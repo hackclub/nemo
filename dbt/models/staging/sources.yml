@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: member_dim
+      - name: member_activity_snapshot
+      - name: channel_dim
+      - name: channel_activity_snapshot
