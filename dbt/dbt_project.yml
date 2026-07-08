@@ -18,3 +18,4 @@ models:
       +materialized: view
     marts:
       +materialized: table
+      +post-hook: "grant select on {{ this }} to superset_ro"
