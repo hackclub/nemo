@@ -82,6 +82,19 @@ ON CONFLICT (user_id, window_start, window_end, source) DO UPDATE SET
     last_active_ios_at = EXCLUDED.last_active_ios_at
 """
 
+MEMBER_PROFILE_SQL = """
+INSERT INTO moderation.member_profile
+    (user_id, name, display_name, username, email, claimed_at, updated_at)
+VALUES (%s, %s, %s, %s, %s, %s, now())
+ON CONFLICT (user_id) DO UPDATE SET
+    name = EXCLUDED.name,
+    display_name = EXCLUDED.display_name,
+    username = EXCLUDED.username,
+    email = EXCLUDED.email,
+    claimed_at = EXCLUDED.claimed_at,
+    updated_at = now()
+"""
+
 CHANNEL_DIM_SQL = """
 INSERT INTO raw.channel_dim
     (channel_id, name, visibility, archived, date_created, last_active_at, creator_id, total_members, updated_at)
@@ -120,9 +133,10 @@ ON CONFLICT (channel_id, window_start, window_end, source) DO UPDATE SET
 """
 
 
-def load_members(conn, files, window_start, window_end):
+def load_members(conn, files, window_start, window_end, with_pii=False):
     dim_rows = []
     activity_rows = []
+    pii_rows = []
     for path in files:
         for row in read_rows(path):
             user_id = (row.get("User ID") or "").strip()
@@ -137,6 +151,15 @@ def load_members(conn, files, window_start, window_end):
                 parse_short_date(row.get("Claimed Date (UTC)")),
                 parse_short_date(row.get("Deactivated date (UTC)")),
             ))
+            if with_pii:
+                pii_rows.append((
+                    user_id,
+                    (row.get("Name") or "").strip() or None,
+                    (row.get("Display name") or "").strip() or None,
+                    (row.get("Username") or "").strip() or None,
+                    (row.get("Email") or "").strip() or None,
+                    parse_short_date(row.get("Claimed Date (UTC)")),
+                ))
             activity_rows.append((
                 user_id,
                 window_start,
@@ -162,7 +185,12 @@ def load_members(conn, files, window_start, window_end):
     with conn.cursor() as cur:
         cur.executemany(MEMBER_DIM_SQL, dim_rows)
         cur.executemany(MEMBER_ACTIVITY_SQL, activity_rows)
-    print(f"members: {len(dim_rows)} dim rows, {len(activity_rows)} activity rows")
+        if pii_rows:
+            cur.executemany(MEMBER_PROFILE_SQL, pii_rows)
+    msg = f"members: {len(dim_rows)} dim rows, {len(activity_rows)} activity rows"
+    if with_pii:
+        msg += f", {len(pii_rows)} pii profiles into moderation"
+    print(msg)
 
 
 def load_channels(conn, analytics_files, admin_file, window_start, window_end):
@@ -229,6 +257,7 @@ def main():
     member = sub.add_parser("member")
     member.add_argument("--window-start", required=True, type=date.fromisoformat)
     member.add_argument("--window-end", required=True, type=date.fromisoformat)
+    member.add_argument("--with-pii", action="store_true")
     member.add_argument("files", nargs="+", type=Path)
 
     channel = sub.add_parser("channel")
@@ -242,7 +271,7 @@ def main():
 
     with connect() as conn:
         if args.kind == "member":
-            load_members(conn, args.files, args.window_start, args.window_end)
+            load_members(conn, args.files, args.window_start, args.window_end, args.with_pii)
         else:
             load_channels(conn, args.files, args.admin, args.window_start, args.window_end)
 
