@@ -1,0 +1,19 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  host: <%= ENV.fetch("POSTGRES_HOST", "localhost") %>
+  port: <%= ENV.fetch("POSTGRES_PORT", "5432") %>
+  database: <%= ENV.fetch("POSTGRES_DB", "mnemosyne") %>
+  username: <%= ENV.fetch("RAILS_DB_USER", "rails_app") %>
+  password: <%= ENV.fetch("RAILS_DB_PASSWORD", "change_me") %>
+  schema_search_path: "app,public"
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default
