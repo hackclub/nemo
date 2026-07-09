@@ -95,6 +95,18 @@ ON CONFLICT (user_id) DO UPDATE SET
     updated_at = now()
 """
 
+SLACK_MEMBER_PROFILE_SQL = """
+INSERT INTO moderation.member_profile
+    (user_id, name, display_name, username, email, updated_at)
+VALUES (%s, %s, %s, %s, %s, now())
+ON CONFLICT (user_id) DO UPDATE SET
+    name = EXCLUDED.name,
+    display_name = COALESCE(EXCLUDED.display_name, moderation.member_profile.display_name),
+    username = EXCLUDED.username,
+    email = EXCLUDED.email,
+    updated_at = now()
+"""
+
 CHANNEL_DIM_SQL = """
 INSERT INTO raw.channel_dim
     (channel_id, name, visibility, archived, date_created, last_active_at, creator_id, total_members, updated_at)
@@ -193,6 +205,25 @@ def load_members(conn, files, window_start, window_end, with_pii=False):
     print(msg)
 
 
+def load_slack_members(conn, files):
+    rows = []
+    for path in files:
+        for row in read_rows(path):
+            user_id = (row.get("userid") or "").strip()
+            if not user_id:
+                continue
+            rows.append((
+                user_id,
+                (row.get("fullname") or "").strip() or None,
+                (row.get("displayname") or "").strip() or None,
+                (row.get("username") or "").strip() or None,
+                (row.get("email") or "").strip() or None,
+            ))
+    with conn.cursor() as cur:
+        cur.executemany(SLACK_MEMBER_PROFILE_SQL, rows)
+    print(f"slack-members: {len(rows)} pii profiles upserted into moderation")
+
+
 def load_channels(conn, analytics_files, admin_file, window_start, window_end):
     name_to_id = {}
     dim_rows = []
@@ -266,14 +297,19 @@ def main():
     channel.add_argument("--admin", required=True, type=Path)
     channel.add_argument("files", nargs="+", type=Path)
 
+    slack_members = sub.add_parser("slack-members")
+    slack_members.add_argument("files", nargs="+", type=Path)
+
     args = parser.parse_args()
     load_dotenv(ENV_FILE)
 
     with connect() as conn:
         if args.kind == "member":
             load_members(conn, args.files, args.window_start, args.window_end, args.with_pii)
-        else:
+        elif args.kind == "channel":
             load_channels(conn, args.files, args.admin, args.window_start, args.window_end)
+        else:
+            load_slack_members(conn, args.files)
 
 
 if __name__ == "__main__":
