@@ -1,0 +1,58 @@
+<% content_for :page_title, "Reports" %>
+<% content_for :page_subtitle, "shroud intake, mirrored read/write per D34" %>
+
+<div class="flex justify-between items-center mb-6">
+  <div></div>
+  <%= link_to "file a report", new_fire_engine_report_path, class: "fe-button" %>
+</div>
+
+<div class="grid grid-cols-4 gap-5 mb-8">
+  <div class="fe-card p-5">
+    <span class="fe-eyebrow">open</span>
+    <div class="fe-stat mt-2"><%= @summary[:open_count] %></div>
+  </div>
+  <div class="fe-card p-5">
+    <span class="fe-eyebrow">resolved, 30d</span>
+    <div class="fe-stat mt-2"><%= @summary[:resolved_last_30d] %></div>
+  </div>
+  <div class="fe-card p-5">
+    <span class="fe-eyebrow">median reply</span>
+    <div class="fe-stat mt-2"><%= @summary[:median_reply_minutes] %>m</div>
+  </div>
+  <div class="fe-card p-5">
+    <span class="fe-eyebrow">median resolve</span>
+    <div class="fe-stat mt-2"><%= @summary[:median_resolve_hours] %>h</div>
+  </div>
+</div>
+
+<div class="flex items-center gap-2 mb-3">
+  <h2 class="fe-h2">Recent reports</h2>
+  <span class="fe-tag-mock">mock — resolved status derived from linked case</span>
+</div>
+
+<div class="fe-card overflow-hidden">
+  <div class="grid grid-cols-5 gap-4 px-5 py-3 border-b fe-divider">
+    <span class="fe-eyebrow">filed</span>
+    <span class="fe-eyebrow">content</span>
+    <span class="fe-eyebrow">status</span>
+    <span class="fe-eyebrow">case</span>
+    <span class="fe-eyebrow"></span>
+  </div>
+  <% @recent.each do |r| %>
+    <div class="grid grid-cols-5 gap-4 px-5 py-3 border-b fe-divider last:border-b-0 items-center">
+      <span class="fe-label"><%= r[:filed_at].strftime("%Y-%m-%d %H:%M") %></span>
+      <span class="fe-label"><%= truncate(r[:content], length: 48) %></span>
+      <span>
+        <span class="fe-badge <%= 'fe-badge-warn' if ['open', 'no case linked'].include?(r[:status]) %>"><%= r[:status] %></span>
+      </span>
+      <span class="fe-label">
+        <% if r[:linked_case_number] %>
+          <%= link_to "##{r[:linked_case_number]}", fire_engine_case_path(r[:linked_case_number]), class: "fe-link" %>
+        <% else %>
+          &mdash;
+        <% end %>
+      </span>
+      <span><%= link_to "edit", edit_fire_engine_report_path(r[:id]), class: "fe-link" %></span>
+    </div>
+  <% end %>
+</div>

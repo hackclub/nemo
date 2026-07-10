@@ -9,38 +9,73 @@
     <%= yield :head %>
 
     <link rel="icon" href="/icon.png" type="image/png">
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="fe-root min-h-screen">
-    <div class="fe-banner">
-      notice &mdash; fire engine is a monitored system. every member lookup is recorded to an immutable audit log.
+  <body class="fe-shell min-h-screen">
+    <div class="flex min-h-screen">
+      <aside class="fe-sidebar w-64 shrink-0 px-4 py-5 flex flex-col justify-between sticky top-0 h-screen overflow-y-auto">
+        <div>
+          <div class="flex items-center gap-2 px-2 mb-8">
+            <span class="fe-dot"></span>
+            <span class="fe-h2">Fire Engine</span>
+          </div>
+
+          <nav class="flex flex-col gap-1">
+            <%= link_to fire_engine_root_path,
+                class: "fe-nav-item #{'is-active' if current_page?(fire_engine_root_path)}" do %>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+              <span>Dashboard</span>
+            <% end %>
+
+            <%= link_to fire_engine_cases_path,
+                class: "fe-nav-item #{'is-active' if current_page?(fire_engine_cases_path)}" do %>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+              <span>Cases</span>
+            <% end %>
+
+            <%= link_to fire_engine_reports_path,
+                class: "fe-nav-item #{'is-active' if current_page?(fire_engine_reports_path)}" do %>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V4a1 1 0 0 1 1-1h9l5 5v7a1 1 0 0 1-1 1H8"/><path d="M4 15h8"/></svg>
+              <span>Reports</span>
+            <% end %>
+          </nav>
+        </div>
+
+        <div class="border-t fe-divider pt-4 px-2">
+          <div class="fe-label mb-3">you &middot; <%= current_staff.user_id %></div>
+          <%= link_to "back to mnemosyne", root_path, class: "fe-link block mb-2" %>
+          <%= button_to "log out", logout_path, method: :delete, class: "fe-link", form: { class: "inline" } %>
+        </div>
+      </aside>
+
+      <div class="flex-1 flex flex-col">
+        <header class="fe-header px-10 py-5 flex items-center justify-between">
+          <div>
+            <h1 class="fe-h1"><%= content_for(:page_title) || "Dashboard" %></h1>
+            <% if content_for(:page_subtitle) %>
+              <p class="fe-label mt-1"><%= content_for(:page_subtitle) %></p>
+            <% end %>
+          </div>
+          <% if notice %>
+            <p class="fe-label" style="color:var(--success)"><%= notice %></p>
+          <% end %>
+          <% if alert %>
+            <p class="fe-label" style="color:#f0b3a9"><%= alert %></p>
+          <% end %>
+        </header>
+
+        <main class="flex-1 px-10 py-8 max-w-6xl">
+          <%= yield %>
+        </main>
+      </div>
     </div>
-
-    <% if notice %>
-      <p class="fe-stamp px-6 py-2 border-b fe-divider"><%= notice %></p>
-    <% end %>
-    <% if alert %>
-      <p class="fe-stamp px-6 py-2 border-b fe-divider" style="color:#f2b8b5"><%= alert %></p>
-    <% end %>
-
-    <header class="flex items-start justify-between px-6 py-4 border-b fe-divider">
-      <div>
-        <h1 class="text-lg font-bold tracking-wide">FIRE ENGINE</h1>
-        <div class="fe-stamp">hack club &middot; fd member reference</div>
-      </div>
-      <div class="fe-stamp text-right">
-        operator: <%= current_staff.user_id %><br>
-        <%= link_to "back to mnemosyne", root_path, class: "fe-link" %>
-      </div>
-    </header>
-
-    <main class="px-6 py-10 max-w-5xl mx-auto">
-      <%= yield %>
-    </main>
   </body>
 </html>

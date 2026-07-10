@@ -1,0 +1,28 @@
+<% content_for :page_title, "Edit report ##{@report[:id]}" %>
+<% content_for :page_subtitle, @report[:linked_case_number] ? "linked to case ##{@report[:linked_case_number]}" : "no case linked" %>
+
+<div class="mb-6">
+  <%= link_to "back to reports", fire_engine_reports_path, class: "fe-link" %>
+</div>
+
+<div class="fe-card p-6">
+  <span class="fe-tag-mock mb-4 inline-block">mock — not yet wired to shroud</span>
+
+  <%= form_with url: fire_engine_report_path(@report[:id]), method: :patch, local: true do %>
+    <div class="mb-4">
+      <label class="fe-label block mb-2">content</label>
+      <%= text_area_tag :content, @report[:content], rows: 5, class: "fe-field", style: "width:100%" %>
+    </div>
+
+    <div class="mb-6">
+      <label class="fe-label block mb-2">staff notes</label>
+      <%= text_area_tag :staff_notes, nil, rows: 3, class: "fe-field", style: "width:100%" %>
+    </div>
+
+    <p class="fe-label mb-6">
+      resolved status isn't editable here — it follows case ##{@report[:linked_case_number]}'s status once linked.
+    </p>
+
+    <%= submit_tag "save", class: "fe-button" %>
+  <% end %>
+</div>

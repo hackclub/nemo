@@ -1,42 +1,80 @@
-<div class="fe-section-label">[ MEMBER LOOKUP ]</div>
+<% content_for :page_title, "Dashboard" %>
+<% content_for :page_subtitle, "member lookup, case load, and report backlog at a glance" %>
 
-<div class="fe-panel mb-10">
+<div class="fe-card p-4 mb-8">
   <%= form_tag fire_engine_root_path, method: :get, class: "flex gap-3" do %>
-    <%= text_field_tag :q, params[:q], placeholder: "slack id, username, or email", class: "fe-input flex-1" %>
-    <%= submit_tag "search", class: "fe-btn" %>
+    <%= text_field_tag :q, params[:q], placeholder: "search by slack id, username, or email", class: "fe-field flex-1" %>
+    <%= submit_tag "search", class: "fe-button" %>
   <% end %>
 </div>
 
 <% if @results %>
-  <div class="fe-section-label">[ RESULTS ]</div>
-  <div class="fe-panel mb-10">
-    <% if @results.any? %>
-      <% @results.each do |m| %>
-        <div class="py-2 border-b fe-divider">
-          <%= link_to (m.display_name.presence || m.name.presence || m.user_id), fire_engine_member_path(m.user_id), style: "color:#d8d8d8" %>
-          <span class="fe-stamp ml-2"><%= m.user_id %></span>
-        </div>
+  <div class="mb-8">
+    <h2 class="fe-h2 mb-3">Results</h2>
+    <div class="fe-card overflow-hidden">
+      <% if @results.any? %>
+        <% @results.each do |m| %>
+          <%= link_to fire_engine_member_path(m.user_id), class: "fe-card-interactive flex items-center justify-between px-5 py-3 border-b fe-divider last:border-b-0", style: "text-decoration:none; color:var(--foreground)" do %>
+            <span><%= m.display_name.presence || m.name.presence || m.user_id %></span>
+            <span class="fe-label"><%= m.user_id %></span>
+          <% end %>
+        <% end %>
+      <% else %>
+        <p class="fe-label p-5">no matches</p>
       <% end %>
-    <% else %>
-      <p class="fe-stamp">no matches</p>
-    <% end %>
+    </div>
   </div>
 <% end %>
 
-<div class="fe-section-label">[ RECENT ACTIVITY ]</div>
-
-<div class="fe-panel mb-10">
-  <% if @recent.any? %>
-    <% @recent.each do |log| %>
-      <div class="py-1 fe-stamp">
-        <%= log.looked_at.strftime("%Y-%m-%d %H:%M") %> &middot; viewed <%= log.subject_user_id %>
-      </div>
-    <% end %>
-  <% else %>
-    <p class="fe-stamp">no lookups recorded yet</p>
+<div class="grid grid-cols-3 gap-5 mb-8">
+  <%= link_to fire_engine_cases_path, class: "fe-card fe-card-interactive p-5", style: "text-decoration:none; color:inherit" do %>
+    <div class="flex items-center justify-between mb-4">
+      <span class="fe-icon-badge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+      </span>
+    </div>
+    <div class="fe-eyebrow mb-1">open cases</div>
+    <div class="fe-stat"><%= @cases_summary[:open_count] %></div>
+    <p class="fe-trend-up mt-2"><%= @cases_summary[:trend] %></p>
+    <p class="fe-label mt-1"><%= @cases_summary[:unassigned_count] %> unassigned &middot; <%= @cases_summary[:aging_5d_plus] %> aging 5+ days</p>
   <% end %>
+
+  <%= link_to fire_engine_reports_path, class: "fe-card fe-card-interactive p-5", style: "text-decoration:none; color:inherit" do %>
+    <div class="flex items-center justify-between mb-4">
+      <span class="fe-icon-badge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V4a1 1 0 0 1 1-1h9l5 5v7a1 1 0 0 1-1 1H8"/><path d="M4 15h8"/></svg>
+      </span>
+    </div>
+    <div class="fe-eyebrow mb-1">open reports</div>
+    <div class="fe-stat"><%= @reports_summary[:open_count] %></div>
+    <p class="fe-trend-down mt-2"><%= @reports_summary[:trend] %></p>
+    <p class="fe-label mt-1">reply <%= @reports_summary[:median_reply_minutes] %>m &middot; resolve <%= @reports_summary[:median_resolve_hours] %>h median</p>
+  <% end %>
+
+  <div class="fe-card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <span class="fe-icon-badge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      </span>
+    </div>
+    <div class="fe-eyebrow mb-1">your lookups today</div>
+    <div class="fe-stat"><%= @lookups_today %></div>
+    <p class="fe-label mt-2">visible only to you</p>
+  </div>
 </div>
 
-<div class="fe-stamp">
-  session <%= current_staff.user_id %> &middot; access logged &middot; <%= Time.current.strftime("%Y-%m-%d %H:%M UTC") %>
+<div class="mb-4">
+  <h2 class="fe-h2 mb-3">Your recent lookups</h2>
+  <div class="fe-card overflow-hidden">
+    <% if @recent.any? %>
+      <% @recent.each do |log| %>
+        <div class="flex items-center justify-between px-5 py-3 border-b fe-divider last:border-b-0">
+          <span class="fe-label">viewed <%= log.subject_user_id %></span>
+          <span class="fe-label"><%= log.looked_at.strftime("%Y-%m-%d %H:%M") %></span>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="fe-label p-5">you haven't looked anyone up yet</p>
+    <% end %>
+  </div>
 </div>

@@ -1,0 +1,141 @@
+<% content_for :page_title, "Case #‌#{@case[:case_number]}" %>
+<% content_for :page_subtitle, "##{@case[:channel]}" %>
+
+<div class="mb-6">
+  <%= link_to "back to cases", fire_engine_cases_path, class: "fe-link" %>
+</div>
+
+<div class="fe-card p-6 mb-8 flex items-center justify-between">
+  <div>
+    <div class="flex items-center gap-2 mb-2">
+      <span class="fe-badge <%= 'fe-badge-warn' if @case[:status] == 'open' %>"><%= @case[:status] %></span>
+      <% if @case[:linked_report_id] %>
+        <%= link_to "filed via report ##{@case[:linked_report_id]}", fire_engine_reports_path, class: "fe-link" %>
+      <% end %>
+    </div>
+    <p class="fe-label">
+      target <%= link_to @case[:target_user_id], fire_engine_member_path(@case[:target_user_id]), class: "fe-link" %>
+      &middot; assignee <%= @case[:assignee] || "unassigned" %>
+      &middot; opened <%= @case[:opened_at].strftime("%Y-%m-%d") %>
+    </p>
+  </div>
+</div>
+
+<div class="flex gap-6" data-controller="panes">
+  <nav class="w-48 shrink-0 flex flex-col gap-6">
+    <div>
+      <div class="fe-eyebrow mb-2 px-2">this case</div>
+      <div class="flex flex-col gap-1">
+        <button type="button" class="fe-nav-item is-active" data-panes-target="nav" data-pane-name="thread"
+            data-action="click->panes#show" data-panes-pane-param="thread">Thread</button>
+        <button type="button" class="fe-nav-item" data-panes-target="nav" data-pane-name="timeline"
+            data-action="click->panes#show" data-panes-pane-param="timeline">Case timeline</button>
+        <button type="button" class="fe-nav-item" data-panes-target="nav" data-pane-name="report"
+            data-action="click->panes#show" data-panes-pane-param="report">File conduct report</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="fe-eyebrow mb-2 px-2">cases</div>
+      <div class="flex flex-col gap-1" style="max-height: 40vh; overflow-y: auto;">
+        <% @all_cases.each do |c| %>
+          <%= link_to fire_engine_case_path(c[:case_number]),
+              class: "fe-nav-item #{'is-active' if c[:case_number] == @case[:case_number]} justify-between" do %>
+            <span>#<%= c[:case_number] %></span>
+            <span class="fe-badge <%= 'fe-badge-warn' if c[:status] == 'open' %>" style="font-size:.6rem"><%= c[:status] %></span>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </nav>
+
+  <div class="flex-1 min-w-0">
+    <div data-panes-target="pane" data-pane-name="thread">
+      <div class="flex items-center gap-2 mb-3">
+        <h2 class="fe-h2">Thread</h2>
+        <span class="fe-tag-mock">mock — live slack mirror, not persisted</span>
+      </div>
+      <div class="fe-card overflow-hidden">
+        <% @thread_messages.each do |m| %>
+          <div class="px-5 py-3 border-b fe-divider last:border-b-0">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="fe-label"><%= m[:user_id] %></span>
+              <span class="fe-label"><%= m[:posted_at].strftime("%H:%M") %></span>
+            </div>
+            <p class="mb-1"><%= m[:text] %></p>
+            <% if m[:reactions].any? %>
+              <div class="flex gap-2">
+                <% m[:reactions].each do |r| %>
+                  <span class="fe-badge">:<%= r[:name] %>: <%= r[:count] %></span>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <div data-panes-target="pane" data-pane-name="timeline" hidden>
+      <div class="flex items-center gap-2 mb-3">
+        <h2 class="fe-h2">Case timeline</h2>
+      </div>
+      <div class="fe-card overflow-hidden">
+        <% if @case_actions.any? %>
+          <% @case_actions.each do |action| %>
+            <div class="px-5 py-4 border-b fe-divider last:border-b-0">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="fe-badge fe-badge-warn"><%= action[:action_type].tr("_", " ") %></span>
+                <span class="fe-label"><%= action[:performed_at].strftime("%Y-%m-%d") %> &middot; by <%= action[:performed_by] %></span>
+              </div>
+              <p class="mb-1"><%= action[:what_they_did] %></p>
+              <% if action[:ban_until] %>
+                <p class="fe-label mb-1">ban until <%= action[:ban_until].strftime("%Y-%m-%d") %></p>
+              <% end %>
+              <%= link_to "view thread", action[:thread_url], class: "fe-link" %>
+            </div>
+          <% end %>
+        <% else %>
+          <p class="fe-label p-5">no prior case history</p>
+        <% end %>
+      </div>
+    </div>
+
+    <div data-panes-target="pane" data-pane-name="report" hidden>
+      <div class="flex items-center gap-2 mb-3">
+        <h2 class="fe-h2">File a conduct report</h2>
+        <span class="fe-tag-mock">mock — not yet wired to lyla</span>
+      </div>
+      <div class="fe-card p-6">
+        <%= form_with url: fire_engine_case_case_actions_path(@case[:case_number]), method: :post, local: true do %>
+          <div class="mb-4">
+            <label class="fe-label block mb-2">reported user(s), comma separated</label>
+            <%= text_field_tag :target_user_ids, @case[:target_user_id], class: "fe-field", style: "width:100%" %>
+          </div>
+
+          <div class="mb-4">
+            <label class="fe-label block mb-2">what did they do</label>
+            <%= text_area_tag :violation, nil, rows: 3, class: "fe-field", style: "width:100%" %>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="fe-label block mb-2">action taken</label>
+              <%= select_tag :action_type, options_for_select(@action_type_options.map { |o| [o.tr("_", " "), o] }), class: "fe-field", style: "width:100%" %>
+            </div>
+            <div>
+              <label class="fe-label block mb-2">category</label>
+              <%= select_tag :category, options_for_select(@category_options), class: "fe-field", style: "width:100%" %>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <label class="fe-label block mb-2">ban until (if applicable)</label>
+            <%= date_field_tag :ban_until, nil, class: "fe-field" %>
+          </div>
+
+          <%= submit_tag "file conduct report", class: "fe-button" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

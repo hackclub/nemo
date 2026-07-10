@@ -1,31 +1,87 @@
-<div class="fe-section-label">[ MEMBER PROFILE ]</div>
+<% content_for :page_title, @member.display_name.presence || @member.name || @member.user_id %>
+<% content_for :page_subtitle, @member.user_id %>
 
-<div class="fe-panel mb-8 flex gap-6">
+<div class="mb-6">
+  <%= link_to "back to dashboard", fire_engine_root_path, class: "fe-link" %>
+</div>
+
+<div class="fe-card p-6 mb-8 flex gap-6 items-center">
   <img src="https://cachet.dunkirk.sh/users/<%= @member.user_id %>/r" alt=""
-       class="w-20 h-20 object-cover border" style="border-color:#2a2d31">
+       class="w-16 h-16 object-cover" style="border-radius: 0.5rem;">
   <div>
-    <div class="text-lg font-bold"><%= @member.display_name.presence || @member.name %></div>
-    <div class="fe-stamp mt-1">slack id: <%= @member.user_id %></div>
-    <div class="fe-stamp">username: <%= @member.username %></div>
-    <div class="fe-stamp">email: <%= @member.email %></div>
-    <div class="fe-stamp">joined: <%= @member.claimed_at&.strftime("%Y-%m-%d") || "never claimed" %></div>
+    <div class="fe-h2"><%= @member.display_name.presence || @member.name %></div>
+    <p class="fe-label mt-2">
+      <%= @member.user_id %> &middot; <%= @member.username %>
+      <% if @member.email.present? %> &middot; <%= @member.email %><% end %>
+    </p>
+    <p class="fe-label mt-1">joined <%= @member.claimed_at&.strftime("%Y-%m-%d") || "never claimed" %></p>
   </div>
 </div>
 
-<div class="fe-section-label">[ ACTIVITY ]</div>
-
-<div class="fe-panel mb-8">
-  <% if @activity %>
-    <p class="fe-stamp">messages posted: <%= @activity.messages_posted %></p>
-    <p class="fe-stamp">channels joined: <%= @activity.channels_joined %></p>
-    <p class="fe-stamp">last active: <%= @activity.last_active_at&.strftime("%Y-%m-%d") || "unknown" %></p>
-  <% else %>
-    <p class="fe-stamp">no activity data available</p>
-  <% end %>
+<div class="mb-8">
+  <div class="flex items-center gap-2 mb-3">
+    <h2 class="fe-h2">Notes</h2>
+  </div>
+  <div class="fe-card overflow-hidden">
+    <% if @notes.any? %>
+      <% @notes.each do |note| %>
+        <div class="px-5 py-3 border-b fe-divider last:border-b-0">
+          <p><%= note[:body] %></p>
+          <p class="fe-label mt-1"><%= note[:author] %> &middot; <%= note[:created_at].strftime("%Y-%m-%d") %></p>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="fe-label p-5">no notes on file</p>
+    <% end %>
+  </div>
 </div>
 
-<div class="fe-stamp">
+<div class="fe-card overflow-hidden mb-8">
+  <div class="grid grid-cols-2 gap-4 px-5 py-3 border-b fe-divider">
+    <span class="fe-label">last active</span>
+    <span class="fe-label"><%= @activity&.last_active_at&.strftime("%m-%d") || "—" %></span>
+  </div>
+  <div class="grid grid-cols-2 gap-4 px-5 py-3 border-b fe-divider">
+    <span class="fe-label">conduct reports filed</span>
+    <span class="fe-label"><%= @conduct_reports_filed %></span>
+  </div>
+  <div class="grid grid-cols-2 gap-4 px-5 py-3 border-b fe-divider">
+    <span class="fe-label">messages posted</span>
+    <span class="fe-label"><%= @activity&.messages_posted || "—" %></span>
+  </div>
+  <div class="grid grid-cols-2 gap-4 px-5 py-3 last:border-b-0">
+    <span class="fe-label">channels joined</span>
+    <span class="fe-label"><%= @activity&.channels_joined || "—" %></span>
+  </div>
+</div>
+
+<div class="mb-8">
+  <div class="flex items-center gap-2 mb-3">
+    <h2 class="fe-h2">Case timeline</h2>
+  </div>
+  <div class="fe-card overflow-hidden">
+    <% if @case_actions.any? %>
+      <% @case_actions.each do |action| %>
+        <div class="px-5 py-4 border-b fe-divider last:border-b-0">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="fe-badge fe-badge-warn"><%= action[:action_type].tr("_", " ") %></span>
+            <span class="fe-label"><%= action[:performed_at].strftime("%Y-%m-%d") %> &middot; by <%= action[:performed_by] %></span>
+          </div>
+          <p class="mb-1"><%= action[:what_they_did] %></p>
+          <% if action[:ban_until] %>
+            <p class="fe-label mb-1">ban until <%= action[:ban_until].strftime("%Y-%m-%d") %></p>
+          <% end %>
+          <%= link_to "case ##{action[:case_number]}", fire_engine_case_path(action[:case_number]), class: "fe-link" %>
+          &middot;
+          <%= link_to "view thread", action[:thread_url], class: "fe-link" %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="fe-label p-5">no prior case history</p>
+    <% end %>
+  </div>
+</div>
+
+<p class="fe-label">
   lookup by <%= current_staff.user_id %> &middot; logged <%= Time.current.strftime("%Y-%m-%d %H:%M UTC") %>
-</div>
-
-<%= link_to "back to search", fire_engine_root_path, class: "fe-link" %>
+</p>
