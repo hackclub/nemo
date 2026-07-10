@@ -1,28 +1,35 @@
-<% content_for :page_title, "Edit report ##{@report[:id]}" %>
+<% content_for :page_title, "Report ##{@report[:id]}" %>
 <% content_for :page_subtitle, @report[:linked_case_number] ? "linked to case ##{@report[:linked_case_number]}" : "no case linked" %>
 
 <div class="mb-6">
   <%= link_to "back to reports", fire_engine_reports_path, class: "fe-link" %>
 </div>
 
+<div class="fe-card p-6 mb-6">
+  <span class="fe-eyebrow">content</span>
+  <p class="mt-2"><%= @report[:content] %></p>
+</div>
+
 <div class="fe-card p-6">
-  <span class="fe-tag-mock mb-4 inline-block">mock — not yet wired to shroud</span>
+  <p class="fe-label mb-4">
+    current status: <span class="fe-badge <%= 'fe-badge-warn' if @report[:status] == 'open' %>"><%= @report[:status] %></span>
+  </p>
 
-  <%= form_with url: fire_engine_report_path(@report[:id]), method: :patch, local: true do %>
-    <div class="mb-4">
-      <label class="fe-label block mb-2">content</label>
-      <%= text_area_tag :content, @report[:content], rows: 5, class: "fe-field", style: "width:100%" %>
-    </div>
-
-    <div class="mb-6">
-      <label class="fe-label block mb-2">staff notes</label>
-      <%= text_area_tag :staff_notes, nil, rows: 3, class: "fe-field", style: "width:100%" %>
-    </div>
-
+  <% if @report[:linked_case_number] %>
     <p class="fe-label mb-6">
-      resolved status isn't editable here — it follows case ##{@report[:linked_case_number]}'s status once linked.
+      resolved status follows <%= link_to "case ##{@report[:linked_case_number]}", fire_engine_case_path(@report[:linked_case_number]), class: "fe-link" %> once linked — marking resolved here only affects Shroud's own record.
     </p>
-
-    <%= submit_tag "save", class: "fe-button" %>
   <% end %>
+
+  <div class="flex gap-3">
+    <%= form_with url: fire_engine_report_path(@report[:id]), method: :patch, local: true do %>
+      <%= hidden_field_tag :mark_resolved, "true" %>
+      <%= submit_tag "mark resolved now", class: "fe-button" %>
+    <% end %>
+
+    <%= form_with url: fire_engine_report_path(@report[:id]), method: :patch, local: true do %>
+      <%= hidden_field_tag :mark_merged, "true" %>
+      <%= submit_tag "mark as duplicate", class: "fe-button" %>
+    <% end %>
+  </div>
 </div>

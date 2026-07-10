@@ -27,7 +27,6 @@
 
 <div class="flex items-center gap-2 mb-3">
   <h2 class="fe-h2">Recent reports</h2>
-  <span class="fe-tag-mock">mock — resolved status derived from linked case</span>
 </div>
 
 <div class="fe-card overflow-hidden">
@@ -40,10 +39,10 @@
   </div>
   <% @recent.each do |r| %>
     <div class="grid grid-cols-5 gap-4 px-5 py-3 border-b fe-divider last:border-b-0 items-center">
-      <span class="fe-label"><%= r[:filed_at].strftime("%Y-%m-%d %H:%M") %></span>
-      <span class="fe-label"><%= truncate(r[:content], length: 48) %></span>
+      <span class="fe-label"><%= r[:filed_at]&.strftime("%Y-%m-%d %H:%M") || "unknown" %></span>
+      <span class="fe-label"><%= truncate(r[:content].to_s, length: 48) %></span>
       <span>
-        <span class="fe-badge <%= 'fe-badge-warn' if ['open', 'no case linked'].include?(r[:status]) %>"><%= r[:status] %></span>
+        <span class="fe-badge <%= 'fe-badge-warn' if ['open', 'not yet forwarded', 'no case linked'].include?(r[:status]) %>"><%= r[:status] %></span>
       </span>
       <span class="fe-label">
         <% if r[:linked_case_number] %>

@@ -6,17 +6,10 @@
 </div>
 
 <div class="fe-card p-6">
-  <span class="fe-tag-mock mb-4 inline-block">mock — not yet wired to shroud</span>
-
   <%= form_with url: fire_engine_reports_path, method: :post, local: true do %>
-    <div class="mb-4">
+    <div class="mb-6">
       <label class="fe-label block mb-2">what happened</label>
       <%= text_area_tag :content, nil, rows: 5, class: "fe-field", style: "width:100%" %>
-    </div>
-
-    <div class="mb-6">
-      <label class="fe-label block mb-2">involving (user id, optional)</label>
-      <%= text_field_tag :target_user_id, nil, class: "fe-field", style: "width:100%" %>
     </div>
 
     <%= submit_tag "file report", class: "fe-button" %>

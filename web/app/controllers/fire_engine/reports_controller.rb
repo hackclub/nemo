@@ -1,50 +1,102 @@
 module FireEngine
   class ReportsController < BaseController
-    MOCK_SUMMARY = {
-      open_count: 4,
-      resolved_last_30d: 42,
-      median_reply_minutes: 18,
-      median_resolve_hours: 4.2
-    }.freeze
-
-    MOCK_RECENT_REPORTS = [
-      { id: 4821, filed_at: 6.hours.ago, content: "posted nsfw content in #general, repeat offender", auto_forwarded: true, linked_case_number: 1042 },
-      { id: 4805, filed_at: 1.day.ago, content: "someone ban evading, same writing style as a banned user", auto_forwarded: false, linked_case_number: nil },
-      { id: 4790, filed_at: 2.days.ago, content: "harassment in dms, screenshots attached", auto_forwarded: true, linked_case_number: 1039 },
-      { id: 4756, filed_at: 3.days.ago, content: "spam links across several channels", auto_forwarded: false, linked_case_number: 1038 }
-    ].freeze
-
     def index
-      @summary = MOCK_SUMMARY
-      @recent = MOCK_RECENT_REPORTS.map { |r| r.merge(status: resolved_status(r)) }
+      reports = shroud.list(limit: 100) || []
+      thread_index = build_thread_index(lyla.cases || [])
+
+      @recent = reports.map { |r| report_summary(r, thread_index) }.sort_by { |r| r[:filed_at] || Time.zone.at(0) }.reverse
+      @summary = build_summary(@recent)
     end
 
     def new
     end
 
     def create
-      redirect_to fire_engine_reports_path,
-        notice: "report filed (mock — not yet wired to shroud)"
+      shroud.create(content: params[:content])
+      redirect_to fire_engine_reports_path, notice: "report filed"
+    rescue ShroudReportsClient::Error => e
+      redirect_to new_fire_engine_report_path, alert: "could not file report: #{e.message}"
     end
 
     def edit
-      @report = MOCK_RECENT_REPORTS.find { |r| r[:id] == params[:id].to_i }
-      return redirect_to(fire_engine_reports_path, alert: "no report found for that id") unless @report
+      raw = shroud.find(params[:id])
+      return redirect_to(fire_engine_reports_path, alert: "no report found for that id") unless raw
+
+      @report = report_summary(raw, build_thread_index(lyla.cases || []))
     end
 
     def update
-      redirect_to fire_engine_reports_path,
-        notice: "report ##{params[:id]} updated (mock — not yet wired to shroud)"
+      if params[:mark_resolved].present?
+        raw = shroud.find(params[:id])
+        forwarded_ts = raw&.dig("fields", "forwarded_ts")
+        shroud.update(params[:id], resolve_time: (Time.current.to_f - forwarded_ts.to_f).round) if forwarded_ts
+      elsif params[:mark_merged].present?
+        shroud.update(params[:id], merged: true)
+      end
+
+      redirect_to fire_engine_reports_path, notice: "report ##{params[:id]} updated"
+    rescue ShroudReportsClient::Error => e
+      redirect_to edit_fire_engine_report_path(params[:id]), alert: "could not update report: #{e.message}"
     end
 
     private
 
-    # Mirrors the planned real logic: resolved status comes from the linked
-    # Lyla case's status, not Shroud's own resolve_time, once a case exists.
-    def resolved_status(report)
-      return CasesController::MOCK_CASES.find { |c| c[:case_number] == report[:linked_case_number] }[:status] if report[:linked_case_number]
+    def shroud
+      @shroud ||= ShroudReportsClient.new
+    end
+
+    def lyla
+      @lyla ||= LylaClient.new
+    end
+
+    def build_thread_index(cases)
+      cases.each_with_object({}) do |c, index|
+        (c["threads"] || []).each { |t| index[t["threadTs"]] = c }
+      end
+    end
+
+    def report_summary(raw, thread_index)
+      f = raw["fields"] || {}
+      linked_case = thread_index[f["forwarded_ts"]]
+
+      {
+        id: raw["id"],
+        filed_at: f["created_at"].presence && Time.zone.parse(f["created_at"]),
+        content: f["content"],
+        auto_forwarded: !!f["is_auto_forward"],
+        reply_time: f["reply_time"],
+        resolve_time: f["resolve_time"],
+        status: derive_status(f, linked_case),
+        linked_case_number: linked_case&.dig("caseNumber")
+      }
+    end
+
+    def derive_status(f, linked_case)
+      return linked_case["status"] if linked_case
+      return "not yet forwarded" if f["forwarded_ts"].blank?
+      return "resolved" if f["resolve_time"].present?
 
       "no case linked"
+    end
+
+    def build_summary(recent)
+      reply_median = median(recent.filter_map { |r| r[:reply_time] })
+      resolve_median = median(recent.filter_map { |r| r[:resolve_time] })
+
+      {
+        open_count: recent.count { |r| r[:status] == "open" },
+        resolved_last_30d: recent.count { |r| r[:status] == "resolved" && r[:filed_at] && r[:filed_at] > 30.days.ago },
+        median_reply_minutes: reply_median && (reply_median / 60.0).round(1),
+        median_resolve_hours: resolve_median && (resolve_median / 3600.0).round(1)
+      }
+    end
+
+    def median(values)
+      return nil if values.empty?
+
+      sorted = values.sort
+      mid = sorted.length / 2
+      sorted.length.odd? ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2.0
     end
   end
 end
