@@ -25,3 +25,7 @@ models:
     columns:
       - name: account_type
         data_tests: [not_null]
+  - name: mart_fast_reply_vs_retention
+    columns:
+      - name: fast_reply
+        data_tests: [not_null, unique]
