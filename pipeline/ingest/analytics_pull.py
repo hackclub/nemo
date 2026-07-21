@@ -43,7 +43,7 @@ INSERT INTO raw.member_dim (user_id, is_guest, claimed_at, updated_at)
 VALUES (%s, %s, %s, now())
 ON CONFLICT (user_id) DO UPDATE SET
     is_guest = EXCLUDED.is_guest,
-    claimed_at = COALESCE(EXCLUDED.claimed_at, raw.member_dim.claimed_at),
+    claimed_at = COALESCE(raw.member_dim.claimed_at, EXCLUDED.claimed_at),
     updated_at = now()
 """
 

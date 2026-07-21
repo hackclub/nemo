@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 import jsonschema
@@ -61,6 +62,24 @@ def handle_event(conn, schemas, event_type, event, client):
     conn.commit()
     if event_type == "channel_created":
         join_new_channel(conn, client, event["channel"]["id"])
+    elif event_type == "team_join":
+        record_claimed_at(conn, event["user"]["id"], event["event_ts"])
+
+
+def record_claimed_at(conn, user_id, event_ts):
+    claimed_at = datetime.fromtimestamp(float(event_ts), tz=timezone.utc)
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO raw.member_dim (user_id, claimed_at, updated_at)
+            VALUES (%s, %s, now())
+            ON CONFLICT (user_id) DO UPDATE SET
+                claimed_at = COALESCE(raw.member_dim.claimed_at, EXCLUDED.claimed_at),
+                updated_at = now()
+            """,
+            (user_id, claimed_at),
+        )
+    conn.commit()
 
 
 def join_new_channel(conn, client, channel_id):
