@@ -6,6 +6,7 @@ import jsonschema
 from dotenv import load_dotenv
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
+from slack_sdk.errors import SlackApiError
 
 from lib.db import connect, dead_letter
 
@@ -44,7 +45,7 @@ def extract(event, schema):
     return result
 
 
-def handle_event(conn, schemas, event_type, event):
+def handle_event(conn, schemas, event_type, event, client):
     payload = extract(event, schemas[event_type])
     try:
         jsonschema.validate(payload, schemas[event_type])
@@ -58,11 +59,24 @@ def handle_event(conn, schemas, event_type, event):
             (event_type, json.dumps(payload)),
         )
     conn.commit()
+    if event_type == "channel_created":
+        join_new_channel(conn, client, event["channel"]["id"])
+
+
+def join_new_channel(conn, client, channel_id):
+    try:
+        client.conversations_join(channel=channel_id)
+    except SlackApiError as exc:
+        error = exc.response.get("error")
+        if error == "is_archived":
+            return
+        dead_letter(conn, SOURCE, {"channel_id": channel_id}, error or str(exc))
+        conn.commit()
 
 
 def make_handler(conn, schemas, event_type):
-    def handler(event):
-        handle_event(conn, schemas, event_type, event)
+    def handler(event, client):
+        handle_event(conn, schemas, event_type, event, client)
 
     return handler
 
