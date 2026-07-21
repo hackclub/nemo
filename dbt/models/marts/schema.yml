@@ -41,3 +41,7 @@ models:
     columns:
       - name: total_members
         data_tests: [not_null]
+  - name: mart_message_depth_distribution
+    columns:
+      - name: threshold
+        data_tests: [not_null, unique]
