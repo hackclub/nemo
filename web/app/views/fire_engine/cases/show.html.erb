@@ -1,4 +1,4 @@
-<% content_for :page_title, "Case #‌#{@case[:case_number]}" %>
+<% content_for :page_title, "Case ##{@case[:case_number]}" %>
 <% content_for :page_subtitle, "##{@case[:channel]}" %>
 
 <div class="mb-6">
@@ -18,8 +18,8 @@
   </div>
 </div>
 
-<div class="flex gap-6" data-controller="panes">
-  <nav class="w-48 shrink-0 flex flex-col gap-6">
+<div class="flex flex-col lg:flex-row gap-6" data-controller="panes">
+  <nav class="lg:w-48 shrink-0 flex flex-col gap-6">
     <div>
       <div class="fe-eyebrow mb-2 px-2">this case</div>
       <div class="flex flex-col gap-1">
@@ -34,12 +34,12 @@
 
     <div>
       <div class="fe-eyebrow mb-2 px-2">cases</div>
-      <div class="flex flex-col gap-1" style="max-height: 40vh; overflow-y: auto;">
+      <div class="flex flex-col gap-1 max-h-[40vh] overflow-y-auto">
         <% @all_cases.each do |c| %>
           <%= link_to fire_engine_case_path(c[:case_number]),
               class: "fe-nav-item #{'is-active' if c[:case_number] == @case[:case_number]} justify-between" do %>
             <span>#<%= c[:case_number] %></span>
-            <span class="fe-badge <%= 'fe-badge-warn' if c[:status] == 'open' %>" style="font-size:.6rem"><%= c[:status] %></span>
+            <span class="fe-badge fe-badge-sm <%= 'fe-badge-warn' if c[:status] == 'open' %>"><%= c[:status] %></span>
           <% end %>
         <% end %>
       </div>
@@ -108,22 +108,22 @@
         <%= form_with url: fire_engine_case_case_actions_path(@case[:case_number]), method: :post, local: true do %>
           <div class="mb-4">
             <label class="fe-label block mb-2">reported user(s), comma separated</label>
-            <%= text_field_tag :target_user_ids, nil, class: "fe-field", style: "width:100%" %>
+            <%= text_field_tag :target_user_ids, nil, class: "fe-field w-full" %>
           </div>
 
           <div class="mb-4">
             <label class="fe-label block mb-2">what did they do</label>
-            <%= text_area_tag :violation, nil, rows: 3, class: "fe-field", style: "width:100%" %>
+            <%= text_area_tag :violation, nil, rows: 3, class: "fe-field w-full" %>
           </div>
 
-          <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label class="fe-label block mb-2">action taken</label>
-              <%= select_tag :action_type, options_for_select(@action_type_options.map { |o| [o.tr("_", " "), o] }), class: "fe-field", style: "width:100%" %>
+              <%= select_tag :action_type, options_for_select(@action_type_options.map { |o| [o.tr("_", " "), o] }), class: "fe-field w-full" %>
             </div>
             <div>
               <label class="fe-label block mb-2">category</label>
-              <%= select_tag :category, options_for_select(@category_options), class: "fe-field", style: "width:100%" %>
+              <%= select_tag :category, options_for_select(@category_options), class: "fe-field w-full" %>
             </div>
           </div>
 
@@ -132,7 +132,7 @@
             <%= date_field_tag :ban_until, nil, class: "fe-field" %>
           </div>
 
-          <%= submit_tag "file conduct report", class: "fe-button" %>
+          <%= submit_tag "file conduct report", class: "fe-button", data: { turbo_submits_with: "filing…" } %>
         <% end %>
       </div>
     </div>

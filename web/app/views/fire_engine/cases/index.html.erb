@@ -1,7 +1,7 @@
 <% content_for :page_title, "Cases" %>
 <% content_for :page_subtitle, "open conduct cases across fd" %>
 
-<div class="grid grid-cols-3 gap-5 mb-8">
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
   <div class="fe-card p-5">
     <span class="fe-eyebrow">open</span>
     <div class="fe-stat mt-2"><%= @open_count %></div>
@@ -23,25 +23,26 @@
   <%= link_to "all", fire_engine_cases_path, class: "fe-link" %>
 </div>
 
-<div class="fe-card overflow-hidden">
-  <div class="grid grid-cols-5 gap-4 px-5 py-3 border-b fe-divider">
-    <span class="fe-eyebrow">case</span>
-    <span class="fe-eyebrow">status</span>
-    <span class="fe-eyebrow">thread</span>
-    <span class="fe-eyebrow">assignees</span>
-    <span class="fe-eyebrow">opened</span>
-  </div>
-  <% @cases.each do |c| %>
-    <%= link_to fire_engine_case_path(c[:case_number]),
-        class: "fe-card-interactive grid grid-cols-5 gap-4 px-5 py-3 border-b fe-divider last:border-b-0",
-        style: "text-decoration:none; color:var(--foreground)" do %>
-      <span class="fe-label">#<%= c[:case_number] %></span>
-      <span>
-        <span class="fe-badge <%= 'fe-badge-warn' if c[:status] == 'open' %>"><%= c[:status] %></span>
-      </span>
-      <span class="fe-label"><%= truncate(c[:snippet], length: 40) if c[:snippet] %></span>
-      <span class="fe-label"><%= c[:assignees].any? ? c[:assignees].join(", ") : "unassigned" %></span>
-      <span class="fe-label"><%= c[:opened_at].strftime("%Y-%m-%d") %></span>
+<div class="fe-card overflow-x-auto">
+  <div class="min-w-[640px]">
+    <div class="grid grid-cols-5 gap-4 px-5 py-3 border-b fe-divider">
+      <span class="fe-eyebrow">case</span>
+      <span class="fe-eyebrow">status</span>
+      <span class="fe-eyebrow">thread</span>
+      <span class="fe-eyebrow">assignees</span>
+      <span class="fe-eyebrow">opened</span>
+    </div>
+    <% @cases.each do |c| %>
+      <%= link_to fire_engine_case_path(c[:case_number]),
+          class: "fe-card-interactive fe-card-link grid grid-cols-5 gap-4 px-5 py-3 border-b fe-divider last:border-b-0" do %>
+        <span class="fe-label">#<%= c[:case_number] %></span>
+        <span>
+          <span class="fe-badge <%= 'fe-badge-warn' if c[:status] == 'open' %>"><%= c[:status] %></span>
+        </span>
+        <span class="fe-label"><%= truncate(c[:snippet], length: 40) if c[:snippet] %></span>
+        <span class="fe-label"><%= c[:assignees].any? ? c[:assignees].join(", ") : "unassigned" %></span>
+        <span class="fe-label"><%= c[:opened_at].strftime("%Y-%m-%d") %></span>
+      <% end %>
     <% end %>
-  <% end %>
+  </div>
 </div>

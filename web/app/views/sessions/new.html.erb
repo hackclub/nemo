@@ -1,12 +1,7 @@
-<div class="mn-section-label">[ SIGN IN ]</div>
+<h2 class="mn-h2 mb-2">Sign in</h2>
+<p class="mn-label mb-6">authenticate with hack club auth to continue. access beyond this point is restricted to allowlisted staff and logged accordingly.</p>
 
-<div class="mn-panel">
-  <p class="mb-6">authenticate with hack club auth to continue. access beyond this point is restricted to allowlisted staff and logged accordingly.</p>
-
-  <%= form_tag "/auth/hackclub", method: :post, authenticity_token: false, data: { turbo: false } do %>
-    <%= hidden_field_tag :authenticity_token, Rack::Protection::AuthenticityToken.token(session) %>
-    <%= submit_tag "log in with hack club auth", class: "mn-btn-accent" %>
-  <% end %>
-</div>
-
-<p class="mn-stamp mt-6">mnemosyne &middot; community manager + fire engine portal</p>
+<%= form_tag "/auth/hackclub", method: :post, authenticity_token: false, data: { turbo: false } do %>
+  <%= hidden_field_tag :authenticity_token, Rack::Protection::AuthenticityToken.token(session) %>
+  <%= submit_tag "log in with hack club auth", class: "mn-button w-full", data: { turbo_submits_with: "redirecting…" } %>
+<% end %>

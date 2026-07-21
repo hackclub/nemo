@@ -4,7 +4,7 @@
 <div class="fe-card p-4 mb-8">
   <%= form_tag fire_engine_root_path, method: :get, class: "flex gap-3" do %>
     <%= text_field_tag :q, params[:q], placeholder: "search by slack id, username, or email", class: "fe-field flex-1" %>
-    <%= submit_tag "search", class: "fe-button" %>
+    <%= submit_tag "search", class: "fe-button", data: { turbo_submits_with: "searching…" } %>
   <% end %>
 </div>
 
@@ -14,7 +14,7 @@
     <div class="fe-card overflow-hidden">
       <% if @results.any? %>
         <% @results.each do |m| %>
-          <%= link_to fire_engine_member_path(m.user_id), class: "fe-card-interactive flex items-center justify-between px-5 py-3 border-b fe-divider last:border-b-0", style: "text-decoration:none; color:var(--foreground)" do %>
+          <%= link_to fire_engine_member_path(m.user_id), class: "fe-card-interactive fe-card-link flex items-center justify-between px-5 py-3 border-b fe-divider last:border-b-0" do %>
             <span><%= m.display_name.presence || m.name.presence || m.user_id %></span>
             <span class="fe-label"><%= m.user_id %></span>
           <% end %>
@@ -27,7 +27,7 @@
 <% end %>
 
 <div class="grid grid-cols-3 gap-5 mb-8">
-  <%= link_to fire_engine_cases_path, class: "fe-card fe-card-interactive p-5", style: "text-decoration:none; color:inherit" do %>
+  <%= link_to fire_engine_cases_path, class: "fe-card fe-card-interactive fe-card-link p-5" do %>
     <div class="flex items-center justify-between mb-4">
       <span class="fe-icon-badge">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
@@ -39,7 +39,7 @@
     <p class="fe-label mt-1"><%= @cases_summary[:unassigned_count] %> unassigned &middot; <%= @cases_summary[:aging_5d_plus] %> aging 5+ days</p>
   <% end %>
 
-  <%= link_to fire_engine_reports_path, class: "fe-card fe-card-interactive p-5", style: "text-decoration:none; color:inherit" do %>
+  <%= link_to fire_engine_reports_path, class: "fe-card fe-card-interactive fe-card-link p-5" do %>
     <div class="flex items-center justify-between mb-4">
       <span class="fe-icon-badge">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V4a1 1 0 0 1 1-1h9l5 5v7a1 1 0 0 1-1 1H8"/><path d="M4 15h8"/></svg>

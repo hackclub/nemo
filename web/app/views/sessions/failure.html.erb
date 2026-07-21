@@ -1,11 +1,9 @@
-<div class="mn-section-label">[ ACCESS DENIED ]</div>
+<h2 class="mn-h2 mn-text-danger mb-2">Access denied</h2>
 
-<div class="mn-panel">
-  <% if @message == "not_on_allowlist" %>
-    <p>your hack club auth login worked, but you're not on mnemosyne's staff list yet. ping whoever runs this thing.</p>
-  <% else %>
-    <p>something went wrong signing in (<%= @message %>). try again?</p>
-  <% end %>
+<% if @message == "not_on_allowlist" %>
+  <p class="mn-label mb-4">your hack club auth login worked, but you're not on mnemosyne's staff list yet. ping whoever runs this thing.</p>
+<% else %>
+  <p class="mn-label mb-4">something went wrong signing in (<%= @message %>). try again?</p>
+<% end %>
 
-  <%= link_to "back to login", login_path, class: "mn-link inline-block mt-4" %>
-</div>
+<%= link_to "back to login", login_path, class: "mn-link" %>

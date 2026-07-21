@@ -1,0 +1,85 @@
+/*
+ * Mnemosyne design tokens — portable export.
+ * Source of truth is app/assets/tailwind/application.css; this file mirrors
+ * it for reuse in other projects. See design.md for the full system.
+ */
+
+:root {
+  /* radius */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 1.25rem;
+
+  /* type */
+  --font-display: "Space Grotesk", "IBM Plex Sans", sans-serif;
+  --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+
+  --text-3xs: 0.625rem;
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.5rem;
+  --text-stat: clamp(1.75rem, 1.4rem + 1.5vw, 2.5rem);
+
+  /* space — 4pt scale */
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 2.5rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
+
+  /* motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-short: 150ms;
+  --dur-base: 220ms;
+
+  /* hack club flag colors — categorical coding only, never a competing accent */
+  --flag-red: oklch(62.3% 0.215 19);
+  --flag-orange: oklch(75.3% 0.168 53);
+  --flag-yellow: oklch(83.6% 0.169 92);
+  --flag-green: oklch(78.3% 0.147 168);
+  --flag-blue: oklch(62.9% 0.142 248);
+  --flag-purple: oklch(56.6% 0.239 314);
+
+  /* fire engine — dark, investigative */
+  --fe-paper: oklch(19.5% 0.011 347);
+  --fe-paper-2: oklch(23.4% 0.015 356);
+  --fe-paper-3: oklch(25.8% 0.018 0);
+  --fe-rule: oklch(30.2% 0.021 4);
+  --fe-rule-strong: oklch(35.9% 0.028 5);
+  --fe-ink: oklch(96.1% 0.007 53);
+  --fe-ink-2: oklch(67.8% 0.023 36);
+  --fe-accent: var(--flag-red);
+  --fe-accent-hover: oklch(67.7% 0.213 18);
+  --fe-accent-ink: oklch(97% 0.012 15);
+  --fe-accent-muted: oklch(28.4% 0.045 12);
+  --fe-success: oklch(79.5% 0.138 166);
+  --fe-danger: oklch(76.6% 0.141 14);
+  --fe-focus: var(--flag-red);
+
+  /* community — light, informational */
+  --mn-paper: oklch(97.1% 0.007 81);
+  --mn-paper-2: oklch(100% 0 90);
+  --mn-paper-3: oklch(97.7% 0.009 52);
+  --mn-rule: oklch(92.1% 0.015 81);
+  --mn-rule-strong: oklch(87.3% 0.021 79);
+  --mn-ink: oklch(27.2% 0.013 72);
+  --mn-ink-2: oklch(61.3% 0.018 79);
+  --mn-accent: var(--flag-red);
+  --mn-accent-hover: oklch(57% 0.202 20);
+  --mn-accent-ink: oklch(97% 0.012 15);
+  --mn-accent-muted: oklch(94.7% 0.022 14);
+  --mn-success: oklch(62.1% 0.121 166);
+  --mn-danger: oklch(51.7% 0.179 18);
+  --mn-focus: var(--flag-red);
+}

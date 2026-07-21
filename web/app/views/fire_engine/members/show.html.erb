@@ -5,9 +5,9 @@
   <%= link_to "back to dashboard", fire_engine_root_path, class: "fe-link" %>
 </div>
 
-<div class="fe-card p-6 mb-8 flex gap-6 items-center">
+<div class="fe-card p-6 mb-8 flex flex-col sm:flex-row gap-6 sm:items-center">
   <img src="https://cachet.dunkirk.sh/users/<%= @member.user_id %>/r" alt=""
-       class="w-16 h-16 object-cover" style="border-radius: 0.5rem;">
+       class="fe-avatar w-16 h-16 shrink-0">
   <div>
     <div class="fe-h2"><%= @member.display_name.presence || @member.name %></div>
     <p class="fe-label mt-2">
@@ -36,9 +36,9 @@
   </div>
 
   <%= form_with url: fire_engine_member_notes_path(@member.user_id), method: :post, local: true, class: "mt-3" do %>
-    <div class="flex gap-3">
-      <%= text_field_tag :body, nil, placeholder: "add a note...", class: "fe-field", style: "flex:1" %>
-      <%= submit_tag "add note", class: "fe-button" %>
+    <div class="flex flex-col sm:flex-row gap-3">
+      <%= text_field_tag :body, nil, placeholder: "add a note...", class: "fe-field flex-1" %>
+      <%= submit_tag "add note", class: "fe-button", data: { turbo_submits_with: "adding…" } %>
     </div>
   <% end %>
 </div>

@@ -1,4 +1,5 @@
 class SessionsController < ApplicationController
+  layout "auth"
   skip_before_action :require_staff
 
   def new

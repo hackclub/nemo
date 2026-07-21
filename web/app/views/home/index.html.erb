@@ -1,13 +1,165 @@
-<div class="mn-section-label">[ COMMUNITY OVERVIEW ]</div>
+<% content_for :page_title, "Dashboard" %>
+<% content_for :page_subtitle, "community health at a glance" %>
 
-<div class="mn-panel mb-8">
-  <p class="mn-stamp mb-2">you: <%= current_staff.user_id %></p>
-  <p>community health dashboards land here.</p>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-5 mb-8">
+  <div class="mn-card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <span class="mn-icon-badge mn-icon-badge-blue">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 6 12 13 2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
+      </span>
+    </div>
+    <div class="mn-eyebrow mb-1">invited</div>
+    <div class="mn-stat"><%= number_with_delimiter(@activation.invited) %></div>
+    <p class="mn-label mt-2">analytics.mart_activation</p>
+  </div>
+
+  <div class="mn-card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <span class="mn-icon-badge mn-icon-badge-green">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
+      </span>
+    </div>
+    <div class="mn-eyebrow mb-1">claimed</div>
+    <div class="mn-stat"><%= number_with_delimiter(@activation.claimed) %></div>
+    <p class="mn-trend-up mt-2"><%= number_to_percentage(@activation.claim_rate.to_f * 100, precision: 1) %> claim rate</p>
+  </div>
+
+  <div class="mn-card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <span class="mn-icon-badge mn-icon-badge-orange">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </span>
+    </div>
+    <div class="mn-eyebrow mb-1">active accounts</div>
+    <div class="mn-stat"><%= number_with_delimiter(@active_members) %></div>
+    <p class="mn-label mt-2">not deactivated as of snapshot</p>
+  </div>
+
+  <div class="mn-card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <span class="mn-icon-badge mn-icon-badge-purple">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </span>
+    </div>
+    <div class="mn-eyebrow mb-1">posting members</div>
+    <% if @participation %>
+      <div class="mn-stat"><%= number_with_delimiter(@participation.posting_members) %></div>
+      <p class="mn-label mt-2"><%= number_to_percentage((@participation.posting_share.to_f * 100).round(1), precision: 1) %> of active, window ending <%= @participation.window_end.strftime("%Y-%m-%d") %></p>
+    <% else %>
+      <div class="mn-stat">&mdash;</div>
+      <p class="mn-label mt-2">no participation window loaded</p>
+    <% end %>
+  </div>
 </div>
 
-<div class="mn-panel mb-8" style="border-color:#b3261e">
-  <p class="mb-3">fire engine &mdash; gated member reference for fd. every lookup is logged.</p>
-  <%= link_to "enter fire engine", fire_engine_root_path, class: "mn-btn-accent inline-block" %>
+<div class="mb-8">
+  <h2 class="mn-h2 mb-3">Growth, last <%= @growth_months.size %> months</h2>
+  <div class="mn-card p-5">
+    <% max_joined = [@growth_months.map(&:joined_members).max, 1].max %>
+    <% @growth_months.each do |m| %>
+      <div class="flex items-center gap-4 py-2">
+        <span class="mn-label w-20 shrink-0"><%= m.month.strftime("%b %Y") %></span>
+        <div class="mn-bar-track flex-1 h-2 rounded-full overflow-hidden">
+          <div class="mn-bar-fill h-full rounded-full" style="width:<%= (m.joined_members.to_f / max_joined * 100).round(1) %>%"></div>
+        </div>
+        <span class="mn-label w-16 text-right"><%= number_with_delimiter(m.joined_members) %> joined</span>
+        <span class="mn-label w-20 text-right"><%= number_with_delimiter(m.deactivated) %> left</span>
+        <span class="<%= m.net_change >= 0 ? 'mn-trend-up' : 'mn-trend-down' %> justify-end w-16"><%= m.net_change >= 0 ? "+" : "" %><%= m.net_change %></span>
+      </div>
+    <% end %>
+  </div>
 </div>
 
-<%= button_to "log out", logout_path, method: :delete, class: "mn-link" %>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
+  <div>
+    <h2 class="mn-h2 mb-3">Activity distribution</h2>
+    <div class="mn-card p-5">
+      <% total_banded = @activity_bands.sum(&:members) %>
+      <div class="mn-bar-track flex h-2.5 rounded-full overflow-hidden mb-4">
+        <% @activity_bands.each do |b| %>
+          <div class="mn-band-<%= b.band_order %>" style="width:<%= total_banded.positive? ? (b.members.to_f / total_banded * 100).round(2) : 0 %>%"></div>
+        <% end %>
+      </div>
+      <% @activity_bands.each do |b| %>
+        <div class="flex items-center justify-between py-1.5">
+          <span class="flex items-center gap-2 mn-label">
+            <span class="mn-band-<%= b.band_order %> inline-block w-2 h-2 rounded-full"></span>
+            messages posted: <%= b.activity_band %>
+          </span>
+          <span class="mn-label"><%= number_with_delimiter(b.members) %> &middot; <%= total_banded.positive? ? number_to_percentage((b.members.to_f / total_banded * 100).round(1), precision: 1) : "0%" %></span>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <div>
+    <h2 class="mn-h2 mb-3">Account composition</h2>
+    <div class="mn-card overflow-x-auto">
+      <div class="min-w-[420px]">
+        <div class="grid grid-cols-4 gap-4 px-5 py-3 border-b mn-divider">
+          <span class="mn-eyebrow">type</span>
+          <span class="mn-eyebrow text-right">members</span>
+          <span class="mn-eyebrow text-right">claimed</span>
+          <span class="mn-eyebrow text-right">messages</span>
+        </div>
+        <% @account_types.each do |a| %>
+          <div class="grid grid-cols-4 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center">
+            <span class="mn-label"><%= a.account_type %><%= " (guest)" if a.is_guest %></span>
+            <span class="mn-label text-right"><%= number_with_delimiter(a.members) %></span>
+            <span class="mn-label text-right"><%= number_with_delimiter(a.claimed) %></span>
+            <span class="mn-label text-right"><%= number_with_delimiter(a.total_messages) %></span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mb-8">
+  <h2 class="mn-h2 mb-3">Top channels</h2>
+  <div class="mn-card overflow-x-auto">
+    <div class="min-w-[640px]">
+      <div class="grid grid-cols-6 gap-4 px-5 py-3 border-b mn-divider">
+        <span class="mn-eyebrow col-span-2">channel</span>
+        <span class="mn-eyebrow text-right">messages</span>
+        <span class="mn-eyebrow text-right">posters</span>
+        <span class="mn-eyebrow text-right">reactions</span>
+        <span class="mn-eyebrow text-right">huddles</span>
+      </div>
+      <% @top_channels.each do |c| %>
+        <div class="grid grid-cols-6 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center mn-card-interactive">
+          <span class="col-span-2 flex items-center gap-2">
+            #<%= c.name %>
+            <span class="mn-badge <%= "mn-badge-pending" if c.visibility != "public" %> inline-flex items-center gap-1.5">
+              <span class="badge-dot <%= c.visibility == "public" ? "mn-dot-public" : "mn-dot-private" %>"></span>
+              <%= c.visibility %>
+            </span>
+          </span>
+          <span class="mn-label text-right"><%= number_with_delimiter(c.messages_posted) %></span>
+          <span class="mn-label text-right"><%= number_with_delimiter(c.members_who_posted) %></span>
+          <span class="mn-label text-right"><%= number_with_delimiter(c.reactions_added) %></span>
+          <span class="mn-label text-right"><%= number_with_delimiter(c.huddles_initiated) %></span>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<div class="mb-4">
+  <h2 class="mn-h2 mb-3">Not yet covered</h2>
+  <div class="mn-card overflow-hidden">
+    <% [
+      ["Retention", "cohort survival past the first weeks: needs multiple time-spaced snapshots, we only have one"],
+      ["New member experience", "onboarding completion and time-to-first-post"],
+      ["Response rate", "how quickly questions and posts get a reply"]
+    ].each do |name, description| %>
+      <div class="flex items-center justify-between px-5 py-4 border-b mn-divider last:border-b-0">
+        <div>
+          <p class="mn-h2 mn-h2-sm"><%= name %></p>
+          <p class="mn-label mt-1"><%= description %></p>
+        </div>
+        <span class="mn-badge mn-badge-pending">chart delivery pending</span>
+      </div>
+    <% end %>
+  </div>
+</div>
