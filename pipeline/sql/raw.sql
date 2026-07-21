@@ -66,6 +66,9 @@ CREATE TABLE IF NOT EXISTS raw.channel_activity_snapshot (
     PRIMARY KEY (channel_id, window_start, window_end, source)
 );
 
+ALTER TABLE raw.member_activity_snapshot ADD COLUMN IF NOT EXISTS days_active_apps integer;
+ALTER TABLE raw.member_activity_snapshot ADD COLUMN IF NOT EXISTS days_active_workflows integer;
+
 CREATE TABLE IF NOT EXISTS raw.sync_cursor (
     source text NOT NULL,
     channel_id text NOT NULL DEFAULT '',
