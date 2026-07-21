@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "raw slack channel_rename event",
+  "type": "object",
+  "required": ["channel"],
+  "additionalProperties": false,
+  "properties": {
+    "channel": {
+      "type": "object",
+      "required": ["id", "name", "created"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "created": { "type": "integer" }
+      }
+    }
+  }
+}

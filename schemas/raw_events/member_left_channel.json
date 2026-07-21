@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "raw slack member_left_channel event",
+  "type": "object",
+  "required": ["user", "channel", "event_ts"],
+  "additionalProperties": false,
+  "properties": {
+    "user": { "type": "string" },
+    "channel": { "type": "string" },
+    "channel_type": { "type": "string" },
+    "event_ts": { "type": "string" }
+  }
+}

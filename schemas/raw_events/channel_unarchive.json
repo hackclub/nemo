@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "raw slack channel_unarchive event",
+  "type": "object",
+  "required": ["channel", "user"],
+  "additionalProperties": false,
+  "properties": {
+    "channel": { "type": "string" },
+    "user": { "type": "string" }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "raw slack message event (metadata only)",
+  "description": "What pipeline/ingest stores for a message event. Note: no text/content field by design",
+  "type": "object",
+  "required": ["ts", "channel", "user", "event_ts"],
+  "additionalProperties": false,
+  "properties": {
+    "ts": { "type": "string" },
+    "channel": { "type": "string" },
+    "user": { "type": "string" },
+    "thread_ts": { "type": "string" },
+    "event_ts": { "type": "string" },
+    "subtype": { "type": "string" }
+  }
+}

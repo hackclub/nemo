@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "raw slack reaction_added event",
+  "type": "object",
+  "required": ["user", "item", "event_ts"],
+  "additionalProperties": false,
+  "properties": {
+    "user": { "type": "string" },
+    "reaction": { "type": "string" },
+    "item": {
+      "type": "object",
+      "required": ["type", "channel", "ts"],
+      "properties": {
+        "type": { "const": "message" },
+        "channel": { "type": "string" },
+        "ts": { "type": "string" }
+      }
+    },
+    "event_ts": { "type": "string" }
+  }
+}

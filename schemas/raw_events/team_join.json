@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "raw slack team_join event (identity fields stripped)",
+  "type": "object",
+  "required": ["user", "event_ts"],
+  "additionalProperties": false,
+  "properties": {
+    "user": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "is_bot": { "type": "boolean" }
+      }
+    },
+    "event_ts": { "type": "string" }
+  }
+}
