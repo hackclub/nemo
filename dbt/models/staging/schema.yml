@@ -25,3 +25,9 @@ models:
         data_tests: [not_null]
       - name: channel_id
         data_tests: [not_null]
+  - name: fct_first_reply
+    columns:
+      - name: newcomer_id
+        data_tests: [unique, not_null]
+      - name: replier_id
+        data_tests: [not_null]
