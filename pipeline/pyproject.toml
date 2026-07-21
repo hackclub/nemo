@@ -5,6 +5,9 @@ requires-python = ">=3.13"
 dependencies = [
     "psycopg[binary]>=3.2",
     "python-dotenv>=1.0",
+    "slack-sdk>=3.33",
+    "slack-bolt>=1.20",
+    "jsonschema>=4.23",
 ]
 
 [dependency-groups]
