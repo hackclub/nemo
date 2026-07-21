@@ -46,6 +46,34 @@ def finish_run(conn: psycopg.Connection, run_id: int, status: str, rows_in: int,
         )
 
 
+def get_cursor(conn: psycopg.Connection, source: str, channel_id: str = "") -> str | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT cursor, status FROM raw.sync_cursor WHERE source = %s AND channel_id = %s",
+            (source, channel_id),
+        )
+        row = cur.fetchone()
+        if row and row[1] == "running":
+            return row[0]
+        return None
+
+
+def save_cursor(conn: psycopg.Connection, source: str, cursor: str, channel_id: str = "") -> None:
+    status = "running" if cursor else "done"
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO raw.sync_cursor (source, channel_id, cursor, status, updated_at)
+            VALUES (%s, %s, %s, %s, now())
+            ON CONFLICT (source, channel_id) DO UPDATE SET
+                cursor = EXCLUDED.cursor,
+                status = EXCLUDED.status,
+                updated_at = now()
+            """,
+            (source, channel_id, cursor, status),
+        )
+
+
 def dead_letter(conn: psycopg.Connection, source: str, payload: dict, reason: str) -> None:
     with conn.cursor() as cur:
         cur.execute(

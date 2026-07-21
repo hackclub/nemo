@@ -6,7 +6,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from lib.db import connect, dead_letter, finish_run, start_run
+from lib.db import connect, dead_letter, finish_run, get_cursor, save_cursor, start_run
 from lib.slack_client import admin_client
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -241,8 +241,10 @@ def pull_channel_day(conn, pull_date):
 def pull_users(conn):
     run_id = start_run(conn, USERS_SOURCE)
     rows_in = rows_rejected = 0
-    dim_rows, profile_rows = [], []
-    for page in admin_client().admin_users_list(limit=99):
+    cursor = get_cursor(conn, USERS_SOURCE)
+    while True:
+        page = admin_client().admin_users_list(limit=99, cursor=cursor)
+        dim_rows, profile_rows = [], []
         for user in page.get("users", []):
             rows_in += 1
             try:
@@ -251,10 +253,16 @@ def pull_users(conn):
             except KeyError as exc:
                 rows_rejected += 1
                 dead_letter(conn, USERS_SOURCE, user, str(exc))
-    with conn.cursor() as cur:
-        cur.executemany(USER_DIM_MERGE_SQL, dim_rows)
-        cur.executemany(USER_PROFILE_SQL, profile_rows)
+        with conn.cursor() as cur:
+            cur.executemany(USER_DIM_MERGE_SQL, dim_rows)
+            cur.executemany(USER_PROFILE_SQL, profile_rows)
+        cursor = page.get("response_metadata", {}).get("next_cursor") or ""
+        save_cursor(conn, USERS_SOURCE, cursor)
+        conn.commit()
+        if not cursor:
+            break
     finish_run(conn, run_id, "ok", rows_in, rows_rejected)
+    conn.commit()
     print(f"admin users: {rows_in} rows, {rows_rejected} rejected")
 
 

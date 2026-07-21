@@ -3,7 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from slack_sdk.errors import SlackApiError
 
-from lib.db import connect, dead_letter, finish_run, start_run
+from lib.db import connect, dead_letter, finish_run, get_cursor, save_cursor, start_run
 from lib.slack_client import admin_client, bot_client
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -18,28 +18,30 @@ def resolve_team_id():
     raise RuntimeError("admin.teams.list returned no teams")
 
 
-def list_public_channel_ids(client, team_id):
-    for page in client.conversations_list(
-        types="public_channel", exclude_archived=True, limit=200, team_id=team_id
-    ):
-        for channel in page.get("channels", []):
-            yield channel["id"]
-
-
 def join_all(conn, client):
     team_id = resolve_team_id()
     run_id = start_run(conn, SOURCE)
     rows_in = rows_rejected = 0
-    for channel_id in list_public_channel_ids(client, team_id):
-        rows_in += 1
-        try:
-            client.conversations_join(channel=channel_id)
-        except SlackApiError as exc:
-            error = exc.response.get("error")
-            if error == "is_archived":
-                continue
-            rows_rejected += 1
-            dead_letter(conn, SOURCE, {"channel_id": channel_id}, error or str(exc))
+    cursor = get_cursor(conn, SOURCE)
+    while True:
+        page = client.conversations_list(
+            types="public_channel", exclude_archived=True, limit=200, team_id=team_id, cursor=cursor
+        )
+        for channel in page.get("channels", []):
+            rows_in += 1
+            try:
+                client.conversations_join(channel=channel["id"])
+            except SlackApiError as exc:
+                error = exc.response.get("error")
+                if error == "is_archived":
+                    continue
+                rows_rejected += 1
+                dead_letter(conn, SOURCE, {"channel_id": channel["id"]}, error or str(exc))
+        cursor = page.get("response_metadata", {}).get("next_cursor") or ""
+        save_cursor(conn, SOURCE, cursor)
+        conn.commit()
+        if not cursor:
+            break
     finish_run(conn, run_id, "ok", rows_in, rows_rejected)
     conn.commit()
     print(f"autojoin: {rows_in} channels checked, {rows_rejected} failed")
