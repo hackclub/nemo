@@ -29,3 +29,7 @@ models:
     columns:
       - name: fast_reply
         data_tests: [not_null, unique]
+  - name: mart_onboarding_funnel
+    columns:
+      - name: cohort_month
+        data_tests: [not_null, unique]
