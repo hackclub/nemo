@@ -9,6 +9,15 @@ from lib.slack_client import admin_client, bot_client
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 SOURCE = "autojoin"
 
+CHANNEL_NAME_SQL = """
+INSERT INTO raw.channel_dim (channel_id, name, archived, updated_at)
+VALUES (%s, %s, %s, now())
+ON CONFLICT (channel_id) DO UPDATE SET
+    name = EXCLUDED.name,
+    archived = EXCLUDED.archived,
+    updated_at = now()
+"""
+
 
 def resolve_team_id():
     for page in admin_client().admin_teams_list(limit=99):
@@ -29,6 +38,8 @@ def join_all(conn, client):
         )
         for channel in page.get("channels", []):
             rows_in += 1
+            with conn.cursor() as cur:
+                cur.execute(CHANNEL_NAME_SQL, (channel["id"], channel.get("name"), channel.get("is_archived", False)))
             try:
                 client.conversations_join(channel=channel["id"])
             except SlackApiError as exc:
