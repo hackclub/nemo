@@ -26,6 +26,14 @@ class LylaClient
     request(:get, "/api/v1/members/#{user_id}/case-actions", params: { limit: limit })
   end
 
+  def notes_for_member(user_id)
+    request(:get, "/api/v1/members/#{user_id}/notes")
+  end
+
+  def create_note(user_id, body:, created_by:)
+    request(:post, "/api/v1/members/#{user_id}/notes", body: { body: body, created_by: created_by })
+  end
+
   private
 
   def request(method, path, params: nil, body: nil)
