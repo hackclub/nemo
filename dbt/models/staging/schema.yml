@@ -17,3 +17,11 @@ models:
     columns:
       - name: channel_id
         data_tests: [not_null]
+  - name: fct_message
+    columns:
+      - name: ts
+        data_tests: [not_null]
+      - name: user_id
+        data_tests: [not_null]
+      - name: channel_id
+        data_tests: [not_null]
