@@ -65,3 +65,39 @@ CREATE TABLE IF NOT EXISTS raw.channel_activity_snapshot (
     created_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (channel_id, window_start, window_end, source)
 );
+
+CREATE TABLE IF NOT EXISTS raw.sync_cursor (
+    source text NOT NULL,
+    channel_id text NOT NULL DEFAULT '',
+    cursor text,
+    status text,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (source, channel_id)
+);
+
+CREATE TABLE IF NOT EXISTS raw.ingest_run (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    source text NOT NULL,
+    started_at timestamptz NOT NULL DEFAULT now(),
+    finished_at timestamptz,
+    status text NOT NULL DEFAULT 'running',
+    rows_in integer,
+    rows_rejected integer,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS raw.dead_letter (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    source text NOT NULL,
+    payload jsonb NOT NULL,
+    reason text,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS raw.slack_events (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    event_type text NOT NULL,
+    payload jsonb NOT NULL,
+    received_at timestamptz NOT NULL DEFAULT now(),
+    created_at timestamptz NOT NULL DEFAULT now()
+);
