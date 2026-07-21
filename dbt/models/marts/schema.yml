@@ -33,3 +33,7 @@ models:
     columns:
       - name: cohort_month
         data_tests: [not_null, unique]
+  - name: mart_channel_onboarding_scorecard
+    columns:
+      - name: channel_id
+        data_tests: [not_null]
