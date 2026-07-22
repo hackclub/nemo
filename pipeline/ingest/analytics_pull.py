@@ -1,7 +1,8 @@
 import argparse
+import calendar
 import gzip
 import json
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -192,6 +193,29 @@ def user_profile_row(user):
     return (user["id"], user.get("full_name"), user.get("username"), user.get("email"))
 
 
+def months_ago(d, months):
+    total = d.year * 12 + (d.month - 1) - months
+    year, month = divmod(total, 12)
+    month += 1
+    day = min(d.day, calendar.monthrange(year, month)[1])
+    return d.replace(year=year, month=month, day=day)
+
+
+def backfill(conn, pull_fn, label):
+    pull_date = date.today() - timedelta(days=2)
+    end_date = months_ago(date.today(), 13)
+    while pull_date >= end_date:
+        try:
+            pull_fn(conn, pull_date)
+            conn.commit()
+        except Exception as exc:
+            conn.rollback()
+            dead_letter(conn, f"{label}_backfill", {"date": pull_date.isoformat()}, str(exc))
+            conn.commit()
+            print(f"{label} backfill {pull_date}: ERROR {exc}")
+        pull_date -= timedelta(days=1)
+
+
 def pull_member_day(conn, pull_date):
     run_id = start_run(conn, f"{ANALYTICS_SOURCE}:member")
     rows_in = rows_rejected = 0
@@ -271,10 +295,14 @@ def main():
     sub = parser.add_subparsers(dest="kind", required=True)
 
     member = sub.add_parser("member")
-    member.add_argument("--date", required=True, type=date.fromisoformat)
+    member_group = member.add_mutually_exclusive_group(required=True)
+    member_group.add_argument("--date", type=date.fromisoformat)
+    member_group.add_argument("--backfill", action="store_true")
 
     channel = sub.add_parser("channel")
-    channel.add_argument("--date", required=True, type=date.fromisoformat)
+    channel_group = channel.add_mutually_exclusive_group(required=True)
+    channel_group.add_argument("--date", type=date.fromisoformat)
+    channel_group.add_argument("--backfill", action="store_true")
 
     sub.add_parser("users")
 
@@ -283,9 +311,15 @@ def main():
 
     with connect() as conn:
         if args.kind == "member":
-            pull_member_day(conn, args.date)
+            if args.backfill:
+                backfill(conn, pull_member_day, "member")
+            else:
+                pull_member_day(conn, args.date)
         elif args.kind == "channel":
-            pull_channel_day(conn, args.date)
+            if args.backfill:
+                backfill(conn, pull_channel_day, "channel")
+            else:
+                pull_channel_day(conn, args.date)
         else:
             pull_users(conn)
 
