@@ -208,6 +208,20 @@
   </div>
 </div>
 
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+  <% @fast_reply_vs_retention.each do |row| %>
+    <div class="mn-card p-5">
+      <div class="mn-eyebrow mb-1"><%= row.fast_reply ? "fast reply (< 1hr)" : "slower reply" %></div>
+      <div class="mn-stat"><%= number_with_delimiter(row.newcomers) %> <span class="mn-label">newcomers</span></div>
+      <% if row.retained_day_30_rate %>
+        <p class="mn-label mt-2">day 30: <%= number_to_percentage((row.retained_day_30_rate.to_f * 100).round(1), precision: 1) %> &middot; day 90: <%= number_to_percentage((row.retained_day_90_rate.to_f * 100).round(1), precision: 1) %></p>
+      <% else %>
+        <p class="mn-label mt-2"><span class="mn-badge mn-badge-pending">TBD</span> not enough cohorts have aged yet</p>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
 <div class="mb-4">
   <h2 class="mn-h2 mb-3">Not yet covered</h2>
   <div class="mn-card overflow-hidden">
