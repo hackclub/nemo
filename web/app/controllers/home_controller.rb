@@ -13,6 +13,7 @@ class HomeController < ApplicationController
     @channel_scorecard = Analytics::MartChannelOnboardingScorecard.order(post_month: :desc, newcomer_volume: :desc).limit(10)
     @fast_reply_vs_retention = Analytics::MartFastReplyVsRetention.order(fast_reply: :desc)
     @recurrence_funnel = Analytics::MartOnboardingRecurrenceFunnel.take
+    @message_depth = Analytics::MartMessageDepthDistribution.order(:threshold)
   end
 
   private

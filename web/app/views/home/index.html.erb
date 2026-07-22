@@ -254,6 +254,26 @@
   </div>
 </div>
 
+<div class="mb-8">
+  <h2 class="mn-h2 mb-3">Message depth distribution</h2>
+  <div class="mn-card p-5">
+    <div style="height: 220px;">
+      <canvas
+        data-controller="chart"
+        data-chart-type-value="bar"
+        data-chart-data-value="<%= {
+          labels: @message_depth.map { |r| ">#{r.threshold}" },
+          datasets: [{
+            label: "% of members",
+            data: @message_depth.map { |r| (r.share_above_threshold.to_f * 100).round(1) }
+          }]
+        }.to_json %>"
+        data-chart-options-value="<%= { maintainAspectRatio: false, plugins: { legend: { display: false } } }.to_json %>"
+      ></canvas>
+    </div>
+  </div>
+</div>
+
 <div class="mb-4">
   <h2 class="mn-h2 mb-3">Not yet covered</h2>
   <div class="mn-card overflow-hidden">
