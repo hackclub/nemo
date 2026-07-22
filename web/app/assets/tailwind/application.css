@@ -825,7 +825,10 @@
 
   .mn-band-0 { background-color: var(--mn-rule-strong); }
   .mn-band-1 { background-color: var(--mn-ink-2); }
-  .mn-band-2 { background-color: var(--mn-accent); }
-  .mn-band-3 { background-color: var(--mn-success); }
-  .mn-band-4 { background-color: var(--flag-purple); }
+  .mn-band-2 { background-color: var(--flag-yellow); }
+  .mn-band-3 { background-color: var(--flag-orange); }
+  .mn-band-4 { background-color: var(--mn-accent); }
+  .mn-band-5 { background-color: var(--mn-success); }
+  .mn-band-6 { background-color: var(--flag-blue); }
+  .mn-band-7 { background-color: var(--flag-purple); }
 }

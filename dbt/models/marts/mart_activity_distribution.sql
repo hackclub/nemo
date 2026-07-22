@@ -12,24 +12,41 @@ members as (
         coalesce(t.messages_posted, 0) as messages_posted
     from {{ ref('dim_member') }} m
     left join member_totals t on t.user_id = m.user_id
+),
+
+member_bands as (
+    select
+        case
+            when messages_posted = 0 then 0
+            when messages_posted < 2 then 1
+            when messages_posted < 5 then 2
+            when messages_posted < 10 then 3
+            when messages_posted < 20 then 4
+            when messages_posted < 50 then 5
+            when messages_posted < 100 then 6
+            else 7
+        end as band_order
+    from members
+),
+
+bands (band_order, activity_band) as (
+    values
+        (0, '0 (dormant)'),
+        (1, '1'),
+        (2, '2-4'),
+        (3, '5-9'),
+        (4, '10-19'),
+        (5, '20-49'),
+        (6, '50-99'),
+        (7, '100+')
 )
+
 select
-    case
-        when messages_posted = 0 then 0
-        when messages_posted between 1 and 5 then 1
-        when messages_posted between 6 and 50 then 2
-        when messages_posted between 51 and 500 then 3
-        else 4
-    end as band_order,
-    case
-        when messages_posted = 0 then '0 (dormant)'
-        when messages_posted between 1 and 5 then '1-5'
-        when messages_posted between 6 and 50 then '6-50'
-        when messages_posted between 51 and 500 then '51-500'
-        else '500+'
-    end as activity_band,
-    count(*) as members,
+    b.band_order,
+    b.activity_band,
+    count(mb.band_order) as members,
     'v1' as metric_version
-from members
-group by 1, 2
-order by band_order
+from bands b
+left join member_bands mb on mb.band_order = b.band_order
+group by b.band_order, b.activity_band
+order by b.band_order
