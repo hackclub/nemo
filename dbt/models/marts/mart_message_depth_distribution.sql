@@ -12,7 +12,6 @@ members as (
         coalesce(t.total_messages_posted, 0) as total_messages_posted
     from {{ ref('dim_member') }} m
     left join member_totals t on t.user_id = m.user_id
-    where m.claimed_at is not null
 ),
 
 thresholds as (
