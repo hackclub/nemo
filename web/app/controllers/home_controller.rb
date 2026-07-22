@@ -10,6 +10,7 @@ class HomeController < ApplicationController
     @activity_bands = Analytics::MartActivityDistribution.order(:band_order)
     @account_types = Analytics::MartAccountType.order(members: :desc)
     @onboarding_funnel = Analytics::MartOnboardingFunnel.order(cohort_month: :desc).first
+    @channel_scorecard = Analytics::MartChannelOnboardingScorecard.order(post_month: :desc, newcomer_volume: :desc).limit(10)
   end
 
   private

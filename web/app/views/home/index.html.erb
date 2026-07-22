@@ -178,6 +178,36 @@
   </div>
 </div>
 
+<div class="mb-8">
+  <h2 class="mn-h2 mb-3">Channel onboarding scorecard</h2>
+  <div class="mn-card overflow-x-auto">
+    <div class="min-w-[640px]">
+      <div class="grid grid-cols-5 gap-4 px-5 py-3 border-b mn-divider">
+        <span class="mn-eyebrow">channel</span>
+        <span class="mn-eyebrow">month</span>
+        <span class="mn-eyebrow text-right">newcomers</span>
+        <span class="mn-eyebrow text-right">fast reply</span>
+        <span class="mn-eyebrow text-right">90-day retention</span>
+      </div>
+      <% @channel_scorecard.each do |row| %>
+        <% fast_reply_pct = (row.fast_reply_share.to_f * 100).round(1) %>
+        <div class="grid grid-cols-5 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center">
+          <span class="mn-label">#<%= row.channel_name %></span>
+          <span class="mn-label"><%= row.post_month.strftime("%b %Y") %></span>
+          <span class="mn-label text-right"><%= number_with_delimiter(row.newcomer_volume) %></span>
+          <span class="<%= fast_reply_pct >= 60 ? 'mn-trend-up' : fast_reply_pct >= 30 ? 'mn-label' : 'mn-trend-down' %> text-right"><%= number_to_percentage(fast_reply_pct, precision: 1) %></span>
+          <% if row.day_90_mature %>
+            <% retained_pct = (row.retained_90_share.to_f * 100).round(1) %>
+            <span class="<%= retained_pct >= 60 ? 'mn-trend-up' : retained_pct >= 30 ? 'mn-label' : 'mn-trend-down' %> text-right"><%= number_to_percentage(retained_pct, precision: 1) %></span>
+          <% else %>
+            <span class="text-right"><span class="mn-badge mn-badge-pending">TBD</span></span>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
 <div class="mb-4">
   <h2 class="mn-h2 mb-3">Not yet covered</h2>
   <div class="mn-card overflow-hidden">
