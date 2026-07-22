@@ -16,7 +16,7 @@ members as (
 ),
 
 thresholds as (
-    select unnest(array[0, 1, 2, 3, 4, 5, 10, 25, 50, 100]) as threshold
+    select unnest(array[1, 2, 5, 10, 20, 50, 100]) as threshold
 ),
 
 member_count as (
