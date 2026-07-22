@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 from ingest.analytics_pull import pull_channel_day, pull_member_day, pull_users
 from ingest.autojoin import join_all
+from ingest.message_activity_pull import pull_all_channels
 from lib.db import connect, finish_run, start_run
 from lib.slack_client import bot_client
 
@@ -29,6 +30,7 @@ def main():
             pull_channel_day(conn, pull_date)
             pull_users(conn)
             join_all(conn, bot_client())
+            pull_all_channels(conn)
             run_dbt()
         except Exception:
             finish_run(conn, run_id, "failed", 0, 0)
