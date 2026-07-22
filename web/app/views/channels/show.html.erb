@@ -1,0 +1,23 @@
+<% content_for :page_title, "##{@channel.name}" %>
+<% content_for :page_subtitle, @channel.visibility %>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+  <div class="mn-card p-4">
+    <p class="mn-eyebrow mb-1">members</p>
+    <p class="mn-h2"><%= number_with_delimiter(@channel.total_members) %></p>
+  </div>
+  <div class="mn-card p-4">
+    <p class="mn-eyebrow mb-1">messages tracked</p>
+    <p class="mn-h2"><%= number_with_delimiter(@engagement&.messages_tracked || 0) %></p>
+  </div>
+  <div class="mn-card p-4">
+    <p class="mn-eyebrow mb-1">views</p>
+    <p class="mn-h2"><%= number_with_delimiter(@engagement&.total_views || 0) %></p>
+  </div>
+  <div class="mn-card p-4">
+    <p class="mn-eyebrow mb-1">reactions</p>
+    <p class="mn-h2"><%= number_with_delimiter(@engagement&.total_reactions || 0) %></p>
+  </div>
+</div>
+
+<%= link_to "&larr; back to channels".html_safe, channels_path, class: "mn-link" %>

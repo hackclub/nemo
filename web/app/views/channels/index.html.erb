@@ -1,0 +1,23 @@
+<% content_for :page_title, "Channels" %>
+
+<div class="mn-card overflow-x-auto">
+  <div class="min-w-[640px]">
+    <div class="grid grid-cols-5 gap-4 px-5 py-3 border-b mn-divider">
+      <span class="mn-eyebrow">channel</span>
+      <span class="mn-eyebrow">visibility</span>
+      <span class="mn-eyebrow text-right">members</span>
+      <span class="mn-eyebrow text-right">messages tracked</span>
+      <span class="mn-eyebrow text-right">views</span>
+    </div>
+    <% @channels.each do |channel| %>
+      <% engagement = @engagement[channel.channel_id] %>
+      <%= link_to channel_path(channel), class: "grid grid-cols-5 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center" do %>
+        <span class="mn-label">#<%= channel.name %></span>
+        <span class="mn-label"><%= channel.visibility %></span>
+        <span class="mn-label text-right"><%= number_with_delimiter(channel.total_members) %></span>
+        <span class="mn-label text-right"><%= number_with_delimiter(engagement&.messages_tracked || 0) %></span>
+        <span class="mn-label text-right"><%= number_with_delimiter(engagement&.total_views || 0) %></span>
+      <% end %>
+    <% end %>
+  </div>
+</div>
