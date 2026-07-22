@@ -104,3 +104,19 @@ CREATE TABLE IF NOT EXISTS raw.slack_events (
     received_at timestamptz NOT NULL DEFAULT now(),
     created_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS raw.message_activity_snapshot (
+    channel_id text NOT NULL,
+    message_ts text NOT NULL,
+    source text NOT NULL,
+    unique_user_views_count integer,
+    unique_user_reactions_count integer,
+    unique_user_shares_count integer,
+    unique_user_clicks_count integer,
+    views_client jsonb,
+    stats_by_department jsonb,
+    stats_by_org jsonb,
+    pulled_at timestamptz NOT NULL DEFAULT now(),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (channel_id, message_ts, source)
+);
