@@ -3,11 +3,11 @@
 <div class="mn-card overflow-x-auto">
   <div class="min-w-[640px]">
     <div class="grid grid-cols-5 gap-4 px-5 py-3 border-b mn-divider">
-      <span class="mn-eyebrow">channel</span>
-      <span class="mn-eyebrow">visibility</span>
-      <span class="mn-eyebrow text-right">members</span>
-      <span class="mn-eyebrow text-right">messages tracked</span>
-      <span class="mn-eyebrow text-right">views</span>
+      <%= channel_sort_link("channel", "name") %>
+      <%= channel_sort_link("visibility", "visibility") %>
+      <div class="text-right"><%= channel_sort_link("members", "members") %></div>
+      <div class="text-right"><%= channel_sort_link("messages tracked", "messages") %></div>
+      <div class="text-right"><%= channel_sort_link("views", "views") %></div>
     </div>
     <% @channels.each do |channel| %>
       <% engagement = @engagement[channel.channel_id] %>
