@@ -146,7 +146,18 @@
 </div>
 
 <div class="mb-8">
-  <h2 class="mn-h2 mb-3">Onboarding funnel<%= ", #{@onboarding_funnel.cohort_month.strftime('%b %Y')} cohort" if @onboarding_funnel %></h2>
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="mn-h2">Onboarding funnel</h2>
+    <% if @cohort_months.present? %>
+      <%= form_with url: root_path, method: :get, class: "flex items-center" do |f| %>
+        <%= f.select :cohort_month,
+              @cohort_months.map { |m| [m.strftime("%b %Y"), m.iso8601] },
+              { selected: @onboarding_funnel&.cohort_month&.iso8601 },
+              class: "mn-label border mn-divider rounded px-2 py-1",
+              onchange: "this.form.requestSubmit()" %>
+      <% end %>
+    <% end %>
+  </div>
   <div class="mn-card p-5">
     <% if @onboarding_funnel %>
       <div style="height: 220px;">
