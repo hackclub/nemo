@@ -9,3 +9,4 @@ sources:
       - name: channel_dim
       - name: channel_activity_snapshot
       - name: slack_events
+      - name: message_activity_snapshot
