@@ -145,12 +145,43 @@
   </div>
 </div>
 
+<div class="mb-8">
+  <h2 class="mn-h2 mb-3">Onboarding funnel<%= ", #{@onboarding_funnel.cohort_month.strftime('%b %Y')} cohort" if @onboarding_funnel %></h2>
+  <div class="mn-card p-5">
+    <% if @onboarding_funnel %>
+      <div style="height: 220px;">
+        <canvas
+          data-controller="chart"
+          data-chart-type-value="bar"
+          data-chart-data-value="<%= {
+            labels: ["Invited", "Joined", "First post", "Retained day 30", "Retained day 90"],
+            datasets: [{
+              label: "members",
+              data: [
+                @onboarding_funnel.invited,
+                @onboarding_funnel.joined,
+                @onboarding_funnel.first_post,
+                @onboarding_funnel.day_30_mature ? @onboarding_funnel.retained_day_30 : nil,
+                @onboarding_funnel.day_90_mature ? @onboarding_funnel.retained_day_90 : nil
+              ]
+            }]
+          }.to_json %>"
+          data-chart-options-value="<%= { indexAxis: "y", maintainAspectRatio: false, plugins: { legend: { display: false } } }.to_json %>"
+        ></canvas>
+      </div>
+      <% unless @onboarding_funnel.day_30_mature %>
+        <p class="mn-label mt-3"><span class="mn-badge mn-badge-pending">too soon to tell</span> retention needs this cohort to age further before day-30/90 numbers mean anything</p>
+      <% end %>
+    <% else %>
+      <p class="mn-label">no cohort data loaded yet</p>
+    <% end %>
+  </div>
+</div>
+
 <div class="mb-4">
   <h2 class="mn-h2 mb-3">Not yet covered</h2>
   <div class="mn-card overflow-hidden">
     <% [
-      ["Retention", "cohort survival past the first weeks: needs multiple time-spaced snapshots, we only have one"],
-      ["New member experience", "onboarding completion and time-to-first-post"],
       ["Response rate", "how quickly questions and posts get a reply"]
     ].each do |name, description| %>
       <div class="flex items-center justify-between px-5 py-4 border-b mn-divider last:border-b-0">
