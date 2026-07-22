@@ -1,10 +1,17 @@
-with members as (
+with member_totals as (
+    select
+        user_id,
+        sum(coalesce(messages_posted, 0)) as messages_posted
+    from {{ ref('fct_member_activity') }}
+    group by user_id
+),
+
+members as (
     select
         m.user_id,
-        coalesce(act.messages_posted, 0) as messages_posted
+        coalesce(t.messages_posted, 0) as messages_posted
     from {{ ref('dim_member') }} m
-    left join {{ ref('fct_member_activity') }} act using (user_id)
-    where m.claimed_at is not null
+    left join member_totals t on t.user_id = m.user_id
 )
 select
     case
