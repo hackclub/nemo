@@ -20,4 +20,50 @@
   </div>
 </div>
 
+<div class="mb-8">
+  <h2 class="mn-h2 mb-3">Daily activity</h2>
+  <div class="mn-card p-5">
+    <% if @activity_trend.any? %>
+      <div style="height: 220px;">
+        <canvas
+          data-controller="chart"
+          data-chart-type-value="bar"
+          data-chart-data-value="<%= {
+            labels: @activity_trend.map { |a| a.window_start.strftime("%b %d") },
+            datasets: [{
+              label: "messages posted",
+              data: @activity_trend.map(&:messages_posted)
+            }]
+          }.to_json %>"
+          data-chart-options-value="<%= { maintainAspectRatio: false, plugins: { legend: { display: false } } }.to_json %>"
+        ></canvas>
+      </div>
+    <% else %>
+      <p class="mn-label">no daily activity data yet</p>
+    <% end %>
+  </div>
+</div>
+
+<% if @scorecard_rows.any? %>
+  <div class="mb-8">
+    <h2 class="mn-h2 mb-3">Onboarding scorecard</h2>
+    <div class="mn-card overflow-hidden">
+      <div class="grid grid-cols-4 gap-4 px-5 py-3 border-b mn-divider">
+        <span class="mn-eyebrow">month</span>
+        <span class="mn-eyebrow text-right">newcomers</span>
+        <span class="mn-eyebrow text-right">fast reply</span>
+        <span class="mn-eyebrow text-right">90-day retention</span>
+      </div>
+      <% @scorecard_rows.each do |row| %>
+        <div class="grid grid-cols-4 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center">
+          <span class="mn-label"><%= row.post_month.strftime("%b %Y") %></span>
+          <span class="mn-label text-right"><%= number_with_delimiter(row.newcomer_volume) %></span>
+          <span class="mn-label text-right"><%= number_to_percentage((row.fast_reply_share.to_f * 100).round(1), precision: 1) %></span>
+          <span class="mn-label text-right"><%= number_to_percentage((row.retained_90_share.to_f * 100).round(1), precision: 1) %></span>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
 <%= link_to "&larr; back to channels".html_safe, channels_path, class: "mn-link" %>

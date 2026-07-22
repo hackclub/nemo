@@ -17,5 +17,7 @@ Rails.application.routes.draw do
     resources :reports, only: [:index, :new, :create, :edit, :update]
   end
 
+  resources :channels, only: [:index, :show]
+
   root "home#index"
 end

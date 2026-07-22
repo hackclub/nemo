@@ -9,6 +9,8 @@ class ChannelsController < ApplicationController
   def show
     @channel = Analytics::DimChannel.find(params[:id])
     @engagement = Analytics::MartChannelEngagement.find_by(channel_id: @channel.channel_id)
+    @activity_trend = Analytics::MartChannelActivity.where(channel_id: @channel.channel_id).order(:window_start)
+    @scorecard_rows = Analytics::MartChannelOnboardingScorecard.where(channel_id: @channel.channel_id).order(:post_month)
   end
 
   private
