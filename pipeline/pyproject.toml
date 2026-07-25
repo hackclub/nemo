@@ -8,6 +8,8 @@ dependencies = [
     "slack-sdk>=3.33",
     "slack-bolt>=1.20",
     "jsonschema>=4.23",
+    "fastapi>=0.140.0",
+    "uvicorn>=0.51.0",
 ]
 
 [dependency-groups]
