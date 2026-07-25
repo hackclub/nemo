@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -9,7 +10,19 @@ ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 load_dotenv(ENV_FILE)
 
 METHOD = "admin.analytics.getChannelAnalytics"
+RANGE_METHOD = "admin.analytics.getAvailableDateRange"
 app = FastAPI(title="mnemosyne channel-analytics")
+
+_range_cache = {"value": None, "at": 0.0}
+
+
+def available_range():
+    if _range_cache["value"] and time.time() - _range_cache["at"] < 3600:
+        return _range_cache["value"]
+    resp = InternalClient().call(RANGE_METHOD, {"type": "member"})
+    value = (resp["start_date"], resp["end_date"])
+    _range_cache.update(value=value, at=time.time())
+    return value
 
 
 @app.get("/health")
@@ -17,9 +30,23 @@ def health():
     return {"ok": True}
 
 
+@app.get("/available-range")
+def available_range_endpoint():
+    try:
+        start, end = available_range()
+    except InternalAuthError as exc:
+        raise HTTPException(status_code=503, detail={"error": "reauth", "message": str(exc)}) from exc
+    except InternalApiError as exc:
+        raise HTTPException(status_code=502, detail={"error": "api", "message": str(exc)}) from exc
+    return {"start_date": start, "end_date": end}
+
+
 @app.get("/channel-analytics")
 def channel_analytics(channel_id: str, name: str, start: str, end: str, privacy: str = "public"):
     try:
+        avail_start, avail_end = available_range()
+        start = max(start, avail_start)
+        end = min(end, avail_end)
         resp = InternalClient().call(METHOD, {
             "start_date": start,
             "end_date": end,
