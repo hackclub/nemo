@@ -39,7 +39,8 @@ class ChannelsController < ApplicationController
     @scorecard_rows = Analytics::MartChannelOnboardingScorecard.where(channel_id: @channel.channel_id).order(:post_month)
 
     @end_date = parse_range_date(params[:end]) || (Date.current - 1)
-    @start_date = parse_range_date(params[:start]) || (@end_date - 30)
+    default_start = [@end_date - 30, @channel.date_created&.to_date].compact.max
+    @start_date = parse_range_date(params[:start]) || default_start
     @range = ChannelAnalyticsService.fetch(
       channel_id: @channel.channel_id, name: @channel.name,
       start_date: @start_date, end_date: @end_date, privacy: @channel.visibility
