@@ -5,17 +5,14 @@ class ChannelsController < ApplicationController
 
   SORT_SQL = {
     "name" => "dim_channel.name",
-    "visibility" => "dim_channel.visibility",
     "members" => "dim_channel.total_members",
-    "messages" => "e.messages_tracked",
-    "views" => "e.total_views",
-    "reactions" => "e.total_reactions"
+    "created" => "dim_channel.date_created"
   }.freeze
 
   def index
     @q = params[:q].to_s.strip
     @page = [params[:page].to_i, 0].max
-    @sort = SORT_SQL.key?(params[:sort]) ? params[:sort] : "name"
+    @sort = SORT_SQL.key?(params[:sort]) ? params[:sort] : "members"
     @direction = params[:direction] == "asc" ? "asc" : "desc"
 
     base = Analytics::DimChannel.where(archived: false)
@@ -23,19 +20,16 @@ class ChannelsController < ApplicationController
     total = base.count
 
     @channels = base
-      .joins("LEFT JOIN analytics.mart_channel_engagement e ON e.channel_id = #{Analytics::DimChannel.table_name}.channel_id")
       .order(Arel.sql(order_clause))
       .limit(PER_PAGE)
       .offset(@page * PER_PAGE)
       .to_a
     @has_more = (@page + 1) * PER_PAGE < total
-    @engagement = Analytics::MartChannelEngagement
-      .where(channel_id: @channels.map(&:channel_id)).index_by(&:channel_id)
 
     return unless request.headers["X-Requested-With"] == "channel-list"
 
     response.set_header("X-Has-More", @has_more.to_s)
-    render partial: "rows", locals: { channels: @channels, engagement: @engagement }, layout: false
+    render partial: "rows", locals: { channels: @channels }, layout: false
   end
 
   def show
