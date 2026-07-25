@@ -43,9 +43,22 @@ class ChannelsController < ApplicationController
     @engagement = Analytics::MartChannelEngagement.find_by(channel_id: @channel.channel_id)
     @activity_trend = Analytics::MartChannelActivity.where(channel_id: @channel.channel_id).order(:window_start)
     @scorecard_rows = Analytics::MartChannelOnboardingScorecard.where(channel_id: @channel.channel_id).order(:post_month)
+
+    @end_date = parse_range_date(params[:end]) || (Date.current - 1)
+    @start_date = parse_range_date(params[:start]) || (@end_date - 30)
+    @range = ChannelAnalyticsService.fetch(
+      channel_id: @channel.channel_id, name: @channel.name,
+      start_date: @start_date, end_date: @end_date, privacy: @channel.visibility
+    )
   end
 
   private
+
+  def parse_range_date(value)
+    Date.iso8601(value.to_s)
+  rescue ArgumentError
+    nil
+  end
 
   def order_clause
     metric = "#{SORT_SQL[@sort]} #{@direction} NULLS LAST"

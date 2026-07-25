@@ -21,6 +21,46 @@
 </div>
 
 <div class="mb-8">
+  <div class="flex items-end justify-between mb-3 gap-4 flex-wrap">
+    <h2 class="mn-h2">Activity over a range</h2>
+    <%= form_with url: channel_path(@channel), method: :get, class: "flex items-end gap-2" do %>
+      <label class="mn-eyebrow">from
+        <%= date_field_tag :start, @start_date, class: "block mt-1 px-2 py-1 border mn-divider rounded bg-transparent mn-label" %>
+      </label>
+      <label class="mn-eyebrow">to
+        <%= date_field_tag :end, @end_date, class: "block mt-1 px-2 py-1 border mn-divider rounded bg-transparent mn-label" %>
+      </label>
+      <%= submit_tag "Apply", class: "mn-eyebrow px-3 py-2 border mn-divider rounded cursor-pointer transition hover:opacity-70" %>
+    <% end %>
+  </div>
+
+  <% if @range.stats %>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <% [["unique posters", "unique_posters"], ["unique viewers", "unique_viewers"],
+          ["unique reactors", "unique_reactors"], ["messages", "messages_count"],
+          ["reactions", "reactions_count"], ["huddles", "huddles_count"]].each do |label, key| %>
+        <div class="mn-card p-4">
+          <p class="mn-eyebrow mb-1"><%= label %></p>
+          <p class="mn-h2"><%= number_with_delimiter(@range.stats[key] || 0) %></p>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="mn-card p-5">
+      <p class="mn-label">
+        <% if @range.error == :reauth %>
+          Analytics service needs re-authentication, refresh the Slack session cookie.
+        <% elsif @range.error == :not_found %>
+          No analytics for this channel in the selected range.
+        <% else %>
+          Couldn&rsquo;t load ranged analytics right now.
+        <% end %>
+      </p>
+    </div>
+  <% end %>
+</div>
+
+<div class="mb-8">
   <h2 class="mn-h2 mb-3">Daily activity</h2>
   <div class="mn-card p-5">
     <% if @activity_trend.any? %>

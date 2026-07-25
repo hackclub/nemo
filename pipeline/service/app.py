@@ -19,7 +19,7 @@ def health():
 
 @app.get("/channel-analytics")
 def channel_analytics(channel_id: str, name: str, start: str, end: str, privacy: str = "public"):
-   try:
+    try:
         resp = InternalClient().call(METHOD, {
             "start_date": start,
             "end_date": end,
