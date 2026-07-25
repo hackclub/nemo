@@ -23,4 +23,14 @@ class ChannelAnalyticsService
   rescue StandardError
     Result.new(error: :unavailable)
   end
+
+  def self.available_range
+    uri = URI("#{BASE_URL}/available-range")
+    response = Net::HTTP.start(uri.host, uri.port, open_timeout: 5, read_timeout: 30) do |http|
+      http.get(uri.request_uri)
+    end
+    response.is_a?(Net::HTTPSuccess) ? JSON.parse(response.body) : nil
+  rescue StandardError
+    nil
+  end
 end

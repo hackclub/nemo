@@ -34,16 +34,21 @@ class ChannelsController < ApplicationController
 
   def show
     @channel = Analytics::DimChannel.find(params[:id])
-    @engagement = Analytics::MartChannelEngagement.find_by(channel_id: @channel.channel_id)
     @activity_trend = Analytics::MartChannelActivity.where(channel_id: @channel.channel_id).order(:window_start)
     @scorecard_rows = Analytics::MartChannelOnboardingScorecard.where(channel_id: @channel.channel_id).order(:post_month)
 
-    @end_date = parse_range_date(params[:end]) || (Date.current - 1)
-    default_start = [@end_date - 30, @channel.date_created&.to_date].compact.max
-    @start_date = parse_range_date(params[:start]) || default_start
+    avail = ChannelAnalyticsService.available_range
+    last_available = avail ? Date.iso8601(avail["end_date"]) : (Date.current - 2)
+    @end_date = parse_range_date(params[:end]) || last_available
+    @start_date = parse_range_date(params[:start]) || (@end_date - 30)
     @range = ChannelAnalyticsService.fetch(
       channel_id: @channel.channel_id, name: @channel.name,
       start_date: @start_date, end_date: @end_date, privacy: @channel.visibility
+    )
+    @all_time = ChannelAnalyticsService.fetch(
+      channel_id: @channel.channel_id, name: @channel.name,
+      start_date: @channel.date_created&.to_date || (last_available - 400),
+      end_date: last_available, privacy: @channel.visibility
     )
   end
 

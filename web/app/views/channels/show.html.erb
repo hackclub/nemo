@@ -1,22 +1,24 @@
 <% content_for :page_title, "##{@channel.name}" %>
 <% content_for :page_subtitle, @channel.visibility %>
 
-<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+<div class="mn-card p-4 mb-6 md:w-1/4">
+  <p class="mn-eyebrow mb-1">members</p>
+  <p class="mn-h2"><%= number_with_delimiter(@channel.total_members) %></p>
+</div>
+
+<h2 class="mn-h2 mb-3">Last 13 months</h2>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
   <div class="mn-card p-4">
-    <p class="mn-eyebrow mb-1">members</p>
-    <p class="mn-h2"><%= number_with_delimiter(@channel.total_members) %></p>
+    <p class="mn-eyebrow mb-1">messages</p>
+    <p class="mn-h2"><%= @all_time.stats ? number_with_delimiter(@all_time.stats["messages_count"] || 0) : "—" %></p>
   </div>
   <div class="mn-card p-4">
-    <p class="mn-eyebrow mb-1">messages tracked</p>
-    <p class="mn-h2"><%= number_with_delimiter(@engagement&.messages_tracked || 0) %></p>
-  </div>
-  <div class="mn-card p-4">
-    <p class="mn-eyebrow mb-1">views</p>
-    <p class="mn-h2"><%= number_with_delimiter(@engagement&.total_views || 0) %></p>
+    <p class="mn-eyebrow mb-1">unique viewers</p>
+    <p class="mn-h2"><%= @all_time.stats ? number_with_delimiter(@all_time.stats["unique_viewers"] || 0) : "—" %></p>
   </div>
   <div class="mn-card p-4">
     <p class="mn-eyebrow mb-1">reactions</p>
-    <p class="mn-h2"><%= number_with_delimiter(@engagement&.total_reactions || 0) %></p>
+    <p class="mn-h2"><%= @all_time.stats ? number_with_delimiter(@all_time.stats["reactions_count"] || 0) : "—" %></p>
   </div>
 </div>
 
