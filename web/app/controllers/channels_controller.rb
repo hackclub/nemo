@@ -15,7 +15,7 @@ class ChannelsController < ApplicationController
     @channels = Analytics::DimChannel.where(archived: false).to_a
 
     @sort = SORT_COLUMNS.key?(params[:sort]) ? params[:sort] : "name"
-    @direction = params[:direction] == "desc" ? "desc" : "asc"
+    @direction = params[:direction] == "asc" ? "asc" : "desc"
     @channels.sort_by! { |channel| SORT_COLUMNS[@sort].call(channel, @engagement[channel.channel_id]) }
     @channels.reverse! if @direction == "desc"
   end
