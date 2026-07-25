@@ -4,6 +4,6 @@ module ChannelsHelper
     next_direction = active ? (@direction == "asc" ? "desc" : "asc") : "desc"
     arrow = active ? (@direction == "asc" ? " &uarr;" : " &darr;") : ""
 
-    link_to safe_join([label, arrow.html_safe]), channels_path(sort: column, direction: next_direction), class: "mn-eyebrow"
+    link_to safe_join([label, arrow.html_safe]), channels_path(sort: column, direction: next_direction, q: @q.presence), class: "mn-eyebrow"
   end
 end

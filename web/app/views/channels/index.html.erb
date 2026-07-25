@@ -1,5 +1,15 @@
 <% content_for :page_title, "Channels" %>
 
+<div data-controller="channel-search">
+<%= form_with url: channels_path, method: :get, class: "mb-4" do %>
+  <%= hidden_field_tag :sort, @sort %>
+  <%= hidden_field_tag :direction, @direction %>
+  <%= text_field_tag :q, @q, placeholder: "Search channels by name…",
+      autocomplete: "off",
+      data: { channel_search_target: "input", action: "input->channel-search#filter" },
+      class: "w-full max-w-xs px-3 py-2 border mn-divider rounded bg-transparent mn-label" %>
+<% end %>
+
 <div class="mn-card overflow-x-auto">
   <div class="min-w-[640px]">
     <div class="grid grid-cols-5 gap-4 px-5 py-3 border-b mn-divider">
@@ -11,7 +21,7 @@
     </div>
     <% @channels.each do |channel| %>
       <% engagement = @engagement[channel.channel_id] %>
-      <%= link_to channel_path(channel), class: "grid grid-cols-5 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center" do %>
+      <%= link_to channel_path(channel), class: "grid grid-cols-5 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center", data: { channel_search_target: "row", name: channel.name.to_s.downcase } do %>
         <span class="mn-label">#<%= channel.name %></span>
         <span class="mn-label"><%= channel.visibility %></span>
         <span class="mn-label text-right"><%= number_with_delimiter(channel.total_members) %></span>
@@ -20,4 +30,5 @@
       <% end %>
     <% end %>
   </div>
+</div>
 </div>

@@ -12,7 +12,10 @@ class ChannelsController < ApplicationController
 
   def index
     @engagement = Analytics::MartChannelEngagement.all.index_by(&:channel_id)
-    @channels = Analytics::DimChannel.where(archived: false).to_a
+    @q = params[:q].to_s.strip
+    channels = Analytics::DimChannel.where(archived: false)
+    channels = channels.where("name ILIKE ?", "%#{@q}%") if @q.present?
+    @channels = channels.to_a
 
     @sort = SORT_COLUMNS.key?(params[:sort]) ? params[:sort] : "name"
     @direction = params[:direction] == "asc" ? "asc" : "desc"
