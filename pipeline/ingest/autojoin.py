@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -27,7 +28,7 @@ def resolve_team_id():
     raise RuntimeError("admin.teams.list returned no teams")
 
 
-def join_all(conn, client):
+def join_all(conn, client, join=True):
     team_id = resolve_team_id()
     run_id = start_run(conn, SOURCE)
     rows_in = rows_rejected = 0
@@ -40,6 +41,8 @@ def join_all(conn, client):
             rows_in += 1
             with conn.cursor() as cur:
                 cur.execute(CHANNEL_NAME_SQL, (channel["id"], channel.get("name"), channel.get("is_archived", False)))
+            if not join:
+                continue
             try:
                 client.conversations_join(channel=channel["id"])
             except SlackApiError as exc:
@@ -55,13 +58,15 @@ def join_all(conn, client):
             break
     finish_run(conn, run_id, "ok", rows_in, rows_rejected)
     conn.commit()
-    print(f"autojoin: {rows_in} channels checked, {rows_rejected} failed")
+    verb = "checked" if join else "named (no join)"
+    print(f"autojoin: {rows_in} channels {verb}, {rows_rejected} failed")
 
 
 def main():
     load_dotenv(ENV_FILE)
+    join = "--no-join" not in sys.argv
     with connect() as conn:
-        join_all(conn, bot_client())
+        join_all(conn, bot_client(), join=join)
 
 
 if __name__ == "__main__":
