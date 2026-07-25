@@ -33,4 +33,15 @@ class ChannelAnalyticsService
   rescue StandardError
     nil
   end
+
+  def self.member_count(channel_id:)
+    uri = URI("#{BASE_URL}/channel-members")
+    uri.query = URI.encode_www_form(channel_id: channel_id)
+    response = Net::HTTP.start(uri.host, uri.port, open_timeout: 5, read_timeout: 30) do |http|
+      http.get(uri.request_uri)
+    end
+    response.is_a?(Net::HTTPSuccess) ? JSON.parse(response.body)["num_members"] : nil
+  rescue StandardError
+    nil
+  end
 end

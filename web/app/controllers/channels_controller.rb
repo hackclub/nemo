@@ -37,6 +37,7 @@ class ChannelsController < ApplicationController
     @activity_trend = Analytics::MartChannelActivity.where(channel_id: @channel.channel_id).order(:window_start)
     @scorecard_rows = Analytics::MartChannelOnboardingScorecard.where(channel_id: @channel.channel_id).order(:post_month)
 
+    @member_count = ChannelAnalyticsService.member_count(channel_id: @channel.channel_id)
     avail = ChannelAnalyticsService.available_range
     last_available = avail ? Date.iso8601(avail["end_date"]) : (Date.current - 2)
     @end_date = parse_range_date(params[:end]) || last_available

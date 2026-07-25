@@ -3,7 +3,7 @@
 
 <div class="mn-card p-4 mb-6 md:w-1/4">
   <p class="mn-eyebrow mb-1">members</p>
-  <p class="mn-h2"><%= number_with_delimiter(@channel.total_members) %></p>
+  <p class="mn-h2"><%= number_with_delimiter(@member_count || @channel.total_members) %></p>
 </div>
 
 <h2 class="mn-h2 mb-3">Last 13 months</h2>
