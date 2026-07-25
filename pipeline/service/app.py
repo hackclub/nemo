@@ -4,7 +4,10 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 
+from slack_sdk.errors import SlackApiError
+
 from lib.internal_client import InternalApiError, InternalAuthError, InternalClient
+from lib.slack_client import bot_client
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 load_dotenv(ENV_FILE)
@@ -28,6 +31,15 @@ def available_range():
 @app.get("/health")
 def health():
     return {"ok": True}
+
+
+@app.get("/channel-members")
+def channel_members(channel_id: str):
+    try:
+        resp = bot_client().conversations_info(channel=channel_id, include_num_members=True)
+    except SlackApiError as exc:
+        raise HTTPException(status_code=502, detail={"error": exc.response.get("error")}) from exc
+    return {"num_members": resp["channel"].get("num_members")}
 
 
 @app.get("/available-range")
