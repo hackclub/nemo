@@ -1,10 +1,10 @@
 select
     count(*) as invited,
-    count(*) filter (where claimed_at is not null) as claimed,
+    count(*) filter (where is_claimed) as claimed,
     round(
-        count(*) filter (where claimed_at is not null)::numeric
+        count(*) filter (where is_claimed)::numeric
         / nullif(count(*), 0),
         4
     ) as claim_rate,
-    'v1' as metric_version
+    'v2' as metric_version
 from {{ ref('dim_member') }}
