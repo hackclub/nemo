@@ -262,12 +262,13 @@ def pull_channel_day(conn, pull_date):
     print(f"channel analytics {pull_date}: {rows_in} rows, {rows_rejected} rejected")
 
 
-def pull_users(conn):
-    run_id = start_run(conn, USERS_SOURCE)
+def pull_users_page(conn, is_active):
+    label = "active" if is_active else "deactivated"
+    run_id = start_run(conn, f"{USERS_SOURCE}:{label}")
     rows_in = rows_rejected = 0
-    cursor = get_cursor(conn, USERS_SOURCE)
+    cursor = get_cursor(conn, USERS_SOURCE, channel_id=label)
     while True:
-        page = admin_client().admin_users_list(limit=99, cursor=cursor)
+        page = admin_client().admin_users_list(limit=99, cursor=cursor, is_active=is_active)
         dim_rows, profile_rows = [], []
         for user in page.get("users", []):
             rows_in += 1
@@ -281,13 +282,18 @@ def pull_users(conn):
             cur.executemany(USER_DIM_MERGE_SQL, dim_rows)
             cur.executemany(USER_PROFILE_SQL, profile_rows)
         cursor = page.get("response_metadata", {}).get("next_cursor") or ""
-        save_cursor(conn, USERS_SOURCE, cursor)
+        save_cursor(conn, USERS_SOURCE, cursor, channel_id=label)
         conn.commit()
         if not cursor:
             break
     finish_run(conn, run_id, "ok", rows_in, rows_rejected)
     conn.commit()
-    print(f"admin users: {rows_in} rows, {rows_rejected} rejected")
+    print(f"admin users ({label}): {rows_in} rows, {rows_rejected} rejected")
+
+
+def pull_users(conn):
+    pull_users_page(conn, is_active=True)
+    pull_users_page(conn, is_active=False)
 
 
 def main():
