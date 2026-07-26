@@ -55,18 +55,29 @@
 <div class="mb-8">
   <h2 class="mn-h2 mb-3">Growth, last <%= @growth_months.size %> months</h2>
   <div class="mn-card p-5">
-    <% max_joined = [@growth_months.map(&:joined_members).max, 1].max %>
-    <% @growth_months.each do |m| %>
-      <div class="flex items-center gap-4 py-2">
-        <span class="mn-label w-20 shrink-0"><%= m.month.strftime("%b %Y") %></span>
-        <div class="mn-bar-track flex-1 h-2 rounded-full overflow-hidden">
-          <div class="mn-bar-fill h-full rounded-full" style="width:<%= (m.joined_members.to_f / max_joined * 100).round(1) %>%"></div>
+    <div style="height: 260px;">
+      <canvas
+        data-controller="chart"
+        data-chart-type-value="bar"
+        data-chart-data-value="<%= {
+          labels: @growth_months.map { |m| m.month.strftime("%b %Y") },
+          datasets: [
+            { label: "invited", data: @growth_months.map(&:invited_members) },
+            { label: "claimed", data: @growth_months.map(&:joined_members) }
+          ]
+        }.to_json %>"
+        data-chart-options-value="<%= { maintainAspectRatio: false, plugins: { legend: { display: true } } }.to_json %>"
+      ></canvas>
+    </div>
+    <div class="flex gap-4 mt-5 pt-4 border-t mn-divider">
+      <% @growth_months.each do |m| %>
+        <div class="flex-1 text-center">
+          <p class="mn-label"><%= m.month.strftime("%b %Y") %></p>
+          <p class="mn-label"><%= number_with_delimiter(m.deactivated) %> left</p>
+          <p class="<%= m.net_change >= 0 ? 'mn-trend-up' : 'mn-trend-down' %>"><%= m.net_change >= 0 ? "+" : "" %><%= m.net_change %></p>
         </div>
-        <span class="mn-label w-16 text-right"><%= number_with_delimiter(m.joined_members) %> joined</span>
-        <span class="mn-label w-20 text-right"><%= number_with_delimiter(m.deactivated) %> left</span>
-        <span class="<%= m.net_change >= 0 ? 'mn-trend-up' : 'mn-trend-down' %> justify-end w-16"><%= m.net_change >= 0 ? "+" : "" %><%= m.net_change %></span>
-      </div>
-    <% end %>
+      <% end %>
+    </div>
   </div>
 </div>
 
