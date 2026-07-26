@@ -69,6 +69,8 @@ CREATE TABLE IF NOT EXISTS raw.channel_activity_snapshot (
 ALTER TABLE raw.member_activity_snapshot ADD COLUMN IF NOT EXISTS days_active_apps integer;
 ALTER TABLE raw.member_activity_snapshot ADD COLUMN IF NOT EXISTS days_active_workflows integer;
 
+ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS claimed_no_date boolean;
+
 CREATE TABLE IF NOT EXISTS raw.sync_cursor (
     source text NOT NULL,
     channel_id text NOT NULL DEFAULT '',
