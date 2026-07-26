@@ -820,6 +820,32 @@
     background-color: var(--mn-accent);
   }
 
+  .mn-growth-chart {
+    height: 260px;
+  }
+
+  .mn-growth-footer {
+    display: flex;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--mn-rule);
+  }
+
+  .mn-growth-footer-col {
+    flex: 1;
+    text-align: center;
+    padding: 0 0.75rem;
+    border-left: 1px solid var(--mn-rule);
+  }
+
+  .mn-growth-footer-col:first-child {
+    border-left: none;
+  }
+
+  .mn-growth-footer-col p + p {
+    margin-top: 0.2rem;
+  }
+
   .mn-dot-public { background-color: var(--flag-green); }
   .mn-dot-private { background-color: var(--flag-purple); }
 

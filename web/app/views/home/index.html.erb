@@ -55,7 +55,7 @@
 <div class="mb-8">
   <h2 class="mn-h2 mb-3">Growth, last <%= @growth_months.size %> months</h2>
   <div class="mn-card p-5">
-    <div style="height: 260px;">
+    <div class="mn-growth-chart">
       <canvas
         data-controller="chart"
         data-chart-type-value="bar"
@@ -69,9 +69,9 @@
         data-chart-options-value="<%= { maintainAspectRatio: false, plugins: { legend: { display: true } } }.to_json %>"
       ></canvas>
     </div>
-    <div class="flex gap-4 mt-5 pt-4 border-t mn-divider">
+    <div class="mn-growth-footer">
       <% @growth_months.each do |m| %>
-        <div class="flex-1 text-center">
+        <div class="mn-growth-footer-col">
           <p class="mn-label"><%= m.month.strftime("%b %Y") %></p>
           <p class="mn-label"><%= number_with_delimiter(m.deactivated) %> left</p>
           <p class="<%= m.net_change >= 0 ? 'mn-trend-up' : 'mn-trend-down' %>"><%= m.net_change >= 0 ? "+" : "" %><%= m.net_change %></p>
