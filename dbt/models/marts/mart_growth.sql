@@ -1,4 +1,12 @@
-with joined as (
+with invited as (
+    select
+        date_trunc('month', account_created)::date as month,
+        count(*) as invited_members
+    from {{ ref('dim_member') }}
+    where account_created is not null
+    group by 1
+),
+joined as (
     select
         date_trunc('month', claimed_at)::date as month,
         count(*) as joined_members
@@ -15,11 +23,13 @@ departed as (
     group by 1
 )
 select
-    coalesce(joined.month, departed.month) as month,
+    coalesce(invited.month, joined.month, departed.month) as month,
+    coalesce(invited.invited_members, 0) as invited_members,
     coalesce(joined.joined_members, 0) as joined_members,
     coalesce(departed.deactivated, 0) as deactivated,
     coalesce(joined.joined_members, 0) - coalesce(departed.deactivated, 0) as net_change,
-    'v2' as metric_version
-from joined
-full outer join departed on joined.month = departed.month
+    'v3' as metric_version
+from invited
+full outer join joined on invited.month = joined.month
+full outer join departed on coalesce(invited.month, joined.month) = departed.month
 order by month
