@@ -6,7 +6,20 @@ class HomeController < ApplicationController
     @participation = Analytics::MartParticipation.order(window_end: :desc).first
     @active_members = Analytics::DimMember.where(deactivated_at: nil).count
     @growth_months = Analytics::MartGrowth.order(month: :desc).limit(6).to_a.reverse
-    @top_channels = Analytics::MartChannelActivity.order(messages_posted: :desc).limit(8)
+    @top_channels = Analytics::MartChannelActivity
+      .where("window_start >= ?", Date.current - 30)
+      .group(:channel_id, :name, :visibility)
+      .select(
+        "channel_id",
+        "name",
+        "visibility",
+        "sum(messages_posted) as messages_posted",
+        "sum(members_who_posted) as members_who_posted",
+        "sum(reactions_added) as reactions_added",
+        "sum(huddles_initiated) as huddles_initiated"
+      )
+      .order("sum(messages_posted) desc")
+      .limit(8)
     @activity_bands = Analytics::MartActivityDistribution.order(:band_order)
     @account_types = Analytics::MartAccountType.order(members: :desc)
     @cohort_months = Analytics::MartOnboardingFunnel.order(cohort_month: :desc).pluck(:cohort_month)
