@@ -8,6 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from lib.db import connect, dead_letter, finish_run, get_cursor, save_cursor, start_run
+from lib.internal_client import InternalApiError, InternalClient
 from lib.slack_client import admin_client
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -45,14 +46,6 @@ VALUES (%s, %s, %s, now())
 ON CONFLICT (user_id) DO UPDATE SET
     is_guest = EXCLUDED.is_guest,
     claimed_at = COALESCE(raw.member_dim.claimed_at, EXCLUDED.claimed_at),
-    updated_at = now()
-"""
-
-MEMBER_PROFILE_EMAIL_SQL = """
-INSERT INTO moderation.member_profile (user_id, email, updated_at)
-VALUES (%s, %s, now())
-ON CONFLICT (user_id) DO UPDATE SET
-    email = EXCLUDED.email,
     updated_at = now()
 """
 
@@ -133,36 +126,30 @@ def member_activity_row(rec, pull_date):
         pull_date,
         pull_date,
         ANALYTICS_SOURCE,
-        int(bool(rec.get("is_active"))),
-        int(bool(rec.get("is_active_desktop"))),
-        int(bool(rec.get("is_active_android"))),
-        int(bool(rec.get("is_active_ios"))),
-        int(bool(rec.get("is_active_slack_connect"))),
-        int(bool(rec.get("is_active_apps"))),
-        int(bool(rec.get("is_active_workflows"))),
-        rec.get("messages_posted_count"),
-        rec.get("channel_messages_posted_count"),
-        rec.get("reactions_added_count"),
+        rec.get("days_active"),
+        rec.get("days_active_desktop"),
+        rec.get("days_active_android"),
+        rec.get("days_active_ios"),
+        rec.get("days_active_slack_connect"),
+        None,
+        None,
+        rec.get("messages_posted"),
+        rec.get("messages_posted_in_channel"),
+        rec.get("reactions_added"),
         rec.get("files_added_count"),
         rec.get("slack_huddles_count"),
         rec.get("search_count"),
-        None,
-        None,
-        None,
-        None,
-        None,
+        rec.get("channels_joined_count"),
+        parse_epoch(rec.get("date_last_active")),
+        parse_epoch(rec.get("date_last_active_desktop")),
+        parse_epoch(rec.get("date_last_active_android")),
+        parse_epoch(rec.get("date_last_active_ios")),
     )
 
 
 def member_dim_row(rec):
-    return (rec["user_id"], bool(rec.get("is_guest")), parse_epoch(rec.get("date_claimed")))
-
-
-def member_profile_row(rec):
-    email = rec.get("email_address")
-    if not email:
-        return None
-    return (rec["user_id"], email)
+    is_guest = bool(rec.get("is_restricted")) or bool(rec.get("is_ultra_restricted"))
+    return (rec["user_id"], is_guest, parse_epoch(rec.get("date_claimed")))
 
 
 def channel_activity_row(rec, pull_date):
@@ -238,24 +225,32 @@ def backfill(conn, pull_fn, label):
 def pull_member_day(conn, pull_date):
     run_id = start_run(conn, f"{ANALYTICS_SOURCE}:member")
     rows_in = rows_rejected = 0
-    activity_rows, dim_rows, profile_rows = [], [], []
-    resp = admin_client().admin_analytics_getFile(type="member", date=pull_date.isoformat())
-    for line in fetch_ndjson(resp):
-        rows_in += 1
-        try:
-            rec = json.loads(line)
-            activity_rows.append(member_activity_row(rec, pull_date))
-            dim_rows.append(member_dim_row(rec))
-            profile_row = member_profile_row(rec)
-            if profile_row:
-                profile_rows.append(profile_row)
-        except (json.JSONDecodeError, KeyError) as exc:
-            rows_rejected += 1
-            dead_letter(conn, ANALYTICS_SOURCE, {"raw_line": line}, str(exc))
+    activity_rows, dim_rows = [], []
+    client = InternalClient()
+    params = {
+        "start_date": pull_date.isoformat(),
+        "end_date": pull_date.isoformat(),
+        "sort_column": "real_name",
+        "sort_direction": "asc",
+    }
+    try:
+        for rec in client.paginate(
+            "admin.analytics.getMemberAnalytics", params, "member_activity",
+            page_size=500, cursor_param="cursor_mark",
+        ):
+            rows_in += 1
+            try:
+                activity_rows.append(member_activity_row(rec, pull_date))
+                dim_rows.append(member_dim_row(rec))
+            except KeyError as exc:
+                rows_rejected += 1
+                dead_letter(conn, ANALYTICS_SOURCE, rec, str(exc))
+    except InternalApiError as exc:
+        finish_run(conn, run_id, "failed", rows_in, rows_rejected)
+        raise RuntimeError(f"member analytics {pull_date}: {exc}") from exc
     with conn.cursor() as cur:
         cur.executemany(MEMBER_ACTIVITY_SQL, activity_rows)
         cur.executemany(MEMBER_DIM_MERGE_SQL, dim_rows)
-        cur.executemany(MEMBER_PROFILE_EMAIL_SQL, profile_rows)
     finish_run(conn, run_id, "ok", rows_in, rows_rejected)
     print(f"member analytics {pull_date}: {rows_in} rows, {rows_rejected} rejected")
 
