@@ -71,6 +71,11 @@ ALTER TABLE raw.member_activity_snapshot ADD COLUMN IF NOT EXISTS days_active_wo
 
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS claimed_no_date boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_bot boolean;
+ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_admin boolean;
+ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_owner boolean;
+ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_primary_owner boolean;
+ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_restricted boolean;
+ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_ultra_restricted boolean;
 
 CREATE TABLE IF NOT EXISTS raw.sync_cursor (
     source text NOT NULL,

@@ -85,12 +85,20 @@ ON CONFLICT (channel_id) DO UPDATE SET
 """
 
 USER_DIM_MERGE_SQL = """
-INSERT INTO raw.member_dim (user_id, account_created, deactivated_at, is_bot, updated_at)
-VALUES (%s, %s, %s, %s, now())
+INSERT INTO raw.member_dim (
+    user_id, account_created, deactivated_at, is_bot,
+    is_admin, is_owner, is_primary_owner, is_restricted, is_ultra_restricted, updated_at
+)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, now())
 ON CONFLICT (user_id) DO UPDATE SET
     account_created = EXCLUDED.account_created,
     deactivated_at = EXCLUDED.deactivated_at,
     is_bot = EXCLUDED.is_bot,
+    is_admin = EXCLUDED.is_admin,
+    is_owner = EXCLUDED.is_owner,
+    is_primary_owner = EXCLUDED.is_primary_owner,
+    is_restricted = EXCLUDED.is_restricted,
+    is_ultra_restricted = EXCLUDED.is_ultra_restricted,
     updated_at = now()
 """
 
@@ -192,6 +200,11 @@ def user_dim_row(user):
         parse_epoch(user.get("date_created")),
         parse_epoch(user.get("deactivated_ts")),
         bool(user.get("is_bot")),
+        bool(user.get("is_admin")),
+        bool(user.get("is_owner")),
+        bool(user.get("is_primary_owner")),
+        bool(user.get("is_restricted")),
+        bool(user.get("is_ultra_restricted")),
     )
 
 
