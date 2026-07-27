@@ -10,7 +10,8 @@ select
         else 'Member'
     end as account_type,
     is_guest,
-    account_created,
+    coalesce(account_created_verified, account_created) as account_created,
+    account_created_verified,
     claimed_at,
     deactivated_at,
     claimed_at is not null or coalesce(claimed_no_date, false) as is_claimed,

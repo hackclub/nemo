@@ -28,7 +28,7 @@ select
     coalesce(joined.joined_members, 0) as joined_members,
     coalesce(departed.deactivated, 0) as deactivated,
     coalesce(joined.joined_members, 0) - coalesce(departed.deactivated, 0) as net_change,
-    'v4' as metric_version
+    'v5' as metric_version
 from invited
 full outer join joined on invited.month = joined.month
 full outer join departed on coalesce(invited.month, joined.month) = departed.month

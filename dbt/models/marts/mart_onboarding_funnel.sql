@@ -48,7 +48,7 @@ select
     count(*) filter (where rc.retained_day_90) as retained_day_90,
     (mc.cohort_month + interval '1 month' + interval '30 days') <= now() as day_30_mature,
     (mc.cohort_month + interval '1 month' + interval '90 days') <= now() as day_90_mature,
-    'v2' as metric_version
+    'v3' as metric_version
 from member_cohort mc
 left join first_posts fp on fp.user_id = mc.user_id
 left join retention_checks rc on rc.user_id = mc.user_id
