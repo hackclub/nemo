@@ -85,11 +85,12 @@ ON CONFLICT (channel_id) DO UPDATE SET
 """
 
 USER_DIM_MERGE_SQL = """
-INSERT INTO raw.member_dim (user_id, account_created, deactivated_at, updated_at)
-VALUES (%s, %s, %s, now())
+INSERT INTO raw.member_dim (user_id, account_created, deactivated_at, is_bot, updated_at)
+VALUES (%s, %s, %s, %s, now())
 ON CONFLICT (user_id) DO UPDATE SET
     account_created = EXCLUDED.account_created,
     deactivated_at = EXCLUDED.deactivated_at,
+    is_bot = EXCLUDED.is_bot,
     updated_at = now()
 """
 
@@ -186,7 +187,12 @@ def channel_dim_row(rec):
 
 
 def user_dim_row(user):
-    return (user["id"], parse_epoch(user.get("date_created")), parse_epoch(user.get("deactivated_ts")))
+    return (
+        user["id"],
+        parse_epoch(user.get("date_created")),
+        parse_epoch(user.get("deactivated_ts")),
+        bool(user.get("is_bot")),
+    )
 
 
 def user_profile_row(user):

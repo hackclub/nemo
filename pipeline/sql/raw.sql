@@ -70,6 +70,7 @@ ALTER TABLE raw.member_activity_snapshot ADD COLUMN IF NOT EXISTS days_active_ap
 ALTER TABLE raw.member_activity_snapshot ADD COLUMN IF NOT EXISTS days_active_workflows integer;
 
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS claimed_no_date boolean;
+ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_bot boolean;
 
 CREATE TABLE IF NOT EXISTS raw.sync_cursor (
     source text NOT NULL,
