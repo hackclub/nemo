@@ -29,7 +29,7 @@ member_funnel as (
     select
         m.user_id,
         m.account_created is not null as created_account,
-        m.claimed_at is not null as signed_in,
+        m.is_claimed as signed_in,
         f.first_post_date is not null as sent_message,
         exists (
             select 1 from ranked_active_days r
@@ -51,6 +51,7 @@ member_funnel as (
         ) as fourth_visit_in_14_days
     from {{ ref('dim_member') }} m
     left join first_post f on f.user_id = m.user_id
+    where not m.is_bot
 )
 
 select
@@ -61,5 +62,5 @@ select
     count(*) filter (where returned_next_day) as returned_next_day,
     count(*) filter (where third_visit_in_7_days) as third_visit_in_7_days,
     count(*) filter (where fourth_visit_in_14_days) as fourth_visit_in_14_days,
-    'v1' as metric_version
+    'v2' as metric_version
 from member_funnel
