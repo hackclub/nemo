@@ -35,7 +35,9 @@ class HomeController < ApplicationController
     @account_types = Analytics::MartAccountType.where.not(account_type: ["Owner", "Admin", "Org Owner"]).order(members: :desc)
     @channel_scorecard = Analytics::MartChannelOnboardingScorecard.order(post_month: :desc, newcomer_volume: :desc).limit(10)
     @fast_reply_vs_retention = Analytics::MartFastReplyVsRetention.order(fast_reply: :desc)
-    @recurrence_funnel = Analytics::MartOnboardingRecurrenceFunnel.take
+    @recurrence_cohort_months = Analytics::MartOnboardingRecurrenceFunnel.order(cohort_month: :desc).pluck(:cohort_month)
+    @recurrence_month = params[:recurrence_month].presence&.then { |d| Date.parse(d) } || @recurrence_cohort_months.first
+    @recurrence_funnel = Analytics::MartOnboardingRecurrenceFunnel.find_by(cohort_month: @recurrence_month)
     @message_depth = Analytics::MartMessageDepthDistribution.order(:threshold)
   end
 
