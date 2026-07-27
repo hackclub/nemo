@@ -11,8 +11,10 @@ with member_cohort as (
 first_posts as (
     select
         user_id,
-        min(posted_at) as first_post_at
-    from {{ ref('fct_message') }}
+        min(window_start) as first_post_at
+    from {{ source('raw', 'member_activity_snapshot') }}
+    where window_start = window_end
+        and coalesce(messages_posted, 0) > 0
     group by user_id
 ),
 
@@ -46,7 +48,7 @@ select
     count(*) filter (where rc.retained_day_90) as retained_day_90,
     (mc.cohort_month + interval '1 month' + interval '30 days') <= now() as day_30_mature,
     (mc.cohort_month + interval '1 month' + interval '90 days') <= now() as day_90_mature,
-    'v1' as metric_version
+    'v2' as metric_version
 from member_cohort mc
 left join first_posts fp on fp.user_id = mc.user_id
 left join retention_checks rc on rc.user_id = mc.user_id
