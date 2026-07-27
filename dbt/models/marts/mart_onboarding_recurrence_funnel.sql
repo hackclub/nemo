@@ -28,6 +28,7 @@ ranked_active_days as (
 member_funnel as (
     select
         m.user_id,
+        date_trunc('month', m.account_created)::date as cohort_month,
         m.account_created is not null as created_account,
         m.is_claimed as signed_in,
         f.first_post_date is not null as sent_message,
@@ -51,10 +52,11 @@ member_funnel as (
         ) as fourth_visit_in_14_days
     from {{ ref('dim_member') }} m
     left join first_post f on f.user_id = m.user_id
-    where not m.is_bot
+    where not m.is_bot and m.account_created is not null
 )
 
 select
+    cohort_month,
     count(*) as total_members,
     count(*) filter (where created_account) as created_account,
     count(*) filter (where signed_in) as signed_in,
@@ -62,5 +64,7 @@ select
     count(*) filter (where returned_next_day) as returned_next_day,
     count(*) filter (where third_visit_in_7_days) as third_visit_in_7_days,
     count(*) filter (where fourth_visit_in_14_days) as fourth_visit_in_14_days,
-    'v2' as metric_version
+    'v3' as metric_version
 from member_funnel
+group by cohort_month
+order by cohort_month

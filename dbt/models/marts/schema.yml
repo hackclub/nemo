@@ -39,6 +39,8 @@ models:
         data_tests: [not_null]
   - name: mart_onboarding_recurrence_funnel
     columns:
+      - name: cohort_month
+        data_tests: [not_null, unique]
       - name: total_members
         data_tests: [not_null]
   - name: mart_message_depth_distribution
