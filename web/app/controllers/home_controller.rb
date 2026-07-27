@@ -13,6 +13,17 @@ class HomeController < ApplicationController
       return
     end
 
+    @recurrence_cohort_months = Analytics::MartOnboardingRecurrenceFunnel.order(cohort_month: :desc).pluck(:cohort_month)
+    @recurrence_month = params[:recurrence_month].presence&.then { |d| Date.parse(d) } || @recurrence_cohort_months.first
+    @recurrence_funnel = Analytics::MartOnboardingRecurrenceFunnel.find_by(cohort_month: @recurrence_month)
+
+    if request.headers["X-Requested-With"] == "recurrence-funnel"
+      render partial: "recurrence_funnel",
+        locals: { recurrence_funnel: @recurrence_funnel, recurrence_cohort_months: @recurrence_cohort_months, recurrence_month: @recurrence_month },
+        layout: false
+      return
+    end
+
     @activation = Analytics::MartActivation.take
     @participation = Analytics::MartParticipation.order(window_end: :desc).first
     @active_members = Analytics::DimMember.where(deactivated_at: nil, is_bot: false).where.not(claimed_at: nil).count
@@ -35,9 +46,6 @@ class HomeController < ApplicationController
     @account_types = Analytics::MartAccountType.where.not(account_type: ["Owner", "Admin", "Org Owner"]).order(members: :desc)
     @channel_scorecard = Analytics::MartChannelOnboardingScorecard.order(post_month: :desc, newcomer_volume: :desc).limit(10)
     @fast_reply_vs_retention = Analytics::MartFastReplyVsRetention.order(fast_reply: :desc)
-    @recurrence_cohort_months = Analytics::MartOnboardingRecurrenceFunnel.order(cohort_month: :desc).pluck(:cohort_month)
-    @recurrence_month = params[:recurrence_month].presence&.then { |d| Date.parse(d) } || @recurrence_cohort_months.first
-    @recurrence_funnel = Analytics::MartOnboardingRecurrenceFunnel.find_by(cohort_month: @recurrence_month)
     @message_depth = Analytics::MartMessageDepthDistribution.order(:threshold)
   end
 
