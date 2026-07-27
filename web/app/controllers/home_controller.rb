@@ -21,7 +21,7 @@ class HomeController < ApplicationController
       .order("sum(messages_posted) desc")
       .limit(8)
     @activity_bands = Analytics::MartActivityDistribution.order(:band_order)
-    @account_types = Analytics::MartAccountType.order(members: :desc)
+    @account_types = Analytics::MartAccountType.where.not(account_type: ["Owner", "Admin", "Org Owner"]).order(members: :desc)
     @cohort_months = Analytics::MartOnboardingFunnel.order(cohort_month: :desc).pluck(:cohort_month)
     selected_cohort = params[:cohort_month].presence&.then { |d| Date.parse(d) } || @cohort_months.first
     @onboarding_funnel = Analytics::MartOnboardingFunnel.find_by(cohort_month: selected_cohort)

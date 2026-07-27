@@ -113,7 +113,7 @@
         </div>
         <% @account_types.each do |a| %>
           <div class="grid grid-cols-4 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center">
-            <span class="mn-label"><%= a.account_type %><%= " (guest)" if a.is_guest %></span>
+            <span class="mn-label"><%= a.account_type %></span>
             <span class="mn-label text-right"><%= number_with_delimiter(a.members) %></span>
             <span class="mn-label text-right"><%= number_with_delimiter(a.claimed) %></span>
             <span class="mn-label text-right"><%= number_with_delimiter(a.total_messages) %></span>
