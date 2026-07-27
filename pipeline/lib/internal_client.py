@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gzip
+import http.client
 import json
 import os
 import time
@@ -95,7 +96,7 @@ class InternalClient:
                     attempt += 1
                     continue
                 raise
-            except urllib.error.URLError:
+            except (urllib.error.URLError, http.client.IncompleteRead):
                 if attempt < max_retries:
                     time.sleep(1 + attempt)
                     attempt += 1
