@@ -8,7 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from lib.db import connect, dead_letter, finish_run, get_cursor, save_cursor, start_run
-from lib.internal_client import InternalApiError, InternalClient
+from lib.internal_client import InternalClient
 from lib.slack_client import admin_client
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -233,11 +233,20 @@ def pull_member_day(conn, pull_date):
         "sort_column": "real_name",
         "sort_direction": "asc",
     }
+
+    def flush():
+        with conn.cursor() as cur:
+            cur.executemany(MEMBER_ACTIVITY_SQL, activity_rows)
+            cur.executemany(MEMBER_DIM_MERGE_SQL, dim_rows)
+        conn.commit()
+        activity_rows.clear()
+        dim_rows.clear()
+
     try:
-        for rec in client.paginate(
+        for i, rec in enumerate(client.paginate(
             "admin.analytics.getMemberAnalytics", params, "member_activity",
-            page_size=500, cursor_param="cursor_mark",
-        ):
+            page_size=500, cursor_param="cursor_mark", max_retries=8,
+        )):
             rows_in += 1
             try:
                 activity_rows.append(member_activity_row(rec, pull_date))
@@ -245,13 +254,16 @@ def pull_member_day(conn, pull_date):
             except KeyError as exc:
                 rows_rejected += 1
                 dead_letter(conn, ANALYTICS_SOURCE, rec, str(exc))
-    except InternalApiError as exc:
+            if (i + 1) % 2000 == 0:
+                flush()
+    except Exception as exc:
+        flush()
         finish_run(conn, run_id, "failed", rows_in, rows_rejected)
+        conn.commit()
         raise RuntimeError(f"member analytics {pull_date}: {exc}") from exc
-    with conn.cursor() as cur:
-        cur.executemany(MEMBER_ACTIVITY_SQL, activity_rows)
-        cur.executemany(MEMBER_DIM_MERGE_SQL, dim_rows)
+    flush()
     finish_run(conn, run_id, "ok", rows_in, rows_rejected)
+    conn.commit()
     print(f"member analytics {pull_date}: {rows_in} rows, {rows_rejected} rejected")
 
 

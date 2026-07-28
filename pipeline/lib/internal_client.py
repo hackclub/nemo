@@ -60,7 +60,7 @@ class InternalClient:
             raise InternalApiError(error)
         return data
 
-    def paginate(self, method, params, items_key, page_size=1000, cursor_param="cursor"):
+    def paginate(self, method, params, items_key, page_size=1000, cursor_param="cursor", max_retries=3):
         base = dict(params)
         base["count"] = page_size
         cursor = None
@@ -69,7 +69,7 @@ class InternalClient:
             page = dict(base)
             if cursor:
                 page[cursor_param] = cursor
-            data = self.call(method, page)
+            data = self.call(method, page, max_retries=max_retries)
             items = data.get(items_key, [])
             yield from items
             seen += len(items)
