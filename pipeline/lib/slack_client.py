@@ -1,10 +1,15 @@
 import os
+from http.client import IncompleteRead, RemoteDisconnected
+from urllib.error import URLError
 
 from slack_sdk import WebClient
 from slack_sdk.http_retry.builtin_handlers import ConnectionErrorRetryHandler, RateLimitErrorRetryHandler
 
 RETRY_HANDLERS = [
-    ConnectionErrorRetryHandler(max_retry_count=2),
+    ConnectionErrorRetryHandler(
+        max_retry_count=5,
+        error_types=[URLError, ConnectionResetError, RemoteDisconnected, IncompleteRead],
+    ),
     RateLimitErrorRetryHandler(max_retry_count=3),
 ]
 
