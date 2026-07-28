@@ -26,7 +26,7 @@ class HomeController < ApplicationController
 
     @activation = Analytics::MartActivation.take
     @participation = Analytics::MartParticipation.order(window_end: :desc).first
-    @active_members = Analytics::DimMember.where(deactivated_at: nil, is_bot: false).where.not(claimed_at: nil).count
+    @active_members = Analytics::DimMember.where(is_bot: false).where.not(claimed_at: nil).count
     @growth_months = Analytics::MartGrowth.order(month: :desc).limit(6).to_a.reverse
     @top_channels = Analytics::MartChannelActivity
       .where("window_start >= ?", Date.current - 30)

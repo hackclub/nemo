@@ -32,7 +32,7 @@
     </div>
     <div class="mn-eyebrow mb-1">active accounts (claimed)</div>
     <div class="mn-stat"><%= number_with_delimiter(@active_members) %></div>
-    <p class="mn-label mt-2">claimed, not deactivated</p>
+    <p class="mn-label mt-2">claimed (all-time)</p>
   </div>
 
   <div class="mn-card p-5">
@@ -71,8 +71,6 @@
       <% @growth_months.each do |m| %>
         <div class="mn-growth-footer-col">
           <p class="mn-label"><%= m.month.strftime("%b %Y") %></p>
-          <p class="mn-label"><%= number_with_delimiter(m.deactivated) %> left</p>
-          <p class="<%= m.net_change >= 0 ? 'mn-trend-up' : 'mn-trend-down' %>"><%= m.net_change >= 0 ? "+" : "" %><%= m.net_change %></p>
         </div>
       <% end %>
     </div>
