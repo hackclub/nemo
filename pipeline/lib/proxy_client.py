@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import http.client
 import json
 import os
@@ -25,11 +26,10 @@ class InternalApiError(RuntimeError):
 
 
 class ProxyClient:
-    def __init__(self, url=None, token=None, connect_timeout=10, read_timeout=120):
+    def __init__(self, url=None, token=None, read_timeout=120):
         self.url = (url or os.environ.get("INTERNAL_PROXY_URL", "")).rstrip("/")
         self.token = token or os.environ.get("INTERNAL_PROXY_TOKEN", "")
         self.read_timeout = read_timeout
-        self.connect_timeout = connect_timeout
         if not self.url or not self.token:
             raise ProxyError("INTERNAL_PROXY_URL and INTERNAL_PROXY_TOKEN must both be set")
 
@@ -73,12 +73,24 @@ class ProxyClient:
         base["count"] = page_size
         cursor = None
         seen = 0
+        previous_page = None
         while True:
             page = dict(base)
             if cursor:
                 page[cursor_param] = cursor
             data = self.call(method, page, max_retries=max_retries, credential=credential)
             items = data.get(items_key, [])
+            fingerprint = hashlib.sha256(
+                json.dumps(items, sort_keys=True, default=str).encode()
+            ).hexdigest()
+            if items and fingerprint == previous_page:
+                raise ProxyError(
+                    f"{method}: page repeated after {seen} records, so the walk is not "
+                    f"advancing. sort_column={base.get('sort_column')!r} is probably not "
+                    f"unique enough for {cursor_param} to order stably"
+                )
+            previous_page = fingerprint
+
             yield from items
             seen += len(items)
             cursor = data.get("next_cursor_mark")
