@@ -20,3 +20,4 @@ select
     last_active_android_at,
     last_active_ios_at
 from {{ source('raw', 'member_activity_snapshot') }}
+where window_start = window_end
