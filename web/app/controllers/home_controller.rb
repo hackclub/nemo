@@ -30,6 +30,13 @@ class HomeController < ApplicationController
     @top_poster_months = Analytics::MartTopPosters.distinct.order(month: :desc).pluck(:month)
     @top_posters_month = params[:top_posters_month].presence&.then { |d| Date.parse(d) } || @top_poster_months.first
     @top_posters = Analytics::MartTopPosters.where(month: @top_posters_month).order(:rank).limit(10)
+
+    if request.headers["X-Requested-With"] == "top-posters"
+      render partial: "top_posters",
+        locals: { top_posters: @top_posters, top_poster_months: @top_poster_months, top_posters_month: @top_posters_month },
+        layout: false
+      return
+    end
     @growth_months = Analytics::MartGrowth.order(month: :desc).limit(6).to_a.reverse
     @top_channels = Analytics::MartChannelActivity
       .where("window_start >= ?", Date.current - 30)
