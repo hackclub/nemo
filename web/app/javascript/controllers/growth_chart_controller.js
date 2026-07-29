@@ -26,10 +26,10 @@ export default class extends Controller {
             callbacks: {
               label: (context) => {
                 const value = context.parsed.y
-                if (context.dataset.label !== "claimed") return `${context.dataset.label}: ${value}`
+                if (context.dataset.label !== "claimed within 30d") return `${context.dataset.label}: ${value}`
                 const rate = this.ratesValue[context.dataIndex]
-                if (rate == null) return `claimed: ${value} (n/a)`
-                return `claimed: ${value} (${(rate * 100).toFixed(1)}% of this cohort)`
+                if (rate == null) return `claimed within 30d: ${value} (n/a)`
+                return `claimed within 30d: ${value} (${(rate * 100).toFixed(1)}% of this cohort)`
               },
             },
           },
