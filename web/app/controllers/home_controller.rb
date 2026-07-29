@@ -26,6 +26,10 @@ class HomeController < ApplicationController
 
     @team_stats = Analytics::MartTeamStats.take
     @activity_trend = Analytics::MartTeamStatsDaily.order(ds: :desc).limit(90).to_a.reverse
+
+    @top_poster_months = Analytics::MartTopPosters.distinct.order(month: :desc).pluck(:month)
+    @top_posters_month = params[:top_posters_month].presence&.then { |d| Date.parse(d) } || @top_poster_months.first
+    @top_posters = Analytics::MartTopPosters.where(month: @top_posters_month).order(:rank).limit(10)
     @growth_months = Analytics::MartGrowth.order(month: :desc).limit(6).to_a.reverse
     @top_channels = Analytics::MartChannelActivity
       .where("window_start >= ?", Date.current - 30)
