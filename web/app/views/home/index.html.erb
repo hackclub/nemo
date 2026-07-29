@@ -74,8 +74,9 @@
         data-activity-chart-data-value="<%= {
           labels: @activity_trend.map { |r| r.ds.strftime("%b %d") },
           datasets: [
-            { label: "active", data: @activity_trend.map(&:active_users_1d) },
-            { label: "posted", data: @activity_trend.map(&:writers_count_1d) }
+            { label: "active", data: @activity_trend.map(&:active_users_1d), backgroundColor: HomeHelper::CHART_SERIES_A, order: 1 },
+            { label: "posted", data: @activity_trend.map(&:writers_count_1d), backgroundColor: HomeHelper::CHART_SERIES_B, order: 1 },
+            ratio_line_dataset("posting share", @activity_trend.map { |r| share_pct(r.writers_count_1d, r.active_users_1d) })
           ]
         }.to_json %>"
       ></canvas>
@@ -92,8 +93,9 @@
         data-activity-chart-data-value="<%= {
           labels: @activity_trend.map { |r| r.ds.strftime("%b %d") },
           datasets: [
-            { label: "public channels", data: @activity_trend.map(&:chats_channels_count_1d) },
-            { label: "private channels", data: @activity_trend.map(&:chats_groups_count_1d) }
+            { label: "public channels", data: @activity_trend.map(&:chats_channels_count_1d), backgroundColor: HomeHelper::CHART_SERIES_A, order: 1 },
+            { label: "private channels", data: @activity_trend.map(&:chats_groups_count_1d), backgroundColor: HomeHelper::CHART_SERIES_B, order: 1 },
+            ratio_line_dataset("private share", @activity_trend.map { |r| share_pct(r.chats_groups_count_1d, r.chats_channels_count_1d.to_i + r.chats_groups_count_1d.to_i) })
           ]
         }.to_json %>"
       ></canvas>
