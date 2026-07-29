@@ -55,3 +55,7 @@ models:
     columns:
       - name: ds
         data_tests: [not_null, unique]
+  - name: mart_team_stats_daily
+    columns:
+      - name: ds
+        data_tests: [not_null, unique]

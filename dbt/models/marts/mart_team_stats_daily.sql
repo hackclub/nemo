@@ -1,0 +1,25 @@
+select
+    ds,
+    total_members_count,
+    total_claimed_count,
+    full_members_count,
+    guests_count,
+    active_users_1d,
+    active_users_7d,
+    active_users_28d,
+    writers_count_1d,
+    writers_count_7d,
+    writers_count_28d,
+    readers_count_1d,
+    readers_count_7d,
+    messages_count_1d,
+    messages_channels_count_from_apps_1d,
+    messages_from_members_1d,
+    channel_messages_1d,
+    chats_channels_count_1d,
+    chats_groups_count_1d,
+    files_count_1d,
+    channels_count,
+    'v1' as metric_version
+from {{ ref('fct_team_stats') }}
+order by ds
