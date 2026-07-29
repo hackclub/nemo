@@ -8,6 +8,7 @@ from ingest.analytics_pull import pull_channel_day, pull_member_day, pull_users
 from ingest.autojoin import join_all
 from ingest.message_activity_pull import pull_all_channels
 from ingest.team_stats_pull import run as pull_team_stats
+from ingest.top_posters_pull import run as pull_top_posters
 from lib.db import connect, finish_run, start_run
 from lib.slack_client import bot_client
 
@@ -28,6 +29,7 @@ def main():
         conn.commit()
         try:
             pull_team_stats(conn)
+            pull_top_posters(conn)
             pull_member_day(conn, pull_date)
             pull_channel_day(conn, pull_date)
             pull_users(conn)
