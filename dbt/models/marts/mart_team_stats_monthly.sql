@@ -9,6 +9,8 @@ with ranked as (
 select
     date_trunc('month', ds)::date as month,
     count(*) as days_covered,
+    extract(day from (date_trunc('month', max(ds)) + interval '1 month - 1 day'))::int as days_in_month,
+    count(*) = extract(day from (date_trunc('month', max(ds)) + interval '1 month - 1 day'))::int as is_complete,
     max(ds) as last_ds,
 
     sum(channel_messages_1d) as channel_messages,

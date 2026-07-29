@@ -28,7 +28,9 @@ class HomeController < ApplicationController
     @activity_granularity = helpers.activity_granularity(params[:activity_granularity])
     @activity_trend =
       if @activity_granularity == "monthly"
-        Analytics::MartTeamStatsMonthly.order(month: :desc).limit(14).to_a.reverse
+        Analytics::MartTeamStatsMonthly
+          .where("is_complete or month = ?", Date.current.beginning_of_month)
+          .order(month: :desc).limit(12).to_a.reverse
       else
         Analytics::MartTeamStatsDaily.order(ds: :desc).limit(90).to_a.reverse
       end
