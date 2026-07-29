@@ -59,6 +59,14 @@ models:
     columns:
       - name: ds
         data_tests: [not_null, unique]
+  - name: mart_team_stats_monthly
+    columns:
+      - name: month
+        data_tests: [not_null, unique]
+      - name: days_covered
+        data_tests: [not_null]
+      - name: active_users_28d
+        data_tests: [not_null]
   - name: mart_top_posters
     columns:
       - name: user_id
