@@ -110,10 +110,11 @@
         data-growth-chart-data-value="<%= {
           labels: @growth_months.map { |m| m.month.strftime("%b %Y") },
           datasets: [
-            { label: "invited", data: @growth_months.map(&:invited_members) },
-            { label: "claimed", data: @growth_months.map(&:joined_members) }
+            { label: "accounts created", data: @growth_months.map(&:created_members) },
+            { label: "claimed", data: @growth_months.map(&:claimed_members) }
           ]
         }.to_json %>"
+        data-growth-chart-rates-value="<%= @growth_months.map { |m| m.claim_rate.to_f }.to_json %>"
       ></canvas>
     </div>
     <div class="mn-growth-footer">

@@ -12,7 +12,7 @@ import {
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend)
 
 export default class extends Controller {
-  static values = { data: Object }
+  static values = { data: Object, rates: Array }
 
   connect() {
     this.chart = new Chart(this.element, {
@@ -27,9 +27,9 @@ export default class extends Controller {
               label: (context) => {
                 const value = context.parsed.y
                 if (context.dataset.label !== "claimed") return `${context.dataset.label}: ${value}`
-                const invited = context.chart.data.datasets[0].data[context.dataIndex]
-                const pct = invited ? ((value / invited) * 100).toFixed(1) : "n/a"
-                return `claimed: ${value} (${pct}%)`
+                const rate = this.ratesValue[context.dataIndex]
+                if (rate == null) return `claimed: ${value} (n/a)`
+                return `claimed: ${value} (${(rate * 100).toFixed(1)}% of this cohort)`
               },
             },
           },
