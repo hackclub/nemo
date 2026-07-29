@@ -25,6 +25,7 @@ class HomeController < ApplicationController
     end
 
     @team_stats = Analytics::MartTeamStats.take
+    @activity_trend = Analytics::MartTeamStatsDaily.order(ds: :desc).limit(90).to_a.reverse
     @growth_months = Analytics::MartGrowth.order(month: :desc).limit(6).to_a.reverse
     @top_channels = Analytics::MartChannelActivity
       .where("window_start >= ?", Date.current - 30)
