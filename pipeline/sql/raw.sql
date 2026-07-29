@@ -152,6 +152,17 @@ CREATE TABLE IF NOT EXISTS raw.team_stats_snapshot (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS raw.top_posters_snapshot (
+    window_start date NOT NULL,
+    window_end date NOT NULL,
+    user_id text NOT NULL,
+    display_name text,
+    messages_posted integer,
+    pulled_at timestamptz NOT NULL DEFAULT now(),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (window_start, window_end, user_id)
+);
+
 CREATE TABLE IF NOT EXISTS raw.message_activity_snapshot (
     channel_id text NOT NULL,
     message_ts text NOT NULL,
