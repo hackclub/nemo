@@ -1,4 +1,5 @@
 import os
+import secrets
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -41,7 +42,9 @@ def require_token(creds: HTTPAuthorizationCredentials | None = Depends(bearer)):
     expected = os.environ.get("PROXY_TOKEN", "")
     if not expected:
         raise HTTPException(status_code=503, detail="proxy token is not configured")
-    if creds is None or creds.credentials != expected:
+    if creds is None or not secrets.compare_digest(
+        creds.credentials.encode("utf-8"), expected.encode("utf-8")
+    ):
         raise HTTPException(status_code=401, detail="invalid bearer token")
 
 
