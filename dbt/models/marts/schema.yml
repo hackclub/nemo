@@ -59,3 +59,13 @@ models:
     columns:
       - name: ds
         data_tests: [not_null, unique]
+  - name: mart_top_posters
+    columns:
+      - name: user_id
+        data_tests: [not_null]
+      - name: month
+        data_tests: [not_null]
+      - name: rank
+        data_tests: [not_null]
+      - name: messages_posted
+        data_tests: [not_null]

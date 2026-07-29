@@ -11,3 +11,4 @@ sources:
       - name: slack_events
       - name: message_activity_snapshot
       - name: team_stats_snapshot
+      - name: top_posters_snapshot
