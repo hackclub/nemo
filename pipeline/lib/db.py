@@ -46,6 +46,21 @@ def finish_run(conn: psycopg.Connection, run_id: int, status: str, rows_in: int,
         )
 
 
+def sweep_stale_runs(conn: psycopg.Connection, max_age_hours: int = 6) -> list[tuple[int, str]]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE raw.ingest_run
+            SET status = 'abandoned', finished_at = now()
+            WHERE status = 'running'
+              AND started_at < now() - make_interval(hours => %s)
+            RETURNING id, source
+            """,
+            (max_age_hours,),
+        )
+        return cur.fetchall()
+
+
 def get_cursor(conn: psycopg.Connection, source: str, channel_id: str = "") -> str | None:
     with conn.cursor() as cur:
         cur.execute(

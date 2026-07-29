@@ -9,7 +9,7 @@ from ingest.autojoin import join_all
 from ingest.message_activity_pull import pull_all_channels
 from ingest.team_stats_pull import run as pull_team_stats
 from ingest.top_posters_pull import run as pull_top_posters
-from lib.db import connect, finish_run, start_run
+from lib.db import connect, finish_run, start_run, sweep_stale_runs
 from lib.slack_client import bot_client
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -25,6 +25,9 @@ def main():
     load_dotenv(ENV_FILE)
     pull_date = date.today() - timedelta(days=2)
     with connect() as conn:
+        for stale_id, stale_source in sweep_stale_runs(conn):
+            print(f"abandoned stale run {stale_id} ({stale_source})")
+        conn.commit()
         run_id = start_run(conn, SOURCE)
         conn.commit()
         try:
