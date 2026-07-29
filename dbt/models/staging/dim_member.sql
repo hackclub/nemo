@@ -15,5 +15,7 @@ select
     claimed_at,
     deactivated_at,
     claimed_at is not null as is_claimed,
+    is_invited_member,
+    is_invited_guest,
     coalesce(is_bot, false) as is_bot
 from {{ source('raw', 'member_dim') }}
