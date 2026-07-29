@@ -6,6 +6,6 @@ select
         / nullif(count(*), 0),
         4
     ) as claim_rate,
-    'v3' as metric_version
+    'v4' as metric_version
 from {{ ref('dim_member') }}
 where not is_bot
