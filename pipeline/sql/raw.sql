@@ -77,6 +77,9 @@ ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_primary_owner boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_restricted boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_ultra_restricted boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS account_created_verified timestamptz;
+ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS claimed_at_verified timestamptz;
+ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_invited_member boolean;
+ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_invited_guest boolean;
 
 CREATE TABLE IF NOT EXISTS raw.sync_cursor (
     source text NOT NULL,
