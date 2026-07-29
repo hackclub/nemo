@@ -84,6 +84,24 @@
 </div>
 
 <div class="mb-8">
+  <h2 class="mn-h2 mb-3">Messages from members, last <%= @activity_trend.size %> days</h2>
+  <div class="mn-card p-5">
+    <div class="mn-growth-chart">
+      <canvas
+        data-controller="activity-chart"
+        data-activity-chart-data-value="<%= {
+          labels: @activity_trend.map { |r| r.ds.strftime("%b %d") },
+          datasets: [
+            { label: "public channels", data: @activity_trend.map(&:chats_channels_count_1d) },
+            { label: "private channels", data: @activity_trend.map(&:chats_groups_count_1d) }
+          ]
+        }.to_json %>"
+      ></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="mb-8">
   <h2 class="mn-h2 mb-3">Growth, last <%= @growth_months.size %> months</h2>
   <div class="mn-card p-5">
     <div class="mn-growth-chart">
