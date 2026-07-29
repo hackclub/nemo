@@ -5,7 +5,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from lib.db import connect, dead_letter, ingest_run
-from lib.internal_client import InternalClient
+from lib.proxy_client import ProxyClient
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
@@ -68,7 +68,7 @@ def available_range(client):
 
 def run(conn, start_date=None, end_date=None):
     with ingest_run(conn, SOURCE) as counts:
-        client = InternalClient()
+        client = ProxyClient()
 
         if start_date is None or end_date is None:
             start_date, end_date = available_range(client)

@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException
 
 from slack_sdk.errors import SlackApiError
 
-from lib.internal_client import InternalApiError, InternalAuthError, InternalClient
+from lib.proxy_client import InternalApiError, InternalAuthError, ProxyClient
 from lib.slack_client import bot_client
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -22,7 +22,7 @@ _range_cache = {"value": None, "at": 0.0}
 def available_range():
     if _range_cache["value"] and time.time() - _range_cache["at"] < 3600:
         return _range_cache["value"]
-    resp = InternalClient().call(RANGE_METHOD, {"type": "member"})
+    resp = ProxyClient().call(RANGE_METHOD, {"type": "member"})
     value = (resp["start_date"], resp["end_date"])
     _range_cache.update(value=value, at=time.time())
     return value
@@ -59,7 +59,7 @@ def channel_analytics(channel_id: str, name: str, start: str, end: str, privacy:
         avail_start, avail_end = available_range()
         start = max(start, avail_start)
         end = min(end, avail_end)
-        resp = InternalClient().call(METHOD, {
+        resp = ProxyClient().call(METHOD, {
             "start_date": start,
             "end_date": end,
             "count": 100,

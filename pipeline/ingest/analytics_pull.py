@@ -8,7 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from lib.db import connect, dead_letter, finish_run, get_cursor, save_cursor, start_run
-from lib.internal_client import InternalClient
+from lib.proxy_client import ProxyClient
 from lib.slack_client import admin_client
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -235,7 +235,7 @@ def pull_member_day(conn, pull_date):
     run_id = start_run(conn, f"{ANALYTICS_SOURCE}:member")
     rows_in = rows_rejected = 0
     activity_rows, dim_rows = [], []
-    client = InternalClient()
+    client = ProxyClient()
     params = {
         "start_date": pull_date.isoformat(),
         "end_date": pull_date.isoformat(),
@@ -302,8 +302,13 @@ def pull_users_page(conn, is_active):
     run_id = start_run(conn, f"{USERS_SOURCE}:{label}")
     rows_in = rows_rejected = 0
     cursor = get_cursor(conn, USERS_SOURCE, channel_id=label)
+    client = ProxyClient()
     while True:
-        page = admin_client().admin_users_list(limit=99, cursor=cursor, is_active=is_active)
+        page = client.call(
+            "admin.users.list",
+            {"limit": 99, "cursor": cursor, "is_active": is_active},
+            credential="admin",
+        )
         dim_rows, profile_rows = [], []
         for user in page.get("users", []):
             rows_in += 1

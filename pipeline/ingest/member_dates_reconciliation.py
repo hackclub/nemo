@@ -4,7 +4,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from lib.db import connect, dead_letter, ingest_run
-from lib.internal_client import InternalApiError, InternalAuthError, InternalClient
+from lib.proxy_client import InternalApiError, InternalAuthError, ProxyClient
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
@@ -23,7 +23,7 @@ def parse_epoch(value):
 
 def run(conn):
     with ingest_run(conn, SOURCE) as counts:
-        client = InternalClient()
+        client = ProxyClient()
 
         avail = client.call("admin.analytics.getAvailableDateRange", {"type": "member"})
         params = {

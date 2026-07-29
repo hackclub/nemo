@@ -5,7 +5,8 @@ from dotenv import load_dotenv
 from slack_sdk.errors import SlackApiError
 
 from lib.db import connect, dead_letter, get_cursor, ingest_run, save_cursor
-from lib.slack_client import admin_client, bot_client
+from lib.proxy_client import ProxyClient
+from lib.slack_client import bot_client
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 SOURCE = "autojoin"
@@ -21,11 +22,11 @@ ON CONFLICT (channel_id) DO UPDATE SET
 
 
 def resolve_team_id():
-    for page in admin_client().admin_teams_list(limit=99):
-        teams = page.get("teams", [])
-        if teams:
-            return teams[0]["id"]
-    raise RuntimeError("admin.teams.list returned no teams")
+    data = ProxyClient().call("admin.teams.list", {"limit": 99}, credential="admin")
+    teams = data.get("teams", [])
+    if not teams:
+        raise RuntimeError("admin.teams.list returned no teams")
+    return teams[0]["id"]
 
 
 def join_all(conn, client, join=True):

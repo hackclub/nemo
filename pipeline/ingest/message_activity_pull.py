@@ -4,7 +4,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from lib.db import connect, dead_letter, get_cursor, ingest_run, save_cursor
-from lib.slack_client import admin_client
+from lib.proxy_client import ProxyClient
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
@@ -53,14 +53,15 @@ def known_channel_ids(conn):
 
 def pull_channel_message_activity(conn, channel_id):
     with ingest_run(conn, f"{SOURCE}:{channel_id}") as counts:
+        client = ProxyClient()
         cursor = get_cursor(conn, SOURCE, channel_id)
         while True:
             params = {"channel": channel_id, "limit": 100}
             if cursor:
                 params["cursor"] = cursor
-            resp = admin_client().api_call("admin.analytics.messages.activity", params=params)
+            data = client.call("admin.analytics.messages.activity", params, credential="admin")
             rows = []
-            for rec in resp.data.get("message_activities", []):
+            for rec in data.get("message_activities", []):
                 counts.rows_in += 1
                 try:
                     rows.append(message_activity_row(rec))
@@ -69,7 +70,7 @@ def pull_channel_message_activity(conn, channel_id):
                     dead_letter(conn, SOURCE, rec, str(exc))
             with conn.cursor() as cur:
                 cur.executemany(MESSAGE_ACTIVITY_SQL, rows)
-            cursor = resp.data.get("response_metadata", {}).get("next_cursor") or ""
+            cursor = data.get("response_metadata", {}).get("next_cursor") or ""
             save_cursor(conn, SOURCE, cursor, channel_id)
             conn.commit()
             if not cursor:
