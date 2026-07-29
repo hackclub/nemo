@@ -1,5 +1,5 @@
 import argparse
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -12,6 +12,7 @@ ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 SOURCE = "team_stats"
 METHOD = "team.stats.timeSeries"
 RANGE_METHOD = "admin.analytics.getAvailableDateRange"
+MAX_WINDOW_DAYS = 380
 
 FIELDS = (
     "total_members_count",
@@ -66,6 +67,14 @@ def available_range(client):
     return date.fromisoformat(rng["start_date"]), date.fromisoformat(rng["end_date"])
 
 
+def windows(start_date, end_date, size=MAX_WINDOW_DAYS):
+    cursor = start_date
+    while cursor <= end_date:
+        last = min(cursor + timedelta(days=size - 1), end_date)
+        yield cursor, last
+        cursor = last + timedelta(days=1)
+
+
 def run(conn, start_date=None, end_date=None):
     with ingest_run(conn, SOURCE) as counts:
         client = ProxyClient()
@@ -73,23 +82,25 @@ def run(conn, start_date=None, end_date=None):
         if start_date is None or end_date is None:
             start_date, end_date = available_range(client)
 
-        data = client.call(
-            METHOD,
-            {"start_date": start_date.isoformat(), "end_date": end_date.isoformat()},
-        )
+        for window_start, window_end in windows(start_date, end_date):
+            data = client.call(
+                METHOD,
+                {"start_date": window_start.isoformat(), "end_date": window_end.isoformat()},
+            )
 
-        rows = []
-        for rec in data.get("stats") or []:
-            try:
-                rows.append(team_stats_row(rec))
-                counts.rows_in += 1
-            except KeyError as exc:
-                counts.rows_rejected += 1
-                dead_letter(conn, SOURCE, rec, str(exc))
+            rows = []
+            for rec in data.get("stats") or []:
+                try:
+                    rows.append(team_stats_row(rec))
+                    counts.rows_in += 1
+                except KeyError as exc:
+                    counts.rows_rejected += 1
+                    dead_letter(conn, SOURCE, rec, str(exc))
 
-        with conn.cursor() as cur:
-            cur.executemany(INSERT_SQL, rows)
-        conn.commit()
+            with conn.cursor() as cur:
+                cur.executemany(INSERT_SQL, rows)
+            conn.commit()
+            print(f"{SOURCE} {window_start}..{window_end}: {len(rows)} rows")
 
     print(f"{SOURCE} {start_date}..{end_date}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
