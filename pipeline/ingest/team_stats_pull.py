@@ -4,7 +4,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from lib.db import connect, dead_letter, finish_run, start_run
+from lib.db import connect, dead_letter, ingest_run
 from lib.internal_client import InternalClient
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -67,34 +67,31 @@ def available_range(client):
 
 
 def run(conn, start_date=None, end_date=None):
-    run_id = start_run(conn, SOURCE)
-    rows_in = rows_rejected = 0
-    client = InternalClient()
+    with ingest_run(conn, SOURCE) as counts:
+        client = InternalClient()
 
-    if start_date is None or end_date is None:
-        start_date, end_date = available_range(client)
+        if start_date is None or end_date is None:
+            start_date, end_date = available_range(client)
 
-    data = client.call(
-        METHOD,
-        {"start_date": start_date.isoformat(), "end_date": end_date.isoformat()},
-    )
+        data = client.call(
+            METHOD,
+            {"start_date": start_date.isoformat(), "end_date": end_date.isoformat()},
+        )
 
-    rows = []
-    for rec in data.get("stats") or []:
-        try:
-            rows.append(team_stats_row(rec))
-            rows_in += 1
-        except KeyError as exc:
-            rows_rejected += 1
-            dead_letter(conn, SOURCE, rec, str(exc))
+        rows = []
+        for rec in data.get("stats") or []:
+            try:
+                rows.append(team_stats_row(rec))
+                counts.rows_in += 1
+            except KeyError as exc:
+                counts.rows_rejected += 1
+                dead_letter(conn, SOURCE, rec, str(exc))
 
-    with conn.cursor() as cur:
-        cur.executemany(INSERT_SQL, rows)
-    conn.commit()
+        with conn.cursor() as cur:
+            cur.executemany(INSERT_SQL, rows)
+        conn.commit()
 
-    finish_run(conn, run_id, "ok", rows_in, rows_rejected)
-    conn.commit()
-    print(f"{SOURCE} {start_date}..{end_date}: {rows_in} rows, {rows_rejected} rejected")
+    print(f"{SOURCE} {start_date}..{end_date}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
 
 def main():

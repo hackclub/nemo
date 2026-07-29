@@ -3,7 +3,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from lib.db import connect, dead_letter, finish_run, get_cursor, save_cursor, start_run
+from lib.db import connect, dead_letter, get_cursor, ingest_run, save_cursor
 from lib.slack_client import admin_client
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -52,32 +52,29 @@ def known_channel_ids(conn):
 
 
 def pull_channel_message_activity(conn, channel_id):
-    run_id = start_run(conn, f"{SOURCE}:{channel_id}")
-    rows_in = rows_rejected = 0
-    cursor = get_cursor(conn, SOURCE, channel_id)
-    while True:
-        params = {"channel": channel_id, "limit": 100}
-        if cursor:
-            params["cursor"] = cursor
-        resp = admin_client().api_call("admin.analytics.messages.activity", params=params)
-        rows = []
-        for rec in resp.data.get("message_activities", []):
-            rows_in += 1
-            try:
-                rows.append(message_activity_row(rec))
-            except KeyError as exc:
-                rows_rejected += 1
-                dead_letter(conn, SOURCE, rec, str(exc))
-        with conn.cursor() as cur:
-            cur.executemany(MESSAGE_ACTIVITY_SQL, rows)
-        cursor = resp.data.get("response_metadata", {}).get("next_cursor") or ""
-        save_cursor(conn, SOURCE, cursor, channel_id)
-        conn.commit()
-        if not cursor:
-            break
-    finish_run(conn, run_id, "ok", rows_in, rows_rejected)
-    conn.commit()
-    print(f"message activity {channel_id}: {rows_in} rows, {rows_rejected} rejected")
+    with ingest_run(conn, f"{SOURCE}:{channel_id}") as counts:
+        cursor = get_cursor(conn, SOURCE, channel_id)
+        while True:
+            params = {"channel": channel_id, "limit": 100}
+            if cursor:
+                params["cursor"] = cursor
+            resp = admin_client().api_call("admin.analytics.messages.activity", params=params)
+            rows = []
+            for rec in resp.data.get("message_activities", []):
+                counts.rows_in += 1
+                try:
+                    rows.append(message_activity_row(rec))
+                except KeyError as exc:
+                    counts.rows_rejected += 1
+                    dead_letter(conn, SOURCE, rec, str(exc))
+            with conn.cursor() as cur:
+                cur.executemany(MESSAGE_ACTIVITY_SQL, rows)
+            cursor = resp.data.get("response_metadata", {}).get("next_cursor") or ""
+            save_cursor(conn, SOURCE, cursor, channel_id)
+            conn.commit()
+            if not cursor:
+                break
+    print(f"message activity {channel_id}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
 
 def pull_all_channels(conn):

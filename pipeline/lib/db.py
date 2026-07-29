@@ -1,5 +1,8 @@
 import json
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass
 
 import psycopg
 
@@ -44,6 +47,27 @@ def finish_run(conn: psycopg.Connection, run_id: int, status: str, rows_in: int,
             """,
             (status, rows_in, rows_rejected, run_id),
         )
+
+
+@dataclass
+class RunCounts:
+    rows_in: int = 0
+    rows_rejected: int = 0
+
+
+@contextmanager
+def ingest_run(conn: psycopg.Connection, source: str) -> Iterator[RunCounts]:
+    run_id = start_run(conn, source)
+    conn.commit()
+    counts = RunCounts()
+    try:
+        yield counts
+    except BaseException:
+        finish_run(conn, run_id, "failed", counts.rows_in, counts.rows_rejected)
+        conn.commit()
+        raise
+    finish_run(conn, run_id, "ok", counts.rows_in, counts.rows_rejected)
+    conn.commit()
 
 
 def sweep_stale_runs(conn: psycopg.Connection, max_age_hours: int = 6) -> list[tuple[int, str]]:

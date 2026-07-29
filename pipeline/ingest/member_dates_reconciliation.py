@@ -3,7 +3,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from lib.db import connect, dead_letter, finish_run, start_run
+from lib.db import connect, dead_letter, ingest_run
 from lib.internal_client import InternalApiError, InternalAuthError, InternalClient
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -22,44 +22,41 @@ def parse_epoch(value):
 
 
 def run(conn):
-    run_id = start_run(conn, SOURCE)
-    rows_in = rows_rejected = 0
-    client = InternalClient()
+    with ingest_run(conn, SOURCE) as counts:
+        client = InternalClient()
 
-    avail = client.call("admin.analytics.getAvailableDateRange", {"type": "member"})
-    params = {
-        "start_date": avail["start_date"],
-        "end_date": avail["end_date"],
-        "sort_column": "real_name",
-        "sort_direction": "asc",
-    }
+        avail = client.call("admin.analytics.getAvailableDateRange", {"type": "member"})
+        params = {
+            "start_date": avail["start_date"],
+            "end_date": avail["end_date"],
+            "sort_column": "real_name",
+            "sort_direction": "asc",
+        }
 
-    for i, member in enumerate(
-        client.paginate(
-            "admin.analytics.getMemberAnalytics",
-            params,
-            "member_activity",
-            page_size=500,
-            cursor_param="cursor_mark",
-        )
-    ):
-        rows_in += 1
-        try:
-            with conn.cursor() as cur:
-                cur.execute(UPDATE_SQL, (parse_epoch(member.get("date_created")), member["user_id"]))
-        except (InternalApiError, KeyError) as exc:
-            rows_rejected += 1
-            conn.rollback()
-            dead_letter(conn, SOURCE, {"user_id": member.get("user_id")}, str(exc))
+        for i, member in enumerate(
+            client.paginate(
+                "admin.analytics.getMemberAnalytics",
+                params,
+                "member_activity",
+                page_size=500,
+                cursor_param="cursor_mark",
+            )
+        ):
+            counts.rows_in += 1
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(UPDATE_SQL, (parse_epoch(member.get("date_created")), member["user_id"]))
+            except (InternalApiError, KeyError) as exc:
+                counts.rows_rejected += 1
+                conn.rollback()
+                dead_letter(conn, SOURCE, {"user_id": member.get("user_id")}, str(exc))
 
-        if (i + 1) % 2000 == 0:
-            conn.commit()
-            print(f"{SOURCE}: {i + 1} processed")
+            if (i + 1) % 2000 == 0:
+                conn.commit()
+                print(f"{SOURCE}: {i + 1} processed")
 
-    conn.commit()
-    finish_run(conn, run_id, "ok", rows_in, rows_rejected)
-    conn.commit()
-    print(f"{SOURCE}: {rows_in} rows, {rows_rejected} rejected")
+        conn.commit()
+    print(f"{SOURCE}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
 
 def main():

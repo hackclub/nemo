@@ -5,7 +5,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from lib.db import connect, dead_letter, finish_run, start_run
+from lib.db import connect, dead_letter, ingest_run
 from lib.internal_client import InternalClient
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -95,29 +95,26 @@ def pull_month(conn, client, month, avail_start, avail_end):
 
 
 def run(conn, month=None, backfill=False):
-    run_id = start_run(conn, SOURCE)
-    client = InternalClient()
-    avail_start, avail_end = available_range(client)
+    with ingest_run(conn, SOURCE) as counts:
+        client = InternalClient()
+        avail_start, avail_end = available_range(client)
 
-    if backfill:
-        months = months_in_range(avail_start, avail_end)
-    elif month:
-        months = [month]
-    else:
-        months = [avail_end.replace(day=1)]
+        if backfill:
+            months = months_in_range(avail_start, avail_end)
+        elif month:
+            months = [month]
+        else:
+            months = [avail_end.replace(day=1)]
 
-    rows_in = rows_rejected = 0
-    for m in months:
-        count, rejected, window_start, window_end = pull_month(
-            conn, client, m, avail_start, avail_end
-        )
-        rows_in += count
-        rows_rejected += rejected
-        print(f"{SOURCE} {window_start}..{window_end}: {count} rows")
+        for m in months:
+            count, rejected, window_start, window_end = pull_month(
+                conn, client, m, avail_start, avail_end
+            )
+            counts.rows_in += count
+            counts.rows_rejected += rejected
+            print(f"{SOURCE} {window_start}..{window_end}: {count} rows")
 
-    finish_run(conn, run_id, "ok", rows_in, rows_rejected)
-    conn.commit()
-    print(f"{SOURCE}: {rows_in} rows, {rows_rejected} rejected across {len(months)} months")
+    print(f"{SOURCE}: {counts.rows_in} rows, {counts.rows_rejected} rejected across {len(months)} months")
 
 
 def main():
