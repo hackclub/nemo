@@ -20,8 +20,13 @@
       </span>
     </div>
     <div class="mn-eyebrow mb-1">claimed</div>
-    <div class="mn-stat"><%= number_with_delimiter(@activation.claimed) %></div>
-    <p class="mn-trend-up mt-2"><%= number_to_percentage(@activation.claim_rate.to_f * 100, precision: 1) %> claim rate</p>
+    <% if @team_stats && @team_stats.total_members_count.to_i.positive? %>
+      <div class="mn-stat"><%= number_with_delimiter(@team_stats.total_claimed_count) %></div>
+      <p class="mn-trend-up mt-2"><%= number_to_percentage(@team_stats.total_claimed_count.to_f / @team_stats.total_members_count * 100, precision: 1) %> claim rate</p>
+    <% else %>
+      <div class="mn-stat">&mdash;</div>
+      <p class="mn-label mt-2">no team stats loaded</p>
+    <% end %>
   </div>
 
   <div class="mn-card p-5">
