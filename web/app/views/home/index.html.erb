@@ -93,9 +93,8 @@
         data-activity-chart-data-value="<%= {
           labels: @activity_trend.map { |r| r.ds.strftime("%b %d") },
           datasets: [
-            { label: "public channels", data: @activity_trend.map(&:chats_channels_count_1d), backgroundColor: HomeHelper::CHART_SERIES_A, order: 1 },
-            { label: "private channels", data: @activity_trend.map(&:chats_groups_count_1d), backgroundColor: HomeHelper::CHART_SERIES_B, order: 1 },
-            ratio_line_dataset("public share", @activity_trend.map { |r| share_pct(r.chats_channels_count_1d, r.chats_channels_count_1d.to_i + r.chats_groups_count_1d.to_i) })
+            { label: "channel messages", data: @activity_trend.map(&:channel_messages_1d), backgroundColor: HomeHelper::CHART_SERIES_A, order: 1 },
+            ratio_line_dataset("public share", @activity_trend.map { |r| share_pct(r.chats_channels_count_1d, r.channel_messages_1d) })
           ]
         }.to_json %>"
       ></canvas>
