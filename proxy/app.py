@@ -108,20 +108,6 @@ class CallRequest(BaseModel):
     max_retries: int = 3
 
 
-@app.get("/health")
-def health(response: Response):
-    present = {name: credential_present(name) for name in CREDENTIALS}
-    ok = all(present.values())
-    if not ok:
-        response.status_code = 503
-    return {
-        "ok": ok,
-        "credentials_configured": present,
-        "allowed_methods": {k: sorted(v) for k, v in ALLOWED_METHODS.items()},
-        "allowed_file_methods": sorted(ALLOWED_FILE_METHODS),
-    }
-
-
 @app.get("/verify", dependencies=[Depends(require_token)])
 def verify(response: Response):
     credentials = {}
@@ -134,7 +120,12 @@ def verify(response: Response):
     ok = all(c["ok"] for c in credentials.values())
     if not ok:
         response.status_code = 503
-    return {"ok": ok, "credentials": credentials}
+    return {
+        "ok": ok,
+        "credentials": credentials,
+        "allowed_methods": {k: sorted(v) for k, v in ALLOWED_METHODS.items()},
+        "allowed_file_methods": sorted(ALLOWED_FILE_METHODS),
+    }
 
 
 def call_internal(req: CallRequest):
