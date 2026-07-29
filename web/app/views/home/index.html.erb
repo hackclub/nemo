@@ -38,9 +38,14 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       </span>
     </div>
-    <div class="mn-eyebrow mb-1">active accounts (claimed)</div>
-    <div class="mn-stat"><%= number_with_delimiter(@active_members) %></div>
-    <p class="mn-label mt-2">claimed (all-time)</p>
+    <div class="mn-eyebrow mb-1">monthly active</div>
+    <% if @team_stats %>
+      <div class="mn-stat"><%= number_with_delimiter(@team_stats.active_users_28d) %></div>
+      <p class="mn-label mt-2">posted or read something, last 28 days</p>
+    <% else %>
+      <div class="mn-stat">n/a</div>
+      <p class="mn-label mt-2">no team stats loaded</p>
+    <% end %>
   </div>
 
   <div class="mn-card p-5">

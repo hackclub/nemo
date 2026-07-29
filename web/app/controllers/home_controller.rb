@@ -25,7 +25,6 @@ class HomeController < ApplicationController
     end
 
     @team_stats = Analytics::MartTeamStats.take
-    @active_members = Analytics::DimMember.where(is_bot: false).where.not(claimed_at: nil).count
     @growth_months = Analytics::MartGrowth.order(month: :desc).limit(6).to_a.reverse
     @top_channels = Analytics::MartChannelActivity
       .where("window_start >= ?", Date.current - 30)
