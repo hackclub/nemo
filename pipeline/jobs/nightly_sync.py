@@ -16,7 +16,7 @@ SOURCE = "nightly_sync"
 
 
 def run_dbt():
-    subprocess.run(["dbt", "run", "--profiles-dir", str(DBT_DIR)], cwd=DBT_DIR, check=True)
+    subprocess.run(["dbt", "build", "--profiles-dir", str(DBT_DIR)], cwd=DBT_DIR, check=True)
 
 
 def main():
