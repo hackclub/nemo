@@ -15,6 +15,42 @@ module HomeHelper
     end
   end
 
+  ACTIVITY_GRANULARITIES = { "daily" => "daily", "monthly" => "monthly" }.freeze
+
+  def activity_granularity(value)
+    ACTIVITY_GRANULARITIES.fetch(value.to_s, "daily")
+  end
+
+  def activity_series(rows, granularity)
+    if granularity == "monthly"
+      {
+        labels: rows.map { |r| r.month.strftime("%b %Y") },
+        tick_every: 1,
+        span: "#{rows.size} months",
+        people: rows.map(&:active_users_28d),
+        people_label: "active in last 28 days",
+        posted: rows.map(&:writers_count_28d),
+        posted_label: "posted in last 28 days",
+        posted_share: rows.map { |r| share_pct(r.writers_count_28d, r.active_users_28d) },
+        messages: rows.map(&:channel_messages),
+        public_share: rows.map { |r| share_pct(r.public_channel_messages, r.channel_messages) }
+      }
+    else
+      {
+        labels: rows.map { |r| r.ds.strftime("%b %d") },
+        tick_every: 15,
+        span: "#{rows.size} days",
+        people: rows.map(&:active_users_1d),
+        people_label: "active",
+        posted: rows.map(&:writers_count_1d),
+        posted_label: "posted",
+        posted_share: rows.map { |r| share_pct(r.writers_count_1d, r.active_users_1d) },
+        messages: rows.map(&:channel_messages_1d),
+        public_share: rows.map { |r| share_pct(r.chats_channels_count_1d, r.channel_messages_1d) }
+      }
+    end
+  end
+
   def share_pct(numerator, denominator)
     return 0.0 if denominator.nil? || denominator.to_i.zero?
 

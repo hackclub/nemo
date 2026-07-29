@@ -1,0 +1,46 @@
+<% s = activity_series(activity_trend, granularity) %>
+
+<div class="flex items-center justify-between mb-3">
+  <h2 class="mn-h2">Active people in your workspace, last <%= s[:span] %></h2>
+  <select
+    class="mn-label border mn-divider rounded px-2 py-1"
+    data-activity-granularity-target="select"
+    data-action="activity-granularity#change"
+  >
+    <option value="daily" <%= "selected" if granularity == "daily" %>>daily</option>
+    <option value="monthly" <%= "selected" if granularity == "monthly" %>>monthly</option>
+  </select>
+</div>
+<div class="mn-card p-5 mb-8">
+  <div class="mn-growth-chart">
+    <canvas
+      data-controller="activity-chart"
+      data-activity-chart-tick-every-value="<%= s[:tick_every] %>"
+      data-activity-chart-data-value="<%= {
+        labels: s[:labels],
+        datasets: [
+          { label: s[:people_label], data: s[:people], backgroundColor: HomeHelper::CHART_SERIES_A, order: 1 },
+          { label: s[:posted_label], data: s[:posted], backgroundColor: HomeHelper::CHART_SERIES_B, order: 1 },
+          ratio_line_dataset("share of active who posted", s[:posted_share])
+        ]
+      }.to_json %>"
+    ></canvas>
+  </div>
+</div>
+
+<h2 class="mn-h2 mb-3">Messages from members, last <%= s[:span] %></h2>
+<div class="mn-card p-5">
+  <div class="mn-growth-chart">
+    <canvas
+      data-controller="activity-chart"
+      data-activity-chart-tick-every-value="<%= s[:tick_every] %>"
+      data-activity-chart-data-value="<%= {
+        labels: s[:labels],
+        datasets: [
+          { label: "channel messages", data: s[:messages], backgroundColor: HomeHelper::CHART_SERIES_A, order: 1 },
+          ratio_line_dataset("public share", s[:public_share])
+        ]
+      }.to_json %>"
+    ></canvas>
+  </div>
+</div>

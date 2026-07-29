@@ -65,40 +65,9 @@
   </div>
 </div>
 
-<div class="mb-8">
-  <h2 class="mn-h2 mb-3">Active people in your workspace, last <%= @activity_trend.size %> days</h2>
-  <div class="mn-card p-5">
-    <div class="mn-growth-chart">
-      <canvas
-        data-controller="activity-chart"
-        data-activity-chart-data-value="<%= {
-          labels: @activity_trend.map { |r| r.ds.strftime("%b %d") },
-          datasets: [
-            { label: "active", data: @activity_trend.map(&:active_users_1d), backgroundColor: HomeHelper::CHART_SERIES_A, order: 1 },
-            { label: "posted", data: @activity_trend.map(&:writers_count_1d), backgroundColor: HomeHelper::CHART_SERIES_B, order: 1 },
-            ratio_line_dataset("share of active who posted", @activity_trend.map { |r| share_pct(r.writers_count_1d, r.active_users_1d) })
-          ]
-        }.to_json %>"
-      ></canvas>
-    </div>
-  </div>
-</div>
-
-<div class="mb-8">
-  <h2 class="mn-h2 mb-3">Messages from members, last <%= @activity_trend.size %> days</h2>
-  <div class="mn-card p-5">
-    <div class="mn-growth-chart">
-      <canvas
-        data-controller="activity-chart"
-        data-activity-chart-data-value="<%= {
-          labels: @activity_trend.map { |r| r.ds.strftime("%b %d") },
-          datasets: [
-            { label: "channel messages", data: @activity_trend.map(&:channel_messages_1d), backgroundColor: HomeHelper::CHART_SERIES_A, order: 1 },
-            ratio_line_dataset("public share", @activity_trend.map { |r| share_pct(r.chats_channels_count_1d, r.channel_messages_1d) })
-          ]
-        }.to_json %>"
-      ></canvas>
-    </div>
+<div class="mb-8" data-controller="activity-granularity" data-activity-granularity-url-value="<%= root_path %>">
+  <div data-activity-granularity-target="container">
+    <%= render "activity_charts", activity_trend: @activity_trend, granularity: @activity_granularity %>
   </div>
 </div>
 

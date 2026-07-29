@@ -25,7 +25,20 @@ class HomeController < ApplicationController
     end
 
     @team_stats = Analytics::MartTeamStats.take
-    @activity_trend = Analytics::MartTeamStatsDaily.order(ds: :desc).limit(90).to_a.reverse
+    @activity_granularity = helpers.activity_granularity(params[:activity_granularity])
+    @activity_trend =
+      if @activity_granularity == "monthly"
+        Analytics::MartTeamStatsMonthly.order(month: :desc).limit(14).to_a.reverse
+      else
+        Analytics::MartTeamStatsDaily.order(ds: :desc).limit(90).to_a.reverse
+      end
+
+    if request.headers["X-Requested-With"] == "activity-charts"
+      render partial: "activity_charts",
+        locals: { activity_trend: @activity_trend, granularity: @activity_granularity },
+        layout: false
+      return
+    end
 
     @top_poster_months = Analytics::MartTopPosters.distinct.order(month: :desc).pluck(:month)
     @top_posters_month = params[:top_posters_month].presence&.then { |d| Date.parse(d) } || @top_poster_months.first
