@@ -41,13 +41,13 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </span>
     </div>
-    <div class="mn-eyebrow mb-1">posting members</div>
-    <% if @participation %>
-      <div class="mn-stat"><%= number_with_delimiter(@participation.posting_members) %></div>
-      <p class="mn-label mt-2"><%= number_to_percentage((@participation.posting_share.to_f * 100).round(1), precision: 1) %> of active, window ending <%= @participation.window_end.strftime("%Y-%m-%d") %></p>
+    <div class="mn-eyebrow mb-1">posting members (last 28 days)</div>
+    <% if @team_stats %>
+      <div class="mn-stat"><%= number_with_delimiter(@team_stats.writers_count_28d) %></div>
+      <p class="mn-label mt-2">posted at least once</p>
     <% else %>
       <div class="mn-stat">&mdash;</div>
-      <p class="mn-label mt-2">no participation window loaded</p>
+      <p class="mn-label mt-2">no team stats loaded</p>
     <% end %>
   </div>
 </div>
