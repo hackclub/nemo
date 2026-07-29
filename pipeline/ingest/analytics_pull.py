@@ -175,7 +175,7 @@ def channel_dim_row(rec):
         rec.get("visibility"),
         rec.get("total_members_count"),
         rec.get("full_members_count"),
-        rec.get("guest_member_count"),
+        rec.get("guest_members_count"),
         parse_epoch(rec.get("date_created")),
         parse_epoch(rec.get("date_last_active")),
     )
