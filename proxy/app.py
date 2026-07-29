@@ -1,5 +1,7 @@
+import logging
 import os
 import secrets
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -34,7 +36,58 @@ ALLOWED_METHODS = {
 
 ALLOWED_FILE_METHODS = frozenset({"admin.analytics.getFile"})
 
-app = FastAPI()
+CREDENTIALS = ("internal", "admin")
+
+logger = logging.getLogger("uvicorn.error")
+
+
+def credential_present(name):
+    if name == "internal":
+        return bool(os.environ.get("SLACK_XOXC_TOKEN") and os.environ.get("SLACK_D_COOKIE"))
+    return bool(os.environ.get("SLACK_ADMIN_TOKEN"))
+
+
+def whoami(name):
+    try:
+        if name == "internal":
+            data = InternalClient().call("auth.test")
+        else:
+            data = admin_client().auth_test().data
+    except (InternalAuthError, InternalApiError, RuntimeError) as exc:
+        return {"ok": False, "error": str(exc)}
+    except SlackApiError as exc:
+        return {"ok": False, "error": exc.response.get("error", "unknown_error")}
+    return {
+        "ok": bool(data.get("ok")),
+        "user": data.get("user"),
+        "user_id": data.get("user_id"),
+        "team": data.get("team"),
+        "team_id": data.get("team_id"),
+    }
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    for name in CREDENTIALS:
+        if not credential_present(name):
+            logger.error("%s credential MISSING from the environment", name)
+            continue
+        info = whoami(name)
+        if info["ok"]:
+            logger.info(
+                "%s credential ok: %s (%s) on %s / %s",
+                name, info["user"], info["user_id"], info["team"], info["team_id"],
+            )
+        else:
+            logger.error("%s credential FAILED: %s", name, info["error"])
+    logger.info(
+        "allowlist: internal=%d admin=%d file=%d",
+        len(ALLOWED_METHODS["internal"]), len(ALLOWED_METHODS["admin"]), len(ALLOWED_FILE_METHODS),
+    )
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 bearer = HTTPBearer(auto_error=False)
 
 
@@ -56,18 +109,32 @@ class CallRequest(BaseModel):
 
 
 @app.get("/health")
-def health():
+def health(response: Response):
+    present = {name: credential_present(name) for name in CREDENTIALS}
+    ok = all(present.values())
+    if not ok:
+        response.status_code = 503
     return {
-        "ok": True,
-        "credentials_configured": {
-            "internal": bool(
-                os.environ.get("SLACK_XOXC_TOKEN") and os.environ.get("SLACK_D_COOKIE")
-            ),
-            "admin": bool(os.environ.get("SLACK_ADMIN_TOKEN")),
-        },
+        "ok": ok,
+        "credentials_configured": present,
         "allowed_methods": {k: sorted(v) for k, v in ALLOWED_METHODS.items()},
         "allowed_file_methods": sorted(ALLOWED_FILE_METHODS),
     }
+
+
+@app.get("/verify", dependencies=[Depends(require_token)])
+def verify(response: Response):
+    credentials = {}
+    for name in CREDENTIALS:
+        if not credential_present(name):
+            credentials[name] = {"ok": False, "error": "not configured"}
+            continue
+        credentials[name] = whoami(name)
+
+    ok = all(c["ok"] for c in credentials.values())
+    if not ok:
+        response.status_code = 503
+    return {"ok": ok, "credentials": credentials}
 
 
 def call_internal(req: CallRequest):
