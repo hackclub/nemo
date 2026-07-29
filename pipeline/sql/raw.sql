@@ -114,6 +114,44 @@ CREATE TABLE IF NOT EXISTS raw.slack_events (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS raw.team_stats_snapshot (
+    ds date PRIMARY KEY,
+    source text NOT NULL,
+    total_members_count integer,
+    total_claimed_count integer,
+    full_members_count integer,
+    guests_count integer,
+    claimed_full_members_count integer,
+    claimed_guests_count integer,
+    total_full_members_count integer,
+    total_guests_count integer,
+    active_users_1d integer,
+    active_users_7d integer,
+    active_users_28d integer,
+    writers_count_1d integer,
+    writers_count_7d integer,
+    writers_count_28d integer,
+    readers_count_1d integer,
+    readers_count_7d integer,
+    messages_count_1d integer,
+    messages_channels_count_from_apps_1d integer,
+    chats_count_1d integer,
+    chats_channels_count_1d integer,
+    chats_groups_count_1d integer,
+    chats_dms_count_1d integer,
+    chats_shared_channels_count_1d integer,
+    cursor_marks_channels_count_1d integer,
+    cursor_marks_groups_count_1d integer,
+    cursor_marks_dms_count_1d integer,
+    cursor_marks_shared_channels_count_1d integer,
+    files_count_1d integer,
+    files_size bigint,
+    channels_count integer,
+    users_channels_count integer,
+    pulled_at timestamptz NOT NULL DEFAULT now(),
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS raw.message_activity_snapshot (
     channel_id text NOT NULL,
     message_ts text NOT NULL,
