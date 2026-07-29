@@ -10,15 +10,15 @@
 <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
   <div class="mn-card p-4">
     <p class="mn-eyebrow mb-1">messages</p>
-    <p class="mn-h2"><%= @all_time.stats ? number_with_delimiter(@all_time.stats["messages_count"] || 0) : "—" %></p>
+    <p class="mn-h2"><%= @all_time.stats ? number_with_delimiter(@all_time.stats["messages_count"] || 0) : "n/a" %></p>
   </div>
   <div class="mn-card p-4">
     <p class="mn-eyebrow mb-1">unique viewers</p>
-    <p class="mn-h2"><%= @all_time.stats ? number_with_delimiter(@all_time.stats["unique_viewers"] || 0) : "—" %></p>
+    <p class="mn-h2"><%= @all_time.stats ? number_with_delimiter(@all_time.stats["unique_viewers"] || 0) : "n/a" %></p>
   </div>
   <div class="mn-card p-4">
     <p class="mn-eyebrow mb-1">reactions</p>
-    <p class="mn-h2"><%= @all_time.stats ? number_with_delimiter(@all_time.stats["reactions_count"] || 0) : "—" %></p>
+    <p class="mn-h2"><%= @all_time.stats ? number_with_delimiter(@all_time.stats["reactions_count"] || 0) : "n/a" %></p>
   </div>
 </div>
 

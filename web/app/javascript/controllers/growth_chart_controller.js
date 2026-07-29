@@ -28,7 +28,7 @@ export default class extends Controller {
                 const value = context.parsed.y
                 if (context.dataset.label !== "claimed") return `${context.dataset.label}: ${value}`
                 const invited = context.chart.data.datasets[0].data[context.dataIndex]
-                const pct = invited ? ((value / invited) * 100).toFixed(1) : "—"
+                const pct = invited ? ((value / invited) * 100).toFixed(1) : "n/a"
                 return `claimed: ${value} (${pct}%)`
               },
             },
