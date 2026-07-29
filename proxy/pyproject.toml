@@ -6,6 +6,7 @@ dependencies = [
     "python-dotenv>=1.0",
     "fastapi>=0.140.0",
     "uvicorn>=0.51.0",
+    "slack-sdk>=3.33",
 ]
 
 [dependency-groups]
