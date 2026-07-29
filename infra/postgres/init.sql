@@ -28,6 +28,3 @@ GRANT USAGE ON SCHEMA moderation TO rails_app;
 GRANT SELECT ON ALL TABLES IN SCHEMA moderation TO rails_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA moderation GRANT SELECT ON TABLES TO rails_app;
 
--- superset
-CREATE ROLE superset_ro LOGIN;
-GRANT USAGE ON SCHEMA analytics TO superset_ro;

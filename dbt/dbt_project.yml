@@ -19,6 +19,4 @@ models:
       +post-hook: "grant select on {{ this }} to rails_app"
     marts:
       +materialized: table
-      +post-hook:
-        - "grant select on {{ this }} to superset_ro"
-        - "grant select on {{ this }} to rails_app"
+      +post-hook: "grant select on {{ this }} to rails_app"

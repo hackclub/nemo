@@ -7,7 +7,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PIPELINE_DB_PASSWORD: ${PIPELINE_DB_PASSWORD}
       DBT_DB_PASSWORD: ${DBT_DB_PASSWORD}
-      SUPERSET_DB_PASSWORD: ${SUPERSET_DB_PASSWORD}
       RAILS_DB_PASSWORD: ${RAILS_DB_PASSWORD}
     ports:
       - "${POSTGRES_PORT}:5432"
@@ -20,28 +19,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  superset:
-    build: ./superset
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
-      ADMIN_USERNAME: ${SUPERSET_ADMIN_USERNAME}
-      ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD}
-    ports:
-      - "8088:8088"
-    volumes:
-      - superset_home:/app/superset_home
-    command:
-      - bash
-      - -c
-      - >
-        superset db upgrade &&
-        superset fab create-admin --username $${ADMIN_USERNAME} --firstname Admin --lastname User --email admin@mnemosyne.local --password $${ADMIN_PASSWORD} &&
-        superset init &&
-        superset run -h 0.0.0.0 -p 8088
 
   events-listener:
     build: ../pipeline
@@ -58,4 +35,3 @@ services:
 
 volumes:
   pgdata:
-  superset_home:
