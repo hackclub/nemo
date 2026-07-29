@@ -46,6 +46,19 @@ class ProxyClient:
         }
         return self._request(f"{self.url}/call", body, headers, max_retries)
 
+    def fetch_file(self, method, params=None, max_retries=3, credential="admin"):
+        payload = {
+            "method": method,
+            "params": {k: v for k, v in dict(params or {}).items() if v is not None},
+            "credential": credential,
+        }
+        body = json.dumps(payload).encode()
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.token}",
+        }
+        return self._request(f"{self.url}/file", body, headers, max_retries, raw=True)
+
     def paginate(
         self,
         method,
@@ -75,13 +88,14 @@ class ProxyClient:
             if num_found is not None and seen >= num_found:
                 break
 
-    def _request(self, url, body, headers, max_retries):
+    def _request(self, url, body, headers, max_retries, raw=False):
         attempt = 0
         while True:
             req = urllib.request.Request(url, data=body, headers=headers, method="POST")
             try:
                 with urllib.request.urlopen(req, timeout=self.read_timeout) as resp:
-                    return json.loads(resp.read())
+                    payload = resp.read()
+                    return payload if raw else json.loads(payload)
             except urllib.error.HTTPError as exc:
                 self._raise_for_status(exc)
             except (urllib.error.URLError, http.client.IncompleteRead, TimeoutError) as exc:

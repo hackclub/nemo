@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 
 from lib.db import connect, dead_letter, finish_run, get_cursor, save_cursor, start_run
 from lib.proxy_client import ProxyClient
-from lib.slack_client import admin_client
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
@@ -115,8 +114,8 @@ def parse_epoch(value):
     return datetime.fromtimestamp(int(value), tz=timezone.utc)
 
 
-def fetch_ndjson(resp):
-    body = gzip.decompress(resp.data)
+def fetch_ndjson(raw):
+    body = gzip.decompress(raw)
     for line in body.decode("utf-8").splitlines():
         line = line.strip()
         if line:
@@ -280,8 +279,11 @@ def pull_channel_day(conn, pull_date):
     run_id = start_run(conn, f"{ANALYTICS_SOURCE}:public_channel")
     rows_in = rows_rejected = 0
     activity_rows, dim_rows = [], []
-    resp = admin_client().admin_analytics_getFile(type="public_channel", date=pull_date.isoformat())
-    for line in fetch_ndjson(resp):
+    raw = ProxyClient().fetch_file(
+        "admin.analytics.getFile",
+        {"type": "public_channel", "date": pull_date.isoformat()},
+    )
+    for line in fetch_ndjson(raw):
         rows_in += 1
         try:
             rec = json.loads(line)
