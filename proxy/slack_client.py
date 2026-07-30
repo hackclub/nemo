@@ -24,8 +24,19 @@ AUTH_ERRORS = {
 }
 
 
+ADMIN_TOKEN_VARS = ("HUMAN_USER_TOKEN_XOXP", "SLACK_ADMIN_TOKEN")
+
+
+def admin_token() -> str:
+    for var in ADMIN_TOKEN_VARS:
+        token = os.environ.get(var, "").strip()
+        if token:
+            return token
+    return ""
+
+
 def admin_client() -> WebClient:
-    token = os.environ.get("SLACK_ADMIN_TOKEN", "")
+    token = admin_token()
     if not token:
-        raise RuntimeError("SLACK_ADMIN_TOKEN must be set")
+        raise RuntimeError(f"one of {' or '.join(ADMIN_TOKEN_VARS)} must be set")
     return WebClient(token=token, retry_handlers=RETRY_HANDLERS)

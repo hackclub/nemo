@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from slack_sdk.errors import SlackApiError
 
 from internal_client import InternalApiError, InternalAuthError, InternalClient
-from slack_client import AUTH_ERRORS, admin_client
+from slack_client import AUTH_ERRORS, admin_client, admin_token
 
 ENV_FILE = Path(__file__).resolve().parent / ".env"
 load_dotenv(ENV_FILE)
@@ -44,7 +44,7 @@ logger = logging.getLogger("uvicorn.error")
 def credential_present(name):
     if name == "internal":
         return bool(os.environ.get("SLACK_XOXC_TOKEN") and os.environ.get("SLACK_D_COOKIE"))
-    return bool(os.environ.get("SLACK_ADMIN_TOKEN"))
+    return bool(admin_token())
 
 
 def whoami(name):
