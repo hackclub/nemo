@@ -19,7 +19,8 @@ INSERT_SQL = """
 INSERT INTO raw.top_posters_snapshot
     (window_start, window_end, user_id, display_name, messages_posted)
 VALUES (%s, %s, %s, %s, %s)
-ON CONFLICT (window_start, window_end, user_id) DO UPDATE SET
+ON CONFLICT (window_start, user_id) DO UPDATE SET
+    window_end = EXCLUDED.window_end,
     display_name = EXCLUDED.display_name,
     messages_posted = EXCLUDED.messages_posted,
     pulled_at = now()

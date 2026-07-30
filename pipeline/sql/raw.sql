@@ -162,7 +162,7 @@ CREATE TABLE IF NOT EXISTS raw.top_posters_snapshot (
     messages_posted integer,
     pulled_at timestamptz NOT NULL DEFAULT now(),
     created_at timestamptz NOT NULL DEFAULT now(),
-    PRIMARY KEY (window_start, window_end, user_id)
+    PRIMARY KEY (window_start, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS raw.message_activity_snapshot (
