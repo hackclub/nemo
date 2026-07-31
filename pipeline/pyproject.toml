@@ -10,6 +10,7 @@ dependencies = [
     "jsonschema>=4.23",
     "fastapi>=0.140.0",
     "uvicorn>=0.51.0",
+    "dbt-postgres>=1.9",
 ]
 
 [dependency-groups]
