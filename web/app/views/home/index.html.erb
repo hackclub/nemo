@@ -155,7 +155,7 @@
     <div class="min-w-[640px]">
       <div class="grid grid-cols-6 gap-4 px-5 py-3 border-b mn-divider">
         <span class="mn-eyebrow col-span-2">channel</span>
-        <span class="mn-eyebrow text-right">messages</span>
+        <span class="mn-eyebrow text-right">member messages</span>
         <span class="mn-eyebrow text-right">posters</span>
         <span class="mn-eyebrow text-right">reactions</span>
         <span class="mn-eyebrow text-right">huddles</span>
@@ -169,7 +169,7 @@
               <%= c.visibility %>
             </span>
           </span>
-          <span class="mn-label text-right"><%= number_with_delimiter(c.messages_posted) %></span>
+          <span class="mn-label text-right"><%= number_with_delimiter(c.messages_posted_by_members) %></span>
           <span class="mn-label text-right"><%= number_with_delimiter(c.members_who_posted) %></span>
           <span class="mn-label text-right"><%= number_with_delimiter(c.reactions_added) %></span>
           <span class="mn-label text-right"><%= number_with_delimiter(c.huddles_initiated) %></span>

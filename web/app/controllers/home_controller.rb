@@ -54,7 +54,7 @@ class HomeController < ApplicationController
     end
     @growth_months = Analytics::MartGrowth.order(month: :desc).limit(6).to_a.reverse
     @top_channels = Analytics::MartChannelRange
-      .order(messages_posted: :desc)
+      .order(messages_posted_by_members: :desc)
       .limit(8)
     @activity_bands = Analytics::MartActivityDistribution.order(:band_order)
     @account_types = Analytics::MartAccountType.where.not(account_type: ["Owner", "Admin", "Org Owner"]).order(members: :desc)
