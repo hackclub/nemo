@@ -93,28 +93,38 @@ def join_new_channel(conn, client, channel_id):
         conn.commit()
 
 
-def make_handler(conn, schemas, event_type):
+def record_failure(event_type, reason):
+    try:
+        with connect() as conn:
+            dead_letter(conn, SOURCE, {"event_type": event_type}, reason)
+    except Exception as exc:
+        print(f"events_listener: could not record {event_type} failure: {exc}", flush=True)
+
+
+def make_handler(schemas, event_type):
     def handler(event, client):
-        handle_event(conn, schemas, event_type, event, client)
+        try:
+            with connect() as conn:
+                handle_event(conn, schemas, event_type, event, client)
+        except Exception as exc:
+            print(f"events_listener: {event_type} failed: {exc}", flush=True)
+            record_failure(event_type, str(exc))
 
     return handler
 
 
-def build_app(conn, schemas):
+def build_app(schemas):
     app = App(token=os.environ["SLACK_BOT_TOKEN"])
 
     for event_type in SCHEMA_FILES:
-        app.event(event_type)(make_handler(conn, schemas, event_type))
+        app.event(event_type)(make_handler(schemas, event_type))
 
     return app
 
 
 def main():
     load_dotenv(ENV_FILE)
-    schemas = load_schemas()
-    with connect() as conn:
-        app = build_app(conn, schemas)
-        SocketModeHandler(app, os.environ["SLACK_APP_TOKEN"]).start()
+    SocketModeHandler(build_app(load_schemas()), os.environ["SLACK_APP_TOKEN"]).start()
 
 
 if __name__ == "__main__":
