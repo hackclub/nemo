@@ -30,6 +30,11 @@ ON CONFLICT (channel_id, window_start, window_end, source) DO UPDATE SET
     huddles_initiated = EXCLUDED.huddles_initiated
 """
 
+PRUNE_SQL = """
+DELETE FROM raw.channel_activity_snapshot
+WHERE source = %s AND (window_start, window_end) <> (%s, %s)
+"""
+
 
 def range_row(rec, start, end):
     return (
@@ -91,7 +96,12 @@ def run(conn, days=WINDOW_DAYS, end=None):
 
         with conn.cursor() as cur:
             cur.executemany(RANGE_SQL, rows)
-    print(f"channel range {start}..{stop}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
+            cur.execute(PRUNE_SQL, (SOURCE, start, stop))
+            pruned = cur.rowcount
+    print(
+        f"channel range {start}..{stop}: {counts.rows_in} rows, "
+        f"{counts.rows_rejected} rejected, {pruned} stale rows pruned"
+    )
 
 
 def main():

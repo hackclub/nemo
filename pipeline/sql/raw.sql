@@ -81,6 +81,8 @@ ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_invited_guest boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_deleted boolean;
 ALTER TABLE raw.member_dim DROP COLUMN IF EXISTS is_guest;
 
+GRANT DELETE ON raw.channel_activity_snapshot TO pipeline_writer;
+
 CREATE TABLE IF NOT EXISTS raw.sync_cursor (
     source text NOT NULL,
     channel_id text NOT NULL DEFAULT '',
