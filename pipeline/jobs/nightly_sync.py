@@ -9,6 +9,7 @@ from ingest.autojoin import join_all
 from ingest.member_dates_reconciliation import run as reconcile_member_dates
 from ingest.team_stats_pull import run as pull_team_stats
 from ingest.top_posters_pull import run as pull_top_posters
+from ingest.users_list_pull import run as pull_users_list
 from lib.db import connect, finish_run, start_run, sweep_stale_runs
 from lib.slack_client import bot_client
 
@@ -36,6 +37,7 @@ def main():
             pull_member_day(conn, pull_date)
             pull_channel_day(conn, pull_date)
             pull_users(conn)
+            pull_users_list(conn)
             reconcile_member_dates(conn)
             join_all(conn, bot_client())
             run_dbt()
