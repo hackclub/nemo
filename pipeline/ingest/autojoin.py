@@ -10,6 +10,7 @@ from lib.slack_client import bot_client
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 SOURCE = "autojoin"
+NAME_SOURCE = "channel_info_names"
 
 CHANNEL_NAME_SQL = """
 INSERT INTO raw.channel_dim (channel_id, name, archived, updated_at)
@@ -60,11 +61,38 @@ def join_all(conn, client, join=True):
     print(f"autojoin: {counts.rows_in} channels {verb}, {counts.rows_rejected} failed")
 
 
+def name_unknown(conn, client):
+    with conn.cursor() as cur:
+        cur.execute("SELECT channel_id FROM raw.channel_dim WHERE name IS NULL")
+        pending = [row[0] for row in cur.fetchall()]
+
+    with ingest_run(conn, NAME_SOURCE) as counts:
+        for channel_id in pending:
+            counts.rows_in += 1
+            try:
+                channel = client.conversations_info(channel=channel_id)["channel"]
+            except SlackApiError as exc:
+                counts.rows_rejected += 1
+                dead_letter(
+                    conn, NAME_SOURCE, {"channel_id": channel_id},
+                    exc.response.get("error") or str(exc),
+                )
+                continue
+            with conn.cursor() as cur:
+                cur.execute(
+                    CHANNEL_NAME_SQL,
+                    (channel_id, channel.get("name"), channel.get("is_archived", False)),
+                )
+    print(f"channel names: {counts.rows_in} looked up, {counts.rows_rejected} unavailable")
+
+
 def main():
     load_dotenv(ENV_FILE)
-    join = "--no-join" not in sys.argv
     with connect() as conn:
-        join_all(conn, bot_client(), join=join)
+        if "--name-unknown" in sys.argv:
+            name_unknown(conn, bot_client())
+        else:
+            join_all(conn, bot_client(), join="--no-join" not in sys.argv)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from ingest.analytics_pull import pull_channel_day, pull_member_day, pull_users
-from ingest.autojoin import join_all
+from ingest.autojoin import join_all, name_unknown
 from ingest.channel_range_pull import run as pull_channel_range
 from ingest.member_dates_reconciliation import run as reconcile_member_dates
 from ingest.team_stats_pull import run as pull_team_stats
@@ -42,6 +42,7 @@ def main():
             pull_users_list(conn)
             reconcile_member_dates(conn)
             join_all(conn, bot_client())
+            name_unknown(conn, bot_client())
             run_dbt()
         except Exception:
             finish_run(conn, run_id, "failed", 0, 0)
