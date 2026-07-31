@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -23,11 +24,14 @@ ON CONFLICT (channel_id) DO UPDATE SET
 
 
 def resolve_team_id():
+    configured = os.environ.get("SLACK_TEAM_ID", "").strip()
+    if not configured:
+        raise RuntimeError("SLACK_TEAM_ID must be set to the workspace autojoin scans")
     data = ProxyClient().call("admin.teams.list", {"limit": 99}, credential="admin")
-    teams = data.get("teams", [])
-    if not teams:
-        raise RuntimeError("admin.teams.list returned no teams")
-    return teams[0]["id"]
+    teams = [team["id"] for team in data.get("teams", [])]
+    if configured not in teams:
+        raise RuntimeError(f"SLACK_TEAM_ID {configured} is not in admin.teams.list: {teams}")
+    return configured
 
 
 def join_all(conn, client, join=True):
