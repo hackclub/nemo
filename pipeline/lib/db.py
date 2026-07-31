@@ -63,6 +63,7 @@ def ingest_run(conn: psycopg.Connection, source: str) -> Iterator[RunCounts]:
     try:
         yield counts
     except BaseException:
+        conn.rollback()
         finish_run(conn, run_id, "failed", counts.rows_in, counts.rows_rejected)
         conn.commit()
         raise
