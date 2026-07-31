@@ -1,11 +1,11 @@
-<% content_for :page_title, "Channels" %>
+<% content_for :page_title, "Public channels" %>
 
 <div data-controller="channel-list"
      data-channel-list-url-value="<%= channels_path %>"
      data-channel-list-sort-value="<%= @sort %>"
      data-channel-list-direction-value="<%= @direction %>">
   <div class="mb-4">
-    <%= text_field_tag :q, @q, placeholder: "Search channels by name…",
+    <%= text_field_tag :q, @q, placeholder: "Search public channels by name…",
         autocomplete: "off",
         data: { channel_list_target: "input", action: "input->channel-list#search" },
         class: "w-full max-w-xs px-3 py-2 border mn-divider rounded bg-transparent mn-label" %>
