@@ -6,6 +6,8 @@ from dataclasses import dataclass
 
 import psycopg
 
+STALE_AFTER_HOURS = 6
+
 
 def connect(dsn: str | None = None) -> psycopg.Connection:
     if dsn is not None:
@@ -74,7 +76,9 @@ def ingest_run(conn: psycopg.Connection, source: str) -> Iterator[RunCounts]:
     conn.commit()
 
 
-def sweep_stale_runs(conn: psycopg.Connection, max_age_hours: int = 6) -> list[tuple[int, str]]:
+def sweep_stale_runs(
+    conn: psycopg.Connection, max_age_hours: int = STALE_AFTER_HOURS
+) -> list[tuple[int, str]]:
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -89,16 +93,23 @@ def sweep_stale_runs(conn: psycopg.Connection, max_age_hours: int = 6) -> list[t
         return cur.fetchall()
 
 
-def get_cursor(conn: psycopg.Connection, source: str, channel_id: str = "") -> str | None:
+def get_cursor(
+    conn: psycopg.Connection,
+    source: str,
+    channel_id: str = "",
+    max_age_hours: int = STALE_AFTER_HOURS,
+) -> str | None:
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT cursor, status FROM raw.sync_cursor WHERE source = %s AND channel_id = %s",
-            (source, channel_id),
+            """
+            SELECT cursor FROM raw.sync_cursor
+            WHERE source = %s AND channel_id = %s AND status = 'running'
+              AND updated_at > now() - make_interval(hours => %s)
+            """,
+            (source, channel_id, max_age_hours),
         )
         row = cur.fetchone()
-        if row and row[1] == "running":
-            return row[0]
-        return None
+        return row[0] if row else None
 
 
 def save_cursor(conn: psycopg.Connection, source: str, cursor: str, channel_id: str = "") -> None:
