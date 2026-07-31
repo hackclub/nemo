@@ -9,7 +9,6 @@ select
         when coalesce(is_restricted, false) then 'Multi-Channel Guest'
         else 'Member'
     end as account_type,
-    is_guest,
     coalesce(account_created_verified, account_created) as account_created,
     account_created_verified,
     claimed_at,

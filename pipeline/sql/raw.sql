@@ -1,7 +1,6 @@
 CREATE TABLE IF NOT EXISTS raw.member_dim (
     user_id text PRIMARY KEY,
     account_type text,
-    is_guest boolean,
     account_created timestamptz,
     claimed_at timestamptz,
     deactivated_at timestamptz,
@@ -80,6 +79,7 @@ ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS account_created_verified tim
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_invited_member boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_invited_guest boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_deleted boolean;
+ALTER TABLE raw.member_dim DROP COLUMN IF EXISTS is_guest;
 
 CREATE TABLE IF NOT EXISTS raw.sync_cursor (
     source text NOT NULL,

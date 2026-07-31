@@ -44,11 +44,10 @@ def read_rows(path):
 
 MEMBER_DIM_SQL = """
 INSERT INTO raw.member_dim
-    (user_id, account_type, is_guest, account_created, claimed_at, deactivated_at, updated_at)
-VALUES (%s, %s, %s, %s, %s, %s, now())
+    (user_id, account_type, account_created, claimed_at, deactivated_at, updated_at)
+VALUES (%s, %s, %s, %s, %s, now())
 ON CONFLICT (user_id) DO UPDATE SET
     account_type = EXCLUDED.account_type,
-    is_guest = EXCLUDED.is_guest,
     account_created = EXCLUDED.account_created,
     claimed_at = EXCLUDED.claimed_at,
     deactivated_at = EXCLUDED.deactivated_at,
@@ -158,7 +157,6 @@ def load_members(conn, files, window_start, window_end, with_pii=False):
             dim_rows.append((
                 user_id,
                 account_type,
-                "guest" in account_type.lower(),
                 parse_short_date(row.get("Account created (UTC)")),
                 parse_short_date(row.get("Claimed Date (UTC)")),
                 parse_short_date(row.get("Deactivated date (UTC)")),

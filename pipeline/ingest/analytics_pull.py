@@ -41,10 +41,9 @@ ON CONFLICT (user_id, window_start, window_end, source) DO UPDATE SET
 
 MEMBER_DIM_MERGE_SQL = """
 INSERT INTO raw.member_dim
-    (user_id, is_guest, claimed_at, is_invited_member, is_invited_guest, updated_at)
-VALUES (%s, %s, %s, %s, %s, now())
+    (user_id, claimed_at, is_invited_member, is_invited_guest, updated_at)
+VALUES (%s, %s, %s, %s, now())
 ON CONFLICT (user_id) DO UPDATE SET
-    is_guest = EXCLUDED.is_guest,
     claimed_at = COALESCE(raw.member_dim.claimed_at, EXCLUDED.claimed_at),
     is_invited_member = EXCLUDED.is_invited_member,
     is_invited_guest = EXCLUDED.is_invited_guest,
@@ -150,10 +149,8 @@ def member_activity_row(rec, pull_date):
 
 
 def member_dim_row(rec):
-    is_guest = bool(rec.get("is_restricted")) or bool(rec.get("is_ultra_restricted"))
     return (
         rec["user_id"],
-        is_guest,
         parse_epoch(rec.get("date_claimed")),
         bool(rec.get("is_invited_member")),
         bool(rec.get("is_invited_guest")),
