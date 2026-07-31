@@ -1,0 +1,15 @@
+**/.env
+**/.env.*
+!**/.env.example
+
+**/.venv/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/.pytest_cache/
+**/.ruff_cache/
+
+.git/
+**/node_modules/
+dbt/target/
+dbt/dbt_packages/
