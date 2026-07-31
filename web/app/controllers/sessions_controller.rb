@@ -12,6 +12,7 @@ class SessionsController < ApplicationController
     staff = slack_id.present? ? Staff.find_by(user_id: slack_id) : nil
 
     if staff
+      reset_session
       session[:user_id] = staff.user_id
       redirect_to root_path, notice: "signed in"
     else
