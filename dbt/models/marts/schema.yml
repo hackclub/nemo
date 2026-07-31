@@ -13,10 +13,6 @@ models:
     columns:
       - name: channel_id
         data_tests: [not_null]
-  - name: mart_activation
-    columns:
-      - name: claim_rate
-        data_tests: [not_null]
   - name: mart_activity_distribution
     columns:
       - name: band_order

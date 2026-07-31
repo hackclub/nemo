@@ -1,11 +1,10 @@
 with member_cohort as (
     select
         user_id,
-        account_created,
         claimed_at,
-        date_trunc('month', coalesce(claimed_at, account_created))::date as cohort_month
+        date_trunc('month', account_created_verified)::date as cohort_month
     from {{ ref('dim_member') }}
-    where account_created is not null or claimed_at is not null
+    where account_created_verified is not null and not is_bot
 ),
 
 first_posts as (
@@ -48,7 +47,7 @@ select
     count(*) filter (where rc.retained_day_90) as retained_day_90,
     (mc.cohort_month + interval '1 month' + interval '30 days') <= now() as day_30_mature,
     (mc.cohort_month + interval '1 month' + interval '90 days') <= now() as day_90_mature,
-    'v3' as metric_version
+    'v4' as metric_version
 from member_cohort mc
 left join first_posts fp on fp.user_id = mc.user_id
 left join retention_checks rc on rc.user_id = mc.user_id
