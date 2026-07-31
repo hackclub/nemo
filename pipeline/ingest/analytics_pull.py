@@ -7,7 +7,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from lib.db import connect, dead_letter, finish_run, get_cursor, save_cursor, start_run
+from lib.db import connect, dead_letter, get_cursor, ingest_run, save_cursor
 from lib.proxy_client import ProxyClient
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -231,106 +231,92 @@ def backfill(conn, pull_fn, label):
 
 
 def pull_member_day(conn, pull_date):
-    run_id = start_run(conn, f"{ANALYTICS_SOURCE}:member")
-    rows_in = rows_rejected = 0
-    activity_rows, dim_rows = [], []
-    client = ProxyClient()
-    params = {
-        "start_date": pull_date.isoformat(),
-        "end_date": pull_date.isoformat(),
-        "sort_column": "real_name",
-        "sort_direction": "asc",
-    }
+    with ingest_run(conn, f"{ANALYTICS_SOURCE}:member") as counts:
+        activity_rows, dim_rows = [], []
+        client = ProxyClient()
+        params = {
+            "start_date": pull_date.isoformat(),
+            "end_date": pull_date.isoformat(),
+            "sort_column": "real_name",
+            "sort_direction": "asc",
+        }
 
-    def flush():
-        with conn.cursor() as cur:
-            cur.executemany(MEMBER_ACTIVITY_SQL, activity_rows)
-            cur.executemany(MEMBER_DIM_MERGE_SQL, dim_rows)
-        conn.commit()
-        activity_rows.clear()
-        dim_rows.clear()
+        def flush():
+            with conn.cursor() as cur:
+                cur.executemany(MEMBER_ACTIVITY_SQL, activity_rows)
+                cur.executemany(MEMBER_DIM_MERGE_SQL, dim_rows)
+            conn.commit()
+            activity_rows.clear()
+            dim_rows.clear()
 
-    try:
         for i, rec in enumerate(client.paginate(
             "admin.analytics.getMemberAnalytics", params, "member_activity",
             page_size=500, cursor_param="cursor_mark", max_retries=8,
         )):
-            rows_in += 1
+            counts.rows_in += 1
             try:
                 activity_rows.append(member_activity_row(rec, pull_date))
                 dim_rows.append(member_dim_row(rec))
             except KeyError as exc:
-                rows_rejected += 1
+                counts.rows_rejected += 1
                 dead_letter(conn, ANALYTICS_SOURCE, rec, str(exc))
             if (i + 1) % 2000 == 0:
                 flush()
-    except Exception as exc:
         flush()
-        finish_run(conn, run_id, "failed", rows_in, rows_rejected)
-        conn.commit()
-        raise RuntimeError(f"member analytics {pull_date}: {exc}") from exc
-    flush()
-    finish_run(conn, run_id, "ok", rows_in, rows_rejected)
-    conn.commit()
-    print(f"member analytics {pull_date}: {rows_in} rows, {rows_rejected} rejected")
+    print(f"member analytics {pull_date}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
 
 def pull_channel_day(conn, pull_date):
-    run_id = start_run(conn, f"{ANALYTICS_SOURCE}:public_channel")
-    rows_in = rows_rejected = 0
-    activity_rows, dim_rows = [], []
-    raw = ProxyClient().fetch_file(
-        "admin.analytics.getFile",
-        {"type": "public_channel", "date": pull_date.isoformat()},
-    )
-    for line in fetch_ndjson(raw):
-        rows_in += 1
-        try:
-            rec = json.loads(line)
-            activity_rows.append(channel_activity_row(rec, pull_date))
-            dim_rows.append(channel_dim_row(rec))
-        except (json.JSONDecodeError, KeyError) as exc:
-            rows_rejected += 1
-            dead_letter(conn, ANALYTICS_SOURCE, {"raw_line": line}, str(exc))
-    with conn.cursor() as cur:
-        cur.executemany(CHANNEL_ACTIVITY_SQL, activity_rows)
-        cur.executemany(CHANNEL_DIM_MERGE_SQL, dim_rows)
-    finish_run(conn, run_id, "ok", rows_in, rows_rejected)
-    print(f"channel analytics {pull_date}: {rows_in} rows, {rows_rejected} rejected")
+    with ingest_run(conn, f"{ANALYTICS_SOURCE}:public_channel") as counts:
+        activity_rows, dim_rows = [], []
+        raw = ProxyClient().fetch_file(
+            "admin.analytics.getFile",
+            {"type": "public_channel", "date": pull_date.isoformat()},
+        )
+        for line in fetch_ndjson(raw):
+            counts.rows_in += 1
+            try:
+                rec = json.loads(line)
+                activity_rows.append(channel_activity_row(rec, pull_date))
+                dim_rows.append(channel_dim_row(rec))
+            except (json.JSONDecodeError, KeyError) as exc:
+                counts.rows_rejected += 1
+                dead_letter(conn, ANALYTICS_SOURCE, {"raw_line": line}, str(exc))
+        with conn.cursor() as cur:
+            cur.executemany(CHANNEL_ACTIVITY_SQL, activity_rows)
+            cur.executemany(CHANNEL_DIM_MERGE_SQL, dim_rows)
+    print(f"channel analytics {pull_date}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
 
 def pull_users_page(conn, is_active):
     label = "active" if is_active else "deactivated"
-    run_id = start_run(conn, f"{USERS_SOURCE}:{label}")
-    rows_in = rows_rejected = 0
-    cursor = get_cursor(conn, USERS_SOURCE, channel_id=label)
-    client = ProxyClient()
-    while True:
-        page = client.call(
-            "admin.users.list",
-            {"limit": 99, "cursor": cursor, "is_active": is_active},
-            credential="admin",
-        )
-        dim_rows, profile_rows = [], []
-        for user in page.get("users", []):
-            rows_in += 1
-            try:
-                dim_rows.append(user_dim_row(user))
-                profile_rows.append(user_profile_row(user))
-            except KeyError as exc:
-                rows_rejected += 1
-                dead_letter(conn, USERS_SOURCE, user, str(exc))
-        with conn.cursor() as cur:
-            cur.executemany(USER_DIM_MERGE_SQL, dim_rows)
-            cur.executemany(USER_PROFILE_SQL, profile_rows)
-        cursor = page.get("response_metadata", {}).get("next_cursor") or ""
-        save_cursor(conn, USERS_SOURCE, cursor, channel_id=label)
-        conn.commit()
-        if not cursor:
-            break
-    finish_run(conn, run_id, "ok", rows_in, rows_rejected)
-    conn.commit()
-    print(f"admin users ({label}): {rows_in} rows, {rows_rejected} rejected")
+    with ingest_run(conn, f"{USERS_SOURCE}:{label}") as counts:
+        cursor = get_cursor(conn, USERS_SOURCE, channel_id=label)
+        client = ProxyClient()
+        while True:
+            page = client.call(
+                "admin.users.list",
+                {"limit": 99, "cursor": cursor, "is_active": is_active},
+                credential="admin",
+            )
+            dim_rows, profile_rows = [], []
+            for user in page.get("users", []):
+                counts.rows_in += 1
+                try:
+                    dim_rows.append(user_dim_row(user))
+                    profile_rows.append(user_profile_row(user))
+                except KeyError as exc:
+                    counts.rows_rejected += 1
+                    dead_letter(conn, USERS_SOURCE, user, str(exc))
+            with conn.cursor() as cur:
+                cur.executemany(USER_DIM_MERGE_SQL, dim_rows)
+                cur.executemany(USER_PROFILE_SQL, profile_rows)
+            cursor = page.get("response_metadata", {}).get("next_cursor") or ""
+            save_cursor(conn, USERS_SOURCE, cursor, channel_id=label)
+            conn.commit()
+            if not cursor:
+                break
+    print(f"admin users ({label}): {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
 
 def pull_users(conn):
