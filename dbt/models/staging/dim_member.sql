@@ -17,5 +17,7 @@ select
     claimed_at is not null as is_claimed,
     is_invited_member,
     is_invited_guest,
-    coalesce(is_bot, false) as is_bot
+    coalesce(is_bot, false) as is_bot,
+    coalesce(is_deleted, true) as is_deleted,
+    not coalesce(is_deleted, true) and not coalesce(is_bot, false) as is_live
 from {{ source('raw', 'member_dim') }}

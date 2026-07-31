@@ -11,9 +11,9 @@ select
     count(*) as members,
     count(*) filter (where m.is_claimed) as claimed,
     sum(coalesce(act.messages_posted, 0)) as total_messages,
-    'v6' as metric_version
+    'v7' as metric_version
 from {{ ref('dim_member') }} m
 left join member_totals act using (user_id)
-where not m.is_bot
+where m.is_live
 group by 1
 order by members desc

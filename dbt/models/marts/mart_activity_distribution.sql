@@ -12,7 +12,7 @@ members as (
         coalesce(t.messages_posted, 0) as messages_posted
     from {{ ref('dim_member') }} m
     left join member_totals t on t.user_id = m.user_id
-    where m.is_claimed and not m.is_bot
+    where m.is_claimed and m.is_live
 ),
 
 member_bands as (
@@ -46,7 +46,7 @@ select
     b.band_order,
     b.activity_band,
     count(mb.band_order) as members,
-    'v4' as metric_version
+    'v5' as metric_version
 from bands b
 left join member_bands mb on mb.band_order = b.band_order
 group by b.band_order, b.activity_band
