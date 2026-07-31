@@ -1,5 +1,4 @@
 import argparse
-import calendar
 import gzip
 import json
 from datetime import date, datetime, timedelta, timezone
@@ -8,7 +7,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from lib.db import connect, dead_letter, get_cursor, ingest_run, save_cursor
-from lib.proxy_client import ProxyClient
+from lib.proxy_client import InternalAuthError, ProxyClient, ProxyError
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
@@ -205,21 +204,18 @@ def user_profile_row(user):
     return (user["id"], user.get("full_name"), user.get("username"), user.get("email"))
 
 
-def months_ago(d, months):
-    total = d.year * 12 + (d.month - 1) - months
-    year, month = divmod(total, 12)
-    month += 1
-    day = min(d.day, calendar.monthrange(year, month)[1])
-    return d.replace(year=year, month=month, day=day)
-
-
 def backfill(conn, pull_fn, label):
-    pull_date = date.today() - timedelta(days=2)
-    end_date = months_ago(date.today(), 13)
+    avail = ProxyClient().call("admin.analytics.getAvailableDateRange", {"type": "member"})
+    pull_date = date.fromisoformat(avail["end_date"])
+    end_date = date.fromisoformat(avail["start_date"])
+    print(f"{label} backfill: {end_date} .. {pull_date}")
     while pull_date >= end_date:
         try:
             pull_fn(conn, pull_date)
             conn.commit()
+        except (InternalAuthError, ProxyError):
+            conn.rollback()
+            raise
         except Exception as exc:
             conn.rollback()
             dead_letter(conn, f"{label}_backfill", {"date": pull_date.isoformat()}, str(exc))
