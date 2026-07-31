@@ -33,7 +33,10 @@ def connect_admin(dsn: str | None = None) -> psycopg.Connection:
 
 def start_run(conn: psycopg.Connection, source: str) -> int:
     with conn.cursor() as cur:
-        cur.execute("INSERT INTO raw.ingest_run (source) VALUES (%s) RETURNING id", (source,))
+        cur.execute(
+            "INSERT INTO raw.ingest_run (source, started_at) VALUES (%s, clock_timestamp()) RETURNING id",
+            (source,),
+        )
         return cur.fetchone()[0]
 
 
@@ -42,7 +45,7 @@ def finish_run(conn: psycopg.Connection, run_id: int, status: str, rows_in: int,
         cur.execute(
             """
             UPDATE raw.ingest_run
-            SET finished_at = now(), status = %s, rows_in = %s, rows_rejected = %s
+            SET finished_at = clock_timestamp(), status = %s, rows_in = %s, rows_rejected = %s
             WHERE id = %s
             """,
             (status, rows_in, rows_rejected, run_id),
@@ -76,7 +79,7 @@ def sweep_stale_runs(conn: psycopg.Connection, max_age_hours: int = 6) -> list[t
         cur.execute(
             """
             UPDATE raw.ingest_run
-            SET status = 'abandoned', finished_at = now()
+            SET status = 'abandoned', finished_at = clock_timestamp()
             WHERE status = 'running'
               AND started_at < now() - make_interval(hours => %s)
             RETURNING id, source
