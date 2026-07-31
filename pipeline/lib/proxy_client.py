@@ -30,6 +30,7 @@ class ProxyClient:
         self.url = (url or os.environ.get("INTERNAL_PROXY_URL", "")).rstrip("/")
         self.token = token or os.environ.get("INTERNAL_PROXY_TOKEN", "")
         self.read_timeout = read_timeout
+        self.last_num_found = None
         if not self.url or not self.token:
             raise ProxyError("INTERNAL_PROXY_URL and INTERNAL_PROXY_TOKEN must both be set")
 
@@ -95,6 +96,8 @@ class ProxyClient:
             seen += len(items)
             cursor = data.get("next_cursor_mark")
             num_found = data.get("num_found")
+            if num_found is not None:
+                self.last_num_found = num_found
             if not cursor or not items:
                 break
             if num_found is not None and seen >= num_found:

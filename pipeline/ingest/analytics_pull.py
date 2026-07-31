@@ -14,6 +14,7 @@ ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
 ANALYTICS_SOURCE = "admin_analytics_api"
 USERS_SOURCE = "admin_users_list"
+MEMBER_PAGE_SIZE = 500
 
 MEMBER_ACTIVITY_SQL = """
 INSERT INTO raw.member_activity_snapshot
@@ -242,13 +243,12 @@ def pull_member_day(conn, pull_date):
             with conn.cursor() as cur:
                 cur.executemany(MEMBER_ACTIVITY_SQL, activity_rows)
                 cur.executemany(MEMBER_DIM_MERGE_SQL, dim_rows)
-            conn.commit()
             activity_rows.clear()
             dim_rows.clear()
 
         for i, rec in enumerate(client.paginate(
             "admin.analytics.getMemberAnalytics", params, "member_activity",
-            page_size=500, cursor_param="cursor_mark", max_retries=8,
+            page_size=MEMBER_PAGE_SIZE, cursor_param="cursor_mark", max_retries=8,
         )):
             counts.rows_in += 1
             try:
@@ -260,6 +260,13 @@ def pull_member_day(conn, pull_date):
             if (i + 1) % 2000 == 0:
                 flush()
         flush()
+
+        expected = client.last_num_found
+        if expected is not None and counts.rows_in > expected + MEMBER_PAGE_SIZE:
+            raise RuntimeError(
+                f"member analytics {pull_date}: walked {counts.rows_in} rows against a "
+                f"num_found of {expected}, refusing to commit the day"
+            )
     print(f"member analytics {pull_date}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
 
