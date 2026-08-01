@@ -2,7 +2,7 @@ with member_totals as (
     select
         user_id,
         sum(coalesce(messages_posted, 0)) as total_messages_posted
-    from {{ ref('fct_member_activity') }}
+    from {{ ref('fct_member_window') }}
     group by user_id
 ),
 
@@ -12,6 +12,7 @@ members as (
         coalesce(t.total_messages_posted, 0) as total_messages_posted
     from {{ ref('dim_member') }} m
     left join member_totals t on t.user_id = m.user_id
+    where m.is_claimed and m.is_live
 ),
 
 thresholds as (
@@ -30,7 +31,7 @@ select
         / nullif((select total_members from member_count), 0),
         4
     ) as share_above_threshold,
-    'v1' as metric_version
+    'v2' as metric_version
 from thresholds th
 cross join members mm
 group by th.threshold

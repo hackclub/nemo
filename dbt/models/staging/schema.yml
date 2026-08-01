@@ -13,6 +13,10 @@ models:
     columns:
       - name: user_id
         data_tests: [not_null]
+  - name: fct_member_window
+    columns:
+      - name: user_id
+        data_tests: [not_null, unique]
   - name: fct_channel_activity
     columns:
       - name: channel_id

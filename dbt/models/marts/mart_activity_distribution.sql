@@ -2,7 +2,7 @@ with member_totals as (
     select
         user_id,
         sum(coalesce(messages_posted, 0)) as messages_posted
-    from {{ ref('fct_member_activity') }}
+    from {{ ref('fct_member_window') }}
     group by user_id
 ),
 
@@ -46,7 +46,7 @@ select
     b.band_order,
     b.activity_band,
     count(mb.band_order) as members,
-    'v5' as metric_version
+    'v6' as metric_version
 from bands b
 left join member_bands mb on mb.band_order = b.band_order
 group by b.band_order, b.activity_band
