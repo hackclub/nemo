@@ -8,6 +8,7 @@ from ingest.analytics_pull import pull_channel_day, pull_member_day, pull_users
 from ingest.autojoin import join_all, name_unknown
 from ingest.channel_range_pull import run as pull_channel_range
 from ingest.member_dates_reconciliation import run as reconcile_member_dates
+from ingest.member_range_pull import run as pull_member_range
 from ingest.team_stats_pull import run as pull_team_stats
 from ingest.top_posters_pull import run as pull_top_posters
 from ingest.users_list_pull import run as pull_users_list
@@ -37,6 +38,7 @@ def main():
             pull_top_posters(conn)
             pull_member_day(conn, pull_date)
             pull_channel_day(conn, pull_date)
+            pull_member_range(conn)
             pull_channel_range(conn)
             pull_users(conn)
             pull_users_list(conn)

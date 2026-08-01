@@ -1,6 +1,6 @@
 from datetime import date, datetime, timezone
 
-from ingest import analytics_pull, channel_range_pull, users_list_pull
+from ingest import analytics_pull, channel_range_pull, member_range_pull, users_list_pull
 
 PULL_DATE = date(2026, 7, 20)
 WINDOW_START = date(2026, 6, 30)
@@ -32,6 +32,15 @@ def test_member_activity_row_carries_day_counts_not_booleans():
     assert row[12] == 9
     assert row[13] == 5
     assert row[18] == epoch(1700000000)
+
+
+def test_member_activity_row_carries_a_window_and_its_own_source():
+    row = analytics_pull.member_activity_row(
+        {"user_id": "U1", "messages_posted": 12}, WINDOW_START, WINDOW_END, member_range_pull.SOURCE
+    )
+    assert row[0:4] == ("U1", WINDOW_START, WINDOW_END, member_range_pull.SOURCE)
+    assert row[11] == 12
+    assert member_range_pull.SOURCE != analytics_pull.ANALYTICS_SOURCE
 
 
 def test_member_activity_row_leaves_api_omitted_fields_null():

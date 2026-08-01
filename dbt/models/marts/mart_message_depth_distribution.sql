@@ -2,7 +2,7 @@ with member_totals as (
     select
         user_id,
         sum(coalesce(messages_posted, 0)) as total_messages_posted
-    from {{ source('raw', 'member_activity_snapshot') }}
+    from {{ ref('fct_member_activity') }}
     group by user_id
 ),
 

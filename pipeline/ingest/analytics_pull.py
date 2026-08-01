@@ -121,12 +121,12 @@ def fetch_ndjson(raw):
             yield line
 
 
-def member_activity_row(rec, pull_date):
+def member_activity_row(rec, start, end=None, source=ANALYTICS_SOURCE):
     return (
         rec["user_id"],
-        pull_date,
-        pull_date,
-        ANALYTICS_SOURCE,
+        start,
+        end or start,
+        source,
         rec.get("days_active"),
         rec.get("days_active_desktop"),
         rec.get("days_active_android"),
