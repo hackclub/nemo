@@ -2,6 +2,7 @@ import logging
 import os
 import secrets
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -36,7 +37,29 @@ ALLOWED_METHODS = {
 
 ALLOWED_FILE_METHODS = frozenset({"admin.analytics.getFile"})
 
+WEB_METHODS = {
+    "internal": frozenset(
+        {
+            "admin.analytics.getChannelAnalytics",
+            "admin.analytics.getAvailableDateRange",
+        }
+    ),
+}
+
 CREDENTIALS = ("internal", "admin")
+
+
+@dataclass(frozen=True)
+class Client:
+    name: str
+    methods: dict
+    file_methods: frozenset
+
+
+CLIENTS = (
+    ("pipeline", "PROXY_TOKEN", ALLOWED_METHODS, ALLOWED_FILE_METHODS),
+    ("web", "PROXY_TOKEN_WEB", WEB_METHODS, frozenset()),
+)
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -80,10 +103,14 @@ async def lifespan(_app):
             )
         else:
             logger.error("%s credential FAILED: %s", name, info["error"])
-    logger.info(
-        "allowlist: internal=%d admin=%d file=%d",
-        len(ALLOWED_METHODS["internal"]), len(ALLOWED_METHODS["admin"]), len(ALLOWED_FILE_METHODS),
-    )
+    for name, var, methods, file_methods in CLIENTS:
+        if not os.environ.get(var, ""):
+            logger.warning("client %s has no token in %s, so it cannot call the proxy", name, var)
+            continue
+        logger.info(
+            "client %s: %d methods, %d file methods",
+            name, sum(len(v) for v in methods.values()), len(file_methods),
+        )
     yield
 
 
@@ -91,14 +118,22 @@ app = FastAPI(lifespan=lifespan)
 bearer = HTTPBearer(auto_error=False)
 
 
-def require_token(creds: HTTPAuthorizationCredentials | None = Depends(bearer)):
-    expected = os.environ.get("PROXY_TOKEN", "")
-    if not expected:
-        raise HTTPException(status_code=503, detail="proxy token is not configured")
-    if creds is None or not secrets.compare_digest(
-        creds.credentials.encode("utf-8"), expected.encode("utf-8")
-    ):
+def current_client(creds: HTTPAuthorizationCredentials | None = Depends(bearer)) -> Client:
+    matched = None
+    configured = 0
+    presented = creds.credentials.encode("utf-8") if creds else b""
+    for name, var, methods, file_methods in CLIENTS:
+        token = os.environ.get(var, "")
+        if not token:
+            continue
+        configured += 1
+        if creds and secrets.compare_digest(presented, token.encode("utf-8")):
+            matched = Client(name, methods, file_methods)
+    if not configured:
+        raise HTTPException(status_code=503, detail="no proxy client token is configured")
+    if matched is None:
         raise HTTPException(status_code=401, detail="invalid bearer token")
+    return matched
 
 
 class CallRequest(BaseModel):
@@ -108,8 +143,8 @@ class CallRequest(BaseModel):
     max_retries: int = 3
 
 
-@app.get("/verify", dependencies=[Depends(require_token)])
-def verify(response: Response):
+@app.get("/verify")
+def verify(response: Response, client: Client = Depends(current_client)):
     credentials = {}
     for name in CREDENTIALS:
         if not credential_present(name):
@@ -122,9 +157,10 @@ def verify(response: Response):
         response.status_code = 503
     return {
         "ok": ok,
+        "client": client.name,
         "credentials": credentials,
-        "allowed_methods": {k: sorted(v) for k, v in ALLOWED_METHODS.items()},
-        "allowed_file_methods": sorted(ALLOWED_FILE_METHODS),
+        "allowed_methods": {k: sorted(v) for k, v in client.methods.items()},
+        "allowed_file_methods": sorted(client.file_methods),
     }
 
 
@@ -161,11 +197,12 @@ def call_admin(req: CallRequest):
     return admin_api_call(req.method, req.params).data
 
 
-@app.post("/file", dependencies=[Depends(require_token)])
-def file(req: CallRequest):
-    if req.method not in ALLOWED_FILE_METHODS:
+@app.post("/file")
+def file(req: CallRequest, client: Client = Depends(current_client)):
+    if req.method not in client.file_methods:
         raise HTTPException(
-            status_code=403, detail=f"method not allowed for file transfer: {req.method}"
+            status_code=403,
+            detail=f"method not allowed for file transfer by {client.name}: {req.method}",
         )
 
     raw = admin_api_call(req.method, req.params).data
@@ -174,15 +211,17 @@ def file(req: CallRequest):
     return Response(content=bytes(raw), media_type="application/octet-stream")
 
 
-@app.post("/call", dependencies=[Depends(require_token)])
-def call(req: CallRequest):
-    allowed = ALLOWED_METHODS.get(req.credential)
-    if allowed is None:
+@app.post("/call")
+def call(req: CallRequest, client: Client = Depends(current_client)):
+    if req.credential not in CREDENTIALS:
         raise HTTPException(status_code=400, detail=f"unknown credential: {req.credential}")
-    if req.method not in allowed:
+    if req.method not in client.methods.get(req.credential, frozenset()):
         raise HTTPException(
             status_code=403,
-            detail=f"method not allowed for {req.credential} credential: {req.method}",
+            detail=(
+                f"method not allowed for {client.name} on the "
+                f"{req.credential} credential: {req.method}"
+            ),
         )
 
     if req.credential == "admin":
