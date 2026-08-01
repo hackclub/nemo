@@ -61,9 +61,20 @@ def team_stats_row(rec):
     return (rec["ds"], SOURCE, *(rec.get(f) for f in FIELDS))
 
 
+def probe_date(client):
+    hint = client.call(RANGE_METHOD, {"type": "member"})
+    rng = hint.get("available_date_range") or hint
+    first = date.fromisoformat(rng["start_date"])
+    last = date.fromisoformat(rng["end_date"])
+    return first + (last - first) // 2
+
+
 def available_range(client):
-    resp = client.call(RANGE_METHOD, {"type": "member"})
-    rng = resp.get("available_date_range") or resp
+    probe = probe_date(client).isoformat()
+    resp = client.call(METHOD, {"start_date": probe, "end_date": probe})
+    rng = resp.get("available_date_range")
+    if not rng:
+        raise RuntimeError(f"{METHOD} returned no available_date_range for {probe}")
     return date.fromisoformat(rng["start_date"]), date.fromisoformat(rng["end_date"])
 
 
