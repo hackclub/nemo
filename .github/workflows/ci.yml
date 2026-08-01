@@ -1,0 +1,78 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pipeline
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run pytest -q
+
+  dbt:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: mnemosyne
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mnemosyne"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5433
+      POSTGRES_DB: mnemosyne
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ci
+      PIPELINE_DB_USER: pipeline_writer
+      PIPELINE_DB_PASSWORD: ci
+      DBT_DB_USER: dbt_owner
+      DBT_DB_PASSWORD: ci
+      RAILS_DB_USER: rails_app
+      RAILS_DB_PASSWORD: ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen
+        working-directory: pipeline
+      - name: create schemas and roles
+        run: |
+          psql "postgresql://postgres:ci@localhost:5433/mnemosyne" -v ON_ERROR_STOP=1 -f infra/postgres/init.sql
+          psql "postgresql://postgres:ci@localhost:5433/mnemosyne" -v ON_ERROR_STOP=1 -c "
+            ALTER ROLE pipeline_writer PASSWORD 'ci';
+            ALTER ROLE dbt_owner PASSWORD 'ci';
+            ALTER ROLE rails_app PASSWORD 'ci';"
+      - name: apply the raw and moderation schema
+        run: uv run python -m jobs.migrate
+        working-directory: pipeline
+        env:
+          PYTHONPATH: .
+      - name: dbt build against an empty warehouse
+        run: ../pipeline/.venv/bin/dbt build --profiles-dir .
+        working-directory: dbt
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: web
+      - run: bundle exec rubocop
