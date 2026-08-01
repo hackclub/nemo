@@ -5,6 +5,7 @@ with member_days as (
         messages_posted
     from {{ source('raw', 'member_activity_snapshot') }}
     where window_start = window_end
+        and coalesce(days_active, 0) > 0
 ),
 
 first_post as (
@@ -53,6 +54,24 @@ member_funnel as (
     from {{ ref('dim_member') }} m
     left join first_post f on f.user_id = m.user_id
     where not m.is_bot and m.account_created is not null
+),
+
+sequential as (
+    select
+        cohort_month,
+        created_account,
+        signed_in,
+        sent_message,
+        sent_message
+            and returned_next_day as returned_next_day,
+        sent_message
+            and returned_next_day
+            and third_visit_in_7_days as third_visit_in_7_days,
+        sent_message
+            and returned_next_day
+            and third_visit_in_7_days
+            and fourth_visit_in_14_days as fourth_visit_in_14_days
+    from member_funnel
 )
 
 select
@@ -64,7 +83,7 @@ select
     count(*) filter (where returned_next_day) as returned_next_day,
     count(*) filter (where third_visit_in_7_days) as third_visit_in_7_days,
     count(*) filter (where fourth_visit_in_14_days) as fourth_visit_in_14_days,
-    'v4' as metric_version
-from member_funnel
+    'v5' as metric_version
+from sequential
 group by cohort_month
 order by cohort_month
