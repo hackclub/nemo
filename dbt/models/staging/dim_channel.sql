@@ -2,7 +2,7 @@ select
     channel_id,
     name,
     visibility,
-    archived,
+    coalesce(archived, true) as archived,
     date_created,
     last_active_at,
     creator_id,

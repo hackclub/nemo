@@ -48,6 +48,7 @@ services:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       NIGHTLY_AT: ${NIGHTLY_AT:-03:00}
+      NIGHTLY_JOIN_CHANNELS: ${NIGHTLY_JOIN_CHANNELS:-false}
       TZ: ${TZ:-UTC}
     restart: unless-stopped
     command: ["sh", "jobs/nightly.sh"]

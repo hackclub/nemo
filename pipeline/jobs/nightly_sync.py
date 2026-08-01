@@ -1,3 +1,4 @@
+import os
 import subprocess
 from datetime import date, timedelta
 from pathlib import Path
@@ -18,6 +19,11 @@ from lib.slack_client import bot_client
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 DBT_DIR = Path(__file__).resolve().parents[2] / "dbt"
 SOURCE = "nightly_sync"
+TRUTHY = {"1", "true", "yes", "on"}
+
+
+def join_channels_enabled():
+    return os.environ.get("NIGHTLY_JOIN_CHANNELS", "").strip().lower() in TRUTHY
 
 
 def run_dbt():
@@ -43,7 +49,7 @@ def main():
             pull_users(conn)
             pull_users_list(conn)
             reconcile_member_dates(conn)
-            join_all(conn, bot_client())
+            join_all(conn, bot_client(), join=join_channels_enabled())
             name_unknown(conn, bot_client())
             run_dbt()
         except Exception:
