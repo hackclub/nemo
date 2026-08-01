@@ -11,6 +11,12 @@ select
     end as account_type,
     coalesce(account_created_verified, account_created) as account_created,
     account_created_verified,
+    case
+        when account_created_verified is not null then account_created_verified
+        when account_created > (
+            select max(account_created_verified) from {{ source('raw', 'member_dim') }}
+        ) then account_created
+    end as cohort_at,
     claimed_at,
     deactivated_at,
     claimed_at is not null as is_claimed,
