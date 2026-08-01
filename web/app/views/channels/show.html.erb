@@ -54,6 +54,8 @@
           Analytics service needs re-authentication, refresh the Slack session cookie.
         <% elsif @range.error == :not_found %>
           No analytics for this channel in the selected range.
+        <% elsif @range.error == :truncated %>
+          Too many channels share this name to find this one. Try a narrower range.
         <% else %>
           Couldn&rsquo;t load ranged analytics right now.
         <% end %>

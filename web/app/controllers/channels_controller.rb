@@ -37,20 +37,20 @@ class ChannelsController < ApplicationController
     @activity_trend = Analytics::MartChannelActivity.where(channel_id: @channel.channel_id).order(:window_start)
     @scorecard_rows = Analytics::MartChannelOnboardingScorecard.where(channel_id: @channel.channel_id).order(:post_month)
 
-    @member_count = ChannelAnalyticsService.member_count(channel_id: @channel.channel_id)
-    avail = ChannelAnalyticsService.available_range
-    last_available = avail ? Date.iso8601(avail["end_date"]) : (Date.current - 2)
+    coverage = Slack::Analytics.coverage
+    last_available = coverage ? Date.iso8601(coverage["end_date"]) : (Date.current - 2)
     @end_date = parse_range_date(params[:end]) || last_available
     @start_date = parse_range_date(params[:start]) || (@end_date - 30)
-    @range = ChannelAnalyticsService.fetch(
+    @range = Slack::Analytics.channel_activity(
       channel_id: @channel.channel_id, name: @channel.name,
-      start_date: @start_date, end_date: @end_date, privacy: @channel.visibility
+      from: @start_date, to: @end_date, privacy: @channel.visibility
     )
-    @all_time = ChannelAnalyticsService.fetch(
+    @all_time = Slack::Analytics.channel_activity(
       channel_id: @channel.channel_id, name: @channel.name,
-      start_date: @channel.date_created&.to_date || (last_available - 400),
-      end_date: last_available, privacy: @channel.visibility
+      from: @channel.date_created&.to_date || (last_available - 400),
+      to: last_available, privacy: @channel.visibility
     )
+    @member_count = @all_time.stats&.dig("total_members_count")
   end
 
   private
