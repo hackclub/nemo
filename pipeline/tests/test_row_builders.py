@@ -1,6 +1,8 @@
+import pytest
 from datetime import date, datetime, timezone
 
 from ingest import analytics_pull, channel_range_pull, member_range_pull, users_list_pull
+from lib.proxy_client import InternalApiError
 
 PULL_DATE = date(2026, 7, 20)
 WINDOW_START = date(2026, 6, 30)
@@ -153,3 +155,38 @@ def test_range_row_maps_chats_to_member_messages():
     assert row[7] == 3
     assert row[9] == 1
     assert row[10] == 0
+
+
+class FakeClient:
+    def __init__(self, edge):
+        self.edge = edge
+        self.calls = []
+
+    def call(self, method, params):
+        asked = date.fromisoformat(params["end_date"])
+        self.calls.append(asked)
+        if asked > self.edge:
+            raise InternalApiError("invalid_arguments")
+        return {"ok": True}
+
+
+def test_discover_end_walks_back_to_the_first_accepted_date():
+    client = FakeClient(date(2026, 7, 31))
+    assert channel_range_pull.discover_end(client, today=date(2026, 8, 3)) == date(2026, 7, 31)
+    assert client.calls == [date(2026, 8, 3), date(2026, 8, 2), date(2026, 8, 1), date(2026, 7, 31)]
+
+
+def test_discover_end_does_not_swallow_unrelated_errors():
+    class Broken(FakeClient):
+        def call(self, method, params):
+            raise InternalApiError("ratelimited")
+
+    with pytest.raises(InternalApiError, match="ratelimited"):
+        channel_range_pull.discover_end(Broken(date(2026, 7, 31)), today=date(2026, 8, 3))
+
+
+def test_discover_end_gives_up_rather_than_probing_forever():
+    client = FakeClient(date(2020, 1, 1))
+    with pytest.raises(RuntimeError, match="rejected every date"):
+        channel_range_pull.discover_end(client, today=date(2026, 8, 3))
+    assert len(client.calls) == channel_range_pull.MAX_PROBE_DAYS + 1

@@ -6,13 +6,16 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from lib.db import connect, dead_letter, ingest_run
-from lib.proxy_client import ProxyClient
+from lib.proxy_client import InternalApiError, ProxyClient
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
 SOURCE = "admin_analytics_channel_range"
+METHOD = "admin.analytics.getChannelAnalytics"
 PAGE_SIZE = 500
 WINDOW_DAYS = 30
+MAX_PROBE_DAYS = 5
+DATE_REJECTIONS = ("invalid_arguments", "data_not_available")
 
 RANGE_SQL = """
 INSERT INTO raw.channel_activity_snapshot
@@ -52,10 +55,35 @@ def range_row(rec, start, end):
     )
 
 
+def discover_end(client, today=None):
+    candidate = today or date.today()
+    for _ in range(MAX_PROBE_DAYS + 1):
+        probe = candidate.isoformat()
+        try:
+            client.call(
+                METHOD,
+                {
+                    "start_date": probe,
+                    "end_date": probe,
+                    "privacy": "public",
+                    "sort_column": "name",
+                    "sort_direction": "asc",
+                    "count": 1,
+                },
+            )
+            return candidate
+        except InternalApiError as exc:
+            if not str(exc).startswith(DATE_REJECTIONS):
+                raise
+            candidate -= timedelta(days=1)
+    raise RuntimeError(
+        f"{METHOD} rejected every date from {today or date.today()} back {MAX_PROBE_DAYS} days"
+    )
+
+
 def resolve_window(client, days=WINDOW_DAYS, end=None):
     if end is None:
-        avail = client.call("admin.analytics.getAvailableDateRange", {"type": "member"})
-        end = date.fromisoformat(avail["end_date"])
+        end = discover_end(client)
     return end - timedelta(days=days - 1), end
 
 
@@ -73,7 +101,7 @@ def run(conn, days=WINDOW_DAYS, end=None):
     with ingest_run(conn, SOURCE) as counts:
         rows = []
         for rec in client.paginate(
-            "admin.analytics.getChannelAnalytics",
+            METHOD,
             params,
             "channel_analytics",
             page_size=PAGE_SIZE,
