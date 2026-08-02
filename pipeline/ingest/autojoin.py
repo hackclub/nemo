@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 from slack_sdk.errors import SlackApiError
 
 from lib.db import connect, dead_letter, get_cursor, ingest_run, save_cursor
-from lib.proxy_client import ProxyClient
 from lib.slack_client import bot_client
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -23,19 +22,22 @@ ON CONFLICT (channel_id) DO UPDATE SET
 """
 
 
-def resolve_team_id():
+def resolve_team_id(client):
     configured = os.environ.get("SLACK_TEAM_ID", "").strip()
     if not configured:
         raise RuntimeError("SLACK_TEAM_ID must be set to the workspace autojoin scans")
-    data = ProxyClient().call("admin.teams.list", {"limit": 99}, credential="admin")
-    teams = [team["id"] for team in data.get("teams", [])]
-    if configured not in teams:
-        raise RuntimeError(f"SLACK_TEAM_ID {configured} is not in admin.teams.list: {teams}")
+    try:
+        client.conversations_list(types="public_channel", limit=1, team_id=configured)
+    except SlackApiError as exc:
+        raise RuntimeError(
+            f"SLACK_TEAM_ID {configured} is not a workspace this bot can read: "
+            f"{exc.response.get('error')}"
+        ) from exc
     return configured
 
 
 def join_all(conn, client, join=True):
-    team_id = resolve_team_id()
+    team_id = resolve_team_id(client)
     with ingest_run(conn, SOURCE) as counts:
         cursor = get_cursor(conn, SOURCE)
         while True:

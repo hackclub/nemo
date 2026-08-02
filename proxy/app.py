@@ -29,7 +29,6 @@ ALLOWED_METHODS = {
     "admin": frozenset(
         {
             "admin.users.list",
-            "admin.teams.list",
         }
     ),
 }
