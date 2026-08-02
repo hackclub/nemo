@@ -14,6 +14,8 @@ load_dotenv(ENV_FILE)
 
 METHOD = "admin.analytics.getChannelAnalytics"
 RANGE_METHOD = "admin.analytics.getAvailableDateRange"
+ROLES_METHOD = "admin.roles.listAssignments"
+CHANNEL_MANAGER_ROLE_ID = "Rl0A"
 app = FastAPI(title="mnemosyne channel-analytics")
 
 _range_cache = {"value": None, "at": 0.0}
@@ -40,6 +42,61 @@ def channel_members(channel_id: str):
     except SlackApiError as exc:
         raise HTTPException(status_code=502, detail={"error": exc.response.get("error")}) from exc
     return {"num_members": resp["channel"].get("num_members")}
+
+
+@app.get("/channel-managers")
+def channel_managers(channel_id: str):
+    if (
+        len(channel_id) < 9
+        or len(channel_id) > 16
+        or channel_id[0] not in ("C", "G")
+        or not channel_id.isalnum()
+        or channel_id != channel_id.upper()
+    ):
+        raise HTTPException(status_code=400, detail={"error": "invalid_channel_id"})
+
+    managers = []
+    cursor = None
+    seen_cursors = set()
+
+    try:
+        client = ProxyClient()
+        while True:
+            params = {
+                "entity_ids": channel_id,
+                "role_ids": CHANNEL_MANAGER_ROLE_ID,
+                "limit": 200,
+            }
+            if cursor:
+                params["cursor"] = cursor
+
+            resp = client.call(ROLES_METHOD, params, credential="admin")
+            for assignment in resp.get("role_assignments", []):
+                user_id = assignment.get("user_id")
+                if (
+                    assignment.get("entity_id") == channel_id
+                    and assignment.get("role_id") == CHANNEL_MANAGER_ROLE_ID
+                    and user_id
+                    and user_id not in managers
+                ):
+                    managers.append(user_id)
+
+            cursor = resp.get("response_metadata", {}).get("next_cursor")
+            if not cursor:
+                break
+            if cursor in seen_cursors:
+                raise InternalApiError("role assignment pagination did not advance")
+            seen_cursors.add(cursor)
+    except InternalAuthError as exc:
+        raise HTTPException(status_code=503, detail={"error": "reauth", "message": str(exc)}) from exc
+    except InternalApiError as exc:
+        raise HTTPException(status_code=502, detail={"error": "api", "message": str(exc)}) from exc
+
+    return {
+        "channel_id": channel_id,
+        "channel_managers": [{"user_id": user_id} for user_id in managers],
+        "count": len(managers),
+    }
 
 
 @app.get("/available-range")
