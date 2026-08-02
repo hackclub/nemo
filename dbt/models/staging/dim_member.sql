@@ -1,3 +1,15 @@
+with scoped as (
+    select
+        *,
+        case
+            when account_created_verified is not null then account_created_verified
+            when account_created > (
+                select max(account_created_verified) from {{ source('raw', 'member_dim') }}
+            ) then account_created
+        end as cohort_at
+    from {{ source('raw', 'member_dim') }}
+)
+
 select
     user_id,
     case
@@ -11,18 +23,17 @@ select
     end as account_type,
     coalesce(account_created_verified, account_created) as account_created,
     account_created_verified,
-    case
-        when account_created_verified is not null then account_created_verified
-        when account_created > (
-            select max(account_created_verified) from {{ source('raw', 'member_dim') }}
-        ) then account_created
-    end as cohort_at,
+    cohort_at,
     claimed_at,
     deactivated_at,
-    claimed_at is not null as is_claimed,
+    case
+        when account_created_verified is not null then claimed_at is not null
+        when cohort_at is not null then invite_pending is false
+        else false
+    end as is_claimed,
     is_invited_member,
     is_invited_guest,
     coalesce(is_bot, false) as is_bot,
     coalesce(is_deleted, true) as is_deleted,
     not coalesce(is_deleted, true) and not coalesce(is_bot, false) as is_live
-from {{ source('raw', 'member_dim') }}
+from scoped

@@ -46,7 +46,7 @@ select
     b.band_order,
     b.activity_band,
     count(mb.band_order) as members,
-    'v6' as metric_version
+    'v7' as metric_version
 from bands b
 left join member_bands mb on mb.band_order = b.band_order
 group by b.band_order, b.activity_band

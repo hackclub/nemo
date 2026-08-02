@@ -31,7 +31,7 @@ select
         / nullif((select total_members from member_count), 0),
         4
     ) as share_above_threshold,
-    'v2' as metric_version
+    'v3' as metric_version
 from thresholds th
 cross join members mm
 group by th.threshold

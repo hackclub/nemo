@@ -83,7 +83,7 @@ select
     count(*) filter (where returned_next_day) as returned_next_day,
     count(*) filter (where third_visit_in_7_days) as third_visit_in_7_days,
     count(*) filter (where fourth_visit_in_14_days) as fourth_visit_in_14_days,
-    'v7' as metric_version
+    'v8' as metric_version
 from sequential
 group by cohort_month
 order by cohort_month
