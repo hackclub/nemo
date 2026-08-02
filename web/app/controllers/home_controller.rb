@@ -58,7 +58,9 @@ class HomeController < ApplicationController
       .limit(8)
     @activity_bands = Analytics::MartActivityDistribution.order(:band_order)
     @account_types = Analytics::MartAccountType.where.not(account_type: ["Owner", "Admin", "Org Owner"]).order(members: :desc)
-    @channel_scorecard = Analytics::MartChannelOnboardingScorecard.order(post_month: :desc, newcomer_volume: :desc).limit(10)
+    @channel_scorecard = Analytics::MartChannelOnboardingScorecard
+      .where(newcomer_volume: HomeHelper::MIN_SAMPLE..)
+      .order(post_month: :desc, newcomer_volume: :desc).limit(10)
     @fast_reply_vs_retention = Analytics::MartFastReplyVsRetention.order(fast_reply: :desc)
     @message_depth = Analytics::MartMessageDepthDistribution.order(:threshold)
   end

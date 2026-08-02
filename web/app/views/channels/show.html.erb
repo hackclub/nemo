@@ -102,8 +102,8 @@
         <div class="grid grid-cols-4 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center">
           <span class="mn-label"><%= row.post_month.strftime("%b %Y") %></span>
           <span class="mn-label text-right"><%= number_with_delimiter(row.newcomer_volume) %></span>
-          <span class="mn-label text-right"><%= number_to_percentage((row.fast_reply_share.to_f * 100).round(1), precision: 1) %></span>
-          <span class="mn-label text-right"><%= number_to_percentage((row.retained_90_share.to_f * 100).round(1), precision: 1) %></span>
+          <span class="mn-label text-right"><%= row.fast_reply_share ? number_to_percentage((row.fast_reply_share.to_f * 100).round(1), precision: 1) : "n/a" %></span>
+          <span class="mn-label text-right"><%= row.retained_90_share ? number_to_percentage((row.retained_90_share.to_f * 100).round(1), precision: 1) : "n/a" %></span>
         </div>
       <% end %>
     </div>

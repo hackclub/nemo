@@ -35,7 +35,9 @@ class ChannelsController < ApplicationController
   def show
     @channel = Analytics::DimChannel.find(params[:id])
     @activity_trend = Analytics::MartChannelActivity.where(channel_id: @channel.channel_id).order(:window_start)
-    @scorecard_rows = Analytics::MartChannelOnboardingScorecard.where(channel_id: @channel.channel_id).order(:post_month)
+    @scorecard_rows = Analytics::MartChannelOnboardingScorecard
+      .where(channel_id: @channel.channel_id, newcomer_volume: HomeHelper::MIN_SAMPLE..)
+      .order(:post_month)
 
     coverage = Slack::Analytics.coverage
     last_available = coverage ? Date.iso8601(coverage["end_date"]) : (Date.current - 2)

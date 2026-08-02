@@ -183,6 +183,7 @@
   </div>
 </div>
 
+<% if @channel_scorecard.any? %>
 <div class="mb-8">
   <h2 class="mn-h2 mb-3">Channel onboarding scorecard</h2>
   <div class="mn-card overflow-x-auto">
@@ -221,11 +222,12 @@
       <% if row.retained_day_30_rate %>
         <p class="mn-label mt-2">day 30: <%= number_to_percentage((row.retained_day_30_rate.to_f * 100).round(1), precision: 1) %> &middot; day 90: <%= number_to_percentage((row.retained_day_90_rate.to_f * 100).round(1), precision: 1) %></p>
       <% else %>
-        <p class="mn-label mt-2"><span class="mn-badge mn-badge-pending">TBD</span> not enough cohorts have aged yet</p>
+        <p class="mn-label mt-2"><span class="mn-badge mn-badge-pending">n/a</span> the daily activity data does not cover these cohorts&rsquo; retention windows</p>
       <% end %>
     </div>
   <% end %>
 </div>
+<% end %>
 
 <div class="mb-8" data-controller="recurrence-funnel" data-recurrence-funnel-url-value="<%= root_path %>">
   <div data-recurrence-funnel-target="container">
