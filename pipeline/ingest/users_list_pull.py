@@ -9,7 +9,7 @@ from lib.slack_client import bot_client
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
 SOURCE = "users_list"
-PAGE_SIZE = 1000
+PAGE_SIZE = 200
 
 MEMBER_DIM_SQL = """
 INSERT INTO raw.member_dim (

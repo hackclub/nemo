@@ -88,16 +88,21 @@ def test_channel_dim_row_converts_epoch_fields():
 
 def test_user_dim_row_treats_zero_deactivated_ts_as_none():
     row = analytics_pull.user_dim_row(
-        {"id": "U1", "date_created": 1600000000, "deactivated_ts": 0, "is_restricted": True}
+        {"id": "U1", "date_created": 1600000000, "deactivated_ts": 0}
     )
-    assert len(row) == 9
-    assert row[0:3] == ("U1", epoch(1600000000), None)
-    assert row[7] is True
+    assert row == ("U1", epoch(1600000000), None)
 
 
 def test_user_dim_row_carries_real_deactivated_ts():
     row = analytics_pull.user_dim_row({"id": "U1", "deactivated_ts": 1700000000})
     assert row[2] == epoch(1700000000)
+
+
+def test_user_dim_row_leaves_account_type_flags_to_users_list():
+    row = analytics_pull.user_dim_row(
+        {"id": "U1", "is_admin": True, "is_owner": True, "is_bot": True, "is_restricted": True}
+    )
+    assert len(row) == 3
 
 
 def test_user_profile_row_carries_identity_fields():
