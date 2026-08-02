@@ -1,4 +1,18 @@
-with member_days as (
+with covered_days as (
+    select distinct window_start as day
+    from {{ ref('fct_member_activity') }}
+),
+
+knowable_starts as (
+    select c1.day
+    from covered_days c1
+    where (
+        select count(*) from covered_days c2
+        where c2.day between c1.day and c1.day + 14
+    ) = 15
+),
+
+member_days as (
     select
         user_id,
         window_start as active_date,
@@ -33,6 +47,7 @@ member_funnel as (
         m.cohort_at is not null as created_account,
         m.is_claimed as signed_in,
         f.first_post_date is not null as sent_message,
+        f.first_post_date in (select day from knowable_starts) as visits_knowable,
         exists (
             select 1 from ranked_active_days r
             where r.user_id = m.user_id
@@ -62,6 +77,7 @@ sequential as (
         created_account,
         signed_in,
         sent_message,
+        visits_knowable,
         sent_message
             and returned_next_day as returned_next_day,
         sent_message
@@ -79,11 +95,16 @@ select
     count(*) as total_members,
     count(*) filter (where created_account) as created_account,
     count(*) filter (where signed_in) as signed_in,
-    count(*) filter (where sent_message) as sent_message,
-    count(*) filter (where returned_next_day) as returned_next_day,
-    count(*) filter (where third_visit_in_7_days) as third_visit_in_7_days,
-    count(*) filter (where fourth_visit_in_14_days) as fourth_visit_in_14_days,
-    'v8' as metric_version
+    case when count(*) filter (where visits_knowable) > 0
+         then count(*) filter (where sent_message) end as sent_message,
+    case when count(*) filter (where visits_knowable) > 0
+         then count(*) filter (where returned_next_day) end as returned_next_day,
+    case when count(*) filter (where visits_knowable) > 0
+         then count(*) filter (where third_visit_in_7_days) end as third_visit_in_7_days,
+    case when count(*) filter (where visits_knowable) > 0
+         then count(*) filter (where fourth_visit_in_14_days) end as fourth_visit_in_14_days,
+    count(*) filter (where visits_knowable) > 0 as visits_knowable,
+    'v9' as metric_version
 from sequential
 group by cohort_month
 order by cohort_month

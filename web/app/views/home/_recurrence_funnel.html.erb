@@ -36,6 +36,9 @@
       ></canvas>
     </div>
     <p class="mn-label mt-3">of <%= number_with_delimiter(recurrence_funnel.total_members) %> total known members</p>
+    <% unless recurrence_funnel.visits_knowable %>
+      <p class="mn-label mt-3"><span class="mn-badge mn-badge-pending">n/a</span> the visit steps need 15 consecutive days of member activity data after a first post, and the daily snapshots have gaps</p>
+    <% end %>
   <% else %>
     <p class="mn-label">no data loaded yet</p>
   <% end %>

@@ -36,7 +36,15 @@ retention as (
             select 1 from daily_activity d
             where d.user_id = rs.newcomer_id
                 and d.active_date between mj.claimed_at::date + 83 and mj.claimed_at::date + 90
-        ) as retained_day_90
+        ) as retained_day_90,
+        exists (
+            select 1 from daily_activity d
+            where d.active_date between mj.claimed_at::date + 23 and mj.claimed_at::date + 30
+        ) as day_30_covered,
+        exists (
+            select 1 from daily_activity d
+            where d.active_date between mj.claimed_at::date + 83 and mj.claimed_at::date + 90
+        ) as day_90_covered
     from reply_speed rs
     inner join member_join mj on mj.user_id = rs.newcomer_id
 )
@@ -44,10 +52,16 @@ retention as (
 select
     fast_reply,
     count(*) as newcomers,
-    count(*) filter (where retained_day_30) as retained_day_30_count,
-    round(count(*) filter (where retained_day_30)::numeric / nullif(count(*), 0), 4) as retained_day_30_rate,
-    count(*) filter (where retained_day_90) as retained_day_90_count,
-    round(count(*) filter (where retained_day_90)::numeric / nullif(count(*), 0), 4) as retained_day_90_rate,
-    'v1' as metric_version
+    case when count(*) filter (where not day_30_covered) = 0
+         then count(*) filter (where retained_day_30) end as retained_day_30_count,
+    case when count(*) filter (where not day_30_covered) = 0
+         then round(count(*) filter (where retained_day_30)::numeric / nullif(count(*), 0), 4)
+    end as retained_day_30_rate,
+    case when count(*) filter (where not day_90_covered) = 0
+         then count(*) filter (where retained_day_90) end as retained_day_90_count,
+    case when count(*) filter (where not day_90_covered) = 0
+         then round(count(*) filter (where retained_day_90)::numeric / nullif(count(*), 0), 4)
+    end as retained_day_90_rate,
+    'v2' as metric_version
 from retention
 group by fast_reply
