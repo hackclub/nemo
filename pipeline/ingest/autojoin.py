@@ -12,6 +12,11 @@ ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 SOURCE = "autojoin"
 NAME_SOURCE = "channel_info_names"
 TEAM_ERRORS = ("team_not_found", "team_access_not_granted", "invalid_team_id")
+UNREACHABLE_ERRORS = (
+    "channel_not_found",
+    "team_access_not_granted",
+    "method_not_supported_for_channel_type",
+)
 
 CHANNEL_NAME_SQL = """
 INSERT INTO raw.channel_dim (channel_id, name, archived, updated_at)
@@ -19,7 +24,12 @@ VALUES (%s, %s, %s, now())
 ON CONFLICT (channel_id) DO UPDATE SET
     name = EXCLUDED.name,
     archived = EXCLUDED.archived,
+    name_unavailable = false,
     updated_at = now()
+"""
+
+MARK_UNREACHABLE_SQL = """
+UPDATE raw.channel_dim SET name_unavailable = true, updated_at = now() WHERE channel_id = %s
 """
 
 
@@ -76,7 +86,10 @@ def join_all(conn, client, join=True):
 
 def name_unknown(conn, client):
     with conn.cursor() as cur:
-        cur.execute("SELECT channel_id FROM raw.channel_dim WHERE name IS NULL")
+        cur.execute(
+            "SELECT channel_id FROM raw.channel_dim "
+            "WHERE name IS NULL AND coalesce(name_unavailable, false) = false"
+        )
         pending = [row[0] for row in cur.fetchall()]
 
     with ingest_run(conn, NAME_SOURCE) as counts:
@@ -86,10 +99,12 @@ def name_unknown(conn, client):
                 channel = client.conversations_info(channel=channel_id)["channel"]
             except SlackApiError as exc:
                 counts.rows_rejected += 1
-                dead_letter(
-                    conn, NAME_SOURCE, {"channel_id": channel_id},
-                    exc.response.get("error") or str(exc),
-                )
+                error = exc.response.get("error") or str(exc)
+                if error in UNREACHABLE_ERRORS:
+                    with conn.cursor() as cur:
+                        cur.execute(MARK_UNREACHABLE_SQL, (channel_id,))
+                    continue
+                dead_letter(conn, NAME_SOURCE, {"channel_id": channel_id}, error)
                 continue
             with conn.cursor() as cur:
                 cur.execute(
