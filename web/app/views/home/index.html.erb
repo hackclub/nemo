@@ -84,7 +84,7 @@
             { label: "claimed within 30d", data: @growth_months.map(&:claimed_members_30d) }
           ]
         }.to_json %>"
-        data-growth-chart-rates-value="<%= @growth_months.map { |m| m.claim_rate_30d.to_f }.to_json %>"
+        data-growth-chart-rates-value="<%= @growth_months.map { |m| m.claim_rate_30d&.to_f }.to_json %>"
       ></canvas>
     </div>
     <div class="mn-growth-footer">
