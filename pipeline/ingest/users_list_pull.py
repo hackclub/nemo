@@ -14,11 +14,12 @@ PAGE_SIZE = 1000
 MEMBER_DIM_SQL = """
 INSERT INTO raw.member_dim (
     user_id, is_deleted, is_bot, is_admin, is_owner, is_primary_owner,
-    is_restricted, is_ultra_restricted, updated_at
+    is_restricted, is_ultra_restricted, invite_pending, updated_at
 )
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, now())
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, now())
 ON CONFLICT (user_id) DO UPDATE SET
     is_deleted = EXCLUDED.is_deleted,
+    invite_pending = EXCLUDED.invite_pending,
     is_bot = EXCLUDED.is_bot,
     is_admin = EXCLUDED.is_admin,
     is_owner = EXCLUDED.is_owner,
@@ -56,6 +57,7 @@ def member_dim_row(user):
         bool(user.get("is_primary_owner")),
         bool(user.get("is_restricted")),
         bool(user.get("is_ultra_restricted")),
+        "is_invited_user" in user,
     )
 
 

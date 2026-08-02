@@ -79,6 +79,7 @@ ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS account_created_verified tim
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_invited_member boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_invited_guest boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_deleted boolean;
+ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS invite_pending boolean;
 ALTER TABLE raw.member_dim DROP COLUMN IF EXISTS is_guest;
 
 GRANT DELETE ON raw.channel_activity_snapshot TO pipeline_writer;

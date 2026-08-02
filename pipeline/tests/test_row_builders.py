@@ -107,9 +107,16 @@ def test_users_list_member_dim_row_reads_the_deleted_flag():
     row = users_list_pull.member_dim_row(
         {"id": "U1", "deleted": True, "is_bot": False, "is_ultra_restricted": True}
     )
-    assert len(row) == 8
+    assert len(row) == 9
     assert row[0:3] == ("U1", True, False)
     assert row[7] is True
+
+
+def test_users_list_member_dim_row_reads_invite_pending_by_presence():
+    absent = users_list_pull.member_dim_row({"id": "U1"})
+    present = users_list_pull.member_dim_row({"id": "U2", "is_invited_user": True})
+    assert absent[8] is False
+    assert present[8] is True
 
 
 def test_users_list_profile_row_prefers_top_level_real_name():
