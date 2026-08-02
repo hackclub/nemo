@@ -11,6 +11,7 @@ from lib.slack_client import bot_client
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 SOURCE = "autojoin"
 NAME_SOURCE = "channel_info_names"
+TEAM_ERRORS = ("team_not_found", "team_access_not_granted", "invalid_team_id")
 
 CHANNEL_NAME_SQL = """
 INSERT INTO raw.channel_dim (channel_id, name, archived, updated_at)
@@ -22,28 +23,34 @@ ON CONFLICT (channel_id) DO UPDATE SET
 """
 
 
-def resolve_team_id(client):
+def resolve_team_id():
     configured = os.environ.get("SLACK_TEAM_ID", "").strip()
     if not configured:
         raise RuntimeError("SLACK_TEAM_ID must be set to the workspace autojoin scans")
-    try:
-        client.conversations_list(types="public_channel", limit=1, team_id=configured)
-    except SlackApiError as exc:
-        raise RuntimeError(
-            f"SLACK_TEAM_ID {configured} is not a workspace this bot can read: "
-            f"{exc.response.get('error')}"
-        ) from exc
     return configured
 
 
+def list_public_channels(client, team_id, cursor):
+    try:
+        return client.conversations_list(
+            types="public_channel", exclude_archived=True, limit=200,
+            team_id=team_id, cursor=cursor,
+        )
+    except SlackApiError as exc:
+        error = exc.response.get("error")
+        if error not in TEAM_ERRORS:
+            raise
+        raise RuntimeError(
+            f"SLACK_TEAM_ID {team_id} is not a workspace this bot can read: {error}"
+        ) from exc
+
+
 def join_all(conn, client, join=True):
-    team_id = resolve_team_id(client)
+    team_id = resolve_team_id()
     with ingest_run(conn, SOURCE) as counts:
         cursor = get_cursor(conn, SOURCE)
         while True:
-            page = client.conversations_list(
-                types="public_channel", exclude_archived=True, limit=200, team_id=team_id, cursor=cursor
-            )
+            page = list_public_channels(client, team_id, cursor)
             for channel in page.get("channels", []):
                 counts.rows_in += 1
                 with conn.cursor() as cur:
