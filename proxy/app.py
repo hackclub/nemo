@@ -30,6 +30,7 @@ ALLOWED_METHODS = {
             "admin.users.list",
             "admin.teams.list",
             "admin.analytics.messages.activity",
+            "admin.roles.listAssignments",
         }
     ),
 }
