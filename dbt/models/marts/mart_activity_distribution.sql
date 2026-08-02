@@ -1,4 +1,11 @@
-with member_totals as (
+with window_bounds as (
+    select
+        min(window_start) as window_start,
+        max(window_end) as window_end
+    from {{ ref('fct_member_window') }}
+),
+
+member_totals as (
     select
         user_id,
         sum(coalesce(messages_posted, 0)) as messages_posted
@@ -11,8 +18,10 @@ members as (
         m.user_id,
         coalesce(t.messages_posted, 0) as messages_posted
     from {{ ref('dim_member') }} m
+    cross join window_bounds w
     left join member_totals t on t.user_id = m.user_id
     where m.is_claimed and m.is_live
+        and m.cohort_at::date between w.window_start and w.window_end
 ),
 
 member_bands as (
@@ -46,7 +55,7 @@ select
     b.band_order,
     b.activity_band,
     count(mb.band_order) as members,
-    'v7' as metric_version
+    'v8' as metric_version
 from bands b
 left join member_bands mb on mb.band_order = b.band_order
 group by b.band_order, b.activity_band
