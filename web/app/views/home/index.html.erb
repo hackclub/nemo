@@ -124,18 +124,16 @@
     <h2 class="mn-h2 mb-3">Account composition</h2>
     <div class="mn-card overflow-x-auto">
       <div class="min-w-[420px]">
-        <div class="grid grid-cols-4 gap-4 px-5 py-3 border-b mn-divider">
+        <div class="grid grid-cols-3 gap-4 px-5 py-3 border-b mn-divider">
           <span class="mn-eyebrow">type</span>
           <span class="mn-eyebrow text-right">members</span>
           <span class="mn-eyebrow text-right">claimed</span>
-          <span class="mn-eyebrow text-right">messages</span>
         </div>
         <% @account_types.each do |a| %>
-          <div class="grid grid-cols-4 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center">
+          <div class="grid grid-cols-3 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center">
             <span class="mn-label"><%= a.account_type %></span>
             <span class="mn-label text-right"><%= number_with_delimiter(a.members) %></span>
             <span class="mn-label text-right"><%= number_with_delimiter(a.claimed) %></span>
-            <span class="mn-label text-right"><%= number_with_delimiter(a.total_messages) %></span>
           </div>
         <% end %>
       </div>
