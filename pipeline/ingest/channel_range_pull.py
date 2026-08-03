@@ -6,16 +6,15 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from lib.db import connect, dead_letter, ingest_run
-from lib.proxy_client import InternalApiError, ProxyClient
+from lib.proxy_client import ProxyClient
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
 SOURCE = "admin_analytics_channel_range"
 METHOD = "admin.analytics.getChannelAnalytics"
+RANGE_METHOD = "admin.analytics.getAvailableDateRange"
 PAGE_SIZE = 500
 WINDOW_DAYS = 30
-MAX_PROBE_DAYS = 5
-DATE_REJECTIONS = ("invalid_arguments", "data_not_available")
 
 RANGE_SQL = """
 INSERT INTO raw.channel_activity_snapshot
@@ -55,36 +54,17 @@ def range_row(rec, start, end):
     )
 
 
-def discover_end(client, today=None):
-    candidate = today or date.today()
-    for _ in range(MAX_PROBE_DAYS + 1):
-        probe = candidate.isoformat()
-        try:
-            client.call(
-                METHOD,
-                {
-                    "start_date": probe,
-                    "end_date": probe,
-                    "privacy": "public",
-                    "sort_column": "name",
-                    "sort_direction": "asc",
-                    "count": 1,
-                },
-            )
-            return candidate
-        except InternalApiError as exc:
-            if not str(exc).startswith(DATE_REJECTIONS):
-                raise
-            candidate -= timedelta(days=1)
-    raise RuntimeError(
-        f"{METHOD} rejected every date from {today or date.today()} back {MAX_PROBE_DAYS} days"
-    )
+def channel_calendar(client):
+    resp = client.call(RANGE_METHOD, {"type": "channel"})
+    rng = resp.get("available_date_range") or resp
+    return date.fromisoformat(rng["start_date"]), date.fromisoformat(rng["end_date"])
 
 
 def resolve_window(client, days=WINDOW_DAYS, end=None):
+    floor, edge = channel_calendar(client)
     if end is None:
-        end = discover_end(client)
-    return end - timedelta(days=days - 1), end
+        end = edge
+    return max(floor, end - timedelta(days=days - 1)), end
 
 
 def run(conn, days=WINDOW_DAYS, end=None):

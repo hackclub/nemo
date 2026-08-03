@@ -1,8 +1,6 @@
-import pytest
 from datetime import date, datetime, timezone
 
 from ingest import analytics_pull, channel_range_pull, member_range_pull, users_list_pull
-from lib.proxy_client import InternalApiError
 
 PULL_DATE = date(2026, 7, 20)
 WINDOW_START = date(2026, 6, 30)
@@ -163,35 +161,38 @@ def test_range_row_maps_chats_to_member_messages():
 
 
 class FakeClient:
-    def __init__(self, edge):
-        self.edge = edge
+    def __init__(self, start="2025-07-01", end="2026-08-01"):
+        self.range = {"ok": True, "start_date": start, "end_date": end}
         self.calls = []
 
     def call(self, method, params):
-        asked = date.fromisoformat(params["end_date"])
-        self.calls.append(asked)
-        if asked > self.edge:
-            raise InternalApiError("invalid_arguments")
-        return {"ok": True}
+        self.calls.append((method, params))
+        return self.range
 
 
-def test_discover_end_walks_back_to_the_first_accepted_date():
-    client = FakeClient(date(2026, 7, 31))
-    assert channel_range_pull.discover_end(client, today=date(2026, 8, 3)) == date(2026, 7, 31)
-    assert client.calls == [date(2026, 8, 3), date(2026, 8, 2), date(2026, 8, 1), date(2026, 7, 31)]
+def test_resolve_window_reads_the_channel_calendar_not_the_member_one():
+    client = FakeClient()
+    start, end = channel_range_pull.resolve_window(client)
+    assert client.calls == [(channel_range_pull.RANGE_METHOD, {"type": "channel"})]
+    assert end == date(2026, 8, 1)
+    assert start == date(2026, 7, 3)
 
 
-def test_discover_end_does_not_swallow_unrelated_errors():
-    class Broken(FakeClient):
+def test_resolve_window_clamps_the_start_to_the_calendar_floor():
+    client = FakeClient(start="2026-07-20", end="2026-08-01")
+    start, end = channel_range_pull.resolve_window(client)
+    assert (start, end) == (date(2026, 7, 20), date(2026, 8, 1))
+
+
+def test_resolve_window_honours_an_explicit_end():
+    client = FakeClient()
+    start, end = channel_range_pull.resolve_window(client, days=7, end=date(2026, 7, 10))
+    assert (start, end) == (date(2026, 7, 4), date(2026, 7, 10))
+
+
+def test_channel_calendar_accepts_a_nested_range():
+    class Nested(FakeClient):
         def call(self, method, params):
-            raise InternalApiError("ratelimited")
+            return {"ok": True, "available_date_range": self.range}
 
-    with pytest.raises(InternalApiError, match="ratelimited"):
-        channel_range_pull.discover_end(Broken(date(2026, 7, 31)), today=date(2026, 8, 3))
-
-
-def test_discover_end_gives_up_rather_than_probing_forever():
-    client = FakeClient(date(2020, 1, 1))
-    with pytest.raises(RuntimeError, match="rejected every date"):
-        channel_range_pull.discover_end(client, today=date(2026, 8, 3))
-    assert len(client.calls) == channel_range_pull.MAX_PROBE_DAYS + 1
+    assert channel_range_pull.channel_calendar(Nested()) == (date(2025, 7, 1), date(2026, 8, 1))
