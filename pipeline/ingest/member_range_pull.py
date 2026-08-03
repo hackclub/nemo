@@ -20,12 +20,20 @@ WHERE source = %s AND (window_start, window_end) <> (%s, %s)
 """
 
 VERIFIED_DATE_SQL = """
-UPDATE raw.member_dim SET account_created_verified = %s, updated_at = now() WHERE user_id = %s
+UPDATE raw.member_dim
+SET account_created_verified = %s,
+    claimed_at = COALESCE(claimed_at, %s),
+    updated_at = now()
+WHERE user_id = %s
 """
 
 
 def verified_date_row(rec):
-    return (parse_epoch(rec.get("date_created")), rec["user_id"])
+    return (
+        parse_epoch(rec.get("date_created")),
+        parse_epoch(rec.get("date_claimed")),
+        rec["user_id"],
+    )
 
 
 def resolve_window(client, days=None, end=None):
