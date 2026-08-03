@@ -4,7 +4,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from ingest.analytics_pull import MEMBER_ACTIVITY_SQL, member_activity_row
+from ingest.analytics_pull import MEMBER_ACTIVITY_SQL, member_activity_row, parse_epoch
 from lib.db import connect, dead_letter, ingest_run
 from lib.proxy_client import ProxyClient
 
@@ -18,6 +18,14 @@ PRUNE_SQL = """
 DELETE FROM raw.member_activity_snapshot
 WHERE source = %s AND (window_start, window_end) <> (%s, %s)
 """
+
+VERIFIED_DATE_SQL = """
+UPDATE raw.member_dim SET account_created_verified = %s, updated_at = now() WHERE user_id = %s
+"""
+
+
+def verified_date_row(rec):
+    return (parse_epoch(rec.get("date_created")), rec["user_id"])
 
 
 def resolve_window(client, days=None, end=None):
@@ -40,12 +48,17 @@ def run(conn, days=None, end=None):
         "sort_direction": "asc",
     }
     with ingest_run(conn, SOURCE) as counts:
-        rows = []
+        rows, dates = [], []
+        dates_written = 0
 
         def flush():
+            nonlocal dates_written
             with conn.cursor() as cur:
                 cur.executemany(MEMBER_ACTIVITY_SQL, rows)
+                cur.executemany(VERIFIED_DATE_SQL, dates)
+            dates_written += len(dates)
             rows.clear()
+            dates.clear()
 
         for i, rec in enumerate(client.paginate(
             "admin.analytics.getMemberAnalytics", params, "member_activity",
@@ -54,6 +67,7 @@ def run(conn, days=None, end=None):
             counts.rows_in += 1
             try:
                 rows.append(member_activity_row(rec, start, stop, SOURCE))
+                dates.append(verified_date_row(rec))
             except KeyError as exc:
                 counts.rows_rejected += 1
                 dead_letter(conn, SOURCE, {"keys": sorted(rec)}, str(exc))
@@ -72,7 +86,7 @@ def run(conn, days=None, end=None):
             cur.execute(PRUNE_SQL, (SOURCE, start, stop))
             pruned = cur.rowcount
     print(
-        f"member range {start}..{stop}: {counts.rows_in} rows, "
+        f"member range {start}..{stop}: {counts.rows_in} rows, {dates_written} dates, "
         f"{counts.rows_rejected} rejected, {pruned} stale rows pruned"
     )
 
