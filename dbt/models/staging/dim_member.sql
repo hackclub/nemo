@@ -1,6 +1,18 @@
 with scoped as (
     select
-        *,
+        user_id,
+        account_created_verified,
+        claimed_at,
+        deactivated_at,
+        invite_pending,
+        is_invited_member,
+        is_invited_guest,
+        is_bot,
+        is_admin,
+        is_owner,
+        is_primary_owner,
+        is_restricted,
+        is_ultra_restricted,
         case
             when account_created_verified is not null then account_created_verified
             when account_created > (
