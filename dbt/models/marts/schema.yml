@@ -43,10 +43,6 @@ models:
         data_tests: [not_null, unique]
       - name: total_members
         data_tests: [not_null]
-  - name: mart_message_depth_distribution
-    columns:
-      - name: threshold
-        data_tests: [not_null, unique]
   - name: mart_channel_engagement
     columns:
       - name: channel_id

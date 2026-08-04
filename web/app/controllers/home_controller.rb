@@ -64,7 +64,6 @@ class HomeController < ApplicationController
     @fast_reply_vs_retention = Analytics::MartFastReplyVsRetention
       .where(newcomers: HomeHelper::MIN_SAMPLE..)
       .order(fast_reply: :desc)
-    @message_depth = Analytics::MartMessageDepthDistribution.order(:threshold)
   end
 
   private
