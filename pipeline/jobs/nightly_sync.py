@@ -26,12 +26,14 @@ from lib.db import (
     run_step,
     start_run,
 )
+from lib.proxy_client import InternalAuthError, ProxyError, ProxyUnavailableError
 from lib.slack_client import bot_client
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 DBT_DIR = Path(__file__).resolve().parents[2] / "dbt"
 SOURCE = "nightly_sync"
 TRUTHY = {"1", "true", "yes", "on"}
+STAGE_ATTEMPTS = 2
 
 
 def join_channels_enabled():
@@ -60,17 +62,37 @@ def stages():
     ]
 
 
+def retryable(exc):
+    if isinstance(exc, InternalAuthError):
+        return False
+    if isinstance(exc, ProxyUnavailableError):
+        return True
+    return not isinstance(exc, ProxyError)
+
+
+def run_stage(conn, name, stage, run_id, index, total):
+    for attempt in range(1, STAGE_ATTEMPTS + 1):
+        try:
+            with run_step(run_id, index, total):
+                stage(conn)
+            return None
+        except Exception as exc:
+            conn.rollback()
+            detail = f"{type(exc).__name__}: {exc}"
+            if attempt == STAGE_ATTEMPTS or not retryable(exc):
+                return detail
+            print(f"[{index}/{total}] {name}: {detail}, retrying")
+    return None
+
+
 def run_stages(conn, plan, run_id):
     failed = []
     for index, (name, stage) in enumerate(plan, start=1):
         print(f"[{index}/{len(plan)}] {name}")
-        try:
-            with run_step(run_id, index, len(plan)):
-                stage(conn)
-        except Exception as exc:
-            conn.rollback()
-            failed.append((name, f"{type(exc).__name__}: {exc}"))
-            print(f"[{index}/{len(plan)}] {name}: FAILED {type(exc).__name__}: {exc}")
+        detail = run_stage(conn, name, stage, run_id, index, len(plan))
+        if detail:
+            failed.append((name, detail))
+            print(f"[{index}/{len(plan)}] {name}: FAILED {detail}")
     return failed
 
 
