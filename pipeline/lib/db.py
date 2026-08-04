@@ -12,6 +12,10 @@ STALE_AFTER_HOURS = 6
 _step = contextvars.ContextVar("ingest_step", default=(None, None, None))
 
 
+def current_step() -> tuple:
+    return _step.get()
+
+
 @contextmanager
 def run_step(parent_run_id: int, step_index: int, step_total: int) -> Iterator[None]:
     token = _step.set((parent_run_id, step_index, step_total))
@@ -191,6 +195,19 @@ def record_day(conn: psycopg.Connection, source: str, ds, rows_in: int) -> None:
             """,
             (source, ds, rows_in > 0, rows_in),
         )
+
+
+def mark_day_unavailable(conn: psycopg.Connection, source: str, ds, reason: str) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO raw.analytics_day (source, ds, loaded, unavailable, updated_at)
+            VALUES (%s, %s, false, true, now())
+            ON CONFLICT (source, ds) DO UPDATE SET unavailable = true, updated_at = now()
+            """,
+            (source, ds),
+        )
+    dead_letter(conn, source, {"ds": str(ds)}, reason)
 
 
 def dead_letter(conn: psycopg.Connection, source: str, payload: dict, reason: str) -> None:

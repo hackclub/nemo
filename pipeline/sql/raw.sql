@@ -115,6 +115,8 @@ WHERE window_start = window_end
 GROUP BY window_start
 ON CONFLICT (source, ds) DO NOTHING;
 
+ALTER TABLE raw.analytics_day ADD COLUMN IF NOT EXISTS unavailable boolean;
+
 CREATE TABLE IF NOT EXISTS raw.sync_cursor (
     source text NOT NULL,
     channel_id text NOT NULL DEFAULT '',

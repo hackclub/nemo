@@ -1,6 +1,7 @@
 import argparse
 import gzip
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -10,10 +11,13 @@ from lib.db import (
     CHANNEL_DAY,
     MEMBER_DAY,
     connect,
+    current_step,
     dead_letter,
     get_cursor,
     ingest_run,
+    mark_day_unavailable,
     record_day,
+    run_step,
     save_cursor,
 )
 from lib.proxy_client import InternalAuthError, ProxyClient, ProxyError
@@ -200,11 +204,18 @@ def user_profile_row(user):
 
 MEMBER_DAY_LIMIT = 3
 CHANNEL_DAY_LIMIT = 30
+DAY_WORKERS = 3
 
 
-def loaded_days(conn, source):
+PERMANENT_DAY_ERRORS = ("file_not_found", "data_not_available")
+
+
+def settled_days(conn, source):
     with conn.cursor() as cur:
-        cur.execute("SELECT ds FROM raw.analytics_day WHERE source = %s AND loaded", (source,))
+        cur.execute(
+            "SELECT ds FROM raw.analytics_day WHERE source = %s AND (loaded OR unavailable)",
+            (source,),
+        )
         return {row[0] for row in cur.fetchall()}
 
 
@@ -224,21 +235,37 @@ def pending_days(loaded, floor, edge, limit):
     return [missing[-1], *missing[:-1][: limit - 1]]
 
 
-def backfill_days(conn, source, kind, pull_fn, limit):
+def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
     floor, edge = calendar(ProxyClient(), kind)
-    days = pending_days(loaded_days(conn, source), floor, edge, limit)
+    days = pending_days(settled_days(conn, source), floor, edge, limit)
     if not days:
         print(f"{source}: every day in {floor}..{edge} is loaded")
         return
 
-    failed = []
-    print(f"{source}: {len(days)} unloaded day(s) of {floor}..{edge}")
-    for day in days:
-        try:
-            pull_fn(conn, day)
-        except Exception as exc:
-            conn.rollback()
-            failed.append(f"{day}: {type(exc).__name__}: {exc}")
+    step = current_step()
+    lanes = max(1, min(workers, len(days)))
+    print(f"{source}: {len(days)} unloaded day(s) of {floor}..{edge}, {lanes} at a time")
+
+    def work(day):
+        with connect() as worker_conn, run_step(*step):
+            pull_fn(worker_conn, day)
+
+    failed, unavailable = [], []
+    with ThreadPoolExecutor(max_workers=lanes) as pool:
+        submitted = {pool.submit(work, day): day for day in days}
+        for future in as_completed(submitted):
+            day = submitted[future]
+            try:
+                future.result()
+            except Exception as exc:
+                if str(exc).startswith(PERMANENT_DAY_ERRORS):
+                    mark_day_unavailable(conn, source, day, str(exc))
+                    conn.commit()
+                    unavailable.append(str(day))
+                else:
+                    failed.append(f"{day}: {type(exc).__name__}: {exc}")
+    if unavailable:
+        print(f"{source}: {len(unavailable)} day(s) have no export and will not be retried")
     if failed:
         raise RuntimeError(f"{source}: {len(failed)} of {len(days)} days failed: " + "; ".join(failed))
 
