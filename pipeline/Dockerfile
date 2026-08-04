@@ -11,3 +11,4 @@ COPY dbt/ /dbt/
 COPY dbt/profiles.yml.example /dbt/profiles.yml
 
 ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONUNBUFFERED=1

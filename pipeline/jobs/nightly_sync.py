@@ -96,9 +96,15 @@ def run_stages(conn, plan, run_id):
     return failed
 
 
-def main():
-    load_dotenv(ENV_FILE)
-    plan = stages()
+def stage_plan(name):
+    plan = [entry for entry in stages() if entry[0] == name]
+    if not plan:
+        raise ValueError(f"unknown stage {name}")
+    return plan
+
+
+def run_sync(plan=None):
+    plan = plan or stages()
     with connect() as conn:
         run_id = start_run(conn, SOURCE)
         conn.commit()
@@ -117,7 +123,13 @@ def main():
     print(f"{SOURCE}: {status}, {len(plan) - len(failed)}/{len(plan)} stages ok")
     for name, detail in failed:
         print(f"  failed: {name}: {detail}")
-    if failed:
+    return run_id, status
+
+
+def main():
+    load_dotenv(ENV_FILE)
+    _, status = run_sync()
+    if status != "ok":
         raise SystemExit(1)
 
 
