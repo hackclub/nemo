@@ -1,6 +1,4 @@
 class PipelineController < ApplicationController
-  before_action :require_community_manager
-
   HISTORY = 12
   FRESHNESS_WINDOW = 30.days
 
@@ -18,13 +16,5 @@ class PipelineController < ApplicationController
       .group(Arel.sql("split_part(source, ':', 1)"))
       .maximum(:finished_at)
       .sort_by { |_stage, at| at }
-  end
-
-  private
-
-  def require_community_manager
-    return if current_staff.community_manager?
-
-    redirect_to fire_engine_root_path
   end
 end

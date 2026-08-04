@@ -16,15 +16,6 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_select "h1", "Mnemosyne"
   end
 
-  test "firefighter only is redirected to fire engine" do
-    staff = Staff.create!(user_id: "UTESTFF1", firefighter: true)
-    sign_in_as(staff)
-
-    get root_path
-
-    assert_redirected_to fire_engine_root_path
-  end
-
   test "unauthenticated visitor is redirected to login" do
     get root_path
 

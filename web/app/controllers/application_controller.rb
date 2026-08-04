@@ -15,7 +15,7 @@ class ApplicationController < ActionController::Base
   end
 
   def require_staff
-    return if current_staff&.community_manager? || current_staff&.firefighter?
+    return if current_staff&.community_manager?
 
     redirect_to login_path, alert: "sign in to continue"
   end

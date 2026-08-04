@@ -1,6 +1,4 @@
 class ChannelsController < ApplicationController
-  before_action :require_community_manager
-
   PER_PAGE = 100
 
   SORT_SQL = {
@@ -72,11 +70,5 @@ class ChannelsController < ApplicationController
       ["CASE WHEN lower(dim_channel.name) = ? THEN 0 WHEN lower(dim_channel.name) LIKE ? THEN 1 ELSE 2 END", ql, "#{ql}%"]
     )
     "#{rank}, #{metric}"
-  end
-
-  def require_community_manager
-    return if current_staff.community_manager?
-
-    redirect_to fire_engine_root_path
   end
 end

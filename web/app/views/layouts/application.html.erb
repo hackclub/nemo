@@ -48,9 +48,6 @@
 
         <div class="border-t mn-divider pt-4 px-2">
           <div class="mn-label mb-3">you &middot; <%= current_staff.user_id %></div>
-          <% if current_staff.firefighter? %>
-            <%= link_to "fire engine", fire_engine_root_path, class: "mn-link block mb-2" %>
-          <% end %>
           <%= button_to "log out", logout_path, method: :delete, class: "mn-link", form: { class: "inline" } %>
         </div>
       </aside>
