@@ -51,22 +51,6 @@
   --flag-blue: oklch(62.9% 0.142 248);
   --flag-purple: oklch(56.6% 0.239 314);
 
-  /* fire engine — dark, investigative */
-  --fe-paper: oklch(19.5% 0.011 347);
-  --fe-paper-2: oklch(23.4% 0.015 356);
-  --fe-paper-3: oklch(25.8% 0.018 0);
-  --fe-rule: oklch(30.2% 0.021 4);
-  --fe-rule-strong: oklch(35.9% 0.028 5);
-  --fe-ink: oklch(96.1% 0.007 53);
-  --fe-ink-2: oklch(67.8% 0.023 36);
-  --fe-accent: var(--flag-red);
-  --fe-accent-hover: oklch(67.7% 0.213 18);
-  --fe-accent-ink: oklch(97% 0.012 15);
-  --fe-accent-muted: oklch(28.4% 0.045 12);
-  --fe-success: oklch(79.5% 0.138 166);
-  --fe-danger: oklch(76.6% 0.141 14);
-  --fe-focus: var(--flag-red);
-
   /* community — light, informational */
   --mn-paper: oklch(97.1% 0.007 81);
   --mn-paper-2: oklch(100% 0 90);
