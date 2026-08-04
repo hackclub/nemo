@@ -85,6 +85,29 @@ ALTER TABLE raw.member_dim DROP COLUMN IF EXISTS is_guest;
 
 GRANT DELETE ON raw.channel_activity_snapshot TO pipeline_writer;
 
+CREATE TABLE IF NOT EXISTS raw.analytics_day (
+    source text NOT NULL,
+    ds date NOT NULL,
+    loaded boolean NOT NULL DEFAULT false,
+    rows_in integer,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (source, ds)
+);
+
+INSERT INTO raw.analytics_day (source, ds, loaded, rows_in)
+SELECT 'member_day', window_start, true, count(*)
+FROM raw.member_activity_snapshot
+WHERE window_start = window_end
+GROUP BY window_start
+ON CONFLICT (source, ds) DO NOTHING;
+
+INSERT INTO raw.analytics_day (source, ds, loaded, rows_in)
+SELECT 'channel_day', window_start, true, count(*)
+FROM raw.channel_activity_snapshot
+WHERE window_start = window_end
+GROUP BY window_start
+ON CONFLICT (source, ds) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS raw.sync_cursor (
     source text NOT NULL,
     channel_id text NOT NULL DEFAULT '',
