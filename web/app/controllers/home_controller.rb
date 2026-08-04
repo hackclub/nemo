@@ -24,7 +24,7 @@ class HomeController < ApplicationController
       return
     end
 
-    @team_stats = Analytics::MartTeamStats.take
+    @team_stats = Analytics::MartTeamStatsDaily.order(ds: :desc).first
     @activity_granularity = helpers.activity_granularity(params[:activity_granularity])
     @activity_trend =
       if @activity_granularity == "monthly"
