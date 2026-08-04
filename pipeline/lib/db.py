@@ -128,6 +128,25 @@ def save_cursor(conn: psycopg.Connection, source: str, cursor: str, channel_id: 
         )
 
 
+MEMBER_DAY = "member_day"
+CHANNEL_DAY = "channel_day"
+
+
+def record_day(conn: psycopg.Connection, source: str, ds, rows_in: int) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO raw.analytics_day (source, ds, loaded, rows_in, updated_at)
+            VALUES (%s, %s, %s, %s, now())
+            ON CONFLICT (source, ds) DO UPDATE SET
+                loaded = raw.analytics_day.loaded OR EXCLUDED.loaded,
+                rows_in = EXCLUDED.rows_in,
+                updated_at = now()
+            """,
+            (source, ds, rows_in > 0, rows_in),
+        )
+
+
 def dead_letter(conn: psycopg.Connection, source: str, payload: dict, reason: str) -> None:
     with conn.cursor() as cur:
         cur.execute(

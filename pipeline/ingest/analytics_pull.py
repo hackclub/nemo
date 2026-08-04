@@ -6,7 +6,16 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from lib.db import connect, dead_letter, get_cursor, ingest_run, save_cursor
+from lib.db import (
+    CHANNEL_DAY,
+    MEMBER_DAY,
+    connect,
+    dead_letter,
+    get_cursor,
+    ingest_run,
+    record_day,
+    save_cursor,
+)
 from lib.proxy_client import InternalAuthError, ProxyClient, ProxyError
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -248,6 +257,8 @@ def pull_member_day(conn, pull_date):
                 f"member analytics {pull_date}: walked {counts.rows_in} rows against a "
                 f"num_found of {expected}, refusing to commit the day"
             )
+
+        record_day(conn, MEMBER_DAY, pull_date, counts.rows_in)
     print(f"member analytics {pull_date}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
 
@@ -270,6 +281,8 @@ def pull_channel_day(conn, pull_date):
         with conn.cursor() as cur:
             cur.executemany(CHANNEL_ACTIVITY_SQL, activity_rows)
             cur.executemany(CHANNEL_DIM_MERGE_SQL, dim_rows)
+
+        record_day(conn, CHANNEL_DAY, pull_date, counts.rows_in)
     print(f"channel analytics {pull_date}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
 
