@@ -6,7 +6,8 @@ with scoped as (
             when account_created > (
                 select max(account_created_verified) from {{ source('raw', 'member_dim') }}
             ) then account_created
-        end as cohort_at
+        end as cohort_at,
+        coalesce(is_deleted, deactivated_at is not null) as resolved_is_deleted
     from {{ source('raw', 'member_dim') }}
 )
 
@@ -33,6 +34,6 @@ select
     is_invited_member,
     is_invited_guest,
     coalesce(is_bot, false) as is_bot,
-    coalesce(is_deleted, true) as is_deleted,
-    not coalesce(is_deleted, true) and not coalesce(is_bot, false) as is_live
+    resolved_is_deleted as is_deleted,
+    not resolved_is_deleted and not coalesce(is_bot, false) as is_live
 from scoped
