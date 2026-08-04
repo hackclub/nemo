@@ -857,4 +857,5 @@
   .mn-band-5 { background-color: var(--mn-success); }
   .mn-band-6 { background-color: var(--flag-blue); }
   .mn-band-7 { background-color: var(--flag-purple); }
+  .mn-band-8 { background-color: var(--mn-ink); }
 }

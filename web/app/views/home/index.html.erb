@@ -100,7 +100,12 @@
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
   <div>
-    <h2 class="mn-h2 mb-3">Activity distribution (claimed)</h2>
+    <h2 class="mn-h2 mb-1">Activity distribution</h2>
+    <% window = @activity_bands.first %>
+    <p class="mn-label mb-3">
+      <%= number_with_delimiter(@activity_bands.sum(&:members)) %> live members &middot;
+      messages posted <%= window&.window_start&.strftime("%b %-d, %Y") %> to <%= window&.window_end&.strftime("%b %-d, %Y") %>
+    </p>
     <div class="mn-card p-5">
       <% total_banded = @activity_bands.sum(&:members) %>
       <div class="mn-bar-track flex h-2.5 rounded-full overflow-hidden mb-4">
@@ -112,11 +117,12 @@
         <div class="flex items-center justify-between py-1.5">
           <span class="flex items-center gap-2 mn-label">
             <span class="mn-band-<%= b.band_order %> inline-block w-2 h-2 rounded-full"></span>
-            messages posted: <%= b.activity_band %>
+            <%= b.band_order <= 1 ? b.activity_band : "messages posted: #{b.activity_band}" %>
           </span>
           <span class="mn-label"><%= number_with_delimiter(b.members) %> &middot; <%= total_banded.positive? ? number_to_percentage((b.members.to_f / total_banded * 100).round(1), precision: 1) : "0%" %></span>
         </div>
       <% end %>
+      <p class="mn-label mt-3">Members who joined recently have had less of the window to post in.</p>
     </div>
   </div>
 
