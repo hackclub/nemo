@@ -116,6 +116,7 @@ GROUP BY window_start
 ON CONFLICT (source, ds) DO NOTHING;
 
 ALTER TABLE raw.analytics_day ADD COLUMN IF NOT EXISTS unavailable boolean;
+ALTER TABLE raw.analytics_day ADD COLUMN IF NOT EXISTS reason text;
 
 CREATE TABLE IF NOT EXISTS raw.sync_cursor (
     source text NOT NULL,

@@ -201,13 +201,15 @@ def mark_day_unavailable(conn: psycopg.Connection, source: str, ds, reason: str)
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO raw.analytics_day (source, ds, loaded, unavailable, updated_at)
-            VALUES (%s, %s, false, true, now())
-            ON CONFLICT (source, ds) DO UPDATE SET unavailable = true, updated_at = now()
+            INSERT INTO raw.analytics_day (source, ds, loaded, unavailable, reason, updated_at)
+            VALUES (%s, %s, false, true, %s, now())
+            ON CONFLICT (source, ds) DO UPDATE SET
+                unavailable = true,
+                reason = EXCLUDED.reason,
+                updated_at = now()
             """,
-            (source, ds),
+            (source, ds, reason),
         )
-    dead_letter(conn, source, {"ds": str(ds)}, reason)
 
 
 def dead_letter(conn: psycopg.Connection, source: str, payload: dict, reason: str) -> None:
