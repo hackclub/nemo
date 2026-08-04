@@ -7,7 +7,10 @@ select
     status,
     started_at,
     finished_at,
-    coalesce(finished_at, clock_timestamp()) - started_at as elapsed,
+    case
+        when status = 'abandoned' then null
+        else coalesce(finished_at, clock_timestamp()) - started_at
+    end as elapsed,
     rows_in,
     rows_rejected,
     total_expected,

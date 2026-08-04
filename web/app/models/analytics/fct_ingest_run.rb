@@ -15,7 +15,13 @@ module Analytics
       status == "running"
     end
 
+    def abandoned?
+      status == "abandoned"
+    end
+
     def seconds
+      return nil if abandoned?
+
       ((finished_at || Time.current) - started_at).to_i
     end
   end

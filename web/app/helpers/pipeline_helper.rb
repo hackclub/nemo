@@ -26,6 +26,7 @@ module PipelineHelper
 
   def run_duration(row)
     seconds = row.seconds
+    return "n/a" if seconds.nil?
     return "#{seconds}s" if seconds < 90
 
     minutes = seconds / 60
