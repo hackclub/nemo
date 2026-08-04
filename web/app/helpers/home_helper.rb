@@ -4,10 +4,6 @@ module HomeHelper
   CHART_RATIO_LINE = "#454e58".freeze
   MIN_SAMPLE = 20
 
-  def usable_sample?(count)
-    count.to_i >= MIN_SAMPLE
-  end
-
   def growth_cohort_status(row)
     return "n/a" if row.last_created_on.nil?
 

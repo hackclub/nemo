@@ -61,7 +61,9 @@ class HomeController < ApplicationController
     @channel_scorecard = Analytics::MartChannelOnboardingScorecard
       .where(newcomer_volume: HomeHelper::MIN_SAMPLE..)
       .order(post_month: :desc, newcomer_volume: :desc).limit(10)
-    @fast_reply_vs_retention = Analytics::MartFastReplyVsRetention.order(fast_reply: :desc)
+    @fast_reply_vs_retention = Analytics::MartFastReplyVsRetention
+      .where(newcomers: HomeHelper::MIN_SAMPLE..)
+      .order(fast_reply: :desc)
     @message_depth = Analytics::MartMessageDepthDistribution.order(:threshold)
   end
 

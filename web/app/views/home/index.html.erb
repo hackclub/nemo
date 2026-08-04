@@ -212,6 +212,9 @@
   </div>
 </div>
 
+<% end %>
+
+<% if @fast_reply_vs_retention.any? %>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
   <% @fast_reply_vs_retention.each do |row| %>
     <div class="mn-card p-5">
