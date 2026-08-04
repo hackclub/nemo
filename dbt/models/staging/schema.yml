@@ -5,6 +5,14 @@ models:
     columns:
       - name: user_id
         data_tests: [unique, not_null]
+  - name: fct_ingest_run
+    columns:
+      - name: id
+        data_tests: [unique, not_null]
+      - name: source
+        data_tests: [not_null]
+      - name: status
+        data_tests: [not_null]
   - name: dim_channel
     columns:
       - name: channel_id

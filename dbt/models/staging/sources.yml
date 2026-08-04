@@ -12,3 +12,5 @@ sources:
       - name: message_activity_snapshot
       - name: team_stats_snapshot
       - name: top_posters_snapshot
+      - name: ingest_run
+      - name: analytics_day
