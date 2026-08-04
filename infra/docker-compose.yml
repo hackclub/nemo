@@ -49,7 +49,7 @@ services:
       POSTGRES_PORT: 5432
       NIGHTLY_AT: ${NIGHTLY_AT:-03:00}
       NIGHTLY_JOIN_CHANNELS: ${NIGHTLY_JOIN_CHANNELS:-false}
-      SYNC_POLL_SECONDS: ${SYNC_POLL_SECONDS:-15}
+      SYNC_POLL_SECONDS: ${SYNC_POLL_SECONDS:-60}
       TZ: ${TZ:-UTC}
     restart: unless-stopped
     command: ["uv", "run", "python", "-m", "jobs.sync_worker"]
