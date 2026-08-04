@@ -280,6 +280,8 @@ def pull_member_day(conn, pull_date):
                 cur.executemany(MEMBER_DIM_MERGE_SQL, dim_rows)
             activity_rows.clear()
             dim_rows.clear()
+            counts.total_expected = client.last_num_found
+            counts.progress()
 
         for i, rec in enumerate(client.paginate(
             "admin.analytics.getMemberAnalytics", params, "member_activity",
@@ -357,6 +359,7 @@ def pull_users_page(conn, is_active):
             cursor = page.get("response_metadata", {}).get("next_cursor") or ""
             save_cursor(conn, USERS_SOURCE, cursor, channel_id=label)
             conn.commit()
+            counts.progress()
             if not cursor:
                 break
     print(f"admin users ({label}): {counts.rows_in} rows, {counts.rows_rejected} rejected")

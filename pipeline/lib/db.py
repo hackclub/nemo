@@ -75,13 +75,40 @@ def finish_run(conn: psycopg.Connection, run_id: int, status: str, rows_in: int,
 class RunCounts:
     rows_in: int = 0
     rows_rejected: int = 0
+    total_expected: int | None = None
+    run_id: int | None = None
+    monitor: psycopg.Connection | None = None
+
+    def progress(self) -> None:
+        if self.run_id is None:
+            return
+        try:
+            if self.monitor is None or self.monitor.closed:
+                self.monitor = connect()
+            with self.monitor.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE raw.ingest_run
+                    SET rows_in = %s, rows_rejected = %s, total_expected = %s
+                    WHERE id = %s
+                    """,
+                    (self.rows_in, self.rows_rejected, self.total_expected, self.run_id),
+                )
+            self.monitor.commit()
+        except Exception:
+            self.close()
+
+    def close(self) -> None:
+        if self.monitor is not None and not self.monitor.closed:
+            self.monitor.close()
+        self.monitor = None
 
 
 @contextmanager
 def ingest_run(conn: psycopg.Connection, source: str) -> Iterator[RunCounts]:
     run_id = start_run(conn, source)
     conn.commit()
-    counts = RunCounts()
+    counts = RunCounts(run_id=run_id)
     try:
         yield counts
     except BaseException:
@@ -89,6 +116,8 @@ def ingest_run(conn: psycopg.Connection, source: str) -> Iterator[RunCounts]:
         finish_run(conn, run_id, "failed", counts.rows_in, counts.rows_rejected)
         conn.commit()
         raise
+    finally:
+        counts.close()
     finish_run(conn, run_id, "ok", counts.rows_in, counts.rows_rejected)
     conn.commit()
 

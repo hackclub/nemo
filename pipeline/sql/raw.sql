@@ -85,6 +85,7 @@ ALTER TABLE raw.member_dim DROP COLUMN IF EXISTS is_guest;
 
 GRANT DELETE ON raw.channel_activity_snapshot TO pipeline_writer;
 
+ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS total_expected integer;
 ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS parent_run_id bigint;
 ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS step_index smallint;
 ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS step_total smallint;

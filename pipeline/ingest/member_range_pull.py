@@ -67,6 +67,8 @@ def run(conn, days=None, end=None):
             dates_written += len(dates)
             rows.clear()
             dates.clear()
+            counts.total_expected = client.last_num_found
+            counts.progress()
 
         for i, rec in enumerate(client.paginate(
             "admin.analytics.getMemberAnalytics", params, "member_activity",

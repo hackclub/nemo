@@ -93,6 +93,7 @@ def run(conn):
             cursor = page.get("response_metadata", {}).get("next_cursor") or ""
             save_cursor(conn, SOURCE, cursor)
             conn.commit()
+            counts.progress()
             if not cursor:
                 break
     print(f"users.list: {counts.rows_in} rows, {counts.rows_rejected} rejected")
