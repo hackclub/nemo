@@ -17,7 +17,6 @@ select
     sum(chats_channels_count_1d) as public_channel_messages,
     sum(chats_groups_count_1d) as private_channel_messages,
     sum(messages_count_1d) as messages,
-    sum(messages_from_members_1d) as messages_from_members,
     sum(messages_channels_count_from_apps_1d) as messages_from_apps,
     sum(files_count_1d) as files,
 

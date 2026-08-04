@@ -14,7 +14,6 @@ select
     readers_count_7d,
     messages_count_1d,
     messages_channels_count_from_apps_1d,
-    messages_from_members_1d,
     channel_messages_1d,
     chats_channels_count_1d,
     chats_groups_count_1d,
