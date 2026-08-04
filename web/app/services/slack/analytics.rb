@@ -10,6 +10,9 @@ module Slack
         response = ProxyClient.call("admin.analytics.getAvailableDateRange", { "type" => "member" })
         { "start_date" => response["start_date"], "end_date" => response["end_date"] }
       end
+    rescue ProxyClient::NotConfigured => e
+      Rails.logger.error("slack analytics proxy is not configured: #{e.message}")
+      nil
     rescue ProxyClient::Error
       nil
     end
@@ -31,6 +34,9 @@ module Slack
       return Result.new(stats: shape(match, from, to)) if match
 
       Result.new(error: response["num_found"].to_i > records.size ? :truncated : :not_found)
+    rescue ProxyClient::NotConfigured => e
+      Rails.logger.error("slack analytics proxy is not configured: #{e.message}")
+      Result.new(error: :not_configured)
     rescue ProxyClient::AuthError
       Result.new(error: :reauth)
     rescue ProxyClient::Error

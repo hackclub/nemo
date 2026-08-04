@@ -6,6 +6,7 @@ module Slack
     class AuthError < Error; end
     class ApiError < Error; end
     class Unavailable < Error; end
+    class NotConfigured < StandardError; end
 
     def self.call(method, params = {}, credential: "internal", read_timeout: 30)
       uri = URI("#{base_url}/call")
@@ -36,11 +37,11 @@ module Slack
     end
 
     def self.base_url
-      ENV.fetch("INTERNAL_PROXY_URL", "http://127.0.0.1:8002")
+      ENV["INTERNAL_PROXY_URL"].presence || raise(NotConfigured, "INTERNAL_PROXY_URL is not set")
     end
 
     def self.token
-      ENV.fetch("PROXY_TOKEN_WEB", "")
+      ENV["PROXY_TOKEN_WEB"].presence || raise(NotConfigured, "PROXY_TOKEN_WEB is not set")
     end
 
     def self.detail_of(response)
