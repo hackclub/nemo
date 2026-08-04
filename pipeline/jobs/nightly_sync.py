@@ -25,7 +25,6 @@ from lib.db import (
     finish_run,
     run_step,
     start_run,
-    sweep_stale_runs,
 )
 from lib.slack_client import bot_client
 
@@ -79,9 +78,6 @@ def main():
     load_dotenv(ENV_FILE)
     plan = stages()
     with connect() as conn:
-        for stale_id, stale_source in sweep_stale_runs(conn):
-            print(f"abandoned stale run {stale_id} ({stale_source})")
-        conn.commit()
         run_id = start_run(conn, SOURCE)
         conn.commit()
 

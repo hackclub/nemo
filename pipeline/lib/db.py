@@ -51,6 +51,9 @@ def connect_admin(dsn: str | None = None) -> psycopg.Connection:
 
 def start_run(conn: psycopg.Connection, source: str) -> int:
     parent_run_id, step_index, step_total = _step.get()
+    if parent_run_id is None:
+        for stale_id, stale_source in sweep_stale_runs(conn):
+            print(f"abandoned stale run {stale_id} ({stale_source})")
     with conn.cursor() as cur:
         cur.execute(
             """
