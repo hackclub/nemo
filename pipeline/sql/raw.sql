@@ -85,6 +85,12 @@ ALTER TABLE raw.member_dim DROP COLUMN IF EXISTS is_guest;
 
 GRANT DELETE ON raw.channel_activity_snapshot TO pipeline_writer;
 
+ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS parent_run_id bigint;
+ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS step_index smallint;
+ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS step_total smallint;
+
+CREATE INDEX IF NOT EXISTS ingest_run_parent_idx ON raw.ingest_run (parent_run_id, step_index);
+
 CREATE TABLE IF NOT EXISTS raw.analytics_day (
     source text NOT NULL,
     ds date NOT NULL,

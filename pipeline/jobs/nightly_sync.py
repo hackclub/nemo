@@ -18,7 +18,15 @@ from ingest.member_range_pull import run as pull_member_range
 from ingest.team_stats_pull import run as pull_team_stats
 from ingest.top_posters_pull import run as pull_top_posters
 from ingest.users_list_pull import run as pull_users_list
-from lib.db import CHANNEL_DAY, MEMBER_DAY, connect, finish_run, start_run, sweep_stale_runs
+from lib.db import (
+    CHANNEL_DAY,
+    MEMBER_DAY,
+    connect,
+    finish_run,
+    run_step,
+    start_run,
+    sweep_stale_runs,
+)
 from lib.slack_client import bot_client
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -53,12 +61,13 @@ def stages():
     ]
 
 
-def run_stages(conn, plan):
+def run_stages(conn, plan, run_id):
     failed = []
     for index, (name, stage) in enumerate(plan, start=1):
         print(f"[{index}/{len(plan)}] {name}")
         try:
-            stage(conn)
+            with run_step(run_id, index, len(plan)):
+                stage(conn)
         except Exception as exc:
             conn.rollback()
             failed.append((name, f"{type(exc).__name__}: {exc}"))
@@ -76,7 +85,7 @@ def main():
         run_id = start_run(conn, SOURCE)
         conn.commit()
 
-        failed = run_stages(conn, plan)
+        failed = run_stages(conn, plan, run_id)
 
         if not failed:
             status = "ok"

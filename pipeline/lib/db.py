@@ -1,3 +1,4 @@
+import contextvars
 import json
 import os
 from collections.abc import Iterator
@@ -7,6 +8,17 @@ from dataclasses import dataclass
 import psycopg
 
 STALE_AFTER_HOURS = 6
+
+_step = contextvars.ContextVar("ingest_step", default=(None, None, None))
+
+
+@contextmanager
+def run_step(parent_run_id: int, step_index: int, step_total: int) -> Iterator[None]:
+    token = _step.set((parent_run_id, step_index, step_total))
+    try:
+        yield
+    finally:
+        _step.reset(token)
 
 
 def connect(dsn: str | None = None) -> psycopg.Connection:
@@ -34,10 +46,15 @@ def connect_admin(dsn: str | None = None) -> psycopg.Connection:
 
 
 def start_run(conn: psycopg.Connection, source: str) -> int:
+    parent_run_id, step_index, step_total = _step.get()
     with conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO raw.ingest_run (source, started_at) VALUES (%s, clock_timestamp()) RETURNING id",
-            (source,),
+            """
+            INSERT INTO raw.ingest_run (source, started_at, parent_run_id, step_index, step_total)
+            VALUES (%s, clock_timestamp(), %s, %s, %s)
+            RETURNING id
+            """,
+            (source, parent_run_id, step_index, step_total),
         )
         return cur.fetchone()[0]
 
