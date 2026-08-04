@@ -55,7 +55,7 @@ jobs:
             ALTER ROLE pipeline_writer PASSWORD 'ci';
             ALTER ROLE dbt_owner PASSWORD 'ci';
             ALTER ROLE rails_app PASSWORD 'ci';"
-      - name: apply the raw and moderation schema
+      - name: apply the raw schema
         run: uv run python -m jobs.migrate
         working-directory: pipeline
         env:
