@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from ingest import (
     analytics_pull,
@@ -142,6 +142,41 @@ def test_users_list_profile_row_falls_back_to_profile_real_name():
 
 def test_users_list_profile_row_survives_a_missing_profile():
     assert users_list_pull.profile_row({"id": "U1", "name": "ada"}) == ("U1", None, None, "ada")
+
+
+FLOOR = date(2026, 7, 1)
+EDGE = date(2026, 7, 10)
+
+
+def test_pending_days_takes_the_newest_first_then_the_oldest():
+    loaded = {date(2026, 7, 3), date(2026, 7, 4)}
+    assert analytics_pull.pending_days(loaded, FLOOR, EDGE, 4) == [
+        date(2026, 7, 10), date(2026, 7, 1), date(2026, 7, 2), date(2026, 7, 5)
+    ]
+
+
+def test_pending_days_returns_only_the_newest_when_the_limit_is_one():
+    assert analytics_pull.pending_days(set(), FLOOR, EDGE, 1) == [date(2026, 7, 10)]
+
+
+def test_pending_days_is_empty_when_every_day_is_loaded():
+    every = set()
+    day = FLOOR
+    while day <= EDGE:
+        every.add(day)
+        day += timedelta(days=1)
+    assert analytics_pull.pending_days(every, FLOOR, EDGE, 5) == []
+
+
+def test_pending_days_never_exceeds_the_limit():
+    assert len(analytics_pull.pending_days(set(), FLOOR, EDGE, 3)) == 3
+
+
+def test_pending_days_ignores_loaded_days_outside_the_calendar():
+    loaded = {date(2020, 1, 1), date(2026, 7, 10)}
+    assert analytics_pull.pending_days(loaded, FLOOR, EDGE, 2) == [
+        date(2026, 7, 9), date(2026, 7, 1)
+    ]
 
 
 AVAIL_START = date(2026, 5, 15)

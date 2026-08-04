@@ -198,6 +198,51 @@ def user_profile_row(user):
     return (user["id"], user.get("full_name"), user.get("username"), user.get("email"))
 
 
+MEMBER_DAY_LIMIT = 3
+CHANNEL_DAY_LIMIT = 30
+
+
+def loaded_days(conn, source):
+    with conn.cursor() as cur:
+        cur.execute("SELECT ds FROM raw.analytics_day WHERE source = %s AND loaded", (source,))
+        return {row[0] for row in cur.fetchall()}
+
+
+def calendar(client, kind):
+    avail = client.call("admin.analytics.getAvailableDateRange", {"type": kind})
+    return date.fromisoformat(avail["start_date"]), date.fromisoformat(avail["end_date"])
+
+
+def pending_days(loaded, floor, edge, limit):
+    missing, day = [], floor
+    while day <= edge:
+        if day not in loaded:
+            missing.append(day)
+        day += timedelta(days=1)
+    if not missing or limit < 1:
+        return []
+    return [missing[-1], *missing[:-1][: limit - 1]]
+
+
+def backfill_days(conn, source, kind, pull_fn, limit):
+    floor, edge = calendar(ProxyClient(), kind)
+    days = pending_days(loaded_days(conn, source), floor, edge, limit)
+    if not days:
+        print(f"{source}: every day in {floor}..{edge} is loaded")
+        return
+
+    failed = []
+    print(f"{source}: {len(days)} unloaded day(s) of {floor}..{edge}")
+    for day in days:
+        try:
+            pull_fn(conn, day)
+        except Exception as exc:
+            conn.rollback()
+            failed.append(f"{day}: {type(exc).__name__}: {exc}")
+    if failed:
+        raise RuntimeError(f"{source}: {len(failed)} of {len(days)} days failed: " + "; ".join(failed))
+
+
 def backfill(conn, pull_fn, label):
     avail = ProxyClient().call("admin.analytics.getAvailableDateRange", {"type": "member"})
     pull_date = date.fromisoformat(avail["end_date"])
