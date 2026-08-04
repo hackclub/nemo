@@ -1,16 +1,14 @@
+{{ config(indexes=[{'columns': ['channel_id', 'window_start']}]) }}
+
 select
-    c.channel_id,
-    c.name,
-    c.visibility,
-    c.total_members,
-    a.window_start,
-    a.window_end,
-    a.messages_posted,
-    a.messages_posted_by_members,
-    a.members_who_posted,
-    a.members_who_viewed,
-    a.reactions_added,
-    a.huddles_initiated,
-    'v1' as metric_version
-from {{ ref('fct_channel_activity') }} a
-join {{ ref('dim_channel') }} c using (channel_id)
+    channel_id,
+    window_start,
+    window_end,
+    messages_posted,
+    messages_posted_by_members,
+    members_who_posted,
+    members_who_viewed,
+    reactions_added,
+    huddles_initiated,
+    'v2' as metric_version
+from {{ ref('fct_channel_activity') }}
