@@ -100,17 +100,6 @@ ON CONFLICT (user_id) DO UPDATE SET
     updated_at = now()
 """
 
-USER_PROFILE_SQL = """
-INSERT INTO moderation.member_profile (user_id, name, username, email, updated_at)
-VALUES (%s, %s, %s, %s, now())
-ON CONFLICT (user_id) DO UPDATE SET
-    name = COALESCE(EXCLUDED.name, moderation.member_profile.name),
-    username = COALESCE(EXCLUDED.username, moderation.member_profile.username),
-    email = COALESCE(EXCLUDED.email, moderation.member_profile.email),
-    updated_at = now()
-"""
-
-
 def parse_epoch(value):
     if not value:
         return None
@@ -196,10 +185,6 @@ def user_dim_row(user):
         parse_epoch(user.get("date_created")),
         parse_epoch(user.get("deactivated_ts")),
     )
-
-
-def user_profile_row(user):
-    return (user["id"], user.get("full_name"), user.get("username"), user.get("email"))
 
 
 MEMBER_DAY_LIMIT = 3
@@ -371,18 +356,16 @@ def pull_users_page(conn, is_active):
                 {"limit": 99, "cursor": cursor, "is_active": is_active},
                 credential="admin",
             )
-            dim_rows, profile_rows = [], []
+            dim_rows = []
             for user in page.get("users", []):
                 counts.rows_in += 1
                 try:
                     dim_rows.append(user_dim_row(user))
-                    profile_rows.append(user_profile_row(user))
                 except KeyError as exc:
                     counts.rows_rejected += 1
                     dead_letter(conn, USERS_SOURCE, user, str(exc))
             with conn.cursor() as cur:
                 cur.executemany(USER_DIM_MERGE_SQL, dim_rows)
-                cur.executemany(USER_PROFILE_SQL, profile_rows)
             cursor = page.get("response_metadata", {}).get("next_cursor") or ""
             save_cursor(conn, USERS_SOURCE, cursor, channel_id=label)
             conn.commit()

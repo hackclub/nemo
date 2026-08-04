@@ -109,11 +109,6 @@ def test_user_dim_row_leaves_account_type_flags_to_users_list():
     assert len(row) == 3
 
 
-def test_user_profile_row_carries_identity_fields():
-    user = {"id": "U1", "full_name": "Ada", "username": "ada", "email": "ada@example.com"}
-    assert analytics_pull.user_profile_row(user) == ("U1", "Ada", "ada", "ada@example.com")
-
-
 def test_users_list_member_dim_row_reads_the_deleted_flag():
     row = users_list_pull.member_dim_row(
         {"id": "U1", "deleted": True, "is_bot": False, "is_ultra_restricted": True}
@@ -128,20 +123,6 @@ def test_users_list_member_dim_row_reads_invite_pending_by_presence():
     present = users_list_pull.member_dim_row({"id": "U2", "is_invited_user": True})
     assert absent[8] is False
     assert present[8] is True
-
-
-def test_users_list_profile_row_prefers_top_level_real_name():
-    user = {"id": "U1", "name": "ada", "real_name": "Ada", "profile": {"real_name": "Ada L", "display_name": "adal"}}
-    assert users_list_pull.profile_row(user) == ("U1", "Ada", "adal", "ada")
-
-
-def test_users_list_profile_row_falls_back_to_profile_real_name():
-    user = {"id": "U1", "name": "ada", "profile": {"real_name": "Ada L"}}
-    assert users_list_pull.profile_row(user)[1] == "Ada L"
-
-
-def test_users_list_profile_row_survives_a_missing_profile():
-    assert users_list_pull.profile_row({"id": "U1", "name": "ada"}) == ("U1", None, None, "ada")
 
 
 FLOOR = date(2026, 7, 1)
