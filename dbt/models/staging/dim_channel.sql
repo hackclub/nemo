@@ -5,7 +5,6 @@ select
     coalesce(archived, true) as archived,
     date_created,
     last_active_at,
-    creator_id,
     total_members,
     full_members,
     guests

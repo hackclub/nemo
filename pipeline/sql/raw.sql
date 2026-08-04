@@ -1,6 +1,5 @@
 CREATE TABLE IF NOT EXISTS raw.member_dim (
     user_id text PRIMARY KEY,
-    account_type text,
     account_created timestamptz,
     claimed_at timestamptz,
     deactivated_at timestamptz,
@@ -40,7 +39,6 @@ CREATE TABLE IF NOT EXISTS raw.channel_dim (
     archived boolean,
     date_created timestamptz,
     last_active_at timestamptz,
-    creator_id text,
     total_members integer,
     full_members integer,
     guests integer,
@@ -68,7 +66,6 @@ CREATE TABLE IF NOT EXISTS raw.channel_activity_snapshot (
 ALTER TABLE raw.member_activity_snapshot ADD COLUMN IF NOT EXISTS days_active_apps integer;
 ALTER TABLE raw.member_activity_snapshot ADD COLUMN IF NOT EXISTS days_active_workflows integer;
 
-ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS claimed_no_date boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_bot boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_admin boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_owner boolean;
@@ -82,6 +79,9 @@ ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_deleted boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS invite_pending boolean;
 ALTER TABLE raw.channel_dim ADD COLUMN IF NOT EXISTS name_unavailable boolean;
 ALTER TABLE raw.member_dim DROP COLUMN IF EXISTS is_guest;
+ALTER TABLE raw.member_dim DROP COLUMN IF EXISTS account_type;
+ALTER TABLE raw.member_dim DROP COLUMN IF EXISTS claimed_no_date;
+ALTER TABLE raw.channel_dim DROP COLUMN IF EXISTS creator_id;
 
 GRANT DELETE ON raw.channel_activity_snapshot TO pipeline_writer;
 
