@@ -14,11 +14,11 @@ module PipelineHelper
   end
 
   def run_stale?(row)
-    Time.current - (row.finished_at || row.started_at) > STALE_AFTER
+    Time.current - row.age_from > STALE_AFTER
   end
 
   def run_age(row)
-    age = "#{time_ago_in_words(row.finished_at || row.started_at)} ago"
+    age = "#{time_ago_in_words(row.age_from)} ago"
     return tag.span(age, class: "mn-label") unless run_stale?(row)
 
     tag.span("#{age}, the nightly should run daily", class: "mn-text-danger")

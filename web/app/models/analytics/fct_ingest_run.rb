@@ -24,5 +24,11 @@ module Analytics
 
       ((finished_at || Time.current) - started_at).to_i
     end
+
+    def age_from
+      return started_at if abandoned?
+
+      finished_at || started_at
+    end
   end
 end
