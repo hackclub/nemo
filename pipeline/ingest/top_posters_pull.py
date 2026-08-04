@@ -26,6 +26,12 @@ ON CONFLICT (window_start, user_id) DO UPDATE SET
     pulled_at = now()
 """
 
+STORED_SQL = """
+SELECT date_trunc('month', window_start)::date AS month, max(window_end) AS window_end
+FROM raw.top_posters_snapshot
+GROUP BY 1
+"""
+
 
 def available_range(client):
     resp = client.call(RANGE_METHOD, {"type": "member"})
@@ -53,6 +59,22 @@ def months_in_range(avail_start, avail_end):
         months.append(cur)
         cur = next_month(cur)
     return months
+
+
+def pending_months(stored, avail_start, avail_end):
+    pending = []
+    for month in months_in_range(avail_start, avail_end):
+        _, want_end = month_bounds(month, avail_start, avail_end)
+        have_end = stored.get(month)
+        if have_end is None or have_end < want_end:
+            pending.append(month)
+    return pending
+
+
+def stored_months(conn):
+    with conn.cursor() as cur:
+        cur.execute(STORED_SQL)
+        return {row[0]: row[1] for row in cur.fetchall()}
 
 
 def top_posters_row(rec, window_start, window_end):
@@ -105,7 +127,9 @@ def run(conn, month=None, backfill=False):
         elif month:
             months = [month]
         else:
-            months = [avail_end.replace(day=1)]
+            months = pending_months(stored_months(conn), avail_start, avail_end)
+            if not months:
+                print(f"{SOURCE}: every month in range is already complete")
 
         for m in months:
             count, rejected, window_start, window_end = pull_month(

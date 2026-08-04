@@ -1,6 +1,12 @@
 from datetime import date, datetime, timezone
 
-from ingest import analytics_pull, channel_range_pull, member_range_pull, users_list_pull
+from ingest import (
+    analytics_pull,
+    channel_range_pull,
+    member_range_pull,
+    top_posters_pull,
+    users_list_pull,
+)
 
 PULL_DATE = date(2026, 7, 20)
 WINDOW_START = date(2026, 6, 30)
@@ -136,6 +142,36 @@ def test_users_list_profile_row_falls_back_to_profile_real_name():
 
 def test_users_list_profile_row_survives_a_missing_profile():
     assert users_list_pull.profile_row({"id": "U1", "name": "ada"}) == ("U1", None, None, "ada")
+
+
+AVAIL_START = date(2026, 5, 15)
+AVAIL_END = date(2026, 8, 2)
+
+
+def test_pending_months_repulls_a_month_clipped_by_a_stale_edge():
+    stored = {date(2026, 5, 1): date(2026, 5, 31), date(2026, 6, 1): date(2026, 6, 30),
+              date(2026, 7, 1): date(2026, 7, 30)}
+    assert top_posters_pull.pending_months(stored, AVAIL_START, AVAIL_END) == [
+        date(2026, 7, 1), date(2026, 8, 1)
+    ]
+
+
+def test_pending_months_is_empty_when_every_month_is_complete():
+    stored = {date(2026, 5, 1): date(2026, 5, 31), date(2026, 6, 1): date(2026, 6, 30),
+              date(2026, 7, 1): date(2026, 7, 31), date(2026, 8, 1): AVAIL_END}
+    assert top_posters_pull.pending_months(stored, AVAIL_START, AVAIL_END) == []
+
+
+def test_pending_months_clamps_the_first_month_to_the_available_floor():
+    stored = {date(2026, 5, 1): date(2026, 5, 31)}
+    pending = top_posters_pull.pending_months(stored, AVAIL_START, AVAIL_END)
+    assert date(2026, 5, 1) not in pending
+
+
+def test_pending_months_returns_everything_when_nothing_is_stored():
+    assert top_posters_pull.pending_months({}, AVAIL_START, AVAIL_END) == [
+        date(2026, 5, 1), date(2026, 6, 1), date(2026, 7, 1), date(2026, 8, 1)
+    ]
 
 
 def test_verified_date_row_carries_both_dates_from_one_record():
