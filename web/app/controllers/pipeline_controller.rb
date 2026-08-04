@@ -16,5 +16,18 @@ class PipelineController < ApplicationController
       .group(Arel.sql("split_part(source, ':', 1)"))
       .maximum(:finished_at)
       .sort_by { |_stage, at| at }
+    @active_request = SyncRequest.active.recent_first.first
+    @last_request = SyncRequest.recent_first.first
+    @auto_refresh = @run&.running? || @active_request.present?
+  end
+
+  def sync
+    if SyncRequest.active.exists?
+      redirect_to pipeline_path, alert: "a sync is already queued or running"
+      return
+    end
+
+    SyncRequest.queue!(kind: "full", requested_by: current_staff.user_id)
+    redirect_to pipeline_path, notice: "sync queued"
   end
 end

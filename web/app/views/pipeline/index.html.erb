@@ -1,6 +1,36 @@
+<% if @auto_refresh %>
+  <% content_for :head do %>
+    <meta name="turbo-refresh-method" content="morph">
+    <meta name="turbo-refresh-scroll" content="preserve">
+  <% end %>
+<% end %>
+
 <div class="mb-8">
   <h1 class="mn-h1 mb-1">Pipeline</h1>
   <p class="mn-label">Nightly sync runs, stage by stage.</p>
+</div>
+
+<div class="mb-8 flex items-center gap-4 flex-wrap">
+  <% if @auto_refresh %>
+    <span class="mn-label" data-controller="run-refresh" data-run-refresh-seconds-value="10">
+      live, refreshing every 10s
+    </span>
+  <% end %>
+  <% if @active_request %>
+    <span class="mn-label">
+      sync <%= @active_request.status %>, requested by <%= @active_request.requested_by %>
+      <%= time_ago_in_words(@active_request.created_at) %> ago
+    </span>
+  <% else %>
+    <%= button_to "run the nightly sync now", pipeline_sync_path, class: "mn-button", form: { class: "inline" } %>
+    <% if @last_request %>
+      <span class="mn-label">
+        last requested by <%= @last_request.requested_by %>
+        <%= time_ago_in_words(@last_request.created_at) %> ago
+        &middot; <%= @last_request.status %>
+      </span>
+    <% end %>
+  <% end %>
 </div>
 
 <% if @run.nil? %>
