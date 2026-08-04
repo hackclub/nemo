@@ -1,0 +1,94 @@
+<div class="mb-8">
+  <h1 class="mn-h1 mb-1">Pipeline</h1>
+  <p class="mn-label">Nightly sync runs, stage by stage.</p>
+</div>
+
+<% if @run.nil? %>
+  <div class="mn-card p-5 mb-8">
+    <p class="mn-label">No nightly run has been recorded yet.</p>
+  </div>
+<% else %>
+  <div class="mb-8">
+    <h2 class="mn-h2 mb-1">Latest run</h2>
+    <p class="mn-label mb-3">
+      <%= run_age(@run) %> &middot;
+      started <%= @run.started_at.strftime("%b %-d, %Y at %H:%M") %> &middot;
+      <%= run_status(@run) %> &middot;
+      <%= run_duration(@run) %>
+      <% if @run.running? && @steps.any? %>
+        &middot; step <%= @steps.last.step_index %> of <%= @steps.last.step_total %>
+      <% end %>
+    </p>
+
+    <div class="mn-card overflow-x-auto">
+      <div class="min-w-[640px]">
+        <div class="grid grid-cols-6 gap-4 px-5 py-3 border-b mn-divider">
+          <span class="mn-eyebrow">step</span>
+          <span class="mn-eyebrow col-span-2">source</span>
+          <span class="mn-eyebrow">status</span>
+          <span class="mn-eyebrow text-right">elapsed</span>
+          <span class="mn-eyebrow text-right">rows</span>
+        </div>
+        <% @steps.each do |step| %>
+          <div class="px-5 py-3 border-b mn-divider last:border-b-0">
+            <div class="grid grid-cols-6 gap-4 items-center">
+              <span class="mn-label"><%= step.step_index %>/<%= step.step_total %></span>
+              <span class="mn-label col-span-2 truncate"><%= step.source %></span>
+              <span class="mn-label"><%= run_status(step) %></span>
+              <span class="mn-label text-right"><%= run_duration(step) %></span>
+              <span class="mn-label text-right"><%= run_rows(step) %></span>
+            </div>
+            <% pct = run_progress_pct(step) %>
+            <% if step.running? && pct %>
+              <div class="mn-bar-track flex h-2 rounded-full overflow-hidden mt-2">
+                <div class="mn-bar-fill" style="width:<%= pct %>%"></div>
+              </div>
+              <p class="mn-label mt-1"><%= number_to_percentage(pct, precision: 1) %></p>
+            <% end %>
+          </div>
+        <% end %>
+        <% if @steps.empty? %>
+          <div class="px-5 py-4">
+            <span class="mn-label">
+              <%= @run.running? ? "No stage has started yet." : "This run predates per-stage tracking." %>
+            </span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
+  <div>
+    <h2 class="mn-h2 mb-3">Recent runs</h2>
+    <div class="mn-card overflow-hidden">
+      <% @history.each do |row| %>
+        <div class="grid grid-cols-4 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center">
+          <span class="mn-label col-span-2"><%= row.started_at.strftime("%b %-d, %H:%M") %></span>
+          <span class="mn-label"><%= run_status(row) %></span>
+          <span class="mn-label text-right"><%= run_duration(row) %></span>
+        </div>
+      <% end %>
+      <% if @history.empty? %>
+        <div class="px-5 py-4"><span class="mn-label">n/a</span></div>
+      <% end %>
+    </div>
+  </div>
+
+  <div>
+    <h2 class="mn-h2 mb-1">Freshness</h2>
+    <p class="mn-label mb-3">Last successful run per source, stalest first.</p>
+    <div class="mn-card overflow-hidden max-h-[40vh] overflow-y-auto">
+      <% @freshness.each do |source, finished_at| %>
+        <div class="grid grid-cols-3 gap-4 px-5 py-2 border-b mn-divider last:border-b-0 items-center">
+          <span class="mn-label col-span-2 truncate"><%= source %></span>
+          <span class="mn-label text-right"><%= time_ago_in_words(finished_at) %> ago</span>
+        </div>
+      <% end %>
+      <% if @freshness.empty? %>
+        <div class="px-5 py-4"><span class="mn-label">n/a</span></div>
+      <% end %>
+    </div>
+  </div>
+</div>

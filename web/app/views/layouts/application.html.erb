@@ -39,6 +39,10 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16"/><path d="M4 15h16"/><path d="M10 3 8 21"/><path d="M16 3l-2 18"/></svg>
               <span>Channels</span>
             <% end %>
+            <%= link_to pipeline_path, class: "mn-nav-item #{'is-active' if controller_name == 'pipeline'}" do %>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+              <span>Pipeline</span>
+            <% end %>
           </nav>
         </div>
 

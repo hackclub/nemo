@@ -18,6 +18,7 @@ Rails.application.routes.draw do
   end
 
   resources :channels, only: [:index, :show]
+  get "pipeline", to: "pipeline#index"
 
   root "home#index"
 end
