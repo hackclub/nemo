@@ -1,5 +1,8 @@
+import io
 import os
 import subprocess
+import sys
+from contextlib import redirect_stdout
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -36,6 +39,16 @@ DBT_DIR = Path(__file__).resolve().parents[2] / "dbt"
 SOURCE = "nightly_sync"
 TRUTHY = {"1", "true", "yes", "on"}
 STAGE_ATTEMPTS = 2
+STEP_OUTPUT_LIMIT = 8000
+
+STEP_OUTPUT_SQL = """
+INSERT INTO raw.ingest_step_output (parent_run_id, step_index, source, output, created_at)
+VALUES (%s, %s, %s, %s, now())
+ON CONFLICT (parent_run_id, step_index) DO UPDATE SET
+    source = EXCLUDED.source,
+    output = EXCLUDED.output,
+    created_at = now()
+"""
 
 
 def join_channels_enabled():
@@ -43,7 +56,17 @@ def join_channels_enabled():
 
 
 def run_dbt():
-    subprocess.run(["dbt", "build", "--profiles-dir", str(DBT_DIR)], cwd=DBT_DIR, check=True)
+    proc = subprocess.Popen(
+        ["dbt", "build", "--profiles-dir", str(DBT_DIR)],
+        cwd=DBT_DIR,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    for line in proc.stdout:
+        print(line, end="")
+    if proc.wait() != 0:
+        raise RuntimeError(f"dbt build exited {proc.returncode}")
 
 
 def stages():
@@ -72,21 +95,57 @@ def retryable(exc):
     return not isinstance(exc, ProxyError)
 
 
+class Tee(io.TextIOBase):
+    def __init__(self, *sinks):
+        self.sinks = sinks
+
+    def write(self, text):
+        for sink in self.sinks:
+            sink.write(text)
+        return len(text)
+
+    def flush(self):
+        for sink in self.sinks:
+            sink.flush()
+
+
+def output_tail(text, limit=STEP_OUTPUT_LIMIT):
+    if len(text) <= limit:
+        return text
+    return f"[truncated, showing the last {limit} of {len(text)} characters]\n" + text[-limit:]
+
+
+def record_step_output(run_id, index, source, text):
+    if run_id is None:
+        return
+    try:
+        with connect() as out_conn, out_conn.cursor() as cur:
+            cur.execute(STEP_OUTPUT_SQL, (run_id, index, source, output_tail(text)))
+            out_conn.commit()
+    except Exception:
+        pass
+
+
 def run_stage(conn, name, stage, run_id, index, total):
     for attempt in range(1, STAGE_ATTEMPTS + 1):
+        buffer = io.StringIO()
         try:
-            with run_step(run_id, index, total):
+            with run_step(run_id, index, total), redirect_stdout(Tee(sys.stdout, buffer)):
                 stage(conn)
-            return None
         except SyncCancelled:
             conn.rollback()
+            record_step_output(run_id, index, name, buffer.getvalue())
             raise
         except Exception as exc:
             conn.rollback()
             detail = f"{type(exc).__name__}: {exc}"
+            record_step_output(run_id, index, name, f"{buffer.getvalue()}\n{detail}\n")
             if attempt == STAGE_ATTEMPTS or not retryable(exc):
                 return detail
             print(f"[{index}/{total}] {name}: {detail}, retrying")
+        else:
+            record_step_output(run_id, index, name, buffer.getvalue())
+            return None
     return None
 
 

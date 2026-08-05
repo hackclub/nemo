@@ -138,6 +138,15 @@ CREATE TABLE IF NOT EXISTS raw.ingest_run (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS raw.ingest_step_output (
+    parent_run_id bigint NOT NULL,
+    step_index smallint NOT NULL,
+    source text,
+    output text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (parent_run_id, step_index)
+);
+
 CREATE TABLE IF NOT EXISTS raw.dead_letter (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     source text NOT NULL,

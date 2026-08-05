@@ -13,4 +13,5 @@ sources:
       - name: team_stats_snapshot
       - name: top_posters_snapshot
       - name: ingest_run
+      - name: ingest_step_output
       - name: analytics_day

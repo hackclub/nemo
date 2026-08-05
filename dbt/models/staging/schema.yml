@@ -33,6 +33,12 @@ models:
         data_tests: [not_null]
       - name: status
         data_tests: [not_null]
+  - name: fct_ingest_step_output
+    columns:
+      - name: parent_run_id
+        data_tests: [not_null]
+      - name: step_index
+        data_tests: [not_null]
   - name: dim_channel
     columns:
       - name: channel_id
