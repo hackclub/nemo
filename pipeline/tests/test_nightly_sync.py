@@ -1,4 +1,5 @@
 from jobs.nightly_sync import retryable
+from lib.db import SyncCancelled
 from lib.proxy_client import (
     InternalApiError,
     InternalAuthError,
@@ -9,6 +10,10 @@ from lib.proxy_client import (
 
 def test_a_dead_credential_is_not_retried():
     assert retryable(InternalAuthError("invalid_auth")) is False
+
+
+def test_a_cancelled_run_is_not_retried():
+    assert retryable(SyncCancelled("cancel requested")) is False
 
 
 def test_a_rejected_request_is_not_retried():

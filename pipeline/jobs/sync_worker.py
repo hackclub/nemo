@@ -1,15 +1,20 @@
 import os
+import threading
+import time
+from contextlib import contextmanager
 from datetime import datetime, timedelta
 
 import psycopg
 from dotenv import load_dotenv
 
 from jobs.nightly_sync import ENV_FILE, run_sync, stage_plan
-from lib.db import connect
+from lib.db import cancel_scope, connect
 
 DEFAULT_AT = "03:00"
 DEFAULT_POLL_SECONDS = 60
+CANCEL_POLL_SECONDS = 30
 CHANNEL = "sync_request"
+CANCEL_CHANNEL = "sync_cancel"
 
 CLAIM_SQL = """
 UPDATE app.sync_request
@@ -68,17 +73,59 @@ def release(request_id, status, run_id):
         conn.commit()
 
 
+@contextmanager
+def cancel_watcher(request_id):
+    listener = connect()
+    listener.autocommit = True
+    listener.execute(f"LISTEN {CANCEL_CHANNEL}")
+    state = {"checked_at": time.monotonic(), "cancelled": False}
+    want = str(request_id)
+    lock = threading.Lock()
+
+    def check():
+        with lock:
+            if state["cancelled"]:
+                return True
+            try:
+                for note in listener.notifies(timeout=0):
+                    if note.payload == want:
+                        state["cancelled"] = True
+            except psycopg.Error:
+                pass
+            if state["cancelled"]:
+                return True
+            now = time.monotonic()
+            if now - state["checked_at"] >= CANCEL_POLL_SECONDS:
+                state["checked_at"] = now
+                try:
+                    with connect() as conn, conn.cursor() as cur:
+                        cur.execute(
+                            "SELECT status FROM app.sync_request WHERE id = %s", (request_id,)
+                        )
+                        row = cur.fetchone()
+                    state["cancelled"] = bool(row and row[0] == "cancelling")
+                except Exception:
+                    pass
+            return state["cancelled"]
+
+    try:
+        yield check
+    finally:
+        listener.close()
+
+
 def serve(request_id, kind, stage):
     label = f"sync request {request_id} ({stage or kind})"
     print(f"{label}: starting")
     try:
         plan = stage_plan(stage) if kind == "stage" else None
-        run_id, status = run_sync(plan)
+        with cancel_watcher(request_id) as check, cancel_scope(check):
+            run_id, status = run_sync(plan)
     except Exception as exc:
         print(f"{label}: worker failed {type(exc).__name__}: {exc}")
         release(request_id, "failed", None)
         return
-    release(request_id, "done", run_id)
+    release(request_id, "cancelled" if status == "cancelled" else "done", run_id)
     print(f"{label}: {status}, run {run_id}")
 
 

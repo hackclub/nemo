@@ -21,8 +21,10 @@ from ingest.users_list_pull import run as pull_users_list
 from lib.db import (
     CHANNEL_DAY,
     MEMBER_DAY,
+    SyncCancelled,
     connect,
     finish_run,
+    raise_if_cancelled,
     run_step,
     start_run,
 )
@@ -63,7 +65,7 @@ def stages():
 
 
 def retryable(exc):
-    if isinstance(exc, InternalAuthError):
+    if isinstance(exc, (SyncCancelled, InternalAuthError)):
         return False
     if isinstance(exc, ProxyUnavailableError):
         return True
@@ -76,6 +78,9 @@ def run_stage(conn, name, stage, run_id, index, total):
             with run_step(run_id, index, total):
                 stage(conn)
             return None
+        except SyncCancelled:
+            conn.rollback()
+            raise
         except Exception as exc:
             conn.rollback()
             detail = f"{type(exc).__name__}: {exc}"
@@ -88,6 +93,7 @@ def run_stage(conn, name, stage, run_id, index, total):
 def run_stages(conn, plan, run_id):
     failed = []
     for index, (name, stage) in enumerate(plan, start=1):
+        raise_if_cancelled()
         print(f"[{index}/{len(plan)}] {name}")
         detail = run_stage(conn, name, stage, run_id, index, len(plan))
         if detail:
@@ -109,9 +115,17 @@ def run_sync(plan=None):
         run_id = start_run(conn, SOURCE)
         conn.commit()
 
-        failed = run_stages(conn, plan, run_id)
+        cancelled = False
+        try:
+            failed = run_stages(conn, plan, run_id)
+        except SyncCancelled:
+            conn.rollback()
+            failed = []
+            cancelled = True
 
-        if not failed:
+        if cancelled:
+            status = "cancelled"
+        elif not failed:
             status = "ok"
         elif len(failed) == len(plan):
             status = "failed"

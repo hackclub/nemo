@@ -11,6 +11,9 @@ from lib.db import (
     CHANNEL_DAY,
     MEMBER_DAY,
     connect,
+    SyncCancelled,
+    cancel_scope,
+    current_cancel,
     current_step,
     dead_letter,
     get_cursor,
@@ -228,11 +231,12 @@ def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
         return
 
     step = current_step()
+    cancel = current_cancel()
     lanes = max(1, min(workers, len(days)))
     print(f"{source}: {len(days)} unloaded day(s) of {floor}..{edge}, {lanes} at a time")
 
     def work(day):
-        with connect() as worker_conn, run_step(*step):
+        with connect() as worker_conn, run_step(*step), cancel_scope(cancel):
             pull_fn(worker_conn, day)
 
     failed, unavailable = [], []
@@ -242,6 +246,8 @@ def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
             day = submitted[future]
             try:
                 future.result()
+            except SyncCancelled:
+                raise
             except Exception as exc:
                 if str(exc).startswith(PERMANENT_DAY_ERRORS):
                     mark_day_unavailable(conn, source, day, str(exc))

@@ -10,10 +10,19 @@ import psycopg
 STALE_AFTER_HOURS = 6
 
 _step = contextvars.ContextVar("ingest_step", default=(None, None, None))
+_cancel = contextvars.ContextVar("cancel_check", default=None)
+
+
+class SyncCancelled(RuntimeError):
+    """A cancel was requested for the run in progress"""
 
 
 def current_step() -> tuple:
     return _step.get()
+
+
+def current_cancel():
+    return _cancel.get()
 
 
 @contextmanager
@@ -23,6 +32,21 @@ def run_step(parent_run_id: int, step_index: int, step_total: int) -> Iterator[N
         yield
     finally:
         _step.reset(token)
+
+
+@contextmanager
+def cancel_scope(check) -> Iterator[None]:
+    token = _cancel.set(check)
+    try:
+        yield
+    finally:
+        _cancel.reset(token)
+
+
+def raise_if_cancelled() -> None:
+    check = _cancel.get()
+    if check is not None and check():
+        raise SyncCancelled("cancel requested")
 
 
 def connect(dsn: str | None = None) -> psycopg.Connection:
@@ -87,6 +111,7 @@ class RunCounts:
     monitor: psycopg.Connection | None = None
 
     def progress(self) -> None:
+        raise_if_cancelled()
         if self.run_id is None:
             return
         try:
@@ -118,6 +143,11 @@ def ingest_run(conn: psycopg.Connection, source: str) -> Iterator[RunCounts]:
     counts = RunCounts(run_id=run_id)
     try:
         yield counts
+    except SyncCancelled:
+        conn.rollback()
+        finish_run(conn, run_id, "cancelled", counts.rows_in, counts.rows_rejected)
+        conn.commit()
+        raise
     except BaseException:
         conn.rollback()
         finish_run(conn, run_id, "failed", counts.rows_in, counts.rows_rejected)
