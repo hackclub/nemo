@@ -5,10 +5,8 @@
   <% end %>
 <% end %>
 
-<div class="mb-8">
-  <h1 class="mn-h1 mb-1">Pipeline</h1>
-  <p class="mn-label">Nightly sync runs, stage by stage.</p>
-</div>
+<% content_for :page_title, "Pipeline" %>
+<% content_for :page_subtitle, "nightly sync runs, stage by stage" %>
 
 <div class="mb-8 flex items-center gap-4 flex-wrap">
   <% if @auto_refresh %>
