@@ -39,6 +39,14 @@ models:
         data_tests: [not_null]
       - name: step_index
         data_tests: [not_null]
+  - name: fct_analytics_day
+    columns:
+      - name: source
+        data_tests: [not_null]
+      - name: ds
+        data_tests: [not_null]
+      - name: loaded
+        data_tests: [not_null]
   - name: dim_channel
     columns:
       - name: channel_id
