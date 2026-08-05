@@ -5,6 +5,16 @@ models:
     columns:
       - name: user_id
         data_tests: [unique, not_null]
+      - name: account_type
+        data_tests: [not_null]
+      - name: is_claimed
+        data_tests: [not_null]
+      - name: is_bot
+        data_tests: [not_null]
+      - name: is_deleted
+        data_tests: [not_null]
+      - name: is_live
+        data_tests: [not_null]
   - name: fct_ingest_run
     columns:
       - name: id
