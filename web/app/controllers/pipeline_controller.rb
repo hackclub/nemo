@@ -9,6 +9,11 @@ class PipelineController < ApplicationController
     else
       Analytics::FctIngestRun.none
     end
+    @step_output = if @run
+      Analytics::FctIngestStepOutput.where(parent_run_id: @run.id).order(:step_index).to_a
+    else
+      []
+    end
     @history = Analytics::FctIngestRun.parents.recent_first.limit(HISTORY)
     @freshness = Analytics::FctIngestRun
       .where(status: "ok")

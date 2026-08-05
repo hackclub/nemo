@@ -1,16 +1,17 @@
 module PipelineHelper
-  STATUS_CLASS = {
-    "ok" => "mn-text-success",
-    "failed" => "mn-text-danger",
-    "partial" => "mn-text-danger",
-    "running" => "mn-label",
-    "abandoned" => "mn-label"
+  STATUS_CHIP = {
+    "ok" => "chip chip-good",
+    "failed" => "chip chip-crit",
+    "partial" => "chip chip-warn",
+    "cancelled" => "chip chip-warn",
+    "running" => "chip chip-off",
+    "abandoned" => "chip chip-off"
   }.freeze
 
   STALE_AFTER = 36.hours
 
   def run_status(row)
-    tag.span row.status, class: STATUS_CLASS.fetch(row.status, "mn-label")
+    tag.span row.status, class: STATUS_CHIP.fetch(row.status, "chip chip-off")
   end
 
   def run_stale?(row)
@@ -19,9 +20,16 @@ module PipelineHelper
 
   def run_age(row)
     age = "#{time_ago_in_words(row.age_from)} ago"
-    return tag.span(age, class: "mn-label") unless run_stale?(row)
+    return tag.span(age, class: "delta-note") unless run_stale?(row)
 
-    tag.span("#{age}, the nightly should run daily", class: "mn-text-danger")
+    tag.span("#{age}, the nightly should run daily", class: "chip chip-warn")
+  end
+
+  def output_size(text)
+    bytes = text.to_s.bytesize
+    return "#{bytes} B" if bytes < 1024
+
+    format("%.1f kB", bytes / 1024.0)
   end
 
   def run_duration(row)

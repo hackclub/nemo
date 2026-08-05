@@ -625,6 +625,17 @@
     padding: var(--s-md) var(--s-md) 0;
   }
 
+  .card-flush > p,
+  .card-flush > .card-note,
+  .card-flush > .delta-note {
+    padding-inline: var(--s-md);
+    padding-bottom: var(--s-md);
+  }
+
+  .card-flush > .log-item:last-child {
+    padding-bottom: var(--s-2xs);
+  }
+
   .stack {
     display: grid;
     gap: var(--s-md);
@@ -1926,12 +1937,70 @@
     color: var(--ink-3);
   }
 
-  .mn-bar-track {
+  .progress {
+    display: block;
+    height: 4px;
+    margin-top: var(--s-3xs);
+    border-radius: var(--r-pill);
     background-color: var(--line-soft);
+    overflow: hidden;
   }
 
-  .mn-bar-fill {
+  .progress-fill {
+    display: block;
+    height: 100%;
+    border-radius: var(--r-pill);
     background-color: var(--accent);
+  }
+
+  .log-item {
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .log-item:last-child {
+    border-bottom: 0;
+  }
+
+  .log-item summary {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs);
+    padding: var(--s-2xs) var(--s-md);
+    cursor: pointer;
+    font-size: var(--t-sm);
+    color: var(--ink);
+  }
+
+  .log-item summary:hover {
+    background-color: var(--card-2);
+  }
+
+  .log-source {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .log-meta {
+    margin-inline-start: auto;
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .log {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: var(--t-2xs);
+    line-height: 1.55;
+    color: var(--ink-2);
+    background-color: var(--card-2);
+    border-top: 1px solid var(--line-soft);
+    padding: var(--s-xs) var(--s-md);
+    margin: 0;
+    max-height: 20rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 
   .mn-growth-chart {
