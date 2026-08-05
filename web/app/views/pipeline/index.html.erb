@@ -22,6 +22,9 @@
       sync <%= @active_request.status %>, requested by <%= @active_request.requested_by %>
       <%= time_ago_in_words(@active_request.created_at) %> ago
     </span>
+    <% if @active_request.status != "cancelling" %>
+      <%= button_to "Cancel", pipeline_cancel_path, class: "btn", form: { class: "contents" } %>
+    <% end %>
   <% else %>
     <% if @last_request %>
       <span class="delta-note">

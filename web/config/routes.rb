@@ -9,6 +9,7 @@ Rails.application.routes.draw do
   resources :channels, only: [:index, :show]
   get "pipeline", to: "pipeline#index"
   post "pipeline/sync", to: "pipeline#sync", as: :pipeline_sync
+  post "pipeline/cancel", to: "pipeline#cancel", as: :pipeline_cancel
 
   root "home#index"
 end

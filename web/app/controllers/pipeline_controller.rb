@@ -37,6 +37,15 @@ class PipelineController < ApplicationController
     redirect_to pipeline_path, notice: "sync queued"
   end
 
+  def cancel
+    request = SyncRequest.active.recent_first.first
+    if request&.cancel!
+      redirect_to pipeline_path, notice: "cancel requested"
+    else
+      redirect_to pipeline_path, alert: "nothing to cancel"
+    end
+  end
+
   private
 
   DayCoverage = Struct.new(:source, :loaded, :unavailable, :never_fetched, :span, :first_ds, :last_ds, keyword_init: true)

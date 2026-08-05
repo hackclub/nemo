@@ -2,6 +2,7 @@ class SyncRequest < ApplicationRecord
   self.table_name = "sync_request"
 
   CHANNEL = "sync_request".freeze
+  CANCEL_CHANNEL = "sync_cancel".freeze
   KINDS = %w[full stage].freeze
   ACTIVE = %w[queued claimed].freeze
 
@@ -23,5 +24,16 @@ class SyncRequest < ApplicationRecord
 
   def active?
     ACTIVE.include?(status)
+  end
+
+  def cancel!
+    return false unless active?
+
+    transaction do
+      update!(status: "cancelling")
+      sql = self.class.sanitize_sql_array(["select pg_notify(?, ?)", CANCEL_CHANNEL, id.to_s])
+      self.class.connection.execute(sql)
+    end
+    true
   end
 end
