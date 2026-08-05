@@ -1,0 +1,17 @@
+<label class="field-label">
+  <%= caption %>
+  <span class="datepicker"
+        data-controller="datepicker"
+        data-datepicker-min-value="<%= min %>"
+        data-datepicker-max-value="<%= max %>">
+    <%= hidden_field_tag name, value, id: "#{name}_value",
+          data: { datepicker_target: "input" } %>
+    <button type="button" class="dp-trigger"
+            data-datepicker-target="trigger"
+            data-action="datepicker#toggle"
+            aria-haspopup="dialog" aria-expanded="false">
+      <%= value.strftime("%b %-d, %Y") %>
+    </button>
+    <span class="dp-pop" hidden role="dialog" aria-label="<%= caption %> date" data-datepicker-target="pop"></span>
+  </span>
+</label>

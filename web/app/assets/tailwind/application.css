@@ -1077,7 +1077,8 @@
     background-color: var(--card-2);
   }
 
-  .segmented button {
+  .segmented button,
+  .segmented a {
     font-family: inherit;
     font-size: var(--t-2xs);
     font-weight: 600;
@@ -1088,16 +1089,167 @@
     background: transparent;
     cursor: pointer;
     white-space: nowrap;
+    text-decoration: none;
     transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
   }
 
-  .segmented button:hover {
+  .segmented button:hover,
+  .segmented a:hover {
     color: var(--ink);
   }
 
-  .segmented button[aria-pressed="true"] {
+  .segmented button[aria-pressed="true"],
+  .segmented a[aria-current] {
     background-color: var(--card);
     color: var(--ink);
+  }
+
+  .datepicker {
+    position: relative;
+    display: grid;
+    gap: 3px;
+  }
+
+  .dp-trigger {
+    font-family: inherit;
+    font-size: var(--t-xs);
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--ink);
+    text-align: left;
+    padding: 7px 10px;
+    min-width: 8.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    background-color: var(--card);
+    cursor: pointer;
+    transition: border-color var(--dur) var(--ease-out);
+  }
+
+  .dp-trigger:hover {
+    border-color: var(--ink-3);
+  }
+
+  .dp-trigger[aria-expanded="true"] {
+    border-color: var(--accent);
+  }
+
+  .dp-pop {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 30;
+    width: 16.5rem;
+    padding: var(--s-xs);
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+  }
+
+  .dp-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2xs);
+    margin-bottom: var(--s-xs);
+  }
+
+  .dp-title {
+    font-size: var(--t-xs);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .dp-nav {
+    width: 24px;
+    height: 24px;
+    flex: none;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ink-2);
+    font-family: inherit;
+    font-size: var(--t-lg);
+    line-height: 1;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
+  }
+
+  .dp-nav:hover:not(:disabled) {
+    background-color: var(--card-2);
+    color: var(--ink);
+  }
+
+  .dp-nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .dp-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 3px;
+  }
+
+  .dp-dow {
+    font-size: var(--t-3xs);
+    font-weight: 600;
+    color: var(--ink-3);
+    text-align: center;
+    padding-bottom: var(--s-3xs);
+  }
+
+  .dp-day {
+    font-family: inherit;
+    font-size: var(--t-2xs);
+    font-variant-numeric: tabular-nums;
+    aspect-ratio: 1;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: background-color var(--dur) var(--ease-out);
+  }
+
+  .dp-day:hover:not(:disabled) {
+    background-color: var(--card-2);
+  }
+
+  .dp-day[aria-selected="true"] {
+    background-color: var(--accent);
+    color: var(--accent-on);
+    font-weight: 700;
+  }
+
+  .dp-day:disabled {
+    color: var(--ink-3);
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .dp-day.is-blank {
+    pointer-events: none;
+  }
+
+  .control-bar {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--s-2xs);
+    flex-wrap: wrap;
+    margin-bottom: var(--s-sm);
+  }
+
+  .field-label {
+    display: grid;
+    gap: 3px;
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    font-weight: 500;
   }
 
   .select {

@@ -21,14 +21,32 @@
   <div class="card-head">
     <div>
       <h2 class="card-title">Activity over a range</h2>
-      <p class="card-sub">queried live from Slack, not from the warehouse</p>
+      <p class="card-sub">
+        <%= @start_date.strftime("%b %-d") %> to <%= @end_date.strftime("%b %-d, %Y") %>
+        &middot; queried live from Slack, not from the warehouse
+      </p>
     </div>
-    <%= form_with url: channel_path(@channel), method: :get, class: "card-tools" do %>
-      <%= date_field_tag :start, @start_date, class: "select", aria: { label: "range start" } %>
-      <%= date_field_tag :end, @end_date, class: "select", aria: { label: "range end" } %>
+    <div class="card-tools">
+      <div class="segmented" role="group" aria-label="range length">
+        <% ChannelsController::RANGE_PRESETS.each do |days| %>
+          <%= link_to "#{days}d", channel_path(@channel, days: days),
+                aria: { current: ("true" if @range_preset == days) } %>
+        <% end %>
+        <%= link_to "custom", channel_path(@channel, start: @start_date, end: @end_date),
+              aria: { current: ("true" if @range_preset.nil?) } %>
+      </div>
+    </div>
+  </div>
+
+  <% if @range_preset.nil? %>
+    <%= form_with url: channel_path(@channel), method: :get, class: "control-bar" do %>
+      <%= render "datepicker", caption: "from", name: :start, value: @start_date,
+            min: @range_min, max: @range_max %>
+      <%= render "datepicker", caption: "to", name: :end, value: @end_date,
+            min: @range_min, max: @range_max %>
       <%= submit_tag "Apply", class: "btn btn-primary" %>
     <% end %>
-  </div>
+  <% end %>
 
   <% if @range.stats %>
     <div class="stat-row">
@@ -56,6 +74,7 @@
       <% end %>
     </p>
   <% end %>
+
 </div>
 
 <div class="card">

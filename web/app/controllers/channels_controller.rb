@@ -1,5 +1,7 @@
 class ChannelsController < ApplicationController
   PER_PAGE = 100
+  RANGE_PRESETS = [7, 28, 90].freeze
+  DEFAULT_RANGE_DAYS = 28
 
   SORT_SQL = {
     "name" => "dim_channel.name",
@@ -48,8 +50,22 @@ class ChannelsController < ApplicationController
 
     coverage = Slack::Analytics.coverage
     last_available = coverage ? Date.iso8601(coverage["end_date"]) : (Date.current - 2)
-    @end_date = parse_range_date(params[:end]) || last_available
-    @start_date = parse_range_date(params[:start]) || (@end_date - 30)
+    custom_start = parse_range_date(params[:start])
+    custom_end = parse_range_date(params[:end])
+
+    if custom_start || custom_end
+      @range_preset = nil
+      @end_date = custom_end || last_available
+      @start_date = custom_start || (@end_date - (DEFAULT_RANGE_DAYS - 1))
+      @start_date = @end_date if @start_date > @end_date
+    else
+      @range_preset = RANGE_PRESETS.include?(params[:days].to_i) ? params[:days].to_i : DEFAULT_RANGE_DAYS
+      @end_date = last_available
+      @start_date = @end_date - (@range_preset - 1)
+    end
+
+    @range_max = last_available
+    @range_min = [@channel.date_created&.to_date, last_available - 400].compact.max
     @range = Slack::Analytics.channel_activity(
       channel_id: @channel.channel_id, name: @channel.name,
       from: @start_date, to: @end_date, privacy: @channel.visibility
