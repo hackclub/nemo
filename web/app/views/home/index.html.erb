@@ -1,7 +1,6 @@
 <% content_for :page_title, "Overview" %>
 <% content_for :page_badge do %>
   <%= as_of_badge(@team_stats&.ds) %>
-  <span class="delta-note">Slack&rsquo;s member analytics run two days behind</span>
 <% end %>
 
 <% if @team_stats.nil? %>

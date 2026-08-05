@@ -11,23 +11,30 @@
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="apple-touch-icon" href="/icon.png">
 
+    <%= javascript_tag nonce: true do %>
+      (function () {
+        try {
+          var stored = localStorage.getItem("mn-theme");
+          if (stored === "dark" || stored === "light") {
+            document.documentElement.setAttribute("data-theme", stored);
+          }
+        } catch (e) {}
+      })();
+    <% end %>
 
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="mn-shell min-h-screen flex items-center justify-center">
-    <div class="w-full max-w-sm px-6">
-      <div class="flex items-center gap-2 mb-6 justify-center">
-        <span class="mn-brand-mark"><span></span><span></span><span></span></span>
-        <span class="mn-h2">Mnemosyne</span>
-      </div>
-
-      <div class="mn-card p-6">
+  <body>
+    <div class="auth">
+      <div class="auth-card">
+        <span class="auth-mark">M</span>
         <%= yield %>
+        <% if notice || alert %>
+          <p class="auth-alt"><%= notice || alert %></p>
+        <% end %>
       </div>
-
-      <p class="mn-label mt-6 text-center">community manager + fire engine portal</p>
     </div>
   </body>
 </html>

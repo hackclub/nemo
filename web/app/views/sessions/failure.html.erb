@@ -1,9 +1,10 @@
-<h2 class="mn-h2 mn-text-danger mb-2">Access denied</h2>
+<h1>Access denied</h1>
 
 <% if @message == "not_on_allowlist" %>
-  <p class="mn-label mb-4">your hack club auth login worked, but you're not on mnemosyne's staff list yet. ping whoever runs this thing.</p>
+  <p>Hack Club auth accepted you, but you are not on Mnemosyne&rsquo;s staff list. Ask whoever runs this to add you.</p>
 <% else %>
-  <p class="mn-label mb-4">something went wrong signing in (<%= @message %>). try again?</p>
+  <p>Something went wrong signing in.</p>
+  <p><span class="chip chip-off"><%= @message %></span></p>
 <% end %>
 
-<%= link_to "back to login", login_path, class: "mn-link" %>
+<%= link_to "Back to sign in", login_path, class: "btn w-full" %>

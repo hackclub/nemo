@@ -461,8 +461,8 @@
 
   .head-row {
     display: flex;
-    align-items: center;
-    gap: var(--s-2xs);
+    align-items: baseline;
+    gap: var(--s-2xs) var(--s-xs);
     flex-wrap: wrap;
   }
 
@@ -473,8 +473,15 @@
     letter-spacing: -0.015em;
   }
 
+  .head-meta {
+    font-size: var(--t-xs);
+    font-weight: 500;
+    color: var(--ink-2);
+  }
+
   .head-actions {
     display: flex;
+    align-self: center;
     gap: var(--s-2xs);
     margin-inline-start: auto;
     flex-wrap: wrap;
@@ -511,6 +518,7 @@
   .btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     font-family: inherit;
     font-size: var(--t-xs);
@@ -583,6 +591,51 @@
   .delta-note {
     font-size: var(--t-2xs);
     color: var(--ink-3);
+  }
+
+  .toast-stack {
+    position: fixed;
+    top: var(--s-md);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 60;
+    display: grid;
+    gap: var(--s-2xs);
+    pointer-events: none;
+  }
+
+  .toast {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs);
+    padding: var(--s-2xs) var(--s-xs);
+    border-radius: var(--r-ctl);
+    background-color: var(--tip-bg);
+    color: var(--tip-ink);
+    font-size: var(--t-sm);
+    font-weight: 500;
+    cursor: pointer;
+    pointer-events: auto;
+    opacity: 1;
+    transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+  }
+
+  .toast::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    flex: none;
+    border-radius: 50%;
+    background-color: var(--good);
+  }
+
+  .toast-alert::before {
+    background-color: var(--warn);
+  }
+
+  .toast.is-leaving {
+    opacity: 0;
+    transform: translateY(-6px);
   }
 
   .banner {

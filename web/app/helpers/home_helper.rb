@@ -84,10 +84,11 @@ module HomeHelper
     return tag.span("no data loaded", class: "chip chip-warn") if ds.nil?
 
     age = (Date.current - ds).to_i
-    label = "data as of #{ds.strftime("%b %-d, %Y")}"
-    return tag.span(label, class: "delta-note") if age <= STALE_AFTER_DAYS
+    behind = age.zero? ? "today" : "#{pluralize(age, "day")} behind"
+    label = "data as of #{ds.strftime("%b %-d, %Y")} · #{behind}"
+    return tag.span(label, class: "head-meta") if age <= STALE_AFTER_DAYS
 
-    tag.span("#{label}, #{pluralize(age, "day")} old", class: "chip chip-warn")
+    tag.span(label, class: "chip chip-warn")
   end
 
   def share_pct(numerator, denominator)

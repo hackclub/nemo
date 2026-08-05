@@ -30,6 +30,21 @@
   </head>
 
   <body>
+    <% if notice || alert %>
+      <div class="toast-stack">
+        <% if notice %>
+          <div class="toast" role="status"
+               data-controller="toast" data-toast-delay-value="3000"
+               data-action="click->toast#dismiss"><%= notice %></div>
+        <% end %>
+        <% if alert %>
+          <div class="toast toast-alert" role="alert"
+               data-controller="toast" data-toast-delay-value="6000"
+               data-action="click->toast#dismiss"><%= alert %></div>
+        <% end %>
+      </div>
+    <% end %>
+
     <div class="shell">
       <aside class="rail">
         <div class="brand">
@@ -92,20 +107,13 @@
             <div class="head-row">
               <h1 class="head-title"><%= content_for(:page_title) || "Mnemosyne" %></h1>
               <% if content_for?(:page_subtitle) %>
-                <span class="delta-note"><%= content_for(:page_subtitle) %></span>
+                <span class="head-meta"><%= content_for(:page_subtitle) %></span>
               <% end %>
               <%= yield :page_badge %>
               <% if content_for?(:head_actions) %>
                 <div class="head-actions"><%= content_for(:head_actions) %></div>
               <% end %>
             </div>
-
-            <% if notice %>
-              <div class="banner"><span class="banner-dot">i</span><%= notice %></div>
-            <% end %>
-            <% if alert %>
-              <div class="banner"><span class="banner-dot">!</span><%= alert %></div>
-            <% end %>
 
             <%= yield %>
           </main>
