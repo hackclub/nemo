@@ -25,7 +25,7 @@
       ["Claimed accounts", nil, @team_stats.total_claimed_count,
        share_chip(@team_stats.total_claimed_count, @team_stats.total_members_count),
        "of all members"],
-      ["Active, last 28 days", "posted or read", @team_stats.active_users_28d,
+      ["Active, last 28 days", "(posted or read)", @team_stats.active_users_28d,
        delta_chip(@team_stats.active_users_28d, @team_stats_prior&.active_users_28d),
        "vs 28 days earlier"],
       ["Posted, last 28 days", nil, @team_stats.writers_count_28d,
@@ -46,9 +46,15 @@
   </div>
 <% end %>
 
-<div data-controller="activity-granularity" data-activity-granularity-url-value="<%= root_path %>">
-  <div data-activity-granularity-target="container">
-    <%= render "activity_charts", activity_trend: @activity_trend, granularity: @activity_granularity %>
+<div data-controller="people-granularity" data-people-granularity-url-value="<%= root_path %>">
+  <div data-people-granularity-target="container">
+    <%= render "active_people", activity_trend: @people_trend, granularity: @people_granularity %>
+  </div>
+</div>
+
+<div data-controller="messages-granularity" data-messages-granularity-url-value="<%= root_path %>">
+  <div data-messages-granularity-target="container">
+    <%= render "member_messages", activity_trend: @messages_trend, granularity: @messages_granularity %>
   </div>
 </div>
 
@@ -115,7 +121,7 @@
     <p class="card-note">Members who joined recently have had less of the window to post in.</p>
   </div>
 
-  <div class="card card-flush">
+  <div class="card card-flush self-start">
     <div class="card-head">
       <div>
         <h2 class="card-title">Account composition</h2>

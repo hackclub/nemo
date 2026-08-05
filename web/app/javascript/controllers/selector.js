@@ -12,9 +12,18 @@ export default class SelectorController extends Controller {
     throw new Error("selector controllers must define a requestedWith")
   }
 
-  async change() {
+  change() {
+    return this.apply(this.selectTarget.value)
+  }
+
+  choose(event) {
+    event.preventDefault()
+    return this.apply(event.currentTarget.dataset.value)
+  }
+
+  async apply(value) {
     const url = new URL(window.location)
-    url.searchParams.set(this.param, this.selectTarget.value)
+    url.searchParams.set(this.param, value)
 
     const resp = await fetch(`${this.urlValue}?${url.searchParams}`, {
       headers: { "X-Requested-With": this.requestedWith, Accept: "text/html" }

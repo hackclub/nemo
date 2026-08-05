@@ -1,0 +1,34 @@
+<% s = activity_series(activity_trend, granularity) %>
+
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Active people in the workspace</h2>
+      <p class="card-sub">last <%= s[:span] %></p>
+    </div>
+    <div class="card-tools">
+      <div class="segmented" role="group" aria-label="granularity for active people">
+        <% %w[daily monthly].each do |g| %>
+          <button type="button"
+                  data-value="<%= g %>"
+                  aria-pressed="<%= granularity == g %>"
+                  data-action="people-granularity#choose"><%= g %></button>
+        <% end %>
+      </div>
+    </div>
+  </div>
+  <div class="mn-growth-chart">
+    <canvas
+      data-controller="activity-chart"
+      data-activity-chart-tick-every-value="<%= s[:tick_every] %>"
+      data-activity-chart-data-value="<%= {
+        labels: s[:labels],
+        datasets: [
+          { label: s[:people_label], data: s[:people], backgroundColor: HomeHelper::CHART_SERIES_A, order: 1 },
+          { label: s[:posted_label], data: s[:posted], backgroundColor: HomeHelper::CHART_SERIES_B, order: 1 },
+          ratio_line_dataset("share of active who posted", s[:posted_share])
+        ]
+      }.to_json %>"
+    ></canvas>
+  </div>
+</div>

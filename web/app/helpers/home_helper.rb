@@ -88,7 +88,7 @@ module HomeHelper
 
     age = (Date.current - ds).to_i
     label = "data as of #{ds.strftime("%b %-d, %Y")}"
-    return tag.span(label, class: "chip chip-off") if age <= STALE_AFTER_DAYS
+    return tag.span(label, class: "delta-note") if age <= STALE_AFTER_DAYS
 
     tag.span("#{label}, #{pluralize(age, "day")} old", class: "chip chip-warn")
   end

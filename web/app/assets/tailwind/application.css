@@ -569,7 +569,7 @@
   .chip-crit { background-color: var(--accent-soft); color: var(--accent-deep); }
 
   .chip-off {
-    background-color: var(--card-2);
+    background-color: color-mix(in oklab, var(--ink) 8%, transparent);
     color: var(--ink-2);
   }
 
@@ -1047,6 +1047,38 @@
 
   .field:focus-within {
     border-color: var(--accent);
+  }
+
+  .segmented {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    background-color: var(--card-2);
+  }
+
+  .segmented button {
+    font-family: inherit;
+    font-size: var(--t-2xs);
+    font-weight: 600;
+    color: var(--ink-2);
+    padding: 4px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
+  }
+
+  .segmented button:hover {
+    color: var(--ink);
+  }
+
+  .segmented button[aria-pressed="true"] {
+    background-color: var(--card);
+    color: var(--ink);
   }
 
   .select {
