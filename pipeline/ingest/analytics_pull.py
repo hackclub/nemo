@@ -196,6 +196,7 @@ DAY_WORKERS = 3
 
 
 PERMANENT_DAY_ERRORS = ("file_not_found", "data_not_available")
+PENDING_DAY_ERRORS = ("file_not_yet_available",)
 
 
 def settled_days(conn, source):
@@ -239,7 +240,7 @@ def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
         with connect() as worker_conn, run_step(*step), cancel_scope(cancel):
             pull_fn(worker_conn, day)
 
-    failed, unavailable = [], []
+    failed, unavailable, pending = [], [], []
     with ThreadPoolExecutor(max_workers=lanes) as pool:
         submitted = {pool.submit(work, day): day for day in days}
         for future in as_completed(submitted):
@@ -253,10 +254,14 @@ def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
                     mark_day_unavailable(conn, source, day, str(exc))
                     conn.commit()
                     unavailable.append(str(day))
+                elif str(exc).startswith(PENDING_DAY_ERRORS):
+                    pending.append(str(day))
                 else:
                     failed.append(f"{day}: {type(exc).__name__}: {exc}")
     if unavailable:
         print(f"{source}: {len(unavailable)} day(s) have no export and will not be retried")
+    if pending:
+        print(f"{source}: {len(pending)} day(s) not exported yet, left for the next run")
     if failed:
         raise RuntimeError(f"{source}: {len(failed)} of {len(days)} days failed: " + "; ".join(failed))
 
