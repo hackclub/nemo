@@ -1,15 +1,9 @@
-/*
- * Mnemosyne design tokens, portable export.
- * Source of truth is app/assets/tailwind/application.css; this file mirrors it
- * for reuse in other projects.
- */
-
 :root {
   color-scheme: light dark;
 
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  /* type */
   --t-3xs: 0.625rem;
   --t-2xs: 0.6875rem;
   --t-xs: 0.75rem;
@@ -19,7 +13,6 @@
   --t-xl: 1.25rem;
   --t-kpi: 1.5rem;
 
-  /* space */
   --s-3xs: 0.25rem;
   --s-2xs: 0.5rem;
   --s-xs: 0.75rem;
@@ -28,16 +21,13 @@
   --s-lg: 1.75rem;
   --s-xl: 2.5rem;
 
-  /* radius */
   --r-card: 12px;
   --r-ctl: 8px;
   --r-pill: 999px;
 
-  /* motion */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --dur: 140ms;
 
-  /* surfaces and ink */
   --canvas: oklch(96.2% 0.003 60);
   --card: oklch(100% 0 0);
   --card-2: oklch(98% 0.002 60);
@@ -47,13 +37,11 @@
   --ink-2: oklch(54% 0.008 60);
   --ink-3: oklch(67% 0.006 60);
 
-  /* accent, Hack Club red */
   --accent: oklch(62.3% 0.215 19);
   --accent-deep: oklch(55% 0.2 20);
   --accent-on: oklch(99% 0.008 20);
   --accent-soft: oklch(95.6% 0.03 18);
 
-  /* semantic, separate from the accent */
   --good: oklch(56% 0.115 162);
   --good-soft: oklch(94.5% 0.04 162);
   --warn: oklch(64% 0.13 70);
@@ -63,11 +51,6 @@
   --knob: oklch(100% 0 0);
   --tip-bg: oklch(21% 0.01 40);
   --tip-ink: oklch(97% 0.003 60);
-
-  /* categorical coding only, never a competing accent */
-  --c-blue: oklch(62.9% 0.142 248);
-  --c-purple: oklch(56.6% 0.239 314);
-  --c-teal: oklch(65% 0.11 195);
 }
 
 @media (prefers-color-scheme: dark) {
