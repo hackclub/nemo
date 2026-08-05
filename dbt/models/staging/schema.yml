@@ -6,7 +6,17 @@ models:
       - name: user_id
         data_tests: [unique, not_null]
       - name: account_type
-        data_tests: [not_null]
+        data_tests:
+          - not_null
+          - accepted_values:
+              values:
+                - Member
+                - Multi-Channel Guest
+                - Single-Channel Guest
+                - Bot
+                - Admin
+                - Owner
+                - Org Owner
       - name: is_claimed
         data_tests: [not_null]
       - name: is_bot
