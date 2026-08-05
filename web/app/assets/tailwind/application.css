@@ -400,6 +400,7 @@
   .head-actions {
     display: flex;
     align-self: center;
+    align-items: center;
     gap: var(--s-2xs);
     margin-inline-start: auto;
     flex-wrap: wrap;
@@ -820,10 +821,6 @@
     padding-bottom: var(--s-md);
   }
 
-  .card-flush > .log-item:last-child {
-    padding-bottom: var(--s-2xs);
-  }
-
   .stack {
     display: grid;
     gap: var(--s-md);
@@ -1041,6 +1038,27 @@
   .data-table .col-num { width: 7rem; }
   .data-table .col-rank { width: 4.5rem; }
   .data-table .col-date { width: 8.5rem; }
+  .data-table .col-btn { width: 3.5rem; }
+
+  .run-btn {
+    font-family: inherit;
+    font-size: var(--t-2xs);
+    font-weight: 600;
+    padding: 4px 8px;
+    border: 1px solid var(--line);
+    border-radius: 0;
+    background-color: var(--card);
+    color: var(--ink-2);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
+  }
+
+  .run-btn:hover {
+    background-color: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent-deep);
+  }
 
   .data-table thead th {
     font-size: var(--t-2xs);
@@ -1204,10 +1222,11 @@
     font-size: var(--t-2xs);
     line-height: 1.55;
     color: var(--ink-2);
-    background-color: var(--card-2);
-    border-top: 1px solid var(--line-soft);
-    padding: var(--s-xs) var(--s-md);
-    margin: 0;
+    background-color: var(--canvas);
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    padding: var(--s-sm);
+    margin: 0 var(--s-md) var(--s-sm);
     max-height: 20rem;
     overflow: auto;
     white-space: pre-wrap;

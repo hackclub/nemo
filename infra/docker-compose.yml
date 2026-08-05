@@ -51,6 +51,9 @@ services:
       NIGHTLY_JOIN_CHANNELS: ${NIGHTLY_JOIN_CHANNELS:-false}
       SYNC_POLL_SECONDS: ${SYNC_POLL_SECONDS:-60}
       TZ: ${TZ:-UTC}
+      INTERNAL_PROXY_URL: http://host.docker.internal:8002
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     command: ["uv", "run", "python", "-m", "jobs.sync_worker"]
 

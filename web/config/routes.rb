@@ -10,6 +10,7 @@ Rails.application.routes.draw do
   get "pipeline", to: "pipeline#index"
   post "pipeline/sync", to: "pipeline#sync", as: :pipeline_sync
   post "pipeline/cancel", to: "pipeline#cancel", as: :pipeline_cancel
+  post "pipeline/trigger_stage", to: "pipeline#trigger_stage", as: :pipeline_trigger_stage
 
   root "home#index"
 end

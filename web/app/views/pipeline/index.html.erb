@@ -28,9 +28,9 @@
   <% else %>
     <% if @last_request %>
       <span class="delta-note">
-        last requested by <%= @last_request.requested_by %>
-        <%= time_ago_in_words(@last_request.created_at) %> ago, <%= @last_request.status %>
+        requested by <%= @last_request.requested_by %> &middot; <%= time_ago_in_words(@last_request.created_at) %> ago
       </span>
+      <%= run_status(@last_request) %>
     <% end %>
     <%= button_to "Run the nightly sync now", pipeline_sync_path,
           class: "btn btn-primary", form: { class: "contents" } %>
@@ -241,13 +241,22 @@
             <tr>
               <th>source</th>
               <th class="col-date">last success</th>
+              <% if @active_request.nil? %>
+                <th class="col-btn"></th>
+              <% end %>
             </tr>
           </thead>
           <tbody>
-            <% @freshness.each do |source, finished_at| %>
+            <% @freshness.each do |stage, finished_at| %>
               <tr>
-                <td><%= source %></td>
+                <td><%= stage %></td>
                 <td><%= time_ago_in_words(finished_at) %> ago</td>
+                <% if @active_request.nil? %>
+                  <td>
+                    <%= button_to "run", pipeline_trigger_stage_path(stage: stage),
+                          class: "run-btn", form: { class: "contents" } %>
+                  </td>
+                <% end %>
               </tr>
             <% end %>
           </tbody>
