@@ -127,8 +127,8 @@ def record_step_output(run_id, index, source, text):
 
 
 def run_stage(conn, name, stage, run_id, index, total):
+    buffer = io.StringIO()
     for attempt in range(1, STAGE_ATTEMPTS + 1):
-        buffer = io.StringIO()
         try:
             with run_step(run_id, index, total), redirect_stdout(Tee(sys.stdout, buffer)):
                 stage(conn)
@@ -139,9 +139,11 @@ def run_stage(conn, name, stage, run_id, index, total):
         except Exception as exc:
             conn.rollback()
             detail = f"{type(exc).__name__}: {exc}"
-            record_step_output(run_id, index, name, f"{buffer.getvalue()}\n{detail}\n")
+            buffer.write(f"{detail}\n")
+            record_step_output(run_id, index, name, buffer.getvalue())
             if attempt == STAGE_ATTEMPTS or not retryable(exc):
                 return detail
+            buffer.write(f"attempt {attempt + 1}\n")
             print(f"[{index}/{total}] {name}: {detail}, retrying")
         else:
             record_step_output(run_id, index, name, buffer.getvalue())
