@@ -4,7 +4,7 @@ class PipelineController < ApplicationController
 
   def index
     @run = Analytics::FctIngestRun.parents.recent_first.first
-    @steps = @run ? steps_for(@run) : Analytics::FctIngestRun.none
+    @steps = @run ? steps_for(@run) : []
     @step_output = @run ? step_output_for(@run) : []
     @history = Analytics::FctIngestRun.parents.recent_first.limit(HISTORY)
     @history_kind = first_step_by_parent(@history.map(&:id))
@@ -61,8 +61,44 @@ class PipelineController < ApplicationController
 
   private
 
+  StepGroup = Struct.new(:source, :step_index, :step_total, :statuses, :children,
+    :rows_in, :total_expected, :seconds, :pct, keyword_init: true) do
+    def running?
+      statuses.key?("running")
+    end
+  end
+
+  STATUS_ORDER = %w[failed cancelled abandoned running ok].freeze
+
   def steps_for(run)
-    Analytics::FctIngestRun.where(parent_run_id: run.id).order(:step_index, :id)
+    Analytics::FctIngestRun
+      .where(parent_run_id: run.id)
+      .order(:step_index, :id)
+      .group_by(&:step_index)
+      .sort
+      .map { |index, group| collapse_step(index, group) }
+  end
+
+  def collapse_step(index, group)
+    sources = group.map(&:source).uniq
+    landed = group.select { |row| %w[ok running].include?(row.status) }
+    rows = landed.filter_map(&:rows_in)
+    expected = landed.filter_map(&:total_expected)
+    started = group.map(&:started_at).min
+    finished = group.all?(&:finished_at) ? group.map(&:finished_at).max : Time.current
+    shares = group.select(&:running?).filter_map(&:progress_share)
+
+    StepGroup.new(
+      source: sources.size == 1 ? sources.first : sources.first.split(":", 2).first,
+      step_index: index,
+      step_total: group.first.step_total,
+      statuses: group.map(&:status).tally.sort_by { |status, _| STATUS_ORDER.index(status) || 99 }.to_h,
+      children: group.size,
+      rows_in: rows.empty? ? nil : rows.sum,
+      total_expected: expected.empty? ? nil : expected.sum,
+      seconds: (finished - started).to_i,
+      pct: shares.empty? ? nil : (shares.sum.to_f / shares.size * 100).round(1)
+    )
   end
 
   def step_output_for(run)

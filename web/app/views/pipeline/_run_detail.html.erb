@@ -34,17 +34,19 @@
               <td>
                 <span class="two-line">
                   <b><%= step.source %></b>
-                  <% pct = run_progress_pct(step) %>
-                  <% if step.running? && pct %>
-                    <span><%= number_to_percentage(pct, precision: 1) %> through</span>
+                  <% notes = [] %>
+                  <% notes << pluralize(step.children, "worker") if step.children > 1 %>
+                  <% notes << "#{number_to_percentage(step.pct, precision: 1)} through" if step.running? && step.pct %>
+                  <% if notes.any? %>
+                    <span><%= notes.join(" &middot; ").html_safe %></span>
                   <% end %>
                 </span>
-                <% if step.running? && pct %>
-                  <span class="progress"><span class="progress-fill" style="width:<%= pct %>%"></span></span>
+                <% if step.running? && step.pct %>
+                  <span class="progress"><span class="progress-fill" style="width:<%= step.pct %>%"></span></span>
                 <% end %>
               </td>
               <td><%= step.step_index %>/<%= step.step_total %></td>
-              <td><%= run_status(step) %></td>
+              <td><%= run_status_tally(step.statuses) %></td>
               <td><%= run_duration(step) %></td>
               <td><%= run_rows(step) %></td>
             </tr>

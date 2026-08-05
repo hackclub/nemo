@@ -14,6 +14,15 @@ module PipelineHelper
     tag.span row.status, class: STATUS_CHIP.fetch(row.status, "chip chip-off")
   end
 
+  def run_status_tally(statuses)
+    counted = statuses.values.sum > 1
+    chips = statuses.map do |status, count|
+      tag.span(counted ? "#{count} #{status}" : status,
+        class: STATUS_CHIP.fetch(status, "chip chip-off"))
+    end
+    safe_join(chips, " ")
+  end
+
   def run_stale?(row)
     Time.current - row.age_from > STALE_AFTER
   end
@@ -50,11 +59,5 @@ module PipelineHelper
     return counted if row.total_expected.blank?
 
     "#{counted} of #{number_with_delimiter(row.total_expected)}"
-  end
-
-  def run_progress_pct(row)
-    return nil if row.progress_share.blank?
-
-    (row.progress_share.to_f * 100).round(1)
   end
 end
