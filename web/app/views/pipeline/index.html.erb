@@ -136,6 +136,60 @@
   </div>
 <% end %>
 
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Day coverage</h2>
+      <p class="card-sub">which days each source has actually loaded</p>
+    </div>
+  </div>
+  <% if @day_coverage.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>source</th>
+            <th class="col-num">span</th>
+            <th class="col-num">loaded</th>
+            <th class="col-num">unavailable</th>
+            <th class="col-num">never fetched</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @day_coverage.each do |row| %>
+            <tr>
+              <td>
+                <span class="two-line">
+                  <b><%= row.source %></b>
+                  <span><%= row.first_ds.strftime("%b %-d, %Y") %> to <%= row.last_ds.strftime("%b %-d, %Y") %></span>
+                </span>
+              </td>
+              <td><%= pluralize(row.span, "day") %></td>
+              <td><%= number_with_delimiter(row.loaded) %></td>
+              <td>
+                <% if row.unavailable.positive? %>
+                  <span class="chip chip-off"><%= number_with_delimiter(row.unavailable) %></span>
+                <% else %>
+                  0
+                <% end %>
+              </td>
+              <td>
+                <% if row.never_fetched.positive? %>
+                  <span class="chip chip-warn"><%= number_with_delimiter(row.never_fetched) %></span>
+                <% else %>
+                  0
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">n/a</p>
+  <% end %>
+</div>
+
 <div class="grid-2-1">
   <div class="card card-flush">
     <div class="card-head">
