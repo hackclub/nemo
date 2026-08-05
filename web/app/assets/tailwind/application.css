@@ -570,8 +570,7 @@
 
   .chip-off {
     background-color: var(--card-2);
-    color: var(--ink-3);
-    border: 1px solid var(--line);
+    color: var(--ink-2);
   }
 
   .delta {
@@ -620,6 +619,22 @@
 
   .card-flush {
     padding: 0;
+  }
+
+  .card-flush .card-head {
+    padding: var(--s-md) var(--s-md) 0;
+  }
+
+  .stack {
+    display: grid;
+    gap: var(--s-md);
+    min-width: 0;
+  }
+
+  .card-note {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    margin: var(--s-sm) 0 0;
   }
 
   .card-head {
@@ -718,6 +733,19 @@
     font-size: var(--t-sm);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+  }
+
+  .legend-foot {
+    margin-top: var(--s-sm);
+    margin-bottom: 0;
+    border-top: 1px solid var(--line);
+    padding-top: var(--s-sm);
+  }
+
+  .legend-note {
+    font-size: var(--t-2xs);
+    font-weight: 500;
+    color: var(--ink-3);
   }
 
   .chart {
@@ -1021,6 +1049,24 @@
     border-color: var(--accent);
   }
 
+  .select {
+    font-family: inherit;
+    font-size: var(--t-xs);
+    font-weight: 600;
+    color: var(--ink);
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    background-color: var(--card);
+    cursor: pointer;
+    transition: background-color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out);
+  }
+
+  .select:hover {
+    background-color: var(--card-2);
+    border-color: var(--ink-3);
+  }
+
   .scroll {
     overflow-x: auto;
   }
@@ -1064,6 +1110,24 @@
 
   .data-table tbody tr:hover {
     background-color: var(--card-2);
+  }
+
+  .card-flush .data-table th:first-child,
+  .card-flush .data-table td:first-child {
+    padding-left: var(--s-md);
+  }
+
+  .card-flush .data-table th:last-child,
+  .card-flush .data-table td:last-child {
+    padding-right: var(--s-md);
+  }
+
+  .card-flush .data-table tbody tr:last-child td {
+    padding-bottom: var(--s-sm);
+  }
+
+  .card-flush .data-table thead th {
+    padding-top: 0;
   }
 
   .sortable {

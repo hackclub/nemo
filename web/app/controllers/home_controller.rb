@@ -23,6 +23,10 @@ class HomeController < ApplicationController
     end
 
     @team_stats = Analytics::MartTeamStatsDaily.order(ds: :desc).first
+    @team_stats_prior =
+      if @team_stats
+        Analytics::MartTeamStatsDaily.where(ds: ..(@team_stats.ds - 28)).order(ds: :desc).first
+      end
     @activity_granularity = helpers.activity_granularity(params[:activity_granularity])
     @activity_trend =
       if @activity_granularity == "monthly"
@@ -59,6 +63,7 @@ class HomeController < ApplicationController
     @channel_scorecard = Analytics::MartChannelOnboardingScorecard
       .where(newcomer_volume: HomeHelper::MIN_SAMPLE..)
       .order(post_month: :desc, newcomer_volume: :desc).limit(10)
+    @channel_scorecard_total = Analytics::MartChannelOnboardingScorecard.count
     @fast_reply_vs_retention = Analytics::MartFastReplyVsRetention
       .where(newcomers: HomeHelper::MIN_SAMPLE..)
       .order(fast_reply: :desc)

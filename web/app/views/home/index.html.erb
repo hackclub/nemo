@@ -1,260 +1,296 @@
-<% content_for :page_title, "Dashboard" %>
-<% content_for :page_subtitle, "community health at a glance" %>
+<% content_for :page_title, "Overview" %>
+<% content_for :page_badge do %>
+  <%= as_of_badge(@team_stats&.ds) %>
+  <span class="delta-note">Slack&rsquo;s member analytics run two days behind</span>
+<% end %>
 
-<div class="grid grid-cols-2 md:grid-cols-4 gap-5 mb-8">
-  <div class="mn-card p-5">
-    <div class="flex items-center justify-between mb-4">
-      <span class="mn-icon-badge mn-icon-badge-blue">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 6 12 13 2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
-      </span>
+<% if @team_stats.nil? %>
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">No team statistics loaded</h2>
+        <p class="card-sub">the headline figures come from Slack&rsquo;s team.stats pull</p>
+      </div>
     </div>
-    <div class="mn-eyebrow mb-1">total</div>
-    <% if @team_stats %>
-      <div class="mn-stat"><%= number_with_delimiter(@team_stats.total_members_count) %></div>
-    <% else %>
-      <p class="mn-label mt-2">no team stats loaded</p>
+    <p class="delta-note">
+      Run the nightly sync, or the team_stats stage on its own, from the Pipeline page.
+    </p>
+  </div>
+<% else %>
+  <div class="kpis">
+    <% [
+      ["Total members", nil, @team_stats.total_members_count,
+       delta_chip(@team_stats.total_members_count, @team_stats_prior&.total_members_count),
+       "vs 28 days earlier"],
+      ["Claimed accounts", nil, @team_stats.total_claimed_count,
+       share_chip(@team_stats.total_claimed_count, @team_stats.total_members_count),
+       "of all members"],
+      ["Active, last 28 days", "posted or read", @team_stats.active_users_28d,
+       delta_chip(@team_stats.active_users_28d, @team_stats_prior&.active_users_28d),
+       "vs 28 days earlier"],
+      ["Posted, last 28 days", nil, @team_stats.writers_count_28d,
+       share_chip(@team_stats.writers_count_28d, @team_stats.active_users_28d),
+       "of active members"]
+    ].each do |label, qualifier, value, chip, note| %>
+      <div class="card">
+        <p class="kpi-label">
+          <%= label %><% if qualifier %> <span class="delta-note"><%= qualifier %></span><% end %>
+        </p>
+        <p class="kpi-val"><%= number_with_delimiter(value) %></p>
+        <div class="delta">
+          <%= chip %>
+          <span class="delta-note"><%= note %></span>
+        </div>
+      </div>
     <% end %>
   </div>
+<% end %>
 
-  <div class="mn-card p-5">
-    <div class="flex items-center justify-between mb-4">
-      <span class="mn-icon-badge mn-icon-badge-green">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
-      </span>
-    </div>
-    <div class="mn-eyebrow mb-1">claimed</div>
-    <% if @team_stats && @team_stats.total_members_count.to_i.positive? %>
-      <div class="mn-stat"><%= number_with_delimiter(@team_stats.total_claimed_count) %></div>
-      <p class="mn-trend-up mt-2"><%= number_to_percentage(@team_stats.total_claimed_count.to_f / @team_stats.total_members_count * 100, precision: 1) %> claim rate</p>
-    <% else %>
-      <div class="mn-stat">n/a</div>
-      <p class="mn-label mt-2">no team stats loaded</p>
-    <% end %>
-  </div>
-
-  <div class="mn-card p-5">
-    <div class="flex items-center justify-between mb-4">
-      <span class="mn-icon-badge mn-icon-badge-orange">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      </span>
-    </div>
-    <div class="mn-eyebrow mb-1">monthly active</div>
-    <% if @team_stats %>
-      <div class="mn-stat"><%= number_with_delimiter(@team_stats.active_users_28d) %></div>
-      <p class="mn-label mt-2">posted or read something, last 28 days</p>
-    <% else %>
-      <div class="mn-stat">n/a</div>
-      <p class="mn-label mt-2">no team stats loaded</p>
-    <% end %>
-  </div>
-
-  <div class="mn-card p-5">
-    <div class="flex items-center justify-between mb-4">
-      <span class="mn-icon-badge mn-icon-badge-purple">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      </span>
-    </div>
-    <div class="mn-eyebrow mb-1">posting members (last 28 days)</div>
-    <% if @team_stats %>
-      <div class="mn-stat"><%= number_with_delimiter(@team_stats.writers_count_28d) %></div>
-      <p class="mn-label mt-2">posted at least once</p>
-    <% else %>
-      <div class="mn-stat">n/a</div>
-      <p class="mn-label mt-2">no team stats loaded</p>
-    <% end %>
-  </div>
-</div>
-
-<div class="mb-8" data-controller="activity-granularity" data-activity-granularity-url-value="<%= root_path %>">
+<div data-controller="activity-granularity" data-activity-granularity-url-value="<%= root_path %>">
   <div data-activity-granularity-target="container">
     <%= render "activity_charts", activity_trend: @activity_trend, granularity: @activity_granularity %>
   </div>
 </div>
 
-<div class="mb-8">
-  <h2 class="mn-h2 mb-3">Growth, last <%= @growth_months.size %> months</h2>
-  <div class="mn-card p-5">
-    <div class="mn-growth-chart">
-      <canvas
-        data-controller="growth-chart"
-        data-growth-chart-data-value="<%= {
-          labels: @growth_months.map { |m| m.month.strftime("%b %Y") },
-          datasets: [
-            { label: "accounts created", data: @growth_months.map(&:created_members) },
-            { label: "claimed within 30d", data: @growth_months.map(&:claimed_members_30d) }
-          ]
-        }.to_json %>"
-        data-growth-chart-rates-value="<%= @growth_months.map { |m| m.claim_rate_30d&.to_f }.to_json %>"
-      ></canvas>
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Accounts created and claimed</h2>
+      <p class="card-sub">last <%= @growth_months.size %> months &middot; claimed within 30 days of creation</p>
     </div>
-    <div class="mn-growth-footer">
-      <% @growth_months.each do |m| %>
-        <div class="mn-growth-footer-col">
-          <p class="mn-label"><%= m.month.strftime("%b %Y") %></p>
-          <p class="mn-label"><%= growth_cohort_status(m) %></p>
-        </div>
-      <% end %>
-    </div>
+  </div>
+  <div class="mn-growth-chart">
+    <canvas
+      data-controller="growth-chart"
+      data-growth-chart-data-value="<%= {
+        labels: @growth_months.map { |m| m.month.strftime("%b %Y") },
+        datasets: [
+          { label: "accounts created", data: @growth_months.map(&:created_members) },
+          { label: "claimed within 30d", data: @growth_months.map(&:claimed_members_30d) }
+        ]
+      }.to_json %>"
+      data-growth-chart-rates-value="<%= @growth_months.map { |m| m.claim_rate_30d&.to_f }.to_json %>"
+    ></canvas>
+  </div>
+  <div class="legend legend-foot">
+    <% @growth_months.each do |m| %>
+      <div class="legend-item">
+        <span class="legend-key"><%= m.month.strftime("%b %Y") %></span>
+        <span class="legend-note"><%= growth_cohort_status(m) %></span>
+      </div>
+    <% end %>
   </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
-  <div>
-    <h2 class="mn-h2 mb-1">Activity distribution</h2>
-    <% window = @activity_bands.first %>
-    <p class="mn-label mb-3">
-      <%= number_with_delimiter(@activity_bands.sum(&:members)) %> live members &middot;
-      messages posted <%= window&.window_start&.strftime("%b %-d, %Y") %> to <%= window&.window_end&.strftime("%b %-d, %Y") %>
-    </p>
-    <div class="mn-card p-5">
-      <% total_banded = @activity_bands.sum(&:members) %>
-      <div class="mn-bar-track flex h-2.5 rounded-full overflow-hidden mb-4">
-        <% @activity_bands.each do |b| %>
-          <div class="mn-band-<%= b.band_order %>" style="width:<%= total_banded.positive? ? (b.members.to_f / total_banded * 100).round(2) : 0 %>%"></div>
-        <% end %>
+<div class="grid-2-1">
+  <div class="card card-stretch">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Activity distribution</h2>
+        <% window = @activity_bands.first %>
+        <p class="card-sub">
+          <%= number_with_delimiter(@activity_bands.sum(&:members)) %> live members &middot;
+          messages posted <%= window&.window_start&.strftime("%b %-d, %Y") %> to <%= window&.window_end&.strftime("%b %-d, %Y") %>
+        </p>
       </div>
+    </div>
+    <% total_banded = @activity_bands.sum(&:members) %>
+    <div class="band">
       <% @activity_bands.each do |b| %>
-        <div class="flex items-center justify-between py-1.5">
-          <span class="flex items-center gap-2 mn-label">
-            <span class="mn-band-<%= b.band_order %> inline-block w-2 h-2 rounded-full"></span>
-            <%= b.band_order <= 1 ? b.activity_band : "messages posted: #{b.activity_band}" %>
-          </span>
-          <span class="mn-label"><%= number_with_delimiter(b.members) %> &middot; <%= total_banded.positive? ? number_to_percentage((b.members.to_f / total_banded * 100).round(1), precision: 1) : "0%" %></span>
+        <i class="mn-band-<%= b.band_order %>" style="width:<%= total_banded.positive? ? (b.members.to_f / total_banded * 100).round(2) : 0 %>%"></i>
+      <% end %>
+    </div>
+    <div class="band-list">
+      <% @activity_bands.each do |b| %>
+        <div class="band-item">
+          <i class="mn-band-<%= b.band_order %>"></i>
+          <span><%= b.band_order <= 1 ? b.activity_band : "messages posted: #{b.activity_band}" %></span>
+          <b>
+            <%= number_with_delimiter(b.members) %> &middot;
+            <%= total_banded.positive? ? number_to_percentage((b.members.to_f / total_banded * 100).round(1), precision: 1) : "0%" %>
+          </b>
         </div>
       <% end %>
-      <p class="mn-label mt-3">Members who joined recently have had less of the window to post in.</p>
     </div>
+    <p class="card-note">Members who joined recently have had less of the window to post in.</p>
   </div>
 
-  <div>
-    <h2 class="mn-h2 mb-3">Account composition</h2>
-    <div class="mn-card overflow-x-auto">
-      <div class="min-w-[420px]">
-        <div class="grid grid-cols-3 gap-4 px-5 py-3 border-b mn-divider">
-          <span class="mn-eyebrow">type</span>
-          <span class="mn-eyebrow text-right">members</span>
-          <span class="mn-eyebrow text-right">claimed</span>
-        </div>
-        <% @account_types.each do |a| %>
-          <div class="grid grid-cols-3 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center">
-            <span class="mn-label"><%= a.account_type %></span>
-            <span class="mn-label text-right"><%= number_with_delimiter(a.members) %></span>
-            <span class="mn-label text-right"><%= number_with_delimiter(a.claimed) %></span>
-          </div>
-        <% end %>
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Account composition</h2>
+        <p class="card-sub">every known account by type</p>
       </div>
+    </div>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>type</th>
+            <th>members</th>
+            <th>claimed</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @account_types.each do |a| %>
+            <tr>
+              <td><%= a.account_type %></td>
+              <td><%= number_with_delimiter(a.members) %></td>
+              <td><%= number_with_delimiter(a.claimed) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
 
-<div class="mb-8" data-controller="top-posters" data-top-posters-url-value="<%= root_path %>">
+<div data-controller="top-posters" data-top-posters-url-value="<%= root_path %>">
   <div data-top-posters-target="container">
     <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months, top_posters_month: @top_posters_month %>
   </div>
 </div>
 
-<div class="mb-8">
-  <h2 class="mn-h2 mb-3">Top public channels</h2>
-  <div class="mn-card overflow-x-auto">
-    <div class="min-w-[760px]">
-      <div class="grid grid-cols-7 gap-4 px-5 py-3 border-b mn-divider">
-        <span class="mn-eyebrow col-span-2">channel</span>
-        <span class="mn-eyebrow text-right">member messages</span>
-        <span class="mn-eyebrow text-right">posters</span>
-        <span class="mn-eyebrow text-right">reactions</span>
-        <span class="mn-eyebrow text-right">reactors</span>
-        <span class="mn-eyebrow text-right">huddles</span>
-      </div>
-      <% @top_channels.each do |c| %>
-        <div class="grid grid-cols-7 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center mn-card-interactive">
-          <span class="col-span-2 flex items-center gap-2">
-            #<%= c.name %>
-          </span>
-          <span class="mn-label text-right"><%= number_with_delimiter(c.messages_posted_by_members) %></span>
-          <span class="mn-label text-right"><%= number_with_delimiter(c.members_who_posted) %></span>
-          <span class="mn-label text-right"><%= number_with_delimiter(c.reactions_added) %></span>
-          <span class="mn-label text-right"><%= number_with_delimiter(c.members_who_reacted) %></span>
-          <span class="mn-label text-right"><%= number_with_delimiter(c.huddles_initiated) %></span>
-        </div>
-      <% end %>
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Top public channels</h2>
+      <p class="card-sub">by member messages in the loaded window</p>
     </div>
+  </div>
+  <div class="scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>channel</th>
+          <th>member messages</th>
+          <th>posters</th>
+          <th>reactions</th>
+          <th>reactors</th>
+          <th>huddles</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @top_channels.each do |c| %>
+          <tr>
+            <td>
+              <span class="two-line">
+                <%= link_to channel_path(c.channel_id) do %>
+                  <b>#<%= c.name %></b>
+                <% end %>
+                <span><%= c.channel_id %></span>
+              </span>
+            </td>
+            <td><%= number_with_delimiter(c.messages_posted_by_members) %></td>
+            <td><%= number_with_delimiter(c.members_who_posted) %></td>
+            <td><%= number_with_delimiter(c.reactions_added) %></td>
+            <td><%= number_with_delimiter(c.members_who_reacted) %></td>
+            <td><%= number_with_delimiter(c.huddles_initiated) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
   </div>
 </div>
 
-<div class="mb-8" data-controller="onboarding-funnel" data-onboarding-funnel-url-value="<%= root_path %>">
+<% if @channel_scorecard.any? %>
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Channel onboarding scorecard</h2>
+        <p class="card-sub">months reaching <%= HomeHelper::MIN_SAMPLE %> newcomers or more</p>
+      </div>
+    </div>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>channel</th>
+            <th>month</th>
+            <th>newcomers</th>
+            <th>fast reply</th>
+            <th>90-day retention</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @channel_scorecard.each do |row| %>
+            <tr>
+              <td>#<%= row.channel_name %></td>
+              <td><%= row.post_month.strftime("%b %Y") %></td>
+              <td><%= number_with_delimiter(row.newcomer_volume) %></td>
+              <td><%= rate_chip((row.fast_reply_share.to_f * 100).round(1)) %></td>
+              <td>
+                <% if row.day_90_mature %>
+                  <%= rate_chip((row.retained_90_share.to_f * 100).round(1)) %>
+                <% else %>
+                  <span class="chip chip-off">TBD</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% else %>
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Channel onboarding scorecard</h2>
+        <p class="card-sub">no channel-month qualifies yet</p>
+      </div>
+      <div class="card-tools"><span class="chip chip-off">0 of <%= @channel_scorecard_total %></span></div>
+    </div>
+    <p class="delta-note">
+      A row needs <%= HomeHelper::MIN_SAMPLE %> newcomers in one channel in one month whose first post
+      can be matched to a reply. Empty by measurement, not by error.
+    </p>
+  </div>
+<% end %>
+
+<div data-controller="onboarding-funnel" data-onboarding-funnel-url-value="<%= root_path %>">
   <div data-onboarding-funnel-target="container">
     <%= render "onboarding_funnel", onboarding_funnel: @onboarding_funnel, cohort_months: @cohort_months %>
   </div>
 </div>
 
-<% if @channel_scorecard.any? %>
-<div class="mb-8">
-  <h2 class="mn-h2 mb-3">Channel onboarding scorecard</h2>
-  <div class="mn-card overflow-x-auto">
-    <div class="min-w-[640px]">
-      <div class="grid grid-cols-5 gap-4 px-5 py-3 border-b mn-divider">
-        <span class="mn-eyebrow">channel</span>
-        <span class="mn-eyebrow">month</span>
-        <span class="mn-eyebrow text-right">newcomers</span>
-        <span class="mn-eyebrow text-right">fast reply</span>
-        <span class="mn-eyebrow text-right">90-day retention</span>
-      </div>
-      <% @channel_scorecard.each do |row| %>
-        <% fast_reply_pct = (row.fast_reply_share.to_f * 100).round(1) %>
-        <div class="grid grid-cols-5 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center">
-          <span class="mn-label">#<%= row.channel_name %></span>
-          <span class="mn-label"><%= row.post_month.strftime("%b %Y") %></span>
-          <span class="mn-label text-right"><%= number_with_delimiter(row.newcomer_volume) %></span>
-          <span class="<%= fast_reply_pct >= 60 ? 'mn-trend-up' : fast_reply_pct >= 30 ? 'mn-label' : 'mn-trend-down' %> text-right"><%= number_to_percentage(fast_reply_pct, precision: 1) %></span>
-          <% if row.day_90_mature %>
-            <% retained_pct = (row.retained_90_share.to_f * 100).round(1) %>
-            <span class="<%= retained_pct >= 60 ? 'mn-trend-up' : retained_pct >= 30 ? 'mn-label' : 'mn-trend-down' %> text-right"><%= number_to_percentage(retained_pct, precision: 1) %></span>
+<% if @fast_reply_vs_retention.any? %>
+  <div class="grid-3">
+    <% @fast_reply_vs_retention.each do |row| %>
+      <div class="card">
+        <p class="kpi-label"><%= row.fast_reply ? "fast reply, under 1 hour" : "slower reply" %></p>
+        <p class="kpi-val"><%= number_with_delimiter(row.newcomers) %></p>
+        <div class="delta">
+          <% if row.retained_day_30_rate %>
+            <span class="chip chip-off">day 30: <%= number_to_percentage((row.retained_day_30_rate.to_f * 100).round(1), precision: 1) %></span>
+            <span class="chip chip-off">day 90: <%= number_to_percentage((row.retained_day_90_rate.to_f * 100).round(1), precision: 1) %></span>
           <% else %>
-            <span class="text-right"><span class="mn-badge mn-badge-pending">TBD</span></span>
+            <span class="chip chip-off">n/a</span>
+            <span class="delta-note">daily activity does not cover these cohorts&rsquo; retention windows</span>
           <% end %>
         </div>
-      <% end %>
-    </div>
+      </div>
+    <% end %>
   </div>
-</div>
-
 <% end %>
 
-<% if @fast_reply_vs_retention.any? %>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
-  <% @fast_reply_vs_retention.each do |row| %>
-    <div class="mn-card p-5">
-      <div class="mn-eyebrow mb-1"><%= row.fast_reply ? "fast reply (< 1hr)" : "slower reply" %></div>
-      <div class="mn-stat"><%= number_with_delimiter(row.newcomers) %> <span class="mn-label">newcomers</span></div>
-      <% if row.retained_day_30_rate %>
-        <p class="mn-label mt-2">day 30: <%= number_to_percentage((row.retained_day_30_rate.to_f * 100).round(1), precision: 1) %> &middot; day 90: <%= number_to_percentage((row.retained_day_90_rate.to_f * 100).round(1), precision: 1) %></p>
-      <% else %>
-        <p class="mn-label mt-2"><span class="mn-badge mn-badge-pending">n/a</span> the daily activity data does not cover these cohorts&rsquo; retention windows</p>
-      <% end %>
-    </div>
-  <% end %>
-</div>
-<% end %>
-
-<div class="mb-8" data-controller="recurrence-funnel" data-recurrence-funnel-url-value="<%= root_path %>">
+<div data-controller="recurrence-funnel" data-recurrence-funnel-url-value="<%= root_path %>">
   <div data-recurrence-funnel-target="container">
     <%= render "recurrence_funnel", recurrence_funnel: @recurrence_funnel, recurrence_cohort_months: @recurrence_cohort_months, recurrence_month: @recurrence_month %>
   </div>
 </div>
 
-<div class="mb-4">
-  <h2 class="mn-h2 mb-3">Not yet covered</h2>
-  <div class="mn-card overflow-hidden">
-    <% [
-      ["Response rate", "how quickly questions and posts get a reply"]
-    ].each do |name, description| %>
-      <div class="flex items-center justify-between px-5 py-4 border-b mn-divider last:border-b-0">
-        <div>
-          <p class="mn-h2 mn-h2-sm"><%= name %></p>
-          <p class="mn-label mt-1"><%= description %></p>
-        </div>
-        <span class="mn-badge mn-badge-pending">chart delivery pending</span>
-      </div>
-    <% end %>
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Response rate</h2>
+      <p class="card-sub">not measured yet</p>
+    </div>
+    <div class="card-tools"><span class="chip chip-warn">17 events recorded</span></div>
   </div>
+  <p class="delta-note">
+    How quickly questions get a reply needs message-level events, and 17 is not enough to compute it.
+    The events listener captures messages only from the moment it runs, so history has to come from a
+    search-based backfill.
+  </p>
 </div>

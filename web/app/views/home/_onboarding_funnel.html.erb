@@ -1,18 +1,25 @@
-<div class="flex items-center justify-between mb-3">
-  <h2 class="mn-h2">Onboarding funnel</h2>
-  <% if cohort_months.present? %>
-    <select
-      class="mn-label border mn-divider rounded px-2 py-1"
-      data-onboarding-funnel-target="select"
-      data-action="onboarding-funnel#change"
-    >
-      <% cohort_months.each do |m| %>
-        <option value="<%= m.iso8601 %>" <%= "selected" if onboarding_funnel&.cohort_month == m %>><%= m.strftime("%b %Y") %></option>
-      <% end %>
-    </select>
-  <% end %>
-</div>
-<div class="mn-card p-5">
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Onboarding funnel</h2>
+      <p class="card-sub">one created-account cohort, step by step</p>
+    </div>
+    <% if cohort_months.present? %>
+      <div class="card-tools">
+        <select
+          class="select"
+          aria-label="cohort month"
+          data-onboarding-funnel-target="select"
+          data-action="onboarding-funnel#change"
+        >
+          <% cohort_months.each do |m| %>
+            <option value="<%= m.iso8601 %>" <%= "selected" if onboarding_funnel&.cohort_month == m %>><%= m.strftime("%b %Y") %></option>
+          <% end %>
+        </select>
+      </div>
+    <% end %>
+  </div>
+
   <% if onboarding_funnel %>
     <div style="height: 220px;">
       <canvas
@@ -35,9 +42,13 @@
       ></canvas>
     </div>
     <% unless onboarding_funnel.day_30_mature %>
-      <p class="mn-label mt-3"><span class="mn-badge mn-badge-pending">n/a</span> first post and retention need daily member activity covering each member&rsquo;s day-30 and day-90 window, and the snapshots do not reach that far back</p>
+      <p class="card-note">
+        <span class="chip chip-off">n/a</span>
+        first post and retention need daily member activity covering each member&rsquo;s day-30 and
+        day-90 window, and the snapshots do not reach that far back
+      </p>
     <% end %>
   <% else %>
-    <p class="mn-label">no cohort data loaded yet</p>
+    <p class="card-note">no cohort data loaded yet</p>
   <% end %>
 </div>

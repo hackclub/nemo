@@ -13,7 +13,9 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     get root_path
 
     assert_response :success
-    assert_select "h1", "Mnemosyne"
+    assert_select "h1.head-title", "Overview"
+    assert_select ".chip", text: /data as of/
+    assert_select ".kpis .card .kpi-val", minimum: 4
   end
 
   test "unauthenticated visitor is redirected to login" do

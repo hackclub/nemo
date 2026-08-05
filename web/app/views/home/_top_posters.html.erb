@@ -1,44 +1,60 @@
 <% first_poster = top_posters.first %>
 <% full_days = first_poster ? Date.new(first_poster.month.year, first_poster.month.month, -1).day : nil %>
-<div class="flex items-center justify-between mb-1">
-  <h2 class="mn-h2">Top posters<%= ", #{first_poster.month.strftime("%B %Y")}" if first_poster %></h2>
-  <% if top_poster_months.present? %>
-    <select
-      class="mn-label border mn-divider rounded px-2 py-1"
-      data-top-posters-target="select"
-      data-action="top-posters#change"
-    >
-      <% top_poster_months.each do |m| %>
-        <option value="<%= m.iso8601 %>" <%= "selected" if top_posters_month == m %>><%= m.strftime("%b %Y") %></option>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Top posters<%= ", #{first_poster.month.strftime("%B %Y")}" if first_poster %></h2>
+      <% if first_poster %>
+        <p class="card-sub">
+          <%= first_poster.days_in_window %> of <%= full_days %> days
+          <%= "(month in progress)" if first_poster.days_in_window < full_days %>
+        </p>
       <% end %>
-    </select>
-  <% end %>
-</div>
-<% if first_poster %>
-  <p class="mn-label mb-3">
-    <%= first_poster.days_in_window %> of <%= full_days %> days
-    <%= "(month in progress)" if first_poster.days_in_window < full_days %>
-  </p>
-<% end %>
-<div class="mn-card overflow-x-auto">
-  <div class="min-w-[520px]">
-    <div class="grid grid-cols-6 gap-4 px-5 py-3 border-b mn-divider">
-      <span class="mn-eyebrow">rank</span>
-      <span class="mn-eyebrow col-span-2">member</span>
-      <span class="mn-eyebrow col-span-2">slack id</span>
-      <span class="mn-eyebrow text-right">messages</span>
     </div>
-    <% if top_posters.any? %>
-      <% top_posters.each do |p| %>
-        <div class="grid grid-cols-6 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center">
-          <span class="mn-label"><%= p.rank %></span>
-          <span class="col-span-2 min-w-0 truncate" title="<%= p.display_name %>"><%= p.display_name.presence || "n/a" %></span>
-          <span class="mn-label col-span-2 min-w-0 truncate"><%= p.user_id %></span>
-          <span class="mn-label text-right"><%= number_with_delimiter(p.messages_posted) %></span>
-        </div>
-      <% end %>
-    <% else %>
-      <div class="px-5 py-3"><span class="mn-label">no top posters loaded</span></div>
+    <% if top_poster_months.present? %>
+      <div class="card-tools">
+        <select
+          class="select"
+          aria-label="month"
+          data-top-posters-target="select"
+          data-action="top-posters#change"
+        >
+          <% top_poster_months.each do |m| %>
+            <option value="<%= m.iso8601 %>" <%= "selected" if top_posters_month == m %>><%= m.strftime("%b %Y") %></option>
+          <% end %>
+        </select>
+      </div>
     <% end %>
+  </div>
+
+  <div class="scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>member</th>
+          <th>rank</th>
+          <th>messages</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if top_posters.any? %>
+          <% top_posters.each do |p| %>
+            <tr>
+              <td>
+                <span class="two-line">
+                  <b><%= p.display_name.presence || "n/a" %></b>
+                  <span><%= p.user_id %></span>
+                </span>
+              </td>
+              <td><%= p.rank %></td>
+              <td><%= number_with_delimiter(p.messages_posted) %></td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr><td colspan="3">no top posters loaded</td></tr>
+        <% end %>
+      </tbody>
+    </table>
   </div>
 </div>

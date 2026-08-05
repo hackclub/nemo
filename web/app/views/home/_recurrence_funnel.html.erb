@@ -1,18 +1,27 @@
-<div class="flex items-center justify-between mb-3">
-  <h2 class="mn-h2">Onboarding recurrence</h2>
-  <% if recurrence_cohort_months.present? %>
-    <select
-      class="mn-label border mn-divider rounded px-2 py-1"
-      data-recurrence-funnel-target="select"
-      data-action="recurrence-funnel#change"
-    >
-      <% recurrence_cohort_months.each do |m| %>
-        <option value="<%= m.iso8601 %>" <%= "selected" if recurrence_month == m %>><%= m.strftime("%b %Y") %></option>
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Onboarding recurrence</h2>
+      <% if recurrence_funnel %>
+        <p class="card-sub">of <%= number_with_delimiter(recurrence_funnel.total_members) %> total known members</p>
       <% end %>
-    </select>
-  <% end %>
-</div>
-<div class="mn-card p-5">
+    </div>
+    <% if recurrence_cohort_months.present? %>
+      <div class="card-tools">
+        <select
+          class="select"
+          aria-label="cohort month"
+          data-recurrence-funnel-target="select"
+          data-action="recurrence-funnel#change"
+        >
+          <% recurrence_cohort_months.each do |m| %>
+            <option value="<%= m.iso8601 %>" <%= "selected" if recurrence_month == m %>><%= m.strftime("%b %Y") %></option>
+          <% end %>
+        </select>
+      </div>
+    <% end %>
+  </div>
+
   <% if recurrence_funnel %>
     <div style="height: 220px;">
       <canvas
@@ -35,11 +44,14 @@
         data-chart-options-value="<%= { indexAxis: "y", maintainAspectRatio: false, plugins: { legend: { display: false } } }.to_json %>"
       ></canvas>
     </div>
-    <p class="mn-label mt-3">of <%= number_with_delimiter(recurrence_funnel.total_members) %> total known members</p>
     <% unless recurrence_funnel.visits_knowable %>
-      <p class="mn-label mt-3"><span class="mn-badge mn-badge-pending">n/a</span> the visit steps need 15 consecutive days of member activity data after a first post, and the daily snapshots have gaps</p>
+      <p class="card-note">
+        <span class="chip chip-off">n/a</span>
+        the visit steps need 15 consecutive days of member activity data after a first post, and the
+        daily snapshots have gaps
+      </p>
     <% end %>
   <% else %>
-    <p class="mn-label">no data loaded yet</p>
+    <p class="card-note">no data loaded yet</p>
   <% end %>
 </div>
