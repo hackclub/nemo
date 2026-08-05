@@ -85,13 +85,6 @@ ALTER TABLE raw.channel_dim DROP COLUMN IF EXISTS creator_id;
 
 GRANT DELETE ON raw.channel_activity_snapshot TO pipeline_writer;
 
-ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS total_expected integer;
-ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS parent_run_id bigint;
-ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS step_index smallint;
-ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS step_total smallint;
-
-CREATE INDEX IF NOT EXISTS ingest_run_parent_idx ON raw.ingest_run (parent_run_id, step_index);
-
 CREATE TABLE IF NOT EXISTS raw.analytics_day (
     source text NOT NULL,
     ds date NOT NULL,
@@ -137,6 +130,13 @@ CREATE TABLE IF NOT EXISTS raw.ingest_run (
     rows_rejected integer,
     created_at timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS total_expected integer;
+ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS parent_run_id bigint;
+ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS step_index smallint;
+ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS step_total smallint;
+
+CREATE INDEX IF NOT EXISTS ingest_run_parent_idx ON raw.ingest_run (parent_run_id, step_index);
 
 CREATE TABLE IF NOT EXISTS raw.ingest_step_output (
     parent_run_id bigint NOT NULL,
