@@ -1,4 +1,3 @@
-import { Controller } from "@hotwired/stimulus"
 import {
   Chart,
   BarController,
@@ -11,6 +10,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js"
+import { ThemedChartController, palette } from "controllers/chart_theme"
 
 Chart.register(
   BarController,
@@ -24,18 +24,11 @@ Chart.register(
   Legend,
 )
 
-export default class extends Controller {
+export default class extends ThemedChartController {
   static values = { data: Object, rates: Array }
 
-  connect() {
-    const css = getComputedStyle(document.documentElement)
-    const token = (name) => css.getPropertyValue(name).trim()
-    const createdColor = token("--mn-rule-strong")
-    const claimedColor = token("--mn-accent")
-    const rateColor = token("--flag-blue")
-    const gridColor = token("--mn-rule")
-    const inkColor = token("--mn-ink-2")
-
+  draw() {
+    const p = palette()
     const [created, claimed] = this.dataValue.datasets
 
     this.chart = new Chart(this.element, {
@@ -43,15 +36,15 @@ export default class extends Controller {
       data: {
         labels: this.dataValue.labels,
         datasets: [
-          { ...created, backgroundColor: createdColor, order: 2 },
-          { ...claimed, backgroundColor: claimedColor, order: 2 },
+          { ...created, backgroundColor: p.accent, borderRadius: 2, order: 2 },
+          { ...claimed, backgroundColor: p.warn, borderRadius: 2, order: 2 },
           {
             type: "line",
             label: "claim rate",
             data: this.ratesValue.map((rate) => (rate == null ? null : rate * 100)),
             yAxisID: "rate",
-            borderColor: rateColor,
-            backgroundColor: rateColor,
+            borderColor: p.ink2,
+            backgroundColor: p.ink2,
             borderWidth: 2,
             pointRadius: 3,
             tension: 0.3,
@@ -66,23 +59,29 @@ export default class extends Controller {
         scales: {
           y: {
             beginAtZero: true,
-            grid: { color: gridColor },
-            ticks: { color: inkColor },
+            grid: { color: p.lineSoft },
+            border: { display: false },
+            ticks: { color: p.ink3 },
           },
           rate: {
             position: "right",
             beginAtZero: true,
             max: 100,
             grid: { drawOnChartArea: false },
-            ticks: { color: rateColor, callback: (value) => `${value}%` },
+            border: { display: false },
+            ticks: { color: p.ink2, callback: (value) => `${value}%` },
           },
           x: {
             grid: { display: false },
-            ticks: { color: inkColor },
+            border: { display: false },
+            ticks: { color: p.ink3 },
           },
         },
         plugins: {
-          legend: { display: true, labels: { color: inkColor } },
+          legend: {
+            display: true,
+            labels: { color: p.ink3, boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: "circle" },
+          },
           tooltip: {
             callbacks: {
               label: (context) => {
@@ -102,9 +101,5 @@ export default class extends Controller {
         },
       },
     })
-  }
-
-  disconnect() {
-    this.chart?.destroy()
   }
 }

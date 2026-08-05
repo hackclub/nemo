@@ -24,8 +24,8 @@
       data-activity-chart-data-value="<%= {
         labels: s[:labels],
         datasets: [
-          { label: s[:people_label], data: s[:people], backgroundColor: HomeHelper::CHART_SERIES_A, order: 1 },
-          { label: s[:posted_label], data: s[:posted], backgroundColor: HomeHelper::CHART_SERIES_B, order: 1 },
+          { label: s[:people_label], data: s[:people], order: 1 },
+          { label: s[:posted_label], data: s[:posted], order: 1 },
           ratio_line_dataset("share of active who posted", s[:posted_share])
         ]
       }.to_json %>"

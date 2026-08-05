@@ -24,7 +24,7 @@
       data-activity-chart-data-value="<%= {
         labels: s[:labels],
         datasets: [
-          { label: "channel messages", data: s[:messages], backgroundColor: HomeHelper::CHART_SERIES_A, order: 1 },
+          { label: "channel messages", data: s[:messages], order: 1 },
           ratio_line_dataset("public share", s[:public_share])
         ]
       }.to_json %>"

@@ -1963,13 +1963,13 @@
   .mn-dot-public { background-color: var(--good); }
   .mn-dot-private { background-color: var(--c-purple); }
 
-  .mn-band-0 { background-color: var(--line); }
-  .mn-band-1 { background-color: var(--ink-2); }
-  .mn-band-2 { background-color: var(--flag-yellow); }
-  .mn-band-3 { background-color: var(--flag-orange); }
-  .mn-band-4 { background-color: var(--accent); }
-  .mn-band-5 { background-color: var(--good); }
-  .mn-band-6 { background-color: var(--c-blue); }
-  .mn-band-7 { background-color: var(--c-purple); }
-  .mn-band-8 { background-color: var(--ink); }
+  .band-0 { background-color: color-mix(in oklab, var(--ink) 7%, transparent); }
+  .band-1 { background-color: color-mix(in oklab, var(--ink) 17%, transparent); }
+  .band-2 { background-color: color-mix(in oklab, var(--accent) 24%, var(--card-2)); }
+  .band-3 { background-color: color-mix(in oklab, var(--accent) 36%, var(--card-2)); }
+  .band-4 { background-color: color-mix(in oklab, var(--accent) 48%, var(--card-2)); }
+  .band-5 { background-color: color-mix(in oklab, var(--accent) 60%, var(--card-2)); }
+  .band-6 { background-color: color-mix(in oklab, var(--accent) 72%, var(--card-2)); }
+  .band-7 { background-color: color-mix(in oklab, var(--accent) 86%, var(--card-2)); }
+  .band-8 { background-color: var(--accent); }
 }

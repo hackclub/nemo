@@ -103,13 +103,13 @@
     <% total_banded = @activity_bands.sum(&:members) %>
     <div class="band">
       <% @activity_bands.each do |b| %>
-        <i class="mn-band-<%= b.band_order %>" style="width:<%= total_banded.positive? ? (b.members.to_f / total_banded * 100).round(2) : 0 %>%"></i>
+        <i class="band-<%= b.band_order %>" style="width:<%= total_banded.positive? ? (b.members.to_f / total_banded * 100).round(2) : 0 %>%"></i>
       <% end %>
     </div>
     <div class="band-list">
       <% @activity_bands.each do |b| %>
         <div class="band-item">
-          <i class="mn-band-<%= b.band_order %>"></i>
+          <i class="band-<%= b.band_order %>"></i>
           <span><%= b.band_order <= 1 ? b.activity_band : "messages posted: #{b.activity_band}" %></span>
           <b>
             <%= number_with_delimiter(b.members) %> &middot;
@@ -290,12 +290,11 @@
   <div class="card-head">
     <div>
       <h2 class="card-title">Response rate</h2>
-      <p class="card-sub">not measured yet</p>
+      <p class="card-sub">How quickly questions get a reply</p>
     </div>
-    <div class="card-tools"><span class="chip chip-warn">17 events recorded</span></div>
+    <div class="card-tools"><span class="chip chip-warn">not measured yet</span></div>
   </div>
   <p class="delta-note">
-    How quickly questions get a reply needs message-level events, and 17 is not enough to compute it.
     The events listener captures messages only from the moment it runs, so history has to come from a
     search-based backfill.
   </p>

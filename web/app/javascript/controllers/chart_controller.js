@@ -1,4 +1,3 @@
-import { Controller } from "@hotwired/stimulus"
 import {
   Chart,
   BarController,
@@ -8,53 +7,28 @@ import {
   Tooltip,
   Legend,
 } from "chart.js"
+import { ThemedChartController, palette } from "controllers/chart_theme"
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend)
 
-function token(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-}
-
-export default class extends Controller {
+export default class extends ThemedChartController {
   static values = { type: String, data: Object, options: Object }
 
-  connect() {
-    this.draw()
-    this.observer = new MutationObserver(() => this.redraw())
-    this.observer.observe(document.documentElement, { attributeFilter: ["data-theme"] })
-    this.media = window.matchMedia("(prefers-color-scheme: dark)")
-    this.onScheme = () => this.redraw()
-    this.media.addEventListener("change", this.onScheme)
-  }
-
-  disconnect() {
-    this.observer?.disconnect()
-    this.media?.removeEventListener("change", this.onScheme)
-    this.chart?.destroy()
-  }
-
-  redraw() {
-    this.chart?.destroy()
-    this.draw()
-  }
-
   draw() {
-    const accent = token("--accent")
-    const ink3 = token("--ink-3")
-    const lineSoft = token("--line-soft")
+    const p = palette()
 
     const data = {
       ...this.dataValue,
       datasets: this.dataValue.datasets.map((set) => ({
-        backgroundColor: accent,
+        backgroundColor: p.accent,
         borderRadius: 3,
         ...set,
       })),
     }
 
     const axis = {
-      ticks: { color: ink3 },
-      grid: { color: lineSoft, drawBorder: false },
+      ticks: { color: p.ink3 },
+      grid: { color: p.lineSoft },
       border: { display: false },
     }
 

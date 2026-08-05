@@ -1,7 +1,4 @@
 module HomeHelper
-  CHART_SERIES_A = "#1c7fcb".freeze
-  CHART_SERIES_B = "#cc6608".freeze
-  CHART_RATIO_LINE = "#454e58".freeze
   MIN_SAMPLE = 20
 
   def growth_cohort_status(row)
@@ -105,8 +102,6 @@ module HomeHelper
       data: data,
       type: "line",
       yAxisID: "y1",
-      borderColor: CHART_RATIO_LINE,
-      backgroundColor: CHART_RATIO_LINE,
       borderWidth: 2,
       pointRadius: 0,
       pointHitRadius: 8,
