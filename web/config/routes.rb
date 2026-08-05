@@ -8,6 +8,7 @@ Rails.application.routes.draw do
 
   resources :channels, only: [:index, :show]
   get "pipeline", to: "pipeline#index"
+  get "pipeline/runs/:id", to: "pipeline#show", as: :pipeline_run
   post "pipeline/sync", to: "pipeline#sync", as: :pipeline_sync
   post "pipeline/cancel", to: "pipeline#cancel", as: :pipeline_cancel
   post "pipeline/trigger_stage", to: "pipeline#trigger_stage", as: :pipeline_trigger_stage

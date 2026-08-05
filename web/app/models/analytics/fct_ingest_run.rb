@@ -1,6 +1,7 @@
 module Analytics
   class FctIngestRun < ApplicationRecord
     self.table_name = "analytics.fct_ingest_run"
+    self.primary_key = "id"
 
     PARENT_SOURCE = "nightly_sync".freeze
 

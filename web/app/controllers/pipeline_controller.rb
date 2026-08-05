@@ -4,17 +4,10 @@ class PipelineController < ApplicationController
 
   def index
     @run = Analytics::FctIngestRun.parents.recent_first.first
-    @steps = if @run
-      Analytics::FctIngestRun.where(parent_run_id: @run.id).order(:step_index, :id)
-    else
-      Analytics::FctIngestRun.none
-    end
-    @step_output = if @run
-      Analytics::FctIngestStepOutput.where(parent_run_id: @run.id).order(:step_index).to_a
-    else
-      []
-    end
+    @steps = @run ? steps_for(@run) : Analytics::FctIngestRun.none
+    @step_output = @run ? step_output_for(@run) : []
     @history = Analytics::FctIngestRun.parents.recent_first.limit(HISTORY)
+    @history_kind = first_step_by_parent(@history.map(&:id))
     @freshness = Analytics::FctIngestRun
       .where(status: "ok")
       .where(finished_at: FRESHNESS_WINDOW.ago..)
@@ -27,6 +20,12 @@ class PipelineController < ApplicationController
     @last_request = SyncRequest.recent_first.first
     @auto_refresh = @run&.running? || @active_request.present?
     @day_coverage = day_coverage
+  end
+
+  def show
+    @run = Analytics::FctIngestRun.parents.find(params[:id])
+    @steps = steps_for(@run)
+    @step_output = step_output_for(@run)
   end
 
   def sync
@@ -61,6 +60,22 @@ class PipelineController < ApplicationController
   end
 
   private
+
+  def steps_for(run)
+    Analytics::FctIngestRun.where(parent_run_id: run.id).order(:step_index, :id)
+  end
+
+  def step_output_for(run)
+    Analytics::FctIngestStepOutput.where(parent_run_id: run.id).order(:step_index).to_a
+  end
+
+  def first_step_by_parent(run_ids)
+    Analytics::FctIngestRun
+      .where(parent_run_id: run_ids)
+      .order(:step_index, :id)
+      .group_by(&:parent_run_id)
+      .transform_values(&:first)
+  end
 
   SOURCE_TO_STAGE = {
     "admin_analytics_api:member" => "member_days",

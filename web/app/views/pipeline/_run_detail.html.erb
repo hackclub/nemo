@@ -1,0 +1,89 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title"><%= heading %></h2>
+      <p class="card-sub">
+        started <%= run.started_at.strftime("%b %-d, %Y at %H:%M") %>
+        &middot; <%= run_duration(run) %>
+        <% if run.running? && steps.any? %>
+          &middot; step <%= steps.last.step_index %> of <%= steps.last.step_total %>
+        <% end %>
+      </p>
+    </div>
+    <div class="card-tools">
+      <%= run_age(run) %>
+      <%= run_status(run) %>
+    </div>
+  </div>
+
+  <% if steps.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>source</th>
+            <th class="col-rank">step</th>
+            <th class="col-num">status</th>
+            <th class="col-num">elapsed</th>
+            <th class="col-num">rows</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% steps.each do |step| %>
+            <tr>
+              <td>
+                <span class="two-line">
+                  <b><%= step.source %></b>
+                  <% pct = run_progress_pct(step) %>
+                  <% if step.running? && pct %>
+                    <span><%= number_to_percentage(pct, precision: 1) %> through</span>
+                  <% end %>
+                </span>
+                <% if step.running? && pct %>
+                  <span class="progress"><span class="progress-fill" style="width:<%= pct %>%"></span></span>
+                <% end %>
+              </td>
+              <td><%= step.step_index %>/<%= step.step_total %></td>
+              <td><%= run_status(step) %></td>
+              <td><%= run_duration(step) %></td>
+              <td><%= run_rows(step) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">
+      <%= run.running? ? "No stage has started yet." : "This run predates per-stage tracking." %>
+    </p>
+  <% end %>
+</div>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Stage output</h2>
+      <p class="card-sub">everything each stage printed, captured as it ran</p>
+    </div>
+    <% if step_output.any? %>
+      <div class="card-tools"><span class="chip chip-off"><%= pluralize(step_output.size, "stage") %></span></div>
+    <% end %>
+  </div>
+
+  <% if step_output.any? %>
+    <% step_output.each do |row| %>
+      <details class="log-item">
+        <summary>
+          <span class="log-source"><%= row.source %></span>
+          <span class="log-meta">step <%= row.step_index %> &middot; <%= output_size(row.output) %></span>
+        </summary>
+        <pre class="log"><%= row.output %></pre>
+      </details>
+    <% end %>
+  <% else %>
+    <p class="card-note">
+      Nothing captured for this run. Stage output is recorded from the run that follows the capture
+      being added, so it stays empty until the next nightly.
+    </p>
+  <% end %>
+</div>
