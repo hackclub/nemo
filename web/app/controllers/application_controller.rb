@@ -4,7 +4,7 @@ class ApplicationController < ActionController::Base
 
   before_action :require_staff
 
-  helper_method :current_staff
+  helper_method :current_staff, :current_profile
 
   private
 
@@ -12,6 +12,12 @@ class ApplicationController < ActionController::Base
     return nil unless session[:user_id]
 
     @current_staff ||= Staff.find_by(user_id: session[:user_id])
+  end
+
+  def current_profile
+    return nil unless current_staff
+
+    @current_profile ||= CachetClient.profile(current_staff.user_id)
   end
 
   def require_staff

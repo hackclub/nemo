@@ -95,10 +95,14 @@
                   autocomplete: "off", aria: { label: "Search channels by name" } %>
           <% end %>
           <div class="topbar-icons">
-            <span class="delta-note"><%= current_staff.user_id %></span>
-            <span class="avatar" aria-hidden="true">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
-            </span>
+            <span class="delta-note"><%= current_profile&.display_name || current_staff.user_id %></span>
+            <% if current_profile&.image_url %>
+              <img class="avatar" src="<%= current_profile.image_url %>" alt="" width="28" height="28">
+            <% else %>
+              <span class="avatar" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+              </span>
+            <% end %>
           </div>
         </div>
 

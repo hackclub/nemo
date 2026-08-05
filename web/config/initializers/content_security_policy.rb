@@ -4,13 +4,13 @@
 # See the Securing Rails Applications Guide for more information:
 # https://guides.rubyonrails.org/security.html#content-security-policy-header
 
-AVATAR_HOST = "https://cachet.dunkirk.sh".freeze
+AVATAR_HOSTS = ["https://avatars.slack-edge.com", "https://*.dunkirk.sh"].freeze
 
 Rails.application.configure do
   config.content_security_policy do |policy|
     policy.default_src     :self
     policy.font_src        :self
-    policy.img_src         :self, :data, AVATAR_HOST
+    policy.img_src         :self, :data, *AVATAR_HOSTS
     policy.object_src      :none
     policy.script_src      :self
     policy.style_src       :self, :unsafe_inline
