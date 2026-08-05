@@ -61,7 +61,9 @@ jobs:
         env:
           PYTHONPATH: .
       - name: dbt build against an empty warehouse
-        run: ../pipeline/.venv/bin/dbt build --profiles-dir .
+        run: |
+          cp profiles.yml.example profiles.yml
+          ../pipeline/.venv/bin/dbt build --profiles-dir .
         working-directory: dbt
 
   web:
