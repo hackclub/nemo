@@ -1,7 +1,22 @@
 <% channels.each do |channel| %>
-  <%= link_to channel_path(channel), class: "grid grid-cols-3 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center" do %>
-    <span class="mn-label">#<%= channel.name %></span>
-    <span class="mn-label text-right"><%= number_with_delimiter(channel.total_members) %></span>
-    <span class="mn-label text-right"><%= channel.date_created&.strftime("%b %-d, %Y") %></span>
-  <% end %>
+  <tr>
+    <td>
+      <span class="two-line">
+        <%= link_to channel_path(channel) do %>
+          <b>#<%= channel.name %></b>
+        <% end %>
+        <span><%= channel.channel_id %></span>
+      </span>
+    </td>
+    <td><%= number_with_delimiter(channel.total_members) %></td>
+    <td>
+      <% if channel.range_messages %>
+        <%= number_with_delimiter(channel.range_messages) %>
+      <% else %>
+        <span class="chip chip-off">no range</span>
+      <% end %>
+    </td>
+    <td><%= channel.range_posters ? number_with_delimiter(channel.range_posters) : "n/a" %></td>
+    <td><%= channel.date_created&.strftime("%b %-d, %Y") %></td>
+  </tr>
 <% end %>

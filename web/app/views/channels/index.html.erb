@@ -1,32 +1,48 @@
 <% content_for :page_title, "Public channels" %>
+<% content_for :page_badge do %>
+  <span class="count-pill"><%= number_with_delimiter(@total) %></span>
+  <% if @range_window %>
+    <span class="delta-note">
+      messages and posters cover
+      <%= @range_window.window_start.strftime("%b %-d, %Y") %> to
+      <%= @range_window.window_end.strftime("%b %-d, %Y") %>
+    </span>
+  <% end %>
+<% end %>
 
 <div data-controller="channel-list"
      data-channel-list-url-value="<%= channels_path %>"
      data-channel-list-sort-value="<%= @sort %>"
-     data-channel-list-direction-value="<%= @direction %>">
-  <div class="mb-4">
-    <%= text_field_tag :q, @q, placeholder: "Search public channels by name…",
-        autocomplete: "off",
-        data: { channel_list_target: "input", action: "input->channel-list#search" },
-        class: "w-full max-w-xs px-3 py-2 border mn-divider rounded bg-transparent mn-label" %>
-  </div>
+     data-channel-list-direction-value="<%= @direction %>"
+     class="stack">
+  <label class="field max-w-sm">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <%= text_field_tag :q, @q, placeholder: "Search public channels by name",
+        autocomplete: "off", aria: { label: "Search public channels by name" },
+        data: { channel_list_target: "input", action: "input->channel-list#search" } %>
+  </label>
 
-  <div class="mn-card overflow-x-auto">
-    <div class="min-w-[640px]">
-      <div class="grid grid-cols-3 gap-4 px-5 py-3 border-b mn-divider">
-        <%= channel_sort_link("channel", "name") %>
-        <div class="text-right"><%= channel_sort_link("members", "members") %></div>
-        <div class="text-right"><%= channel_sort_link("created", "created") %></div>
-      </div>
-      <div data-channel-list-target="rows">
-        <%= render "rows", channels: @channels %>
-      </div>
+  <div class="card card-flush">
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <%= channel_sort_th("channel", "name") %>
+            <%= channel_sort_th("members", "members", "col-num") %>
+            <%= channel_sort_th("messages", "messages", "col-num") %>
+            <%= channel_sort_th("posters", "posters", "col-num") %>
+            <%= channel_sort_th("created", "created", "col-date") %>
+          </tr>
+        </thead>
+        <tbody data-channel-list-target="rows">
+          <%= render "rows", channels: @channels %>
+        </tbody>
+      </table>
     </div>
   </div>
 
-  <div class="mt-4<%= " hidden" unless @has_more %>" data-channel-list-target="moreWrap">
-    <%= button_tag "Load more", type: "button",
-        data: { action: "channel-list#loadMore" },
-        class: "mn-eyebrow px-3 py-2 border mn-divider rounded cursor-pointer transition hover:opacity-70" %>
+  <div class="<%= "hidden" unless @has_more %>" data-channel-list-target="moreWrap">
+    <%= button_tag "Load more", type: "button", class: "btn",
+        data: { action: "channel-list#loadMore" } %>
   </div>
 </div>

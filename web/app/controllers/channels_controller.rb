@@ -4,8 +4,14 @@ class ChannelsController < ApplicationController
   SORT_SQL = {
     "name" => "dim_channel.name",
     "members" => "dim_channel.total_members",
-    "created" => "dim_channel.date_created"
+    "created" => "dim_channel.date_created",
+    "messages" => "r.messages_posted_by_members",
+    "posters" => "r.members_who_posted"
   }.freeze
+
+  RANGE_JOIN = "LEFT JOIN analytics.mart_channel_range r ON r.channel_id = dim_channel.channel_id".freeze
+  RANGE_COLUMNS = "dim_channel.*, r.messages_posted_by_members AS range_messages, " \
+                  "r.members_who_posted AS range_posters".freeze
 
   def index
     @q = params[:q].to_s.strip
@@ -13,16 +19,19 @@ class ChannelsController < ApplicationController
     @sort = SORT_SQL.key?(params[:sort]) ? params[:sort] : "members"
     @direction = params[:direction] == "asc" ? "asc" : "desc"
 
-    base = Analytics::DimChannel.where(archived: false)
-    base = base.where("dim_channel.name ILIKE ?", "%#{@q}%") if @q.present?
-    total = base.count
+    scope = Analytics::DimChannel.where(archived: false)
+    scope = scope.where("dim_channel.name ILIKE ?", "%#{@q}%") if @q.present?
+    @total = scope.count
+    @range_window = Analytics::MartChannelRange.order(:channel_id).first
 
-    @channels = base
+    @channels = scope
+      .joins(RANGE_JOIN)
+      .select(RANGE_COLUMNS)
       .order(Arel.sql(order_clause))
       .limit(PER_PAGE)
       .offset(@page * PER_PAGE)
       .to_a
-    @has_more = (@page + 1) * PER_PAGE < total
+    @has_more = (@page + 1) * PER_PAGE < @total
 
     return unless request.headers["X-Requested-With"] == "channel-list"
 

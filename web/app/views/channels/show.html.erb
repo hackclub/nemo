@@ -1,115 +1,153 @@
 <% content_for :page_title, "##{@channel.name}" %>
 <% content_for :page_subtitle, @channel.visibility %>
 
-<div class="mn-card p-4 mb-6 md:w-1/4">
-  <p class="mn-eyebrow mb-1">members</p>
-  <p class="mn-h2"><%= number_with_delimiter(@member_count || @channel.total_members) %></p>
-</div>
-
-<h2 class="mn-h2 mb-3">Last 13 months</h2>
-<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-  <div class="mn-card p-4">
-    <p class="mn-eyebrow mb-1">messages</p>
-    <p class="mn-h2"><%= @all_time.stats ? number_with_delimiter(@all_time.stats["messages_count"] || 0) : "n/a" %></p>
+<div class="kpis">
+  <div class="card">
+    <p class="kpi-label">Members</p>
+    <p class="kpi-val"><%= number_with_delimiter(@member_count || @channel.total_members) %></p>
+    <div class="delta"><span class="delta-note">current</span></div>
   </div>
-  <div class="mn-card p-4">
-    <p class="mn-eyebrow mb-1">unique viewers</p>
-    <p class="mn-h2"><%= @all_time.stats ? number_with_delimiter(@all_time.stats["unique_viewers"] || 0) : "n/a" %></p>
-  </div>
-  <div class="mn-card p-4">
-    <p class="mn-eyebrow mb-1">reactions</p>
-    <p class="mn-h2"><%= @all_time.stats ? number_with_delimiter(@all_time.stats["reactions_count"] || 0) : "n/a" %></p>
-  </div>
-</div>
-
-<div class="mb-8">
-  <div class="flex items-end justify-between mb-3 gap-4 flex-wrap">
-    <h2 class="mn-h2">Activity over a range</h2>
-    <%= form_with url: channel_path(@channel), method: :get, class: "flex items-end gap-2" do %>
-      <label class="mn-eyebrow">from
-        <%= date_field_tag :start, @start_date, class: "block mt-1 px-2 py-1 border mn-divider rounded bg-transparent mn-label" %>
-      </label>
-      <label class="mn-eyebrow">to
-        <%= date_field_tag :end, @end_date, class: "block mt-1 px-2 py-1 border mn-divider rounded bg-transparent mn-label" %>
-      </label>
-      <%= submit_tag "Apply", class: "mn-eyebrow px-3 py-2 border mn-divider rounded cursor-pointer transition hover:opacity-70" %>
-    <% end %>
-  </div>
-
-  <% if @range.stats %>
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-      <% [["unique posters", "unique_posters"], ["unique viewers", "unique_viewers"],
-          ["unique reactors", "unique_reactors"], ["messages", "messages_count"],
-          ["reactions", "reactions_count"], ["huddles", "huddles_count"]].each do |label, key| %>
-        <div class="mn-card p-4">
-          <p class="mn-eyebrow mb-1"><%= label %></p>
-          <p class="mn-h2"><%= number_with_delimiter(@range.stats[key] || 0) %></p>
-        </div>
-      <% end %>
-    </div>
-  <% else %>
-    <div class="mn-card p-5">
-      <p class="mn-label">
-        <% if @range.error == :not_configured %>
-          Analytics proxy is not configured on this deployment. Set INTERNAL_PROXY_URL and PROXY_TOKEN_WEB.
-        <% elsif @range.error == :reauth %>
-          Analytics service needs re-authentication, refresh the Slack session cookie.
-        <% elsif @range.error == :not_found %>
-          No analytics for this channel in the selected range.
-        <% elsif @range.error == :truncated %>
-          Too many channels share this name to find this one. Try a narrower range.
-        <% else %>
-          Couldn&rsquo;t load ranged analytics right now.
-        <% end %>
-      </p>
+  <% [["Messages", "messages_count"], ["Unique viewers", "unique_viewers"],
+      ["Reactions", "reactions_count"]].each do |label, key| %>
+    <div class="card">
+      <p class="kpi-label"><%= label %></p>
+      <p class="kpi-val"><%= @all_time.stats ? number_with_delimiter(@all_time.stats[key] || 0) : "n/a" %></p>
+      <div class="delta"><span class="delta-note">last 13 months</span></div>
     </div>
   <% end %>
 </div>
 
-<div class="mb-8">
-  <h2 class="mn-h2 mb-3">Daily activity</h2>
-  <div class="mn-card p-5">
-    <% if @activity_trend.any? %>
-      <div style="height: 220px;">
-        <canvas
-          data-controller="chart"
-          data-chart-type-value="bar"
-          data-chart-data-value="<%= {
-            labels: @activity_trend.map { |a| a.window_start.strftime("%b %d") },
-            datasets: [{
-              label: "messages posted",
-              data: @activity_trend.map(&:messages_posted)
-            }]
-          }.to_json %>"
-          data-chart-options-value="<%= { maintainAspectRatio: false, plugins: { legend: { display: false } } }.to_json %>"
-        ></canvas>
-      </div>
-    <% else %>
-      <p class="mn-label">no daily activity data yet</p>
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Activity over a range</h2>
+      <p class="card-sub">queried live from Slack, not from the warehouse</p>
+    </div>
+    <%= form_with url: channel_path(@channel), method: :get, class: "card-tools" do %>
+      <%= date_field_tag :start, @start_date, class: "select", aria: { label: "range start" } %>
+      <%= date_field_tag :end, @end_date, class: "select", aria: { label: "range end" } %>
+      <%= submit_tag "Apply", class: "btn btn-primary" %>
     <% end %>
   </div>
-</div>
 
-<% if @scorecard_rows.any? %>
-  <div class="mb-8">
-    <h2 class="mn-h2 mb-3">Onboarding scorecard</h2>
-    <div class="mn-card overflow-hidden">
-      <div class="grid grid-cols-4 gap-4 px-5 py-3 border-b mn-divider">
-        <span class="mn-eyebrow">month</span>
-        <span class="mn-eyebrow text-right">newcomers</span>
-        <span class="mn-eyebrow text-right">fast reply</span>
-        <span class="mn-eyebrow text-right">90-day retention</span>
-      </div>
-      <% @scorecard_rows.each do |row| %>
-        <div class="grid grid-cols-4 gap-4 px-5 py-3 border-b mn-divider last:border-b-0 items-center">
-          <span class="mn-label"><%= row.post_month.strftime("%b %Y") %></span>
-          <span class="mn-label text-right"><%= number_with_delimiter(row.newcomer_volume) %></span>
-          <span class="mn-label text-right"><%= row.fast_reply_share ? number_to_percentage((row.fast_reply_share.to_f * 100).round(1), precision: 1) : "n/a" %></span>
-          <span class="mn-label text-right"><%= row.retained_90_share ? number_to_percentage((row.retained_90_share.to_f * 100).round(1), precision: 1) : "n/a" %></span>
+  <% if @range.stats %>
+    <div class="stat-row">
+      <% [["unique posters", "unique_posters"], ["unique viewers", "unique_viewers"],
+          ["unique reactors", "unique_reactors"], ["messages", "messages_count"],
+          ["reactions", "reactions_count"], ["huddles", "huddles_count"]].each do |label, key| %>
+        <div>
+          <p class="kpi-label"><%= label %></p>
+          <p class="kpi-val"><%= number_with_delimiter(@range.stats[key] || 0) %></p>
         </div>
       <% end %>
     </div>
+  <% else %>
+    <p class="card-note">
+      <% if @range.error == :not_configured %>
+        Analytics proxy is not configured on this deployment. Set INTERNAL_PROXY_URL and PROXY_TOKEN_WEB.
+      <% elsif @range.error == :reauth %>
+        Analytics service needs re-authentication, refresh the Slack session cookie.
+      <% elsif @range.error == :not_found %>
+        No analytics for this channel in the selected range.
+      <% elsif @range.error == :truncated %>
+        Too many channels share this name to find this one. Try a narrower range.
+      <% else %>
+        Couldn&rsquo;t load ranged analytics right now.
+      <% end %>
+    </p>
+  <% end %>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Daily activity</h2>
+      <% if @activity_trend.any? %>
+        <p class="card-sub">
+          <%= @activity_trend.first.window_start.strftime("%b %-d, %Y") %> to
+          <%= @activity_trend.last.window_start.strftime("%b %-d, %Y") %>
+        </p>
+      <% end %>
+    </div>
+    <% if @activity_trend.any? %>
+      <% span_days = (@activity_trend.last.window_start - @activity_trend.first.window_start).to_i + 1 %>
+      <% if @activity_trend.size < span_days %>
+        <div class="card-tools">
+          <span class="chip chip-warn"><%= pluralize(span_days - @activity_trend.size, "day") %> never fetched</span>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+
+  <% if @activity_trend.any? %>
+    <div style="height: 220px;">
+      <canvas
+        data-controller="chart"
+        data-chart-type-value="bar"
+        data-chart-data-value="<%= {
+          labels: @activity_trend.map { |a| a.window_start.strftime("%b %d") },
+          datasets: [{
+            label: "messages posted",
+            data: @activity_trend.map(&:messages_posted)
+          }]
+        }.to_json %>"
+        data-chart-options-value="<%= { maintainAspectRatio: false, plugins: { legend: { display: false } } }.to_json %>"
+      ></canvas>
+    </div>
+  <% else %>
+    <p class="card-note">no daily activity data yet</p>
+  <% end %>
+</div>
+
+<% if @scorecard_rows.any? %>
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Onboarding scorecard</h2>
+        <p class="card-sub">months reaching <%= HomeHelper::MIN_SAMPLE %> newcomers or more</p>
+      </div>
+    </div>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-date">month</th>
+            <th class="col-num">newcomers</th>
+            <th class="col-num">fast reply</th>
+            <th class="col-num">90-day retention</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @scorecard_rows.each do |row| %>
+            <tr>
+              <td><%= row.post_month.strftime("%b %Y") %></td>
+              <td><%= number_with_delimiter(row.newcomer_volume) %></td>
+              <td><%= row.fast_reply_share ? rate_chip((row.fast_reply_share.to_f * 100).round(1)) : "n/a" %></td>
+              <td><%= row.retained_90_share ? rate_chip((row.retained_90_share.to_f * 100).round(1)) : "n/a" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% else %>
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Onboarding scorecard</h2>
+        <p class="card-sub">no month qualifies for this channel</p>
+      </div>
+    </div>
+    <p class="delta-note">
+      A row needs newcomers whose first post here can be matched to a reply, and no month reaches the
+      <%= HomeHelper::MIN_SAMPLE %>-newcomer threshold yet. Empty by measurement, not by error.
+    </p>
   </div>
 <% end %>
 
-<%= link_to "&larr; back to channels".html_safe, channels_path, class: "mn-link" %>
+<div>
+  <%= link_to channels_path, class: "crumb" do %>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    back to channels
+  <% end %>
+</div>

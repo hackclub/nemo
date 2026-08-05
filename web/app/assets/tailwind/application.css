@@ -642,6 +642,7 @@
     align-items: flex-start;
     gap: var(--s-2xs);
     margin-bottom: var(--s-sm);
+    flex-wrap: wrap;
   }
 
   .card-title {
@@ -660,8 +661,26 @@
   .card-tools {
     margin-inline-start: auto;
     display: flex;
-    gap: 2px;
+    align-items: flex-end;
+    gap: var(--s-2xs);
+    flex-wrap: wrap;
+  }
+
+  .card-tools .icon-btn {
     color: var(--ink-3);
+  }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+    gap: var(--s-sm);
+    border-top: 1px solid var(--line);
+    padding-top: var(--s-sm);
+  }
+
+  .stat-row .kpi-val {
+    font-size: var(--t-lg);
+    margin-bottom: 0;
   }
 
   .kpis {
@@ -1106,6 +1125,24 @@
   .data-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .data-table .col-num {
+    width: 7rem;
+  }
+
+  .data-table .col-rank {
+    width: 4.5rem;
+  }
+
+  .data-table .col-date {
+    width: 8.5rem;
+  }
+
+  .data-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .data-table thead th {
@@ -1159,6 +1196,10 @@
   }
 
   .card-flush .data-table thead th {
+    padding-top: var(--s-sm);
+  }
+
+  .card-flush .card-head + .scroll .data-table thead th {
     padding-top: 0;
   }
 

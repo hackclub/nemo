@@ -62,6 +62,8 @@ export default class extends Controller {
       type: this.typeValue,
       data: data,
       options: {
+        interaction: { mode: "index", intersect: false },
+        hover: { mode: "index", intersect: false },
         ...this.optionsValue,
         scales: { x: axis, y: axis, ...(this.optionsValue.scales || {}) },
       },
