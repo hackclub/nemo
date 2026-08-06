@@ -337,16 +337,58 @@
   </div>
 </div>
 
-<div class="card">
+<% checked, by_member, = @response_rate_totals %>
+<div class="card card-flush">
   <div class="card-head">
     <div>
       <h2 class="card-title">Response rate</h2>
-      <p class="card-sub">How quickly questions get a reply</p>
+      <p class="card-sub">whether a newcomer&rsquo;s first post got a reply, and how long it took</p>
     </div>
-    <div class="card-tools"><span class="chip chip-warn">not measured yet</span></div>
+    <div class="card-tools">
+      <% if checked.positive? %>
+        <%= rate_chip(share_pct(by_member, checked), "answered by a member") %>
+        <span class="chip chip-off"><%= pluralize(number_with_delimiter(checked), "first post") %> checked</span>
+      <% else %>
+        <span class="chip chip-warn">not measured yet</span>
+      <% end %>
+    </div>
   </div>
-  <p class="delta-note">
-    The events listener captures messages only from the moment it runs, so history has to come from a
-    search-based backfill.
-  </p>
+  <% if @response_rate.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>first posted</th>
+            <th class="col-num">checked</th>
+            <th class="col-num">by a member</th>
+            <th class="col-num">by a bot</th>
+            <th class="col-num">no reply</th>
+            <th class="col-num">median wait</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @response_rate.each do |r| %>
+            <tr>
+              <td>
+                <span class="two-line">
+                  <b><%= r.post_month.strftime("%b %Y") %></b>
+                  <span><%= number_to_percentage(share_pct(r.answered_by_member, r.first_posts_checked), precision: 1) %> answered by a member</span>
+                </span>
+              </td>
+              <td><%= number_with_delimiter(r.first_posts_checked) %></td>
+              <td><%= number_with_delimiter(r.answered_by_member) %></td>
+              <td><%= number_with_delimiter(r.answered_by_bot) %></td>
+              <td><%= number_with_delimiter(r.unanswered) %></td>
+              <td><%= reply_wait(r.median_member_latency_seconds) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">
+      No first post has been checked yet. The member history backfill finds first posts, then the replies walk
+      fills this in, newest cohorts first.
+    </p>
+  <% end %>
 </div>

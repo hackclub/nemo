@@ -72,12 +72,28 @@ module HomeHelper
     tag.span(number_to_percentage(numerator.to_f / denominator * 100, precision: 1), class: "chip chip-off")
   end
 
-  def rate_chip(pct)
+  def rate_chip(pct, label = nil)
     style = if pct >= 60 then "chip chip-good"
     elsif pct >= 30 then "chip chip-off"
     else "chip chip-warn"
     end
-    tag.span(number_to_percentage(pct, precision: 1), class: style)
+    text = number_to_percentage(pct, precision: 1)
+    tag.span(label ? "#{text} #{label}" : text, class: style)
+  end
+
+  def reply_wait(seconds)
+    return "n/a" if seconds.nil?
+
+    seconds = seconds.to_i
+    return "#{seconds}s" if seconds < 90
+
+    minutes = seconds / 60
+    return "#{minutes} min" if minutes < 90
+
+    hours = minutes / 60.0
+    return format("%.1f h", hours) if hours < 48
+
+    format("%.1f d", hours / 24)
   end
 
   def as_of_badge(ds)

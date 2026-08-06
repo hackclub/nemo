@@ -70,6 +70,8 @@ class HomeController < ApplicationController
       .where(searched: 1..)
       .order(cohort_month: :desc)
       .limit(13)
+    @response_rate = Analytics::MartResponseRate.order(post_month: :desc).limit(13)
+    @response_rate_totals = Analytics::MartResponseRate.totals
     @fast_reply_vs_retention = Analytics::MartFastReplyVsRetention
       .where(newcomers: HomeHelper::MIN_SAMPLE..)
       .order(fast_reply: :desc)
