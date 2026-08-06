@@ -21,7 +21,7 @@ from lib.db import (
     record_day,
     run_step,
 )
-from lib.proxy_client import InternalAuthError, ProxyClient, ProxyError
+from lib.proxy_client import ProxyClient
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
@@ -173,6 +173,7 @@ def channel_dim_row(rec):
 MEMBER_DAY_LIMIT = 6
 CHANNEL_DAY_LIMIT = 30
 DAY_WORKERS = 3
+CALENDAR_DAYS_MAX = 500
 
 
 PERMANENT_DAY_ERRORS = ("file_not_found", "data_not_available")
@@ -207,6 +208,10 @@ def pending_days(loaded, floor, edge, limit):
     if not missing or limit < 1:
         return []
     return missing[::-1][:limit]
+
+
+def by_key(rows):
+    return sorted(rows, key=lambda row: row[0])
 
 
 def refresh_statistics(kind):
@@ -271,26 +276,6 @@ def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
         raise RuntimeError(f"{source}: {len(failed)} of {len(days)} days failed: " + "; ".join(failed))
 
 
-def backfill(conn, pull_fn, label):
-    avail = ProxyClient().call("admin.analytics.getAvailableDateRange", {"type": "member"})
-    pull_date = date.fromisoformat(avail["end_date"])
-    end_date = date.fromisoformat(avail["start_date"])
-    print(f"{label} backfill: {end_date} .. {pull_date}")
-    while pull_date >= end_date:
-        try:
-            pull_fn(conn, pull_date)
-            conn.commit()
-        except (InternalAuthError, ProxyError):
-            conn.rollback()
-            raise
-        except Exception as exc:
-            conn.rollback()
-            dead_letter(conn, f"{label}_backfill", {"date": pull_date.isoformat()}, str(exc))
-            conn.commit()
-            print(f"{label} backfill {pull_date}: ERROR {exc}")
-        pull_date -= timedelta(days=1)
-
-
 def pull_member_day(conn, pull_date):
     with ingest_run(conn, f"{ANALYTICS_SOURCE}:member") as counts:
         activity_rows, dim_rows = [], []
@@ -305,7 +290,7 @@ def pull_member_day(conn, pull_date):
         def flush():
             with conn.cursor() as cur:
                 cur.executemany(MEMBER_ACTIVITY_SQL, activity_rows)
-                cur.executemany(MEMBER_DIM_MERGE_SQL, dim_rows)
+                cur.executemany(MEMBER_DIM_MERGE_SQL, by_key(dim_rows))
             activity_rows.clear()
             dim_rows.clear()
             counts.total_expected = client.last_num_found
@@ -355,40 +340,43 @@ def pull_channel_day(conn, pull_date):
                 dead_letter(conn, ANALYTICS_SOURCE, {"raw_line": line}, str(exc))
         with conn.cursor() as cur:
             cur.executemany(CHANNEL_ACTIVITY_SQL, activity_rows)
-            cur.executemany(CHANNEL_DIM_MERGE_SQL, dim_rows)
+            cur.executemany(CHANNEL_DIM_MERGE_SQL, by_key(dim_rows))
 
         record_day(conn, CHANNEL_DAY, pull_date, counts.rows_in)
     print(f"channel analytics {pull_date}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
+
+
+DAY_WALKS = {
+    "member": (MEMBER_DAY, pull_member_day),
+    "channel": (CHANNEL_DAY, pull_channel_day),
+}
 
 
 def main():
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="kind", required=True)
 
-    member = sub.add_parser("member")
-    member_group = member.add_mutually_exclusive_group(required=True)
-    member_group.add_argument("--date", type=date.fromisoformat)
-    member_group.add_argument("--backfill", action="store_true")
-
-    channel = sub.add_parser("channel")
-    channel_group = channel.add_mutually_exclusive_group(required=True)
-    channel_group.add_argument("--date", type=date.fromisoformat)
-    channel_group.add_argument("--backfill", action="store_true")
+    for kind in DAY_WALKS:
+        walk = sub.add_parser(kind)
+        group = walk.add_mutually_exclusive_group(required=True)
+        group.add_argument("--date", type=date.fromisoformat)
+        group.add_argument("--backfill", action="store_true")
+        walk.add_argument("--limit", type=int)
+        walk.add_argument("--workers", type=int, default=DAY_WORKERS)
 
     args = parser.parse_args()
     load_dotenv(ENV_FILE)
 
+    source, pull_fn = DAY_WALKS[args.kind]
     with connect() as conn:
-        if args.kind == "member":
-            if args.backfill:
-                backfill(conn, pull_member_day, "member")
-            else:
-                pull_member_day(conn, args.date)
+        if args.backfill:
+            backfill_days(
+                conn, source, args.kind, pull_fn,
+                args.limit or CALENDAR_DAYS_MAX,
+                workers=args.workers,
+            )
         else:
-            if args.backfill:
-                backfill(conn, pull_channel_day, "channel")
-            else:
-                pull_channel_day(conn, args.date)
+            pull_fn(conn, args.date)
 
 
 if __name__ == "__main__":
