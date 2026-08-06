@@ -1,19 +1,12 @@
 with reply_speed as (
     select
         r.newcomer_id,
+        r.post_at::date as first_post_on,
         r.latency_seconds,
         r.latency_seconds < 3600 and not r.replied_by_bot as fast_reply
     from {{ ref('fct_first_reply') }} r
     inner join {{ ref('dim_member') }} d on d.user_id = r.newcomer_id
     where not d.is_bot
-),
-
-member_join as (
-    select
-        user_id,
-        claimed_at
-    from {{ ref('dim_member') }}
-    where claimed_at is not null
 ),
 
 daily_activity as (
@@ -32,23 +25,22 @@ retention as (
         exists (
             select 1 from daily_activity d
             where d.user_id = rs.newcomer_id
-                and d.active_date between mj.claimed_at::date + 23 and mj.claimed_at::date + 30
+                and d.active_date between rs.first_post_on + 23 and rs.first_post_on + 30
         ) as retained_day_30,
         exists (
             select 1 from daily_activity d
             where d.user_id = rs.newcomer_id
-                and d.active_date between mj.claimed_at::date + 83 and mj.claimed_at::date + 90
+                and d.active_date between rs.first_post_on + 83 and rs.first_post_on + 90
         ) as retained_day_90,
         exists (
             select 1 from daily_activity d
-            where d.active_date between mj.claimed_at::date + 23 and mj.claimed_at::date + 30
+            where d.active_date between rs.first_post_on + 23 and rs.first_post_on + 30
         ) as day_30_covered,
         exists (
             select 1 from daily_activity d
-            where d.active_date between mj.claimed_at::date + 83 and mj.claimed_at::date + 90
+            where d.active_date between rs.first_post_on + 83 and rs.first_post_on + 90
         ) as day_90_covered
     from reply_speed rs
-    left join member_join mj on mj.user_id = rs.newcomer_id
 )
 
 select
@@ -64,6 +56,6 @@ select
     case when count(*) filter (where not day_90_covered) = 0
          then round(count(*) filter (where retained_day_90)::numeric / nullif(count(*), 0), 4)
     end as retained_day_90_rate,
-    'v3' as metric_version
+    'v4' as metric_version
 from retention
 group by fast_reply
