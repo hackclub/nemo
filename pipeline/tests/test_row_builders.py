@@ -262,25 +262,67 @@ def test_history_row_survives_a_total_with_no_matches():
     assert member_history.history_row("U1", {"total": 3, "matches": []}) == ("U1", 3, None, None)
 
 
-def test_reply_row_skips_self_replies_and_computes_latency():
+def test_scan_replies_skips_self_replies_and_computes_latency():
     posted = epoch(1600000000)
     messages = [
         {"user": "U1", "ts": "1600000000.000000"},
         {"user": "U1", "ts": "1600000060.000000"},
         {"user": "U2", "ts": "1600000840.000000"},
     ]
-    row = first_reply.reply_row("U1", posted, messages)
-    assert row == ("U1", "U2", epoch(1600000840), 840, None, None)
+    assert first_reply.scan_replies("U1", posted, messages) == (
+        ("U2", epoch(1600000840), 840), None,
+    )
+
+
+def test_scan_replies_walks_past_a_bot_to_the_first_human():
+    posted = epoch(1600000000)
+    messages = [
+        {"user": "U1", "ts": "1600000000.000000"},
+        {"user": "UBOT", "bot_id": "B1", "ts": "1600000004.000000"},
+        {"subtype": "bot_message", "bot_id": "B2", "ts": "1600000009.000000"},
+        {"user": "U2", "ts": "1600003600.000000"},
+    ]
+    assert first_reply.scan_replies("U1", posted, messages) == (
+        ("U2", epoch(1600003600), 3600), ("UBOT", epoch(1600000004), 4),
+    )
+
+
+def test_scan_replies_keeps_a_bot_only_thread_separate():
+    posted = epoch(1600000000)
+    messages = [
+        {"user": "U1", "ts": "1600000000.000000"},
+        {"user": "UBOT", "bot_id": "B1", "ts": "1600000004.000000"},
+    ]
+    human, bot = first_reply.scan_replies("U1", posted, messages)
+    assert human is None
+    assert bot == ("UBOT", epoch(1600000004), 4)
+
+
+def test_scan_replies_carries_a_bot_found_on_an_earlier_page():
+    posted = epoch(1600000000)
+    earlier_bot = ("UBOT", epoch(1600000004), 4)
+    page = [{"user": "U2", "ts": "1600000840.000000"}]
+    assert first_reply.scan_replies("U1", posted, page, earlier_bot) == (
+        ("U2", epoch(1600000840), 840), earlier_bot,
+    )
 
 
 def test_reply_row_records_an_unanswered_first_post():
-    posted = epoch(1600000000)
-    assert first_reply.reply_row("U1", posted, [{"user": "U1", "ts": "1600000000.000000"}]) == (
-        "U1", None, None, None, None, None,
+    assert first_reply.reply_row("U1", None, None) == (
+        "U1", None, None, None, None, None, None, None, None, first_reply.WALK_VERSION,
+    )
+
+
+def test_reply_row_carries_both_repliers():
+    human = ("U2", epoch(1600003600), 3600)
+    bot = ("UBOT", epoch(1600000004), 4)
+    assert first_reply.reply_row("U1", human, bot) == (
+        "U1", "U2", epoch(1600003600), 3600, "UBOT", epoch(1600000004), 4,
+        None, None, first_reply.WALK_VERSION,
     )
 
 
 def test_unreadable_row_marks_a_permanent_skip():
     assert first_reply.unreadable_row("U1", "channel_not_found") == (
-        "U1", None, None, None, True, "channel_not_found",
+        "U1", None, None, None, None, None, None, True, "channel_not_found", first_reply.WALK_VERSION,
     )

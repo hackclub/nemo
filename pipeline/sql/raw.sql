@@ -250,5 +250,14 @@ CREATE TABLE IF NOT EXISTS raw.member_first_reply (
     latency_seconds integer,
     unreadable boolean,
     reason text,
-    fetched_at timestamptz NOT NULL DEFAULT now()
+    fetched_at timestamptz NOT NULL DEFAULT now(),
+    bot_replier_id text,
+    bot_reply_ts timestamptz,
+    bot_latency_seconds integer,
+    walk_version smallint NOT NULL DEFAULT 1
 );
+
+ALTER TABLE raw.member_first_reply ADD COLUMN IF NOT EXISTS bot_replier_id text;
+ALTER TABLE raw.member_first_reply ADD COLUMN IF NOT EXISTS bot_reply_ts timestamptz;
+ALTER TABLE raw.member_first_reply ADD COLUMN IF NOT EXISTS bot_latency_seconds integer;
+ALTER TABLE raw.member_first_reply ADD COLUMN IF NOT EXISTS walk_version smallint NOT NULL DEFAULT 1;

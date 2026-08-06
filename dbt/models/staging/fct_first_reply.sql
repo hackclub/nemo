@@ -1,15 +1,16 @@
 with searched as (
     select
         h.user_id as newcomer_id,
-        r.replier_id,
+        coalesce(r.replier_id, r.bot_replier_id) as replier_id,
         h.first_post_ts as post_at,
         h.first_post_channel as channel_id,
-        r.reply_ts as reply_at,
-        r.latency_seconds::numeric as latency_seconds,
+        coalesce(r.reply_ts, r.bot_reply_ts) as reply_at,
+        coalesce(r.latency_seconds, r.bot_latency_seconds)::numeric as latency_seconds,
+        r.replier_id is null as bot_only,
         'search' as source
     from {{ ref('fct_member_history') }} h
     inner join {{ ref('fct_member_first_reply') }} r on r.user_id = h.user_id
-    where r.replier_id is not null
+    where coalesce(r.replier_id, r.bot_replier_id) is not null
 ),
 
 event_first_posts as (
@@ -40,6 +41,7 @@ event_replies as (
         p.channel_id,
         m.posted_at as reply_at,
         extract(epoch from (m.posted_at - p.first_post_at)) as latency_seconds,
+        false as bot_only,
         'events' as source,
         row_number() over (partition by p.poster_id order by m.posted_at) as rn
     from event_post_details p
@@ -48,16 +50,22 @@ event_replies as (
 ),
 
 unioned as (
-    select newcomer_id, replier_id, post_at, channel_id, reply_at, latency_seconds, source
+    select newcomer_id, replier_id, post_at, channel_id, reply_at, latency_seconds, bot_only, source
     from searched
     union all
-    select newcomer_id, replier_id, post_at, channel_id, reply_at, latency_seconds, source
+    select newcomer_id, replier_id, post_at, channel_id, reply_at, latency_seconds, bot_only, source
     from event_replies
     where rn = 1
 )
 
 select
-    u.*,
-    coalesce(d.is_bot, false) as replied_by_bot
+    u.newcomer_id,
+    u.replier_id,
+    u.post_at,
+    u.channel_id,
+    u.reply_at,
+    u.latency_seconds,
+    u.source,
+    u.bot_only or coalesce(d.is_bot, false) as replied_by_bot
 from unioned u
 left join {{ ref('dim_member') }} d on d.user_id = u.replier_id
