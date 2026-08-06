@@ -136,10 +136,11 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">Activity distribution</h2>
-        <% window = @activity_bands.first %>
+        <% coverage = @activity_bands.first %>
         <p class="card-sub">
-          <%= number_with_delimiter(@activity_bands.sum(&:members)) %> live members &middot;
-          messages posted <%= window&.window_start&.strftime("%b %-d, %Y") %> to <%= window&.window_end&.strftime("%b %-d, %Y") %>
+          messages posted over each member&rsquo;s whole history &middot;
+          <%= number_with_delimiter(@activity_bands.sum(&:members)) %> of
+          <%= number_with_delimiter(coverage&.workspace_members) %> members searched
         </p>
       </div>
     </div>
@@ -153,7 +154,7 @@
       <% @activity_bands.each do |b| %>
         <div class="band-item">
           <i class="band-<%= b.band_order %>"></i>
-          <span><%= b.band_order <= 1 ? b.activity_band : "messages posted: #{b.activity_band}" %></span>
+          <span><%= b.band_order.zero? ? b.activity_band : "messages posted: #{b.activity_band}" %></span>
           <b>
             <%= number_with_delimiter(b.members) %> &middot;
             <%= total_banded.positive? ? number_to_percentage((b.members.to_f / total_banded * 100).round(1), precision: 1) : "0%" %>
@@ -161,7 +162,10 @@
         </div>
       <% end %>
     </div>
-    <p class="card-note">Members who joined recently have had less of the window to post in.</p>
+    <p class="card-note">
+      Counted from each member&rsquo;s all-time message history. The backfill searches the newest joiners
+      first, so until it is finished this leans towards members who have had the least time to post.
+    </p>
   </div>
 
   <div class="card card-flush self-start">
