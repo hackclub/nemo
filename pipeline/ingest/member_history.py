@@ -38,14 +38,39 @@ LIMIT %s
 
 MERGE_SQL = """
 INSERT INTO raw.member_message_history
-    (user_id, total_messages, first_post_ts, first_post_channel, searched_at)
-VALUES (%s, %s, %s, %s, now())
+    (user_id, total_messages, first_post_ts, first_post_channel, searched_at, counted_through)
+VALUES (%s, %s, %s, %s, now(), now()::date)
 ON CONFLICT (user_id) DO UPDATE SET
     total_messages = EXCLUDED.total_messages,
     first_post_ts = EXCLUDED.first_post_ts,
     first_post_channel = EXCLUDED.first_post_channel,
-    searched_at = now()
+    searched_at = now(),
+    counted_through = now()::date
 """
+
+CARRY_FORWARD_SQL = """
+WITH delta AS (
+    SELECT s.user_id, sum(s.messages_posted) AS more, max(s.window_start) AS through
+    FROM raw.member_activity_snapshot s
+    JOIN raw.member_message_history h ON h.user_id = s.user_id
+    WHERE s.window_start = s.window_end
+      AND s.window_start > h.counted_through
+    GROUP BY s.user_id
+)
+UPDATE raw.member_message_history h
+SET total_messages = h.total_messages + delta.more,
+    counted_through = delta.through
+FROM delta
+WHERE h.user_id = delta.user_id
+"""
+
+
+def carry_forward(conn):
+    with conn.cursor() as cur:
+        cur.execute(CARRY_FORWARD_SQL)
+        advanced = cur.rowcount
+    conn.commit()
+    print(f"{SOURCE}: {advanced} member(s) carried forward from daily rows")
 
 
 def history_row(user_id, messages):
@@ -84,6 +109,7 @@ def search_member(client, team_id, user_id):
 
 
 def run(conn, limit=BATCH_LIMIT):
+    carry_forward(conn)
     members = pending_members(conn, limit)
     if not members:
         print(f"{SOURCE}: every member is searched")

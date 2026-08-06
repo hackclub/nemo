@@ -233,5 +233,12 @@ CREATE TABLE IF NOT EXISTS raw.member_message_history (
     total_messages integer NOT NULL,
     first_post_ts timestamptz,
     first_post_channel text,
-    searched_at timestamptz NOT NULL DEFAULT now()
+    searched_at timestamptz NOT NULL DEFAULT now(),
+    counted_through date
 );
+
+ALTER TABLE raw.member_message_history ADD COLUMN IF NOT EXISTS counted_through date;
+
+UPDATE raw.member_message_history
+SET counted_through = searched_at::date
+WHERE counted_through IS NULL;
