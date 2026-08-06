@@ -178,6 +178,11 @@ DAY_WORKERS = 3
 PERMANENT_DAY_ERRORS = ("file_not_found", "data_not_available")
 PENDING_DAY_ERRORS = ("file_not_yet_available",)
 
+DAY_TABLES = {
+    "member": "raw.member_activity_snapshot",
+    "channel": "raw.channel_activity_snapshot",
+}
+
 
 def settled_days(conn, source):
     with conn.cursor() as cur:
@@ -202,6 +207,24 @@ def pending_days(loaded, floor, edge, limit):
     if not missing or limit < 1:
         return []
     return missing[::-1][:limit]
+
+
+def refresh_statistics(kind):
+    table = DAY_TABLES.get(kind)
+    if table is None:
+        return
+    refused = []
+    try:
+        with connect() as stats_conn:
+            stats_conn.add_notice_handler(lambda note: refused.append(note.message_primary))
+            stats_conn.execute(f"ANALYZE {table}")
+    except Exception as exc:
+        print(f"{table}: could not refresh statistics, {type(exc).__name__}: {exc}")
+        return
+    if refused:
+        print(f"{table}: statistics NOT refreshed, {refused[0]}")
+    else:
+        print(f"{table}: statistics refreshed")
 
 
 def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
@@ -238,6 +261,8 @@ def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
                     pending.append(str(day))
                 else:
                     failed.append(f"{day}: {type(exc).__name__}: {exc}")
+    if len(unavailable) + len(pending) + len(failed) < len(days):
+        refresh_statistics(kind)
     if unavailable:
         print(f"{source}: {len(unavailable)} day(s) have no export and will not be retried")
     if pending:
