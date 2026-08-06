@@ -1,0 +1,7 @@
+#!/bin/bash -e
+
+if [ "${1}" == "./bin/thrust" ] || { [ "${1}" == "./bin/rails" ] && [ "${2}" == "server" ]; }; then
+  ./bin/rails db:migrate
+fi
+
+exec "${@}"
