@@ -15,3 +15,4 @@ sources:
       - name: ingest_run
       - name: ingest_step_output
       - name: analytics_day
+      - name: member_message_history

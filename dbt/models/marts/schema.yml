@@ -17,6 +17,12 @@ models:
     columns:
       - name: band_order
         data_tests: [not_null, unique]
+  - name: mart_monthly_cohorts
+    columns:
+      - name: cohort_month
+        data_tests: [not_null, unique]
+      - name: members
+        data_tests: [not_null]
   - name: mart_account_type
     columns:
       - name: account_type

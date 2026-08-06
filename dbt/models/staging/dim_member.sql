@@ -45,6 +45,7 @@ select
     end as is_claimed,
     is_invited_member,
     is_invited_guest,
+    coalesce(invite_pending, false) as invite_pending,
     coalesce(is_bot, false) as is_bot,
     resolved_is_deleted as is_deleted,
     not resolved_is_deleted and not coalesce(is_bot, false) as is_live

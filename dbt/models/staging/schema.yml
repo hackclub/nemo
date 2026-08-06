@@ -39,6 +39,12 @@ models:
         data_tests: [not_null]
       - name: step_index
         data_tests: [not_null]
+  - name: fct_member_history
+    columns:
+      - name: user_id
+        data_tests: [unique, not_null]
+      - name: total_messages
+        data_tests: [not_null]
   - name: fct_analytics_day
     columns:
       - name: source
