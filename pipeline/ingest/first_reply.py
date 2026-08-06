@@ -71,11 +71,14 @@ def pending_members(conn, limit):
 
 
 def fetch_reply(client, user_id, channel, first_post_ts):
+    ts = f"{first_post_ts.timestamp():.6f}"
     resp = client.call(
         "conversations.replies",
         {
             "channel": channel,
-            "ts": f"{first_post_ts.timestamp():.6f}",
+            "ts": ts,
+            "oldest": ts,
+            "inclusive": True,
             "limit": THREAD_PAGE,
         },
         credential="admin",
