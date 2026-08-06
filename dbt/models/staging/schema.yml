@@ -45,6 +45,16 @@ models:
         data_tests: [unique, not_null]
       - name: total_messages
         data_tests: [not_null]
+  - name: fct_member_first_reply
+    columns:
+      - name: user_id
+        data_tests: [unique, not_null]
+  - name: fct_first_post
+    columns:
+      - name: user_id
+        data_tests: [unique, not_null]
+      - name: posted_at
+        data_tests: [not_null]
   - name: fct_analytics_day
     columns:
       - name: source

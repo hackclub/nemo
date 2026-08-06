@@ -23,6 +23,12 @@ models:
         data_tests: [not_null, unique]
       - name: members
         data_tests: [not_null]
+  - name: mart_response_rate
+    columns:
+      - name: post_month
+        data_tests: [not_null, unique]
+      - name: first_posts_checked
+        data_tests: [not_null]
   - name: mart_account_type
     columns:
       - name: account_type

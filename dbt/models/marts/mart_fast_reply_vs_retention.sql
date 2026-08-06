@@ -2,7 +2,7 @@ with reply_speed as (
     select
         newcomer_id,
         latency_seconds,
-        latency_seconds < 3600 as fast_reply
+        latency_seconds < 3600 and not replied_by_bot as fast_reply
     from {{ ref('fct_first_reply') }}
 ),
 

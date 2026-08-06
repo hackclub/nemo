@@ -1,26 +1,15 @@
-with first_posts as (
+with newcomer_first_posts as (
     select
         user_id,
         channel_id,
-        posted_at,
-        date_trunc('month', posted_at)::date as post_month,
-        row_number() over (partition by user_id order by posted_at) as rn
-    from {{ ref('fct_message') }}
-),
-
-newcomer_first_posts as (
-    select
-        user_id,
-        channel_id,
-        post_month
-    from first_posts
-    where rn = 1
+        date_trunc('month', posted_at)::date as post_month
+    from {{ ref('fct_first_post') }}
 ),
 
 reply_info as (
     select
         newcomer_id,
-        latency_seconds < 3600 as fast_reply
+        latency_seconds < 3600 and not replied_by_bot as fast_reply
     from {{ ref('fct_first_reply') }}
 ),
 
