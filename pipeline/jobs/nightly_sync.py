@@ -16,6 +16,7 @@ from ingest.analytics_pull import (
 )
 from ingest.autojoin import join_all, name_unknown
 from ingest.channel_range_pull import run as pull_channel_range
+from ingest.member_history import run as pull_member_history
 from ingest.member_range_pull import run as pull_member_range
 from ingest.team_stats_pull import run as pull_team_stats
 from ingest.top_posters_pull import run as pull_top_posters
@@ -81,6 +82,7 @@ def stages():
         ("users_list", lambda conn: pull_users_list(conn)),
         ("autojoin", lambda conn: join_all(conn, bot_client(), join=join_channels_enabled())),
         ("channel_names", lambda conn: name_unknown(conn, bot_client())),
+        ("member_history", lambda conn: pull_member_history(conn)),
         ("dbt", lambda conn: run_dbt()),
     ]
 

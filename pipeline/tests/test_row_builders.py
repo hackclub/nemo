@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 from ingest import (
     analytics_pull,
     channel_range_pull,
+    member_history,
     member_range_pull,
     top_posters_pull,
     users_list_pull,
@@ -241,3 +242,20 @@ def test_channel_calendar_accepts_a_nested_range():
             return {"ok": True, "available_date_range": self.range}
 
     assert channel_range_pull.channel_calendar(Nested()) == (date(2025, 7, 1), date(2026, 8, 1))
+
+
+def test_history_row_reads_the_first_match():
+    messages = {
+        "total": 6009,
+        "matches": [{"ts": "1606939916.452200", "channel": {"id": "C75M7C0SY", "name": "welcome"}}],
+    }
+    row = member_history.history_row("U1", messages)
+    assert row == ("U1", 6009, epoch(1606939916.4522), "C75M7C0SY")
+
+
+def test_history_row_records_a_member_who_never_posted():
+    assert member_history.history_row("U1", {"total": 0, "matches": []}) == ("U1", 0, None, None)
+
+
+def test_history_row_survives_a_total_with_no_matches():
+    assert member_history.history_row("U1", {"total": 3, "matches": []}) == ("U1", 3, None, None)
