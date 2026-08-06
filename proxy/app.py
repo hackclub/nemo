@@ -29,6 +29,8 @@ ALLOWED_METHODS = {
     "admin": frozenset(
         {
             "admin.users.list",
+            "search.messages",
+            "conversations.replies",
         }
     ),
 }
