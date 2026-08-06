@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 from ingest import (
     analytics_pull,
     channel_range_pull,
+    first_reply,
     member_history,
     member_range_pull,
     top_posters_pull,
@@ -259,3 +260,27 @@ def test_history_row_records_a_member_who_never_posted():
 
 def test_history_row_survives_a_total_with_no_matches():
     assert member_history.history_row("U1", {"total": 3, "matches": []}) == ("U1", 3, None, None)
+
+
+def test_reply_row_skips_self_replies_and_computes_latency():
+    posted = epoch(1600000000)
+    messages = [
+        {"user": "U1", "ts": "1600000000.000000"},
+        {"user": "U1", "ts": "1600000060.000000"},
+        {"user": "U2", "ts": "1600000840.000000"},
+    ]
+    row = first_reply.reply_row("U1", posted, messages)
+    assert row == ("U1", "U2", epoch(1600000840), 840, None, None)
+
+
+def test_reply_row_records_an_unanswered_first_post():
+    posted = epoch(1600000000)
+    assert first_reply.reply_row("U1", posted, [{"user": "U1", "ts": "1600000000.000000"}]) == (
+        "U1", None, None, None, None, None,
+    )
+
+
+def test_unreadable_row_marks_a_permanent_skip():
+    assert first_reply.unreadable_row("U1", "channel_not_found") == (
+        "U1", None, None, None, True, "channel_not_found",
+    )
