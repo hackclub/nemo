@@ -1,9 +1,11 @@
 with newcomer_first_posts as (
     select
-        user_id,
-        channel_id,
-        date_trunc('month', posted_at)::date as post_month
-    from {{ ref('fct_first_post') }}
+        f.user_id,
+        f.channel_id,
+        date_trunc('month', f.posted_at)::date as post_month
+    from {{ ref('fct_first_post') }} f
+    inner join {{ ref('dim_member') }} d on d.user_id = f.user_id
+    where not d.is_bot
 ),
 
 reply_info as (
@@ -38,7 +40,7 @@ scorecard_rows as (
             where d.window_start between mj.claimed_at::date + 83 and mj.claimed_at::date + 90
         ) as day_90_covered
     from newcomer_first_posts nfp
-    inner join member_join mj on mj.user_id = nfp.user_id
+    left join member_join mj on mj.user_id = nfp.user_id
     left join reply_info ri on ri.newcomer_id = nfp.user_id
 )
 
@@ -56,7 +58,7 @@ select
     end as retained_90_share,
     (r.post_month + interval '1 month' + interval '90 days') <= now()
         and count(*) filter (where not r.day_90_covered) = 0 as day_90_mature,
-    'v2' as metric_version
+    'v3' as metric_version
 from scorecard_rows r
 left join {{ ref('dim_channel') }} c on c.channel_id = r.channel_id
 group by r.channel_id, c.name, r.post_month

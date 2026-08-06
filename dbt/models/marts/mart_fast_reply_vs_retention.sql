@@ -1,9 +1,11 @@
 with reply_speed as (
     select
-        newcomer_id,
-        latency_seconds,
-        latency_seconds < 3600 and not replied_by_bot as fast_reply
-    from {{ ref('fct_first_reply') }}
+        r.newcomer_id,
+        r.latency_seconds,
+        r.latency_seconds < 3600 and not r.replied_by_bot as fast_reply
+    from {{ ref('fct_first_reply') }} r
+    inner join {{ ref('dim_member') }} d on d.user_id = r.newcomer_id
+    where not d.is_bot
 ),
 
 member_join as (
@@ -46,7 +48,7 @@ retention as (
             where d.active_date between mj.claimed_at::date + 83 and mj.claimed_at::date + 90
         ) as day_90_covered
     from reply_speed rs
-    inner join member_join mj on mj.user_id = rs.newcomer_id
+    left join member_join mj on mj.user_id = rs.newcomer_id
 )
 
 select
@@ -62,6 +64,6 @@ select
     case when count(*) filter (where not day_90_covered) = 0
          then round(count(*) filter (where retained_day_90)::numeric / nullif(count(*), 0), 4)
     end as retained_day_90_rate,
-    'v2' as metric_version
+    'v3' as metric_version
 from retention
 group by fast_reply
