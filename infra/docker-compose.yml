@@ -32,6 +32,9 @@ services:
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
+      INTERNAL_PROXY_URL: ${CONTAINER_PROXY_URL:-${INTERNAL_PROXY_URL}}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     command: ["uv", "run", "python", "-m", "ingest.events_listener"]
 
@@ -52,11 +55,34 @@ services:
       NIGHTLY_RUN_AT_START: ${NIGHTLY_RUN_AT_START:-false}
       SYNC_POLL_SECONDS: ${SYNC_POLL_SECONDS:-60}
       TZ: ${TZ:-UTC}
-      INTERNAL_PROXY_URL: http://host.docker.internal:8002
+      INTERNAL_PROXY_URL: ${CONTAINER_PROXY_URL:-${INTERNAL_PROXY_URL}}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
     command: ["uv", "run", "python", "-m", "jobs.sync_worker"]
+
+  web:
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY:-}
+      TLS_DOMAIN: ${TLS_DOMAIN:-}
+      TZ: ${TZ:-UTC}
+      INTERNAL_PROXY_URL: ${CONTAINER_PROXY_URL:-${INTERNAL_PROXY_URL}}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${WEB_HTTP_PORT:-8080}:80"
+      - "${WEB_HTTPS_PORT:-8443}:443"
+    restart: unless-stopped
 
 volumes:
   pgdata:
