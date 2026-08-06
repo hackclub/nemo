@@ -227,3 +227,11 @@ CREATE TABLE IF NOT EXISTS raw.message_activity_snapshot (
     created_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (channel_id, message_ts, source)
 );
+
+CREATE TABLE IF NOT EXISTS raw.member_message_history (
+    user_id text PRIMARY KEY,
+    total_messages integer NOT NULL,
+    first_post_ts timestamptz,
+    first_post_channel text,
+    searched_at timestamptz NOT NULL DEFAULT now()
+);
