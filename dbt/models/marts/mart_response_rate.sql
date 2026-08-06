@@ -16,6 +16,7 @@ with checked as (
 classified as (
     select
         post_month,
+        bot_replier_id is not null as bot_replied_first,
         case
             when replier_id is not null and not replier_is_bot then 'member'
             when replier_id is not null or bot_replier_id is not null then 'bot'
@@ -31,6 +32,8 @@ select
     count(*) filter (where answered_by = 'member') as answered_by_member,
     count(*) filter (where answered_by = 'bot') as answered_by_bot,
     count(*) filter (where answered_by = 'none') as unanswered,
+    count(*) filter (where bot_replied_first) as bot_replied_first,
+    count(*) filter (where bot_replied_first and answered_by = 'member') as bot_first_then_member,
     round((percentile_cont(0.5) within group (order by member_latency))::numeric, 0)
         as median_member_latency_seconds,
     'v2' as metric_version

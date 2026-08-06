@@ -337,7 +337,7 @@
   </div>
 </div>
 
-<% checked, by_member, = @response_rate_totals %>
+<% checked, by_member, bot_first, bot_first_then_member = @response_rate_totals %>
 <div class="card card-flush">
   <div class="card-head">
     <div>
@@ -363,6 +363,7 @@
             <th class="col-num">by a member</th>
             <th class="col-num">by a bot</th>
             <th class="col-num">no reply</th>
+            <th class="col-num">bot first</th>
             <th class="col-num">median wait</th>
           </tr>
         </thead>
@@ -379,12 +380,23 @@
               <td><%= number_with_delimiter(r.answered_by_member) %></td>
               <td><%= number_with_delimiter(r.answered_by_bot) %></td>
               <td><%= number_with_delimiter(r.unanswered) %></td>
+              <td><%= number_with_delimiter(r.bot_replied_first) %></td>
               <td><%= reply_wait(r.median_member_latency_seconds) %></td>
             </tr>
           <% end %>
         </tbody>
       </table>
     </div>
+    <% if bot_first.positive? %>
+      <p class="delta-note">
+        A bot spoke before any person on
+        <b><%= number_to_percentage(share_pct(bot_first, checked), precision: 1) %></b>
+        of these first posts, and
+        <b><%= number_with_delimiter(bot_first_then_member) %> of <%= number_with_delimiter(bot_first) %></b>
+        of those did then get a person. Bot first overlaps the columns to its left; the wait is always
+        measured to the first member reply.
+      </p>
+    <% end %>
   <% else %>
     <p class="card-note">
       No first post has been checked yet. The member history backfill finds first posts, then the replies walk
