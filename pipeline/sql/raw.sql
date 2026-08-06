@@ -66,6 +66,10 @@ CREATE TABLE IF NOT EXISTS raw.channel_activity_snapshot (
 ALTER TABLE raw.member_activity_snapshot ADD COLUMN IF NOT EXISTS days_active_apps integer;
 ALTER TABLE raw.member_activity_snapshot ADD COLUMN IF NOT EXISTS days_active_workflows integer;
 
+CREATE INDEX IF NOT EXISTS member_activity_snapshot_daily_idx
+    ON raw.member_activity_snapshot (window_start)
+    WHERE window_start = window_end;
+
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_bot boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_admin boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_owner boolean;
