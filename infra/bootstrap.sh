@@ -13,6 +13,13 @@ from_env() {
   grep -E "^$1=" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d= -f2- || true
 }
 
+for secret_file in "$ENV_FILE" "$ROOT/proxy/.env"; do
+  if [ -f "$secret_file" ] && [ "$(stat -c '%a' "$secret_file")" != "600" ]; then
+    chmod 600 "$secret_file"
+    echo "==> tightened $secret_file to 600"
+  fi
+done
+
 POSTGRES_HOST="${POSTGRES_HOST:-$(from_env POSTGRES_HOST)}"
 POSTGRES_PORT="${POSTGRES_PORT:-$(from_env POSTGRES_PORT)}"
 POSTGRES_USER="${POSTGRES_USER:-$(from_env POSTGRES_USER)}"
@@ -40,14 +47,27 @@ if [ ${#missing[@]} -gt 0 ]; then
   exit 1
 fi
 
-for name in PIPELINE_DB_PASSWORD DBT_DB_PASSWORD RAILS_DB_PASSWORD POSTGRES_PASSWORD; do
-  if [ "${!name}" = "change_me" ]; then
-    echo "warning: $name is still change_me" >&2
-  fi
-done
-
 RAILS_ENV="${RAILS_ENV:-production}"
 export RAILS_ENV
+
+INTERNAL_PROXY_TOKEN="${INTERNAL_PROXY_TOKEN:-$(from_env INTERNAL_PROXY_TOKEN)}"
+PROXY_TOKEN_WEB="${PROXY_TOKEN_WEB:-$(from_env PROXY_TOKEN_WEB)}"
+
+placeholders=()
+for name in POSTGRES_PASSWORD PIPELINE_DB_PASSWORD DBT_DB_PASSWORD RAILS_DB_PASSWORD \
+            INTERNAL_PROXY_TOKEN PROXY_TOKEN_WEB; do
+  case "${!name}" in
+    change_me|change_me_to_match_the_proxy) placeholders+=("$name") ;;
+  esac
+done
+if [ ${#placeholders[@]} -gt 0 ]; then
+  if [ "$RAILS_ENV" = "production" ]; then
+    echo "refusing to bootstrap production with placeholder secrets: ${placeholders[*]}" >&2
+    echo "set real values in $ENV_FILE, or re-run with RAILS_ENV=development" >&2
+    exit 1
+  fi
+  echo "warning: still placeholder: ${placeholders[*]}" >&2
+fi
 if [ "$RAILS_ENV" = "production" ] && [ -z "${SECRET_KEY_BASE:-}" ] && [ ! -f "$ROOT/web/config/master.key" ]; then
   echo "rails cannot boot in production without web/config/master.key or SECRET_KEY_BASE." >&2
   echo "provide one, or re-run with RAILS_ENV=development to build the schema only." >&2
