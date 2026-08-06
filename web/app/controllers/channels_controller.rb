@@ -66,14 +66,20 @@ class ChannelsController < ApplicationController
 
     @range_max = last_available
     @range_min = [@channel.date_created&.to_date, last_available - 400].compact.max
-    @range = Slack::Analytics.channel_activity(
-      channel_id: @channel.channel_id, name: @channel.name,
-      from: @start_date, to: @end_date, privacy: @channel.visibility
-    )
-    @all_time = Slack::Analytics.channel_activity(
-      channel_id: @channel.channel_id, name: @channel.name,
-      from: @channel.date_created&.to_date || (last_available - 400),
-      to: last_available, privacy: @channel.visibility
+    all_time_start = @channel.date_created&.to_date || (last_available - 400)
+    @range, @all_time = Slack::Analytics.parallel(
+      -> {
+        Slack::Analytics.channel_activity(
+          channel_id: @channel.channel_id, name: @channel.name,
+          from: @start_date, to: @end_date, privacy: @channel.visibility
+        )
+      },
+      -> {
+        Slack::Analytics.channel_activity(
+          channel_id: @channel.channel_id, name: @channel.name,
+          from: all_time_start, to: last_available, privacy: @channel.visibility
+        )
+      }
     )
     @member_count = @all_time.stats&.dig("total_members_count")
   end

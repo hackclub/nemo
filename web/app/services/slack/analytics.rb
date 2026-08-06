@@ -17,6 +17,12 @@ module Slack
       nil
     end
 
+    def self.parallel(*tasks)
+      tasks
+        .map { |task| Thread.new { Rails.application.executor.wrap { task.call } } }
+        .map(&:value)
+    end
+
     def self.channel_activity(channel_id:, name:, from:, to:, privacy: "public")
       from, to = clamp(from, to)
       response = ProxyClient.call("admin.analytics.getChannelAnalytics", {
