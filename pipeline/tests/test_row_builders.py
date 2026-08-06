@@ -184,12 +184,12 @@ def test_verified_date_row_carries_both_dates_from_one_record():
     row = member_range_pull.verified_date_row(
         {"user_id": "U1", "date_created": 1600000000, "date_claimed": 1600000500}
     )
-    assert row == (epoch(1600000000), epoch(1600000500), "U1")
+    assert row == ("U1", epoch(1600000000), epoch(1600000500))
 
 
 def test_verified_date_row_leaves_an_unclaimed_member_null():
     row = member_range_pull.verified_date_row({"user_id": "U1", "date_created": 1600000000})
-    assert row == (epoch(1600000000), None, "U1")
+    assert row == ("U1", epoch(1600000000), None)
 
 
 def test_range_row_maps_chats_to_member_messages():
