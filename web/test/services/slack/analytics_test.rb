@@ -10,10 +10,14 @@ class Slack::AnalyticsTest < ActiveSupport::TestCase
   end
 
   test "parallel raises what a task raised" do
+    was = Thread.report_on_exception
+    Thread.report_on_exception = false
     err = assert_raises(RuntimeError) do
       Slack::Analytics.parallel(-> { :ok }, -> { raise "boom" })
     end
     assert_equal "boom", err.message
+  ensure
+    Thread.report_on_exception = was
   end
 
   test "parallel overlaps its tasks" do

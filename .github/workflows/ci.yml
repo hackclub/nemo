@@ -18,23 +18,24 @@ jobs:
       - run: uv run ruff check .
       - run: uv run pytest -q
 
-  dbt:
+  warehouse:
     runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:18
         env:
           POSTGRES_PASSWORD: ci
-          POSTGRES_DB: mnemosyne
+          POSTGRES_DB: mnemosyne_test
         ports:
           - 5433:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d mnemosyne"
+          --health-cmd "pg_isready -U postgres -d mnemosyne_test"
           --health-interval 10s --health-timeout 5s --health-retries 10
     env:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5433
-      POSTGRES_DB: mnemosyne
+      POSTGRES_DB: mnemosyne_test
+      POSTGRES_TEST_DB: mnemosyne_test
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ci
       PIPELINE_DB_USER: pipeline_writer
@@ -48,23 +49,22 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --frozen
         working-directory: pipeline
-      - name: create schemas and roles
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: web
+      - name: create roles and give them the ci password
         run: |
-          psql "postgresql://postgres:ci@localhost:5433/mnemosyne" -v ON_ERROR_STOP=1 -f infra/postgres/init.sql
-          psql "postgresql://postgres:ci@localhost:5433/mnemosyne" -v ON_ERROR_STOP=1 -c "
+          psql "postgresql://postgres:ci@localhost:5433/mnemosyne_test" -v ON_ERROR_STOP=1 -f infra/postgres/init.sql
+          psql "postgresql://postgres:ci@localhost:5433/mnemosyne_test" -v ON_ERROR_STOP=1 -c "
             ALTER ROLE pipeline_writer PASSWORD 'ci';
             ALTER ROLE dbt_owner PASSWORD 'ci';
             ALTER ROLE rails_app PASSWORD 'ci';"
-      - name: apply the raw schema
-        run: uv run python -m jobs.migrate
-        working-directory: pipeline
-        env:
-          PYTHONPATH: .
-      - name: dbt build against an empty warehouse
-        run: |
-          cp profiles.yml.example profiles.yml
-          ../pipeline/.venv/bin/dbt build --profiles-dir .
-        working-directory: dbt
+      - name: build the warehouse
+        run: bash infra/test-db.sh
+      - name: rails tests
+        run: bin/rails test
+        working-directory: web
 
   web:
     runs-on: ubuntu-latest

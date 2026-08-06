@@ -2,6 +2,17 @@ ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
 
+connected_to = ActiveRecord::Base.connection.current_database
+unless connected_to.end_with?("_test")
+  abort <<~MESSAGE
+    Refusing to run tests against #{connected_to.inspect}.
+
+    The suite truncates fixture tables and writes real rows, so it needs its own
+    database whose name ends in _test. Build one with infra/test-db.sh, or point
+    POSTGRES_TEST_DB at an existing one.
+  MESSAGE
+end
+
 module ActiveSupport
   class TestCase
     parallelize(workers: 1)

@@ -14,6 +14,7 @@ development:
 
 test:
   <<: *default
+  database: <%= ENV.fetch("POSTGRES_TEST_DB") { "#{ENV.fetch("POSTGRES_DB", "mnemosyne")}_test" } %>
 
 production:
   <<: *default

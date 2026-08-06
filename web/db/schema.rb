@@ -46,7 +46,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_193454) do
     t.index ["run_id"], name: "index_sync_request_on_run_id"
     t.index ["status"], name: "index_sync_request_on_status"
     t.check_constraint "kind::text = 'full'::text AND stage IS NULL OR kind::text = 'stage'::text AND stage IS NOT NULL", name: "sync_request_stage_matches_kind"
-    t.check_constraint "status::text = ANY (ARRAY['queued'::character varying, 'claimed'::character varying, 'done'::character varying, 'failed'::character varying, 'cancelling'::character varying, 'cancelled'::character varying]::text[])", name: "sync_request_status_known"
+    t.check_constraint "status::text = ANY (ARRAY['queued'::character varying::text, 'claimed'::character varying::text, 'done'::character varying::text, 'failed'::character varying::text, 'cancelling'::character varying::text, 'cancelled'::character varying::text])", name: "sync_request_status_known"
   end
 
 end
