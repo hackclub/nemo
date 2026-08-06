@@ -15,8 +15,7 @@ knowable_starts as (
 member_days as (
     select
         user_id,
-        window_start as active_date,
-        messages_posted
+        window_start as active_date
     from {{ source('raw', 'member_activity_snapshot') }}
     where window_start = window_end
         and coalesce(days_active, 0) > 0
@@ -25,10 +24,12 @@ member_days as (
 first_post as (
     select
         user_id,
-        min(active_date) as first_post_date
-    from member_days
-    where coalesce(messages_posted, 0) > 0
-    group by user_id
+        posted_at::date as first_post_date
+    from {{ ref('fct_first_post') }}
+),
+
+searched as (
+    select user_id from {{ ref('fct_member_history') }}
 ),
 
 ranked_active_days as (
@@ -45,8 +46,9 @@ member_funnel as (
         m.user_id,
         date_trunc('month', m.cohort_at)::date as cohort_month,
         m.cohort_at is not null as created_account,
-        m.is_claimed as signed_in,
+        not m.invite_pending as signed_in,
         f.first_post_date is not null as sent_message,
+        m.invite_pending or s.user_id is not null as post_knowable,
         f.first_post_date in (select day from knowable_starts) as visits_knowable,
         exists (
             select 1 from ranked_active_days r
@@ -68,6 +70,7 @@ member_funnel as (
         ) as fourth_visit_in_14_days
     from {{ ref('dim_member') }} m
     left join first_post f on f.user_id = m.user_id
+    left join searched s on s.user_id = m.user_id
     where not m.is_bot and m.cohort_at is not null
 ),
 
@@ -76,8 +79,9 @@ sequential as (
         cohort_month,
         created_account,
         signed_in,
-        sent_message,
+        post_knowable,
         visits_knowable,
+        sent_message,
         sent_message
             and returned_next_day as returned_next_day,
         sent_message
@@ -88,23 +92,35 @@ sequential as (
             and third_visit_in_7_days
             and fourth_visit_in_14_days as fourth_visit_in_14_days
     from member_funnel
+),
+
+gated as (
+    select
+        cohort_month,
+        count(*) as total_members,
+        count(*) filter (where created_account) as created_account,
+        count(*) filter (where signed_in) as signed_in,
+        count(*) filter (where not post_knowable) = 0 as posts_knowable,
+        count(*) filter (where visits_knowable) > 0 as visits_knowable,
+        count(*) filter (where sent_message) as sent_message,
+        count(*) filter (where returned_next_day) as returned_next_day,
+        count(*) filter (where third_visit_in_7_days) as third_visit_in_7_days,
+        count(*) filter (where fourth_visit_in_14_days) as fourth_visit_in_14_days
+    from sequential
+    group by cohort_month
 )
 
 select
     cohort_month,
-    count(*) as total_members,
-    count(*) filter (where created_account) as created_account,
-    count(*) filter (where signed_in) as signed_in,
-    case when count(*) filter (where visits_knowable) > 0
-         then count(*) filter (where sent_message) end as sent_message,
-    case when count(*) filter (where visits_knowable) > 0
-         then count(*) filter (where returned_next_day) end as returned_next_day,
-    case when count(*) filter (where visits_knowable) > 0
-         then count(*) filter (where third_visit_in_7_days) end as third_visit_in_7_days,
-    case when count(*) filter (where visits_knowable) > 0
-         then count(*) filter (where fourth_visit_in_14_days) end as fourth_visit_in_14_days,
-    count(*) filter (where visits_knowable) > 0 as visits_knowable,
-    'v9' as metric_version
-from sequential
-group by cohort_month
+    total_members,
+    created_account,
+    signed_in,
+    case when posts_knowable then sent_message end as sent_message,
+    case when posts_knowable and visits_knowable then returned_next_day end as returned_next_day,
+    case when posts_knowable and visits_knowable then third_visit_in_7_days end as third_visit_in_7_days,
+    case when posts_knowable and visits_knowable then fourth_visit_in_14_days end as fourth_visit_in_14_days,
+    posts_knowable,
+    visits_knowable,
+    'v10' as metric_version
+from gated
 order by cohort_month

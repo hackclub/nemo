@@ -8,8 +8,11 @@
     </div>
     <% if recurrence_cohort_months.present? %>
       <div class="card-tools">
-        <% if recurrence_funnel && !recurrence_funnel.visits_knowable %>
-          <%= incomplete_chip("the visit steps need 15 consecutive days of member activity after a first post") %>
+        <% if recurrence_funnel %>
+          <%= incomplete_chip(
+                ("the sent-message step needs every member of this cohort searched" unless recurrence_funnel.posts_knowable),
+                ("the visit steps need 15 consecutive days of member activity after a first post" unless recurrence_funnel.visits_knowable)
+              ) %>
         <% end %>
         <select
           class="select"
