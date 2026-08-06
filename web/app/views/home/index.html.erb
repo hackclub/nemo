@@ -87,6 +87,58 @@
   </div>
 </div>
 
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Monthly cohorts</h2>
+      <p class="card-sub">members who joined each month, from their all-time message history</p>
+    </div>
+  </div>
+  <% if @monthly_cohorts.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>cohort</th>
+            <th class="col-num">members</th>
+            <th class="col-num">ever posted</th>
+            <th class="col-num">posted in 30d</th>
+            <th class="col-num">median days</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @monthly_cohorts.each do |c| %>
+            <tr>
+              <td>
+                <span class="two-line">
+                  <b><%= c.cohort_month.strftime("%b %Y") %></b>
+                  <% unless c.complete? %>
+                    <span><%= number_with_delimiter(c.searched) %> of <%= number_with_delimiter(c.members) %> searched</span>
+                  <% end %>
+                </span>
+              </td>
+              <td><%= number_with_delimiter(c.members) %></td>
+              <% if c.complete? %>
+                <td><%= number_to_percentage(c.ever_posted.to_f / c.members * 100, precision: 1) %></td>
+                <td><%= number_to_percentage(c.posted_within_30d.to_f / c.members * 100, precision: 1) %></td>
+                <td><%= c.median_days_to_first_post || "n/a" %></td>
+              <% else %>
+                <td>n/a</td>
+                <td>n/a</td>
+                <td>n/a</td>
+              <% end %>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">
+      No cohort has been searched yet. The member history backfill fills this in, newest months first.
+    </p>
+  <% end %>
+</div>
+
 <div class="grid-2-1">
   <div class="card card-stretch">
     <div class="card-head">
