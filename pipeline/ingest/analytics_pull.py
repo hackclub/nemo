@@ -170,7 +170,7 @@ def channel_dim_row(rec):
     )
 
 
-MEMBER_DAY_LIMIT = 3
+MEMBER_DAY_LIMIT = 6
 CHANNEL_DAY_LIMIT = 30
 DAY_WORKERS = 3
 
@@ -201,7 +201,7 @@ def pending_days(loaded, floor, edge, limit):
         day += timedelta(days=1)
     if not missing or limit < 1:
         return []
-    return [missing[-1], *missing[:-1][: limit - 1]]
+    return missing[::-1][:limit]
 
 
 def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):

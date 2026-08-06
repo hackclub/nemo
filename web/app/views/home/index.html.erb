@@ -68,7 +68,7 @@
     <canvas
       data-controller="growth-chart"
       data-growth-chart-data-value="<%= {
-        labels: @growth_months.map { |m| m.month.strftime("%b %Y") },
+        labels: @growth_months.map { |m| [m.month.strftime("%b %Y"), growth_cohort_status(m)] },
         datasets: [
           { label: "accounts created", data: @growth_months.map(&:created_members) },
           { label: "claimed within 30d", data: @growth_months.map(&:claimed_members_30d) }
@@ -76,14 +76,6 @@
       }.to_json %>"
       data-growth-chart-rates-value="<%= @growth_months.map { |m| m.claim_rate_30d&.to_f }.to_json %>"
     ></canvas>
-  </div>
-  <div class="legend legend-foot">
-    <% @growth_months.each do |m| %>
-      <div class="legend-item">
-        <span class="legend-key"><%= m.month.strftime("%b %Y") %></span>
-        <span class="legend-note"><%= growth_cohort_status(m) %></span>
-      </div>
-    <% end %>
   </div>
 </div>
 
@@ -315,17 +307,19 @@
   <div class="grid-3">
     <% @fast_reply_vs_retention.each do |row| %>
       <div class="card">
-        <p class="kpi-label"><%= row.fast_reply ? "fast reply, under 1 hour" : "slower reply" %></p>
+        <p class="kpi-label">
+          <%= row.fast_reply ? "fast reply, under 1 hour" : "slower reply" %>
+          <%= incomplete_chip(
+                ("daily activity does not cover these newcomers' retention windows" if row.retained_day_30_rate.nil?)
+              ) %>
+        </p>
         <p class="kpi-val"><%= number_with_delimiter(row.newcomers) %></p>
-        <div class="delta">
-          <% if row.retained_day_30_rate %>
+        <% if row.retained_day_30_rate %>
+          <div class="delta">
             <span class="chip chip-off">day 30: <%= number_to_percentage((row.retained_day_30_rate.to_f * 100).round(1), precision: 1) %></span>
             <span class="chip chip-off">day 90: <%= number_to_percentage((row.retained_day_90_rate.to_f * 100).round(1), precision: 1) %></span>
-          <% else %>
-            <span class="chip chip-off">n/a</span>
-            <span class="delta-note">daily activity does not cover these cohorts&rsquo; retention windows</span>
-          <% end %>
-        </div>
+          </div>
+        <% end %>
       </div>
     <% end %>
   </div>
@@ -389,12 +383,11 @@
     </div>
     <% if bot_first.positive? %>
       <p class="delta-note">
-        A bot spoke before any person on
+        A bot replied before any person on
         <b><%= number_to_percentage(share_pct(bot_first, checked), precision: 1) %></b>
         of these first posts, and
         <b><%= number_with_delimiter(bot_first_then_member) %> of <%= number_with_delimiter(bot_first) %></b>
-        of those did then get a person. Bot first overlaps the columns to its left; the wait is always
-        measured to the first member reply.
+        of those did then get a person.
       </p>
     <% end %>
   <% else %>

@@ -112,10 +112,17 @@ FLOOR = date(2026, 7, 1)
 EDGE = date(2026, 7, 10)
 
 
-def test_pending_days_takes_the_newest_first_then_the_oldest():
+def test_pending_days_walks_backwards_from_the_newest_missing_day():
     loaded = {date(2026, 7, 3), date(2026, 7, 4)}
     assert analytics_pull.pending_days(loaded, FLOOR, EDGE, 4) == [
-        date(2026, 7, 10), date(2026, 7, 1), date(2026, 7, 2), date(2026, 7, 5)
+        date(2026, 7, 10), date(2026, 7, 9), date(2026, 7, 8), date(2026, 7, 7)
+    ]
+
+
+def test_pending_days_skips_over_a_loaded_run():
+    loaded = {date(2026, 7, 9), date(2026, 7, 10)}
+    assert analytics_pull.pending_days(loaded, FLOOR, EDGE, 3) == [
+        date(2026, 7, 8), date(2026, 7, 7), date(2026, 7, 6)
     ]
 
 
@@ -139,7 +146,7 @@ def test_pending_days_never_exceeds_the_limit():
 def test_pending_days_ignores_loaded_days_outside_the_calendar():
     loaded = {date(2020, 1, 1), date(2026, 7, 10)}
     assert analytics_pull.pending_days(loaded, FLOOR, EDGE, 2) == [
-        date(2026, 7, 9), date(2026, 7, 1)
+        date(2026, 7, 9), date(2026, 7, 8)
     ]
 
 

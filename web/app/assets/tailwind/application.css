@@ -957,13 +957,6 @@
     font-weight: 500;
   }
 
-  .legend-foot {
-    margin-top: var(--s-sm);
-    margin-bottom: 0;
-    border-top: 1px solid var(--line);
-    padding-top: var(--s-sm);
-  }
-
   .legend-note {
     font-size: var(--t-2xs);
     font-weight: 500;

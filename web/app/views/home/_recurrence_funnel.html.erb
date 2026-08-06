@@ -8,6 +8,9 @@
     </div>
     <% if recurrence_cohort_months.present? %>
       <div class="card-tools">
+        <% if recurrence_funnel && !recurrence_funnel.visits_knowable %>
+          <%= incomplete_chip("the visit steps need 15 consecutive days of member activity after a first post") %>
+        <% end %>
         <select
           class="select"
           aria-label="cohort month"
@@ -44,13 +47,6 @@
         data-chart-options-value="<%= { indexAxis: "y", maintainAspectRatio: false, plugins: { legend: { display: false } } }.to_json %>"
       ></canvas>
     </div>
-    <% unless recurrence_funnel.visits_knowable %>
-      <p class="card-note">
-        <span class="chip chip-off">n/a</span>
-        the visit steps need 15 consecutive days of member activity data after a first post, and the
-        daily snapshots have gaps
-      </p>
-    <% end %>
   <% else %>
     <p class="card-note">no data loaded yet</p>
   <% end %>

@@ -8,7 +8,7 @@ import psycopg
 from dotenv import load_dotenv
 
 from jobs.nightly_sync import ENV_FILE, run_sync, stage_plan
-from lib.db import cancel_scope, connect
+from lib.db import STALE_AFTER_HOURS, cancel_scope, connect, sweep_stale_runs
 
 DEFAULT_AT = "03:00"
 DEFAULT_POLL_SECONDS = 60
@@ -33,6 +33,14 @@ RELEASE_SQL = """
 UPDATE app.sync_request
 SET status = %s, run_id = %s, finished_at = now(), updated_at = now()
 WHERE id = %s
+"""
+
+RELEASE_STALE_SQL = """
+UPDATE app.sync_request
+SET status = 'failed', finished_at = now(), updated_at = now()
+WHERE status IN ('claimed', 'cancelling')
+  AND claimed_at < now() - make_interval(hours => %s)
+RETURNING id
 """
 
 
@@ -129,6 +137,22 @@ def serve(request_id, kind, stage):
     print(f"{label}: {status}, run {run_id}")
 
 
+def reap():
+    try:
+        with connect() as conn, conn.cursor() as cur:
+            swept = sweep_stale_runs(conn)
+            cur.execute(RELEASE_STALE_SQL, (STALE_AFTER_HOURS,))
+            stranded = [row[0] for row in cur.fetchall()]
+            conn.commit()
+    except psycopg.Error as exc:
+        print(f"sync worker: reaper skipped after {type(exc).__name__}: {exc}")
+        return
+    for run_id, source in swept:
+        print(f"sync worker: abandoned stale run {run_id} ({source})")
+    for request_id in stranded:
+        print(f"sync worker: failed stranded sync request {request_id}")
+
+
 def run_scheduled():
     print(f"sync worker: scheduled run starting at {datetime.now():%Y-%m-%dT%H:%M:%S}")
     try:
@@ -148,6 +172,7 @@ def main():
         f"next scheduled run at {scheduled:%Y-%m-%dT%H:%M}"
     )
     waiting = listener()
+    reap()
 
     while True:
         if datetime.now() >= scheduled:
@@ -159,10 +184,12 @@ def main():
         request = claim()
         if request:
             serve(*request)
+            reap()
             continue
 
         try:
-            wait_for_request(waiting, wait_seconds(poll, scheduled, datetime.now()))
+            if not wait_for_request(waiting, wait_seconds(poll, scheduled, datetime.now())):
+                reap()
         except psycopg.OperationalError as exc:
             print(f"sync worker: listener reconnecting after {type(exc).__name__}: {exc}")
             waiting = listener()

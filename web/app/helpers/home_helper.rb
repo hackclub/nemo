@@ -7,7 +7,7 @@ module HomeHelper
     if row.month == Date.current.beginning_of_month
       "#{row.last_created_on.day} of #{row.month.end_of_month.day} days"
     elsif row.claim_rate_30d_final_on > Date.current
-      "final #{row.claim_rate_30d_final_on.strftime("%b %-d")}"
+      "matures #{row.claim_rate_30d_final_on.strftime("%b %-d")}"
     else
       "mature"
     end
@@ -79,6 +79,13 @@ module HomeHelper
     end
     text = number_to_percentage(pct, precision: 1)
     tag.span(label ? "#{text} #{label}" : text, class: style)
+  end
+
+  def incomplete_chip(*reasons)
+    reasons = reasons.compact
+    return nil if reasons.empty?
+
+    tag.span("not complete", class: "chip chip-off", title: reasons.join("; "))
   end
 
   def reply_wait(seconds)

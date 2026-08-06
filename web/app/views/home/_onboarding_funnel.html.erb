@@ -6,6 +6,12 @@
     </div>
     <% if cohort_months.present? %>
       <div class="card-tools">
+        <% if onboarding_funnel %>
+          <%= incomplete_chip(
+                ("first post needs every member of this cohort searched" if onboarding_funnel.first_post.nil?),
+                ("retention needs daily member activity covering each member's day-30 and day-90 window" unless onboarding_funnel.day_30_mature)
+              ) %>
+        <% end %>
         <select
           class="select"
           aria-label="cohort month"
@@ -41,20 +47,6 @@
         data-chart-options-value="<%= { maintainAspectRatio: false, plugins: { legend: { display: false } } }.to_json %>"
       ></canvas>
     </div>
-    <% if onboarding_funnel.first_post.nil? %>
-      <p class="card-note">
-        <span class="chip chip-off">n/a</span>
-        first post needs every member of this cohort searched, and the history backfill works through
-        the cohorts newest first
-      </p>
-    <% end %>
-    <% unless onboarding_funnel.day_30_mature %>
-      <p class="card-note">
-        <span class="chip chip-off">n/a</span>
-        retention needs daily member activity covering each member&rsquo;s day-30 and day-90 window,
-        and the snapshots do not reach that far back
-      </p>
-    <% end %>
   <% else %>
     <p class="card-note">no cohort data loaded yet</p>
   <% end %>
