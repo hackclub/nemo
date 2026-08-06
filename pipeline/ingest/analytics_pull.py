@@ -16,19 +16,16 @@ from lib.db import (
     current_cancel,
     current_step,
     dead_letter,
-    get_cursor,
     ingest_run,
     mark_day_unavailable,
     record_day,
     run_step,
-    save_cursor,
 )
 from lib.proxy_client import InternalAuthError, ProxyClient, ProxyError
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
 ANALYTICS_SOURCE = "admin_analytics_api"
-USERS_SOURCE = "admin_users_list"
 MEMBER_PAGE_SIZE = 500
 
 MEMBER_ACTIVITY_SQL = """
@@ -91,15 +88,6 @@ ON CONFLICT (channel_id) DO UPDATE SET
     guests = EXCLUDED.guests,
     date_created = COALESCE(raw.channel_dim.date_created, EXCLUDED.date_created),
     last_active_at = EXCLUDED.last_active_at,
-    updated_at = now()
-"""
-
-USER_DIM_MERGE_SQL = """
-INSERT INTO raw.member_dim (user_id, account_created, deactivated_at, updated_at)
-VALUES (%s, %s, %s, now())
-ON CONFLICT (user_id) DO UPDATE SET
-    account_created = EXCLUDED.account_created,
-    deactivated_at = EXCLUDED.deactivated_at,
     updated_at = now()
 """
 
@@ -179,14 +167,6 @@ def channel_dim_row(rec):
         rec.get("guest_members_count"),
         parse_epoch(rec.get("date_created")),
         parse_epoch(rec.get("date_last_active")),
-    )
-
-
-def user_dim_row(user):
-    return (
-        user["id"],
-        parse_epoch(user.get("date_created")),
-        parse_epoch(user.get("deactivated_ts")),
     )
 
 
@@ -356,41 +336,6 @@ def pull_channel_day(conn, pull_date):
     print(f"channel analytics {pull_date}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
 
-def pull_users_page(conn, is_active):
-    label = "active" if is_active else "deactivated"
-    with ingest_run(conn, f"{USERS_SOURCE}:{label}") as counts:
-        cursor = get_cursor(conn, USERS_SOURCE, channel_id=label)
-        client = ProxyClient()
-        while True:
-            page = client.call(
-                "admin.users.list",
-                {"limit": 99, "cursor": cursor, "is_active": is_active},
-                credential="admin",
-            )
-            dim_rows = []
-            for user in page.get("users", []):
-                counts.rows_in += 1
-                try:
-                    dim_rows.append(user_dim_row(user))
-                except KeyError as exc:
-                    counts.rows_rejected += 1
-                    dead_letter(conn, USERS_SOURCE, user, str(exc))
-            with conn.cursor() as cur:
-                cur.executemany(USER_DIM_MERGE_SQL, dim_rows)
-            cursor = page.get("response_metadata", {}).get("next_cursor") or ""
-            save_cursor(conn, USERS_SOURCE, cursor, channel_id=label)
-            conn.commit()
-            counts.progress()
-            if not cursor:
-                break
-    print(f"admin users ({label}): {counts.rows_in} rows, {counts.rows_rejected} rejected")
-
-
-def pull_users(conn):
-    pull_users_page(conn, is_active=True)
-    pull_users_page(conn, is_active=False)
-
-
 def main():
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="kind", required=True)
@@ -405,8 +350,6 @@ def main():
     channel_group.add_argument("--date", type=date.fromisoformat)
     channel_group.add_argument("--backfill", action="store_true")
 
-    sub.add_parser("users")
-
     args = parser.parse_args()
     load_dotenv(ENV_FILE)
 
@@ -416,13 +359,11 @@ def main():
                 backfill(conn, pull_member_day, "member")
             else:
                 pull_member_day(conn, args.date)
-        elif args.kind == "channel":
+        else:
             if args.backfill:
                 backfill(conn, pull_channel_day, "channel")
             else:
                 pull_channel_day(conn, args.date)
-        else:
-            pull_users(conn)
 
 
 if __name__ == "__main__":

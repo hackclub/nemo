@@ -90,25 +90,6 @@ def test_channel_dim_row_converts_epoch_fields():
     assert row[5] == epoch(1700000000)
 
 
-def test_user_dim_row_treats_zero_deactivated_ts_as_none():
-    row = analytics_pull.user_dim_row(
-        {"id": "U1", "date_created": 1600000000, "deactivated_ts": 0}
-    )
-    assert row == ("U1", epoch(1600000000), None)
-
-
-def test_user_dim_row_carries_real_deactivated_ts():
-    row = analytics_pull.user_dim_row({"id": "U1", "deactivated_ts": 1700000000})
-    assert row[2] == epoch(1700000000)
-
-
-def test_user_dim_row_leaves_account_type_flags_to_users_list():
-    row = analytics_pull.user_dim_row(
-        {"id": "U1", "is_admin": True, "is_owner": True, "is_bot": True, "is_restricted": True}
-    )
-    assert len(row) == 3
-
-
 def test_users_list_member_dim_row_reads_the_deleted_flag():
     row = users_list_pull.member_dim_row(
         {"id": "U1", "deleted": True, "is_bot": False, "is_ultra_restricted": True}

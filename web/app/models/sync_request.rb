@@ -8,7 +8,7 @@ class SyncRequest < ApplicationRecord
 
   STAGES = %w[
     team_stats top_posters member_days channel_days member_range channel_range
-    admin_users_list users_list autojoin channel_names dbt
+    users_list autojoin channel_names dbt
   ].freeze
 
   scope :active, -> { where(status: ACTIVE) }

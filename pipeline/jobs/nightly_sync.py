@@ -13,7 +13,6 @@ from ingest.analytics_pull import (
     backfill_days,
     pull_channel_day,
     pull_member_day,
-    pull_users,
 )
 from ingest.autojoin import join_all, name_unknown
 from ingest.channel_range_pull import run as pull_channel_range
@@ -79,7 +78,6 @@ def stages():
             conn, CHANNEL_DAY, "channel", pull_channel_day, CHANNEL_DAY_LIMIT)),
         ("member_range", lambda conn: pull_member_range(conn)),
         ("channel_range", lambda conn: pull_channel_range(conn)),
-        ("admin_users_list", lambda conn: pull_users(conn)),
         ("users_list", lambda conn: pull_users_list(conn)),
         ("autojoin", lambda conn: join_all(conn, bot_client(), join=join_channels_enabled())),
         ("channel_names", lambda conn: name_unknown(conn, bot_client())),

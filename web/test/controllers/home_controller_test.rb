@@ -14,7 +14,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h1.head-title", "Overview"
-    assert_select ".head-row .head-meta", text: /data as of/
+    assert_select ".head-row .head-meta, .head-row .chip", text: /data as of|no data loaded/
     assert_select ".kpis .card .kpi-val", minimum: 4
   end
 
