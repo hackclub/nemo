@@ -70,6 +70,10 @@ CREATE INDEX IF NOT EXISTS member_activity_snapshot_daily_idx
     ON raw.member_activity_snapshot (window_start)
     WHERE window_start = window_end;
 
+CREATE INDEX IF NOT EXISTS member_activity_snapshot_visits_idx
+    ON raw.member_activity_snapshot (window_start, user_id)
+    WHERE window_start = window_end AND coalesce(days_active, 0) > 0;
+
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_bot boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_admin boolean;
 ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_owner boolean;
