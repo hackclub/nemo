@@ -242,3 +242,13 @@ ALTER TABLE raw.member_message_history ADD COLUMN IF NOT EXISTS counted_through 
 UPDATE raw.member_message_history
 SET counted_through = searched_at::date
 WHERE counted_through IS NULL;
+
+CREATE TABLE IF NOT EXISTS raw.member_first_reply (
+    user_id text PRIMARY KEY,
+    replier_id text,
+    reply_ts timestamptz,
+    latency_seconds integer,
+    unreadable boolean,
+    reason text,
+    fetched_at timestamptz NOT NULL DEFAULT now()
+);
