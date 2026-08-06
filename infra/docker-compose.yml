@@ -49,6 +49,7 @@ services:
       POSTGRES_PORT: 5432
       NIGHTLY_AT: ${NIGHTLY_AT:-03:00}
       NIGHTLY_JOIN_CHANNELS: ${NIGHTLY_JOIN_CHANNELS:-false}
+      NIGHTLY_RUN_AT_START: ${NIGHTLY_RUN_AT_START:-false}
       SYNC_POLL_SECONDS: ${SYNC_POLL_SECONDS:-60}
       TZ: ${TZ:-UTC}
       INTERNAL_PROXY_URL: http://host.docker.internal:8002

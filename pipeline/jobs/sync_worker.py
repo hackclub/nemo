@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import psycopg
 from dotenv import load_dotenv
 
-from jobs.nightly_sync import ENV_FILE, run_sync, stage_plan
+from jobs.nightly_sync import ENV_FILE, TRUTHY, run_sync, stage_plan
 from lib.db import STALE_AFTER_HOURS, cancel_scope, connect, sweep_stale_runs
 
 DEFAULT_AT = "03:00"
@@ -153,13 +153,17 @@ def reap():
         print(f"sync worker: failed stranded sync request {request_id}")
 
 
-def run_scheduled():
-    print(f"sync worker: scheduled run starting at {datetime.now():%Y-%m-%dT%H:%M:%S}")
+def run_at_start_enabled():
+    return os.environ.get("NIGHTLY_RUN_AT_START", "").strip().lower() in TRUTHY
+
+
+def run_scheduled(label="scheduled"):
+    print(f"sync worker: {label} run starting at {datetime.now():%Y-%m-%dT%H:%M:%S}")
     try:
         run_id, status = run_sync()
-        print(f"sync worker: scheduled run {status}, run {run_id}")
+        print(f"sync worker: {label} run {status}, run {run_id}")
     except Exception as exc:
-        print(f"sync worker: scheduled run failed {type(exc).__name__}: {exc}")
+        print(f"sync worker: {label} run failed {type(exc).__name__}: {exc}")
 
 
 def main():
@@ -173,6 +177,11 @@ def main():
     )
     waiting = listener()
     reap()
+
+    if run_at_start_enabled():
+        run_scheduled("startup")
+        scheduled = next_run_at(at, datetime.now())
+        print(f"sync worker: next scheduled run at {scheduled:%Y-%m-%dT%H:%M}")
 
     while True:
         if datetime.now() >= scheduled:
