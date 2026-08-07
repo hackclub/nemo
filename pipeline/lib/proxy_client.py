@@ -6,7 +6,11 @@ import json
 import os
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
+
+LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "host.docker.internal"})
+TRUTHY = frozenset({"1", "true", "yes", "on"})
 
 
 class ProxyError(RuntimeError):
@@ -25,6 +29,21 @@ class InternalApiError(RuntimeError):
     """The upstream Slack endpoint returned ok:false for a non-auth reason"""
 
 
+def plaintext_refused(url, allow_plaintext=None):
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme == "https" or parsed.hostname in LOCAL_HOSTS:
+        return None
+    if allow_plaintext is None:
+        allow_plaintext = os.environ.get("PROXY_ALLOW_PLAINTEXT", "")
+    if allow_plaintext.strip().lower() in TRUTHY:
+        return None
+    return (
+        f"INTERNAL_PROXY_URL is {parsed.scheme}:// to {parsed.hostname}, which sends the bearer "
+        "token in clear text over the network. use https, or set PROXY_ALLOW_PLAINTEXT=true if "
+        "that hop is already private"
+    )
+
+
 class ProxyClient:
     def __init__(self, url=None, token=None, read_timeout=120):
         self.url = (url or os.environ.get("INTERNAL_PROXY_URL", "")).rstrip("/")
@@ -33,6 +52,9 @@ class ProxyClient:
         self.last_num_found = None
         if not self.url or not self.token:
             raise ProxyError("INTERNAL_PROXY_URL and INTERNAL_PROXY_TOKEN must both be set")
+        refusal = plaintext_refused(self.url)
+        if refusal:
+            raise ProxyError(refusal)
 
     def call(self, method, params=None, max_retries=3, credential="internal"):
         payload = {

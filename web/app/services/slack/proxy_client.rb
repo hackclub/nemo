@@ -36,8 +36,25 @@ module Slack
       raise Unavailable, e.message
     end
 
+    LOCAL_HOSTS = ["localhost", "127.0.0.1", "::1", "host.docker.internal"].freeze
+    TRUTHY = ["1", "true", "yes", "on"].freeze
+
     def self.base_url
-      ENV["INTERNAL_PROXY_URL"].presence || raise(NotConfigured, "INTERNAL_PROXY_URL is not set")
+      url = ENV["INTERNAL_PROXY_URL"].presence || raise(NotConfigured, "INTERNAL_PROXY_URL is not set")
+      refusal = plaintext_refusal(url)
+      raise NotConfigured, refusal if refusal
+
+      url
+    end
+
+    def self.plaintext_refusal(url)
+      uri = URI(url)
+      return nil if uri.scheme == "https" || LOCAL_HOSTS.include?(uri.host)
+      return nil if TRUTHY.include?(ENV["PROXY_ALLOW_PLAINTEXT"].to_s.strip.downcase)
+
+      "INTERNAL_PROXY_URL is #{uri.scheme}:// to #{uri.host}, which sends the bearer token in " \
+        "clear text over the network. use https, or set PROXY_ALLOW_PLAINTEXT=true if that hop " \
+        "is already private"
     end
 
     def self.token
