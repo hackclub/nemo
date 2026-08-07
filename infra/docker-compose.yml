@@ -9,7 +9,7 @@ services:
       DBT_DB_PASSWORD: ${DBT_DB_PASSWORD}
       RAILS_DB_PASSWORD: ${RAILS_DB_PASSWORD}
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "127.0.0.1:${POSTGRES_PORT}:5432"
     volumes:
       - pgdata:/var/lib/postgresql
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
