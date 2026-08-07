@@ -8,7 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from slack_sdk.errors import SlackApiError
 
 from internal_client import InternalApiError, InternalAuthError, InternalClient
@@ -136,11 +136,14 @@ def current_client(creds: HTTPAuthorizationCredentials | None = Depends(bearer))
     return matched
 
 
+MAX_RETRIES_CEILING = 8
+
+
 class CallRequest(BaseModel):
     method: str
     params: dict = {}
     credential: str = "internal"
-    max_retries: int = 3
+    max_retries: int = Field(3, ge=0, le=MAX_RETRIES_CEILING)
 
 
 @app.get("/verify")
