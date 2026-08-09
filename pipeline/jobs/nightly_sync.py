@@ -1,5 +1,4 @@
 import io
-import os
 import subprocess
 import sys
 from contextlib import redirect_stdout
@@ -14,7 +13,7 @@ from ingest.analytics_pull import (
     pull_channel_day,
     pull_member_day,
 )
-from ingest.autojoin import join_all, name_unknown
+from ingest.autojoin import name_unknown, record_channel_names
 from ingest.channel_range_pull import run as pull_channel_range
 from ingest.first_reply import run as pull_first_reply
 from ingest.member_history import run as pull_member_history
@@ -52,10 +51,6 @@ ON CONFLICT (parent_run_id, step_index) DO UPDATE SET
 """
 
 
-def join_channels_enabled():
-    return os.environ.get("NIGHTLY_JOIN_CHANNELS", "").strip().lower() in TRUTHY
-
-
 def run_dbt():
     proc = subprocess.Popen(
         ["dbt", "build", "--profiles-dir", str(DBT_DIR)],
@@ -81,7 +76,7 @@ def stages():
         ("member_range", lambda conn: pull_member_range(conn)),
         ("channel_range", lambda conn: pull_channel_range(conn)),
         ("users_list", lambda conn: pull_users_list(conn)),
-        ("autojoin", lambda conn: join_all(conn, bot_client(), join=join_channels_enabled())),
+        ("autojoin", lambda conn: record_channel_names(conn, bot_client())),
         ("channel_names", lambda conn: name_unknown(conn, bot_client())),
         ("member_history", lambda conn: pull_member_history(conn)),
         ("first_reply", lambda conn: pull_first_reply(conn)),

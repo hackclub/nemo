@@ -12,9 +12,6 @@ oauth_config:
   scopes:
     bot:
       - channels:read
-      - channels:join
-      - channels:history
-      - reactions:read
       - users:read
     user:
       - admin.analytics:read
@@ -24,13 +21,5 @@ oauth_config:
 settings:
   event_subscriptions:
     bot_events:
-      - message.channels
-      - reaction_added
-      - member_joined_channel
-      - member_left_channel
       - team_join
-      - channel_created
-      - channel_archive
-      - channel_unarchive
-      - channel_rename
   socket_mode_enabled: true

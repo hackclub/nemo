@@ -7,7 +7,6 @@ import jsonschema
 from dotenv import load_dotenv
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
-from slack_sdk.errors import SlackApiError
 
 from lib.db import connect, dead_letter
 
@@ -16,15 +15,7 @@ SCHEMA_DIR = Path(__file__).resolve().parents[2] / "schemas" / "raw_events"
 SOURCE = "events_listener"
 
 SCHEMA_FILES = {
-    "message": "message.json",
-    "reaction_added": "reaction_added.json",
-    "member_joined_channel": "member_joined_channel.json",
-    "member_left_channel": "member_left_channel.json",
     "team_join": "team_join.json",
-    "channel_created": "channel_created.json",
-    "channel_archive": "channel_archive.json",
-    "channel_unarchive": "channel_unarchive.json",
-    "channel_rename": "channel_rename.json",
 }
 
 
@@ -46,7 +37,7 @@ def extract(event, schema):
     return result
 
 
-def handle_event(conn, schemas, event_type, event, client):
+def handle_event(conn, schemas, event_type, event):
     payload = extract(event, schemas[event_type])
     try:
         jsonschema.validate(payload, schemas[event_type])
@@ -60,9 +51,7 @@ def handle_event(conn, schemas, event_type, event, client):
             (event_type, json.dumps(payload)),
         )
     conn.commit()
-    if event_type == "channel_created":
-        join_new_channel(conn, client, event["channel"]["id"])
-    elif event_type == "team_join":
+    if event_type == "team_join":
         record_claimed_at(conn, event["user"]["id"], event["event_ts"])
 
 
@@ -82,17 +71,6 @@ def record_claimed_at(conn, user_id, event_ts):
     conn.commit()
 
 
-def join_new_channel(conn, client, channel_id):
-    try:
-        client.conversations_join(channel=channel_id)
-    except SlackApiError as exc:
-        error = exc.response.get("error")
-        if error == "is_archived":
-            return
-        dead_letter(conn, SOURCE, {"channel_id": channel_id}, error or str(exc))
-        conn.commit()
-
-
 def record_failure(event_type, reason):
     try:
         with connect() as conn:
@@ -102,10 +80,10 @@ def record_failure(event_type, reason):
 
 
 def make_handler(schemas, event_type):
-    def handler(event, client):
+    def handler(event):
         try:
             with connect() as conn:
-                handle_event(conn, schemas, event_type, event, client)
+                handle_event(conn, schemas, event_type, event)
         except Exception as exc:
             print(f"events_listener: {event_type} failed: {exc}", flush=True)
             record_failure(event_type, str(exc))

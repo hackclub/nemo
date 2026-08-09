@@ -55,7 +55,7 @@ def list_public_channels(client, team_id, cursor):
         ) from exc
 
 
-def join_all(conn, client, join=True):
+def record_channel_names(conn, client):
     team_id = resolve_team_id()
     with ingest_run(conn, SOURCE) as counts:
         cursor = get_cursor(conn, SOURCE)
@@ -65,23 +65,12 @@ def join_all(conn, client, join=True):
                 counts.rows_in += 1
                 with conn.cursor() as cur:
                     cur.execute(CHANNEL_NAME_SQL, (channel["id"], channel.get("name"), channel.get("is_archived", False)))
-                if not join:
-                    continue
-                try:
-                    client.conversations_join(channel=channel["id"])
-                except SlackApiError as exc:
-                    error = exc.response.get("error")
-                    if error == "is_archived":
-                        continue
-                    counts.rows_rejected += 1
-                    dead_letter(conn, SOURCE, {"channel_id": channel["id"]}, error or str(exc))
             cursor = page.get("response_metadata", {}).get("next_cursor") or ""
             save_cursor(conn, SOURCE, cursor)
             conn.commit()
             if not cursor:
                 break
-    verb = "checked" if join else "named (no join)"
-    print(f"autojoin: {counts.rows_in} channels {verb}, {counts.rows_rejected} failed")
+    print(f"{SOURCE}: {counts.rows_in} channels named, {counts.rows_rejected} failed")
 
 
 def name_unknown(conn, client):
@@ -120,7 +109,7 @@ def main():
         if "--name-unknown" in sys.argv:
             name_unknown(conn, bot_client())
         else:
-            join_all(conn, bot_client(), join="--no-join" not in sys.argv)
+            record_channel_names(conn, bot_client())
 
 
 if __name__ == "__main__":
