@@ -2,10 +2,13 @@ CREATE TABLE IF NOT EXISTS raw.member_dim (
     user_id text PRIMARY KEY,
     account_created timestamptz,
     claimed_at timestamptz,
+    claimed_at_source text,
     deactivated_at timestamptz,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS claimed_at_source text;
 
 CREATE TABLE IF NOT EXISTS raw.member_activity_snapshot (
     user_id text NOT NULL,

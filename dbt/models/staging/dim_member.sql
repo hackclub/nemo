@@ -3,6 +3,7 @@ with scoped as (
         user_id,
         account_created_verified,
         claimed_at,
+        claimed_at_source,
         deactivated_at,
         invite_pending,
         is_invited_member,
@@ -37,6 +38,7 @@ select
     account_created_verified,
     cohort_at,
     claimed_at,
+    claimed_at_source,
     deactivated_at,
     case
         when account_created_verified is not null then claimed_at is not null
