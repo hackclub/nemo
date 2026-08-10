@@ -35,14 +35,7 @@ QUANTILE_CHECKS = [
 MIN_QUANTILE_SAMPLE = 500
 TAIL_SAMPLES_PER_TAIL = 50
 
-KNOWN_GAPS = [
-    (
-        "mart_fast_reply_vs_retention",
-        "retained_day_30_rate",
-        "aggregates every newcomer with no maturity filter, so anyone who first posted "
-        "in the last 30 days nulls the whole metric. null on production too",
-    ),
-]
+KNOWN_GAPS = []
 
 MART_CHECKS = [
     ("mart_onboarding_funnel", "retained_day_30"),
@@ -50,6 +43,8 @@ MART_CHECKS = [
     ("mart_onboarding_recurrence_funnel", "returned_next_day"),
     ("mart_response_rate", "answered_by_member"),
     ("mart_response_rate", "median_member_latency_seconds"),
+    ("mart_fast_reply_vs_retention", "retained_day_30_rate"),
+    ("mart_fast_reply_vs_retention", "retained_day_90_rate"),
     ("mart_channel_onboarding_scorecard", "retained_90_share"),
     ("mart_activity_distribution", "members"),
     ("mart_growth", "claim_rate_30d"),

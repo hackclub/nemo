@@ -1,61 +1,40 @@
 with reply_speed as (
     select
         r.newcomer_id,
-        r.post_at::date as first_post_on,
-        r.latency_seconds,
         r.latency_seconds < 3600 and not r.replied_by_bot as fast_reply
     from {{ ref('fct_first_reply') }} r
     inner join {{ ref('dim_member') }} d on d.user_id = r.newcomer_id
     where not d.is_bot
 ),
 
-daily_activity as (
+scoped as (
     select
-        user_id,
-        window_start as active_date
-    from {{ source('raw', 'member_activity_snapshot') }}
-    where window_start = window_end
-        and coalesce(days_active, 0) > 0
-),
-
-retention as (
-    select
-        rs.newcomer_id,
         rs.fast_reply,
-        exists (
-            select 1 from daily_activity d
-            where d.user_id = rs.newcomer_id
-                and d.active_date between rs.first_post_on + 23 and rs.first_post_on + 30
-        ) as retained_day_30,
-        exists (
-            select 1 from daily_activity d
-            where d.user_id = rs.newcomer_id
-                and d.active_date between rs.first_post_on + 83 and rs.first_post_on + 90
-        ) as retained_day_90,
-        exists (
-            select 1 from daily_activity d
-            where d.active_date between rs.first_post_on + 23 and rs.first_post_on + 30
-        ) as day_30_covered,
-        exists (
-            select 1 from daily_activity d
-            where d.active_date between rs.first_post_on + 83 and rs.first_post_on + 90
-        ) as day_90_covered
+        m.retained_day_30,
+        m.retained_day_90,
+        m.day_30_covered,
+        m.day_90_covered
     from reply_speed rs
+    inner join {{ ref('fct_member_retention') }} m on m.user_id = rs.newcomer_id
 )
 
 select
     fast_reply,
     count(*) as newcomers,
-    case when count(*) filter (where not day_30_covered) = 0
-         then count(*) filter (where retained_day_30) end as retained_day_30_count,
-    case when count(*) filter (where not day_30_covered) = 0
-         then round(count(*) filter (where retained_day_30)::numeric / nullif(count(*), 0), 4)
-    end as retained_day_30_rate,
-    case when count(*) filter (where not day_90_covered) = 0
-         then count(*) filter (where retained_day_90) end as retained_day_90_count,
-    case when count(*) filter (where not day_90_covered) = 0
-         then round(count(*) filter (where retained_day_90)::numeric / nullif(count(*), 0), 4)
-    end as retained_day_90_rate,
-    'v4' as metric_version
-from retention
+    count(*) filter (where day_30_covered) as measured_day_30,
+    count(*) filter (where day_30_covered and retained_day_30) as retained_day_30_count,
+    round(
+        count(*) filter (where day_30_covered and retained_day_30)::numeric
+            / nullif(count(*) filter (where day_30_covered), 0),
+        4
+    ) as retained_day_30_rate,
+    count(*) filter (where day_90_covered) as measured_day_90,
+    count(*) filter (where day_90_covered and retained_day_90) as retained_day_90_count,
+    round(
+        count(*) filter (where day_90_covered and retained_day_90)::numeric
+            / nullif(count(*) filter (where day_90_covered), 0),
+        4
+    ) as retained_day_90_rate,
+    'v5' as metric_version
+from scoped
 group by fast_reply

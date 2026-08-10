@@ -2,7 +2,6 @@ with newcomer_first_posts as (
     select
         f.user_id,
         f.channel_id,
-        f.posted_at::date as first_post_on,
         date_trunc('month', f.posted_at)::date as post_month
     from {{ ref('fct_first_post') }} f
     inner join {{ ref('dim_member') }} d on d.user_id = f.user_id
@@ -22,17 +21,10 @@ scorecard_rows as (
         nfp.post_month,
         nfp.user_id,
         ri.fast_reply,
-        exists (
-            select 1 from {{ ref('fct_member_activity') }} a
-            where a.user_id = nfp.user_id
-                and coalesce(a.days_active, 0) > 0
-                and a.window_start between nfp.first_post_on + 83 and nfp.first_post_on + 90
-        ) as retained_day_90,
-        exists (
-            select 1 from {{ ref('fct_member_activity') }} d
-            where d.window_start between nfp.first_post_on + 83 and nfp.first_post_on + 90
-        ) as day_90_covered
+        r.retained_day_90,
+        r.day_90_covered
     from newcomer_first_posts nfp
+    inner join {{ ref('fct_member_retention') }} r on r.user_id = nfp.user_id
     left join reply_info ri on ri.newcomer_id = nfp.user_id
 )
 
@@ -50,7 +42,7 @@ select
     end as retained_90_share,
     (r.post_month + interval '1 month' + interval '90 days') <= now()
         and count(*) filter (where not r.day_90_covered) = 0 as day_90_mature,
-    'v4' as metric_version
+    'v5' as metric_version
 from scorecard_rows r
 left join {{ ref('dim_channel') }} c on c.channel_id = r.channel_id
 group by r.channel_id, c.name, r.post_month

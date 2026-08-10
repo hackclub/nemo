@@ -314,14 +314,20 @@
         <p class="kpi-label">
           <%= row.fast_reply ? "fast reply, under 1 hour" : "slower reply" %>
           <%= incomplete_chip(
-                ("daily activity does not cover these newcomers' retention windows" if row.retained_day_30_rate.nil?)
+                ("no newcomer here has a covered retention window yet" if row.retained_day_30_rate.nil?)
               ) %>
         </p>
         <p class="kpi-val"><%= number_with_delimiter(row.newcomers) %></p>
         <% if row.retained_day_30_rate %>
           <div class="delta">
-            <span class="chip chip-off">day 30: <%= number_to_percentage((row.retained_day_30_rate.to_f * 100).round(1), precision: 1) %></span>
-            <span class="chip chip-off">day 90: <%= number_to_percentage((row.retained_day_90_rate.to_f * 100).round(1), precision: 1) %></span>
+            <span class="chip chip-off">
+              day 30: <%= number_to_percentage((row.retained_day_30_rate.to_f * 100).round(1), precision: 1) %>
+              of <%= number_with_delimiter(row.measured_day_30) %>
+            </span>
+            <span class="chip chip-off">
+              day 90: <%= number_to_percentage((row.retained_day_90_rate.to_f * 100).round(1), precision: 1) %>
+              of <%= number_with_delimiter(row.measured_day_90) %>
+            </span>
           </div>
         <% end %>
       </div>

@@ -1,44 +1,9 @@
-with covered_days as (
-    select distinct window_start as day
-    from {{ ref('fct_member_activity') }}
-),
-
-knowable_starts as (
-    select c1.day
-    from covered_days c1
-    where (
-        select count(*) from covered_days c2
-        where c2.day between c1.day and c1.day + 14
-    ) = 15
-),
-
-member_days as (
-    select
-        user_id,
-        window_start as active_date
-    from {{ source('raw', 'member_activity_snapshot') }}
-    where window_start = window_end
-        and coalesce(days_active, 0) > 0
-),
-
-first_post as (
-    select
-        user_id,
-        posted_at::date as first_post_date
-    from {{ ref('fct_first_post') }}
-),
-
-searched as (
+with searched as (
     select user_id from {{ ref('fct_member_history') }}
 ),
 
-ranked_active_days as (
-    select
-        d.user_id,
-        d.active_date,
-        row_number() over (partition by d.user_id order by d.active_date) as visit_number
-    from member_days d
-    inner join first_post f on f.user_id = d.user_id and d.active_date >= f.first_post_date
+retention as (
+    select * from {{ ref('fct_member_retention') }}
 ),
 
 member_funnel as (
@@ -47,29 +12,14 @@ member_funnel as (
         date_trunc('month', m.cohort_at)::date as cohort_month,
         m.cohort_at is not null as created_account,
         not m.invite_pending as signed_in,
-        f.first_post_date is not null as sent_message,
+        r.user_id is not null as sent_message,
         m.invite_pending or s.user_id is not null as post_knowable,
-        f.first_post_date in (select day from knowable_starts) as visits_knowable,
-        exists (
-            select 1 from ranked_active_days r
-            where r.user_id = m.user_id
-                and r.visit_number = 2
-                and r.active_date <= f.first_post_date + interval '1 day'
-        ) as returned_next_day,
-        exists (
-            select 1 from ranked_active_days r
-            where r.user_id = m.user_id
-                and r.visit_number = 3
-                and r.active_date <= f.first_post_date + interval '7 day'
-        ) as third_visit_in_7_days,
-        exists (
-            select 1 from ranked_active_days r
-            where r.user_id = m.user_id
-                and r.visit_number = 4
-                and r.active_date <= f.first_post_date + interval '14 day'
-        ) as fourth_visit_in_14_days
+        r.visits_knowable,
+        r.returned_next_day,
+        r.third_visit_in_7_days,
+        r.fourth_visit_in_14_days
     from {{ ref('dim_member') }} m
-    left join first_post f on f.user_id = m.user_id
+    left join retention r on r.user_id = m.user_id
     left join searched s on s.user_id = m.user_id
     where not m.is_bot and m.cohort_at is not null
 ),
@@ -121,6 +71,6 @@ select
     case when posts_knowable and visits_knowable then fourth_visit_in_14_days end as fourth_visit_in_14_days,
     posts_knowable,
     visits_knowable,
-    'v10' as metric_version
+    'v11' as metric_version
 from gated
 order by cohort_month

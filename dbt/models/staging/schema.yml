@@ -55,6 +55,16 @@ models:
         data_tests: [unique, not_null]
       - name: posted_at
         data_tests: [not_null]
+  - name: fct_member_retention
+    columns:
+      - name: user_id
+        data_tests: [unique, not_null]
+      - name: first_post_on
+        data_tests: [not_null]
+      - name: day_30_covered
+        data_tests: [not_null]
+      - name: day_90_covered
+        data_tests: [not_null]
   - name: fct_analytics_day
     columns:
       - name: source
