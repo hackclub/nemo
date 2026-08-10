@@ -1,0 +1,11 @@
+<% marker = Deployment.current %>
+<% if marker.seeded? %>
+  <div class="synthetic" role="alert">
+    <strong>Seeded data.</strong> Nothing here is measured.
+    <span class="synthetic-meta">
+      seeded <%= marker.seeded_at ? marker.seeded_at.to_date.to_fs(:long) : "n/a" %>
+      &middot; <%= marker.scale || "n/a" %>
+      &middot; rng <%= marker.rng || "n/a" %>
+    </span>
+  </div>
+<% end %>

@@ -424,6 +424,42 @@
     color: var(--accent);
   }
 
+  .synthetic {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: baseline;
+    gap: 0 var(--s-2xs);
+    padding: 6px var(--s-md);
+    background-color: var(--warn-soft);
+    color: var(--warn);
+    border-bottom: 1px solid color-mix(in oklab, var(--warn) 30%, transparent);
+    font-size: var(--t-xs);
+    text-align: center;
+  }
+
+  .synthetic strong {
+    font-weight: 650;
+  }
+
+  .synthetic-meta {
+    color: color-mix(in oklab, var(--warn) 70%, var(--ink));
+    font-family: var(--font-code);
+    font-size: var(--t-2xs);
+  }
+
+  body:has(.synthetic) {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  body:has(.synthetic) .shell {
+    height: auto;
+    flex: 1;
+    min-height: 0;
+  }
+
   /* ── toast ─────────────────────────────────────────────── */
 
   .toast-stack {
