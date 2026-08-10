@@ -62,8 +62,13 @@ case "$ROLE" in
   doctor)
     py -m lib.config "${1:-serve}"
     ;;
-  ""|-h|--help|help)
+  -h|--help|help)
     usage
+    ;;
+  "")
+    echo "nemo: no role given. pass one, or set NEMO_ROLE" >&2
+    usage >&2
+    exit 64
     ;;
   *)
     echo "nemo: unknown role '$ROLE'" >&2

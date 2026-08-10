@@ -62,4 +62,3 @@ ENV HOME=/home/nemo
 
 EXPOSE 80
 ENTRYPOINT ["/app/bin/nemo"]
-CMD ["serve"]
