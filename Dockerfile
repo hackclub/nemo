@@ -53,7 +53,7 @@ COPY --chown=1000:1000 pipeline/ /app/pipeline/
 COPY --chown=1000:1000 warehouse/ /app/warehouse/
 COPY --chown=1000:1000 warehouse/profiles.yml.example /app/warehouse/profiles.yml
 COPY --chown=1000:1000 schemas/ /app/schemas/
-COPY --chown=1000:1000 infra/postgres/init.sql /app/infra/postgres/init.sql
+COPY --chown=1000:1000 db/ /app/db/
 COPY --chown=1000:1000 bin/nemo /app/bin/nemo
 
 USER 1000:1000

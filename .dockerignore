@@ -19,6 +19,6 @@ web/log/
 web/storage/
 web/.hallmark/
 proxy/
-infra/logs/
+infra/
 docs/
 data/

@@ -53,15 +53,10 @@ jobs:
         with:
           bundler-cache: true
           working-directory: web
-      - name: create roles and give them the ci password
-        run: |
-          psql "postgresql://postgres:ci@localhost:5433/mnemosyne_test" -v ON_ERROR_STOP=1 -f infra/postgres/init.sql
-          psql "postgresql://postgres:ci@localhost:5433/mnemosyne_test" -v ON_ERROR_STOP=1 -c "
-            ALTER ROLE pipeline_writer PASSWORD 'ci';
-            ALTER ROLE dbt_owner PASSWORD 'ci';
-            ALTER ROLE rails_app PASSWORD 'ci';"
-      - name: build the warehouse
-        run: bash infra/test-db.sh
+      - name: schemas, roles, grants and both migration sets
+        run: ./bin/nemo provision
+      - name: seed, build the warehouse, verify
+        run: ./bin/nemo seed --scale tiny
       - name: rails tests
         run: bin/rails test
         working-directory: web
