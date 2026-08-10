@@ -6,6 +6,8 @@ WEB="$ROOT/web"
 
 if [ -x "$PIPELINE/.venv/bin/python" ]; then
   PY="$PIPELINE/.venv/bin/python"
+  PATH="$PIPELINE/.venv/bin:$PATH"
+  export PATH
 else
   PY="python"
 fi
