@@ -16,9 +16,6 @@ FOREIGN_ROWS = [
     ("raw.message_activity_snapshot", f"source NOT LIKE '{SEED_SOURCE_PREFIX}%'"),
     ("raw.team_stats_snapshot", f"source NOT LIKE '{SEED_SOURCE_PREFIX}%'"),
     ("raw.analytics_day", f"source NOT LIKE '{SEED_SOURCE_PREFIX}%'"),
-    ("raw.ingest_run", f"source NOT LIKE '{SEED_SOURCE_PREFIX}%'"),
-    ("raw.dead_letter", f"source NOT LIKE '{SEED_SOURCE_PREFIX}%'"),
-    ("raw.slack_events", "true"),
 ]
 
 

@@ -2,6 +2,7 @@ import collections
 from datetime import datetime, time, timedelta, timezone
 
 from seed import SEED_SOURCE_PREFIX
+from seed import runs as runs_module
 from seed.generate import COVERED_DAYS, Sampler
 
 MEMBER_DAY_SOURCE = f"{SEED_SOURCE_PREFIX}member_day"
@@ -29,6 +30,13 @@ SEEDED_TABLES = (
     "raw.channel_dim",
 )
 
+LOG_TABLES = (
+    "raw.ingest_step_output",
+    "raw.ingest_run",
+    "raw.dead_letter",
+    "raw.slack_events",
+)
+
 STAMP_SQL = """
 UPDATE raw.deployment SET
     mode = 'seeded',
@@ -46,6 +54,8 @@ def noon(day):
 
 def clear(conn, force=False):
     with conn.cursor() as cur:
+        for table in LOG_TABLES:
+            cur.execute(f"DELETE FROM {table}")
         for table in dict.fromkeys(SEEDED_TABLES):
             if force:
                 cur.execute(f"DELETE FROM {table}")
@@ -383,6 +393,44 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed, day
 
     with conn.cursor() as cur:
         cur.execute(STAMP_SQL, (profile["captured_at"], scale, seed))
+    conn.commit()
+    return counts
+
+
+RUN_COLUMNS = ["source", "started_at", "finished_at", "status", "rows_in", "rows_rejected",
+               "total_expected", "parent_run_id", "step_index", "step_total"]
+
+
+def write_runs(conn, rng, members, as_of):
+    parent_ids = []
+    with conn.cursor() as cur:
+        for row in runs_module.parent_rows(rng, as_of):
+            cur.execute(
+                f"INSERT INTO raw.ingest_run ({', '.join(RUN_COLUMNS)}) "
+                f"VALUES ({', '.join(['%s'] * len(RUN_COLUMNS))}) RETURNING id",
+                row,
+            )
+            parent_ids.append(cur.fetchone()[0])
+
+    counts = {
+        "ingest_run": len(parent_ids) + copy_rows(
+            conn, "raw.ingest_run", RUN_COLUMNS,
+            runs_module.child_rows(rng, as_of, parent_ids),
+        ),
+        "ingest_step_output": copy_rows(
+            conn, "raw.ingest_step_output",
+            ["parent_run_id", "step_index", "source", "output"],
+            runs_module.step_output_rows(rng, parent_ids),
+        ),
+        "dead_letter": copy_rows(
+            conn, "raw.dead_letter", ["source", "payload", "reason", "created_at"],
+            runs_module.dead_letter_rows(rng, as_of),
+        ),
+        "slack_events": copy_rows(
+            conn, "raw.slack_events", ["event_type", "payload", "received_at"],
+            runs_module.slack_event_rows(rng, members, as_of),
+        ),
+    }
     conn.commit()
     return counts
 

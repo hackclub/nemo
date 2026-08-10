@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 from lib.db import connect
 from seed import SCALES
-from seed.emit import analyze, clear, write
+from seed.emit import analyze, clear, write, write_runs
 from seed.generate import build, events
 from seed.guards import SeedRefused, check
 
@@ -51,6 +51,7 @@ def main(argv=None):
         counts = write(
             conn, channels, members, profile, as_of, rng, stream, args.scale, args.seed
         )
+        counts.update(write_runs(conn, rng, members, as_of))
         notices = analyze(conn)
 
     for name, count in counts.items():
