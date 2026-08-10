@@ -22,7 +22,17 @@ class CreateSyncRequest < ActiveRecord::Migration[8.1]
     add_index :sync_request, :run_id
 
     reversible do |dir|
-      dir.up { execute "GRANT SELECT, UPDATE ON app.sync_request TO pipeline_writer" }
+      dir.up do
+        execute <<~SQL
+          DO $$
+          BEGIN
+              IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pipeline_writer') THEN
+                  GRANT SELECT, UPDATE ON app.sync_request TO pipeline_writer;
+              END IF;
+          END
+          $$
+        SQL
+      end
     end
   end
 end
