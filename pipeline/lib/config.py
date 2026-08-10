@@ -77,14 +77,12 @@ ROLES = {
         ],
     },
     "provision": {
-        "required": DATABASE + ADMIN,
+        "required": DATABASE + ADMIN + ["RAILS_DB_USER", "RAILS_DB_PASSWORD"],
         "optional": [
             "PIPELINE_DB_USER",
             "PIPELINE_DB_PASSWORD",
             "DBT_DB_USER",
             "DBT_DB_PASSWORD",
-            "RAILS_DB_USER",
-            "RAILS_DB_PASSWORD",
             "BOOTSTRAP_ADMIN_SLACK_ID",
             "TZ",
         ],
