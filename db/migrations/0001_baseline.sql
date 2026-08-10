@@ -5,10 +5,19 @@ CREATE TABLE IF NOT EXISTS raw.member_dim (
     claimed_at_source text,
     deactivated_at timestamptz,
     created_at timestamptz NOT NULL DEFAULT now(),
-    updated_at timestamptz NOT NULL DEFAULT now()
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    is_bot boolean,
+    is_admin boolean,
+    is_owner boolean,
+    is_primary_owner boolean,
+    is_restricted boolean,
+    is_ultra_restricted boolean,
+    account_created_verified timestamptz,
+    is_invited_member boolean,
+    is_invited_guest boolean,
+    is_deleted boolean,
+    invite_pending boolean
 );
-
-ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS claimed_at_source text;
 
 CREATE TABLE IF NOT EXISTS raw.member_activity_snapshot (
     user_id text NOT NULL,
@@ -20,6 +29,8 @@ CREATE TABLE IF NOT EXISTS raw.member_activity_snapshot (
     days_active_android integer,
     days_active_ios integer,
     days_slack_connect integer,
+    days_active_apps integer,
+    days_active_workflows integer,
     messages_posted integer,
     channel_messages_posted integer,
     reactions_added integer,
@@ -35,6 +46,14 @@ CREATE TABLE IF NOT EXISTS raw.member_activity_snapshot (
     PRIMARY KEY (user_id, window_start, window_end, source)
 );
 
+CREATE INDEX IF NOT EXISTS member_activity_snapshot_daily_idx
+    ON raw.member_activity_snapshot (window_start)
+    WHERE window_start = window_end;
+
+CREATE INDEX IF NOT EXISTS member_activity_snapshot_visits_idx
+    ON raw.member_activity_snapshot (window_start, user_id)
+    WHERE window_start = window_end AND coalesce(days_active, 0) > 0;
+
 CREATE TABLE IF NOT EXISTS raw.channel_dim (
     channel_id text PRIMARY KEY,
     name text,
@@ -46,7 +65,8 @@ CREATE TABLE IF NOT EXISTS raw.channel_dim (
     full_members integer,
     guests integer,
     created_at timestamptz NOT NULL DEFAULT now(),
-    updated_at timestamptz NOT NULL DEFAULT now()
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    name_unavailable boolean
 );
 
 CREATE TABLE IF NOT EXISTS raw.channel_activity_snapshot (
@@ -66,45 +86,16 @@ CREATE TABLE IF NOT EXISTS raw.channel_activity_snapshot (
     PRIMARY KEY (channel_id, window_start, window_end, source)
 );
 
-ALTER TABLE raw.member_activity_snapshot ADD COLUMN IF NOT EXISTS days_active_apps integer;
-ALTER TABLE raw.member_activity_snapshot ADD COLUMN IF NOT EXISTS days_active_workflows integer;
-
-CREATE INDEX IF NOT EXISTS member_activity_snapshot_daily_idx
-    ON raw.member_activity_snapshot (window_start)
-    WHERE window_start = window_end;
-
-CREATE INDEX IF NOT EXISTS member_activity_snapshot_visits_idx
-    ON raw.member_activity_snapshot (window_start, user_id)
-    WHERE window_start = window_end AND coalesce(days_active, 0) > 0;
-
-ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_bot boolean;
-ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_admin boolean;
-ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_owner boolean;
-ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_primary_owner boolean;
-ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_restricted boolean;
-ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_ultra_restricted boolean;
-ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS account_created_verified timestamptz;
-ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_invited_member boolean;
-ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_invited_guest boolean;
-ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS is_deleted boolean;
-ALTER TABLE raw.member_dim ADD COLUMN IF NOT EXISTS invite_pending boolean;
-ALTER TABLE raw.channel_dim ADD COLUMN IF NOT EXISTS name_unavailable boolean;
-ALTER TABLE raw.member_dim DROP COLUMN IF EXISTS is_guest;
-ALTER TABLE raw.member_dim DROP COLUMN IF EXISTS account_type;
-ALTER TABLE raw.member_dim DROP COLUMN IF EXISTS claimed_no_date;
-ALTER TABLE raw.channel_dim DROP COLUMN IF EXISTS creator_id;
-
 CREATE TABLE IF NOT EXISTS raw.analytics_day (
     source text NOT NULL,
     ds date NOT NULL,
     loaded boolean NOT NULL DEFAULT false,
     rows_in integer,
     updated_at timestamptz NOT NULL DEFAULT now(),
+    unavailable boolean,
+    reason text,
     PRIMARY KEY (source, ds)
 );
-
-ALTER TABLE raw.analytics_day ADD COLUMN IF NOT EXISTS unavailable boolean;
-ALTER TABLE raw.analytics_day ADD COLUMN IF NOT EXISTS reason text;
 
 CREATE TABLE IF NOT EXISTS raw.sync_cursor (
     source text NOT NULL,
@@ -123,13 +114,12 @@ CREATE TABLE IF NOT EXISTS raw.ingest_run (
     status text NOT NULL DEFAULT 'running',
     rows_in integer,
     rows_rejected integer,
-    created_at timestamptz NOT NULL DEFAULT now()
+    created_at timestamptz NOT NULL DEFAULT now(),
+    total_expected integer,
+    parent_run_id bigint,
+    step_index smallint,
+    step_total smallint
 );
-
-ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS total_expected integer;
-ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS parent_run_id bigint;
-ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS step_index smallint;
-ALTER TABLE raw.ingest_run ADD COLUMN IF NOT EXISTS step_total smallint;
 
 CREATE INDEX IF NOT EXISTS ingest_run_parent_idx ON raw.ingest_run (parent_run_id, step_index);
 
@@ -232,12 +222,6 @@ CREATE TABLE IF NOT EXISTS raw.member_message_history (
     counted_through date
 );
 
-ALTER TABLE raw.member_message_history ADD COLUMN IF NOT EXISTS counted_through date;
-
-UPDATE raw.member_message_history
-SET counted_through = searched_at::date
-WHERE counted_through IS NULL;
-
 CREATE TABLE IF NOT EXISTS raw.member_first_reply (
     user_id text PRIMARY KEY,
     replier_id text,
@@ -251,11 +235,6 @@ CREATE TABLE IF NOT EXISTS raw.member_first_reply (
     bot_latency_seconds integer,
     walk_version smallint NOT NULL DEFAULT 1
 );
-
-ALTER TABLE raw.member_first_reply ADD COLUMN IF NOT EXISTS bot_replier_id text;
-ALTER TABLE raw.member_first_reply ADD COLUMN IF NOT EXISTS bot_reply_ts timestamptz;
-ALTER TABLE raw.member_first_reply ADD COLUMN IF NOT EXISTS bot_latency_seconds integer;
-ALTER TABLE raw.member_first_reply ADD COLUMN IF NOT EXISTS walk_version smallint NOT NULL DEFAULT 1;
 
 CREATE TABLE IF NOT EXISTS raw.deployment (
     id boolean PRIMARY KEY DEFAULT true CHECK (id),
