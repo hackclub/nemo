@@ -32,6 +32,9 @@ QUANTILE_CHECKS = [
     ("messaging.join_to_first_post_hours", 0.5, 3.0),
 ]
 
+MIN_QUANTILE_SAMPLE = 500
+TAIL_SAMPLES_PER_TAIL = 50
+
 KNOWN_GAPS = [
     (
         "mart_fast_reply_vs_retention",
@@ -100,13 +103,19 @@ def compare_shape(reference, seeded):
 
 def compare_quantiles(reference, seeded):
     for path, point, factor in QUANTILE_CHECKS:
+        block = dig(seeded, path)
         want = Sampler(dig(reference, path))(point)
-        got = Sampler(dig(seeded, path))(point)
+        got = Sampler(block)(point)
+        label = f"{path} p{int(point * 100)}"
+        needed = max(MIN_QUANTILE_SAMPLE, round(TAIL_SAMPLES_PER_TAIL / (1 - point)))
+        if block.get("n", 0) < needed:
+            yield label, got, want, None, f"skipped, {block.get('n', 0)} rows, needs {needed}"
+            continue
         if want <= 0:
             ok = got <= 1
         else:
             ok = (1 / factor) <= (got / max(got and want, 1e-9)) <= factor
-        yield f"{path} p{int(point * 100)}", got, want, ok, f"within {factor}x"
+        yield label, got, want, ok, f"within {factor}x"
 
 
 def check_marts(admin):
@@ -126,8 +135,8 @@ def check_consistency(conn):
 def report(rows):
     failures = 0
     for label, got, want, ok, rule in rows:
-        mark = "ok  " if ok else "FAIL"
-        failures += 0 if ok else 1
+        mark = "skip" if ok is None else ("ok  " if ok else "FAIL")
+        failures += 1 if ok is False else 0
         shown = f"{got:.4g}" if isinstance(got, float) else got
         target = f"{want:.4g}" if isinstance(want, float) else want
         print(f"  {mark} {label:52} {shown!s:>12}  vs {target!s:>12}  ({rule})")

@@ -21,6 +21,7 @@ services:
       retries: 5
 
   events-listener:
+    profiles: ["live"]
     build:
       context: ..
       dockerfile: pipeline/Dockerfile
@@ -39,6 +40,7 @@ services:
     command: ["uv", "run", "python", "-m", "ingest.events_listener"]
 
   nightly-sync:
+    profiles: ["live"]
     build:
       context: ..
       dockerfile: pipeline/Dockerfile
@@ -59,6 +61,35 @@ services:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
     command: ["uv", "run", "python", "-m", "jobs.sync_worker"]
+
+  seed:
+    profiles: ["seed"]
+    build:
+      context: ..
+      dockerfile: pipeline/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${SEED_DB:-${POSTGRES_DB}_seed}
+      SEED_ALLOW_DB: ${SEED_ALLOW_DB:-}
+      TZ: ${TZ:-UTC}
+    restart: "no"
+    command:
+      - sh
+      - -c
+      - >-
+        uv run python -m seed
+        --scale ${SEED_SCALE:-dev}
+        --seed ${SEED_RNG:-1}
+        --history-months ${SEED_HISTORY_MONTHS:-16}
+        ${SEED_HOSTILE:+--hostile}
+        && uv run dbt build --project-dir /dbt --profiles-dir /dbt --quiet
+        && uv run python -m seed.verify
 
   web:
     build:
