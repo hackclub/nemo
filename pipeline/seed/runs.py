@@ -1,6 +1,8 @@
 import json
 from datetime import datetime, time, timedelta, timezone
 
+from seed import hostile as hostile_module
+
 PARENT_SOURCE = "nightly_sync"
 RUN_HISTORY = 14
 
@@ -93,26 +95,27 @@ def child_rows(rng, as_of, parent_ids, history=RUN_HISTORY):
             cursor += spent
 
 
-def step_output_rows(rng, parent_ids):
+def step_output_rows(rng, parent_ids, hostile=False):
     for parent_id in parent_ids:
         for step, (source, _, rows) in enumerate(STAGE_SOURCES, start=1):
             template = STEP_OUTPUT.get(source)
             if not template:
                 continue
+            output = template.format(rows=rows, rejected=rng.randrange(4))
             yield (
                 parent_id,
                 step,
                 source,
-                template.format(rows=rows, rejected=rng.randrange(4)),
+                hostile_module.reason(rng, output, hostile),
             )
 
 
-def dead_letter_rows(rng, as_of, count=40):
+def dead_letter_rows(rng, as_of, count=40, hostile=False):
     for _ in range(count):
-        source, reason = DEAD_LETTER_REASONS[rng.randrange(len(DEAD_LETTER_REASONS))]
+        source, base = DEAD_LETTER_REASONS[rng.randrange(len(DEAD_LETTER_REASONS))]
         seen = as_of - timedelta(days=rng.randrange(RUN_HISTORY), seconds=rng.randrange(86400))
         payload = {"user_id": f"USEED{rng.randrange(200_000):07d}", "keys": ["date", "user_id"]}
-        yield (source, json.dumps(payload), reason, seen)
+        yield (source, json.dumps(payload), hostile_module.reason(rng, base, hostile), seen)
 
 
 def slack_event_rows(rng, members, as_of, count=25):

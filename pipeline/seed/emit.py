@@ -2,6 +2,7 @@ import collections
 from datetime import datetime, time, timedelta, timezone
 
 from seed import SEED_SOURCE_PREFIX
+from seed import hostile as hostile_module
 from seed import runs as runs_module
 from seed.generate import COVERED_DAYS, Sampler
 
@@ -213,7 +214,7 @@ def team_days(by_member, channels, members, start, days):
         )
 
 
-def top_posters(by_member, end):
+def top_posters(rng, by_member, end, hostile=False):
     for window in TOP_POSTER_WINDOWS:
         start = end - timedelta(days=window - 1)
         totals = collections.Counter()
@@ -221,7 +222,10 @@ def top_posters(by_member, end):
             if start <= day <= end:
                 totals[user_id] += messages
         for user_id, messages in totals.most_common(TOP_POSTER_LIMIT):
-            yield (start, end, user_id, f"member {user_id[-4:]}", messages, noon(end))
+            yield (
+                start, end, user_id,
+                hostile_module.display_name(rng, user_id, hostile), messages, noon(end),
+            )
 
 
 def analytics_days(start, days, holes):
@@ -283,7 +287,7 @@ def history_rows(members, totals, as_of):
         )
 
 
-def first_reply_rows(rng, members, profile):
+def first_reply_rows(rng, members, profile, hostile=False):
     shares = profile["replies"]
     human = Sampler(shares["latency_seconds"])
     bot = Sampler(shares["bot_latency_seconds"])
@@ -308,12 +312,17 @@ def first_reply_rows(rng, members, profile):
                 f"USEED{rng.randrange(50):07d}", posted + timedelta(seconds=latency), latency, 2,
             )
         elif roll < shares["human_share"] + shares["bot_only_share"] + 0.02:
-            yield (member.user_id, None, None, None, True, "thread unreadable", None, None, None, 2)
+            yield (
+                member.user_id, None, None, None, True,
+                hostile_module.reason(rng, "thread unreadable", hostile),
+                None, None, None, 2,
+            )
         else:
             yield (member.user_id, None, None, None, False, None, None, None, None, 2)
 
 
-def write(conn, channels, members, profile, as_of, rng, stream, scale, seed, days=COVERED_DAYS):
+def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
+          days=COVERED_DAYS, hostile=False):
     start = as_of - timedelta(days=days - 1)
     holes = {start + timedelta(days=UNAVAILABLE_OFFSET + i) for i in range(UNAVAILABLE_DAYS)}
     by_member, by_channel, totals, last_active = fold(
@@ -345,7 +354,7 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed, day
         conn, "raw.member_first_reply",
         ["user_id", "replier_id", "reply_ts", "latency_seconds", "unreadable", "reason",
          "bot_replier_id", "bot_reply_ts", "bot_latency_seconds", "walk_version"],
-        first_reply_rows(rng, members, profile),
+        first_reply_rows(rng, members, profile, hostile),
     )
 
     member_columns = ["user_id", "window_start", "window_end", "source", "days_active",
@@ -384,7 +393,7 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed, day
     counts["top_posters"] = copy_rows(
         conn, "raw.top_posters_snapshot",
         ["window_start", "window_end", "user_id", "display_name", "messages_posted", "pulled_at"],
-        top_posters(by_member, as_of),
+        top_posters(rng, by_member, as_of, hostile),
     )
     counts["analytics_day"] = copy_rows(
         conn, "raw.analytics_day", ["source", "ds", "loaded", "rows_in", "unavailable", "reason"],
@@ -401,7 +410,7 @@ RUN_COLUMNS = ["source", "started_at", "finished_at", "status", "rows_in", "rows
                "total_expected", "parent_run_id", "step_index", "step_total"]
 
 
-def write_runs(conn, rng, members, as_of):
+def write_runs(conn, rng, members, as_of, hostile=False):
     parent_ids = []
     with conn.cursor() as cur:
         for row in runs_module.parent_rows(rng, as_of):
@@ -420,11 +429,11 @@ def write_runs(conn, rng, members, as_of):
         "ingest_step_output": copy_rows(
             conn, "raw.ingest_step_output",
             ["parent_run_id", "step_index", "source", "output"],
-            runs_module.step_output_rows(rng, parent_ids),
+            runs_module.step_output_rows(rng, parent_ids, hostile),
         ),
         "dead_letter": copy_rows(
             conn, "raw.dead_letter", ["source", "payload", "reason", "created_at"],
-            runs_module.dead_letter_rows(rng, as_of),
+            runs_module.dead_letter_rows(rng, as_of, hostile=hostile),
         ),
         "slack_events": copy_rows(
             conn, "raw.slack_events", ["event_type", "payload", "received_at"],

@@ -10,6 +10,7 @@ from seed import SCALES
 from seed.emit import analyze, clear, write, write_runs
 from seed.generate import build, events
 from seed.guards import SeedRefused, check
+from seed.hostile import poison_channels
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
@@ -45,13 +46,16 @@ def main(argv=None):
     channels, members, profile, as_of, rng = build(SCALES[args.scale], args.seed, as_of)
     stream = events(rng, members, profile, as_of)
     print(f"seed: generated {len(members)} members and {len(channels)} channels")
+    if args.hostile:
+        print(f"seed: poisoned {poison_channels(rng, channels)} channel names")
 
     with connect() as conn:
         clear(conn, force=args.force)
         counts = write(
-            conn, channels, members, profile, as_of, rng, stream, args.scale, args.seed
+            conn, channels, members, profile, as_of, rng, stream, args.scale, args.seed,
+            hostile=args.hostile,
         )
-        counts.update(write_runs(conn, rng, members, as_of))
+        counts.update(write_runs(conn, rng, members, as_of, hostile=args.hostile))
         notices = analyze(conn)
 
     for name, count in counts.items():
