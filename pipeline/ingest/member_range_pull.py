@@ -1,14 +1,12 @@
 import argparse
 from datetime import date, timedelta
-from pathlib import Path
 
 from dotenv import load_dotenv
 
 from ingest.analytics_pull import MEMBER_ACTIVITY_SQL, member_activity_row, parse_epoch
 from lib.db import connect, dead_letter, ingest_run
+from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
-
-ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
 SOURCE = "admin_analytics_member_range"
 PAGE_SIZE = 500

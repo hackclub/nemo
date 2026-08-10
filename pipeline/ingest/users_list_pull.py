@@ -1,12 +1,10 @@
 import os
-from pathlib import Path
 
 from dotenv import load_dotenv
 
 from lib.db import connect, dead_letter, get_cursor, ingest_run, save_cursor
+from lib.paths import ENV_FILE
 from lib.slack_client import bot_client
-
-ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
 SOURCE = "users_list"
 PAGE_SIZE = 200

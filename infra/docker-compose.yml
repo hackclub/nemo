@@ -88,7 +88,7 @@ services:
         --seed ${SEED_RNG:-1}
         --history-months ${SEED_HISTORY_MONTHS:-16}
         ${SEED_HOSTILE:+--hostile}
-        && uv run dbt build --project-dir /dbt --profiles-dir /dbt --quiet
+        && uv run dbt build --project-dir /warehouse --profiles-dir /warehouse --quiet
         && uv run python -m seed.verify
 
   web:

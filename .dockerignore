@@ -11,5 +11,5 @@
 
 .git/
 **/node_modules/
-dbt/target/
-dbt/dbt_packages/
+warehouse/target/
+warehouse/dbt_packages/

@@ -1,14 +1,12 @@
 import os
 import sys
-from pathlib import Path
 
 from dotenv import load_dotenv
 from slack_sdk.errors import SlackApiError
 
 from lib.db import connect, dead_letter, get_cursor, ingest_run, save_cursor
+from lib.paths import ENV_FILE
 from lib.slack_client import bot_client
-
-ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 SOURCE = "autojoin"
 NAME_SOURCE = "channel_info_names"
 TEAM_ERRORS = ("team_not_found", "team_access_not_granted", "invalid_team_id")

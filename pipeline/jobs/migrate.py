@@ -1,11 +1,8 @@
-from pathlib import Path
-
 from dotenv import load_dotenv
 
 from lib.db import connect_admin
+from lib.paths import ENV_FILE, SQL_DIR
 
-SQL_DIR = Path(__file__).resolve().parents[1] / "sql"
-ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 SCHEMAS = ("raw", "analytics", "app")
 
 

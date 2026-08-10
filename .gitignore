@@ -13,11 +13,11 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 
-dbt/target/
-dbt/dbt_packages/
-dbt/logs/
-dbt/profiles.yml
-dbt/.user.yml
+warehouse/target/
+warehouse/dbt_packages/
+warehouse/logs/
+warehouse/profiles.yml
+warehouse/.user.yml
 logs/
 
 .DS_Store

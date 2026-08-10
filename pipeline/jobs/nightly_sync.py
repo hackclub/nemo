@@ -2,7 +2,6 @@ import io
 import subprocess
 import sys
 from contextlib import redirect_stdout
-from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -32,11 +31,11 @@ from lib.db import (
     run_step,
     start_run,
 )
+from lib.paths import ENV_FILE, WAREHOUSE_DIR
 from lib.proxy_client import InternalAuthError, ProxyError, ProxyUnavailableError
 from lib.slack_client import bot_client
 
-ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
-DBT_DIR = Path(__file__).resolve().parents[2] / "dbt"
+DBT_DIR = WAREHOUSE_DIR
 SOURCE = "nightly_sync"
 TRUTHY = {"1", "true", "yes", "on"}
 STAGE_ATTEMPTS = 2

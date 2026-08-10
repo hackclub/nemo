@@ -1,12 +1,10 @@
 import json
-from pathlib import Path
 
 from dotenv import load_dotenv
 
 from lib.db import connect, dead_letter, get_cursor, ingest_run, save_cursor
+from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
-
-ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
 SOURCE = "admin_analytics_messages_activity"
 

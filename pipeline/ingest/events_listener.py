@@ -1,7 +1,6 @@
 import json
 import os
 from datetime import datetime, timezone
-from pathlib import Path
 
 import jsonschema
 from dotenv import load_dotenv
@@ -9,9 +8,7 @@ from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
 from lib.db import connect, dead_letter
-
-ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
-SCHEMA_DIR = Path(__file__).resolve().parents[2] / "schemas" / "raw_events"
+from lib.paths import ENV_FILE, RAW_EVENT_SCHEMA_DIR as SCHEMA_DIR
 SOURCE = "events_listener"
 
 SCHEMA_FILES = {

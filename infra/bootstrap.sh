@@ -118,8 +118,8 @@ echo "==> the first staff row"
 (cd "$ROOT/web" && bin/rails db:seed)
 
 echo "==> analytics from dbt, so the dashboard has tables to read"
-[ -f "$ROOT/dbt/profiles.yml" ] || cp "$ROOT/dbt/profiles.yml.example" "$ROOT/dbt/profiles.yml"
-(cd "$ROOT/dbt" && "$ROOT/pipeline/.venv/bin/dbt" build --profiles-dir . --quiet)
+[ -f "$ROOT/warehouse/profiles.yml" ] || cp "$ROOT/warehouse/profiles.yml.example" "$ROOT/warehouse/profiles.yml"
+(cd "$ROOT/warehouse" && "$ROOT/pipeline/.venv/bin/dbt" build --profiles-dir . --quiet)
 
 echo "==> ready. what is left is not schema:"
 echo "    start the proxy, then check it: curl -H \"Authorization: Bearer \$INTERNAL_PROXY_TOKEN\" \\"

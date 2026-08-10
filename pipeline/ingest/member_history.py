@@ -2,14 +2,12 @@ import argparse
 import os
 import time
 from datetime import datetime, timezone
-from pathlib import Path
 
 from dotenv import load_dotenv
 
 from lib.db import connect, dead_letter, ingest_run
+from lib.paths import ENV_FILE
 from lib.proxy_client import InternalApiError, ProxyClient
-
-ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
 SOURCE = "member_history"
 BATCH_LIMIT = int(os.environ.get("MEMBER_HISTORY_LIMIT", "8000"))

@@ -6,8 +6,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from lib.db import connect
+from lib.paths import ENV_FILE
 
-ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 PROFILE_FILE = Path(__file__).resolve().parent / "profile.json"
 
 QUANTILES = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]

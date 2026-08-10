@@ -1,14 +1,12 @@
 import argparse
 import calendar
 from datetime import date
-from pathlib import Path
 
 from dotenv import load_dotenv
 
 from lib.db import connect, dead_letter, ingest_run
+from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
-
-ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
 SOURCE = "top_posters"
 METHOD = "admin.analytics.getMemberAnalytics"

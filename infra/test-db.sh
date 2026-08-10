@@ -79,7 +79,7 @@ admin -d "$TARGET" -c "
   on conflict (ds) do nothing"
 
 echo "==> analytics from dbt"
-[ -f "$ROOT/dbt/profiles.yml" ] || cp "$ROOT/dbt/profiles.yml.example" "$ROOT/dbt/profiles.yml"
-(cd "$ROOT/dbt" && "$ROOT/pipeline/.venv/bin/dbt" build --profiles-dir . --quiet)
+[ -f "$ROOT/warehouse/profiles.yml" ] || cp "$ROOT/warehouse/profiles.yml.example" "$ROOT/warehouse/profiles.yml"
+(cd "$ROOT/warehouse" && "$ROOT/pipeline/.venv/bin/dbt" build --profiles-dir . --quiet)
 
 echo "==> ready: cd web && bin/rails test"

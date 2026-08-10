@@ -1,18 +1,17 @@
 import argparse
 import time
 from datetime import date
-from pathlib import Path
 
 from dotenv import load_dotenv
 
 from lib.db import connect
+from lib.paths import ENV_FILE
 from seed import SCALES
 from seed.emit import analyze, clear, write, write_runs
 from seed.generate import HISTORY_MONTHS, build, events
 from seed.guards import SeedRefused, check
 from seed.hostile import poison_channels
 
-ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
 
 
 def parse_args(argv=None):
