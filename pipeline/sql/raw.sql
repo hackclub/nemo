@@ -103,20 +103,6 @@ CREATE TABLE IF NOT EXISTS raw.analytics_day (
     PRIMARY KEY (source, ds)
 );
 
-INSERT INTO raw.analytics_day (source, ds, loaded, rows_in)
-SELECT 'member_day', window_start, true, count(*)
-FROM raw.member_activity_snapshot
-WHERE window_start = window_end
-GROUP BY window_start
-ON CONFLICT (source, ds) DO NOTHING;
-
-INSERT INTO raw.analytics_day (source, ds, loaded, rows_in)
-SELECT 'channel_day', window_start, true, count(*)
-FROM raw.channel_activity_snapshot
-WHERE window_start = window_end
-GROUP BY window_start
-ON CONFLICT (source, ds) DO NOTHING;
-
 ALTER TABLE raw.analytics_day ADD COLUMN IF NOT EXISTS unavailable boolean;
 ALTER TABLE raw.analytics_day ADD COLUMN IF NOT EXISTS reason text;
 

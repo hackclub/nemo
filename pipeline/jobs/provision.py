@@ -1,3 +1,4 @@
+import argparse
 import os
 import subprocess
 import sys
@@ -16,6 +17,22 @@ ROLE_PASSWORDS = [
     ("DBT_DB_USER", "DBT_DB_PASSWORD"),
     ("RAILS_DB_USER", "RAILS_DB_PASSWORD"),
 ]
+
+
+def ensure_database():
+    target = os.environ["POSTGRES_DB"]
+    with connect_admin(maintenance=True) as conn:
+        conn.autocommit = True
+        if conn.execute(
+            "SELECT 1 FROM pg_database WHERE datname = %s", (target,)
+        ).fetchone():
+            return
+        try:
+            conn.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(target)))
+        except Exception as exc:
+            print(f"provision: could not create {target}: {exc}")
+            raise SystemExit(1) from exc
+    print(f"provision: created {target}")
 
 
 def apply_init_sql(conn):
@@ -71,7 +88,14 @@ def seed_staff():
 
 
 def main():
+    parser = argparse.ArgumentParser(prog="provision")
+    parser.add_argument("--create", action="store_true")
+    args = parser.parse_args()
+
     load_dotenv(ENV_FILE)
+    if args.create:
+        ensure_database()
+
     print("provision: schemas, roles and grants")
     with connect_admin() as conn:
         apply_init_sql(conn)
