@@ -8,7 +8,7 @@ from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
 from lib.db import connect, dead_letter
-from lib.paths import ENV_FILE, RAW_EVENT_SCHEMA_DIR as SCHEMA_DIR
+from lib.paths import ENV_FILE, SCHEMA_DIR
 SOURCE = "events_listener"
 
 SCHEMA_FILES = {
