@@ -1,0 +1,73 @@
+#!/bin/sh -e
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PIPELINE="$ROOT/pipeline"
+WEB="$ROOT/web"
+
+if [ -x "$PIPELINE/.venv/bin/python" ]; then
+  PY="$PIPELINE/.venv/bin/python"
+else
+  PY="python"
+fi
+
+py() {
+  cd "$PIPELINE" && PYTHONPATH=. "$PY" "$@"
+}
+
+usage() {
+  cat <<'TXT'
+nemo <role> [args]
+
+  serve          the dashboard. set PORT to run it directly, otherwise
+                 thruster serves it on 80, which is the container path
+  collect        the slack events listener
+  sync           the nightly sync worker
+  transform      dbt build
+  seed           generate synthetic data, transform, then verify
+  provision      schemas, roles, grants and both migration sets
+  doctor <role>  report the env this role needs and what is missing
+
+the role may also come from NEMO_ROLE when no argument is given.
+TXT
+}
+
+ROLE="${1:-${NEMO_ROLE:-}}"
+[ $# -gt 0 ] && shift
+
+case "$ROLE" in
+  serve)
+    cd "$WEB" || exit 1
+    if [ -n "${PORT:-}" ]; then
+      exec ./bin/rails server -p "$PORT" "$@"
+    fi
+    exec ./bin/thrust ./bin/rails server "$@"
+    ;;
+  collect)
+    py -m ingest.events_listener "$@"
+    ;;
+  sync)
+    py -m jobs.sync_worker "$@"
+    ;;
+  transform)
+    py -m jobs.transform "$@"
+    ;;
+  seed)
+    py -m seed "$@"
+    py -m jobs.transform
+    py -m seed.verify
+    ;;
+  provision)
+    py -m jobs.provision "$@"
+    ;;
+  doctor)
+    py -m lib.config "${1:-serve}"
+    ;;
+  ""|-h|--help|help)
+    usage
+    ;;
+  *)
+    echo "nemo: unknown role '$ROLE'" >&2
+    usage >&2
+    exit 64
+    ;;
+esac

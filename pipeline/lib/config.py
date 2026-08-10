@@ -1,0 +1,155 @@
+import argparse
+import os
+import sys
+
+DATABASE = ["POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_DB"]
+ADMIN = ["POSTGRES_USER", "POSTGRES_PASSWORD"]
+
+ROLES = {
+    "serve": {
+        "required": DATABASE + ["RAILS_DB_USER", "RAILS_DB_PASSWORD", "APP_HOST"],
+        "optional": [
+            "SECRET_KEY_BASE",
+            "RAILS_MASTER_KEY",
+            "HCA_ISSUER",
+            "HCA_CLIENT_ID",
+            "HCA_CLIENT_SECRET",
+            "HCA_REDIRECT_URI",
+            "INTERNAL_PROXY_URL",
+            "PROXY_TOKEN_WEB",
+            "PROXY_ALLOW_PLAINTEXT",
+            "RAILS_MAX_THREADS",
+            "WEB_CONCURRENCY",
+            "RAILS_LOG_LEVEL",
+            "TLS_DOMAIN",
+            "BOOTSTRAP_ADMIN_SLACK_ID",
+            "TZ",
+        ],
+    },
+    "collect": {
+        "required": DATABASE + [
+            "PIPELINE_DB_USER",
+            "PIPELINE_DB_PASSWORD",
+            "SLACK_BOT_TOKEN",
+            "SLACK_APP_TOKEN",
+        ],
+        "optional": ["SLACK_TEAM_ID", "TZ"],
+    },
+    "sync": {
+        "required": DATABASE + [
+            "PIPELINE_DB_USER",
+            "PIPELINE_DB_PASSWORD",
+            "INTERNAL_PROXY_URL",
+            "INTERNAL_PROXY_TOKEN",
+            "DBT_DB_USER",
+            "DBT_DB_PASSWORD",
+        ],
+        "optional": [
+            "SLACK_BOT_TOKEN",
+            "SLACK_TEAM_ID",
+            "NIGHTLY_AT",
+            "NIGHTLY_RUN_AT_START",
+            "SYNC_POLL_SECONDS",
+            "PROXY_ALLOW_PLAINTEXT",
+            "MEMBER_HISTORY_LIMIT",
+            "FIRST_REPLY_LIMIT",
+            "TZ",
+        ],
+    },
+    "transform": {
+        "required": DATABASE + ["DBT_DB_USER", "DBT_DB_PASSWORD"],
+        "optional": ["TZ"],
+    },
+    "seed": {
+        "required": DATABASE + ADMIN + [
+            "PIPELINE_DB_USER",
+            "PIPELINE_DB_PASSWORD",
+            "DBT_DB_USER",
+            "DBT_DB_PASSWORD",
+        ],
+        "optional": ["SEED_ALLOW_DB", "SEED_SCALE", "SEED_RNG", "SEED_HISTORY_MONTHS", "TZ"],
+    },
+    "provision": {
+        "required": DATABASE + ADMIN,
+        "optional": [
+            "PIPELINE_DB_USER",
+            "PIPELINE_DB_PASSWORD",
+            "DBT_DB_USER",
+            "DBT_DB_PASSWORD",
+            "RAILS_DB_USER",
+            "RAILS_DB_PASSWORD",
+            "BOOTSTRAP_ADMIN_SLACK_ID",
+            "TZ",
+        ],
+    },
+}
+
+SECRETS = ("PASSWORD", "TOKEN", "SECRET", "KEY")
+
+NEVER = {
+    "serve": ["SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "SLACK_TOKEN", "INTERNAL_PROXY_TOKEN"],
+}
+
+
+def known(role):
+    spec = ROLES[role]
+    return spec["required"] + spec["optional"]
+
+
+def missing(role, env=None):
+    env = env if env is not None else os.environ
+    return [name for name in ROLES[role]["required"] if not env.get(name)]
+
+
+def unexpected(role, env=None):
+    env = env if env is not None else os.environ
+    allowed = set(known(role))
+    named = {name for spec in ROLES.values() for name in spec["required"] + spec["optional"]}
+    return sorted(name for name in named - allowed if env.get(name))
+
+
+def forbidden(role, env=None):
+    env = env if env is not None else os.environ
+    return [name for name in NEVER.get(role, []) if env.get(name)]
+
+
+def report(role, env=None):
+    gone = missing(role, env)
+    extra = unexpected(role, env)
+    banned = forbidden(role, env)
+
+    print(f"role {role}")
+    for name in ROLES[role]["required"]:
+        state = "MISSING" if name in gone else "set"
+        print(f"  required  {name:28} {state}")
+    if extra:
+        print("  unexpected for this role, the repo does not read these here:")
+        for name in extra:
+            print(f"    {name}")
+    if banned:
+        print("  MUST NOT be set for this role:")
+        for name in banned:
+            print(f"    {name}")
+    if gone:
+        print(f"{role}: {len(gone)} required variable(s) missing: {', '.join(gone)}")
+    if banned:
+        print(f"{role}: {len(banned)} variable(s) present that this role must never hold")
+    return 1 if gone or banned else 0
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(prog="config")
+    parser.add_argument("role", choices=sorted(ROLES))
+    parser.add_argument("--no-env-file", action="store_true")
+    args = parser.parse_args(argv)
+    if not args.no_env_file:
+        from dotenv import load_dotenv
+
+        from lib.paths import ENV_FILE
+
+        load_dotenv(ENV_FILE)
+    sys.exit(report(args.role))
+
+
+if __name__ == "__main__":
+    main()
