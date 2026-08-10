@@ -4,7 +4,7 @@ SCALE ?= dev
 ROLE ?= serve
 PORT ?= 3000
 
-.PHONY: help up down logs provision transform seed serve test test-db lint doctor build image clean
+.PHONY: help up down logs provision transform seed serve test test-db lint doctor env-examples build image clean
 
 help:
 	@echo "make up            postgres for local work"
@@ -17,6 +17,7 @@ help:
 	@echo "make test          pytest and rails test"
 	@echo "make lint          ruff and rubocop"
 	@echo "make doctor        the env a role needs           [ROLE=$(ROLE)]"
+	@echo "make env-examples  regenerate deploy/env/*.env.example"
 	@echo "make image         build the one image"
 	@echo "make clean         drop the test database"
 
@@ -55,6 +56,9 @@ lint:
 
 doctor:
 	$(NEMO) doctor $(ROLE)
+
+env-examples:
+	cd pipeline && PYTHONPATH=. .venv/bin/python -m lib.config --write
 
 build image:
 	docker build -t mnemosyne:latest .
