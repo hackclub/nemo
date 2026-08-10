@@ -1,7 +1,12 @@
 #!/bin/bash -e
 
 if [ "${1}" == "./bin/thrust" ] || { [ "${1}" == "./bin/rails" ] && [ "${2}" == "server" ]; }; then
-  ./bin/rails db:migrate
+  ./bin/rails runner '
+    %w[raw analytics app].each do |schema|
+      ActiveRecord::Base.connection.execute("CREATE SCHEMA IF NOT EXISTS #{schema}")
+    end
+    ActiveRecord::Base.connection_pool.migration_context.migrate
+  '
 fi
 
 exec "${@}"

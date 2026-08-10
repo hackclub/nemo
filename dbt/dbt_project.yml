@@ -16,7 +16,7 @@ models:
   mnemosyne:
     staging:
       +materialized: view
-      +post-hook: "grant select on {{ this }} to rails_app"
+      +post-hook: "{{ grant_read('rails_app') }}"
     marts:
       +materialized: table
-      +post-hook: "grant select on {{ this }} to rails_app"
+      +post-hook: "{{ grant_read('rails_app') }}"

@@ -93,11 +93,20 @@ fi
 echo "==> schemas, roles and grants"
 admin -d "$POSTGRES_DB" -f "$ROOT/infra/postgres/init.sql"
 
-echo "==> role passwords from $ENV_FILE"
-admin -d "$POSTGRES_DB" -c "
-  alter role $PIPELINE_DB_USER password '$PIPELINE_DB_PASSWORD';
-  alter role $DBT_DB_USER password '$DBT_DB_PASSWORD';
-  alter role $RAILS_DB_USER password '$RAILS_DB_PASSWORD';"
+separate_roles="$(admin -d "$POSTGRES_DB" -tAc "
+  select count(*) = 3 from pg_roles where rolname in ('pipeline_writer', 'dbt_owner', 'rails_app')")"
+
+if [ "$separate_roles" = "t" ]; then
+  echo "==> role passwords from $ENV_FILE"
+  admin -d "$POSTGRES_DB" -c "
+    alter role $PIPELINE_DB_USER password '$PIPELINE_DB_PASSWORD';
+    alter role $DBT_DB_USER password '$DBT_DB_PASSWORD';
+    alter role $RAILS_DB_USER password '$RAILS_DB_PASSWORD';"
+else
+  echo "==> single-role deployment: $POSTGRES_USER owns everything, no role passwords to set."
+  echo "    point PIPELINE_DB_USER, DBT_DB_USER and RAILS_DB_USER at $POSTGRES_USER in $ENV_FILE."
+  echo "    write ownership is not enforced on this server."
+fi
 
 echo "==> app tables from the rails migrations"
 (cd "$ROOT/web" && bin/rails runner 'ActiveRecord::Base.connection_pool.migration_context.migrate')

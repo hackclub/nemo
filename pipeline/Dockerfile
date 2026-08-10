@@ -18,3 +18,5 @@ USER 1000:1000
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 ENV HOME=/home/pipeline
+
+ENTRYPOINT ["/app/bin/docker-entrypoint"]
