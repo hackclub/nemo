@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from lib.db import connect
 from seed import SCALES
 from seed.emit import analyze, clear, write, write_runs
-from seed.generate import build, events
+from seed.generate import HISTORY_MONTHS, build, events
 from seed.guards import SeedRefused, check
 from seed.hostile import poison_channels
 
@@ -20,6 +20,7 @@ def parse_args(argv=None):
     parser.add_argument("--scale", choices=sorted(SCALES), default="dev")
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--as-of", type=date.fromisoformat)
+    parser.add_argument("--history-months", type=int, default=HISTORY_MONTHS)
     parser.add_argument("--hostile", action="store_true")
     parser.add_argument("--force", action="store_true")
     return parser.parse_args(argv)
@@ -43,7 +44,9 @@ def main(argv=None):
     )
 
     started = time.monotonic()
-    channels, members, profile, as_of, rng = build(SCALES[args.scale], args.seed, as_of)
+    channels, members, profile, as_of, rng = build(
+        SCALES[args.scale], args.seed, as_of, history_months=args.history_months
+    )
     stream = events(rng, members, profile, as_of)
     print(f"seed: generated {len(members)} members and {len(channels)} channels")
     if args.hostile:

@@ -8,8 +8,8 @@ from seed.generate import COVERED_DAYS, Sampler
 
 MEMBER_DAY_SOURCE = f"{SEED_SOURCE_PREFIX}member_day"
 CHANNEL_DAY_SOURCE = f"{SEED_SOURCE_PREFIX}channel_day"
-MEMBER_RANGE_SOURCE = f"{SEED_SOURCE_PREFIX}member_range"
-CHANNEL_RANGE_SOURCE = f"{SEED_SOURCE_PREFIX}channel_range"
+MEMBER_RANGE_SOURCE = "admin_analytics_member_range"
+CHANNEL_RANGE_SOURCE = "admin_analytics_channel_range"
 TEAM_SOURCE = f"{SEED_SOURCE_PREFIX}team_stats"
 TOP_POSTER_WINDOWS = (7, 30, 90)
 TOP_POSTER_LIMIT = 50
@@ -60,21 +60,21 @@ def clear(conn, force=False):
         for table in dict.fromkeys(SEEDED_TABLES):
             if force:
                 cur.execute(f"DELETE FROM {table}")
-            elif has_source(cur, table):
-                cur.execute(f"DELETE FROM {table} WHERE source LIKE %s", (f"{SEED_SOURCE_PREFIX}%",))
-            elif table == "raw.channel_dim":
-                cur.execute("DELETE FROM raw.channel_dim WHERE channel_id LIKE 'CSEED%'")
-            else:
+            elif has_column(cur, table, "channel_id"):
+                cur.execute(f"DELETE FROM {table} WHERE channel_id LIKE 'CSEED%'")
+            elif has_column(cur, table, "user_id"):
                 cur.execute(f"DELETE FROM {table} WHERE user_id LIKE 'USEED%'")
+            else:
+                cur.execute(f"DELETE FROM {table} WHERE source LIKE %s", (f"{SEED_SOURCE_PREFIX}%",))
     conn.commit()
 
 
-def has_source(cur, table):
+def has_column(cur, table, column):
     schema, name = table.split(".")
     cur.execute(
         "SELECT 1 FROM information_schema.columns "
-        "WHERE table_schema = %s AND table_name = %s AND column_name = 'source'",
-        (schema, name),
+        "WHERE table_schema = %s AND table_name = %s AND column_name = %s",
+        (schema, name, column),
     )
     return cur.fetchone() is not None
 
@@ -241,9 +241,9 @@ def member_dim_rows(members, totals):
     for member in members:
         yield (
             member.user_id,
-            noon(member.cohort_at),
-            noon(member.cohort_at),
-            noon(member.claimed_at) if member.claimed_at else None,
+            joined_at(member),
+            joined_at(member),
+            joined_at(member) if member.claimed_at else None,
             "team_join" if member.claimed_at else None,
             noon(member.deactivated_at) if member.deactivated_at else None,
             member.deactivated_at is not None,
@@ -275,12 +275,22 @@ def channel_dim_rows(channels, last_active):
         )
 
 
+def joined_at(member):
+    return datetime.combine(member.cohort_at, time(0, 0), tzinfo=timezone.utc)
+
+
+def posted_at(member):
+    if not member.first_post_at:
+        return None
+    return joined_at(member) + timedelta(hours=member.first_post_delay_hours)
+
+
 def history_rows(members, totals, as_of):
     for member in members:
         yield (
             member.user_id,
             totals.get(member.user_id, 0) + member.total_messages,
-            noon(member.first_post_at) if member.first_post_at else None,
+            posted_at(member),
             member.first_post_channel,
             noon(as_of),
             as_of,
@@ -295,7 +305,7 @@ def first_reply_rows(rng, members, profile, hostile=False):
         if not member.first_post_at:
             continue
         roll = rng.random()
-        posted = noon(member.first_post_at)
+        posted = posted_at(member)
         bot_latency = int(max(1, bot(rng.random()))) if rng.random() < shares["bot_first_share"] else None
         bot_ts = posted + timedelta(seconds=bot_latency) if bot_latency else None
         if roll < shares["human_share"]:

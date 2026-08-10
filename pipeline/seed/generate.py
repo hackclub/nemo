@@ -9,12 +9,14 @@ from seed import SEED_CHANNEL_PREFIX, SEED_USER_PREFIX
 from seed.profile import PROFILE_FILE
 
 COVERED_DAYS = 400
+HISTORY_MONTHS = 16
 CHANNELS_PER_MEMBER = 0.06
 HOME_CHANNELS = (1, 6)
 MAX_TAIL_ALPHA = 6.0
 LIFETIME_MIN_DAYS = 3.0
 LIFETIME_SCALE_DAYS = 300.0
 LIFETIME_EXPONENT = 2.5
+MESSAGE_RANK_WEIGHT = 0.35
 
 WORDS = (
     "lounge welcome ship code design hardware music games photos books coffee garden rocket "
@@ -74,6 +76,7 @@ class Member:
     deactivated_at: date | None
     total_messages: int
     first_post_at: date | None
+    first_post_delay_hours: float
     first_post_channel: str | None
     home_channels: list = field(default_factory=list)
 
@@ -110,8 +113,10 @@ def jitter(rng, value, spread=0.12):
     return clip(value + rng.gauss(0, spread))
 
 
-def cohort_calendar(profile, members, as_of):
+def cohort_calendar(profile, members, as_of, history_months=None):
     sizes = profile["members"]["cohort_sizes"]
+    if history_months:
+        sizes = sizes[-history_months:]
     total = sum(count for _, count in sizes) or 1
     last = date.fromisoformat(sizes[-1][0])
     shift = (as_of.year - last.year) * 12 + (as_of.month - last.month)
@@ -164,13 +169,15 @@ def unique_name(rng, seen):
     return name
 
 
-def make_members(rng, profile, count, channels, as_of):
-    rates = profile["members"]["rates"]
+def make_members(rng, profile, count, channels, as_of, history_months=None):
+    rates = dict(profile["members"]["rates"])
+    posting = clip(profile["messaging"]["ever_posted_rate"], 0.0, 0.9)
+    rates["invite_pending"] = clip(rates["invite_pending"] / (1 - posting))
     messages_q = Sampler(profile["messaging"]["total_messages"])
     delay_q = Sampler(profile["messaging"]["join_to_first_post_hours"])
     weights = channel_weights(channels)
     members, index = [], 0
-    for month, size in cohort_calendar(profile, count, as_of):
+    for month, size in cohort_calendar(profile, count, as_of, history_months):
         for _ in range(size):
             members.append(
                 make_member(rng, rates, messages_q, delay_q, channels, weights, month, index, as_of)
@@ -188,6 +195,7 @@ def make_member(rng, rates, messages_q, delay_q, channels, weights, month, index
     total = 0 if is_bot else int(messages_q(jitter(rng, engagement, 0.05)))
 
     first_post_at, first_post_channel, home = None, None, []
+    delay = 0.0
     if total > 0:
         home = pick_channels(rng, channels, weights, rng.randint(*HOME_CHANNELS))
         delay = max(0.0, delay_q(rng.random()))
@@ -215,6 +223,7 @@ def make_member(rng, rates, messages_q, delay_q, channels, weights, month, index
         deactivated_at=deactivated_at,
         total_messages=total,
         first_post_at=first_post_at,
+        first_post_delay_hours=delay,
         first_post_channel=first_post_channel,
         home_channels=home,
     )
@@ -290,7 +299,8 @@ def member_events(rng, member, sim, start, days):
             member.user_id,
             channel.channel_id,
             day,
-            max(1, int(sim["msg_q"](jitter(rng, member.engagement, 0.2)))),
+            max(0, int(sim["msg_q"](clip(MESSAGE_RANK_WEIGHT * rank
+                                         + (1 - MESSAGE_RANK_WEIGHT) * rng.random())))),
             max(0, int(sim["react_q"](rng.random()))),
         )
 
@@ -316,12 +326,12 @@ def events(rng, members, profile, as_of, days=COVERED_DAYS):
         yield from member_events(rng, member, sim, start, days)
 
 
-def build(scale_members, seed=1, as_of=None, profile=None):
+def build(scale_members, seed=1, as_of=None, profile=None, history_months=HISTORY_MONTHS):
     profile = profile or load_profile()
     as_of = as_of or date.today()
     rng = random.Random(seed)
     channels = make_channels(
         rng, profile, max(20, round(scale_members * CHANNELS_PER_MEMBER)), as_of
     )
-    members = make_members(rng, profile, scale_members, channels, as_of)
+    members = make_members(rng, profile, scale_members, channels, as_of, history_months)
     return channels, members, profile, as_of, rng
