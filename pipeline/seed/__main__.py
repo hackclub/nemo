@@ -1,4 +1,5 @@
 import argparse
+import time
 from datetime import date
 from pathlib import Path
 
@@ -6,6 +7,8 @@ from dotenv import load_dotenv
 
 from lib.db import connect
 from seed import SCALES
+from seed.emit import analyze, clear, write
+from seed.generate import build, events
 from seed.guards import SeedRefused, check
 
 ENV_FILE = Path(__file__).resolve().parents[2] / "infra" / ".env"
@@ -37,7 +40,27 @@ def main(argv=None):
         f"({SCALES[args.scale]} members), rng {args.seed}, as of {as_of}"
         f"{', hostile fixtures on' if args.hostile else ''}"
     )
-    print("seed: guards passed. nothing to generate yet")
+
+    started = time.monotonic()
+    channels, members, profile, as_of, rng = build(SCALES[args.scale], args.seed, as_of)
+    stream = events(rng, members, profile, as_of)
+    print(f"seed: generated {len(members)} members and {len(channels)} channels")
+
+    with connect() as conn:
+        clear(conn, force=args.force)
+        counts = write(
+            conn, channels, members, profile, as_of, rng, stream, args.scale, args.seed
+        )
+        notices = analyze(conn)
+
+    for name, count in counts.items():
+        print(f"seed:   {name}: {count} rows")
+    for notice in notices:
+        print(f"seed: postgres said: {notice}")
+    print(
+        f"seed: wrote {sum(counts.values())} rows in {time.monotonic() - started:.1f}s. "
+        f"{dbname} is now marked seeded, run dbt build next"
+    )
 
 
 if __name__ == "__main__":

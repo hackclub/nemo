@@ -180,7 +180,8 @@ def make_members(rng, profile, count, channels, as_of):
 
 
 def make_member(rng, rates, messages_q, delay_q, channels, weights, month, index, as_of):
-    days_in = min(27, (as_of - month).days) if month <= as_of else 0
+    latest = as_of - timedelta(days=1)
+    days_in = min(27, (latest - month).days) if month <= latest else 0
     cohort_at = month + timedelta(days=rng.randint(0, max(0, days_in)))
     engagement = rng.random()
     is_bot = rng.random() < rates["is_bot"]
@@ -191,14 +192,14 @@ def make_member(rng, rates, messages_q, delay_q, channels, weights, month, index
         home = pick_channels(rng, channels, weights, rng.randint(*HOME_CHANNELS))
         delay = max(0.0, delay_q(rng.random()))
         first_post_at = cohort_at + timedelta(hours=delay)
-        if first_post_at > as_of:
+        if first_post_at > latest:
             first_post_at, total = None, 0
         else:
             first_post_channel = home[0].channel_id
 
     deactivated_at = None
-    if rng.random() < rates["is_deleted"]:
-        span = max(1, (as_of - cohort_at).days)
+    if rng.random() < rates["is_deleted"] and cohort_at < latest:
+        span = max(1, (latest - cohort_at).days)
         deactivated_at = cohort_at + timedelta(days=rng.randint(1, span))
 
     return Member(
@@ -206,14 +207,14 @@ def make_member(rng, rates, messages_q, delay_q, channels, weights, month, index
         cohort_at=cohort_at,
         engagement=engagement,
         claimed_at=cohort_at if rng.random() < rates["claimed"] else None,
-        invite_pending=rng.random() < rates["invite_pending"],
+        invite_pending=first_post_at is None and rng.random() < rates["invite_pending"],
         is_bot=is_bot,
         is_admin=rng.random() < rates["is_admin"],
         is_restricted=rng.random() < rates["is_restricted"],
         is_ultra_restricted=rng.random() < rates["is_ultra_restricted"],
         deactivated_at=deactivated_at,
         total_messages=total,
-        first_post_at=first_post_at.date() if hasattr(first_post_at, "date") else first_post_at,
+        first_post_at=first_post_at,
         first_post_channel=first_post_channel,
         home_channels=home,
     )
