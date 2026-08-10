@@ -51,7 +51,17 @@ ON CONFLICT (parent_run_id, step_index) DO UPDATE SET
 """
 
 
+def ensure_dbt_profile():
+    profile = DBT_DIR / "profiles.yml"
+    if profile.exists():
+        return
+    example = DBT_DIR / "profiles.yml.example"
+    profile.write_text(example.read_text())
+    print(f"dbt: wrote {profile.name} from {example.name}")
+
+
 def run_dbt():
+    ensure_dbt_profile()
     proc = subprocess.Popen(
         ["dbt", "build", "--profiles-dir", str(DBT_DIR)],
         cwd=DBT_DIR,
