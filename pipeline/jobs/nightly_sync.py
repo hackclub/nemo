@@ -28,6 +28,7 @@ from lib.db import (
     connect,
     finish_run,
     raise_if_cancelled,
+    refuse_if_seeded,
     run_step,
     start_run,
 )
@@ -170,6 +171,7 @@ def stage_plan(name):
 def run_sync(plan=None):
     plan = plan or stages()
     with connect() as conn:
+        refuse_if_seeded(conn)
         run_id = start_run(conn, SOURCE)
         conn.commit()
 

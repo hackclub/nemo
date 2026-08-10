@@ -8,7 +8,14 @@ import psycopg
 from dotenv import load_dotenv
 
 from jobs.nightly_sync import ENV_FILE, TRUTHY, run_sync, stage_plan
-from lib.db import STALE_AFTER_HOURS, cancel_scope, connect, sweep_stale_runs
+from lib.db import (
+    STALE_AFTER_HOURS,
+    SeededDeployment,
+    cancel_scope,
+    connect,
+    refuse_if_seeded,
+    sweep_stale_runs,
+)
 
 DEFAULT_AT = "03:00"
 DEFAULT_POLL_SECONDS = 60
@@ -168,6 +175,13 @@ def run_scheduled(label="scheduled"):
 
 def main():
     load_dotenv(ENV_FILE)
+    with connect() as conn:
+        try:
+            refuse_if_seeded(conn)
+        except SeededDeployment as exc:
+            print(f"sync worker: {exc}")
+            raise SystemExit(1) from exc
+
     at = os.environ.get("NIGHTLY_AT", "").strip() or DEFAULT_AT
     poll = int(os.environ.get("SYNC_POLL_SECONDS", "") or DEFAULT_POLL_SECONDS)
     scheduled = next_run_at(at, datetime.now())

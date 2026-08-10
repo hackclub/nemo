@@ -73,6 +73,25 @@ def connect_admin(dsn: str | None = None) -> psycopg.Connection:
     )
 
 
+class SeededDeployment(RuntimeError):
+    """The database holds synthetic data, so ingestion must not run against it"""
+
+
+def deployment_mode(conn: psycopg.Connection) -> str:
+    row = conn.execute("SELECT mode FROM raw.deployment").fetchone()
+    return row[0] if row else "live"
+
+
+def refuse_if_seeded(conn: psycopg.Connection) -> None:
+    mode = deployment_mode(conn)
+    if mode != "live":
+        raise SeededDeployment(
+            f"{os.environ.get('POSTGRES_DB', 'this database')} is marked {mode}. "
+            "ingestion would mix real Slack data into synthetic data and spend real "
+            "API quota. rebuild the database if you meant to make it live"
+        )
+
+
 def start_run(conn: psycopg.Connection, source: str) -> int:
     parent_run_id, step_index, step_total = _step.get()
     if parent_run_id is None:

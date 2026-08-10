@@ -274,3 +274,17 @@ ALTER TABLE raw.member_first_reply ADD COLUMN IF NOT EXISTS bot_replier_id text;
 ALTER TABLE raw.member_first_reply ADD COLUMN IF NOT EXISTS bot_reply_ts timestamptz;
 ALTER TABLE raw.member_first_reply ADD COLUMN IF NOT EXISTS bot_latency_seconds integer;
 ALTER TABLE raw.member_first_reply ADD COLUMN IF NOT EXISTS walk_version smallint NOT NULL DEFAULT 1;
+
+CREATE TABLE IF NOT EXISTS raw.deployment (
+    id boolean PRIMARY KEY DEFAULT true CHECK (id),
+    mode text NOT NULL CHECK (mode IN ('live', 'seeded')),
+    seeded_at timestamptz,
+    seed_profile text,
+    seed_scale text,
+    seed_rng bigint,
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+INSERT INTO raw.deployment (id, mode) VALUES (true, 'live') ON CONFLICT (id) DO NOTHING;
+
+GRANT SELECT, UPDATE ON raw.deployment TO pipeline_writer;
