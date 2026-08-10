@@ -38,7 +38,7 @@
                   <% notes << pluralize(step.children, "worker") if step.children > 1 %>
                   <% notes << "#{number_to_percentage(step.pct, precision: 1)} through" if step.running? && step.pct %>
                   <% if notes.any? %>
-                    <span><%= notes.join(" &middot; ").html_safe %></span>
+                    <span><%= safe_join(notes, " · ") %></span>
                   <% end %>
                 </span>
                 <% if step.running? && step.pct %>
