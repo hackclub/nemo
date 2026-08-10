@@ -1,8 +1,0 @@
-#!/bin/sh -e
-
-if [ "${SKIP_MIGRATE}" != "true" ]; then
-  echo "entrypoint: applying the raw schema"
-  uv run python -m jobs.migrate
-fi
-
-exec "$@"

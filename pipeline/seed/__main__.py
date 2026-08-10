@@ -1,4 +1,5 @@
 import argparse
+import os
 import time
 from datetime import date
 
@@ -12,6 +13,7 @@ from seed.generate import HISTORY_MONTHS, build, events
 from seed.guards import SeedRefused, check
 from seed.hostile import poison_channels
 
+TRUTHY = {"1", "true", "yes", "on"}
 
 
 def parse_args(argv=None):
@@ -20,7 +22,11 @@ def parse_args(argv=None):
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--as-of", type=date.fromisoformat)
     parser.add_argument("--history-months", type=int, default=HISTORY_MONTHS)
-    parser.add_argument("--hostile", action="store_true")
+    parser.add_argument(
+        "--hostile",
+        action="store_true",
+        default=os.environ.get("SEED_HOSTILE", "").strip().lower() in TRUTHY,
+    )
     parser.add_argument("--force", action="store_true")
     return parser.parse_args(argv)
 

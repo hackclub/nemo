@@ -67,7 +67,14 @@ ROLES = {
             "DBT_DB_USER",
             "DBT_DB_PASSWORD",
         ],
-        "optional": ["SEED_ALLOW_DB", "SEED_SCALE", "SEED_RNG", "SEED_HISTORY_MONTHS", "TZ"],
+        "optional": [
+            "SEED_ALLOW_DB",
+            "SEED_SCALE",
+            "SEED_RNG",
+            "SEED_HISTORY_MONTHS",
+            "SEED_HOSTILE",
+            "TZ",
+        ],
     },
     "provision": {
         "required": DATABASE + ADMIN,

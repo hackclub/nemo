@@ -13,3 +13,12 @@
 **/node_modules/
 warehouse/target/
 warehouse/dbt_packages/
+warehouse/logs/
+web/tmp/
+web/log/
+web/storage/
+web/.hallmark/
+proxy/
+infra/logs/
+docs/
+data/

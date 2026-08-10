@@ -22,78 +22,9 @@ services:
 
   events-listener:
     profiles: ["live"]
+    image: mnemosyne:latest
     build:
       context: ..
-      dockerfile: pipeline/Dockerfile
-    depends_on:
-      postgres:
-        condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      INTERNAL_PROXY_URL: ${CONTAINER_PROXY_URL:-${INTERNAL_PROXY_URL}}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: unless-stopped
-    command: ["uv", "run", "python", "-m", "ingest.events_listener"]
-
-  nightly-sync:
-    profiles: ["live"]
-    build:
-      context: ..
-      dockerfile: pipeline/Dockerfile
-    depends_on:
-      postgres:
-        condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      NIGHTLY_AT: ${NIGHTLY_AT:-03:00}
-      NIGHTLY_RUN_AT_START: ${NIGHTLY_RUN_AT_START:-false}
-      SYNC_POLL_SECONDS: ${SYNC_POLL_SECONDS:-60}
-      TZ: ${TZ:-UTC}
-      INTERNAL_PROXY_URL: ${CONTAINER_PROXY_URL:-${INTERNAL_PROXY_URL}}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: unless-stopped
-    command: ["uv", "run", "python", "-m", "jobs.sync_worker"]
-
-  seed:
-    profiles: ["seed"]
-    build:
-      context: ..
-      dockerfile: pipeline/Dockerfile
-    depends_on:
-      postgres:
-        condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: ${SEED_DB:-${POSTGRES_DB}_seed}
-      SEED_ALLOW_DB: ${SEED_ALLOW_DB:-}
-      TZ: ${TZ:-UTC}
-    restart: "no"
-    command:
-      - sh
-      - -c
-      - >-
-        uv run python -m seed
-        --scale ${SEED_SCALE:-dev}
-        --seed ${SEED_RNG:-1}
-        --history-months ${SEED_HISTORY_MONTHS:-16}
-        ${SEED_HOSTILE:+--hostile}
-        && uv run dbt build --project-dir /warehouse --profiles-dir /warehouse --quiet
-        && uv run python -m seed.verify
-
-  web:
-    build:
-      context: ../web
       dockerfile: Dockerfile
     depends_on:
       postgres:
@@ -103,6 +34,101 @@ services:
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      INTERNAL_PROXY_URL: ${CONTAINER_PROXY_URL:-${INTERNAL_PROXY_URL}}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    command: ["collect"]
+
+  nightly-sync:
+    profiles: ["live"]
+    image: mnemosyne:latest
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      NIGHTLY_AT: ${NIGHTLY_AT:-03:00}
+      NIGHTLY_RUN_AT_START: ${NIGHTLY_RUN_AT_START:-false}
+      SYNC_POLL_SECONDS: ${SYNC_POLL_SECONDS:-60}
+      TZ: ${TZ:-UTC}
+      INTERNAL_PROXY_URL: ${CONTAINER_PROXY_URL:-${INTERNAL_PROXY_URL}}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    command: ["sync"]
+
+  provision:
+    profiles: ["seed"]
+    image: mnemosyne:latest
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: ${TZ:-UTC}
+    restart: "no"
+    command: ["provision"]
+
+  seed:
+    profiles: ["seed"]
+    image: mnemosyne:latest
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      provision:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      SEED_ALLOW_DB: ${SEED_ALLOW_DB:-}
+      SEED_HOSTILE: ${SEED_HOSTILE:-}
+      TZ: ${TZ:-UTC}
+    restart: "no"
+    command:
+      - seed
+      - --scale
+      - ${SEED_SCALE:-dev}
+      - --seed
+      - ${SEED_RNG:-1}
+      - --history-months
+      - ${SEED_HISTORY_MONTHS:-16}
+
+  web:
+    image: mnemosyne:latest
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
       RAILS_MASTER_KEY: ${RAILS_MASTER_KEY:-}
       APP_HOST: ${APP_HOST:-}
       TLS_DOMAIN: ${TLS_DOMAIN:-}
