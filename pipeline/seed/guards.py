@@ -1,7 +1,12 @@
 import os
 import re
 
-from seed import SEED_CHANNEL_PREFIX, SEED_SOURCE_PREFIX, SEED_USER_PREFIX
+from seed import (
+    SEED_CHANNEL_PREFIX,
+    SEED_REF_PREFIX,
+    SEED_SOURCE_PREFIX,
+    SEED_USER_PREFIX,
+)
 
 ALLOWED_SUFFIX = re.compile(r"_(dev|test|seed)$")
 
@@ -16,6 +21,10 @@ FOREIGN_ROWS = [
     ("raw.message_activity_snapshot", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
     ("raw.team_stats_snapshot", f"source NOT LIKE '{SEED_SOURCE_PREFIX}%'"),
     ("raw.analytics_day", f"source NOT LIKE '{SEED_SOURCE_PREFIX}%'"),
+    (
+        "fd.cases",
+        f"external_ref IS NULL OR external_ref NOT LIKE '{SEED_REF_PREFIX}%'",
+    ),
 ]
 
 

@@ -1,7 +1,8 @@
 import collections
 from datetime import datetime, time, timedelta, timezone
 
-from seed import SEED_SOURCE_PREFIX
+from seed import SEED_REF_PREFIX, SEED_SOURCE_PREFIX
+from seed import conduct as conduct_module
 from seed import hostile as hostile_module
 from seed import runs as runs_module
 from seed.generate import COVERED_DAYS, Sampler
@@ -17,7 +18,12 @@ UNAVAILABLE_DAYS = 3
 UNAVAILABLE_OFFSET = 2
 IDLE_ROWS_PER_DAY = 25
 
+SEED_PREDICATES = {
+    "fd.cases": f"external_ref LIKE '{SEED_REF_PREFIX}%'",
+}
+
 SEEDED_TABLES = (
+    "fd.cases",
     "raw.member_activity_snapshot",
     "raw.channel_activity_snapshot",
     "raw.team_stats_snapshot",
@@ -60,6 +66,8 @@ def clear(conn, force=False):
         for table in dict.fromkeys(SEEDED_TABLES):
             if force:
                 cur.execute(f"DELETE FROM {table}")
+            elif table in SEED_PREDICATES:
+                cur.execute(f"DELETE FROM {table} WHERE {SEED_PREDICATES[table]}")
             elif has_column(cur, table, "channel_id"):
                 cur.execute(f"DELETE FROM {table} WHERE channel_id LIKE 'CSEED%'")
             elif has_column(cur, table, "user_id"):
@@ -448,6 +456,18 @@ def write_runs(conn, rng, members, as_of, hostile=False):
         "slack_events": copy_rows(
             conn, "raw.slack_events", ["event_type", "payload", "received_at"],
             runs_module.slack_event_rows(rng, members, as_of),
+        ),
+    }
+    conn.commit()
+    return counts
+
+
+def write_conduct(conn, seed, members, as_of):
+    rng = conduct_module.rng_for(seed)
+    counts = {
+        "fd.cases": copy_rows(
+            conn, "fd.cases", conduct_module.CASE_COLUMNS,
+            conduct_module.case_rows(rng, members, as_of),
         ),
     }
     conn.commit()

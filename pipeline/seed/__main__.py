@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from lib.db import connect
 from lib.paths import ENV_FILE
 from seed import SCALES
-from seed.emit import analyze, clear, write, write_runs
+from seed.emit import analyze, clear, write, write_conduct, write_runs
 from seed.generate import HISTORY_MONTHS, build, events
 from seed.guards import SeedRefused, check
 from seed.hostile import poison_channels
@@ -64,6 +64,7 @@ def main(argv=None):
             hostile=args.hostile,
         )
         counts.update(write_runs(conn, rng, members, as_of, hostile=args.hostile))
+        counts.update(write_conduct(conn, args.seed, members, as_of))
         notices = analyze(conn)
 
     for name, count in counts.items():
