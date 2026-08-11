@@ -6,6 +6,10 @@ Rails.application.routes.draw do
   get "auth/failure", to: "sessions#failure", as: :auth_failure
   delete "logout", to: "sessions#destroy", as: :logout
 
+  namespace :fd do
+    root to: "queue#index"
+  end
+
   resources :channels, only: [:index, :show]
   get "pipeline", to: "pipeline#index"
   get "pipeline/runs/:id", to: "pipeline#show", as: :pipeline_run
