@@ -67,6 +67,61 @@
   <div class="card card-flush">
     <div class="card-head">
       <div>
+        <h2 class="card-title">What was done</h2>
+        <p class="card-sub"><%= pluralize(@actions.size, "action") %>, oldest first</p>
+      </div>
+    </div>
+    <% if @actions.any? %>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>Directed at</th>
+              <th>Decided by</th>
+              <th class="col-date">When</th>
+              <th>State</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @actions.each do |action| %>
+              <tr>
+                <td>
+                  <span class="two-line">
+                    <b><%= action_label(action.type_key) %></b>
+                    <span><%= action_detail_note(action) || "n/a" %></span>
+                  </span>
+                </td>
+                <td>
+                  <span class="two-line">
+                    <b>@<%= action.target_user_id %></b>
+                    <span><%= action_target_note(action, @case) %></span>
+                  </span>
+                </td>
+                <td>
+                  <span class="two-line">
+                    <b>@<%= action.decided_by %></b>
+                    <span><%= action_performer_note(action) %></span>
+                  </span>
+                </td>
+                <td class="col-date"><%= action.performed_at.strftime("%b %-d, %Y") %></td>
+                <td><%= action_state_chip(action) || "n/a" %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="card-note">
+        Nothing has been done yet. A case can also resolve with no action, which is recorded
+        as an outcome rather than an absence.
+      </p>
+    <% end %>
+  </div>
+
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
         <h2 class="card-title">How this arrived</h2>
         <p class="card-sub"><%= reports_summary(@reports) %></p>
       </div>

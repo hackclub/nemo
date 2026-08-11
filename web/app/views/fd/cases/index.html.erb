@@ -29,12 +29,13 @@
           <tr>
             <th>Subject</th>
             <th>Category</th>
+            <th class="col-num">Actions</th>
             <th class="col-num">Age</th>
             <th>Assigned</th>
           </tr>
         </thead>
         <tbody>
-          <%= render "rows", cases: @cases, context: @context %>
+          <%= render "rows", cases: @cases, context: @context, action_counts: @action_counts %>
         </tbody>
       </table>
     </div>

@@ -13,6 +13,7 @@
       </span>
     </td>
     <td><%= kase.category_key || "n/a" %></td>
+    <td class="col-num"><%= action_counts.fetch(kase.id, 0) %></td>
     <td class="col-num"><%= case_age_chip(kase) %></td>
     <td>
       <% if kase.claimed? %>

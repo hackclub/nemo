@@ -154,6 +154,53 @@ module FdHelper
     parts.join(" · ")
   end
 
+  ACTION_LABELS = {
+    "warning" => "Warning",
+    "shush" => "Shush",
+    "temp_ban" => "Temporary ban",
+    "indef_ban" => "Indefinite ban",
+    "perma_ban" => "Permanent ban",
+    "channel_ban" => "Channel ban",
+    "locked_thread" => "Locked thread",
+    "dm" => "DM"
+  }.freeze
+
+  def action_label(type_key)
+    ACTION_LABELS.fetch(type_key) { type_key.tr("_", " ").capitalize }
+  end
+
+  def action_state_chip(action)
+    return tag.span("reversed", class: "chip chip-off") if action.reversed?
+    return tag.span("expired", class: "chip chip-off") if action.expired?
+
+    if action.expires?
+      remaining = case_age_label(action.expires_at - Time.current)
+      return tag.span("expires in #{remaining}", class: "chip chip-warn")
+    end
+
+    nil
+  end
+
+  def action_performer_note(action)
+    return "performed themselves" if action.performed_by_decider?
+
+    "performed by @#{action.performed_by}"
+  end
+
+  def action_detail_note(action)
+    channel = action.details["channel_id"]
+    parts = []
+    parts << channel if channel.present?
+    parts << "via #{action.source_app}" if action.source_app != "fire_engine"
+    parts.join(" · ").presence
+  end
+
+  def action_target_note(action, kase)
+    return "the subject" if action.target_user_id == kase.subject_user_id
+
+    "not the subject"
+  end
+
   def fact_number(value)
     value ? number_with_delimiter(value) : "n/a"
   end

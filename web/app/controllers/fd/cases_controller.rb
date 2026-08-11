@@ -7,6 +7,7 @@ module Fd
       @filter = FILTERS.include?(params[:filter]) ? params[:filter] : DEFAULT_FILTER
       @cases = scope_for(@filter).to_a
       @context = MemberContext.for(@cases.map(&:subject_user_id))
+      @action_counts = Action.where(case_id: @cases.map(&:id)).group(:case_id).count
       @open_count = Case.unresolved.count
       @unassigned_count = Case.unresolved.where(claimed_by: nil).count
     end
@@ -16,6 +17,7 @@ module Fd
       @threads = @case.threads.primary_first.to_a
       @participants = @case.participants.by_role.to_a
       @reports = @case.reports.oldest_first.to_a
+      @actions = @case.actions.oldest_first.to_a
       @siblings = @case.sibling_cases.oldest_first.to_a
       @context = MemberContext.for(
         [@case.subject_user_id] +
