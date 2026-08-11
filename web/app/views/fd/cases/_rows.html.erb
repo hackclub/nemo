@@ -3,16 +3,22 @@
     <td>
       <span class="two-line">
         <%= link_to fd_case_path(kase) do %>
-          <b><%= kase.subject_user_id ? "@#{kase.subject_user_id}" : "no subject set" %></b>
+          <b>
+            <span class="sev <%= case_severity(kase) %>"></span>
+            <%= kase.subject_user_id ? "@#{kase.subject_user_id}" : "no subject set" %>
+            <span class="mono">#<%= kase.id %></span>
+          </b>
         <% end %>
         <span><%= subject_context_line(context[kase.subject_user_id]) %></span>
       </span>
     </td>
-    <td class="col-num"><%= case_age_chip(kase.opened_at) %></td>
-    <td class="col-date"><%= kase.opened_at.strftime("%b %-d, %Y") %></td>
+    <td><%= kase.category_key || "n/a" %></td>
+    <td class="col-num"><%= case_age_chip(kase) %></td>
     <td>
       <% if kase.claimed? %>
         @<%= kase.claimed_by %>
+      <% elsif kase.resolved? %>
+        n/a
       <% else %>
         <span class="chip chip-crit">unassigned</span>
       <% end %>

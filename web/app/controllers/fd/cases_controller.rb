@@ -1,5 +1,16 @@
 module Fd
   class CasesController < BaseController
+    FILTERS = %w[open mine all].freeze
+    DEFAULT_FILTER = "open".freeze
+
+    def index
+      @filter = FILTERS.include?(params[:filter]) ? params[:filter] : DEFAULT_FILTER
+      @cases = scope_for(@filter).to_a
+      @context = MemberContext.for(@cases.map(&:subject_user_id))
+      @open_count = Case.unresolved.count
+      @unassigned_count = Case.unresolved.where(claimed_by: nil).count
+    end
+
     def show
       @case = Case.find(params[:id])
       @threads = @case.threads.primary_first.to_a
@@ -11,6 +22,16 @@ module Fd
           @participants.map(&:user_id) +
           @siblings.map(&:subject_user_id)
       )
+    end
+
+    private
+
+    def scope_for(filter)
+      case filter
+      when "mine" then Case.unresolved.where(claimed_by: current_staff.user_id).oldest_first
+      when "all" then Case.newest_first
+      else Case.unresolved.oldest_first
+      end
     end
   end
 end

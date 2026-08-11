@@ -77,10 +77,13 @@
         <div>
           <p class="rail-label">Fire Engine</p>
           <nav class="rail-nav" aria-label="Fire Engine">
-            <%= link_to fd_root_path, class: "rail-item",
+            <%= link_to fd_cases_path, class: "rail-item",
                   aria: { current: ("page" if controller_path.start_with?("fd/")) } do %>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4 6v6c0 4 3.4 7.4 8 8 4.6-.6 8-4 8-8V6l-8-3Z"/></svg>
-              Queue
+              Cases
+              <% if open_case_count.positive? %>
+                <span class="rail-badge"><%= open_case_count %></span>
+              <% end %>
             <% end %>
           </nav>
         </div>

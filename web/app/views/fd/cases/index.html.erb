@@ -1,0 +1,44 @@
+<% content_for :page_title, "Cases" %>
+<% content_for :page_subtitle do %>
+  <%= @open_count %> open · <%= @unassigned_count %> unassigned
+<% end %>
+<% content_for :head_actions do %>
+  <div class="segmented">
+    <% Fd::CasesController::FILTERS.each do |name| %>
+      <%= link_to name.capitalize, fd_cases_path(filter: name),
+            aria: { current: ("true" if @filter == name) } %>
+    <% end %>
+  </div>
+<% end %>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title"><%= filter_title(@filter) %></h2>
+      <p class="card-sub"><%= filter_ordering(@filter) %> · subject context from the warehouse</p>
+    </div>
+    <div class="card-tools">
+      <span class="chip chip-off"><%= pluralize(@cases.size, "case") %></span>
+    </div>
+  </div>
+
+  <% if @cases.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Category</th>
+            <th class="col-num">Age</th>
+            <th>Assigned</th>
+          </tr>
+        </thead>
+        <tbody>
+          <%= render "rows", cases: @cases, context: @context %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note"><%= filter_empty_note(@filter) %></p>
+  <% end %>
+</div>

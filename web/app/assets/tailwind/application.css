@@ -251,6 +251,21 @@
     flex: none;
   }
 
+  .rail-badge {
+    margin-left: auto;
+    font-size: var(--t-3xs);
+    font-weight: 700;
+    background-color: var(--accent-soft);
+    color: var(--accent-deep);
+    border-radius: var(--r-pill);
+    padding: 1px 7px;
+  }
+
+  .rail-item[aria-current="page"] .rail-badge {
+    background-color: var(--accent-on);
+    color: var(--accent-deep);
+  }
+
   .rail-foot {
     margin-top: auto;
     display: grid;
@@ -584,6 +599,19 @@
     background-color: color-mix(in oklab, var(--ink) 8%, transparent);
     color: var(--ink-2);
   }
+
+  .sev {
+    display: inline-block;
+    width: 3px;
+    height: 1.1em;
+    border-radius: 2px;
+    vertical-align: -0.15em;
+    margin-right: 6px;
+  }
+
+  .sev-crit { background-color: var(--accent); }
+  .sev-warn { background-color: var(--warn); }
+  .sev-calm { background-color: var(--off); }
 
   .delta {
     display: flex;

@@ -2,17 +2,61 @@ module FdHelper
   AGE_WARN = 2.days
   AGE_CRIT = 5.days
 
-  def case_age_chip(opened_at)
-    age = Time.current - opened_at
-    tone =
-      if age >= AGE_CRIT
-        "chip-crit"
-      elsif age >= AGE_WARN
-        "chip-warn"
-      else
-        "chip-off"
-      end
-    tag.span(case_age_label(age), class: "chip #{tone}")
+  FILTER_TITLES = {
+    "open" => "Open cases",
+    "mine" => "Cases you claimed",
+    "all" => "Every case"
+  }.freeze
+
+  FILTER_ORDERING = {
+    "open" => "oldest first",
+    "mine" => "oldest first",
+    "all" => "newest first"
+  }.freeze
+
+  FILTER_EMPTY = {
+    "open" => "Nothing open right now.",
+    "mine" => "You have not claimed any open cases.",
+    "all" => "n/a"
+  }.freeze
+
+  def filter_title(filter)
+    FILTER_TITLES.fetch(filter, "Cases")
+  end
+
+  def filter_ordering(filter)
+    FILTER_ORDERING.fetch(filter, "oldest first")
+  end
+
+  def filter_empty_note(filter)
+    FILTER_EMPTY.fetch(filter, "n/a")
+  end
+
+  def case_age_seconds(kase)
+    (kase.resolved_at || Time.current) - kase.opened_at
+  end
+
+  def case_age_chip(kase)
+    seconds = case_age_seconds(kase)
+    tone = kase.resolved? ? "chip-off" : age_tone(seconds)
+    tag.span(case_age_label(seconds), class: "chip #{tone}")
+  end
+
+  def case_severity(kase)
+    return "sev-calm" if kase.resolved?
+
+    case age_tone(case_age_seconds(kase))
+    when "chip-crit" then "sev-crit"
+    when "chip-warn" then "sev-warn"
+    else "sev-calm"
+    end
+  end
+
+  def age_tone(seconds)
+    return "chip-crit" if seconds >= AGE_CRIT
+    return "chip-warn" if seconds >= AGE_WARN
+
+    "chip-off"
   end
 
   def case_age_label(seconds)

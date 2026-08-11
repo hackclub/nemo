@@ -7,8 +7,8 @@ Rails.application.routes.draw do
   delete "logout", to: "sessions#destroy", as: :logout
 
   namespace :fd do
-    root to: "queue#index"
-    resources :cases, only: [:show]
+    root to: "cases#index"
+    resources :cases, only: [:index, :show]
   end
 
   resources :channels, only: [:index, :show]

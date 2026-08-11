@@ -13,6 +13,7 @@ module Fd
 
     scope :unresolved, -> { where(resolved_at: nil) }
     scope :oldest_first, -> { order(:opened_at) }
+    scope :newest_first, -> { order(opened_at: :desc) }
 
     def resolved?
       resolved_at.present?
