@@ -16,7 +16,7 @@ module Fd
     end
 
     def readonly?
-      true
+      persisted?
     end
 
     def by_human?
