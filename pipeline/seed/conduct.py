@@ -11,6 +11,8 @@ ENGAGEMENT_WEIGHT = 0.7
 FIREFIGHTER_COUNT = 5
 NO_SUBJECT_SHARE = 0.02
 CLAIMED_SHARE = 0.8
+OPEN_CLAIMED_SHARE = 0.55
+MIN_UNASSIGNED_OPEN = 2
 SECOND_CASE_SHARE = 0.18
 THIRD_CASE_SHARE = 0.05
 MEAN_RESOLVE_DAYS = 8.0
@@ -492,6 +494,19 @@ def attach_all_actions(rng, cases, as_of):
     return cases
 
 
+def free_open_cases(rng, cases, minimum=MIN_UNASSIGNED_OPEN):
+    still_open = [case for case in cases if case.resolved_at is None]
+    shortfall = minimum - sum(1 for case in still_open if case.claimed_at is None)
+    if shortfall <= 0:
+        return cases
+
+    claimed = [case for case in still_open if case.claimed_at is not None]
+    rng.shuffle(claimed)
+    for case in claimed[:shortfall]:
+        case.claimed_by = case.claimed_at = None
+    return cases
+
+
 def build_cases(rng, members, as_of):
     pool = firefighters(members)
     if not pool:
@@ -505,10 +520,11 @@ def build_cases(rng, members, as_of):
     def settle(case, opened_at):
         takes = min(rng.expovariate(1.0 / MEAN_RESOLVE_DAYS), MAX_RESOLVE_DAYS)
         would_resolve = opened_at + timedelta(days=takes)
-        if rng.random() < CLAIMED_SHARE:
+        resolves = would_resolve <= horizon
+        if rng.random() < (CLAIMED_SHARE if resolves else OPEN_CLAIMED_SHARE):
             case.claimed_by = rng.choice(pool)
             case.claimed_at = opened_at + timedelta(days=takes * CLAIM_FRACTION * rng.random())
-        if would_resolve <= horizon:
+        if resolves:
             case.resolution = pick_resolution(rng)
             case.resolved_at = would_resolve
             case.member_note = (
@@ -565,7 +581,7 @@ def build_cases(rng, members, as_of):
                         sibling.participants.append((user_id, role))
                 built.append(sibling)
 
-    return built
+    return free_open_cases(rng, built)
 
 
 def case_row(case):
