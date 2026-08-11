@@ -1,6 +1,6 @@
 <% content_for :page_title, "Case #{@case.id}" %>
 <% content_for :page_subtitle do %>
-  opened <%= @case.opened_at.strftime("%b %-d, %Y") %> by @<%= @case.opened_by %>
+  <%= case_head_meta(@case, @reports) %>
 <% end %>
 <% content_for :page_badge do %>
   <%= case_status_chip(@case) %>

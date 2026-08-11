@@ -120,6 +120,40 @@ module FdHelper
     end
   end
 
+  def filed_by_label(reports)
+    return nil if reports.empty?
+
+    named = reports.reject(&:anonymous?)
+
+    if named.empty?
+      reports.one? ? "filed anonymously" : "filed anonymously by #{reports.size} people"
+    elsif reports.one?
+      "filed by #{named.first.reporter_label}"
+    else
+      "filed by #{named.first.reporter_label} and #{pluralize(reports.size - 1, 'other')}"
+    end
+  end
+
+  def case_head_meta(kase, reports)
+    parts = []
+    parts << kase.category_key.tr("_", " ") if kase.category_key
+    opened = "opened #{kase.opened_at.strftime('%b %-d')}"
+
+    if !kase.claimed?
+      parts << "#{opened} by @#{kase.opened_by}"
+      parts << "unassigned"
+    elsif kase.claimed_by == kase.opened_by
+      parts << "#{opened} and assigned to @#{kase.claimed_by}"
+    else
+      parts << "#{opened} by @#{kase.opened_by}"
+      parts << "assigned to @#{kase.claimed_by}"
+    end
+
+    filed = filed_by_label(reports)
+    parts << filed if filed
+    parts.join(" · ")
+  end
+
   def fact_number(value)
     value ? number_with_delimiter(value) : "n/a"
   end
