@@ -23,6 +23,13 @@ SECOND_WITNESS_SHARE = 0.15
 REPORTER_IS_TARGET_SHARE = 0.5
 REPORTER_IS_WITNESS_SHARE = 0.25
 THREAD_LEAD_MINUTES = (2, 240)
+ANON_WHEN_UNREPORTED_SHARE = 0.6
+CROWD_SHARE = 0.06
+CROWD_EXTRA = (2, 4)
+ANON_EXTRA_SHARE = 0.5
+REPLIED_SHARE = 0.75
+MEAN_REPLY_HOURS = 6.0
+REPORT_LEAD_MINUTES = (3, 180)
 
 RESOLUTION_WEIGHTS = (
     ("action_taken", 0.55),
@@ -49,6 +56,34 @@ CASE_COLUMNS = [
 
 THREAD_COLUMNS = ["case_id", "channel_id", "thread_ts", "is_primary", "added_by"]
 PARTICIPANT_COLUMNS = ["case_id", "user_id", "role"]
+REPORT_COLUMNS = [
+    "case_id",
+    "reporter_user_id",
+    "is_anonymous",
+    "body",
+    "received_at",
+    "dm_channel_id",
+    "dm_ts",
+    "forwarded_ts",
+    "first_replied_at",
+    "closed_at",
+    "source_app",
+    "external_ref",
+]
+
+
+@dataclass
+class SeedReport:
+    reporter_user_id: str | None
+    is_anonymous: bool
+    body: str
+    received_at: datetime
+    dm_channel_id: str | None
+    dm_ts: str | None
+    forwarded_ts: str
+    first_replied_at: datetime | None
+    closed_at: datetime | None
+    source_app: str
 
 
 @dataclass
@@ -65,10 +100,11 @@ class SeedCase:
     member_note: str | None = None
     threads: list = field(default_factory=list)
     participants: list = field(default_factory=list)
+    reports: list = field(default_factory=list)
 
 
-def rng_for(seed):
-    return random.Random(f"{seed}:conduct")
+def rng_for(seed, stream="conduct"):
+    return random.Random(f"{seed}:{stream}")
 
 
 def firefighters(members, count=FIREFIGHTER_COUNT):
@@ -187,6 +223,63 @@ def attach_people(rng, case, roster, channel_id):
         case.participants.append((witnesses[0], "reporter"))
 
 
+def dm_channel_for(user_id):
+    return f"D{user_id[1:]}"
+
+
+def make_report(rng, case, reporter, source_app="shroud"):
+    received_at = case.opened_at - timedelta(minutes=rng.uniform(*REPORT_LEAD_MINUTES))
+    anonymous = reporter is None
+    replied_at = None
+    if rng.random() < REPLIED_SHARE:
+        replied_at = received_at + timedelta(hours=rng.expovariate(1.0 / MEAN_REPLY_HOURS))
+        if case.resolved_at and replied_at > case.resolved_at:
+            replied_at = case.resolved_at
+    return SeedReport(
+        reporter_user_id=reporter,
+        is_anonymous=anonymous,
+        body="[seed] report text, synthetic, not a real account of anything",
+        received_at=received_at,
+        dm_channel_id=None if anonymous else dm_channel_for(reporter),
+        dm_ts=slack_ts(rng, received_at),
+        forwarded_ts=slack_ts(rng, received_at),
+        first_replied_at=replied_at,
+        closed_at=case.resolved_at,
+        source_app=source_app,
+    )
+
+
+def attach_reports(rng, case, roster):
+    named = [user_id for user_id, role in case.participants if role == "reporter"]
+    if named:
+        case.reports.append(make_report(rng, case, named[0]))
+    elif rng.random() < ANON_WHEN_UNREPORTED_SHARE:
+        case.reports.append(make_report(rng, case, None))
+
+    if not case.reports or rng.random() >= CROWD_SHARE:
+        return
+
+    channel_id = case.threads[0][0] if case.threads else None
+    exclude = {case.subject_user_id, *named}
+    for _ in range(rng.randint(*CROWD_EXTRA)):
+        if channel_id is None or rng.random() < ANON_EXTRA_SHARE:
+            case.reports.append(make_report(rng, case, None))
+            continue
+        extra = pick_other(rng, roster, channel_id, exclude)
+        if extra is None:
+            continue
+        exclude.add(extra)
+        case.reports.append(make_report(rng, case, extra))
+        case.participants.append((extra, "reporter"))
+
+
+def attach_all_reports(rng, cases, members):
+    roster = channel_roster(members)
+    for case in cases:
+        attach_reports(rng, case, roster)
+    return cases
+
+
 def build_cases(rng, members, as_of):
     pool = firefighters(members)
     if not pool:
@@ -297,3 +390,27 @@ def participant_rows(cases, ids):
             continue
         for user_id, role in case.participants:
             yield (case_id, user_id, role)
+
+
+def report_rows(cases, ids):
+    index = 0
+    for case in cases:
+        case_id = ids.get(case.external_ref)
+        if case_id is None:
+            continue
+        for report in case.reports:
+            index += 1
+            yield (
+                case_id,
+                report.reporter_user_id,
+                report.is_anonymous,
+                report.body,
+                report.received_at,
+                report.dm_channel_id,
+                report.dm_ts,
+                report.forwarded_ts,
+                report.first_replied_at,
+                report.closed_at,
+                report.source_app,
+                f"{SEED_REF_PREFIX}report:{index}",
+            )

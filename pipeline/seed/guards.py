@@ -25,6 +25,10 @@ FOREIGN_ROWS = [
         "fd.cases",
         f"external_ref IS NULL OR external_ref NOT LIKE '{SEED_REF_PREFIX}%'",
     ),
+    (
+        "fd.case_reports",
+        f"external_ref IS NULL OR external_ref NOT LIKE '{SEED_REF_PREFIX}%'",
+    ),
 ]
 
 
