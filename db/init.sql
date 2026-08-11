@@ -74,6 +74,11 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'app' AND tablename = 'sync_request') THEN
         EXECUTE 'GRANT SELECT, UPDATE ON app.sync_request TO pipeline_writer';
     END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'fd' AND tablename = 'audit') THEN
+        EXECUTE 'REVOKE UPDATE, DELETE ON fd.audit FROM pipeline_writer';
+        EXECUTE 'REVOKE UPDATE, DELETE ON fd.audit FROM rails_app';
+    END IF;
 EXCEPTION
     WHEN insufficient_privilege THEN
         RAISE NOTICE 'single-role deployment: % may not administer pipeline_writer, dbt_owner '
