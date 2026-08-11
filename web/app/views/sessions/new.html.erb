@@ -1,5 +1,5 @@
 <h1>Sign in</h1>
-<p>Access is restricted to allowlisted staff, and every sign in is logged.</p>
+<p>Access is restricted to allowlisted staff.</p>
 
 <%= form_tag "/auth/hackclub", method: :post, authenticity_token: false, data: { turbo: false } do %>
   <%= hidden_field_tag :authenticity_token, Rack::Protection::AuthenticityToken.token(session) %>
