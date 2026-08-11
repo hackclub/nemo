@@ -8,6 +8,8 @@ module Fd
       inverse_of: :kase, dependent: nil
     has_many :participants, class_name: "Fd::CaseParticipant", foreign_key: :case_id,
       inverse_of: :kase, dependent: nil
+    has_many :reports, class_name: "Fd::CaseReport", foreign_key: :case_id,
+      inverse_of: :kase, dependent: nil
 
     scope :unresolved, -> { where(resolved_at: nil) }
     scope :oldest_first, -> { order(:opened_at) }

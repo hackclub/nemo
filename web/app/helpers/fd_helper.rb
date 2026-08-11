@@ -53,6 +53,21 @@ module FdHelper
     ROLE_LABELS.fetch(role, role)
   end
 
+  def reply_latency_label(report)
+    return "no reply yet" unless report.replied?
+
+    case_age_label(report.reply_latency)
+  end
+
+  def reports_summary(reports)
+    return "n/a" if reports.empty?
+
+    anonymous = reports.count(&:anonymous?)
+    parts = ["#{pluralize(reports.size, 'report')}"]
+    parts << "#{anonymous} anonymous" if anonymous.positive?
+    parts.join(" · ")
+  end
+
   def case_status_chip(kase)
     if kase.resolved?
       tag.span(kase.resolution.tr("_", " "), class: "chip chip-off")

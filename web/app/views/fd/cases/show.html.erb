@@ -49,6 +49,56 @@
     </table>
   </div>
 
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">How this arrived</h2>
+        <p class="card-sub"><%= reports_summary(@reports) %></p>
+      </div>
+    </div>
+    <% if @reports.any? %>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Reporter</th>
+              <th class="col-date">Received</th>
+              <th>First reply</th>
+              <th>Told the outcome</th>
+              <th>What they wrote</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @reports.each do |report| %>
+              <tr>
+                <td>
+                  <span class="two-line">
+                    <b><%= report.reporter_label %></b>
+                    <span>via <%= report.source_app %></span>
+                  </span>
+                </td>
+                <td class="col-date"><%= report.received_at.strftime("%b %-d, %Y") %></td>
+                <td>
+                  <% if report.replied? %>
+                    <%= reply_latency_label(report) %>
+                  <% else %>
+                    <span class="chip chip-crit">no reply yet</span>
+                  <% end %>
+                </td>
+                <td><%= report.told_of_outcome? ? "yes" : "not yet" %></td>
+                <td><%= report.body || "n/a" %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="card-note">
+        No report. A firefighter opened this case from something they saw themselves.
+      </p>
+    <% end %>
+  </div>
+
   <div class="grid-2-1">
     <div class="card card-flush">
       <div class="card-head">
