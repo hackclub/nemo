@@ -1,0 +1,152 @@
+<% content_for :page_title, "Case #{@case.id}" %>
+<% content_for :page_subtitle do %>
+  opened <%= @case.opened_at.strftime("%b %-d, %Y") %> by @<%= @case.opened_by %>
+<% end %>
+<% content_for :page_badge do %>
+  <%= case_status_chip(@case) %>
+<% end %>
+
+<div class="stack">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">
+          <% if @case.subject_user_id %>
+            @<%= @case.subject_user_id %>
+          <% else %>
+            No subject set
+          <% end %>
+        </h2>
+        <p class="card-sub"><%= subject_context_line(@context[@case.subject_user_id]) %></p>
+      </div>
+    </div>
+
+    <table class="data-table">
+      <tbody>
+        <tr>
+          <td>Claimed by</td>
+          <td><%= @case.claimed? ? "@#{@case.claimed_by}" : "unassigned" %></td>
+        </tr>
+        <tr>
+          <td>Category</td>
+          <td><%= @case.category_key || "n/a" %></td>
+        </tr>
+        <tr>
+          <td>Resolved</td>
+          <td>
+            <% if @case.resolved? %>
+              <%= @case.resolved_at.strftime("%b %-d, %Y") %> as <%= @case.resolution.tr("_", " ") %>
+            <% else %>
+              n/a
+            <% end %>
+          </td>
+        </tr>
+        <tr>
+          <td>What the member was told</td>
+          <td><%= @case.member_note || "n/a" %></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid-2-1">
+    <div class="card card-flush">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">Threads</h2>
+          <p class="card-sub">where it happened</p>
+        </div>
+      </div>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Channel</th>
+              <th>Thread</th>
+              <th>Added by</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @threads.each do |thread| %>
+              <tr>
+                <td>
+                  <span class="two-line">
+                    <b><%= thread.channel_id %></b>
+                    <span><%= thread.is_primary ? "primary" : "added later" %></span>
+                  </span>
+                </td>
+                <td>
+                  <%= link_to "open in Slack",
+                        slack_thread_url(thread.channel_id, thread.thread_ts),
+                        target: "_blank", rel: "noopener" %>
+                </td>
+                <td>@<%= thread.added_by %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card card-flush">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">Who else was involved</h2>
+            <p class="card-sub">the subject is above, not in this list</p>
+          </div>
+        </div>
+        <% if @participants.any? %>
+          <table class="data-table">
+            <tbody>
+              <% @participants.each do |person| %>
+                <tr>
+                  <td>
+                    <span class="two-line">
+                      <b>@<%= person.user_id %></b>
+                      <span><%= role_label(person.role) %></span>
+                    </span>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% else %>
+          <p class="card-note">n/a</p>
+        <% end %>
+      </div>
+
+      <div class="card card-flush">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">Duplicate Cases</h2>
+            <p class="card-sub">other cases citing one of these threads</p>
+          </div>
+        </div>
+        <% if @siblings.any? %>
+          <table class="data-table">
+            <tbody>
+              <% @siblings.each do |sibling| %>
+                <tr>
+                  <td>
+                    <span class="two-line">
+                      <%= link_to fd_case_path(sibling) do %>
+                        <b>Case <%= sibling.id %></b>
+                      <% end %>
+                      <span>
+                        <%= sibling.subject_user_id ? "@#{sibling.subject_user_id}" : "no subject set" %>
+                      </span>
+                    </span>
+                  </td>
+                  <td><%= case_status_chip(sibling) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% else %>
+          <p class="card-note">n/a</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

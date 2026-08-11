@@ -8,6 +8,7 @@ Rails.application.routes.draw do
 
   namespace :fd do
     root to: "queue#index"
+    resources :cases, only: [:show]
   end
 
   resources :channels, only: [:index, :show]

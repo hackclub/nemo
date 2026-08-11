@@ -36,6 +36,31 @@ module FdHelper
     rest.zero? ? "#{years}y" : "#{years}y #{rest}mo"
   end
 
+  SLACK_ARCHIVES = "https://hackclub.slack.com/archives".freeze
+
+  ROLE_LABELS = {
+    "target" => "on the receiving end",
+    "reporter" => "reported it",
+    "witness" => "was in the thread",
+    "participant" => "was in the thread"
+  }.freeze
+
+  def slack_thread_url(channel_id, thread_ts)
+    "#{SLACK_ARCHIVES}/#{channel_id}/p#{thread_ts.delete('.')}"
+  end
+
+  def role_label(role)
+    ROLE_LABELS.fetch(role, role)
+  end
+
+  def case_status_chip(kase)
+    if kase.resolved?
+      tag.span(kase.resolution.tr("_", " "), class: "chip chip-off")
+    else
+      tag.span("open", class: "chip chip-crit")
+    end
+  end
+
   def subject_context_line(context)
     return "nobody identified yet" if context.nil?
     return "not in the warehouse yet" unless context.known?

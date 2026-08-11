@@ -2,7 +2,9 @@
   <tr>
     <td>
       <span class="two-line">
-        <b><%= kase.subject_user_id ? "@#{kase.subject_user_id}" : "no subject set" %></b>
+        <%= link_to fd_case_path(kase) do %>
+          <b><%= kase.subject_user_id ? "@#{kase.subject_user_id}" : "no subject set" %></b>
+        <% end %>
         <span><%= subject_context_line(context[kase.subject_user_id]) %></span>
       </span>
     </td>
