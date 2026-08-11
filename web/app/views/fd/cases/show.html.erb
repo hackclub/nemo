@@ -5,6 +5,12 @@
 <% content_for :page_badge do %>
   <%= case_status_chip(@case) %>
 <% end %>
+<% content_for :head_actions do %>
+  <label for="case-timeline" class="btn drawer-open">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h13M3 12h9M3 19h13"/><circle cx="20" cy="5" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="20" cy="19" r="1.6"/></svg>
+    Timeline
+  </label>
+<% end %>
 
 <div class="stack">
   <% subject = @context[@case.subject_user_id] %>
@@ -115,99 +121,6 @@
       <p class="card-note">
         Nothing has been done yet. A case can also resolve with no action, which is recorded
         as an outcome rather than an absence.
-      </p>
-    <% end %>
-  </div>
-
-  <div class="card card-flush">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">Notes</h2>
-        <p class="card-sub"><%= note_count_summary(@notes, @standing_notes) %> · internal, never shown to the member</p>
-      </div>
-    </div>
-    <% if @notes.any? || @standing_notes.any? %>
-      <table class="data-table">
-        <tbody>
-          <% @notes.each do |note| %>
-            <tr>
-              <td>
-                <span class="two-line">
-                  <b><%= note.body %></b>
-                  <span><%= note_byline(note) %></span>
-                </span>
-              </td>
-            </tr>
-          <% end %>
-          <% @standing_notes.each do |note| %>
-            <tr>
-              <td>
-                <span class="two-line">
-                  <b><%= note.body %></b>
-                  <span>
-                    <span class="chip chip-off">standing</span>
-                    <%= note_byline(note) %> · about the member, not this case
-                  </span>
-                </span>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    <% else %>
-      <p class="card-note">
-        Nothing written down yet. Notes are for what the record cannot hold on its own:
-        what a conversation felt like, why a decision went the way it did.
-      </p>
-    <% end %>
-  </div>
-
-  <div class="card card-flush">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">Trail</h2>
-        <p class="card-sub"><%= audit_trail_summary(@trail) %> · append only, oldest first</p>
-      </div>
-    </div>
-    <% if @trail.any? %>
-      <div class="scroll">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>What happened</th>
-              <th>Who</th>
-              <th class="col-date">When</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @trail.each do |entry| %>
-              <tr>
-                <td>
-                  <span class="two-line">
-                    <b><%= audit_verb_label(entry) %></b>
-                    <span><%= audit_change_note(entry) || "n/a" %></span>
-                  </span>
-                </td>
-                <td>
-                  <span class="two-line">
-                    <b><%= audit_actor_label(entry) %></b>
-                    <span><%= audit_actor_note(entry) || "n/a" %></span>
-                  </span>
-                </td>
-                <td class="col-date">
-                  <span class="two-line">
-                    <b><%= entry.occurred_at.strftime("%b %-d, %Y") %></b>
-                    <span><%= entry.occurred_at.strftime("%H:%M") %></span>
-                  </span>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <p class="card-note">
-        Nothing recorded yet. The trail fills in as cases are opened, assigned and acted on.
       </p>
     <% end %>
   </div>
@@ -363,3 +276,46 @@
     </div>
   </div>
 </div>
+
+<input type="checkbox" id="case-timeline" class="drawer-flip">
+<label for="case-timeline" class="drawer-veil" aria-hidden="true"></label>
+
+<aside class="drawer" aria-label="Timeline">
+  <div class="drawer-head">
+    <h2>Timeline</h2>
+    <label for="case-timeline" class="drawer-shut">Close</label>
+  </div>
+  <div class="drawer-body">
+    <% if @timeline.any? %>
+      <div class="timeline">
+        <% @timeline.each do |entry| %>
+          <div class="tl-item">
+            <div class="tl-when">
+              <%= entry.at.strftime("%-d %b") %><br><%= entry.at.strftime("%H:%M") %>
+            </div>
+            <div class="tl-what">
+              <div class="tl-head">
+                <span class="tl-title"><%= entry.title %></span>
+                <% if entry.mark %>
+                  <span class="tl-mark tl-mark-<%= entry.mark %>"><%= entry.mark %></span>
+                <% end %>
+                <% entry.chips.each do |chip| %>
+                  <span class="chip chip-off"><%= chip %></span>
+                <% end %>
+              </div>
+              <% if entry.detail.present? %>
+                <div class="tl-detail"><%= entry.detail %></div>
+              <% end %>
+              <% if entry.said.present? %>
+                <div class="said"><%= entry.said %></div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="card-note">Nothing recorded yet.</p>
+    <% end %>
+    <div class="tl-open"><%= timeline_standing(@case, @timeline) %></div>
+  </div>
+</aside>

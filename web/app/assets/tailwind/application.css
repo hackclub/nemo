@@ -1038,6 +1038,174 @@
     .grid-2-1 { grid-template-columns: minmax(0, 1fr); }
   }
 
+  .timeline {
+    display: grid;
+    gap: 0;
+  }
+
+  .tl-item {
+    display: grid;
+    grid-template-columns: 84px 1fr;
+    gap: var(--s-sm);
+    padding: var(--s-xs) 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .tl-item:last-child {
+    border-bottom: 0;
+  }
+
+  .tl-when {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    padding-top: 2px;
+  }
+
+  .tl-what {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .tl-head {
+    display: flex;
+    gap: var(--s-2xs);
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+
+  .tl-title {
+    font-weight: 600;
+    font-size: var(--t-sm);
+  }
+
+  .tl-detail {
+    font-size: var(--t-2xs);
+    color: var(--ink-2);
+  }
+
+  .tl-mark {
+    font-size: var(--t-3xs);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    font-weight: 700;
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+
+  .tl-mark-in {
+    background-color: color-mix(in oklab, var(--ink) 8%, transparent);
+    color: var(--ink-2);
+  }
+
+  .tl-mark-act {
+    background-color: var(--accent-soft);
+    color: var(--accent-deep);
+  }
+
+  .tl-mark-own {
+    background-color: var(--good-soft);
+    color: var(--good);
+  }
+
+  .tl-mark-note {
+    background-color: var(--warn-soft);
+    color: var(--warn);
+  }
+
+  .tl-open {
+    border: 1px dashed var(--line);
+    border-radius: var(--r-ctl);
+    padding: var(--s-2xs) var(--s-xs);
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    margin-top: var(--s-2xs);
+  }
+
+  .said {
+    border-left: 3px solid var(--line);
+    padding-left: var(--s-xs);
+    font-size: var(--t-xs);
+    color: var(--ink-2);
+    margin-top: 4px;
+  }
+
+  .drawer-flip {
+    position: fixed;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .drawer-veil {
+    position: fixed;
+    inset: 0;
+    background-color: color-mix(in oklab, var(--ink) 34%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur) var(--ease-out);
+    z-index: 40;
+  }
+
+  .drawer {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: min(380px, 86%);
+    background-color: var(--card);
+    border-inline-start: 1px solid var(--line);
+    z-index: 41;
+    transform: translateX(101%);
+    transition: transform var(--dur) var(--ease-out);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .drawer-flip:checked ~ .drawer {
+    transform: translateX(0);
+  }
+
+  .drawer-flip:checked ~ .drawer-veil {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .drawer-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2xs);
+    padding: var(--s-sm) var(--s-md);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .drawer-head h2 {
+    margin: 0;
+    font-size: var(--t-md);
+    font-weight: 700;
+  }
+
+  .drawer-shut {
+    margin-inline-start: auto;
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .drawer-body {
+    overflow-y: auto;
+    padding: var(--s-sm) var(--s-md) var(--s-md);
+  }
+
+  .drawer-open {
+    cursor: pointer;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .drawer, .drawer-veil { transition: none; }
+  }
+
   /* ── charts and legends ────────────────────────────────── */
 
   .chart-tall {
