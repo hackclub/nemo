@@ -19,6 +19,13 @@ module Fd
       @reports = @case.reports.oldest_first.to_a
       @actions = @case.actions.oldest_first.to_a
       @siblings = @case.sibling_cases.oldest_first.to_a
+      @notes = @case.notes.visible.recent_first.to_a
+      @standing_notes = Note.for_subject(@case.subject_user_id).visible.recent_first.to_a
+      @trail = AuditEntry.trail_for(
+        case_id: @case.id,
+        action_ids: @actions.map(&:id),
+        report_ids: @reports.map(&:id),
+      ).to_a
       @context = MemberContext.for(
         [@case.subject_user_id] +
           @participants.map(&:user_id) +

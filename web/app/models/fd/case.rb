@@ -12,6 +12,8 @@ module Fd
       inverse_of: :kase, dependent: nil
     has_many :actions, class_name: "Fd::Action", foreign_key: :case_id,
       inverse_of: :kase, dependent: nil
+    has_many :notes, class_name: "Fd::Note", foreign_key: :case_id,
+      inverse_of: :kase, dependent: nil
 
     scope :unresolved, -> { where(resolved_at: nil) }
     scope :oldest_first, -> { order(:opened_at) }

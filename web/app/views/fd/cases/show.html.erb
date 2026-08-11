@@ -122,6 +122,99 @@
   <div class="card card-flush">
     <div class="card-head">
       <div>
+        <h2 class="card-title">Notes</h2>
+        <p class="card-sub"><%= note_count_summary(@notes, @standing_notes) %> · internal, never shown to the member</p>
+      </div>
+    </div>
+    <% if @notes.any? || @standing_notes.any? %>
+      <table class="data-table">
+        <tbody>
+          <% @notes.each do |note| %>
+            <tr>
+              <td>
+                <span class="two-line">
+                  <b><%= note.body %></b>
+                  <span><%= note_byline(note) %></span>
+                </span>
+              </td>
+            </tr>
+          <% end %>
+          <% @standing_notes.each do |note| %>
+            <tr>
+              <td>
+                <span class="two-line">
+                  <b><%= note.body %></b>
+                  <span>
+                    <span class="chip chip-off">standing</span>
+                    <%= note_byline(note) %> · about the member, not this case
+                  </span>
+                </span>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p class="card-note">
+        Nothing written down yet. Notes are for what the record cannot hold on its own:
+        what a conversation felt like, why a decision went the way it did.
+      </p>
+    <% end %>
+  </div>
+
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Trail</h2>
+        <p class="card-sub"><%= audit_trail_summary(@trail) %> · append only, oldest first</p>
+      </div>
+    </div>
+    <% if @trail.any? %>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>What happened</th>
+              <th>Who</th>
+              <th class="col-date">When</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @trail.each do |entry| %>
+              <tr>
+                <td>
+                  <span class="two-line">
+                    <b><%= audit_verb_label(entry) %></b>
+                    <span><%= audit_change_note(entry) || "n/a" %></span>
+                  </span>
+                </td>
+                <td>
+                  <span class="two-line">
+                    <b><%= audit_actor_label(entry) %></b>
+                    <span><%= audit_actor_note(entry) || "n/a" %></span>
+                  </span>
+                </td>
+                <td class="col-date">
+                  <span class="two-line">
+                    <b><%= entry.occurred_at.strftime("%b %-d, %Y") %></b>
+                    <span><%= entry.occurred_at.strftime("%H:%M") %></span>
+                  </span>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="card-note">
+        Nothing recorded yet. The trail fills in as cases are opened, assigned and acted on.
+      </p>
+    <% end %>
+  </div>
+
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
         <h2 class="card-title">How this arrived</h2>
         <p class="card-sub"><%= reports_summary(@reports) %></p>
       </div>

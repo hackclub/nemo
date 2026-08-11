@@ -250,4 +250,101 @@ module FdHelper
     parts << "#{context.channels_joined} channels" if context.channels_joined
     parts.join(" · ")
   end
+
+  AUDIT_VERBS = {
+    "opened" => "case opened",
+    "claimed" => "assigned",
+    "resolved" => "case resolved",
+    "performed" => "action taken",
+    "reversed" => "action reversed",
+    "received" => "report arrived",
+  }.freeze
+
+  AUDIT_KINDS = {
+    "bot" => "automatic",
+    "system" => "arrived on its own",
+    "import" => "backfilled",
+  }.freeze
+
+  def note_count_summary(notes, standing)
+    total = notes.size + standing.size
+    return "nothing written down yet" if total.zero?
+
+    parts = ["#{notes.size} on this case"]
+    parts << "#{standing.size} standing on the member" if standing.any?
+    parts.join(" · ")
+  end
+
+  def note_byline(note)
+    "@#{note.author} · #{ago_label(note.created_at)}"
+  end
+
+  def ago_label(at)
+    return "n/a" if at.nil?
+
+    seconds = Time.current - at
+    return "just now" if seconds < 1.minute
+
+    "#{case_age_label(seconds)} ago"
+  end
+
+  def audit_verb_label(entry)
+    AUDIT_VERBS.fetch(entry.verb, entry.verb.tr("_", " "))
+  end
+
+  def audit_actor_label(entry)
+    return "@#{entry.actor_user_id}" if entry.actor?
+
+    AUDIT_KINDS.fetch(entry.actor_kind, entry.actor_kind)
+  end
+
+  def audit_actor_note(entry)
+    parts = []
+    parts << AUDIT_KINDS[entry.actor_kind] if entry.actor? && !entry.by_human?
+    parts << "via #{entry.source_app}" unless entry.source_app == "fire_engine"
+    parts.join(" · ").presence
+  end
+
+  AUDIT_OMIT_KEYS = %w[claimed_by reversed_at].freeze
+
+  def audit_change_note(entry)
+    payload = entry.after.presence
+    return nil if payload.blank?
+
+    payload.filter_map { |key, value| audit_fragment(key, value) }
+      .first(3).join(" · ").presence
+  end
+
+  def audit_fragment(key, value)
+    return nil if value.nil? || AUDIT_OMIT_KEYS.include?(key)
+
+    case key
+    when "subject_user_id" then "about @#{value}"
+    when "target_user_id" then "on @#{value}"
+    when "type_key" then action_label(value)
+    when "resolution" then "as #{value.tr('_', ' ')}"
+    when "expires_at" then "expires #{audit_value(value)}"
+    when "reason" then value
+    when "is_anonymous" then value ? "anonymous" : "identified"
+    else value == true ? key.tr("_", " ") : "#{key.tr('_', ' ')} #{audit_value(value)}"
+    end
+  end
+
+  def audit_value(value)
+    text = value.to_s
+    return text.tr("_", " ") unless text.match?(/\A\d{4}-\d{2}-\d{2}T/)
+
+    Time.zone.parse(text).strftime("%b %-d, %Y")
+  rescue ArgumentError
+    text
+  end
+
+  def audit_trail_summary(trail)
+    return "nothing recorded yet" if trail.empty?
+
+    span = trail.last.occurred_at - trail.first.occurred_at
+    return "#{trail.size} entries, all within the hour" if span < 1.hour
+
+    "#{trail.size} entries over #{case_age_label(span)}"
+  end
 end
