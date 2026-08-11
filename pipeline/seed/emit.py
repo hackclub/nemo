@@ -19,10 +19,12 @@ UNAVAILABLE_OFFSET = 2
 IDLE_ROWS_PER_DAY = 25
 
 SEED_PREDICATES = {
+    "fd.actions": f"external_ref LIKE '{SEED_REF_PREFIX}%'",
     "fd.cases": f"external_ref LIKE '{SEED_REF_PREFIX}%'",
 }
 
 SEEDED_TABLES = (
+    "fd.actions",
     "fd.cases",
     "raw.member_activity_snapshot",
     "raw.channel_activity_snapshot",
@@ -474,6 +476,7 @@ def case_ids(conn):
 def write_conduct(conn, seed, members, as_of):
     cases = conduct_module.build_cases(conduct_module.rng_for(seed), members, as_of)
     conduct_module.attach_all_reports(conduct_module.rng_for(seed, "reports"), cases, members)
+    conduct_module.attach_all_actions(conduct_module.rng_for(seed, "actions"), cases, as_of)
     counts = {
         "fd.cases": copy_rows(
             conn, "fd.cases", conduct_module.CASE_COLUMNS,
@@ -492,6 +495,10 @@ def write_conduct(conn, seed, members, as_of):
     counts["fd.case_reports"] = copy_rows(
         conn, "fd.case_reports", conduct_module.REPORT_COLUMNS,
         conduct_module.report_rows(cases, ids),
+    )
+    counts["fd.actions"] = copy_rows(
+        conn, "fd.actions", conduct_module.ACTION_COLUMNS,
+        conduct_module.action_rows(cases, ids),
     )
     conn.commit()
     return counts

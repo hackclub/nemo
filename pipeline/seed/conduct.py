@@ -31,6 +31,22 @@ REPLIED_SHARE = 0.75
 MEAN_REPLY_HOURS = 6.0
 REPORT_LEAD_MINUTES = (3, 180)
 
+ACTION_LADDER = ("warning", "shush", "temp_ban", "indef_ban", "perma_ban")
+EXPIRING_DAYS = {"shush": (7, 7), "temp_ban": (30, 120)}
+SEVERE_SHARE = 0.04
+OPEN_WITH_ACTION_SHARE = 0.4
+SECOND_ACTION_SHARE = 0.3
+DM_TO_TARGET_SHARE = 0.25
+LOCK_THREAD_SHARE = 0.2
+REVERSED_SHARE = 0.06
+FIREHOSE_SHARE = 0.1
+BOT_ACTOR = "UMNEMOSYNE"
+REVERSAL_REASONS = (
+    "[seed] appeal upheld",
+    "[seed] issued against the wrong account",
+    "[seed] lifted early after a conversation",
+)
+
 RESOLUTION_WEIGHTS = (
     ("action_taken", 0.55),
     ("no_action", 0.28),
@@ -72,6 +88,40 @@ REPORT_COLUMNS = [
 ]
 
 
+ACTION_COLUMNS = [
+    "case_id",
+    "type_key",
+    "target_user_id",
+    "decided_by",
+    "performed_by",
+    "performed_at",
+    "source_app",
+    "expires_at",
+    "reversed_at",
+    "reversed_by",
+    "reversal_reason",
+    "subject_context",
+    "details",
+    "external_ref",
+]
+
+
+@dataclass
+class SeedAction:
+    type_key: str
+    target_user_id: str
+    decided_by: str
+    performed_by: str
+    performed_at: datetime
+    source_app: str
+    subject_context: dict
+    details: dict
+    expires_at: datetime | None = None
+    reversed_at: datetime | None = None
+    reversed_by: str | None = None
+    reversal_reason: str | None = None
+
+
 @dataclass
 class SeedReport:
     reporter_user_id: str | None
@@ -101,6 +151,7 @@ class SeedCase:
     threads: list = field(default_factory=list)
     participants: list = field(default_factory=list)
     reports: list = field(default_factory=list)
+    actions: list = field(default_factory=list)
 
 
 def rng_for(seed, stream="conduct"):
@@ -280,6 +331,107 @@ def attach_all_reports(rng, cases, members):
     return cases
 
 
+def action_context(case, at):
+    context = dict(case.context)
+    context["captured_at"] = at.isoformat()
+    return context
+
+
+def rung_type(rng, priors):
+    if rng.random() < SEVERE_SHARE:
+        return rng.choice(ACTION_LADDER[-2:])
+    top = min(priors, len(ACTION_LADDER) - 1)
+    if top > 0 and rng.random() < 0.35:
+        top -= 1
+    return ACTION_LADDER[top]
+
+
+def action_window(case, horizon):
+    start = case.claimed_at or case.opened_at
+    end = case.resolved_at or horizon
+    if end <= start:
+        end = start + timedelta(minutes=30)
+    return start, end
+
+
+def action_moment(rng, start, end):
+    span = max((end - start).total_seconds(), 60.0)
+    return start + timedelta(seconds=rng.uniform(0, span))
+
+
+def make_action(rng, case, type_key, target, at, decider, performed_by=None, details=None):
+    action = SeedAction(
+        type_key=type_key,
+        target_user_id=target,
+        decided_by=decider,
+        performed_by=performed_by or decider,
+        performed_at=at,
+        source_app="fire_engine",
+        subject_context=action_context(case, at),
+        details=details or {},
+    )
+    if type_key in EXPIRING_DAYS:
+        low, high = EXPIRING_DAYS[type_key]
+        action.expires_at = at + timedelta(days=rng.uniform(low, high))
+    if rng.random() < REVERSED_SHARE:
+        action.reversed_at = at + timedelta(days=rng.uniform(0.5, 20))
+        action.reversed_by = decider
+        action.reversal_reason = rng.choice(REVERSAL_REASONS)
+    return action
+
+
+def attach_actions(rng, case, horizon):
+    if case.subject_user_id is None:
+        return
+    if case.resolution in ("no_action", "duplicate", "not_conduct"):
+        return
+    if case.resolution is None and rng.random() >= OPEN_WITH_ACTION_SHARE:
+        return
+
+    decider = case.claimed_by or case.opened_by
+    start, end = action_window(case, horizon)
+    priors = case.context.get("priors", 0)
+
+    at = action_moment(rng, start, end)
+    primary = make_action(rng, case, rung_type(rng, priors), case.subject_user_id, at, decider)
+    if rng.random() < FIREHOSE_SHARE:
+        primary.source_app = "firehose"
+        primary.performed_by = BOT_ACTOR
+    case.actions.append(primary)
+
+    channel_id = case.threads[0][0] if case.threads else None
+    if channel_id and rng.random() < LOCK_THREAD_SHARE:
+        case.actions.append(
+            make_action(
+                rng, case, "locked_thread", case.subject_user_id,
+                action_moment(rng, start, end), decider,
+                performed_by=BOT_ACTOR, details={"channel_id": channel_id},
+            )
+        )
+
+    target = next((u for u, role in case.participants if role == "target"), None)
+    if target and rng.random() < DM_TO_TARGET_SHARE:
+        case.actions.append(
+            make_action(rng, case, "dm", target, action_moment(rng, start, end), decider)
+        )
+
+    if rng.random() < SECOND_ACTION_SHARE and channel_id:
+        case.actions.append(
+            make_action(
+                rng, case, "channel_ban", case.subject_user_id,
+                action_moment(rng, start, end), decider,
+                details={"channel_id": channel_id},
+            )
+        )
+
+
+def attach_all_actions(rng, cases, as_of):
+    horizon = datetime.combine(as_of, time(23, 59), tzinfo=timezone.utc)
+    for case in cases:
+        attach_actions(rng, case, horizon)
+    return cases
+
+
 def build_cases(rng, members, as_of):
     pool = firefighters(members)
     if not pool:
@@ -390,6 +542,32 @@ def participant_rows(cases, ids):
             continue
         for user_id, role in case.participants:
             yield (case_id, user_id, role)
+
+
+def action_rows(cases, ids):
+    index = 0
+    for case in cases:
+        case_id = ids.get(case.external_ref)
+        if case_id is None:
+            continue
+        for action in case.actions:
+            index += 1
+            yield (
+                case_id,
+                action.type_key,
+                action.target_user_id,
+                action.decided_by,
+                action.performed_by,
+                action.performed_at,
+                action.source_app,
+                action.expires_at,
+                action.reversed_at,
+                action.reversed_by,
+                action.reversal_reason,
+                json.dumps(action.subject_context),
+                json.dumps(action.details),
+                f"{SEED_REF_PREFIX}action:{index}",
+            )
 
 
 def report_rows(cases, ids):
