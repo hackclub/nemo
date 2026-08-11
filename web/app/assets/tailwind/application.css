@@ -600,6 +600,54 @@
     color: var(--ink-2);
   }
 
+  .mono {
+    font-family: var(--font-code);
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+  }
+
+  .subject {
+    display: flex;
+    gap: var(--s-sm);
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .subject-avatar {
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 50%;
+    background-color: var(--accent-soft);
+    color: var(--accent-deep);
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+  }
+
+  .subject-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr));
+    gap: var(--s-xs) var(--s-sm);
+    border-top: 1px solid var(--line);
+    padding-top: var(--s-sm);
+    margin-top: var(--s-sm);
+  }
+
+  .fact-label {
+    font-size: var(--t-3xs);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 600;
+  }
+
+  .fact-val {
+    font-size: var(--t-md);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
   .sev {
     display: inline-block;
     width: 3px;

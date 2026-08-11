@@ -27,6 +27,18 @@ module Fd
       (Date.current - @member.cohort_at.to_date).to_i
     end
 
+    def cohort_at
+      @member&.cohort_at
+    end
+
+    def claimed_at
+      @member&.claimed_at
+    end
+
+    def days_active
+      @window&.days_active
+    end
+
     def messages_posted
       @window&.messages_posted
     end

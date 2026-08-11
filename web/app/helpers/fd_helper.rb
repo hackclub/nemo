@@ -120,6 +120,44 @@ module FdHelper
     end
   end
 
+  def fact_number(value)
+    value ? number_with_delimiter(value) : "n/a"
+  end
+
+  def last_active_label(at)
+    return "n/a" if at.nil?
+
+    days = (Date.current - at.to_date).to_i
+    return "today" if days <= 0
+    return "yesterday" if days == 1
+    return "#{days}d ago" if days < 30
+
+    at.to_date.strftime("%b %-d, %Y")
+  end
+
+  def claimed_phrase(context)
+    return "claimed" if context.cohort_at.nil?
+
+    if context.claimed_at.to_date == context.cohort_at.to_date
+      "claimed the same day"
+    else
+      "claimed #{context.claimed_at.to_date.strftime('%b %-d, %Y')}"
+    end
+  end
+
+  def subject_identity_line(kase, context)
+    return "nobody identified yet" if kase.subject_user_id.blank?
+
+    parts = [kase.subject_user_id]
+    if context&.known?
+      parts << "joined #{context.cohort_at.to_date.strftime('%b %-d, %Y')}" if context.cohort_at
+      parts << (context.claimed_at ? claimed_phrase(context) : "never claimed")
+    else
+      parts << "not in the warehouse yet"
+    end
+    parts.join(" · ")
+  end
+
   def subject_context_line(context)
     return "nobody identified yet" if context.nil?
     return "not in the warehouse yet" unless context.known?
