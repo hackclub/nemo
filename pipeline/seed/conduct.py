@@ -41,6 +41,31 @@ LOCK_THREAD_SHARE = 0.2
 REVERSED_SHARE = 0.06
 FIREHOSE_SHARE = 0.1
 BOT_ACTOR = "UMNEMOSYNE"
+CASE_NOTE_SHARE = 0.45
+SECOND_NOTE_SHARE = 0.25
+NOTE_DELETED_SHARE = 0.05
+STANDING_NOTE_SHARE = 0.35
+NOTE_DELETE_HOURS = (1.0, 72.0)
+STANDING_NOTE_LAG_DAYS = (0.5, 14.0)
+
+CASE_NOTE_BODIES = (
+    "spoke to them in DM, they understood and apologised",
+    "second read of the thread, less clear cut than the report makes it sound",
+    "reporter asked to stay out of it, keeping them off the thread",
+    "they had a rough week in another channel. not an excuse, but worth knowing",
+    "asked the channel regulars, this was out of character for them",
+    "waiting for the target to come back online before deciding anything",
+    "thread had already cooled off by the time we got to it",
+    "asked a second firefighter to read this before I act",
+)
+
+STANDING_NOTE_BODIES = (
+    "escalates when corrected in public, a soft word early goes further",
+    "has come up more than once now, none of it severe on its own",
+    "asked not to be pinged into pile-ons, honour that",
+    "usually fine. the pattern is late-night posts",
+    "much better since the first case, keep that in mind on any next one",
+)
 REVERSAL_REASONS = (
     "[seed] appeal upheld",
     "[seed] issued against the wrong account",
@@ -68,6 +93,30 @@ CASE_COLUMNS = [
     "external_ref",
     "created_at",
     "updated_at",
+]
+
+NOTE_COLUMNS = [
+    "case_id",
+    "subject_user_id",
+    "body",
+    "author",
+    "created_at",
+    "updated_at",
+    "deleted_at",
+    "deleted_by",
+]
+
+AUDIT_COLUMNS = [
+    "occurred_at",
+    "actor_user_id",
+    "actor_kind",
+    "entity_type",
+    "entity_id",
+    "verb",
+    "before",
+    "after",
+    "source_app",
+    "request_id",
 ]
 
 THREAD_COLUMNS = ["case_id", "channel_id", "thread_ts", "is_primary", "added_by"]
@@ -137,6 +186,16 @@ class SeedReport:
 
 
 @dataclass
+class SeedNote:
+    body: str
+    author: str
+    created_at: datetime
+    subject_user_id: str | None = None
+    deleted_at: datetime | None = None
+    deleted_by: str | None = None
+
+
+@dataclass
 class SeedCase:
     external_ref: str
     subject_user_id: str | None
@@ -152,6 +211,7 @@ class SeedCase:
     participants: list = field(default_factory=list)
     reports: list = field(default_factory=list)
     actions: list = field(default_factory=list)
+    notes: list = field(default_factory=list)
 
 
 def rng_for(seed, stream="conduct"):
@@ -591,4 +651,195 @@ def report_rows(cases, ids):
                 report.closed_at,
                 report.source_app,
                 f"{SEED_REF_PREFIX}report:{index}",
+            )
+
+
+def note_moment(rng, case, horizon):
+    start, end = action_window(case, horizon)
+    return start + timedelta(seconds=rng.uniform(0, (end - start).total_seconds()))
+
+
+def note_author(rng, case, crew):
+    for candidate in (case.claimed_by, case.opened_by):
+        if candidate and candidate != BOT_ACTOR:
+            return candidate
+    return rng.choice(crew)
+
+
+def attach_notes(rng, case, crew, horizon):
+    if rng.random() >= CASE_NOTE_SHARE:
+        return
+    count = 2 if rng.random() < SECOND_NOTE_SHARE else 1
+    for _ in range(count):
+        created_at = note_moment(rng, case, horizon)
+        author = note_author(rng, case, crew)
+        deleted_at = None
+        deleted_by = None
+        if rng.random() < NOTE_DELETED_SHARE:
+            deleted_at = min(
+                created_at + timedelta(hours=rng.uniform(*NOTE_DELETE_HOURS)), horizon
+            )
+            deleted_by = author
+        case.notes.append(
+            SeedNote(
+                body=rng.choice(CASE_NOTE_BODIES),
+                author=author,
+                created_at=created_at,
+                deleted_at=deleted_at,
+                deleted_by=deleted_by,
+            )
+        )
+
+
+def standing_notes(rng, cases, crew, horizon):
+    latest = {}
+    for case in cases:
+        if not case.subject_user_id:
+            continue
+        seen = latest.get(case.subject_user_id)
+        latest[case.subject_user_id] = (
+            case.opened_at if seen is None else max(seen, case.opened_at)
+        )
+    counts = collections.Counter(
+        case.subject_user_id for case in cases if case.subject_user_id
+    )
+    notes = []
+    for user_id in sorted(latest):
+        if counts[user_id] < 2 or rng.random() >= STANDING_NOTE_SHARE:
+            continue
+        lag = timedelta(days=rng.uniform(*STANDING_NOTE_LAG_DAYS))
+        notes.append(
+            SeedNote(
+                body=rng.choice(STANDING_NOTE_BODIES),
+                author=rng.choice(crew),
+                created_at=min(latest[user_id] + lag, horizon),
+                subject_user_id=user_id,
+            )
+        )
+    return notes
+
+
+def attach_all_notes(rng, cases, members, as_of):
+    horizon = datetime.combine(as_of, time(23, 59), tzinfo=timezone.utc)
+    crew = firefighters(members)
+    for case in cases:
+        attach_notes(rng, case, crew, horizon)
+    return standing_notes(rng, cases, crew, horizon)
+
+
+def note_rows(cases, ids, standing):
+    for case in cases:
+        case_id = ids.get(case.external_ref)
+        if case_id is None:
+            continue
+        for note in case.notes:
+            yield (
+                case_id,
+                None,
+                note.body,
+                note.author,
+                note.created_at,
+                note.deleted_at or note.created_at,
+                note.deleted_at,
+                note.deleted_by,
+            )
+    for note in standing:
+        yield (
+            None,
+            note.subject_user_id,
+            note.body,
+            note.author,
+            note.created_at,
+            note.created_at,
+            None,
+            None,
+        )
+
+
+def actor_kind(user_id):
+    if user_id is None:
+        return "system"
+    return "bot" if user_id == BOT_ACTOR else "human"
+
+
+def audit_entry(at, actor, entity_type, entity_id, verb, before, after, source_app, request):
+    return (
+        at,
+        actor,
+        actor_kind(actor),
+        entity_type,
+        entity_id,
+        verb,
+        None if before is None else json.dumps(before),
+        None if after is None else json.dumps(after),
+        source_app,
+        request,
+    )
+
+
+def case_audit(case, case_id):
+    request = f"{SEED_REF_PREFIX}audit:case:{case_id}"
+    yield audit_entry(
+        case.opened_at, case.opened_by, "case", case_id, "opened",
+        None, {"subject_user_id": case.subject_user_id}, "fire_engine", f"{request}:opened",
+    )
+    if case.claimed_at:
+        yield audit_entry(
+            case.claimed_at, case.claimed_by, "case", case_id, "claimed",
+            {"claimed_by": None}, {"claimed_by": case.claimed_by},
+            "fire_engine", f"{request}:claimed",
+        )
+    if case.resolved_at:
+        yield audit_entry(
+            case.resolved_at, case.claimed_by or case.opened_by, "case", case_id, "resolved",
+            {"resolution": None}, {"resolution": case.resolution},
+            "fire_engine", f"{request}:resolved",
+        )
+
+
+def action_audit(action, action_id, request):
+    yield audit_entry(
+        action.performed_at, action.performed_by, "action", action_id, "performed",
+        None,
+        {
+            "type_key": action.type_key,
+            "target_user_id": action.target_user_id,
+            "expires_at": action.expires_at.isoformat() if action.expires_at else None,
+        },
+        action.source_app, f"{request}:performed",
+    )
+    if action.reversed_at:
+        yield audit_entry(
+            action.reversed_at, action.reversed_by, "action", action_id, "reversed",
+            {"reversed_at": None},
+            {"reversed_at": action.reversed_at.isoformat(), "reason": action.reversal_reason},
+            "fire_engine", f"{request}:reversed",
+        )
+
+
+def audit_rows(cases, ids, action_ids, report_ids):
+    action_index = 0
+    report_index = 0
+    for case in cases:
+        case_id = ids.get(case.external_ref)
+        if case_id is None:
+            continue
+        yield from case_audit(case, case_id)
+        for report in case.reports:
+            report_index += 1
+            report_id = report_ids.get(f"{SEED_REF_PREFIX}report:{report_index}")
+            if report_id is None:
+                continue
+            yield audit_entry(
+                report.received_at, None, "report", report_id, "received",
+                None, {"is_anonymous": report.is_anonymous},
+                report.source_app, f"{SEED_REF_PREFIX}audit:report:{report_id}",
+            )
+        for action in case.actions:
+            action_index += 1
+            action_id = action_ids.get(f"{SEED_REF_PREFIX}action:{action_index}")
+            if action_id is None:
+                continue
+            yield from action_audit(
+                action, action_id, f"{SEED_REF_PREFIX}audit:action:{action_id}"
             )

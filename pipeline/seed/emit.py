@@ -1,7 +1,8 @@
 import collections
 from datetime import datetime, time, timedelta, timezone
 
-from seed import SEED_REF_PREFIX, SEED_SOURCE_PREFIX
+from lib.db import connect_admin
+from seed import SEED_REF_PREFIX, SEED_SOURCE_PREFIX, SEED_USER_PREFIX
 from seed import conduct as conduct_module
 from seed import hostile as hostile_module
 from seed import runs as runs_module
@@ -19,11 +20,17 @@ UNAVAILABLE_OFFSET = 2
 IDLE_ROWS_PER_DAY = 25
 
 SEED_PREDICATES = {
+    "fd.audit": f"request_id LIKE '{SEED_REF_PREFIX}%'",
+    "fd.notes": f"author LIKE '{SEED_USER_PREFIX}%'",
     "fd.actions": f"external_ref LIKE '{SEED_REF_PREFIX}%'",
     "fd.cases": f"external_ref LIKE '{SEED_REF_PREFIX}%'",
 }
 
+APPEND_ONLY_TABLES = ("fd.audit",)
+
 SEEDED_TABLES = (
+    "fd.audit",
+    "fd.notes",
     "fd.actions",
     "fd.cases",
     "raw.member_activity_snapshot",
@@ -61,11 +68,24 @@ def noon(day):
     return datetime.combine(day, time(12, 0), tzinfo=timezone.utc)
 
 
+def clear_append_only(force=False):
+    with connect_admin() as admin, admin.cursor() as cur:
+        for table in APPEND_ONLY_TABLES:
+            if force:
+                cur.execute(f"DELETE FROM {table}")
+            else:
+                cur.execute(f"DELETE FROM {table} WHERE {SEED_PREDICATES[table]}")
+        admin.commit()
+
+
 def clear(conn, force=False):
+    clear_append_only(force=force)
     with conn.cursor() as cur:
         for table in LOG_TABLES:
             cur.execute(f"DELETE FROM {table}")
         for table in dict.fromkeys(SEEDED_TABLES):
+            if table in APPEND_ONLY_TABLES:
+                continue
             if force:
                 cur.execute(f"DELETE FROM {table}")
             elif table in SEED_PREDICATES:
@@ -464,19 +484,26 @@ def write_runs(conn, rng, members, as_of, hostile=False):
     return counts
 
 
-def case_ids(conn):
+def ref_ids(conn, table):
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT external_ref, id FROM fd.cases WHERE external_ref LIKE %s",
+            f"SELECT external_ref, id FROM {table} WHERE external_ref LIKE %s",
             (f"{SEED_REF_PREFIX}%",),
         )
         return dict(cur.fetchall())
+
+
+def case_ids(conn):
+    return ref_ids(conn, "fd.cases")
 
 
 def write_conduct(conn, seed, members, as_of):
     cases = conduct_module.build_cases(conduct_module.rng_for(seed), members, as_of)
     conduct_module.attach_all_reports(conduct_module.rng_for(seed, "reports"), cases, members)
     conduct_module.attach_all_actions(conduct_module.rng_for(seed, "actions"), cases, as_of)
+    standing = conduct_module.attach_all_notes(
+        conduct_module.rng_for(seed, "notes"), cases, members, as_of
+    )
     counts = {
         "fd.cases": copy_rows(
             conn, "fd.cases", conduct_module.CASE_COLUMNS,
@@ -499,6 +526,16 @@ def write_conduct(conn, seed, members, as_of):
     counts["fd.actions"] = copy_rows(
         conn, "fd.actions", conduct_module.ACTION_COLUMNS,
         conduct_module.action_rows(cases, ids),
+    )
+    counts["fd.notes"] = copy_rows(
+        conn, "fd.notes", conduct_module.NOTE_COLUMNS,
+        conduct_module.note_rows(cases, ids, standing),
+    )
+    counts["fd.audit"] = copy_rows(
+        conn, "fd.audit", conduct_module.AUDIT_COLUMNS,
+        conduct_module.audit_rows(
+            cases, ids, ref_ids(conn, "fd.actions"), ref_ids(conn, "fd.case_reports")
+        ),
     )
     conn.commit()
     return counts

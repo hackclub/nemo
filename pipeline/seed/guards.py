@@ -33,6 +33,11 @@ FOREIGN_ROWS = [
         "fd.actions",
         f"external_ref IS NULL OR external_ref NOT LIKE '{SEED_REF_PREFIX}%'",
     ),
+    ("fd.notes", f"author NOT LIKE '{SEED_USER_PREFIX}%'"),
+    (
+        "fd.audit",
+        f"request_id IS NULL OR request_id NOT LIKE '{SEED_REF_PREFIX}%'",
+    ),
 ]
 
 
