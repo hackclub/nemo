@@ -1,0 +1,19 @@
+<% cases.each do |kase| %>
+  <tr>
+    <td>
+      <span class="two-line">
+        <b><%= kase.subject_user_id ? "@#{kase.subject_user_id}" : "no subject set" %></b>
+        <span><%= subject_context_line(context[kase.subject_user_id]) %></span>
+      </span>
+    </td>
+    <td class="col-num"><%= case_age_chip(kase.opened_at) %></td>
+    <td class="col-date"><%= kase.opened_at.strftime("%b %-d, %Y") %></td>
+    <td>
+      <% if kase.claimed? %>
+        @<%= kase.claimed_by %>
+      <% else %>
+        <span class="chip chip-crit">unassigned</span>
+      <% end %>
+    </td>
+  </tr>
+<% end %>

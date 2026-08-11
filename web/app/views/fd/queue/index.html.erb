@@ -1,11 +1,33 @@
 <% content_for :page_title, "Queue" %>
 <% content_for :page_subtitle, "open conduct cases" %>
+<% content_for :page_badge do %>
+  <span class="count-pill"><%= number_with_delimiter(@cases.size) %></span>
+<% end %>
 
-<div class="card">
+<div class="card card-flush">
   <div class="card-head">
     <div>
       <h2 class="card-title">Open cases</h2>
     </div>
   </div>
-  <p class="card-note">n/a</p>
+
+  <% if @cases.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th class="col-num">Age</th>
+            <th class="col-date">Opened</th>
+            <th>Claimed by</th>
+          </tr>
+        </thead>
+        <tbody>
+          <%= render "rows", cases: @cases, context: @context %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">n/a</p>
+  <% end %>
 </div>
