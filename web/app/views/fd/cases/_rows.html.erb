@@ -21,7 +21,8 @@
       <% elsif kase.resolved? %>
         n/a
       <% else %>
-        <span class="chip chip-crit">unassigned</span>
+        <%= button_to "Claim", fd_case_claim_path(kase), method: :post,
+              class: "btn", form: { class: "contents" } %>
       <% end %>
     </td>
   </tr>

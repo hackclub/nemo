@@ -8,7 +8,9 @@ Rails.application.routes.draw do
 
   namespace :fd do
     root to: "cases#index"
-    resources :cases, only: [:index, :show]
+    resources :cases, only: [:index, :show] do
+      resource :claim, only: [:create, :destroy]
+    end
   end
 
   resources :channels, only: [:index, :show]

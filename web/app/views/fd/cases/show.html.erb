@@ -6,6 +6,15 @@
   <%= case_status_chip(@case) %>
 <% end %>
 <% content_for :head_actions do %>
+  <% unless @case.resolved? %>
+    <% if @case.claimed_by == current_staff.user_id %>
+      <%= button_to "Unclaim", fd_case_claim_path(@case), method: :delete,
+            class: "btn", form: { class: "contents" } %>
+    <% elsif !@case.claimed? %>
+      <%= button_to "Claim", fd_case_claim_path(@case), method: :post,
+            class: "btn btn-primary", form: { class: "contents" } %>
+    <% end %>
+  <% end %>
   <label for="case-timeline" class="btn drawer-open">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h13M3 12h9M3 19h13"/><circle cx="20" cy="5" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="20" cy="19" r="1.6"/></svg>
     Timeline
