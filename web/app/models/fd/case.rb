@@ -58,11 +58,11 @@ module Fd
     end
 
     def sibling_cases
-      pairs = threads.map(&:coordinates)
+      pairs = threads.evidence.map(&:coordinates)
       return Case.none if pairs.empty?
 
       tuples = Array.new(pairs.size, "(?, ?)").join(", ")
-      ids = CaseThread
+      ids = CaseThread.evidence
         .where("(channel_id, thread_ts) IN (#{tuples})", *pairs.flatten)
         .where.not(case_id: id)
         .distinct

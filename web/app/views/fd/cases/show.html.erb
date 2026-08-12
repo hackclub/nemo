@@ -285,7 +285,7 @@
                 <td>
                   <span class="two-line">
                     <b><%= thread.channel_id %></b>
-                    <span><%= thread.is_primary ? "primary" : "added later" %></span>
+                    <span><%= thread_kind_note(thread) %></span>
                   </span>
                 </td>
                 <td>

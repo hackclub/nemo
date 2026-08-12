@@ -135,6 +135,13 @@ module FdHelper
     ACTION_LABELS.map { |key, label| [label, key] }
   end
 
+  def thread_kind_note(thread)
+    return "FD discussion, not evidence" if thread.internal?
+    return "primary evidence" if thread.is_primary
+
+    "evidence, added later"
+  end
+
   def note_byline(note)
     ["@#{note.author}", note.created_at.strftime("%b %-d, %Y")].join(" · ")
   end
