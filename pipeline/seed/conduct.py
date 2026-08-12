@@ -43,6 +43,14 @@ LOCK_THREAD_SHARE = 0.2
 REVERSED_SHARE = 0.06
 FIREHOSE_SHARE = 0.1
 BOT_ACTOR = "UMNEMOSYNE"
+EVIDENCE = "evidence"
+INTERNAL = "internal"
+FD_CHANNEL = "CSEEDFIREHOUSE"
+INTERNAL_THREAD_SHARE = 0.25
+SECOND_INTERNAL_SHARE = 0.2
+SHARED_INTERNAL_SHARE = 0.35
+MIN_SHARED_EVIDENCE = 3
+FD_LAG_MINUTES = (5.0, 240.0)
 CASE_NOTE_SHARE = 0.45
 SECOND_NOTE_SHARE = 0.25
 NOTE_DELETED_SHARE = 0.05
@@ -121,7 +129,7 @@ AUDIT_COLUMNS = [
     "request_id",
 ]
 
-THREAD_COLUMNS = ["case_id", "channel_id", "thread_ts", "is_primary", "added_by"]
+THREAD_COLUMNS = ["case_id", "channel_id", "thread_ts", "kind", "is_primary", "added_by"]
 PARTICIPANT_COLUMNS = ["case_id", "user_id", "role"]
 REPORT_COLUMNS = [
     "case_id",
@@ -494,6 +502,74 @@ def attach_all_actions(rng, cases, as_of):
     return cases
 
 
+def attach_internal_threads(rng, cases, members):
+    crew = firefighters(members)
+    if not crew:
+        return cases
+
+    seen = []
+    for case in cases:
+        if rng.random() >= INTERNAL_THREAD_SHARE:
+            continue
+
+        rounds = 2 if rng.random() < SECOND_INTERNAL_SHARE else 1
+        for _ in range(rounds):
+            if seen and rng.random() < SHARED_INTERNAL_SHARE:
+                thread_ts = rng.choice(seen)
+            else:
+                at = case.opened_at + timedelta(minutes=rng.uniform(*FD_LAG_MINUTES))
+                thread_ts = slack_ts(rng, at)
+                seen.append(thread_ts)
+
+            case.threads.append(
+                (FD_CHANNEL, thread_ts, INTERNAL, False, rng.choice(crew))
+            )
+    return cases
+
+
+def primary_of(case):
+    for thread in case.threads:
+        if thread[2] == EVIDENCE and thread[3]:
+            return thread
+    return None
+
+
+def shared_evidence_count(cases):
+    seen = collections.Counter()
+    for case in cases:
+        for channel_id, thread_ts, kind, _, _ in case.threads:
+            if kind == EVIDENCE:
+                seen[(channel_id, thread_ts)] += 1
+    return sum(1 for count in seen.values() if count > 1)
+
+
+def attach_shared_evidence(rng, cases, minimum=MIN_SHARED_EVIDENCE):
+    shortfall = minimum - shared_evidence_count(cases)
+    if shortfall <= 0:
+        return cases
+
+    eligible = [case for case in cases if primary_of(case)]
+    if len(eligible) < 2:
+        return cases
+
+    made = 0
+    for _ in range(shortfall * 20):
+        if made >= shortfall:
+            break
+
+        source, target = rng.sample(eligible, 2)
+        channel_id, thread_ts = primary_of(source)[:2]
+        if any(t[0] == channel_id and t[1] == thread_ts for t in target.threads):
+            continue
+
+        target.threads.append(
+            (channel_id, thread_ts, EVIDENCE, False, target.opened_by)
+        )
+        made += 1
+
+    return cases
+
+
 def free_open_cases(rng, cases, minimum=MIN_UNASSIGNED_OPEN):
     still_open = [case for case in cases if case.resolved_at is None]
     shortfall = minimum - sum(1 for case in still_open if case.claimed_at is None)
@@ -549,13 +625,19 @@ def build_cases(rng, members, as_of):
                 context=context_for(member, priors, opened_at),
             )
             settle(case, opened_at)
-            case.threads.append((channel_id, primary_ts, True, case.opened_by))
+            case.threads.append((channel_id, primary_ts, EVIDENCE, True, case.opened_by))
             if rng.random() < SECOND_THREAD_SHARE and len(member.home_channels) > 1:
                 other = rng.choice(
                     [c for c in member.home_channels if c.channel_id != channel_id]
                 )
                 case.threads.append(
-                    (other.channel_id, slack_ts(rng, opened_at), False, rng.choice(pool))
+                    (
+                        other.channel_id,
+                        slack_ts(rng, opened_at),
+                        EVIDENCE,
+                        False,
+                        rng.choice(pool),
+                    )
                 )
             attach_people(rng, case, roster, channel_id)
             built.append(case)
@@ -575,7 +657,9 @@ def build_cases(rng, members, as_of):
                     context=context_for(by_id[sibling_subject], 0, sibling_at),
                 )
                 settle(sibling, sibling_at)
-                sibling.threads.append((channel_id, primary_ts, True, sibling.opened_by))
+                sibling.threads.append(
+                    (channel_id, primary_ts, EVIDENCE, True, sibling.opened_by)
+                )
                 for user_id, role in case.participants:
                     if user_id != sibling_subject and role in ("target", "witness"):
                         sibling.participants.append((user_id, role))
@@ -607,8 +691,8 @@ def thread_rows(cases, ids):
         case_id = ids.get(case.external_ref)
         if case_id is None:
             continue
-        for channel_id, thread_ts, is_primary, added_by in case.threads:
-            yield (case_id, channel_id, thread_ts, is_primary, added_by)
+        for channel_id, thread_ts, kind, is_primary, added_by in case.threads:
+            yield (case_id, channel_id, thread_ts, kind, is_primary, added_by)
 
 
 def participant_rows(cases, ids):

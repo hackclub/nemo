@@ -504,6 +504,9 @@ def write_conduct(conn, seed, members, as_of):
     standing = conduct_module.attach_all_notes(
         conduct_module.rng_for(seed, "notes"), cases, members, as_of
     )
+    thread_rng = conduct_module.rng_for(seed, "threads")
+    conduct_module.attach_internal_threads(thread_rng, cases, members)
+    conduct_module.attach_shared_evidence(thread_rng, cases)
     counts = {
         "fd.cases": copy_rows(
             conn, "fd.cases", conduct_module.CASE_COLUMNS,
