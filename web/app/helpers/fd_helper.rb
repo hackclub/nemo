@@ -80,8 +80,6 @@ module FdHelper
     rest.zero? ? "#{years}y" : "#{years}y #{rest}mo"
   end
 
-  SLACK_ARCHIVES = "https://hackclub.slack.com/archives".freeze
-
   ROLE_LABELS = {
     "target" => "on the receiving end",
     "reporter" => "reported it",
@@ -90,7 +88,7 @@ module FdHelper
   }.freeze
 
   def slack_thread_url(channel_id, thread_ts)
-    "#{SLACK_ARCHIVES}/#{channel_id}/p#{thread_ts.delete('.')}"
+    Fd::SlackLink.url_for(channel_id, thread_ts)
   end
 
   def role_label(role)
@@ -136,8 +134,8 @@ module FdHelper
   end
 
   def thread_kind_note(thread)
-    return "FD discussion, not evidence" if thread.internal?
-    return "primary evidence" if thread.is_primary
+    return "internal discussion" if thread.internal?
+    return "primary thread" if thread.is_primary
 
     "evidence, added later"
   end
