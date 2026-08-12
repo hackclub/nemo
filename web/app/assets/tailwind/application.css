@@ -1066,8 +1066,63 @@
     transition: opacity var(--dur) var(--ease-out);
   }
 
-  .modal-flip:checked ~ .modal-veil,
-  .modal-flip:checked ~ .modal-wrap {
+  .menu {
+    position: relative;
+  }
+
+  .menu > summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .menu > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .menu[open] > summary {
+    border-color: var(--accent);
+    color: var(--accent-deep);
+  }
+
+  .menu-pop {
+    position: absolute;
+    inset-inline-end: 0;
+    top: calc(100% + var(--s-2xs));
+    z-index: 30;
+    min-width: 12.5rem;
+    padding: var(--s-3xs);
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    display: grid;
+    gap: 1px;
+  }
+
+  .menu-pop .btn {
+    border-color: transparent;
+    background-color: transparent;
+    justify-content: flex-start;
+    width: 100%;
+    font-weight: 500;
+    padding: 7px var(--s-2xs);
+  }
+
+  .menu-pop .btn:hover {
+    background-color: var(--card-2);
+  }
+
+  .menu-sep {
+    height: 1px;
+    background-color: var(--line-soft);
+    margin: var(--s-3xs) calc(var(--s-2xs) * -1);
+  }
+
+  .modal-host {
+    display: contents;
+  }
+
+  .modal-host:has(> .modal-flip:checked) > .modal-veil,
+  .modal-host:has(> .modal-flip:checked) > .modal-wrap {
     opacity: 1;
     pointer-events: auto;
   }

@@ -239,7 +239,7 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase)
     assert_select "input#resolve-case"
     assert_select "form[action=?]", fd_case_resolution_path(@kase)
-    assert_select ".opt", 3
+    assert_select "form[action=?] .opt", fd_case_resolution_path(@kase), 3
 
     close(member_note: "done")
     get fd_case_path(@kase)

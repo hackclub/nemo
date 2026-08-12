@@ -7,19 +7,36 @@
 <% end %>
 <% content_for :head_actions do %>
   <% unless @case.resolved? %>
-    <label for="resolve-case" class="btn btn-primary">Resolve</label>
-    <% if @case.claimed_by == current_staff.user_id %>
-      <%= button_to "Unclaim", fd_case_claim_path(@case), method: :delete,
-            class: "btn", form: { class: "contents" } %>
-    <% elsif !@case.claimed? %>
+    <% if @case.claimed? %>
+      <label for="resolve-case" class="btn btn-primary">Resolve</label>
+    <% else %>
       <%= button_to "Claim", fd_case_claim_path(@case), method: :post,
             class: "btn btn-primary", form: { class: "contents" } %>
     <% end %>
   <% end %>
+
   <label for="case-timeline" class="btn drawer-open">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h13M3 12h9M3 19h13"/><circle cx="20" cy="5" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="20" cy="19" r="1.6"/></svg>
     Timeline
   </label>
+
+  <details class="menu">
+    <summary class="btn" aria-label="More actions">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+    </summary>
+    <div class="menu-pop">
+      <label for="add-note" class="btn">Add a note</label>
+      <% unless @case.resolved? %>
+        <div class="menu-sep"></div>
+        <% if @case.claimed_by == current_staff.user_id %>
+          <%= button_to "Put it back in the queue", fd_case_claim_path(@case),
+                method: :delete, class: "btn", form: { class: "contents" } %>
+        <% elsif !@case.claimed? %>
+          <label for="resolve-case" class="btn">Resolve without claiming</label>
+        <% end %>
+      <% end %>
+    </div>
+  </details>
 <% end %>
 
 <div class="stack">
@@ -292,7 +309,57 @@
   </div>
 </div>
 
+<div class="modal-host">
+  <input type="checkbox" id="add-note" class="modal-flip">
+  <label for="add-note" class="modal-veil" aria-hidden="true"></label>
+  <div class="modal-wrap">
+    <div class="modal" role="dialog" aria-label="Add a note">
+      <div class="modal-head">
+        <h2 class="modal-title">Add a note</h2>
+        <span class="modal-sub">internal, and never sent to anybody</span>
+      </div>
+      <%= form_with url: fd_case_notes_path(@case), method: :post do %>
+        <div class="modal-body">
+          <div class="outcomes">
+            <label class="opt">
+              <%= radio_button_tag :scope, "case", true %>
+              <span class="opt-dot" aria-hidden="true"></span>
+              <span>
+                <span class="opt-label">About this case</span>
+                <span class="opt-note">Sits in the timeline with everything else that happened.</span>
+              </span>
+            </label>
+            <% if @case.subject_user_id %>
+              <label class="opt">
+                <%= radio_button_tag :scope, "member", false %>
+                <span class="opt-dot" aria-hidden="true"></span>
+                <span>
+                  <span class="opt-label">About @<%= @case.subject_user_id %></span>
+                  <span class="opt-note">
+                    Follows the member to every case, now and later. For a pattern, not an incident.
+                  </span>
+                </span>
+              </label>
+            <% end %>
+          </div>
+          <label class="field-label">
+            The note
+            <%= text_area_tag :body, nil, rows: 4, class: "textarea",
+                  maxlength: Fd::NotesController::MAX_LENGTH,
+                  placeholder: "what the record cannot hold on its own" %>
+          </label>
+        </div>
+        <div class="modal-foot">
+          <label for="add-note" class="btn">Close</label>
+          <%= submit_tag "Save the note", class: "btn btn-primary" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
 <% unless @case.resolved? %>
+<div class="modal-host">
   <input type="checkbox" id="resolve-case" class="modal-flip">
   <label for="resolve-case" class="modal-veil" aria-hidden="true"></label>
   <div class="modal-wrap">
@@ -387,6 +454,7 @@
       <% end %>
     </div>
   </div>
+</div>
 <% end %>
 
 <input type="checkbox" id="case-timeline" class="drawer-flip">
