@@ -269,6 +269,9 @@
           <h2 class="card-title">Threads</h2>
           <p class="card-sub">where it happened</p>
         </div>
+        <div class="card-tools">
+          <label for="attach-thread" class="btn">Attach a thread</label>
+        </div>
       </div>
       <div class="scroll">
         <table class="data-table">
@@ -293,7 +296,17 @@
                         slack_thread_url(thread.channel_id, thread.thread_ts),
                         target: "_blank", rel: "noopener" %>
                 </td>
-                <td>@<%= thread.added_by %></td>
+                <td>
+                  <span class="two-line">
+                    <b>@<%= thread.added_by %></b>
+                    <span>
+                      <%= button_to "Detach", fd_case_thread_path(@case, thread),
+                            method: :delete, class: "text-btn",
+                            form: { class: "contents", data: { turbo_confirm:
+                              "Detach this thread? The trail keeps which one it was." } } %>
+                    </span>
+                  </span>
+                </td>
               </tr>
             <% end %>
           </tbody>
@@ -409,6 +422,50 @@
         <div class="modal-foot">
           <label for="log-action" class="btn">Close</label>
           <%= submit_tag "Log it", class: "btn btn-primary" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<div class="modal-host">
+  <input type="checkbox" id="attach-thread" class="modal-flip">
+  <label for="attach-thread" class="modal-veil" aria-hidden="true"></label>
+  <div class="modal-wrap">
+    <div class="modal" role="dialog" aria-label="Attach a thread">
+      <div class="modal-head">
+        <h2 class="modal-title">Attach a thread</h2>
+        <span class="modal-sub">paste a Slack link</span>
+      </div>
+      <%= form_with url: fd_case_threads_path(@case), method: :post do %>
+        <div class="modal-body">
+          <label class="field-label">
+            Slack link
+            <%= text_field_tag :link, nil, class: "textarea", id: nil,
+                  placeholder: "https://hackclub.slack.com/archives/C0266FRGV/p1754487721123456" %>
+          </label>
+          <div class="outcomes">
+            <label class="opt">
+              <%= radio_button_tag :kind, "evidence", true %>
+              <span class="opt-dot" aria-hidden="true"></span>
+              <span>
+                <span class="opt-label">Evidence</span>
+                <span class="opt-note">The conversation the case is about.</span>
+              </span>
+            </label>
+            <label class="opt">
+              <%= radio_button_tag :kind, "internal", false %>
+              <span class="opt-dot" aria-hidden="true"></span>
+              <span>
+                <span class="opt-label">Internal</span>
+                <span class="opt-note">The internal discussion thread</span>
+              </span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <label for="attach-thread" class="btn">Close</label>
+          <%= submit_tag "Attach", class: "btn btn-primary" %>
         </div>
       <% end %>
     </div>

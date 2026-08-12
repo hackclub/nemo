@@ -40,7 +40,7 @@ module Fd
         entity_id: record.id,
         verb: verb,
         before: redact(type, before || previous_values(record, changes)),
-        after: redact(type, after || changes.transform_values(&:last)),
+        after: redact(type, after || next_values(record, changes)),
         source_app: source_app,
         request_id: request_id,
       )
@@ -56,6 +56,12 @@ module Fd
       return nil if record.previously_new_record?
 
       changes.transform_values(&:first)
+    end
+
+    def self.next_values(record, changes)
+      return changes.transform_values(&:last) unless record.previously_new_record?
+
+      record.attributes.except(*IGNORED_COLUMNS).compact
     end
 
     def self.redact(type, payload)

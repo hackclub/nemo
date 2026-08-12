@@ -15,6 +15,7 @@ Rails.application.routes.draw do
       resources :notes, only: [:create, :destroy]
       resources :actions, only: [:create]
       resources :reversals, only: [:create]
+      resources :threads, only: [:create, :destroy]
     end
   end
 

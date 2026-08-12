@@ -33,6 +33,23 @@ class Fd::AuditTest < ActiveSupport::TestCase
     assert_equal "USUB", entry.after["subject_user_id"]
   end
 
+  test "a create records the whole row, including columns left at their default" do
+    thread = Fd::CaseThread.create!(case_id: kase.id, channel_id: "C1", thread_ts: "1.1",
+      added_by: "UFF1")
+    entry = record(thread, "attached")
+
+    assert_equal "evidence", entry.after["kind"],
+      "a column equal to its database default is still part of what was created"
+    assert_equal "C1", entry.after["channel_id"]
+    assert_equal false, entry.after["is_primary"]
+  end
+
+  test "a create leaves out columns that hold nothing" do
+    entry = record(kase, "opened")
+    assert_not entry.after.key?("resolution")
+    assert_not entry.after.key?("claimed_by")
+  end
+
   test "an update records both sides of only what moved" do
     target = kase
     target.update!(claimed_by: "UFF2", claimed_at: Time.current)
