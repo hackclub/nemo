@@ -3,7 +3,7 @@
     <td class="col-tick">
       <% unless kase.resolved? %>
         <%= check_box_tag "case_ids[]", kase.id, false,
-              id: "tick-#{kase.id}", form: "merge-form", class: "tick",
+              id: "tick-#{kase.id}", form: "merge-form", class: "tick tick-case",
               data: { action: "change->merge#refresh" },
               aria: { label: "select case #{kase.id}" } %>
       <% end %>

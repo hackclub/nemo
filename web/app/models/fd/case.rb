@@ -4,8 +4,6 @@ module Fd
 
     RESOLUTIONS = %w[action_taken no_action duplicate not_conduct].freeze
     CLOSE_REASONS = %w[not_conduct no_action].freeze
-    LEARNED_FROM = %w[saw_it told_in_dm off_slack staff].freeze
-
     CATEGORIES = %w[
       nos adult insulting bullying discrimination hateful
       harassment_identity harassment_general nsfw_mild nsfw_extreme

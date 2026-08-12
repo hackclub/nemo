@@ -444,23 +444,18 @@
             <%= text_field_tag :link, nil, class: "textarea", id: nil,
                   placeholder: "https://hackclub.slack.com/archives/C0266FRGV/p1754487721123456" %>
           </label>
-          <div class="outcomes">
-            <label class="opt">
-              <%= radio_button_tag :kind, "evidence", true %>
-              <span class="opt-dot" aria-hidden="true"></span>
-              <span>
-                <span class="opt-label">Evidence</span>
-                <span class="opt-note">The conversation the case is about.</span>
-              </span>
-            </label>
-            <label class="opt">
-              <%= radio_button_tag :kind, "internal", false %>
-              <span class="opt-dot" aria-hidden="true"></span>
-              <span>
-                <span class="opt-label">Internal</span>
-                <span class="opt-note">The internal discussion thread</span>
-              </span>
-            </label>
+          <div class="field-label">
+            <span>What that thread is</span>
+            <div class="segmented seg-radio">
+              <label>
+                <%= radio_button_tag :kind, "evidence", true, id: nil %>
+                Evidence
+              </label>
+              <label>
+                <%= radio_button_tag :kind, "internal", false, id: nil %>
+                Internal discussion
+              </label>
+            </div>
           </div>
         </div>
         <div class="modal-foot">

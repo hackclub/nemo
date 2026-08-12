@@ -8,7 +8,7 @@ export default class extends Controller {
   }
 
   refresh() {
-    const ticked = this.element.querySelectorAll("input.tick:checked")
+    const ticked = this.element.querySelectorAll("input.tick-case:checked")
     const numbers = Array.from(ticked, (box) => `#${box.value}`)
 
     this.countTarget.textContent = numbers.length

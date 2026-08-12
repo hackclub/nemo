@@ -153,13 +153,6 @@ module FdHelper
     "ban_evasion" => "Slack ban evasion"
   }.freeze
 
-  LEARNED_FROM_LABELS = {
-    "saw_it" => "I saw it myself",
-    "told_in_dm" => "Somebody told me in a DM",
-    "off_slack" => "Raised at an event or on a call",
-    "staff" => "Passed on by staff"
-  }.freeze
-
   def category_label(key)
     return "n/a" if key.blank?
 
@@ -168,10 +161,6 @@ module FdHelper
 
   def category_options
     Fd::Case::CATEGORIES.map { |key| [category_label(key), key] }
-  end
-
-  def learned_from_label(key)
-    LEARNED_FROM_LABELS[key]
   end
 
   def thread_kind_note(thread)

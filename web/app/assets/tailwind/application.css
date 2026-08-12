@@ -709,6 +709,91 @@
     color: var(--ink);
   }
 
+  .picker {
+    position: relative;
+  }
+
+  .picker > summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2xs);
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .picker > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .picker[open] > summary {
+    border-color: var(--accent);
+  }
+
+  .picker-pop {
+    inset-inline: 0;
+    max-height: 15rem;
+    overflow-y: auto;
+    min-width: 0;
+  }
+
+  .picker-opt {
+    position: relative;
+    display: block;
+    font-size: var(--t-xs);
+    font-weight: 500;
+    color: var(--ink-2);
+    padding: 6px var(--s-2xs);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .picker-opt input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .picker-opt:hover {
+    background-color: var(--card-2);
+    color: var(--ink);
+  }
+
+  .picker-opt:has(input:checked) {
+    background-color: var(--accent-soft);
+    color: var(--accent-deep);
+    font-weight: 600;
+  }
+
+  .seg-radio label {
+    position: relative;
+    font-family: inherit;
+    font-size: var(--t-2xs);
+    font-weight: 600;
+    color: var(--ink-2);
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
+  }
+
+  .seg-radio input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .seg-radio label:hover {
+    color: var(--ink);
+  }
+
+  .seg-radio label:has(input:checked) {
+    background-color: var(--card);
+    color: var(--ink);
+  }
+
   .select {
     font-family: inherit;
     font-size: var(--t-xs);
@@ -1354,7 +1439,7 @@
     box-shadow: 0 8px 24px color-mix(in oklab, var(--ink) 22%, transparent);
   }
 
-  .body:has(.tick:checked) .bulk {
+  .body:has(.tick-case:checked) .bulk {
     display: flex;
   }
 

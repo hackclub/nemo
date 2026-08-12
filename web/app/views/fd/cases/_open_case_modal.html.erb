@@ -1,0 +1,87 @@
+<div class="modal-host">
+  <input type="checkbox" id="open-case" class="modal-flip" <%= "checked" if @open_modal %>>
+  <label for="open-case" class="modal-veil" aria-hidden="true"></label>
+  <div class="modal-wrap">
+    <div class="modal" role="dialog" aria-label="Open a case">
+      <div class="modal-head">
+        <h2 class="modal-title">Open a case</h2>
+        <span class="modal-sub">by hand, when no report came in</span>
+      </div>
+      <%= form_with url: fd_cases_path, method: :post do %>
+        <div class="modal-body">
+          <% if @open_for_subject.any? %>
+            <div class="dup">
+              <span>
+                <b>@<%= params[:subject_user_id] %> already has an open case.</b>
+                <% @open_for_subject.each do |other| %>
+                  <%= link_to "##{other.id}", fd_case_path(other) %>
+                  <%= category_label(other.category_key).downcase %>,
+                  <%= case_age_label(case_age_seconds(other)) %><%= other.claimed? ? ", assigned to @#{other.claimed_by}" : ", unassigned" %>.
+                <% end %>
+              </span>
+              <%= link_to "Add to ##{@open_for_subject.first.id} instead",
+                    fd_case_path(@open_for_subject.first), class: "btn" %>
+            </div>
+          <% end %>
+
+          <label class="field-label">
+            Subject
+            <%= text_field_tag :subject_user_id, params[:subject_user_id], class: "textarea",
+                  id: nil, placeholder: "U08K3F2QX" %>
+          </label>
+
+          <div class="field-label">
+            <span>Category</span>
+            <details class="picker" data-controller="picker" data-action="change->picker#choose">
+              <summary class="select">
+                <span data-picker-target="label" data-blank="Not sure yet"><%=
+                  params[:category_key].present? ? category_label(params[:category_key]) : "Not sure yet"
+                %></span>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+              </summary>
+              <div class="menu-pop picker-pop">
+                <label class="picker-opt">
+                  <%= radio_button_tag :category_key, "", params[:category_key].blank?,
+                        id: nil, data: { label: "Not sure yet" } %>
+                  Not sure yet
+                </label>
+                <% Fd::Case::CATEGORIES.each do |key| %>
+                  <label class="picker-opt">
+                    <%= radio_button_tag :category_key, key, params[:category_key] == key,
+                          id: nil, data: { label: category_label(key) } %>
+                    <%= category_label(key) %>
+                  </label>
+                <% end %>
+              </div>
+            </details>
+          </div>
+
+          <label class="field-label">
+            What happened
+            <%= text_area_tag :body, params[:body], rows: 4, class: "textarea", id: nil,
+                  maxlength: Fd::NotesController::MAX_LENGTH %>
+            <span class="opt-note">Filed as the first note. Internal, never sent to anybody.</span>
+          </label>
+
+          <label class="opt">
+            <%= check_box_tag :assign_to_me, "1", params[:assign_to_me] == "1", class: "tick" %>
+            <span class="opt-dot" aria-hidden="true"></span>
+            <span>
+              <span class="opt-label">Assign it to me</span>
+              <span class="opt-note">Leave it off and it joins the queue unassigned.</span>
+            </span>
+          </label>
+        </div>
+        <div class="modal-foot">
+          <label for="open-case" class="btn">Close</label>
+          <% if @open_for_subject.any? %>
+            <%= button_tag "Open it anyway, this is separate", name: "separate", value: "1",
+                  class: "btn btn-primary" %>
+          <% else %>
+            <%= submit_tag "Open the case", class: "btn btn-primary" %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

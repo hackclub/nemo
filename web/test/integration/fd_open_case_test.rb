@@ -1,17 +1,13 @@
 require "test_helper"
 
 class FdOpenCaseTest < ActionDispatch::IntegrationTest
-  LINK = "https://hackclub.slack.com/archives/C0266FRGV/p1754487721123456".freeze
-
   setup do
     @me = Staff.create!(user_id: "UME", community_manager: true)
     @watermark = Fd::Case.maximum(:id).to_i
   end
 
   def open_case(**params)
-    post fd_cases_path, params: {
-      subject_user_id: "USUB", learned_from: "saw_it",
-    }.merge(params)
+    post fd_cases_path, params: { subject_user_id: "USUB" }.merge(params)
   end
 
   def opened
@@ -24,15 +20,19 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     assert_nil opened
   end
 
-  test "the form is offered" do
+  test "the queue carries the form in a modal, closed by default" do
     sign_in_as(@me)
-    get new_fd_case_path
+    get fd_cases_path
 
     assert_response :success
-    assert_select "form[action=?]", fd_cases_path
-    assert_select "input[name=subject_user_id]"
-    assert_select "select[name=category_key]"
-    assert_select "input[name=learned_from]", 4
+    assert_select "label[for=open-case]", text: "Open a case"
+    assert_select "input#open-case.modal-flip"
+    assert_select "input#open-case[checked]", count: 0
+    assert_select "form[action=?] input[name=subject_user_id]", fd_cases_path
+    assert_select "form[action=?] .picker input[name=category_key]", fd_cases_path,
+      minimum: Fd::Case::CATEGORIES.size
+    assert_select "select[name=category_key]", count: 0,
+      message: "the category picker should not be a native select"
   end
 
   test "opening records who opened it and when" do
@@ -42,7 +42,6 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     kase = opened
     assert_equal "USUB", kase.subject_user_id
     assert_equal "bullying", kase.category_key
-    assert_equal "saw_it", kase.learned_from
     assert_equal "UME", kase.opened_by
     assert_equal "fire_engine", kase.source_app
     assert_redirected_to fd_case_path(kase)
@@ -71,16 +70,6 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     assert_match(/say who this case is about/, flash[:alert])
   end
 
-  test "how you learned about it is required, and must be one of the four" do
-    sign_in_as(@me)
-    open_case(learned_from: "")
-    assert_nil opened
-
-    open_case(learned_from: "a little bird")
-    assert_nil opened
-    assert_match(/say how you learned about it/, flash[:alert])
-  end
-
   test "a category outside the list is refused" do
     sign_in_as(@me)
     open_case(category_key: "vibes")
@@ -104,35 +93,23 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     assert_equal "UME", note.author
   end
 
-  test "a thread can be attached as it opens, and becomes primary" do
+  test "the modal asks for no thread at all, threads are attached on the case" do
     sign_in_as(@me)
-    open_case(link: LINK)
+    get fd_cases_path
 
-    thread = opened.threads.sole
-    assert_equal "C0266FRGV", thread.channel_id
-    assert_equal "1754487721.123456", thread.thread_ts
-    assert_equal "evidence", thread.kind
-    assert thread.is_primary
+    assert_select "form[action=?] input[name=link]", fd_cases_path, count: 0
+    assert_select "form[action=?] input[name=kind]", fd_cases_path, count: 0
   end
 
-  test "an internal first thread is never primary" do
+  test "a posted thread link is ignored" do
     sign_in_as(@me)
-    open_case(link: LINK, kind: "internal")
+    open_case(link: "https://hackclub.slack.com/archives/C0266FRGV/p1754487721123456")
 
-    thread = opened.threads.sole
-    assert thread.internal?
-    assert_not thread.is_primary
+    assert_not_nil opened
+    assert_equal 0, opened.threads.count, "the form does not take a thread, so none is attached"
   end
 
-  test "a bad link refuses the whole thing rather than opening a half case" do
-    sign_in_as(@me)
-    open_case(link: "https://someoneelse.slack.com/archives/C1/p1754487721123456", body: "text")
-
-    assert_nil opened, "nothing should be created when part of the form is wrong"
-    assert_match(/not a link to a Slack thread/, flash[:alert])
-  end
-
-  test "opening with no thread and no note still works" do
+  test "a case opens with nothing but a subject" do
     sign_in_as(@me)
     open_case
 
@@ -141,15 +118,14 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     assert_equal 0, opened.notes.count
   end
 
-  test "the case, its thread and its note share one request in the trail" do
+  test "the case and its note share one request in the trail" do
     sign_in_as(@me)
-    open_case(link: LINK, body: "context")
+    open_case(body: "context")
 
     kase = opened
     ids = Fd::AuditEntry.where(
-      "(entity_type = 'case' AND entity_id = ?) OR (entity_type = 'thread' AND entity_id IN (?))" \
-      " OR (entity_type = 'note' AND entity_id IN (?))",
-      kase.id, kase.threads.ids, kase.notes.ids
+      "(entity_type = 'case' AND entity_id = ?) OR (entity_type = 'note' AND entity_id IN (?))",
+      kase.id, kase.notes.ids
     ).pluck(:request_id).uniq
 
     assert_equal 1, ids.size
@@ -201,12 +177,12 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
   test "what I typed survives the warning" do
     Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 3.days.ago)
     sign_in_as(@me)
-    open_case(category_key: "spam", body: "third time this week", learned_from: "staff")
+    open_case(category_key: "spam", body: "third time this week")
 
+    assert_select "input#open-case[checked]", message: "the modal must reopen with the warning"
     assert_select "input[name=subject_user_id][value=USUB]"
-    assert_select "select[name=category_key] option[value=spam][selected]"
+    assert_select ".picker input[name=category_key][value=spam][checked]"
     assert_select "textarea[name=body]", text: /third time this week/
-    assert_select "input[name=learned_from][value=staff][checked]"
   end
 
   test "the confirm button replaces the plain one once warned" do
@@ -235,9 +211,12 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     assert_not_nil opened
   end
 
-  test "the queue links to the form" do
+  test "the queue still lists cases behind the warning" do
+    Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 3.days.ago)
     sign_in_as(@me)
-    get fd_cases_path
-    assert_select "a[href=?]", new_fd_case_path, text: "Open a case"
+    open_case
+
+    assert_select ".data-table tbody tr", minimum: 1
+    assert_select "form#merge-form"
   end
 end
