@@ -15,7 +15,7 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
   end
 
   def opened
-    Fd::Case.where("id > ?", @watermark).order(:id).last
+    Fd::Case.where("id > ?", @watermark).where(opened_by: @me.user_id).order(:id).last
   end
 
   test "a signed out visitor cannot open a case" do
@@ -48,12 +48,16 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     assert_redirected_to fd_case_path(kase)
   end
 
-  test "it joins the queue unassigned unless I say otherwise" do
+  test "it joins the queue unassigned by default" do
     sign_in_as(@me)
     open_case
     assert_nil opened.claimed_by
+  end
 
+  test "it can be assigned to me as it opens" do
+    sign_in_as(@me)
     open_case(assign_to_me: "1")
+
     assert_equal "UME", opened.claimed_by
     assert_not_nil opened.claimed_at
   end
@@ -159,6 +163,76 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     entry = Fd::AuditEntry.where(entity_type: "note", entity_id: opened.notes.ids, verb: "noted").sole
     assert_equal "redacted, 22 chars", entry.after["body"]
     assert_no_match(/self harm/, entry.after.to_json)
+  end
+
+  test "a subject with an open case stops the first submit" do
+    existing = Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1",
+      opened_at: 3.days.ago, category_key: "bullying")
+    sign_in_as(@me)
+    open_case
+
+    assert_nil opened, "nothing is created until it is confirmed as separate"
+    assert_response :unprocessable_content
+    assert_match(/already has an open case, ##{existing.id}/, flash[:alert])
+  end
+
+  test "the warning names the case, its state and a way to reach it" do
+    existing = Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1",
+      opened_at: 3.days.ago, category_key: "bullying", claimed_by: "UFF2",
+      claimed_at: 2.days.ago)
+    sign_in_as(@me)
+    open_case
+
+    assert_select ".dup a[href=?]", fd_case_path(existing)
+    assert_match(/assigned to @UFF2/, response.body)
+    assert_select ".dup a", text: "Add to ##{existing.id} instead"
+  end
+
+  test "confirming it is separate opens the second case" do
+    Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 3.days.ago)
+    sign_in_as(@me)
+    open_case(separate: "1")
+
+    assert_not_nil opened
+    assert_equal "USUB", opened.subject_user_id
+    assert_equal 2, Fd::Case.unresolved.where(subject_user_id: "USUB").count
+  end
+
+  test "what I typed survives the warning" do
+    Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 3.days.ago)
+    sign_in_as(@me)
+    open_case(category_key: "spam", body: "third time this week", learned_from: "staff")
+
+    assert_select "input[name=subject_user_id][value=USUB]"
+    assert_select "select[name=category_key] option[value=spam][selected]"
+    assert_select "textarea[name=body]", text: /third time this week/
+    assert_select "input[name=learned_from][value=staff][checked]"
+  end
+
+  test "the confirm button replaces the plain one once warned" do
+    Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 3.days.ago)
+    sign_in_as(@me)
+    open_case
+
+    assert_select "button[name=separate][value='1']"
+    assert_select "input[type=submit][value='Open the case']", count: 0
+  end
+
+  test "a resolved case for the same subject raises no warning" do
+    Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 5.days.ago,
+      resolved_at: 1.day.ago, resolution: "no_action")
+    sign_in_as(@me)
+    open_case
+
+    assert_not_nil opened, "a closed case is not a reason to stop"
+  end
+
+  test "somebody else's open case is not a reason to stop" do
+    Fd::Case.create!(subject_user_id: "UELSE", opened_by: "UFF1", opened_at: 3.days.ago)
+    sign_in_as(@me)
+    open_case
+
+    assert_not_nil opened
   end
 
   test "the queue links to the form" do

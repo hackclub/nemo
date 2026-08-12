@@ -47,6 +47,7 @@ module Fd
 
       problem = objection(subject)
       return refuse(problem) if problem
+      return refuse(already_open_warning) if warn_about_open_case?
 
       kase = nil
       writing do
@@ -83,6 +84,16 @@ module Fd
       end
 
       nil
+    end
+
+    def warn_about_open_case?
+      @open_for_subject.any? && params[:separate] != "1"
+    end
+
+    def already_open_warning
+      numbers = @open_for_subject.map { |kase| "##{kase.id}" }.to_sentence
+      "@#{params[:subject_user_id]} already has an open case, #{numbers}. " \
+        "Add to that one, or open a new case."
     end
 
     def attach_first_thread(kase)

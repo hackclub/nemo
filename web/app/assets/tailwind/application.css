@@ -1141,6 +1141,35 @@
     text-decoration: underline;
   }
 
+  .dup {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs) var(--s-xs);
+    flex-wrap: wrap;
+    border: 1px solid var(--warn);
+    background-color: var(--warn-soft);
+    border-radius: var(--r-card);
+    padding: var(--s-xs) var(--s-md);
+    font-size: var(--t-xs);
+    color: var(--warn);
+  }
+
+  .dup b {
+    font-weight: 700;
+  }
+
+  .dup a:not(.btn) {
+    color: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+  }
+
+  .dup .btn {
+    margin-inline-start: auto;
+    color: var(--ink);
+    flex: none;
+  }
+
   .note-none {
     font-size: var(--t-2xs);
     color: var(--ink-3);
@@ -1251,6 +1280,7 @@
   }
 
   .opt {
+    position: relative;
     display: grid;
     grid-template-columns: 13px minmax(0, 1fr);
     gap: var(--s-2xs);

@@ -8,11 +8,12 @@
         <b>@<%= params[:subject_user_id] %> already has an open case.</b>
         <% @open_for_subject.each do |other| %>
           <%= link_to "##{other.id}", fd_case_path(other) %>
-          <%= category_label(other.category_key) %>,
-          <%= case_age_label(case_age_seconds(other)) %>.
+          <%= category_label(other.category_key).downcase %>,
+          <%= case_age_label(case_age_seconds(other)) %><%= other.claimed? ? ", assigned to @#{other.claimed_by}" : ", unassigned" %>.
         <% end %>
       </span>
-      <span class="opt-note">Open this one anyway only if it is a separate incident.</span>
+      <%= link_to "Add to ##{@open_for_subject.first.id} instead",
+            fd_case_path(@open_for_subject.first), class: "btn" %>
     </div>
   <% end %>
 
@@ -109,6 +110,11 @@
 
   <div class="head-actions">
     <%= link_to "Cancel", fd_cases_path, class: "btn" %>
-    <%= submit_tag "Open the case", class: "btn btn-primary" %>
+    <% if @open_for_subject.any? %>
+      <%= button_tag "Open it anyway, this is separate", name: "separate", value: "1",
+            class: "btn btn-primary" %>
+    <% else %>
+      <%= submit_tag "Open the case", class: "btn btn-primary" %>
+    <% end %>
   </div>
 <% end %>
