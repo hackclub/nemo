@@ -1125,7 +1125,7 @@
     gap: var(--s-2xs);
   }
 
-  .note-del {
+  .text-btn {
     font-family: inherit;
     font-size: var(--t-2xs);
     font-weight: 600;
@@ -1136,7 +1136,7 @@
     cursor: pointer;
   }
 
-  .note-del:hover {
+  .text-btn:hover {
     color: var(--accent);
     text-decoration: underline;
   }

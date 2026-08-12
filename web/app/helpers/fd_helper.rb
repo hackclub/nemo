@@ -148,6 +148,18 @@ module FdHelper
     parts.join(" · ")
   end
 
+  def action_option_label(action)
+    [
+      action_label(action.type_key),
+      "on @#{action.target_user_id}",
+      action.performed_at.strftime("%b %-d, %Y"),
+    ].join(" · ")
+  end
+
+  def action_options_for(actions)
+    actions.map { |action| [action_option_label(action), action.id] }
+  end
+
   def case_option_label(kase)
     parts = ["##{kase.id}"]
     parts << (kase.subject_user_id ? "@#{kase.subject_user_id}" : "no subject")

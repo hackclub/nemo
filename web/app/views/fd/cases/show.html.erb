@@ -175,7 +175,14 @@
                 <td>
                   <span class="two-line">
                     <b><%= action_label(action.type_key) %></b>
-                    <span><%= action_detail_note(action) || "n/a" %></span>
+                    <span>
+                      <% detail = action_detail_note(action) %>
+                      <%= detail %>
+                      <% unless action.reversed? %>
+                        <%= "·" if detail %>
+                        <label for="reverse-<%= action.id %>" class="text-btn">Reverse</label>
+                      <% end %>
+                    </span>
                   </span>
                 </td>
                 <td>
@@ -191,7 +198,7 @@
                   </span>
                 </td>
                 <td class="col-date"><%= action.performed_at.strftime("%b %-d, %Y") %></td>
-                <td><%= action_state_chip(action) || "n/a" %></td>
+                <td><%= action_state_chip(action) %></td>
               </tr>
             <% end %>
           </tbody>
@@ -356,6 +363,35 @@
     </div>
   </div>
 </div>
+
+<% @live_actions.each do |action| %>
+  <div class="modal-host">
+    <input type="checkbox" id="reverse-<%= action.id %>" class="modal-flip">
+    <label for="reverse-<%= action.id %>" class="modal-veil" aria-hidden="true"></label>
+    <div class="modal-wrap">
+      <div class="modal" role="dialog" aria-label="Reverse this action">
+        <div class="modal-head">
+          <h2 class="modal-title">Reverse this action</h2>
+          <span class="modal-sub"><%= action_option_label(action) %></span>
+        </div>
+        <%= form_with url: fd_case_reversals_path(@case), method: :post do %>
+          <%= hidden_field_tag :action_id, action.id, id: nil %>
+          <div class="modal-body">
+            <label class="field-label">
+              Why
+              <%= text_area_tag :reversal_reason, nil, rows: 3, class: "textarea", id: nil,
+                    maxlength: Fd::ReversalsController::MAX_REASON %>
+            </label>
+          </div>
+          <div class="modal-foot">
+            <label for="reverse-<%= action.id %>" class="btn">Close</label>
+            <%= submit_tag "Reverse it", class: "btn btn-primary" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>
 
 <div class="modal-host">
   <input type="checkbox" id="log-action" class="modal-flip">

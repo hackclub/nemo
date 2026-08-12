@@ -14,6 +14,7 @@ Rails.application.routes.draw do
       resource :resolution, only: [:create]
       resources :notes, only: [:create, :destroy]
       resources :actions, only: [:create]
+      resources :reversals, only: [:create]
     end
   end
 

@@ -18,6 +18,7 @@ module Fd
       @participants = @case.participants.by_role.to_a
       @reports = @case.reports.oldest_first.to_a
       @actions = @case.actions.oldest_first.to_a
+      @live_actions = @actions.reject(&:reversed?)
       @siblings = @case.sibling_cases.oldest_first.to_a
       @duplicate_candidates = Case.candidates_for(@case, @siblings)
       @notes = @case.notes.visible.recent_first.to_a
