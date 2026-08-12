@@ -4,6 +4,14 @@ module Fd
 
     RESOLUTIONS = %w[action_taken no_action duplicate not_conduct].freeze
     CLOSE_REASONS = %w[not_conduct no_action].freeze
+    LEARNED_FROM = %w[saw_it told_in_dm off_slack staff].freeze
+
+    CATEGORIES = %w[
+      nos adult insulting bullying discrimination hateful
+      harassment_identity harassment_general nsfw_mild nsfw_extreme
+      advertising spam fraud_hcb fraud_referral fraud_ysws fraud_other
+      ban_evasion
+    ].freeze
 
     has_many :threads, class_name: "Fd::CaseThread", foreign_key: :case_id,
       inverse_of: :kase, dependent: nil

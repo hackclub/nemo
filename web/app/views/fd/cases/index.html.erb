@@ -9,6 +9,7 @@
             aria: { current: ("true" if @filter == name) } %>
     <% end %>
   </div>
+  <%= link_to "Open a case", new_fd_case_path, class: "btn btn-primary" %>
 <% end %>
 
 <div class="stack" data-controller="merge">

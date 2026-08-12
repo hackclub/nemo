@@ -1,0 +1,114 @@
+<% content_for :page_title, "Open a case" %>
+<% content_for :page_subtitle, "by hand, when no report came in" %>
+
+<%= form_with url: fd_cases_path, method: :post, class: "stack" do %>
+  <% if @open_for_subject.any? %>
+    <div class="dup">
+      <span>
+        <b>@<%= params[:subject_user_id] %> already has an open case.</b>
+        <% @open_for_subject.each do |other| %>
+          <%= link_to "##{other.id}", fd_case_path(other) %>
+          <%= category_label(other.category_key) %>,
+          <%= case_age_label(case_age_seconds(other)) %>.
+        <% end %>
+      </span>
+      <span class="opt-note">Open this one anyway only if it is a separate incident.</span>
+    </div>
+  <% end %>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Who and what</h2>
+        <p class="card-sub">the subject is the person the case is about, not whoever told you</p>
+      </div>
+    </div>
+
+    <div class="stack">
+      <label class="field-label">
+        Subject
+        <%= text_field_tag :subject_user_id, params[:subject_user_id], class: "textarea",
+              id: nil, placeholder: "U08K3F2QX" %>
+      </label>
+
+      <label class="field-label">
+        Category
+        <%= select_tag :category_key, options_for_select(category_options, params[:category_key]),
+              include_blank: "not sure yet", class: "select", id: nil %>
+      </label>
+
+      <label class="opt">
+        <%= check_box_tag :assign_to_me, "1", params[:assign_to_me] == "1", class: "tick" %>
+        <span class="opt-dot" aria-hidden="true"></span>
+        <span>
+          <span class="opt-label">Assign it to me</span>
+          <span class="opt-note">Leave it off and it joins the queue unassigned.</span>
+        </span>
+      </label>
+
+      <label class="field-label">
+        What happened
+        <%= text_area_tag :body, params[:body], rows: 4, class: "textarea", id: nil,
+              maxlength: Fd::NotesController::MAX_LENGTH %>
+        <span class="opt-note">Filed as the first note. Internal, and never sent to anybody.</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">How you learned about it</h2>
+        <p class="card-sub">a case opened by hand has no report behind it</p>
+      </div>
+    </div>
+    <div class="outcomes">
+      <% Fd::Case::LEARNED_FROM.each do |key| %>
+        <label class="opt">
+          <%= radio_button_tag :learned_from, key, params[:learned_from] == key %>
+          <span class="opt-dot" aria-hidden="true"></span>
+          <span class="opt-label"><%= learned_from_label(key) %></span>
+        </label>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">A thread, if there is one</h2>
+        <p class="card-sub">optional, and you can attach more later</p>
+      </div>
+    </div>
+    <div class="stack">
+      <label class="field-label">
+        Slack link
+        <%= text_field_tag :link, params[:link], class: "textarea", id: nil,
+              placeholder: "https://hackclub.slack.com/archives/C0266FRGV/p1754487721123456" %>
+      </label>
+      <div class="outcomes">
+        <label class="opt">
+          <%= radio_button_tag :kind, "evidence", params[:kind] != "internal" %>
+          <span class="opt-dot" aria-hidden="true"></span>
+          <span>
+            <span class="opt-label">Evidence</span>
+            <span class="opt-note">The conversation the case is about.</span>
+          </span>
+        </label>
+        <label class="opt">
+          <%= radio_button_tag :kind, "internal", params[:kind] == "internal" %>
+          <span class="opt-dot" aria-hidden="true"></span>
+          <span>
+            <span class="opt-label">Internal</span>
+            <span class="opt-note">Where FD talked it through, not part of what happened.</span>
+          </span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="head-actions">
+    <%= link_to "Cancel", fd_cases_path, class: "btn" %>
+    <%= submit_tag "Open the case", class: "btn btn-primary" %>
+  </div>
+<% end %>

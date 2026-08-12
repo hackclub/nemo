@@ -37,7 +37,78 @@ module Fd
       )
     end
 
+    def new
+      @open_for_subject = []
+    end
+
+    def create
+      subject = params[:subject_user_id].to_s.strip.presence
+      @open_for_subject = subject ? Case.unresolved.where(subject_user_id: subject).to_a : []
+
+      problem = objection(subject)
+      return refuse(problem) if problem
+
+      kase = nil
+      writing do
+        kase = Case.create!(
+          subject_user_id: subject,
+          category_key: params[:category_key].presence,
+          learned_from: params[:learned_from],
+          opened_by: current_staff.user_id,
+          opened_at: Time.current,
+          claimed_by: (current_staff.user_id if params[:assign_to_me] == "1"),
+          claimed_at: (Time.current if params[:assign_to_me] == "1"),
+          source_app: Audit::SOURCE_APP
+        )
+        audit(kase, "opened")
+        attach_first_thread(kase)
+        write_first_note(kase)
+      end
+
+      redirect_to fd_case_path(kase), notice: "case #{kase.id} opened"
+    end
+
     private
+
+    def objection(subject)
+      return "say who this case is about" if subject.nil?
+      unless Case::LEARNED_FROM.include?(params[:learned_from])
+        return "say how you learned about it"
+      end
+      if params[:category_key].present? && !Case::CATEGORIES.include?(params[:category_key])
+        return "pick a category from the list"
+      end
+      if params[:link].present? && SlackLink.parse(params[:link]).nil?
+        return "that is not a link to a Slack thread in this workspace"
+      end
+
+      nil
+    end
+
+    def attach_first_thread(kase)
+      ref = SlackLink.parse(params[:link])
+      return if ref.nil?
+
+      kind = CaseThread::KINDS.include?(params[:kind]) ? params[:kind] : "evidence"
+      thread = CaseThread.create!(
+        case_id: kase.id, channel_id: ref.channel_id, thread_ts: ref.thread_ts,
+        kind: kind, is_primary: kind == "evidence", added_by: current_staff.user_id
+      )
+      audit(thread, "attached")
+    end
+
+    def write_first_note(kase)
+      body = params[:body].to_s.strip
+      return if body.blank?
+
+      note = Note.create!(case_id: kase.id, body: body, author: current_staff.user_id)
+      audit(note, "noted")
+    end
+
+    def refuse(message)
+      flash.now[:alert] = message
+      render :new, status: :unprocessable_content
+    end
 
     def scope_for(filter)
       case filter
