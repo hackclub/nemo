@@ -10,6 +10,7 @@ Rails.application.routes.draw do
     root to: "cases#index"
     resources :cases, only: [:index, :show] do
       resource :claim, only: [:create, :destroy]
+      resource :resolution, only: [:create]
     end
   end
 

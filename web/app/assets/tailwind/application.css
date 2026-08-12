@@ -1038,6 +1038,192 @@
     .grid-2-1 { grid-template-columns: minmax(0, 1fr); }
   }
 
+  .modal-flip {
+    position: fixed;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .modal-veil {
+    position: fixed;
+    inset: 0;
+    background-color: color-mix(in oklab, var(--ink) 40%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur) var(--ease-out);
+    z-index: 50;
+  }
+
+  .modal-wrap {
+    position: fixed;
+    inset: 0;
+    z-index: 51;
+    display: grid;
+    place-items: center;
+    padding: var(--s-md);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur) var(--ease-out);
+  }
+
+  .modal-flip:checked ~ .modal-veil,
+  .modal-flip:checked ~ .modal-wrap {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .modal {
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    width: min(560px, 100%);
+    max-height: 86vh;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .modal form {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 0;
+  }
+
+  .modal-head {
+    padding: var(--s-sm) var(--s-md);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2xs);
+    flex-wrap: wrap;
+  }
+
+  .modal-title {
+    font-size: var(--t-md);
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .modal-sub {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+  }
+
+  .modal-body {
+    padding: var(--s-md);
+    display: grid;
+    gap: var(--s-sm);
+    overflow-y: auto;
+  }
+
+  .modal-foot {
+    padding: var(--s-sm) var(--s-md);
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--s-2xs);
+    background-color: var(--card-2);
+  }
+
+  .outcomes {
+    display: grid;
+    gap: var(--s-2xs);
+  }
+
+  .opt {
+    display: grid;
+    grid-template-columns: 13px minmax(0, 1fr);
+    gap: var(--s-2xs);
+    align-items: start;
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    padding: var(--s-2xs) var(--s-xs);
+    cursor: pointer;
+  }
+
+  .opt input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .opt-dot {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    margin-top: 3px;
+    flex: none;
+  }
+
+  .opt:has(input:checked) {
+    border-color: var(--accent);
+    background-color: var(--accent-soft);
+  }
+
+  .opt:has(input:checked) .opt-dot {
+    border: 4px solid var(--accent);
+  }
+
+  .opt-label {
+    font-size: var(--t-sm);
+    font-weight: 600;
+    display: block;
+  }
+
+  .opt-note {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+  }
+
+  .only {
+    display: none;
+    gap: var(--s-sm);
+    border-left: 2px solid var(--accent-soft);
+    padding-left: var(--s-xs);
+  }
+
+  form:has(input[value="report"]:checked) .only-report,
+  form:has(input[value="close"]:checked) .only-close,
+  form:has(input[value="duplicate"]:checked) .only-duplicate {
+    display: grid;
+  }
+
+  .when {
+    display: none;
+  }
+
+  form:has(#type_key option[value="shush"]:checked) .when-expiry,
+  form:has(#type_key option[value="temp_ban"]:checked) .when-expiry,
+  form:has(#type_key option[value="channel_ban"]:checked) .when-expiry {
+    display: grid;
+  }
+
+  form:has(#type_key option[value="channel_ban"]:checked) .when-channel,
+  form:has(#type_key option[value="locked_thread"]:checked) .when-channel {
+    display: grid;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .modal-veil, .modal-wrap { transition: none; }
+  }
+
+  .textarea {
+    font-family: inherit;
+    font-size: var(--t-sm);
+    color: var(--ink);
+    padding: 8px var(--s-xs);
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    background-color: var(--card);
+    width: 100%;
+    resize: vertical;
+  }
+
+  .textarea::placeholder {
+    color: var(--ink-3);
+  }
+
   .timeline {
     display: grid;
     gap: 0;

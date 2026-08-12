@@ -112,6 +112,29 @@ module FdHelper
     parts.join(" · ")
   end
 
+  RESOLUTION_LABELS = {
+    "action_taken" => "Action taken",
+    "no_action" => "No action needed",
+    "duplicate" => "Duplicate of another case",
+    "not_conduct" => "Not a conduct matter",
+  }.freeze
+
+  def resolution_label(key)
+    RESOLUTION_LABELS.fetch(key, key.to_s.tr("_", " "))
+  end
+
+  def resolution_options
+    Fd::Case::RESOLUTIONS.map { |key| [resolution_label(key), key] }
+  end
+
+  def close_reason_options
+    Fd::Case::CLOSE_REASONS.map { |key| [resolution_label(key), key] }
+  end
+
+  def action_options
+    ACTION_LABELS.map { |key, label| [label, key] }
+  end
+
   def case_status_chip(kase)
     if kase.resolved?
       tag.span(kase.resolution.tr("_", " "), class: "chip chip-off")

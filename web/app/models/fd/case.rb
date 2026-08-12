@@ -3,6 +3,7 @@ module Fd
     self.table_name = "fd.cases"
 
     RESOLUTIONS = %w[action_taken no_action duplicate not_conduct].freeze
+    CLOSE_REASONS = %w[not_conduct no_action].freeze
 
     has_many :threads, class_name: "Fd::CaseThread", foreign_key: :case_id,
       inverse_of: :kase, dependent: nil

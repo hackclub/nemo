@@ -7,6 +7,7 @@
 <% end %>
 <% content_for :head_actions do %>
   <% unless @case.resolved? %>
+    <label for="resolve-case" class="btn btn-primary">Resolve</label>
     <% if @case.claimed_by == current_staff.user_id %>
       <%= button_to "Unclaim", fd_case_claim_path(@case), method: :delete,
             class: "btn", form: { class: "contents" } %>
@@ -58,26 +59,31 @@
     <% end %>
   </div>
 
-  <div class="card card-flush">
-    <table class="data-table">
-      <tbody>
-        <tr>
-          <td>Resolved</td>
-          <td>
-            <% if @case.resolved? %>
-              <%= @case.resolved_at.strftime("%b %-d, %Y") %> as <%= @case.resolution.tr("_", " ") %>
-            <% else %>
-              n/a
-            <% end %>
-          </td>
-        </tr>
-        <tr>
-          <td>What the member was told</td>
-          <td><%= @case.member_note || "n/a" %></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <% if @case.resolved? %>
+    <div class="card card-flush">
+      <table class="data-table">
+        <tbody>
+          <tr>
+            <td>Resolved</td>
+            <td>
+              <%= @case.resolved_at.strftime("%b %-d, %Y") %>
+              as <%= @case.resolution.tr("_", " ") %>
+            </td>
+          </tr>
+          <% if @case.duplicate_of %>
+            <tr>
+              <td>Duplicate of</td>
+              <td><%= link_to "case #{@case.duplicate_of}", fd_case_path(@case.duplicate_of) %></td>
+            </tr>
+          <% end %>
+          <tr>
+            <td>Reason recorded</td>
+            <td><%= @case.member_note || "n/a" %></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
 
   <div class="card card-flush">
     <div class="card-head">
@@ -285,6 +291,97 @@
     </div>
   </div>
 </div>
+
+<% unless @case.resolved? %>
+  <input type="checkbox" id="resolve-case" class="modal-flip">
+  <label for="resolve-case" class="modal-veil" aria-hidden="true"></label>
+  <div class="modal-wrap">
+    <div class="modal" role="dialog" aria-label="Resolve this case">
+      <div class="modal-head">
+        <h2 class="modal-title">Resolve case <%= @case.id %></h2>
+        <span class="modal-sub">
+          <%= @case.claimed? ? "assigned to @#{@case.claimed_by}" : "not assigned to anybody" %>
+        </span>
+      </div>
+      <%= form_with url: fd_case_resolution_path(@case), method: :post do %>
+        <div class="modal-body">
+          <div class="outcomes">
+            <label class="opt">
+              <%= radio_button_tag :outcome, "report", true %>
+              <span class="opt-dot" aria-hidden="true"></span>
+              <span>
+                <span class="opt-label">File a report</span>
+                <span class="opt-note">Something was done about it. Records the action.</span>
+              </span>
+            </label>
+            <label class="opt">
+              <%= radio_button_tag :outcome, "close", false %>
+              <span class="opt-dot" aria-hidden="true"></span>
+              <span>
+                <span class="opt-label">Close it</span>
+                <span class="opt-note">Nothing to act on, or not ours to act on.</span>
+              </span>
+            </label>
+            <label class="opt">
+              <%= radio_button_tag :outcome, "duplicate", false %>
+              <span class="opt-dot" aria-hidden="true"></span>
+              <span>
+                <span class="opt-label">Duplicate</span>
+                <span class="opt-note">Already being handled as another case.</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="only only-report">
+            <label class="field-label">
+              What was done
+              <%= select_tag :type_key, options_for_select(action_options), class: "select" %>
+            </label>
+            <label class="field-label">
+              Directed at
+              <%= text_field_tag :target_user_id, @case.subject_user_id, class: "textarea" %>
+            </label>
+            <label class="field-label when when-expiry">
+              Until when
+              <%= date_field_tag :expires_on, nil, class: "textarea" %>
+            </label>
+            <label class="field-label when when-channel">
+              Which channel
+              <%= text_field_tag :channel_id, nil, class: "textarea", placeholder: "C0266FRGV" %>
+            </label>
+          </div>
+
+          <div class="only only-close">
+            <label class="field-label">
+              Why
+              <%= select_tag :close_reason,
+                    options_for_select(close_reason_options), class: "select" %>
+            </label>
+          </div>
+
+          <div class="only only-duplicate">
+            <label class="field-label">
+              Duplicate of which case
+              <%= number_field_tag :duplicate_of, nil, class: "textarea", min: 1 %>
+            </label>
+          </div>
+
+          <label class="field-label">
+            Reason
+            <%= text_area_tag :member_note, nil, rows: 3, class: "textarea" %>
+            <span class="opt-note">
+              Kept on the record. Nothing here is sent to anybody.
+            </span>
+          </label>
+        </div>
+        <div class="modal-foot">
+          <label for="resolve-case" class="btn">Close</label>
+          <%= submit_tag "Resolve", class: "btn btn-primary" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
 
 <input type="checkbox" id="case-timeline" class="drawer-flip">
 <label for="case-timeline" class="drawer-veil" aria-hidden="true"></label>
