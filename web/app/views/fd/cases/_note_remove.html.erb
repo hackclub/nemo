@@ -1,0 +1,5 @@
+<% if note.author == current_staff.user_id %>
+  <%= button_to "Remove", fd_case_note_path(kase, note), method: :delete,
+        class: "note-del", form: { class: "contents",
+        data: { turbo_confirm: "Remove this note? The trail keeps that you wrote and removed one." } } %>
+<% end %>

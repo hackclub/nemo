@@ -23,7 +23,43 @@ module Fd
       redirect_to fd_case_path(kase), notice: notice_for(kase, standing)
     end
 
+    def destroy
+      kase = Case.find(params[:case_id])
+      now = Time.current
+      removed = false
+
+      writing do
+        rows = on_this_page(kase)
+          .where(id: params[:id], deleted_at: nil, author: current_staff.user_id)
+          .update_all(deleted_at: now, deleted_by: current_staff.user_id, updated_at: now)
+        next if rows.zero?
+
+        removed = true
+        note = Note.find(params[:id])
+        audit(note, "deleted",
+          before: { "deleted_at" => nil },
+          after: {
+            "deleted_at" => note.deleted_at,
+            "deleted_by" => note.deleted_by,
+            "body" => note.body,
+          })
+      end
+
+      if removed
+        redirect_to fd_case_path(kase), notice: "note removed"
+      else
+        redirect_to fd_case_path(kase), alert: "only whoever wrote a note can remove it"
+      end
+    end
+
     private
+
+    def on_this_page(kase)
+      Note.where(
+        "case_id = :id OR (case_id IS NULL AND subject_user_id = :subject)",
+        id: kase.id, subject: kase.subject_user_id
+      )
+    end
 
     def objection(kase, body, standing)
       return "write the note before saving it" if body.blank?

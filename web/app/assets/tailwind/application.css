@@ -1125,6 +1125,22 @@
     gap: var(--s-2xs);
   }
 
+  .note-del {
+    font-family: inherit;
+    font-size: var(--t-2xs);
+    font-weight: 600;
+    color: var(--ink-3);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .note-del:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
   .note-none {
     font-size: var(--t-2xs);
     color: var(--ink-3);
@@ -1410,14 +1426,14 @@
     display: none;
   }
 
-  form:has(#type_key option[value="shush"]:checked) .when-expiry,
-  form:has(#type_key option[value="temp_ban"]:checked) .when-expiry,
-  form:has(#type_key option[value="channel_ban"]:checked) .when-expiry {
+  form:has(.action-type option[value="shush"]:checked) .when-expiry,
+  form:has(.action-type option[value="temp_ban"]:checked) .when-expiry,
+  form:has(.action-type option[value="channel_ban"]:checked) .when-expiry {
     display: grid;
   }
 
-  form:has(#type_key option[value="channel_ban"]:checked) .when-channel,
-  form:has(#type_key option[value="locked_thread"]:checked) .when-channel {
+  form:has(.action-type option[value="channel_ban"]:checked) .when-channel,
+  form:has(.action-type option[value="locked_thread"]:checked) .when-channel {
     display: grid;
   }
 

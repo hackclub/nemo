@@ -142,6 +142,92 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     assert_select ".note-none", text: "No notes", minimum: 1
   end
 
+  test "removing my own note leaves it soft deleted, not gone" do
+    sign_in_as(@me)
+    write(body: "wrote this in haste")
+    note = notes.sole
+
+    delete fd_case_note_path(@kase, note)
+    note.reload
+
+    assert_not_nil note.deleted_at
+    assert_equal "UME", note.deleted_by
+    assert_equal "wrote this in haste", note.body, "the row stays, only the visibility changes"
+    assert_match(/note removed/, flash[:notice])
+  end
+
+  test "a removed note disappears from the page" do
+    sign_in_as(@me)
+    write(body: "wrote this in haste")
+    delete fd_case_note_path(@kase, notes.sole)
+
+    get fd_case_path(@kase)
+    assert_select ".note-row", 0
+    assert_no_match(/wrote this in haste/, response.body)
+  end
+
+  test "I cannot remove somebody else's note" do
+    note = Fd::Note.create!(case_id: @kase.id, body: "not mine", author: "UFF9")
+    sign_in_as(@me)
+    delete fd_case_note_path(@kase, note)
+
+    assert_nil note.reload.deleted_at
+    assert_match(/only whoever wrote a note can remove it/, flash[:alert])
+  end
+
+  test "a note belonging to another case cannot be removed through this one" do
+    other = Fd::Case.create!(subject_user_id: "UELSE", opened_by: "UFF1", opened_at: 1.day.ago)
+    theirs = Fd::Note.create!(case_id: other.id, body: "somewhere else", author: "UME")
+
+    sign_in_as(@me)
+    delete fd_case_note_path(@kase, theirs)
+
+    assert_nil theirs.reload.deleted_at, "the case in the url must own the note"
+  end
+
+  test "removing twice does not write a second trail entry" do
+    sign_in_as(@me)
+    write(body: "twice over")
+    note = notes.sole
+
+    delete fd_case_note_path(@kase, note)
+    first = note.reload.deleted_at
+    delete fd_case_note_path(@kase, note)
+
+    assert_equal first, note.reload.deleted_at
+    assert_equal 1, Fd::AuditEntry.where(entity_type: "note", entity_id: note.id, verb: "deleted").count
+  end
+
+  test "the trail records that a note was struck without keeping what it said" do
+    sign_in_as(@me)
+    write(body: "he mentioned self harm")
+    note = notes.sole
+    delete fd_case_note_path(@kase, note)
+
+    entry = Fd::AuditEntry.where(entity_type: "note", entity_id: note.id, verb: "deleted").sole
+    assert_equal "UME", entry.after["deleted_by"]
+    assert_equal "redacted, 22 chars", entry.after["body"]
+    assert_no_match(/self harm/, entry.after.to_json)
+  end
+
+  test "a standing note can be removed by its author from the case page" do
+    sign_in_as(@me)
+    write(scope: "member", body: "pattern worth watching")
+    note = notes.sole
+
+    delete fd_case_note_path(@kase, note)
+    assert_not_nil note.reload.deleted_at
+  end
+
+  test "only my own notes offer a remove control" do
+    Fd::Note.create!(case_id: @kase.id, body: "mine", author: "UME")
+    Fd::Note.create!(case_id: @kase.id, body: "theirs", author: "UFF9")
+
+    sign_in_as(@me)
+    get fd_case_path(@kase)
+    assert_select ".note-del", 1
+  end
+
   test "notes can still be written on a resolved case" do
     @kase.update!(resolved_at: 1.hour.ago, resolution: "no_action")
     sign_in_as(@me)

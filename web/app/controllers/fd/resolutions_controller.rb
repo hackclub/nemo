@@ -1,8 +1,6 @@
 module Fd
   class ResolutionsController < BaseController
-    NEEDS_EXPIRY = %w[shush temp_ban channel_ban].freeze
-    NEEDS_CHANNEL = %w[channel_ban].freeze
-    TAKES_CHANNEL = %w[channel_ban locked_thread].freeze
+    include LogsActions
 
     def create
       @case = Case.find(params[:case_id])
@@ -51,27 +49,10 @@ module Fd
     end
 
     def objection(resolution)
-      return report_objection if params[:outcome] == "report"
+      return action_objection if params[:outcome] == "report"
       return duplicate_objection if resolution == "duplicate"
 
       nil
-    end
-
-    def report_objection
-      return "pick what was done" unless FdHelper::ACTION_LABELS.key?(params[:type_key].to_s)
-      return "say who it was directed at" if params[:target_user_id].blank?
-      if NEEDS_EXPIRY.include?(params[:type_key]) && params[:expires_on].blank?
-        return "#{type_name.downcase} needs a date it runs until"
-      end
-      if NEEDS_CHANNEL.include?(params[:type_key]) && params[:channel_id].blank?
-        return "#{type_name.downcase} needs a channel"
-      end
-
-      nil
-    end
-
-    def type_name
-      FdHelper::ACTION_LABELS.fetch(params[:type_key].to_s, params[:type_key].to_s)
     end
 
     def duplicate_objection
@@ -96,31 +77,7 @@ module Fd
     end
 
     def file_report
-      action = Action.create!(
-        case_id: @case.id,
-        type_key: params[:type_key],
-        target_user_id: params[:target_user_id].strip,
-        decided_by: current_staff.user_id,
-        performed_by: current_staff.user_id,
-        performed_at: @now,
-        source_app: Audit::SOURCE_APP,
-        expires_at: expiry_for(params[:type_key]),
-        details: channel_for(params[:type_key])
-      )
-      audit(action, "performed")
-    end
-
-    def expiry_for(type_key)
-      return nil unless NEEDS_EXPIRY.include?(type_key)
-
-      params[:expires_on].presence&.to_date&.end_of_day
-    end
-
-    def channel_for(type_key)
-      return {} unless TAKES_CHANNEL.include?(type_key)
-      return {} if params[:channel_id].blank?
-
-      { "channel_id" => params[:channel_id].strip }
+      audit(log_action(@case, @now), "performed")
     end
 
     def refusal(kase)
