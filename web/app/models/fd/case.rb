@@ -17,6 +17,31 @@ module Fd
       inverse_of: :kase, dependent: nil
 
     scope :unresolved, -> { where(resolved_at: nil) }
+    scope :not_duplicate, -> { where(duplicate_of: nil) }
+
+    def self.candidates_for(kase, siblings = [], limit: 25)
+      ordered = siblings.map(&:id)
+      if kase.subject_user_id
+        ordered += where(subject_user_id: kase.subject_user_id)
+          .where.not(id: kase.id).order(opened_at: :desc).limit(10).ids
+      end
+      ordered += unresolved.where.not(id: kase.id).order(opened_at: :desc).limit(15).ids
+      ordered = (ordered.uniq - [kase.id]).first(limit)
+
+      by_id = where(id: ordered).index_by(&:id)
+      ordered.filter_map { |id| by_id[id] }
+    end
+
+    def self.root_for(id, hops: 10)
+      current = id
+      hops.times do
+        parent = where(id: current).pick(:duplicate_of)
+        break if parent.nil?
+
+        current = parent
+      end
+      current
+    end
     scope :oldest_first, -> { order(:opened_at) }
     scope :newest_first, -> { order(opened_at: :desc) }
 

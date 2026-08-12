@@ -89,7 +89,7 @@ module Fd
         .update_all(
           resolved_at: @now,
           resolution: resolution,
-          member_note: params[:member_note].presence,
+          member_note: (params[:member_note].presence unless resolution == "duplicate"),
           duplicate_of: (params[:duplicate_of] if resolution == "duplicate"),
           updated_at: @now
         ).positive?

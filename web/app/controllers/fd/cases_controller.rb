@@ -19,6 +19,7 @@ module Fd
       @reports = @case.reports.oldest_first.to_a
       @actions = @case.actions.oldest_first.to_a
       @siblings = @case.sibling_cases.oldest_first.to_a
+      @duplicate_candidates = Case.candidates_for(@case, @siblings)
       @notes = @case.notes.visible.recent_first.to_a
       @standing_notes = Note.for_subject(@case.subject_user_id).visible.recent_first.to_a
       @timeline = CaseTimeline.for(

@@ -11,6 +11,7 @@
   </div>
 <% end %>
 
+<div class="stack" data-controller="merge">
 <div class="card card-flush">
   <div class="card-head">
     <div>
@@ -27,6 +28,7 @@
       <table class="data-table">
         <thead>
           <tr>
+            <th class="col-tick"><span class="sr-only">Select</span></th>
             <th>Subject</th>
             <th>Category</th>
             <th class="col-num">Actions</th>
@@ -42,4 +44,17 @@
   <% else %>
     <p class="card-note"><%= filter_empty_note(@filter) %></p>
   <% end %>
+</div>
+
+<% if @cases.any? { |kase| !kase.resolved? } %>
+  <%= form_with url: fd_merge_cases_path, method: :post, id: "merge-form", class: "bulk" do %>
+    <%= hidden_field_tag :filter, @filter %>
+    <span class="bulk-note">
+      <b><span data-merge-target="count">0</span> ticked</b>
+      <span class="bulk-ids" data-merge-target="ids"></span>
+      <span class="bulk-rule">Oldest case stays open</span>
+    </span>
+    <%= submit_tag "Mark as duplicates", class: "btn btn-primary" %>
+  <% end %>
+<% end %>
 </div>

@@ -1189,6 +1189,119 @@
     display: grid;
   }
 
+  .bulk {
+    display: none;
+    align-items: center;
+    gap: var(--s-2xs) var(--s-xs);
+    flex-wrap: wrap;
+    border: 1px solid var(--accent);
+    border-radius: var(--r-card);
+    background-color: var(--card);
+    padding: var(--s-xs) var(--s-md);
+    position: sticky;
+    bottom: var(--s-md);
+    z-index: 20;
+    box-shadow: 0 8px 24px color-mix(in oklab, var(--ink) 22%, transparent);
+  }
+
+  .body:has(.tick:checked) .bulk {
+    display: flex;
+  }
+
+  .bulk-ids {
+    font-family: var(--font-code);
+    color: var(--ink-2);
+    overflow-wrap: anywhere;
+  }
+
+  .bulk-rule {
+    color: var(--ink-3);
+  }
+
+  .bulk-rule::before {
+    content: "·";
+    margin-inline-end: var(--s-2xs);
+  }
+
+  .bulk-note {
+    font-size: var(--t-2xs);
+    color: var(--ink-2);
+    margin-inline-end: auto;
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2xs);
+    flex-wrap: wrap;
+  }
+
+  .bulk .select {
+    max-width: 22rem;
+  }
+
+  .col-tick {
+    width: 46px;
+  }
+
+  .data-table td.col-tick {
+    text-align: left;
+    overflow: visible;
+    vertical-align: middle;
+  }
+
+  .tick {
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background-color: var(--card-2);
+    display: inline-grid;
+    place-content: center;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: background-color var(--dur) var(--ease-out),
+      border-color var(--dur) var(--ease-out);
+  }
+
+  .tick:hover {
+    border-color: var(--accent);
+  }
+
+  .tick:checked {
+    background-color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .tick:checked::after {
+    content: "";
+    width: 4px;
+    height: 8px;
+    margin-top: -2px;
+    border: solid var(--accent-on);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  .data-table thead th.col-tick + th,
+  .data-table tbody td.col-tick + td {
+    text-align: left;
+    white-space: normal;
+  }
+
+  .card-flush .data-table th.col-tick + th,
+  .card-flush .data-table td.col-tick + td {
+    padding-left: var(--s-2xs);
+  }
+
+  .card-flush .data-table th.col-tick,
+  .card-flush .data-table td.col-tick {
+    padding-right: var(--s-2xs);
+  }
+
+  form:has(input[value="duplicate"]:checked) .unless-duplicate {
+    display: none;
+  }
+
   .when {
     display: none;
   }

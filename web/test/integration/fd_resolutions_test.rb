@@ -164,6 +164,24 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     assert_equal other.id, @kase.duplicate_of
   end
 
+  test "a duplicate keeps no reason, even if one is posted" do
+    other = Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 4.days.ago)
+    sign_in_as(@me)
+    post fd_case_resolution_path(@kase),
+      params: { outcome: "duplicate", duplicate_of: other.id, member_note: "typed then switched" }
+
+    @kase.reload
+    assert_equal "duplicate", @kase.resolution
+    assert_nil @kase.member_note, "a duplicate is explained by the case it points at"
+    assert_no_match(/typed then switched/, entries("resolved").sole.after.to_json)
+  end
+
+  test "the reason field is not offered for a duplicate" do
+    sign_in_as(@me)
+    get fd_case_path(@kase)
+    assert_select "label.unless-duplicate textarea[name=member_note]"
+  end
+
   test "a case cannot be a duplicate of itself" do
     sign_in_as(@me)
     post fd_case_resolution_path(@kase), params: { outcome: "duplicate", duplicate_of: @kase.id }

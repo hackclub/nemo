@@ -135,6 +135,18 @@ module FdHelper
     ACTION_LABELS.map { |key, label| [label, key] }
   end
 
+  def case_option_label(kase)
+    parts = ["##{kase.id}"]
+    parts << (kase.subject_user_id ? "@#{kase.subject_user_id}" : "no subject")
+    parts << kase.category_key.tr("_", " ") if kase.category_key
+    parts << case_age_label(case_age_seconds(kase))
+    parts.join(" · ")
+  end
+
+  def case_options(cases)
+    cases.map { |kase| [case_option_label(kase), kase.id] }
+  end
+
   def case_status_chip(kase)
     if kase.resolved?
       tag.span(kase.resolution.tr("_", " "), class: "chip chip-off")

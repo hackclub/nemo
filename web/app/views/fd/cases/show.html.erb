@@ -360,13 +360,19 @@
           </div>
 
           <div class="only only-duplicate">
-            <label class="field-label">
-              Duplicate of which case
-              <%= number_field_tag :duplicate_of, nil, class: "textarea", min: 1 %>
-            </label>
+            <% if @duplicate_candidates.any? %>
+              <label class="field-label">
+                Duplicate of which case
+                <%= select_tag :duplicate_of,
+                      options_for_select(case_options(@duplicate_candidates)),
+                      include_blank: "pick the case this duplicates", class: "select" %>
+             </label>
+            <% else %>
+              <span class="opt-note">There is no other case this could duplicate.</span>
+            <% end %>
           </div>
 
-          <label class="field-label">
+          <label class="field-label unless-duplicate">
             Reason
             <%= text_area_tag :member_note, nil, rows: 3, class: "textarea" %>
             <span class="opt-note">

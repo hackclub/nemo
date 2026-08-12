@@ -8,6 +8,7 @@ Rails.application.routes.draw do
 
   namespace :fd do
     root to: "cases#index"
+    post "cases/merge", to: "merges#create", as: :merge_cases
     resources :cases, only: [:index, :show] do
       resource :claim, only: [:create, :destroy]
       resource :resolution, only: [:create]
