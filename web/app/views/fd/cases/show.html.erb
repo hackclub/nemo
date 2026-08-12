@@ -73,6 +73,47 @@
           <div class="fact-val"><%= last_active_label(subject&.last_active_at) %></div>
         </div>
       </div>
+
+      <div class="subject-notes">
+        <span class="fact-label">Notes on @<%= @case.subject_user_id %></span>
+        <% if @standing_notes.any? %>
+          <div class="notes">
+            <% @standing_notes.each do |note| %>
+              <div class="note-row">
+                <div class="note-body"><%= note.body %></div>
+                <div class="note-by"><%= note_byline(note) %></div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <span class="note-none">No notes</span>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Notes</h2>
+        <p class="card-sub">internal</p>
+      </div>
+      <div class="card-tools">
+        <label for="add-note" class="btn">Add a note</label>
+      </div>
+    </div>
+
+    <% if @notes.any? %>
+      <div class="notes">
+        <% @notes.each do |note| %>
+          <div class="note-row">
+            <div class="note-body"><%= note.body %></div>
+            <div class="note-by"><%= note_byline(note) %></div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <span class="note-none">No notes</span>
     <% end %>
   </div>
 

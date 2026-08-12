@@ -135,6 +135,19 @@ module FdHelper
     ACTION_LABELS.map { |key, label| [label, key] }
   end
 
+  def note_byline(note)
+    ["@#{note.author}", note.created_at.strftime("%b %-d, %Y")].join(" · ")
+  end
+
+  def notes_summary(notes, standing)
+    return "nothing written down yet" if notes.empty? && standing.empty?
+
+    parts = []
+    parts << "#{notes.size} on this case" if notes.any?
+    parts << "#{standing.size} standing on the member" if standing.any?
+    parts.join(" · ")
+  end
+
   def case_option_label(kase)
     parts = ["##{kase.id}"]
     parts << (kase.subject_user_id ? "@#{kase.subject_user_id}" : "no subject")

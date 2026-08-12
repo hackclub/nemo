@@ -1117,6 +1117,55 @@
     margin: var(--s-3xs) calc(var(--s-2xs) * -1);
   }
 
+  .subject-notes {
+    border-top: 1px solid var(--line);
+    padding-top: var(--s-sm);
+    margin-top: var(--s-sm);
+    display: grid;
+    gap: var(--s-2xs);
+  }
+
+  .note-none {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+  }
+
+  .notes {
+    display: grid;
+  }
+
+  .note-row {
+    display: grid;
+    gap: 4px;
+    padding: var(--s-xs) 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .note-row:first-child {
+    padding-top: 0;
+  }
+
+  .note-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .note-body {
+    font-size: var(--t-sm);
+    color: var(--ink);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .note-by {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    display: flex;
+    gap: var(--s-2xs);
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+
   .modal-host {
     display: contents;
   }

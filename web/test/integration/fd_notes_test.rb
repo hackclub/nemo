@@ -104,6 +104,44 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     assert_select ".tl-mark-note"
   end
 
+  test "anybody opening the case sees the notes without hunting for them" do
+    Fd::Note.create!(case_id: @kase.id, body: "spoke to them in DM", author: "UFF1")
+    Fd::Note.create!(subject_user_id: "USUB", body: "escalates in public", author: "UFF2")
+
+    sign_in_as(Staff.create!(user_id: "UOTHER", community_manager: true))
+    get fd_case_path(@kase)
+
+    assert_select ".note-row", 2
+    assert_select ".note-body", text: "spoke to them in DM"
+    assert_select ".note-body", text: "escalates in public"
+    assert_select ".note-by", text: /@UFF1/
+  end
+
+  test "a standing note is marked as being about the member, not the case" do
+    Fd::Note.create!(subject_user_id: "USUB", body: "watch for repeats", author: "UFF2")
+    sign_in_as(@me)
+    get fd_case_path(@kase)
+
+    assert_select ".subject-notes .note-body", text: "watch for repeats"
+    assert_match(/Notes on @USUB/, response.body)
+  end
+
+  test "a deleted note is not shown on the page" do
+    Fd::Note.create!(case_id: @kase.id, body: "struck from the record", author: "UFF1",
+      deleted_at: Time.current, deleted_by: "UFF1")
+    sign_in_as(@me)
+    get fd_case_path(@kase)
+
+    assert_select ".note-row", 0
+    assert_no_match(/struck from the record/, response.body)
+  end
+
+  test "the notes card says so when there is nothing written" do
+    sign_in_as(@me)
+    get fd_case_path(@kase)
+    assert_select ".note-none", text: "No notes", minimum: 1
+  end
+
   test "notes can still be written on a resolved case" do
     @kase.update!(resolved_at: 1.hour.ago, resolution: "no_action")
     sign_in_as(@me)
