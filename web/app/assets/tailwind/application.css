@@ -638,9 +638,44 @@
     margin-top: var(--s-sm);
   }
 
+  .thr-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-3xs) var(--s-2xs);
+    flex-wrap: wrap;
+  }
+
+  .thr-where {
+    font-family: var(--font-code);
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .thr-end {
+    margin-inline-start: auto;
+    display: flex;
+    gap: var(--s-2xs);
+    align-items: baseline;
+  }
+
+  .thr-gone {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+  }
+
+  .pane > .thr-head {
+    padding: 0 0 var(--s-2xs);
+    border-bottom: 1px solid var(--line);
+  }
+
   .pane-cut {
     border-bottom: 1px solid var(--line);
     padding-bottom: var(--s-sm);
+  }
+
+  .pane .subject-facts {
+    margin-top: 0;
   }
 
   .fact-label {
@@ -1967,6 +2002,10 @@
 
   .index-item .chip {
     margin-inline-start: auto;
+  }
+
+  .index-side .offered {
+    padding-inline: var(--s-2xs);
   }
 
   .index-face {

@@ -163,87 +163,35 @@
     <% end %>
   </div>
 
-  <div class="grid-2-1">
-    <div class="card card-flush">
-      <div class="card-head">
-        <div>
-          <h2 class="card-title">Threads</h2>
-        </div>
-        <div class="card-tools">
-          <label for="attach-thread" class="btn">Attach a thread</label>
-        </div>
-      </div>
-      <div class="scroll">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Channel</th>
-              <th>Thread</th>
-              <th>Added by</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @threads.each do |thread| %>
-              <tr>
-                <td>
-                  <span class="two-line">
-                    <b><%= thread.channel_id %></b>
-                    <span><%= thread_kind_note(thread) %></span>
-                  </span>
-                </td>
-                <td>
-                  <%= link_to "open in Slack",
-                        slack_thread_url(thread.channel_id, thread.thread_ts),
-                        target: "_blank", rel: "noopener" %>
-                </td>
-                <td>
-                  <span class="two-line">
-                    <b><%= handle(thread.added_by) %></b>
-                    <span>
-                      <%= button_to "Detach", fd_case_thread_path(@case, thread),
-                            method: :delete, class: "text-btn",
-                            form: { class: "contents", data: { turbo_confirm:
-                              "Detach this thread?" } } %>
-                    </span>
-                  </span>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    </div>
+  <%= render "threads", kase: @case, threads: @thread_list %>
 
-    <div class="stack">
-      <div class="card card-flush">
-        <div class="card-head">
-          <div>
-            <h2 class="card-title">Duplicate Cases</h2>
-          </div>
-        </div>
-        <% if @siblings.any? %>
-          <table class="data-table">
-            <tbody>
-              <% @siblings.each do |sibling| %>
-                <tr>
-                  <td>
-                    <span class="two-line">
-                      <%= link_to fd_case_path(sibling) do %>
-                        <b>Case <%= sibling.id %></b>
-                      <% end %>
-                      <span><%= subject_handles(sibling) %></span>
-                    </span>
-                  </td>
-                  <td><%= case_status_chip(sibling) %></td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        <% else %>
-          <p class="card-note">n/a</p>
-        <% end %>
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Duplicate Cases</h2>
       </div>
     </div>
+    <% if @siblings.any? %>
+      <table class="data-table">
+        <tbody>
+          <% @siblings.each do |sibling| %>
+            <tr>
+              <td>
+                <span class="two-line">
+                  <%= link_to fd_case_path(sibling) do %>
+                    <b>Case <%= sibling.id %></b>
+                  <% end %>
+                  <span><%= subject_handles(sibling) %></span>
+                </span>
+              </td>
+              <td><%= case_status_chip(sibling) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p class="card-note">n/a</p>
+    <% end %>
   </div>
 </div>
 

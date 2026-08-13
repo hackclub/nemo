@@ -12,7 +12,9 @@
             aria: { current: people.chosen?(person) ? "true" : nil } do %>
         <span class="index-face"><%= names.initial(person.user_id) %></span>
         <%= names[person.user_id] %>
-        <span class="chip <%= role_tone(person.role) %>"><%= role_label(person.role) %></span>
+        <% person.roles.each do |role| %>
+          <span class="chip <%= role_tone(role) %>"><%= role_label(role) %></span>
+        <% end %>
       <% end %>
     <% end %>
     <label for="add-person" class="index-item index-add">
@@ -73,10 +75,6 @@
         <div>
           <div class="fact-label">Their messages</div>
           <div class="fact-val">n/a</div>
-        </div>
-        <div>
-          <div class="fact-label">Notes naming them</div>
-          <div class="fact-val"><%= here.notes_naming.size %> <span class="fact-val dim">of <%= here.notes_total %></span></div>
         </div>
         <div>
           <div class="fact-label">Priors, 12 months</div>
@@ -152,10 +150,7 @@
                 </div>
               <% end %>
             <% else %>
-              <div class="thin">
-                <span>Nothing, and they are on the case.</span>
-                <label for="log-action" class="text-btn">Log an action</label>
-              </div>
+              <span class="note-none">Nothing, and they are on the case.</span>
             <% end %>
           </div>
         </div>

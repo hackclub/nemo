@@ -318,7 +318,7 @@ module FdHelper
     return "internal discussion" if thread.internal?
     return "primary thread" if thread.is_primary
 
-    "evidence, added later"
+    "evidence"
   end
 
   def note_byline(note)

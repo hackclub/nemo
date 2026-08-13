@@ -86,6 +86,11 @@ BEGIN
         EXECUTE 'REVOKE INSERT, UPDATE, DELETE ON fd.member FROM rails_app';
         EXECUTE 'REVOKE INSERT, UPDATE, DELETE ON fd.member_identity FROM rails_app';
     END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'fd' AND tablename = 'thread_messages') THEN
+        EXECUTE 'REVOKE ALL ON fd.thread_messages FROM dbt_owner';
+        EXECUTE 'REVOKE INSERT, UPDATE, DELETE ON fd.thread_messages FROM rails_app';
+    END IF;
 EXCEPTION
     WHEN insufficient_privilege THEN
         RAISE NOTICE 'single-role deployment: % may not administer pipeline_writer, dbt_owner '

@@ -1,0 +1,65 @@
+<p class="band-label">
+  The threads ·
+  <%= threads.any? ? pluralize(threads.size, "attached") : "none attached" %>
+</p>
+
+<turbo-frame id="threads" target="_top" data-turbo-action="advance">
+<div class="inspector">
+  <div class="index-side">
+    <% threads.each do |row| %>
+      <%= link_to fd_case_path(kase, thread: row.id, person: params[:person]),
+            class: "index-item", data: { turbo_frame: "threads" },
+            aria: { current: threads.chosen?(row) ? "true" : nil } do %>
+        <span class="mono"><%= row.channel_id %></span>
+        <span class="chip <%= row.tone %>"><%= row.state %></span>
+      <% end %>
+    <% end %>
+    <label for="attach-thread" class="index-item index-add">
+      <span class="index-face">+</span>
+      Attach a thread
+    </label>
+  </div>
+
+  <div class="pane">
+    <% if threads.chosen.nil? %>
+      <p class="card-note">No thread is attached, so there is nothing to read.</p>
+    <% else %>
+      <% row = threads.chosen %>
+      <div class="thr-head">
+        <span class="thr-where"><%= row.channel_id %></span>
+        <% if row.locked? %>
+          <span class="chip chip-warn">locked</span>
+        <% end %>
+        <span class="thr-end">
+          <%= link_to "Open in Slack", slack_thread_url(row.channel_id, row.thread_ts),
+                class: "btn", target: "_blank", rel: "noopener" %>
+        </span>
+      </div>
+
+      <p class="thr-gone">
+        Mnemosyne holds the channel and the timestamp, not the messages.
+        Read the thread in Slack.
+      </p>
+
+      <div class="rail-card">
+        <div class="thin">
+          <span><b>Attached</b> <%= handle(row.added_by) %> · <%= last_case_label(row.added_at) %></span>
+          <%= button_to "Detach", fd_case_thread_path(kase, row.record),
+                method: :delete, class: "text-btn",
+                form: { class: "contents", data: { turbo_frame: "_top",
+                turbo_confirm: "Detach this thread?" } } %>
+        </div>
+        <div class="thin">
+          <span><b>Timestamp</b> <span class="mono"><%= row.thread_ts %></span></span>
+        </div>
+        <% if row.locked? %>
+          <div class="thin">
+            <span><b>Locked</b> a thread in this channel was locked on this case</span>
+            <span class="mini-note">no reply after that point exists</span>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>
+</turbo-frame>

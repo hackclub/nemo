@@ -2,7 +2,7 @@ module Fd
   class CasePeople
     include Enumerable
 
-    RANK = { "subject" => 0, "reporter" => 1, "involved" => 2 }.freeze
+    RANK = { "reporter" => 0, "subject" => 1, "involved" => 2 }.freeze
 
     class Person
       attr_reader :user_id, :roles, :records
