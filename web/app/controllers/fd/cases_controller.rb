@@ -10,13 +10,14 @@ module Fd
       @threads = @case.threads.primary_first.to_a
       @participants = @case.participants.by_role.to_a
       @others = @participants.reject { |person| person.role == "subject" }
+      @people = CasePeople.for(@participants, asked: params[:person])
       @reports = @case.reports.oldest_first.to_a
       @actions = @case.actions.oldest_first.to_a
       @live_actions = @actions.reject(&:reversed?)
       @siblings = @case.sibling_cases.includes(:subjects).oldest_first.to_a
       @duplicate_candidates = Case.candidates_for(@case, @siblings)
       @notes = @case.notes.visible.recent_first.to_a
-      @standing_notes = Note.for_subjects(@case.subject_user_ids).visible.recent_first
+      @standing_notes = Note.for_subjects(@participants.map(&:user_id)).visible.recent_first
         .group_by(&:subject_user_id)
       @assignees = @case.assignees.to_a
       @mentioned = @case.mentioned_but_unlogged(
@@ -27,7 +28,7 @@ module Fd
         @case,
         reports: @reports,
         actions: @actions,
-        notes: @notes + @standing_notes.values.flatten,
+        notes: @notes + @standing_notes.values_at(*@case.subject_user_ids).compact.flatten,
         participants: @participants,
         assignees: @assignees,
         names: @names,

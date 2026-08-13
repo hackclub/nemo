@@ -147,6 +147,16 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     assert_match(/Notes on @USUB/, response.body)
   end
 
+  test "a standing note shows for somebody who is not a subject" do
+    Fd::CaseParticipant.create!(case_id: @kase.id, user_id: "UWATCHER", role: "involved",
+      detail: "they piled on")
+    Fd::Note.create!(subject_user_id: "UWATCHER", body: "keeps turning up", author: "UFF2")
+    sign_in_as(@me)
+    get fd_case_path(@kase, person: "UWATCHER")
+
+    assert_select ".subject-notes .note-body", text: "keeps turning up"
+  end
+
   test "a deleted note is not shown on the page" do
     Fd::Note.create!(case_id: @kase.id, body: "struck from the record", author: "UFF1",
       deleted_at: Time.current, deleted_by: "UFF1")

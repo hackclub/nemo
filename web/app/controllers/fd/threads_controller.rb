@@ -45,7 +45,7 @@ module Fd
         thread.destroy!
       end
 
-      redirect_to fd_case_path(kase), notice: "thread detached, the trail keeps which one"
+      redirect_to fd_case_path(kase), notice: "thread detached"
     end
 
     private

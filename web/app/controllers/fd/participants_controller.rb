@@ -51,7 +51,7 @@ module Fd
       end
 
       redirect_to fd_case_path(kase),
-        notice: "@#{person.user_id} taken off the case, the trail keeps that they were on it"
+        notice: "@#{person.user_id} taken off the case"
     end
 
     private

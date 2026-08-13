@@ -1,5 +1,5 @@
 <% if note.author == current_staff.user_id %>
   <%= button_to "Remove", fd_member_note_path(user_id, note), method: :delete,
         class: "text-btn", form: { class: "contents",
-        data: { turbo_confirm: "Remove this note? The trail keeps that you wrote and removed one." } } %>
+        data: { turbo_confirm: "Remove this note?" } } %>
 <% end %>

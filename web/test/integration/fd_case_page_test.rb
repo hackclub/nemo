@@ -13,25 +13,57 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase)
 
     assert_select "button.handle[data-copy-id-value=USUB][title='copy USUB']"
-    assert_select "#who-else button.handle[data-copy-id-value=UWATCHER]"
-    assert_select "button.handle[data-controller=copy]", minimum: 2
+
+    get fd_case_path(@kase, person: "UWATCHER")
+
+    assert_select "#who .pane button.handle[data-copy-id-value=UWATCHER]"
   end
 
-  test "one card for one subject" do
+  test "one subject fills the pane, and the menu holds only them" do
     get fd_case_path(@kase)
 
-    assert_select ".subject .card-title", 1
-    assert_select ".subject .card-title", text: "@USUB"
+    assert_select "#who a.index-item", 1
+    assert_select "#who .pane .mcard-name button.handle", text: "@USUB"
   end
 
-  test "a case about several people gives each of them a card" do
+  test "everybody on the case is a row, and one of them is in the pane" do
     @kase.add_subject!("USECOND")
+    Fd::CaseParticipant.create!(case_id: @kase.id, user_id: "UWATCHER", role: "involved",
+      detail: "they piled on")
     get fd_case_path(@kase)
 
-    assert_select ".subject .card-title", 2
-    assert_select ".subject .card-title", text: "@USUB"
-    assert_select ".subject .card-title", text: "@USECOND"
-    assert_select ".subject-notes .fact-label", text: "Notes on @USECOND"
+    assert_select "#who a.index-item", 3
+    assert_select "#who .pane .mcard-name", 1, "only one person is shown at a time"
+    assert_select "#who a.index-item[aria-current=true]", 1
+  end
+
+  test "asking for somebody else puts them in the pane" do
+    @kase.add_subject!("USECOND")
+    get fd_case_path(@kase, person: "USECOND")
+
+    assert_select "#who .pane .mcard-name button.handle", text: "@USECOND"
+    assert_select "#who .pane .subject-notes .fact-label", text: "Notes on @USECOND"
+    assert_select "#who a.index-item[aria-current=true]", text: /@USECOND/
+  end
+
+  test "somebody who is not on the case cannot be asked for" do
+    get fd_case_path(@kase, person: "UNOBODY")
+
+    assert_response :success
+    assert_select "#who .pane .mcard-name button.handle", text: "@USUB",
+      count: 1, message: "an unknown id falls back to the first person"
+  end
+
+  test "one person holding two roles is one row, showing both" do
+    Fd::CaseParticipant.create!(case_id: @kase.id, user_id: "UBOTH", role: "reporter")
+    Fd::CaseParticipant.create!(case_id: @kase.id, user_id: "UBOTH", role: "involved",
+      detail: "they piled on")
+    get fd_case_path(@kase, person: "UBOTH")
+
+    assert_select "#who a.index-item", text: /@UBOTH/, count: 1
+    assert_select "#who .pane .role-row", 2
+    assert_select "#who .pane .role-row .chip", text: "reported it"
+    assert_select "#who .pane .role-row .chip", text: "involved"
   end
 
   test "a case about nobody still renders, and says so once" do
@@ -39,27 +71,9 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase)
 
     assert_response :success
-    assert_select ".subject .card-title", 1
-    assert_select ".subject .card-title", text: "No subject set"
+    assert_select "#who a.index-item", 0
+    assert_select "#who .pane .card-note", text: "Nobody is logged on this case yet."
     assert_select ".subject-facts", 0, "there are no figures to show for nobody"
-  end
-
-  test "a subject is never listed as somebody else who was involved" do
-    @kase.add_subject!("USECOND")
-    Fd::CaseParticipant.create!(case_id: @kase.id, user_id: "UWATCHER", role: "involved",
-      detail: "they piled on")
-    get fd_case_path(@kase)
-
-    assert_select "#who-else .who-name", text: "@UWATCHER"
-    assert_select "#who-else .who-name", text: "@USUB", count: 0
-    assert_select "#who-else .who-name", text: "@USECOND", count: 0
-  end
-
-  test "with nobody else involved the list says so rather than naming the subject" do
-    get fd_case_path(@kase)
-
-    assert_select "#who-else .card-note", text: "n/a"
-    assert_select "#who-else .who-row", 0
   end
 
   test "standing notes name the member they follow, once there is more than one" do

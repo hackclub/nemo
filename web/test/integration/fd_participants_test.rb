@@ -212,8 +212,12 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
       fd_case_participants_path(@kase)
     assert_select ".seg-radio input[name=role][value=involved][checked]"
     assert_select ".seg-radio input[name=role][value=subject]"
-    assert_select "#who-else .who-row .who-name", text: "@UWATCHER"
-    assert_select "#who-else .who-row .who-note", text: "they piled on"
-    assert_select "#who-else .who-row .chip.chip-warn", text: "involved"
+    assert_select "#who a.index-item", text: /@UWATCHER/
+
+    get fd_case_path(@kase, person: "UWATCHER")
+
+    assert_select "#who .pane .mcard-name button.handle", text: "@UWATCHER"
+    assert_select "#who .pane .role-row .role-why", text: "they piled on"
+    assert_select "#who .pane .role-row .chip.chip-warn", text: "involved"
   end
 end

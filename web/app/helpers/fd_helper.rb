@@ -242,7 +242,6 @@ module FdHelper
   def report_when_line(report, kase)
     parts = [report.received_at.strftime("%-d %b %Y, %H:%M")]
     parts << "through #{report.source_app}" if report.source_app.present?
-    parts << "#{names[kase.opened_by]} opened the case #{case_age_label(Time.current - kase.opened_at)} ago"
 
     parts << "not told the outcome yet" if kase.resolved? && !report.told_of_outcome?
     parts.join(" · ")

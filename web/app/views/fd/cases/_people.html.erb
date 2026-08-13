@@ -1,0 +1,99 @@
+<p class="band-label">
+  Who is on this case ·
+  <%= people.any? ? pluralize(people.size, "person") : "nobody yet" %>
+</p>
+
+<turbo-frame id="who" target="_top" data-turbo-action="advance">
+<div class="inspector">
+  <div class="index-side">
+    <% people.each do |person| %>
+      <%= link_to fd_case_path(kase, person: person.user_id), class: "index-item",
+            data: { turbo_frame: "who" },
+            aria: { current: people.chosen?(person) ? "true" : nil } do %>
+        <span class="index-face"><%= names.initial(person.user_id) %></span>
+        <%= names[person.user_id] %>
+        <span class="chip <%= role_tone(person.role) %>"><%= role_label(person.role) %></span>
+      <% end %>
+    <% end %>
+    <label for="add-person" class="index-item index-add">
+      <span class="index-face">+</span>
+      Add somebody
+    </label>
+    <%= render "mentioned", kase: kase, mentioned: mentioned %>
+  </div>
+
+  <div class="pane">
+    <% if people.chosen.nil? %>
+      <p class="card-note">Nobody is logged on this case yet.</p>
+    <% else %>
+      <% person = people.chosen %>
+      <% context = contexts[person.user_id] %>
+      <div class="mcard-top">
+        <span class="mcard-face" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+        </span>
+        <span>
+          <span class="mcard-name"><%= handle(person.user_id) %></span>
+          <span class="mcard-sub"><%= subject_identity_line(person.user_id, context) %></span>
+        </span>
+        <span class="mcard-acts">
+          <%= link_to "Their record", fd_member_path(person.user_id), class: "btn" %>
+          <%= link_to "In Slack", slack_member_url(person.user_id), class: "btn",
+                target: "_blank", rel: "noopener" %>
+        </span>
+      </div>
+
+      <div class="roles">
+        <% person.records.each do |record| %>
+          <div class="role-row">
+            <span class="chip <%= role_tone(record.role) %>"><%= role_label(record.role) %></span>
+            <span class="role-why">
+              <%= record.detail.presence || "logged #{record.noted_at.strftime('%-d %b')}" %>
+            </span>
+            <span class="role-end"><%= render "person_remove", kase: kase, person: record %></span>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="subject-facts">
+        <div>
+          <div class="fact-label">Messages</div>
+          <div class="fact-val"><%= fact_number(context&.messages_posted) %></div>
+        </div>
+        <div>
+          <div class="fact-label">Active days</div>
+          <div class="fact-val"><%= fact_number(context&.days_active) %></div>
+        </div>
+        <div>
+          <div class="fact-label">Channels</div>
+          <div class="fact-val"><%= fact_number(context&.channels_joined) %></div>
+        </div>
+        <div>
+          <div class="fact-label">Last active</div>
+          <div class="fact-val"><%= last_active_label(context&.last_active_at) %></div>
+        </div>
+      </div>
+
+      <div class="subject-notes">
+        <span class="fact-label">Notes on <%= names[person.user_id] %></span>
+        <% held = notes.fetch(person.user_id, []) %>
+        <% if held.any? %>
+          <div class="notes">
+            <% held.each do |note| %>
+              <div class="note-row">
+                <div class="note-body"><%= mentioned(note.body) %></div>
+                <div class="note-by">
+                  <span><%= note_byline(note) %></span>
+                  <%= render "note_remove", kase: kase, note: note %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <span class="note-none">No notes</span>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>
+</turbo-frame>

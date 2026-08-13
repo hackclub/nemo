@@ -24,6 +24,11 @@ module Fd
       @profiles[user_id]&.display_name.presence || "@#{user_id}"
     end
 
+    def initial(user_id)
+      shown = self[user_id].sub(/\A@/, "").strip
+      shown.present? ? shown[0].upcase : "?"
+    end
+
     def member(user_id)
       @members[user_id]
     end
