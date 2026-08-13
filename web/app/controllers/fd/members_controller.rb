@@ -1,5 +1,14 @@
 module Fd
   class MembersController < BaseController
+    def index
+      @query = MemberQuery.new(params)
+      @rows = @query.rows
+      @names = Names.for(@rows.map(&:user_id))
+      @context = MemberContext.for(@rows.map(&:user_id))
+      @views = @query.views
+      @headline = MemberQuery.headline
+    end
+
     def show
       @user_id = params[:id].to_s.upcase
       @record = MemberRecord.new(@user_id)

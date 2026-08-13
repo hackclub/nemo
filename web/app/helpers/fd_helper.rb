@@ -51,6 +51,52 @@ module FdHelper
     end
   end
 
+  def share_of(part, whole)
+    return "n/a" if whole.to_i.zero?
+
+    "#{((part.to_f / whole) * 100).round(1)}% of the workspace"
+  end
+
+  def member_severity(row)
+    return "sev-crit" if row.open_cases.positive?
+    return "sev-warn" if row.priors >= 2
+
+    "sev-calm"
+  end
+
+  def member_activity_line(context)
+    return nil unless context&.known?
+
+    parts = []
+    parts << "#{number_with_delimiter(context.messages_posted)} messages" if
+      context.messages_posted
+    parts << "#{context.channels_joined} channels" if context.channels_joined
+    parts.join(" · ").presence
+  end
+
+  def last_case_label(at)
+    return "n/a" if at.nil?
+
+    at = at.to_time
+    days = (Date.current - at.to_date).to_i
+    return "today" if days <= 0
+    return "#{days}d ago" if days < 30
+
+    at.strftime("%-d %b %Y")
+  end
+
+  def member_state_chips(row)
+    chips = []
+    chips << tag.span("open case", class: "chip chip-crit") if row.open_cases.positive?
+    chips << tag.span(pluralize(row.notes, "note"), class: "chip chip-warn") if
+      row.notes.positive?
+    if chips.empty? && row.subject_of.zero? && row.logged_in.zero?
+      chips << tag.span("nothing on record", class: "chip chip-good")
+    end
+    chips << tag.span("resolved", class: "chip chip-off") if chips.empty?
+    safe_join(chips, " ")
+  end
+
   HISTORY_TONES = {
     "open" => "chip-crit",
     "subject" => "chip-crit",

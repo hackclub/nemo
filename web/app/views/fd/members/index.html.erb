@@ -1,0 +1,180 @@
+<% content_for :page_title, "Members" %>
+<% content_for :page_subtitle do %>
+  <%= @headline[:history] %> with a conduct history ·
+  <%= number_with_delimiter(@query.population) %> in the workspace
+<% end %>
+
+<div class="stack">
+  <div class="kpis">
+    <div class="card">
+      <p class="kpi-label">With a history</p>
+      <p class="kpi-val"><%= @headline[:history] %></p>
+      <div class="delta-note"><%= share_of(@headline[:history], @query.population) %></div>
+    </div>
+    <div class="card">
+      <p class="kpi-label">Two or more priors</p>
+      <p class="kpi-val"><%= @headline[:priors] %></p>
+      <div class="delta-note">
+        <% if @headline[:open].positive? %>
+          <span class="chip chip-warn"><%= @headline[:open] %> with an open case</span>
+        <% else %>
+          <span class="chip chip-off">none open</span>
+        <% end %>
+      </div>
+    </div>
+    <div class="card">
+      <p class="kpi-label">Standing notes</p>
+      <p class="kpi-val"><%= @headline[:notes] %></p>
+      <div class="delta-note">members FD has written about</div>
+    </div>
+    <div class="card">
+      <p class="kpi-label">Logged, never a subject</p>
+      <p class="kpi-val"><%= @headline[:logged_only] %></p>
+      <div class="delta-note">reporters and involved</div>
+    </div>
+  </div>
+
+  <div class="views">
+    <% @views.each do |view| %>
+      <%= link_to fd_members_path(view: view.key), class: "view",
+            aria: { current: ("true" if view.current) } do %>
+        <%= view.label %>
+        <span class="view-count"><%= view.count %></span>
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="filters" data-controller="dismiss">
+    <% @query.inline_facets.each do |facet| %>
+      <span class="facet-set <%= "on" if facet.on %>">
+        <details class="facet-drop" name="member-facet">
+          <summary class="facet">
+            <%= facet.label %>
+            <% if facet.on || facet.key == "sort" %>
+              <b><%= facet.value_label %></b>
+            <% end %>
+            <% unless facet.on %>
+              <span class="facet-caret" aria-hidden="true">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            <% end %>
+          </summary>
+          <div class="menu-pop facet-pop">
+            <%= render "facet_options", query: @query, facet: facet %>
+          </div>
+        </details>
+        <% if facet.on %>
+          <%= link_to fd_members_path(@query.facet_params(facet.key => Fd::MemberQuery::DEFAULTS[facet.key])),
+                class: "facet-x", aria: { label: "clear the #{facet.label.downcase} filter" } do %>
+            &times;
+          <% end %>
+        <% end %>
+      </span>
+    <% end %>
+
+    <% if @query.more_facets.any? %>
+      <span class="facet-set">
+        <details class="facet-drop" name="member-facet">
+          <summary class="facet">
+            More
+            <span class="facet-caret" aria-hidden="true">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+            </span>
+          </summary>
+          <div class="menu-pop facet-pop more-pop">
+            <% @query.more_facets.each do |facet| %>
+              <details class="more-item" name="member-more">
+                <summary class="more-name">
+                  <%= facet.label %>
+                  <span class="facet-caret" aria-hidden="true">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+                  </span>
+                </summary>
+                <div class="more-options">
+                  <%= render "facet_options", query: @query, facet: facet %>
+                </div>
+              </details>
+            <% end %>
+          </div>
+        </details>
+      </span>
+    <% end %>
+  </div>
+
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title"><%= @query.title %></h2>
+        <p class="card-sub"><%= @query.summary %></p>
+      </div>
+      <div class="card-tools">
+        <span class="chip chip-off"><%= pluralize(@query.total, "member") %></span>
+      </div>
+    </div>
+
+    <% if @rows.any? %>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th>Tenure</th>
+              <th class="col-num">Subject of</th>
+              <th class="col-num">Logged in</th>
+              <th class="col-num">Actions</th>
+              <th>Last case</th>
+              <th>State</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @rows.each do |row| %>
+              <tr>
+                <td>
+                  <span class="two-line">
+                    <%= link_to fd_member_path(row.user_id) do %>
+                      <b>
+                        <span class="sev <%= member_severity(row) %>"></span>
+                        <%= names[row.user_id] %>
+                      </b>
+                    <% end %>
+                    <span class="idline">
+                      <span class="mono"><%= row.user_id %></span>
+                      <%= member_activity_line(@context[row.user_id]) %>
+                    </span>
+                  </span>
+                </td>
+                <td><%= tenure_label(@context[row.user_id]&.tenure_days) %></td>
+                <td class="col-num"><%= row.subject_of %></td>
+                <td class="col-num"><%= row.logged_in %></td>
+                <td class="col-num"><%= row.actions %></td>
+                <td><%= last_case_label(row.last_case_at) %></td>
+                <td><%= member_state_chips(row) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <% if @query.pages > 1 %>
+        <div class="pager">
+          <% if @query.page > 1 %>
+            <%= link_to "Back", fd_members_path(@query.page_params(@query.page - 1)),
+                  class: "btn" %>
+          <% else %>
+            <span class="btn is-off">Back</span>
+          <% end %>
+          <span class="pager-at">
+            Page <%= @query.page %> of <%= @query.pages %>
+          </span>
+          <% if @query.page < @query.pages %>
+            <%= link_to "Next", fd_members_path(@query.page_params(@query.page + 1)),
+                  class: "btn" %>
+          <% else %>
+            <span class="btn is-off">Next</span>
+          <% end %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="card-note"><%= @query.empty_note %></p>
+    <% end %>
+  </div>
+</div>

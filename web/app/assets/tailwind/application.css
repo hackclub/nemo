@@ -1295,6 +1295,26 @@
     padding: 0 var(--s-md) var(--s-md);
   }
 
+  .pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-sm);
+    padding: var(--s-xs) var(--s-md) var(--s-md);
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .pager-at {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .btn.is-off {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
   .pair {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
