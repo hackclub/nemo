@@ -15,6 +15,8 @@ Rails.application.routes.draw do
     end
     resources :decisions, only: [:index, :show, :create, :update, :destroy] do
       resources :threads, only: [:create, :destroy], controller: "decision_threads"
+      resource :settlement, only: [:create]
+      resource :supersession, only: [:create]
     end
     resources :cases, only: [:index, :show, :create] do
       resource :claim, only: [:create, :destroy]

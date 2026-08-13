@@ -279,12 +279,130 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
       verb: "amended")
   end
 
-  test "a settled decision is not edited from here" do
-    decision = settled(title: "Pile-ons")
-    patch fd_decision_path(decision), params: { title: "Pile-ons", statement: "something else" }
+  test "settling makes it the rule, and says who agreed" do
+    decision = write(title: "Appeals")
+    post fd_decision_settlement_path(decision)
 
-    assert_match(/amend it rather than editing it/, flash[:alert])
-    assert_not_equal "something else", decision.reload.statement
+    decision.reload
+    assert_predicate decision, :settled?
+    assert_equal "UME", decision.settled_by
+    assert_match(/it is the rule from now on/, flash[:notice])
+    assert Fd::AuditEntry.exists?(entity_type: "decision", entity_id: decision.id,
+      verb: "settled")
+  end
+
+  test "settling twice is refused, so the first agreement stands" do
+    decision = settled(title: "Pile-ons")
+    post fd_decision_settlement_path(decision)
+
+    assert_match(/already settled/, flash[:alert])
+    assert_equal "ULEAD", decision.reload.settled_by
+  end
+
+  test "a settled decision is amended, and stays settled" do
+    decision = settled(title: "Pile-ons")
+    patch fd_decision_path(decision), params: { title: "Pile-ons",
+      statement: "One lock and a note to the loudest three, unless it is a raid." }
+
+    decision.reload
+    assert_predicate decision, :settled?
+    assert_equal "ULEAD", decision.settled_by
+    assert_match(/One lock and a note to the loudest three, unless it is a raid./,
+      decision.statement)
+    assert_match(/amended/, flash[:notice])
+    assert Fd::AuditEntry.exists?(entity_type: "decision", entity_id: decision.id,
+      verb: "amended")
+  end
+
+  test "a retired decision is neither edited nor amended" do
+    rule = settled(title: "Spam accounts")
+    dead = settled(title: "Warnings by DM")
+    dead.supersede!(rule, by: "ULEAD")
+
+    patch fd_decision_path(dead), params: { title: "Warnings by DM", statement: "no" }
+
+    assert_match(/was retired, write a new one instead/, flash[:alert])
+    assert_not_equal "no", dead.reload.statement
+  end
+
+  test "superseding writes the replacement and retires the old one in one move" do
+    old = settled(title: "Warnings by DM", reasons: ["it was quieter"])
+    post fd_decision_supersession_path(old), params: { title: "Spam accounts",
+      statement: "Banned on sight for a first-post invite link.",
+      category_key: "spam", reasons: "warning a throwaway does nothing" }
+
+    fresh = Fd::Decision.in_force.sole
+    old.reload
+
+    assert_equal "Spam accounts", fresh.title
+    assert_equal "UME", fresh.settled_by
+    assert_equal ["warning a throwaway does nothing"], fresh.reasons
+    assert_predicate old, :superseded?
+    assert_equal fresh.id, old.replaced_by_id
+    assert_equal "UME", old.retired_by
+    assert_redirected_to fd_decision_path(fresh)
+    assert Fd::AuditEntry.exists?(entity_type: "decision", entity_id: old.id,
+      verb: "superseded")
+    assert Fd::AuditEntry.exists?(entity_type: "decision", entity_id: fresh.id,
+      verb: "settled")
+  end
+
+  test "a replacement with no sentence is refused, and nothing is retired" do
+    old = settled(title: "Warnings by DM")
+    post fd_decision_supersession_path(old), params: { title: "Spam accounts", statement: "" }
+
+    assert_match(/say what FD does/, flash[:alert])
+    assert_predicate old.reload, :settled?
+    assert_equal 1, Fd::Decision.count
+  end
+
+  test "a replacement cannot reuse the name of a live decision" do
+    settled(title: "Spam accounts")
+    old = settled(title: "Warnings by DM")
+    post fd_decision_supersession_path(old), params: { title: "spam accounts",
+      statement: "something" }
+
+    assert_match(/already a decision called that/, flash[:alert])
+    assert_predicate old.reload, :settled?
+  end
+
+  test "a proposal cannot be superseded, it was never the rule" do
+    old = write(title: "Appeals")
+    post fd_decision_supersession_path(old), params: { title: "Appeals, again",
+      statement: "something" }
+
+    assert_match(/only a settled decision can be superseded/, flash[:alert])
+    assert_equal 1, Fd::Decision.count
+  end
+
+  test "the controls follow the state" do
+    proposal = write(title: "Appeals")
+    get fd_decision_path(proposal)
+    assert_select "form[action=?]", fd_decision_settlement_path(proposal)
+    assert_select "label[for=edit-decision]", text: "Edit"
+    assert_select "label[for=supersede-decision]", count: 0
+
+    rule = settled(title: "Pile-ons")
+    get fd_decision_path(rule)
+    assert_select "form[action=?]", fd_decision_settlement_path(rule), count: 0
+    assert_select "label[for=edit-decision]", text: "Amend"
+    assert_select "label[for=supersede-decision]", text: "Supersede"
+
+    rule.supersede!(proposal.tap { |one| one.settle!(by: "ULEAD") }, by: "ULEAD")
+    get fd_decision_path(rule)
+    assert_select "label[for=edit-decision]", count: 0
+    assert_select "label[for=supersede-decision]", count: 0
+  end
+
+  test "a signed out visitor cannot settle or supersede" do
+    decision = write(title: "Appeals")
+    delete logout_path
+
+    post fd_decision_settlement_path(decision)
+    assert_predicate decision.reload, :proposed?
+
+    post fd_decision_supersession_path(decision), params: { title: "x", statement: "y" }
+    assert_equal 1, Fd::Decision.count
   end
 
   test "whoever proposed it can drop it, and nobody else can" do
@@ -438,15 +556,8 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
     assert_select "form[action*=citations]", count: 0
   end
 
-  test "the write control is on the log, and the edit control only while proposed" do
-    proposal = write(title: "Appeals")
+  test "the write control is on the log" do
     get fd_decisions_path
     assert_select "label[for=new-decision]", text: "New decision"
-
-    get fd_decision_path(proposal)
-    assert_select "label[for=edit-decision]", text: "Edit"
-
-    get fd_decision_path(settled(title: "Pile-ons"))
-    assert_select "label[for=edit-decision]", count: 0
   end
 end

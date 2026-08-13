@@ -2,9 +2,10 @@
   <input type="checkbox" id="edit-decision" class="modal-flip" autocomplete="off">
   <label for="edit-decision" class="modal-veil" aria-hidden="true"></label>
   <div class="modal-wrap">
-    <div class="modal" role="dialog" aria-label="Edit this decision">
+    <% wording = decision.proposed? ? "Edit this decision" : "Amend this decision" %>
+    <div class="modal" role="dialog" aria-label="<%= wording %>">
       <div class="modal-head">
-        <h2 class="modal-title">Edit this decision</h2>
+        <h2 class="modal-title"><%= wording %></h2>
       </div>
       <%= form_with url: fd_decision_path(decision), method: :patch,
             html: { autocomplete: "off" } do %>
@@ -12,7 +13,7 @@
           <%= render "fd/decisions/words", decision: decision, with_reasons: true %>
         </div>
         <div class="modal-foot">
-          <% if decision.proposed_by == current_staff.user_id %>
+          <% if decision.proposed? && decision.proposed_by == current_staff.user_id %>
             <%= button_to "Drop it", fd_decision_path(decision), method: :delete,
                   class: "btn", form: { class: "contents",
                   data: { turbo_confirm: "Drop this proposal?" } } %>

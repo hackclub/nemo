@@ -1,5 +1,7 @@
 module Fd
   class DecisionsController < BaseController
+    include DecisionWords
+
     VIEWS = {
       "all" => "All",
       "force" => "In force",
@@ -49,15 +51,16 @@ module Fd
 
     def update
       decision = Decision.find(params[:id])
-      problem = missing_words || settled_already(decision)
+      problem = missing_words || retired_already(decision)
       return redirect_to(fd_decision_path(decision), alert: problem) if problem
 
       writing do
-        decision.update!(written)
+        decision.proposed? ? decision.update!(written) : decision.amend!(written)
         audit(decision, "amended")
       end
 
-      redirect_to fd_decision_path(decision), notice: "reworded"
+      redirect_to fd_decision_path(decision),
+        notice: decision.proposed? ? "reworded" : "amended"
     rescue ActiveRecord::RecordNotUnique
       redirect_to fd_decision_path(params[:id]), alert: "there is already a decision called that"
     end
@@ -78,25 +81,10 @@ module Fd
 
     private
 
-    def written
-      {
-        title: params[:title],
-        statement: params[:statement],
-        category_key: Case::CATEGORIES.include?(params[:category_key]) ? params[:category_key] : nil,
-        reasons: params[:reasons].to_s.split("\n")
-      }
-    end
+    def retired_already(decision)
+      return nil unless decision.superseded?
 
-    def missing_words
-      return "give it a name" if params[:title].blank?
-
-      "say what FD does from now on" if params[:statement].blank?
-    end
-
-    def settled_already(decision)
-      return nil if decision.proposed?
-
-      "decision #{decision.id} is settled, amend it rather than editing it"
+      "decision #{decision.id} was retired, write a new one instead"
     end
 
     def not_droppable(decision)

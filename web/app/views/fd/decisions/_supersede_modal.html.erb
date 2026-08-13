@@ -1,0 +1,25 @@
+<div class="modal-host">
+  <input type="checkbox" id="supersede-decision" class="modal-flip" autocomplete="off">
+  <label for="supersede-decision" class="modal-veil" aria-hidden="true"></label>
+  <div class="modal-wrap">
+    <div class="modal" role="dialog" aria-label="Supersede this decision">
+      <div class="modal-head">
+        <h2 class="modal-title">Replace <%= decision.title %></h2>
+      </div>
+      <%= form_with url: fd_decision_supersession_path(decision), method: :post,
+            html: { autocomplete: "off" } do %>
+        <div class="modal-body">
+          <%= render "fd/decisions/words", decision: nil, with_reasons: false %>
+          <label class="field-label">
+            Why, one line each
+            <%= text_area_tag :reasons, nil, rows: 3, class: "textarea", id: nil %>
+          </label>
+        </div>
+        <div class="modal-foot">
+          <label for="supersede-decision" class="btn">Close</label>
+          <%= submit_tag "Replace it", class: "btn btn-primary" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

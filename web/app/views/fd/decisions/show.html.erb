@@ -7,7 +7,13 @@
 <% end %>
 <% content_for :head_actions do %>
   <% if @decision.proposed? %>
-    <label for="edit-decision" class="btn btn-primary">Edit</label>
+    <%= button_to "Settle it", fd_decision_settlement_path(@decision), method: :post,
+          class: "btn btn-primary", form: { class: "contents", data: { turbo_confirm:
+            "Settle #{@decision.title}? It becomes the rule." } } %>
+    <label for="edit-decision" class="btn">Edit</label>
+  <% elsif @decision.settled? %>
+    <label for="edit-decision" class="btn">Amend</label>
+    <label for="supersede-decision" class="btn">Supersede</label>
   <% end %>
   <label for="link-threads" class="btn">Link threads</label>
   <%= link_to "The log", fd_decisions_path, class: "btn" %>
@@ -137,7 +143,10 @@
   </div>
 </div>
 
-<% if @decision.proposed? %>
+<% unless @decision.superseded? %>
   <%= render "fd/decisions/edit_modal", decision: @decision %>
+<% end %>
+<% if @decision.settled? %>
+  <%= render "fd/decisions/supersede_modal", decision: @decision %>
 <% end %>
 <%= render "fd/decisions/link_threads_modal", decision: @decision %>
