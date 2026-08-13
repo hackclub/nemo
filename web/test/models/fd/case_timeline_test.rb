@@ -63,7 +63,7 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
       reports: [report(is_anonymous: false, reporter_user_id: "UT")],
       participants: [person],
     ).first
-    assert_equal "from @UT, who was involved · via shroud · no reply yet · told the outcome: not yet",
+    assert_equal "from @UT, who was involved · via shroud · no reply yet",
       entry.detail
   end
 

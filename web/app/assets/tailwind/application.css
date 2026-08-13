@@ -743,6 +743,11 @@
     font-variant-numeric: tabular-nums;
   }
 
+  .fact-val.dim {
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+
   .sev {
     display: inline-block;
     width: 3px;
@@ -2131,41 +2136,23 @@
   }
 
   .report {
-    border: 1px solid var(--line);
-    border-inline-start: 3px solid var(--accent);
-    border-radius: var(--r-card);
-    background-color: var(--card);
-    padding: var(--s-xs) var(--s-md);
+    border-inline-start: 2px solid var(--line);
+    padding-inline-start: var(--s-sm);
     display: grid;
     gap: var(--s-3xs);
   }
 
-  .report-top {
-    display: flex;
-    align-items: center;
-    gap: var(--s-2xs);
-    flex-wrap: wrap;
-  }
-
-  .report-who {
-    font-size: var(--t-sm);
-    font-weight: 700;
-  }
-
-  .report-end {
-    margin-inline-start: auto;
-    display: flex;
-    gap: var(--s-2xs);
-    align-items: center;
-  }
-
   .report-said {
     margin: 0;
-    font-size: var(--t-sm);
+    font-size: var(--t-md);
     color: var(--ink);
   }
 
   .report-when {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-3xs) var(--s-2xs);
+    flex-wrap: wrap;
     font-size: var(--t-2xs);
     color: var(--ink-3);
   }
