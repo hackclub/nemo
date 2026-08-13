@@ -133,8 +133,7 @@ module Fd
     end
 
     def summary(shown, total)
-      ["#{shown} of #{total}", SORT.fetch(self["sort"]),
-       "subject context from the warehouse"].join(" · ")
+      ["#{shown} of #{total}", SORT.fetch(self["sort"])].join(" · ")
     end
 
     def empty_note

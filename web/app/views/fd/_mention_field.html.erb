@@ -1,0 +1,8 @@
+<div class="mention-field" data-controller="mention"
+     data-mention-url-value="<%= fd_member_search_path %>">
+  <%= text_area_tag name, value, rows: rows, class: "textarea", id: nil,
+        maxlength: Fd::NotesController::MAX_LENGTH,
+        placeholder: placeholder,
+        data: { mention_target: "field", action: "input->mention#type keydown->mention#keys" } %>
+  <div class="menu-pop pick-pop mention-pop" hidden data-mention-target="results"></div>
+</div>

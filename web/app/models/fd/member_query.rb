@@ -171,7 +171,7 @@ module Fd
 
     def summary
       seen = rows.empty? ? "none" : "#{first_shown} to #{last_shown} of #{number_with_delimiter(total)}"
-      [seen, SORT.fetch(self["sort"]), "activity from the warehouse"].join(" · ")
+      [seen, SORT.fetch(self["sort"])].join(" · ")
     end
 
     def empty_note

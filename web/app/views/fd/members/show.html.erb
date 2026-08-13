@@ -104,7 +104,7 @@
         <div class="notes">
           <% @record.notes.each do |note| %>
             <div class="note-row">
-              <div class="note-body"><%= note.body %></div>
+              <div class="note-body"><%= mentioned(note.body) %></div>
               <div class="note-by">
                 <span><%= note_byline(note) %></span>
                 <%= render "note_remove", user_id: @user_id, note: note %>

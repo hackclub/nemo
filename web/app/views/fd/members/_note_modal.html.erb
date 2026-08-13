@@ -10,9 +10,8 @@
         <div class="modal-body">
           <label class="field-label">
             The note
-            <%= text_area_tag :body, nil, rows: 4, class: "textarea", id: nil,
-                  maxlength: Fd::NotesController::MAX_LENGTH,
-                  placeholder: "for a pattern, not an incident" %>
+            <%= render "fd/mention_field", name: :body, value: nil, rows: 4,
+                  placeholder: "for a pattern, not an incident. type @ to name somebody" %>
           </label>
         </div>
         <div class="modal-foot">

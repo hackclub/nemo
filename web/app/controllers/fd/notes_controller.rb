@@ -4,7 +4,7 @@ module Fd
 
     def create
       kase = Case.find(params[:case_id])
-      body = params[:body].to_s.strip
+      body = Mentions.normalise(params[:body].to_s.strip)
       about = params[:about].to_s
       standing = about.present? && about != "case"
 

@@ -29,7 +29,8 @@ module Fd
       [user_id] +
         subject_cases.flat_map { |kase| kase.subject_user_ids + kase.assignee_user_ids } +
         actions.flat_map { |action| [action.decided_by, action.performed_by, action.reversed_by] } +
-        notes.map(&:author)
+        notes.map(&:author) +
+        notes.flat_map { |note| Mentions.ids(note.body) }
     end
 
     def actions

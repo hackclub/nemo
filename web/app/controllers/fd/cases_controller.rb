@@ -75,7 +75,9 @@ module Fd
         @reports.map(&:reporter_user_id),
         @actions.flat_map { |a| [a.target_user_id, a.decided_by, a.performed_by, a.reversed_by] },
         (@notes + @standing_notes.values.flatten).map(&:author),
-        @siblings.flat_map(&:subject_user_ids)
+        @siblings.flat_map(&:subject_user_ids),
+        (@notes + @standing_notes.values.flatten).flat_map { |note| Mentions.ids(note.body) },
+        @reports.flat_map { |report| Mentions.ids(report.body) }
       ]
     end
 
@@ -130,7 +132,7 @@ module Fd
     end
 
     def write_first_note(kase)
-      body = params[:body].to_s.strip
+      body = Mentions.normalise(params[:body].to_s.strip)
       return if body.blank?
 
       note = Note.create!(case_id: kase.id, body: body, author: current_staff.user_id)

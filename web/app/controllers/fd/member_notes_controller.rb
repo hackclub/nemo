@@ -2,7 +2,7 @@ module Fd
   class MemberNotesController < BaseController
     def create
       user_id = params[:member_id].to_s.upcase
-      body = params[:body].to_s.strip
+      body = Mentions.normalise(params[:body].to_s.strip)
 
       problem = objection(body)
       return redirect_to(fd_member_path(user_id), alert: problem) if problem

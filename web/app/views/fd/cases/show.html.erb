@@ -66,7 +66,7 @@
       <div class="notes">
         <% @notes.each do |note| %>
           <div class="note-row">
-            <div class="note-body"><%= note.body %></div>
+            <div class="note-body"><%= mentioned(note.body) %></div>
             <div class="note-by">
               <span><%= note_byline(note) %></span>
               <%= render "note_remove", kase: @case, note: note %>
@@ -161,8 +161,7 @@
       </div>
     <% else %>
       <p class="card-note">
-        Nothing has been done yet. A case can also resolve with no action, which is recorded
-        as an outcome rather than an absence.
+        Nothing has been done yet.
       </p>
     <% end %>
   </div>
@@ -204,7 +203,7 @@
                   <% end %>
                 </td>
                 <td><%= report.told_of_outcome? ? "yes" : "not yet" %></td>
-                <td><%= report.body || "n/a" %></td>
+                <td><%= report.body.present? ? mentioned(report.body) : "n/a" %></td>
               </tr>
             <% end %>
           </tbody>
@@ -467,9 +466,8 @@
           </div>
           <label class="field-label">
             The note
-            <%= text_area_tag :body, nil, rows: 4, class: "textarea",
-                  maxlength: Fd::NotesController::MAX_LENGTH,
-                  placeholder: "what the record cannot hold on its own" %>
+            <%= render "fd/mention_field", name: :body, value: nil, rows: 4,
+                  placeholder: "what the record cannot hold on its own. type @ to name somebody" %>
           </label>
         </div>
         <div class="modal-foot">
@@ -595,7 +593,7 @@
                 <div class="tl-detail"><%= entry.detail %></div>
               <% end %>
               <% if entry.said.present? %>
-                <div class="said"><%= entry.said %></div>
+                <div class="said"><%= mentioned(entry.said) %></div>
               <% end %>
             </div>
           </div>

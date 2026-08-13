@@ -51,6 +51,24 @@ module FdHelper
     end
   end
 
+  def at_name(user_id)
+    shown = names[user_id]
+    shown.start_with?("@") ? shown : "@#{shown}"
+  end
+
+  def mentioned(text)
+    return "" if text.blank?
+
+    parts = Fd::Mentions.split(text).map do |piece|
+      found = piece.match(Fd::Mentions::SLACK)
+      next piece unless found
+
+      link_to at_name(found[1]), fd_member_path(found[1]), class: "mention", title: found[1]
+    end
+
+    safe_join(parts)
+  end
+
   def already_open_line(cases, preset)
     asked = Array(preset).map { |person| person[:id] }
     caught = (cases.flat_map(&:subject_user_ids) & asked).uniq

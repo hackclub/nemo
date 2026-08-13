@@ -57,8 +57,8 @@
 
           <label class="field-label">
             What happened
-            <%= text_area_tag :body, params[:body], rows: 4, class: "textarea", id: nil,
-                  maxlength: Fd::NotesController::MAX_LENGTH %>
+            <%= render "fd/mention_field", name: :body, value: params[:body], rows: 4,
+                  placeholder: "type @ to name somebody" %>
           </label>
 
           <label class="opt">
