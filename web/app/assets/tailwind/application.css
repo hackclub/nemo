@@ -2859,6 +2859,7 @@
     padding: var(--s-2xs) var(--s-xs);
     border-bottom: 1px solid var(--line-soft);
     text-align: right;
+    vertical-align: middle;
     font-size: var(--t-sm);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -2877,6 +2878,10 @@
 
   .data-table tbody tr:hover {
     background-color: color-mix(in oklab, var(--ink) 5%, transparent);
+  }
+
+  .data-table.static tbody tr:hover {
+    background-color: transparent;
   }
 
   .data-table td a {
