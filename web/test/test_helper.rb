@@ -19,6 +19,12 @@ module ActiveSupport
 
     fixtures :all
 
+    def make_case(subject: "USUB", **attrs)
+      kase = Fd::Case.create!({ opened_by: "UFF1", opened_at: 2.days.ago }.merge(attrs))
+      kase.add_subject!(subject) if subject
+      kase
+    end
+
     def sign_in_as(staff)
       OmniAuth.config.test_mode = true
       OmniAuth.config.mock_auth[:hackclub] = OmniAuth::AuthHash.new(

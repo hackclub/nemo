@@ -4,9 +4,11 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
   OPENED = Time.utc(2026, 3, 1, 9, 0)
 
   def kase(**attrs)
-    Fd::Case.new({
-      id: 1, subject_user_id: "USUB", opened_by: "UFF1", opened_at: OPENED
-    }.merge(attrs))
+    Fd::Case.new({ id: 1, opened_by: "UFF1", opened_at: OPENED }.merge(attrs))
+  end
+
+  def subject(user_id = "USUB")
+    Fd::CaseParticipant.new(user_id: user_id, role: "subject")
   end
 
   def report(**attrs)
@@ -26,7 +28,7 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
     Fd::Note.new({ body: "spoke to them", author: "UFF1", created_at: OPENED + 30.minutes }.merge(attrs))
   end
 
-  def build(kase, reports: [], actions: [], notes: [], participants: [])
+  def build(kase, reports: [], actions: [], notes: [], participants: [subject])
     Fd::CaseTimeline.for(kase, reports:, actions:, notes:, participants:)
   end
 

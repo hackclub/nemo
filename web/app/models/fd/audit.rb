@@ -8,6 +8,7 @@ module Fd
       "Fd::Note" => "note",
       "Fd::CaseReport" => "report",
       "Fd::CaseThread" => "thread",
+      "Fd::CaseParticipant" => "participant",
     }.freeze
 
     VERBS = %w[
@@ -27,7 +28,7 @@ module Fd
     class UnknownVerb < ArgumentError; end
 
     def self.record(record, verb, actor:, request_id: nil, actor_kind: "human",
-      source_app: SOURCE_APP, before: nil, after: nil)
+      source_app: SOURCE_APP, entity_id: nil, before: nil, after: nil)
       type = entity_type(record)
       raise UnknownVerb, "#{verb} is not an audited verb" unless VERBS.include?(verb)
 
@@ -37,7 +38,7 @@ module Fd
         actor_user_id: actor,
         actor_kind: actor_kind,
         entity_type: type,
-        entity_id: record.id,
+        entity_id: entity_id || record.id,
         verb: verb,
         before: redact(type, before || previous_values(record, changes)),
         after: redact(type, after || next_values(record, changes)),

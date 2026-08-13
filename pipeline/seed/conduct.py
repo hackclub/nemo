@@ -92,7 +92,6 @@ RESOLUTION_WEIGHTS = (
 )
 
 CASE_COLUMNS = [
-    "subject_user_id",
     "opened_by",
     "opened_at",
     "claimed_by",
@@ -675,7 +674,6 @@ def build_cases(rng, members, as_of):
 
 def case_row(case):
     return (
-        case.subject_user_id,
         case.opened_by,
         case.opened_at,
         case.claimed_by,
@@ -705,6 +703,8 @@ def participant_rows(cases, ids):
         case_id = ids.get(case.external_ref)
         if case_id is None:
             continue
+        if case.subject_user_id:
+            yield (case_id, case.subject_user_id, "subject", None)
         for user_id, role, detail in case.participants:
             yield (case_id, user_id, role, detail)
 

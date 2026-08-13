@@ -15,6 +15,9 @@ module Fd
       inverse_of: :kase, dependent: nil
     has_many :participants, class_name: "Fd::CaseParticipant", foreign_key: :case_id,
       inverse_of: :kase, dependent: nil
+    has_many :subjects, -> { subjects.order(:user_id) },
+      class_name: "Fd::CaseParticipant", foreign_key: :case_id,
+      inverse_of: :kase, dependent: nil
     has_many :reports, class_name: "Fd::CaseReport", foreign_key: :case_id,
       inverse_of: :kase, dependent: nil
     has_many :actions, class_name: "Fd::Action", foreign_key: :case_id,
@@ -24,17 +27,20 @@ module Fd
 
     scope :unresolved, -> { where(resolved_at: nil) }
     scope :not_duplicate, -> { where(duplicate_of: nil) }
+    scope :with_subject, ->(user_id) {
+      where(id: CaseParticipant.subjects.where(user_id: user_id).select(:case_id))
+    }
 
     def self.candidates_for(kase, siblings = [], limit: 25)
       ordered = siblings.map(&:id)
-      if kase.subject_user_id
-        ordered += where(subject_user_id: kase.subject_user_id)
+      kase.subject_user_ids.each do |user_id|
+        ordered += with_subject(user_id)
           .where.not(id: kase.id).order(opened_at: :desc).limit(10).ids
       end
       ordered += unresolved.where.not(id: kase.id).order(opened_at: :desc).limit(15).ids
       ordered = (ordered.uniq - [kase.id]).first(limit)
 
-      by_id = where(id: ordered).index_by(&:id)
+      by_id = where(id: ordered).includes(:subjects).index_by(&:id)
       ordered.filter_map { |id| by_id[id] }
     end
 
@@ -50,6 +56,18 @@ module Fd
     end
     scope :oldest_first, -> { order(:opened_at) }
     scope :newest_first, -> { order(opened_at: :desc) }
+
+    def subject_user_ids
+      subjects.map(&:user_id)
+    end
+
+    def subject_user_id
+      subject_user_ids.first
+    end
+
+    def add_subject!(user_id)
+      subjects.create!(user_id: user_id, role: "subject")
+    end
 
     def resolved?
       resolved_at.present?

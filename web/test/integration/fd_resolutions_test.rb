@@ -3,7 +3,7 @@ require "test_helper"
 class FdResolutionsTest < ActionDispatch::IntegrationTest
   setup do
     @me = Staff.create!(user_id: "UME", community_manager: true)
-    @kase = Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 3.days.ago)
+    @kase = make_case(opened_at: 3.days.ago)
   end
 
   def actions
@@ -155,7 +155,7 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
   end
 
   test "marking a duplicate links the two cases" do
-    other = Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 4.days.ago)
+    other = make_case(opened_at: 4.days.ago)
     sign_in_as(@me)
     post fd_case_resolution_path(@kase), params: { outcome: "duplicate", duplicate_of: other.id }
 
@@ -165,7 +165,7 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a duplicate keeps no reason, even if one is posted" do
-    other = Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 4.days.ago)
+    other = make_case(opened_at: 4.days.ago)
     sign_in_as(@me)
     post fd_case_resolution_path(@kase),
       params: { outcome: "duplicate", duplicate_of: other.id, member_note: "typed then switched" }

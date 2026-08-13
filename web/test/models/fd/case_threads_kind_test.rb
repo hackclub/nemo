@@ -6,10 +6,6 @@ class Fd::CaseThreadsKindTest < ActiveSupport::TestCase
     @two = make_case
   end
 
-  def make_case
-    Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 2.days.ago)
-  end
-
   def attach(kase, channel, ts, **attrs)
     Fd::CaseThread.create!({
       case_id: kase.id, channel_id: channel, thread_ts: ts, added_by: "UFF1"

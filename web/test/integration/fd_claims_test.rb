@@ -3,7 +3,7 @@ require "test_helper"
 class FdClaimsTest < ActionDispatch::IntegrationTest
   setup do
     @me = Staff.create!(user_id: "UME", community_manager: true)
-    @kase = Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 2.days.ago)
+    @kase = make_case
   end
 
   def audit_rows(verb)

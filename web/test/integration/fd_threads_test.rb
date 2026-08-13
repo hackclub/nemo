@@ -5,7 +5,7 @@ class FdThreadsTest < ActionDispatch::IntegrationTest
 
   setup do
     @me = Staff.create!(user_id: "UME", community_manager: true)
-    @kase = Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 2.days.ago)
+    @kase = make_case
   end
 
   def attach(**params)
@@ -103,7 +103,7 @@ class FdThreadsTest < ActionDispatch::IntegrationTest
   end
 
   test "the same thread can sit on two different cases" do
-    other = Fd::Case.create!(subject_user_id: "UELSE", opened_by: "UFF1", opened_at: 1.day.ago)
+    other = make_case(subject: "UELSE", opened_at: 1.day.ago)
     sign_in_as(@me)
     attach
     post fd_case_threads_path(other), params: { link: LINK }
@@ -148,7 +148,7 @@ class FdThreadsTest < ActionDispatch::IntegrationTest
   end
 
   test "a thread on another case cannot be detached through this one" do
-    other = Fd::Case.create!(subject_user_id: "UELSE", opened_by: "UFF1", opened_at: 1.day.ago)
+    other = make_case(subject: "UELSE", opened_at: 1.day.ago)
     theirs = Fd::CaseThread.create!(case_id: other.id, channel_id: "C9", thread_ts: "9.9",
       added_by: "UFF1")
 

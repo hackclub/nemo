@@ -8,12 +8,6 @@ class FdMergesTest < ActionDispatch::IntegrationTest
     @dup_two = make_case
   end
 
-  def make_case(**attrs)
-    Fd::Case.create!({
-      subject_user_id: "USUB", opened_by: "UFF1", opened_at: 2.days.ago
-    }.merge(attrs))
-  end
-
   def merge(ids, target, **params)
     post fd_merge_cases_path,
       params: { case_ids: Array(ids).map(&:to_s), duplicate_of: target.to_s }.merge(params)
@@ -50,7 +44,7 @@ class FdMergesTest < ActionDispatch::IntegrationTest
     merge([@dup_one.id], @main.id)
 
     assert_equal 1, @dup_one.reload.threads.count
-    assert_equal 1, @dup_one.participants.count
+    assert_equal %w[involved subject], @dup_one.participants.map(&:role).sort
     assert_equal 0, @main.reload.threads.count
   end
 

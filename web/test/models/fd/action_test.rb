@@ -80,7 +80,7 @@ module Fd
     end
 
     test "for_target finds actions aimed at someone who is not the subject" do
-      kase = Fd::Case.create!(opened_by: "UFF1", subject_user_id: "USEED0000001",
+      kase = make_case(subject: "USEED0000001",
         external_ref: "test:action:target")
       to_subject = Fd::Action.create!(case_id: kase.id, type_key: "warning",
         target_user_id: "USEED0000001", decided_by: "UFF1", performed_by: "UFF1")

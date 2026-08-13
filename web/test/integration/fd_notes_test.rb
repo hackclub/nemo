@@ -3,7 +3,7 @@ require "test_helper"
 class FdNotesTest < ActionDispatch::IntegrationTest
   setup do
     @me = Staff.create!(user_id: "UME", community_manager: true)
-    @kase = Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 2.days.ago)
+    @kase = make_case
   end
 
   def write(**params)
@@ -48,7 +48,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
   end
 
   test "a standing note is refused when the case has no subject" do
-    @kase.update!(subject_user_id: nil)
+    @kase.subjects.destroy_all
     sign_in_as(@me)
     write(scope: "member")
 
@@ -176,7 +176,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
   end
 
   test "a note belonging to another case cannot be removed through this one" do
-    other = Fd::Case.create!(subject_user_id: "UELSE", opened_by: "UFF1", opened_at: 1.day.ago)
+    other = make_case(subject: "UELSE", opened_at: 1.day.ago)
     theirs = Fd::Note.create!(case_id: other.id, body: "somewhere else", author: "UME")
 
     sign_in_as(@me)
@@ -246,7 +246,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
   end
 
   test "a case with no subject offers only the case scope" do
-    @kase.update!(subject_user_id: nil)
+    @kase.subjects.destroy_all
     sign_in_as(@me)
     get fd_case_path(@kase)
 

@@ -2,9 +2,7 @@ require "test_helper"
 
 class Fd::AuditTest < ActiveSupport::TestCase
   def kase(**attrs)
-    Fd::Case.create!({
-      subject_user_id: "USUB", opened_by: "UFF1", opened_at: Time.current
-    }.merge(attrs))
+    make_case(opened_at: Time.current, **attrs)
   end
 
   def record(target, verb, **opts)
@@ -17,6 +15,7 @@ class Fd::AuditTest < ActiveSupport::TestCase
     assert_equal "note", Fd::Audit.entity_type(Fd::Note.new)
     assert_equal "report", Fd::Audit.entity_type(Fd::CaseReport.new)
     assert_equal "thread", Fd::Audit.entity_type(Fd::CaseThread.new)
+    assert_equal "participant", Fd::Audit.entity_type(Fd::CaseParticipant.new)
   end
 
   test "a record outside the conduct schema is refused rather than mislabelled" do
@@ -30,7 +29,18 @@ class Fd::AuditTest < ActiveSupport::TestCase
   test "a create has no before, because there was no before" do
     entry = record(kase, "opened")
     assert_nil entry.before
-    assert_equal "USUB", entry.after["subject_user_id"]
+    assert_equal "UFF1", entry.after["opened_by"]
+  end
+
+  test "a row keyed by more than its id is filed under the case it belongs to" do
+    target = kase
+    person = target.add_subject!("UANOTHER")
+    entry = record(person, "attached", entity_id: target.id)
+
+    assert_equal "participant", entry.entity_type
+    assert_equal target.id, entry.entity_id
+    assert_equal "UANOTHER", entry.after["user_id"]
+    assert_equal "subject", entry.after["role"]
   end
 
   test "a create records the whole row, including columns left at their default" do
@@ -56,7 +66,7 @@ class Fd::AuditTest < ActiveSupport::TestCase
     entry = record(target, "claimed")
     assert_equal({ "claimed_by" => nil }, entry.before.slice("claimed_by"))
     assert_equal "UFF2", entry.after["claimed_by"]
-    assert_not entry.after.key?("subject_user_id")
+    assert_not entry.after.key?("opened_by")
   end
 
   test "bookkeeping columns are not audited as changes" do

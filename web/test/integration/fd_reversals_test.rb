@@ -3,7 +3,7 @@ require "test_helper"
 class FdReversalsTest < ActionDispatch::IntegrationTest
   setup do
     @me = Staff.create!(user_id: "UME", community_manager: true)
-    @kase = Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 3.days.ago)
+    @kase = make_case(opened_at: 3.days.ago)
     @action = make_action
   end
 
@@ -62,7 +62,7 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
   end
 
   test "an action on another case cannot be reversed through this one" do
-    other = Fd::Case.create!(subject_user_id: "UELSE", opened_by: "UFF1", opened_at: 1.day.ago)
+    other = make_case(subject: "UELSE", opened_at: 1.day.ago)
     theirs = Fd::Action.create!(case_id: other.id, type_key: "warning", target_user_id: "UELSE",
       decided_by: "UFF1", performed_by: "UFF1", performed_at: 1.hour.ago, source_app: "fire_engine")
 

@@ -142,8 +142,7 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
   end
 
   test "a subject with an open case stops the first submit" do
-    existing = Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1",
-      opened_at: 3.days.ago, category_key: "bullying")
+    existing = make_case(opened_at: 3.days.ago, category_key: "bullying")
     sign_in_as(@me)
     open_case
 
@@ -153,8 +152,7 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
   end
 
   test "the warning names the case, its state and a way to reach it" do
-    existing = Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1",
-      opened_at: 3.days.ago, category_key: "bullying", claimed_by: "UFF2",
+    existing = make_case(opened_at: 3.days.ago, category_key: "bullying", claimed_by: "UFF2",
       claimed_at: 2.days.ago)
     sign_in_as(@me)
     open_case
@@ -165,17 +163,17 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
   end
 
   test "confirming it is separate opens the second case" do
-    Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 3.days.ago)
+    make_case(opened_at: 3.days.ago)
     sign_in_as(@me)
     open_case(separate: "1")
 
     assert_not_nil opened
     assert_equal "USUB", opened.subject_user_id
-    assert_equal 2, Fd::Case.unresolved.where(subject_user_id: "USUB").count
+    assert_equal 2, Fd::Case.unresolved.with_subject("USUB").count
   end
 
   test "what I typed survives the warning" do
-    Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 3.days.ago)
+    make_case(opened_at: 3.days.ago)
     sign_in_as(@me)
     open_case(category_key: "spam", body: "third time this week")
 
@@ -186,7 +184,7 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
   end
 
   test "the confirm button replaces the plain one once warned" do
-    Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 3.days.ago)
+    make_case(opened_at: 3.days.ago)
     sign_in_as(@me)
     open_case
 
@@ -195,8 +193,7 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
   end
 
   test "a resolved case for the same subject raises no warning" do
-    Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 5.days.ago,
-      resolved_at: 1.day.ago, resolution: "no_action")
+    make_case(opened_at: 5.days.ago, resolved_at: 1.day.ago, resolution: "no_action")
     sign_in_as(@me)
     open_case
 
@@ -204,7 +201,7 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
   end
 
   test "somebody else's open case is not a reason to stop" do
-    Fd::Case.create!(subject_user_id: "UELSE", opened_by: "UFF1", opened_at: 3.days.ago)
+    make_case(subject: "UELSE", opened_at: 3.days.ago)
     sign_in_as(@me)
     open_case
 
@@ -212,7 +209,7 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
   end
 
   test "the queue still lists cases behind the warning" do
-    Fd::Case.create!(subject_user_id: "USUB", opened_by: "UFF1", opened_at: 3.days.ago)
+    make_case(opened_at: 3.days.ago)
     sign_in_as(@me)
     open_case
 

@@ -29,6 +29,11 @@ module Fd
       participants.find { |person| person.user_id == user_id }&.role
     end
 
+    def subject_user_ids
+      @subject_user_ids ||= participants.select { |person| person.role == "subject" }
+        .map(&:user_id)
+    end
+
     def report_entries
       reports.map do |report|
         Entry.new(
@@ -93,7 +98,7 @@ module Fd
 
     def opened_detail
       parts = ["by @#{kase.opened_by}"]
-      parts << "no subject set" if kase.subject_user_id.nil?
+      parts << "no subject set" if subject_user_ids.empty?
       context = kase.subject_context
       if context.is_a?(Hash) && context["priors"]
         parts << "at that moment: #{pluralize(context['priors'], 'prior')}"
@@ -147,7 +152,7 @@ module Fd
 
     def action_detail(action)
       parts = []
-      parts << "on @#{action.target_user_id}" if action.target_user_id != kase.subject_user_id
+      parts << "on @#{action.target_user_id}" unless subject_user_ids.include?(action.target_user_id)
       parts << "decided by @#{action.decided_by}"
       unless action.performed_by_decider?
         parts << "performed by #{performer(action.performed_by)}"
