@@ -45,7 +45,7 @@
               <span class="avatar"><%= names.initial(said.author_user_id) %></span>
               <span>
                 <span class="msg-who">
-                  <%= names[said.author_user_id] %>
+                  <%= member_link(said.author_user_id) %>
                   <span class="msg-at">
                     <%= said.posted_at.strftime("%-d %b %H:%M") %><%= " · edited" if said.edited? %>
                   </span>
@@ -68,7 +68,7 @@
 
       <div class="rail-card">
         <div class="thin">
-          <span><b>Attached</b> <%= handle(row.added_by) %> · <%= last_case_label(row.added_at) %></span>
+          <span><b>Attached</b> <%= member_link(row.added_by) %> · <%= last_case_label(row.added_at) %></span>
           <%= button_to "Detach", fd_case_thread_path(kase, row.record),
                 method: :delete, class: "text-btn",
                 form: { class: "contents", data: { turbo_frame: "_top",

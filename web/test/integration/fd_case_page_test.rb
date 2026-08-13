@@ -66,6 +66,20 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     assert_select "#who .pane .roles .line-why b", text: "involved"
   end
 
+  test "a name that leads to a member record is a link to it" do
+    Fd::Note.create!(case_id: @kase.id, body: "spoke to them", author: "UFF1")
+    get fd_case_path(@kase)
+
+    assert_select ".note-by a.lnk[href=?]", fd_member_path("UFF1"), text: "@UFF1"
+  end
+
+  test "the header names the people it mentions with links, not plain text" do
+    @kase.assign!("UFF2")
+    get fd_case_path(@kase)
+
+    assert_select ".head-meta a.lnk[href=?]", fd_member_path("UFF2")
+  end
+
   test "logging an action from a person's pane is aimed at that person" do
     @kase.add_subject!("USECOND")
     get fd_case_path(@kase, person: "USECOND")

@@ -664,6 +664,20 @@
     color: var(--ink-3);
   }
 
+  .lnk {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-decoration-color: color-mix(in oklab, var(--ink-3) 55%, transparent);
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+
+  .lnk:hover {
+    color: var(--accent-deep);
+    text-decoration-color: currentColor;
+  }
+
   .msg {
     display: grid;
     grid-template-columns: 28px minmax(0, 1fr);

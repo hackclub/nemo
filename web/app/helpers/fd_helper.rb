@@ -13,6 +13,12 @@ module FdHelper
       data: { controller: "copy", copy_id_value: user_id, action: "click->copy#write" })
   end
 
+  def member_link(user_id)
+    return "n/a" if user_id.blank?
+
+    link_to names[user_id], fd_member_path(user_id), class: "lnk", title: user_id
+  end
+
   def handle_list(user_ids)
     return "n/a" if user_ids.blank?
 
@@ -322,7 +328,7 @@ module FdHelper
   end
 
   def note_byline(note)
-    [names[note.author], note.created_at.strftime("%b %-d, %Y")].join(" · ")
+    safe_join([member_link(note.author), note.created_at.strftime("%b %-d, %Y")], " · ")
   end
 
   def notes_summary(notes, standing)
@@ -387,9 +393,10 @@ module FdHelper
     if named.empty?
       reports.one? ? "filed anonymously" : "filed anonymously by #{reports.size} people"
     elsif reports.one?
-      "filed by #{named.first.reporter_label(names)}"
+      safe_join(["filed by ", member_link(named.first.reporter_user_id)])
     else
-      "filed by #{named.first.reporter_label(names)} and #{pluralize(reports.size - 1, 'other')}"
+      safe_join(["filed by ", member_link(named.first.reporter_user_id),
+        " and #{pluralize(reports.size - 1, 'other')}"])
     end
   end
 
@@ -399,18 +406,24 @@ module FdHelper
     opened = "opened #{kase.opened_at.strftime('%b %-d')}"
 
     if !kase.assigned?
-      parts << "#{opened} by #{names[kase.opened_by]}"
+      parts << safe_join([opened, " by ", member_link(kase.opened_by)])
       parts << "unassigned"
     elsif kase.assignee_user_ids == [kase.opened_by]
-      parts << "#{opened} and assigned to #{names[kase.opened_by]}"
+      parts << safe_join([opened, " and assigned to ", member_link(kase.opened_by)])
     else
-      parts << "#{opened} by #{names[kase.opened_by]}"
-      parts << "assigned to #{names.list(kase.assignee_user_ids)}"
+      parts << safe_join([opened, " by ", member_link(kase.opened_by)])
+      parts << safe_join(["assigned to ", member_links(kase.assignee_user_ids)])
     end
 
     filed = filed_by_label(reports)
     parts << filed if filed
-    parts.join(" · ")
+    safe_join(parts, " · ")
+  end
+
+  def member_links(user_ids)
+    return "n/a" if user_ids.blank?
+
+    safe_join(Array(user_ids).map { |user_id| member_link(user_id) }, ", ")
   end
 
   ACTION_LABELS = {

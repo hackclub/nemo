@@ -139,13 +139,13 @@
                 </td>
                 <td>
                   <span class="two-line">
-                    <b><%= handle(action.target_user_id) %></b>
+                    <b><%= member_link(action.target_user_id) %></b>
                     <span><%= action_target_note(action, @case) %></span>
                   </span>
                 </td>
                 <td>
                   <span class="two-line">
-                    <b><%= handle(action.decided_by) %></b>
+                    <b><%= member_link(action.decided_by) %></b>
                     <span><%= action_performer_note(action) %></span>
                   </span>
                 </td>
@@ -181,7 +181,7 @@
                   <%= link_to fd_case_path(sibling) do %>
                     <b>Case <%= sibling.id %></b>
                   <% end %>
-                  <span><%= subject_handles(sibling) %></span>
+                  <span><%= member_links(sibling.subject_user_ids) %></span>
                 </span>
               </td>
               <td><%= case_status_chip(sibling) %></td>

@@ -144,7 +144,7 @@
                 <div class="thin">
                   <span>
                     <b><%= action_label(action.type_key) %></b>
-                    <%= action.performed_at.strftime("%-d %b") %> · <%= names[action.decided_by] %>
+                    <%= action.performed_at.strftime("%-d %b") %> · <%= member_link(action.decided_by) %>
                   </span>
                   <%= action_state_chip(action) %>
                 </div>

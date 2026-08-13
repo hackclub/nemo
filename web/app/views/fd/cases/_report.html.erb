@@ -7,7 +7,7 @@
       <% if report.anonymous? %>
         An anonymous report
       <% else %>
-        <%= handle(report.reporter_user_id) %> made this report
+        <%= member_link(report.reporter_user_id) %> made this report
       <% end %>
     </span>
     <span class="report-end">
