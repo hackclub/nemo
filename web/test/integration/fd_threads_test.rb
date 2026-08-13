@@ -144,7 +144,7 @@ class FdThreadsTest < ActionDispatch::IntegrationTest
     entry = entries("detached").sole
     assert_equal "C0266FRGV", entry.before["channel_id"]
     assert_equal "1754487721.123456", entry.before["thread_ts"]
-    assert_match(/trail keeps which one/, flash[:notice])
+    assert_match(/detached/, flash[:notice])
   end
 
   test "a thread on another case cannot be detached through this one" do

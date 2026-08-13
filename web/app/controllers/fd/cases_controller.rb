@@ -19,6 +19,7 @@ module Fd
       @notes = @case.notes.visible.recent_first.to_a
       @standing_notes = Note.for_subjects(@participants.map(&:user_id)).visible.recent_first
         .group_by(&:subject_user_id)
+      @case_person = CasePerson.for(@people.chosen, kase: @case, actions: @actions, notes: @notes)
       @assignees = @case.assignees.to_a
       @mentioned = @case.mentioned_but_unlogged(
         notes: @notes + @standing_notes.values.flatten, reports: @reports

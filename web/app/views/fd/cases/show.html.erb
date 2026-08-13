@@ -46,7 +46,7 @@
   <% end %>
 
   <%= render "people", kase: @case, people: @people, contexts: @context,
-        notes: @standing_notes, mentioned: @mentioned %>
+        notes: @standing_notes, mentioned: @mentioned, case_person: @case_person %>
 
   <div class="card">
     <div class="card-head">
@@ -286,7 +286,8 @@
       </div>
       <%= form_with url: fd_case_actions_path(@case), method: :post, html: { autocomplete: "off" } do %>
         <div class="modal-body">
-          <%= render "action_fields", kase: @case %>
+          <%= render "action_fields", kase: @case,
+                  target: @people.chosen&.user_id || lone_subject(@case) %>
         </div>
         <div class="modal-foot">
           <label for="log-action" class="btn">Close</label>
@@ -423,7 +424,8 @@
           </div>
 
           <div class="only only-report">
-            <%= render "action_fields", kase: @case %>
+            <%= render "action_fields", kase: @case,
+                  target: @people.chosen&.user_id || lone_subject(@case) %>
           </div>
 
           <div class="only only-close">

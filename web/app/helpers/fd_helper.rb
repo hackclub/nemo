@@ -209,7 +209,7 @@ module FdHelper
   end
 
   ROLE_LABELS = {
-    "subject" => "the case is about them",
+    "subject" => "subject",
     "reporter" => "reported it",
     "involved" => "involved"
   }.freeze

@@ -61,9 +61,16 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase, person: "UBOTH")
 
     assert_select "#who a.index-item", text: /@UBOTH/, count: 1
-    assert_select "#who .pane .role-row", 2
-    assert_select "#who .pane .role-row .chip", text: "reported it"
-    assert_select "#who .pane .role-row .chip", text: "involved"
+    assert_select "#who .pane .roles .line-row", 2
+    assert_select "#who .pane .line-row .chip", text: "reported it"
+    assert_select "#who .pane .line-row .chip", text: "involved"
+  end
+
+  test "logging an action from a person's pane is aimed at that person" do
+    @kase.add_subject!("USECOND")
+    get fd_case_path(@kase, person: "USECOND")
+
+    assert_select "input[name=target_user_id][value=USECOND]", minimum: 1
   end
 
   test "a case about nobody still renders, and says so once" do

@@ -28,6 +28,7 @@
     <% else %>
       <% person = people.chosen %>
       <% context = contexts[person.user_id] %>
+      <% here = case_person %>
       <div class="mcard-top">
         <span class="mcard-face" aria-hidden="true">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
@@ -43,34 +44,84 @@
         </span>
       </div>
 
-      <div class="roles">
+      <div class="lines roles">
         <% person.records.each do |record| %>
-          <div class="role-row">
+          <div class="line-row">
             <span class="chip <%= role_tone(record.role) %>"><%= role_label(record.role) %></span>
-            <span class="role-why">
+            <span class="line-why">
               <%= record.detail.presence || "logged #{record.noted_at.strftime('%-d %b')}" %>
             </span>
-            <span class="role-end"><%= render "person_remove", kase: kase, person: record %></span>
+            <span class="line-end"><%= render "person_remove", kase: kase, person: record %></span>
           </div>
         <% end %>
       </div>
 
-      <div class="subject-facts">
-        <div>
-          <div class="fact-label">Messages</div>
-          <div class="fact-val"><%= fact_number(context&.messages_posted) %></div>
+      <div>
+        <p class="band-label">On this case</p>
+        <div class="subject-facts">
+          <div>
+            <div class="fact-label">Done to them</div>
+            <div class="fact-val"><%= here.actions.any? ? pluralize(here.actions.size, "action") : "nothing" %></div>
+          </div>
+          <div>
+            <div class="fact-label">Notes naming them</div>
+            <div class="fact-val"><%= here.notes_naming.size %> of <%= here.notes_total %></div>
+          </div>
+          <div>
+            <div class="fact-label">Priors before it</div>
+            <div class="fact-val"><%= here.priors %></div>
+          </div>
+          <div>
+            <div class="fact-label">Their messages</div>
+            <div class="fact-val">n/a</div>
+          </div>
+          <div>
+            <div class="fact-label">Cases ever</div>
+            <div class="fact-val"><%= here.cases_ever %></div>
+          </div>
         </div>
-        <div>
-          <div class="fact-label">Active days</div>
-          <div class="fact-val"><%= fact_number(context&.days_active) %></div>
-        </div>
-        <div>
-          <div class="fact-label">Channels</div>
-          <div class="fact-val"><%= fact_number(context&.channels_joined) %></div>
-        </div>
-        <div>
-          <div class="fact-label">Last active</div>
-          <div class="fact-val"><%= last_active_label(context&.last_active_at) %></div>
+      </div>
+
+      <div class="lines acts">
+        <% if here.actions.any? %>
+          <% here.actions.each do |action| %>
+            <div class="line-row">
+              <span class="chip <%= action.reversed? ? "chip-off" : "chip-crit" %>">
+                <%= action_label(action.type_key) %>
+              </span>
+              <span class="line-why">
+                <%= action.performed_at.strftime("%-d %b") %> · <%= names[action.decided_by] %>
+                <%= "· reversed" if action.reversed? %>
+              </span>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="line-row">
+            <span class="line-why">Nothing has been done to them on this case.</span>
+            <span class="line-end"><label for="log-action" class="text-btn">Log an action</label></span>
+          </div>
+        <% end %>
+      </div>
+
+      <div>
+        <p class="band-label">In the workspace</p>
+        <div class="subject-facts">
+          <div>
+            <div class="fact-label">Messages</div>
+            <div class="fact-val"><%= fact_number(context&.messages_posted) %></div>
+          </div>
+          <div>
+            <div class="fact-label">Active days</div>
+            <div class="fact-val"><%= fact_number(context&.days_active) %></div>
+          </div>
+          <div>
+            <div class="fact-label">Channels</div>
+            <div class="fact-val"><%= fact_number(context&.channels_joined) %></div>
+          </div>
+          <div>
+            <div class="fact-label">Last active</div>
+            <div class="fact-val"><%= last_active_label(context&.last_active_at) %></div>
+          </div>
         </div>
       </div>
 

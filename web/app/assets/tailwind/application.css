@@ -1854,11 +1854,11 @@
     padding-bottom: 0;
   }
 
-  .roles {
+  .lines {
     display: grid;
   }
 
-  .role-row {
+  .line-row {
     display: flex;
     align-items: center;
     gap: var(--s-2xs);
@@ -1867,12 +1867,12 @@
     border-top: 1px solid var(--line-soft);
   }
 
-  .role-why {
+  .line-why {
     font-size: var(--t-2xs);
     color: var(--ink-3);
   }
 
-  .role-end {
+  .line-end {
     margin-inline-start: auto;
   }
 

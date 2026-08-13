@@ -217,7 +217,7 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase, person: "UWATCHER")
 
     assert_select "#who .pane .mcard-name button.handle", text: "@UWATCHER"
-    assert_select "#who .pane .role-row .role-why", text: "they piled on"
-    assert_select "#who .pane .role-row .chip.chip-warn", text: "involved"
+    assert_select "#who .pane .roles .line-row .line-why", text: "they piled on"
+    assert_select "#who .pane .roles .line-row .chip.chip-warn", text: "involved"
   end
 end
