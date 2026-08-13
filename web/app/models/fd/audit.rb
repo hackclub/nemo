@@ -17,7 +17,7 @@ module Fd
     VERBS = %w[
       opened claimed unclaimed resolved reopened
       performed reversed received
-      noted deleted attached detached flagged unflagged
+      noted deleted attached detached flagged unflagged closed
     ].freeze
 
     REDACTED_COLUMNS = {

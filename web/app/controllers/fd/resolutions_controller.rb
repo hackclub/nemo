@@ -18,6 +18,7 @@ module Fd
 
         settled = true
         file_report if params[:outcome] == "report"
+        close_reports
         @case.reload
         audit(@case, "resolved",
           before: { "resolved_at" => nil, "resolution" => nil },
@@ -78,6 +79,14 @@ module Fd
 
     def file_report
       audit(log_action(@case, @now), "performed")
+    end
+
+    def close_reports
+      @case.reports.where(closed_at: nil).find_each do |report|
+        report.update!(closed_at: @now, closed_by: current_staff.user_id)
+        audit(report, "closed", entity_id: @case.id,
+          before: { "closed_at" => nil }, after: { "closed_at" => @now })
+      end
     end
 
     def refusal(kase)

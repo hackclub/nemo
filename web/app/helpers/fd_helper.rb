@@ -252,8 +252,9 @@ module FdHelper
     parts = [report.received_at.strftime("%-d %b %Y, %H:%M")]
     parts << "through #{report.source_app}" if report.source_app.present?
 
+    parts << report.closed_line(names) if report.told_of_outcome?
     parts << "not told the outcome yet" if kase.resolved? && !report.told_of_outcome?
-    parts.join(" · ")
+    parts.compact.join(" · ")
   end
 
   RESOLUTION_LABELS = {

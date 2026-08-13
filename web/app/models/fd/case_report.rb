@@ -39,5 +39,11 @@ module Fd
     def told_of_outcome?
       closed_at.present?
     end
+
+    def closed_line(names)
+      return nil unless told_of_outcome?
+
+      "told the outcome #{closed_at.strftime('%-d %b')} by #{names[closed_by]}"
+    end
   end
 end

@@ -35,7 +35,7 @@ class Fd::CaseReportTest < ActiveSupport::TestCase
     report = file(first_replied_at: 4.days.ago)
 
     refute report.told_of_outcome?, "a reply is not the outcome"
-    report.update!(closed_at: Time.current)
+    report.update!(closed_at: Time.current, closed_by: "UFF1")
     assert report.told_of_outcome?
   end
 end

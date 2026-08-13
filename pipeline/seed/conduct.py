@@ -317,6 +317,7 @@ REPORT_COLUMNS = [
     "forwarded_ts",
     "first_replied_at",
     "closed_at",
+    "closed_by",
     "source_app",
     "external_ref",
 ]
@@ -367,6 +368,7 @@ class SeedReport:
     forwarded_ts: str
     first_replied_at: datetime | None
     closed_at: datetime | None
+    closed_by: str | None
     source_app: str
 
 
@@ -563,6 +565,7 @@ def make_report(rng, case, reporter, source_app="shroud"):
         forwarded_ts=slack_ts(rng, received_at),
         first_replied_at=replied_at,
         closed_at=case.resolved_at,
+        closed_by=(case.claimed_by or case.opened_by) if case.resolved_at else None,
         source_app=source_app,
     )
 
@@ -1115,6 +1118,7 @@ def report_rows(cases, ids):
                 report.forwarded_ts,
                 report.first_replied_at,
                 report.closed_at,
+                report.closed_by,
                 report.source_app,
                 f"{SEED_REF_PREFIX}report:{index}",
             )

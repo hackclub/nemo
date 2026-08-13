@@ -234,6 +234,30 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     assert_match(/already resolved/, flash[:alert])
   end
 
+  test "resolving closes the reports that were still open" do
+    report = Fd::CaseReport.create!(case_id: @kase.id, reporter_user_id: "UREP1",
+      is_anonymous: false, body: "look at this", source_app: "shroud", received_at: 2.days.ago)
+    sign_in_as(@me)
+    close(member_note: "warned them")
+
+    report.reload
+    assert_not_nil report.closed_at
+    assert_equal "UME", report.closed_by
+    assert Fd::AuditEntry.exists?(entity_type: "report", verb: "closed",
+      entity_id: @kase.id)
+  end
+
+  test "a report already closed is left as it was" do
+    was = 3.days.ago.change(usec: 0)
+    report = Fd::CaseReport.create!(case_id: @kase.id, is_anonymous: true,
+      source_app: "shroud", received_at: 5.days.ago, closed_at: was, closed_by: "UFF9")
+    sign_in_as(@me)
+    close(member_note: "done")
+
+    assert_equal "UFF9", report.reload.closed_by
+    assert_equal was.to_i, report.closed_at.to_i
+  end
+
   test "the modal is offered while open and gone once resolved" do
     sign_in_as(@me)
     get fd_case_path(@kase)
