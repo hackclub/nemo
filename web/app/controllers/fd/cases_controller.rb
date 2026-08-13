@@ -19,6 +19,9 @@ module Fd
       @standing_notes = Note.for_subjects(@case.subject_user_ids).visible.recent_first
         .group_by(&:subject_user_id)
       @assignees = @case.assignees.to_a
+      @mentioned = @case.mentioned_but_unlogged(
+        notes: @notes + @standing_notes.values.flatten, reports: @reports
+      )
       @names = Names.for(page_ids)
       @timeline = CaseTimeline.for(
         @case,

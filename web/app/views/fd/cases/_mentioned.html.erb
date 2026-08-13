@@ -1,0 +1,13 @@
+<% if mentioned.any? %>
+  <div class="offered">
+    <span class="offered-note">Named in a note, not logged</span>
+    <% mentioned.each do |user_id| %>
+      <span class="offered-one">
+        <%= link_to at_name(user_id), fd_member_path(user_id), class: "mention" %>
+        <%= button_to "Log", fd_case_participants_path(kase),
+              params: { user_ids: [user_id], role: "involved" },
+              class: "text-btn", form: { class: "contents" } %>
+      </span>
+    <% end %>
+  </div>
+<% end %>

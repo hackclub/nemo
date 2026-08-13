@@ -1838,6 +1838,31 @@
     padding-bottom: 0;
   }
 
+  .offered {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs) var(--s-sm);
+    flex-wrap: wrap;
+    border-top: 1px solid var(--line-soft);
+    margin-top: var(--s-2xs);
+    padding-top: var(--s-2xs);
+  }
+
+  .offered-note {
+    font-size: var(--t-3xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--ink-3);
+  }
+
+  .offered-one {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--s-3xs);
+    font-size: var(--t-2xs);
+  }
+
   .mention-field {
     position: relative;
     display: grid;

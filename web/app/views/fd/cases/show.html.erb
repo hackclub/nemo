@@ -297,6 +297,7 @@
         <% else %>
           <p class="card-note">n/a</p>
         <% end %>
+        <%= render "mentioned", kase: @case, mentioned: @mentioned %>
       </div>
 
       <div class="card card-flush">

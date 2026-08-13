@@ -138,6 +138,14 @@ module Fd
       assignees.create!(user_id: user_id, assigned_by: by || user_id, assigned_at: Time.current)
     end
 
+    def mentioned_but_unlogged(notes: [], reports: [])
+      said = (notes + reports).flat_map { |row| Mentions.ids(row.body) }.uniq
+      return [] if said.empty?
+
+      (said - participants.map(&:user_id) - Staff.where(user_id: said).pluck(:user_id)) -
+        [opened_by]
+    end
+
     def mine_or_free?(user_id)
       !assigned? || assigned_to?(user_id)
     end
