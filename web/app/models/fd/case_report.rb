@@ -26,6 +26,16 @@ module Fd
       first_replied_at - received_at
     end
 
+    def unanswered?
+      first_replied_at.nil?
+    end
+
+    def waiting_for(now = Time.current)
+      return nil if replied?
+
+      now - received_at
+    end
+
     def told_of_outcome?
       closed_at.present?
     end

@@ -1,0 +1,33 @@
+<div class="report">
+  <div class="report-top">
+    <span class="avatar" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+    </span>
+    <span class="report-who">
+      <% if report.anonymous? %>
+        An anonymous report
+      <% else %>
+        <%= handle(report.reporter_user_id) %> made this report
+      <% end %>
+    </span>
+    <span class="report-end">
+      <% if report.replied? %>
+        <span class="chip chip-good">replied in <%= case_age_label(report.reply_latency) %></span>
+      <% elsif kase.resolved? %>
+        <span class="chip chip-warn">never replied to</span>
+      <% else %>
+        <span class="chip chip-crit">no reply in <%= case_age_label(report.waiting_for) %></span>
+      <% end %>
+      <% if report.dm_channel_id.present? %>
+        <%= link_to "Reply in Slack", slack_thread_url(report.dm_channel_id, report.dm_ts),
+              class: "btn", target: "_blank", rel: "noopener" %>
+      <% end %>
+    </span>
+  </div>
+  <% if report.body.present? %>
+    <p class="report-said"><%= mentioned(report.body) %></p>
+  <% else %>
+    <p class="report-said note-none">They wrote nothing with it.</p>
+  <% end %>
+  <span class="report-when"><%= report_when_line(report, kase) %></span>
+</div>

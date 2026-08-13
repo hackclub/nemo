@@ -239,18 +239,12 @@ module FdHelper
     subject_context_line(context)
   end
 
-  def reply_latency_label(report)
-    return "no reply yet" unless report.replied?
+  def report_when_line(report, kase)
+    parts = [report.received_at.strftime("%-d %b %Y, %H:%M")]
+    parts << "through #{report.source_app}" if report.source_app.present?
+    parts << "#{names[kase.opened_by]} opened the case #{case_age_label(Time.current - kase.opened_at)} ago"
 
-    case_age_label(report.reply_latency)
-  end
-
-  def reports_summary(reports)
-    return "n/a" if reports.empty?
-
-    anonymous = reports.count(&:anonymous?)
-    parts = ["#{pluralize(reports.size, 'report')}"]
-    parts << "#{anonymous} anonymous" if anonymous.positive?
+    parts << "not told the outcome yet" if kase.resolved? && !report.told_of_outcome?
     parts.join(" · ")
   end
 
