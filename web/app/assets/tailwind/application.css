@@ -1260,6 +1260,39 @@
     color: var(--ink-3);
   }
 
+  .who {
+    display: grid;
+    gap: 0;
+  }
+
+  .who-row {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) auto auto;
+    gap: var(--s-2xs);
+    align-items: center;
+    padding: var(--s-2xs) 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .who-row:last-child {
+    border-bottom: 0;
+  }
+
+  .who-row .avatar {
+    width: 26px;
+    height: 26px;
+  }
+
+  .who-name {
+    font-size: var(--t-sm);
+    font-weight: 600;
+  }
+
+  .who-note {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+  }
+
   .notes {
     display: grid;
   }
@@ -1298,6 +1331,14 @@
 
   .modal-host {
     display: contents;
+  }
+
+  .why {
+    display: none;
+  }
+
+  .modal-body:has(#role-involved:checked) .why {
+    display: grid;
   }
 
   .modal-host:has(> .modal-flip:checked) > .modal-veil,

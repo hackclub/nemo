@@ -43,12 +43,12 @@
 <div class="stack">
   <% if @case.subjects.any? %>
     <% @case.subjects.each do |person| %>
-      <%= render "subject_card", kase: @case, user_id: person.user_id,
+      <%= render "subject_card", kase: @case, person: person,
             context: @context[person.user_id],
             notes: @standing_notes.fetch(person.user_id, []) %>
     <% end %>
   <% else %>
-    <%= render "subject_card", kase: @case, user_id: nil, context: nil, notes: [] %>
+    <%= render "subject_card", kase: @case, person: nil, context: nil, notes: [] %>
   <% end %>
 
   <div class="card">
@@ -270,31 +270,38 @@
     </div>
 
     <div class="stack">
-      <div class="card card-flush" id="who-else">
+      <div class="card" id="who-else">
         <div class="card-head">
           <div>
-            <h2 class="card-title">Who else was involved</h2>
+            <h2 class="card-title">Who else is logged</h2>
             <p class="card-sub">
               <%= @case.subjects.many? ? "the subjects are" : "the subject is" %>
               above, not in this list
             </p>
           </div>
+          <div class="card-tools">
+            <label for="add-person" class="btn">Add</label>
+          </div>
         </div>
         <% if @others.any? %>
-          <table class="data-table">
-            <tbody>
-              <% @others.each do |person| %>
-                <tr>
-                  <td>
-                    <span class="two-line">
-                      <b>@<%= person.user_id %></b>
-                      <span><%= role_label(person.role) %></span>
-                    </span>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
+          <div class="who">
+            <% @others.each do |person| %>
+              <div class="who-row">
+                <span class="avatar" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+                </span>
+                <% note = person_note(person, @context[person.user_id]) %>
+                <span>
+                  <span class="who-name">@<%= person.user_id %></span>
+                  <% if note %>
+                    <br><span class="who-note"><%= note %></span>
+                  <% end %>
+                </span>
+                <span class="chip <%= role_tone(person.role) %>"><%= role_label(person.role) %></span>
+                <%= render "person_remove", kase: @case, person: person %>
+              </div>
+            <% end %>
+          </div>
         <% else %>
           <p class="card-note">n/a</p>
         <% end %>
@@ -422,6 +429,8 @@
     </div>
   </div>
 </div>
+
+<%= render "add_person_modal", kase: @case %>
 
 <div class="modal-host">
   <input type="checkbox" id="add-note" class="modal-flip">

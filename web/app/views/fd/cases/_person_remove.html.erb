@@ -1,0 +1,5 @@
+<%= button_to "×", fd_case_participant_path(kase, person.user_id),
+      method: :delete, params: { role: person.role },
+      class: "text-btn", aria: { label: "take @#{person.user_id} off the case" },
+      form: { class: "contents",
+      data: { turbo_confirm: "Take @#{person.user_id} off this case? The trail keeps that they were on it." } } %>

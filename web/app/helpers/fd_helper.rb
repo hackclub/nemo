@@ -94,6 +94,23 @@ module FdHelper
     ROLE_LABELS.fetch(role, role)
   end
 
+  ROLE_TONES = {
+    "involved" => "chip-warn",
+    "reporter" => "chip-off",
+    "subject" => "chip-crit"
+  }.freeze
+
+  def role_tone(role)
+    ROLE_TONES.fetch(role, "chip-off")
+  end
+
+  def person_note(person, context)
+    return person.detail if person.detail.present?
+    return nil unless context&.known?
+
+    subject_context_line(context)
+  end
+
   def reply_latency_label(report)
     return "no reply yet" unless report.replied?
 
@@ -192,6 +209,11 @@ module FdHelper
 
   def action_options_for(actions)
     actions.map { |action| [action_option_label(action), action.id] }
+  end
+
+  def lone_subject(kase)
+    ids = kase.subject_user_ids
+    ids.first if ids.one?
   end
 
   def subject_handles(kase)

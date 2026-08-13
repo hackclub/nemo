@@ -48,4 +48,19 @@ class FdHelperTest < ActionView::TestCase
   test "a case about nobody says so rather than naming an empty handle" do
     assert_equal "no subject set", subject_handles(make_case(subject: nil))
   end
+
+  def person(**attrs)
+    Fd::CaseParticipant.new({ user_id: "UNEW", role: "involved" }.merge(attrs))
+  end
+
+  test "a logged person reads as the reason they were logged" do
+    assert_equal "it was aimed at them", person_note(person(detail: "it was aimed at them"), nil)
+  end
+
+  test "a member the warehouse has never seen says nothing rather than saying so" do
+    context = Fd::MemberContext.for(["UNEW"])["UNEW"]
+    assert_not context.known?
+    assert_nil person_note(person(role: "reporter"), context),
+      "warehouse absence belongs on the subject card, not under every name"
+  end
 end

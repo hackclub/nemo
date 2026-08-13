@@ -1,3 +1,4 @@
+<% user_id = person&.user_id %>
 <div class="card">
   <div class="subject">
     <div class="subject-avatar" aria-hidden="true">
@@ -8,6 +9,9 @@
         <%= user_id ? "@#{user_id}" : "No subject set" %>
       </h2>
       <div class="mono"><%= subject_identity_line(user_id, context) %></div>
+      <% if person %>
+        <%= render "person_remove", kase: kase, person: person %>
+      <% end %>
     </div>
   </div>
 

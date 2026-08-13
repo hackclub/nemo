@@ -40,16 +40,16 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
       detail: "they piled on")
     get fd_case_path(@kase)
 
-    assert_select "#who-else b", text: "@UWATCHER"
-    assert_select "#who-else b", text: "@USUB", count: 0
-    assert_select "#who-else b", text: "@USECOND", count: 0
+    assert_select "#who-else .who-name", text: "@UWATCHER"
+    assert_select "#who-else .who-name", text: "@USUB", count: 0
+    assert_select "#who-else .who-name", text: "@USECOND", count: 0
   end
 
   test "with nobody else involved the list says so rather than naming the subject" do
     get fd_case_path(@kase)
 
     assert_select "#who-else .card-note", text: "n/a"
-    assert_select "#who-else tbody tr", 0
+    assert_select "#who-else .who-row", 0
   end
 
   test "standing notes name the member they follow, once there is more than one" do

@@ -16,6 +16,7 @@ Rails.application.routes.draw do
       resources :actions, only: [:create]
       resources :reversals, only: [:create]
       resources :threads, only: [:create, :destroy]
+      resources :participants, only: [:create, :destroy]
     end
   end
 
