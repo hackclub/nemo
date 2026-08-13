@@ -1,0 +1,46 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Their history</h2>
+    </div>
+    <div class="card-tools">
+      <div class="segmented">
+        <% Fd::MemberTimeline::KINDS.each do |key, label| %>
+          <%= link_to label, fd_member_path(user_id, show: (key unless key == "all")),
+                aria: { current: ("true" if key == only) } %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <% if history.any? %>
+    <div class="timeline history-list">
+      <% history.each do |entry| %>
+        <div class="tl-item">
+          <div class="tl-when">
+            <%= entry.at.strftime("%-d %b") %>
+            <% if entry.at > 1.year.ago %>
+              <br><%= entry.at.strftime("%H:%M") %>
+            <% else %>
+              <br><%= entry.at.strftime("%Y") %>
+            <% end %>
+          </div>
+          <div class="tl-what">
+            <div class="tl-head">
+              <%= link_to entry.title, fd_case_path(entry.case_id), class: "tl-title" %>
+              <span class="tl-mark tl-mark-<%= entry.mark %>"><%= entry.mark %></span>
+              <% entry.chips.each do |chip| %>
+                <span class="chip <%= history_chip_tone(chip) %>"><%= chip %></span>
+              <% end %>
+            </div>
+            <% if entry.detail.present? %>
+              <div class="tl-detail"><%= entry.detail %></div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="card-note"><%= history_empty_note(only) %></p>
+  <% end %>
+</div>

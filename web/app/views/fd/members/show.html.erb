@@ -75,6 +75,10 @@
     </div>
   </div>
 
+  <% if @record.anything? %>
+    <%= render "history", history: @history, only: @only, user_id: @user_id %>
+  <% end %>
+
   <div class="pair">
     <% if @record.anything? %>
       <%= render "shape", record: @record %>

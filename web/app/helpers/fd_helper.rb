@@ -51,6 +51,29 @@ module FdHelper
     end
   end
 
+  HISTORY_TONES = {
+    "open" => "chip-crit",
+    "subject" => "chip-crit",
+    "involved" => "chip-warn",
+    "reporter" => "chip-off",
+    "reversed" => "chip-warn",
+    "undone" => "chip-good"
+  }.freeze
+
+  def history_chip_tone(chip)
+    HISTORY_TONES.fetch(chip) { chip.start_with?("expires") ? "chip-warn" : "chip-off" }
+  end
+
+  HISTORY_EMPTY = {
+    "subject" => "No case has ever been about them.",
+    "logged" => "They have never been logged in somebody else's case.",
+    "actions" => "Nothing has ever been done to them."
+  }.freeze
+
+  def history_empty_note(only)
+    HISTORY_EMPTY.fetch(only, "Nothing on record.")
+  end
+
   def shape_sub(record)
     return "one case" if record.spine.one?
 

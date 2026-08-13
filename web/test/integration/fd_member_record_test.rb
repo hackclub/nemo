@@ -19,7 +19,7 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select ".chip", text: "nothing on record"
     assert_select ".card-note", text: /No conduct history/
-    assert_select ".note-none", text: /Nothing FD has written down/
+    assert_select ".note-none", text: /Nothing written yet/
     assert_select ".spine", 0, "no shape to draw when there is no history"
   end
 
@@ -117,6 +117,43 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     assert_equal before, AccessLog.count, "a refused request must not record a lookup"
   end
 
+  test "the history lists every case and action, newest first" do
+    old = make_case(subject: SUBJECT, opened_at: 40.days.ago, resolved_at: 30.days.ago,
+      resolution: "action_taken")
+    act_on old, performed_at: 31.days.ago
+    recent = make_case(subject: SUBJECT, opened_at: 2.days.ago)
+
+    get fd_member_path(SUBJECT)
+
+    assert_select ".card-title", text: "Their history"
+    assert_select ".tl-item", 3
+    assert_select ".tl-item:first-child a.tl-title", text: "Case #{recent.id} opened"
+    assert_select "a.tl-title[href=?]", fd_case_path(old)
+  end
+
+  test "the history filter narrows without leaving the page" do
+    kase = make_case(subject: SUBJECT, opened_at: 10.days.ago)
+    act_on kase, performed_at: 3.days.ago
+
+    get fd_member_path(SUBJECT, show: "actions")
+
+    assert_select ".tl-item", 1
+    assert_select ".segmented a[aria-current]", text: "Actions"
+  end
+
+  test "a filter that matches nothing says which nothing it is" do
+    make_case(subject: SUBJECT, opened_at: 10.days.ago)
+    get fd_member_path(SUBJECT, show: "actions")
+
+    assert_select ".tl-item", 0
+    assert_select ".card-note", text: /Nothing has ever been done to them/
+  end
+
+  test "a member with no history has no history card at all" do
+    get fd_member_path("UNOBODY")
+    assert_select ".card-title", text: "Their history", count: 0
+  end
+
   test "the shape and the notes sit side by side, as drawn" do
     make_case(subject: SUBJECT, opened_at: 20.days.ago, resolved_at: 10.days.ago,
       resolution: "no_action")
@@ -179,6 +216,6 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     get fd_member_path(seeded.user_id)
 
     assert_select "button.handle[data-copy-id-value=?]", seeded.user_id
-    assert_select ".chip", text: "full member"
+    assert_select ".card-title", text: seeded.name
   end
 end

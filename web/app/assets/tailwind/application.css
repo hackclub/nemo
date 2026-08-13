@@ -1291,6 +1291,10 @@
     color: var(--ink-3);
   }
 
+  .history-list {
+    padding: 0 var(--s-md) var(--s-md);
+  }
+
   .pair {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
