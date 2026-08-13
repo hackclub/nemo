@@ -208,7 +208,7 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     get fd_cases_path(subject_user_id: SUBJECT, open: "1")
 
     assert_select "input#open-case[checked]"
-    assert_select "input[name=subject_user_id][value=?]", SUBJECT
+    assert_select ".pick[data-member-picker-preset-value*=?]", SUBJECT
   end
 
   test "a seeded member reads as their name with the id one click away" do

@@ -56,6 +56,9 @@ module Fd
     scope :with_subject, ->(user_id) {
       where(id: CaseParticipant.subjects.where(user_id: user_id).select(:case_id))
     }
+    scope :with_any_subject, ->(user_ids) {
+      where(id: CaseParticipant.subjects.where(user_id: user_ids).select(:case_id))
+    }
     scope :assigned_to, ->(user_id) {
       where(id: CaseAssignee.where(user_id: user_id).select(:case_id))
     }

@@ -2,11 +2,14 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["field", "input", "results", "store"]
-  static values = { name: String, url: String, single: Boolean }
+  static values = { name: String, url: String, single: Boolean, preset: Array }
 
   connect() {
     this.chosen = new Map()
     this.timer = null
+    for (const { id, name, initial } of this.presetValue) {
+      this.chosen.set(id, { name, initial })
+    }
     this.render()
   }
 

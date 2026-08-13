@@ -28,7 +28,8 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     assert_select "label[for=open-case]", text: "Open a case"
     assert_select "input#open-case.modal-flip"
     assert_select "input#open-case[checked]", count: 0
-    assert_select "form[action=?] input[name=subject_user_id]", fd_cases_path
+    assert_select "form[action=?] .pick[data-member-picker-name-value='subject_user_ids[]']",
+      fd_cases_path
     assert_select "form[action=?] .picker input[name=category_key]", fd_cases_path,
       minimum: Fd::Case::CATEGORIES.size
     assert_select "select[name=category_key]", count: 0,
@@ -141,6 +142,60 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     assert_no_match(/self harm/, entry.after.to_json)
   end
 
+  test "a case can be opened about several people at once" do
+    sign_in_as(@me)
+    post fd_cases_path, params: { subject_user_ids: %w[UONE UTWO UTHREE] }
+
+    kase = Fd::Case.order(:id).last
+    assert_equal %w[UONE UTHREE UTWO], kase.subject_user_ids
+    assert_match(/opened, about 3 people/, flash[:notice])
+  end
+
+  test "each subject gets its own trail entry, under the one request" do
+    sign_in_as(@me)
+    post fd_cases_path, params: { subject_user_ids: %w[UONE UTWO] }
+
+    kase = Fd::Case.order(:id).last
+    rows = Fd::AuditEntry.where(entity_type: "participant", entity_id: kase.id, verb: "attached")
+    assert_equal 2, rows.count
+    assert_equal %w[UONE UTWO], rows.map { |row| row.after["user_id"] }.sort
+    assert_equal 1, rows.pluck(:request_id).uniq.size
+  end
+
+  test "one bad id refuses the whole case rather than opening a half one" do
+    sign_in_as(@me)
+    before = Fd::Case.count
+    post fd_cases_path, params: { subject_user_ids: %w[UONE bob] }
+
+    assert_equal before, Fd::Case.count
+    assert_match(/does not look like a Slack member id/, flash[:alert])
+  end
+
+  test "the same person named twice is one subject, not two" do
+    sign_in_as(@me)
+    post fd_cases_path, params: { subject_user_ids: %w[UONE UONE] }
+
+    assert_equal ["UONE"], Fd::Case.order(:id).last.subject_user_ids
+  end
+
+  test "an open case for any of the people named raises the warning" do
+    existing = make_case(subject: "UTWO", opened_at: 3.days.ago)
+    sign_in_as(@me)
+    post fd_cases_path, params: { subject_user_ids: %w[UONE UTWO] }
+
+    assert_response :unprocessable_content
+    assert_match(/@UTWO already has an open case, ##{existing.id}/, flash[:alert])
+  end
+
+  test "the warning names everybody it caught, not just the first" do
+    make_case(subject: "UONE", opened_at: 4.days.ago)
+    make_case(subject: "UTWO", opened_at: 3.days.ago)
+    sign_in_as(@me)
+    post fd_cases_path, params: { subject_user_ids: %w[UONE UTWO] }
+
+    assert_match(/@UONE and @UTWO already have an open case/, flash[:alert])
+  end
+
   test "a subject with an open case stops the first submit" do
     existing = make_case(opened_at: 3.days.ago, category_key: "bullying")
     sign_in_as(@me)
@@ -177,7 +232,8 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     open_case(category_key: "spam", body: "third time this week")
 
     assert_select "input#open-case[checked]", message: "the modal must reopen with the warning"
-    assert_select "input[name=subject_user_id][value=USUB]"
+    assert_select ".pick[data-member-picker-preset-value*=USUB]",
+      message: "the person I picked must still be picked after the warning"
     assert_select ".picker input[name=category_key][value=spam][checked]"
     assert_select "textarea[name=body]", text: /third time this week/
   end

@@ -5,14 +5,13 @@
     <div class="modal" role="dialog" aria-label="Open a case">
       <div class="modal-head">
         <h2 class="modal-title">Open a case</h2>
-        <span class="modal-sub">by hand, when no report came in</span>
       </div>
       <%= form_with url: fd_cases_path, method: :post do %>
         <div class="modal-body">
           <% if @open_for_subject.any? %>
             <div class="dup">
               <span>
-                <b>@<%= params[:subject_user_id] %> already has an open case.</b>
+                <b><%= already_open_line(@open_for_subject, @subject_preset) %></b>
                 <% @open_for_subject.each do |other| %>
                   <%= link_to "##{other.id}", fd_case_path(other) %>
                   <%= category_label(other.category_key).downcase %>,
@@ -24,11 +23,11 @@
             </div>
           <% end %>
 
-          <label class="field-label">
-            Subject
-            <%= text_field_tag :subject_user_id, params[:subject_user_id], class: "textarea",
-                  id: nil, placeholder: "U08K3F2QX" %>
-          </label>
+          <div class="field-label">
+            <span>Who the case is about</span>
+            <%= render "fd/member_picker", name: "subject_user_ids[]", single: false,
+                  label: "search for who the case is about", preset: @subject_preset %>
+          </div>
 
           <div class="field-label">
             <span>Category</span>
@@ -60,7 +59,6 @@
             What happened
             <%= text_area_tag :body, params[:body], rows: 4, class: "textarea", id: nil,
                   maxlength: Fd::NotesController::MAX_LENGTH %>
-            <span class="opt-note">Filed as the first note. Internal, never sent to anybody.</span>
           </label>
 
           <label class="opt">

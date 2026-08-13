@@ -36,11 +36,13 @@ module Fd
       )
     end
 
-    def create
-      subject = params[:subject_user_id].to_s.strip.presence
-      @open_for_subject = subject ? Case.unresolved.with_subject(subject).to_a : []
+    MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/
 
-      problem = objection(subject)
+    def create
+      subjects = asked_subjects
+      @open_for_subject = open_cases_for(subjects)
+
+      problem = objection(subjects)
       return refuse(problem) if problem
       return refuse(already_open_warning) if warn_about_open_case?
 
@@ -53,14 +55,14 @@ module Fd
           source_app: Audit::SOURCE_APP
         )
         audit(kase, "opened")
-        audit(kase.add_subject!(subject), "attached", entity_id: kase.id)
+        subjects.each { |id| audit(kase.add_subject!(id), "attached", entity_id: kase.id) }
         if params[:assign_to_me] == "1"
           audit(kase.assign!(current_staff.user_id), "claimed", entity_id: kase.id)
         end
         write_first_note(kase)
       end
 
-      redirect_to fd_case_path(kase), notice: "case #{kase.id} opened"
+      redirect_to fd_case_path(kase), notice: opened_notice(kase, subjects)
     end
 
     private
@@ -77,8 +79,31 @@ module Fd
       ]
     end
 
-    def objection(subject)
-      return "say who this case is about" if subject.nil?
+    def asked_subjects
+      raw = params[:subject_user_ids].presence || [params[:subject_user_id]]
+      Array(raw).map { |id| id.to_s.strip.delete_prefix("@").upcase }.reject(&:blank?).uniq
+    end
+
+    def preset_for(subjects)
+      return [] if subjects.empty?
+
+      known = Names.for(subjects)
+      subjects.map do |id|
+        { id: id, name: known[id], initial: known.member(id)&.initial || id[0] }
+      end
+    end
+
+    def open_cases_for(subjects)
+      return [] if subjects.empty?
+
+      Case.unresolved.with_any_subject(subjects).includes(:subjects).oldest_first.to_a
+    end
+
+    def objection(subjects)
+      return "say who this case is about" if subjects.empty?
+      unless subjects.all? { |id| id.match?(MEMBER_ID) }
+        return "that does not look like a Slack member id"
+      end
       if params[:category_key].present? && !Case::CATEGORIES.include?(params[:category_key])
         return "pick a category from the list"
       end
@@ -91,9 +116,17 @@ module Fd
     end
 
     def already_open_warning
+      caught = (@open_for_subject.flat_map(&:subject_user_ids) & asked_subjects).uniq
+      who = Names.for(caught).list(caught)
       numbers = @open_for_subject.map { |kase| "##{kase.id}" }.to_sentence
-      "@#{params[:subject_user_id]} already has an open case, #{numbers}. " \
+      "#{who} already #{caught.many? ? 'have' : 'has'} an open case, #{numbers}. " \
         "Add to that one, or open a new case."
+    end
+
+    def opened_notice(kase, subjects)
+      return "case #{kase.id} opened" if subjects.one?
+
+      "case #{kase.id} opened, about #{subjects.size} people"
     end
 
     def write_first_note(kase)
@@ -119,6 +152,7 @@ module Fd
       @stats = QueueStats.load
       @total_count = @stats.total
       @views = @query.views
+      @subject_preset = preset_for(asked_subjects)
       @names = Names.for(@cases.flat_map { |kase|
         kase.subject_user_ids + kase.assignee_user_ids
       })
