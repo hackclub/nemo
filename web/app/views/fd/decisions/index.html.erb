@@ -1,0 +1,58 @@
+<% content_for :page_title, "Decisions" %>
+<% content_for :page_subtitle do %>
+  <%= @counts["force"] %> in force ·
+  <%= @counts["proposed"] %> proposed ·
+  <%= @counts["retired"] %> retired
+<% end %>
+
+<div class="stack">
+  <div class="views">
+    <% Fd::DecisionsController::VIEWS.each do |key, label| %>
+      <%= link_to fd_decisions_path(key == "all" ? {} : { view: key }), class: "view",
+            aria: { current: ("true" if key == @view) } do %>
+        <%= label %>
+        <span class="view-count"><%= @counts[key] %></span>
+      <% end %>
+    <% end %>
+  </div>
+
+  <% if @counts["all"].zero? %>
+    <div class="card">
+      <p class="card-note">Nothing written down yet.</p>
+    </div>
+  <% end %>
+
+  <% @bands.each do |title, sub, rows| %>
+    <p class="band-label"><%= title %> · <%= rows.size %> · <%= sub %></p>
+
+    <% if rows.any? %>
+      <div class="card card-flush">
+        <div class="scroll">
+          <table class="data-table">
+            <tbody>
+              <% rows.each do |decision| %>
+                <tr>
+                  <td>
+                    <span class="two-line">
+                      <b><%= decision.title %></b>
+                      <span class="idline">
+                        <%= decision_row_line(decision, @threads[decision.id]) %>
+                      </span>
+                    </span>
+                  </td>
+                  <td class="said-cell"><%= decision.statement %></td>
+                  <td class="col-num">n/a</td>
+                  <td class="col-state"><%= decision_state_chip(decision) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% else %>
+      <div class="card">
+        <p class="card-note">Nothing in this state.</p>
+      </div>
+    <% end %>
+  <% end %>
+</div>

@@ -513,6 +513,42 @@ module FdHelper
     parts.join(" · ")
   end
 
+  DECISION_CHIPS = {
+    "settled" => ["chip-good", "in force"],
+    "proposed" => ["chip-warn", "proposed"],
+    "superseded" => ["chip-off", "retired"]
+  }.freeze
+
+  def decision_state_chip(decision)
+    tone, label = DECISION_CHIPS.fetch(decision.state)
+    tag.span(label, class: "chip #{tone}")
+  end
+
+  def decision_when_line(decision)
+    case decision.state
+    when "proposed"
+      safe_join(["written #{decision.proposed_at.strftime('%-d %b')} by ",
+        member_link(decision.proposed_by)])
+    when "settled"
+      safe_join(["settled #{decision.settled_at.strftime('%-d %b')} by ",
+        member_link(decision.settled_by)])
+    else
+      retired = safe_join(["retired #{decision.retired_at.strftime('%-d %b')} by ",
+        member_link(decision.retired_by)])
+      return retired if decision.replacement.nil?
+
+      safe_join([retired, "replaced by #{decision.replacement.title}"], " · ")
+    end
+  end
+
+  def decision_thread_note(count)
+    count.to_i.zero? ? "no threads" : pluralize(count, "thread")
+  end
+
+  def decision_row_line(decision, threads)
+    safe_join([decision_when_line(decision), decision_thread_note(threads)], " · ")
+  end
+
   def timeline_standing(kase, timeline)
     return "Nothing has happened on this case yet." if timeline.empty?
 

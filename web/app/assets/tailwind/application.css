@@ -2791,6 +2791,14 @@
   .data-table .col-rank { width: 4.5rem; }
   .data-table .col-date { width: 8.5rem; }
   .data-table .col-btn { width: 3.5rem; }
+  .data-table .col-state { width: 7rem; }
+
+  .data-table .said-cell {
+    text-align: left;
+    white-space: normal;
+    color: var(--ink-2);
+    font-size: var(--t-2xs);
+  }
 
   .run-btn {
     font-family: inherit;
