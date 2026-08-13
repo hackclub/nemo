@@ -129,6 +129,36 @@ module FdHelper
     Fd::Case::CATEGORIES.map { |key| [category_label(key), key] }
   end
 
+  def span_label(seconds)
+    return "n/a" if seconds.nil?
+
+    days = seconds / 86_400.0
+    return "#{days.round(1)}d" if days >= 1
+
+    hours = seconds / 3600.0
+    return "#{hours.round}h" if hours >= 1
+
+    "#{(seconds / 60).round}m"
+  end
+
+  def median_note(stats)
+    return "nothing resolved this quarter" if stats.median_now.nil?
+    return "no quarter to compare with yet" if stats.median_before.nil?
+
+    "was #{span_label(stats.median_before)} last quarter"
+  end
+
+  def oldest_unassigned_chip(stats)
+    return tag.span("none waiting", class: "chip chip-off") if stats.oldest_unassigned.nil?
+
+    age = Time.current - stats.oldest_unassigned
+    tag.span("oldest #{case_age_label(age)}", class: "chip #{age_tone(age)}")
+  end
+
+  def since_label(at)
+    at ? "since #{at.strftime('%b %Y')}" : "none yet"
+  end
+
   def facet_link(query, key, value)
     fd_cases_path(query.facet_params(key => value))
   end

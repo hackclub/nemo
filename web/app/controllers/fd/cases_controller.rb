@@ -101,9 +101,8 @@ module Fd
       @cases = @query.relation.includes(:subjects, :assignees).to_a
       @context = MemberContext.for(@cases.flat_map(&:subject_user_ids))
       @action_counts = Action.where(case_id: @cases.map(&:id)).group(:case_id).count
-      @open_count = Case.unresolved.count
-      @unassigned_count = Case.unresolved.unassigned.count
-      @total_count = Case.count
+      @stats = QueueStats.load
+      @total_count = @stats.total
       @views = @query.views
       @open_for_subject ||= []
     end
