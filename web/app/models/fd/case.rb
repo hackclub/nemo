@@ -65,6 +65,21 @@ module Fd
     scope :free_or_assigned_to, ->(user_id) {
       unassigned.or(assigned_to(user_id))
     }
+    scope :with_action, -> { where(id: Action.select(:case_id)) }
+    scope :counts_as_prior, -> { where.not(resolved_at: nil).with_action }
+
+    PRIOR_WINDOW = 12.months
+
+    def self.priors_for(user_id, within: nil, before: nil)
+      scope = counts_as_prior.with_subject(user_id)
+      scope = scope.where(resolved_at: within.ago..) if within
+      scope = scope.where(resolved_at: ...before) if before
+      scope
+    end
+
+    def self.prior_count(user_id, within: nil, before: nil)
+      priors_for(user_id, within: within, before: before).count
+    end
 
     def self.candidates_for(kase, siblings = [], limit: 25)
       ordered = siblings.map(&:id)

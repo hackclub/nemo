@@ -509,6 +509,7 @@ def write_conduct(conn, seed, members, as_of):
     thread_rng = conduct_module.rng_for(seed, "threads")
     conduct_module.attach_internal_threads(thread_rng, cases, members)
     conduct_module.attach_shared_evidence(thread_rng, cases)
+    conduct_module.settle_priors(cases)
     profiles = conduct_module.profiles_for(
         conduct_module.rng_for(seed, "profiles"), members, as_of
     )

@@ -337,6 +337,28 @@ def slack_ts(rng, at):
     return f"{int(before.timestamp())}.{rng.randrange(1000000):06d}"
 
 
+PRIOR_WINDOW_DAYS = 365
+
+
+def settle_priors(cases):
+    by_subject = collections.defaultdict(list)
+    for case in cases:
+        if case.subject_user_id:
+            by_subject[case.subject_user_id].append(case)
+
+    for owned in by_subject.values():
+        owned.sort(key=lambda case: case.opened_at)
+        for case in owned:
+            case.context["priors"] = sum(
+                1
+                for other in owned
+                if other.resolved_at is not None
+                and other.actions
+                and other.resolved_at < case.opened_at
+                and (case.opened_at - other.resolved_at).days <= PRIOR_WINDOW_DAYS
+            )
+
+
 def context_for(member, priors, at):
     return {
         "tenure_days": max((at.date() - member.cohort_at).days, 0),
@@ -655,7 +677,7 @@ def build_cases(rng, members, as_of):
     for member in pick_subjects(rng, members):
         if not member.home_channels:
             continue
-        for priors, day in enumerate(open_days(rng, member, as_of, case_count(rng))):
+        for seq, day in enumerate(open_days(rng, member, as_of, case_count(rng))):
             index += 1
             opened_at = moment(rng, day)
             channel_id = rng.choice(member.home_channels).channel_id
@@ -665,7 +687,7 @@ def build_cases(rng, members, as_of):
                 subject_user_id=None if rng.random() < NO_SUBJECT_SHARE else member.user_id,
                 opened_by=rng.choice(pool),
                 opened_at=opened_at,
-                context=context_for(member, priors, opened_at),
+                context=context_for(member, seq, opened_at),
             )
             settle(case, opened_at)
             case.threads.append((channel_id, primary_ts, EVIDENCE, True, case.opened_by))
