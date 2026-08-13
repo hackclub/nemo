@@ -50,22 +50,12 @@
   <% end %>
 
   <% if @case.resolved? %>
-    <div class="card card-flush">
-      <table class="data-table">
-        <tbody>
-          <tr>
-            <td>Resolved</td>
-            <td>
-              <%= @case.resolved_at.strftime("%b %-d, %Y") %>
-              as <%= @case.resolution.tr("_", " ") %>
-            </td>
-          </tr>
-          <tr>
-            <td>Reason recorded</td>
-            <td><%= @case.member_note || "n/a" %></td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="closed">
+      <span class="closed-what">Closed <%= @case.resolved_at.strftime("%-d %b") %></span>
+      <span class="chip chip-off"><%= resolution_label(@case.resolution).downcase %></span>
+      <% if @case.member_note.present? %>
+        <span class="closed-why"><%= @case.member_note %></span>
+      <% end %>
     </div>
   <% end %>
 

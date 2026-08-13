@@ -2135,6 +2135,32 @@
     justify-content: flex-end;
   }
 
+  .closed {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-3xs) var(--s-2xs);
+    flex-wrap: wrap;
+    border: 1px solid var(--good);
+    background-color: var(--good-soft);
+    border-radius: var(--r-card);
+    padding: var(--s-xs) var(--s-md);
+  }
+
+  .closed-what {
+    font-size: var(--t-sm);
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .closed-why {
+    font-size: var(--t-2xs);
+    color: var(--ink-2);
+  }
+
+  .closed-end {
+    margin-inline-start: auto;
+  }
+
   .report {
     border-inline-start: 2px solid var(--line);
     padding-inline-start: var(--s-sm);

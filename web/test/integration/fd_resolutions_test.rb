@@ -244,7 +244,7 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     close(member_note: "done")
     get fd_case_path(@kase)
     assert_select "input#resolve-case", count: 0
-    assert_match(/Reason recorded/, response.body)
-    assert_match(/done/, response.body)
+    assert_select ".closed .closed-what", text: /Closed/
+    assert_select ".closed .closed-why", text: "done"
   end
 end
