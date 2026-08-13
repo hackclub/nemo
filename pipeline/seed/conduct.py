@@ -79,10 +79,45 @@ STANDING_NOTE_BODIES = (
     "much better since the first case, keep that in mind on any next one",
 )
 REVERSAL_REASONS = (
-    "[seed] appeal upheld",
-    "[seed] issued against the wrong account",
-    "[seed] lifted early after a conversation",
+    "appeal upheld, the thread reads differently with the context they gave",
+    "issued against the wrong account, same display name",
+    "lifted early after a conversation, they get it",
+    "shouldn't have been a shush, a warning was enough",
 )
+
+REPORT_BODIES = (
+    "can someone look at the thread i linked, it's getting nasty in there",
+    "third spam account today, this one is posting invite links",
+    "they've been at me all week in that channel and i'm done arguing",
+    "someone should say something before this turns into a pile on",
+    "not sure this is worth a report but the tone in there is off",
+    "screenshot in the thread. second time from the same person",
+    "reporting it so it's written down somewhere, i don't want anything to happen",
+    "can a firefighter take a look, i don't want to reply and make it worse",
+    "i blocked them but they're still going in the thread",
+    "this is the person i mentioned on the call",
+)
+
+RESOLUTION_NOTES = {
+    "action_taken": (
+        "warned them, they took it fine",
+        "shushed for a week, they'd been told once before",
+        "removed from the channel, the thread is locked",
+    ),
+    "no_action": (
+        "read the thread twice, it's blunt but not a conduct matter",
+        "both sides were rude, told them both to drop it",
+        "nothing here beyond a bad day, no action",
+    ),
+    "duplicate": (
+        "same thread as the earlier case, folded into that one",
+        "already handled under the other case",
+    ),
+    "not_conduct": (
+        "a support question, pointed them at the right channel",
+        "moderation on their own server, not ours",
+    ),
+}
 
 RESOLUTION_WEIGHTS = (
     ("action_taken", 0.55),
@@ -521,7 +556,7 @@ def make_report(rng, case, reporter, source_app="shroud"):
     return SeedReport(
         reporter_user_id=reporter,
         is_anonymous=anonymous,
-        body="[seed] report text, synthetic, not a real account of anything",
+        body=rng.choice(REPORT_BODIES),
         received_at=received_at,
         dm_channel_id=None if anonymous else dm_channel_for(reporter),
         dm_ts=slack_ts(rng, received_at),
@@ -765,9 +800,7 @@ def build_cases(rng, members, as_of):
         if resolves:
             case.resolution = pick_resolution(rng)
             case.resolved_at = would_resolve
-            case.member_note = (
-                f"[seed] closed as {case.resolution}. synthetic text, not a real outcome"
-            )
+            case.member_note = rng.choice(RESOLUTION_NOTES[case.resolution])
         elif case.claimed_at and case.claimed_at > horizon:
             case.claimed_by = case.claimed_at = None
 

@@ -59,7 +59,6 @@ module Fd
       end
       parts << "via #{report.source_app}"
       parts << (report.replied? ? "replied in #{span(report.reply_latency)}" : "no reply yet")
-      parts << "told the outcome: not yet" unless report.told_of_outcome?
       parts.join(" · ")
     end
 
