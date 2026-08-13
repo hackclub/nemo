@@ -10,6 +10,7 @@ module Fd
       "Fd::CaseThread" => "thread",
       "Fd::CaseParticipant" => "participant",
       "Fd::CaseAssignee" => "assignee",
+      "Fd::MemberIdentity" => "identity",
     }.freeze
 
     VERBS = %w[
@@ -21,6 +22,7 @@ module Fd
     REDACTED_COLUMNS = {
       "note" => %w[body],
       "case" => %w[member_note],
+      "identity" => %w[real_name first_name last_name email],
     }.freeze
 
     IGNORED_COLUMNS = %w[id created_at updated_at].freeze

@@ -79,6 +79,13 @@ BEGIN
         EXECUTE 'REVOKE UPDATE, DELETE ON fd.audit FROM pipeline_writer';
         EXECUTE 'REVOKE UPDATE, DELETE ON fd.audit FROM rails_app';
     END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'fd' AND tablename = 'member') THEN
+        EXECUTE 'REVOKE ALL ON fd.member FROM dbt_owner';
+        EXECUTE 'REVOKE ALL ON fd.member_identity FROM dbt_owner';
+        EXECUTE 'REVOKE INSERT, UPDATE, DELETE ON fd.member FROM rails_app';
+        EXECUTE 'REVOKE INSERT, UPDATE, DELETE ON fd.member_identity FROM rails_app';
+    END IF;
 EXCEPTION
     WHEN insufficient_privilege THEN
         RAISE NOTICE 'single-role deployment: % may not administer pipeline_writer, dbt_owner '
