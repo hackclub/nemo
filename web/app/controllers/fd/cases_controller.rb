@@ -20,12 +20,14 @@ module Fd
       @notes = @case.notes.visible.recent_first.to_a
       @standing_notes = Note.for_subjects(@case.subject_user_ids).visible.recent_first
         .group_by(&:subject_user_id)
+      @assignees = @case.assignees.to_a
       @timeline = CaseTimeline.for(
         @case,
         reports: @reports,
         actions: @actions,
         notes: @notes + @standing_notes.values.flatten,
         participants: @participants,
+        assignees: @assignees,
       )
       @context = MemberContext.for(
         @case.subject_user_ids +
@@ -48,12 +50,13 @@ module Fd
           category_key: params[:category_key].presence,
           opened_by: current_staff.user_id,
           opened_at: Time.current,
-          claimed_by: (current_staff.user_id if params[:assign_to_me] == "1"),
-          claimed_at: (Time.current if params[:assign_to_me] == "1"),
           source_app: Audit::SOURCE_APP
         )
         audit(kase, "opened")
         audit(kase.add_subject!(subject), "attached", entity_id: kase.id)
+        if params[:assign_to_me] == "1"
+          audit(kase.assign!(current_staff.user_id), "claimed", entity_id: kase.id)
+        end
         write_first_note(kase)
       end
 
@@ -98,17 +101,17 @@ module Fd
 
     def load_queue
       @filter = FILTERS.include?(params[:filter]) ? params[:filter] : DEFAULT_FILTER
-      @cases = scope_for(@filter).includes(:subjects).to_a
+      @cases = scope_for(@filter).includes(:subjects, :assignees).to_a
       @context = MemberContext.for(@cases.flat_map(&:subject_user_ids))
       @action_counts = Action.where(case_id: @cases.map(&:id)).group(:case_id).count
       @open_count = Case.unresolved.count
-      @unassigned_count = Case.unresolved.where(claimed_by: nil).count
+      @unassigned_count = Case.unresolved.unassigned.count
       @open_for_subject ||= []
     end
 
     def scope_for(filter)
       case filter
-      when "mine" then Case.unresolved.where(claimed_by: current_staff.user_id).oldest_first
+      when "mine" then Case.unresolved.assigned_to(current_staff.user_id).oldest_first
       when "all" then Case.newest_first
       else Case.unresolved.oldest_first
       end

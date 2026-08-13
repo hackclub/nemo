@@ -9,6 +9,7 @@ module Fd
       "Fd::CaseReport" => "report",
       "Fd::CaseThread" => "thread",
       "Fd::CaseParticipant" => "participant",
+      "Fd::CaseAssignee" => "assignee",
     }.freeze
 
     VERBS = %w[

@@ -5,7 +5,7 @@ module Fd
     def create
       kase = Case.find(params[:case_id])
 
-      problem = action_objection || claim_objection(kase)
+      problem = action_objection || not_yours(kase)
       return redirect_to(fd_case_path(kase), alert: problem) if problem
 
       writing do
@@ -16,12 +16,6 @@ module Fd
     end
 
     private
-
-    def claim_objection(kase)
-      return nil if kase.claimed_by.nil? || kase.claimed_by == current_staff.user_id
-
-      "case #{kase.id} is assigned to @#{kase.claimed_by}, not to you"
-    end
 
     def logged_notice(kase)
       return "#{type_name.downcase} logged on case #{kase.id}" if kase.resolved?

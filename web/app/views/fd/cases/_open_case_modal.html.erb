@@ -16,7 +16,7 @@
                 <% @open_for_subject.each do |other| %>
                   <%= link_to "##{other.id}", fd_case_path(other) %>
                   <%= category_label(other.category_key).downcase %>,
-                  <%= case_age_label(case_age_seconds(other)) %><%= other.claimed? ? ", assigned to @#{other.claimed_by}" : ", unassigned" %>.
+                  <%= case_age_label(case_age_seconds(other)) %><%= other.assigned? ? ", assigned to #{other.assignee_handles}" : ", unassigned" %>.
                 <% end %>
               </span>
               <%= link_to "Add to ##{@open_for_subject.first.id} instead",

@@ -76,7 +76,7 @@ class FdMergesTest < ActionDispatch::IntegrationTest
   end
 
   test "somebody else's case is left alone" do
-    @dup_one.update!(claimed_by: "UOTHER", claimed_at: 1.hour.ago)
+    @dup_one.assign!("UOTHER")
     sign_in_as(@me)
     merge([@dup_one.id], @main.id)
 

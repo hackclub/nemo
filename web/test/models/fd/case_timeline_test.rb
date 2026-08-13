@@ -28,16 +28,21 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
     Fd::Note.new({ body: "spoke to them", author: "UFF1", created_at: OPENED + 30.minutes }.merge(attrs))
   end
 
-  def build(kase, reports: [], actions: [], notes: [], participants: [subject])
-    Fd::CaseTimeline.for(kase, reports:, actions:, notes:, participants:)
+  def assignee(user_id, at, by: nil)
+    Fd::CaseAssignee.new(user_id: user_id, assigned_by: by || user_id, assigned_at: at)
+  end
+
+  def build(kase, reports: [], actions: [], notes: [], participants: [subject], assignees: [])
+    Fd::CaseTimeline.for(kase, reports:, actions:, notes:, participants:, assignees:)
   end
 
   test "entries run oldest first regardless of which table they came from" do
     entries = build(
-      kase(claimed_by: "UFF1", claimed_at: OPENED + 20.minutes),
+      kase,
       reports: [report],
       actions: [action],
       notes: [note],
+      assignees: [assignee("UFF1", OPENED + 20.minutes)],
     )
     assert_equal ["Report received", "Case opened", "Assigned", "Note added", "Warning"],
       entries.map(&:title)
@@ -69,9 +74,25 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
   end
 
   test "assignment is measured from opening" do
-    entry = build(kase(claimed_by: "UFF2", claimed_at: OPENED + 28.minutes))
+    entry = build(kase, assignees: [assignee("UFF2", OPENED + 28.minutes)])
       .find { |e| e.title == "Assigned" }
     assert_equal "@UFF2 · 28 minutes after opening", entry.detail
+  end
+
+  test "every assignee gets their own entry, at the moment they took it" do
+    entries = build(kase, assignees: [
+      assignee("UFF2", OPENED + 28.minutes),
+      assignee("UFF3", OPENED + 2.hours)
+    ]).select { |e| e.title == "Assigned" }
+
+    assert_equal 2, entries.size
+    assert_equal [OPENED + 28.minutes, OPENED + 2.hours], entries.map(&:at)
+  end
+
+  test "a case put on somebody by another firefighter says who did it" do
+    entry = build(kase, assignees: [assignee("UFF3", OPENED + 1.hour, by: "UFF2")])
+      .find { |e| e.title == "Assigned" }
+    assert_equal "@UFF3 · by @UFF2 · an hour after opening", entry.detail
   end
 
   test "an action performed by the bot names the bot, not a handle" do

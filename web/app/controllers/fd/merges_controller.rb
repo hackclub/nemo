@@ -44,7 +44,7 @@ module Fd
       writing do
         Case.where(id: ids).unresolved.order(:id).each do |kase|
           rows = Case.where(id: kase.id, resolved_at: nil)
-            .where(claimed_by: [nil, current_staff.user_id])
+            .free_or_assigned_to(current_staff.user_id)
             .update_all(
               resolved_at: now, resolution: "duplicate",
               duplicate_of: root, updated_at: now

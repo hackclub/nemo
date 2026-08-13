@@ -87,7 +87,7 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
   end
 
   test "I cannot reverse on a case assigned to somebody else" do
-    @kase.update!(claimed_by: "UOTHER", claimed_at: 1.hour.ago)
+    @kase.assign!("UOTHER")
     sign_in_as(@me)
     reverse
 

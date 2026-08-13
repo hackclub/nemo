@@ -19,9 +19,10 @@ module ActiveSupport
 
     fixtures :all
 
-    def make_case(subject: "USUB", **attrs)
+    def make_case(subject: "USUB", assign: nil, **attrs)
       kase = Fd::Case.create!({ opened_by: "UFF1", opened_at: 2.days.ago }.merge(attrs))
       kase.add_subject!(subject) if subject
+      Array(assign).each { |user_id| kase.assign!(user_id) }
       kase
     end
 

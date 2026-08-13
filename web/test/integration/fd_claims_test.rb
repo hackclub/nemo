@@ -7,13 +7,13 @@ class FdClaimsTest < ActionDispatch::IntegrationTest
   end
 
   def audit_rows(verb)
-    Fd::AuditEntry.where(entity_type: "case", entity_id: @kase.id, verb: verb)
+    Fd::AuditEntry.where(entity_type: "assignee", entity_id: @kase.id, verb: verb)
   end
 
   test "a signed out visitor cannot claim, and nothing is written" do
     post fd_case_claim_path(@kase)
     assert_redirected_to login_path
-    assert_nil @kase.reload.claimed_by
+    assert_not @kase.reload.assigned?
     assert_equal 0, audit_rows("claimed").count
   end
 
@@ -21,7 +21,7 @@ class FdClaimsTest < ActionDispatch::IntegrationTest
     denied = Staff.create!(user_id: "UNOPE", community_manager: false)
     sign_in_as(denied)
     post fd_case_claim_path(@kase)
-    assert_nil @kase.reload.claimed_by
+    assert_not @kase.reload.assigned?
     assert_equal 0, audit_rows("claimed").count
   end
 
@@ -30,25 +30,23 @@ class FdClaimsTest < ActionDispatch::IntegrationTest
     post fd_case_claim_path(@kase)
     assert_redirected_to fd_case_path(@kase)
 
-    @kase.reload
-    assert_equal "UME", @kase.claimed_by
-    assert_not_nil @kase.claimed_at
+    assert_equal ["UME"], @kase.reload.assignee_user_ids
+    assert_not_nil @kase.assignees.sole.assigned_at
 
     entry = audit_rows("claimed").sole
     assert_equal "UME", entry.actor_user_id
     assert_equal "human", entry.actor_kind
-    assert_nil entry.before["claimed_by"]
-    assert_equal "UME", entry.after["claimed_by"]
+    assert_equal "UME", entry.after["user_id"]
   end
 
-  test "a second claim does not steal the case and writes no second row" do
-    @kase.update!(claimed_by: "UOTHER", claimed_at: 1.hour.ago)
+  test "a second person claiming joins the case rather than being turned away" do
+    @kase.assign!("UOTHER")
     sign_in_as(@me)
     post fd_case_claim_path(@kase)
 
-    assert_equal "UOTHER", @kase.reload.claimed_by
-    assert_equal 0, audit_rows("claimed").count
-    assert_match(/claimed by @UOTHER/, flash[:alert])
+    assert_equal %w[UOTHER UME], @kase.reload.assignee_user_ids
+    assert_equal 1, audit_rows("claimed").count
+    assert_match(/is yours, alongside @UOTHER/, flash[:notice])
   end
 
   test "a resolved case cannot be claimed" do
@@ -56,27 +54,36 @@ class FdClaimsTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     post fd_case_claim_path(@kase)
 
-    assert_nil @kase.reload.claimed_by
+    assert_not @kase.reload.assigned?
     assert_match(/already resolved/, flash[:alert])
   end
 
   test "unclaiming releases my own case" do
-    @kase.update!(claimed_by: "UME", claimed_at: 1.hour.ago)
+    @kase.assign!("UME")
     sign_in_as(@me)
     delete fd_case_claim_path(@kase)
 
-    @kase.reload
-    assert_nil @kase.claimed_by
-    assert_nil @kase.claimed_at
+    assert_not @kase.reload.assigned?
     assert_equal "UME", audit_rows("unclaimed").sole.actor_user_id
+    assert_match(/back in the queue/, flash[:notice])
   end
 
-  test "I cannot drop somebody else's case" do
-    @kase.update!(claimed_by: "UOTHER", claimed_at: 1.hour.ago)
+  test "stepping off a shared case leaves it with the others" do
+    @kase.assign!("UOTHER")
+    @kase.assign!("UME")
     sign_in_as(@me)
     delete fd_case_claim_path(@kase)
 
-    assert_equal "UOTHER", @kase.reload.claimed_by
+    assert_equal ["UOTHER"], @kase.reload.assignee_user_ids
+    assert_match(/still with @UOTHER/, flash[:notice])
+  end
+
+  test "I cannot drop somebody else off a case" do
+    @kase.assign!("UOTHER")
+    sign_in_as(@me)
+    delete fd_case_claim_path(@kase)
+
+    assert_equal ["UOTHER"], @kase.reload.assignee_user_ids
     assert_equal 0, audit_rows("unclaimed").count
     assert_match(/not to you/, flash[:alert])
   end
@@ -87,7 +94,18 @@ class FdClaimsTest < ActionDispatch::IntegrationTest
     post fd_case_claim_path(@kase)
 
     assert_equal 1, audit_rows("claimed").count
+    assert_equal 1, @kase.reload.assignees.count
     assert_match(/already yours/, flash[:alert])
+  end
+
+  test "the trail keeps who was taken off, since the row itself is gone" do
+    @kase.assign!("UME")
+    sign_in_as(@me)
+    delete fd_case_claim_path(@kase)
+
+    entry = audit_rows("unclaimed").sole
+    assert_equal "UME", entry.before["user_id"]
+    assert_nil entry.after
   end
 
   test "every row from one claim shares a request id" do

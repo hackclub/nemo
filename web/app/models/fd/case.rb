@@ -38,6 +38,9 @@ module Fd
     scope :unassigned, -> {
       where.not(id: CaseAssignee.select(:case_id))
     }
+    scope :free_or_assigned_to, ->(user_id) {
+      unassigned.or(assigned_to(user_id))
+    }
 
     def self.candidates_for(kase, siblings = [], limit: 25)
       ordered = siblings.map(&:id)
@@ -93,13 +96,18 @@ module Fd
       assignees.create!(user_id: user_id, assigned_by: by || user_id, assigned_at: Time.current)
     end
 
+    def mine_or_free?(user_id)
+      !assigned? || assigned_to?(user_id)
+    end
+
+    def assignee_handles
+      assignee_user_ids.map { |id| "@#{id}" }.to_sentence
+    end
+
     def resolved?
       resolved_at.present?
     end
 
-    def claimed?
-      claimed_by.present?
-    end
 
     def primary_thread
       threads.detect(&:is_primary)

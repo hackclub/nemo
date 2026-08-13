@@ -22,6 +22,12 @@ module Fd
       ActiveRecord::Base.transaction { yield }
     end
 
+    def not_yours(kase)
+      return nil if kase.mine_or_free?(current_staff.user_id)
+
+      "case #{kase.id} is assigned to #{kase.assignee_handles}, not to you"
+    end
+
     def audit(record, verb, **options)
       Fd::Audit.record(
         record, verb,

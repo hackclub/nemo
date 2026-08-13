@@ -42,11 +42,8 @@ module Fd
       return "pick the action to reverse" if params[:action_id].blank?
       return "say why it is being reversed" if reason.blank?
       return "keep the reason under #{MAX_REASON} characters" if reason.length > MAX_REASON
-      if kase.claimed_by.present? && kase.claimed_by != current_staff.user_id
-        return "case #{kase.id} is assigned to @#{kase.claimed_by}, not to you"
-      end
 
-      nil
+      not_yours(kase)
     end
   end
 end

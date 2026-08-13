@@ -66,7 +66,7 @@ module Fd
 
     def mark_resolved(resolution)
       Case.where(id: @case.id, resolved_at: nil)
-        .where(claimed_by: [nil, current_staff.user_id])
+        .free_or_assigned_to(current_staff.user_id)
         .update_all(
           resolved_at: @now,
           resolution: resolution,
@@ -83,7 +83,7 @@ module Fd
     def refusal(kase)
       return "case #{kase.id} was already resolved" if kase.resolved?
 
-      "case #{kase.id} is assigned to @#{kase.claimed_by}, not to you"
+      not_yours(kase)
     end
 
     def refuse(message)

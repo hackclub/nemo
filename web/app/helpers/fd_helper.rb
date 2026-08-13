@@ -263,14 +263,14 @@ module FdHelper
     parts << kase.category_key.tr("_", " ") if kase.category_key
     opened = "opened #{kase.opened_at.strftime('%b %-d')}"
 
-    if !kase.claimed?
+    if !kase.assigned?
       parts << "#{opened} by @#{kase.opened_by}"
       parts << "unassigned"
-    elsif kase.claimed_by == kase.opened_by
-      parts << "#{opened} and assigned to @#{kase.claimed_by}"
+    elsif kase.assignee_user_ids == [kase.opened_by]
+      parts << "#{opened} and assigned to @#{kase.opened_by}"
     else
       parts << "#{opened} by @#{kase.opened_by}"
-      parts << "assigned to @#{kase.claimed_by}"
+      parts << "assigned to #{kase.assignee_handles}"
     end
 
     filed = filed_by_label(reports)
@@ -382,7 +382,7 @@ module FdHelper
       "Resolved #{kase.resolved_at.strftime('%-d %b')} as #{kase.resolution.tr('_', ' ')}. " \
         "#{timeline.size} entries, kept whether or not Slack still has the thread."
     else
-      assigned = kase.claimed? ? "assigned to @#{kase.claimed_by}" : "still unassigned"
+      assigned = kase.assigned? ? "assigned to #{kase.assignee_handles}" : "still unassigned"
       "Still open. #{case_age_label(case_age_seconds(kase))}, #{assigned}. " \
         "Nothing ages out: it stays here until somebody resolves it."
     end

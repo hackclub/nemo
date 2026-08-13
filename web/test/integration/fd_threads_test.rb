@@ -115,7 +115,7 @@ class FdThreadsTest < ActionDispatch::IntegrationTest
   end
 
   test "I cannot attach to a case assigned to somebody else" do
-    @kase.update!(claimed_by: "UOTHER", claimed_at: 1.hour.ago)
+    @kase.assign!("UOTHER")
     sign_in_as(@me)
     attach
 
@@ -162,7 +162,7 @@ class FdThreadsTest < ActionDispatch::IntegrationTest
   test "I cannot detach from a case assigned to somebody else" do
     thread = Fd::CaseThread.create!(case_id: @kase.id, channel_id: "C1", thread_ts: "1.1",
       added_by: "UFF1")
-    @kase.update!(claimed_by: "UOTHER", claimed_at: 1.hour.ago)
+    @kase.assign!("UOTHER")
 
     sign_in_as(@me)
     delete fd_case_thread_path(@kase, thread)

@@ -82,7 +82,7 @@ class FdActionsTest < ActionDispatch::IntegrationTest
   end
 
   test "I cannot act on a case assigned to somebody else" do
-    @kase.update!(claimed_by: "UOTHER", claimed_at: 1.hour.ago)
+    @kase.assign!("UOTHER")
     sign_in_as(@me)
     log
 
@@ -91,7 +91,7 @@ class FdActionsTest < ActionDispatch::IntegrationTest
   end
 
   test "I can act on my own case" do
-    @kase.update!(claimed_by: "UME", claimed_at: 1.hour.ago)
+    @kase.assign!("UME")
     sign_in_as(@me)
     log
     assert_equal 1, actions.count

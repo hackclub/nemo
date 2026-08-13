@@ -2,16 +2,17 @@ module Fd
   class CaseTimeline
     Entry = Struct.new(:at, :title, :mark, :chips, :detail, :said, keyword_init: true)
 
-    def self.for(kase, reports:, actions:, notes:, participants: [])
-      new(kase, reports:, actions:, notes:, participants:).entries
+    def self.for(kase, reports:, actions:, notes:, participants: [], assignees: [])
+      new(kase, reports:, actions:, notes:, participants:, assignees:).entries
     end
 
-    def initialize(kase, reports:, actions:, notes:, participants: [])
+    def initialize(kase, reports:, actions:, notes:, participants: [], assignees: [])
       @case = kase
       @reports = reports
       @actions = actions
       @notes = notes
       @participants = participants
+      @assignees = assignees
     end
 
     def entries
@@ -21,7 +22,7 @@ module Fd
 
     private
 
-    attr_reader :reports, :actions, :notes, :participants
+    attr_reader :reports, :actions, :notes, :participants, :assignees
 
     def kase = @case
 
@@ -72,13 +73,13 @@ module Fd
         ),
       ]
 
-      if kase.claimed?
+      assignees.each do |person|
         list << Entry.new(
-          at: kase.claimed_at,
+          at: person.assigned_at,
           title: "Assigned",
           mark: "owner",
           chips: [],
-          detail: "@#{kase.claimed_by} · #{span(kase.claimed_at - kase.opened_at)} after opening",
+          detail: assigned_detail(person),
         )
       end
 
@@ -106,8 +107,15 @@ module Fd
       parts.join(" · ")
     end
 
+    def assigned_detail(person)
+      parts = ["@#{person.user_id}"]
+      parts << "by @#{person.assigned_by}" if person.assigned_by != person.user_id
+      parts << "#{span(person.assigned_at - kase.opened_at)} after opening"
+      parts.join(" · ")
+    end
+
     def resolved_detail
-      parts = ["by @#{kase.claimed_by || kase.opened_by}"]
+      parts = ["by @#{assignees.first&.user_id || kase.opened_by}"]
       parts << "#{span(kase.resolved_at - kase.opened_at)} after opening"
       parts << "the member was not told" if kase.member_note.blank?
       parts.join(" · ")

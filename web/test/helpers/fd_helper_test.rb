@@ -12,7 +12,7 @@ class FdHelperTest < ActionView::TestCase
   end
 
   test "an open case says it will not age out and who has it" do
-    line = timeline_standing(kase(claimed_by: "UFF2", claimed_at: 4.days.ago), entries(3))
+    line = timeline_standing(make_case(opened_at: 5.days.ago, assign: "UFF2"), entries(3))
     assert_match(/\AStill open\. 5d, assigned to @UFF2\./, line)
     assert_match(/stays here until somebody resolves it/, line)
   end

@@ -50,15 +50,15 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
   test "it joins the queue unassigned by default" do
     sign_in_as(@me)
     open_case
-    assert_nil opened.claimed_by
+    assert_not opened.assigned?
   end
 
   test "it can be assigned to me as it opens" do
     sign_in_as(@me)
     open_case(assign_to_me: "1")
 
-    assert_equal "UME", opened.claimed_by
-    assert_not_nil opened.claimed_at
+    assert_equal ["UME"], opened.assignee_user_ids
+    assert_equal "UME", opened.assignees.sole.assigned_by
   end
 
   test "a case needs somebody to be about" do
@@ -152,8 +152,7 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
   end
 
   test "the warning names the case, its state and a way to reach it" do
-    existing = make_case(opened_at: 3.days.ago, category_key: "bullying", claimed_by: "UFF2",
-      claimed_at: 2.days.ago)
+    existing = make_case(opened_at: 3.days.ago, category_key: "bullying", assign: "UFF2")
     sign_in_as(@me)
     open_case
 

@@ -31,7 +31,7 @@ module Fd
 
       return redirect_to(fd_case_path(kase), alert: "that thread is not on this case") if thread.nil?
 
-      problem = claim_objection(kase)
+      problem = not_yours(kase)
       return redirect_to(fd_case_path(kase), alert: problem) if problem
 
       writing do
@@ -53,13 +53,7 @@ module Fd
     def objection(kase, ref)
       return "paste a link to a Slack thread in this workspace" if ref.nil?
 
-      claim_objection(kase)
-    end
-
-    def claim_objection(kase)
-      return nil if kase.claimed_by.nil? || kase.claimed_by == current_staff.user_id
-
-      "case #{kase.id} is assigned to @#{kase.claimed_by}, not to you"
+      not_yours(kase)
     end
 
     def first_evidence?(kase, kind)

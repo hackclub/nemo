@@ -7,7 +7,7 @@
 <% end %>
 <% content_for :head_actions do %>
   <% unless @case.resolved? %>
-    <% if @case.claimed? %>
+    <% if @case.assigned? %>
       <label for="resolve-case" class="btn btn-primary">Resolve</label>
     <% else %>
       <%= button_to "Claim", fd_case_claim_path(@case), method: :post,
@@ -29,10 +29,10 @@
       <label for="log-action" class="btn">Log an action</label>
       <% unless @case.resolved? %>
         <div class="menu-sep"></div>
-        <% if @case.claimed_by == current_staff.user_id %>
+        <% if @case.assigned_to?(current_staff.user_id) %>
           <%= button_to "Put it back in the queue", fd_case_claim_path(@case),
                 method: :delete, class: "btn", form: { class: "contents" } %>
-        <% elsif !@case.claimed? %>
+        <% elsif !@case.assigned? %>
           <label for="resolve-case" class="btn">Resolve without claiming</label>
         <% end %>
       <% end %>
@@ -490,7 +490,7 @@
       <div class="modal-head">
         <h2 class="modal-title">Resolve case <%= @case.id %></h2>
         <span class="modal-sub">
-          <%= @case.claimed? ? "assigned to @#{@case.claimed_by}" : "not assigned to anybody" %>
+          <%= @case.assigned? ? "assigned to #{@case.assignee_handles}" : "not assigned to anybody" %>
         </span>
       </div>
       <%= form_with url: fd_case_resolution_path(@case), method: :post do %>

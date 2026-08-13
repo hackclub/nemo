@@ -30,8 +30,8 @@
     <td class="col-num"><%= action_counts.fetch(kase.id, 0) %></td>
     <td class="col-num"><%= case_age_chip(kase) %></td>
     <td>
-      <% if kase.claimed? %>
-        @<%= kase.claimed_by %>
+      <% if kase.assigned? %>
+        <%= kase.assignee_handles %>
       <% elsif kase.resolved? %>
         n/a
       <% else %>
