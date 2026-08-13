@@ -37,8 +37,16 @@ module Fd
         performed_at: at,
         source_app: Audit::SOURCE_APP,
         expires_at: expiry,
+        cites_message_id: cited_message_id(kase),
         details: channel
       )
+    end
+
+    def cited_message_id(kase)
+      asked = params[:cites_message_id].presence
+      return nil if asked.nil?
+
+      ThreadMessage.for_threads(kase.threads.to_a).find_by(id: asked)&.id
     end
 
     def expiry

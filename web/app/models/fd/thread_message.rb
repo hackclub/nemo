@@ -20,6 +20,10 @@ module Fd
       persisted?
     end
 
+    def coordinates
+      [channel_id, thread_ts]
+    end
+
     def root?
       is_root
     end

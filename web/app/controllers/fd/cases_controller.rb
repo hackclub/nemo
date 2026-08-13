@@ -19,10 +19,14 @@ module Fd
       @notes = @case.notes.visible.recent_first.to_a
       @standing_notes = Note.for_subjects(@participants.map(&:user_id)).visible.recent_first
         .group_by(&:subject_user_id)
-      @case_person = CasePerson.for(@people.chosen, kase: @case, actions: @actions, notes: @notes)
       @thread_messages = ThreadMessage.for_threads(@threads).to_a
+      @case_person = CasePerson.for(@people.chosen, kase: @case, actions: @actions,
+        notes: @notes, messages: @thread_messages)
       @thread_list = CaseThreads.for(@threads, actions: @actions,
         messages: @thread_messages, asked: params[:thread])
+      @flags = @case.citations.index_by(&:thread_message_id)
+      @flagged_messages = @thread_messages.select { |said| @flags.key?(said.id) }
+      @cited_by = @actions.select(&:cites?).group_by(&:cites_message_id)
       @assignees = @case.assignees.to_a
       @mentioned = @case.mentioned_but_unlogged(
         notes: @notes + @standing_notes.values.flatten, reports: @reports

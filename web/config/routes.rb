@@ -21,6 +21,7 @@ Rails.application.routes.draw do
       resources :reversals, only: [:create]
       resources :threads, only: [:create, :destroy]
       resources :participants, only: [:create, :destroy]
+      resources :citations, only: [:create, :destroy]
     end
   end
 

@@ -3,6 +3,8 @@ module Fd
     self.table_name = "fd.actions"
 
     belongs_to :kase, class_name: "Fd::Case", foreign_key: :case_id, inverse_of: :actions
+    belongs_to :cited_message, class_name: "Fd::ThreadMessage",
+      foreign_key: :cites_message_id, optional: true
 
     scope :live, -> { where(reversed_at: nil) }
     scope :reversed, -> { where.not(reversed_at: nil) }
@@ -13,6 +15,10 @@ module Fd
 
     def reversed?
       reversed_at.present?
+    end
+
+    def cites?
+      cites_message_id.present?
     end
 
     def expires?

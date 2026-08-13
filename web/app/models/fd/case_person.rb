@@ -1,18 +1,23 @@
 module Fd
   class CasePerson
-    def self.for(person, kase:, actions:, notes:)
+    def self.for(person, kase:, actions:, notes:, messages: [])
       return nil if person.nil?
 
-      new(person, kase, actions, notes)
+      new(person, kase, actions, notes, messages)
     end
 
-    attr_reader :person, :actions
+    attr_reader :person, :actions, :messages
 
-    def initialize(person, kase, actions, notes)
+    def initialize(person, kase, actions, notes, messages = [])
       @person = person
       @kase = kase
       @actions = actions.select { |action| action.target_user_id == person.user_id }
       @notes = notes
+      @messages = messages.select { |message| message.author_user_id == person.user_id }
+    end
+
+    def threads_spoken_in
+      messages.map { |message| [message.channel_id, message.thread_ts] }.uniq.size
     end
 
     def user_id

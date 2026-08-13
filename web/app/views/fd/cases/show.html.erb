@@ -62,7 +62,8 @@
   <%= render "people", kase: @case, people: @people, contexts: @context,
         notes: @standing_notes, mentioned: @mentioned, case_person: @case_person %>
 
-  <%= render "threads", kase: @case, threads: @thread_list %>
+  <%= render "threads", kase: @case, threads: @thread_list,
+        flags: @flags, cited_by: @cited_by %>
 
   <div class="card card-flush">
     <div class="card-head">
@@ -90,10 +91,10 @@
                   <span class="two-line">
                     <b><%= action_label(action.type_key) %></b>
                     <span>
-                      <% detail = action_detail_note(action) %>
+                      <% detail = [action_detail_note(action), cited_line(action)].compact.join(" · ") %>
                       <%= detail %>
                       <% unless action.reversed? %>
-                        <%= "·" if detail %>
+                        <%= "·" if detail.present? %>
                         <label for="reverse-<%= action.id %>" class="text-btn">Reverse</label>
                       <% end %>
                     </span>
@@ -194,7 +195,7 @@
       </div>
       <%= form_with url: fd_case_actions_path(@case), method: :post, html: { autocomplete: "off" } do %>
         <div class="modal-body">
-          <%= render "action_fields", kase: @case,
+          <%= render "action_fields", kase: @case, flagged: @flagged_messages,
                   target: @people.chosen&.user_id || lone_subject(@case) %>
         </div>
         <div class="modal-foot">
@@ -332,7 +333,7 @@
           </div>
 
           <div class="only only-report">
-            <%= render "action_fields", kase: @case,
+            <%= render "action_fields", kase: @case, flagged: @flagged_messages,
                   target: @people.chosen&.user_id || lone_subject(@case) %>
           </div>
 

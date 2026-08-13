@@ -471,6 +471,23 @@ module FdHelper
     parts.join(" · ").presence
   end
 
+  def cite_options(messages)
+    messages.map do |said|
+      words = said.body.to_s.truncate(60)
+      shown = "#{said.channel_id} #{said.posted_at.strftime('%-d %b %H:%M')} " \
+        "#{names[said.author_user_id]}: #{words.presence || 'no text held'}"
+      [shown, said.id]
+    end
+  end
+
+  def cited_line(action)
+    said = action.cited_message
+    return nil if said.nil?
+
+    "cites #{names[said.author_user_id]} in #{said.channel_id}, " \
+      "#{said.posted_at.strftime('%-d %b %H:%M')}"
+  end
+
   def action_target_note(action, kase)
     return "the subject" if kase.subject_user_ids.include?(action.target_user_id)
 

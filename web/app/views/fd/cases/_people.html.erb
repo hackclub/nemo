@@ -74,7 +74,14 @@
         </div>
         <div>
           <div class="fact-label">Their messages</div>
-          <div class="fact-val">n/a</div>
+          <div class="fact-val">
+            <% if here.messages.any? %>
+              <%= here.messages.size %>
+              <span class="fact-val dim">· in <%= pluralize(here.threads_spoken_in, "thread") %></span>
+            <% else %>
+              none held
+            <% end %>
+          </div>
         </div>
         <div>
           <div class="fact-label">Priors, 12 months</div>
@@ -174,6 +181,28 @@
             <span class="note-none">No notes</span>
           <% end %>
         </div>
+      </div>
+
+      <div class="pane-cut">
+        <p class="band-label">Their messages in this case</p>
+        <% if here.messages.any? %>
+          <div class="rail-card">
+            <% here.messages.each do |said| %>
+              <div class="thin">
+                <span>
+                  <b><%= said.channel_id %></b>
+                  <%= said.posted_at.strftime("%-d %b %H:%M") %>
+                  · <%= said.readable? ? said.body : "no text held" %>
+                </span>
+                <% if said.deleted? %>
+                  <span class="chip chip-off">deleted in Slack</span>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <span class="note-none">Nothing of theirs is held from the attached threads.</span>
+        <% end %>
       </div>
 
       <div>

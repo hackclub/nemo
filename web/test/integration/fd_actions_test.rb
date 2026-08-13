@@ -16,6 +16,14 @@ class FdActionsTest < ActionDispatch::IntegrationTest
     @kase.actions
   end
 
+  test "a citation must point at a message on this case" do
+    sign_in_as(@me)
+    log(cites_message_id: "999999")
+
+    assert_nil actions.sole.cites_message_id,
+      "a message that is not held cannot be cited"
+  end
+
   test "a signed out visitor cannot log an action" do
     log
     assert_redirected_to login_path

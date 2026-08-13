@@ -11,12 +11,13 @@ module Fd
       "Fd::CaseParticipant" => "participant",
       "Fd::CaseAssignee" => "assignee",
       "Fd::MemberIdentity" => "identity",
+      "Fd::CaseCitation" => "citation",
     }.freeze
 
     VERBS = %w[
       opened claimed unclaimed resolved reopened
       performed reversed received
-      noted deleted attached detached
+      noted deleted attached detached flagged unflagged
     ].freeze
 
     REDACTED_COLUMNS = {

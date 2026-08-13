@@ -88,6 +88,28 @@ class Fd::CasePersonTest < ActiveSupport::TestCase
       "the number and the rows behind it must never disagree"
   end
 
+  Said = Struct.new(:channel_id, :thread_ts, :author_user_id, keyword_init: true)
+
+  test "only their own messages land in their pane" do
+    theirs = Said.new(channel_id: "C0LOUNGE", thread_ts: "1.1", author_user_id: "UDEX")
+    somebody = Said.new(channel_id: "C0LOUNGE", thread_ts: "1.1", author_user_id: "UELSE")
+    here = Fd::CasePerson.for(@person, kase: @kase, actions: [], notes: [],
+      messages: [theirs, somebody])
+
+    assert_equal [theirs], here.messages
+  end
+
+  test "speaking twice in one thread is one thread, not two" do
+    said = Array.new(2) do |i|
+      Said.new(channel_id: "C0LOUNGE", thread_ts: "1.1", author_user_id: "UDEX")
+    end
+    said << Said.new(channel_id: "C0SHIP", thread_ts: "2.2", author_user_id: "UDEX")
+    here = Fd::CasePerson.for(@person, kase: @kase, actions: [], notes: [], messages: said)
+
+    assert_equal 3, here.messages.size
+    assert_equal 2, here.threads_spoken_in
+  end
+
   test "cases ever counts every case they appear on, in any role" do
     other = make_case(subject: "USOMEBODY")
     Fd::CaseParticipant.create!(case_id: other.id, user_id: "UDEX", role: "involved",
