@@ -18,8 +18,8 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select ".chip", text: "nothing on record"
-    assert_select ".card-note", text: /No conduct history/
-    assert_select ".note-none", text: /Nothing written yet/
+    assert_select ".card-note", text: "none"
+    assert_select ".note-none", text: "No notes"
     assert_select ".spine", 0, "no shape to draw when there is no history"
   end
 

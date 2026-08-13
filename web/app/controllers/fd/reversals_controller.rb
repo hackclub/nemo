@@ -25,7 +25,7 @@ module Fd
           after: {
             "reversed_at" => action.reversed_at,
             "reversed_by" => action.reversed_by,
-            "reason" => reason,
+            "reason" => reason
           })
       end
 

@@ -17,7 +17,7 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
 
   def reverse(**params)
     post fd_case_reversals_path(@kase), params: {
-      action_id: @action.id, reversal_reason: "appeal upheld",
+      action_id: @action.id, reversal_reason: "appeal upheld"
     }.merge(params)
   end
 

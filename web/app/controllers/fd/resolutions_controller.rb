@@ -25,7 +25,7 @@ module Fd
             "resolved_at" => @case.resolved_at,
             "resolution" => resolution,
             "duplicate_of" => @case.duplicate_of,
-            "member_note" => @case.member_note,
+            "member_note" => @case.member_note
           })
       end
 

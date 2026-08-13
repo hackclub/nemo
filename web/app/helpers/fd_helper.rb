@@ -31,6 +31,16 @@ module FdHelper
     "#{SLACK_TEAM_URL}/#{user_id}"
   end
 
+  def claimed_phrase(context)
+    return "claimed" if context.cohort_at.nil?
+
+    if context.claimed_at.to_date == context.cohort_at.to_date
+      "claimed the same day"
+    else
+      "claimed #{context.claimed_at.to_date.strftime('%b %-d, %Y')}"
+    end
+  end
+
   def joined_line(context)
     return "not in the warehouse yet" if context.nil? || !context.known?
     return "joined #{context.cohort_at.to_date.strftime('%-d %b %Y')}" if context.claimed_at.nil?
@@ -238,13 +248,6 @@ module FdHelper
     ROLE_TONES.fetch(role, "chip-off")
   end
 
-  def person_note(person, context)
-    return person.detail if person.detail.present?
-    return nil unless context&.known?
-
-    subject_context_line(context)
-  end
-
   def report_when_line(report, kase)
     parts = [report.received_at.strftime("%-d %b %Y, %H:%M")]
     parts << "through #{report.source_app}" if report.source_app.present?
@@ -257,15 +260,11 @@ module FdHelper
     "action_taken" => "Action taken",
     "no_action" => "No action needed",
     "duplicate" => "Duplicate of another case",
-    "not_conduct" => "Not a conduct matter",
+    "not_conduct" => "Not a conduct matter"
   }.freeze
 
   def resolution_label(key)
     RESOLUTION_LABELS.fetch(key, key.to_s.tr("_", " "))
-  end
-
-  def resolution_options
-    Fd::Case::RESOLUTIONS.map { |key| [resolution_label(key), key] }
   end
 
   def close_reason_options
@@ -320,36 +319,16 @@ module FdHelper
     fd_cases_path(query.facet_params(key => value))
   end
 
-  def thread_kind_note(thread)
-    return "internal discussion" if thread.internal?
-    return "primary thread" if thread.is_primary
-
-    "evidence"
-  end
-
   def note_byline(note)
     safe_join([member_link(note.author), note.created_at.strftime("%b %-d, %Y")], " · ")
-  end
-
-  def notes_summary(notes, standing)
-    return "nothing written down yet" if notes.empty? && standing.empty?
-
-    parts = []
-    parts << "#{notes.size} on this case" if notes.any?
-    parts << "#{standing.size} standing on the member" if standing.any?
-    parts.join(" · ")
   end
 
   def action_option_label(action)
     [
       action_label(action.type_key),
       "on #{names[action.target_user_id]}",
-      action.performed_at.strftime("%b %-d, %Y"),
+      action.performed_at.strftime("%b %-d, %Y")
     ].join(" · ")
-  end
-
-  def action_options_for(actions)
-    actions.map { |action| [action_option_label(action), action.id] }
   end
 
   def lone_subject(kase)
@@ -507,29 +486,6 @@ module FdHelper
     return "#{days}d ago" if days < 30
 
     at.to_date.strftime("%b %-d, %Y")
-  end
-
-  def claimed_phrase(context)
-    return "claimed" if context.cohort_at.nil?
-
-    if context.claimed_at.to_date == context.cohort_at.to_date
-      "claimed the same day"
-    else
-      "claimed #{context.claimed_at.to_date.strftime('%b %-d, %Y')}"
-    end
-  end
-
-  def subject_identity_line(user_id, context)
-    return "nobody identified yet" if user_id.blank?
-
-    parts = [user_id.to_s]
-    if context&.known?
-      parts << "joined #{context.cohort_at.to_date.strftime('%b %-d, %Y')}" if context.cohort_at
-      parts << (context.claimed_at ? claimed_phrase(context) : "never claimed")
-    else
-      parts << "not in the warehouse yet"
-    end
-    parts.join(" · ")
   end
 
   def pane_identity_line(user_id, context)

@@ -39,7 +39,7 @@ module Fd
           before: {
             "channel_id" => thread.channel_id,
             "thread_ts" => thread.thread_ts,
-            "kind" => thread.kind,
+            "kind" => thread.kind
           },
           after: nil)
         thread.destroy!

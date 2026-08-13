@@ -63,26 +63,6 @@ class Fd::CaseThreadsTest < ActiveSupport::TestCase
     assert_equal 1, rows.find { |row| row.id == ship.id }.held
   end
 
-  test "what Slack says it has, less what we hold, is what is missing" do
-    lounge = attach("C0LOUNGE", "1.1")
-    messages = [said("C0LOUNGE", "1.1", root: true, reply_count: 14), said("C0LOUNGE", "1.1")]
-
-    assert_equal 13, Fd::CaseThreads.for([lounge], messages: messages).chosen.missing
-  end
-
-  test "holding everything means nothing is missing" do
-    lounge = attach("C0LOUNGE", "1.1")
-    messages = [said("C0LOUNGE", "1.1", root: true, reply_count: 1), said("C0LOUNGE", "1.1")]
-
-    assert_equal 0, Fd::CaseThreads.for([lounge], messages: messages).chosen.missing
-  end
-
-  test "a thread with no root claims nothing about what is missing" do
-    lounge = attach("C0LOUNGE", "1.1")
-
-    assert_equal 0, Fd::CaseThreads.for([lounge], messages: [said("C0LOUNGE", "1.1")]).chosen.missing
-  end
-
   test "asking for a thread that is not on this case falls back to the first" do
     lounge = attach("C0LOUNGE", "1.1", is_primary: true)
     attach("C0SHIP", "3.3")

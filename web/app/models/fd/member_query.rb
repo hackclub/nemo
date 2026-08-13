@@ -180,7 +180,7 @@ module Fd
       when "open" then "Nobody has an open case."
       when "priors" then "Nobody has two or more priors."
       when "notes" then "No standing notes on anybody."
-      else "No member matches this. Clear a filter to widen it."
+      else "No member matches this."
       end
     end
 

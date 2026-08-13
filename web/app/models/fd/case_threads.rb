@@ -23,16 +23,6 @@ module Fd
         messages.size
       end
 
-      def told_of
-        root&.reply_count
-      end
-
-      def missing
-        return 0 if told_of.nil?
-
-        [told_of - replies.size, 0].max
-      end
-
       delegate :id, :channel_id, :thread_ts, :added_by, :added_at, :kind,
         :evidence?, :internal?, to: :record
 

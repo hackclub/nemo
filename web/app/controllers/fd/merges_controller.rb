@@ -61,7 +61,7 @@ module Fd
             after: {
               "resolved_at" => kase.resolved_at,
               "resolution" => "duplicate",
-              "duplicate_of" => root,
+              "duplicate_of" => root
             })
         end
       end

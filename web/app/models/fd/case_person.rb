@@ -32,14 +32,6 @@ module Fd
       actions.count(&:reversed?)
     end
 
-    def notes_naming
-      @notes_naming ||= @notes.select { |note| Mentions.ids(note.body).include?(user_id) }
-    end
-
-    def notes_total
-      @notes.size
-    end
-
     def priors
       @priors ||= Case.prior_count(user_id, within: Case::PRIOR_WINDOW, before: @kase.opened_at)
     end

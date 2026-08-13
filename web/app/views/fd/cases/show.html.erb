@@ -69,7 +69,6 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">What was done</h2>
-        <p class="card-sub"><%= pluralize(@actions.size, "action") %>, oldest first</p>
       </div>
     </div>
     <% if @actions.any? %>
@@ -130,7 +129,6 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">Notes</h2>
-        <p class="card-sub">internal</p>
       </div>
       <div class="card-tools">
         <label for="add-note" class="btn">Add a note</label>
@@ -311,7 +309,6 @@
               <span class="opt-dot" aria-hidden="true"></span>
               <span>
                 <span class="opt-label">File a report</span>
-                <span class="opt-note">Something was done about it.</span>
               </span>
             </label>
             <label class="opt">
@@ -319,7 +316,6 @@
               <span class="opt-dot" aria-hidden="true"></span>
               <span>
                 <span class="opt-label">Close it</span>
-                <span class="opt-note">Nothing to act on, or not ours to act on.</span>
               </span>
             </label>
             <label class="opt">
@@ -327,7 +323,6 @@
               <span class="opt-dot" aria-hidden="true"></span>
               <span>
                 <span class="opt-label">Duplicate</span>
-                <span class="opt-note">Already being handled as another case.</span>
               </span>
             </label>
           </div>

@@ -70,7 +70,7 @@ module Fd
           mark: "owner",
           chips: [],
           detail: opened_detail,
-        ),
+        )
       ]
 
       assignees.each do |person|
@@ -130,7 +130,7 @@ module Fd
             mark: "action",
             chips: action_chips(action),
             detail: action_detail(action),
-          ),
+          )
         ]
 
         if action.reversed?

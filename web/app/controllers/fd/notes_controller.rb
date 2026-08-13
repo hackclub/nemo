@@ -42,7 +42,7 @@ module Fd
           after: {
             "deleted_at" => note.deleted_at,
             "deleted_by" => note.deleted_by,
-            "body" => note.body,
+            "body" => note.body
           })
       end
 

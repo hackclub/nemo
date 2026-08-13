@@ -140,11 +140,11 @@ module Fd
       case view
       when "attention" then "Nothing needs attention right now."
       when "mine" then "Nothing is assigned to you."
-      when "unassigned" then "Every open case has somebody on it."
+      when "unassigned" then "Nothing unassigned."
       when "aging" then "Nothing open has been sitting for five days."
       when "resolved" then "Nothing has been resolved this month yet."
       when "everything" then "n/a"
-      else "No case matches this. Clear a filter to widen it."
+      else "No case matches this."
       end
     end
 

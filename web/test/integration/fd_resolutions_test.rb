@@ -19,13 +19,13 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
 
   def report(**params)
     post fd_case_resolution_path(@kase), params: {
-      outcome: "report", type_key: "warning", target_user_id: "USUB",
+      outcome: "report", type_key: "warning", target_user_id: "USUB"
     }.merge(params)
   end
 
   def close(**params)
     post fd_case_resolution_path(@kase), params: {
-      outcome: "close", close_reason: "no_action",
+      outcome: "close", close_reason: "no_action"
     }.merge(params)
   end
 

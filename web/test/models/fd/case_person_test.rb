@@ -35,15 +35,6 @@ class Fd::CasePersonTest < ActiveSupport::TestCase
     assert_empty here.live_actions
   end
 
-  test "a note counts as naming them only if it mentions them" do
-    about = note("spoke to <@UDEX> about it")
-    note("nothing to do with them")
-    here = build(notes: Fd::Note.where(case_id: @kase.id).to_a)
-
-    assert_equal [about.id], here.notes_naming.map(&:id)
-    assert_equal 2, here.notes_total
-  end
-
   test "priors count only cases resolved before this one opened" do
     earlier = make_case(subject: "UDEX", opened_at: 60.days.ago)
     earlier.update!(resolved_at: 50.days.ago, resolution: "action_taken")

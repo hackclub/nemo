@@ -116,7 +116,7 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "#who a.index-item", 0
-    assert_select "#who .pane .card-note", text: "Nobody is logged on this case yet."
+    assert_select "#who .pane .card-note", text: "Nobody logged yet."
     assert_select ".subject-facts", 0, "there are no figures to show for nobody"
   end
 

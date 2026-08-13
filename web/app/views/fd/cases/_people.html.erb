@@ -26,7 +26,7 @@
 
   <div class="pane">
     <% if people.chosen.nil? %>
-      <p class="card-note">Nobody is logged on this case yet.</p>
+      <p class="card-note">Nobody logged yet.</p>
     <% else %>
       <% person = people.chosen %>
       <% context = contexts[person.user_id] %>
@@ -201,7 +201,7 @@
             <% end %>
           </div>
         <% else %>
-          <span class="note-none">Nothing of theirs is held from the attached threads.</span>
+          <span class="note-none">No messages of theirs.</span>
         <% end %>
       </div>
 
