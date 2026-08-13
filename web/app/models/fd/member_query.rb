@@ -8,7 +8,7 @@ module Fd
     VIEWS = {
       "history" => "Has a history",
       "open" => "Open case",
-      "priors" => "Two or more priors",
+      "priors" => "Two or more priors, 12mo",
       "notes" => "Standing notes",
       "everyone" => "Everyone"
     }.freeze
@@ -178,7 +178,7 @@ module Fd
       case view
       when "history" then "Nobody has a conduct history yet."
       when "open" then "Nobody has an open case."
-      when "priors" then "Nobody has two or more priors."
+      when "priors" then "Nobody has two or more priors in 12 months."
       when "notes" then "No standing notes on anybody."
       else "No member matches this."
       end
@@ -360,7 +360,7 @@ module Fd
 
     def prior_counts
       CaseParticipant.subjects
-        .where(case_id: Case.where.not(resolved_at: nil).select(:id))
+        .where(case_id: Case.where(resolved_at: Case::PRIOR_WINDOW.ago..).select(:id))
         .where(<<~SQL.squish)
           EXISTS (
             SELECT 1 FROM fd.actions a

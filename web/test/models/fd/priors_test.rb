@@ -86,6 +86,15 @@ class Fd::PriorsTest < ActiveSupport::TestCase
     assert_equal 0, Fd::Case.prior_count(SUBJECT, before: 55.days.ago)
   end
 
+  test "the members list counts the same priors the member page does" do
+    act_on resolved_case(opened: 60.days.ago, resolved: 50.days.ago)
+    act_on resolved_case(opened: 20.months.ago, resolved: 19.months.ago)
+
+    row = Fd::MemberQuery.new({}).summary_rows.find { |found| found.user_id == SUBJECT }
+    assert_equal Fd::Case.prior_count(SUBJECT, within: Fd::Case::PRIOR_WINDOW), row.priors,
+      "the list and the record must not answer the same question differently"
+  end
+
   test "somebody with a clean record counts zero rather than failing" do
     assert_equal 0, Fd::Case.prior_count("UNOBODY")
     assert_empty Fd::Case.priors_for("UNOBODY").to_a

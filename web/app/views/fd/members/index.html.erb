@@ -12,7 +12,7 @@
       <div class="delta-note"><%= share_of(@headline[:history], @query.population) %></div>
     </div>
     <div class="card">
-      <p class="kpi-label">Two or more priors</p>
+      <p class="kpi-label">Two or more priors, 12mo</p>
       <p class="kpi-val"><%= @headline[:priors] %></p>
       <div class="delta-note">
         <% if @headline[:open].positive? %>
