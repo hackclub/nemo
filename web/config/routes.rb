@@ -15,7 +15,7 @@ Rails.application.routes.draw do
     end
     resources :cases, only: [:index, :show, :create] do
       resource :claim, only: [:create, :destroy]
-      resource :resolution, only: [:create]
+      resource :resolution, only: [:create, :destroy]
       resources :notes, only: [:create, :destroy]
       resources :actions, only: [:create]
       resources :reversals, only: [:create]

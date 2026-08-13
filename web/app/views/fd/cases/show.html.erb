@@ -56,6 +56,11 @@
       <% if @case.member_note.present? %>
         <span class="closed-why"><%= @case.member_note %></span>
       <% end %>
+      <span class="closed-end">
+        <%= button_to "Reopen", fd_case_resolution_path(@case), method: :delete,
+              class: "btn", form: { class: "contents", data: { turbo_confirm:
+                "Reopen case #{@case.id}? It goes back in the queue." } } %>
+      </span>
     </div>
   <% end %>
 

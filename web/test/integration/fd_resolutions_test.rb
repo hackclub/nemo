@@ -258,6 +258,35 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     assert_equal was.to_i, report.closed_at.to_i
   end
 
+  test "reopening puts the case back in the queue and says who did it" do
+    sign_in_as(@me)
+    close(member_note: "done")
+    delete fd_case_resolution_path(@kase)
+
+    @kase.reload
+    assert_nil @kase.resolved_at
+    assert_nil @kase.resolution
+    assert_match(/open again/, flash[:notice])
+    assert Fd::AuditEntry.exists?(entity_type: "case", entity_id: @kase.id, verb: "reopened")
+  end
+
+  test "a duplicate that is reopened stops pointing at the other case" do
+    other = make_case(subject: "UELSE", opened_at: 3.days.ago)
+    sign_in_as(@me)
+    post fd_case_resolution_path(@kase), params: { outcome: "duplicate", duplicate_of: other.id }
+    assert_equal other.id, @kase.reload.duplicate_of
+
+    delete fd_case_resolution_path(@kase)
+    assert_nil @kase.reload.duplicate_of
+  end
+
+  test "an open case cannot be reopened" do
+    sign_in_as(@me)
+    delete fd_case_resolution_path(@kase)
+
+    assert_match(/already open/, flash[:alert])
+  end
+
   test "the modal is offered while open and gone once resolved" do
     sign_in_as(@me)
     get fd_case_path(@kase)

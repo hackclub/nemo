@@ -37,6 +37,24 @@ module Fd
       end
     end
 
+    def destroy
+      @case = Case.find(params[:case_id])
+      @now = Time.current
+
+      return refuse("case #{@case.id} is already open") unless @case.resolved?
+
+      was = { "resolved_at" => @case.resolved_at, "resolution" => @case.resolution,
+              "duplicate_of" => @case.duplicate_of }
+
+      writing do
+        @case.update!(resolved_at: nil, resolution: nil, duplicate_of: nil, updated_at: @now)
+        audit(@case, "reopened", before: was,
+          after: { "resolved_at" => nil, "resolution" => nil, "duplicate_of" => nil })
+      end
+
+      redirect_to fd_case_path(@case), notice: "case #{@case.id} is open again"
+    end
+
     private
 
     def resolution_for(outcome)
