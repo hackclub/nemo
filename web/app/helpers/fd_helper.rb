@@ -549,6 +549,35 @@ module FdHelper
     safe_join([decision_when_line(decision), decision_thread_note(threads)], " · ")
   end
 
+  def decision_head_meta(decision)
+    parts = []
+    parts << decision.category_label.downcase if decision.category_key
+    parts << decision_when_line(decision)
+    safe_join(parts, " · ")
+  end
+
+  def decision_history_line(decision)
+    parts = [safe_join(["proposed #{decision.proposed_at.strftime('%-d %b %Y')} by ",
+      member_link(decision.proposed_by)])]
+
+    if decision.settled_at
+      parts << safe_join(["settled #{decision.settled_at.strftime('%-d %b %Y')} by ",
+        member_link(decision.settled_by)])
+    end
+
+    if decision.retired_at
+      parts << safe_join(["retired #{decision.retired_at.strftime('%-d %b %Y')} by ",
+        member_link(decision.retired_by)])
+    end
+
+    if decision.replacement
+      parts << safe_join(["replaced by ",
+        link_to(decision.replacement.title, fd_decision_path(decision.replacement), class: "lnk")])
+    end
+
+    safe_join(parts, " · ")
+  end
+
   def timeline_standing(kase, timeline)
     return "Nothing has happened on this case yet." if timeline.empty?
 

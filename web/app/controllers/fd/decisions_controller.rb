@@ -21,7 +21,25 @@ module Fd
       @names = Names.for(people_named)
     end
 
+    def show
+      @decision = Decision.includes(:threads, :replacement).find(params[:id])
+      @replaced = @decision.replaced.order(:retired_at).to_a
+      @previous, @next = neighbours(@decision)
+      @names = Names.for(named_on(@decision))
+    end
+
     private
+
+    def neighbours(decision)
+      order = Decision.newest_first.pluck(:id)
+      at = order.index(decision.id)
+      [at.positive? ? order[at - 1] : nil, order[at + 1]]
+    end
+
+    def named_on(decision)
+      [decision.proposed_by, decision.settled_by, decision.retired_by,
+       *decision.threads.map(&:added_by)].compact.uniq
+    end
 
     def counts
       tally = Decision.group(:state).count

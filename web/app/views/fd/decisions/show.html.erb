@@ -1,0 +1,80 @@
+<% content_for :page_title, @decision.title %>
+<% content_for :page_subtitle do %>
+  <%= decision_head_meta(@decision) %>
+<% end %>
+<% content_for :page_badge do %>
+  <%= decision_state_chip(@decision) %>
+<% end %>
+<% content_for :head_actions do %>
+  <%= link_to "The log", fd_decisions_path, class: "btn" %>
+  <% if @previous %>
+    <%= link_to "Previous", fd_decision_path(@previous), class: "btn" %>
+  <% else %>
+    <span class="btn is-off">Previous</span>
+  <% end %>
+  <% if @next %>
+    <%= link_to "Next", fd_decision_path(@next), class: "btn" %>
+  <% else %>
+    <span class="btn is-off">Next</span>
+  <% end %>
+<% end %>
+
+<div class="stack">
+  <div class="card">
+    <p class="dec-said"><%= @decision.statement %></p>
+
+    <% if @decision.reasons.any? %>
+      <div class="dec-why">
+        <% @decision.reasons.each do |reason| %>
+          <p class="fact-line"><%= reason %></p>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="card-note">No reasons written down.</p>
+    <% end %>
+  </div>
+
+  <p class="band-label">
+    Where it was argued ·
+    <%= @decision.threads.any? ? pluralize(@decision.threads.size, "thread") : "none linked" %>
+  </p>
+
+  <% if @decision.threads.any? %>
+    <% @decision.threads.each do |thread| %>
+      <div class="card">
+        <div class="thr-head">
+          <span class="thr-where"><%= thread.channel_id %></span>
+          <% if thread.said_why? %>
+            <span class="thr-why"><%= thread.why %></span>
+          <% end %>
+          <span class="thr-end">
+            <%= link_to "Open in Slack", slack_thread_url(thread.channel_id, thread.thread_ts),
+                  class: "btn", target: "_blank", rel: "noopener" %>
+          </span>
+        </div>
+        <p class="thr-gone">
+          Linked by <%= member_link(thread.added_by) %> · <%= last_case_label(thread.added_at) %>
+        </p>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="card">
+      <p class="card-note">No thread linked.</p>
+    </div>
+  <% end %>
+
+  <p class="band-label">History</p>
+  <div class="card">
+    <p class="thr-gone"><%= decision_history_line(@decision) %></p>
+    <% if @replaced.any? %>
+      <div class="dec-why">
+        <% @replaced.each do |old| %>
+          <p class="fact-line">
+            Replaced <%= link_to old.title, fd_decision_path(old), class: "lnk" %>,
+            retired <%= old.retired_at.strftime("%-d %b %Y") %>
+          </p>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

@@ -659,6 +659,30 @@
     align-items: baseline;
   }
 
+  .thr-why {
+    font-size: var(--t-2xs);
+    color: var(--ink-2);
+  }
+
+  .dec-said {
+    margin: 0;
+    font-size: var(--t-md);
+    color: var(--ink);
+  }
+
+  .dec-why {
+    display: grid;
+    margin-top: var(--s-2xs);
+  }
+
+  .fact-line {
+    margin: 0;
+    padding: var(--s-2xs) 0;
+    border-top: 1px solid var(--line-soft);
+    font-size: var(--t-2xs);
+    color: var(--ink-2);
+  }
+
   .thr-gone {
     font-size: var(--t-2xs);
     color: var(--ink-3);
@@ -1160,6 +1184,10 @@
     font-size: var(--t-2xs);
     color: var(--ink-3);
     margin: var(--s-sm) 0 0;
+  }
+
+  .card > .card-note:first-child {
+    margin-top: 0;
   }
 
   .card-head {

@@ -8,11 +8,8 @@
 <div class="stack">
   <div class="views">
     <% Fd::DecisionsController::VIEWS.each do |key, label| %>
-      <%= link_to fd_decisions_path(key == "all" ? {} : { view: key }), class: "view",
-            aria: { current: ("true" if key == @view) } do %>
-        <%= label %>
-        <span class="view-count"><%= @counts[key] %></span>
-      <% end %>
+      <%= link_to label, fd_decisions_path(key == "all" ? {} : { view: key }), class: "view",
+            aria: { current: ("true" if key == @view) } %>
     <% end %>
   </div>
 
@@ -34,7 +31,9 @@
                 <tr>
                   <td>
                     <span class="two-line">
-                      <b><%= decision.title %></b>
+                      <%= link_to fd_decision_path(decision) do %>
+                        <b><%= decision.title %></b>
+                      <% end %>
                       <span class="idline">
                         <%= decision_row_line(decision, @threads[decision.id]) %>
                       </span>
