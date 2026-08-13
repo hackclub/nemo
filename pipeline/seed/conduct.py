@@ -94,8 +94,6 @@ RESOLUTION_WEIGHTS = (
 CASE_COLUMNS = [
     "opened_by",
     "opened_at",
-    "claimed_by",
-    "claimed_at",
     "resolved_at",
     "resolution",
     "member_note",
@@ -678,8 +676,6 @@ def case_row(case):
     return (
         case.opened_by,
         case.opened_at,
-        case.claimed_by,
-        case.claimed_at,
         case.resolved_at,
         case.resolution,
         case.member_note,
@@ -896,12 +892,25 @@ def case_audit(case, case_id):
     request = f"{SEED_REF_PREFIX}audit:case:{case_id}"
     yield audit_entry(
         case.opened_at, case.opened_by, "case", case_id, "opened",
-        None, {"subject_user_id": case.subject_user_id}, "fire_engine", f"{request}:opened",
+        None, {"opened_by": case.opened_by, "source_app": "fire_engine"},
+        "fire_engine", f"{request}:opened",
     )
+    if case.subject_user_id:
+        yield audit_entry(
+            case.opened_at, case.opened_by, "participant", case_id, "attached",
+            None,
+            {"case_id": case_id, "user_id": case.subject_user_id, "role": "subject"},
+            "fire_engine", f"{request}:subject",
+        )
     if case.claimed_at:
         yield audit_entry(
-            case.claimed_at, case.claimed_by, "case", case_id, "claimed",
-            {"claimed_by": None}, {"claimed_by": case.claimed_by},
+            case.claimed_at, case.claimed_by, "assignee", case_id, "claimed",
+            None,
+            {
+                "case_id": case_id,
+                "user_id": case.claimed_by,
+                "assigned_by": case.claimed_by,
+            },
             "fire_engine", f"{request}:claimed",
         )
     if case.resolved_at:

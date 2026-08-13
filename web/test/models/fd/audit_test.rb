@@ -57,22 +57,22 @@ class Fd::AuditTest < ActiveSupport::TestCase
   test "a create leaves out columns that hold nothing" do
     entry = record(kase, "opened")
     assert_not entry.after.key?("resolution")
-    assert_not entry.after.key?("claimed_by")
+    assert_not entry.after.key?("category_key")
   end
 
   test "an update records both sides of only what moved" do
     target = kase
-    target.update!(claimed_by: "UFF2", claimed_at: Time.current)
-    entry = record(target, "claimed")
-    assert_equal({ "claimed_by" => nil }, entry.before.slice("claimed_by"))
-    assert_equal "UFF2", entry.after["claimed_by"]
+    target.update!(category_key: "bullying")
+    entry = record(target, "opened")
+    assert_equal({ "category_key" => nil }, entry.before.slice("category_key"))
+    assert_equal "bullying", entry.after["category_key"]
     assert_not entry.after.key?("opened_by")
   end
 
   test "bookkeeping columns are not audited as changes" do
     target = kase
-    target.update!(claimed_by: "UFF2", claimed_at: Time.current)
-    entry = record(target, "claimed")
+    target.update!(category_key: "bullying")
+    entry = record(target, "opened")
     assert_empty entry.after.keys & Fd::Audit::IGNORED_COLUMNS
   end
 
@@ -100,8 +100,9 @@ class Fd::AuditTest < ActiveSupport::TestCase
 
   test "explicit sides win, for writes that never load a row" do
     target = kase
-    entry = record(target, "claimed", before: { "claimed_by" => nil }, after: { "claimed_by" => "UFF9" })
-    assert_equal "UFF9", entry.after["claimed_by"]
+    entry = record(target, "resolved",
+      before: { "resolution" => nil }, after: { "resolution" => "no_action" })
+    assert_equal "no_action", entry.after["resolution"]
   end
 
   test "the actor, the request and the source are all recorded" do
