@@ -27,7 +27,7 @@
   <% if report.body.present? %>
     <p class="report-said"><%= mentioned(report.body) %></p>
   <% else %>
-    <p class="report-said note-none">They wrote nothing with it.</p>
+    <p class="report-said note-none">No words with it.</p>
   <% end %>
   <span class="report-when"><%= report_when_line(report, kase) %></span>
 </div>

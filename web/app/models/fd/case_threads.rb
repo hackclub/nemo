@@ -3,12 +3,35 @@ module Fd
     include Enumerable
 
     class Attached
-      def initialize(record, locked)
+      def initialize(record, locked, messages = [])
         @record = record
         @locked = locked
+        @messages = messages
       end
 
-      attr_reader :record
+      attr_reader :record, :messages
+
+      def root
+        messages.find(&:root?)
+      end
+
+      def replies
+        messages.reject(&:root?)
+      end
+
+      def held
+        messages.size
+      end
+
+      def told_of
+        root&.reply_count
+      end
+
+      def missing
+        return 0 if told_of.nil?
+
+        [told_of - replies.size, 0].max
+      end
 
       delegate :id, :channel_id, :thread_ts, :added_by, :added_at, :kind,
         :evidence?, :internal?, to: :record
@@ -36,17 +59,21 @@ module Fd
       end
     end
 
-    def self.for(threads, actions: [], asked: nil)
-      new(threads, actions, asked)
+    def self.for(threads, actions: [], messages: [], asked: nil)
+      new(threads, actions, messages, asked)
     end
 
     attr_reader :chosen
 
-    def initialize(threads, actions = [], asked = nil)
+    def initialize(threads, actions = [], messages = [], asked = nil)
       locked = locked_channels(actions)
+      said = messages.group_by { |message| [message.channel_id, message.thread_ts] }
       @rows = threads
         .sort_by { |thread| [thread.internal? ? 0 : 1, thread.is_primary ? 0 : 1, thread.added_at] }
-        .map { |thread| Attached.new(thread, locked.include?(thread.channel_id)) }
+        .map do |thread|
+          Attached.new(thread, locked.include?(thread.channel_id),
+            said.fetch([thread.channel_id, thread.thread_ts], []))
+        end
       @chosen = @rows.find { |row| row.id.to_s == asked.to_s } || @rows.first
     end
 

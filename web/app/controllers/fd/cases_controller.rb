@@ -20,7 +20,9 @@ module Fd
       @standing_notes = Note.for_subjects(@participants.map(&:user_id)).visible.recent_first
         .group_by(&:subject_user_id)
       @case_person = CasePerson.for(@people.chosen, kase: @case, actions: @actions, notes: @notes)
-      @thread_list = CaseThreads.for(@threads, actions: @actions, asked: params[:thread])
+      @thread_messages = ThreadMessage.for_threads(@threads).to_a
+      @thread_list = CaseThreads.for(@threads, actions: @actions,
+        messages: @thread_messages, asked: params[:thread])
       @assignees = @case.assignees.to_a
       @mentioned = @case.mentioned_but_unlogged(
         notes: @notes + @standing_notes.values.flatten, reports: @reports
@@ -83,7 +85,9 @@ module Fd
         (@notes + @standing_notes.values.flatten).map(&:author),
         @siblings.flat_map(&:subject_user_ids),
         (@notes + @standing_notes.values.flatten).flat_map { |note| Mentions.ids(note.body) },
-        @reports.flat_map { |report| Mentions.ids(report.body) }
+        @reports.flat_map { |report| Mentions.ids(report.body) },
+        @thread_messages.map(&:author_user_id),
+        @threads.map(&:added_by)
       ]
     end
 
