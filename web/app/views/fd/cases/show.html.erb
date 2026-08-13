@@ -210,9 +210,7 @@
         </table>
       </div>
     <% else %>
-      <p class="card-note">
-        No report. A firefighter opened this case from something they saw themselves.
-      </p>
+      <p class="card-note">No report.</p>
     <% end %>
   </div>
 
@@ -221,7 +219,6 @@
       <div class="card-head">
         <div>
           <h2 class="card-title">Threads</h2>
-          <p class="card-sub">where it happened</p>
         </div>
         <div class="card-tools">
           <label for="attach-thread" class="btn">Attach a thread</label>
@@ -273,10 +270,6 @@
         <div class="card-head">
           <div>
             <h2 class="card-title">Who else is logged</h2>
-            <p class="card-sub">
-              <%= @case.subjects.many? ? "the subjects are" : "the subject is" %>
-              above, not in this list
-            </p>
           </div>
           <div class="card-tools">
             <label for="add-person" class="btn">Add</label>
@@ -310,7 +303,6 @@
         <div class="card-head">
           <div>
             <h2 class="card-title">Duplicate Cases</h2>
-            <p class="card-sub">other cases citing one of these threads</p>
           </div>
         </div>
         <% if @siblings.any? %>
@@ -375,7 +367,6 @@
     <div class="modal" role="dialog" aria-label="Log an action">
       <div class="modal-head">
         <h2 class="modal-title">Log an action</h2>
-        <span class="modal-sub">the case stays open</span>
       </div>
       <%= form_with url: fd_case_actions_path(@case), method: :post do %>
         <div class="modal-body">
@@ -397,7 +388,6 @@
     <div class="modal" role="dialog" aria-label="Attach a thread">
       <div class="modal-head">
         <h2 class="modal-title">Attach a thread</h2>
-        <span class="modal-sub">paste a Slack link</span>
       </div>
       <%= form_with url: fd_case_threads_path(@case), method: :post do %>
         <div class="modal-body">
@@ -448,7 +438,6 @@
               <span class="opt-dot" aria-hidden="true"></span>
               <span>
                 <span class="opt-label">About this case</span>
-                <span class="opt-note">Sits in the timeline with everything else that happened.</span>
               </span>
             </label>
             <% @case.subjects.each do |person| %>
@@ -457,9 +446,6 @@
                 <span class="opt-dot" aria-hidden="true"></span>
                 <span>
                   <span class="opt-label">About <%= names[person.user_id] %></span>
-                  <span class="opt-note">
-                    Follows the member to every case, now and later. For a pattern, not an incident.
-                  </span>
                 </span>
               </label>
             <% end %>
@@ -467,7 +453,7 @@
           <label class="field-label">
             The note
             <%= render "fd/mention_field", name: :body, value: nil, rows: 4,
-                  placeholder: "what the record cannot hold on its own. type @ to name somebody" %>
+                  placeholder: "meow" %>
           </label>
         </div>
         <div class="modal-foot">
@@ -499,7 +485,7 @@
               <span class="opt-dot" aria-hidden="true"></span>
               <span>
                 <span class="opt-label">File a report</span>
-                <span class="opt-note">Something was done about it. Records the action.</span>
+                <span class="opt-note">Something was done about it.</span>
               </span>
             </label>
             <label class="opt">
@@ -548,9 +534,6 @@
           <label class="field-label unless-duplicate">
             Reason
             <%= text_area_tag :member_note, nil, rows: 3, class: "textarea" %>
-            <span class="opt-note">
-              Kept on the record. Nothing here is sent to anybody.
-            </span>
           </label>
         </div>
         <div class="modal-foot">

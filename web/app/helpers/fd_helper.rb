@@ -521,16 +521,14 @@ module FdHelper
     return "Nothing has happened on this case yet." if timeline.empty?
 
     if kase.resolved?
-      "Resolved #{kase.resolved_at.strftime('%-d %b')} as #{kase.resolution.tr('_', ' ')}. " \
-        "#{timeline.size} entries, kept whether or not Slack still has the thread."
+      "Resolved #{kase.resolved_at.strftime('%-d %b')} as #{kase.resolution.tr('_', ' ')}."
     else
       assigned = if kase.assigned?
         "assigned to #{names.list(kase.assignee_user_ids)}"
       else
         "still unassigned"
       end
-      "Still open. #{case_age_label(case_age_seconds(kase))}, #{assigned}. " \
-        "Nothing ages out: it stays here until somebody resolves it."
+      "Still open. #{case_age_label(case_age_seconds(kase))}, #{assigned}."
     end
   end
 end

@@ -11,21 +11,20 @@ class FdHelperTest < ActionView::TestCase
     Array.new(count) { Fd::CaseTimeline::Entry.new(at: Time.current, title: "x") }
   end
 
-  test "an open case says it will not age out and who has it" do
+  test "an open case says how old it is and who has it" do
     line = timeline_standing(make_case(opened_at: 5.days.ago, assign: "UFF2"), entries(3))
-    assert_match(/\AStill open\. 5d, assigned to @UFF2\./, line)
-    assert_match(/stays here until somebody resolves it/, line)
+    assert_equal "Still open. 5d, assigned to @UFF2.", line
   end
 
   test "an unassigned case says so rather than naming nobody" do
     assert_match(/still unassigned/, timeline_standing(kase, entries(2)))
   end
 
-  test "a resolved case states its outcome and entry count" do
+  test "a resolved case states its outcome" do
     line = timeline_standing(
       kase(resolved_at: Time.utc(2026, 3, 4, 12), resolution: "action_taken"), entries(6)
     )
-    assert_match(/\AResolved 4 Mar as action taken\. 6 entries/, line)
+    assert_equal "Resolved 4 Mar as action taken.", line
   end
 
   test "an empty timeline says nothing has happened" do
