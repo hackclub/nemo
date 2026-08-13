@@ -35,7 +35,7 @@ module Fd
       return redirect_to(fd_case_path(kase), alert: problem) if problem
 
       writing do
-        audit(thread, "detached",
+        audit(thread, "detached", entity_id: kase.id,
           before: {
             "channel_id" => thread.channel_id,
             "thread_ts" => thread.thread_ts,

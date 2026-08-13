@@ -6,6 +6,22 @@ module Fd
     scope :oldest_first, -> { order(:occurred_at, :id) }
     scope :for_entity, ->(type, ids) { where(entity_type: type, entity_id: ids) }
 
+    ERASING = %w[deleted detached unflagged].freeze
+    CASE_FILED = %w[participant thread citation].freeze
+
+    def self.erasures_for(case_id:, note_ids: [])
+      scope = where(verb: ERASING)
+      scope = if note_ids.present?
+        scope.where(
+          "(entity_type IN (?) AND entity_id = ?) OR (entity_type = 'note' AND entity_id IN (?))",
+          CASE_FILED, case_id, note_ids
+        )
+      else
+        scope.where(entity_type: CASE_FILED, entity_id: case_id)
+      end
+      scope.oldest_first
+    end
+
     def self.trail_for(case_id:, action_ids: [], report_ids: [])
       pairs = { "case" => Array(case_id), "action" => action_ids, "report" => report_ids }
         .reject { |_type, ids| ids.blank? }

@@ -187,6 +187,17 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     assert_match(/note removed/, flash[:notice])
   end
 
+  test "a removed note leaves a mark in the timeline" do
+    sign_in_as(@me)
+    write(body: "wrote this in haste")
+    delete fd_case_note_path(@kase, notes.sole)
+
+    get fd_case_path(@kase)
+    assert_select ".tl-title", text: "Note removed"
+    assert_select ".tl-detail", text: /@UME/
+    assert_no_match(/wrote this in haste/, response.body)
+  end
+
   test "a removed note disappears from the page" do
     sign_in_as(@me)
     write(body: "wrote this in haste")

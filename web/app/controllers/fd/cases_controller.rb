@@ -31,6 +31,8 @@ module Fd
       @mentioned = @case.mentioned_but_unlogged(
         notes: @notes + @standing_notes.values.flatten, reports: @reports
       )
+      @erasures = AuditEntry.erasures_for(case_id: @case.id,
+        note_ids: @case.notes.ids).to_a
       @names = Names.for(page_ids)
       @timeline = CaseTimeline.for(
         @case,
@@ -39,6 +41,7 @@ module Fd
         notes: @notes + @standing_notes.values_at(*@case.subject_user_ids).compact.flatten,
         participants: @participants,
         assignees: @assignees,
+        erasures: @erasures,
         names: @names,
       )
       @context = MemberContext.for(
@@ -91,7 +94,8 @@ module Fd
         (@notes + @standing_notes.values.flatten).flat_map { |note| Mentions.ids(note.body) },
         @reports.flat_map { |report| Mentions.ids(report.body) },
         @thread_messages.map(&:author_user_id),
-        @threads.map(&:added_by)
+        @threads.map(&:added_by),
+        @erasures.map(&:actor_user_id)
       ]
     end
 

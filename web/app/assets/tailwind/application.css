@@ -2580,6 +2580,26 @@
     white-space: nowrap;
   }
 
+  .tl-mark-in {
+    background-color: color-mix(in oklab, var(--ink) 8%, transparent);
+    color: var(--ink-2);
+  }
+
+  .tl-mark-act {
+    background-color: var(--accent-soft);
+    color: var(--accent-deep);
+  }
+
+  .tl-mark-own {
+    background-color: var(--good-soft);
+    color: var(--good);
+  }
+
+  .tl-mark-note {
+    background-color: var(--warn-soft);
+    color: var(--warn);
+  }
+
   .tl-open {
     border: 1px dashed var(--line);
     border-radius: var(--r-ctl);
@@ -2606,7 +2626,7 @@
   .drawer-veil {
     position: fixed;
     inset: 0;
-    background-color: color-mix(in oklab, var(--ink) 34%, transparent);
+    background-color: var(--veil);
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--dur) var(--ease-out);
