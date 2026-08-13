@@ -1,0 +1,27 @@
+<div class="modal-host">
+  <input type="checkbox" id="edit-decision" class="modal-flip" autocomplete="off">
+  <label for="edit-decision" class="modal-veil" aria-hidden="true"></label>
+  <div class="modal-wrap">
+    <div class="modal" role="dialog" aria-label="Edit this decision">
+      <div class="modal-head">
+        <h2 class="modal-title">Edit this decision</h2>
+        <p class="modal-sub">Still proposed, so the wording is anybody's to fix.</p>
+      </div>
+      <%= form_with url: fd_decision_path(decision), method: :patch,
+            html: { autocomplete: "off" } do %>
+        <div class="modal-body">
+          <%= render "fd/decisions/words", decision: decision, with_reasons: true %>
+        </div>
+        <div class="modal-foot">
+          <% if decision.proposed_by == current_staff.user_id %>
+            <%= button_to "Drop it", fd_decision_path(decision), method: :delete,
+                  class: "btn", form: { class: "contents",
+                  data: { turbo_confirm: "Drop this proposal?" } } %>
+          <% end %>
+          <label for="edit-decision" class="btn">Close</label>
+          <%= submit_tag "Save the wording", class: "btn btn-primary" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

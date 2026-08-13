@@ -1,0 +1,21 @@
+<div class="modal-host">
+  <input type="checkbox" id="new-decision" class="modal-flip" autocomplete="off">
+  <label for="new-decision" class="modal-veil" aria-hidden="true"></label>
+  <div class="modal-wrap">
+    <div class="modal" role="dialog" aria-label="New decision">
+      <div class="modal-head">
+        <h2 class="modal-title">New decision</h2>
+        <p class="modal-sub">It lands as proposed. A lead settles it.</p>
+      </div>
+      <%= form_with url: fd_decisions_path, method: :post, html: { autocomplete: "off" } do %>
+        <div class="modal-body">
+          <%= render "fd/decisions/words", decision: nil, with_reasons: false %>
+        </div>
+        <div class="modal-foot">
+          <label for="new-decision" class="btn">Close</label>
+          <%= submit_tag "Write it down", class: "btn btn-primary" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -6,6 +6,9 @@
   <%= decision_state_chip(@decision) %>
 <% end %>
 <% content_for :head_actions do %>
+  <% if @decision.proposed? %>
+    <label for="edit-decision" class="btn btn-primary">Edit</label>
+  <% end %>
   <%= link_to "The log", fd_decisions_path, class: "btn" %>
   <% if @previous %>
     <%= link_to "Previous", fd_decision_path(@previous), class: "btn" %>
@@ -78,3 +81,7 @@
     <% end %>
   </div>
 </div>
+
+<% if @decision.proposed? %>
+  <%= render "fd/decisions/edit_modal", decision: @decision %>
+<% end %>

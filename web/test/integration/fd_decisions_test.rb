@@ -219,4 +219,105 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
     get fd_decision_path(999_999)
     assert_response :not_found
   end
+
+  test "writing one lands it as proposed, under whoever wrote it" do
+    post fd_decisions_path, params: { title: "Screenshots as evidence",
+      statement: "A screenshot alone is never enough to act, ask for the permalink.",
+      category_key: "spam" }
+
+    decision = Fd::Decision.sole
+    assert_predicate decision, :proposed?
+    assert_equal "UME", decision.proposed_by
+    assert_equal "spam", decision.category_key
+    assert_redirected_to fd_decision_path(decision)
+    assert Fd::AuditEntry.exists?(entity_type: "decision", entity_id: decision.id,
+      verb: "proposed")
+  end
+
+  test "a decision with no name or no sentence is refused" do
+    post fd_decisions_path, params: { title: "", statement: "something" }
+    assert_match(/give it a name/, flash[:alert])
+
+    post fd_decisions_path, params: { title: "Appeals", statement: "  " }
+    assert_match(/say what FD does/, flash[:alert])
+    assert_equal 0, Fd::Decision.count
+  end
+
+  test "a category nobody offered is dropped rather than stored" do
+    post fd_decisions_path, params: { title: "Appeals", statement: "read by somebody else",
+      category_key: "vibes" }
+
+    assert_nil Fd::Decision.sole.category_key
+  end
+
+  test "two live decisions cannot share a name" do
+    settled(title: "Spam accounts")
+    post fd_decisions_path, params: { title: "spam accounts", statement: "again" }
+
+    assert_match(/already a decision called that/, flash[:alert])
+    assert_equal 1, Fd::Decision.count
+  end
+
+  test "a signed out visitor cannot write one" do
+    delete logout_path
+    post fd_decisions_path, params: { title: "Appeals", statement: "read by somebody else" }
+
+    assert_equal 0, Fd::Decision.count
+  end
+
+  test "a proposal can be reworded, and the reasons are one per line" do
+    decision = write(title: "Appeals")
+    patch fd_decision_path(decision), params: { title: "Appeals",
+      statement: "An appeal is read by somebody who was not on the case.",
+      reasons: "the first reader has already made up their mind\n\n  it costs one message  " }
+
+    decision.reload
+    assert_equal "An appeal is read by somebody who was not on the case.", decision.statement
+    assert_equal ["the first reader has already made up their mind", "it costs one message"],
+      decision.reasons
+    assert Fd::AuditEntry.exists?(entity_type: "decision", entity_id: decision.id,
+      verb: "amended")
+  end
+
+  test "a settled decision is not edited from here" do
+    decision = settled(title: "Pile-ons")
+    patch fd_decision_path(decision), params: { title: "Pile-ons", statement: "something else" }
+
+    assert_match(/amend it rather than editing it/, flash[:alert])
+    assert_not_equal "something else", decision.reload.statement
+  end
+
+  test "whoever proposed it can drop it, and nobody else can" do
+    mine = write(title: "Appeals", proposed_by: "UME")
+    theirs = write(title: "Night shift", proposed_by: "UFF1")
+
+    delete fd_decision_path(theirs)
+    assert_match(/only they can drop it/, flash[:alert])
+    assert Fd::Decision.exists?(theirs.id)
+
+    delete fd_decision_path(mine)
+    assert_not Fd::Decision.exists?(mine.id)
+    assert_redirected_to fd_decisions_path
+    assert Fd::AuditEntry.exists?(entity_type: "decision", entity_id: mine.id, verb: "dropped")
+  end
+
+  test "a settled decision cannot be dropped" do
+    decision = settled(title: "Pile-ons", proposed_by: "UME")
+    delete fd_decision_path(decision)
+
+    assert_match(/superseded, never dropped/, flash[:alert])
+    assert Fd::Decision.exists?(decision.id)
+  end
+
+  test "the write control is on the log, and the edit control only while proposed" do
+    proposal = write(title: "Appeals")
+    get fd_decisions_path
+    assert_select "label[for=new-decision]", text: "New decision"
+
+    get fd_decision_path(proposal)
+    assert_select "label[for=edit-decision]", text: "Edit"
+
+    get fd_decision_path(settled(title: "Pile-ons"))
+    assert_select "label[for=edit-decision]", count: 0
+  end
 end

@@ -4,6 +4,9 @@
   <%= @counts["proposed"] %> proposed ·
   <%= @counts["retired"] %> retired
 <% end %>
+<% content_for :head_actions do %>
+  <label for="new-decision" class="btn btn-primary">New decision</label>
+<% end %>
 
 <div class="stack">
   <div class="views">
@@ -55,3 +58,5 @@
     <% end %>
   <% end %>
 </div>
+
+<%= render "fd/decisions/new_modal" %>
