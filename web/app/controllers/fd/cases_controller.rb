@@ -104,6 +104,7 @@ module Fd
       @open_count = Case.unresolved.count
       @unassigned_count = Case.unresolved.unassigned.count
       @total_count = Case.count
+      @views = @query.views
       @open_for_subject ||= []
     end
   end

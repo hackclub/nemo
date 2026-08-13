@@ -130,7 +130,7 @@ module FdHelper
   end
 
   def facet_link(query, key, value)
-    fd_cases_path(query.to_params(key => value))
+    fd_cases_path(query.facet_params(key => value))
   end
 
   def thread_kind_note(thread)

@@ -7,6 +7,16 @@
 <% end %>
 
 <div class="stack" data-controller="merge">
+  <div class="views">
+    <% @views.each do |view| %>
+      <%= link_to fd_cases_path(view: view.key), class: "view",
+            aria: { current: ("true" if view.current) } do %>
+        <%= view.label %>
+        <span class="view-count"><%= view.count %></span>
+      <% end %>
+    <% end %>
+  </div>
+
   <div class="filters" data-controller="dismiss">
     <% @query.inline_facets.each do |facet| %>
       <span class="facet-set <%= "on" if facet.on %>">

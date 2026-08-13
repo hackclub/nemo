@@ -2,6 +2,7 @@ module Fd
   class CaseQuery
     Facet = Struct.new(:key, :label, :value, :value_label, :options, :on, :kind,
       keyword_init: true)
+    View = Struct.new(:key, :label, :count, :current, keyword_init: true)
 
     MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/
 
@@ -17,14 +18,41 @@ module Fd
     }.freeze
     ASSIGNEE = { "anyone" => "anyone", "me" => "me", "nobody" => "nobody" }.freeze
 
+    AGE_WARN = 2.days
+    AGE_CRIT = 5.days
     AGE_DAYS = { "2d" => 2, "5d" => 5 }.freeze
     AGE_WORDS = { "2d" => "older than two days", "5d" => "older than five days" }.freeze
 
-    DEFAULTS = {
-      "status" => "open", "age" => "any", "assignee" => "anyone", "category" => "any",
-      "subject" => "anyone", "actions" => "any", "opened" => "any", "sort" => "oldest"
+    VIEWS = {
+      "attention" => "Needs attention",
+      "mine" => "Mine",
+      "unassigned" => "Unassigned",
+      "aging" => "Aging over 5d",
+      "resolved" => "Resolved this month",
+      "everything" => "Everything"
     }.freeze
-    KEYS = DEFAULTS.keys.freeze
+
+    VIEW_FACETS = {
+      "attention" => { "status" => "open" },
+      "mine" => { "status" => "open", "assignee" => "me" },
+      "unassigned" => { "status" => "open", "assignee" => "nobody" },
+      "aging" => { "status" => "open", "age" => "5d" },
+      "resolved" => { "status" => "resolved", "resolved" => "month" },
+      "everything" => { "sort" => "newest" }
+    }.freeze
+
+    RESOLVED = {
+      "any" => "any time", "month" => "this month",
+      "quarter" => "this quarter", "year" => "this year"
+    }.freeze
+
+    DEFAULTS = {
+      "status" => "any", "age" => "any", "assignee" => "anyone", "category" => "any",
+      "subject" => "anyone", "actions" => "any", "opened" => "any", "resolved" => "any",
+      "sort" => "oldest"
+    }.freeze
+    FACET_KEYS = DEFAULTS.keys.freeze
+    KEYS = (FACET_KEYS + ["view"]).freeze
 
     def initialize(params = {}, viewer: nil)
       @params = params
@@ -35,7 +63,9 @@ module Fd
 
     def [](key)
       raw = @params[key].to_s
-      allowed?(key, raw) ? raw : DEFAULTS.fetch(key)
+      return raw if allowed?(key, raw)
+
+      implied.fetch(key) { DEFAULTS.fetch(key) }
     end
 
     def default?(key)
@@ -43,31 +73,63 @@ module Fd
     end
 
     def filtered?
-      KEYS.excluding("sort").any? { |key| !default?(key) }
+      FACET_KEYS.excluding("sort").any? { |key| !default?(key) }
     end
 
-    def to_params(overrides = {})
-      chosen = KEYS.index_with { |key| self[key] }.merge(overrides.stringify_keys)
-      chosen.reject { |key, value| value.to_s == DEFAULTS[key] || value.blank? }
+    def view
+      raw = @params["view"].to_s
+      return nil if raw == NO_VIEW || chosen_facets.any?
+
+      VIEWS.key?(raw) ? raw : DEFAULT_VIEW
+    end
+
+    def view_label = VIEWS.fetch(view)
+
+    def views
+      counts = self.class.view_counts(viewer)
+      VIEWS.map do |key, label|
+        View.new(key: key, label: label, count: counts.fetch(key), current: key == view)
+      end
+    end
+
+    def self.view_counts(viewer)
+      VIEWS.keys.index_with { |key| new({ "view" => key }, viewer: viewer).relation.count }
+    end
+
+    def to_params
+      return {} if view == DEFAULT_VIEW
+      return { "view" => view } if view
+
+      chosen_facets.presence || { "view" => NO_VIEW }
+    end
+
+    def facet_params(overrides)
+      base = view ? VIEW_FACETS.fetch(view) : chosen_facets
+      chosen = base.merge(overrides.stringify_keys)
+        .reject { |key, value| value.to_s == DEFAULTS[key] || value.blank? }
+
+      chosen.presence || { "view" => NO_VIEW }
     end
 
     def relation
-      scope = apply_sort(Case.all)
+      scope = apply_sort(apply_view(Case.all))
       scope = apply_status(scope)
       scope = apply_age(scope)
       scope = apply_assignee(scope)
       scope = apply_category(scope)
       scope = apply_subject(scope)
       scope = apply_actions(scope)
-      apply_opened(scope)
+      apply_resolved(apply_opened(scope))
     end
 
     def title
-      rest = [age_phrase, assignee_phrase, category_phrase, subject_phrase,
-              actions_phrase, opened_phrase].compact
-      return status_phrase if rest.empty?
+      return view_label if view
 
-      "#{status_phrase}, #{rest.to_sentence}"
+      rest = [age_phrase, assignee_phrase, category_phrase, subject_phrase,
+              actions_phrase, opened_phrase, resolved_phrase].compact
+      return status_lead if rest.empty?
+
+      "#{status_lead}, #{rest.to_sentence}"
     end
 
     def summary(shown, total)
@@ -76,9 +138,15 @@ module Fd
     end
 
     def empty_note
-      return "Nothing open right now." if !filtered? && self["status"] == "open"
-
-      "No case matches this. Clear a filter to widen it."
+      case view
+      when "attention" then "Nothing needs attention right now."
+      when "mine" then "Nothing is assigned to you."
+      when "unassigned" then "Every open case has somebody on it."
+      when "aging" then "Nothing open has been sitting for five days."
+      when "resolved" then "Nothing has been resolved this month yet."
+      when "everything" then "n/a"
+      else "No case matches this. Clear a filter to widen it."
+      end
     end
 
     PRIMARY = %w[status age assignee sort].freeze
@@ -101,6 +169,7 @@ module Fd
         facet("subject", "Subject", { "anyone" => "anyone" }, kind: :typed),
         facet("actions", "Actions", ACTIONS),
         facet("opened", "Opened", OPENED),
+        facet("resolved", "Resolved", RESOLVED),
         facet("sort", "Sort", SORT)
       ]
     end
@@ -115,6 +184,20 @@ module Fd
     end
 
     private
+
+    DEFAULT_VIEW = "attention".freeze
+    NO_VIEW = "none".freeze
+
+    def chosen_facets
+      @chosen_facets ||= FACET_KEYS.filter_map { |key|
+        raw = @params[key].to_s
+        [key, raw] if allowed?(key, raw) && raw != DEFAULTS[key]
+      }.to_h
+    end
+
+    def implied
+      view ? VIEW_FACETS.fetch(view) : {}
+    end
 
     def facet(key, label, options, kind: :list)
       value = self[key]
@@ -133,11 +216,24 @@ module Fd
       when "age" then AGE.key?(raw)
       when "actions" then ACTIONS.key?(raw)
       when "opened" then OPENED.key?(raw)
+      when "resolved" then RESOLVED.key?(raw)
       when "sort" then SORT.key?(raw)
       when "category" then raw == "any" || Case::CATEGORIES.include?(raw)
       when "assignee" then ASSIGNEE.key?(raw) || raw.match?(MEMBER_ID)
       when "subject" then raw == "anyone" || raw.match?(MEMBER_ID)
       else false
+      end
+    end
+
+    def apply_view(scope)
+      case view
+      when "attention"
+        scope.unresolved.unassigned.or(scope.unresolved.where(opened_at: ..AGE_WARN.ago))
+      when "mine" then viewer ? scope.unresolved.assigned_to(viewer) : scope.unresolved
+      when "unassigned" then scope.unresolved.unassigned
+      when "aging" then scope.unresolved.where(opened_at: ..AGE_CRIT.ago)
+      when "resolved" then scope.where(resolved_at: Time.current.beginning_of_month..)
+      else scope
       end
     end
 
@@ -180,12 +276,21 @@ module Fd
     end
 
     def apply_opened(scope)
-      since = case self["opened"]
+      since = window(self["opened"])
+      since ? scope.where(opened_at: since..) : scope
+    end
+
+    def apply_resolved(scope)
+      since = window(self["resolved"])
+      since ? scope.where(resolved_at: since..) : scope
+    end
+
+    def window(value)
+      case value
       when "month" then Time.current.beginning_of_month
       when "quarter" then Time.current.beginning_of_quarter
       when "year" then Time.current.beginning_of_year
       end
-      since ? scope.where(opened_at: since..) : scope
     end
 
     def apply_sort(scope)
@@ -199,12 +304,16 @@ module Fd
     ACTION_COUNT_SQL =
       "(SELECT count(*) FROM fd.actions WHERE fd.actions.case_id = fd.cases.id) DESC".freeze
 
-    def status_phrase
+    def status_lead
       case self["status"]
       when "open" then "Open"
       when "resolved" then "Resolved"
       else "Every case"
       end
+    end
+
+    def resolved_phrase
+      default?("resolved") ? nil : "resolved #{RESOLVED.fetch(self['resolved'])}"
     end
 
     def age_phrase = AGE_WORDS[self["age"]]

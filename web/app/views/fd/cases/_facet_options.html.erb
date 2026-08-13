@@ -1,6 +1,6 @@
 <% if facet.kind == :typed %>
   <%= form_with url: fd_cases_path, method: :get, class: "facet-typed" do %>
-    <% query.to_params.except(facet.key).each do |key, value| %>
+    <% query.facet_params({}).except(facet.key).each do |key, value| %>
       <%= hidden_field_tag key, value, id: nil %>
     <% end %>
     <%= text_field_tag facet.key, (facet.value unless query.default?(facet.key)),

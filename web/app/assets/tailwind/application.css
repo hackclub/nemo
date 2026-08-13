@@ -1260,6 +1260,39 @@
     color: var(--ink-3);
   }
 
+  .views {
+    display: flex;
+    gap: var(--s-sm);
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: var(--s-2xs);
+  }
+
+  .view {
+    font-size: var(--t-2xs);
+    font-weight: 600;
+    color: var(--ink-2);
+    padding: 4px 0;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+
+  .view:hover {
+    color: var(--ink);
+  }
+
+  .view[aria-current] {
+    color: var(--ink);
+    border-bottom-color: var(--accent);
+  }
+
+  .view-count {
+    color: var(--ink-3);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
   .filters {
     display: flex;
     gap: var(--s-2xs);
