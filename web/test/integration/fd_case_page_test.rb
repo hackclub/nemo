@@ -66,6 +66,29 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     assert_select "#who .pane .roles .line-why b", text: "involved"
   end
 
+  test "the bands read who, then the evidence, then what we did, then the paperwork" do
+    get fd_case_path(@kase)
+
+    page = response.body
+    who = page.index("Who is on this case")
+    threads = page.index("The threads")
+    done = page.index("What was done")
+    notes = page.index(">Notes<")
+
+    assert_operator who, :<, threads, "the people band comes before the threads"
+    assert_operator threads, :<, done, "the evidence comes before what we did about it"
+    assert_operator done, :<, notes, "the notes are the last band"
+  end
+
+  test "a duplicate is a chip in the header, not a card of its own" do
+    other = make_case(subject: "UELSE", opened_at: 3.days.ago)
+    @kase.update!(resolved_at: Time.current, resolution: "duplicate", duplicate_of: other.id)
+    get fd_case_path(@kase)
+
+    assert_select ".chip[href=?]", fd_case_path(other), text: "duplicate of case #{other.id}"
+    assert_select "h2", text: "Duplicate Cases", count: 0
+  end
+
   test "a name that leads to a member record is a link to it" do
     Fd::Note.create!(case_id: @kase.id, body: "spoke to them", author: "UFF1")
     get fd_case_path(@kase)

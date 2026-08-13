@@ -4,6 +4,10 @@
 <% end %>
 <% content_for :page_badge do %>
   <%= case_status_chip(@case) %>
+  <% if @case.duplicate_of %>
+    <%= link_to "duplicate of case #{@case.duplicate_of}", fd_case_path(@case.duplicate_of),
+          class: "chip chip-off" %>
+  <% end %>
 <% end %>
 <% content_for :head_actions do %>
   <% unless @case.resolved? %>
@@ -45,37 +49,6 @@
     <%= render "report", report: report, kase: @case %>
   <% end %>
 
-  <%= render "people", kase: @case, people: @people, contexts: @context,
-        notes: @standing_notes, mentioned: @mentioned, case_person: @case_person %>
-
-  <div class="card">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">Notes</h2>
-        <p class="card-sub">internal</p>
-      </div>
-      <div class="card-tools">
-        <label for="add-note" class="btn">Add a note</label>
-      </div>
-    </div>
-
-    <% if @notes.any? %>
-      <div class="notes">
-        <% @notes.each do |note| %>
-          <div class="note-row">
-            <div class="note-body"><%= mentioned(note.body) %></div>
-            <div class="note-by">
-              <span><%= note_byline(note) %></span>
-              <%= render "note_remove", kase: @case, note: note %>
-            </div>
-          </div>
-        <% end %>
-      </div>
-    <% else %>
-      <span class="note-none">No notes</span>
-    <% end %>
-  </div>
-
   <% if @case.resolved? %>
     <div class="card card-flush">
       <table class="data-table">
@@ -87,12 +60,6 @@
               as <%= @case.resolution.tr("_", " ") %>
             </td>
           </tr>
-          <% if @case.duplicate_of %>
-            <tr>
-              <td>Duplicate of</td>
-              <td><%= link_to "case #{@case.duplicate_of}", fd_case_path(@case.duplicate_of) %></td>
-            </tr>
-          <% end %>
           <tr>
             <td>Reason recorded</td>
             <td><%= @case.member_note || "n/a" %></td>
@@ -101,6 +68,11 @@
       </table>
     </div>
   <% end %>
+
+  <%= render "people", kase: @case, people: @people, contexts: @context,
+        notes: @standing_notes, mentioned: @mentioned, case_person: @case_person %>
+
+  <%= render "threads", kase: @case, threads: @thread_list %>
 
   <div class="card card-flush">
     <div class="card-head">
@@ -163,36 +135,34 @@
     <% end %>
   </div>
 
-  <%= render "threads", kase: @case, threads: @thread_list %>
-
-  <div class="card card-flush">
+  <div class="card">
     <div class="card-head">
       <div>
-        <h2 class="card-title">Duplicate Cases</h2>
+        <h2 class="card-title">Notes</h2>
+        <p class="card-sub">internal</p>
+      </div>
+      <div class="card-tools">
+        <label for="add-note" class="btn">Add a note</label>
       </div>
     </div>
-    <% if @siblings.any? %>
-      <table class="data-table">
-        <tbody>
-          <% @siblings.each do |sibling| %>
-            <tr>
-              <td>
-                <span class="two-line">
-                  <%= link_to fd_case_path(sibling) do %>
-                    <b>Case <%= sibling.id %></b>
-                  <% end %>
-                  <span><%= member_links(sibling.subject_user_ids) %></span>
-                </span>
-              </td>
-              <td><%= case_status_chip(sibling) %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
+
+    <% if @notes.any? %>
+      <div class="notes">
+        <% @notes.each do |note| %>
+          <div class="note-row">
+            <div class="note-body"><%= mentioned(note.body) %></div>
+            <div class="note-by">
+              <span><%= note_byline(note) %></span>
+              <%= render "note_remove", kase: @case, note: note %>
+            </div>
+          </div>
+        <% end %>
+      </div>
     <% else %>
-      <p class="card-note">n/a</p>
+      <span class="note-none">No notes</span>
     <% end %>
   </div>
+
 </div>
 
 <% @live_actions.each do |action| %>
