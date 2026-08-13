@@ -62,14 +62,14 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
     assert_select ".card-note", text: "Nothing in this state."
   end
 
-  test "a band says how many it holds and what the state means" do
+  test "a band says how many it holds" do
     settled(title: "Pile-ons")
     write(title: "Appeals")
 
     get fd_decisions_path
 
-    assert_select ".band-label", text: /In force · 1 · what FD does today/
-    assert_select ".band-label", text: /Proposed · 1 · waiting on a lead/
+    assert_select ".band-label", text: "In force · 1"
+    assert_select ".band-label", text: "Proposed · 1"
   end
 
   test "a state nobody offered falls back to the whole log" do
@@ -307,6 +307,135 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
 
     assert_match(/superseded, never dropped/, flash[:alert])
     assert Fd::Decision.exists?(decision.id)
+  end
+
+  test "several links land as several threads in one go" do
+    decision = settled(title: "Spam accounts")
+    post fd_decision_threads_path(decision), params: {
+      links: "https://hackclub.slack.com/archives/C0266FRGV/p1754079240123456\n" \
+             "https://hackclub.slack.com/archives/C0155HFRGV/p1754079880123456\n",
+      why: "where it was decided"
+    }
+
+    assert_equal 2, decision.threads.count
+    assert_equal ["C0155HFRGV", "C0266FRGV"], decision.threads.map(&:channel_id).sort
+    assert_equal ["where it was decided"], decision.threads.map(&:why).uniq
+    assert_equal "UME", decision.threads.first.added_by
+    assert_match(/2 threads linked/, flash[:notice])
+    assert_equal 2, Fd::AuditEntry.where(entity_type: "decision_thread", verb: "attached",
+      entity_id: decision.id).count
+  end
+
+  test "a thread is internal discussion unless it says otherwise" do
+    decision = settled(title: "Spam accounts")
+    post fd_decision_threads_path(decision), params: {
+      links: "https://hackclub.slack.com/archives/C0266FRGV/p1754079240123456"
+    }
+    assert_predicate decision.threads.sole, :internal?
+
+    post fd_decision_threads_path(decision), params: {
+      links: "https://hackclub.slack.com/archives/C0LOUNGE/p1754079880123456",
+      kind: "reference", why: "the wave that started it"
+    }
+    assert_predicate decision.threads.reference.sole, :reference?
+
+    get fd_decision_path(decision)
+    assert_select ".chip.chip-warn", text: "internal"
+    assert_select ".chip.chip-off", text: "reference"
+  end
+
+  test "a kind nobody offered falls back to internal" do
+    decision = settled(title: "Spam accounts")
+    post fd_decision_threads_path(decision), params: {
+      links: "https://hackclub.slack.com/archives/C0266FRGV/p1754079240123456",
+      kind: "evidence"
+    }
+
+    assert_predicate decision.threads.sole, :internal?
+  end
+
+  test "a line that is not a Slack thread link is reported, not swallowed" do
+    decision = settled(title: "Spam accounts")
+    post fd_decision_threads_path(decision), params: {
+      links: "https://hackclub.slack.com/archives/C0266FRGV/p1754079240123456\n" \
+             "https://example.com/nope\nnot a link at all"
+    }
+
+    assert_equal 1, decision.threads.count
+    assert_match(/1 thread linked, 2 lines were not Slack thread links/, flash[:notice])
+  end
+
+  test "the same thread twice in one paste is linked once" do
+    decision = settled(title: "Spam accounts")
+    link = "https://hackclub.slack.com/archives/C0266FRGV/p1754079240123456"
+    post fd_decision_threads_path(decision), params: { links: "#{link}\n#{link}" }
+
+    assert_equal 1, decision.threads.count
+  end
+
+  test "a thread already linked is left alone rather than refused" do
+    decision = settled(title: "Spam accounts")
+    link = "https://hackclub.slack.com/archives/C0266FRGV/p1754079240123456"
+    post fd_decision_threads_path(decision), params: { links: link, why: "first reason" }
+    post fd_decision_threads_path(decision), params: { links: link, why: "second reason" }
+
+    assert_equal 1, decision.threads.count
+    assert_equal "first reason", decision.threads.sole.why
+    assert_match(/nothing linked, 1 already linked/, flash[:notice])
+  end
+
+  test "an empty paste is refused" do
+    decision = settled(title: "Spam accounts")
+    post fd_decision_threads_path(decision), params: { links: "   " }
+
+    assert_match(/paste at least one Slack link/, flash[:alert])
+    assert_equal 0, decision.threads.count
+  end
+
+  test "unlinking a thread leaves the trail behind" do
+    decision = settled(title: "Spam accounts")
+    thread = decision.threads.create!(channel_id: "C1", thread_ts: "1.1", added_by: "UME",
+      why: "the wave")
+
+    delete fd_decision_thread_path(decision, thread)
+
+    assert_equal 0, decision.threads.count
+    assert_match(/thread unlinked/, flash[:notice])
+    entry = Fd::AuditEntry.where(entity_type: "decision_thread", verb: "detached").sole
+    assert_equal decision.id, entry.entity_id
+    assert_equal "the wave", entry.before["why"]
+  end
+
+  test "a thread on another decision cannot be unlinked from this one" do
+    mine = settled(title: "Spam accounts")
+    theirs = settled(title: "Pile-ons")
+    thread = theirs.threads.create!(channel_id: "C1", thread_ts: "1.1", added_by: "UME")
+
+    delete fd_decision_thread_path(mine, thread)
+
+    assert_match(/not on this decision/, flash[:alert])
+    assert_equal 1, theirs.threads.count
+  end
+
+  test "a signed out visitor cannot link a thread" do
+    decision = settled(title: "Spam accounts")
+    delete logout_path
+    post fd_decision_threads_path(decision), params: {
+      links: "https://hackclub.slack.com/archives/C0266FRGV/p1754079240123456"
+    }
+
+    assert_equal 0, decision.threads.count
+  end
+
+  test "a linked thread reads its held messages, and nothing on it can be flagged" do
+    decision = settled(title: "Spam accounts")
+    decision.threads.create!(channel_id: "C1", thread_ts: "1.1", added_by: "UME")
+
+    get fd_decision_path(decision)
+
+    assert_select ".thr-gone", text: "No messages held for this thread yet."
+    assert_select ".msg-end", count: 0
+    assert_select "form[action*=citations]", count: 0
   end
 
   test "the write control is on the log, and the edit control only while proposed" do

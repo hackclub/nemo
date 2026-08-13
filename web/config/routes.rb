@@ -13,7 +13,9 @@ Rails.application.routes.draw do
     resources :members, only: [:index, :show] do
       resources :notes, only: [:create, :destroy], controller: "member_notes"
     end
-    resources :decisions, only: [:index, :show, :create, :update, :destroy]
+    resources :decisions, only: [:index, :show, :create, :update, :destroy] do
+      resources :threads, only: [:create, :destroy], controller: "decision_threads"
+    end
     resources :cases, only: [:index, :show, :create] do
       resource :claim, only: [:create, :destroy]
       resource :resolution, only: [:create, :destroy]

@@ -22,8 +22,8 @@
     </div>
   <% end %>
 
-  <% @bands.each do |title, sub, rows| %>
-    <p class="band-label"><%= title %> · <%= rows.size %> · <%= sub %></p>
+  <% @bands.each do |title, rows| %>
+    <p class="band-label"><%= title %> · <%= rows.size %></p>
 
     <% if rows.any? %>
       <div class="card card-flush">

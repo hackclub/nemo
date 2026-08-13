@@ -8,9 +8,9 @@ module Fd
     }.freeze
 
     BANDS = {
-      "force" => ["In force", "what FD does today"],
-      "proposed" => ["Proposed", "waiting on a lead"],
-      "retired" => ["Retired", "replaced, kept for the record"]
+      "force" => "In force",
+      "proposed" => "Proposed",
+      "retired" => "Retired"
     }.freeze
 
     def index
@@ -25,7 +25,8 @@ module Fd
       @decision = Decision.includes(:threads, :replacement).find(params[:id])
       @replaced = @decision.replaced.order(:retired_at).to_a
       @previous, @next = neighbours(@decision)
-      @names = Names.for(named_on(@decision))
+      @messages = ThreadMessage.for_threads(@decision.threads).to_a.group_by(&:coordinates)
+      @names = Names.for(named_on(@decision) + @messages.values.flatten.map(&:author_user_id))
     end
 
     def create
@@ -39,7 +40,7 @@ module Fd
         audit(decision, "proposed")
       end
 
-      redirect_to fd_decision_path(decision), notice: "written down, waiting on a lead"
+      redirect_to fd_decision_path(decision), notice: "written down"
     rescue ActiveRecord::RecordNotUnique
       redirect_to fd_decisions_path, alert: "there is already a decision called that"
     end
@@ -128,7 +129,7 @@ module Fd
       keys = @view == "all" ? BANDS.keys : [@view]
       keys.filter_map do |key|
         rows = listing(key).to_a
-        [*BANDS.fetch(key), rows] if rows.any? || keys.one?
+        [BANDS.fetch(key), rows] if rows.any? || keys.one?
       end
     end
 

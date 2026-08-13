@@ -683,6 +683,10 @@
     color: var(--ink-2);
   }
 
+  .dec-why .fact-line:last-child {
+    padding-bottom: 0;
+  }
+
   .thr-gone {
     font-size: var(--t-2xs);
     color: var(--ink-3);
@@ -2914,6 +2918,10 @@
 
   .card-flush .data-table tbody tr:last-child td {
     padding-bottom: var(--s-sm);
+  }
+
+  .card-flush .data-table:not(:has(thead)) tbody tr:first-child td {
+    padding-top: var(--s-sm);
   }
 
   .card-flush .data-table thead th {

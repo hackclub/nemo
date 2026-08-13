@@ -9,6 +9,7 @@
   <% if @decision.proposed? %>
     <label for="edit-decision" class="btn btn-primary">Edit</label>
   <% end %>
+  <label for="link-threads" class="btn">Link threads</label>
   <%= link_to "The log", fd_decisions_path, class: "btn" %>
   <% if @previous %>
     <%= link_to "Previous", fd_decision_path(@previous), class: "btn" %>
@@ -47,6 +48,9 @@
       <div class="card">
         <div class="thr-head">
           <span class="thr-where"><%= thread.channel_id %></span>
+          <span class="chip <%= thread.internal? ? "chip-warn" : "chip-off" %>">
+            <%= thread.internal? ? "internal" : "reference" %>
+          </span>
           <% if thread.said_why? %>
             <span class="thr-why"><%= thread.why %></span>
           <% end %>
@@ -55,9 +59,24 @@
                   class: "btn", target: "_blank", rel: "noopener" %>
           </span>
         </div>
-        <p class="thr-gone">
-          Linked by <%= member_link(thread.added_by) %> · <%= last_case_label(thread.added_at) %>
-        </p>
+        <% held = @messages[thread.coordinates] %>
+        <% if held.blank? %>
+          <p class="thr-gone">No messages held for this thread yet.</p>
+        <% else %>
+          <%= render "fd/messages", messages: held %>
+        <% end %>
+
+        <div class="rail-card">
+          <div class="thin">
+            <span>
+              <b>Linked</b> <%= member_link(thread.added_by) %> ·
+              <%= last_case_label(thread.added_at) %>
+            </span>
+            <%= button_to "Unlink", fd_decision_thread_path(@decision, thread),
+                  method: :delete, class: "text-btn",
+                  form: { class: "contents", data: { turbo_confirm: "Unlink this thread?" } } %>
+          </div>
+        </div>
       </div>
     <% end %>
   <% else %>
@@ -85,3 +104,4 @@
 <% if @decision.proposed? %>
   <%= render "fd/decisions/edit_modal", decision: @decision %>
 <% end %>
+<%= render "fd/decisions/link_threads_modal", decision: @decision %>

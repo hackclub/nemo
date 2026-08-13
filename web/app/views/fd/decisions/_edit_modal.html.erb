@@ -5,7 +5,6 @@
     <div class="modal" role="dialog" aria-label="Edit this decision">
       <div class="modal-head">
         <h2 class="modal-title">Edit this decision</h2>
-        <p class="modal-sub">Still proposed, so the wording is anybody's to fix.</p>
       </div>
       <%= form_with url: fd_decision_path(decision), method: :patch,
             html: { autocomplete: "off" } do %>

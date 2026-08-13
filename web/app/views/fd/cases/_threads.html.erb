@@ -39,51 +39,8 @@
       <% if row.held.zero? %>
         <p class="thr-gone">No messages held for this thread yet.</p>
       <% else %>
-        <div>
-          <% row.messages.each do |said| %>
-            <% flag = flags[said.id] %>
-            <div class="msg <%= "msg-flagged" if flag %>">
-              <span class="avatar"><%= names.initial(said.author_user_id) %></span>
-              <span>
-                <span class="msg-who">
-                  <%= member_link(said.author_user_id) %>
-                  <span class="msg-at">
-                    <%= said.posted_at.strftime("%-d %b %H:%M") %><%= " · edited" if said.edited? %>
-                  </span>
-                  <span class="msg-end">
-                    <% if flag %>
-                      <%= button_to "Unflag", fd_case_citation_path(kase, flag),
-                            method: :delete, class: "text-btn",
-                            params: { person: params[:person] },
-                            form: { class: "contents", data: { turbo_frame: "threads" } } %>
-                    <% else %>
-                      <%= button_to "Flag", fd_case_citations_path(kase),
-                            params: { thread_message_id: said.id, person: params[:person] },
-                            class: "text-btn",
-                            form: { class: "contents", data: { turbo_frame: "threads" } } %>
-                    <% end %>
-                  </span>
-                </span>
-                <% if said.readable? %>
-                  <div class="msg-text"><%= mentioned(said.body) %></div>
-                <% end %>
-                <% if said.purged? %>
-                  <div class="msg-flag">Erased by <%= names[said.purged_by] %>.</div>
-                <% elsif said.deleted? %>
-                  <div class="msg-flag">
-                    Deleted in Slack <%= last_case_label(said.deleted_at) %>
-                  </div>
-                <% end %>
-                <% cited_by[said.id]&.each do |action| %>
-                  <div class="msg-flag">
-                    The <%= action_label(action.type_key).downcase %> of
-                    <%= action.performed_at.strftime("%-d %b %H:%M") %> cites this message
-                  </div>
-                <% end %>
-              </span>
-            </div>
-          <% end %>
-        </div>
+        <%= render "fd/messages", messages: row.messages, kase: kase,
+              flags: flags, cited_by: cited_by %>
       <% end %>
 
       <div class="rail-card">
