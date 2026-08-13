@@ -5,22 +5,23 @@ module Fd
     def create
       kase = Case.find(params[:case_id])
       body = params[:body].to_s.strip
-      standing = params[:scope] == "member"
+      about = params[:about].to_s
+      standing = about.present? && about != "case"
 
-      problem = objection(kase, body, standing)
+      problem = objection(kase, body, standing, about)
       return redirect_to(fd_case_path(kase), alert: problem) if problem
 
       writing do
         note = Note.create!(
           case_id: standing ? nil : kase.id,
-          subject_user_id: standing ? kase.subject_user_id : nil,
+          subject_user_id: standing ? about : nil,
           body: body,
           author: current_staff.user_id
         )
         audit(note, "noted")
       end
 
-      redirect_to fd_case_path(kase), notice: notice_for(kase, standing)
+      redirect_to fd_case_path(kase), notice: notice_for(kase, standing, about)
     end
 
     def destroy
@@ -55,22 +56,22 @@ module Fd
     private
 
     def on_this_page(kase)
-      Note.where(
-        "case_id = :id OR (case_id IS NULL AND subject_user_id = :subject)",
-        id: kase.id, subject: kase.subject_user_id
-      )
+      Note.where(case_id: kase.id)
+        .or(Note.standing.where(subject_user_id: kase.subject_user_ids))
     end
 
-    def objection(kase, body, standing)
+    def objection(kase, body, standing, about)
       return "write the note before saving it" if body.blank?
       return "that note is too long, keep it under #{MAX_LENGTH} characters" if body.length > MAX_LENGTH
-      return "this case has no subject, so there is nobody to note this against" if standing && kase.subject_user_id.blank?
+      if standing && !kase.subject_user_ids.include?(about)
+        return "that member is not a subject of this case"
+      end
 
       nil
     end
 
-    def notice_for(kase, standing)
-      standing ? "noted against @#{kase.subject_user_id}" : "note added to case #{kase.id}"
+    def notice_for(kase, standing, about)
+      standing ? "noted against @#{about}" : "note added to case #{kase.id}"
     end
   end
 end

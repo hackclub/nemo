@@ -106,7 +106,7 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
   test "a standing note is marked as being about the member" do
     entry = build(kase, notes: [note(subject_user_id: "USUB", body: "escalates in public")])
       .find { |e| e.title == "Note added" }
-    assert_equal ["about the member"], entry.chips
+    assert_equal ["about @USUB"], entry.chips
     assert_equal "escalates in public", entry.said
     assert_equal "by @UFF1", entry.detail
   end

@@ -38,7 +38,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
 
   test "a standing note attaches to the member, not the case" do
     sign_in_as(@me)
-    write(scope: "member", body: "escalates when corrected in public")
+    write(about: "USUB", body: "escalates when corrected in public")
 
     note = notes.sole
     assert_nil note.case_id
@@ -50,10 +50,31 @@ class FdNotesTest < ActionDispatch::IntegrationTest
   test "a standing note is refused when the case has no subject" do
     @kase.subjects.destroy_all
     sign_in_as(@me)
-    write(scope: "member")
+    write(about: "USUB")
 
     assert_equal 0, notes.count
-    assert_match(/nobody to note this against/, flash[:alert])
+    assert_empty Fd::Note.for_subject("USUB").to_a
+    assert_match(/not a subject of this case/, flash[:alert])
+  end
+
+  test "a standing note cannot be filed against somebody who is not a subject" do
+    sign_in_as(@me)
+    write(about: "UPASSERBY", body: "nothing to do with them")
+
+    assert_empty Fd::Note.for_subject("UPASSERBY").to_a,
+      "a forged member id must write nothing at all"
+    assert_match(/not a subject of this case/, flash[:alert])
+  end
+
+  test "with several subjects the note lands on the one that was chosen" do
+    @kase.add_subject!("USECOND")
+    sign_in_as(@me)
+    write(about: "USECOND", body: "this one keeps at it")
+
+    note = Fd::Note.for_subject("USECOND").sole
+    assert_nil note.case_id
+    assert_empty Fd::Note.for_subject("USUB").to_a, "the other subject keeps a clean record"
+    assert_match(/noted against @USECOND/, flash[:notice])
   end
 
   test "an empty note is refused rather than stored blank" do
@@ -212,7 +233,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
 
   test "a standing note can be removed by its author from the case page" do
     sign_in_as(@me)
-    write(scope: "member", body: "pattern worth watching")
+    write(about: "USUB", body: "pattern worth watching")
     note = notes.sole
 
     delete fd_case_note_path(@kase, note)
@@ -241,8 +262,8 @@ class FdNotesTest < ActionDispatch::IntegrationTest
 
     assert_select "input#add-note.modal-flip"
     assert_select "form[action=?] textarea[name=body]", fd_case_notes_path(@kase)
-    assert_select "input[name=scope][value=case]"
-    assert_select "input[name=scope][value=member]"
+    assert_select "input[name=about][value=case][checked]"
+    assert_select "input[name=about][value=USUB]"
   end
 
   test "a case with no subject offers only the case scope" do
@@ -250,7 +271,17 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     get fd_case_path(@kase)
 
-    assert_select "input[name=scope][value=case]"
-    assert_select "input[name=scope][value=member]", count: 0
+    assert_select "input[name=about][value=case]"
+    assert_select "input[name=about]", count: 1
+  end
+
+  test "every subject is offered by name, so the note says who it is about" do
+    @kase.add_subject!("USECOND")
+    sign_in_as(@me)
+    get fd_case_path(@kase)
+
+    assert_select "input[name=about][value=USUB]"
+    assert_select "input[name=about][value=USECOND]"
+    assert_select ".opt-label", text: "About @USECOND"
   end
 end

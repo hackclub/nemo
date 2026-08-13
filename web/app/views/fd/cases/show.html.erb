@@ -41,60 +41,15 @@
 <% end %>
 
 <div class="stack">
-  <% subject = @context[@case.subject_user_id] %>
-  <div class="card">
-    <div class="subject">
-      <div class="subject-avatar" aria-hidden="true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
-      </div>
-      <div>
-        <h2 class="card-title">
-          <%= @case.subject_user_id ? "@#{@case.subject_user_id}" : "No subject set" %>
-        </h2>
-        <div class="mono"><%= subject_identity_line(@case, subject) %></div>
-      </div>
-    </div>
-
-    <% if @case.subject_user_id %>
-      <div class="subject-facts">
-        <div>
-          <div class="fact-label">Messages</div>
-          <div class="fact-val"><%= fact_number(subject&.messages_posted) %></div>
-        </div>
-        <div>
-          <div class="fact-label">Active days</div>
-          <div class="fact-val"><%= fact_number(subject&.days_active) %></div>
-        </div>
-        <div>
-          <div class="fact-label">Channels</div>
-          <div class="fact-val"><%= fact_number(subject&.channels_joined) %></div>
-        </div>
-        <div>
-          <div class="fact-label">Last active</div>
-          <div class="fact-val"><%= last_active_label(subject&.last_active_at) %></div>
-        </div>
-      </div>
-
-      <div class="subject-notes">
-        <span class="fact-label">Notes on @<%= @case.subject_user_id %></span>
-        <% if @standing_notes.any? %>
-          <div class="notes">
-            <% @standing_notes.each do |note| %>
-              <div class="note-row">
-                <div class="note-body"><%= note.body %></div>
-                <div class="note-by">
-                  <span><%= note_byline(note) %></span>
-                  <%= render "note_remove", kase: @case, note: note %>
-                </div>
-              </div>
-            <% end %>
-          </div>
-        <% else %>
-          <span class="note-none">No notes</span>
-        <% end %>
-      </div>
+  <% if @case.subjects.any? %>
+    <% @case.subjects.each do |person| %>
+      <%= render "subject_card", kase: @case, user_id: person.user_id,
+            context: @context[person.user_id],
+            notes: @standing_notes.fetch(person.user_id, []) %>
     <% end %>
-  </div>
+  <% else %>
+    <%= render "subject_card", kase: @case, user_id: nil, context: nil, notes: [] %>
+  <% end %>
 
   <div class="card">
     <div class="card-head">
@@ -315,17 +270,20 @@
     </div>
 
     <div class="stack">
-      <div class="card card-flush">
+      <div class="card card-flush" id="who-else">
         <div class="card-head">
           <div>
             <h2 class="card-title">Who else was involved</h2>
-            <p class="card-sub">the subject is above, not in this list</p>
+            <p class="card-sub">
+              <%= @case.subjects.many? ? "the subjects are" : "the subject is" %>
+              above, not in this list
+            </p>
           </div>
         </div>
-        <% if @participants.any? %>
+        <% if @others.any? %>
           <table class="data-table">
             <tbody>
-              <% @participants.each do |person| %>
+              <% @others.each do |person| %>
                 <tr>
                   <td>
                     <span class="two-line">
@@ -359,9 +317,7 @@
                       <%= link_to fd_case_path(sibling) do %>
                         <b>Case <%= sibling.id %></b>
                       <% end %>
-                      <span>
-                        <%= sibling.subject_user_id ? "@#{sibling.subject_user_id}" : "no subject set" %>
-                      </span>
+                      <span><%= subject_handles(sibling) %></span>
                     </span>
                   </td>
                   <td><%= case_status_chip(sibling) %></td>
@@ -480,19 +436,19 @@
         <div class="modal-body">
           <div class="outcomes">
             <label class="opt">
-              <%= radio_button_tag :scope, "case", true %>
+              <%= radio_button_tag :about, "case", true %>
               <span class="opt-dot" aria-hidden="true"></span>
               <span>
                 <span class="opt-label">About this case</span>
                 <span class="opt-note">Sits in the timeline with everything else that happened.</span>
               </span>
             </label>
-            <% if @case.subject_user_id %>
+            <% @case.subjects.each do |person| %>
               <label class="opt">
-                <%= radio_button_tag :scope, "member", false %>
+                <%= radio_button_tag :about, person.user_id, false %>
                 <span class="opt-dot" aria-hidden="true"></span>
                 <span>
-                  <span class="opt-label">About @<%= @case.subject_user_id %></span>
+                  <span class="opt-label">About @<%= person.user_id %></span>
                   <span class="opt-note">
                     Follows the member to every case, now and later. For a pattern, not an incident.
                   </span>

@@ -194,9 +194,17 @@ module FdHelper
     actions.map { |action| [action_option_label(action), action.id] }
   end
 
+  def subject_handles(kase)
+    ids = kase.subject_user_ids
+    return "no subject set" if ids.empty?
+    return "@#{ids.first}" if ids.one?
+
+    "@#{ids.first} and #{pluralize(ids.size - 1, 'other')}"
+  end
+
   def case_option_label(kase)
     parts = ["##{kase.id}"]
-    parts << (kase.subject_user_id ? "@#{kase.subject_user_id}" : "no subject")
+    parts << subject_handles(kase)
     parts << kase.category_key.tr("_", " ") if kase.category_key
     parts << case_age_label(case_age_seconds(kase))
     parts.join(" · ")
@@ -290,7 +298,7 @@ module FdHelper
   end
 
   def action_target_note(action, kase)
-    return "the subject" if action.target_user_id == kase.subject_user_id
+    return "the subject" if kase.subject_user_ids.include?(action.target_user_id)
 
     "not the subject"
   end
@@ -320,10 +328,10 @@ module FdHelper
     end
   end
 
-  def subject_identity_line(kase, context)
-    return "nobody identified yet" if kase.subject_user_id.blank?
+  def subject_identity_line(user_id, context)
+    return "nobody identified yet" if user_id.blank?
 
-    parts = [kase.subject_user_id]
+    parts = [user_id]
     if context&.known?
       parts << "joined #{context.cohort_at.to_date.strftime('%b %-d, %Y')}" if context.cohort_at
       parts << (context.claimed_at ? claimed_phrase(context) : "never claimed")

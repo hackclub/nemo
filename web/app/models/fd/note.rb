@@ -16,6 +16,12 @@ module Fd
       standing.where(subject_user_id: user_id)
     end
 
+    def self.for_subjects(user_ids)
+      return none if user_ids.blank?
+
+      standing.where(subject_user_id: user_ids)
+    end
+
     def deleted?
       deleted_at.present?
     end

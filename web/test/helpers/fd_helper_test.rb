@@ -31,4 +31,21 @@ class FdHelperTest < ActionView::TestCase
   test "an empty timeline says nothing has happened" do
     assert_equal "Nothing has happened on this case yet.", timeline_standing(kase, [])
   end
+
+  test "one subject reads as a handle" do
+    assert_equal "@UAAA", subject_handles(make_case(subject: "UAAA"))
+  end
+
+  test "several subjects name the first and count the rest" do
+    saved = make_case(subject: "UAAA")
+    saved.add_subject!("UBBB")
+    assert_equal "@UAAA and 1 other", subject_handles(Fd::Case.find(saved.id))
+
+    saved.add_subject!("UCCC")
+    assert_equal "@UAAA and 2 others", subject_handles(Fd::Case.find(saved.id))
+  end
+
+  test "a case about nobody says so rather than naming an empty handle" do
+    assert_equal "no subject set", subject_handles(make_case(subject: nil))
+  end
 end

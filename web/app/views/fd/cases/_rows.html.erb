@@ -13,11 +13,17 @@
         <%= link_to fd_case_path(kase) do %>
           <b>
             <span class="sev <%= case_severity(kase) %>"></span>
-            <%= kase.subject_user_id ? "@#{kase.subject_user_id}" : "no subject set" %>
+            <%= subject_handles(kase) %>
             <span class="mono">#<%= kase.id %></span>
           </b>
         <% end %>
-        <span><%= subject_context_line(context[kase.subject_user_id]) %></span>
+        <span>
+          <% if kase.subject_user_ids.many? %>
+            <%= pluralize(kase.subject_user_ids.size, "subject") %>
+          <% else %>
+            <%= subject_context_line(context[kase.subject_user_id]) %>
+          <% end %>
+        </span>
       </span>
     </td>
     <td><%= kase.category_key || "n/a" %></td>

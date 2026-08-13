@@ -172,7 +172,7 @@ module Fd
           at: note.created_at,
           title: "Note added",
           mark: "note",
-          chips: note.standing? ? ["about the member"] : [],
+          chips: note.standing? ? ["about @#{note.subject_user_id}"] : [],
           detail: "by @#{note.author}",
           said: note.body,
         )
