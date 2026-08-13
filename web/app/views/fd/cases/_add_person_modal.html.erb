@@ -8,11 +8,11 @@
       </div>
       <%= form_with url: fd_case_participants_path(kase), method: :post do %>
         <div class="modal-body">
-          <label class="field-label">
-            Who
-            <%= text_field_tag :user_id, nil, class: "textarea", id: nil,
-                  placeholder: "search by name or paste a user id" %>
-          </label>
+          <div class="field-label">
+            <span>Who</span>
+            <%= render "fd/member_picker", name: "user_ids[]", single: false,
+                  label: "search for the people to add" %>
+          </div>
 
           <div class="field-label">
             <span>Their part in it</span>

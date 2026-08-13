@@ -1,0 +1,14 @@
+<div class="pick" data-controller="member-picker dismiss"
+     data-member-picker-name-value="<%= name %>"
+     data-member-picker-url-value="<%= fd_member_search_path %>"
+     data-member-picker-single-value="<%= single %>">
+  <div class="input pick-field" data-member-picker-target="field">
+    <input type="text" class="pick-input" autocomplete="off"
+           aria-label="<%= label %>"
+           placeholder="search by name or paste a user id"
+           data-member-picker-target="input"
+           data-action="input->member-picker#type keydown->member-picker#keys">
+  </div>
+  <div class="menu-pop pick-pop" hidden data-member-picker-target="results"></div>
+  <span data-member-picker-target="store"></span>
+</div>

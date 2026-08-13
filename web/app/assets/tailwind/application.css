@@ -1260,6 +1260,118 @@
     color: var(--ink-3);
   }
 
+  .pick {
+    position: relative;
+  }
+
+  .pick-field {
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    background-color: var(--card);
+    padding: 6px 8px;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .pick-field:focus-within {
+    border-color: var(--accent);
+  }
+
+  .pick-input {
+    font: inherit;
+    font-size: var(--t-sm);
+    color: var(--ink);
+    background: none;
+    border: 0;
+    outline: none;
+    flex: 1;
+    min-width: 8rem;
+  }
+
+  .token {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background-color: var(--accent-soft);
+    color: var(--accent-deep);
+    border-radius: var(--r-pill);
+    padding: 2px 4px 2px 2px;
+    font-size: var(--t-2xs);
+    font-weight: 600;
+  }
+
+  .token .avatar {
+    width: 18px;
+    height: 18px;
+    font-size: 9px;
+    font-weight: 700;
+    background-color: var(--accent);
+    color: var(--accent-on);
+  }
+
+  .token-x {
+    font: inherit;
+    color: var(--accent-deep);
+    background: none;
+    border: 0;
+    opacity: 0.6;
+    cursor: pointer;
+    padding-inline-end: 3px;
+  }
+
+  .token-x:hover {
+    opacity: 1;
+  }
+
+  .pick-pop {
+    inset-inline-start: 0;
+    inset-inline-end: auto;
+    top: calc(100% + var(--s-3xs));
+    max-height: 15rem;
+    overflow-y: auto;
+    padding: var(--s-3xs);
+  }
+
+  .pick-opt {
+    font: inherit;
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs);
+    width: 100%;
+    padding: 5px var(--s-2xs);
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+    text-align: start;
+  }
+
+  .pick-opt:hover {
+    background-color: var(--card-2);
+  }
+
+  .pick-opt .avatar {
+    width: 22px;
+    height: 22px;
+    font-size: var(--t-3xs);
+    font-weight: 700;
+  }
+
+  .pick-name {
+    font-size: var(--t-2xs);
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .pick-id {
+    font-size: var(--t-3xs);
+    color: var(--ink-3);
+    margin-inline-start: auto;
+  }
+
   .handle {
     font: inherit;
     color: inherit;

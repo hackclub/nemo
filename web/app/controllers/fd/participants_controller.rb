@@ -4,22 +4,30 @@ module Fd
 
     def create
       kase = Case.find(params[:case_id])
-      user_id = params[:user_id].to_s.strip.delete_prefix("@").upcase
+      wanted = asked_for
       role = params[:role].to_s
       detail = role == "involved" ? params[:detail].to_s.strip : ""
 
-      problem = objection(kase, user_id, role)
+      problem = objection(kase, wanted, role)
       return redirect_to(fd_case_path(kase), alert: problem) if problem
 
+      added = []
+      already = []
+
       writing do
-        person = kase.participants.create!(user_id: user_id, role: role, detail: detail.presence)
-        audit(person, "attached", entity_id: kase.id)
+        wanted.each do |user_id|
+          ActiveRecord::Base.transaction(requires_new: true) do
+            person = kase.participants.create!(user_id: user_id, role: role,
+              detail: detail.presence)
+            audit(person, "attached", entity_id: kase.id)
+          end
+          added << user_id
+        rescue ActiveRecord::RecordNotUnique
+          already << user_id
+        end
       end
 
-      redirect_to fd_case_path(kase), notice: added_notice(role, user_id)
-    rescue ActiveRecord::RecordNotUnique
-      redirect_to fd_case_path(kase),
-        notice: "@#{user_id} was already on this case as #{role_word(role)}, nothing changed"
+      redirect_to fd_case_path(kase), notice: added_notice(role, added, already)
     end
 
     def destroy
@@ -48,9 +56,16 @@ module Fd
 
     private
 
-    def objection(kase, user_id, role)
-      return "say who to add" if user_id.blank?
-      return "that does not look like a Slack member id" unless user_id.match?(MEMBER_ID)
+    def asked_for
+      raw = params[:user_ids].presence || [params[:user_id]]
+      Array(raw).map { |id| id.to_s.strip.delete_prefix("@").upcase }.reject(&:blank?).uniq
+    end
+
+    def objection(kase, wanted, role)
+      return "say who to add" if wanted.empty?
+      unless wanted.all? { |id| id.match?(MEMBER_ID) }
+        return "that does not look like a Slack member id"
+      end
       return "pick how they were on this case" unless CaseParticipant::ROLES.include?(role)
 
       not_yours(kase)
@@ -60,12 +75,16 @@ module Fd
       role == "involved" ? "involved" : "the #{role}"
     end
 
-    def added_notice(role, user_id)
-      case role
-      when "subject" then "the case is now also about @#{user_id}"
-      when "reporter" then "@#{user_id} recorded as reporting it"
-      else "@#{user_id} added to who else was involved"
+    def added_notice(role, added, already)
+      return "everybody you picked was already on this case, nothing changed" if added.empty?
+
+      who = added.map { |id| "@#{id}" }.to_sentence
+      note = case role
+      when "subject" then "the case is now also about #{who}"
+      when "reporter" then "#{who} recorded as reporting it"
+      else "#{who} added to who else is logged"
       end
+      already.any? ? "#{note}, #{already.size} already there" : note
     end
   end
 end

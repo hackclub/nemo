@@ -28,7 +28,7 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
     person = people.sole
     assert_equal "involved", person.role
     assert_equal "it was aimed at them", person.detail
-    assert_match(/@UNEW added to who else was involved/, flash[:notice])
+    assert_match(/@UNEW added to who else is logged/, flash[:notice])
   end
 
   test "involved without a reason is allowed, the reason is optional" do
@@ -93,7 +93,36 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
 
     assert_equal 1, people.count
     assert_nil flash[:alert], "a repeat is a no-op, not something to warn about"
-    assert_match(/already on this case as involved, nothing changed/, flash[:notice])
+    assert_match(/already on this case, nothing changed/, flash[:notice])
+  end
+
+  test "several people are added in one go, at the same role" do
+    sign_in_as(@me)
+    post fd_case_participants_path(@kase),
+      params: { user_ids: %w[UONE UTWO UTHREE], role: "involved", detail: "all in the thread" }
+
+    assert_equal %w[UONE UTHREE UTWO], people.map(&:user_id).sort
+    assert_match(/@UONE, @UTWO, and @UTHREE added to who else is logged/, flash[:notice])
+  end
+
+  test "a repeat among several does not stop the rest from landing" do
+    sign_in_as(@me)
+    add(user_id: "UONE")
+    post fd_case_participants_path(@kase),
+      params: { user_ids: %w[UONE UTWO], role: "involved", detail: "piled on" }
+
+    assert_equal %w[UONE UTWO], people.map(&:user_id).sort,
+      "the duplicate must not abort the transaction the others are riding in"
+    assert_match(/@UTWO added to who else is logged, 1 already there/, flash[:notice])
+  end
+
+  test "one bad id in a batch refuses the whole batch" do
+    sign_in_as(@me)
+    post fd_case_participants_path(@kase),
+      params: { user_ids: %w[UONE bob], role: "involved", detail: "x" }
+
+    assert_empty people.to_a
+    assert_match(/does not look like a Slack member id/, flash[:alert])
   end
 
   test "one person can hold two roles on one case" do
@@ -179,7 +208,8 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase)
 
     assert_select "input#add-person.modal-flip"
-    assert_select "form[action=?] input[name=user_id]", fd_case_participants_path(@kase)
+    assert_select "form[action=?] .pick[data-member-picker-name-value='user_ids[]']",
+      fd_case_participants_path(@kase)
     assert_select ".seg-radio input[name=role][value=involved][checked]"
     assert_select ".seg-radio input[name=role][value=subject]"
     assert_select "#who-else .who-row .who-name", text: "@UWATCHER"
