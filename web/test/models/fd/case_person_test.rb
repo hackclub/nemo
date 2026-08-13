@@ -58,6 +58,36 @@ class Fd::CasePersonTest < ActiveSupport::TestCase
     assert_equal 1, build.priors, "a case resolved after this one opened is not a prior for it"
   end
 
+  test "the rows explain themselves, and agree with the count" do
+    counted = make_case(subject: "UDEX", opened_at: 60.days.ago)
+    counted.update!(resolved_at: 50.days.ago, resolution: "action_taken")
+    action(target: "UDEX", case_id: counted.id, performed_at: 55.days.ago)
+
+    undone = make_case(subject: "UDEX", opened_at: 40.days.ago)
+    undone.update!(resolved_at: 30.days.ago, resolution: "action_taken")
+    action(target: "UDEX", case_id: undone.id, performed_at: 35.days.ago,
+      reversed_at: 20.days.ago, reversed_by: "UFF2", reversal_reason: "appeal upheld")
+
+    nothing = make_case(subject: "UDEX", opened_at: 20.days.ago)
+    nothing.update!(resolved_at: 10.days.ago, resolution: "no_action")
+
+    onlooker = make_case(subject: "USOMEBODY", opened_at: 15.days.ago)
+    onlooker.update!(resolved_at: 12.days.ago, resolution: "action_taken")
+    Fd::CaseParticipant.create!(case_id: onlooker.id, user_id: "UDEX", role: "involved",
+      detail: "they were in the thread")
+    action(target: "USOMEBODY", case_id: onlooker.id, performed_at: 13.days.ago)
+
+    here = build
+    reasons = here.earlier_cases.to_h { |row| [row.kase.id, row.why] }
+
+    assert_nil reasons[counted.id]
+    assert_equal "the action was reversed", reasons[undone.id]
+    assert_equal "nothing was done to them", reasons[nothing.id]
+    assert_equal "logged, not the subject", reasons[onlooker.id]
+    assert_equal here.priors, here.earlier_cases.count(&:counts),
+      "the number and the rows behind it must never disagree"
+  end
+
   test "cases ever counts every case they appear on, in any role" do
     other = make_case(subject: "USOMEBODY")
     Fd::CaseParticipant.create!(case_id: other.id, user_id: "UDEX", role: "involved",

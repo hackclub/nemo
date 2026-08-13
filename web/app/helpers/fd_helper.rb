@@ -428,6 +428,10 @@ module FdHelper
     ACTION_LABELS.fetch(type_key) { type_key.tr("_", " ").capitalize }
   end
 
+  def action_labels(actions)
+    actions.map { |action| action_label(action.type_key).downcase }.uniq.to_sentence
+  end
+
   def action_state_chip(action)
     return tag.span("reversed", class: "chip chip-off") if action.reversed?
     return tag.span("expired", class: "chip chip-off") if action.expired?
@@ -496,6 +500,18 @@ module FdHelper
       parts << "not in the warehouse yet"
     end
     parts.join(" · ")
+  end
+
+  def pane_identity_line(user_id, context)
+    parts = [user_id.to_s]
+    if context&.known?
+      parts << "joined #{context.cohort_at.to_date.strftime('%b %Y')}" if context.cohort_at
+      parts << member_activity_line(context)
+      parts << "active #{last_active_label(context.last_active_at)}" if context.last_active_at
+    else
+      parts << "not in the warehouse yet"
+    end
+    parts.compact_blank.join(" · ")
   end
 
   def subject_context_line(context)

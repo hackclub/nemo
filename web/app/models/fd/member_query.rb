@@ -360,7 +360,15 @@ module Fd
 
     def prior_counts
       CaseParticipant.subjects
-        .where(case_id: Case.counts_as_prior.select(:id))
+        .where(case_id: Case.where.not(resolved_at: nil).select(:id))
+        .where(<<~SQL.squish)
+          EXISTS (
+            SELECT 1 FROM fd.actions a
+            WHERE a.case_id = fd.case_participants.case_id
+              AND a.target_user_id = fd.case_participants.user_id
+              AND a.reversed_at IS NULL
+          )
+        SQL
         .group(:user_id).count
     end
   end

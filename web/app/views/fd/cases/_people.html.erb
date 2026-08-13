@@ -34,21 +34,30 @@
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
         </span>
         <span>
-          <span class="mcard-name"><%= handle(person.user_id) %></span>
-          <span class="mcard-sub"><%= subject_identity_line(person.user_id, context) %></span>
+          <span class="mcard-name">
+            <%= handle(person.user_id) %>
+            <% person.roles.each do |role| %>
+              <span class="chip <%= role_tone(role) %>"><%= role_label(role) %></span>
+            <% end %>
+            <% if here.priors.positive? %>
+              <span class="chip chip-warn"><%= pluralize(here.priors, "prior") %></span>
+            <% end %>
+          </span>
+          <span class="mcard-sub"><%= pane_identity_line(person.user_id, context) %></span>
         </span>
         <span class="mcard-acts">
           <%= link_to "Their record", fd_member_path(person.user_id), class: "btn" %>
           <%= link_to "In Slack", slack_member_url(person.user_id), class: "btn",
                 target: "_blank", rel: "noopener" %>
+          <label for="log-action" class="btn">Log an action</label>
         </span>
       </div>
 
       <div class="lines roles">
         <% person.records.each do |record| %>
           <div class="line-row">
-            <span class="chip <%= role_tone(record.role) %>"><%= role_label(record.role) %></span>
             <span class="line-why">
+              <b><%= role_label(record.role) %></b>
               <%= record.detail.presence || "logged #{record.noted_at.strftime('%-d %b')}" %>
             </span>
             <span class="line-end"><%= render "person_remove", kase: kase, person: record %></span>
@@ -56,51 +65,120 @@
         <% end %>
       </div>
 
-      <div>
-        <p class="band-label">On this case</p>
-        <div class="subject-facts">
-          <div>
-            <div class="fact-label">Done to them</div>
-            <div class="fact-val"><%= here.actions.any? ? pluralize(here.actions.size, "action") : "nothing" %></div>
+      <div class="subject-facts pane-cut">
+        <div>
+          <div class="fact-label">Done to them here</div>
+          <div class="fact-val"><%= here.actions.any? ? pluralize(here.actions.size, "action") : "nothing" %></div>
+        </div>
+        <div>
+          <div class="fact-label">Their messages</div>
+          <div class="fact-val">n/a</div>
+        </div>
+        <div>
+          <div class="fact-label">Notes naming them</div>
+          <div class="fact-val"><%= here.notes_naming.size %> <span class="fact-val dim">of <%= here.notes_total %></span></div>
+        </div>
+        <div>
+          <div class="fact-label">Priors, 12 months</div>
+          <div class="fact-val">
+            <%= here.priors %>
+            <% if here.reversed_actions.positive? %>
+              <span class="fact-val dim"><%= here.reversed_actions %> reversed</span>
+            <% end %>
           </div>
-          <div>
-            <div class="fact-label">Notes naming them</div>
-            <div class="fact-val"><%= here.notes_naming.size %> of <%= here.notes_total %></div>
-          </div>
-          <div>
-            <div class="fact-label">Priors before it</div>
-            <div class="fact-val"><%= here.priors %></div>
-          </div>
-          <div>
-            <div class="fact-label">Their messages</div>
-            <div class="fact-val">n/a</div>
-          </div>
-          <div>
-            <div class="fact-label">Cases ever</div>
-            <div class="fact-val"><%= here.cases_ever %></div>
-          </div>
+        </div>
+        <div>
+          <div class="fact-label">Lifetime</div>
+          <div class="fact-val"><%= pluralize(here.cases_ever, "case") %></div>
         </div>
       </div>
 
-      <div class="lines acts">
-        <% if here.actions.any? %>
-          <% here.actions.each do |action| %>
-            <div class="line-row">
-              <span class="chip <%= action.reversed? ? "chip-off" : "chip-crit" %>">
-                <%= action_label(action.type_key) %>
-              </span>
-              <span class="line-why">
-                <%= action.performed_at.strftime("%-d %b") %> · <%= names[action.decided_by] %>
-                <%= "· reversed" if action.reversed? %>
-              </span>
-            </div>
-          <% end %>
-        <% else %>
-          <div class="line-row">
-            <span class="line-why">Nothing has been done to them on this case.</span>
-            <span class="line-end"><label for="log-action" class="text-btn">Log an action</label></span>
+      <div class="pane-cut">
+        <p class="band-label">Their record before this case</p>
+        <% if here.earlier_cases.any? %>
+          <div class="scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Case</th>
+                  <th>What was done to them</th>
+                  <th>Counts as a prior</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% here.earlier_cases.each do |row| %>
+                  <tr>
+                    <td>
+                      <span class="two-line">
+                        <b><%= link_to "case #{row.kase.id}", fd_case_path(row.kase) %></b>
+                        <span>
+                          <% if row.kase.category_key.present? %>
+                            <%= category_label(row.kase.category_key) %> ·
+                          <% end %>
+                          <%= last_case_label(row.kase.resolved_at || row.kase.opened_at) %>
+                        </span>
+                      </span>
+                    </td>
+                    <td><%= row.actions.any? ? action_labels(row.actions) : "nothing" %></td>
+                    <td>
+                      <span class="chip <%= row.counts ? "chip-warn" : "chip-off" %>">
+                        <%= row.counts ? "yes" : "no" %>
+                      </span>
+                    </td>
+                    <td><%= link_to "Open", fd_case_path(row.kase), class: "text-btn" %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
           </div>
+        <% else %>
+          <span class="note-none">No earlier cases.</span>
         <% end %>
+      </div>
+
+      <div class="pair">
+        <div>
+          <p class="band-label">Done to them here</p>
+          <div class="rail-card">
+            <% if here.actions.any? %>
+              <% here.actions.each do |action| %>
+                <div class="thin">
+                  <span>
+                    <b><%= action_label(action.type_key) %></b>
+                    <%= action.performed_at.strftime("%-d %b") %> · <%= names[action.decided_by] %>
+                  </span>
+                  <%= action_state_chip(action) %>
+                </div>
+              <% end %>
+            <% else %>
+              <div class="thin">
+                <span>Nothing, and they are on the case.</span>
+                <label for="log-action" class="text-btn">Log an action</label>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <div>
+          <p class="band-label">Notes on <%= names[person.user_id] %></p>
+          <% held = notes.fetch(person.user_id, []) %>
+          <% if held.any? %>
+            <div class="notes">
+              <% held.each do |note| %>
+                <div class="note-row">
+                  <div class="note-body"><%= mentioned(note.body) %></div>
+                  <div class="note-by">
+                    <span><%= note_byline(note) %></span>
+                    <%= render "note_remove", kase: kase, note: note %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <span class="note-none">No notes</span>
+          <% end %>
+        </div>
       </div>
 
       <div>
@@ -125,25 +203,6 @@
         </div>
       </div>
 
-      <div class="subject-notes">
-        <span class="fact-label">Notes on <%= names[person.user_id] %></span>
-        <% held = notes.fetch(person.user_id, []) %>
-        <% if held.any? %>
-          <div class="notes">
-            <% held.each do |note| %>
-              <div class="note-row">
-                <div class="note-body"><%= mentioned(note.body) %></div>
-                <div class="note-by">
-                  <span><%= note_byline(note) %></span>
-                  <%= render "note_remove", kase: kase, note: note %>
-                </div>
-              </div>
-            <% end %>
-          </div>
-        <% else %>
-          <span class="note-none">No notes</span>
-        <% end %>
-      </div>
     <% end %>
   </div>
 </div>

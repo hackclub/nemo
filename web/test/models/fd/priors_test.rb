@@ -38,17 +38,36 @@ class Fd::PriorsTest < ActiveSupport::TestCase
       "being harmed by somebody else must not count against you"
   end
 
-  test "an action logged against somebody else on their case still counts" do
+  test "an action logged against somebody else on their case is not their prior" do
     act_on resolved_case(opened: 60.days.ago, resolved: 50.days.ago), target: "UELSE"
-    assert_equal 1, Fd::Case.prior_count(SUBJECT),
-      "the case is the unit, and it was resolved with an action on it"
+    assert_equal 0, Fd::Case.prior_count(SUBJECT),
+      "a case about two people, acted on for one of them, is a prior for that one only"
   end
 
-  test "a reversed action still counts, per the definition as written" do
+  test "a reversed action is not a prior, because it was undone" do
     act_on resolved_case(opened: 60.days.ago, resolved: 50.days.ago),
       reversed_at: 40.days.ago, reversed_by: "UFF2", reversal_reason: "appeal upheld"
 
+    assert_equal 0, Fd::Case.prior_count(SUBJECT),
+      "reversing an action says it should not have happened, so it cannot count as a finding"
+  end
+
+  test "one live action among reversed ones still makes a prior" do
+    kase = resolved_case(opened: 60.days.ago, resolved: 50.days.ago)
+    act_on kase, reversed_at: 40.days.ago, reversed_by: "UFF2", reversal_reason: "appeal upheld"
+    act_on kase, type_key: "shush"
+
     assert_equal 1, Fd::Case.prior_count(SUBJECT)
+  end
+
+  test "the window is measured from the moment being asked about, not from today" do
+    act_on resolved_case(opened: 20.months.ago, resolved: 19.months.ago)
+    later = make_case(subject: SUBJECT, opened_at: 8.months.ago)
+
+    assert_equal 0, Fd::Case.prior_count(SUBJECT, within: Fd::Case::PRIOR_WINDOW),
+      "19 months ago is outside a year from today"
+    assert_equal 1, Fd::Case.prior_count(SUBJECT, within: Fd::Case::PRIOR_WINDOW,
+      before: later.opened_at), "but it was inside a year when that case was opened"
   end
 
   test "the window is measured from when the case was resolved" do

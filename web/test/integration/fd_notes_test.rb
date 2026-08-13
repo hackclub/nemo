@@ -143,7 +143,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     get fd_case_path(@kase)
 
-    assert_select ".subject-notes .note-body", text: "watch for repeats"
+    assert_select "#who .pane .notes .note-body", text: "watch for repeats"
     assert_match(/Notes on @USUB/, response.body)
   end
 
@@ -154,7 +154,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     get fd_case_path(@kase, person: "UWATCHER")
 
-    assert_select ".subject-notes .note-body", text: "keeps turning up"
+    assert_select "#who .pane .notes .note-body", text: "keeps turning up"
   end
 
   test "a deleted note is not shown on the page" do

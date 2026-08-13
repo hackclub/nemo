@@ -638,6 +638,11 @@
     margin-top: var(--s-sm);
   }
 
+  .pane-cut {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: var(--s-sm);
+  }
+
   .fact-label {
     font-size: var(--t-3xs);
     letter-spacing: 0.1em;
@@ -1204,14 +1209,6 @@
     height: 1px;
     background-color: var(--line-soft);
     margin: var(--s-3xs) calc(var(--s-2xs) * -1);
-  }
-
-  .subject-notes {
-    border-top: 1px solid var(--line);
-    padding-top: var(--s-sm);
-    margin-top: var(--s-sm);
-    display: grid;
-    gap: var(--s-2xs);
   }
 
   .text-btn {
@@ -1852,6 +1849,30 @@
   .note-row:last-child {
     border-bottom: 0;
     padding-bottom: 0;
+  }
+
+  .rail-card {
+    display: grid;
+    gap: var(--s-2xs);
+  }
+
+  .thin {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--s-2xs);
+    font-size: var(--t-2xs);
+    color: var(--ink-2);
+    padding: 3px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .thin:last-child {
+    border-bottom: 0;
+  }
+
+  .thin b {
+    color: var(--ink);
+    font-weight: 600;
   }
 
   .lines {

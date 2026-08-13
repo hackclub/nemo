@@ -68,15 +68,18 @@ module Fd
     scope :free_or_assigned_to, ->(user_id) {
       unassigned.or(assigned_to(user_id))
     }
-    scope :with_action, -> { where(id: Action.select(:case_id)) }
-    scope :counts_as_prior, -> { where.not(resolved_at: nil).with_action }
+    scope :with_live_action_against, ->(user_id) {
+      where(id: Action.live.for_target(user_id).select(:case_id))
+    }
 
     PRIOR_WINDOW = 12.months
 
     def self.priors_for(user_id, within: nil, before: nil)
-      scope = counts_as_prior.with_subject(user_id)
-      scope = scope.where(resolved_at: within.ago..) if within
+      scope = where.not(resolved_at: nil)
+        .with_subject(user_id)
+        .with_live_action_against(user_id)
       scope = scope.where(resolved_at: ...before) if before
+      scope = scope.where(resolved_at: ((before || Time.current) - within)..) if within
       scope
     end
 

@@ -42,7 +42,7 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase, person: "USECOND")
 
     assert_select "#who .pane .mcard-name button.handle", text: "@USECOND"
-    assert_select "#who .pane .subject-notes .fact-label", text: "Notes on @USECOND"
+    assert_select "#who .pane .band-label", text: "Notes on @USECOND"
     assert_select "#who a.index-item[aria-current=true]", text: /@USECOND/
   end
 
@@ -62,8 +62,8 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
 
     assert_select "#who a.index-item", text: /@UBOTH/, count: 1
     assert_select "#who .pane .roles .line-row", 2
-    assert_select "#who .pane .line-row .chip", text: "reported it"
-    assert_select "#who .pane .line-row .chip", text: "involved"
+    assert_select "#who .pane .mcard-name .chip", text: "reported it"
+    assert_select "#who .pane .roles .line-why b", text: "involved"
   end
 
   test "logging an action from a person's pane is aimed at that person" do
