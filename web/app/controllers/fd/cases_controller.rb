@@ -1,8 +1,5 @@
 module Fd
   class CasesController < BaseController
-    FILTERS = %w[open mine all].freeze
-    DEFAULT_FILTER = "open".freeze
-
     def index
       load_queue
     end
@@ -100,21 +97,14 @@ module Fd
     end
 
     def load_queue
-      @filter = FILTERS.include?(params[:filter]) ? params[:filter] : DEFAULT_FILTER
-      @cases = scope_for(@filter).includes(:subjects, :assignees).to_a
+      @query = CaseQuery.new(params, viewer: current_staff&.user_id)
+      @cases = @query.relation.includes(:subjects, :assignees).to_a
       @context = MemberContext.for(@cases.flat_map(&:subject_user_ids))
       @action_counts = Action.where(case_id: @cases.map(&:id)).group(:case_id).count
       @open_count = Case.unresolved.count
       @unassigned_count = Case.unresolved.unassigned.count
+      @total_count = Case.count
       @open_for_subject ||= []
-    end
-
-    def scope_for(filter)
-      case filter
-      when "mine" then Case.unresolved.assigned_to(current_staff.user_id).oldest_first
-      when "all" then Case.newest_first
-      else Case.unresolved.oldest_first
-      end
     end
   end
 end

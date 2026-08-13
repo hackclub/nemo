@@ -2,36 +2,6 @@ module FdHelper
   AGE_WARN = 2.days
   AGE_CRIT = 5.days
 
-  FILTER_TITLES = {
-    "open" => "Open cases",
-    "mine" => "Cases you claimed",
-    "all" => "Every case"
-  }.freeze
-
-  FILTER_ORDERING = {
-    "open" => "oldest first",
-    "mine" => "oldest first",
-    "all" => "newest first"
-  }.freeze
-
-  FILTER_EMPTY = {
-    "open" => "Nothing open right now.",
-    "mine" => "You have not claimed any open cases.",
-    "all" => "n/a"
-  }.freeze
-
-  def filter_title(filter)
-    FILTER_TITLES.fetch(filter, "Cases")
-  end
-
-  def filter_ordering(filter)
-    FILTER_ORDERING.fetch(filter, "oldest first")
-  end
-
-  def filter_empty_note(filter)
-    FILTER_EMPTY.fetch(filter, "n/a")
-  end
-
   def case_age_seconds(kase)
     (kase.resolved_at || Time.current) - kase.opened_at
   end
@@ -149,34 +119,18 @@ module FdHelper
     ACTION_LABELS.map { |key, label| [label, key] }
   end
 
-  CATEGORY_LABELS = {
-    "nos" => "Misconduct not otherwise specified",
-    "adult" => "Adult",
-    "insulting" => "Insulting or demeaning remarks",
-    "bullying" => "Bullying",
-    "discrimination" => "Discrimination",
-    "hateful" => "Hateful remarks",
-    "harassment_identity" => "Systematic harassment, identity based",
-    "harassment_general" => "Systematic harassment, general",
-    "nsfw_mild" => "Mild or ambiguous NSFW",
-    "nsfw_extreme" => "Clear and extreme NSFW",
-    "advertising" => "Advertising or recruiting",
-    "spam" => "Spam",
-    "fraud_hcb" => "HCB fraud",
-    "fraud_referral" => "Referral fraud",
-    "fraud_ysws" => "YSWS fraud",
-    "fraud_other" => "Other fraud",
-    "ban_evasion" => "Slack ban evasion"
-  }.freeze
-
   def category_label(key)
     return "n/a" if key.blank?
 
-    CATEGORY_LABELS.fetch(key) { key.tr("_", " ") }
+    Fd::Case.category_label(key)
   end
 
   def category_options
     Fd::Case::CATEGORIES.map { |key| [category_label(key), key] }
+  end
+
+  def facet_link(query, key, value)
+    fd_cases_path(query.to_params(key => value))
   end
 
   def thread_kind_note(thread)

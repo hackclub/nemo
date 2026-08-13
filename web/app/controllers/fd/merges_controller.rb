@@ -21,11 +21,15 @@ module Fd
       if marked.zero?
         refuse("nothing to mark: they are resolved already, or assigned to somebody else")
       else
-        redirect_to fd_cases_path(filter: params[:filter]), notice: outcome(marked, ids, root)
+        redirect_to fd_cases_path(query_params), notice: outcome(marked, ids, root)
       end
     end
 
     private
+
+    def query_params
+      params.permit(*CaseQuery::KEYS).to_h.compact_blank
+    end
 
     def chosen_target
       return nil if params[:duplicate_of].blank?
@@ -73,7 +77,7 @@ module Fd
     end
 
     def refuse(message)
-      redirect_to fd_cases_path(filter: params[:filter]), alert: message
+      redirect_to fd_cases_path(query_params), alert: message
     end
   end
 end

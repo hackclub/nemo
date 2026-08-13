@@ -3,61 +3,114 @@
   <%= @open_count %> open · <%= @unassigned_count %> unassigned
 <% end %>
 <% content_for :head_actions do %>
-  <div class="segmented">
-    <% Fd::CasesController::FILTERS.each do |name| %>
-      <%= link_to name.capitalize, fd_cases_path(filter: name),
-            aria: { current: ("true" if @filter == name) } %>
-    <% end %>
-  </div>
   <label for="open-case" class="btn btn-primary">Open a case</label>
 <% end %>
 
 <div class="stack" data-controller="merge">
-<div class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title"><%= filter_title(@filter) %></h2>
-      <p class="card-sub"><%= filter_ordering(@filter) %> · subject context from the warehouse</p>
-    </div>
-    <div class="card-tools">
-      <span class="chip chip-off"><%= pluralize(@cases.size, "case") %></span>
-    </div>
+  <div class="filters" data-controller="dismiss">
+    <% @query.inline_facets.each do |facet| %>
+      <span class="facet-set <%= "on" if facet.on %>">
+        <details class="facet-drop" name="queue-facet">
+          <summary class="facet">
+            <%= facet.label %>
+            <% if facet.on || facet.key == "sort" %>
+              <b><%= facet.value_label %></b>
+            <% end %>
+            <% unless facet.on %>
+              <span class="facet-caret" aria-hidden="true">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            <% end %>
+          </summary>
+          <div class="menu-pop facet-pop">
+            <%= render "facet_options", query: @query, facet: facet %>
+          </div>
+        </details>
+        <% if facet.on %>
+          <%= link_to facet_link(@query, facet.key, Fd::CaseQuery::DEFAULTS[facet.key]),
+                class: "facet-x", aria: { label: "clear the #{facet.label.downcase} filter" } do %>
+            &times;
+          <% end %>
+        <% end %>
+      </span>
+    <% end %>
+
+    <% if @query.more_facets.any? %>
+      <span class="facet-set">
+        <details class="facet-drop" name="queue-facet">
+          <summary class="facet">
+            More
+            <span class="facet-caret" aria-hidden="true">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+            </span>
+          </summary>
+          <div class="menu-pop facet-pop more-pop">
+            <% @query.more_facets.each do |facet| %>
+              <details class="more-item" name="queue-more">
+                <summary class="more-name">
+                  <%= facet.label %>
+                  <span class="facet-caret" aria-hidden="true">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+                  </span>
+                </summary>
+                <div class="more-options">
+                  <%= render "facet_options", query: @query, facet: facet %>
+                </div>
+              </details>
+            <% end %>
+          </div>
+        </details>
+      </span>
+    <% end %>
   </div>
 
-  <% if @cases.any? %>
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th class="col-tick"><span class="sr-only">Select</span></th>
-            <th>Subject</th>
-            <th>Category</th>
-            <th class="col-num">Actions</th>
-            <th class="col-num">Age</th>
-            <th>Assigned</th>
-          </tr>
-        </thead>
-        <tbody>
-          <%= render "rows", cases: @cases, context: @context, action_counts: @action_counts %>
-        </tbody>
-      </table>
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title"><%= @query.title %></h2>
+        <p class="card-sub"><%= @query.summary(@cases.size, @total_count) %></p>
+      </div>
+      <div class="card-tools">
+        <span class="chip chip-off"><%= pluralize(@cases.size, "case") %></span>
+      </div>
     </div>
-  <% else %>
-    <p class="card-note"><%= filter_empty_note(@filter) %></p>
-  <% end %>
-</div>
 
-<% if @cases.any? { |kase| !kase.resolved? } %>
-  <%= form_with url: fd_merge_cases_path, method: :post, id: "merge-form", class: "bulk" do %>
-    <%= hidden_field_tag :filter, @filter %>
-    <span class="bulk-note">
-      <b><span data-merge-target="count">0</span> ticked</b>
-      <span class="bulk-ids" data-merge-target="ids"></span>
-      <span class="bulk-rule">Oldest case stays open</span>
-    </span>
-    <%= submit_tag "Mark as duplicates", class: "btn btn-primary" %>
+    <% if @cases.any? %>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="col-tick"><span class="sr-only">Select</span></th>
+              <th>Subject</th>
+              <th>Category</th>
+              <th class="col-num">Actions</th>
+              <th class="col-num">Age</th>
+              <th>Assigned</th>
+            </tr>
+          </thead>
+          <tbody>
+            <%= render "rows", cases: @cases, context: @context, action_counts: @action_counts %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="card-note"><%= @query.empty_note %></p>
+    <% end %>
+  </div>
+
+  <% if @cases.any? { |kase| !kase.resolved? } %>
+    <%= form_with url: fd_merge_cases_path, method: :post, id: "merge-form", class: "bulk" do %>
+      <% @query.to_params.each do |key, value| %>
+        <%= hidden_field_tag key, value, id: nil %>
+      <% end %>
+      <span class="bulk-note">
+        <b><span data-merge-target="count">0</span> ticked</b>
+        <span class="bulk-ids" data-merge-target="ids"></span>
+        <span class="bulk-rule">Oldest case stays open</span>
+      </span>
+      <%= submit_tag "Mark as duplicates", class: "btn btn-primary" %>
+    <% end %>
   <% end %>
-<% end %>
 </div>
 
 <%= render "open_case_modal" %>

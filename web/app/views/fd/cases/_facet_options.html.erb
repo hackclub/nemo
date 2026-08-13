@@ -1,0 +1,21 @@
+<% if facet.kind == :typed %>
+  <%= form_with url: fd_cases_path, method: :get, class: "facet-typed" do %>
+    <% query.to_params.except(facet.key).each do |key, value| %>
+      <%= hidden_field_tag key, value, id: nil %>
+    <% end %>
+    <%= text_field_tag facet.key, (facet.value unless query.default?(facet.key)),
+          class: "textarea", id: nil, placeholder: "U08K3F2QX" %>
+    <%= submit_tag "Go", class: "btn" %>
+  <% end %>
+<% end %>
+<% facet.options.each do |value, label| %>
+  <%= link_to facet_link(query, facet.key, value), class: "facet-opt",
+        aria: { current: ("true" if value == facet.value) } do %>
+    <span class="facet-tick" aria-hidden="true">
+      <% if value == facet.value %>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>
+      <% end %>
+    </span>
+    <%= label %>
+  <% end %>
+<% end %>

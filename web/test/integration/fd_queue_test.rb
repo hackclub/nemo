@@ -16,7 +16,7 @@ class FdQueueTest < ActionDispatch::IntegrationTest
   test "the mine filter lists what I am on and nothing else" do
     @mine.assign!("UME")
     @theirs.assign!("UOTHER")
-    get fd_cases_path(filter: "mine")
+    get fd_cases_path(assignee: "me")
 
     assert listed?(@mine)
     assert_not listed?(@theirs), "somebody else's case is not mine"
@@ -26,7 +26,7 @@ class FdQueueTest < ActionDispatch::IntegrationTest
   test "a case I share with somebody else is still mine" do
     @mine.assign!("UOTHER")
     @mine.assign!("UME")
-    get fd_cases_path(filter: "mine")
+    get fd_cases_path(assignee: "me")
 
     assert listed?(@mine)
   end
@@ -34,7 +34,7 @@ class FdQueueTest < ActionDispatch::IntegrationTest
   test "the mine filter drops a case once I step off it" do
     @mine.assign!("UME")
     @mine.assignees.sole.destroy!
-    get fd_cases_path(filter: "mine")
+    get fd_cases_path(assignee: "me")
 
     assert_not listed?(@mine)
   end
@@ -42,7 +42,7 @@ class FdQueueTest < ActionDispatch::IntegrationTest
   test "a resolved case of mine is not in the open queue" do
     @mine.assign!("UME")
     @mine.update!(resolved_at: 1.hour.ago, resolution: "no_action")
-    get fd_cases_path(filter: "mine")
+    get fd_cases_path(assignee: "me")
 
     assert_not listed?(@mine)
   end

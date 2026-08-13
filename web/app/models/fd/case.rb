@@ -11,6 +11,30 @@ module Fd
       ban_evasion
     ].freeze
 
+    CATEGORY_LABELS = {
+      "nos" => "Misconduct not otherwise specified",
+      "adult" => "Adult",
+      "insulting" => "Insulting or demeaning remarks",
+      "bullying" => "Bullying",
+      "discrimination" => "Discrimination",
+      "hateful" => "Hateful remarks",
+      "harassment_identity" => "Systematic harassment, identity based",
+      "harassment_general" => "Systematic harassment, general",
+      "nsfw_mild" => "Mild or ambiguous NSFW",
+      "nsfw_extreme" => "Clear and extreme NSFW",
+      "advertising" => "Advertising or recruiting",
+      "spam" => "Spam",
+      "fraud_hcb" => "HCB fraud",
+      "fraud_referral" => "Referral fraud",
+      "fraud_ysws" => "YSWS fraud",
+      "fraud_other" => "Other fraud",
+      "ban_evasion" => "Slack ban evasion"
+    }.freeze
+
+    def self.category_label(key)
+      CATEGORY_LABELS.fetch(key) { key.to_s.tr("_", " ") }
+    end
+
     has_many :threads, class_name: "Fd::CaseThread", foreign_key: :case_id,
       inverse_of: :kase, dependent: nil
     has_many :participants, class_name: "Fd::CaseParticipant", foreign_key: :case_id,
