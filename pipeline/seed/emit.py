@@ -24,6 +24,7 @@ SEED_PREDICATES = {
     "fd.notes": f"author LIKE '{SEED_USER_PREFIX}%'",
     "fd.actions": f"external_ref LIKE '{SEED_REF_PREFIX}%'",
     "fd.cases": f"external_ref LIKE '{SEED_REF_PREFIX}%'",
+    "fd.member": f"user_id LIKE '{SEED_USER_PREFIX}%'",
 }
 
 APPEND_ONLY_TABLES = ("fd.audit",)
@@ -33,6 +34,7 @@ SEEDED_TABLES = (
     "fd.notes",
     "fd.actions",
     "fd.cases",
+    "fd.member",
     "raw.member_activity_snapshot",
     "raw.channel_activity_snapshot",
     "raw.team_stats_snapshot",
@@ -507,7 +509,18 @@ def write_conduct(conn, seed, members, as_of):
     thread_rng = conduct_module.rng_for(seed, "threads")
     conduct_module.attach_internal_threads(thread_rng, cases, members)
     conduct_module.attach_shared_evidence(thread_rng, cases)
+    profiles = conduct_module.profiles_for(
+        conduct_module.rng_for(seed, "profiles"), members, as_of
+    )
     counts = {
+        "fd.member": copy_rows(
+            conn, "fd.member", conduct_module.MEMBER_COLUMNS,
+            conduct_module.member_rows(profiles, members),
+        ),
+        "fd.member_identity": copy_rows(
+            conn, "fd.member_identity", conduct_module.IDENTITY_COLUMNS,
+            conduct_module.identity_rows(profiles, members),
+        ),
         "fd.cases": copy_rows(
             conn, "fd.cases", conduct_module.CASE_COLUMNS,
             (conduct_module.case_row(case) for case in cases),

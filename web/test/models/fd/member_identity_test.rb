@@ -58,4 +58,31 @@ class Fd::MemberIdentityTest < ActiveSupport::TestCase
   test "identity is separately granted, so a member row carries no personal name" do
     assert_not Fd::Member.column_names.intersect?(%w[real_name first_name last_name email])
   end
+
+  test "reading a seeded identity hands back the row and logs who looked" do
+    seeded = Fd::Member.order(:user_id).first
+    before = AccessLog.count
+
+    row = Fd::MemberIdentity.look_up(seeded.user_id, actor: @me)
+
+    assert_equal seeded.user_id, row.user_id
+    assert_match(/\A\w+ \w+\z/, row.real_name)
+    assert_equal before + 1, AccessLog.count
+    assert_equal seeded.user_id, AccessLog.order(:id).last.subject_user_id
+  end
+
+  test "the corpus never carries a deliverable address" do
+    assert_equal 0, Fd::MemberIdentity.where.not(email: nil)
+      .where.not("email LIKE '%@example.invalid'").count
+  end
+
+  test "every seeded member has an identity row, and they agree" do
+    assert_equal Fd::Member.count, Fd::MemberIdentity.count
+    assert_equal 0, Fd::Member.joins(:identity)
+      .where.not("fd.member_identity.email = fd.member.handle || '@example.invalid'").count
+  end
+
+  test "some members have no display name, so the fallback is exercised by the corpus" do
+    assert_operator Fd::Member.where(display_name: "").count, :>, 0
+  end
 end
