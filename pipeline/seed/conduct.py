@@ -20,10 +20,12 @@ MAX_RESOLVE_DAYS = 120.0
 CLAIM_FRACTION = 0.3
 SECOND_THREAD_SHARE = 0.15
 SIBLING_SHARE = 0.08
-WITNESS_SHARE = 0.45
-SECOND_WITNESS_SHARE = 0.15
+INVOLVED_SHARE = 0.45
+SECOND_INVOLVED_SHARE = 0.15
+AIMED_AT = "it was aimed at them"
+TOOK_PART = "took part in the thread"
 REPORTER_IS_TARGET_SHARE = 0.5
-REPORTER_IS_WITNESS_SHARE = 0.25
+REPORTER_IS_INVOLVED_SHARE = 0.25
 THREAD_LEAD_MINUTES = (2, 240)
 ANON_WHEN_UNREPORTED_SHARE = 0.6
 CROWD_SHARE = 0.06
@@ -130,7 +132,7 @@ AUDIT_COLUMNS = [
 ]
 
 THREAD_COLUMNS = ["case_id", "channel_id", "thread_ts", "kind", "is_primary", "added_by"]
-PARTICIPANT_COLUMNS = ["case_id", "user_id", "role"]
+PARTICIPANT_COLUMNS = ["case_id", "user_id", "role", "detail"]
 REPORT_COLUMNS = [
     "case_id",
     "reporter_user_id",
@@ -320,28 +322,28 @@ def attach_people(rng, case, roster, channel_id):
     target = pick_other(rng, roster, channel_id, exclude)
     if target is None:
         return
-    case.participants.append((target, "target"))
+    case.participants.append((target, "involved", AIMED_AT))
     exclude.add(target)
 
-    witnesses = []
-    if rng.random() < WITNESS_SHARE:
+    involved = []
+    if rng.random() < INVOLVED_SHARE:
         first = pick_other(rng, roster, channel_id, exclude)
         if first:
-            witnesses.append(first)
+            involved.append(first)
             exclude.add(first)
-            if rng.random() < SECOND_WITNESS_SHARE:
+            if rng.random() < SECOND_INVOLVED_SHARE:
                 second = pick_other(rng, roster, channel_id, exclude)
                 if second:
-                    witnesses.append(second)
+                    involved.append(second)
                     exclude.add(second)
-    for witness in witnesses:
-        case.participants.append((witness, "witness"))
+    for user_id in involved:
+        case.participants.append((user_id, "involved", TOOK_PART))
 
     roll = rng.random()
     if roll < REPORTER_IS_TARGET_SHARE:
-        case.participants.append((target, "reporter"))
-    elif roll < REPORTER_IS_TARGET_SHARE + REPORTER_IS_WITNESS_SHARE and witnesses:
-        case.participants.append((witnesses[0], "reporter"))
+        case.participants.append((target, "reporter", None))
+    elif roll < REPORTER_IS_TARGET_SHARE + REPORTER_IS_INVOLVED_SHARE and involved:
+        case.participants.append((involved[0], "reporter", None))
 
 
 def dm_channel_for(user_id):
@@ -371,7 +373,7 @@ def make_report(rng, case, reporter, source_app="shroud"):
 
 
 def attach_reports(rng, case, roster):
-    named = [user_id for user_id, role in case.participants if role == "reporter"]
+    named = [user_id for user_id, role, _ in case.participants if role == "reporter"]
     if named:
         case.reports.append(make_report(rng, case, named[0]))
     elif rng.random() < ANON_WHEN_UNREPORTED_SHARE:
@@ -391,7 +393,7 @@ def attach_reports(rng, case, roster):
             continue
         exclude.add(extra)
         case.reports.append(make_report(rng, case, extra))
-        case.participants.append((extra, "reporter"))
+        case.participants.append((extra, "reporter", None))
 
 
 def attach_all_reports(rng, cases, members):
@@ -479,7 +481,7 @@ def attach_actions(rng, case, horizon):
             )
         )
 
-    target = next((u for u, role in case.participants if role == "target"), None)
+    target = next((u for u, _, detail in case.participants if detail == AIMED_AT), None)
     if target and rng.random() < DM_TO_TARGET_SHARE:
         case.actions.append(
             make_action(rng, case, "dm", target, action_moment(rng, start, end), decider)
@@ -642,7 +644,10 @@ def build_cases(rng, members, as_of):
             attach_people(rng, case, roster, channel_id)
             built.append(case)
 
-            piled_on = [u for u, role in case.participants if role == "witness"]
+            piled_on = [
+                u for u, role, detail in case.participants
+                if role == "involved" and detail == TOOK_PART
+            ]
             if piled_on and rng.random() < SIBLING_SHARE:
                 index += 1
                 sibling_subject = piled_on[0]
@@ -660,9 +665,9 @@ def build_cases(rng, members, as_of):
                 sibling.threads.append(
                     (channel_id, primary_ts, EVIDENCE, True, sibling.opened_by)
                 )
-                for user_id, role in case.participants:
-                    if user_id != sibling_subject and role in ("target", "witness"):
-                        sibling.participants.append((user_id, role))
+                for user_id, role, detail in case.participants:
+                    if user_id != sibling_subject and role == "involved":
+                        sibling.participants.append((user_id, role, detail))
                 built.append(sibling)
 
     return free_open_cases(rng, built)
@@ -700,8 +705,8 @@ def participant_rows(cases, ids):
         case_id = ids.get(case.external_ref)
         if case_id is None:
             continue
-        for user_id, role in case.participants:
-            yield (case_id, user_id, role)
+        for user_id, role, detail in case.participants:
+            yield (case_id, user_id, role, detail)
 
 
 def action_rows(cases, ids):

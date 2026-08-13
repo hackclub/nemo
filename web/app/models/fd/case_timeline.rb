@@ -47,7 +47,7 @@ module Fd
       unless report.anonymous?
         role = role_of(report.reporter_user_id)
         who = "from #{report.reporter_label}"
-        who += ", who was the #{role}" if role && role != "reporter"
+        who += ", who was involved" if role == "involved"
         parts << who
       end
       parts << "via #{report.source_app}"

@@ -49,14 +49,14 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
     assert_no_match(/@/, entry.detail)
   end
 
-  test "an identified reporter who is also the target says so once" do
-    person = Fd::CaseParticipant.new(user_id: "UT", role: "target")
+  test "an identified reporter who was also involved says so once" do
+    person = Fd::CaseParticipant.new(user_id: "UT", role: "involved")
     entry = build(
       kase,
       reports: [report(is_anonymous: false, reporter_user_id: "UT")],
       participants: [person],
     ).first
-    assert_equal "from @UT, who was the target · via shroud · no reply yet · told the outcome: not yet",
+    assert_equal "from @UT, who was involved · via shroud · no reply yet · told the outcome: not yet",
       entry.detail
   end
 

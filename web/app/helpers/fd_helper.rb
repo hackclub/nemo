@@ -81,10 +81,9 @@ module FdHelper
   end
 
   ROLE_LABELS = {
-    "target" => "on the receiving end",
+    "subject" => "the case is about them",
     "reporter" => "reported it",
-    "witness" => "was in the thread",
-    "participant" => "was in the thread"
+    "involved" => "involved"
   }.freeze
 
   def slack_thread_url(channel_id, thread_ts)
