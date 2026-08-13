@@ -25,6 +25,7 @@ SEED_PREDICATES = {
     "fd.actions": f"external_ref LIKE '{SEED_REF_PREFIX}%'",
     "fd.cases": f"external_ref LIKE '{SEED_REF_PREFIX}%'",
     "fd.member": f"user_id LIKE '{SEED_USER_PREFIX}%'",
+    "fd.thread_messages": f"source_app = '{SEED_SOURCE_PREFIX}slack'",
 }
 
 APPEND_ONLY_TABLES = ("fd.audit",)
@@ -33,6 +34,7 @@ SEEDED_TABLES = (
     "fd.audit",
     "fd.notes",
     "fd.actions",
+    "fd.thread_messages",
     "fd.cases",
     "fd.member",
     "raw.member_activity_snapshot",
@@ -531,6 +533,10 @@ def write_conduct(conn, seed, members, as_of):
     counts["fd.case_threads"] = copy_rows(
         conn, "fd.case_threads", conduct_module.THREAD_COLUMNS,
         conduct_module.thread_rows(cases, ids),
+    )
+    counts["fd.thread_messages"] = copy_rows(
+        conn, "fd.thread_messages", conduct_module.MESSAGE_COLUMNS,
+        conduct_module.message_rows(conduct_module.rng_for(seed, "messages"), cases),
     )
     counts["fd.case_participants"] = copy_rows(
         conn, "fd.case_participants", conduct_module.PARTICIPANT_COLUMNS,

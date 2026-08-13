@@ -78,6 +78,23 @@ CONSISTENCY_CHECKS = [
         "where h.user_id is null",
     ),
     (
+        "every stored thread has exactly one root",
+        "select count(*) from ("
+        "select channel_id, thread_ts from fd.thread_messages "
+        "group by channel_id, thread_ts having count(*) filter (where is_root) <> 1) t",
+    ),
+    (
+        "every message belongs to a thread on a case",
+        "select count(*) from fd.thread_messages m "
+        "left join fd.case_threads t on t.channel_id = m.channel_id "
+        "and t.thread_ts = m.thread_ts where t.case_id is null",
+    ),
+    (
+        "a message deleted in slack keeps what it said",
+        "select count(*) from fd.thread_messages "
+        "where deleted_at is not null and body is null",
+    ),
+    (
         "no day ledger gap inside the covered span",
         "select (max(ds) - min(ds) + 1) - count(*) from raw.analytics_day where source like 'seed_%member_day'",
     ),

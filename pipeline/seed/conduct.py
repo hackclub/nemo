@@ -4,7 +4,7 @@ import random
 from dataclasses import dataclass, field
 from datetime import datetime, time, timedelta, timezone
 
-from seed import SEED_REF_PREFIX
+from seed import SEED_REF_PREFIX, SEED_SOURCE_PREFIX
 
 CASE_RATE = 0.025
 ENGAGEMENT_WEIGHT = 0.7
@@ -129,6 +129,103 @@ AUDIT_COLUMNS = [
 ]
 
 THREAD_COLUMNS = ["case_id", "channel_id", "thread_ts", "kind", "is_primary", "added_by"]
+
+MESSAGE_COLUMNS = [
+    "channel_id",
+    "thread_ts",
+    "message_ts",
+    "parent_ts",
+    "is_root",
+    "author_user_id",
+    "subtype",
+    "body",
+    "file_count",
+    "permalink",
+    "reply_count",
+    "posted_at",
+    "edited_at",
+    "deleted_at",
+    "source_app",
+]
+
+THREAD_OPENERS = [
+    "anyone know why the deploy keeps failing on the same step",
+    "is the wifi working for anyone else or just me",
+    "shipped my first pcb today, the traces are ugly but it works",
+    "how do i get an api key for this, the docs link is dead",
+    "builds fine locally, dies in ci. what am i missing",
+    "does anyone have the link for tonight's call",
+    "spent 3 hours on a semicolon. that's it, that's the message",
+    "is there a rule against posting wips here",
+]
+
+BARBS = [
+    "maybe read the error message for once",
+    "how are you this bad at googling",
+    "nobody asked",
+    "cry about it",
+    "genuinely how do you not know this yet",
+    "some of you should not be allowed near a keyboard",
+    "free nitro for the first 20 people who join my server",
+    "dm me for the giveaway, not a scam",
+]
+
+PILE_ON = [
+    "lmao",
+    "+1",
+    "^",
+    "brutal",
+    "not wrong tho",
+]
+
+CALLOUTS = [
+    "not cool",
+    "come on man",
+    "that's uncalled for",
+    "reporting this",
+    "third one today",
+]
+
+SECOND_BARBS = [
+    "it was a joke, relax",
+    "ok that came out worse than i meant",
+    "whatever, deleting",
+]
+
+FD_OPENERS = [
+    "who's taking this one",
+    "second opinion on this before i do anything",
+    "third time this month for them, worth a look",
+    "picking this up unless someone else already has",
+]
+
+FD_TAKING = [
+    "i can take it",
+    "mine, give me ten minutes",
+    "on it",
+]
+
+FD_DECIDED = [
+    "warned them, watching the thread",
+    "locked it, they kept going after the warning",
+    "the nov one was reversed so i wouldn't count it",
+    "leaving the other one alone, it was one word",
+    "not a conduct thing imo, just a bad day",
+]
+
+FD_AFTER = [
+    "dm sent, they apologised",
+    "somebody should reply to the reporter, they've heard nothing",
+    "closing it unless anyone objects",
+]
+
+MESSAGE_REPLIES = (1, 4)
+MESSAGE_GAP_SECONDS = (25.0, 480.0)
+MESSAGE_DELETED_SHARE = 0.07
+MESSAGE_EDITED_SHARE = 0.05
+MESSAGE_FILE_SHARE = 0.1
+PARTIAL_FETCH_SHARE = 0.15
+MESSAGE_SOURCE = f"{SEED_SOURCE_PREFIX}slack"
 PARTICIPANT_COLUMNS = ["case_id", "user_id", "role", "detail"]
 
 MEMBER_COLUMNS = [
@@ -758,6 +855,108 @@ def thread_rows(cases, ids):
             continue
         for channel_id, thread_ts, kind, is_primary, added_by in case.threads:
             yield (case_id, channel_id, thread_ts, kind, is_primary, added_by)
+
+
+def message_ts_at(rng, at):
+    return f"{int(at.timestamp())}.{rng.randrange(1000000):06d}"
+
+
+def permalink_for(channel_id, message_ts):
+    return f"https://hackclub.slack.com/archives/{channel_id}/p{message_ts.replace('.', '')}"
+
+
+def fd_crew_for(case, added_by):
+    crew = [added_by, case.claimed_by, case.opened_by]
+    return list(dict.fromkeys(user_id for user_id in crew if user_id))
+
+
+def internal_script(rng, crew):
+    lines = [(crew[0], rng.choice(FD_OPENERS))]
+    banks = [FD_TAKING, FD_DECIDED]
+    if rng.random() < 0.6:
+        banks.append(FD_AFTER)
+    if len(banks) < MESSAGE_REPLIES[1] and rng.random() < 0.4:
+        banks.insert(2, FD_DECIDED)
+
+    for bank in banks:
+        lines.append((crew[len(lines) % len(crew)], rng.choice(bank)))
+    return lines
+
+
+def evidence_script(rng, case, reporters, involved):
+    opener = (reporters or involved or [case.subject_user_id])[0]
+    lines = [(opener, rng.choice(THREAD_OPENERS))]
+
+    if case.subject_user_id:
+        lines.append((case.subject_user_id, rng.choice(BARBS)))
+    for user_id in [person for person in involved if person != opener][:2]:
+        if rng.random() < 0.7:
+            lines.append((user_id, rng.choice(PILE_ON)))
+    if reporters and rng.random() < 0.7:
+        lines.append((reporters[0], rng.choice(CALLOUTS)))
+    if case.subject_user_id and rng.random() < 0.35:
+        lines.append((case.subject_user_id, rng.choice(SECOND_BARBS)))
+
+    return lines[: 1 + MESSAGE_REPLIES[1]]
+
+
+def thread_messages(rng, case, channel_id, thread_ts, kind, added_by):
+    if kind == INTERNAL:
+        crew = fd_crew_for(case, added_by)
+        script = internal_script(rng, crew) if crew else []
+    else:
+        script = evidence_script(
+            rng, case,
+            [user_id for user_id, role, _ in case.participants if role == "reporter"],
+            [user_id for user_id, role, _ in case.participants if role == "involved"],
+        )
+    if not script or script[0][0] is None:
+        return
+
+    at = datetime.fromtimestamp(float(thread_ts), tz=timezone.utc)
+    held = len(script) - 1
+    reported = held
+    if rng.random() < PARTIAL_FETCH_SHARE:
+        reported = held + rng.randrange(1, 7)
+
+    for index, (author, body) in enumerate(script):
+        root = index == 0
+        message_ts = thread_ts if root else message_ts_at(rng, at)
+        edited_at = at + timedelta(minutes=rng.uniform(1, 30)) if (
+            rng.random() < MESSAGE_EDITED_SHARE
+        ) else None
+        deleted_at = at + timedelta(hours=rng.uniform(0.5, 48)) if (
+            not root and rng.random() < MESSAGE_DELETED_SHARE
+        ) else None
+
+        yield (
+            channel_id,
+            thread_ts,
+            message_ts,
+            None if root else thread_ts,
+            root,
+            author,
+            None,
+            body,
+            1 if rng.random() < MESSAGE_FILE_SHARE else 0,
+            permalink_for(channel_id, message_ts),
+            reported if root else None,
+            at,
+            edited_at,
+            deleted_at,
+            MESSAGE_SOURCE,
+        )
+        at = at + timedelta(seconds=rng.uniform(*MESSAGE_GAP_SECONDS))
+
+
+def message_rows(rng, cases):
+    seen = set()
+    for case in cases:
+        for channel_id, thread_ts, kind, _, added_by in case.threads:
+            if (channel_id, thread_ts) in seen:
+                continue
+            seen.add((channel_id, thread_ts))
+            yield from thread_messages(rng, case, channel_id, thread_ts, kind, added_by)
 
 
 def assignee_rows(cases, ids):
