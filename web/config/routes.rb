@@ -10,6 +10,9 @@ Rails.application.routes.draw do
     root to: "cases#index"
     post "cases/merge", to: "merges#create", as: :merge_cases
     get "members/search", to: "members#search", as: :member_search
+    resources :members, only: [:show] do
+      resources :notes, only: [:create, :destroy], controller: "member_notes"
+    end
     resources :cases, only: [:index, :show, :create] do
       resource :claim, only: [:create, :destroy]
       resource :resolution, only: [:create]

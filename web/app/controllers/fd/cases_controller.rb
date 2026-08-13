@@ -1,6 +1,7 @@
 module Fd
   class CasesController < BaseController
     def index
+      @open_modal = params[:open] == "1"
       load_queue
     end
 

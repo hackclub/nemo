@@ -19,6 +19,52 @@ module FdHelper
     safe_join(user_ids.map { |id| handle(id) }, ", ")
   end
 
+  SLACK_TEAM_URL = "https://hackclub.slack.com/team".freeze
+
+  def slack_member_url(user_id)
+    "#{SLACK_TEAM_URL}/#{user_id}"
+  end
+
+  def joined_line(context)
+    return "not in the warehouse yet" if context.nil? || !context.known?
+    return "joined #{context.cohort_at.to_date.strftime('%-d %b %Y')}" if context.claimed_at.nil?
+
+    "joined #{context.cohort_at.to_date.strftime('%-d %b %Y')}, #{claimed_phrase(context)}"
+  end
+
+  def identity_line(identity)
+    return locked_note("Nothing on file") if identity.nil?
+    return locked_note("Identity purged") if identity.purged?
+    return locked_note("Email not collected yet") if identity.email.blank?
+
+    locked_note(identity.email)
+  end
+
+  def locked_note(text)
+    tag.span(class: "locked") do
+      concat tag.svg(width: 11, height: 11, viewBox: "0 0 24 24", fill: "none",
+        stroke: "currentColor", "stroke-width": 2) {
+        concat tag.rect(x: 4, y: 10, width: 16, height: 10, rx: 2)
+        concat tag.path(d: "M8 10V7a4 4 0 0 1 8 0v3")
+      }
+      concat text
+    end
+  end
+
+  def shape_sub(record)
+    return "one case" if record.spine.one?
+
+    months = ((record.last_case_at - record.first_case_at) / 30.days).floor
+    span = months.positive? ? pluralize(months, "month") : "under a month"
+    "#{span}, #{pluralize(record.spine.size, 'case')}"
+  end
+
+  def action_tally(record)
+    return pluralize(record.actions.size, "action") if record.reversed_actions.zero?
+
+    "#{record.reversed_actions} of #{record.actions.size} actions undone"
+  end
+
   def case_age_seconds(kase)
     (kase.resolved_at || Time.current) - kase.opened_at
   end

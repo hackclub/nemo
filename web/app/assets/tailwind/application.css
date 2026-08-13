@@ -1260,6 +1260,162 @@
     color: var(--ink-3);
   }
 
+  .grow {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .push-end {
+    margin-inline-start: auto;
+    flex: none;
+  }
+
+  .card-note.flush {
+    padding: 0;
+  }
+
+  .idline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px var(--s-2xs);
+    align-items: baseline;
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+  }
+
+  .locked {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+  }
+
+  .pair {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--s-md);
+    align-items: start;
+  }
+
+  @media (max-width: 860px) {
+    .pair {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .shape-nums {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--s-sm);
+    border-top: 1px solid var(--line);
+    padding-top: var(--s-sm);
+    margin-top: var(--s-sm);
+  }
+
+  .shape-nums .fact-val {
+    font-size: var(--t-lg);
+  }
+
+  .shape-nums .muted {
+    color: var(--ink-3);
+  }
+
+  .spine {
+    position: relative;
+    height: 34px;
+    margin: var(--s-md) 6px 0;
+  }
+
+  .spine-rule {
+    position: absolute;
+    inset-inline: 0;
+    top: 22px;
+    height: 2px;
+    background-color: var(--line);
+    border-radius: 2px;
+  }
+
+  .spine-dot {
+    position: absolute;
+    top: 16px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    border: 3px solid var(--card);
+  }
+
+  .spine-dot i {
+    position: absolute;
+    bottom: 17px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-code);
+    font-size: var(--t-3xs);
+    font-style: normal;
+    color: var(--ink-3);
+  }
+
+  .spine-dot:hover i {
+    color: var(--ink);
+  }
+
+  .dot-done {
+    background-color: var(--ink-3);
+  }
+
+  .dot-clear {
+    background-color: var(--card);
+    box-shadow: inset 0 0 0 2px var(--ink-3);
+  }
+
+  .dot-in {
+    background-color: var(--warn);
+  }
+
+  .dot-open {
+    background-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+
+  .spine-ends {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: var(--t-3xs);
+    color: var(--ink-3);
+  }
+
+  .spine-gap {
+    font-style: italic;
+  }
+
+  .spine-key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2xs) var(--s-sm);
+    margin-top: var(--s-sm);
+    border-top: 1px solid var(--line-soft);
+    padding-top: var(--s-2xs);
+    font-size: var(--t-3xs);
+    color: var(--ink-3);
+  }
+
+  .spine-key span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .spine-key i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    font-style: normal;
+    flex: none;
+  }
+
   .pick {
     position: relative;
   }

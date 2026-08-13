@@ -1,0 +1,25 @@
+<div class="modal-host">
+  <input type="checkbox" id="add-member-note" class="modal-flip">
+  <label for="add-member-note" class="modal-veil" aria-hidden="true"></label>
+  <div class="modal-wrap">
+    <div class="modal" role="dialog" aria-label="Add a note about this member">
+      <div class="modal-head">
+        <h2 class="modal-title">Note on <%= names[user_id] %></h2>
+      </div>
+      <%= form_with url: fd_member_notes_path(user_id), method: :post do %>
+        <div class="modal-body">
+          <label class="field-label">
+            The note
+            <%= text_area_tag :body, nil, rows: 4, class: "textarea", id: nil,
+                  maxlength: Fd::NotesController::MAX_LENGTH,
+                  placeholder: "for a pattern, not an incident" %>
+          </label>
+        </div>
+        <div class="modal-foot">
+          <label for="add-member-note" class="btn">Close</label>
+          <%= submit_tag "Save the note", class: "btn btn-primary" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
