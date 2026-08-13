@@ -18,6 +18,8 @@ module Fd
     has_many :subjects, -> { subjects.order(:user_id) },
       class_name: "Fd::CaseParticipant", foreign_key: :case_id,
       inverse_of: :kase, dependent: nil
+    has_many :assignees, -> { oldest_first }, class_name: "Fd::CaseAssignee",
+      foreign_key: :case_id, inverse_of: :kase, dependent: nil
     has_many :reports, class_name: "Fd::CaseReport", foreign_key: :case_id,
       inverse_of: :kase, dependent: nil
     has_many :actions, class_name: "Fd::Action", foreign_key: :case_id,
@@ -29,6 +31,12 @@ module Fd
     scope :not_duplicate, -> { where(duplicate_of: nil) }
     scope :with_subject, ->(user_id) {
       where(id: CaseParticipant.subjects.where(user_id: user_id).select(:case_id))
+    }
+    scope :assigned_to, ->(user_id) {
+      where(id: CaseAssignee.where(user_id: user_id).select(:case_id))
+    }
+    scope :unassigned, -> {
+      where.not(id: CaseAssignee.select(:case_id))
     }
 
     def self.candidates_for(kase, siblings = [], limit: 25)
@@ -67,6 +75,22 @@ module Fd
 
     def add_subject!(user_id)
       subjects.create!(user_id: user_id, role: "subject")
+    end
+
+    def assignee_user_ids
+      assignees.map(&:user_id)
+    end
+
+    def assigned?
+      assignees.any?
+    end
+
+    def assigned_to?(user_id)
+      assignee_user_ids.include?(user_id)
+    end
+
+    def assign!(user_id, by: nil)
+      assignees.create!(user_id: user_id, assigned_by: by || user_id, assigned_at: Time.current)
     end
 
     def resolved?

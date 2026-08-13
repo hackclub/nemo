@@ -522,6 +522,10 @@ def write_conduct(conn, seed, members, as_of):
         conn, "fd.case_participants", conduct_module.PARTICIPANT_COLUMNS,
         conduct_module.participant_rows(cases, ids),
     )
+    counts["fd.case_assignees"] = copy_rows(
+        conn, "fd.case_assignees", conduct_module.ASSIGNEE_COLUMNS,
+        conduct_module.assignee_rows(cases, ids),
+    )
     counts["fd.case_reports"] = copy_rows(
         conn, "fd.case_reports", conduct_module.REPORT_COLUMNS,
         conduct_module.report_rows(cases, ids),

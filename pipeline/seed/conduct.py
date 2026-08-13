@@ -132,6 +132,8 @@ AUDIT_COLUMNS = [
 
 THREAD_COLUMNS = ["case_id", "channel_id", "thread_ts", "kind", "is_primary", "added_by"]
 PARTICIPANT_COLUMNS = ["case_id", "user_id", "role", "detail"]
+
+ASSIGNEE_COLUMNS = ["case_id", "user_id", "assigned_at", "assigned_by"]
 REPORT_COLUMNS = [
     "case_id",
     "reporter_user_id",
@@ -696,6 +698,14 @@ def thread_rows(cases, ids):
             continue
         for channel_id, thread_ts, kind, is_primary, added_by in case.threads:
             yield (case_id, channel_id, thread_ts, kind, is_primary, added_by)
+
+
+def assignee_rows(cases, ids):
+    for case in cases:
+        case_id = ids.get(case.external_ref)
+        if case_id is None or case.claimed_by is None:
+            continue
+        yield (case_id, case.claimed_by, case.claimed_at, case.claimed_by)
 
 
 def participant_rows(cases, ids):
