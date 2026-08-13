@@ -11,13 +11,16 @@ module Fd
       "Fd::CaseParticipant" => "participant",
       "Fd::CaseAssignee" => "assignee",
       "Fd::MemberIdentity" => "identity",
-      "Fd::CaseCitation" => "citation"
+      "Fd::CaseCitation" => "citation",
+      "Fd::Decision" => "decision",
+      "Fd::DecisionThread" => "decision_thread"
     }.freeze
 
     VERBS = %w[
       opened claimed unclaimed resolved reopened
       performed reversed received
       noted deleted attached detached flagged unflagged closed
+      proposed settled amended superseded dropped
     ].freeze
 
     REDACTED_COLUMNS = {
