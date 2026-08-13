@@ -28,11 +28,14 @@ module Fd
       @flagged_messages = @thread_messages.select { |said| @flags.key?(said.id) }
       @cited_by = @actions.select(&:cites?).group_by(&:cites_message_id)
       @assignees = @case.assignees.to_a
+      @decisions = Decision.order(:title).to_a
       @mentioned = @case.mentioned_but_unlogged(
         notes: @notes + @standing_notes.values.flatten, reports: @reports
       )
       @erasures = AuditEntry.erasures_for(case_id: @case.id,
         note_ids: @case.notes.ids).to_a
+      @links = AuditEntry.decision_links_for(case_id: @case.id).to_a
+      @decision_titles = Decision.where(id: linked_decision_ids).pluck(:id, :title).to_h
       @names = Names.for(page_ids)
       @timeline = CaseTimeline.for(
         @case,
@@ -42,6 +45,8 @@ module Fd
         participants: @participants,
         assignees: @assignees,
         erasures: @erasures,
+        links: @links,
+        decisions: @decision_titles,
         names: @names,
       )
       @context = MemberContext.for(
@@ -95,8 +100,14 @@ module Fd
         @reports.flat_map { |report| Mentions.ids(report.body) },
         @thread_messages.map(&:author_user_id),
         @threads.map(&:added_by),
-        @erasures.map(&:actor_user_id)
+        @erasures.map(&:actor_user_id),
+        @links.map(&:actor_user_id)
       ]
+    end
+
+    def linked_decision_ids
+      @links.flat_map { |row| [row.before, row.after] }
+        .compact.filter_map { |values| values["followed_decision_id"] }.uniq
     end
 
     def asked_subjects

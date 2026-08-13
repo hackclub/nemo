@@ -85,6 +85,42 @@
     </div>
   <% end %>
 
+  <p class="band-label">
+    <%= cases_band_label(@decision) %> · <%= @cases.any? ? @cases.size : "none" %>
+  </p>
+
+  <% if @cases.any? %>
+    <div class="card card-flush">
+      <div class="scroll">
+        <table class="data-table">
+          <tbody>
+            <% @cases.each do |kase| %>
+              <tr>
+                <td>
+                  <span class="two-line">
+                    <%= link_to fd_case_path(kase) do %>
+                      <b>case <%= kase.id %></b>
+                    <% end %>
+                    <span class="idline">
+                      <%= category_label(kase.category_key).downcase %> ·
+                      <%= kase.opened_at.strftime("%-d %b") %>
+                    </span>
+                  </span>
+                </td>
+                <td class="said-cell"><%= kase.member_note %></td>
+                <td class="col-state"><%= case_status_chip(kase) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% else %>
+    <div class="card">
+      <p class="card-note">No case linked yet.</p>
+    </div>
+  <% end %>
+
   <p class="band-label">History</p>
   <div class="card">
     <p class="thr-gone"><%= decision_history_line(@decision) %></p>

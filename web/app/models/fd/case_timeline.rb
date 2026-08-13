@@ -3,12 +3,13 @@ module Fd
     Entry = Struct.new(:at, :title, :mark, :chips, :detail, :said, keyword_init: true)
 
     def self.for(kase, reports:, actions:, notes:, participants: [], assignees: [],
-      erasures: [], names: nil)
-      new(kase, reports:, actions:, notes:, participants:, assignees:, erasures:, names:).entries
+      erasures: [], links: [], decisions: {}, names: nil)
+      new(kase, reports:, actions:, notes:, participants:, assignees:, erasures:,
+        links:, decisions:, names:).entries
     end
 
     def initialize(kase, reports:, actions:, notes:, participants: [], assignees: [],
-      erasures: [], names: nil)
+      erasures: [], links: [], decisions: {}, names: nil)
       @case = kase
       @reports = reports
       @actions = actions
@@ -16,17 +17,20 @@ module Fd
       @participants = participants
       @assignees = assignees
       @erasures = erasures
+      @links = links
+      @decisions = decisions
       @names = names || Names.none
     end
 
     def entries
-      (report_entries + case_entries + action_entries + note_entries + erasure_entries)
-        .compact.sort_by { |entry| [entry.at, entry.title] }
+      (report_entries + case_entries + action_entries + note_entries + erasure_entries +
+        link_entries).compact.sort_by { |entry| [entry.at, entry.title] }
     end
 
     private
 
-    attr_reader :reports, :actions, :notes, :participants, :assignees, :erasures, :names
+    attr_reader :reports, :actions, :notes, :participants, :assignees, :erasures,
+      :links, :decisions, :names
 
     def kase = @case
 
@@ -209,6 +213,25 @@ module Fd
           detail: erasure_detail(row)
         )
       end
+    end
+
+    LINKED = { "followed" => "Decision linked", "unfollowed" => "Decision unlinked" }.freeze
+
+    def link_entries
+      links.map do |row|
+        Entry.new(
+          at: row.occurred_at,
+          title: LINKED.fetch(row.verb),
+          mark: "owner",
+          chips: [],
+          detail: link_detail(row)
+        )
+      end
+    end
+
+    def link_detail(row)
+      id = ((row.verb == "followed" ? row.after : row.before) || {})["followed_decision_id"]
+      ["by #{names[row.actor_user_id]}", decisions[id]].compact.join(" · ")
     end
 
     def erasure_detail(row)

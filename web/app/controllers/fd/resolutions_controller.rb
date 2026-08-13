@@ -44,12 +44,15 @@ module Fd
       return refuse("case #{@case.id} is already open") unless @case.resolved?
 
       was = { "resolved_at" => @case.resolved_at, "resolution" => @case.resolution,
-              "duplicate_of" => @case.duplicate_of }
+              "duplicate_of" => @case.duplicate_of,
+              "followed_decision_id" => @case.followed_decision_id }
 
       writing do
-        @case.update!(resolved_at: nil, resolution: nil, duplicate_of: nil, updated_at: @now)
+        @case.update!(resolved_at: nil, resolution: nil, duplicate_of: nil,
+          followed_decision_id: nil, updated_at: @now)
         audit(@case, "reopened", before: was,
-          after: { "resolved_at" => nil, "resolution" => nil, "duplicate_of" => nil })
+          after: { "resolved_at" => nil, "resolution" => nil, "duplicate_of" => nil,
+                   "followed_decision_id" => nil })
       end
 
       redirect_to fd_case_path(@case), notice: "case #{@case.id} is open again"

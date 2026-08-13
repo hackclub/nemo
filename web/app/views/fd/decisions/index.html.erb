@@ -43,7 +43,7 @@
                     </span>
                   </td>
                   <td class="said-cell"><%= decision.statement %></td>
-                  <td class="col-num">n/a</td>
+                  <td class="col-num"><%= decision_case_note(@followed[decision.id]) %></td>
                   <td class="col-state"><%= decision_state_chip(decision) %></td>
                 </tr>
               <% end %>

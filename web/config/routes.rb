@@ -25,6 +25,7 @@ Rails.application.routes.draw do
       resources :threads, only: [:create, :destroy]
       resources :participants, only: [:create, :destroy]
       resources :citations, only: [:create, :destroy]
+      resource :decision, only: [:create, :destroy], controller: "case_decisions"
     end
   end
 

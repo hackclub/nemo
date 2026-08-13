@@ -549,6 +549,37 @@ module FdHelper
     safe_join([decision_when_line(decision), decision_thread_note(threads)], " · ")
   end
 
+  def followed_chip(kase)
+    decision = kase.followed_decision
+    return nil if decision.nil?
+
+    tone = decision.proposed? ? "chip-warn" : "chip-crit"
+    said = decision.proposed? ? "behind #{decision.title}" : "followed #{decision.title}"
+    link_to said, fd_decision_path(decision), class: "chip #{tone}"
+  end
+
+  DECISION_GROUPS = { "settled" => "In force", "proposed" => "Proposed",
+                      "superseded" => "Retired" }.freeze
+  DECISION_ORDER = { "settled" => 0, "proposed" => 1, "superseded" => 2 }.freeze
+
+  def decision_groups(kase, decisions)
+    decisions.group_by(&:state).sort_by { |state, _| DECISION_ORDER.fetch(state) }
+      .map { |state, group| [DECISION_GROUPS.fetch(state), ordered_for(kase, group)] }
+  end
+
+  def ordered_for(kase, decisions)
+    decisions.sort_by { |one| [one.category_key == kase.category_key ? 0 : 1, one.title] }
+      .map { |one| [one.title, one.id] }
+  end
+
+  def cases_band_label(decision)
+    decision.settled? ? "Cases that followed it" : "Cases behind it"
+  end
+
+  def decision_case_note(count)
+    count.to_i.zero? ? "n/a" : pluralize(count, "case")
+  end
+
   def decision_head_meta(decision)
     parts = []
     parts << decision.category_label.downcase if decision.category_key

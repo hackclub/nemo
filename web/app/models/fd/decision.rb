@@ -13,6 +13,8 @@ module Fd
       inverse_of: :replaced, optional: true
     has_many :replaced, class_name: "Fd::Decision", foreign_key: :replaced_by_id,
       inverse_of: :replacement, dependent: nil
+    has_many :cases_followed, -> { newest_first }, class_name: "Fd::Case",
+      foreign_key: :followed_decision_id, inverse_of: :followed_decision, dependent: nil
 
     scope :in_force, -> { where(state: "settled") }
     scope :unsettled, -> { where(state: "proposed") }

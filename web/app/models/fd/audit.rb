@@ -20,7 +20,7 @@ module Fd
       opened claimed unclaimed resolved reopened
       performed reversed received
       noted deleted attached detached flagged unflagged closed
-      proposed settled amended superseded dropped
+      proposed settled amended superseded dropped followed unfollowed
     ].freeze
 
     REDACTED_COLUMNS = {

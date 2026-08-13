@@ -18,6 +18,7 @@ module Fd
       @counts = counts
       @bands = bands
       @threads = DecisionThread.group(:decision_id).count
+      @followed = Case.where.not(followed_decision_id: nil).group(:followed_decision_id).count
       @names = Names.for(people_named)
     end
 
@@ -26,6 +27,7 @@ module Fd
       @replaced = @decision.replaced.order(:retired_at).to_a
       @previous, @next = neighbours(@decision)
       @messages = ThreadMessage.for_threads(@decision.threads).to_a.group_by(&:coordinates)
+      @cases = @decision.cases_followed.includes(:subjects).to_a
       @names = Names.for(named_on(@decision) + @messages.values.flatten.map(&:author_user_id))
     end
 
