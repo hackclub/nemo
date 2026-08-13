@@ -1,12 +1,12 @@
 <div class="modal-host">
-  <input type="checkbox" id="open-case" class="modal-flip" <%= "checked" if @open_modal %>>
+  <input type="checkbox" id="open-case" class="modal-flip" autocomplete="off" <%= "checked" if @open_modal %>>
   <label for="open-case" class="modal-veil" aria-hidden="true"></label>
   <div class="modal-wrap">
     <div class="modal" role="dialog" aria-label="Open a case">
       <div class="modal-head">
         <h2 class="modal-title">Open a case</h2>
       </div>
-      <%= form_with url: fd_cases_path, method: :post do %>
+      <%= form_with url: fd_cases_path, method: :post, html: { autocomplete: "off" } do %>
         <div class="modal-body">
           <% if @open_for_subject.any? %>
             <div class="dup">

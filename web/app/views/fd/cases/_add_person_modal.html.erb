@@ -1,12 +1,12 @@
 <div class="modal-host">
-  <input type="checkbox" id="add-person" class="modal-flip">
+  <input type="checkbox" id="add-person" class="modal-flip" autocomplete="off">
   <label for="add-person" class="modal-veil" aria-hidden="true"></label>
   <div class="modal-wrap">
     <div class="modal" role="dialog" aria-label="Add people to the case">
       <div class="modal-head">
         <h2 class="modal-title">Add people to case <%= kase.id %></h2>
       </div>
-      <%= form_with url: fd_case_participants_path(kase), method: :post do %>
+      <%= form_with url: fd_case_participants_path(kase), method: :post, html: { autocomplete: "off" } do %>
         <div class="modal-body">
           <div class="field-label">
             <span>Who</span>

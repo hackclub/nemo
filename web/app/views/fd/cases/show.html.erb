@@ -334,7 +334,7 @@
 
 <% @live_actions.each do |action| %>
   <div class="modal-host">
-    <input type="checkbox" id="reverse-<%= action.id %>" class="modal-flip">
+    <input type="checkbox" id="reverse-<%= action.id %>" class="modal-flip" autocomplete="off">
     <label for="reverse-<%= action.id %>" class="modal-veil" aria-hidden="true"></label>
     <div class="modal-wrap">
       <div class="modal" role="dialog" aria-label="Reverse this action">
@@ -342,7 +342,7 @@
           <h2 class="modal-title">Reverse this action</h2>
           <span class="modal-sub"><%= action_option_label(action) %></span>
         </div>
-        <%= form_with url: fd_case_reversals_path(@case), method: :post do %>
+        <%= form_with url: fd_case_reversals_path(@case), method: :post, html: { autocomplete: "off" } do %>
           <%= hidden_field_tag :action_id, action.id, id: nil %>
           <div class="modal-body">
             <label class="field-label">
@@ -362,14 +362,14 @@
 <% end %>
 
 <div class="modal-host">
-  <input type="checkbox" id="log-action" class="modal-flip">
+  <input type="checkbox" id="log-action" class="modal-flip" autocomplete="off">
   <label for="log-action" class="modal-veil" aria-hidden="true"></label>
   <div class="modal-wrap">
     <div class="modal" role="dialog" aria-label="Log an action">
       <div class="modal-head">
         <h2 class="modal-title">Log an action</h2>
       </div>
-      <%= form_with url: fd_case_actions_path(@case), method: :post do %>
+      <%= form_with url: fd_case_actions_path(@case), method: :post, html: { autocomplete: "off" } do %>
         <div class="modal-body">
           <%= render "action_fields", kase: @case %>
         </div>
@@ -383,14 +383,14 @@
 </div>
 
 <div class="modal-host">
-  <input type="checkbox" id="attach-thread" class="modal-flip">
+  <input type="checkbox" id="attach-thread" class="modal-flip" autocomplete="off">
   <label for="attach-thread" class="modal-veil" aria-hidden="true"></label>
   <div class="modal-wrap">
     <div class="modal" role="dialog" aria-label="Attach a thread">
       <div class="modal-head">
         <h2 class="modal-title">Attach a thread</h2>
       </div>
-      <%= form_with url: fd_case_threads_path(@case), method: :post do %>
+      <%= form_with url: fd_case_threads_path(@case), method: :post, html: { autocomplete: "off" } do %>
         <div class="modal-body">
           <label class="field-label">
             Slack link
@@ -423,7 +423,7 @@
 <%= render "add_person_modal", kase: @case %>
 
 <div class="modal-host">
-  <input type="checkbox" id="add-note" class="modal-flip">
+  <input type="checkbox" id="add-note" class="modal-flip" autocomplete="off">
   <label for="add-note" class="modal-veil" aria-hidden="true"></label>
   <div class="modal-wrap">
     <div class="modal" role="dialog" aria-label="Add a note">
@@ -431,7 +431,7 @@
         <h2 class="modal-title">Add a note</h2>
         <span class="modal-sub">internal</span>
       </div>
-      <%= form_with url: fd_case_notes_path(@case), method: :post do %>
+      <%= form_with url: fd_case_notes_path(@case), method: :post, html: { autocomplete: "off" } do %>
         <div class="modal-body">
           <div class="outcomes">
             <label class="opt">
@@ -468,7 +468,7 @@
 
 <% unless @case.resolved? %>
 <div class="modal-host">
-  <input type="checkbox" id="resolve-case" class="modal-flip">
+  <input type="checkbox" id="resolve-case" class="modal-flip" autocomplete="off">
   <label for="resolve-case" class="modal-veil" aria-hidden="true"></label>
   <div class="modal-wrap">
     <div class="modal" role="dialog" aria-label="Resolve this case">
@@ -478,7 +478,7 @@
           <%= @case.assigned? ? "assigned to #{@case.assignee_handles}" : "not assigned to anybody" %>
         </span>
       </div>
-      <%= form_with url: fd_case_resolution_path(@case), method: :post do %>
+      <%= form_with url: fd_case_resolution_path(@case), method: :post, html: { autocomplete: "off" } do %>
         <div class="modal-body">
           <div class="outcomes">
             <label class="opt">
@@ -547,7 +547,7 @@
 </div>
 <% end %>
 
-<input type="checkbox" id="case-timeline" class="drawer-flip">
+<input type="checkbox" id="case-timeline" class="drawer-flip" autocomplete="off">
 <label for="case-timeline" class="drawer-veil" aria-hidden="true"></label>
 
 <aside class="drawer" aria-label="Timeline">

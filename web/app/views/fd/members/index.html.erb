@@ -44,7 +44,7 @@
     <% end %>
   </div>
 
-  <div class="filters" data-controller="dismiss">
+  <div class="filters">
     <% @query.inline_facets.each do |facet| %>
       <span class="facet-set <%= "on" if facet.on %>">
         <details class="facet-drop" name="member-facet">

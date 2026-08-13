@@ -1,12 +1,12 @@
 <div class="modal-host">
-  <input type="checkbox" id="add-member-note" class="modal-flip">
+  <input type="checkbox" id="add-member-note" class="modal-flip" autocomplete="off">
   <label for="add-member-note" class="modal-veil" aria-hidden="true"></label>
   <div class="modal-wrap">
     <div class="modal" role="dialog" aria-label="Add a note about this member">
       <div class="modal-head">
         <h2 class="modal-title">Note on <%= names[user_id] %></h2>
       </div>
-      <%= form_with url: fd_member_notes_path(user_id), method: :post do %>
+      <%= form_with url: fd_member_notes_path(user_id), method: :post, html: { autocomplete: "off" } do %>
         <div class="modal-body">
           <label class="field-label">
             The note

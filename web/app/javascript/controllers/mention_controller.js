@@ -52,7 +52,7 @@ export default class extends Controller {
       const row = document.createElement("button")
       row.type = "button"
       row.className = "pick-opt"
-      row.dataset.action = "click->mention#choose"
+      row.dataset.action = "click->mention#choose mouseenter->mention#hover"
       row.dataset.id = member.id
       row.innerHTML = `<span class="avatar">${member.initial}</span>
         <span class="pick-name">${member.name}</span>
@@ -60,6 +60,35 @@ export default class extends Controller {
       this.resultsTarget.append(row)
     }
     this.resultsTarget.hidden = false
+    this.at = -1
+    this.mark()
+  }
+
+  rows() {
+    return [...this.resultsTarget.querySelectorAll(".pick-opt")]
+  }
+
+  mark() {
+    this.rows().forEach((row, spot) => {
+      const on = spot === this.at
+      row.setAttribute("aria-selected", on ? "true" : "false")
+      if (on) row.scrollIntoView({ block: "nearest" })
+    })
+  }
+
+  move(step) {
+    const all = this.rows()
+    if (all.length === 0) return
+
+    this.at = this.at < 0
+      ? (step > 0 ? 0 : all.length - 1)
+      : (this.at + step + all.length) % all.length
+    this.mark()
+  }
+
+  hover(event) {
+    this.at = this.rows().indexOf(event.currentTarget)
+    this.mark()
   }
 
   choose(event) {
@@ -83,17 +112,27 @@ export default class extends Controller {
   keys(event) {
     if (this.resultsTarget.hidden) return
 
+    if (event.key === "ArrowDown") {
+      event.preventDefault()
+      return this.move(1)
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault()
+      return this.move(-1)
+    }
+
     if (event.key === "Escape") {
       event.preventDefault()
       return this.close()
     }
 
     if (event.key === "Enter" || event.key === "Tab") {
-      const first = this.resultsTarget.querySelector(".pick-opt")
-      if (!first) return
+      const row = this.rows()[this.at] || this.rows()[0]
+      if (!row) return
 
       event.preventDefault()
-      this.put(first.dataset.id)
+      this.put(row.dataset.id)
     }
   }
 

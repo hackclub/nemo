@@ -11,10 +11,17 @@ export default class extends Controller {
       this.chosen.set(id, { name, initial })
     }
     this.render()
+    this.away = this.away.bind(this)
+    document.addEventListener("click", this.away)
   }
 
   disconnect() {
     clearTimeout(this.timer)
+    document.removeEventListener("click", this.away)
+  }
+
+  away(event) {
+    if (!this.element.contains(event.target)) this.clearResults()
   }
 
   type() {
@@ -46,7 +53,7 @@ export default class extends Controller {
       const row = document.createElement("button")
       row.type = "button"
       row.className = "pick-opt"
-      row.dataset.action = "click->member-picker#choose"
+      row.dataset.action = "click->member-picker#choose mouseenter->member-picker#hover"
       row.dataset.id = member.id
       row.dataset.name = member.name
       row.dataset.initial = member.initial
@@ -56,6 +63,35 @@ export default class extends Controller {
       this.resultsTarget.append(row)
     }
     this.resultsTarget.hidden = false
+    this.at = -1
+    this.mark()
+  }
+
+  rows() {
+    return [...this.resultsTarget.querySelectorAll(".pick-opt")]
+  }
+
+  mark() {
+    this.rows().forEach((row, spot) => {
+      const on = spot === this.at
+      row.setAttribute("aria-selected", on ? "true" : "false")
+      if (on) row.scrollIntoView({ block: "nearest" })
+    })
+  }
+
+  move(step) {
+    const all = this.rows()
+    if (all.length === 0) return
+
+    this.at = this.at < 0
+      ? (step > 0 ? 0 : all.length - 1)
+      : (this.at + step + all.length) % all.length
+    this.mark()
+  }
+
+  hover(event) {
+    this.at = this.rows().indexOf(event.currentTarget)
+    this.mark()
   }
 
   choose(event) {
@@ -78,10 +114,15 @@ export default class extends Controller {
   }
 
   keys(event) {
+    if (!this.resultsTarget.hidden && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+      event.preventDefault()
+      return this.move(event.key === "ArrowDown" ? 1 : -1)
+    }
+
     if (event.key === "Enter") {
       event.preventDefault()
-      const first = this.resultsTarget.querySelector(".pick-opt")
-      if (first) return first.click()
+      const row = this.rows()[this.at] || this.rows()[0]
+      if (row) return row.click()
 
       const typed = this.inputTarget.value.trim().toUpperCase()
       if (/^[UW][A-Z0-9]{2,}$/.test(typed)) this.add(typed, `@${typed}`, typed[1] || "?")
