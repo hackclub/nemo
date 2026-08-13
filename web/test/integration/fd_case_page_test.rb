@@ -7,6 +7,16 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
   end
 
+  test "a name carries the id it copies, so a handle is never lost" do
+    Fd::CaseParticipant.create!(case_id: @kase.id, user_id: "UWATCHER", role: "involved",
+      detail: "they piled on")
+    get fd_case_path(@kase)
+
+    assert_select "button.handle[data-copy-id-value=USUB][title='copy USUB']"
+    assert_select "#who-else button.handle[data-copy-id-value=UWATCHER]"
+    assert_select "button.handle[data-controller=copy]", minimum: 2
+  end
+
   test "one card for one subject" do
     get fd_case_path(@kase)
 

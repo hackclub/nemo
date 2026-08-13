@@ -41,4 +41,6 @@ Rails.application.configure do
   config.action_controller.raise_on_missing_callback_actions = true
 
   config.active_record.maintain_test_schema = false
+
+  config.x.cachet_enabled = false
 end

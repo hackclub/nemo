@@ -53,7 +53,13 @@ class CachetClient
     "cachet/profile/#{user_id}"
   end
 
+  def self.enabled?
+    Rails.application.config.x.cachet_enabled != false
+  end
+
   def self.fetch(user_id)
+    return nil unless enabled?
+
     uri = URI("#{BASE_URL}/users/#{user_id}")
     response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 3,
       read_timeout: 5) do |http|

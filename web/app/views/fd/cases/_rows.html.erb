@@ -31,7 +31,7 @@
     <td class="col-num"><%= case_age_chip(kase) %></td>
     <td>
       <% if kase.assigned? %>
-        <%= kase.assignee_handles %>
+        <%= handle_list(kase.assignee_user_ids) %>
       <% elsif kase.resolved? %>
         n/a
       <% else %>

@@ -10,8 +10,10 @@ module Fd
       is_anonymous
     end
 
-    def reporter_label
-      anonymous? ? "anonymous" : "@#{reporter_user_id}"
+    def reporter_label(names = nil)
+      return "anonymous" if anonymous?
+
+      names ? names[reporter_user_id] : "@#{reporter_user_id}"
     end
 
     def replied?

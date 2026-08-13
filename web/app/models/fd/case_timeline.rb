@@ -2,17 +2,18 @@ module Fd
   class CaseTimeline
     Entry = Struct.new(:at, :title, :mark, :chips, :detail, :said, keyword_init: true)
 
-    def self.for(kase, reports:, actions:, notes:, participants: [], assignees: [])
-      new(kase, reports:, actions:, notes:, participants:, assignees:).entries
+    def self.for(kase, reports:, actions:, notes:, participants: [], assignees: [], names: nil)
+      new(kase, reports:, actions:, notes:, participants:, assignees:, names:).entries
     end
 
-    def initialize(kase, reports:, actions:, notes:, participants: [], assignees: [])
+    def initialize(kase, reports:, actions:, notes:, participants: [], assignees: [], names: nil)
       @case = kase
       @reports = reports
       @actions = actions
       @notes = notes
       @participants = participants
       @assignees = assignees
+      @names = names || Names.none
     end
 
     def entries
@@ -22,7 +23,7 @@ module Fd
 
     private
 
-    attr_reader :reports, :actions, :notes, :participants, :assignees
+    attr_reader :reports, :actions, :notes, :participants, :assignees, :names
 
     def kase = @case
 
@@ -52,7 +53,7 @@ module Fd
       parts = []
       unless report.anonymous?
         role = role_of(report.reporter_user_id)
-        who = "from #{report.reporter_label}"
+        who = "from #{report.reporter_label(names)}"
         who += ", who was involved" if role == "involved"
         parts << who
       end
@@ -98,7 +99,7 @@ module Fd
     end
 
     def opened_detail
-      parts = ["by @#{kase.opened_by}"]
+      parts = ["by #{names[kase.opened_by]}"]
       parts << "no subject set" if subject_user_ids.empty?
       context = kase.subject_context
       if context.is_a?(Hash) && context["priors"]
@@ -108,14 +109,14 @@ module Fd
     end
 
     def assigned_detail(person)
-      parts = ["@#{person.user_id}"]
-      parts << "by @#{person.assigned_by}" if person.assigned_by != person.user_id
+      parts = [names[person.user_id]]
+      parts << "by #{names[person.assigned_by]}" if person.assigned_by != person.user_id
       parts << "#{span(person.assigned_at - kase.opened_at)} after opening"
       parts.join(" · ")
     end
 
     def resolved_detail
-      parts = ["by @#{assignees.first&.user_id || kase.opened_by}"]
+      parts = ["by #{names[assignees.first&.user_id || kase.opened_by]}"]
       parts << "#{span(kase.resolved_at - kase.opened_at)} after opening"
       parts << "the member was not told" if kase.member_note.blank?
       parts.join(" · ")
@@ -139,7 +140,7 @@ module Fd
             title: "#{action_title(action)} reversed",
             mark: "action",
             chips: [],
-            detail: ["by @#{action.reversed_by}", action.reversal_reason].compact.join(" · "),
+            detail: ["by #{names[action.reversed_by]}", action.reversal_reason].compact.join(" · "),
           )
         end
 
@@ -160,8 +161,10 @@ module Fd
 
     def action_detail(action)
       parts = []
-      parts << "on @#{action.target_user_id}" unless subject_user_ids.include?(action.target_user_id)
-      parts << "decided by @#{action.decided_by}"
+      unless subject_user_ids.include?(action.target_user_id)
+        parts << "on #{names[action.target_user_id]}"
+      end
+      parts << "decided by #{names[action.decided_by]}"
       unless action.performed_by_decider?
         parts << "performed by #{performer(action.performed_by)}"
       end
@@ -171,7 +174,7 @@ module Fd
     end
 
     def performer(user_id)
-      user_id == "UMNEMOSYNE" ? "Mnemosyne" : "@#{user_id}"
+      user_id == "UMNEMOSYNE" ? "Mnemosyne" : names[user_id]
     end
 
     def note_entries
@@ -180,8 +183,8 @@ module Fd
           at: note.created_at,
           title: "Note added",
           mark: "note",
-          chips: note.standing? ? ["about @#{note.subject_user_id}"] : [],
-          detail: "by @#{note.author}",
+          chips: note.standing? ? ["about #{names[note.subject_user_id]}"] : [],
+          detail: "by #{names[note.author]}",
           said: note.body,
         )
       end

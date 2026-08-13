@@ -18,6 +18,7 @@ module Fd
       @standing_notes = Note.for_subjects(@case.subject_user_ids).visible.recent_first
         .group_by(&:subject_user_id)
       @assignees = @case.assignees.to_a
+      @names = Names.for(page_ids)
       @timeline = CaseTimeline.for(
         @case,
         reports: @reports,
@@ -25,6 +26,7 @@ module Fd
         notes: @notes + @standing_notes.values.flatten,
         participants: @participants,
         assignees: @assignees,
+        names: @names,
       )
       @context = MemberContext.for(
         @case.subject_user_ids +
@@ -61,6 +63,18 @@ module Fd
     end
 
     private
+
+    def page_ids
+      [
+        @case.opened_by,
+        @participants.map(&:user_id),
+        @assignees.flat_map { |person| [person.user_id, person.assigned_by] },
+        @reports.map(&:reporter_user_id),
+        @actions.flat_map { |a| [a.target_user_id, a.decided_by, a.performed_by, a.reversed_by] },
+        (@notes + @standing_notes.values.flatten).map(&:author),
+        @siblings.flat_map(&:subject_user_ids)
+      ]
+    end
 
     def objection(subject)
       return "say who this case is about" if subject.nil?
@@ -104,6 +118,9 @@ module Fd
       @stats = QueueStats.load
       @total_count = @stats.total
       @views = @query.views
+      @names = Names.for(@cases.flat_map { |kase|
+        kase.subject_user_ids + kase.assignee_user_ids
+      })
       @open_for_subject ||= []
     end
   end

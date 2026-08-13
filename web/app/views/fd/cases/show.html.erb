@@ -142,13 +142,13 @@
                 </td>
                 <td>
                   <span class="two-line">
-                    <b>@<%= action.target_user_id %></b>
+                    <b><%= handle(action.target_user_id) %></b>
                     <span><%= action_target_note(action, @case) %></span>
                   </span>
                 </td>
                 <td>
                   <span class="two-line">
-                    <b>@<%= action.decided_by %></b>
+                    <b><%= handle(action.decided_by) %></b>
                     <span><%= action_performer_note(action) %></span>
                   </span>
                 </td>
@@ -253,7 +253,7 @@
                 </td>
                 <td>
                   <span class="two-line">
-                    <b>@<%= thread.added_by %></b>
+                    <b><%= handle(thread.added_by) %></b>
                     <span>
                       <%= button_to "Detach", fd_case_thread_path(@case, thread),
                             method: :delete, class: "text-btn",
@@ -292,7 +292,7 @@
                 </span>
                 <% note = person_note(person, @context[person.user_id]) %>
                 <span>
-                  <span class="who-name">@<%= person.user_id %></span>
+                  <span class="who-name"><%= handle(person.user_id) %></span>
                   <% if note %>
                     <br><span class="who-note"><%= note %></span>
                   <% end %>
@@ -457,7 +457,7 @@
                 <%= radio_button_tag :about, person.user_id, false %>
                 <span class="opt-dot" aria-hidden="true"></span>
                 <span>
-                  <span class="opt-label">About @<%= person.user_id %></span>
+                  <span class="opt-label">About <%= names[person.user_id] %></span>
                   <span class="opt-note">
                     Follows the member to every case, now and later. For a pattern, not an incident.
                   </span>

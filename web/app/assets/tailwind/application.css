@@ -1260,6 +1260,33 @@
     color: var(--ink-3);
   }
 
+  .handle {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    text-align: start;
+    border-bottom: 1px dotted transparent;
+  }
+
+  .handle:hover {
+    border-bottom-color: var(--ink-3);
+  }
+
+  .handle[data-copied] {
+    color: var(--accent-deep);
+    border-bottom-color: var(--accent);
+  }
+
+  .handle[data-copied]::after {
+    content: " id copied";
+    font-size: var(--t-3xs);
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+
   .views {
     display: flex;
     gap: var(--s-sm);

@@ -6,7 +6,7 @@
     </div>
     <div>
       <h2 class="card-title">
-        <%= user_id ? "@#{user_id}" : "No subject set" %>
+        <%= user_id ? handle(user_id) : "No subject set" %>
       </h2>
       <div class="mono"><%= subject_identity_line(user_id, context) %></div>
       <% if person %>
@@ -36,7 +36,7 @@
     </div>
 
     <div class="subject-notes">
-      <span class="fact-label">Notes on @<%= user_id %></span>
+      <span class="fact-label">Notes on <%= names[user_id] %></span>
       <% if notes.any? %>
         <div class="notes">
           <% notes.each do |note| %>

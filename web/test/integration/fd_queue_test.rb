@@ -62,12 +62,13 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     assert_equal before - 1, Fd::Case.unresolved.unassigned.count
   end
 
-  test "the open queue names everybody a case is on" do
+  test "the open queue names everybody a case is on, each copyable" do
     @mine.assign!("UONE")
     @mine.assign!("UTWO")
     get fd_cases_path
 
-    assert_match(/@UONE and @UTWO/, response.body)
+    assert_select "button.handle[data-copy-id-value=UONE]", text: "@UONE"
+    assert_select "button.handle[data-copy-id-value=UTWO]", text: "@UTWO"
   end
 
   test "the six views are offered, with the current one marked" do

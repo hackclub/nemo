@@ -2,6 +2,23 @@ module FdHelper
   AGE_WARN = 2.days
   AGE_CRIT = 5.days
 
+  def names
+    @names || Fd::Names.none
+  end
+
+  def handle(user_id)
+    return "n/a" if user_id.blank?
+
+    tag.button(names[user_id], type: "button", class: "handle", title: "copy #{user_id}",
+      data: { controller: "copy", copy_id_value: user_id, action: "click->copy#write" })
+  end
+
+  def handle_list(user_ids)
+    return "n/a" if user_ids.blank?
+
+    safe_join(user_ids.map { |id| handle(id) }, ", ")
+  end
+
   def case_age_seconds(kase)
     (kase.resolved_at || Time.current) - kase.opened_at
   end
@@ -171,7 +188,7 @@ module FdHelper
   end
 
   def note_byline(note)
-    ["@#{note.author}", note.created_at.strftime("%b %-d, %Y")].join(" · ")
+    [names[note.author], note.created_at.strftime("%b %-d, %Y")].join(" · ")
   end
 
   def notes_summary(notes, standing)
@@ -186,7 +203,7 @@ module FdHelper
   def action_option_label(action)
     [
       action_label(action.type_key),
-      "on @#{action.target_user_id}",
+      "on #{names[action.target_user_id]}",
       action.performed_at.strftime("%b %-d, %Y"),
     ].join(" · ")
   end
@@ -203,9 +220,9 @@ module FdHelper
   def subject_handles(kase)
     ids = kase.subject_user_ids
     return "no subject set" if ids.empty?
-    return "@#{ids.first}" if ids.one?
+    return names[ids.first] if ids.one?
 
-    "@#{ids.first} and #{pluralize(ids.size - 1, 'other')}"
+    "#{names[ids.first]} and #{pluralize(ids.size - 1, 'other')}"
   end
 
   def case_option_label(kase)
@@ -236,9 +253,9 @@ module FdHelper
     if named.empty?
       reports.one? ? "filed anonymously" : "filed anonymously by #{reports.size} people"
     elsif reports.one?
-      "filed by #{named.first.reporter_label}"
+      "filed by #{named.first.reporter_label(names)}"
     else
-      "filed by #{named.first.reporter_label} and #{pluralize(reports.size - 1, 'other')}"
+      "filed by #{named.first.reporter_label(names)} and #{pluralize(reports.size - 1, 'other')}"
     end
   end
 
@@ -248,13 +265,13 @@ module FdHelper
     opened = "opened #{kase.opened_at.strftime('%b %-d')}"
 
     if !kase.assigned?
-      parts << "#{opened} by @#{kase.opened_by}"
+      parts << "#{opened} by #{names[kase.opened_by]}"
       parts << "unassigned"
     elsif kase.assignee_user_ids == [kase.opened_by]
-      parts << "#{opened} and assigned to @#{kase.opened_by}"
+      parts << "#{opened} and assigned to #{names[kase.opened_by]}"
     else
-      parts << "#{opened} by @#{kase.opened_by}"
-      parts << "assigned to #{kase.assignee_handles}"
+      parts << "#{opened} by #{names[kase.opened_by]}"
+      parts << "assigned to #{names.list(kase.assignee_user_ids)}"
     end
 
     filed = filed_by_label(reports)
@@ -292,7 +309,7 @@ module FdHelper
   def action_performer_note(action)
     return "performed themselves" if action.performed_by_decider?
 
-    "performed by @#{action.performed_by}"
+    "performed by #{names[action.performed_by]}"
   end
 
   def action_detail_note(action)
@@ -337,7 +354,7 @@ module FdHelper
   def subject_identity_line(user_id, context)
     return "nobody identified yet" if user_id.blank?
 
-    parts = [user_id]
+    parts = [user_id.to_s]
     if context&.known?
       parts << "joined #{context.cohort_at.to_date.strftime('%b %-d, %Y')}" if context.cohort_at
       parts << (context.claimed_at ? claimed_phrase(context) : "never claimed")
@@ -366,7 +383,11 @@ module FdHelper
       "Resolved #{kase.resolved_at.strftime('%-d %b')} as #{kase.resolution.tr('_', ' ')}. " \
         "#{timeline.size} entries, kept whether or not Slack still has the thread."
     else
-      assigned = kase.assigned? ? "assigned to #{kase.assignee_handles}" : "still unassigned"
+      assigned = if kase.assigned?
+        "assigned to #{names.list(kase.assignee_user_ids)}"
+      else
+        "still unassigned"
+      end
       "Still open. #{case_age_label(case_age_seconds(kase))}, #{assigned}. " \
         "Nothing ages out: it stays here until somebody resolves it."
     end
