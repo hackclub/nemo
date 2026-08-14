@@ -53,36 +53,34 @@ class Fd::PermissionTest < ActiveSupport::TestCase
     end
   end
 
-  test "the three roles stack, doing then undoing then the tool itself" do
-    assert_equal 10, Fd::Permission.held_by("firefighter").size
+  test "the three roles stack, the work then the rules then the tool itself" do
+    assert_equal 13, Fd::Permission.held_by("firefighter").size
     assert_equal 15, Fd::Permission.held_by("lead").size
-    assert_equal 17, Fd::Permission.held_by("community_manager").size
+    assert_equal 16, Fd::Permission.held_by("community_manager").size
     assert_equal Fd::Permission.keys.size, Fd::Permission.held_by("community_manager").size
 
-    assert_equal %w[case.reverse case.reopen decision.settle decision.retire
-                    identity.read identity.purge access.grant].sort,
+    assert_equal %w[decision.settle decision.retire access.grant].sort,
       Fd::Permission.lead_only.sort
-    assert_equal %w[access.grant identity.purge].sort, Fd::Permission.manager_only.sort
+    assert_equal %w[access.grant], Fd::Permission.manager_only
   end
 
-  test "a firefighter holds everything a lead does not undo" do
+  test "a firefighter does the conduct work, including undoing it" do
     assert firefighter.may?("case.act")
-    assert_not firefighter.may?("case.reverse")
-    assert_not firefighter.may?("identity.read")
+    assert firefighter.may?("case.reverse")
+    assert firefighter.may?("case.reopen")
+    assert firefighter.may?("identity.read")
+    assert_not firefighter.may?("decision.settle")
   end
 
-  test "a lead undoes work but does not hand out access" do
-    assert lead.may?("case.reverse")
+  test "a lead settles the rules but does not hand out access" do
     assert lead.may?("decision.settle")
-    assert lead.may?("identity.read")
+    assert lead.may?("decision.retire")
     assert_not lead.may?("access.grant")
-    assert_not lead.may?("identity.purge")
   end
 
   test "a community manager holds the tool itself" do
     assert manager.may?("access.grant")
-    assert manager.may?("identity.purge")
-    assert manager.may?("case.reverse")
+    assert manager.may?("decision.settle")
     assert_predicate manager, :manager?
     assert_predicate manager, :lead?
   end
@@ -117,15 +115,17 @@ class Fd::PermissionTest < ActiveSupport::TestCase
     assert_not firefighter.may?("case.note", theirs)
   end
 
-  test "the locked permissions cannot be moved between roles" do
+  test "handing out access is the one permission nobody can move" do
     assert Fd::Permission.locked?("access.grant")
-    assert Fd::Permission.locked?("identity.purge")
     assert_not Fd::Permission.locked?("case.reverse")
+    assert_not Fd::Permission.locked?("decision.settle")
   end
 
   test "a refusal says which rule stopped it" do
-    assert_equal "reverse an action somebody logged is lead only",
-      Fd::Permission.refusal("case.reverse")
+    assert_equal "settle a proposal, amend a settled one is lead only",
+      Fd::Permission.refusal("decision.settle")
+    assert_equal "give or take back access is community manager only",
+      Fd::Permission.refusal("access.grant")
     assert_equal "that is not yours", Fd::Permission.refusal("case.act")
     assert_equal "you cannot make that change", Fd::Permission.refusal("nonsense")
   end

@@ -2,6 +2,11 @@
 <% content_for :page_subtitle do %>
   <%= role_tally(@grants) %>
 <% end %>
+<% if current_staff.may?("access.grant") %>
+  <% content_for :head_actions do %>
+    <label for="give-access" class="btn btn-primary">Give access</label>
+  <% end %>
+<% end %>
 
 <div class="stack">
   <div class="views">
@@ -56,6 +61,9 @@
               </span>
             </span>
             <span class="mcard-acts">
+              <% if current_staff.may?("access.grant") %>
+                <label for="change-access" class="btn">Change</label>
+              <% end %>
               <%= link_to "Everyone", fd_settings_path, class: "btn" %>
             </span>
           </div>
@@ -73,9 +81,7 @@
               <span class="line-row">
                 <b>Identity reads</b>
                 <span class="mono">identity.read</span>
-                <span class="line-end">
-                  <%= @role == "firefighter" ? "n/a" : @reads %>
-                </span>
+                <span class="line-end"><%= @reads %></span>
               </span>
             </div>
           </div>
@@ -182,3 +188,10 @@
     </div>
   <% end %>
 </div>
+
+<% if current_staff.may?("access.grant") %>
+  <%= render "fd/settings/give_modal" %>
+  <% if @person %>
+    <%= render "fd/settings/change_modal", grant: @person %>
+  <% end %>
+<% end %>

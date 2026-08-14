@@ -125,23 +125,26 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     give("UFF1")
     get fd_settings_path(person: "UFF1")
 
-    assert_select ".band-label", text: /What the role does not cover · 7/
-    assert_select ".line-row", text: /Reverse an action.*lead only/m
+    assert_select ".band-label", text: /What the role does not cover · 3/
+    assert_select ".line-row", text: /Settle a proposal.*lead only/m
     assert_select ".line-row", text: /Give or take back access.*community manager only/m
   end
 
-  test "a lead is short of only the two the manager keeps" do
+  test "a lead is short of only what the manager keeps" do
     give("ULEAD", role: "lead")
     get fd_settings_path(person: "ULEAD")
 
-    assert_select ".band-label", text: /What the role does not cover · 2/
+    assert_select ".band-label", text: /What the role does not cover · 1/
   end
 
-  test "a firefighter reads no identities, and it says so rather than zero" do
+  test "identity reads are counted for everybody, since everybody may read" do
     give("UFF1")
+    AccessLog.create!(actor_id: "UFF1", subject_user_id: "USUB", field_class: "identity",
+      looked_at: 2.days.ago)
+
     get fd_settings_path(person: "UFF1")
 
-    assert_select ".line-row", text: /Identity reads.*n\/a/m
+    assert_select ".line-row", text: /Identity reads.*1/m
   end
 
   test "the pane keeps the refusals, and says so when there are none" do

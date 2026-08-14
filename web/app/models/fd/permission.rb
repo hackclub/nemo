@@ -43,11 +43,11 @@ module Fd
         events: %w[case/resolved]
       },
       "case.reverse" => {
-        label: "Reverse an action somebody logged", roles: LEAD, scope: :assigned,
+        label: "Reverse an action somebody logged", roles: EVERYONE, scope: :assigned,
         events: %w[action/reversed]
       },
       "case.reopen" => {
-        label: "Put a resolved case back in the queue", roles: LEAD, scope: :assigned,
+        label: "Put a resolved case back in the queue", roles: EVERYONE, scope: :assigned,
         events: %w[case/reopened]
       },
       "decision.write" => {
@@ -71,11 +71,8 @@ module Fd
         label: "Write a standing note about a member", roles: EVERYONE, events: []
       },
       "identity.read" => {
-        label: "See the real name and email behind an id", roles: LEAD, events: [],
+        label: "See the real name and email behind an id", roles: EVERYONE, events: [],
         logged: true
-      },
-      "identity.purge" => {
-        label: "Erase a stored identity or message", roles: MANAGER, events: []
       },
       "access.grant" => {
         label: "Give or take back access", roles: MANAGER,
@@ -83,7 +80,7 @@ module Fd
       }
     }.freeze
 
-    LOCKED = %w[access.grant identity.purge].freeze
+    LOCKED = %w[access.grant].freeze
 
     def self.keys = ALL.keys
 

@@ -15,6 +15,7 @@ Rails.application.routes.draw do
     end
     resource :search, only: [:show], controller: "searches"
     resource :settings, only: [:show]
+    resources :grants, only: [:create, :destroy]
     resources :decisions, only: [:index, :show, :create, :update, :destroy] do
       resources :threads, only: [:create, :destroy], controller: "decision_threads"
       resource :settlement, only: [:create]

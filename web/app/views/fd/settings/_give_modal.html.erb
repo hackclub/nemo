@@ -1,0 +1,28 @@
+<%= render layout: "fd/modal", locals: { id: "give-access", title: "Give access" } do %>
+  <%= form_with url: fd_grants_path, method: :post, html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <div class="field-label">
+        <span>Who</span>
+        <%= render "fd/member_picker", name: "user_id", single: true,
+              label: "search for who to give it to" %>
+      </div>
+
+      <div class="field-label">
+        <span>Role</span>
+        <div class="segmented seg-radio">
+          <% Fd::Permission::ROLES.each do |role| %>
+            <label>
+              <%= radio_button_tag :role, role, role == "firefighter", id: nil %>
+              <%= Fd::Permission::ROLE_LABELS.fetch(role) %>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <label for="give-access" class="btn">Close</label>
+      <%= submit_tag "Give it", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>

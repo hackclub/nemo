@@ -6,13 +6,16 @@
       <%= render "fd/decisions/words", decision: decision, with_reasons: true %>
     </div>
     <div class="modal-foot">
-      <% if decision.proposed? && decision.proposed_by == current_staff.user_id %>
-        <%= button_to "Drop it", fd_decision_path(decision), method: :delete,
-              class: "btn", form: { class: "contents",
-              data: { turbo_confirm: "Drop this proposal?" } } %>
-      <% end %>
       <label for="edit-decision" class="btn">Close</label>
       <%= submit_tag "Save", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+
+  <% if decision.proposed? && decision.proposed_by == current_staff.user_id %>
+    <div class="modal-foot">
+      <%= button_to "Drop it", fd_decision_path(decision), method: :delete,
+            class: "btn", form: { class: "contents",
+            data: { turbo_confirm: "Drop this proposal?" } } %>
     </div>
   <% end %>
 <% end %>

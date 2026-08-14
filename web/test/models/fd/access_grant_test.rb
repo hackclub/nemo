@@ -70,7 +70,7 @@ class Fd::AccessGrantTest < ActiveSupport::TestCase
     fresh = Staff.find("UFF1")
     assert_equal "firefighter", fresh.role
     assert fresh.may?("case.act")
-    assert_not fresh.may?("case.reverse")
+    assert_not fresh.may?("decision.settle")
 
     give("UFF1", role: "lead")
     assert_predicate Staff.find("UFF1"), :lead?

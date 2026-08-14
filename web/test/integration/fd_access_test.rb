@@ -43,12 +43,19 @@ class FdAccessTest < ActionDispatch::IntegrationTest
       controller_for(name).declared.intersect?(Fd::Permission.lead_only)
     end.map(&:first).uniq
 
-    assert_equal %w[fd/resolutions fd/reversals fd/settlements fd/supersessions
-                    fd/retirements].sort, lead_only.sort,
+    assert_equal %w[fd/settlements fd/supersessions fd/retirements fd/grants].sort,
+      lead_only.sort,
       "a lead-only route appeared or vanished, so this test needs updating"
   end
 
-  test "a firefighter cannot reverse an action, and the attempt is kept" do
+  test "a firefighter cannot hand out access" do
+    post fd_grants_path, params: { user_id: "U0NEW", role: "lead", reason: "why not" }
+
+    assert_nil Fd::AccessGrant.role_for("U0NEW")
+    assert_equal "access.grant", refusals.sole.after["permission"]
+  end
+
+  test "a firefighter undoes the work, on a case that is theirs to work" do
     kase = make_case(opened_at: 2.days.ago)
     action = Fd::Action.create!(case_id: kase.id, type_key: "warning", target_user_id: "USUB",
       decided_by: "UOTHER", performed_by: "UOTHER")
@@ -56,21 +63,23 @@ class FdAccessTest < ActionDispatch::IntegrationTest
     post fd_case_reversals_path(kase), params: { action_id: action.id,
       reversal_reason: "they appealed" }
 
-    assert_nil action.reload.reversed_at
-    assert_match(/lead only/, flash[:alert])
-    assert_equal 1, refusals.where(verb: "refused").count
-    assert_equal "case.reverse", refusals.sole.after["permission"]
-    assert_equal "firefighter", refusals.sole.after["role"]
+    assert_not_nil action.reload.reversed_at
+    assert_equal 0, refusals.count
   end
 
-  test "a firefighter cannot reopen a resolved case" do
-    kase = make_case(opened_at: 3.days.ago)
-    kase.update!(resolved_at: 1.day.ago, resolution: "no_action")
+  test "a firefighter is refused on a case assigned to somebody else" do
+    kase = make_case(opened_at: 2.days.ago)
+    kase.assign!("UOTHER")
+    action = Fd::Action.create!(case_id: kase.id, type_key: "warning", target_user_id: "USUB",
+      decided_by: "UOTHER", performed_by: "UOTHER")
 
-    delete fd_case_resolution_path(kase)
+    post fd_case_reversals_path(kase), params: { action_id: action.id,
+      reversal_reason: "they appealed" }
 
-    assert_not_nil kase.reload.resolved_at
-    assert_equal "case.reopen", refusals.sole.after["permission"]
+    assert_nil action.reload.reversed_at
+    assert_match(/not to you/, flash[:alert])
+    assert_equal "case.reverse", refusals.sole.after["permission"]
+    assert_equal "firefighter", refusals.sole.after["role"]
   end
 
   test "a firefighter cannot settle, supersede or retire a decision" do

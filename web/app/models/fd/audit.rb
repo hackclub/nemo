@@ -13,7 +13,8 @@ module Fd
       "Fd::MemberIdentity" => "identity",
       "Fd::CaseCitation" => "citation",
       "Fd::Decision" => "decision",
-      "Fd::DecisionThread" => "decision_thread"
+      "Fd::DecisionThread" => "decision_thread",
+      "Fd::AccessGrant" => "grant"
     }.freeze
 
     VERBS = %w[

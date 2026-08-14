@@ -1,0 +1,30 @@
+<%= render layout: "fd/modal", locals: { id: "change-access",
+      title: "Change what #{names[grant.user_id]} holds" } do %>
+  <%= form_with url: fd_grants_path, method: :post, html: { autocomplete: "off" } do %>
+    <%= hidden_field_tag :user_id, grant.user_id, id: nil %>
+    <div class="modal-body">
+      <div class="field-label">
+        <span>Role</span>
+        <div class="segmented seg-radio">
+          <% Fd::Permission::ROLES.each do |role| %>
+            <label>
+              <%= radio_button_tag :role, role, role == grant.role, id: nil %>
+              <%= Fd::Permission::ROLE_LABELS.fetch(role) %>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <label for="change-access" class="btn">Close</label>
+      <%= submit_tag "Change it", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+
+  <div class="modal-foot">
+    <%= button_to "Take it back", fd_grant_path(grant), method: :delete, class: "btn",
+          form: { class: "contents", data: { turbo_confirm:
+            "Take back what #{names[grant.user_id]} holds?" } } %>
+  </div>
+<% end %>
