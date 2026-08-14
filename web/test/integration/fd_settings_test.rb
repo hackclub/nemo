@@ -95,6 +95,77 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     assert_select ".view[aria-current]", text: /Access/
   end
 
+  test "a person opens beside the roster, with their grant and its reason" do
+    give("UFF1", reason: "night shift while sam is away")
+
+    get fd_settings_path(person: "UFF1")
+
+    assert_response :success
+    assert_select ".inspector .index-item[aria-current]", text: /UFF1/
+    assert_select ".mcard-sub", text: /given by @UME/
+    assert_select ".mcard-sub", text: /night shift while sam is away/
+  end
+
+  test "the pane counts what they did with the grant, by permission" do
+    give("UFF1")
+    3.times do |n|
+      Fd::AuditEntry.create!(actor_user_id: "UFF1", actor_kind: "human", entity_type: "action",
+        entity_id: n + 1, verb: "performed", source_app: "fire_engine")
+    end
+    Fd::AuditEntry.create!(actor_user_id: "UFF1", actor_kind: "human", entity_type: "case",
+      entity_id: 1, verb: "opened", source_app: "fire_engine", occurred_at: 2.months.ago)
+
+    get fd_settings_path(person: "UFF1")
+
+    assert_select ".line-row", text: /Log an action.*case\.act.*3/m
+    assert_select ".line-row", text: /Open a case/, count: 0
+  end
+
+  test "the pane lists what the role does not cover" do
+    give("UFF1")
+    get fd_settings_path(person: "UFF1")
+
+    assert_select ".band-label", text: /What the role does not cover · 7/
+    assert_select ".line-row", text: /Reverse an action.*lead only/m
+    assert_select ".line-row", text: /Give or take back access.*community manager only/m
+  end
+
+  test "a lead is short of only the two the manager keeps" do
+    give("ULEAD", role: "lead")
+    get fd_settings_path(person: "ULEAD")
+
+    assert_select ".band-label", text: /What the role does not cover · 2/
+  end
+
+  test "a firefighter reads no identities, and it says so rather than zero" do
+    give("UFF1")
+    get fd_settings_path(person: "UFF1")
+
+    assert_select ".line-row", text: /Identity reads.*n\/a/m
+  end
+
+  test "the pane keeps the refusals, and says so when there are none" do
+    give("UFF1")
+    get fd_settings_path(person: "UFF1")
+    assert_select ".card-note", text: "Never refused."
+
+    Fd::AuditEntry.create!(actor_user_id: "UFF1", actor_kind: "human", entity_type: "case",
+      entity_id: 41, verb: "refused", source_app: "fire_engine",
+      after: { "permission" => "case.reverse", "role" => "firefighter" })
+
+    get fd_settings_path(person: "UFF1")
+    assert_select ".band-label", text: /Refused · 1/
+    assert_select ".line-row", text: /Reverse an action.*case 41/m
+  end
+
+  test "asking for somebody who holds nothing shows the roster" do
+    give("UFF1")
+    get fd_settings_path(person: "UNOBODY")
+
+    assert_select ".inspector", count: 0
+    assert_select ".data-table"
+  end
+
   test "the rail carries settings" do
     get fd_settings_path
     assert_select ".rail-item[aria-current='page']", text: /Settings/

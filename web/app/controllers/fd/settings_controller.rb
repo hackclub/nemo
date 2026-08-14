@@ -4,6 +4,8 @@ module Fd
     WINDOW = 30.days
     DORMANT_AFTER = 30.days
 
+    REFUSALS_SHOWN = 5
+
     def show
       @tab = TABS.key?(params[:tab]) ? params[:tab] : "access"
       @grants = AccessGrant.live.newest_first.to_a
@@ -11,10 +13,37 @@ module Fd
       @acted = acted_since(WINDOW.ago)
       @last_acted = last_acted
       @dormant = dormant
+      @person = chosen
+      person_facts if @person
       @names = Names.for(named)
     end
 
     private
+
+    def chosen
+      asked = params[:person].to_s
+      @grants.find { |grant| grant.user_id == asked }
+    end
+
+    def person_facts
+      @role = @person.role
+      @did = did_with_it
+      @cannot = Permission.keys - Permission.held_by(@role)
+      @refused = AuditEntry.where(actor_user_id: @person.user_id, verb: "refused")
+        .recent_first.limit(REFUSALS_SHOWN).to_a
+      @reads = AccessLog.where(actor_id: @person.user_id, field_class: "identity")
+        .where(looked_at: WINDOW.ago..).count
+    end
+
+    def did_with_it
+      counted = AuditEntry.where(actor_user_id: @person.user_id)
+        .where(occurred_at: WINDOW.ago..)
+        .group(:entity_type, :verb).count
+
+      Permission.held_by(@role).to_h do |key|
+        [key, Permission.events(key).sum { |event| counted[event.split("/")] || 0 }]
+      end
+    end
 
     def holders
       @holders ||= @grants.map(&:user_id)

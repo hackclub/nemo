@@ -22,7 +22,102 @@
       </div>
     <% end %>
 
-    <% if @grants.any? %>
+    <% if @person %>
+      <div class="inspector">
+        <div class="index-side">
+          <% @grants.each do |grant| %>
+            <%= link_to fd_settings_path(person: grant.user_id), class: "index-item",
+                  aria: { current: (grant.user_id == @person.user_id ? "true" : nil) } do %>
+              <span class="index-face"><%= names.initial(grant.user_id) %></span>
+              <%= names[grant.user_id] %>
+              <%= role_chip(grant.role) %>
+            <% end %>
+          <% end %>
+        </div>
+
+        <div class="pane">
+          <div class="mcard-top">
+            <span class="mcard-face"><%= names.initial(@person.user_id) %></span>
+            <span>
+              <span class="mcard-name">
+                <%= names[@person.user_id] %>
+                <%= role_chip(@role) %>
+              </span>
+              <span class="mcard-sub">
+                <span class="mono"><%= @person.user_id %></span>
+                <span>·</span>
+                since <%= @person.granted_at.strftime("%-d %b %Y") %>
+                <span>·</span>
+                given by <%= given_by(@person.granted_by) %>
+                <% if @person.reason.present? %>
+                  <span>·</span>
+                  <span class="said-cell"><%= @person.reason %></span>
+                <% end %>
+              </span>
+            </span>
+            <span class="mcard-acts">
+              <%= link_to "Everyone", fd_settings_path, class: "btn" %>
+            </span>
+          </div>
+
+          <div>
+            <p class="band-label">What they did with it · 30 days</p>
+            <div class="lines">
+              <% @did.select { |_key, count| count.positive? }.each do |key, count| %>
+                <span class="line-row">
+                  <b><%= Fd::Permission.label(key) %></b>
+                  <span class="mono"><%= key %></span>
+                  <span class="line-end"><%= count %></span>
+                </span>
+              <% end %>
+              <span class="line-row">
+                <b>Identity reads</b>
+                <span class="mono">identity.read</span>
+                <span class="line-end">
+                  <%= @role == "firefighter" ? "n/a" : @reads %>
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <p class="band-label">What the role does not cover · <%= @cannot.size %></p>
+            <% if @cannot.any? %>
+              <div class="lines">
+                <% @cannot.each do |key| %>
+                  <span class="line-row">
+                    <b><%= Fd::Permission.label(key) %></b>
+                    <span class="mono"><%= key %></span>
+                    <span class="line-end">
+                      <%= Fd::Permission::ROLE_LABELS.fetch(Fd::Permission.least(key)).downcase %> only
+                    </span>
+                  </span>
+                <% end %>
+              </div>
+            <% else %>
+              <p class="card-note">Nothing. They hold the lot.</p>
+            <% end %>
+          </div>
+
+          <div>
+            <p class="band-label">Refused · <%= @refused.size %></p>
+            <% if @refused.any? %>
+              <div class="lines">
+                <% @refused.each do |row| %>
+                  <span class="line-row">
+                    <b><%= Fd::Permission.label(row.after["permission"]) %></b>
+                    <span><%= row.entity_type %> <%= row.entity_id.positive? ? row.entity_id : nil %></span>
+                    <span class="line-end"><%= row.occurred_at.strftime("%-d %b %H:%M") %></span>
+                  </span>
+                <% end %>
+              </div>
+            <% else %>
+              <p class="card-note">Never refused.</p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% elsif @grants.any? %>
       <div class="card card-flush">
         <div class="scroll">
           <table class="data-table">
@@ -41,7 +136,9 @@
                 <tr>
                   <td>
                     <span class="two-line">
-                      <b><%= names[grant.user_id] %></b>
+                      <%= link_to fd_settings_path(person: grant.user_id) do %>
+                        <b><%= names[grant.user_id] %></b>
+                      <% end %>
                       <span class="idline mono"><%= grant.user_id %></span>
                     </span>
                   </td>
