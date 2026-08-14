@@ -77,7 +77,9 @@ ROLES = {
         ],
     },
     "bot": {
-        "required": [
+        "required": DATABASE + [
+            "PIPELINE_DB_USER",
+            "PIPELINE_DB_PASSWORD",
             "SHROUD_BOT_TOKEN",
             "SHROUD_APP_TOKEN",
             "NEMO_BOT_TOKEN",

@@ -7,9 +7,11 @@ from dotenv import load_dotenv
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
 from bot import nemo, shroud
+from bot.engine import session, shutdown
 from bot.nemo import app as nemo_app
 from bot.shroud import app as shroud_app
 from lib.config import missing
+from lib.db import SeededDeployment, refuse_if_seeded
 from lib.paths import ENV_FILE
 
 log = logging.getLogger("bot")
@@ -40,6 +42,14 @@ def main():
         print("run `nemo doctor bot` for the whole picture", file=sys.stderr)
         return 78
 
+    try:
+        with session() as conn:
+            refuse_if_seeded(conn)
+    except SeededDeployment as refusal:
+        print(f"bot: {refusal}", file=sys.stderr)
+        shutdown()
+        return 78
+
     running = [start(*one) for one in handlers()]
     stopping = threading.Event()
 
@@ -54,6 +64,7 @@ def main():
 
     for handler in running:
         handler.close()
+    shutdown()
     log.info("bot: stopped")
     return 0
 
