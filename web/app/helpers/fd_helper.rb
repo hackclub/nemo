@@ -620,6 +620,30 @@ module FdHelper
     "identity/read" => "Read the identity of"
   }.freeze
 
+  def why_not(key, record = nil)
+    Fd::Access.why_not(current_staff, key, record)
+  end
+
+  def opens_modal(key, text = nil, opens:, on: nil, css: "btn", &block)
+    why = why_not(key, on)
+    body = block ? capture(&block) : text
+    return tag.label(body, for: opens, class: css) if why.nil?
+
+    dead_button(body, why, css)
+  end
+
+  def gated_button(key, text, path, on: nil, css: "btn", **options)
+    why = why_not(key, on)
+    return dead_button(text, why, css) if why
+
+    form = { class: "contents" }.merge(options.delete(:form) || {})
+    button_to text, path, class: css, form: form, **options
+  end
+
+  def dead_button(text, why, css = "btn")
+    tag.span(text, class: "#{css} btn-off", title: why, aria: { disabled: "true" })
+  end
+
   def did_path(person, key, asked)
     fd_settings_path(tab: "usage", person: person.user_id, did: (key unless asked == key))
   end

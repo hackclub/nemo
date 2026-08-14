@@ -16,14 +16,14 @@
           <% if kase %>
             <span class="msg-end">
               <% if flag %>
-                <%= button_to "Unflag", fd_case_citation_path(kase, flag),
-                      method: :delete, class: "text-btn",
+                <%= gated_button "case.thread", "Unflag", fd_case_citation_path(kase, flag),
+                      on: kase, css: "text-btn", method: :delete,
                       params: { person: params[:person] },
                       form: { class: "contents", data: { turbo_frame: "threads" } } %>
               <% else %>
-                <%= button_to "Flag", fd_case_citations_path(kase),
+                <%= gated_button "case.thread", "Flag", fd_case_citations_path(kase),
+                      on: kase, css: "text-btn",
                       params: { thread_message_id: said.id, person: params[:person] },
-                      class: "text-btn",
                       form: { class: "contents", data: { turbo_frame: "threads" } } %>
               <% end %>
             </span>

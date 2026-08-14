@@ -8,8 +8,9 @@
 <% end %>
 <% content_for :head_actions do %>
   <% if @decision.proposed? %>
-    <%= button_to "Settle it", fd_decision_settlement_path(@decision), method: :post,
-          class: "btn btn-primary", form: { class: "contents", data: { turbo_confirm:
+    <%= gated_button "decision.settle", "Settle it",
+          fd_decision_settlement_path(@decision), css: "btn btn-primary", method: :post,
+          form: { class: "contents", data: { turbo_confirm:
             "Settle #{@decision.title}? It becomes the rule." } } %>
   <% end %>
   <% if @previous %>
@@ -28,14 +29,13 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
       </summary>
       <div class="menu-pop">
-        <label for="edit-decision" class="btn">
-          Edit
-        </label>
+        <%= opens_modal "decision.write", "Edit", opens: "edit-decision" %>
         <% if @decision.settled? %>
           <div class="menu-sep"></div>
-          <label for="supersede-decision" class="btn">Replace</label>
-          <%= button_to "Retire", fd_decision_retirement_path(@decision),
-                method: :post, class: "btn", form: { class: "contents",
+          <%= opens_modal "decision.retire", "Replace", opens: "supersede-decision" %>
+          <%= gated_button "decision.retire", "Retire",
+                fd_decision_retirement_path(@decision), method: :post,
+                form: { class: "contents",
                 data: { turbo_confirm: "Retire #{@decision.title}?" } } %>
         <% end %>
       </div>

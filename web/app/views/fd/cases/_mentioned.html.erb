@@ -4,9 +4,9 @@
     <% mentioned.each do |user_id| %>
       <span class="offered-one">
         <%= link_to at_name(user_id), fd_member_path(user_id), class: "mention" %>
-        <%= button_to "Log", fd_case_participants_path(kase),
-              params: { user_ids: [user_id], role: "involved" },
-              class: "text-btn", form: { class: "contents" } %>
+        <%= gated_button "case.people", "Log", fd_case_participants_path(kase),
+              on: kase, css: "text-btn",
+              params: { user_ids: [user_id], role: "involved" } %>
       </span>
     <% end %>
   </div>

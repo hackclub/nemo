@@ -15,6 +15,20 @@ module Fd
       within_scope?(staff, Permission.scope(key), record)
     end
 
+    def self.why_not(staff, key, record = nil)
+      held = staff&.role
+      return "you hold no access" if held.nil?
+      return Permission.refusal(key) unless Permission.roles(key).include?(held)
+      return nil if within_scope?(staff, Permission.scope(key), record)
+      return not_yours(record) if record.respond_to?(:mine_or_free?)
+
+      "that is not yours"
+    end
+
+    def self.not_yours(kase)
+      "case #{kase.id} is assigned to #{kase.assignee_handles}, not to you"
+    end
+
     def self.within_scope?(staff, scope, record)
       return true if scope.nil? || record.nil?
 

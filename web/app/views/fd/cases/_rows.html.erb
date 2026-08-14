@@ -35,8 +35,8 @@
       <% elsif kase.resolved? %>
         n/a
       <% else %>
-        <%= button_to "Claim", fd_case_claim_path(kase), method: :post,
-              class: "btn", form: { class: "contents" } %>
+        <%= gated_button "case.open", "Claim", fd_case_claim_path(kase), on: kase,
+              method: :post %>
       <% end %>
     </td>
   </tr>

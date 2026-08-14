@@ -14,10 +14,11 @@
 <% content_for :head_actions do %>
   <% unless @case.resolved? %>
     <% if @case.assigned? %>
-      <label for="resolve-case" class="btn btn-primary">Resolve</label>
+      <%= opens_modal "case.resolve", "Resolve", opens: "resolve-case", on: @case,
+            css: "btn btn-primary" %>
     <% else %>
-      <%= button_to "Claim", fd_case_claim_path(@case), method: :post,
-            class: "btn btn-primary", form: { class: "contents" } %>
+      <%= gated_button "case.open", "Claim", fd_case_claim_path(@case), on: @case,
+            css: "btn btn-primary", method: :post %>
     <% end %>
   <% end %>
 
@@ -31,18 +32,19 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
     </summary>
     <div class="menu-pop">
-      <label for="add-note" class="btn">Add a note</label>
-      <label for="log-action" class="btn">Log an action</label>
+      <%= opens_modal "case.note", "Add a note", opens: "add-note" %>
+      <%= opens_modal "case.act", "Log an action", opens: "log-action", on: @case %>
       <% if @decisions.any? %>
-        <label for="follow-decision" class="btn">Link a decision</label>
+        <%= opens_modal "decision.link", "Link a decision", opens: "follow-decision" %>
       <% end %>
       <% unless @case.resolved? %>
         <div class="menu-sep"></div>
         <% if @case.assigned_to?(current_staff.user_id) %>
-          <%= button_to "Put it back in the queue", fd_case_claim_path(@case),
-                method: :delete, class: "btn", form: { class: "contents" } %>
+          <%= gated_button "case.open", "Put it back in the queue", fd_case_claim_path(@case),
+                on: @case, method: :delete %>
         <% elsif !@case.assigned? %>
-          <label for="resolve-case" class="btn">Resolve without claiming</label>
+          <%= opens_modal "case.resolve", "Resolve without claiming", opens: "resolve-case",
+                on: @case %>
         <% end %>
       <% end %>
     </div>
@@ -63,8 +65,8 @@
         <span class="closed-why"><%= @case.member_note %></span>
       <% end %>
       <span class="closed-end">
-        <%= button_to "Reopen", fd_case_resolution_path(@case), method: :delete,
-              class: "btn", form: { class: "contents", data: { turbo_confirm:
+        <%= gated_button "case.reopen", "Reopen", fd_case_resolution_path(@case), on: @case,
+              method: :delete, form: { class: "contents", data: { turbo_confirm:
                 "Reopen case #{@case.id}? It goes back in the queue." } } %>
       </span>
     </div>
@@ -105,7 +107,8 @@
                       <%= detail %>
                       <% unless action.reversed? %>
                         <%= "·" if detail.present? %>
-                        <label for="reverse-<%= action.id %>" class="text-btn">Reverse</label>
+                        <%= opens_modal "case.reverse", "Reverse",
+                              opens: "reverse-#{action.id}", on: @case, css: "text-btn" %>
                       <% end %>
                     </span>
                   </span>
@@ -142,7 +145,7 @@
         <h2 class="card-title">Notes</h2>
       </div>
       <div class="card-tools">
-        <label for="add-note" class="btn">Add a note</label>
+        <%= opens_modal "case.note", "Add a note", opens: "add-note" %>
       </div>
     </div>
 

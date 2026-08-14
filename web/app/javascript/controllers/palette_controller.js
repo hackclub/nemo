@@ -153,8 +153,8 @@ export default class extends Controller {
 
   line(row, term) {
     const line = document.createElement("a")
-    line.className = "palette-row"
-    line.href = row.url
+    line.className = row.why ? "palette-row off" : "palette-row"
+    if (!row.why) line.href = row.url
     line.dataset.action = "mouseenter->palette#hover"
     line.dataset.at = this.rows.length
 
@@ -166,10 +166,10 @@ export default class extends Controller {
     title.textContent = row.title
     what.append(title)
 
-    if (row.sub) {
+    if (row.why || row.sub) {
       const sub = document.createElement("span")
       sub.className = "sub"
-      sub.textContent = ` ${row.sub}`
+      sub.textContent = ` ${row.why || row.sub}`
       what.append(sub)
     }
 
@@ -223,6 +223,8 @@ export default class extends Controller {
     if (!row) return
 
     event.preventDefault()
+    if (!row.href) return
+
     this.close()
     window.location = row.href
   }

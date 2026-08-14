@@ -14,10 +14,11 @@
         <span class="chip <%= row.tone %>"><%= row.state %></span>
       <% end %>
     <% end %>
-    <label for="attach-thread" class="index-item index-add">
+    <%= opens_modal "case.thread", opens: "attach-thread", on: kase,
+          css: "index-item index-add" do %>
       <span class="index-face">+</span>
       Attach a thread
-    </label>
+    <% end %>
   </div>
 
   <div class="pane">
@@ -46,8 +47,8 @@
       <div class="rail-card">
         <div class="thin">
           <span><b>Attached</b> <%= member_link(row.added_by) %> · <%= last_case_label(row.added_at) %></span>
-          <%= button_to "Detach", fd_case_thread_path(kase, row.record),
-                method: :delete, class: "text-btn",
+          <%= gated_button "case.thread", "Detach", fd_case_thread_path(kase, row.record),
+                on: kase, css: "text-btn", method: :delete,
                 form: { class: "contents", data: { turbo_frame: "_top",
                 turbo_confirm: "Detach this thread?" } } %>
         </div>

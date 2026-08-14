@@ -17,10 +17,11 @@
         <% end %>
       <% end %>
     <% end %>
-    <label for="add-person" class="index-item index-add">
+    <%= opens_modal "case.people", opens: "add-person", on: kase,
+          css: "index-item index-add" do %>
       <span class="index-face">+</span>
       Add somebody
-    </label>
+    <% end %>
     <%= render "mentioned", kase: kase, mentioned: mentioned %>
   </div>
 
@@ -51,7 +52,7 @@
           <%= link_to "Their record", fd_member_path(person.user_id), class: "btn" %>
           <%= link_to "In Slack", slack_member_url(person.user_id), class: "btn",
                 target: "_blank", rel: "noopener" %>
-          <label for="log-action" class="btn">Log an action</label>
+          <%= opens_modal "case.act", "Log an action", opens: "log-action", on: kase %>
         </span>
       </div>
 

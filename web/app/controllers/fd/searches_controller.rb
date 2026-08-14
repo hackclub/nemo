@@ -46,14 +46,22 @@ module Fd
       rows = commands.select { |row| term.blank? || row[:title].downcase.include?(term.downcase) }
 
       { term: term, scope: "command",
-        groups: [{ key: "command", label: "Commands", total: rows.size, rows: rows }] }
+        groups: [{ key: "command", label: "Commands", total: rows.size, rows: gated(rows) }] }
+    end
+
+    def gated(rows)
+      rows.map do |row|
+        key = row.delete(:key)
+        on = row.delete(:on)
+        row.merge(why: key && Access.why_not(current_staff, key, on))
+      end
     end
 
     def commands
       here + [
-        { kind: "do", icon: "⚡", title: "Open a case", sub: nil,
+        { kind: "do", icon: "⚡", title: "Open a case", sub: nil, key: "case.open",
           url: fd_cases_path(open: "1") },
-        { kind: "do", icon: "📓", title: "Write a decision", sub: nil,
+        { kind: "do", icon: "📓", title: "Write a decision", sub: nil, key: "decision.write",
           url: fd_decisions_path(new: "1") },
         { kind: "do", icon: "📁", title: "Go to the cases", sub: nil, url: fd_cases_path },
         { kind: "do", icon: "👤", title: "Go to the members", sub: nil, url: fd_members_path },
@@ -68,15 +76,15 @@ module Fd
       on = "on case #{kase.id}"
       [
         { kind: "do", icon: "⚡", title: "Resolve this case", sub: on,
-          url: fd_case_path(kase, do: "resolve") },
+          key: "case.resolve", on: kase, url: fd_case_path(kase, do: "resolve") },
         { kind: "do", icon: "⚡", title: "Log an action", sub: on,
-          url: fd_case_path(kase, do: "action") },
+          key: "case.act", on: kase, url: fd_case_path(kase, do: "action") },
         { kind: "do", icon: "📝", title: "Add a note", sub: on,
-          url: fd_case_path(kase, do: "note") },
+          key: "case.note", url: fd_case_path(kase, do: "note") },
         { kind: "do", icon: "🔗", title: "Attach a thread", sub: on,
-          url: fd_case_path(kase, do: "thread") },
+          key: "case.thread", on: kase, url: fd_case_path(kase, do: "thread") },
         { kind: "do", icon: "📓", title: "Link a decision", sub: on,
-          url: fd_case_path(kase, do: "decision") }
+          key: "decision.link", url: fd_case_path(kase, do: "decision") }
       ]
     end
 
@@ -86,9 +94,9 @@ module Fd
 
       on = "on #{decision.title}"
       [
-        { kind: "do", icon: "📝", title: "Edit the wording", sub: on,
+        { kind: "do", icon: "📝", title: "Edit the wording", sub: on, key: "decision.write",
           url: fd_decision_path(decision, do: "edit") },
-        { kind: "do", icon: "🔗", title: "Link threads", sub: on,
+        { kind: "do", icon: "🔗", title: "Link threads", sub: on, key: "decision.link",
           url: fd_decision_path(decision, do: "threads") }
       ]
     end
@@ -106,10 +114,12 @@ module Fd
     def resting
       [
         { key: "waiting", label: "Waiting on you", total: 2, rows: waiting },
-        { key: "do", label: "Do", total: 2, rows: [
-          { kind: "do", icon: "⚡", title: "Open a case", sub: nil, url: fd_cases_path },
-          { kind: "do", icon: "📓", title: "Write a decision", sub: nil, url: fd_decisions_path }
-        ] }
+        { key: "do", label: "Do", total: 2, rows: gated([
+          { kind: "do", icon: "⚡", title: "Open a case", sub: nil, key: "case.open",
+            url: fd_cases_path },
+          { kind: "do", icon: "📓", title: "Write a decision", sub: nil,
+            key: "decision.write", url: fd_decisions_path }
+        ]) }
       ].reject { |group| group[:rows].empty? }
     end
 

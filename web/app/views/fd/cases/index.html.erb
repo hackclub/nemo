@@ -4,7 +4,7 @@
   <%= @stats.open_count %> open · <%= @stats.unassigned %> unassigned
 <% end %>
 <% content_for :head_actions do %>
-  <label for="open-case" class="btn btn-primary">Open a case</label>
+  <%= opens_modal "case.open", "Open a case", opens: "open-case", css: "btn btn-primary" %>
 <% end %>
 
 <div class="stack" data-controller="merge">

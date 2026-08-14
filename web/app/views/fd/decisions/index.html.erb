@@ -5,7 +5,8 @@
   <%= @counts["retired"] %> retired
 <% end %>
 <% content_for :head_actions do %>
-  <label for="new-decision" class="btn btn-primary">New decision</label>
+  <%= opens_modal "decision.write", "New decision", opens: "new-decision",
+        css: "btn btn-primary" %>
 <% end %>
 
 <div class="stack">

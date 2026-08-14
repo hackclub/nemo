@@ -594,6 +594,27 @@
     transform: none;
   }
 
+  .btn-off {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn.btn-off:hover {
+    background-color: var(--card);
+    border-color: var(--line);
+  }
+
+  .btn-primary.btn-off:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .text-btn.btn-off:hover {
+    color: var(--ink-3);
+    text-decoration: none;
+  }
+
   .chip {
     display: inline-flex;
     align-items: center;
@@ -1337,6 +1358,11 @@
 
   .palette-row.sel {
     background-color: var(--accent-soft);
+  }
+
+  .palette-row.off {
+    opacity: 0.45;
+    cursor: not-allowed;
   }
 
   .palette-row .sub {

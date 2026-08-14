@@ -14,10 +14,11 @@
         <span class="chip <%= row.internal? ? "chip-warn" : "chip-off" %>"><%= row.kind %></span>
       <% end %>
     <% end %>
-    <label for="link-threads" class="index-item index-add">
+    <%= opens_modal "decision.link", opens: "link-threads",
+          css: "index-item index-add" do %>
       <span class="index-face">+</span>
       Link threads
-    </label>
+    <% end %>
   </div>
 
   <div class="pane">
@@ -48,8 +49,8 @@
             <b>Linked</b> <%= member_link(chosen.added_by) %> ·
             <%= last_case_label(chosen.added_at) %>
           </span>
-          <%= button_to "Unlink", fd_decision_thread_path(decision, chosen),
-                method: :delete, class: "text-btn",
+          <%= gated_button "decision.link", "Unlink",
+                fd_decision_thread_path(decision, chosen), css: "text-btn", method: :delete,
                 form: { class: "contents", data: { turbo_frame: "_top",
                 turbo_confirm: "Unlink this thread?" } } %>
         </div>
