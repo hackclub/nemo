@@ -568,6 +568,10 @@ module FdHelper
     said.any? ? "#{pluralize(grants.size, 'person')} · #{said.join(' · ')}" : "nobody yet"
   end
 
+  def holds_mark(held)
+    tag.span(held ? "yes" : "no", class: held ? "yes" : "no")
+  end
+
   GIVEN_OUTSIDE = %w[manually backfill].freeze
 
   def given_by(user_id)

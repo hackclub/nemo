@@ -1,6 +1,6 @@
 module Fd
   class SettingsController < BaseController
-    TABS = { "access" => "Access", "history" => "Grant history" }.freeze
+    TABS = { "access" => "Access", "roles" => "Roles", "history" => "Grant history" }.freeze
     WINDOW = 30.days
     DORMANT_AFTER = 30.days
 
@@ -15,6 +15,7 @@ module Fd
       @dormant = dormant
       @person = chosen
       person_facts if @person
+      @used = used_lately if @tab == "roles"
       @names = Names.for(named)
     end
 
@@ -33,6 +34,16 @@ module Fd
         .recent_first.limit(REFUSALS_SHOWN).to_a
       @reads = AccessLog.where(actor_id: @person.user_id, field_class: "identity")
         .where(looked_at: WINDOW.ago..).count
+    end
+
+    def used_lately
+      counted = AuditEntry.where(occurred_at: WINDOW.ago..).group(:entity_type, :verb).count
+      reads = AccessLog.where(field_class: "identity", looked_at: WINDOW.ago..).count
+
+      Permission.keys.to_h do |key|
+        tally = Permission.events(key).sum { |event| counted[event.split("/")] || 0 }
+        [key, Permission.logged?(key) ? reads : tally]
+      end
     end
 
     def did_with_it

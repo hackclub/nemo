@@ -10,6 +10,11 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     Fd::AccessGrant.give!(user_id, role: role, by: "UME", **attrs)
   end
 
+  def used_for(key)
+    row = css_select("tr").find { |tr| tr.css("td.mono").text.strip == key }
+    row&.css("td")&.last&.text.to_s.strip
+  end
+
   test "a signed out visitor sees nothing" do
     delete logout_path
     get fd_settings_path
@@ -86,6 +91,43 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     assert_select ".said-cell", text: "left FD"
     assert_select ".chip.chip-off", text: "ended"
     assert_select ".chip.chip-good", text: "live"
+  end
+
+  test "the roles tab lists every permission, grouped the way the app is" do
+    get fd_settings_path(tab: "roles")
+
+    assert_response :success
+    assert_select ".band-label", text: /Cases · 9/
+    assert_select ".band-label", text: /Decisions · 4/
+    assert_select ".band-label", text: /People and access · 3/
+    assert_select "td.mono", text: "case.reverse"
+    assert_select "td.mono", count: Fd::Permission.keys.size
+  end
+
+  test "each row says which roles hold it" do
+    get fd_settings_path(tab: "roles")
+
+    assert_select "tr", text: /case\.act.*yes.*yes.*yes/m
+    assert_select "tr", text: /decision\.settle.*no.*yes.*yes/m
+    assert_select "tr", text: /access\.grant.*no.*no.*yes/m
+  end
+
+  test "the roles tab counts how often each permission was used" do
+    get fd_settings_path(tab: "roles")
+    before = used_for("case.act").to_i
+    reads = used_for("identity.read").to_i
+
+    Fd::AuditEntry.create!(actor_user_id: "UME", actor_kind: "human", entity_type: "action",
+      entity_id: 1, verb: "performed", source_app: "fire_engine")
+    Fd::AuditEntry.create!(actor_user_id: "UME", actor_kind: "human", entity_type: "action",
+      entity_id: 2, verb: "performed", source_app: "fire_engine", occurred_at: 2.months.ago)
+    AccessLog.create!(actor_id: "UME", subject_user_id: "USUB", field_class: "identity",
+      looked_at: 1.day.ago)
+
+    get fd_settings_path(tab: "roles")
+
+    assert_equal before + 1, used_for("case.act").to_i, "only the row inside the window counts"
+    assert_equal reads + 1, used_for("identity.read").to_i
   end
 
   test "a tab nobody offered falls back to the roster" do

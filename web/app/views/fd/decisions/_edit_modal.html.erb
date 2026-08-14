@@ -1,21 +1,19 @@
 <%= render layout: "fd/modal", locals: { id: "edit-decision", title: "Edit",
       open: params[:do] == "edit" } do %>
   <%= form_with url: fd_decision_path(decision), method: :patch,
-        html: { autocomplete: "off" } do %>
+        html: { autocomplete: "off", id: "edit-wording" } do %>
     <div class="modal-body">
       <%= render "fd/decisions/words", decision: decision, with_reasons: true %>
     </div>
-    <div class="modal-foot">
-      <label for="edit-decision" class="btn">Close</label>
-      <%= submit_tag "Save", class: "btn btn-primary" %>
-    </div>
   <% end %>
 
-  <% if decision.proposed? && decision.proposed_by == current_staff.user_id %>
-    <div class="modal-foot">
+  <div class="modal-foot">
+    <% if decision.proposed? && decision.proposed_by == current_staff.user_id %>
       <%= button_to "Drop it", fd_decision_path(decision), method: :delete,
             class: "btn", form: { class: "contents",
             data: { turbo_confirm: "Drop this proposal?" } } %>
-    </div>
-  <% end %>
+    <% end %>
+    <label for="edit-decision" class="btn">Close</label>
+    <%= submit_tag "Save", class: "btn btn-primary", form: "edit-wording" %>
+  </div>
 <% end %>

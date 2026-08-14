@@ -555,6 +555,7 @@
     font-family: inherit;
     font-size: var(--t-2xs);
     font-weight: 600;
+    line-height: 1.25;
     padding: 6px 10px;
     border-radius: var(--r-ctl);
     border: 1px solid var(--line);
@@ -2977,6 +2978,15 @@
   .data-table .col-btn { width: 3.5rem; }
   .data-table .col-state { width: 7rem; }
   .data-table .col-role { width: 8rem; }
+
+  .data-table .yes {
+    color: var(--good);
+    font-weight: 700;
+  }
+
+  .data-table .no {
+    color: var(--ink-3);
+  }
 
   .data-table .said-cell {
     text-align: left;

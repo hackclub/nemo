@@ -19,15 +19,50 @@
     <% end %>
   </div>
 
-  <% if @tab == "access" %>
+  <% if @tab != "history" %>
     <% @dormant.each do |grant| %>
+      <% next if @tab == "roles" %>
       <div class="strip">
         <b><%= names[grant.user_id] %> has held a <%= grant.role.tr("_", " ") %> grant
           since <%= grant.granted_at.strftime("%b %Y") %> and done nothing</b>
       </div>
     <% end %>
 
-    <% if @person %>
+    <% if @tab == "roles" %>
+    <% Fd::Permission.by_area.each do |area, keys| %>
+      <p class="band-label"><%= area %> · <%= keys.size %></p>
+      <div class="card card-flush">
+        <div class="scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Permission</th>
+                <th class="said-cell">What it lets them do</th>
+                <% Fd::Permission::ROLES.each do |role| %>
+                  <th class="col-num"><%= Fd::Permission::ROLE_LABELS.fetch(role) %></th>
+                <% end %>
+                <th class="col-num">Used 30d</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% keys.each do |key| %>
+                <tr>
+                  <td class="mono"><%= key %></td>
+                  <td class="said-cell"><%= Fd::Permission.label(key) %></td>
+                  <% Fd::Permission::ROLES.each do |role| %>
+                    <td class="col-num">
+                      <%= holds_mark(Fd::Permission.roles(key).include?(role)) %>
+                    </td>
+                  <% end %>
+                  <td class="col-num"><%= @used[key] %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% end %>
+    <% elsif @person %>
       <div class="inspector">
         <div class="index-side">
           <% @grants.each do |grant| %>
