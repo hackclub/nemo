@@ -123,6 +123,21 @@ CONSISTENCY_CHECKS = [
         "and a.entity_id = c.id and a.verb = 'followed')",
     ),
     (
+        "nobody holds two live grants at once",
+        "select count(*) from (select user_id from fd.access_grants "
+        "where revoked_at is null group by user_id having count(*) > 1) t",
+    ),
+    (
+        "every grant was given by somebody who holds one",
+        "select count(*) from fd.access_grants g where g.granted_by like 'USEED%' "
+        "and not exists (select 1 from fd.access_grants h where h.user_id = g.granted_by)",
+    ),
+    (
+        "every refusal names the permission that was refused",
+        "select count(*) from fd.audit where verb = 'refused' "
+        "and after ->> 'permission' is null",
+    ),
+    (
         "no day ledger gap inside the covered span",
         "select (max(ds) - min(ds) + 1) - count(*) from raw.analytics_day where source like 'seed_%member_day'",
     ),

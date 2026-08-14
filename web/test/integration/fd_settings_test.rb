@@ -130,6 +130,64 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     assert_equal reads + 1, used_for("identity.read").to_i
   end
 
+  test "the usage tab counts the load per person and ranks by it" do
+    give("UBUSY")
+    give("UQUIET")
+    3.times do |n|
+      Fd::AuditEntry.create!(actor_user_id: "UBUSY", actor_kind: "human", entity_type: "action",
+        entity_id: n + 1, verb: "performed", source_app: "fire_engine")
+    end
+    Fd::AuditEntry.create!(actor_user_id: "UQUIET", actor_kind: "human", entity_type: "case",
+      entity_id: 7, verb: "opened", source_app: "fire_engine")
+
+    get fd_settings_path(tab: "usage")
+
+    assert_response :success
+    rows = css_select("tbody tr")
+    assert_equal ["UBUSY", "UQUIET"], rows.first(2).map { |tr| tr.css("a").first["href"][/U\w+/] }
+    assert_equal %w[0 3 0 0 0], rows[0].css("td.col-num").map { |td| td.text.strip }
+    assert_equal %w[1 0 0 0 0], rows[1].css("td.col-num").map { |td| td.text.strip }
+  end
+
+  test "a refusal counts as a refusal, not as work done" do
+    give("UFF1")
+    Fd::AuditEntry.create!(actor_user_id: "UFF1", actor_kind: "human", entity_type: "case",
+      entity_id: 0, verb: "refused", source_app: "fire_engine",
+      after: { "permission" => "decision.settle", "role" => "firefighter" })
+
+    get fd_settings_path(tab: "usage")
+
+    row = css_select("tbody tr").find { |tr| tr.to_s.include?("UFF1") }
+    assert_equal %w[0 0 0 0 1], row.css("td.col-num").map { |td| td.text.strip }
+    assert_select ".bar.warm"
+  end
+
+  test "the usage headline counts reads, refusals and grants that moved" do
+    give("UFF1")
+    AccessLog.create!(actor_id: "UFF1", subject_user_id: "USUB", field_class: "identity",
+      looked_at: 1.day.ago)
+    AccessLog.create!(actor_id: "UFF1", subject_user_id: "UOTHER", field_class: "identity",
+      looked_at: 2.months.ago)
+    Fd::AuditEntry.create!(actor_user_id: "UFF1", actor_kind: "human", entity_type: "case",
+      entity_id: 0, verb: "refused", source_app: "fire_engine",
+      after: { "permission" => "access.grant", "role" => "firefighter" })
+
+    get fd_settings_path(tab: "usage")
+
+    values = css_select(".kpi-val").map { |node| node.text.strip.to_i }
+    assert_equal [Fd::AccessGrant.live.count, 1, 1, 0], values
+    assert_select ".delta-note", text: /1 access\.grant/
+  end
+
+  test "a grant nobody has used shows up as unused, with who holds it" do
+    give("UQUIET", at: 4.months.ago)
+
+    get fd_settings_path(tab: "usage")
+
+    assert_select ".kpi-label", text: "Grants unused"
+    assert_select ".delta-note .chip.chip-warn", text: /UQUIET, 4mo/
+  end
+
   test "a tab nobody offered falls back to the roster" do
     give("UFF1")
     get fd_settings_path(tab: "vibes")

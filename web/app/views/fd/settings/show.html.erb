@@ -14,14 +14,16 @@
       <%= link_to fd_settings_path(key == "access" ? {} : { tab: key }), class: "view",
             aria: { current: ("true" if key == @tab) } do %>
         <%= label %>
-        <span class="view-count"><%= key == "access" ? @grants.size : Fd::AccessGrant.count %></span>
+        <% if @counts[key] %>
+          <span class="view-count"><%= @counts[key] %></span>
+        <% end %>
       <% end %>
     <% end %>
   </div>
 
   <% if @tab != "history" %>
     <% @dormant.each do |grant| %>
-      <% next if @tab == "roles" %>
+      <% next unless @tab == "access" %>
       <div class="strip">
         <b><%= names[grant.user_id] %> has held a <%= grant.role.tr("_", " ") %> grant
           since <%= grant.granted_at.strftime("%b %Y") %> and done nothing</b>
@@ -62,7 +64,71 @@
         </div>
       </div>
     <% end %>
-    <% elsif @person %>
+    <% elsif @tab == "usage" %>
+      <div class="kpis">
+        <div class="card">
+          <p class="kpi-label">Grants held</p>
+          <p class="kpi-val"><%= @grants.size %></p>
+          <div class="delta-note"><%= grant_change_note(@given, @taken_back) %></div>
+        </div>
+        <div class="card">
+          <p class="kpi-label">Identity reads</p>
+          <p class="kpi-val"><%= @reads_total %></p>
+          <div class="delta-note"><%= reads_note(@read_counts, @top_reader) %></div>
+        </div>
+        <div class="card">
+          <p class="kpi-label">Refused attempts</p>
+          <p class="kpi-val"><%= @refused_total %></p>
+          <div class="delta-note"><%= refused_note(@refused_kinds) %></div>
+        </div>
+        <div class="card">
+          <p class="kpi-label">Grants unused</p>
+          <p class="kpi-val"><%= @dormant.size %></p>
+          <div class="delta-note">
+            <%= dormant_note(@dormant, Fd::SettingsController::DORMANT_SHOWN) %>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-flush">
+        <div class="scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Person</th>
+                <th class="col-num">Cases</th>
+                <th class="col-num">Actions</th>
+                <th class="col-num">Reversed</th>
+                <th class="col-num">Reads</th>
+                <th class="col-num">Refused</th>
+                <th>Share of the load</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @load.each do |row| %>
+                <tr>
+                  <td>
+                    <span class="two-line">
+                      <b>
+                        <%= link_to names[row.user_id], fd_settings_path(person: row.user_id) %>
+                        <%= role_chip(row.role) %>
+                      </b>
+                      <span class="idline"><%= acted_line(@last_acted[row.user_id]) %></span>
+                    </span>
+                  </td>
+                  <td class="col-num"><%= row.cases %></td>
+                  <td class="col-num"><%= row.actions %></td>
+                  <td class="col-num"><%= row.reversals %></td>
+                  <td class="col-num"><%= row.reads %></td>
+                  <td class="col-num"><%= row.refused %></td>
+                  <td><%= load_bar(row.share) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <% elsif @person %>
       <div class="inspector">
         <div class="index-side">
           <% @grants.each do |grant| %>

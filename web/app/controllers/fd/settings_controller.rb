@@ -1,10 +1,16 @@
 module Fd
   class SettingsController < BaseController
-    TABS = { "access" => "Access", "roles" => "Roles", "history" => "Grant history" }.freeze
+    TABS = { "access" => "Access", "roles" => "Roles", "usage" => "Usage",
+             "history" => "Grant history" }.freeze
     WINDOW = 30.days
     DORMANT_AFTER = 30.days
 
     REFUSALS_SHOWN = 5
+    KINDS_SHOWN = 3
+    DORMANT_SHOWN = 2
+
+    Load = Struct.new(:user_id, :role, :cases, :actions, :reversals, :reads, :refused,
+      :weight, :share, keyword_init: true)
 
     def show
       @tab = TABS.key?(params[:tab]) ? params[:tab] : "access"
@@ -16,10 +22,17 @@ module Fd
       @person = chosen
       person_facts if @person
       @used = used_lately if @tab == "roles"
+      usage_facts if @tab == "usage"
+      @counts = tab_counts
       @names = Names.for(named)
     end
 
     private
+
+    def tab_counts
+      { "access" => @grants.size, "roles" => Permission.keys.size,
+        "history" => AccessGrant.count }
+    end
 
     def chosen
       asked = params[:person].to_s
@@ -46,6 +59,57 @@ module Fd
       end
     end
 
+    def usage_facts
+      @read_counts = identity_reads
+      @reads_total = @read_counts.values.sum
+      @top_reader = @read_counts.max_by { |_who, count| count }
+      @given = AccessGrant.where(granted_at: WINDOW.ago..).count
+      @taken_back = AccessGrant.where(revoked_at: WINDOW.ago..).count
+      @refused_total = refusals.count
+      @refused_kinds = refused_kinds
+      @load = load_rows
+    end
+
+    def identity_reads
+      AccessLog.where(field_class: "identity", looked_at: WINDOW.ago..)
+        .group(:actor_id).count
+    end
+
+    def refusals
+      AuditEntry.where(verb: "refused", occurred_at: WINDOW.ago..)
+    end
+
+    def refused_kinds
+      refusals.group(Arel.sql("after ->> 'permission'")).count
+        .reject { |key, _count| key.blank? }
+        .sort_by { |_key, count| -count }.first(KINDS_SHOWN)
+    end
+
+    def load_rows
+      tallies = AuditEntry.where(actor_user_id: holders, occurred_at: WINDOW.ago..)
+        .group(:actor_user_id, :entity_type, :verb).count
+      touched = AuditEntry.where(actor_user_id: holders, entity_type: "case")
+        .where.not(verb: "refused").where(occurred_at: WINDOW.ago..)
+        .group(:actor_user_id).distinct.count(:entity_id)
+
+      rows = @grants.map { |grant| load_row(grant, tallies, touched) }
+      whole = rows.sum(&:weight)
+      rows.each { |row| row.share = whole.zero? ? 0 : (row.weight * 100.0 / whole).round }
+      rows.sort_by { |row| [-row.weight, row.user_id] }
+    end
+
+    def load_row(grant, tallies, touched)
+      mine = tallies.select { |(who, _type, _verb), _count| who == grant.user_id }
+      refused = mine.sum { |(_who, _type, verb), count| verb == "refused" ? count : 0 }
+
+      Load.new(user_id: grant.user_id, role: grant.role,
+        cases: touched[grant.user_id].to_i,
+        actions: tallies[[grant.user_id, "action", "performed"]].to_i,
+        reversals: tallies[[grant.user_id, "action", "reversed"]].to_i,
+        reads: @read_counts[grant.user_id].to_i,
+        refused: refused, weight: mine.values.sum - refused, share: 0)
+    end
+
     def did_with_it
       counted = AuditEntry.where(actor_user_id: @person.user_id)
         .where(occurred_at: WINDOW.ago..)
@@ -61,9 +125,10 @@ module Fd
     end
 
     def named
-      holders + @grants.map(&:granted_by) + Array(@history).flat_map { |grant|
-        [grant.user_id, grant.granted_by, grant.revoked_by]
-      }.compact
+      holders + @grants.map(&:granted_by) + Array(@top_reader&.first) +
+        Array(@history).flat_map { |grant|
+          [grant.user_id, grant.granted_by, grant.revoked_by]
+        }.compact
     end
 
     def acted_since(moment)

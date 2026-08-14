@@ -9,6 +9,13 @@ from seed import SEED_REF_PREFIX, SEED_SOURCE_PREFIX
 CASE_RATE = 0.025
 ENGAGEMENT_WEIGHT = 0.7
 FIREFIGHTER_COUNT = 5
+LEAD_COUNT = 2
+GRANT_AGE_DAYS = (60, 400)
+DORMANT_GRANT_DAYS = 124
+ENDED_GRANT_DAYS = (280, 70)
+REFUSALS_EACH = (0, 2)
+REFUSAL_WINDOW_DAYS = 26.0
+REFUSED_KEYS = ("decision.settle", "decision.retire", "access.grant")
 NO_SUBJECT_SHARE = 0.02
 CLAIMED_SHARE = 0.8
 OPEN_CLAIMED_SHARE = 0.55
@@ -291,6 +298,16 @@ DECISION_THREAD_COLUMNS = [
     "added_at",
 ]
 
+GRANT_COLUMNS = [
+    "user_id",
+    "role",
+    "reason",
+    "granted_by",
+    "granted_at",
+    "revoked_by",
+    "revoked_at",
+]
+
 MESSAGE_COLUMNS = [
     "channel_id",
     "thread_ts",
@@ -537,6 +554,79 @@ def firefighters(members, count=FIREFIGHTER_COUNT):
         key=lambda m: (-m.engagement, m.user_id),
     )
     return [m.user_id for m in ranked[:count]]
+
+
+def quiet_members(members, count):
+    ranked = sorted(
+        (m for m in members if not m.is_bot),
+        key=lambda m: (m.engagement, m.user_id),
+    )
+    return [m.user_id for m in ranked[:count]]
+
+
+def access_grants(rng, members, as_of):
+    crew = firefighters(members)
+    if not crew:
+        return []
+
+    horizon = datetime.combine(as_of, time(9, 0), tzinfo=timezone.utc)
+    rows = []
+    for spot, user_id in enumerate(crew):
+        role = "lead" if spot < LEAD_COUNT else "firefighter"
+        giver = crew[1] if spot == 0 and len(crew) > 1 else crew[0]
+        held = rng.randint(*GRANT_AGE_DAYS)
+        rows.append(
+            (user_id, role, None, giver, horizon - timedelta(days=held), None, None)
+        )
+
+    spare = [user_id for user_id in quiet_members(members, 2) if user_id not in crew]
+    if spare:
+        rows.append(
+            (
+                spare[0],
+                "firefighter",
+                "cover for the night shift",
+                crew[0],
+                horizon - timedelta(days=DORMANT_GRANT_DAYS),
+                None,
+                None,
+            )
+        )
+    if len(spare) > 1:
+        started, ended = ENDED_GRANT_DAYS
+        rows.append(
+            (
+                spare[1],
+                "firefighter",
+                "left FD",
+                crew[0],
+                horizon - timedelta(days=started),
+                crew[0],
+                horizon - timedelta(days=ended),
+            )
+        )
+    return rows
+
+
+def refusal_rows(rng, members, as_of):
+    crew = firefighters(members)[LEAD_COUNT:]
+    horizon = datetime.combine(as_of, time(18, 0), tzinfo=timezone.utc)
+
+    for spot, user_id in enumerate(crew):
+        turns = max(rng.randint(*REFUSALS_EACH), 1 if spot == 0 else 0)
+        for turn in range(turns):
+            at = horizon - timedelta(days=rng.uniform(1.0, REFUSAL_WINDOW_DAYS))
+            yield audit_entry(
+                at,
+                user_id,
+                "case",
+                0,
+                "refused",
+                None,
+                {"permission": rng.choice(REFUSED_KEYS), "role": "firefighter"},
+                "fire_engine",
+                f"{SEED_REF_PREFIX}audit:refused:{spot}:{turn}",
+            )
 
 
 def channel_roster(members):

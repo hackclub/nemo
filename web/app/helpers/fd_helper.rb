@@ -584,6 +584,46 @@ module FdHelper
     last_case_label(at)
   end
 
+  def acted_line(at)
+    at ? "acted #{last_case_label(at)}" : "nothing yet"
+  end
+
+  def grant_change_note(given, taken_back)
+    return "no change in 30 days" if given.zero? && taken_back.zero?
+
+    "#{given} given, #{taken_back} taken back"
+  end
+
+  def reads_note(counts, top)
+    return "none in 30 days" if top.nil?
+
+    said = pluralize(counts.size, "person")
+    counts.one? ? said : "#{said}, most by #{names[top.first]}"
+  end
+
+  def refused_note(kinds)
+    return "none in 30 days" if kinds.empty?
+
+    kinds.map { |key, count| "#{count} #{key}" }.join(" · ")
+  end
+
+  def dormant_note(grants, shown)
+    return "everyone has used theirs" if grants.empty?
+
+    safe_join(grants.first(shown).map { |grant| dormant_chip(grant) }, " ")
+  end
+
+  def dormant_chip(grant)
+    held = ((Time.current - grant.granted_at) / 1.day).floor
+    tag.span("#{names[grant.user_id]}, #{tenure_label(held)}", class: "chip chip-warn")
+  end
+
+  def load_bar(share)
+    tag.span(class: "bar#{' warm' if share.zero?}") do
+      tag.i("", style: "width: #{[share, 100].min}%")
+    end
+  end
+
   def grant_span(grant)
     from = grant.granted_at.strftime("%-d %b %Y")
     grant.live? ? "since #{from}" : "#{from} to #{grant.revoked_at.strftime('%-d %b %Y')}"

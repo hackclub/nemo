@@ -2988,6 +2988,25 @@
     color: var(--ink-3);
   }
 
+  .bar {
+    display: block;
+    height: 7px;
+    min-width: 60px;
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: color-mix(in oklab, var(--ink) 8%, transparent);
+  }
+
+  .bar i {
+    display: block;
+    height: 100%;
+    background-color: var(--accent);
+  }
+
+  .bar.warm i {
+    background-color: var(--warn);
+  }
+
   .data-table .said-cell {
     text-align: left;
     white-space: normal;
