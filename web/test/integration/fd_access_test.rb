@@ -43,7 +43,8 @@ class FdAccessTest < ActionDispatch::IntegrationTest
       controller_for(name).declared.intersect?(Fd::Permission.lead_only)
     end.map(&:first).uniq
 
-    assert_equal %w[fd/settlements fd/supersessions fd/retirements fd/grants].sort,
+    assert_equal %w[fd/settlements fd/supersessions fd/retirements fd/grants
+                    fd/role_permissions].sort,
       lead_only.sort,
       "a lead-only route appeared or vanished, so this test needs updating"
   end

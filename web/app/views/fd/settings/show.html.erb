@@ -49,12 +49,10 @@
             <tbody>
               <% keys.each do |key| %>
                 <tr>
-                  <td class="mono"><%= key %></td>
+                  <td class="mono"><%= key %> <%= moved_chip(key) %></td>
                   <td class="said-cell"><%= Fd::Permission.label(key) %></td>
                   <% Fd::Permission::ROLES.each do |role| %>
-                    <td class="col-num">
-                      <%= holds_mark(Fd::Permission.roles(key).include?(role)) %>
-                    </td>
+                    <td class="col-num"><%= role_switch(key, role) %></td>
                   <% end %>
                   <td class="col-num"><%= @used[key] %></td>
                 </tr>

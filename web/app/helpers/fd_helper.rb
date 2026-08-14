@@ -572,6 +572,24 @@ module FdHelper
     tag.span(held ? "yes" : "no", class: held ? "yes" : "no")
   end
 
+  def role_switch(key, role)
+    held = Fd::Permission.roles(key).include?(role)
+    return holds_mark(held) if Fd::Permission.locked?(key) || !current_staff.may?("access.grant")
+
+    button_to held ? "yes" : "no",
+      fd_role_permission_path(role: role, key: key, allowed: held ? "0" : "1"),
+      method: :patch, class: "switch #{held ? 'yes' : 'no'}",
+      title: "#{held ? 'take' : 'give'} #{key} #{held ? 'from' : 'to'} " \
+        "#{Fd::Permission::ROLE_LABELS.fetch(role).downcase}",
+      form: { class: "contents" }
+  end
+
+  def moved_chip(key)
+    return nil unless Fd::RolePermission.moved?(key)
+
+    tag.span("moved", class: "chip chip-warn")
+  end
+
   GIVEN_OUTSIDE = %w[manually backfill].freeze
 
   def given_by(user_id)
@@ -617,6 +635,8 @@ module FdHelper
     "decision_thread/detached" => "Unlinked a thread from",
     "grant/granted" => "Gave access to",
     "grant/revoked" => "Took access from",
+    "permission/granted" => "Gave a role",
+    "permission/revoked" => "Took from a role",
     "identity/read" => "Read the identity of"
   }.freeze
 

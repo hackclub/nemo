@@ -76,7 +76,7 @@ module Fd
       },
       "access.grant" => {
         label: "Give or take back access", roles: MANAGER,
-        events: %w[grant/granted grant/revoked]
+        events: %w[grant/granted grant/revoked permission/granted permission/revoked]
       }
     }.freeze
 
@@ -90,7 +90,15 @@ module Fd
 
     def self.label(key) = fetch(key)[:label]
 
-    def self.roles(key) = fetch(key)[:roles]
+    def self.default_roles(key) = fetch(key)[:roles]
+
+    def self.roles(key)
+      moved = Current.role_permissions
+      return default_roles(key) if moved.empty?
+
+      held = default_roles(key)
+      ROLES.select { |role| moved.fetch([role, key.to_s]) { held.include?(role) } }
+    end
 
     def self.scope(key) = fetch(key)[:scope]
 

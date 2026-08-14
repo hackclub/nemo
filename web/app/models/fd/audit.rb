@@ -14,7 +14,8 @@ module Fd
       "Fd::CaseCitation" => "citation",
       "Fd::Decision" => "decision",
       "Fd::DecisionThread" => "decision_thread",
-      "Fd::AccessGrant" => "grant"
+      "Fd::AccessGrant" => "grant",
+      "Fd::RolePermission" => "permission"
     }.freeze
 
     VERBS = %w[

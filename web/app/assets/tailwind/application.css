@@ -3023,6 +3023,18 @@
   .data-table .col-state { width: 7rem; }
   .data-table .col-role { width: 8rem; }
 
+  .data-table .switch {
+    font: inherit;
+    background: 0;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .data-table .switch:hover {
+    text-decoration: underline;
+  }
+
   .data-table .yes {
     color: var(--good);
     font-weight: 700;

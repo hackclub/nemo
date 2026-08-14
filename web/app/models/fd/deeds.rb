@@ -71,6 +71,7 @@ module Fd
       when "note" then note_row(row, event)
       when "decision", "decision_thread" then decision_row(row, event)
       when "grant" then grant_row(row, event)
+      when "permission" then moved_row(row, event)
       when "report" then report_row(row, event)
       when *ON_CASE then on_case(row, event, row.entity_id)
       else Row.new(at: row.occurred_at, event: event)
@@ -111,6 +112,12 @@ module Fd
 
       Row.new(at: row.occurred_at, event: event, kind: "decision", id: row.entity_id,
         about: title)
+    end
+
+    def moved_row(row, event)
+      said = row.after || {}
+      Row.new(at: row.occurred_at, event: event,
+        said: [said["permission"], said["role"]&.tr("_", " ")].compact.join(" · ").presence)
     end
 
     def grant_row(row, event)
