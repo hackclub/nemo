@@ -53,7 +53,7 @@ class FdGatingTest < ActionDispatch::IntegrationTest
     decision = proposal
 
     get fd_decision_path(decision)
-    assert_equal "settle a proposal, amend a settled one is lead only",
+    assert_equal "settle a proposal, putting it in force is lead only",
       dead("Settle it")["title"]
 
     become("lead")
@@ -65,6 +65,20 @@ class FdGatingTest < ActionDispatch::IntegrationTest
     get fd_decision_path(proposal)
 
     assert_select "form[action=?]", fd_decision_settlement_path(Fd::Decision.last), count: 0
+  end
+
+  test "filing a report on the way out needs the permission to log an action" do
+    kase = make_case(assign: "UFF1")
+    Fd::RolePermission.set!("firefighter", "case.act", false, by: "UME")
+
+    post fd_case_resolution_path(kase), params: { outcome: "report", type_key: "temp_ban",
+      target_user_id: "USUB" }
+
+    assert_equal 0, Fd::Action.where(case_id: kase.id).count
+    assert_not kase.reload.resolved?
+
+    post fd_case_resolution_path(kase), params: { outcome: "close", close_reason: "no_action" }
+    assert kase.reload.resolved?, "resolving without an action is still theirs to do"
   end
 
   test "the palette says why a command is closed rather than hiding it" do

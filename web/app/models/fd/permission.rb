@@ -51,7 +51,7 @@ module Fd
         events: %w[case/reopened]
       },
       "decision.write" => {
-        label: "Propose one, reword a proposal, drop their own", roles: EVERYONE,
+        label: "Propose one, reword any of them, drop their own", roles: EVERYONE,
         events: %w[decision/proposed decision/amended decision/dropped]
       },
       "decision.link" => {
@@ -60,7 +60,7 @@ module Fd
                    case/unfollowed]
       },
       "decision.settle" => {
-        label: "Settle a proposal, amend a settled one", roles: LEAD,
+        label: "Settle a proposal, putting it in force", roles: LEAD,
         events: %w[decision/settled]
       },
       "decision.retire" => {

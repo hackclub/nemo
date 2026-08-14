@@ -39,6 +39,25 @@ class Fd::MemberIdentityTest < ActiveSupport::TestCase
     assert_equal "identity", entry.field_class
   end
 
+  test "somebody whose role does not carry identity.read is handed nothing" do
+    them = Staff.create!(user_id: "UFF1", community_manager: false)
+    Fd::AccessGrant.give!("UFF1", role: "firefighter", by: "UME")
+    Fd::RolePermission.set!("firefighter", "identity.read", false, by: "UME")
+    before = AccessLog.count
+
+    row = Fd::MemberIdentity.look_up(Fd::Member.order(:user_id).first.user_id, actor: them)
+
+    assert row.refused?
+    assert_nil row.email
+    assert_equal before, AccessLog.count, "a read that did not happen must not be logged"
+  end
+
+  test "a read that is allowed is not marked refused" do
+    assert_not Fd::MemberIdentity.look_up("UNOBODY", actor: @me)&.refused?
+    assert_not Fd::MemberIdentity.look_up(Fd::Member.order(:user_id).first.user_id,
+      actor: @me).refused?
+  end
+
   test "the trail redacts every identity column, so an email cannot reach it" do
     assert_equal %w[real_name first_name last_name email],
       Fd::Audit::REDACTED_COLUMNS.fetch("identity")

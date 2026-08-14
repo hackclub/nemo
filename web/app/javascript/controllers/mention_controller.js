@@ -2,6 +2,13 @@ import { Controller } from "@hotwired/stimulus"
 
 const TOKEN = /@([\w.\-]*)$/
 
+function said(className, text) {
+  const span = document.createElement("span")
+  span.className = className
+  span.textContent = text
+  return span
+}
+
 export default class extends Controller {
   static targets = ["field", "results"]
   static values = { url: String }
@@ -54,9 +61,11 @@ export default class extends Controller {
       row.className = "pick-opt"
       row.dataset.action = "click->mention#choose mouseenter->mention#hover"
       row.dataset.id = member.id
-      row.innerHTML = `<span class="avatar">${member.initial}</span>
-        <span class="pick-name">${member.name}</span>
-        <span class="pick-id mono">${member.id}</span>`
+      row.append(
+        said("avatar", member.initial),
+        said("pick-name", member.name),
+        said("pick-id mono", member.id)
+      )
       this.resultsTarget.append(row)
     }
     this.resultsTarget.hidden = false

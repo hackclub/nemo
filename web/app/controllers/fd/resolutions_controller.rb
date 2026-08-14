@@ -4,6 +4,8 @@ module Fd
 
     permit "case.resolve", on: -> { Case.find(params[:case_id]) }, only: :create
     permit "case.reopen", on: -> { Case.find(params[:case_id]) }, only: :destroy
+    permit "case.act", on: -> { Case.find(params[:case_id]) }, only: :create,
+      if: -> { params[:outcome] == "report" }
 
     def create
       @case = Case.find(params[:case_id])

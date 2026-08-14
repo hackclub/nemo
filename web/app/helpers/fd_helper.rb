@@ -50,6 +50,7 @@ module FdHelper
 
   def identity_line(identity)
     return locked_note("Nothing on file") if identity.nil?
+    return locked_note("Not yours to read") if identity.refused?
     return locked_note("Identity purged") if identity.purged?
     return locked_note("Email not collected yet") if identity.email.blank?
 

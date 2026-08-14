@@ -1,5 +1,12 @@
 import { Controller } from "@hotwired/stimulus"
 
+function said(className, text) {
+  const span = document.createElement("span")
+  span.className = className
+  span.textContent = text
+  return span
+}
+
 export default class extends Controller {
   static targets = ["field", "input", "results", "store"]
   static values = { name: String, url: String, single: Boolean, preset: Array }
@@ -57,9 +64,11 @@ export default class extends Controller {
       row.dataset.id = member.id
       row.dataset.name = member.name
       row.dataset.initial = member.initial
-      row.innerHTML = `<span class="avatar">${member.initial}</span>
-        <span class="pick-name">${member.name}</span>
-        <span class="pick-id mono">${member.id}</span>`
+      row.append(
+        said("avatar", member.initial),
+        said("pick-name", member.name),
+        said("pick-id mono", member.id)
+      )
       this.resultsTarget.append(row)
     }
     this.resultsTarget.hidden = false
@@ -149,7 +158,7 @@ export default class extends Controller {
     for (const [id, { name, initial }] of this.chosen) {
       const token = document.createElement("span")
       token.className = "token"
-      token.innerHTML = `<span class="avatar">${initial}</span>${name}`
+      token.append(said("avatar", initial), document.createTextNode(name))
 
       const remove = document.createElement("button")
       remove.type = "button"

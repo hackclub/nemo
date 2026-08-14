@@ -28,6 +28,28 @@ class FdAccessTest < ActionDispatch::IntegrationTest
     Fd::AuditEntry.where(verb: "refused")
   end
 
+  DECORATIVE = %w[case.read].freeze
+
+  def self.enforced
+    controllers = Rails.application.routes.routes.filter_map { |route|
+      route.defaults[:controller].to_s.presence
+    }.uniq.select { |name| name.start_with?("fd/") }
+
+    declared = controllers.flat_map { |name| "#{name}_controller".camelize.constantize.declared }
+    asked = Dir["#{Rails.root}/app/**/*.rb"].flat_map { |path|
+      File.read(path).scan(/(?:may\?|allow\?|why_not)\(\s*(?:\w+,\s*)?"([\w.]+)"/).flatten
+    }
+    (declared + asked).uniq
+  end
+
+  test "a permission that guards something has somewhere it is actually checked" do
+    unenforced = Fd::Permission.keys - self.class.enforced - DECORATIVE
+
+    assert_empty unenforced,
+      "#{unenforced.join(', ')} can be moved on the roles tab but nothing reads it, " \
+      "so the switch would be inert"
+  end
+
   test "every route that writes names a permission that exists" do
     self.class.fd_writes.each do |name, action|
       keys = controller_for(name).declared

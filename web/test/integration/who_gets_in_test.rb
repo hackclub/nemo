@@ -110,6 +110,15 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     assert_select "h1", text: /sign in/i
   end
 
+  test "the sign in switch for development is not routed anywhere else" do
+    assert_not Rails.application.routes.url_helpers.respond_to?(:dev_be_path)
+
+    get "/dev/be/UNOROLE"
+
+    assert_response :not_found
+    assert_nil session[:user_id]
+  end
+
   test "a json endpoint says no rather than handing back a login page" do
     get fd_search_path(format: :json, q: "anything")
 

@@ -122,7 +122,7 @@ class Fd::PermissionTest < ActiveSupport::TestCase
   end
 
   test "a refusal says which rule stopped it" do
-    assert_equal "settle a proposal, amend a settled one is lead only",
+    assert_equal "settle a proposal, putting it in force is lead only",
       Fd::Permission.refusal("decision.settle")
     assert_equal "give or take back access is community manager only",
       Fd::Permission.refusal("access.grant")

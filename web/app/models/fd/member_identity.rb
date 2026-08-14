@@ -9,13 +9,24 @@ module Fd
 
     scope :kept, -> { where(purged_at: nil) }
 
+    Refused = Class.new do
+      def purged? = false
+
+      def email = nil
+
+      def refused? = true
+    end
+
     def self.look_up(user_id, actor:)
       raise NoActor, "reading identity needs an actor to log it against" if actor.nil?
+      return Refused.new unless actor.may?("identity.read")
 
       row = kept.find_by(user_id: user_id)
       AccessLog.record!(actor: actor, subject_user_id: user_id, field_class: "identity")
       row
     end
+
+    def refused? = false
 
     def readonly?
       persisted?
