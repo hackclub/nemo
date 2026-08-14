@@ -4,7 +4,7 @@ class FdHelperTest < ActionView::TestCase
   include FdHelper
 
   def kase(**attrs)
-    Fd::Case.new({ id: 1, opened_by: "UFF1", opened_at: 5.days.ago }.merge(attrs))
+    make_case(opened_at: 5.days.ago, **attrs)
   end
 
   def entries(count)
