@@ -1,42 +1,33 @@
-<div class="modal-host">
-  <input type="checkbox" id="link-threads" class="modal-flip" autocomplete="off">
-  <label for="link-threads" class="modal-veil" aria-hidden="true"></label>
-  <div class="modal-wrap">
-    <div class="modal" role="dialog" aria-label="Link threads">
-      <div class="modal-head">
-        <h2 class="modal-title">Link threads</h2>
+<%= render layout: "fd/modal", locals: { id: "link-threads", title: "Link threads" } do %>
+  <%= form_with url: fd_decision_threads_path(decision), method: :post,
+        html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <label class="field-label">
+        <%= text_area_tag :links, nil, rows: 4, class: "textarea", id: nil,
+              placeholder: "https://hackclub.slack.com/archives/C0266FRGV/p1754487721123456" %>
+      </label>
+      <div class="field-label">
+        <span>What that thread is</span>
+        <div class="segmented seg-radio">
+          <label>
+            <%= radio_button_tag :kind, "internal", true, id: nil %>
+            Internal discussion
+          </label>
+          <label>
+            <%= radio_button_tag :kind, "reference", false, id: nil %>
+            Referenced thread
+          </label>
+        </div>
       </div>
-      <%= form_with url: fd_decision_threads_path(decision), method: :post,
-            html: { autocomplete: "off" } do %>
-        <div class="modal-body">
-          <label class="field-label">
-            <%= text_area_tag :links, nil, rows: 4, class: "textarea", id: nil,
-                  placeholder: "https://hackclub.slack.com/archives/C0266FRGV/p1754487721123456" %>
-          </label>
-          <div class="field-label">
-            <span>What that thread is</span>
-            <div class="segmented seg-radio">
-              <label>
-                <%= radio_button_tag :kind, "internal", true, id: nil %>
-                Internal discussion
-              </label>
-              <label>
-                <%= radio_button_tag :kind, "reference", false, id: nil %>
-                Referenced thread
-              </label>
-            </div>
-          </div>
-          <label class="field-label">
-            Why they are linked
-            <%= text_field_tag :why, nil, class: "textarea", id: nil,
-                  placeholder: "where it was decided" %>
-          </label>
-        </div>
-        <div class="modal-foot">
-          <label for="link-threads" class="btn">Close</label>
-          <%= submit_tag "Link them", class: "btn btn-primary" %>
-        </div>
-      <% end %>
+      <label class="field-label">
+        Why they are linked
+        <%= text_field_tag :why, nil, class: "textarea", id: nil,
+              placeholder: "where it was decided" %>
+      </label>
     </div>
-  </div>
-</div>
+    <div class="modal-foot">
+      <label for="link-threads" class="btn">Close</label>
+      <%= submit_tag "Link them", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>

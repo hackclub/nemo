@@ -1,48 +1,40 @@
-<div class="modal-host">
-  <input type="checkbox" id="add-person" class="modal-flip" autocomplete="off">
-  <label for="add-person" class="modal-veil" aria-hidden="true"></label>
-  <div class="modal-wrap">
-    <div class="modal" role="dialog" aria-label="Add people to the case">
-      <div class="modal-head">
-        <h2 class="modal-title">Add people to case <%= kase.id %></h2>
+<%= render layout: "fd/modal", locals: { id: "add-person",
+      title: "Add people to case #{kase.id}", label: "Add people to the case" } do %>
+  <%= form_with url: fd_case_participants_path(kase), method: :post, html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <div class="field-label">
+        <span>Who</span>
+        <%= render "fd/member_picker", name: "user_ids[]", single: false,
+              label: "search for the people to add" %>
       </div>
-      <%= form_with url: fd_case_participants_path(kase), method: :post, html: { autocomplete: "off" } do %>
-        <div class="modal-body">
-          <div class="field-label">
-            <span>Who</span>
-            <%= render "fd/member_picker", name: "user_ids[]", single: false,
-                  label: "search for the people to add" %>
-          </div>
 
-          <div class="field-label">
-            <span>Their part in it</span>
-            <div class="segmented seg-radio">
-              <label>
-                <%= radio_button_tag :role, "subject", false, id: nil %>
-                Another subject
-              </label>
-              <label>
-                <%= radio_button_tag :role, "involved", true, id: "role-involved" %>
-                Involved
-              </label>
-              <label>
-                <%= radio_button_tag :role, "reporter", false, id: nil %>
-                Reported it
-              </label>
-            </div>
-          </div>
-
-          <label class="field-label why">
-            How they were involved
-            <%= text_area_tag :detail, nil, rows: 2, class: "textarea", id: nil,
-                  placeholder: "it was aimed at them" %>
+      <div class="field-label">
+        <span>Their part in it</span>
+        <div class="segmented seg-radio">
+          <label>
+            <%= radio_button_tag :role, "subject", false, id: nil %>
+            Another subject
+          </label>
+          <label>
+            <%= radio_button_tag :role, "involved", true, id: "role-involved" %>
+            Involved
+          </label>
+          <label>
+            <%= radio_button_tag :role, "reporter", false, id: nil %>
+            Reported it
           </label>
         </div>
-        <div class="modal-foot">
-          <label for="add-person" class="btn">Close</label>
-          <%= submit_tag "Add to the case", class: "btn btn-primary" %>
-        </div>
-      <% end %>
+      </div>
+
+      <label class="field-label why">
+        How they were involved
+        <%= text_area_tag :detail, nil, rows: 2, class: "textarea", id: nil,
+              placeholder: "it was aimed at them" %>
+      </label>
     </div>
-  </div>
-</div>
+    <div class="modal-foot">
+      <label for="add-person" class="btn">Close</label>
+      <%= submit_tag "Add to the case", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>

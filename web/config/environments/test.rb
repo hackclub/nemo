@@ -42,5 +42,7 @@ Rails.application.configure do
 
   config.active_record.maintain_test_schema = false
 
+  config.logger = ActiveSupport::Logger.new(Rails.root.join("log/test.log"), 1, 8.megabytes)
+
   config.x.cachet_enabled = false
 end

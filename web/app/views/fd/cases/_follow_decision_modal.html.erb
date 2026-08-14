@@ -1,31 +1,23 @@
-<div class="modal-host">
-  <input type="checkbox" id="follow-decision" class="modal-flip" autocomplete="off">
-  <label for="follow-decision" class="modal-veil" aria-hidden="true"></label>
-  <div class="modal-wrap">
-    <div class="modal" role="dialog" aria-label="Which decision this followed">
-      <div class="modal-head">
-        <h2 class="modal-title">Link a decision</h2>
-      </div>
-      <%= form_with url: fd_case_decision_path(kase), method: :post,
-            html: { autocomplete: "off" } do %>
-        <div class="modal-body">
-          <label class="field-label">
-            Decision
-            <%= select_tag :decision_id,
-                  grouped_options_for_select(decision_groups(kase, decisions),
-                    kase.followed_decision_id),
-                  include_blank: "pick one", class: "select" %>
-          </label>
-        </div>
-        <div class="modal-foot">
-          <% if kase.followed_decision_id %>
-            <%= button_to "Unlink", fd_case_decision_path(kase),
-                  method: :delete, class: "btn", form: { class: "contents" } %>
-          <% end %>
-          <label for="follow-decision" class="btn">Close</label>
-          <%= submit_tag "Record it", class: "btn btn-primary" %>
-        </div>
-      <% end %>
+<%= render layout: "fd/modal", locals: { id: "follow-decision",
+      title: "Link a decision", label: "Which decision this followed" } do %>
+  <%= form_with url: fd_case_decision_path(kase), method: :post,
+        html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <label class="field-label">
+        Decision
+        <%= select_tag :decision_id,
+              grouped_options_for_select(decision_groups(kase, decisions),
+                kase.followed_decision_id),
+              include_blank: "pick one", class: "select" %>
+      </label>
     </div>
-  </div>
-</div>
+    <div class="modal-foot">
+      <% if kase.followed_decision_id %>
+        <%= button_to "Unlink", fd_case_decision_path(kase),
+              method: :delete, class: "btn", form: { class: "contents" } %>
+      <% end %>
+      <label for="follow-decision" class="btn">Close</label>
+      <%= submit_tag "Record it", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>

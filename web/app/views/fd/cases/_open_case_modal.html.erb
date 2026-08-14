@@ -1,11 +1,5 @@
-<div class="modal-host">
-  <input type="checkbox" id="open-case" class="modal-flip" autocomplete="off" <%= "checked" if @open_modal %>>
-  <label for="open-case" class="modal-veil" aria-hidden="true"></label>
-  <div class="modal-wrap">
-    <div class="modal" role="dialog" aria-label="Open a case">
-      <div class="modal-head">
-        <h2 class="modal-title">Open a case</h2>
-      </div>
+<%= render layout: "fd/modal", locals: { id: "open-case", title: "Open a case",
+      open: @open_modal } do %>
       <%= form_with url: fd_cases_path, method: :post, html: { autocomplete: "off" } do %>
         <div class="modal-body">
           <% if @open_for_subject.any? %>
@@ -79,6 +73,4 @@
           <% end %>
         </div>
       <% end %>
-    </div>
-  </div>
-</div>
+<% end %>

@@ -2030,15 +2030,6 @@
     align-content: start;
   }
 
-  .index-head {
-    font-size: var(--t-3xs);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    font-weight: 700;
-    color: var(--ink-3);
-    padding: var(--s-2xs) var(--s-2xs) 3px;
-  }
-
   .index-item {
     display: flex;
     align-items: center;
@@ -2731,33 +2722,6 @@
 
   .chart-short {
     height: 220px;
-  }
-
-  .legend {
-    display: flex;
-    gap: var(--s-md);
-    flex-wrap: wrap;
-    margin-bottom: var(--s-sm);
-  }
-
-  .legend-item {
-    display: grid;
-    gap: 1px;
-  }
-
-  .legend-key {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: var(--t-2xs);
-    color: var(--ink-2);
-    font-weight: 500;
-  }
-
-  .legend-note {
-    font-size: var(--t-2xs);
-    font-weight: 500;
-    color: var(--ink-3);
   }
 
   /* ── distribution bands ────────────────────────────────── */

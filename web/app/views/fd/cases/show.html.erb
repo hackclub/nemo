@@ -165,155 +165,111 @@
 </div>
 
 <% @live_actions.each do |action| %>
-  <div class="modal-host">
-    <input type="checkbox" id="reverse-<%= action.id %>" class="modal-flip" autocomplete="off">
-    <label for="reverse-<%= action.id %>" class="modal-veil" aria-hidden="true"></label>
-    <div class="modal-wrap">
-      <div class="modal" role="dialog" aria-label="Reverse this action">
-        <div class="modal-head">
-          <h2 class="modal-title">Reverse this action</h2>
-          <span class="modal-sub"><%= action_option_label(action) %></span>
-        </div>
-        <%= form_with url: fd_case_reversals_path(@case), method: :post, html: { autocomplete: "off" } do %>
-          <%= hidden_field_tag :action_id, action.id, id: nil %>
-          <div class="modal-body">
-            <label class="field-label">
-              Why
-              <%= text_area_tag :reversal_reason, nil, rows: 3, class: "textarea", id: nil,
-                    maxlength: Fd::ReversalsController::MAX_REASON %>
-            </label>
-          </div>
-          <div class="modal-foot">
-            <label for="reverse-<%= action.id %>" class="btn">Close</label>
-            <%= submit_tag "Reverse it", class: "btn btn-primary" %>
-          </div>
-        <% end %>
+  <%= render layout: "fd/modal", locals: { id: "reverse-#{action.id}",
+        title: "Reverse this action", sub: action_option_label(action) } do %>
+    <%= form_with url: fd_case_reversals_path(@case), method: :post, html: { autocomplete: "off" } do %>
+      <%= hidden_field_tag :action_id, action.id, id: nil %>
+      <div class="modal-body">
+        <label class="field-label">
+          Why
+          <%= text_area_tag :reversal_reason, nil, rows: 3, class: "textarea", id: nil,
+                maxlength: Fd::ReversalsController::MAX_REASON %>
+        </label>
       </div>
-    </div>
-  </div>
+      <div class="modal-foot">
+        <label for="reverse-<%= action.id %>" class="btn">Close</label>
+        <%= submit_tag "Reverse it", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  <% end %>
 <% end %>
 
-<div class="modal-host">
-  <input type="checkbox" id="log-action" class="modal-flip" autocomplete="off">
-  <label for="log-action" class="modal-veil" aria-hidden="true"></label>
-  <div class="modal-wrap">
-    <div class="modal" role="dialog" aria-label="Log an action">
-      <div class="modal-head">
-        <h2 class="modal-title">Log an action</h2>
-      </div>
-      <%= form_with url: fd_case_actions_path(@case), method: :post, html: { autocomplete: "off" } do %>
-        <div class="modal-body">
-          <%= render "action_fields", kase: @case, flagged: @flagged_messages,
-                  target: @people.chosen&.user_id || lone_subject(@case) %>
-        </div>
-        <div class="modal-foot">
-          <label for="log-action" class="btn">Close</label>
-          <%= submit_tag "Log it", class: "btn btn-primary" %>
-        </div>
-      <% end %>
+<%= render layout: "fd/modal", locals: { id: "log-action", title: "Log an action" } do %>
+  <%= form_with url: fd_case_actions_path(@case), method: :post, html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <%= render "action_fields", kase: @case, flagged: @flagged_messages,
+              target: @people.chosen&.user_id || lone_subject(@case) %>
     </div>
-  </div>
-</div>
+    <div class="modal-foot">
+      <label for="log-action" class="btn">Close</label>
+      <%= submit_tag "Log it", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>
 
-<div class="modal-host">
-  <input type="checkbox" id="attach-thread" class="modal-flip" autocomplete="off">
-  <label for="attach-thread" class="modal-veil" aria-hidden="true"></label>
-  <div class="modal-wrap">
-    <div class="modal" role="dialog" aria-label="Attach a thread">
-      <div class="modal-head">
-        <h2 class="modal-title">Attach a thread</h2>
-      </div>
-      <%= form_with url: fd_case_threads_path(@case), method: :post, html: { autocomplete: "off" } do %>
-        <div class="modal-body">
-          <label class="field-label">
-            Slack link
-            <%= text_field_tag :link, nil, class: "textarea", id: nil,
-                  placeholder: "https://hackclub.slack.com/archives/C0266FRGV/p1754487721123456" %>
+<%= render layout: "fd/modal", locals: { id: "attach-thread", title: "Attach a thread" } do %>
+  <%= form_with url: fd_case_threads_path(@case), method: :post, html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <label class="field-label">
+        Slack link
+        <%= text_field_tag :link, nil, class: "textarea", id: nil,
+              placeholder: "https://hackclub.slack.com/archives/C0266FRGV/p1754487721123456" %>
+      </label>
+      <div class="field-label">
+        <span>What that thread is</span>
+        <div class="segmented seg-radio">
+          <label>
+            <%= radio_button_tag :kind, "evidence", true, id: nil %>
+            Evidence
           </label>
-          <div class="field-label">
-            <span>What that thread is</span>
-            <div class="segmented seg-radio">
-              <label>
-                <%= radio_button_tag :kind, "evidence", true, id: nil %>
-                Evidence
-              </label>
-              <label>
-                <%= radio_button_tag :kind, "internal", false, id: nil %>
-                Internal discussion
-              </label>
-            </div>
-          </div>
+          <label>
+            <%= radio_button_tag :kind, "internal", false, id: nil %>
+            Internal discussion
+          </label>
         </div>
-        <div class="modal-foot">
-          <label for="attach-thread" class="btn">Close</label>
-          <%= submit_tag "Attach", class: "btn btn-primary" %>
-        </div>
-      <% end %>
+      </div>
     </div>
-  </div>
-</div>
+    <div class="modal-foot">
+      <label for="attach-thread" class="btn">Close</label>
+      <%= submit_tag "Attach", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>
 
 <%= render "add_person_modal", kase: @case %>
 <% if @decisions.any? %>
   <%= render "follow_decision_modal", kase: @case, decisions: @decisions %>
 <% end %>
 
-<div class="modal-host">
-  <input type="checkbox" id="add-note" class="modal-flip" autocomplete="off">
-  <label for="add-note" class="modal-veil" aria-hidden="true"></label>
-  <div class="modal-wrap">
-    <div class="modal" role="dialog" aria-label="Add a note">
-      <div class="modal-head">
-        <h2 class="modal-title">Add a note</h2>
-        <span class="modal-sub">internal</span>
-      </div>
-      <%= form_with url: fd_case_notes_path(@case), method: :post, html: { autocomplete: "off" } do %>
-        <div class="modal-body">
-          <div class="outcomes">
-            <label class="opt">
-              <%= radio_button_tag :about, "case", true %>
-              <span class="opt-dot" aria-hidden="true"></span>
-              <span>
-                <span class="opt-label">About this case</span>
-              </span>
-            </label>
-            <% @case.subjects.each do |person| %>
-              <label class="opt">
-                <%= radio_button_tag :about, person.user_id, false %>
-                <span class="opt-dot" aria-hidden="true"></span>
-                <span>
-                  <span class="opt-label">About <%= names[person.user_id] %></span>
-                </span>
-              </label>
-            <% end %>
-          </div>
-          <label class="field-label">
-            The note
-            <%= render "fd/mention_field", name: :body, value: nil, rows: 4,
-                  placeholder: "meow" %>
+<%= render layout: "fd/modal", locals: { id: "add-note", title: "Add a note",
+      sub: "internal" } do %>
+  <%= form_with url: fd_case_notes_path(@case), method: :post, html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <div class="outcomes">
+        <label class="opt">
+          <%= radio_button_tag :about, "case", true %>
+          <span class="opt-dot" aria-hidden="true"></span>
+          <span>
+            <span class="opt-label">About this case</span>
+          </span>
+        </label>
+        <% @case.subjects.each do |person| %>
+          <label class="opt">
+            <%= radio_button_tag :about, person.user_id, false %>
+            <span class="opt-dot" aria-hidden="true"></span>
+            <span>
+              <span class="opt-label">About <%= names[person.user_id] %></span>
+            </span>
           </label>
-        </div>
-        <div class="modal-foot">
-          <label for="add-note" class="btn">Close</label>
-          <%= submit_tag "Save the note", class: "btn btn-primary" %>
-        </div>
-      <% end %>
+        <% end %>
+      </div>
+      <label class="field-label">
+        The note
+        <%= render "fd/mention_field", name: :body, value: nil, rows: 4,
+              placeholder: "meow" %>
+      </label>
     </div>
-  </div>
-</div>
+    <div class="modal-foot">
+      <label for="add-note" class="btn">Close</label>
+      <%= submit_tag "Save the note", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>
 
 <% unless @case.resolved? %>
-<div class="modal-host">
-  <input type="checkbox" id="resolve-case" class="modal-flip" autocomplete="off">
-  <label for="resolve-case" class="modal-veil" aria-hidden="true"></label>
-  <div class="modal-wrap">
-    <div class="modal" role="dialog" aria-label="Resolve this case">
-      <div class="modal-head">
-        <h2 class="modal-title">Resolve case <%= @case.id %></h2>
-        <span class="modal-sub">
-          <%= @case.assigned? ? "assigned to #{@case.assignee_handles}" : "not assigned to anybody" %>
-        </span>
-      </div>
+<%= render layout: "fd/modal", locals: { id: "resolve-case",
+      title: "Resolve case #{@case.id}", label: "Resolve this case",
+      sub: @case.assigned? ? "assigned to #{@case.assignee_handles}" : "not assigned to anybody" } do %>
       <%= form_with url: fd_case_resolution_path(@case), method: :post, html: { autocomplete: "off" } do %>
         <div class="modal-body">
           <div class="outcomes">
@@ -376,9 +332,7 @@
           <%= submit_tag "Resolve", class: "btn btn-primary" %>
         </div>
       <% end %>
-    </div>
-  </div>
-</div>
+<% end %>
 <% end %>
 
 <input type="checkbox" id="case-timeline" class="drawer-flip" autocomplete="off">

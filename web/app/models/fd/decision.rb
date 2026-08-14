@@ -4,7 +4,6 @@ module Fd
 
     class NotAllowed < StandardError; end
 
-    STATES = %w[proposed settled superseded].freeze
     AMENDABLE = %w[title statement reasons category_key].freeze
 
     has_many :threads, -> { oldest_first }, class_name: "Fd::DecisionThread",
@@ -20,7 +19,6 @@ module Fd
     scope :unsettled, -> { where(state: "proposed") }
     scope :retired, -> { where(state: "superseded") }
     scope :live, -> { where.not(state: "superseded") }
-    scope :of_category, ->(key) { where(category_key: key) }
     scope :newest_first, -> { order(Arel.sql("coalesce(settled_at, proposed_at) DESC")) }
     scope :oldest_first, -> { order(Arel.sql("coalesce(settled_at, proposed_at)")) }
 
@@ -39,11 +37,6 @@ module Fd
     def proposed? = state == "proposed"
     def settled? = state == "settled"
     def superseded? = state == "superseded"
-    def live? = !superseded?
-
-    def decided_at
-      settled_at || proposed_at
-    end
 
     def category_label
       category_key.present? ? Case.category_label(category_key) : nil
