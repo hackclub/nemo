@@ -488,36 +488,28 @@
     min-height: 0;
   }
 
-  /* ── toast ─────────────────────────────────────────────── */
+  /* ── the message in the top bar ────────────────────────── */
 
-  .toast-stack {
-    position: fixed;
-    top: var(--s-md);
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 60;
-    display: grid;
-    gap: var(--s-2xs);
-    pointer-events: none;
+  .topbar:has(.topbar-msg) .field-top {
+    display: none;
   }
 
-  .toast {
+  .topbar-msg {
+    flex: 1;
     display: flex;
     align-items: center;
     gap: var(--s-2xs);
-    padding: var(--s-2xs) var(--s-xs);
-    border-radius: var(--r-ctl);
-    background-color: var(--tip-bg);
-    color: var(--tip-ink);
+    min-width: 0;
+    padding: 7px var(--s-2xs);
     font-size: var(--t-sm);
     font-weight: 500;
+    color: var(--ink);
     cursor: pointer;
-    pointer-events: auto;
     opacity: 1;
-    transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+    transition: opacity 180ms var(--ease-out);
   }
 
-  .toast::before {
+  .topbar-msg::before {
     content: "";
     width: 6px;
     height: 6px;
@@ -526,13 +518,12 @@
     background-color: var(--good);
   }
 
-  .toast-alert::before {
+  .topbar-msg-alert::before {
     background-color: var(--warn);
   }
 
-  .toast.is-leaving {
+  .topbar-msg.is-leaving {
     opacity: 0;
-    transform: translateY(-6px);
   }
 
   /* ── controls ──────────────────────────────────────────── */

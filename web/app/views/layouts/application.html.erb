@@ -31,21 +31,6 @@
 
   <body>
     <%= render "shared/synthetic_banner" %>
-    <% if notice || alert %>
-      <div class="toast-stack">
-        <% if notice %>
-          <div class="toast" role="status"
-               data-controller="toast" data-toast-delay-value="3000"
-               data-action="click->toast#dismiss"><%= notice %></div>
-        <% end %>
-        <% if alert %>
-          <div class="toast toast-alert" role="alert"
-               data-controller="toast" data-toast-delay-value="6000"
-               data-action="click->toast#dismiss"><%= alert %></div>
-        <% end %>
-      </div>
-    <% end %>
-
     <div class="shell" data-controller="dismiss palette"
          data-palette-url-value="<%= fd_search_path(format: :json) %>"
          data-palette-on-value="<%= content_for(:palette_on) %>"
@@ -124,6 +109,13 @@
 
       <div class="main">
         <div class="topbar">
+          <% if alert || notice %>
+            <div class="topbar-msg <%= "topbar-msg-alert" if alert %>"
+                 role="<%= alert ? "alert" : "status" %>"
+                 data-controller="toast" data-toast-delay-value="<%= alert ? 6000 : 3000 %>"
+                 data-action="click->toast#dismiss"
+                 title="dismiss"><%= alert || notice %></div>
+          <% end %>
           <button type="button" class="field-top" data-action="palette#open"
                   aria-label="Search cases, members, notes">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
