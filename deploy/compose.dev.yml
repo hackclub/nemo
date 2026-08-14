@@ -41,6 +41,28 @@ services:
     restart: unless-stopped
     command: ["collect"]
 
+  bot:
+    profiles: ["live"]
+    image: mnemosyne:latest
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      FIREHOUSE_CHANNEL_ID: ${FIREHOUSE_CHANNEL_ID:-}
+      TZ: ${TZ:-UTC}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    command: ["bot"]
+
   nightly-sync:
     profiles: ["live"]
     image: mnemosyne:latest

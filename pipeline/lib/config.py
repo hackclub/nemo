@@ -76,6 +76,16 @@ ROLES = {
             "TZ",
         ],
     },
+    "bot": {
+        "required": [
+            "SHROUD_BOT_TOKEN",
+            "SHROUD_APP_TOKEN",
+            "NEMO_BOT_TOKEN",
+            "NEMO_APP_TOKEN",
+            "FIREHOUSE_CHANNEL_ID",
+        ],
+        "optional": ["SLACK_TEAM_ID", "TZ"],
+    },
     "provision": {
         "required": DATABASE + ADMIN + ["RAILS_DB_USER", "RAILS_DB_PASSWORD"],
         "optional": [
@@ -113,10 +123,19 @@ HEADINGS = {
     "transform": "dbt build. one shot",
     "seed": "synthetic data, then transform, then verify. one shot",
     "provision": "schemas, roles, grants and both migration sets. one shot",
+    "bot": "shroud takes the reports, nemo works them. long running",
 }
 
 NEVER = {
     "serve": ["SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "SLACK_TOKEN", "INTERNAL_PROXY_TOKEN"],
+    "bot": [
+        "SLACK_BOT_TOKEN",
+        "SLACK_APP_TOKEN",
+        "SLACK_TOKEN",
+        "INTERNAL_PROXY_TOKEN",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+    ],
 }
 
 

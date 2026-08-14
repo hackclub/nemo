@@ -1,0 +1,25 @@
+display_information:
+  name: Shroud
+  description: Tell the Fire Department something, anonymously or not.
+  background_color: "#1c1917"
+
+features:
+  bot_user:
+    display_name: shroud
+    always_online: true
+
+oauth_config:
+  scopes:
+    bot:
+      - im:history
+      - im:write
+      - files:read
+
+settings:
+  event_subscriptions:
+    bot_events:
+      - message.im
+  interactivity:
+    is_enabled: true
+  socket_mode_enabled: true
+  org_deploy_enabled: false
