@@ -10,7 +10,15 @@ def test_the_allowed_suffixes_pass(dbname):
 
 @pytest.mark.parametrize(
     "dbname",
-    ["mnemosyne", "", "postgres", "mnemosyne_devious", "mnemosyne_dev_backup", "dev", "MNEMOSYNE_DEV"],
+    [
+        "mnemosyne",
+        "",
+        "postgres",
+        "mnemosyne_devious",
+        "mnemosyne_dev_backup",
+        "dev",
+        "MNEMOSYNE_DEV",
+    ],
 )
 def test_everything_else_is_refused(dbname):
     assert not target_allowed(dbname)

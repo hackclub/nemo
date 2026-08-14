@@ -47,16 +47,23 @@ def evidence(shares):
     return lines
 
 
+SAID = {
+    "stored": "kept",
+    "pending": "not kept yet",
+    "skipped": "lives outside Slack",
+    "gone": "Slack no longer has it",
+    "too_large": "too big to keep",
+    "refused": "Slack would not hand it over",
+    "failed": "we could not keep it",
+}
+
+
 def named(files):
     out = []
     for item in files:
         name = escape(item.get("name") or item.get("slack_file_id"))
-        if item.get("fetch_state") == "skipped" and item.get("external_url"):
-            out.append(f"{name} (lives outside Slack)")
-        elif item.get("fetch_state") == "gone":
-            out.append(f"{name} (Slack no longer has it)")
-        else:
-            out.append(name)
+        note = SAID.get(item.get("fetch_state"))
+        out.append(f"{name} ({note})" if note else name)
     return out
 
 

@@ -115,14 +115,19 @@ EDGE = date(2026, 7, 10)
 def test_pending_days_walks_backwards_from_the_newest_missing_day():
     loaded = {date(2026, 7, 3), date(2026, 7, 4)}
     assert analytics_pull.pending_days(loaded, FLOOR, EDGE, 4) == [
-        date(2026, 7, 10), date(2026, 7, 9), date(2026, 7, 8), date(2026, 7, 7)
+        date(2026, 7, 10),
+        date(2026, 7, 9),
+        date(2026, 7, 8),
+        date(2026, 7, 7),
     ]
 
 
 def test_pending_days_skips_over_a_loaded_run():
     loaded = {date(2026, 7, 9), date(2026, 7, 10)}
     assert analytics_pull.pending_days(loaded, FLOOR, EDGE, 3) == [
-        date(2026, 7, 8), date(2026, 7, 7), date(2026, 7, 6)
+        date(2026, 7, 8),
+        date(2026, 7, 7),
+        date(2026, 7, 6),
     ]
 
 
@@ -146,7 +151,8 @@ def test_pending_days_never_exceeds_the_limit():
 def test_pending_days_ignores_loaded_days_outside_the_calendar():
     loaded = {date(2020, 1, 1), date(2026, 7, 10)}
     assert analytics_pull.pending_days(loaded, FLOOR, EDGE, 2) == [
-        date(2026, 7, 9), date(2026, 7, 8)
+        date(2026, 7, 9),
+        date(2026, 7, 8),
     ]
 
 
@@ -155,16 +161,24 @@ AVAIL_END = date(2026, 8, 2)
 
 
 def test_pending_months_repulls_a_month_clipped_by_a_stale_edge():
-    stored = {date(2026, 5, 1): date(2026, 5, 31), date(2026, 6, 1): date(2026, 6, 30),
-              date(2026, 7, 1): date(2026, 7, 30)}
+    stored = {
+        date(2026, 5, 1): date(2026, 5, 31),
+        date(2026, 6, 1): date(2026, 6, 30),
+        date(2026, 7, 1): date(2026, 7, 30),
+    }
     assert top_posters_pull.pending_months(stored, AVAIL_START, AVAIL_END) == [
-        date(2026, 7, 1), date(2026, 8, 1)
+        date(2026, 7, 1),
+        date(2026, 8, 1),
     ]
 
 
 def test_pending_months_is_empty_when_every_month_is_complete():
-    stored = {date(2026, 5, 1): date(2026, 5, 31), date(2026, 6, 1): date(2026, 6, 30),
-              date(2026, 7, 1): date(2026, 7, 31), date(2026, 8, 1): AVAIL_END}
+    stored = {
+        date(2026, 5, 1): date(2026, 5, 31),
+        date(2026, 6, 1): date(2026, 6, 30),
+        date(2026, 7, 1): date(2026, 7, 31),
+        date(2026, 8, 1): AVAIL_END,
+    }
     assert top_posters_pull.pending_months(stored, AVAIL_START, AVAIL_END) == []
 
 
@@ -176,7 +190,10 @@ def test_pending_months_clamps_the_first_month_to_the_available_floor():
 
 def test_pending_months_returns_everything_when_nothing_is_stored():
     assert top_posters_pull.pending_months({}, AVAIL_START, AVAIL_END) == [
-        date(2026, 5, 1), date(2026, 6, 1), date(2026, 7, 1), date(2026, 8, 1)
+        date(2026, 5, 1),
+        date(2026, 6, 1),
+        date(2026, 7, 1),
+        date(2026, 8, 1),
     ]
 
 
@@ -277,7 +294,8 @@ def test_scan_replies_skips_self_replies_and_computes_latency():
         {"user": "U2", "ts": "1600000840.000000"},
     ]
     assert first_reply.scan_replies("U1", posted, messages) == (
-        ("U2", epoch(1600000840), 840), None,
+        ("U2", epoch(1600000840), 840),
+        None,
     )
 
 
@@ -290,7 +308,8 @@ def test_scan_replies_walks_past_a_bot_to_the_first_human():
         {"user": "U2", "ts": "1600003600.000000"},
     ]
     assert first_reply.scan_replies("U1", posted, messages) == (
-        ("U2", epoch(1600003600), 3600), ("UBOT", epoch(1600000004), 4),
+        ("U2", epoch(1600003600), 3600),
+        ("UBOT", epoch(1600000004), 4),
     )
 
 
@@ -310,13 +329,23 @@ def test_scan_replies_carries_a_bot_found_on_an_earlier_page():
     earlier_bot = ("UBOT", epoch(1600000004), 4)
     page = [{"user": "U2", "ts": "1600000840.000000"}]
     assert first_reply.scan_replies("U1", posted, page, earlier_bot) == (
-        ("U2", epoch(1600000840), 840), earlier_bot,
+        ("U2", epoch(1600000840), 840),
+        earlier_bot,
     )
 
 
 def test_reply_row_records_an_unanswered_first_post():
     assert first_reply.reply_row("U1", None, None) == (
-        "U1", None, None, None, None, None, None, None, None, first_reply.WALK_VERSION,
+        "U1",
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        first_reply.WALK_VERSION,
     )
 
 
@@ -324,12 +353,29 @@ def test_reply_row_carries_both_repliers():
     human = ("U2", epoch(1600003600), 3600)
     bot = ("UBOT", epoch(1600000004), 4)
     assert first_reply.reply_row("U1", human, bot) == (
-        "U1", "U2", epoch(1600003600), 3600, "UBOT", epoch(1600000004), 4,
-        None, None, first_reply.WALK_VERSION,
+        "U1",
+        "U2",
+        epoch(1600003600),
+        3600,
+        "UBOT",
+        epoch(1600000004),
+        4,
+        None,
+        None,
+        first_reply.WALK_VERSION,
     )
 
 
 def test_unreadable_row_marks_a_permanent_skip():
     assert first_reply.unreadable_row("U1", "channel_not_found") == (
-        "U1", None, None, None, None, None, None, True, "channel_not_found", first_reply.WALK_VERSION,
+        "U1",
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        True,
+        "channel_not_found",
+        first_reply.WALK_VERSION,
     )

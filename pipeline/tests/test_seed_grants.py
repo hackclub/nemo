@@ -16,10 +16,7 @@ class FakeMember:
 
 
 def crowd(size=12):
-    return [
-        FakeMember(user_id=f"USEED{n:07d}", engagement=1.0 - (n / size))
-        for n in range(size)
-    ]
+    return [FakeMember(user_id=f"USEED{n:07d}", engagement=1.0 - (n / size)) for n in range(size)]
 
 
 def rows_for(members, stream="grants"):

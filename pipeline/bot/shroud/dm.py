@@ -1,6 +1,7 @@
 import logging
 
 from bot.engine import intake, session
+from bot.shroud import files
 from bot.shroud.reply import acknowledgement
 
 log = logging.getLogger("bot.shroud")
@@ -40,6 +41,12 @@ def register(app, on_taken=None):
         if not fresh:
             return
         log.info("shroud: took message %s in %s", message_id, event["channel"])
+
+        if event.get("files"):
+            try:
+                files.drain(client.token)
+            except Exception:
+                log.exception("shroud: could not keep the files, they stay pending")
 
         sent = client.chat_postMessage(channel=event["channel"], text=acknowledgement(first))
         with session() as conn:

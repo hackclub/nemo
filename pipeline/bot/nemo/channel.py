@@ -2,6 +2,7 @@ import logging
 import os
 
 from bot.nemo import cards
+from bot.nemo import files as carry
 
 log = logging.getLogger("bot.nemo")
 
@@ -143,6 +144,9 @@ def post_report(client, conn, case_id, channel_id=None):
             "WHERE id = %s AND mirrored_ts IS NULL",
             (ts, case["message_id"]),
         )
+    if case["message_id"]:
+        carry.share(client, conn, case["message_id"], channel_id or firehouse_channel(), ts)
+
     log.info("nemo: case %s posted to the firehouse at %s", case_id, ts)
     return ts
 
@@ -172,6 +176,8 @@ def post_follow_up(client, conn, message_id, channel_id=None):
         "WHERE id = %s AND mirrored_ts IS NULL",
         (ts, message_id),
     )
+    carry.share(client, conn, message_id, channel_id or firehouse_channel(), forwarded)
+
     log.info("nemo: message %s carried into the firehouse at %s", message_id, ts)
     return ts
 
