@@ -2,6 +2,8 @@ module Fd
   class ActionsController < BaseController
     include LogsActions
 
+    permit "case.act", on: -> { Case.find(params[:case_id]) }
+
     def create
       kase = Case.find(params[:case_id])
 

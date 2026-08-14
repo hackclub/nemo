@@ -99,7 +99,7 @@ class Fd::PermissionTest < ActiveSupport::TestCase
 
     assert boss.may?("case.act"), "the role holds it"
     assert_not boss.may?("case.act", kase), "but the case is not theirs"
-    assert boss.may?("case.reverse", kase), "reversing is not scoped to the assignment"
+    assert_not boss.may?("case.reverse", kase), "reversing is scoped to the assignment too"
   end
 
   test "a free case is anybody's to work" do

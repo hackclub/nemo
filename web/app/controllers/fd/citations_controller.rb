@@ -1,5 +1,7 @@
 module Fd
   class CitationsController < BaseController
+    permit "case.thread", on: -> { Case.find(params[:case_id]) }
+
     def create
       kase = Case.find(params[:case_id])
       said = held_message(kase, params[:thread_message_id])

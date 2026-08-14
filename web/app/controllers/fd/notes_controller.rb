@@ -2,6 +2,8 @@ module Fd
   class NotesController < BaseController
     MAX_LENGTH = 5_000
 
+    permit "case.note"
+
     def create
       kase = Case.find(params[:case_id])
       body = Mentions.normalise(params[:body].to_s.strip)

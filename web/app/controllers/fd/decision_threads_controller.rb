@@ -1,5 +1,7 @@
 module Fd
   class DecisionThreadsController < BaseController
+    permit "decision.link"
+
     def create
       decision = Decision.find(params[:decision_id])
       lines = params[:links].to_s.split("\n").map(&:strip).reject(&:blank?)

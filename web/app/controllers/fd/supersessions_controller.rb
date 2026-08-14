@@ -2,6 +2,8 @@ module Fd
   class SupersessionsController < BaseController
     include DecisionWords
 
+    permit "decision.retire"
+
     def create
       old = Decision.find(params[:decision_id])
       problem = missing_words

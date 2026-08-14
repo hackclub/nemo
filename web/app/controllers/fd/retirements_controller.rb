@@ -1,5 +1,7 @@
 module Fd
   class RetirementsController < BaseController
+    permit "decision.retire"
+
     def create
       decision = Decision.find(params[:decision_id])
 

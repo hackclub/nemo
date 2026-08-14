@@ -1,5 +1,7 @@
 module Fd
   class MergesController < BaseController
+    permit "case.resolve"
+
     def create
       ids = Array(params[:case_ids]).map(&:to_i).reject(&:zero?).uniq
       return refuse("tick the cases to mark as duplicates") if ids.empty?

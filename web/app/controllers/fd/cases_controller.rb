@@ -1,5 +1,7 @@
 module Fd
   class CasesController < BaseController
+    permit "case.open", only: :create
+
     def index
       @open_modal = params[:open] == "1"
       load_queue

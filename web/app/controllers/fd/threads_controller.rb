@@ -1,5 +1,7 @@
 module Fd
   class ThreadsController < BaseController
+    permit "case.thread", on: -> { Case.find(params[:case_id]) }
+
     def create
       kase = Case.find(params[:case_id])
       ref = SlackLink.parse(params[:link])

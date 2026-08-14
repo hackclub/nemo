@@ -7,6 +7,10 @@ class Fd::BaseControllerTest < ActiveSupport::TestCase
     end
   end
 
+  def before_callbacks(controller)
+    controller._process_action_callbacks.select { |c| c.kind == :before }.map(&:filter)
+  end
+
   test "reads are not gated, every other verb is" do
     assert controller("GET").send(:read_only_request?)
     assert controller("HEAD").send(:read_only_request?)
@@ -15,46 +19,38 @@ class Fd::BaseControllerTest < ActiveSupport::TestCase
     end
   end
 
-  test "the write gate is registered for the whole conduct area" do
+  test "a controller that writes without declaring a permission refuses to run" do
     names = Fd::BaseController._process_action_callbacks.map(&:filter)
-    assert_includes names, :require_write
+    assert_includes names, :require_a_declaration
     assert_includes names, :require_staff
+
+    bare = Class.new(Fd::BaseController)
+    assert_empty bare.declared
+    assert_raises(RuntimeError) { bare.new.send(:require_a_declaration) }
   end
 
-  test "the write gate runs after sign in, so it never leaks to a stranger" do
+  test "the gate runs after sign in, so it never leaks to a stranger" do
     names = Fd::BaseController._process_action_callbacks.map(&:filter)
-    assert names.index(:require_staff) < names.index(:require_write)
+    assert names.index(:require_staff) < names.index(:require_a_declaration)
   end
 
-  ALLOWED_BEFORE_GATE = %i[verify_authenticity_token require_staff].freeze
-
-  def before_callbacks(controller)
-    controller._process_action_callbacks.select { |c| c.kind == :before }.map(&:filter)
-  end
-
-  test "forgery protection runs before the write gate" do
+  test "forgery protection runs before the gate" do
     names = before_callbacks(Fd::CasesController)
-    assert names.index(:verify_authenticity_token) < names.index(:require_write)
+    assert names.index(:verify_authenticity_token) < names.index(:require_a_declaration)
   end
 
-  test "nothing the app declares runs before the write gate" do
-    names = before_callbacks(Fd::CasesController)
-    earlier = names.take(names.index(:require_write)).grep(Symbol)
-    assert_equal [], earlier - ALLOWED_BEFORE_GATE,
-      "a callback runs before the write gate and could leak whether a record exists"
-  end
+  test "every conduct controller that writes declares what it needs" do
+    Rails.application.eager_load!
+    writing = Fd::BaseController.descendants.reject do |controller|
+      (controller.action_methods & %w[create update destroy]).empty?
+    end
 
-  test "nobody without the staff flag may write" do
-    c = Fd::BaseController.new
-    def c.current_staff = nil
-    assert_equal false, c.send(:may_write?)
-
-    denied = Staff.new(user_id: "U1", community_manager: false)
-    def c.current_staff = @staff
-    c.instance_variable_set(:@staff, denied)
-    assert_equal false, c.send(:may_write?)
-
-    c.instance_variable_set(:@staff, Staff.new(user_id: "U2", community_manager: true))
-    assert_equal true, c.send(:may_write?)
+    assert writing.size >= 15, "expected the whole conduct area, saw #{writing.size}"
+    writing.each do |controller|
+      assert controller.declared.any?, "#{controller} writes without a permission"
+      controller.declared.each do |key|
+        assert_includes Fd::Permission.keys, key, "#{controller} names #{key}, which does not exist"
+      end
+    end
   end
 end

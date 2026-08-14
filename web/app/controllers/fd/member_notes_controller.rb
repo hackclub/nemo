@@ -1,5 +1,7 @@
 module Fd
   class MemberNotesController < BaseController
+    permit "member.note"
+
     def create
       user_id = params[:member_id].to_s.upcase
       body = Mentions.normalise(params[:body].to_s.strip)

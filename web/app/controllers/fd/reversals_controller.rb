@@ -2,6 +2,8 @@ module Fd
   class ReversalsController < BaseController
     MAX_REASON = 500
 
+    permit "case.reverse", on: -> { Case.find(params[:case_id]) }
+
     def create
       kase = Case.find(params[:case_id])
       reason = params[:reversal_reason].to_s.strip

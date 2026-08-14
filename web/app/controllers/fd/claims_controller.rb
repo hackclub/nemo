@@ -1,5 +1,7 @@
 module Fd
   class ClaimsController < BaseController
+    permit "case.open", on: -> { Case.find(params[:case_id]) }
+
     def create
       kase = Case.find(params[:case_id])
       taken = false

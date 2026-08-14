@@ -2,6 +2,8 @@ module Fd
   class ParticipantsController < BaseController
     MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/
 
+    permit "case.people", on: -> { Case.find(params[:case_id]) }
+
     def create
       kase = Case.find(params[:case_id])
       wanted = asked_for

@@ -2,6 +2,8 @@ module Fd
   class DecisionsController < BaseController
     include DecisionWords
 
+    permit "decision.write", except: [:index, :show]
+
     VIEWS = {
       "all" => "All",
       "force" => "In force",

@@ -2,6 +2,9 @@ module Fd
   class ResolutionsController < BaseController
     include LogsActions
 
+    permit "case.resolve", on: -> { Case.find(params[:case_id]) }, only: :create
+    permit "case.reopen", on: -> { Case.find(params[:case_id]) }, only: :destroy
+
     def create
       @case = Case.find(params[:case_id])
       @now = Time.current

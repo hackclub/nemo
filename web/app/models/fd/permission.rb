@@ -43,11 +43,11 @@ module Fd
         events: %w[case/resolved]
       },
       "case.reverse" => {
-        label: "Reverse an action somebody logged", roles: LEAD,
+        label: "Reverse an action somebody logged", roles: LEAD, scope: :assigned,
         events: %w[action/reversed]
       },
       "case.reopen" => {
-        label: "Put a resolved case back in the queue", roles: LEAD,
+        label: "Put a resolved case back in the queue", roles: LEAD, scope: :assigned,
         events: %w[case/reopened]
       },
       "decision.write" => {

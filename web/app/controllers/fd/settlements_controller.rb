@@ -1,5 +1,7 @@
 module Fd
   class SettlementsController < BaseController
+    permit "decision.settle"
+
     def create
       decision = Decision.find(params[:decision_id])
 
