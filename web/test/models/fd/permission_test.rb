@@ -6,13 +6,17 @@ class Fd::PermissionTest < ActiveSupport::TestCase
   end
 
   def firefighter
-    @firefighter ||= Staff.create!(user_id: "UFF", community_manager: false)
+    @firefighter ||= holding("UFF", "firefighter")
   end
 
   def lead
-    @lead ||= Staff.create!(user_id: "ULEAD", community_manager: false).tap do |staff|
-      def staff.role = "lead"
-    end
+    @lead ||= holding("ULEAD", "lead")
+  end
+
+  def holding(user_id, role)
+    Staff.create!(user_id: user_id, community_manager: false)
+    Fd::AccessGrant.give!(user_id, role: role, by: "UBOSS")
+    Staff.find(user_id)
   end
 
   test "every permission names a role somebody can hold" do

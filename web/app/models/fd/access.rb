@@ -2,8 +2,9 @@ module Fd
   class Access
     def self.role(staff)
       return nil if staff.nil?
+      return "community_manager" if staff.community_manager?
 
-      staff.community_manager? ? "community_manager" : "firefighter"
+      AccessGrant.role_for(staff.user_id)
     end
 
     def self.allow?(staff, key, record = nil)

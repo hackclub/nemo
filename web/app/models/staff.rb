@@ -3,7 +3,9 @@ class Staff < ApplicationRecord
   self.primary_key = "user_id"
 
   def role
-    Fd::Access.role(self)
+    return @role if defined?(@role)
+
+    @role = Fd::Access.role(self)
   end
 
   def lead?
