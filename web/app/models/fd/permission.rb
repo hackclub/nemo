@@ -20,7 +20,7 @@ module Fd
       },
       "case.open" => {
         label: "Open a case, claim it, hand it back", roles: EVERYONE,
-        events: %w[case/opened case/claimed case/unclaimed]
+        events: %w[case/opened assignee/claimed assignee/unclaimed]
       },
       "case.note" => {
         label: "Write a note, delete their own", roles: EVERYONE, scope: :author,

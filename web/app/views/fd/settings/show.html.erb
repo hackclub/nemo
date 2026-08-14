@@ -64,6 +64,126 @@
         </div>
       </div>
     <% end %>
+    <% elsif @tab == "usage" && @person %>
+      <div class="inspector">
+        <div class="index-side">
+          <% @load.each do |row| %>
+            <%= link_to fd_settings_path(tab: "usage", person: row.user_id), class: "index-item",
+                  aria: { current: (row.user_id == @person.user_id ? "true" : nil) } do %>
+              <span class="index-face"><%= names.initial(row.user_id) %></span>
+              <%= names[row.user_id] %>
+              <%= role_chip(row.role) %>
+            <% end %>
+          <% end %>
+        </div>
+
+        <div class="pane">
+          <div class="mcard-top">
+            <span class="mcard-face"><%= names.initial(@person.user_id) %></span>
+            <span>
+              <span class="mcard-name">
+                <%= names[@person.user_id] %>
+                <%= role_chip(@role) %>
+              </span>
+              <span class="mcard-sub">
+                <span class="mono"><%= @person.user_id %></span>
+                <span>·</span>
+                since <%= @person.granted_at.strftime("%-d %b %Y") %>
+                <span>·</span>
+                <%= acted_line(@last_acted[@person.user_id]) %>
+              </span>
+            </span>
+            <span class="mcard-acts">
+              <%= link_to "The grant", fd_settings_path(person: @person.user_id), class: "btn" %>
+              <%= link_to "Everyone", fd_settings_path(tab: "usage"), class: "btn" %>
+            </span>
+          </div>
+
+          <div class="stat-row">
+            <div>
+              <p class="kpi-label">Cases</p>
+              <p class="kpi-val"><%= @mine.cases %></p>
+            </div>
+            <div>
+              <p class="kpi-label">Actions</p>
+              <p class="kpi-val"><%= @mine.actions %></p>
+            </div>
+            <div>
+              <p class="kpi-label">Reversed</p>
+              <p class="kpi-val"><%= @mine.reversals %></p>
+            </div>
+            <div>
+              <p class="kpi-label">Reads</p>
+              <p class="kpi-val"><%= @mine.reads %></p>
+            </div>
+            <div>
+              <p class="kpi-label">Refused</p>
+              <p class="kpi-val"><%= @mine.refused %></p>
+            </div>
+            <div>
+              <p class="kpi-label">Share of the load</p>
+              <p class="kpi-val"><%= @mine.share %>%</p>
+            </div>
+          </div>
+
+          <div>
+            <p class="band-label">What they did with it · 30 days</p>
+            <div class="lines">
+              <% @did.select { |_key, count| count.positive? }.each do |key, count| %>
+                <%= link_to did_path(@person, key, @asked), class: "line-row",
+                      aria: { current: ("true" if @asked == key) } do %>
+                  <b><%= Fd::Permission.label(key) %></b>
+                  <span class="mono"><%= key %></span>
+                  <span class="line-end"><%= count %></span>
+                <% end %>
+              <% end %>
+              <%= link_to did_path(@person, "identity.read", @asked), class: "line-row",
+                    aria: { current: ("true" if @asked == "identity.read") } do %>
+                <b>Identity reads</b>
+                <span class="mono">identity.read</span>
+                <span class="line-end"><%= @reads %></span>
+              <% end %>
+            </div>
+          </div>
+
+          <div>
+            <p class="band-label">
+              <%= @asked ? Fd::Permission.label(@asked) : "Newest first" %>
+              · <%= @deeds.rows.size %>
+            </p>
+            <% if @deeds.rows.any? %>
+              <div class="lines">
+                <% @deeds.rows.each do |deed| %>
+                  <span class="line-row">
+                    <b><%= deed_head(deed) %></b>
+                    <span><%= deed_said(deed) %></span>
+                    <span class="line-end"><%= deed.at.strftime("%-d %b %H:%M") %></span>
+                  </span>
+                <% end %>
+              </div>
+            <% else %>
+              <p class="card-note">Nothing in 30 days.</p>
+            <% end %>
+          </div>
+
+          <div>
+            <p class="band-label">Refused · <%= @refused.size %></p>
+            <% if @refused.any? %>
+              <div class="lines">
+                <% @refused.each do |row| %>
+                  <span class="line-row">
+                    <b><%= Fd::Permission.label(row.after["permission"]) %></b>
+                    <span><%= row.entity_type %> <%= row.entity_id.positive? ? row.entity_id : nil %></span>
+                    <span class="line-end"><%= row.occurred_at.strftime("%-d %b %H:%M") %></span>
+                  </span>
+                <% end %>
+              </div>
+            <% else %>
+              <p class="card-note">Never refused.</p>
+            <% end %>
+          </div>
+        </div>
+      </div>
     <% elsif @tab == "usage" %>
       <div class="kpis">
         <div class="card">
@@ -110,17 +230,22 @@
                   <td>
                     <span class="two-line">
                       <b>
-                        <%= link_to names[row.user_id], fd_settings_path(person: row.user_id) %>
+                        <%= link_to names[row.user_id],
+                              fd_settings_path(tab: "usage", person: row.user_id) %>
                         <%= role_chip(row.role) %>
                       </b>
                       <span class="idline"><%= acted_line(@last_acted[row.user_id]) %></span>
                     </span>
                   </td>
-                  <td class="col-num"><%= row.cases %></td>
-                  <td class="col-num"><%= row.actions %></td>
-                  <td class="col-num"><%= row.reversals %></td>
-                  <td class="col-num"><%= row.reads %></td>
-                  <td class="col-num"><%= row.refused %></td>
+                  <td class="col-num"><%= tally_link(row.user_id, row.cases) %></td>
+                  <td class="col-num"><%= tally_link(row.user_id, row.actions, "case.act") %></td>
+                  <td class="col-num">
+                    <%= tally_link(row.user_id, row.reversals, "case.reverse") %>
+                  </td>
+                  <td class="col-num">
+                    <%= tally_link(row.user_id, row.reads, "identity.read") %>
+                  </td>
+                  <td class="col-num"><%= tally_link(row.user_id, row.refused) %></td>
                   <td><%= load_bar(row.share) %></td>
                 </tr>
               <% end %>
@@ -165,26 +290,10 @@
               <% if current_staff.may?("access.grant") %>
                 <label for="change-access" class="btn">Change</label>
               <% end %>
+              <%= link_to "What they did", fd_settings_path(tab: "usage",
+                    person: @person.user_id), class: "btn" %>
               <%= link_to "Everyone", fd_settings_path, class: "btn" %>
             </span>
-          </div>
-
-          <div>
-            <p class="band-label">What they did with it · 30 days</p>
-            <div class="lines">
-              <% @did.select { |_key, count| count.positive? }.each do |key, count| %>
-                <span class="line-row">
-                  <b><%= Fd::Permission.label(key) %></b>
-                  <span class="mono"><%= key %></span>
-                  <span class="line-end"><%= count %></span>
-                </span>
-              <% end %>
-              <span class="line-row">
-                <b>Identity reads</b>
-                <span class="mono">identity.read</span>
-                <span class="line-end"><%= @reads %></span>
-              </span>
-            </div>
           </div>
 
           <div>
@@ -203,23 +312,6 @@
               </div>
             <% else %>
               <p class="card-note">Nothing. They hold the lot.</p>
-            <% end %>
-          </div>
-
-          <div>
-            <p class="band-label">Refused · <%= @refused.size %></p>
-            <% if @refused.any? %>
-              <div class="lines">
-                <% @refused.each do |row| %>
-                  <span class="line-row">
-                    <b><%= Fd::Permission.label(row.after["permission"]) %></b>
-                    <span><%= row.entity_type %> <%= row.entity_id.positive? ? row.entity_id : nil %></span>
-                    <span class="line-end"><%= row.occurred_at.strftime("%-d %b %H:%M") %></span>
-                  </span>
-                <% end %>
-              </div>
-            <% else %>
-              <p class="card-note">Never refused.</p>
             <% end %>
           </div>
         </div>

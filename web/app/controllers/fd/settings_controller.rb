@@ -20,9 +20,10 @@ module Fd
       @last_acted = last_acted
       @dormant = dormant
       @person = chosen
-      person_facts if @person
+      grant_facts if @person
       @used = used_lately if @tab == "roles"
       usage_facts if @tab == "usage"
+      deed_facts if @person && @tab == "usage"
       @counts = tab_counts
       @names = Names.for(named)
     end
@@ -39,14 +40,19 @@ module Fd
       @grants.find { |grant| grant.user_id == asked }
     end
 
-    def person_facts
+    def grant_facts
       @role = @person.role
-      @did = did_with_it
       @cannot = Permission.keys - Permission.held_by(@role)
+    end
+
+    def deed_facts
+      @mine = @load.find { |row| row.user_id == @person.user_id }
+      @did = did_with_it
+      @reads = @read_counts[@person.user_id].to_i
       @refused = AuditEntry.where(actor_user_id: @person.user_id, verb: "refused")
         .recent_first.limit(REFUSALS_SHOWN).to_a
-      @reads = AccessLog.where(actor_id: @person.user_id, field_class: "identity")
-        .where(looked_at: WINDOW.ago..).count
+      @asked = Permission.keys.find { |key| key == params[:did].to_s }
+      @deeds = Deeds.new(@person.user_id, since: WINDOW.ago, only: @asked)
     end
 
     def used_lately
@@ -126,6 +132,7 @@ module Fd
 
     def named
       holders + @grants.map(&:granted_by) + Array(@top_reader&.first) +
+        Array(@deeds&.member_ids) +
         Array(@history).flat_map { |grant|
           [grant.user_id, grant.granted_by, grant.revoked_by]
         }.compact

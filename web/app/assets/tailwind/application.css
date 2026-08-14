@@ -2177,6 +2177,24 @@
     border-top: 1px solid var(--line-soft);
   }
 
+  a.line-row {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  a.line-row:hover b {
+    text-decoration: underline;
+  }
+
+  a.line-row[aria-current] b {
+    color: var(--accent);
+  }
+
+  a.line-row[aria-current] .line-end {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
   .line-why {
     font-size: var(--t-2xs);
     color: var(--ink-3);

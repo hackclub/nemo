@@ -206,7 +206,7 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     assert_select ".mcard-sub", text: /night shift while sam is away/
   end
 
-  test "the pane counts what they did with the grant, by permission" do
+  test "one person on the usage tab counts what they did, by permission" do
     give("UFF1")
     3.times do |n|
       Fd::AuditEntry.create!(actor_user_id: "UFF1", actor_kind: "human", entity_type: "action",
@@ -215,10 +215,73 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     Fd::AuditEntry.create!(actor_user_id: "UFF1", actor_kind: "human", entity_type: "case",
       entity_id: 1, verb: "opened", source_app: "fire_engine", occurred_at: 2.months.ago)
 
-    get fd_settings_path(person: "UFF1")
+    get fd_settings_path(tab: "usage", person: "UFF1")
 
     assert_select ".line-row", text: /Log an action.*case\.act.*3/m
     assert_select ".line-row", text: /Open a case/, count: 0
+    assert_select ".stat-row .kpi-val", text: "3"
+  end
+
+  test "a claim counts towards opening a case, which is where it is audited" do
+    give("UFF1")
+    Fd::AuditEntry.create!(actor_user_id: "UFF1", actor_kind: "human", entity_type: "assignee",
+      entity_id: 41, verb: "claimed", source_app: "fire_engine")
+
+    get fd_settings_path(tab: "usage", person: "UFF1")
+
+    assert_select ".line-row", text: /Open a case, claim it.*case\.open.*1/m
+    assert_select ".line-row", text: /Claimed case 41/
+  end
+
+  test "the person view shows the work itself, not just how much of it there was" do
+    give("UFF1")
+    kase = make_case
+    action = Fd::Action.create!(case_id: kase.id, type_key: "temp_ban", target_user_id: "USUB",
+      decided_by: "UFF1", performed_by: "UFF1")
+    Fd::AuditEntry.create!(actor_user_id: "UFF1", actor_kind: "human", entity_type: "action",
+      entity_id: action.id, verb: "performed", source_app: "fire_engine")
+
+    get fd_settings_path(tab: "usage", person: "UFF1")
+
+    assert_select ".line-row", text: /Logged an action on case #{kase.id}.*temp ban on/m
+    assert_select ".line-row a[href=?]", fd_case_path(kase)
+  end
+
+  test "a number in the usage table opens that person filtered to it" do
+    give("UFF1")
+    Fd::AuditEntry.create!(actor_user_id: "UFF1", actor_kind: "human", entity_type: "action",
+      entity_id: 1, verb: "performed", source_app: "fire_engine")
+
+    get fd_settings_path(tab: "usage")
+
+    assert_select "td a[href=?]",
+      fd_settings_path(tab: "usage", person: "UFF1", did: "case.act"), text: "1"
+  end
+
+  test "asking for one permission narrows the list to it" do
+    give("UFF1")
+    kase = make_case
+    Fd::AuditEntry.create!(actor_user_id: "UFF1", actor_kind: "human", entity_type: "case",
+      entity_id: kase.id, verb: "opened", source_app: "fire_engine")
+    AccessLog.create!(actor_id: "UFF1", subject_user_id: "USUB", field_class: "identity",
+      looked_at: 1.day.ago)
+
+    get fd_settings_path(tab: "usage", person: "UFF1", did: "identity.read")
+
+    assert_select "a.line-row[aria-current='true']", text: /identity\.read/
+    assert_select ".line-row", text: /Read the identity of/
+    assert_select ".line-row", text: /Opened case/, count: 0
+  end
+
+  test "the permission already asked for links back to everything" do
+    give("UFF1")
+    Fd::AuditEntry.create!(actor_user_id: "UFF1", actor_kind: "human", entity_type: "case",
+      entity_id: 1, verb: "opened", source_app: "fire_engine")
+
+    get fd_settings_path(tab: "usage", person: "UFF1", did: "case.open")
+
+    assert_select "a.line-row[aria-current='true'][href=?]",
+      fd_settings_path(tab: "usage", person: "UFF1")
   end
 
   test "the pane lists what the role does not cover" do
@@ -242,21 +305,21 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     AccessLog.create!(actor_id: "UFF1", subject_user_id: "USUB", field_class: "identity",
       looked_at: 2.days.ago)
 
-    get fd_settings_path(person: "UFF1")
+    get fd_settings_path(tab: "usage", person: "UFF1")
 
     assert_select ".line-row", text: /Identity reads.*1/m
   end
 
-  test "the pane keeps the refusals, and says so when there are none" do
+  test "the person view keeps the refusals, and says so when there are none" do
     give("UFF1")
-    get fd_settings_path(person: "UFF1")
+    get fd_settings_path(tab: "usage", person: "UFF1")
     assert_select ".card-note", text: "Never refused."
 
     Fd::AuditEntry.create!(actor_user_id: "UFF1", actor_kind: "human", entity_type: "case",
       entity_id: 41, verb: "refused", source_app: "fire_engine",
       after: { "permission" => "case.reverse", "role" => "firefighter" })
 
-    get fd_settings_path(person: "UFF1")
+    get fd_settings_path(tab: "usage", person: "UFF1")
     assert_select ".band-label", text: /Refused · 1/
     assert_select ".line-row", text: /Reverse an action.*case 41/m
   end

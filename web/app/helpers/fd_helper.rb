@@ -584,6 +584,74 @@ module FdHelper
     last_case_label(at)
   end
 
+  DEED_WORDS = {
+    "case/opened" => "Opened",
+    "case/claimed" => "Claimed",
+    "case/unclaimed" => "Handed back",
+    "case/resolved" => "Resolved",
+    "case/reopened" => "Reopened",
+    "case/followed" => "Linked a decision to",
+    "case/unfollowed" => "Unlinked a decision from",
+    "note/noted" => "Wrote a note on",
+    "note/deleted" => "Deleted a note on",
+    "participant/attached" => "Added somebody to",
+    "participant/detached" => "Took somebody off",
+    "assignee/attached" => "Assigned",
+    "assignee/detached" => "Unassigned",
+    "assignee/claimed" => "Claimed",
+    "assignee/unclaimed" => "Handed back",
+    "thread/attached" => "Attached a thread to",
+    "thread/detached" => "Detached a thread from",
+    "citation/flagged" => "Flagged a message on",
+    "citation/unflagged" => "Unflagged a message on",
+    "action/performed" => "Logged an action on",
+    "action/reversed" => "Reversed an action on",
+    "report/received" => "Took a report on",
+    "report/closed" => "Told the reporter on",
+    "decision/proposed" => "Proposed",
+    "decision/amended" => "Reworded",
+    "decision/dropped" => "Dropped",
+    "decision/settled" => "Settled",
+    "decision/superseded" => "Retired",
+    "decision_thread/attached" => "Linked a thread to",
+    "decision_thread/detached" => "Unlinked a thread from",
+    "grant/granted" => "Gave access to",
+    "grant/revoked" => "Took access from",
+    "identity/read" => "Read the identity of"
+  }.freeze
+
+  def did_path(person, key, asked)
+    fd_settings_path(tab: "usage", person: person.user_id, did: (key unless asked == key))
+  end
+
+  def tally_link(user_id, count, key = nil)
+    return count.to_s if count.zero?
+
+    link_to count, fd_settings_path(tab: "usage", person: user_id, did: key), class: "lnk"
+  end
+
+  def deed_words(event)
+    DEED_WORDS.fetch(event) { event.tr("_/", " ").capitalize }
+  end
+
+  def deed_head(deed)
+    return deed_words(deed.event) if deed.kind.nil?
+
+    safe_join([deed_words(deed.event), deed_link(deed)], " ")
+  end
+
+  def deed_link(deed)
+    case deed.kind
+    when "case" then link_to deed.about, fd_case_path(deed.id), class: "lnk"
+    when "decision" then link_to deed.about, fd_decision_path(deed.id), class: "lnk"
+    else member_link(deed.id)
+    end
+  end
+
+  def deed_said(deed)
+    [deed.said, ("on #{names[deed.who]}" if deed.who.present?)].compact.join(" ")
+  end
+
   def acted_line(at)
     at ? "acted #{last_case_label(at)}" : "nothing yet"
   end
