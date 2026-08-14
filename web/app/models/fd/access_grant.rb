@@ -22,6 +22,7 @@ module Fd
       refuse "#{role} is not a role" unless Permission::ROLES.include?(role.to_s)
 
       transaction do
+        Staff.find_or_create_by!(user_id: user_id)
         live.where(user_id: user_id).find_each { |held| held.take_back!(by: by, at: at) }
         create!(user_id: user_id, role: role, granted_by: by, granted_at: at,
           reason: reason.presence)

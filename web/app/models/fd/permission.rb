@@ -74,6 +74,9 @@ module Fd
         label: "See the real name and email behind an id", roles: EVERYONE, events: [],
         logged: true
       },
+      "access.read" => {
+        label: "See who holds access and what they did with it", roles: MANAGER, events: []
+      },
       "access.grant" => {
         label: "Give or take back access", roles: MANAGER,
         events: %w[grant/granted grant/revoked permission/granted permission/revoked]

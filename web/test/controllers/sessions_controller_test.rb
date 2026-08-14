@@ -20,12 +20,22 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "UTESTALLOWED", session[:user_id]
   end
 
+  test "a staff row with no grant is rejected like a stranger" do
+    Staff.create!(user_id: "UTESTNOGRANT", community_manager: false)
+    mock_hca_auth("UTESTNOGRANT")
+
+    get "/auth/hackclub/callback"
+
+    assert_redirected_to auth_failure_path(message: "no_access")
+    assert_nil session[:user_id]
+  end
+
   test "unknown slack id is rejected" do
     mock_hca_auth("UNOTALLOWED")
 
     get "/auth/hackclub/callback"
 
-    assert_redirected_to auth_failure_path(message: "not_on_allowlist")
+    assert_redirected_to auth_failure_path(message: "no_access")
     assert_nil session[:user_id]
   end
 
@@ -39,7 +49,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     get "/auth/hackclub/callback"
 
-    assert_redirected_to auth_failure_path(message: "not_on_allowlist")
+    assert_redirected_to auth_failure_path(message: "no_access")
   end
 
   test "logout clears the session" do

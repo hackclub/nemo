@@ -20,10 +20,12 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
     get fd_settings_path(tab: "roles")
     assert_equal "button", switch_for("decision.settle", "firefighter").name
 
+    move("lead", "access.read", "1")
     Staff.find("UME").update!(community_manager: false)
     Fd::AccessGrant.give!("UME", role: "lead", by: "UME")
 
     get fd_settings_path(tab: "roles")
+    assert_response :success
     assert_equal "span", switch_for("decision.settle", "firefighter").name
   end
 

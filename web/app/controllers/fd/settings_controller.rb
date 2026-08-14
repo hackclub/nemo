@@ -1,6 +1,8 @@
 module Fd
   class SettingsController < BaseController
-    TABS = { "access" => "Access", "roles" => "Roles", "usage" => "Usage",
+    permit "access.read"
+
+    TABS ={ "access" => "Access", "roles" => "Roles", "usage" => "Usage",
              "history" => "Grant history" }.freeze
     WINDOW = 30.days
     DORMANT_AFTER = 30.days

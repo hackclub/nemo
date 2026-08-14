@@ -1,5 +1,5 @@
 <h1>Sign in</h1>
-<p>Access is restricted to allowlisted staff.</p>
+<p>Only people a community manager has given access can sign in.</p>
 
 <%= form_tag "/auth/hackclub", method: :post, authenticity_token: false, data: { turbo: false } do %>
   <%= hidden_field_tag :authenticity_token, Rack::Protection::AuthenticityToken.token(session) %>

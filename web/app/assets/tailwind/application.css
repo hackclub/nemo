@@ -3327,8 +3327,8 @@
     margin-inline: auto;
   }
 
-  .auth-alt {
-    margin-top: var(--s-sm);
+  .auth-card .auth-alt {
+    margin: var(--s-sm) 0 0;
     font-size: var(--t-2xs);
     color: var(--ink-3);
   }

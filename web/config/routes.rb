@@ -6,6 +6,10 @@ Rails.application.routes.draw do
   get "auth/failure", to: "sessions#failure", as: :auth_failure
   delete "logout", to: "sessions#destroy", as: :logout
 
+  if Rails.env.development?
+    get "dev/be/:user_id", to: "dev_sessions#create", as: :dev_be
+  end
+
   namespace :fd do
     root to: "cases#index"
     post "cases/merge", to: "merges#create", as: :merge_cases

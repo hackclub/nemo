@@ -1,10 +1,14 @@
 <h1>Access denied</h1>
 
-<% if @message == "not_on_allowlist" %>
-  <p>Hack Club auth accepted you, but you are not on Mnemosyne&rsquo;s staff list. Ask whoever runs this to add you.</p>
+<% if @message == "no_access" %>
+  <p>You do not have access to Mnemosyne. Ask a community manager for it.</p>
 <% else %>
   <p>Something went wrong signing in.</p>
   <p><span class="chip chip-off"><%= @message %></span></p>
 <% end %>
 
-<%= link_to "Back to sign in", login_path, class: "btn w-full" %>
+<% if current_staff %>
+  <%= button_to "Sign out", logout_path, method: :delete, class: "btn w-full" %>
+<% else %>
+  <%= link_to "Back to sign in", login_path, class: "btn w-full" %>
+<% end %>

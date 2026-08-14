@@ -99,7 +99,7 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select ".band-label", text: /Cases · 9/
     assert_select ".band-label", text: /Decisions · 4/
-    assert_select ".band-label", text: /People and access · 3/
+    assert_select ".band-label", text: /People and access · 4/
     assert_select "td.mono", text: "case.reverse"
     assert_select "td.mono", count: Fd::Permission.keys.size
   end
@@ -288,7 +288,7 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     give("UFF1")
     get fd_settings_path(person: "UFF1")
 
-    assert_select ".band-label", text: /What the role does not cover · 3/
+    assert_select ".band-label", text: /What the role does not cover · 4/
     assert_select ".line-row", text: /Settle a proposal.*lead only/m
     assert_select ".line-row", text: /Give or take back access.*community manager only/m
   end
@@ -297,7 +297,7 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     give("ULEAD", role: "lead")
     get fd_settings_path(person: "ULEAD")
 
-    assert_select ".band-label", text: /What the role does not cover · 1/
+    assert_select ".band-label", text: /What the role does not cover · 2/
   end
 
   test "identity reads are counted for everybody, since everybody may read" do
@@ -335,5 +335,17 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
   test "the rail carries settings" do
     get fd_settings_path
     assert_select ".rail-item[aria-current='page']", text: /Settings/
+  end
+
+  test "a firefighter is not offered settings, and is turned away from it" do
+    Staff.find("UME").update!(community_manager: false)
+    Fd::AccessGrant.give!("UME", role: "firefighter", by: "UME")
+
+    get fd_cases_path
+    assert_select ".rail-item", text: /Settings/, count: 0
+
+    get fd_settings_path
+    assert_redirected_to fd_cases_path
+    assert_equal 1, Fd::AuditEntry.where(verb: "refused").count
   end
 end

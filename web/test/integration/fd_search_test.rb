@@ -19,7 +19,8 @@ class FdSearchTest < ActionDispatch::IntegrationTest
     delete logout_path
     get fd_search_path(format: :json), params: { q: "raid" }
 
-    assert_redirected_to login_path
+    assert_response :unauthorized
+    assert_empty response.body
   end
 
   test "an empty box offers what is waiting and what you can do" do

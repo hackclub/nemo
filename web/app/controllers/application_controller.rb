@@ -22,6 +22,8 @@ class ApplicationController < ActionController::Base
 
   def require_staff
     return if current_staff&.role.present?
+    return head :unauthorized if request.format.json?
+    return redirect_to auth_failure_path(message: "no_access") if current_staff
 
     redirect_to login_path, alert: "sign in to continue"
   end
