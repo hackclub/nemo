@@ -6,9 +6,13 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
   end
 
+  def ours
+    Fd::Decision.where.not("proposed_by LIKE 'USEED%'")
+  end
+
   def write(**attrs)
     Fd::Decision.create!({
-      title: "Spam accounts",
+      title: "Throwaway accounts",
       statement: "A first-post account posting an invite link is banned on sight.",
       proposed_by: "UFF1"
     }.merge(attrs))
@@ -27,9 +31,9 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "the log renders with every state on it" do
-    rule = settled(title: "Pile-ons")
-    write(title: "Appeals")
-    dead = settled(title: "Warnings by DM")
+    rule = settled(title: "Dogpiling")
+    write(title: "Second chances")
+    dead = settled(title: "Warnings in public")
     dead.supersede!(rule, by: "ULEAD")
 
     get fd_decisions_path
@@ -45,12 +49,12 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "the page renders for a proposal, a rule and a retired one" do
-    proposal = write(title: "Appeals")
-    rule = settled(title: "Pile-ons", category_key: "harassment_general",
+    proposal = write(title: "Second chances")
+    rule = settled(title: "Dogpiling", category_key: "harassment_general",
       reasons: ["five cases for one thread is bookkeeping"])
     rule.threads.create!(channel_id: "C0266FRGV", thread_ts: "1.1",
       added_by: "UFF1", why: "where it was decided")
-    dead = settled(title: "Warnings by DM")
+    dead = settled(title: "Warnings in public")
     dead.supersede!(rule, by: "ULEAD")
 
     [proposal, rule, dead].each do |decision|
@@ -60,7 +64,7 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a thread can be picked out of the pane by id" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     decision.threads.create!(channel_id: "C0FIREHOUSE", thread_ts: "1.1", added_by: "UME")
     second = decision.threads.create!(channel_id: "C0LOUNGE", thread_ts: "2.2",
       added_by: "UME", kind: "reference")
@@ -75,11 +79,11 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "writing one lands it as proposed, under whoever wrote it" do
-    post fd_decisions_path, params: { title: "Screenshots as evidence",
+    post fd_decisions_path, params: { title: "Logs as evidence",
       statement: "A screenshot alone is never enough to act, ask for the permalink.",
       category_key: "spam" }
 
-    decision = Fd::Decision.sole
+    decision = ours.sole
     assert_predicate decision, :proposed?
     assert_equal "UME", decision.proposed_by
     assert_equal "spam", decision.category_key
@@ -90,35 +94,36 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
 
   test "a decision with no name or no sentence is refused" do
     post fd_decisions_path, params: { title: "", statement: "something" }
-    post fd_decisions_path, params: { title: "Appeals", statement: "  " }
+    post fd_decisions_path, params: { title: "Second chances", statement: "  " }
 
-    assert_equal 0, Fd::Decision.count
+    assert_equal 0, ours.count
   end
 
   test "a category nobody offered is dropped rather than stored" do
-    post fd_decisions_path, params: { title: "Appeals", statement: "read by somebody else",
-      category_key: "vibes" }
+    post fd_decisions_path, params: { title: "Second chances",
+      statement: "read by somebody else", category_key: "vibes" }
 
-    assert_nil Fd::Decision.sole.category_key
+    assert_nil ours.sole.category_key
   end
 
   test "two live decisions cannot share a name" do
-    settled(title: "Spam accounts")
-    post fd_decisions_path, params: { title: "spam accounts", statement: "again" }
+    settled(title: "Throwaway accounts")
+    post fd_decisions_path, params: { title: "throwaway accounts", statement: "again" }
 
-    assert_equal 1, Fd::Decision.count
+    assert_equal 1, ours.count
   end
 
   test "a signed out visitor cannot write one" do
     delete logout_path
-    post fd_decisions_path, params: { title: "Appeals", statement: "read by somebody else" }
+    post fd_decisions_path, params: { title: "Second chances",
+      statement: "read by somebody else" }
 
-    assert_equal 0, Fd::Decision.count
+    assert_equal 0, ours.count
   end
 
   test "a proposal can be reworded, and the reasons are one per line" do
-    decision = write(title: "Appeals")
-    patch fd_decision_path(decision), params: { title: "Appeals",
+    decision = write(title: "Second chances")
+    patch fd_decision_path(decision), params: { title: "Second chances",
       statement: "An appeal is read by somebody who was not on the case.",
       reasons: "the first reader has already made up their mind\n\n  it costs one message  " }
 
@@ -131,7 +136,7 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "settling makes it the rule, and says who agreed" do
-    decision = write(title: "Appeals")
+    decision = write(title: "Second chances")
     post fd_decision_settlement_path(decision)
 
     decision.reload
@@ -142,15 +147,15 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "settling twice is refused, so the first agreement stands" do
-    decision = settled(title: "Pile-ons")
+    decision = settled(title: "Dogpiling")
     post fd_decision_settlement_path(decision)
 
     assert_equal "ULEAD", decision.reload.settled_by
   end
 
   test "a settled decision is amended, and stays settled" do
-    decision = settled(title: "Pile-ons")
-    patch fd_decision_path(decision), params: { title: "Pile-ons",
+    decision = settled(title: "Dogpiling")
+    patch fd_decision_path(decision), params: { title: "Dogpiling",
       statement: "One lock and a note to the loudest three, unless it is a raid." }
 
     decision.reload
@@ -163,25 +168,25 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a retired decision is neither edited nor amended" do
-    rule = settled(title: "Spam accounts")
-    dead = settled(title: "Warnings by DM")
+    rule = settled(title: "Throwaway accounts")
+    dead = settled(title: "Warnings in public")
     dead.supersede!(rule, by: "ULEAD")
 
-    patch fd_decision_path(dead), params: { title: "Warnings by DM", statement: "no" }
+    patch fd_decision_path(dead), params: { title: "Warnings in public", statement: "no" }
 
     assert_not_equal "no", dead.reload.statement
   end
 
   test "superseding writes the replacement and retires the old one in one move" do
-    old = settled(title: "Warnings by DM", reasons: ["it was quieter"])
-    post fd_decision_supersession_path(old), params: { title: "Spam accounts",
+    old = settled(title: "Warnings in public", reasons: ["it was quieter"])
+    post fd_decision_supersession_path(old), params: { title: "Throwaway accounts",
       statement: "Banned on sight for a first-post invite link.",
       category_key: "spam", reasons: "warning a throwaway does nothing" }
 
-    fresh = Fd::Decision.in_force.sole
+    fresh = ours.in_force.sole
     old.reload
 
-    assert_equal "Spam accounts", fresh.title
+    assert_equal "Throwaway accounts", fresh.title
     assert_equal "UME", fresh.settled_by
     assert_equal ["warning a throwaway does nothing"], fresh.reasons
     assert_predicate old, :superseded?
@@ -195,32 +200,33 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a replacement with no sentence is refused, and nothing is retired" do
-    old = settled(title: "Warnings by DM")
-    post fd_decision_supersession_path(old), params: { title: "Spam accounts", statement: "" }
+    old = settled(title: "Warnings in public")
+    post fd_decision_supersession_path(old), params: { title: "Throwaway accounts",
+      statement: "" }
 
     assert_predicate old.reload, :settled?
-    assert_equal 1, Fd::Decision.count
+    assert_equal 1, ours.count
   end
 
   test "a replacement cannot reuse the name of a live decision" do
-    settled(title: "Spam accounts")
-    old = settled(title: "Warnings by DM")
-    post fd_decision_supersession_path(old), params: { title: "spam accounts",
+    settled(title: "Throwaway accounts")
+    old = settled(title: "Warnings in public")
+    post fd_decision_supersession_path(old), params: { title: "throwaway accounts",
       statement: "something" }
 
     assert_predicate old.reload, :settled?
   end
 
   test "a proposal cannot be superseded, it was never the rule" do
-    old = write(title: "Appeals")
-    post fd_decision_supersession_path(old), params: { title: "Appeals, again",
+    old = write(title: "Second chances")
+    post fd_decision_supersession_path(old), params: { title: "Second chances, again",
       statement: "something" }
 
-    assert_equal 1, Fd::Decision.count
+    assert_equal 1, ours.count
   end
 
   test "a rule can be retired without anything replacing it" do
-    decision = settled(title: "Night shift")
+    decision = settled(title: "Weekend cover")
     post fd_decision_retirement_path(decision)
 
     decision.reload
@@ -232,14 +238,14 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a proposal is dropped, not retired" do
-    decision = write(title: "Appeals")
+    decision = write(title: "Second chances")
     post fd_decision_retirement_path(decision)
 
     assert_predicate decision.reload, :proposed?
   end
 
   test "retiring twice is refused" do
-    decision = settled(title: "Night shift")
+    decision = settled(title: "Weekend cover")
     post fd_decision_retirement_path(decision)
     post fd_decision_retirement_path(decision)
 
@@ -247,19 +253,19 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a signed out visitor cannot settle or supersede" do
-    decision = write(title: "Appeals")
+    decision = write(title: "Second chances")
     delete logout_path
 
     post fd_decision_settlement_path(decision)
     assert_predicate decision.reload, :proposed?
 
     post fd_decision_supersession_path(decision), params: { title: "x", statement: "y" }
-    assert_equal 1, Fd::Decision.count
+    assert_equal 1, ours.count
   end
 
   test "whoever proposed it can drop it, and nobody else can" do
-    mine = write(title: "Appeals", proposed_by: "UME")
-    theirs = write(title: "Night shift", proposed_by: "UFF1")
+    mine = write(title: "Second chances", proposed_by: "UME")
+    theirs = write(title: "Weekend cover", proposed_by: "UFF1")
 
     delete fd_decision_path(theirs)
     assert Fd::Decision.exists?(theirs.id)
@@ -271,14 +277,14 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a settled decision cannot be dropped" do
-    decision = settled(title: "Pile-ons", proposed_by: "UME")
+    decision = settled(title: "Dogpiling", proposed_by: "UME")
     delete fd_decision_path(decision)
 
     assert Fd::Decision.exists?(decision.id)
   end
 
   test "several links land as several threads in one go" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     post fd_decision_threads_path(decision), params: {
       links: "https://hackclub.slack.com/archives/C0266FRGV/p1754079240123456\n" \
              "https://hackclub.slack.com/archives/C0155HFRGV/p1754079880123456\n",
@@ -294,7 +300,7 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a thread is internal discussion unless it says otherwise" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     post fd_decision_threads_path(decision), params: {
       links: "https://hackclub.slack.com/archives/C0266FRGV/p1754079240123456"
     }
@@ -308,7 +314,7 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a kind nobody offered falls back to internal" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     post fd_decision_threads_path(decision), params: {
       links: "https://hackclub.slack.com/archives/C0266FRGV/p1754079240123456",
       kind: "evidence"
@@ -318,7 +324,7 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a line that is not a Slack thread link is dropped, and the rest still land" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     post fd_decision_threads_path(decision), params: {
       links: "https://hackclub.slack.com/archives/C0266FRGV/p1754079240123456\n" \
              "https://example.com/nope\nnot a link at all"
@@ -328,7 +334,7 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "the same thread twice in one paste is linked once" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     link = "https://hackclub.slack.com/archives/C0266FRGV/p1754079240123456"
     post fd_decision_threads_path(decision), params: { links: "#{link}\n#{link}" }
 
@@ -336,7 +342,7 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a thread already linked keeps the reason it was linked with" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     link = "https://hackclub.slack.com/archives/C0266FRGV/p1754079240123456"
     post fd_decision_threads_path(decision), params: { links: link, why: "first reason" }
     post fd_decision_threads_path(decision), params: { links: link, why: "second reason" }
@@ -346,28 +352,28 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "an empty paste links nothing" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     post fd_decision_threads_path(decision), params: { links: "   " }
 
     assert_equal 0, decision.threads.count
   end
 
   test "unlinking a thread leaves the trail behind" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     thread = decision.threads.create!(channel_id: "C1", thread_ts: "1.1", added_by: "UME",
       why: "the wave")
 
     delete fd_decision_thread_path(decision, thread)
 
     assert_equal 0, decision.threads.count
-    entry = Fd::AuditEntry.where(entity_type: "decision_thread", verb: "detached").sole
-    assert_equal decision.id, entry.entity_id
+    entry = Fd::AuditEntry.where(entity_type: "decision_thread", verb: "detached",
+      entity_id: decision.id).sole
     assert_equal "the wave", entry.before["why"]
   end
 
   test "a thread on another decision cannot be unlinked from this one" do
-    mine = settled(title: "Spam accounts")
-    theirs = settled(title: "Pile-ons")
+    mine = settled(title: "Throwaway accounts")
+    theirs = settled(title: "Dogpiling")
     thread = theirs.threads.create!(channel_id: "C1", thread_ts: "1.1", added_by: "UME")
 
     delete fd_decision_thread_path(mine, thread)
@@ -376,7 +382,7 @@ class FdDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a signed out visitor cannot link a thread" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     delete logout_path
     post fd_decision_threads_path(decision), params: {
       links: "https://hackclub.slack.com/archives/C0266FRGV/p1754079240123456"

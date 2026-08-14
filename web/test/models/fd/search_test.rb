@@ -18,8 +18,8 @@ class Fd::SearchTest < ActiveSupport::TestCase
   end
 
   def decision(**attrs)
-    Fd::Decision.create!({ title: "Spam accounts", proposed_by: "UFF1",
-      statement: "A first-post account posting an invite link is banned on sight." }.merge(attrs))
+    Fd::Decision.create!({ title: "Referral accounts", proposed_by: "UFF1",
+      statement: "A brand new handle posting a banjo link is banned on sight." }.merge(attrs))
   end
 
   test "a term nobody typed asks the database nothing" do
@@ -29,18 +29,19 @@ class Fd::SearchTest < ActiveSupport::TestCase
   end
 
   test "a group with nothing in it is left out" do
-    decision(title: "Pile-ons", statement: "one lock and a note to the loudest three")
+    decision(title: "Dogpiling", statement: "one lock and a note to the noisiest three")
 
-    assert_equal ["decision"], kinds("loudest")
+    assert_equal ["decision"], kinds("noisiest")
   end
 
   test "a decision is found by its name, its sentence or one of its reasons" do
-    decision(reasons: ["warning a throwaway does nothing"])
+    decision(reasons: ["warning a kazoo does nothing"])
 
-    assert_equal ["Spam accounts"], rows("spam", "decision").map { |row| row.record.title }
-    assert_equal ["Spam accounts"], rows("invite link", "decision").map { |row| row.record.title }
-    assert_equal ["Spam accounts"], rows("throwaway", "decision").map { |row| row.record.title }
-    assert_empty rows("banjo", "decision")
+    %w[referral banjo kazoo].each do |typed|
+      assert_equal ["Referral accounts"], rows(typed, "decision").map { |row| row.record.title },
+        "#{typed} should find the decision under test and nothing else"
+    end
+    assert_empty rows("harpsichord", "decision")
   end
 
   test "a case is found by its number, however it is typed" do
@@ -134,7 +135,7 @@ class Fd::SearchTest < ActiveSupport::TestCase
   end
 
   test "a rule in force outranks a proposal, and a retired one comes last" do
-    dead = decision(title: "Warnings by DM", statement: "a raid gets a warning")
+    dead = decision(title: "Warnings in public", statement: "a raid gets a warning")
     dead.settle!(by: "ULEAD")
     rule = decision(title: "Raid nights", statement: "a raid is locked on sight")
     rule.settle!(by: "ULEAD")

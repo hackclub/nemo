@@ -16,7 +16,7 @@ class FdGatingTest < ActionDispatch::IntegrationTest
   end
 
   def proposal
-    Fd::Decision.create!(title: "Pile-ons", statement: "one warning each",
+    Fd::Decision.create!(title: "Dogpiling", statement: "one warning each",
       proposed_by: "UFF1", proposed_at: 2.days.ago)
   end
 
@@ -40,6 +40,16 @@ class FdGatingTest < ActionDispatch::IntegrationTest
     assert_nil dead("Resolve")
     assert_nil dead("Log an action")
     assert_select "label[for=?]", "resolve-case", text: "Resolve"
+  end
+
+  test "a resolved case anybody can reopen, whoever it was assigned to" do
+    kase = make_case(assign: "UOTHER", resolved_at: 1.day.ago, resolution: "no_action")
+
+    get fd_case_path(kase)
+    assert_nil dead("Reopen"), "reopening is not scoped to the assignment"
+
+    delete fd_case_resolution_path(kase)
+    assert_not kase.reload.resolved?
   end
 
   test "an unclaimed case is free, so nothing is greyed" do

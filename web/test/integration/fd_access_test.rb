@@ -25,7 +25,7 @@ class FdAccessTest < ActionDispatch::IntegrationTest
   end
 
   def refusals
-    Fd::AuditEntry.where(verb: "refused")
+    Fd::AuditEntry.where(verb: "refused", actor_user_id: @me.user_id)
   end
 
   DECORATIVE = %w[case.read].freeze
@@ -106,16 +106,16 @@ class FdAccessTest < ActionDispatch::IntegrationTest
   end
 
   test "a firefighter cannot settle, supersede or retire a decision" do
-    proposal = Fd::Decision.create!(title: "Appeals", statement: "read by somebody else",
+    proposal = Fd::Decision.create!(title: "Second chances", statement: "read by somebody else",
       proposed_by: "UFF1")
-    rule = Fd::Decision.create!(title: "Pile-ons", statement: "one lock and a note",
+    rule = Fd::Decision.create!(title: "Dogpiling", statement: "one lock and a note",
       proposed_by: "UFF1")
     rule.settle!(by: "UBOSS")
 
     post fd_decision_settlement_path(proposal)
     assert_predicate proposal.reload, :proposed?
 
-    post fd_decision_supersession_path(rule), params: { title: "Pile-ons, again",
+    post fd_decision_supersession_path(rule), params: { title: "Dogpiling, again",
       statement: "something else" }
     assert_predicate rule.reload, :settled?
 

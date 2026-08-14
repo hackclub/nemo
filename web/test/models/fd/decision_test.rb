@@ -3,7 +3,7 @@ require "test_helper"
 class Fd::DecisionTest < ActiveSupport::TestCase
   def write(**attrs)
     Fd::Decision.create!({
-      title: "Spam accounts",
+      title: "Throwaway accounts",
       statement: "A first-post account posting an invite link is banned on sight.",
       proposed_by: "UFF1"
     }.merge(attrs))
@@ -13,6 +13,10 @@ class Fd::DecisionTest < ActiveSupport::TestCase
     decision = write(**attrs)
     decision.settle!(by: "ULEAD")
     decision
+  end
+
+  def ours
+    Fd::Decision.where.not("proposed_by LIKE 'USEED%'")
   end
 
   test "a decision starts proposed, and nobody has settled it" do
@@ -41,7 +45,7 @@ class Fd::DecisionTest < ActiveSupport::TestCase
 
   test "superseding retires the old one and points it at what replaced it" do
     old = settled
-    new = settled(title: "Spam accounts, with a carve-out")
+    new = settled(title: "Throwaway accounts, with a carve-out")
     old.supersede!(new, by: "ULEAD", at: Time.utc(2026, 8, 16))
 
     assert_predicate old, :superseded?
@@ -67,7 +71,7 @@ class Fd::DecisionTest < ActiveSupport::TestCase
 
   test "a retired decision cannot replace anything" do
     old = settled
-    dead = settled(title: "Warnings by DM")
+    dead = settled(title: "Warnings in public")
     replacement = settled(title: "Something newer")
     dead.supersede!(replacement, by: "ULEAD")
 
@@ -113,30 +117,30 @@ class Fd::DecisionTest < ActiveSupport::TestCase
   end
 
   test "a title with stray whitespace is stored trimmed" do
-    assert_equal "Night shift", write(title: "  Night shift\n").title
+    assert_equal "Weekend cover", write(title: "  Weekend cover\n").title
   end
 
   test "the log separates what is in force from what is proposed and retired" do
-    proposal = write(title: "Appeals")
-    rule = settled(title: "Pile-ons")
-    dead = settled(title: "Warnings by DM")
+    proposal = write(title: "Second chances")
+    rule = settled(title: "Dogpiling")
+    dead = settled(title: "Warnings in public")
     dead.supersede!(rule, by: "ULEAD")
 
-    assert_equal [rule], Fd::Decision.in_force.to_a
-    assert_equal [proposal], Fd::Decision.unsettled.to_a
-    assert_equal [dead], Fd::Decision.retired.to_a
-    assert_equal [proposal, rule].map(&:id).sort, Fd::Decision.live.ids.sort
+    assert_equal [rule], ours.in_force.to_a
+    assert_equal [proposal], ours.unsettled.to_a
+    assert_equal [dead], ours.retired.to_a
+    assert_equal [proposal, rule].map(&:id).sort, ours.live.ids.sort
   end
 
   test "the log reads in the order the decisions took effect" do
-    first = settled(title: "Pile-ons", proposed_at: 3.months.ago)
+    first = settled(title: "Dogpiling", proposed_at: 3.months.ago)
     first.update!(settled_at: 2.months.ago)
-    second = settled(title: "Night shift", proposed_at: 2.days.ago)
+    second = settled(title: "Weekend cover", proposed_at: 2.days.ago)
     second.update!(settled_at: 1.day.ago)
-    waiting = write(title: "Appeals", proposed_at: 1.hour.ago)
+    waiting = write(title: "Second chances", proposed_at: 1.hour.ago)
 
-    assert_equal [first, second, waiting], Fd::Decision.oldest_first.to_a
-    assert_equal [waiting, second, first], Fd::Decision.newest_first.to_a
+    assert_equal [first, second, waiting], ours.oldest_first.to_a
+    assert_equal [waiting, second, first], ours.newest_first.to_a
   end
 
   test "a decision carries the threads it was argued in, oldest first" do
@@ -161,7 +165,7 @@ class Fd::DecisionTest < ActiveSupport::TestCase
 
   test "a category reads as the same label a case uses" do
     assert_equal "Spam", write(category_key: "spam").category_label
-    assert_nil write(title: "Night shift").category_label
+    assert_nil write(title: "Weekend cover").category_label
   end
 
   test "decisions are audited under their own entity types" do

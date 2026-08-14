@@ -25,7 +25,7 @@ class FdSearchTest < ActionDispatch::IntegrationTest
 
   test "an empty box offers what is waiting and what you can do" do
     make_case(opened_at: 3.days.ago)
-    Fd::Decision.create!(title: "Appeals", statement: "read by somebody else",
+    Fd::Decision.create!(title: "Second chances", statement: "read by somebody else",
       proposed_by: "UFF1")
 
     keys = found("")["groups"].map { |one| one["key"] }
@@ -33,17 +33,18 @@ class FdSearchTest < ActionDispatch::IntegrationTest
 
     waiting = group("", "waiting")["rows"]
     assert_match(/unassigned case/, waiting.first["title"])
-    assert_equal "1 proposal to settle", waiting.last["title"]
+    assert_match(/\A#{Fd::Decision.unsettled.count} proposals? to settle\z/,
+      waiting.last["title"])
     assert_equal fd_decisions_path(view: "proposed"), waiting.last["url"]
   end
 
   test "a decision row carries where it stands and what it is called" do
-    decision = Fd::Decision.create!(title: "Spam accounts", proposed_by: "UFF1",
-      statement: "A first-post account posting an invite link is banned on sight.")
+    decision = Fd::Decision.create!(title: "Throwaway accounts", proposed_by: "UFF1",
+      statement: "A brand new handle posting a banjo link is banned on sight.")
     decision.settle!(by: "ULEAD")
 
-    row = group("invite link", "decision")["rows"].sole
-    assert_equal "Spam accounts", row["title"]
+    row = group("banjo", "decision")["rows"].sole
+    assert_equal "Throwaway accounts", row["title"]
     assert_equal "in force", row["sub"]
     assert_equal fd_decision_path(decision), row["url"]
     assert_equal "📓", row["icon"]
@@ -151,7 +152,7 @@ class FdSearchTest < ActionDispatch::IntegrationTest
   end
 
   test "a decision command opens its modal too" do
-    decision = Fd::Decision.create!(title: "Appeals", statement: "read by somebody else",
+    decision = Fd::Decision.create!(title: "Second chances", statement: "read by somebody else",
       proposed_by: "UME")
 
     get fd_search_path(format: :json), params: { q: ">", on_decision: decision.id }

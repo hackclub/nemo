@@ -47,7 +47,7 @@ module Fd
         events: %w[action/reversed]
       },
       "case.reopen" => {
-        label: "Put a resolved case back in the queue", roles: EVERYONE, scope: :assigned,
+        label: "Put a resolved case back in the queue", roles: EVERYONE,
         events: %w[case/reopened]
       },
       "decision.write" => {

@@ -81,7 +81,7 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
     move("firefighter", "decision.settle", "1")
 
     assert_equal Fd::Permission::LEAD, Fd::Permission.roles("decision.settle")
-    assert_equal 1, Fd::AuditEntry.where(verb: "refused").count
+    assert_equal 1, Fd::AuditEntry.where(verb: "refused", actor_user_id: "UME").count
   end
 
   test "the move shows up in what that manager did" do

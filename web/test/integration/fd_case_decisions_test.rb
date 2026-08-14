@@ -15,7 +15,7 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a case records which decision it followed" do
-    decision = settled(title: "Spam accounts", category_key: "spam")
+    decision = settled(title: "Throwaway accounts", category_key: "spam")
     post fd_case_decision_path(@case), params: { decision_id: decision.id }
 
     assert_equal decision.id, @case.reload.followed_decision_id
@@ -23,7 +23,7 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a case can sit behind a proposal, which is how a proposal earns settling" do
-    proposal = Fd::Decision.create!(title: "Appeals", statement: "read by somebody else",
+    proposal = Fd::Decision.create!(title: "Second chances", statement: "read by somebody else",
       proposed_by: "UFF1")
     post fd_case_decision_path(@case), params: { decision_id: proposal.id }
 
@@ -32,8 +32,8 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a retired decision can be linked too, cases were decided under it" do
-    rule = settled(title: "Spam accounts")
-    dead = settled(title: "Warnings by DM")
+    rule = settled(title: "Throwaway accounts")
+    dead = settled(title: "Warnings in public")
     dead.supersede!(rule, by: "ULEAD")
 
     post fd_case_decision_path(@case), params: { decision_id: dead.id }
@@ -47,7 +47,7 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "the pointer can be taken off again" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     post fd_case_decision_path(@case), params: { decision_id: decision.id }
     delete fd_case_decision_path(@case)
 
@@ -56,7 +56,7 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a case assigned to somebody else is not mine to tag" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     @case.assign!("UOTHER")
     post fd_case_decision_path(@case), params: { decision_id: decision.id }
 
@@ -64,7 +64,7 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a signed out visitor cannot tag a case" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     delete logout_path
     post fd_case_decision_path(@case), params: { decision_id: decision.id }
 
@@ -72,7 +72,7 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "the case page renders with a decision on it" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     post fd_case_decision_path(@case), params: { decision_id: decision.id }
 
     get fd_case_path(@case)
@@ -83,7 +83,7 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "the timeline records linking and unlinking" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     post fd_case_decision_path(@case), params: { decision_id: decision.id }
     delete fd_case_decision_path(@case)
 
@@ -93,11 +93,11 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
 
     assert_equal ["Decision linked", "Decision unlinked"],
       timeline.map(&:title).select { |title| title.start_with?("Decision") }
-    assert timeline.any? { |entry| entry.detail.to_s.include?("Spam accounts") }
+    assert timeline.any? { |entry| entry.detail.to_s.include?("Throwaway accounts") }
   end
 
   test "reopening a case drops what it followed, along with the outcome" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     post fd_case_decision_path(@case), params: { decision_id: decision.id }
     post fd_case_resolution_path(@case), params: { outcome: "close", close_reason: "no_action" }
     delete fd_case_resolution_path(@case)
@@ -108,7 +108,7 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
   end
 
   test "a decision that cases followed cannot be deleted out from under them" do
-    decision = settled(title: "Spam accounts")
+    decision = settled(title: "Throwaway accounts")
     post fd_case_decision_path(@case), params: { decision_id: decision.id }
 
     assert_raises(ActiveRecord::StatementInvalid) { decision.destroy! }

@@ -2,6 +2,7 @@ require "test_helper"
 
 class FdSettingsTest < ActionDispatch::IntegrationTest
   setup do
+    Fd::AccessGrant.where("user_id LIKE 'USEED%'").delete_all
     @me = Staff.create!(user_id: "UME", community_manager: true)
     sign_in_as(@me)
   end
@@ -164,6 +165,9 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
 
   test "the usage headline counts reads, refusals and grants that moved" do
     give("UFF1")
+    get fd_settings_path(tab: "usage")
+    before = css_select(".kpi-val").map { |node| node.text.strip.to_i }
+
     AccessLog.create!(actor_id: "UFF1", subject_user_id: "USUB", field_class: "identity",
       looked_at: 1.day.ago)
     AccessLog.create!(actor_id: "UFF1", subject_user_id: "UOTHER", field_class: "identity",
@@ -173,10 +177,13 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
       after: { "permission" => "access.grant", "role" => "firefighter" })
 
     get fd_settings_path(tab: "usage")
+    after = css_select(".kpi-val").map { |node| node.text.strip.to_i }
 
-    values = css_select(".kpi-val").map { |node| node.text.strip.to_i }
-    assert_equal [Fd::AccessGrant.live.count, 1, 1, 0], values
-    assert_select ".delta-note", text: /1 access\.grant/
+    assert_equal before[0], after[0], "nobody was given or lost a grant"
+    assert_equal before[1] + 1, after[1], "only the read inside the window counts"
+    assert_equal before[2] + 1, after[2], "the refusal counts"
+    assert_equal before[3], after[3], "the fresh grant is not dormant yet"
+    assert_select ".delta-note", text: /access\.grant/
   end
 
   test "a grant nobody has used shows up as unused, with who holds it" do
@@ -346,6 +353,6 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
 
     get fd_settings_path
     assert_redirected_to fd_cases_path
-    assert_equal 1, Fd::AuditEntry.where(verb: "refused").count
+    assert_equal 1, Fd::AuditEntry.where(verb: "refused", actor_user_id: "UME").count
   end
 end
