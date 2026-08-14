@@ -2,10 +2,9 @@
   <input type="checkbox" id="edit-decision" class="modal-flip" autocomplete="off">
   <label for="edit-decision" class="modal-veil" aria-hidden="true"></label>
   <div class="modal-wrap">
-    <% wording = decision.proposed? ? "Edit this decision" : "Amend this decision" %>
-    <div class="modal" role="dialog" aria-label="<%= wording %>">
+    <div class="modal" role="dialog" aria-label="Edit">
       <div class="modal-head">
-        <h2 class="modal-title"><%= wording %></h2>
+        <h2 class="modal-title">Edit</h2>
       </div>
       <%= form_with url: fd_decision_path(decision), method: :patch,
             html: { autocomplete: "off" } do %>

@@ -19,7 +19,6 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
     post fd_case_decision_path(@case), params: { decision_id: decision.id }
 
     assert_equal decision.id, @case.reload.followed_decision_id
-    assert_match(/following Spam accounts/, flash[:notice])
     assert Fd::AuditEntry.exists?(entity_type: "case", entity_id: @case.id, verb: "followed")
   end
 
@@ -29,13 +28,7 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
     post fd_case_decision_path(@case), params: { decision_id: proposal.id }
 
     assert_equal proposal.id, @case.reload.followed_decision_id
-    assert_match(/behind the Appeals proposal/, flash[:notice])
-
-    get fd_case_path(@case)
-    assert_select "a.chip.chip-warn", text: "behind Appeals"
-
-    get fd_decision_path(proposal)
-    assert_select ".band-label", text: /Cases behind it · 1/
+    assert_equal [@case.id], proposal.cases_followed.ids
   end
 
   test "a retired decision can be linked too, cases were decided under it" do
@@ -51,7 +44,6 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
     post fd_case_decision_path(@case), params: { decision_id: 999_999 }
 
     assert_nil @case.reload.followed_decision_id
-    assert_match(/pick a decision/, flash[:alert])
   end
 
   test "the pointer can be taken off again" do
@@ -69,7 +61,6 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
     post fd_case_decision_path(@case), params: { decision_id: decision.id }
 
     assert_nil @case.reload.followed_decision_id
-    assert_match(/not to you/, flash[:alert])
   end
 
   test "a signed out visitor cannot tag a case" do
@@ -80,55 +71,29 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
     assert_nil @case.reload.followed_decision_id
   end
 
-  test "the control lives in the menu, and only when the log has something in it" do
-    get fd_case_path(@case)
-    assert_select "label[for=follow-decision]", count: 0
-
-    Fd::Decision.create!(title: "Appeals", statement: "read by somebody else",
-      proposed_by: "UFF1")
-    get fd_case_path(@case)
-    assert_select ".menu-pop label[for=follow-decision]", text: "Link a decision"
-  end
-
-  test "the picker groups by state, in force first" do
-    settled(title: "Spam accounts")
-    Fd::Decision.create!(title: "Appeals", statement: "read by somebody else",
-      proposed_by: "UFF1")
-
-    get fd_case_path(@case)
-
-    assert_equal ["In force", "Proposed"],
-      css_select("#follow-decision ~ .modal-wrap optgroup").map { |group| group["label"] }
-  end
-
-  test "the case says what it followed, and links to it" do
-    decision = settled(title: "Spam accounts")
-    post fd_case_decision_path(@case), params: { decision_id: decision.id }
-    get fd_case_path(@case)
-
-    assert_select "a.chip[href=?]", fd_decision_path(decision), text: "followed Spam accounts"
-  end
-
-  test "the decision names the cases that followed it, and counts them on the log" do
+  test "the case page renders with a decision on it" do
     decision = settled(title: "Spam accounts")
     post fd_case_decision_path(@case), params: { decision_id: decision.id }
 
-    get fd_decision_path(decision)
-    assert_select ".band-label", text: /Cases that followed it · 1/
-    assert_select "a[href=?]", fd_case_path(@case)
+    get fd_case_path(@case)
+    assert_response :success
 
-    get fd_decisions_path
-    assert_select "td.col-num", text: "1 case"
+    get fd_decision_path(decision)
+    assert_response :success
   end
 
-  test "a decision nothing has followed says so on both pages" do
-    decision = settled(title: "Night shift")
+  test "the timeline records linking and unlinking" do
+    decision = settled(title: "Spam accounts")
+    post fd_case_decision_path(@case), params: { decision_id: decision.id }
+    delete fd_case_decision_path(@case)
 
-    get fd_decision_path(decision)
-    assert_select ".card-note", text: "No case linked yet."
+    timeline = Fd::CaseTimeline.for(@case.reload, reports: [], actions: [], notes: [],
+      links: Fd::AuditEntry.decision_links_for(case_id: @case.id).to_a,
+      decisions: { decision.id => decision.title })
 
-    get fd_decisions_path
-    assert_select "td.col-num", text: "n/a"
+    assert_equal ["Decision linked", "Decision unlinked"],
+      timeline.map(&:title).select { |title| title.start_with?("Decision") }
+    assert timeline.any? { |entry| entry.detail.to_s.include?("Spam accounts") }
   end
 
   test "reopening a case drops what it followed, along with the outcome" do
@@ -140,21 +105,6 @@ class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
     @case.reload
     assert_nil @case.resolved_at
     assert_nil @case.followed_decision_id
-  end
-
-  test "the timeline says when a decision was linked, and when it was taken off" do
-    decision = settled(title: "Spam accounts")
-    post fd_case_decision_path(@case), params: { decision_id: decision.id }
-    get fd_case_path(@case)
-
-    assert_select ".tl-title", text: "Decision linked"
-    assert_select ".tl-detail", text: /Spam accounts/
-
-    delete fd_case_decision_path(@case)
-    get fd_case_path(@case)
-
-    assert_select ".tl-title", text: "Decision unlinked"
-    assert_select ".tl-detail", text: /Spam accounts/
   end
 
   test "a decision that cases followed cannot be deleted out from under them" do

@@ -28,6 +28,7 @@ module Fd
       @decision = Decision.includes(:threads, :replacement).find(params[:id])
       @replaced = @decision.replaced.order(:retired_at).to_a
       @previous, @next = neighbours(@decision)
+      @chosen_thread = chosen_thread(@decision)
       @messages = ThreadMessage.for_threads(@decision.threads).to_a.group_by(&:coordinates)
       @cases = @decision.cases_followed.includes(:subjects).to_a
       @names = Names.for(named_on(@decision) + @messages.values.flatten.map(&:author_user_id))
@@ -76,7 +77,7 @@ module Fd
         decision.drop!
       end
 
-      redirect_to fd_decisions_path, notice: "dropped, it was never the rule"
+      redirect_to fd_decisions_path, notice: "dropped"
     end
 
     private
@@ -84,14 +85,19 @@ module Fd
     def retired_already(decision)
       return nil unless decision.superseded?
 
-      "decision #{decision.id} was retired, write a new one instead"
+      "decision #{decision.id} is retired"
     end
 
     def not_droppable(decision)
       return "a settled decision is superseded, never dropped" unless decision.droppable?
       return nil if decision.proposed_by == current_staff.user_id
 
-      "@#{decision.proposed_by} proposed that, so only they can drop it"
+      "only @#{decision.proposed_by} can drop it"
+    end
+
+    def chosen_thread(decision)
+      asked = params[:thread].to_s
+      decision.threads.detect { |row| row.id.to_s == asked } || decision.threads.first
     end
 
     def neighbours(decision)

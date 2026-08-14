@@ -8,7 +8,7 @@ module Fd
         audit(decision, "settled")
       end
 
-      redirect_to fd_decision_path(decision), notice: "settled, it is the rule from now on"
+      redirect_to fd_decision_path(decision), notice: "settled"
     rescue Decision::NotAllowed => e
       redirect_to fd_decision_path(decision), alert: e.message
     end

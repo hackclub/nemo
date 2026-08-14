@@ -47,6 +47,12 @@ FIREHOSE_SHARE = 0.1
 BOT_ACTOR = "UMNEMOSYNE"
 EVIDENCE = "evidence"
 INTERNAL = "internal"
+REFERENCE = "reference"
+DECISION_SETTLE_DAYS = (1.0, 6.0)
+DECISION_SECOND_INTERNAL_SHARE = 0.4
+DECISION_REFERENCE_SHARE = 0.6
+DECISION_FOLLOW_SHARE = 0.3
+DECISION_BEHIND_PROPOSAL = (1, 3)
 FD_CHANNEL = "CSEEDFIREHOUSE"
 INTERNAL_THREAD_SHARE = 0.25
 SECOND_INTERNAL_SHARE = 0.2
@@ -78,6 +84,100 @@ STANDING_NOTE_BODIES = (
     "usually fine. the pattern is late-night posts",
     "much better since the first case, keep that in mind on any next one",
 )
+DECISION_LIBRARY = (
+    {
+        "title": "Spam accounts",
+        "statement": "A first-post account posting an invite link is banned on sight, "
+                     "with no warning, and the thread is locked.",
+        "category_key": "spam",
+        "reasons": (
+            "warning a throwaway account does nothing, it is abandoned within the hour",
+            "three of us handled the same wave three different ways in one afternoon",
+            "a real member caught by this can appeal, and the ban is cheap to reverse",
+        ),
+        "state": "settled",
+        "age_days": 180,
+        "replaces": "Warnings by DM",
+    },
+    {
+        "title": "Warnings by DM",
+        "statement": "Every warning goes by DM, never in the channel it happened in.",
+        "category_key": None,
+        "reasons": ("a public warning turns one bad message into a thread about us",),
+        "state": "superseded",
+        "age_days": 320,
+    },
+    {
+        "title": "Pile-ons",
+        "statement": "A pile-on gets one thread lock and a note to the loudest three, "
+                     "not five separate cases.",
+        "category_key": "harassment_general",
+        "reasons": (
+            "five cases for one thread is bookkeeping, not conduct work",
+            "the quiet ones stop reading when everybody gets a case",
+        ),
+        "state": "settled",
+        "age_days": 240,
+    },
+    {
+        "title": "Night shift",
+        "statement": "Nothing worse than a warning is acted on alone after midnight. "
+                     "Write the note and hand it over.",
+        "category_key": None,
+        "reasons": (
+            "every reversal this year was decided after 1am by somebody working alone",
+        ),
+        "state": "settled",
+        "age_days": 90,
+    },
+    {
+        "title": "Minors in DMs",
+        "statement": "An adult messaging a minor privately goes straight to staff, "
+                     "with no ladder and no delay.",
+        "category_key": "adult",
+        "reasons": (
+            "this is not ours to weigh up, it is theirs to act on",
+            "the ladder exists to give people a chance to correct, which does not apply here",
+        ),
+        "state": "settled",
+        "age_days": 300,
+    },
+    {
+        "title": "Alt accounts",
+        "statement": "A ban covers the person, not the account, so a new account is the same ban.",
+        "category_key": "ban_evasion",
+        "reasons": ("otherwise the ladder resets every time somebody signs up again",),
+        "state": "settled",
+        "age_days": 140,
+    },
+    {
+        "title": "Appeals",
+        "statement": "An appeal is read by somebody who was not on the case. "
+                     "If nobody else is free, it waits.",
+        "category_key": None,
+        "reasons": (
+            "the person who decided it has already made up their mind",
+            "waiting a day costs less than a reversal nobody trusts",
+        ),
+        "state": "proposed",
+        "age_days": 12,
+    },
+    {
+        "title": "Screenshots as evidence",
+        "statement": "A screenshot on its own is never enough to act. Ask for the permalink.",
+        "category_key": None,
+        "reasons": ("we have been handed two edited screenshots this month",),
+        "state": "proposed",
+        "age_days": 5,
+    },
+)
+
+DECISION_THREAD_REASONS = {
+    "first": "where it was decided",
+    "second": "the objection two weeks later",
+    "reference": "the thread that started it",
+}
+
 REVERSAL_REASONS = (
     "appeal upheld, the thread reads differently with the context they gave",
     "issued against the wrong account, same display name",
@@ -164,6 +264,32 @@ AUDIT_COLUMNS = [
 ]
 
 THREAD_COLUMNS = ["case_id", "channel_id", "thread_ts", "kind", "is_primary", "added_by"]
+
+DECISION_COLUMNS = [
+    "title",
+    "statement",
+    "category_key",
+    "reasons",
+    "state",
+    "proposed_by",
+    "proposed_at",
+    "settled_by",
+    "settled_at",
+    "retired_by",
+    "retired_at",
+    "created_at",
+    "updated_at",
+]
+
+DECISION_THREAD_COLUMNS = [
+    "decision_id",
+    "channel_id",
+    "thread_ts",
+    "why",
+    "kind",
+    "added_by",
+    "added_at",
+]
 
 MESSAGE_COLUMNS = [
     "channel_id",
@@ -1297,6 +1423,229 @@ def action_audit(action, action_id, request):
             {"reversed_at": None},
             {"reversed_at": action.reversed_at.isoformat(), "reason": action.reversal_reason},
             "fire_engine", f"{request}:reversed",
+        )
+
+
+@dataclass
+class SeedDecision:
+    title: str
+    statement: str
+    category_key: str | None
+    reasons: list
+    state: str
+    proposed_by: str
+    proposed_at: datetime
+    settled_by: str | None = None
+    settled_at: datetime | None = None
+    retired_by: str | None = None
+    retired_at: datetime | None = None
+    replaces: str | None = None
+    threads: list = field(default_factory=list)
+
+    @property
+    def live_from(self):
+        return self.settled_at or self.proposed_at
+
+
+def build_decisions(rng, members, cases, as_of):
+    crew = firefighters(members)
+    if not crew:
+        return []
+
+    horizon = datetime.combine(as_of, time(23, 59), tzinfo=timezone.utc)
+    resolved = [case for case in cases if case.resolved_at]
+    built = []
+
+    for entry in DECISION_LIBRARY:
+        proposed_at = horizon - timedelta(days=entry["age_days"], hours=rng.uniform(0, 12))
+        writer = rng.choice(crew)
+        decision = SeedDecision(
+            title=entry["title"],
+            statement=entry["statement"],
+            category_key=entry["category_key"],
+            reasons=list(entry["reasons"]),
+            state=entry["state"],
+            proposed_by=writer,
+            proposed_at=proposed_at,
+            replaces=entry.get("replaces"),
+        )
+        if entry["state"] != "proposed":
+            decision.settled_by = rng.choice(crew)
+            decision.settled_at = proposed_at + timedelta(days=rng.uniform(*DECISION_SETTLE_DAYS))
+        attach_decision_threads(rng, decision, crew, resolved)
+        built.append(decision)
+
+    retire_replaced(built)
+    return built
+
+
+def attach_decision_threads(rng, decision, crew, resolved):
+    added_by = decision.proposed_by
+    decision.threads.append((
+        FD_CHANNEL,
+        slack_ts(rng, decision.proposed_at),
+        DECISION_THREAD_REASONS["first"],
+        INTERNAL,
+        added_by,
+        decision.proposed_at,
+    ))
+
+    if rng.random() < DECISION_SECOND_INTERNAL_SHARE:
+        later = decision.live_from + timedelta(days=rng.uniform(7.0, 30.0))
+        decision.threads.append((
+            FD_CHANNEL,
+            slack_ts(rng, later),
+            DECISION_THREAD_REASONS["second"],
+            INTERNAL,
+            rng.choice(crew),
+            later,
+        ))
+
+    earlier = [case for case in resolved if case.opened_at <= decision.proposed_at]
+    if earlier and rng.random() < DECISION_REFERENCE_SHARE:
+        case = rng.choice(earlier[-40:])
+        channel_id, thread_ts = case.threads[0][0], case.threads[0][1]
+        decision.threads.append((
+            channel_id,
+            thread_ts,
+            DECISION_THREAD_REASONS["reference"],
+            REFERENCE,
+            added_by,
+            decision.proposed_at,
+        ))
+
+
+def retire_replaced(decisions):
+    by_title = {decision.title: decision for decision in decisions}
+    for decision in decisions:
+        if decision.replaces is None:
+            continue
+        old = by_title.get(decision.replaces)
+        if old is None:
+            continue
+        old.retired_by = decision.settled_by
+        old.retired_at = decision.settled_at
+
+
+def without_titles(decisions, taken):
+    lowered = {title.lower() for title in taken}
+    kept = [one for one in decisions if one.title.lower() not in lowered]
+    gone = {one.title for one in decisions} - {one.title for one in kept}
+
+    for decision in kept:
+        if decision.replaces in gone:
+            decision.replaces = None
+
+    replaced = {one.replaces for one in kept if one.replaces}
+    for decision in kept:
+        if decision.state == "superseded" and decision.title not in replaced:
+            decision.state = "settled"
+            decision.retired_by = decision.retired_at = None
+
+    return kept
+
+
+def decision_rows(decisions):
+    for decision in decisions:
+        yield (
+            decision.title,
+            decision.statement,
+            decision.category_key,
+            decision.reasons,
+            decision.state,
+            decision.proposed_by,
+            decision.proposed_at,
+            decision.settled_by,
+            decision.settled_at,
+            decision.retired_by,
+            decision.retired_at,
+            decision.proposed_at,
+            decision.retired_at or decision.settled_at or decision.proposed_at,
+        )
+
+
+def replacement_pairs(decisions):
+    for decision in decisions:
+        if decision.replaces:
+            yield decision.replaces, decision.title
+
+
+def decision_thread_rows(decisions, ids):
+    for decision in decisions:
+        decision_id = ids.get(decision.title)
+        if decision_id is None:
+            continue
+        for channel_id, thread_ts, why, kind, added_by, added_at in decision.threads:
+            yield (decision_id, channel_id, thread_ts, why, kind, added_by, added_at)
+
+
+def decision_follows(rng, cases, decisions):
+    taken = set()
+    follows = []
+
+    for decision in sorted(decisions, key=lambda one: one.live_from, reverse=True):
+        behind = decision.state == "proposed"
+        pool = [
+            case for case in cases
+            if case.external_ref not in taken and case.resolved_at
+            and (case.resolved_at <= decision.proposed_at if behind
+                 else case.resolved_at >= decision.live_from)
+        ]
+        if not pool:
+            continue
+
+        if behind:
+            wanted = min(rng.randint(*DECISION_BEHIND_PROPOSAL), len(pool))
+            pool = pool[-12:]
+        else:
+            wanted = round(len(pool) * DECISION_FOLLOW_SHARE * rng.uniform(0.4, 1.0))
+        for case in rng.sample(pool, min(wanted, len(pool))):
+            taken.add(case.external_ref)
+            follows.append((
+                case.external_ref,
+                decision.title,
+                case.resolved_at,
+                case.claimed_by or case.opened_by,
+            ))
+
+    return follows
+
+
+def decision_audit_rows(decisions, ids):
+    for decision in decisions:
+        decision_id = ids.get(decision.title)
+        if decision_id is None:
+            continue
+        request = f"{SEED_REF_PREFIX}audit:decision:{decision_id}"
+        yield audit_entry(
+            decision.proposed_at, decision.proposed_by, "decision", decision_id, "proposed",
+            None, {"title": decision.title, "state": "proposed"},
+            "fire_engine", f"{request}:proposed",
+        )
+        if decision.settled_at:
+            yield audit_entry(
+                decision.settled_at, decision.settled_by, "decision", decision_id, "settled",
+                {"state": "proposed"}, {"state": "settled"},
+                "fire_engine", f"{request}:settled",
+            )
+        if decision.retired_at:
+            yield audit_entry(
+                decision.retired_at, decision.retired_by, "decision", decision_id, "superseded",
+                {"state": "settled"}, {"state": "superseded"},
+                "fire_engine", f"{request}:superseded",
+            )
+
+
+def follow_audit_rows(follows, case_ids, decision_ids):
+    for external_ref, title, at, by in follows:
+        case_id = case_ids.get(external_ref)
+        decision_id = decision_ids.get(title)
+        if case_id is None or decision_id is None:
+            continue
+        yield audit_entry(
+            at, by, "case", case_id, "followed",
+            {"followed_decision_id": None}, {"followed_decision_id": decision_id},
+            "fire_engine", f"{SEED_REF_PREFIX}audit:case:{case_id}:followed",
         )
 
 

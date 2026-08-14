@@ -1,13 +1,13 @@
 <label class="field-label">
-  Call it
+  About
   <%= text_field_tag :title, decision&.title, class: "textarea", id: nil,
         placeholder: "Spam accounts" %>
 </label>
 
 <label class="field-label">
-  What FD does from now on
+  Description
   <%= text_area_tag :statement, decision&.statement, rows: 3, class: "textarea", id: nil,
-        placeholder: "One sentence. If it needs a paragraph, it is two decisions." %>
+        placeholder: "banned on sight, no warning, thread locked" %>
 </label>
 
 <div class="field-label">

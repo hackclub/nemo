@@ -62,6 +62,12 @@ module Fd
       update!(attrs.to_h.transform_keys(&:to_s).slice(*AMENDABLE))
     end
 
+    def retire!(by:, at: Time.current)
+      refuse "only a settled decision can be retired" unless settled?
+
+      update!(state: "superseded", retired_by: by, retired_at: at)
+    end
+
     def supersede!(replacement, by:, at: Time.current)
       refuse "only a settled decision can be superseded" unless settled?
       refuse "a decision cannot supersede itself" if replacement.id == id

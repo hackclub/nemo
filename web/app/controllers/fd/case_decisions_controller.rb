@@ -26,15 +26,15 @@ module Fd
         audit(kase, "unfollowed", before: { "followed_decision_id" => was }, after: nil)
       end
 
-      redirect_to fd_case_path(kase), notice: "no longer recorded as following a decision"
+      redirect_to fd_case_path(kase), notice: "decision unlinked"
     end
 
     private
 
     def linked_notice(decision)
-      return "recorded as following #{decision.title}" if decision.settled?
+      return "following #{decision.title}" if decision.settled?
 
-      "recorded behind the #{decision.title} proposal"
+      "behind the #{decision.title} proposal"
     end
 
     def refusal(kase)

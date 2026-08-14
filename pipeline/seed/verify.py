@@ -95,6 +95,34 @@ CONSISTENCY_CHECKS = [
         "where deleted_at is not null and body is null",
     ),
     (
+        "every decision that is not a proposal says who settled it",
+        "select count(*) from fd.decisions "
+        "where state <> 'proposed' and (settled_by is null or settled_at is null)",
+    ),
+    (
+        "every retired decision points at what replaced it",
+        "select count(*) from fd.decisions "
+        "where state = 'superseded' and replaced_by_id is null",
+    ),
+    (
+        "no case follows a rule that was not in force when it was resolved",
+        "select count(*) from fd.cases c join fd.decisions d "
+        "on d.id = c.followed_decision_id "
+        "where d.state <> 'proposed' and c.resolved_at < d.settled_at",
+    ),
+    (
+        "no case sits behind a proposal written before the case was resolved",
+        "select count(*) from fd.cases c join fd.decisions d "
+        "on d.id = c.followed_decision_id "
+        "where d.state = 'proposed' and c.resolved_at > d.proposed_at",
+    ),
+    (
+        "every followed decision is recorded in the audit",
+        "select count(*) from fd.cases c where c.followed_decision_id is not null "
+        "and not exists (select 1 from fd.audit a where a.entity_type = 'case' "
+        "and a.entity_id = c.id and a.verb = 'followed')",
+    ),
+    (
         "no day ledger gap inside the covered span",
         "select (max(ds) - min(ds) + 1) - count(*) from raw.analytics_day where source like 'seed_%member_day'",
     ),

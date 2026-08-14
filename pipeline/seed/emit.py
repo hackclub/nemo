@@ -1,4 +1,5 @@
 import collections
+import itertools
 from datetime import datetime, time, timedelta, timezone
 
 from lib.db import connect_admin
@@ -26,6 +27,9 @@ SEED_PREDICATES = {
     "fd.cases": f"external_ref LIKE '{SEED_REF_PREFIX}%'",
     "fd.member": f"user_id LIKE '{SEED_USER_PREFIX}%'",
     "fd.thread_messages": f"source_app = '{SEED_SOURCE_PREFIX}slack'",
+    "fd.case_citations": f"flagged_by LIKE '{SEED_USER_PREFIX}%'",
+    "fd.decision_threads": f"added_by LIKE '{SEED_USER_PREFIX}%'",
+    "fd.decisions": f"proposed_by LIKE '{SEED_USER_PREFIX}%'",
 }
 
 APPEND_ONLY_TABLES = ("fd.audit",)
@@ -34,8 +38,11 @@ SEEDED_TABLES = (
     "fd.audit",
     "fd.notes",
     "fd.actions",
+    "fd.case_citations",
     "fd.thread_messages",
     "fd.cases",
+    "fd.decision_threads",
+    "fd.decisions",
     "fd.member",
     "raw.member_activity_snapshot",
     "raw.channel_activity_snapshot",
@@ -501,6 +508,45 @@ def case_ids(conn):
     return ref_ids(conn, "fd.cases")
 
 
+def live_titles(conn):
+    with conn.cursor() as cur:
+        cur.execute("SELECT title FROM fd.decisions WHERE state <> 'superseded'")
+        return [title for (title,) in cur.fetchall()]
+
+
+def decision_ids(conn):
+    with conn.cursor() as cur:
+        cur.execute("SELECT title, id FROM fd.decisions")
+        return dict(cur.fetchall())
+
+
+def link_replacements(conn, pairs, ids):
+    with conn.cursor() as cur:
+        for old_title, new_title in pairs:
+            old_id, new_id = ids.get(old_title), ids.get(new_title)
+            if old_id is None or new_id is None:
+                continue
+            cur.execute(
+                "UPDATE fd.decisions SET replaced_by_id = %s WHERE id = %s",
+                (new_id, old_id),
+            )
+
+
+def apply_follows(conn, follows, cases, decisions):
+    written = 0
+    with conn.cursor() as cur:
+        for external_ref, title, _at, _by in follows:
+            case_id, decision_id = cases.get(external_ref), decisions.get(title)
+            if case_id is None or decision_id is None:
+                continue
+            cur.execute(
+                "UPDATE fd.cases SET followed_decision_id = %s WHERE id = %s",
+                (decision_id, case_id),
+            )
+            written += 1
+    return written
+
+
 def write_conduct(conn, seed, members, as_of):
     cases = conduct_module.build_cases(conduct_module.rng_for(seed), members, as_of)
     conduct_module.attach_all_reports(conduct_module.rng_for(seed, "reports"), cases, members)
@@ -558,10 +604,34 @@ def write_conduct(conn, seed, members, as_of):
         conn, "fd.notes", conduct_module.NOTE_COLUMNS,
         conduct_module.note_rows(cases, ids, standing),
     )
+    decisions = conduct_module.without_titles(
+        conduct_module.build_decisions(
+            conduct_module.rng_for(seed, "decisions"), members, cases, as_of
+        ),
+        live_titles(conn),
+    )
+    counts["fd.decisions"] = copy_rows(
+        conn, "fd.decisions", conduct_module.DECISION_COLUMNS,
+        conduct_module.decision_rows(decisions),
+    )
+    told = decision_ids(conn)
+    link_replacements(conn, conduct_module.replacement_pairs(decisions), told)
+    counts["fd.decision_threads"] = copy_rows(
+        conn, "fd.decision_threads", conduct_module.DECISION_THREAD_COLUMNS,
+        conduct_module.decision_thread_rows(decisions, told),
+    )
+    follows = conduct_module.decision_follows(
+        conduct_module.rng_for(seed, "follows"), cases, decisions
+    )
+    counts["fd.cases followed"] = apply_follows(conn, follows, ids, told)
     counts["fd.audit"] = copy_rows(
         conn, "fd.audit", conduct_module.AUDIT_COLUMNS,
-        conduct_module.audit_rows(
-            cases, ids, ref_ids(conn, "fd.actions"), ref_ids(conn, "fd.case_reports")
+        itertools.chain(
+            conduct_module.audit_rows(
+                cases, ids, ref_ids(conn, "fd.actions"), ref_ids(conn, "fd.case_reports")
+            ),
+            conduct_module.decision_audit_rows(decisions, told),
+            conduct_module.follow_audit_rows(follows, ids, told),
         ),
     )
     conn.commit()

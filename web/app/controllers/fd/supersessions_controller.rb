@@ -17,7 +17,7 @@ module Fd
         audit(old, "superseded", after: { "replaced_by_id" => fresh.id })
       end
 
-      redirect_to fd_decision_path(fresh), notice: "#{old.title} is retired, this replaces it"
+      redirect_to fd_decision_path(fresh), notice: "replaces #{old.title}"
     rescue Decision::NotAllowed => e
       redirect_to fd_decision_path(old), alert: e.message
     rescue ActiveRecord::RecordNotUnique

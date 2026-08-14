@@ -10,13 +10,7 @@
     <%= button_to "Settle it", fd_decision_settlement_path(@decision), method: :post,
           class: "btn btn-primary", form: { class: "contents", data: { turbo_confirm:
             "Settle #{@decision.title}? It becomes the rule." } } %>
-    <label for="edit-decision" class="btn">Edit</label>
-  <% elsif @decision.settled? %>
-    <label for="edit-decision" class="btn">Amend</label>
-    <label for="supersede-decision" class="btn">Supersede</label>
   <% end %>
-  <label for="link-threads" class="btn">Link threads</label>
-  <%= link_to "The log", fd_decisions_path, class: "btn" %>
   <% if @previous %>
     <%= link_to "Previous", fd_decision_path(@previous), class: "btn" %>
   <% else %>
@@ -26,6 +20,25 @@
     <%= link_to "Next", fd_decision_path(@next), class: "btn" %>
   <% else %>
     <span class="btn is-off">Next</span>
+  <% end %>
+  <% unless @decision.superseded? %>
+    <details class="menu">
+      <summary class="btn" aria-label="Change the wording">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+      </summary>
+      <div class="menu-pop">
+        <label for="edit-decision" class="btn">
+          Edit
+        </label>
+        <% if @decision.settled? %>
+          <div class="menu-sep"></div>
+          <label for="supersede-decision" class="btn">Replace</label>
+          <%= button_to "Retire", fd_decision_retirement_path(@decision),
+                method: :post, class: "btn", form: { class: "contents",
+                data: { turbo_confirm: "Retire #{@decision.title}?" } } %>
+        <% end %>
+      </div>
+    </details>
   <% end %>
 <% end %>
 
@@ -44,52 +57,8 @@
     <% end %>
   </div>
 
-  <p class="band-label">
-    Where it was argued ·
-    <%= @decision.threads.any? ? pluralize(@decision.threads.size, "thread") : "none linked" %>
-  </p>
-
-  <% if @decision.threads.any? %>
-    <% @decision.threads.each do |thread| %>
-      <div class="card">
-        <div class="thr-head">
-          <span class="thr-where"><%= thread.channel_id %></span>
-          <span class="chip <%= thread.internal? ? "chip-warn" : "chip-off" %>">
-            <%= thread.internal? ? "internal" : "reference" %>
-          </span>
-          <% if thread.said_why? %>
-            <span class="thr-why"><%= thread.why %></span>
-          <% end %>
-          <span class="thr-end">
-            <%= link_to "Open in Slack", slack_thread_url(thread.channel_id, thread.thread_ts),
-                  class: "btn", target: "_blank", rel: "noopener" %>
-          </span>
-        </div>
-        <% held = @messages[thread.coordinates] %>
-        <% if held.blank? %>
-          <p class="thr-gone">No messages held for this thread yet.</p>
-        <% else %>
-          <%= render "fd/messages", messages: held %>
-        <% end %>
-
-        <div class="rail-card">
-          <div class="thin">
-            <span>
-              <b>Linked</b> <%= member_link(thread.added_by) %> ·
-              <%= last_case_label(thread.added_at) %>
-            </span>
-            <%= button_to "Unlink", fd_decision_thread_path(@decision, thread),
-                  method: :delete, class: "text-btn",
-                  form: { class: "contents", data: { turbo_confirm: "Unlink this thread?" } } %>
-          </div>
-        </div>
-      </div>
-    <% end %>
-  <% else %>
-    <div class="card">
-      <p class="card-note">No thread linked.</p>
-    </div>
-  <% end %>
+  <%= render "fd/decisions/threads", decision: @decision, threads: @decision.threads,
+        chosen: @chosen_thread, messages: @messages %>
 
   <p class="band-label">
     <%= cases_band_label(@decision) %> · <%= @cases.any? ? @cases.size : "none" %>
