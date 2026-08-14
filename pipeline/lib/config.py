@@ -86,7 +86,7 @@ ROLES = {
             "NEMO_APP_TOKEN",
             "FIREHOUSE_CHANNEL_ID",
         ],
-        "optional": ["SLACK_TEAM_ID", "TZ"],
+        "optional": ["APP_HOST", "SLACK_TEAM_ID", "TZ"],
     },
     "provision": {
         "required": DATABASE + ADMIN + ["RAILS_DB_USER", "RAILS_DB_PASSWORD"],
