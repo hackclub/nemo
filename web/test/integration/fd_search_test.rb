@@ -1,0 +1,91 @@
+require "test_helper"
+
+class FdSearchTest < ActionDispatch::IntegrationTest
+  setup do
+    @me = Staff.create!(user_id: "UME", community_manager: true)
+    sign_in_as(@me)
+  end
+
+  def found(term)
+    get fd_search_path(format: :json), params: { q: term }
+    JSON.parse(response.body)
+  end
+
+  def group(term, key)
+    found(term)["groups"].find { |one| one["key"] == key }
+  end
+
+  test "a signed out visitor gets nothing" do
+    delete logout_path
+    get fd_search_path(format: :json), params: { q: "raid" }
+
+    assert_redirected_to login_path
+  end
+
+  test "an empty box offers what is waiting and what you can do" do
+    make_case(opened_at: 3.days.ago)
+    Fd::Decision.create!(title: "Appeals", statement: "read by somebody else",
+      proposed_by: "UFF1")
+
+    keys = found("")["groups"].map { |one| one["key"] }
+    assert_equal ["waiting", "do"], keys
+
+    waiting = group("", "waiting")["rows"]
+    assert_match(/unassigned case/, waiting.first["title"])
+    assert_equal "1 proposal to settle", waiting.last["title"]
+    assert_equal fd_decisions_path(view: "proposed"), waiting.last["url"]
+  end
+
+  test "a decision row carries where it stands and what it is called" do
+    decision = Fd::Decision.create!(title: "Spam accounts", proposed_by: "UFF1",
+      statement: "A first-post account posting an invite link is banned on sight.")
+    decision.settle!(by: "ULEAD")
+
+    row = group("invite link", "decision")["rows"].sole
+    assert_equal "Spam accounts", row["title"]
+    assert_equal "in force", row["sub"]
+    assert_equal fd_decision_path(decision), row["url"]
+    assert_equal "📓", row["icon"]
+  end
+
+  test "a case row says what state it is in and who holds it" do
+    kase = make_case(opened_at: 2.days.ago, category_key: "spam", assign: "UME")
+    kase.update!(member_note: "a raid from six accounts")
+
+    row = group("raid", "case")["rows"].first
+    assert_equal "case #{kase.id}", row["title"]
+    assert_match(/spam · open/, row["sub"])
+    assert_equal fd_case_path(kase), row["url"]
+  end
+
+  test "a note row quotes the words around the match and points at its case" do
+    kase = make_case(opened_at: 2.days.ago)
+    Fd::Note.create!(case_id: kase.id, body: "told them to drop it and they did", author: "UFF1")
+
+    row = group("drop it", "note")["rows"].first
+    assert_equal "case #{kase.id}", row["title"]
+    assert_includes row["said"], "drop it"
+    assert_equal fd_case_path(kase), row["url"]
+  end
+
+  test "a group says how many it holds when the rows are capped" do
+    kase = make_case(opened_at: 2.days.ago)
+    5.times { |n| Fd::Note.create!(case_id: kase.id, body: "raid #{n}", author: "UFF1") }
+
+    notes = group("raid", "note")
+    assert_equal 3, notes["rows"].size
+    assert_equal 5, notes["total"]
+  end
+
+  test "a term nobody typed enough of finds nothing" do
+    assert_empty found("a")["groups"].reject { |one| ["waiting", "do"].include?(one["key"]) }
+  end
+
+  test "the palette and its opener are on every page" do
+    get fd_cases_path
+
+    assert_select "[data-controller~=palette]"
+    assert_select ".palette-host input[data-palette-target=input]"
+    assert_select "button.field-top[data-action='palette#open']"
+  end
+end

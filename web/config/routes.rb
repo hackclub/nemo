@@ -13,6 +13,7 @@ Rails.application.routes.draw do
     resources :members, only: [:index, :show] do
       resources :notes, only: [:create, :destroy], controller: "member_notes"
     end
+    resource :search, only: [:show], controller: "searches"
     resources :decisions, only: [:index, :show, :create, :update, :destroy] do
       resources :threads, only: [:create, :destroy], controller: "decision_threads"
       resource :settlement, only: [:create]

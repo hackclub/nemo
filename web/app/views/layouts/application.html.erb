@@ -46,7 +46,9 @@
       </div>
     <% end %>
 
-    <div class="shell" data-controller="dismiss">
+    <div class="shell" data-controller="dismiss palette"
+         data-palette-url-value="<%= fd_search_path(format: :json) %>"
+         data-action="keydown@document->palette#key">
       <aside class="rail">
         <div class="brand">
           <span class="brand-mark">M</span>
@@ -114,11 +116,12 @@
 
       <div class="main">
         <div class="topbar">
-          <%= form_with url: channels_path, method: :get, class: "field-top" do %>
+          <button type="button" class="field-top" data-action="palette#open"
+                  aria-label="Search cases, members, notes">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-            <%= search_field_tag :q, nil, placeholder: "Search channels by name",
-                  autocomplete: "off", aria: { label: "Search channels by name" } %>
-          <% end %>
+            Search cases, members, notes
+            <span class="kbd">⌘K</span>
+          </button>
           <div class="topbar-icons">
             <span class="delta-note"><%= current_profile&.display_name || current_staff.user_id %></span>
             <% if current_profile&.image_url %>
@@ -148,6 +151,8 @@
           </main>
         </div>
       </div>
+
+      <%= render "fd/palette" %>
     </div>
   </body>
 </html>
