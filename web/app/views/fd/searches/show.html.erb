@@ -1,0 +1,55 @@
+<% content_for :page_title, @found.term.presence || "Search" %>
+<% if @found.asked? %>
+  <% content_for :page_subtitle do %>
+    <%= pluralize(@counts.values.sum, "hit") %> in <%= @took %>ms
+  <% end %>
+<% end %>
+
+<div class="stack">
+  <% if @found.asked? %>
+    <div class="views">
+      <%= link_to fd_search_path(q: params[:q]), class: "view",
+            aria: { current: ("true" if @found.scope.nil?) } do %>
+        All <span class="view-count"><%= @counts.values.sum %></span>
+      <% end %>
+      <% @counts.each do |key, count| %>
+        <%= link_to fd_search_path(q: params[:q], scope: key), class: "view",
+              aria: { current: ("true" if @found.scope == key) } do %>
+          <%= Fd::Search::LABELS.fetch(key) %>
+          <span class="view-count"><%= count %></span>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if @groups.empty? %>
+    <div class="card">
+      <p class="card-note">
+        <%= @found.asked? ? "Nothing found." : "Type at least two letters." %>
+      </p>
+    </div>
+  <% end %>
+
+  <% @groups.each do |group| %>
+    <p class="band-label"><%= group[:label] %> · <%= group[:total] %></p>
+    <div class="card card-flush">
+      <div class="scroll">
+        <table class="data-table">
+          <tbody>
+            <% group[:rows].each do |row| %>
+              <tr>
+                <td>
+                  <span class="two-line">
+                    <%= link_to row[:title], row[:url] %>
+                    <span class="idline"><%= row[:sub] %></span>
+                  </span>
+                </td>
+                <td class="said-cell"><%= row[:said] %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+</div>

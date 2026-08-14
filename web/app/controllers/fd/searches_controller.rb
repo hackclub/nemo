@@ -3,15 +3,39 @@ module Fd
     ICONS = { "member" => "👤", "case" => "📁", "decision" => "📓",
               "note" => "📝", "report" => "📨" }.freeze
 
-    def show
-      return render json: commanding if commanding?
+    PAGE_LIMIT = 20
 
-      found = Search.new(params[:q], scope: params[:scope])
-      render json: { term: found.term, scope: found.scope,
-                     groups: found.asked? ? shown(found) : resting }
+    def show
+      respond_to do |format|
+        format.json { render json: payload }
+        format.html { page }
+      end
     end
 
     private
+
+    def payload
+      return commanding if commanding?
+
+      found = Search.new(params[:q], scope: params[:scope])
+      { term: found.term, scope: found.scope,
+        groups: found.asked? ? shown(found) : resting }
+    end
+
+    def page
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      @found = Search.new(params[:q], scope: params[:scope], limit: PAGE_LIMIT)
+      @groups = @found.asked? ? shown(@found) : []
+      @took = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
+      @counts = every_count
+    end
+
+    def every_count
+      whole = Search.new(params[:q], limit: 1)
+      return {} unless whole.asked?
+
+      whole.groups.to_h { |group| [group.key, group.total] }
+    end
 
     def commanding?
       params[:q].to_s.start_with?(">") || params[:scope] == "command"

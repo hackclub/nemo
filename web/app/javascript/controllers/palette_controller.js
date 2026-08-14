@@ -132,6 +132,15 @@ export default class extends Controller {
       }
     }
 
+    const held = groups.reduce((sum, group) => sum + group.rows.length, 0)
+    const all = groups.reduce((sum, group) => sum + group.total, 0)
+    if (term.length > 0 && all > held) {
+      this.resultsTarget.append(this.line({
+        icon: "→", title: `See all ${all}`, sub: null, said: null,
+        url: `/fd/search?q=${encodeURIComponent(term)}${this.only ? `&scope=${this.only}` : ""}`,
+      }, term))
+    }
+
     if (this.rows.length === 0 && term.length > 0) {
       const none = document.createElement("div")
       none.className = "palette-group"
