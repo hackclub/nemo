@@ -9,8 +9,12 @@ class Fd::SearchTest < ActiveSupport::TestCase
     look(term).groups.map(&:key)
   end
 
-  def rows(term, kind)
-    look(term).groups.find { |group| group.key == kind }&.rows.to_a
+  def rows(term, kind, limit: Fd::Search::LIMIT)
+    look(term, limit: limit).groups.find { |group| group.key == kind }&.rows.to_a
+  end
+
+  def ranked(term)
+    rows(term, "member", limit: 50).map { |row| row.record.user_id }
   end
 
   def decision(**attrs)
@@ -108,6 +112,49 @@ class Fd::SearchTest < ActiveSupport::TestCase
     Fd::Note.create!(case_id: kase.id, body: "the raid again", author: "UFF1")
 
     assert_equal "the raid again", rows("raid", "note").sole.said
+  end
+
+  test "an open case outranks a resolved one" do
+    old = make_case(opened_at: 3.days.ago)
+    old.update!(resolved_at: 1.day.ago, resolution: "no_action",
+      member_note: "the raid was over by then")
+    open = make_case(opened_at: 4.days.ago)
+    open.update!(member_note: "the raid is still going")
+
+    found = rows("raid", "case").map { |row| row.record.id }
+    assert_equal [open.id, old.id], found & [open.id, old.id]
+  end
+
+  test "the case whose number was typed comes first" do
+    asked = make_case(opened_at: 5.days.ago)
+    asked.update!(member_note: "the raid started here")
+    make_case(opened_at: 1.hour.ago).update!(member_note: "another raid, newer")
+
+    assert_equal asked.id, rows(asked.id.to_s, "case").first.record.id
+  end
+
+  test "a rule in force outranks a proposal, and a retired one comes last" do
+    dead = decision(title: "Warnings by DM", statement: "a raid gets a warning")
+    dead.settle!(by: "ULEAD")
+    rule = decision(title: "Raid nights", statement: "a raid is locked on sight")
+    rule.settle!(by: "ULEAD")
+    dead.supersede!(rule, by: "ULEAD")
+    proposal = decision(title: "Raid appeals", statement: "a raid ban is appealable")
+
+    assert_equal [rule.id, proposal.id, dead.id],
+      rows("raid", "decision").map { |row| row.record.id }
+  end
+
+  test "somebody with a conduct history outranks a quiet namesake" do
+    before = ranked("na")
+    quiet, noisy = before.last(2)
+    skip "the corpus has no two quiet members sharing a name" if quiet.nil? || quiet == noisy
+
+    make_case(subject: noisy, opened_at: 2.days.ago)
+
+    after = ranked("na")
+    assert after.index(noisy) < after.index(quiet),
+      "a member with a case must climb above a quiet namesake"
   end
 
   test "the groups keep one order, whatever matched" do

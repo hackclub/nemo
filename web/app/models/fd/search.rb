@@ -67,8 +67,25 @@ module Fd
       @like ||= "%#{Member.sanitize_sql_like(term.downcase)}%"
     end
 
+    MEMBER_ORDER = <<~SQL.squish
+      (lower(coalesce(handle, '')) = :term OR lower(coalesce(display_name, '')) = :term) DESC,
+      EXISTS (
+        SELECT 1 FROM fd.case_participants p WHERE p.user_id = fd.member.user_id
+      ) DESC,
+      display_name
+    SQL
+
+    CASE_ORDER = "(id = :asked) DESC, (resolved_at IS NOT NULL), opened_at DESC".freeze
+
+    DECISION_ORDER = <<~SQL.squish
+      (lower(title) = :term) DESC,
+      CASE state WHEN 'settled' THEN 0 WHEN 'proposed' THEN 1 ELSE 2 END,
+      coalesce(settled_at, proposed_at) DESC
+    SQL
+
     def members
       Member.search(term, limit: 50)
+        .reorder(Arel.sql(Member.sanitize_sql_array([MEMBER_ORDER, term: term.downcase])))
     end
 
     def member_ids
@@ -85,7 +102,8 @@ module Fd
       ids += Case.with_any_subject(member_ids).ids if member_ids.any?
       ids << case_id if case_id
 
-      Case.where(id: ids.uniq).newest_first
+      Case.where(id: ids.uniq)
+        .reorder(Arel.sql(Case.sanitize_sql_array([CASE_ORDER, asked: case_id || 0])))
     end
 
     def reason_matches
@@ -96,7 +114,8 @@ module Fd
     end
 
     def decisions
-      Decision.where(<<~SQL.squish, q: term, like: like).newest_first
+      ordered = Arel.sql(Decision.sanitize_sql_array([DECISION_ORDER, term: term.downcase]))
+      Decision.reorder(ordered).where(<<~SQL.squish, q: term, like: like)
         to_tsvector('simple', title || ' ' || statement) @@ websearch_to_tsquery('simple', :q)
           OR lower(title) LIKE :like
           OR EXISTS (SELECT 1 FROM unnest(reasons) reason WHERE lower(reason) LIKE :like)
