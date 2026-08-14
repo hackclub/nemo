@@ -81,6 +81,38 @@ class FdSearchTest < ActionDispatch::IntegrationTest
     assert_empty found("a")["groups"].reject { |one| ["waiting", "do"].include?(one["key"]) }
   end
 
+  test "a scope keeps one kind and says so back" do
+    decision = Fd::Decision.create!(title: "Raid nights", proposed_by: "UFF1",
+      statement: "a raid is locked on sight")
+    decision.settle!(by: "ULEAD")
+    make_case(opened_at: 2.days.ago).update!(member_note: "a raid, six accounts")
+
+    get fd_search_path(format: :json), params: { q: "raid", scope: "decision" }
+    payload = JSON.parse(response.body)
+
+    assert_equal "decision", payload["scope"]
+    assert_equal ["decision"], payload["groups"].map { |one| one["key"] }
+  end
+
+  test "a pasted Slack link answers with the case holding that thread" do
+    kase = make_case(opened_at: 2.days.ago)
+    Fd::CaseThread.create!(case_id: kase.id, channel_id: "C0266FRGV",
+      thread_ts: "1754487721.123456", added_by: "UFF1", is_primary: true)
+
+    row = group("https://hackclub.slack.com/archives/C0266FRGV/p1754487721123456", "case")
+      .fetch("rows").sole
+
+    assert_equal "case #{kase.id}", row["title"]
+    assert_equal fd_case_path(kase), row["url"]
+  end
+
+  test "the palette carries a scope chip and the tab hint" do
+    get fd_cases_path
+
+    assert_select ".palette-input .scope[hidden]"
+    assert_select ".palette-foot", text: /tab/
+  end
+
   test "the palette and its opener are on every page" do
     get fd_cases_path
 

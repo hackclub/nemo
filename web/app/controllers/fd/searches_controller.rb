@@ -4,8 +4,9 @@ module Fd
               "note" => "📝", "report" => "📨" }.freeze
 
     def show
-      found = Search.new(params[:q])
-      render json: { term: found.term, groups: found.asked? ? shown(found) : resting }
+      found = Search.new(params[:q], scope: params[:scope])
+      render json: { term: found.term, scope: found.scope,
+                     groups: found.asked? ? shown(found) : resting }
     end
 
     private

@@ -2,8 +2,13 @@ module Fd
   class Search
     MIN_TERM = 2
     LIMIT = 3
+    SCOPED_LIMIT = 20
     WINDOW = 90
     LEAD_IN = 30
+
+    PREFIXES = { "@" => "member", "#" => "case", "d:" => "decision",
+                 "n:" => "note", "r:" => "report" }.freeze
+    SCOPES = %w[member case decision note report].freeze
 
     Row = Struct.new(:kind, :record, :said, keyword_init: true)
     Group = Struct.new(:key, :label, :rows, :total, keyword_init: true)
@@ -16,14 +21,24 @@ module Fd
       "report" => "Reports"
     }.freeze
 
-    def initialize(term, limit: LIMIT)
-      @term = term.to_s.strip
-      @limit = limit
+    def initialize(term, scope: nil, limit: nil)
+      raw = term.to_s.strip
+      prefix = PREFIXES.keys.find { |mark| raw.downcase.start_with?(mark) }
+
+      @scope = SCOPES.find { |kind| kind == scope.to_s } || (prefix && PREFIXES[prefix])
+      @term = prefix ? raw[prefix.length..].to_s.strip : raw
+      @limit = limit || (@scope ? SCOPED_LIMIT : LIMIT)
     end
 
-    attr_reader :term
+    attr_reader :term, :scope
 
-    def asked? = term.length >= MIN_TERM
+    def asked? = term.length >= MIN_TERM || thread.present?
+
+    def thread
+      return @thread if defined?(@thread)
+
+      @thread = SlackLink.parse(term)
+    end
 
     def groups
       @groups ||= asked? ? built.reject { |group| group.rows.empty? } : []
@@ -47,13 +62,29 @@ module Fd
     private
 
     def built
-      [
+      return holding_the_thread if thread
+
+      all = [
         group("member", members),
         group("case", cases),
         group("decision", decisions),
         group("note", notes) { |note| note.body },
         group("report", reports) { |report| report.body }
       ]
+      scope ? all.select { |one| one.key == scope } : all
+    end
+
+    def holding_the_thread
+      [
+        group("case", Case.where(id: CaseThread.where(coordinates).select(:case_id)).newest_first),
+        group("decision", Decision.where(
+          id: DecisionThread.where(coordinates).select(:decision_id)
+        ).newest_first)
+      ]
+    end
+
+    def coordinates
+      { channel_id: thread.channel_id, thread_ts: thread.thread_ts }
     end
 
     def group(kind, scope, &said)

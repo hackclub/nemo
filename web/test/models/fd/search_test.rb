@@ -157,6 +157,58 @@ class Fd::SearchTest < ActiveSupport::TestCase
       "a member with a case must climb above a quiet namesake"
   end
 
+  test "a prefix narrows the search to one kind" do
+    member = Fd::Member.live.first
+    make_case(subject: member.user_id, opened_at: 2.days.ago)
+    name = member.handle.presence || member.display_name
+
+    assert_includes kinds(name), "case"
+    assert_equal ["member"], kinds("@#{name}")
+    assert_equal ["case"], kinds("##{name}")
+  end
+
+  test "a scope passed on its own does the same as a prefix" do
+    decision(title: "Raid nights", statement: "a raid is locked on sight")
+    make_case(opened_at: 2.days.ago).update!(member_note: "a raid, six accounts")
+
+    assert_equal ["case", "decision"], kinds("raid")
+    assert_equal ["decision"], look("raid", scope: "decision").groups.map(&:key)
+  end
+
+  test "a scoped search shows more of the one kind it kept" do
+    kase = make_case(opened_at: 2.days.ago)
+    6.times { |n| Fd::Note.create!(case_id: kase.id, body: "raid #{n}", author: "UFF1") }
+
+    assert_equal 3, rows("raid", "note").size
+    assert_equal 6, look("raid", scope: "note").groups.sole.rows.size
+  end
+
+  test "a scope nobody offered is ignored" do
+    decision(title: "Raid nights", statement: "a raid is locked on sight")
+
+    assert_equal ["decision"], look("raid", scope: "vibes").groups.map(&:key)
+  end
+
+  test "a pasted Slack link finds the case holding that thread" do
+    kase = make_case(opened_at: 2.days.ago)
+    Fd::CaseThread.create!(case_id: kase.id, channel_id: "C0266FRGV",
+      thread_ts: "1754487721.123456", added_by: "UFF1", is_primary: true)
+    ruled = decision(title: "Raid nights", statement: "a raid is locked on sight")
+    ruled.threads.create!(channel_id: "C0266FRGV", thread_ts: "1754487721.123456",
+      added_by: "UFF1")
+
+    link = "https://hackclub.slack.com/archives/C0266FRGV/p1754487721123456"
+    assert_equal [kase.id], rows(link, "case").map { |row| row.record.id }
+    assert_equal [ruled.id], rows(link, "decision").map { |row| row.record.id }
+  end
+
+  test "a link to a thread nobody kept finds nothing" do
+    link = "https://hackclub.slack.com/archives/C0NOTHING/p1754487721123456"
+
+    assert_predicate look(link), :asked?
+    assert_empty look(link).groups
+  end
+
   test "the groups keep one order, whatever matched" do
     member = Fd::Member.live.first
     make_case(subject: member.user_id, opened_at: 2.days.ago)

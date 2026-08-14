@@ -1,13 +1,22 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["host", "input", "results"]
+  static targets = ["host", "input", "results", "scope"]
   static values = { url: String }
+
+  static kinds = {
+    member: "members", members: "members",
+    case: "cases", cases: "cases",
+    decision: "decisions", decisions: "decisions",
+    note: "notes", notes: "notes",
+    report: "reports", reports: "reports",
+  }
 
   connect() {
     this.timer = null
     this.rows = []
     this.at = 0
+    this.scope = null
   }
 
   disconnect() {
@@ -25,6 +34,30 @@ export default class extends Controller {
     if (event.key === "ArrowDown") return this.move(event, 1)
     if (event.key === "ArrowUp") return this.move(event, -1)
     if (event.key === "Enter") return this.go(event)
+    if (event.key === "Tab") return this.scoping(event)
+    if (event.key === "Backspace") return this.unscope(event)
+  }
+
+  scoping(event) {
+    const word = this.inputTarget.value.trim().split(/\s+/)[0] ?? ""
+    const kind = this.constructor.kinds[word.toLowerCase()]
+    if (!kind) return
+
+    event.preventDefault()
+    this.scope = word.toLowerCase().replace(/s$/, "")
+    this.scopeTarget.textContent = kind
+    this.scopeTarget.hidden = false
+    this.inputTarget.value = this.inputTarget.value.trim().slice(word.length).trim()
+    this.look()
+  }
+
+  unscope(event) {
+    if (!this.scope || this.inputTarget.value.length > 0) return
+
+    event.preventDefault()
+    this.scope = null
+    this.scopeTarget.hidden = true
+    this.look()
   }
 
   open() {
@@ -46,7 +79,10 @@ export default class extends Controller {
 
   async look() {
     const term = this.inputTarget.value.trim()
-    const response = await fetch(`${this.urlValue}?q=${encodeURIComponent(term)}`, {
+    const asked = new URLSearchParams({ q: term })
+    if (this.scope) asked.set("scope", this.scope)
+
+    const response = await fetch(`${this.urlValue}?${asked}`, {
       headers: { Accept: "application/json" },
     })
     if (!response.ok) return

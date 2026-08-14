@@ -1249,6 +1249,19 @@
     font-size: var(--t-lg);
   }
 
+  .scope {
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    color: var(--accent-deep);
+    background-color: var(--accent-soft);
+    border-radius: 5px;
+    padding: 2px 7px;
+  }
+
+  .scope[hidden] {
+    display: none;
+  }
+
   .palette-input input {
     flex: 1;
     border: 0;
