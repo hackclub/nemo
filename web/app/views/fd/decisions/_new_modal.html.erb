@@ -1,4 +1,5 @@
-<%= render layout: "fd/modal", locals: { id: "new-decision", title: "New decision" } do %>
+<%= render layout: "fd/modal", locals: { id: "new-decision", title: "New decision",
+      open: params[:new] == "1" } do %>
   <%= form_with url: fd_decisions_path, method: :post, html: { autocomplete: "off" } do %>
     <div class="modal-body">
       <%= render "fd/decisions/words", decision: nil, with_reasons: false %>

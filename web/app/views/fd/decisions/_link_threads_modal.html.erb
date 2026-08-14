@@ -1,4 +1,5 @@
-<%= render layout: "fd/modal", locals: { id: "link-threads", title: "Link threads" } do %>
+<%= render layout: "fd/modal", locals: { id: "link-threads", title: "Link threads",
+      open: params[:do] == "threads" } do %>
   <%= form_with url: fd_decision_threads_path(decision), method: :post,
         html: { autocomplete: "off" } do %>
     <div class="modal-body">

@@ -1,4 +1,5 @@
 <% content_for :page_title, @decision.title %>
+<% content_for :palette_on, "decision:#{@decision.id}" %>
 <% content_for :page_subtitle do %>
   <%= decision_head_meta(@decision) %>
 <% end %>

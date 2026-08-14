@@ -4,12 +4,70 @@ module Fd
               "note" => "📝", "report" => "📨" }.freeze
 
     def show
+      return render json: commanding if commanding?
+
       found = Search.new(params[:q], scope: params[:scope])
       render json: { term: found.term, scope: found.scope,
                      groups: found.asked? ? shown(found) : resting }
     end
 
     private
+
+    def commanding?
+      params[:q].to_s.start_with?(">") || params[:scope] == "command"
+    end
+
+    def commanding
+      term = params[:q].to_s.delete_prefix(">").strip
+      rows = commands.select { |row| term.blank? || row[:title].downcase.include?(term.downcase) }
+
+      { term: term, scope: "command",
+        groups: [{ key: "command", label: "Commands", total: rows.size, rows: rows }] }
+    end
+
+    def commands
+      here + [
+        { kind: "do", icon: "⚡", title: "Open a case", sub: nil,
+          url: fd_cases_path(open: "1") },
+        { kind: "do", icon: "📓", title: "Write a decision", sub: nil,
+          url: fd_decisions_path(new: "1") },
+        { kind: "do", icon: "📁", title: "Go to the cases", sub: nil, url: fd_cases_path },
+        { kind: "do", icon: "👤", title: "Go to the members", sub: nil, url: fd_members_path },
+        { kind: "do", icon: "📓", title: "Go to the decisions", sub: nil, url: fd_decisions_path }
+      ]
+    end
+
+    def here
+      kase = Case.find_by(id: params[:on_case])
+      return decision_commands if kase.nil?
+
+      on = "on case #{kase.id}"
+      [
+        { kind: "do", icon: "⚡", title: "Resolve this case", sub: on,
+          url: fd_case_path(kase, do: "resolve") },
+        { kind: "do", icon: "⚡", title: "Log an action", sub: on,
+          url: fd_case_path(kase, do: "action") },
+        { kind: "do", icon: "📝", title: "Add a note", sub: on,
+          url: fd_case_path(kase, do: "note") },
+        { kind: "do", icon: "🔗", title: "Attach a thread", sub: on,
+          url: fd_case_path(kase, do: "thread") },
+        { kind: "do", icon: "📓", title: "Link a decision", sub: on,
+          url: fd_case_path(kase, do: "decision") }
+      ]
+    end
+
+    def decision_commands
+      decision = Decision.find_by(id: params[:on_decision])
+      return [] if decision.nil?
+
+      on = "on #{decision.title}"
+      [
+        { kind: "do", icon: "📝", title: "Edit the wording", sub: on,
+          url: fd_decision_path(decision, do: "edit") },
+        { kind: "do", icon: "🔗", title: "Link threads", sub: on,
+          url: fd_decision_path(decision, do: "threads") }
+      ]
+    end
 
     def shown(found)
       @names = Names.for(found.groups.flat_map { |group| named_in(group) })

@@ -1,4 +1,5 @@
 <% content_for :page_title, "Case #{@case.id}" %>
+<% content_for :palette_on, "case:#{@case.id}" %>
 <% content_for :page_subtitle do %>
   <%= case_head_meta(@case, @reports) %>
 <% end %>
@@ -184,7 +185,8 @@
   <% end %>
 <% end %>
 
-<%= render layout: "fd/modal", locals: { id: "log-action", title: "Log an action" } do %>
+<%= render layout: "fd/modal", locals: { id: "log-action", title: "Log an action",
+      open: params[:do] == "action" } do %>
   <%= form_with url: fd_case_actions_path(@case), method: :post, html: { autocomplete: "off" } do %>
     <div class="modal-body">
       <%= render "action_fields", kase: @case, flagged: @flagged_messages,
@@ -197,7 +199,8 @@
   <% end %>
 <% end %>
 
-<%= render layout: "fd/modal", locals: { id: "attach-thread", title: "Attach a thread" } do %>
+<%= render layout: "fd/modal", locals: { id: "attach-thread", title: "Attach a thread",
+      open: params[:do] == "thread" } do %>
   <%= form_with url: fd_case_threads_path(@case), method: :post, html: { autocomplete: "off" } do %>
     <div class="modal-body">
       <label class="field-label">
@@ -232,7 +235,7 @@
 <% end %>
 
 <%= render layout: "fd/modal", locals: { id: "add-note", title: "Add a note",
-      sub: "internal" } do %>
+      sub: "internal", open: params[:do] == "note" } do %>
   <%= form_with url: fd_case_notes_path(@case), method: :post, html: { autocomplete: "off" } do %>
     <div class="modal-body">
       <div class="outcomes">
@@ -269,6 +272,7 @@
 <% unless @case.resolved? %>
 <%= render layout: "fd/modal", locals: { id: "resolve-case",
       title: "Resolve case #{@case.id}", label: "Resolve this case",
+      open: params[:do] == "resolve",
       sub: @case.assigned? ? "assigned to #{@case.assignee_handles}" : "not assigned to anybody" } do %>
       <%= form_with url: fd_case_resolution_path(@case), method: :post, html: { autocomplete: "off" } do %>
         <div class="modal-body">

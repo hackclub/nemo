@@ -106,6 +106,61 @@ class FdSearchTest < ActionDispatch::IntegrationTest
     assert_equal fd_case_path(kase), row["url"]
   end
 
+  test "a prefix alone drops the resting rows and shows that kind" do
+    make_case(opened_at: 2.days.ago)
+    payload = found("#")
+
+    assert_equal "case", payload["scope"]
+    assert_equal ["case"], payload["groups"].map { |one| one["key"] }
+  end
+
+  test "a chevron turns the box into commands" do
+    payload = found(">")
+
+    assert_equal "command", payload["scope"]
+    titles = payload["groups"].sole["rows"].map { |row| row["title"] }
+    assert_includes titles, "Open a case"
+    assert_includes titles, "Write a decision"
+  end
+
+  test "commands filter as you keep typing" do
+    titles = found(">write").fetch("groups").sole["rows"].map { |row| row["title"] }
+
+    assert_equal ["Write a decision"], titles
+  end
+
+  test "on a case, the commands act on that case" do
+    kase = make_case(opened_at: 2.days.ago)
+    get fd_search_path(format: :json), params: { q: ">", on_case: kase.id }
+    rows = JSON.parse(response.body)["groups"].sole["rows"]
+
+    resolve = rows.find { |row| row["title"] == "Resolve this case" }
+    assert_equal "on case #{kase.id}", resolve["sub"]
+    assert_equal fd_case_path(kase, do: "resolve"), resolve["url"]
+  end
+
+  test "a command lands with the modal already open" do
+    kase = make_case(opened_at: 2.days.ago)
+
+    get fd_case_path(kase, do: "resolve")
+    assert_select "input#resolve-case[checked]"
+
+    get fd_case_path(kase)
+    assert_select "input#resolve-case[checked]", count: 0
+  end
+
+  test "a decision command opens its modal too" do
+    decision = Fd::Decision.create!(title: "Appeals", statement: "read by somebody else",
+      proposed_by: "UME")
+
+    get fd_search_path(format: :json), params: { q: ">", on_decision: decision.id }
+    rows = JSON.parse(response.body)["groups"].sole["rows"]
+    assert_includes rows.map { |row| row["title"] }, "Link threads"
+
+    get fd_decision_path(decision, do: "edit")
+    assert_select "input#edit-decision[checked]"
+  end
+
   test "the palette carries a scope chip and the tab hint" do
     get fd_cases_path
 

@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["host", "input", "results", "scope"]
-  static values = { url: String }
+  static values = { url: String, on: String }
 
   static kinds = {
     member: "members", members: "members",
@@ -16,7 +16,7 @@ export default class extends Controller {
     this.timer = null
     this.rows = []
     this.at = 0
-    this.scope = null
+    this.only = null
   }
 
   disconnect() {
@@ -44,7 +44,7 @@ export default class extends Controller {
     if (!kind) return
 
     event.preventDefault()
-    this.scope = word.toLowerCase().replace(/s$/, "")
+    this.only = word.toLowerCase().replace(/s$/, "")
     this.scopeTarget.textContent = kind
     this.scopeTarget.hidden = false
     this.inputTarget.value = this.inputTarget.value.trim().slice(word.length).trim()
@@ -52,10 +52,10 @@ export default class extends Controller {
   }
 
   unscope(event) {
-    if (!this.scope || this.inputTarget.value.length > 0) return
+    if (!this.only || this.inputTarget.value.length > 0) return
 
     event.preventDefault()
-    this.scope = null
+    this.only = null
     this.scopeTarget.hidden = true
     this.look()
   }
@@ -80,15 +80,34 @@ export default class extends Controller {
   async look() {
     const term = this.inputTarget.value.trim()
     const asked = new URLSearchParams({ q: term })
-    if (this.scope) asked.set("scope", this.scope)
+    if (this.only) asked.set("scope", this.only)
+    if (this.hasOnValue && this.onValue) {
+      const [key, id] = this.onValue.split(":")
+      asked.set(key === "case" ? "on_case" : "on_decision", id)
+    }
 
     const response = await fetch(`${this.urlValue}?${asked}`, {
       headers: { Accept: "application/json" },
     })
     if (!response.ok) return
 
-    const { groups } = await response.json()
-    this.draw(groups, term)
+    const payload = await response.json()
+    this.adopt(payload.scope)
+    this.draw(payload.groups, term)
+  }
+
+  adopt(scope) {
+    if (!scope || scope === this.only || scope === "command") return
+
+    const marks = { "@": "member", "#": "case", "d:": "decision", "n:": "note", "r:": "report" }
+    const typed = this.inputTarget.value.toLowerCase()
+    const mark = Object.keys(marks).find((one) => typed.startsWith(one) && marks[one] === scope)
+    if (!mark) return
+
+    this.only = scope
+    this.scopeTarget.textContent = `${scope}s`
+    this.scopeTarget.hidden = false
+    this.inputTarget.value = this.inputTarget.value.slice(mark.length).trim()
   }
 
   draw(groups, term) {

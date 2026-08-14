@@ -1,4 +1,5 @@
-<%= render layout: "fd/modal", locals: { id: "edit-decision", title: "Edit" } do %>
+<%= render layout: "fd/modal", locals: { id: "edit-decision", title: "Edit",
+      open: params[:do] == "edit" } do %>
   <%= form_with url: fd_decision_path(decision), method: :patch,
         html: { autocomplete: "off" } do %>
     <div class="modal-body">

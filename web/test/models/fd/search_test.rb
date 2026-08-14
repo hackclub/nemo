@@ -167,6 +167,34 @@ class Fd::SearchTest < ActiveSupport::TestCase
     assert_equal ["case"], kinds("##{name}")
   end
 
+  test "a prefix on its own shows that kind straight away" do
+    kase = make_case(opened_at: 2.days.ago)
+    decision(title: "Raid nights", statement: "a raid is locked on sight")
+    Fd::Note.create!(case_id: kase.id, body: "a note about the raid", author: "UFF1")
+
+    assert_equal ["case"], kinds("#")
+    assert_equal ["decision"], kinds("d:")
+    assert_equal ["note"], kinds("n:")
+    assert_equal ["member"], kinds("@")
+    assert rows("#", "case").any?, "an empty case scope still lists cases"
+  end
+
+  test "an open case leads the list a bare scope shows" do
+    open = make_case(opened_at: 1.hour.ago)
+    make_case(opened_at: 30.minutes.ago).update!(resolved_at: Time.current,
+      resolution: "no_action")
+
+    assert_equal open.id, rows("#", "case").first.record.id
+  end
+
+  test "a bare scope counts what it showed, not the whole table" do
+    make_case(opened_at: 2.days.ago)
+    found = look("#").groups.sole
+
+    assert_equal found.rows.size, found.total
+    assert_nil found.rows.first.said
+  end
+
   test "a scope passed on its own does the same as a prefix" do
     decision(title: "Raid nights", statement: "a raid is locked on sight")
     make_case(opened_at: 2.days.ago).update!(member_note: "a raid, six accounts")

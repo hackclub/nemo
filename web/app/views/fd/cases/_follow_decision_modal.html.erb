@@ -1,5 +1,6 @@
 <%= render layout: "fd/modal", locals: { id: "follow-decision",
-      title: "Link a decision", label: "Which decision this followed" } do %>
+      title: "Link a decision", label: "Which decision this followed",
+      open: params[:do] == "decision" } do %>
   <%= form_with url: fd_case_decision_path(kase), method: :post,
         html: { autocomplete: "off" } do %>
     <div class="modal-body">

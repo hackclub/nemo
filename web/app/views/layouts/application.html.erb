@@ -48,6 +48,7 @@
 
     <div class="shell" data-controller="dismiss palette"
          data-palette-url-value="<%= fd_search_path(format: :json) %>"
+         data-palette-on-value="<%= content_for(:palette_on) %>"
          data-action="keydown@document->palette#key">
       <aside class="rail">
         <div class="brand">

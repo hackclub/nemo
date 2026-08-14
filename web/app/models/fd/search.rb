@@ -32,7 +32,9 @@ module Fd
 
     attr_reader :term, :scope
 
-    def asked? = term.length >= MIN_TERM || thread.present?
+    def asked? = searching? || scope.present? || thread.present?
+
+    def searching? = term.length >= MIN_TERM
 
     def thread
       return @thread if defined?(@thread)
@@ -87,11 +89,13 @@ module Fd
       { channel_id: thread.channel_id, thread_ts: thread.thread_ts }
     end
 
-    def group(kind, scope, &said)
-      rows = scope.limit(@limit).map do |record|
-        Row.new(kind: kind, record: record, said: said && self.class.snippet(said.call(record), term))
+    def group(kind, found, &said)
+      rows = found.limit(@limit).map do |record|
+        Row.new(kind: kind, record: record,
+          said: searching? && said ? self.class.snippet(said.call(record), term) : nil)
       end
-      Group.new(key: kind, label: LABELS.fetch(kind), rows: rows, total: scope.count)
+      Group.new(key: kind, label: LABELS.fetch(kind), rows: rows,
+        total: searching? ? found.count : rows.size)
     end
 
     def like
@@ -114,9 +118,20 @@ module Fd
       coalesce(settled_at, proposed_at) DESC
     SQL
 
+    RECENT_CASES = 40
+
     def members
+      return recent_members unless searching?
+
       Member.search(term, limit: 50)
         .reorder(Arel.sql(Member.sanitize_sql_array([MEMBER_ORDER, term: term.downcase])))
+    end
+
+    def recent_members
+      ids = CaseParticipant.subjects
+        .where(case_id: Case.newest_first.limit(RECENT_CASES).select(:id))
+        .pluck(:user_id).uniq
+      Member.where(user_id: ids).in_order_of(:user_id, ids)
     end
 
     def member_ids
@@ -129,6 +144,8 @@ module Fd
     end
 
     def cases
+      return Case.reorder(Arel.sql("(resolved_at IS NOT NULL), opened_at DESC")) unless searching?
+
       ids = Case.where(id: reason_matches).ids
       ids += Case.with_any_subject(member_ids).ids if member_ids.any?
       ids << case_id if case_id
@@ -146,6 +163,8 @@ module Fd
 
     def decisions
       ordered = Arel.sql(Decision.sanitize_sql_array([DECISION_ORDER, term: term.downcase]))
+      return Decision.reorder(ordered) unless searching?
+
       Decision.reorder(ordered).where(<<~SQL.squish, q: term, like: like)
         to_tsvector('simple', title || ' ' || statement) @@ websearch_to_tsquery('simple', :q)
           OR lower(title) LIKE :like
@@ -154,12 +173,16 @@ module Fd
     end
 
     def notes
+      return Note.visible.recent_first unless searching?
+
       Note.visible.recent_first.where(<<~SQL.squish, q: term)
         to_tsvector('simple', coalesce(body, '')) @@ websearch_to_tsquery('simple', :q)
       SQL
     end
 
     def reports
+      return CaseReport.order(received_at: :desc) unless searching?
+
       CaseReport.order(received_at: :desc).where(<<~SQL.squish, q: term)
         to_tsvector('simple', coalesce(body, '')) @@ websearch_to_tsquery('simple', :q)
       SQL
