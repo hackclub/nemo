@@ -1203,6 +1203,26 @@
     margin-top: 0;
   }
 
+  .strip {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs) var(--s-sm);
+    flex-wrap: wrap;
+    border: 1px solid var(--accent);
+    background-color: var(--accent-soft);
+    border-radius: var(--r-card);
+    padding: var(--s-2xs) var(--s-md);
+  }
+
+  .strip b {
+    color: var(--accent-deep);
+    font-size: var(--t-sm);
+  }
+
+  .strip .btn {
+    margin-inline-start: auto;
+  }
+
   .palette-host[hidden] {
     display: none;
   }
@@ -2956,6 +2976,7 @@
   .data-table .col-date { width: 8.5rem; }
   .data-table .col-btn { width: 3.5rem; }
   .data-table .col-state { width: 7rem; }
+  .data-table .col-role { width: 8rem; }
 
   .data-table .said-cell {
     text-align: left;

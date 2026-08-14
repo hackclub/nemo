@@ -1,0 +1,87 @@
+<% content_for :page_title, "Settings" %>
+<% content_for :page_subtitle do %>
+  <%= role_tally(@grants) %>
+<% end %>
+
+<div class="stack">
+  <div class="views">
+    <% Fd::SettingsController::TABS.each do |key, label| %>
+      <%= link_to fd_settings_path(key == "access" ? {} : { tab: key }), class: "view",
+            aria: { current: ("true" if key == @tab) } do %>
+        <%= label %>
+        <span class="view-count"><%= key == "access" ? @grants.size : Fd::AccessGrant.count %></span>
+      <% end %>
+    <% end %>
+  </div>
+
+  <% if @tab == "access" %>
+    <% @dormant.each do |grant| %>
+      <div class="strip">
+        <b><%= names[grant.user_id] %> has held a <%= grant.role.tr("_", " ") %> grant
+          since <%= grant.granted_at.strftime("%b %Y") %> and done nothing</b>
+      </div>
+    <% end %>
+
+    <% if @grants.any? %>
+      <div class="card card-flush">
+        <div class="scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Person</th>
+                <th class="col-role">Role</th>
+                <th>Since</th>
+                <th>Given by</th>
+                <th class="col-num">Acted 30d</th>
+                <th>Last acted</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @grants.each do |grant| %>
+                <tr>
+                  <td>
+                    <span class="two-line">
+                      <b><%= names[grant.user_id] %></b>
+                      <span class="idline mono"><%= grant.user_id %></span>
+                    </span>
+                  </td>
+                  <td class="col-role"><%= role_chip(grant.role) %></td>
+                  <td><%= grant.granted_at.strftime("%b %Y") %></td>
+                  <td><%= given_by(grant.granted_by) %></td>
+                  <td class="col-num"><%= @acted[grant.user_id] || 0 %></td>
+                  <td><%= acted_label(@last_acted[grant.user_id]) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% else %>
+      <div class="card">
+        <p class="card-note">Nobody holds a grant yet.</p>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="card card-flush">
+      <div class="scroll">
+        <table class="data-table">
+          <tbody>
+            <% @history.each do |grant| %>
+              <tr>
+                <td>
+                  <span class="two-line">
+                    <b><%= names[grant.user_id] %></b>
+                    <span class="idline"><%= grant.role.tr("_", " ") %></span>
+                  </span>
+                </td>
+                <td class="said-cell"><%= grant.reason %></td>
+                <td><%= grant_span(grant) %></td>
+                <td class="col-state"><%= grant_state_chip(grant) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+</div>

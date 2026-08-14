@@ -549,6 +549,48 @@ module FdHelper
     safe_join([decision_when_line(decision), decision_thread_note(threads)], " · ")
   end
 
+  ROLE_CHIPS = { "community_manager" => ["chip-crit", "manager"],
+                 "lead" => ["chip-warn", "lead"],
+                 "firefighter" => ["chip-off", "firefighter"] }.freeze
+
+  def role_chip(role)
+    tone, said = ROLE_CHIPS.fetch(role, ["chip-off", role])
+    tag.span(said, class: "chip #{tone}")
+  end
+
+  def role_tally(grants)
+    counted = grants.group_by(&:role).transform_values(&:size)
+    said = Fd::Permission::ROLES.reverse.filter_map do |role|
+      next if counted[role].to_i.zero?
+
+      "#{counted[role]} #{Fd::Permission::ROLE_LABELS.fetch(role).downcase.pluralize(counted[role])}"
+    end
+    said.any? ? "#{pluralize(grants.size, 'person')} · #{said.join(' · ')}" : "nobody yet"
+  end
+
+  GIVEN_OUTSIDE = %w[manually backfill].freeze
+
+  def given_by(user_id)
+    GIVEN_OUTSIDE.include?(user_id) ? "manually" : names[user_id]
+  end
+
+  def acted_label(at)
+    return "never" if at.nil?
+
+    last_case_label(at)
+  end
+
+  def grant_span(grant)
+    from = grant.granted_at.strftime("%-d %b %Y")
+    grant.live? ? "since #{from}" : "#{from} to #{grant.revoked_at.strftime('%-d %b %Y')}"
+  end
+
+  def grant_state_chip(grant)
+    return tag.span("live", class: "chip chip-good") if grant.live?
+
+    tag.span("ended", class: "chip chip-off")
+  end
+
   def followed_chip(kase)
     decision = kase.followed_decision
     return nil if decision.nil?
