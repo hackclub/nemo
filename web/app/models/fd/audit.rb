@@ -21,6 +21,7 @@ module Fd
       performed reversed received
       noted deleted attached detached flagged unflagged closed
       proposed settled amended superseded dropped followed unfollowed
+      granted revoked refused
     ].freeze
 
     REDACTED_COLUMNS = {

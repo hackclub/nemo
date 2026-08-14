@@ -1,0 +1,132 @@
+require "test_helper"
+
+class Fd::PermissionTest < ActiveSupport::TestCase
+  def manager
+    @manager ||= Staff.create!(user_id: "UBOSS", community_manager: true)
+  end
+
+  def firefighter
+    @firefighter ||= Staff.create!(user_id: "UFF", community_manager: false)
+  end
+
+  def lead
+    @lead ||= Staff.create!(user_id: "ULEAD", community_manager: false).tap do |staff|
+      def staff.role = "lead"
+    end
+  end
+
+  test "every permission names a role somebody can hold" do
+    Fd::Permission.keys.each do |key|
+      roles = Fd::Permission.roles(key)
+      assert roles.any?, "#{key} belongs to nobody"
+      assert_empty roles - Fd::Permission::ROLES, "#{key} names a role that does not exist"
+    end
+  end
+
+  test "every permission says what it lets you do, and where it lives" do
+    Fd::Permission.keys.each do |key|
+      assert Fd::Permission.label(key).present?, "#{key} has no label"
+      assert Fd::Permission.area(key).present?, "#{key} belongs to no area"
+    end
+  end
+
+  test "every scope rule is one the code knows" do
+    Fd::Permission.keys.each do |key|
+      scope = Fd::Permission.scope(key)
+      next if scope.nil?
+
+      assert_includes Fd::Permission::SCOPES, scope, "#{key} names an unknown scope"
+    end
+  end
+
+  test "every audited event names a verb the audit accepts" do
+    Fd::Permission.keys.each do |key|
+      Fd::Permission.events(key).each do |event|
+        entity, verb = event.split("/")
+        assert entity.present?, "#{key} has a malformed event"
+        assert_includes Fd::Audit::VERBS, verb, "#{key} claims a verb nobody writes"
+      end
+    end
+  end
+
+  test "the three roles stack, doing then undoing then the tool itself" do
+    assert_equal 10, Fd::Permission.held_by("firefighter").size
+    assert_equal 15, Fd::Permission.held_by("lead").size
+    assert_equal 17, Fd::Permission.held_by("community_manager").size
+    assert_equal Fd::Permission.keys.size, Fd::Permission.held_by("community_manager").size
+
+    assert_equal %w[case.reverse case.reopen decision.settle decision.retire
+                    identity.read identity.purge access.grant].sort,
+      Fd::Permission.lead_only.sort
+    assert_equal %w[access.grant identity.purge].sort, Fd::Permission.manager_only.sort
+  end
+
+  test "a firefighter holds everything a lead does not undo" do
+    assert firefighter.may?("case.act")
+    assert_not firefighter.may?("case.reverse")
+    assert_not firefighter.may?("identity.read")
+  end
+
+  test "a lead undoes work but does not hand out access" do
+    assert lead.may?("case.reverse")
+    assert lead.may?("decision.settle")
+    assert lead.may?("identity.read")
+    assert_not lead.may?("access.grant")
+    assert_not lead.may?("identity.purge")
+  end
+
+  test "a community manager holds the tool itself" do
+    assert manager.may?("access.grant")
+    assert manager.may?("identity.purge")
+    assert manager.may?("case.reverse")
+    assert_predicate manager, :manager?
+    assert_predicate manager, :lead?
+  end
+
+  test "somebody with no staff row holds nothing" do
+    assert_nil Fd::Access.role(nil)
+    assert_not Fd::Access.allow?(nil, "case.read")
+  end
+
+  test "a case write is refused on somebody else's case, whatever the role" do
+    boss = lead
+    kase = make_case(opened_at: 2.days.ago)
+    kase.assign!("UOTHER")
+
+    assert boss.may?("case.act"), "the role holds it"
+    assert_not boss.may?("case.act", kase), "but the case is not theirs"
+    assert boss.may?("case.reverse", kase), "reversing is not scoped to the assignment"
+  end
+
+  test "a free case is anybody's to work" do
+    kase = make_case(opened_at: 2.days.ago)
+
+    assert firefighter.may?("case.act", kase)
+  end
+
+  test "a note is its author's to delete" do
+    kase = make_case(opened_at: 2.days.ago)
+    theirs = Fd::Note.create!(case_id: kase.id, body: "not mine", author: "UOTHER")
+    mine = Fd::Note.create!(case_id: kase.id, body: "mine", author: "UFF")
+
+    assert firefighter.may?("case.note", mine)
+    assert_not firefighter.may?("case.note", theirs)
+  end
+
+  test "the locked permissions cannot be moved between roles" do
+    assert Fd::Permission.locked?("access.grant")
+    assert Fd::Permission.locked?("identity.purge")
+    assert_not Fd::Permission.locked?("case.reverse")
+  end
+
+  test "a refusal says which rule stopped it" do
+    assert_equal "reverse an action somebody logged is lead only",
+      Fd::Permission.refusal("case.reverse")
+    assert_equal "that is not yours", Fd::Permission.refusal("case.act")
+    assert_equal "you cannot make that change", Fd::Permission.refusal("nonsense")
+  end
+
+  test "asking about a permission nobody defined is an error, not a quiet no" do
+    assert_raises(Fd::Permission::Unknown) { Fd::Permission.roles("case.vanish") }
+  end
+end
