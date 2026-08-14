@@ -21,7 +21,7 @@ class ApplicationController < ActionController::Base
   end
 
   def require_staff
-    return if current_staff&.community_manager?
+    return if current_staff&.role.present?
 
     redirect_to login_path, alert: "sign in to continue"
   end
