@@ -1,4 +1,6 @@
+import argparse
 import logging
+import os
 import signal
 import sys
 import threading
@@ -6,39 +8,62 @@ import threading
 from dotenv import load_dotenv
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
-from bot import nemo, shroud
+from bot import APPS, NEEDS, nemo, shroud
 from bot.engine import session, shutdown
 from bot.nemo import app as nemo_app
 from bot.shroud import app as shroud_app
-from lib.config import missing
+from lib.config import DATABASE
 from lib.db import SeededDeployment, refuse_if_seeded
 from lib.paths import ENV_FILE
 
 log = logging.getLogger("bot")
 
-
-def handlers():
-    return [
-        (shroud.build(), shroud_app.app_token(), "shroud"),
-        (nemo.build(), nemo_app.app_token(), "nemo"),
-    ]
+BUILD = {
+    "shroud": (shroud.build, shroud_app.app_token),
+    "nemo": (nemo.build, nemo_app.app_token),
+}
 
 
-def start(app, token, name):
-    handler = SocketModeHandler(app, token)
+def parse_args(argv):
+    parser = argparse.ArgumentParser(prog="nemo bot")
+    parser.add_argument(
+        "apps",
+        nargs="*",
+        choices=APPS,
+        help="which app to run. both, unless you name one",
+    )
+    return parser.parse_args(argv)
+
+
+def needed(apps):
+    wanted = DATABASE + ["PIPELINE_DB_USER", "PIPELINE_DB_PASSWORD"]
+    for name in apps:
+        wanted += NEEDS[name]
+    return [name for name in wanted if not os.environ.get(name)]
+
+
+def start(name):
+    build, token = BUILD[name]
+    handler = SocketModeHandler(build(), token())
     thread = threading.Thread(target=handler.start, name=name, daemon=True)
     thread.start()
     log.info("%s connected", name)
     return handler
 
 
-def main():
+def main(argv=None):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     load_dotenv(ENV_FILE)
 
-    gone = missing("bot")
+    apps = parse_args(sys.argv[1:] if argv is None else argv).apps or list(APPS)
+
+    gone = needed(apps)
     if gone:
-        print(f"bot: {len(gone)} required variable(s) missing: {', '.join(gone)}", file=sys.stderr)
+        print(
+            f"bot: {', '.join(apps)} needs {len(gone)} variable(s) that are not set: "
+            f"{', '.join(gone)}",
+            file=sys.stderr,
+        )
         print("run `nemo doctor bot` for the whole picture", file=sys.stderr)
         return 78
 
@@ -50,7 +75,7 @@ def main():
         shutdown()
         return 78
 
-    running = [start(*one) for one in handlers()]
+    running = [start(name) for name in apps]
     stopping = threading.Event()
 
     def stop(*_):
@@ -59,7 +84,7 @@ def main():
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
 
-    log.info("bot: %d app(s) up, no handlers registered yet", len(running))
+    log.info("bot: up, %s", " and ".join(apps))
     stopping.wait()
 
     for handler in running:
