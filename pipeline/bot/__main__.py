@@ -8,20 +8,16 @@ import threading
 from dotenv import load_dotenv
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
-from bot import APPS, NEEDS, nemo, shroud
+from bot import APPS, NEEDS
 from bot.engine import session, shutdown
 from bot.nemo import app as nemo_app
+from bot.relay import Relay
 from bot.shroud import app as shroud_app
 from lib.config import DATABASE
 from lib.db import SeededDeployment, refuse_if_seeded
 from lib.paths import ENV_FILE
 
 log = logging.getLogger("bot")
-
-BUILD = {
-    "shroud": (shroud.build, shroud_app.app_token),
-    "nemo": (nemo.build, nemo_app.app_token),
-}
 
 
 def parse_args(argv):
@@ -42,9 +38,20 @@ def needed(apps):
     return [name for name in wanted if not os.environ.get(name)]
 
 
-def start(name):
-    build, token = BUILD[name]
-    handler = SocketModeHandler(build(), token())
+def wire(apps):
+    relay = Relay()
+    built = {}
+    if "shroud" in apps:
+        built["shroud"] = (shroud_app.build(relay.taken), shroud_app.app_token())
+        relay.shroud_client = built["shroud"][0].client
+    if "nemo" in apps:
+        built["nemo"] = (nemo_app.build(relay.answered), nemo_app.app_token())
+        relay.nemo_client = built["nemo"][0].client
+    return built
+
+
+def start(name, app, token):
+    handler = SocketModeHandler(app, token)
     thread = threading.Thread(target=handler.start, name=name, daemon=True)
     thread.start()
     log.info("%s connected", name)
@@ -75,7 +82,7 @@ def main(argv=None):
         shutdown()
         return 78
 
-    running = [start(name) for name in apps]
+    running = [start(name, *built) for name, built in wire(apps).items()]
     stopping = threading.Event()
 
     def stop(*_):

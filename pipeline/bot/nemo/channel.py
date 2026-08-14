@@ -43,6 +43,19 @@ ORDER BY m.posted_at, s.id
 """
 
 
+FOLLOW_UP = """
+SELECT m.body, m.mirrored_ts, r.forwarded_ts, m.conversation_id
+FROM fd.intake_messages m
+JOIN fd.intake_conversations c ON c.id = m.conversation_id
+LEFT JOIN fd.case_reports r ON r.id = c.report_id
+WHERE m.id = %s
+"""
+
+COUNT_FILES = """
+SELECT count(*) FROM fd.intake_message_files WHERE message_id = %s
+"""
+
+
 def firehouse_channel():
     return os.environ["FIREHOUSE_CHANNEL_ID"]
 
@@ -132,3 +145,47 @@ def post_report(client, conn, case_id, channel_id=None):
         )
     log.info("nemo: case %s posted to the firehouse at %s", case_id, ts)
     return ts
+
+
+def post_follow_up(client, conn, message_id, channel_id=None):
+    row = conn.execute(FOLLOW_UP, (message_id,)).fetchone()
+    if not row:
+        return None
+    body, mirrored, forwarded, _ = row
+    if mirrored:
+        return mirrored
+    if not forwarded:
+        log.warning("nemo: message %s has no card to hang under", message_id)
+        return None
+
+    files = conn.execute(COUNT_FILES, (message_id,)).fetchone()[0]
+    sent = client.chat_postMessage(
+        channel=channel_id or firehouse_channel(),
+        thread_ts=forwarded,
+        text=cards.report.follow_up(body, files),
+        unfurl_links=False,
+        unfurl_media=False,
+    )
+    ts = sent["ts"]
+    conn.execute(
+        "UPDATE fd.intake_messages SET mirrored_ts = %s, mirrored_at = now() "
+        "WHERE id = %s AND mirrored_ts IS NULL",
+        (ts, message_id),
+    )
+    log.info("nemo: message %s carried into the firehouse at %s", message_id, ts)
+    return ts
+
+
+def register(app, on_reply=None):
+    @app.event("message")
+    def on_message(event):
+        if on_reply is None:
+            return
+        if event.get("channel") != firehouse_channel():
+            return
+        if event.get("bot_id") or event.get("subtype"):
+            return
+        thread_ts = event.get("thread_ts")
+        if not thread_ts or thread_ts == event.get("ts"):
+            return
+        on_reply(thread_ts, event.get("text"), event.get("user"))

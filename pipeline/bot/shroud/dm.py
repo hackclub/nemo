@@ -7,8 +7,16 @@ log = logging.getLogger("bot.shroud")
 
 CARRIES_CONTENT = (None, "file_share", "me_message", "thread_broadcast")
 
+INBOUND_SO_FAR = """
+SELECT m.conversation_id, count(*) OVER (PARTITION BY m.conversation_id) = 1
+FROM fd.intake_messages m
+JOIN fd.intake_conversations c ON c.id = m.conversation_id
+WHERE c.channel_id = %s AND c.closed_at IS NULL AND m.direction = 'inbound'
+LIMIT 1
+"""
 
-def register(app):
+
+def register(app, on_taken=None):
     @app.event("message")
     def on_message(event, client):
         if event.get("channel_type") != "im":
@@ -26,12 +34,8 @@ def register(app):
 
         with session() as conn:
             message_id, fresh = intake.record(conn, event)
-            first = conn.execute(
-                "SELECT count(*) = 1 FROM fd.intake_messages m "
-                "JOIN fd.intake_conversations c ON c.id = m.conversation_id "
-                "WHERE c.channel_id = %s AND c.closed_at IS NULL AND m.direction = 'inbound'",
-                (event["channel"],),
-            ).fetchone()[0]
+            row = conn.execute(INBOUND_SO_FAR, (event["channel"],)).fetchone()
+            conversation_id, first = (row[0], row[1]) if row else (None, True)
 
         if not fresh:
             return
@@ -48,6 +52,9 @@ def register(app):
                 },
                 direction="outbound",
             )
+
+        if on_taken and conversation_id:
+            on_taken(conversation_id, message_id)
 
     def on_changed(event):
         message = event.get("message") or {}

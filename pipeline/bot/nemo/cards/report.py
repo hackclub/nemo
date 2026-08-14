@@ -89,3 +89,15 @@ def blocks(case):
 
 def fallback(case):
     return f"Case {case['case_id']}: a report came in"
+
+
+def follow_up(body, file_count=0):
+    said = quote(body)
+    if not file_count:
+        return said
+    plural = "s" if file_count != 1 else ""
+    return f"{said}\n_they also sent {file_count} file{plural}_"
+
+
+def to_member(body):
+    return f"FD asks:\n{quote(body)}\n_reply here and it goes straight back to them_"

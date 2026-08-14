@@ -2,9 +2,13 @@ import os
 
 from slack_bolt import App
 
+from bot.nemo import channel
 
-def build():
-    return App(token=os.environ["NEMO_BOT_TOKEN"], raise_error_for_unhandled_request=False)
+
+def build(on_reply=None):
+    app = App(token=os.environ["NEMO_BOT_TOKEN"], raise_error_for_unhandled_request=False)
+    channel.register(app, on_reply)
+    return app
 
 
 def app_token():
@@ -12,4 +16,4 @@ def app_token():
 
 
 def firehouse_channel():
-    return os.environ["FIREHOUSE_CHANNEL_ID"]
+    return channel.firehouse_channel()

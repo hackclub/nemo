@@ -5,9 +5,9 @@ from slack_bolt import App
 from bot.shroud import dm
 
 
-def build():
+def build(on_taken=None):
     app = App(token=os.environ["SHROUD_BOT_TOKEN"], raise_error_for_unhandled_request=False)
-    dm.register(app)
+    dm.register(app, on_taken)
     return app
 
 
