@@ -6,6 +6,14 @@
 
 AVATAR_HOSTS = ["https://avatars.slack-edge.com", "https://*.dunkirk.sh"].freeze
 
+AUTH_ORIGIN = begin
+  issuer = URI.parse(ENV.fetch("HCA_ISSUER", "https://auth.hackclub.com"))
+  port = issuer.port unless issuer.port == issuer.default_port
+  ["#{issuer.scheme}://#{issuer.host}", port].compact.join(":")
+rescue URI::InvalidURIError
+  "https://auth.hackclub.com"
+end
+
 Rails.application.configure do
   config.content_security_policy do |policy|
     policy.default_src     :self
@@ -16,7 +24,7 @@ Rails.application.configure do
     policy.style_src       :self, :unsafe_inline
     policy.connect_src     :self
     policy.base_uri        :self
-    policy.form_action     :self
+    policy.form_action     :self, AUTH_ORIGIN
     policy.frame_ancestors :none
   end
 

@@ -928,6 +928,7 @@ def attach_internal_threads(rng, cases, members):
         if rng.random() >= INTERNAL_THREAD_SHARE:
             continue
 
+        mine = set()
         rounds = 2 if rng.random() < SECOND_INTERNAL_SHARE else 1
         for _ in range(rounds):
             if seen and rng.random() < SHARED_INTERNAL_SHARE:
@@ -937,6 +938,10 @@ def attach_internal_threads(rng, cases, members):
                 thread_ts = slack_ts(rng, at)
                 seen.append(thread_ts)
 
+            if thread_ts in mine:
+                continue
+
+            mine.add(thread_ts)
             case.threads.append(
                 (FD_CHANNEL, thread_ts, INTERNAL, False, rng.choice(crew))
             )
@@ -1105,7 +1110,11 @@ def thread_rows(cases, ids):
         case_id = ids.get(case.external_ref)
         if case_id is None:
             continue
+        written = set()
         for channel_id, thread_ts, kind, is_primary, added_by in case.threads:
+            if (channel_id, thread_ts) in written:
+                continue
+            written.add((channel_id, thread_ts))
             yield (case_id, channel_id, thread_ts, kind, is_primary, added_by)
 
 
