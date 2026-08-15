@@ -1200,6 +1200,11 @@
     padding-bottom: var(--s-2xs);
   }
 
+  turbo-frame#queue,
+  turbo-frame#roster {
+    display: contents;
+  }
+
   .stack {
     display: grid;
     gap: var(--s-md);
