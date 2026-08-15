@@ -1,5 +1,6 @@
 <% if facet.kind == :typed %>
-  <%= form_with url: fd_cases_path, method: :get, class: "facet-typed" do %>
+  <%= form_with url: fd_cases_path, method: :get, class: "facet-typed",
+        data: { turbo_frame: "queue" } do %>
     <% query.facet_params({}).except(facet.key).each do |key, value| %>
       <%= hidden_field_tag key, value, id: nil %>
     <% end %>
@@ -10,6 +11,7 @@
 <% end %>
 <% facet.options.each do |value, label| %>
   <%= link_to facet_link(query, facet.key, value), class: "facet-opt",
+        data: { turbo_frame: "queue" },
         aria: { current: ("true" if value == facet.value) } do %>
     <span class="facet-tick" aria-hidden="true">
       <% if value == facet.value %>

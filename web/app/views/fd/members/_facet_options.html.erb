@@ -1,5 +1,6 @@
 <% facet.options.each do |value, label| %>
   <%= link_to fd_members_path(query.facet_params(facet.key => value)), class: "facet-opt",
+        data: { turbo_frame: "roster" },
         aria: { current: ("true" if value == facet.value) } do %>
     <span class="facet-tick" aria-hidden="true">
       <% if value == facet.value %>

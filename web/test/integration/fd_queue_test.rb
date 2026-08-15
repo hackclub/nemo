@@ -71,6 +71,23 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     assert_select "button.handle[data-copy-id-value=UTWO]", text: "@UTWO"
   end
 
+  test "filtering swaps the queue in place instead of reloading the page" do
+    get fd_cases_path
+
+    assert_select "turbo-frame#queue .views", 1, "the views and rows live in one frame"
+    assert_select "turbo-frame#queue .data-table", 1
+    assert_select ".views .view[data-turbo-frame=queue]", 6, "every view stays in the frame"
+    assert_select ".facet-opt[data-turbo-frame=queue]", minimum: 1
+    assert_select "turbo-frame#queue .kpis", 0, "the headline figures are not filtered"
+  end
+
+  test "opening a case still leaves the frame" do
+    kase = make_case
+    get fd_cases_path
+
+    assert_select "a[href=?]:not([data-turbo-frame])", fd_case_path(kase)
+  end
+
   test "the six views are offered, with the current one marked" do
     get fd_cases_path
 

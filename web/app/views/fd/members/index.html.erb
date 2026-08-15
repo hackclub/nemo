@@ -34,9 +34,11 @@
     </div>
   </div>
 
+  <turbo-frame id="roster" target="_top" data-turbo-action="advance">
   <div class="views">
     <% @views.each do |view| %>
       <%= link_to fd_members_path(view: view.key), class: "view",
+            data: { turbo_frame: "roster" },
             aria: { current: ("true" if view.current) } do %>
         <%= view.label %>
         <span class="view-count"><%= view.count %></span>
@@ -65,7 +67,8 @@
         </details>
         <% if facet.on %>
           <%= link_to fd_members_path(@query.facet_params(facet.key => Fd::MemberQuery::DEFAULTS[facet.key])),
-                class: "facet-x", aria: { label: "clear the #{facet.label.downcase} filter" } do %>
+                class: "facet-x", data: { turbo_frame: "roster" },
+                aria: { label: "clear the #{facet.label.downcase} filter" } do %>
             &times;
           <% end %>
         <% end %>
@@ -158,7 +161,7 @@
         <div class="pager">
           <% if @query.page > 1 %>
             <%= link_to "Back", fd_members_path(@query.page_params(@query.page - 1)),
-                  class: "btn" %>
+                  class: "btn", data: { turbo_frame: "roster" } %>
           <% else %>
             <span class="btn is-off">Back</span>
           <% end %>
@@ -167,7 +170,7 @@
           </span>
           <% if @query.page < @query.pages %>
             <%= link_to "Next", fd_members_path(@query.page_params(@query.page + 1)),
-                  class: "btn" %>
+                  class: "btn", data: { turbo_frame: "roster" } %>
           <% else %>
             <span class="btn is-off">Next</span>
           <% end %>
@@ -177,4 +180,5 @@
       <p class="card-note"><%= @query.empty_note %></p>
     <% end %>
   </div>
+  </turbo-frame>
 </div>

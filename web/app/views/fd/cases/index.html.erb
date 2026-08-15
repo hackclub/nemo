@@ -32,9 +32,11 @@
       <div class="delta-note"><%= @stats.opened_month_resolved %> resolved</div>
     </div>
   </div>
+  <turbo-frame id="queue" target="_top" data-turbo-action="advance">
   <div class="views">
     <% @views.each do |view| %>
       <%= link_to fd_cases_path(view: view.key), class: "view",
+            data: { turbo_frame: "queue" },
             aria: { current: ("true" if view.current) } do %>
         <%= view.label %>
         <span class="view-count"><%= view.count %></span>
@@ -63,7 +65,8 @@
         </details>
         <% if facet.on %>
           <%= link_to facet_link(@query, facet.key, Fd::CaseQuery::DEFAULTS[facet.key]),
-                class: "facet-x", aria: { label: "clear the #{facet.label.downcase} filter" } do %>
+                class: "facet-x", data: { turbo_frame: "queue" },
+                aria: { label: "clear the #{facet.label.downcase} filter" } do %>
             &times;
           <% end %>
         <% end %>
@@ -146,6 +149,7 @@
       <%= submit_tag "Mark as duplicates", class: "btn btn-primary" %>
     <% end %>
   <% end %>
+  </turbo-frame>
 </div>
 
 <%= render "open_case_modal" %>
