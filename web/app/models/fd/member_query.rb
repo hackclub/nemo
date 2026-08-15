@@ -288,8 +288,19 @@ module Fd
       case self["sort"]
       when "cases" then found.sort_by { |row| [-(row.subject_of + row.logged_in), row.user_id] }
       when "actions" then found.sort_by { |row| [-row.actions, row.user_id] }
-      when "name" then found.sort_by { |row| Member.find_by(user_id: row.user_id)&.name.to_s }
+      when "name" then by_name(found)
       else found.sort_by { |row| [-(row.last_case_at&.to_i || 0), row.user_id] }
+      end
+    end
+
+    def by_name(found)
+      known = Member.where(user_id: found.map(&:user_id))
+        .pluck(:user_id, :display_name, :handle)
+        .to_h { |id, display, handle| [id, display.presence || handle.presence || "@#{id}"] }
+
+      found.sort_by do |row|
+        shown = known.fetch(row.user_id) { row.user_id }
+        [shown.sub(/\A@/, "").downcase, row.user_id]
       end
     end
 
