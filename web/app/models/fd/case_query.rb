@@ -92,8 +92,31 @@ module Fd
       end
     end
 
-    def self.view_counts(viewer)
-      VIEWS.keys.index_with { |key| new({ "view" => key }, viewer: viewer).relation.count }
+    COUNTS_SQL = <<~SQL.freeze
+      SELECT
+        count(*) FILTER (WHERE c.resolved_at IS NULL) AS attention,
+        count(*) FILTER (
+          WHERE c.resolved_at IS NULL AND (:viewer IS NULL OR EXISTS (
+            SELECT 1 FROM fd.case_assignees a
+            WHERE a.case_id = c.id AND a.user_id = :viewer
+          ))
+        ) AS mine,
+        count(*) FILTER (
+          WHERE c.resolved_at IS NULL AND NOT EXISTS (
+            SELECT 1 FROM fd.case_assignees a WHERE a.case_id = c.id
+          )
+        ) AS unassigned,
+        count(*) FILTER (WHERE c.resolved_at IS NULL AND c.opened_at <= :aging) AS aging,
+        count(*) FILTER (WHERE c.resolved_at >= :month) AS resolved,
+        count(*) AS everything
+      FROM fd.cases c
+    SQL
+
+    def self.view_counts(viewer, now: Time.current)
+      binds = { viewer: viewer.presence, aging: now - AGE_CRIT, month: now.beginning_of_month }
+      row = Case.connection.select_one(Case.sanitize_sql([COUNTS_SQL, binds]))
+
+      VIEWS.keys.index_with { |key| row[key].to_i }
     end
 
     def to_params

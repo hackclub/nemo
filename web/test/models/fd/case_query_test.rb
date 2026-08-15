@@ -125,4 +125,26 @@ class Fd::CaseQueryTest < ActiveSupport::TestCase
     assert_equal Fd::CaseQuery::VIEWS.keys.sort, counts.keys.sort
     assert counts.values.all? { |n| n.is_a?(Integer) }
   end
+
+  def counted_one_by_one(viewer)
+    Fd::CaseQuery::VIEWS.keys.index_with do |key|
+      Fd::CaseQuery.new(ActionController::Parameters.new("view" => key), viewer: viewer)
+        .relation.count
+    end
+  end
+
+  test "the one counting query agrees with running each view on its own" do
+    make_case(opened_at: 9.days.ago)
+    make_case(opened_at: 1.hour.ago, assign: "UME")
+    make_case(opened_at: 2.hours.ago, assign: "UOTHER")
+    make_case(opened_at: 3.days.ago, resolved_at: Time.current, resolution: "no_action")
+
+    assert_equal counted_one_by_one("UME"), Fd::CaseQuery.view_counts("UME")
+  end
+
+  test "the counts still agree when nobody is signed in" do
+    make_case(opened_at: 1.hour.ago, assign: "UOTHER")
+
+    assert_equal counted_one_by_one(nil), Fd::CaseQuery.view_counts(nil)
+  end
 end
