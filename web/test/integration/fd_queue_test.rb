@@ -85,13 +85,15 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     assert_select ".view", text: /Unassigned #{Fd::Case.unresolved.unassigned.count}/
   end
 
-  test "needs attention keeps a fresh unassigned case and drops a fresh claimed one" do
+  test "needs attention keeps a fresh claimed case as well as a free one" do
     fresh_free = make_case(opened_at: 1.hour.ago)
     fresh_taken = make_case(opened_at: 1.hour.ago, assign: "UOTHER")
+    resolved = make_case(opened_at: 1.hour.ago, resolved_at: Time.current, resolution: "no_action")
     get fd_cases_path
 
-    assert listed?(fresh_free), "nobody is on it, so it needs attention however new it is"
-    assert_not listed?(fresh_taken), "somebody is already on it and it is an hour old"
+    assert listed?(fresh_free), "nobody is on it"
+    assert listed?(fresh_taken), "somebody is on it, but it is still open"
+    assert_not listed?(resolved), "resolved cases stay off the queue"
   end
 
   test "choosing a view sets the facets it implies" do

@@ -34,12 +34,12 @@ class Fd::CaseQueryTest < ActiveSupport::TestCase
     assert_equal "anyone", query(subject: "bob")["subject"]
   end
 
-  test "needs attention keeps what nobody is on, and what has gone stale" do
+  test "needs attention keeps every open case, claimed or not" do
     found = ids
-    assert_includes found, @fresh.id, "unassigned, so it needs attention"
+    assert_includes found, @fresh.id, "unassigned"
     assert_includes found, @stale.id, "six days old"
-    assert_not_includes found, @taken.id, "an hour old and somebody is on it"
-    assert_not_includes found, @done.id
+    assert_includes found, @taken.id, "somebody is on it, but it is still open"
+    assert_not_includes found, @done.id, "resolved, so it is off the queue"
   end
 
   test "aging only keeps what has sat past five days" do

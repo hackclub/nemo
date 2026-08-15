@@ -226,8 +226,7 @@ module Fd
 
     def apply_view(scope)
       case view
-      when "attention"
-        scope.unresolved.unassigned.or(scope.unresolved.where(opened_at: ..AGE_WARN.ago))
+      when "attention" then scope.unresolved
       when "mine" then viewer ? scope.unresolved.assigned_to(viewer) : scope.unresolved
       when "unassigned" then scope.unresolved.unassigned
       when "aging" then scope.unresolved.where(opened_at: ..AGE_CRIT.ago)
