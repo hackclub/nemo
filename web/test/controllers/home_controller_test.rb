@@ -27,7 +27,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
   test "a staff row with no roles cannot sign in, so it never reaches the dashboard" do
     staff = Staff.create!(user_id: "UTESTNONE1")
     sign_in_as(staff)
-    assert_redirected_to auth_failure_path(message: "no_access")
+    assert_redirected_to auth_failure_path(message: "not_allowlisted")
 
     get root_path
     assert_redirected_to login_path

@@ -26,7 +26,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     get "/auth/hackclub/callback"
 
-    assert_redirected_to auth_failure_path(message: "no_access")
+    assert_redirected_to auth_failure_path(message: "not_allowlisted")
     assert_nil session[:user_id]
   end
 
@@ -35,7 +35,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     get "/auth/hackclub/callback"
 
-    assert_redirected_to auth_failure_path(message: "no_access")
+    assert_redirected_to auth_failure_path(message: "not_allowlisted")
     assert_nil session[:user_id]
   end
 
@@ -49,7 +49,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     get "/auth/hackclub/callback"
 
-    assert_redirected_to auth_failure_path(message: "no_access")
+    assert_redirected_to auth_failure_path(message: "not_allowlisted")
   end
 
   test "logout clears the session" do

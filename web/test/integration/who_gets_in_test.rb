@@ -48,14 +48,26 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
   test "holding no grant means no session, whatever the staff table says" do
     sign_in_as(@me)
 
-    assert_redirected_to auth_failure_path(message: "no_access")
+    assert_redirected_to auth_failure_path(message: "not_allowlisted")
     assert_nil session[:user_id]
+  end
+
+  test "a live grant is enough on its own, with no staff row behind it" do
+    Fd::AccessGrant.create!(user_id: "UNOROW", role: "firefighter",
+      granted_by: "UNOROLE", granted_at: Time.current)
+    assert_nil Staff.find_by(user_id: "UNOROW"), "the seeder writes grants without staff rows"
+
+    sign_in_as(Staff.new(user_id: "UNOROW"))
+
+    assert_equal "UNOROW", session[:user_id]
+    get fd_cases_path
+    assert_response :success
   end
 
   test "somebody unknown to the staff table is refused the same way" do
     sign_in_as(Staff.new(user_id: "USTRANGER"))
 
-    assert_redirected_to auth_failure_path(message: "no_access")
+    assert_redirected_to auth_failure_path(message: "not_allowlisted")
     assert_nil session[:user_id]
   end
 
@@ -65,7 +77,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h1", text: "Access denied"
-    assert_select "p", text: /You do not have access to Mnemosyne/
+    assert_select "p", text: /You are not allowlisted/
     assert_select "a[href=?]", login_path
     assert_select ".auth-alt", count: 0
   end
@@ -96,7 +108,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     grant.take_back!(by: "UBOSS")
 
     get fd_root_path
-    assert_redirected_to auth_failure_path(message: "no_access")
+    assert_redirected_to auth_failure_path(message: "not_allowlisted")
   end
 
   test "a stale session lands on the sign in page rather than bouncing forever" do

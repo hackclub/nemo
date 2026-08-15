@@ -1,8 +1,18 @@
 module Fd
   class Access
+    BOOTSTRAP = "BOOTSTRAP_ADMIN_SLACK_ID".freeze
+
+    def self.bootstrap_ids
+      ENV[BOOTSTRAP].to_s.split(",").map(&:strip).reject(&:empty?)
+    end
+
+    def self.bootstrap?(user_id)
+      user_id.present? && bootstrap_ids.include?(user_id)
+    end
+
     def self.role(staff)
       return nil if staff.nil?
-      return "community_manager" if staff.community_manager?
+      return "community_manager" if bootstrap?(staff.user_id)
 
       AccessGrant.role_for(staff.user_id)
     end

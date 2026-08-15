@@ -3,8 +3,14 @@ require "test_helper"
 class FdSettingsTest < ActionDispatch::IntegrationTest
   setup do
     Fd::AccessGrant.where("user_id LIKE 'USEED%'").delete_all
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @bootstrap_was = ENV["BOOTSTRAP_ADMIN_SLACK_ID"]
+    ENV["BOOTSTRAP_ADMIN_SLACK_ID"] = "UME"
+    @me = Staff.create!(user_id: "UME")
     sign_in_as(@me)
+  end
+
+  teardown do
+    ENV["BOOTSTRAP_ADMIN_SLACK_ID"] = @bootstrap_was
   end
 
   def give(user_id, role: "firefighter", **attrs)
@@ -345,14 +351,27 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
   end
 
   test "a firefighter is not offered settings, and is turned away from it" do
-    Staff.find("UME").update!(community_manager: false)
-    Fd::AccessGrant.give!("UME", role: "firefighter", by: "UME")
+    hand = Staff.create!(user_id: "UHAND")
+    give("UHAND")
+    sign_in_as(hand)
 
     get fd_cases_path
     assert_select ".rail-item", text: /Settings/, count: 0
 
     get fd_settings_path
     assert_redirected_to fd_cases_path
-    assert_equal 1, Fd::AuditEntry.where(verb: "refused", actor_user_id: "UME").count
+    assert_equal 1, Fd::AuditEntry.where(verb: "refused", actor_user_id: "UHAND").count
+  end
+
+  test "the flag on a staff row no longer outranks the grant they hold" do
+    ENV["BOOTSTRAP_ADMIN_SLACK_ID"] = nil
+    flagged = Staff.create!(user_id: "UFLAGGED", community_manager: true)
+    assert_equal "community_manager", flagged.reload.role, "seeding the flag issues a real grant"
+
+    give("UFLAGGED")
+    sign_in_as(flagged)
+
+    get fd_settings_path
+    assert_redirected_to fd_cases_path, "the grant demoted them, the flag is still set"
   end
 end

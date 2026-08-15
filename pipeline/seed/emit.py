@@ -91,8 +91,26 @@ def clear_append_only(force=False):
         admin.commit()
 
 
+def staff_for_grant_holders():
+    with connect_admin() as admin:
+        rows = admin.execute(
+            "INSERT INTO app.staff (user_id, community_manager, created_at, updated_at) "
+            "SELECT DISTINCT g.user_id, false, now(), now() FROM fd.access_grants g "
+            "ON CONFLICT (user_id) DO NOTHING RETURNING user_id"
+        ).rowcount
+        admin.commit()
+    return rows
+
+
+def clear_seeded_staff():
+    with connect_admin() as admin:
+        admin.execute(f"DELETE FROM app.staff WHERE user_id LIKE '{SEED_USER_PREFIX}%'")
+        admin.commit()
+
+
 def clear(conn, force=False):
     clear_append_only(force=force)
+    clear_seeded_staff()
     with conn.cursor() as cur:
         for table in LOG_TABLES:
             cur.execute(f"DELETE FROM {table}")
@@ -630,6 +648,7 @@ def write_conduct(conn, seed, members, as_of):
         conn, "fd.access_grants", conduct_module.GRANT_COLUMNS,
         conduct_module.access_grants(conduct_module.rng_for(seed, "grants"), members, as_of),
     )
+    counts["app.staff"] = staff_for_grant_holders()
     counts["fd.audit"] = copy_rows(
         conn, "fd.audit", conduct_module.AUDIT_COLUMNS,
         itertools.chain(

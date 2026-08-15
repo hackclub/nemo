@@ -11,7 +11,7 @@ class ApplicationController < ActionController::Base
   def current_staff
     return nil unless session[:user_id]
 
-    @current_staff ||= Staff.find_by(user_id: session[:user_id])
+    @current_staff ||= Staff.find_or_initialize_by(user_id: session[:user_id])
   end
 
   def current_profile
@@ -23,7 +23,7 @@ class ApplicationController < ActionController::Base
   def require_staff
     return if current_staff&.role.present?
     return head :unauthorized if request.format.json?
-    return redirect_to auth_failure_path(message: "no_access") if current_staff
+    return redirect_to auth_failure_path(message: "not_allowlisted") if current_staff
 
     redirect_to login_path, alert: "sign in to continue"
   end

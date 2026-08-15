@@ -1,7 +1,7 @@
 <h1>Access denied</h1>
 
-<% if @message == "no_access" %>
-  <p>You do not have access to Mnemosyne. Ask a community manager for it.</p>
+<% if @message.in?(["not_allowlisted", "no_access"]) %>
+  <p>You are not allowlisted. Ask a community manager to grant you a role.</p>
 <% else %>
   <p>Something went wrong signing in.</p>
   <p><span class="chip chip-off"><%= @message %></span></p>

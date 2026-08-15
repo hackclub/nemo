@@ -90,6 +90,12 @@ CONSISTENCY_CHECKS = [
         "and t.thread_ts = m.thread_ts where t.case_id is null",
     ),
     (
+        "everyone ever granted a role has a staff row to sign in with",
+        "select count(*) from ("
+        "select distinct user_id from fd.access_grants) g "
+        "left join app.staff s on s.user_id = g.user_id where s.user_id is null",
+    ),
+    (
         "a message deleted in slack keeps what it said",
         "select count(*) from fd.thread_messages "
         "where deleted_at is not null and body is null",

@@ -9,7 +9,7 @@ class SessionsController < ApplicationController
   def create
     auth = request.env["omniauth.auth"]
     slack_id = auth&.extra&.raw_info&.[]("slack_id")
-    staff = slack_id.present? ? Staff.find_by(user_id: slack_id) : nil
+    staff = slack_id.present? ? Staff.find_or_initialize_by(user_id: slack_id) : nil
 
     if staff&.role.present?
       reset_session
@@ -17,7 +17,7 @@ class SessionsController < ApplicationController
       redirect_to root_path, notice: "signed in"
     else
       reset_session
-      redirect_to auth_failure_path(message: "no_access")
+      redirect_to auth_failure_path(message: "not_allowlisted")
     end
   end
 
