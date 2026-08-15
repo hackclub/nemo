@@ -48,16 +48,19 @@ module Fd
 
       return refuse("case #{@case.id} is already open") unless @case.resolved?
 
+      held = @case.assignee_user_ids
       was = { "resolved_at" => @case.resolved_at, "resolution" => @case.resolution,
               "duplicate_of" => @case.duplicate_of,
-              "followed_decision_id" => @case.followed_decision_id }
+              "followed_decision_id" => @case.followed_decision_id,
+              "assignees" => held }
 
       writing do
         @case.update!(resolved_at: nil, resolution: nil, duplicate_of: nil,
           followed_decision_id: nil, updated_at: @now)
+        @case.assignees.destroy_all
         audit(@case, "reopened", before: was,
           after: { "resolved_at" => nil, "resolution" => nil, "duplicate_of" => nil,
-                   "followed_decision_id" => nil })
+                   "followed_decision_id" => nil, "assignees" => [] })
       end
 
       redirect_to fd_case_path(@case), notice: "case #{@case.id} is open again"
@@ -93,7 +96,6 @@ module Fd
 
     def mark_resolved(resolution)
       Case.where(id: @case.id, resolved_at: nil)
-        .free_or_assigned_to(current_staff.user_id)
         .update_all(
           resolved_at: @now,
           resolution: resolution,
