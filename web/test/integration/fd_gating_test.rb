@@ -27,9 +27,18 @@ class FdGatingTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal "case #{kase.id} is assigned to @UOTHER, not to you",
-      dead("Resolve")["title"]
-    assert dead("Log an action"), "logging an action is theirs to do, not ours"
+      dead("Log an action")["title"]
     assert_select ".index-add.btn-off", text: /Add somebody/
+  end
+
+  test "resolving is open to anyone, whoever is holding the case" do
+    kase = make_case(assign: "UOTHER")
+
+    get fd_case_path(kase)
+    assert_nil dead("Resolve"), "somebody else holding it does not make it theirs to close"
+
+    post fd_case_resolution_path(kase), params: { outcome: "close", close_reason: "no_action" }
+    assert kase.reload.resolved?
   end
 
   test "the same buttons are live on a case of their own" do
@@ -97,17 +106,18 @@ class FdGatingTest < ActionDispatch::IntegrationTest
     get fd_search_path(format: :json, q: ">", on_case: kase.id)
 
     rows = response.parsed_body["groups"].first["rows"]
-    resolve = rows.find { |row| row["title"] == "Resolve this case" }
-    assert_equal "case #{kase.id} is assigned to @UOTHER, not to you", resolve["why"]
+    act = rows.find { |row| row["title"] == "Log an action" }
+    assert_equal "case #{kase.id} is assigned to @UOTHER, not to you", act["why"]
+    assert_nil rows.find { |row| row["title"] == "Resolve this case" }["why"]
     assert_nil rows.find { |row| row["title"] == "Go to the cases" }["why"]
   end
 
   test "the wording a greyed control shows is the wording the refusal uses" do
     kase = make_case(assign: "UOTHER")
     get fd_case_path(kase)
-    shown = dead("Resolve")["title"]
+    shown = dead("Log an action")["title"]
 
-    post fd_case_resolution_path(kase), params: { resolution: "no_action" }
+    post fd_case_actions_path(kase), params: { kind: "warning", about: "USUB" }
 
     assert_equal shown, flash[:alert]
   end

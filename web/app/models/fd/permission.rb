@@ -39,7 +39,7 @@ module Fd
         events: %w[action/performed]
       },
       "case.resolve" => {
-        label: "Resolve a case, mark a duplicate", roles: EVERYONE, scope: :assigned,
+        label: "Resolve a case, mark a duplicate", roles: EVERYONE,
         events: %w[case/resolved]
       },
       "case.reverse" => {

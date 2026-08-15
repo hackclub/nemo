@@ -212,7 +212,16 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     assert_nil @kase.reload.member_note
   end
 
-  test "I cannot resolve a case assigned to somebody else" do
+  test "I can resolve a case somebody else is holding" do
+    @kase.assign!("UOTHER")
+    sign_in_as(@me)
+    close(member_note: "sorted between us")
+
+    assert_not_nil @kase.reload.resolved_at, "assignment says who will, not who may"
+    assert_nil flash[:alert]
+  end
+
+  test "resolving with an action is still theirs, because the action is" do
     @kase.assign!("UOTHER")
     sign_in_as(@me)
     report
@@ -268,6 +277,20 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     assert_nil @kase.resolution
     assert_match(/open again/, flash[:notice])
     assert Fd::AuditEntry.exists?(entity_type: "case", entity_id: @kase.id, verb: "reopened")
+  end
+
+  test "reopening hands the case back to nobody" do
+    @kase.assign!("UOTHER")
+    @kase.assign!(@me.user_id)
+    sign_in_as(@me)
+    close(member_note: "done")
+
+    delete fd_case_resolution_path(@kase)
+
+    assert_empty @kase.reload.assignee_user_ids, "whoever had it is not on the hook again"
+    entry = Fd::AuditEntry.where(entity_type: "case", entity_id: @kase.id, verb: "reopened").last
+    assert_equal %w[UOTHER UME], entry.before["assignees"], "the record says who was let go"
+    assert_empty entry.after["assignees"]
   end
 
   test "a duplicate that is reopened stops pointing at the other case" do

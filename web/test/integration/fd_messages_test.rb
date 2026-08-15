@@ -20,7 +20,7 @@ class FdMessagesTest < ActionDispatch::IntegrationTest
   test "a refusal stays twice as long, and says so to a screen reader" do
     kase = make_case(assign: "UOTHER")
 
-    post fd_case_resolution_path(kase), params: { outcome: "close", close_reason: "no_action" }
+    post fd_case_actions_path(kase), params: { kind: "warning", about: "USUB" }
     follow_redirect!
 
     assert_select ".topbar-msg.topbar-msg-alert[role=?][data-toast-delay-value=?]", "alert", "6000",

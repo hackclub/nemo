@@ -648,7 +648,6 @@ def write_conduct(conn, seed, members, as_of):
         conn, "fd.access_grants", conduct_module.GRANT_COLUMNS,
         conduct_module.access_grants(conduct_module.rng_for(seed, "grants"), members, as_of),
     )
-    counts["app.staff"] = staff_for_grant_holders()
     counts["fd.audit"] = copy_rows(
         conn, "fd.audit", conduct_module.AUDIT_COLUMNS,
         itertools.chain(
