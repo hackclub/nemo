@@ -106,7 +106,7 @@ module Fd
     end
 
     def total
-      @total ||= narrowed.size
+      @total ||= filtered.size
     end
 
     def population
@@ -121,7 +121,12 @@ module Fd
     end
 
     def self.view_counts
-      VIEWS.keys.index_with { |key| new({ "view" => key }).total }
+      shared = new({}).send(:with_a_history)
+      VIEWS.keys.index_with do |key|
+        counting = new({ "view" => key })
+        counting.send(:shared_summaries=, shared)
+        counting.total
+      end
     end
 
     def summary_rows
@@ -227,14 +232,17 @@ module Fd
     end
 
     def narrowed
-      @narrowed ||= begin
+      @narrowed ||= sorted(filtered)
+    end
+
+    def filtered
+      @filtered ||= begin
         found = summaries.values
         found = found.select { |row| row.subject_of.positive? || row.logged_in.positive? } unless
           self["who"] == "everyone"
         found = found.select { |row| row.priors >= self["priors"].to_i } unless default?("priors")
         found = filter_state(found)
-        found = filter_context(found)
-        sorted(found)
+        filter_context(found)
       end
     end
 
@@ -305,27 +313,37 @@ module Fd
     end
 
     def summaries
-      @summaries ||= begin
-        found = Hash.new { |all, id| all[id] = Row.new(user_id: id, subject_of: 0, logged_in: 0,
-          open_cases: 0, actions: 0, notes: 0, priors: 0) }
+      @summaries ||= self["who"] == "everyone" ? with_everyone(with_a_history) : with_a_history
+    end
 
-        conduct_rows.each do |row|
-          held = found[row["user_id"]]
-          held.subject_of = row["subject_of"].to_i
-          held.logged_in = row["logged_in"].to_i
-          held.open_cases = row["open_cases"].to_i
-          held.last_case_at = row["last_case_at"]
-        end
-        Action.group(:target_user_id).count.each { |id, n| found[id].actions = n }
-        Note.standing.visible.group(:subject_user_id).count.each { |id, n| found[id].notes = n }
-        prior_counts.each { |id, n| found[id].priors = n }
+    attr_writer :shared_summaries
 
-        if self["who"] == "everyone"
-          Member.live.pluck(:user_id).each { |id| found[id] }
-        end
+    def with_a_history
+      @shared_summaries || build_summaries
+    end
 
-        found
+    def with_everyone(found)
+      found = found.dup
+      Member.live.pluck(:user_id).each { |id| found[id] }
+      found
+    end
+
+    def build_summaries
+      found = Hash.new { |all, id| all[id] = Row.new(user_id: id, subject_of: 0, logged_in: 0,
+        open_cases: 0, actions: 0, notes: 0, priors: 0) }
+
+      conduct_rows.each do |row|
+        held = found[row["user_id"]]
+        held.subject_of = row["subject_of"].to_i
+        held.logged_in = row["logged_in"].to_i
+        held.open_cases = row["open_cases"].to_i
+        held.last_case_at = row["last_case_at"]
       end
+      Action.group(:target_user_id).count.each { |id, n| found[id].actions = n }
+      Note.standing.visible.group(:subject_user_id).count.each { |id, n| found[id].notes = n }
+      prior_counts.each { |id, n| found[id].priors = n }
+
+      found
     end
 
     def priors_phrase
