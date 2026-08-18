@@ -651,6 +651,25 @@
     font-weight: 700;
   }
 
+  .row-subject {
+    display: flex;
+    align-items: center;
+    gap: var(--s-xs);
+  }
+
+  .row-avatar {
+    width: 22px;
+    height: 22px;
+    flex: none;
+    border-radius: 50%;
+    background-color: var(--accent-soft);
+    color: var(--accent-deep);
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: var(--t-3xs);
+  }
+
   .subject-facts {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr));

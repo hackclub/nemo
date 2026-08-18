@@ -152,4 +152,30 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?] button", fd_case_claim_path(@free), text: "Claim"
     assert_select "form[action=?] button", fd_case_claim_path(@mine), count: 0
   end
+
+  test "the whole row carries the link, not just the subject name" do
+    get fd_cases_path
+
+    assert_select "tr[data-controller=row-link][data-row-link-href-value=?]",
+      fd_case_path(@free), 1
+  end
+
+  test "a row folds its category into the subtitle, with spaces not underscores" do
+    @mine.update!(category_key: "harassment_general")
+    get fd_cases_path
+
+    assert_select ".two-line span", text: /harassment general/
+  end
+
+  test "a row with no category does not print a bare n/a in the subtitle" do
+    get fd_cases_path
+
+    assert_select ".two-line span", text: /\An\/a\z/, count: 0
+  end
+
+  test "a row names how many times its subject has been reported before" do
+    get fd_cases_path
+
+    assert_select "td .chip", text: "never reported before", minimum: 1
+  end
 end

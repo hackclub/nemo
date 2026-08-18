@@ -346,10 +346,53 @@ module FdHelper
     "#{names[ids.first]} and #{pluralize(ids.size - 1, 'other')}"
   end
 
+  def category_short(key)
+    return "n/a" if key.blank?
+
+    key.tr("_", " ")
+  end
+
+  def row_subtitle(kase, context)
+    parts = [category_short(kase.category_key)]
+    parts << if kase.subject_user_ids.many?
+      pluralize(kase.subject_user_ids.size, "subject")
+    else
+      subject_context_line(context[kase.subject_user_id])
+    end
+    parts.reject { |part| part == "n/a" }.join(" · ")
+  end
+
+  def row_avatar(kase)
+    id = kase.subject_user_ids.first if kase.subject_user_ids.one?
+    letter = id ? names.initial(id) : "?"
+    tag.span(letter, class: "row-avatar", aria: { hidden: true })
+  end
+
+  PRIOR_TONES = { 0 => "chip-good", 1 => "chip-off" }.freeze
+
+  def prior_phrase(count)
+    case count
+    when 0 then "never reported before"
+    when 1 then "1 prior"
+    else "#{count} priors"
+    end
+  end
+
+  def prior_tone(count)
+    PRIOR_TONES.fetch(count, "chip-crit")
+  end
+
+  def prior_chip(kase, prior_counts)
+    return "n/a" unless kase.subject_user_ids.one?
+
+    count = prior_counts.fetch(kase.subject_user_ids.first, 0)
+    tag.span(prior_phrase(count), class: "chip #{prior_tone(count)}")
+  end
+
   def case_option_label(kase)
     parts = ["##{kase.id}"]
     parts << subject_handles(kase)
-    parts << kase.category_key.tr("_", " ") if kase.category_key
+    parts << category_short(kase.category_key) if kase.category_key
     parts << case_age_label(case_age_seconds(kase))
     parts.join(" · ")
   end

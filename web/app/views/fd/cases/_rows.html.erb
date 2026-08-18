@@ -1,5 +1,6 @@
 <% cases.each do |kase| %>
-  <tr>
+  <tr data-controller="row-link" data-row-link-href-value="<%= fd_case_path(kase) %>"
+      data-action="click->row-link#go">
     <td class="col-tick">
       <% unless kase.resolved? %>
         <%= check_box_tag "case_ids[]", kase.id, false,
@@ -9,26 +10,22 @@
       <% end %>
     </td>
     <td>
-      <span class="two-line">
-        <%= link_to fd_case_path(kase) do %>
-          <b>
-            <span class="sev <%= case_severity(kase) %>"></span>
-            <%= subject_handles(kase) %>
-            <span class="mono">#<%= kase.id %></span>
-          </b>
-        <% end %>
-        <span>
-          <% if kase.subject_user_ids.many? %>
-            <%= pluralize(kase.subject_user_ids.size, "subject") %>
-          <% else %>
-            <%= subject_context_line(context[kase.subject_user_id]) %>
+      <div class="row-subject">
+        <%= row_avatar(kase) %>
+        <span class="two-line">
+          <%= link_to fd_case_path(kase) do %>
+            <b>
+              <span class="sev <%= case_severity(kase) %>"></span>
+              <%= subject_handles(kase) %>
+              <span class="mono">#<%= kase.id %></span>
+            </b>
           <% end %>
+          <span><%= row_subtitle(kase, context) %></span>
         </span>
-      </span>
+      </div>
     </td>
-    <td><%= kase.category_key || "n/a" %></td>
-    <td class="col-num"><%= action_counts.fetch(kase.id, 0) %></td>
-    <td class="col-num"><%= case_age_chip(kase) %></td>
+    <td><%= prior_chip(kase, prior_counts) %></td>
+    <td class="col-num"><%= case_age_label(case_age_seconds(kase)) %></td>
     <td>
       <% if kase.assigned? %>
         <%= handle_list(kase.assignee_user_ids) %>

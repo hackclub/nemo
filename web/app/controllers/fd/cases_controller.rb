@@ -181,7 +181,8 @@ module Fd
       @query = CaseQuery.new(params, viewer: current_staff&.user_id)
       @cases = @query.relation.includes(:subjects, :assignees).to_a
       @context = MemberContext.for(@cases.flat_map(&:subject_user_ids))
-      @action_counts = Action.where(case_id: @cases.map(&:id)).group(:case_id).count
+      lone_subjects = @cases.filter_map { |kase| kase.subject_user_ids.first if kase.subject_user_ids.one? }
+      @prior_counts = Case.prior_counts_for(lone_subjects)
       @stats = QueueStats.load
       @total_count = @stats.total
       @views = @query.views

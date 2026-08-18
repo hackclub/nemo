@@ -91,6 +91,24 @@ module Fd
       priors_for(user_id, within: within, before: before).count
     end
 
+    def self.prior_counts_for(user_ids, within: PRIOR_WINDOW)
+      ids = user_ids.compact.uniq
+      return {} if ids.empty?
+
+      CaseParticipant.subjects
+        .where(user_id: ids)
+        .where(case_id: where(resolved_at: within.ago..).select(:id))
+        .where(<<~SQL.squish)
+          EXISTS (
+            SELECT 1 FROM fd.actions a
+            WHERE a.case_id = fd.case_participants.case_id
+              AND a.target_user_id = fd.case_participants.user_id
+              AND a.reversed_at IS NULL
+          )
+        SQL
+        .group(:user_id).count
+    end
+
     def self.candidates_for(kase, siblings = [], limit: 25)
       ordered = siblings.map(&:id)
       kase.subject_user_ids.each do |user_id|

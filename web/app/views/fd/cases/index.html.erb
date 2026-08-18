@@ -110,14 +110,13 @@
             <tr>
               <th class="col-tick"><span class="sr-only">Select</span></th>
               <th>Subject</th>
-              <th>Category</th>
-              <th class="col-num">Actions</th>
+              <th>History</th>
               <th class="col-num">Age</th>
               <th>Assigned</th>
             </tr>
           </thead>
           <tbody>
-            <%= render "rows", cases: @cases, context: @context, action_counts: @action_counts %>
+            <%= render "rows", cases: @cases, context: @context, prior_counts: @prior_counts %>
           </tbody>
         </table>
       </div>
