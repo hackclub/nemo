@@ -32,6 +32,8 @@ module Fd
       "everything" => "Everything"
     }.freeze
 
+    TABS = %w[attention aging everything].freeze
+
     VIEW_FACETS = {
       "attention" => { "status" => "open" },
       "mine" => { "status" => "open", "assignee" => "me" },

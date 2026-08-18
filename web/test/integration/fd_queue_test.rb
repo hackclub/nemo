@@ -76,7 +76,9 @@ class FdQueueTest < ActionDispatch::IntegrationTest
 
     assert_select "turbo-frame#queue .views", 1, "the views and rows live in one frame"
     assert_select "turbo-frame#queue .data-table", 1
-    assert_select ".views .view[data-turbo-frame=queue]", 6, "every view stays in the frame"
+    assert_select ".views .view[data-turbo-frame=queue]", 3, "the three tabs stay in the frame"
+    assert_select ".filters .facet-set .facet[data-turbo-frame=queue]",
+      { minimum: 3 }, "the demoted views are filter pills in the same frame"
     assert_select ".facet-opt[data-turbo-frame=queue]", minimum: 1
     assert_select "turbo-frame#queue .kpis", 0, "the headline figures are not filtered"
   end
@@ -88,18 +90,22 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]:not([data-turbo-frame])", fd_case_path(kase)
   end
 
-  test "the six views are offered, with the current one marked" do
+  test "three views are tabs, the other three are filter pills" do
     get fd_cases_path
 
-    assert_select ".views .view", 6
+    assert_select ".views .view", 3
     assert_select ".view[aria-current]", text: /Needs attention/
+    assert_select ".filters .facet-set .facet", text: /Mine/
+    assert_select ".filters .facet-set .facet", text: /Unassigned/
+    assert_select ".filters .facet-set .facet", text: /Resolved this month/
   end
 
-  test "a view carries a count you can read before clicking it" do
+  test "a pill view carries a count and marks itself current" do
     get fd_cases_path(view: "unassigned")
 
-    assert_select ".view[aria-current]", text: /Unassigned/
-    assert_select ".view", text: /Unassigned #{Fd::Case.unresolved.unassigned.count}/
+    assert_select ".filters .facet-set.on .facet[aria-current]", text: /Unassigned/
+    assert_select ".filters .facet-set.on .facet",
+      text: /Unassigned\s*#{Fd::Case.unresolved.unassigned.count}/
   end
 
   test "needs attention keeps a fresh claimed case as well as a free one" do

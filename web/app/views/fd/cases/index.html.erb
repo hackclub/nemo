@@ -1,40 +1,20 @@
 <% content_for :page_title, "Cases" %>
 <% content_for :page_subtitle do %>
   <%= number_with_delimiter(@stats.total) %> <%= since_label(@stats.first_opened) %> ·
-  <%= @stats.open_count %> open · <%= @stats.unassigned %> unassigned
+  <%= @stats.open_count %> open ·
+  <%= @stats.unassigned %> unassigned <%= oldest_unassigned_chip(@stats) %> ·
+  median to resolve <%= span_label(@stats.median_now) %>
 <% end %>
 <% content_for :head_actions do %>
   <%= opens_modal "case.open", "Open a case", opens: "open-case", css: "btn btn-primary" %>
 <% end %>
 
+<% tabs, pill_views = @views.partition { |view| Fd::CaseQuery::TABS.include?(view.key) } %>
+
 <div class="stack" data-controller="merge">
-  <div class="kpis">
-    <div class="card">
-      <p class="kpi-label">Open</p>
-      <p class="kpi-val"><%= @stats.open_count %></p>
-      <div class="delta-note">
-        <%= pluralize(@stats.open_no_action, "with no action logged") %>
-      </div>
-    </div>
-    <div class="card">
-      <p class="kpi-label">Unassigned</p>
-      <p class="kpi-val"><%= @stats.unassigned %></p>
-      <div class="delta-note"><%= oldest_unassigned_chip(@stats) %></div>
-    </div>
-    <div class="card">
-      <p class="kpi-label">Median to resolve</p>
-      <p class="kpi-val"><%= span_label(@stats.median_now) %></p>
-      <div class="delta-note"><%= median_note(@stats) %></div>
-    </div>
-    <div class="card">
-      <p class="kpi-label">Opened this month</p>
-      <p class="kpi-val"><%= @stats.opened_month %></p>
-      <div class="delta-note"><%= @stats.opened_month_resolved %> resolved</div>
-    </div>
-  </div>
   <turbo-frame id="queue" target="_top" data-turbo-action="advance">
   <div class="views">
-    <% @views.each do |view| %>
+    <% tabs.each do |view| %>
       <%= link_to fd_cases_path(view: view.key), class: "view",
             data: { turbo_frame: "queue" },
             aria: { current: ("true" if view.current) } do %>
@@ -45,6 +25,16 @@
   </div>
 
   <div class="filters">
+    <% pill_views.each do |view| %>
+      <span class="facet-set <%= "on" if view.current %>">
+        <%= link_to fd_cases_path(view: view.key), class: "facet",
+              data: { turbo_frame: "queue" },
+              aria: { current: ("true" if view.current) } do %>
+          <%= view.label %>
+          <b><%= view.count %></b>
+        <% end %>
+      </span>
+    <% end %>
     <% @query.inline_facets.each do |facet| %>
       <span class="facet-set <%= "on" if facet.on %>">
         <details class="facet-drop" name="queue-facet">
