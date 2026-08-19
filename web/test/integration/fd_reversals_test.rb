@@ -117,7 +117,7 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
   test "each live action carries its own control and its own modal" do
     live = make_action(type_key: "warning", performed_at: 1.day.ago)
     sign_in_as(@me)
-    get fd_case_path(@kase)
+    get fd_case_path(@kase, tab: "actions")
 
     assert_select ".text-btn", text: "Reverse", count: 2
     assert_select "input#reverse-#{@action.id}.modal-flip"
@@ -133,7 +133,7 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
     assert_not_nil @action.reload.reversed_at
     assert_nil live.reload.reversed_at
 
-    get fd_case_path(@kase)
+    get fd_case_path(@kase, tab: "actions")
     assert_select ".text-btn", text: "Reverse", count: 1
   end
 

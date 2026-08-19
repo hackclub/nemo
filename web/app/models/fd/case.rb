@@ -109,6 +109,19 @@ module Fd
         .group(:user_id).count
     end
 
+    def self.thread_message_counts_for(case_ids)
+      ids = case_ids.compact.uniq
+      return {} if ids.empty?
+
+      CaseThread.where(case_id: ids)
+        .joins(<<~SQL.squish)
+          JOIN fd.thread_messages tm
+            ON tm.channel_id = fd.case_threads.channel_id
+           AND tm.thread_ts = fd.case_threads.thread_ts
+        SQL
+        .group(:case_id).count
+    end
+
     def self.candidates_for(kase, siblings = [], limit: 25)
       ordered = siblings.map(&:id)
       kase.subject_user_ids.each do |user_id|

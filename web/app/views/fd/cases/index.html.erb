@@ -10,6 +10,7 @@
 <% end %>
 
 <% tabs, pill_views = @views.partition { |view| Fd::CaseQuery::TABS.include?(view.key) } %>
+<% pinned, tucked = pill_views.partition { |view| Fd::CaseQuery::PINNED_PILLS.include?(view.key) } %>
 
 <div class="stack" data-controller="merge">
   <turbo-frame id="queue" target="_top" data-turbo-action="advance">
@@ -22,10 +23,10 @@
         <span class="view-count"><%= view.count %></span>
       <% end %>
     <% end %>
-  </div>
 
-  <div class="filters">
-    <% pill_views.each do |view| %>
+    <span class="views-fill"></span>
+
+    <% pinned.each do |view| %>
       <span class="facet-set <%= "on" if view.current %>">
         <%= link_to fd_cases_path(view: view.key), class: "facet",
               data: { turbo_frame: "queue" },
@@ -33,63 +34,51 @@
           <%= view.label %>
           <b><%= view.count %></b>
         <% end %>
-      </span>
-    <% end %>
-    <% @query.inline_facets.each do |facet| %>
-      <span class="facet-set <%= "on" if facet.on %>">
-        <details class="facet-drop" name="queue-facet">
-          <summary class="facet">
-            <%= facet.label %>
-            <% if facet.on || facet.key == "sort" %>
-              <b><%= facet.value_label %></b>
-            <% end %>
-            <% unless facet.on %>
-              <span class="facet-caret" aria-hidden="true">
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
-              </span>
-            <% end %>
-          </summary>
-          <div class="menu-pop facet-pop">
-            <%= render "facet_options", query: @query, facet: facet %>
-          </div>
-        </details>
-        <% if facet.on %>
-          <%= link_to facet_link(@query, facet.key, Fd::CaseQuery::DEFAULTS[facet.key]),
-                class: "facet-x", data: { turbo_frame: "queue" },
-                aria: { label: "clear the #{facet.label.downcase} filter" } do %>
+        <% if view.current %>
+          <%= link_to fd_cases_path, class: "facet-x", data: { turbo_frame: "queue" },
+                aria: { label: "clear the #{view.label.downcase} filter" } do %>
             &times;
           <% end %>
         <% end %>
       </span>
     <% end %>
 
-    <% if @query.more_facets.any? %>
-      <span class="facet-set">
-        <details class="facet-drop" name="queue-facet">
-          <summary class="facet">
-            More
-            <span class="facet-caret" aria-hidden="true">
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
-            </span>
-          </summary>
-          <div class="menu-pop facet-pop more-pop">
-            <% @query.more_facets.each do |facet| %>
-              <details class="more-item" name="queue-more">
-                <summary class="more-name">
-                  <%= facet.label %>
-                  <span class="facet-caret" aria-hidden="true">
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
-                  </span>
-                </summary>
-                <div class="more-options">
-                  <%= render "facet_options", query: @query, facet: facet %>
-                </div>
-              </details>
+    <span class="facet-set <%= "on" if @query.filtered? || tucked.any?(&:current) %>">
+      <details class="facet-drop" name="queue-facet">
+        <summary class="facet">
+          Filters
+          <span class="facet-caret" aria-hidden="true">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+          </span>
+        </summary>
+        <div class="menu-pop filters-pop">
+          <% tucked.each do |view| %>
+            <%= link_to fd_cases_path(view: view.key), class: "more-name",
+                  data: { turbo_frame: "queue" },
+                  aria: { current: ("true" if view.current) } do %>
+              <%= view.label %>
+              <span class="view-count"><%= view.count %></span>
             <% end %>
-          </div>
-        </details>
-      </span>
-    <% end %>
+          <% end %>
+          <% @query.facets.each do |facet| %>
+            <details class="more-item" name="queue-more">
+              <summary class="more-name">
+                <%= facet.label %>
+                <% if facet.on || facet.key == "sort" %>
+                  <b><%= facet.value_label %></b>
+                <% end %>
+                <span class="facet-caret" aria-hidden="true">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+                </span>
+              </summary>
+              <div class="more-options">
+                <%= render "facet_options", query: @query, facet: facet %>
+              </div>
+            </details>
+          <% end %>
+        </div>
+      </details>
+    </span>
   </div>
 
   <div class="card card-flush">
@@ -116,7 +105,8 @@
             </tr>
           </thead>
           <tbody>
-            <%= render "rows", cases: @cases, context: @context, prior_counts: @prior_counts %>
+            <%= render "rows", cases: @cases, prior_counts: @prior_counts,
+                  thread_counts: @thread_counts %>
           </tbody>
         </table>
       </div>
@@ -140,5 +130,7 @@
   <% end %>
   </turbo-frame>
 </div>
+
+<turbo-frame id="case-drawer" class="case-drawer-frame" data-controller="case-drawer"></turbo-frame>
 
 <%= render "open_case_modal" %>

@@ -130,18 +130,20 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     Fd::Note.create!(subject_user_id: "USUB", body: "escalates in public", author: "UFF2")
 
     sign_in_as(Staff.create!(user_id: "UOTHER", community_manager: true))
-    get fd_case_path(@kase)
+    get fd_case_path(@kase, tab: "notes")
 
-    assert_select ".note-row", 2
+    assert_select ".note-row", 1
     assert_select ".note-body", text: "spoke to them in DM"
-    assert_select ".note-body", text: "escalates in public"
     assert_select ".note-by", text: /@UFF1/
+
+    get fd_case_path(@kase, tab: "people")
+    assert_select "#who .pane .notes .note-body", text: "escalates in public"
   end
 
   test "a standing note is marked as being about the member, not the case" do
     Fd::Note.create!(subject_user_id: "USUB", body: "watch for repeats", author: "UFF2")
     sign_in_as(@me)
-    get fd_case_path(@kase)
+    get fd_case_path(@kase, tab: "people")
 
     assert_select "#who .pane .notes .note-body", text: "watch for repeats"
     assert_match(/Notes on @USUB/, response.body)
@@ -152,7 +154,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
       detail: "they piled on")
     Fd::Note.create!(subject_user_id: "UWATCHER", body: "keeps turning up", author: "UFF2")
     sign_in_as(@me)
-    get fd_case_path(@kase, person: "UWATCHER")
+    get fd_case_path(@kase, person: "UWATCHER", tab: "people")
 
     assert_select "#who .pane .notes .note-body", text: "keeps turning up"
   end
@@ -161,7 +163,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     Fd::Note.create!(case_id: @kase.id, body: "struck from the record", author: "UFF1",
       deleted_at: Time.current, deleted_by: "UFF1")
     sign_in_as(@me)
-    get fd_case_path(@kase)
+    get fd_case_path(@kase, tab: "notes")
 
     assert_select ".note-row", 0
     assert_no_match(/struck from the record/, response.body)
@@ -169,7 +171,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
 
   test "the notes card says so when there is nothing written" do
     sign_in_as(@me)
-    get fd_case_path(@kase)
+    get fd_case_path(@kase, tab: "notes")
     assert_select ".note-none", text: "No notes", minimum: 1
   end
 
@@ -266,7 +268,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     Fd::Note.create!(case_id: @kase.id, body: "theirs", author: "UFF9")
 
     sign_in_as(@me)
-    get fd_case_path(@kase)
+    get fd_case_path(@kase, tab: "notes")
     assert_select ".notes .text-btn", 1
   end
 

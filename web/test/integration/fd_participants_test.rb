@@ -205,7 +205,7 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
     Fd::CaseParticipant.create!(case_id: @kase.id, user_id: "UWATCHER", role: "involved",
       detail: "they piled on")
     sign_in_as(@me)
-    get fd_case_path(@kase)
+    get fd_case_path(@kase, tab: "people")
 
     assert_select "input#add-person.modal-flip"
     assert_select "form[action=?] .pick[data-member-picker-name-value='user_ids[]']",
@@ -214,7 +214,7 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
     assert_select ".seg-radio input[name=role][value=subject]"
     assert_select "#who a.index-item", text: /@UWATCHER/
 
-    get fd_case_path(@kase, person: "UWATCHER")
+    get fd_case_path(@kase, person: "UWATCHER", tab: "people")
 
     assert_select "#who .pane .mcard-name button.handle", text: "@UWATCHER"
     assert_select "#who .pane .roles .line-why", text: /they piled on/

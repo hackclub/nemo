@@ -174,7 +174,7 @@ class FdThreadsTest < ActionDispatch::IntegrationTest
   test "the page offers the attach modal and a detach control per row" do
     sign_in_as(@me)
     attach
-    get fd_case_path(@kase)
+    get fd_case_path(@kase, tab: "evidence")
 
     assert_select "input#attach-thread.modal-flip"
     assert_select "form[action=?] input[name=link]", fd_case_threads_path(@kase)

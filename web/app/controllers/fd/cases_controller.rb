@@ -2,6 +2,8 @@ module Fd
   class CasesController < BaseController
     permit "case.open", only: :create
 
+    TABS = %w[report evidence actions notes people].freeze
+
     def index
       @open_modal = params[:open] == "1"
       load_queue
@@ -9,6 +11,8 @@ module Fd
 
     def show
       @case = Case.find(params[:id])
+      return render_drawer if turbo_frame_request_id == "case-drawer"
+
       @threads = @case.threads.primary_first.to_a
       @participants = @case.participants.by_role.to_a
       @others = @participants.reject { |person| person.role == "subject" }
@@ -56,6 +60,13 @@ module Fd
           @participants.map(&:user_id) +
           @siblings.flat_map(&:subject_user_ids)
       )
+      @tab = params[:tab].presence_in(TABS) || (@case.resolved? ? "actions" : "report")
+      @tab_counts = {
+        "evidence" => @thread_list.select(&:evidence?).sum(&:held),
+        "actions" => @actions.size,
+        "notes" => @notes.size,
+        "people" => @participants.size
+      }
     end
 
     MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/
@@ -88,6 +99,12 @@ module Fd
     end
 
     private
+
+    def render_drawer
+      @reports = @case.reports.oldest_first.to_a
+      @names = Names.for(@case.subject_user_ids + @case.assignee_user_ids + [@case.opened_by])
+      render "drawer"
+    end
 
     def page_ids
       [
@@ -179,16 +196,18 @@ module Fd
 
     def load_queue
       @query = CaseQuery.new(params, viewer: current_staff&.user_id)
-      @cases = @query.relation.includes(:subjects, :assignees).to_a
-      @context = MemberContext.for(@cases.flat_map(&:subject_user_ids))
+      @cases = @query.relation.includes(:subjects, :assignees, :reports).to_a
+      case_ids = @cases.map(&:id)
       lone_subjects = @cases.filter_map { |kase| kase.subject_user_ids.first if kase.subject_user_ids.one? }
       @prior_counts = Case.prior_counts_for(lone_subjects)
+      @thread_counts = Case.thread_message_counts_for(case_ids)
       @stats = QueueStats.load
       @total_count = @stats.total
       @views = @query.views
       @subject_preset = preset_for(asked_subjects)
       @names = Names.for(@cases.flat_map { |kase|
-        kase.subject_user_ids + kase.assignee_user_ids
+        kase.subject_user_ids + kase.assignee_user_ids + [kase.opened_by] +
+          kase.reports.map(&:reporter_user_id)
       })
       @open_for_subject ||= []
     end

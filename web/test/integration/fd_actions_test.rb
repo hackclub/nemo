@@ -118,7 +118,7 @@ class FdActionsTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     log(type_key: "shush", expires_on: "2026-09-01")
 
-    get fd_case_path(@kase)
+    get fd_case_path(@kase, tab: "actions")
     assert_match(/Shush/, response.body)
     assert_select ".data-table"
   end

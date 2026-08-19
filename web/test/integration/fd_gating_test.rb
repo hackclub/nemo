@@ -28,6 +28,8 @@ class FdGatingTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "case #{kase.id} is assigned to @UOTHER, not to you",
       dead("Log an action")["title"]
+
+    get fd_case_path(kase, tab: "people")
     assert_select ".index-add.btn-off", text: /Add somebody/
   end
 

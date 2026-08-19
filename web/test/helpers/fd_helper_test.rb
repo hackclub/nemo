@@ -91,7 +91,7 @@ class FdHelperTest < ActionView::TestCase
     assert_equal "n/a", prior_chip(Fd::Case.find(saved.id), { "UAAA" => 4 })
   end
 
-  test "the row subtitle folds the category in front of the context" do
+  test "the row subtitle folds the category in front of the subject" do
     saved = make_case(subject: "UAAA", category_key: "spam")
     line = row_subtitle(Fd::Case.find(saved.id), {})
     assert_match(/\Aspam/, line)
@@ -103,10 +103,56 @@ class FdHelperTest < ActionView::TestCase
     assert_no_match(/n\/a/, line)
   end
 
-  test "several subjects are counted, not context-lined" do
+  test "several subjects are counted" do
     saved = make_case(subject: "UAAA")
     saved.add_subject!("UBBB")
     line = row_subtitle(Fd::Case.find(saved.id), {})
     assert_match(/2 subjects/, line)
+  end
+
+  test "no subject yet says so plainly, not as a bare n/a" do
+    saved = make_case(subject: nil)
+    line = row_subtitle(Fd::Case.find(saved.id), {})
+    assert_match(/subject not yet identified/, line)
+  end
+
+  test "a case with thread messages counts them in the subtitle" do
+    saved = make_case(subject: "UAAA")
+    line = row_subtitle(Fd::Case.find(saved.id), { saved.id => 8 })
+    assert_match(/8 messages/, line)
+  end
+
+  test "a case with no thread messages does not print a zero" do
+    saved = make_case(subject: "UAAA")
+    line = row_subtitle(Fd::Case.find(saved.id), {})
+    assert_no_match(/0 messages/, line)
+  end
+
+  test "the row names the reporter, not the subject, when a report is on file" do
+    saved = make_case(subject: "UAAA")
+    Fd::CaseReport.create!(case_id: saved.id, reporter_user_id: "UREP", is_anonymous: false,
+      source_app: "shroud", received_at: Time.current)
+    assert_equal "@UREP", row_reporter_label(Fd::Case.find(saved.id))
+  end
+
+  test "an anonymous report reads as anonymous, not by the missing name" do
+    saved = make_case(subject: "UAAA")
+    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true,
+      source_app: "shroud", received_at: Time.current)
+    assert_equal "anonymous", row_reporter_label(Fd::Case.find(saved.id))
+  end
+
+  test "a case with no report at all names who opened it directly" do
+    saved = make_case(subject: "UAAA", opened_by: "UOPEN")
+    assert_equal "@UOPEN", row_reporter_label(Fd::Case.find(saved.id))
+  end
+
+  test "several reports name the first reporter and count the rest" do
+    saved = make_case(subject: "UAAA")
+    Fd::CaseReport.create!(case_id: saved.id, reporter_user_id: "UREP1", is_anonymous: false,
+      source_app: "shroud", received_at: Time.current)
+    Fd::CaseReport.create!(case_id: saved.id, reporter_user_id: "UREP2", is_anonymous: false,
+      source_app: "shroud", received_at: Time.current)
+    assert_equal "@UREP1 and 1 other", row_reporter_label(Fd::Case.find(saved.id))
   end
 end

@@ -1,6 +1,7 @@
 <% cases.each do |kase| %>
   <tr data-controller="row-link" data-row-link-href-value="<%= fd_case_path(kase) %>"
-      data-action="click->row-link#go">
+      data-action="click->row-link#go"
+      class="<%= "row-resolved" if kase.resolved? %>">
     <td class="col-tick">
       <% unless kase.resolved? %>
         <%= check_box_tag "case_ids[]", kase.id, false,
@@ -11,16 +12,16 @@
     </td>
     <td>
       <div class="row-subject">
-        <%= row_avatar(kase) %>
+        <span class="sev <%= case_severity(kase) %>"></span>
+        <%= row_reporter_avatar(kase) %>
         <span class="two-line">
           <%= link_to fd_case_path(kase) do %>
             <b>
-              <span class="sev <%= case_severity(kase) %>"></span>
-              <%= subject_handles(kase) %>
+              <%= row_reporter_label(kase) %>
               <span class="mono">#<%= kase.id %></span>
             </b>
           <% end %>
-          <span><%= row_subtitle(kase, context) %></span>
+          <span><%= row_subtitle(kase, thread_counts) %></span>
         </span>
       </div>
     </td>

@@ -307,7 +307,7 @@ module FdHelper
   end
 
   def oldest_unassigned_chip(stats)
-    return tag.span("none waiting", class: "chip chip-off") if stats.oldest_unassigned.nil?
+    return nil if stats.oldest_unassigned.nil?
 
     age = Time.current - stats.oldest_unassigned
     tag.span("oldest #{case_age_label(age)}", class: "chip #{age_tone(age)}")
@@ -352,20 +352,49 @@ module FdHelper
     key.tr("_", " ")
   end
 
-  def row_subtitle(kase, context)
-    parts = [category_short(kase.category_key)]
-    parts << if kase.subject_user_ids.many?
-      pluralize(kase.subject_user_ids.size, "subject")
-    else
-      subject_context_line(context[kase.subject_user_id])
-    end
+  def row_subtitle(kase, thread_counts)
+    parts = [category_short(kase.category_key), row_subject_phrase(kase)]
+    count = thread_counts.fetch(kase.id, 0)
+    parts << pluralize(count, "message") if count.positive?
     parts.reject { |part| part == "n/a" }.join(" · ")
+  end
+
+  def row_subject_phrase(kase)
+    ids = kase.subject_user_ids
+    return "subject not yet identified" if ids.empty?
+    return pluralize(ids.size, "subject") if ids.many?
+
+    "about #{names[ids.first]}"
   end
 
   def row_avatar(kase)
     id = kase.subject_user_ids.first if kase.subject_user_ids.one?
     letter = id ? names.initial(id) : "?"
     tag.span(letter, class: "row-avatar", aria: { hidden: true })
+  end
+
+  def row_reporter_id(kase)
+    reports = kase.reports.to_a
+    return kase.opened_by if reports.empty?
+
+    reports.reject(&:anonymous?).first&.reporter_user_id
+  end
+
+  def row_reporter_avatar(kase)
+    id = row_reporter_id(kase)
+    letter = id ? names.initial(id) : "?"
+    tag.span(letter, class: "row-avatar", aria: { hidden: true })
+  end
+
+  def row_reporter_label(kase)
+    reports = kase.reports.to_a
+    return names[kase.opened_by] if reports.empty?
+
+    named = reports.reject(&:anonymous?)
+    return "anonymous" if named.empty?
+    return names[named.first.reporter_user_id] if reports.one?
+
+    "#{names[named.first.reporter_user_id]} and #{pluralize(reports.size - 1, 'other')}"
   end
 
   PRIOR_TONES = { 0 => "chip-good", 1 => "chip-off" }.freeze
@@ -399,6 +428,17 @@ module FdHelper
 
   def case_options(cases)
     cases.map { |kase| [case_option_label(kase), kase.id] }
+  end
+
+  CASE_TAB_LABELS = {
+    "report" => "Report", "evidence" => "Evidence", "actions" => "Actions",
+    "notes" => "Notes", "people" => "People"
+  }.freeze
+
+  def case_tab_groups(counts)
+    tabs = Fd::CasesController::TABS.map { |key| { key: key, label: CASE_TAB_LABELS.fetch(key),
+      count: counts[key] } }
+    tabs.partition { |tab| tab[:key] == "report" || tab[:count].to_i.positive? }
   end
 
   def case_status_chip(kase)

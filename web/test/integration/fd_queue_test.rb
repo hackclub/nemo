@@ -77,8 +77,8 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#queue .views", 1, "the views and rows live in one frame"
     assert_select "turbo-frame#queue .data-table", 1
     assert_select ".views .view[data-turbo-frame=queue]", 3, "the three tabs stay in the frame"
-    assert_select ".filters .facet-set .facet[data-turbo-frame=queue]",
-      { minimum: 3 }, "the demoted views are filter pills in the same frame"
+    assert_select ".views .facet-set .facet[data-turbo-frame=queue]",
+      { minimum: 2 }, "the pinned views are filter pills in the same frame"
     assert_select ".facet-opt[data-turbo-frame=queue]", minimum: 1
     assert_select "turbo-frame#queue .kpis", 0, "the headline figures are not filtered"
   end
@@ -90,21 +90,21 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]:not([data-turbo-frame])", fd_case_path(kase)
   end
 
-  test "three views are tabs, the other three are filter pills" do
+  test "three views are tabs, two are pinned pills, one tucks into Filters" do
     get fd_cases_path
 
     assert_select ".views .view", 3
     assert_select ".view[aria-current]", text: /Needs attention/
-    assert_select ".filters .facet-set .facet", text: /Mine/
-    assert_select ".filters .facet-set .facet", text: /Unassigned/
-    assert_select ".filters .facet-set .facet", text: /Resolved this month/
+    assert_select ".views .facet-set .facet", text: /Mine/
+    assert_select ".views .facet-set .facet", text: /Unassigned/
+    assert_select ".views .more-name", text: /Resolved this month/
   end
 
   test "a pill view carries a count and marks itself current" do
     get fd_cases_path(view: "unassigned")
 
-    assert_select ".filters .facet-set.on .facet[aria-current]", text: /Unassigned/
-    assert_select ".filters .facet-set.on .facet",
+    assert_select ".views .facet-set.on .facet[aria-current]", text: /Unassigned/
+    assert_select ".views .facet-set.on .facet",
       text: /Unassigned\s*#{Fd::Case.unresolved.unassigned.count}/
   end
 
@@ -122,8 +122,8 @@ class FdQueueTest < ActionDispatch::IntegrationTest
   test "choosing a view sets the facets it implies" do
     get fd_cases_path(view: "mine")
 
-    assert_select ".facet-set.on .facet", text: /Assignee\s*me/
-    assert_select ".facet-set.on .facet", text: /Status\s*open/
+    assert_select ".more-name", text: /Assignee\s*me/
+    assert_select ".more-name", text: /Status\s*open/
   end
 
   test "changing a facet turns the view off and keeps what the view had set" do

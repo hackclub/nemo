@@ -52,10 +52,6 @@
 <% end %>
 
 <div class="stack">
-  <% @reports.each do |report| %>
-    <%= render "report", report: report, kase: @case %>
-  <% end %>
-
   <% if @case.resolved? %>
     <div class="closed">
       <span class="closed-what">Closed <%= @case.resolved_at.strftime("%-d %b") %></span>
@@ -72,99 +68,136 @@
     </div>
   <% end %>
 
-  <%= render "people", kase: @case, people: @people, contexts: @context,
-        notes: @standing_notes, mentioned: @mentioned, case_person: @case_person %>
+  <% kept_tabs, demoted_tabs = case_tab_groups(@tab_counts) %>
+  <div class="views">
+    <% kept_tabs.each do |tab| %>
+      <%= link_to fd_case_path(@case, tab: tab[:key]), class: "view",
+            aria: { current: ("true" if tab[:key] == @tab) } do %>
+        <%= tab[:label] %>
+        <% if tab[:count] %><span class="view-count"><%= tab[:count] %></span><% end %>
+      <% end %>
+    <% end %>
+    <% if demoted_tabs.any? %><span class="views-fill"></span><% end %>
+    <% demoted_tabs.each do |tab| %>
+      <%= link_to fd_case_path(@case, tab: tab[:key]), class: "view view-off",
+            aria: { current: ("true" if tab[:key] == @tab) } do %>
+        <%= tab[:label] %>
+        <span class="view-count"><%= tab[:count] %></span>
+      <% end %>
+    <% end %>
+  </div>
 
-  <%= render "threads", kase: @case, threads: @thread_list,
-        flags: @flags, cited_by: @cited_by %>
+  <% if @tab == "report" %>
+    <% if @reports.any? %>
+      <% @reports.each do |report| %>
+        <%= render "report", report: report, kase: @case %>
+      <% end %>
+    <% else %>
+      <p class="card-note">No report on file. <%= member_link(@case.opened_by) %> opened this case directly.</p>
+    <% end %>
+  <% end %>
 
-  <div class="card card-flush">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">What was done</h2>
+  <% if @tab == "people" %>
+    <%= render "people", kase: @case, people: @people, contexts: @context,
+          notes: @standing_notes, mentioned: @mentioned, case_person: @case_person %>
+  <% end %>
+
+  <% if @tab == "evidence" %>
+    <%= render "threads", kase: @case, threads: @thread_list,
+          flags: @flags, cited_by: @cited_by %>
+  <% end %>
+
+  <% if @tab == "actions" %>
+    <div class="card card-flush">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">What was done</h2>
+        </div>
       </div>
-    </div>
-    <% if @actions.any? %>
-      <div class="scroll">
-        <table class="data-table static">
-          <thead>
-            <tr>
-              <th>Action</th>
-              <th>Directed at</th>
-              <th>Decided by</th>
-              <th class="col-date">When</th>
-              <th>State</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @actions.each do |action| %>
+      <% if @actions.any? %>
+        <div class="scroll">
+          <table class="data-table static">
+            <thead>
               <tr>
-                <td>
-                  <span class="two-line">
-                    <b><%= action_label(action.type_key) %></b>
-                    <span>
-                      <% detail = [action_detail_note(action), cited_line(action)].compact.join(" · ") %>
-                      <%= detail %>
-                      <% unless action.reversed? %>
-                        <%= "·" if detail.present? %>
-                        <%= opens_modal "case.reverse", "Reverse",
-                              opens: "reverse-#{action.id}", on: @case, css: "text-btn" %>
-                      <% end %>
-                    </span>
-                  </span>
-                </td>
-                <td>
-                  <span class="two-line">
-                    <b><%= member_link(action.target_user_id) %></b>
-                    <span><%= action_target_note(action, @case) %></span>
-                  </span>
-                </td>
-                <td>
-                  <span class="two-line">
-                    <b><%= member_link(action.decided_by) %></b>
-                    <span><%= action_performer_note(action) %></span>
-                  </span>
-                </td>
-                <td class="col-date"><%= action.performed_at.strftime("%b %-d, %Y") %></td>
-                <td><%= action_state_chip(action) %></td>
+                <th>Action</th>
+                <th>Directed at</th>
+                <th>Decided by</th>
+                <th class="col-date">When</th>
+                <th>State</th>
               </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <p class="card-note">
-        Nothing has been done yet.
-      </p>
-    <% end %>
-  </div>
-
-  <div class="card">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">Notes</h2>
-      </div>
-      <div class="card-tools">
-        <%= opens_modal "case.note", "Add a note", opens: "add-note" %>
-      </div>
+            </thead>
+            <tbody>
+              <% @actions.each do |action| %>
+                <tr>
+                  <td>
+                    <span class="two-line">
+                      <b><%= action_label(action.type_key) %></b>
+                      <span>
+                        <% detail = [action_detail_note(action), cited_line(action)].compact.join(" · ") %>
+                        <%= detail %>
+                        <% unless action.reversed? %>
+                          <%= "·" if detail.present? %>
+                          <%= opens_modal "case.reverse", "Reverse",
+                                opens: "reverse-#{action.id}", on: @case, css: "text-btn" %>
+                        <% end %>
+                      </span>
+                    </span>
+                  </td>
+                  <td>
+                    <span class="two-line">
+                      <b><%= member_link(action.target_user_id) %></b>
+                      <span><%= action_target_note(action, @case) %></span>
+                    </span>
+                  </td>
+                  <td>
+                    <span class="two-line">
+                      <b><%= member_link(action.decided_by) %></b>
+                      <span><%= action_performer_note(action) %></span>
+                    </span>
+                  </td>
+                  <td class="col-date"><%= action.performed_at.strftime("%b %-d, %Y") %></td>
+                  <td><%= action_state_chip(action) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <p class="card-note">
+          Nothing has been done yet.
+        </p>
+      <% end %>
     </div>
+  <% end %>
 
-    <% if @notes.any? %>
-      <div class="notes">
-        <% @notes.each do |note| %>
-          <div class="note-row">
-            <div class="note-body"><%= mentioned(note.body) %></div>
-            <div class="note-by">
-              <span><%= note_byline(note) %></span>
-              <%= render "note_remove", kase: @case, note: note %>
-            </div>
-          </div>
-        <% end %>
+  <% if @tab == "notes" %>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">Notes</h2>
+        </div>
+        <div class="card-tools">
+          <%= opens_modal "case.note", "Add a note", opens: "add-note" %>
+        </div>
       </div>
-    <% else %>
-      <span class="note-none">No notes</span>
-    <% end %>
-  </div>
+
+      <% if @notes.any? %>
+        <div class="notes">
+          <% @notes.each do |note| %>
+            <div class="note-row">
+              <div class="note-body"><%= mentioned(note.body) %></div>
+              <div class="note-by">
+                <span><%= note_byline(note) %></span>
+                <%= render "note_remove", kase: @case, note: note %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <span class="note-none">No notes</span>
+      <% end %>
+    </div>
+  <% end %>
 
 </div>
 

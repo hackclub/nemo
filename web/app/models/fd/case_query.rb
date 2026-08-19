@@ -33,6 +33,7 @@ module Fd
     }.freeze
 
     TABS = %w[attention aging everything].freeze
+    PINNED_PILLS = %w[mine unassigned].freeze
 
     VIEW_FACETS = {
       "attention" => { "status" => "open" },
