@@ -8,11 +8,28 @@ def blocks_of(kind, blocks):
 def text_of(blocks):
     out = []
     for block in blocks:
-        if block["type"] == "section":
+        if block["type"] == "header":
             out.append(block["text"]["text"])
+        elif block["type"] == "section":
+            if "text" in block:
+                out.append(block["text"]["text"])
+            for field in block.get("fields", []):
+                out.append(field["text"])
+        elif block["type"] == "rich_text":
+            for element in block["elements"]:
+                out.extend(part["text"] for part in element["elements"])
         else:
             out.extend(e["text"] for e in block["elements"])
     return "\n".join(out)
+
+
+def quoted(blocks):
+    return "\n".join(
+        part["text"]
+        for block in blocks_of("rich_text", blocks)
+        for element in block["elements"]
+        for part in element["elements"]
+    )
 
 
 def a_case(**over):
@@ -23,59 +40,57 @@ def a_case(**over):
 
 def test_the_case_number_leads():
     blocks = card.blocks(a_case())
-    assert "*Case 2545*" in blocks[0]["text"]["text"]
+    assert blocks[0]["type"] == "header"
+    assert "Case 2545" in blocks[0]["text"]["text"]
 
 
-def test_the_case_number_links_when_there_is_a_host():
+def test_the_case_links_out_to_fire_engine():
     blocks = card.blocks(a_case(url="https://nemo.hackclub.com/fd/cases/2545"))
-    assert "<https://nemo.hackclub.com/fd/cases/2545|Case 2545>" in blocks[0]["text"]["text"]
+    assert "<https://nemo.hackclub.com/fd/cases/2545|open in Fire Engine>" in text_of(blocks)
 
 
-def test_a_case_with_no_category_says_so():
-    assert "no category yet" in card.blocks(a_case())[0]["text"]["text"]
+def test_a_case_with_no_category_just_says_the_number():
+    assert card.blocks(a_case())[0]["text"]["text"] == "Case 2545"
 
 
 def test_the_category_shows_when_it_is_set():
     blocks = card.blocks(a_case(category_key="harassment_general"))
-    assert "harassment_general" in blocks[0]["text"]["text"]
+    assert "harassment general" in blocks[0]["text"]["text"]
+
+
+def test_the_header_stays_within_slacks_limit():
+    blocks = card.blocks(a_case(category_key="c" * 400))
+    assert len(blocks[0]["text"]["text"]) <= card.HEADER_LIMIT
 
 
 def test_the_report_is_quoted():
-    assert "> someone is being awful" in text_of(card.blocks(a_case()))
-
-
-def test_every_line_of_the_report_is_quoted():
-    blocks = card.blocks(a_case(body="line one\nline two"))
-    body = text_of(blocks)
-    assert "> line one" in body
-    assert "> line two" in body
-
-
-def test_a_blank_line_stays_a_quote():
-    blocks = card.blocks(a_case(body="one\n\ntwo"))
-    assert "\n>\n" in text_of(blocks)
+    assert quoted(card.blocks(a_case())) == "someone is being awful"
 
 
 def test_a_report_with_no_words_still_reads():
-    assert "only what is attached" in text_of(card.blocks(a_case(body="")))
+    assert "only what is attached" in quoted(card.blocks(a_case(body="")))
 
 
 def test_a_very_long_report_is_cut_and_says_so():
-    blocks = card.blocks(a_case(body="x" * 5000))
-    body = blocks[1]["text"]["text"]
-    assert len(body) <= card.SECTION_LIMIT
+    body = quoted(card.blocks(a_case(body="x" * 5000)))
+    assert len(body) <= card.QUOTE_LIMIT + len(card.CUT)
     assert "truncated" in body
 
 
 def test_mentions_cannot_ping_the_firehouse():
     blocks = card.blocks(a_case(body="it was <@U0BAD> in <#C123>"))
-    body = text_of(blocks)
-    assert "<@U0BAD>" not in body
-    assert "&lt;@U0BAD&gt;" in body
+    said = quoted(blocks)
+    assert "<@U0BAD>" in said, "a quote block carries text literally"
+    assert card.blocks(a_case(body="<!channel>"))[1]["type"] == "rich_text"
 
 
-def test_ampersands_survive_escaping():
-    assert "&amp;" in text_of(card.blocks(a_case(body="rock & roll")))
+def test_a_relayed_message_is_escaped_because_it_is_markdown():
+    assert "&lt;@U0BAD&gt;" in card.to_member("it was <@U0BAD>")
+    assert "&lt;@U0BAD&gt;" in card.follow_up("it was <@U0BAD>")
+
+
+def test_ampersands_survive_escaping_where_it_matters():
+    assert "&amp;" in card.to_member("rock & roll")
 
 
 def test_an_anonymous_report_never_names_the_reporter():
@@ -97,16 +112,6 @@ def test_a_named_report_with_no_reporter_falls_back_to_anonymous():
 def test_files_are_listed_by_name():
     blocks = card.blocks(a_case(files=[{"name": "shot.png", "fetch_state": "pending"}]))
     assert "shot.png" in text_of(blocks)
-
-
-def test_the_file_count_is_singular_for_one():
-    blocks = card.blocks(a_case(files=[{"name": "a.png", "fetch_state": "pending"}]))
-    assert "1 file" in text_of(blocks)
-    assert "1 files" not in text_of(blocks)
-
-
-def test_no_files_says_zero():
-    assert "0 files" in text_of(card.blocks(a_case()))
 
 
 def test_an_external_file_says_where_it_lives():
@@ -151,11 +156,11 @@ def test_forwarded_evidence_is_linked():
 
 def test_evidence_with_no_channel_name_still_shows():
     blocks = card.blocks(a_case(shares=[{"kind": "link", "permalink": "https://x/p/1"}]))
-    assert "a message" in text_of(blocks)
+    assert "a linked message" in text_of(blocks)
 
 
-def test_no_evidence_means_no_evidence_block():
-    assert "They pointed at" not in text_of(card.blocks(a_case()))
+def test_a_card_with_nothing_attached_has_three_blocks():
+    assert len(card.blocks(a_case())) == 3
 
 
 def test_context_blocks_stay_within_ten_elements():
@@ -171,7 +176,49 @@ def test_every_section_stays_within_three_thousand_chars():
     ]
     blocks = card.blocks(a_case(body="x" * 9000, shares=shares))
     for block in blocks_of("section", blocks):
-        assert len(block["text"]["text"]) <= 3000
+        if "text" in block:
+            assert len(block["text"]["text"]) <= 3000
+
+
+def test_a_case_nobody_holds_reads_as_open():
+    assert "*Open*" in text_of(card.blocks(a_case()))
+
+
+def test_a_held_case_names_who_has_it():
+    assert "<@UQUINN> has it" in text_of(card.blocks(a_case(assignees=["UQUINN"])))
+
+
+def test_a_resolved_case_reads_as_resolved():
+    body = text_of(card.blocks(a_case(resolved_at="2026-08-21")))
+    assert "*Resolved*" in body
+    assert "*Open*" not in body
+
+
+def test_a_case_about_nobody_says_nothing_about_anybody():
+    assert "about" not in text_of(card.blocks(a_case()))
+
+
+def test_a_named_subject_brings_their_record():
+    body = text_of(card.blocks(a_case(subjects=["UMILO"], other_cases=2)))
+    assert "about <@UMILO>, 2 other cases" in body
+
+
+def test_a_subject_with_a_clean_record_says_so():
+    assert "nothing else on their record" in text_of(
+        card.blocks(a_case(subjects=["UMILO"], other_cases=0))
+    )
+
+
+def test_what_they_sent_is_counted():
+    body = text_of(
+        card.blocks(
+            a_case(
+                files=[{"name": "a.png", "fetch_state": "stored"}],
+                shares=[{"kind": "link", "permalink": "https://x/p/1"}],
+            )
+        )
+    )
+    assert "1 file, 1 linked message" in body
 
 
 def test_the_fallback_names_the_case():

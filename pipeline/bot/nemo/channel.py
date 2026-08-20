@@ -7,8 +7,8 @@ from bot.nemo import files as carry
 log = logging.getLogger("bot.nemo")
 
 CASE = """
-SELECT c.id, c.category_key,
-       r.id, r.is_anonymous, r.reporter_user_id, r.body, r.forwarded_ts,
+SELECT c.id, c.category_key, c.resolved_at,
+       r.id, r.is_anonymous, r.reporter_user_id, r.body, r.forwarded_ts, r.received_at,
        v.id
 FROM fd.cases c
 JOIN fd.case_reports r ON r.case_id = c.id
@@ -16,6 +16,21 @@ LEFT JOIN fd.intake_conversations v ON v.report_id = r.id
 WHERE c.id = %s
 ORDER BY r.id
 LIMIT 1
+"""
+
+SUBJECTS = """
+SELECT user_id FROM fd.case_participants
+WHERE case_id = %s AND role = 'subject'
+ORDER BY user_id
+"""
+
+ASSIGNEES = """
+SELECT user_id FROM fd.case_assignees WHERE case_id = %s ORDER BY assigned_at
+"""
+
+OTHER_CASES = """
+SELECT count(DISTINCT case_id) FROM fd.case_participants
+WHERE role = 'subject' AND case_id <> %s AND user_id = ANY(%s)
 """
 
 FIRST_MESSAGE = """
@@ -76,17 +91,31 @@ def gather(conn, case_id):
     case = {
         "case_id": row[0],
         "category_key": row[1],
-        "report_id": row[2],
-        "is_anonymous": row[3],
-        "reporter_user_id": row[4],
-        "body": row[5],
-        "forwarded_ts": row[6],
-        "conversation_id": row[7],
+        "resolved_at": row[2],
+        "report_id": row[3],
+        "is_anonymous": row[4],
+        "reporter_user_id": row[5],
+        "body": row[6],
+        "forwarded_ts": row[7],
+        "received_at": row[8],
+        "conversation_id": row[9],
         "url": case_url(row[0]),
         "files": [],
         "shares": [],
         "message_id": None,
     }
+
+    case["subjects"] = [
+        subject[0] for subject in conn.execute(SUBJECTS, (case["case_id"],)).fetchall()
+    ]
+    case["assignees"] = [
+        held[0] for held in conn.execute(ASSIGNEES, (case["case_id"],)).fetchall()
+    ]
+    case["other_cases"] = (
+        conn.execute(OTHER_CASES, (case["case_id"], case["subjects"])).fetchone()[0]
+        if case["subjects"]
+        else 0
+    )
 
     convo = case["conversation_id"]
     if convo is None:
