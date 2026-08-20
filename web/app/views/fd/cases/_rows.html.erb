@@ -2,16 +2,14 @@
   <tr data-controller="row-link" data-row-link-href-value="<%= fd_case_path(kase) %>"
       data-action="click->row-link#go"
       class="<%= "row-resolved" if kase.resolved? %>">
-    <td class="col-tick">
-      <% unless kase.resolved? %>
-        <%= check_box_tag "case_ids[]", kase.id, false,
-              id: "tick-#{kase.id}", form: "merge-form", class: "tick tick-case",
-              data: { action: "change->merge#refresh" },
-              aria: { label: "select case #{kase.id}" } %>
-      <% end %>
-    </td>
     <td>
       <div class="row-subject">
+        <% unless kase.resolved? %>
+          <%= check_box_tag "case_ids[]", kase.id, false,
+                id: "tick-#{kase.id}", form: "merge-form", class: "tick tick-case",
+                data: { action: "change->merge#refresh" },
+                aria: { label: "select case #{kase.id}" } %>
+        <% end %>
         <span class="sev <%= case_severity(kase) %>"></span>
         <%= row_reporter_avatar(kase) %>
         <span class="two-line">
@@ -29,11 +27,11 @@
     <td class="col-num"><%= case_age_label(case_age_seconds(kase)) %></td>
     <td>
       <% if kase.assigned? %>
-        <%= handle_list(kase.assignee_user_ids) %>
+        <%= assignee_faces(kase.assignee_user_ids) %>
       <% elsif kase.resolved? %>
         n/a
       <% else %>
-        <%= gated_button "case.open", "Claim", fd_case_claim_path(kase), on: kase,
+        <%= gated_button "case.open", "claim", fd_case_claim_path(kase), on: kase,
               method: :post %>
       <% end %>
     </td>

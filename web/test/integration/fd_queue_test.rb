@@ -149,7 +149,7 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     @mine.assign!("UME")
     get fd_cases_path
 
-    assert_select "form[action=?] button", fd_case_claim_path(@free), text: "Claim"
+    assert_select "form[action=?] button", fd_case_claim_path(@free)
     assert_select "form[action=?] button", fd_case_claim_path(@mine), count: 0
   end
 

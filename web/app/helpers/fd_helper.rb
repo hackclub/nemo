@@ -368,10 +368,30 @@ module FdHelper
     "about #{names[ids.first]}"
   end
 
+  AVATAR_TONES = 8
+
+  def avatar_tone(user_id)
+    return "av-none" if user_id.blank?
+
+    "av-#{(user_id.sum % AVATAR_TONES) + 1}"
+  end
+
+  def face(user_id, css: "row-avatar")
+    letter = user_id ? names.initial(user_id) : "?"
+    tag.span(letter, class: "#{css} #{avatar_tone(user_id)}", aria: { hidden: true })
+  end
+
   def row_avatar(kase)
     id = kase.subject_user_ids.first if kase.subject_user_ids.one?
-    letter = id ? names.initial(id) : "?"
-    tag.span(letter, class: "row-avatar", aria: { hidden: true })
+    face(id)
+  end
+
+  def assignee_faces(user_ids)
+    return "n/a" if user_ids.blank?
+
+    safe_join(Array(user_ids).map { |id|
+      tag.span(class: "face-name") { safe_join([face(id), handle(id)]) }
+    }, " ")
   end
 
   def row_reporter_id(kase)
@@ -382,9 +402,7 @@ module FdHelper
   end
 
   def row_reporter_avatar(kase)
-    id = row_reporter_id(kase)
-    letter = id ? names.initial(id) : "?"
-    tag.span(letter, class: "row-avatar", aria: { hidden: true })
+    face(row_reporter_id(kase))
   end
 
   def row_reporter_label(kase)

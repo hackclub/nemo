@@ -38,7 +38,7 @@
       <aside class="rail">
         <div class="brand">
           <span class="brand-mark">M</span>
-          <span class="brand-name">Mnemosyne</span>
+          <span class="rail-text brand-name">Mnemosyne</span>
         </div>
 
         <div>
@@ -47,17 +47,17 @@
             <%= link_to root_path, class: "rail-item",
                   aria: { current: ("page" if current_page?(root_path)) } do %>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-              Overview
+              <span class="rail-text">Overview</span>
             <% end %>
             <%= link_to channels_path, class: "rail-item",
                   aria: { current: ("page" if controller_name == "channels") } do %>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg>
-              Channels
+              <span class="rail-text">Channels</span>
             <% end %>
             <%= link_to pipeline_path, class: "rail-item",
                   aria: { current: ("page" if controller_name == "pipeline") } do %>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
-              Pipeline
+              <span class="rail-text">Pipeline</span>
             <% end %>
           </nav>
         </div>
@@ -68,7 +68,7 @@
             <%= link_to fd_cases_path, class: "rail-item",
                   aria: { current: ("page" if controller_path == "fd/cases") } do %>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4 6v6c0 4 3.4 7.4 8 8 4.6-.6 8-4 8-8V6l-8-3Z"/></svg>
-              Cases
+              <span class="rail-text">Cases</span>
               <% if open_case_count.positive? %>
                 <span class="rail-badge"><%= open_case_count %></span>
               <% end %>
@@ -76,33 +76,33 @@
             <%= link_to fd_members_path, class: "rail-item",
                   aria: { current: ("page" if controller_path.start_with?("fd/member")) } do %>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M18 20a6 6 0 0 0-2.4-4.8"/></svg>
-              Members
+              <span class="rail-text">Members</span>
             <% end %>
             <%= link_to fd_decisions_path, class: "rail-item",
                   aria: { current: ("page" if controller_path.start_with?("fd/decision")) } do %>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v14H6.5A1.5 1.5 0 0 0 5 18.5V4.5Z"/><path d="M5 18.5A1.5 1.5 0 0 0 6.5 20H19"/><path d="M8.5 7.5h7M8.5 11h4.5"/></svg>
-              Decisions
+              <span class="rail-text">Decisions</span>
             <% end %>
             <% if current_staff&.may?("access.read") %>
               <%= link_to fd_settings_path, class: "rail-item",
                     aria: { current: ("page" if controller_path == "fd/settings") } do %>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg>
-                Settings
+                <span class="rail-text">Settings</span>
               <% end %>
             <% end %>
           </nav>
         </div>
 
         <div class="rail-foot">
-          <div class="toggle-row">
-            Dark mode
-            <button type="button" class="sw" role="switch" aria-checked="false"
-                    aria-label="Dark mode"
-                    data-controller="theme" data-action="theme#toggle"></button>
-          </div>
+          <button type="button" class="rail-item" role="switch" aria-checked="false"
+                  aria-label="Dark mode"
+                  data-controller="theme" data-action="theme#toggle">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none"/></svg>
+            <span class="rail-text">Dark mode</span>
+          </button>
           <%= button_to logout_path, method: :delete, class: "rail-item", form: { class: "contents" } do %>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-            Sign out
+            <span class="rail-text">Sign out</span>
           <% end %>
         </div>
       </aside>
