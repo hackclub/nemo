@@ -8,7 +8,7 @@ from bot.nemo.cards import report as cards
 log = logging.getLogger("bot.relay")
 
 WHO_TO_REACH = """
-SELECT c.id, c.channel_id, c.closed_at
+SELECT c.id, c.channel_id, c.thread_ts, c.closed_at
 FROM fd.intake_messages m
 JOIN fd.intake_conversations c ON c.id = m.conversation_id
 WHERE m.mirrored_ts = %s
@@ -53,21 +53,28 @@ class Relay:
         if not row:
             log.info("relay: thread %s is not a report thread", thread_ts)
             return None
-        conversation_id, channel_id, closed_at = row
+        conversation_id, channel_id, member_thread_ts, closed_at = row
         if closed_at:
             log.info("relay: conversation %s is closed, not delivering", conversation_id)
             return None
 
+        said = cards.to_member(text)
         sent = self.shroud_client.chat_postMessage(
             channel=channel_id,
-            text=cards.to_member(text),
+            thread_ts=member_thread_ts,
+            text=said,
             unfurl_links=False,
             unfurl_media=False,
         )
         with session() as conn:
             intake.record(
                 conn,
-                {"channel": channel_id, "ts": sent["ts"], "text": cards.to_member(text)},
+                {
+                    "channel": channel_id,
+                    "ts": sent["ts"],
+                    "thread_ts": member_thread_ts,
+                    "text": said,
+                },
                 direction="outbound",
                 sent_by=sent_by,
             )

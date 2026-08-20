@@ -4,24 +4,27 @@ from bot.engine import parse
 from bot.engine.identity import ensure_member
 
 
-def conversation(conn, channel_id, member_user_id=None):
+def root_ts(event):
+    return event.get("thread_ts") or event.get("ts")
+
+
+FIND = """
+SELECT id FROM fd.intake_conversations WHERE channel_id = %s AND thread_ts = %s
+"""
+
+
+def conversation(conn, channel_id, thread_ts, member_user_id=None):
     ensure_member(conn, member_user_id)
-    row = conn.execute(
-        "SELECT id FROM fd.intake_conversations WHERE channel_id = %s AND closed_at IS NULL",
-        (channel_id,),
-    ).fetchone()
+    row = conn.execute(FIND, (channel_id, thread_ts)).fetchone()
     if row:
         return row[0]
 
     conn.execute(
-        "INSERT INTO fd.intake_conversations (channel_id, member_user_id) VALUES (%s, %s) "
-        "ON CONFLICT DO NOTHING",
-        (channel_id, member_user_id),
+        "INSERT INTO fd.intake_conversations (channel_id, thread_ts, member_user_id) "
+        "VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+        (channel_id, thread_ts, member_user_id),
     )
-    return conn.execute(
-        "SELECT id FROM fd.intake_conversations WHERE channel_id = %s AND closed_at IS NULL",
-        (channel_id,),
-    ).fetchone()[0]
+    return conn.execute(FIND, (channel_id, thread_ts)).fetchone()[0]
 
 
 def close(conn, conversation_id, closed_by):
@@ -38,7 +41,7 @@ def record(conn, event, direction="inbound", sent_by=None):
     author = event.get("user") if direction == "inbound" else None
     ensure_member(conn, author)
 
-    convo = conversation(conn, channel_id, author)
+    convo = conversation(conn, channel_id, root_ts(event), author)
     body = event.get("text")
     blocks = event.get("blocks")
     attachments = event.get("attachments")

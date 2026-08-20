@@ -9,11 +9,9 @@ log = logging.getLogger("bot.shroud")
 CARRIES_CONTENT = (None, "file_share", "me_message", "thread_broadcast")
 
 INBOUND_SO_FAR = """
-SELECT m.conversation_id, count(*) OVER (PARTITION BY m.conversation_id) = 1
-FROM fd.intake_messages m
-JOIN fd.intake_conversations c ON c.id = m.conversation_id
-WHERE c.channel_id = %s AND c.closed_at IS NULL AND m.direction = 'inbound'
-LIMIT 1
+SELECT count(*) = 1
+FROM fd.intake_messages
+WHERE conversation_id = %s AND direction = 'inbound'
 """
 
 
@@ -33,14 +31,18 @@ def register(app, on_taken=None):
         if event.get("bot_id"):
             return
 
+        thread_ts = intake.root_ts(event)
+
         with session() as conn:
             message_id, fresh = intake.record(conn, event)
-            row = conn.execute(INBOUND_SO_FAR, (event["channel"],)).fetchone()
-            conversation_id, first = (row[0], row[1]) if row else (None, True)
+            conversation_id = intake.conversation(conn, event["channel"], thread_ts)
+            first = conn.execute(INBOUND_SO_FAR, (conversation_id,)).fetchone()[0]
 
         if not fresh:
             return
-        log.info("shroud: took message %s in %s", message_id, event["channel"])
+        log.info(
+            "shroud: took message %s in %s thread %s", message_id, event["channel"], thread_ts
+        )
 
         if event.get("files"):
             try:
@@ -48,14 +50,18 @@ def register(app, on_taken=None):
             except Exception:
                 log.exception("shroud: could not keep the files, they stay pending")
 
-        sent = client.chat_postMessage(channel=event["channel"], text=acknowledgement(first))
+        said = acknowledgement(first)
+        sent = client.chat_postMessage(
+            channel=event["channel"], thread_ts=thread_ts, text=said
+        )
         with session() as conn:
             intake.record(
                 conn,
                 {
                     "channel": event["channel"],
                     "ts": sent["ts"],
-                    "text": acknowledgement(first),
+                    "thread_ts": thread_ts,
+                    "text": said,
                 },
                 direction="outbound",
             )
