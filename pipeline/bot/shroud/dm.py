@@ -2,7 +2,7 @@ import logging
 
 from bot.engine import intake, session
 from bot.shroud import consent, files
-from bot.shroud.reply import acknowledgement
+from bot.shroud.reply import acknowledgement, receipt
 
 log = logging.getLogger("bot.shroud")
 
@@ -178,15 +178,13 @@ def register(app, on_taken=None):
         with session() as conn:
             conn.execute(RETIRE_PROMPT, (consent.DONE, channel_id, prompt_ts))
 
-        client.chat_update(
-            channel=channel_id, ts=prompt_ts, text=consent.sent(anonymous), blocks=[]
-        )
         log.info(
             "shroud: conversation %s handed over, anonymous=%s", conversation_id, anonymous
         )
+        case_id = on_taken(conversation_id, message_id, anonymous) if on_taken else None
 
-        if on_taken:
-            on_taken(conversation_id, message_id, anonymous)
+        said, blocks = receipt(case_id, anonymous)
+        client.chat_update(channel=channel_id, ts=prompt_ts, text=said, blocks=blocks)
 
     @app.action(consent.CANCEL)
     def on_cancel(ack, body, client):

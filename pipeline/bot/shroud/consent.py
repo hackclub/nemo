@@ -108,15 +108,6 @@ def blocks(bodies, files=0):
                 },
             ],
         },
-        {
-            "type": "context",
-            "elements": [
-                {
-                    "type": "mrkdwn",
-                    "text": "Nothing has been sent. Add more here first if you want.",
-                }
-            ],
-        },
     ]
     return built
 
@@ -132,11 +123,5 @@ def chosen(state):
     return (picked or {}).get("value") or ANONYMOUS
 
 
-SENT_ANONYMOUS = "Sent anonymously. The Fire Department has it."
-SENT_NAMED = "Sent, with your name on it. The Fire Department has it."
 DROPPED = "Nothing was sent. Say more here whenever you want, and I will ask again."
 ALREADY = "This one is already with the Fire Department."
-
-
-def sent(anonymous):
-    return SENT_ANONYMOUS if anonymous else SENT_NAMED

@@ -21,25 +21,25 @@ class Relay:
         self.nemo_client = nemo_client
 
     def taken(self, conversation_id, message_id, anonymous=True):
-        if self.nemo_client is None:
-            log.warning(
-                "relay: nemo is not running, conversation %s is recorded but not posted",
-                conversation_id,
-            )
-            return None
-
-        opener = bot_user_id(self.nemo_client, "nemo")
+        opener = bot_user_id(self.nemo_client, "nemo") if self.nemo_client else None
         with session() as conn:
             already = case.existing(conn, conversation_id)
             case_id = case.open_case(conn, conversation_id, opener, anonymous)
+        log.info("relay: conversation %s is case %s", conversation_id, case_id)
+
+        if self.nemo_client is None:
+            log.warning(
+                "relay: nemo is not running, case %s is recorded but not posted", case_id
+            )
+            return case_id
 
         with session() as conn:
             if already:
-                return channel.post_follow_up(self.nemo_client, conn, message_id)
-            posted = channel.post_report(self.nemo_client, conn, case_id)
+                channel.post_follow_up(self.nemo_client, conn, message_id)
+            else:
+                channel.post_report(self.nemo_client, conn, case_id)
 
-        log.info("relay: conversation %s is case %s", conversation_id, case_id)
-        return posted
+        return case_id
 
     def answered(self, thread_ts, text, sent_by):
         if self.shroud_client is None:
