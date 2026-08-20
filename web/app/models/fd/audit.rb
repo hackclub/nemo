@@ -19,7 +19,7 @@ module Fd
     }.freeze
 
     VERBS = %w[
-      opened claimed unclaimed resolved reopened
+      opened claimed unclaimed resolved reopened categorised
       performed reversed received
       noted deleted attached detached flagged unflagged closed
       proposed settled amended superseded dropped followed unfollowed
