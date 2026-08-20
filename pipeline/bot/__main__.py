@@ -11,6 +11,7 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 from bot import APPS, NEEDS
 from bot.engine import session, shutdown
 from bot.nemo import app as nemo_app
+from bot.nemo import sweep, watch
 from bot.relay import Relay
 from bot.shroud import app as shroud_app
 from lib.config import DATABASE
@@ -82,8 +83,13 @@ def main(argv=None):
         shutdown()
         return 78
 
-    running = [start(name, *built) for name, built in wire(apps).items()]
+    built = wire(apps)
+    running = [start(name, *made) for name, made in built.items()]
     stopping = threading.Event()
+
+    if "nemo" in built:
+        watch.start(built["nemo"][0].client, stopping)
+        sweep.start(built["nemo"][0].client, stopping)
 
     def stop(*_):
         stopping.set()

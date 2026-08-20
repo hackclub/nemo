@@ -1,6 +1,7 @@
 import logging
 import os
 
+from bot.engine import parse
 from bot.nemo import cards
 from bot.nemo import files as carry
 
@@ -9,7 +10,7 @@ log = logging.getLogger("bot.nemo")
 CASE = """
 SELECT c.id, c.category_key, c.resolved_at,
        r.id, r.is_anonymous, r.reporter_user_id, r.body, r.forwarded_ts, r.received_at,
-       v.id
+       v.id, r.card_digest
 FROM fd.cases c
 JOIN fd.case_reports r ON r.case_id = c.id
 LEFT JOIN fd.intake_conversations v ON v.report_id = r.id
@@ -72,6 +73,10 @@ SELECT count(*) FROM fd.intake_message_files WHERE message_id = %s
 """
 
 
+def digest_of(blocks):
+    return parse.digest(None, blocks, None)
+
+
 def firehouse_channel():
     return os.environ["FIREHOUSE_CHANNEL_ID"]
 
@@ -99,6 +104,7 @@ def gather(conn, case_id):
         "forwarded_ts": row[7],
         "received_at": row[8],
         "conversation_id": row[9],
+        "card_digest": row[10],
         "url": case_url(row[0]),
         "files": [],
         "shares": [],
@@ -154,18 +160,20 @@ def post_report(client, conn, case_id, channel_id=None):
         log.info("nemo: case %s is already in the firehouse", case_id)
         return case["forwarded_ts"]
 
+    built = cards.report.blocks(case)
     sent = client.chat_postMessage(
         channel=channel_id or firehouse_channel(),
         text=cards.report.fallback(case),
-        blocks=cards.report.blocks(case),
+        blocks=built,
         unfurl_links=False,
         unfurl_media=False,
     )
     ts = sent["ts"]
 
     conn.execute(
-        "UPDATE fd.case_reports SET forwarded_ts = %s WHERE id = %s AND forwarded_ts IS NULL",
-        (ts, case["report_id"]),
+        "UPDATE fd.case_reports SET forwarded_ts = %s, card_digest = %s, "
+        "card_rendered_at = now() WHERE id = %s AND forwarded_ts IS NULL",
+        (ts, digest_of(built), case["report_id"]),
     )
     if case["message_id"] and not case.get("mirrored_ts"):
         conn.execute(
@@ -209,6 +217,30 @@ def post_follow_up(client, conn, message_id, channel_id=None):
 
     log.info("nemo: message %s carried into the firehouse at %s", message_id, ts)
     return ts
+
+
+def redraw(client, conn, case_id, channel_id=None):
+    case = gather(conn, case_id)
+    if case is None or not case["forwarded_ts"]:
+        return None
+
+    built = cards.report.blocks(case)
+    fingerprint = digest_of(built)
+    if fingerprint == case["card_digest"]:
+        return case["forwarded_ts"]
+
+    client.chat_update(
+        channel=channel_id or firehouse_channel(),
+        ts=case["forwarded_ts"],
+        text=cards.report.fallback(case),
+        blocks=built,
+    )
+    conn.execute(
+        "UPDATE fd.case_reports SET card_digest = %s, card_rendered_at = now() WHERE id = %s",
+        (fingerprint, case["report_id"]),
+    )
+    log.info("nemo: case %s redrawn", case_id)
+    return case["forwarded_ts"]
 
 
 def register(app, on_reply=None):
