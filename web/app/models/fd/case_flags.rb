@@ -10,6 +10,12 @@ module Fd
       new(names: names).for_case(kase)
     end
 
+    def self.channel_guesses(reports)
+      said = reports.map(&:body).compact.join(" ")
+      said.scan(/#([a-z0-9][a-z0-9._-]{1,60})/i).flatten.uniq.first(3)
+        .map { |name| "##{name} was mentioned · attach that thread?" }
+    end
+
     def self.for_queue(names: Names.none)
       new(names: names).for_queue
     end
@@ -19,7 +25,7 @@ module Fd
     end
 
     def for_case(kase)
-      [priors_flag(kase), merge_flag(kase), unclaimed_flag(kase)].compact
+      [no_subject_flag(kase), priors_flag(kase), merge_flag(kase), unclaimed_flag(kase)].compact
     end
 
     def for_queue
@@ -27,6 +33,14 @@ module Fd
     end
 
     private
+
+    def no_subject_flag(kase)
+      return nil if kase.resolved? || kase.subject_user_ids.any?
+
+      Flag.new(tone: "mid", headline: "Nobody has said who this is about.",
+        detail: "Until somebody does it will not show on anyone's record, " \
+                "and priors cannot be checked.")
+    end
 
     def oldest_unclaimed
       Case.unresolved.unassigned.where(opened_at: ..UNCLAIMED_AFTER.ago).order(:opened_at).first

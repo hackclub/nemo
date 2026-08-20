@@ -1,10 +1,19 @@
-<% content_for :page_title, "Case #{@case.id}" %>
+<% content_for :page_title, @case.id.to_s %>
+<% content_for :page_face do %>
+  <span class="crumb"><%= link_to "Cases", fd_cases_path %> /</span>
+<% end %>
 <% content_for :palette_on, "case:#{@case.id}" %>
 <% content_for :page_subtitle do %>
   <%= case_head_meta(@case, @reports) %>
 <% end %>
 <% content_for :page_badge do %>
   <%= case_status_chip(@case) %>
+  <% if @case.category_key %>
+    <span class="chip chip-off"><%= category_short(@case.category_key) %></span>
+  <% end %>
+  <% if @unfinished %>
+    <span class="chip chip-warn">nothing set yet</span>
+  <% end %>
   <%= followed_chip(@case) unless @case.resolved? %>
   <% if @case.duplicate_of %>
     <%= link_to "duplicate of case #{@case.duplicate_of}", fd_case_path(@case.duplicate_of),
@@ -12,13 +21,21 @@
   <% end %>
 <% end %>
 <% content_for :head_actions do %>
-  <% unless @case.resolved? %>
+  <% if @case.resolved? %>
+    <%= gated_button "case.reopen", "Reopen", fd_case_resolution_path(@case), on: @case,
+          method: :delete, form: { class: "contents", data: { turbo_confirm:
+            "Reopen case #{@case.id}? It goes back in the queue." } } %>
+  <% else %>
     <% if @case.assigned? %>
       <%= opens_modal "case.resolve", "Resolve", opens: "resolve-case", on: @case,
             css: "btn btn-primary" %>
     <% else %>
       <%= gated_button "case.open", "Claim", fd_case_claim_path(@case), on: @case,
             css: "btn btn-primary", method: :post %>
+    <% end %>
+
+    <% if @merge_into %>
+      <%= link_to "Merge", fd_case_merge_path(@case, into: @merge_into.id), class: "btn" %>
     <% end %>
   <% end %>
 
@@ -54,21 +71,24 @@
 <div class="stack">
   <% if @case.resolved? %>
     <div class="closed">
-      <span class="closed-what">Closed <%= @case.resolved_at.strftime("%-d %b") %></span>
-      <span class="chip chip-off"><%= resolution_label(@case.resolution).downcase %></span>
-      <%= followed_chip(@case) %>
+      <span class="closed-what">
+        Closed <%= @case.resolved_at.strftime("%-d %b") %> ·
+        <%= resolution_label(@case.resolution).downcase %>
+      </span>
       <% if @case.member_note.present? %>
         <span class="closed-why"><%= @case.member_note %></span>
       <% end %>
+      <%= followed_chip(@case) %>
       <span class="closed-end">
-        <%= gated_button "case.reopen", "Reopen", fd_case_resolution_path(@case), on: @case,
-              method: :delete, form: { class: "contents", data: { turbo_confirm:
-                "Reopen case #{@case.id}? It goes back in the queue." } } %>
+        <% if @case.assigned? %>
+          <span class="faces"><%= assignee_faces(@case.assignee_user_ids) %></span>
+        <% end %>
+        <%= told_chip(@reports, @open_reports) %>
       </span>
     </div>
   <% end %>
 
-  <%= render "flagstrip", flags: @flags %>
+  <%= render "fd/flagstrip", flags: @flags %>
 
   <% kept_tabs, demoted_tabs = case_tab_groups(@tab_counts) %>
   <div class="views">
@@ -89,118 +109,95 @@
     <% end %>
   </div>
 
+  <div class="cols c-2">
+    <div>
   <% if @tab == "report" %>
-    <% if @reports.any? %>
-      <% @reports.each do |report| %>
-        <%= render "report", report: report, kase: @case %>
-      <% end %>
-    <% else %>
-      <p class="card-note">No report on file. <%= member_link(@case.opened_by) %> opened this case directly.</p>
-    <% end %>
+    <div class="card card-chat">
+      <%= render "chat", kase: @case, reports: @reports, notes: @notes.reverse %>
+    </div>
   <% end %>
 
   <% if @tab == "people" %>
     <%= render "people", kase: @case, people: @people, contexts: @context,
-          notes: @standing_notes, mentioned: @mentioned, case_person: @case_person %>
+          notes: @standing_notes, mentioned: @mentioned, priors: @person_priors,
+          said_counts: @said_counts, total_messages: @thread_messages.size %>
   <% end %>
 
   <% if @tab == "evidence" %>
     <%= render "threads", kase: @case, threads: @thread_list,
-          flags: @flags, cited_by: @cited_by %>
+          flags: @citations, cited_by: @cited_by %>
   <% end %>
 
   <% if @tab == "actions" %>
-    <div class="card card-flush">
-      <div class="card-head">
-        <div>
-          <h2 class="card-title">What was done</h2>
+    <% if @actions.any? %>
+      <% @actions.each do |action| %>
+        <div class="card">
+          <div class="line-row line-first">
+            <span class="chip <%= action_tone(action) %>"><%= action_label(action.type_key).downcase %></span>
+            <span class="grow"><%= action_line(action, @case) %></span>
+            <%= action_state_chip(action) %>
+            <% unless action.reversed? %>
+              <%= opens_modal "case.reverse", "Reverse", opens: "reverse-#{action.id}",
+                    on: @case, css: "text-btn" %>
+            <% end %>
+          </div>
+
+          <% cited = @cited_messages[action.cites_message_id] if action.cites? %>
+          <% if cited %>
+            <div class="said said-cite">
+              <div class="msg-text"><%= cited.readable? ? cited.body : "no text held" %></div>
+              <div class="sub2">
+                the message it cites · <%= member_link(cited.author_user_id) %> ·
+                <%= channel_label(cited.channel_id) %> ·
+                <%= cited.posted_at.strftime("%-d %b %H:%M") %>
+              </div>
+            </div>
+          <% end %>
+
+          <div class="sub2"><%= action_standing_line(action, @case) %></div>
         </div>
-      </div>
-      <% if @actions.any? %>
-        <div class="scroll">
-          <table class="data-table static">
-            <thead>
-              <tr>
-                <th>Action</th>
-                <th>Directed at</th>
-                <th>Decided by</th>
-                <th class="col-date">When</th>
-                <th>State</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% @actions.each do |action| %>
-                <tr>
-                  <td>
-                    <span class="two-line">
-                      <b><%= action_label(action.type_key) %></b>
-                      <span>
-                        <% detail = [action_detail_note(action), cited_line(action)].compact.join(" · ") %>
-                        <%= detail %>
-                        <% unless action.reversed? %>
-                          <%= "·" if detail.present? %>
-                          <%= opens_modal "case.reverse", "Reverse",
-                                opens: "reverse-#{action.id}", on: @case, css: "text-btn" %>
-                        <% end %>
-                      </span>
-                    </span>
-                  </td>
-                  <td>
-                    <span class="two-line">
-                      <b><%= member_link(action.target_user_id) %></b>
-                      <span><%= action_target_note(action, @case) %></span>
-                    </span>
-                  </td>
-                  <td>
-                    <span class="two-line">
-                      <b><%= member_link(action.decided_by) %></b>
-                      <span><%= action_performer_note(action) %></span>
-                    </span>
-                  </td>
-                  <td class="col-date"><%= action.performed_at.strftime("%b %-d, %Y") %></td>
-                  <td><%= action_state_chip(action) %></td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      <% else %>
-        <p class="card-note">
-          Nothing has been done yet.
-        </p>
       <% end %>
-    </div>
+    <% else %>
+      <div class="card">
+        <p class="card-note">Nothing has been done yet.</p>
+      </div>
+    <% end %>
   <% end %>
 
   <% if @tab == "notes" %>
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <h2 class="card-title">Notes</h2>
-        </div>
-        <div class="card-tools">
-          <%= opens_modal "case.note", "Add a note", opens: "add-note" %>
-        </div>
+    <div class="card notes-card">
+      <div class="notes-head">
+        <span class="lbl grow">What the team said to itself</span>
+        <%= opens_modal "case.note", "Add a note", opens: "add-note" %>
       </div>
 
       <% if @notes.any? %>
         <div class="notes">
           <% @notes.each do |note| %>
             <div class="note-row">
-              <div class="note-body"><%= mentioned(note.body) %></div>
-              <div class="note-by">
-                <span><%= note_byline(note) %></span>
-                <%= render "note_remove", kase: @case, note: note %>
+              <%= face(note.author) %>
+              <div class="note-main">
+                <div class="note-body"><%= mentioned(note.body) %></div>
+                <div class="note-by">
+                  <span><%= note_byline(note) %></span>
+                  <%= render "note_remove", kase: @case, note: note %>
+                </div>
               </div>
             </div>
           <% end %>
         </div>
       <% else %>
-        <span class="note-none">No notes</span>
+        <p class="notes-none">No notes yet. They stay internal, and nobody outside FD sees them.</p>
       <% end %>
     </div>
   <% end %>
+    </div>
 
+    <div>
+      <%= render "rail", kase: @case, subject: @subject, priors: @subject_priors,
+            contexts: @context, unfinished: @unfinished, guesses: @guesses %>
+    </div>
+  </div>
 </div>
 
 <% @live_actions.each do |action| %>
@@ -229,6 +226,19 @@
     <div class="modal-body">
       <%= render "action_fields", kase: @case, flagged: @flagged_messages,
               target: @people.chosen&.user_id || lone_subject(@case) %>
+
+      <% standing = @live_actions.reject(&:expired?).max_by(&:performed_at) %>
+      <% if standing %>
+        <div class="flag flag-mid">
+          <span class="flag-icon" aria-hidden="true">◆</span>
+          <div><b><%= names[standing.target_user_id] %> already has a
+            <%= action_label(standing.type_key).downcase %> from
+            <%= standing.performed_at.strftime("%-d %b") %> that still stands.</b></div>
+        </div>
+      <% end %>
+
+      <%= render "what_this_does",
+            lines: action_consequences(@case, @people.chosen&.user_id || lone_subject(@case)) %>
     </div>
     <div class="modal-foot">
       <label for="log-action" class="btn">Close</label>
@@ -263,6 +273,27 @@
     <div class="modal-foot">
       <label for="attach-thread" class="btn">Close</label>
       <%= submit_tag "Attach", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>
+
+<%= render layout: "fd/modal", locals: { id: "set-category",
+      title: "What kind of thing is case #{@case.id}?" } do %>
+  <%= form_with url: fd_case_path(@case), method: :patch, html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <div class="outcomes">
+        <% Fd::Case::CATEGORIES.each_with_index do |key, i| %>
+          <label class="opt">
+            <%= radio_button_tag :category_key, key, i.zero? %>
+            <span class="opt-dot" aria-hidden="true"></span>
+            <span><span class="opt-label"><%= category_label(key) %></span></span>
+          </label>
+        <% end %>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <label for="set-category" class="btn">Close</label>
+      <%= submit_tag "Set it", class: "btn btn-primary" %>
     </div>
   <% end %>
 <% end %>
@@ -368,6 +399,26 @@
             Reason
             <%= text_area_tag :member_note, nil, rows: 3, class: "textarea" %>
           </label>
+
+          <% if @open_reports.positive? %>
+            <label class="opt">
+              <%= check_box_tag :tell_reporter, "1", true %>
+              <span>
+                <span class="opt-label">Tell the reporter how it ended</span>
+                <span class="opt-note">goes through the bot, they never learn who you are</span>
+              </span>
+            </label>
+          <% end %>
+
+          <% if @merge_into %>
+            <div class="flag flag-mid">
+              <span class="flag-icon" aria-hidden="true">◆</span>
+              <div><b>#<%= @merge_into.id %> is <%= merge_reason(@case, @merge_into) %> and still open.</b>
+                Merging first would resolve both together.</div>
+            </div>
+          <% end %>
+
+          <%= render "what_this_does", lines: resolve_consequences(@case, @open_reports) %>
         </div>
         <div class="modal-foot">
           <label for="resolve-case" class="btn">Close</label>
@@ -379,14 +430,23 @@
 
 <aside class="drawer" aria-label="Timeline" data-case-timeline-target="panel">
   <div class="drawer-head">
-    <h2>Timeline</h2>
-    <button type="button" class="drawer-shut" data-action="click->case-timeline#close">Close</button>
+    <h2>Timeline · case <%= @case.id %></h2>
+    <span class="chip chip-off"><%= pluralize(@timeline.size, "entry") %></span>
+    <button type="button" class="drawer-shut" data-action="click->case-timeline#close">
+      <span class="kbd">esc</span>
+    </button>
   </div>
   <div class="drawer-body">
     <% if @timeline.any? %>
+      <div class="chiprow tl-filter">
+        <%= radio_button_tag :tl, "all", true, class: "tl-pick", id: "tl-all" %>
+        <label for="tl-all" class="filt">everything</label>
+        <%= radio_button_tag :tl, "changed", false, class: "tl-pick", id: "tl-changed" %>
+        <label for="tl-changed" class="filt">what changed</label>
+      </div>
       <div class="timeline">
         <% @timeline.each do |entry| %>
-          <div class="tl-item">
+          <div class="tl-item tl-<%= entry.mark %>">
             <div class="tl-when">
               <%= entry.at.strftime("%-d %b") %><br><%= entry.at.strftime("%H:%M") %>
             </div>

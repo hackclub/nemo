@@ -1,0 +1,75 @@
+<% composer = local_assigns.fetch(:composer, true) %>
+
+<div class="chat">
+  <div class="chat-head">
+    <% if reports.any? %>
+      <%= face(reports.first.anonymous? ? nil : reports.first.reporter_user_id) %>
+      <span class="grow two-line">
+        <b><%= reporter_names(reports) %></b>
+        <span><%= chat_head_line(reports, kase) %></span>
+      </span>
+      <%= report_state_chip(reports.first, kase) %>
+    <% else %>
+      <span class="grow two-line">
+        <b>Nobody to reply to</b>
+        <span>no report came in, so this is the team talking</span>
+      </span>
+    <% end %>
+  </div>
+
+  <div class="chat-log">
+    <% chat_entries(reports, notes).each do |entry| %>
+      <div class="said-row said-<%= entry.side %>">
+        <% if entry.side == "in" %><%= face(entry.who) %><% end %>
+        <div class="said-bubble">
+          <div class="said-top">
+            <b><%= entry.name %></b>
+            <% if entry.kind == "note" %><span class="chip chip-warn">internal</span><% end %>
+            <span class="said-at"><%= entry.at.strftime("%-d %b, %H:%M") %></span>
+          </div>
+          <div class="said-body"><%= mentioned(entry.body) %></div>
+        </div>
+      </div>
+    <% end %>
+
+    <% if chat_entries(reports, notes).empty? %>
+      <p class="card-note">
+        <% if reports.any? %>
+          Nothing said yet.
+        <% else %>
+          No report on file. <%= member_link(kase.opened_by) %> opened this case directly.
+        <% end %>
+      </p>
+    <% end %>
+  </div>
+
+  <% if composer && !kase.resolved? %>
+    <%= form_with url: fd_case_notes_path(kase), method: :post, class: "chat-composer",
+          data: { controller: "chat", chat_reporter_value: reports.any? },
+          html: { autocomplete: "off" } do %>
+      <%= hidden_field_tag :from, "report", id: nil %>
+
+      <div class="chat-field" data-action="click->chat#focus">
+        <span class="chat-pill" data-chat-target="pill" hidden>
+          to reporter
+          <button type="button" class="chat-pill-x" data-action="click->chat#drop"
+                  aria-label="talk to the team instead">&times;</button>
+        </span>
+        <div class="mention-field" data-controller="mention"
+             data-mention-url-value="<%= fd_member_search_path %>">
+          <%= text_area_tag :body, nil, rows: 1, class: "chat-input", id: nil,
+                maxlength: Fd::NotesController::MAX_LENGTH,
+                placeholder: "Message the team, or > to reply to the reporter",
+                data: { chat_target: "field", mention_target: "field",
+                        action: "input->mention#type input->chat#type " \
+                                "keydown->mention#keys keydown->chat#keys" } %>
+          <div class="menu-pop pick-pop mention-pop" hidden data-mention-target="results"></div>
+        </div>
+
+        <button type="submit" class="chat-send" data-chat-target="send" aria-label="Send">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+        </button>
+      </div>
+    <% end %>
+  <% end %>
+</div>

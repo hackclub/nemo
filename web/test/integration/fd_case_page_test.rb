@@ -13,17 +13,14 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase, tab: "people")
 
     assert_select "button.handle[data-copy-id-value=USUB][title='copy USUB']"
-
-    get fd_case_path(@kase, person: "UWATCHER", tab: "people")
-
-    assert_select "#who .pane button.handle[data-copy-id-value=UWATCHER]"
+    assert_select ".people-list button.handle[data-copy-id-value=UWATCHER]"
   end
 
-  test "one subject fills the pane, and the menu holds only them" do
+  test "one subject is one row, carrying their name" do
     get fd_case_path(@kase, tab: "people")
 
-    assert_select "#who a.index-item", 1
-    assert_select "#who .pane .mcard-name button.handle", text: "@USUB"
+    assert_select ".people-list .person-row", 1
+    assert_select ".people-list .person-row button.handle", text: "@USUB"
   end
 
   test "everybody on the case is a row, and one of them is in the pane" do
@@ -32,56 +29,53 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
       detail: "they piled on")
     get fd_case_path(@kase, tab: "people")
 
-    assert_select "#who a.index-item", 3
-    assert_select "#who .pane .mcard-name", 1, "only one person is shown at a time"
-    assert_select "#who a.index-item[aria-current=true]", 1
+    assert_select ".people-list .person-row", 3, "everybody is on the page at once"
+    assert_select ".people-list .person-row a.btn", text: "Their history", count: 3
   end
 
-  test "asking for somebody else puts them in the pane" do
+  test "a second subject is a row of their own" do
     @kase.add_subject!("USECOND")
-    get fd_case_path(@kase, person: "USECOND", tab: "people")
+    get fd_case_path(@kase, tab: "people")
 
-    assert_select "#who .pane .mcard-name button.handle", text: "@USECOND"
-    assert_select "#who .pane .band-label", text: "Notes on @USECOND"
-    assert_select "#who a.index-item[aria-current=true]", text: /@USECOND/
+    assert_select ".people-list .person-row button.handle", text: "@USECOND"
+    assert_select ".people-list .person-row", 2
   end
 
-  test "somebody who is not on the case cannot be asked for" do
+  test "somebody who is not on the case is not listed" do
     get fd_case_path(@kase, person: "UNOBODY", tab: "people")
 
     assert_response :success
-    assert_select "#who .pane .mcard-name button.handle", text: "@USUB",
-      count: 1, message: "an unknown id falls back to the first person"
+    assert_select ".people-list .person-row", 1
+    assert_select ".people-list .person-row button.handle", text: "@USUB"
   end
 
   test "one person holding two roles is one row, showing both" do
     Fd::CaseParticipant.create!(case_id: @kase.id, user_id: "UBOTH", role: "reporter")
     Fd::CaseParticipant.create!(case_id: @kase.id, user_id: "UBOTH", role: "involved",
       detail: "they piled on")
-    get fd_case_path(@kase, person: "UBOTH", tab: "people")
+    get fd_case_path(@kase, tab: "people")
 
-    assert_select "#who a.index-item", text: /@UBOTH/, count: 1
-    assert_select "#who .pane .roles .line-row", 2
-    assert_select "#who .pane .mcard-name .chip", text: "reported it"
-    assert_select "#who .pane .roles .line-why b", text: "involved"
+    assert_select ".people-list .person-row", text: /@UBOTH/, count: 1
+    assert_select ".people-list .person-row .chip", text: "reported it"
+    assert_select ".people-list .person-row .chip", text: "involved"
   end
 
   test "each tab shows only its own section, not the others" do
     get fd_case_path(@kase, tab: "people")
-    assert_match(/Who is on this case/, response.body)
-    assert_select ".card-title", text: "What was done", count: 0
+    assert_select ".people-list .person-row", minimum: 1
+    assert_select ".cols .chiprow .filt", 0
 
     get fd_case_path(@kase, tab: "evidence")
-    assert_match(/The evidence/, response.body)
-    assert_no_match(/Who is on this case/, response.body)
+    assert_select ".cols .chiprow .filt", minimum: 1
+    assert_select ".people-list", 0
 
     get fd_case_path(@kase, tab: "actions")
-    assert_select ".card-title", text: "What was done"
-    assert_no_match(/The threads/, response.body)
+    assert_select ".card-note", text: "Nothing has been done yet."
+    assert_select ".people-list", 0
 
     get fd_case_path(@kase, tab: "notes")
-    assert_select ".card-title", text: "Notes"
-    assert_select ".card-title", text: "What was done", count: 0
+    assert_select ".notes-none", text: /No notes yet/
+    assert_select ".card-note", text: "Nothing has been done yet.", count: 0
   end
 
   test "the report tab says so plainly when the case has no report on file" do
@@ -126,9 +120,8 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase, tab: "people")
 
     assert_response :success
-    assert_select "#who a.index-item", 0
-    assert_select "#who .pane .card-note", text: "Nobody logged yet."
-    assert_select ".subject-facts", 0, "there are no figures to show for nobody"
+    assert_select ".people-list .person-row", 0
+    assert_select ".people-list .person-add", 1, "adding somebody is still offered"
   end
 
   test "standing notes name the member they follow, once there is more than one" do
@@ -137,5 +130,36 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase)
 
     assert_select ".tl-head .chip", text: "about @USECOND"
+  end
+
+  test "setting the category writes it, and lands in the trail" do
+    kase = make_case(category_key: nil)
+
+    patch fd_case_path(kase), params: { category_key: "harassment_general" }
+
+    assert_equal "harassment_general", kase.reload.category_key
+    assert_equal 1, Fd::AuditEntry.where(entity_type: "case", entity_id: kase.id,
+      verb: "categorised").count
+  end
+
+  test "a category that is already set is not overwritten" do
+    kase = make_case(category_key: "spam")
+
+    patch fd_case_path(kase), params: { category_key: "harassment_general" }
+
+    assert_equal "spam", kase.reload.category_key
+    assert_match(/already has a category/, flash[:alert])
+  end
+
+  test "a case somebody else holds still offers to put me on it too" do
+    kase = make_case(assign: "UOTHER")
+
+    get fd_case_path(kase)
+    assert_select ".card-top form[action=?] .btn", fd_case_claim_path(kase),
+      text: "Assign myself"
+
+    post fd_case_claim_path(kase)
+
+    assert_equal %w[UME UOTHER], kase.reload.assignee_user_ids.sort
   end
 end

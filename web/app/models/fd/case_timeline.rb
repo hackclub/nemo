@@ -44,41 +44,56 @@ module Fd
     end
 
     def report_entries
+      first = reports.min_by(&:received_at)
+
       reports.map do |report|
         Entry.new(
           at: report.received_at,
-          title: "Report received",
+          title: "Reported",
           mark: "intake",
           chips: report.anonymous? ? ["anonymous"] : [],
-          detail: report_detail(report),
+          detail: report_detail(report, standing: report == first),
           said: report.body,
         )
       end
     end
 
-    def report_detail(report)
+    def report_detail(report, standing: false)
       parts = []
       unless report.anonymous?
         role = role_of(report.reporter_user_id)
-        who = "from #{report.reporter_label(names)}"
+        who = "by #{report.reporter_label(names)}"
         who += ", who was involved" if role == "involved"
         parts << who
       end
       parts << "via #{report.source_app}"
       parts << (report.replied? ? "replied in #{span(report.reply_latency)}" : "no reply yet")
+      parts += standing_parts if standing
       parts.join(" · ")
     end
 
+    def standing_parts
+      parts = []
+      parts << "no subject set" if subject_user_ids.empty?
+      context = kase.subject_context
+      if context.is_a?(Hash) && context["priors"]
+        parts << "at that moment: #{pluralize(context['priors'], 'prior')}"
+      end
+      parts
+    end
+
     def case_entries
-      list = [
-        Entry.new(
+      list = []
+
+      if reports.empty?
+        list << Entry.new(
           at: kase.opened_at,
-          title: "Case opened",
+          title: "Opened",
           mark: "owner",
           chips: [],
           detail: opened_detail,
         )
-      ]
+      end
 
       assignees.each do |person|
         list << Entry.new(
@@ -105,13 +120,7 @@ module Fd
     end
 
     def opened_detail
-      parts = ["by #{names[kase.opened_by]}"]
-      parts << "no subject set" if subject_user_ids.empty?
-      context = kase.subject_context
-      if context.is_a?(Hash) && context["priors"]
-        parts << "at that moment: #{pluralize(context['priors'], 'prior')}"
-      end
-      parts.join(" · ")
+      (["by #{names[kase.opened_by]}"] + standing_parts).join(" · ")
     end
 
     def assigned_detail(person)

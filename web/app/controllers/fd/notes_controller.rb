@@ -62,6 +62,7 @@ module Fd
 
     def back_to(kase, standing, about)
       return fd_case_path(kase, tab: "people", person: about) if standing
+      return fd_case_path(kase, tab: "report") if params[:from] == "report"
 
       fd_case_path(kase, tab: "notes")
     end

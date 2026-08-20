@@ -1,0 +1,76 @@
+<% content_for :page_title, "Merge case #{@case.id}" %>
+<% content_for :page_face do %>
+  <span class="crumb"><%= link_to "Case #{@case.id}", fd_case_path(@case) %> /</span>
+<% end %>
+<% content_for :page_badge do %>
+  <%= case_status_chip(@case) %>
+<% end %>
+
+<div class="stack">
+  <% if @target.nil? %>
+    <p class="card-note">There is no other case this could merge into.</p>
+  <% else %>
+    <%= render "fd/flagstrip", flags: merge_flags(@plan) %>
+
+    <div class="cols c-2">
+      <div>
+        <div class="card">
+          <div class="lbl">What will be on the merged case</div>
+          <div class="scroll">
+            <table class="data-table static">
+              <tbody>
+                <% @plan.survives.each do |label, value| %>
+                  <tr>
+                    <td><%= label %></td>
+                    <td><b><%= value %></b></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="lbl">What folds</div>
+          <% @plan.folds.each do |line| %>
+            <div class="rail-line"><%= line %></div>
+          <% end %>
+          <% if @plan.destructive %>
+            <div class="flag flag-crit" style="margin-top:8px">
+              <span class="flag-icon" aria-hidden="true">▲</span>
+              <div><b>This is the part you cannot undo.</b> <%= @plan.destructive %></div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="lbl">Merge into</div>
+          <% @candidates.first(8).each do |kase| %>
+            <div class="line-row">
+              <%= link_to fd_case_merge_path(@case, into: kase.id), class: "grow lnk" do %>
+                <b>#<%= kase.id %></b> <%= subject_handles(kase) %>
+              <% end %>
+              <% if kase.id == @target.id %>
+                <span class="chip chip-crit">chosen</span>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="card">
+          <div class="lbl">Then</div>
+          <%= form_with url: fd_merge_cases_path, method: :post do %>
+            <%= hidden_field_tag "case_ids[]", @case.id, id: nil %>
+            <%= hidden_field_tag "case_ids[]", @target.id, id: nil %>
+            <%= hidden_field_tag :duplicate_of, @plan.keeper.id, id: nil %>
+            <%= submit_tag "Merge into ##{@plan.keeper.id}", class: "btn btn-primary",
+                  data: { turbo_confirm: "Merge ##{@plan.folded.id} into ##{@plan.keeper.id}?" } %>
+          <% end %>
+          <%= link_to "Cancel", fd_case_path(@case), class: "btn" %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

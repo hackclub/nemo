@@ -26,7 +26,7 @@ class FdCaseDrawerTest < ActionDispatch::IntegrationTest
     assert_select ".views .view", minimum: 1
 
     get fd_case_path(@kase, tab: "actions")
-    assert_select ".card-title", text: "What was done"
+    assert_select ".card-note", text: "Nothing has been done yet."
   end
 
   test "the drawer offers to claim an unclaimed case" do
@@ -55,7 +55,7 @@ class FdCaseDrawerTest < ActionDispatch::IntegrationTest
       body: "they keep DMing me", source_app: "shroud", received_at: Time.current)
     get_drawer(@kase)
 
-    assert_select ".report-said", text: /they keep DMing me/
+    assert_select ".said-body", text: /they keep DMing me/
   end
 
   test "a resolved row greys out in place instead of disappearing" do

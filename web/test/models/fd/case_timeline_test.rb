@@ -44,7 +44,7 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
       notes: [note],
       assignees: [assignee("UFF1", OPENED + 20.minutes)],
     )
-    assert_equal ["Report received", "Case opened", "Assigned", "Note added", "Warning"],
+    assert_equal ["Reported", "Assigned", "Note added", "Warning"],
       entries.map(&:title)
     assert_equal entries.map(&:at).sort, entries.map(&:at)
   end
@@ -63,7 +63,7 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
       reports: [report(is_anonymous: false, reporter_user_id: "UT")],
       participants: [person],
     ).first
-    assert_equal "from @UT, who was involved · via shroud · no reply yet",
+    assert_equal "by @UT, who was involved · via shroud · no reply yet · no subject set",
       entry.detail
   end
 
@@ -114,7 +114,7 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
   test "a reversal is its own entry at its own time" do
     row = action(reversed_at: OPENED + 2.days, reversed_by: "UFF2", reversal_reason: "appeal upheld")
     entries = build(kase, actions: [row])
-    assert_equal ["Case opened", "Warning", "Warning reversed"], entries.map(&:title)
+    assert_equal ["Opened", "Warning", "Warning reversed"], entries.map(&:title)
     assert_equal "by @UFF2 · appeal upheld", entries.last.detail
     assert_equal OPENED + 2.days, entries.last.at
   end
@@ -149,7 +149,7 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
 
   test "a case with nothing attached still records that it was opened" do
     entries = build(kase)
-    assert_equal ["Case opened"], entries.map(&:title)
+    assert_equal ["Opened"], entries.map(&:title)
     assert_equal "by @UFF1", entries.first.detail
   end
 end

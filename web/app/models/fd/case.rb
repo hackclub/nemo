@@ -122,6 +122,14 @@ module Fd
         .group(:case_id).count
     end
 
+    def self.thread_channels_for(case_ids)
+      ids = case_ids.compact.uniq
+      return {} if ids.empty?
+
+      CaseThread.where(case_id: ids).pluck(:case_id, :channel_id)
+        .group_by(&:first).transform_values { |pairs| pairs.map(&:last).uniq }
+    end
+
     def self.candidates_for(kase, siblings = [], limit: 25)
       ordered = siblings.map(&:id)
       kase.subject_user_ids.each do |user_id|

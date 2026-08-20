@@ -6,6 +6,14 @@ module FdHelper
     @names || Fd::Names.none
   end
 
+  def channels
+    @channels || Fd::ChannelNames.none
+  end
+
+  def channel_label(channel_id)
+    channels[channel_id]
+  end
+
   def handle(user_id)
     return "n/a" if user_id.blank?
 
@@ -188,6 +196,89 @@ module FdHelper
     tag.span(case_age_label(seconds), class: "chip #{tone}")
   end
 
+  def subject_standing(user_id, context)
+    parts = ["subject"]
+    parts << tenure_label(context.tenure_days) if context&.tenure_days
+    parts.join(" · ")
+  end
+
+  def person_line(person, context, said_counts, total_messages)
+    parts = []
+    parts << "here #{tenure_label(context.tenure_days)}" if context&.tenure_days
+    parts << "active #{last_active_label(context.last_active_at)}" if context&.last_active_at
+    parts << said_phrase(said_counts.fetch(person.user_id, 0), total_messages)
+    parts += person.records.filter_map { |record| record.detail.presence }
+    parts.compact.join(" · ").presence || person.user_id
+  end
+
+  def said_phrase(said, total)
+    return nil if said.zero?
+    return pluralize(said, "message") if said == total
+
+    "said #{said} of the #{total} messages"
+  end
+
+  def prior_chip_for(count)
+    tag.span(prior_phrase(count), class: "chip #{prior_tone(count)}")
+  end
+
+  def merge_reason(kase, other)
+    shared = kase.threads.map(&:coordinates) & other.threads.map(&:coordinates)
+    return "same thread in #{shared.first.first}" if shared.any?
+
+    both = kase.subject_user_ids & other.subject_user_ids
+    return "same subject" if both.any?
+
+    "also open"
+  end
+
+  def resolve_consequences(kase, open_reports)
+    lines = ["Case ##{kase.id} closes, and leaves the queue."]
+    if open_reports.positive?
+      lines << "#{pluralize(open_reports, 'reporter')} #{open_reports == 1 ? 'is' : 'are'} " \
+               "told the outcome, unless you turn that off."
+    end
+    lines << "Filing a report logs an action against somebody, which counts as a prior."
+    lines << "It is written to the trail either way, and can be reopened."
+    lines
+  end
+
+  def action_consequences(kase, target)
+    ["An action is logged against #{target ? names[target] : 'whoever you pick'}, " \
+       "and counts as a prior for twelve months.",
+     "Case ##{kase.id} stays #{kase.resolved? ? 'resolved' : 'open'}.",
+     "Nobody is messaged. Telling them is a separate step.",
+     "It is written to the trail, and can be reversed."]
+  end
+
+  def flagged_count(row, flags)
+    row.messages.count { |said| flags.key?(said.id) }
+  end
+
+  def shown_messages(row, flags, only)
+    return row.messages unless only == "flagged"
+
+    row.messages.select { |said| flags.key?(said.id) }
+  end
+
+  def evidence_empty_note(row, only)
+    return "Nothing in this thread is flagged." if only == "flagged"
+
+    "No messages held for this thread yet."
+  end
+
+  def merge_flags(plan)
+    return [] if plan.nil?
+
+    detail = if plan.same_thread?
+      "They share #{plan.shared_channels.to_sentence}. Merging keeps both reports."
+    else
+      "Nothing says these are the same thread. Check before you merge."
+    end
+    [Fd::CaseFlags::Flag.new(tone: plan.same_thread? ? "mid" : "crit",
+      headline: "##{plan.folded.id} would fold into ##{plan.keeper.id}.", detail: detail)]
+  end
+
   def case_severity(kase)
     return "sev-calm" if kase.resolved?
 
@@ -250,10 +341,61 @@ module FdHelper
     ROLE_TONES.fetch(role, "chip-off")
   end
 
+  ChatEntry = Struct.new(:at, :side, :kind, :who, :name, :body, keyword_init: true)
+
+  def chat_entries(reports, notes)
+    said = reports.flat_map { |report| report_entries(report) }
+    said += notes.map do |note|
+      ChatEntry.new(at: note.created_at, side: "out", kind: "note", who: note.author,
+        name: names[note.author], body: note.body)
+    end
+    said.sort_by(&:at)
+  end
+
+  def report_entries(report)
+    entries = [ChatEntry.new(at: report.received_at, side: "in", kind: "report",
+      who: (report.reporter_user_id unless report.anonymous?),
+      name: report.reporter_label(names),
+      body: report.body.presence || "No words with it.")]
+
+    if report.told_of_outcome?
+      entries << ChatEntry.new(at: report.closed_at, side: "out", kind: "outcome",
+        who: report.closed_by, name: names[report.closed_by],
+        body: "Told them how it ended.")
+    end
+    entries
+  end
+
+  def reporter_names(reports)
+    return "anonymous" if reports.all?(&:anonymous?)
+
+    named = reports.reject(&:anonymous?).map { |report| names[report.reporter_user_id] }.uniq
+    reports.any?(&:anonymous?) ? "#{named.to_sentence} and anonymous" : named.to_sentence
+  end
+
+  def chat_head_line(reports, kase)
+    parts = []
+    parts << "reported it #{report_when_short(reports.first)}"
+    if reports.first.unanswered? && !kase.resolved?
+      parts << "waiting #{case_age_label(reports.first.waiting_for)}"
+    end
+    parts.join(" · ")
+  end
+
+  def report_when_short(report)
+    report.received_at.strftime("%-d %b")
+  end
+
+  def report_state_chip(report, kase)
+    return tag.span("told how it ended", class: "chip chip-good") if report.told_of_outcome?
+    return tag.span("not told yet", class: "chip chip-warn") if kase.resolved?
+    return nil if report.replied?
+
+    tag.span("no answer yet", class: "chip chip-warn")
+  end
+
   def report_when_line(report, kase)
     parts = [report.received_at.strftime("%-d %b %Y, %H:%M")]
-    parts << "through #{report.source_app}" if report.source_app.present?
-
     parts << report.closed_line(names) if report.told_of_outcome?
     parts << "not told the outcome yet" if kase.resolved? && !report.told_of_outcome?
     parts.compact.join(" · ")
@@ -265,6 +407,18 @@ module FdHelper
     "duplicate" => "Duplicate of another case",
     "not_conduct" => "Not a conduct matter"
   }.freeze
+
+  def told_chip(reports, open_reports)
+    return nil if reports.blank?
+
+    return tag.span(told_phrase(reports.size), class: "chip chip-good") if open_reports.zero?
+
+    tag.span("#{pluralize(open_reports, 'reporter')} not told", class: "chip chip-warn")
+  end
+
+  def told_phrase(count)
+    count == 1 ? "reporter was told" : "#{count} reporters were told"
+  end
 
   def resolution_label(key)
     RESOLUTION_LABELS.fetch(key, key.to_s.tr("_", " "))
@@ -353,19 +507,32 @@ module FdHelper
     key.tr("_", " ")
   end
 
-  def row_subtitle(kase, thread_counts)
-    parts = [category_short(kase.category_key), row_subject_phrase(kase)]
-    count = thread_counts.fetch(kase.id, 0)
-    parts << pluralize(count, "message") if count.positive?
-    parts.reject { |part| part == "n/a" }.join(" · ")
+  def row_subtitle(kase, thread_counts, thread_channels = {})
+    parts = [category_short(kase.category_key), row_origin_phrase(kase)]
+    parts << row_messages_phrase(kase, thread_counts, thread_channels)
+    parts.compact.reject { |part| part == "n/a" }.join(" · ")
   end
 
-  def row_subject_phrase(kase)
-    ids = kase.subject_user_ids
-    return "subject not yet identified" if ids.empty?
-    return pluralize(ids.size, "subject") if ids.many?
+  def row_origin_phrase(kase)
+    reports = kase.reports.to_a
+    return "#{names[kase.opened_by]} opened it" if reports.empty?
 
-    "about #{names[ids.first]}"
+    named = reports.reject(&:anonymous?)
+    return "#{pluralize(reports.size, 'person')} reported it" if reports.many?
+    return "a member reported it" if named.empty?
+
+    "#{names[named.first.reporter_user_id]} reported it"
+  end
+
+  def row_messages_phrase(kase, thread_counts, thread_channels)
+    count = thread_counts.fetch(kase.id, 0)
+    return nil unless count.positive?
+
+    said = pluralize(count, "message")
+    where = Array(thread_channels[kase.id])
+    return said unless where.one? && channels.named?(where.first)
+
+    "#{said} in #{channels[where.first]}"
   end
 
   AVATAR_TONES = 8
@@ -392,6 +559,18 @@ module FdHelper
     safe_join(Array(user_ids).map { |id|
       tag.span(class: "face-name") { safe_join([face(id), handle(id)]) }
     }, " ")
+  end
+
+  def row_subject_avatar(kase)
+    face(kase.subject_user_ids.first)
+  end
+
+  def row_subject_label(kase)
+    ids = kase.subject_user_ids
+    return "nobody identified yet" if ids.empty?
+    return names[ids.first] if ids.one?
+
+    "#{names[ids.first]} and #{pluralize(ids.size - 1, 'other')}"
   end
 
   def row_reporter_id(kase)
@@ -468,39 +647,32 @@ module FdHelper
     end
   end
 
-  def filed_by_label(reports)
-    return nil if reports.empty?
-
-    named = reports.reject(&:anonymous?)
-
-    if named.empty?
-      reports.one? ? "filed anonymously" : "filed anonymously by #{reports.size} people"
-    elsif reports.one?
-      safe_join(["filed by ", member_link(named.first.reporter_user_id)])
-    else
-      safe_join(["filed by ", member_link(named.first.reporter_user_id),
-        " and #{pluralize(reports.size - 1, 'other')}"])
-    end
-  end
-
   def case_head_meta(kase, reports)
     parts = []
     parts << kase.category_key.tr("_", " ") if kase.category_key
-    opened = "opened #{kase.opened_at.strftime('%b %-d')}"
-
-    if !kase.assigned?
-      parts << safe_join([opened, " by ", member_link(kase.opened_by)])
-      parts << "unassigned"
-    elsif kase.assignee_user_ids == [kase.opened_by]
-      parts << safe_join([opened, " and assigned to ", member_link(kase.opened_by)])
+    parts << case_origin_label(kase, reports)
+    parts << if kase.assigned?
+      safe_join(["assigned to ", member_links(kase.assignee_user_ids)])
     else
-      parts << safe_join([opened, " by ", member_link(kase.opened_by)])
-      parts << safe_join(["assigned to ", member_links(kase.assignee_user_ids)])
+      "unassigned"
     end
-
-    filed = filed_by_label(reports)
-    parts << filed if filed
     safe_join(parts, " · ")
+  end
+
+  def case_origin_label(kase, reports)
+    first = Array(reports).min_by(&:received_at)
+    return safe_join(["opened #{on_day(kase.opened_at)} by ",
+      member_link(kase.opened_by)]) if first.nil?
+
+    said = "reported #{on_day(first.received_at)}"
+    return "#{said} by #{pluralize(reports.size, 'person')}" if reports.many?
+    return "#{said} by a member" if first.anonymous?
+
+    safe_join(["#{said} by ", member_link(first.reporter_user_id)])
+  end
+
+  def on_day(at)
+    at.strftime("%b %-d")
   end
 
   def member_links(user_ids)
@@ -522,6 +694,40 @@ module FdHelper
 
   def action_label(type_key)
     ACTION_LABELS.fetch(type_key) { type_key.tr("_", " ").capitalize }
+  end
+
+  ACTION_TONES = {
+    "warning" => "chip-warn", "shush" => "chip-warn", "locked_thread" => "chip-off",
+    "dm" => "chip-off"
+  }.freeze
+
+  def action_tone(action)
+    return "chip-off" if action.reversed?
+
+    ACTION_TONES.fetch(action.type_key, "chip-crit")
+  end
+
+  def action_line(action, kase)
+    aside = kase.subject_user_ids.include?(action.target_user_id) ? "" : " (not the subject)"
+    safe_join([
+      "to ", member_link(action.target_user_id),
+      "#{aside}, #{action.performed_at.strftime('%-d %b')}, by ", member_link(action.decided_by)
+    ])
+  end
+
+  def action_standing_line(action, kase)
+    parts = []
+    parts << reversal_line(action) if action.reversed?
+    parts << "expires #{action.expires_at.strftime('%-d %b %Y')}" if action.expires?
+    parts << action_detail_note(action)
+    parts << action_performer_note(action) unless action.performed_by_decider?
+    parts << "follows #{kase.followed_decision.title}" if kase.followed_decision
+    parts.compact.join(" · ")
+  end
+
+  def reversal_line(action)
+    why = action.reversal_reason.present? ? ", #{action.reversal_reason}" : ""
+    "reversed #{action.reversed_at.strftime('%-d %b')} by #{names[action.reversed_by]}#{why}"
   end
 
   def action_labels(actions)
@@ -711,6 +917,7 @@ module FdHelper
     "case/unclaimed" => "Handed back",
     "case/resolved" => "Resolved",
     "case/reopened" => "Reopened",
+    "case/categorised" => "Set what kind of thing",
     "case/followed" => "Linked a decision to",
     "case/unfollowed" => "Unlinked a decision from",
     "note/noted" => "Wrote a note on",
@@ -859,7 +1066,7 @@ module FdHelper
     link_to said, fd_decision_path(decision), class: "chip #{tone}"
   end
 
-  DECISION_GROUPS = { "settled" => "In force", "proposed" => "Proposed",
+  DECISION_GROUPS ={ "settled" => "In force", "proposed" => "Proposed",
                       "superseded" => "Retired" }.freeze
   DECISION_ORDER = { "settled" => 0, "proposed" => 1, "superseded" => 2 }.freeze
 

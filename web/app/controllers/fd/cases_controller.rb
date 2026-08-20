@@ -1,6 +1,6 @@
 module Fd
   class CasesController < BaseController
-    permit "case.open", only: :create
+    permit "case.open", only: [:create, :update]
 
     TABS = %w[report evidence actions notes people].freeze
 
@@ -30,9 +30,14 @@ module Fd
         notes: @notes, messages: @thread_messages)
       @thread_list = CaseThreads.for(@threads, actions: @actions,
         messages: @thread_messages, asked: params[:thread])
-      @flags = @case.citations.index_by(&:thread_message_id)
-      @flagged_messages = @thread_messages.select { |said| @flags.key?(said.id) }
+      @citations = @case.citations.index_by(&:thread_message_id)
+      @flagged_messages = @thread_messages.select { |said| @citations.key?(said.id) }
       @cited_by = @actions.select(&:cites?).group_by(&:cites_message_id)
+      @cited_messages = cited_messages
+      @channels = ChannelNames.for(@threads.map(&:channel_id) +
+        @cited_messages.values.map(&:channel_id))
+      @said_counts = @thread_messages.group_by(&:author_user_id).transform_values(&:size)
+      @person_priors = Case.prior_counts_for(@participants.map(&:user_id))
       @assignees = @case.assignees.to_a
       @decisions = Decision.order(:title).to_a
       @mentioned = @case.mentioned_but_unlogged(
@@ -62,12 +67,39 @@ module Fd
       )
       @tab = params[:tab].presence_in(TABS) || (@case.resolved? ? "actions" : "report")
       @tab_counts = {
-        "evidence" => @thread_list.size,
+        "evidence" => @thread_messages.size.positive? ? @thread_messages.size : @thread_list.size,
         "actions" => @actions.size,
         "notes" => @notes.size,
         "people" => @participants.size
       }
       @flags = CaseFlags.for_case(@case, names: @names)
+      @subject = @case.subject_user_ids.first
+      @subject_priors = @subject ? Case.prior_count(@subject, within: Case::PRIOR_WINDOW) : 0
+      @merge_into = @duplicate_candidates.find { |other| !other.resolved? }
+      @open_reports = @reports.count { |report| !report.told_of_outcome? }
+      @unfinished = !@case.resolved? &&
+        (@subject.nil? || @case.category_key.blank? || @threads.empty?)
+      @guesses = @unfinished ? CaseFlags.channel_guesses(@reports) : []
+    end
+
+    def update
+      kase = Case.find(params[:id])
+      wanted = params[:category_key].to_s
+      unless Case::CATEGORIES.include?(wanted)
+        return redirect_to(fd_case_path(kase), alert: "pick a category from the list")
+      end
+      if kase.category_key.present?
+        return redirect_to(fd_case_path(kase), alert: "this case already has a category")
+      end
+
+      was = kase.category_key
+      writing do
+        kase.update!(category_key: wanted)
+        audit(kase, "categorised",
+          before: { "category_key" => was }, after: { "category_key" => wanted })
+      end
+
+      redirect_to fd_case_path(kase), notice: "case #{kase.id} is #{wanted.tr('_', ' ')}"
     end
 
     MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/
@@ -103,8 +135,18 @@ module Fd
 
     def render_drawer
       @reports = @case.reports.oldest_first.to_a
-      @names = Names.for(@case.subject_user_ids + @case.assignee_user_ids + [@case.opened_by])
+      @names = Names.for(@case.subject_user_ids + @case.assignee_user_ids + [@case.opened_by] +
+        @reports.map(&:reporter_user_id))
+      @flags = CaseFlags.for_case(@case, names: @names)
+      siblings = @case.sibling_cases.includes(:subjects).oldest_first.to_a
+      @merge_into = Case.candidates_for(@case, siblings).find { |other| !other.resolved? }
       render "drawer"
+    end
+
+    def cited_messages
+      wanted = @cited_by.keys - @thread_messages.map(&:id)
+      held = @thread_messages.index_by(&:id)
+      held.merge(ThreadMessage.where(id: wanted).index_by(&:id))
     end
 
     def page_ids
@@ -119,6 +161,8 @@ module Fd
         (@notes + @standing_notes.values.flatten).flat_map { |note| Mentions.ids(note.body) },
         @reports.flat_map { |report| Mentions.ids(report.body) },
         @thread_messages.map(&:author_user_id),
+        @thread_messages.map(&:purged_by),
+        @citations.values.map(&:flagged_by),
         @threads.map(&:added_by),
         @erasures.map(&:actor_user_id),
         @links.map(&:actor_user_id)
@@ -201,6 +245,8 @@ module Fd
       lone_subjects = @cases.filter_map { |kase| kase.subject_user_ids.first if kase.subject_user_ids.one? }
       @prior_counts = Case.prior_counts_for(lone_subjects)
       @thread_counts = Case.thread_message_counts_for(case_ids)
+      @thread_channels = Case.thread_channels_for(case_ids)
+      @channels = ChannelNames.for(@thread_channels.values.flatten)
       @stats = QueueStats.load
       @total_count = @stats.total
       @views = @query.views

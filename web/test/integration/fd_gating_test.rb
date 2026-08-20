@@ -30,7 +30,7 @@ class FdGatingTest < ActionDispatch::IntegrationTest
       dead("Log an action")["title"]
 
     get fd_case_path(kase, tab: "people")
-    assert_select ".index-add.btn-off", text: /Add somebody/
+    assert_select ".person-add.btn-off", text: /Add somebody/
   end
 
   test "resolving is open to anyone, whoever is holding the case" do

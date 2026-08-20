@@ -1,235 +1,32 @@
-<p class="band-label">
-  Who is on this case ·
-  <%= people.any? ? pluralize(people.size, "person") : "nobody yet" %>
-</p>
-
-<turbo-frame id="who" target="_top" data-turbo-action="advance">
-<div class="inspector">
-  <div class="index-side">
+<div class="card card-flush">
+  <div class="people-list">
     <% people.each do |person| %>
-      <%= link_to fd_case_path(kase, tab: "people", person: person.user_id), class: "index-item",
-            data: { turbo_frame: "who" },
-            aria: { current: people.chosen?(person) ? "true" : nil } do %>
-        <span class="index-face"><%= names.initial(person.user_id) %></span>
-        <%= names[person.user_id] %>
-        <% person.roles.each do |role| %>
-          <span class="chip <%= role_tone(role) %>"><%= role_label(role) %></span>
-        <% end %>
-      <% end %>
-    <% end %>
-    <%= opens_modal "case.people", opens: "add-person", on: kase,
-          css: "index-item index-add" do %>
-      <span class="index-face">+</span>
-      Add somebody
-    <% end %>
-    <%= render "mentioned", kase: kase, mentioned: mentioned %>
-  </div>
-
-  <div class="pane">
-    <% if people.chosen.nil? %>
-      <p class="card-note">Nobody logged yet.</p>
-    <% else %>
-      <% person = people.chosen %>
-      <% context = contexts[person.user_id] %>
-      <% here = case_person %>
-      <div class="mcard-top">
-        <span class="mcard-face" aria-hidden="true">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+      <div class="line-row fat person-row">
+        <%= face(person.user_id) %>
+        <span class="grow two-line">
+          <b><%= handle(person.user_id) %></b>
+          <span><%= person_line(person, contexts[person.user_id], said_counts, total_messages) %></span>
         </span>
-        <span>
-          <span class="mcard-name">
-            <%= handle(person.user_id) %>
-            <% person.roles.each do |role| %>
-              <span class="chip <%= role_tone(role) %>"><%= role_label(role) %></span>
-            <% end %>
-            <% if here.priors.positive? %>
-              <span class="chip chip-warn"><%= pluralize(here.priors, "prior") %></span>
-            <% end %>
-          </span>
-          <span class="mcard-sub"><%= pane_identity_line(person.user_id, context) %></span>
-        </span>
-        <span class="mcard-acts">
-          <%= link_to "Their record", fd_member_path(person.user_id), class: "btn",
-                data: { turbo_frame: "person-drawer" } %>
-          <%= link_to "In Slack", slack_member_url(person.user_id), class: "btn",
-                target: "_blank", rel: "noopener" %>
-          <%= opens_modal "case.act", "Log an action", opens: "log-action", on: kase %>
-        </span>
-      </div>
-
-      <div class="lines roles">
         <% person.records.each do |record| %>
-          <div class="line-row">
-            <span class="line-why">
-              <b><%= role_label(record.role) %></b>
-              <%= record.detail.presence || "logged #{record.noted_at.strftime('%-d %b')}" %>
-            </span>
-            <span class="line-end"><%= render "person_remove", kase: kase, person: record %></span>
-          </div>
+          <span class="chip-token">
+            <span class="chip <%= role_tone(record.role) %>"><%= role_label(record.role) %></span>
+            <%= render "person_remove", kase: kase, person: record %>
+          </span>
         <% end %>
-      </div>
-
-      <div class="subject-facts pane-cut">
-        <div>
-          <div class="fact-label">Done to them here</div>
-          <div class="fact-val"><%= here.actions.any? ? pluralize(here.actions.size, "action") : "nothing" %></div>
-        </div>
-        <div>
-          <div class="fact-label">Their messages</div>
-          <div class="fact-val">
-            <% if here.messages.any? %>
-              <%= here.messages.size %>
-              <span class="fact-val dim">· in <%= pluralize(here.threads_spoken_in, "thread") %></span>
-            <% else %>
-              none held
-            <% end %>
-          </div>
-        </div>
-        <div>
-          <div class="fact-label">Priors, 12 months</div>
-          <div class="fact-val">
-            <%= here.priors %>
-            <% if here.reversed_actions.positive? %>
-              <span class="fact-val dim">· <%= here.reversed_actions %> reversed</span>
-            <% end %>
-          </div>
-        </div>
-        <div>
-          <div class="fact-label">Lifetime</div>
-          <div class="fact-val"><%= pluralize(here.cases_ever, "case") %></div>
-        </div>
-      </div>
-
-      <div class="pane-cut">
-        <p class="band-label">Their record before this case</p>
-        <% if here.earlier_cases.any? %>
-          <div class="scroll">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Case</th>
-                  <th>What was done to them</th>
-                  <th>Counts as a prior</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <% here.earlier_cases.each do |row| %>
-                  <tr>
-                    <td>
-                      <span class="two-line">
-                        <b><%= link_to "case #{row.kase.id}", fd_case_path(row.kase) %></b>
-                        <span>
-                          <% if row.kase.category_key.present? %>
-                            <%= category_label(row.kase.category_key) %> ·
-                          <% end %>
-                          <%= last_case_label(row.kase.resolved_at || row.kase.opened_at) %>
-                        </span>
-                      </span>
-                    </td>
-                    <td><%= row.actions.any? ? action_labels(row.actions) : "nothing" %></td>
-                    <td>
-                      <span class="chip <%= row.counts ? "chip-warn" : "chip-off" %>">
-                        <%= row.counts ? "yes" : "no" %>
-                      </span>
-                    </td>
-                    <td><%= link_to "Open", fd_case_path(row.kase), class: "text-btn" %></td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
-          </div>
-        <% else %>
-          <span class="note-none">No earlier cases.</span>
+        <% if priors.fetch(person.user_id, 0).positive? %>
+          <%= prior_chip_for(priors.fetch(person.user_id)) %>
         <% end %>
+        <%= link_to "Their history", fd_member_path(person.user_id), class: "btn",
+              data: { turbo_frame: "person-drawer" } %>
       </div>
+    <% end %>
 
-      <div class="pair">
-        <div>
-          <p class="band-label">Done to them here</p>
-          <div class="rail-card">
-            <% if here.actions.any? %>
-              <% here.actions.each do |action| %>
-                <div class="thin">
-                  <span>
-                    <b><%= action_label(action.type_key) %></b>
-                    <%= action.performed_at.strftime("%-d %b") %> · <%= member_link(action.decided_by) %>
-                  </span>
-                  <%= action_state_chip(action) %>
-                </div>
-              <% end %>
-            <% else %>
-              <span class="note-none">Nothing done to them.</span>
-            <% end %>
-          </div>
-        </div>
-
-        <div>
-          <p class="band-label">Notes on <%= names[person.user_id] %></p>
-          <% held = notes.fetch(person.user_id, []) %>
-          <% if held.any? %>
-            <div class="notes">
-              <% held.each do |note| %>
-                <div class="note-row">
-                  <div class="note-body"><%= mentioned(note.body) %></div>
-                  <div class="note-by">
-                    <span><%= note_byline(note) %></span>
-                    <%= render "note_remove", kase: kase, note: note %>
-                  </div>
-                </div>
-              <% end %>
-            </div>
-          <% else %>
-            <span class="note-none">No notes</span>
-          <% end %>
-        </div>
-      </div>
-
-      <div class="pane-cut">
-        <p class="band-label">Their messages in this case</p>
-        <% if here.messages.any? %>
-          <div class="rail-card">
-            <% here.messages.each do |said| %>
-              <div class="thin">
-                <span>
-                  <b><%= said.channel_id %></b>
-                  <%= said.posted_at.strftime("%-d %b %H:%M") %>
-                  · <%= said.readable? ? said.body : "no text held" %>
-                </span>
-                <% if said.deleted? %>
-                  <span class="chip chip-off">deleted in Slack</span>
-                <% end %>
-              </div>
-            <% end %>
-          </div>
-        <% else %>
-          <span class="note-none">No messages of theirs.</span>
-        <% end %>
-      </div>
-
-      <div>
-        <p class="band-label">In the workspace</p>
-        <div class="subject-facts">
-          <div>
-            <div class="fact-label">Messages</div>
-            <div class="fact-val"><%= fact_number(context&.messages_posted) %></div>
-          </div>
-          <div>
-            <div class="fact-label">Active days</div>
-            <div class="fact-val"><%= fact_number(context&.days_active) %></div>
-          </div>
-          <div>
-            <div class="fact-label">Channels</div>
-            <div class="fact-val"><%= fact_number(context&.channels_joined) %></div>
-          </div>
-          <div>
-            <div class="fact-label">Last active</div>
-            <div class="fact-val"><%= last_active_label(context&.last_active_at) %></div>
-          </div>
-        </div>
-      </div>
-
+    <%= opens_modal "case.people", opens: "add-person", on: kase,
+          css: "line-row fat person-add" do %>
+      <span class="face-slot" aria-hidden="true">+</span>
+      <span class="grow">Add somebody</span>
     <% end %>
   </div>
 </div>
-</turbo-frame>
+
+<%= render "mentioned", kase: kase, mentioned: mentioned %>

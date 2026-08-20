@@ -1,59 +1,61 @@
-<p class="band-label">
-  The evidence ·
-  <%= threads.any? ? pluralize(threads.size, "attached") : "none attached" %>
-</p>
-
 <turbo-frame id="threads" target="_top" data-turbo-action="advance">
-<div class="inspector">
-  <div class="index-side">
+<div class="card">
+  <div class="chiprow">
     <% threads.each do |row| %>
       <%= link_to fd_case_path(kase, tab: "evidence", thread: row.id, person: params[:person]),
-            class: "index-item", data: { turbo_frame: "threads" },
+            class: "filt", data: { turbo_frame: "threads" },
             aria: { current: threads.chosen?(row) ? "true" : nil } do %>
-        <span class="mono"><%= row.channel_id %></span>
-        <span class="chip <%= row.tone %>"><%= row.state %></span>
+        <span class="<%= "mono" unless channels.named?(row.channel_id) %>"><%= channel_label(row.channel_id) %></span>
+        <b><%= row.held %></b>
+        <% if row.internal? %><span class="chip chip-warn">internal</span><% end %>
+        <% if row.locked? %><span class="chip chip-warn">locked</span><% end %>
       <% end %>
     <% end %>
-    <%= opens_modal "case.thread", opens: "attach-thread", on: kase,
-          css: "index-item index-add" do %>
-      <span class="index-face">+</span>
-      Attach a thread
+
+    <span class="chiprow-fill"></span>
+
+    <% if threads.chosen && flagged_count(threads.chosen, flags).positive? %>
+      <%= link_to fd_case_path(kase, tab: "evidence", thread: threads.chosen.id,
+            person: params[:person], only: ("flagged" unless params[:only] == "flagged")),
+            class: "filt", data: { turbo_frame: "threads" },
+            aria: { current: ("true" if params[:only] == "flagged") } do %>
+        only flagged
+        <span class="chip chip-crit"><%= flagged_count(threads.chosen, flags) %></span>
+      <% end %>
+    <% end %>
+
+    <% if threads.chosen %>
+      <%= link_to "open in slack ↗",
+            slack_thread_url(threads.chosen.channel_id, threads.chosen.thread_ts),
+            class: "filt", target: "_blank", rel: "noopener" %>
+    <% end %>
+
+    <%= opens_modal "case.thread", opens: "attach-thread", on: kase, css: "filt" do %>
+      + attach another
     <% end %>
   </div>
 
-  <div class="pane">
-    <% if threads.chosen.nil? %>
-      <p class="card-note">No evidence attached.</p>
+  <% if threads.chosen.nil? %>
+    <p class="card-note">No evidence attached.</p>
+  <% else %>
+    <% row = threads.chosen %>
+    <% shown = shown_messages(row, flags, params[:only]) %>
+    <% if shown.empty? %>
+      <p class="thr-gone"><%= evidence_empty_note(row, params[:only]) %></p>
     <% else %>
-      <% row = threads.chosen %>
-      <div class="thr-head">
-        <span class="thr-where"><%= row.channel_id %></span>
-        <% if row.locked? %>
-          <span class="chip chip-warn">locked</span>
-        <% end %>
-        <span class="thr-end">
-          <%= link_to "Open in Slack", slack_thread_url(row.channel_id, row.thread_ts),
-                class: "btn", target: "_blank", rel: "noopener" %>
-        </span>
-      </div>
-
-      <% if row.held.zero? %>
-        <p class="thr-gone">No messages held for this thread yet.</p>
-      <% else %>
-        <%= render "fd/messages", messages: row.messages, kase: kase,
-              flags: flags, cited_by: cited_by %>
-      <% end %>
-
-      <div class="rail-card">
-        <div class="thin">
-          <span><b>Attached</b> <%= member_link(row.added_by) %> · <%= last_case_label(row.added_at) %></span>
-          <%= gated_button "case.thread", "Detach", fd_case_thread_path(kase, row.record),
-                on: kase, css: "text-btn", method: :delete,
-                form: { class: "contents", data: { turbo_frame: "_top",
-                turbo_confirm: "Detach this thread?" } } %>
-        </div>
-      </div>
+      <%= render "fd/messages", messages: shown, kase: kase,
+            flags: flags, cited_by: cited_by %>
     <% end %>
-  </div>
+
+    <div class="line-row">
+      <span class="grow sub2">
+        <b>Attached</b> <%= member_link(row.added_by) %> · <%= last_case_label(row.added_at) %>
+      </span>
+      <%= gated_button "case.thread", "Detach", fd_case_thread_path(kase, row.record),
+            on: kase, css: "text-btn", method: :delete,
+            form: { class: "contents", data: { turbo_frame: "_top",
+            turbo_confirm: "Detach this thread?" } } %>
+    </div>
+  <% end %>
 </div>
 </turbo-frame>

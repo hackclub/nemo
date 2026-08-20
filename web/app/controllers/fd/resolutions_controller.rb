@@ -23,7 +23,7 @@ module Fd
 
         settled = true
         file_report if params[:outcome] == "report"
-        close_reports
+        close_reports unless params[:tell_reporter] == "0"
         @case.reload
         audit(@case, "resolved",
           before: { "resolved_at" => nil, "resolution" => nil },

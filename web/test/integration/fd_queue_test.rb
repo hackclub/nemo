@@ -142,7 +142,7 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     get fd_cases_path(view: "none")
 
     assert_select ".view[aria-current]", 0
-    assert_select ".card-title", text: "Every case"
+    assert_select ".queue-table tbody tr", minimum: 1
   end
 
   test "an unassigned row offers the claim button, an assigned one does not" do

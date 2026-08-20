@@ -137,6 +137,7 @@
         <div class="scrollarea">
           <main class="body" data-controller="case-timeline">
             <div class="head-row">
+              <%= yield :page_face %>
               <h1 class="head-title"><%= content_for(:page_title) || "Mnemosyne" %></h1>
               <% if content_for?(:page_subtitle) %>
                 <span class="head-meta"><%= content_for(:page_subtitle) %></span>

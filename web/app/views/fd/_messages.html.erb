@@ -10,9 +10,14 @@
       <span>
         <span class="msg-who">
           <%= member_link(said.author_user_id) %>
-          <span class="msg-at">
-            <%= said.posted_at.strftime("%-d %b %H:%M") %><%= " · edited" if said.edited? %>
-          </span>
+          <span class="msg-at"><%= said.posted_at.strftime("%-d %b %H:%M") %></span>
+          <% if flag %><span class="chip chip-crit">flagged as evidence</span><% end %>
+          <% if said.edited? %><span class="chip chip-off">edited</span><% end %>
+          <% if said.purged? %>
+            <span class="chip chip-off">erased</span>
+          <% elsif said.deleted? %>
+            <span class="chip chip-off">deleted in slack</span>
+          <% end %>
           <% if kase %>
             <span class="msg-end">
               <% if flag %>
@@ -30,19 +35,17 @@
           <% end %>
         </span>
         <% if said.readable? %>
-          <div class="msg-text"><%= mentioned(said.body) %></div>
+          <div class="msg-text<%= " msg-gone" if said.deleted? || said.purged? %>"><% if said.deleted? || said.purged? %>kept here: <% end %><%= mentioned(said.body) %></div>
         <% end %>
         <% if said.purged? %>
-          <div class="msg-flag">Erased by <%= names[said.purged_by] %>.</div>
+          <div class="sub2">erased by <%= names[said.purged_by] %></div>
         <% elsif said.deleted? %>
-          <div class="msg-flag">
-            Deleted in Slack <%= last_case_label(said.deleted_at) %>
-          </div>
+          <div class="sub2">deleted in Slack <%= last_case_label(said.deleted_at) %></div>
         <% end %>
-        <% cited_by[said.id]&.each do |action| %>
-          <div class="msg-flag">
-            The <%= action_label(action.type_key).downcase %> of
-            <%= action.performed_at.strftime("%-d %b %H:%M") %> cites this message
+        <% if flag %>
+          <div class="sub2">
+            flagged by <%= names[flag.flagged_by] %> ·
+            <%= cited_by[said.id].present? ? "cited by an action" : "not cited by an action yet" %>
           </div>
         <% end %>
       </span>

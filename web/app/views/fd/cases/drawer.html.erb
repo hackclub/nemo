@@ -11,11 +11,11 @@
   <div class="drawer-b">
     <p class="drawer-sub"><%= case_head_meta(@case, @reports) %></p>
 
+    <%= render "fd/flagstrip", flags: @flags %>
+
     <% if @reports.any? %>
-      <div class="card">
-        <% @reports.each do |report| %>
-          <%= render "report", report: report, kase: @case %>
-        <% end %>
+      <div class="card card-chat">
+        <%= render "chat", kase: @case, reports: @reports, notes: [], composer: false %>
       </div>
     <% else %>
       <p class="card-note">No report on file.</p>
@@ -34,6 +34,12 @@
             <button type="submit" class="keys-item">
               <span class="kbd">a</span><span>claim</span>
             </button>
+          <% end %>
+        <% end %>
+        <% if @merge_into %>
+          <%= link_to fd_case_merge_path(@case, into: @merge_into.id), class: "keys-item",
+                data: { turbo_frame: "_top", case_drawer_target: "merge" } do %>
+            <span class="kbd">m</span><span>merge <%= @merge_into.id %></span>
           <% end %>
         <% end %>
       <% end %>

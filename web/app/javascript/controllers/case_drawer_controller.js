@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["claim", "resolve", "open"]
+  static targets = ["claim", "resolve", "merge", "open"]
 
   connect() {
     this.onKey = this.onKey.bind(this)
@@ -41,6 +41,9 @@ export default class extends Controller {
         break
       case "r":
         if (this.hasResolveTarget) this.resolveTarget.click()
+        break
+      case "m":
+        if (this.hasMergeTarget) this.mergeTarget.click()
         break
       case "Enter":
         if (this.hasOpenTarget) this.openTarget.click()

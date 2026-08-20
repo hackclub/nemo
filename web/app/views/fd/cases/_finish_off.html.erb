@@ -1,0 +1,41 @@
+<div class="card card-asks">
+  <div class="line-row">
+    <span class="face-slot" aria-hidden="true">?</span>
+    <span class="grow">who is it about</span>
+    <% if subject %>
+      <span class="chip chip-good">set</span>
+    <% else %>
+      <%= opens_modal "case.people", "Set", opens: "add-person", on: kase %>
+    <% end %>
+  </div>
+
+  <div class="line-row">
+    <span class="face-slot" aria-hidden="true">▤</span>
+    <span class="grow">what kind of thing</span>
+    <% if kase.category_key.present? %>
+      <span class="chip chip-good">set</span>
+    <% else %>
+      <label for="set-category" class="btn">Set</label>
+    <% end %>
+  </div>
+
+  <div class="line-row">
+    <span class="face-slot" aria-hidden="true">#</span>
+    <span class="grow">where it happened</span>
+    <% if kase.threads.any? %>
+      <span class="chip chip-good">set</span>
+    <% else %>
+      <%= opens_modal "case.thread", "Attach", opens: "attach-thread", on: kase %>
+    <% end %>
+  </div>
+</div>
+
+<% if guesses.any? %>
+  <div class="card">
+    <div class="lbl">Guesses</div>
+    <% guesses.each do |line| %>
+      <div class="rail-line"><%= line %></div>
+    <% end %>
+    <div class="sub2">guesses only, nothing is set until you say so</div>
+  </div>
+<% end %>

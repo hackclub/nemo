@@ -2,6 +2,16 @@ module Fd
   class MergesController < BaseController
     permit "case.resolve"
 
+    def show
+      @case = Case.find(params[:id])
+      @siblings = @case.sibling_cases.includes(:subjects).oldest_first.to_a
+      @candidates = Case.candidates_for(@case, @siblings)
+      @target = @candidates.find { |kase| kase.id == params[:into].to_i } || @candidates.first
+      @plan = MergePlan.for(@case, @target) if @target
+      @names = Names.for((@candidates + [@case]).flat_map(&:subject_user_ids) +
+        [@case.opened_by])
+    end
+
     def create
       ids = Array(params[:case_ids]).map(&:to_i).reject(&:zero?).uniq
       return refuse("tick the cases to mark as duplicates") if ids.empty?

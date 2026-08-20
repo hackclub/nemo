@@ -1,5 +1,5 @@
-<%= gated_button "case.people", "Remove", fd_case_participant_path(kase, person.user_id),
-      on: kase, css: "text-btn", method: :delete, params: { role: person.role },
+<%= gated_button "case.people", "×", fd_case_participant_path(kase, person.user_id),
+      on: kase, css: "chip-x", method: :delete, params: { role: person.role },
       aria: { label: "take @#{person.user_id} off the case" },
       form: { class: "contents", data: { turbo_frame: "_top",
       turbo_confirm: "Take @#{person.user_id} off this case?" } } %>

@@ -81,33 +81,15 @@
     </span>
   </div>
 
-  <%= render "flagstrip", flags: @flags %>
+  <%= render "fd/flagstrip", flags: @flags %>
 
   <div class="card card-flush">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title"><%= @query.title %></h2>
-        <p class="card-sub"><%= @query.summary(@cases.size, @total_count) %></p>
-      </div>
-      <div class="card-tools">
-        <span class="chip chip-off"><%= pluralize(@cases.size, "case") %></span>
-      </div>
-    </div>
-
     <% if @cases.any? %>
       <div class="scroll">
         <table class="data-table queue-table">
-          <thead>
-            <tr>
-              <th>Subject</th>
-              <th>History</th>
-              <th>Age</th>
-              <th>Assigned</th>
-            </tr>
-          </thead>
           <tbody>
             <%= render "rows", cases: @cases, prior_counts: @prior_counts,
-                  thread_counts: @thread_counts %>
+                  thread_counts: @thread_counts, thread_channels: @thread_channels %>
           </tbody>
         </table>
       </div>

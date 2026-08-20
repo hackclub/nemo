@@ -137,16 +137,18 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     assert_select ".note-by", text: /@UFF1/
 
     get fd_case_path(@kase, tab: "people")
-    assert_select "#who .pane .notes .note-body", text: "escalates in public"
+    assert_select ".people-list", text: /escalates in public/, count: 0
+
+    get fd_member_path("USUB")
+    assert_select ".note-body", text: "escalates in public"
   end
 
   test "a standing note is marked as being about the member, not the case" do
     Fd::Note.create!(subject_user_id: "USUB", body: "watch for repeats", author: "UFF2")
     sign_in_as(@me)
-    get fd_case_path(@kase, tab: "people")
+    get fd_member_path("USUB")
 
-    assert_select "#who .pane .notes .note-body", text: "watch for repeats"
-    assert_match(/Notes on @USUB/, response.body)
+    assert_select ".note-body", text: "watch for repeats"
   end
 
   test "a standing note shows for somebody who is not a subject" do
@@ -154,9 +156,9 @@ class FdNotesTest < ActionDispatch::IntegrationTest
       detail: "they piled on")
     Fd::Note.create!(subject_user_id: "UWATCHER", body: "keeps turning up", author: "UFF2")
     sign_in_as(@me)
-    get fd_case_path(@kase, person: "UWATCHER", tab: "people")
+    get fd_member_path("UWATCHER")
 
-    assert_select "#who .pane .notes .note-body", text: "keeps turning up"
+    assert_select ".note-body", text: "keeps turning up"
   end
 
   test "a deleted note is not shown on the page" do
@@ -172,7 +174,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
   test "the notes card says so when there is nothing written" do
     sign_in_as(@me)
     get fd_case_path(@kase, tab: "notes")
-    assert_select ".note-none", text: "No notes", minimum: 1
+    assert_select ".notes-none", text: /No notes yet/, minimum: 1
   end
 
   test "removing my own note leaves it soft deleted, not gone" do
@@ -269,7 +271,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
 
     sign_in_as(@me)
     get fd_case_path(@kase, tab: "notes")
-    assert_select ".notes .text-btn", 1
+    assert_select ".note-by .text-btn", 1
   end
 
   test "notes can still be written on a resolved case" do
