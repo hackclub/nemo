@@ -18,6 +18,8 @@ def text_of(blocks):
         elif block["type"] == "rich_text":
             for element in block["elements"]:
                 out.extend(part["text"] for part in element["elements"])
+        elif block["type"] == "actions":
+            out.extend(e["text"]["text"] for e in block["elements"])
         else:
             out.extend(e["text"] for e in block["elements"])
     return "\n".join(out)
@@ -159,8 +161,23 @@ def test_evidence_with_no_channel_name_still_shows():
     assert "a linked message" in text_of(blocks)
 
 
-def test_a_card_with_nothing_attached_has_three_blocks():
-    assert len(card.blocks(a_case())) == 3
+def test_a_card_with_nothing_attached_is_four_blocks():
+    assert len(card.blocks(a_case())) == 4
+
+
+def test_an_open_case_offers_to_be_claimed():
+    acting = [b for b in card.blocks(a_case()) if b["type"] == "actions"][0]
+    assert [e["action_id"] for e in acting["elements"]] == [card.CLAIM]
+    assert acting["elements"][0]["value"] == "2545"
+
+
+def test_a_held_case_offers_nothing_and_sends_you_to_fire_engine():
+    blocks = card.blocks(a_case(assignees=["UQUINN"]))
+    assert not [b for b in blocks if b["type"] == "actions"]
+
+
+def test_a_resolved_case_offers_nothing():
+    assert not [b for b in card.blocks(a_case(resolved_at="x")) if b["type"] == "actions"]
 
 
 def test_context_blocks_stay_within_ten_elements():

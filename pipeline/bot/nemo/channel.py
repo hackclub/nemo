@@ -1,7 +1,7 @@
 import logging
 import os
 
-from bot.engine import parse
+from bot.engine import access, audit, parse, session
 from bot.nemo import cards
 from bot.nemo import files as carry
 
@@ -70,6 +70,19 @@ WHERE m.id = %s
 
 COUNT_FILES = """
 SELECT count(*) FROM fd.intake_message_files WHERE message_id = %s
+"""
+
+HELD_BY = """
+SELECT user_id FROM fd.case_assignees WHERE case_id = %s ORDER BY assigned_at
+"""
+
+CLAIM = """
+INSERT INTO fd.case_assignees (case_id, user_id, assigned_by) VALUES (%s, %s, %s)
+ON CONFLICT DO NOTHING
+"""
+
+STILL_OPEN = """
+SELECT resolved_at IS NULL FROM fd.cases WHERE id = %s
 """
 
 
@@ -243,7 +256,48 @@ def redraw(client, conn, case_id, channel_id=None):
     return case["forwarded_ts"]
 
 
+def whisper(client, body, said):
+    client.chat_postEphemeral(
+        channel=body["channel"]["id"],
+        user=body["user"]["id"],
+        thread_ts=body["message"].get("thread_ts") or body["message"]["ts"],
+        text=said,
+    )
+
+
+def claimed(conn, case_id, user_id):
+    conn.execute(CLAIM, (case_id, user_id, user_id))
+    audit.record(conn, "assignee", case_id, "claimed", user_id, after={"user_id": user_id})
+
+
 def register(app, on_reply=None):
+    @app.action(cards.report.CLAIM)
+    def on_claim(ack, body, client):
+        ack()
+        case_id = int(body["actions"][0]["value"])
+        user_id = body["user"]["id"]
+
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, "case.open")
+            if not allowed:
+                return whisper(client, body, refusal)
+            if not conn.execute(STILL_OPEN, (case_id,)).fetchone()[0]:
+                return whisper(client, body, f"case {case_id} is already resolved")
+            held = [row[0] for row in conn.execute(HELD_BY, (case_id,)).fetchall()]
+            if user_id in held:
+                return whisper(client, body, f"case {case_id} is already yours")
+            if held:
+                who = ", ".join(f"<@{one}>" for one in held)
+                return whisper(
+                    client,
+                    body,
+                    f"case {case_id} is with {who}. Put yourself on it in Fire Engine "
+                    "if you need to work it together.",
+                )
+            claimed(conn, case_id, user_id)
+
+        log.info("nemo: case %s claimed by %s", case_id, user_id)
+
     @app.event("message")
     def on_message(event):
         if on_reply is None:

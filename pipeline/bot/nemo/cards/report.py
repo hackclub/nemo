@@ -4,9 +4,7 @@ QUOTE_LIMIT = 2400
 HEADER_LIMIT = 150
 CUT = "\n[truncated, the whole thing is on the case page]"
 
-OPEN = "🟥"
-HELD = "🟨"
-CLOSED = "🟩"
+CLAIM = "case_claim"
 
 
 def escape(text):
@@ -124,6 +122,29 @@ def named(files):
     return out
 
 
+def button(action_id, label, case_id, style=None):
+    made = {
+        "type": "button",
+        "action_id": action_id,
+        "text": {"type": "plain_text", "text": label},
+        "value": str(case_id),
+    }
+    if style:
+        made["style"] = style
+    return made
+
+
+def buttons(case):
+    if case.get("resolved_at") or case.get("assignees"):
+        return None
+
+    return {
+        "type": "actions",
+        "block_id": f"case_{case['case_id']}",
+        "elements": [button(CLAIM, "Claim it", case["case_id"], "primary")],
+    }
+
+
 def blocks(case):
     files = case.get("files") or []
     shares = case.get("shares") or []
@@ -143,6 +164,10 @@ def blocks(case):
     trail = evidence(shares) + [f"📎 {name}" for name in named(files)]
     if trail:
         built.append(context([" · ".join(trail)]))
+
+    acting = buttons(case)
+    if acting:
+        built.append(acting)
 
     return built
 
