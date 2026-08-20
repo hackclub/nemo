@@ -1,0 +1,13 @@
+<% if flags.any? %>
+  <div class="flagstrip">
+    <% flags.each do |flag| %>
+      <div class="flag flag-<%= flag.tone %>">
+        <span class="flag-icon" aria-hidden="true"><%= flag.tone == "crit" ? "▲" : "◆" %></span>
+        <div>
+          <b><%= flag.headline %></b>
+          <%= flag.detail if flag.detail %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>

@@ -7,7 +7,7 @@
 <div class="inspector">
   <div class="index-side">
     <% people.each do |person| %>
-      <%= link_to fd_case_path(kase, person: person.user_id), class: "index-item",
+      <%= link_to fd_case_path(kase, tab: "people", person: person.user_id), class: "index-item",
             data: { turbo_frame: "who" },
             aria: { current: people.chosen?(person) ? "true" : nil } do %>
         <span class="index-face"><%= names.initial(person.user_id) %></span>
@@ -49,7 +49,8 @@
           <span class="mcard-sub"><%= pane_identity_line(person.user_id, context) %></span>
         </span>
         <span class="mcard-acts">
-          <%= link_to "Their record", fd_member_path(person.user_id), class: "btn" %>
+          <%= link_to "Their record", fd_member_path(person.user_id), class: "btn",
+                data: { turbo_frame: "person-drawer" } %>
           <%= link_to "In Slack", slack_member_url(person.user_id), class: "btn",
                 target: "_blank", rel: "noopener" %>
           <%= opens_modal "case.act", "Log an action", opens: "log-action", on: kase %>

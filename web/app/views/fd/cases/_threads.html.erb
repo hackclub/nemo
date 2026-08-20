@@ -1,5 +1,5 @@
 <p class="band-label">
-  The threads ·
+  The evidence ·
   <%= threads.any? ? pluralize(threads.size, "attached") : "none attached" %>
 </p>
 
@@ -7,7 +7,7 @@
 <div class="inspector">
   <div class="index-side">
     <% threads.each do |row| %>
-      <%= link_to fd_case_path(kase, thread: row.id, person: params[:person]),
+      <%= link_to fd_case_path(kase, tab: "evidence", thread: row.id, person: params[:person]),
             class: "index-item", data: { turbo_frame: "threads" },
             aria: { current: threads.chosen?(row) ? "true" : nil } do %>
         <span class="mono"><%= row.channel_id %></span>
@@ -23,7 +23,7 @@
 
   <div class="pane">
     <% if threads.chosen.nil? %>
-      <p class="card-note">No thread attached.</p>
+      <p class="card-note">No evidence attached.</p>
     <% else %>
       <% row = threads.chosen %>
       <div class="thr-head">

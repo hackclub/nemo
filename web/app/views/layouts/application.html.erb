@@ -135,7 +135,7 @@
         </div>
 
         <div class="scrollarea">
-          <main class="body">
+          <main class="body" data-controller="case-timeline">
             <div class="head-row">
               <h1 class="head-title"><%= content_for(:page_title) || "Mnemosyne" %></h1>
               <% if content_for?(:page_subtitle) %>
@@ -154,5 +154,8 @@
 
       <%= render "fd/palette" %>
     </div>
+
+    <turbo-frame id="person-drawer" class="person-drawer-frame" data-controller="person-drawer"
+      target="_top"></turbo-frame>
   </body>
 </html>

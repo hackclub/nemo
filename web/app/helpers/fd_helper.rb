@@ -16,7 +16,8 @@ module FdHelper
   def member_link(user_id)
     return "n/a" if user_id.blank?
 
-    link_to names[user_id], fd_member_path(user_id), class: "lnk", title: user_id
+    link_to names[user_id], fd_member_path(user_id), class: "lnk", title: user_id,
+      data: { turbo_frame: "person-drawer" }
   end
 
   def handle_list(user_ids)

@@ -72,7 +72,7 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     assert_select ".card-title", text: "What was done", count: 0
 
     get fd_case_path(@kase, tab: "evidence")
-    assert_match(/The threads/, response.body)
+    assert_match(/The evidence/, response.body)
     assert_no_match(/Who is on this case/, response.body)
 
     get fd_case_path(@kase, tab: "actions")

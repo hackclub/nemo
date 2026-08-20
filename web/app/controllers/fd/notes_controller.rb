@@ -11,7 +11,7 @@ module Fd
       standing = about.present? && about != "case"
 
       problem = objection(kase, body, standing, about)
-      return redirect_to(fd_case_path(kase), alert: problem) if problem
+      return redirect_to(back_to(kase, standing, about), alert: problem) if problem
 
       writing do
         note = Note.create!(
@@ -23,13 +23,15 @@ module Fd
         audit(note, "noted")
       end
 
-      redirect_to fd_case_path(kase), notice: notice_for(kase, standing, about)
+      redirect_to back_to(kase, standing, about), notice: notice_for(kase, standing, about)
     end
 
     def destroy
       kase = Case.find(params[:case_id])
       now = Time.current
       removed = false
+      about = on_this_page(kase).find_by(id: params[:id])&.subject_user_id
+      standing = about.present?
 
       writing do
         rows = on_this_page(kase)
@@ -49,13 +51,20 @@ module Fd
       end
 
       if removed
-        redirect_to fd_case_path(kase), notice: "note removed"
+        redirect_to back_to(kase, standing, about), notice: "note removed"
       else
-        redirect_to fd_case_path(kase), alert: "only whoever wrote a note can remove it"
+        redirect_to back_to(kase, standing, about),
+          alert: "only whoever wrote a note can remove it"
       end
     end
 
     private
+
+    def back_to(kase, standing, about)
+      return fd_case_path(kase, tab: "people", person: about) if standing
+
+      fd_case_path(kase, tab: "notes")
+    end
 
     def on_this_page(kase)
       Note.where(case_id: kase.id)

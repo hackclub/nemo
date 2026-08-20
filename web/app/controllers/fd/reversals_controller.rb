@@ -9,7 +9,7 @@ module Fd
       reason = params[:reversal_reason].to_s.strip
 
       problem = objection(kase, reason)
-      return redirect_to(fd_case_path(kase), alert: problem) if problem
+      return redirect_to(fd_case_path(kase, tab: "actions"), alert: problem) if problem
 
       now = Time.current
       reversed = false
@@ -32,9 +32,11 @@ module Fd
       end
 
       if reversed
-        redirect_to fd_case_path(kase), notice: "action reversed, and the record keeps both"
+        redirect_to fd_case_path(kase, tab: "actions"),
+          notice: "action reversed, and the record keeps both"
       else
-        redirect_to fd_case_path(kase), alert: "that action is not on this case, or was reversed already"
+        redirect_to fd_case_path(kase, tab: "actions"),
+          alert: "that action is not on this case, or was reversed already"
       end
     end
 

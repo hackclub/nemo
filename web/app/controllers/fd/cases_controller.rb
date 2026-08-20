@@ -62,11 +62,12 @@ module Fd
       )
       @tab = params[:tab].presence_in(TABS) || (@case.resolved? ? "actions" : "report")
       @tab_counts = {
-        "evidence" => @thread_list.select(&:evidence?).sum(&:held),
+        "evidence" => @thread_list.size,
         "actions" => @actions.size,
         "notes" => @notes.size,
         "people" => @participants.size
       }
+      @flags = CaseFlags.for_case(@case, names: @names)
     end
 
     MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/
@@ -150,7 +151,6 @@ module Fd
     end
 
     def objection(subjects)
-      return "say who this case is about" if subjects.empty?
       unless subjects.all? { |id| id.match?(MEMBER_ID) }
         return "that does not look like a Slack member id"
       end
@@ -210,6 +210,7 @@ module Fd
           kase.reports.map(&:reporter_user_id)
       })
       @open_for_subject ||= []
+      @flags = CaseFlags.for_queue
     end
   end
 end

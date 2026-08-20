@@ -1,0 +1,61 @@
+<turbo-frame id="person-drawer" data-controller="person-drawer">
+  <div class="drawer-h">
+    <span class="row-avatar" aria-hidden="true"><%= @member ? @member.initial : "?" %></span>
+    <b><%= names[@user_id] %></b>
+    <span class="chip chip-off"><%= tenure_label(@context&.tenure_days) %></span>
+    <span style="flex:1"></span>
+    <span class="kbd" data-action="click->person-drawer#close">esc</span>
+    <%= link_to "full record ↗", fd_member_path(@user_id), class: "btn ghost",
+          data: { turbo_frame: "_top" } %>
+  </div>
+  <div class="drawer-b">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">Done to them</h2>
+        </div>
+      </div>
+      <% if @record.actions.any? %>
+        <div class="notes">
+          <% @record.actions.each do |action| %>
+            <div class="note-row">
+              <span class="two-line">
+                <b><%= action_label(action.type_key) %> <%= action_state_chip(action) %></b>
+                <span>
+                  <%= action.performed_at.strftime("%-d %b, %Y") %> ·
+                  <%= member_link(action.decided_by) %> ·
+                  <%= link_to "case ##{action.case_id}", fd_case_path(action.case_id),
+                        class: "lnk" %>
+                </span>
+              </span>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <span class="note-none">Nothing done to them yet.</span>
+      <% end %>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">Notes on <%= names[@user_id] %></h2>
+        </div>
+      </div>
+      <% if @record.notes.any? %>
+        <div class="notes">
+          <% @record.notes.first(3).each do |note| %>
+            <div class="note-row">
+              <div class="note-body"><%= mentioned(note.body) %></div>
+              <div class="note-by">
+                <span><%= note_byline(note) %></span>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <span class="note-none">No notes</span>
+      <% end %>
+    </div>
+  </div>
+</turbo-frame>

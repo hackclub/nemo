@@ -62,13 +62,14 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     assert_equal "UME", opened.assignees.sole.assigned_by
   end
 
-  test "a case needs somebody to be about" do
+  test "a case can be opened with nobody identified as the subject yet" do
     sign_in_as(@me)
     open_case(subject_user_id: "  ")
 
-    assert_nil opened
-    assert_response :unprocessable_content
-    assert_match(/say who this case is about/, flash[:alert])
+    kase = opened
+    assert_not_nil kase
+    assert_empty kase.subject_user_ids
+    assert_redirected_to fd_case_path(kase)
   end
 
   test "a category outside the list is refused" do

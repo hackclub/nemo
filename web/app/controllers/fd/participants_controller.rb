@@ -11,7 +11,7 @@ module Fd
       detail = role == "involved" ? params[:detail].to_s.strip : ""
 
       problem = objection(kase, wanted, role)
-      return redirect_to(fd_case_path(kase), alert: problem) if problem
+      return redirect_to(fd_case_path(kase, tab: "people"), alert: problem) if problem
 
       added = []
       already = []
@@ -29,17 +29,19 @@ module Fd
         end
       end
 
-      redirect_to fd_case_path(kase), notice: added_notice(role, added, already)
+      redirect_to fd_case_path(kase, tab: "people"), notice: added_notice(role, added, already)
     end
 
     def destroy
       kase = Case.find(params[:case_id])
       person = kase.participants.find_by(user_id: params[:id], role: params[:role])
 
-      return redirect_to(fd_case_path(kase), alert: "they are not on this case") if person.nil?
+      if person.nil?
+        return redirect_to(fd_case_path(kase, tab: "people"), alert: "they are not on this case")
+      end
 
       problem = not_yours(kase)
-      return redirect_to(fd_case_path(kase), alert: problem) if problem
+      return redirect_to(fd_case_path(kase, tab: "people"), alert: problem) if problem
 
       writing do
         audit(person, "detached", entity_id: kase.id,
@@ -52,7 +54,7 @@ module Fd
         person.destroy!
       end
 
-      redirect_to fd_case_path(kase),
+      redirect_to fd_case_path(kase, tab: "people"),
         notice: "@#{person.user_id} taken off the case"
     end
 

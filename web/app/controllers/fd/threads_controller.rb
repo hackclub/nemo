@@ -8,7 +8,7 @@ module Fd
       kind = CaseThread::KINDS.include?(params[:kind]) ? params[:kind] : "evidence"
 
       problem = objection(kase, ref)
-      return redirect_to(fd_case_path(kase), alert: problem) if problem
+      return redirect_to(fd_case_path(kase, tab: "evidence"), alert: problem) if problem
 
       writing do
         thread = CaseThread.create!(
@@ -22,19 +22,22 @@ module Fd
         audit(thread, "attached")
       end
 
-      redirect_to fd_case_path(kase), notice: attached_notice(kind)
+      redirect_to fd_case_path(kase, tab: "evidence"), notice: attached_notice(kind)
     rescue ActiveRecord::RecordNotUnique
-      redirect_to fd_case_path(kase), alert: "that thread is already on this case"
+      redirect_to fd_case_path(kase, tab: "evidence"), alert: "that thread is already on this case"
     end
 
     def destroy
       kase = Case.find(params[:case_id])
       thread = kase.threads.find_by(id: params[:id])
 
-      return redirect_to(fd_case_path(kase), alert: "that thread is not on this case") if thread.nil?
+      if thread.nil?
+        return redirect_to(fd_case_path(kase, tab: "evidence"),
+          alert: "that thread is not on this case")
+      end
 
       problem = not_yours(kase)
-      return redirect_to(fd_case_path(kase), alert: problem) if problem
+      return redirect_to(fd_case_path(kase, tab: "evidence"), alert: problem) if problem
 
       writing do
         audit(thread, "detached", entity_id: kase.id,
@@ -47,7 +50,7 @@ module Fd
         thread.destroy!
       end
 
-      redirect_to fd_case_path(kase), notice: "thread detached"
+      redirect_to fd_case_path(kase, tab: "evidence"), notice: "thread detached"
     end
 
     private

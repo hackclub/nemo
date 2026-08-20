@@ -9,7 +9,7 @@ module Fd
       return refuse(kase, "that message is not on this case") if said.nil?
 
       problem = not_yours(kase)
-      return redirect_to(fd_case_path(kase), alert: problem) if problem
+      return redirect_to(fd_case_path(kase, tab: "evidence"), alert: problem) if problem
 
       writing do
         flag = CaseCitation.create!(case_id: kase.id, thread_message_id: said.id,
@@ -29,7 +29,7 @@ module Fd
       return refuse(kase, "that flag is not on this case") if flag.nil?
 
       problem = not_yours(kase)
-      return redirect_to(fd_case_path(kase), alert: problem) if problem
+      return redirect_to(fd_case_path(kase, tab: "evidence"), alert: problem) if problem
 
       said = flag.message
       writing do
@@ -44,7 +44,8 @@ module Fd
     private
 
     def case_url_for(kase, said)
-      fd_case_path(kase, thread: thread_of(kase, said), person: params[:person].presence)
+      fd_case_path(kase, tab: "evidence", thread: thread_of(kase, said),
+        person: params[:person].presence)
     end
 
     def held_message(kase, id)
@@ -60,7 +61,7 @@ module Fd
     end
 
     def refuse(kase, alert)
-      redirect_to fd_case_path(kase), alert: alert
+      redirect_to fd_case_path(kase, tab: "evidence"), alert: alert
     end
   end
 end

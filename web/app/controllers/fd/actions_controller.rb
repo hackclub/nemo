@@ -8,13 +8,13 @@ module Fd
       kase = Case.find(params[:case_id])
 
       problem = action_objection || not_yours(kase)
-      return redirect_to(fd_case_path(kase), alert: problem) if problem
+      return redirect_to(fd_case_path(kase, tab: "actions"), alert: problem) if problem
 
       writing do
         audit(log_action(kase, Time.current), "performed")
       end
 
-      redirect_to fd_case_path(kase), notice: logged_notice(kase)
+      redirect_to fd_case_path(kase, tab: "actions"), notice: logged_notice(kase)
     end
 
     private
