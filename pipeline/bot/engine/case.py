@@ -29,10 +29,13 @@ def existing(conn, conversation_id):
     return None
 
 
-def open_case(conn, conversation_id, opened_by):
+def open_case(conn, conversation_id, opened_by, anonymous=True):
     already = existing(conn, conversation_id)
     if already:
         return already
+
+    member = conn.execute(CONVERSATION, (conversation_id,)).fetchone()[2]
+    reporter = None if anonymous else member
 
     ref = case_ref(conversation_id)
     conn.execute(
@@ -49,10 +52,10 @@ def open_case(conn, conversation_id, opened_by):
     report = report_ref(conversation_id)
     conn.execute(
         "INSERT INTO fd.case_reports "
-        "(case_id, is_anonymous, body, received_at, source_app, external_ref) "
-        "VALUES (%s, true, %s, coalesce(%s, now()), 'shroud', %s) "
+        "(case_id, is_anonymous, reporter_user_id, body, received_at, source_app, external_ref) "
+        "VALUES (%s, %s, %s, %s, coalesce(%s, now()), 'shroud', %s) "
         "ON CONFLICT (external_ref) DO NOTHING",
-        (case_id, body, received, report),
+        (case_id, reporter is None, reporter, body, received, report),
     )
     report_id = conn.execute(
         "SELECT id FROM fd.case_reports WHERE external_ref = %s", (report,)

@@ -20,7 +20,7 @@ class Relay:
         self.shroud_client = shroud_client
         self.nemo_client = nemo_client
 
-    def taken(self, conversation_id, message_id):
+    def taken(self, conversation_id, message_id, anonymous=True):
         if self.nemo_client is None:
             log.warning(
                 "relay: nemo is not running, conversation %s is recorded but not posted",
@@ -31,7 +31,7 @@ class Relay:
         opener = bot_user_id(self.nemo_client, "nemo")
         with session() as conn:
             already = case.existing(conn, conversation_id)
-            case_id = case.open_case(conn, conversation_id, opener)
+            case_id = case.open_case(conn, conversation_id, opener, anonymous)
 
         with session() as conn:
             if already:
