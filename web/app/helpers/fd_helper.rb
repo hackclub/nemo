@@ -343,6 +343,14 @@ module FdHelper
 
   ChatEntry = Struct.new(:at, :side, :kind, :who, :name, :body, keyword_init: true)
 
+  def chat_stream(kase)
+    "case_#{kase.id}_chat"
+  end
+
+  def chat_log_id(kase)
+    "chat-log-#{kase.id}"
+  end
+
   def chat_entries(reports, chat)
     said = reports.flat_map { |report| report_entries(report) }
     said += chat.map { |line| chat_entry(line) }

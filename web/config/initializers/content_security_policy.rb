@@ -22,7 +22,9 @@ Rails.application.configure do
     policy.object_src      :none
     policy.script_src      :self
     policy.style_src       :self, :unsafe_inline
-    policy.connect_src     :self
+    host = ENV["APP_HOST"].presence
+    sockets = host ? ["ws://#{host}", "wss://#{host}"] : ["ws://localhost:*"]
+    policy.connect_src     :self, *sockets
     policy.base_uri        :self
     policy.form_action     :self, AUTH_ORIGIN
     policy.frame_ancestors :none

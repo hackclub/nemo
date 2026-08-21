@@ -1,0 +1,31 @@
+<% said = chat_entries(reports, chat) %>
+
+<div class="chat-log" id="<%= chat_log_id(kase) %>">
+  <% if earlier.positive? %>
+    <p class="sub2 chat-earlier"><%= pluralize(earlier, "earlier message") %> on the case page</p>
+  <% end %>
+
+  <% said.each do |entry| %>
+    <div class="said-row said-<%= entry.side %>">
+      <% if entry.side == "in" %><%= face(entry.who) %><% end %>
+      <div class="said-bubble">
+        <div class="said-top">
+          <b><%= entry.name %></b>
+          <% if entry.kind == "chat" %><span class="chip chip-warn">internal</span><% end %>
+          <span class="said-at"><%= entry.at.strftime("%-d %b, %H:%M") %></span>
+        </div>
+        <div class="said-body"><%= mentioned(entry.body) %></div>
+      </div>
+    </div>
+  <% end %>
+
+  <% if said.empty? %>
+    <p class="card-note">
+      <% if reports.any? %>
+        Nothing said yet.
+      <% else %>
+        No report on file. <%= member_link(kase.opened_by) %> opened this case directly.
+      <% end %>
+    </p>
+  <% end %>
+</div>

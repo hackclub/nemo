@@ -54,9 +54,9 @@ class Fd::PermissionTest < ActiveSupport::TestCase
   end
 
   test "the three roles stack, the work then the rules then the tool itself" do
-    assert_equal 14, Fd::Permission.held_by("firefighter").size
-    assert_equal 16, Fd::Permission.held_by("lead").size
-    assert_equal 18, Fd::Permission.held_by("community_manager").size
+    assert_equal 15, Fd::Permission.held_by("firefighter").size
+    assert_equal 17, Fd::Permission.held_by("lead").size
+    assert_equal 19, Fd::Permission.held_by("community_manager").size
     assert_equal Fd::Permission.keys.size, Fd::Permission.held_by("community_manager").size
 
     assert_equal %w[decision.settle decision.retire access.read access.grant].sort,
