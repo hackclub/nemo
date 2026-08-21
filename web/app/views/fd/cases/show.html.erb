@@ -113,7 +113,7 @@
     <div>
   <% if @tab == "report" %>
     <div class="card card-chat">
-      <%= render "chat", kase: @case, reports: @reports, notes: @notes.reverse %>
+      <%= render "chat", kase: @case, reports: @reports, chat: @chat, earlier: @earlier_chat %>
     </div>
   <% end %>
 

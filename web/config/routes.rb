@@ -32,6 +32,7 @@ Rails.application.routes.draw do
       resource :claim, only: [:create, :destroy]
       resource :resolution, only: [:create, :destroy]
       resources :replies, only: [:create]
+      resources :chats, only: [:create]
       resources :notes, only: [:create, :destroy]
       resources :actions, only: [:create]
       resources :reversals, only: [:create]

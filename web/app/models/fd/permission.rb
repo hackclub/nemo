@@ -34,6 +34,9 @@ module Fd
         label: "Attach a thread, flag a message", roles: EVERYONE, scope: :assigned,
         events: %w[thread/attached thread/detached citation/flagged citation/unflagged]
       },
+      "case.chat" => {
+        label: "Talk to the team on a case", roles: EVERYONE, events: []
+      },
       "case.reply" => {
         label: "Answer the reporter", roles: EVERYONE,
         events: %w[report/answered]

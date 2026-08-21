@@ -15,7 +15,7 @@
 
     <% if @reports.any? %>
       <div class="card card-chat">
-        <%= render "chat", kase: @case, reports: @reports, notes: [], composer: false %>
+        <%= render "chat", kase: @case, reports: @reports, chat: [], composer: false %>
       </div>
     <% else %>
       <p class="card-note">No report on file.</p>

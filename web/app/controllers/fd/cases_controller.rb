@@ -23,6 +23,8 @@ module Fd
       @siblings = @case.sibling_cases.includes(:subjects).oldest_first.to_a
       @duplicate_candidates = Case.candidates_for(@case, @siblings)
       @notes = @case.notes.visible.recent_first.to_a
+      @chat = CaseChat.tail(@case.id)
+      @earlier_chat = CaseChat.earlier_than(@case.id, @chat.size)
       @standing_notes = Note.for_subjects(@participants.map(&:user_id)).visible.recent_first
         .group_by(&:subject_user_id)
       @thread_messages = ThreadMessage.for_threads(@threads).to_a

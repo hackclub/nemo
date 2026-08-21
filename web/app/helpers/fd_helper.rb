@@ -343,13 +343,21 @@ module FdHelper
 
   ChatEntry = Struct.new(:at, :side, :kind, :who, :name, :body, keyword_init: true)
 
-  def chat_entries(reports, notes)
+  def chat_entries(reports, chat)
     said = reports.flat_map { |report| report_entries(report) }
-    said += notes.map do |note|
-      ChatEntry.new(at: note.created_at, side: "out", kind: "note", who: note.author,
-        name: names[note.author], body: note.body)
-    end
+    said += chat.map { |line| chat_entry(line) }
     said.sort_by(&:at)
+  end
+
+  def chat_entry(line)
+    ChatEntry.new(at: line.said_at, side: "out", kind: "chat", who: line.author_user_id,
+      name: names[line.author_user_id], body: chat_body(line))
+  end
+
+  def chat_body(line)
+    return "#{line.body} (deleted in Slack)" if line.deleted?
+
+    line.body
   end
 
   def report_entries(report)

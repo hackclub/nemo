@@ -1,4 +1,7 @@
 <% composer = local_assigns.fetch(:composer, true) %>
+<% chat = local_assigns.fetch(:chat, []) %>
+<% earlier = local_assigns.fetch(:earlier, 0) %>
+<% said = chat_entries(reports, chat) %>
 
 <div class="chat">
   <div class="chat-head">
@@ -18,13 +21,17 @@
   </div>
 
   <div class="chat-log">
-    <% chat_entries(reports, notes).each do |entry| %>
+    <% if earlier.positive? %>
+      <p class="sub2 chat-earlier"><%= pluralize(earlier, "earlier message") %> on the case page</p>
+    <% end %>
+
+    <% said.each do |entry| %>
       <div class="said-row said-<%= entry.side %>">
         <% if entry.side == "in" %><%= face(entry.who) %><% end %>
         <div class="said-bubble">
           <div class="said-top">
             <b><%= entry.name %></b>
-            <% if entry.kind == "note" %><span class="chip chip-warn">internal</span><% end %>
+            <% if entry.kind == "chat" %><span class="chip chip-warn">internal</span><% end %>
             <span class="said-at"><%= entry.at.strftime("%-d %b, %H:%M") %></span>
           </div>
           <div class="said-body"><%= mentioned(entry.body) %></div>
@@ -32,7 +39,7 @@
       </div>
     <% end %>
 
-    <% if chat_entries(reports, notes).empty? %>
+    <% if said.empty? %>
       <p class="card-note">
         <% if reports.any? %>
           Nothing said yet.
@@ -44,13 +51,11 @@
   </div>
 
   <% if composer && !kase.resolved? %>
-    <%= form_with url: fd_case_notes_path(kase), method: :post, class: "chat-composer",
+    <%= form_with url: fd_case_chats_path(kase), method: :post, class: "chat-composer",
           data: { controller: "chat", chat_reporter_value: reports.any?,
-                  chat_note_url_value: fd_case_notes_path(kase),
+                  chat_note_url_value: fd_case_chats_path(kase),
                   chat_reply_url_value: fd_case_replies_path(kase) },
           html: { autocomplete: "off" } do %>
-      <%= hidden_field_tag :from, "report", id: nil %>
-
       <div class="chat-field" data-action="click->chat#focus">
         <span class="chat-pill" data-chat-target="pill" hidden>
           to reporter
