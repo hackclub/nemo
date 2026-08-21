@@ -5,8 +5,6 @@ module Fd
     MAX_LENGTH = 4_000
     SHOWN = 50
 
-    after_commit { CaseChatBroadcast.of(case_id) }
-
     scope :oldest_first, -> { order(:said_at, :id) }
     scope :newest_first, -> { order(said_at: :desc, id: :desc) }
 
