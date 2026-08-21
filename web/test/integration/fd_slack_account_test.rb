@@ -11,16 +11,19 @@ class FdSlackAccountTest < ActionDispatch::IntegrationTest
     Slack::Oauth.define_singleton_method(name, original)
   end
 
+  KEPT = %w[NEMO_CLIENT_ID NEMO_CLIENT_SECRET SLACK_TEAM_ID].freeze
+
   setup do
     @me = Staff.create!(user_id: "UME", community_manager: true)
+    @was = ENV.slice(*KEPT)
+    KEPT.each { |name| ENV.delete(name) }
     ENV["NEMO_CLIENT_ID"] = "1.2"
     ENV["NEMO_CLIENT_SECRET"] = "shh"
   end
 
   teardown do
-    ENV.delete("NEMO_CLIENT_ID")
-    ENV.delete("NEMO_CLIENT_SECRET")
-    ENV.delete("SLACK_TEAM_ID")
+    KEPT.each { |name| ENV.delete(name) }
+    @was.each { |name, value| ENV[name] = value }
   end
 
   def granted(id: "UME", scope: "chat:write", token: "xoxp-real", team: "T0FIRE")

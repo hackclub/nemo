@@ -58,6 +58,7 @@ module Fd
       return if case_id.nil?
 
       Rails.application.executor.wrap do
+        Fd::ReplyEcho.catch_up(case_id)
         Fd::CaseChatBroadcast.of(case_id)
       end
     rescue StandardError => trouble

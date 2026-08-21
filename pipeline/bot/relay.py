@@ -27,6 +27,10 @@ WHERE id = (SELECT report_id FROM fd.intake_conversations WHERE id = %s)
   AND first_replied_at IS NULL
 """
 
+LINKED = """
+SELECT 1 FROM fd.staff_slack WHERE staff_user_id = %s AND revoked_at IS NULL
+"""
+
 THREAD_OF = """
 SELECT r.forwarded_ts
 FROM fd.intake_conversations c
@@ -89,7 +93,23 @@ class Relay:
 
         if sent:
             log.info("relay: sent %s queued message(s)", sent)
+
+        self.tick_echoes(conversation_id)
         return sent
+
+    def tick_echoes(self, conversation_id=None):
+        if self.nemo_client is None:
+            return 0
+
+        with session() as conn:
+            waiting = outbox.unticked(conn, conversation_id)
+
+        for outbox_id, ts in waiting:
+            self.mark((channel.firehouse_channel(), ts), answer.SENT)
+            with session() as conn:
+                outbox.ticked(conn, outbox_id)
+
+        return len(waiting)
 
     def hand_over(self, conn, queued):
         if queued.closed_at:
@@ -142,13 +162,21 @@ class Relay:
     def tell_the_thread(self, conn, queued, signed):
         if self.nemo_client is None:
             return
+        if conn.execute(LINKED, (queued.requested_by,)).fetchone():
+            log.info("relay: outbox %s is theirs to echo, they linked slack", queued.id)
+            return
 
         row = conn.execute(THREAD_OF, (queued.conversation_id,)).fetchone()
-        if not row:
+        if not row or not outbox.claim_echo(conn, queued.id):
             return
 
         at = channel.echo(self.nemo_client, row[0], queued.requested_by, queued.body, signed)
+        if at is None:
+            return outbox.drop_echo(conn, queued.id)
+
+        outbox.echoed(conn, queued.id, at[1], "nemo")
         self.mark(at, answer.SENT)
+        outbox.ticked(conn, queued.id)
 
     def mark(self, at, emoji):
         if at is None or self.nemo_client is None:
