@@ -6,6 +6,8 @@ module Fd
     encrypts :user_token
 
     SCOPE = "chat:write".freeze
+    SLACK = "slack".freeze
+    GONE = %w[token_revoked invalid_auth account_inactive not_authed].freeze
 
     scope :live, -> { where(revoked_at: nil) }
 
@@ -34,7 +36,18 @@ module Fd
     end
 
     def stumbled!(said)
+      return gone!(said) if GONE.include?(said.to_s)
+
       update_columns(last_error: said.to_s.first(200), last_error_at: Time.current)
+    end
+
+    def gone!(said)
+      update_columns(last_error: said.to_s.first(200), last_error_at: Time.current,
+        revoked_at: Time.current, revoked_by: SLACK)
+    end
+
+    def given_up?
+      revoked_by == SLACK
     end
 
     def give_back!(by)

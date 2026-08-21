@@ -173,6 +173,21 @@ class FdChatTest < ActionDispatch::IntegrationTest
     ENV.delete("FIREHOUSE_CHANNEL_ID")
   end
 
+  test "a dead token is given up on, not tried again for every message" do
+    in_the_firehouse
+    dead = ->(**) { { "ok" => false, "error" => "token_revoked" } }
+
+    said = instead_of(:post_message, dead) { say }
+
+    assert_nil said.mirrored_as
+    assert_nil Fd::StaffSlack.held_by("UME"), "it stops claiming messages it cannot send"
+    row = Fd::StaffSlack.find_by(staff_user_id: "UME")
+    assert row.given_up?
+    assert_equal "token_revoked", row.last_error
+  ensure
+    ENV.delete("FIREHOUSE_CHANNEL_ID")
+  end
+
   test "slack being unreachable hands the message back to the bot" do
     in_the_firehouse
     dead = ->(**) { raise Slack::Chat::Unavailable, "execution expired" }

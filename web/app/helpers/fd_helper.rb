@@ -940,9 +940,9 @@ module FdHelper
     said.strip.first.to_s.upcase
   end
 
-  def slack_link_chip(held)
+  def slack_link_chip(held, gone = nil)
+    return tag.span("stopped working", class: "chip chip-warn") if gone || held&.stumbled?
     return tag.span("not linked", class: "chip chip-off") if held.nil?
-    return tag.span("stopped working", class: "chip chip-warn") if held.stumbled?
 
     tag.span("linked", class: "chip chip-good")
   end

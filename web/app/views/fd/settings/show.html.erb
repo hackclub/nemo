@@ -343,7 +343,12 @@
                       <span class="idline mono"><%= grant.user_id %></span>
                     </span>
                   </td>
-                  <td class="col-role"><%= role_chip(grant.role) %></td>
+                  <td class="col-role">
+                    <%= role_chip(grant.role) %>
+                    <% if @linked.include?(grant.user_id) %>
+                      <span class="chip chip-good">slack</span>
+                    <% end %>
+                  </td>
                   <td><%= grant.granted_at.strftime("%b %Y") %></td>
                   <td><%= given_by(grant.granted_by) %></td>
                   <td class="col-num"><%= @acted[grant.user_id] || 0 %></td>

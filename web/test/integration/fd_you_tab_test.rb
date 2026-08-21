@@ -112,6 +112,33 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
     assert_select "button[type=submit]", text: "Link Slack"
   end
 
+  test "a grant slack gave up on reads as stopped working, not as never linked" do
+    link!.gone!("token_revoked")
+    sign_in_as(@me)
+    get fd_settings_path(tab: "you")
+
+    assert_select ".chip-warn", text: "stopped working"
+    assert_select ".strip b", text: /token_revoked/
+    assert_select "button[type=submit]", text: "Link Slack again"
+  end
+
+  test "a grant you unlinked yourself reads as never linked" do
+    link!.give_back!("UME")
+    sign_in_as(@me)
+    get fd_settings_path(tab: "you")
+
+    assert_select ".chip-off", text: "not linked"
+    assert_select "button[type=submit]", text: "Link Slack"
+  end
+
+  test "the access tab says who has linked slack" do
+    link!("UME")
+    sign_in_as(@boss)
+    get fd_settings_path(tab: "access")
+
+    assert_select "td.col-role .chip-good", text: "slack"
+  end
+
   test "everybody gets the settings link in the rail" do
     sign_in_as(@me)
     get fd_cases_path

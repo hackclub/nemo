@@ -21,6 +21,7 @@ module Fd
       return you_facts if just_me?
 
       @grants = AccessGrant.live.newest_first.to_a
+      @linked = StaffSlack.live.pluck(:staff_user_id)
       @history = AccessGrant.newest_first.limit(50).to_a if @tab == "history"
       @acted = acted_since(WINDOW.ago)
       @last_acted = last_acted
