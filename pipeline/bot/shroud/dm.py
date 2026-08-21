@@ -2,17 +2,11 @@ import logging
 
 from bot.engine import intake, session
 from bot.shroud import consent, files
-from bot.shroud.reply import acknowledgement, receipt
+from bot.shroud.reply import GOT_IT, receipt
 
 log = logging.getLogger("bot.shroud")
 
 CARRIES_CONTENT = (None, "file_share", "me_message", "thread_broadcast")
-
-INBOUND_SO_FAR = """
-SELECT count(*) = 1
-FROM fd.intake_messages
-WHERE conversation_id = %s AND direction = 'inbound'
-"""
 
 STANDING = """
 SELECT c.handed_off_at IS NOT NULL,
@@ -84,7 +78,6 @@ def register(app, on_taken=None):
             handed_off, prompt_ts = conn.execute(
                 STANDING, (consent.SUBTYPE, conversation_id)
             ).fetchone()
-            first = conn.execute(INBOUND_SO_FAR, (conversation_id,)).fetchone()[0]
             asking = None if handed_off else preview(conn, conversation_id)
 
         if not fresh:
@@ -100,7 +93,7 @@ def register(app, on_taken=None):
                 log.exception("shroud: could not keep the files, they stay pending")
 
         if handed_off:
-            answer(client, event["channel"], thread_ts, acknowledgement(first))
+            nod(client, event["channel"], event["ts"])
             if on_taken:
                 on_taken(conversation_id, message_id)
             return
@@ -134,19 +127,11 @@ def register(app, on_taken=None):
                 direction="outbound",
             )
 
-    def answer(client, channel_id, thread_ts, said):
-        sent = client.chat_postMessage(channel=channel_id, thread_ts=thread_ts, text=said)
-        with session() as conn:
-            intake.record(
-                conn,
-                {
-                    "channel": channel_id,
-                    "ts": sent["ts"],
-                    "thread_ts": thread_ts,
-                    "text": said,
-                },
-                direction="outbound",
-            )
+    def nod(client, channel_id, ts):
+        try:
+            client.reactions_add(channel=channel_id, timestamp=ts, name=GOT_IT)
+        except Exception as failure:
+            log.warning("shroud: could not tick their message: %s", failure)
 
     @app.action(consent.ACTION)
     def on_pick(ack):

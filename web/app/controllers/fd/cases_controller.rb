@@ -23,6 +23,10 @@ module Fd
       @siblings = @case.sibling_cases.includes(:subjects).oldest_first.to_a
       @duplicate_candidates = Case.candidates_for(@case, @siblings)
       @notes = @case.notes.visible.recent_first.to_a
+      @conversations = IntakeConversation.for_case(@case.id).to_a
+      @conversation_said = IntakeMessage.tail(@conversations.map(&:id))
+      @queued = IntakeOutbox.where(conversation_id: @conversations.map(&:id))
+        .where(sent_at: nil).oldest_first.to_a
       @chat = CaseChat.tail(@case.id)
       @earlier_chat = CaseChat.earlier_than(@case.id, @chat.size)
       @standing_notes = Note.for_subjects(@participants.map(&:user_id)).visible.recent_first

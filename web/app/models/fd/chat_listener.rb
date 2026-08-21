@@ -1,7 +1,6 @@
 module Fd
   class ChatListener
-    CHANNEL = "fd_chat_changed"
-    LOCK_KEY = 8_314_072
+    CHANNELS = %w[fd_chat_changed fd_conversation_changed].freeze
     RETRY_AFTER = 5
     WAIT = 30
 
@@ -48,28 +47,18 @@ module Fd
       held = ActiveRecord::Base.connection_pool.checkout
       raw = held.raw_connection
 
-      unless mine?(raw)
-        Rails.logger.info("chat listener: another process is listening")
-        ActiveRecord::Base.connection_pool.checkin(held)
-        sleep RETRY_AFTER * 12
-        return
-      end
+      CHANNELS.each { |heard| raw.exec("LISTEN #{heard}") }
+      Rails.logger.info("chat listener: listening on #{CHANNELS.join(", ")}")
 
-      raw.exec("LISTEN #{CHANNEL}")
-      Rails.logger.info("chat listener: listening for the bot's messages")
       loop { raw.wait_for_notify(WAIT) { |_channel, _pid, payload| heard(payload) } }
-    end
-
-    def mine?(raw)
-      raw.exec("SELECT pg_try_advisory_lock(#{LOCK_KEY})").getvalue(0, 0) == "t"
     end
 
     def heard(payload)
       case_id = self.class.case_id_from(payload)
       return if case_id.nil?
 
-      ActiveRecord::Base.connection_pool.with_connection do
-        CaseChatBroadcast.of(case_id)
+      Rails.application.executor.wrap do
+        Fd::CaseChatBroadcast.of(case_id)
       end
     rescue StandardError => trouble
       Rails.logger.warn("chat listener: case #{payload}: #{trouble.message}")

@@ -22,7 +22,13 @@ module Fd
           after: { "outbox_id" => queued.id, "mode" => queued.mode })
       end
 
-      redirect_to back_to(kase), notice: "on its way to them"
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.action(:reload_frame, "chat-log-#{kase.id}",
+            attributes: { src: fd_case_chat_log_path(kase) })
+        end
+        format.html { redirect_to back_to(kase), notice: "on its way to them" }
+      end
     end
 
     private

@@ -1,6 +1,7 @@
-<% said = chat_entries(reports, chat) %>
+<% said = chat_entries(reports, chat, messages, queued) %>
 
-<div class="chat-log" id="<%= chat_log_id(kase) %>">
+<%= turbo_frame_tag chat_log_id(kase) do %>
+<div class="chat-log">
   <% if earlier.positive? %>
     <p class="sub2 chat-earlier"><%= pluralize(earlier, "earlier message") %> on the case page</p>
   <% end %>
@@ -12,6 +13,7 @@
         <div class="said-top">
           <b><%= entry.name %></b>
           <% if entry.kind == "chat" %><span class="chip chip-warn">internal</span><% end %>
+          <% if entry.state %><span class="chip <%= state_tone(entry.state) %>"><%= entry.state %></span><% end %>
           <span class="said-at"><%= entry.at.strftime("%-d %b, %H:%M") %></span>
         </div>
         <div class="said-body"><%= mentioned(entry.body) %></div>
@@ -29,3 +31,4 @@
     </p>
   <% end %>
 </div>
+<% end %>

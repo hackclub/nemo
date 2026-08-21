@@ -6,7 +6,22 @@ export default class extends Controller {
 
   connect() {
     this.toReporter = false
+    this.sent = this.sent.bind(this)
+    this.element.addEventListener("turbo:submit-end", this.sent)
     this.grow()
+  }
+
+  disconnect() {
+    this.element.removeEventListener("turbo:submit-end", this.sent)
+  }
+
+  sent(event) {
+    if (!event.detail?.success) return
+
+    this.fieldTarget.value = ""
+    this.aim(false)
+    this.grow()
+    this.fieldTarget.focus()
   }
 
   focus() {

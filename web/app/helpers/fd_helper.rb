@@ -341,7 +341,7 @@ module FdHelper
     ROLE_TONES.fetch(role, "chip-off")
   end
 
-  ChatEntry = Struct.new(:at, :side, :kind, :who, :name, :body, keyword_init: true)
+  ChatEntry = Struct.new(:at, :side, :kind, :who, :name, :body, :state, keyword_init: true)
 
   def chat_stream(kase)
     "case_#{kase.id}_chat"
@@ -351,10 +351,67 @@ module FdHelper
     "chat-log-#{kase.id}"
   end
 
-  def chat_entries(reports, chat)
-    said = reports.flat_map { |report| report_entries(report) }
+  def state_tone(state)
+    return "chip-crit" if state.start_with?("undelivered")
+    return "chip-warn" if state == "sending"
+
+    "chip-off"
+  end
+
+  def chat_entries(reports, chat, messages = [], queued = [])
+    said = messages.any? ? messages.map { |one| message_entry(one) } : opening(reports)
+    said += reports.filter_map { |report| told_entry(report) }
     said += chat.map { |line| chat_entry(line) }
+    said += queued.map { |row| queued_entry(row) }
     said.sort_by(&:at)
+  end
+
+  def opening(reports)
+    reports.map do |report|
+      ChatEntry.new(at: report.received_at, side: "in", kind: "them",
+        who: (report.reporter_user_id unless report.anonymous?),
+        name: report.reporter_label(names),
+        body: report.body.presence || "No words with it.")
+    end
+  end
+
+  def message_entry(said)
+    theirs = said.theirs?
+    ChatEntry.new(
+      at: said.posted_at,
+      side: theirs ? "in" : "out",
+      kind: theirs ? "them" : "us",
+      who: theirs ? said.author_user_id : said.sent_by,
+      name: message_name(said),
+      body: message_body(said),
+      state: ("deleted in Slack" if said.deleted?)
+    )
+  end
+
+  def message_name(said)
+    return names[said.author_user_id] if said.theirs? && said.author_user_id
+    return "them" if said.theirs?
+    return names[said.sent_by] if said.sent_by
+
+    "the Fire Department"
+  end
+
+  def message_body(said)
+    said.body.presence || "no words, only what was attached"
+  end
+
+  def queued_entry(row)
+    ChatEntry.new(at: row.requested_at, side: "out", kind: "us",
+      who: row.requested_by, name: names[row.requested_by], body: row.body,
+      state: row.failed? ? "undelivered, #{row.error}" : "sending")
+  end
+
+  def told_entry(report)
+    return nil unless report.told_of_outcome?
+
+    ChatEntry.new(at: report.closed_at, side: "out", kind: "us",
+      who: report.closed_by, name: names[report.closed_by],
+      body: "Told them how it ended.")
   end
 
   def chat_entry(line)
@@ -366,20 +423,6 @@ module FdHelper
     return "#{line.body} (deleted in Slack)" if line.deleted?
 
     line.body
-  end
-
-  def report_entries(report)
-    entries = [ChatEntry.new(at: report.received_at, side: "in", kind: "report",
-      who: (report.reporter_user_id unless report.anonymous?),
-      name: report.reporter_label(names),
-      body: report.body.presence || "No words with it.")]
-
-    if report.told_of_outcome?
-      entries << ChatEntry.new(at: report.closed_at, side: "out", kind: "outcome",
-        who: report.closed_by, name: names[report.closed_by],
-        body: "Told them how it ended.")
-    end
-    entries
   end
 
   def reporter_names(reports)

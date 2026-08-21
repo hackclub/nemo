@@ -33,6 +33,7 @@ Rails.application.routes.draw do
       resource :resolution, only: [:create, :destroy]
       resources :replies, only: [:create]
       resources :chats, only: [:create]
+      resource :chat_log, only: [:show]
       resources :notes, only: [:create, :destroy]
       resources :actions, only: [:create]
       resources :reversals, only: [:create]

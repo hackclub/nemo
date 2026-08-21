@@ -18,10 +18,22 @@ module Fd
         )
       end
 
-      redirect_to back_to(kase)
+      answer(kase)
     end
 
     private
+
+    def answer(kase)
+      respond_to do |format|
+        format.turbo_stream { render turbo_stream: reloaded(kase) }
+        format.html { redirect_to back_to(kase) }
+      end
+    end
+
+    def reloaded(kase)
+      turbo_stream.action(:reload_frame, "chat-log-#{kase.id}",
+        attributes: { src: fd_case_chat_log_path(kase) })
+    end
 
     def back_to(kase)
       fd_case_path(kase, tab: "report")

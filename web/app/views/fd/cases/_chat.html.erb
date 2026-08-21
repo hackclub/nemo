@@ -1,5 +1,7 @@
 <% composer = local_assigns.fetch(:composer, true) %>
 <% chat = local_assigns.fetch(:chat, []) %>
+<% messages = local_assigns.fetch(:messages, []) %>
+<% queued = local_assigns.fetch(:queued, []) %>
 <% earlier = local_assigns.fetch(:earlier, 0) %>
 
 <div class="chat">
@@ -20,7 +22,8 @@
   </div>
 
   <%= turbo_stream_from chat_stream(kase) %>
-  <%= render "chat_log", kase: kase, reports: reports, chat: chat, earlier: earlier %>
+  <%= render "chat_log", kase: kase, reports: reports, chat: chat, earlier: earlier,
+        messages: messages, queued: queued %>
 
   <% if composer && !kase.resolved? %>
     <%= form_with url: fd_case_chats_path(kase), method: :post, class: "chat-composer",

@@ -1,34 +1,26 @@
 module Fd
   class CaseChatBroadcast
+    include Rails.application.routes.url_helpers
+
     def self.of(case_id)
-      new(Case.find_by(id: case_id)).call
+      new(case_id).call
     end
 
-    def initialize(kase)
-      @case = kase
+    def initialize(case_id)
+      @case_id = case_id
     end
 
     def call
-      return if @case.nil?
+      return unless Case.exists?(id: @case_id)
 
-      chat = CaseChat.tail(@case.id)
-      reports = @case.reports.oldest_first.to_a
-
-      Turbo::StreamsChannel.broadcast_replace_to(
-        "case_#{@case.id}_chat",
-        target: "chat-log-#{@case.id}",
-        partial: "fd/cases/chat_log",
-        locals: { kase: @case, reports: reports, chat: chat,
-                  earlier: CaseChat.earlier_than(@case.id, chat.size) },
-        assigns: { names: Names.for(names_in(reports, chat)) }
-      )
+      Turbo::StreamsChannel.broadcast_stream_to("case_#{@case_id}_chat", content: stream)
     end
 
     private
 
-    def names_in(reports, chat)
-      reports.map(&:reporter_user_id) + reports.map(&:closed_by) +
-        chat.map(&:author_user_id) + [@case.opened_by]
+    def stream
+      %(<turbo-stream action="reload_frame" target="chat-log-#{@case_id}" ) +
+        %(src="#{fd_case_chat_log_path(@case_id)}"></turbo-stream>)
     end
   end
 end
