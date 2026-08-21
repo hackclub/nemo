@@ -1,29 +1,21 @@
 module Fd
   class ResolutionsController < BaseController
-    include LogsActions
-
     permit "case.resolve", on: -> { Case.find(params[:case_id]) }, only: :create
     permit "case.reopen", on: -> { Case.find(params[:case_id]) }, only: :destroy
-    permit "case.act", on: -> { Case.find(params[:case_id]) }, only: :create,
-      if: -> { params[:outcome] == "report" }
 
     def create
       @case = Case.find(params[:case_id])
       @now = Time.current
 
-      resolution = resolution_for(params[:outcome].to_s)
-      return refuse("say how this case ended") if resolution.nil?
-
-      problem = objection(resolution)
-      return refuse(problem) if problem
+      resolution = ending
+      return refuse("say why this case is closing") if resolution.nil?
 
       settled = false
       writing do
         next unless mark_resolved(resolution)
 
         settled = true
-        file_report if params[:outcome] == "report"
-        close_reports unless params[:tell_reporter] == "0"
+        close_reports if telling?
         @case.reload
         audit(@case, "resolved",
           before: { "resolved_at" => nil, "resolution" => nil },
@@ -68,30 +60,20 @@ module Fd
 
     private
 
-    def resolution_for(outcome)
-      case outcome
-      when "report" then "action_taken"
-      when "duplicate" then "duplicate"
-      when "close"
-        reason = params[:close_reason].to_s
-        Case::CLOSE_REASONS.include?(reason) ? reason : nil
-      end
+    def ending
+      return "action_taken" if @case.actions.live.any?
+
+      reason = params[:close_reason].to_s
+      Case::CLOSE_REASONS.include?(reason) ? reason : nil
     end
 
-    def objection(resolution)
-      return action_objection if params[:outcome] == "report"
-      return duplicate_objection if resolution == "duplicate"
-
-      nil
+    def telling?
+      params[:tell_reporter] == "1"
     end
 
-    def duplicate_objection
-      other = params[:duplicate_of].to_s
-      return "say which case this duplicates" if other.blank?
-      return "a case cannot duplicate itself" if other.to_i == @case.id
-      return "case #{other} does not exist" unless Case.exists?(id: other)
-
-      nil
+    def told
+      said = params[:member_message].to_s.strip
+      said.presence || Resolution::TOLD
     end
 
     def mark_resolved(resolution)
@@ -99,22 +81,28 @@ module Fd
         .update_all(
           resolved_at: @now,
           resolution: resolution,
-          member_note: (params[:member_note].presence unless resolution == "duplicate"),
-          duplicate_of: (params[:duplicate_of] if resolution == "duplicate"),
+          member_note: params[:member_note].presence,
           updated_at: @now
         ).positive?
     end
 
-    def file_report
-      audit(log_action(@case, @now), "performed")
-    end
-
     def close_reports
+      said = told
+
       @case.reports.where(closed_at: nil).find_each do |report|
         report.update!(closed_at: @now, closed_by: current_staff.user_id)
         audit(report, "closed", entity_id: @case.id,
           before: { "closed_at" => nil }, after: { "closed_at" => @now })
+        queue(report, said)
       end
+    end
+
+    def queue(report, said)
+      conversation = IntakeConversation.find_by(report_id: report.id, closed_at: nil)
+      return if conversation.nil?
+
+      IntakeOutbox.create!(conversation_id: conversation.id, kind: "outcome", body: said,
+        requested_by: current_staff.user_id)
     end
 
     def refusal(kase)

@@ -42,7 +42,8 @@ class FdChatTest < ActionDispatch::IntegrationTest
   end
 
   test "the chat log renders on its own for the frame to fetch" do
-    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "on it")
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "on it",
+      source_app: "fire_engine")
     get fd_case_chat_log_path(@kase)
 
     assert_response :success

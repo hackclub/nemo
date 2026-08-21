@@ -346,68 +346,36 @@
       sub: @case.assigned? ? "assigned to #{@case.assignee_handles}" : "not assigned to anybody" } do %>
       <%= form_with url: fd_case_resolution_path(@case), method: :post, html: { autocomplete: "off" } do %>
         <div class="modal-body">
-          <div class="outcomes">
-            <label class="opt">
-              <%= radio_button_tag :outcome, "report", true %>
-              <span class="opt-dot" aria-hidden="true"></span>
-              <span>
-                <span class="opt-label">File a report</span>
-              </span>
-            </label>
-            <label class="opt">
-              <%= radio_button_tag :outcome, "close", false %>
-              <span class="opt-dot" aria-hidden="true"></span>
-              <span>
-                <span class="opt-label">Close it</span>
-              </span>
-            </label>
-            <label class="opt">
-              <%= radio_button_tag :outcome, "duplicate", false %>
-              <span class="opt-dot" aria-hidden="true"></span>
-              <span>
-                <span class="opt-label">Duplicate</span>
-              </span>
-            </label>
-          </div>
-
-          <div class="only only-report">
-            <%= render "action_fields", kase: @case, flagged: @flagged_messages,
-                  target: @people.chosen&.user_id || lone_subject(@case) %>
-          </div>
-
-          <div class="only only-close">
+          <% if @live_actions.any? %>
+            <div class="field-label">
+              <span>Why it is closing</span>
+              <div class="said"><%= closing_because(@live_actions) %></div>
+            </div>
+          <% else %>
             <label class="field-label">
-              Why
+              Why it is closing
               <%= select_tag :close_reason,
                     options_for_select(close_reason_options), class: "select" %>
             </label>
-          </div>
+          <% end %>
 
-          <div class="only only-duplicate">
-            <% if @duplicate_candidates.any? %>
-              <label class="field-label">
-                Duplicate of which case
-                <%= select_tag :duplicate_of,
-                      options_for_select(case_options(@duplicate_candidates)),
-                      include_blank: "pick the case this duplicates", class: "select" %>
-             </label>
-            <% else %>
-              <span class="opt-note">There is no other case this could duplicate.</span>
-            <% end %>
-          </div>
-
-          <label class="field-label unless-duplicate">
-            Reason
-            <%= text_area_tag :member_note, nil, rows: 3, class: "textarea" %>
+          <label class="field-label">
+            Summary
+            <%= text_area_tag :member_note, nil, rows: 2, class: "textarea" %>
           </label>
 
           <% if @open_reports.positive? %>
             <label class="opt">
               <%= check_box_tag :tell_reporter, "1", true %>
+              <span class="opt-box" aria-hidden="true"></span>
               <span>
-                <span class="opt-label">Tell the reporter how it ended</span>
-                <span class="opt-note">goes through the bot, they never learn who you are</span>
+                <span class="opt-label">Notify the reporter</span>
               </span>
+            </label>
+            <label class="field-label only only-telling">
+              What they are told
+              <%= text_area_tag :member_message, Fd::Resolution::TOLD, rows: 3,
+                    class: "textarea", maxlength: Fd::IntakeOutbox::MAX_LENGTH %>
             </label>
           <% end %>
 
@@ -418,8 +386,6 @@
                 Merging first would resolve both together.</div>
             </div>
           <% end %>
-
-          <%= render "what_this_does", lines: resolve_consequences(@case, @open_reports) %>
         </div>
         <div class="modal-foot">
           <label for="resolve-case" class="btn">Close</label>

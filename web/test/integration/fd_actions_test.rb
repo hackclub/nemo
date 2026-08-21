@@ -132,11 +132,11 @@ class FdActionsTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?] select[name=type_key]", fd_case_actions_path(@kase)
   end
 
-  test "both modals carry their own action fields without clashing ids" do
+  test "the log modal carries its action fields without an id that could clash" do
     sign_in_as(@me)
     get fd_case_path(@kase)
 
-    assert_select "select.action-type", 2
+    assert_select "select.action-type", 1
     assert_select "select#type_key", count: 0
   end
 end

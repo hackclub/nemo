@@ -483,6 +483,11 @@ module FdHelper
     RESOLUTION_LABELS.fetch(key, key.to_s.tr("_", " "))
   end
 
+  def closing_because(actions)
+    said = actions.map { |action| action_label(action.type_key).downcase }.uniq.to_sentence
+    "action taken, #{said}"
+  end
+
   def close_reason_options
     Fd::Case::CLOSE_REASONS.map { |key| [resolution_label(key), key] }
   end

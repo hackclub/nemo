@@ -3007,13 +3007,20 @@
     pointer-events: none;
   }
 
-  .opt-dot {
+  .opt-dot,
+  .opt-box {
     width: 13px;
     height: 13px;
     border-radius: 50%;
     border: 1px solid var(--line);
     margin-top: 3px;
     flex: none;
+  }
+
+  .opt-box {
+    border-radius: 3px;
+    display: grid;
+    place-items: center;
   }
 
   .opt:has(input:checked) {
@@ -3023,6 +3030,21 @@
 
   .opt:has(input:checked) .opt-dot {
     border: 4px solid var(--accent);
+  }
+
+  .opt:has(input:checked) .opt-box {
+    background-color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .opt:has(input:checked) .opt-box::after {
+    content: "";
+    width: 7px;
+    height: 4px;
+    border: 2px solid var(--card);
+    border-top: 0;
+    border-right: 0;
+    transform: rotate(-45deg) translate(0, -1px);
   }
 
   .opt-label {
@@ -3043,9 +3065,7 @@
     padding-left: var(--s-xs);
   }
 
-  form:has(input[value="report"]:checked) .only-report,
-  form:has(input[value="close"]:checked) .only-close,
-  form:has(input[value="duplicate"]:checked) .only-duplicate {
+  form:has(#tell_reporter:checked) .only-telling {
     display: grid;
   }
 
@@ -3213,9 +3233,6 @@
     padding-right: var(--s-2xs);
   }
 
-  form:has(input[value="duplicate"]:checked) .unless-duplicate {
-    display: none;
-  }
 
   .when {
     display: none;

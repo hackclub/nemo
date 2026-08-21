@@ -135,12 +135,12 @@ class FdMergesTest < ActionDispatch::IntegrationTest
       message: "the bulk bar should not ask which case to keep"
   end
 
-  test "the case page offers real cases to duplicate rather than a bare number box" do
+  test "the case page sends you to the merge plan rather than a duplicate picker" do
     sign_in_as(@me)
     get fd_case_path(@dup_one)
 
-    assert_select "select[name=duplicate_of]"
-    assert_select "select[name=duplicate_of] option[value=?]", @main.id.to_s
+    assert_select "a[href^=?]", "/fd/cases/#{@dup_one.id}/merge?into="
+    assert_select "select[name=duplicate_of]", count: 0
     assert_select "input[name=duplicate_of]", count: 0
   end
 end
