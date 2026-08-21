@@ -1,3 +1,7 @@
+import re
+
+MENTION = re.compile(r"(<[@#][A-Z0-9][A-Z0-9]*(?:\|[^>]*)?>)")
+
 SECTION_LIMIT = 3000
 CONTEXT_ELEMENTS = 10
 QUOTE_LIMIT = 2400
@@ -9,6 +13,13 @@ CLAIM = "case_claim"
 
 def escape(text):
     return (text or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def escape_but_mentions(text):
+    return "".join(
+        part if MENTION.fullmatch(part) else escape(part)
+        for part in MENTION.split(text or "")
+    )
 
 
 def said(body):

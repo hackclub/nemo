@@ -275,14 +275,19 @@ def mirror(client, conn, case_id, channel_id=None):
     carried = 0
 
     for chat_id, author, body, thread_ts in chat.waiting(conn, case_id):
-        said = f"*{who.name(client, author)}* {cards.report.escape(body)}"
+        seen = who.face(client, author)
+        wearing = {"username": seen["name"]}
+        if seen["icon"]:
+            wearing["icon_url"] = seen["icon"]
+
         try:
             sent = client.chat_postMessage(
                 channel=channel_id or firehouse_channel(),
                 thread_ts=thread_ts,
-                text=said,
+                text=cards.report.escape_but_mentions(body),
                 unfurl_links=False,
                 unfurl_media=False,
+                **wearing,
             )
         except Exception as failure:
             log.warning("nemo: chat %s did not reach the thread: %s", chat_id, failure)
