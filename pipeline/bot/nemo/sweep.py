@@ -73,12 +73,14 @@ def start(relay, stopping, channel_id=None):
     seconds = every()
 
     def loop():
-        log.info("bot: sweeping every %ss, in case something was missed", seconds)
-        while not stopping.wait(seconds):
+        log.info("bot: catching up on anything missed, then sweeping every %ss", seconds)
+        while True:
             try:
                 once(relay, channel_id)
             except Exception:
                 log.exception("bot: the sweep failed, trying again next time")
+            if stopping.wait(seconds):
+                return
 
     thread = threading.Thread(target=loop, name="bot-sweep", daemon=True)
     thread.start()
