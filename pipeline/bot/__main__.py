@@ -39,8 +39,7 @@ def needed(apps):
     return [name for name in wanted if not os.environ.get(name)]
 
 
-def wire(apps):
-    relay = Relay()
+def wire(apps, relay):
     built = {}
     if "shroud" in apps:
         built["shroud"] = (shroud_app.build(relay.taken), shroud_app.app_token())
@@ -83,13 +82,14 @@ def main(argv=None):
         shutdown()
         return 78
 
-    built = wire(apps)
+    relay = Relay()
+    built = wire(apps, relay)
     running = [start(name, *made) for name, made in built.items()]
     stopping = threading.Event()
 
-    if "nemo" in built:
-        watch.start(built["nemo"][0].client, stopping)
-        sweep.start(built["nemo"][0].client, stopping)
+    if built:
+        watch.start(relay, stopping)
+        sweep.start(relay, stopping)
 
     def stop(*_):
         stopping.set()

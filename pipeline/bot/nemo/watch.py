@@ -3,46 +3,36 @@ import threading
 
 from lib.db import connect
 
-from bot.engine import session
-from bot.nemo import channel
-
 log = logging.getLogger("bot.nemo")
 
 CASES = "fd_case_changed"
 CHAT = "fd_chat_changed"
+OUTBOX = "fd_outbox_waiting"
 
 
-def redraw(client, case_id, channel_id=None):
-    with session() as conn:
-        return channel.redraw(client, conn, case_id, channel_id)
-
-
-def mirror(client, case_id, channel_id=None):
-    with session() as conn:
-        return channel.mirror(client, conn, case_id, channel_id)
-
-
-def listen(client, stopping, channel_id=None):
+def listen(relay, stopping):
     conn = connect()
     conn.autocommit = True
-    conn.execute(f"LISTEN {CASES}")
-    conn.execute(f"LISTEN {CHAT}")
-    log.info("nemo: listening for case and chat changes")
+    for heard in (CASES, CHAT, OUTBOX):
+        conn.execute(f"LISTEN {heard}")
+    log.info("bot: listening for cases, chat and the outbox")
 
     try:
         for note in conn.notifies(stop_after=None, timeout=None):
             if stopping.is_set():
                 break
-            case_id = int(note.payload) if note.payload.isdigit() else None
-            if case_id is None:
+            told = int(note.payload) if note.payload.isdigit() else None
+            if told is None:
                 continue
             try:
                 if note.channel == CHAT:
-                    mirror(client, case_id, channel_id)
+                    relay.mirror(told)
+                elif note.channel == OUTBOX:
+                    relay.deliver(told)
                 else:
-                    redraw(client, case_id, channel_id)
+                    relay.redraw(told)
             except Exception as failure:
-                log.warning("nemo: case %s could not be brought up to date: %s", case_id, failure)
+                log.warning("bot: %s %s could not be handled: %s", note.channel, told, failure)
     finally:
         try:
             conn.close()
@@ -50,16 +40,16 @@ def listen(client, stopping, channel_id=None):
             pass
 
 
-def start(client, stopping, channel_id=None):
+def start(relay, stopping):
     def loop():
         while not stopping.is_set():
             try:
-                listen(client, stopping, channel_id)
+                listen(relay, stopping)
             except Exception as failure:
-                log.warning("nemo: lost the case listener, waiting to retry: %s", failure)
+                log.warning("bot: lost the listener, waiting to retry: %s", failure)
                 if stopping.wait(5):
                     return
 
-    thread = threading.Thread(target=loop, name="nemo-watch", daemon=True)
+    thread = threading.Thread(target=loop, name="bot-watch", daemon=True)
     thread.start()
     return thread

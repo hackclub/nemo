@@ -1,6 +1,6 @@
 import logging
 
-from bot.engine import case, intake, session
+from bot.engine import case, intake, outbox, session
 from bot.nemo import answer
 from bot.engine.whoami import bot_user_id
 from bot.nemo import channel
@@ -19,6 +19,12 @@ WHERE m.mirrored_ts = %s
 FIRST_ANSWER = """
 UPDATE fd.case_reports SET first_replied_at = now()
 WHERE id = %s AND first_replied_at IS NULL
+"""
+
+FIRST_ANSWER_FOR = """
+UPDATE fd.case_reports SET first_replied_at = now()
+WHERE id = (SELECT report_id FROM fd.intake_conversations WHERE id = %s)
+  AND first_replied_at IS NULL
 """
 
 
@@ -47,6 +53,71 @@ class Relay:
                 channel.post_report(self.nemo_client, conn, case_id)
 
         return case_id
+
+    def redraw(self, case_id):
+        if self.nemo_client is None:
+            return None
+        with session() as conn:
+            return channel.redraw(self.nemo_client, conn, case_id)
+
+    def mirror(self, case_id):
+        if self.nemo_client is None:
+            return None
+        with session() as conn:
+            return channel.mirror(self.nemo_client, conn, case_id)
+
+    def deliver(self, conversation_id=None):
+        if self.shroud_client is None:
+            log.warning("relay: shroud is not running, the outbox waits")
+            return 0
+
+        with session() as conn:
+            queue = outbox.waiting(conn, conversation_id)
+
+        sent = 0
+        for queued in queue:
+            with session() as conn:
+                if self.hand_over(conn, queued):
+                    sent += 1
+
+        if sent:
+            log.info("relay: sent %s queued message(s)", sent)
+        return sent
+
+    def hand_over(self, conn, queued):
+        if queued.closed_at:
+            outbox.stumbled(conn, queued.id, "the conversation is closed", True)
+            log.info("relay: outbox %s is for a closed conversation", queued.id)
+            return False
+
+        try:
+            posted = self.shroud_client.chat_postMessage(
+                channel=queued.channel_id,
+                thread_ts=queued.thread_ts,
+                text=cards.to_member(queued.body),
+                unfurl_links=False,
+                unfurl_media=False,
+            )
+        except Exception as failure:
+            outbox.stumbled(conn, queued.id, failure, queued.last_try)
+            log.warning("relay: outbox %s did not go: %s", queued.id, failure)
+            return False
+
+        message_id, _ = intake.record(
+            conn,
+            {
+                "channel": queued.channel_id,
+                "ts": posted["ts"],
+                "thread_ts": queued.thread_ts,
+                "text": cards.to_member(queued.body),
+            },
+            direction="outbound",
+            sent_by=queued.requested_by,
+        )
+        outbox.sent(conn, queued.id, message_id)
+        if queued.kind == "reply":
+            conn.execute(FIRST_ANSWER_FOR, (queued.conversation_id,))
+        return True
 
     def mark(self, at, emoji):
         if at is None or self.nemo_client is None:

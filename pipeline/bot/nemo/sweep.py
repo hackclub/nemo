@@ -2,7 +2,7 @@ import logging
 import os
 import threading
 
-from bot.engine import session
+from bot.engine import outbox, session
 from bot.nemo import channel, chat
 
 log = logging.getLogger("bot.nemo")
@@ -41,38 +41,45 @@ def each(cases, doing, work, client, channel_id):
                 work(client, conn, case_id, channel_id)
                 done += 1
             except Exception as failure:
-                log.warning("nemo: case %s %s: %s", case_id, doing, failure)
+                log.warning("bot: case %s %s: %s", case_id, doing, failure)
                 if done == 0:
-                    log.warning("nemo: giving up this sweep, %s is failing for every case", doing)
+                    log.warning("bot: giving up this sweep, %s is failing for every case", doing)
                     break
     return done
 
 
-def once(client, channel_id=None):
+def once(relay, channel_id=None):
+    client = relay.nemo_client
+
     with session() as conn:
         missing = [row[0] for row in conn.execute(UNCARDED).fetchall()]
         standing = [row[0] for row in conn.execute(WORTH_REDRAWING).fetchall()]
-
-    with session() as conn:
         unmirrored = chat.waiting_anywhere(conn)
+        queued = outbox.any_waiting(conn)
 
-    posted = each(missing, "still has no card", channel.post_report, client, channel_id)
-    drawn = each(standing, "could not be redrawn", channel.redraw, client, channel_id)
-    carried = each(unmirrored, "has chat that did not go out", channel.mirror, client, channel_id)
-    return posted, drawn, carried
+    posted = drawn = carried = 0
+    if client is not None:
+        posted = each(missing, "still has no card", channel.post_report, client, channel_id)
+        drawn = each(standing, "could not be redrawn", channel.redraw, client, channel_id)
+        carried = each(
+            unmirrored, "has chat that did not go out", channel.mirror, client, channel_id
+        )
+
+    handed = sum(relay.deliver(conversation_id) for conversation_id in queued)
+    return posted, drawn, carried, handed
 
 
-def start(client, stopping, channel_id=None):
+def start(relay, stopping, channel_id=None):
     seconds = every()
 
     def loop():
-        log.info("nemo: sweeping the firehouse every %ss, in case a change was missed", seconds)
+        log.info("bot: sweeping every %ss, in case something was missed", seconds)
         while not stopping.wait(seconds):
             try:
-                once(client, channel_id)
+                once(relay, channel_id)
             except Exception:
-                log.exception("nemo: the sweep failed, trying again next time")
+                log.exception("bot: the sweep failed, trying again next time")
 
-    thread = threading.Thread(target=loop, name="nemo-sweep", daemon=True)
+    thread = threading.Thread(target=loop, name="bot-sweep", daemon=True)
     thread.start()
     return thread
