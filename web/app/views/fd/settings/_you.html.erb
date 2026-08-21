@@ -1,0 +1,61 @@
+<% held = account&.live? ? account : nil %>
+
+<div class="card">
+  <div class="mcard-top">
+    <span class="mcard-face"><%= you_initial %></span>
+    <span>
+      <span class="mcard-name">
+        <%= current_profile&.display_name || current_staff.user_id %>
+        <%= role_chip(current_staff.role) %>
+      </span>
+      <span class="mcard-sub">
+        <span class="mono"><%= current_staff.user_id %></span>
+        <span>·</span>
+        <span>signed in with Hack Club</span>
+      </span>
+    </span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <p class="card-title">Your Slack account</p>
+    <div class="card-tools"><%= slack_link_chip(held) %></div>
+  </div>
+
+  <% if held&.stumbled? %>
+    <div class="strip">
+      <b>Slack refused it <%= last_case_label(held.last_error_at) %>:
+        <span class="mono"><%= held.last_error %></span>. Messages went out through nemo.</b>
+    </div>
+  <% end %>
+
+  <% if held %>
+    <div class="mcard-sub">
+      <span class="mono"><%= held.scopes %></span>
+      <span>·</span>
+      <span>linked <%= last_case_label(held.granted_at) %></span>
+      <span>·</span>
+      <span>used <%= last_case_label(held.last_used_at) %></span>
+    </div>
+    <div class="mcard-acts">
+      <% if held.stumbled? && linkable %>
+        <%= button_to "Link Slack again", fd_slack_account_path, class: "btn btn-primary",
+              form: { data: { turbo: false } } %>
+      <% end %>
+      <%= button_to "Unlink", fd_slack_account_path, method: :delete, class: "btn",
+            form: { data: { turbo_confirm: "Unlink Slack? Your messages go out through " \
+                                           "nemo instead." } } %>
+    </div>
+  <% elsif linkable %>
+    <p class="card-note">
+      Your messages go out under your name either way. Linked, you send them yourself.
+    </p>
+    <div class="mcard-acts">
+      <%= button_to "Link Slack", fd_slack_account_path, class: "btn btn-primary",
+            form: { data: { turbo: false } } %>
+    </div>
+  <% else %>
+    <p class="card-note">Linking is not set up on this server.</p>
+  <% end %>
+</div>

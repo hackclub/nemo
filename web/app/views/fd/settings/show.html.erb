@@ -1,8 +1,10 @@
 <% content_for :page_title, "Settings" %>
-<% content_for :page_subtitle do %>
-  <%= role_tally(@grants) %>
+<% if @grants %>
+  <% content_for :page_subtitle do %>
+    <%= role_tally(@grants) %>
+  <% end %>
 <% end %>
-<% if current_staff.may?("access.grant") %>
+<% if @grants && current_staff.may?("access.grant") %>
   <% content_for :head_actions do %>
     <label for="give-access" class="btn btn-primary">Give access</label>
   <% end %>
@@ -10,7 +12,7 @@
 
 <div class="stack">
   <div class="views">
-    <% Fd::SettingsController::TABS.each do |key, label| %>
+    <% @tabs.each do |key, label| %>
       <%= link_to fd_settings_path(key == "access" ? {} : { tab: key }), class: "view",
             aria: { current: ("true" if key == @tab) } do %>
         <%= label %>
@@ -21,7 +23,9 @@
     <% end %>
   </div>
 
-  <% if @tab != "history" %>
+  <% if @tab == "you" %>
+    <%= render "you", account: @account, linkable: @linkable %>
+  <% elsif @tab != "history" %>
     <% @dormant.each do |grant| %>
       <% next unless @tab == "access" %>
       <div class="strip">

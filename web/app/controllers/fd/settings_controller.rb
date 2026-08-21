@@ -1,9 +1,10 @@
 module Fd
   class SettingsController < BaseController
-    permit "access.read"
+    permit "access.read", unless: :just_me?
 
-    TABS ={ "access" => "Access", "roles" => "Roles", "usage" => "Usage",
-             "history" => "Grant history" }.freeze
+    TABS = { "access" => "Access", "roles" => "Roles", "usage" => "Usage",
+             "history" => "Grant history", "you" => "You" }.freeze
+    MINE = %w[you].freeze
     WINDOW = 30.days
     DORMANT_AFTER = 30.days
 
@@ -15,7 +16,10 @@ module Fd
       :weight, :share, keyword_init: true)
 
     def show
-      @tab = TABS.key?(params[:tab]) ? params[:tab] : "access"
+      @tab = tab
+      @tabs = may_read_access? ? TABS : TABS.slice(*MINE)
+      return you_facts if just_me?
+
       @grants = AccessGrant.live.newest_first.to_a
       @history = AccessGrant.newest_first.limit(50).to_a if @tab == "history"
       @acted = acted_since(WINDOW.ago)
@@ -32,8 +36,31 @@ module Fd
 
     private
 
+    def tab
+      @tab ||= TABS.key?(params[:tab]) ? params[:tab] : (may_read_access? ? "access" : "you")
+    end
+
+    def just_me?
+      MINE.include?(tab)
+    end
+
+    def may_read_access?
+      current_staff&.may?("access.read")
+    end
+
+    def you_facts
+      @counts = may_read_access? ? tally_without_grants : {}
+      @account = StaffSlack.find_by(staff_user_id: current_staff.user_id)
+      @linkable = Slack::Oauth.configured?
+    end
+
     def tab_counts
       { "access" => @grants.size, "roles" => Permission.keys.size,
+        "history" => AccessGrant.count }
+    end
+
+    def tally_without_grants
+      { "access" => AccessGrant.live.count, "roles" => Permission.keys.size,
         "history" => AccessGrant.count }
     end
 

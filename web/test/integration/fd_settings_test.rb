@@ -350,15 +350,20 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     assert_select ".rail-item[aria-current='page']", text: /Settings/
   end
 
-  test "a firefighter is not offered settings, and is turned away from it" do
+  test "a firefighter gets settings, lands on their own tab, and no further" do
     hand = Staff.create!(user_id: "UHAND")
     give("UHAND")
     sign_in_as(hand)
 
     get fd_cases_path
-    assert_select ".rail-item", text: /Settings/, count: 0
+    assert_select ".rail-item", text: /Settings/
 
     get fd_settings_path
+    assert_response :success
+    assert_select ".card-title", text: "Your Slack account"
+    assert_select ".data-table", count: 0
+
+    get fd_settings_path(tab: "access")
     assert_redirected_to fd_cases_path
     assert_equal 1, Fd::AuditEntry.where(verb: "refused", actor_user_id: "UHAND").count
   end
@@ -371,7 +376,7 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     give("UFLAGGED")
     sign_in_as(flagged)
 
-    get fd_settings_path
+    get fd_settings_path(tab: "access")
     assert_redirected_to fd_cases_path, "the grant demoted them, the flag is still set"
   end
 end

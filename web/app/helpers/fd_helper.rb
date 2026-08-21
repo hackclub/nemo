@@ -931,6 +931,18 @@ module FdHelper
     tag.span(said, class: "chip #{tone}")
   end
 
+  def you_initial
+    said = current_profile&.display_name.presence || current_staff.user_id
+    said.strip.first.to_s.upcase
+  end
+
+  def slack_link_chip(held)
+    return tag.span("not linked", class: "chip chip-off") if held.nil?
+    return tag.span("stopped working", class: "chip chip-warn") if held.stumbled?
+
+    tag.span("linked", class: "chip chip-good")
+  end
+
   def role_tally(grants)
     counted = grants.group_by(&:role).transform_values(&:size)
     said = Fd::Permission::ROLES.reverse.filter_map do |role|
