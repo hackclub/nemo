@@ -4,18 +4,44 @@ module Fd
 
     def create
       kase = Case.find(params[:case_id])
-      body = Mentions.normalise(params[:body].to_s.strip)
+      read = Marks.read(Mentions.normalise(params[:body].to_s.strip))
 
-      problem = objection(body)
+      return send_it(kase, read) if read.to_reporter?
+
+      problem = objection(read.said)
       return redirect_to(back_to(kase), alert: problem) if problem
 
-      said = writing { keep(kase, body) }
+      said = writing { keep(kase, read.said) }
       SlackPost.carry(said) if said.mirrored_as == "user"
 
       answer(kase)
     end
 
     private
+
+    def send_it(kase, read)
+      why_not = Access.why_not(current_staff, "case.reply", kase)
+      return redirect_to(back_to(kase), alert: why_not) if why_not
+
+      sent = nil
+      writing do
+        sent = Outgoing.queue(kase, read.said, mode: mode(read), by: current_staff.user_id)
+        answered(kase, sent.queued) if sent.queued
+      end
+
+      return redirect_to(back_to(kase), alert: sent.problem) if sent.problem
+
+      answer(kase)
+    end
+
+    def answered(kase, queued)
+      audit(queued.conversation.report, "answered", entity_id: kase.id,
+        after: { "outbox_id" => queued.id, "mode" => queued.mode })
+    end
+
+    def mode(read)
+      read.signed? && params[:anon] != "1" ? "signed" : "body"
+    end
 
     def keep(kase, body)
       CaseChat.create!(

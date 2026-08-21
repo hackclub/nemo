@@ -3,7 +3,7 @@ import logging
 from bot.engine import case, intake, outbox, session
 from bot.nemo import answer
 from bot.engine.whoami import bot_user_id
-from bot.nemo import channel
+from bot.nemo import channel, who
 from bot.nemo import files as carry
 from bot.nemo.cards import report as cards
 
@@ -25,6 +25,13 @@ FIRST_ANSWER_FOR = """
 UPDATE fd.case_reports SET first_replied_at = now()
 WHERE id = (SELECT report_id FROM fd.intake_conversations WHERE id = %s)
   AND first_replied_at IS NULL
+"""
+
+THREAD_OF = """
+SELECT r.forwarded_ts
+FROM fd.intake_conversations c
+JOIN fd.case_reports r ON r.id = c.report_id
+WHERE c.id = %s AND r.forwarded_ts IS NOT NULL
 """
 
 
@@ -90,6 +97,7 @@ class Relay:
             log.info("relay: outbox %s is for a closed conversation", queued.id)
             return False
 
+        signed = queued.mode == "signed"
         try:
             posted = self.shroud_client.chat_postMessage(
                 channel=queued.channel_id,
@@ -97,6 +105,7 @@ class Relay:
                 text=cards.to_member(queued.body),
                 unfurl_links=False,
                 unfurl_media=False,
+                **self.wearing(queued.requested_by, signed),
             )
         except Exception as failure:
             outbox.stumbled(conn, queued.id, failure, queued.last_try)
@@ -117,7 +126,29 @@ class Relay:
         outbox.sent(conn, queued.id, message_id)
         if queued.kind == "reply":
             conn.execute(FIRST_ANSWER_FOR, (queued.conversation_id,))
+        self.tell_the_thread(conn, queued, signed)
         return True
+
+    def wearing(self, user_id, signed):
+        if not signed or not user_id or self.nemo_client is None:
+            return {}
+
+        seen = who.face(self.nemo_client, user_id)
+        worn = {"username": seen["name"]}
+        if seen["icon"]:
+            worn["icon_url"] = seen["icon"]
+        return worn
+
+    def tell_the_thread(self, conn, queued, signed):
+        if self.nemo_client is None:
+            return
+
+        row = conn.execute(THREAD_OF, (queued.conversation_id,)).fetchone()
+        if not row:
+            return
+
+        at = channel.echo(self.nemo_client, row[0], queued.requested_by, queued.body, signed)
+        self.mark(at, answer.SENT)
 
     def mark(self, at, emoji):
         if at is None or self.nemo_client is None:
@@ -141,7 +172,7 @@ class Relay:
             log.warning("relay: could not say why it did not send: %s", failure)
         return None
 
-    def answered(self, thread_ts, text, sent_by, files=(), at=None):
+    def answered(self, thread_ts, text, sent_by, signed=True, files=(), at=None):
         if self.shroud_client is None:
             log.warning("relay: shroud is not running, cannot answer thread %s", thread_ts)
             return self.refuse(at, sent_by, "shroud is not running, so nothing was sent")
@@ -168,6 +199,7 @@ class Relay:
                 text=said,
                 unfurl_links=False,
                 unfurl_media=False,
+                **self.wearing(sent_by, signed),
             )
         except Exception as failure:
             log.warning("relay: could not reach conversation %s: %s", conversation_id, failure)
@@ -194,5 +226,9 @@ class Relay:
             )
 
         self.mark(at, answer.SENT)
-        log.info("relay: carried an answer to conversation %s", conversation_id)
+        log.info(
+            "relay: carried a %s answer to conversation %s",
+            "signed" if signed else "unsigned",
+            conversation_id,
+        )
         return sent["ts"]

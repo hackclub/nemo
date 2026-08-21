@@ -403,7 +403,11 @@ module FdHelper
   def queued_entry(row)
     ChatEntry.new(at: row.requested_at, side: "out", kind: "us",
       who: row.requested_by, name: names[row.requested_by], body: row.body,
-      state: row.failed? ? "undelivered, #{row.error}" : "sending")
+      state: row.failed? ? "undelivered, #{row.error}" : "sending, #{signing(row)}")
+  end
+
+  def signing(row)
+    row.mode == "signed" ? "from #{names[row.requested_by]}" : "anonymous"
   end
 
   def told_entry(report)

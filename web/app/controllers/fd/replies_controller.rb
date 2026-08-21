@@ -4,23 +4,15 @@ module Fd
 
     def create
       kase = Case.find(params[:case_id])
-      body = params[:body].to_s.strip
-      conversation = IntakeConversation.for_case(kase.id).open_ones.first
-
-      problem = objection(conversation, body)
-      return redirect_to(back_to(kase), alert: problem) if problem
+      read = Marks.read(params[:body], aimed: true)
+      sent = nil
 
       writing do
-        queued = IntakeOutbox.create!(
-          conversation_id: conversation.id,
-          kind: "reply",
-          body: body,
-          mode: mode,
-          requested_by: current_staff.user_id
-        )
-        audit(conversation.report, "answered", entity_id: kase.id,
-          after: { "outbox_id" => queued.id, "mode" => queued.mode })
+        sent = Outgoing.queue(kase, read.said, mode: mode(read), by: current_staff.user_id)
+        answered(kase, sent.queued) if sent.queued
       end
+
+      return redirect_to(back_to(kase), alert: sent.problem) if sent.problem
 
       respond_to do |format|
         format.turbo_stream { render turbo_stream: CaseChatBroadcast.tag(kase.id) }
@@ -30,23 +22,17 @@ module Fd
 
     private
 
+    def answered(kase, queued)
+      audit(queued.conversation.report, "answered", entity_id: kase.id,
+        after: { "outbox_id" => queued.id, "mode" => queued.mode })
+    end
+
     def back_to(kase)
       fd_case_path(kase, tab: "report")
     end
 
-    def mode
-      IntakeOutbox::MODES.include?(params[:mode]) ? params[:mode] : "body"
-    end
-
-    def objection(conversation, body)
-      return "write something before sending it" if body.blank?
-      if body.length > IntakeOutbox::MAX_LENGTH
-        return "that is too long to send, keep it under #{IntakeOutbox::MAX_LENGTH} characters"
-      end
-      return "there is nobody to reply to on this case" if conversation.nil?
-      return "that conversation is closed, so nothing can be sent" if conversation.closed?
-
-      nil
+    def mode(read)
+      read.signed? && params[:anon] != "1" ? "signed" : "body"
     end
   end
 end

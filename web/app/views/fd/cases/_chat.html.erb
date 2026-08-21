@@ -33,15 +33,16 @@
           html: { autocomplete: "off" } do %>
       <div class="chat-field" data-action="click->chat#focus">
         <span class="chat-pill" data-chat-target="pill" hidden>
-          to reporter
+          <span data-chat-target="aim">to reporter</span>
           <button type="button" class="chat-pill-x" data-action="click->chat#drop"
                   aria-label="talk to the team instead">&times;</button>
         </span>
+        <%= hidden_field_tag :anon, "", data: { chat_target: "anon" }, id: nil %>
         <div class="mention-field" data-controller="mention"
              data-mention-url-value="<%= fd_member_search_path %>">
           <%= text_area_tag :body, nil, rows: 1, class: "chat-input", id: nil,
                 maxlength: Fd::NotesController::MAX_LENGTH,
-                placeholder: "Message the team, or > to reply to the reporter",
+                placeholder: "Message the team, or ? to reply to the reporter",
                 data: { chat_target: "field", mention_target: "field",
                         action: "input->mention#type input->chat#type " \
                                 "keydown->mention#keys keydown->chat#keys" } %>

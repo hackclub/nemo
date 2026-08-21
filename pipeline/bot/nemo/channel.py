@@ -271,6 +271,33 @@ def claimed(conn, case_id, user_id):
     audit.record(conn, "assignee", case_id, "claimed", user_id, after={"user_id": user_id})
 
 
+def echo(client, thread_ts, sent_by, body, signed, channel_id=None):
+    seen = who.face(client, sent_by)
+    wearing = {"username": seen["name"]}
+    if seen["icon"]:
+        wearing["icon_url"] = seen["icon"]
+
+    said = f"{answer.PREFIX}{cards.report.escape_but_mentions(body)}"
+    if not signed:
+        said = f"{answer.ANON}{said}"
+
+    room = channel_id or firehouse_channel()
+    try:
+        sent = client.chat_postMessage(
+            channel=room,
+            thread_ts=thread_ts,
+            text=said,
+            unfurl_links=False,
+            unfurl_media=False,
+            **wearing,
+        )
+    except Exception as failure:
+        log.warning("nemo: the thread did not hear about the reply: %s", failure)
+        return None
+
+    return room, sent["ts"]
+
+
 def mirror(client, conn, case_id, channel_id=None):
     carried = 0
 
@@ -346,16 +373,17 @@ def register(app, on_reply=None):
         if not thread_ts or thread_ts == event.get("ts"):
             return
 
-        said = answer.meant_for_them(event.get("text"))
-        if said is None:
+        aimed = answer.read(event.get("text"))
+        if aimed is None:
             return ours(event, thread_ts)
 
         if on_reply is None:
             return
         on_reply(
             thread_ts,
-            said,
+            aimed["said"],
             event.get("user"),
+            signed=aimed["signed"],
             files=event.get("files") or [],
             at=(event["channel"], event["ts"]),
         )

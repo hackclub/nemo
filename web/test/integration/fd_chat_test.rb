@@ -57,6 +57,65 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_match(/nobody to reply to/, flash[:alert])
   end
 
+  def with_a_reporter
+    reporter = Fd::Member.first.user_id
+    report = Fd::CaseReport.create!(case_id: @kase.id, reporter_user_id: reporter,
+      is_anonymous: false, body: "look at this", source_app: "shroud", received_at: 2.days.ago)
+    Fd::IntakeConversation.create!(report_id: report.id, member_user_id: reporter,
+      channel_id: "D0REP", thread_ts: "1700.5", opened_at: 2.days.ago)
+  end
+
+  test "a marked message typed at the team endpoint goes to the reporter, signed" do
+    with_a_reporter
+    post fd_case_chats_path(@kase), params: { body: "?we are looking at it" },
+      as: :turbo_stream
+
+    assert_equal 0, Fd::CaseChat.where(case_id: @kase.id).count, "it left the room"
+    queued = Fd::IntakeOutbox.sole
+    assert_equal "we are looking at it", queued.body
+    assert_equal "signed", queued.mode
+    assert_equal "UME", queued.requested_by
+  end
+
+  test "the tilde takes your name off a reply typed at the team endpoint" do
+    with_a_reporter
+    post fd_case_chats_path(@kase), params: { body: "~?we are looking at it" },
+      as: :turbo_stream
+
+    assert_equal "body", Fd::IntakeOutbox.sole.mode
+  end
+
+  test "a tilde on its own is kept as words, not read as a mark" do
+    post fd_case_chats_path(@kase), params: { body: "~hi team" }, as: :turbo_stream
+
+    assert_equal "~hi team", Fd::CaseChat.where(case_id: @kase.id).sole.body
+    assert_equal 0, Fd::IntakeOutbox.count
+  end
+
+  test "the reply endpoint signs by default and takes the anon flag" do
+    with_a_reporter
+    post fd_case_replies_path(@kase), params: { body: "we are on it" }, as: :turbo_stream
+    assert_equal "signed", Fd::IntakeOutbox.sole.mode
+
+    post fd_case_replies_path(@kase), params: { body: "and again", anon: "1" },
+      as: :turbo_stream
+    assert_equal "body", Fd::IntakeOutbox.order(:id).last.mode
+  end
+
+  test "somebody who may not reply cannot get there through the team endpoint" do
+    with_a_reporter
+    hand = Staff.create!(user_id: "UHAND")
+    Fd::AccessGrant.give!("UHAND", role: "firefighter", by: @me.user_id, reason: "works here")
+    Fd::RolePermission.set!("firefighter", "case.reply", false, by: @me.user_id)
+    sign_in_as(hand)
+
+    post fd_case_chats_path(@kase), params: { body: "?we are looking at it" }
+
+    assert_equal 0, Fd::IntakeOutbox.count
+    assert_equal 0, Fd::CaseChat.where(case_id: @kase.id).count, "and it is not filed as chat"
+    assert_not_nil flash[:alert]
+  end
+
   def instead_of(name, answer)
     original = Slack::Chat.method(name)
     Slack::Chat.define_singleton_method(name) do |*args, **kwargs|

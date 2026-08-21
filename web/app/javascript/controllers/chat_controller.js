@@ -1,11 +1,12 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["field", "pill", "send"]
+  static targets = ["field", "pill", "send", "aim", "anon"]
   static values = { reporter: Boolean, noteUrl: String, replyUrl: String }
 
   connect() {
     this.toReporter = false
+    this.anonymous = false
     this.sent = this.sent.bind(this)
     this.element.addEventListener("turbo:submit-end", this.sent)
     this.grow()
@@ -29,10 +30,16 @@ export default class extends Controller {
   }
 
   type() {
-    if (!this.toReporter && this.reporterValue && /^>\s/.test(this.fieldTarget.value)) {
-      this.fieldTarget.value = this.fieldTarget.value.replace(/^>\s/, "")
-      this.aim(true)
+    const marks = /^(~?)([?>])\s?/.exec(this.fieldTarget.value)
+
+    if (marks && this.reporterValue && !this.toReporter) {
+      this.fieldTarget.value = this.fieldTarget.value.slice(marks[0].length)
+      this.aim(true, marks[1] === "~")
+    } else if (this.toReporter && !this.anonymous && /^~\s?/.test(this.fieldTarget.value)) {
+      this.fieldTarget.value = this.fieldTarget.value.replace(/^~\s?/, "")
+      this.aim(true, true)
     }
+
     this.grow()
   }
 
@@ -57,9 +64,12 @@ export default class extends Controller {
     this.fieldTarget.focus()
   }
 
-  aim(atReporter) {
+  aim(atReporter, anonymous = false) {
     this.toReporter = atReporter
+    this.anonymous = atReporter && anonymous
     this.pillTarget.hidden = !atReporter
+    this.aimTarget.textContent = this.anonymous ? "to reporter, anonymous" : "to reporter, from you"
+    this.anonTarget.value = this.anonymous ? "1" : ""
     this.element.action = atReporter ? this.replyUrlValue : this.noteUrlValue
     this.sendTarget.title = atReporter ? "Send to the reporter" : "Send to the team"
   }
