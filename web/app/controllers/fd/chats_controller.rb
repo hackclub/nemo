@@ -9,19 +9,23 @@ module Fd
       problem = objection(body)
       return redirect_to(back_to(kase), alert: problem) if problem
 
-      writing do
-        CaseChat.create!(
-          case_id: kase.id,
-          author_user_id: current_staff.user_id,
-          body: body,
-          source_app: Audit::SOURCE_APP
-        )
-      end
+      said = writing { keep(kase, body) }
+      SlackPost.carry(said) if said.mirrored_as == "user"
 
       answer(kase)
     end
 
     private
+
+    def keep(kase, body)
+      CaseChat.create!(
+        case_id: kase.id,
+        author_user_id: current_staff.user_id,
+        body: body,
+        source_app: Audit::SOURCE_APP,
+        mirrored_as: (SlackPost.claimable?(kase.id, current_staff.user_id) ? "user" : nil)
+      )
+    end
 
     def answer(kase)
       respond_to do |format|

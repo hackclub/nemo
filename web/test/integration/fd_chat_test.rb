@@ -56,4 +56,102 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_equal 0, Fd::IntakeOutbox.count
     assert_match(/nobody to reply to/, flash[:alert])
   end
+
+  def instead_of(name, answer)
+    original = Slack::Chat.method(name)
+    Slack::Chat.define_singleton_method(name) do |*args, **kwargs|
+      answer.respond_to?(:call) ? answer.call(*args, **kwargs) : answer
+    end
+    yield
+  ensure
+    Slack::Chat.define_singleton_method(name, original)
+  end
+
+  def in_the_firehouse
+    ENV["FIREHOUSE_CHANNEL_ID"] = "C0FIRE"
+    Fd::CaseReport.create!(case_id: @kase.id, is_anonymous: true, source_app: "shroud",
+      received_at: 2.days.ago, forwarded_ts: "1700.0001")
+    Fd::StaffSlack.keep!("UME", token: "xoxp-real", team_id: "T0FIRE", scopes: "chat:write")
+  end
+
+  def say(body = "did we warn them before?")
+    post fd_case_chats_path(@kase), params: { body: body }, as: :turbo_stream
+    Fd::CaseChat.where(case_id: @kase.id).last
+  end
+
+  test "with slack linked, the message goes out as you and the bot leaves it alone" do
+    in_the_firehouse
+    sent = nil
+    answer = lambda do |**args|
+      sent = args
+      { "ok" => true, "ts" => "1700.0009" }
+    end
+
+    said = instead_of(:post_message, answer) { say }
+
+    assert_equal "1700.0009", said.mirrored_ts
+    assert_equal "user", said.mirrored_as
+    assert_not_nil said.mirrored_at
+    assert_equal "C0FIRE", sent[:channel]
+    assert_equal "1700.0001", sent[:thread_ts], "it lands in the case thread, not the channel"
+    assert_equal "xoxp-real", sent[:token]
+    assert_equal "did we warn them before?", sent[:text]
+    assert_not_nil Fd::StaffSlack.held_by("UME").last_used_at
+  ensure
+    ENV.delete("FIREHOUSE_CHANNEL_ID")
+  end
+
+  test "slack refusing it hands the message back to the bot and says why" do
+    in_the_firehouse
+    refusal = ->(**) { { "ok" => false, "error" => "not_in_channel" } }
+
+    said = instead_of(:post_message, refusal) { say }
+
+    assert_nil said.mirrored_ts, "nothing was sent, so nemo still has to carry it"
+    assert_nil said.mirrored_as
+    assert_equal "not_in_channel", Fd::StaffSlack.held_by("UME").last_error
+  ensure
+    ENV.delete("FIREHOUSE_CHANNEL_ID")
+  end
+
+  test "slack being unreachable hands the message back to the bot" do
+    in_the_firehouse
+    dead = ->(**) { raise Slack::Chat::Unavailable, "execution expired" }
+
+    said = instead_of(:post_message, dead) { say }
+
+    assert_nil said.mirrored_as
+    assert_match(/execution expired/, Fd::StaffSlack.held_by("UME").last_error)
+  ensure
+    ENV.delete("FIREHOUSE_CHANNEL_ID")
+  end
+
+  test "without slack linked, the message is left for the bot untouched" do
+    ENV["FIREHOUSE_CHANNEL_ID"] = "C0FIRE"
+    Fd::CaseReport.create!(case_id: @kase.id, is_anonymous: true, source_app: "shroud",
+      received_at: 2.days.ago, forwarded_ts: "1700.0001")
+
+    said = instead_of(:post_message, ->(**) { flunk "nothing should be sent" }) { say }
+
+    assert_nil said.mirrored_as
+    assert_nil said.mirrored_ts
+  ensure
+    ENV.delete("FIREHOUSE_CHANNEL_ID")
+  end
+
+  test "a case with no card in the firehouse is left for the bot" do
+    ENV["FIREHOUSE_CHANNEL_ID"] = "C0FIRE"
+    Fd::StaffSlack.keep!("UME", token: "xoxp-real", team_id: "T0FIRE", scopes: "chat:write")
+
+    said = instead_of(:post_message, ->(**) { flunk "there is no thread to post into" }) { say }
+
+    assert_nil said.mirrored_as
+  ensure
+    ENV.delete("FIREHOUSE_CHANNEL_ID")
+  end
+
+  test "a mention survives, the rest is escaped for slack" do
+    assert_equal "&lt;b&gt; <@U0A1> &amp; me",
+      Fd::SlackPost.escape("<b> <@U0A1> & me")
+  end
 end

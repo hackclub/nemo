@@ -79,6 +79,7 @@ SELECT c.id, c.author_user_id, c.body, r.forwarded_ts
 FROM fd.case_chat c
 JOIN fd.case_reports r ON r.case_id = c.case_id
 WHERE c.case_id = %s AND c.ts IS NULL AND c.mirrored_ts IS NULL
+  AND (c.mirrored_as IS NULL OR c.said_at < now() - interval '2 minutes')
   AND r.forwarded_ts IS NOT NULL
 ORDER BY c.said_at, c.id
 LIMIT 20
@@ -89,11 +90,13 @@ SELECT DISTINCT c.case_id
 FROM fd.case_chat c
 JOIN fd.case_reports r ON r.case_id = c.case_id
 WHERE c.ts IS NULL AND c.mirrored_ts IS NULL AND r.forwarded_ts IS NOT NULL
+  AND (c.mirrored_as IS NULL OR c.said_at < now() - interval '2 minutes')
 LIMIT 50
 """
 
 MIRRORED = """
-UPDATE fd.case_chat SET mirrored_ts = %s, mirrored_at = now(), last_seen_at = now()
+UPDATE fd.case_chat
+SET mirrored_ts = %s, mirrored_at = now(), mirrored_as = 'nemo', last_seen_at = now()
 WHERE id = %s AND mirrored_ts IS NULL
 """
 
