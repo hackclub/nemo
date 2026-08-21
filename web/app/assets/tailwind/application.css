@@ -2657,7 +2657,13 @@
   .chat {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
-    min-height: 26rem;
+    height: min(68vh, 40rem);
+  }
+
+  .chat > turbo-frame {
+    display: block;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .chat-head {
@@ -2673,7 +2679,14 @@
     gap: var(--s-2xs);
     align-content: start;
     padding: var(--s-md);
+    height: 100%;
     overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .chat-earlier {
+    text-align: center;
+    padding-bottom: var(--s-2xs);
   }
 
   .said-row {

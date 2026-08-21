@@ -4,7 +4,7 @@
 <% queued = local_assigns.fetch(:queued, []) %>
 <% earlier = local_assigns.fetch(:earlier, 0) %>
 
-<div class="chat">
+<div class="chat" data-controller="stick">
   <div class="chat-head">
     <% if reports.any? %>
       <%= face(reports.first.anonymous? ? nil : reports.first.reporter_user_id) %>

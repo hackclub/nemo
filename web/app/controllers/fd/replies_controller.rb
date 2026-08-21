@@ -23,10 +23,7 @@ module Fd
       end
 
       respond_to do |format|
-        format.turbo_stream do
-          render turbo_stream: turbo_stream.action(:reload_frame, "chat-log-#{kase.id}",
-            attributes: { src: fd_case_chat_log_path(kase) })
-        end
+        format.turbo_stream { render turbo_stream: CaseChatBroadcast.tag(kase.id) }
         format.html { redirect_to back_to(kase), notice: "on its way to them" }
       end
     end
