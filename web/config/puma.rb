@@ -29,7 +29,15 @@ threads_count = ENV.fetch("RAILS_MAX_THREADS", 3)
 threads threads_count, threads_count
 
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.
-port ENV.fetch("PORT", 3000)
+# Set SSL_LOCAL=1 with a self-signed cert in tmp/certs to serve https instead, which is
+# what Slack needs before it will redirect back to a callback on this machine.
+if ENV["SSL_LOCAL"]
+  ssl_bind ENV.fetch("SSL_HOST", "127.0.0.1"), ENV.fetch("PORT", 3000),
+    key: ENV.fetch("SSL_KEY", "tmp/certs/localhost.key"),
+    cert: ENV.fetch("SSL_CERT", "tmp/certs/localhost.crt")
+else
+  port ENV.fetch("PORT", 3000)
+end
 
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart
