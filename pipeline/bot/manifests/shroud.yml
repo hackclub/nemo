@@ -15,6 +15,7 @@ oauth_config:
       - im:history
       - im:write
       - files:read
+      - files:write
 
 settings:
   event_subscriptions:

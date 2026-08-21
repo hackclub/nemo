@@ -2,6 +2,7 @@ import logging
 import os
 
 from bot.engine import access, audit, parse, session
+from bot.nemo import answer
 from bot.nemo import cards
 from bot.nemo import files as carry
 
@@ -304,9 +305,20 @@ def register(app, on_reply=None):
             return
         if event.get("channel") != firehouse_channel():
             return
-        if event.get("bot_id") or event.get("subtype"):
+        if event.get("bot_id") or event.get("subtype") not in (None, "file_share"):
             return
         thread_ts = event.get("thread_ts")
         if not thread_ts or thread_ts == event.get("ts"):
             return
-        on_reply(thread_ts, event.get("text"), event.get("user"))
+
+        said = answer.meant_for_them(event.get("text"))
+        if said is None:
+            return
+
+        on_reply(
+            thread_ts,
+            said,
+            event.get("user"),
+            files=event.get("files") or [],
+            at=(event["channel"], event["ts"]),
+        )

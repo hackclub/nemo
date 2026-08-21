@@ -1,6 +1,10 @@
 import logging
+import urllib.error
+import urllib.request
 
 from bot.engine import files
+
+TIMEOUT = 30
 
 log = logging.getLogger("bot.nemo")
 
@@ -53,3 +57,43 @@ def share(client, conn, message_id, channel_id, thread_ts):
     if sent:
         log.info("nemo: carried %d file(s) into the firehouse", sent)
     return sent
+
+
+def fetch(url, token, limit):
+    request = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT) as answer:
+            body = answer.read(limit + 1)
+            return body if len(body) <= limit else None
+    except (urllib.error.URLError, TimeoutError, OSError) as trouble:
+        log.warning("nemo: could not fetch %s: %s", url, trouble)
+        return None
+
+
+def to_member(nemo_client, shroud_client, attached, channel_id, thread_ts):
+    if nemo_client is None or shroud_client is None:
+        return 0
+
+    limit = files.cap()
+    carried = 0
+
+    for item in attached:
+        url = item.get("url_private_download") or item.get("url_private")
+        name = item.get("name") or item.get("id") or "file"
+        if not url:
+            continue
+
+        body = fetch(url, nemo_client.token, limit)
+        if body is None:
+            log.warning("nemo: %s was not carried to the member", name)
+            continue
+
+        try:
+            shroud_client.files_upload_v2(
+                channel=channel_id, thread_ts=thread_ts, content=body, filename=name
+            )
+            carried += 1
+        except Exception as failure:
+            log.warning("nemo: could not hand %s to the member: %s", name, failure)
+
+    return carried

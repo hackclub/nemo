@@ -12,10 +12,12 @@ oauth_config:
   scopes:
     bot:
       - chat:write
+      - files:read
       - files:write
       - channels:history
       - groups:history
       - reactions:read
+      - reactions:write
       - users:read
 
 settings:

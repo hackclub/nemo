@@ -1,17 +1,24 @@
 import logging
 
 from bot.engine import case, intake, session
+from bot.nemo import answer
 from bot.engine.whoami import bot_user_id
 from bot.nemo import channel
+from bot.nemo import files as carry
 from bot.nemo.cards import report as cards
 
 log = logging.getLogger("bot.relay")
 
 WHO_TO_REACH = """
-SELECT c.id, c.channel_id, c.thread_ts, c.closed_at
+SELECT c.id, c.channel_id, c.thread_ts, c.closed_at, c.report_id
 FROM fd.intake_messages m
 JOIN fd.intake_conversations c ON c.id = m.conversation_id
 WHERE m.mirrored_ts = %s
+"""
+
+FIRST_ANSWER = """
+UPDATE fd.case_reports SET first_replied_at = now()
+WHERE id = %s AND first_replied_at IS NULL
 """
 
 
@@ -41,11 +48,33 @@ class Relay:
 
         return case_id
 
-    def answered(self, thread_ts, text, sent_by):
+    def mark(self, at, emoji):
+        if at is None or self.nemo_client is None:
+            return
+        channel_id, ts = at
+        try:
+            self.nemo_client.reactions_add(channel=channel_id, timestamp=ts, name=emoji)
+        except Exception as failure:
+            log.warning("relay: could not mark %s with %s: %s", ts, emoji, failure)
+
+    def refuse(self, at, sent_by, said):
+        self.mark(at, answer.STUCK)
+        if at is None or self.nemo_client is None:
+            return None
+        channel_id, ts = at
+        try:
+            self.nemo_client.chat_postEphemeral(
+                channel=channel_id, user=sent_by, thread_ts=ts, text=said
+            )
+        except Exception as failure:
+            log.warning("relay: could not say why it did not send: %s", failure)
+        return None
+
+    def answered(self, thread_ts, text, sent_by, files=(), at=None):
         if self.shroud_client is None:
             log.warning("relay: shroud is not running, cannot answer thread %s", thread_ts)
-            return None
-        if not (text or "").strip():
+            return self.refuse(at, sent_by, "shroud is not running, so nothing was sent")
+        if not (text or "").strip() and not files:
             return None
 
         with session() as conn:
@@ -53,19 +82,26 @@ class Relay:
         if not row:
             log.info("relay: thread %s is not a report thread", thread_ts)
             return None
-        conversation_id, channel_id, member_thread_ts, closed_at = row
+        conversation_id, channel_id, member_thread_ts, closed_at, report_id = row
         if closed_at:
             log.info("relay: conversation %s is closed, not delivering", conversation_id)
-            return None
+            return self.refuse(
+                at, sent_by, f"conversation {conversation_id} is closed, so nothing was sent"
+            )
 
         said = cards.to_member(text)
-        sent = self.shroud_client.chat_postMessage(
-            channel=channel_id,
-            thread_ts=member_thread_ts,
-            text=said,
-            unfurl_links=False,
-            unfurl_media=False,
-        )
+        try:
+            sent = self.shroud_client.chat_postMessage(
+                channel=channel_id,
+                thread_ts=member_thread_ts,
+                text=said,
+                unfurl_links=False,
+                unfurl_media=False,
+            )
+        except Exception as failure:
+            log.warning("relay: could not reach conversation %s: %s", conversation_id, failure)
+            return self.refuse(at, sent_by, f"slack refused it: {failure}")
+
         with session() as conn:
             intake.record(
                 conn,
@@ -78,5 +114,14 @@ class Relay:
                 direction="outbound",
                 sent_by=sent_by,
             )
+            if report_id:
+                conn.execute(FIRST_ANSWER, (report_id,))
+
+        if files:
+            carry.to_member(
+                self.nemo_client, self.shroud_client, files, channel_id, member_thread_ts
+            )
+
+        self.mark(at, answer.SENT)
         log.info("relay: carried an answer to conversation %s", conversation_id)
         return sent["ts"]
