@@ -3,7 +3,7 @@ import os
 import threading
 
 from bot.engine import session
-from bot.nemo import channel
+from bot.nemo import channel, chat
 
 log = logging.getLogger("bot.nemo")
 
@@ -53,9 +53,13 @@ def once(client, channel_id=None):
         missing = [row[0] for row in conn.execute(UNCARDED).fetchall()]
         standing = [row[0] for row in conn.execute(WORTH_REDRAWING).fetchall()]
 
+    with session() as conn:
+        unmirrored = chat.waiting_anywhere(conn)
+
     posted = each(missing, "still has no card", channel.post_report, client, channel_id)
     drawn = each(standing, "could not be redrawn", channel.redraw, client, channel_id)
-    return posted, drawn
+    carried = each(unmirrored, "has chat that did not go out", channel.mirror, client, channel_id)
+    return posted, drawn, carried
 
 
 def start(client, stopping, channel_id=None):

@@ -2,7 +2,7 @@ import logging
 import os
 
 from bot.engine import access, audit, parse, session
-from bot.nemo import answer, chat
+from bot.nemo import answer, chat, who
 from bot.nemo import cards
 from bot.nemo import files as carry
 
@@ -269,6 +269,31 @@ def whisper(client, body, said):
 def claimed(conn, case_id, user_id):
     conn.execute(CLAIM, (case_id, user_id, user_id))
     audit.record(conn, "assignee", case_id, "claimed", user_id, after={"user_id": user_id})
+
+
+def mirror(client, conn, case_id, channel_id=None):
+    carried = 0
+
+    for chat_id, author, body, thread_ts in chat.waiting(conn, case_id):
+        said = f"*{who.name(client, author)}* {cards.report.escape(body)}"
+        try:
+            sent = client.chat_postMessage(
+                channel=channel_id or firehouse_channel(),
+                thread_ts=thread_ts,
+                text=said,
+                unfurl_links=False,
+                unfurl_media=False,
+            )
+        except Exception as failure:
+            log.warning("nemo: chat %s did not reach the thread: %s", chat_id, failure)
+            break
+
+        chat.mirrored(conn, chat_id, sent["ts"])
+        carried += 1
+
+    if carried:
+        log.info("nemo: carried %s message(s) into case %s's thread", carried, case_id)
+    return carried
 
 
 def register(app, on_reply=None):

@@ -72,3 +72,39 @@ def edit(conn, channel_id, message):
 def delete(conn, channel_id, ts):
     row = conn.execute(DELETE, (channel_id, ts)).fetchone()
     return row[0] if row else None
+
+
+WAITING = """
+SELECT c.id, c.author_user_id, c.body, r.forwarded_ts
+FROM fd.case_chat c
+JOIN fd.case_reports r ON r.case_id = c.case_id
+WHERE c.case_id = %s AND c.ts IS NULL AND c.mirrored_ts IS NULL
+  AND r.forwarded_ts IS NOT NULL
+ORDER BY c.said_at, c.id
+LIMIT 20
+"""
+
+WAITING_ANYWHERE = """
+SELECT DISTINCT c.case_id
+FROM fd.case_chat c
+JOIN fd.case_reports r ON r.case_id = c.case_id
+WHERE c.ts IS NULL AND c.mirrored_ts IS NULL AND r.forwarded_ts IS NOT NULL
+LIMIT 50
+"""
+
+MIRRORED = """
+UPDATE fd.case_chat SET mirrored_ts = %s, mirrored_at = now(), last_seen_at = now()
+WHERE id = %s AND mirrored_ts IS NULL
+"""
+
+
+def waiting(conn, case_id):
+    return conn.execute(WAITING, (case_id,)).fetchall()
+
+
+def waiting_anywhere(conn):
+    return [row[0] for row in conn.execute(WAITING_ANYWHERE).fetchall()]
+
+
+def mirrored(conn, chat_id, ts):
+    conn.execute(MIRRORED, (ts, chat_id))
