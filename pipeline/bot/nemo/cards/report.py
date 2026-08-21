@@ -187,14 +187,5 @@ def fallback(case):
     return f"Case {case['case_id']}: a report came in"
 
 
-def follow_up(body, file_count=0):
-    text = escape(said(body))
-    quoted = "\n".join(f"> {line}" if line else ">" for line in text.splitlines())
-    if not file_count:
-        return quoted
-    plural = "s" if file_count != 1 else ""
-    return f"{quoted}\n_they also sent {file_count} file{plural}_"
-
-
 def to_member(body):
     return escape(said(body))

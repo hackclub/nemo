@@ -88,7 +88,6 @@ def test_mentions_cannot_ping_the_firehouse():
 
 def test_a_relayed_message_is_escaped_because_it_is_markdown():
     assert "&lt;@U0BAD&gt;" in card.to_member("it was <@U0BAD>")
-    assert "&lt;@U0BAD&gt;" in card.follow_up("it was <@U0BAD>")
 
 
 def test_ampersands_survive_escaping_where_it_matters():

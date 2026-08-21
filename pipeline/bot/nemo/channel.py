@@ -62,16 +62,15 @@ ORDER BY m.posted_at, s.id
 
 
 FOLLOW_UP = """
-SELECT m.body, m.mirrored_ts, r.forwarded_ts, m.conversation_id
+SELECT m.body, m.mirrored_ts, r.forwarded_ts, m.conversation_id,
+       r.is_anonymous, r.reporter_user_id
 FROM fd.intake_messages m
 JOIN fd.intake_conversations c ON c.id = m.conversation_id
 LEFT JOIN fd.case_reports r ON r.id = c.report_id
 WHERE m.id = %s
 """
 
-COUNT_FILES = """
-SELECT count(*) FROM fd.intake_message_files WHERE message_id = %s
-"""
+ANONYMOUS = "Anonymous reporter"
 
 HELD_BY = """
 SELECT user_id FROM fd.case_assignees WHERE case_id = %s ORDER BY assigned_at
@@ -202,24 +201,35 @@ def post_report(client, conn, case_id, channel_id=None):
     return ts
 
 
+def as_reporter(client, anonymous, reporter_user_id):
+    if anonymous or not reporter_user_id:
+        return {"username": ANONYMOUS}
+
+    seen = who.face(client, reporter_user_id)
+    wearing = {"username": seen["name"]}
+    if seen["icon"]:
+        wearing["icon_url"] = seen["icon"]
+    return wearing
+
+
 def post_follow_up(client, conn, message_id, channel_id=None):
     row = conn.execute(FOLLOW_UP, (message_id,)).fetchone()
     if not row:
         return None
-    body, mirrored, forwarded, _ = row
+    body, mirrored, forwarded, _, anonymous, reporter = row
     if mirrored:
         return mirrored
     if not forwarded:
         log.warning("nemo: message %s has no card to hang under", message_id)
         return None
 
-    files = conn.execute(COUNT_FILES, (message_id,)).fetchone()[0]
     sent = client.chat_postMessage(
         channel=channel_id or firehouse_channel(),
         thread_ts=forwarded,
-        text=cards.report.follow_up(body, files),
+        text=cards.report.to_member(body),
         unfurl_links=False,
         unfurl_media=False,
+        **as_reporter(client, anonymous, reporter),
     )
     ts = sent["ts"]
     conn.execute(
