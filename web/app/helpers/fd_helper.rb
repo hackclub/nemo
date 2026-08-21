@@ -1011,7 +1011,9 @@ module FdHelper
     "grant/revoked" => "Took access from",
     "permission/granted" => "Gave a role",
     "permission/revoked" => "Took from a role",
-    "identity/read" => "Read the identity of"
+    "identity/read" => "Read the identity of",
+    "slack_account/linked" => "Linked their Slack account",
+    "slack_account/unlinked" => "Unlinked their Slack account"
   }.freeze
 
   def why_not(key, record = nil)

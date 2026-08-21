@@ -23,6 +23,22 @@ module Web
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks])
 
+    ENCRYPTION_KEYS = %w[
+      FD_ENCRYPTION_PRIMARY_KEY FD_ENCRYPTION_DETERMINISTIC_KEY FD_ENCRYPTION_SALT
+    ].freeze
+    ENCRYPTION_STANDIN = "mnemosyne-encryption-key-outside-production".freeze
+
+    keys = ENCRYPTION_KEYS.map { |name| ENV[name].presence }
+    if keys.any?(&:nil?)
+      raise "#{ENCRYPTION_KEYS.join(", ")} must be set" if Rails.env.production?
+
+      keys = keys.map { ENCRYPTION_STANDIN }
+    end
+
+    config.active_record.encryption.primary_key = keys[0]
+    config.active_record.encryption.deterministic_key = keys[1]
+    config.active_record.encryption.key_derivation_salt = keys[2]
+
     # Configuration for the application, engines, and railties goes here.
     #
     # These settings can be overridden in specific environments using the files

@@ -12,7 +12,8 @@ module Fd
     SCOPES = %i[assigned author].freeze
 
     AREAS = { "case" => "Cases", "decision" => "Decisions", "member" => "People and access",
-              "identity" => "People and access", "access" => "People and access" }.freeze
+              "identity" => "People and access", "access" => "People and access",
+              "slack" => "Your own account" }.freeze
 
     ALL = {
       "case.read" => {
@@ -80,6 +81,10 @@ module Fd
       "identity.read" => {
         label: "See the real name and email behind an id", roles: EVERYONE, events: [],
         logged: true
+      },
+      "slack.link" => {
+        label: "Link their own Slack account, to send as themselves", roles: EVERYONE,
+        events: %w[slack_account/linked slack_account/unlinked]
       },
       "access.read" => {
         label: "See who holds access and what they did with it", roles: MANAGER, events: []

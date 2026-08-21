@@ -15,7 +15,8 @@ module Fd
       "Fd::Decision" => "decision",
       "Fd::DecisionThread" => "decision_thread",
       "Fd::AccessGrant" => "grant",
-      "Fd::RolePermission" => "permission"
+      "Fd::RolePermission" => "permission",
+      "Fd::StaffSlack" => "slack_account"
     }.freeze
 
     VERBS = %w[
@@ -24,12 +25,14 @@ module Fd
       noted deleted attached detached flagged unflagged closed answered
       proposed settled amended superseded dropped followed unfollowed
       granted revoked refused
+      linked unlinked
     ].freeze
 
     REDACTED_COLUMNS = {
       "note" => %w[body],
       "case" => %w[member_note],
-      "identity" => %w[real_name first_name last_name email]
+      "identity" => %w[real_name first_name last_name email],
+      "slack_account" => %w[user_token]
     }.freeze
 
     IGNORED_COLUMNS = %w[id created_at updated_at].freeze
