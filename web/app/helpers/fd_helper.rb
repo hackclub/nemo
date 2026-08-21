@@ -449,14 +449,6 @@ module FdHelper
     report.received_at.strftime("%-d %b")
   end
 
-  def report_state_chip(report, kase)
-    return tag.span("told how it ended", class: "chip chip-good") if report.told_of_outcome?
-    return tag.span("not told yet", class: "chip chip-warn") if kase.resolved?
-    return nil if report.replied?
-
-    tag.span("no answer yet", class: "chip chip-warn")
-  end
-
   def report_when_line(report, kase)
     parts = [report.received_at.strftime("%-d %b %Y, %H:%M")]
     parts << report.closed_line(names) if report.told_of_outcome?

@@ -11,11 +11,13 @@ module Fd
     scope :newest_first, -> { order(posted_at: :desc, id: :desc) }
     scope :from_them, -> { where(direction: "inbound") }
     scope :from_us, -> { where(direction: "outbound") }
+    scope :said_by_somebody, -> { where(direction: "inbound").or(where.not(sent_by: nil)) }
 
     def self.tail(conversation_ids, limit: SHOWN)
       return [] if conversation_ids.blank?
 
-      where(conversation_id: conversation_ids).newest_first.limit(limit).to_a.reverse
+      where(conversation_id: conversation_ids).said_by_somebody
+        .newest_first.limit(limit).to_a.reverse
     end
 
     def theirs?

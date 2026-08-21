@@ -168,7 +168,7 @@
   <% if @tab == "notes" %>
     <div class="card notes-card">
       <div class="notes-head">
-        <span class="lbl grow">What the team said to itself</span>
+        <span class="lbl grow">Notes</span>
         <%= opens_modal "case.note", "Add a note", opens: "add-note" %>
       </div>
 
@@ -188,7 +188,7 @@
           <% end %>
         </div>
       <% else %>
-        <p class="notes-none">No notes yet. They stay internal, and nobody outside FD sees them.</p>
+        <p class="notes-none">No notes yet.</p>
       <% end %>
     </div>
   <% end %>
