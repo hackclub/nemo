@@ -21,7 +21,7 @@ module Fd
     VERBS = %w[
       opened claimed unclaimed resolved reopened categorised
       performed reversed received
-      noted deleted attached detached flagged unflagged closed
+      noted deleted attached detached flagged unflagged closed answered
       proposed settled amended superseded dropped followed unfollowed
       granted revoked refused
     ].freeze

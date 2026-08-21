@@ -45,7 +45,9 @@
 
   <% if composer && !kase.resolved? %>
     <%= form_with url: fd_case_notes_path(kase), method: :post, class: "chat-composer",
-          data: { controller: "chat", chat_reporter_value: reports.any? },
+          data: { controller: "chat", chat_reporter_value: reports.any?,
+                  chat_note_url_value: fd_case_notes_path(kase),
+                  chat_reply_url_value: fd_case_replies_path(kase) },
           html: { autocomplete: "off" } do %>
       <%= hidden_field_tag :from, "report", id: nil %>
 

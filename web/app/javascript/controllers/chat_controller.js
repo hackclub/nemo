@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["field", "pill", "send"]
-  static values = { reporter: Boolean }
+  static values = { reporter: Boolean, noteUrl: String, replyUrl: String }
 
   connect() {
     this.toReporter = false
@@ -45,10 +45,8 @@ export default class extends Controller {
   aim(atReporter) {
     this.toReporter = atReporter
     this.pillTarget.hidden = !atReporter
-    this.sendTarget.disabled = atReporter
-    this.sendTarget.title = atReporter
-      ? "Fire Engine cannot send DMs yet, replies go out from Slack"
-      : "Send"
+    this.element.action = atReporter ? this.replyUrlValue : this.noteUrlValue
+    this.sendTarget.title = atReporter ? "Send to the reporter" : "Send to the team"
   }
 
   pickingAMention() {

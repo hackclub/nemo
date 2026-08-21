@@ -104,7 +104,7 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     get fd_settings_path(tab: "roles")
 
     assert_response :success
-    assert_select ".band-label", text: /Cases · 9/
+    assert_select ".band-label", text: /Cases · 10/
     assert_select ".band-label", text: /Decisions · 4/
     assert_select ".band-label", text: /People and access · 4/
     assert_select "td.mono", text: "case.reverse"
