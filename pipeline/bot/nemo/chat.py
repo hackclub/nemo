@@ -1,6 +1,7 @@
 from psycopg.types.json import Jsonb
 
 from bot.engine import parse
+from bot.nemo.cards import report as cards
 
 CASE_OF_THREAD = """
 SELECT case_id FROM fd.case_reports WHERE forwarded_ts = %s
@@ -30,12 +31,65 @@ RETURNING id
 """
 
 
+ADOPT = """
+UPDATE fd.case_chat
+SET channel_id = %s, ts = %s, last_seen_at = now()
+WHERE mirrored_ts = %s AND ts IS NULL
+RETURNING id
+"""
+
+PENDING = """
+SELECT id, body FROM fd.case_chat
+WHERE case_id = %s AND author_user_id = %s AND mirrored_as = 'user'
+  AND mirrored_ts IS NULL AND ts IS NULL AND said_at > now() - interval '2 minutes'
+ORDER BY said_at
+"""
+
+ADOPT_PENDING = """
+UPDATE fd.case_chat
+SET channel_id = %s, ts = %s, mirrored_ts = %s, mirrored_at = now(), last_seen_at = now()
+WHERE id = %s AND ts IS NULL
+RETURNING id
+"""
+
+
 def case_of_thread(conn, thread_ts):
     row = conn.execute(CASE_OF_THREAD, (thread_ts,)).fetchone()
     return row[0] if row else None
 
 
+def adopt(conn, case_id, event):
+    row = conn.execute(ADOPT, (event["channel"], event["ts"], event["ts"])).fetchone()
+    if row:
+        return row[0]
+
+    return adopt_late(conn, case_id, event)
+
+
+def adopt_late(conn, case_id, event):
+    said = event.get("text") or ""
+    waiting = conn.execute(PENDING, (case_id, event.get("user"))).fetchall()
+    for chat_id, body in waiting:
+        if cards.escape_but_mentions(body) != said:
+            continue
+        row = conn.execute(
+            ADOPT_PENDING, (event["channel"], event["ts"], event["ts"], chat_id)
+        ).fetchone()
+        if row:
+            return row[0]
+
+    return None
+
+
 def keep(conn, case_id, event):
+    ours = adopt(conn, case_id, event)
+    if ours:
+        return ours, False
+
+    return insert(conn, case_id, event)
+
+
+def insert(conn, case_id, event):
     blocks = event.get("blocks")
     row = conn.execute(
         KEEP,
