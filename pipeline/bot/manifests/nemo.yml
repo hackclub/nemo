@@ -10,7 +10,7 @@ features:
 
 oauth_config:
   redirect_urls:
-    - http://localhost:3000/fd/slack_account/callback
+    - https://localhost:3000/fd/slack_account/callback
   scopes:
     user:
       - chat:write
