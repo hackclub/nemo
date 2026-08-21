@@ -2,7 +2,7 @@ import logging
 import os
 
 from bot.engine import access, audit, parse, session
-from bot.nemo import answer
+from bot.nemo import answer, chat
 from bot.nemo import cards
 from bot.nemo import files as carry
 
@@ -301,20 +301,27 @@ def register(app, on_reply=None):
 
     @app.event("message")
     def on_message(event):
-        if on_reply is None:
-            return
         if event.get("channel") != firehouse_channel():
             return
-        if event.get("bot_id") or event.get("subtype") not in (None, "file_share"):
+
+        subtype = event.get("subtype")
+        if subtype == "message_changed":
+            return on_changed(event)
+        if subtype == "message_deleted":
+            return on_deleted(event)
+        if event.get("bot_id") or subtype not in (None, "file_share"):
             return
+
         thread_ts = event.get("thread_ts")
         if not thread_ts or thread_ts == event.get("ts"):
             return
 
         said = answer.meant_for_them(event.get("text"))
         if said is None:
-            return
+            return ours(event, thread_ts)
 
+        if on_reply is None:
+            return
         on_reply(
             thread_ts,
             said,
@@ -322,3 +329,30 @@ def register(app, on_reply=None):
             files=event.get("files") or [],
             at=(event["channel"], event["ts"]),
         )
+
+    def ours(event, thread_ts):
+        with session() as conn:
+            case_id = chat.case_of_thread(conn, thread_ts)
+            if case_id is None:
+                return
+            chat_id, fresh = chat.keep(conn, case_id, event)
+
+        if fresh:
+            log.info("nemo: case %s heard us say something (%s)", case_id, chat_id)
+
+    def on_changed(event):
+        message = event.get("message") or {}
+        if not message.get("ts") or message.get("subtype") == "bot_message":
+            return
+        with session() as conn:
+            changed = chat.edit(conn, event["channel"], message)
+        if changed:
+            log.info("nemo: chat %s was edited", changed)
+
+    def on_deleted(event):
+        if not event.get("deleted_ts"):
+            return
+        with session() as conn:
+            gone = chat.delete(conn, event["channel"], event["deleted_ts"])
+        if gone:
+            log.info("nemo: chat %s was deleted in slack, the words are kept", gone)
