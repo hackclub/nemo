@@ -4,10 +4,10 @@ module Fd
       keyword_init: true)
 
     KINDS = {
-      "all" => "All",
-      "subject" => "As subject",
-      "logged" => "Logged in",
-      "actions" => "Actions"
+      "all" => "Everything",
+      "cases" => "Cases",
+      "actions" => "Actions",
+      "notes" => "Notes"
     }.freeze
 
     def self.for(record, names: Names.none, only: "all")
@@ -21,7 +21,7 @@ module Fd
 
     def entries(only = "all")
       wanted = KINDS.key?(only) ? only : "all"
-      all = case_entries + logged_entries + action_entries
+      all = case_entries + logged_entries + action_entries + note_entries
       all = all.select { |entry| entry.kind == wanted } unless wanted == "all"
       all.sort_by { |entry| [-entry.at.to_i, -entry.case_id.to_i] }
     end
@@ -35,7 +35,7 @@ module Fd
         Entry.new(
           at: kase.opened_at,
           title: "Case #{kase.id} opened",
-          kind: "subject",
+          kind: "cases",
           mark: "own",
           chips: ["subject", outcome_of(kase)].compact,
           detail: case_detail(kase),
@@ -50,7 +50,7 @@ module Fd
           Entry.new(
             at: kase.opened_at,
             title: "Case #{kase.id}",
-            kind: "logged",
+            kind: "cases",
             mark: "in",
             chips: [person.role, outcome_of(kase)].compact,
             detail: logged_detail(kase, person),
@@ -88,6 +88,21 @@ module Fd
         end
 
         list
+      end
+    end
+
+    def note_entries
+      record.notes.map do |note|
+        Entry.new(
+          at: note.created_at,
+          title: "Note",
+          kind: "notes",
+          mark: "note",
+          chips: [],
+          detail: "by #{names[note.author]}",
+          said: note.body,
+          case_id: nil
+        )
       end
     end
 

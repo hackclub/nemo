@@ -27,7 +27,11 @@
           </div>
           <div class="tl-what">
             <div class="tl-head">
-              <%= link_to entry.title, fd_case_path(entry.case_id), class: "tl-title" %>
+              <% if entry.case_id %>
+                <%= link_to entry.title, fd_case_path(entry.case_id), class: "tl-title" %>
+              <% else %>
+                <span class="tl-title"><%= entry.title %></span>
+              <% end %>
               <span class="tl-mark tl-mark-<%= entry.mark %>"><%= entry.mark %></span>
               <% entry.chips.each do |chip| %>
                 <span class="chip <%= history_chip_tone(chip) %>"><%= chip %></span>
@@ -35,6 +39,9 @@
             </div>
             <% if entry.detail.present? %>
               <div class="tl-detail"><%= entry.detail %></div>
+            <% end %>
+            <% if entry.said.present? %>
+              <div class="said"><%= mentioned(entry.said) %></div>
             <% end %>
           </div>
         </div>

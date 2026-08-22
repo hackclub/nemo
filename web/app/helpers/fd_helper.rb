@@ -163,9 +163,9 @@ module FdHelper
   end
 
   HISTORY_EMPTY = {
-    "subject" => "No case has ever been about them.",
-    "logged" => "They have never been logged in somebody else's case.",
-    "actions" => "Nothing has ever been done to them."
+    "cases" => "No case has ever involved them.",
+    "actions" => "Nothing has ever been done to them.",
+    "notes" => "Nobody has written a standing note about them."
   }.freeze
 
   def history_empty_note(only)

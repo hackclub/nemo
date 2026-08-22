@@ -18,7 +18,8 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
     entry = entries.sole
 
     assert_match(/\ACase \d+ opened\z/, entry.title)
-    assert_equal "subject", entry.kind
+    assert_equal "cases", entry.kind
+    assert_equal "own", entry.mark
     assert_equal %w[subject], entry.chips.first(1)
     assert_includes entry.chips, "action taken"
     assert_match(/spam/, entry.detail)
@@ -34,7 +35,8 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
     theirs.participants.create!(user_id: SUBJECT, role: "involved", detail: "it was aimed at them")
 
     entry = entries.sole
-    assert_equal "logged", entry.kind
+    assert_equal "cases", entry.kind
+    assert_equal "in", entry.mark, "the mark still tells it from a case about them"
     assert_includes entry.chips, "involved"
     assert_match(/it was aimed at them/, entry.detail)
     assert_match(/they were not the subject/, entry.detail)
@@ -77,8 +79,8 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
     other.participants.create!(user_id: SUBJECT, role: "reporter")
 
     assert_equal 3, entries.size
-    assert_equal ["subject"], entries(only: "subject").map(&:kind).uniq
-    assert_equal ["logged"], entries(only: "logged").map(&:kind).uniq
+    assert_equal ["cases"], entries(only: "cases").map(&:kind).uniq
+    assert_equal 2, entries(only: "cases").size, "one about them, one they were logged in"
     assert_equal ["actions"], entries(only: "actions").map(&:kind).uniq
   end
 
@@ -104,5 +106,51 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
 
   test "somebody with nothing has an empty history rather than an error" do
     assert_empty Fd::MemberTimeline.for(Fd::MemberRecord.new("UNOBODY"))
+  end
+
+  def note_about(user_id = SUBJECT, body: "a soft word early goes further", **attrs)
+    Fd::Note.create!({ subject_user_id: user_id, body: body, author: "UFF1" }.merge(attrs))
+  end
+
+  test "the filters are everything, cases, actions and notes" do
+    assert_equal %w[all cases actions notes], Fd::MemberTimeline::KINDS.keys
+  end
+
+  test "a standing note is an entry with the words in it" do
+    note_about
+    entry = entries(only: "notes").sole
+
+    assert_equal "Note", entry.title
+    assert_equal "note", entry.mark
+    assert_equal "a soft word early goes further", entry.said
+    assert_nil entry.case_id, "a standing note belongs to no case, so it links to none"
+    assert_match(/by /, entry.detail)
+  end
+
+  test "a note about somebody else stays on their record" do
+    note_about("USOMEBODY")
+    assert_empty entries(only: "notes")
+  end
+
+  test "a note on a case is not a standing note and does not appear here" do
+    kase = make_case(subject: SUBJECT, opened_at: 2.days.ago)
+    Fd::Note.create!(case_id: kase.id, body: "case note", author: "UFF1")
+
+    assert_empty entries(only: "notes")
+  end
+
+  test "a deleted note is gone from the record" do
+    note_about.update!(deleted_at: Time.current, deleted_by: "UFF1")
+    assert_empty entries(only: "notes")
+  end
+
+  test "notes sit in the same stream as cases and actions, newest first" do
+    kase = make_case(subject: SUBJECT, opened_at: 5.days.ago)
+    act_on kase, at: 3.days.ago
+    note_about(created_at: 1.day.ago)
+
+    said = entries
+    assert_equal 3, said.size
+    assert_equal %w[notes actions cases], said.map(&:kind)
   end
 end
