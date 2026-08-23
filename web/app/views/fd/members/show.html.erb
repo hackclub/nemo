@@ -34,9 +34,6 @@
           <span>logged in <b><%= @standing.logged_in %></b></span>
           <span>actions <b><%= @standing.actions %></b></span>
           <span>reversed <b><%= @standing.reversed %></b></span>
-          <% if @record.first_case_at %>
-            <span>first seen <b><%= @record.first_case_at.strftime("%-d %b %Y") %></b></span>
-          <% end %>
         </div>
       <% end %>
     </div>

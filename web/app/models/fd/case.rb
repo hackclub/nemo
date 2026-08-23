@@ -143,6 +143,22 @@ module Fd
       ordered.filter_map { |id| by_id[id] }
     end
 
+    FAMILY_HOPS = 5
+
+    def self.family_of(root_id, hops: FAMILY_HOPS)
+      ids = [root_id]
+      frontier = [root_id]
+
+      hops.times do
+        frontier = where(duplicate_of: frontier).where.not(id: ids).ids
+        break if frontier.empty?
+
+        ids += frontier
+      end
+
+      ids
+    end
+
     def self.root_for(id, hops: 10)
       current = id
       hops.times do
@@ -155,6 +171,29 @@ module Fd
     end
     scope :oldest_first, -> { order(:opened_at) }
     scope :newest_first, -> { order(opened_at: :desc) }
+
+    def family_ids
+      @family_ids ||= self.class.family_of(id)
+    end
+
+    def merged_in
+      @merged_in ||= self.class.where(id: family_ids - [id])
+        .includes(:subjects).oldest_first.to_a
+    end
+
+    def merged?
+      merged_in.any?
+    end
+
+    def folded?
+      duplicate_of.present?
+    end
+
+    def root
+      return self unless folded?
+
+      @root ||= self.class.find_by(id: self.class.root_for(id)) || self
+    end
 
     def subject_user_ids
       subjects.map(&:user_id)
