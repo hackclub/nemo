@@ -20,6 +20,8 @@ def text_of(blocks):
                 out.extend(part["text"] for part in element["elements"])
         elif block["type"] == "actions":
             out.extend(e["text"]["text"] for e in block["elements"])
+        elif block["type"] == "divider":
+            continue
         else:
             out.extend(e["text"] for e in block["elements"])
     return "\n".join(out)
@@ -40,10 +42,30 @@ def a_case(**over):
     return base
 
 
-def test_the_case_number_leads():
-    blocks = card.blocks(a_case())
+def test_the_header_says_what_it_is_and_where():
+    blocks = card.blocks(
+        a_case(
+            category_key="bullying",
+            shares=[{"kind": "forward", "source_channel_name": "lounge", "permalink": "https://x"}],
+        )
+    )
     assert blocks[0]["type"] == "header"
-    assert "Case 2545" in blocks[0]["text"]["text"]
+    assert blocks[0]["text"]["text"] == "Bullying in #lounge"
+
+
+def test_the_case_number_is_still_on_the_card():
+    assert "case *2545*" in text_of(card.blocks(a_case()))
+
+
+def test_a_category_with_no_channel_says_only_what_it_is():
+    assert card.blocks(a_case(category_key="spam"))[0]["text"]["text"] == "Spam"
+
+
+def test_a_channel_with_no_category_says_only_where():
+    blocks = card.blocks(
+        a_case(shares=[{"kind": "forward", "source_channel_name": "lounge", "permalink": "https://x"}])
+    )
+    assert blocks[0]["text"]["text"] == "A report about #lounge"
 
 
 def test_the_case_links_out_to_fire_engine():
@@ -55,9 +77,13 @@ def test_a_case_with_no_category_just_says_the_number():
     assert card.blocks(a_case())[0]["text"]["text"] == "Case 2545"
 
 
-def test_the_category_shows_when_it_is_set():
+def test_the_category_reads_as_words_not_as_a_slug():
     blocks = card.blocks(a_case(category_key="harassment_general"))
-    assert "harassment general" in blocks[0]["text"]["text"]
+    assert blocks[0]["text"]["text"] == "Systematic harassment, general"
+
+
+def test_a_category_the_table_does_not_know_still_reads():
+    assert card.blocks(a_case(category_key="brand_new"))[0]["text"]["text"] == "brand new"
 
 
 def test_the_header_stays_within_slacks_limit():
@@ -83,7 +109,7 @@ def test_mentions_cannot_ping_the_firehouse():
     blocks = card.blocks(a_case(body="it was <@U0BAD> in <#C123>"))
     said = quoted(blocks)
     assert "<@U0BAD>" in said, "a quote block carries text literally"
-    assert card.blocks(a_case(body="<!channel>"))[1]["type"] == "rich_text"
+    assert blocks_of("rich_text", card.blocks(a_case(body="<!channel>")))
 
 
 def test_a_relayed_message_is_escaped_because_it_is_markdown():
@@ -160,8 +186,14 @@ def test_evidence_with_no_channel_name_still_shows():
     assert "a linked message" in text_of(blocks)
 
 
-def test_a_card_with_nothing_attached_is_four_blocks():
-    assert len(card.blocks(a_case())) == 4
+def test_a_card_with_nothing_attached_carries_no_divider():
+    kinds = [block["type"] for block in card.blocks(a_case())]
+    assert kinds == ["header", "context", "rich_text", "section", "actions"]
+
+
+def test_something_attached_earns_the_divider():
+    kinds = [block["type"] for block in card.blocks(a_case(files=[{"name": "a.png"}]))]
+    assert kinds == ["header", "context", "rich_text", "section", "divider", "context", "actions"]
 
 
 def test_an_open_case_offers_to_be_claimed():
@@ -210,13 +242,17 @@ def test_a_resolved_case_reads_as_resolved():
     assert "*Open*" not in body
 
 
-def test_a_case_about_nobody_says_nothing_about_anybody():
-    assert "about" not in text_of(card.blocks(a_case()))
+def test_a_case_about_nobody_says_so_where_the_name_would_be():
+    body = text_of(card.blocks(a_case()))
+    assert "*About*\nnobody named yet" in body
+    assert "Their record" not in body
 
 
 def test_a_named_subject_brings_their_record():
     body = text_of(card.blocks(a_case(subjects=["UMILO"], other_cases=2)))
-    assert "about <@UMILO>, 2 other cases" in body
+    assert "*About*\n<@UMILO>" in body
+    assert "*Their record*\n2 other cases" in body
+    assert ":warning: *2 other cases*" in body, "and it is flagged up top"
 
 
 def test_a_subject_with_a_clean_record_says_so():
@@ -225,7 +261,7 @@ def test_a_subject_with_a_clean_record_says_so():
     )
 
 
-def test_what_they_sent_is_counted():
+def test_what_they_sent_is_named_not_counted():
     body = text_of(
         card.blocks(
             a_case(
@@ -234,8 +270,22 @@ def test_what_they_sent_is_counted():
             )
         )
     )
-    assert "1 file, 1 linked message" in body
+    assert "a.png" in body
+    assert "<https://x/p/1|a linked message>" in body
+
+
+def test_who_is_holding_it_is_a_field_of_its_own():
+    assert "*Held by*\nnobody yet" in text_of(card.blocks(a_case()))
+    assert "*Held by*\n<@UQUINN>" in text_of(card.blocks(a_case(assignees=["UQUINN"])))
+    assert "*Held by*\nclosed" in text_of(card.blocks(a_case(resolved_at="2026-08-21")))
 
 
 def test_the_fallback_names_the_case():
     assert "2545" in card.fallback(a_case())
+    assert "spam" in card.fallback(a_case(category_key="spam"))
+
+
+def test_the_card_carries_the_case_in_its_metadata():
+    carried = card.metadata(a_case(report_id=91))
+    assert carried["event_type"] == "fd_case_card"
+    assert carried["event_payload"] == {"case_id": 2545, "report_id": 91}

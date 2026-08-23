@@ -178,6 +178,7 @@ def post_report(client, conn, case_id, channel_id=None):
         channel=channel_id or firehouse_channel(),
         text=cards.report.fallback(case),
         blocks=built,
+        metadata=cards.report.metadata(case),
         unfurl_links=False,
         unfurl_media=False,
     )

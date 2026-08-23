@@ -1,0 +1,18 @@
+categories:
+  nos: Misconduct not otherwise specified
+  adult: Adult
+  insulting: Insulting or demeaning remarks
+  bullying: Bullying
+  discrimination: Discrimination
+  hateful: Hateful remarks
+  harassment_identity: Systematic harassment, identity based
+  harassment_general: Systematic harassment, general
+  nsfw_mild: Mild or ambiguous NSFW
+  nsfw_extreme: Clear and extreme NSFW
+  advertising: Advertising or recruiting
+  spam: Spam
+  fraud_hcb: HCB fraud
+  fraud_referral: Referral fraud
+  fraud_ysws: YSWS fraud
+  fraud_other: Other fraud
+  ban_evasion: Slack ban evasion

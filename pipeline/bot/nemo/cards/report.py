@@ -1,14 +1,31 @@
 import re
 
+import yaml
+
+from lib.paths import CATEGORIES_FILE
+
 MENTION = re.compile(r"(<[@#][A-Z0-9][A-Z0-9]*(?:\|[^>]*)?>)")
 
 SECTION_LIMIT = 3000
 CONTEXT_ELEMENTS = 10
 QUOTE_LIMIT = 2400
 HEADER_LIMIT = 150
+FIELD_LIMIT = 2000
+FIELDS_MAX = 10
 CUT = "\n[truncated, the whole thing is on the case page]"
 
 CLAIM = "case_claim"
+
+LABELS = None
+
+
+def category_label(key):
+    global LABELS
+    if LABELS is None:
+        LABELS = yaml.safe_load(CATEGORIES_FILE.read_text())["categories"]
+    if not key:
+        return None
+    return LABELS.get(key, key.replace("_", " "))
 
 
 def escape(text):
@@ -49,11 +66,30 @@ def context(parts):
     return {"type": "context", "elements": [{"type": "mrkdwn", "text": part} for part in kept]}
 
 
+def where(case):
+    for share in case.get("shares") or []:
+        if share.get("source_channel_name"):
+            return f"#{share['source_channel_name']}"
+    return None
+
+
+def headline(case):
+    label = category_label(case.get("category_key"))
+    channel = where(case)
+    if label and channel:
+        return f"{label} in {channel}"
+    if label:
+        return label
+    if channel:
+        return f"A report about {channel}"
+    return f"Case {case['case_id']}"
+
+
 def title(case):
-    name = f"Case {case['case_id']}"
-    category = (case.get("category_key") or "").replace("_", " ")
-    line = f"{name} · {category}" if category else name
-    return {"type": "header", "text": {"type": "plain_text", "text": line[:HEADER_LIMIT]}}
+    return {
+        "type": "header",
+        "text": {"type": "plain_text", "text": headline(case)[:HEADER_LIMIT]},
+    }
 
 
 def standing(case):
@@ -63,6 +99,54 @@ def standing(case):
     if held:
         return ", ".join(f"<@{user_id}>" for user_id in held) + " has it"
     return "*Open*"
+
+
+def priors(case):
+    others = case.get("other_cases") or 0
+    if not others or not case.get("subjects"):
+        return None
+    return f":warning: *{others} other case" + ("s*" if others != 1 else "*")
+
+
+def field(name, value):
+    return {"type": "mrkdwn", "text": f"*{name}*\n{value}"[:FIELD_LIMIT]}
+
+
+def subjects_line(case):
+    subjects = case.get("subjects") or []
+    if not subjects:
+        return "nobody named yet"
+    return ", ".join(f"<@{user_id}>" for user_id in subjects)
+
+
+def record_line(case):
+    if not case.get("subjects"):
+        return None
+    others = case.get("other_cases") or 0
+    if not others:
+        return "nothing else on their record"
+    return f"{others} other case" + ("s" if others != 1 else "")
+
+
+def holding_line(case):
+    held = case.get("assignees") or []
+    if held:
+        return ", ".join(f"<@{user_id}>" for user_id in held)
+    if case.get("resolved_at"):
+        return "closed"
+    return "nobody yet"
+
+
+def facts(case):
+    built = [
+        field("About", subjects_line(case)),
+        field("Reported by", " · ".join(part for part in [reporter(case), when(case)] if part)),
+    ]
+    record = record_line(case)
+    if record:
+        built.append(field("Their record", record))
+    built.append(field("Held by", holding_line(case)))
+    return {"type": "section", "fields": built[:FIELDS_MAX]}
 
 
 def when(case):
@@ -78,18 +162,7 @@ def link(case):
 def reporter(case):
     if case.get("is_anonymous", True) or not case.get("reporter_user_id"):
         return "anonymous"
-    return f"from <@{case['reporter_user_id']}>"
-
-
-def sent(case):
-    counted = []
-    files = len(case.get("files") or [])
-    shares = len(case.get("shares") or [])
-    if files:
-        counted.append(f"{files} file" + ("s" if files != 1 else ""))
-    if shares:
-        counted.append(f"{shares} linked message" + ("s" if shares != 1 else ""))
-    return ", ".join(counted) or None
+    return f"<@{case['reporter_user_id']}>"
 
 
 def about(case):
@@ -101,6 +174,11 @@ def about(case):
     if not others:
         return f"about {who}, nothing else on their record"
     return f"about {who}, {others} other case" + ("s" if others != 1 else "")
+
+
+def state(case):
+    parts = [standing(case), priors(case), f"case *{case['case_id']}*", link(case)]
+    return " · ".join(part for part in parts if part)
 
 
 def evidence(shares):
@@ -160,20 +238,16 @@ def blocks(case):
     files = case.get("files") or []
     shares = case.get("shares") or []
 
-    line = " · ".join(
-        part
-        for part in [standing(case), reporter(case), sent(case), when(case), link(case)]
-        if part
-    )
-
-    built = [title(case), quote(case.get("body")), context([line])]
-
-    held = about(case)
-    if held:
-        built.append(context([held]))
+    built = [
+        title(case),
+        context([state(case)]),
+        quote(case.get("body")),
+        facts(case),
+    ]
 
     trail = evidence(shares) + [f"📎 {name}" for name in named(files)]
     if trail:
+        built.append({"type": "divider"})
         built.append(context([" · ".join(trail)]))
 
     acting = buttons(case)
@@ -184,7 +258,14 @@ def blocks(case):
 
 
 def fallback(case):
-    return f"Case {case['case_id']}: a report came in"
+    return f"Case {case['case_id']}: {headline(case).lower()}"
+
+
+def metadata(case):
+    return {
+        "event_type": "fd_case_card",
+        "event_payload": {"case_id": case["case_id"], "report_id": case.get("report_id")},
+    }
 
 
 def to_member(body):

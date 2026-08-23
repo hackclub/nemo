@@ -4,32 +4,9 @@ module Fd
 
     RESOLUTIONS = %w[action_taken no_action duplicate not_conduct].freeze
     CLOSE_REASONS = %w[not_conduct no_action].freeze
-    CATEGORIES = %w[
-      nos adult insulting bullying discrimination hateful
-      harassment_identity harassment_general nsfw_mild nsfw_extreme
-      advertising spam fraud_hcb fraud_referral fraud_ysws fraud_other
-      ban_evasion
-    ].freeze
-
-    CATEGORY_LABELS = {
-      "nos" => "Misconduct not otherwise specified",
-      "adult" => "Adult",
-      "insulting" => "Insulting or demeaning remarks",
-      "bullying" => "Bullying",
-      "discrimination" => "Discrimination",
-      "hateful" => "Hateful remarks",
-      "harassment_identity" => "Systematic harassment, identity based",
-      "harassment_general" => "Systematic harassment, general",
-      "nsfw_mild" => "Mild or ambiguous NSFW",
-      "nsfw_extreme" => "Clear and extreme NSFW",
-      "advertising" => "Advertising or recruiting",
-      "spam" => "Spam",
-      "fraud_hcb" => "HCB fraud",
-      "fraud_referral" => "Referral fraud",
-      "fraud_ysws" => "YSWS fraud",
-      "fraud_other" => "Other fraud",
-      "ban_evasion" => "Slack ban evasion"
-    }.freeze
+    CATEGORY_LABELS = YAML.load_file(Rails.root.join("../db/categories.yml"))
+      .fetch("categories").freeze
+    CATEGORIES = CATEGORY_LABELS.keys.freeze
 
     def self.category_label(key)
       CATEGORY_LABELS.fetch(key) { key.to_s.tr("_", " ") }
