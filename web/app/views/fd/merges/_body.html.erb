@@ -1,0 +1,67 @@
+<%= turbo_frame_tag "merge-body" do %>
+  <div class="merge-pane">
+    <div class="merge-list">
+      <% if groups.empty? %>
+        <p class="card-note flush">
+          <%= term.present? ? "Nothing matches that." : "Nothing looks like a duplicate of this one." %>
+        </p>
+      <% end %>
+
+      <% groups.each do |label, found| %>
+        <p class="merge-group"><%= label %></p>
+        <% found.each do |other| %>
+          <%= link_to fd_case_merge_path(kase, into: other.id, q: term.presence),
+                class: "merge-pick", data: { turbo_frame: "merge-body" },
+                aria: { current: ("true" if target && other.id == target.id) } do %>
+            <span class="merge-ring" aria-hidden="true"></span>
+            <span class="merge-who">
+              <b><%= subject_handles(other) %></b>
+              <span class="merge-id">#<%= other.id %></span>
+              <span class="merge-sub"><%= merge_candidate_line(other) %></span>
+            </span>
+            <%= case_status_chip(other) %>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <% if plan %>
+    <%= form_with url: fd_merge_cases_path, method: :post, data: { turbo_frame: "_top" } do %>
+      <%= hidden_field_tag "case_ids[]", kase.id, id: nil %>
+      <%= hidden_field_tag "case_ids[]", target.id, id: nil %>
+
+      <div class="merge-outcome">
+        <p class="merge-said">
+          <b>#<%= plan.keeper.id %> will hold both.</b>
+          <%= merge_thread_line(plan) %>
+          #<%= plan.folded.id %> closes as a duplicate, and its link lands on
+          #<%= plan.keeper.id %>.
+        </p>
+        <p class="merge-counts">Then on #<%= plan.keeper.id %>: <%= merge_counts(plan) %></p>
+
+        <div class="merge-keep">
+          <% [plan.keeper, plan.folded].each do |one| %>
+            <%= link_to fd_case_merge_path(kase, into: target.id, keep: one.id,
+                  q: term.presence), class: "merge-swap",
+                  data: { turbo_frame: "merge-body" },
+                  aria: { current: ("true" if one.id == plan.keeper.id) } do %>
+              #<%= one.id %> holds them
+            <% end %>
+          <% end %>
+        </div>
+        <%= hidden_field_tag :duplicate_of, plan.keeper.id, id: nil %>
+
+      </div>
+
+      <div class="merge-act">
+        <label for="merge-case" class="btn">Close</label>
+        <%= submit_tag "Merge into ##{plan.keeper.id}", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="merge-act">
+      <label for="merge-case" class="btn">Close</label>
+    </div>
+  <% end %>
+<% end %>

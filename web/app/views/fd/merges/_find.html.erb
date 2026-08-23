@@ -1,0 +1,9 @@
+<%= form_with url: fd_case_merge_path(kase), method: :get, class: "field merge-find",
+      data: { turbo_frame: "merge-body", controller: "merge-search",
+              action: "input->merge-search#look", merge_search_url_value:
+              fd_case_merge_path(kase) },
+      html: { autocomplete: "off" } do %>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+  <%= search_field_tag :q, term, id: nil, placeholder: "case number, subject or channel",
+        data: { merge_search_target: "field" } %>
+<% end %>

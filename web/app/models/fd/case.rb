@@ -130,6 +130,27 @@ module Fd
         .group_by(&:first).transform_values { |pairs| pairs.map(&:last).uniq }
     end
 
+    def self.candidate_groups(kase, siblings = [], limit: 25)
+      skip = kase.family_ids
+      shared = siblings.reject { |one| skip.include?(one.id) }
+      subject = if kase.subject_user_ids.any?
+        with_any_subject(kase.subject_user_ids)
+          .where.not(id: skip + shared.map(&:id)).order(opened_at: :desc).limit(10).to_a
+      else
+        []
+      end
+      seen = skip + shared.map(&:id) + subject.map(&:id)
+      recent = unresolved.where.not(id: seen).order(opened_at: :desc).limit(8).to_a
+
+      [
+        ["same thread", shared],
+        ["also about #{kase.subject_user_ids.any? ? 'the same person' : 'somebody on this case'}",
+         subject],
+        ["opened around the same time", recent]
+      ].reject { |_label, found| found.empty? }
+        .map { |label, found| [label, found.first(limit)] }
+    end
+
     def self.candidates_for(kase, siblings = [], limit: 25)
       ordered = siblings.map(&:id)
       kase.subject_user_ids.each do |user_id|

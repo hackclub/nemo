@@ -1,18 +1,20 @@
 module Fd
   class MergePlan
-    def self.for(from, into)
-      new(from, into)
+    def self.for(from, into, keeper: nil)
+      new(from, into, keeper: keeper)
     end
 
-    def initialize(from, into)
+    def initialize(from, into, keeper: nil)
       @from = from
       @into = into
+      @asked = keeper
     end
 
     attr_reader :from, :into
 
     def keeper
-      @keeper ||= [from, into].min_by(&:opened_at)
+      @keeper ||= [from, into].find { |one| one.id == @asked.to_i } ||
+        [from, into].min_by(&:opened_at)
     end
 
     def folded

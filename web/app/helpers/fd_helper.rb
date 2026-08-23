@@ -532,6 +532,31 @@ module FdHelper
     reports.any?(&:anonymous?) ? "#{named.to_sentence} and anonymous" : named.to_sentence
   end
 
+  def merge_candidate_line(kase)
+    held = if kase.assigned?
+      "with #{names.list(kase.assignee_user_ids)}"
+    elsif !kase.resolved?
+      "nobody holding it"
+    end
+    ["opened #{kase.opened_at.strftime('%-d %b')}", held].compact.join(" · ")
+  end
+
+  def merge_thread_line(plan)
+    return nil if plan.folded.reports.empty?
+
+    "Its report thread comes across and keeps its own conversation."
+  end
+
+  def merge_counts(plan)
+    [
+      pluralize(plan.reports, "report thread"),
+      pluralize(plan.threads, "evidence thread"),
+      pluralize(plan.actions, "action"),
+      pluralize(plan.notes, "note"),
+      pluralize(plan.people, "person", plural: "people")
+    ].join(" · ")
+  end
+
   def composer_hint(thread, names)
     return "Message the team" if thread.nil?
 

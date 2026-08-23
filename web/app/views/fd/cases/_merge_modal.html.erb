@@ -1,0 +1,13 @@
+<%= render layout: "fd/modal", locals: { id: "merge-case",
+      title: "Merge case #{kase.id}", sub: "the older case holds both",
+      label: "Merge this case into another" } do %>
+  <div class="merge-shell">
+    <div class="merge-pane">
+      <%= render "fd/merges/find", kase: kase, term: nil %>
+    </div>
+    <%= turbo_frame_tag "merge-body", src: fd_case_merge_path(kase), loading: "lazy",
+          class: "merge-frame" do %>
+      <div class="merge-pane"><p class="card-note flush">Looking for duplicates...</p></div>
+    <% end %>
+  </div>
+<% end %>

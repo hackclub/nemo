@@ -34,9 +34,7 @@
             css: "btn btn-primary", method: :post %>
     <% end %>
 
-    <% if @merge_into %>
-      <%= link_to "Merge", fd_case_merge_path(@case, into: @merge_into.id), class: "btn" %>
-    <% end %>
+    <%= opens_modal "case.resolve", "Merge", opens: "merge-case", on: @case %>
   <% end %>
 
   <button type="button" class="btn" data-action="click->case-timeline#open">
@@ -444,3 +442,5 @@
     <div class="tl-open"><%= timeline_standing(@case, @timeline) %></div>
   </div>
 </aside>
+
+<%= render "merge_modal", kase: @case %>

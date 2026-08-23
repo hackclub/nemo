@@ -135,12 +135,50 @@ class FdMergesTest < ActionDispatch::IntegrationTest
       message: "the bulk bar should not ask which case to keep"
   end
 
-  test "the case page sends you to the merge plan rather than a duplicate picker" do
+  test "the case page opens the merge modal, and loads it lazily" do
     sign_in_as(@me)
     get fd_case_path(@dup_one)
 
-    assert_select "a[href^=?]", "/fd/cases/#{@dup_one.id}/merge?into="
-    assert_select "select[name=duplicate_of]", count: 0
+    assert_select "label[for=merge-case]", text: "Merge"
+    assert_select "turbo-frame#merge-body[src=?][loading=lazy]",
+      "/fd/cases/#{@dup_one.id}/merge"
     assert_select "input[name=duplicate_of]", count: 0
+  end
+
+  test "the merge body groups the candidates and names the outcome" do
+    sign_in_as(@me)
+    get fd_case_merge_path(@dup_one)
+
+    assert_response :success
+    assert_select "turbo-frame#merge-body"
+    assert_select ".merge-group"
+    assert_select ".merge-pick[aria-current]", 1
+    assert_select ".merge-said b", text: /will hold both/
+    assert_select "input[type=hidden][name=duplicate_of]", 1
+    assert_select ".merge-swap[aria-current]", 1
+    assert_select "input[type=submit][value^=?]", "Merge into #"
+  end
+
+  test "swapping which case holds them rewrites the sentence" do
+    sign_in_as(@me)
+    older = [@dup_one, @dup_two].min_by(&:opened_at)
+    newer = [@dup_one, @dup_two].max_by(&:opened_at)
+
+    get fd_case_merge_path(@dup_one, into: @dup_two.id)
+    assert_select ".merge-said b", text: "##{older.id} will hold both."
+
+    get fd_case_merge_path(@dup_one, into: @dup_two.id, keep: newer.id)
+    assert_select ".merge-said b", text: "##{newer.id} will hold both."
+    assert_select "input[type=hidden][name=duplicate_of][value=?]", newer.id.to_s
+  end
+
+  test "picking a case by number that is already in the family is ignored" do
+    @dup_two.update!(resolved_at: Time.current, resolution: "duplicate",
+      duplicate_of: @dup_one.id)
+    sign_in_as(@me)
+
+    get fd_case_merge_path(@dup_one, into: @dup_two.id)
+
+    assert_select ".merge-pick", text: /##{@dup_two.id}/, count: 0
   end
 end
