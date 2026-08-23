@@ -2888,8 +2888,11 @@
 
   .chat {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    height: min(68vh, 40rem);
+    grid-auto-rows: auto;
+  }
+
+  .chat > turbo-cable-stream-source {
+    display: none;
   }
 
   .chat > turbo-frame {
@@ -3164,8 +3167,9 @@
     display: grid;
     gap: var(--s-2xs);
     align-content: start;
-    padding: var(--s-md);
-    height: 100%;
+    padding: var(--s-sm) var(--s-md);
+    min-height: 6rem;
+    max-height: min(52vh, 28rem);
     overflow-y: auto;
     overscroll-behavior: contain;
   }
