@@ -17,27 +17,61 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     get fd_member_path("UNOBODY")
 
     assert_response :success
-    assert_select ".chip", text: "nothing on record"
-    assert_select ".card-note", text: "none"
+    assert_select ".stand.stand-clean .chip", text: "nothing on record"
+    assert_select ".stand", text: /Nothing on record, and nothing ever done to them/
     assert_select ".note-none", text: "No notes"
-    assert_select ".spine", 0, "no shape to draw when there is no history"
   end
 
-  test "the facts card is there even when the conduct half is empty" do
+  test "the facts they do have are one quiet line, and the ones they do not are absent" do
     get fd_member_path("UNOBODY")
 
-    assert_select ".subject-facts .fact-label", text: "Messages"
-    assert_select ".subject-facts .fact-label", text: "Priors, 12mo"
+    assert_select ".head-meta .idline"
+    assert_select ".idline", text: /not in the warehouse yet/
+    assert_select ".idline", text: /n\/a/, count: 0
+    assert_select ".subject-facts", 0, "the six fact grid is gone"
   end
 
-  test "an open case shows as the badge, and links to it" do
+  test "an open case is named in the standing line, and links to it" do
     kase = make_case(subject: SUBJECT, opened_at: 2.days.ago)
     get fd_member_path(SUBJECT)
 
-    assert_select "a.chip-crit[href=?]", fd_case_path(kase), text: "case ##{kase.id} open"
+    assert_select ".stand a.lnk[href=?]", fd_case_path(kase), text: "##{kase.id}"
+    assert_select ".stand", text: /is open, with nobody/
   end
 
-  test "the shape counts what they were the subject of and what they were only logged in" do
+  test "the standing line says who holds the open case, and calls it you when it is yours" do
+    kase = make_case(subject: SUBJECT, opened_at: 2.days.ago, assign: "UFF1")
+    get fd_member_path(SUBJECT)
+    assert_select ".stand", text: /with @UFF1/
+
+    kase.assign!(@me.user_id)
+    get fd_member_path(SUBJECT)
+    assert_select ".stand", text: /with you/
+  end
+
+  test "what is standing right now is the chip, and the page goes loud" do
+    kase = make_case(subject: SUBJECT, opened_at: 3.days.ago)
+    act_on kase, type_key: "shush", expires_at: 4.days.from_now
+
+    get fd_member_path(SUBJECT)
+
+    assert_select ".stand.stand-live"
+    assert_select ".stand .chip-crit", text: /shush until/
+    assert_select ".stand", text: /1 action still standing/
+  end
+
+  test "an expired action leaves the chip quiet without hiding the history" do
+    kase = make_case(subject: SUBJECT, opened_at: 30.days.ago)
+    act_on kase, type_key: "shush", expires_at: 1.day.ago
+
+    get fd_member_path(SUBJECT)
+
+    assert_select ".stand.stand-live", 0
+    assert_select ".stand .chip-off", text: "nothing standing"
+    assert_select ".record-line", 2, "the case and the action are still on the record"
+  end
+
+  test "the counts sit under the record, once" do
     make_case(subject: SUBJECT, opened_at: 30.days.ago, resolved_at: 20.days.ago,
       resolution: "no_action")
     theirs = make_case(subject: "USOMEBODY", opened_at: 10.days.ago)
@@ -45,25 +79,10 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
 
     get fd_member_path(SUBJECT)
 
-    assert_select ".shape-nums .fact-val", text: "1", minimum: 2
-    assert_select ".spine-dot", 2
-    assert_select ".spine-dot.dot-clear", 1
-    assert_select ".spine-dot.dot-in", 1
-  end
-
-  test "a resolved case with an action reads differently from one without" do
-    acted = make_case(subject: SUBJECT, opened_at: 40.days.ago, resolved_at: 30.days.ago,
-      resolution: "action_taken")
-    act_on acted
-    make_case(subject: SUBJECT, opened_at: 20.days.ago, resolved_at: 10.days.ago,
-      resolution: "no_action")
-
-    get fd_member_path(SUBJECT)
-
-    assert_select ".spine-dot.dot-done", 1
-    assert_select ".spine-dot.dot-clear", 1
-    assert_select ".spine-key", text: /action taken/
-    assert_select ".spine-key", text: /resolved, no action/
+    assert_select ".record-strip", 1
+    assert_select ".record-strip", text: /subject of 1/
+    assert_select ".record-strip", text: /logged in 1/
+    assert_select ".record-strip", text: /first seen/
   end
 
   test "the priors figure uses the definition, not the case count" do
@@ -77,7 +96,7 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     get fd_member_path(SUBJECT)
 
     assert_equal 1, Fd::Case.prior_count(SUBJECT, within: Fd::Case::PRIOR_WINDOW)
-    assert_select ".fact-val", text: "1"
+    assert_select ".stand", text: /1 prior in twelve months/
   end
 
   test "reversed actions are counted apart from the rest" do
@@ -89,8 +108,8 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
 
     get fd_member_path(SUBJECT)
 
-    assert_select ".chip", text: /1 of 2 actions undone/
-    assert_select ".shape-nums .muted", text: "1"
+    assert_select ".stand", text: /1 action still standing, 1 reversed/
+    assert_select ".record-strip", text: /reversed 1/
   end
 
   test "the identity line says email is not collected rather than showing a blank" do
@@ -125,10 +144,10 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
 
     get fd_member_path(SUBJECT)
 
-    assert_select ".card-title", text: "Their history"
-    assert_select ".tl-item", 3
-    assert_select ".tl-item:first-child a.tl-title", text: "Case #{recent.id} opened"
-    assert_select "a.tl-title[href=?]", fd_case_path(old)
+    assert_select ".card-title", text: "Record"
+    assert_select ".record-line", 3
+    assert_select ".record-line:first-child a.record-title", text: "Case #{recent.id} opened"
+    assert_select "a.record-title[href=?]", fd_case_path(old)
   end
 
   test "the history filter narrows without leaving the page" do
@@ -137,31 +156,35 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
 
     get fd_member_path(SUBJECT, show: "actions")
 
-    assert_select ".tl-item", 1
-    assert_select ".segmented a[aria-current]", text: "Actions"
+    assert_select ".record-line", 1
+    assert_select ".chiprow a[aria-current]", text: "actions"
   end
 
   test "a filter that matches nothing says which nothing it is" do
     make_case(subject: SUBJECT, opened_at: 10.days.ago)
     get fd_member_path(SUBJECT, show: "actions")
 
-    assert_select ".tl-item", 0
+    assert_select ".record-line", 0
     assert_select ".card-note", text: /Nothing has ever been done to them/
   end
 
-  test "a member with no history has no history card at all" do
+  test "a member with no history still shows the record, empty, and the notes" do
     get fd_member_path("UNOBODY")
-    assert_select ".card-title", text: "Their history", count: 0
+
+    assert_select ".card-title", text: "Record"
+    assert_select ".record-line", 0
+    assert_select ".card-title", text: /Notes on/
   end
 
-  test "the shape and the notes sit side by side, as drawn" do
+  test "the page is one column: standing, then the record, then the notes" do
     make_case(subject: SUBJECT, opened_at: 20.days.ago, resolved_at: 10.days.ago,
       resolution: "no_action")
     get fd_member_path(SUBJECT)
 
-    assert_select ".pair > .card", 2
-    assert_select ".pair .spine"
-    assert_select ".pair .card-title", text: /Notes on/
+    assert_select ".pair", 0, "no side by side any more"
+    assert_select ".stack > .stand", 1
+    assert_select ".stack > .card", 2
+    assert_select ".card-title", text: /Notes on/
   end
 
   test "a note written here follows the member rather than a case" do
@@ -216,6 +239,6 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     get fd_member_path(seeded.user_id)
 
     assert_select "button.handle[data-copy-id-value=?]", seeded.user_id
-    assert_select ".card-title", text: seeded.name
+    assert_select ".head-title", text: seeded.name
   end
 end

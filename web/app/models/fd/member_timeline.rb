@@ -1,6 +1,6 @@
 module Fd
   class MemberTimeline
-    Entry = Struct.new(:at, :title, :kind, :mark, :chips, :detail, :said, :case_id,
+    Entry = Struct.new(:at, :title, :kind, :mark, :state, :detail, :said, :case_id,
       keyword_init: true)
 
     KINDS = {
@@ -37,7 +37,7 @@ module Fd
           title: "Case #{kase.id} opened",
           kind: "cases",
           mark: "own",
-          chips: ["subject", outcome_of(kase)].compact,
+          state: outcome_of(kase),
           detail: case_detail(kase),
           case_id: kase.id,
         )
@@ -52,7 +52,7 @@ module Fd
             title: "Case #{kase.id}",
             kind: "cases",
             mark: "in",
-            chips: [person.role, outcome_of(kase)].compact,
+            state: "logged in",
             detail: logged_detail(kase, person),
             case_id: kase.id,
           )
@@ -68,7 +68,7 @@ module Fd
             title: FdHelper::ACTION_LABELS.fetch(action.type_key, action.type_key.tr("_", " ")),
             kind: "actions",
             mark: "act",
-            chips: action_chips(action),
+            state: action.reversed? ? "reversed" : "standing",
             detail: action_detail(action),
             case_id: action.case_id
           )
@@ -80,7 +80,7 @@ module Fd
             title: "#{FdHelper::ACTION_LABELS.fetch(action.type_key, action.type_key)} reversed",
             kind: "actions",
             mark: "act",
-            chips: ["undone"],
+            state: "reversed",
             detail: ["case #{action.case_id}", action.reversal_reason,
                      "by #{names[action.reversed_by]}"].compact.join(" · "),
             case_id: action.case_id,
@@ -98,8 +98,8 @@ module Fd
           title: "Note",
           kind: "notes",
           mark: "note",
-          chips: [],
-          detail: "by #{names[note.author]}",
+          state: names[note.author],
+          detail: nil,
           said: note.body,
           case_id: nil
         )
@@ -130,26 +130,13 @@ module Fd
       parts.compact.join(" · ")
     end
 
-    def action_chips(action)
-      chips = []
-      chips << "expires #{action.expires_at.strftime('%b %-d')}" if action.expires?
-      chips << "reversed" if action.reversed?
-      chips
-    end
-
     def action_detail(action)
       parts = ["case #{action.case_id}"]
       channel = action.details.is_a?(Hash) ? action.details["channel_id"] : nil
       parts << "in #{channel}" if channel
-      parts << "decided by #{names[action.decided_by]}"
-      unless action.performed_by_decider?
-        parts << "performed by #{performer(action.performed_by)}"
-      end
+      parts << "by #{names[action.decided_by]}"
+      parts << "lifts #{action.expires_at.strftime('%-d %b')}" if action.expires?
       parts.join(" · ")
-    end
-
-    def performer(user_id)
-      user_id == "UMNEMOSYNE" ? "Mnemosyne" : names[user_id]
     end
   end
 end

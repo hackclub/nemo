@@ -1,120 +1,86 @@
 <% content_for :page_title, names[@user_id] %>
-<% content_for :page_badge do %>
-  <% if @record.open_case %>
-    <%= link_to "case ##{@record.open_case.id} open", fd_case_path(@record.open_case),
-          class: "chip chip-crit" %>
-  <% else %>
-    <span class="chip chip-good">nothing on record</span>
-  <% end %>
+<% content_for :page_face do %>
+  <span class="head-face" aria-hidden="true"><%= @member ? @member.initial : "?" %></span>
 <% end %>
-<% if @record.anything? %>
-  <% content_for :page_subtitle do %>
-    subject of <%= @record.subject_cases.size %> ·
-    logged in <%= @record.logged_cases.size %> ·
-    <%= pluralize(@record.actions.size, "action") %><%=
-      ", #{@record.reversed_actions} reversed" if @record.reversed_actions.positive? %>
-  <% end %>
+<% content_for :page_subtitle do %>
+  <span class="idline">
+    <%= handle(@user_id) %>
+    <% if @member&.handle.present? %><span>@<%= @member.handle %></span><% end %>
+    <% if @member&.pronouns.present? %><span><%= @member.pronouns %></span><% end %>
+    <% if @member&.tz.present? %><span><%= @member.tz %></span><% end %>
+    <%= member_facts(@context, @identity) %>
+  </span>
 <% end %>
 <% content_for :head_actions do %>
+  <%= link_to "Open in Slack", slack_member_url(@user_id), class: "btn",
+        target: "_blank", rel: "noopener" %>
   <%= link_to "Their cases", fd_cases_path(subject: @user_id), class: "btn" %>
-  <%= opens_modal "member.note", "Add a note", opens: "add-member-note" %>
   <%= link_to "Open a case", fd_cases_path(subject_user_id: @user_id, open: "1"),
         class: "btn btn-primary" %>
 <% end %>
 
 <div class="stack">
-  <div class="card">
-    <div class="subject">
-      <div class="subject-avatar" aria-hidden="true">
-        <%= @member ? @member.initial : "?" %>
-      </div>
-      <div class="grow">
-        <h2 class="card-title">
-          <%= names[@user_id] %>
-        </h2>
-        <div class="idline">
-          <%= handle(@user_id) %>
-          <% if @member&.handle.present? %><span>@<%= @member.handle %></span><% end %>
-          <% if @member&.pronouns.present? %><span><%= @member.pronouns %></span><% end %>
-          <% if @member&.tz.present? %><span><%= @member.tz %></span><% end %>
-          <span><%= joined_line(@context) %></span>
-        </div>
-        <div class="idline">
-          <%= identity_line(@identity) %>
-        </div>
-      </div>
-      <%= link_to "Open in Slack", slack_member_url(@user_id), class: "btn push-end",
-            target: "_blank", rel: "noopener" %>
-    </div>
-
-    <div class="subject-facts">
-      <div>
-        <div class="fact-label">Messages</div>
-        <div class="fact-val"><%= fact_number(@context&.messages_posted) %></div>
-      </div>
-      <div>
-        <div class="fact-label">Channels</div>
-        <div class="fact-val"><%= fact_number(@context&.channels_joined) %></div>
-      </div>
-      <div>
-        <div class="fact-label">Active days</div>
-        <div class="fact-val"><%= fact_number(@context&.days_active) %></div>
-      </div>
-      <div>
-        <div class="fact-label">Tenure</div>
-        <div class="fact-val"><%= tenure_label(@context&.tenure_days) %></div>
-      </div>
-      <div>
-        <div class="fact-label">Last active</div>
-        <div class="fact-val"><%= last_active_label(@context&.last_active_at) %></div>
-      </div>
-      <div>
-        <div class="fact-label">Priors, 12mo</div>
-        <div class="fact-val"><%= @record.priors.zero? ? "none" : @record.priors %></div>
-      </div>
-    </div>
+  <div class="stand <%= member_standing_tone(@standing) %>">
+    <%= standing_chip(@standing) %>
+    <span><%= member_standing_line(@standing, names) %></span>
   </div>
 
-  <% if @record.anything? %>
-    <%= render "history", history: @history, only: @only, user_id: @user_id %>
-  <% end %>
-
-  <div class="pair">
-    <% if @record.anything? %>
-      <%= render "shape", record: @record %>
-    <% else %>
-      <div class="card">
-        <h2 class="card-title">Conduct history</h2>
-        <p class="card-note flush">none</p>
-      </div>
-    <% end %>
-
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <h2 class="card-title">Notes on <%= names[@user_id] %></h2>
-        </div>
-        <div class="card-tools">
-          <%= opens_modal "member.note", "Add", opens: "add-member-note" %>
-        </div>
-      </div>
-      <% if @record.notes.any? %>
-        <div class="notes">
-          <% @record.notes.each do |note| %>
-            <div class="note-row">
-              <div class="note-body"><%= mentioned(note.body) %></div>
-              <div class="note-by">
-                <span><%= note_byline(note) %></span>
-                <%= render "note_remove", user_id: @user_id, note: note %>
-              </div>
-            </div>
+  <% if @history.any? || @only != "all" %>
+    <div class="card card-flush">
+      <%= render "history", history: @history, only: @only, user_id: @user_id %>
+      <% if @record.anything? || @standing.actions.positive? %>
+        <div class="record-strip">
+          <span>subject of <b><%= @standing.cases %></b></span>
+          <span>logged in <b><%= @standing.logged_in %></b></span>
+          <span>actions <b><%= @standing.actions %></b></span>
+          <span>reversed <b><%= @standing.reversed %></b></span>
+          <% if @record.first_case_at %>
+            <span>first seen <b><%= @record.first_case_at.strftime("%-d %b %Y") %></b></span>
           <% end %>
         </div>
-      <% else %>
-        <span class="note-none">No notes</span>
       <% end %>
     </div>
+  <% end %>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Notes on <%= names[@user_id] %></h2>
+      </div>
+      <span class="chip chip-off"><%= @record.notes.size %></span>
+    </div>
+    <% if @record.notes.any? %>
+      <div class="notes">
+        <% @record.notes.each do |note| %>
+          <div class="note-row">
+            <div class="note-body"><%= mentioned(note.body) %></div>
+            <div class="note-by">
+              <span><%= note_byline(note) %></span>
+              <%= render "note_remove", user_id: @user_id, note: note %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <span class="note-none">No notes</span>
+    <% end %>
+
+    <% if current_staff.may?("member.note") %>
+      <%= form_with url: fd_member_notes_path(@user_id), method: :post,
+            class: "note-composer", html: { autocomplete: "off" } do %>
+        <div class="mention-field" data-controller="mention"
+             data-mention-url-value="<%= fd_member_search_path %>">
+          <%= text_area_tag :body, nil, rows: 1, class: "note-input", id: nil,
+                maxlength: Fd::NotesController::MAX_LENGTH,
+                placeholder: "Write a note about #{names[@user_id]}",
+                data: { mention_target: "field", action: "input->mention#type " \
+                        "keydown->mention#keys" } %>
+          <div class="menu-pop pick-pop mention-pop" hidden data-mention-target="results"></div>
+        </div>
+        <button type="submit" class="chat-send" aria-label="Save the note">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+        </button>
+      <% end %>
+    <% end %>
   </div>
 </div>
-
-<%= render "note_modal", user_id: @user_id %>

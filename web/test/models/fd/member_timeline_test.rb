@@ -20,14 +20,13 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
     assert_match(/\ACase \d+ opened\z/, entry.title)
     assert_equal "cases", entry.kind
     assert_equal "own", entry.mark
-    assert_equal %w[subject], entry.chips.first(1)
-    assert_includes entry.chips, "action taken"
+    assert_equal "action taken", entry.state
     assert_match(/spam/, entry.detail)
   end
 
   test "an open case says open rather than naming a resolution" do
     make_case(subject: SUBJECT, opened_at: 2.days.ago)
-    assert_includes entries.sole.chips, "open"
+    assert_equal "open", entries.sole.state
   end
 
   test "a case they were only logged in carries their role and their reason" do
@@ -37,7 +36,7 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
     entry = entries.sole
     assert_equal "cases", entry.kind
     assert_equal "in", entry.mark, "the mark still tells it from a case about them"
-    assert_includes entry.chips, "involved"
+    assert_equal "logged in", entry.state
     assert_match(/it was aimed at them/, entry.detail)
     assert_match(/they were not the subject/, entry.detail)
   end
@@ -59,7 +58,7 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
 
     reversal = entries.find { |entry| entry.title.end_with?("reversed") }
     assert_equal 2.days.ago.to_i, reversal.at.to_i
-    assert_includes reversal.chips, "undone"
+    assert_equal "reversed", reversal.state
     assert_match(/appeal upheld/, reversal.detail)
   end
 
@@ -124,7 +123,7 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
     assert_equal "note", entry.mark
     assert_equal "a soft word early goes further", entry.said
     assert_nil entry.case_id, "a standing note belongs to no case, so it links to none"
-    assert_match(/by /, entry.detail)
+    assert_equal "@UFF1", entry.state, "the author is the chip"
   end
 
   test "a note about somebody else stays on their record" do

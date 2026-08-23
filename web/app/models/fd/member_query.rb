@@ -29,17 +29,17 @@ module Fd
     STATE = { "any" => "any", "open" => "open case", "noted" => "standing notes",
               "clean" => "nothing on record" }.freeze
     WHO = { "history" => "with a history", "everyone" => "everyone" }.freeze
-    SORT = { "recent" => "most recent case", "cases" => "most cases",
-             "actions" => "most actions", "name" => "name" }.freeze
+    SORT = { "recent" => "last case", "subject" => "cases as subject",
+             "logged" => "cases logged in", "actions" => "actions",
+             "name" => "name" }.freeze
+    DIRS = %w[desc asc].freeze
 
     DEFAULTS = {
       "who" => "history", "priors" => "any", "tenure" => "any", "active" => "any",
-      "category" => "any", "state" => "any", "sort" => "recent"
+      "category" => "any", "state" => "any", "sort" => "recent", "dir" => "desc"
     }.freeze
     FACET_KEYS = DEFAULTS.keys.freeze
     KEYS = (FACET_KEYS + ["view"]).freeze
-    PRIMARY = %w[priors tenure active sort].freeze
-
     LIMIT = 50
     DEFAULT_VIEW = "history".freeze
     NO_VIEW = "none".freeze
@@ -149,20 +149,32 @@ module Fd
         facet("priors", "Priors", PRIORS),
         facet("tenure", "Tenure", TENURE),
         facet("active", "Last active", ACTIVE),
-        facet("sort", "Sort", SORT),
         facet("state", "State", STATE),
-        facet("category", "Category", category_options),
-        facet("who", "Who", WHO)
+        facet("category", "Category", category_options)
       ]
     end
 
-    def inline_facets
-      shown = facets.select(&:on)
-      shown + facets.reject(&:on).select { |facet| PRIMARY.include?(facet.key) }
+    def sorting?(key)
+      self["sort"] == key
     end
 
-    def more_facets
-      facets.reject { |facet| facet.on || PRIMARY.include?(facet.key) }
+    def descending?
+      self["dir"] == "desc"
+    end
+
+    def sort_params(key)
+      return facet_params("sort" => key, "dir" => "desc") unless sorting?(key)
+      return facet_params("dir" => "asc") if descending?
+
+      facet_params("sort" => DEFAULTS["sort"], "dir" => DEFAULTS["dir"])
+    end
+
+    def sort_label
+      said = SORT.fetch(self["sort"])
+      return "name, a to z" if self["sort"] == "name" && !descending?
+      return "name, z to a" if self["sort"] == "name"
+
+      descending? ? "most #{said}" : "least #{said}"
     end
 
     def title
@@ -176,7 +188,7 @@ module Fd
 
     def summary
       seen = rows.empty? ? "none" : "#{first_shown} to #{last_shown} of #{number_with_delimiter(total)}"
-      [seen, SORT.fetch(self["sort"])].join(" · ")
+      [seen, sort_label].join(" · ")
     end
 
     def empty_note
@@ -226,6 +238,7 @@ module Fd
       when "state" then STATE.key?(raw)
       when "who" then WHO.key?(raw)
       when "sort" then SORT.key?(raw)
+      when "dir" then DIRS.include?(raw)
       when "category" then raw == "any" || Case::CATEGORIES.include?(raw)
       else false
       end
@@ -293,12 +306,15 @@ module Fd
     end
 
     def sorted(found)
-      case self["sort"]
-      when "cases" then found.sort_by { |row| [-(row.subject_of + row.logged_in), row.user_id] }
+      ranked = case self["sort"]
+      when "subject" then found.sort_by { |row| [-row.subject_of, row.user_id] }
+      when "logged" then found.sort_by { |row| [-row.logged_in, row.user_id] }
       when "actions" then found.sort_by { |row| [-row.actions, row.user_id] }
       when "name" then by_name(found)
       else found.sort_by { |row| [-(row.last_case_at&.to_i || 0), row.user_id] }
       end
+
+      descending? ? ranked : ranked.reverse
     end
 
     def by_name(found)

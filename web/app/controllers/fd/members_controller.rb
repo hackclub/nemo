@@ -18,6 +18,7 @@ module Fd
       @history = MemberTimeline.for(@record, names: @names, only: @only)
       @identity = MemberIdentity.look_up(@user_id, actor: current_staff)
       @context = MemberContext.for([@user_id])[@user_id]
+      @standing = MemberStanding.new(@record)
       render "drawer" if turbo_frame_request_id == "person-drawer"
     end
 

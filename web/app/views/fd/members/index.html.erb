@@ -44,64 +44,51 @@
         <span class="view-count"><%= view.count %></span>
       <% end %>
     <% end %>
-  </div>
 
-  <div class="filters">
-    <% @query.inline_facets.each do |facet| %>
-      <span class="facet-set <%= "on" if facet.on %>">
-        <details class="facet-drop" name="member-facet">
-          <summary class="facet">
-            <%= facet.label %>
-            <% if facet.on || facet.key == "sort" %>
-              <b><%= facet.value_label %></b>
-            <% end %>
-            <% unless facet.on %>
-              <span class="facet-caret" aria-hidden="true">
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
-              </span>
-            <% end %>
-          </summary>
-          <div class="menu-pop facet-pop">
-            <%= render "facet_options", query: @query, facet: facet %>
-          </div>
-        </details>
-        <% if facet.on %>
-          <%= link_to fd_members_path(@query.facet_params(facet.key => Fd::MemberQuery::DEFAULTS[facet.key])),
-                class: "facet-x", data: { turbo_frame: "roster" },
-                aria: { label: "clear the #{facet.label.downcase} filter" } do %>
-            &times;
-          <% end %>
+    <span class="views-fill"></span>
+
+    <% @query.facets.select(&:on).each do |facet| %>
+      <span class="facet-set on">
+        <span class="facet">
+          <%= facet.label %>
+          <b><%= facet.value_label %></b>
+        </span>
+        <%= link_to fd_members_path(@query.facet_params(facet.key => Fd::MemberQuery::DEFAULTS[facet.key])),
+              class: "facet-x", data: { turbo_frame: "roster" },
+              aria: { label: "clear the #{facet.label.downcase} filter" } do %>
+          &times;
         <% end %>
       </span>
     <% end %>
 
-    <% if @query.more_facets.any? %>
-      <span class="facet-set">
-        <details class="facet-drop" name="member-facet">
-          <summary class="facet">
-            More
-            <span class="facet-caret" aria-hidden="true">
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
-            </span>
-          </summary>
-          <div class="menu-pop facet-pop more-pop">
-            <% @query.more_facets.each do |facet| %>
-              <details class="more-item" name="member-more">
-                <summary class="more-name">
-                  <%= facet.label %>
-                  <span class="facet-caret" aria-hidden="true">
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
-                  </span>
-                </summary>
-                <div class="more-options">
-                  <%= render "facet_options", query: @query, facet: facet %>
-                </div>
-              </details>
-            <% end %>
-          </div>
-        </details>
-      </span>
-    <% end %>
+    <span class="facet-set <%= "on" if @query.facets.any?(&:on) %>">
+      <details class="facet-drop" name="member-facet">
+        <summary class="facet">
+          Filters
+          <span class="facet-caret" aria-hidden="true">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+          </span>
+        </summary>
+        <div class="menu-pop filters-pop">
+          <% @query.facets.each do |facet| %>
+            <details class="more-item" name="member-more">
+              <summary class="more-name">
+                <%= facet.label %>
+                <% if facet.on || facet.key == "sort" %>
+                  <b><%= facet.value_label %></b>
+                <% end %>
+                <span class="facet-caret" aria-hidden="true">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+                </span>
+              </summary>
+              <div class="more-options">
+                <%= render "facet_options", query: @query, facet: facet %>
+              </div>
+            </details>
+          <% end %>
+        </div>
+      </details>
+    </span>
   </div>
 
   <div class="card card-flush">
@@ -120,12 +107,12 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>Member</th>
+              <%= member_sort_header("Member", "name") %>
               <th>Tenure</th>
-              <th class="col-num">Subject of</th>
-              <th class="col-num">Logged in</th>
-              <th class="col-num">Actions</th>
-              <th>Last case</th>
+              <%= member_sort_header("Subject of", "subject", numeric: true) %>
+              <%= member_sort_header("Logged in", "logged", numeric: true) %>
+              <%= member_sort_header("Actions", "actions", numeric: true) %>
+              <%= member_sort_header("Last case", "recent") %>
               <th>State</th>
             </tr>
           </thead>
@@ -133,16 +120,16 @@
             <% @rows.each do |row| %>
               <tr>
                 <td>
-                  <span class="two-line">
-                    <%= link_to fd_member_path(row.user_id) do %>
-                      <b>
-                        <span class="sev <%= member_severity(row) %>"></span>
-                        <%= names[row.user_id] %>
-                      </b>
-                    <% end %>
-                    <span class="idline">
-                      <span class="mono"><%= row.user_id %></span>
-                      <%= member_activity_line(@context[row.user_id]) %>
+                  <span class="row-name">
+                    <span class="sev <%= member_severity(row) %>"></span>
+                    <span class="two-line">
+                      <%= link_to fd_member_path(row.user_id) do %>
+                        <b><%= names[row.user_id] %></b>
+                      <% end %>
+                      <span class="idline">
+                        <span class="mono"><%= row.user_id %></span>
+                        <%= member_activity_line(@context[row.user_id]) %>
+                      </span>
                     </span>
                   </span>
                 </td>

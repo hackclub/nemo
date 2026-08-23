@@ -109,6 +109,32 @@ module FdHelper
     "#{((part.to_f / whole) * 100).round(1)}% of the workspace"
   end
 
+  def member_sort_header(label, key, numeric: false)
+    css = ["th-sort"]
+    css << "col-num" if numeric
+    css << (@query.descending? ? "sort-down" : "sort-up") if @query.sorting?(key)
+
+    tag.th(class: css.join(" "),
+      aria: { sort: sort_state(key) }) do
+      link_to fd_members_path(@query.sort_params(key)), data: { turbo_frame: "roster" } do
+        concat tag.span(label)
+        concat sort_caret(key)
+      end
+    end
+  end
+
+  def sort_state(key)
+    return nil unless @query.sorting?(key)
+
+    @query.descending? ? "descending" : "ascending"
+  end
+
+  def sort_caret(key)
+    return tag.span("", class: "sort-mark") unless @query.sorting?(key)
+
+    tag.span(@query.descending? ? "▾" : "▴", class: "sort-mark on", aria: { hidden: true })
+  end
+
   def member_severity(row)
     return "sev-crit" if row.open_cases.positive?
     return "sev-warn" if row.priors >= 2
@@ -151,15 +177,16 @@ module FdHelper
 
   HISTORY_TONES = {
     "open" => "chip-crit",
-    "subject" => "chip-crit",
-    "involved" => "chip-warn",
-    "reporter" => "chip-off",
-    "reversed" => "chip-warn",
-    "undone" => "chip-good"
+    "standing" => "chip-warn",
+    "action taken" => "chip-good",
+    "resolved, no action" => "chip-good",
+    "no action" => "chip-good",
+    "reversed" => "chip-off",
+    "logged in" => "chip-off"
   }.freeze
 
-  def history_chip_tone(chip)
-    HISTORY_TONES.fetch(chip) { chip.start_with?("expires") ? "chip-warn" : "chip-off" }
+  def history_chip_tone(state)
+    HISTORY_TONES.fetch(state.to_s, "chip-off")
   end
 
   HISTORY_EMPTY = {
@@ -194,6 +221,75 @@ module FdHelper
     seconds = case_age_seconds(kase)
     tone = kase.resolved? ? "chip-off" : age_tone(seconds)
     tag.span(case_age_label(seconds), class: "chip #{tone}")
+  end
+
+  def member_facts(context, identity)
+    parts = []
+    parts << joined_line(context)
+    parts << "here #{tenure_label(context.tenure_days)}" if context&.tenure_days
+    parts << "active #{last_active_label(context.last_active_at)}" if context&.last_active_at
+    if context&.messages_posted
+      parts << "#{fact_number(context.messages_posted)} messages" \
+               "#{" in #{context.channels_joined} channels" if context.channels_joined}"
+    end
+    safe_join(parts.compact.map { |part| tag.span(part) } + [identity_line(identity)], " ")
+  end
+
+  def member_standing_tone(standing)
+    return "stand-clean" if standing.clean?
+    return "stand-live" if standing.anything_in_force?
+
+    "stand-quiet"
+  end
+
+  def member_standing_line(standing, names)
+    return "Nothing on record, and nothing ever done to them." if standing.clean?
+
+    safe_join([priors_phrase(standing), actions_phrase(standing),
+               open_case_phrase(standing, names)].compact, " ")
+  end
+
+  def priors_phrase(standing)
+    return "No priors in twelve months." if standing.priors.zero?
+
+    tag.b("#{pluralize(standing.priors, 'prior')} in twelve months.")
+  end
+
+  def actions_phrase(standing)
+    return nil if standing.actions.zero?
+
+    parts = ["#{pluralize(standing.in_force.size, 'action')} still standing"]
+    parts << "#{standing.reversed} reversed" if standing.reversed.positive?
+    "#{parts.join(', ')}."
+  end
+
+  def open_case_phrase(standing, names)
+    kase = standing.open_case
+    return "No case is open on them." if kase.nil?
+
+    holders = standing.holders
+    with = if holders.empty?
+      "with nobody"
+    elsif holders.include?(current_staff&.user_id)
+      "with you"
+    else
+      "with #{names.list(holders)}"
+    end
+    safe_join(["Case", link_to("##{kase.id}", fd_case_path(kase), class: "lnk"),
+               "is open, #{with}."], " ")
+  end
+
+  BANS = %w[perma_ban indef_ban temp_ban channel_ban].freeze
+
+  def standing_chip(standing)
+    action = standing.worst
+    return tag.span("nothing on record", class: "chip chip-good") if standing.clean?
+    return tag.span("nothing standing", class: "chip chip-off") if action.nil?
+
+    said = action_label(action.type_key).downcase
+    said += action.expires? ? " until #{action.expires_at.strftime('%-d %b')}" : " in force"
+    tone = BANS.include?(action.type_key) ? "chip-crit" : "chip-warn"
+    tag.span(said, class: "chip #{tone}")
   end
 
   def subject_standing(user_id, context)
