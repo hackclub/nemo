@@ -2,8 +2,12 @@ module Fd
   class Case < ApplicationRecord
     self.table_name = "fd.cases"
 
-    RESOLUTIONS = %w[action_taken no_action duplicate not_conduct].freeze
-    CLOSE_REASONS = %w[not_conduct no_action].freeze
+    RESOLUTION_TABLE = YAML.load_file(Rails.root.join("../db/resolutions.yml"))
+      .fetch("resolutions").freeze
+    RESOLUTIONS = RESOLUTION_TABLE.keys.freeze
+    RESOLUTION_LABELS = RESOLUTION_TABLE.transform_values { |row| row.fetch("label") }.freeze
+    CLOSE_REASONS = RESOLUTION_TABLE.select { |_key, row| row["pick"] }
+      .sort_by { |_key, row| row["pick"] }.map(&:first).freeze
     CATEGORY_LABELS = YAML.load_file(Rails.root.join("../db/categories.yml"))
       .fetch("categories").freeze
     CATEGORIES = CATEGORY_LABELS.keys.freeze

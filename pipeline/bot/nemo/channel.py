@@ -284,6 +284,37 @@ def claimed(conn, case_id, user_id):
     audit.record(conn, "assignee", case_id, "claimed", user_id, after={"user_id": user_id})
 
 
+LIVE_ACTIONS = """
+SELECT target_user_id, type_key, expires_at, details FROM fd.actions
+WHERE case_id = %s AND reversed_at IS NULL
+ORDER BY performed_at, id
+"""
+
+OPEN_REPORTS = """
+SELECT count(*) FROM fd.case_reports WHERE case_id = %s AND closed_at IS NULL
+"""
+
+RESOLVE = """
+UPDATE fd.cases SET resolved_at = now(), resolution = %s, member_note = %s, updated_at = now()
+WHERE id = %s AND resolved_at IS NULL
+RETURNING resolved_at
+"""
+
+CLOSE_REPORTS = """
+UPDATE fd.case_reports SET closed_at = now(), closed_by = %s
+WHERE case_id = %s AND closed_at IS NULL
+RETURNING id
+"""
+
+OPEN_CONVERSATION = """
+SELECT id FROM fd.intake_conversations WHERE report_id = %s AND closed_at IS NULL
+"""
+
+TELL_THEM = """
+INSERT INTO fd.intake_outbox (conversation_id, kind, body, requested_by)
+VALUES (%s, 'outcome', %s, %s)
+"""
+
 LOG_ACTION = """
 INSERT INTO fd.actions
     (case_id, type_key, target_user_id, decided_by, performed_by, performed_at,
@@ -291,6 +322,58 @@ INSERT INTO fd.actions
 VALUES (%s, %s, %s, %s, %s, now(), %s, %s, %s)
 RETURNING id, performed_at
 """
+
+
+def counted(conn, sql, case_id):
+    return conn.execute(sql, (case_id,)).fetchone()[0]
+
+
+def live_actions(conn, case_id):
+    return [
+        {
+            "target_user_id": row[0],
+            "type_key": row[1],
+            "expires_at": row[2],
+            "details": row[3],
+        }
+        for row in conn.execute(LIVE_ACTIONS, (case_id,)).fetchall()
+    ]
+
+
+def close_reports(conn, case_id, said, user_id):
+    told = 0
+    for row in conn.execute(CLOSE_REPORTS, (user_id, case_id)).fetchall():
+        report_id = row[0]
+        audit.record(
+            conn, "report", report_id, "closed", user_id,
+            before={"closed_at": None}, after={"closed_at": "now", "case_id": case_id},
+        )
+        open_one = conn.execute(OPEN_CONVERSATION, (report_id,)).fetchone()
+        if open_one is None:
+            continue
+        conn.execute(TELL_THEM, (open_one[0], said, user_id))
+        told += 1
+    return told
+
+
+def resolve(conn, case_id, said, user_id):
+    row = conn.execute(
+        RESOLVE, (said["resolution"], said["member_note"], case_id)
+    ).fetchone()
+    if row is None:
+        return None
+
+    audit.record(
+        conn, "case", case_id, "resolved", user_id,
+        before={"resolved_at": None, "resolution": None},
+        after={
+            "resolved_at": str(row[0]),
+            "resolution": said["resolution"],
+            "member_note": said["member_note"],
+        },
+    )
+    told = close_reports(conn, case_id, said["said"], user_id) if said["telling"] else 0
+    return told
 
 
 def log_action(conn, case_id, said, user_id):
@@ -454,6 +537,59 @@ def register(app, on_reply=None):
             channel=firehouse_channel(),
             user=user_id,
             text=cards.action.told(said, case_id),
+        )
+
+    @app.action(cards.report.RESOLVE)
+    def on_resolve_asked(ack, body, client):
+        ack()
+        case_id = int(body["actions"][0]["value"])
+        user_id = body["user"]["id"]
+
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, "case.resolve", case_id)
+            if not allowed:
+                return whisper(client, body, refusal)
+            live = live_actions(conn, case_id)
+            open_ones = counted(conn, OPEN_REPORTS, case_id)
+
+        client.views_open(
+            trigger_id=body["trigger_id"],
+            view=cards.resolve.view(case_id, live, open_ones),
+        )
+
+    @app.view(cards.resolve.CALLBACK)
+    def on_resolved(ack, body, view, client):
+        case_id = int(view["private_metadata"])
+        user_id = body["user"]["id"]
+
+        with session() as conn:
+            live = live_actions(conn, case_id)
+        said = cards.resolve.picked(view["state"], live)
+
+        wrong = cards.resolve.objection(said)
+        if wrong:
+            return ack(response_action="errors", errors=wrong)
+
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, "case.resolve", case_id)
+            if not allowed:
+                return ack(response_action="errors", errors={cards.resolve.WHY: refusal})
+            told = resolve(conn, case_id, said, user_id)
+
+        if told is None:
+            return ack(
+                response_action="errors",
+                errors={cards.resolve.WHY: f"Case {case_id} was already resolved."},
+            )
+
+        ack()
+        with session() as conn:
+            redraw(client, conn, case_id)
+        log.info("nemo: case %s resolved by %s, %s told", case_id, user_id, told)
+        client.chat_postEphemeral(
+            channel=firehouse_channel(),
+            user=user_id,
+            text=cards.resolve.done(said, case_id, told),
         )
 
     @app.event("message")

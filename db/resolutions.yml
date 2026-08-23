@@ -1,0 +1,15 @@
+resolutions:
+  action_taken:
+    label: Action taken
+  no_action:
+    label: No action needed
+    pick: 2
+  duplicate:
+    label: Duplicate of another case
+  not_conduct:
+    label: Not a conduct matter
+    pick: 1
+
+told: >-
+  Thanks for reporting! Your report has been marked as resolved, please reach out to us again
+  if you have any further inquiries.

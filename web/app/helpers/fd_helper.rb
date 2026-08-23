@@ -86,13 +86,26 @@ module FdHelper
     return "" if text.blank?
 
     parts = Fd::Mentions.split(text).map do |piece|
-      found = piece.match(Fd::Mentions::SLACK)
-      next piece unless found
+      said = piece.match(Fd::Mentions::SLACK)
+      next mention_link(said[1]) if said
 
-      link_to at_name(found[1]), fd_member_path(found[1]), class: "mention", title: found[1]
+      room = piece.match(Fd::Mentions::CHANNEL)
+      next channel_mention(room[1], room[2]) if room
+
+      piece
     end
 
     safe_join(parts)
+  end
+
+  def mention_link(user_id)
+    link_to at_name(user_id), fd_member_path(user_id), class: "mention", title: user_id
+  end
+
+  def channel_mention(channel_id, said = nil)
+    named = channels.named?(channel_id) ? channel_label(channel_id) : nil
+    shown = named || (said.present? ? "##{said}" : channel_id)
+    link_to shown, channel_path(channel_id), class: "mention", title: channel_id
   end
 
   def already_open_line(cases, preset)
@@ -587,12 +600,7 @@ module FdHelper
     parts.compact.join(" · ")
   end
 
-  RESOLUTION_LABELS = {
-    "action_taken" => "Action taken",
-    "no_action" => "No action needed",
-    "duplicate" => "Duplicate of another case",
-    "not_conduct" => "Not a conduct matter"
-  }.freeze
+  RESOLUTION_LABELS = Fd::Case::RESOLUTION_LABELS
 
   def told_chip(reports, open_reports)
     return nil if reports.blank?

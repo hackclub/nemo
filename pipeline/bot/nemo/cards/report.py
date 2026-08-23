@@ -15,6 +15,7 @@ CUT = "\n[truncated, the whole thing is on the case page]"
 
 CLAIM = "case_claim"
 LOG_ACTION = "case_log_action"
+RESOLVE = "case_resolve_open"
 
 LABELS = None
 
@@ -195,6 +196,7 @@ def buttons(case):
     if not case.get("assignees"):
         elements.append(button(CLAIM, "Claim it", case_id, "primary"))
     elements.append(button(LOG_ACTION, "Log an action", case_id))
+    elements.append(button(RESOLVE, "Resolve", case_id, "danger"))
 
     return {"type": "actions", "block_id": f"case_{case_id}", "elements": elements}
 

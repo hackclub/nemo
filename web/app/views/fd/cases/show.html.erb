@@ -74,7 +74,7 @@
         <%= resolution_label(@case.resolution).downcase %>
       </span>
       <% if @case.member_note.present? %>
-        <span class="closed-why"><%= @case.member_note %></span>
+        <span class="closed-why"><%= mentioned(@case.member_note) %></span>
       <% end %>
       <%= followed_chip(@case) %>
       <span class="closed-end">

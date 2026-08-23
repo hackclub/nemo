@@ -54,7 +54,7 @@ def view(case_id, subjects=()):
         "blocks": [
             {
                 "type": "context",
-                "elements": [{"type": "mrkdwn", "text": f"case *{case_id}*"}],
+                "elements": [{"type": "mrkdwn", "text": f"*case {case_id}*"}],
             },
             {
                 "type": "input",
@@ -137,4 +137,4 @@ def details(said):
 
 
 def told(said, case_id):
-    return f"{label(said['type_key']).lower()} logged on case {case_id}"
+    return f"{label(said['type_key']).lower()} logged on *case {case_id}*"

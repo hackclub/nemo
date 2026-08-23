@@ -86,4 +86,10 @@ def test_a_permanent_ban_takes_no_date():
 
 def test_the_word_it_reports_back_is_the_label():
     said = action.picked(state(kind="temp_ban", until="2026-09-01"))
-    assert action.told(said, 3864) == "temporary ban logged on case 3864"
+    assert action.told(said, 3864) == "temporary ban logged on *case 3864*"
+
+
+def test_the_case_is_named_once_in_the_body_not_in_the_title():
+    view = action.view(3864)
+    assert view["title"]["text"] == "Log an action"
+    assert view["blocks"][0]["elements"][0]["text"] == "*case 3864*"

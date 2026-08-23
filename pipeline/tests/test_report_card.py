@@ -226,13 +226,23 @@ def test_what_is_attached_earns_a_second_footer_and_nothing_more():
 
 def test_an_open_case_offers_to_be_claimed():
     acting = blocks_of("actions", card.blocks(a_case()))[0]
-    assert [e["action_id"] for e in acting["elements"]] == [card.CLAIM, card.LOG_ACTION]
+    assert [e["action_id"] for e in acting["elements"]] == [
+        card.CLAIM,
+        card.LOG_ACTION,
+        card.RESOLVE,
+    ]
     assert acting["elements"][0]["value"] == "2545"
 
 
 def test_a_held_case_keeps_its_buttons_but_not_the_claim():
     acting = blocks_of("actions", card.blocks(a_case(assignees=["UQUINN"])))[0]
-    assert [e["action_id"] for e in acting["elements"]] == [card.LOG_ACTION]
+    assert [e["action_id"] for e in acting["elements"]] == [card.LOG_ACTION, card.RESOLVE]
+
+
+def test_resolving_is_the_one_button_that_looks_dangerous():
+    acting = blocks_of("actions", card.blocks(a_case()))[0]
+    styles = {e["action_id"]: e.get("style") for e in acting["elements"]}
+    assert styles == {card.CLAIM: "primary", card.LOG_ACTION: None, card.RESOLVE: "danger"}
 
 
 def test_a_resolved_case_offers_nothing():

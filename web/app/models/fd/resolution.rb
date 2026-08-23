@@ -1,6 +1,5 @@
 module Fd
   class Resolution
-    TOLD = "Thanks for reporting! Your report has been marked as resolved, " \
-           "please reach out to us again if you have any further inquiries."
+    TOLD = YAML.load_file(Rails.root.join("../db/resolutions.yml")).fetch("told").freeze
   end
 end
