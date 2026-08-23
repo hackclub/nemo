@@ -1,0 +1,22 @@
+<%= turbo_frame_tag "merge-body" do %>
+  <div class="merge-pane">
+    <div class="merge-list">
+      <p class="merge-group">ticked, and who holds them</p>
+      <% plan.all.each do |one| %>
+        <%= link_to fd_confirm_merge_cases_path(carry.merge(case_ids: plan.all.map(&:id),
+              keep: one.id)), class: "merge-pick", data: { turbo_frame: "merge-body" },
+              aria: { current: ("true" if one.id == plan.keeper.id) } do %>
+          <span class="merge-ring" aria-hidden="true"></span>
+          <span class="merge-who">
+            <b><%= subject_handles(one) %></b>
+            <span class="merge-id">#<%= one.id %></span>
+            <span class="merge-sub"><%= merge_candidate_line(one) %></span>
+          </span>
+          <%= case_status_chip(one) %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <%= render "fd/merges/outcome", plan: plan, carry: carry %>
+<% end %>

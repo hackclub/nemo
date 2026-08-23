@@ -172,6 +172,72 @@ class FdMergesTest < ActionDispatch::IntegrationTest
     assert_select "input[type=hidden][name=duplicate_of][value=?]", newer.id.to_s
   end
 
+  def in_order
+    @main.update!(opened_at: 3.days.ago)
+    @dup_one.update!(opened_at: 2.days.ago)
+    @dup_two.update!(opened_at: 1.day.ago)
+  end
+
+  test "the queue asks for a confirmation instead of merging on the spot" do
+    sign_in_as(@me)
+    get fd_cases_path
+
+    assert_select "form#merge-form[method=get][action=?]", fd_confirm_merge_cases_path
+    assert_select "input[type=submit][value=?]", "Merge ticked"
+    assert_select "turbo-frame#merge-body:not([src])"
+  end
+
+  test "the confirmation names every ticked case and merges nothing yet" do
+    in_order
+    sign_in_as(@me)
+    get fd_confirm_merge_cases_path(case_ids: [@dup_two.id, @main.id, @dup_one.id])
+
+    assert_response :success
+    assert_select "turbo-frame#merge-body"
+    assert_select ".merge-pick", 3
+    assert_select ".merge-pick[aria-current]", 1
+    assert_select ".merge-said b", text: "##{@main.id} will hold all 3."
+    assert_select "input[type=hidden][name='case_ids[]']", 3
+    assert_select "input[type=hidden][name=duplicate_of][value=?]", @main.id.to_s
+    assert_equal 0, Fd::Case.where(id: [@main.id, @dup_one.id, @dup_two.id])
+      .where.not(resolved_at: nil).count
+  end
+
+  test "the ticked list is how you pick who holds them" do
+    in_order
+    sign_in_as(@me)
+    get fd_confirm_merge_cases_path(case_ids: [@main.id, @dup_one.id, @dup_two.id],
+      keep: @dup_two.id)
+
+    assert_select ".merge-said b", text: "##{@dup_two.id} will hold all 3."
+    assert_select "input[type=hidden][name=duplicate_of][value=?]", @dup_two.id.to_s
+    assert_select ".merge-keep", count: 0
+  end
+
+  test "confirming a pair still reads as both" do
+    in_order
+    sign_in_as(@me)
+    get fd_confirm_merge_cases_path(case_ids: [@main.id, @dup_one.id])
+
+    assert_select ".merge-said b", text: "##{@main.id} will hold both."
+  end
+
+  test "confirming with one case ticked is refused" do
+    sign_in_as(@me)
+    get fd_confirm_merge_cases_path(case_ids: [@main.id])
+
+    assert_redirected_to fd_cases_path
+    assert_match(/tick at least two/, flash[:alert])
+  end
+
+  test "the filters survive a merge made from the confirmation" do
+    in_order
+    sign_in_as(@me)
+    get fd_confirm_merge_cases_path(case_ids: [@main.id, @dup_one.id], view: "unassigned")
+
+    assert_select "input[type=hidden][name=view][value=unassigned]"
+  end
+
   test "picking a case by number that is already in the family is ignored" do
     @dup_two.update!(resolved_at: Time.current, resolution: "duplicate",
       duplicate_of: @dup_one.id)

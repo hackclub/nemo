@@ -12,7 +12,8 @@
 <% tabs, pill_views = @views.partition { |view| Fd::CaseQuery::TABS.include?(view.key) } %>
 <% pinned, tucked = pill_views.partition { |view| Fd::CaseQuery::PINNED_PILLS.include?(view.key) } %>
 
-<div class="stack" data-controller="merge">
+<div class="stack" data-controller="merge"
+     data-merge-url-value="<%= fd_confirm_merge_cases_path %>">
   <turbo-frame id="queue" target="_top" data-turbo-action="advance">
   <div class="views">
     <% tabs.each do |view| %>
@@ -99,7 +100,8 @@
   </div>
 
   <% if @cases.any? { |kase| !kase.resolved? } %>
-    <%= form_with url: fd_merge_cases_path, method: :post, id: "merge-form", class: "bulk" do %>
+    <%= form_with url: fd_confirm_merge_cases_path, method: :get, id: "merge-form",
+          class: "bulk", data: { action: "submit->merge#confirm" } do %>
       <% @query.to_params.each do |key, value| %>
         <%= hidden_field_tag key, value, id: nil %>
       <% end %>
@@ -108,7 +110,7 @@
         <span class="bulk-ids" data-merge-target="ids"></span>
         <span class="bulk-rule">Oldest case stays open</span>
       </span>
-      <%= submit_tag "Mark as duplicates", class: "btn btn-primary" %>
+      <%= submit_tag "Merge ticked", class: "btn btn-primary" %>
     <% end %>
   <% end %>
   </turbo-frame>
@@ -117,3 +119,4 @@
 <turbo-frame id="case-drawer" class="case-drawer-frame" data-controller="case-drawer"></turbo-frame>
 
 <%= render "open_case_modal" %>
+<%= render "merge_modal", kase: nil %>

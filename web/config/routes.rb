@@ -13,6 +13,7 @@ Rails.application.routes.draw do
   namespace :fd do
     root to: "cases#index"
     post "cases/merge", to: "merges#create", as: :merge_cases
+    get "cases/merge", to: "merges#confirm", as: :confirm_merge_cases
     get "cases/:id/merge", to: "merges#show", as: :case_merge
     get "members/search", to: "members#search", as: :member_search
     resources :members, only: [:index, :show] do

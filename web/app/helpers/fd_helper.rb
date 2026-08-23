@@ -363,18 +363,6 @@ module FdHelper
     "No messages held for this thread yet."
   end
 
-  def merge_flags(plan)
-    return [] if plan.nil?
-
-    detail = if plan.same_thread?
-      "They share #{plan.shared_channels.to_sentence}. Merging keeps both reports."
-    else
-      "Nothing says these are the same thread. Check before you merge."
-    end
-    [Fd::CaseFlags::Flag.new(tone: plan.same_thread? ? "mid" : "crit",
-      headline: "##{plan.folded.id} would fold into ##{plan.keeper.id}.", detail: detail)]
-  end
-
   def case_severity(kase)
     return "sev-calm" if kase.resolved?
 
@@ -541,10 +529,26 @@ module FdHelper
     ["opened #{kase.opened_at.strftime('%-d %b')}", held].compact.join(" · ")
   end
 
-  def merge_thread_line(plan)
-    return nil if plan.folded.reports.empty?
+  def merge_hold_line(plan)
+    "##{plan.keeper.id} will hold #{plan.pair? ? 'both' : "all #{plan.all.size}"}."
+  end
 
-    "Its report thread comes across and keeps its own conversation."
+  def merge_thread_line(plan)
+    carried = plan.folded_cases.count { |one| one.reports.any? }
+    return nil if carried.zero?
+
+    if carried == 1
+      "Its report thread comes across and keeps its own conversation."
+    else
+      "Their report threads come across and each keeps its own conversation."
+    end
+  end
+
+  def merge_fold_line(plan)
+    numbers = plan.folded_cases.map { |one| "##{one.id}" }.to_sentence
+    closes = plan.folded_cases.one? ? "closes as a duplicate" : "close as duplicates"
+    lands = plan.folded_cases.one? ? "its link lands" : "their links land"
+    "#{numbers} #{closes}, and #{lands} on ##{plan.keeper.id}."
   end
 
   def merge_counts(plan)

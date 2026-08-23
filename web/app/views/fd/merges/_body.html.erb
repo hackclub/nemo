@@ -27,38 +27,10 @@
   </div>
 
   <% if plan %>
-    <%= form_with url: fd_merge_cases_path, method: :post, data: { turbo_frame: "_top" } do %>
-      <%= hidden_field_tag "case_ids[]", kase.id, id: nil %>
-      <%= hidden_field_tag "case_ids[]", target.id, id: nil %>
-
-      <div class="merge-outcome">
-        <p class="merge-said">
-          <b>#<%= plan.keeper.id %> will hold both.</b>
-          <%= merge_thread_line(plan) %>
-          #<%= plan.folded.id %> closes as a duplicate, and its link lands on
-          #<%= plan.keeper.id %>.
-        </p>
-        <p class="merge-counts">Then on #<%= plan.keeper.id %>: <%= merge_counts(plan) %></p>
-
-        <div class="merge-keep">
-          <% [plan.keeper, plan.folded].each do |one| %>
-            <%= link_to fd_case_merge_path(kase, into: target.id, keep: one.id,
-                  q: term.presence), class: "merge-swap",
-                  data: { turbo_frame: "merge-body" },
-                  aria: { current: ("true" if one.id == plan.keeper.id) } do %>
-              #<%= one.id %> holds them
-            <% end %>
-          <% end %>
-        </div>
-        <%= hidden_field_tag :duplicate_of, plan.keeper.id, id: nil %>
-
-      </div>
-
-      <div class="merge-act">
-        <label for="merge-case" class="btn">Close</label>
-        <%= submit_tag "Merge into ##{plan.keeper.id}", class: "btn btn-primary" %>
-      </div>
-    <% end %>
+    <%= render "fd/merges/outcome", plan: plan,
+          keep_url: ->(one) {
+            fd_case_merge_path(kase, into: target.id, keep: one.id, q: term.presence)
+          } %>
   <% else %>
     <div class="merge-act">
       <label for="merge-case" class="btn">Close</label>

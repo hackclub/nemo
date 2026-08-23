@@ -1,0 +1,35 @@
+<%= form_with url: fd_merge_cases_path, method: :post, data: { turbo_frame: "_top" } do %>
+  <% plan.all.each do |one| %>
+    <%= hidden_field_tag "case_ids[]", one.id, id: nil %>
+  <% end %>
+  <% local_assigns.fetch(:carry, {}).each do |key, value| %>
+    <%= hidden_field_tag key, value, id: nil %>
+  <% end %>
+
+  <div class="merge-outcome">
+    <p class="merge-said">
+      <b><%= merge_hold_line(plan) %></b>
+      <%= merge_thread_line(plan) %>
+      <%= merge_fold_line(plan) %>
+    </p>
+    <p class="merge-counts">Then on #<%= plan.keeper.id %>: <%= merge_counts(plan) %></p>
+
+    <% if local_assigns[:keep_url] %>
+      <div class="merge-keep">
+        <% plan.all.each do |one| %>
+          <%= link_to keep_url.call(one), class: "merge-swap",
+                data: { turbo_frame: "merge-body" },
+                aria: { current: ("true" if one.id == plan.keeper.id) } do %>
+            #<%= one.id %> holds them
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+    <%= hidden_field_tag :duplicate_of, plan.keeper.id, id: nil %>
+  </div>
+
+  <div class="merge-act">
+    <label for="merge-case" class="btn">Close</label>
+    <%= submit_tag "Merge into ##{plan.keeper.id}", class: "btn btn-primary" %>
+  </div>
+<% end %>

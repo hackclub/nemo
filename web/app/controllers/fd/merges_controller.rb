@@ -15,8 +15,22 @@ module Fd
         @candidates.flat_map(&:assignee_user_ids))
     end
 
+    def confirm
+      ids = ticked_ids
+      return refuse("tick at least two cases to merge") if ids.size < 2
+
+      @carry = query_params
+      cases = Case.where(id: ids).includes(:subjects, :assignees, :reports, :participants)
+        .oldest_first.to_a
+      return refuse("those cases are gone") if cases.size < 2
+
+      @plan = MergePlan.over(cases, keeper: params[:keep])
+      @names = Names.for(cases.flat_map(&:subject_user_ids) +
+        cases.flat_map(&:assignee_user_ids))
+    end
+
     def create
-      ids = Array(params[:case_ids]).map(&:to_i).reject(&:zero?).uniq
+      ids = ticked_ids
       return refuse("tick the cases to mark as duplicates") if ids.empty?
 
       if params[:duplicate_of].present? && chosen_target.nil?
@@ -41,6 +55,10 @@ module Fd
     end
 
     private
+
+    def ticked_ids
+      Array(params[:case_ids]).map(&:to_i).reject(&:zero?).uniq
+    end
 
     def found_groups
       found = Search.new(@term, scope: "case", limit: 8).groups
