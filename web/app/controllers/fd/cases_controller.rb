@@ -13,16 +13,18 @@ module Fd
       @case = Case.find(params[:id])
       return render_drawer if turbo_frame_request_id == "case-drawer"
 
-      @threads = @case.threads.primary_first.to_a
-      @participants = @case.participants.by_role.to_a
+      family = @case.family_ids
+      @threads = CaseThread.where(case_id: family).primary_first.to_a
+      @participants = CaseParticipant.where(case_id: family).by_role.to_a
+        .uniq { |person| [person.user_id, person.role] }
       @others = @participants.reject { |person| person.role == "subject" }
       @people = CasePeople.for(@participants, asked: params[:person])
       @reports = @case.reports.oldest_first.to_a
-      @actions = @case.actions.oldest_first.to_a
+      @actions = Action.where(case_id: family).oldest_first.to_a
       @live_actions = @actions.reject(&:reversed?)
       @siblings = @case.sibling_cases.includes(:subjects).oldest_first.to_a
       @duplicate_candidates = Case.candidates_for(@case, @siblings)
-      @notes = @case.notes.visible.recent_first.to_a
+      @notes = Note.where(case_id: family).visible.recent_first.to_a
       @conversations = IntakeConversation.for_case(@case.id).to_a
       @conversation_said = IntakeMessage.tail(@conversations.map(&:id))
       @queued = IntakeOutbox.where(conversation_id: @conversations.map(&:id))
@@ -36,7 +38,8 @@ module Fd
         notes: @notes, messages: @thread_messages)
       @thread_list = CaseThreads.for(@threads, actions: @actions,
         messages: @thread_messages, asked: params[:thread])
-      @citations = @case.citations.index_by(&:thread_message_id)
+      @citations = CaseCitation.where(case_id: family).oldest_first
+        .index_by(&:thread_message_id)
       @flagged_messages = @thread_messages.select { |said| @citations.key?(said.id) }
       @cited_by = @actions.select(&:cites?).group_by(&:cites_message_id)
       @cited_messages = cited_messages
@@ -49,9 +52,9 @@ module Fd
       @mentioned = @case.mentioned_but_unlogged(
         notes: @notes + @standing_notes.values.flatten, reports: @reports
       )
-      @erasures = AuditEntry.erasures_for(case_id: @case.id,
-        note_ids: @case.notes.ids).to_a
-      @links = AuditEntry.decision_links_for(case_id: @case.id).to_a
+      @erasures = AuditEntry.erasures_for(case_id: family,
+        note_ids: Note.where(case_id: family).ids).to_a
+      @links = AuditEntry.decision_links_for(case_id: family).to_a
       @decision_titles = Decision.where(id: linked_decision_ids).pluck(:id, :title).to_h
       @names = Names.for(page_ids)
       @timeline = CaseTimeline.for(

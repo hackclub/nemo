@@ -24,7 +24,7 @@ module Fd
 
     def destroy
       kase = Case.find(params[:case_id])
-      flag = kase.citations.find_by(id: params[:id])
+      flag = CaseCitation.where(case_id: kase.family_ids).find_by(id: params[:id])
 
       return refuse(kase, "that flag is not on this case") if flag.nil?
 

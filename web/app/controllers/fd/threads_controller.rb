@@ -29,7 +29,7 @@ module Fd
 
     def destroy
       kase = Case.find(params[:case_id])
-      thread = kase.threads.find_by(id: params[:id])
+      thread = CaseThread.where(case_id: kase.family_ids).find_by(id: params[:id])
 
       if thread.nil?
         return redirect_to(fd_case_path(kase, tab: "evidence"),

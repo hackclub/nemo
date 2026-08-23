@@ -34,6 +34,12 @@ module Fd
 
     def kase = @case
 
+    def from_chip(record)
+      return nil if record.case_id.nil? || record.case_id == kase.id
+
+      "from ##{record.case_id}"
+    end
+
     def role_of(user_id)
       participants.find { |person| person.user_id == user_id }&.role
     end
@@ -171,7 +177,8 @@ module Fd
       chips = []
       chips << "expires #{action.expires_at.strftime('%b %-d')}" if action.expires?
       chips << "reversed" if action.reversed?
-      chips
+      chips << from_chip(action)
+      chips.compact
     end
 
     def action_detail(action)
@@ -198,7 +205,8 @@ module Fd
           at: note.created_at,
           title: "Note added",
           mark: "note",
-          chips: note.standing? ? ["about #{names[note.subject_user_id]}"] : [],
+          chips: [note.standing? ? "about #{names[note.subject_user_id]}" : nil,
+                  from_chip(note)].compact,
           detail: "by #{names[note.author]}",
           said: note.body,
         )

@@ -34,7 +34,8 @@ module Fd
 
     def destroy
       kase = Case.find(params[:case_id])
-      person = kase.participants.find_by(user_id: params[:id], role: params[:role])
+      person = CaseParticipant.where(case_id: kase.family_ids)
+        .find_by(user_id: params[:id], role: params[:role])
 
       if person.nil?
         return redirect_to(fd_case_path(kase, tab: "people"), alert: "they are not on this case")

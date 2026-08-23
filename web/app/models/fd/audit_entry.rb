@@ -18,11 +18,12 @@ module Fd
       scope = where(verb: ERASING)
       scope = if note_ids.present?
         scope.where(
-          "(entity_type IN (?) AND entity_id = ?) OR (entity_type = 'note' AND entity_id IN (?))",
-          CASE_FILED, case_id, note_ids
+          "(entity_type IN (?) AND entity_id IN (?)) OR " \
+          "(entity_type = 'note' AND entity_id IN (?))",
+          CASE_FILED, Array(case_id), note_ids
         )
       else
-        scope.where(entity_type: CASE_FILED, entity_id: case_id)
+        scope.where(entity_type: CASE_FILED, entity_id: Array(case_id))
       end
       scope.oldest_first
     end
