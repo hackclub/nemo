@@ -1,6 +1,8 @@
 import logging
 import os
 
+from psycopg.types.json import Jsonb
+
 from bot.engine import access, audit, parse, session
 from bot.nemo import answer, chat, who
 from bot.nemo import cards
@@ -282,6 +284,47 @@ def claimed(conn, case_id, user_id):
     audit.record(conn, "assignee", case_id, "claimed", user_id, after={"user_id": user_id})
 
 
+LOG_ACTION = """
+INSERT INTO fd.actions
+    (case_id, type_key, target_user_id, decided_by, performed_by, performed_at,
+     source_app, expires_at, details)
+VALUES (%s, %s, %s, %s, %s, now(), %s, %s, %s)
+RETURNING id, performed_at
+"""
+
+
+def log_action(conn, case_id, said, user_id):
+    expires = f"{said['expires_on']} 23:59:59" if said.get("expires_on") else None
+    row = conn.execute(
+        LOG_ACTION,
+        (
+            case_id,
+            said["type_key"],
+            said["target_user_id"],
+            user_id,
+            user_id,
+            audit.SOURCE_APP,
+            expires,
+            Jsonb(cards.action.details(said)),
+        ),
+    ).fetchone()
+
+    audit.record(
+        conn,
+        "action",
+        row[0],
+        "performed",
+        user_id,
+        after={
+            "case_id": case_id,
+            "type_key": said["type_key"],
+            "target_user_id": said["target_user_id"],
+            "expires_at": expires,
+        },
+    )
+    return row[0]
+
+
 def echo(client, thread_ts, sent_by, body, signed, channel_id=None):
     seen = who.face(client, sent_by)
     wearing = {"username": seen["name"]}
@@ -366,6 +409,52 @@ def register(app, on_reply=None):
             claimed(conn, case_id, user_id)
 
         log.info("nemo: case %s claimed by %s", case_id, user_id)
+
+    @app.action(cards.report.LOG_ACTION)
+    def on_log_action(ack, body, client):
+        ack()
+        case_id = int(body["actions"][0]["value"])
+        user_id = body["user"]["id"]
+
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, "case.act", case_id)
+            if not allowed:
+                return whisper(client, body, refusal)
+            subjects = [row[0] for row in conn.execute(SUBJECTS, (case_id,)).fetchall()]
+
+        client.views_open(
+            trigger_id=body["trigger_id"],
+            view=cards.action.view(case_id, subjects),
+        )
+
+    @app.view(cards.action.CALLBACK)
+    def on_action_logged(ack, body, view, client):
+        case_id = int(view["private_metadata"])
+        user_id = body["user"]["id"]
+        said = cards.action.picked(view["state"])
+
+        wrong = cards.action.objection(said)
+        if wrong:
+            return ack(response_action="errors", errors=wrong)
+
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, "case.act", case_id)
+            if not allowed:
+                return ack(
+                    response_action="errors",
+                    errors={cards.action.KIND: refusal},
+                )
+            action_id = log_action(conn, case_id, said, user_id)
+
+        ack()
+        with session() as conn:
+            redraw(client, conn, case_id)
+        log.info("nemo: action %s logged on case %s by %s", action_id, case_id, user_id)
+        client.chat_postEphemeral(
+            channel=firehouse_channel(),
+            user=user_id,
+            text=cards.action.told(said, case_id),
+        )
 
     @app.event("message")
     def on_message(event):

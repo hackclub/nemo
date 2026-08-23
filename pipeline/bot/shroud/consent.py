@@ -1,3 +1,5 @@
+from bot.engine import richtext
+
 QUOTE_LIMIT = 2000
 CUT = "\n> [there is more, and they will see all of it]"
 
@@ -20,12 +22,19 @@ def escape(text):
 
 
 def quote(bodies):
-    said = "\n\n".join(escape(body).strip() for body in bodies if (body or "").strip())
+    said = "\n\n".join(body.strip() for body in bodies if (body or "").strip())
     if not said:
-        return "_no words yet, only what you attached_"
+        return None
     if len(said) > QUOTE_LIMIT:
         said = said[:QUOTE_LIMIT].rstrip() + CUT
     return said
+
+
+def quoted(bodies):
+    said = quote(bodies)
+    if said is None:
+        return richtext.quote("no words yet, only what you attached", {"italic": True})
+    return richtext.quote(said)
 
 
 def option(value, label, note):
@@ -58,15 +67,7 @@ def blocks(bodies, files=0):
                 "text": "*Ready when you are.* The Fire Department will see this:",
             },
         },
-        {
-            "type": "rich_text",
-            "elements": [
-                {
-                    "type": "rich_text_quote",
-                    "elements": [{"type": "text", "text": quote(bodies)}],
-                }
-            ],
-        },
+        quoted(bodies),
     ]
 
     if files:

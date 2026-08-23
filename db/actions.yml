@@ -1,0 +1,22 @@
+actions:
+  warning:
+    label: Warning
+  shush:
+    label: Shush
+    expires: true
+  temp_ban:
+    label: Temporary ban
+    expires: true
+  indef_ban:
+    label: Indefinite ban
+  perma_ban:
+    label: Permanent ban
+  channel_ban:
+    label: Channel ban
+    expires: true
+    channel: required
+  locked_thread:
+    label: Locked thread
+    channel: optional
+  dm:
+    label: DM

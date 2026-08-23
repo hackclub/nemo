@@ -880,16 +880,7 @@ module FdHelper
     safe_join(Array(user_ids).map { |user_id| member_link(user_id) }, ", ")
   end
 
-  ACTION_LABELS = {
-    "warning" => "Warning",
-    "shush" => "Shush",
-    "temp_ban" => "Temporary ban",
-    "indef_ban" => "Indefinite ban",
-    "perma_ban" => "Permanent ban",
-    "channel_ban" => "Channel ban",
-    "locked_thread" => "Locked thread",
-    "dm" => "DM"
-  }.freeze
+  ACTION_LABELS = Fd::Action::LABELS
 
   def action_label(type_key)
     ACTION_LABELS.fetch(type_key) { type_key.tr("_", " ").capitalize }

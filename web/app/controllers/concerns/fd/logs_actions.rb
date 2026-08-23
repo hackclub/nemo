@@ -1,8 +1,8 @@
 module Fd
   module LogsActions
-    NEEDS_EXPIRY = %w[shush temp_ban channel_ban].freeze
-    NEEDS_CHANNEL = %w[channel_ban].freeze
-    TAKES_CHANNEL = %w[channel_ban locked_thread].freeze
+    NEEDS_EXPIRY = Action::NEEDS_EXPIRY
+    NEEDS_CHANNEL = Action::NEEDS_CHANNEL
+    TAKES_CHANNEL = Action::TAKES_CHANNEL
 
     private
 
