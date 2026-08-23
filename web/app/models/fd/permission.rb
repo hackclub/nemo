@@ -2,100 +2,31 @@ module Fd
   class Permission
     class Unknown < ArgumentError; end
 
-    ROLES = %w[firefighter lead community_manager].freeze
-    ROLE_LABELS = { "firefighter" => "Firefighter", "lead" => "Lead",
-                    "community_manager" => "Community manager" }.freeze
+    PATH = Rails.root.join("../db/permissions.yml").freeze
+    TABLE = YAML.load_file(PATH).freeze
 
-    EVERYONE = ROLES
-    LEAD = %w[lead community_manager].freeze
-    MANAGER = %w[community_manager].freeze
+    ROLES = TABLE.fetch("roles").freeze
+    ROLE_LABELS = TABLE.fetch("role_labels").freeze
+    ROLE_SETS = TABLE.fetch("role_sets").transform_values(&:freeze).freeze
+
+    EVERYONE = ROLE_SETS.fetch("everyone")
+    LEAD = ROLE_SETS.fetch("lead")
+    MANAGER = ROLE_SETS.fetch("manager")
     SCOPES = %i[assigned author].freeze
 
-    AREAS = { "case" => "Cases", "decision" => "Decisions", "member" => "People and access",
-              "identity" => "People and access", "access" => "People and access",
-              "slack" => "Your own account" }.freeze
+    AREAS = TABLE.fetch("areas").freeze
 
-    ALL = {
-      "case.read" => {
-        label: "Read every case, note and thread", roles: EVERYONE, events: []
-      },
-      "case.open" => {
-        label: "Open a case, claim it, hand it back", roles: EVERYONE,
-        events: %w[case/opened assignee/claimed assignee/unclaimed]
-      },
-      "case.note" => {
-        label: "Write a note, delete their own", roles: EVERYONE, scope: :author,
-        events: %w[note/noted note/deleted]
-      },
-      "case.people" => {
-        label: "Add somebody, take somebody off", roles: EVERYONE, scope: :assigned,
-        events: %w[participant/attached participant/detached]
-      },
-      "case.thread" => {
-        label: "Attach a thread, flag a message", roles: EVERYONE, scope: :assigned,
-        events: %w[thread/attached thread/detached citation/flagged citation/unflagged]
-      },
-      "case.chat" => {
-        label: "Talk to the team on a case", roles: EVERYONE, events: []
-      },
-      "case.reply" => {
-        label: "Answer the reporter", roles: EVERYONE,
-        events: %w[report/answered]
-      },
-      "case.act" => {
-        label: "Log an action against somebody", roles: EVERYONE, scope: :assigned,
-        events: %w[action/performed]
-      },
-      "case.resolve" => {
-        label: "Resolve a case, mark a duplicate", roles: EVERYONE,
-        events: %w[case/resolved]
-      },
-      "case.reverse" => {
-        label: "Reverse an action somebody logged", roles: EVERYONE, scope: :assigned,
-        events: %w[action/reversed]
-      },
-      "case.reopen" => {
-        label: "Put a resolved case back in the queue", roles: EVERYONE,
-        events: %w[case/reopened]
-      },
-      "decision.write" => {
-        label: "Propose one, reword any of them, drop their own", roles: EVERYONE,
-        events: %w[decision/proposed decision/amended decision/dropped]
-      },
-      "decision.link" => {
-        label: "Link threads, link a case to a decision", roles: EVERYONE,
-        events: %w[decision_thread/attached decision_thread/detached case/followed
-                   case/unfollowed]
-      },
-      "decision.settle" => {
-        label: "Settle a proposal, putting it in force", roles: LEAD,
-        events: %w[decision/settled]
-      },
-      "decision.retire" => {
-        label: "Supersede or retire a rule", roles: LEAD,
-        events: %w[decision/superseded]
-      },
-      "member.note" => {
-        label: "Write a standing note about a member", roles: EVERYONE, events: []
-      },
-      "identity.read" => {
-        label: "See the real name and email behind an id", roles: EVERYONE, events: [],
-        logged: true
-      },
-      "slack.link" => {
-        label: "Link their own Slack account, to send as themselves", roles: EVERYONE,
-        events: %w[slack_account/linked slack_account/unlinked]
-      },
-      "access.read" => {
-        label: "See who holds access and what they did with it", roles: MANAGER, events: []
-      },
-      "access.grant" => {
-        label: "Give or take back access", roles: MANAGER,
-        events: %w[grant/granted grant/revoked permission/granted permission/revoked]
-      }
+    ALL = TABLE.fetch("permissions").to_h { |key, row|
+      [key, {
+        label: row.fetch("label"),
+        roles: ROLE_SETS.fetch(row.fetch("held_by")),
+        scope: row["scope"]&.to_sym,
+        events: (row["events"] || []).freeze,
+        logged: row["logged"] == true
+      }.freeze]
     }.freeze
 
-    LOCKED = %w[access.grant].freeze
+    LOCKED = TABLE.fetch("locked").freeze
 
     def self.keys = ALL.keys
 

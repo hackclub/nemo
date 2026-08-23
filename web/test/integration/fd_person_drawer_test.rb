@@ -23,7 +23,8 @@ class FdPersonDrawerTest < ActionDispatch::IntegrationTest
 
     assert_select "turbo-frame#person-drawer", 1
     assert_select "turbo-frame#person-drawer .drawer-h", 0, "the layout's frame stays empty"
-    assert_select ".subject-avatar", 1
+    assert_select ".head-face", 1
+    assert_select ".head-actions", 1, "the full page keeps its own header actions"
   end
 
   test "a case note by another author opens their drawer, not a full navigation" do

@@ -48,7 +48,8 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
     action = entries.find { |entry| entry.kind == "actions" }
     assert_equal "Warning", action.title
     assert_match(/case #{kase.id}/, action.detail)
-    assert_match(/decided by/, action.detail)
+    assert_match(/by @UFF1/, action.detail)
+    assert_no_match(/performed by/, action.detail, "one firefighter took the action, not two")
   end
 
   test "a reversal is its own entry, at the moment it was undone" do

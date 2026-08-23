@@ -56,7 +56,7 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     get fd_member_path(SUBJECT)
 
     assert_select ".stand.stand-live"
-    assert_select ".stand .chip-crit", text: /shush until/
+    assert_select ".stand .chip-warn", text: /shush until/
     assert_select ".stand", text: /1 action still standing/
   end
 
@@ -82,7 +82,7 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     assert_select ".record-strip", 1
     assert_select ".record-strip", text: /subject of 1/
     assert_select ".record-strip", text: /logged in 1/
-    assert_select ".record-strip", text: /first seen/
+    assert_select ".record-strip", text: /reversed 0/
   end
 
   test "the priors figure uses the definition, not the case count" do
@@ -168,10 +168,11 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     assert_select ".card-note", text: /Nothing has ever been done to them/
   end
 
-  test "a member with no history still shows the record, empty, and the notes" do
+  test "a member with nothing on record says so and drops the record card" do
     get fd_member_path("UNOBODY")
 
-    assert_select ".card-title", text: "Record"
+    assert_select ".stand.stand-clean .chip-good", text: "nothing on record"
+    assert_select ".card-title", text: "Record", count: 0
     assert_select ".record-line", 0
     assert_select ".card-title", text: /Notes on/
   end
