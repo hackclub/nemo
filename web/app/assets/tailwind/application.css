@@ -4455,6 +4455,16 @@
     text-decoration: none;
   }
 
+  .row-merged {
+    text-decoration: underline;
+    text-decoration-color: var(--line);
+    text-underline-offset: 2px;
+  }
+
+  .row-merged:hover {
+    color: var(--accent);
+  }
+
   .two-line a:hover b,
   .two-line button:hover b {
     color: var(--accent);

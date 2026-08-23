@@ -18,14 +18,18 @@ module Fd
             AND NOT EXISTS (SELECT 1 FROM fd.case_assignees x WHERE x.case_id = c.id)
         ) AS oldest_unassigned,
         count(*) FILTER (WHERE opened_at >= :month) AS opened_month,
-        count(*) FILTER (WHERE opened_at >= :month AND resolved_at IS NOT NULL)
-          AS opened_month_resolved,
+        count(*) FILTER (
+          WHERE opened_at >= :month AND resolved_at IS NOT NULL AND duplicate_of IS NULL
+        ) AS opened_month_resolved,
         percentile_cont(0.5) WITHIN GROUP (
           ORDER BY extract(epoch FROM resolved_at - opened_at)
-        ) FILTER (WHERE resolved_at >= :quarter) AS median_now,
+        ) FILTER (WHERE resolved_at >= :quarter AND duplicate_of IS NULL) AS median_now,
         percentile_cont(0.5) WITHIN GROUP (
           ORDER BY extract(epoch FROM resolved_at - opened_at)
-        ) FILTER (WHERE resolved_at >= :last_quarter AND resolved_at < :quarter) AS median_before
+        ) FILTER (
+          WHERE resolved_at >= :last_quarter AND resolved_at < :quarter
+            AND duplicate_of IS NULL
+        ) AS median_before
       FROM fd.cases c
     SQL
 

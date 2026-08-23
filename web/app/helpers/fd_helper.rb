@@ -701,7 +701,15 @@ module FdHelper
   def row_subtitle(kase, thread_counts, thread_channels = {})
     parts = [category_short(kase.category_key), row_origin_phrase(kase)]
     parts << row_messages_phrase(kase, thread_counts, thread_channels)
-    parts.compact.reject { |part| part == "n/a" }.join(" · ")
+    parts << row_merged_phrase(kase)
+    safe_join(parts.compact.reject { |part| part == "n/a" }, " · ")
+  end
+
+  def row_merged_phrase(kase)
+    return nil if kase.duplicate_of.blank?
+
+    safe_join(["merged into ",
+      link_to("##{kase.duplicate_of}", fd_case_path(kase.duplicate_of), class: "row-merged")])
   end
 
   def row_origin_phrase(kase)

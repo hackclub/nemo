@@ -110,7 +110,9 @@ module Fd
           )
         ) AS unassigned,
         count(*) FILTER (WHERE c.resolved_at IS NULL AND c.opened_at <= :aging) AS aging,
-        count(*) FILTER (WHERE c.resolved_at >= :month) AS resolved,
+        count(*) FILTER (
+          WHERE c.resolved_at >= :month AND c.duplicate_of IS NULL
+        ) AS resolved,
         count(*) AS everything
       FROM fd.cases c
     SQL
@@ -256,7 +258,8 @@ module Fd
       when "mine" then viewer ? scope.unresolved.assigned_to(viewer) : scope.unresolved
       when "unassigned" then scope.unresolved.unassigned
       when "aging" then scope.unresolved.where(opened_at: ..AGE_CRIT.ago)
-      when "resolved" then scope.where(resolved_at: Time.current.beginning_of_month..)
+      when "resolved"
+        scope.not_duplicate.where(resolved_at: Time.current.beginning_of_month..)
       else scope
       end
     end

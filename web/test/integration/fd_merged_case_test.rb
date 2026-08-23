@@ -135,6 +135,47 @@ class FdMergedCaseTest < ActionDispatch::IntegrationTest
     assert_equal conversation.id, Fd::IntakeOutbox.sole.conversation_id
   end
 
+  def resolved_count
+    Fd::CaseQuery.view_counts(nil)["resolved"]
+  end
+
+  test "the queue does not count a folded case as resolved work" do
+    get fd_cases_path(view: "resolved")
+    assert_select ".two-line b", text: /##{@folded.id}/, count: 0
+
+    folded = resolved_count
+    @folded.update!(duplicate_of: nil)
+
+    assert_equal resolved_count - 1, folded, "a merge is filing, not an outcome"
+  end
+
+  test "a folded case still shows in everything, saying where it went" do
+    get fd_cases_path(view: "everything")
+
+    assert_select ".two-line span", text: /merged into ##{@root.id}/
+    assert_select "a.row-merged[href=?]", fd_case_path(@root)
+    assert_select ".two-line b", text: /##{@folded.id}/
+  end
+
+  test "a merge counts as neither a resolution nor a time to resolve" do
+    start = Time.current.beginning_of_month
+    @folded.update!(opened_at: start + 1.minute, resolved_at: start + 2.minutes)
+    merged = Fd::QueueStats.load
+    @folded.update!(duplicate_of: nil)
+    loose = Fd::QueueStats.load
+
+    assert_equal loose.opened_month_resolved - 1, merged.opened_month_resolved
+    assert_not_equal loose.median_now, merged.median_now
+    assert_equal loose.total, merged.total, "it is still a case that happened"
+  end
+
+  test "a case resolved on its own merits still counts" do
+    folded = resolved_count
+    @folded.update!(resolution: "no_action", duplicate_of: nil)
+
+    assert_equal folded + 1, resolved_count
+  end
+
   test "the internal chat shows in whichever thread you are reading" do
     people = Fd::Member.order(:user_id).limit(2).pluck(:user_id)
     report_on(@root, people.first, at: 3.days.ago)
