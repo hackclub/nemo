@@ -78,4 +78,71 @@ class FdMergedCaseTest < ActionDispatch::IntegrationTest
 
     assert_nil Fd::CaseThread.find_by(id: thread.id), "detaching removes it"
   end
+
+  def report_on(kase, who, at:)
+    report = Fd::CaseReport.create!(case_id: kase.id, reporter_user_id: who,
+      is_anonymous: false, body: "#{who} said something", source_app: "shroud", received_at: at)
+    Fd::IntakeConversation.create!(report_id: report.id, member_user_id: who,
+      channel_id: "D0#{who}", thread_ts: "1700.#{report.id}", opened_at: at)
+    report
+  end
+
+  test "one report means no thread pills at all" do
+    who = Fd::Member.first.user_id
+    report_on(@root, who, at: 3.days.ago)
+
+    get fd_case_path(@root)
+    assert_select ".chat-picks", 0
+    assert_select ".chat-head b"
+  end
+
+  test "two reports give a pill each, and the folded one says where it came from" do
+    people = Fd::Member.order(:user_id).limit(2).pluck(:user_id)
+    mine = report_on(@root, people.first, at: 3.days.ago)
+    theirs = report_on(@folded, people.last, at: 6.days.ago)
+
+    get fd_case_path(@root)
+
+    assert_select ".chat-picks .chat-pick", 2
+    assert_select ".chat-pick[aria-current]", 1
+    assert_select ".chat-pick-from", text: "from ##{@folded.id}"
+    assert_not_nil mine
+    assert_not_nil theirs
+  end
+
+  test "the thread you pick is the conversation you see" do
+    people = Fd::Member.order(:user_id).limit(2).pluck(:user_id)
+    mine = report_on(@root, people.first, at: 3.days.ago)
+    theirs = report_on(@folded, people.last, at: 6.days.ago)
+
+    get fd_case_path(@root, thread: theirs.id)
+    assert_select ".chat-log .said-body", text: /#{people.last} said something/
+    assert_select ".chat-log .said-body", text: /#{people.first} said something/, count: 0
+
+    get fd_case_path(@root, thread: mine.id)
+    assert_select ".chat-log .said-body", text: /#{people.first} said something/
+  end
+
+  test "a reply goes to the thread you were reading, not the first one" do
+    people = Fd::Member.order(:user_id).limit(2).pluck(:user_id)
+    report_on(@root, people.first, at: 3.days.ago)
+    theirs = report_on(@folded, people.last, at: 6.days.ago)
+    conversation = Fd::IntakeConversation.find_by(report_id: theirs.id)
+
+    post fd_case_replies_path(@root), params: { body: "we are on it",
+      conversation_id: conversation.id }, as: :turbo_stream
+
+    assert_equal conversation.id, Fd::IntakeOutbox.sole.conversation_id
+  end
+
+  test "the internal chat shows in whichever thread you are reading" do
+    people = Fd::Member.order(:user_id).limit(2).pluck(:user_id)
+    report_on(@root, people.first, at: 3.days.ago)
+    theirs = report_on(@folded, people.last, at: 6.days.ago)
+    Fd::CaseChat.create!(case_id: @root.id, author_user_id: "UME", body: "same person as both",
+      source_app: "fire_engine")
+
+    get fd_case_path(@root, thread: theirs.id)
+    assert_select ".chat-log .said-body", text: "same person as both"
+  end
 end

@@ -3,14 +3,31 @@
 <% messages = local_assigns.fetch(:messages, []) %>
 <% queued = local_assigns.fetch(:queued, []) %>
 <% earlier = local_assigns.fetch(:earlier, 0) %>
+<% thread = local_assigns.fetch(:thread, reports.last) %>
+<% conversation = local_assigns.fetch(:conversation, nil) %>
 
 <div class="chat" data-controller="stick">
+  <% if reports.size > 1 %>
+    <div class="chat-picks">
+      <% reports.each do |report| %>
+        <%= link_to fd_case_path(kase, tab: "report", thread: report.id),
+              class: "chat-pick", aria: { current: ("true" if report.id == thread&.id) } do %>
+          <%= face(report.anonymous? ? nil : report.reporter_user_id) %>
+          <span><%= report.reporter_label(names) %></span>
+          <% if report.case_id != kase.id %>
+            <span class="chat-pick-from">from #<%= report.case_id %></span>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
   <div class="chat-head">
-    <% if reports.any? %>
-      <%= face(reports.first.anonymous? ? nil : reports.first.reporter_user_id) %>
+    <% if thread %>
+      <%= face(thread.anonymous? ? nil : thread.reporter_user_id) %>
       <span class="grow two-line">
-        <b><%= reporter_names(reports) %></b>
-        <span><%= chat_head_line(reports, kase) %></span>
+        <b><%= thread.reporter_label(names) %></b>
+        <span><%= chat_head_line([thread], kase) %></span>
       </span>
     <% else %>
       <span class="grow two-line">
@@ -21,15 +38,18 @@
   </div>
 
   <%= turbo_stream_from chat_stream(kase) %>
-  <%= render "chat_log", kase: kase, reports: reports, chat: chat, earlier: earlier,
+  <%= render "chat_log", kase: kase, reports: [thread].compact, chat: chat, earlier: earlier,
         messages: messages, queued: queued %>
 
   <% if composer && !kase.resolved? %>
     <%= form_with url: fd_case_chats_path(kase), method: :post, class: "chat-composer",
-          data: { controller: "chat", chat_reporter_value: reports.any?,
+          data: { controller: "chat", chat_reporter_value: thread.present?,
                   chat_note_url_value: fd_case_chats_path(kase),
                   chat_reply_url_value: fd_case_replies_path(kase) },
           html: { autocomplete: "off" } do %>
+      <% if conversation %>
+        <%= hidden_field_tag :conversation_id, conversation.id, id: nil %>
+      <% end %>
       <div class="chat-field" data-action="click->chat#focus">
         <span class="chat-pill" data-chat-target="pill" hidden>
           <span data-chat-target="aim">to reporter</span>
@@ -40,8 +60,8 @@
         <div class="mention-field" data-controller="mention"
              data-mention-url-value="<%= fd_member_search_path %>">
           <%= text_area_tag :body, nil, rows: 1, class: "chat-input", id: nil,
-                maxlength: Fd::NotesController::MAX_LENGTH,
-                placeholder: "Message the team, or ? to reply to the reporter",
+                maxlength: Fd::CaseChat::MAX_LENGTH,
+                placeholder: composer_hint(thread, names),
                 data: { chat_target: "field", mention_target: "field",
                         action: "input->mention#type input->chat#type " \
                                 "keydown->mention#keys keydown->chat#keys" } %>

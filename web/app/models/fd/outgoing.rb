@@ -2,8 +2,7 @@ module Fd
   class Outgoing
     Sent = Struct.new(:queued, :problem, keyword_init: true)
 
-    def self.queue(kase, said, mode:, by:)
-      conversation = IntakeConversation.for_case(kase.id).open_ones.first
+    def self.queue(conversation, said, mode:, by:)
       problem = objection(conversation, said)
       return Sent.new(problem: problem) if problem
 

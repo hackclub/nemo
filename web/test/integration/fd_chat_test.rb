@@ -14,7 +14,7 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match(/turbo-stream action="reload_frame"/, response.body)
     assert_match(/target="chat-log-#{@kase.id}"/, response.body)
-    assert_match(%r{src="/fd/cases/#{@kase.id}/chat_log"}, response.body)
+    assert_no_match(/src=/, response.body, "each viewer reloads the thread they are on")
   end
 
   test "the message is kept as working chat, not as a note" do

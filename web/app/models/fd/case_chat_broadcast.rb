@@ -5,10 +5,8 @@ module Fd
     end
 
     def self.tag(case_id)
-      path = Rails.application.routes.url_helpers.fd_case_chat_log_path(case_id)
-      said = %(<turbo-stream action="reload_frame" target="chat-log-#{case_id}" ) +
-             %(src="#{path}"></turbo-stream>)
-      said.html_safe
+      %(<turbo-stream action="reload_frame" target="chat-log-#{case_id}"></turbo-stream>)
+        .html_safe
     end
 
     def initialize(case_id)

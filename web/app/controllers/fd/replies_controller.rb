@@ -8,7 +8,8 @@ module Fd
       sent = nil
 
       writing do
-        sent = Outgoing.queue(kase, read.said, mode: mode(read), by: current_staff.user_id)
+        sent = Outgoing.queue(conversation_for(kase), read.said, mode: mode(read),
+          by: current_staff.user_id)
         answered(kase, sent.queued) if sent.queued
       end
 
@@ -21,6 +22,11 @@ module Fd
     end
 
     private
+
+    def conversation_for(kase)
+      family = IntakeConversation.for_case(kase.family_ids).open_ones
+      family.find_by(id: params[:conversation_id]) || family.first
+    end
 
     def answered(kase, queued)
       audit(queued.conversation.report, "answered", entity_id: kase.id,

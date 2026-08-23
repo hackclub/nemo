@@ -2898,6 +2898,55 @@
     overflow: hidden;
   }
 
+  .chat-picks {
+    display: flex;
+    gap: var(--s-3xs);
+    flex-wrap: wrap;
+    padding: var(--s-2xs) var(--s-sm) 0;
+  }
+
+  .chat-pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--t-fine);
+    color: var(--ink-2);
+    background-color: var(--card-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    padding: 2px 9px 2px 3px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .chat-pick:hover {
+    border-color: var(--ink-3);
+    color: var(--ink);
+  }
+
+  .chat-pick[aria-current] {
+    border-color: var(--accent);
+    background-color: var(--accent-soft);
+    color: var(--accent-deep);
+    font-weight: 600;
+  }
+
+  .chat-pick .avatar {
+    width: 18px;
+    height: 18px;
+    font-size: var(--t-4xs);
+  }
+
+  .chat-pick-from {
+    color: var(--ink-3);
+    font-weight: 400;
+  }
+
+  .chat-pick[aria-current] .chat-pick-from {
+    color: var(--accent-deep);
+    opacity: 0.7;
+  }
+
   .chat-head {
     display: flex;
     align-items: center;

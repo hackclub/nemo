@@ -114,7 +114,8 @@
   <% if @tab == "report" %>
     <div class="card card-chat">
       <%= render "chat", kase: @case, reports: @reports, chat: @chat, earlier: @earlier_chat,
-            messages: @conversation_said, queued: @queued %>
+            messages: @conversation_said, queued: @queued, thread: @thread,
+            conversation: @thread_conversation %>
     </div>
   <% end %>
 

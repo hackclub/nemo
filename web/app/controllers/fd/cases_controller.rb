@@ -19,18 +19,24 @@ module Fd
         .uniq { |person| [person.user_id, person.role] }
       @others = @participants.reject { |person| person.role == "subject" }
       @people = CasePeople.for(@participants, asked: params[:person])
-      @reports = @case.reports.oldest_first.to_a
+      @reports = CaseReport.where(case_id: family).oldest_first.to_a
       @actions = Action.where(case_id: family).oldest_first.to_a
       @live_actions = @actions.reject(&:reversed?)
       @siblings = @case.sibling_cases.includes(:subjects).oldest_first.to_a
       @duplicate_candidates = Case.candidates_for(@case, @siblings)
       @notes = Note.where(case_id: family).visible.recent_first.to_a
-      @conversations = IntakeConversation.for_case(@case.id).to_a
-      @conversation_said = IntakeMessage.tail(@conversations.map(&:id))
-      @queued = IntakeOutbox.where(conversation_id: @conversations.map(&:id))
-        .where(sent_at: nil).oldest_first.to_a
-      @chat = CaseChat.tail(@case.id)
-      @earlier_chat = CaseChat.earlier_than(@case.id, @chat.size)
+      @conversations = IntakeConversation.for_case(family).to_a
+      @thread = chosen_thread(@reports)
+      @thread_conversation = @conversations.find { |one| one.report_id == @thread&.id }
+      @conversation_said = IntakeMessage.tail([@thread_conversation&.id].compact)
+      @queued = if @thread_conversation
+        IntakeOutbox.where(conversation_id: @thread_conversation.id)
+          .where(sent_at: nil).oldest_first.to_a
+      else
+        []
+      end
+      @chat = CaseChat.tail(family)
+      @earlier_chat = CaseChat.earlier_than(family, @chat.size)
       @standing_notes = Note.for_subjects(@participants.map(&:user_id)).visible.recent_first
         .group_by(&:subject_user_id)
       @thread_messages = ThreadMessage.for_threads(@threads).to_a
@@ -141,6 +147,10 @@ module Fd
     end
 
     private
+
+    def chosen_thread(reports)
+      reports.find { |report| report.id == params[:thread].to_i } || reports.last
+    end
 
     def render_drawer
       @reports = @case.reports.oldest_first.to_a

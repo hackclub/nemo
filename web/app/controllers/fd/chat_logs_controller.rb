@@ -4,13 +4,19 @@ module Fd
 
     def show
       @case = Case.find(params[:case_id])
-      @reports = @case.reports.oldest_first.to_a
-      conversations = IntakeConversation.for_case(@case.id).pluck(:id)
-      @conversation_said = IntakeMessage.tail(conversations)
-      @queued = IntakeOutbox.where(conversation_id: conversations, sent_at: nil)
-        .oldest_first.to_a
-      @chat = CaseChat.tail(@case.id)
-      @earlier_chat = CaseChat.earlier_than(@case.id, @chat.size)
+      family = @case.family_ids
+      reports = CaseReport.where(case_id: family).oldest_first.to_a
+      @thread = reports.find { |report| report.id == params[:thread].to_i } || reports.last
+      @reports = [@thread].compact
+      conversation = IntakeConversation.for_case(family).find_by(report_id: @thread&.id)
+      @conversation_said = IntakeMessage.tail([conversation&.id].compact)
+      @queued = if conversation
+        IntakeOutbox.where(conversation_id: conversation.id, sent_at: nil).oldest_first.to_a
+      else
+        []
+      end
+      @chat = CaseChat.tail(family)
+      @earlier_chat = CaseChat.earlier_than(family, @chat.size)
       @names = Names.for(said_by)
 
       render layout: false

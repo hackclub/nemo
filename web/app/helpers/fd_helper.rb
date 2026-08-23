@@ -532,6 +532,12 @@ module FdHelper
     reports.any?(&:anonymous?) ? "#{named.to_sentence} and anonymous" : named.to_sentence
   end
 
+  def composer_hint(thread, names)
+    return "Message the team" if thread.nil?
+
+    "Message the team, or ? to reply to #{thread.reporter_label(names)}"
+  end
+
   def chat_head_line(reports, kase)
     parts = []
     parts << "reported it #{report_when_short(reports.first)}"
