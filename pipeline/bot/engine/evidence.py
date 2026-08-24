@@ -3,7 +3,10 @@ from bot.engine import audit
 FORWARDS = """
 SELECT s.source_channel_id,
        coalesce(s.source_thread_ts, s.source_ts) AS thread_ts,
-       s.source_ts
+       s.source_ts,
+       s.source_author_user_id,
+       s.source_body,
+       s.permalink
 FROM fd.intake_shares s
 JOIN fd.intake_messages m ON m.id = s.message_id
 WHERE m.conversation_id = %s
@@ -26,11 +29,51 @@ RETURNING id, is_primary
 """
 
 
+KEEP = """
+INSERT INTO fd.thread_messages
+    (channel_id, thread_ts, message_ts, parent_ts, is_root,
+     author_user_id, body, permalink, posted_at, source_app)
+VALUES (%(channel_id)s, %(thread_ts)s, %(message_ts)s, %(parent_ts)s, %(is_root)s,
+        %(author)s, %(body)s, %(permalink)s,
+        to_timestamp(%(message_ts)s::numeric), 'shroud')
+ON CONFLICT (channel_id, thread_ts, message_ts) DO NOTHING
+RETURNING id
+"""
+
+
 def forwards(conn, conversation_id):
     return [
-        {"channel_id": row[0], "thread_ts": row[1], "source_ts": row[2]}
+        {
+            "channel_id": row[0],
+            "thread_ts": row[1],
+            "source_ts": row[2],
+            "author": row[3],
+            "body": row[4],
+            "permalink": row[5],
+        }
         for row in conn.execute(FORWARDS, (conversation_id,)).fetchall()
     ]
+
+
+def keep(conn, found):
+    if not found.get("author"):
+        return None
+
+    at_root = found["source_ts"] == found["thread_ts"]
+    row = conn.execute(
+        KEEP,
+        {
+            "channel_id": found["channel_id"],
+            "thread_ts": found["thread_ts"],
+            "message_ts": found["source_ts"],
+            "parent_ts": None if at_root else found["thread_ts"],
+            "is_root": at_root,
+            "author": found["author"],
+            "body": found["body"],
+            "permalink": found["permalink"],
+        },
+    ).fetchone()
+    return row[0] if row else None
 
 
 def attach(conn, case_id, found, added_by):
@@ -66,8 +109,12 @@ def attach(conn, case_id, found, added_by):
 
 
 def promote(conn, case_id, conversation_id, added_by):
-    return [
-        thread_id
-        for found in forwards(conn, conversation_id)
-        if (thread_id := attach(conn, case_id, found, added_by)) is not None
-    ]
+    threads, messages = 0, 0
+
+    for found in forwards(conn, conversation_id):
+        if attach(conn, case_id, found, added_by) is not None:
+            threads += 1
+        if keep(conn, found) is not None:
+            messages += 1
+
+    return {"threads": threads, "messages": messages}

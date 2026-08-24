@@ -51,8 +51,11 @@ class Relay:
             case_id = case.open_case(conn, conversation_id, opener, anonymous)
             brought = evidence.promote(conn, case_id, conversation_id, opener)
         log.info("relay: conversation %s is case %s", conversation_id, case_id)
-        if brought:
-            log.info("relay: case %s came with %s thread(s)", case_id, len(brought))
+        if brought["threads"] or brought["messages"]:
+            log.info(
+                "relay: case %s came with %s thread(s) and %s message(s)",
+                case_id, brought["threads"], brought["messages"],
+            )
 
         if self.nemo_client is None:
             log.warning(
