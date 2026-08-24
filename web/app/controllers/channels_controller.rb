@@ -1,4 +1,6 @@
 class ChannelsController < ApplicationController
+  before_action { needs(:analytics) }
+
   PER_PAGE = 100
   RANGE_PRESETS = [7, 28, 90].freeze
   DEFAULT_RANGE_DAYS = 28

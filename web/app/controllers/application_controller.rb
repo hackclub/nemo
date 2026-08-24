@@ -4,12 +4,14 @@ class ApplicationController < ActionController::Base
 
   before_action :require_staff
 
-  helper_method :current_staff, :current_profile, :on?
+  helper_method :current_staff, :current_profile
 
   private
 
-  def on?(key)
-    Fd::Flag.on?(key)
+  def needs(key)
+    return if Fd::Flag.on?(key)
+
+    redirect_to fd_cases_path, alert: "#{Fd::Flag.label(key).downcase} is turned off"
   end
 
   def current_staff

@@ -1,6 +1,7 @@
 require "test_helper"
 
 class MentionRenderTest < ActionView::TestCase
+  include ApplicationHelper
   include FdHelper
 
   def channels

@@ -1,4 +1,6 @@
 class PipelineController < ApplicationController
+  before_action { needs(:analytics) }
+
   HISTORY = 12
   FRESHNESS_WINDOW = 30.days
 

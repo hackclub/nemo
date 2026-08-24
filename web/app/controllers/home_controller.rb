@@ -1,4 +1,6 @@
 class HomeController < ApplicationController
+  before_action { needs(:analytics) }
+
   def index
     @cohort_months = Analytics::MartOnboardingFunnel.order(cohort_month: :desc).pluck(:cohort_month)
     selected_cohort = params[:cohort_month].presence&.then { |d| Date.parse(d) } || @cohort_months.first

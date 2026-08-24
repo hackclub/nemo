@@ -127,6 +127,8 @@ module FdHelper
   def channel_mention(channel_id, said = nil)
     named = channels.named?(channel_id) ? channel_label(channel_id) : nil
     shown = named || (said.present? ? "##{said}" : channel_id)
+    return tag.span(shown, class: "mention", title: channel_id) unless on?(:analytics)
+
     link_to shown, channel_path(channel_id), class: "mention", title: channel_id
   end
 

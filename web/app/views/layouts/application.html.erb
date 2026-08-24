@@ -42,6 +42,7 @@
           <span class="rail-text brand-name">Mnemosyne</span>
         </div>
 
+        <% if on?(:analytics) %>
         <div>
           <p class="rail-label">Main menu</p>
           <nav class="rail-nav" aria-label="Main">
@@ -62,6 +63,7 @@
             <% end %>
           </nav>
         </div>
+        <% end %>
 
         <div>
           <p class="rail-label">Fire Engine</p>
