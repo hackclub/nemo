@@ -1,6 +1,6 @@
 module Fd
   class MemberStanding
-    WEIGHT = %w[perma_ban indef_ban temp_ban channel_ban shush warning locked_thread dm].freeze
+    WEIGHT = Action::WORST_FIRST
 
     def initialize(record, at: Time.current)
       @record = record

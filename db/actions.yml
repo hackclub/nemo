@@ -1,22 +1,30 @@
 actions:
   warning:
     label: Warning
+    weight: 6
   shush:
     label: Shush
     expires: true
+    weight: 5
   temp_ban:
     label: Temporary ban
     expires: true
+    weight: 3
   indef_ban:
     label: Indefinite ban
+    weight: 2
   perma_ban:
     label: Permanent ban
+    weight: 1
   channel_ban:
     label: Channel ban
     expires: true
     channel: required
+    weight: 4
   locked_thread:
     label: Locked thread
     channel: optional
+    weight: 7
   dm:
     label: DM
+    weight: 8

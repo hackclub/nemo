@@ -96,12 +96,20 @@ def firehouse_channel():
     return os.environ["FIREHOUSE_CHANNEL_ID"]
 
 
-def case_url(case_id):
+def app_url(path):
     host = os.environ.get("APP_HOST")
     if not host:
         return None
     scheme = "http" if host.startswith("localhost") or host.startswith("127.") else "https"
-    return f"{scheme}://{host}/fd/cases/{case_id}"
+    return f"{scheme}://{host}{path}"
+
+
+def case_url(case_id):
+    return app_url(f"/fd/cases/{case_id}")
+
+
+def member_url(user_id):
+    return app_url(f"/fd/members/{user_id}")
 
 
 def gather(conn, case_id):

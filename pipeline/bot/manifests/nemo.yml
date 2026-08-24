@@ -7,6 +7,11 @@ features:
   bot_user:
     display_name: nemo
     always_online: true
+  slash_commands:
+    - command: /nemo
+      description: Look somebody up, or pull up a case
+      usage_hint: lookup @somebody | 3864
+      should_escape: true
 
 oauth_config:
   redirect_urls:
