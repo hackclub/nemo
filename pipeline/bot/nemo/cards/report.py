@@ -7,6 +7,10 @@ from bot.nemo.cards import edit
 from lib.paths import CATEGORIES_FILE
 
 MENTION = re.compile(r"(<[@#][A-Z0-9][A-Z0-9]*(?:\|[^>]*)?>)")
+LINK = re.compile(r"(<https?://[^\s<>]+?(?:\|[^>]*)?>)")
+SLACK_BIT = re.compile(
+    r"(<[@#][A-Z0-9][A-Z0-9]*(?:\|[^>]*)?>|<https?://[^\s<>]+?(?:\|[^>]*)?>)"
+)
 
 SECTION_LIMIT = 3000
 CONTEXT_ELEMENTS = 10
@@ -35,11 +39,15 @@ def escape(text):
     return (text or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def escape_but_mentions(text):
+def escape_but_slack(text):
     return "".join(
-        part if MENTION.fullmatch(part) else escape(part)
-        for part in MENTION.split(text or "")
+        part if SLACK_BIT.fullmatch(part) else escape(part)
+        for part in SLACK_BIT.split(text or "")
     )
+
+
+def escape_but_mentions(text):
+    return escape_but_slack(text)
 
 
 def said(body):
@@ -153,7 +161,10 @@ def evidence(shares):
         where = share.get("source_channel_name")
         label = f"#{where}" if where else "a linked message"
         permalink = share.get("permalink")
-        lines.append(f"<{permalink}|{label}>" if permalink else label)
+        said = f"<{permalink}|{label}>" if permalink else label
+        if not share.get("is_reachable"):
+            said += " (a link, not shared)"
+        lines.append(said)
     return lines
 
 
@@ -260,5 +271,12 @@ def metadata(case):
     }
 
 
+def escape_but_links(text):
+    return "".join(
+        part if LINK.fullmatch(part) else escape(part)
+        for part in LINK.split(text or "")
+    )
+
+
 def to_member(body):
-    return escape(said(body))
+    return escape_but_links(said(body))

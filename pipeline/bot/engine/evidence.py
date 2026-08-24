@@ -1,6 +1,6 @@
 from bot.engine import audit
 
-FORWARDS = """
+SHARED = """
 SELECT s.source_channel_id,
        coalesce(s.source_thread_ts, s.source_ts) AS thread_ts,
        s.source_ts,
@@ -11,7 +11,7 @@ FROM fd.intake_shares s
 JOIN fd.intake_messages m ON m.id = s.message_id
 WHERE m.conversation_id = %s
   AND m.direction = 'inbound'
-  AND s.kind = 'forward'
+  AND s.is_reachable
   AND s.source_channel_id IS NOT NULL
   AND s.source_ts IS NOT NULL
 ORDER BY s.id
@@ -41,7 +41,7 @@ RETURNING id
 """
 
 
-def forwards(conn, conversation_id):
+def shared(conn, conversation_id):
     return [
         {
             "channel_id": row[0],
@@ -51,7 +51,7 @@ def forwards(conn, conversation_id):
             "body": row[4],
             "permalink": row[5],
         }
-        for row in conn.execute(FORWARDS, (conversation_id,)).fetchall()
+        for row in conn.execute(SHARED, (conversation_id,)).fetchall()
     ]
 
 
@@ -111,7 +111,7 @@ def attach(conn, case_id, found, added_by):
 def promote(conn, case_id, conversation_id, added_by):
     threads, messages = 0, 0
 
-    for found in forwards(conn, conversation_id):
+    for found in shared(conn, conversation_id):
         if attach(conn, case_id, found, added_by) is not None:
             threads += 1
         if keep(conn, found) is not None:

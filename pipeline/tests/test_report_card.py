@@ -389,3 +389,40 @@ def test_the_thread_leads_the_footer_and_the_links_follow():
     )
     trail = blocks_of("context", blocks)[-1]["elements"][0]["text"]
     assert trail.startswith("*1 thread attached* · <https://x/p/1|#yarrow>")
+
+
+def test_a_pasted_thread_link_survives_into_the_team_thread():
+    link = "<https://hackclub.slack.com/archives/C0YARROW/p1755000000000900>"
+    assert card.escape_but_slack(f"look at {link}") == f"look at {link}"
+
+
+def test_a_labelled_link_survives_too():
+    link = "<https://x/y|the thread>"
+    assert card.escape_but_slack(link) == link
+
+
+def test_the_team_thread_keeps_mentions_and_links_together():
+    said = card.escape_but_slack("<@U0BAD> in <https://x/y> and <b>")
+    assert "<@U0BAD>" in said
+    assert "<https://x/y>" in said
+    assert "&lt;b&gt;" in said
+
+
+def test_a_reporter_gets_the_link_but_never_the_mention():
+    said = card.to_member("read <https://x/y|the rules>, not <@U0BAD>")
+    assert "<https://x/y|the rules>" in said
+    assert "&lt;@U0BAD&gt;" in said, "a reporter must not be handed somebody else"
+
+
+def test_a_link_nobody_shared_says_so():
+    shares = [{"kind": "link", "source_channel_name": "club-yarrow-help",
+               "permalink": "https://x/p/1", "is_reachable": False}]
+    assert card.evidence(shares) == [
+        "<https://x/p/1|#club-yarrow-help> (a link, not shared)"
+    ]
+
+
+def test_a_message_they_did_share_reads_plainly():
+    shares = [{"kind": "forward", "source_channel_name": "club-yarrow-help",
+               "permalink": "https://x/p/1", "is_reachable": True}]
+    assert card.evidence(shares) == ["<https://x/p/1|#club-yarrow-help>"]

@@ -21,7 +21,7 @@ class Conn:
         self.audited = []
 
     def execute(self, sql, params=None):
-        if sql is evidence.FORWARDS:
+        if sql is evidence.SHARED:
             return Answer(self.shares)
 
         if sql is evidence.ATTACH:
@@ -175,10 +175,13 @@ def test_every_attach_leaves_a_trail_saying_it_came_with_the_report():
     assert said[4] == "attached"
 
 
-def test_only_forwards_are_asked_for():
-    assert "kind = 'forward'" in evidence.FORWARDS
-    assert "direction = 'inbound'" in evidence.FORWARDS
-    assert "coalesce(s.source_thread_ts, s.source_ts)" in evidence.FORWARDS
+def test_what_was_shared_is_asked_for_whatever_shape_it_arrived_in():
+    assert "s.is_reachable" in evidence.SHARED
+    assert "kind" not in evidence.SHARED, (
+        "a confirmed unfurl carries the same words a forward does"
+    )
+    assert "direction = 'inbound'" in evidence.SHARED
+    assert "coalesce(s.source_thread_ts, s.source_ts)" in evidence.SHARED
 
 
 def test_neither_write_can_collide_with_a_later_pull():
@@ -191,4 +194,17 @@ def test_the_timestamp_is_cast_on_both_uses():
     assert "%(message_ts)s::text" in evidence.KEEP
     assert "to_timestamp(%(message_ts)s::text::numeric)" in evidence.KEEP, (
         "one parameter used as both text and numeric makes postgres refuse the statement"
+    )
+
+
+def test_a_confirmed_unfurl_becomes_evidence_like_a_forward_does():
+    conn = Conn([share()])
+
+    assert evidence.promote(conn, 3949, 7, "UNEMO") == {"threads": 1, "messages": 1}
+    assert conn.kept[0]["body"] == "go back to your own server"
+
+
+def test_a_bare_link_is_not_evidence_because_it_carries_nothing():
+    assert "s.is_reachable" in evidence.SHARED, (
+        "the query never sees a link nobody shared, so promote cannot attach one"
     )

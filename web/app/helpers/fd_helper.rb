@@ -92,10 +92,32 @@ module FdHelper
       room = piece.match(Fd::Mentions::CHANNEL)
       next channel_mention(room[1], room[2]) if room
 
+      wrapped = piece.match(Fd::Mentions::LINK)
+      next linked(wrapped[1], wrapped[2]) if wrapped
+      next linked(piece) if piece.match?(Fd::Mentions::BARE)
+
       piece
     end
 
     safe_join(parts)
+  end
+
+  def linked(url, label = nil)
+    href = CGI.unescapeHTML(url.to_s)
+    return href unless href.start_with?("http://", "https://")
+
+    link_to link_label(href, label), href, class: "said-link",
+      target: "_blank", rel: "noopener"
+  end
+
+  def link_label(href, label = nil)
+    said = CGI.unescapeHTML(label.to_s)
+    return said if said.present? && said != href
+
+    ref = Fd::SlackLink.parse(href)
+    return channel_label(ref.channel_id) if ref
+
+    href.delete_prefix("https://").delete_prefix("http://").truncate(48)
   end
 
   def mention_link(user_id)

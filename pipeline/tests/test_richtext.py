@@ -102,3 +102,51 @@ def test_a_forward_from_a_channel_with_no_name_still_counts():
 def test_a_report_with_nothing_attached_shows_no_trail():
     said = consent.blocks(["look at this"])
     assert not [b for b in said if b["type"] == "context"]
+
+
+def test_a_pasted_link_becomes_a_link_element_not_literal_text():
+    said = richtext.elements("<https://x.com/y>")
+    assert said == [{"type": "link", "url": "https://x.com/y"}]
+
+
+def test_slacks_escaped_ampersand_is_undone_in_the_href():
+    url = ("https://hackclub.slack.com/archives/C09TTRZH94Z/p1787569865339089"
+           "?thread_ts=1787568364.974219&amp;cid=C09TTRZH94Z")
+    said = richtext.elements(f"<{url}|{url}>")
+
+    assert said[0]["url"].count("&amp;") == 0
+    assert "&cid=C09TTRZH94Z" in said[0]["url"]
+
+
+def test_a_url_that_is_its_own_label_carries_no_second_copy():
+    said = richtext.elements("<https://x.com/y|https://x.com/y>")
+    assert "text" not in said[0]
+
+
+def test_a_labelled_link_keeps_the_label():
+    said = richtext.elements("<https://x.com/y|the thread>")
+    assert said[0] == {"type": "link", "url": "https://x.com/y", "text": "the thread"}
+
+
+def test_a_bare_url_is_linked_too():
+    said = richtext.elements("read https://hackclub.com/conduct first")
+    assert said[1] == {"type": "link", "url": "https://hackclub.com/conduct"}
+    assert said[0]["text"] == "read "
+    assert said[2]["text"] == " first"
+
+
+def test_links_and_mentions_live_together():
+    said = richtext.elements("<@U0BAD> sent <https://x.com/y|this> in <#C0LOUNGE>")
+    assert [part["type"] for part in said] == [
+        "user", "text", "link", "text", "channel"
+    ]
+
+
+def test_a_link_flattens_back_to_its_url():
+    made = richtext.quote("see <https://x.com/y|this>")
+    assert richtext.flatten(made) == "see https://x.com/y"
+
+
+def test_a_link_is_not_a_mention_for_the_reporter_guard():
+    assert richtext.mentions("<https://x.com/y>") is False
+    assert richtext.mentions("<@U0BAD>") is True

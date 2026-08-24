@@ -101,8 +101,9 @@ def attach(conn, message_id, event):
         conn.execute(
             "INSERT INTO fd.intake_shares "
             "(message_id, kind, source_channel_id, source_channel_name, source_ts, "
-            " source_thread_ts, source_author_user_id, source_body, permalink, raw) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
+            " source_thread_ts, source_author_user_id, source_body, permalink, "
+            " is_reachable, raw) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
             (
                 message_id,
                 share["kind"],
@@ -113,6 +114,7 @@ def attach(conn, message_id, event):
                 share["source_author_user_id"],
                 share["source_body"],
                 share["permalink"],
+                share.get("is_reachable", False),
                 Jsonb(share["raw"]) if share["raw"] else None,
             ),
         )

@@ -5,7 +5,10 @@ from datetime import datetime, timezone
 
 ARCHIVE_LINK = re.compile(
     r"https://[a-zA-Z0-9._-]+\.slack\.com/archives/([A-Z][A-Z0-9]+)/p(\d{10})(\d{6})"
+    r"(?:\?([^\s<>|]*))?"
 )
+
+THREAD_TS = re.compile(r"(?:^|[?&]|&amp;)thread_ts=(\d{1,12}\.\d{6})")
 
 
 def posted_at(ts):
@@ -22,12 +25,17 @@ def digest(body, blocks, attachments):
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
+def thread_of(query):
+    found = THREAD_TS.search(query or "")
+    return found.group(1) if found else None
+
+
 def link_target(url):
     found = ARCHIVE_LINK.search(url or "")
     if not found:
         return None
-    channel_id, seconds, micros = found.groups()
-    return channel_id, f"{seconds}.{micros}"
+    channel_id, seconds, micros, query = found.groups()
+    return channel_id, f"{seconds}.{micros}", thread_of(query)
 
 
 def shares(event):
@@ -63,16 +71,22 @@ def shares(event):
                 "source_channel_id": channel_id,
                 "source_channel_name": attachment.get("channel_name"),
                 "source_ts": str(ts) if ts else None,
-                "source_thread_ts": attachment.get("thread_ts"),
+                "source_thread_ts": attachment.get("thread_ts")
+                or (target[2] if target else None),
                 "source_author_user_id": attachment.get("author_id"),
                 "source_body": attachment.get("text") or attachment.get("fallback"),
                 "permalink": url,
+                "is_reachable": bool(
+                    attachment.get("text")
+                    or attachment.get("fallback")
+                    or attachment.get("author_id")
+                ),
                 "raw": attachment,
             }
         )
 
     for url in ARCHIVE_LINK.findall(event.get("text") or ""):
-        channel_id, ts = url[0], f"{url[1]}.{url[2]}"
+        channel_id, ts, parent = url[0], f"{url[1]}.{url[2]}", thread_of(url[3])
         if any(s["source_channel_id"] == channel_id and s["source_ts"] == ts for s in out):
             continue
         key = (channel_id, ts, None)
@@ -85,10 +99,11 @@ def shares(event):
                 "source_channel_id": channel_id,
                 "source_channel_name": None,
                 "source_ts": ts,
-                "source_thread_ts": None,
+                "source_thread_ts": parent,
                 "source_author_user_id": None,
                 "source_body": None,
                 "permalink": None,
+                "is_reachable": False,
                 "raw": None,
             }
         )

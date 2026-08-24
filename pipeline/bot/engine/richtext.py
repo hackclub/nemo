@@ -1,6 +1,23 @@
+import html
 import re
 
 MENTION = re.compile(r"<@([UW][A-Z0-9]+)(?:\|[^>]*)?>|<#(C[A-Z0-9]+)(?:\|[^>]*)?>")
+
+PIECE = re.compile(
+    r"<@([UW][A-Z0-9]+)(?:\|[^>]*)?>"
+    r"|<#(C[A-Z0-9]+)(?:\|[^>]*)?>"
+    r"|<(https?://[^|>\s]+)(?:\|([^>]*))?>"
+    r"|(?<![<|])(https?://[^\s<>]+)"
+)
+
+
+def link(url, label=None):
+    href = html.unescape(url)
+    made = {"type": "link", "url": href}
+    said = html.unescape(label or "")
+    if said and said != href:
+        made["text"] = said
+    return made
 
 
 def elements(text, style=None):
@@ -8,15 +25,20 @@ def elements(text, style=None):
     out = []
     at = 0
 
-    for found in MENTION.finditer(said):
+    for found in PIECE.finditer(said):
         before = said[at : found.start()]
         if before:
             out.append(word(before, style))
-        user_id, channel_id = found.group(1), found.group(2)
+
+        user_id, channel_id, url, label, bare = found.groups()
         if user_id:
             out.append({"type": "user", "user_id": user_id})
-        else:
+        elif channel_id:
             out.append({"type": "channel", "channel_id": channel_id})
+        elif url:
+            out.append(link(url, label))
+        else:
+            out.append(link(bare))
         at = found.end()
 
     rest = said[at:]

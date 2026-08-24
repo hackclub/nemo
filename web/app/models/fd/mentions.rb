@@ -2,8 +2,12 @@ module Fd
   module Mentions
     SLACK = /<@([UW][A-Z0-9]{2,})(?:\|[^>]*)?>/
     CHANNEL = /<#(C[A-Z0-9]{2,})(?:\|([^>]*))?>/
+    LINK = %r{\A<(https?://[^|>\s]+)(?:\|([^>]*))?>\z}
+    BARE = %r{\Ahttps?://[^\s<>]+\z}
     TYPED = /(?<![\w<@])@?([UW](?=[A-Z0-9]*\d)[A-Z0-9]{6,})\b(?!@)/
-    ANY = /(<@[UW][A-Z0-9]{2,}(?:\|[^>]*)?>|<\#C[A-Z0-9]{2,}(?:\|[^>]*)?>)/
+    ANY = %r{(<@[UW][A-Z0-9]{2,}(?:\|[^>]*)?>|<\#C[A-Z0-9]{2,}(?:\|[^>]*)?>|
+              <https?://[^|>\s]+(?:\|[^>]*)?>|
+              (?<![<|])https?://[^\s<>]+)}x
 
     def self.normalise(text)
       return text if text.blank?

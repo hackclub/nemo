@@ -17,7 +17,41 @@ def test_digest_changes_with_the_text():
 
 def test_link_target_pulls_channel_and_ts():
     url = "https://hackclub.slack.com/archives/C0266FRGT/p1700000000123456"
-    assert parse.link_target(url) == ("C0266FRGT", "1700000000.123456")
+    assert parse.link_target(url) == ("C0266FRGT", "1700000000.123456", None)
+
+
+def test_a_link_to_a_reply_carries_the_thread_it_belongs_to():
+    url = ("https://hackclub.slack.com/archives/C0BE6N4G2BA/p1787569148773329"
+           "?thread_ts=1787569009.909839&cid=C0BE6N4G2BA")
+    assert parse.link_target(url) == (
+        "C0BE6N4G2BA", "1787569148.773329", "1787569009.909839"
+    )
+
+
+def test_slack_escapes_the_ampersand_and_it_is_still_read():
+    url = ("https://hackclub.slack.com/archives/C0BE6N4G2BA/p1787569148773329"
+           "?thread_ts=1787569009.909839&amp;cid=C0BE6N4G2BA")
+    assert parse.link_target(url)[2] == "1787569009.909839"
+
+
+def test_a_pasted_reply_link_attaches_the_thread_not_the_reply():
+    said = ("<https://hackclub.slack.com/archives/C0BE6N4G2BA/p1787569148773329"
+            "?thread_ts=1787569009.909839&amp;cid=C0BE6N4G2BA|"
+            "https://hackclub.slack.com/archives/C0BE6N4G2BA/p1787569148773329"
+            "?thread_ts=1787569009.909839&amp;cid=C0BE6N4G2BA>"
+            "\n\ni'd like to report it?")
+    share = parse.shares({"text": said, "attachments": []})[0]
+
+    assert share["source_ts"] == "1787569148.773329"
+    assert share["source_thread_ts"] == "1787569009.909839"
+    assert share["kind"] == "link"
+    assert share["is_reachable"] is False
+
+
+def test_a_cid_that_is_not_a_thread_ts_is_ignored():
+    url = ("https://hackclub.slack.com/archives/C0266FRGT/p1700000000123456"
+           "?cid=C0266FRGT&x=1")
+    assert parse.link_target(url)[2] is None
 
 
 def test_link_target_ignores_anything_else():
