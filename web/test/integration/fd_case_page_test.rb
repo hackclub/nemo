@@ -162,4 +162,33 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
 
     assert_equal %w[UME UOTHER], kase.reload.assignee_user_ids.sort
   end
+
+  test "an empty view keeps its place in the list" do
+    get fd_case_path(@kase)
+
+    views = css_select(".views .view").map { |view| view.text.split.first }
+    assert_equal %w[Report Evidence Actions Notes People], views,
+      "a view is hardest to find when you have not used it, so it must not move"
+    assert_empty css_select(".views .views-fill"),
+      "nothing is pushed to the far edge any more"
+  end
+
+  test "an empty view says nought rather than hiding" do
+    get fd_case_path(@kase)
+
+    notes = css_select(".views .view").find { |view| view.text.include?("Notes") }
+    assert_equal "0", notes.css(".view-count").text
+    assert_includes notes["class"], "view-off"
+  end
+
+  test "a view with rows is not dimmed" do
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "on it",
+      source_app: "fire_engine")
+    Fd::Note.create!(case_id: @kase.id, author: "UME", body: "worth keeping")
+    get fd_case_path(@kase)
+
+    notes = css_select(".views .view").find { |view| view.text.include?("Notes") }
+    assert_equal "1", notes.css(".view-count").text
+    assert_not_includes notes["class"].to_s, "view-off"
+  end
 end

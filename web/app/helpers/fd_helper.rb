@@ -856,10 +856,9 @@ module FdHelper
     "notes" => "Notes", "people" => "People"
   }.freeze
 
-  def case_tab_groups(counts)
-    tabs = Fd::CasesController::TABS.map { |key| { key: key, label: CASE_TAB_LABELS.fetch(key),
+  def case_tabs(counts)
+    Fd::CasesController::TABS.map { |key| { key: key, label: CASE_TAB_LABELS.fetch(key),
       count: counts[key] } }
-    tabs.partition { |tab| tab[:key] == "report" || tab[:count].to_i.positive? }
   end
 
   def case_status_chip(kase)

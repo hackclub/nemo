@@ -88,21 +88,13 @@
 
   <%= render "fd/flagstrip", flags: @flags %>
 
-  <% kept_tabs, demoted_tabs = case_tab_groups(@tab_counts) %>
   <div class="views">
-    <% kept_tabs.each do |tab| %>
-      <%= link_to fd_case_path(@case, tab: tab[:key]), class: "view",
+    <% case_tabs(@tab_counts).each do |tab| %>
+      <%= link_to fd_case_path(@case, tab: tab[:key]),
+            class: class_names("view", "view-off" => tab[:count]&.zero?),
             aria: { current: ("true" if tab[:key] == @tab) } do %>
         <%= tab[:label] %>
         <% if tab[:count] %><span class="view-count"><%= tab[:count] %></span><% end %>
-      <% end %>
-    <% end %>
-    <% if demoted_tabs.any? %><span class="views-fill"></span><% end %>
-    <% demoted_tabs.each do |tab| %>
-      <%= link_to fd_case_path(@case, tab: tab[:key]), class: "view view-off",
-            aria: { current: ("true" if tab[:key] == @tab) } do %>
-        <%= tab[:label] %>
-        <span class="view-count"><%= tab[:count] %></span>
       <% end %>
     <% end %>
   </div>
