@@ -1,0 +1,9 @@
+flags:
+  analytics:
+    label: Community analytics
+    covers: Overview, Channels and Pipeline
+    default: true
+  decisions:
+    label: Decisions
+    covers: The decisions section, and linking a case to one
+    default: true

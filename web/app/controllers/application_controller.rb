@@ -4,9 +4,13 @@ class ApplicationController < ActionController::Base
 
   before_action :require_staff
 
-  helper_method :current_staff, :current_profile
+  helper_method :current_staff, :current_profile, :on?
 
   private
+
+  def on?(key)
+    Fd::Flag.on?(key)
+  end
 
   def current_staff
     return nil unless session[:user_id]
