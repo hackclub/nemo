@@ -795,7 +795,8 @@
     font-size: var(--t-3xs);
     font-weight: 600;
     line-height: 1.25;
-    padding: 6px 10px;
+    height: var(--chat-ctl);
+    padding: 0 10px;
     border-radius: var(--r-ctl);
     border: 1px solid var(--line);
     background-color: var(--card);
@@ -831,6 +832,11 @@
     opacity: 0.45;
     cursor: not-allowed;
     transform: none;
+  }
+
+  .btn-only {
+    width: var(--chat-ctl);
+    padding: 0;
   }
 
   .btn-off {
@@ -1890,6 +1896,7 @@
     background-color: transparent;
     justify-content: flex-start;
     width: 100%;
+    height: auto;
     font-weight: 500;
     padding: 7px var(--s-2xs);
   }

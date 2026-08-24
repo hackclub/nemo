@@ -163,6 +163,18 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     assert_equal %w[UME UOTHER], kase.reload.assignee_user_ids.sort
   end
 
+  test "the toolbar is text buttons and one square icon" do
+    get fd_case_path(@kase)
+
+    timeline = css_select(".head-actions .btn").find { |btn| btn.text.include?("Timeline") }
+    assert timeline
+    assert_empty timeline.css("svg"), "text buttons carry no icons, so they cannot be a third shape"
+
+    icons = css_select(".head-actions .btn").select { |btn| btn.text.strip.empty? }
+    assert_equal 1, icons.size, "exactly one icon-only control, the overflow"
+    assert_includes icons.first["class"], "btn-only"
+  end
+
   test "the case names what it still needs instead of warning vaguely" do
     get fd_case_path(make_case(subject: nil))
 
