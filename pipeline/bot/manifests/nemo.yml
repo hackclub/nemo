@@ -9,8 +9,8 @@ features:
     always_online: true
   slash_commands:
     - command: /nemo
-      description: Look somebody up, or pull up a case
-      usage_hint: lookup @somebody | 3864
+      description: Look somebody up, note something, open a case, or pull one up
+      usage_hint: lookup @somebody | note @somebody | open @somebody | 3864
       should_escape: true
 
 oauth_config:

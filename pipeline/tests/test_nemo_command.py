@@ -54,28 +54,84 @@ def text_of(answer):
 
 
 def test_a_case_number_is_understood_bare_or_hashed():
-    assert command.asked("3864") == ("case", 3864)
-    assert command.asked(" #3864 ") == ("case", 3864)
+    assert command.asked("3864") == ("case", 3864, None)
+    assert command.asked(" #3864 ") == ("case", 3864, None)
 
 
 def test_a_lookup_needs_an_escaped_mention():
-    assert command.asked("lookup <@U0QUINN>") == (command.LOOKUP, "U0QUINN")
-    assert command.asked("lookup <@U0QUINN|old-handle>") == (command.LOOKUP, "U0QUINN")
-    assert command.asked("LOOKUP <@W0BOSS>") == (command.LOOKUP, "W0BOSS")
+    assert command.asked("lookup <@U0QUINN>") == (command.LOOKUP, "U0QUINN", None)
+    assert command.asked("lookup <@U0QUINN|old-handle>") == (command.LOOKUP, "U0QUINN", None)
+    assert command.asked("LOOKUP <@W0BOSS>") == (command.LOOKUP, "W0BOSS", None)
 
 
 def test_a_lookup_with_an_unescaped_name_names_nobody():
-    assert command.asked("lookup @quinn27") == (command.LOOKUP, None)
+    assert command.asked("lookup @quinn27") == (command.LOOKUP, None, None)
 
 
 def test_anything_else_gets_the_help():
     for said in ("", None, "   ", "resolve 3864", "who @them"):
-        assert command.asked(said) == (None, None)
+        assert command.asked(said) == (None, None, None)
 
 
 def test_the_help_says_only_what_it_can_do():
-    assert "/nemo lookup" in command.HELP
-    assert "/nemo 3864" in command.HELP
+    for verb in ("/nemo lookup", "/nemo note", "/nemo open", "/nemo 3864"):
+        assert verb in command.HELP
+    for never in ("resolve", "ban", "act"):
+        assert never not in command.HELP
+
+
+def test_a_note_keeps_the_words_and_drops_the_mention_that_named_them():
+    assert command.asked("note <@U0QUINN> spoke to them in a DM") == (
+        command.NOTE,
+        "U0QUINN",
+        "spoke to them in a DM",
+    )
+
+
+def test_the_words_can_sit_either_side_of_the_name_and_close_up_after_it():
+    assert command.asked("open going after <@U0QUINN> all week") == (
+        command.OPEN,
+        "U0QUINN",
+        "going after all week",
+    )
+
+
+def test_a_second_mention_stays_in_the_words():
+    verb, who, body = command.asked("note <@U0QUINN> was rude to <@U0MILO>")
+    assert (verb, who) == (command.NOTE, "U0QUINN")
+    assert body == "was rude to <@U0MILO>"
+
+
+def test_a_write_with_no_words_is_asked_for_them():
+    assert command.asked("note <@U0QUINN>") == (command.NOTE, "U0QUINN", None)
+    assert command.asked("open <@U0QUINN>   ") == (command.OPEN, "U0QUINN", None)
+    assert command.NOTE in command.NEEDS_WORDS
+    assert command.OPEN in command.NEEDS_WORDS
+    assert command.LOOKUP not in command.NEEDS_WORDS
+
+
+def test_every_verb_is_gated_on_the_permission_the_dashboard_uses():
+    assert command.NEEDED == {
+        command.LOOKUP: "identity.read",
+        command.NOTE: "member.note",
+        command.OPEN: "case.open",
+        "case": "case.read",
+    }
+
+
+def test_an_open_case_about_them_is_named_rather_than_doubled():
+    said = command.already_open("U0QUINN", [3864])
+    assert "<@U0QUINN> already has an open case, *case 3864*" in said
+    assert "Add what you found to that one instead." in said
+
+    assert "*case 3864*, *case 3900*" in command.already_open("U0QUINN", [3864, 3900])
+
+
+def test_opening_says_what_was_opened_and_about_whom():
+    assert command.opened(3949, "U0QUINN", "going after the new kids") == (
+        "*case 3949* opened about <@U0QUINN>"
+    )
+    assert "nothing written on it yet" in command.opened(3949, "U0QUINN", None)
 
 
 def test_the_record_leads_with_the_person_and_what_is_in_force():

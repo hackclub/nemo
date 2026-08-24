@@ -292,6 +292,24 @@ def claimed(conn, case_id, user_id):
     audit.record(conn, "assignee", case_id, "claimed", user_id, after={"user_id": user_id})
 
 
+OPEN_CASE = """
+INSERT INTO fd.cases (opened_by, opened_at, source_app)
+VALUES (%s, now(), %s)
+RETURNING id
+"""
+
+OPEN_ABOUT = """
+SELECT c.id FROM fd.cases c
+JOIN fd.case_participants p ON p.case_id = c.id AND p.role = 'subject'
+WHERE p.user_id = %s AND c.resolved_at IS NULL
+ORDER BY c.opened_at
+LIMIT 3
+"""
+
+MEMBER_NOTE = """
+INSERT INTO fd.notes (subject_user_id, body, author) VALUES (%s, %s, %s) RETURNING id
+"""
+
 ADD_SUBJECT = """
 INSERT INTO fd.case_participants (case_id, user_id, role)
 VALUES (%s, %s, 'subject')
@@ -423,6 +441,28 @@ def reopen(conn, case_id, by):
         after={"resolved_at": None, "resolution": None, "assignees": []},
     )
     return True
+
+
+def open_about(conn, user_id):
+    return [row[0] for row in conn.execute(OPEN_ABOUT, (user_id,)).fetchall()]
+
+
+def open_case(conn, subject, body, by):
+    case_id = conn.execute(OPEN_CASE, (by, audit.SOURCE_APP)).fetchone()[0]
+    audit.record(conn, "case", case_id, "opened", by, after={"opened_by": by})
+    add_subject(conn, case_id, subject, by)
+    if body:
+        keep_note(conn, case_id, body, by)
+    return case_id
+
+
+def member_note(conn, subject, body, by):
+    note_id = conn.execute(MEMBER_NOTE, (subject, body, by)).fetchone()[0]
+    audit.record(
+        conn, "note", note_id, "noted", by,
+        after={"subject_user_id": subject, "body": body},
+    )
+    return note_id
 
 
 def counted(conn, sql, case_id):

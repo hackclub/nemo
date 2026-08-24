@@ -9,31 +9,56 @@ log = logging.getLogger("bot.nemo")
 
 COMMAND = "/nemo"
 LOOKUP = "lookup"
+NOTE = "note"
+OPEN = "open"
+
+ABOUT_SOMEBODY = (LOOKUP, NOTE, OPEN)
+NEEDS_WORDS = (NOTE, OPEN)
 
 WHO = re.compile(r"<@([UW][A-Z0-9]+)(?:\|[^>]*)?>")
 CASE = re.compile(r"\A#?(\d+)\Z")
+MEMBER_ID = re.compile(r"\A[UW][A-Z0-9]{2,}\Z")
 
 HELP = (
     "*/nemo lookup @somebody* for their whole record, "
+    "*/nemo note @somebody what you found*, "
+    "*/nemo open @somebody what happened*, "
     "or */nemo 3864* for a case."
 )
+
+ASK_FOR_SOMEBODY = {
+    LOOKUP: "Name somebody: */nemo lookup @them*",
+    NOTE: "Name somebody: */nemo note @them what you found*",
+    OPEN: "Name somebody: */nemo open @them what happened*",
+}
+
+ASK_FOR_WORDS = {
+    NOTE: "Say what you found: */nemo note @them what you found*",
+    OPEN: "Say what happened: */nemo open @them what happened*",
+}
 
 
 def asked(text):
     said = (text or "").strip()
     if not said:
-        return None, None
+        return None, None, None
 
     first, _, rest = said.partition(" ")
     number = CASE.match(first)
     if number:
-        return "case", int(number.group(1))
+        return "case", int(number.group(1)), None
 
-    if first.lower() != LOOKUP:
-        return None, None
+    verb = first.lower()
+    if verb not in ABOUT_SOMEBODY:
+        return None, None, None
 
     found = WHO.search(rest)
-    return (LOOKUP, found.group(1)) if found else (LOOKUP, None)
+    if not found:
+        return verb, None, None
+
+    who = found.group(1)
+    body = re.sub(r"\s+", " ", rest[: found.start()] + " " + rest[found.end() :]).strip()
+    return verb, (who if MEMBER_ID.match(who) else None), body or None
 
 
 def said_only(text):
@@ -114,27 +139,60 @@ def looked_up(found, names=None):
     return {"text": f"the record of {user_id}", "blocks": blocks}
 
 
+NEEDED = {
+    LOOKUP: "identity.read",
+    NOTE: "member.note",
+    OPEN: "case.open",
+    "case": "case.read",
+}
+
+
+def already_open(user_id, numbers):
+    said = ", ".join(f"*case {one}*" for one in numbers)
+    return (
+        f"<@{user_id}> already has an open case, {said}. "
+        "Add what you found to that one instead."
+    )
+
+
+def opened(case_id, user_id, noted):
+    said = f"*case {case_id}* opened about <@{user_id}>"
+    return said if noted else f"{said}, with nothing written on it yet"
+
+
 def register(app):
     @app.command(COMMAND)
     def on_nemo(ack, command, respond):
         ack()
-        verb, wanted = asked(command.get("text"))
+        verb, wanted, body = asked(command.get("text"))
         user_id = command["user_id"]
 
         if verb is None:
             return respond(**said_only(HELP))
-
-        if verb == LOOKUP and wanted is None:
-            return respond(**said_only("Name somebody: */nemo lookup @them*"))
+        if verb in ABOUT_SOMEBODY and wanted is None:
+            return respond(**said_only(ASK_FOR_SOMEBODY[verb]))
+        if verb in NEEDS_WORDS and not body:
+            return respond(**said_only(ASK_FOR_WORDS[verb]))
 
         with session() as conn:
-            key = "identity.read" if verb == LOOKUP else "case.read"
-            allowed, refusal = access.may(conn, user_id, key)
+            allowed, refusal = access.may(conn, user_id, NEEDED[verb])
             if not allowed:
                 return respond(**said_only(refusal))
 
             if verb == LOOKUP:
                 answer = looked_up(record.read(conn, wanted))
+            elif verb == NOTE:
+                channel.member_note(conn, wanted, body, user_id)
+                answer = said_only(
+                    f"noted about <@{wanted}>, and it follows them to every case"
+                )
+            elif verb == OPEN:
+                held = channel.open_about(conn, wanted)
+                if held:
+                    answer = said_only(already_open(wanted, held))
+                else:
+                    case_id = channel.open_case(conn, wanted, body, user_id)
+                    answer = said_only(opened(case_id, wanted, body))
             else:
                 case = channel.gather(conn, wanted)
                 answer = (
@@ -143,5 +201,5 @@ def register(app):
                     else said_only(f"There is no case {wanted}.")
                 )
 
-        log.info("nemo: %s asked for %s %s", user_id, verb, wanted)
+        log.info("nemo: %s ran %s on %s", user_id, verb, wanted)
         return respond(**answer)
