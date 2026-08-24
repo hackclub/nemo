@@ -6,7 +6,8 @@
 <% thread = local_assigns.fetch(:thread, reports.last) %>
 <% conversation = local_assigns.fetch(:conversation, nil) %>
 
-<div class="chat" data-controller="stick">
+<div class="chat" data-controller="stick catch-up"
+     data-catch-up-frame-value="<%= chat_log_id(kase) %>">
   <% if reports.size > 1 %>
     <div class="chat-picks">
       <% reports.each do |report| %>

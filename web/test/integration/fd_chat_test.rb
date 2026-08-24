@@ -51,6 +51,19 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert frame["complete"], "the first paint is already rendered, so it must not refetch"
   end
 
+  test "a browser that lost the socket is told which frame to catch up" do
+    get fd_case_path(@kase, tab: "report")
+
+    chat = css_select("div.chat").first
+    assert_includes chat["data-controller"].split, "catch-up"
+    assert_equal "chat-log-#{@kase.id}", chat["data-catch-up-frame-value"]
+    assert_equal chat["data-catch-up-frame-value"],
+      css_select("turbo-frame#chat-log-#{@kase.id}").first["id"],
+      "a reconnect that reloads nothing would leave the pane stale for good"
+    assert css_select("div.chat turbo-cable-stream-source").any?,
+      "the controller watches inside itself, so the source has to be in there"
+  end
+
   test "the chat log renders on its own for the frame to fetch" do
     Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "on it",
       source_app: "fire_engine")
