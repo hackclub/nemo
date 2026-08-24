@@ -116,8 +116,17 @@
   <% end %>
 
   <% if @tab == "evidence" %>
-    <%= render "threads", kase: @case, threads: @thread_list,
-          flags: @citations, cited_by: @cited_by %>
+    <% if @thread_list.any? %>
+      <%= render "threads", kase: @case, threads: @thread_list,
+            flags: @citations, cited_by: @cited_by %>
+    <% else %>
+      <div class="card">
+        <%= render layout: "empty", locals: { title: "No evidence attached" } do %>
+          <%= opens_modal "case.thread", "Attach a thread", opens: "attach-thread", on: @case,
+                css: "btn btn-primary" %>
+        <% end %>
+      </div>
+    <% end %>
   <% end %>
 
   <% if @tab == "actions" %>
@@ -151,19 +160,21 @@
       <% end %>
     <% else %>
       <div class="card">
-        <p class="card-note">Nothing has been done yet.</p>
+        <%= render layout: "empty", locals: { title: "No action taken yet" } do %>
+          <%= opens_modal "case.act", "Log an action", opens: "log-action", on: @case,
+                css: "btn btn-primary" %>
+        <% end %>
       </div>
     <% end %>
   <% end %>
 
   <% if @tab == "notes" %>
-    <div class="card notes-card">
-      <div class="notes-head">
-        <span class="lbl grow">Notes</span>
-        <%= opens_modal "case.note", "Add a note", opens: "add-note" %>
-      </div>
-
-      <% if @notes.any? %>
+    <% if @notes.any? %>
+      <div class="card notes-card">
+        <div class="notes-head">
+          <span class="lbl grow">Notes</span>
+          <%= opens_modal "case.note", "Add a note", opens: "add-note" %>
+        </div>
         <div class="notes">
           <% @notes.each do |note| %>
             <div class="note-row">
@@ -178,10 +189,14 @@
             </div>
           <% end %>
         </div>
-      <% else %>
-        <p class="notes-none">No notes yet.</p>
-      <% end %>
-    </div>
+      </div>
+    <% else %>
+      <div class="card">
+        <%= render layout: "empty", locals: { title: "No notes yet" } do %>
+          <%= opens_modal "case.note", "Add a note", opens: "add-note", css: "btn btn-primary" %>
+        <% end %>
+      </div>
+    <% end %>
   <% end %>
     </div>
 

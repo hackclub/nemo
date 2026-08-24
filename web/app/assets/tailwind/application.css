@@ -2580,11 +2580,23 @@
     opacity: 1;
   }
 
-  .notes-none {
-    padding: var(--s-lg) var(--s-md);
+  .empty {
+    display: grid;
+    justify-items: center;
+    gap: var(--s-2xs);
+    padding: var(--s-md) var(--s-sm);
     text-align: center;
-    font-size: var(--t-2xs);
-    color: var(--ink-3);
+  }
+
+  .empty-title {
+    margin: 0;
+    font-size: var(--t-md);
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .empty-do {
+    display: contents;
   }
 
   .rail-card {

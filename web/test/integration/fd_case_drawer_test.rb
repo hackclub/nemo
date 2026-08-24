@@ -26,7 +26,7 @@ class FdCaseDrawerTest < ActionDispatch::IntegrationTest
     assert_select ".views .view", minimum: 1
 
     get fd_case_path(@kase, tab: "actions")
-    assert_select ".card-note", text: "Nothing has been done yet."
+    assert_select ".empty-title", text: "No action taken yet"
   end
 
   test "the drawer offers to claim an unclaimed case" do

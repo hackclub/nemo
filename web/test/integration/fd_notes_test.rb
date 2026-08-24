@@ -174,7 +174,8 @@ class FdNotesTest < ActionDispatch::IntegrationTest
   test "the notes card says so when there is nothing written" do
     sign_in_as(@me)
     get fd_case_path(@kase, tab: "notes")
-    assert_select ".notes-none", text: /No notes yet/, minimum: 1
+    assert_select ".empty-title", text: "No notes yet"
+    assert_select ".empty .empty-do", text: /Add a note/
   end
 
   test "removing my own note leaves it soft deleted, not gone" do

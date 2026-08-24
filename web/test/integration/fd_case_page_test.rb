@@ -63,19 +63,19 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
   test "each tab shows only its own section, not the others" do
     get fd_case_path(@kase, tab: "people")
     assert_select ".people-list .person-row", minimum: 1
-    assert_select ".cols .chiprow .filt", 0
+    assert_select ".cols .empty-title", 0
 
     get fd_case_path(@kase, tab: "evidence")
-    assert_select ".cols .chiprow .filt", minimum: 1
+    assert_select ".empty-title", text: "No evidence attached"
     assert_select ".people-list", 0
 
     get fd_case_path(@kase, tab: "actions")
-    assert_select ".card-note", text: "Nothing has been done yet."
+    assert_select ".empty-title", text: "No action taken yet"
     assert_select ".people-list", 0
 
     get fd_case_path(@kase, tab: "notes")
-    assert_select ".notes-none", text: /No notes yet/
-    assert_select ".card-note", text: "Nothing has been done yet.", count: 0
+    assert_select ".empty-title", text: "No notes yet"
+    assert_select ".empty-title", text: "No action taken yet", count: 0
   end
 
   test "the report tab says so plainly when the case has no report on file" do
@@ -179,6 +179,25 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     notes = css_select(".views .view").find { |view| view.text.include?("Notes") }
     assert_equal "0", notes.css(".view-count").text
     assert_includes notes["class"], "view-off"
+  end
+
+  test "an empty tab offers the thing that fills it" do
+    { "evidence" => "Attach a thread", "actions" => "Log an action",
+      "notes" => "Add a note" }.each do |tab, offer|
+      get fd_case_path(@kase, tab: tab)
+
+      assert_select ".empty .empty-do", 1, "the #{tab} tab is a dead end without its control"
+      assert_select ".empty .empty-do", text: /#{offer}/
+    end
+  end
+
+  test "the notes header does not repeat the empty state's control" do
+    get fd_case_path(@kase, tab: "notes")
+    assert_select ".notes-head", 0, "one control, not two"
+
+    Fd::Note.create!(case_id: @kase.id, author: "UME", body: "worth keeping")
+    get fd_case_path(@kase, tab: "notes")
+    assert_select ".notes-head", 1
   end
 
   test "a view with rows is not dimmed" do
