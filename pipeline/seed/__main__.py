@@ -17,7 +17,7 @@ from seed.emit import (
     write_runs,
 )
 from seed.generate import HISTORY_MONTHS, build, events
-from seed.guards import SeedRefused, check
+from seed.guards import SeedRefused, check, check_target_name
 from seed.hostile import poison_channels
 
 TRUTHY = {"1", "true", "yes", "on"}
@@ -35,12 +35,33 @@ def parse_args(argv=None):
         default=os.environ.get("SEED_HOSTILE", "").strip().lower() in TRUTHY,
     )
     parser.add_argument("--force", action="store_true")
+    parser.add_argument("--clear-only", action="store_true")
     return parser.parse_args(argv)
+
+
+def clear_only(args):
+    try:
+        dbname = check_target_name()
+    except SeedRefused as exc:
+        print(f"seed: {exc}")
+        raise SystemExit(2) from exc
+
+    with connect() as conn:
+        clear(conn, force=args.force)
+    print(
+        f"seed: cleared what the seeder wrote from {dbname}"
+        f"{', and everything else in those tables' if args.force else ''}"
+    )
+    return 0
 
 
 def main(argv=None):
     args = parse_args(argv)
     load_dotenv(ENV_FILE)
+
+    if args.clear_only:
+        return clear_only(args)
+
     with connect() as conn:
         try:
             dbname, mode = check(conn, force=args.force)
