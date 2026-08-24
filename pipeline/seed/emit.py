@@ -35,6 +35,19 @@ SEED_PREDICATES = {
 
 APPEND_ONLY_TABLES = ("fd.audit",)
 
+DEPENDENTS = (
+    ("fd.case_chat", "case_id", "fd.cases"),
+    ("fd.case_citations", "thread_message_id", "fd.thread_messages"),
+    ("fd.actions", "case_id", "fd.cases"),
+)
+
+DETACH = (
+    ("fd.actions", "cites_message_id", "fd.thread_messages"),
+    ("fd.cases", "followed_decision_id", "fd.decisions"),
+    ("fd.cases", "duplicate_of", "fd.cases"),
+    ("fd.decisions", "replaced_by_id", "fd.decisions"),
+)
+
 SEEDED_TABLES = (
     "fd.audit",
     "fd.notes",
@@ -65,6 +78,16 @@ LOG_TABLES = (
     "raw.dead_letter",
     "raw.slack_events",
 )
+
+UNSTAMP_SQL = """
+UPDATE raw.deployment SET
+    mode = 'live',
+    seeded_at = NULL,
+    seed_profile = NULL,
+    seed_scale = NULL,
+    seed_rng = NULL,
+    updated_at = now()
+"""
 
 STAMP_SQL = """
 UPDATE raw.deployment SET
@@ -108,10 +131,33 @@ def clear_seeded_staff():
         admin.commit()
 
 
+def going(table, force):
+    if force or table not in SEED_PREDICATES:
+        return f"SELECT id FROM {table}"
+    return f"SELECT id FROM {table} WHERE {SEED_PREDICATES[table]}"
+
+
+def release(cur, force=False):
+    for child, column, parent in DETACH:
+        cur.execute(
+            f"UPDATE {child} SET {column} = NULL "
+            f"WHERE {column} IN ({going(parent, force)})"
+        )
+    for child, column, parent in DEPENDENTS:
+        cur.execute(f"DELETE FROM {child} WHERE {column} IN ({going(parent, force)})")
+
+
+def unstamp(conn):
+    with conn.cursor() as cur:
+        cur.execute(UNSTAMP_SQL)
+    conn.commit()
+
+
 def clear(conn, force=False):
     clear_append_only(force=force)
     clear_seeded_staff()
     with conn.cursor() as cur:
+        release(cur, force=force)
         for table in LOG_TABLES:
             cur.execute(f"DELETE FROM {table}")
         for table in dict.fromkeys(SEEDED_TABLES):

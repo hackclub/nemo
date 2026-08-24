@@ -12,6 +12,7 @@ from seed.emit import (
     analyze,
     clear,
     staff_for_grant_holders,
+    unstamp,
     write,
     write_conduct,
     write_runs,
@@ -48,10 +49,12 @@ def clear_only(args):
 
     with connect() as conn:
         clear(conn, force=args.force)
+        unstamp(conn)
     print(
         f"seed: cleared what the seeder wrote from {dbname}"
         f"{', and everything else in those tables' if args.force else ''}"
     )
+    print(f"seed: {dbname} is marked live again, the bot and the listener will start against it")
     return 0
 
 
