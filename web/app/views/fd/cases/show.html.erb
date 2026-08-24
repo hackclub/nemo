@@ -1,17 +1,8 @@
-<% content_for :page_title, case_title(@case, @threads) %>
+<% content_for :page_title, @case.id.to_s %>
 <% content_for :page_face do %>
   <span class="crumb"><%= link_to "Cases", fd_cases_path %> /</span>
 <% end %>
 <% content_for :palette_on, "case:#{@case.id}" %>
-<% content_for :page_badge do %>
-  <%= case_status_chip(@case) %>
-  <%= case_hands_chip(@case) %>
-  <%= followed_chip(@case) unless @case.resolved? %>
-  <% if @case.duplicate_of %>
-    <%= link_to "duplicate of case #{@case.duplicate_of}", fd_case_path(@case.duplicate_of),
-          class: "chip chip-off" %>
-  <% end %>
-<% end %>
 <% content_for :head_actions do %>
   <% if @case.resolved? %>
     <%= gated_button "case.reopen", "Reopen", fd_case_resolution_path(@case), on: @case,
@@ -26,16 +17,17 @@
             css: "btn btn-primary", method: :post %>
     <% end %>
 
-    <%= opens_modal "case.resolve", "Merge", opens: "merge-case", on: @case %>
   <% end %>
-
-  <button type="button" class="btn" data-action="click->case-timeline#open">Timeline</button>
 
   <details class="menu">
     <summary class="btn btn-only" aria-label="More actions">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
     </summary>
     <div class="menu-pop">
+      <% unless @case.resolved? %>
+        <%= opens_modal "case.resolve", "Merge into another case", opens: "merge-case",
+              on: @case %>
+      <% end %>
       <%= opens_modal "case.note", "Add a note", opens: "add-note" %>
       <%= opens_modal "case.act", "Log an action", opens: "log-action", on: @case %>
       <% if @decisions.any? %>
@@ -56,6 +48,14 @@
       <% end %>
     </div>
   </details>
+
+  <span class="bar-sep"></span>
+
+  <button type="button" class="btn btn-only btn-toggle" aria-pressed="false"
+          aria-label="Timeline" data-case-timeline-target="toggle"
+          data-action="click->case-timeline#toggle">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h13M3 12h9M3 19h13"/><circle cx="20" cy="5" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="20" cy="19" r="1.6"/></svg>
+  </button>
 <% end %>
 
 <div class="stack">
@@ -394,35 +394,27 @@
 
 <aside class="drawer" aria-label="Timeline" data-case-timeline-target="panel">
   <div class="drawer-head">
-    <h2>Timeline · case <%= @case.id %></h2>
-    <span class="chip chip-off"><%= pluralize(@timeline.size, "entry") %></span>
-    <button type="button" class="drawer-shut" data-action="click->case-timeline#close">
-      <span class="kbd">esc</span>
-    </button>
+    <h2>Timeline</h2>
+    <span class="drawer-tools">
+      <button type="button" class="btn btn-only btn-toggle" aria-pressed="false"
+              aria-label="Keep the timeline open beside the case"
+              data-case-timeline-target="pin" data-action="click->case-timeline#pin">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17v5M9 3h6l-1 7 3 3H7l3-3z"/></svg>
+      </button>
+      <button type="button" class="btn btn-only btn-ghost drawer-shut"
+              aria-label="Close the timeline" data-action="click->case-timeline#close">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </span>
   </div>
   <div class="drawer-body">
     <% if @timeline.any? %>
-      <div class="chiprow tl-filter">
-        <%= radio_button_tag :tl, "all", true, class: "tl-pick", id: "tl-all" %>
-        <label for="tl-all" class="filt">everything</label>
-        <%= radio_button_tag :tl, "changed", false, class: "tl-pick", id: "tl-changed" %>
-        <label for="tl-changed" class="filt">what changed</label>
-      </div>
       <div class="timeline">
         <% @timeline.each do |entry| %>
           <div class="tl-item tl-<%= entry.mark %>">
-            <div class="tl-when">
-              <%= entry.at.strftime("%-d %b") %><br><%= entry.at.strftime("%H:%M") %>
-            </div>
             <div class="tl-what">
               <div class="tl-head">
                 <span class="tl-title"><%= entry.title %></span>
-                <% if entry.mark %>
-                  <span class="tl-mark tl-mark-<%= entry.mark %>"><%= entry.mark %></span>
-                <% end %>
-                <% entry.chips.each do |chip| %>
-                  <span class="chip chip-off"><%= chip %></span>
-                <% end %>
               </div>
               <% if entry.detail.present? %>
                 <div class="tl-detail"><%= entry.detail %></div>
@@ -430,6 +422,9 @@
               <% if entry.said.present? %>
                 <div class="said"><%= mentioned(entry.said) %></div>
               <% end %>
+            </div>
+            <div class="tl-when">
+              <%= entry.at.strftime("%-d %b") %><br><%= entry.at.strftime("%H:%M") %>
             </div>
           </div>
         <% end %>

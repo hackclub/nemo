@@ -856,16 +856,6 @@ module FdHelper
     "notes" => "Notes", "people" => "People"
   }.freeze
 
-  def case_title(kase, threads = [])
-    what = kase.category_key.presence&.tr("_", " ")&.upcase_first
-    return "Case #{kase.id}" if what.nil?
-
-    rows = Array(threads)
-    on = rows.find(&:is_primary) || rows.first
-    named = on && channels.named?(on.channel_id) ? channel_label(on.channel_id) : nil
-    named ? "#{what} in #{named}" : what
-  end
-
   STILL_NEEDED = { 1 => "One thing", 2 => "Two things", 3 => "Three things" }.freeze
 
   def still_needed(missing)

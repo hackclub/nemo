@@ -787,10 +787,6 @@
 
   /* ── the message in the top bar ────────────────────────── */
 
-  .topbar:has(.topbar-msg) .field-top {
-    display: none;
-  }
-
   .topbar-msg {
     position: absolute;
     top: calc(100% + var(--s-2xs));
@@ -895,6 +891,20 @@
   .btn-only {
     width: var(--chat-ctl);
     padding: 0;
+  }
+
+  .bar-sep {
+    width: 1px;
+    height: 18px;
+    flex: none;
+    margin: 0 2px;
+    background-color: var(--line);
+  }
+
+  .btn-toggle[aria-pressed="true"] {
+    background-color: var(--accent-soft);
+    border-color: transparent;
+    color: var(--accent);
   }
 
   .btn-off {
@@ -4002,11 +4012,41 @@
   }
 
   .tl-item {
+    position: relative;
     display: grid;
-    grid-template-columns: 84px 1fr;
-    gap: var(--s-sm);
-    padding: var(--s-xs) 0;
-    border-bottom: 1px solid var(--line-soft);
+    grid-template-columns: 12px minmax(0, 1fr);
+    gap: 2px 9px;
+    padding-bottom: var(--s-xs);
+  }
+
+  .tl-item::before {
+    content: "";
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: center;
+    width: 7px;
+    height: 7px;
+    margin-top: 4px;
+    border-radius: 50%;
+    background-color: var(--ink-3);
+  }
+
+  .tl-item:first-child::before {
+    background-color: var(--accent);
+  }
+
+  .tl-item::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: 5px;
+    top: 16px;
+    bottom: -2px;
+    width: 1px;
+    background-color: var(--line);
+  }
+
+  .tl-item:last-child::after {
+    display: none;
   }
 
   .tl-item:last-child {
@@ -4014,13 +4054,22 @@
   }
 
   .tl-when {
-    font-size: var(--t-2xs);
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    gap: 4px;
+    font-size: var(--t-4xs);
     color: var(--ink-3);
     font-variant-numeric: tabular-nums;
-    padding-top: 2px;
+  }
+
+  .tl-when br {
+    display: none;
   }
 
   .tl-what {
+    grid-column: 2;
+    grid-row: 1;
     display: grid;
     gap: 3px;
     min-width: 0;
@@ -4035,11 +4084,12 @@
 
   .tl-title {
     font-weight: 600;
-    font-size: var(--t-sm);
+    font-size: var(--t-fine);
+    color: var(--ink);
   }
 
   .tl-detail {
-    font-size: var(--t-2xs);
+    font-size: var(--t-fine);
     color: var(--ink-2);
   }
 
@@ -4092,29 +4142,86 @@
 
   .drawer {
     position: fixed;
-    inset-block: 0;
+    inset-block-start: 52px;
+    inset-block-end: 0;
     inset-inline-end: 0;
-    width: min(420px, 92vw);
+    width: 268px;
     background-color: var(--card);
     border-inline-start: 1px solid var(--line);
-    box-shadow: -12px 0 28px oklch(0% 0 0 / 0.12);
-    z-index: 43;
-    transform: translateX(101%);
-    transition: transform var(--dur) var(--ease-out);
-    display: grid;
+    z-index: 20;
+    display: none;
     grid-template-rows: auto minmax(0, 1fr);
   }
 
-  .drawer.is-open {
-    transform: translateX(0);
+  .dock-open .drawer {
+    display: grid;
   }
+
+  .dock-open.dock-pinned .drawer {
+    inset-block-start: calc(52px + var(--s-page));
+    inset-block-end: var(--s-page);
+    inset-inline-end: var(--s-page);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    box-shadow: 0 24px 60px oklch(0% 0 0 / 0.35);
+    overflow: hidden;
+  }
+
+  .dock-open.dock-pinned .scrollarea {
+    padding-inline-end: calc(268px + var(--s-page) * 2);
+  }
+
+  .dock-open:not(.dock-pinned) .drawer {
+    inset-block-start: 0;
+    box-shadow: -12px 0 28px oklch(0% 0 0 / 0.28);
+    z-index: 43;
+  }
+
+  @media (max-width: 1199px) {
+    .drawer {
+      inset-block-start: 0;
+      width: min(320px, 92vw);
+      box-shadow: -12px 0 28px oklch(0% 0 0 / 0.18);
+      z-index: 43;
+    }
+
+    .dock-open.dock-pinned .scrollarea {
+      padding-inline-end: 0;
+    }
+  }
+
 
   .drawer-head {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: var(--s-2xs);
-    padding: var(--s-sm) var(--s-md);
+    height: 52px;
+    padding: 0 var(--s-xs);
     border-bottom: 1px solid var(--line);
+  }
+
+  .drawer-head h2 {
+    font-size: var(--t-2xs);
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .drawer-tools {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-inline-start: auto;
+  }
+
+  .btn-ghost {
+    border-color: transparent;
+    background-color: transparent;
+    color: var(--ink-2);
+  }
+
+  .timeline {
+    display: grid;
+    align-content: start;
   }
 
   .drawer-head h2 {

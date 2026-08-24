@@ -25,6 +25,12 @@
           if (localStorage.getItem("mn-rail") === "shut") {
             document.documentElement.classList.add("rail-shut");
           }
+          if (localStorage.getItem("mn-dock") === "open") {
+            document.documentElement.classList.add("dock-open");
+          }
+          if (localStorage.getItem("mn-dock-pin") === "pinned") {
+            document.documentElement.classList.add("dock-pinned");
+          }
         } catch (e) {}
       })();
     <% end %>
