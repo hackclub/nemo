@@ -1,5 +1,7 @@
 module Fd
   class DecisionsController < BaseController
+    before_action { needs(:decisions) }
+
     include DecisionWords
 
     permit "decision.write", except: [:index, :show]

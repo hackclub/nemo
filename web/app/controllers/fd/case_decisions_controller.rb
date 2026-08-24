@@ -1,5 +1,7 @@
 module Fd
   class CaseDecisionsController < BaseController
+    before_action { needs(:decisions) }
+
     permit "decision.link", on: -> { Case.find(params[:case_id]) }
 
     def create

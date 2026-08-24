@@ -1,5 +1,7 @@
 module Fd
   class SettlementsController < BaseController
+    before_action { needs(:decisions) }
+
     permit "decision.settle"
 
     def create

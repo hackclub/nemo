@@ -1,5 +1,7 @@
 module Fd
   class DecisionThreadsController < BaseController
+    before_action { needs(:decisions) }
+
     permit "decision.link"
 
     def create

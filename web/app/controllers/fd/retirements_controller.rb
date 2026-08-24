@@ -1,5 +1,7 @@
 module Fd
   class RetirementsController < BaseController
+    before_action { needs(:decisions) }
+
     permit "decision.retire"
 
     def create

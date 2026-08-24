@@ -1,5 +1,7 @@
 module Fd
   class SupersessionsController < BaseController
+    before_action { needs(:decisions) }
+
     include DecisionWords
 
     permit "decision.retire"

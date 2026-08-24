@@ -54,7 +54,7 @@ module Fd
       @said_counts = @thread_messages.group_by(&:author_user_id).transform_values(&:size)
       @person_priors = Case.prior_counts_for(@participants.map(&:user_id))
       @assignees = @case.assignees.to_a
-      @decisions = Decision.order(:title).to_a
+      @decisions = Flag.on?(:decisions) ? Decision.order(:title).to_a : []
       @mentioned = @case.mentioned_but_unlogged(
         notes: @notes + @standing_notes.values.flatten, reports: @reports
       )
