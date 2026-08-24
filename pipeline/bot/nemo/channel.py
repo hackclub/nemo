@@ -452,6 +452,23 @@ def reopen(conn, case_id, by):
     return True
 
 
+def said_again(client, conn, case_id, was, channel_id=None):
+    redraw(client, conn, case_id, channel_id)
+
+    case = gather(conn, case_id)
+    if case is None or not case["forwarded_ts"]:
+        return None
+
+    said = was.replace("_", " ") if was else "resolved"
+    return client.chat_postMessage(
+        channel=channel_id or firehouse_channel(),
+        thread_ts=case["forwarded_ts"],
+        text=f":arrows_counterclockwise: they wrote back, so case {case_id} is open again "
+        f"(it was closed as {said})",
+        unfurl_links=False,
+    )["ts"]
+
+
 def open_about(conn, user_id):
     return [row[0] for row in conn.execute(OPEN_ABOUT, (user_id,)).fetchall()]
 

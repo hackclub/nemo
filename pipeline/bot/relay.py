@@ -46,10 +46,13 @@ class Relay:
 
     def taken(self, conversation_id, message_id, anonymous=True):
         opener = bot_user_id(self.nemo_client, "nemo") if self.nemo_client else None
+        woke = None
         with session() as conn:
             already = case.existing(conn, conversation_id)
             case_id = case.open_case(conn, conversation_id, opener, anonymous)
             brought = evidence.promote(conn, case_id, conversation_id, opener)
+            if already:
+                woke = case.wake(conn, case_id, opener)
         log.info("relay: conversation %s is case %s", conversation_id, case_id)
         if brought["threads"] or brought["messages"]:
             log.info(
@@ -66,6 +69,9 @@ class Relay:
         with session() as conn:
             if already:
                 channel.post_follow_up(self.nemo_client, conn, message_id)
+                if woke:
+                    log.info("relay: case %s was %s, they wrote back", case_id, woke)
+                    channel.said_again(self.nemo_client, conn, case_id, woke)
             else:
                 channel.post_report(self.nemo_client, conn, case_id)
 

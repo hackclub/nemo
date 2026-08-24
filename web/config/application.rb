@@ -28,9 +28,13 @@ module Web
     ].freeze
     ENCRYPTION_STANDIN = "mnemosyne-encryption-key-outside-production".freeze
 
+    building = ENV["SECRET_KEY_BASE_DUMMY"].present?
+
     keys = ENCRYPTION_KEYS.map { |name| ENV[name].presence }
     if keys.any?(&:nil?)
-      raise "#{ENCRYPTION_KEYS.join(", ")} must be set" if Rails.env.production?
+      if Rails.env.production? && !building
+        raise "#{ENCRYPTION_KEYS.join(", ")} must be set"
+      end
 
       keys = keys.map { ENCRYPTION_STANDIN }
     end
