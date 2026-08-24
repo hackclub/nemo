@@ -40,6 +40,7 @@ ROLE="${1:-${NEMO_ROLE:-}}"
 case "$ROLE" in
   serve)
     cd "$WEB" || exit 1
+    export NEMO_STREAM="${NEMO_STREAM:-1}"
     if [ -n "${PORT:-}" ]; then
       exec ./bin/rails server -p "$PORT" "$@"
     fi

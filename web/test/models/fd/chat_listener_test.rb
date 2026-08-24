@@ -19,6 +19,38 @@ class Fd::ChatListenerTest < ActiveSupport::TestCase
     assert_not Fd::ChatListener.serving?
   end
 
+  test "saying no in any of the usual spellings turns it off" do
+    %w[0 false no off FALSE Off].each do |said|
+      with_env("NEMO_STREAM", said) do
+        assert_not Fd::ChatListener.wanted?, "NEMO_STREAM=#{said} should not stream"
+      end
+    end
+  end
+
+  test "anything else asked for turns it on, whatever the process is called" do
+    %w[1 true yes on].each do |said|
+      with_env("NEMO_STREAM", said) do
+        assert Fd::ChatListener.wanted?, "NEMO_STREAM=#{said} should stream"
+      end
+    end
+  end
+
+  test "an empty setting is not an answer, so the process decides" do
+    with_env("NEMO_STREAM", "") do
+      assert_equal Fd::ChatListener.serving?, Fd::ChatListener.wanted?
+    end
+  end
+
+  def with_env(name, value)
+    was, had, serving = ENV[name], ENV.key?(name), Rails.env
+    ENV[name] = value
+    Rails.env = "production"
+    yield
+  ensure
+    Rails.env = serving
+    had ? ENV[name] = was : ENV.delete(name)
+  end
+
   test "it connects on its own terms, not out of the request pool" do
     said = {
       host: "db.example", port: 5432, database: "mnemosyne",

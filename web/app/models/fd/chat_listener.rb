@@ -3,12 +3,13 @@ module Fd
     CHANNELS = %w[fd_chat_changed fd_conversation_changed].freeze
     RETRY_AFTER = 5
     WAIT = 30
+    OFF = %w[0 false no off].freeze
 
     def self.wanted?
       return false if Rails.env.test?
 
-      asked = ENV["NEMO_STREAM"]
-      return asked != "0" if asked
+      asked = ENV["NEMO_STREAM"].presence
+      return OFF.exclude?(asked.downcase) if asked
 
       serving?
     end
