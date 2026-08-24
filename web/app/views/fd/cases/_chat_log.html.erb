@@ -1,6 +1,7 @@
 <% said = chat_entries(reports, chat, messages, queued) %>
 
-<%= turbo_frame_tag chat_log_id(kase) do %>
+<%= turbo_frame_tag chat_log_id(kase),
+      src: fd_case_chat_log_path(kase, thread: reports.first&.id), complete: "" do %>
 <div class="chat-log">
   <% if earlier.positive? %>
     <p class="sub2 chat-earlier"><%= pluralize(earlier, "earlier message") %> on the case page</p>
