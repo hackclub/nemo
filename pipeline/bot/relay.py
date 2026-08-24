@@ -1,6 +1,6 @@
 import logging
 
-from bot.engine import case, intake, outbox, session
+from bot.engine import case, evidence, intake, outbox, session
 from bot.nemo import answer
 from bot.engine.whoami import bot_user_id
 from bot.nemo import channel, who
@@ -49,7 +49,10 @@ class Relay:
         with session() as conn:
             already = case.existing(conn, conversation_id)
             case_id = case.open_case(conn, conversation_id, opener, anonymous)
+            brought = evidence.promote(conn, case_id, conversation_id, opener)
         log.info("relay: conversation %s is case %s", conversation_id, case_id)
+        if brought:
+            log.info("relay: case %s came with %s thread(s)", case_id, len(brought))
 
         if self.nemo_client is None:
             log.warning(
