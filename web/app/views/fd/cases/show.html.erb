@@ -237,8 +237,6 @@
         </div>
       <% end %>
 
-      <%= render "what_this_does",
-            lines: action_consequences(@case, @people.chosen&.user_id || lone_subject(@case)) %>
     </div>
     <div class="modal-foot">
       <label for="log-action" class="btn">Close</label>

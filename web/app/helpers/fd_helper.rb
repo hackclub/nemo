@@ -352,14 +352,6 @@ module FdHelper
     lines
   end
 
-  def action_consequences(kase, target)
-    ["An action is logged against #{target ? names[target] : 'whoever you pick'}, " \
-       "and counts as a prior for twelve months.",
-     "Case ##{kase.id} stays #{kase.resolved? ? 'resolved' : 'open'}.",
-     "Nobody is messaged. Telling them is a separate step.",
-     "It is written to the trail, and can be reversed."]
-  end
-
   def flagged_count(row, flags)
     row.messages.count { |said| flags.key?(said.id) }
   end
