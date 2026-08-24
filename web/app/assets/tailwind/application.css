@@ -212,9 +212,13 @@
 
   .shell {
     display: grid;
-    grid-template-columns: var(--rail-w) minmax(0, 1fr);
+    grid-template-columns: var(--rail-open-w) minmax(0, 1fr);
     height: 100vh;
     background-color: var(--card);
+  }
+
+  .rail-shut .shell {
+    grid-template-columns: var(--rail-w) minmax(0, 1fr);
   }
 
   .rail {
@@ -225,28 +229,22 @@
     gap: 12px;
     overflow-x: hidden;
     overflow-y: auto;
-    width: var(--rail-w);
+    width: 100%;
     position: relative;
     z-index: 30;
     background-color: var(--card);
-    transition: width var(--dur) var(--ease-out);
-  }
-
-  .rail:hover,
-  .rail:focus-within {
-    width: var(--rail-open-w);
-    box-shadow: 10px 0 26px oklch(0% 0 0 / 0.12);
   }
 
   .rail-text {
     white-space: nowrap;
-    opacity: 0;
-    transition: opacity var(--dur) var(--ease-out);
   }
 
-  .rail:hover .rail-text,
-  .rail:focus-within .rail-text {
-    opacity: 1;
+  .rail-shut .rail-text {
+    display: none;
+  }
+
+  .rail-shut .rail-fold svg {
+    transform: scaleX(-1);
   }
 
   .rail-label {
@@ -260,13 +258,10 @@
     height: 14px;
     white-space: nowrap;
     overflow: hidden;
-    opacity: 0;
-    transition: opacity var(--dur) var(--ease-out);
   }
 
-  .rail:hover .rail-label,
-  .rail:focus-within .rail-label {
-    opacity: 1;
+  .rail-shut .rail-label {
+    visibility: hidden;
   }
 
   .rail-nav {
@@ -360,13 +355,10 @@
     border-radius: var(--r-pill);
     padding: 1px 7px;
     margin-inline-end: var(--s-2xs);
-    opacity: 0;
-    transition: opacity var(--dur) var(--ease-out);
   }
 
-  .rail:hover .rail-badge,
-  .rail:focus-within .rail-badge {
-    opacity: 1;
+  .rail-shut .rail-badge {
+    display: none;
   }
 
   .rail-item[aria-current="page"] .rail-badge {
