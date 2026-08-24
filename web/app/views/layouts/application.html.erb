@@ -112,8 +112,38 @@
         </div>
       </aside>
 
-      <div class="main">
+      <div class="main" data-controller="case-timeline">
         <div class="topbar">
+          <%= yield :page_face %>
+          <h1 class="head-title"><%= content_for(:page_title) || "Mnemosyne" %></h1>
+          <% if content_for?(:page_subtitle) %>
+            <span class="head-meta"><%= content_for(:page_subtitle) %></span>
+          <% end %>
+          <%= yield :page_badge %>
+
+          <span class="topbar-fill"></span>
+
+          <button type="button" class="field-top" data-action="palette#open"
+                  aria-label="Search cases, members, notes">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            Search cases, members, notes
+            <span class="kbd">⌘K</span>
+          </button>
+
+          <% if content_for?(:head_actions) %>
+            <div class="head-actions"><%= content_for(:head_actions) %></div>
+          <% end %>
+
+          <% name = current_profile&.display_name || current_staff.user_id %>
+          <% if current_profile&.image_url %>
+            <img class="avatar" src="<%= current_profile.image_url %>" alt="<%= name %>"
+                 title="<%= name %>" width="28" height="28">
+          <% else %>
+            <span class="avatar" title="<%= name %>">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+            </span>
+          <% end %>
+
           <% if alert || notice %>
             <div class="topbar-msg <%= "topbar-msg-alert" if alert %>"
                  role="<%= alert ? "alert" : "status" %>"
@@ -121,38 +151,10 @@
                  data-action="click->toast#dismiss"
                  title="dismiss"><%= alert || notice %></div>
           <% end %>
-          <button type="button" class="field-top" data-action="palette#open"
-                  aria-label="Search cases, members, notes">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-            Search cases, members, notes
-            <span class="kbd">⌘K</span>
-          </button>
-          <div class="topbar-icons">
-            <span class="delta-note"><%= current_profile&.display_name || current_staff.user_id %></span>
-            <% if current_profile&.image_url %>
-              <img class="avatar" src="<%= current_profile.image_url %>" alt="" width="28" height="28">
-            <% else %>
-              <span class="avatar" aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
-              </span>
-            <% end %>
-          </div>
         </div>
 
         <div class="scrollarea">
-          <main class="body" data-controller="case-timeline">
-            <div class="head-row">
-              <%= yield :page_face %>
-              <h1 class="head-title"><%= content_for(:page_title) || "Mnemosyne" %></h1>
-              <% if content_for?(:page_subtitle) %>
-                <span class="head-meta"><%= content_for(:page_subtitle) %></span>
-              <% end %>
-              <%= yield :page_badge %>
-              <% if content_for?(:head_actions) %>
-                <div class="head-actions"><%= content_for(:head_actions) %></div>
-              <% end %>
-            </div>
-
+          <main class="body">
             <%= yield %>
           </main>
         </div>

@@ -426,29 +426,44 @@
   }
 
   .topbar {
-    display: flex;
-    align-items: center;
-    gap: var(--s-sm);
-    padding: var(--s-2xs) var(--s-md);
-    border-bottom: 1px solid var(--line);
-    flex-wrap: wrap;
-    flex: none;
-  }
-
-  .field-top {
-    flex: 1 1 220px;
-    min-width: 0;
+    position: relative;
     display: flex;
     align-items: center;
     gap: var(--s-2xs);
+    height: 52px;
+    padding: 0 var(--s-page);
+    border-bottom: 1px solid var(--line);
+    background-color: var(--card);
+    flex-wrap: nowrap;
+    flex: none;
+  }
+
+  .topbar-fill {
+    flex: 1 1 auto;
+    min-width: var(--s-2xs);
+  }
+
+  .field-top {
+    flex: 0 1 254px;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: var(--chat-ctl);
+    padding: 0 8px 0 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    background-color: var(--card-2);
     color: var(--ink-3);
-    font-size: var(--t-sm);
-    padding: 7px 0;
+    font-size: var(--t-2xs);
     font-family: inherit;
     text-align: left;
-    background: 0;
-    border: 0;
+    white-space: nowrap;
     cursor: pointer;
+  }
+
+  .field-top .kbd {
+    margin-inline-start: auto;
   }
 
   .field-top:hover {
@@ -503,12 +518,8 @@
     align-content: start;
   }
 
-  .head-row {
-    display: flex;
-    align-items: center;
-    gap: var(--s-2xs) var(--s-xs);
-    flex-wrap: nowrap;
-    min-height: 52px;
+  .crumb-sep {
+    color: var(--ink-3);
   }
 
   .head-face {
@@ -789,13 +800,21 @@
   }
 
   .topbar-msg {
-    flex: 1;
+    position: absolute;
+    top: calc(100% + var(--s-2xs));
+    inset-inline-end: var(--s-page);
+    z-index: 20;
+    max-width: 32rem;
     display: flex;
     align-items: center;
     gap: var(--s-2xs);
     min-width: 0;
-    padding: 7px var(--s-2xs);
-    font-size: var(--t-sm);
+    padding: 8px var(--s-xs);
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    box-shadow: 0 10px 30px oklch(0% 0 0 / 0.18);
+    font-size: var(--t-2xs);
     font-weight: 500;
     color: var(--ink);
     cursor: pointer;
