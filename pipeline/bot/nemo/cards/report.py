@@ -242,11 +242,42 @@ def attached(case):
     return f"*{held} thread" + ("s attached*" if held != 1 else " attached*")
 
 
+SHOWN_SHARES = 3
+
+
+def brought(shares):
+    return [
+        share
+        for share in shares
+        if share.get("is_reachable") and (share.get("source_body") or "").strip()
+    ][:SHOWN_SHARES]
+
+
+def whose(share):
+    who = share.get("source_author_user_id")
+    where = share.get("source_channel_name")
+    said = f"<@{who}>" if who else "somebody"
+    if where:
+        said += f" in #{where}"
+    permalink = share.get("permalink")
+    return f"{said} · <{permalink}|open it>" if permalink else said
+
+
+def what_they_reported(shares):
+    built = []
+    for share in brought(shares):
+        built.append(context([whose(share)]))
+        built.append(quote(share["source_body"]))
+    return built
+
+
 def blocks(case):
     files = case.get("files") or []
     shares = case.get("shares") or []
 
-    built = [title(case), quote(case.get("body")), footer(case)]
+    built = [title(case), quote(case.get("body"))]
+    built += what_they_reported(shares)
+    built.append(footer(case))
 
     trail = [part for part in [attached(case)] if part]
     trail += evidence(shares) + [f"📎 {name}" for name in named(files)]

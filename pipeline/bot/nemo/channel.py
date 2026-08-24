@@ -60,7 +60,7 @@ SELECT count(*) FROM fd.case_threads WHERE case_id = %s AND kind = 'evidence'
 
 SHARES = """
 SELECT s.kind, s.source_channel_id, s.source_channel_name, s.source_ts, s.permalink,
-       s.is_reachable
+       s.is_reachable, s.source_author_user_id, s.source_body
 FROM fd.intake_shares s
 JOIN fd.intake_messages m ON m.id = s.message_id
 WHERE m.conversation_id = %s
@@ -175,6 +175,8 @@ def gather(conn, case_id):
             "source_ts": s[3],
             "permalink": s[4],
             "is_reachable": s[5],
+            "source_author_user_id": s[6],
+            "source_body": s[7],
         }
         for s in conn.execute(SHARES, (convo,)).fetchall()
     ]

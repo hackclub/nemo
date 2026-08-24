@@ -38,9 +38,46 @@ def link_target(url):
     return channel_id, f"{seconds}.{micros}", thread_of(query)
 
 
+RICHEST = ("forward", "unfurl", "link")
+
+
+def points_at(share):
+    found = link_target(share["permalink"]) if share["permalink"] else None
+    return {share["source_ts"], found[1] if found else None} - {None}
+
+
+def same_message(one, other):
+    if one["source_channel_id"] != other["source_channel_id"]:
+        return False
+
+    here, there = points_at(one), points_at(other)
+    if here and there:
+        return bool(here & there)
+
+    return one["permalink"] == other["permalink"]
+
+
+def merge(into, found):
+    for field, value in found.items():
+        if field in ("kind", "is_reachable"):
+            continue
+        if into.get(field) is None and value is not None:
+            into[field] = value
+
+    into["is_reachable"] = into["is_reachable"] or found["is_reachable"]
+    into["kind"] = min(into["kind"], found["kind"], key=RICHEST.index)
+
+
+def gather(out, found):
+    for already in out:
+        if same_message(already, found):
+            merge(already, found)
+            return
+    out.append(found)
+
+
 def shares(event):
     out = []
-    seen = set()
 
     for attachment in event.get("attachments") or []:
         if not isinstance(attachment, dict):
@@ -61,11 +98,8 @@ def shares(event):
         if not url and not (channel_id and ts):
             continue
 
-        key = (channel_id, ts, url)
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(
+        gather(
+            out,
             {
                 "kind": "forward" if forwarded else "unfurl",
                 "source_channel_id": channel_id,
@@ -87,13 +121,8 @@ def shares(event):
 
     for url in ARCHIVE_LINK.findall(event.get("text") or ""):
         channel_id, ts, parent = url[0], f"{url[1]}.{url[2]}", thread_of(url[3])
-        if any(s["source_channel_id"] == channel_id and s["source_ts"] == ts for s in out):
-            continue
-        key = (channel_id, ts, None)
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(
+        gather(
+            out,
             {
                 "kind": "link",
                 "source_channel_id": channel_id,

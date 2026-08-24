@@ -204,3 +204,58 @@ def test_files_without_an_id_are_dropped():
 def test_no_files_and_no_attachments_is_empty():
     assert parse.files({}) == []
     assert parse.shares({}) == []
+
+
+def unfurl(**over):
+    said = {"is_msg_unfurl": True, "author_id": "UMILO", "text": "the awful line"}
+    said.update(over)
+    return said
+
+
+REPLY = ("https://hackclub.slack.com/archives/C09TTRZH94Z/p1787569865339089"
+         "?thread_ts=1787568364.974219&amp;cid=C09TTRZH94Z")
+ROOT = "https://hackclub.slack.com/archives/C09TTRZH94Z/p1787568364974219"
+
+
+def test_one_paste_is_one_share_however_slack_stamps_the_unfurl():
+    for ts in ("1787569865.339089", "1787568364.974219", None):
+        event = {"text": f"<{REPLY}|{REPLY}>", "attachments": [
+            unfurl(channel_id="C09TTRZH94Z", ts=ts, permalink=REPLY)]}
+        found = parse.shares(event)
+
+        assert len(found) == 1, f"a ts of {ts} split one paste in two"
+        assert found[0]["is_reachable"] is True
+        assert found[0]["source_body"] == "the awful line"
+
+
+def test_the_merged_share_keeps_the_words_and_gains_the_thread():
+    event = {"text": f"<{REPLY}|{REPLY}>", "attachments": [
+        unfurl(channel_id="C09TTRZH94Z", permalink=REPLY)]}
+    found = parse.shares(event)[0]
+
+    assert found["source_author_user_id"] == "UMILO"
+    assert found["source_ts"] == "1787569865.339089"
+    assert found["source_thread_ts"] == "1787568364.974219"
+
+
+def test_two_different_messages_stay_two_shares():
+    other = REPLY.replace("p1787569865339089", "p1787569999000000")
+    found = parse.shares({"text": f"<{REPLY}|{REPLY}> and {other}", "attachments": []})
+
+    assert [s["source_ts"] for s in found] == ["1787569865.339089", "1787569999.000000"]
+
+
+def test_a_forward_of_the_root_does_not_swallow_a_link_to_a_reply():
+    event = {"text": f"<{REPLY}|{REPLY}>", "attachments": [
+        unfurl(is_share=True, is_msg_unfurl=False, channel_id="C09TTRZH94Z",
+               ts="1787568364.974219", permalink=ROOT)]}
+    found = parse.shares(event)
+
+    assert [s["kind"] for s in found] == ["forward", "link"]
+
+
+def test_a_richer_shape_wins_when_two_are_merged():
+    event = {"text": f"<{REPLY}|{REPLY}>", "attachments": [
+        unfurl(is_share=True, is_msg_unfurl=False, channel_id="C09TTRZH94Z", permalink=REPLY)]}
+
+    assert parse.shares(event)[0]["kind"] == "forward"

@@ -426,3 +426,43 @@ def test_a_message_they_did_share_reads_plainly():
     shares = [{"kind": "forward", "source_channel_name": "club-yarrow-help",
                "permalink": "https://x/p/1", "is_reachable": True}]
     assert card.evidence(shares) == ["<https://x/p/1|#club-yarrow-help>"]
+
+
+def a_share(**over):
+    base = {"kind": "unfurl", "source_channel_id": "C0YARROW",
+            "source_channel_name": "club-yarrow-help", "source_ts": "1787569865.339089",
+            "permalink": "https://x/p/1", "is_reachable": True,
+            "source_author_user_id": "UMILO",
+            "source_body": "go back to your own server"}
+    base.update(over)
+    return base
+
+
+def test_the_card_shows_what_was_reported_not_only_that_something_was():
+    said = text_of(card.blocks(a_case(shares=[a_share()])))
+
+    assert "go back to your own server" in said
+    assert "<@UMILO> in #club-yarrow-help" in said
+
+
+def test_the_reported_message_sits_under_the_report_and_above_the_footer():
+    kinds = [b["type"] for b in card.blocks(a_case(shares=[a_share()]))]
+    assert kinds[:5] == ["header", "rich_text", "context", "rich_text", "context"]
+
+
+def test_a_link_nobody_shared_has_no_words_to_show():
+    said = text_of(card.blocks(a_case(shares=[a_share(is_reachable=False, source_body=None)])))
+    assert "go back to your own server" not in said
+
+
+def test_an_author_slack_did_not_name_is_still_shown():
+    said = text_of(card.blocks(a_case(shares=[a_share(source_author_user_id=None)])))
+    assert "somebody in #club-yarrow-help" in said
+
+
+def test_only_the_first_few_reported_messages_are_shown():
+    many = [a_share(source_ts=str(n), source_body=f"line {n}") for n in range(6)]
+    said = text_of(card.blocks(a_case(shares=many)))
+
+    assert "line 0" in said
+    assert "line 5" not in said
