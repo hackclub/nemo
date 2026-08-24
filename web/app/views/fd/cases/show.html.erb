@@ -3,9 +3,6 @@
   <span class="crumb"><%= link_to "Cases", fd_cases_path %> /</span>
 <% end %>
 <% content_for :palette_on, "case:#{@case.id}" %>
-<% content_for :page_subtitle do %>
-  <%= case_head_meta(@case, @reports) %>
-<% end %>
 <% content_for :page_badge do %>
   <%= case_status_chip(@case) %>
   <%= case_hands_chip(@case) %>
@@ -49,7 +46,10 @@
         <% if @case.assigned_to?(current_staff.user_id) %>
           <%= gated_button "case.open", "Put it back in the queue", fd_case_claim_path(@case),
                 on: @case, method: :delete %>
-        <% elsif !@case.assigned? %>
+        <% elsif @case.assigned? %>
+          <%= gated_button "case.open", "Put myself on it too", fd_case_claim_path(@case),
+                on: @case, method: :post %>
+        <% else %>
           <%= opens_modal "case.resolve", "Resolve without claiming", opens: "resolve-case",
                 on: @case %>
         <% end %>
@@ -194,7 +194,8 @@
 
     <div class="facts">
       <%= render "rail", kase: @case, subject: @subject, priors: @subject_priors,
-            contexts: @context, missing: @missing, guesses: @guesses %>
+            contexts: @context, missing: @missing, guesses: @guesses,
+            reports: @reports, threads: @threads %>
     </div>
   </div>
 </div>

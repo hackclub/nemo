@@ -14,7 +14,6 @@
           <b><%= member_link(subject) %></b>
           <span><%= subject_standing(subject, contexts[subject]) %></span>
         </span>
-        <%= prior_chip_for(priors) %>
       </div>
       <div class="sub2">
         <%= link_to "their whole history →", fd_member_path(subject),
@@ -31,27 +30,45 @@
   </div>
 </div>
 
+<% first = reports.min_by(&:received_at) %>
 <div class="fbox">
-  <div class="ft">
-    Assigned
-    <% unless kase.resolved? %>
-      <% if kase.assigned_to?(current_staff.user_id) %>
-        <%= gated_button "case.open", "Put it back", fd_case_claim_path(kase),
-              on: kase, method: :delete %>
-      <% elsif kase.assigned? %>
-        <%= gated_button "case.open", "Assign myself", fd_case_claim_path(kase),
-              on: kase, method: :post %>
-      <% else %>
-        <%= gated_button "case.open", "Take it", fd_case_claim_path(kase),
-              on: kase, method: :post %>
-      <% end %>
+  <div class="ft">Reported by</div>
+  <div class="fb">
+    <% if first.nil? %>
+      <div class="line-row">
+        <span class="grow rail-line">Nobody, this was opened by hand</span>
+      </div>
+    <% else %>
+      <div class="line-row">
+        <%= face(first.anonymous? ? nil : first.reporter_user_id) %>
+        <span class="grow two-line">
+          <b><%= first.anonymous? ? "Anonymous" : member_link(first.reporter_user_id) %></b>
+          <span>
+            <% unless first.anonymous? %><%= pluralize(reports.size, "report") %> · <% end %>
+            <%= on_day(first.received_at) %>
+          </span>
+        </span>
+      </div>
     <% end %>
   </div>
-  <div class="fb">
-    <% if kase.assigned? %>
-      <div class="faces"><%= assignee_faces(kase.assignee_user_ids) %></div>
-    <% else %>
-      <div class="rail-line">Nobody yet</div>
-    <% end %>
+</div>
+
+<% on = threads.find(&:is_primary) || threads.first %>
+<div class="facts-grid">
+  <div class="cell">
+    <span class="fg-k">Opened</span>
+    <span class="fg-v"><%= on_day(kase.opened_at) %></span>
+  </div>
+  <div class="cell">
+    <span class="fg-k">Channel</span>
+    <span class="fg-v"><%= on ? channel_label(on.channel_id) : "n/a" %></span>
+  </div>
+  <div class="cell">
+    <span class="fg-k">Violation</span>
+    <span class="fg-v"><%= category_short(kase.category_key) %></span>
+  </div>
+  <div class="cell">
+    <span class="fg-k">Priors</span>
+    <span class="fg-v"><%= priors.positive? ? priors : "n/a" %></span>
   </div>
 </div>
