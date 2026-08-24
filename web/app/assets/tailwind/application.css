@@ -34,6 +34,8 @@
     --r-card: 12px;
     --r-ctl: 8px;
     --r-pill: 999px;
+    --chat-ctl: 28px;
+    --chat-line: 1.5;
 
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --dur: 140ms;
@@ -621,8 +623,10 @@
     color: var(--ink);
     font: inherit;
     font-size: var(--t-sm);
+    line-height: var(--chat-line);
     resize: none;
-    padding: 4px 2px;
+    padding: calc((var(--chat-ctl) - 1em * var(--chat-line)) / 2) 2px;
+    min-height: var(--chat-ctl);
     max-height: 120px;
   }
 
@@ -3265,13 +3269,13 @@
   .chat-input {
     font-family: inherit;
     font-size: var(--t-sm);
-    line-height: 1.5;
+    line-height: var(--chat-line);
     color: var(--ink);
     background-color: transparent;
     border: 0;
-    padding: 4px 0;
+    padding: calc((var(--chat-ctl) - 1em * var(--chat-line)) / 2) 0;
     width: 100%;
-    min-height: 28px;
+    min-height: var(--chat-ctl);
     resize: none;
     outline: none;
     max-height: 10rem;
@@ -3304,8 +3308,8 @@
   .chat-send {
     display: grid;
     place-items: center;
-    width: 28px;
-    height: 28px;
+    width: var(--chat-ctl);
+    height: var(--chat-ctl);
     flex: none;
     border-radius: 8px;
     border: 1px solid var(--line);
