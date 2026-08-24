@@ -58,7 +58,20 @@ NAMED_OPTION = option(
 )
 
 
-def blocks(bodies, files=0):
+def forwarded(channels):
+    if not channels:
+        return None
+
+    counted = f"{len(channels)} forwarded message" + ("s" if len(channels) != 1 else "")
+    named = [f"#{one}" for one in channels if one]
+    if not named:
+        return counted
+
+    where = ", ".join(dict.fromkeys(named))
+    return f"{counted}, from {where}"
+
+
+def blocks(bodies, files=0, channels=()):
     built = [
         {
             "type": "section",
@@ -70,12 +83,19 @@ def blocks(bodies, files=0):
         quoted(bodies),
     ]
 
+    coming = []
+    brought = forwarded(list(channels))
+    if brought:
+        coming.append(f"↪️ {brought}")
     if files:
         plural = "s" if files != 1 else ""
+        coming.append(f"📎 {files} file{plural}")
+
+    if coming:
         built.append(
             {
                 "type": "context",
-                "elements": [{"type": "mrkdwn", "text": f"📎 {files} file{plural}"}],
+                "elements": [{"type": "mrkdwn", "text": "  ·  ".join(coming)}],
             }
         )
 

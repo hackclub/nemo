@@ -81,3 +81,24 @@ def test_a_long_report_is_still_cut_in_the_confirmation():
     said = consent.quoted(["x" * 5000])["elements"][0]["elements"]
     assert len(said[0]["text"]) <= consent.QUOTE_LIMIT + len(consent.CUT)
     assert "there is more" in said[0]["text"]
+
+
+def test_the_prompt_counts_a_forward_as_well_as_a_file():
+    said = consent.blocks(["look at this"], files=2, channels=["club-yarrow-help"])
+    trail = [b for b in said if b["type"] == "context"][0]["elements"][0]["text"]
+
+    assert "1 forwarded message, from #club-yarrow-help" in trail
+    assert "2 files" in trail
+
+
+def test_two_forwards_from_one_channel_name_it_once():
+    assert consent.forwarded(["yarrow", "yarrow"]) == "2 forwarded messages, from #yarrow"
+
+
+def test_a_forward_from_a_channel_with_no_name_still_counts():
+    assert consent.forwarded([None]) == "1 forwarded message"
+
+
+def test_a_report_with_nothing_attached_shows_no_trail():
+    said = consent.blocks(["look at this"])
+    assert not [b for b in said if b["type"] == "context"]

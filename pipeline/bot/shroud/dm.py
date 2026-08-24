@@ -32,6 +32,14 @@ JOIN fd.intake_messages m ON m.id = f.message_id
 WHERE m.conversation_id = %s
 """
 
+WHAT_THEY_FORWARDED = """
+SELECT s.source_channel_name
+FROM fd.intake_shares s
+JOIN fd.intake_messages m ON m.id = s.message_id
+WHERE m.conversation_id = %s AND m.direction = 'inbound' AND s.kind = 'forward'
+ORDER BY s.id
+"""
+
 CONVERSATION_OF = """
 SELECT conversation_id FROM fd.intake_messages WHERE channel_id = %s AND ts = %s
 """
@@ -51,7 +59,8 @@ WHERE channel_id = %s AND ts = %s
 def preview(conn, conversation_id):
     bodies = [row[0] for row in conn.execute(WHAT_THEY_SAID, (conversation_id,)).fetchall()]
     held = conn.execute(HOW_MANY_FILES, (conversation_id,)).fetchone()[0]
-    return consent.blocks(bodies, held)
+    brought = conn.execute(WHAT_THEY_FORWARDED, (conversation_id,)).fetchall()
+    return consent.blocks(bodies, held, [row[0] for row in brought])
 
 
 def register(app, on_taken=None):

@@ -33,9 +33,9 @@ KEEP = """
 INSERT INTO fd.thread_messages
     (channel_id, thread_ts, message_ts, parent_ts, is_root,
      author_user_id, body, permalink, posted_at, source_app)
-VALUES (%(channel_id)s, %(thread_ts)s, %(message_ts)s, %(parent_ts)s, %(is_root)s,
+VALUES (%(channel_id)s, %(thread_ts)s, %(message_ts)s::text, %(parent_ts)s, %(is_root)s,
         %(author)s, %(body)s, %(permalink)s,
-        to_timestamp(%(message_ts)s::numeric), 'shroud')
+        to_timestamp(%(message_ts)s::text::numeric), 'shroud')
 ON CONFLICT (channel_id, thread_ts, message_ts) DO NOTHING
 RETURNING id
 """

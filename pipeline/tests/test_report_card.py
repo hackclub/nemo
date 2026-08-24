@@ -367,3 +367,25 @@ def test_the_card_carries_the_case_in_its_metadata():
     carried = card.metadata(a_case(report_id=91))
     assert carried["event_type"] == "fd_case_card"
     assert carried["event_payload"] == {"case_id": 2545, "report_id": 91}
+
+
+def test_a_case_that_holds_threads_says_so_before_the_links():
+    said = text_of(card.blocks(a_case(threads=1)))
+    assert "*1 thread attached*" in said
+
+    many = text_of(card.blocks(a_case(threads=3)))
+    assert "*3 threads attached*" in many
+
+
+def test_a_case_holding_nothing_says_nothing_about_threads():
+    assert "attached" not in text_of(card.blocks(a_case()))
+    assert "attached" not in text_of(card.blocks(a_case(threads=0)))
+
+
+def test_the_thread_leads_the_footer_and_the_links_follow():
+    blocks = card.blocks(
+        a_case(threads=1, shares=[{"kind": "forward", "source_channel_name": "yarrow",
+                                   "permalink": "https://x/p/1"}])
+    )
+    trail = blocks_of("context", blocks)[-1]["elements"][0]["text"]
+    assert trail.startswith("*1 thread attached* · <https://x/p/1|#yarrow>")

@@ -185,3 +185,10 @@ def test_neither_write_can_collide_with_a_later_pull():
     assert "ON CONFLICT (case_id, channel_id, thread_ts) DO NOTHING" in evidence.ATTACH
     assert "ON CONFLICT (channel_id, thread_ts, message_ts) DO NOTHING" in evidence.KEEP
     assert "'shroud'" in evidence.KEEP, "so a pulled message is tellable from a forwarded one"
+
+
+def test_the_timestamp_is_cast_on_both_uses():
+    assert "%(message_ts)s::text" in evidence.KEEP
+    assert "to_timestamp(%(message_ts)s::text::numeric)" in evidence.KEEP, (
+        "one parameter used as both text and numeric makes postgres refuse the statement"
+    )

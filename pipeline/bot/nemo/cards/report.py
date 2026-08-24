@@ -223,13 +223,22 @@ def buttons(case):
     return {"type": "actions", "block_id": f"case_{case_id}", "elements": elements}
 
 
+def attached(case):
+    held = case.get("threads") or 0
+    if not held:
+        return None
+
+    return f"*{held} thread" + ("s attached*" if held != 1 else " attached*")
+
+
 def blocks(case):
     files = case.get("files") or []
     shares = case.get("shares") or []
 
     built = [title(case), quote(case.get("body")), footer(case)]
 
-    trail = evidence(shares) + [f"📎 {name}" for name in named(files)]
+    trail = [part for part in [attached(case)] if part]
+    trail += evidence(shares) + [f"📎 {name}" for name in named(files)]
     if trail:
         built.append(context([" · ".join(trail)]))
 

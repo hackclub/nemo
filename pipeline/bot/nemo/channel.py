@@ -54,6 +54,10 @@ WHERE m.conversation_id = %s
 ORDER BY m.posted_at, mf.seq
 """
 
+THREADS = """
+SELECT count(*) FROM fd.case_threads WHERE case_id = %s AND kind = 'evidence'
+"""
+
 SHARES = """
 SELECT s.kind, s.source_channel_id, s.source_channel_name, s.source_ts, s.permalink
 FROM fd.intake_shares s
@@ -145,6 +149,7 @@ def gather(conn, case_id):
         if case["subjects"]
         else 0
     )
+    case["threads"] = conn.execute(THREADS, (case["case_id"],)).fetchone()[0]
 
     convo = case["conversation_id"]
     if convo is None:
