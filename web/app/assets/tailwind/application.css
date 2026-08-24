@@ -4559,25 +4559,39 @@
   }
 
   .data-table thead th {
-    font-size: var(--t-2xs);
-    font-weight: 600;
+    font-family: var(--font-code);
+    font-size: var(--t-micro);
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     color: var(--ink-3);
     text-align: right;
-    padding: var(--s-2xs) var(--s-xs);
+    padding: 11px var(--s-xs) 9px;
+    background-color: var(--card-2);
     border-bottom: 1px solid var(--line);
     white-space: nowrap;
+    vertical-align: middle;
   }
+
+  .data-table .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stripe { box-shadow: inset 3px 0 0 var(--line); }
+  .stripe-warm { box-shadow: inset 3px 0 0 var(--warn); }
+  .stripe-hot { box-shadow: inset 3px 0 0 var(--accent); }
 
   .data-table thead th:first-child {
     text-align: left;
   }
 
   .data-table tbody td {
-    padding: var(--s-2xs) var(--s-xs);
+    padding: 9px var(--s-xs);
     border-bottom: 1px solid var(--line-soft);
     text-align: right;
     vertical-align: middle;
-    font-size: var(--t-sm);
+    font-size: var(--t-2xs);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     overflow: hidden;
