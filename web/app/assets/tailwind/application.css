@@ -57,6 +57,7 @@
     --t-lg: var(--t-head);
     --t-xl: var(--t-page);
 
+    --s-page: 14px;
     --s-3xs: 0.25rem;
     --s-2xs: 0.5rem;
     --s-xs: 0.75rem;
@@ -495,9 +496,9 @@
   }
 
   .body {
-    padding: var(--s-md);
+    padding: var(--s-page);
     display: grid;
-    gap: var(--s-md);
+    gap: var(--s-page);
     min-width: 0;
     align-content: start;
   }
@@ -4346,7 +4347,7 @@
 
   .cols {
     display: grid;
-    gap: 10px;
+    gap: var(--s-page);
     align-items: start;
     min-width: 0;
   }
@@ -4359,7 +4360,7 @@
   }
 
   .c-2 {
-    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 272px;
   }
 
   @media (max-width: 820px) {
