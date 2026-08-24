@@ -909,22 +909,35 @@
   .chip {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
+    height: 20px;
     font-size: var(--t-fine);
-    font-weight: 500;
-    line-height: 1.35;
-    padding: 1px 6px;
-    border-radius: 5px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 0 8px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--line);
+    background-color: var(--card-2);
+    color: var(--ink-2);
     white-space: nowrap;
   }
 
-  .chip-good { background-color: var(--good-soft); color: var(--good); }
-  .chip-warn { background-color: var(--warn-soft); color: var(--warn); }
-  .chip-crit { background-color: var(--accent-soft); color: var(--accent-deep); }
+  .chip-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: currentColor;
+    flex: none;
+  }
+
+  .chip-good { background-color: var(--good-soft); color: var(--good); border-color: transparent; }
+  .chip-warn { background-color: var(--warn-soft); color: var(--warn); border-color: transparent; }
+  .chip-crit { background-color: var(--accent-soft); color: var(--accent); border-color: transparent; }
 
   .chip-off {
     background-color: color-mix(in oklab, var(--ink) 8%, transparent);
     color: var(--ink-2);
+    border-color: transparent;
   }
 
   .mono {

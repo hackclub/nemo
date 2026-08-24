@@ -880,11 +880,9 @@ module FdHelper
   end
 
   def case_status_chip(kase)
-    if kase.resolved?
-      tag.span(kase.resolution.tr("_", " "), class: "chip chip-off")
-    else
-      tag.span("open", class: "chip chip-crit")
-    end
+    return tag.span(kase.resolution.tr("_", " "), class: "chip chip-off") if kase.resolved?
+
+    tag.span(safe_join([tag.span(class: "chip-dot"), "open"]), class: "chip chip-crit")
   end
 
   def case_head_meta(kase, reports)
