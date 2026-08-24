@@ -818,14 +818,14 @@
   }
 
   .btn-primary {
-    background-color: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-on);
+    background-color: var(--ink);
+    border-color: var(--ink);
+    color: var(--canvas);
   }
 
   .btn-primary:hover {
-    background-color: var(--accent-deep);
-    border-color: var(--accent-deep);
+    background-color: color-mix(in oklab, var(--ink) 86%, var(--canvas));
+    border-color: color-mix(in oklab, var(--ink) 86%, var(--canvas));
   }
 
   .btn:disabled {
@@ -851,8 +851,8 @@
   }
 
   .btn-primary.btn-off:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
+    background-color: var(--ink);
+    border-color: var(--ink);
   }
 
   .text-btn.btn-off:hover {
