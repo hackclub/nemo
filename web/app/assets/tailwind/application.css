@@ -4250,15 +4250,33 @@
     .case-drawer-frame, .person-drawer-frame { transition: none; }
   }
 
-  .card-asks {
-    border-color: var(--accent);
+  .todo {
+    border: 1px solid var(--warn);
+    background-color: var(--warn-soft);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: grid;
+    gap: var(--s-2xs);
   }
 
-  .asks-head {
-    margin: 0 0 var(--s-2xs);
+  .todo-t {
+    margin: 0;
     font-size: var(--t-2xs);
     font-weight: 600;
-    color: var(--accent-deep);
+    color: var(--warn);
+  }
+
+  .todo-row {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs);
+    flex-wrap: wrap;
+  }
+
+  .todo-row .btn {
+    height: 24px;
+    font-size: var(--t-fine);
+    background-color: var(--card);
   }
 
   .face-slot {

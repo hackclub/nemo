@@ -1,7 +1,7 @@
 <p class="facts-h">Case facts</p>
 
 <% if missing.any? %>
-  <%= render "finish_off", kase: kase, subject: subject, missing: missing, guesses: guesses %>
+  <%= render "finish_off", kase: kase, missing: missing, guesses: guesses %>
 <% end %>
 
 <div class="fbox">
@@ -52,9 +52,6 @@
       <div class="faces"><%= assignee_faces(kase.assignee_user_ids) %></div>
     <% else %>
       <div class="rail-line">Nobody yet</div>
-      <% unless kase.resolved? %>
-        <div class="sub2">anyone can resolve it, claimed or not</div>
-      <% end %>
     <% end %>
   </div>
 </div>
