@@ -163,6 +163,15 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     assert_equal %w[UME UOTHER], kase.reload.assignee_user_ids.sort
   end
 
+  test "the violation is said once in the head, not twice" do
+    @kase.update!(category_key: "harassment")
+    get fd_case_path(@kase)
+
+    said = css_select(".head-row").text.scan(/harassment/i).size
+    assert_equal 1, said, "the title carries it, so the chip and the subtitle were repeating it"
+    assert_select ".head-row .head-title", text: /Harassment/
+  end
+
   test "the toolbar is text buttons and one square icon" do
     get fd_case_path(@kase)
 

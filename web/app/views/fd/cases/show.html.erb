@@ -1,4 +1,4 @@
-<% content_for :page_title, @case.id.to_s %>
+<% content_for :page_title, case_title(@case, @threads) %>
 <% content_for :page_face do %>
   <span class="crumb"><%= link_to "Cases", fd_cases_path %> /</span>
 <% end %>
@@ -8,9 +8,7 @@
 <% end %>
 <% content_for :page_badge do %>
   <%= case_status_chip(@case) %>
-  <% if @case.category_key %>
-    <span class="chip chip-off"><%= category_short(@case.category_key) %></span>
-  <% end %>
+  <%= case_hands_chip(@case) %>
   <%= followed_chip(@case) unless @case.resolved? %>
   <% if @case.duplicate_of %>
     <%= link_to "duplicate of case #{@case.duplicate_of}", fd_case_path(@case.duplicate_of),
