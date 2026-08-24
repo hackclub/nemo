@@ -284,6 +284,40 @@ def claimed(conn, case_id, user_id):
     audit.record(conn, "assignee", case_id, "claimed", user_id, after={"user_id": user_id})
 
 
+ADD_SUBJECT = """
+INSERT INTO fd.case_participants (case_id, user_id, role)
+VALUES (%s, %s, 'subject')
+ON CONFLICT DO NOTHING
+RETURNING user_id
+"""
+
+SET_CATEGORY = """
+UPDATE fd.cases SET category_key = %s, updated_at = now()
+WHERE id = %s AND category_key IS NULL
+RETURNING category_key
+"""
+
+KEEP_NOTE = """
+INSERT INTO fd.notes (case_id, body, author) VALUES (%s, %s, %s) RETURNING id
+"""
+
+HAND_BACK = """
+DELETE FROM fd.case_assignees WHERE case_id = %s AND user_id = %s
+RETURNING assigned_by
+"""
+
+REOPEN = """
+UPDATE fd.cases
+SET resolved_at = NULL, resolution = NULL, duplicate_of = NULL,
+    followed_decision_id = NULL, updated_at = now()
+WHERE id = %s AND resolved_at IS NOT NULL
+RETURNING resolution
+"""
+
+CLEAR_ASSIGNEES = """
+DELETE FROM fd.case_assignees WHERE case_id = %s RETURNING user_id
+"""
+
 LIVE_ACTIONS = """
 SELECT target_user_id, type_key, expires_at, details FROM fd.actions
 WHERE case_id = %s AND reversed_at IS NULL
@@ -322,6 +356,65 @@ INSERT INTO fd.actions
 VALUES (%s, %s, %s, %s, %s, now(), %s, %s, %s)
 RETURNING id, performed_at
 """
+
+
+def add_subject(conn, case_id, user_id, by):
+    row = conn.execute(ADD_SUBJECT, (case_id, user_id)).fetchone()
+    if row is None:
+        return False
+
+    audit.record(
+        conn, "participant", case_id, "attached", by,
+        after={"user_id": user_id, "role": "subject"},
+    )
+    return True
+
+
+def set_category(conn, case_id, key, by):
+    row = conn.execute(SET_CATEGORY, (key, case_id)).fetchone()
+    if row is None:
+        return False
+
+    audit.record(
+        conn, "case", case_id, "categorised", by,
+        before={"category_key": None}, after={"category_key": key},
+    )
+    return True
+
+
+def keep_note(conn, case_id, body, by):
+    note_id = conn.execute(KEEP_NOTE, (case_id, body, by)).fetchone()[0]
+    audit.record(
+        conn, "note", note_id, "noted", by,
+        after={"case_id": case_id, "body": body},
+    )
+    return note_id
+
+
+def hand_back(conn, case_id, user_id):
+    row = conn.execute(HAND_BACK, (case_id, user_id)).fetchone()
+    if row is None:
+        return False
+
+    audit.record(
+        conn, "assignee", case_id, "unclaimed", user_id,
+        before={"user_id": user_id, "assigned_by": row[0]},
+    )
+    return True
+
+
+def reopen(conn, case_id, by):
+    row = conn.execute(REOPEN, (case_id,)).fetchone()
+    if row is None:
+        return False
+
+    held = [one[0] for one in conn.execute(CLEAR_ASSIGNEES, (case_id,)).fetchall()]
+    audit.record(
+        conn, "case", case_id, "reopened", by,
+        before={"resolution": row[0], "assignees": held},
+        after={"resolved_at": None, "resolution": None, "assignees": []},
+    )
+    return True
 
 
 def counted(conn, sql, case_id):
@@ -538,6 +631,152 @@ def register(app, on_reply=None):
             user=user_id,
             text=cards.action.told(said, case_id),
         )
+
+    MORE = {
+        cards.edit.SUBJECT: ("case.people", cards.edit.subject_view),
+        cards.edit.CATEGORY: ("case.open", cards.edit.category_view),
+        cards.edit.NOTE: ("case.note", cards.edit.note_view),
+    }
+
+    @app.action(cards.edit.MENU)
+    def on_more(ack, body, client):
+        ack()
+        verb, case_id = cards.edit.asked(body["actions"][0]["selected_option"]["value"])
+        user_id = body["user"]["id"]
+        if case_id is None:
+            return None
+
+        if verb == cards.edit.HAND_BACK:
+            return on_hand_back(body, client, case_id, user_id)
+
+        wanted = MORE.get(verb)
+        if wanted is None:
+            return None
+
+        key, view_of = wanted
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, key, case_id)
+        if not allowed:
+            return whisper(client, body, refusal)
+
+        client.views_open(trigger_id=body["trigger_id"], view=view_of(case_id))
+        return None
+
+    def on_hand_back(body, client, case_id, user_id):
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, "case.open", case_id)
+            if not allowed:
+                return whisper(client, body, refusal)
+            given = hand_back(conn, case_id, user_id)
+
+        if not given:
+            return whisper(client, body, f"case {case_id} is not yours to hand back")
+
+        with session() as conn:
+            redraw(client, conn, case_id)
+        log.info("nemo: case %s handed back by %s", case_id, user_id)
+        return whisper(client, body, f"you are off *case {case_id}*")
+
+    @app.view(cards.edit.SUBJECT)
+    def on_subject(ack, body, view, client):
+        case_id = int(view["private_metadata"])
+        user_id = body["user"]["id"]
+        wanted = cards.edit.who_picked(view["state"])
+
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, "case.people", case_id)
+            if not allowed:
+                return ack(response_action="errors", errors={cards.edit.WHO: refusal})
+            added = add_subject(conn, case_id, wanted, user_id)
+
+        ack()
+        with session() as conn:
+            redraw(client, conn, case_id)
+        log.info("nemo: case %s is about %s (new: %s)", case_id, wanted, added)
+        client.chat_postEphemeral(
+            channel=firehouse_channel(),
+            user=user_id,
+            text=(
+                f"*case {case_id}* is about <@{wanted}>"
+                if added
+                else f"<@{wanted}> was already on *case {case_id}*"
+            ),
+        )
+        return None
+
+    @app.view(cards.edit.CATEGORY)
+    def on_category(ack, body, view, client):
+        case_id = int(view["private_metadata"])
+        user_id = body["user"]["id"]
+        key = cards.edit.what_picked(view["state"])
+
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, "case.open", case_id)
+            if not allowed:
+                return ack(response_action="errors", errors={cards.edit.WHAT: refusal})
+            settled = set_category(conn, case_id, key, user_id)
+
+        if not settled:
+            return ack(
+                response_action="errors",
+                errors={cards.edit.WHAT: f"Case {case_id} already has a category."},
+            )
+
+        ack()
+        with session() as conn:
+            redraw(client, conn, case_id)
+        log.info("nemo: case %s is %s", case_id, key)
+        client.chat_postEphemeral(
+            channel=firehouse_channel(),
+            user=user_id,
+            text=f"*case {case_id}* is {cards.edit.category_label(key).lower()}",
+        )
+        return None
+
+    @app.view(cards.edit.NOTE)
+    def on_note(ack, body, view, client):
+        case_id = int(view["private_metadata"])
+        user_id = body["user"]["id"]
+        said = cards.edit.said_picked(view["state"])
+
+        wrong = cards.edit.note_objection(said)
+        if wrong:
+            return ack(response_action="errors", errors=wrong)
+
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, "case.note", case_id)
+            if not allowed:
+                return ack(response_action="errors", errors={cards.edit.SAID: refusal})
+            note_id = keep_note(conn, case_id, said, user_id)
+
+        ack()
+        log.info("nemo: note %s kept on case %s", note_id, case_id)
+        client.chat_postEphemeral(
+            channel=firehouse_channel(),
+            user=user_id,
+            text=f"noted on *case {case_id}*",
+        )
+        return None
+
+    @app.action(cards.report.REOPEN)
+    def on_reopen(ack, body, client):
+        ack()
+        case_id = int(body["actions"][0]["value"])
+        user_id = body["user"]["id"]
+
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, "case.reopen", case_id)
+            if not allowed:
+                return whisper(client, body, refusal)
+            back = reopen(conn, case_id, user_id)
+
+        if not back:
+            return whisper(client, body, f"case {case_id} is already open")
+
+        with session() as conn:
+            redraw(client, conn, case_id)
+        log.info("nemo: case %s reopened by %s", case_id, user_id)
+        return whisper(client, body, f"*case {case_id}* is open again, and unclaimed")
 
     @app.action(cards.report.RESOLVE)
     def on_resolve_asked(ack, body, client):

@@ -3,6 +3,7 @@ import re
 import yaml
 
 from bot.engine import richtext
+from bot.nemo.cards import edit
 from lib.paths import CATEGORIES_FILE
 
 MENTION = re.compile(r"(<[@#][A-Z0-9][A-Z0-9]*(?:\|[^>]*)?>)")
@@ -16,6 +17,7 @@ CUT = "\n[truncated, the whole thing is on the case page]"
 CLAIM = "case_claim"
 LOG_ACTION = "case_log_action"
 RESOLVE = "case_resolve_open"
+REOPEN = "case_reopen"
 
 LABELS = None
 
@@ -187,16 +189,36 @@ def button(action_id, label, case_id, style=None):
     return made
 
 
-def buttons(case):
-    if case.get("resolved_at"):
-        return None
+REOPEN_CONFIRM = {
+    "title": {"type": "plain_text", "text": "Reopen it?"},
+    "text": {
+        "type": "mrkdwn",
+        "text": "This drops the resolution and takes everybody off it. "
+        "The case comes back unclaimed.",
+    },
+    "confirm": {"type": "plain_text", "text": "Reopen"},
+    "deny": {"type": "plain_text", "text": "Leave it closed"},
+}
 
+
+def buttons(case):
     case_id = case["case_id"]
+
+    if case.get("resolved_at"):
+        back = button(REOPEN, "Reopen", case_id)
+        back["confirm"] = REOPEN_CONFIRM
+        return {"type": "actions", "block_id": f"case_{case_id}", "elements": [back]}
+
+    held = case.get("assignees") or []
     elements = []
-    if not case.get("assignees"):
+    if not held:
         elements.append(button(CLAIM, "Claim it", case_id, "primary"))
     elements.append(button(LOG_ACTION, "Log an action", case_id))
     elements.append(button(RESOLVE, "Resolve", case_id, "danger"))
+
+    more = edit.menu(case, mine=bool(held))
+    if more:
+        elements.append(more)
 
     return {"type": "actions", "block_id": f"case_{case_id}", "elements": elements}
 

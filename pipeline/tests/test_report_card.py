@@ -1,3 +1,4 @@
+from bot.nemo.cards import edit
 from bot.nemo.cards import report as card
 
 
@@ -19,7 +20,11 @@ def text_of(blocks):
             for element in block["elements"]:
                 out.extend(part["text"] for part in element["elements"])
         elif block["type"] == "actions":
-            out.extend(e["text"]["text"] for e in block["elements"])
+            for element in block["elements"]:
+                if "text" in element:
+                    out.append(element["text"]["text"])
+                for choice in element.get("options", []):
+                    out.append(choice["text"]["text"])
         elif block["type"] == "divider":
             continue
         else:
@@ -224,29 +229,61 @@ def test_what_is_attached_earns_a_second_footer_and_nothing_more():
     assert kinds == ["header", "rich_text", "context", "context", "actions"]
 
 
+def acting_on(case):
+    return blocks_of("actions", card.blocks(case))[0]["elements"]
+
+
 def test_an_open_case_offers_to_be_claimed():
-    acting = blocks_of("actions", card.blocks(a_case()))[0]
-    assert [e["action_id"] for e in acting["elements"]] == [
+    acting = acting_on(a_case())
+    assert [e["action_id"] for e in acting] == [
         card.CLAIM,
         card.LOG_ACTION,
         card.RESOLVE,
+        edit.MENU,
     ]
-    assert acting["elements"][0]["value"] == "2545"
+    assert acting[0]["value"] == "2545"
 
 
 def test_a_held_case_keeps_its_buttons_but_not_the_claim():
-    acting = blocks_of("actions", card.blocks(a_case(assignees=["UQUINN"])))[0]
-    assert [e["action_id"] for e in acting["elements"]] == [card.LOG_ACTION, card.RESOLVE]
+    acting = acting_on(a_case(assignees=["UQUINN"]))
+    assert [e["action_id"] for e in acting] == [card.LOG_ACTION, card.RESOLVE, edit.MENU]
 
 
 def test_resolving_is_the_one_button_that_looks_dangerous():
-    acting = blocks_of("actions", card.blocks(a_case()))[0]
-    styles = {e["action_id"]: e.get("style") for e in acting["elements"]}
-    assert styles == {card.CLAIM: "primary", card.LOG_ACTION: None, card.RESOLVE: "danger"}
+    styles = {e["action_id"]: e.get("style") for e in acting_on(a_case())}
+    assert styles == {
+        card.CLAIM: "primary",
+        card.LOG_ACTION: None,
+        card.RESOLVE: "danger",
+        edit.MENU: None,
+    }
 
 
-def test_a_resolved_case_offers_nothing():
-    assert not [b for b in card.blocks(a_case(resolved_at="x")) if b["type"] == "actions"]
+def test_the_overflow_offers_what_is_still_missing():
+    bare = [o["text"]["text"] for o in acting_on(a_case())[-1]["options"]]
+    assert bare == ["Say who it is about", "Set the violation", "Leave a note"]
+
+    known = a_case(subjects=["UMILO"], category_key="spam", assignees=["UME"])
+    assert [o["text"]["text"] for o in acting_on(known)[-1]["options"]] == [
+        "Leave a note",
+        "Hand it back",
+    ]
+
+
+def test_every_overflow_option_carries_the_case_it_belongs_to():
+    for choice in acting_on(a_case())[-1]["options"]:
+        assert edit.asked(choice["value"])[1] == 2545
+
+
+def test_a_resolved_case_offers_only_the_way_back():
+    acting = acting_on(a_case(resolved_at="2026-08-21"))
+    assert [e["action_id"] for e in acting] == [card.REOPEN]
+    assert "takes everybody off it" in acting[0]["confirm"]["text"]["text"]
+
+
+def test_a_resolved_case_has_no_overflow_left():
+    acting = acting_on(a_case(resolved_at="x"))
+    assert not [e for e in acting if e["type"] == "overflow"]
 
 
 def test_context_blocks_stay_within_ten_elements():
