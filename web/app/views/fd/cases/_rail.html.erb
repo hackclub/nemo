@@ -1,35 +1,39 @@
+<p class="facts-h">Case facts</p>
+
 <% if missing.any? %>
   <%= render "finish_off", kase: kase, subject: subject, missing: missing, guesses: guesses %>
 <% end %>
 
-<div class="card">
-  <% if subject %>
-    <div class="line-row">
-      <%= face(subject) %>
-      <span class="grow two-line">
-        <b><%= member_link(subject) %></b>
-        <span><%= subject_standing(subject, contexts[subject]) %></span>
-      </span>
-      <%= prior_chip_for(priors) %>
-    </div>
-    <div class="sub2">
-      <%= link_to "their whole history →", fd_member_path(subject),
-            data: { turbo_frame: "person-drawer" } %>
-    </div>
-  <% else %>
-    <div class="lbl">Subject</div>
-    <div class="line-row">
-      <span class="grow rail-line">Nobody identified yet</span>
-      <% unless kase.resolved? %>
-        <%= opens_modal "case.people", "Say who", opens: "add-person", on: kase %>
-      <% end %>
-    </div>
-  <% end %>
+<div class="fbox">
+  <div class="ft">Subject</div>
+  <div class="fb">
+    <% if subject %>
+      <div class="line-row">
+        <%= face(subject) %>
+        <span class="grow two-line">
+          <b><%= member_link(subject) %></b>
+          <span><%= subject_standing(subject, contexts[subject]) %></span>
+        </span>
+        <%= prior_chip_for(priors) %>
+      </div>
+      <div class="sub2">
+        <%= link_to "their whole history →", fd_member_path(subject),
+              data: { turbo_frame: "person-drawer" } %>
+      </div>
+    <% else %>
+      <div class="line-row">
+        <span class="grow rail-line">Nobody identified yet</span>
+        <% unless kase.resolved? %>
+          <%= opens_modal "case.people", "Say who", opens: "add-person", on: kase %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
 </div>
 
-<div class="card">
-  <div class="card-top">
-    <span class="lbl grow">Assigned</span>
+<div class="fbox">
+  <div class="ft">
+    Assigned
     <% unless kase.resolved? %>
       <% if kase.assigned_to?(current_staff.user_id) %>
         <%= gated_button "case.open", "Put it back", fd_case_claim_path(kase),
@@ -43,13 +47,14 @@
       <% end %>
     <% end %>
   </div>
-
-  <% if kase.assigned? %>
-    <div class="faces"><%= assignee_faces(kase.assignee_user_ids) %></div>
-  <% else %>
-    <div class="rail-line">Nobody yet</div>
-    <% unless kase.resolved? %>
-      <div class="sub2">anyone can resolve it, claimed or not</div>
+  <div class="fb">
+    <% if kase.assigned? %>
+      <div class="faces"><%= assignee_faces(kase.assignee_user_ids) %></div>
+    <% else %>
+      <div class="rail-line">Nobody yet</div>
+      <% unless kase.resolved? %>
+        <div class="sub2">anyone can resolve it, claimed or not</div>
+      <% end %>
     <% end %>
-  <% end %>
+  </div>
 </div>

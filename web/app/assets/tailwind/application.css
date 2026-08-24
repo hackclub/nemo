@@ -2333,6 +2333,102 @@
     font-weight: 500;
   }
 
+  .facts-h {
+    font-family: var(--font-code);
+    font-size: var(--t-micro);
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 0 2px;
+    margin: 0;
+  }
+
+  .fbox {
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    min-width: 0;
+  }
+
+  .fbox > .ft {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2xs);
+    padding: 9px 11px;
+    background-color: var(--card-2);
+    border-bottom: 1px solid var(--line);
+    border-radius: 9px 9px 0 0;
+    font-size: var(--t-fine);
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+
+  .fbox > .fb {
+    padding: 10px 11px;
+    display: grid;
+    gap: var(--s-2xs);
+  }
+
+  .fbox > .rows > .row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 11px;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: var(--t-2xs);
+  }
+
+  .fbox > .rows > .row:last-child {
+    border-bottom: 0;
+  }
+
+  .row-k { color: var(--ink-3); }
+
+  .row-v {
+    color: var(--ink);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .facts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background-color: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+
+  .facts-grid .cell {
+    background-color: var(--card);
+    padding: 7px 10px 8px;
+    display: grid;
+    gap: 1px;
+  }
+
+  .facts-grid .cell:first-child { border-top-left-radius: 9px; }
+  .facts-grid .cell:nth-child(2) { border-top-right-radius: 9px; }
+  .facts-grid .cell:nth-last-child(2) { border-bottom-left-radius: 9px; }
+  .facts-grid .cell:last-child { border-bottom-right-radius: 9px; }
+
+  .facts-grid .fg-k {
+    font-family: var(--font-code);
+    font-size: var(--t-micro);
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  .facts-grid .fg-v {
+    font-size: var(--t-2xs);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
   .panel {
     background-color: var(--card);
     border: 1px solid var(--line);
