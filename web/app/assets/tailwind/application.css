@@ -3265,11 +3265,13 @@
   .chat-input {
     font-family: inherit;
     font-size: var(--t-sm);
+    line-height: 1.5;
     color: var(--ink);
     background-color: transparent;
     border: 0;
-    padding: 0;
+    padding: 4px 0;
     width: 100%;
+    min-height: 28px;
     resize: none;
     outline: none;
     max-height: 10rem;
