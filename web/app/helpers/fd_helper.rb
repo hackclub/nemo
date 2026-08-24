@@ -1119,6 +1119,17 @@ module FdHelper
       form: { class: "contents" }
   end
 
+  def flag_switch(key)
+    showing = Fd::Flag.on?(key)
+    return holds_mark(showing) unless current_staff.may?("app.flip")
+
+    button_to showing ? "yes" : "no",
+      fd_flag_path(key: key, on: showing ? "0" : "1"),
+      method: :patch, class: "switch #{showing ? 'yes' : 'no'}",
+      title: "#{showing ? 'turn off' : 'turn on'} #{Fd::Flag.label(key).downcase}",
+      form: { class: "contents" }
+  end
+
   def moved_chip(key)
     return nil unless Fd::RolePermission.moved?(key)
 

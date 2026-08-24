@@ -43,7 +43,7 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
     sign_in_as(@boss)
     get fd_settings_path
 
-    assert_select ".views .view", 5
+    assert_select ".views .view", 6
     assert_select ".card-title", text: "Your Slack account", count: 0
   end
 

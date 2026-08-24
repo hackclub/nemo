@@ -2,8 +2,8 @@ module Fd
   class SettingsController < BaseController
     permit "access.read", unless: :just_me?
 
-    TABS = { "access" => "Access", "roles" => "Roles", "usage" => "Usage",
-             "history" => "Grant history", "you" => "You" }.freeze
+    TABS = { "access" => "Access", "roles" => "Roles", "sections" => "Sections",
+             "usage" => "Usage", "history" => "Grant history", "you" => "You" }.freeze
     MINE = %w[you].freeze
     WINDOW = 30.days
     DORMANT_AFTER = 30.days

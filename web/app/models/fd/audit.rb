@@ -16,7 +16,8 @@ module Fd
       "Fd::DecisionThread" => "decision_thread",
       "Fd::AccessGrant" => "grant",
       "Fd::RolePermission" => "permission",
-      "Fd::StaffSlack" => "slack_account"
+      "Fd::StaffSlack" => "slack_account",
+      "Fd::Flag" => "flag"
     }.freeze
 
     VERBS = %w[
@@ -26,6 +27,7 @@ module Fd
       proposed settled amended superseded dropped followed unfollowed
       granted revoked refused
       linked unlinked
+      turned_on turned_off
     ].freeze
 
     REDACTED_COLUMNS = {

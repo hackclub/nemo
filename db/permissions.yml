@@ -20,6 +20,7 @@ areas:
   identity: People and access
   access: People and access
   slack: Your own account
+  app: The dashboard
 
 locked:
   - access.grant
@@ -130,3 +131,8 @@ permissions:
     label: Give or take back access
     held_by: manager
     events: [grant/granted, grant/revoked, permission/granted, permission/revoked]
+
+  app.flip:
+    label: Turn a section of the dashboard on or off
+    held_by: manager
+    events: [flag/turned_on, flag/turned_off]

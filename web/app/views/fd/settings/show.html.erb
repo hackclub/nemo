@@ -66,6 +66,33 @@
         </div>
       </div>
     <% end %>
+    <% elsif @tab == "sections" %>
+      <p class="card-note">
+        Turning a section off hides it and refuses its pages. Nothing is deleted, and
+        turning it back on brings it back as it was.
+      </p>
+      <div class="card card-flush">
+        <div class="scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Section</th>
+                <th class="said-cell">What it covers</th>
+                <th class="col-num">Showing</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% Fd::Flag::KEYS.each do |key| %>
+                <tr>
+                  <td><b><%= Fd::Flag.label(key) %></b></td>
+                  <td class="said-cell"><%= Fd::Flag.covers(key) %></td>
+                  <td class="col-num"><%= flag_switch(key) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
     <% elsif @tab == "usage" && @person %>
       <div class="inspector">
         <div class="index-side">
