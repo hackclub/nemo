@@ -22,6 +22,16 @@ module Fd
       new.start
     end
 
+    def self.connection_options(config = ActiveRecord::Base.connection_db_config.configuration_hash)
+      {
+        host: config[:host],
+        port: config[:port],
+        dbname: config[:database],
+        user: config[:username],
+        password: config[:password]
+      }.compact
+    end
+
     def self.case_id_from(payload)
       Integer(payload)
     rescue ArgumentError, TypeError
@@ -43,14 +53,13 @@ module Fd
 
     private
 
-    def listen
-      held = ActiveRecord::Base.connection_pool.checkout
-      raw = held.raw_connection
-
+    def listen(raw = PG.connect(self.class.connection_options))
       CHANNELS.each { |heard| raw.exec("LISTEN #{heard}") }
       Rails.logger.info("chat listener: listening on #{CHANNELS.join(", ")}")
 
       loop { raw.wait_for_notify(WAIT) { |_channel, _pid, payload| heard(payload) } }
+    ensure
+      raw&.close
     end
 
     def heard(payload)
