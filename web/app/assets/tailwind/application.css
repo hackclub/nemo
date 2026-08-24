@@ -2468,6 +2468,20 @@
     background-color: var(--card-2);
   }
 
+  .panel > .card,
+  .panel > turbo-frame > .card {
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
+  }
+
+  .facts {
+    display: grid;
+    gap: 10px;
+    align-content: start;
+    min-width: 0;
+  }
+
   .views-fill {
     flex: 1;
   }

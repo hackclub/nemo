@@ -80,6 +80,8 @@
 
   <%= render "fd/flagstrip", flags: @flags %>
 
+  <div class="cols c-2">
+    <div class="panel">
   <div class="views">
     <% case_tabs(@tab_counts).each do |tab| %>
       <%= link_to fd_case_path(@case, tab: tab[:key]),
@@ -91,8 +93,6 @@
     <% end %>
   </div>
 
-  <div class="cols c-2">
-    <div>
   <% if @tab == "report" %>
     <div class="card card-chat">
       <%= render "chat", kase: @case, reports: @reports, chat: @chat, earlier: @earlier_chat,
@@ -192,7 +192,7 @@
   <% end %>
     </div>
 
-    <div>
+    <div class="facts">
       <%= render "rail", kase: @case, subject: @subject, priors: @subject_priors,
             contexts: @context, missing: @missing, guesses: @guesses %>
     </div>
