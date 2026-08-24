@@ -4,8 +4,8 @@ default: &default
   host: <%= ENV.fetch("POSTGRES_HOST", "localhost") %>
   port: <%= ENV.fetch("POSTGRES_PORT", "5432") %>
   database: <%= ENV.fetch("POSTGRES_DB", "mnemosyne") %>
-  username: <%= ENV.fetch("RAILS_DB_USER", "rails_app") %>
-  password: <%= ENV.fetch("RAILS_DB_PASSWORD", "change_me") %>
+  username: <%= [ENV["RAILS_DB_USER"], ENV["POSTGRES_USER"], "rails_app"].find { |v| !v.to_s.empty? } %>
+  password: <%= [ENV["RAILS_DB_PASSWORD"], ENV["POSTGRES_PASSWORD"], "change_me"].find { |v| !v.to_s.empty? } %>
   schema_search_path: "app,public"
   pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
 

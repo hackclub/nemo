@@ -33,7 +33,7 @@ def parse_args(argv):
 
 
 def needed(apps):
-    wanted = DATABASE + ["PIPELINE_DB_USER", "PIPELINE_DB_PASSWORD"]
+    wanted = list(DATABASE)
     for name in apps:
         wanted += NEEDS[name]
     return [name for name in wanted if not os.environ.get(name)]

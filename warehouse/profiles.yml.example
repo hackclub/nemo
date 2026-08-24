@@ -5,8 +5,8 @@ mnemosyne:
       type: postgres
       host: "{{ env_var('POSTGRES_HOST', 'localhost') }}"
       port: "{{ env_var('POSTGRES_PORT', '5433') | as_number }}"
-      user: "{{ env_var('DBT_DB_USER', 'dbt_owner') }}"
-      password: "{{ env_var('DBT_DB_PASSWORD') }}"
+      user: "{{ env_var('DBT_DB_USER', '') or env_var('POSTGRES_USER', 'dbt_owner') }}"
+      password: "{{ env_var('DBT_DB_PASSWORD', '') or env_var('POSTGRES_PASSWORD', '') }}"
       dbname: "{{ env_var('POSTGRES_DB', 'mnemosyne') }}"
       schema: analytics
       threads: 4

@@ -49,15 +49,23 @@ def raise_if_cancelled() -> None:
         raise SyncCancelled("cancel requested")
 
 
+def credentials(prefix: str) -> tuple[str, str]:
+    return (
+        os.environ.get(f"{prefix}_DB_USER") or os.environ["POSTGRES_USER"],
+        os.environ.get(f"{prefix}_DB_PASSWORD") or os.environ["POSTGRES_PASSWORD"],
+    )
+
+
 def connect(dsn: str | None = None) -> psycopg.Connection:
     if dsn is not None:
         return psycopg.connect(dsn)
+    user, password = credentials("PIPELINE")
     return psycopg.connect(
         host=os.environ["POSTGRES_HOST"],
         port=os.environ["POSTGRES_PORT"],
         dbname=os.environ["POSTGRES_DB"],
-        user=os.environ["PIPELINE_DB_USER"],
-        password=os.environ["PIPELINE_DB_PASSWORD"],
+        user=user,
+        password=password,
     )
 
 

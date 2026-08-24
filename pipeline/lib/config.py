@@ -2,13 +2,22 @@ import argparse
 import os
 import sys
 
-DATABASE = ["POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_DB"]
-ADMIN = ["POSTGRES_USER", "POSTGRES_PASSWORD"]
+DATABASE = [
+    "POSTGRES_HOST",
+    "POSTGRES_PORT",
+    "POSTGRES_DB",
+    "POSTGRES_USER",
+    "POSTGRES_PASSWORD",
+]
+
+PIPELINE_ROLE = ["PIPELINE_DB_USER", "PIPELINE_DB_PASSWORD"]
+DBT_ROLE = ["DBT_DB_USER", "DBT_DB_PASSWORD"]
+RAILS_ROLE = ["RAILS_DB_USER", "RAILS_DB_PASSWORD"]
 
 ROLES = {
     "serve": {
-        "required": DATABASE + ["RAILS_DB_USER", "RAILS_DB_PASSWORD", "APP_HOST"],
-        "optional": [
+        "required": DATABASE + ["APP_HOST"],
+        "optional": RAILS_ROLE + [
             "SECRET_KEY_BASE",
             "RAILS_MASTER_KEY",
             "HCA_ISSUER",
@@ -34,24 +43,12 @@ ROLES = {
         ],
     },
     "collect": {
-        "required": DATABASE + [
-            "PIPELINE_DB_USER",
-            "PIPELINE_DB_PASSWORD",
-            "SLACK_BOT_TOKEN",
-            "SLACK_APP_TOKEN",
-        ],
-        "optional": ["SLACK_TEAM_ID", "TZ"],
+        "required": DATABASE + ["SLACK_BOT_TOKEN", "SLACK_APP_TOKEN"],
+        "optional": PIPELINE_ROLE + ["SLACK_TEAM_ID", "TZ"],
     },
     "sync": {
-        "required": DATABASE + [
-            "PIPELINE_DB_USER",
-            "PIPELINE_DB_PASSWORD",
-            "INTERNAL_PROXY_URL",
-            "INTERNAL_PROXY_TOKEN",
-            "DBT_DB_USER",
-            "DBT_DB_PASSWORD",
-        ],
-        "optional": [
+        "required": DATABASE + ["INTERNAL_PROXY_URL", "INTERNAL_PROXY_TOKEN"],
+        "optional": PIPELINE_ROLE + DBT_ROLE + [
             "SLACK_BOT_TOKEN",
             "SLACK_TEAM_ID",
             "NIGHTLY_AT",
@@ -64,17 +61,12 @@ ROLES = {
         ],
     },
     "transform": {
-        "required": DATABASE + ["DBT_DB_USER", "DBT_DB_PASSWORD"],
-        "optional": ["TZ"],
+        "required": DATABASE,
+        "optional": DBT_ROLE + ["TZ"],
     },
     "seed": {
-        "required": DATABASE + ADMIN + [
-            "PIPELINE_DB_USER",
-            "PIPELINE_DB_PASSWORD",
-            "DBT_DB_USER",
-            "DBT_DB_PASSWORD",
-        ],
-        "optional": [
+        "required": DATABASE,
+        "optional": PIPELINE_ROLE + DBT_ROLE + [
             "SEED_ALLOW_DB",
             "SEED_SCALE",
             "SEED_RNG",
@@ -85,23 +77,22 @@ ROLES = {
     },
     "bot": {
         "required": DATABASE + [
-            "PIPELINE_DB_USER",
-            "PIPELINE_DB_PASSWORD",
             "SHROUD_BOT_TOKEN",
             "SHROUD_APP_TOKEN",
             "NEMO_BOT_TOKEN",
             "NEMO_APP_TOKEN",
             "FIREHOUSE_CHANNEL_ID",
         ],
-        "optional": ["APP_HOST", "INTAKE_FILE_MAX_BYTES", "SLACK_TEAM_ID", "TZ"],
+        "optional": PIPELINE_ROLE + [
+            "APP_HOST",
+            "INTAKE_FILE_MAX_BYTES",
+            "SLACK_TEAM_ID",
+            "TZ",
+        ],
     },
     "provision": {
-        "required": DATABASE + ADMIN + ["RAILS_DB_USER", "RAILS_DB_PASSWORD"],
-        "optional": [
-            "PIPELINE_DB_USER",
-            "PIPELINE_DB_PASSWORD",
-            "DBT_DB_USER",
-            "DBT_DB_PASSWORD",
+        "required": DATABASE,
+        "optional": RAILS_ROLE + PIPELINE_ROLE + DBT_ROLE + [
             "BOOTSTRAP_ADMIN_SLACK_ID",
             "TZ",
         ],
@@ -142,8 +133,6 @@ NEVER = {
         "SLACK_APP_TOKEN",
         "SLACK_TOKEN",
         "INTERNAL_PROXY_TOKEN",
-        "POSTGRES_USER",
-        "POSTGRES_PASSWORD",
     ],
 }
 
