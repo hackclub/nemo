@@ -856,6 +856,14 @@ module FdHelper
     "notes" => "Notes", "people" => "People"
   }.freeze
 
+  STILL_NEEDED = { 1 => "One thing", 2 => "Two things", 3 => "Three things" }.freeze
+
+  def still_needed(missing)
+    return if missing.empty?
+
+    "#{STILL_NEEDED.fetch(missing.size, "#{missing.size} things")} before this can close"
+  end
+
   def case_tabs(counts)
     Fd::CasesController::TABS.map { |key| { key: key, label: CASE_TAB_LABELS.fetch(key),
       count: counts[key] } }

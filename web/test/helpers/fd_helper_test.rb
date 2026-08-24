@@ -163,4 +163,15 @@ class FdHelperTest < ActionView::TestCase
       source_app: "shroud", received_at: Time.current)
     assert_equal "@UREP1 and 1 other", row_reporter_label(Fd::Case.find(saved.id))
   end
+
+  test "a finished case is asked for nothing" do
+    assert_nil still_needed([])
+  end
+
+  test "what is still needed is counted, not left to guess" do
+    assert_equal "One thing before this can close", still_needed([:subject])
+    assert_equal "Two things before this can close", still_needed([:subject, :evidence])
+    assert_equal "Three things before this can close",
+      still_needed([:subject, :violation, :evidence])
+  end
 end

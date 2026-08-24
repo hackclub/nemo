@@ -11,9 +11,6 @@
   <% if @case.category_key %>
     <span class="chip chip-off"><%= category_short(@case.category_key) %></span>
   <% end %>
-  <% if @unfinished %>
-    <span class="chip chip-warn">nothing set yet</span>
-  <% end %>
   <%= followed_chip(@case) unless @case.resolved? %>
   <% if @case.duplicate_of %>
     <%= link_to "duplicate of case #{@case.duplicate_of}", fd_case_path(@case.duplicate_of),
@@ -202,7 +199,7 @@
 
     <div>
       <%= render "rail", kase: @case, subject: @subject, priors: @subject_priors,
-            contexts: @context, unfinished: @unfinished, guesses: @guesses %>
+            contexts: @context, missing: @missing, guesses: @guesses %>
     </div>
   </div>
 </div>

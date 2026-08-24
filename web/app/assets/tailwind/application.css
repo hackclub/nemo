@@ -4049,6 +4049,13 @@
     border-color: var(--accent);
   }
 
+  .asks-head {
+    margin: 0 0 var(--s-2xs);
+    font-size: var(--t-2xs);
+    font-weight: 600;
+    color: var(--accent-deep);
+  }
+
   .face-slot {
     width: 22px;
     height: 22px;

@@ -1,5 +1,5 @@
-<% if unfinished %>
-  <%= render "finish_off", kase: kase, subject: subject, guesses: guesses %>
+<% if missing.any? %>
+  <%= render "finish_off", kase: kase, subject: subject, missing: missing, guesses: guesses %>
 <% end %>
 
 <div class="card">

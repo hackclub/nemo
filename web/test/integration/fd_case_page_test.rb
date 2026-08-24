@@ -163,6 +163,35 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     assert_equal %w[UME UOTHER], kase.reload.assignee_user_ids.sort
   end
 
+  test "the case names what it still needs instead of warning vaguely" do
+    get fd_case_path(make_case(subject: nil))
+
+    assert_select ".chip", { text: "nothing set yet", count: 0 },
+      "a chip standing for one of three things told nobody which"
+    assert_select ".card-asks .asks-head", text: "Three things before this can close"
+    assert_select ".card-asks .line-row", 3
+  end
+
+  test "the count follows what is actually set" do
+    get fd_case_path(@kase)
+    assert_select ".card-asks .asks-head", text: "Two things before this can close"
+    assert_select ".card-asks .chip-good", 1, "the subject is set, so that row says so"
+
+    @kase.update!(category_key: "harassment")
+    get fd_case_path(@kase)
+    assert_select ".card-asks .asks-head", text: "One thing before this can close"
+    assert_select ".card-asks .chip-good", 2
+  end
+
+  test "a case with nothing outstanding is not asked for anything" do
+    @kase.update!(category_key: "harassment")
+    Fd::CaseThread.create!(case_id: @kase.id, channel_id: "C1", thread_ts: "1700.1",
+      added_by: "UME")
+    get fd_case_path(@kase)
+
+    assert_select ".card-asks", 0
+  end
+
   test "an empty view keeps its place in the list" do
     get fd_case_path(@kase)
 
