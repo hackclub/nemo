@@ -14,6 +14,7 @@ module Fd
         audit(note, "noted")
       end
 
+      flash[:did] = { "label" => "See their record", "href" => fd_member_path(user_id) }
       redirect_to fd_member_path(user_id, show: "notes"),
         notice: "noted, and it follows them to every case"
     end
@@ -41,7 +42,8 @@ module Fd
       end
 
       if removed
-        redirect_to fd_member_path(user_id, show: "notes"), notice: "note removed"
+        flash[:said] = "It stays in the audit trail, but it no longer follows them to a case."
+        redirect_to fd_member_path(user_id, show: "notes"), notice: "Note removed"
       else
         redirect_to fd_member_path(user_id, show: "notes"), alert: "only whoever wrote a note can remove it"
       end

@@ -192,7 +192,8 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     assert_not_nil note.deleted_at
     assert_equal "UME", note.deleted_by
     assert_equal "wrote this in haste", note.body, "the row stays, only the visibility changes"
-    assert_match(/note removed/, flash[:notice])
+    assert_match(/Note removed/i, flash[:notice])
+    assert_match(/stays in the audit trail/, flash[:said])
   end
 
   test "a removed note leaves a mark in the timeline" do

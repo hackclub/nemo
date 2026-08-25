@@ -17,7 +17,8 @@ module Fd
         audit(flag, "flagged", entity_id: kase.id)
       end
 
-      redirect_to case_url_for(kase, said), notice: "message flagged"
+      flash[:said] = "It is now evidence on case #{kase.id}, and stays if the thread moves."
+      redirect_to case_url_for(kase, said), notice: "Message flagged as evidence"
     rescue ActiveRecord::RecordNotUnique
       redirect_to case_url_for(kase, said), notice: "that message was already flagged"
     end
@@ -38,7 +39,8 @@ module Fd
         flag.destroy!
       end
 
-      redirect_to case_url_for(kase, said), notice: "flag taken off"
+      flash[:said] = "The message is still in the thread; it is no longer cited as evidence."
+      redirect_to case_url_for(kase, said), notice: "Flag taken off the message"
     end
 
     private

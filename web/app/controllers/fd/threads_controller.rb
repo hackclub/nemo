@@ -50,7 +50,8 @@ module Fd
         thread.destroy!
       end
 
-      redirect_to fd_case_path(kase, tab: "evidence"), notice: "thread detached"
+      flash[:said] = "The messages stay in Slack, and the case keeps a record that it was here."
+      redirect_to fd_case_path(kase, tab: "evidence"), notice: "Thread taken off case #{kase.id}"
     end
 
     private

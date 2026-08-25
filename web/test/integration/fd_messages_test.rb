@@ -13,18 +13,29 @@ class FdMessagesTest < ActionDispatch::IntegrationTest
     post fd_case_claim_path(kase)
     follow_redirect!
 
-    assert_select ".topbar .topbar-msg", text: /case #{kase.id} is yours/
-    assert_select ".topbar-msg[role=?][data-toast-delay-value=?]", "status", "3000"
+    assert_select ".topbar .topbar-msg .msg-title", text: /case #{kase.id} is yours/
+    assert_select ".topbar-msgs[aria-live=?]", "polite"
+    assert_select ".topbar-msg.topbar-msg-good[data-toast-delay-value=?]", "3000"
   end
 
-  test "a refusal stays twice as long, and says so to a screen reader" do
+  test "a refusal holds until it is closed, and says what was not done" do
     kase = make_case(assign: "UOTHER")
 
     post fd_case_actions_path(kase), params: { kind: "warning", about: "USUB" }
     follow_redirect!
 
-    assert_select ".topbar-msg.topbar-msg-alert[role=?][data-toast-delay-value=?]", "alert", "6000",
-      text: /assigned to @UOTHER, not to you/
+    assert_select ".topbar-msg.topbar-msg-bad[data-toast-delay-value=?]", "0"
+    assert_select ".topbar-msg .msg-title", text: /assigned to @UOTHER, not to you/
+    assert_select ".topbar-msg .msg-said", text: /Nothing was changed/
+    assert_select ".topbar-msg .msg-shut"
+  end
+
+  test "a confirmation that leads somewhere offers the way there" do
+    post fd_member_notes_path("USUB"), params: { body: "keeps at it" }
+    follow_redirect!
+
+    assert_select ".topbar-msg .msg-did a[href=?]", fd_member_path("USUB"),
+      text: "See their record"
   end
 
   test "a page with nothing to say carries no message at all" do

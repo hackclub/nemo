@@ -159,13 +159,12 @@
             </span>
           <% end %>
 
-          <% if alert || notice %>
-            <div class="topbar-msg <%= "topbar-msg-alert" if alert %>"
-                 role="<%= alert ? "alert" : "status" %>"
-                 data-controller="toast" data-toast-delay-value="<%= alert ? 6000 : 3000 %>"
-                 data-action="click->toast#dismiss"
-                 title="dismiss"><%= alert || notice %></div>
-          <% end %>
+          <div class="topbar-msgs" aria-live="polite" aria-atomic="false">
+            <% if alert || notice %>
+              <%= render "layouts/told", alert: alert, notice: notice,
+                    said: flash[:said], did: flash[:did], tone: flash[:tone] %>
+            <% end %>
+          </div>
         </div>
 
         <div class="scrollarea">

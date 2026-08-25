@@ -14,7 +14,8 @@ class SessionsController < ApplicationController
     if staff&.role.present?
       reset_session
       session[:user_id] = staff.user_id
-      redirect_to root_path, notice: "signed in"
+      flash[:said] = "Everything you do from here is recorded against #{staff.user_id}."
+      redirect_to root_path, notice: "Signed in as a #{staff.role.tr('_', ' ')}"
     else
       reset_session
       redirect_to auth_failure_path(message: "not_allowlisted")

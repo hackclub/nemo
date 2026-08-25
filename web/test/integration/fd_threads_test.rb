@@ -144,7 +144,8 @@ class FdThreadsTest < ActionDispatch::IntegrationTest
     entry = entries("detached").sole
     assert_equal "C0266FRGV", entry.before["channel_id"]
     assert_equal "1754487721.123456", entry.before["thread_ts"]
-    assert_match(/detached/, flash[:notice])
+    assert_match(/Thread taken off case/, flash[:notice])
+    assert_match(/messages stay in Slack/, flash[:said])
   end
 
   test "a thread on another case cannot be detached through this one" do

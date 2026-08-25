@@ -795,40 +795,89 @@
 
   /* ── the message in the top bar ────────────────────────── */
 
-  .topbar-msg {
+  .topbar-msgs {
     position: absolute;
     top: calc(100% + var(--s-2xs));
     inset-inline-end: var(--s-page);
     z-index: 20;
-    max-width: 32rem;
-    display: flex;
-    align-items: center;
+    display: grid;
     gap: var(--s-2xs);
-    min-width: 0;
-    padding: 8px var(--s-xs);
+    justify-items: end;
+  }
+
+  .topbar-msg {
+    width: min(23rem, calc(100vw - var(--s-page) * 2));
+    display: flex;
+    align-items: flex-start;
+    gap: var(--s-2xs);
+    padding: 10px 11px;
     background-color: var(--card);
     border: 1px solid var(--line);
-    border-radius: var(--r-ctl);
-    box-shadow: 0 10px 30px oklch(0% 0 0 / 0.18);
-    font-size: var(--t-2xs);
-    font-weight: 500;
+    border-inline-start: 3px solid var(--ink-3);
+    border-radius: 10px;
+    box-shadow: 0 12px 32px oklch(0% 0 0 / 0.2);
     color: var(--ink);
-    cursor: pointer;
     opacity: 1;
     transition: opacity 180ms var(--ease-out);
   }
 
-  .topbar-msg::before {
-    content: "";
-    width: 6px;
-    height: 6px;
+  .topbar-msg-good { border-inline-start-color: var(--good); }
+  .topbar-msg-warn { border-inline-start-color: var(--warn); }
+  .topbar-msg-bad { border-inline-start-color: var(--accent); }
+
+  .msg-mark {
     flex: none;
-    border-radius: 50%;
-    background-color: var(--good);
+    margin-top: 1px;
+    color: var(--ink-3);
+    display: grid;
   }
 
-  .topbar-msg-alert::before {
-    background-color: var(--warn);
+  .topbar-msg-good .msg-mark { color: var(--good); }
+  .topbar-msg-warn .msg-mark { color: var(--warn); }
+  .topbar-msg-bad .msg-mark { color: var(--accent); }
+
+  .msg-body {
+    display: grid;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .msg-title {
+    font-size: var(--t-2xs);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .msg-said {
+    font-size: var(--t-fine);
+    color: var(--ink-2);
+    overflow-wrap: anywhere;
+  }
+
+  .msg-did a {
+    font-size: var(--t-fine);
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .msg-shut {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 5px;
+    background: none;
+    color: var(--ink-3);
+    cursor: pointer;
+  }
+
+  .msg-shut:hover {
+    background-color: var(--card-2);
+    color: var(--ink);
   }
 
   .topbar-msg.is-leaving {

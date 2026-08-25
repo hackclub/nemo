@@ -51,7 +51,8 @@ module Fd
       end
 
       if removed
-        redirect_to back_to(kase, standing, about), notice: "note removed"
+        flash[:said] = "It stays in the audit trail, but nobody will see it on the case again."
+        redirect_to back_to(kase, standing, about), notice: "Note removed"
       else
         redirect_to back_to(kase, standing, about),
           alert: "only whoever wrote a note can remove it"

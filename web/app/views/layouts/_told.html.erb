@@ -1,0 +1,27 @@
+<% tone ||= alert ? "warn" : "good" %>
+<% holds = tone != "good" %>
+<div class="topbar-msg topbar-msg-<%= tone %>"
+     data-controller="toast" data-toast-delay-value="<%= holds ? 0 : 3000 %>">
+  <span class="msg-mark" aria-hidden="true">
+    <% if tone == "good" %>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>
+    <% elsif tone == "bad" %>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.01"/></svg>
+    <% else %>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 19h18L12 4Z"/><path d="M12 10v4M12 17v.01"/></svg>
+    <% end %>
+  </span>
+  <span class="msg-body">
+    <span class="msg-title"><%= alert || notice %></span>
+    <% if said.present? %>
+      <span class="msg-said"><%= said %></span>
+    <% end %>
+    <% if did.is_a?(Hash) && did["href"].present? %>
+      <span class="msg-did"><%= link_to did["label"], did["href"] %></span>
+    <% end %>
+  </span>
+  <button type="button" class="msg-shut" aria-label="Dismiss"
+          data-action="toast#dismiss">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+  </button>
+</div>

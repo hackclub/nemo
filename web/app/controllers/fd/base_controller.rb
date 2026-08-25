@@ -42,7 +42,13 @@ module Fd
 
     def refuse!(key, record = nil)
       log_refusal(key, record)
+      flash[:tone] = "bad"
+      flash[:said] = "Nothing was changed. #{Permission.label(key)} is #{least_for(key)} only."
       redirect_back fallback_location: fd_cases_path, alert: refusal_for(key, record)
+    end
+
+    def least_for(key)
+      Permission::ROLE_LABELS.fetch(Permission.least(key)).downcase
     end
 
     def refusal_for(key, record)

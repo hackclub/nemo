@@ -17,7 +17,10 @@ module Fd
 
       respond_to do |format|
         format.turbo_stream { render turbo_stream: CaseChatBroadcast.tag(kase.id) }
-        format.html { redirect_to back_to(kase), notice: "on its way to them" }
+        format.html do
+          flash[:said] = "It goes out as a DM. Your name is on it either way."
+          redirect_to back_to(kase), notice: "Reply on its way to the reporter"
+        end
       end
     end
 
