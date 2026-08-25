@@ -2459,6 +2459,75 @@
     font-variant-numeric: tabular-nums;
   }
 
+  .fbox-warn {
+    border-color: var(--warn);
+  }
+
+  .fbox-warn > .ft {
+    color: var(--warn);
+    background-color: var(--warn-soft);
+    border-bottom-color: var(--warn);
+  }
+
+  .fb-line {
+    font-size: var(--t-2xs);
+    line-height: 1.5;
+    color: var(--ink);
+  }
+
+  .fb-line b {
+    font-weight: 600;
+  }
+
+  .fb-do {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .fb-do .btn {
+    height: 24px;
+    font-size: var(--t-fine);
+    background-color: var(--card);
+  }
+
+  .who {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs);
+    min-width: 0;
+  }
+
+  .data-table.record-table thead th,
+  .data-table.record-table tbody td {
+    text-align: left;
+  }
+
+  .record-table tbody td.sub {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+
+  .when-cell {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2xs);
+  }
+
+  .when-cell form {
+    display: contents;
+  }
+
+  .record-table .when-cell .text-btn {
+    opacity: 0;
+  }
+
+  .record-table tbody tr:hover .when-cell .text-btn,
+  .record-table .when-cell .text-btn:focus-visible {
+    opacity: 1;
+  }
+
   .panel {
     background-color: var(--card);
     border: 1px solid var(--line);

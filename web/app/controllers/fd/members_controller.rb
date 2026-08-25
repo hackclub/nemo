@@ -14,8 +14,11 @@ module Fd
       @record = MemberRecord.new(@user_id)
       @names = Names.for(@record.people_named)
       @member = @names.member(@user_id)
-      @only = MemberTimeline::KINDS.key?(params[:show]) ? params[:show] : "all"
-      @history = MemberTimeline.for(@record, names: @names, only: @only)
+      @only = MemberTimeline::TABS.key?(params[:show]) ? params[:show] : "all"
+      @entries = MemberTimeline.for(@record, names: @names)
+      @counts = @entries.group_by(&:kind).transform_values(&:size)
+      @counts["all"] = @entries.size
+      @history = @only == "all" ? @entries : @entries.select { |entry| entry.kind == @only }
       @identity = MemberIdentity.look_up(@user_id, actor: current_staff)
       @context = MemberContext.for([@user_id])[@user_id]
       @standing = MemberStanding.new(@record)

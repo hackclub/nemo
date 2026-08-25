@@ -1,74 +1,182 @@
 <% content_for :page_title, names[@user_id] %>
 <% content_for :page_face do %>
-  <span class="head-face" aria-hidden="true"><%= @member ? @member.initial : "?" %></span>
+  <span class="crumb"><%= link_to "Members", fd_members_path %> /</span>
 <% end %>
 <% content_for :head_actions do %>
-  <%= link_to "Open in Slack", slack_member_url(@user_id), class: "btn",
-        target: "_blank", rel: "noopener" %>
-  <%= link_to "Their cases", fd_cases_path(subject: @user_id), class: "btn" %>
   <%= link_to "Open a case", fd_cases_path(subject_user_id: @user_id, open: "1"),
         class: "btn btn-primary" %>
+  <details class="menu">
+    <summary class="btn btn-only" aria-label="More actions">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+    </summary>
+    <div class="menu-pop">
+      <%= link_to "Their cases", fd_cases_path(subject: @user_id) %>
+      <%= link_to "Open in Slack", slack_member_url(@user_id),
+            target: "_blank", rel: "noopener" %>
+    </div>
+  </details>
 <% end %>
 
-<div class="stack">
-  <div class="stand <%= member_standing_tone(@standing) %>">
-    <%= standing_chip(@standing) %>
-    <span><%= member_standing_line(@standing, names) %></span>
-  </div>
-
-  <% if @history.any? || @only != "all" %>
-    <div class="card card-flush">
-      <%= render "history", history: @history, only: @only, user_id: @user_id %>
-      <% if @record.anything? || @standing.actions.positive? %>
-        <div class="record-strip">
-          <span>subject of <b><%= @standing.cases %></b></span>
-          <span>logged in <b><%= @standing.logged_in %></b></span>
-          <span>actions <b><%= @standing.actions %></b></span>
-          <span>reversed <b><%= @standing.reversed %></b></span>
-        </div>
+<div class="cols c-2">
+  <div class="panel">
+    <div class="views">
+      <% Fd::MemberTimeline::TABS.each do |key, label| %>
+        <%= member_tab_link(@user_id, key, label, @counts.fetch(key, 0)) %>
       <% end %>
     </div>
-  <% end %>
 
-  <div class="card">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">Notes on <%= names[@user_id] %></h2>
-      </div>
-      <span class="chip chip-off"><%= @record.notes.size %></span>
-    </div>
-    <% if @record.notes.any? %>
-      <div class="notes">
-        <% @record.notes.each do |note| %>
-          <div class="note-row">
-            <div class="note-body"><%= mentioned(note.body) %></div>
-            <div class="note-by">
-              <span><%= note_byline(note) %></span>
-              <%= render "note_remove", user_id: @user_id, note: note %>
+    <% show_force = @standing.in_force.any? && %w[all actions].include?(@only) %>
+    <% show_write = current_staff.may?("member.note") && %w[all notes].include?(@only) %>
+    <% if show_force || show_write %>
+      <div class="panel-body">
+        <% if show_force %>
+          <div class="fbox fbox-warn">
+            <div class="ft">In force now</div>
+            <div class="fb">
+              <% @standing.in_force.each do |action| %>
+                <div class="fb-line"><%= in_force_line(action, names) %></div>
+                <div class="fb-do">
+                  <%= link_to "Reverse it", fd_case_path(action.case_id, tab: "actions"),
+                        class: "btn" %>
+                  <%= link_to "Open case #{action.case_id}", fd_case_path(action.case_id),
+                        class: "btn btn-ghost" %>
+                </div>
+              <% end %>
             </div>
           </div>
         <% end %>
+
+        <% if show_write %>
+          <%= form_with url: fd_member_notes_path(@user_id), method: :post,
+                class: "note-composer", html: { autocomplete: "off" } do %>
+            <div class="mention-field" data-controller="mention"
+                 data-mention-url-value="<%= fd_member_search_path %>">
+              <%= text_area_tag :body, nil, rows: 1, class: "note-input", id: nil,
+                    maxlength: Fd::NotesController::MAX_LENGTH,
+                    placeholder: "Write a note about #{names[@user_id]}",
+                    data: { mention_target: "field", action: "input->mention#type " \
+                            "keydown->mention#keys" } %>
+              <div class="menu-pop pick-pop mention-pop" hidden data-mention-target="results"></div>
+            </div>
+            <button type="submit" class="chat-send" aria-label="Save the note">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+            </button>
+          <% end %>
+        <% end %>
       </div>
-    <% else %>
-      <span class="note-none">No notes</span>
     <% end %>
 
-    <% if current_staff.may?("member.note") %>
-      <%= form_with url: fd_member_notes_path(@user_id), method: :post,
-            class: "note-composer", html: { autocomplete: "off" } do %>
-        <div class="mention-field" data-controller="mention"
-             data-mention-url-value="<%= fd_member_search_path %>">
-          <%= text_area_tag :body, nil, rows: 1, class: "note-input", id: nil,
-                maxlength: Fd::NotesController::MAX_LENGTH,
-                placeholder: "Write a note about #{names[@user_id]}",
-                data: { mention_target: "field", action: "input->mention#type " \
-                        "keydown->mention#keys" } %>
-          <div class="menu-pop pick-pop mention-pop" hidden data-mention-target="results"></div>
-        </div>
-        <button type="submit" class="chat-send" aria-label="Save the note">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
-        </button>
-      <% end %>
+    <% if @history.any? %>
+      <div class="scroll">
+        <table class="data-table record-table">
+          <colgroup>
+            <col style="width: 16%">
+            <col style="width: 44%">
+            <col style="width: 20%">
+            <col style="width: 20%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Happened</th>
+              <th>What</th>
+              <th>Who</th>
+              <th>When</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @history.each do |entry| %>
+              <tr>
+                <td><%= history_word_chip(entry) %></td>
+                <td>
+                  <span class="two-line">
+                    <% if entry.case_id %>
+                      <b><%= link_to entry.title, fd_case_path(entry.case_id) %></b>
+                    <% else %>
+                      <b><%= entry.title %></b>
+                    <% end %>
+                    <% if entry.said.present? %>
+                      <span><%= mentioned(entry.said) %></span>
+                    <% else %>
+                      <% under = [entry.state, entry.detail].reject(&:blank?).join(" · ") %>
+                      <% if under.present? %><span><%= under %></span><% end %>
+                    <% end %>
+                  </span>
+                </td>
+                <td class="sub"><%= entry.who ? member_link(entry.who) : "n/a" %></td>
+                <td class="sub">
+                  <span class="when-cell">
+                    <span><%= entry.at.strftime("%-d %b %Y") %></span>
+                    <% if entry.ref.is_a?(Fd::Note) %>
+                      <%= render "note_remove", user_id: @user_id, note: entry.ref %>
+                    <% end %>
+                  </span>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title"><%= history_empty_note(@only) %></p>
+      </div>
     <% end %>
+  </div>
+
+  <div class="facts">
+    <p class="facts-h">Member facts</p>
+
+    <div class="fbox">
+      <div class="ft">Identity</div>
+      <div class="fb">
+        <div class="who">
+          <%= face(@user_id) %>
+          <span class="two-line">
+            <b><%= names[@user_id] %></b>
+            <span><%= identity_line(@identity) %></span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="facts-grid">
+      <div class="cell">
+        <span class="fg-k">Joined</span>
+        <span class="fg-v">
+          <%= @context&.cohort_at ? @context.cohort_at.to_date.strftime("%b %Y") : "n/a" %>
+        </span>
+      </div>
+      <div class="cell">
+        <span class="fg-k">Messages</span>
+        <span class="fg-v"><%= fact_number(@context&.messages_posted) %></span>
+      </div>
+      <div class="cell">
+        <span class="fg-k">Cases</span>
+        <span class="fg-v"><%= @standing.cases + @standing.logged_in %></span>
+      </div>
+      <div class="cell">
+        <span class="fg-k">Priors</span>
+        <span class="fg-v"><%= @standing.priors.positive? ? @standing.priors : "n/a" %></span>
+      </div>
+    </div>
+
+    <div class="facts-grid">
+      <div class="cell">
+        <span class="fg-k">Actions</span>
+        <span class="fg-v"><%= @standing.actions %></span>
+      </div>
+      <div class="cell">
+        <span class="fg-k">Reversed</span>
+        <span class="fg-v"><%= @standing.reversed %></span>
+      </div>
+      <div class="cell">
+        <span class="fg-k">Here</span>
+        <span class="fg-v"><%= tenure_label(@context&.tenure_days) %></span>
+      </div>
+      <div class="cell">
+        <span class="fg-k">Last seen</span>
+        <span class="fg-v"><%= last_active_label(@context&.last_active_at) %></span>
+      </div>
+    </div>
   </div>
 </div>

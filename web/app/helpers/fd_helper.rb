@@ -238,6 +238,34 @@ module FdHelper
     HISTORY_TONES.fetch(state.to_s, "chip-off")
   end
 
+  def history_word_chip(entry)
+    tone = case entry.word
+           when "reversal" then "chip-good"
+           when "action" then entry.state == "reversed" ? "chip-off" : "chip-warn"
+           when "case" then ("chip-crit" if entry.state == "open")
+           end
+    tag.span(entry.word, class: ["chip", tone].compact.join(" "))
+  end
+
+  def member_tab_link(user_id, key, label, count)
+    link_to fd_member_path(user_id, show: (key unless key == "all")),
+      class: "view", aria: { current: ("true" if key == @only) } do
+      concat tag.span(label)
+      concat tag.span(count, class: "view-count")
+    end
+  end
+
+  def in_force_line(action, names)
+    span = if action.expires?
+      "until #{action.expires_at.strftime('%-d %b %Y')}"
+    else
+      "with no end date"
+    end
+    tail = "set by #{names[action.decided_by]} on #{action.performed_at.strftime('%-d %b')}"
+    tail += " after case #{action.case_id}" if action.case_id
+    safe_join([tag.b(action_label(action.type_key)), " #{span}, #{tail}."])
+  end
+
   HISTORY_EMPTY = {
     "cases" => "No case has ever involved them.",
     "actions" => "Nothing has ever been done to them.",

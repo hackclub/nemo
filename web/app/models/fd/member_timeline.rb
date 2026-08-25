@@ -1,10 +1,17 @@
 module Fd
   class MemberTimeline
-    Entry = Struct.new(:at, :title, :kind, :mark, :state, :detail, :said, :case_id,
-      keyword_init: true)
+    Entry = Struct.new(:at, :title, :kind, :word, :who, :mark, :state, :detail, :said, :case_id,
+      :ref, keyword_init: true)
 
     KINDS = {
       "all" => "Everything",
+      "cases" => "Cases",
+      "actions" => "Actions",
+      "notes" => "Notes"
+    }.freeze
+
+    TABS = {
+      "all" => "Record",
       "cases" => "Cases",
       "actions" => "Actions",
       "notes" => "Notes"
@@ -36,6 +43,8 @@ module Fd
           at: kase.opened_at,
           title: "Case #{kase.id} opened",
           kind: "cases",
+          word: "case",
+          who: kase.assignee_user_ids.first,
           mark: "own",
           state: outcome_of(kase),
           detail: case_detail(kase),
@@ -51,6 +60,8 @@ module Fd
             at: kase.opened_at,
             title: "Case #{kase.id}",
             kind: "cases",
+            word: "case",
+            who: kase.assignee_user_ids.first,
             mark: "in",
             state: "logged in",
             detail: logged_detail(kase, person),
@@ -67,6 +78,8 @@ module Fd
             at: action.performed_at,
             title: FdHelper::ACTION_LABELS.fetch(action.type_key, action.type_key.tr("_", " ")),
             kind: "actions",
+            word: "action",
+            who: action.decided_by,
             mark: "act",
             state: action.reversed? ? "reversed" : "standing",
             detail: action_detail(action),
@@ -79,6 +92,8 @@ module Fd
             at: action.reversed_at,
             title: "#{FdHelper::ACTION_LABELS.fetch(action.type_key, action.type_key)} reversed",
             kind: "actions",
+            word: "reversal",
+            who: action.reversed_by,
             mark: "act",
             state: "reversed",
             detail: ["case #{action.case_id}", action.reversal_reason,
@@ -97,11 +112,14 @@ module Fd
           at: note.created_at,
           title: "Note",
           kind: "notes",
+          word: "note",
+          who: note.author,
           mark: "note",
           state: names[note.author],
           detail: nil,
           said: note.body,
-          case_id: nil
+          case_id: nil,
+          ref: note
         )
       end
     end

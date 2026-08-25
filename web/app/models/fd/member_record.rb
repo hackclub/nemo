@@ -22,12 +22,13 @@ module Fd
 
     def logged_cases
       @logged_cases ||= Case.where(id: logged_case_ids)
-        .includes(:participants).oldest_first.to_a
+        .includes(:participants, :assignees).oldest_first.to_a
     end
 
     def people_named
       [user_id] +
         subject_cases.flat_map { |kase| kase.subject_user_ids + kase.assignee_user_ids } +
+        logged_cases.flat_map(&:assignee_user_ids) +
         actions.flat_map { |action| [action.decided_by, action.performed_by, action.reversed_by] } +
         notes.map(&:author) +
         notes.flat_map { |note| Mentions.ids(note.body) }
