@@ -7,14 +7,15 @@ module Fd
       body = Mentions.normalise(params[:body].to_s.strip)
 
       problem = objection(body)
-      return redirect_to(fd_member_path(user_id), alert: problem) if problem
+      return redirect_to(fd_member_path(user_id, show: "notes"), alert: problem) if problem
 
       writing do
         note = Note.create!(subject_user_id: user_id, body: body, author: current_staff.user_id)
         audit(note, "noted")
       end
 
-      redirect_to fd_member_path(user_id), notice: "noted, and it follows them to every case"
+      redirect_to fd_member_path(user_id, show: "notes"),
+        notice: "noted, and it follows them to every case"
     end
 
     def destroy
@@ -40,9 +41,9 @@ module Fd
       end
 
       if removed
-        redirect_to fd_member_path(user_id), notice: "note removed"
+        redirect_to fd_member_path(user_id, show: "notes"), notice: "note removed"
       else
-        redirect_to fd_member_path(user_id), alert: "only whoever wrote a note can remove it"
+        redirect_to fd_member_path(user_id, show: "notes"), alert: "only whoever wrote a note can remove it"
       end
     end
 

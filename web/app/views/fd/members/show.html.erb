@@ -26,43 +26,23 @@
     </div>
 
     <% show_force = @standing.in_force.any? && %w[all actions].include?(@only) %>
-    <% show_write = current_staff.may?("member.note") && %w[all notes].include?(@only) %>
-    <% if show_force || show_write %>
+    <% show_write = current_staff.may?("member.note") && @only == "notes" %>
+    <% if show_force %>
       <div class="panel-body">
-        <% if show_force %>
-          <div class="fbox fbox-warn">
-            <div class="ft">In force now</div>
-            <div class="fb">
-              <% @standing.in_force.each do |action| %>
-                <div class="fb-line"><%= in_force_line(action, names) %></div>
-                <div class="fb-do">
-                  <%= link_to "Reverse it", fd_case_path(action.case_id, tab: "actions"),
-                        class: "btn" %>
-                  <%= link_to "Open case #{action.case_id}", fd_case_path(action.case_id),
-                        class: "btn btn-ghost" %>
-                </div>
-              <% end %>
-            </div>
+        <div class="fbox fbox-warn">
+          <div class="ft">In force now</div>
+          <div class="fb">
+            <% @standing.in_force.each do |action| %>
+              <div class="fb-line"><%= in_force_line(action, names) %></div>
+              <div class="fb-do">
+                <%= link_to "Reverse it", fd_case_path(action.case_id, tab: "actions"),
+                      class: "btn" %>
+                <%= link_to "Open case #{action.case_id}", fd_case_path(action.case_id),
+                      class: "btn btn-ghost" %>
+              </div>
+            <% end %>
           </div>
-        <% end %>
-
-        <% if show_write %>
-          <%= form_with url: fd_member_notes_path(@user_id), method: :post,
-                class: "note-composer", html: { autocomplete: "off" } do %>
-            <div class="mention-field" data-controller="mention"
-                 data-mention-url-value="<%= fd_member_search_path %>">
-              <%= text_area_tag :body, nil, rows: 1, class: "note-input", id: nil,
-                    maxlength: Fd::NotesController::MAX_LENGTH,
-                    placeholder: "Write a note about #{names[@user_id]}",
-                    data: { mention_target: "field", action: "input->mention#type " \
-                            "keydown->mention#keys" } %>
-              <div class="menu-pop pick-pop mention-pop" hidden data-mention-target="results"></div>
-            </div>
-            <button type="submit" class="chat-send" aria-label="Save the note">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
-            </button>
-          <% end %>
-        <% end %>
+        </div>
       </div>
     <% end %>
 
@@ -119,6 +99,27 @@
     <% else %>
       <div class="empty">
         <p class="empty-title"><%= history_empty_note(@only) %></p>
+      </div>
+    <% end %>
+
+    <% if show_write %>
+      <div class="panel-foot">
+        <%= form_with url: fd_member_notes_path(@user_id), method: :post,
+              class: "note-composer", html: { autocomplete: "off" } do %>
+          <div class="mention-field" data-controller="mention"
+               data-mention-send-value="true"
+               data-mention-url-value="<%= fd_member_search_path %>">
+            <%= text_area_tag :body, nil, rows: 1, class: "note-input", id: nil,
+                  maxlength: Fd::NotesController::MAX_LENGTH,
+                  placeholder: "Write a note about #{names[@user_id]}, Enter saves it",
+                  data: { mention_target: "field", action: "input->mention#type " \
+                          "keydown->mention#keys" } %>
+            <div class="menu-pop pick-pop mention-pop" hidden data-mention-target="results"></div>
+          </div>
+          <button type="submit" class="chat-send" aria-label="Save the note">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+          </button>
+        <% end %>
       </div>
     <% end %>
   </div>

@@ -14,7 +14,7 @@ module Fd
     end
 
     def in_force
-      @in_force ||= record.actions.select { |action| action.active?(at) }
+      @in_force ||= record.actions.select { |action| action.in_force?(at) }
         .sort_by { |action| [weight_of(action), -action.performed_at.to_i] }
     end
 

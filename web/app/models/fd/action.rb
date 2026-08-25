@@ -41,6 +41,10 @@ module Fd
       !reversed? && !expired?(at)
     end
 
+    def in_force?(at = Time.current)
+      expires? && !reversed? && expires_at > at
+    end
+
     def performed_by_decider?
       decided_by == performed_by
     end

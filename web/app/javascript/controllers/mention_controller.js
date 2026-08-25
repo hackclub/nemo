@@ -11,7 +11,7 @@ function said(className, text) {
 
 export default class extends Controller {
   static targets = ["field", "results"]
-  static values = { url: String }
+  static values = { url: String, send: Boolean }
 
   connect() {
     this.timer = null
@@ -119,7 +119,13 @@ export default class extends Controller {
   }
 
   keys(event) {
-    if (this.resultsTarget.hidden) return
+    if (this.resultsTarget.hidden) {
+      if (this.sendValue && event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault()
+        if (this.fieldTarget.value.trim()) this.element.closest("form")?.requestSubmit()
+      }
+      return
+    }
 
     if (event.key === "ArrowDown") {
       event.preventDefault()

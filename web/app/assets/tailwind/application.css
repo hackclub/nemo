@@ -2498,6 +2498,26 @@
     min-width: 0;
   }
 
+  .panel-foot {
+    padding: var(--s-xs) var(--s-sm);
+    background-color: var(--card-2);
+  }
+
+  .panel-foot .note-composer {
+    margin-top: 0;
+    background-color: var(--card);
+  }
+
+  .panel-foot .chat-send {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+  }
+
+  .panel .data-table.record-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
   .data-table.record-table thead th,
   .data-table.record-table tbody td {
     text-align: left;
@@ -2553,6 +2573,7 @@
 
   .panel > .views {
     background-color: var(--card-2);
+    border-bottom: 0;
   }
 
   .panel > .card,
