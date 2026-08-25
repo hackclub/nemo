@@ -108,7 +108,7 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     reverse
 
-    get fd_case_path(@kase)
+    get fd_case_path(@kase, tab: "actions")
     assert_select ".chip", text: "reversed"
     assert_select "label[for=?]", "reverse-#{@action.id}", count: 0
     assert_select "input##{'reverse-' + @action.id.to_s}", count: 0

@@ -40,6 +40,15 @@ class Fd::MemberStandingTest < ActiveSupport::TestCase
     assert_equal said.worst.expires_at, said.lifts_at
   end
 
+  test "an action with no due date is not in force, however serious" do
+    kase = make_case(subject: SUBJECT)
+    act_on(kase, type_key: "perma_ban", performed_at: 1.day.ago)
+
+    said = standing
+    assert_empty said.in_force, "a permanent ban has no due date to reach"
+    assert_equal 1, said.actions
+  end
+
   test "an action past its expiry is not in force" do
     kase = make_case(subject: SUBJECT)
     act_on(kase, type_key: "shush", expires_at: 1.day.ago)
@@ -72,17 +81,18 @@ class Fd::MemberStandingTest < ActiveSupport::TestCase
     act_on(kase, type_key: "warning", performed_at: 1.hour.ago)
     act_on(kase, type_key: "perma_ban", performed_at: 3.days.ago)
     act_on(kase, type_key: "shush", performed_at: 2.hours.ago, expires_at: 5.days.from_now)
+    act_on(kase, type_key: "temp_ban", performed_at: 3.days.ago, expires_at: 9.days.from_now)
 
     said = standing
-    assert_equal 3, said.in_force.size
-    assert_equal "perma_ban", said.worst.type_key, "a ban outranks a shush and a warning"
-    assert_nil said.lifts_at, "a permanent ban does not lift"
+    assert_equal 2, said.in_force.size, "only a due date not yet reached counts as in force"
+    assert_equal "temp_ban", said.worst.type_key, "a ban outranks a shush"
+    assert_equal said.worst.expires_at, said.lifts_at
   end
 
   test "the newest wins when two of the same kind are in force" do
     kase = make_case(subject: SUBJECT)
-    old = act_on(kase, type_key: "warning", performed_at: 10.days.ago)
-    new = act_on(kase, type_key: "warning", performed_at: 1.day.ago)
+    old = act_on(kase, type_key: "shush", performed_at: 10.days.ago, expires_at: 2.days.from_now)
+    new = act_on(kase, type_key: "shush", performed_at: 1.day.ago, expires_at: 5.days.from_now)
 
     assert_equal new.id, standing.worst.id
     assert_not_equal old.id, standing.worst.id

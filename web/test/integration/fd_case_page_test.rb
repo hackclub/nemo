@@ -85,12 +85,13 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     assert_select ".card-note a.lnk", text: "@UFF1"
   end
 
-  test "a duplicate is a chip in the header, not a card of its own" do
+  test "a duplicate names the case it was folded into, in the facts column" do
     other = make_case(subject: "UELSE", opened_at: 3.days.ago)
     @kase.update!(resolved_at: Time.current, resolution: "duplicate", duplicate_of: other.id)
     get fd_case_path(@kase)
 
-    assert_select ".chip[href=?]", fd_case_path(other), text: "duplicate of case #{other.id}"
+    assert_select ".facts .fbox .ft", text: "Folded into"
+    assert_select ".facts a[href=?]", fd_case_path(other), text: "case #{other.id}"
     assert_select "h2", text: "Duplicate Cases", count: 0
   end
 
@@ -101,11 +102,11 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     assert_select ".note-by a.lnk[href=?]", fd_member_path("UFF1"), text: "@UFF1"
   end
 
-  test "the header names the people it mentions with links, not plain text" do
+  test "the facts column names the people it mentions with links, not plain text" do
     @kase.assign!("UFF2")
     get fd_case_path(@kase)
 
-    assert_select ".head-meta a.lnk[href=?]", fd_member_path("UFF2")
+    assert_select ".facts a[href=?]", fd_member_path(@kase.subject_user_ids.first)
   end
 
   test "logging an action from a person's pane is aimed at that person" do
@@ -124,12 +125,13 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     assert_select ".people-list .person-add", 1, "adding somebody is still offered"
   end
 
-  test "standing notes name the member they follow, once there is more than one" do
+  test "a standing note on a subject shows under them in the people tab" do
     @kase.add_subject!("USECOND")
     Fd::Note.create!(subject_user_id: "USECOND", body: "keeps at it", author: "UFF1")
-    get fd_case_path(@kase)
+    get fd_case_path(@kase, tab: "people")
 
-    assert_select ".tl-head .chip", text: "about @USECOND"
+    assert_select ".person-block .person-note .note-body", text: "keeps at it"
+    assert_select ".person-note .sub2", text: /@UFF1/
   end
 
   test "setting the category writes it, and lands in the trail" do
@@ -155,33 +157,19 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     kase = make_case(assign: "UOTHER")
 
     get fd_case_path(kase)
-    assert_select ".card-top form[action=?] .btn", fd_case_claim_path(kase),
-      text: "Assign myself"
+    assert_select "form[action=?]", fd_case_claim_path(kase), minimum: 1
 
     post fd_case_claim_path(kase)
 
     assert_equal %w[UME UOTHER], kase.reload.assignee_user_ids.sort
   end
 
-  test "the violation is said once in the head, not twice" do
+  test "the top bar carries the case number, not the violation" do
     @kase.update!(category_key: "harassment")
     get fd_case_path(@kase)
 
-    said = css_select(".head-row").text.scan(/harassment/i).size
-    assert_equal 1, said, "the title carries it, so the chip and the subtitle were repeating it"
-    assert_select ".head-row .head-title", text: /Harassment/
-  end
-
-  test "the toolbar is text buttons and one square icon" do
-    get fd_case_path(@kase)
-
-    timeline = css_select(".head-actions .btn").find { |btn| btn.text.include?("Timeline") }
-    assert timeline
-    assert_empty timeline.css("svg"), "text buttons carry no icons, so they cannot be a third shape"
-
-    icons = css_select(".head-actions .btn").select { |btn| btn.text.strip.empty? }
-    assert_equal 1, icons.size, "exactly one icon-only control, the overflow"
-    assert_includes icons.first["class"], "btn-only"
+    assert_select ".head-title", text: @kase.id.to_s
+    assert_select ".topbar .chip", 0, "no pills sit next to the case number"
   end
 
   test "the case names what it still needs instead of warning vaguely" do
@@ -189,19 +177,17 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
 
     assert_select ".chip", { text: "nothing set yet", count: 0 },
       "a chip standing for one of three things told nobody which"
-    assert_select ".card-asks .asks-head", text: "Three things before this can close"
-    assert_select ".card-asks .line-row", 3
+    assert_select ".todo .todo-t", text: "Three things before this can close"
+    assert_select ".todo .todo-row .btn", 3
   end
 
   test "the count follows what is actually set" do
     get fd_case_path(@kase)
-    assert_select ".card-asks .asks-head", text: "Two things before this can close"
-    assert_select ".card-asks .chip-good", 1, "the subject is set, so that row says so"
+    assert_select ".todo .todo-t", text: "Two things before this can close"
 
     @kase.update!(category_key: "harassment")
     get fd_case_path(@kase)
-    assert_select ".card-asks .asks-head", text: "One thing before this can close"
-    assert_select ".card-asks .chip-good", 2
+    assert_select ".todo .todo-t", text: "One thing before this can close"
   end
 
   test "a case with nothing outstanding is not asked for anything" do

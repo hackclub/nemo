@@ -415,8 +415,9 @@
               <div class="tl-head">
                 <span class="tl-title"><%= entry.title %></span>
               </div>
-              <% if entry.detail.present? %>
-                <div class="tl-detail"><%= entry.detail %></div>
+              <% marks = [entry.detail.presence, *entry.chips].compact %>
+              <% if marks.any? %>
+                <div class="tl-detail"><%= marks.join(" · ") %></div>
               <% end %>
               <% if entry.said.present? %>
                 <div class="said"><%= mentioned(entry.said) %></div>

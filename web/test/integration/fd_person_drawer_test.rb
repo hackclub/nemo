@@ -23,7 +23,7 @@ class FdPersonDrawerTest < ActionDispatch::IntegrationTest
 
     assert_select "turbo-frame#person-drawer", 1
     assert_select "turbo-frame#person-drawer .drawer-h", 0, "the layout's frame stays empty"
-    assert_select ".head-face", 1
+    assert_select ".crumb a[href=?]", fd_members_path
     assert_select ".head-actions", 1, "the full page keeps its own header actions"
   end
 

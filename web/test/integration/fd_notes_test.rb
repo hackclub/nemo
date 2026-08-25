@@ -122,7 +122,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
 
     get fd_case_path(@kase)
     assert_match(/asked a second firefighter to read this/, response.body)
-    assert_select ".tl-mark-note"
+    assert_select ".tl-item.tl-note"
   end
 
   test "anybody opening the case sees the notes without hunting for them" do
@@ -137,18 +137,21 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     assert_select ".note-by", text: /@UFF1/
 
     get fd_case_path(@kase, tab: "people")
-    assert_select ".people-list", text: /escalates in public/, count: 0
+    assert_select ".person-note .note-body", { text: "escalates in public" },
+      "a standing note follows the member onto any case that names them"
+    assert_select ".notes .note-row", { count: 0 },
+      "but it is not a note on this case, so it stays off the notes tab"
 
-    get fd_member_path("USUB")
-    assert_select ".note-body", text: "escalates in public"
+    get fd_member_path("USUB", show: "notes")
+    assert_select ".record-table", text: /escalates in public/
   end
 
   test "a standing note is marked as being about the member, not the case" do
     Fd::Note.create!(subject_user_id: "USUB", body: "watch for repeats", author: "UFF2")
     sign_in_as(@me)
-    get fd_member_path("USUB")
+    get fd_member_path("USUB", show: "notes")
 
-    assert_select ".note-body", text: "watch for repeats"
+    assert_select ".record-table", text: /watch for repeats/
   end
 
   test "a standing note shows for somebody who is not a subject" do
@@ -156,9 +159,9 @@ class FdNotesTest < ActionDispatch::IntegrationTest
       detail: "they piled on")
     Fd::Note.create!(subject_user_id: "UWATCHER", body: "keeps turning up", author: "UFF2")
     sign_in_as(@me)
-    get fd_member_path("UWATCHER")
+    get fd_member_path("UWATCHER", show: "notes")
 
-    assert_select ".note-body", text: "keeps turning up"
+    assert_select ".record-table", text: /keeps turning up/
   end
 
   test "a deleted note is not shown on the page" do

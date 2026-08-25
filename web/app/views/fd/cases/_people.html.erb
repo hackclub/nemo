@@ -1,6 +1,7 @@
 <div class="card card-flush">
   <div class="people-list">
     <% people.each do |person| %>
+      <div class="person-block">
       <div class="line-row fat person-row">
         <%= face(person.user_id) %>
         <span class="grow two-line">
@@ -18,6 +19,13 @@
         <% end %>
         <%= link_to "Their history", fd_member_path(person.user_id), class: "btn",
               data: { turbo_frame: "person-drawer" } %>
+      </div>
+      <% Array(notes[person.user_id]).each do |note| %>
+        <div class="person-note">
+          <div class="note-body"><%= mentioned(note.body) %></div>
+          <div class="sub2"><%= note_byline(note) %></div>
+        </div>
+      <% end %>
       </div>
     <% end %>
 

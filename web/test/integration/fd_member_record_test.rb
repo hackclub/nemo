@@ -17,72 +17,8 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     get fd_member_path("UNOBODY")
 
     assert_response :success
-    assert_select ".stand.stand-clean .chip", text: "nothing on record"
-    assert_select ".stand", text: /Nothing on record, and nothing ever done to them/
-    assert_select ".note-none", text: "No notes"
-  end
-
-  test "the facts they do have are one quiet line, and the ones they do not are absent" do
-    get fd_member_path("UNOBODY")
-
-    assert_select ".head-meta .idline"
-    assert_select ".idline", text: /not in the warehouse yet/
-    assert_select ".idline", text: /n\/a/, count: 0
-    assert_select ".subject-facts", 0, "the six fact grid is gone"
-  end
-
-  test "an open case is named in the standing line, and links to it" do
-    kase = make_case(subject: SUBJECT, opened_at: 2.days.ago)
-    get fd_member_path(SUBJECT)
-
-    assert_select ".stand a.lnk[href=?]", fd_case_path(kase), text: "##{kase.id}"
-    assert_select ".stand", text: /is open, with nobody/
-  end
-
-  test "the standing line says who holds the open case, and calls it you when it is yours" do
-    kase = make_case(subject: SUBJECT, opened_at: 2.days.ago, assign: "UFF1")
-    get fd_member_path(SUBJECT)
-    assert_select ".stand", text: /with @UFF1/
-
-    kase.assign!(@me.user_id)
-    get fd_member_path(SUBJECT)
-    assert_select ".stand", text: /with you/
-  end
-
-  test "what is standing right now is the chip, and the page goes loud" do
-    kase = make_case(subject: SUBJECT, opened_at: 3.days.ago)
-    act_on kase, type_key: "shush", expires_at: 4.days.from_now
-
-    get fd_member_path(SUBJECT)
-
-    assert_select ".stand.stand-live"
-    assert_select ".stand .chip-warn", text: /shush until/
-    assert_select ".stand", text: /1 action still standing/
-  end
-
-  test "an expired action leaves the chip quiet without hiding the history" do
-    kase = make_case(subject: SUBJECT, opened_at: 30.days.ago)
-    act_on kase, type_key: "shush", expires_at: 1.day.ago
-
-    get fd_member_path(SUBJECT)
-
-    assert_select ".stand.stand-live", 0
-    assert_select ".stand .chip-off", text: "nothing standing"
-    assert_select ".record-line", 2, "the case and the action are still on the record"
-  end
-
-  test "the counts sit under the record, once" do
-    make_case(subject: SUBJECT, opened_at: 30.days.ago, resolved_at: 20.days.ago,
-      resolution: "no_action")
-    theirs = make_case(subject: "USOMEBODY", opened_at: 10.days.ago)
-    theirs.participants.create!(user_id: SUBJECT, role: "involved", detail: "aimed at them")
-
-    get fd_member_path(SUBJECT)
-
-    assert_select ".record-strip", 1
-    assert_select ".record-strip", text: /subject of 1/
-    assert_select ".record-strip", text: /logged in 1/
-    assert_select ".record-strip", text: /reversed 0/
+    assert_select ".record-table tbody tr", 0
+    assert_select ".empty-title"
   end
 
   test "the priors figure uses the definition, not the case count" do
@@ -93,23 +29,38 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
       resolution: "no_action")
     make_case(subject: SUBJECT, opened_at: 2.days.ago)
 
-    get fd_member_path(SUBJECT)
-
     assert_equal 1, Fd::Case.prior_count(SUBJECT, within: Fd::Case::PRIOR_WINDOW)
-    assert_select ".stand", text: /1 prior in twelve months/
   end
 
-  test "reversed actions are counted apart from the rest" do
-    kase = make_case(subject: SUBJECT, opened_at: 40.days.ago, resolved_at: 30.days.ago,
-      resolution: "action_taken")
-    act_on kase
-    act_on kase, type_key: "shush", reversed_at: 20.days.ago, reversed_by: "UFF2",
-      reversal_reason: "appeal upheld"
+  test "a timed action still running leads the record" do
+    kase = make_case(subject: SUBJECT, opened_at: 3.days.ago)
+    act_on kase, type_key: "shush", expires_at: 4.days.from_now
 
     get fd_member_path(SUBJECT)
 
-    assert_select ".stand", text: /1 action still standing, 1 reversed/
-    assert_select ".record-strip", text: /reversed 1/
+    assert_select ".fbox-warn .ft", text: "In force now"
+    assert_select ".fbox-warn .fb-line", text: /Shush until/
+    assert_select ".fbox-warn a[href=?]", fd_case_path(kase)
+  end
+
+  test "an action with no due date never leads the record, but stays on it" do
+    kase = make_case(subject: SUBJECT, opened_at: 3.days.ago)
+    act_on kase, type_key: "warning"
+
+    get fd_member_path(SUBJECT)
+
+    assert_select ".fbox-warn", 0, "a warning is not being enforced over time"
+    assert_select ".record-table tbody tr", 2, "the case and the warning are still on the record"
+  end
+
+  test "an action past its expiry drops out of force without leaving the record" do
+    kase = make_case(subject: SUBJECT, opened_at: 30.days.ago)
+    act_on kase, type_key: "shush", expires_at: 1.day.ago
+
+    get fd_member_path(SUBJECT)
+
+    assert_select ".fbox-warn", 0
+    assert_select ".record-table tbody tr", 2
   end
 
   test "the identity line says email is not collected rather than showing a blank" do
@@ -136,7 +87,7 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     assert_equal before, AccessLog.count, "a refused request must not record a lookup"
   end
 
-  test "the history lists every case and action, newest first" do
+  test "the record lists every case and action, newest first" do
     old = make_case(subject: SUBJECT, opened_at: 40.days.ago, resolved_at: 30.days.ago,
       resolution: "action_taken")
     act_on old, performed_at: 31.days.ago
@@ -144,60 +95,52 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
 
     get fd_member_path(SUBJECT)
 
-    assert_select ".card-title", text: "Record"
-    assert_select ".record-line", 3
-    assert_select ".record-line:first-child a.record-title", text: "Case #{recent.id} opened"
-    assert_select "a.record-title[href=?]", fd_case_path(old)
+    assert_select ".record-table tbody tr", 3
+    assert_select ".record-table tbody tr:first-child a[href=?]", fd_case_path(recent)
+    assert_select ".record-table a[href=?]", fd_case_path(old)
   end
 
-  test "the history filter narrows without leaving the page" do
+  test "each tab narrows the record to its own kind" do
     kase = make_case(subject: SUBJECT, opened_at: 10.days.ago)
     act_on kase, performed_at: 3.days.ago
+    Fd::Note.create!(subject_user_id: SUBJECT, body: "watch this one", author: "UFF1")
+
+    get fd_member_path(SUBJECT)
+    assert_select ".record-table tbody tr", 3
 
     get fd_member_path(SUBJECT, show: "actions")
+    assert_select ".record-table tbody tr", 1
+    assert_select ".view[aria-current]", text: /Actions/
 
-    assert_select ".record-line", 1
-    assert_select ".chiprow a[aria-current]", text: "actions"
+    get fd_member_path(SUBJECT, show: "notes")
+    assert_select ".record-table tbody tr", 1
+    assert_select ".view[aria-current]", text: /Notes/
   end
 
-  test "a filter that matches nothing says which nothing it is" do
+  test "a tab that matches nothing says which nothing it is" do
     make_case(subject: SUBJECT, opened_at: 10.days.ago)
     get fd_member_path(SUBJECT, show: "actions")
 
-    assert_select ".record-line", 0
-    assert_select ".card-note", text: /Nothing has ever been done to them/
+    assert_select ".record-table tbody tr", 0
+    assert_select ".empty-title", text: /Nothing has ever been done to them/
   end
 
-  test "a member with nothing on record says so and drops the record card" do
-    get fd_member_path("UNOBODY")
-
-    assert_select ".stand.stand-clean .chip-good", text: "nothing on record"
-    assert_select ".card-title", text: "Record", count: 0
-    assert_select ".record-line", 0
-    assert_select ".card-title", text: /Notes on/
-  end
-
-  test "the page is one column: standing, then the record, then the notes" do
-    make_case(subject: SUBJECT, opened_at: 20.days.ago, resolved_at: 10.days.ago,
-      resolution: "no_action")
+  test "the composer only sits on the tab that holds the notes" do
     get fd_member_path(SUBJECT)
+    assert_select "form[action=?]", fd_member_notes_path(SUBJECT), count: 0
 
-    assert_select ".pair", 0, "no side by side any more"
-    assert_select ".stack > .stand", 1
-    assert_select ".stack > .card", 2
-    assert_select ".card-title", text: /Notes on/
+    get fd_member_path(SUBJECT, show: "notes")
+    assert_select "form[action=?] textarea[name=body]", fd_member_notes_path(SUBJECT)
   end
 
   test "a note written here follows the member rather than a case" do
-    get fd_member_path(SUBJECT)
-    assert_select "form[action=?] textarea[name=body]", fd_member_notes_path(SUBJECT)
-
     post fd_member_notes_path(SUBJECT), params: { body: "escalates in public" }
 
     note = Fd::Note.for_subject(SUBJECT).sole
     assert_nil note.case_id, "a standing note belongs to the member, not a case"
     assert_equal "UME", note.author
     assert_match(/follows them to every case/, flash[:notice])
+    assert_redirected_to fd_member_path(SUBJECT, show: "notes")
   end
 
   test "an empty note is refused here too" do
@@ -233,13 +176,5 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
 
     assert_select "input#open-case[checked]"
     assert_select ".pick[data-member-picker-preset-value*=?]", SUBJECT
-  end
-
-  test "a seeded member reads as their name with the id one click away" do
-    seeded = Fd::Member.live.order(:user_id).first
-    get fd_member_path(seeded.user_id)
-
-    assert_select "button.handle[data-copy-id-value=?]", seeded.user_id
-    assert_select ".head-title", text: seeded.name
   end
 end

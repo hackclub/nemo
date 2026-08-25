@@ -51,7 +51,8 @@ class FdMergedCaseTest < ActionDispatch::IntegrationTest
     act_on(@folded)
     get fd_case_path(@root)
 
-    assert_select ".chip", text: "from ##{@folded.id}"
+    assert_select ".tl-item .tl-detail", { text: /from ##{@folded.id}/ },
+      "an entry carried over from a folded case says where it came from"
   end
 
   test "the timeline says nothing extra for the case's own entries" do
@@ -141,7 +142,7 @@ class FdMergedCaseTest < ActionDispatch::IntegrationTest
 
   test "the queue does not count a folded case as resolved work" do
     get fd_cases_path(view: "resolved")
-    assert_select ".two-line b", text: /##{@folded.id}/, count: 0
+    assert_select ".two-line b", text: /#{@folded.id}/, count: 0
 
     folded = resolved_count
     @folded.update!(duplicate_of: nil)
@@ -154,7 +155,7 @@ class FdMergedCaseTest < ActionDispatch::IntegrationTest
 
     assert_select ".two-line span", text: /merged into ##{@root.id}/
     assert_select "a.row-merged[href=?]", fd_case_path(@root)
-    assert_select ".two-line b", text: /##{@folded.id}/
+    assert_select ".two-line b", text: /#{@folded.id}/
   end
 
   test "a merge counts as neither a resolution nor a time to resolve" do

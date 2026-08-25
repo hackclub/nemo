@@ -17,15 +17,14 @@ class Fd::CaseQueryTest < ActiveSupport::TestCase
     query(viewer: viewer, **params).relation.where(id: mine).ids
   end
 
-  test "an empty request lands on needs attention" do
+  test "an empty request lands on the open cases" do
     assert_equal "attention", query.view
-    assert_equal "Needs attention", query.title
   end
 
   test "a value outside the vocabulary is ignored, not raised" do
     assert_equal "attention", query(view: "; drop table").view
     assert_equal "any", query(age: "300d")["age"]
-    assert_equal "oldest", query(sort: "sideways")["sort"]
+    assert_equal "opened", query(sort: "sideways")["sort"]
     assert_equal "anyone", query(assignee: "not a user id")["assignee"]
   end
 

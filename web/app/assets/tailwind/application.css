@@ -3000,8 +3000,23 @@
     display: grid;
   }
 
-  .people-list > .line-row.fat:hover {
+  .people-list > .person-block > .line-row.fat:hover {
     background-color: var(--card-2);
+  }
+
+  .person-note {
+    display: grid;
+    gap: 3px;
+    margin: 0 8px 8px 42px;
+    padding: 8px 10px;
+    border-radius: var(--r-ctl);
+    background-color: var(--card-2);
+    box-shadow: inset 2px 0 0 var(--line);
+  }
+
+  .person-note .note-body {
+    font-size: var(--t-2xs);
+    color: var(--ink);
   }
 
   .chip-token {

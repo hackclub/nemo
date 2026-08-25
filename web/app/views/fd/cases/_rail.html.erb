@@ -4,6 +4,19 @@
   <%= render "finish_off", kase: kase, missing: missing, guesses: guesses %>
 <% end %>
 
+<% if kase.duplicate_of %>
+  <div class="fbox">
+    <div class="ft">Folded into</div>
+    <div class="fb">
+      <div class="rail-line">
+        Closed as a duplicate of
+        <%= link_to "case #{kase.duplicate_of}", fd_case_path(kase.duplicate_of),
+              class: "lnk" %>, which carries everything from here.
+      </div>
+    </div>
+  </div>
+<% end %>
+
 <div class="fbox">
   <div class="ft">Subject</div>
   <div class="fb">

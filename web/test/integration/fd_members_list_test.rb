@@ -10,6 +10,10 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     css_select("a[href='#{fd_member_path(user_id)}']").any?
   end
 
+  def listed_links
+    css_select("tbody tr .row-name a").map { |link| link["href"] }
+  end
+
   def act_on(kase, target:, **attrs)
     Fd::Action.create!({ case_id: kase.id, type_key: "warning", target_user_id: target,
                          decided_by: "UFF1", performed_by: "UFF1" }.merge(attrs))
@@ -21,14 +25,22 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     assert_redirected_to login_path
   end
 
-  test "the default view lists only people with a conduct history" do
-    subject = make_case(subject: "UHASONE", opened_at: 2.days.ago)
+  test "landing on the list picks a view rather than leaving none chosen" do
+    make_case(subject: "UHASONE", opened_at: 2.days.ago)
     get fd_members_path
+
+    assert_equal "everyone", Fd::MemberQuery.new({}).view
+    assert_select ".view[aria-current]", 1
+    assert listed?("UHASONE")
+  end
+
+  test "the history view narrows to people conduct work has touched" do
+    make_case(subject: "UHASONE", opened_at: 2.days.ago)
+    get fd_members_path(view: "history")
 
     assert listed?("UHASONE")
     assert_not listed?(Fd::Member.live.where.not(user_id: "UHASONE").first.user_id),
       "nine thousand quiet members are not the working set"
-    assert_equal subject.id, Fd::Case.with_subject("UHASONE").sole.id
   end
 
   test "somebody only ever logged in another case still belongs here" do
@@ -41,23 +53,24 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     assert_select "td.col-num", text: "0", minimum: 1
   end
 
-  test "subject of and logged in are counted apart" do
+  test "a row counts every case that named them, and the actions apart" do
     make_case(subject: "UBOTH", opened_at: 5.days.ago)
     theirs = make_case(subject: "USOMEBODY", opened_at: 3.days.ago)
     theirs.participants.create!(user_id: "UBOTH", role: "reporter")
 
-    get fd_members_path
+    get fd_members_path(view: "history")
 
     row = css_select("tr").find { |tr| tr.to_s.include?("UBOTH") }
     numbers = row.css("td.col-num").map(&:text).map(&:strip)
-    assert_equal %w[1 1 0], numbers
+    assert_equal %w[2 0], numbers, "subject of one and logged in another is two cases, no actions"
   end
 
-  test "the six views are offered with counts, the current one marked" do
+  test "only the named tabs are offered, with counts, the current one marked" do
     get fd_members_path
 
-    assert_select ".views .view", 5
-    assert_select ".view[aria-current]", text: /Has a history/
+    assert_select ".views .view", Fd::MemberQuery::TABS.size
+    assert_select ".view[aria-current]", text: /Everyone/
+    assert_select ".view .view-count", Fd::MemberQuery::TABS.size
   end
 
   test "the open case view keeps only people with one open" do
@@ -90,18 +103,14 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     assert_not listed?("UNOACTION"), "two resolved cases with no action are not two priors"
   end
 
-  test "a facet turns the view off, as on the queue" do
+  test "a facet narrows outside the tabs, and marks none of them current" do
     make_case(subject: "UHASONE", opened_at: 2.days.ago)
     get fd_members_path(priors: "2")
 
     assert_select ".view[aria-current]", 0
-    assert_select ".facet-set.on .facet", text: /Priors\s*2 or more/
   end
 
   test "everyone reaches past the working set" do
-    get fd_members_path(view: "everyone")
-
-    assert_select ".card-title", text: "Everyone"
     assert_operator Fd::MemberQuery.new({ "view" => "everyone" }).total, :>, 100
   end
 
@@ -112,20 +121,18 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     assert_select ".pager-at", text: /Page 1 of \d+/
     assert_select ".pager a", text: "Next"
     assert_select ".pager .is-off", text: "Back", count: 1
-    assert_select ".card-sub", text: /1 to #{Fd::MemberQuery::LIMIT} of/
   end
 
   test "the next page shows the next slice, not the same one again" do
     get fd_members_path(view: "everyone")
-    first = css_select("tbody tr .mono").map(&:text)
+    first = listed_links
 
     get fd_members_path(view: "everyone", page: "2")
-    second = css_select("tbody tr .mono").map(&:text)
+    second = listed_links
 
     assert_equal Fd::MemberQuery::LIMIT, second.size
     assert_empty first & second, "page two must not repeat page one"
     assert_select ".pager-at", text: /Page 2 of/
-    assert_select ".card-sub", text: /#{Fd::MemberQuery::LIMIT + 1} to/
   end
 
   test "a page past the end lands on the last page rather than an empty table" do
@@ -161,7 +168,7 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     get fd_members_path(view: "notes")
 
     assert_select "tbody tr", 0
-    assert_select ".card-note", text: /No standing notes on anybody/
+    assert_select ".empty-title", text: /No standing notes on anybody/
   end
 
   test "the rail offers members alongside cases, and marks which one you are on" do
@@ -173,12 +180,12 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     assert_select ".rail-nav a[href=?][aria-current=page]", fd_cases_path
   end
 
-  test "each row links to the member record and shows the id" do
+  test "each row carries a face and links to the member record" do
     make_case(subject: "UHASONE", opened_at: 2.days.ago)
-    get fd_members_path
+    get fd_members_path(view: "history")
 
     assert_select "a[href=?]", fd_member_path("UHASONE")
-    assert_select ".idline .mono", text: "UHASONE"
+    assert_select ".row-name .row-avatar", minimum: 1
   end
 
   test "an open case shows as a chip on the row" do

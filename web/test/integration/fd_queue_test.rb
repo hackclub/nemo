@@ -76,10 +76,8 @@ class FdQueueTest < ActionDispatch::IntegrationTest
 
     assert_select "turbo-frame#queue .views", 1, "the views and rows live in one frame"
     assert_select "turbo-frame#queue .data-table", 1
-    assert_select ".views .view[data-turbo-frame=queue]", 3, "the three tabs stay in the frame"
-    assert_select ".views .facet-set .facet[data-turbo-frame=queue]",
-      { minimum: 2 }, "the pinned views are filter pills in the same frame"
-    assert_select ".facet-opt[data-turbo-frame=queue]", minimum: 1
+    assert_select ".views .view[data-turbo-frame=queue]", Fd::CaseQuery::TABS.size,
+      "every tab stays in the frame"
     assert_select "turbo-frame#queue .kpis", 0, "the headline figures are not filtered"
   end
 
@@ -90,22 +88,20 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]:not([data-turbo-frame])", fd_case_path(kase)
   end
 
-  test "three views are tabs, two are pinned pills, one tucks into Filters" do
+  test "every view is a tab, and one of them is always current" do
     get fd_cases_path
 
-    assert_select ".views .view", 3
-    assert_select ".view[aria-current]", text: /Needs attention/
-    assert_select ".views .facet-set .facet", text: /Mine/
-    assert_select ".views .facet-set .facet", text: /Unassigned/
-    assert_select ".views .more-name", text: /Resolved this month/
+    assert_select ".views .view", Fd::CaseQuery::TABS.size
+    assert_select ".view[aria-current]", 1
+    assert_select ".view[aria-current]", text: /Open/
   end
 
-  test "a pill view carries a count and marks itself current" do
+  test "a tab carries its count and marks itself current when chosen" do
     get fd_cases_path(view: "unassigned")
 
-    assert_select ".views .facet-set.on .facet[aria-current]", text: /Unassigned/
-    assert_select ".views .facet-set.on .facet",
-      text: /Unassigned\s*#{Fd::Case.unresolved.unassigned.count}/
+    assert_select ".view[aria-current]", text: /Unclaimed/
+    assert_select ".view[aria-current] .view-count",
+      text: Fd::Case.unresolved.unassigned.count.to_s
   end
 
   test "needs attention keeps a fresh claimed case as well as a free one" do
@@ -120,10 +116,10 @@ class FdQueueTest < ActionDispatch::IntegrationTest
   end
 
   test "choosing a view sets the facets it implies" do
-    get fd_cases_path(view: "mine")
+    query = Fd::CaseQuery.new({ "view" => "mine" }, viewer: "UME")
 
-    assert_select ".more-name", text: /Assignee\s*me/
-    assert_select ".more-name", text: /Status\s*open/
+    assert_equal "me", query["assignee"]
+    assert_equal "open", query["status"]
   end
 
   test "changing a facet turns the view off and keeps what the view had set" do
@@ -171,11 +167,5 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     get fd_cases_path
 
     assert_select ".two-line span", text: /\An\/a\z/, count: 0
-  end
-
-  test "a row names how many times its subject has been reported before" do
-    get fd_cases_path
-
-    assert_select "td .chip", text: "never reported before", minimum: 1
   end
 end

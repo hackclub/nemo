@@ -70,7 +70,7 @@ class FdMentionsTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase)
     assert_select ".mention-field[data-mention-url-value=?]", fd_member_search_path
 
-    get fd_member_path("UPRIOR")
+    get fd_member_path("UPRIOR", show: "notes")
     assert_select ".mention-field[data-mention-url-value=?]", fd_member_search_path
 
     get fd_cases_path
