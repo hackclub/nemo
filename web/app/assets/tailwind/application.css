@@ -3313,6 +3313,16 @@
     overscroll-behavior: contain;
   }
 
+  .chat-log > .card-note {
+    margin: 0;
+  }
+
+  .chat-log:has(> .card-note:only-child) {
+    align-content: center;
+    justify-items: center;
+    text-align: center;
+  }
+
   .chat-earlier {
     text-align: center;
     padding-bottom: var(--s-2xs);
@@ -3344,8 +3354,6 @@
 
   .said-out .said-bubble {
     border-end-end-radius: 4px;
-    background-color: var(--warn-soft);
-    border-color: color-mix(in oklab, var(--warn) 30%, transparent);
   }
 
   .said-top {
