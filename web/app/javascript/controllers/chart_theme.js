@@ -12,7 +12,15 @@ export function palette() {
     ink3: token("--ink-3"),
     line: token("--line"),
     lineSoft: token("--line-soft"),
-    card: token("--card")
+    card: token("--card"),
+    series: [
+      token("--series-1"),
+      token("--series-2"),
+      token("--series-3"),
+      token("--series-4"),
+      token("--series-5"),
+      token("--series-0")
+    ]
   }
 }
 

@@ -36,8 +36,8 @@ export default class extends ThemedChartController {
       data: {
         labels: this.dataValue.labels,
         datasets: [
-          { ...created, backgroundColor: p.accent, borderRadius: 2, order: 2 },
-          { ...claimed, backgroundColor: p.warn, borderRadius: 2, order: 2 },
+          { ...created, backgroundColor: p.series[0], borderRadius: 2, order: 2 },
+          { ...claimed, backgroundColor: p.series[1], borderRadius: 2, order: 2 },
           {
             type: "line",
             label: "claim rate",

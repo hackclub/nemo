@@ -214,6 +214,6 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
     assert_select ".seg-radio input[name=role][value=subject]"
     assert_select ".people-list .person-row button.handle", text: "@UWATCHER"
     assert_select ".people-list .person-row", text: /they piled on/
-    assert_select ".people-list .person-row .chip.chip-warn", text: "involved"
+    assert_select ".people-list .people-role", text: "Involved"
   end
 end

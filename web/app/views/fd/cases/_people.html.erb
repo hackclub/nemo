@@ -1,40 +1,54 @@
-<div class="card card-flush">
-  <div class="people-list">
-    <% people.each do |person| %>
-      <div class="person-block">
-      <div class="line-row fat person-row">
-        <%= face(person.user_id) %>
-        <span class="grow two-line">
-          <b><%= handle(person.user_id) %></b>
-          <span><%= person_line(person, contexts[person.user_id], said_counts, total_messages) %></span>
-        </span>
-        <% person.records.each do |record| %>
-          <span class="chip-token">
-            <span class="chip <%= role_tone(record.role) %>"><%= role_label(record.role) %></span>
-            <%= render "person_remove", kase: kase, person: record %>
-          </span>
-        <% end %>
-        <% if priors.fetch(person.user_id, 0).positive? %>
-          <%= prior_chip_for(priors.fetch(person.user_id)) %>
-        <% end %>
-        <%= link_to "Their history", fd_member_path(person.user_id), class: "btn",
-              data: { turbo_frame: "person-drawer" } %>
-      </div>
-      <% Array(notes[person.user_id]).each do |note| %>
-        <div class="person-note">
-          <div class="note-body"><%= mentioned(note.body) %></div>
-          <div class="sub2"><%= note_byline(note) %></div>
-        </div>
-      <% end %>
-      </div>
-    <% end %>
+<div class="panel-head">
+  <span class="lbl grow"><%= people_head_line(people) %></span>
+  <%= opens_modal "case.people", "Add somebody", opens: "add-person", on: kase %>
+</div>
 
-    <%= opens_modal "case.people", opens: "add-person", on: kase,
-          css: "line-row fat person-add" do %>
-      <span class="face-slot" aria-hidden="true">+</span>
-      <span class="grow">Add somebody</span>
-    <% end %>
+<% if people.size.zero? %>
+  <div class="empty">
+    <p class="empty-title">Nobody is on this case yet</p>
+    <p class="card-note">
+      A case needs a subject before it can be resolved. If a note named somebody,
+      they are offered below.
+    </p>
+    <div class="empty-do">
+      <%= opens_modal "case.people", "Say who it is about", opens: "add-person", on: kase,
+            css: "btn btn-primary" %>
+    </div>
   </div>
+<% end %>
+
+<div class="people-list">
+  <% people_by_role(people).each do |heading, group| %>
+    <p class="people-role"><%= heading %></p>
+    <% group.each do |person| %>
+      <div class="person-block">
+        <div class="line-row fat person-row">
+          <%= face(person.user_id, css: "person-face") %>
+          <span class="grow two-line">
+            <b><%= handle(person.user_id) %></b>
+            <span>
+              <%= safe_join([also_roles(person),
+                    person_line(person, contexts[person.user_id], said_counts,
+                      total_messages)].compact, " · ") %>
+            </span>
+          </span>
+          <% if priors.fetch(person.user_id, 0).positive? %>
+            <%= prior_chip_for(priors.fetch(person.user_id)) %>
+          <% end %>
+          <%= link_to "History", fd_member_path(person.user_id), class: "btn",
+                data: { turbo_frame: "person-drawer" } %>
+          <%= render "person_menu", kase: kase, person: person %>
+        </div>
+
+        <% Array(notes[person.user_id]).each do |note| %>
+          <div class="person-note">
+            <div class="note-body"><%= mentioned(note.body) %></div>
+            <div class="sub2"><%= note_byline(note) %></div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
 </div>
 
 <%= render "mentioned", kase: kase, mentioned: mentioned %>

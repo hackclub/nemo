@@ -19,8 +19,8 @@ export default class extends ThemedChartController {
 
     const data = {
       ...this.dataValue,
-      datasets: this.dataValue.datasets.map((set) => ({
-        backgroundColor: p.accent,
+      datasets: this.dataValue.datasets.map((set, index) => ({
+        backgroundColor: p.series[index % p.series.length],
         borderRadius: 3,
         ...set,
       })),

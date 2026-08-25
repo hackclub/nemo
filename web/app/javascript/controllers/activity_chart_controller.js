@@ -37,7 +37,7 @@ export default class extends ThemedChartController {
 
   draw() {
     const p = palette()
-    const series = [p.accent, p.warn]
+    const series = p.series
     let bars = 0
 
     const datasets = (this.dataValue.datasets || []).map((set) => {

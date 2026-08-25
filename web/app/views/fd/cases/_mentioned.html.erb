@@ -1,13 +1,10 @@
-<% if mentioned.any? %>
+<% mentioned.each do |user_id| %>
   <div class="offered">
-    <span class="offered-note">Named in a note, not logged</span>
-    <% mentioned.each do |user_id| %>
-      <span class="offered-one">
-        <%= link_to at_name(user_id), fd_member_path(user_id), class: "mention" %>
-        <%= gated_button "case.people", "Log", fd_case_participants_path(kase),
-              on: kase, css: "text-btn",
-              params: { user_ids: [user_id], role: "involved" } %>
-      </span>
-    <% end %>
+    <span class="grow rail-line">
+      <%= link_to at_name(user_id), fd_member_path(user_id), class: "mention" %>
+      is named in a note but is not on the case
+    </span>
+    <%= gated_button "case.people", "Add them", fd_case_participants_path(kase),
+          on: kase, css: "btn", params: { user_ids: [user_id], role: "involved" } %>
   </div>
 <% end %>

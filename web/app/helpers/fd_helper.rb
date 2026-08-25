@@ -28,33 +28,10 @@ module FdHelper
       data: { turbo_frame: "person-drawer" }
   end
 
-  def handle_list(user_ids)
-    return "n/a" if user_ids.blank?
-
-    safe_join(user_ids.map { |id| handle(id) }, ", ")
-  end
-
   SLACK_TEAM_URL = "https://hackclub.slack.com/team".freeze
 
   def slack_member_url(user_id)
     "#{SLACK_TEAM_URL}/#{user_id}"
-  end
-
-  def claimed_phrase(context)
-    return "claimed" if context.cohort_at.nil?
-
-    if context.claimed_at.to_date == context.cohort_at.to_date
-      "claimed the same day"
-    else
-      "claimed #{on_day(context.claimed_at)}"
-    end
-  end
-
-  def joined_line(context)
-    return "not in the warehouse yet" if context.nil? || !context.known?
-    return "joined #{on_day(context.cohort_at)}" if context.claimed_at.nil?
-
-    "joined #{on_day(context.cohort_at)}, #{claimed_phrase(context)}"
   end
 
   def identity_line(identity)
@@ -192,15 +169,6 @@ module FdHelper
     "sev-calm"
   end
 
-  def member_activity_line(context)
-    return nil unless context&.known?
-
-    parts = []
-    parts << "#{number_with_delimiter(context.messages_posted)} messages" if
-      context.messages_posted
-    parts.join(" · ").presence
-  end
-
   def on_day(at, none: "n/a")
     at ? at.to_time.strftime("%-d %b %Y") : none
   end
@@ -232,20 +200,6 @@ module FdHelper
     end
     chips << tag.span("resolved", class: "chip chip-off") if chips.empty?
     safe_join(chips, " ")
-  end
-
-  HISTORY_TONES = {
-    "open" => "chip-crit",
-    "standing" => "chip-warn",
-    "action taken" => "chip-good",
-    "resolved, no action" => "chip-good",
-    "no action" => "chip-good",
-    "reversed" => "chip-off",
-    "logged in" => "chip-off"
-  }.freeze
-
-  def history_chip_tone(state)
-    HISTORY_TONES.fetch(state.to_s, "chip-off")
   end
 
   def wrong_on?(field)
@@ -296,54 +250,8 @@ module FdHelper
     HISTORY_EMPTY.fetch(only, "Nothing on record.")
   end
 
-  def shape_sub(record)
-    return "one case" if record.spine.one?
-
-    months = ((record.last_case_at - record.first_case_at) / 30.days).floor
-    span = months.positive? ? pluralize(months, "month") : "under a month"
-    "#{span}, #{pluralize(record.spine.size, 'case')}"
-  end
-
-  def action_tally(record)
-    return pluralize(record.actions.size, "action") if record.reversed_actions.zero?
-
-    "#{record.reversed_actions} of #{record.actions.size} actions undone"
-  end
-
   def case_age_seconds(kase)
     (kase.resolved_at || Time.current) - kase.opened_at
-  end
-
-  def case_age_chip(kase)
-    seconds = case_age_seconds(kase)
-    tone = kase.resolved? ? "chip-off" : age_tone(seconds)
-    tag.span(case_age_label(seconds), class: "chip #{tone}")
-  end
-
-  def member_facts(context, identity)
-    parts = []
-    parts << joined_line(context)
-    parts << "here #{tenure_label(context.tenure_days)}" if context&.tenure_days
-    parts << "active #{last_active_label(context.last_active_at)}" if context&.last_active_at
-    if context&.messages_posted
-      parts << "#{fact_number(context.messages_posted)} messages" \
-               "#{" in #{context.channels_joined} channels" if context.channels_joined}"
-    end
-    safe_join(parts.compact.map { |part| tag.span(part) } + [identity_line(identity)], " ")
-  end
-
-  def member_standing_tone(standing)
-    return "stand-clean" if standing.clean?
-    return "stand-live" if standing.anything_in_force?
-
-    "stand-quiet"
-  end
-
-  def member_standing_line(standing, names)
-    return "Nothing on record, and nothing ever done to them." if standing.clean?
-
-    safe_join([priors_phrase(standing), actions_phrase(standing),
-               open_case_phrase(standing, names)].compact, " ")
   end
 
   def priors_phrase(standing)
@@ -360,34 +268,7 @@ module FdHelper
     "#{parts.join(', ')}."
   end
 
-  def open_case_phrase(standing, names)
-    kase = standing.open_case
-    return "No case is open on them." if kase.nil?
-
-    holders = standing.holders
-    with = if holders.empty?
-      "with nobody"
-    elsif holders.include?(current_staff&.user_id)
-      "with you"
-    else
-      "with #{names.list(holders)}"
-    end
-    safe_join(["Case", link_to("##{kase.id}", fd_case_path(kase), class: "lnk"),
-               "is open, #{with}."], " ")
-  end
-
   BANS = %w[perma_ban indef_ban temp_ban channel_ban].freeze
-
-  def standing_chip(standing)
-    action = standing.worst
-    return tag.span("nothing on record", class: "chip chip-good") if standing.clean?
-    return tag.span("nothing standing", class: "chip chip-off") if action.nil?
-
-    said = action_label(action.type_key).downcase
-    said += action.expires? ? " until #{on_day(action.expires_at)}" : " in force"
-    tone = BANS.include?(action.type_key) ? "chip-crit" : "chip-warn"
-    tag.span(said, class: "chip #{tone}")
-  end
 
   def subject_standing(user_id, context)
     parts = ["subject"]
@@ -402,6 +283,54 @@ module FdHelper
     parts << said_phrase(said_counts.fetch(person.user_id, 0), total_messages)
     parts += person.records.filter_map { |record| record.detail.presence }
     parts.compact.join(" · ").presence || person.user_id
+  end
+
+  PEOPLE_ORDER = %w[subject involved reporter].freeze
+
+  PEOPLE_HEADINGS = {
+    "subject" => ["Subject", "Subjects"],
+    "involved" => ["Involved", "Involved"],
+    "reporter" => ["Reported it", "Reported it"]
+  }.freeze
+
+  def main_role(person)
+    PEOPLE_ORDER.find { |role| person.roles.include?(role) } || person.role
+  end
+
+  def people_by_role(people)
+    grouped = people.group_by { |person| main_role(person) }
+    PEOPLE_ORDER.filter_map do |role|
+      found = grouped[role]
+      next if found.blank?
+
+      one, many = PEOPLE_HEADINGS.fetch(role)
+      [found.one? ? one : many, found]
+    end
+  end
+
+  def people_head_line(people)
+    return "Nobody on this case" if people.size.zero?
+
+    "#{pluralize(people.size, "person")} on this case"
+  end
+
+  def also_roles(person)
+    extra = person.roles - [main_role(person)]
+    return if extra.empty?
+
+    "also #{extra.map { |role| role_label(role) }.to_sentence}"
+  end
+
+  REMOVE_LABELS = {
+    "subject" => "Remove as the subject",
+    "involved" => "Remove as involved",
+    "reporter" => "Remove as a reporter"
+  }.freeze
+
+  def remove_person_label(person, record)
+    return "Take them off the case" if person.records.one?
+
+    REMOVE_LABELS.fetch(record.role, "Remove as #{record.role}")
   end
 
   def said_phrase(said, total)
@@ -423,17 +352,6 @@ module FdHelper
     return "same subject" if both.any?
 
     "also open"
-  end
-
-  def resolve_consequences(kase, open_reports)
-    lines = ["Case ##{kase.id} closes, and leaves the queue."]
-    if open_reports.positive?
-      lines << "#{pluralize(open_reports, 'reporter')} #{open_reports == 1 ? 'is' : 'are'} " \
-               "told the outcome, unless you turn that off."
-    end
-    lines << "Filing a report logs an action against somebody, which counts as a prior."
-    lines << "It is written to the trail either way, and can be reopened."
-    lines
   end
 
   def flagged_count(row, flags)
@@ -612,13 +530,6 @@ module FdHelper
     line.body
   end
 
-  def reporter_names(reports)
-    return "anonymous" if reports.all?(&:anonymous?)
-
-    named = reports.reject(&:anonymous?).map { |report| names[report.reporter_user_id] }.uniq
-    reports.any?(&:anonymous?) ? "#{named.to_sentence} and anonymous" : named.to_sentence
-  end
-
   def merge_candidate_line(kase)
     held = if kase.assigned?
       "with #{names.list(kase.assignee_user_ids)}"
@@ -679,13 +590,6 @@ module FdHelper
     on_day(report.received_at)
   end
 
-  def report_when_line(report, kase)
-    parts = [report.received_at.strftime("%-d %b %Y, %H:%M")]
-    parts << report.closed_line(names) if report.told_of_outcome?
-    parts << "not told the outcome yet" if kase.resolved? && !report.told_of_outcome?
-    parts.compact.join(" · ")
-  end
-
   RESOLUTION_LABELS = Fd::Case::RESOLUTION_LABELS
 
   def told_chip(reports, open_reports)
@@ -725,36 +629,6 @@ module FdHelper
 
   def category_options
     Fd::Case::CATEGORIES.map { |key| [category_label(key), key] }
-  end
-
-  def span_label(seconds)
-    return "n/a" if seconds.nil?
-
-    days = seconds / 86_400.0
-    return "#{days.round(1)}d" if days >= 1
-
-    hours = seconds / 3600.0
-    return "#{hours.round}h" if hours >= 1
-
-    "#{(seconds / 60).round}m"
-  end
-
-  def median_note(stats)
-    return "nothing resolved this quarter" if stats.median_now.nil?
-    return "no quarter to compare with yet" if stats.median_before.nil?
-
-    "was #{span_label(stats.median_before)} last quarter"
-  end
-
-  def oldest_unassigned_chip(stats)
-    return nil if stats.oldest_unassigned.nil?
-
-    age = Time.current - stats.oldest_unassigned
-    tag.span("oldest #{case_age_label(age)}", class: "chip #{age_tone(age)}")
-  end
-
-  def since_label(at)
-    at ? "since #{at.strftime('%b %Y')}" : "none yet"
   end
 
   def facet_link(query, key, value)
@@ -866,17 +740,6 @@ module FdHelper
     "#{names[ids.first]} and #{pluralize(ids.size - 1, 'other')}"
   end
 
-  def row_reporter_id(kase)
-    reports = kase.reports.to_a
-    return kase.opened_by if reports.empty?
-
-    reports.reject(&:anonymous?).first&.reporter_user_id
-  end
-
-  def row_reporter_avatar(kase)
-    face(row_reporter_id(kase))
-  end
-
   def row_reporter_label(kase)
     reports = kase.reports.to_a
     return names[kase.opened_by] if reports.empty?
@@ -909,18 +772,6 @@ module FdHelper
     tag.span(prior_phrase(count), class: "chip #{prior_tone(count)}")
   end
 
-  def case_option_label(kase)
-    parts = ["##{kase.id}"]
-    parts << subject_handles(kase)
-    parts << category_short(kase.category_key) if kase.category_key
-    parts << case_age_label(case_age_seconds(kase))
-    parts.join(" · ")
-  end
-
-  def case_options(cases)
-    cases.map { |kase| [case_option_label(kase), kase.id] }
-  end
-
   CASE_TAB_LABELS = {
     "report" => "Report", "evidence" => "Evidence", "actions" => "Actions",
     "notes" => "Notes", "people" => "People"
@@ -949,15 +800,6 @@ module FdHelper
     case_origin_label(kase, reports)
   end
 
-  def case_hands_chip(kase)
-    return if kase.resolved?
-    return tag.span("unclaimed", class: "chip chip-off") unless kase.assigned?
-    return tag.span("yours", class: "chip chip-good") if
-      kase.assigned_to?(current_staff&.user_id)
-
-    tag.span(safe_join(["with ", member_link(kase.assignee_user_ids.first)]), class: "chip")
-  end
-
   def case_origin_label(kase, reports)
     first = Array(reports).min_by(&:received_at)
     return safe_join(["opened #{on_day(kase.opened_at)} by ",
@@ -970,12 +812,6 @@ module FdHelper
     safe_join(["#{said} by ", member_link(first.reporter_user_id)])
   end
 
-
-  def member_links(user_ids)
-    return "n/a" if user_ids.blank?
-
-    safe_join(Array(user_ids).map { |user_id| member_link(user_id) }, ", ")
-  end
 
   ACTION_LABELS = Fd::Action::LABELS
 
@@ -1017,10 +853,6 @@ module FdHelper
     "reversed #{on_day(action.reversed_at)} by #{names[action.reversed_by]}#{why}"
   end
 
-  def action_labels(actions)
-    actions.map { |action| action_label(action.type_key).downcase }.uniq.to_sentence
-  end
-
   def action_state_chip(action)
     return tag.span("reversed", class: "chip chip-off") if action.reversed?
     return tag.span("expired", class: "chip chip-off") if action.expired?
@@ -1056,50 +888,12 @@ module FdHelper
     end
   end
 
-  def cited_line(action)
-    said = action.cited_message
-    return nil if said.nil?
-
-    "cites #{names[said.author_user_id]} in #{said.channel_id}, " \
-      "#{said.posted_at.strftime('%-d %b %H:%M')}"
-  end
-
-  def action_target_note(action, kase)
-    return "the subject" if kase.subject_user_ids.include?(action.target_user_id)
-
-    "not the subject"
-  end
-
   def fact_number(value)
     value ? number_with_delimiter(value) : "n/a"
   end
 
   def last_active_label(at)
     ago_label(at)
-  end
-
-  def pane_identity_line(user_id, context)
-    parts = [user_id.to_s]
-    if context&.known?
-      parts << "joined #{context.cohort_at.to_date.strftime('%b %Y')}" if context.cohort_at
-      parts << member_activity_line(context)
-      parts << "active #{last_active_label(context.last_active_at)}" if context.last_active_at
-    else
-      parts << "not in the warehouse yet"
-    end
-    parts.compact_blank.join(" · ")
-  end
-
-  def subject_context_line(context)
-    return "nobody identified yet" if context.nil?
-    return "not in the warehouse yet" unless context.known?
-
-    parts = [tenure_label(context.tenure_days)]
-    if context.messages_posted
-      parts << "#{number_with_delimiter(context.messages_posted)} messages"
-    end
-    parts << "#{context.channels_joined} channels" if context.channels_joined
-    parts.join(" · ")
   end
 
   DECISION_CHIPS = {
@@ -1145,28 +939,6 @@ module FdHelper
   def role_chip(role)
     tone, said = ROLE_CHIPS.fetch(role, ["chip-off", role])
     tag.span(said, class: "chip #{tone}")
-  end
-
-  def you_initial
-    said = current_profile&.display_name.presence || current_staff.user_id
-    said.strip.first.to_s.upcase
-  end
-
-  def slack_link_chip(held, gone = nil)
-    return tag.span("stopped working", class: "chip chip-warn") if gone || held&.stumbled?
-    return tag.span("not linked", class: "chip chip-off") if held.nil?
-
-    tag.span("linked", class: "chip chip-good")
-  end
-
-  def role_tally(grants)
-    counted = grants.group_by(&:role).transform_values(&:size)
-    said = Fd::Permission::ROLES.reverse.filter_map do |role|
-      next if counted[role].to_i.zero?
-
-      "#{counted[role]} #{Fd::Permission::ROLE_LABELS.fetch(role).downcase.pluralize(counted[role])}"
-    end
-    said.any? ? "#{pluralize(grants.size, 'person')} · #{said.join(' · ')}" : "nobody yet"
   end
 
   def holds_mark(held)
@@ -1322,13 +1094,6 @@ module FdHelper
     return "no change in 30 days" if given.zero? && taken_back.zero?
 
     "#{given} given, #{taken_back} taken back"
-  end
-
-  def reads_note(counts, top)
-    return "none in 30 days" if top.nil?
-
-    said = pluralize(counts.size, "person")
-    counts.one? ? said : "#{said}, most by #{names[top.first]}"
   end
 
   def refused_note(kinds)

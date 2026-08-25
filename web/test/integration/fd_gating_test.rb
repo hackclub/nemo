@@ -34,7 +34,7 @@ class FdGatingTest < ActionDispatch::IntegrationTest
       "a tooltip is no use on a keyboard, so the reason is in the row"
 
     get fd_case_path(kase, tab: "people")
-    assert_select ".person-add.btn-off", text: /Add somebody/
+    assert_select ".panel-head .btn-off", text: /Add somebody/
   end
 
   test "every item in the overflow menu can be reached by keyboard" do

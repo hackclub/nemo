@@ -73,7 +73,7 @@ class FdOfferedTest < ActionDispatch::IntegrationTest
     note "both <@U0NAMED01> and <@U0NAMED02> were in it"
     get fd_case_path(@kase, tab: "people")
 
-    assert_select ".offered-one", 2
+    assert_select ".offered", 2
     assert_select ".offered a.mention", text: "@U0NAMED01"
     assert_select ".offered a.mention", text: "@U0NAMED02"
   end
@@ -82,7 +82,7 @@ class FdOfferedTest < ActionDispatch::IntegrationTest
     note "<@U0NAMED01> then <@U0NAMED01> again"
     get fd_case_path(@kase, tab: "people")
 
-    assert_select ".offered-one", 1
+    assert_select ".offered", 1
   end
 
   test "a standing note on the subject can offer somebody too" do

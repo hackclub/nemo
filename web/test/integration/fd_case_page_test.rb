@@ -30,7 +30,7 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase, tab: "people")
 
     assert_select ".people-list .person-row", 3, "everybody is on the page at once"
-    assert_select ".people-list .person-row a.btn", text: "Their history", count: 3
+    assert_select ".people-list .person-row a.btn", text: "History", count: 3
   end
 
   test "a second subject is a row of their own" do
@@ -56,8 +56,8 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase, tab: "people")
 
     assert_select ".people-list .person-row", text: /@UBOTH/, count: 1
-    assert_select ".people-list .person-row .chip", text: "reported it"
-    assert_select ".people-list .person-row .chip", text: "involved"
+    assert_select ".people-list .people-role", text: "Involved"
+    assert_select ".people-list .person-row", text: /also reported it/
   end
 
   test "each tab shows only its own section, not the others" do
@@ -122,7 +122,9 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select ".people-list .person-row", 0
-    assert_select ".people-list .person-add", 1, "adding somebody is still offered"
+    assert_select ".empty-title", text: "Nobody is on this case yet"
+    assert_select ".empty-do .btn", text: "Say who it is about",
+      count: 1, message: "adding somebody is still offered"
   end
 
   test "a standing note on a subject shows under them in the people tab" do

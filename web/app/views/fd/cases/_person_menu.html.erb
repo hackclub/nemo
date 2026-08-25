@@ -1,0 +1,18 @@
+<details class="menu" data-controller="menu">
+  <summary class="btn btn-only" aria-label="More for <%= names[person.user_id] %>">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+  </summary>
+  <div class="menu-pop">
+    <%= link_to "Their cases", fd_cases_path(subject: person.user_id), class: "btn" %>
+    <%= link_to "Open in Slack", slack_member_url(person.user_id), class: "btn",
+          target: "_blank", rel: "noopener" %>
+    <div class="menu-sep"></div>
+    <% person.records.each do |record| %>
+      <%= gated_button "case.people", remove_person_label(person, record),
+            fd_case_participant_path(kase, person.user_id), on: kase, css: "btn",
+            method: :delete, params: { role: record.role },
+            form: { class: "contents", data: { turbo_frame: "_top",
+            turbo_confirm: "Take @#{person.user_id} off this case?" } } %>
+    <% end %>
+  </div>
+</details>
