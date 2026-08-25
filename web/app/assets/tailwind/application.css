@@ -476,6 +476,10 @@
     outline: none;
   }
 
+  .field-top:focus-within {
+    border-color: var(--accent);
+  }
+
   .topbar-icons {
     display: flex;
     align-items: center;
@@ -673,6 +677,10 @@
 
   .note-input:focus {
     outline: none;
+  }
+
+  .note-composer:focus-within {
+    border-color: var(--accent);
   }
 
   .record-strip {
@@ -2238,9 +2246,12 @@
     color: var(--ink);
     background: none;
     border: 0;
-    outline: none;
     flex: 1;
     min-width: 8rem;
+  }
+
+  .pick-input:focus {
+    outline: none;
   }
 
   .token {
