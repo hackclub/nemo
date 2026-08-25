@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { reloadFrame } from "turbo_actions"
 
 export default class extends Controller {
   static values = { frame: String }
@@ -38,7 +39,6 @@ export default class extends Controller {
   }
 
   catchUp() {
-    const frame = document.getElementById(this.frameValue)
-    if (frame) frame.reload()
+    reloadFrame(document.getElementById(this.frameValue))
   }
 }

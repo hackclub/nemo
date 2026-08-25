@@ -1,14 +1,17 @@
 import { Turbo } from "@hotwired/turbo-rails"
 
-Turbo.StreamActions.reload_frame = function () {
-  const frame = document.getElementById(this.target)
+export function reloadFrame(frame, src = null) {
   if (!frame) return
 
-  const src = this.getAttribute("src")
-  if (src && frame.src !== src) {
-    frame.src = src
+  const want = src || frame.dataset.src
+  if (want && frame.getAttribute("src") !== want) {
+    frame.setAttribute("src", want)
     return
   }
 
-  frame.reload()
+  if (frame.getAttribute("src")) frame.reload()
+}
+
+Turbo.StreamActions.reload_frame = function () {
+  reloadFrame(document.getElementById(this.target), this.getAttribute("src"))
 }

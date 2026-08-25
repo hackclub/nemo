@@ -41,14 +41,15 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_match(/write something/, flash[:alert])
   end
 
-  test "the chat frame carries the source it reloads from" do
+  test "the chat frame knows where to reload from without refetching on sight" do
     get fd_case_path(@kase, tab: "report")
 
     frame = css_select("turbo-frame#chat-log-#{@kase.id}").first
     assert frame, "the chat log has to be a frame for the broadcast to target"
-    assert_equal fd_case_chat_log_path(@kase), frame["src"],
-      "without a src, reload() sets src to null twice and fetches nothing"
-    assert frame["complete"], "the first paint is already rendered, so it must not refetch"
+    assert_nil frame["src"],
+      "a src on a frame we already filled is refetched at once, whatever complete says"
+    assert_equal fd_case_chat_log_path(@kase), frame["data-src"],
+      "reload_frame and catch-up read this, or reload() fetches nothing"
   end
 
   test "a browser that lost the socket is told which frame to catch up" do
