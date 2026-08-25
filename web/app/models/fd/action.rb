@@ -20,6 +20,7 @@ module Fd
     scope :oldest_first, -> { order(:performed_at) }
     scope :for_target, ->(user_id) { where(target_user_id: user_id) }
     scope :expiring, -> { live.where.not(expires_at: nil) }
+    scope :in_force, ->(at = Time.current) { live.where("expires_at > ?", at) }
 
     def reversed?
       reversed_at.present?

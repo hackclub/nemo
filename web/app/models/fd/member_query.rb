@@ -2,8 +2,8 @@ module Fd
   class MemberQuery
     Facet = Struct.new(:key, :label, :value, :value_label, :options, :on, keyword_init: true)
     View = Struct.new(:key, :label, :count, :current, keyword_init: true)
-    Row = Struct.new(:user_id, :cases, :subject_of, :logged_in, :open_cases, :actions, :notes,
-      :priors, :last_case_at, keyword_init: true)
+    Row = Struct.new(:user_id, :cases, :subject_of, :logged_in, :open_cases, :actions, :in_force,
+      :notes, :priors, :last_case_at, keyword_init: true)
 
     VIEWS = {
       "everyone" => "Everyone",
@@ -266,6 +266,7 @@ module Fd
     def filter_state(found)
       case self["state"]
       when "open" then found.select { |row| row.open_cases.positive? }
+      when "force" then found.select { |row| row.in_force.positive? }
       when "noted" then found.select { |row| row.notes.positive? }
       when "clean" then found.select { |row| row.subject_of.zero? && row.logged_in.zero? }
       else found
@@ -350,7 +351,7 @@ module Fd
 
     def build_summaries
       found = Hash.new { |all, id| all[id] = Row.new(user_id: id, cases: 0, subject_of: 0,
-        logged_in: 0, open_cases: 0, actions: 0, notes: 0, priors: 0) }
+        logged_in: 0, open_cases: 0, actions: 0, in_force: 0, notes: 0, priors: 0) }
 
       conduct_rows.each do |row|
         held = found[row["user_id"]]
@@ -361,6 +362,7 @@ module Fd
         held.last_case_at = row["last_case_at"]
       end
       Action.group(:target_user_id).count.each { |id, n| found[id].actions = n }
+      Action.in_force.group(:target_user_id).count.each { |id, n| found[id].in_force = n }
       Note.standing.visible.group(:subject_user_id).count.each { |id, n| found[id].notes = n }
       prior_counts.each { |id, n| found[id].priors = n }
 

@@ -87,6 +87,28 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     assert_select ".view .view-count", Fd::MemberQuery::TABS.size
   end
 
+  test "the in force view keeps only people with something still running" do
+    live = make_case(subject: "ULIVE", opened_at: 9.days.ago)
+    act_on live, target: "ULIVE", type_key: "shush", expires_at: 5.days.from_now
+
+    lapsed = make_case(subject: "ULAPSED", opened_at: 40.days.ago)
+    act_on lapsed, target: "ULAPSED", type_key: "shush", expires_at: 1.day.ago
+
+    warned = make_case(subject: "UWARNED", opened_at: 9.days.ago)
+    act_on warned, target: "UWARNED", type_key: "warning"
+
+    lifted = make_case(subject: "ULIFTED", opened_at: 9.days.ago)
+    act_on lifted, target: "ULIFTED", type_key: "shush", expires_at: 5.days.from_now,
+      reversed_at: 1.day.ago, reversed_by: "UME", reversal_reason: "appeal upheld"
+
+    get fd_members_path(view: "force")
+
+    assert listed?("ULIVE")
+    assert_not listed?("ULAPSED"), "its due date has passed"
+    assert_not listed?("UWARNED"), "a warning has no due date to reach"
+    assert_not listed?("ULIFTED"), "it was reversed"
+  end
+
   test "the open case view keeps only people with one open" do
     make_case(subject: "UOPEN", opened_at: 2.days.ago)
     make_case(subject: "UCLOSED", opened_at: 9.days.ago, resolved_at: 1.day.ago,

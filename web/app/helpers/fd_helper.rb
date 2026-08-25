@@ -215,7 +215,9 @@ module FdHelper
   def member_state_chips(row)
     chips = []
     chips << tag.span("open case", class: "chip chip-crit") if row.open_cases.positive?
-    chips << tag.span(pluralize(row.notes, "note"), class: "chip chip-warn") if
+    chips << tag.span("#{row.in_force} in force", class: "chip chip-warn") if
+      row.in_force.positive?
+    chips << tag.span(pluralize(row.notes, "note"), class: "chip chip-off") if
       row.notes.positive?
     if chips.empty? && row.subject_of.zero? && row.logged_in.zero?
       chips << tag.span("nothing on record", class: "chip chip-good")
