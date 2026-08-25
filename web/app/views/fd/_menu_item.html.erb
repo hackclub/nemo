@@ -1,0 +1,30 @@
+<span class="mi">
+  <span class="mi-ic" aria-hidden="true">
+    <% case icon %>
+    <% when "note" %>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v18H6.5A1.5 1.5 0 0 1 5 19.5Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+    <% when "act" %>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4 3.4 7.4 8 8 4.6-.6 8-4 8-8V6l-8-3Z"/><path d="M12 8v5"/><path d="M12 16v.01"/></svg>
+    <% when "decision" %>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v14H6.5A1.5 1.5 0 0 0 5 18.5Z"/><path d="M5 18.5A1.5 1.5 0 0 0 6.5 20H19"/></svg>
+    <% when "hand" %>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 7 5 12l5 5"/><path d="M5 12h9a5 5 0 0 1 5 5v2"/></svg>
+    <% when "join" %>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M18 8v6M15 11h6"/></svg>
+    <% when "merge" %>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v6a5 5 0 0 0 5 5h7"/><path d="M18 3v6a5 5 0 0 1-5 5"/><path d="m15 11 3 3-3 3"/></svg>
+    <% when "cases" %>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4 3.4 7.4 8 8 4.6-.6 8-4 8-8V6l-8-3Z"/></svg>
+    <% when "external" %>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 19V8a1.5 1.5 0 0 1 1.5-1.5H10"/></svg>
+    <% when "resolve" %>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>
+    <% end %>
+  </span>
+  <span class="mi-body">
+    <span class="mi-t"><%= label %></span>
+    <% if local_assigns[:note].present? %>
+      <span class="mi-note"><%= note %></span>
+    <% end %>
+  </span>
+</span>

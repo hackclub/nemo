@@ -139,7 +139,7 @@ class FdMergesTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     get fd_case_path(@dup_one)
 
-    assert_select "label[for=merge-case]", text: "Merge into another case"
+    assert_select "label[for=merge-case] .mi-t", text: "Merge into another case"
     assert_select "turbo-frame#merge-body[src=?][loading=lazy]",
       "/fd/cases/#{@dup_one.id}/merge"
     assert_select "input[name=duplicate_of]", count: 0

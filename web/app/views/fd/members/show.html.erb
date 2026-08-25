@@ -10,9 +10,10 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
     </summary>
     <div class="menu-pop">
-      <%= link_to "Their cases", fd_cases_path(subject: @user_id) %>
-      <%= link_to "Open in Slack", slack_member_url(@user_id),
-            target: "_blank", rel: "noopener" %>
+      <%= link_to menu_item("cases", "Their cases"), fd_cases_path(subject: @user_id),
+            class: "btn" %>
+      <%= link_to menu_item("external", "Open in Slack"), slack_member_url(@user_id),
+            class: "btn", target: "_blank", rel: "noopener" %>
     </div>
   </details>
 <% end %>

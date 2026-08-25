@@ -24,26 +24,33 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
     </summary>
     <div class="menu-pop">
-      <% unless @case.resolved? %>
-        <%= opens_modal "case.resolve", "Merge into another case", opens: "merge-case",
-              on: @case %>
-      <% end %>
-      <%= opens_modal "case.note", "Add a note", opens: "add-note" %>
-      <%= opens_modal "case.act", "Log an action", opens: "log-action", on: @case %>
+      <%= opens_modal "case.note", menu_item("note", "Add a note"), opens: "add-note" %>
+      <%= opens_modal "case.act", menu_item("act", "Log an action"), opens: "log-action",
+            on: @case %>
       <% if @decisions.any? %>
-        <%= opens_modal "decision.link", "Link a decision", opens: "follow-decision" %>
+        <%= opens_modal "decision.link", menu_item("decision", "Link a decision"),
+              opens: "follow-decision" %>
       <% end %>
+
       <% unless @case.resolved? %>
-        <div class="menu-sep"></div>
         <% if @case.assigned_to?(current_staff.user_id) %>
-          <%= gated_button "case.open", "Put it back in the queue", fd_case_claim_path(@case),
-                on: @case, method: :delete %>
+          <p class="menu-group">Who holds it</p>
+          <%= gated_button "case.open", menu_item("hand", "Put it back in the queue"),
+                fd_case_claim_path(@case), on: @case, method: :delete %>
         <% elsif @case.assigned? %>
-          <%= gated_button "case.open", "Put myself on it too", fd_case_claim_path(@case),
-                on: @case, method: :post %>
-        <% else %>
-          <%= opens_modal "case.resolve", "Resolve without claiming", opens: "resolve-case",
-                on: @case %>
+          <p class="menu-group">Who holds it</p>
+          <%= gated_button "case.open", menu_item("join", "Put myself on it too"),
+                fd_case_claim_path(@case), on: @case, method: :post %>
+        <% end %>
+
+        <p class="menu-group">Closes this case</p>
+        <%= opens_modal "case.resolve", menu_item("merge", "Merge into another case",
+              note: "Folds it into an older case, which then holds both"),
+              opens: "merge-case", on: @case %>
+        <% unless @case.assigned? %>
+          <%= opens_modal "case.resolve", menu_item("resolve", "Resolve without claiming",
+                note: "Closes it under your name without putting you on it"),
+                opens: "resolve-case", on: @case %>
         <% end %>
       <% end %>
     </div>

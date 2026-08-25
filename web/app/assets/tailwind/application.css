@@ -1862,7 +1862,53 @@
     width: 100%;
     height: auto;
     font-weight: 500;
-    padding: 7px var(--s-2xs);
+    padding: 7px 9px;
+  }
+
+  .menu-group {
+    font-family: var(--font-code);
+    font-size: var(--t-micro);
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0;
+    padding: 10px 9px 3px;
+  }
+
+  .mi {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    gap: 9px;
+    align-items: start;
+    width: 100%;
+    text-align: start;
+  }
+
+  .mi-ic {
+    display: grid;
+    place-items: center;
+    color: var(--ink-3);
+    padding-top: 1px;
+  }
+
+  .mi-body {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .mi-t {
+    font-size: var(--t-body);
+    font-weight: 500;
+  }
+
+  .mi-note {
+    font-size: var(--t-fine);
+    font-weight: 400;
+    color: var(--ink-3);
+    white-space: normal;
+    line-height: 1.4;
   }
 
   .menu-pop .btn:hover,
