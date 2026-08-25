@@ -893,6 +893,14 @@
     padding: 0;
   }
 
+  .pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-xs);
+    padding: var(--s-xs) 0;
+  }
+
   .bar-sep {
     width: 1px;
     height: 18px;

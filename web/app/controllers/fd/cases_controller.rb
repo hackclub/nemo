@@ -3,6 +3,7 @@ module Fd
     permit "case.open", only: [:create, :update]
 
     TABS = %w[report evidence actions notes people].freeze
+    PER_PAGE = 50
 
     def index
       @open_modal = params[:open] == "1"
@@ -266,7 +267,11 @@ module Fd
 
     def load_queue
       @query = CaseQuery.new(params, viewer: current_staff&.user_id)
-      @cases = @query.relation.includes(:subjects, :assignees, :reports).to_a
+      @page = [params[:page].to_i, 1].max
+      found = @query.relation.includes(:subjects, :assignees, :reports)
+        .offset((@page - 1) * PER_PAGE).limit(PER_PAGE + 1).to_a
+      @more = found.size > PER_PAGE
+      @cases = found.first(PER_PAGE)
       case_ids = @cases.map(&:id)
       lone_subjects = @cases.filter_map { |kase| kase.subject_user_ids.first if kase.subject_user_ids.one? }
       @prior_counts = Case.prior_counts_for(lone_subjects)

@@ -14,8 +14,9 @@ module Fd
       "quarter" => "this quarter", "year" => "this year"
     }.freeze
     SORT = {
-      "oldest" => "oldest first", "newest" => "newest first", "actions" => "most actions"
+      "opened" => "when it opened", "case" => "case number", "actions" => "most actions"
     }.freeze
+    DIRS = %w[asc desc].freeze
     ASSIGNEE = { "anyone" => "anyone", "me" => "me", "nobody" => "nobody" }.freeze
 
     AGE_WARN = 2.days
@@ -24,24 +25,24 @@ module Fd
     AGE_WORDS = { "2d" => "older than two days", "5d" => "older than five days" }.freeze
 
     VIEWS = {
-      "attention" => "Needs attention",
+      "attention" => "Open",
       "mine" => "Mine",
-      "unassigned" => "Unassigned",
+      "unassigned" => "Unclaimed",
       "aging" => "Aging over 5d",
-      "resolved" => "Resolved this month",
+      "resolved" => "Resolved",
       "everything" => "Everything"
     }.freeze
 
-    TABS = %w[attention aging everything].freeze
-    PINNED_PILLS = %w[mine unassigned].freeze
+    TABS = %w[attention mine unassigned resolved].freeze
+    PINNED_PILLS = [].freeze
 
     VIEW_FACETS = {
       "attention" => { "status" => "open" },
       "mine" => { "status" => "open", "assignee" => "me" },
       "unassigned" => { "status" => "open", "assignee" => "nobody" },
       "aging" => { "status" => "open", "age" => "5d" },
-      "resolved" => { "status" => "resolved", "resolved" => "month" },
-      "everything" => { "sort" => "newest" }
+      "resolved" => { "status" => "resolved" },
+      "everything" => {}
     }.freeze
 
     RESOLVED = {
@@ -52,7 +53,7 @@ module Fd
     DEFAULTS = {
       "status" => "any", "age" => "any", "assignee" => "anyone", "category" => "any",
       "subject" => "anyone", "actions" => "any", "opened" => "any", "resolved" => "any",
-      "sort" => "oldest"
+      "sort" => "opened", "dir" => "desc"
     }.freeze
     FACET_KEYS = DEFAULTS.keys.freeze
     KEYS = (FACET_KEYS + ["view"]).freeze
@@ -111,7 +112,7 @@ module Fd
         ) AS unassigned,
         count(*) FILTER (WHERE c.resolved_at IS NULL AND c.opened_at <= :aging) AS aging,
         count(*) FILTER (
-          WHERE c.resolved_at >= :month AND c.duplicate_of IS NULL
+          WHERE c.resolved_at IS NOT NULL AND c.duplicate_of IS NULL
         ) AS resolved,
         count(*) AS everything
       FROM fd.cases c
@@ -137,6 +138,21 @@ module Fd
         .reject { |key, value| value.to_s == DEFAULTS[key] || value.blank? }
 
       chosen.presence || { "view" => NO_VIEW }
+    end
+
+    def sorting?(key)
+      self["sort"] == key
+    end
+
+    def descending?
+      self["dir"] == "desc"
+    end
+
+    def sort_params(key)
+      return facet_params("sort" => key, "dir" => "desc") unless sorting?(key)
+      return facet_params("dir" => "asc") if descending?
+
+      facet_params("sort" => DEFAULTS["sort"], "dir" => DEFAULTS["dir"])
     end
 
     def relation
@@ -245,6 +261,7 @@ module Fd
       when "opened" then OPENED.key?(raw)
       when "resolved" then RESOLVED.key?(raw)
       when "sort" then SORT.key?(raw)
+      when "dir" then DIRS.include?(raw)
       when "category" then raw == "any" || Case::CATEGORIES.include?(raw)
       when "assignee" then ASSIGNEE.key?(raw) || raw.match?(MEMBER_ID)
       when "subject" then raw == "anyone" || raw.match?(MEMBER_ID)
@@ -259,7 +276,7 @@ module Fd
       when "unassigned" then scope.unresolved.unassigned
       when "aging" then scope.unresolved.where(opened_at: ..AGE_CRIT.ago)
       when "resolved"
-        scope.not_duplicate.where(resolved_at: Time.current.beginning_of_month..)
+        scope.not_duplicate.where.not(resolved_at: nil)
       else scope
       end
     end
@@ -321,10 +338,11 @@ module Fd
     end
 
     def apply_sort(scope)
+      way = descending? ? "DESC" : "ASC"
       case self["sort"]
-      when "newest" then scope.newest_first
+      when "case" then scope.order(Arel.sql("fd.cases.id #{way}"))
       when "actions" then scope.order(Arel.sql(ACTION_COUNT_SQL)).order(:opened_at)
-      else scope.oldest_first
+      else scope.order(Arel.sql("fd.cases.opened_at #{way}"))
       end
     end
 

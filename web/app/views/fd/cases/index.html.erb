@@ -1,10 +1,4 @@
 <% content_for :page_title, "Cases" %>
-<% content_for :page_subtitle do %>
-  <%= number_with_delimiter(@stats.total) %> <%= since_label(@stats.first_opened) %> ·
-  <%= @stats.open_count %> open ·
-  <%= @stats.unassigned %> unassigned <%= oldest_unassigned_chip(@stats) %> ·
-  median to resolve <%= span_label(@stats.median_now) %>
-<% end %>
 <% content_for :head_actions do %>
   <%= opens_modal "case.open", "Open a case", opens: "open-case", css: "btn btn-primary" %>
 <% end %>
@@ -15,6 +9,7 @@
 <div class="stack" data-controller="merge"
      data-merge-url-value="<%= fd_confirm_merge_cases_path %>">
   <turbo-frame id="queue" target="_top" data-turbo-action="advance">
+  <div class="panel">
   <div class="views">
     <% tabs.each do |view| %>
       <%= link_to fd_cases_path(view: view.key), class: "view",
@@ -25,69 +20,25 @@
       <% end %>
     <% end %>
 
-    <span class="views-fill"></span>
-
-    <% pinned.each do |view| %>
-      <span class="facet-set <%= "on" if view.current %>">
-        <%= link_to fd_cases_path(view: view.key), class: "facet",
-              data: { turbo_frame: "queue" },
-              aria: { current: ("true" if view.current) } do %>
-          <%= view.label %>
-          <b><%= view.count %></b>
-        <% end %>
-        <% if view.current %>
-          <%= link_to fd_cases_path, class: "facet-x", data: { turbo_frame: "queue" },
-                aria: { label: "clear the #{view.label.downcase} filter" } do %>
-            &times;
-          <% end %>
-        <% end %>
-      </span>
-    <% end %>
-
-    <span class="facet-set <%= "on" if @query.filtered? || tucked.any?(&:current) %>">
-      <details class="facet-drop" name="queue-facet">
-        <summary class="facet">
-          Filters
-          <span class="facet-caret" aria-hidden="true">
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
-          </span>
-        </summary>
-        <div class="menu-pop filters-pop">
-          <% tucked.each do |view| %>
-            <%= link_to fd_cases_path(view: view.key), class: "more-name",
-                  data: { turbo_frame: "queue" },
-                  aria: { current: ("true" if view.current) } do %>
-              <%= view.label %>
-              <span class="view-count"><%= view.count %></span>
-            <% end %>
-          <% end %>
-          <% @query.facets.each do |facet| %>
-            <details class="more-item" name="queue-more">
-              <summary class="more-name">
-                <%= facet.label %>
-                <% if facet.on || facet.key == "sort" %>
-                  <b><%= facet.value_label %></b>
-                <% end %>
-                <span class="facet-caret" aria-hidden="true">
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
-                </span>
-              </summary>
-              <div class="more-options">
-                <%= render "facet_options", query: @query, facet: facet %>
-              </div>
-            </details>
-          <% end %>
-        </div>
-      </details>
-    </span>
   </div>
 
-  <%= render "fd/flagstrip", flags: @flags %>
-
-  <div class="card card-flush">
     <% if @cases.any? %>
       <div class="scroll">
         <table class="data-table queue-table">
+          <colgroup>
+            <col style="width: 44%">
+            <col style="width: 22%">
+            <col style="width: 20%">
+            <col style="width: 14%">
+          </colgroup>
+          <thead>
+            <tr>
+              <%= case_sort_header("Case", "case") %>
+              <th>Subject</th>
+              <th>Held by</th>
+              <%= case_sort_header("Age", "opened") %>
+            </tr>
+          </thead>
           <tbody>
             <%= render "rows", cases: @cases, prior_counts: @prior_counts,
                   thread_counts: @thread_counts, thread_channels: @thread_channels %>
@@ -95,9 +46,25 @@
         </table>
       </div>
     <% else %>
-      <p class="card-note"><%= @query.empty_note %></p>
+      <div class="empty">
+        <p class="empty-title"><%= @query.empty_note %></p>
+      </div>
     <% end %>
   </div>
+
+  <% if @page > 1 || @more %>
+    <div class="pager">
+      <% if @page > 1 %>
+        <%= link_to "← Newer", fd_cases_path(request.query_parameters.merge(page: @page - 1)),
+              class: "btn", data: { turbo_frame: "queue" } %>
+      <% end %>
+      <span class="sub2">Page <%= @page %></span>
+      <% if @more %>
+        <%= link_to "Older →", fd_cases_path(request.query_parameters.merge(page: @page + 1)),
+              class: "btn", data: { turbo_frame: "queue" } %>
+      <% end %>
+    </div>
+  <% end %>
 
   <% if @cases.any? { |kase| !kase.resolved? } %>
     <%= form_with url: fd_confirm_merge_cases_path, method: :get, id: "merge-form",

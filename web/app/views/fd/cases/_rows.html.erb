@@ -2,7 +2,7 @@
   <tr data-controller="row-link" data-row-link-href-value="<%= fd_case_path(kase) %>"
       data-action="click->row-link#go"
       class="<%= "row-resolved" if kase.resolved? %>">
-    <td>
+    <td class="<%= case_stripe(kase) %>">
       <div class="row-subject">
         <% unless kase.resolved? %>
           <%= check_box_tag "case_ids[]", kase.id, false,
@@ -10,30 +10,34 @@
                 data: { action: "change->merge#refresh" },
                 aria: { label: "select case #{kase.id}" } %>
         <% end %>
-        <span class="sev <%= case_severity(kase) %>"></span>
-        <%= row_subject_avatar(kase) %>
         <span class="two-line">
           <%= link_to fd_case_path(kase) do %>
-            <b>
-              <%= row_subject_label(kase) %>
-              <span class="mono">#<%= kase.id %></span>
-            </b>
+            <b>Case <%= kase.id %></b>
           <% end %>
           <span><%= row_subtitle(kase, thread_counts, thread_channels) %></span>
         </span>
       </div>
     </td>
-    <td><%= prior_chip(kase, prior_counts) %></td>
-    <td class="col-num"><%= case_age_label(case_age_seconds(kase)) %></td>
+    <td>
+      <% if kase.subject_user_ids.any? %>
+        <div class="row-subject">
+          <%= row_subject_avatar(kase) %>
+          <span><%= row_subject_label(kase) %></span>
+        </div>
+      <% else %>
+        <span class="sub2">nobody named yet</span>
+      <% end %>
+    </td>
     <td>
       <% if kase.assigned? %>
         <%= assignee_faces(kase.assignee_user_ids) %>
       <% elsif kase.resolved? %>
-        n/a
+        <span class="sub2">n/a</span>
       <% else %>
-        <%= gated_button "case.open", "claim", fd_case_claim_path(kase), on: kase,
-              method: :post %>
+        <%= gated_button "case.open", "Claim", fd_case_claim_path(kase), on: kase,
+              css: "btn btn-primary", method: :post %>
       <% end %>
     </td>
+    <td><%= case_age_label(case_age_seconds(kase)) %></td>
   </tr>
 <% end %>

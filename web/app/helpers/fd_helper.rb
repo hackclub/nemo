@@ -160,6 +160,19 @@ module FdHelper
     end
   end
 
+  def case_sort_header(label, key, numeric: false)
+    css = ["th-sort"]
+    css << "num" if numeric
+    css << (@query.descending? ? "sort-down" : "sort-up") if @query.sorting?(key)
+
+    tag.th(class: css.join(" "), aria: { sort: sort_state(key) }) do
+      link_to fd_cases_path(@query.sort_params(key)), data: { turbo_frame: "queue" } do
+        concat tag.span(label)
+        concat sort_caret(key)
+      end
+    end
+  end
+
   def sort_state(key)
     return nil unless @query.sorting?(key)
 
@@ -390,6 +403,12 @@ module FdHelper
     return "Nothing in this thread is flagged." if only == "flagged"
 
     "No messages held for this thread yet."
+  end
+
+  STRIPES = { "sev-crit" => "stripe stripe-hot", "sev-warn" => "stripe stripe-warm" }.freeze
+
+  def case_stripe(kase)
+    STRIPES.fetch(case_severity(kase), "stripe")
   end
 
   def case_severity(kase)
