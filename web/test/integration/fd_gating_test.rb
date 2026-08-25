@@ -12,7 +12,9 @@ class FdGatingTest < ActionDispatch::IntegrationTest
   end
 
   def dead(text)
-    css_select(".btn-off, .text-btn.btn-off").find { |node| node.text.strip == text }
+    css_select(".btn-off, .text-btn.btn-off").find do |node|
+      (node.at_css("span:not(.btn-why)") || node).text.strip == text
+    end
   end
 
   def proposal
@@ -26,11 +28,27 @@ class FdGatingTest < ActionDispatch::IntegrationTest
     get fd_case_path(kase)
 
     assert_response :success
-    assert_equal "case #{kase.id} is assigned to @UOTHER, not to you",
-      dead("Log an action")["title"]
+    why = "case #{kase.id} is assigned to @UOTHER, not to you"
+    assert_equal why, dead("Log an action")["title"]
+    assert_equal why, dead("Log an action").at_css(".btn-why").text.strip,
+      "a tooltip is no use on a keyboard, so the reason is in the row"
 
     get fd_case_path(kase, tab: "people")
     assert_select ".person-add.btn-off", text: /Add somebody/
+  end
+
+  test "every item in the overflow menu can be reached by keyboard" do
+    kase = make_case
+
+    get fd_case_path(kase)
+
+    assert_select "details.menu[data-controller=menu]", 1
+    live = css_select("details.menu .menu-pop label")
+    assert live.any?, "the menu opens modals through labels"
+    live.each do |label|
+      assert_equal "0", label["tabindex"],
+        "a bare label is not in the tab order, so #{label.text.strip} was unreachable"
+    end
   end
 
   test "resolving is open to anyone, whoever is holding the case" do

@@ -1264,7 +1264,9 @@ module FdHelper
   def opens_modal(key, text = nil, opens:, on: nil, css: "btn", &block)
     why = why_not(key, on)
     body = block ? capture(&block) : text
-    return tag.label(body, for: opens, class: css) if why.nil?
+    if why.nil?
+      return tag.label(body, for: opens, class: css, tabindex: "0", role: "button")
+    end
 
     dead_button(body, why, css)
   end
@@ -1278,7 +1280,10 @@ module FdHelper
   end
 
   def dead_button(text, why, css = "btn")
-    tag.span(text, class: "#{css} btn-off", title: why, aria: { disabled: "true" })
+    tag.span(class: "#{css} btn-off", title: why, aria: { disabled: "true" }) do
+      concat tag.span(text)
+      concat tag.span(why, class: "btn-why")
+    end
   end
 
   def did_path(person, key, asked)

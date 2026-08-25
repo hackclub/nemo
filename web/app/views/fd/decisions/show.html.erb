@@ -24,7 +24,7 @@
     <span class="btn is-off">Next</span>
   <% end %>
   <% unless @decision.superseded? %>
-    <details class="menu">
+    <details class="menu" data-controller="menu">
       <summary class="btn btn-only" aria-label="Change the wording">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
       </summary>

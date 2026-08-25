@@ -5,7 +5,7 @@
 <% content_for :head_actions do %>
   <%= link_to "Open a case", fd_cases_path(subject_user_id: @user_id, open: "1"),
         class: "btn btn-primary" %>
-  <details class="menu">
+  <details class="menu" data-controller="menu">
     <summary class="btn btn-only" aria-label="More actions">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
     </summary>

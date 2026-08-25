@@ -978,6 +978,27 @@
     transform: none;
   }
 
+  .btn-why {
+    display: none;
+  }
+
+  .menu-pop .btn-off {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    opacity: 1;
+    color: var(--ink-3);
+  }
+
+  .menu-pop .btn-why {
+    display: block;
+    font-size: var(--t-fine);
+    font-weight: 400;
+    color: var(--accent);
+    white-space: normal;
+    text-align: start;
+  }
+
   .btn.btn-off:hover {
     background-color: var(--card);
     border-color: var(--line);
@@ -2052,8 +2073,13 @@
     padding: 7px var(--s-2xs);
   }
 
-  .menu-pop .btn:hover {
+  .menu-pop .btn:hover,
+  .menu-pop .btn:focus-visible {
     background-color: var(--card-2);
+  }
+
+  .menu-pop .btn-off:hover {
+    background-color: transparent;
   }
 
   .menu-sep {
