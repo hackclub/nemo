@@ -85,7 +85,7 @@
                 <td class="sub"><%= entry.who ? member_link(entry.who) : "n/a" %></td>
                 <td class="sub">
                   <span class="when-cell">
-                    <span><%= entry.at.strftime("%-d %b %Y") %></span>
+                    <span><%= on_day(entry.at) %></span>
                     <% if entry.ref.is_a?(Fd::Note) %>
                       <%= render "note_remove", user_id: @user_id, note: entry.ref %>
                     <% end %>

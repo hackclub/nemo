@@ -22,7 +22,7 @@
               <span class="two-line">
                 <b><%= action_label(action.type_key) %> <%= action_state_chip(action) %></b>
                 <span>
-                  <%= action.performed_at.strftime("%-d %b, %Y") %> ·
+                  <%= on_day(action.performed_at) %> ·
                   <%= member_link(action.decided_by) %> ·
                   <%= link_to "case ##{action.case_id}", fd_case_path(action.case_id),
                         class: "lnk" %>

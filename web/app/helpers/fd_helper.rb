@@ -46,15 +46,15 @@ module FdHelper
     if context.claimed_at.to_date == context.cohort_at.to_date
       "claimed the same day"
     else
-      "claimed #{context.claimed_at.to_date.strftime('%b %-d, %Y')}"
+      "claimed #{on_day(context.claimed_at)}"
     end
   end
 
   def joined_line(context)
     return "not in the warehouse yet" if context.nil? || !context.known?
-    return "joined #{context.cohort_at.to_date.strftime('%-d %b %Y')}" if context.claimed_at.nil?
+    return "joined #{on_day(context.cohort_at)}" if context.claimed_at.nil?
 
-    "joined #{context.cohort_at.to_date.strftime('%-d %b %Y')}, #{claimed_phrase(context)}"
+    "joined #{on_day(context.cohort_at)}, #{claimed_phrase(context)}"
   end
 
   def identity_line(identity)
@@ -201,15 +201,23 @@ module FdHelper
     parts.join(" · ").presence
   end
 
-  def last_case_label(at)
-    return "n/a" if at.nil?
+  def on_day(at, none: "n/a")
+    at ? at.to_time.strftime("%-d %b %Y") : none
+  end
 
-    at = at.to_time
-    days = (Date.current - at.to_date).to_i
+  def ago_label(at, none: "n/a")
+    return none if at.nil?
+
+    days = (Date.current - at.to_time.to_date).to_i
     return "today" if days <= 0
+    return "yesterday" if days == 1
     return "#{days}d ago" if days < 30
 
-    at.strftime("%-d %b %Y")
+    on_day(at)
+  end
+
+  def last_case_label(at)
+    ago_label(at)
   end
 
   def member_state_chips(row)
@@ -272,8 +280,8 @@ module FdHelper
   end
 
   def in_force_line(action, names)
-    span = action.expires? ? " until #{action.expires_at.strftime('%-d %b %Y')}" : ""
-    tail = ", set by #{names[action.decided_by]} on #{action.performed_at.strftime('%-d %b')}"
+    span = action.expires? ? " until #{on_day(action.expires_at)}" : ""
+    tail = ", set by #{names[action.decided_by]} on #{on_day(action.performed_at)}"
     tail += " after case #{action.case_id}" if action.case_id
     safe_join([tag.b(action_label(action.type_key)), "#{span}#{tail}."])
   end
@@ -376,7 +384,7 @@ module FdHelper
     return tag.span("nothing standing", class: "chip chip-off") if action.nil?
 
     said = action_label(action.type_key).downcase
-    said += action.expires? ? " until #{action.expires_at.strftime('%-d %b')}" : " in force"
+    said += action.expires? ? " until #{on_day(action.expires_at)}" : " in force"
     tone = BANS.include?(action.type_key) ? "chip-crit" : "chip-warn"
     tag.span(said, class: "chip #{tone}")
   end
@@ -617,7 +625,7 @@ module FdHelper
     elsif !kase.resolved?
       "nobody holding it"
     end
-    ["opened #{kase.opened_at.strftime('%-d %b')}", held].compact.join(" · ")
+    ["opened #{on_day(kase.opened_at)}", held].compact.join(" · ")
   end
 
   def merge_hold_line(plan)
@@ -668,7 +676,7 @@ module FdHelper
   end
 
   def report_when_short(report)
-    report.received_at.strftime("%-d %b")
+    on_day(report.received_at)
   end
 
   def report_when_line(report, kase)
@@ -754,14 +762,14 @@ module FdHelper
   end
 
   def note_byline(note)
-    safe_join([member_link(note.author), note.created_at.strftime("%b %-d, %Y")], " · ")
+    safe_join([member_link(note.author), on_day(note.created_at)], " · ")
   end
 
   def action_option_label(action)
     [
       action_label(action.type_key),
       "on #{names[action.target_user_id]}",
-      action.performed_at.strftime("%b %-d, %Y")
+      on_day(action.performed_at)
     ].join(" · ")
   end
 
@@ -962,9 +970,6 @@ module FdHelper
     safe_join(["#{said} by ", member_link(first.reporter_user_id)])
   end
 
-  def on_day(at)
-    at.strftime("%b %-d")
-  end
 
   def member_links(user_ids)
     return "n/a" if user_ids.blank?
@@ -993,14 +998,14 @@ module FdHelper
     aside = kase.subject_user_ids.include?(action.target_user_id) ? "" : " (not the subject)"
     safe_join([
       "to ", member_link(action.target_user_id),
-      "#{aside}, #{action.performed_at.strftime('%-d %b')}, by ", member_link(action.decided_by)
+      "#{aside}, #{on_day(action.performed_at)}, by ", member_link(action.decided_by)
     ])
   end
 
   def action_standing_line(action, kase)
     parts = []
     parts << reversal_line(action) if action.reversed?
-    parts << "expires #{action.expires_at.strftime('%-d %b %Y')}" if action.expires?
+    parts << "expires #{on_day(action.expires_at)}" if action.expires?
     parts << action_detail_note(action)
     parts << action_performer_note(action) unless action.performed_by_decider?
     parts << "follows #{kase.followed_decision.title}" if kase.followed_decision
@@ -1009,7 +1014,7 @@ module FdHelper
 
   def reversal_line(action)
     why = action.reversal_reason.present? ? ", #{action.reversal_reason}" : ""
-    "reversed #{action.reversed_at.strftime('%-d %b')} by #{names[action.reversed_by]}#{why}"
+    "reversed #{on_day(action.reversed_at)} by #{names[action.reversed_by]}#{why}"
   end
 
   def action_labels(actions)
@@ -1070,14 +1075,7 @@ module FdHelper
   end
 
   def last_active_label(at)
-    return "n/a" if at.nil?
-
-    days = (Date.current - at.to_date).to_i
-    return "today" if days <= 0
-    return "yesterday" if days == 1
-    return "#{days}d ago" if days < 30
-
-    at.to_date.strftime("%b %-d, %Y")
+    ago_label(at)
   end
 
   def pane_identity_line(user_id, context)
@@ -1211,9 +1209,7 @@ module FdHelper
   end
 
   def acted_label(at)
-    return "never" if at.nil?
-
-    last_case_label(at)
+    ago_label(at, none: "never")
   end
 
   DEED_WORDS = {
@@ -1360,7 +1356,7 @@ module FdHelper
 
   def grant_span(grant)
     from = grant.granted_at.strftime("%-d %b %Y")
-    grant.live? ? "since #{from}" : "#{from} to #{grant.revoked_at.strftime('%-d %b %Y')}"
+    grant.live? ? "since #{from}" : "#{from} to #{on_day(grant.revoked_at)}"
   end
 
   def grant_state_chip(grant)
@@ -1433,7 +1429,7 @@ module FdHelper
     return "Nothing has happened on this case yet." if timeline.empty?
 
     if kase.resolved?
-      "Resolved #{kase.resolved_at.strftime('%-d %b')} as #{kase.resolution.tr('_', ' ')}."
+      "Resolved #{on_day(kase.resolved_at)} as #{kase.resolution.tr('_', ' ')}."
     else
       assigned = if kase.assigned?
         "assigned to #{names.list(kase.assignee_user_ids)}"

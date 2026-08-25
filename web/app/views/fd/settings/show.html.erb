@@ -213,7 +213,7 @@
           <span class="grow two-line">
             <b><%= names[@person.user_id] %> <%= role_chip(@role) %></b>
             <span>
-              since <%= @person.granted_at.strftime("%-d %b %Y") %>,
+              since <%= on_day(@person.granted_at) %>,
               given by <%= given_by(@person.granted_by) %>
             </span>
           </span>

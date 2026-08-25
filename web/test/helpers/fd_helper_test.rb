@@ -24,7 +24,8 @@ class FdHelperTest < ActionView::TestCase
     line = timeline_standing(
       kase(resolved_at: Time.utc(2026, 3, 4, 12), resolution: "action_taken"), entries(6)
     )
-    assert_equal "Resolved 4 Mar as action taken.", line
+    assert_equal "Resolved 4 Mar 2026 as action taken.", line,
+      "a date without its year reads the same whether it was this March or three Marches ago"
   end
 
   test "an empty timeline says nothing has happened" do
