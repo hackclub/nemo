@@ -2461,12 +2461,6 @@
     background-color: var(--card);
   }
 
-  .panel-foot .chat-send {
-    width: 24px;
-    height: 24px;
-    border-radius: 7px;
-  }
-
   .panel .data-table.record-table tbody tr:last-child td {
     border-bottom: 0;
   }
@@ -2833,6 +2827,86 @@
 
   .person-row:has(+ .person-note) {
     border-bottom: 1px solid var(--line-soft);
+  }
+
+  .fcard {
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .fcard-who {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs);
+    padding: var(--s-xs);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .fstats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-bottom: 1px solid var(--line);
+  }
+
+  .fstat {
+    display: grid;
+    gap: 3px;
+    justify-items: center;
+    padding: var(--s-xs) var(--s-3xs);
+    border-inline-start: 1px solid var(--line-soft);
+  }
+
+  .fstat:first-child {
+    border-inline-start: 0;
+  }
+
+  .fstat-n {
+    font-family: var(--font-code);
+    font-size: var(--t-title);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .fstat-n.is-none {
+    color: var(--ink-3);
+    font-weight: 400;
+  }
+
+  .fstat-k {
+    font-size: var(--t-fine);
+    color: var(--ink-2);
+  }
+
+  .frows {
+    display: grid;
+    padding: var(--s-2xs) var(--s-xs) var(--s-xs);
+  }
+
+  .frow {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s-2xs);
+    padding: 4px 0;
+    font-size: var(--t-small);
+    color: var(--ink-2);
+  }
+
+  .frow b {
+    font-family: var(--font-code);
+    font-size: var(--t-small);
+    font-weight: 600;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .frow b.is-none {
+    color: var(--ink-3);
+    font-weight: 400;
   }
 
   .standing {

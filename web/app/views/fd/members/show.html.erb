@@ -115,56 +115,55 @@
   <div class="facts">
     <p class="facts-h">Member facts</p>
 
-    <div class="fbox">
-      <div class="ft">Identity</div>
-      <div class="fb">
-        <div class="who">
-          <%= face(@user_id) %>
-          <span class="two-line">
-            <b><%= names[@user_id] %></b>
-            <span><%= identity_line(@identity) %></span>
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <div class="facts-grid">
-      <div class="cell">
-        <span class="fg-k">Joined</span>
-        <span class="fg-v">
-          <%= @context&.cohort_at ? @context.cohort_at.to_date.strftime("%b %Y") : "n/a" %>
+    <div class="fcard">
+      <div class="fcard-who">
+        <%= face(@user_id) %>
+        <span class="two-line">
+          <b><%= names[@user_id] %></b>
+          <span><%= identity_line(@identity) %></span>
         </span>
       </div>
-      <div class="cell">
-        <span class="fg-k">Messages</span>
-        <span class="fg-v"><%= fact_number(@context&.messages_posted) %></span>
-      </div>
-      <div class="cell">
-        <span class="fg-k">Cases</span>
-        <span class="fg-v"><%= @standing.cases_named %></span>
-      </div>
-      <div class="cell">
-        <span class="fg-k">Priors</span>
-        <span class="fg-v"><%= @standing.priors.positive? ? @standing.priors : "n/a" %></span>
-      </div>
-    </div>
 
-    <div class="facts-grid">
-      <div class="cell">
-        <span class="fg-k">Actions</span>
-        <span class="fg-v"><%= @standing.actions %></span>
+      <div class="fstats">
+        <div class="fstat">
+          <span class="fstat-n <%= "is-none" if @standing.cases_named.zero? %>">
+            <%= @standing.cases_named %>
+          </span>
+          <span class="fstat-k"><%= "case".pluralize(@standing.cases_named) %></span>
+        </div>
+        <div class="fstat">
+          <span class="fstat-n <%= "is-none" if @standing.actions.zero? %>">
+            <%= @standing.actions %>
+          </span>
+          <span class="fstat-k"><%= "action".pluralize(@standing.actions) %></span>
+        </div>
+        <div class="fstat">
+          <span class="fstat-n <%= "is-none" if @standing.reversed.zero? %>">
+            <%= @standing.reversed %>
+          </span>
+          <span class="fstat-k">reversed</span>
+        </div>
       </div>
-      <div class="cell">
-        <span class="fg-k">Reversed</span>
-        <span class="fg-v"><%= @standing.reversed %></span>
-      </div>
-      <div class="cell">
-        <span class="fg-k">Here</span>
-        <span class="fg-v"><%= tenure_label(@context&.tenure_days) %></span>
-      </div>
-      <div class="cell">
-        <span class="fg-k">Last seen</span>
-        <span class="fg-v"><%= last_active_label(@context&.last_active_at) %></span>
+
+      <div class="frows">
+        <div class="frow">
+          <span>Here since</span>
+          <b class="<%= "is-none" unless @context&.cohort_at %>">
+            <%= @context&.cohort_at ? @context.cohort_at.to_date.strftime("%b %Y") : "n/a" %>
+          </b>
+        </div>
+        <div class="frow">
+          <span>Messages</span>
+          <b class="<%= "is-none" unless @context&.messages_posted %>">
+            <%= fact_number(@context&.messages_posted) %>
+          </b>
+        </div>
+        <div class="frow">
+          <span>Last seen</span>
+          <b class="<%= "is-none" unless @context&.last_active_at %>">
+            <%= last_active_label(@context&.last_active_at) %>
+          </b>
+        </div>
       </div>
     </div>
   </div>
