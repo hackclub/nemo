@@ -2524,6 +2524,10 @@
     border-bottom: 1px solid var(--line);
   }
 
+  .cols > .panel {
+    gap: 0;
+  }
+
   .panel > .views {
     background-color: var(--card-2);
     border-bottom: 0;
@@ -2800,19 +2804,10 @@
     display: grid;
   }
 
-  .people-role {
-    font-family: var(--font-code);
-    font-size: var(--t-micro);
+  .person-role {
+    font-size: var(--t-small);
     font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
     color: var(--ink-3);
-    margin: 0;
-    padding: var(--s-xs) var(--s-md) var(--s-3xs);
-  }
-
-  .people-list > .people-role:first-child {
-    padding-top: var(--s-2xs);
   }
 
   .person-face {
@@ -2897,7 +2892,7 @@
   .person-note {
     display: grid;
     gap: 3px;
-    margin: 0 var(--s-md) var(--s-2xs) 58px;
+    margin: var(--s-2xs) var(--s-md) var(--s-2xs) 58px;
     padding-left: var(--s-xs);
     border-left: 2px solid var(--line);
   }

@@ -287,38 +287,27 @@ module FdHelper
 
   PEOPLE_ORDER = %w[subject involved reporter].freeze
 
-  PEOPLE_HEADINGS = {
-    "subject" => ["Subject", "Subjects"],
-    "involved" => ["Involved", "Involved"],
-    "reporter" => ["Reported it", "Reported it"]
-  }.freeze
+  def role_rank(role)
+    PEOPLE_ORDER.index(role) || PEOPLE_ORDER.size
+  end
 
   def main_role(person)
     PEOPLE_ORDER.find { |role| person.roles.include?(role) } || person.role
   end
 
-  def people_by_role(people)
-    grouped = people.group_by { |person| main_role(person) }
-    PEOPLE_ORDER.filter_map do |role|
-      found = grouped[role]
-      next if found.blank?
+  def people_in_order(people)
+    people.sort_by { |person| role_rank(main_role(person)) }
+  end
 
-      one, many = PEOPLE_HEADINGS.fetch(role)
-      [found.one? ? one : many, found]
-    end
+  def person_roles_line(person)
+    person.roles.sort_by { |role| role_rank(role) }
+      .map { |role| role_label(role) }.join(" · ")
   end
 
   def people_head_line(people)
     return "Nobody on this case" if people.size.zero?
 
     "#{pluralize(people.size, "person")} on this case"
-  end
-
-  def also_roles(person)
-    extra = person.roles - [main_role(person)]
-    return if extra.empty?
-
-    "also #{extra.map { |role| role_label(role) }.to_sentence}"
   end
 
   REMOVE_LABELS = {

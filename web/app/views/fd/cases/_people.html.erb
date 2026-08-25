@@ -18,36 +18,35 @@
 <% end %>
 
 <div class="people-list">
-  <% people_by_role(people).each do |heading, group| %>
-    <p class="people-role"><%= heading %></p>
-    <% group.each do |person| %>
-      <div class="person-block">
-        <div class="line-row fat person-row">
-          <%= face(person.user_id, css: "person-face") %>
-          <span class="grow two-line">
-            <b><%= handle(person.user_id) %></b>
-            <span>
-              <%= safe_join([also_roles(person),
-                    person_line(person, contexts[person.user_id], said_counts,
-                      total_messages)].compact, " · ") %>
-            </span>
+  <% people_in_order(people).each do |person| %>
+    <div class="person-block">
+      <div class="line-row fat person-row">
+        <%= face(person.user_id, css: "person-face") %>
+        <span class="grow two-line">
+          <b>
+            <%= handle(person.user_id) %>
+            <span class="person-role">· <%= person_roles_line(person) %></span>
+          </b>
+          <span>
+            <%= person_line(person, contexts[person.user_id], said_counts,
+                  total_messages) %>
           </span>
-          <% if priors.fetch(person.user_id, 0).positive? %>
-            <%= prior_chip_for(priors.fetch(person.user_id)) %>
-          <% end %>
-          <%= link_to "History", fd_member_path(person.user_id), class: "btn",
-                data: { turbo_frame: "person-drawer" } %>
-          <%= render "person_menu", kase: kase, person: person %>
-        </div>
-
-        <% Array(notes[person.user_id]).each do |note| %>
-          <div class="person-note">
-            <div class="note-body"><%= mentioned(note.body) %></div>
-            <div class="sub2"><%= note_byline(note) %></div>
-          </div>
+        </span>
+        <% if priors.fetch(person.user_id, 0).positive? %>
+          <%= prior_chip_for(priors.fetch(person.user_id)) %>
         <% end %>
+        <%= link_to "History", fd_member_path(person.user_id), class: "btn",
+              data: { turbo_frame: "person-drawer" } %>
+        <%= render "person_menu", kase: kase, person: person %>
       </div>
-    <% end %>
+
+      <% Array(notes[person.user_id]).each do |note| %>
+        <div class="person-note">
+          <div class="note-body"><%= mentioned(note.body) %></div>
+          <div class="sub2"><%= note_byline(note) %></div>
+        </div>
+      <% end %>
+    </div>
   <% end %>
 </div>
 

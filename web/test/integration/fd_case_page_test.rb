@@ -56,8 +56,8 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase, tab: "people")
 
     assert_select ".people-list .person-row", text: /@UBOTH/, count: 1
-    assert_select ".people-list .people-role", text: "Involved"
-    assert_select ".people-list .person-row", text: /also reported it/
+    assert_select ".people-list .person-role", text: /involved/
+    assert_select ".people-list .person-role", text: /reported it/
   end
 
   test "each tab shows only its own section, not the others" do
