@@ -264,10 +264,6 @@
     visibility: hidden;
   }
 
-  .rail-nav {
-    gap: 7px;
-  }
-
   .rail-glyph {
     font-style: normal;
     font-size: 15px;
@@ -948,14 +944,6 @@
   .btn-only {
     width: var(--chat-ctl);
     padding: 0;
-  }
-
-  .pager {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--s-xs);
-    padding: var(--s-xs) 0;
   }
 
   .bar-sep {
@@ -1895,21 +1883,6 @@
     font-size: var(--t-2xs);
     color: var(--ink-3);
     flex-wrap: wrap;
-  }
-
-  .kbd {
-    font-family: var(--font-code);
-    font-size: var(--t-3xs);
-    border: 1px solid var(--line);
-    border-bottom-width: 2px;
-    border-radius: 4px;
-    padding: 1px 5px;
-    color: var(--ink-2);
-    background-color: var(--card-2);
-  }
-
-  .field-top .kbd {
-    margin-inline-start: auto;
   }
 
   .card-head {
@@ -3536,11 +3509,6 @@
     overflow: hidden;
   }
 
-  .merge-pane {
-    display: grid;
-    gap: var(--s-2xs);
-    padding: var(--s-sm) var(--s-md);
-  }
 
   .merge-shell {
     display: grid;
@@ -3555,7 +3523,9 @@
   }
 
   .merge-pane {
-    padding-bottom: 0;
+    display: grid;
+    gap: var(--s-2xs);
+    padding: var(--s-sm) var(--s-md) 0;
     min-height: 0;
   }
 
@@ -3673,14 +3643,11 @@
   }
 
   .merge-counts,
-  .merge-warn {
-    font-size: var(--t-fine);
-    color: var(--ink-3);
-    margin: 0;
-    max-width: none;
-  }
 
   .merge-warn {
+    margin: 0;
+    max-width: none;
+    font-size: var(--t-fine);
     color: var(--accent-deep);
   }
 
@@ -4135,16 +4102,13 @@
   }
 
   .opt-dot,
+
   .opt-box {
     width: 13px;
     height: 13px;
-    border-radius: 50%;
-    border: 1px solid var(--line);
-    margin-top: 3px;
     flex: none;
-  }
-
-  .opt-box {
+    margin-top: 3px;
+    border: 1px solid var(--line);
     border-radius: 3px;
     display: grid;
     place-items: center;
@@ -4366,11 +4330,6 @@
     color: var(--ink-3);
   }
 
-  .timeline {
-    display: grid;
-    gap: 0;
-  }
-
   .tl-item {
     position: relative;
     display: grid;
@@ -4560,11 +4519,6 @@
     border-bottom: 1px solid var(--line);
   }
 
-  .drawer-head h2 {
-    font-size: var(--t-2xs);
-    font-weight: 600;
-    margin: 0;
-  }
 
   .drawer-tools {
     display: flex;
@@ -4581,6 +4535,7 @@
 
   .timeline {
     display: grid;
+    gap: 0;
     align-content: start;
   }
 
