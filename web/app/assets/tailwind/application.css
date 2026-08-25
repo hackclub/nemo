@@ -2664,6 +2664,9 @@
   .fb-do .btn {
     height: 24px;
     font-size: var(--t-fine);
+  }
+
+  .fb-do .btn:not(.btn-primary) {
     background-color: var(--card);
   }
 
@@ -2677,6 +2680,77 @@
   .panel-foot {
     padding: var(--s-xs) var(--s-sm);
     background-color: var(--card-2);
+  }
+
+  .outcome {
+    border: 1px solid var(--line);
+    border-inline-start: 3px solid var(--warn);
+    border-radius: 8px;
+    padding: 9px 11px;
+    background-color: var(--card-2);
+    font-size: var(--t-2xs);
+    color: var(--ink-2);
+  }
+
+  .outcome b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .bar-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 4px var(--s-2xs);
+    padding: 8px 11px;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: var(--t-2xs);
+  }
+
+  .fbox > .rows > .bar-row:last-child {
+    border-bottom: 0;
+  }
+
+  .bar-track {
+    grid-column: 1 / -1;
+    height: 4px;
+    border-radius: 2px;
+    background-color: var(--line);
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    background-color: var(--ink-3);
+  }
+
+  .data-table tbody td.said-cell,
+  .data-table tbody td:has(> .two-line),
+  .data-table tbody td:has(> .row-name) {
+    text-align: start;
+  }
+
+  .data-table tbody tr.band-row td {
+    padding: 9px var(--s-sm) 7px;
+    background-color: var(--card-2);
+    border-bottom: 1px solid var(--line);
+    font-family: var(--font-code);
+    font-size: var(--t-micro);
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    text-align: start;
+  }
+
+  .fbox > .rows > a.row:hover {
+    background-color: var(--card-2);
+  }
+
+  .fbox > .rows > .row[aria-current] {
+    box-shadow: inset 2px 0 0 var(--accent);
   }
 
   .field-wrong {
@@ -3184,7 +3258,10 @@
   .line-row.line-first,
   .card > .line-row:first-child,
   .card > .lbl + .line-row,
-  .card > .lbl + form > .line-row {
+  .card > .lbl + form > .line-row,
+  .fb > .line-row:first-child,
+  .fb > form:first-child > .line-row,
+  .panel-body > .line-row:first-child {
     border-top: 0;
     padding-top: 0;
   }
@@ -4680,6 +4757,9 @@
   .todo-row .btn {
     height: 24px;
     font-size: var(--t-fine);
+  }
+
+  .todo-row .btn:not(.btn-primary) {
     background-color: var(--card);
   }
 

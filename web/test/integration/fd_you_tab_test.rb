@@ -27,7 +27,7 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select ".views .view", count: 1, text: /You/
-    assert_select ".card-title", text: "Your Slack account"
+    assert_select ".ft", text: /Your Slack account/
     assert_select "table.data-table", count: 0
   end
 
@@ -44,7 +44,7 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
     get fd_settings_path
 
     assert_select ".views .view", 6
-    assert_select ".card-title", text: "Your Slack account", count: 0
+    assert_select ".ft", text: /Your Slack account/, count: 0
   end
 
   test "a manager can open their own tab, and the counts stay on the strip" do
@@ -52,7 +52,7 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
     get fd_settings_path(tab: "you")
 
     assert_response :success
-    assert_select ".card-title", text: "Your Slack account"
+    assert_select ".ft", text: /Your Slack account/
     assert_select ".views .view-count", text: Fd::Permission.keys.size.to_s
   end
 
@@ -60,7 +60,7 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     get fd_settings_path(tab: "you")
 
-    assert_select ".chip-off", text: "not linked"
+    assert_select "button[type=submit]", { text: /Link Slack/ }, "the button is the state"
     assert_select "form[action=?][method=post]", fd_slack_account_path
     assert_select "form[action=?] button[type=submit]", fd_slack_account_path, text: "Link Slack"
   end
@@ -70,7 +70,7 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     get fd_settings_path(tab: "you")
 
-    assert_select ".chip-good", text: "linked"
+    assert_select "button[type=submit]", { text: "Unlink" }, "the button is the state"
     assert_select ".mono", text: "chat:write"
     assert_select "form[action=?] input[name=_method][value=delete]", fd_slack_account_path
     assert_select "button[type=submit]", text: "Link Slack", count: 0
@@ -81,8 +81,8 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     get fd_settings_path(tab: "you")
 
-    assert_select ".chip-warn", text: "stopped working"
-    assert_select ".strip b", text: /token_revoked/
+    assert_select ".fbox-warn .ft", { text: /Slack refused your link/ }
+    assert_select ".fbox-warn .fb-line", text: /token_revoked/
     assert_select "button[type=submit]", text: "Link Slack again"
   end
 
@@ -92,7 +92,7 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
     get fd_settings_path(tab: "you")
 
     assert_select "form[action=?]", fd_slack_account_path, count: 0
-    assert_select ".card-note", text: /not set up on this server/
+    assert_select ".sub2", text: /not set up on this server/
   end
 
   test "somebody else's grant is not on your tab" do
@@ -100,7 +100,7 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     get fd_settings_path(tab: "you")
 
-    assert_select ".chip-off", text: "not linked"
+    assert_select "button[type=submit]", { text: /Link Slack/ }, "the button is the state"
   end
 
   test "an unlinked row that was given back reads as not linked" do
@@ -108,7 +108,7 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     get fd_settings_path(tab: "you")
 
-    assert_select ".chip-off", text: "not linked"
+    assert_select "button[type=submit]", { text: /Link Slack/ }, "the button is the state"
     assert_select "button[type=submit]", text: "Link Slack"
   end
 
@@ -117,8 +117,8 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     get fd_settings_path(tab: "you")
 
-    assert_select ".chip-warn", text: "stopped working"
-    assert_select ".strip b", text: /token_revoked/
+    assert_select ".fbox-warn .ft", { text: /Slack refused your link/ }
+    assert_select ".fbox-warn .fb-line", text: /token_revoked/
     assert_select "button[type=submit]", text: "Link Slack again"
   end
 
@@ -127,7 +127,7 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     get fd_settings_path(tab: "you")
 
-    assert_select ".chip-off", text: "not linked"
+    assert_select "button[type=submit]", { text: /Link Slack/ }, "the button is the state"
     assert_select "button[type=submit]", text: "Link Slack"
   end
 

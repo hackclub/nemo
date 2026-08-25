@@ -90,6 +90,6 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
 
     get fd_settings_path(tab: "usage", person: "UME", did: "access.grant")
 
-    assert_select ".line-row", text: /Took from a role.*case\.reverse · lead/m
+    assert_select ".fbox .row", text: /Took from a role.*case\.reverse · lead/m
   end
 end

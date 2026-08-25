@@ -41,21 +41,24 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     assert_select "td", text: /UFF1/
   end
 
-  test "the subtitle counts the roster by role" do
+  test "the roster counts itself by role" do
     Fd::AccessGrant.delete_all
     give("UFF1")
     give("UFF2")
     give("ULEAD", role: "lead")
 
     get fd_settings_path
-    assert_select ".head-meta", text: /3 people · 1 lead · 2 firefighters/
+
+    assert_select ".view[aria-current] .view-count", text: "3"
+    assert_select ".chip", text: "lead"
+    assert_select ".chip", text: "firefighter", minimum: 2
   end
 
   test "an empty roster says so" do
     Fd::AccessGrant.delete_all
     get fd_settings_path
 
-    assert_select ".card-note", text: "Nobody holds a grant yet."
+    assert_select ".empty-title", text: "Nobody holds a grant yet"
   end
 
   test "a grant nobody has used in a month is called out" do
@@ -66,15 +69,15 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
 
     get fd_settings_path
 
-    assert_select ".strip b", text: /UQUIET has held a firefighter grant/
-    assert_select ".strip", count: 1
+    assert_select ".todo-t", text: /UQUIET has held a firefighter grant/
+    assert_select ".todo", count: 1
   end
 
   test "a fresh grant is not called dormant" do
     give("UNEW")
     get fd_settings_path
 
-    assert_select ".strip", count: 0
+    assert_select ".todo", count: 0
   end
 
   test "the roster says when each person last acted" do
@@ -104,9 +107,9 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     get fd_settings_path(tab: "roles")
 
     assert_response :success
-    assert_select ".band-label", text: /Cases · 11/
-    assert_select ".band-label", text: /Decisions · 4/
-    assert_select ".band-label", text: /People and access · 4/
+    assert_select ".band-row", text: /Cases · 11/
+    assert_select ".band-row", text: /Decisions · 4/
+    assert_select ".band-row", text: /People and access · 4/
     assert_select "td.mono", text: "case.reverse"
     assert_select "td.mono", count: Fd::Permission.keys.size
   end
@@ -152,8 +155,23 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     assert_response :success
     rows = css_select("tbody tr")
     assert_equal ["UBUSY", "UQUIET"], rows.first(2).map { |tr| tr.css("a").first["href"][/U\w+/] }
-    assert_equal %w[0 3 0 0 0], rows[0].css("td.col-num").map { |td| td.text.strip }
-    assert_equal %w[1 0 0 0 0], rows[1].css("td.col-num").map { |td| td.text.strip }
+    assert_equal %w[0 3 0 0], rows[0].css("td.col-num").map { |td| td.text.strip },
+      "cases, actions, reversed, refused: reads have their own box now"
+    assert_equal %w[1 0 0 0], rows[1].css("td.col-num").map { |td| td.text.strip }
+  end
+
+  test "identity reads get a box of their own, ranked" do
+    give("UREADER")
+    3.times do |n|
+      AccessLog.create!(actor_id: "UREADER", subject_user_id: "USUB#{n}",
+        field_class: "identity", looked_at: 1.day.ago)
+    end
+
+    get fd_settings_path(tab: "usage")
+
+    assert_select "th", { text: "Reads", count: 0 }, "it is not a column any more"
+    assert_select ".facts .fbox .bar-row .row-v", text: "3"
+    assert_select ".facts .fbox .bar-row .bar-fill"
   end
 
   test "a refusal counts as a refusal, not as work done" do
@@ -165,14 +183,14 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     get fd_settings_path(tab: "usage")
 
     row = css_select("tbody tr").find { |tr| tr.to_s.include?("UFF1") }
-    assert_equal %w[0 0 0 0 1], row.css("td.col-num").map { |td| td.text.strip }
+    assert_equal %w[0 0 0 1], row.css("td.col-num").map { |td| td.text.strip }
     assert_select ".bar.warm"
   end
 
   test "the usage headline counts reads, refusals and grants that moved" do
     give("UFF1")
     get fd_settings_path(tab: "usage")
-    before = css_select(".kpi-val").map { |node| node.text.strip.to_i }
+    before = css_select(".facts .fg-v").map { |node| node.text.strip.to_i }
 
     AccessLog.create!(actor_id: "UFF1", subject_user_id: "USUB", field_class: "identity",
       looked_at: 1.day.ago)
@@ -183,13 +201,13 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
       after: { "permission" => "access.grant", "role" => "firefighter" })
 
     get fd_settings_path(tab: "usage")
-    after = css_select(".kpi-val").map { |node| node.text.strip.to_i }
+    after = css_select(".facts .fg-v").map { |node| node.text.strip.to_i }
 
     assert_equal before[0], after[0], "nobody was given or lost a grant"
     assert_equal before[1] + 1, after[1], "only the read inside the window counts"
     assert_equal before[2] + 1, after[2], "the refusal counts"
     assert_equal before[3], after[3], "the fresh grant is not dormant yet"
-    assert_select ".delta-note", text: /access\.grant/
+    assert_select ".facts .rail-line", text: /access\.grant/
   end
 
   test "a grant nobody has used shows up as unused, with who holds it" do
@@ -197,8 +215,8 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
 
     get fd_settings_path(tab: "usage")
 
-    assert_select ".kpi-label", text: "Grants unused"
-    assert_select ".delta-note .chip.chip-warn", text: /UQUIET, 4mo/
+    assert_select ".facts .fg-k", text: "Unused"
+    assert_select ".facts .rail-line .chip.chip-warn", text: /UQUIET, 4mo/
   end
 
   test "a tab nobody offered falls back to the roster" do
@@ -214,9 +232,11 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     get fd_settings_path(person: "UFF1")
 
     assert_response :success
-    assert_select ".inspector .index-item[aria-current]", text: /UFF1/
-    assert_select ".mcard-sub", text: /given by @UME/
-    assert_select ".mcard-sub", text: /night shift while sam is away/
+    assert_select ".inspector", { count: 0 },
+      "the second roster duplicated the table you just left"
+    assert_select ".panel .who .two-line b", text: /UFF1/
+    assert_select ".panel .who .two-line span", text: /given by @UME/
+    assert_select ".panel .outcome", text: /night shift while sam is away/
   end
 
   test "one person on the usage tab counts what they did, by permission" do
@@ -230,9 +250,9 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
 
     get fd_settings_path(tab: "usage", person: "UFF1")
 
-    assert_select ".line-row", text: /Log an action.*case\.act.*3/m
-    assert_select ".line-row", text: /Open a case/, count: 0
-    assert_select ".stat-row .kpi-val", text: "3"
+    assert_select ".fbox .row", text: /Log an action.*case\.act.*3/m
+    assert_select ".fbox .row", text: /Open a case/, count: 0
+    assert_select ".stat-row .fg-v", text: "3"
   end
 
   test "a claim counts towards opening a case, which is where it is audited" do
@@ -242,8 +262,8 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
 
     get fd_settings_path(tab: "usage", person: "UFF1")
 
-    assert_select ".line-row", text: /Open a case, claim it.*case\.open.*1/m
-    assert_select ".line-row", text: /Claimed case 41/
+    assert_select ".fbox .row", text: /Open a case, claim it.*case\.open.*1/m
+    assert_select ".fbox .row", text: /Claimed case 41/
   end
 
   test "the person view shows the work itself, not just how much of it there was" do
@@ -256,8 +276,8 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
 
     get fd_settings_path(tab: "usage", person: "UFF1")
 
-    assert_select ".line-row", text: /Logged an action on case #{kase.id}.*temp ban on/m
-    assert_select ".line-row a[href=?]", fd_case_path(kase)
+    assert_select ".fbox .row", text: /Logged an action on case #{kase.id}.*temp ban on/m
+    assert_select ".fbox .row a[href=?]", fd_case_path(kase)
   end
 
   test "a number in the usage table opens that person filtered to it" do
@@ -281,9 +301,9 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
 
     get fd_settings_path(tab: "usage", person: "UFF1", did: "identity.read")
 
-    assert_select "a.line-row[aria-current='true']", text: /identity\.read/
-    assert_select ".line-row", text: /Read the identity of/
-    assert_select ".line-row", text: /Opened case/, count: 0
+    assert_select "a.row[aria-current='true']", text: /identity\.read/
+    assert_select ".fbox .row", text: /Read the identity of/
+    assert_select ".fbox .row", text: /Opened case/, count: 0
   end
 
   test "the permission already asked for links back to everything" do
@@ -293,7 +313,7 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
 
     get fd_settings_path(tab: "usage", person: "UFF1", did: "case.open")
 
-    assert_select "a.line-row[aria-current='true'][href=?]",
+    assert_select "a.row[aria-current='true'][href=?]",
       fd_settings_path(tab: "usage", person: "UFF1")
   end
 
@@ -301,16 +321,16 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     give("UFF1")
     get fd_settings_path(person: "UFF1")
 
-    assert_select ".band-label", text: /What the role does not cover · 5/
-    assert_select ".line-row", text: /Settle a proposal.*lead only/m
-    assert_select ".line-row", text: /Give or take back access.*community manager only/m
+    assert_select ".ft", text: /What the role does not cover\s*5/
+    assert_select ".fbox .row", text: /Settle a proposal.*lead only/m
+    assert_select ".fbox .row", text: /Give or take back access.*community manager only/m
   end
 
   test "a lead is short of only what the manager keeps" do
     give("ULEAD", role: "lead")
     get fd_settings_path(person: "ULEAD")
 
-    assert_select ".band-label", text: /What the role does not cover · 3/
+    assert_select ".ft", text: /What the role does not cover\s*3/
   end
 
   test "identity reads are counted for everybody, since everybody may read" do
@@ -320,21 +340,21 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
 
     get fd_settings_path(tab: "usage", person: "UFF1")
 
-    assert_select ".line-row", text: /Identity reads.*1/m
+    assert_select ".fbox .row", text: /Identity reads.*1/m
   end
 
   test "the person view keeps the refusals, and says so when there are none" do
     give("UFF1")
     get fd_settings_path(tab: "usage", person: "UFF1")
-    assert_select ".card-note", text: "Never refused."
+    assert_select ".sub2", text: "Never refused."
 
     Fd::AuditEntry.create!(actor_user_id: "UFF1", actor_kind: "human", entity_type: "case",
       entity_id: 41, verb: "refused", source_app: "fire_engine",
       after: { "permission" => "case.reverse", "role" => "firefighter" })
 
     get fd_settings_path(tab: "usage", person: "UFF1")
-    assert_select ".band-label", text: /Refused · 1/
-    assert_select ".line-row", text: /Reverse an action.*case 41/m
+    assert_select ".ft", text: /Refused\s*1/
+    assert_select ".fbox .row", text: /Reverse an action.*case 41/m
   end
 
   test "asking for somebody who holds nothing shows the roster" do
@@ -371,7 +391,7 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
 
     get fd_settings_path
     assert_response :success
-    assert_select ".card-title", text: "Your Slack account"
+    assert_select ".ft", text: /Your Slack account/
     assert_select ".data-table", count: 0
 
     get fd_settings_path(tab: "access")

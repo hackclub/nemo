@@ -1,62 +1,54 @@
 <% held = account&.live? ? account : nil %>
 <% gone = account&.given_up? ? account : nil %>
+<% told = gone || (held&.stumbled? && held) %>
 
-<div class="card">
-  <div class="mcard-top">
-    <span class="mcard-face"><%= you_initial %></span>
-    <span>
-      <span class="mcard-name">
-        <%= current_profile&.display_name || current_staff.user_id %>
-        <%= role_chip(current_staff.role) %>
-      </span>
-      <span class="mcard-sub">
-        <span class="mono"><%= current_staff.user_id %></span>
-        <span>·</span>
-        <span>signed in with Hack Club</span>
-      </span>
-    </span>
-  </div>
-</div>
-
-<div class="card">
-  <div class="card-head">
-    <p class="card-title">Your Slack account</p>
-    <div class="card-tools"><%= slack_link_chip(held, gone) %></div>
-  </div>
-
-  <% if (told = gone || held&.stumbled? && held) %>
-    <div class="strip">
-      <b>Slack refused it <%= last_case_label(told.last_error_at) %>:
-        <span class="mono"><%= told.last_error %></span>. Messages went out through nemo.</b>
+<div class="panel-body">
+  <% if told %>
+    <div class="fbox fbox-warn">
+      <div class="ft">Slack refused your link <%= last_case_label(told.last_error_at) %></div>
+      <div class="fb">
+        <div class="fb-line">
+          <code class="mono"><%= told.last_error %></code>. Since then your replies have gone
+          out as <b>nemo</b>, not as you.
+        </div>
+        <% if linkable %>
+          <div class="fb-do">
+            <%= button_to "Link Slack again", fd_slack_account_path, class: "btn btn-primary",
+                  form: { class: "contents", data: { turbo: false } } %>
+          </div>
+        <% end %>
+      </div>
     </div>
   <% end %>
 
-  <% if held %>
-    <div class="mcard-sub">
-      <span class="mono"><%= held.scopes %></span>
-      <span>·</span>
-      <span>linked <%= last_case_label(held.granted_at) %></span>
-      <span>·</span>
-      <span>used <%= last_case_label(held.last_used_at) %></span>
-    </div>
-    <div class="mcard-acts">
-      <% if held.stumbled? && linkable %>
-        <%= button_to "Link Slack again", fd_slack_account_path, class: "btn btn-primary",
-              form: { data: { turbo: false } } %>
+  <div class="fbox">
+    <div class="ft">Your Slack account</div>
+    <div class="fb">
+      <div class="who">
+        <%= face(current_staff.user_id) %>
+        <span class="grow two-line">
+          <b><%= current_profile&.display_name || current_staff.user_id %></b>
+          <span class="mono"><%= current_staff.user_id %></span>
+        </span>
+        <% if held %>
+          <%= button_to "Unlink", fd_slack_account_path, method: :delete, class: "btn",
+                form: { class: "contents", data: { turbo_confirm:
+                  "Unlink Slack? Your replies go out through nemo instead." } } %>
+        <% elsif linkable %>
+          <%= button_to(gone ? "Link Slack again" : "Link Slack", fd_slack_account_path,
+                class: "btn btn-primary", form: { class: "contents", data: { turbo: false } }) %>
+        <% end %>
+      </div>
+
+      <% if held %>
+        <div class="sub2 mono"><%= held.scopes %></div>
+        <div class="sub2">
+          linked <%= last_case_label(held.granted_at) %> &middot;
+          used <%= last_case_label(held.last_used_at) %>
+        </div>
+      <% elsif !linkable %>
+        <div class="sub2">Linking is not set up on this server.</div>
       <% end %>
-      <%= button_to "Unlink", fd_slack_account_path, method: :delete, class: "btn",
-            form: { data: { turbo_confirm: "Unlink Slack? Your messages go out through " \
-                                           "nemo instead." } } %>
     </div>
-  <% elsif linkable %>
-    <p class="card-note">
-      Your messages go out under your name either way. Linked, you send them yourself.
-    </p>
-    <div class="mcard-acts">
-      <%= button_to(gone ? "Link Slack again" : "Link Slack", fd_slack_account_path,
-            class: "btn btn-primary", form: { data: { turbo: false } }) %>
-    </div>
-  <% else %>
-    <p class="card-note">Linking is not set up on this server.</p>
-  <% end %>
+  </div>
 </div>

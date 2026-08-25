@@ -53,6 +53,23 @@ module Fd
       @counts = may_read_access? ? tally_without_grants : {}
       @account = StaffSlack.find_by(staff_user_id: current_staff.user_id)
       @linkable = Slack::Oauth.configured?
+      @yours = mine_lately
+    end
+
+    def mine_lately
+      me = current_staff.user_id
+      tallies = AuditEntry.where(actor_user_id: me, occurred_at: WINDOW.ago..)
+        .group(:entity_type, :verb).count
+      {
+        cases: AuditEntry.where(actor_user_id: me, entity_type: "case")
+          .where.not(verb: "refused").where(occurred_at: WINDOW.ago..)
+          .distinct.count(:entity_id),
+        actions: tallies[%w[action performed]].to_i,
+        reads: AccessLog.where(actor_id: me, field_class: "identity",
+          looked_at: WINDOW.ago..).count,
+        refused: AuditEntry.where(actor_user_id: me, verb: "refused",
+          occurred_at: WINDOW.ago..).count
+      }
     end
 
     def tab_counts
