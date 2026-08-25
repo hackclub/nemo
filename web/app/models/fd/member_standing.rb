@@ -46,6 +46,10 @@ module Fd
       record.logged_cases.size
     end
 
+    def cases_named
+      record.cases_named
+    end
+
     def actions
       record.actions.size
     end

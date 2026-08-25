@@ -53,6 +53,11 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     assert_select "td.col-num", text: "0", minimum: 1
   end
 
+  def numbers_for(user_id)
+    row = css_select("tr").find { |tr| tr.to_s.include?(user_id) }
+    row.css("td.col-num").map(&:text).map(&:strip)
+  end
+
   test "a row counts every case that named them, and the actions apart" do
     make_case(subject: "UBOTH", opened_at: 5.days.ago)
     theirs = make_case(subject: "USOMEBODY", opened_at: 3.days.ago)
@@ -60,9 +65,18 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
 
     get fd_members_path(view: "history")
 
-    row = css_select("tr").find { |tr| tr.to_s.include?("UBOTH") }
-    numbers = row.css("td.col-num").map(&:text).map(&:strip)
-    assert_equal %w[2 0], numbers, "subject of one and logged in another is two cases, no actions"
+    assert_equal %w[2 0], numbers_for("UBOTH"),
+      "subject of one and logged in another is two cases, no actions"
+  end
+
+  test "one case that names somebody twice is still one case" do
+    both = make_case(subject: "UTWICE", opened_at: 5.days.ago)
+    both.participants.create!(user_id: "UTWICE", role: "reporter")
+
+    get fd_members_path(view: "history")
+
+    assert_equal %w[1 0], numbers_for("UTWICE"),
+      "reporting the case you are the subject of does not make it two cases"
   end
 
   test "only the named tabs are offered, with counts, the current one marked" do

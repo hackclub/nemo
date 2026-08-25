@@ -58,6 +58,10 @@ module Fd
       subject_cases.any? || logged_cases.any?
     end
 
+    def cases_named
+      spread.size
+    end
+
     def first_case_at
       spread.first&.opened_at
     end

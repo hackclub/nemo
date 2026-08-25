@@ -2,7 +2,7 @@ module Fd
   class MemberQuery
     Facet = Struct.new(:key, :label, :value, :value_label, :options, :on, keyword_init: true)
     View = Struct.new(:key, :label, :count, :current, keyword_init: true)
-    Row = Struct.new(:user_id, :subject_of, :logged_in, :open_cases, :actions, :notes,
+    Row = Struct.new(:user_id, :cases, :subject_of, :logged_in, :open_cases, :actions, :notes,
       :priors, :last_case_at, keyword_init: true)
 
     VIEWS = {
@@ -311,7 +311,7 @@ module Fd
 
     def sorted(found)
       ranked = case self["sort"]
-      when "subject" then found.sort_by { |row| [-row.subject_of, row.user_id] }
+      when "subject" then found.sort_by { |row| [-row.cases, row.user_id] }
       when "logged" then found.sort_by { |row| [-row.logged_in, row.user_id] }
       when "actions" then found.sort_by { |row| [-row.actions, row.user_id] }
       when "name" then by_name(found)
@@ -349,11 +349,12 @@ module Fd
     end
 
     def build_summaries
-      found = Hash.new { |all, id| all[id] = Row.new(user_id: id, subject_of: 0, logged_in: 0,
-        open_cases: 0, actions: 0, notes: 0, priors: 0) }
+      found = Hash.new { |all, id| all[id] = Row.new(user_id: id, cases: 0, subject_of: 0,
+        logged_in: 0, open_cases: 0, actions: 0, notes: 0, priors: 0) }
 
       conduct_rows.each do |row|
         held = found[row["user_id"]]
+        held.cases = row["cases"].to_i
         held.subject_of = row["subject_of"].to_i
         held.logged_in = row["logged_in"].to_i
         held.open_cases = row["open_cases"].to_i
@@ -396,6 +397,7 @@ module Fd
     def conduct_rows
       Case.connection.select_all(Case.sanitize_sql([<<~SQL, { category: self["category"] }]))
         SELECT p.user_id,
+               count(DISTINCT p.case_id) AS cases,
                count(*) FILTER (WHERE p.role = 'subject') AS subject_of,
                count(*) FILTER (WHERE p.role <> 'subject') AS logged_in,
                count(*) FILTER (WHERE p.role = 'subject' AND c.resolved_at IS NULL) AS open_cases,
