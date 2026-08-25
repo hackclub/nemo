@@ -227,10 +227,14 @@ module FdHelper
 
   def member_tab_link(user_id, key, label, count)
     link_to fd_member_path(user_id, show: (key unless key == "all")),
-      class: "view", aria: { current: ("true" if key == @only) } do
+      aria: { current: ("true" if key == @only) } do
       concat tag.span(label)
-      concat tag.span(count, class: "view-count")
+      concat tag.span(count, class: "seg-count")
     end
+  end
+
+  def history_by_month(entries)
+    entries.group_by { |entry| entry.at.to_date.beginning_of_month }
   end
 
   def in_force_line(action, names)

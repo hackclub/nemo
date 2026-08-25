@@ -18,83 +18,69 @@
 <% end %>
 
 <div class="cols c-2">
-  <div class="panel">
-    <div class="views">
-      <% Fd::MemberTimeline::TABS.each do |key, label| %>
-        <%= member_tab_link(@user_id, key, label, @counts.fetch(key, 0)) %>
-      <% end %>
-    </div>
-
-    <% show_force = @standing.in_force.any? && %w[all actions].include?(@only) %>
+  <div>
     <% show_write = current_staff.may?("member.note") && @only == "notes" %>
-    <% if show_force %>
-      <div class="panel-body">
-        <div class="fbox fbox-warn">
-          <div class="ft">In force now</div>
-          <div class="fb">
-            <% @standing.in_force.each do |action| %>
-              <div class="fb-line"><%= in_force_line(action, names) %></div>
-              <div class="fb-do">
-                <%= link_to "Reverse it", fd_case_path(action.case_id, tab: "actions"),
-                      class: "btn" %>
-                <%= link_to "Open case #{action.case_id}", fd_case_path(action.case_id),
-                      class: "btn btn-ghost" %>
-              </div>
-            <% end %>
+
+    <% if @standing.in_force.any? %>
+      <div class="standing">
+        <p class="standing-t">In force now</p>
+        <% @standing.in_force.each do |action| %>
+          <div class="standing-row">
+            <span class="grow standing-line"><%= in_force_line(action, names) %></span>
+            <%= link_to "Reverse it", fd_case_path(action.case_id, tab: "actions"),
+                  class: "btn" %>
+            <%= link_to "Open case #{action.case_id}", fd_case_path(action.case_id),
+                  class: "btn btn-ghost" %>
           </div>
-        </div>
+        <% end %>
       </div>
     <% end %>
 
+  <div class="panel">
+    <div class="panel-head">
+      <span class="segmented">
+        <% Fd::MemberTimeline::KINDS.each do |key, label| %>
+          <%= member_tab_link(@user_id, key, label, @counts.fetch(key, 0)) %>
+        <% end %>
+      </span>
+      <span class="grow"></span>
+      <% if current_staff.may?("member.note") && !show_write %>
+        <%= link_to "Write a note", fd_member_path(@user_id, show: "notes"), class: "btn" %>
+      <% end %>
+    </div>
+
     <% if @history.any? %>
-      <div class="scroll">
-        <table class="data-table record-table">
-          <colgroup>
-            <col style="width: 16%">
-            <col style="width: 44%">
-            <col style="width: 20%">
-            <col style="width: 20%">
-          </colgroup>
-          <thead>
-            <tr>
-              <th>Happened</th>
-              <th>What</th>
-              <th>Who</th>
-              <th>When</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @history.each do |entry| %>
-              <tr>
-                <td><%= history_word_chip(entry) %></td>
-                <td>
-                  <span class="two-line">
-                    <% if entry.case_id %>
-                      <b><%= link_to entry.title, fd_case_path(entry.case_id) %></b>
-                    <% else %>
-                      <b><%= entry.title %></b>
-                    <% end %>
-                    <% if entry.said.present? %>
-                      <span><%= mentioned(entry.said) %></span>
-                    <% else %>
-                      <% under = [entry.state, entry.detail].reject(&:blank?).join(" · ") %>
-                      <% if under.present? %><span><%= under %></span><% end %>
-                    <% end %>
-                  </span>
-                </td>
-                <td class="sub"><%= entry.who ? member_link(entry.who) : "n/a" %></td>
-                <td class="sub">
-                  <span class="when-cell">
-                    <span><%= on_day(entry.at) %></span>
-                    <% if entry.ref.is_a?(Fd::Note) %>
-                      <%= render "note_remove", user_id: @user_id, note: entry.ref %>
-                    <% end %>
-                  </span>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
+      <div class="record-list">
+        <% history_by_month(@history).each do |month, entries| %>
+          <p class="record-month"><%= month.strftime("%B %Y") %></p>
+          <% entries.each do |entry| %>
+            <div class="record-row">
+              <span class="record-when">
+                <span class="record-day"><%= entry.at.strftime("%-d %b") %></span>
+                <%= history_word_chip(entry) %>
+              </span>
+              <span class="record-what">
+                <% if entry.case_id %>
+                  <b><%= link_to entry.title, fd_case_path(entry.case_id) %></b>
+                <% else %>
+                  <b><%= entry.title %></b>
+                <% end %>
+                <% if entry.said.present? %>
+                  <span class="record-said"><%= mentioned(entry.said) %></span>
+                <% else %>
+                  <% under = [entry.state, entry.detail].reject(&:blank?).join(" · ") %>
+                  <% if under.present? %><span class="record-said"><%= under %></span><% end %>
+                <% end %>
+                <span class="record-by">
+                  <%= entry.who ? member_link(entry.who) : "n/a" %>
+                  <% if entry.ref.is_a?(Fd::Note) %>
+                    <%= render "note_remove", user_id: @user_id, note: entry.ref %>
+                  <% end %>
+                </span>
+              </span>
+            </div>
+          <% end %>
+        <% end %>
       </div>
     <% else %>
       <div class="empty">
@@ -123,6 +109,7 @@
         <% end %>
       </div>
     <% end %>
+  </div>
   </div>
 
   <div class="facts">

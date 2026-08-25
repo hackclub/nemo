@@ -147,7 +147,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
       "but it is not a note on this case, so it stays off the notes tab"
 
     get fd_member_path("USUB", show: "notes")
-    assert_select ".record-table", text: /escalates in public/
+    assert_select ".record-list", text: /escalates in public/
   end
 
   test "a standing note is marked as being about the member, not the case" do
@@ -155,7 +155,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     get fd_member_path("USUB", show: "notes")
 
-    assert_select ".record-table", text: /watch for repeats/
+    assert_select ".record-list", text: /watch for repeats/
   end
 
   test "a standing note shows for somebody who is not a subject" do
@@ -165,7 +165,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     get fd_member_path("UWATCHER", show: "notes")
 
-    assert_select ".record-table", text: /keeps turning up/
+    assert_select ".record-list", text: /keeps turning up/
   end
 
   test "a deleted note is not shown on the page" do

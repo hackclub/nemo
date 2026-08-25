@@ -2667,8 +2667,13 @@
     display: flex;
     align-items: center;
     gap: var(--s-2xs);
-    padding: var(--s-xs) var(--s-md);
+    padding: var(--s-2xs) var(--s-sm);
     border-bottom: 1px solid var(--line);
+  }
+
+  .notes-head .btn,
+  .panel-head .btn {
+    height: 26px;
   }
 
   .panel > .panel-head {
@@ -2830,13 +2835,133 @@
     border-bottom: 1px solid var(--line-soft);
   }
 
+  .standing {
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    border-inline-start: 3px solid var(--warn);
+    border-radius: var(--r-card);
+    padding: 10px var(--s-sm);
+    display: grid;
+    gap: 6px;
+  }
+
+  .standing-t {
+    font-family: var(--font-code);
+    font-size: var(--t-micro);
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--warn);
+    margin: 0;
+  }
+
+  .standing-row {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs);
+    flex-wrap: wrap;
+  }
+
+  .standing-row .btn {
+    height: 26px;
+  }
+
+  .standing-line {
+    font-size: var(--t-small);
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+
+  .seg-count {
+    font-family: var(--font-code);
+    font-size: var(--t-micro);
+    color: var(--ink-3);
+    margin-inline-start: 5px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .segmented a[aria-current] .seg-count {
+    color: var(--ink-2);
+  }
+
+  .record-list {
+    display: grid;
+    padding-bottom: var(--s-2xs);
+  }
+
+  .record-month {
+    font-family: var(--font-code);
+    font-size: var(--t-micro);
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0;
+    padding: var(--s-xs) var(--s-sm) var(--s-3xs);
+  }
+
+  .record-row {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: var(--s-xs);
+    padding: 8px var(--s-sm);
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .record-list > .record-row:last-child {
+    border-bottom: 0;
+  }
+
+  .record-when {
+    display: grid;
+    gap: 4px;
+    justify-items: end;
+    text-align: right;
+  }
+
+  .record-day {
+    font-family: var(--font-code);
+    font-size: var(--t-small);
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .record-what {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .record-what b {
+    font-size: var(--t-body);
+    font-weight: 600;
+  }
+
+  .record-said {
+    font-size: var(--t-small);
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+
+  .record-by {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2xs);
+    font-size: var(--t-micro);
+    color: var(--ink-3);
+  }
+
+  .record-by form {
+    display: contents;
+  }
+
   .ledger {
     display: grid;
   }
 
   .ledger-row {
     display: grid;
-    grid-template-columns: 4px minmax(0, 1fr);
+    grid-template-columns: 3px minmax(0, 1fr);
     border-bottom: 1px solid var(--line-soft);
   }
 
@@ -2850,8 +2975,8 @@
 
   .ledger-main {
     display: grid;
-    gap: 6px;
-    padding: var(--s-xs) var(--s-md);
+    gap: 3px;
+    padding: 10px var(--s-sm);
     min-width: 0;
   }
 
@@ -2863,9 +2988,13 @@
   }
 
   .ledger-top b {
-    font-size: var(--t-head);
+    font-size: var(--t-body);
     font-weight: 600;
     letter-spacing: -0.01em;
+  }
+
+  .ledger-top .btn {
+    height: 26px;
   }
 
   .action-undone {
@@ -2876,9 +3005,9 @@
 
   .ledger-said {
     margin: 0;
-    font-size: var(--t-body);
+    font-size: var(--t-small);
     color: var(--ink-2);
-    line-height: 1.55;
+    line-height: 1.5;
   }
 
   .people-list > .person-block > .line-row.fat:hover {

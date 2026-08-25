@@ -17,7 +17,7 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     get fd_member_path("UNOBODY")
 
     assert_response :success
-    assert_select ".record-table tbody tr", 0
+    assert_select ".record-row", 0
     assert_select ".empty-title"
   end
 
@@ -38,9 +38,9 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
 
     get fd_member_path(SUBJECT)
 
-    assert_select ".fbox-warn .ft", text: "In force now"
-    assert_select ".fbox-warn .fb-line", text: /Shush until/
-    assert_select ".fbox-warn a[href=?]", fd_case_path(kase)
+    assert_select ".standing .standing-t", text: "In force now"
+    assert_select ".standing .standing-line", text: /Shush until/
+    assert_select ".standing a[href=?]", fd_case_path(kase)
   end
 
   test "an action with no due date never leads the record, but stays on it" do
@@ -49,8 +49,8 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
 
     get fd_member_path(SUBJECT)
 
-    assert_select ".fbox-warn", 0, "a warning is not being enforced over time"
-    assert_select ".record-table tbody tr", 2, "the case and the warning are still on the record"
+    assert_select ".standing", 0, "a warning is not being enforced over time"
+    assert_select ".record-row", 2, "the case and the warning are still on the record"
   end
 
   test "an action past its expiry drops out of force without leaving the record" do
@@ -59,8 +59,8 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
 
     get fd_member_path(SUBJECT)
 
-    assert_select ".fbox-warn", 0
-    assert_select ".record-table tbody tr", 2
+    assert_select ".standing", 0
+    assert_select ".record-row", 2
   end
 
   test "the identity line says email is not collected rather than showing a blank" do
@@ -95,9 +95,9 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
 
     get fd_member_path(SUBJECT)
 
-    assert_select ".record-table tbody tr", 3
-    assert_select ".record-table tbody tr:first-child a[href=?]", fd_case_path(recent)
-    assert_select ".record-table a[href=?]", fd_case_path(old)
+    assert_select ".record-row", 3
+    assert_select ".record-row:first-of-type a[href=?]", fd_case_path(recent)
+    assert_select ".record-list a[href=?]", fd_case_path(old)
   end
 
   test "each tab narrows the record to its own kind" do
@@ -106,22 +106,22 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     Fd::Note.create!(subject_user_id: SUBJECT, body: "watch this one", author: "UFF1")
 
     get fd_member_path(SUBJECT)
-    assert_select ".record-table tbody tr", 3
+    assert_select ".record-row", 3
 
     get fd_member_path(SUBJECT, show: "actions")
-    assert_select ".record-table tbody tr", 1
-    assert_select ".view[aria-current]", text: /Actions/
+    assert_select ".record-row", 1
+    assert_select ".segmented a[aria-current]", text: /Actions/
 
     get fd_member_path(SUBJECT, show: "notes")
-    assert_select ".record-table tbody tr", 1
-    assert_select ".view[aria-current]", text: /Notes/
+    assert_select ".record-row", 1
+    assert_select ".segmented a[aria-current]", text: /Notes/
   end
 
   test "a tab that matches nothing says which nothing it is" do
     make_case(subject: SUBJECT, opened_at: 10.days.ago)
     get fd_member_path(SUBJECT, show: "actions")
 
-    assert_select ".record-table tbody tr", 0
+    assert_select ".record-row", 0
     assert_select ".empty-title", text: /Nothing has ever been done to them/
   end
 
