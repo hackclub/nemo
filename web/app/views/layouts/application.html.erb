@@ -129,7 +129,8 @@
       <div class="main" data-controller="case-timeline">
         <div class="topbar">
           <%= yield :page_face %>
-          <h1 class="head-title"><%= content_for(:page_title) || "Mnemosyne" %></h1>
+          <% page_title = content_for(:page_title) || "Mnemosyne" %>
+          <h1 class="head-title" title="<%= page_title %>"><%= page_title %></h1>
           <% if content_for?(:page_subtitle) %>
             <span class="head-meta"><%= content_for(:page_subtitle) %></span>
           <% end %>

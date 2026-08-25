@@ -958,6 +958,9 @@
     background-color: var(--card-2);
     color: var(--ink-2);
     white-space: nowrap;
+    max-width: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .chip-dot {
@@ -1979,7 +1982,9 @@
     inset-inline-end: 0;
     top: calc(100% + var(--s-2xs));
     z-index: 30;
+    width: max-content;
     min-width: 12.5rem;
+    max-width: min(22rem, calc(100vw - var(--s-page) * 2));
     padding: var(--s-3xs);
     background-color: var(--card);
     border: 1px solid var(--line);
@@ -4892,6 +4897,17 @@
   .data-table tbody td:first-child {
     text-align: left;
     white-space: normal;
+  }
+
+  .data-table tbody td.said-cell,
+  .data-table tbody td .note-body,
+  .data-table tbody .two-line span {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    overflow: hidden;
+    overflow-wrap: anywhere;
   }
 
   .data-table tbody tr:last-child td {
