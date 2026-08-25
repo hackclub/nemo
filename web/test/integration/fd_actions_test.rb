@@ -120,7 +120,7 @@ class FdActionsTest < ActionDispatch::IntegrationTest
 
     get fd_case_path(@kase, tab: "actions")
     assert_match(/Shush/, response.body)
-    assert_select ".card .chip", text: "shush"
+    assert_select ".ledger-top b", text: "Shush"
   end
 
   test "the case page offers the log modal from the menu" do

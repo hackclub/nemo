@@ -2550,7 +2550,7 @@
     height: 36px;
     padding: 0 10px;
     margin-bottom: -1px;
-    font-size: var(--t-small);
+    font-size: var(--t-body);
     font-weight: 500;
     color: var(--ink-2);
     border-bottom: 2px solid transparent;
@@ -2568,20 +2568,20 @@
   }
 
   .view-off {
-    opacity: 0.55;
+    color: var(--ink-3);
   }
 
   .view-count {
     font-family: var(--font-code);
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     color: var(--ink-3);
     font-weight: 500;
     font-variant-numeric: tabular-nums;
-    background-color: var(--card);
-    border: 1px solid var(--line);
-    border-radius: var(--r-pill);
-    padding: 0 5px;
-    line-height: 15px;
+    line-height: 1;
+  }
+
+  .view[aria-current] .view-count {
+    color: var(--ink-2);
   }
 
   .facet-opt {
@@ -2687,6 +2687,7 @@
 
   .notes-card .note-row:last-child {
     border-bottom: 0;
+    padding-bottom: var(--s-xs);
   }
 
   .notes-card .note-row:hover {
@@ -2832,6 +2833,57 @@
 
   .person-row:has(+ .person-note) {
     border-bottom: 1px solid var(--line-soft);
+  }
+
+  .ledger {
+    display: grid;
+  }
+
+  .ledger-row {
+    display: grid;
+    grid-template-columns: 4px minmax(0, 1fr);
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .ledger-row:last-child {
+    border-bottom: 0;
+  }
+
+  .ledger-rail {
+    display: block;
+  }
+
+  .ledger-main {
+    display: grid;
+    gap: 6px;
+    padding: var(--s-xs) var(--s-md);
+    min-width: 0;
+  }
+
+  .ledger-top {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs);
+    flex-wrap: wrap;
+  }
+
+  .ledger-top b {
+    font-size: var(--t-head);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .action-undone {
+    color: var(--ink-2);
+    text-decoration: line-through;
+    text-decoration-color: var(--ink-3);
+  }
+
+  .ledger-said {
+    margin: 0;
+    font-size: var(--t-body);
+    color: var(--ink-2);
+    line-height: 1.55;
   }
 
   .people-list > .person-block > .line-row.fat:hover {

@@ -122,33 +122,8 @@
 
   <% if @tab == "actions" %>
     <% if @actions.any? %>
-      <% @actions.each do |action| %>
-        <div class="card">
-          <div class="line-row line-first">
-            <span class="chip <%= action_tone(action) %>"><%= action_label(action.type_key).downcase %></span>
-            <span class="grow"><%= action_line(action, @case) %></span>
-            <%= action_state_chip(action) %>
-            <% unless action.reversed? %>
-              <%= opens_modal "case.reverse", "Reverse", opens: "reverse-#{action.id}",
-                    on: @case, css: "text-btn" %>
-            <% end %>
-          </div>
-
-          <% cited = @cited_messages[action.cites_message_id] if action.cites? %>
-          <% if cited %>
-            <div class="said said-cite">
-              <div class="msg-text"><%= cited.readable? ? cited.body : "no text held" %></div>
-              <div class="sub2">
-                the message it cites · <%= member_link(cited.author_user_id) %> ·
-                <%= channel_label(cited.channel_id) %> ·
-                <%= cited.posted_at.strftime("%-d %b %H:%M") %>
-              </div>
-            </div>
-          <% end %>
-
-          <div class="sub2"><%= action_standing_line(action, @case) %></div>
-        </div>
-      <% end %>
+      <%= render "actions", kase: @case, actions: @actions,
+            cited_messages: @cited_messages %>
     <% else %>
       <div class="card">
         <%= render layout: "empty", locals: { title: "No action taken yet" } do %>

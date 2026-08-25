@@ -819,33 +819,13 @@ module FdHelper
     ACTION_LABELS.fetch(type_key) { type_key.tr("_", " ").capitalize }
   end
 
-  ACTION_TONES = {
-    "warning" => "chip-warn", "shush" => "chip-warn", "locked_thread" => "chip-off",
-    "dm" => "chip-off"
-  }.freeze
-
-  def action_tone(action)
-    return "chip-off" if action.reversed?
-
-    ACTION_TONES.fetch(action.type_key, "chip-crit")
-  end
-
-  def action_line(action, kase)
-    aside = kase.subject_user_ids.include?(action.target_user_id) ? "" : " (not the subject)"
-    safe_join([
-      "to ", member_link(action.target_user_id),
-      "#{aside}, #{on_day(action.performed_at)}, by ", member_link(action.decided_by)
-    ])
-  end
-
   def action_standing_line(action, kase)
     parts = []
     parts << reversal_line(action) if action.reversed?
-    parts << "expires #{on_day(action.expires_at)}" if action.expires?
-    parts << action_detail_note(action)
+    parts << "via #{action.source_app}" if action.source_app != "fire_engine"
     parts << action_performer_note(action) unless action.performed_by_decider?
     parts << "follows #{kase.followed_decision.title}" if kase.followed_decision
-    parts.compact.join(" · ")
+    parts.compact.join(" · ").presence
   end
 
   def reversal_line(action)
@@ -855,14 +835,39 @@ module FdHelper
 
   def action_state_chip(action)
     return tag.span("reversed", class: "chip chip-off") if action.reversed?
-    return tag.span("expired", class: "chip chip-off") if action.expired?
+    return tag.span("expired #{on_day(action.expires_at)}", class: "chip chip-off") if action.expired?
 
-    if action.expires?
-      remaining = case_age_label(action.expires_at - Time.current)
-      return tag.span("expires in #{remaining}", class: "chip chip-warn")
-    end
+    return nil unless action.expires?
 
-    nil
+    remaining = case_age_label(action.expires_at - Time.current)
+    tag.span("in force, #{remaining} left", class: "chip chip-warn")
+  end
+
+  def action_rail_tone(action)
+    action.active? ? "sev-warn" : "sev-calm"
+  end
+
+  def actions_head_line(actions)
+    standing = actions.count(&:active?)
+    tail = standing.zero? ? "none still standing" : "#{standing} still standing"
+    "#{pluralize(actions.size, "action")} · #{tail}"
+  end
+
+  def action_sentence(action)
+    channel = action.details["channel_id"]
+    parts = ["On ", member_link(action.target_user_id)]
+    parts << " in #{channel_label(channel)}" if channel.present?
+    parts << ", until #{on_day(action.expires_at)}" if action.expires?
+    parts << ". Set by "
+    parts << member_link(action.decided_by)
+    parts << " on #{on_day(action.performed_at)}."
+    safe_join(parts)
+  end
+
+  def off_subject_chip(action, kase)
+    return if kase.subject_user_ids.include?(action.target_user_id)
+
+    tag.span("not the subject", class: "chip chip-crit")
   end
 
   def action_performer_note(action)

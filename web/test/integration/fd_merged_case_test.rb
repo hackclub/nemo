@@ -20,7 +20,7 @@ class FdMergedCaseTest < ActionDispatch::IntegrationTest
     get fd_case_path(@root, tab: "actions")
 
     assert_response :success
-    assert_select ".line-row .chip", text: "shush"
+    assert_select ".ledger-top b", text: "Shush"
   end
 
   test "the folded case's notes show, and the count includes them" do

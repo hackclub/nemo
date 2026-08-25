@@ -125,7 +125,7 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     get fd_case_path(@kase, tab: "actions")
 
-    assert_select ".text-btn", text: "Reverse", count: 2
+    assert_select ".ledger-top .btn", text: "Reverse", count: 2
     assert_select "input#reverse-#{@action.id}.modal-flip"
     assert_select "input#reverse-#{live.id}.modal-flip"
     assert_select "input[name=action_id][value=?]", live.id.to_s
@@ -140,7 +140,7 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
     assert_nil live.reload.reversed_at
 
     get fd_case_path(@kase, tab: "actions")
-    assert_select ".text-btn", text: "Reverse", count: 1
+    assert_select ".ledger-top .btn", text: "Reverse", count: 1
   end
 
   test "the reversal shows in the timeline as its own moment" do
