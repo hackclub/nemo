@@ -139,10 +139,12 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
     assert_select "td.col-role .chip-good", text: "slack"
   end
 
-  test "everybody gets the settings link in the rail" do
+  test "everybody with a role gets the settings link under their face" do
     sign_in_as(@me)
     get fd_cases_path
 
-    assert_select ".rail a[href=?]", fd_settings_path
+    assert_select ".you-menu .menu-pop a[href=?]", fd_settings_path
+    assert_select ".you-menu .you-head", { text: /#{@me.role.tr("_", " ")}/ },
+      "the menu names the role you are acting with"
   end
 end

@@ -345,9 +345,20 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     assert_select ".data-table"
   end
 
-  test "the rail carries settings" do
+  test "settings sits under your own face, not in the rail" do
     get fd_settings_path
-    assert_select ".rail-item[aria-current='page']", text: /Settings/
+
+    assert_select ".rail a[href=?]", fd_settings_path, { count: 0 },
+      "the rail is for what you navigate between, not for your account"
+    assert_select ".you-menu .menu-pop a[href=?]", fd_settings_path, 1
+  end
+
+  test "the account controls leave the rail foot with settings" do
+    get fd_cases_path
+
+    assert_select ".rail-foot .rail-item", 1, "only Collapse, which is about the rail itself"
+    assert_select ".you-menu .you-switch[role=switch]", 1, "dark mode moved into the menu"
+    assert_select ".you-menu form[action=?]", logout_path, 1, "so did sign out"
   end
 
   test "a firefighter gets settings, lands on their own tab, and no further" do
@@ -356,7 +367,7 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     sign_in_as(hand)
 
     get fd_cases_path
-    assert_select ".rail-item", text: /Settings/
+    assert_select ".you-menu .menu-pop a[href=?]", fd_settings_path, 1
 
     get fd_settings_path
     assert_response :success

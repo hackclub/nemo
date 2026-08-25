@@ -42,8 +42,8 @@ class FdGatingTest < ActionDispatch::IntegrationTest
 
     get fd_case_path(kase)
 
-    assert_select "details.menu[data-controller=menu]", 1
-    live = css_select("details.menu .menu-pop label")
+    assert_select ".head-actions details.menu[data-controller=menu]", 1
+    live = css_select(".head-actions details.menu .menu-pop label")
     assert live.any?, "the menu opens modals through labels"
     live.each do |label|
       assert_equal "0", label["tabindex"],

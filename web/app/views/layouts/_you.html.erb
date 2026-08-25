@@ -1,0 +1,51 @@
+<% name = profile&.display_name || staff.user_id %>
+<details class="menu you-menu" data-controller="menu">
+  <summary class="you-face" aria-haspopup="menu" aria-label="<%= name %>, and your account">
+    <% if profile&.image_url %>
+      <img class="avatar" src="<%= profile.image_url %>" alt="" width="28" height="28">
+    <% else %>
+      <span class="avatar">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+      </span>
+    <% end %>
+  </summary>
+
+  <div class="menu-pop you-pop">
+    <div class="you-head">
+      <% if profile&.image_url %>
+        <img class="avatar" src="<%= profile.image_url %>" alt="" width="30" height="30">
+      <% else %>
+        <span class="avatar">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+        </span>
+      <% end %>
+      <span class="two-line">
+        <b><%= name %></b>
+        <span><%= staff.role.present? ? staff.role.tr("_", " ") : "no access" %></span>
+      </span>
+    </div>
+
+    <% if staff.role.present? %>
+      <%= link_to fd_settings_path, class: "btn" do %>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+        <span>Settings</span>
+      <% end %>
+      <div class="menu-sep"></div>
+    <% end %>
+
+    <button type="button" class="btn you-switch" role="switch" aria-checked="false"
+            data-controller="theme" data-action="theme#toggle">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none"/></svg>
+      <span>Dark mode</span>
+      <span class="you-track" aria-hidden="true"></span>
+    </button>
+
+    <div class="menu-sep"></div>
+
+    <%= button_to logout_path, method: :delete, class: "btn you-out",
+          form: { class: "contents" } do %>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      <span>Sign out</span>
+    <% end %>
+  </div>
+</details>

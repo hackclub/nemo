@@ -97,27 +97,10 @@
               <span class="rail-text">Decisions</span>
             <% end %>
             <% end %>
-            <% if current_staff&.role.present? %>
-              <%= link_to fd_settings_path, class: "rail-item",
-                    aria: { current: ("page" if controller_path == "fd/settings") } do %>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg>
-                <span class="rail-text">Settings</span>
-              <% end %>
-            <% end %>
           </nav>
         </div>
 
         <div class="rail-foot">
-          <button type="button" class="rail-item" role="switch" aria-checked="false"
-                  aria-label="Dark mode"
-                  data-controller="theme" data-action="theme#toggle">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none"/></svg>
-            <span class="rail-text">Dark mode</span>
-          </button>
-          <%= button_to logout_path, method: :delete, class: "rail-item", form: { class: "contents" } do %>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-            <span class="rail-text">Sign out</span>
-          <% end %>
           <button type="button" class="rail-item rail-fold" data-action="rail#toggle"
                   aria-label="Collapse the menu">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6 9 12l6 6"/></svg>
@@ -149,15 +132,7 @@
             <div class="head-actions"><%= content_for(:head_actions) %></div>
           <% end %>
 
-          <% name = current_profile&.display_name || current_staff.user_id %>
-          <% if current_profile&.image_url %>
-            <img class="avatar" src="<%= current_profile.image_url %>" alt="<%= name %>"
-                 title="<%= name %>" width="28" height="28">
-          <% else %>
-            <span class="avatar" title="<%= name %>">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
-            </span>
-          <% end %>
+          <%= render "layouts/you", staff: current_staff, profile: current_profile %>
 
           <div class="topbar-msgs" aria-live="polite" aria-atomic="false">
             <% if alert || notice %>
