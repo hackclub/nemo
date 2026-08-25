@@ -240,6 +240,20 @@ module FdHelper
     HISTORY_TONES.fetch(state.to_s, "chip-off")
   end
 
+  def wrong_on?(field)
+    flash[:wrong].is_a?(Hash) && flash[:wrong]["field"] == field.to_s
+  end
+
+  def field_wrong(field)
+    return nil unless wrong_on?(field)
+
+    tag.p(flash[:wrong]["said"], class: "field-wrong")
+  end
+
+  def field_was(field, fallback = nil)
+    wrong_on?(field) ? flash[:wrong]["was"] : fallback
+  end
+
   def history_word_chip(entry)
     tone = case entry.word
     when "reversal" then "chip-good"

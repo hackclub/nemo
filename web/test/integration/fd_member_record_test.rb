@@ -147,7 +147,12 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     post fd_member_notes_path(SUBJECT), params: { body: "   " }
 
     assert_empty Fd::Note.for_subject(SUBJECT).to_a
-    assert_match(/write the note/, flash[:alert])
+    assert_nil flash[:alert], "a problem with one field is not a page-level message"
+    assert_equal "body", flash[:wrong]["field"]
+    assert_match(/Write the note/i, flash[:wrong]["said"])
+
+    follow_redirect!
+    assert_select ".panel-foot .field-wrong", text: /Write the note/i
   end
 
   test "the note text never reaches the trail, only its length" do

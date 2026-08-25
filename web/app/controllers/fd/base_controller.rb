@@ -40,6 +40,14 @@ module Fd
       nil
     end
 
+    CARRIES = 900
+
+    def wrong!(field, said, was = nil)
+      kept = was.to_s.length <= CARRIES ? was : nil
+      flash[:wrong] = { "field" => field.to_s, "said" => said, "was" => kept }
+      said
+    end
+
     def refuse!(key, record = nil)
       log_refusal(key, record)
       flash[:tone] = "bad"

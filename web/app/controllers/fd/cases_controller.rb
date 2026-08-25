@@ -101,7 +101,8 @@ module Fd
       kase = Case.find(params[:id])
       wanted = params[:category_key].to_s
       unless Case::CATEGORIES.include?(wanted)
-        return redirect_to(fd_case_path(kase), alert: "pick a category from the list")
+        wrong!(:category_key, "Pick one of these.")
+        return redirect_to(fd_case_path(kase, do: "category"))
       end
       if kase.category_key.present?
         return redirect_to(fd_case_path(kase), alert: "this case already has a category")

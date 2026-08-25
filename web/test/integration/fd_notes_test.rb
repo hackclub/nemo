@@ -81,7 +81,9 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     write(body: "   ")
     assert_equal 0, notes.count
-    assert_match(/write the note/, flash[:alert])
+    assert_nil flash[:alert], "a problem with one field is not a page-level message"
+    assert_equal "body", flash[:wrong]["field"]
+    assert_match(/Write the note/i, flash[:wrong]["said"])
   end
 
   test "the body is trimmed before it is stored" do
@@ -94,7 +96,9 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     write(body: "x" * (Fd::NotesController::MAX_LENGTH + 1))
     assert_equal 0, notes.count
-    assert_match(/too long/, flash[:alert])
+    assert_match(/Keep it under/, flash[:wrong]["said"])
+    assert_nil flash[:wrong]["was"],
+      "a body over the limit will not fit in a cookie, so it is not carried back"
   end
 
   test "the note text never reaches the trail, only its length" do

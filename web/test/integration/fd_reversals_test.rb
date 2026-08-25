@@ -51,14 +51,20 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
     reverse(reversal_reason: "   ")
 
     assert_nil @action.reload.reversed_at
-    assert_match(/say why it is being reversed/, flash[:alert])
+    assert_nil flash[:alert], "a problem with one field is not a page-level message"
+    assert_equal "reversal_reason", flash[:wrong]["field"]
+    assert_match(/Say why it is being reversed/i, flash[:wrong]["said"])
+
+    follow_redirect!
+    assert_select "input#reverse-#{@action.id}[checked]", 1, "the modal comes back open"
+    assert_select ".field-wrong", text: /Say why it is being reversed/i
   end
 
   test "an absurdly long reason is refused" do
     sign_in_as(@me)
     reverse(reversal_reason: "x" * (Fd::ReversalsController::MAX_REASON + 1))
     assert_nil @action.reload.reversed_at
-    assert_match(/under 500 characters/, flash[:alert])
+    assert_match(/Keep it under 500 characters/, flash[:wrong]["said"])
   end
 
   test "an action on another case cannot be reversed through this one" do

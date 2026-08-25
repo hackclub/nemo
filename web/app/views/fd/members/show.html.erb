@@ -104,12 +104,13 @@
 
     <% if show_write %>
       <div class="panel-foot">
+        <%= field_wrong(:body) %>
         <%= form_with url: fd_member_notes_path(@user_id), method: :post,
               class: "note-composer", html: { autocomplete: "off" } do %>
           <div class="mention-field" data-controller="mention"
                data-mention-send-value="true"
                data-mention-url-value="<%= fd_member_search_path %>">
-            <%= text_area_tag :body, nil, rows: 1, class: "note-input", id: nil,
+            <%= text_area_tag :body, field_was(:body), rows: 1, class: "note-input", id: nil,
                   maxlength: Fd::NotesController::MAX_LENGTH,
                   placeholder: "Write a note about #{names[@user_id]}, Enter saves it",
                   data: { mention_target: "field", action: "input->mention#type " \

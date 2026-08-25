@@ -201,15 +201,18 @@
 
 <% @live_actions.each do |action| %>
   <%= render layout: "fd/modal", locals: { id: "reverse-#{action.id}",
-        title: "Reverse this action", sub: action_option_label(action) } do %>
+        title: "Reverse this action", sub: action_option_label(action),
+        open: params[:do] == "reverse-#{action.id}" } do %>
     <%= form_with url: fd_case_reversals_path(@case), method: :post, html: { autocomplete: "off" } do %>
       <%= hidden_field_tag :action_id, action.id, id: nil %>
       <div class="modal-body">
         <label class="field-label">
           Why
-          <%= text_area_tag :reversal_reason, nil, rows: 3, class: "textarea", id: nil,
+          <%= text_area_tag :reversal_reason, field_was(:reversal_reason), rows: 3,
+                class: "textarea", id: nil,
                 maxlength: Fd::ReversalsController::MAX_REASON %>
         </label>
+        <%= field_wrong(:reversal_reason) %>
       </div>
       <div class="modal-foot">
         <label for="reverse-<%= action.id %>" class="btn">Close</label>
@@ -275,7 +278,8 @@
 <% end %>
 
 <%= render layout: "fd/modal", locals: { id: "set-category",
-      title: "What kind of thing is case #{@case.id}?" } do %>
+      title: "What kind of thing is case #{@case.id}?",
+      open: params[:do] == "category" } do %>
   <%= form_with url: fd_case_path(@case), method: :patch, html: { autocomplete: "off" } do %>
     <div class="modal-body">
       <div class="outcomes">
@@ -287,6 +291,7 @@
           </label>
         <% end %>
       </div>
+      <%= field_wrong(:category_key) %>
     </div>
     <div class="modal-foot">
       <label for="set-category" class="btn">Close</label>
@@ -324,9 +329,10 @@
       </div>
       <label class="field-label">
         The note
-        <%= render "fd/mention_field", name: :body, value: nil, rows: 4,
+        <%= render "fd/mention_field", name: :body, value: field_was(:body), rows: 4,
               placeholder: "meow" %>
       </label>
+      <%= field_wrong(:body) %>
     </div>
     <div class="modal-foot">
       <label for="add-note" class="btn">Close</label>

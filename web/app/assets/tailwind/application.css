@@ -2568,6 +2568,30 @@
     background-color: var(--card-2);
   }
 
+  .field-wrong {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    font-size: var(--t-fine);
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .field-wrong::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    flex: none;
+    border-radius: 50%;
+    background-color: currentColor;
+    transform: translateY(-1px);
+  }
+
+  .panel-foot .field-wrong {
+    margin-bottom: 6px;
+  }
+
   .panel-foot .note-composer {
     margin-top: 0;
     background-color: var(--card);

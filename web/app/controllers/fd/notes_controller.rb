@@ -11,7 +11,10 @@ module Fd
       standing = about.present? && about != "case"
 
       problem = objection(kase, body, standing, about)
-      return redirect_to(back_to(kase, standing, about), alert: problem) if problem
+      if problem
+        return redirect_to(back_to(kase, standing, about),
+          alert: (problem unless flash[:wrong]))
+      end
 
       writing do
         note = Note.create!(
@@ -74,8 +77,11 @@ module Fd
     end
 
     def objection(kase, body, standing, about)
-      return "write the note before saving it" if body.blank?
-      return "that note is too long, keep it under #{MAX_LENGTH} characters" if body.length > MAX_LENGTH
+      return wrong!(:body, "Write the note before saving it.") if body.blank?
+      if body.length > MAX_LENGTH
+        return wrong!(:body,
+          "Keep it under #{MAX_LENGTH} characters. That one is #{body.length}.", body)
+      end
       if standing && !kase.subject_user_ids.include?(about)
         return "that member is not a subject of this case"
       end

@@ -7,7 +7,10 @@ module Fd
       body = Mentions.normalise(params[:body].to_s.strip)
 
       problem = objection(body)
-      return redirect_to(fd_member_path(user_id, show: "notes"), alert: problem) if problem
+      if problem
+        return redirect_to(fd_member_path(user_id, show: "notes"),
+          alert: (problem unless flash[:wrong]))
+      end
 
       writing do
         note = Note.create!(subject_user_id: user_id, body: body, author: current_staff.user_id)
@@ -52,9 +55,12 @@ module Fd
     private
 
     def objection(body)
-      return "write the note before saving it" if body.blank?
-      return "that note is too long, keep it under #{NotesController::MAX_LENGTH} characters" if
-        body.length > NotesController::MAX_LENGTH
+      return wrong!(:body, "Write the note before saving it.") if body.blank?
+
+      most = NotesController::MAX_LENGTH
+      if body.length > most
+        return wrong!(:body, "Keep it under #{most} characters. That one is #{body.length}.", body)
+      end
 
       nil
     end
