@@ -2,15 +2,6 @@
 <% content_for :page_face do %>
   <span class="head-face" aria-hidden="true"><%= @member ? @member.initial : "?" %></span>
 <% end %>
-<% content_for :page_subtitle do %>
-  <span class="idline">
-    <%= handle(@user_id) %>
-    <% if @member&.handle.present? %><span>@<%= @member.handle %></span><% end %>
-    <% if @member&.pronouns.present? %><span><%= @member.pronouns %></span><% end %>
-    <% if @member&.tz.present? %><span><%= @member.tz %></span><% end %>
-    <%= member_facts(@context, @identity) %>
-  </span>
-<% end %>
 <% content_for :head_actions do %>
   <%= link_to "Open in Slack", slack_member_url(@user_id), class: "btn",
         target: "_blank", rel: "noopener" %>

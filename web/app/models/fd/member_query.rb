@@ -6,15 +6,19 @@ module Fd
       :priors, :last_case_at, keyword_init: true)
 
     VIEWS = {
+      "everyone" => "Everyone",
+      "force" => "In force",
+      "priors" => "With priors",
       "history" => "Has a history",
       "open" => "Open case",
-      "priors" => "Two or more priors, 12mo",
-      "notes" => "Standing notes",
-      "everyone" => "Everyone"
+      "notes" => "Standing notes"
     }.freeze
 
+    TABS = %w[everyone force priors].freeze
+
     VIEW_FACETS = {
-      "history" => {},
+      "history" => { "who" => "history" },
+      "force" => { "state" => "force" },
       "open" => { "state" => "open" },
       "priors" => { "priors" => "2" },
       "notes" => { "state" => "noted" },
@@ -35,13 +39,13 @@ module Fd
     DIRS = %w[desc asc].freeze
 
     DEFAULTS = {
-      "who" => "history", "priors" => "any", "tenure" => "any", "active" => "any",
+      "who" => "everyone", "priors" => "any", "tenure" => "any", "active" => "any",
       "category" => "any", "state" => "any", "sort" => "recent", "dir" => "desc"
     }.freeze
     FACET_KEYS = DEFAULTS.keys.freeze
     KEYS = (FACET_KEYS + ["view"]).freeze
     LIMIT = 50
-    DEFAULT_VIEW = "history".freeze
+    DEFAULT_VIEW = "everyone".freeze
     NO_VIEW = "none".freeze
 
     def initialize(params = {})

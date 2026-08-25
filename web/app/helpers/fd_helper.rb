@@ -198,7 +198,6 @@ module FdHelper
     parts = []
     parts << "#{number_with_delimiter(context.messages_posted)} messages" if
       context.messages_posted
-    parts << "#{context.channels_joined} channels" if context.channels_joined
     parts.join(" · ").presence
   end
 
@@ -406,6 +405,10 @@ module FdHelper
   end
 
   STRIPES = { "sev-crit" => "stripe stripe-hot", "sev-warn" => "stripe stripe-warm" }.freeze
+
+  def member_stripe(row)
+    STRIPES.fetch(member_severity(row), "stripe")
+  end
 
   def case_stripe(kase)
     STRIPES.fetch(case_severity(kase), "stripe")

@@ -3862,41 +3862,11 @@
     max-width: 22rem;
   }
 
-  .data-table.queue-table tbody td {
-    padding: 10px var(--s-sm);
-  }
-
-  .data-table.queue-table tbody td:first-child {
-    width: 44%;
-  }
-
   .data-table.queue-table tbody td:nth-child(2),
-  .data-table.queue-table thead th:nth-child(2) {
-    width: 24%;
-    text-align: left;
-  }
-
+  .data-table.queue-table thead th:nth-child(2),
   .data-table.queue-table tbody td:nth-child(3),
   .data-table.queue-table thead th:nth-child(3) {
-    width: 10%;
     text-align: left;
-  }
-
-  .card-flush .queue-table tbody td:first-child {
-    padding-left: 14px;
-  }
-
-  .data-table.queue-table thead th {
-    padding-inline: var(--s-sm);
-  }
-
-  .data-table.queue-table thead th:first-child {
-    padding-left: 14px;
-  }
-
-  .data-table.queue-table tbody td:last-child {
-    text-align: right;
-    width: 22%;
   }
 
   .face-name {
@@ -4643,7 +4613,7 @@
     table-layout: fixed;
   }
 
-  .data-table .col-num { width: 7rem; }
+  .data-table:not(:has(colgroup)) .col-num { width: 7rem; }
   .data-table .col-rank { width: 4.5rem; }
   .data-table .col-date { width: 8.5rem; }
   .data-table .col-btn { width: 3.5rem; }
@@ -4732,9 +4702,55 @@
     vertical-align: middle;
   }
 
-  .data-table .num {
+  .panel .data-table th,
+  .panel .data-table td {
+    padding-inline: var(--s-xs);
+  }
+
+  .panel .data-table tbody td {
+    padding-block: 11px;
+  }
+
+  .panel .data-table tbody tr:hover {
+    background-color: var(--card-2);
+  }
+
+  .panel .data-table .row-name b,
+  .panel .data-table .two-line b {
+    font-size: var(--t-sm);
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .panel .data-table th:first-child,
+  .panel .data-table td:first-child {
+    padding-inline-start: var(--s-sm);
+  }
+
+  .panel .data-table th:last-child,
+  .panel .data-table td:last-child {
+    padding-inline-end: var(--s-sm);
+  }
+
+  .data-table th.num,
+  .data-table th.col-num {
     text-align: right;
+  }
+
+  .data-table th.num a,
+  .data-table th.col-num a {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+  }
+
+  .data-table td.num,
+  .data-table td.col-num {
+    text-align: right;
+    font-family: var(--font-code);
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
+    color: var(--ink);
   }
 
   .stripe { box-shadow: inset 3px 0 0 var(--line); }

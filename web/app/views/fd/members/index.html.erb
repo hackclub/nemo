@@ -1,42 +1,10 @@
 <% content_for :page_title, "Members" %>
-<% content_for :page_subtitle do %>
-  <%= @headline[:history] %> with a conduct history ·
-  <%= number_with_delimiter(@query.population) %> in the workspace
-<% end %>
 
 <div class="stack">
-  <div class="kpis">
-    <div class="card">
-      <p class="kpi-label">With a history</p>
-      <p class="kpi-val"><%= @headline[:history] %></p>
-      <div class="delta-note"><%= share_of(@headline[:history], @query.population) %></div>
-    </div>
-    <div class="card">
-      <p class="kpi-label">Two or more priors, 12mo</p>
-      <p class="kpi-val"><%= @headline[:priors] %></p>
-      <div class="delta-note">
-        <% if @headline[:open].positive? %>
-          <span class="chip chip-warn"><%= @headline[:open] %> with an open case</span>
-        <% else %>
-          <span class="chip chip-off">none open</span>
-        <% end %>
-      </div>
-    </div>
-    <div class="card">
-      <p class="kpi-label">Notes</p>
-      <p class="kpi-val"><%= @headline[:notes] %></p>
-      <div class="delta-note">on members</div>
-    </div>
-    <div class="card">
-      <p class="kpi-label">Logged, never a subject</p>
-      <p class="kpi-val"><%= @headline[:logged_only] %></p>
-      <div class="delta-note">reporters and involved</div>
-    </div>
-  </div>
-
   <turbo-frame id="roster" target="_top" data-turbo-action="advance">
+  <div class="panel">
   <div class="views">
-    <% @views.each do |view| %>
+    <% @views.select { |view| Fd::MemberQuery::TABS.include?(view.key) }.each do |view| %>
       <%= link_to fd_members_path(view: view.key), class: "view",
             data: { turbo_frame: "roster" },
             aria: { current: ("true" if view.current) } do %>
@@ -45,100 +13,45 @@
       <% end %>
     <% end %>
 
-    <span class="views-fill"></span>
-
-    <% @query.facets.select(&:on).each do |facet| %>
-      <span class="facet-set on">
-        <span class="facet">
-          <%= facet.label %>
-          <b><%= facet.value_label %></b>
-        </span>
-        <%= link_to fd_members_path(@query.facet_params(facet.key => Fd::MemberQuery::DEFAULTS[facet.key])),
-              class: "facet-x", data: { turbo_frame: "roster" },
-              aria: { label: "clear the #{facet.label.downcase} filter" } do %>
-          &times;
-        <% end %>
-      </span>
-    <% end %>
-
-    <span class="facet-set <%= "on" if @query.facets.any?(&:on) %>">
-      <details class="facet-drop" name="member-facet">
-        <summary class="facet">
-          Filters
-          <span class="facet-caret" aria-hidden="true">
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
-          </span>
-        </summary>
-        <div class="menu-pop filters-pop">
-          <% @query.facets.each do |facet| %>
-            <details class="more-item" name="member-more">
-              <summary class="more-name">
-                <%= facet.label %>
-                <% if facet.on || facet.key == "sort" %>
-                  <b><%= facet.value_label %></b>
-                <% end %>
-                <span class="facet-caret" aria-hidden="true">
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
-                </span>
-              </summary>
-              <div class="more-options">
-                <%= render "facet_options", query: @query, facet: facet %>
-              </div>
-            </details>
-          <% end %>
-        </div>
-      </details>
-    </span>
   </div>
-
-  <div class="card card-flush">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title"><%= @query.title %></h2>
-        <p class="card-sub"><%= @query.summary %></p>
-      </div>
-      <div class="card-tools">
-        <span class="chip chip-off"><%= pluralize(@query.total, "member") %></span>
-      </div>
-    </div>
 
     <% if @rows.any? %>
       <div class="scroll">
         <table class="data-table">
+          <colgroup>
+            <col style="width: 34%">
+            <col style="width: 22%">
+            <col style="width: 12%">
+            <col style="width: 12%">
+            <col style="width: 20%">
+          </colgroup>
           <thead>
             <tr>
               <%= member_sort_header("Member", "name") %>
-              <th>Tenure</th>
-              <%= member_sort_header("Subject of", "subject", numeric: true) %>
-              <%= member_sort_header("Logged in", "logged", numeric: true) %>
+              <th>Standing</th>
+              <%= member_sort_header("Cases", "subject", numeric: true) %>
               <%= member_sort_header("Actions", "actions", numeric: true) %>
               <%= member_sort_header("Last case", "recent") %>
-              <th>State</th>
             </tr>
           </thead>
           <tbody>
             <% @rows.each do |row| %>
               <tr>
-                <td>
+                <td class="<%= member_stripe(row) %>">
                   <span class="row-name">
-                    <span class="sev <%= member_severity(row) %>"></span>
+                    <%= face(row.user_id) %>
                     <span class="two-line">
                       <%= link_to fd_member_path(row.user_id) do %>
                         <b><%= names[row.user_id] %></b>
                       <% end %>
-                      <span class="idline">
-                        <span class="mono"><%= row.user_id %></span>
-                        <%= member_activity_line(@context[row.user_id]) %>
-                      </span>
+                      <span><%= tenure_label(@context[row.user_id]&.tenure_days) %></span>
                     </span>
                   </span>
                 </td>
-                <td><%= tenure_label(@context[row.user_id]&.tenure_days) %></td>
-                <td class="col-num"><%= row.subject_of %></td>
-                <td class="col-num"><%= row.logged_in %></td>
+                <td><%= member_state_chips(row) %></td>
+                <td class="col-num"><%= row.subject_of + row.logged_in %></td>
                 <td class="col-num"><%= row.actions %></td>
                 <td><%= last_case_label(row.last_case_at) %></td>
-                <td><%= member_state_chips(row) %></td>
               </tr>
             <% end %>
           </tbody>
@@ -164,7 +77,9 @@
         </div>
       <% end %>
     <% else %>
-      <p class="card-note"><%= @query.empty_note %></p>
+      <div class="empty">
+        <p class="empty-title"><%= @query.empty_note %></p>
+      </div>
     <% end %>
   </div>
   </turbo-frame>
