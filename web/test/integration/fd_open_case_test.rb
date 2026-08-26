@@ -269,7 +269,7 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     open_case
 
-    assert_select ".data-table tbody tr", minimum: 1
+    assert_select ".deck-card", minimum: 1
     assert_select "form#merge-form"
   end
 end

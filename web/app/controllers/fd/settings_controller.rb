@@ -1,5 +1,6 @@
 module Fd
   class SettingsController < BaseController
+    skip_before_action :needs_the_engine
     permit "access.read", unless: :just_me?
 
     TABS = { "access" => "Access", "roles" => "Roles", "sections" => "Sections",

@@ -23,7 +23,7 @@
   </div>
 
     <% if @cases.any? %>
-      <%= render "cards", cases: @cases, prior_counts: @prior_counts,
+      <%= render "cards", cases: @cases,
             thread_channels: @thread_channels %>
     <% else %>
       <div class="empty">

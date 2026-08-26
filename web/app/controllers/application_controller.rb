@@ -11,7 +11,14 @@ class ApplicationController < ActionController::Base
   def needs(key)
     return if Fd::Flag.on?(key)
 
-    redirect_to fd_cases_path, alert: "#{Fd::Flag.label(key).downcase} is turned off"
+    redirect_to still_on, alert: "#{Fd::Flag.label(key).downcase} is turned off"
+  end
+
+  def still_on
+    return fd_cases_path if Fd::Flag.on?(:fire_engine)
+    return root_path if Fd::Flag.on?(:analytics)
+
+    fd_settings_path
   end
 
   def current_staff

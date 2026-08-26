@@ -1,5 +1,6 @@
 module Fd
   class BaseController < ApplicationController
+    before_action :needs_the_engine
     before_action :require_a_declaration, unless: :read_only_request?
 
     class << self
@@ -14,6 +15,10 @@ module Fd
     end
 
     private
+
+    def needs_the_engine
+      needs(:fire_engine)
+    end
 
     def read_only_request?
       request.get? || request.head?

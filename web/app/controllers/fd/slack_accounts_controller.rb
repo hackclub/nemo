@@ -1,5 +1,6 @@
 module Fd
   class SlackAccountsController < BaseController
+    skip_before_action :needs_the_engine
     permit "slack.link"
 
     STATE = :slack_link_state

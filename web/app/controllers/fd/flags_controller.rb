@@ -1,5 +1,6 @@
 module Fd
   class FlagsController < BaseController
+    skip_before_action :needs_the_engine
     permit "app.flip"
 
     def update

@@ -766,6 +766,32 @@ module FdHelper
     parts.join(" · ")
   end
 
+  def case_meta_line(kase, thread_channels)
+    parts = []
+    first = case_first_report(kase)
+    parts << if first.nil?
+      "opened by hand"
+    else
+      safe_join(["reported by ", case_reporter_line(kase)])
+    end
+
+    channel = Array(thread_channels[kase.id]).first
+    where = channels.named?(channel) ? " in #{channel_label(channel)}" : ""
+    parts << "#{on_day(kase.opened_at)}#{where}"
+
+    parts << if kase.assigned?
+      safe_join(["held by ", safe_join(kase.assignee_user_ids.map { |id| handle(id) }, ", ")])
+    else
+      "unclaimed"
+    end
+
+    if kase.resolved? && kase.category_key.present?
+      parts << tag.b(category_label(kase.category_key))
+    end
+
+    safe_join(parts, " · ")
+  end
+
   def case_standing_label(kase, prior_counts)
     return "Resolved" if kase.resolved?
     return "Needs a subject" if kase.subject_user_ids.empty?

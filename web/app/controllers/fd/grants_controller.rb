@@ -1,5 +1,7 @@
 module Fd
   class GrantsController < BaseController
+    skip_before_action :needs_the_engine
+
     MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/
 
     permit "access.grant"

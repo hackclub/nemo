@@ -62,6 +62,6 @@ class FdCaseDrawerTest < ActionDispatch::IntegrationTest
     @kase.update!(resolved_at: Time.current, resolution: "no_action")
     get fd_cases_path(view: "everything")
 
-    assert_select "tr.row-resolved[data-row-link-href-value=?]", fd_case_path(@kase)
+    assert_select ".deck-card.deck-done[data-row-link-href-value=?]", fd_case_path(@kase)
   end
 end

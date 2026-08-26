@@ -1,5 +1,6 @@
 module Fd
   class RolePermissionsController < BaseController
+    skip_before_action :needs_the_engine
     permit "access.grant"
 
     def update

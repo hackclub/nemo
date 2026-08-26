@@ -274,8 +274,6 @@ module Fd
       @more = found.size > PER_PAGE
       @cases = found.first(PER_PAGE)
       case_ids = @cases.map(&:id)
-      lone_subjects = @cases.filter_map { |kase| kase.subject_user_ids.first if kase.subject_user_ids.one? }
-      @prior_counts = Case.prior_counts_for(lone_subjects)
       @thread_counts = Case.thread_message_counts_for(case_ids)
       @thread_channels = Case.thread_channels_for(case_ids)
       @channels = ChannelNames.for(@thread_channels.values.flatten)

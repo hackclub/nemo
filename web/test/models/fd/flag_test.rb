@@ -15,7 +15,7 @@ module Fd
     test "a flag nobody has touched follows the file" do
       assert Flag.on?(:decisions)
       assert Flag.on?("analytics")
-      assert_equal %w[analytics decisions], Flag.showing
+      assert_equal %w[analytics fire_engine decisions], Flag.showing
     end
 
     test "the file says true in a word yaml does not read as a boolean key" do
@@ -31,7 +31,7 @@ module Fd
 
       assert Flag.off?(:decisions)
       assert Flag.on?(:analytics)
-      assert_equal ["analytics"], Flag.showing
+      assert_equal %w[analytics fire_engine], Flag.showing
     end
 
     test "turning it back on clears the override" do
