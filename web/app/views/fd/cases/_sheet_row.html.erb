@@ -1,0 +1,45 @@
+<% flag = flags[said.id] %>
+<div class="sheet-row <%= "is-flagged" if flag %>">
+  <div class="sheet-who">
+    <span class="sheet-name"><%= names[said.author_user_id] %></span>
+    <span class="sheet-at"><%= said.posted_at.strftime("%H:%M") %></span>
+    <% if flag %>
+      <span class="sheet-mark"><%= marks[said.id] %></span>
+    <% end %>
+  </div>
+
+  <div class="sheet-said">
+    <% if said.readable? %>
+      <div class="sheet-text<%= " msg-gone" if said.deleted? || said.purged? %>"><% if said.deleted? || said.purged? %>kept here: <% end %><%= mentioned(said.body) %></div>
+    <% end %>
+
+    <div class="sheet-under">
+      <% notes = [] %>
+      <% notes << "edited" if said.edited? %>
+      <% notes << "erased by #{names[said.purged_by]}" if said.purged? %>
+      <% notes << "deleted in Slack #{last_case_label(said.deleted_at)}" if said.deleted? && !said.purged? %>
+      <% notes << "flagged by #{names[flag.flagged_by]}" if flag %>
+      <% if notes.any? %>
+        <span><%= notes.join(" · ") %></span>
+      <% end %>
+      <% if flag && cited_by[said.id].blank? %>
+        <span class="sheet-loose">not cited by an action yet</span>
+      <% elsif flag %>
+        <span>cited by an action</span>
+      <% end %>
+      <span class="grow"></span>
+      <% if flag %>
+        <%= gated_button "case.thread", "Unflag", fd_case_citation_path(kase, flag),
+              on: kase, css: "text-btn", method: :delete,
+              params: { person: params[:person], only: params[:only] },
+              form: { class: "contents", data: { turbo_frame: "threads" } } %>
+      <% else %>
+        <%= gated_button "case.thread", "Flag", fd_case_citations_path(kase),
+              on: kase, css: "text-btn",
+              params: { thread_message_id: said.id, person: params[:person],
+                        only: params[:only] },
+              form: { class: "contents", data: { turbo_frame: "threads" } } %>
+      <% end %>
+    </div>
+  </div>
+</div>

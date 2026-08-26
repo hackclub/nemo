@@ -370,6 +370,14 @@ module FdHelper
     "No messages held for this thread yet."
   end
 
+  def citation_numbers(flags)
+    flags.keys.each_with_index.to_h { |id, i| [id, "E#{i + 1}"] }
+  end
+
+  def messages_by_day(messages)
+    messages.group_by { |said| said.posted_at.to_date }
+  end
+
   STRIPES = { "sev-crit" => "stripe stripe-hot", "sev-warn" => "stripe stripe-warm" }.freeze
 
   def member_stripe(row)

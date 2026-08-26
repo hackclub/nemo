@@ -1,0 +1,22 @@
+<details class="menu" data-controller="menu">
+  <summary class="btn btn-only" aria-label="More for this thread">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+  </summary>
+  <div class="menu-pop">
+    <% if row %>
+      <%= link_to menu_item("external", "Open in Slack"),
+            slack_thread_url(row.channel_id, row.thread_ts), class: "btn",
+            target: "_blank", rel: "noopener" %>
+    <% end %>
+    <%= opens_modal "case.thread", menu_item("note", "Attach another thread"),
+          opens: "attach-thread", on: kase %>
+    <% if row %>
+      <p class="menu-group">Takes it off the case</p>
+      <%= gated_button "case.thread", menu_item("hand", "Detach this thread"),
+            fd_case_thread_path(kase, row.record), on: kase, css: "btn",
+            method: :delete,
+            form: { class: "contents", data: { turbo_frame: "_top",
+            turbo_confirm: "Detach this thread?" } } %>
+    <% end %>
+  </div>
+</details>

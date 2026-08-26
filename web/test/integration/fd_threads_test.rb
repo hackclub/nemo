@@ -181,6 +181,6 @@ class FdThreadsTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?] input[name=link]", fd_case_threads_path(@kase)
     assert_select "input[name=kind][value=evidence]"
     assert_select "input[name=kind][value=internal]"
-    assert_select ".text-btn", text: "Detach", count: 1
+    assert_select ".menu-pop .mi-t", text: "Detach this thread", count: 1
   end
 end

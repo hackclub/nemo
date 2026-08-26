@@ -119,10 +119,17 @@
             flags: @citations, cited_by: @cited_by %>
     <% else %>
       <div class="card">
-        <%= render layout: "empty", locals: { title: "No evidence attached" } do %>
-          <%= opens_modal "case.thread", "Attach a thread", opens: "attach-thread", on: @case,
-                css: "btn btn-primary" %>
-        <% end %>
+        <div class="empty">
+          <p class="empty-title">No evidence attached</p>
+          <p class="card-note">
+            A case can be resolved without it, but an action that cites a message needs
+            the thread on file first.
+          </p>
+          <div class="empty-do">
+            <%= opens_modal "case.thread", "Attach a thread", opens: "attach-thread",
+                  on: @case, css: "btn btn-primary" %>
+          </div>
+        </div>
       </div>
     <% end %>
   <% end %>

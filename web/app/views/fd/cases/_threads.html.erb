@@ -1,61 +1,99 @@
 <turbo-frame id="threads" target="_top" data-turbo-action="advance">
-<div class="card">
-  <div class="chiprow">
-    <% threads.each do |row| %>
-      <%= link_to fd_case_path(kase, tab: "evidence", thread: row.id, person: params[:person]),
-            class: "filt", data: { turbo_frame: "threads" },
-            aria: { current: threads.chosen?(row) ? "true" : nil } do %>
-        <span class="<%= "mono" unless channels.named?(row.channel_id) %>"><%= channel_label(row.channel_id) %></span>
-        <b><%= row.held %></b>
-        <% if row.internal? %><span class="chip chip-warn">internal</span><% end %>
-        <% if row.locked? %><span class="chip chip-warn">locked</span><% end %>
+<% row = threads.chosen %>
+<% marks = citation_numbers(flags) %>
+
+<div class="panel">
+  <div class="panel-head">
+    <span class="segmented">
+      <% threads.each do |one| %>
+        <%= link_to fd_case_path(kase, tab: "evidence", thread: one.id, person: params[:person]),
+              data: { turbo_frame: "threads" },
+              aria: { current: (threads.chosen?(one) ? "true" : nil) } do %>
+          <span class="<%= "mono" unless channels.named?(one.channel_id) %>"><%= channel_label(one.channel_id) %></span>
+          <span class="seg-count"><%= one.held %></span>
+        <% end %>
       <% end %>
+    </span>
+
+    <span class="grow"></span>
+
+    <% if row %>
+      <span class="sheet-by">
+        attached by <%= member_link(row.added_by) %>, <%= last_case_label(row.added_at) %>
+      </span>
     <% end %>
 
-    <span class="chiprow-fill"></span>
-
-    <% if threads.chosen && flagged_count(threads.chosen, flags).positive? %>
-      <%= link_to fd_case_path(kase, tab: "evidence", thread: threads.chosen.id,
-            person: params[:person], only: ("flagged" unless params[:only] == "flagged")),
-            class: "filt", data: { turbo_frame: "threads" },
-            aria: { current: ("true" if params[:only] == "flagged") } do %>
-        only flagged
-        <span class="chip chip-crit"><%= flagged_count(threads.chosen, flags) %></span>
-      <% end %>
+    <% if row && flagged_count(row, flags).positive? %>
+      <span class="segmented">
+        <%= link_to fd_case_path(kase, tab: "evidence", thread: row.id, person: params[:person]),
+              data: { turbo_frame: "threads" },
+              aria: { current: ("true" unless params[:only] == "flagged") } do %>
+          All <span class="seg-count"><%= row.held %></span>
+        <% end %>
+        <%= link_to fd_case_path(kase, tab: "evidence", thread: row.id,
+              person: params[:person], only: "flagged"),
+              data: { turbo_frame: "threads" },
+              aria: { current: ("true" if params[:only] == "flagged") } do %>
+          Flagged <span class="seg-count"><%= flagged_count(row, flags) %></span>
+        <% end %>
+      </span>
     <% end %>
 
-    <% if threads.chosen %>
-      <%= link_to "open in slack ↗",
-            slack_thread_url(threads.chosen.channel_id, threads.chosen.thread_ts),
-            class: "filt", target: "_blank", rel: "noopener" %>
-    <% end %>
-
-    <%= opens_modal "case.thread", opens: "attach-thread", on: kase, css: "filt" do %>
-      + attach another
-    <% end %>
+    <%= render "thread_menu", kase: kase, row: row %>
   </div>
 
-  <% if threads.chosen.nil? %>
-    <p class="card-note">No evidence attached.</p>
+  <% if row.nil? %>
+    <div class="empty">
+      <p class="empty-title">No thread chosen</p>
+      <p class="card-note">Pick one above, or attach another.</p>
+    </div>
   <% else %>
-    <% row = threads.chosen %>
-    <% shown = shown_messages(row, flags, params[:only]) %>
-    <% if shown.empty? %>
-      <p class="thr-gone"><%= evidence_empty_note(row, params[:only]) %></p>
-    <% else %>
-      <%= render "fd/messages", messages: shown, kase: kase,
-            flags: flags, cited_by: cited_by %>
+    <% if row.locked? %>
+      <div class="flag flag-warn flag-wide">
+        <span class="flag-icon" aria-hidden="true">&#9679;</span>
+        <div>
+          <b>This thread is locked in Slack.</b>
+          What is held here is the last copy taken. Nothing new will arrive, and the
+          <%= pluralize(row.held, "message") %> below stay readable.
+        </div>
+      </div>
     <% end %>
 
-    <div class="line-row">
-      <span class="grow sub2">
-        <b>Attached</b> <%= member_link(row.added_by) %> · <%= last_case_label(row.added_at) %>
-      </span>
-      <%= gated_button "case.thread", "Detach", fd_case_thread_path(kase, row.record),
-            on: kase, css: "text-btn", method: :delete,
-            form: { class: "contents", data: { turbo_frame: "_top",
-            turbo_confirm: "Detach this thread?" } } %>
-    </div>
+    <% shown = shown_messages(row, flags, params[:only]) %>
+    <% if shown.empty? && params[:only] == "flagged" %>
+      <div class="sheet-none">
+        <span class="grow">
+          Nothing in this thread is flagged yet. Flagging marks a message so an action
+          can cite it.
+        </span>
+        <%= link_to "Show all #{row.held}",
+              fd_case_path(kase, tab: "evidence", thread: row.id, person: params[:person]),
+              class: "btn", data: { turbo_frame: "threads" } %>
+      </div>
+    <% elsif shown.empty? %>
+      <div class="empty">
+        <p class="empty-title">Nothing has been copied across yet</p>
+        <p class="card-note">
+          The thread is on the case, but the messages have not been fetched. The next
+          sync picks it up.
+        </p>
+        <div class="empty-do">
+          <%= link_to "Open in Slack &#8599;".html_safe,
+                slack_thread_url(row.channel_id, row.thread_ts),
+                class: "btn", target: "_blank", rel: "noopener" %>
+        </div>
+      </div>
+    <% else %>
+      <div class="sheet">
+        <% messages_by_day(shown).each do |day, said_on| %>
+          <p class="sheet-day"><%= day.strftime("%-d %B %Y") %></p>
+          <% said_on.each do |said| %>
+            <%= render "sheet_row", said: said, kase: kase, flags: flags,
+                  cited_by: cited_by, marks: marks %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
   <% end %>
 </div>
 </turbo-frame>
