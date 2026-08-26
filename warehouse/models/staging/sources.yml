@@ -16,4 +16,7 @@ sources:
       - name: analytics_day
       - name: member_message_history
       - name: member_first_reply
+      - name: member_channel_message
+      - name: member_channel_membership
+      - name: member_channel_walk
       - name: deployment

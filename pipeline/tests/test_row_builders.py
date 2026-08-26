@@ -361,6 +361,18 @@ def test_keep_paging_stops_at_the_hundredth_page():
     assert member_channels.keep_paging(messages, 100, 10000) is False
 
 
+def test_joined_channels_keeps_public_rooms_only_and_dedupes():
+    channels = [
+        {"id": "C2", "is_channel": True},
+        {"id": "C1", "is_channel": True},
+        {"id": "C1", "is_channel": True},
+        {"id": "C9", "is_channel": True, "is_private": True},
+        {"id": "C8", "is_channel": True, "is_archived": True},
+        {"id": "D1", "is_im": True},
+    ]
+    assert member_channels.joined_channels(channels) == ["C1", "C2"]
+
+
 def test_scan_replies_skips_self_replies_and_computes_latency():
     posted = epoch(1600000000)
     messages = [

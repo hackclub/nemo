@@ -73,3 +73,13 @@ models:
         data_tests: [not_null]
       - name: messages_posted
         data_tests: [not_null]
+  - name: mart_newcomer_channels
+    columns:
+      - name: channel_id
+        data_tests: [not_null, unique]
+      - name: newcomers_posting
+        data_tests: [not_null]
+      - name: newcomers_joined
+        data_tests: [not_null]
+      - name: cohort_size
+        data_tests: [not_null]

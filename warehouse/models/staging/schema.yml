@@ -107,3 +107,17 @@ models:
         data_tests: [not_null]
       - name: window_start
         data_tests: [not_null]
+  - name: fct_member_channel
+    columns:
+      - name: user_id
+        data_tests: [not_null]
+      - name: channel_id
+        data_tests: [not_null]
+      - name: messages
+        data_tests: [not_null]
+  - name: fct_member_channel_membership
+    columns:
+      - name: user_id
+        data_tests: [not_null]
+      - name: channel_id
+        data_tests: [not_null]
