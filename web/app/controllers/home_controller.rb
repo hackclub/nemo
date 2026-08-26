@@ -58,6 +58,18 @@ class HomeController < ApplicationController
         layout: false
       return
     end
+    @newcomer_measure = Analytics::MartNewcomerChannels.measure(params[:newcomer_measure])
+    @newcomer_reach = Analytics::MartNewcomerChannels.order(:channel_id).first
+    @newcomer_channels = Analytics::MartNewcomerChannels.ranked(@newcomer_measure, floor: HomeHelper::MIN_SAMPLE)
+
+    if request.headers["X-Requested-With"] == "newcomer-channels"
+      render partial: "newcomer_channels",
+        locals: { newcomer_channels: @newcomer_channels, newcomer_reach: @newcomer_reach,
+                  newcomer_measure: @newcomer_measure },
+        layout: false
+      return
+    end
+
     @growth_months = Analytics::MartGrowth.order(month: :desc).limit(6).to_a.reverse
     @top_channels = Analytics::MartChannelRange
       .order(messages_posted_by_members: :desc)

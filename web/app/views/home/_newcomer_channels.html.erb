@@ -1,0 +1,91 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Where newcomers land</h2>
+      <% if newcomer_reach %>
+        <p class="card-sub">
+          <%= number_with_delimiter(newcomer_reach.cohort_size) %> members who first signed in
+          in the 30 days to <%= newcomer_reach.cohort_end.strftime("%-d %b %Y") %> &middot;
+          <%= number_with_delimiter(newcomer_reach.searched_of_cohort) %> searched,
+          <%= number_with_delimiter(newcomer_reach.read_of_cohort) %> read
+        </p>
+      <% end %>
+    </div>
+    <div class="card-tools">
+      <div class="segmented" role="group" aria-label="measure for newcomer channels">
+        <% Analytics::MartNewcomerChannels::MEASURES.each do |key, said| %>
+          <button type="button"
+                  data-value="<%= key %>"
+                  aria-pressed="<%= newcomer_measure == key %>"
+                  data-action="newcomer-channels#choose"><%= said[:label] %></button>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <% if newcomer_channels.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>channel</th>
+            <th class="col-num">posted</th>
+            <th class="col-num">came back</th>
+            <th class="col-num">posted here first</th>
+            <th class="col-num">joined</th>
+            <th class="col-num">messages</th>
+            <th class="col-num">share of the room</th>
+            <th class="col-num">lift</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% newcomer_channels.each do |c| %>
+            <tr>
+              <td>
+                <span class="two-line">
+                  <%= link_to channel_path(c.channel_id) do %>
+                    <b>#<%= c.name %></b>
+                  <% end %>
+                  <span><%= c.channel_id %></span>
+                </span>
+              </td>
+              <td><%= number_with_delimiter(c.newcomers_posting) %></td>
+              <td>
+                <span class="two-line">
+                  <b><%= number_with_delimiter(c.newcomers_returning) %></b>
+                  <span><%= c.returning_share ? number_to_percentage(c.returning_share * 100, precision: 0) : "n/a" %></span>
+                </span>
+              </td>
+              <td><%= number_with_delimiter(c.newcomer_first_posts) %></td>
+              <td>
+                <span class="two-line">
+                  <b><%= number_with_delimiter(c.newcomers_joined) %></b>
+                  <span><%= c.joined_share ? "#{number_to_percentage(c.joined_share * 100, precision: 0)} of read" : "n/a" %></span>
+                </span>
+              </td>
+              <td><%= number_with_delimiter(c.newcomer_messages) %></td>
+              <td><%= c.newcomer_message_share ? number_to_percentage(c.newcomer_message_share * 100, precision: 1) : "n/a" %></td>
+              <td><%= c.newcomer_lift ? "#{c.newcomer_lift.round(1)}x" : "n/a" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <p class="card-note">
+      Lift compares a channel&rsquo;s share of newcomer messages with its share of all messages, so a
+      room every newcomer is added to sits near 1x. Viewers are counted for everyone, never per cohort:
+      Slack does not say who read a channel.
+    </p>
+  <% else %>
+    <p class="card-note">
+      <% if newcomer_reach %>
+        No channel has reached <%= HomeHelper::MIN_SAMPLE %> newcomers yet.
+        <%= number_with_delimiter(newcomer_reach.searched_of_cohort) %>
+        of <%= number_with_delimiter(newcomer_reach.cohort_size) %> newcomers are searched,
+        and the walk fills the rest in, newest first.
+      <% else %>
+        No newcomer has been walked yet. The member channels stage fills this in, newest first.
+      <% end %>
+    </p>
+  <% end %>
+</div>

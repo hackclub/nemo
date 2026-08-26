@@ -24,7 +24,7 @@ MIN_SECONDS_PER_SEARCH = 0.6
 MIN_SECONDS_PER_READ = 0.6
 
 PENDING_SQL = """
-WITH edge AS (SELECT max(claimed_at)::date AS d FROM raw.member_dim)
+WITH edge AS MATERIALIZED (SELECT max(claimed_at)::date AS d FROM raw.member_dim)
 SELECT m.user_id
 FROM raw.member_dim m
 CROSS JOIN edge
@@ -62,7 +62,7 @@ ON CONFLICT (user_id) DO UPDATE SET
 """
 
 UNREAD_SQL = """
-WITH edge AS (SELECT max(claimed_at)::date AS d FROM raw.member_dim)
+WITH edge AS MATERIALIZED (SELECT max(claimed_at)::date AS d FROM raw.member_dim)
 SELECT m.user_id
 FROM raw.member_dim m
 CROSS JOIN edge

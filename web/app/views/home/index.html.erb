@@ -246,6 +246,13 @@
   </div>
 </div>
 
+<div data-controller="newcomer-channels" data-newcomer-channels-url-value="<%= root_path %>">
+  <div data-newcomer-channels-target="container">
+    <%= render "newcomer_channels", newcomer_channels: @newcomer_channels,
+          newcomer_reach: @newcomer_reach, newcomer_measure: @newcomer_measure %>
+  </div>
+</div>
+
 <% if @channel_scorecard.any? %>
   <div class="card card-flush">
     <div class="card-head">
