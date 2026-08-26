@@ -1,0 +1,52 @@
+<div class="deck">
+  <% cases.each do |kase| %>
+    <div class="deck-card<%= " deck-done" if kase.resolved? %>">
+      <div class="deck-head">
+        <div class="deck-who">
+          <%= face(kase.subject_user_ids.first, css: "person-face") %>
+          <span class="grow two-line">
+            <b>Case <%= kase.id %></b>
+            <span class="<%= "is-none" if kase.subject_user_ids.empty? %>">
+              <%= row_subject_label(kase) %>
+              <%= "· #{prior_phrase(prior_counts.fetch(kase.subject_user_ids.first, 0))}" if kase.subject_user_ids.one? %>
+            </span>
+          </span>
+        </div>
+
+        <div class="deck-facts">
+          <span>Violation</span>
+          <b class="<%= "is-none" if kase.category_key.blank? %>"><%= category_short(kase.category_key) %></b>
+          <span>Reporter</span>
+          <b><%= case_reporter_line(kase) %></b>
+          <span>Opened</span>
+          <b><%= case_opened_line(kase, thread_channels) %></b>
+          <span>Held by</span>
+          <b class="<%= "is-none" unless kase.assigned? %>">
+            <%= kase.assigned? ? kase.assignee_handles : "nobody" %>
+          </b>
+        </div>
+      </div>
+
+      <div class="deck-said">
+        <% excerpt = case_excerpt(kase) %>
+        <% if excerpt %>
+          <p class="deck-body"><%= mentioned(excerpt) %></p>
+        <% else %>
+          <p class="deck-body is-none">Opened by hand. No report on file.</p>
+        <% end %>
+      </div>
+
+      <div class="deck-do">
+        <% unless kase.resolved? || kase.assigned? %>
+          <%= gated_button "case.open", "Claim", fd_case_claim_path(kase), on: kase,
+                css: "btn btn-primary", method: :post %>
+        <% end %>
+        <%= link_to "Open", fd_case_path(kase), class: "btn" %>
+        <span class="grow"></span>
+        <span class="deck-age <%= age_tone(case_age_seconds(kase)) %>">
+          <%= kase.resolved? ? "resolved" : case_age_label(case_age_seconds(kase)) %>
+        </span>
+      </div>
+    </div>
+  <% end %>
+</div>

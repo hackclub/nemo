@@ -107,6 +107,10 @@ def main():
     print("provision: app schema from the rails migrations")
     apply_app_schema()
 
+    print("provision: grants over the tables the migrations just made")
+    with connect_admin() as conn:
+        apply_init_sql(conn)
+
     print("provision: the first staff row")
     seed_staff()
 

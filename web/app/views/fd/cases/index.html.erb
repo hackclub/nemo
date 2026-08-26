@@ -23,28 +23,8 @@
   </div>
 
     <% if @cases.any? %>
-      <div class="scroll">
-        <table class="data-table queue-table">
-          <colgroup>
-            <col style="width: 44%">
-            <col style="width: 22%">
-            <col style="width: 20%">
-            <col style="width: 14%">
-          </colgroup>
-          <thead>
-            <tr>
-              <%= case_sort_header("Case", "case") %>
-              <th>Subject</th>
-              <th>Held by</th>
-              <%= case_sort_header("Age", "opened") %>
-            </tr>
-          </thead>
-          <tbody>
-            <%= render "rows", cases: @cases, prior_counts: @prior_counts,
-                  thread_counts: @thread_counts, thread_channels: @thread_channels %>
-          </tbody>
-        </table>
-      </div>
+      <%= render "cards", cases: @cases, prior_counts: @prior_counts,
+            thread_channels: @thread_channels %>
     <% else %>
       <div class="empty">
         <p class="empty-title"><%= @query.empty_note %></p>

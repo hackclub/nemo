@@ -740,6 +740,43 @@ module FdHelper
     face(kase.subject_user_ids.first)
   end
 
+  def case_first_report(kase)
+    kase.reports.min_by(&:received_at)
+  end
+
+  def case_excerpt(kase)
+    case_first_report(kase)&.body.presence
+  end
+
+  def case_reporter_line(kase)
+    first = case_first_report(kase)
+    return "nobody" if first.nil?
+
+    label = first.anonymous? ? "Anonymous" : names[first.reporter_user_id]
+    extra = kase.reports.size - 1
+    return label unless extra.positive?
+
+    safe_join([label, tag.span("and #{extra} more", class: "card-thin")], " ")
+  end
+
+  def case_opened_line(kase, thread_channels)
+    channel = Array(thread_channels[kase.id]).first
+    parts = [on_day(kase.opened_at)]
+    parts << channel_label(channel) if channel.present? && channels.named?(channel)
+    parts.join(" · ")
+  end
+
+  def case_standing_label(kase, prior_counts)
+    return "Resolved" if kase.resolved?
+    return "Needs a subject" if kase.subject_user_ids.empty?
+    return "Held by #{kase.assignee_handles}" if kase.assigned?
+
+    lone = kase.subject_user_ids.one? ? kase.subject_user_ids.first : nil
+    return "#{kase.subject_user_ids.size} subjects" if lone.nil?
+
+    prior_phrase(prior_counts.fetch(lone, 0))
+  end
+
   def row_subject_label(kase)
     ids = kase.subject_user_ids
     return "nobody identified yet" if ids.empty?
