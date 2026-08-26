@@ -15,6 +15,7 @@ from ingest.analytics_pull import (
 from ingest.autojoin import name_unknown, record_channel_names
 from ingest.channel_range_pull import run as pull_channel_range
 from ingest.first_reply import run as pull_first_reply
+from ingest.member_channels import run as pull_member_channels
 from ingest.member_history import run as pull_member_history
 from ingest.member_range_pull import run as pull_member_range
 from ingest.team_stats_pull import run as pull_team_stats
@@ -89,6 +90,7 @@ def stages():
         ("autojoin", lambda conn: record_channel_names(conn, bot_client())),
         ("channel_names", lambda conn: name_unknown(conn, bot_client())),
         ("member_history", lambda conn: pull_member_history(conn)),
+        ("member_channels", lambda conn: pull_member_channels(conn)),
         ("first_reply", lambda conn: pull_first_reply(conn)),
         ("dbt", lambda conn: run_dbt()),
     ]

@@ -4,6 +4,7 @@ from ingest import (
     analytics_pull,
     channel_range_pull,
     first_reply,
+    member_channels,
     member_history,
     member_range_pull,
     top_posters_pull,
@@ -308,6 +309,56 @@ def test_history_row_has_no_first_post_when_nothing_public_is_visible():
         ],
     }
     assert member_history.history_row("U1", messages) == ("U1", 2, None, None)
+
+
+def public_match(channel_id, ts):
+    return {"ts": ts, "channel": {"id": channel_id, "name": channel_id.lower()}}
+
+
+def test_tally_page_counts_per_channel_and_keeps_the_span():
+    matches = [
+        public_match("C1", "1606939916.000100"),
+        public_match("C2", "1606939999.000100"),
+        public_match("C1", "1606950000.000200"),
+        {"ts": "1606960000.000300", "channel": {"id": "D1", "is_im": True}},
+    ]
+    tally = member_channels.tally_page({}, matches)
+    assert tally == {
+        "C1": [2, epoch(1606939916.0001), epoch(1606950000.0002)],
+        "C2": [1, epoch(1606939999.0001), epoch(1606939999.0001)],
+    }
+
+
+def test_tally_page_accumulates_across_pages():
+    tally = member_channels.tally_page({}, [public_match("C1", "1606939916.000100")])
+    member_channels.tally_page(tally, [public_match("C1", "1606950000.000200")])
+    assert tally["C1"][0] == 2
+
+
+def test_message_rows_are_one_row_per_channel():
+    tally = member_channels.tally_page({}, [public_match("C2", "1.0"), public_match("C1", "2.0")])
+    rows = member_channels.message_rows("U1", tally)
+    assert [(row[0], row[1], row[2]) for row in rows] == [("U1", "C1", 1), ("U1", "C2", 1)]
+
+
+def test_keep_paging_continues_while_a_full_page_is_still_short_of_the_total():
+    messages = {"paging": {"page": 1, "total": 350}, "matches": [{}] * 100}
+    assert member_channels.keep_paging(messages, 1, 100) is True
+
+
+def test_keep_paging_stops_on_a_short_page():
+    messages = {"paging": {"page": 2, "total": 350}, "matches": [{}] * 40}
+    assert member_channels.keep_paging(messages, 2, 140) is False
+
+
+def test_keep_paging_stops_when_slack_wraps_back_to_page_one():
+    messages = {"paging": {"page": 1, "total": 76175}, "matches": [{}] * 100}
+    assert member_channels.keep_paging(messages, 101, 10000) is False
+
+
+def test_keep_paging_stops_at_the_hundredth_page():
+    messages = {"paging": {"page": 100, "total": 76175}, "matches": [{}] * 100}
+    assert member_channels.keep_paging(messages, 100, 10000) is False
 
 
 def test_scan_replies_skips_self_replies_and_computes_latency():
