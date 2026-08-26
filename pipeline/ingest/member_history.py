@@ -71,10 +71,15 @@ def carry_forward(conn):
     print(f"{SOURCE}: {advanced} member(s) carried forward from daily rows")
 
 
+def is_public(match):
+    channel = match.get("channel") or {}
+    return not (channel.get("is_im") or channel.get("is_mpim") or channel.get("is_private"))
+
+
 def history_row(user_id, messages):
     total = messages.get("total", 0)
     matches = messages.get("matches") or []
-    first = matches[0] if total and matches else None
+    first = next((match for match in matches if is_public(match)), None) if total else None
     if first is None:
         return (user_id, total, None, None)
     return (

@@ -286,6 +286,30 @@ def test_history_row_survives_a_total_with_no_matches():
     assert member_history.history_row("U1", {"total": 3, "matches": []}) == ("U1", 3, None, None)
 
 
+def test_history_row_skips_a_dm_to_reach_the_first_public_post():
+    messages = {
+        "total": 4,
+        "matches": [
+            {"ts": "1606939916.452200", "channel": {"id": "D01OWNER", "is_im": True}},
+            {"ts": "1606940000.000100", "channel": {"id": "G01PRIVATE", "is_private": True}},
+            {"ts": "1606950000.000200", "channel": {"id": "C75M7C0SY", "name": "welcome"}},
+        ],
+    }
+    row = member_history.history_row("U1", messages)
+    assert row == ("U1", 4, epoch(1606950000.0002), "C75M7C0SY")
+
+
+def test_history_row_has_no_first_post_when_nothing_public_is_visible():
+    messages = {
+        "total": 2,
+        "matches": [
+            {"ts": "1606939916.452200", "channel": {"id": "D01OWNER", "is_im": True}},
+            {"ts": "1606940000.000100", "channel": {"id": "G01GROUP", "is_mpim": True}},
+        ],
+    }
+    assert member_history.history_row("U1", messages) == ("U1", 2, None, None)
+
+
 def test_scan_replies_skips_self_replies_and_computes_latency():
     posted = epoch(1600000000)
     messages = [
