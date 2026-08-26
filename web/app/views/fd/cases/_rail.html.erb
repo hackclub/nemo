@@ -17,21 +17,20 @@
   </div>
 <% end %>
 
-<div class="fbox">
-  <div class="ft">Subject</div>
-  <div class="fb">
+<% first = reports.min_by(&:received_at) %>
+<% on = threads.find(&:is_primary) || threads.first %>
+
+<div class="fcard">
+  <div class="fcard-head">
     <% if subject %>
-      <div class="line-row">
-        <%= face(subject) %>
+      <div class="who">
+        <%= face(subject, css: "person-face") %>
         <span class="grow two-line">
           <b><%= member_link(subject) %></b>
-          <span><%= subject_standing(subject, contexts[subject]) %></span>
+          <span><%= tenure_label(contexts[subject]&.tenure_days) %></span>
         </span>
       </div>
-      <div class="sub2">
-        <%= link_to "their whole history →", fd_member_path(subject),
-              data: { turbo_frame: "person-drawer" } %>
-      </div>
+      <%= prior_chip_for(priors) %>
     <% else %>
       <div class="line-row">
         <span class="grow rail-line">Nobody identified yet</span>
@@ -41,47 +40,44 @@
       </div>
     <% end %>
   </div>
-</div>
 
-<% first = reports.min_by(&:received_at) %>
-<div class="fbox">
-  <div class="ft">Reported by</div>
-  <div class="fb">
-    <% if first.nil? %>
-      <div class="line-row">
-        <span class="grow rail-line">Nobody, this was opened by hand</span>
-      </div>
-    <% else %>
-      <div class="line-row">
-        <%= face(first.anonymous? ? nil : first.reporter_user_id) %>
-        <span class="grow two-line">
-          <b><%= first.anonymous? ? "Anonymous" : member_link(first.reporter_user_id) %></b>
-          <span>
-            <% unless first.anonymous? %><%= pluralize(reports.size, "report") %> · <% end %>
-            <%= on_day(first.received_at) %>
-          </span>
-        </span>
-      </div>
-    <% end %>
+  <div class="frows">
+    <div class="frow">
+      <span>Violation</span>
+      <b class="<%= "is-none" if kase.category_key.blank? %>">
+        <%= category_short(kase.category_key) %>
+      </b>
+    </div>
+    <div class="frow">
+      <span>Where</span>
+      <% if on.nil? %>
+        <b class="is-none">n/a</b>
+      <% elsif channels.named?(on.channel_id) %>
+        <b><%= channel_label(on.channel_id) %></b>
+      <% else %>
+        <b class="is-none">unknown</b>
+      <% end %>
+    </div>
+    <div class="frow">
+      <span>Opened</span>
+      <b><%= on_day(kase.opened_at) %></b>
+    </div>
+    <div class="frow">
+      <span>Reported by</span>
+      <% if first.nil? %>
+        <b class="is-none">nobody</b>
+      <% elsif first.anonymous? %>
+        <b>Anonymous</b>
+      <% else %>
+        <b><%= member_link(first.reporter_user_id) %></b>
+      <% end %>
+    </div>
   </div>
-</div>
 
-<% on = threads.find(&:is_primary) || threads.first %>
-<div class="facts-grid">
-  <div class="cell">
-    <span class="fg-k">Opened</span>
-    <span class="fg-v"><%= on_day(kase.opened_at) %></span>
-  </div>
-  <div class="cell">
-    <span class="fg-k">Channel</span>
-    <span class="fg-v"><%= on ? channel_label(on.channel_id) : "n/a" %></span>
-  </div>
-  <div class="cell">
-    <span class="fg-k">Violation</span>
-    <span class="fg-v"><%= category_short(kase.category_key) %></span>
-  </div>
-  <div class="cell">
-    <span class="fg-k">Priors</span>
-    <span class="fg-v"><%= priors.positive? ? priors : "n/a" %></span>
-  </div>
+  <% if subject %>
+    <div class="fcard-do">
+      <%= link_to "Their whole history", fd_member_path(subject), class: "btn",
+            data: { turbo_frame: "person-drawer" } %>
+    </div>
+  <% end %>
 </div>

@@ -2897,6 +2897,32 @@
     border-bottom: 1px solid var(--line);
   }
 
+  .fcard-head {
+    display: grid;
+    gap: var(--s-2xs);
+    justify-items: start;
+    padding: var(--s-xs);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .fcard-head .who,
+  .fcard-head .line-row {
+    width: 100%;
+  }
+
+  .fcard-head .line-row {
+    border-top: 0;
+    padding: 0;
+  }
+
+  .fcard-do {
+    padding: 0 var(--s-xs) var(--s-xs);
+  }
+
+  .fcard-do .btn {
+    width: 100%;
+  }
+
   .fstats {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2936,25 +2962,31 @@
 
   .frows {
     display: grid;
-    padding: var(--s-2xs) var(--s-xs) var(--s-xs);
+    padding: 2px var(--s-xs) var(--s-2xs);
   }
 
   .frow {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: var(--s-2xs);
-    padding: 4px 0;
+    gap: var(--s-sm);
+    padding: 5px 0;
     font-size: var(--t-small);
-    color: var(--ink-2);
+    color: var(--ink-3);
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .frow:last-child {
+    border-bottom: 0;
   }
 
   .frow b {
-    font-family: var(--font-code);
     font-size: var(--t-small);
-    font-weight: 600;
+    font-weight: 500;
     color: var(--ink);
     font-variant-numeric: tabular-nums;
+    text-align: end;
+    min-width: 0;
   }
 
   .frow b.is-none {
