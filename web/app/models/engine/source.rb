@@ -48,5 +48,22 @@ module Engine
     def guarded? = guard != "none"
 
     def resumable? = resume != "none"
+
+    def runs_as = @said["runs_as"] || [key]
+
+    STALE_AFTER = { "daily" => 2.days, "weekly" => 8.days, "monthly" => 35.days }.freeze
+
+    def stale_after = STALE_AFTER[cadence]
+
+    def stale?(last_ok)
+      return false if stale_after.nil?
+
+      last_ok.nil? || last_ok < stale_after.ago
+    end
+
+    def self.for_run(run_source)
+      @by_run ||= all.flat_map { |source| source.runs_as.map { |name| [name, source] } }.to_h
+      @by_run[run_source] || @by_run[run_source.split(":", 2).first]
+    end
   end
 end

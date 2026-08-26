@@ -6,7 +6,6 @@
 <% end %>
 
 <% content_for :page_title, "Engine" %>
-<% content_for :page_subtitle, "nightly sync runs, stage by stage" %>
 
 <% content_for :page_badge do %>
   <% if @auto_refresh %>
@@ -26,17 +25,21 @@
       <%= button_to "Cancel", engine_cancel_path, class: "btn", form: { class: "contents" } %>
     <% end %>
   <% else %>
-    <% if @last_request %>
-      <span class="delta-note">
-        requested by <%= @last_request.requested_by %> &middot; <%= time_ago_in_words(@last_request.created_at) %> ago
-      </span>
-      <%= run_status(@last_request) %>
-    <% end %>
     <%= button_to "Run the nightly sync now", engine_sync_path,
           class: "btn btn-primary", form: { class: "contents" } %>
   <% end %>
 <% end %>
 
+<div class="views">
+  <% EngineController::TABS.each do |key, label| %>
+    <%= link_to engine_path(key == "runs" ? {} : { tab: key }), class: "view",
+          aria: { current: ("true" if key == @tab) } do %>
+      <span><%= label %></span>
+    <% end %>
+  <% end %>
+</div>
+
+<% if @tab == "runs" %>
 <% if @run.nil? %>
   <div class="card">
     <div class="card-head">
@@ -45,82 +48,26 @@
         <p class="card-sub">nothing recorded yet</p>
       </div>
     </div>
-    <p class="delta-note">No nightly run has been recorded. Start one with the button above.</p>
   </div>
 <% else %>
   <%= render "run_detail", run: @run, steps: @steps, step_output: @step_output, heading: "Latest run" %>
 <% end %>
-
-<div class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Day coverage</h2>
-      <p class="card-sub">which days each source has actually loaded</p>
-    </div>
-  </div>
-  <% if @day_coverage.any? %>
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>source</th>
-            <th class="col-num">span</th>
-            <th class="col-num">loaded</th>
-            <th class="col-num">unavailable</th>
-            <th class="col-num">never fetched</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @day_coverage.each do |row| %>
-            <tr>
-              <td>
-                <span class="two-line">
-                  <b><%= row.source %></b>
-                  <span><%= row.first_ds.strftime("%b %-d, %Y") %> to <%= row.last_ds.strftime("%b %-d, %Y") %></span>
-                </span>
-              </td>
-              <td><%= pluralize(row.span, "day") %></td>
-              <td><%= number_with_delimiter(row.loaded) %></td>
-              <td>
-                <% if row.unavailable.positive? %>
-                  <span class="chip chip-off"><%= number_with_delimiter(row.unavailable) %></span>
-                <% else %>
-                  0
-                <% end %>
-              </td>
-              <td>
-                <% if row.never_fetched.positive? %>
-                  <span class="chip chip-warn"><%= number_with_delimiter(row.never_fetched) %></span>
-                <% else %>
-                  0
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  <% else %>
-    <p class="card-note">n/a</p>
-  <% end %>
-</div>
 
 <div class="grid-2-1">
   <div class="card card-flush">
     <div class="card-head">
       <div>
         <h2 class="card-title">Recent runs</h2>
-        <p class="card-sub">last <%= EngineController::HISTORY %> parent runs</p>
       </div>
     </div>
     <% if @history.any? %>
       <div class="scroll">
-        <table class="data-table">
+        <table class="data-table engine-table">
           <thead>
             <tr>
-              <th>started</th>
-              <th class="col-num">status</th>
-              <th class="col-num">elapsed</th>
+              <th style="width:50%">started</th>
+              <th class="col-num" style="width:25%">status</th>
+              <th class="col-num" style="width:25%">elapsed</th>
             </tr>
           </thead>
           <tbody>
@@ -157,26 +104,25 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">Freshness</h2>
-        <p class="card-sub">last success per source, stalest first</p>
       </div>
     </div>
     <% if @freshness.any? %>
       <div class="scroll">
-        <table class="data-table">
+        <table class="data-table engine-table">
           <thead>
             <tr>
-              <th>source</th>
-              <th class="col-date">last success</th>
+              <th style="width:55%">source</th>
+              <th class="col-num" style="width:25%">last success</th>
               <% if @active_request.nil? %>
-                <th class="col-btn"></th>
+                <th class="col-btn" style="width:20%"></th>
               <% end %>
             </tr>
           </thead>
           <tbody>
             <% @freshness.each do |stage, finished_at| %>
               <tr>
-                <td><%= stage %></td>
-                <td><%= time_ago_in_words(finished_at) %> ago</td>
+                <td class="src-key"><%= stage %></td>
+                <td class="mono"><%= short_age(finished_at) %> ago</td>
                 <% if @active_request.nil? %>
                   <td>
                     <%= button_to "run", engine_trigger_stage_path(stage: stage),
@@ -193,3 +139,51 @@
     <% end %>
   </div>
 </div>
+
+<% elsif @tab == "sources" %>
+  <%= render "sources", sources: @sources, active_request: @active_request %>
+
+<% else %>
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Day coverage</h2>
+    </div>
+  </div>
+  <% if @day_coverage.any? %>
+    <div class="scroll">
+      <table class="data-table engine-table">
+        <thead>
+          <tr>
+            <th style="width:34%">source</th>
+            <th class="col-num" style="width:16%">span</th>
+            <th class="col-num" style="width:16%">loaded</th>
+            <th class="col-num" style="width:17%">unavailable</th>
+            <th class="col-num" style="width:17%">never fetched</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @day_coverage.each do |row| %>
+            <tr>
+              <td>
+                <span class="two-line">
+                  <b><%= row.source %></b>
+                  <span><%= row.first_ds.strftime("%b %-d, %Y") %> to <%= row.last_ds.strftime("%b %-d, %Y") %></span>
+                </span>
+              </td>
+              <td><%= pluralize(row.span, "day") %></td>
+              <td><%= number_with_delimiter(row.loaded) %></td>
+              <td><%= number_with_delimiter(row.unavailable) %></td>
+              <td class="<%= "state-stale" if row.never_fetched.positive? %>">
+                <%= number_with_delimiter(row.never_fetched) %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">n/a</p>
+  <% end %>
+</div>
+<% end %>

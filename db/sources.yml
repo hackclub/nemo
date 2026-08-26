@@ -34,6 +34,7 @@ sources:
     retention: keep
     prune_floor: 13 months
     writes: [raw.member_activity_snapshot, raw.analytics_day]
+    runs_as: [admin_analytics_api:member]
     feeds: [mart_onboarding_funnel, mart_onboarding_recurrence_funnel]
     limits:
       batch: {default: 6, min: 1, max: 30}
@@ -49,6 +50,7 @@ sources:
     retention: keep
     prune_floor: 13 months
     writes: [raw.channel_activity_snapshot, raw.analytics_day]
+    runs_as: [admin_analytics_api:public_channel]
     feeds: [mart_channel_activity]
     limits:
       batch: {default: 30, min: 1, max: 60}
@@ -63,6 +65,7 @@ sources:
     resume: none
     retention: replace
     writes: [raw.member_activity_snapshot, raw.member_dim]
+    runs_as: [admin_analytics_member_range]
     feeds: [mart_activity_distribution, mart_monthly_cohorts]
 
   channel_range:
@@ -75,6 +78,7 @@ sources:
     resume: none
     retention: newest window only
     writes: [raw.channel_activity_snapshot]
+    runs_as: [admin_analytics_channel_range]
     feeds: [mart_channel_range]
 
   users_list:
@@ -112,6 +116,7 @@ sources:
     retention: replace
     writes: [raw.channel_dim]
     feeds: [dim_channel]
+    runs_as: [channel_info_names]
 
   member_history:
     label: All-time message count and first post

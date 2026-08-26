@@ -14,6 +14,33 @@ module EngineHelper
     tag.span row.status, class: STATUS_CHIP.fetch(row.status, "chip chip-off")
   end
 
+  SOURCE_STATE_CLASS = { "stale" => "state-stale", "never run" => "state-never" }.freeze
+
+  def source_state_class(state)
+    SOURCE_STATE_CLASS.fetch(state, "state-live")
+  end
+
+  def short_age(at)
+    return "n/a" if at.nil?
+
+    seconds = (Time.current - at).to_i
+    return "#{seconds}s" if seconds < 60
+    return "#{seconds / 60}m" if seconds < 3600
+    return "#{seconds / 3600}h" if seconds < 86_400
+
+    "#{seconds / 86_400}d"
+  end
+
+  def short_seconds(seconds)
+    return "n/a" if seconds.nil?
+
+    seconds = seconds.round
+    return "#{seconds}s" if seconds < 60
+    return "#{seconds / 60}m #{seconds % 60}s" if seconds < 3600
+
+    "#{seconds / 3600}h #{(seconds % 3600) / 60}m"
+  end
+
   def run_status_tally(statuses)
     counted = statuses.values.sum > 1
     chips = statuses.map do |status, count|

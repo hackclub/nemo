@@ -6,6 +6,45 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
     OmniAuth.config.mock_auth[:hackclub] = nil
   end
 
+  test "the three tabs each render, and an unknown tab falls back to runs" do
+    sign_in_as(Staff.create!(user_id: "UTESTCM1", community_manager: true))
+
+    get engine_path
+    assert_response :success
+    assert_select ".view[aria-current=true] span", text: "Runs"
+
+    get engine_path(tab: "coverage")
+    assert_select ".view[aria-current=true] span", text: "Coverage"
+    assert_select ".card-title", text: "Day coverage"
+
+    get engine_path(tab: "teleporter")
+    assert_select ".view[aria-current=true] span", text: "Runs"
+  end
+
+  test "the sources tab lists every source with what it declares" do
+    sign_in_as(Staff.create!(user_id: "UTESTCM1", community_manager: true))
+
+    get engine_path(tab: "sources")
+
+    assert_response :success
+    assert_select ".view[aria-current=true] span", text: "Sources"
+    assert_select "tbody tr:not(.band-row)", count: Engine::Source::KEYS.size
+    assert_select "tbody tr.band-row", minimum: 1, message: "sources are banded by cadence"
+    assert_select "tbody td b", text: "member_channels", count: 1,
+      message: "a stage the old hardcoded list never knew about"
+    assert_select "tbody td b", text: "channel_membership", count: 1
+  end
+
+  test "a source can be triggered from the row that describes it" do
+    sign_in_as(Staff.create!(user_id: "UTESTCM1", community_manager: true))
+
+    assert_difference -> { SyncRequest.count }, 1 do
+      post engine_trigger_stage_path(stage: "member_channels")
+    end
+
+    assert_equal "member_channels", SyncRequest.recent_first.first.stage
+  end
+
   test "a community manager queues a full sync" do
     sign_in_as(Staff.create!(user_id: "UTESTCM1", community_manager: true))
 

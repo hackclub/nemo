@@ -5027,6 +5027,23 @@
     font-size: var(--t-small);
   }
 
+  .src-key {
+    font-family: var(--font-code);
+    letter-spacing: -0.01em;
+  }
+
+  .state-live {
+    color: var(--good);
+  }
+
+  .state-stale {
+    color: var(--warn);
+  }
+
+  .state-never {
+    color: var(--ink-3);
+  }
+
   .run-btn {
     font-family: inherit;
     font-size: var(--t-small);
@@ -5196,6 +5213,10 @@
 
   .card-flush .card-head + .scroll .data-table thead th {
     padding-top: 0;
+  }
+
+  .card-flush .card-head + .scroll .data-table.engine-table thead th {
+    padding-top: 9px;
   }
 
   .sortable {

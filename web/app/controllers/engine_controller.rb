@@ -3,25 +3,21 @@ class EngineController < ApplicationController
 
   HISTORY = 12
   FRESHNESS_WINDOW = 30.days
+  TYPICAL_OF = 10
+
+  TABS = { "runs" => "Runs", "sources" => "Sources", "coverage" => "Coverage" }.freeze
 
   def index
-    @run = Analytics::FctIngestRun.parents.recent_first.first
-    @steps = @run ? steps_for(@run) : []
-    @step_output = @run ? step_output_for(@run) : []
-    @history = Analytics::FctIngestRun.parents.recent_first.limit(HISTORY)
-    @history_kind = first_step_by_parent(@history.map(&:id))
-    @freshness = Analytics::FctIngestRun
-      .where(status: "ok")
-      .where(finished_at: FRESHNESS_WINDOW.ago..)
-      .pluck(:source, :finished_at)
-      .filter_map { |source, finished_at| [stage_for_source(source), finished_at] if stage_for_source(source) }
-      .group_by(&:first)
-      .transform_values { |pairs| pairs.map(&:last).max }
-      .sort_by { |_stage, at| at }
+    @tab = TABS.key?(params[:tab]) ? params[:tab] : "runs"
     @active_request = SyncRequest.active.recent_first.first
-    @last_request = SyncRequest.recent_first.first
+    @run = Analytics::FctIngestRun.parents.recent_first.first
     @auto_refresh = @run&.running? || @active_request.present?
-    @day_coverage = day_coverage
+
+    case @tab
+    when "runs" then run_facts
+    when "sources" then @sources = source_rows
+    when "coverage" then @day_coverage = day_coverage
+    end
   end
 
   def show
@@ -115,20 +111,76 @@ class EngineController < ApplicationController
       .transform_values(&:first)
   end
 
-  SOURCE_TO_STAGE = {
-    "admin_analytics_api:member" => "member_days",
-    "admin_analytics_api:public_channel" => "channel_days",
-    "admin_analytics_member_range" => "member_range",
-    "admin_analytics_channel_range" => "channel_range",
-    "channel_info_names" => "channel_names"
-  }.freeze
-
   def stage_for_source(source)
     return nil if source == "nightly_sync"
-    return SOURCE_TO_STAGE[source] if SOURCE_TO_STAGE.key?(source)
 
-    prefix = source.split(":", 2).first
-    SyncRequest::STAGES.include?(prefix) ? prefix : nil
+    Engine::Source.for_run(source)&.key
+  end
+
+  def run_facts
+    @steps = @run ? steps_for(@run) : []
+    @step_output = @run ? step_output_for(@run) : []
+    @history = Analytics::FctIngestRun.parents.recent_first.limit(HISTORY)
+    @history_kind = first_step_by_parent(@history.map(&:id))
+    @freshness = last_success_by_stage(FRESHNESS_WINDOW.ago).sort_by { |_stage, at| at }
+  end
+
+  def last_success_by_stage(since = nil)
+    scope = Analytics::FctIngestRun.where(status: "ok")
+    scope = scope.where(finished_at: since..) if since
+    scope
+      .pluck(:source, :finished_at)
+      .filter_map { |source, finished_at| [stage_for_source(source), finished_at] if stage_for_source(source) }
+      .group_by(&:first)
+      .transform_values { |pairs| pairs.map(&:last).max }
+  end
+
+  SourceRow = Struct.new(:source, :last_ok, :typical, :rows, :state, keyword_init: true)
+
+  def source_rows
+    last_ok = last_success_by_stage
+    seconds = typical_seconds
+    rows = last_rows_in
+
+    Engine::Source.all.map do |source|
+      finished_at = last_ok[source.key]
+      SourceRow.new(
+        source: source,
+        last_ok: finished_at,
+        typical: seconds[source.key],
+        rows: rows[source.key],
+        state: finished_at.nil? ? "never run" : (source.stale?(finished_at) ? "stale" : "live")
+      )
+    end
+  end
+
+  def typical_seconds
+    Analytics::FctIngestRun
+      .where(status: "ok")
+      .where.not(finished_at: nil)
+      .order(id: :desc)
+      .limit(TYPICAL_OF * Engine::Source::KEYS.size)
+      .pluck(:source, Arel.sql("extract(epoch from finished_at - started_at)"))
+      .filter_map { |source, taken| [stage_for_source(source), taken.to_f] if stage_for_source(source) }
+      .group_by(&:first)
+      .transform_values { |pairs| median(pairs.map(&:last).first(TYPICAL_OF)) }
+  end
+
+  def last_rows_in
+    Analytics::FctIngestRun
+      .where(status: "ok")
+      .where.not(rows_in: nil)
+      .order(id: :asc)
+      .pluck(:source, :rows_in)
+      .filter_map { |source, count| [stage_for_source(source), count] if stage_for_source(source) }
+      .to_h
+  end
+
+  def median(values)
+    return nil if values.empty?
+
+    sorted = values.sort
+    sorted[sorted.size / 2]
   end
 
   DayCoverage = Struct.new(:source, :loaded, :unavailable, :never_fetched, :span, :first_ds, :last_ds, keyword_init: true)
