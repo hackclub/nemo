@@ -9,19 +9,24 @@
 
       <div class="field-label">
         <span>Role</span>
-        <div class="segmented seg-radio">
+        <div class="outcomes">
           <% Fd::Permission::ROLES.each do |role| %>
-            <label>
-              <%= radio_button_tag :role, role, role == "firefighter", id: nil %>
-              <%= Fd::Permission::ROLE_LABELS.fetch(role) %>
+            <label class="opt">
+              <%= radio_button_tag :role, role, role == "firefighter" %>
+              <span class="opt-dot" aria-hidden="true"></span>
+              <span>
+                <span class="opt-label"><%= Fd::Permission::ROLE_LABELS.fetch(role) %></span>
+                <span class="opt-why"><%= role_reach(role) %></span>
+              </span>
             </label>
           <% end %>
         </div>
+        <span class="sub2">Each role holds everything the one before it holds, and more.</span>
       </div>
 
     </div>
     <div class="modal-foot">
-      <label for="give-access" class="btn">Close</label>
+      <label for="give-access" class="btn btn-ghost">Cancel</label>
       <%= submit_tag "Give it", class: "btn btn-primary" %>
     </div>
   <% end %>

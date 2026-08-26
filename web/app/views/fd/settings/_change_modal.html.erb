@@ -19,10 +19,11 @@
   <% end %>
 
   <div class="modal-foot">
-    <%= button_to "Take it back", fd_grant_path(grant), method: :delete, class: "btn",
+    <%= button_to "Take it back", fd_grant_path(grant), method: :delete,
+          class: "btn btn-ghost btn-undo",
           form: { class: "contents", data: { turbo_confirm:
             "Take back what #{names[grant.user_id]} holds?" } } %>
-    <label for="change-access" class="btn">Close</label>
+    <label for="change-access" class="btn btn-ghost">Cancel</label>
     <%= submit_tag "Change it", class: "btn btn-primary", form: "change-grant" %>
   </div>
 <% end %>

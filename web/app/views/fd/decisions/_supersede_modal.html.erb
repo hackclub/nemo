@@ -3,14 +3,26 @@
   <%= form_with url: fd_decision_supersession_path(decision), method: :post,
         html: { autocomplete: "off" } do %>
     <div class="modal-body">
+      <div class="fbox">
+        <div class="ft">Being replaced</div>
+        <div class="fb">
+          <div class="fb-line"><b><%= decision.title %></b></div>
+          <div class="rail-line"><%= decision.statement %></div>
+          <div class="sub2">
+            It is retired when this one settles, and stays on the record.
+          </div>
+        </div>
+      </div>
+
       <%= render "fd/decisions/words", decision: nil, with_reasons: false %>
       <label class="field-label">
-        Why, one line each
+        Why it is changing
         <%= text_area_tag :reasons, nil, rows: 3, class: "textarea", id: nil %>
+        <span class="sub2">One reason per line.</span>
       </label>
     </div>
     <div class="modal-foot">
-      <label for="supersede-decision" class="btn">Close</label>
+      <label for="supersede-decision" class="btn btn-ghost">Cancel</label>
       <%= submit_tag "Replace it", class: "btn btn-primary" %>
     </div>
   <% end %>

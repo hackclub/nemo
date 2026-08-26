@@ -197,7 +197,8 @@
         <%= field_wrong(:reversal_reason) %>
       </div>
       <div class="modal-foot">
-        <label for="reverse-<%= action.id %>" class="btn">Close</label>
+        <p class="modal-note">It stops standing. The record keeps both it and the reversal.</p>
+        <label for="reverse-<%= action.id %>" class="btn btn-ghost">Cancel</label>
         <%= submit_tag "Reverse it", class: "btn btn-primary" %>
       </div>
     <% end %>
@@ -223,7 +224,7 @@
 
     </div>
     <div class="modal-foot">
-      <label for="log-action" class="btn">Close</label>
+      <label for="log-action" class="btn btn-ghost">Cancel</label>
       <%= submit_tag "Log it", class: "btn btn-primary" %>
     </div>
   <% end %>
@@ -251,32 +252,46 @@
           </label>
         </div>
       </div>
+      <p class="card-note">
+        The messages are copied here as they are now. If the thread is later locked or
+        deleted in Slack, what is held on the case stays readable.
+      </p>
     </div>
     <div class="modal-foot">
-      <label for="attach-thread" class="btn">Close</label>
+      <label for="attach-thread" class="btn btn-ghost">Cancel</label>
       <%= submit_tag "Attach", class: "btn btn-primary" %>
     </div>
   <% end %>
 <% end %>
 
 <%= render layout: "fd/modal", locals: { id: "set-category",
-      title: "What kind of thing is case #{@case.id}?",
+      title: "Set the violation",
+      sub: "case #{@case.id}",
       open: params[:do] == "category" } do %>
   <%= form_with url: fd_case_path(@case), method: :patch, html: { autocomplete: "off" } do %>
     <div class="modal-body">
-      <div class="outcomes">
-        <% Fd::Case::CATEGORIES.each_with_index do |key, i| %>
-          <label class="opt">
-            <%= radio_button_tag :category_key, key, i.zero? %>
-            <span class="opt-dot" aria-hidden="true"></span>
-            <span><span class="opt-label"><%= category_label(key) %></span></span>
-          </label>
-        <% end %>
+      <div class="field-label">
+        <span>What kind of thing it is</span>
+        <details class="picker" data-controller="picker" data-action="change->picker#choose">
+          <summary class="select">
+            <span data-picker-target="label"><%= category_label(Fd::Case::CATEGORIES.first) %></span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <div class="menu-pop picker-pop">
+            <% Fd::Case::CATEGORIES.each_with_index do |key, i| %>
+              <label class="picker-opt">
+                <%= radio_button_tag :category_key, key, i.zero?, id: nil,
+                      data: { label: category_label(key) } %>
+                <%= category_label(key) %>
+              </label>
+            <% end %>
+          </div>
+        </details>
       </div>
       <%= field_wrong(:category_key) %>
     </div>
     <div class="modal-foot">
-      <label for="set-category" class="btn">Close</label>
+      <label for="set-category" class="btn btn-ghost">Cancel</label>
       <%= submit_tag "Set it", class: "btn btn-primary" %>
     </div>
   <% end %>
@@ -291,23 +306,20 @@
       sub: "internal", open: params[:do] == "note" } do %>
   <%= form_with url: fd_case_notes_path(@case), method: :post, html: { autocomplete: "off" } do %>
     <div class="modal-body">
-      <div class="outcomes">
-        <label class="opt">
-          <%= radio_button_tag :about, "case", true %>
-          <span class="opt-dot" aria-hidden="true"></span>
-          <span>
-            <span class="opt-label">About this case</span>
-          </span>
-        </label>
-        <% @case.subjects.each do |person| %>
-          <label class="opt">
-            <%= radio_button_tag :about, person.user_id, false %>
-            <span class="opt-dot" aria-hidden="true"></span>
-            <span>
-              <span class="opt-label">About <%= names[person.user_id] %></span>
-            </span>
+      <div class="field-label">
+        <span>What it is about</span>
+        <div class="segmented seg-radio">
+          <label>
+            <%= radio_button_tag :about, "case", true, id: nil %>
+            This case
           </label>
-        <% end %>
+          <% @case.subjects.each do |person| %>
+            <label>
+              <%= radio_button_tag :about, person.user_id, false, id: nil %>
+              <%= names[person.user_id] %>
+            </label>
+          <% end %>
+        </div>
       </div>
       <label class="field-label">
         The note
@@ -317,7 +329,7 @@
       <%= field_wrong(:body) %>
     </div>
     <div class="modal-foot">
-      <label for="add-note" class="btn">Close</label>
+      <label for="add-note" class="btn btn-ghost">Cancel</label>
       <%= submit_tag "Save the note", class: "btn btn-primary" %>
     </div>
   <% end %>
@@ -372,7 +384,10 @@
           <% end %>
         </div>
         <div class="modal-foot">
-          <label for="resolve-case" class="btn">Close</label>
+          <% if @open_reports.positive? %>
+            <p class="modal-note">A reply to the reporter cannot be unsent.</p>
+          <% end %>
+          <label for="resolve-case" class="btn btn-ghost">Cancel</label>
           <%= submit_tag "Resolve", class: "btn btn-primary" %>
         </div>
       <% end %>

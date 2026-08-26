@@ -15,9 +15,10 @@
     <div class="modal-foot">
       <% if kase.followed_decision_id %>
         <%= button_to "Unlink", fd_case_decision_path(kase),
-              method: :delete, class: "btn", form: { class: "contents" } %>
+              method: :delete, class: "btn btn-ghost btn-undo",
+              form: { class: "contents" } %>
       <% end %>
-      <label for="follow-decision" class="btn">Close</label>
+      <label for="follow-decision" class="btn btn-ghost">Cancel</label>
       <%= submit_tag "Record it", class: "btn btn-primary" %>
     </div>
   <% end %>

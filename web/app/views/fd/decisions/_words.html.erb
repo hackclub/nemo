@@ -38,7 +38,8 @@
 
 <% if with_reasons %>
   <label class="field-label">
-    Why, one line each
+    Why
     <%= text_area_tag :reasons, decision.reasons.join("\n"), rows: 4, class: "textarea", id: nil %>
+    <span class="sub2">One reason per line.</span>
   </label>
 <% end %>

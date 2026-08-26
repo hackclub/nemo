@@ -231,6 +231,11 @@ module FdHelper
     end
   end
 
+  def role_reach(role)
+    held = Fd::Permission.keys.count { |key| Fd::Permission.roles(key).include?(role) }
+    "#{held} of #{Fd::Permission.keys.size} permissions"
+  end
+
   def menu_item(icon, label, note: nil)
     render "fd/menu_item", icon: icon, label: label, note: note
   end

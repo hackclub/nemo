@@ -11,8 +11,10 @@
     <%= turbo_frame_tag "merge-body", src: (fd_case_merge_path(kase) if kase),
           loading: ("lazy" if kase), class: "merge-frame" do %>
       <div class="merge-pane">
-        <p class="card-note flush">
-          <%= kase ? "Looking for duplicates..." : "Reading the ticked cases..." %>
+        <p class="lines" aria-label="<%= kase ? "Looking for duplicates" : "Reading the ticked cases" %>">
+          <i style="width:78%"></i>
+          <i style="width:62%"></i>
+          <i style="width:70%"></i>
         </p>
       </div>
     <% end %>

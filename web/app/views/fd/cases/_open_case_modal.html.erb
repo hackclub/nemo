@@ -64,7 +64,7 @@
           </label>
         </div>
         <div class="modal-foot">
-          <label for="open-case" class="btn">Close</label>
+          <label for="open-case" class="btn btn-ghost">Cancel</label>
           <% if @open_for_subject.any? %>
             <%= button_tag "Open it anyway, this is separate", name: "separate", value: "1",
                   class: "btn btn-primary" %>

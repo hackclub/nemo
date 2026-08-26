@@ -316,6 +316,6 @@ class FdNotesTest < ActionDispatch::IntegrationTest
 
     assert_select "input[name=about][value=USUB]"
     assert_select "input[name=about][value=USECOND]"
-    assert_select ".opt-label", text: "About @USECOND"
+    assert_select ".seg-radio label", text: /@USECOND/
   end
 end

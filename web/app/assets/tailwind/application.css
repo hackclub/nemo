@@ -1362,9 +1362,9 @@
 
   .field-label {
     display: grid;
-    gap: 3px;
+    gap: 4px;
     font-size: var(--t-small);
-    color: var(--ink-3);
+    color: var(--ink-2);
     font-weight: 500;
   }
 
@@ -2038,6 +2038,13 @@
     padding: var(--s-xs) var(--s-md);
     font-size: var(--t-small);
     color: var(--warn);
+  }
+
+  .modal-body > .dup:first-child {
+    margin: calc(var(--s-md) * -1) calc(var(--s-md) * -1) 0;
+    border-block-start: 0;
+    border-inline: 0;
+    border-radius: 0;
   }
 
   .dup b {
@@ -3827,8 +3834,9 @@
   }
 
   .modal-title {
-    font-size: var(--t-body);
-    font-weight: 700;
+    font-size: var(--t-head);
+    font-weight: 620;
+    letter-spacing: -0.015em;
     margin: 0;
   }
 
@@ -3845,12 +3853,51 @@
   }
 
   .modal-foot {
-    padding: var(--s-sm) var(--s-md);
+    padding: var(--s-xs) var(--s-md);
     border-top: 1px solid var(--line);
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     gap: var(--s-2xs);
     background-color: var(--card-2);
+  }
+
+  .lines {
+    display: grid;
+    gap: 7px;
+    margin: 0;
+    padding: var(--s-2xs) 0;
+  }
+
+  .lines i {
+    display: block;
+    height: 11px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--line-soft), var(--line), var(--line-soft));
+    background-size: 200% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lines i { animation: none; }
+  }
+
+  .modal-note {
+    margin-inline-end: auto;
+    font-size: var(--t-fine);
+    color: var(--ink-3);
+    line-height: 1.4;
+    max-width: 26ch;
+  }
+
+  .modal-foot .btn-undo {
+    margin-inline-end: auto;
+    color: var(--sev-crit-deep);
   }
 
   .outcomes {
@@ -3917,6 +3964,14 @@
     font-size: var(--t-body);
     font-weight: 600;
     display: block;
+  }
+
+  .opt-why {
+    display: block;
+    font-size: var(--t-fine);
+    font-weight: 400;
+    color: var(--ink-3);
+    margin-top: 1px;
   }
 
   .only {
