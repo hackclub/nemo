@@ -36,7 +36,7 @@ class AnalyticsFlagTest < ActionDispatch::IntegrationTest
   test "with it off, every analytics page sends you to the queue" do
     turn_it_off
 
-    [root_path, channels_path, pipeline_path].each do |where|
+    [root_path, channels_path, engine_path].each do |where|
       get where
       assert_redirected_to fd_cases_path
       assert_match(/community analytics is turned off/, flash[:alert])
@@ -46,7 +46,7 @@ class AnalyticsFlagTest < ActionDispatch::IntegrationTest
   test "with it off, the pipeline's buttons are refused too, not just its page" do
     turn_it_off
 
-    post pipeline_sync_path
+    post engine_sync_path
     assert_redirected_to fd_cases_path
   end
 

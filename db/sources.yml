@@ -1,0 +1,192 @@
+sources:
+  team_stats:
+    label: Workspace daily statistics
+    endpoint: team.stats.timeSeries
+    credential: internal
+    cadence: daily
+    window: 1 day
+    guard: none
+    resume: none
+    retention: keep
+    writes: [raw.team_stats_snapshot]
+    feeds: [mart_team_stats_daily, mart_team_stats_monthly]
+
+  top_posters:
+    label: Top posters by month
+    endpoint: admin.analytics.getMemberAnalytics
+    credential: internal
+    cadence: daily
+    window: 1 month
+    guard: none
+    resume: none
+    retention: keep
+    writes: [raw.top_posters_snapshot]
+    feeds: [mart_top_posters]
+
+  member_days:
+    label: Member activity, one day at a time
+    endpoint: admin.analytics.getMemberAnalytics
+    credential: internal
+    cadence: daily
+    window: 1 day
+    guard: num_found
+    resume: none
+    retention: keep
+    prune_floor: 13 months
+    writes: [raw.member_activity_snapshot, raw.analytics_day]
+    feeds: [mart_onboarding_funnel, mart_onboarding_recurrence_funnel]
+    limits:
+      batch: {default: 6, min: 1, max: 30}
+
+  channel_days:
+    label: Channel activity, one day at a time
+    endpoint: admin.analytics.getFile
+    credential: admin
+    cadence: daily
+    window: 1 day
+    guard: num_found
+    resume: none
+    retention: keep
+    prune_floor: 13 months
+    writes: [raw.channel_activity_snapshot, raw.analytics_day]
+    feeds: [mart_channel_activity]
+    limits:
+      batch: {default: 30, min: 1, max: 60}
+
+  member_range:
+    label: Member analytics over the whole available window
+    endpoint: admin.analytics.getMemberAnalytics
+    credential: internal
+    cadence: daily
+    window: 13 months
+    guard: num_found
+    resume: none
+    retention: replace
+    writes: [raw.member_activity_snapshot, raw.member_dim]
+    feeds: [mart_activity_distribution, mart_monthly_cohorts]
+
+  channel_range:
+    label: Channel analytics over a rolling window
+    endpoint: admin.analytics.getChannelAnalytics
+    credential: internal
+    cadence: daily
+    window: 30 days
+    guard: num_found
+    resume: none
+    retention: newest window only
+    writes: [raw.channel_activity_snapshot]
+    feeds: [mart_channel_range]
+
+  users_list:
+    label: Account flags and deactivation
+    endpoint: users.list
+    credential: bot
+    cadence: daily
+    window: snapshot
+    guard: none
+    resume: sync_cursor
+    retention: replace
+    writes: [raw.member_dim]
+    feeds: [mart_account_type, mart_growth]
+
+  autojoin:
+    label: Public channel names
+    endpoint: conversations.list
+    credential: bot
+    cadence: daily
+    window: snapshot
+    guard: cursor end
+    resume: cursor
+    retention: replace
+    writes: [raw.channel_dim]
+    feeds: [dim_channel]
+
+  channel_names:
+    label: Names for channels the list never returned
+    endpoint: conversations.info
+    credential: bot
+    cadence: daily
+    window: snapshot
+    guard: none
+    resume: pending set
+    retention: replace
+    writes: [raw.channel_dim]
+    feeds: [dim_channel]
+
+  member_history:
+    label: All-time message count and first post
+    endpoint: search.messages
+    credential: admin
+    cadence: daily
+    window: all time
+    guard: none
+    resume: pending set
+    retention: keep
+    writes: [raw.member_message_history]
+    feeds: [mart_monthly_cohorts, mart_activity_distribution]
+    limits:
+      batch: {default: 8000, min: 500, max: 20000}
+
+  member_channels:
+    label: Newcomer messages by channel
+    endpoint: search.messages
+    credential: admin
+    cadence: daily
+    window: cohort
+    guard: page assert
+    resume: pending set
+    retention: keep
+    prune_floor: 30 days
+    writes: [raw.member_channel_message, raw.member_channel_walk]
+    feeds: [mart_newcomer_channels]
+    limits:
+      batch: {default: 600, min: 50, max: 2000}
+      cohort_days: {default: 30, min: 7, max: 90}
+
+  channel_membership:
+    label: Which public channels a newcomer joined
+    endpoint: users.conversations
+    credential: bot
+    cadence: daily
+    window: cohort
+    guard: cursor end
+    resume: pending set
+    retention: keep
+    prune_floor: 30 days
+    writes: [raw.member_channel_membership, raw.member_channel_walk]
+    feeds: [mart_newcomer_channels]
+    limits:
+      batch: {default: 600, min: 50, max: 2000}
+      cohort_days: {default: 30, min: 7, max: 90}
+
+  first_reply:
+    label: The first reply a newcomer received
+    endpoint: conversations.replies
+    credential: admin
+    cadence: daily
+    window: per newcomer
+    guard: none
+    resume: pending set
+    retention: keep
+    writes: [raw.member_first_reply]
+    feeds: [mart_response_rate, mart_fast_reply_vs_retention]
+
+  dbt:
+    label: Build the warehouse
+    endpoint: none
+    credential: none
+    cadence: daily
+    window: n/a
+    guard: none
+    resume: none
+    retention: n/a
+    writes: [analytics]
+    feeds: [every mart]
+
+cadences: [daily, weekly, monthly, on_demand, live]
+
+guards: [none, num_found, page assert, cursor end, walk_version]
+
+resumes: [none, cursor, sync_cursor, pending set]
+
+retentions: [keep, replace, newest window only, n/a]

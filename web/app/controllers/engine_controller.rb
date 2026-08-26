@@ -1,4 +1,4 @@
-class PipelineController < ApplicationController
+class EngineController < ApplicationController
   before_action { needs(:analytics) }
 
   HISTORY = 12
@@ -32,33 +32,33 @@ class PipelineController < ApplicationController
 
   def sync
     if SyncRequest.active.exists?
-      redirect_to pipeline_path, alert: "a sync is already queued or running"
+      redirect_to engine_path, alert: "a sync is already queued or running"
       return
     end
 
     SyncRequest.queue!(kind: "full", requested_by: current_staff.user_id)
-    redirect_to pipeline_path, notice: "sync queued"
+    redirect_to engine_path, notice: "sync queued"
   end
 
   def cancel
     request = SyncRequest.active.recent_first.first
     if request&.cancel!
-      redirect_to pipeline_path, notice: "cancel requested"
+      redirect_to engine_path, notice: "cancel requested"
     else
-      redirect_to pipeline_path, alert: "nothing to cancel"
+      redirect_to engine_path, alert: "nothing to cancel"
     end
   end
 
   def trigger_stage
     if SyncRequest.active.exists?
-      redirect_to pipeline_path, alert: "a sync is already queued or running"
+      redirect_to engine_path, alert: "a sync is already queued or running"
       return
     end
 
     SyncRequest.queue!(kind: "stage", stage: params[:stage], requested_by: current_staff.user_id)
-    redirect_to pipeline_path, notice: "#{params[:stage]} queued"
+    redirect_to engine_path, notice: "#{params[:stage]} queued"
   rescue ActiveRecord::RecordInvalid => e
-    redirect_to pipeline_path, alert: e.record.errors.full_messages.to_sentence
+    redirect_to engine_path, alert: e.record.errors.full_messages.to_sentence
   end
 
   private

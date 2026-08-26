@@ -1,4 +1,4 @@
-module PipelineHelper
+module EngineHelper
   STATUS_CHIP = {
     "ok" => "chip chip-good",
     "failed" => "chip chip-crit",

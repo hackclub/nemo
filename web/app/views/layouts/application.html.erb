@@ -41,8 +41,8 @@
 
   <body>
     <%= render "shared/synthetic_banner" %>
-    <% engine = on?(:fire_engine) %>
-    <div class="shell" data-controller="dismiss rail<%= " palette" if engine %>"
+    <% fire_engine = on?(:fire_engine) %>
+    <div class="shell" data-controller="dismiss rail<%= " palette" if fire_engine %>"
          data-palette-url-value="<%= fd_search_path(format: :json) %>"
          data-palette-on-value="<%= content_for(:palette_on) %>"
          data-action="keydown@document->palette#key">
@@ -66,16 +66,16 @@
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg>
               <span class="rail-text">Channels</span>
             <% end %>
-            <%= link_to pipeline_path, class: "rail-item",
-                  aria: { current: ("page" if controller_name == "pipeline") } do %>
+            <%= link_to engine_path, class: "rail-item",
+                  aria: { current: ("page" if controller_name == "engine") } do %>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
-              <span class="rail-text">Pipeline</span>
+              <span class="rail-text">Engine</span>
             <% end %>
           </nav>
         </div>
         <% end %>
 
-        <% if engine %>
+        <% if fire_engine %>
         <div>
           <p class="rail-label">Fire Engine</p>
           <nav class="rail-nav" aria-label="Fire Engine">
@@ -124,7 +124,7 @@
 
           <span class="topbar-fill"></span>
 
-          <% if engine %>
+          <% if fire_engine %>
           <button type="button" class="field-top" data-action="palette#open"
                   aria-label="Search cases, members, notes">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -154,12 +154,12 @@
         </div>
       </div>
 
-      <% if engine %>
+      <% if fire_engine %>
         <%= render "fd/palette" %>
       <% end %>
     </div>
 
-    <% if engine %>
+    <% if fire_engine %>
       <turbo-frame id="person-drawer" class="person-drawer-frame" data-controller="person-drawer"
         target="_top"></turbo-frame>
     <% end %>

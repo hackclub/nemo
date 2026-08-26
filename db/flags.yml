@@ -1,7 +1,7 @@
 flags:
   analytics:
     label: Community analytics
-    covers: Overview, Channels and Pipeline
+    covers: Overview, Channels and Engine
     default: true
   fire_engine:
     label: Fire Engine

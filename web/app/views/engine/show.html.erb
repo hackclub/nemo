@@ -12,7 +12,7 @@
 <%= render "run_detail", run: @run, steps: @steps, step_output: @step_output, heading: "This run" %>
 
 <div>
-  <%= link_to pipeline_path, class: "crumb" do %>
+  <%= link_to engine_path, class: "crumb" do %>
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
     back to pipeline
   <% end %>

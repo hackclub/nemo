@@ -18,7 +18,7 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "td", text: "Community analytics"
-    assert_select ".said-cell", text: /Overview, Channels and Pipeline/
+    assert_select ".said-cell", text: /Overview, Channels and Engine/
     assert_select "form[action=?]", fd_flag_path(key: "analytics", on: "0")
   end
 

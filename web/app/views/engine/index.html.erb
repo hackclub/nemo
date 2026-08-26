@@ -5,7 +5,7 @@
   <% end %>
 <% end %>
 
-<% content_for :page_title, "Pipeline" %>
+<% content_for :page_title, "Engine" %>
 <% content_for :page_subtitle, "nightly sync runs, stage by stage" %>
 
 <% content_for :page_badge do %>
@@ -23,7 +23,7 @@
       <%= time_ago_in_words(@active_request.created_at) %> ago
     </span>
     <% if @active_request.status != "cancelling" %>
-      <%= button_to "Cancel", pipeline_cancel_path, class: "btn", form: { class: "contents" } %>
+      <%= button_to "Cancel", engine_cancel_path, class: "btn", form: { class: "contents" } %>
     <% end %>
   <% else %>
     <% if @last_request %>
@@ -32,7 +32,7 @@
       </span>
       <%= run_status(@last_request) %>
     <% end %>
-    <%= button_to "Run the nightly sync now", pipeline_sync_path,
+    <%= button_to "Run the nightly sync now", engine_sync_path,
           class: "btn btn-primary", form: { class: "contents" } %>
   <% end %>
 <% end %>
@@ -110,7 +110,7 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">Recent runs</h2>
-        <p class="card-sub">last <%= PipelineController::HISTORY %> parent runs</p>
+        <p class="card-sub">last <%= EngineController::HISTORY %> parent runs</p>
       </div>
     </div>
     <% if @history.any? %>
@@ -129,7 +129,7 @@
               <tr>
                 <td>
                   <span class="two-line">
-                    <%= link_to row.started_at.strftime("%b %-d, %H:%M"), pipeline_run_path(row) %>
+                    <%= link_to row.started_at.strftime("%b %-d, %H:%M"), engine_run_path(row) %>
                     <span>
                       <% if first_step.nil? %>
                         n/a
@@ -179,7 +179,7 @@
                 <td><%= time_ago_in_words(finished_at) %> ago</td>
                 <% if @active_request.nil? %>
                   <td>
-                    <%= button_to "run", pipeline_trigger_stage_path(stage: stage),
+                    <%= button_to "run", engine_trigger_stage_path(stage: stage),
                           class: "run-btn", form: { class: "contents" } %>
                   </td>
                 <% end %>

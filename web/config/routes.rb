@@ -49,11 +49,14 @@ Rails.application.routes.draw do
   end
 
   resources :channels, only: [:index, :show]
-  get "pipeline", to: "pipeline#index"
-  get "pipeline/runs/:id", to: "pipeline#show", as: :pipeline_run
-  post "pipeline/sync", to: "pipeline#sync", as: :pipeline_sync
-  post "pipeline/cancel", to: "pipeline#cancel", as: :pipeline_cancel
-  post "pipeline/trigger_stage", to: "pipeline#trigger_stage", as: :pipeline_trigger_stage
+  get "engine", to: "engine#index"
+  get "engine/runs/:id", to: "engine#show", as: :engine_run
+  post "engine/sync", to: "engine#sync", as: :engine_sync
+  post "engine/cancel", to: "engine#cancel", as: :engine_cancel
+  post "engine/trigger_stage", to: "engine#trigger_stage", as: :engine_trigger_stage
+
+  get "pipeline", to: redirect("/engine")
+  get "pipeline/runs/:id", to: redirect("/engine/runs/%{id}")
 
   root "home#index"
 end

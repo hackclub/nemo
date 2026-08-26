@@ -6,10 +6,7 @@ class SyncRequest < ApplicationRecord
   KINDS = %w[full stage].freeze
   ACTIVE = %w[queued claimed].freeze
 
-  STAGES = %w[
-    team_stats top_posters member_days channel_days member_range channel_range
-    users_list autojoin channel_names member_history first_reply dbt
-  ].freeze
+  STAGES = Engine::Source::KEYS
 
   scope :active, -> { where(status: ACTIVE) }
   scope :recent_first, -> { order(id: :desc) }
