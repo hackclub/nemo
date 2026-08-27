@@ -91,10 +91,12 @@ class ProxyClient:
         cursor_param="cursor",
         max_retries=3,
         credential="internal",
+        start_cursor=None,
+        on_page=None,
     ):
         base = dict(params)
         base["count"] = page_size
-        cursor = None
+        cursor = start_cursor
         seen = 0
         previous_page = None
         while True:
@@ -120,6 +122,8 @@ class ProxyClient:
             num_found = data.get("num_found")
             if num_found is not None:
                 self.last_num_found = num_found
+            if on_page:
+                on_page(cursor, seen)
             if not cursor or not items:
                 break
             if num_found is not None and seen >= num_found:

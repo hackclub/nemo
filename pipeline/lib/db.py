@@ -238,6 +238,49 @@ def save_cursor(conn: psycopg.Connection, source: str, cursor: str, channel_id: 
         )
 
 
+def get_walk(
+    conn: psycopg.Connection,
+    source: str,
+    window_key: str,
+    max_age_hours: int = STALE_AFTER_HOURS,
+) -> tuple[str | None, int]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT cursor, rows_seen FROM raw.sync_cursor
+            WHERE source = %s AND channel_id = '' AND status = 'running'
+              AND window_key = %s
+              AND updated_at > now() - make_interval(hours => %s)
+            """,
+            (source, window_key, max_age_hours),
+        )
+        row = cur.fetchone()
+        if row is None or not row[0]:
+            return None, 0
+        return row[0], row[1] or 0
+
+
+def save_walk(
+    conn: psycopg.Connection, source: str, window_key: str, cursor: str | None, rows_seen: int
+) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO raw.sync_cursor
+                (source, channel_id, cursor, status, window_key, rows_seen, updated_at)
+            VALUES (%s, '', %s, %s, %s, %s, now())
+            ON CONFLICT (source, channel_id) DO UPDATE SET
+                cursor = EXCLUDED.cursor,
+                status = EXCLUDED.status,
+                window_key = EXCLUDED.window_key,
+                rows_seen = EXCLUDED.rows_seen,
+                updated_at = now()
+            """,
+            (source, cursor or "", "running" if cursor else "done", window_key, rows_seen),
+        )
+    conn.commit()
+
+
 MEMBER_DAY = "member_day"
 CHANNEL_DAY = "channel_day"
 

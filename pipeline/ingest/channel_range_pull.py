@@ -4,7 +4,7 @@ from datetime import date, timedelta
 
 from dotenv import load_dotenv
 
-from lib.db import connect, dead_letter, ingest_run
+from lib.db import connect, dead_letter, get_walk, ingest_run, save_walk
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
 from lib.walk import check_walk
@@ -77,8 +77,24 @@ def run(conn, days=WINDOW_DAYS, end=None):
         "sort_direction": "asc",
         "team_ids": os.environ.get("SLACK_TEAM_ID") or None,
     }
+    window_key = f"{start}..{stop}"
+    resume_at, already = get_walk(conn, SOURCE, window_key)
+
     with ingest_run(conn, SOURCE) as counts:
+        counts.rows_in = already
         rows = []
+
+        def flush(cursor, seen):
+            with conn.cursor() as cur:
+                cur.executemany(RANGE_SQL, rows)
+            rows.clear()
+            save_walk(conn, SOURCE, window_key, cursor, already + seen)
+            counts.total_expected = client.last_num_found
+            counts.progress()
+
+        if resume_at:
+            print(f"channel range {window_key}: resuming after {already} rows")
+
         for rec in client.paginate(
             METHOD,
             params,
@@ -86,6 +102,8 @@ def run(conn, days=WINDOW_DAYS, end=None):
             page_size=PAGE_SIZE,
             cursor_param="cursor_mark",
             max_retries=8,
+            start_cursor=resume_at,
+            on_page=flush,
         ):
             counts.rows_in += 1
             try:
@@ -94,15 +112,16 @@ def run(conn, days=WINDOW_DAYS, end=None):
                 counts.rows_rejected += 1
                 dead_letter(conn, SOURCE, {"keys": sorted(rec)}, str(exc))
 
-        check_walk(f"channel range {start}..{stop}", counts.rows_in,
+        check_walk(f"channel range {window_key}", counts.rows_in,
             client.last_num_found, PAGE_SIZE)
 
         with conn.cursor() as cur:
             cur.executemany(RANGE_SQL, rows)
             cur.execute(PRUNE_SQL, (SOURCE, start, stop))
             pruned = cur.rowcount
+        save_walk(conn, SOURCE, window_key, None, counts.rows_in)
     print(
-        f"channel range {start}..{stop}: {counts.rows_in} rows, "
+        f"channel range {window_key}: {counts.rows_in} rows, "
         f"{counts.rows_rejected} rejected, {pruned} stale rows pruned"
     )
 
