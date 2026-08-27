@@ -238,6 +238,18 @@ def save_cursor(conn: psycopg.Connection, source: str, cursor: str, channel_id: 
         )
 
 
+def analyze(tables) -> str | None:
+    refused = []
+    try:
+        with connect() as stats_conn:
+            stats_conn.add_notice_handler(lambda note: refused.append(note.message_primary))
+            for table in tables:
+                stats_conn.execute(f"ANALYZE {table}")
+    except Exception as exc:
+        return f"{type(exc).__name__}: {exc}"
+    return refused[0] if refused else None
+
+
 def get_walk(
     conn: psycopg.Connection,
     source: str,

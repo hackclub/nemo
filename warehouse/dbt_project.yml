@@ -12,6 +12,8 @@ clean-targets:
   - "target"
   - "dbt_packages"
 
+on-run-end: "{{ analyze_built() }}"
+
 models:
   mnemosyne:
     staging:

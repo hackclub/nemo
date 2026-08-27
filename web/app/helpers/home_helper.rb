@@ -1,6 +1,21 @@
 module HomeHelper
   MIN_SAMPLE = 20
 
+  def stale_note(mart)
+    Engine::Freshness.note(mart)
+  end
+
+  def stale_card(title, note)
+    tag.div(class: "card") do
+      tag.div(class: "card-head") do
+        tag.div do
+          tag.h2(title, class: "card-title") +
+            tag.p("n/a", class: "card-sub")
+        end
+      end + tag.p(note, class: "card-note")
+    end
+  end
+
   def growth_cohort_status(row)
     return "n/a" if row.last_created_on.nil?
 

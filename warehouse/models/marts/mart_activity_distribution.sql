@@ -18,7 +18,10 @@ population as (
 ),
 
 coverage as (
-    select (select count(*) from walkable) as workspace_members
+    select
+        (select count(*) from walkable) as workspace_members,
+        (select min(first_post_ts)::date from {{ ref('fct_member_history') }}) as window_start,
+        (select max(searched_at)::date from {{ ref('fct_member_history') }}) as window_end
 ),
 
 member_bands as (
@@ -53,9 +56,11 @@ select
     b.activity_band,
     count(mb.band_order) as members,
     c.workspace_members,
-    'v10' as metric_version
+    c.window_start,
+    c.window_end,
+    'v11' as metric_version
 from bands b
 cross join coverage c
 left join member_bands mb on mb.band_order = b.band_order
-group by b.band_order, b.activity_band, c.workspace_members
+group by b.band_order, b.activity_band, c.workspace_members, c.window_start, c.window_end
 order by b.band_order

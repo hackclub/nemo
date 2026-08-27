@@ -16,6 +16,13 @@ scoped as (
         m.day_90_covered
     from reply_speed rs
     inner join {{ ref('fct_member_retention') }} m on m.user_id = rs.newcomer_id
+),
+
+covered as (
+    select
+        min(reply_at)::date as window_start,
+        max(reply_at)::date as window_end
+    from {{ ref('fct_first_reply') }}
 )
 
 select
@@ -35,6 +42,9 @@ select
             / nullif(count(*) filter (where day_90_covered), 0),
         4
     ) as retained_day_90_rate,
-    'v5' as metric_version
+    c.window_start,
+    c.window_end,
+    'v6' as metric_version
 from scoped
-group by fast_reply
+cross join covered c
+group by fast_reply, c.window_start, c.window_end

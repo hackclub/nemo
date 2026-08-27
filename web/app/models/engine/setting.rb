@@ -7,11 +7,15 @@ module Engine
     ENGINE = "engine".freeze
     CADENCE = "cadence".freeze
     ENABLED = "enabled".freeze
+    RETENTION = "retention_days".freeze
+    KEEP = "keep".freeze
+    LONGEST = 3650
 
     ENGINE_DIALS = {
       "run_at" => { label: "Nightly at", default: "03:00", kind: :time },
       "budget_minutes" => { label: "Budget for one night", default: "45", kind: :number,
-                            min: 5, max: 480 }
+                            min: 5, max: 480 },
+      Engine::Freshness::SWITCH => { label: "Stale cards read n/a", default: "true", kind: :switch }
     }.freeze
 
     def self.overrides
@@ -31,6 +35,7 @@ module Engine
       return ENGINE_DIALS.fetch(name.to_s).fetch(:default) if source.to_s == ENGINE
       return Source[source].cadence if name.to_s == CADENCE
       return "true" if name.to_s == ENABLED
+      return KEEP if name.to_s == RETENTION
 
       Source[source].limit(name).fetch("default").to_s
     end
@@ -84,13 +89,29 @@ module Engine
         return value if %w[true false].include?(value)
 
         raise Refused, "#{value} is not true or false"
+      when RETENTION
+        checked_retention(source, value)
       else
         in_bounds(Source[source].limit(name), name, value)
       end
     end
 
+    def self.checked_retention(source, value)
+      return KEEP if value.casecmp(KEEP).zero?
+
+      floor = Source[source].prune_floor_days
+      raise Refused, "#{source} does not delete anything" if floor.nil?
+
+      in_bounds({ "min" => floor, "max" => LONGEST }, RETENTION, value)
+    end
+
     def self.checked_engine(name, value)
       dial = ENGINE_DIALS.fetch(name) { raise Refused, "#{name} is not an engine setting" }
+      if dial[:kind] == :switch
+        return value if %w[true false].include?(value)
+
+        raise Refused, "#{value} is not true or false"
+      end
       return value if dial[:kind] == :time && value.match?(/\A([01]\d|2[0-3]):[0-5]\d\z/)
       raise Refused, "#{value} is not a time of day" if dial[:kind] == :time
 

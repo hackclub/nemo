@@ -176,6 +176,18 @@ sources:
     writes: [raw.member_first_reply]
     feeds: [mart_response_rate, mart_fast_reply_vs_retention]
 
+  prune:
+    label: Drop rows past their retention window
+    endpoint: none
+    credential: none
+    cadence: daily
+    window: n/a
+    guard: none
+    resume: none
+    retention: n/a
+    writes: [raw]
+    feeds: [nothing]
+
   dbt:
     label: Build the warehouse
     endpoint: none

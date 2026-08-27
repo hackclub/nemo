@@ -55,6 +55,29 @@ def budget_minutes(conn):
     return int(said(conn, ENGINE, "budget_minutes", DEFAULTS["budget_minutes"]))
 
 
+KEEP = "keep"
+
+
+def floor_days(key):
+    floor = sources.prune_floor(key)
+    if not floor:
+        return None
+    count, unit = floor.split()
+    return int(count) * (30 if unit.startswith("month") else 1)
+
+
+def retention_days(conn, key):
+    asked = said(conn, key, "retention_days", KEEP)
+    if asked == KEEP:
+        return None
+
+    floor = floor_days(key)
+    days = int(asked)
+    if floor and days < floor:
+        raise ValueError(f"{key}: {days} days is under the {floor} day floor")
+    return days
+
+
 def last_ok(conn, key):
     with conn.cursor() as cur:
         cur.execute(LAST_OK_SQL, (list(sources.runs_as(key)),))

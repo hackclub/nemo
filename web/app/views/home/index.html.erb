@@ -204,6 +204,10 @@
   </div>
 </div>
 
+<% top_channels_stale = stale_note("mart_channel_range") %>
+<% if top_channels_stale %>
+  <%= stale_card("Top public channels", top_channels_stale) %>
+<% else %>
 <div class="card card-flush">
   <div class="card-head">
     <div>
@@ -245,6 +249,7 @@
     </table>
   </div>
 </div>
+<% end %>
 
 <div data-controller="newcomer-channels" data-newcomer-channels-url-value="<%= root_path %>">
   <div data-newcomer-channels-target="container">

@@ -17,6 +17,7 @@ from ingest.first_reply import run as pull_first_reply
 from ingest.member_channels import read_membership as pull_channel_membership
 from ingest.member_channels import run as pull_member_channels
 from ingest.member_history import run as pull_member_history
+from ingest.prune import run as prune_rows
 from ingest.member_range_pull import run as pull_member_range
 from ingest.team_stats_pull import run as pull_team_stats
 from ingest.top_posters_pull import run as pull_top_posters
@@ -25,6 +26,7 @@ from lib.db import (
     CHANNEL_DAY,
     MEMBER_DAY,
     SyncCancelled,
+    analyze,
     connect,
     finish_run,
     raise_if_cancelled,
@@ -32,7 +34,7 @@ from lib.db import (
     run_step,
     start_run,
 )
-from lib import settings
+from lib import settings, sources
 from lib.paths import ENV_FILE, WAREHOUSE_DIR
 from lib.proxy_client import InternalAuthError, ProxyError, ProxyUnavailableError
 from lib.slack_client import bot_client
@@ -104,6 +106,7 @@ def stages():
             tuned(conn, "channel_membership", "batch"),
             tuned(conn, "channel_membership", "cohort_days"))),
         ("first_reply", lambda conn: pull_first_reply(conn)),
+        ("prune", lambda conn: prune_rows(conn)),
         ("dbt", lambda conn: run_dbt()),
     ]
 
@@ -175,9 +178,23 @@ def run_stage(conn, name, stage, run_id, index, total):
             buffer.write(f"attempt {attempt + 1}\n")
             print(f"[{index}/{total}] {name}: {detail}, retrying")
         else:
+            refresh_statistics(name)
             record_step_output(run_id, index, name, buffer.getvalue())
             return None
     return None
+
+
+def refresh_statistics(name):
+    tables = [
+        table for table in sources.says(name, "writes")
+        if table.startswith("raw.") and table.count(".") == 1
+    ]
+    if not tables:
+        return
+
+    refused = analyze(tables)
+    if refused:
+        print(f"{name}: statistics NOT refreshed, {refused}")
 
 
 SKIP_SQL = """

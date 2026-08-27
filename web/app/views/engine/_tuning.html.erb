@@ -27,6 +27,32 @@
 <div class="card card-flush">
   <div class="card-head">
     <div>
+      <h2 class="card-title">Retention</h2>
+    </div>
+  </div>
+  <div class="scroll">
+    <table class="data-table engine-table">
+      <thead>
+        <tr>
+          <th style="width:34%">source</th>
+          <th class="col-num" style="width:16%">default</th>
+          <th class="col-num" style="width:16%">now</th>
+          <th style="width:34%">changed by</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% Engine::Source.all.select(&:prunable?).each do |s| %>
+          <%= render "dial", source: s.key, name: Engine::Setting::RETENTION,
+                title: s.key, sub: "floor #{s.prune_floor}", may_tune: may_tune %>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
       <h2 class="card-title">Cadence and batch size</h2>
     </div>
   </div>
