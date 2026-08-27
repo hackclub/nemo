@@ -18,12 +18,12 @@
 <% else %>
   <div class="kpis">
     <% [
-      ["Total members", nil, @team_stats.total_members_count,
+      ["Total members", "(Slack's count today)", @team_stats.total_members_count,
        delta_chip(@team_stats.total_members_count, @team_stats_prior&.total_members_count),
        "vs 28 days earlier"],
       ["Claimed accounts", nil, @team_stats.total_claimed_count,
        share_chip(@team_stats.total_claimed_count, @team_stats.total_members_count),
-       "of all members"],
+       "of the members Slack counts today"],
       ["Active, last 28 days", "(posted or read)", @team_stats.active_users_28d,
        delta_chip(@team_stats.active_users_28d, @team_stats_prior&.active_users_28d),
        "vs 28 days earlier"],
@@ -57,25 +57,9 @@
   </div>
 </div>
 
-<div class="card">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Accounts created and claimed</h2>
-      <p class="card-sub">last <%= @growth_months.size %> months &middot; claimed within 30 days of creation</p>
-    </div>
-  </div>
-  <div class="chart-tall">
-    <canvas
-      data-controller="growth-chart"
-      data-growth-chart-data-value="<%= {
-        labels: @growth_months.map { |m| [m.month.strftime("%b %Y"), growth_cohort_status(m)] },
-        datasets: [
-          { label: "accounts created", data: @growth_months.map(&:created_members) },
-          { label: "claimed within 30d", data: @growth_months.map(&:claimed_members_30d) }
-        ]
-      }.to_json %>"
-      data-growth-chart-rates-value="<%= @growth_months.map { |m| m.claim_rate_30d&.to_f }.to_json %>"
-    ></canvas>
+<div data-controller="growth-months" data-growth-months-url-value="<%= root_path %>">
+  <div data-growth-months-target="container">
+    <%= render "growth", growth_months: @growth_months, growth_span: @growth_span %>
   </div>
 </div>
 
@@ -141,6 +125,9 @@
           messages posted over each member&rsquo;s whole history &middot;
           <%= number_with_delimiter(@activity_bands.sum(&:members)) %> of
           <%= number_with_delimiter(coverage&.workspace_members) %> members searched
+          <% if coverage && window_note(coverage.window_start, coverage.window_end) %>
+            &middot; searched <%= window_note(coverage.window_start, coverage.window_end) %>
+          <% end %>
         </p>
       </div>
     </div>
@@ -172,7 +159,12 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">Account composition</h2>
-        <p class="card-sub">every known account by type</p>
+        <p class="card-sub">
+          <% seen = @account_types.first %>
+          live accounts by type<% if seen %> &middot;
+            seen in <%= window_note(seen.window_start, seen.window_end) %>
+          <% end %>
+        </p>
       </div>
     </div>
     <div class="scroll">
@@ -212,7 +204,11 @@
   <div class="card-head">
     <div>
       <h2 class="card-title">Top public channels</h2>
-      <p class="card-sub">by member messages in the loaded window</p>
+      <p class="card-sub">
+        by member messages<% if @top_channels.first %> &middot;
+          <%= window_note(@top_channels.first.window_start, @top_channels.first.window_end) %>
+        <% end %>
+      </p>
     </div>
   </div>
   <div class="scroll">

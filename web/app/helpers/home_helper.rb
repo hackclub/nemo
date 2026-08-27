@@ -1,8 +1,19 @@
 module HomeHelper
   MIN_SAMPLE = 20
+  GROWTH_SPANS = [6, 12, 24].freeze
+  DEFAULT_GROWTH_SPAN = 6
 
   def stale_note(mart)
     Engine::Freshness.note(mart)
+  end
+
+  def window_note(from, to)
+    return nil if from.nil? || to.nil?
+
+    return to.strftime("%-d %b %Y") if from == to
+
+    same_year = from.year == to.year
+    "#{from.strftime(same_year ? '%-d %b' : '%-d %b %Y')} to #{to.strftime('%-d %b %Y')}"
   end
 
   def stale_card(title, note)

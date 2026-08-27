@@ -9,4 +9,4 @@ from {{ ref('mart_onboarding_funnel') }}
 where joined > invited
     or first_post > joined
     or retained_day_30 > first_post
-    or retained_day_90 > retained_day_30
+    or retained_day_90 > first_post

@@ -1,0 +1,33 @@
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Accounts created and claimed</h2>
+      <p class="card-sub">claimed within 30 days of creation</p>
+    </div>
+    <div class="card-tools">
+      <select
+        class="select"
+        aria-label="months of growth"
+        data-growth-months-target="select"
+        data-action="growth-months#change"
+      >
+        <% HomeHelper::GROWTH_SPANS.each do |span| %>
+          <option value="<%= span %>" <%= "selected" if span == growth_span %>><%= span %> months</option>
+        <% end %>
+      </select>
+    </div>
+  </div>
+  <div class="chart-tall">
+    <canvas
+      data-controller="growth-chart"
+      data-growth-chart-data-value="<%= {
+        labels: growth_months.map { |m| [m.month.strftime("%b %Y"), growth_cohort_status(m)] },
+        datasets: [
+          { label: "accounts created", data: growth_months.map(&:created_members) },
+          { label: "claimed within 30d", data: growth_months.map(&:claimed_members_30d) }
+        ]
+      }.to_json %>"
+      data-growth-chart-rates-value="<%= growth_months.map { |m| m.claim_rate_30d&.to_f }.to_json %>"
+    ></canvas>
+  </div>
+</div>

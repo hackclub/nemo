@@ -20,7 +20,7 @@ population as (
 coverage as (
     select
         (select count(*) from walkable) as workspace_members,
-        (select min(first_post_ts)::date from {{ ref('fct_member_history') }}) as window_start,
+        (select min(searched_at)::date from {{ ref('fct_member_history') }}) as window_start,
         (select max(searched_at)::date from {{ ref('fct_member_history') }}) as window_end
 ),
 

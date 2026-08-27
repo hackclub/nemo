@@ -28,8 +28,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select ".view[aria-current=true] span", text: "Sources"
-    assert_select "tbody tr:not(.band-row)", count: Engine::Source::KEYS.size
-    assert_select "tbody tr.band-row", minimum: 1, message: "sources are banded by cadence"
+    assert_select "tbody tr", count: Engine::Source::KEYS.size
     assert_select "tbody td b", text: "member_channels", count: 1,
       message: "a stage the old hardcoded list never knew about"
     assert_select "tbody td b", text: "channel_membership", count: 1

@@ -70,7 +70,16 @@ class HomeController < ApplicationController
       return
     end
 
-    @growth_months = Analytics::MartGrowth.order(month: :desc).limit(6).to_a.reverse
+    asked = params[:growth_months].to_i
+    @growth_span = HomeHelper::GROWTH_SPANS.include?(asked) ? asked : HomeHelper::DEFAULT_GROWTH_SPAN
+    @growth_months = Analytics::MartGrowth.order(month: :desc).limit(@growth_span).to_a.reverse
+
+    if request.headers["X-Requested-With"] == "growth"
+      render partial: "growth",
+        locals: { growth_months: @growth_months, growth_span: @growth_span },
+        layout: false
+      return
+    end
     @top_channels = Analytics::MartChannelRange
       .order(messages_posted_by_members: :desc)
       .limit(8)
