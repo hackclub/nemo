@@ -5032,6 +5032,16 @@
     letter-spacing: -0.01em;
   }
 
+  .dial-set {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs);
+  }
+
+  .field-tune {
+    width: 6rem;
+  }
+
   .state-live {
     color: var(--good);
   }

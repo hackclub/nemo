@@ -8,6 +8,7 @@ import psycopg
 from dotenv import load_dotenv
 
 from jobs.nightly_sync import ENV_FILE, TRUTHY, run_sync, stage_plan
+from lib import settings
 from lib.db import (
     STALE_AFTER_HOURS,
     SeededDeployment,
@@ -160,6 +161,16 @@ def reap():
         print(f"sync worker: failed stranded sync request {request_id}")
 
 
+def scheduled_at():
+    from_env = os.environ.get("NIGHTLY_AT", "").strip()
+    try:
+        with connect() as conn:
+            return settings.run_at(conn)
+    except Exception as exc:
+        print(f"sync worker: reading the schedule failed, {type(exc).__name__}: {exc}")
+        return from_env or DEFAULT_AT
+
+
 def run_at_start_enabled():
     return os.environ.get("NIGHTLY_RUN_AT_START", "").strip().lower() in TRUTHY
 
@@ -182,7 +193,7 @@ def main():
             print(f"sync worker: {exc}")
             raise SystemExit(1) from exc
 
-    at = os.environ.get("NIGHTLY_AT", "").strip() or DEFAULT_AT
+    at = scheduled_at()
     poll = int(os.environ.get("SYNC_POLL_SECONDS", "") or DEFAULT_POLL_SECONDS)
     scheduled = next_run_at(at, datetime.now())
     print(

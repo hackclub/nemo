@@ -49,3 +49,7 @@ def clamped(key, name, value):
 
 def prune_floor(key):
     return source(key).get("prune_floor")
+
+
+def runs_as(key):
+    return source(key).get("runs_as") or [key]

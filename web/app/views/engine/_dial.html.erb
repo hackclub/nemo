@@ -15,16 +15,18 @@
       <%= form_with url: engine_tune_path, method: :patch, class: "contents" do |f| %>
         <%= f.hidden_field :source, value: source %>
         <%= f.hidden_field :name, value: name %>
-        <% if name == Engine::Setting::CADENCE %>
-          <%= f.select :value, Engine::Source::CADENCES,
-                { selected: Engine::Setting.value(source, name) },
-                class: "select", onchange: "this.form.requestSubmit()" %>
-        <% else %>
-          <span class="field field-tune">
-            <%= f.text_field :value, value: Engine::Setting.value(source, name),
-                  inputmode: "numeric", onchange: "this.form.requestSubmit()" %>
-          </span>
-        <% end %>
+        <span class="dial-set">
+          <% if name == Engine::Setting::CADENCE %>
+            <%= f.select :value, Engine::Source::CADENCES,
+                  { selected: Engine::Setting.value(source, name) }, class: "select" %>
+          <% else %>
+            <span class="field field-tune">
+              <%= f.text_field :value, value: Engine::Setting.value(source, name),
+                    inputmode: "numeric" %>
+            </span>
+          <% end %>
+          <%= f.submit "save", class: "run-btn" %>
+        </span>
       <% end %>
     <% else %>
       <span class="mono"><%= Engine::Setting.value(source, name) %></span>

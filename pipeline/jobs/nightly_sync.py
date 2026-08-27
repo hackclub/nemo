@@ -2,12 +2,11 @@ import io
 import subprocess
 import sys
 from contextlib import redirect_stdout
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
 from ingest.analytics_pull import (
-    CHANNEL_DAY_LIMIT,
-    MEMBER_DAY_LIMIT,
     backfill_days,
     pull_channel_day,
     pull_member_day,
@@ -33,6 +32,7 @@ from lib.db import (
     run_step,
     start_run,
 )
+from lib import settings
 from lib.paths import ENV_FILE, WAREHOUSE_DIR
 from lib.proxy_client import InternalAuthError, ProxyError, ProxyUnavailableError
 from lib.slack_client import bot_client
@@ -77,24 +77,42 @@ def run_dbt():
         raise RuntimeError(f"dbt build exited {proc.returncode}")
 
 
+def tuned(conn, key, name):
+    return settings.limit(conn, key, name)
+
+
 def stages():
     return [
         ("team_stats", lambda conn: pull_team_stats(conn)),
         ("top_posters", lambda conn: pull_top_posters(conn)),
         ("member_days", lambda conn: backfill_days(
-            conn, MEMBER_DAY, "member", pull_member_day, MEMBER_DAY_LIMIT)),
+            conn, MEMBER_DAY, "member", pull_member_day, tuned(conn, "member_days", "batch"))),
         ("channel_days", lambda conn: backfill_days(
-            conn, CHANNEL_DAY, "channel", pull_channel_day, CHANNEL_DAY_LIMIT)),
+            conn, CHANNEL_DAY, "channel", pull_channel_day, tuned(conn, "channel_days", "batch"))),
         ("member_range", lambda conn: pull_member_range(conn)),
         ("channel_range", lambda conn: pull_channel_range(conn)),
         ("users_list", lambda conn: pull_users_list(conn)),
         ("autojoin", lambda conn: record_channel_names(conn, bot_client())),
         ("channel_names", lambda conn: name_unknown(conn, bot_client())),
-        ("member_history", lambda conn: pull_member_history(conn)),
-        ("member_channels", lambda conn: pull_member_channels(conn)),
-        ("channel_membership", lambda conn: pull_channel_membership(conn, bot_client())),
+        ("member_history", lambda conn: pull_member_history(
+            conn, tuned(conn, "member_history", "batch"))),
+        ("member_channels", lambda conn: pull_member_channels(
+            conn, tuned(conn, "member_channels", "batch"),
+            tuned(conn, "member_channels", "cohort_days"))),
+        ("channel_membership", lambda conn: pull_channel_membership(
+            conn, bot_client(),
+            tuned(conn, "channel_membership", "batch"),
+            tuned(conn, "channel_membership", "cohort_days"))),
         ("first_reply", lambda conn: pull_first_reply(conn)),
         ("dbt", lambda conn: run_dbt()),
+    ]
+
+
+def tonight(conn, now=None):
+    now = now or datetime.now(timezone.utc)
+    return [
+        (name, stage, settings.skip_reason(conn, name, now))
+        for name, stage in stages()
     ]
 
 
@@ -162,35 +180,56 @@ def run_stage(conn, name, stage, run_id, index, total):
     return None
 
 
+SKIP_SQL = """
+INSERT INTO raw.ingest_run
+    (source, started_at, finished_at, status, parent_run_id, step_index, step_total)
+VALUES (%s, clock_timestamp(), clock_timestamp(), 'skipped', %s, %s, %s)
+"""
+
+
+def record_skip(conn, run_id, index, total, name, why):
+    with conn.cursor() as cur:
+        cur.execute(SKIP_SQL, (name, run_id, index, total))
+    conn.commit()
+    record_step_output(run_id, index, name, f"{name}: skipped, {why}\n")
+
+
 def run_stages(conn, plan, run_id):
-    failed = []
-    for index, (name, stage) in enumerate(plan, start=1):
+    failed, ran, skipped = [], 0, 0
+    for index, (name, stage, why) in enumerate(plan, start=1):
         raise_if_cancelled()
+        if why:
+            skipped += 1
+            print(f"[{index}/{len(plan)}] {name}: skipped, {why}")
+            record_skip(conn, run_id, index, len(plan), name, why)
+            continue
+        ran += 1
         print(f"[{index}/{len(plan)}] {name}")
         detail = run_stage(conn, name, stage, run_id, index, len(plan))
         if detail:
             failed.append((name, detail))
             print(f"[{index}/{len(plan)}] {name}: FAILED {detail}")
-    return failed
+    return failed, ran, skipped
 
 
 def stage_plan(name):
-    plan = [entry for entry in stages() if entry[0] == name]
+    plan = [(key, stage, None) for key, stage in stages() if key == name]
     if not plan:
         raise ValueError(f"unknown stage {name}")
     return plan
 
 
 def run_sync(plan=None):
-    plan = plan or stages()
     with connect() as conn:
         refuse_if_seeded(conn)
+        plan = plan or tonight(conn)
         run_id = start_run(conn, SOURCE)
         conn.commit()
 
         cancelled = False
+        ran = skipped = 0
         try:
-            failed = run_stages(conn, plan, run_id)
+            failed, ran, skipped = run_stages(conn, plan, run_id)
         except SyncCancelled:
             conn.rollback()
             failed = []
@@ -200,14 +239,14 @@ def run_sync(plan=None):
             status = "cancelled"
         elif not failed:
             status = "ok"
-        elif len(failed) == len(plan):
+        elif len(failed) == ran:
             status = "failed"
         else:
             status = "partial"
         finish_run(conn, run_id, status, 0, 0)
         conn.commit()
 
-    print(f"{SOURCE}: {status}, {len(plan) - len(failed)}/{len(plan)} stages ok")
+    print(f"{SOURCE}: {status}, {ran - len(failed)}/{ran} stages ok, {skipped} not due")
     for name, detail in failed:
         print(f"  failed: {name}: {detail}")
     return run_id, status
