@@ -143,6 +143,9 @@
 <% elsif @tab == "sources" %>
   <%= render "sources", sources: @sources, active_request: @active_request %>
 
+<% elsif @tab == "tuning" %>
+  <%= render "tuning", may_tune: @may_tune %>
+
 <% else %>
 <div class="card card-flush">
   <div class="card-head">

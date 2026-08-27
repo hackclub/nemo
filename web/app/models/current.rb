@@ -1,5 +1,5 @@
 class Current < ActiveSupport::CurrentAttributes
-  attribute :moved, :flipped
+  attribute :moved, :flipped, :tuned
 
   def role_permissions
     self.moved ||= Fd::RolePermission.overrides
@@ -15,5 +15,9 @@ class Current < ActiveSupport::CurrentAttributes
 
   def forget_flags
     self.flipped = nil
+  end
+
+  def forget_tuned
+    self.tuned = nil
   end
 end

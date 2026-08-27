@@ -1,0 +1,47 @@
+<% changed = Engine::Setting.changed?(source, name) %>
+<% row = changed ? Engine::Setting.find_by(source: source, name: name) : nil %>
+<tr>
+  <td>
+    <span class="two-line">
+      <b class="src-key"><%= title %></b>
+      <% if sub %>
+        <span><%= sub %></span>
+      <% end %>
+    </span>
+  </td>
+  <td class="mono"><%= Engine::Setting.default(source, name) %></td>
+  <td>
+    <% if may_tune %>
+      <%= form_with url: engine_tune_path, method: :patch, class: "contents" do |f| %>
+        <%= f.hidden_field :source, value: source %>
+        <%= f.hidden_field :name, value: name %>
+        <% if name == Engine::Setting::CADENCE %>
+          <%= f.select :value, Engine::Source::CADENCES,
+                { selected: Engine::Setting.value(source, name) },
+                class: "select", onchange: "this.form.requestSubmit()" %>
+        <% else %>
+          <span class="field field-tune">
+            <%= f.text_field :value, value: Engine::Setting.value(source, name),
+                  inputmode: "numeric", onchange: "this.form.requestSubmit()" %>
+          </span>
+        <% end %>
+      <% end %>
+    <% else %>
+      <span class="mono"><%= Engine::Setting.value(source, name) %></span>
+    <% end %>
+  </td>
+  <td>
+    <% if changed && row %>
+      <span class="two-line">
+        <b><%= row.changed_by %></b>
+        <span><%= time_ago_in_words(row.changed_at) %> ago</span>
+      </span>
+      <% if may_tune %>
+        <%= button_to "reset", engine_untune_path(source: source, name: name),
+              method: :delete, class: "run-btn", form: { class: "contents" } %>
+      <% end %>
+    <% else %>
+      <span class="state-never">unchanged</span>
+    <% end %>
+  </td>
+</tr>

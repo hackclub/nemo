@@ -5,7 +5,8 @@ class EngineController < ApplicationController
   FRESHNESS_WINDOW = 30.days
   TYPICAL_OF = 10
 
-  TABS = { "runs" => "Runs", "sources" => "Sources", "coverage" => "Coverage" }.freeze
+  TABS = { "runs" => "Runs", "sources" => "Sources", "coverage" => "Coverage",
+           "tuning" => "Tuning" }.freeze
 
   def index
     @tab = TABS.key?(params[:tab]) ? params[:tab] : "runs"
@@ -17,7 +18,35 @@ class EngineController < ApplicationController
     when "runs" then run_facts
     when "sources" then @sources = source_rows
     when "coverage" then @day_coverage = day_coverage
+    when "tuning" then @may_tune = current_staff.may?("app.flip")
     end
+  end
+
+  def tune
+    return refuse_tuning unless current_staff.may?("app.flip")
+
+    row = Engine::Setting.set!(params[:source], params[:name], params[:value],
+      by: current_staff.user_id)
+    Fd::Audit.record(row, "tuned",
+      actor: current_staff.user_id, request_id: request.request_id,
+      after: { "source" => row.source, "name" => row.name, "value" => row.value })
+
+    redirect_to engine_path(tab: "tuning"), notice: "#{row.name} is #{row.value}"
+  rescue Engine::Setting::Refused, Engine::Source::Unknown => e
+    redirect_to engine_path(tab: "tuning"), alert: e.message
+  end
+
+  def untune
+    return refuse_tuning unless current_staff.may?("app.flip")
+
+    row = Engine::Setting.reset!(params[:source], params[:name], by: current_staff.user_id)
+    if row
+      Fd::Audit.record(row, "reset",
+        actor: current_staff.user_id, request_id: request.request_id,
+        after: { "source" => row.source, "name" => row.name })
+    end
+
+    redirect_to engine_path(tab: "tuning"), notice: "#{params[:name]} is back to the file"
   end
 
   def show
@@ -109,6 +138,10 @@ class EngineController < ApplicationController
       .order(:step_index, :id)
       .group_by(&:parent_run_id)
       .transform_values(&:first)
+  end
+
+  def refuse_tuning
+    redirect_to engine_path(tab: "tuning"), alert: "tuning the engine is community manager only"
   end
 
   def stage_for_source(source)

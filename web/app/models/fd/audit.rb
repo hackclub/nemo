@@ -15,6 +15,7 @@ module Fd
       "Fd::Decision" => "decision",
       "Fd::DecisionThread" => "decision_thread",
       "Fd::AccessGrant" => "grant",
+      "Engine::Setting" => "engine_setting",
       "Fd::RolePermission" => "permission",
       "Fd::StaffSlack" => "slack_account",
       "Fd::Flag" => "flag"
@@ -28,6 +29,7 @@ module Fd
       granted revoked refused
       linked unlinked
       turned_on turned_off
+      tuned reset
     ].freeze
 
     REDACTED_COLUMNS = {

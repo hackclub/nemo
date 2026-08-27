@@ -54,6 +54,8 @@ Rails.application.routes.draw do
   post "engine/sync", to: "engine#sync", as: :engine_sync
   post "engine/cancel", to: "engine#cancel", as: :engine_cancel
   post "engine/trigger_stage", to: "engine#trigger_stage", as: :engine_trigger_stage
+  patch "engine/tune", to: "engine#tune", as: :engine_tune
+  delete "engine/tune", to: "engine#untune", as: :engine_untune
 
   get "pipeline", to: redirect("/engine")
   get "pipeline/runs/:id", to: redirect("/engine/runs/%{id}")
