@@ -45,7 +45,7 @@ sources:
     credential: admin
     cadence: daily
     window: 1 day
-    guard: num_found
+    guard: none
     resume: none
     retention: keep
     prune_floor: 13 months

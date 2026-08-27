@@ -7,6 +7,7 @@ from ingest.analytics_pull import MEMBER_ACTIVITY_SQL, member_activity_row, pars
 from lib.db import connect, dead_letter, ingest_run
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
+from lib.walk import check_walk
 
 SOURCE = "admin_analytics_member_range"
 PAGE_SIZE = 500
@@ -90,12 +91,8 @@ def run(conn, days=None, end=None):
                 flush()
         flush()
 
-        expected = client.last_num_found
-        if expected is not None and counts.rows_in > expected + PAGE_SIZE:
-            raise RuntimeError(
-                f"member range {start}..{stop}: walked {counts.rows_in} rows against a "
-                f"num_found of {expected}, refusing to commit the window"
-            )
+        check_walk(f"member range {start}..{stop}", counts.rows_in,
+            client.last_num_found, PAGE_SIZE)
 
         with conn.cursor() as cur:
             cur.execute(PRUNE_SQL, (SOURCE, start, stop))

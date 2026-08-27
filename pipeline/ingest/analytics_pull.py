@@ -22,6 +22,7 @@ from lib.db import (
 )
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
+from lib.walk import check_walk
 
 ANALYTICS_SOURCE = "admin_analytics_api"
 MEMBER_PAGE_SIZE = 500
@@ -314,12 +315,8 @@ def pull_member_day(conn, pull_date):
                 flush()
         flush()
 
-        expected = client.last_num_found
-        if expected is not None and counts.rows_in > expected + MEMBER_PAGE_SIZE:
-            raise RuntimeError(
-                f"member analytics {pull_date}: walked {counts.rows_in} rows against a "
-                f"num_found of {expected}, refusing to commit the day"
-            )
+        check_walk(f"member analytics {pull_date}", counts.rows_in,
+            client.last_num_found, MEMBER_PAGE_SIZE)
 
         record_day(conn, MEMBER_DAY, pull_date, counts.rows_in)
     print(f"member analytics {pull_date}: {counts.rows_in} rows, {counts.rows_rejected} rejected")

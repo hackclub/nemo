@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from lib.db import connect, dead_letter, ingest_run
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
+from lib.walk import check_walk
 
 SOURCE = "admin_analytics_channel_range"
 METHOD = "admin.analytics.getChannelAnalytics"
@@ -93,12 +94,8 @@ def run(conn, days=WINDOW_DAYS, end=None):
                 counts.rows_rejected += 1
                 dead_letter(conn, SOURCE, {"keys": sorted(rec)}, str(exc))
 
-        expected = client.last_num_found
-        if expected is not None and counts.rows_in > expected + PAGE_SIZE:
-            raise RuntimeError(
-                f"channel range {start}..{stop}: walked {counts.rows_in} rows against a "
-                f"num_found of {expected}, refusing to commit the window"
-            )
+        check_walk(f"channel range {start}..{stop}", counts.rows_in,
+            client.last_num_found, PAGE_SIZE)
 
         with conn.cursor() as cur:
             cur.executemany(RANGE_SQL, rows)
