@@ -300,6 +300,45 @@ def check_distribution_population(conn, client):
     return "mart_activity_distribution.workspace_members", "cross", "dim_member, walkable", ours, theirs
 
 
+RETENTION_COVERAGE_SQL = """
+select count(distinct first_post_on) as dates,
+       count(distinct first_post_on) filter (where day_30_covered) as day_30,
+       count(distinct first_post_on) filter (where day_90_covered) as day_90,
+       count(distinct first_post_on) filter (where visits_knowable) as visits
+from analytics.fct_member_retention
+"""
+
+MEMBER_DAYS_SQL = "select window_start from analytics.fct_member_activity group by 1 order by 1"
+
+VISITS_NEED = 15
+
+
+def longest_run(days):
+    best = run = 0
+    for i, day in enumerate(days):
+        run = run + 1 if i and (day - days[i - 1]).days == 1 else 1
+        best = max(best, run)
+    return best
+
+
+def check_retention_coverage(conn, client):
+    with conn.cursor() as cur:
+        cur.execute(RETENTION_COVERAGE_SQL)
+        dates, day_30, day_90, visits = cur.fetchone()
+        cur.execute(MEMBER_DAYS_SQL)
+        days = [r[0] for r in cur.fetchall()]
+    return [
+        ("first-post dates with a day-30 observation", "cover",
+         "one member-day inside the 8 days at +23..+30", day_30, dates),
+        ("first-post dates with a day-90 observation", "cover",
+         "one member-day inside the 8 days at +83..+90", day_90, dates),
+        ("first-post dates where visits are knowable", "cover",
+         f"{VISITS_NEED} consecutive member-days from the first post", visits, dates),
+        ("longest unbroken run of member-days", "cover",
+         f"{VISITS_NEED}, which is what the visit steps need", longest_run(days), VISITS_NEED),
+    ]
+
+
 def check_response_rate_totals(conn, client):
     ours = one(conn, """
         select sum(first_posts_checked) - sum(unanswered)
@@ -354,6 +393,7 @@ CHECKS = [
     check_top_poster_against_slack,
     check_distribution_population,
     check_response_rate_totals,
+    check_retention_coverage,
 ]
 
 
@@ -413,20 +453,21 @@ def run(only=None, tolerance=TOLERANCE, cross_only=False):
                 skipped += 1
                 continue
             try:
-                name, kind, source, ours, theirs = check(conn, client)
+                got = check(conn, client)
             except Exception as exc:
                 conn.rollback()
                 results.append((check.__name__, "error", str(exc).splitlines()[0][:70],
                                 None, None, "error", None))
                 continue
-            state, delta = verdict(name, ours, theirs, tolerance)
-            results.append((name, kind, source, ours, theirs, state, delta))
+            for name, kind, source, ours, theirs in (got if isinstance(got, list) else [got]):
+                state, delta = verdict(name, ours, theirs, tolerance)
+                results.append((name, kind, source, ours, theirs, state, delta))
 
     graded = []
     for row in results:
         if len(row) == 5:
             name, kind, source, ours, theirs = row
-            if kind == "plan":
+            if kind in ("plan", "cover"):
                 state, delta = verdict(name, ours, theirs, 0.0)
             else:
                 state, delta = stale_verdict(ours, theirs)
