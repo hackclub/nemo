@@ -8,9 +8,11 @@ import os
 
 import psycopg
 
-from lib.db import credentials
+from lib import sources
+from lib.db import connect, credentials
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
+from lib.settings import PERIOD
 
 TOLERANCE = 0.01
 
@@ -24,6 +26,85 @@ def connect_reader():
         user=user,
         password=password,
     )
+
+
+STAMPS = ("updated_at", "created_at", "searched_at", "seen_at")
+
+
+def columns_of(conn, table):
+    schema, name = table.split(".", 1)
+    with conn.cursor() as cur:
+        cur.execute("""select column_name from information_schema.columns
+                       where table_schema = %s and table_name = %s""", (schema, name))
+        return {r[0] for r in cur.fetchall()}
+
+
+def newest_stamp(conn, table, wrote_as):
+    schema, name = table.split(".", 1)
+    have = columns_of(conn, table)
+    column = next((c for c in STAMPS if c in have), None)
+    if column is None:
+        return None
+    where, args = "", ()
+    if "source" in have and wrote_as:
+        where = " where source = any(%s)"
+        args = (wrote_as,)
+    with conn.cursor() as cur:
+        cur.execute(f"select max({column}) from {schema}.{name}{where}", args)
+        return cur.fetchone()[0]
+
+
+def wrote_as(key):
+    seen = []
+    for name in sources.runs_as(key):
+        head = name.split(":", 1)[0]
+        if head not in seen:
+            seen.append(head)
+    return seen
+
+
+def last_produced(conn, key):
+    newest = None
+    for table in sources.says(key, "writes"):
+        if not table.startswith("raw.") or table.count(".") != 1:
+            continue
+        try:
+            stamp = newest_stamp(conn, table, wrote_as(key))
+        except Exception:
+            conn.rollback()
+            continue
+        if stamp and (newest is None or stamp > newest):
+            newest = stamp
+    return newest
+
+
+def last_ok_run(conn, key):
+    with conn.cursor() as cur:
+        cur.execute("""select max(finished_at) from raw.ingest_run
+                       where status = 'ok' and source = any(%s)""", (list(sources.runs_as(key)),))
+        return cur.fetchone()[0]
+
+
+def check_every_source_is_fresh(pipe_conn):
+    now = datetime.now(timezone.utc)
+    rows = []
+    for key in sources.KEYS:
+        cadence = sources.says(key, "cadence")
+        window = PERIOD.get(cadence)
+        if window is None:
+            continue
+        produced = last_produced(pipe_conn, key)
+        ran = last_ok_run(pipe_conn, key)
+        seen = max([x for x in (produced, ran) if x], default=None)
+        allowed = window.total_seconds() / 3600
+        if seen is None:
+            rows.append((f"{key}, hours since it last produced", "fresh",
+                         f"{cadence}, and nothing on record", None, allowed))
+            continue
+        age = (now - seen).total_seconds() / 3600
+        rows.append((f"{key}, hours since it last produced", "fresh",
+                     f"{cadence}, so {allowed:.0f}h", round(age, 1), allowed))
+    return rows
 
 
 def utc_date(value):
@@ -218,6 +299,8 @@ SLACK_CHECKS = {
     "check_top_poster_against_slack",
 }
 
+PIPELINE_CHECKS = [check_every_source_is_fresh]
+
 CHECKS = [
     check_members_against_slack,
     check_claimed_against_slack,
@@ -246,6 +329,14 @@ KNOWN = {
 }
 
 
+def stale_verdict(age, allowed):
+    if age is None:
+        return "no record", None
+    if age <= allowed:
+        return "ok", None
+    return "stale", (age - allowed) / allowed
+
+
 def verdict(name, ours, theirs, tolerance):
     if ours is None or theirs is None:
         return "no data", None
@@ -266,6 +357,15 @@ def run(only=None, tolerance=TOLERANCE, cross_only=False):
     client = None if cross_only else ProxyClient()
     results = []
     skipped = 0
+    with connect() as pipe:
+        for check in PIPELINE_CHECKS:
+            try:
+                results.extend(check(pipe))
+            except Exception as exc:
+                pipe.rollback()
+                results.append((check.__name__, "error", str(exc).splitlines()[0][:70],
+                                None, None, "error", None))
+
     with connect_reader() as conn:
         for check in CHECKS:
             if only and only not in check.__name__:
@@ -283,6 +383,16 @@ def run(only=None, tolerance=TOLERANCE, cross_only=False):
             state, delta = verdict(name, ours, theirs, tolerance)
             results.append((name, kind, source, ours, theirs, state, delta))
 
+    graded = []
+    for row in results:
+        if len(row) == 5:
+            name, kind, source, ours, theirs = row
+            state, delta = stale_verdict(ours, theirs)
+            graded.append((name, kind, source, ours, theirs, state, delta))
+        else:
+            graded.append(row)
+    results = graded
+
     width = max(len(r[0]) for r in results)
     print(f"{'headline':<{width}}  {'kind':<6}{'ours':>14}{'second source':>16}{'delta':>9}  state")
     print("-" * (width + 52))
@@ -291,8 +401,8 @@ def run(only=None, tolerance=TOLERANCE, cross_only=False):
         if state not in ("ok", "known"):
             bad += 1
         d = "" if delta is None else f"{delta * 100:+.2f}%"
-        o = "n/a" if ours is None else f"{int(ours):,}"
-        t = "n/a" if theirs is None else f"{int(theirs):,}"
+        o = "n/a" if ours is None else (f"{ours:,.1f}" if isinstance(ours, float) else f"{int(ours):,}")
+        t = "n/a" if theirs is None else (f"{theirs:,.0f}" if isinstance(theirs, float) else f"{int(theirs):,}")
         print(f"{name:<{width}}  {kind:<6}{o:>14}{t:>16}{d:>9}  {state}")
         if state != "ok":
             note = KNOWN.get(name)
