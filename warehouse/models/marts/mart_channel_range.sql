@@ -16,4 +16,4 @@ select
     a.huddles_initiated,
     'v1' as metric_version
 from {{ ref('fct_channel_range') }} a
-join {{ ref('dim_channel') }} c using (channel_id)
+left join {{ ref('dim_channel') }} c using (channel_id)
