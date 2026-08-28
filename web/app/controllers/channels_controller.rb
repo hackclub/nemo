@@ -7,7 +7,7 @@ class ChannelsController < ApplicationController
 
   SORT_SQL = {
     "name" => "dim_channel.name",
-    "members" => "dim_channel.total_members",
+    "members" => "r.total_members",
     "created" => "dim_channel.date_created",
     "messages" => "r.messages_posted_by_members",
     "posters" => "r.members_who_posted"
@@ -15,7 +15,7 @@ class ChannelsController < ApplicationController
 
   RANGE_JOIN = "LEFT JOIN analytics.mart_channel_range r ON r.channel_id = dim_channel.channel_id".freeze
   RANGE_COLUMNS = "dim_channel.*, r.messages_posted_by_members AS range_messages, " \
-                  "r.members_who_posted AS range_posters".freeze
+                  "r.members_who_posted AS range_posters, r.total_members AS range_members".freeze
 
   def index
     @q = params[:q].to_s.strip

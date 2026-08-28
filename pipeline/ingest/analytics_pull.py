@@ -71,25 +71,25 @@ CHANNEL_ACTIVITY_SQL = """
 INSERT INTO raw.channel_activity_snapshot
     (channel_id, window_start, window_end, source, messages_posted, messages_posted_by_members,
      members_who_posted, change_in_members_who_posted, members_who_viewed, reactions_added,
-     members_who_reacted, huddles_initiated)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+     members_who_reacted, huddles_initiated, total_members, full_members, guests)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (channel_id, window_start, window_end, source) DO UPDATE SET
     messages_posted = EXCLUDED.messages_posted,
     messages_posted_by_members = EXCLUDED.messages_posted_by_members,
     members_who_posted = EXCLUDED.members_who_posted,
     members_who_viewed = EXCLUDED.members_who_viewed,
-    reactions_added = EXCLUDED.reactions_added
+    reactions_added = EXCLUDED.reactions_added,
+    total_members = EXCLUDED.total_members,
+    full_members = EXCLUDED.full_members,
+    guests = EXCLUDED.guests
 """
 
 CHANNEL_DIM_MERGE_SQL = """
 INSERT INTO raw.channel_dim
-    (channel_id, visibility, total_members, full_members, guests, date_created, last_active_at, updated_at)
-VALUES (%s, %s, %s, %s, %s, %s, %s, now())
+    (channel_id, visibility, date_created, last_active_at, updated_at)
+VALUES (%s, %s, %s, %s, now())
 ON CONFLICT (channel_id) DO UPDATE SET
     visibility = COALESCE(EXCLUDED.visibility, raw.channel_dim.visibility),
-    total_members = EXCLUDED.total_members,
-    full_members = EXCLUDED.full_members,
-    guests = EXCLUDED.guests,
     date_created = COALESCE(raw.channel_dim.date_created, EXCLUDED.date_created),
     last_active_at = EXCLUDED.last_active_at,
     updated_at = now()
@@ -159,6 +159,9 @@ def channel_activity_row(rec, pull_date):
         rec.get("reactions_added_count"),
         None,
         None,
+        rec.get("total_members_count"),
+        rec.get("full_members_count"),
+        rec.get("guest_members_count"),
     )
 
 
@@ -166,9 +169,6 @@ def channel_dim_row(rec):
     return (
         rec["channel_id"],
         rec.get("visibility"),
-        rec.get("total_members_count"),
-        rec.get("full_members_count"),
-        rec.get("guest_members_count"),
         parse_epoch(rec.get("date_created")),
         parse_epoch(rec.get("date_last_active")),
     )

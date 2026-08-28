@@ -10,6 +10,9 @@ select
     members_who_viewed,
     reactions_added,
     members_who_reacted,
-    huddles_initiated
+    huddles_initiated,
+    total_members,
+    full_members,
+    guests
 from {{ source('raw', 'channel_activity_snapshot') }}
 where window_start = window_end

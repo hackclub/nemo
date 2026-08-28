@@ -105,6 +105,10 @@ models:
         data_type: text
       - name: total_members
         data_type: integer
+      - name: full_members
+        data_type: integer
+      - name: guests
+        data_type: integer
       - name: window_start
         data_type: date
       - name: window_end

@@ -4,7 +4,7 @@
 <div class="kpis">
   <div class="card">
     <p class="kpi-label">Members</p>
-    <p class="kpi-val"><%= number_with_delimiter(@member_count || @channel.total_members) %></p>
+    <p class="kpi-val"><%= @member_count ? number_with_delimiter(@member_count) : "n/a" %></p>
     <div class="delta"><span class="delta-note">current</span></div>
   </div>
   <% [["Messages", "messages_count"], ["Unique viewers", "unique_viewers"],

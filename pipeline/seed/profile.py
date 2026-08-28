@@ -117,15 +117,20 @@ def reply_shape(conn):
     }
 
 
+NEWEST_WINDOW = "source = 'admin_analytics_channel_range'"
+
+
 def channel_shape(conn):
     return {
         "count": conn.execute("SELECT count(*) FROM raw.channel_dim").fetchone()[0],
-        "total_members": quantiles(conn, "total_members", "raw.channel_dim"),
+        "total_members": quantiles(
+            conn, "total_members", "raw.channel_activity_snapshot", NEWEST_WINDOW
+        ),
         "guest_share": quantiles(
             conn,
             "guests::numeric / nullif(total_members, 0)",
-            "raw.channel_dim",
-            "total_members > 0",
+            "raw.channel_activity_snapshot",
+            f"{NEWEST_WINDOW} AND total_members > 0",
         ),
         "archived_rate": float(
             conn.execute(

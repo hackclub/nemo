@@ -19,8 +19,8 @@ RANGE_SQL = """
 INSERT INTO raw.channel_activity_snapshot
     (channel_id, window_start, window_end, source, messages_posted, messages_posted_by_members,
      members_who_posted, members_who_viewed, reactions_added, members_who_reacted,
-     huddles_initiated)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+     huddles_initiated, total_members, full_members, guests)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (channel_id, window_start, window_end, source) DO UPDATE SET
     messages_posted = EXCLUDED.messages_posted,
     messages_posted_by_members = EXCLUDED.messages_posted_by_members,
@@ -28,7 +28,10 @@ ON CONFLICT (channel_id, window_start, window_end, source) DO UPDATE SET
     members_who_viewed = EXCLUDED.members_who_viewed,
     reactions_added = EXCLUDED.reactions_added,
     members_who_reacted = EXCLUDED.members_who_reacted,
-    huddles_initiated = EXCLUDED.huddles_initiated
+    huddles_initiated = EXCLUDED.huddles_initiated,
+    total_members = EXCLUDED.total_members,
+    full_members = EXCLUDED.full_members,
+    guests = EXCLUDED.guests
 """
 
 PRUNE_SQL = """
@@ -50,6 +53,9 @@ def range_row(rec, start, end):
         rec.get("reactions_count"),
         rec.get("users_who_reacted_count"),
         rec.get("huddles_count"),
+        rec.get("total_members_count"),
+        rec.get("full_members_count"),
+        rec.get("guest_members_count"),
     )
 
 

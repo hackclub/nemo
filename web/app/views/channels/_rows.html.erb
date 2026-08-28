@@ -8,7 +8,13 @@
         <span><%= channel.channel_id %></span>
       </span>
     </td>
-    <td><%= number_with_delimiter(channel.total_members) %></td>
+    <td>
+      <% if channel.range_members %>
+        <%= number_with_delimiter(channel.range_members) %>
+      <% else %>
+        <span class="chip chip-off">n/a</span>
+      <% end %>
+    </td>
     <td>
       <% if channel.range_messages %>
         <%= number_with_delimiter(channel.range_messages) %>

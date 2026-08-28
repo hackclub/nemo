@@ -73,9 +73,12 @@ def test_channel_activity_row_maps_counts():
         "members_who_posted_count": 4,
         "members_who_viewed_count": 30,
         "reactions_added_count": 2,
+        "total_members_count": 44295,
+        "full_members_count": 42717,
+        "guest_members_count": 1578,
     }
     row = analytics_pull.channel_activity_row(rec, PULL_DATE)
-    assert len(row) == 12
+    assert len(row) == 15
     assert row[0] == "C1"
     assert row[4] == 10
     assert row[5] == 7
@@ -84,13 +87,27 @@ def test_channel_activity_row_maps_counts():
     assert row[9] == 2
 
 
+def test_channel_activity_row_keeps_the_membership_counts():
+    rec = {"channel_id": "C1", "total_members_count": 44295,
+           "full_members_count": 42717, "guest_members_count": 1578}
+    row = analytics_pull.channel_activity_row(rec, PULL_DATE)
+    assert row[12:15] == (44295, 42717, 1578)
+
+
 def test_channel_dim_row_converts_epoch_fields():
     row = analytics_pull.channel_dim_row(
         {"channel_id": "C1", "visibility": "public", "date_created": 1700000000}
     )
-    assert len(row) == 7
+    assert len(row) == 4
     assert row[0] == "C1"
-    assert row[5] == epoch(1700000000)
+    assert row[2] == epoch(1700000000)
+
+
+def test_channel_dim_row_no_longer_carries_membership():
+    row = analytics_pull.channel_dim_row(
+        {"channel_id": "C1", "visibility": "public", "total_members_count": 281}
+    )
+    assert 281 not in row
 
 
 def test_users_list_member_dim_row_reads_the_deleted_flag():
@@ -220,9 +237,12 @@ def test_range_row_maps_chats_to_member_messages():
         "reactions_count": 1,
         "users_who_reacted_count": 1,
         "huddles_count": 0,
+        "total_members_count": 44295,
+        "full_members_count": 42717,
+        "guest_members_count": 1578,
     }
     row = channel_range_pull.range_row(rec, WINDOW_START, WINDOW_END)
-    assert len(row) == 11
+    assert len(row) == 14
     assert row[0:4] == ("C1", WINDOW_START, WINDOW_END, channel_range_pull.SOURCE)
     assert row[4] == 151576
     assert row[5] == 9
@@ -230,6 +250,13 @@ def test_range_row_maps_chats_to_member_messages():
     assert row[7] == 3
     assert row[9] == 1
     assert row[10] == 0
+
+
+def test_range_row_keeps_the_membership_the_response_already_carries():
+    rec = {"channel_id": "C1", "total_members_count": 44295,
+           "full_members_count": 42717, "guest_members_count": 1578}
+    row = channel_range_pull.range_row(rec, WINDOW_START, WINDOW_END)
+    assert row[11:14] == (44295, 42717, 1578)
 
 
 class FakeClient:

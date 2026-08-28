@@ -247,11 +247,13 @@ def idle_days(by_member, members, start, days, holes):
             yield (member.user_id, day, day, MEMBER_DAY_SOURCE, 0, 0, 0, 0, None)
 
 
-def channel_days(by_channel):
+def channel_days(by_channel, members_of):
     for (channel_id, day), (messages, reactions, posters) in by_channel.items():
+        total, guests = members_of[channel_id]
         yield (
             channel_id, day, day, CHANNEL_DAY_SOURCE, messages, messages,
             len(posters), len(posters) * 3, reactions, max(1, len(posters) // 2), 0,
+            total, total - guests, guests,
         )
 
 
@@ -269,7 +271,11 @@ def member_ranges(by_member, start, end):
         )
 
 
-def channel_ranges(by_channel, start, end):
+def channel_membership(channels):
+    return {c.channel_id: (c.total_members, c.guests) for c in channels}
+
+
+def channel_ranges(by_channel, start, end, members_of):
     rolled = collections.defaultdict(lambda: [0, 0, set()])
     for (channel_id, _), (messages, reactions, posters) in by_channel.items():
         row = rolled[channel_id]
@@ -277,9 +283,11 @@ def channel_ranges(by_channel, start, end):
         row[1] += reactions
         row[2] |= posters
     for channel_id, (messages, reactions, posters) in rolled.items():
+        total, guests = members_of[channel_id]
         yield (
             channel_id, start, end, CHANNEL_RANGE_SOURCE, messages, messages,
             len(posters), len(posters) * 3, reactions, max(1, len(posters) // 2), 0,
+            total, total - guests, guests,
         )
 
 
@@ -378,9 +386,6 @@ def channel_dim_rows(channels, last_active):
             channel.archived,
             noon(channel.date_created),
             noon(last_active[channel.channel_id]) if channel.channel_id in last_active else None,
-            channel.total_members,
-            channel.total_members - channel.guests,
-            channel.guests,
             False,
         )
 
@@ -461,7 +466,7 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
     counts["channel_dim"] = copy_rows(
         conn, "raw.channel_dim",
         ["channel_id", "name", "visibility", "archived", "date_created", "last_active_at",
-         "total_members", "full_members", "guests", "name_unavailable"],
+         "name_unavailable"],
         channel_dim_rows(channels, last_active),
     )
     counts["member_message_history"] = copy_rows(
@@ -482,7 +487,8 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
                       "last_active_at"]
     channel_columns = ["channel_id", "window_start", "window_end", "source", "messages_posted",
                        "messages_posted_by_members", "members_who_posted", "members_who_viewed",
-                       "reactions_added", "members_who_reacted", "huddles_initiated"]
+                       "reactions_added", "members_who_reacted", "huddles_initiated",
+                       "total_members", "full_members", "guests"]
 
     counts["member_day"] = copy_rows(
         conn, "raw.member_activity_snapshot", member_columns, member_days(by_member)
@@ -495,12 +501,14 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
         conn, "raw.member_activity_snapshot", member_columns,
         member_ranges(by_member, start, as_of),
     )
+    members_of = channel_membership(channels)
     counts["channel_day"] = copy_rows(
-        conn, "raw.channel_activity_snapshot", channel_columns, channel_days(by_channel)
+        conn, "raw.channel_activity_snapshot", channel_columns,
+        channel_days(by_channel, members_of),
     )
     counts["channel_range"] = copy_rows(
         conn, "raw.channel_activity_snapshot", channel_columns,
-        channel_ranges(by_channel, start, as_of),
+        channel_ranges(by_channel, start, as_of, members_of),
     )
     counts["team_stats"] = copy_rows(
         conn, "raw.team_stats_snapshot",
