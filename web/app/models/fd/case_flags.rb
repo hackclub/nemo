@@ -10,12 +10,6 @@ module Fd
       new(names: names).for_case(kase)
     end
 
-    def self.channel_guesses(reports)
-      said = reports.map(&:body).compact.join(" ")
-      said.scan(/#([a-z0-9][a-z0-9._-]{1,60})/i).flatten.uniq.first(3)
-        .map { |name| "##{name} was mentioned · attach that thread?" }
-    end
-
     def self.for_queue(names: Names.none)
       new(names: names).for_queue
     end

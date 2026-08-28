@@ -12,15 +12,3 @@
     <% end %>
   </div>
 </div>
-
-<% if guesses.any? %>
-  <div class="fbox">
-    <div class="ft">Guesses</div>
-    <div class="fb">
-      <% guesses.each do |line| %>
-        <div class="rail-line"><%= line %></div>
-      <% end %>
-      <div class="sub2">guesses only, nothing is set until you say so</div>
-    </div>
-  </div>
-<% end %>

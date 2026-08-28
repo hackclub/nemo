@@ -1,7 +1,7 @@
 <p class="facts-h">Case facts</p>
 
 <% if missing.any? %>
-  <%= render "finish_off", kase: kase, missing: missing, guesses: guesses %>
+  <%= render "finish_off", kase: kase, missing: missing %>
 <% end %>
 
 <% if kase.duplicate_of %>

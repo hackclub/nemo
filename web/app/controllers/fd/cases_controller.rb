@@ -94,7 +94,6 @@ module Fd
       @merge_into = @duplicate_candidates.find { |other| !other.resolved? }
       @open_reports = @reports.count { |report| !report.told_of_outcome? }
       @missing = missing_on(@case, @subject, @threads)
-      @guesses = @missing.any? ? CaseFlags.channel_guesses(@reports) : []
     end
 
     def update

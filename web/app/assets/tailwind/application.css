@@ -2685,12 +2685,12 @@
   .view {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
     height: 36px;
     padding: 0 10px;
     margin-bottom: -1px;
-    font-size: var(--t-body);
-    font-weight: 500;
+    font-size: var(--t-small);
+    font-weight: 400;
     color: var(--ink-2);
     border-bottom: 2px solid transparent;
     white-space: nowrap;
@@ -2701,9 +2701,9 @@
   }
 
   .view[aria-current] {
-    color: var(--ink);
-    font-weight: 600;
-    border-bottom-color: var(--select);
+    color: var(--accent);
+    font-weight: 500;
+    border-bottom-color: var(--accent);
   }
 
   .view-off {
@@ -2717,6 +2717,16 @@
     font-weight: 500;
     font-variant-numeric: tabular-nums;
     line-height: 1;
+    background-color: var(--card-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 9px;
+    padding: 1px 5px;
+  }
+
+  .view[aria-current] .view-count {
+    background-color: var(--accent-soft);
+    border-color: var(--accent-line);
+    color: var(--accent);
   }
 
   .view[aria-current] .view-count {
@@ -2990,8 +3000,8 @@
     display: grid;
     gap: var(--s-2xs);
     justify-items: start;
-    padding: var(--s-xs);
-    border-bottom: 1px solid var(--line);
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line-soft);
   }
 
   .fcard-head .who,
@@ -3032,7 +3042,7 @@
 
   .fstat-n {
     font-family: var(--font-code);
-    font-size: var(--t-title);
+    font-size: 19px;
     font-weight: 600;
     letter-spacing: -0.02em;
     line-height: 1;
@@ -3046,7 +3056,7 @@
 
   .fstat-k {
     font-size: var(--t-fine);
-    color: var(--ink-2);
+    color: var(--ink-3);
   }
 
   .frows {
@@ -3059,8 +3069,8 @@
     align-items: baseline;
     justify-content: space-between;
     gap: var(--s-sm);
-    padding: 5px 0;
-    font-size: var(--t-small);
+    padding: 7px 14px;
+    font-size: var(--t-body);
     color: var(--ink-3);
     border-bottom: 1px solid var(--line-soft);
   }
@@ -3425,10 +3435,10 @@
   }
 
   .band-label {
-    font-size: var(--t-small);
-    letter-spacing: 0.08em;
+    font-size: var(--t-fine);
+    letter-spacing: 0.07em;
     text-transform: uppercase;
-    font-weight: 700;
+    font-weight: 500;
     color: var(--ink-3);
   }
 
