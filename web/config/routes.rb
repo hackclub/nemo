@@ -11,7 +11,7 @@ Rails.application.routes.draw do
   end
 
   namespace :fd do
-    root to: "cases#index"
+    root to: "fire#show"
     post "cases/merge", to: "merges#create", as: :merge_cases
     get "cases/merge", to: "merges#confirm", as: :confirm_merge_cases
     get "cases/:id/merge", to: "merges#show", as: :case_merge

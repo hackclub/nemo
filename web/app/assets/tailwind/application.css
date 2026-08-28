@@ -5190,10 +5190,6 @@
   }
 
   .card-flush .card-head + .scroll .data-table thead th {
-    padding-top: 0;
-  }
-
-  .card-flush .card-head + .scroll .data-table.engine-table thead th {
     padding-top: 9px;
   }
 

@@ -1,0 +1,111 @@
+<% content_for :page_title, "Fire Engine" %>
+<% content_for :head_actions do %>
+  <%= opens_modal "case.open", "Open a case", opens: "open-case", css: "btn btn-primary" %>
+<% end %>
+
+<div class="kpis">
+  <div class="card">
+    <p class="kpi-label">Open cases</p>
+    <p class="kpi-val"><%= @open %></p>
+    <div class="delta">
+      <% if @unclaimed.positive? %>
+        <span class="chip chip-warn"><%= @unclaimed %> nobody has picked up</span>
+      <% else %>
+        <span class="chip chip-good">all claimed</span>
+      <% end %>
+    </div>
+  </div>
+  <div class="card">
+    <p class="kpi-label">Median time to claim</p>
+    <p class="kpi-val"><%= @claim_lag ? case_age_label(@claim_lag) : "n/a" %></p>
+    <div class="delta">
+      <span class="delta-note">from when the report arrived</span>
+    </div>
+  </div>
+  <div class="card">
+    <p class="kpi-label">Actions, 30 days</p>
+    <p class="kpi-val"><%= @actions_total %></p>
+    <div class="delta">
+      <span class="delta-note"><%= @reversed %> later reversed</span>
+    </div>
+  </div>
+</div>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">What firefighters did</h2>
+      <p class="card-sub">last 30 days, worst first</p>
+    </div>
+  </div>
+  <% if @actions.any? %>
+    <% peak = @actions.values.max %>
+    <div class="scroll">
+      <table class="data-table">
+        <tbody>
+          <% Fd::Action::WORST_FIRST.each do |key| %>
+            <% count = @actions[key].to_i %>
+            <% next if count.zero? %>
+            <tr>
+              <td><b><%= action_label(key) %></b></td>
+              <td class="col-num"><%= count %></td>
+              <td style="width:38%">
+                <span class="bar-track">
+                  <span class="bar-fill" style="width: <%= share_of(count, peak) %>%"></span>
+                </span>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty">
+      <p class="empty-title">Nothing logged in 30 days</p>
+    </div>
+  <% end %>
+</div>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Lookups</h2>
+      <p class="card-sub">
+        newest first &middot; <%= pluralize(@reads_total, "read") %> in 30 days
+      </p>
+    </div>
+  </div>
+  <% if @reads.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>who looked</th>
+            <th>which member</th>
+            <th>what they read</th>
+            <th class="col-num">when</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @reads.each do |row| %>
+            <tr>
+              <td>
+                <span class="row-name">
+                  <%= face(row.actor_id) %>
+                  <b><%= names[row.actor_id] %></b>
+                </span>
+              </td>
+              <td><%= member_link(row.subject_user_id) %></td>
+              <td class="sub2"><%= row.field_class %></td>
+              <td class="mono"><%= short_age(row.looked_at) %> ago</td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty">
+      <p class="empty-title">No lookups in 30 days</p>
+    </div>
+  <% end %>
+</div>
