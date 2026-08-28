@@ -81,6 +81,7 @@
     --dur: 110ms;
 
     --rail-open-w: 214px;
+    --head-h: 62px;
 
     --canvas: #f7f7f9;
     --card: #ffffff;
@@ -447,6 +448,7 @@
 
   .rhead {
     position: relative;
+    min-height: var(--head-h);
     padding: 16px var(--s-page) 14px;
     border-bottom: 1px solid var(--line);
     background-color: var(--card);
@@ -4499,7 +4501,7 @@
 
   .drawer {
     position: fixed;
-    inset-block-start: 52px;
+    inset-block-start: var(--head-h);
     inset-block-end: 0;
     inset-inline-end: 0;
     width: 268px;
@@ -4515,12 +4517,12 @@
   }
 
   .dock-open.dock-pinned .drawer {
-    inset-block-start: calc(52px + var(--s-page));
+    inset-block-start: calc(var(--head-h) + var(--s-page));
     inset-block-end: var(--s-page);
     inset-inline-end: var(--s-page);
     border: 1px solid var(--line);
     border-radius: var(--r-card);
-    box-shadow: 0 24px 60px oklch(0% 0 0 / 0.35);
+    box-shadow: var(--e-2);
     overflow: hidden;
   }
 
@@ -4530,7 +4532,7 @@
 
   .dock-open:not(.dock-pinned) .drawer {
     inset-block-start: 0;
-    box-shadow: -12px 0 28px oklch(0% 0 0 / 0.28);
+    box-shadow: -12px 0 28px rgb(0 0 0 / 0.28);
     z-index: 43;
   }
 
@@ -4538,7 +4540,7 @@
     .drawer {
       inset-block-start: 0;
       width: min(320px, 92vw);
-      box-shadow: -12px 0 28px oklch(0% 0 0 / 0.18);
+      box-shadow: -12px 0 28px rgb(0 0 0 / 0.18);
       z-index: 43;
     }
 
