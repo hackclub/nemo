@@ -1,0 +1,97 @@
+<% content_for :page_title, "Response" %>
+<% content_for :page_kicker, "Stage 03" %>
+
+<% checked, by_member, bot_first, bot_first_then_member = @response_rate_totals %>
+<div id="response" class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Response rate</h2>
+      <p class="card-sub">whether a newcomer&rsquo;s first post got a reply, and how long it took</p>
+    </div>
+    <div class="card-tools">
+      <% if checked.positive? %>
+        <%= rate_chip(share_pct(by_member, checked), "answered by a member") %>
+        <span class="chip chip-off"><%= pluralize(number_with_delimiter(checked), "first post") %> checked</span>
+      <% else %>
+        <span class="chip chip-warn">not measured yet</span>
+      <% end %>
+    </div>
+  </div>
+  <% if @response_rate.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>first posted</th>
+            <th class="col-num">checked</th>
+            <th class="col-num">by a member</th>
+            <th class="col-num">by a bot</th>
+            <th class="col-num">no reply</th>
+            <th class="col-num">bot first</th>
+            <th class="col-num">median wait</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @response_rate.each do |r| %>
+            <tr>
+              <td>
+                <span class="two-line">
+                  <b><%= r.post_month.strftime("%b %Y") %></b>
+                  <span><%= number_to_percentage(share_pct(r.answered_by_member, r.first_posts_checked), precision: 1) %> answered by a member</span>
+                </span>
+              </td>
+              <td><%= number_with_delimiter(r.first_posts_checked) %></td>
+              <td><%= number_with_delimiter(r.answered_by_member) %></td>
+              <td><%= number_with_delimiter(r.answered_by_bot) %></td>
+              <td><%= number_with_delimiter(r.unanswered) %></td>
+              <td><%= number_with_delimiter(r.bot_replied_first) %></td>
+              <td><%= reply_wait(r.median_member_latency_seconds) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <% if bot_first.positive? %>
+      <p class="delta-note">
+        A bot replied before any person on
+        <b><%= number_to_percentage(share_pct(bot_first, checked), precision: 1) %></b>
+        of these first posts, and
+        <b><%= number_with_delimiter(bot_first_then_member) %> of <%= number_with_delimiter(bot_first) %></b>
+        of those did then get a person.
+      </p>
+    <% end %>
+  <% else %>
+    <p class="card-note">
+      No first post has been checked yet. The member history backfill finds first posts, then the replies walk
+      fills this in, newest cohorts first.
+    </p>
+  <% end %>
+</div>
+
+<% if @fast_reply_vs_retention.any? %>
+  <div class="grid-3">
+    <% @fast_reply_vs_retention.each do |row| %>
+      <div class="card">
+        <p class="kpi-label">
+          <%= row.fast_reply ? "fast reply, under 1 hour" : "slower reply" %>
+          <%= incomplete_chip(
+                ("no newcomer here has a covered retention window yet" if row.retained_day_30_rate.nil?)
+              ) %>
+        </p>
+        <p class="kpi-val"><%= number_with_delimiter(row.newcomers) %></p>
+        <% if row.retained_day_30_rate %>
+          <div class="delta">
+            <span class="chip chip-off">
+              day 30: <%= number_to_percentage((row.retained_day_30_rate.to_f * 100).round(1), precision: 1) %>
+              of <%= number_with_delimiter(row.measured_day_30) %>
+            </span>
+            <span class="chip chip-off">
+              day 90: <%= number_to_percentage((row.retained_day_90_rate.to_f * 100).round(1), precision: 1) %>
+              of <%= number_with_delimiter(row.measured_day_90) %>
+            </span>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

@@ -2,28 +2,6 @@ class HomeController < ApplicationController
   before_action { needs(:analytics) }
 
   def index
-    @cohort_months = Analytics::MartOnboardingFunnel.order(cohort_month: :desc).pluck(:cohort_month)
-    selected_cohort = params[:cohort_month].presence&.then { |d| Date.parse(d) } || @cohort_months.first
-    @onboarding_funnel = Analytics::MartOnboardingFunnel.find_by(cohort_month: selected_cohort)
-
-    if request.headers["X-Requested-With"] == "onboarding-funnel"
-      render partial: "onboarding_funnel",
-        locals: { onboarding_funnel: @onboarding_funnel, cohort_months: @cohort_months },
-        layout: false
-      return
-    end
-
-    @recurrence_cohort_months = Analytics::MartOnboardingRecurrenceFunnel.order(cohort_month: :desc).pluck(:cohort_month)
-    @recurrence_month = params[:recurrence_month].presence&.then { |d| Date.parse(d) } || @recurrence_cohort_months.first
-    @recurrence_funnel = Analytics::MartOnboardingRecurrenceFunnel.find_by(cohort_month: @recurrence_month)
-
-    if request.headers["X-Requested-With"] == "recurrence-funnel"
-      render partial: "recurrence_funnel",
-        locals: { recurrence_funnel: @recurrence_funnel, recurrence_cohort_months: @recurrence_cohort_months, recurrence_month: @recurrence_month },
-        layout: false
-      return
-    end
-
     @team_stats = Analytics::MartTeamStatsDaily.order(ds: :desc).first
     @team_stats_prior =
       if @team_stats
@@ -35,69 +13,20 @@ class HomeController < ApplicationController
     case request.headers["X-Requested-With"]
     when "active-people"
       render partial: "active_people",
-        locals: { activity_trend: activity_trend_for(@people_granularity), granularity: @people_granularity },
+        locals: { activity_trend: activity_trend_for(@people_granularity),
+                  granularity: @people_granularity },
         layout: false
       return
     when "member-messages"
       render partial: "member_messages",
-        locals: { activity_trend: activity_trend_for(@messages_granularity), granularity: @messages_granularity },
+        locals: { activity_trend: activity_trend_for(@messages_granularity),
+                  granularity: @messages_granularity },
         layout: false
       return
     end
 
     @people_trend = activity_trend_for(@people_granularity)
     @messages_trend = activity_trend_for(@messages_granularity)
-
-    @top_poster_months = Analytics::MartTopPosters.distinct.order(month: :desc).pluck(:month)
-    @top_posters_month = params[:top_posters_month].presence&.then { |d| Date.parse(d) } || @top_poster_months.first
-    @top_posters = Analytics::MartTopPosters.where(month: @top_posters_month).order(:rank).limit(10)
-
-    if request.headers["X-Requested-With"] == "top-posters"
-      render partial: "top_posters",
-        locals: { top_posters: @top_posters, top_poster_months: @top_poster_months, top_posters_month: @top_posters_month },
-        layout: false
-      return
-    end
-    @newcomer_measure = Analytics::MartNewcomerChannels.measure(params[:newcomer_measure])
-    @newcomer_reach = Analytics::MartNewcomerChannels.order(:channel_id).first
-    @newcomer_channels = Analytics::MartNewcomerChannels.ranked(@newcomer_measure, floor: HomeHelper::MIN_SAMPLE)
-
-    if request.headers["X-Requested-With"] == "newcomer-channels"
-      render partial: "newcomer_channels",
-        locals: { newcomer_channels: @newcomer_channels, newcomer_reach: @newcomer_reach,
-                  newcomer_measure: @newcomer_measure },
-        layout: false
-      return
-    end
-
-    asked = params[:growth_months].to_i
-    @growth_span = HomeHelper::GROWTH_SPANS.include?(asked) ? asked : HomeHelper::DEFAULT_GROWTH_SPAN
-    @growth_months = Analytics::MartGrowth.order(month: :desc).limit(@growth_span).to_a.reverse
-
-    if request.headers["X-Requested-With"] == "growth"
-      render partial: "growth",
-        locals: { growth_months: @growth_months, growth_span: @growth_span },
-        layout: false
-      return
-    end
-    @top_channels = Analytics::MartChannelRange
-      .order(messages_posted_by_members: :desc)
-      .limit(8)
-    @activity_bands = Analytics::MartActivityDistribution.order(:band_order)
-    @account_types = Analytics::MartAccountType.where.not(account_type: ["Owner", "Admin", "Org Owner"]).order(members: :desc)
-    @channel_scorecard = Analytics::MartChannelOnboardingScorecard
-      .where(newcomer_volume: HomeHelper::MIN_SAMPLE..)
-      .order(post_month: :desc, newcomer_volume: :desc).limit(10)
-    @channel_scorecard_total = Analytics::MartChannelOnboardingScorecard.count
-    @monthly_cohorts = Analytics::MartMonthlyCohorts
-      .where(searched: 1..)
-      .order(cohort_month: :desc)
-      .limit(13)
-    @response_rate = Analytics::MartResponseRate.order(post_month: :desc).limit(13)
-    @response_rate_totals = Analytics::MartResponseRate.totals
-    @fast_reply_vs_retention = Analytics::MartFastReplyVsRetention
-      .where(newcomers: HomeHelper::MIN_SAMPLE..)
-      .order(fast_reply: :desc)
   end
 
   private

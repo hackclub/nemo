@@ -38,7 +38,7 @@
   </div>
 
   <% if @range_preset.nil? %>
-    <%= form_with url: channel_path(@channel), method: :get, class: "control-bar" do %>
+    <%= form_with url: channel_path(@channel), method: :get, class: "qbar" do %>
       <%= render "datepicker", caption: "from", name: :start, value: @start_date,
             min: @range_min, max: @range_max %>
       <%= render "datepicker", caption: "to", name: :end, value: @end_date,

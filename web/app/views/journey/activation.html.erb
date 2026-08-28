@@ -1,0 +1,64 @@
+<% content_for :page_title, "Activation" %>
+<% content_for :page_kicker, "Stage 02" %>
+
+<div id="activation" data-controller="newcomer-channels" data-newcomer-channels-url-value="<%= activation_journey_path %>">
+  <div data-newcomer-channels-target="container">
+    <%= render "newcomer_channels", newcomer_channels: @newcomer_channels,
+          newcomer_reach: @newcomer_reach, newcomer_measure: @newcomer_measure %>
+  </div>
+</div>
+
+<% if @channel_scorecard.any? %>
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Channel onboarding scorecard</h2>
+        <p class="card-sub">months reaching <%= HomeHelper::MIN_SAMPLE %> newcomers or more</p>
+      </div>
+    </div>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>channel</th>
+            <th class="col-date">month</th>
+            <th class="col-num">newcomers</th>
+            <th class="col-num">fast reply</th>
+            <th class="col-num">90-day retention</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @channel_scorecard.each do |row| %>
+            <tr>
+              <td>#<%= row.channel_name %></td>
+              <td><%= row.post_month.strftime("%b %Y") %></td>
+              <td><%= number_with_delimiter(row.newcomer_volume) %></td>
+              <td><%= rate_chip((row.fast_reply_share.to_f * 100).round(1)) %></td>
+              <td>
+                <% if row.day_90_mature %>
+                  <%= rate_chip((row.retained_90_share.to_f * 100).round(1)) %>
+                <% else %>
+                  <span class="chip chip-off">TBD</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% else %>
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Channel onboarding scorecard</h2>
+        <p class="card-sub">no channel-month qualifies yet</p>
+      </div>
+      <div class="card-tools"><span class="chip chip-off">0 of <%= @channel_scorecard_total %></span></div>
+    </div>
+    <p class="delta-note">
+      A row needs <%= HomeHelper::MIN_SAMPLE %> newcomers in one channel in one month whose first post
+      can be matched to a reply. Empty by measurement, not by error.
+    </p>
+  </div>
+<% end %>

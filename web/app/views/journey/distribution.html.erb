@@ -1,0 +1,98 @@
+<% content_for :page_title, "Distribution" %>
+<% content_for :page_kicker, "Stage 05" %>
+
+<div id="distribution" data-controller="top-posters" data-top-posters-url-value="<%= distribution_journey_path %>">
+  <div data-top-posters-target="container">
+    <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months, top_posters_month: @top_posters_month %>
+  </div>
+</div>
+
+<div class="card card-stretch">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Activity distribution</h2>
+      <% coverage = @activity_bands.first %>
+      <p class="card-sub">
+        messages posted over each member&rsquo;s whole history &middot;
+        <%= number_with_delimiter(@activity_bands.sum(&:members)) %> of
+        <%= number_with_delimiter(coverage&.workspace_members) %> members searched
+        <% if coverage && window_note(coverage.window_start, coverage.window_end) %>
+          &middot; searched <%= window_note(coverage.window_start, coverage.window_end) %>
+        <% end %>
+      </p>
+    </div>
+  </div>
+  <% total_banded = @activity_bands.sum(&:members) %>
+  <div class="band">
+    <% @activity_bands.each do |b| %>
+      <i class="band-<%= b.band_order %>" style="width:<%= total_banded.positive? ? (b.members.to_f / total_banded * 100).round(2) : 0 %>%"></i>
+    <% end %>
+  </div>
+  <div class="band-list">
+    <% @activity_bands.each do |b| %>
+      <div class="band-item">
+        <i class="band-<%= b.band_order %>"></i>
+        <span><%= b.band_order.zero? ? b.activity_band : "messages posted: #{b.activity_band}" %></span>
+        <b>
+          <%= number_with_delimiter(b.members) %> &middot;
+          <%= total_banded.positive? ? number_to_percentage((b.members.to_f / total_banded * 100).round(1), precision: 1) : "0%" %>
+        </b>
+      </div>
+    <% end %>
+  </div>
+  <p class="card-note">
+    Counted from each member&rsquo;s all-time message history. The backfill searches the newest joiners
+    first, so until it is finished this leans towards members who have had the least time to post.
+  </p>
+</div>
+
+<% top_channels_stale = stale_note("mart_channel_range") %>
+<% if top_channels_stale %>
+  <%= stale_card("Top public channels", top_channels_stale) %>
+<% else %>
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Top public channels</h2>
+      <p class="card-sub">
+        by member messages<% if @top_channels.first %> &middot;
+          <%= window_note(@top_channels.first.window_start, @top_channels.first.window_end) %>
+        <% end %>
+      </p>
+    </div>
+  </div>
+  <div class="scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>channel</th>
+          <th class="col-num">member messages</th>
+          <th class="col-num">posters</th>
+          <th class="col-num">reactions</th>
+          <th class="col-num">reactors</th>
+          <th class="col-num">huddles</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @top_channels.each do |c| %>
+          <tr>
+            <td>
+              <span class="two-line">
+                <%= link_to channel_path(c.channel_id) do %>
+                  <b>#<%= c.name %></b>
+                <% end %>
+                <span><%= c.channel_id %></span>
+              </span>
+            </td>
+            <td><%= number_with_delimiter(c.messages_posted_by_members) %></td>
+            <td><%= number_with_delimiter(c.members_who_posted) %></td>
+            <td><%= number_with_delimiter(c.reactions_added) %></td>
+            <td><%= number_with_delimiter(c.members_who_reacted) %></td>
+            <td><%= number_with_delimiter(c.huddles_initiated) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% end %>

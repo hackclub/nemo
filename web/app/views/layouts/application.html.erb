@@ -63,8 +63,9 @@
               </span>
               <span class="rail-text">Overview</span>
             <% end %>
-            <% journey_stages.each do |number, label, anchor| %>
-              <%= link_to root_path(anchor: anchor), class: "rail-item" do %>
+            <% journey_stages.each do |number, label, stage| %>
+              <%= link_to public_send(:"#{stage}_journey_path"), class: "rail-item",
+                    aria: { current: ("page" if current_page?(public_send(:"#{stage}_journey_path"))) } do %>
                 <span class="rail-ix" aria-hidden="true"><%= number %></span>
                 <span class="rail-text"><%= label %></span>
               <% end %>

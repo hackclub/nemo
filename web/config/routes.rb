@@ -48,6 +48,11 @@ Rails.application.routes.draw do
     end
   end
 
+  ApplicationHelper::JOURNEY.each do |_number, _label, stage|
+    get stage, to: "journey##{ApplicationHelper::ACTIONS.fetch(stage)}",
+      as: :"#{stage}_journey"
+  end
+
   resources :channels, only: [:index, :show]
   get "engine", to: "engine#index"
   get "engine/runs/:id", to: "engine#show", as: :engine_run

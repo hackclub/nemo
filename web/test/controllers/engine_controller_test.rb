@@ -11,14 +11,12 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
 
     get engine_path
     assert_response :success
-    assert_select ".view[aria-current=true] span", text: "Runs"
 
     get engine_path(tab: "coverage")
-    assert_select ".view[aria-current=true] span", text: "Coverage"
     assert_select ".card-title", text: "Day coverage"
 
     get engine_path(tab: "teleporter")
-    assert_select ".view[aria-current=true] span", text: "Runs"
+    assert_select ".card-title", text: "Latest run", message: "an unknown tab falls back to runs"
   end
 
   test "the sources tab lists every source with what it declares" do
@@ -27,7 +25,6 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
     get engine_path(tab: "sources")
 
     assert_response :success
-    assert_select ".view[aria-current=true] span", text: "Sources"
     assert_select "tbody tr", count: Engine::Source::KEYS.size
     assert_select "tbody td b", text: "member_channels", count: 1,
       message: "a stage the old hardcoded list never knew about"

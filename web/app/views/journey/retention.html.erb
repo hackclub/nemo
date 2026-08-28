@@ -1,0 +1,14 @@
+<% content_for :page_title, "Retention" %>
+<% content_for :page_kicker, "Stage 04" %>
+
+<div id="retention" data-controller="onboarding-funnel" data-onboarding-funnel-url-value="<%= retention_journey_path %>">
+  <div data-onboarding-funnel-target="container">
+    <%= render "onboarding_funnel", onboarding_funnel: @onboarding_funnel, cohort_months: @cohort_months %>
+  </div>
+</div>
+
+<div data-controller="recurrence-funnel" data-recurrence-funnel-url-value="<%= retention_journey_path %>">
+  <div data-recurrence-funnel-target="container">
+    <%= render "recurrence_funnel", recurrence_funnel: @recurrence_funnel, recurrence_cohort_months: @recurrence_cohort_months, recurrence_month: @recurrence_month %>
+  </div>
+</div>

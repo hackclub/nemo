@@ -32,14 +32,16 @@
   <% end %>
 </div>
 
-<div class="views">
-  <% EngineController::TABS.each do |key, label| %>
-    <%= link_to engine_path(key == "runs" ? {} : { tab: key }), class: "view",
-          aria: { current: ("true" if key == @tab) } do %>
-      <span><%= label %></span>
+<% content_for :page_controls do %>
+  <span class="segmented">
+    <% EngineController::TABS.each do |key, label| %>
+      <%= link_to engine_path(key == "runs" ? {} : { tab: key }),
+            aria: { current: ("true" if key == @tab) } do %>
+        <%= label %>
+      <% end %>
     <% end %>
-  <% end %>
-</div>
+  </span>
+<% end %>
 
 <% if @tab == "runs" %>
 <% if @run.nil? %>
