@@ -79,7 +79,6 @@ LOG_TABLES = (
     "raw.ingest_step_output",
     "raw.ingest_run",
     "raw.dead_letter",
-    "raw.slack_events",
 )
 
 UNSTAMP_SQL = """
@@ -561,10 +560,6 @@ def write_runs(conn, rng, members, as_of, hostile=False):
         "dead_letter": copy_rows(
             conn, "raw.dead_letter", ["source", "payload", "reason", "created_at"],
             runs_module.dead_letter_rows(rng, as_of, hostile=hostile),
-        ),
-        "slack_events": copy_rows(
-            conn, "raw.slack_events", ["event_type", "payload", "received_at"],
-            runs_module.slack_event_rows(rng, members, as_of),
         ),
     }
     conn.commit()

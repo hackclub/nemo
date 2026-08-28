@@ -22,7 +22,6 @@ nemo <role> [args]
 
   serve          the dashboard. set PORT to run it directly, otherwise
                  thruster serves it on 80, which is the container path
-  collect        the slack events listener
   bot            shroud takes the reports, nemo works them
   sync           the nightly sync worker
   transform      dbt build
@@ -45,9 +44,6 @@ case "$ROLE" in
       exec ./bin/rails server -p "$PORT" "$@"
     fi
     exec ./bin/thrust ./bin/rails server "$@"
-    ;;
-  collect)
-    py -m ingest.events_listener "$@"
     ;;
   bot)
     py -m bot "$@"

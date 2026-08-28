@@ -118,12 +118,3 @@ def dead_letter_rows(rng, as_of, count=40, hostile=False):
         yield (source, json.dumps(payload), hostile_module.reason(rng, base, hostile), seen)
 
 
-def slack_event_rows(rng, members, as_of, count=25):
-    joined = [m for m in members if (as_of - m.cohort_at).days < RUN_HISTORY]
-    for member in joined[:count]:
-        payload = {
-            "type": "team_join",
-            "user": {"id": member.user_id, "team_id": "TSEED0001"},
-            "event_ts": f"{int(midnight(member.cohort_at, 9).timestamp())}.000100",
-        }
-        yield ("team_join", json.dumps(payload), midnight(member.cohort_at, 9))

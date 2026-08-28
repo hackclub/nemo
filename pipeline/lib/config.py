@@ -43,10 +43,6 @@ ROLES = {
             "TZ",
         ],
     },
-    "collect": {
-        "required": DATABASE + ["SLACK_BOT_TOKEN", "SLACK_APP_TOKEN"],
-        "optional": PIPELINE_ROLE + ["SLACK_TEAM_ID", "TZ"],
-    },
     "sync": {
         "required": DATABASE + ["INTERNAL_PROXY_URL", "INTERNAL_PROXY_TOKEN"],
         "optional": PIPELINE_ROLE + DBT_ROLE + [
@@ -120,7 +116,6 @@ DEFAULTS = {
 
 HEADINGS = {
     "serve": "the dashboard. the only role with a public URL",
-    "collect": "the slack events listener. long running",
     "sync": "the nightly sync worker. long running",
     "transform": "dbt build. one shot",
     "seed": "synthetic data, then transform, then verify. one shot",
