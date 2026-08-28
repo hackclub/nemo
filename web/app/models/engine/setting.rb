@@ -13,7 +13,7 @@ module Engine
 
     ENGINE_DIALS = {
       "run_at" => { label: "Nightly at", default: "03:00", kind: :time },
-      "budget_minutes" => { label: "Budget for one night", default: "45", kind: :number,
+      "budget_minutes" => { label: "Budget for one night", default: "90", kind: :number,
                             min: 5, max: 480 },
       Engine::Freshness::SWITCH => { label: "Stale cards read n/a", default: "true", kind: :switch }
     }.freeze

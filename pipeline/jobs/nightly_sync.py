@@ -1,6 +1,7 @@
 import io
 import subprocess
 import sys
+import time
 from contextlib import redirect_stdout
 from datetime import datetime, timezone
 
@@ -197,6 +198,19 @@ def refresh_statistics(name):
         print(f"{name}: statistics NOT refreshed, {refused}")
 
 
+ALWAYS_RUNS = "dbt"
+
+
+def over_budget(spent_minutes, budget_minutes, ran, name):
+    if not budget_minutes or name == ALWAYS_RUNS:
+        return None
+    if ran < 1:
+        return None
+    if spent_minutes < budget_minutes:
+        return None
+    return f"over budget, {spent_minutes:.0f} of {budget_minutes} minutes spent"
+
+
 SKIP_SQL = """
 INSERT INTO raw.ingest_run
     (source, started_at, finished_at, status, parent_run_id, step_index, step_total)
@@ -211,10 +225,16 @@ def record_skip(conn, run_id, index, total, name, why):
     record_step_output(run_id, index, name, f"{name}: skipped, {why}\n")
 
 
-def run_stages(conn, plan, run_id):
-    failed, ran, skipped = [], 0, 0
+def run_stages(conn, plan, run_id, budget=None):
+    started = time.monotonic()
+    failed, ran, skipped, cut = [], 0, 0, 0
     for index, (name, stage, why) in enumerate(plan, start=1):
         raise_if_cancelled()
+        if not why:
+            spent = (time.monotonic() - started) / 60
+            why = over_budget(spent, budget, ran, name)
+            if why:
+                cut += 1
         if why:
             skipped += 1
             print(f"[{index}/{len(plan)}] {name}: skipped, {why}")
@@ -226,7 +246,7 @@ def run_stages(conn, plan, run_id):
         if detail:
             failed.append((name, detail))
             print(f"[{index}/{len(plan)}] {name}: FAILED {detail}")
-    return failed, ran, skipped
+    return failed, ran, skipped, cut
 
 
 def stage_plan(name):
@@ -244,9 +264,10 @@ def run_sync(plan=None):
         conn.commit()
 
         cancelled = False
-        ran = skipped = 0
+        ran = skipped = cut = 0
+        budget = settings.budget_minutes(conn)
         try:
-            failed, ran, skipped = run_stages(conn, plan, run_id)
+            failed, ran, skipped, cut = run_stages(conn, plan, run_id, budget)
         except SyncCancelled:
             conn.rollback()
             failed = []
@@ -257,6 +278,8 @@ def run_sync(plan=None):
         elif ran == 0 and skipped == 0:
             status = "failed"
             failed = [("plan", "the plan was empty, so no stage ran and none was skipped")]
+        elif cut:
+            status = "partial"
         elif not failed:
             status = "ok"
         elif len(failed) == ran:
@@ -266,7 +289,8 @@ def run_sync(plan=None):
         finish_run(conn, run_id, status, 0, 0)
         conn.commit()
 
-    print(f"{SOURCE}: {status}, {ran - len(failed)}/{ran} stages ok, {skipped} not due")
+    print(f"{SOURCE}: {status}, {ran - len(failed)}/{ran} stages ok, "
+          f"{skipped - cut} not due, {cut} cut for budget")
     for name, detail in failed:
         print(f"  failed: {name}: {detail}")
     return run_id, status
