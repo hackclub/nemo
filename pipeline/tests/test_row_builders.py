@@ -58,11 +58,19 @@ def test_member_activity_row_leaves_api_omitted_fields_null():
     assert row[10] is None
 
 
+def test_member_dim_row_stamps_the_day_the_flags_came_from():
+    row = analytics_pull.member_dim_row(
+        {"user_id": "U1", "is_invited_member": True, "is_invited_guest": False}, PULL_DATE
+    )
+    assert row[2] is True and row[3] is False
+    assert row[4] == PULL_DATE
+
+
 def test_member_dim_row_has_no_guest_flag():
     row = analytics_pull.member_dim_row(
-        {"user_id": "U1", "date_claimed": 1600000000, "is_invited_guest": True}
+        {"user_id": "U1", "date_claimed": 1600000000, "is_invited_guest": True}, PULL_DATE
     )
-    assert row == ("U1", epoch(1600000000), False, True)
+    assert row == ("U1", epoch(1600000000), False, True, PULL_DATE)
 
 
 def test_channel_activity_row_maps_counts():

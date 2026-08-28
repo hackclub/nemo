@@ -51,14 +51,22 @@ ON CONFLICT (user_id, window_start, window_end, source) DO UPDATE SET
     searches = EXCLUDED.searches
 """
 
-MEMBER_DIM_MERGE_SQL = """
+NEWER_DAY = """
+        raw.member_dim.invite_flags_on IS NULL
+        OR EXCLUDED.invite_flags_on >= raw.member_dim.invite_flags_on
+"""
+
+MEMBER_DIM_MERGE_SQL = f"""
 INSERT INTO raw.member_dim
-    (user_id, claimed_at, is_invited_member, is_invited_guest, updated_at)
-VALUES (%s, %s, %s, %s, now())
+    (user_id, claimed_at, is_invited_member, is_invited_guest, invite_flags_on, updated_at)
+VALUES (%s, %s, %s, %s, %s, now())
 ON CONFLICT (user_id) DO UPDATE SET
     claimed_at = COALESCE(raw.member_dim.claimed_at, EXCLUDED.claimed_at),
-    is_invited_member = EXCLUDED.is_invited_member,
-    is_invited_guest = EXCLUDED.is_invited_guest,
+    is_invited_member = CASE WHEN {NEWER_DAY}
+        THEN EXCLUDED.is_invited_member ELSE raw.member_dim.is_invited_member END,
+    is_invited_guest = CASE WHEN {NEWER_DAY}
+        THEN EXCLUDED.is_invited_guest ELSE raw.member_dim.is_invited_guest END,
+    invite_flags_on = greatest(raw.member_dim.invite_flags_on, EXCLUDED.invite_flags_on),
     updated_at = now()
 """
 
@@ -131,12 +139,13 @@ def member_activity_row(rec, start, end=None, source=ANALYTICS_SOURCE):
     )
 
 
-def member_dim_row(rec):
+def member_dim_row(rec, pull_date):
     return (
         rec["user_id"],
         parse_epoch(rec.get("date_claimed")),
         bool(rec.get("is_invited_member")),
         bool(rec.get("is_invited_guest")),
+        pull_date,
     )
 
 
@@ -302,7 +311,7 @@ def pull_member_day(conn, pull_date):
             counts.rows_in += 1
             try:
                 activity_rows.append(member_activity_row(rec, pull_date))
-                dim_rows.append(member_dim_row(rec))
+                dim_rows.append(member_dim_row(rec, pull_date))
             except KeyError as exc:
                 counts.rows_rejected += 1
                 dead_letter(conn, ANALYTICS_SOURCE, rec, str(exc))
