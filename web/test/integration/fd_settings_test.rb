@@ -377,7 +377,8 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     get fd_cases_path
 
     assert_select ".rail-foot .rail-item", 1, "only Collapse, which is about the rail itself"
-    assert_select ".you-menu .you-switch[role=switch]", 1, "dark mode moved into the menu"
+    assert_select ".you-menu .themelist button[data-theme-set]", 6,
+      "the six themes moved into the menu"
     assert_select ".you-menu form[action=?]", logout_path, 1, "so did sign out"
   end
 

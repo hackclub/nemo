@@ -1,0 +1,16 @@
+<div class="themelist" role="group" aria-label="Theme"
+     data-controller="theme" data-action="click->theme#set">
+  <% theme_options.each do |key, label, swatches| %>
+    <button type="button" data-theme-set="<%= key %>" aria-pressed="false">
+      <span class="chipset" aria-hidden="true">
+        <% swatches.each do |colour| %>
+          <i style="background: <%= colour %>"></i>
+        <% end %>
+      </span>
+      <span><%= label %></span>
+      <span class="tick" aria-hidden="true">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4 10-10"/></svg>
+      </span>
+    </button>
+  <% end %>
+</div>

@@ -19,7 +19,10 @@
       (function () {
         try {
           var stored = localStorage.getItem("mn-theme");
-          if (stored === "dark" || stored === "light") {
+          var known = ["paper", "fog", "slate", "midnight", "ember"];
+          if (stored === "dark") stored = "slate";
+          if (stored === "light") stored = "paper";
+          if (known.indexOf(stored) !== -1) {
             document.documentElement.setAttribute("data-theme", stored);
           }
           if (localStorage.getItem("mn-rail") === "shut") {
