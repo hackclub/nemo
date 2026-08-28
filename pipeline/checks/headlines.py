@@ -201,10 +201,13 @@ def check_claimed_against_slack(conn, client):
 
 
 def check_our_claimed_flag_against_slack(conn, client):
-    ours = one(conn, "select count(*) from analytics.dim_member where is_live and is_claimed")
-    theirs = one(conn, "select total_claimed_count from analytics.mart_team_stats_daily "
-                       "order by ds desc limit 1")
-    return "dim_member.is_claimed, live members", "cross", "team.stats total_claimed_count", ours, theirs
+    ours = one(conn, """
+        select round(100.0 * count(*) filter (where is_claimed) / nullif(count(*), 0))
+        from analytics.dim_member where is_live""")
+    theirs = one(conn, """
+        select round(100.0 * total_claimed_count / nullif(total_members_count, 0))
+        from analytics.mart_team_stats_daily order by ds desc limit 1""")
+    return "claim rate, percent", "cross", "team.stats claim rate", ours, theirs
 
 
 SLACK_CHECKS = {
@@ -233,6 +236,10 @@ CHECKS = [
 
 
 KNOWN = {
+    "claim rate, percent": (
+        0.30, "our denominator is the live members we have walked, which excludes a large "
+              "pool of never-claimed deactivated accounts that Slack still counts"
+    ),
     "mart_team_stats_daily.total_members_count": (
         0.10, "Slack counts everyone in the org today; dim_member holds the members we have walked"
     ),
