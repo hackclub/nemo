@@ -107,6 +107,45 @@ def check_every_source_is_fresh(pipe_conn):
     return rows
 
 
+FULL_PLAN_SQL = """
+select max(x.finished_at) from (
+    select p.id, p.finished_at, max(c.step_total) as planned
+    from raw.ingest_run p
+    join raw.ingest_run c on c.parent_run_id = p.id
+    where p.source = 'nightly_sync'
+    group by p.id, p.finished_at
+) x where x.planned >= %s
+"""
+
+LAST_PLAN_SQL = """
+select coalesce(max(c.step_total), 0)
+from raw.ingest_run p
+left join raw.ingest_run c on c.parent_run_id = p.id
+where p.id = (select max(id) from raw.ingest_run
+              where source = 'nightly_sync' and parent_run_id is null)
+"""
+
+
+def check_the_nightly_ran_the_whole_plan(pipe_conn):
+    total = len(sources.KEYS)
+    now = datetime.now(timezone.utc)
+    rows = []
+    with pipe_conn.cursor() as cur:
+        cur.execute(FULL_PLAN_SQL, (total,))
+        newest = cur.fetchone()[0]
+        cur.execute(LAST_PLAN_SQL)
+        planned = cur.fetchone()[0]
+    rows.append(("the last nightly, stages planned", "plan",
+                 f"all {total} of them", planned, total))
+    if newest is None:
+        rows.append(("hours since a nightly ran every stage", "fresh",
+                     "daily, and no full plan is on record", None, 20.0))
+    else:
+        rows.append(("hours since a nightly ran every stage", "fresh",
+                     "daily, so 20h", round((now - newest).total_seconds() / 3600, 1), 20.0))
+    return rows
+
+
 def utc_date(value):
     if not value:
         return None
@@ -299,7 +338,7 @@ SLACK_CHECKS = {
     "check_top_poster_against_slack",
 }
 
-PIPELINE_CHECKS = [check_every_source_is_fresh]
+PIPELINE_CHECKS = [check_every_source_is_fresh, check_the_nightly_ran_the_whole_plan]
 
 CHECKS = [
     check_members_against_slack,
@@ -387,7 +426,10 @@ def run(only=None, tolerance=TOLERANCE, cross_only=False):
     for row in results:
         if len(row) == 5:
             name, kind, source, ours, theirs = row
-            state, delta = stale_verdict(ours, theirs)
+            if kind == "plan":
+                state, delta = verdict(name, ours, theirs, 0.0)
+            else:
+                state, delta = stale_verdict(ours, theirs)
             graded.append((name, kind, source, ours, theirs, state, delta))
         else:
             graded.append(row)

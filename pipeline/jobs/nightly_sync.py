@@ -254,6 +254,9 @@ def run_sync(plan=None):
 
         if cancelled:
             status = "cancelled"
+        elif ran == 0 and skipped == 0:
+            status = "failed"
+            failed = [("plan", "the plan was empty, so no stage ran and none was skipped")]
         elif not failed:
             status = "ok"
         elif len(failed) == ran:
