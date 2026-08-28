@@ -156,11 +156,11 @@ class FdQueueTest < ActionDispatch::IntegrationTest
       fd_case_path(@free), 1
   end
 
-  test "an open card keeps the violation off the meta line" do
+  test "an open case keeps the violation out of the queue" do
     @mine.update!(category_key: "harassment_general")
     get fd_cases_path
 
-    assert_select ".deck-meta", text: /harassment/i, count: 0
+    assert_select ".queue-table", text: /harassment/i, count: 0
   end
 
   test "a resolved card names the violation in full, not the raw key" do
