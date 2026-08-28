@@ -11,7 +11,7 @@ WHERE status = 'ok' AND source = ANY(%s)
 """
 
 ENGINE = "engine"
-DEFAULTS = {"run_at": "03:00", "budget_minutes": "90"}
+DEFAULTS = {"run_at": "03:00", "budget_minutes": "480"}
 
 PERIOD = {
     "daily": timedelta(hours=20),

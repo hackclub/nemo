@@ -86,7 +86,7 @@ VALUES (%s, %s, %s, %s, now())
 ON CONFLICT (channel_id) DO UPDATE SET
     visibility = COALESCE(EXCLUDED.visibility, raw.channel_dim.visibility),
     date_created = COALESCE(raw.channel_dim.date_created, EXCLUDED.date_created),
-    last_active_at = EXCLUDED.last_active_at,
+    last_active_at = greatest(raw.channel_dim.last_active_at, EXCLUDED.last_active_at),
     updated_at = now()
 """
 
