@@ -19,16 +19,11 @@ WHERE source = %s AND (window_start, window_end) <> (%s, %s)
 
 VERIFIED_DATE_SQL = """
 INSERT INTO raw.member_dim
-    (user_id, account_created_verified, claimed_at, claimed_at_source, updated_at)
-VALUES (%s, %s, %s, 'member_range', now())
+    (user_id, account_created_verified, claimed_at, updated_at)
+VALUES (%s, %s, %s, now())
 ON CONFLICT (user_id) DO UPDATE SET
     account_created_verified = EXCLUDED.account_created_verified,
     claimed_at = COALESCE(raw.member_dim.claimed_at, EXCLUDED.claimed_at),
-    claimed_at_source = CASE
-        WHEN raw.member_dim.claimed_at IS NULL AND EXCLUDED.claimed_at IS NOT NULL
-        THEN EXCLUDED.claimed_at_source
-        ELSE raw.member_dim.claimed_at_source
-    END,
     updated_at = now()
 """
 

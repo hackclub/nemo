@@ -53,15 +53,10 @@ ON CONFLICT (user_id, window_start, window_end, source) DO UPDATE SET
 
 MEMBER_DIM_MERGE_SQL = """
 INSERT INTO raw.member_dim
-    (user_id, claimed_at, claimed_at_source, is_invited_member, is_invited_guest, updated_at)
-VALUES (%s, %s, 'member_day', %s, %s, now())
+    (user_id, claimed_at, is_invited_member, is_invited_guest, updated_at)
+VALUES (%s, %s, %s, %s, now())
 ON CONFLICT (user_id) DO UPDATE SET
     claimed_at = COALESCE(raw.member_dim.claimed_at, EXCLUDED.claimed_at),
-    claimed_at_source = CASE
-        WHEN raw.member_dim.claimed_at IS NULL AND EXCLUDED.claimed_at IS NOT NULL
-        THEN EXCLUDED.claimed_at_source
-        ELSE raw.member_dim.claimed_at_source
-    END,
     is_invited_member = EXCLUDED.is_invited_member,
     is_invited_guest = EXCLUDED.is_invited_guest,
     updated_at = now()

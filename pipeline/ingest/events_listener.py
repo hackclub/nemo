@@ -57,15 +57,10 @@ def record_claimed_at(conn, user_id, event_ts):
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO raw.member_dim (user_id, claimed_at, claimed_at_source, updated_at)
-            VALUES (%s, %s, 'team_join', now())
+            INSERT INTO raw.member_dim (user_id, claimed_at, updated_at)
+            VALUES (%s, %s, now())
             ON CONFLICT (user_id) DO UPDATE SET
                 claimed_at = COALESCE(raw.member_dim.claimed_at, EXCLUDED.claimed_at),
-                claimed_at_source = CASE
-                    WHEN raw.member_dim.claimed_at IS NULL AND EXCLUDED.claimed_at IS NOT NULL
-                    THEN EXCLUDED.claimed_at_source
-                    ELSE raw.member_dim.claimed_at_source
-                END,
                 updated_at = now()
             """,
             (user_id, claimed_at),

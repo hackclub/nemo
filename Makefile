@@ -4,7 +4,7 @@ SCALE ?= dev
 ROLE ?= serve
 PORT ?= 3000
 
-.PHONY: help up down logs provision transform seed serve test test-db lint doctor env-examples build image clean
+.PHONY: help up down logs provision transform seed serve test test-db check lint doctor env-examples build image clean
 
 help:
 	@echo "make up            postgres for local work"
@@ -15,6 +15,7 @@ help:
 	@echo "make serve         the dashboard on PORT=$(PORT)"
 	@echo "make test-db       rebuild the database the rails suite runs against"
 	@echo "make test          pytest and rails test"
+	@echo "make check         every headline against a second source"
 	@echo "make lint          ruff and rubocop"
 	@echo "make doctor        the env a role needs           [ROLE=$(ROLE)]"
 	@echo "make env-examples  regenerate deploy/env/*.env.example"
@@ -49,6 +50,9 @@ test-db:
 test:
 	cd pipeline && PYTHONPATH=. .venv/bin/python -m pytest -q
 	cd web && bin/rails test
+
+check:
+	cd pipeline && PYTHONPATH=. .venv/bin/python -m checks.headlines $(CHECK_ARGS)
 
 lint:
 	cd pipeline && .venv/bin/ruff check .

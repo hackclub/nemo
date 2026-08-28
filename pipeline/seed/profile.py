@@ -55,11 +55,6 @@ def member_shape(conn):
             FROM raw.member_dim
             """
         ).fetchone(),
-        "claimed_at_source": shares(
-            conn,
-            "SELECT coalesce(claimed_at_source, 'none'), count(*)::numeric / sum(count(*)) OVER () "
-            "FROM raw.member_dim WHERE claimed_at IS NOT NULL GROUP BY 1",
-        ),
     }
 
 

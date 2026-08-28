@@ -214,9 +214,6 @@
     }
   },
   "members": {
-    "claimed_at_source": {
-      "none": 1.0
-    },
     "cohort_sizes": [
       [
         "2014-03-01",
