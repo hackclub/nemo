@@ -405,6 +405,26 @@ module FdHelper
     "chip-off"
   end
 
+  def age_ink(seconds)
+    return "age-crit" if seconds >= AGE_CRIT
+    return "age-warn" if seconds >= AGE_WARN
+
+    ""
+  end
+
+  LANES = ["open", "acting", "resolved"].freeze
+
+  def case_lanes(cases)
+    LANES.index_with { |lane| cases.select { |kase| case_lane(kase) == lane } }
+  end
+
+  def case_lane(kase)
+    return "resolved" if kase.resolved?
+    return "acting" if kase.actions.any?
+
+    "open"
+  end
+
   def case_age_label(seconds)
     days = (seconds / 1.day).floor
     return "#{days}d" if days.positive?

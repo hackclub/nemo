@@ -279,6 +279,7 @@ module Fd
       @channels = ChannelNames.for(@thread_channels.values.flatten)
       @stats = QueueStats.load
       @total_count = @stats.total
+      @layout = params[:layout] == "board" ? "board" : "queue"
       @views = @query.views
       @subject_preset = preset_for(asked_subjects)
       @names = Names.for(@cases.flat_map { |kase|

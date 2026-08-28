@@ -1,0 +1,20 @@
+<% violation = cases.any? && cases.all?(&:resolved?) %>
+<div class="card card-flush">
+  <div class="scroll">
+    <table class="data-table queue-table">
+      <thead>
+        <tr>
+          <th>case</th>
+          <% if violation %><th>violation</th><% end %>
+          <th class="col-state">state</th>
+          <th>subject</th>
+          <th>on it</th>
+          <th class="col-num">age</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= render "rows", cases: cases, violation: violation %>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,5 +1,11 @@
 <% content_for :page_title, "Cases" %>
 <% content_for :head_actions do %>
+  <span class="segmented">
+    <%= link_to "Queue", fd_cases_path(request.query_parameters.except("layout")),
+          aria: { current: ("true" unless @layout == "board") } %>
+    <%= link_to "Board", fd_cases_path(request.query_parameters.merge(layout: "board")),
+          aria: { current: ("true" if @layout == "board") } %>
+  </span>
   <%= opens_modal "case.open", "Open a case", opens: "open-case", css: "btn btn-primary" %>
 <% end %>
 
@@ -23,8 +29,11 @@
   </div>
 
     <% if @cases.any? %>
-      <%= render "cards", cases: @cases,
-            thread_channels: @thread_channels %>
+      <% if @layout == "board" %>
+        <%= render "board", cases: @cases, thread_channels: @thread_channels %>
+      <% else %>
+        <%= render "queue", cases: @cases %>
+      <% end %>
     <% else %>
       <div class="empty">
         <p class="empty-title"><%= @query.empty_note %></p>

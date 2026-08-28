@@ -75,7 +75,7 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     get fd_cases_path
 
     assert_select "turbo-frame#queue .views", 1, "the views and rows live in one frame"
-    assert_select "turbo-frame#queue .deck", 1
+    assert_select "turbo-frame#queue .data-table", 1
     assert_select ".views .view[data-turbo-frame=queue]", Fd::CaseQuery::TABS.size,
       "every tab stays in the frame"
     assert_select "turbo-frame#queue .kpis", 0, "the headline figures are not filtered"
@@ -138,7 +138,7 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     get fd_cases_path(view: "none")
 
     assert_select ".view[aria-current]", 0
-    assert_select ".deck-card", minimum: 1
+    assert_select "tbody tr", minimum: 1
   end
 
   test "an unassigned row offers the claim button, an assigned one does not" do
@@ -152,7 +152,7 @@ class FdQueueTest < ActionDispatch::IntegrationTest
   test "the whole row carries the link, not just the subject name" do
     get fd_cases_path
 
-    assert_select ".deck-card[data-controller=row-link][data-row-link-href-value=?]",
+    assert_select "tr[data-controller=row-link][data-row-link-href-value=?]",
       fd_case_path(@free), 1
   end
 
@@ -166,10 +166,10 @@ class FdQueueTest < ActionDispatch::IntegrationTest
   test "a resolved card names the violation in full, not the raw key" do
     @mine.update!(category_key: "harassment_general", resolved_at: Time.current,
       resolution: "no_action")
-    get fd_cases_path(view: "everything")
+    get fd_cases_path(view: "resolved")
 
-    assert_select ".deck-meta b", text: "Systematic harassment, general"
-    assert_select ".deck-meta", text: /harassment_general/, count: 0
+    assert_select ".queue-table td", text: "Systematic harassment, general"
+    assert_select ".queue-table", text: /harassment_general/, count: 0
   end
 
   test "a row with no category does not print a bare n/a in the subtitle" do

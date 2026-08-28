@@ -1,0 +1,37 @@
+<div class="board">
+  <% case_lanes(cases).each do |lane, held| %>
+    <div class="lane">
+      <div class="lane-head">
+        <i class="lane-dot lane-<%= lane %>" aria-hidden="true"></i>
+        <span class="grow"><%= lane %></span>
+        <b><%= held.size %></b>
+      </div>
+      <% if held.any? %>
+        <% held.each do |kase| %>
+          <div class="lane-card" data-controller="row-link"
+               data-row-link-href-value="<%= fd_case_path(kase) %>"
+               data-action="click->row-link#go">
+            <div class="lane-id">
+              #<%= kase.id %>
+              <span><%= category_label(kase.category_key) %></span>
+            </div>
+            <p class="lane-said"><%= case_excerpt(kase) || "no report on file" %></p>
+            <div class="lane-foot">
+              <% where = thread_channels[kase.id]&.first %>
+              <span class="mono"><%= where ? channel_label(where) : "n/a" %></span>
+              <span class="grow"></span>
+              <% if kase.assigned? %>
+                <%= assignee_faces(kase.assignee_user_ids) %>
+              <% end %>
+              <span class="<%= age_ink(case_age_seconds(kase)) unless kase.resolved? %>">
+                <%= kase.resolved? ? "resolved" : case_age_label(case_age_seconds(kase)) %>
+              </span>
+            </div>
+          </div>
+        <% end %>
+      <% else %>
+        <p class="lane-none">nothing here</p>
+      <% end %>
+    </div>
+  <% end %>
+</div>
