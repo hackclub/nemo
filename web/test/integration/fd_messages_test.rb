@@ -42,7 +42,6 @@ class FdMessagesTest < ActionDispatch::IntegrationTest
     get fd_cases_path
     get fd_cases_path
 
-    assert_select ".topbar .field-top"
     assert_select ".topbar-msg", count: 0
   end
 

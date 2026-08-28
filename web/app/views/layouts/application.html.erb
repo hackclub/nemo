@@ -19,14 +19,11 @@
       (function () {
         try {
           var stored = localStorage.getItem("mn-theme");
-          var known = ["paper", "fog", "slate", "midnight", "ember"];
-          if (stored === "dark") stored = "slate";
-          if (stored === "light") stored = "paper";
-          if (known.indexOf(stored) !== -1) {
+          if (stored === "paper" || stored === "fog") stored = "light";
+          if (stored === "slate" || stored === "midnight" || stored === "ember") stored = "dark";
+          if (stored === "dark" || stored === "light") {
             document.documentElement.setAttribute("data-theme", stored);
-          }
-          if (localStorage.getItem("mn-rail") === "shut") {
-            document.documentElement.classList.add("rail-shut");
+            localStorage.setItem("mn-theme", stored);
           }
           if (localStorage.getItem("mn-dock") === "open") {
             document.documentElement.classList.add("dock-open");
@@ -45,33 +42,57 @@
   <body>
     <%= render "shared/synthetic_banner" %>
     <% fire_engine = on?(:fire_engine) %>
-    <div class="shell" data-controller="dismiss rail<%= " palette" if fire_engine %>"
+    <div class="shell" data-controller="dismiss<%= " palette" if fire_engine %>"
          data-palette-url-value="<%= fd_search_path(format: :json) %>"
          data-palette-on-value="<%= content_for(:palette_on) %>"
          data-action="keydown@document->palette#key">
       <aside class="rail">
         <div class="brand">
           <span class="brand-mark">M</span>
-          <span class="rail-text brand-name">Mnemosyne</span>
+          <span class="brand-name">Mnemosyne</span>
         </div>
 
         <% if on?(:analytics) %>
-        <div>
-          <p class="rail-label">Main menu</p>
-          <nav class="rail-nav" aria-label="Main">
+        <div class="navsec">
+          <p class="rail-label">The journey</p>
+          <nav class="rail-nav" aria-label="The journey">
             <%= link_to root_path, class: "rail-item",
                   aria: { current: ("page" if current_page?(root_path)) } do %>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              <span class="rail-ic" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              </span>
               <span class="rail-text">Overview</span>
             <% end %>
+            <% journey_stages.each do |number, label, anchor| %>
+              <%= link_to root_path(anchor: anchor), class: "rail-item" do %>
+                <span class="rail-ix" aria-hidden="true"><%= number %></span>
+                <span class="rail-text"><%= label %></span>
+              <% end %>
+            <% end %>
+          </nav>
+        </div>
+
+        <div class="navsec">
+          <p class="rail-label">Places</p>
+          <nav class="rail-nav" aria-label="Places">
             <%= link_to channels_path, class: "rail-item",
                   aria: { current: ("page" if controller_name == "channels") } do %>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg>
+              <span class="rail-ic" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg>
+              </span>
               <span class="rail-text">Channels</span>
             <% end %>
+          </nav>
+        </div>
+
+        <div class="navsec">
+          <p class="rail-label">The engine</p>
+          <nav class="rail-nav" aria-label="The engine">
             <%= link_to engine_path, class: "rail-item",
                   aria: { current: ("page" if controller_name == "engine") } do %>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+              <span class="rail-ic" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+              </span>
               <span class="rail-text">Engine</span>
             <% end %>
           </nav>
@@ -79,12 +100,14 @@
         <% end %>
 
         <% if fire_engine %>
-        <div>
+        <div class="navsec">
           <p class="rail-label">Fire Engine</p>
           <nav class="rail-nav" aria-label="Fire Engine">
             <%= link_to fd_cases_path, class: "rail-item",
                   aria: { current: ("page" if controller_path == "fd/cases") } do %>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4 6v6c0 4 3.4 7.4 8 8 4.6-.6 8-4 8-8V6l-8-3Z"/></svg>
+              <span class="rail-ic" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4 6v6c0 4 3.4 7.4 8 8 4.6-.6 8-4 8-8V6l-8-3Z"/></svg>
+              </span>
               <span class="rail-text">Cases</span>
               <% if open_case_count.positive? %>
                 <span class="rail-badge"><%= open_case_count %></span>
@@ -92,13 +115,17 @@
             <% end %>
             <%= link_to fd_members_path, class: "rail-item",
                   aria: { current: ("page" if controller_path.start_with?("fd/member")) } do %>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M18 20a6 6 0 0 0-2.4-4.8"/></svg>
+              <span class="rail-ic" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M18 20a6 6 0 0 0-2.4-4.8"/></svg>
+              </span>
               <span class="rail-text">Members</span>
             <% end %>
             <% if on?(:decisions) %>
             <%= link_to fd_decisions_path, class: "rail-item",
                   aria: { current: ("page" if controller_path.start_with?("fd/decision")) } do %>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v14H6.5A1.5 1.5 0 0 0 5 18.5V4.5Z"/><path d="M5 18.5A1.5 1.5 0 0 0 6.5 20H19"/><path d="M8.5 7.5h7M8.5 11h4.5"/></svg>
+              <span class="rail-ic" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v14H6.5A1.5 1.5 0 0 0 5 18.5V4.5Z"/><path d="M5 18.5A1.5 1.5 0 0 0 6.5 20H19"/><path d="M8.5 7.5h7M8.5 11h4.5"/></svg>
+              </span>
               <span class="rail-text">Decisions</span>
             <% end %>
             <% end %>
@@ -106,13 +133,18 @@
         </div>
         <% end %>
 
-        <div class="rail-foot">
-          <button type="button" class="rail-item rail-fold" data-action="rail#toggle"
-                  aria-label="Collapse the menu">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6 9 12l6 6"/></svg>
-            <span class="rail-text">Collapse</span>
-          </button>
-        </div>
+        <% if fire_engine %>
+          <div class="rail-foot">
+            <button type="button" class="rail-item rail-find" data-action="palette#open"
+                    aria-label="Search cases, members, notes">
+              <span class="rail-ic" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              </span>
+              <span class="rail-text">Search</span>
+              <span class="kbd">⌘K</span>
+            </button>
+          </div>
+        <% end %>
       </aside>
 
       <div class="main" data-controller="case-timeline">
@@ -126,15 +158,6 @@
           <%= yield :page_badge %>
 
           <span class="topbar-fill"></span>
-
-          <% if fire_engine %>
-          <button type="button" class="field-top" data-action="palette#open"
-                  aria-label="Search cases, members, notes">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-            Search cases, members, notes
-            <span class="kbd">⌘K</span>
-          </button>
-          <% end %>
 
           <% if content_for?(:head_actions) %>
             <div class="head-actions"><%= content_for(:head_actions) %></div>

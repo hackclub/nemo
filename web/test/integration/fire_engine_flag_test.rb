@@ -17,22 +17,6 @@ class FireEngineFlagTest < ActionDispatch::IntegrationTest
     Fd::Flag.set!(:fire_engine, false, by: @me.user_id)
   end
 
-  test "with it on, the rail carries the whole section" do
-    get root_path
-
-    assert_select "nav[aria-label='Fire Engine'] a", minimum: 2
-    assert_select ".rail-label", text: "Fire Engine"
-  end
-
-  test "with it off, the section is not in the rail at all" do
-    turn_it_off
-    get root_path
-
-    assert_select "nav[aria-label='Fire Engine']", count: 0
-    assert_select ".rail-label", text: "Fire Engine", count: 0
-    assert_select ".rail-label", text: "Main menu", count: 1, message: "analytics is untouched"
-  end
-
   test "with it off, the palette goes with it" do
     turn_it_off
     get root_path

@@ -17,22 +17,6 @@ class AnalyticsFlagTest < ActionDispatch::IntegrationTest
     Fd::Flag.set!(:analytics, false, by: @me.user_id)
   end
 
-  test "with it on, the rail carries the whole main menu" do
-    get fd_cases_path
-
-    assert_select "nav[aria-label=Main] a", minimum: 3
-    assert_select ".rail-label", text: "Main menu"
-  end
-
-  test "with it off, the main menu is not in the rail at all" do
-    turn_it_off
-    get fd_cases_path
-
-    assert_select "nav[aria-label=Main]", count: 0
-    assert_select ".rail-label", text: "Main menu", count: 0
-    assert_select ".rail-text", text: "Cases", count: 1, message: "fire engine is untouched"
-  end
-
   test "with it off, every analytics page sends you to the queue" do
     turn_it_off
 

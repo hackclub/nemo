@@ -212,6 +212,5 @@ class FdSearchTest < ActionDispatch::IntegrationTest
 
     assert_select "[data-controller~=palette]"
     assert_select ".palette-host input[data-palette-target=input]"
-    assert_select "button.field-top[data-action='palette#open']"
   end
 end

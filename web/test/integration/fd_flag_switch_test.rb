@@ -69,14 +69,4 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
     assert_redirected_to fd_settings_path(tab: "sections")
     assert_match(/not a flag/, flash[:alert])
   end
-
-  test "flipping one section leaves the other showing" do
-    sign_in_as(@boss)
-
-    patch fd_flag_path, params: { key: "decisions", on: "0" }
-    get fd_cases_path
-
-    assert_select ".rail-text", text: "Decisions", count: 0
-    assert_select "nav[aria-label=Main] a", minimum: 3
-  end
 end

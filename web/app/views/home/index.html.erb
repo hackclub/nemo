@@ -57,7 +57,7 @@
   </div>
 </div>
 
-<div data-controller="growth-months" data-growth-months-url-value="<%= root_path %>">
+<div id="acquisition" data-controller="growth-months" data-growth-months-url-value="<%= root_path %>">
   <div data-growth-months-target="container">
     <%= render "growth", growth_months: @growth_months, growth_span: @growth_span %>
   </div>
@@ -190,7 +190,7 @@
   </div>
 </div>
 
-<div data-controller="top-posters" data-top-posters-url-value="<%= root_path %>">
+<div id="distribution" data-controller="top-posters" data-top-posters-url-value="<%= root_path %>">
   <div data-top-posters-target="container">
     <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months, top_posters_month: @top_posters_month %>
   </div>
@@ -247,7 +247,7 @@
 </div>
 <% end %>
 
-<div data-controller="newcomer-channels" data-newcomer-channels-url-value="<%= root_path %>">
+<div id="activation" data-controller="newcomer-channels" data-newcomer-channels-url-value="<%= root_path %>">
   <div data-newcomer-channels-target="container">
     <%= render "newcomer_channels", newcomer_channels: @newcomer_channels,
           newcomer_reach: @newcomer_reach, newcomer_measure: @newcomer_measure %>
@@ -309,7 +309,7 @@
   </div>
 <% end %>
 
-<div data-controller="onboarding-funnel" data-onboarding-funnel-url-value="<%= root_path %>">
+<div id="retention" data-controller="onboarding-funnel" data-onboarding-funnel-url-value="<%= root_path %>">
   <div data-onboarding-funnel-target="container">
     <%= render "onboarding_funnel", onboarding_funnel: @onboarding_funnel, cohort_months: @cohort_months %>
   </div>
@@ -350,7 +350,7 @@
 </div>
 
 <% checked, by_member, bot_first, bot_first_then_member = @response_rate_totals %>
-<div class="card card-flush">
+<div id="response" class="card card-flush">
   <div class="card-head">
     <div>
       <h2 class="card-title">Response rate</h2>
