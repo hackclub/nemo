@@ -1,10 +1,11 @@
 import argparse
+import os
 import sys
+import time
 from datetime import date, datetime, timezone
 
 from dotenv import load_dotenv
 
-import os
 
 import psycopg
 
@@ -13,6 +14,7 @@ from lib.db import connect, credentials
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
 from lib.settings import PERIOD
+from lib.slack_client import bot_client
 
 TOLERANCE = 0.01
 
@@ -251,10 +253,11 @@ def check_monthly_stats_roll_up_the_daily(conn, client):
 
 def check_the_two_channel_sources_stay_together(conn, client):
     lag = one(conn, """
-        select (select max(window_end) from analytics.mart_channel_range)
-             - (select max(window_start) from analytics.mart_channel_activity)""")
+        select greatest(0,
+            (select max(window_end) from analytics.mart_channel_range)
+          - (select max(window_start) from analytics.mart_channel_activity))""")
     return ("channel daily pull, days behind the walk", "cross",
-            "0 days if both ran last night", lag, 0)
+            "up to 2, since the export lags the walk by a day", lag, 2)
 
 
 def check_channel_members_against_slack(conn, client):
@@ -266,6 +269,39 @@ def check_channel_members_against_slack(conn, client):
                (top["channel_id"],))
     return (f"mart_channel_range.total_members #{top.get('name')}", "slack",
             "getChannelAnalytics", ours, top.get("total_members_count"))
+
+
+def check_the_dimension_join_drops_nothing(conn, client):
+    walked = one(conn, "select count(*) from analytics.fct_channel_range")
+    listed = one(conn, "select count(*) from analytics.mart_channel_range")
+    return ("channels the dimension join drops", "cross",
+            "0, every walked channel should reach the mart", walked - listed, 0)
+
+
+def check_archived_flags_against_slack(conn, client):
+    bot = bot_client()
+    team = os.environ.get("SLACK_TEAM_ID")
+    theirs, cursor = {}, ""
+    while True:
+        page = bot.conversations_list(types="public_channel", limit=1000,
+                                      cursor=cursor, exclude_archived=False, team_id=team)
+        for channel in page["channels"]:
+            theirs[channel["id"]] = bool(channel.get("is_archived"))
+        cursor = (page.get("response_metadata") or {}).get("next_cursor") or ""
+        if not cursor:
+            break
+        time.sleep(1.2)
+    with conn.cursor() as cur:
+        cur.execute("select channel_id from analytics.dim_channel where not archived")
+        ours = [r[0] for r in cur.fetchall()]
+    drifted = sum(1 for cid in ours if theirs.get(cid) is True)
+    unlisted = sum(1 for cid in ours if cid not in theirs)
+    return [
+        ("channels we call live that Slack has archived", "slack",
+         "0, the archived flag should follow Slack", drifted, 0),
+        ("channels we hold that this team's list never returns", "slack",
+         "reported, not judged: likely other teams in the grid", unlisted, unlisted),
+    ]
 
 
 def check_channel_count_against_slack(conn, client):
@@ -374,6 +410,7 @@ SLACK_CHECKS = {
     "check_claimed_against_slack",
     "check_channel_members_against_slack",
     "check_channel_count_against_slack",
+    "check_archived_flags_against_slack",
     "check_top_poster_against_slack",
 }
 
@@ -390,6 +427,8 @@ CHECKS = [
     check_the_two_channel_sources_stay_together,
     check_channel_members_against_slack,
     check_channel_count_against_slack,
+    check_the_dimension_join_drops_nothing,
+    check_archived_flags_against_slack,
     check_top_poster_against_slack,
     check_distribution_population,
     check_response_rate_totals,
@@ -438,6 +477,8 @@ def run(only=None, tolerance=TOLERANCE, cross_only=False):
     skipped = 0
     with connect() as pipe:
         for check in PIPELINE_CHECKS:
+            if only and only not in check.__name__:
+                continue
             try:
                 results.extend(check(pipe))
             except Exception as exc:
