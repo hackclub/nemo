@@ -128,6 +128,23 @@ where p.id = (select max(id) from raw.ingest_run
 """
 
 
+HEARTBEAT_STALE_MINUTES = 15.0
+
+
+def check_the_worker_is_alive(pipe_conn):
+    now = datetime.now(timezone.utc)
+    with pipe_conn.cursor() as cur:
+        cur.execute("select beat_at from raw.worker_heartbeat where worker = 'sync_worker'")
+        row = cur.fetchone()
+    if row is None:
+        return [("minutes since the worker said it was alive", "fresh",
+                 "it has never said so, which means it has not started since this shipped",
+                 None, HEARTBEAT_STALE_MINUTES)]
+    return [("minutes since the worker said it was alive", "fresh",
+             f"{HEARTBEAT_STALE_MINUTES:.0f}, it beats every poll",
+             round((now - row[0]).total_seconds() / 60, 1), HEARTBEAT_STALE_MINUTES)]
+
+
 def check_the_nightly_ran_the_whole_plan(pipe_conn):
     total = len(sources.KEYS)
     now = datetime.now(timezone.utc)
@@ -414,7 +431,11 @@ SLACK_CHECKS = {
     "check_top_poster_against_slack",
 }
 
-PIPELINE_CHECKS = [check_every_source_is_fresh, check_the_nightly_ran_the_whole_plan]
+PIPELINE_CHECKS = [
+    check_every_source_is_fresh,
+    check_the_nightly_ran_the_whole_plan,
+    check_the_worker_is_alive,
+]
 
 CHECKS = [
     check_members_against_slack,

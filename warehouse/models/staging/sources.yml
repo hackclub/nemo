@@ -19,4 +19,5 @@ sources:
       - name: member_channel_message
       - name: member_channel_membership
       - name: member_channel_walk
+      - name: worker_heartbeat
       - name: deployment

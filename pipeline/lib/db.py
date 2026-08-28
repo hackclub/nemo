@@ -85,6 +85,21 @@ class SeededDeployment(RuntimeError):
     """The database holds synthetic data, so ingestion must not run against it"""
 
 
+BEAT_SQL = """
+INSERT INTO raw.worker_heartbeat (worker, beat_at, note)
+VALUES (%s, now(), %s)
+ON CONFLICT (worker) DO UPDATE SET beat_at = now(), note = EXCLUDED.note
+"""
+
+
+def beat(conn: psycopg.Connection, worker: str, note: str | None = None) -> None:
+    try:
+        conn.execute(BEAT_SQL, (worker, note))
+        conn.commit()
+    except psycopg.Error:
+        conn.rollback()
+
+
 def deployment_mode(conn: psycopg.Connection) -> str:
     row = conn.execute("SELECT mode FROM raw.deployment").fetchone()
     return row[0] if row else "live"

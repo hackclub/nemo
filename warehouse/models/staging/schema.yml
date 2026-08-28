@@ -121,3 +121,9 @@ models:
         data_tests: [not_null]
       - name: channel_id
         data_tests: [not_null]
+  - name: fct_worker_heartbeat
+    columns:
+      - name: worker
+        data_tests: [not_null, unique]
+      - name: beat_at
+        data_tests: [not_null]

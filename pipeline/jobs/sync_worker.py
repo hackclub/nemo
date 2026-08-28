@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from jobs.nightly_sync import ENV_FILE, TRUTHY, run_sync, stage_plan
 from lib import settings
 from lib.db import (
+    beat,
     STALE_AFTER_HOURS,
     SeededDeployment,
     cancel_scope,
@@ -175,6 +176,17 @@ def run_at_start_enabled():
     return os.environ.get("NIGHTLY_RUN_AT_START", "").strip().lower() in TRUTHY
 
 
+WORKER = "sync_worker"
+
+
+def alive(note):
+    try:
+        with connect() as conn:
+            beat(conn, WORKER, note)
+    except Exception as exc:
+        print(f"sync worker: heartbeat failed, {type(exc).__name__}: {exc}")
+
+
 def run_scheduled(label="scheduled"):
     print(f"sync worker: {label} run starting at {datetime.now():%Y-%m-%dT%H:%M:%S}")
     try:
@@ -202,6 +214,7 @@ def main():
     )
     waiting = listener()
     reap()
+    alive(f"next scheduled run at {scheduled:%Y-%m-%dT%H:%M}")
 
     if run_at_start_enabled():
         run_scheduled("startup")
@@ -209,6 +222,7 @@ def main():
         print(f"sync worker: next scheduled run at {scheduled:%Y-%m-%dT%H:%M}")
 
     while True:
+        alive(f"next scheduled run at {scheduled:%Y-%m-%dT%H:%M}")
         if datetime.now() >= scheduled:
             run_scheduled()
             scheduled = next_run_at(at, datetime.now())
