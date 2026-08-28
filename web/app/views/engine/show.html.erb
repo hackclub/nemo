@@ -1,13 +1,4 @@
 <% content_for :page_title, "Run #{@run.id}" %>
-<% content_for :page_subtitle do %>
-  <% if @steps.any? && @steps.first.step_total == 1 %>
-    single stage &middot; <%= @steps.first.source %>
-  <% elsif @steps.any? %>
-    full nightly &middot; <%= @steps.first.step_total %> stages
-  <% else %>
-    predates per-stage tracking
-  <% end %>
-<% end %>
 
 <%= render "run_detail", run: @run, steps: @steps, step_output: @step_output, heading: "This run" %>
 

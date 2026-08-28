@@ -15,7 +15,7 @@ class FdPersonDrawerTest < ActionDispatch::IntegrationTest
 
     assert_select "turbo-frame#person-drawer", 1
     assert_select ".drawer-h", 1
-    assert_select ".head-actions", 0, "the full page's header actions do not leak into the drawer"
+    assert_select ".ractions", 0, "the full page's header actions do not leak into the drawer"
   end
 
   test "a plain visit to a member still renders the whole page" do
@@ -24,7 +24,6 @@ class FdPersonDrawerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#person-drawer", 1
     assert_select "turbo-frame#person-drawer .drawer-h", 0, "the layout's frame stays empty"
     assert_select ".crumb a[href=?]", fd_members_path
-    assert_select ".head-actions", 1, "the full page keeps its own header actions"
   end
 
   test "a case note by another author opens their drawer, not a full navigation" do

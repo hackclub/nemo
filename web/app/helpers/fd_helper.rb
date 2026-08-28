@@ -1237,13 +1237,6 @@ module FdHelper
     count.to_i.zero? ? "n/a" : pluralize(count, "case")
   end
 
-  def decision_head_meta(decision)
-    parts = []
-    parts << decision.category_label.downcase if decision.category_key
-    parts << decision_when_line(decision)
-    safe_join(parts, " · ")
-  end
-
   def decision_history_line(decision)
     parts = [safe_join(["proposed #{decision.proposed_at.strftime('%-d %b %Y')} by ",
       member_link(decision.proposed_by)])]

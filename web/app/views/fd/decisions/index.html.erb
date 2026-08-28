@@ -1,9 +1,4 @@
 <% content_for :page_title, "Decisions" %>
-<% content_for :page_subtitle do %>
-  <%= @counts["force"] %> in force ·
-  <%= @counts["proposed"] %> proposed ·
-  <%= @counts["retired"] %> retired
-<% end %>
 <% content_for :head_actions do %>
   <%= opens_modal "decision.write", "New decision", opens: "new-decision",
         css: "btn btn-primary" %>

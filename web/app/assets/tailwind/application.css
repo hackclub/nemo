@@ -445,67 +445,79 @@
     overflow: hidden;
   }
 
-  .topbar {
+  .rhead {
     position: relative;
-    display: flex;
-    align-items: center;
-    gap: var(--s-2xs);
-    height: 52px;
-    padding: 0 var(--s-page);
+    padding: 16px var(--s-page) 14px;
     border-bottom: 1px solid var(--line);
     background-color: var(--card);
-    flex-wrap: nowrap;
     flex: none;
   }
 
-  .topbar-fill {
-    flex: 1 1 auto;
-    min-width: var(--s-2xs);
+  .rtop {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
   }
 
-  .field-top {
-    flex: 0 1 254px;
+  .rhead-said {
     min-width: 0;
+  }
+
+  .rkicker {
+    font-family: var(--font-code);
+    font-size: var(--t-fine);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 6px;
+  }
+
+  .rkicker-plain {
+    color: var(--ink-3);
+  }
+
+  .rtitle {
     display: flex;
-    align-items: center;
-    gap: 7px;
-    height: var(--chat-ctl);
-    padding: 0 8px 0 10px;
-    border: 1px solid var(--line);
-    border-radius: var(--r-ctl);
-    background-color: var(--card-2);
+    align-items: baseline;
+    gap: var(--s-3xs);
+    font-size: var(--t-title);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin: 0;
+    min-width: 0;
+  }
+
+  .rsub {
     color: var(--ink-3);
     font-size: var(--t-small);
-    font-family: inherit;
-    text-align: left;
-    white-space: nowrap;
-    cursor: pointer;
+    margin: 5px 0 0;
+    max-width: 70ch;
   }
 
-  .field-top .kbd {
+  .ractions {
     margin-inline-start: auto;
+    display: flex;
+    gap: 7px;
+    align-items: center;
+    flex: none;
   }
 
-  .field-top:hover {
-    color: var(--ink-2);
+  .qbar {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs);
+    flex-wrap: wrap;
+    padding: 12px 0 0;
   }
 
-  .field-top input {
-    border: 0;
-    background: 0;
-    font-family: inherit;
-    font-size: var(--t-body);
-    color: var(--ink);
-    width: 100%;
-    min-width: 0;
+  .qlab {
+    font-size: var(--t-fine);
+    color: var(--ink-3);
+    font-weight: 500;
   }
 
-  .field-top input:focus {
-    outline: none;
-  }
-
-  .field-top:focus-within {
-    border-color: var(--focus);
+  .qspacer {
+    flex: 1;
   }
 
   .avatar {
@@ -600,40 +612,6 @@
     border-color: var(--focus);
   }
 
-  .head-title {
-    font-size: var(--t-title);
-    font-weight: 620;
-    font-stretch: 104%;
-    line-height: 1.15;
-    margin: 0;
-    letter-spacing: -0.02em;
-    flex: 0 1 auto;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .head-meta {
-    font-size: var(--t-small);
-    font-weight: 500;
-    color: var(--ink-2);
-    min-width: 0;
-    flex: 0 1 auto;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .head-actions {
-    display: flex;
-    align-items: center;
-    gap: var(--s-2xs);
-    margin-inline-start: auto;
-    flex: none;
-    flex-wrap: nowrap;
-  }
-
   .crumb {
     background: 0;
     border: 0;
@@ -691,45 +669,42 @@
   /* ── the message in the top bar ────────────────────────── */
 
   .topbar-msgs {
-    position: absolute;
-    top: calc(100% + var(--s-2xs));
-    inset-inline-end: var(--s-page);
-    z-index: 20;
+    position: fixed;
+    bottom: 22px;
+    inset-inline: 0;
+    z-index: 90;
     display: grid;
     gap: var(--s-2xs);
-    justify-items: end;
+    justify-items: center;
+    pointer-events: none;
   }
 
   .topbar-msg {
-    width: min(23rem, calc(100vw - var(--s-page) * 2));
+    max-width: min(34rem, calc(100vw - var(--s-page) * 2));
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--s-2xs);
-    padding: 10px 11px;
-    background-color: var(--card);
-    border: 1px solid var(--line);
-    border-inline-start: 3px solid var(--ink-3);
-    border-radius: 10px;
-    box-shadow: var(--e-2);
-    color: var(--ink);
+    padding: 9px 11px 9px 14px;
+    background-color: var(--tip-bg);
+    border: 1px solid var(--tip-bg);
+    border-radius: 7px;
+    box-shadow: var(--e-1);
+    color: var(--tip-ink);
     opacity: 1;
+    pointer-events: auto;
     transition: opacity 180ms var(--ease-out);
-  }
-
-  .topbar-msg-good { border-inline-start-color: var(--good); }
-  .topbar-msg-warn { border-inline-start-color: var(--warn); }
-  .topbar-msg-bad { border-inline-start-color: var(--sev-crit); }
-
-  .msg-mark {
-    flex: none;
-    margin-top: 1px;
-    color: var(--ink-3);
-    display: grid;
   }
 
   .topbar-msg-good .msg-mark { color: var(--good); }
   .topbar-msg-warn .msg-mark { color: var(--warn); }
   .topbar-msg-bad .msg-mark { color: var(--sev-crit); }
+
+  .msg-mark {
+    flex: none;
+    color: var(--tip-ink);
+    opacity: 0.7;
+    display: grid;
+  }
 
   .msg-body {
     display: grid;
@@ -740,20 +715,23 @@
 
   .msg-title {
     font-size: var(--t-small);
-    font-weight: 600;
+    font-weight: 500;
     overflow-wrap: anywhere;
   }
 
   .msg-said {
     font-size: var(--t-fine);
-    color: var(--ink-2);
+    color: var(--tip-ink);
+    opacity: 0.75;
     overflow-wrap: anywhere;
   }
 
   .msg-did a {
     font-size: var(--t-fine);
     font-weight: 600;
-    color: var(--link);
+    color: var(--tip-ink);
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
   .msg-shut {
@@ -766,13 +744,13 @@
     border: 0;
     border-radius: 5px;
     background: none;
-    color: var(--ink-3);
+    color: var(--tip-ink);
     cursor: pointer;
   }
 
   .msg-shut:hover {
-    background-color: var(--card-2);
-    color: var(--ink);
+    background-color: rgb(255 255 255 / 0.14);
+    color: var(--tip-ink);
   }
 
   .topbar-msg.is-leaving {
@@ -1460,14 +1438,6 @@
 
   .field:focus-within {
     border-color: var(--focus);
-  }
-
-  .control-bar {
-    display: flex;
-    align-items: flex-end;
-    gap: var(--s-2xs);
-    flex-wrap: wrap;
-    margin-bottom: var(--s-sm);
   }
 
   .field-label {

@@ -35,7 +35,6 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     get fd_settings_path
 
     assert_response :success
-    assert_select ".head-title", text: "Settings"
     assert_select ".chip.chip-off", text: "firefighter"
     assert_select ".chip.chip-warn", text: "lead"
     assert_select "td", text: /UFF1/

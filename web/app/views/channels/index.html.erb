@@ -1,15 +1,4 @@
 <% content_for :page_title, "Public channels" %>
-<% content_for :page_badge do %>
-  <span class="count-pill"><%= number_with_delimiter(@total) %></span>
-  <% if @range_window %>
-    <span class="head-meta">
-      messages and posters cover
-      <%= @range_window.window_start.strftime("%b %-d, %Y") %> to
-      <%= @range_window.window_end.strftime("%b %-d, %Y") %>
-    </span>
-  <% end %>
-<% end %>
-
 <div data-controller="channel-list"
      data-channel-list-url-value="<%= channels_path %>"
      data-channel-list-sort-value="<%= @sort %>"

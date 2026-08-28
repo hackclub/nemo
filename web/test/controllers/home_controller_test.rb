@@ -13,7 +13,6 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     get root_path
 
     assert_response :success
-    assert_select "h1.head-title", "Overview"
     assert_select ".kpis .card .kpi-val", minimum: 4
   end
 

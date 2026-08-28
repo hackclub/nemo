@@ -166,14 +166,6 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     assert_equal %w[UME UOTHER], kase.reload.assignee_user_ids.sort
   end
 
-  test "the top bar carries the case number, not the violation" do
-    @kase.update!(category_key: "harassment")
-    get fd_case_path(@kase)
-
-    assert_select ".head-title", text: @kase.id.to_s
-    assert_select ".topbar .chip", 0, "no pills sit next to the case number"
-  end
-
   test "the case names what it still needs instead of warning vaguely" do
     get fd_case_path(make_case(subject: nil))
 

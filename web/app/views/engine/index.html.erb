@@ -7,20 +7,8 @@
 
 <% content_for :page_title, "Engine" %>
 
-<% content_for :page_badge do %>
-  <% if @auto_refresh %>
-    <span class="chip chip-off" data-controller="run-refresh" data-run-refresh-seconds-value="10">
-      live, refreshing every 10s
-    </span>
-  <% end %>
-<% end %>
-
 <% content_for :head_actions do %>
   <% if @active_request %>
-    <span class="chip chip-off">
-      sync <%= @active_request.status %>, requested by <%= @active_request.requested_by %>
-      <%= time_ago_in_words(@active_request.created_at) %> ago
-    </span>
     <% if @active_request.status != "cancelling" %>
       <%= button_to "Cancel", engine_cancel_path, class: "btn", form: { class: "contents" } %>
     <% end %>
@@ -29,6 +17,20 @@
           class: "btn btn-primary", form: { class: "contents" } %>
   <% end %>
 <% end %>
+
+<div class="chiprow">
+  <% if @active_request %>
+    <span class="chip chip-off">
+      sync <%= @active_request.status %>, requested by <%= @active_request.requested_by %>
+      <%= time_ago_in_words(@active_request.created_at) %> ago
+    </span>
+  <% end %>
+  <% if @auto_refresh %>
+    <span class="chip chip-off" data-controller="run-refresh" data-run-refresh-seconds-value="10">
+      live, refreshing every 10s
+    </span>
+  <% end %>
+</div>
 
 <div class="views">
   <% EngineController::TABS.each do |key, label| %>

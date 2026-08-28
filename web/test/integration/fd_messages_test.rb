@@ -13,7 +13,7 @@ class FdMessagesTest < ActionDispatch::IntegrationTest
     post fd_case_claim_path(kase)
     follow_redirect!
 
-    assert_select ".topbar .topbar-msg .msg-title", text: /case #{kase.id} is yours/
+    assert_select ".topbar-msg .msg-title", text: /case #{kase.id} is yours/
     assert_select ".topbar-msgs[aria-live=?]", "polite"
     assert_select ".topbar-msg.topbar-msg-good[data-toast-delay-value=?]", "3000"
   end

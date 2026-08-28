@@ -1,10 +1,4 @@
 <% content_for :page_title, @found.term.presence || "Search" %>
-<% if @found.asked? %>
-  <% content_for :page_subtitle do %>
-    <%= pluralize(@counts.values.sum, "hit") %> in <%= @took %>ms
-  <% end %>
-<% end %>
-
 <div class="stack">
   <% if @found.asked? %>
     <div class="views">

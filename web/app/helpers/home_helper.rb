@@ -75,7 +75,6 @@ module HomeHelper
     end
   end
 
-  STALE_AFTER_DAYS = 2
 
   def stat_delta(current, prior)
     return nil if current.nil? || prior.nil? || prior.to_f.zero?
@@ -127,17 +126,6 @@ module HomeHelper
     return format("%.1f h", hours) if hours < 48
 
     format("%.1f d", hours / 24)
-  end
-
-  def as_of_badge(ds)
-    return tag.span("no data loaded", class: "chip chip-warn") if ds.nil?
-
-    age = (Date.current - ds).to_i
-    behind = age.zero? ? "today" : "#{pluralize(age, "day")} behind"
-    label = "data as of #{ds.strftime("%b %-d, %Y")} · #{behind}"
-    return tag.span(label, class: "head-meta") if age <= STALE_AFTER_DAYS
-
-    tag.span(label, class: "chip chip-warn")
   end
 
   def share_pct(numerator, denominator)

@@ -1,8 +1,4 @@
 <% content_for :page_title, "Overview" %>
-<% content_for :page_badge do %>
-  <%= as_of_badge(@team_stats&.ds) %>
-<% end %>
-
 <% if @team_stats.nil? %>
   <div class="card">
     <div class="card-head">

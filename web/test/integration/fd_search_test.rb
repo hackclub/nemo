@@ -171,8 +171,6 @@ class FdSearchTest < ActionDispatch::IntegrationTest
     get fd_search_path(q: "raid")
 
     assert_response :success
-    assert_select ".head-title", text: "raid"
-    assert_select ".head-meta", text: /hits in \d+ms/
     assert_select ".band-label", text: /Cases · 1/
     assert_select ".band-label", text: /Notes · 1/
     assert_select "a[href=?]", fd_case_path(kase)

@@ -2,7 +2,6 @@
 <% content_for :page_face do %>
   <span class="crumb"><%= link_to "Cases", fd_cases_path(@carry) %> /</span>
 <% end %>
-<% content_for :page_subtitle, "the older case holds them" %>
 
 <div class="card card-flush">
   <%= render "ticked", plan: @plan, carry: @carry %>
