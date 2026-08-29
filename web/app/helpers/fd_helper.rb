@@ -1035,6 +1035,13 @@ module FdHelper
     value ? number_with_delimiter(value) : "n/a"
   end
 
+  def here_since(context)
+    at = context&.cohort_at
+    return "n/a" if at.nil?
+
+    "#{at.to_date.strftime('%b %Y')} &middot; #{tenure_label(context.tenure_days)}".html_safe
+  end
+
   def last_active_label(at)
     ago_label(at)
   end

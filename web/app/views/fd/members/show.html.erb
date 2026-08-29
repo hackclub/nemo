@@ -139,10 +139,10 @@
           <span class="fstat-k"><%= "action".pluralize(@standing.actions) %></span>
         </div>
         <div class="fstat">
-          <span class="fstat-n <%= "is-none" if @standing.reversed.zero? %>">
-            <%= @standing.reversed %>
+          <span class="fstat-n <%= "is-none" if @standing.in_force.empty? %>">
+            <%= @standing.in_force.size %>
           </span>
-          <span class="fstat-k">reversed</span>
+          <span class="fstat-k">in force</span>
         </div>
       </div>
 
@@ -150,7 +150,7 @@
         <div class="frow">
           <span>Here since</span>
           <b class="<%= "is-none" unless @context&.cohort_at %>">
-            <%= @context&.cohort_at ? @context.cohort_at.to_date.strftime("%b %Y") : "n/a" %>
+            <%= here_since(@context) %>
           </b>
         </div>
         <div class="frow">
@@ -160,9 +160,15 @@
           </b>
         </div>
         <div class="frow">
-          <span>Last seen</span>
-          <b class="<%= "is-none" unless @context&.last_active_at %>">
-            <%= last_active_label(@context&.last_active_at) %>
+          <span>Public channels</span>
+          <b class="<%= "is-none" unless @context&.channels_joined&.positive? %>">
+            <%= fact_number(@context&.channels_joined) %>
+          </b>
+        </div>
+        <div class="frow">
+          <span>Standing notes</span>
+          <b class="<%= "is-none" if @record.notes.empty? %>">
+            <%= @record.notes.empty? ? "none" : @record.notes.size %>
           </b>
         </div>
       </div>
