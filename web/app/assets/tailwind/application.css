@@ -529,6 +529,35 @@
     padding: 12px 0 0;
   }
 
+  .stack > .qbar,
+  .body > .qbar {
+    padding: 0;
+  }
+
+  .qbar > * {
+    flex: none;
+  }
+
+  .qbar > .qspacer {
+    flex: 1 1 auto;
+  }
+
+  .qbar .field {
+    flex: 0 1 clamp(200px, 26vw, 320px);
+    min-width: 180px;
+    padding-block: 5px;
+  }
+
+  .qbar .field input {
+    min-width: 0;
+  }
+
+  .qbar .btn,
+  .qbar .segmented,
+  .qbar .select {
+    height: var(--chat-ctl);
+  }
+
   .qlab {
     font-size: var(--t-fine);
     color: var(--ink-3);
@@ -1321,9 +1350,10 @@
   }
 
   .segmented button[aria-pressed="true"],
-  .segmented a[aria-current] {
-    background-color: var(--card);
-    color: var(--ink);
+  .segmented a[aria-current="true"],
+  .segmented a[aria-current="page"] {
+    background-color: var(--accent-soft);
+    color: var(--accent);
   }
 
   .picker {
@@ -3156,8 +3186,9 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .segmented a[aria-current] .seg-count {
-    color: var(--ink-2);
+  .segmented a[aria-current="true"] .seg-count,
+  .segmented a[aria-current="page"] .seg-count {
+    color: var(--accent);
   }
 
   .record-list {

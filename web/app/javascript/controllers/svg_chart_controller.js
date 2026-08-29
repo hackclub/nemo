@@ -80,7 +80,7 @@ export default class extends Controller {
     if (!this.switchableValue) return legend
 
     const pick = (kind, label) =>
-      `<button type="button" data-kind="${kind}" aria-current="${this.shown === kind}">${label}</button>`
+      `<button type="button" data-kind="${kind}" aria-pressed="${this.shown === kind}">${label}</button>`
 
     return `<div class="chart-head">${legend}<span class="segmented chart-pick">${
       pick("bars", "Bar")}${pick("line", "Line")}</span></div>`

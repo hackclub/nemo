@@ -4,8 +4,8 @@
      data-channel-list-sort-value="<%= @sort %>"
      data-channel-list-direction-value="<%= @direction %>"
      class="stack">
-  <% content_for :page_controls do %>
-    <label class="field max-w-sm">
+  <div class="qbar">
+    <label class="field">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <%= text_field_tag :q, @q, placeholder: "Search public channels by name",
           autocomplete: "off", aria: { label: "Search public channels by name" },
@@ -13,7 +13,7 @@
     </label>
     <span class="qspacer"></span>
     <span class="qlab"><%= number_with_delimiter(@total) %> channels</span>
-  <% end %>
+  </div>
 
   <div class="card card-flush">
     <div class="scroll">
