@@ -278,6 +278,8 @@ module Fd
       @flagged_counts = Case.flagged_counts_for(case_ids)
       @live_action_counts = Case.live_action_counts_for(case_ids)
       @action_counts = Case.action_counts_for(case_ids)
+      @endings = Case.ending_tally
+      @closed_count = Case.where.not(resolved_at: nil).count
       @channels = ChannelNames.for(@thread_channels.values.flatten)
       @stats = QueueStats.load
       @total_count = @stats.total

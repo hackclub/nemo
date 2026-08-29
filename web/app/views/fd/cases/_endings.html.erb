@@ -1,0 +1,34 @@
+<% peak = endings.map(&:last).max.to_i %>
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">How cases ended</h2>
+      <p class="card-sub">of the <%= number_with_delimiter(closed) %> closed</p>
+    </div>
+  </div>
+  <div class="scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ending</th>
+          <th class="col-num">cases</th>
+          <th>share</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% endings.each do |label, count| %>
+          <tr>
+            <td><%= label %></td>
+            <td class="col-num"><%= number_with_delimiter(count) %></td>
+            <td style="width: 44%">
+              <div class="inbar <%= "soft" if peak.positive? && count < peak / 3.0 %>">
+                <span><i style="width: <%= peak.positive? ? [(count.to_f / peak * 100), 2].max.round : 0 %>%"></i></span>
+                <span><%= closed.positive? ? "#{(count.to_f / closed * 100).round}%" : "n/a" %></span>
+              </div>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

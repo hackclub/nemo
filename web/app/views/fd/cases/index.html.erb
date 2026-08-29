@@ -73,6 +73,10 @@
     <% end %>
   <% end %>
   </turbo-frame>
+
+  <% if @endings.any? %>
+    <%= render "endings", endings: @endings, closed: @closed_count %>
+  <% end %>
 </div>
 
 <turbo-frame id="case-drawer" class="case-drawer-frame" data-controller="case-drawer"></turbo-frame>

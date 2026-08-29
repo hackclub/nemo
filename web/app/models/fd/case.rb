@@ -110,6 +110,29 @@ module Fd
       CaseCitation.where(case_id: ids).group(:case_id).count
     end
 
+    ACTED = "action_taken".freeze
+
+    def self.ending_tally
+      closed = where.not(resolved_at: nil)
+      by_resolution = closed.group(:resolution).count
+      by_action = Action.where(case_id: closed.where(resolution: ACTED).select(:id))
+        .group(:type_key).count
+
+      rows = RESOLUTION_TABLE.filter_map do |key, said|
+        next if key == ACTED
+
+        count = by_resolution[key].to_i
+        [said.fetch("label"), count] if count.positive?
+      end
+
+      acted = Action::WORST_FIRST.filter_map do |key|
+        count = by_action[key].to_i
+        [Action::LABELS.fetch(key), count] if count.positive?
+      end
+
+      acted + rows
+    end
+
     def self.action_counts_for(case_ids)
       ids = case_ids.compact.uniq
       return {} if ids.empty?
