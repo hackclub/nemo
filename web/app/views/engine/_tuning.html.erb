@@ -4,78 +4,53 @@
       <h2 class="card-title">Schedule</h2>
     </div>
   </div>
-  <div class="scroll">
-    <table class="data-table engine-table">
-      <thead>
-        <tr>
-          <th style="width:34%">setting</th>
-          <th class="col-num" style="width:16%">default</th>
-          <th class="col-num" style="width:16%">now</th>
-          <th style="width:34%">changed by</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% Engine::Setting::ENGINE_DIALS.each do |name, dial| %>
-          <%= render "dial", source: Engine::Setting::ENGINE, name: name,
-                title: dial[:label], sub: nil, may_tune: may_tune %>
-        <% end %>
-      </tbody>
-    </table>
+  <div class="card-body flush">
+    <% Engine::Setting::ENGINE_DIALS.each do |name, dial| %>
+      <div class="tgrid" style="grid-template-columns: minmax(0, 1fr) 118px 190px">
+        <div class="tn"><%= dial[:label] %></div>
+        <div class="tcell">
+          <%= render "val", source: Engine::Setting::ENGINE, name: name,
+                may_tune: may_tune, show_was: true %>
+        </div>
+        <div class="sub r">
+          <% row = Engine::Setting.find_by(source: Engine::Setting::ENGINE, name: name) %>
+          <%= row ? "#{row.changed_by}, #{time_ago_in_words(row.changed_at)} ago" : "from the file" %>
+        </div>
+      </div>
+    <% end %>
   </div>
 </div>
 
 <div class="card card-flush">
   <div class="card-head">
     <div>
-      <h2 class="card-title">Retention</h2>
+      <h2 class="card-title">Per source</h2>
     </div>
   </div>
-  <div class="scroll">
-    <table class="data-table engine-table">
-      <thead>
-        <tr>
-          <th style="width:34%">source</th>
-          <th class="col-num" style="width:16%">default</th>
-          <th class="col-num" style="width:16%">now</th>
-          <th style="width:34%">changed by</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% Engine::Source.all.select(&:prunable?).each do |s| %>
-          <%= render "dial", source: s.key, name: Engine::Setting::RETENTION,
-                title: s.key, sub: "floor #{s.prune_floor}", may_tune: may_tune %>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<div class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Cadence and batch size</h2>
+  <div class="card-body flush">
+    <div class="tgrid thead">
+      <div>Source</div>
+      <div class="tcell">Cadence</div>
+      <div class="tcell">Retention</div>
+      <div class="tcell">Enabled</div>
     </div>
-  </div>
-  <div class="scroll">
-    <table class="data-table engine-table">
-      <thead>
-        <tr>
-          <th style="width:34%">source</th>
-          <th class="col-num" style="width:16%">default</th>
-          <th class="col-num" style="width:16%">now</th>
-          <th style="width:34%">changed by</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% Engine::Source.all.each do |s| %>
-          <%= render "dial", source: s.key, name: Engine::Setting::CADENCE,
-                title: s.key, sub: "cadence", may_tune: may_tune %>
-          <% s.limits.each_key do |limit| %>
-            <%= render "dial", source: s.key, name: limit,
-                  title: s.key, sub: limit.tr("_", " "), may_tune: may_tune %>
-          <% end %>
-        <% end %>
-      </tbody>
-    </table>
+    <% sources.each do |row| %>
+      <% source = row.source %>
+      <div class="tgrid">
+        <div class="tn"><b><%= source.key %></b><span><%= source.label %></span></div>
+        <div class="tcell">
+          <%= render "val", source: source.key, name: Engine::Setting::CADENCE,
+                may_tune: may_tune, show_was: true %>
+        </div>
+        <div class="tcell">
+          <%= render "val", source: source.key, name: Engine::Setting::RETENTION,
+                may_tune: may_tune, show_was: true %>
+        </div>
+        <div class="tcell">
+          <%= render "val", source: source.key, name: Engine::Setting::ENABLED,
+                may_tune: may_tune, show_was: true %>
+        </div>
+      </div>
+    <% end %>
   </div>
 </div>

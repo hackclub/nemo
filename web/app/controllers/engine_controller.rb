@@ -4,6 +4,8 @@ class EngineController < ApplicationController
   HISTORY = 12
   FRESHNESS_WINDOW = 30.days
   TYPICAL_OF = 10
+  NIGHTS = 30
+  VISIT_STEPS_NEED = 15
 
   TABS = { "runs" => "Runs", "sources" => "Sources", "coverage" => "Coverage",
            "tuning" => "Tuning" }.freeze
@@ -14,12 +16,27 @@ class EngineController < ApplicationController
     @run = Analytics::FctIngestRun.parents.recent_first.first
     @auto_refresh = @run&.running? || @active_request.present?
 
+    @may_tune = current_staff.may?("app.flip")
+    @open = params[:open].presence
+    @steps = @run ? steps_for(@run) : []
+    @step_output = @run ? step_output_for(@run) : []
+    @nights = night_dates
+    @matrix = night_matrix(@nights)
+    @band = band_facts
+
     case @tab
-    when "runs" then run_facts
     when "sources" then @sources = source_rows
-    when "coverage" then @day_coverage = day_coverage
-    when "tuning" then @may_tune = current_staff.may?("app.flip")
+    when "coverage" then coverage_facts
+    when "tuning" then @sources = source_rows
     end
+  end
+
+  HOLDING = [["Recurrence funnel, visit steps", 15], ["Retention, day 30", 30],
+             ["Retention, day 90", 90]].freeze
+
+  def coverage_facts
+    @day_coverage = day_coverage
+    @held = consecutive_member_days
   end
 
   def tune
@@ -150,12 +167,93 @@ class EngineController < ApplicationController
     Engine::Source.for_run(source)&.key
   end
 
-  def run_facts
-    @steps = @run ? steps_for(@run) : []
-    @step_output = @run ? step_output_for(@run) : []
-    @history = Analytics::FctIngestRun.parents.recent_first.limit(HISTORY)
-    @history_kind = first_step_by_parent(@history.map(&:id))
-    @freshness = last_success_by_stage(FRESHNESS_WINDOW.ago).sort_by { |_stage, at| at }
+  def night_dates
+    last = Date.current
+    ((last - (NIGHTS - 1))..last).to_a
+  end
+
+  def night_matrix(nights)
+    index = Hash.new { |store, key| store[key] = {} }
+
+    Analytics::FctIngestRun
+      .where(started_at: nights.first.beginning_of_day..)
+      .where.not(source: Analytics::FctIngestRun::PARENT_SOURCE)
+      .pluck(:source, :status, :started_at)
+      .each do |source, status, started_at|
+        stage = stage_for_source(source)
+        next unless stage
+
+        on = started_at.to_date
+        was = index[stage][on]
+        index[stage][on] = status if was.nil? || RANK.fetch(status, 0) > RANK.fetch(was, 0)
+      end
+
+    Engine::Source.all.map do |source|
+      cells = nights.map do |on|
+        case index[source.key][on]
+        when "ok" then "ok"
+        when "running" then "run"
+        when "skipped" then "skip"
+        when nil then on == Date.current ? "wait" : "none"
+        else "fail"
+        end
+      end
+      [source, cells]
+    end
+  end
+
+  RANK = { "skipped" => 1, "ok" => 2, "running" => 3, "abandoned" => 4, "error" => 5 }.freeze
+
+  BandFact = Struct.new(:key, :value, :said, :tone, keyword_init: true)
+
+  def band_facts
+    held = consecutive_member_days
+    behind = source_rows.select { |row| row.state == "stale" || row.state == "never run" }
+    worst = behind.min_by { |row| row.last_ok || Time.at(0) }
+    done = @steps.count { |step| step.statuses.to_s.include?("ok") }
+
+    [
+      BandFact.new(key: "Consecutive member-days", value: held,
+        said: "of #{VISIT_STEPS_NEED}, which is what the visit steps need",
+        tone: held >= VISIT_STEPS_NEED ? "good" : ""),
+      BandFact.new(key: "Behind", value: behind.size,
+        said: worst ? "#{worst.source.key}, #{short_age(worst.last_ok)}" : "nothing",
+        tone: behind.any? ? "bad" : "good"),
+      BandFact.new(key: "Tonight", value: "#{done}/#{Engine::Source::KEYS.size}",
+        said: @run ? run_span(@run) : "not started", tone: "push")
+    ]
+  end
+
+  MEMBER_DAY_SOURCE = "member_day".freeze
+
+  def consecutive_member_days
+    days = Analytics::FctAnalyticsDay
+      .where(source: MEMBER_DAY_SOURCE, loaded: true)
+      .order(ds: :desc)
+      .pluck(:ds)
+    return 0 if days.empty?
+
+    run = 1
+    days.each_cons(2) do |later, earlier|
+      break unless (later - earlier).to_i == 1
+
+      run += 1
+    end
+    run
+  end
+
+  def short_age(at)
+    return "never" if at.nil?
+
+    hours = ((Time.current - at) / 1.hour).round
+    hours < 24 ? "#{hours}h" : "#{(hours / 24.0).round}d"
+  end
+
+  def run_span(run)
+    seconds = run.seconds
+    return "n/a" if seconds.nil?
+
+    seconds < 60 ? "#{seconds}s" : "#{seconds / 60}m"
   end
 
   def last_success_by_stage(since = nil)

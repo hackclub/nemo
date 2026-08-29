@@ -11,16 +11,6 @@
         </p>
       <% end %>
     </div>
-    <div class="card-tools">
-      <div class="segmented" role="group" aria-label="measure for newcomer channels">
-        <% Analytics::MartNewcomerChannels::MEASURES.each do |key, said| %>
-          <button type="button"
-                  data-value="<%= key %>"
-                  aria-pressed="<%= newcomer_measure == key %>"
-                  data-action="newcomer-channels#choose"><%= said[:label] %></button>
-        <% end %>
-      </div>
-    </div>
   </div>
 
   <% if newcomer_channels.any? %>
@@ -32,10 +22,7 @@
             <th class="col-num">posted</th>
             <th class="col-num">came back</th>
             <th class="col-num">posted here first</th>
-            <th class="col-num">joined</th>
             <th class="col-num">messages</th>
-            <th class="col-num">share of the room</th>
-            <th class="col-num">lift</th>
           </tr>
         </thead>
         <tbody>
@@ -57,15 +44,7 @@
                 </span>
               </td>
               <td class="col-num"><%= number_with_delimiter(c.newcomer_first_posts) %></td>
-              <td class="col-num">
-                <span class="two-line">
-                  <b><%= number_with_delimiter(c.newcomers_joined) %></b>
-                  <span><%= c.joined_share ? "#{number_to_percentage(c.joined_share * 100, precision: 0)} of read" : "n/a" %></span>
-                </span>
-              </td>
               <td class="col-num"><%= number_with_delimiter(c.newcomer_messages) %></td>
-              <td class="col-num"><%= c.newcomer_message_share ? number_to_percentage(c.newcomer_message_share * 100, precision: 1) : "n/a" %></td>
-              <td class="col-num"><%= c.newcomer_lift ? "#{c.newcomer_lift.round(1)}x" : "n/a" %></td>
             </tr>
           <% end %>
         </tbody>

@@ -1,52 +1,101 @@
-<div class="scroll">
-  <table class="data-table engine-table">
-    <thead>
-      <tr>
-        <th style="width:24%">source</th>
-        <th style="width:10%">cadence</th>
-        <th style="width:12%">window</th>
-        <th style="width:15%">retention</th>
-        <th class="col-num" style="width:9%">last ok</th>
-        <th class="col-num" style="width:9%">typical</th>
-        <th class="col-num" style="width:9%">rows</th>
-        <th class="col-num" style="width:8%">state</th>
-        <% if active_request.nil? %>
-          <th class="col-btn" style="width:4%"></th>
+<% cells_by_key = matrix.to_h { |source, cells| [source.key, cells] } %>
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Sources</h2>
+    </div>
+  </div>
+
+  <div class="lhead">
+    <div>Source</div>
+    <div>Cadence</div>
+    <div>Window</div>
+    <div>Retention</div>
+    <div>Last 14 nights</div>
+    <div class="r">Last ok</div>
+    <div class="r">Typical</div>
+    <div class="r">Rows</div>
+    <div></div>
+    <div></div>
+  </div>
+
+  <% sources.sort_by { |row| row.last_ok || Time.at(0) }.each do |row| %>
+    <% source = row.source %>
+    <% cells = cells_by_key[source.key] || [] %>
+    <% missed = cells.count { |cell| cell == "none" || cell == "fail" } %>
+    <% state = row.state == "live" ? "live" : "stale" %>
+    <% is_open = open == source.key %>
+    <%= link_to engine_path(tab: "sources", open: (source.key unless is_open)),
+          class: "lrow", aria: { expanded: is_open.to_s } do %>
+      <div class="skey"><i class="dot <%= state %>"></i><b><%= source.key %></b></div>
+      <div style="font-size: 12px"><%= Engine::Setting.value(source.key, Engine::Setting::CADENCE) %></div>
+      <div class="sub mono" style="font-size: 11.5px"><%= source.window %></div>
+      <div style="font-size: 12px">
+        <%= Engine::Setting.value(source.key, Engine::Setting::RETENTION) %>
+        <% if source.prune_floor.present? %>
+          <span class="sub" style="display: block">floor <%= source.prune_floor %></span>
         <% end %>
-      </tr>
-    </thead>
-    <tbody>
-      <% sources.each do |row| %>
-        <% s = row.source %>
-        <tr>
-          <td>
-            <span class="two-line">
-              <b class="src-key"><%= s.key %></b>
-              <span><%= s.endpoint %></span>
-            </span>
-          </td>
-          <td><%= s.cadence %></td>
-          <td class="mono"><%= s.window %></td>
-          <td>
-            <span class="two-line">
-              <b class="src-key"><%= s.retention %></b>
-              <% if s.prune_floor %>
-                <span>floor <%= s.prune_floor %></span>
+      </div>
+      <div class="cells">
+        <% cells.last(14).each do |cell| %><i class="<%= cell %>"></i><% end %>
+      </div>
+      <div class="snum <%= "warn" if state == "stale" %>"><%= short_age(row.last_ok) %></div>
+      <div class="snum"><%= row.typical ? "#{row.typical.round}s" : "n/a" %></div>
+      <div class="snum"><%= row.rows ? number_with_delimiter(row.rows) : "n/a" %></div>
+      <div class="r"></div>
+      <div class="scar">&#9654;</div>
+    <% end %>
+
+    <% if is_open %>
+      <div class="exp">
+        <div>
+          <div class="exp-k">The contract &middot; db/sources.yml</div>
+          <dl class="facts2">
+            <dt>Endpoint</dt><dd><%= source.endpoint %></dd>
+            <dt>Credential</dt><dd><%= source.credential %></dd>
+            <dt>Feeds</dt><dd class="plain"><%= Array(source.feeds).join(", ") %></dd>
+            <dt>Last <%= EngineController::NIGHTS %></dt>
+            <dd class="plain">
+              <% if missed.positive? %>
+                missed <b><%= missed %></b> <%= "night".pluralize(missed) %>
+              <% else %>
+                ran every night
               <% end %>
-            </span>
-          </td>
-          <td class="mono"><%= short_age(row.last_ok) %></td>
-          <td class="mono"><%= short_seconds(row.typical) %></td>
-          <td class="mono"><%= row.rows ? number_with_delimiter(row.rows) : "n/a" %></td>
-          <td class="<%= source_state_class(row.state) %>"><%= row.state %></td>
-          <% if active_request.nil? %>
-            <td>
-              <%= button_to "run", engine_trigger_stage_path(stage: s.key),
-                    class: "run-btn", form: { class: "contents" } %>
-            </td>
+            </dd>
+          </dl>
+
+          <div class="exp-k" style="margin-top: 16px">Dials</div>
+          <div class="dialrow">
+            <div class="dn">Cadence<span>how often the night runs it</span></div>
+            <div class="dd">was <%= source.cadence %></div>
+            <%= render "val", source: source.key, name: Engine::Setting::CADENCE, may_tune: may_tune %>
+          </div>
+          <div class="dialrow">
+            <div class="dn">Retention<span>how many days of its rows are kept</span></div>
+            <div class="dd">was <%= Engine::Setting::KEEP %></div>
+            <%= render "val", source: source.key, name: Engine::Setting::RETENTION, may_tune: may_tune %>
+          </div>
+        </div>
+
+        <div>
+          <div class="exp-k">What it said last night</div>
+          <% said = @step_output.find { |out| out.source.to_s.start_with?(source.key) } %>
+          <% if said&.output.present? %>
+            <pre><%= said.output %></pre>
+          <% else %>
+            <p class="card-sub" style="margin: 0">
+              Nothing captured. Output is recorded from the run after the capture was added.
+            </p>
           <% end %>
-        </tr>
-      <% end %>
-    </tbody>
-  </table>
+          <div class="exp-act">
+            <% if active_request.nil? %>
+              <%= button_to "Run it now", engine_trigger_stage_path(stage: source.key),
+                    class: "btn", form: { class: "contents" } %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+
 </div>

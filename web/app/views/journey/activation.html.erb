@@ -1,11 +1,9 @@
 <% content_for :page_title, "Activation" %>
 <% content_for :page_kicker, "Stage 02" %>
 
-<div id="activation" data-controller="newcomer-channels" data-newcomer-channels-url-value="<%= activation_journey_path %>">
-  <div data-newcomer-channels-target="container">
-    <%= render "newcomer_channels", newcomer_channels: @newcomer_channels,
-          newcomer_reach: @newcomer_reach, newcomer_measure: @newcomer_measure %>
-  </div>
+<div id="activation">
+  <%= render "newcomer_channels", newcomer_channels: @newcomer_channels,
+        newcomer_reach: @newcomer_reach %>
 </div>
 
 <% if @channel_scorecard.any? %>

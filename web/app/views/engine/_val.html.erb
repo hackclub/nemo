@@ -1,0 +1,24 @@
+<% now = Engine::Setting.value(source, name) %>
+<% was = Engine::Setting.default(source, name) %>
+<% tuned = now.to_s != was.to_s %>
+<% if defined?(show_was) && show_was && tuned %>
+  <span class="was">was <%= was %></span>
+<% end %>
+<% if may_tune %>
+  <%= form_with url: engine_tune_path, method: :patch, class: "contents" do |f| %>
+    <%= f.hidden_field :source, value: source %>
+    <%= f.hidden_field :name, value: name %>
+    <% if name == Engine::Setting::CADENCE %>
+      <%= f.select :value, Engine::Source::CADENCES, { selected: now },
+            class: "val #{"tuned" if tuned}", onchange: "this.form.requestSubmit()" %>
+    <% elsif name == Engine::Freshness::SWITCH || name == Engine::Setting::ENABLED %>
+      <%= f.select :value, %w[true false], { selected: now },
+            class: "val #{"tuned" if tuned}", onchange: "this.form.requestSubmit()" %>
+    <% else %>
+      <%= f.text_field :value, value: now, inputmode: "numeric", size: 6,
+            class: "val #{"tuned" if tuned}", onchange: "this.form.requestSubmit()" %>
+    <% end %>
+  <% end %>
+<% else %>
+  <span class="val <%= "tuned" if tuned %>"><%= now %></span>
+<% end %>

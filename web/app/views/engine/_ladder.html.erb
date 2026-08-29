@@ -1,0 +1,22 @@
+<% slowest = steps.map { |step| step.seconds.to_i }.max.to_i %>
+<div class="ladder">
+  <% steps.each do |step| %>
+    <% running = step.running? %>
+    <% leading = step.statuses.keys.first %>
+    <% state = running ? "run" : (leading == "ok" ? "ok" : "") %>
+    <% source = Engine::Source.for_run(step.source) %>
+    <div class="rung <%= state %>">
+      <div class="ri"><%= step.step_index %></div>
+      <div class="rn">
+        <b><%= source&.key || step.source %></b>
+        <span><%= source&.endpoint.presence == "none" ? source.label.downcase : source&.endpoint %></span>
+      </div>
+      <div class="rbar">
+        <i style="width: <%= slowest.positive? ? [(step.seconds.to_f / slowest * 100), 2].max.round(1) : 2 %>%"></i>
+      </div>
+      <div class="snum"><%= run_duration(step) %></div>
+      <div class="snum"><%= step.rows_in ? number_with_delimiter(step.rows_in) : "n/a" %></div>
+      <div class="rst"><%= leading %></div>
+    </div>
+  <% end %>
+</div>

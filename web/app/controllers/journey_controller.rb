@@ -19,14 +19,9 @@ class JourneyController < ApplicationController
   end
 
   def activation
-    @newcomer_measure = Analytics::MartNewcomerChannels.measure(params[:newcomer_measure])
     @newcomer_reach = Analytics::MartNewcomerChannels.order(:channel_id).first
-    @newcomer_channels = Analytics::MartNewcomerChannels.ranked(@newcomer_measure,
-      floor: HomeHelper::MIN_SAMPLE)
-
-    return if refreshed("newcomer-channels", "newcomer_channels",
-      newcomer_channels: @newcomer_channels, newcomer_reach: @newcomer_reach,
-      newcomer_measure: @newcomer_measure)
+    @newcomer_channels = Analytics::MartNewcomerChannels.ranked(
+      Analytics::MartNewcomerChannels::DEFAULT_MEASURE, floor: HomeHelper::MIN_SAMPLE)
 
     @channel_scorecard = Analytics::MartChannelOnboardingScorecard
       .where(newcomer_volume: HomeHelper::MIN_SAMPLE..)

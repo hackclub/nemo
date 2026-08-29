@@ -7,31 +7,6 @@
 
 <% content_for :page_title, "Engine" %>
 
-<% content_for :head_actions do %>
-  <% if @active_request %>
-    <% if @active_request.status != "cancelling" %>
-      <%= button_to "Cancel", engine_cancel_path, class: "btn", form: { class: "contents" } %>
-    <% end %>
-  <% else %>
-    <%= button_to "Run the nightly sync now", engine_sync_path,
-          class: "btn btn-primary", form: { class: "contents" } %>
-  <% end %>
-<% end %>
-
-<div class="chiprow">
-  <% if @active_request %>
-    <span class="chip chip-off">
-      sync <%= @active_request.status %>, requested by <%= @active_request.requested_by %>
-      <%= time_ago_in_words(@active_request.created_at) %> ago
-    </span>
-  <% end %>
-  <% if @auto_refresh %>
-    <span class="chip chip-off" data-controller="run-refresh" data-run-refresh-seconds-value="10">
-      live, refreshing every 10s
-    </span>
-  <% end %>
-</div>
-
 <% content_for :page_controls do %>
   <span class="segmented">
     <% EngineController::TABS.each do |key, label| %>
@@ -41,156 +16,74 @@
       <% end %>
     <% end %>
   </span>
+
+  <span class="qspacer"></span>
+
+  <span class="qlab">Nightly at</span>
+  <%= render "val", source: Engine::Setting::ENGINE, name: "run_at", may_tune: @may_tune %>
+  <span class="qlab">Budget</span>
+  <%= render "val", source: Engine::Setting::ENGINE, name: "budget_minutes", may_tune: @may_tune %>
+  <span class="qlab">minutes</span>
+
+  <% if @active_request %>
+    <span class="chip">
+      <i class="dot run"></i>
+      step <%= @steps.size %> of <%= Engine::Source::KEYS.size %>
+    </span>
+    <% if @active_request.status != "cancelling" %>
+      <%= button_to "Cancel", engine_cancel_path, class: "btn", form: { class: "contents" } %>
+    <% end %>
+  <% else %>
+    <%= button_to "Run the nightly now", engine_sync_path,
+          class: "btn btn-primary", form: { class: "contents" } %>
+  <% end %>
 <% end %>
+
+<%= render "band", band: @band %>
 
 <% if @tab == "runs" %>
-<% if @run.nil? %>
-  <div class="card">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">Latest run</h2>
-        <p class="card-sub">nothing recorded yet</p>
-      </div>
-    </div>
-  </div>
-<% else %>
-  <%= render "run_detail", run: @run, steps: @steps, step_output: @step_output, heading: "Latest run" %>
-<% end %>
-
-<div class="grid-2-1">
   <div class="card card-flush">
     <div class="card-head">
       <div>
-        <h2 class="card-title">Recent runs</h2>
+        <h2 class="card-title">Tonight</h2>
+        <p class="card-sub">
+          <% if @run %>
+            <%= @run.started_at.strftime("%-d %b, %H:%M") %> &middot; <%= run_duration(@run) %> so far
+            &middot; step <%= @steps.size %> of <%= Engine::Source::KEYS.size %>
+          <% else %>
+            nothing recorded yet
+          <% end %>
+        </p>
       </div>
+      <% if @run&.running? %>
+        <div class="card-tools">
+          <span class="swatch"><i class="dot run"></i>running</span>
+        </div>
+      <% end %>
     </div>
-    <% if @history.any? %>
-      <div class="scroll">
-        <table class="data-table engine-table">
-          <thead>
-            <tr>
-              <th style="width:50%">started</th>
-              <th class="col-num" style="width:25%">status</th>
-              <th class="col-num" style="width:25%">elapsed</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @history.each do |row| %>
-              <% first_step = @history_kind[row.id] %>
-              <tr>
-                <td>
-                  <span class="two-line">
-                    <%= link_to row.started_at.strftime("%b %-d, %H:%M"), engine_run_path(row) %>
-                    <span>
-                      <% if first_step.nil? %>
-                        n/a
-                      <% elsif first_step.step_total == 1 %>
-                        stage &middot; <%= first_step.source %>
-                      <% else %>
-                        full nightly &middot; <%= first_step.step_total %> stages
-                      <% end %>
-                    </span>
-                  </span>
-                </td>
-                <td class="col-num"><%= run_status(row) %></td>
-                <td class="col-num"><%= run_duration(row) %></td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
+    <% if @steps.any? %>
+      <%= render "ladder", steps: @steps %>
     <% else %>
       <p class="card-note">n/a</p>
     <% end %>
   </div>
 
-  <div class="card card-flush self-start">
+  <div class="card card-flush">
     <div class="card-head">
       <div>
-        <h2 class="card-title">Freshness</h2>
+        <h2 class="card-title">The last <%= EngineController::NIGHTS %> nights</h2>
       </div>
     </div>
-    <% if @freshness.any? %>
-      <div class="scroll">
-        <table class="data-table engine-table">
-          <thead>
-            <tr>
-              <th style="width:55%">source</th>
-              <th class="col-num" style="width:25%">last success</th>
-              <% if @active_request.nil? %>
-                <th class="col-btn" style="width:20%"></th>
-              <% end %>
-            </tr>
-          </thead>
-          <tbody>
-            <% @freshness.each do |stage, finished_at| %>
-              <tr>
-                <td class="src-key"><%= stage %></td>
-                <td class="mono col-num"><%= short_age(finished_at) %> ago</td>
-                <% if @active_request.nil? %>
-                  <td class="col-btn">
-                    <%= button_to "run", engine_trigger_stage_path(stage: stage),
-                          class: "run-btn", form: { class: "contents" } %>
-                  </td>
-                <% end %>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <p class="card-note">n/a</p>
-    <% end %>
+    <%= render "matrix", matrix: @matrix, nights: @nights %>
   </div>
-</div>
 
 <% elsif @tab == "sources" %>
-  <%= render "sources", sources: @sources, active_request: @active_request %>
+  <%= render "sources", sources: @sources, active_request: @active_request,
+        matrix: @matrix, open: @open, may_tune: @may_tune %>
+
+<% elsif @tab == "coverage" %>
+  <%= render "coverage", day_coverage: @day_coverage, held: @held %>
 
 <% elsif @tab == "tuning" %>
-  <%= render "tuning", may_tune: @may_tune %>
-
-<% else %>
-<div class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Day coverage</h2>
-    </div>
-  </div>
-  <% if @day_coverage.any? %>
-    <div class="scroll">
-      <table class="data-table engine-table">
-        <thead>
-          <tr>
-            <th style="width:34%">source</th>
-            <th class="col-num" style="width:16%">span</th>
-            <th class="col-num" style="width:16%">loaded</th>
-            <th class="col-num" style="width:17%">unavailable</th>
-            <th class="col-num" style="width:17%">never fetched</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @day_coverage.each do |row| %>
-            <tr>
-              <td>
-                <span class="two-line">
-                  <b><%= row.source %></b>
-                  <span><%= row.first_ds.strftime("%b %-d, %Y") %> to <%= row.last_ds.strftime("%b %-d, %Y") %></span>
-                </span>
-              </td>
-              <td><%= pluralize(row.span, "day") %></td>
-              <td><%= number_with_delimiter(row.loaded) %></td>
-              <td><%= number_with_delimiter(row.unavailable) %></td>
-              <td class="<%= "state-stale" if row.never_fetched.positive? %>">
-                <%= number_with_delimiter(row.never_fetched) %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  <% else %>
-    <p class="card-note">n/a</p>
-  <% end %>
-</div>
+  <%= render "tuning", may_tune: @may_tune, sources: @sources %>
 <% end %>

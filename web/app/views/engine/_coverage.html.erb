@@ -1,0 +1,79 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Which days of data each source holds</h2>
+    </div>
+  </div>
+
+  <% if day_coverage.any? %>
+    <div class="card-body" style="display: flex; flex-direction: column; gap: 18px; padding: 16px">
+      <% day_coverage.each do |row| %>
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px">
+            <span class="mono" style="font-size: 12px; font-weight: 500"><%= row.source %></span>
+            <span class="sub mono">
+              <%= number_with_delimiter(row.loaded) %> held
+              &middot; <%= number_with_delimiter(row.unavailable) %> Slack has no file for
+              <% if row.never_fetched.positive? %>
+                &middot; <%= number_with_delimiter(row.never_fetched) %> before we started
+              <% end %>
+            </span>
+          </div>
+          <div class="cov">
+            <% row.never_fetched.times do %><i class="no"></i><% end %>
+            <% row.unavailable.times do %><i class="un"></i><% end %>
+            <% row.loaded.times do %><i class="on"></i><% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="key">
+      <span><i style="background-color: var(--series-2); opacity: .82"></i>held</span>
+      <span><i style="background-color: var(--ink-4); opacity: .55"></i>Slack has no file for that day</span>
+      <span><i style="background-color: var(--line)"></i>before the job existed</span>
+    </div>
+  <% else %>
+    <p class="card-note">n/a</p>
+  <% end %>
+</div>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">What the day count is holding up</h2>
+    </div>
+  </div>
+  <div class="scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>metric</th>
+          <th class="col-num">days held</th>
+          <th class="col-num">days needed</th>
+          <th>progress</th>
+          <th class="col-num">first measurable</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% EngineController::HOLDING.each do |label, needed| %>
+          <% share = needed.positive? ? (held.to_f / needed * 100) : 0 %>
+          <tr>
+            <td><%= label %></td>
+            <td class="col-num"><%= held %></td>
+            <td class="col-num"><%= needed %></td>
+            <td style="width: 34%">
+              <div class="inbar <%= "soft" if share < 50 %>">
+                <span><i style="width: <%= [share, 2].max.round %>%"></i></span>
+                <span><%= share.round %>%</span>
+              </div>
+            </td>
+            <td class="col-num mono">
+              <%= held >= needed ? "now" : (Date.current + (needed - held)).strftime("~%-d %b %Y") %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

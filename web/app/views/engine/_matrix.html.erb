@@ -1,0 +1,43 @@
+<% said = { "ok" => "ran", "fail" => "failed here", "run" => "running now",
+            "skip" => "nothing to do", "wait" => "not started yet", "none" => "did not run" } %>
+<div class="grid-h">
+  <div>Source</div>
+  <div class="nights">
+    <% nights.each_with_index do |on, i| %>
+      <span><%= on.strftime("%-d") if (i % 5) == 4 || i == nights.size - 1 %></span>
+    <% end %>
+  </div>
+  <div class="r">Missed</div>
+  <div></div>
+  <div></div>
+  <div></div>
+</div>
+
+<% matrix.each do |source, cells| %>
+  <% missed = cells.count { |cell| cell == "none" || cell == "fail" } %>
+  <% state = cells.last == "run" ? "run" : (cells.last(2).include?("ok") ? "live" : "stale") %>
+  <%= link_to engine_path(tab: "sources", open: source.key), class: "srow" do %>
+    <div class="skey">
+      <i class="dot <%= state %>"></i>
+      <b><%= source.key %></b>
+    </div>
+    <div class="cells">
+      <% cells.each_with_index do |cell, i| %>
+        <i class="<%= cell %>" title="<%= nights[i].strftime("%-d %b") %> &middot; <%= said[cell] %>"></i>
+      <% end %>
+    </div>
+    <div class="snum <%= "warn" if missed.positive? %>"><%= missed.positive? ? missed : "n/a" %></div>
+    <div></div>
+    <div></div>
+    <div></div>
+  <% end %>
+<% end %>
+
+<div class="key">
+  <span><i style="background-color: var(--series-2); opacity: .82"></i>ran</span>
+  <span><i style="background-color: var(--series-0); opacity: .5"></i>guard skipped it, nothing to do</span>
+  <span><i style="background-color: var(--down)"></i>failed</span>
+  <span><i style="background-color: var(--line-soft); border: 1px dashed var(--line)"></i>the job did not run</span>
+  <span><i style="background-color: var(--card-2); border: 1px solid var(--line-soft)"></i>not started yet</span>
+  <span><i style="background-color: var(--accent)"></i>running</span>
+</div>

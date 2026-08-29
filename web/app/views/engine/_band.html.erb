@@ -1,0 +1,11 @@
+<div class="card">
+  <div class="runband">
+    <% band.each do |fact| %>
+      <div class="bf <%= fact.tone %>">
+        <span class="k"><%= fact.key %></span>
+        <span class="v"><%= fact.value %></span>
+        <span class="s"><%= fact.said %></span>
+      </div>
+    <% end %>
+  </div>
+</div>
