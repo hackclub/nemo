@@ -14,7 +14,7 @@ class FdPersonDrawerTest < ActionDispatch::IntegrationTest
     get_drawer("USUB")
 
     assert_select "turbo-frame#person-drawer", 1
-    assert_select ".drawer-h", 1
+    assert_select ".pm-head", 1
     assert_select ".ractions", 0, "the full page's header actions do not leak into the drawer"
   end
 
@@ -38,8 +38,9 @@ class FdPersonDrawerTest < ActionDispatch::IntegrationTest
   test "a member with nothing on record still renders the drawer" do
     get_drawer("UNOBODY")
 
-    assert_select ".note-none", text: "Nothing done to them yet."
-    assert_select ".note-none", text: "No notes"
+    assert_select ".person-modal"
+    assert_select ".note-none", text: "Never named in a case."
+    assert_select ".fstat b", text: "0", count: 3
   end
 
   test "the drawer shows what was done to them, and their notes, nothing else" do
@@ -51,9 +52,10 @@ class FdPersonDrawerTest < ActionDispatch::IntegrationTest
 
     get_drawer("UAAA")
 
-    assert_select ".card-title", text: "Done to them"
-    assert_select ".card-title", text: "Notes on @UAAA"
-    assert_select ".card-title", text: "Summary", count: 0
-    assert_select ".card-title", text: "Their history", count: 0
+    assert_select ".pm-label", text: "Cases they appear in"
+    assert_select ".fstat span", text: "actions"
+    assert_select ".fstat span", text: "in force"
+    assert_select ".pm-foot .btn", { text: "Open the full record" },
+      "the summary points at the record rather than repeating it"
   end
 end

@@ -2,17 +2,19 @@
   <tr data-controller="row-link" data-row-link-href-value="<%= fd_case_path(kase) %>"
       data-action="click->row-link#go"
       class="<%= "row-resolved" if kase.resolved? %>">
-    <td class="<%= case_stripe(kase) %>">
+    <td class="col-tick <%= case_stripe(kase) %>">
+      <% unless kase.resolved? %>
+        <%= check_box_tag "case_ids[]", kase.id, false,
+              id: "tick-#{kase.id}", form: "merge-form", class: "tick tick-case",
+              data: { action: "change->merge#refresh" },
+              aria: { label: "select case #{kase.id} to merge" } %>
+      <% end %>
+    </td>
+    <td>
       <div class="row-subject">
-        <% unless kase.resolved? %>
-          <%= check_box_tag "case_ids[]", kase.id, false,
-                id: "tick-#{kase.id}", form: "merge-form", class: "tick tick-case",
-                data: { action: "change->merge#refresh" },
-                aria: { label: "select case #{kase.id} to merge" } %>
-        <% end %>
         <span class="two-line">
           <%= link_to fd_case_path(kase) do %>
-            <b>Case <%= kase.id %></b>
+            <b>#<%= kase.id %></b>
           <% end %>
           <% if kase.duplicate_of %>
             <span><%= row_merged_phrase(kase) %></span>
@@ -55,7 +57,6 @@
         <span><%= row_reporter_label(kase) %></span>
       </div>
     </td>
-    <td class="col-state"><%= case_status_chip(kase) %></td>
     <td>
       <% if kase.subject_user_ids.any? %>
         <% priors = case_priors(kase, priors_by_user) %>
@@ -74,6 +75,7 @@
         <span class="sub2">nobody named yet</span>
       <% end %>
     </td>
+    <td class="col-state"><%= case_status_chip(kase) %></td>
     <td>
       <% if kase.assigned? %>
         <%= assignee_faces(kase.assignee_user_ids) %>

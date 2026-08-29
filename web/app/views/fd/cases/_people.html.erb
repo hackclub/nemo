@@ -32,12 +32,17 @@
                   total_messages) %>
           </span>
         </span>
-        <% if priors.fetch(person.user_id, 0).positive? %>
-          <%= prior_chip_for(priors.fetch(person.user_id)) %>
-        <% end %>
-        <%= link_to "History", fd_member_path(person.user_id), class: "btn",
-              data: { turbo_frame: "person-drawer" } %>
-        <%= render "person_menu", kase: kase, person: person %>
+        <span class="row-right">
+          <% count = priors.fetch(person.user_id, 0) %>
+          <% if count.positive? %>
+            <span class="mchip warn"><%= pluralize(count, "prior case") %></span>
+          <% else %>
+            <span class="mchip good">no priors</span>
+          <% end %>
+          <%= link_to "History", fd_member_path(person.user_id), class: "btn",
+                data: { turbo_frame: "person-drawer" } %>
+          <%= render "person_menu", kase: kase, person: person %>
+        </span>
       </div>
 
       <% Array(notes[person.user_id]).each do |note| %>

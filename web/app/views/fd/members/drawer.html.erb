@@ -1,61 +1,77 @@
 <turbo-frame id="person-drawer" data-controller="person-drawer">
-  <div class="drawer-h">
-    <span class="row-avatar" aria-hidden="true"><%= @member ? @member.initial : "?" %></span>
-    <b><%= names[@user_id] %></b>
-    <span class="chip chip-off"><%= tenure_label(@context&.tenure_days) %></span>
-    <span style="flex:1"></span>
-    <span class="kbd" data-action="click->person-drawer#close">esc</span>
-    <%= link_to "full record ↗", fd_member_path(@user_id), class: "btn ghost",
-          data: { turbo_frame: "_top" } %>
-  </div>
-  <div class="drawer-b">
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <h2 class="card-title">Done to them</h2>
+  <div class="person-modal" role="dialog" aria-label="<%= names[@user_id] %>">
+    <div class="pm-head">
+      <b><%= names[@user_id] %></b>
+      <button type="button" class="pm-x" aria-label="Close"
+              data-action="click->person-drawer#close">&#10005;</button>
+    </div>
+
+    <div class="pm-body">
+      <div class="who">
+        <%= face(@user_id, css: "row-avatar av-lg") %>
+        <span class="two-line">
+          <b><%= names[@user_id] %></b>
+          <span>
+            <%= @context&.cohort_at ? "here since #{on_day(@context.cohort_at)}" : "join date unknown" %>
+            <% if @context&.messages_posted %>
+              &middot; <%= number_with_delimiter(@context.messages_posted) %> messages
+            <% end %>
+            <% if @context&.channels_joined %>
+              &middot; <%= @context.channels_joined %> public channels
+            <% end %>
+          </span>
+        </span>
+      </div>
+
+      <div class="pm-stats">
+        <div class="fstat">
+          <b class="<%= "is-none" if @record.cases_named.zero? %>"><%= @record.cases_named %></b>
+          <span><%= "case".pluralize(@record.cases_named) %></span>
+        </div>
+        <div class="fstat">
+          <b class="<%= "is-none" if @record.actions.empty? %>"><%= @record.actions.size %></b>
+          <span>actions</span>
+        </div>
+        <div class="fstat">
+          <b class="<%= "is-none" if @standing.in_force.empty? %>"><%= @standing.in_force.size %></b>
+          <span>in force</span>
         </div>
       </div>
-      <% if @record.actions.any? %>
-        <div class="notes">
-          <% @record.actions.each do |action| %>
-            <div class="note-row">
+
+      <% named = (@record.subject_cases + @record.logged_cases).uniq(&:id).sort_by(&:opened_at) %>
+      <% if named.any? %>
+        <div class="pm-group">
+          <span class="pm-label">Cases they appear in</span>
+          <% by_case = @record.actions.group_by(&:case_id) %>
+          <% named.each do |kase| %>
+            <%= link_to fd_case_path(kase), class: "pm-case", data: { turbo_frame: "_top" } do %>
               <span class="two-line">
-                <b><%= action_label(action.type_key) %> <%= action_state_chip(action) %></b>
-                <span>
-                  <%= on_day(action.performed_at) %> ·
-                  <%= member_link(action.decided_by) %> ·
-                  <%= link_to "case ##{action.case_id}", fd_case_path(action.case_id),
-                        class: "lnk" %>
-                </span>
+                <b>#<%= kase.id %> <%= category_label(kase.category_key) %></b>
+                <span><%= kase.subject_user_ids.include?(@user_id) ? "subject" : "named" %></span>
               </span>
-            </div>
+              <span class="row-right"><%= case_status_chip(kase) %></span>
+            <% end %>
+            <% Array(by_case[kase.id]).each do |action| %>
+              <div class="pm-act">
+                <span class="pm-act-top">
+                  <b><%= action_label(action.type_key) %></b>
+                  <%= action_state_chip(action) %>
+                </span>
+                <span class="pm-act-said"><%= action_sentence(action) %></span>
+              </div>
+            <% end %>
           <% end %>
         </div>
       <% else %>
-        <span class="note-none">Nothing done to them yet.</span>
+        <span class="note-none">Never named in a case.</span>
       <% end %>
     </div>
 
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <h2 class="card-title">Notes on <%= names[@user_id] %></h2>
-        </div>
-      </div>
-      <% if @record.notes.any? %>
-        <div class="notes">
-          <% @record.notes.first(3).each do |note| %>
-            <div class="note-row">
-              <div class="note-body"><%= mentioned(note.body) %></div>
-              <div class="note-by">
-                <span><%= note_byline(note) %></span>
-              </div>
-            </div>
-          <% end %>
-        </div>
-      <% else %>
-        <span class="note-none">No notes</span>
-      <% end %>
+    <div class="pm-foot">
+      <span class="pm-spacer"></span>
+      <button type="button" class="btn" data-action="click->person-drawer#close">Close</button>
+      <%= link_to "Open the full record", fd_member_path(@user_id), class: "btn btn-primary",
+            data: { turbo_frame: "_top" } %>
     </div>
   </div>
 </turbo-frame>

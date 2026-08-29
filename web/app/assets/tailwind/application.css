@@ -3220,7 +3220,7 @@
   }
 
   .people-list {
-    padding: 0 0 var(--s-2xs);
+    padding: 2px 0;
     display: grid;
   }
 
@@ -3242,8 +3242,13 @@
   }
 
   .person-row .two-line b {
-    font-size: var(--t-head);
+    font-size: 12.5px;
     font-weight: 600;
+  }
+
+  .person-row .two-line span {
+    font-size: 11.5px;
+    color: var(--ink-3);
   }
 
   .person-row:has(+ .person-note) {
@@ -3546,20 +3551,70 @@
   }
 
   .person-block {
-    padding-bottom: var(--s-3xs);
+    padding-bottom: 0;
+  }
+
+  .line-row.fat.person-row {
+    gap: 11px;
+    padding: 11px 16px;
+    border-top: 0;
+    border-bottom: 1px solid var(--line-soft);
+    flex-wrap: nowrap;
+  }
+
+  .person-block:last-child .line-row.fat.person-row {
+    border-bottom: 0;
+  }
+
+  .row-right {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex: none;
+  }
+
+  .person-who {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 14px 16px 12px;
+  }
+
+  .row-avatar.av-lg {
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+    border-radius: 8px;
+  }
+
+  .drawer-foot {
+    display: flex;
+    gap: 7px;
+    padding: 11px 14px;
+    border-top: 1px solid var(--line-soft);
+    background-color: var(--card-2);
   }
 
   .person-note {
     display: grid;
     gap: 3px;
-    margin: var(--s-2xs) var(--s-md) var(--s-2xs) 58px;
-    padding-left: var(--s-xs);
+    margin: 0 16px 11px 49px;
+    padding: 2px 0 2px 11px;
     border-left: 2px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-2);
   }
 
   .person-note .note-body {
-    font-size: var(--t-small);
-    color: var(--ink);
+    font-size: 12px;
+    color: var(--ink-2);
+  }
+
+  .person-note .sub2 {
+    font-size: 11px;
+    color: var(--ink-4);
+    margin-top: 3px;
   }
 
   .msg-gone {
@@ -4452,12 +4507,15 @@
   }
 
   .queue-table .tick {
-    opacity: 0;
-    width: 0;
+    opacity: 1;
+    width: 15px;
     flex: none;
-    border-width: 0;
-    margin-inline-end: calc(var(--s-xs) * -1);
     transition: opacity var(--dur) var(--ease-out);
+  }
+
+  .queue-table .col-tick {
+    width: 32px;
+    padding-inline-end: 0;
   }
 
   .queue-table tr:hover .tick,
@@ -4504,9 +4562,9 @@
     transform: rotate(45deg);
   }
 
-  .data-table thead th.col-tick + th,
-  .card-flush .data-table th.col-tick + th,
-  .card-flush .data-table th.col-tick,
+  .data-table:not(.queue-table) thead th.col-tick + th,
+  .card-flush .data-table:not(.queue-table) th.col-tick + th,
+  .card-flush .data-table:not(.queue-table) th.col-tick,
   .when {
     display: none;
   }
@@ -4837,26 +4895,143 @@
 
   .person-drawer-frame {
     position: fixed;
-    inset-block: 0;
-    inset-inline-end: 0;
-    width: min(480px, 92vw);
-    background-color: var(--card);
-    border-inline-start: 1px solid var(--line);
-    box-shadow: -12px 0 28px oklch(0% 0 0 / 0.12);
+    inset: 0;
     z-index: 42;
+    display: grid;
+    place-items: start center;
+    padding: 8vh 16px 16px;
     overflow-y: auto;
-    transform: translateX(101%);
-    transition: transform var(--dur) var(--ease-out);
+    background-color: oklch(0% 0 0 / 0.44);
   }
 
   .person-drawer-frame:empty {
-    transform: translateX(101%);
-    box-shadow: none;
+    display: none;
   }
 
-  .person-drawer-frame:not(:empty) {
-    transform: translateX(0);
+  .person-modal {
+    width: 100%;
+    max-width: 660px;
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 24px 60px oklch(0% 0 0 / 0.28);
+    overflow: hidden;
   }
+
+  .pm-head {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .pm-head b { font-size: 13.5px; font-weight: 600; }
+  .pm-head span { font-size: 11.5px; color: var(--ink-3); }
+
+  .pm-x {
+    margin-left: auto;
+    border: 0;
+    background: none;
+    color: var(--ink-4);
+    cursor: pointer;
+    font: inherit;
+    font-size: 15px;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 4px;
+    align-self: center;
+  }
+
+  .pm-x:hover { background-color: var(--hover); color: var(--ink); }
+
+  .pm-body {
+    padding: 15px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .pm-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .pm-stats .fstat {
+    display: block;
+    padding: 11px 14px;
+    border-inline-start: 1px solid var(--line-soft);
+  }
+
+  .pm-stats .fstat:first-child { border-inline-start: 0; }
+
+  .pm-stats .fstat b {
+    display: block;
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pm-stats .fstat span {
+    display: block;
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-top: 3px;
+  }
+
+  .pm-group { display: grid; gap: 6px; }
+
+  .pm-label {
+    font-size: 11.5px;
+    color: var(--ink-2);
+    font-weight: 500;
+  }
+
+  .pm-case {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .pm-case .two-line b { font-size: 12.5px; font-weight: 600; }
+  .pm-case .two-line span { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+
+  .pm-stats .fstat b.is-none { color: var(--ink-4); }
+
+  .pm-act {
+    display: grid;
+    gap: 3px;
+    margin: 0 0 8px 14px;
+    padding: 2px 0 2px 11px;
+    border-left: 2px solid var(--line);
+  }
+
+  .pm-act-top {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .pm-act-top b { font-size: 12px; font-weight: 600; }
+  .pm-act-said { font-size: 11.5px; color: var(--ink-3); }
+
+  .pm-foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--line-soft);
+    background-color: var(--card-2);
+  }
+
+  .pm-spacer { margin-left: auto; }
 
   @media (prefers-reduced-motion: reduce) {
     .case-drawer-frame, .person-drawer-frame { transition: none; }
