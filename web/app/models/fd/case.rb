@@ -103,6 +103,20 @@ module Fd
         .group(:case_id).count
     end
 
+    def self.flagged_counts_for(case_ids)
+      ids = case_ids.compact.uniq
+      return {} if ids.empty?
+
+      CaseCitation.where(case_id: ids).group(:case_id).count
+    end
+
+    def self.live_action_counts_for(case_ids)
+      ids = case_ids.compact.uniq
+      return {} if ids.empty?
+
+      Action.where(case_id: ids, reversed_at: nil).group(:case_id).count
+    end
+
     def self.thread_channels_for(case_ids)
       ids = case_ids.compact.uniq
       return {} if ids.empty?

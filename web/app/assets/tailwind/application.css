@@ -609,9 +609,15 @@
 
   .needs {
     display: inline-flex;
-    gap: 5px;
+    align-items: center;
+    gap: 6px;
     flex-wrap: wrap;
     margin-top: 5px;
+  }
+
+  .needs-said {
+    font-size: var(--t-fine);
+    color: var(--ink-4);
   }
 
   .subjcell {

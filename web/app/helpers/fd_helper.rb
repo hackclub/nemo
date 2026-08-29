@@ -775,6 +775,21 @@ module FdHelper
     tag.span(class: "gist") { tag.q(body) }
   end
 
+  def case_needs(kase)
+    return [] if kase.resolved?
+
+    needs = []
+    needs << "a subject" if kase.subject_user_ids.empty?
+    needs << "a violation" if kase.category_key.blank?
+    needs
+  end
+
+  def to_sentence_words(words)
+    return words.first if words.one?
+
+    "#{words[0..-2].join(', ')} and #{words.last}"
+  end
+
   def row_reporter_face(kase)
     first = case_first_report(kase)
     return face(nil) if first.nil? || first.anonymous?

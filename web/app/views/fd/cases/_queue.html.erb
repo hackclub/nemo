@@ -14,7 +14,9 @@
         </tr>
       </thead>
       <tbody>
-        <%= render "rows", cases: cases, violation: violation, priors_by_user: priors_by_user %>
+        <%= render "rows", cases: cases, violation: violation, priors_by_user: priors_by_user,
+              thread_counts: thread_counts, flagged_counts: flagged_counts,
+              live_action_counts: live_action_counts %>
       </tbody>
     </table>
   </div>

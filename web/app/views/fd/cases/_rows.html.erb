@@ -23,6 +23,26 @@
           <% else %>
             <span>no report on file</span>
           <% end %>
+
+          <% held = thread_counts[kase.id].to_i %>
+          <% flagged = flagged_counts[kase.id].to_i %>
+          <% acting = live_action_counts[kase.id].to_i %>
+          <% needs = case_needs(kase) %>
+          <% if needs.any? || acting.positive? || flagged.positive? %>
+            <span class="needs">
+              <% if needs.any? %>
+                <span class="needs-said">needs <%= to_sentence_words(needs) %></span>
+              <% end %>
+              <% if acting.positive? %>
+                <span class="mchip act">
+                  <%= pluralize(acting, "action") %> <%= acting == 1 ? "stands" : "stand" %>
+                </span>
+              <% end %>
+              <% if flagged.positive? %>
+                <span class="mchip"><%= flagged %> of <%= held %> flagged</span>
+              <% end %>
+            </span>
+          <% end %>
         </span>
       </div>
     </td>
@@ -41,14 +61,14 @@
         <% priors = case_priors(kase, priors_by_user) %>
         <div class="subjcell">
           <%= row_subject_avatar(kase) %>
-          <span class="two-line">
-            <b><%= row_subject_label(kase) %></b>
-            <% if priors.positive? %>
+          <% if priors.positive? %>
+            <span class="two-line">
+              <b><%= row_subject_label(kase) %></b>
               <span class="mchip warn"><%= pluralize(priors, "prior case") %></span>
-            <% else %>
-              <span>no priors</span>
-            <% end %>
-          </span>
+            </span>
+          <% else %>
+            <span><%= row_subject_label(kase) %></span>
+          <% end %>
         </div>
       <% else %>
         <span class="sub2">nobody named yet</span>

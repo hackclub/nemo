@@ -99,7 +99,7 @@ class FdQueueTest < ActionDispatch::IntegrationTest
   test "a tab carries its count and marks itself current when chosen" do
     get fd_cases_path(view: "unassigned")
 
-    assert_select ".view[aria-current]", text: /Unclaimed/
+    assert_select ".view[aria-current]", text: /Nobody on it/
     assert_select ".view[aria-current] .view-count",
       text: Fd::Case.unresolved.unassigned.count.to_s
   end

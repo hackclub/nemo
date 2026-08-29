@@ -171,17 +171,18 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
 
     assert_select ".chip", { text: "nothing set yet", count: 0 },
       "a chip standing for one of three things told nobody which"
-    assert_select ".todo .todo-t", text: "Three things before this can close"
-    assert_select ".todo .todo-row .btn", 3
+    assert_select ".todo .todo-t", text: "Two things before this can close"
+    assert_select ".todo .todo-row .btn", 2
   end
 
   test "the count follows what is actually set" do
     get fd_case_path(@kase)
-    assert_select ".todo .todo-t", text: "Two things before this can close"
+    assert_select ".todo .todo-t", text: "One thing before this can close"
 
     @kase.update!(category_key: "harassment")
     get fd_case_path(@kase)
-    assert_select ".todo .todo-t", text: "One thing before this can close"
+    assert_select ".todo", { count: 0 },
+      "evidence is not a requirement, so a case with a subject and a violation is ready to close"
   end
 
   test "a case with nothing outstanding is not asked for anything" do

@@ -93,7 +93,7 @@ module Fd
       @subject_priors = @subject ? Case.prior_count(@subject, within: Case::PRIOR_WINDOW) : 0
       @merge_into = @duplicate_candidates.find { |other| !other.resolved? }
       @open_reports = @reports.count { |report| !report.told_of_outcome? }
-      @missing = missing_on(@case, @subject, @threads)
+      @missing = missing_on(@case, @subject)
     end
 
     def update
@@ -207,11 +207,10 @@ module Fd
       end
     end
 
-    def missing_on(kase, subject, threads)
+    def missing_on(kase, subject)
       return [] if kase.resolved?
 
-      needed = { subject: subject.nil?, violation: kase.category_key.blank?,
-                 evidence: threads.empty? }
+      needed = { subject: subject.nil?, violation: kase.category_key.blank? }
       needed.select { |_what, missing| missing }.keys
     end
 
@@ -276,6 +275,8 @@ module Fd
       @thread_counts = Case.thread_message_counts_for(case_ids)
       @thread_channels = Case.thread_channels_for(case_ids)
       @priors = Case.prior_counts_for(@cases.flat_map(&:subject_user_ids))
+      @flagged_counts = Case.flagged_counts_for(case_ids)
+      @live_action_counts = Case.live_action_counts_for(case_ids)
       @channels = ChannelNames.for(@thread_channels.values.flatten)
       @stats = QueueStats.load
       @total_count = @stats.total

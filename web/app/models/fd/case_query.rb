@@ -26,20 +26,22 @@ module Fd
 
     VIEWS = {
       "attention" => "Open",
+      "unassigned" => "Nobody on it",
       "mine" => "Mine",
-      "unassigned" => "Unclaimed",
+      "acted" => "Acted on",
       "aging" => "Aging over 5d",
       "resolved" => "Resolved",
       "everything" => "Everything"
     }.freeze
 
-    TABS = %w[attention mine unassigned resolved].freeze
+    TABS = %w[attention unassigned mine acted resolved everything].freeze
     PINNED_PILLS = [].freeze
 
     VIEW_FACETS = {
       "attention" => { "status" => "open" },
       "mine" => { "status" => "open", "assignee" => "me" },
       "unassigned" => { "status" => "open", "assignee" => "nobody" },
+      "acted" => { "status" => "open", "actions" => "some" },
       "aging" => { "status" => "open", "age" => "5d" },
       "resolved" => { "status" => "resolved" },
       "everything" => {}
@@ -110,6 +112,11 @@ module Fd
             SELECT 1 FROM fd.case_assignees a WHERE a.case_id = c.id
           )
         ) AS unassigned,
+        count(*) FILTER (
+          WHERE c.resolved_at IS NULL AND EXISTS (
+            SELECT 1 FROM fd.actions a WHERE a.case_id = c.id
+          )
+        ) AS acted,
         count(*) FILTER (WHERE c.resolved_at IS NULL AND c.opened_at <= :aging) AS aging,
         count(*) FILTER (
           WHERE c.resolved_at IS NOT NULL AND c.duplicate_of IS NULL

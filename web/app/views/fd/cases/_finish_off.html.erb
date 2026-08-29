@@ -7,8 +7,5 @@
     <% if missing.include?(:violation) %>
       <label for="set-category" class="btn">Set the violation</label>
     <% end %>
-    <% if missing.include?(:evidence) %>
-      <%= opens_modal "case.thread", "Attach evidence", opens: "attach-thread", on: kase %>
-    <% end %>
   </div>
 </div>
