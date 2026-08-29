@@ -964,15 +964,16 @@
   }
 
   .btn-primary {
-    background-color: var(--ink);
-    border-color: var(--ink);
-    color: var(--canvas);
-    font-weight: 600;
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-on);
+    font-weight: 500;
   }
 
   .btn-primary:hover {
-    background-color: color-mix(in oklab, var(--ink) 86%, var(--canvas));
-    border-color: color-mix(in oklab, var(--ink) 86%, var(--canvas));
+    background-color: var(--accent-deep);
+    border-color: var(--accent-deep);
+    color: var(--accent-on);
   }
 
   .btn:disabled {
