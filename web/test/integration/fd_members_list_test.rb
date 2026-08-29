@@ -55,7 +55,7 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
 
   def numbers_for(user_id)
     row = css_select("tr").find { |tr| tr.to_s.include?(user_id) }
-    row.css("td.col-num").map(&:text).map(&:strip)
+    row.css("td.col-cases, td.col-actions").map(&:text).map(&:strip)
   end
 
   test "a row counts every case that named them, and the actions apart" do
@@ -224,10 +224,10 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     assert_select ".row-name .row-avatar", minimum: 1
   end
 
-  test "an open case shows as a chip on the row" do
+  test "an open case shows in the standing column" do
     make_case(subject: "UOPEN", opened_at: 2.days.ago)
     get fd_members_path
 
-    assert_select "td .chip.chip-crit", text: "open case"
+    assert_select "td .swatch", text: "open case"
   end
 end

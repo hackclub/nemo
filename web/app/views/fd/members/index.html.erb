@@ -18,40 +18,42 @@
     <% if @rows.any? %>
       <div class="scroll">
         <table class="data-table">
-          <colgroup>
-            <col style="width: 34%">
-            <col style="width: 22%">
-            <col style="width: 12%">
-            <col style="width: 12%">
-            <col style="width: 20%">
-          </colgroup>
           <thead>
             <tr>
               <%= member_sort_header("Member", "name") %>
-              <th>Standing</th>
+              <%= member_sort_header("Messages", "name", numeric: true) %>
+              <%= member_sort_header("Channels", "name", numeric: true) %>
               <%= member_sort_header("Cases", "subject", numeric: true) %>
               <%= member_sort_header("Actions", "actions", numeric: true) %>
-              <%= member_sort_header("Last case", "recent") %>
+              <%= member_sort_header("Notes", "notes", numeric: true) %>
+              <th>Standing</th>
             </tr>
           </thead>
           <tbody>
             <% @rows.each do |row| %>
+              <% seen = @context[row.user_id] %>
               <tr>
-                <td class="<%= member_stripe(row) %>">
+                <td>
                   <span class="row-name">
                     <%= face(row.user_id) %>
                     <span class="two-line">
                       <%= link_to fd_member_path(row.user_id) do %>
                         <b><%= names[row.user_id] %></b>
                       <% end %>
-                      <span><%= tenure_label(@context[row.user_id]&.tenure_days) %></span>
+                      <span>
+                        here since <%= seen&.cohort_at ? on_day(seen.cohort_at).downcase : "n/a" %><% if @grants[row.user_id] %> &middot; <%= @grants[row.user_id].role.tr("_", " ") %><% end %>
+                      </span>
                     </span>
                   </span>
                 </td>
-                <td><%= member_state_chips(row) %></td>
-                <td class="col-num"><%= row.cases %></td>
-                <td class="col-num"><%= row.actions %></td>
-                <td><%= last_case_label(row.last_case_at) %></td>
+                <td class="col-num"><%= seen&.messages_posted ? number_with_delimiter(seen.messages_posted) : "n/a" %></td>
+                <td class="col-num"><%= seen&.channels_joined || "n/a" %></td>
+                <td class="col-num col-cases <%= "is-none" if row.cases.zero? %>"><%= row.cases %></td>
+                <td class="col-num col-actions <%= "is-none" if row.actions.zero? %>">
+                  <%= row.actions %><% if row.in_force.positive? %> <span class="delta-down">&middot;<%= row.in_force %></span><% end %>
+                </td>
+                <td class="col-num <%= "is-none" if row.notes.zero? %>"><%= row.notes %></td>
+                <td><%= member_standing_swatch(row) %></td>
               </tr>
             <% end %>
           </tbody>

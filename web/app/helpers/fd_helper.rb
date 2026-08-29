@@ -188,6 +188,20 @@ module FdHelper
     ago_label(at)
   end
 
+  def member_standing_swatch(row)
+    word, tint =
+      if row.open_cases.positive? then ["open case", "var(--series-3)"]
+      elsif row.in_force.positive? then ["in force", "var(--down)"]
+      elsif row.notes.positive? || row.cases.positive? then ["noted", "var(--series-3)"]
+      else ["clean", "var(--series-2)"]
+      end
+
+    tag.span(class: "swatch") do
+      concat tag.i(nil, style: "background-color: #{tint}")
+      concat word
+    end
+  end
+
   def member_state_chips(row)
     chips = []
     chips << tag.span("open case", class: "chip chip-crit") if row.open_cases.positive?

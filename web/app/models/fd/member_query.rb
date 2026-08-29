@@ -35,7 +35,7 @@ module Fd
     WHO = { "history" => "with a history", "everyone" => "everyone" }.freeze
     SORT = { "recent" => "last case", "subject" => "cases as subject",
              "logged" => "cases logged in", "actions" => "actions",
-             "name" => "name" }.freeze
+             "notes" => "notes", "name" => "name" }.freeze
     DIRS = %w[desc asc].freeze
 
     DEFAULTS = {
@@ -315,6 +315,7 @@ module Fd
       when "subject" then found.sort_by { |row| [-row.cases, row.user_id] }
       when "logged" then found.sort_by { |row| [-row.logged_in, row.user_id] }
       when "actions" then found.sort_by { |row| [-row.actions, row.user_id] }
+      when "notes" then found.sort_by { |row| [-row.notes, row.user_id] }
       when "name" then by_name(found)
       else found.sort_by { |row| [-(row.last_case_at&.to_i || 0), row.user_id] }
       end
