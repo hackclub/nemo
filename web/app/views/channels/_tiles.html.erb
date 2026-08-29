@@ -1,0 +1,23 @@
+<% peak = channels.map { |c| c.range_messages.to_i }.max.to_i %>
+<% channels.each do |channel| %>
+  <%= link_to channel_path(channel), class: "tile" do %>
+    <span class="tile-t">#<%= channel.name %></span>
+    <span class="tile-s"><%= channel.channel_id %></span>
+    <span class="tile-v">
+      <%= channel.range_messages ? number_with_delimiter(channel.range_messages) : "n/a" %>
+    </span>
+    <span class="tile-s">
+      member messages
+      <% if channel.range_posters || channel.range_viewers %>
+        &middot; <%= number_with_delimiter(channel.range_posters.to_i) %> posted,
+        <%= number_with_delimiter(channel.range_viewers.to_i) %> read
+      <% end %>
+    </span>
+    <span class="tile-b">
+      <span class="inbar <%= "soft" if channel_voice_tone(channel) == "is-quiet" %>">
+        <span><i style="width: <%= peak.positive? ? [(channel.range_messages.to_f / peak * 100), 1.5].max.round(1) : 0 %>%"></i></span>
+        <span><%= channel_voice(channel) %></span>
+      </span>
+    </span>
+  <% end %>
+<% end %>

@@ -10,26 +10,42 @@ class ChannelsController < ApplicationController
     "members" => "r.total_members",
     "created" => "dim_channel.date_created",
     "messages" => "r.messages_posted_by_members",
-    "posters" => "r.members_who_posted"
+    "posters" => "r.members_who_posted",
+    "viewers" => "r.members_who_viewed"
   }.freeze
+
+  SPOKE_SHARE = "r.members_who_posted::numeric / NULLIF(r.total_members, 0)".freeze
+
+  FILTERS = {
+    "spoke_over_10" => ["Who spoke", "over 10%", "#{SPOKE_SHARE} > 0.10"],
+    "spoke_under_2" => ["Who spoke", "under 2%", "#{SPOKE_SHARE} < 0.02"],
+    "members_over_10000" => ["Members", "over 10,000", "r.total_members > 10000"],
+    "members_under_2000" => ["Members", "under 2,000", "r.total_members < 2000"]
+  }.freeze
+
+  QUIET_FLOOR = 25
+  QUIET_LIMIT = 8
 
   RANGE_JOIN = "LEFT JOIN analytics.mart_channel_range r ON r.channel_id = dim_channel.channel_id".freeze
   RANGE_COLUMNS = "dim_channel.*, r.messages_posted_by_members AS range_messages, " \
-                  "r.members_who_posted AS range_posters, r.total_members AS range_members".freeze
+                  "r.members_who_posted AS range_posters, r.total_members AS range_members, " \
+                  "r.members_who_viewed AS range_viewers".freeze
 
   def index
     @q = params[:q].to_s.strip
     @page = [params[:page].to_i, 0].max
     @sort = SORT_SQL.key?(params[:sort]) ? params[:sort] : "members"
     @direction = params[:direction] == "asc" ? "asc" : "desc"
+    @view = params[:view] == "grid" ? "grid" : "table"
+    @filters = Array(params[:f]).select { |key| FILTERS.key?(key) }.uniq
 
-    scope = Analytics::DimChannel.where(archived: false)
+    scope = Analytics::DimChannel.where(archived: false).joins(RANGE_JOIN)
     scope = scope.where("dim_channel.name ILIKE ?", "%#{@q}%") if @q.present?
+    @filters.each { |key| scope = scope.where(Arel.sql(FILTERS.fetch(key).last)) }
+
     @total = scope.count
-    @range_window = Analytics::MartChannelRange.order(:channel_id).first
 
     @channels = scope
-      .joins(RANGE_JOIN)
       .select(RANGE_COLUMNS)
       .order(Arel.sql(order_clause))
       .limit(PER_PAGE)
@@ -37,10 +53,13 @@ class ChannelsController < ApplicationController
       .to_a
     @has_more = (@page + 1) * PER_PAGE < @total
 
-    return unless request.headers["X-Requested-With"] == "channel-list"
+    if request.headers["X-Requested-With"] == "channel-list"
+      response.set_header("X-Has-More", @has_more.to_s)
+      return render partial: (@view == "grid" ? "tiles" : "rows"),
+                    locals: { channels: @channels }, layout: false
+    end
 
-    response.set_header("X-Has-More", @has_more.to_s)
-    render partial: "rows", locals: { channels: @channels }, layout: false
+    @quiet_rooms = quiet_rooms
   end
 
   def show
@@ -87,6 +106,15 @@ class ChannelsController < ApplicationController
   end
 
   private
+
+  def quiet_rooms
+    Analytics::MartChannelRange
+      .where(visibility: "public")
+      .where("members_who_posted >= ?", QUIET_FLOOR)
+      .where("members_who_viewed > members_who_posted")
+      .order(Arel.sql("members_who_viewed::numeric / members_who_posted DESC"))
+      .limit(QUIET_LIMIT)
+  end
 
   def parse_range_date(value)
     Date.iso8601(value.to_s)

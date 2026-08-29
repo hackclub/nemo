@@ -3,6 +3,8 @@
      data-channel-list-url-value="<%= channels_path %>"
      data-channel-list-sort-value="<%= @sort %>"
      data-channel-list-direction-value="<%= @direction %>"
+     data-channel-list-view-value="<%= @view %>"
+     data-channel-list-filters-value="<%= @filters.to_json %>"
      class="stack">
   <div class="qbar">
     <label class="field">
@@ -11,32 +13,110 @@
           autocomplete: "off", aria: { label: "Search public channels by name" },
           data: { channel_list_target: "input", action: "input->channel-list#search" } %>
     </label>
+
+    <% if channel_filter_options.any? %>
+      <details class="menu" data-controller="menu">
+        <summary class="btn">Filter<span class="car" aria-hidden="true">▾</span></summary>
+        <div class="menu-pop menu-start">
+          <% channel_filter_options.each do |key, (label, value, _sql)| %>
+            <%= link_to channel_query(f: @filters + [key]), class: "btn" do %>
+              <%= label %><span class="menu-val"><%= value %></span>
+            <% end %>
+          <% end %>
+        </div>
+      </details>
+    <% end %>
+
+    <% @filters.each do |key| %>
+      <% label, value, _sql = ChannelsController::FILTERS.fetch(key) %>
+      <span class="pill">
+        <%= label %> <em><%= value %></em>
+        <%= link_to "✕", channel_query(f: (@filters - [key]).presence),
+              aria: { label: "Remove #{label} #{value}" } %>
+      </span>
+    <% end %>
+
     <span class="qspacer"></span>
-    <span class="qlab"><%= number_with_delimiter(@total) %> channels</span>
+    <div class="segmented" role="group" aria-label="channel view">
+      <% { "table" => "Table", "grid" => "Grid" }.each do |value, label| %>
+        <%= link_to label, channel_query(view: (value unless value == "table")),
+              aria: { current: ("true" if @view == value) } %>
+      <% end %>
+    </div>
   </div>
 
   <div class="card card-flush">
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <%= channel_sort_th("channel", "name") %>
-            <%= channel_sort_th("member messages", "messages") %>
-            <%= channel_sort_th("posted", "posters", "col-num") %>
-            <%= channel_sort_th("members", "members", "col-num") %>
-            <th class="col-num">who spoke</th>
-            <%= channel_sort_th("created", "created", "col-date") %>
-          </tr>
-        </thead>
-        <tbody data-channel-list-target="rows">
-          <%= render "rows", channels: @channels %>
-        </tbody>
-      </table>
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Channels</h2>
+        <p class="card-sub"><%= number_with_delimiter(@total) %> channels</p>
+      </div>
     </div>
+
+    <% if @view == "grid" %>
+      <div class="tiles" data-channel-list-target="rows">
+        <%= render "tiles", channels: @channels %>
+      </div>
+    <% else %>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <%= channel_sort_th("channel", "name") %>
+              <%= channel_sort_th("member messages", "messages") %>
+              <%= channel_sort_th("posted", "posters", "col-num") %>
+              <%= channel_sort_th("read", "viewers", "col-num") %>
+              <%= channel_sort_th("members", "members", "col-num") %>
+              <th class="col-num">who spoke</th>
+            </tr>
+          </thead>
+          <tbody data-channel-list-target="rows">
+            <%= render "rows", channels: @channels %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
   </div>
 
   <div class="<%= "hidden" unless @has_more %>" data-channel-list-target="moreWrap">
     <%= button_tag "Load more", type: "button", class: "btn",
         data: { action: "channel-list#loadMore" } %>
   </div>
+
+  <% if @quiet_rooms.any? %>
+    <div class="card card-flush">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">Read, but not written in</h2>
+          <p class="card-sub">readers per person who posted</p>
+        </div>
+      </div>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>channel</th>
+              <th class="col-num">read</th>
+              <th class="col-num">posted</th>
+              <th class="col-num">ratio</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @quiet_rooms.each do |room| %>
+              <tr>
+                <td>
+                  <%= link_to "##{room.name}", channel_path(room.channel_id) %>
+                </td>
+                <td class="col-num"><%= number_with_delimiter(room.members_who_viewed) %></td>
+                <td class="col-num"><%= number_with_delimiter(room.members_who_posted) %></td>
+                <td class="col-num is-loud">
+                  <%= channel_read_ratio(room.members_who_viewed, room.members_who_posted) %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
 </div>

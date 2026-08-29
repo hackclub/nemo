@@ -1,4 +1,10 @@
 module ChannelsHelper
+  def channel_query(**overrides)
+    base = { q: @q.presence, sort: @sort, direction: @direction,
+             view: (@view unless @view == "table"), f: @filters.presence }
+    channels_path(**base.merge(overrides).compact)
+  end
+
   def channel_sort_th(label, column, css = nil)
     active = @sort == column
     next_direction = active ? (@direction == "asc" ? "desc" : "asc") : "desc"
@@ -7,9 +13,19 @@ module ChannelsHelper
 
     tag.th(class: css, **{ "aria-sort": sort_state }) do
       link_to safe_join([label, arrow.html_safe]),
-        channels_path(sort: column, direction: next_direction, q: @q.presence),
+        channel_query(sort: column, direction: next_direction),
         class: "sortable"
     end
+  end
+
+  def channel_filter_options
+    ChannelsController::FILTERS.reject { |key, _| @filters.include?(key) }
+  end
+
+  def channel_read_ratio(read, posted)
+    return "n/a" if read.nil? || posted.to_i.zero?
+
+    (read.to_f / posted).round(1)
   end
 
   def channel_voice(channel)

@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["input", "rows", "moreWrap"]
-  static values = { url: String, sort: String, direction: String }
+  static values = { url: String, sort: String, direction: String, view: String, filters: Array }
 
   connect() {
     this.page = 0
@@ -27,8 +27,10 @@ export default class extends Controller {
       q: this.inputTarget.value.trim(),
       sort: this.sortValue,
       direction: this.directionValue,
+      view: this.viewValue,
       page: this.page
     })
+    this.filtersValue.forEach((f) => params.append("f[]", f))
     const resp = await fetch(`${this.urlValue}?${params}`, {
       headers: { "X-Requested-With": "channel-list", Accept: "text/html" }
     })

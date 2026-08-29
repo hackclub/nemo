@@ -20,6 +20,7 @@
       <% end %>
     </td>
     <td class="col-num"><%= channel.range_posters ? number_with_delimiter(channel.range_posters) : "n/a" %></td>
+    <td class="col-num"><%= channel.range_viewers ? number_with_delimiter(channel.range_viewers) : "n/a" %></td>
     <td class="col-num">
       <% if channel.range_members %>
         <%= number_with_delimiter(channel.range_members) %>
@@ -28,6 +29,5 @@
       <% end %>
     </td>
     <td class="col-num <%= channel_voice_tone(channel) %>"><%= channel_voice(channel) %></td>
-    <td class="col-date"><%= channel.date_created&.strftime("%b %-d, %Y") %></td>
   </tr>
 <% end %>

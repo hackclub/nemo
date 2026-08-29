@@ -533,6 +533,115 @@
     align-items: end;
   }
 
+  .car {
+    font-size: var(--t-micro);
+    color: var(--ink-3);
+  }
+
+  .menu-start {
+    inset-inline-start: 0;
+    inset-inline-end: auto;
+  }
+
+  .menu-val {
+    margin-inline-start: auto;
+    padding-inline-start: var(--s-sm);
+    color: var(--ink-3);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: var(--chat-ctl);
+    padding: 0 6px 0 9px;
+    font-size: var(--t-fine);
+    font-weight: 500;
+    color: var(--ink-2);
+    background-color: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    border-radius: var(--r-pill);
+    white-space: nowrap;
+  }
+
+  .pill em {
+    font-style: normal;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .pill a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: var(--t-micro);
+    color: var(--ink-3);
+    text-decoration: none;
+  }
+
+  .pill a:hover {
+    background-color: var(--card);
+    color: var(--ink);
+  }
+
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+    gap: var(--s-2xs);
+    padding: var(--s-sm);
+  }
+
+  @media (min-width: 64rem) {
+    .tiles {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .tile {
+    display: grid;
+    align-content: start;
+    padding: 13px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color var(--dur) var(--ease-out), background-color var(--dur) var(--ease-out);
+  }
+
+  .tile:hover {
+    border-color: var(--focus);
+    background-color: var(--hover);
+  }
+
+  .tile-t {
+    font-family: var(--font-code);
+    font-size: var(--t-small);
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .tile-s {
+    font-size: var(--t-fine);
+    color: var(--ink-3);
+    margin-top: 2px;
+  }
+
+  .tile-v {
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    margin-top: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  .tile-b {
+    margin-top: 10px;
+  }
+
   .stack > .qbar,
   .body > .qbar {
     padding: 0;
@@ -549,7 +658,8 @@
   .qbar .field {
     flex: 0 1 clamp(200px, 26vw, 320px);
     min-width: 180px;
-    padding-block: 5px;
+    height: var(--chat-ctl);
+    padding-block: 0;
   }
 
   .qbar .field input {
