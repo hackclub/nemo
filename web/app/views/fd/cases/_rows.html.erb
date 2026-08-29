@@ -14,22 +14,41 @@
           <%= link_to fd_case_path(kase) do %>
             <b>Case <%= kase.id %></b>
           <% end %>
-          <span>
-            <%= case_excerpt(kase) || "no report on file" %>
-            <% if kase.duplicate_of %>&middot; <%= row_merged_phrase(kase) %><% end %>
-          </span>
+          <% if kase.duplicate_of %>
+            <span><%= row_merged_phrase(kase) %></span>
+          <% end %>
+          <% gist = case_gist(kase) %>
+          <% if gist %>
+            <%= gist %>
+          <% else %>
+            <span>no report on file</span>
+          <% end %>
         </span>
       </div>
     </td>
     <% if violation %>
       <td class="sub2"><%= category_label(kase.category_key) %></td>
     <% end %>
+    <td>
+      <div class="subjcell">
+        <%= row_reporter_face(kase) %>
+        <span><%= row_reporter_label(kase) %></span>
+      </div>
+    </td>
     <td class="col-state"><%= case_status_chip(kase) %></td>
     <td>
       <% if kase.subject_user_ids.any? %>
-        <div class="row-subject">
+        <% priors = case_priors(kase, priors_by_user) %>
+        <div class="subjcell">
           <%= row_subject_avatar(kase) %>
-          <span><%= row_subject_label(kase) %></span>
+          <span class="two-line">
+            <b><%= row_subject_label(kase) %></b>
+            <% if priors.positive? %>
+              <span class="mchip warn"><%= pluralize(priors, "prior case") %></span>
+            <% else %>
+              <span>no priors</span>
+            <% end %>
+          </span>
         </div>
       <% else %>
         <span class="sub2">nobody named yet</span>

@@ -6,6 +6,7 @@
         <tr>
           <th>case</th>
           <% if violation %><th>violation</th><% end %>
+          <th>reported by</th>
           <th class="col-state">state</th>
           <th>subject</th>
           <th>on it</th>
@@ -13,7 +14,7 @@
         </tr>
       </thead>
       <tbody>
-        <%= render "rows", cases: cases, violation: violation %>
+        <%= render "rows", cases: cases, violation: violation, priors_by_user: priors_by_user %>
       </tbody>
     </table>
   </div>

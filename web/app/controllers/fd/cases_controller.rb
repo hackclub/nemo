@@ -275,6 +275,7 @@ module Fd
       case_ids = @cases.map(&:id)
       @thread_counts = Case.thread_message_counts_for(case_ids)
       @thread_channels = Case.thread_channels_for(case_ids)
+      @priors = Case.prior_counts_for(@cases.flat_map(&:subject_user_ids))
       @channels = ChannelNames.for(@thread_channels.values.flatten)
       @stats = QueueStats.load
       @total_count = @stats.total

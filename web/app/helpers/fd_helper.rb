@@ -768,6 +768,24 @@ module FdHelper
     case_first_report(kase)&.body.presence
   end
 
+  def case_gist(kase)
+    body = case_first_report(kase)&.body.presence
+    return nil if body.nil?
+
+    tag.span(class: "gist") { tag.q(body) }
+  end
+
+  def row_reporter_face(kase)
+    first = case_first_report(kase)
+    return face(nil) if first.nil? || first.anonymous?
+
+    face(first.reporter_user_id)
+  end
+
+  def case_priors(kase, counts)
+    counts[kase.subject_user_id].to_i
+  end
+
   def case_reporter_line(kase)
     first = case_first_report(kase)
     return "nobody" if first.nil?

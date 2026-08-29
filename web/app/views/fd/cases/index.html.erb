@@ -32,7 +32,7 @@
       <% if @layout == "board" %>
         <%= render "board", cases: @cases, thread_channels: @thread_channels %>
       <% else %>
-        <%= render "queue", cases: @cases %>
+        <%= render "queue", cases: @cases, priors_by_user: @priors %>
       <% end %>
     <% else %>
       <div class="empty">
