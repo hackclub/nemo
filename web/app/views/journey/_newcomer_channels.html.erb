@@ -49,23 +49,23 @@
                   <span><%= c.channel_id %></span>
                 </span>
               </td>
-              <td><%= number_with_delimiter(c.newcomers_posting) %></td>
+              <td class="col-num"><%= number_with_delimiter(c.newcomers_posting) %></td>
               <td class="col-num">
                 <span class="two-line">
                   <b><%= number_with_delimiter(c.newcomers_returning) %></b>
                   <span><%= c.returning_share ? number_to_percentage(c.returning_share * 100, precision: 0) : "n/a" %></span>
                 </span>
               </td>
-              <td><%= number_with_delimiter(c.newcomer_first_posts) %></td>
+              <td class="col-num"><%= number_with_delimiter(c.newcomer_first_posts) %></td>
               <td class="col-num">
                 <span class="two-line">
                   <b><%= number_with_delimiter(c.newcomers_joined) %></b>
                   <span><%= c.joined_share ? "#{number_to_percentage(c.joined_share * 100, precision: 0)} of read" : "n/a" %></span>
                 </span>
               </td>
-              <td><%= number_with_delimiter(c.newcomer_messages) %></td>
-              <td><%= c.newcomer_message_share ? number_to_percentage(c.newcomer_message_share * 100, precision: 1) : "n/a" %></td>
-              <td><%= c.newcomer_lift ? "#{c.newcomer_lift.round(1)}x" : "n/a" %></td>
+              <td class="col-num"><%= number_with_delimiter(c.newcomer_messages) %></td>
+              <td class="col-num"><%= c.newcomer_message_share ? number_to_percentage(c.newcomer_message_share * 100, precision: 1) : "n/a" %></td>
+              <td class="col-num"><%= c.newcomer_lift ? "#{c.newcomer_lift.round(1)}x" : "n/a" %></td>
             </tr>
           <% end %>
         </tbody>

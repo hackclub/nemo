@@ -117,10 +117,10 @@
                 <span><%= chan_total.positive? ? number_to_percentage(c.messages_posted_by_members.to_f / chan_total * 100, precision: 0) : "0%" %></span>
               </div>
             </td>
-            <td><%= number_with_delimiter(c.members_who_posted) %></td>
-            <td><%= number_with_delimiter(c.reactions_added) %></td>
-            <td><%= number_with_delimiter(c.members_who_reacted) %></td>
-            <td><%= number_with_delimiter(c.huddles_initiated) %></td>
+            <td class="col-num"><%= number_with_delimiter(c.members_who_posted) %></td>
+            <td class="col-num"><%= number_with_delimiter(c.reactions_added) %></td>
+            <td class="col-num"><%= number_with_delimiter(c.members_who_reacted) %></td>
+            <td class="col-num"><%= number_with_delimiter(c.huddles_initiated) %></td>
           </tr>
         <% end %>
       </tbody>

@@ -13,7 +13,6 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">Channel onboarding scorecard</h2>
-        <p class="card-sub">months reaching <%= HomeHelper::MIN_SAMPLE %> newcomers or more</p>
       </div>
     </div>
     <div class="scroll">
@@ -31,10 +30,10 @@
           <% @channel_scorecard.each do |row| %>
             <tr>
               <td>#<%= row.channel_name %></td>
-              <td><%= row.post_month.strftime("%b %Y") %></td>
-              <td><%= number_with_delimiter(row.newcomer_volume) %></td>
-              <td><%= rate_chip((row.fast_reply_share.to_f * 100).round(1)) %></td>
-              <td>
+              <td class="col-date"><%= row.post_month.strftime("%b %Y") %></td>
+              <td class="col-num"><%= number_with_delimiter(row.newcomer_volume) %></td>
+              <td class="col-num"><%= rate_chip((row.fast_reply_share.to_f * 100).round(1)) %></td>
+              <td class="col-num">
                 <% if row.day_90_mature %>
                   <%= rate_chip((row.retained_90_share.to_f * 100).round(1)) %>
                 <% else %>

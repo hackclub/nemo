@@ -92,8 +92,8 @@
                     </span>
                   </span>
                 </td>
-                <td><%= run_status(row) %></td>
-                <td><%= run_duration(row) %></td>
+                <td class="col-num"><%= run_status(row) %></td>
+                <td class="col-num"><%= run_duration(row) %></td>
               </tr>
             <% end %>
           </tbody>
@@ -126,9 +126,9 @@
             <% @freshness.each do |stage, finished_at| %>
               <tr>
                 <td class="src-key"><%= stage %></td>
-                <td class="mono"><%= short_age(finished_at) %> ago</td>
+                <td class="mono col-num"><%= short_age(finished_at) %> ago</td>
                 <% if @active_request.nil? %>
-                  <td>
+                  <td class="col-btn">
                     <%= button_to "run", engine_trigger_stage_path(stage: stage),
                           class: "run-btn", form: { class: "contents" } %>
                   </td>

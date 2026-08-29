@@ -27,4 +27,14 @@ module ChannelsHelper
 
     ""
   end
+
+  def channel_spoke_share(posted, members)
+    return "n/a" if posted.nil? || members.to_i.zero?
+
+    number_to_percentage(posted.to_f / members * 100, precision: 1)
+  end
+
+  def slack_channel_url(channel_id)
+    "https://app.slack.com/client/#{ENV.fetch("SLACK_TEAM_ID", "T0266FRGM")}/#{channel_id}"
+  end
 end

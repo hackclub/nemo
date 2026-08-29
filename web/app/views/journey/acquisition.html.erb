@@ -37,15 +37,15 @@
                   <% end %>
                 </span>
               </td>
-              <td><%= number_with_delimiter(c.members) %></td>
+              <td class="col-num"><%= number_with_delimiter(c.members) %></td>
               <% if c.complete? %>
-                <td><%= number_to_percentage(c.ever_posted.to_f / c.members * 100, precision: 1) %></td>
-                <td><%= number_to_percentage(c.posted_within_30d.to_f / c.members * 100, precision: 1) %></td>
-                <td><%= c.median_days_to_first_post || "n/a" %></td>
+                <td class="col-num"><%= number_to_percentage(c.ever_posted.to_f / c.members * 100, precision: 1) %></td>
+                <td class="col-num"><%= number_to_percentage(c.posted_within_30d.to_f / c.members * 100, precision: 1) %></td>
+                <td class="col-num"><%= c.median_days_to_first_post || "n/a" %></td>
               <% else %>
-                <td>n/a</td>
-                <td>n/a</td>
-                <td>n/a</td>
+                <td class="col-num">n/a</td>
+                <td class="col-num">n/a</td>
+                <td class="col-num">n/a</td>
               <% end %>
             </tr>
           <% end %>
@@ -84,8 +84,8 @@
         <% @account_types.each do |a| %>
           <tr>
             <td><%= a.account_type %></td>
-            <td><%= number_with_delimiter(a.members) %></td>
-            <td><%= number_with_delimiter(a.claimed) %></td>
+            <td class="col-num"><%= number_with_delimiter(a.members) %></td>
+            <td class="col-num"><%= number_with_delimiter(a.claimed) %></td>
           </tr>
         <% end %>
       </tbody>

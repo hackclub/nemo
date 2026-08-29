@@ -529,6 +529,10 @@
     padding: 12px 0 0;
   }
 
+  .qbar:has(.field-label) {
+    align-items: end;
+  }
+
   .stack > .qbar,
   .body > .qbar {
     padding: 0;
@@ -1507,13 +1511,16 @@
   }
 
   .dp-trigger {
+    display: inline-flex;
+    align-items: center;
     font-family: inherit;
     font-size: var(--t-small);
     font-weight: 500;
     line-height: 1.2;
     color: var(--ink);
     text-align: left;
-    padding: 7px 10px;
+    height: var(--chat-ctl);
+    padding: 0 10px;
     min-width: 8.75rem;
     border: 1px solid var(--line);
     border-radius: var(--r-ctl);
@@ -2591,8 +2598,8 @@
   }
 
   .data-table tbody td.said-cell,
-  .data-table tbody td:has(> .two-line),
-  .data-table tbody td:has(> .row-name) {
+  .data-table tbody td:has(> .two-line):not(.col-num):not(.num),
+  .data-table tbody td:has(> .row-name):not(.col-num):not(.num) {
     text-align: start;
   }
 
@@ -4934,6 +4941,8 @@
     align-items: center;
     gap: var(--s-2xs);
     flex-wrap: wrap;
+    min-height: var(--chat-ctl);
+    margin-bottom: var(--s-3xs);
   }
 
   .chart-head .chart-legend {
@@ -4978,6 +4987,11 @@
 
   .chart-short {
     height: 220px;
+  }
+
+  .chart-short:has([data-controller~="svg-chart"]),
+  .chart-tall:has([data-controller~="svg-chart"]) {
+    height: auto;
   }
 
   /* ── distribution bands ────────────────────────────────── */
@@ -5285,8 +5299,20 @@
   }
 
   .data-table th.num,
-  .data-table th.col-num {
+  .data-table th.col-num,
+  .data-table th.col-rank,
+  .data-table th.col-btn {
     text-align: right;
+  }
+
+  .data-table td.col-rank,
+  .data-table td.col-btn {
+    text-align: right;
+  }
+
+  .data-table th.col-date,
+  .data-table td.col-date {
+    text-align: end;
   }
 
   .data-table th.num a,
@@ -5294,6 +5320,10 @@
     display: flex;
     flex-direction: row-reverse;
     justify-content: flex-start;
+  }
+
+  .data-table td.col-num .chip {
+    margin-inline-start: auto;
   }
 
   .data-table td.col-num .two-line {
@@ -5317,7 +5347,7 @@
   .data-table tbody td {
     padding: 9px var(--s-xs);
     border-bottom: 1px solid var(--line-soft);
-    text-align: right;
+    text-align: start;
     vertical-align: middle;
     font-size: var(--t-small);
     font-variant-numeric: tabular-nums;
@@ -5326,8 +5356,11 @@
     text-overflow: ellipsis;
   }
 
-  .data-table tbody td:first-child {
+  .data-table tbody td:first-child:not(.col-num):not(.num):not(.col-rank):not(.col-date) {
     text-align: left;
+  }
+
+  .data-table tbody td:first-child {
     white-space: normal;
   }
 

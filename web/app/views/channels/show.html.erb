@@ -1,19 +1,33 @@
 <% content_for :page_title, "##{@channel.name}" %>
+<% content_for :page_face do %>
+  <span class="crumb"><%= link_to "Channels", channels_path %> /</span>
+<% end %>
 
+<% content_for :head_actions do %>
+  <%= link_to "Open in Slack", slack_channel_url(@channel.channel_id), class: "btn",
+        target: "_blank", rel: "noopener" %>
+<% end %>
+
+<% stats = @range.stats %>
+<% posted = stats && stats["unique_posters"].to_i %>
+<% read = stats && stats["unique_viewers"].to_i %>
 <div class="kpis">
   <div class="card">
     <p class="kpi-label">Members</p>
     <p class="kpi-val"><%= @member_count ? number_with_delimiter(@member_count) : "n/a" %></p>
-    <div class="delta"><span class="delta-note">current</span></div>
   </div>
-  <% [["Messages", "messages_count"], ["Unique viewers", "unique_viewers"],
-      ["Reactions", "reactions_count"]].each do |label, key| %>
-    <div class="card">
-      <p class="kpi-label"><%= label %></p>
-      <p class="kpi-val"><%= @all_time.stats ? number_with_delimiter(@all_time.stats[key] || 0) : "n/a" %></p>
-      <div class="delta"><span class="delta-note">last 13 months</span></div>
-    </div>
-  <% end %>
+  <div class="card">
+    <p class="kpi-label">Member messages</p>
+    <p class="kpi-val"><%= stats ? number_with_delimiter(stats["messages_count"].to_i) : "n/a" %></p>
+  </div>
+  <div class="card">
+    <p class="kpi-label">Who spoke</p>
+    <p class="kpi-val"><%= channel_spoke_share(posted, @member_count) %></p>
+  </div>
+  <div class="card">
+    <p class="kpi-label">Who read</p>
+    <p class="kpi-val"><%= read ? number_with_delimiter(read) : "n/a" %></p>
+  </div>
 </div>
 
 <div class="card">
@@ -22,7 +36,6 @@
       <h2 class="card-title">Activity over a range</h2>
       <p class="card-sub">
         <%= @start_date.strftime("%b %-d") %> to <%= @end_date.strftime("%b %-d, %Y") %>
-        &middot; queried live from Slack, not from the warehouse
       </p>
     </div>
     <div class="card-tools">
@@ -101,7 +114,8 @@
     <div class="chart-short">
       <div
         data-controller="svg-chart"
-        data-svg-chart-kind-value="bars"
+        data-svg-chart-kind-value="line"
+        data-svg-chart-switchable-value="true"
         data-svg-chart-height-value="240"
         data-svg-chart-data-value="<%= {
           labels: @activity_trend.map { |a| a.window_start.strftime("%b %d") },
@@ -122,7 +136,6 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">Onboarding scorecard</h2>
-        <p class="card-sub">months reaching <%= HomeHelper::MIN_SAMPLE %> newcomers or more</p>
       </div>
     </div>
     <div class="scroll">
@@ -162,10 +175,3 @@
     </p>
   </div>
 <% end %>
-
-<div>
-  <%= link_to channels_path, class: "crumb" do %>
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-    back to channels
-  <% end %>
-</div>

@@ -40,12 +40,12 @@
                   <span><%= number_to_percentage(share_pct(r.answered_by_member, r.first_posts_checked), precision: 1) %> answered by a member</span>
                 </span>
               </td>
-              <td><%= number_with_delimiter(r.first_posts_checked) %></td>
-              <td><%= number_with_delimiter(r.answered_by_member) %></td>
-              <td><%= number_with_delimiter(r.answered_by_bot) %></td>
-              <td><%= number_with_delimiter(r.unanswered) %></td>
-              <td><%= number_with_delimiter(r.bot_replied_first) %></td>
-              <td><%= reply_wait(r.median_member_latency_seconds) %></td>
+              <td class="col-num"><%= number_with_delimiter(r.first_posts_checked) %></td>
+              <td class="col-num"><%= number_with_delimiter(r.answered_by_member) %></td>
+              <td class="col-num"><%= number_with_delimiter(r.answered_by_bot) %></td>
+              <td class="col-num"><%= number_with_delimiter(r.unanswered) %></td>
+              <td class="col-num"><%= number_with_delimiter(r.bot_replied_first) %></td>
+              <td class="col-num"><%= reply_wait(r.median_member_latency_seconds) %></td>
             </tr>
           <% end %>
         </tbody>

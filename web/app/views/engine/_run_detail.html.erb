@@ -45,10 +45,10 @@
                   <span class="progress"><span class="progress-fill" style="width:<%= step.pct %>%"></span></span>
                 <% end %>
               </td>
-              <td><%= step.step_index %>/<%= step.step_total %></td>
-              <td><%= run_status_tally(step.statuses) %></td>
-              <td><%= run_duration(step) %></td>
-              <td><%= run_rows(step) %></td>
+              <td class="col-rank"><%= step.step_index %>/<%= step.step_total %></td>
+              <td class="col-num"><%= run_status_tally(step.statuses) %></td>
+              <td class="col-num"><%= run_duration(step) %></td>
+              <td class="col-num"><%= run_rows(step) %></td>
             </tr>
           <% end %>
         </tbody>
