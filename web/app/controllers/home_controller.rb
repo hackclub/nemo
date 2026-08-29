@@ -10,21 +10,6 @@ class HomeController < ApplicationController
     @people_granularity = helpers.activity_granularity(params[:people_granularity])
     @messages_granularity = helpers.activity_granularity(params[:messages_granularity])
 
-    case request.headers["X-Requested-With"]
-    when "active-people"
-      render partial: "active_people",
-        locals: { activity_trend: activity_trend_for(@people_granularity),
-                  granularity: @people_granularity },
-        layout: false
-      return
-    when "member-messages"
-      render partial: "member_messages",
-        locals: { activity_trend: activity_trend_for(@messages_granularity),
-                  granularity: @messages_granularity },
-        layout: false
-      return
-    end
-
     @people_trend = activity_trend_for(@people_granularity)
     @messages_trend = activity_trend_for(@messages_granularity)
   end

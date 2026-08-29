@@ -14,16 +14,6 @@
                 ("retention needs daily member activity covering each member's day-30 and day-90 window" unless onboarding_funnel.day_30_mature)
               ) %>
         <% end %>
-        <select
-          class="select"
-          aria-label="cohort month"
-          data-onboarding-funnel-target="select"
-          data-action="onboarding-funnel#change"
-        >
-          <% cohort_months.each do |m| %>
-            <option value="<%= m.iso8601 %>" <%= "selected" if onboarding_funnel&.cohort_month == m %>><%= m.strftime("%b %Y") %></option>
-          <% end %>
-        </select>
       </div>
     <% end %>
   </div>

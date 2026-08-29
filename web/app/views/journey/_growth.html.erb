@@ -4,18 +4,6 @@
       <h2 class="card-title">Accounts created and claimed</h2>
       <p class="card-sub">claimed within 30 days of creation</p>
     </div>
-    <div class="card-tools">
-      <select
-        class="select"
-        aria-label="months of growth"
-        data-growth-months-target="select"
-        data-action="growth-months#change"
-      >
-        <% HomeHelper::GROWTH_SPANS.each do |span| %>
-          <option value="<%= span %>" <%= "selected" if span == growth_span %>><%= span %> months</option>
-        <% end %>
-      </select>
-    </div>
   </div>
   <div
     data-controller="svg-chart"

@@ -6,9 +6,6 @@ class JourneyController < ApplicationController
     @growth_span = HomeHelper::GROWTH_SPANS.include?(asked) ? asked : HomeHelper::DEFAULT_GROWTH_SPAN
     @growth_months = Analytics::MartGrowth.order(month: :desc).limit(@growth_span).to_a.reverse
 
-    return if refreshed("growth", "growth",
-      growth_months: @growth_months, growth_span: @growth_span)
-
     @monthly_cohorts = Analytics::MartMonthlyCohorts
       .where(searched: 1..)
       .order(cohort_month: :desc)
@@ -42,9 +39,6 @@ class JourneyController < ApplicationController
     chosen = params[:cohort_month].presence&.then { |d| Date.parse(d) } || @cohort_months.first
     @onboarding_funnel = Analytics::MartOnboardingFunnel.find_by(cohort_month: chosen)
 
-    return if refreshed("onboarding-funnel", "onboarding_funnel",
-      onboarding_funnel: @onboarding_funnel, cohort_months: @cohort_months)
-
     @recurrence_cohort_months = Analytics::MartOnboardingRecurrenceFunnel
       .order(cohort_month: :desc).pluck(:cohort_month)
     @recurrence_month = params[:recurrence_month].presence&.then { |d| Date.parse(d) } ||
@@ -63,10 +57,6 @@ class JourneyController < ApplicationController
     @top_posters_month = params[:top_posters_month].presence&.then { |d| Date.parse(d) } ||
       @top_poster_months.first
     @top_posters = Analytics::MartTopPosters.where(month: @top_posters_month).order(:rank).limit(10)
-
-    return if refreshed("top-posters", "top_posters",
-      top_posters: @top_posters, top_poster_months: @top_poster_months,
-      top_posters_month: @top_posters_month)
 
     @activity_bands = Analytics::MartActivityDistribution.order(:band_order)
     @top_channels = Analytics::MartChannelRange

@@ -6,16 +6,6 @@
       <h2 class="card-title">Messages from members</h2>
       <p class="card-sub">last <%= s[:span] %></p>
     </div>
-    <div class="card-tools">
-      <div class="segmented" role="group" aria-label="granularity for member messages">
-        <% %w[daily monthly].each do |g| %>
-          <button type="button"
-                  data-value="<%= g %>"
-                  aria-pressed="<%= granularity == g %>"
-                  data-action="messages-granularity#choose"><%= g %></button>
-        <% end %>
-      </div>
-    </div>
   </div>
   <div
     data-controller="svg-chart"

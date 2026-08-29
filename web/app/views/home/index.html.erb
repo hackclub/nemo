@@ -41,14 +41,15 @@
   </div>
 <% end %>
 
-<div data-controller="people-granularity" data-people-granularity-url-value="<%= root_path %>">
-  <div data-people-granularity-target="container">
-    <%= render "active_people", activity_trend: @people_trend, granularity: @people_granularity %>
+<% content_for :page_controls do %>
+  <span class="qlab">Grain</span>
+  <div class="segmented" role="group" aria-label="granularity">
+    <% HomeHelper::ACTIVITY_GRANULARITIES.each_value.to_a.uniq.each do |g| %>
+      <%= link_to g, root_path(people_granularity: g, messages_granularity: g),
+            aria: { current: ("true" if @people_granularity == g) } %>
+    <% end %>
   </div>
-</div>
+<% end %>
 
-<div data-controller="messages-granularity" data-messages-granularity-url-value="<%= root_path %>">
-  <div data-messages-granularity-target="container">
-    <%= render "member_messages", activity_trend: @messages_trend, granularity: @messages_granularity %>
-  </div>
-</div>
+<%= render "active_people", activity_trend: @people_trend, granularity: @people_granularity %>
+<%= render "member_messages", activity_trend: @messages_trend, granularity: @messages_granularity %>

@@ -12,20 +12,6 @@
         </p>
       <% end %>
     </div>
-    <% if top_poster_months.present? %>
-      <div class="card-tools">
-        <select
-          class="select"
-          aria-label="month"
-          data-top-posters-target="select"
-          data-action="top-posters#change"
-        >
-          <% top_poster_months.each do |m| %>
-            <option value="<%= m.iso8601 %>" <%= "selected" if top_posters_month == m %>><%= m.strftime("%b %Y") %></option>
-          <% end %>
-        </select>
-      </div>
-    <% end %>
   </div>
 
   <div class="scroll">

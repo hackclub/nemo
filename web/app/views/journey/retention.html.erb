@@ -1,10 +1,26 @@
 <% content_for :page_title, "Retention" %>
 <% content_for :page_kicker, "Stage 04" %>
 
-<div id="retention" data-controller="onboarding-funnel" data-onboarding-funnel-url-value="<%= retention_journey_path %>">
-  <div data-onboarding-funnel-target="container">
-    <%= render "onboarding_funnel", onboarding_funnel: @onboarding_funnel, cohort_months: @cohort_months %>
-  </div>
+<% if @cohort_months.present? %>
+  <% content_for :page_controls do %>
+    <span class="qlab">Cohort</span>
+    <details class="menu" data-controller="menu">
+      <summary class="btn">
+        <%= @onboarding_funnel&.cohort_month&.strftime("%b %Y") || "pick a month" %>
+        <span class="car" aria-hidden="true">▾</span>
+      </summary>
+      <div class="menu-pop menu-start">
+        <% @cohort_months.each do |m| %>
+          <%= link_to m.strftime("%b %Y"), retention_journey_path(cohort_month: m.iso8601),
+                class: "btn", aria: { current: ("true" if m == @onboarding_funnel&.cohort_month) } %>
+        <% end %>
+      </div>
+    </details>
+  <% end %>
+<% end %>
+
+<div id="retention">
+  <%= render "onboarding_funnel", onboarding_funnel: @onboarding_funnel, cohort_months: @cohort_months %>
 </div>
 
 <div data-controller="recurrence-funnel" data-recurrence-funnel-url-value="<%= retention_journey_path %>">

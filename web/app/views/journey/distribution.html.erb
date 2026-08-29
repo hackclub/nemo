@@ -1,10 +1,25 @@
 <% content_for :page_title, "Distribution" %>
 <% content_for :page_kicker, "Stage 05" %>
 
-<div id="distribution" data-controller="top-posters" data-top-posters-url-value="<%= distribution_journey_path %>">
-  <div data-top-posters-target="container">
-    <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months, top_posters_month: @top_posters_month %>
-  </div>
+<% if @top_poster_months.present? %>
+  <% content_for :page_controls do %>
+    <span class="qlab">Month</span>
+    <details class="menu" data-controller="menu">
+      <summary class="btn">
+        <%= @top_posters_month.strftime("%b %Y") %><span class="car" aria-hidden="true">▾</span>
+      </summary>
+      <div class="menu-pop menu-start">
+        <% @top_poster_months.each do |m| %>
+          <%= link_to m.strftime("%b %Y"), distribution_journey_path(top_posters_month: m.iso8601),
+                class: "btn", aria: { current: ("true" if m == @top_posters_month) } %>
+        <% end %>
+      </div>
+    </details>
+  <% end %>
+<% end %>
+
+<div id="distribution">
+  <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months, top_posters_month: @top_posters_month %>
 </div>
 
 <div class="card card-stretch">
