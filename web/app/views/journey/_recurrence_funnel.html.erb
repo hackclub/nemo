@@ -14,16 +14,6 @@
                 ("the visit steps need 15 consecutive days of member activity after a first post" unless recurrence_funnel.visits_knowable)
               ) %>
         <% end %>
-        <select
-          class="select"
-          aria-label="cohort month"
-          data-recurrence-funnel-target="select"
-          data-action="recurrence-funnel#change"
-        >
-          <% recurrence_cohort_months.each do |m| %>
-            <option value="<%= m.iso8601 %>" <%= "selected" if recurrence_month == m %>><%= m.strftime("%b %Y") %></option>
-          <% end %>
-        </select>
       </div>
     <% end %>
   </div>

@@ -5410,14 +5410,17 @@
 
   .data-table th.num,
   .data-table th.col-num,
-  .data-table th.col-rank,
   .data-table th.col-btn {
     text-align: right;
   }
 
-  .data-table td.col-rank,
   .data-table td.col-btn {
     text-align: right;
+  }
+
+  .data-table th.col-rank,
+  .data-table td.col-rank {
+    text-align: start;
   }
 
   .data-table th.col-date,
@@ -5466,7 +5469,7 @@
     text-overflow: ellipsis;
   }
 
-  .data-table tbody td:first-child:not(.col-num):not(.num):not(.col-rank):not(.col-date) {
+  .data-table tbody td:first-child:not(.col-num):not(.num):not(.col-date) {
     text-align: left;
   }
 

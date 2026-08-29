@@ -45,11 +45,6 @@ class JourneyController < ApplicationController
       @recurrence_cohort_months.first
     @recurrence_funnel = Analytics::MartOnboardingRecurrenceFunnel
       .find_by(cohort_month: @recurrence_month)
-
-    refreshed("recurrence-funnel", "recurrence_funnel",
-      recurrence_funnel: @recurrence_funnel,
-      recurrence_cohort_months: @recurrence_cohort_months,
-      recurrence_month: @recurrence_month)
   end
 
   def distribution
@@ -62,14 +57,5 @@ class JourneyController < ApplicationController
     @top_channels = Analytics::MartChannelRange
       .order(messages_posted_by_members: :desc)
       .limit(8)
-  end
-
-  private
-
-  def refreshed(header, partial, **locals)
-    return false unless request.headers["X-Requested-With"] == header
-
-    render partial: partial, locals: locals, layout: false
-    true
   end
 end
