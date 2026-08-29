@@ -23,22 +23,45 @@
     </div>
   </div>
   <% total_banded = @activity_bands.sum(&:members) %>
-  <div class="band">
-    <% @activity_bands.each do |b| %>
-      <i class="band-<%= b.band_order %>" style="width:<%= total_banded.positive? ? (b.members.to_f / total_banded * 100).round(2) : 0 %>%"></i>
-    <% end %>
-  </div>
-  <div class="band-list">
-    <% @activity_bands.each do |b| %>
-      <div class="band-item">
-        <i class="band-<%= b.band_order %>"></i>
-        <span><%= b.band_order.zero? ? b.activity_band : "messages posted: #{b.activity_band}" %></span>
-        <b>
-          <%= number_with_delimiter(b.members) %> &middot;
-          <%= total_banded.positive? ? number_to_percentage((b.members.to_f / total_banded * 100).round(1), precision: 1) : "0%" %>
-        </b>
-      </div>
-    <% end %>
+  <% peak = @activity_bands.map(&:members).max.to_i %>
+  <div class="scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>band</th>
+          <th class="col-num">members</th>
+          <th class="col-num">share</th>
+          <th>distribution</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @activity_bands.each do |b| %>
+          <% share = total_banded.positive? ? b.members.to_f / total_banded * 100 : 0 %>
+          <tr>
+            <td>
+              <span class="swatch">
+                <i style="background: <%= b.band_order.zero? ? "var(--off)" : "var(--accent)" %>"></i>
+                <%= b.band_order.zero? ? b.activity_band : "messages posted: #{b.activity_band}" %>
+              </span>
+            </td>
+            <td class="col-num"><%= number_with_delimiter(b.members) %></td>
+            <td class="col-num"><%= number_to_percentage(share.round(1), precision: 1) %></td>
+            <td style="width: 42%">
+              <div class="inbar <%= "soft" if b.band_order.zero? %>">
+                <span><i style="width: <%= peak.positive? ? [(b.members.to_f / peak * 100), 1.5].max.round(1) : 0 %>%"></i></span>
+                <span></span>
+              </div>
+            </td>
+          </tr>
+        <% end %>
+        <tr class="total">
+          <td>searched so far</td>
+          <td class="col-num"><%= number_with_delimiter(total_banded) %></td>
+          <td class="col-num">100%</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
   </div>
   <p class="card-note">
     Counted from each member&rsquo;s all-time message history. The backfill searches the newest joiners
@@ -61,12 +84,15 @@
       </p>
     </div>
   </div>
+  <% chan_peak = @top_channels.map(&:messages_posted_by_members).max.to_i %>
+  <% chan_total = @top_channels.sum(&:messages_posted_by_members) %>
   <div class="scroll">
     <table class="data-table">
       <thead>
         <tr>
           <th>channel</th>
           <th class="col-num">member messages</th>
+          <th>share of the ten</th>
           <th class="col-num">posters</th>
           <th class="col-num">reactions</th>
           <th class="col-num">reactors</th>
@@ -84,7 +110,13 @@
                 <span><%= c.channel_id %></span>
               </span>
             </td>
-            <td><%= number_with_delimiter(c.messages_posted_by_members) %></td>
+            <td class="col-num"><%= number_with_delimiter(c.messages_posted_by_members) %></td>
+            <td style="width: 30%">
+              <div class="inbar">
+                <span><i style="width: <%= chan_peak.positive? ? [(c.messages_posted_by_members.to_f / chan_peak * 100), 1.5].max.round(1) : 0 %>%"></i></span>
+                <span><%= chan_total.positive? ? number_to_percentage(c.messages_posted_by_members.to_f / chan_total * 100, precision: 0) : "0%" %></span>
+              </div>
+            </td>
             <td><%= number_with_delimiter(c.members_who_posted) %></td>
             <td><%= number_with_delimiter(c.reactions_added) %></td>
             <td><%= number_with_delimiter(c.members_who_reacted) %></td>

@@ -17,17 +17,27 @@
       </select>
     </div>
   </div>
-  <div class="chart-tall">
-    <canvas
-      data-controller="growth-chart"
-      data-growth-chart-data-value="<%= {
-        labels: growth_months.map { |m| [m.month.strftime("%b %Y"), growth_cohort_status(m)] },
-        datasets: [
-          { label: "accounts created", data: growth_months.map(&:created_members) },
-          { label: "claimed within 30d", data: growth_months.map(&:claimed_members_30d) }
-        ]
-      }.to_json %>"
-      data-growth-chart-rates-value="<%= growth_months.map { |m| m.claim_rate_30d&.to_f }.to_json %>"
-    ></canvas>
-  </div>
+  <div
+    data-controller="svg-chart"
+    data-svg-chart-kind-value="bars"
+    data-svg-chart-switchable-value="true"
+    data-svg-chart-height-value="240"
+    data-svg-chart-data-value="<%= {
+      labels: growth_months.map { |m| m.month.strftime("%b %Y") },
+      datasets: [
+        { label: "accounts created", data: growth_months.map(&:created_members) },
+        { label: "claimed within 30d", data: growth_months.map(&:claimed_members_30d) }
+      ]
+    }.to_json %>"
+  ></div>
+  <div
+    data-controller="svg-chart"
+    data-svg-chart-kind-value="line"
+    data-svg-chart-height-value="120"
+    data-svg-chart-pct-value="true"
+    data-svg-chart-data-value="<%= {
+      labels: growth_months.map { |m| m.month.strftime("%b %Y") },
+      datasets: [{ label: "claim rate", data: growth_months.map { |m| m.claim_rate_30d && m.claim_rate_30d.to_f * 100 } }]
+    }.to_json %>"
+  ></div>
 </div>

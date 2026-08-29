@@ -1,3 +1,4 @@
+<% peak = channels.map { |c| c.range_messages.to_i }.max.to_i %>
 <% channels.each do |channel| %>
   <tr>
     <td>
@@ -8,21 +9,25 @@
         <span><%= channel.channel_id %></span>
       </span>
     </td>
-    <td>
+    <td style="width: 26%">
+      <% if channel.range_messages %>
+        <div class="inbar">
+          <span><i style="width: <%= peak.positive? ? [(channel.range_messages.to_f / peak * 100), 1.5].max.round(1) : 0 %>%"></i></span>
+          <span><%= channel.range_messages >= 1000 ? "#{(channel.range_messages / 1000.0).round}k" : number_with_delimiter(channel.range_messages) %></span>
+        </div>
+      <% else %>
+        <span class="chip chip-off">no range</span>
+      <% end %>
+    </td>
+    <td class="col-num"><%= channel.range_posters ? number_with_delimiter(channel.range_posters) : "n/a" %></td>
+    <td class="col-num">
       <% if channel.range_members %>
         <%= number_with_delimiter(channel.range_members) %>
       <% else %>
         <span class="chip chip-off">n/a</span>
       <% end %>
     </td>
-    <td>
-      <% if channel.range_messages %>
-        <%= number_with_delimiter(channel.range_messages) %>
-      <% else %>
-        <span class="chip chip-off">no range</span>
-      <% end %>
-    </td>
-    <td><%= channel.range_posters ? number_with_delimiter(channel.range_posters) : "n/a" %></td>
-    <td><%= channel.date_created&.strftime("%b %-d, %Y") %></td>
+    <td class="col-num <%= channel_voice_tone(channel) %>"><%= channel_voice(channel) %></td>
+    <td class="col-date"><%= channel.date_created&.strftime("%b %-d, %Y") %></td>
   </tr>
 <% end %>

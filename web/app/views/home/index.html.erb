@@ -52,36 +52,3 @@
     <%= render "member_messages", activity_trend: @messages_trend, granularity: @messages_granularity %>
   </div>
 </div>
-
-<div class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">The journey</h2>
-      <p class="card-sub">five stages, in order &middot; each one a rate out of the stage above it</p>
-    </div>
-  </div>
-  <div class="scroll">
-    <table class="data-table">
-      <tbody>
-        <% journey_stages.each do |number, label, stage| %>
-          <tr data-controller="row-link"
-              data-row-link-href-value="<%= public_send(:"#{stage}_journey_path") %>"
-              data-action="click->row-link#go">
-            <td class="col-num mono"><%= number %></td>
-            <td>
-              <span class="two-line">
-                <b><%= link_to label, public_send(:"#{stage}_journey_path") %></b>
-                <span><%= journey_blurb(stage) %></span>
-              </span>
-            </td>
-            <td class="col-state"><%= journey_reach(stage) %></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
-  <p class="card-note">
-    A stage reading <b>n/a</b> is not a low number, it is an absent one. The walk that fills it in is
-    rate limited, so it arrives a night at a time rather than a query at a time.
-  </p>
-</div>

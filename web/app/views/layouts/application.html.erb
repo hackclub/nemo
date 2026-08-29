@@ -54,8 +54,7 @@
 
         <% if on?(:analytics) %>
         <div class="navsec">
-          <p class="rail-label">The journey</p>
-          <nav class="rail-nav" aria-label="The journey">
+          <nav class="rail-nav" aria-label="Overview">
             <%= link_to root_path, class: "rail-item",
                   aria: { current: ("page" if current_page?(root_path)) } do %>
               <span class="rail-ic" aria-hidden="true">
@@ -63,13 +62,15 @@
               </span>
               <span class="rail-text">Overview</span>
             <% end %>
-            <% journey_stages.each do |number, label, stage| %>
-              <%= link_to public_send(:"#{stage}_journey_path"), class: "rail-item",
-                    aria: { current: ("page" if current_page?(public_send(:"#{stage}_journey_path"))) } do %>
-                <span class="rail-ix" aria-hidden="true"><%= number %></span>
-                <span class="rail-text"><%= label %></span>
+            <div class="rail-nest">
+              <% journey_stages.each do |number, label, stage| %>
+                <%= link_to public_send(:"#{stage}_journey_path"), class: "rail-item",
+                      aria: { current: ("page" if current_page?(public_send(:"#{stage}_journey_path"))) } do %>
+                  <span class="rail-ix" aria-hidden="true"><%= number %></span>
+                  <span class="rail-text"><%= label %></span>
+                <% end %>
               <% end %>
-            <% end %>
+            </div>
           </nav>
         </div>
 

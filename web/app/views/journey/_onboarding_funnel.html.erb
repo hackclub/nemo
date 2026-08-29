@@ -30,10 +30,11 @@
 
   <% if onboarding_funnel %>
     <div class="chart-short">
-      <canvas
-        data-controller="chart"
-        data-chart-type-value="bar"
-        data-chart-data-value="<%= {
+      <div
+        data-controller="svg-chart"
+        data-svg-chart-kind-value="bars"
+        data-svg-chart-height-value="240"
+        data-svg-chart-data-value="<%= {
           labels: ["Created", "Joined", "First post", "Active in days 23-30", "Active in days 83-90"],
           datasets: [{
             label: "members",
@@ -46,8 +47,7 @@
             ]
           }]
         }.to_json %>"
-        data-chart-options-value="<%= { maintainAspectRatio: false, plugins: { legend: { display: false } } }.to_json %>"
-      ></canvas>
+      ></div>
     </div>
   <% else %>
     <p class="card-note">no cohort data loaded yet</p>

@@ -32,27 +32,36 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th>member</th>
           <th class="col-rank">rank</th>
+          <th>member</th>
           <th class="col-num">messages</th>
+          <th>share of the top ten</th>
         </tr>
       </thead>
       <tbody>
+        <% peak = top_posters.map(&:messages_posted).max.to_i %>
+        <% total = top_posters.sum(&:messages_posted) %>
         <% if top_posters.any? %>
           <% top_posters.each do |p| %>
             <tr>
+              <td class="col-rank"><%= p.rank %></td>
               <td>
                 <span class="two-line">
                   <b><%= p.display_name.presence || "n/a" %></b>
                   <span><%= p.user_id %></span>
                 </span>
               </td>
-              <td><%= p.rank %></td>
-              <td><%= number_with_delimiter(p.messages_posted) %></td>
+              <td class="col-num"><%= number_with_delimiter(p.messages_posted) %></td>
+              <td style="width: 38%">
+                <div class="inbar">
+                  <span><i style="width: <%= peak.positive? ? [(p.messages_posted.to_f / peak * 100), 1.5].max.round(1) : 0 %>%"></i></span>
+                  <span><%= total.positive? ? number_to_percentage(p.messages_posted.to_f / total * 100, precision: 0) : "0%" %></span>
+                </div>
+              </td>
             </tr>
           <% end %>
         <% else %>
-          <tr><td colspan="3">no top posters loaded</td></tr>
+          <tr><td colspan="4">no top posters loaded</td></tr>
         <% end %>
       </tbody>
     </table>

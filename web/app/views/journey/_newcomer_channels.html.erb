@@ -50,14 +50,14 @@
                 </span>
               </td>
               <td><%= number_with_delimiter(c.newcomers_posting) %></td>
-              <td>
+              <td class="col-num">
                 <span class="two-line">
                   <b><%= number_with_delimiter(c.newcomers_returning) %></b>
                   <span><%= c.returning_share ? number_to_percentage(c.returning_share * 100, precision: 0) : "n/a" %></span>
                 </span>
               </td>
               <td><%= number_with_delimiter(c.newcomer_first_posts) %></td>
-              <td>
+              <td class="col-num">
                 <span class="two-line">
                   <b><%= number_with_delimiter(c.newcomers_joined) %></b>
                   <span><%= c.joined_share ? "#{number_to_percentage(c.joined_share * 100, precision: 0)} of read" : "n/a" %></span>

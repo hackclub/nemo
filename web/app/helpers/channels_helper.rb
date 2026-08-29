@@ -11,4 +11,20 @@ module ChannelsHelper
         class: "sortable"
     end
   end
+
+  def channel_voice(channel)
+    return "n/a" if channel.range_posters.nil? || channel.range_members.to_i.zero?
+
+    number_to_percentage(channel.range_posters.to_f / channel.range_members * 100, precision: 1)
+  end
+
+  def channel_voice_tone(channel)
+    return "" if channel.range_posters.nil? || channel.range_members.to_i.zero?
+
+    share = channel.range_posters.to_f / channel.range_members * 100
+    return "is-loud" if share > 10
+    return "is-quiet" if share < 2
+
+    ""
+  end
 end

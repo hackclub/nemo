@@ -21,9 +21,10 @@
         <thead>
           <tr>
             <%= channel_sort_th("channel", "name") %>
+            <%= channel_sort_th("member messages", "messages") %>
+            <%= channel_sort_th("posted", "posters", "col-num") %>
             <%= channel_sort_th("members", "members", "col-num") %>
-            <%= channel_sort_th("messages", "messages", "col-num") %>
-            <%= channel_sort_th("posters", "posters", "col-num") %>
+            <th class="col-num">who spoke</th>
             <%= channel_sort_th("created", "created", "col-date") %>
           </tr>
         </thead>
