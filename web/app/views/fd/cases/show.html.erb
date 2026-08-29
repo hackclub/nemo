@@ -151,21 +151,21 @@
   <% if @tab == "notes" %>
     <% if @notes.any? %>
       <div class="card notes-card">
-        <div class="notes-head">
+        <div class="panel-head notes-head">
           <span class="lbl grow">Notes</span>
           <%= opens_modal "case.note", "Add a note", opens: "add-note" %>
         </div>
-        <div class="notes">
+        <div class="people-list">
           <% @notes.each do |note| %>
-            <div class="note-row">
+            <div class="line-row fat person-row note-line note-row">
               <%= face(note.author) %>
-              <div class="note-main">
-                <div class="note-body"><%= mentioned(note.body) %></div>
-                <div class="note-by">
-                  <span><%= note_byline(note) %></span>
-                  <%= render "note_remove", kase: @case, note: note %>
-                </div>
-              </div>
+              <span class="grow two-line">
+                <b class="note-said note-body"><%= mentioned(note.body) %></b>
+                <span class="note-by"><%= note_byline(note) %></span>
+              </span>
+              <span class="row-right">
+                <%= render "note_remove", kase: @case, note: note %>
+              </span>
             </div>
           <% end %>
         </div>
@@ -320,10 +320,10 @@
             <%= radio_button_tag :about, "case", true, id: nil %>
             This case
           </label>
-          <% @case.subjects.each do |person| %>
+          <% @participants.map(&:user_id).uniq.each do |user_id| %>
             <label>
-              <%= radio_button_tag :about, person.user_id, false, id: nil %>
-              <%= names[person.user_id] %>
+              <%= radio_button_tag :about, user_id, false, id: nil %>
+              <%= names[user_id] %>
             </label>
           <% end %>
         </div>
@@ -331,7 +331,7 @@
       <label class="field-label">
         The note
         <%= render "fd/mention_field", name: :body, value: field_was(:body), rows: 4,
-              placeholder: "meow" %>
+              placeholder: "type @ to name somebody" %>
       </label>
       <%= field_wrong(:body) %>
     </div>

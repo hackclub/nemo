@@ -280,7 +280,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
 
     sign_in_as(@me)
     get fd_case_path(@kase, tab: "notes")
-    assert_select ".note-by .text-btn", 1
+    assert_select ".note-line .text-btn", 1
   end
 
   test "notes can still be written on a resolved case" do

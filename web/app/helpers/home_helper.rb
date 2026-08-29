@@ -87,14 +87,15 @@ module HomeHelper
     return nil if pct.nil? || pct.abs < 0.05
 
     arrow = pct.positive? ? "↑" : "↓"
-    style = pct.positive? ? "chip chip-good" : "chip chip-warn"
+    style = pct.positive? ? "delta-up" : "delta-down"
     tag.span("#{arrow} #{number_to_percentage(pct.abs, precision: 1)}", class: style)
   end
 
   def share_chip(numerator, denominator)
     return nil if denominator.nil? || denominator.to_i.zero?
 
-    tag.span(number_to_percentage(numerator.to_f / denominator * 100, precision: 1), class: "chip chip-off")
+    tag.span(number_to_percentage(numerator.to_f / denominator * 100, precision: 1),
+      class: "delta-share")
   end
 
   def rate_chip(pct, label = nil)

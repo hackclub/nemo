@@ -73,10 +73,6 @@
     <% elsif shown.empty? %>
       <div class="empty">
         <p class="empty-title">Nothing has been copied across yet</p>
-        <p class="card-note">
-          The thread is on the case, but the messages have not been fetched. The next
-          sync picks it up.
-        </p>
         <div class="empty-do">
           <%= link_to "Open in Slack &#8599;".html_safe,
                 slack_thread_url(row.channel_id, row.thread_ts),

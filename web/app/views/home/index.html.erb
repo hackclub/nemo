@@ -14,13 +14,13 @@
 <% else %>
   <div class="kpis">
     <% [
-      ["Total members", "(Slack's count today)", @team_stats.total_members_count,
+      ["Total members", nil, @team_stats.total_members_count,
        delta_chip(@team_stats.total_members_count, @team_stats_prior&.total_members_count),
        "vs 28 days earlier"],
       ["Claimed accounts", nil, @team_stats.total_claimed_count,
        share_chip(@team_stats.total_claimed_count, @team_stats.total_members_count),
-       "of the members Slack counts today"],
-      ["Active, last 28 days", "(posted or read)", @team_stats.active_users_28d,
+       nil],
+      ["Active, last 28 days", nil, @team_stats.active_users_28d,
        delta_chip(@team_stats.active_users_28d, @team_stats_prior&.active_users_28d),
        "vs 28 days earlier"],
       ["Posted, last 28 days", nil, @team_stats.writers_count_28d,
@@ -34,7 +34,7 @@
         <p class="kpi-val"><%= number_with_delimiter(value) %></p>
         <div class="delta">
           <%= chip %>
-          <span class="delta-note"><%= note %></span>
+          <% if note %><span class="delta-note"><%= note %></span><% end %>
         </div>
       </div>
     <% end %>
