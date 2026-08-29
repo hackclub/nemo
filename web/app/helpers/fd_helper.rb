@@ -414,13 +414,13 @@ module FdHelper
 
   LANES = ["open", "acting", "resolved"].freeze
 
-  def case_lanes(cases)
-    LANES.index_with { |lane| cases.select { |kase| case_lane(kase) == lane } }
+  def case_lanes(cases, action_counts)
+    LANES.index_with { |lane| cases.select { |kase| case_lane(kase, action_counts) == lane } }
   end
 
-  def case_lane(kase)
+  def case_lane(kase, action_counts)
     return "resolved" if kase.resolved?
-    return "acting" if kase.actions.any?
+    return "acting" if action_counts[kase.id].to_i.positive?
 
     "open"
   end

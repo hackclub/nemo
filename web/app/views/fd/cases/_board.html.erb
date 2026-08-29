@@ -1,5 +1,5 @@
 <div class="board">
-  <% case_lanes(cases).each do |lane, held| %>
+  <% case_lanes(cases, action_counts).each do |lane, held| %>
     <div class="lane">
       <div class="lane-head">
         <i class="lane-dot lane-<%= lane %>" aria-hidden="true"></i>
@@ -15,7 +15,29 @@
               #<%= kase.id %>
               <span><%= category_label(kase.category_key) %></span>
             </div>
-            <p class="lane-said"><%= case_excerpt(kase) || "no report on file" %></p>
+            <% gist = case_gist(kase) %>
+            <% if gist %>
+              <p class="lane-said"><%= gist %></p>
+            <% else %>
+              <p class="lane-said sub2">no report on file</p>
+            <% end %>
+
+            <% if kase.subject_user_ids.any? %>
+              <% priors = case_priors(kase, priors_by_user) %>
+              <div class="subjcell lane-who">
+                <%= row_subject_avatar(kase) %>
+                <span><%= row_subject_label(kase) %></span>
+                <% if priors.positive? %>
+                  <span class="mchip warn"><%= pluralize(priors, "prior case") %></span>
+                <% end %>
+              </div>
+            <% end %>
+
+            <% needs = case_needs(kase) %>
+            <% if needs.any? %>
+              <p class="needs-said lane-needs">needs <%= to_sentence_words(needs) %></p>
+            <% end %>
+
             <div class="lane-foot">
               <% where = thread_channels[kase.id]&.first %>
               <span class="mono"><%= where ? channel_label(where) : "n/a" %></span>

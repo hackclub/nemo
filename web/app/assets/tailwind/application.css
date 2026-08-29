@@ -620,6 +620,20 @@
     color: var(--ink-4);
   }
 
+  .lane-said .gist {
+    margin-top: 0;
+    white-space: normal;
+    overflow: visible;
+  }
+
+  .lane-who {
+    margin: 0 0 6px;
+  }
+
+  .lane-needs {
+    margin: 0 0 7px;
+  }
+
   .subjcell {
     display: flex;
     align-items: center;

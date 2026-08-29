@@ -277,6 +277,7 @@ module Fd
       @priors = Case.prior_counts_for(@cases.flat_map(&:subject_user_ids))
       @flagged_counts = Case.flagged_counts_for(case_ids)
       @live_action_counts = Case.live_action_counts_for(case_ids)
+      @action_counts = Case.action_counts_for(case_ids)
       @channels = ChannelNames.for(@thread_channels.values.flatten)
       @stats = QueueStats.load
       @total_count = @stats.total

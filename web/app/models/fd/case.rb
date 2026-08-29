@@ -110,6 +110,13 @@ module Fd
       CaseCitation.where(case_id: ids).group(:case_id).count
     end
 
+    def self.action_counts_for(case_ids)
+      ids = case_ids.compact.uniq
+      return {} if ids.empty?
+
+      Action.where(case_id: ids).group(:case_id).count
+    end
+
     def self.live_action_counts_for(case_ids)
       ids = case_ids.compact.uniq
       return {} if ids.empty?
