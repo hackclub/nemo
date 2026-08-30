@@ -10,5 +10,13 @@ module Analytics
     def complete?
       searched >= members
     end
+
+    def mature?
+      cohort_month.end_of_month <= Date.current - 30
+    end
+
+    def matures_on
+      cohort_month.end_of_month + 30
+    end
   end
 end

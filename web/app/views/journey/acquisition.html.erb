@@ -48,7 +48,13 @@
               <td class="col-num"><%= number_with_delimiter(c.members) %></td>
               <% if c.complete? %>
                 <td class="col-num"><%= number_to_percentage(c.ever_posted.to_f / c.members * 100, precision: 1) %></td>
-                <td class="col-num"><%= number_to_percentage(c.posted_within_30d.to_f / c.members * 100, precision: 1) %></td>
+                <td class="col-num">
+                  <% if c.mature? %>
+                    <%= number_to_percentage(c.posted_within_30d.to_f / c.members * 100, precision: 1) %>
+                  <% else %>
+                    <span class="sub2">matures <%= c.matures_on.strftime("%-d %b") %></span>
+                  <% end %>
+                </td>
                 <td class="col-num"><%= c.median_days_to_first_post || "n/a" %></td>
               <% else %>
                 <td class="col-num">n/a</td>
