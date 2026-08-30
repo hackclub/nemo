@@ -55,7 +55,7 @@ module Fd
     DEFAULTS = {
       "status" => "any", "age" => "any", "assignee" => "anyone", "category" => "any",
       "subject" => "anyone", "actions" => "any", "opened" => "any", "resolved" => "any",
-      "sort" => "opened", "dir" => "desc"
+      "sort" => "opened", "dir" => "asc"
     }.freeze
     FACET_KEYS = DEFAULTS.keys.freeze
     KEYS = (FACET_KEYS + ["view"]).freeze
@@ -156,8 +156,8 @@ module Fd
     end
 
     def sort_params(key)
-      return facet_params("sort" => key, "dir" => "desc") unless sorting?(key)
-      return facet_params("dir" => "asc") if descending?
+      return facet_params("sort" => key, "dir" => DEFAULTS["dir"]) unless sorting?(key)
+      return facet_params("dir" => "desc") unless descending?
 
       facet_params("sort" => DEFAULTS["sort"], "dir" => DEFAULTS["dir"])
     end

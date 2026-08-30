@@ -146,4 +146,29 @@ class Fd::CaseQueryTest < ActiveSupport::TestCase
 
     assert_equal counted_one_by_one(nil), Fd::CaseQuery.view_counts(nil)
   end
+
+  test "the queue opens with the oldest case first" do
+    assert_equal [@stale.id, @fresh.id, @taken.id], ids(view: "everything") - [@done.id],
+      "the case that has waited longest is the one that needs somebody"
+  end
+
+  test "asking for the newest first still works" do
+    oldest_first = ids(view: "everything")
+
+    assert_equal oldest_first.reverse, ids(view: "everything", dir: "desc")
+  end
+
+  test "sorting a column starts in the default direction, then reverses, then clears" do
+    bare = query.sort_params("case")
+    assert_equal "case", bare["sort"]
+    assert_not_includes bare.keys, "dir",
+      "a fresh column starts in the default direction, so dir stays out of the url"
+
+    ascending = query(sort: "case")
+    assert_equal "desc", ascending.sort_params("case")["dir"], "clicking again reverses it"
+
+    descending = query(sort: "case", dir: "desc")
+    assert_not_includes descending.sort_params("case").keys, "sort",
+      "a third click drops back to the default sort"
+  end
 end
