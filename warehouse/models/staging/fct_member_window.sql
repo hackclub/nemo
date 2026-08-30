@@ -1,3 +1,5 @@
+{{ config(materialized='table', indexes=[{'columns': ['source', 'user_id']}]) }}
+
 with latest as (
     select window_start, window_end
     from {{ source('raw', 'member_activity_snapshot') }}
