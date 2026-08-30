@@ -773,11 +773,15 @@ module FdHelper
     "#{words[0..-2].join(', ')} and #{words.last}"
   end
 
-  def row_reporter_face(kase)
-    first = case_first_report(kase)
-    return face(nil) if first.nil? || first.anonymous?
+  def row_reporter(kase)
+    reports = kase.reports.to_a
+    return kase.opened_by if reports.empty?
 
-    face(first.reporter_user_id)
+    reports.reject(&:anonymous?).first&.reporter_user_id
+  end
+
+  def row_reporter_face(kase)
+    face(row_reporter(kase))
   end
 
   def case_priors(kase, counts)
@@ -848,14 +852,13 @@ module FdHelper
   end
 
   def row_reporter_label(kase)
-    reports = kase.reports.to_a
-    return names[kase.opened_by] if reports.empty?
+    who = row_reporter(kase)
+    return "anonymous" if who.blank?
 
-    named = reports.reject(&:anonymous?)
-    return "anonymous" if named.empty?
-    return names[named.first.reporter_user_id] if reports.one?
+    others = kase.reports.size - 1
+    return names[who] if others < 1
 
-    "#{names[named.first.reporter_user_id]} and #{pluralize(reports.size - 1, 'other')}"
+    "#{names[who]} and #{pluralize(others, 'other')}"
   end
 
   PRIOR_TONES = { 0 => "chip-good", 1 => "chip-off" }.freeze

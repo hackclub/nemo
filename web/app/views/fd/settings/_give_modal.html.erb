@@ -7,22 +7,23 @@
               label: "search for who to give it to" %>
       </div>
 
-      <div class="field-label">
+      <label class="field-label">
         <span>Role</span>
-        <div class="outcomes">
+        <div class="segmented seg-radio">
           <% Fd::Permission::ROLES.each do |role| %>
-            <label class="opt">
-              <%= radio_button_tag :role, role, role == "firefighter" %>
-              <span class="opt-dot" aria-hidden="true"></span>
-              <span>
-                <span class="opt-label"><%= Fd::Permission::ROLE_LABELS.fetch(role) %></span>
-                <span class="opt-why"><%= role_reach(role) %></span>
-              </span>
+            <label>
+              <%= radio_button_tag :role, role, role == "firefighter", id: nil %>
+              <span><%= Fd::Permission::ROLE_LABELS.fetch(role) %></span>
             </label>
           <% end %>
         </div>
-      </div>
+      </label>
 
+      <label class="field-label">
+        <span>Why they are getting it</span>
+        <%= text_field_tag :reason, field_was(:reason), class: "textarea", id: nil,
+              placeholder: "one line, kept on the grant" %>
+      </label>
     </div>
     <div class="modal-foot">
       <label for="give-access" class="btn btn-ghost">Cancel</label>

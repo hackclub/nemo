@@ -6,8 +6,8 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
   end
 
-  def give(user_id: "U0AFF1", role: "firefighter")
-    post fd_grants_path, params: { user_id: user_id, role: role }
+  def give(user_id: "U0AFF1", role: "firefighter", **rest)
+    post fd_grants_path, params: { user_id: user_id, role: role }.merge(rest)
   end
 
   test "giving access records the role and who gave it" do
@@ -117,5 +117,33 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
 
     get fd_settings_path
     assert_select "label[for=give-access]", count: 0
+  end
+
+  test "a reason is kept on the grant when one is given" do
+    give(reason: "covering the weekend")
+
+    assert_equal "covering the weekend", Fd::AccessGrant.live.find_by(user_id: "U0AFF1").reason
+  end
+
+  test "a grant without a reason is still allowed, since the field is optional" do
+    give
+
+    grant = Fd::AccessGrant.live.find_by(user_id: "U0AFF1")
+    assert_nil grant.reason
+    assert_equal "firefighter", grant.role
+  end
+
+  test "a blank reason is stored as nothing rather than an empty string" do
+    give(reason: "   ")
+
+    assert_nil Fd::AccessGrant.live.find_by(user_id: "U0AFF1").reason
+  end
+
+  test "the give modal offers the role as a segmented row and an optional reason" do
+    get fd_settings_path
+
+    assert_select "#give-access ~ * .seg-radio input[name=role]",
+      Fd::Permission::ROLES.size
+    assert_select "#give-access ~ * input[name=reason]", 1
   end
 end

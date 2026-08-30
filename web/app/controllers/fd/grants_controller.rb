@@ -14,8 +14,10 @@ module Fd
 
       grant = nil
       writing do
-        grant = AccessGrant.give!(user_id, role: role, by: current_staff.user_id)
-        audit(grant, "granted", after: { "user_id" => user_id, "role" => role })
+        grant = AccessGrant.give!(user_id, role: role, by: current_staff.user_id,
+          reason: params[:reason].to_s.strip.presence)
+        audit(grant, "granted",
+          after: { "user_id" => user_id, "role" => role, "reason" => grant.reason })
       end
 
       redirect_to fd_settings_path(person: user_id),

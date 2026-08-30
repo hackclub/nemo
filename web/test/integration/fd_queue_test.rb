@@ -184,4 +184,31 @@ class FdQueueTest < ActionDispatch::IntegrationTest
 
     assert_select ".two-line span", text: /\An\/a\z/, count: 0
   end
+
+  def reporter_cell(kase)
+    row = css_select("tr").find { |tr| tr.to_s.include?(fd_case_path(kase)) }
+    row.css("td")[2]
+  end
+
+  test "a case nobody reported is credited to whoever opened it, face and name alike" do
+    assert_empty @free.reports
+
+    get fd_cases_path
+    cell = reporter_cell(@free)
+
+    assert_no_match(/\?/, cell.css(".row-avatar").text,
+      "the face must not say unknown while the name says who opened it")
+    assert_match(/UFF1|#{@free.opened_by}/, cell.text)
+  end
+
+  test "an anonymous report shows no face and no name" do
+    @free.reports.create!(reporter_user_id: nil, is_anonymous: true, body: "said quietly",
+      received_at: 1.hour.ago, source_app: "fire_engine")
+
+    get fd_cases_path
+    cell = reporter_cell(@free)
+
+    assert_match(/anonymous/, cell.text)
+    assert_equal "?", cell.css(".row-avatar").text.strip
+  end
 end
