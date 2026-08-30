@@ -1,5 +1,18 @@
 <% content_for :page_title, "Members" %>
 
+<% content_for :page_controls do %>
+  <%= form_with url: fd_members_path, method: :get, class: "qsearch",
+        data: { controller: "live-search", action: "input->live-search#go",
+                turbo_frame: "roster", turbo_action: "advance" } do %>
+    <% @query.picked.each do |key, value| %>
+      <%= hidden_field_tag key, value, id: nil %>
+    <% end %>
+    <%= search_field_tag :q, @query.term, placeholder: "Find a member",
+          class: "qsearch-in", autocomplete: "off",
+          aria: { label: "Find a member" } %>
+  <% end %>
+<% end %>
+
 <div class="stack">
   <turbo-frame id="roster" target="_top" data-turbo-action="advance">
   <div class="panel">

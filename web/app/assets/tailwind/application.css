@@ -826,6 +826,32 @@
     flex: 1;
   }
 
+  .qsearch {
+    display: flex;
+  }
+
+  .qsearch-in {
+    height: var(--chat-ctl);
+    min-width: 15rem;
+    padding: 0 10px;
+    font: inherit;
+    font-size: var(--t-small);
+    color: var(--ink-1);
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+  }
+
+  .qsearch-in::placeholder {
+    color: var(--ink-4);
+  }
+
+  .qsearch-in:focus {
+    outline: none;
+    border-color: var(--accent-line);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
   .avatar {
     width: 22px;
     height: 22px;

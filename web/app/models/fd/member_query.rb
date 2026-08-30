@@ -52,6 +52,12 @@ module Fd
       @params = params
     end
 
+    def term
+      @term ||= @params["q"].to_s.strip.delete_prefix("@")
+    end
+
+    def asked? = term.present?
+
     def [](key)
       raw = @params[key].to_s
       return raw if allowed?(key, raw)
@@ -71,18 +77,24 @@ module Fd
     def view_label = VIEWS.fetch(view)
 
     def to_params
+      asking.merge(picked)
+    end
+
+    def picked
       return {} if view == DEFAULT_VIEW
       return { "view" => view } if view
 
       chosen_facets.presence || { "view" => NO_VIEW }
     end
 
+    def asking = asked? ? { "q" => term } : {}
+
     def facet_params(overrides)
       base = view ? VIEW_FACETS.fetch(view) : chosen_facets
       chosen = base.merge(overrides.stringify_keys)
         .reject { |key, value| value.to_s == DEFAULTS[key] || value.blank? }
 
-      chosen.presence || { "view" => NO_VIEW }
+      asking.merge(chosen.presence || { "view" => NO_VIEW })
     end
 
     def rows
@@ -248,6 +260,7 @@ module Fd
         found = found.select { |row| row.subject_of.positive? || row.logged_in.positive? } unless
           self["who"] == "everyone"
         found = found.select { |row| row.priors >= self["priors"].to_i } unless default?("priors")
+        found = filter_term(found)
         found = filter_state(found)
         filter_context(found)
       end
@@ -260,6 +273,17 @@ module Fd
       when "noted" then found.select { |row| row.notes.positive? }
       when "clean" then found.select { |row| row.subject_of.zero? && row.logged_in.zero? }
       else found
+      end
+    end
+
+    def filter_term(found)
+      return found unless asked?
+
+      wanted = term.downcase
+      known = Names.for(found.map(&:user_id))
+      found.select do |row|
+        row.user_id.downcase.include?(wanted) ||
+          known[row.user_id].to_s.downcase.include?(wanted)
       end
     end
 

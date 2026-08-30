@@ -224,6 +224,35 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     assert_select ".row-name .row-avatar", minimum: 1
   end
 
+  test "searching narrows the roster to the people asked for" do
+    make_case(subject: "UHASONE", opened_at: 2.days.ago)
+    get fd_members_path(q: "UHASONE")
+
+    assert listed?("UHASONE")
+    assert_select "tbody tr", 1
+  end
+
+  test "a leading at sign is ignored, so pasting a handle works" do
+    make_case(subject: "UHASONE", opened_at: 2.days.ago)
+    get fd_members_path(q: "@uhasone")
+
+    assert listed?("UHASONE"), "the search is case insensitive and tolerates the @"
+  end
+
+  test "a search that matches nobody says so rather than showing everybody" do
+    get fd_members_path(q: "UNOSUCHPERSON")
+
+    assert_select "tbody tr", 0
+  end
+
+  test "the search survives paging and view links" do
+    query = Fd::MemberQuery.new({ "q" => "UHASONE", "view" => "everyone" })
+
+    assert_equal "UHASONE", query.page_params(2)["q"], "paging must not drop the search"
+    assert_equal "UHASONE", query.facet_params("priors" => "2")["q"],
+      "narrowing must not drop the search"
+  end
+
   test "an open case shows in the standing column" do
     make_case(subject: "UOPEN", opened_at: 2.days.ago)
     get fd_members_path
