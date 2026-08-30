@@ -13,7 +13,8 @@ module Fd
     VIA = { "dashboard" => "from the dashboard", "command" => "from Slack" }.freeze
 
     KIND_VIEWS = {
-      "audit" => "audit", "read" => "read", "consent" => "api", "event" => "api"
+      "audit" => "audit", "read" => "read", "consent" => "api", "event" => "api",
+      "request" => "api"
     }.freeze
 
     Row = Struct.new(:at, :event, :kind, :id, :about, :who, :said, :actor, keyword_init: true)
@@ -68,7 +69,7 @@ module Fd
     end
 
     def union
-      "#{audit_side}#{reads_side}#{consent_side}#{event_side}"
+      "#{audit_side}#{reads_side}#{consent_side}#{event_side}#{request_side}"
     end
 
     def nothing_asked?
@@ -149,6 +150,21 @@ module Fd
       SQL
     end
 
+    def request_side
+      return "" unless wanted?("api")
+      return "" if @only
+
+      mine = @user_id ? "AND t.owner_user_id = :who" : ""
+      <<~SQL
+        #{lead_for(audit_side, reads_side, consent_side, event_side)}
+        SELECT 'request' AS kind, r.token_id AS id, date_trunc('day', r.at) AS at
+        FROM api.request_log r
+        JOIN api.token t ON t.id = r.token_id
+        WHERE r.at >= :since #{mine}
+        GROUP BY r.token_id, date_trunc('day', r.at)
+      SQL
+    end
+
     def lead_for(*sides)
       sides.all?(&:empty?) ? "" : "UNION ALL"
     end
@@ -182,6 +198,7 @@ module Fd
       read_rows = reads_for(chosen.select { |row| row["kind"] == "read" }.map { |row| row["id"] })
       consent_rows = consents_for(ids_of(chosen, "consent"))
       event_rows = events_for(ids_of(chosen, "event"))
+      request_rows = requests_for(chosen.select { |row| row["kind"] == "request" })
 
       found = entries
       @actions = Action.where(id: ids(found, "action")).index_by(&:id)
@@ -192,11 +209,53 @@ module Fd
         .pluck(:id, :title).to_h
 
       made = found.map { |row| row_for(row).tap { |one| one.actor = row.actor_user_id } }
-      (made + read_rows + consent_rows + event_rows).sort_by { |row| -row.at.to_i }
+      (made + read_rows + consent_rows + event_rows + request_rows)
+        .sort_by { |row| -row.at.to_i }
     end
 
     def ids_of(chosen, kind)
       chosen.select { |row| row["kind"] == kind }.map { |row| row["id"] }
+    end
+
+    ROLLED = <<~SQL.freeze
+      SELECT r.token_id, date_trunc('day', r.at) AS day, t.name AS token_name,
+             t.owner_user_id AS owner, count(*) AS asks,
+             count(*) FILTER (WHERE r.outcome = 'withheld') AS withheld,
+             count(DISTINCT r.subject_user_id) AS people,
+             count(DISTINCT r.channel_id) AS rooms
+      FROM api.request_log r
+      JOIN api.token t ON t.id = r.token_id
+      WHERE r.at >= :since
+      GROUP BY r.token_id, date_trunc('day', r.at), t.name, t.owner_user_id
+    SQL
+
+    def requests_for(picked_rows)
+      return [] if picked_rows.empty?
+
+      wanted = picked_rows.map { |row| [row["id"].to_i, row["at"].to_time.to_i] }.to_set
+      rolled.filter_map do |row|
+        next unless wanted.include?([row["token_id"].to_i, row["day"].to_time.to_i])
+
+        request_row(row)
+      end
+    end
+
+    def rolled
+      AuditEntry.connection.select_all(
+        AuditEntry.sanitize_sql([ROLLED, { since: @since }])
+      )
+    end
+
+    def request_row(row)
+      people = row["people"].to_i
+      withheld = row["withheld"].to_i
+      rooms = row["rooms"].to_i
+      said = ["#{rooms} #{'channel'.pluralize(rooms)}"]
+      said << "#{withheld} withheld" if withheld.positive?
+
+      Row.new(at: row["day"], event: "api/checked", kind: "capability",
+        about: "#{people} #{'member'.pluralize(people)}", actor: row["owner"],
+        said: ([row["token_name"]] + said).join(" · "))
     end
 
     def events_for(ids)
@@ -204,7 +263,7 @@ module Fd
 
       ::Api::Event.where(id: ids).map do |event|
         Row.new(at: event.at, event: "api/#{event.verb}", kind: "capability",
-          about: event.detail, actor: event.actor_user_id, said: event.subject)
+          about: event.subject, actor: event.actor_user_id, said: event.detail)
       end
     end
 

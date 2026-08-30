@@ -151,6 +151,60 @@ class Fd::DeedsTest < ActiveSupport::TestCase
       "one line each way, whatever order a shared timestamp puts them in"
   end
 
+  def checked(token, on: "C0DESIGN99", subjects: ["USUB"], outcome: "manager", at: 1.hour.ago)
+    Api::RequestLog.insert_all(subjects.map do |subject|
+      { token_id: token.id, channel_id: on, subject_user_id: subject,
+        outcome: outcome, at: at }
+    end)
+  end
+
+  test "a day of api traffic reads as one line, not one line a call" do
+    token, = Api::Token.mint!(WHO, "Toolbox")
+    checked(token, subjects: %w[U1 U2 U3])
+
+    row = deeds(view: "api").sole
+    assert_equal ["api/checked", "3 members", WHO], [row.event, row.about, row.actor]
+    assert_equal "Toolbox · 1 channel", row.said
+  end
+
+  test "the roll up counts channels and what was withheld" do
+    token, = Api::Token.mint!(WHO, "Toolbox")
+    checked(token, on: "C0ONE", subjects: %w[U1 U2])
+    checked(token, on: "C0TWO", subjects: %w[U3], outcome: "withheld")
+
+    assert_equal "Toolbox · 2 channels · 1 withheld", deeds(view: "api").sole.said
+  end
+
+  test "two days of traffic are two lines, and two tokens are two more" do
+    mine, = Api::Token.mint!(WHO, "Toolbox")
+    theirs, = Api::Token.mint!("UOTHER", "Arcade")
+    checked(mine, at: 1.hour.ago)
+    checked(mine, at: 2.days.ago)
+    checked(theirs, at: 1.hour.ago)
+
+    assert_equal 3, Fd::Deeds.new(nil, since: 30.days.ago, view: "api").rows.size
+  end
+
+  test "a token owner sees their own traffic and not somebody else's" do
+    mine, = Api::Token.mint!(WHO, "Toolbox")
+    theirs, = Api::Token.mint!("UOTHER", "Arcade")
+    checked(mine)
+    checked(theirs)
+
+    assert_equal ["Toolbox · 1 channel"], deeds(view: "api").map(&:said)
+  end
+
+  test "the api count covers consent, events and traffic alike" do
+    token, = Api::Token.mint!(WHO, "Toolbox")
+    checked(token, subjects: %w[U1 U2])
+    Api::Consent.set!(WHO, "channel_manager", true, via: "dashboard")
+    Api::Event.record!("token_minted", actor: WHO, subject: token.shown, detail: "Toolbox")
+
+    counted = Fd::Deeds.new(WHO, since: 30.days.ago).totals
+    assert_equal 3, counted["api"], "one roll up, one consent line, one event"
+    assert_equal deeds(view: "api").size, counted["api"]
+  end
+
   test "consent changes are asked for by nobody looking at one permission" do
     Api::Consent.set!(WHO, "channel_manager", true, via: "dashboard")
     audit("case", make_case.id, "opened")
