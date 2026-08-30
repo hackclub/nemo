@@ -110,8 +110,9 @@
               <span class="rail-ic" aria-hidden="true">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c4 0 7-2.7 7-6.5 0-4-3-6-4.5-9C13 4 12 2 12 2S9 5 8 8c-.6 1.8-1 2.5-1 2.5S5.5 9 5.5 7C4 9 3 12 3 15.5 3 19.3 8 22 12 22Z"/></svg>
               </span>
-              <span class="rail-text">Fire Engine</span>
+              <span class="rail-text">Overview</span>
             <% end %>
+            <div class="rail-nest">
             <%= link_to fd_cases_path, class: "rail-item",
                   aria: { current: ("page" if controller_path == "fd/cases") } do %>
               <span class="rail-ic" aria-hidden="true">
@@ -138,6 +139,7 @@
               <span class="rail-text">Decisions</span>
             <% end %>
             <% end %>
+            </div>
           </nav>
         </div>
         <% end %>
