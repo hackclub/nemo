@@ -7,6 +7,7 @@ class CachetClient
   CACHE_TTL = 12.hours
   PENDING_TTL = 1.minute
   BATCH = 8
+  FETCH_CAP = 24
   PENDING = :pending
   MISSING = false
 
@@ -24,7 +25,7 @@ class CachetClient
     known = Rails.cache.read_multi(*keys.keys).transform_keys { |key| keys.fetch(key) }
     found = known.select { |_, value| value.is_a?(Profile) }
 
-    found.merge(fetch_all(wanted - known.keys))
+    found.merge(fetch_all((wanted - known.keys).first(FETCH_CAP)))
   end
 
   def self.fetch_all(user_ids)

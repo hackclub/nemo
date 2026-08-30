@@ -4,16 +4,17 @@ module Fd
 
     WINDOW = 30.days
     PER_PAGE = 100
-    CEILING = 2_000
 
     def show
-      all = Deeds.new(nil, since: WINDOW.ago, limit: CEILING).rows
-      @total = all.size
+      counting = Deeds.new(nil, since: WINDOW.ago)
+      @total = counting.total
       @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
       @page = [params[:page].to_i, 1].max.clamp(1, @pages)
-      @rows = all.slice((@page - 1) * PER_PAGE, PER_PAGE) || []
-      @actors = all.filter_map(&:actor).tally
-      @names = Names.for(@rows.flat_map { |row| [row.actor, row.who, row.id] }.compact)
+
+      @deeds = Deeds.new(nil, since: WINDOW.ago, limit: PER_PAGE,
+        offset: (@page - 1) * PER_PAGE)
+      @rows = @deeds.rows
+      @names = Names.for(@deeds.member_ids)
     end
   end
 end

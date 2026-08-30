@@ -7,15 +7,20 @@ module Fd
 
     ON_CASE = %w[case participant assignee thread citation].freeze
 
-    def initialize(user_id, since:, only: nil, limit: LIMIT)
+    def initialize(user_id, since:, only: nil, limit: LIMIT, offset: 0)
       @user_id = user_id
       @since = since
       @only = only
       @limit = limit
+      @offset = offset
     end
 
     def rows
-      @rows ||= @only == READ ? reads : built
+      @rows ||= built
+    end
+
+    def total
+      @total ||= picked("count(*) AS found").first["found"].to_i
     end
 
     def member_ids
@@ -24,20 +29,63 @@ module Fd
 
     private
 
-    def reads
-      scope = AccessLog.where(field_class: "identity").where(looked_at: @since..)
-      scope = scope.where(actor_id: @user_id) if @user_id
-      scope.order(looked_at: :desc).limit(@limit).map do |log|
-        Row.new(at: log.looked_at, event: "identity/read", kind: "member",
-          id: log.subject_user_id, actor: log.actor_id)
-      end
+    def picked(select = "kind, id, at")
+      return AuditEntry.connection.select_all("SELECT 0 AS found WHERE false") if nothing_asked?
+
+      sql = <<~SQL
+        WITH picked AS (#{audit_side}#{reads_side})
+        SELECT #{select} FROM picked
+      SQL
+      sql += "ORDER BY at DESC LIMIT :limit OFFSET :offset" unless select.start_with?("count")
+      AuditEntry.connection.select_all(
+        AuditEntry.sanitize_sql([sql, { since: @since, who: @user_id,
+                                        limit: @limit, offset: @offset }])
+      )
+    end
+
+    def nothing_asked?
+      audit_side.strip.empty? && reads_side.strip.empty?
+    end
+
+    def audit_side
+      return "" if @only && @only != READ && Permission.events(@only).empty?
+      return "" if @only == READ
+
+      mine = @user_id ? "AND a.actor_user_id = :who" : ""
+      <<~SQL
+        SELECT 'audit' AS kind, a.id AS id, a.occurred_at AS at
+        FROM fd.audit a
+        WHERE a.occurred_at >= :since AND a.verb <> 'refused' #{mine} #{only_clause}
+      SQL
+    end
+
+    def reads_side
+      return "" if @only && @only != READ
+
+      mine = @user_id ? "AND l.actor_id = :who" : ""
+      lead = audit_side.empty? ? "" : "UNION ALL"
+      <<~SQL
+        #{lead}
+        SELECT 'read' AS kind, l.id AS id, l.looked_at AS at
+        FROM access_log l
+        WHERE l.looked_at >= :since AND l.field_class = 'identity' #{mine}
+      SQL
+    end
+
+    def only_clause
+      return "" unless @only
+
+      pairs = Permission.events(@only).map { |event| event.split("/") }
+      return "AND false" if pairs.empty?
+
+      said = pairs.map { |type, verb|
+        AuditEntry.sanitize_sql(["(a.entity_type = ? AND a.verb = ?)", type, verb])
+      }
+      "AND (#{said.join(' OR ')})"
     end
 
     def entries
-      scope = AuditEntry.where(occurred_at: @since..).where.not(verb: "refused")
-      scope = scope.where(actor_user_id: @user_id) if @user_id
-      scope = narrow(scope, Permission.events(@only)) if @only
-      scope.recent_first.limit(@limit).to_a
+      AuditEntry.where(id: @picked_ids).recent_first.to_a
     end
 
     def narrow(scope, events)
@@ -48,6 +96,10 @@ module Fd
     end
 
     def built
+      chosen = picked.to_a
+      @picked_ids = chosen.select { |row| row["kind"] == "audit" }.map { |row| row["id"] }
+      read_rows = reads_for(chosen.select { |row| row["kind"] == "read" }.map { |row| row["id"] })
+
       found = entries
       @actions = Action.where(id: ids(found, "action")).index_by(&:id)
       @notes = Note.where(id: ids(found, "note")).index_by(&:id)
@@ -56,7 +108,17 @@ module Fd
       @titles = Decision.where(id: ids(found, "decision", "decision_thread"))
         .pluck(:id, :title).to_h
 
-      found.map { |row| row_for(row).tap { |made| made.actor = row.actor_user_id } }
+      made = found.map { |row| row_for(row).tap { |one| one.actor = row.actor_user_id } }
+      (made + read_rows).sort_by { |row| -row.at.to_i }
+    end
+
+    def reads_for(ids)
+      return [] if ids.empty?
+
+      AccessLog.where(id: ids).map do |log|
+        Row.new(at: log.looked_at, event: "identity/read", kind: "member",
+          id: log.subject_user_id, actor: log.actor_id)
+      end
     end
 
     def ids(found, *types)
