@@ -18,10 +18,18 @@ class Fd::NamesTest < ActiveSupport::TestCase
     assert_equal "Ada Lovelace", names["U1"]
   end
 
-  test "a member we hold wins over cachet, since it is the record we control" do
+  test "cachet wins over the warehouse, since it is what the member calls themselves today" do
     names = Fd::Names.new(
       members: { "U1" => Fd::Member.new(user_id: "U1", display_name: "From the warehouse") },
       profiles: { "U1" => profile("From cachet") }
+    )
+    assert_equal "From cachet", names["U1"]
+  end
+
+  test "the warehouse still answers when cachet has nothing" do
+    names = Fd::Names.new(
+      members: { "U1" => Fd::Member.new(user_id: "U1", display_name: "From the warehouse") },
+      profiles: { "U1" => nil }
     )
     assert_equal "From the warehouse", names["U1"]
   end
@@ -66,5 +74,43 @@ class Fd::NamesTest < ActiveSupport::TestCase
     names = Fd::Names.for([seeded.user_id])
     assert_equal seeded.user_id, names.member(seeded.user_id).user_id
     assert_nil names.member("UNOBODY")
+  end
+
+  def answering(found)
+    was = CachetClient.method(:profiles)
+    calls = []
+    CachetClient.define_singleton_method(:profiles) do |ids|
+      calls << ids
+      found.slice(*ids)
+    end
+    yield calls
+  ensure
+    CachetClient.define_singleton_method(:profiles, was)
+  end
+
+  test "somebody nobody thought to look up is still named, not shown as an id" do
+    answering({ "ULATE" => profile("Grace") }) do
+      names = Fd::Names.new
+      assert_equal "Grace", names["ULATE"],
+        "a name we can reach must never render as a raw slack id"
+    end
+  end
+
+  test "a late lookup happens once, however often the name is asked for" do
+    answering({ "ULATE" => profile("Grace") }) do |calls|
+      names = Fd::Names.new
+      3.times { names["ULATE"] }
+
+      assert_equal 1, calls.size
+    end
+  end
+
+  test "late lookups are capped so one page cannot fan out forever" do
+    answering({}) do |calls|
+      names = Fd::Names.new
+      20.times { |i| names["UNONE#{i}"] }
+
+      assert_equal Fd::Names::LATE_LOOKUPS, calls.size
+    end
   end
 end
