@@ -5,6 +5,7 @@
 <% earlier = local_assigns.fetch(:earlier, 0) %>
 <% thread = local_assigns.fetch(:thread, reports.last) %>
 <% conversation = local_assigns.fetch(:conversation, nil) %>
+<% said_count = local_assigns.fetch(:said_count, messages.size) %>
 
 <div class="chat" data-controller="stick catch-up"
      data-catch-up-frame-value="<%= chat_log_id(kase) %>">
@@ -28,7 +29,7 @@
       <%= face(thread.anonymous? ? nil : thread.reporter_user_id) %>
       <span class="grow two-line">
         <b><%= thread.reporter_label(names) %></b>
-        <span><%= chat_head_line([thread], kase) %></span>
+        <span><%= chat_head_line([thread], kase, said: said_count) %></span>
       </span>
     <% else %>
       <span class="grow two-line">

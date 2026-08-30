@@ -29,6 +29,7 @@ module Fd
       @thread = chosen_thread(@reports)
       @thread_conversation = @conversations.find { |one| one.report_id == @thread&.id }
       @conversation_said = IntakeMessage.tail([@thread_conversation&.id].compact)
+      @conversation_count = IntakeMessage.count_for([@thread_conversation&.id].compact)
       @queued = if @thread_conversation
         IntakeOutbox.where(conversation_id: @thread_conversation.id)
           .where(sent_at: nil).oldest_first.to_a

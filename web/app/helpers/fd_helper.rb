@@ -585,9 +585,10 @@ module FdHelper
     "Message the team, or ? to reply to #{thread.reporter_label(names)}"
   end
 
-  def chat_head_line(reports, kase)
+  def chat_head_line(reports, kase, said: 0)
     parts = []
     parts << "reported it #{report_when_short(reports.first)}"
+    parts << pluralize(said, "message") if said.positive?
     if reports.first.unanswered? && !kase.resolved?
       parts << "waiting #{case_age_label(reports.first.waiting_for)}"
     end

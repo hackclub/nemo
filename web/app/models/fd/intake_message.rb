@@ -13,6 +13,12 @@ module Fd
     scope :from_us, -> { where(direction: "outbound") }
     scope :said_by_somebody, -> { where(direction: "inbound").or(where.not(sent_by: nil)) }
 
+    def self.count_for(conversation_ids)
+      return 0 if conversation_ids.blank?
+
+      where(conversation_id: conversation_ids).said_by_somebody.count
+    end
+
     def self.tail(conversation_ids, limit: SHOWN)
       return [] if conversation_ids.blank?
 
