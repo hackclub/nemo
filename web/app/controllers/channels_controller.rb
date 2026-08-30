@@ -52,13 +52,12 @@ class ChannelsController < ApplicationController
       .offset(@page * PER_PAGE)
       .to_a
     @has_more = (@page + 1) * PER_PAGE < @total
+    @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
 
-    if request.headers["X-Requested-With"] == "channel-list"
-      response.set_header("X-Has-More", @has_more.to_s)
-      return render partial: (@view == "grid" ? "tiles" : "rows"),
-                    locals: { channels: @channels }, layout: false
-    end
-
+    @quiet_page = [params[:quiet_page].to_i, 1].max
+    @quiet_total = quiet_scope.count
+    @quiet_pages = [(@quiet_total / QUIET_LIMIT.to_f).ceil, 1].max
+    @quiet_page = @quiet_page.clamp(1, @quiet_pages)
     @quiet_rooms = quiet_rooms
   end
 
@@ -107,13 +106,18 @@ class ChannelsController < ApplicationController
 
   private
 
-  def quiet_rooms
+  def quiet_scope
     Analytics::MartChannelRange
       .where(visibility: "public")
       .where("members_who_posted >= ?", QUIET_FLOOR)
       .where("members_who_viewed > members_who_posted")
+  end
+
+  def quiet_rooms
+    quiet_scope
       .order(Arel.sql("members_who_viewed::numeric / members_who_posted DESC"))
       .limit(QUIET_LIMIT)
+      .offset((@quiet_page - 1) * QUIET_LIMIT)
   end
 
   def parse_range_date(value)

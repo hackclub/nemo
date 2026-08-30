@@ -1,18 +1,76 @@
 <% content_for :page_title, "Public channels" %>
-<div data-controller="channel-list"
-     data-channel-list-url-value="<%= channels_path %>"
-     data-channel-list-sort-value="<%= @sort %>"
-     data-channel-list-direction-value="<%= @direction %>"
-     data-channel-list-view-value="<%= @view %>"
-     data-channel-list-filters-value="<%= @filters.to_json %>"
-     class="stack">
+<div class="stack">
+  <% if @quiet_rooms.any? %>
+    <div class="card card-flush">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">Read, but not written in</h2>
+          <p class="card-sub">readers per person who posted</p>
+        </div>
+      </div>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>channel</th>
+              <th class="col-num">read</th>
+              <th class="col-num">posted</th>
+              <th class="col-num">ratio</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @quiet_rooms.each do |room| %>
+              <tr>
+                <td>
+                  <%= link_to "##{room.name}", channel_path(room.channel_id) %>
+                </td>
+                <td class="col-num"><%= number_with_delimiter(room.members_who_viewed) %></td>
+                <td class="col-num"><%= number_with_delimiter(room.members_who_posted) %></td>
+                <td class="col-num is-loud">
+                  <%= channel_read_ratio(room.members_who_viewed, room.members_who_posted) %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+      <% if @quiet_pages > 1 %>
+        <div class="pager">
+          <% if @quiet_page > 1 %>
+            <%= link_to "Back",
+                  channels_path(request.query_parameters.merge(quiet_page: @quiet_page - 1)),
+                  class: "btn" %>
+          <% else %>
+            <span class="btn is-off">Back</span>
+          <% end %>
+          <span class="pager-at">
+            Page <%= @quiet_page %> of <%= @quiet_pages %>
+          </span>
+          <% if @quiet_page < @quiet_pages %>
+            <%= link_to "Next",
+                  channels_path(request.query_parameters.merge(quiet_page: @quiet_page + 1)),
+                  class: "btn" %>
+          <% else %>
+            <span class="btn is-off">Next</span>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
   <div class="qbar">
-    <label class="field">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <%= text_field_tag :q, @q, placeholder: "Search public channels by name",
-          autocomplete: "off", aria: { label: "Search public channels by name" },
-          data: { channel_list_target: "input", action: "input->channel-list#search" } %>
-    </label>
+    <%= form_with url: channels_path, method: :get, class: "qsearch",
+          data: { controller: "live-search", action: "input->live-search#go",
+                  turbo_action: "advance" } do %>
+      <% { sort: @sort, direction: @direction, view: @view }.each do |key, value| %>
+        <%= hidden_field_tag key, value, id: nil %>
+      <% end %>
+      <% @filters.each { |key| concat hidden_field_tag("f[]", key, id: nil) } %>
+      <%= search_field_tag :q, @q, placeholder: "Search public channels by name",
+            class: "qsearch-in", autocomplete: "off",
+            aria: { label: "Search public channels by name" } %>
+    <% end %>
 
     <% if channel_filter_options.any? %>
       <details class="menu" data-controller="menu">
@@ -54,7 +112,7 @@
     </div>
 
     <% if @view == "grid" %>
-      <div class="tiles" data-channel-list-target="rows">
+      <div class="tiles">
         <%= render "tiles", channels: @channels %>
       </div>
     <% else %>
@@ -70,7 +128,7 @@
               <th class="col-num">who spoke</th>
             </tr>
           </thead>
-          <tbody data-channel-list-target="rows">
+          <tbody>
             <%= render "rows", channels: @channels %>
           </tbody>
         </table>
@@ -78,45 +136,23 @@
     <% end %>
   </div>
 
-  <div class="<%= "hidden" unless @has_more %>" data-channel-list-target="moreWrap">
-    <%= button_tag "Load more", type: "button", class: "btn",
-        data: { action: "channel-list#loadMore" } %>
-  </div>
-
-  <% if @quiet_rooms.any? %>
-    <div class="card card-flush">
-      <div class="card-head">
-        <div>
-          <h2 class="card-title">Read, but not written in</h2>
-          <p class="card-sub">readers per person who posted</p>
-        </div>
-      </div>
-      <div class="scroll">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>channel</th>
-              <th class="col-num">read</th>
-              <th class="col-num">posted</th>
-              <th class="col-num">ratio</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @quiet_rooms.each do |room| %>
-              <tr>
-                <td>
-                  <%= link_to "##{room.name}", channel_path(room.channel_id) %>
-                </td>
-                <td class="col-num"><%= number_with_delimiter(room.members_who_viewed) %></td>
-                <td class="col-num"><%= number_with_delimiter(room.members_who_posted) %></td>
-                <td class="col-num is-loud">
-                  <%= channel_read_ratio(room.members_who_viewed, room.members_who_posted) %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
+  <% if @pages > 1 %>
+    <div class="pager">
+      <% if @page.positive? %>
+        <%= link_to "Back", channels_path(request.query_parameters.merge(page: @page - 1)),
+              class: "btn" %>
+      <% else %>
+        <span class="btn is-off">Back</span>
+      <% end %>
+      <span class="pager-at">
+        Page <%= @page + 1 %> of <%= @pages %>
+      </span>
+      <% if @has_more %>
+        <%= link_to "Next", channels_path(request.query_parameters.merge(page: @page + 1)),
+              class: "btn" %>
+      <% else %>
+        <span class="btn is-off">Next</span>
+      <% end %>
     </div>
   <% end %>
 </div>

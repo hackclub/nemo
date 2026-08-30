@@ -46,16 +46,22 @@
     <% end %>
   </div>
 
-  <% if @page > 1 || @more %>
+  <% if @pages > 1 %>
     <div class="pager">
       <% if @page > 1 %>
-        <%= link_to "← Newer", fd_cases_path(request.query_parameters.merge(page: @page - 1)),
+        <%= link_to "Back", fd_cases_path(request.query_parameters.merge(page: @page - 1)),
               class: "btn", data: { turbo_frame: "queue" } %>
+      <% else %>
+        <span class="btn is-off">Back</span>
       <% end %>
-      <span class="sub2">Page <%= @page %></span>
+      <span class="pager-at">
+        Page <%= @page %> of <%= @pages %>
+      </span>
       <% if @more %>
-        <%= link_to "Older →", fd_cases_path(request.query_parameters.merge(page: @page + 1)),
+        <%= link_to "Next", fd_cases_path(request.query_parameters.merge(page: @page + 1)),
               class: "btn", data: { turbo_frame: "queue" } %>
+      <% else %>
+        <span class="btn is-off">Next</span>
       <% end %>
     </div>
   <% end %>

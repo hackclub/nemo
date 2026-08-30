@@ -260,6 +260,8 @@ module Fd
         .offset((@page - 1) * PER_PAGE).limit(PER_PAGE + 1).to_a
       @more = found.size > PER_PAGE
       @cases = found.first(PER_PAGE)
+      @total = @query.relation.count
+      @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
       case_ids = @cases.map(&:id)
       @thread_counts = Case.thread_message_counts_for(case_ids)
       @thread_channels = Case.thread_channels_for(case_ids)
