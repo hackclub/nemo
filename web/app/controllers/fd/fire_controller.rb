@@ -1,7 +1,6 @@
 module Fd
   class FireController < BaseController
     WINDOW = 30.days
-    READS_SHOWN = 6
 
     def show
       @open = Case.unresolved.not_duplicate.count
@@ -14,12 +13,6 @@ module Fd
 
       @endings = Case.ending_tally
       @closed_count = Case.where.not(resolved_at: nil).count
-
-      @reads = AccessLog.where(field_class: "identity", looked_at: WINDOW.ago..)
-        .order(looked_at: :desc).limit(READS_SHOWN).to_a
-      @reads_total = AccessLog.where(field_class: "identity", looked_at: WINDOW.ago..).count
-
-      @names = Names.for(named)
     end
 
     private
@@ -34,10 +27,6 @@ module Fd
       return nil if lags.empty?
 
       lags[lags.size / 2]
-    end
-
-    def named
-      @reads.flat_map { |row| [row.actor_id, row.subject_user_id] }.uniq
     end
   end
 end
