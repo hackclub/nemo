@@ -10,6 +10,12 @@ Rails.application.routes.draw do
     get "dev/be/:user_id", to: "dev_sessions#create", as: :dev_be
   end
 
+  namespace :api do
+    namespace :v1 do
+      resource :token, only: [:show], controller: "tokens"
+    end
+  end
+
   namespace :you do
     get "api", to: "api#show", as: :api
     resource :consent, only: [:update], controller: "consents"

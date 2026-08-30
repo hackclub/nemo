@@ -39,7 +39,15 @@ module Api
       [row, key]
     end
 
+    TOUCH_EVERY = 1.minute
+
     def revoked? = revoked_at.present?
+
+    def used!
+      return if last_used_at && last_used_at > TOUCH_EVERY.ago
+
+      update_column(:last_used_at, Time.current)
+    end
 
     def revoke!(by:)
       update!(revoked_at: Time.current, revoked_by: by)
