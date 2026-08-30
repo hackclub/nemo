@@ -22,6 +22,7 @@ module Fd
       @history = @only == "all" ? @entries : @entries.select { |entry| entry.kind == @only }
       @identity = MemberIdentity.look_up(@user_id, actor: current_staff)
       @context = MemberContext.for([@user_id])[@user_id]
+      @rooms = SlackScan.channels(@user_id)
       @standing = MemberStanding.new(@record)
       render "drawer" if turbo_frame_request_id == "person-drawer"
     end

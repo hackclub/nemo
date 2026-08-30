@@ -3341,6 +3341,10 @@
     overflow: hidden;
   }
 
+  .fcard:has(.rooms-menu[open]) {
+    overflow: visible;
+  }
+
   .fcard-who {
     display: flex;
     align-items: center;
@@ -3378,6 +3382,51 @@
     width: auto;
     min-width: 0;
     justify-content: center;
+  }
+
+
+  .rooms-menu {
+    margin-inline-start: auto;
+  }
+
+  .rooms-count {
+    list-style: none;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--accent);
+    text-align: end;
+  }
+
+  .rooms-count::-webkit-details-marker { display: none; }
+
+  .rooms-count:hover { text-decoration: underline; }
+
+  .rooms-pop {
+    max-height: 20rem;
+    overflow-y: auto;
+    min-width: 12rem;
+    padding: 4px;
+  }
+
+  .rooms-row {
+    display: block;
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: var(--t-small);
+    color: var(--ink-2);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  a.rooms-row:hover {
+    background-color: var(--card-2);
+    color: var(--ink-1);
+  }
+
+  .rooms-shut {
+    margin-inline-start: 6px;
+    font-size: var(--t-fine);
+    color: var(--ink-4);
   }
 
   .fstats {

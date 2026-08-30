@@ -240,20 +240,20 @@ def check_members_against_the_dimension(conn, client):
 
 
 def check_account_types_sum_to_the_workspace(conn, client):
-    ours = one(conn, "select sum(members) from analytics.mart_account_type")
+    ours = one(conn, "select sum(invited) from analytics.mart_account_type")
     theirs = one(conn, "select count(*) from analytics.dim_member "
                        "where not is_bot and not is_deleted")
-    return "mart_account_type.members, summed", "cross", "dim_member, live and not a bot", ours, theirs
+    return "mart_account_type.invited, summed", "cross", "dim_member, live and not a bot", ours, theirs
 
 
 def check_growth_cohorts_against_the_dimension(conn, client):
-    ours = one(conn, "select sum(created_members) from analytics.mart_growth")
+    ours = one(conn, "select sum(invited_members) from analytics.mart_growth")
     theirs = one(conn, """
         select count(*) from analytics.dim_member
         where cohort_at >= (select min(month) from analytics.mart_growth)
           and cohort_at <  (select max(month) + interval '1 month' from analytics.mart_growth)
           and not is_bot""")
-    return "mart_growth.created_members, summed", "cross", "dim_member.cohort_at", ours, theirs
+    return "mart_growth.invited_members, summed", "cross", "dim_member.cohort_at", ours, theirs
 
 
 def check_monthly_stats_roll_up_the_daily(conn, client):

@@ -32,6 +32,7 @@ ROLES = {
             "FD_ENCRYPTION_DETERMINISTIC_KEY",
             "FD_ENCRYPTION_SALT",
             "INTERNAL_PROXY_URL",
+            "SLACKSCAN_URL",
             "PROXY_TOKEN_WEB",
             "PROXY_ALLOW_PLAINTEXT",
             "RAILS_MAX_THREADS",

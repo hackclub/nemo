@@ -160,10 +160,26 @@
           </b>
         </div>
         <div class="frow">
-          <span>Public channels</span>
-          <b class="<%= "is-none" unless @context&.channels_joined&.positive? %>">
-            <%= fact_number(@context&.channels_joined) %>
-          </b>
+          <span>Channels</span>
+          <% if @rooms.any? %>
+            <details class="menu rooms-menu" data-controller="menu">
+              <summary class="rooms-count"><%= number_with_delimiter(@rooms.size) %></summary>
+              <div class="menu-pop menu-end rooms-pop">
+                <% @rooms.sort_by { |room| [room.private ? 1 : 0, room.name] }.each do |room| %>
+                  <% if on?(:analytics) && !room.private %>
+                    <%= link_to "##{room.name}", channel_path(room.channel_id), class: "rooms-row" %>
+                  <% else %>
+                    <span class="rooms-row">
+                      #<%= room.name %>
+                      <% if room.private %><span class="rooms-shut">private</span><% end %>
+                    </span>
+                  <% end %>
+                <% end %>
+              </div>
+            </details>
+          <% else %>
+            <b class="is-none">n/a</b>
+          <% end %>
         </div>
         <div class="frow">
           <span>Standing notes</span>
