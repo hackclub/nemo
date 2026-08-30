@@ -9,9 +9,10 @@
     <p class="kpi-val"><%= @open %></p>
     <div class="delta">
       <% if @unclaimed.positive? %>
-        <span class="chip chip-warn"><%= @unclaimed %> nobody has picked up</span>
+        <span class="delta-down"><%= @unclaimed %></span>
+        <span class="delta-note">with nobody on it</span>
       <% else %>
-        <span class="chip chip-good">all claimed</span>
+        <span class="delta-note">everything has somebody on it</span>
       <% end %>
     </div>
   </div>
