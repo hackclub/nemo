@@ -1,4 +1,3 @@
-<% violation = cases.any? && cases.all?(&:resolved?) %>
 <div class="card card-flush">
   <div class="scroll">
     <table class="data-table queue-table">
@@ -6,7 +5,6 @@
         <tr>
           <th class="col-tick"></th>
           <th>what happened</th>
-          <% if violation %><th>violation</th><% end %>
           <th>reported by</th>
           <th>who it is about</th>
           <th class="col-state">state</th>
@@ -15,7 +13,7 @@
         </tr>
       </thead>
       <tbody>
-        <%= render "rows", cases: cases, violation: violation, priors_by_user: priors_by_user,
+        <%= render "rows", cases: cases, priors_by_user: priors_by_user,
               thread_counts: thread_counts, flagged_counts: flagged_counts,
               live_action_counts: live_action_counts %>
       </tbody>

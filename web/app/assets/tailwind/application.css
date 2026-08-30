@@ -613,11 +613,12 @@
   }
 
   .needs {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 6px;
+    column-gap: 6px;
+    row-gap: 8px;
     flex-wrap: wrap;
-    margin-top: 5px;
+    margin-top: 7px;
   }
 
   .needs-said {
@@ -663,6 +664,25 @@
     color: var(--ink-3);
     white-space: nowrap;
     background-color: var(--card);
+    flex: none;
+    width: fit-content;
+    justify-self: start;
+    align-self: start;
+  }
+
+  .two-line .mchip {
+    font-size: 10.5px;
+    margin-top: 3px;
+  }
+
+  .data-table tbody .two-line .row-violation {
+    display: inline;
+    margin-inline-start: 5px;
+    font-size: var(--t-small);
+    font-weight: 400;
+    color: var(--ink-3);
+    white-space: nowrap;
+    overflow: visible;
   }
 
   .mchip.good {

@@ -156,11 +156,18 @@ class FdQueueTest < ActionDispatch::IntegrationTest
       fd_case_path(@free), 1
   end
 
-  test "an open case keeps the violation out of the queue" do
+  test "an open case names its violation beside the case number" do
     @mine.update!(category_key: "harassment_general")
     get fd_cases_path
 
-    assert_select ".queue-table", text: /harassment/i, count: 0
+    assert_select ".queue-table .row-violation", text: /Systematic harassment, general/
+  end
+
+  test "a case with no violation prints nothing beside the number" do
+    @mine.update!(category_key: nil)
+    get fd_cases_path
+
+    assert_select "tr[data-row-link-href-value=?] .row-violation", fd_case_path(@mine), count: 0
   end
 
   test "a resolved card names the violation in full, not the raw key" do
@@ -168,7 +175,7 @@ class FdQueueTest < ActionDispatch::IntegrationTest
       resolution: "no_action")
     get fd_cases_path(view: "resolved")
 
-    assert_select ".queue-table td", text: "Systematic harassment, general"
+    assert_select ".queue-table .row-violation", text: /Systematic harassment, general/
     assert_select ".queue-table", text: /harassment_general/, count: 0
   end
 

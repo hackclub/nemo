@@ -14,7 +14,7 @@
       <div class="row-subject">
         <span class="two-line">
           <%= link_to fd_case_path(kase) do %>
-            <b>#<%= kase.id %></b>
+            <b>#<%= kase.id %><% if kase.category_key.present? %><span class="row-violation">&middot; <%= category_label(kase.category_key) %></span><% end %></b>
           <% end %>
           <% if kase.duplicate_of %>
             <span><%= row_merged_phrase(kase) %></span>
@@ -48,9 +48,6 @@
         </span>
       </div>
     </td>
-    <% if violation %>
-      <td class="sub2"><%= category_label(kase.category_key) %></td>
-    <% end %>
     <td>
       <div class="subjcell">
         <%= row_reporter_face(kase) %>
@@ -65,7 +62,7 @@
           <% if priors.positive? %>
             <span class="two-line">
               <b><%= row_subject_label(kase) %></b>
-              <span class="mchip warn"><%= pluralize(priors, "prior case") %></span>
+              <span class="mchip warn"><%= priors %> priors</span>
             </span>
           <% else %>
             <span><%= row_subject_label(kase) %></span>
