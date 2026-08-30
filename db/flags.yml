@@ -11,3 +11,8 @@ flags:
     label: Decisions
     covers: The decisions section, and linking a case to one
     default: true
+  public_api:
+    label: Public API
+    covers: Channel manager lookups, tokens and opt-in
+    audience: Everyone in Slack
+    default: false

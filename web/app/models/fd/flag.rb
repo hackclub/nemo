@@ -15,6 +15,8 @@ module Fd
 
     def self.covers(key) = fetch(key).fetch("covers")
 
+    def self.audience(key) = fetch(key)["audience"]
+
     def self.default?(key) = fetch(key).fetch("default") == true
 
     def self.flipped

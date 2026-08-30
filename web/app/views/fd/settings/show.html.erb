@@ -107,7 +107,9 @@
               <tr>
                 <td><b><%= Fd::Flag.label(key) %></b></td>
                 <td class="said-cell"><%= Fd::Flag.covers(key) %></td>
-                <td class="sub2"><%= pluralize(holders, "person") %></td>
+                <td class="sub2">
+                  <%= Fd::Flag.audience(key) || pluralize(holders, "person") %>
+                </td>
                 <td class="col-num"><%= flag_switch(key) %></td>
               </tr>
             <% end %>
