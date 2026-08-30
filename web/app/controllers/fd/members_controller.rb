@@ -8,7 +8,6 @@ module Fd
       @grants = AccessGrant.where(user_id: @rows.map(&:user_id), revoked_at: nil)
         .index_by(&:user_id)
       @views = @query.views
-      @headline = MemberQuery.headline
     end
 
     def show

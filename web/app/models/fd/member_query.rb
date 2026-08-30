@@ -118,34 +118,24 @@ module Fd
     end
 
     def views
-      counts = self.class.view_counts
+      counts = self.class.view_counts(with_a_history, live_ids)
       VIEWS.map do |key, label|
         View.new(key: key, label: label, count: counts.fetch(key), current: key == view)
       end
     end
 
-    def self.view_counts
-      shared = new({}).send(:with_a_history)
+    def self.view_counts(shared = nil, ids = nil)
+      shared ||= new({}).send(:with_a_history)
       VIEWS.keys.index_with do |key|
         counting = new({ "view" => key })
         counting.send(:shared_summaries=, shared)
+        counting.send(:live_ids=, ids) if ids
         counting.total
       end
     end
 
     def summary_rows
       summaries.values
-    end
-
-    def self.headline
-      seen = new({}).summary_rows
-      {
-        history: seen.count { |row| row.subject_of.positive? || row.logged_in.positive? },
-        priors: seen.count { |row| row.priors >= 2 },
-        open: seen.count { |row| row.open_cases.positive? },
-        notes: seen.count { |row| row.notes.positive? },
-        logged_only: seen.count { |row| row.logged_in.positive? && row.subject_of.zero? }
-      }
     end
 
     def facets
@@ -338,15 +328,19 @@ module Fd
       @summaries ||= self["who"] == "everyone" ? with_everyone(with_a_history) : with_a_history
     end
 
-    attr_writer :shared_summaries
+    attr_writer :shared_summaries, :live_ids
 
     def with_a_history
-      @shared_summaries || build_summaries
+      @shared_summaries ||= build_summaries
+    end
+
+    def live_ids
+      @live_ids ||= Member.live.pluck(:user_id)
     end
 
     def with_everyone(found)
       found = found.dup
-      Member.live.pluck(:user_id).each { |id| found[id] }
+      live_ids.each { |id| found[id] }
       found
     end
 
