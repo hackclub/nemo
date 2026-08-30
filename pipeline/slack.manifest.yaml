@@ -17,6 +17,7 @@ oauth_config:
       - admin.analytics:read
       - admin.users:read
       - admin.teams:read
+      - admin.roles:read
 
 settings:
   event_subscriptions:
