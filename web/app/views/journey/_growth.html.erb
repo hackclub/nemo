@@ -1,8 +1,8 @@
 <div class="card">
   <div class="card-head">
     <div>
-      <h2 class="card-title">Accounts created and claimed</h2>
-      <p class="card-sub">claimed within 30 days of creation</p>
+      <h2 class="card-title">Invited and claimed</h2>
+      <p class="card-sub">an account is claimed when its member first signs in</p>
     </div>
   </div>
   <div
@@ -13,8 +13,8 @@
     data-svg-chart-data-value="<%= {
       labels: growth_months.map { |m| m.month.strftime("%b %Y") },
       datasets: [
-        { label: "accounts created", data: growth_months.map(&:created_members) },
-        { label: "claimed within 30d", data: growth_months.map(&:claimed_members_30d) }
+        { label: "invited", data: growth_months.map(&:invited_members) },
+        { label: "claimed", data: growth_months.map(&:claimed_members) }
       ]
     }.to_json %>"
   ></div>
@@ -25,7 +25,7 @@
     data-svg-chart-pct-value="true"
     data-svg-chart-data-value="<%= {
       labels: growth_months.map { |m| m.month.strftime("%b %Y") },
-      datasets: [{ label: "claim rate", data: growth_months.map { |m| m.claim_rate_30d && m.claim_rate_30d.to_f * 100 } }]
+      datasets: [{ label: "claim rate", data: growth_months.map { |m| m.claim_rate && m.claim_rate.to_f * 100 } }]
     }.to_json %>"
   ></div>
 </div>

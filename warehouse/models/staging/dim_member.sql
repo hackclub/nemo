@@ -38,11 +38,7 @@ select
     cohort_at,
     claimed_at,
     deactivated_at,
-    case
-        when account_created_verified is not null then claimed_at is not null
-        when cohort_at is not null then invite_pending is false
-        else false
-    end as is_claimed,
+    not coalesce(invite_pending, false) as is_claimed,
     is_invited_member,
     is_invited_guest,
     coalesce(invite_pending, false) as invite_pending,

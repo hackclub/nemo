@@ -27,18 +27,6 @@ module HomeHelper
     end
   end
 
-  def growth_cohort_status(row)
-    return "n/a" if row.last_created_on.nil?
-
-    if row.month == Date.current.beginning_of_month
-      "#{row.last_created_on.day} of #{row.month.end_of_month.day} days"
-    elsif row.claim_rate_30d_final_on > Date.current
-      "matures #{row.claim_rate_30d_final_on.strftime("%b %-d")}"
-    else
-      "mature"
-    end
-  end
-
   ACTIVITY_GRANULARITIES = { "daily" => "daily", "monthly" => "monthly" }.freeze
 
   def activity_granularity(value)
@@ -74,7 +62,6 @@ module HomeHelper
       }
     end
   end
-
 
   def stat_delta(current, prior)
     return nil if current.nil? || prior.nil? || prior.to_f.zero?

@@ -9,7 +9,7 @@ models:
       - name: account_type
         data_type: text
         data_tests: [not_null]
-      - name: members
+      - name: invited
         data_type: bigint
       - name: claimed
         data_type: bigint
@@ -165,18 +165,14 @@ models:
       - name: month
         data_type: date
         data_tests: [not_null, unique]
-      - name: created_members
+      - name: invited_members
+        data_type: bigint
+      - name: unclaimed_members
         data_type: bigint
       - name: claimed_members
         data_type: bigint
       - name: claim_rate
         data_type: numeric
-      - name: claimed_members_30d
-        data_type: bigint
-      - name: claim_rate_30d
-        data_type: numeric
-      - name: claim_rate_30d_final_on
-        data_type: date
       - name: last_created_on
         data_type: date
       - name: metric_version

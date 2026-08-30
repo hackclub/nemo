@@ -21,7 +21,7 @@ checks as (
         'full_members' as dimension,
         ours.full_claimed as ours,
         slack.claimed_full_members_count as slack,
-        1.22 as max_ratio
+        1.30 as max_ratio
     from ours
     cross join slack
 

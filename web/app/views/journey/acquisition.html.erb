@@ -84,7 +84,7 @@
       <thead>
         <tr>
           <th>type</th>
-          <th class="col-num">members</th>
+          <th class="col-num">invited</th>
           <th class="col-num">claimed</th>
         </tr>
       </thead>
@@ -92,7 +92,7 @@
         <% @account_types.each do |a| %>
           <tr>
             <td><%= a.account_type %></td>
-            <td class="col-num"><%= number_with_delimiter(a.members) %></td>
+            <td class="col-num"><%= number_with_delimiter(a.invited) %></td>
             <td class="col-num"><%= number_with_delimiter(a.claimed) %></td>
           </tr>
         <% end %>
