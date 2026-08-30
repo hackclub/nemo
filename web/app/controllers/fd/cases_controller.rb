@@ -12,7 +12,6 @@ module Fd
 
     def show
       @case = Case.find(params[:id])
-      return render_drawer if turbo_frame_request_id == "case-drawer"
 
       family = @case.family_ids
       @threads = CaseThread.where(case_id: family).primary_first.to_a
@@ -150,16 +149,6 @@ module Fd
 
     def chosen_thread(reports)
       reports.find { |report| report.id == params[:thread].to_i } || reports.last
-    end
-
-    def render_drawer
-      @reports = @case.reports.oldest_first.to_a
-      @names = Names.for(@case.subject_user_ids + @case.assignee_user_ids + [@case.opened_by] +
-        @reports.map(&:reporter_user_id))
-      @flags = CaseFlags.for_case(@case, names: @names)
-      siblings = @case.sibling_cases.includes(:subjects).oldest_first.to_a
-      @merge_into = Case.candidates_for(@case, siblings).find { |other| !other.resolved? }
-      render "drawer"
     end
 
     def cited_messages

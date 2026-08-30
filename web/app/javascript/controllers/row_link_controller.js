@@ -5,8 +5,12 @@ export default class extends Controller {
 
   go(event) {
     if (event.target.closest("a, button, input, label, summary, details")) return
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
 
-    const drawer = document.getElementById("case-drawer")
-    if (drawer) drawer.src = this.hrefValue
+    if (window.Turbo) {
+      window.Turbo.visit(this.hrefValue)
+    } else {
+      window.location.href = this.hrefValue
+    }
   }
 }

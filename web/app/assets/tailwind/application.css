@@ -4858,29 +4858,6 @@
     .drawer { transition: none; }
   }
 
-  .case-drawer-frame {
-    position: fixed;
-    inset-block: 0;
-    inset-inline-end: 0;
-    width: min(420px, 92vw);
-    background-color: var(--card);
-    border-inline-start: 1px solid var(--line);
-    box-shadow: -12px 0 28px oklch(0% 0 0 / 0.12);
-    z-index: 41;
-    overflow-y: auto;
-    transform: translateX(101%);
-    transition: transform var(--dur) var(--ease-out);
-  }
-
-  .case-drawer-frame:empty {
-    transform: translateX(101%);
-    box-shadow: none;
-  }
-
-  .case-drawer-frame:not(:empty) {
-    transform: translateX(0);
-  }
-
   .drawer-h {
     display: flex;
     align-items: center;
@@ -5107,7 +5084,7 @@
   .pm-spacer { margin-left: auto; }
 
   @media (prefers-reduced-motion: reduce) {
-    .case-drawer-frame, .person-drawer-frame { transition: none; }
+    .person-drawer-frame { transition: none; }
   }
 
   .todo {
@@ -5842,6 +5819,15 @@
 
   .data-table tbody tr:hover {
     background-color: color-mix(in oklab, var(--ink) 5%, transparent);
+  }
+
+  .data-table tbody tr[data-controller~="row-link"] {
+    cursor: pointer;
+  }
+
+  .data-table tbody tr[data-controller~="row-link"]:hover .row-subject .two-line b {
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
   .data-table.static tbody tr:hover {
