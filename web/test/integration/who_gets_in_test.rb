@@ -8,7 +8,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
   INSIDE = %i[root_path fd_root_path fd_members_path fd_decisions_path fd_settings_path].freeze
 
-  MEMBER = %w[you/api you/consents you/tokens].freeze
+  MEMBER = %w[you/api you/consents you/tokens docs].freeze
 
   BEARER = %w[api/v1/tokens api/v1/channel_managers].freeze
 

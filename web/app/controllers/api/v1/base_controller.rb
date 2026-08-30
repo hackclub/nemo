@@ -56,15 +56,22 @@ module Api
       end
 
       SAID = {
-        "api_off" => "the mnemosyne api is turned off",
-        "invalid_token" => "no live token matches that key",
-        "revoked_token" => "that token was revoked and will not come back",
-        "bad_channel_id" => "a channel id looks like C0123456789",
-        "bad_user_id" => "a user id looks like U0123456789",
-        "channel_not_found" => "no public channel with that id",
-        "too_many_subjects" => "ask about fewer people in one call",
-        "rate_limited" => "too many calls this minute, wait and try again"
+        "api_off" => "the public_api flag is off",
+        "invalid_token" => "no live key matches that digest",
+        "revoked_token" => "that key was revoked, do not retry",
+        "bad_channel_id" => "channel_id must match /\\AC[A-Z0-9]{8,}\\z/",
+        "bad_user_id" => "every user id must match /\\A[UW][A-Z0-9]{8,}\\z/",
+        "rate_limited" => "rate limit spent, see retry_after"
       }.freeze
+
+      CALLER_ERRORS = [
+        [401, "invalid_token", "Absent, malformed, or unknown Authorization header."],
+        [401, "revoked_token", "Key exists but was revoked. Not retryable."],
+        [422, "bad_channel_id", "channel_id did not match the pattern above."],
+        [422, "bad_user_id", "user_id did not match the pattern above."],
+        [429, "rate_limited", "Budget spent. Retry after retry_after seconds."],
+        [503, "api_off", "The public_api flag is off. Applies to every route."]
+      ].freeze
 
       def refuse(status, error, **extra)
         render json: { error: error, message: SAID[error] }.compact.merge(extra), status: status

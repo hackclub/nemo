@@ -1,0 +1,159 @@
+<% channel_pattern = Api::V1::ChannelManagersController::CHANNEL.source %>
+<% member_pattern = Api::V1::ChannelManagersController::MEMBER.source %>
+
+<header class="docs-lede">
+  <h1><%= topic.title %></h1>
+  <p><%= topic.blurb %></p>
+  <dl class="docs-meta">
+    <div><dt>Base</dt><dd class="mono"><%= request.base_url %>/api/v1</dd></div>
+    <div><dt>Scheme</dt><dd class="mono">Bearer</dd></div>
+    <div><dt>Rate</dt><dd class="mono"><%= @rate %>/min per key</dd></div>
+    <div><dt>Format</dt><dd class="mono">application/json</dd></div>
+  </dl>
+</header>
+
+<section class="docs-sec" id="auth">
+  <h2>Authentication</h2>
+  <pre class="pre">Authorization: Bearer nemo_live_7Fj2QcW8xR4mLpVdA1sT</pre>
+  <p>
+    Keys are <code>nemo_live_</code> plus 20 base58 characters, minted on
+    <%= link_to "your settings page", you_api_path(tab: "tokens") %> and stored as a SHA-256
+    digest. Shown once. Never accepted as a query parameter.
+  </p>
+  <pre class="pre"><span class="c">GET /api/v1/token</span> <span class="c">// what this key is</span>
+
+{ <span class="k">"name"</span>: <span class="s">"Toolbox"</span>, <span class="k">"prefix"</span>: <span class="s">"nemo_live_7Fj2"</span>,
+  <span class="k">"owner_user_id"</span>: <span class="s">"U0A5PLKMB25"</span>, <span class="k">"rate_per_minute"</span>: <span class="n"><%= @rate %></span> }</pre>
+</section>
+
+<section class="docs-sec" id="check">
+  <h2><span class="verb">GET</span> Check a member</h2>
+  <pre class="pre">/api/v1/channels/{channel_id}/managers/{user_id}</pre>
+  <p>One channel and one member per request. There is no batch form.</p>
+  <div class="scroll">
+    <table class="data-table">
+      <thead>
+        <tr><th>param</th><th>pattern</th><th class="said-cell">notes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">channel_id</td>
+          <td class="mono"><%= channel_pattern %></td>
+          <td class="said-cell">Public or private. Never validated against an index.</td>
+        </tr>
+        <tr>
+          <td class="mono">user_id</td>
+          <td class="mono"><%= member_pattern %></td>
+          <td class="said-cell">Unknown ids answer <code>withheld</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="two-up">
+    <div class="docs-case">
+      <p class="docs-case-h">200 · consent granted</p>
+      <pre class="pre">{
+  <span class="k">"channel_id"</span>: <span class="s">"C0P5NE3M0"</span>,
+  <span class="k">"user_id"</span>: <span class="s">"U0A5PLKMB25"</span>,
+  <span class="k">"consent"</span>: <span class="s">"granted"</span>,
+  <span class="k">"is_manager"</span>: <span class="n">true</span>,
+  <span class="k">"synced_at"</span>: <span class="s">"2026-08-31T04:12:07Z"</span>,
+  <span class="k">"stale"</span>: <span class="n">false</span>
+}</pre>
+    </div>
+    <div class="docs-case">
+      <p class="docs-case-h">200 · consent withheld</p>
+      <pre class="pre">{
+  <span class="k">"channel_id"</span>: <span class="s">"C0P5NE3M0"</span>,
+  <span class="k">"user_id"</span>: <span class="s">"U0A5PLKMB25"</span>,
+  <span class="k">"consent"</span>: <span class="s">"withheld"</span>,
+  <span class="k">"is_manager"</span>: <span class="n">null</span>,
+  <span class="k">"opt_in_url"</span>: <span class="s">"<%= you_api_url %>"</span>
+}</pre>
+    </div>
+  </div>
+  <div class="scroll">
+    <table class="data-table">
+      <thead>
+        <tr><th>field</th><th>type</th><th class="said-cell">notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">consent</td><td class="mono">string</td>
+          <td class="said-cell"><code>granted</code> or <code>withheld</code>. Always present.</td></tr>
+        <tr><td class="mono">is_manager</td><td class="mono">bool | null</td>
+          <td class="said-cell"><code>null</code> whenever consent is withheld.</td></tr>
+        <tr><td class="mono">synced_at</td><td class="mono">iso8601?</td>
+          <td class="said-cell">When the channel was last read from Slack. Absent when withheld.</td></tr>
+        <tr><td class="mono">stale</td><td class="mono">bool?</td>
+          <td class="said-cell"><code>true</code> past the cache TTL. Answer still served.</td></tr>
+        <tr><td class="mono">opt_in_url</td><td class="mono">string?</td>
+          <td class="said-cell">Present only when withheld.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="docs-sec" id="consent">
+  <h2>Consent states</h2>
+  <p>Branch on <code>consent</code>, not on the status code. Withheld is a <code>200</code>.</p>
+  <div class="scroll">
+    <table class="data-table">
+      <thead>
+        <tr><th>consent</th><th>is_manager</th><th class="said-cell">meaning</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">granted</td><td class="mono">true | false</td>
+          <td class="said-cell">Member opted in. This is the answer.</td></tr>
+        <tr><td class="mono">withheld</td><td class="mono">null</td>
+          <td class="said-cell">Member has not opted in, or is unknown to us.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="docs-note">
+    Consent is settled before the channel is touched, so a withheld body is identical whatever
+    channel you named: same fields, no <code>synced_at</code>, no <code>stale</code>. That is
+    what lets private channels be answered at all. Mnemosyne does not message members on a
+    caller's behalf; surface <code>opt_in_url</code> yourself.
+  </p>
+  <p>
+    A channel with no managers on record, or one that does not exist, answers
+    <code>is_manager: false</code>. The API never confirms whether a channel exists.
+  </p>
+</section>
+
+<section class="docs-sec" id="rate">
+  <h2>Rate limits</h2>
+  <p>
+    <code><%= @rate %></code> requests per fixed 60 second window, per key. Overridable per key
+    by a community manager.
+  </p>
+  <pre class="pre">RateLimit-Limit: <%= @rate %>
+RateLimit-Remaining: <%= [@rate - 3, 0].max %>
+RateLimit-Reset: 34        <span class="c">// seconds until the window rolls</span>
+Retry-After: 34            <span class="c">// 429 only, matches body.retry_after</span></pre>
+  <p>
+    The first three are on every answered request. Refusals raised before the key is resolved
+    carry none, since there is no budget to report.
+  </p>
+</section>
+
+<section class="docs-sec" id="errors">
+  <h2>Errors</h2>
+  <pre class="pre">{ <span class="k">"error"</span>: <span class="s">"rate_limited"</span>, <span class="k">"message"</span>: <span class="s">"rate limit spent, see retry_after"</span>, <span class="k">"retry_after"</span>: <span class="n">34</span> }</pre>
+  <div class="scroll">
+    <table class="data-table">
+      <thead>
+        <tr><th>status</th><th>error</th><th class="said-cell">cause</th></tr>
+      </thead>
+      <tbody>
+        <% Api::V1::BaseController::CALLER_ERRORS.each do |status, key, said| %>
+          <tr>
+            <td class="mono"><%= status %></td>
+            <td class="mono"><%= key %></td>
+            <td class="said-cell"><%= said %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</section>

@@ -158,9 +158,8 @@
           </nav>
         </div>
 
-        <% if fire_engine %>
-          <div class="rail-foot">
-            <% if current_staff&.may?("access.read") %>
+        <div class="rail-foot">
+            <% if fire_engine && current_staff&.may?("access.read") %>
               <%= link_to fd_audit_path, class: "rail-item",
                     aria: { current: ("page" if controller_path == "fd/audits") } do %>
                 <span class="rail-ic" aria-hidden="true">
@@ -169,6 +168,14 @@
                 <span class="rail-text">Audit log</span>
               <% end %>
             <% end %>
+            <%= link_to docs_path, class: "rail-item",
+                  aria: { current: ("page" if controller_path == "docs") } do %>
+              <span class="rail-ic" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h9l5 5v11H5z"/><path d="M14 4v5h5"/><path d="M9 13h6M9 17h4"/></svg>
+              </span>
+              <span class="rail-text">Docs</span>
+            <% end %>
+            <% if fire_engine %>
             <button type="button" class="rail-item rail-find" data-action="palette#open"
                     aria-label="Search cases, members, notes">
               <span class="rail-ic" aria-hidden="true">
@@ -177,8 +184,8 @@
               <span class="rail-text">Search</span>
               <span class="kbd">⌘K</span>
             </button>
-          </div>
-        <% end %>
+            <% end %>
+        </div>
       </aside>
 
       <div class="main" data-controller="case-timeline">

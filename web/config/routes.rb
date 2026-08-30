@@ -13,12 +13,12 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       resource :token, only: [:show], controller: "tokens"
-      post "channels/:channel_id/managers/check", to: "channel_managers#check",
-        as: :channel_managers_check
       get "channels/:channel_id/managers/:user_id", to: "channel_managers#show",
         as: :channel_manager
     end
   end
+
+  get "docs", to: "docs#show", as: :docs
 
   namespace :you do
     get "api", to: "api#show", as: :api
