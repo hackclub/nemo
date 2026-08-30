@@ -44,8 +44,8 @@
   <div class="frows">
     <div class="frow">
       <span>Violation</span>
-      <b class="<%= "is-none" if kase.category_key.blank? %>">
-        <%= category_short(kase.category_key) %>
+      <b class="<%= "is-none" if kase.violations.empty? %>">
+        <%= violations_label(kase.violations, short: true) || "n/a" %>
       </b>
     </div>
     <div class="frow">

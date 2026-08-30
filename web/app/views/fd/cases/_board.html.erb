@@ -13,7 +13,7 @@
                data-action="click->row-link#go">
             <div class="lane-id">
               #<%= kase.id %>
-              <span><%= category_label(kase.category_key) %></span>
+              <span><%= violations_label(violations[kase.id] || [kase.category_key].compact) %></span>
             </div>
             <% gist = case_gist(kase) %>
             <% if gist %>

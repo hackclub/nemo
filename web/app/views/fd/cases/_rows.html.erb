@@ -14,7 +14,8 @@
       <div class="row-subject">
         <span class="two-line">
           <%= link_to fd_case_path(kase) do %>
-            <b>#<%= kase.id %><% if kase.category_key.present? %><span class="row-violation">&middot; <%= category_label(kase.category_key) %></span><% end %></b>
+            <% said = violations_label(violations[kase.id] || [kase.category_key].compact) %>
+            <b>#<%= kase.id %><% if said %><span class="row-violation">&middot; <%= said %></span><% end %></b>
           <% end %>
           <% if kase.duplicate_of %>
             <span><%= row_merged_phrase(kase) %></span>

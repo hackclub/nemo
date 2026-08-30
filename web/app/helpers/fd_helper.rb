@@ -968,6 +968,12 @@ module FdHelper
     safe_join(parts)
   end
 
+  def violations_label(keys, short: false)
+    return nil if keys.empty?
+
+    keys.map { |key| short ? category_short(key) : category_label(key) }.join(", ")
+  end
+
   def action_reason(action)
     said = action.reason.presence
     return tag.span("no reason recorded", class: "why-none") if said.nil?

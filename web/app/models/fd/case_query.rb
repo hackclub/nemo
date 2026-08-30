@@ -310,8 +310,24 @@ module Fd
       end
     end
 
+    LIVE_ACTION_CATEGORY = <<~SQL.squish
+      EXISTS (
+        SELECT 1 FROM fd.actions a
+        WHERE a.case_id = fd.cases.id AND a.reversed_at IS NULL AND a.category_key = :key
+      )
+      OR (
+        NOT EXISTS (
+          SELECT 1 FROM fd.actions a
+          WHERE a.case_id = fd.cases.id AND a.reversed_at IS NULL AND a.category_key IS NOT NULL
+        )
+        AND fd.cases.category_key = :key
+      )
+    SQL
+
     def apply_category(scope)
-      default?("category") ? scope : scope.where(category_key: self["category"])
+      return scope if default?("category")
+
+      scope.where(LIVE_ACTION_CATEGORY, key: self["category"])
     end
 
     def apply_subject(scope)

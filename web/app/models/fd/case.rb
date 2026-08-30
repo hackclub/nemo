@@ -70,6 +70,22 @@ module Fd
       priors_for(user_id, within: within, before: before).count
     end
 
+    def violations
+      told = actions.reject(&:reversed?).filter_map(&:category_key).uniq
+      return told if told.any?
+
+      [category_key].compact
+    end
+
+    def self.violations_for(case_ids)
+      ids = case_ids.compact.uniq
+      return {} if ids.empty?
+
+      Action.where(case_id: ids, reversed_at: nil).where.not(category_key: nil)
+        .distinct.pluck(:case_id, :category_key)
+        .group_by(&:first).transform_values { |pairs| pairs.map(&:last) }
+    end
+
     def self.prior_counts_for(user_ids, within: PRIOR_WINDOW)
       ids = user_ids.compact.uniq
       return {} if ids.empty?

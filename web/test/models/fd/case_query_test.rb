@@ -147,6 +147,74 @@ class Fd::CaseQueryTest < ActiveSupport::TestCase
     assert_equal counted_one_by_one(nil), Fd::CaseQuery.view_counts(nil)
   end
 
+  def act_on(kase, category:, **attrs)
+    Fd::Action.create!({ case_id: kase.id, type_key: "warning", target_user_id: "USUB",
+                         decided_by: "UFF1", performed_by: "UFF1", reason: "why",
+                         category_key: category }.merge(attrs))
+  end
+
+  test "a case with actions is about what its actions say" do
+    kase = make_case(category_key: "spam")
+    act_on(kase, category: "harassment_general")
+
+    assert_equal ["harassment_general"], kase.reload.violations,
+      "the action is what was actually decided"
+  end
+
+  test "a case names every violation its actions name" do
+    kase = make_case(category_key: "spam")
+    act_on(kase, category: "harassment_general")
+    act_on(kase, category: "adult")
+
+    assert_equal %w[harassment_general adult].sort, kase.reload.violations.sort,
+      "two actions can be about two different things"
+  end
+
+  test "a reversed action no longer says what the case was about" do
+    kase = make_case(category_key: "spam")
+    act_on(kase, category: "harassment_general", reversed_at: Time.current, reversed_by: "UME")
+
+    assert_equal ["spam"], kase.reload.violations
+  end
+
+  test "a case with no actions falls back to its own violation" do
+    kase = make_case(category_key: "spam")
+
+    assert_equal ["spam"], kase.violations
+  end
+
+  def found_under(category)
+    query(view: "everything", category: category).relation.ids
+  end
+
+  test "filtering by violation finds the case its actions name, not its own" do
+    kase = make_case(category_key: "spam")
+    act_on(kase, category: "harassment_general")
+
+    assert_includes found_under("harassment_general"), kase.id,
+      "the filter must find what the queue shows"
+    assert_not_includes found_under("spam"), kase.id,
+      "the case column no longer speaks once an action has"
+  end
+
+  test "filtering still finds a case that has no actions" do
+    kase = make_case(category_key: "spam")
+
+    assert_includes found_under("spam"), kase.id
+  end
+
+  test "the batch lookup agrees with the one built per case" do
+    first = make_case(category_key: "spam")
+    act_on(first, category: "adult")
+    second = make_case(category_key: "spam")
+
+    batch = Fd::Case.violations_for([first.id, second.id])
+
+    assert_equal ["adult"], batch[first.id]
+    assert_nil batch[second.id], "a case with no acted violation is absent, not empty"
+    assert_equal ["spam"], second.violations
+  end
+
   test "the queue opens with the oldest case first" do
     assert_equal [@stale.id, @fresh.id, @taken.id], ids(view: "everything") - [@done.id],
       "the case that has waited longest is the one that needs somebody"
