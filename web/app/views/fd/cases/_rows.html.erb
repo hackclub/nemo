@@ -2,7 +2,7 @@
   <tr data-controller="row-link" data-row-link-href-value="<%= fd_case_path(kase) %>"
       data-action="click->row-link#go"
       class="<%= "row-resolved" if kase.resolved? %>">
-    <td class="col-tick <%= case_stripe(kase) %>">
+    <td class="col-tick">
       <% unless kase.resolved? %>
         <%= check_box_tag "case_ids[]", kase.id, false,
               id: "tick-#{kase.id}", form: "merge-form", class: "tick tick-case",

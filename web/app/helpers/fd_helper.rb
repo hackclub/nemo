@@ -162,13 +162,6 @@ module FdHelper
     tag.span(@query.descending? ? "▾" : "▴", class: "sort-mark on", aria: { hidden: true })
   end
 
-  def member_severity(row)
-    return "sev-crit" if row.open_cases.positive?
-    return "sev-warn" if row.priors >= 2
-
-    "sev-calm"
-  end
-
   def on_day(at, none: "n/a")
     at ? at.to_time.strftime("%-d %b %Y") : none
   end
@@ -390,26 +383,6 @@ module FdHelper
 
   def messages_by_day(messages)
     messages.group_by { |said| said.posted_at.to_date }
-  end
-
-  STRIPES = { "sev-crit" => "stripe stripe-hot", "sev-warn" => "stripe stripe-warm" }.freeze
-
-  def member_stripe(row)
-    STRIPES.fetch(member_severity(row), "stripe")
-  end
-
-  def case_stripe(kase)
-    STRIPES.fetch(case_severity(kase), "stripe")
-  end
-
-  def case_severity(kase)
-    return "sev-calm" if kase.resolved?
-
-    case age_tone(case_age_seconds(kase))
-    when "chip-crit" then "sev-crit"
-    when "chip-warn" then "sev-warn"
-    else "sev-calm"
-    end
   end
 
   def age_tone(seconds)

@@ -181,7 +181,7 @@
           </thead>
           <tbody>
             <% @load.each do |row| %>
-              <tr class="<%= "stripe stripe-warm" if row.share.zero? %>">
+              <tr>
                 <td>
                   <span class="row-name">
                     <%= face(row.user_id) %>
@@ -320,7 +320,7 @@
           </thead>
           <tbody>
             <% @grants.each do |grant| %>
-              <tr class="<%= "stripe stripe-warm" if (@acted[grant.user_id] || 0).zero? %>">
+              <tr>
                 <td>
                   <span class="row-name">
                     <%= face(grant.user_id) %>
