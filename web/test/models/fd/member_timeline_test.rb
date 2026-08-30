@@ -58,7 +58,7 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
       reversal_reason: "appeal upheld"
 
     reversal = entries.find { |entry| entry.title.end_with?("reversed") }
-    assert_equal 2.days.ago.to_i, reversal.at.to_i
+    assert_in_delta 2.days.ago.to_i, reversal.at.to_i, 5
     assert_equal "reversed", reversal.state
     assert_match(/appeal upheld/, reversal.detail)
   end

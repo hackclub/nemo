@@ -122,6 +122,8 @@ class Fd::DeedsTest < ActiveSupport::TestCase
     note = Fd::Note.create!(subject_user_id: "UWATCHED", body: "keep an eye", author: WHO)
     audit("note", note.id, "noted")
 
-    assert_equal %w[UWATCHED USUB], Fd::Deeds.new(WHO, since: 30.days.ago).member_ids
+    assert_equal ["UWATCHED", "USUB", WHO].sort,
+      Fd::Deeds.new(WHO, since: 30.days.ago).member_ids.sort,
+      "the actor is named too, so an audit log can say who did it"
   end
 end

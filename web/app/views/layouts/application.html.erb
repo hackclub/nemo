@@ -146,6 +146,15 @@
 
         <% if fire_engine %>
           <div class="rail-foot">
+            <% if current_staff&.may?("access.read") %>
+              <%= link_to fd_audit_path, class: "rail-item",
+                    aria: { current: ("page" if controller_path == "fd/audits") } do %>
+                <span class="rail-ic" aria-hidden="true">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h13l3 3v13H4z"/><path d="M8 10h8M8 14h8M8 18h5"/></svg>
+                </span>
+                <span class="rail-text">Audit log</span>
+              <% end %>
+            <% end %>
             <button type="button" class="rail-item rail-find" data-action="palette#open"
                     aria-label="Search cases, members, notes">
               <span class="rail-ic" aria-hidden="true">

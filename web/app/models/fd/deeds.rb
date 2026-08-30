@@ -3,7 +3,7 @@ module Fd
     LIMIT = 40
     READ = "identity.read".freeze
 
-    Row = Struct.new(:at, :event, :kind, :id, :about, :who, :said, keyword_init: true)
+    Row = Struct.new(:at, :event, :kind, :id, :about, :who, :said, :actor, keyword_init: true)
 
     ON_CASE = %w[case participant assignee thread citation].freeze
 
@@ -19,23 +19,23 @@ module Fd
     end
 
     def member_ids
-      rows.filter_map { |row| row.kind == "member" ? row.id : row.who }.uniq
+      rows.flat_map { |row| [row.kind == "member" ? row.id : row.who, row.actor] }.compact.uniq
     end
 
     private
 
     def reads
-      AccessLog.where(actor_id: @user_id, field_class: "identity")
-        .where(looked_at: @since..).order(looked_at: :desc).limit(@limit)
-        .map do |log|
-          Row.new(at: log.looked_at, event: "identity/read", kind: "member",
-            id: log.subject_user_id)
-        end
+      scope = AccessLog.where(field_class: "identity").where(looked_at: @since..)
+      scope = scope.where(actor_id: @user_id) if @user_id
+      scope.order(looked_at: :desc).limit(@limit).map do |log|
+        Row.new(at: log.looked_at, event: "identity/read", kind: "member",
+          id: log.subject_user_id, actor: log.actor_id)
+      end
     end
 
     def entries
-      scope = AuditEntry.where(actor_user_id: @user_id, occurred_at: @since..)
-        .where.not(verb: "refused")
+      scope = AuditEntry.where(occurred_at: @since..).where.not(verb: "refused")
+      scope = scope.where(actor_user_id: @user_id) if @user_id
       scope = narrow(scope, Permission.events(@only)) if @only
       scope.recent_first.limit(@limit).to_a
     end
@@ -56,7 +56,7 @@ module Fd
       @titles = Decision.where(id: ids(found, "decision", "decision_thread"))
         .pluck(:id, :title).to_h
 
-      found.map { |row| row_for(row) }
+      found.map { |row| row_for(row).tap { |made| made.actor = row.actor_user_id } }
     end
 
     def ids(found, *types)
