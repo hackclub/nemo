@@ -120,12 +120,43 @@ class Fd::DeedsTest < ActiveSupport::TestCase
       looked_at: 2.days.ago)
   end
 
-  test "a view keeps only its own source, and no view keeps nothing" do
+  def all_three
     both_kinds
+    Api::Consent.set!(WHO, "channel_manager", true, via: "dashboard")
+  end
 
-    assert_equal %w[case/opened identity/read], deeds.map(&:event).sort
+  test "a view keeps only its own source, and no view keeps nothing" do
+    all_three
+
+    assert_equal %w[case/opened consent/granted identity/read], deeds.map(&:event).sort
     assert_equal ["case/opened"], deeds(view: "audit").map(&:event)
     assert_equal ["identity/read"], deeds(view: "read").map(&:event)
+    assert_equal ["consent/granted"], deeds(view: "api").map(&:event)
+  end
+
+  test "a consent change names the capability and how it was made, not a member link" do
+    Api::Consent.set!(WHO, "channel_manager", true, via: "command")
+
+    row = deeds(view: "api").sole
+    assert_equal ["capability", "channel manager lookups"], [row.kind, row.about]
+    assert_equal ["from Slack", WHO], [row.said, row.actor]
+    assert_nil row.id, "a consent row links nothing, it is about the person who made it"
+  end
+
+  test "opting back out reads as its own line, and both survive" do
+    Api::Consent.set!(WHO, "channel_manager", true, via: "dashboard")
+    Api::Consent.set!(WHO, "channel_manager", false, via: "dashboard")
+
+    assert_equal ["consent/granted", "consent/withheld"], deeds(view: "api").map(&:event).sort,
+      "one line each way, whatever order a shared timestamp puts them in"
+  end
+
+  test "consent changes are asked for by nobody looking at one permission" do
+    Api::Consent.set!(WHO, "channel_manager", true, via: "dashboard")
+    audit("case", make_case.id, "opened")
+
+    assert_equal ["case/opened"], deeds(only: "case.open").map(&:event)
+    assert_empty deeds(only: "identity.read")
   end
 
   test "an unknown view falls back to everything rather than to nothing" do
@@ -137,17 +168,18 @@ class Fd::DeedsTest < ActiveSupport::TestCase
   end
 
   test "the per-view counts add up to the unfiltered total" do
-    both_kinds
+    all_three
     counted = Fd::Deeds.new(WHO, since: 30.days.ago).totals
 
     assert_equal 1, counted["audit"]
     assert_equal 1, counted["read"]
-    assert_equal counted["all"], counted["audit"] + counted["read"]
+    assert_equal 1, counted["api"]
+    assert_equal counted["all"], counted["audit"] + counted["read"] + counted["api"]
     assert_equal Fd::Deeds.new(WHO, since: 30.days.ago).total, counted["all"]
   end
 
   test "counting a view agrees with paging it" do
-    both_kinds
+    all_three
     counted = Fd::Deeds.new(WHO, since: 30.days.ago).totals
 
     Fd::Deeds::VIEWS.each_key do |key|
@@ -159,7 +191,7 @@ class Fd::DeedsTest < ActiveSupport::TestCase
   test "a view still counts every source when there is nothing to count" do
     counted = Fd::Deeds.new(WHO, since: 30.days.ago).totals
 
-    assert_equal({ "audit" => 0, "read" => 0, "all" => 0 }, counted)
+    assert_equal({ "audit" => 0, "read" => 0, "api" => 0, "all" => 0 }, counted)
   end
 
   test "the members it mentions are the ones a name is needed for" do

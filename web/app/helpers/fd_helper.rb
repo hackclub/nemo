@@ -1149,6 +1149,8 @@ module FdHelper
     "decision/dropped" => "Dropped",
     "decision/settled" => "Settled",
     "decision/superseded" => "Retired",
+    "consent/granted" => "Opted in to",
+    "consent/withheld" => "Opted out of",
     "decision_thread/attached" => "Linked a thread to",
     "decision_thread/detached" => "Unlinked a thread from",
     "grant/granted" => "Gave access to",
@@ -1213,6 +1215,7 @@ module FdHelper
     case deed.kind
     when "case" then link_to deed.about, fd_case_path(deed.id), class: "lnk"
     when "decision" then link_to deed.about, fd_decision_path(deed.id), class: "lnk"
+    when "capability" then deed.about
     else member_link(deed.id)
     end
   end

@@ -13,5 +13,9 @@ module Api
     def self.label(key) = fetch(key).fetch("label")
 
     def self.covers(key) = fetch(key).fetch("covers")
+
+    def self.known?(key) = TABLE.key?(key.to_s)
+
+    def self.said(key) = known?(key) ? label(key).downcase : key.to_s
   end
 end

@@ -6,8 +6,11 @@ module Fd
     VIEWS = {
       "all" => { tab: "Everything", head: "Everything anyone did" },
       "audit" => { tab: "Firefighters", head: "Everything firefighters did" },
-      "read" => { tab: "Identity reads", head: "Every identity read" }
+      "read" => { tab: "Identity reads", head: "Every identity read" },
+      "api" => { tab: "API", head: "Everything anyone did to the API" }
     }.freeze
+
+    VIA = { "dashboard" => "from the dashboard", "command" => "from Slack" }.freeze
 
     Row = Struct.new(:at, :event, :kind, :id, :about, :who, :said, :actor, keyword_init: true)
 
@@ -50,7 +53,7 @@ module Fd
       return AuditEntry.connection.select_all("SELECT 0 AS found WHERE false") if nothing_asked?
 
       sql = <<~SQL
-        WITH picked AS (#{audit_side}#{reads_side})
+        WITH picked AS (#{union})
         SELECT #{select} FROM picked
       SQL
       sql += "ORDER BY at DESC LIMIT :limit OFFSET :offset" unless select.start_with?("count")
@@ -60,8 +63,16 @@ module Fd
       )
     end
 
+    def union
+      "#{audit_side}#{reads_side}#{consent_side}"
+    end
+
     def nothing_asked?
-      audit_side.strip.empty? && reads_side.strip.empty?
+      union.strip.empty?
+    end
+
+    def wanted?(name)
+      @view == "all" || @view == name
     end
 
     def tallied
@@ -69,7 +80,7 @@ module Fd
       return counted if nothing_asked?
 
       sql = <<~SQL
-        WITH picked AS (#{audit_side}#{reads_side})
+        WITH picked AS (#{union})
         SELECT kind, count(*) AS found FROM picked GROUP BY kind
       SQL
       found = AuditEntry.connection.select_all(
@@ -80,7 +91,7 @@ module Fd
     end
 
     def audit_side
-      return "" if @view == "read"
+      return "" unless wanted?("audit")
       return "" if @only && @only != READ && Permission.events(@only).empty?
       return "" if @only == READ
 
@@ -93,16 +104,29 @@ module Fd
     end
 
     def reads_side
-      return "" if @view == "audit"
+      return "" unless wanted?("read")
       return "" if @only && @only != READ
 
       mine = @user_id ? "AND l.actor_id = :who" : ""
-      lead = audit_side.empty? ? "" : "UNION ALL"
       <<~SQL
-        #{lead}
+        #{audit_side.empty? ? '' : 'UNION ALL'}
         SELECT 'read' AS kind, l.id AS id, l.looked_at AS at
         FROM access_log l
         WHERE l.looked_at >= :since AND l.field_class = 'identity' #{mine}
+      SQL
+    end
+
+    def consent_side
+      return "" unless wanted?("api")
+      return "" if @only
+
+      mine = @user_id ? "AND c.user_id = :who" : ""
+      lead = audit_side.empty? && reads_side.empty? ? "" : "UNION ALL"
+      <<~SQL
+        #{lead}
+        SELECT 'api' AS kind, c.id AS id, c.at AS at
+        FROM api.consent_log c
+        WHERE c.at >= :since #{mine}
       SQL
     end
 
@@ -133,6 +157,7 @@ module Fd
       chosen = picked.to_a
       @picked_ids = chosen.select { |row| row["kind"] == "audit" }.map { |row| row["id"] }
       read_rows = reads_for(chosen.select { |row| row["kind"] == "read" }.map { |row| row["id"] })
+      consent_rows = consents_for(chosen.select { |row| row["kind"] == "api" }.map { |row| row["id"] })
 
       found = entries
       @actions = Action.where(id: ids(found, "action")).index_by(&:id)
@@ -143,7 +168,17 @@ module Fd
         .pluck(:id, :title).to_h
 
       made = found.map { |row| row_for(row).tap { |one| one.actor = row.actor_user_id } }
-      (made + read_rows).sort_by { |row| -row.at.to_i }
+      (made + read_rows + consent_rows).sort_by { |row| -row.at.to_i }
+    end
+
+    def consents_for(ids)
+      return [] if ids.empty?
+
+      ::Api::ConsentLog.where(id: ids).map do |log|
+        Row.new(at: log.at, event: "consent/#{log.state}", kind: "capability",
+          about: ::Api::Capability.said(log.capability), actor: log.user_id,
+          said: VIA.fetch(log.via, log.via))
+      end
     end
 
     def reads_for(ids)
