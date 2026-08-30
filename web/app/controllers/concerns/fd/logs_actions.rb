@@ -23,6 +23,9 @@ module Fd
       if NEEDS_CHANNEL.include?(type_key) && params[:channel_id].blank?
         return "#{type_name.downcase} needs a channel"
       end
+      if params[:reason].to_s.strip.blank?
+        return wrong!(:reason, "say why this was the answer", params[:reason])
+      end
 
       nil
     end
@@ -38,8 +41,17 @@ module Fd
         source_app: Audit::SOURCE_APP,
         expires_at: expiry,
         cites_message_id: cited_message_id(kase),
+        reason: params[:reason].to_s.strip,
+        category_key: chosen_category(kase),
         details: channel
       )
+    end
+
+    def chosen_category(kase)
+      asked = params[:category_key].to_s
+      return asked if Case::CATEGORIES.include?(asked)
+
+      kase.category_key
     end
 
     def cited_message_id(kase)

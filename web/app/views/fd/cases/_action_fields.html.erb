@@ -16,6 +16,18 @@
   <%= text_field_tag :channel_id, nil, class: "textarea", id: nil,
         placeholder: "C0266FRGV" %>
 </label>
+<label class="field-label">
+  What it is about
+  <%= select_tag :category_key,
+        options_for_select([["not set", ""]] + category_options, kase.category_key),
+        class: "select", id: nil %>
+</label>
+<label class="field-label">
+  Why
+  <%= text_area_tag :reason, field_was(:reason), rows: 3, class: "textarea", id: nil,
+        placeholder: "what they did, and why this is the answer to it" %>
+</label>
+<%= field_wrong(:reason) %>
 <% if flagged.any? %>
   <label class="field-label">
     Which flagged message it is about

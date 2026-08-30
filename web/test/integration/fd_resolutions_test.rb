@@ -19,7 +19,7 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
 
   def act(**params)
     post fd_case_actions_path(@kase), params: {
-      type_key: "warning", target_user_id: "USUB"
+      type_key: "warning", target_user_id: "USUB", reason: "would not let it go"
     }.merge(params)
   end
 

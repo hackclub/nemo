@@ -132,7 +132,8 @@ class FdAccessTest < ActionDispatch::IntegrationTest
     post fd_case_notes_path(kase), params: { body: "asked them to stop" }
     assert_equal 1, kase.notes.count
 
-    post fd_case_actions_path(kase), params: { type_key: "warning", target_user_id: "USUB" }
+    post fd_case_actions_path(kase), params: { type_key: "warning", target_user_id: "USUB",
+                                               reason: "warned for the same thing twice" }
     assert_equal 1, kase.actions.count
 
     post fd_case_resolution_path(kase), params: { outcome: "close", close_reason: "no_action" }

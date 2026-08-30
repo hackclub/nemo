@@ -8,7 +8,7 @@ class FdActionsTest < ActionDispatch::IntegrationTest
 
   def log(**params)
     post fd_case_actions_path(@kase), params: {
-      type_key: "warning", target_user_id: "USUB"
+      type_key: "warning", target_user_id: "USUB", reason: "kept at it after being asked to stop"
     }.merge(params)
   end
 
@@ -138,5 +138,52 @@ class FdActionsTest < ActionDispatch::IntegrationTest
 
     assert_select "select.action-type", 1
     assert_select "select#type_key", count: 0
+  end
+
+  test "an action must say why it was taken" do
+    sign_in_as(@me)
+    log(reason: "   ")
+
+    assert_empty actions, "nothing may be logged against somebody without a reason"
+    assert_equal "reason", flash[:wrong]["field"]
+  end
+
+  test "the reason is kept so it does not have to be typed twice" do
+    sign_in_as(@me)
+    log(type_key: "shush", reason: "")
+
+    assert_equal "shush needs a date it runs until", flash[:alert],
+      "the first objection still wins"
+  end
+
+  test "the reason is stored as written, trimmed" do
+    sign_in_as(@me)
+    log(reason: "  said it again in the same thread  ")
+
+    assert_equal "said it again in the same thread", actions.sole.reason
+  end
+
+  test "a violation is optional, and a set one is kept on the action" do
+    sign_in_as(@me)
+    log(category_key: "harassment_general")
+
+    assert_equal "harassment_general", actions.sole.category_key
+  end
+
+  test "an action with no violation chosen falls back to the case" do
+    @kase.update!(category_key: "spam")
+    sign_in_as(@me)
+    log
+
+    assert_equal "spam", actions.sole.category_key,
+      "the case already says what this is about"
+  end
+
+  test "a violation that is not a real category is refused, not stored" do
+    @kase.update!(category_key: nil)
+    sign_in_as(@me)
+    log(category_key: "nonsense")
+
+    assert_nil actions.sole.category_key
   end
 end
