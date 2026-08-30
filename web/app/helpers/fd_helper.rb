@@ -969,6 +969,13 @@ module FdHelper
     safe_join(parts)
   end
 
+  def action_reason(action)
+    said = action.reason.presence
+    return tag.span("no reason recorded", class: "why-none") if said.nil?
+
+    tag.q(said, class: "why-said")
+  end
+
   def off_subject_chip(action, kase)
     return if kase.subject_user_ids.include?(action.target_user_id)
 

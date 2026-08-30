@@ -20,6 +20,7 @@
           <% end %>
         </div>
 
+        <p class="ledger-why"><%= action_reason(action) %></p>
         <p class="ledger-said"><%= action_sentence(action) %></p>
 
         <% cited = cited_messages[action.cites_message_id] if action.cites? %>

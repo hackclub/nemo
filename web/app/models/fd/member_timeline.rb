@@ -154,6 +154,7 @@ module Fd
       parts << "in #{channel}" if channel
       parts << "by #{names[action.decided_by]}"
       parts << "lifts #{action.expires_at.strftime('%-d %b')}" if action.expires?
+      parts << action.reason if action.reason.present?
       parts.join(" · ")
     end
   end

@@ -5143,6 +5143,25 @@
     min-width: 0;
   }
 
+  .why-said {
+    quotes: "\201C" "\201D";
+    color: var(--ink-2);
+  }
+
+  .why-none {
+    color: var(--ink-4);
+  }
+
+  .ledger-why {
+    margin: 0 0 3px;
+    font-size: var(--t-small);
+  }
+
+  .pm-act-why {
+    display: block;
+    font-size: var(--t-small);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .person-drawer-frame { transition: none; }
   }
