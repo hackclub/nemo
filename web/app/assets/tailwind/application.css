@@ -5131,11 +5131,15 @@
   .acts-row {
     display: flex;
     align-items: baseline;
-    gap: 8px;
+    gap: 7px;
     margin-bottom: 7px;
   }
 
   .acts-row:last-child { margin-bottom: 0; }
+
+  .acts-now .mchip {
+    align-self: baseline;
+  }
 
   .acts-why {
     font-size: var(--t-small);
