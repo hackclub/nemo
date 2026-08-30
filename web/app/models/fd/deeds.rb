@@ -3,14 +3,27 @@ module Fd
     LIMIT = 40
     READ = "identity.read".freeze
 
+    VIEWS = {
+      "all" => { tab: "Everything", head: "Everything anyone did" },
+      "audit" => { tab: "Firefighters", head: "Everything firefighters did" },
+      "read" => { tab: "Identity reads", head: "Every identity read" }
+    }.freeze
+
     Row = Struct.new(:at, :event, :kind, :id, :about, :who, :said, :actor, keyword_init: true)
 
     ON_CASE = %w[case participant assignee thread citation].freeze
 
-    def initialize(user_id, since:, only: nil, limit: LIMIT, offset: 0)
+    def self.view_for(asked)
+      VIEWS.key?(asked.to_s) ? asked.to_s : "all"
+    end
+
+    attr_reader :view
+
+    def initialize(user_id, since:, only: nil, view: nil, limit: LIMIT, offset: 0)
       @user_id = user_id
       @since = since
       @only = only
+      @view = self.class.view_for(view)
       @limit = limit
       @offset = offset
     end
@@ -21,6 +34,10 @@ module Fd
 
     def total
       @total ||= picked("count(*) AS found").first["found"].to_i
+    end
+
+    def totals
+      @totals ||= tallied
     end
 
     def member_ids
@@ -47,7 +64,23 @@ module Fd
       audit_side.strip.empty? && reads_side.strip.empty?
     end
 
+    def tallied
+      counted = VIEWS.keys.excluding("all").index_with(0)
+      return counted if nothing_asked?
+
+      sql = <<~SQL
+        WITH picked AS (#{audit_side}#{reads_side})
+        SELECT kind, count(*) AS found FROM picked GROUP BY kind
+      SQL
+      found = AuditEntry.connection.select_all(
+        AuditEntry.sanitize_sql([sql, { since: @since, who: @user_id }])
+      )
+      found.each { |row| counted[row["kind"]] = row["found"].to_i }
+      counted.merge("all" => counted.values.sum)
+    end
+
     def audit_side
+      return "" if @view == "read"
       return "" if @only && @only != READ && Permission.events(@only).empty?
       return "" if @only == READ
 
@@ -60,6 +93,7 @@ module Fd
     end
 
     def reads_side
+      return "" if @view == "audit"
       return "" if @only && @only != READ
 
       mine = @user_id ? "AND l.actor_id = :who" : ""

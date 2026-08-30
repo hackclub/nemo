@@ -1,8 +1,18 @@
 <% content_for :page_title, "Audit log" %>
 
 <div class="panel">
+  <div class="views">
+    <% Fd::Deeds::VIEWS.each do |key, labels| %>
+      <%= link_to fd_audit_path(key == "all" ? {} : { view: key }), class: "view",
+            aria: { current: ("true" if key == @view) } do %>
+        <span><%= labels[:tab] %></span>
+        <span class="view-count"><%= number_with_delimiter(@counts.fetch(key, 0)) %></span>
+      <% end %>
+    <% end %>
+  </div>
+
   <div class="panel-head">
-    <b>Everything firefighters did</b>
+    <b><%= Fd::Deeds::VIEWS.fetch(@view)[:head] %></b>
     <span class="qspacer"></span>
     <span class="qlab">
       last 30 days &middot; <%= pluralize(@total, "entry") %>
@@ -46,13 +56,13 @@
     <% if @pages > 1 %>
       <div class="pager">
         <% if @page > 1 %>
-          <%= link_to "Back", fd_audit_path(page: @page - 1), class: "btn" %>
+          <%= link_to "Back", fd_audit_path(page: @page - 1, view: @seen), class: "btn" %>
         <% else %>
           <span class="btn is-off">Back</span>
         <% end %>
         <span class="pager-at">Page <%= @page %> of <%= @pages %></span>
         <% if @page < @pages %>
-          <%= link_to "Next", fd_audit_path(page: @page + 1), class: "btn" %>
+          <%= link_to "Next", fd_audit_path(page: @page + 1, view: @seen), class: "btn" %>
         <% else %>
           <span class="btn is-off">Next</span>
         <% end %>

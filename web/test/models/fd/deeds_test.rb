@@ -114,6 +114,54 @@ class Fd::DeedsTest < ActiveSupport::TestCase
     assert_equal %w[case/resolved case/claimed], deeds(limit: 2).map(&:event)
   end
 
+  def both_kinds
+    audit("case", make_case.id, "opened")
+    AccessLog.create!(actor_id: WHO, subject_user_id: "USUB", field_class: "identity",
+      looked_at: 2.days.ago)
+  end
+
+  test "a view keeps only its own source, and no view keeps nothing" do
+    both_kinds
+
+    assert_equal %w[case/opened identity/read], deeds.map(&:event).sort
+    assert_equal ["case/opened"], deeds(view: "audit").map(&:event)
+    assert_equal ["identity/read"], deeds(view: "read").map(&:event)
+  end
+
+  test "an unknown view falls back to everything rather than to nothing" do
+    both_kinds
+
+    assert_equal deeds.size, deeds(view: "nonsense").size
+    assert_equal "all", Fd::Deeds.view_for("nonsense")
+    assert_equal "all", Fd::Deeds.view_for(nil)
+  end
+
+  test "the per-view counts add up to the unfiltered total" do
+    both_kinds
+    counted = Fd::Deeds.new(WHO, since: 30.days.ago).totals
+
+    assert_equal 1, counted["audit"]
+    assert_equal 1, counted["read"]
+    assert_equal counted["all"], counted["audit"] + counted["read"]
+    assert_equal Fd::Deeds.new(WHO, since: 30.days.ago).total, counted["all"]
+  end
+
+  test "counting a view agrees with paging it" do
+    both_kinds
+    counted = Fd::Deeds.new(WHO, since: 30.days.ago).totals
+
+    Fd::Deeds::VIEWS.each_key do |key|
+      assert_equal deeds(view: key).size, counted.fetch(key),
+        "#{key} counts one way and pages another"
+    end
+  end
+
+  test "a view still counts every source when there is nothing to count" do
+    counted = Fd::Deeds.new(WHO, since: 30.days.ago).totals
+
+    assert_equal({ "audit" => 0, "read" => 0, "all" => 0 }, counted)
+  end
+
   test "the members it mentions are the ones a name is needed for" do
     kase = make_case
     action = Fd::Action.create!(case_id: kase.id, type_key: "warning", target_user_id: "USUB",
