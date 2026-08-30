@@ -759,10 +759,9 @@ module FdHelper
   def case_needs(kase)
     return [] if kase.resolved?
 
-    needs = []
-    needs << "a subject" if kase.subject_user_ids.empty?
-    needs << "a violation" if kase.category_key.blank?
-    needs
+    return [] if kase.subject_user_ids.any?
+
+    ["a subject"]
   end
 
   def to_sentence_words(words)

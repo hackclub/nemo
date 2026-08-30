@@ -4,8 +4,5 @@
     <% if missing.include?(:subject) %>
       <%= opens_modal "case.people", "Pick a subject", opens: "add-person", on: kase %>
     <% end %>
-    <% if missing.include?(:violation) %>
-      <label for="set-category" class="btn">Set the violation</label>
-    <% end %>
   </div>
 </div>

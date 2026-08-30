@@ -200,8 +200,7 @@ module Fd
     def missing_on(kase, subject)
       return [] if kase.resolved?
 
-      needed = { subject: subject.nil?, violation: kase.category_key.blank? }
-      needed.select { |_what, missing| missing }.keys
+      subject.nil? ? [:subject] : []
     end
 
     def open_cases_for(subjects)

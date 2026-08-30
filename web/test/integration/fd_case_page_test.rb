@@ -171,18 +171,27 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
 
     assert_select ".chip", { text: "nothing set yet", count: 0 },
       "a chip standing for one of three things told nobody which"
-    assert_select ".todo .todo-t", text: "Two things before this can close"
-    assert_select ".todo .todo-row .btn", 2
+    assert_select ".todo .todo-t", text: "One thing before this can close"
+    assert_select ".todo .todo-row .btn", 1
   end
 
-  test "the count follows what is actually set" do
+  test "the violation can still be set once it stopped being a blocker" do
     get fd_case_path(@kase)
-    assert_select ".todo .todo-t", text: "One thing before this can close"
+
+    assert_select ".menu-pop label[for=set-category]", 1,
+      "taking it out of the banner must not make it unreachable"
+  end
+
+  test "a case with somebody named is ready to close, violation or not" do
+    assert_nil @kase.category_key
+
+    get fd_case_path(@kase)
+    assert_select ".todo", { count: 0 },
+      "a violation is optional, so its absence must not block a close"
 
     @kase.update!(category_key: "harassment")
     get fd_case_path(@kase)
-    assert_select ".todo", { count: 0 },
-      "evidence is not a requirement, so a case with a subject and a violation is ready to close"
+    assert_select ".todo", { count: 0 }
   end
 
   test "a case with nothing outstanding is not asked for anything" do

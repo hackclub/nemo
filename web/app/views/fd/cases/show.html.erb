@@ -24,6 +24,10 @@
       <%= opens_modal "case.note", menu_item("note", "Add a note"), opens: "add-note" %>
       <%= opens_modal "case.act", menu_item("act", "Log an action"), opens: "log-action",
             on: @case %>
+      <% unless @case.resolved? %>
+        <%= opens_modal "case.people", menu_item("decision", "Set the violation"),
+              opens: "set-category", on: @case %>
+      <% end %>
       <% if @decisions.any? %>
         <%= opens_modal "decision.link", menu_item("decision", "Link a decision"),
               opens: "follow-decision" %>
