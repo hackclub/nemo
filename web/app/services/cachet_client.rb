@@ -43,8 +43,10 @@ class CachetClient
   end
 
   def self.remember(user_id, outcome)
-    return Rails.cache.write(cache_key(user_id), outcome, expires_in: CACHE_TTL) if
-      outcome.is_a?(Profile)
+    if outcome.is_a?(Profile)
+      CachetProfile.remember(user_id, outcome)
+      return Rails.cache.write(cache_key(user_id), outcome, expires_in: CACHE_TTL)
+    end
 
     ttl = outcome == PENDING ? PENDING_TTL : CACHE_TTL
     Rails.cache.write(cache_key(user_id), MISSING, expires_in: ttl)

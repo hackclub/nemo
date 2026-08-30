@@ -454,6 +454,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .rail, .rail-text, .rail-label, .rail-badge { transition: none; }
+    .modal { transform: none; transition: none; }
   }
 
   .main {
@@ -4347,10 +4348,13 @@
 
   .modal-host:has(> .modal-flip:checked) > .modal-wrap > .modal {
     pointer-events: auto;
+    transform: none;
   }
 
   .modal {
     pointer-events: none;
+    transform: translateY(8px);
+    transition: transform 150ms var(--ease-out);
     background-color: var(--card);
     border: 1px solid var(--line);
     border-radius: var(--r-card);
@@ -4437,6 +4441,10 @@
     color: var(--ink-3);
     line-height: 1.4;
     max-width: 26ch;
+  }
+
+  .modal-foot .btn-aside {
+    margin-inline-end: auto;
   }
 
   .modal-foot .btn-undo {

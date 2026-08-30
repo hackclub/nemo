@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_30_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_30_160000) do
   create_schema "app"
 
   # These are extensions that must be enabled in order to support this database
@@ -26,6 +26,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_000000) do
     t.datetime "updated_at", null: false
     t.index ["actor_id"], name: "index_access_log_on_actor_id"
     t.index ["subject_user_id"], name: "index_access_log_on_subject_user_id"
+  end
+
+  create_table "app.cachet_profiles", primary_key: "user_id", id: :string, force: :cascade do |t|
+    t.string "display_name"
+    t.datetime "fetched_at", null: false
+    t.string "image_url"
+    t.string "pronouns"
+    t.index ["display_name"], name: "index_cachet_profiles_on_display_name"
   end
 
   create_table "app.engine_setting", force: :cascade do |t|

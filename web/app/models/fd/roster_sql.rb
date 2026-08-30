@@ -60,6 +60,15 @@ module Fd
 
     CONTEXT_COLUMNS = ", dm.cohort_at, w.last_active_at".freeze
 
+    IDENTITY_COLUMNS =
+      ", mi.real_name, mi.first_name, mi.last_name, mi.email, cp.display_name AS shown_name".freeze
+
+    IDENTITY_JOIN = <<~SQL
+      LEFT JOIN fd.member_identity mi
+        ON mi.user_id = people.user_id AND mi.purged_at IS NULL
+      LEFT JOIN cachet_profiles cp ON cp.user_id = people.user_id
+    SQL
+
     CONTEXT_JOIN = <<~SQL
       LEFT JOIN analytics.dim_member dm ON dm.user_id = people.user_id
       LEFT JOIN analytics.fct_member_window w
@@ -76,10 +85,20 @@ module Fd
     private
 
     def aggregates
-      return AGGREGATES.sub("CONTEXT_JOIN", "") unless context_asked?
+      columns = "m.display_name, m.handle, m.title"
+      joins = []
 
-      AGGREGATES.sub("m.display_name, m.handle", "m.display_name, m.handle#{CONTEXT_COLUMNS}")
-        .sub("CONTEXT_JOIN", CONTEXT_JOIN)
+      if context_asked?
+        columns += CONTEXT_COLUMNS
+        joins << CONTEXT_JOIN
+      end
+
+      if asked?
+        columns += IDENTITY_COLUMNS
+        joins << IDENTITY_JOIN
+      end
+
+      AGGREGATES.sub("m.display_name, m.handle", columns).sub("CONTEXT_JOIN", joins.join("\n"))
     end
 
     def context_asked?
@@ -124,8 +143,12 @@ module Fd
       end
     end
 
+    TERM_FIELDS = %w[
+      user_id display_name handle title shown_name real_name first_name last_name email
+    ].freeze
+
     def term_clause
-      "(user_id ILIKE :term OR display_name ILIKE :term OR handle ILIKE :term)"
+      "(#{TERM_FIELDS.map { |field| "#{field} ILIKE :term" }.join(' OR ')})"
     end
 
     def roster_order

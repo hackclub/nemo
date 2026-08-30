@@ -12,8 +12,6 @@
                   <%= case_age_label(case_age_seconds(other)) %><%= other.assigned? ? ", assigned to #{other.assignee_handles}" : ", unassigned" %>.
                 <% end %>
               </span>
-              <%= link_to "Add to ##{@open_for_subject.first.id} instead",
-                    fd_case_path(@open_for_subject.first), class: "btn" %>
             </div>
           <% end %>
 
@@ -56,7 +54,9 @@
           </label>
 
           <label class="opt">
-            <%= check_box_tag :assign_to_me, "1", params[:assign_to_me] == "1", class: "tick" %>
+            <%= hidden_field_tag :assign_to_me, "0", id: nil %>
+            <%= check_box_tag :assign_to_me, "1", params.fetch(:assign_to_me, "1") == "1",
+                  class: "tick" %>
             <span class="opt-dot" aria-hidden="true"></span>
             <span>
               <span class="opt-label">Assign it to me</span>
@@ -64,6 +64,10 @@
           </label>
         </div>
         <div class="modal-foot">
+          <% if @open_for_subject.any? %>
+            <%= link_to "Add to ##{@open_for_subject.first.id} instead",
+                  fd_case_path(@open_for_subject.first), class: "btn btn-aside" %>
+          <% end %>
           <label for="open-case" class="btn btn-ghost">Cancel</label>
           <% if @open_for_subject.any? %>
             <%= button_tag "Open it anyway, this is separate", name: "separate", value: "1",

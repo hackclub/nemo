@@ -214,7 +214,8 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
 
     assert_select ".dup a[href=?]", fd_case_path(existing)
     assert_match(/assigned to @UFF2/, response.body)
-    assert_select ".dup a", text: "Add to ##{existing.id} instead"
+    assert_select ".modal-foot a", text: "Add to ##{existing.id} instead",
+      count: 1
   end
 
   test "confirming it is separate opens the second case" do
@@ -271,5 +272,22 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
 
     assert_select "tbody tr", minimum: 1
     assert_select "form#merge-form"
+  end
+
+  test "the modal offers to assign it to you by default" do
+    sign_in_as(@me)
+    get fd_cases_path(open: "1")
+
+    assert_select "#open-case ~ * input[name=assign_to_me][type=checkbox][checked]", 1,
+      "an unassigned case is nobody's job, so the box starts ticked"
+  end
+
+  test "unticking it still opens the case unassigned" do
+    sign_in_as(@me)
+    post fd_cases_path, params: { subject_user_ids: ["USUB"], body: "said it again",
+                                  assign_to_me: "0" }
+
+    assert_empty Fd::Case.order(:id).last.assignees,
+      "an explicit untick must not be overridden by the default"
   end
 end
