@@ -5,50 +5,75 @@ class Fd::MemberQueryTest < ActiveSupport::TestCase
     Fd::MemberQuery.new(ActionController::Parameters.new(params))
   end
 
-  def rows(user_ids)
-    user_ids.map { |id| Fd::MemberQuery::Row.new(user_id: id) }
+  def named(user_ids)
+    shown = Fd::Member.where(user_id: user_ids)
+      .pluck(:user_id, :display_name, :handle)
+      .to_h { |id, display, handle| [id, (display.presence || handle.presence || id).downcase] }
+    user_ids.map { |id| shown.fetch(id, id.downcase) }
   end
 
-  def by_name(user_ids)
-    query.send(:by_name, rows(user_ids)).map(&:user_id)
+  def collate(said)
+    said.gsub(/[^a-z0-9]/, "")
   end
 
-  setup do
-    @members = Fd::Member.where.not(display_name: nil).order(:user_id).limit(8).to_a
-    skip "no members to sort" if @members.size < 4
-    @ids = @members.map(&:user_id)
-  end
-
-  test "the roster sorts by the name the member model reports" do
-    expected = @members
-      .sort_by { |m| [m.name.sub(/\A@/, "").downcase, m.user_id] }
-      .map(&:user_id)
-
-    assert_equal expected, by_name(@ids.shuffle)
-  end
-
-  test "the order does not depend on the order it was handed" do
-    assert_equal by_name(@ids), by_name(@ids.reverse)
-  end
-
-  test "somebody with no member row still sorts, and not to the front" do
-    found = by_name(@ids + ["ZZUNKNOWN"])
-
-    assert_equal @ids.size + 1, found.size
-    assert_not_equal "ZZUNKNOWN", found.first, "an unknown member used to sort above everyone"
-    assert_equal "ZZUNKNOWN", found.last, "@ZZUNKNOWN sorts under its own id"
-  end
-
-  test "naming the whole roster takes one query, whatever its size" do
-    many = @ids + Array.new(40) { |n| format("ZZBULK%03d", n) }
-
+  def counting
     counted = 0
     listener = ActiveSupport::Notifications.subscribe("sql.active_record") do |_, _, _, _, load|
       counted += 1 unless load[:name].to_s.in?(%w[SCHEMA TRANSACTION])
     end
-    by_name(many)
+    yield
+    counted
+  ensure
     ActiveSupport::Notifications.unsubscribe(listener)
+  end
 
-    assert_equal 1, counted, "one bulk lookup, not one per member"
+  setup do
+    skip "no members to sort" if Fd::Member.live.count < 4
+  end
+
+  test "the two name directions are exact opposites" do
+    forward = query("view" => "everyone", "sort" => "name").summary_rows.map(&:user_id)
+    backward = query("view" => "everyone", "sort" => "name", "dir" => "asc")
+      .summary_rows.map(&:user_id)
+
+    assert_equal forward.reverse, backward,
+      "one direction must be the other read backwards"
+    assert_operator forward.size, :>, 1
+  end
+
+  test "the name sort groups people by the name they show, not their id" do
+    shown = named(query("view" => "everyone", "sort" => "name").rows.map(&:user_id))
+
+    assert_equal shown, shown.sort { |a, b| collate(a) <=> collate(b) },
+      "the page is not in the order the database collates names"
+  end
+
+  test "a page is the matching slice of the whole ordering" do
+    asked = { "view" => "everyone", "sort" => "name" }
+    whole = query(asked).summary_rows.map(&:user_id)
+
+    assert_equal whole.first(Fd::MemberQuery::LIMIT), query(asked).rows.map(&:user_id)
+    assert_equal whole.slice(Fd::MemberQuery::LIMIT, Fd::MemberQuery::LIMIT),
+      query(asked.merge("page" => "2")).rows.map(&:user_id)
+  end
+
+  test "a page costs the same whether it is the first or a later one" do
+    first = counting { query("view" => "everyone").rows }
+    later = counting { query("view" => "everyone", "page" => "3").rows }
+
+    assert_equal first, later, "a later page must not walk further than the first"
+    assert_operator first, :<=, 2, "one count and one page, not a walk of the whole roster"
+  end
+
+  test "a page holds at most one page worth of people" do
+    assert_operator query("view" => "everyone").rows.size, :<=, Fd::MemberQuery::LIMIT
+  end
+
+  test "the roster counts everybody the views claim" do
+    counts = Fd::MemberQuery.view_counts
+
+    assert_equal counts["everyone"], query("view" => "everyone").total
+    assert_equal counts["open"], query("view" => "open").total
+    assert_equal counts["notes"], query("view" => "notes").total
   end
 end

@@ -1,5 +1,7 @@
 module Fd
   class MemberQuery
+    include RosterSql
+
     Facet = Struct.new(:key, :label, :value, :value_label, :options, :on, keyword_init: true)
     View = Struct.new(:key, :label, :count, :current, keyword_init: true)
     Row = Struct.new(:user_id, :cases, :subject_of, :logged_in, :open_cases, :actions, :in_force,
@@ -98,7 +100,7 @@ module Fd
     end
 
     def rows
-      @rows ||= narrowed.slice((page - 1) * LIMIT, LIMIT) || []
+      @rows ||= page_rows
     end
 
     def page
@@ -122,7 +124,10 @@ module Fd
     end
 
     def total
-      @total ||= filtered.size
+      @total ||= ask(<<~SQL).first["found"].to_i
+        WITH #{aggregates}
+        SELECT count(*) AS found FROM roster WHERE #{roster_where}
+      SQL
     end
 
     def population
@@ -130,24 +135,18 @@ module Fd
     end
 
     def views
-      counts = self.class.view_counts(with_a_history, live_ids)
+      counts = self.class.view_counts
       VIEWS.map do |key, label|
         View.new(key: key, label: label, count: counts.fetch(key), current: key == view)
       end
     end
 
-    def self.view_counts(shared = nil, ids = nil)
-      shared ||= new({}).send(:with_a_history)
-      VIEWS.keys.index_with do |key|
-        counting = new({ "view" => key })
-        counting.send(:shared_summaries=, shared)
-        counting.send(:live_ids=, ids) if ids
-        counting.total
-      end
+    def self.view_counts
+      new({}).send(:counts_per_view)
     end
 
     def summary_rows
-      summaries.values
+      all_rows
     end
 
     def facets
@@ -250,142 +249,49 @@ module Fd
       end
     end
 
-    def narrowed
-      @narrowed ||= sorted(filtered)
+    def page_rows
+      found = ask(<<~SQL, limit: LIMIT, offset: (page - 1) * LIMIT)
+        WITH #{aggregates}
+        SELECT * FROM roster WHERE #{roster_where}
+        ORDER BY #{roster_order}
+        LIMIT :limit OFFSET :offset
+      SQL
+      found.map { |row| row_from(row) }
     end
 
-    def filtered
-      @filtered ||= begin
-        found = summaries.values
-        found = found.select { |row| row.subject_of.positive? || row.logged_in.positive? } unless
-          self["who"] == "everyone"
-        found = found.select { |row| row.priors >= self["priors"].to_i } unless default?("priors")
-        found = filter_term(found)
-        found = filter_state(found)
-        filter_context(found)
+    def all_rows
+      ask(<<~SQL).map { |row| row_from(row) }
+        WITH #{aggregates}
+        SELECT * FROM roster WHERE #{roster_where} ORDER BY #{roster_order}
+      SQL
+    end
+
+    def counts_per_view
+      said = VIEWS.keys.map { |key| "count(*) FILTER (WHERE #{view_clause(key)}) AS #{key}" }
+      row = ask(<<~SQL).first
+        WITH #{aggregates}
+        SELECT #{said.join(", ")} FROM roster
+      SQL
+      VIEWS.keys.index_with { |key| row[key].to_i }
+    end
+
+    def view_clause(key)
+      case key
+      when "history" then "(subject_of > 0 OR logged_in > 0)"
+      when "force" then "in_force > 0"
+      when "open" then "open_cases > 0"
+      when "priors" then "priors >= 2"
+      when "notes" then "notes > 0"
+      else "1 = 1"
       end
     end
 
-    def filter_state(found)
-      case self["state"]
-      when "open" then found.select { |row| row.open_cases.positive? }
-      when "force" then found.select { |row| row.in_force.positive? }
-      when "noted" then found.select { |row| row.notes.positive? }
-      when "clean" then found.select { |row| row.subject_of.zero? && row.logged_in.zero? }
-      else found
-      end
-    end
-
-    def filter_term(found)
-      return found unless asked?
-
-      wanted = term.downcase
-      known = Names.for(found.map(&:user_id))
-      found.select do |row|
-        row.user_id.downcase.include?(wanted) ||
-          known[row.user_id].to_s.downcase.include?(wanted)
-      end
-    end
-
-    def filter_context(found)
-      return found if default?("tenure") && default?("active")
-
-      context = MemberContext.for(found.map(&:user_id))
-      found.select do |row|
-        seen = context[row.user_id]
-        tenure_ok?(seen) && active_ok?(seen)
-      end
-    end
-
-    def tenure_ok?(seen)
-      return true if default?("tenure")
-
-      days = seen&.tenure_days
-      return false if days.nil?
-
-      case self["tenure"]
-      when "new" then days < 31
-      when "year" then days < 366
-      else days >= 366
-      end
-    end
-
-    def active_ok?(seen)
-      return true if default?("active")
-
-      at = seen&.last_active_at
-      return self["active"] == "dormant" if at.nil?
-
-      days = (Date.current - at.to_date).to_i
-      case self["active"]
-      when "week" then days <= 7
-      when "month" then days <= 30
-      else days > 90
-      end
-    end
-
-    def sorted(found)
-      ranked = case self["sort"]
-      when "subject" then found.sort_by { |row| [-row.cases, row.user_id] }
-      when "logged" then found.sort_by { |row| [-row.logged_in, row.user_id] }
-      when "actions" then found.sort_by { |row| [-row.actions, row.user_id] }
-      when "notes" then found.sort_by { |row| [-row.notes, row.user_id] }
-      when "name" then by_name(found)
-      else found.sort_by { |row| [-(row.last_case_at&.to_i || 0), row.user_id] }
-      end
-
-      descending? ? ranked : ranked.reverse
-    end
-
-    def by_name(found)
-      known = Member.where(user_id: found.map(&:user_id))
-        .pluck(:user_id, :display_name, :handle)
-        .to_h { |id, display, handle| [id, display.presence || handle.presence || "@#{id}"] }
-
-      found.sort_by do |row|
-        shown = known.fetch(row.user_id) { row.user_id }
-        [shown.sub(/\A@/, "").downcase, row.user_id]
-      end
-    end
-
-    def summaries
-      @summaries ||= self["who"] == "everyone" ? with_everyone(with_a_history) : with_a_history
-    end
-
-    attr_writer :shared_summaries, :live_ids
-
-    def with_a_history
-      @shared_summaries ||= build_summaries
-    end
-
-    def live_ids
-      @live_ids ||= Member.live.pluck(:user_id)
-    end
-
-    def with_everyone(found)
-      found = found.dup
-      live_ids.each { |id| found[id] }
-      found
-    end
-
-    def build_summaries
-      found = Hash.new { |all, id| all[id] = Row.new(user_id: id, cases: 0, subject_of: 0,
-        logged_in: 0, open_cases: 0, actions: 0, in_force: 0, notes: 0, priors: 0) }
-
-      conduct_rows.each do |row|
-        held = found[row["user_id"]]
-        held.cases = row["cases"].to_i
-        held.subject_of = row["subject_of"].to_i
-        held.logged_in = row["logged_in"].to_i
-        held.open_cases = row["open_cases"].to_i
-        held.last_case_at = row["last_case_at"]
-      end
-      Action.group(:target_user_id).count.each { |id, n| found[id].actions = n }
-      Action.in_force.group(:target_user_id).count.each { |id, n| found[id].in_force = n }
-      Note.standing.visible.group(:subject_user_id).count.each { |id, n| found[id].notes = n }
-      prior_counts.each { |id, n| found[id].priors = n }
-
-      found
+    def row_from(row)
+      Row.new(user_id: row["user_id"], cases: row["cases"].to_i,
+        subject_of: row["subject_of"].to_i, logged_in: row["logged_in"].to_i,
+        open_cases: row["open_cases"].to_i, actions: row["actions"].to_i,
+        in_force: row["in_force"].to_i, notes: row["notes"].to_i,
+        priors: row["priors"].to_i, last_case_at: row["last_case_at"])
     end
 
     def priors_phrase
@@ -413,28 +319,6 @@ module Fd
 
     def category_phrase
       default?("category") ? nil : Case.category_label(self["category"]).downcase
-    end
-
-    def conduct_rows
-      Case.connection.select_all(Case.sanitize_sql([<<~SQL, { category: self["category"] }]))
-        SELECT p.user_id,
-               count(DISTINCT p.case_id) AS cases,
-               count(*) FILTER (WHERE p.role = 'subject') AS subject_of,
-               count(*) FILTER (WHERE p.role <> 'subject') AS logged_in,
-               count(*) FILTER (WHERE p.role = 'subject' AND c.resolved_at IS NULL) AS open_cases,
-               max(c.opened_at) AS last_case_at
-        FROM fd.case_participants p
-        JOIN fd.cases c ON c.id = p.case_id
-        WHERE (:category = 'any' OR c.category_key = :category)
-        GROUP BY p.user_id
-      SQL
-    end
-
-    def prior_counts
-      Action.where(reversed_at: nil)
-        .where(performed_at: Case::PRIOR_WINDOW.ago..)
-        .group(:target_user_id)
-        .distinct.count(:case_id)
     end
   end
 end
