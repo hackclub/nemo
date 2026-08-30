@@ -385,13 +385,6 @@ module FdHelper
     messages.group_by { |said| said.posted_at.to_date }
   end
 
-  def age_tone(seconds)
-    return "chip-crit" if seconds >= AGE_CRIT
-    return "chip-warn" if seconds >= AGE_WARN
-
-    "chip-off"
-  end
-
   def age_ink(seconds)
     return "age-crit" if seconds >= AGE_CRIT
     return "age-warn" if seconds >= AGE_WARN

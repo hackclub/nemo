@@ -36,9 +36,7 @@
                 <span class="needs-said">needs <%= to_sentence_words(needs) %></span>
               <% end %>
               <% if acting.positive? %>
-                <span class="mchip act">
-                  <%= pluralize(acting, "action") %> <%= acting == 1 ? "stands" : "stand" %>
-                </span>
+                <span class="mchip act"><%= pluralize(acting, "action") %> taken</span>
               <% end %>
               <% if flagged.positive? %>
                 <span class="mchip"><%= flagged %> of <%= held %> flagged</span>
