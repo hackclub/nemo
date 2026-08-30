@@ -4,8 +4,9 @@ module Fd
     permit "access.read", unless: :just_me?
 
     TABS = { "access" => "Access", "roles" => "Roles", "sections" => "Sections",
-             "usage" => "Usage", "history" => "Grant history", "you" => "You" }.freeze
-    MINE = %w[you].freeze
+             "usage" => "Usage", "history" => "Grant history",
+             "activity" => "Activity", "you" => "You" }.freeze
+    MINE = %w[you activity].freeze
     WINDOW = 30.days
     DORMANT_AFTER = 30.days
 
@@ -19,6 +20,7 @@ module Fd
     def show
       @tab = tab
       @tabs = may_read_access? ? TABS : TABS.slice(*MINE)
+      return activity_facts if @tab == "activity"
       return you_facts if just_me?
 
       @grants = AccessGrant.live.newest_first.to_a
@@ -48,6 +50,13 @@ module Fd
 
     def may_read_access?
       current_staff&.may?("access.read")
+    end
+
+    def activity_facts
+      @deeds = Deeds.new(current_staff.user_id, since: WINDOW.ago)
+      @yours = mine_lately
+      @counts = may_read_access? ? tally_without_grants : {}
+      @names = Names.for(@deeds.member_ids + [current_staff.user_id])
     end
 
     def you_facts

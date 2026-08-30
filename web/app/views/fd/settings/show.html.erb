@@ -7,7 +7,7 @@
 
 <% roles = Fd::Permission::ROLES %>
 
-<div class="cols <%= "c-2" if %w[usage you].include?(@tab) && !@person %>">
+<div class="cols <%= "c-2" if %w[usage you activity].include?(@tab) && !@person %>">
   <div class="panel">
     <div class="views">
       <% @tabs.each do |key, label| %>
@@ -21,7 +21,40 @@
       <% end %>
     </div>
 
-    <% if @tab == "you" %>
+    <% if @tab == "activity" %>
+      <div class="panel-head">
+        <b>What you did</b>
+        <span class="qspacer"></span>
+        <span class="qlab">last 30 days &middot; only your own</span>
+      </div>
+      <% if @deeds.rows.any? %>
+        <div class="scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>what</th>
+                <th class="said-cell">about</th>
+                <th class="col-num">when</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @deeds.rows.each do |deed| %>
+                <tr>
+                  <td><b><%= deed_head(deed) %></b></td>
+                  <td class="said-cell"><%= deed_said(deed) %></td>
+                  <td class="mono col-num"><%= deed.at.strftime("%-d %b %H:%M") %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="empty">
+          <p class="empty-title">Nothing in 30 days</p>
+        </div>
+      <% end %>
+
+    <% elsif @tab == "you" %>
       <%= render "you", account: @account, linkable: @linkable %>
 
     <% elsif @tab == "roles" %>
@@ -421,7 +454,7 @@
     </div>
   <% end %>
 
-  <% if @tab == "you" %>
+  <% if %w[you activity].include?(@tab) %>
     <div class="facts">
       <p class="facts-h">You</p>
       <div class="fbox">

@@ -39,11 +39,36 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
     assert_match(/community manager/, flash[:alert])
   end
 
+  def deed_rows
+    css_select(".panel .data-table tbody tr").map(&:text)
+  end
+
+  test "a firefighter can read their own activity without holding access.read" do
+    sign_in_as(@me)
+    get fd_settings_path(tab: "activity")
+
+    assert_response :success
+    assert_select ".panel-head b", text: "What you did"
+  end
+
+  test "the activity tab shows your deeds and nobody else's" do
+    mine = make_case(subject: "USUB")
+    Fd::Note.create!(case_id: mine.id, body: "mine", author: @me.user_id)
+    theirs = make_case(subject: "UOTHER")
+    Fd::Note.create!(case_id: theirs.id, body: "theirs", author: @boss.user_id)
+
+    sign_in_as(@me)
+    get fd_settings_path(tab: "activity")
+
+    assert_no_match(/theirs/, deed_rows.join(" "),
+      "an activity log that showed everybody would be the thing we just took off the overview")
+  end
+
   test "a manager still lands on access and keeps every tab" do
     sign_in_as(@boss)
     get fd_settings_path
 
-    assert_select ".views .view", 6
+    assert_select ".views .view", Fd::SettingsController::TABS.size
     assert_select ".ft", text: /Your Slack account/, count: 0
   end
 
