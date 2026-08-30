@@ -66,37 +66,3 @@
     </p>
   <% end %>
 </div>
-
-<div class="card card-flush self-start">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Account composition</h2>
-      <p class="card-sub">
-        <% seen = @account_types.first %>
-        live accounts by type<% if seen %> &middot;
-          seen in <%= window_note(seen.window_start, seen.window_end) %>
-        <% end %>
-      </p>
-    </div>
-  </div>
-  <div class="scroll">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>type</th>
-          <th class="col-num">invited</th>
-          <th class="col-num">claimed</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @account_types.each do |a| %>
-          <tr>
-            <td><%= a.account_type %></td>
-            <td class="col-num"><%= number_with_delimiter(a.invited) %></td>
-            <td class="col-num"><%= number_with_delimiter(a.claimed) %></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
-</div>

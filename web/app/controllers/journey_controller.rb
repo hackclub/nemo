@@ -10,9 +10,6 @@ class JourneyController < ApplicationController
       .where(searched: 1..)
       .order(cohort_month: :desc)
       .limit(13)
-    @account_types = Analytics::MartAccountType
-      .where.not(account_type: ["Owner", "Admin", "Org Owner"])
-      .order(members: :desc)
   end
 
   def activation
