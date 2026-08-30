@@ -74,10 +74,28 @@
     </div>
   </div>
 
-  <% if subject %>
+  <% if actions.any? %>
+    <div class="acts-now">
+      <p class="acts-h"><%= pluralize(actions.size, "action") %> taken</p>
+      <% actions.each do |action| %>
+        <div class="acts-row">
+          <span class="mchip act"><%= action_label(action.type_key) %></span>
+          <span class="acts-why"><%= action_sentence(action) %></span>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if subject || (!kase.resolved? && !kase.assigned?) %>
     <div class="fcard-do">
-      <%= link_to "Their whole history", fd_member_path(subject), class: "btn",
-            data: { turbo_frame: "person-drawer" } %>
+      <% if !kase.resolved? && !kase.assigned? %>
+        <%= gated_button "case.open", "Claim", fd_case_claim_path(kase), on: kase,
+              css: "btn btn-primary", method: :post %>
+      <% end %>
+      <% if subject %>
+        <%= link_to "Their whole history", fd_member_path(subject), class: "btn",
+              data: { turbo_frame: "person-drawer" } %>
+      <% end %>
     </div>
   <% end %>
 </div>

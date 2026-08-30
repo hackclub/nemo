@@ -12,9 +12,6 @@
     <% if @case.assigned? %>
       <%= opens_modal "case.resolve", "Resolve", opens: "resolve-case", on: @case,
             css: "btn btn-primary" %>
-    <% else %>
-      <%= gated_button "case.open", "Claim", fd_case_claim_path(@case), on: @case,
-            css: "btn btn-primary", method: :post %>
     <% end %>
 
   <% end %>
@@ -182,7 +179,7 @@
 
     <div class="facts">
       <%= render "rail", kase: @case, subject: @subject, priors: @subject_priors,
-            contexts: @context, missing: @missing,
+            contexts: @context, missing: @missing, actions: @live_actions,
             reports: @reports, threads: @threads %>
     </div>
   </div>
