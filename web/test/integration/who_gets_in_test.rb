@@ -10,7 +10,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
   MEMBER = %w[you/api you/consents you/tokens].freeze
 
-  BEARER = %w[api/v1/tokens].freeze
+  BEARER = %w[api/v1/tokens api/v1/channel_managers].freeze
 
   setup do
     Rails.application.eager_load!
