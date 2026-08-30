@@ -46,6 +46,7 @@ module Api
         token = ::Api::Token.find_by(digest: ::Api::Token.digest_of(key))
         return refuse(:unauthorized, "invalid_token") if token.nil?
         return refuse(:unauthorized, "revoked_token") if token.revoked?
+        return refuse(:unauthorized, "expired_token") if token.expired?
 
         @current_token = token
         token.used!
@@ -59,6 +60,7 @@ module Api
         "api_off" => "the public_api flag is off",
         "invalid_token" => "no live key matches that digest",
         "revoked_token" => "that key was revoked, do not retry",
+        "expired_token" => "that key reached its expiry date, mint a new one",
         "bad_channel_id" => "channel_id must match /\\AC[A-Z0-9]{8,}\\z/",
         "bad_user_id" => "every user id must match /\\A[UW][A-Z0-9]{8,}\\z/",
         "rate_limited" => "rate limit spent, see retry_after"
@@ -67,6 +69,7 @@ module Api
       CALLER_ERRORS = [
         [401, "invalid_token", "Absent, malformed, or unknown Authorization header."],
         [401, "revoked_token", "Key exists but was revoked. Not retryable."],
+        [401, "expired_token", "Key passed its expiry date. Mint a new one."],
         [422, "bad_channel_id", "channel_id did not match the pattern above."],
         [422, "bad_user_id", "user_id did not match the pattern above."],
         [429, "rate_limited", "Budget spent. Retry after retry_after seconds."],

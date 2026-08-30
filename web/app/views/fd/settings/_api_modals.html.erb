@@ -30,7 +30,7 @@
   <% end %>
 <% end %>
 
-<% @tokens.reject(&:revoked?).each do |token| %>
+<% @tokens.reject(&:spent?).each do |token| %>
   <%= render layout: "fd/modal", locals: { id: "rate-#{token.id}",
         title: "Rate for #{token.name}", sub: "owned by #{names[token.owner_user_id]}" } do %>
     <%= form_with url: fd_api_token_rate_path(token), method: :patch,

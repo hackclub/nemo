@@ -1,7 +1,7 @@
 <% content_for :page_title, "API access" %>
 <% api_off = Fd::Flag.off?(:public_api) %>
 <% granted = Api::Capability::KEYS.count { |key| @consents[key] == Api::Consent::GRANTED } %>
-<% live = @tokens.reject(&:revoked?) %>
+<% live = @tokens.reject(&:spent?) %>
 <% cap = Api::Setting.value("tokens_per_owner") %>
 
 <div class="cols c-2">
@@ -57,7 +57,7 @@
                   <th>name</th>
                   <th>key</th>
                   <th class="col-num">rate</th>
-                  <th class="col-date">created</th>
+                  <th class="col-date">expires</th>
                   <th class="col-date">last used</th>
                   <th class="col-btn"></th>
                 </tr>
@@ -70,7 +70,9 @@
                     <td class="col-num mono">
                       <%= token.revoked? ? "n/a" : "#{token.rate}/min" %>
                     </td>
-                    <td class="col-date mono"><%= token.created_at.strftime("%-d %b") %></td>
+                    <td class="col-date mono <%= "sub2" if token.expired? %>">
+                      <%= token.spent? ? "n/a" : token.dies_in %>
+                    </td>
                     <td class="col-date mono">
                       <%= token.last_used_at ? time_ago_in_words(token.last_used_at) : "never" %>
                     </td>
@@ -78,6 +80,10 @@
                       <% if token.revoked? %>
                         <span class="chip chip-crit">
                           Revoked <%= token.revoked_at.strftime("%-d %b") %>
+                        </span>
+                      <% elsif token.expired? %>
+                        <span class="chip chip-off">
+                          Expired <%= token.expires_at.strftime("%-d %b") %>
                         </span>
                       <% else %>
                         <label for="kill-<%= token.id %>" class="text-btn" tabindex="0"
@@ -138,8 +144,8 @@
 </div>
 
 <% if @tab == "tokens" && !api_off %>
-  <%= render "mint" %>
+  <%= render "you/api/mint" %>
   <% live.each do |token| %>
-    <%= render "kill", token: token %>
+    <%= render "you/api/kill", token: token %>
   <% end %>
 <% end %>

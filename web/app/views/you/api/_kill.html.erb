@@ -8,8 +8,8 @@
       </p>
       <div class="facts-grid">
         <div class="cell">
-          <span class="fg-k">created</span>
-          <span class="fg-v"><%= token.created_at.strftime("%-d %b %Y") %></span>
+          <span class="fg-k">expires</span>
+          <span class="fg-v"><%= token_life_line(token).delete_prefix("expires ") %></span>
         </div>
         <div class="cell">
           <span class="fg-k">last used</span>

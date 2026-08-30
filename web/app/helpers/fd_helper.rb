@@ -1235,6 +1235,12 @@ module FdHelper
     "tokens_per_owner" => "Live tokens per owner"
   }.freeze
 
+  def token_life_line(token)
+    return "never expires" if token.expires_at.nil?
+
+    "expires #{token.expires_at.strftime('%-d %b %Y')}"
+  end
+
   def dial_label(key)
     DIAL_LABELS.fetch(key, key.tr("_", " "))
   end

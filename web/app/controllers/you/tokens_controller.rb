@@ -4,9 +4,10 @@ module You
       return refuse(turned_off) if Fd::Flag.off?(:public_api)
       return refuse("name what the token is for") if params[:name].to_s.strip.empty?
 
-      token, @secret = Api::Token.mint!(member_id, params[:name])
+      token, @secret = Api::Token.mint!(member_id, params[:name], lasting: params[:lasting])
       Api::Event.record!("token_minted", actor: member_id, subject: token.shown,
-        detail: token.name)
+        detail: [token.name, Api::Token::LIFE_WORDS.fetch(Api::Token.life_for(params[:lasting]))]
+          .join(", "))
 
       @token = token
       show_again

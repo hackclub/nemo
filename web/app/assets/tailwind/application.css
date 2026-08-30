@@ -2803,6 +2803,80 @@
     color: var(--accent-on);
   }
 
+  .drop {
+    position: relative;
+    display: grid;
+  }
+
+  .drop::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: 12px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-inline-end: 2px solid var(--ink-3);
+    border-block-end: 2px solid var(--ink-3);
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+  }
+
+  .drop-in {
+    appearance: none;
+    width: 100%;
+    font-family: inherit;
+    font-size: var(--t-body);
+    line-height: 1.25;
+    color: var(--ink);
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    padding: 9px 32px 9px var(--s-xs);
+    cursor: pointer;
+    transition: border-color var(--dur) var(--ease-out);
+  }
+
+  .drop-in:hover {
+    border-color: var(--ink-3);
+  }
+
+  .drop-in:focus-visible {
+    outline: none;
+    border-color: var(--focus);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  .drop:has(.drop-in:hover)::after {
+    border-color: var(--ink);
+  }
+
+  .form-body {
+    gap: var(--s-md);
+  }
+
+  .form-body .field-label {
+    gap: 6px;
+  }
+
+  .warn-line {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--s-2xs);
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: var(--r-ctl);
+    background-color: var(--warn-soft);
+    color: var(--warn);
+    font-size: var(--t-small);
+    font-weight: 500;
+    line-height: 1.45;
+  }
+
+  .warn-line svg {
+    flex: none;
+    margin-top: 1px;
+  }
+
   .secret {
     display: flex;
     align-items: center;
