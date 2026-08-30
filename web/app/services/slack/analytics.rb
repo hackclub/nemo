@@ -2,6 +2,7 @@ module Slack
   class Analytics
     SEARCH_PAGE = 1000
     COVERAGE_TTL = 1.hour
+    CHANNEL_TTL = 6.hours
 
     Result = Struct.new(:stats, :error, keyword_init: true)
 
@@ -25,6 +26,20 @@ module Slack
 
     def self.channel_activity(channel_id:, name:, from:, to:, privacy: "public")
       from, to = clamp(from, to)
+      key = channel_key(channel_id, from, to, privacy)
+      held = Rails.cache.read(key)
+      return Result.new(stats: held) if held
+
+      asked(channel_id: channel_id, name: name, from: from, to: to, privacy: privacy).tap do |got|
+        Rails.cache.write(key, got.stats, expires_in: CHANNEL_TTL) if got.stats
+      end
+    end
+
+    def self.channel_key(channel_id, from, to, privacy)
+      "slack/analytics/channel/#{channel_id}/#{from}/#{to}/#{privacy}"
+    end
+
+    def self.asked(channel_id:, name:, from:, to:, privacy:)
       response = ProxyClient.call("admin.analytics.getChannelAnalytics", {
         "start_date" => from,
         "end_date" => to,
