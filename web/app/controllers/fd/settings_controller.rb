@@ -5,7 +5,7 @@ module Fd
 
     TABS = { "access" => "Access", "roles" => "Roles", "sections" => "Sections",
              "usage" => "Usage", "history" => "Grant history",
-             "activity" => "Activity", "you" => "You" }.freeze
+             "activity" => "Activity", "you" => "You", "api" => "API" }.freeze
     MINE = %w[you activity].freeze
     WINDOW = 30.days
     DORMANT_AFTER = 30.days
@@ -32,6 +32,7 @@ module Fd
       @person = chosen
       grant_facts if @person
       @used = used_lately if @tab == "roles"
+      api_facts if @tab == "api"
       usage_facts if @tab == "usage"
       deed_facts if @person && @tab == "usage"
       @counts = tab_counts
@@ -84,7 +85,19 @@ module Fd
 
     def tab_counts
       { "access" => @grants.size, "roles" => Permission.keys.size,
-        "history" => AccessGrant.count }
+        "history" => AccessGrant.count, "api" => ::Api::Token.live.count }
+    end
+
+    def api_facts
+      @tokens = ::Api::Token.order(revoked_at: :asc, created_at: :desc).to_a
+      @asks = ::Api::RequestLog.where(at: WINDOW.ago..).group(:token_id).count
+      @opted_in = ::Api::Consent.where(state: ::Api::Consent::GRANTED).count
+      @checks = ::Api::RequestLog.where(at: WINDOW.ago..).count
+      @withheld = ::Api::RequestLog.where(at: WINDOW.ago.., outcome: "withheld").count
+      @channels = ::Api::RequestLog.where(at: WINDOW.ago..).distinct.count(:channel_id)
+      @synced = ::Api::ChannelSweep.maximum(:synced_at)
+      @dials = ::Api::Setting::DEFAULTS.keys.index_with { |key| ::Api::Setting.value(key) }
+      @last_dial = ::Api::Setting.order(changed_at: :desc).first
     end
 
     def tally_without_grants
@@ -189,6 +202,7 @@ module Fd
 
     def named
       holders + @grants.map(&:granted_by) + Array(@top_reader&.first) +
+        Array(@tokens).map(&:owner_user_id) + Array(@last_dial&.changed_by) +
         Array(@deeds&.member_ids) +
         Array(@history).flat_map { |grant|
           [grant.user_id, grant.granted_by, grant.revoked_by]

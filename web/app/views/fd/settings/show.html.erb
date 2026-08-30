@@ -90,6 +90,124 @@
         </table>
       </div>
 
+    <% elsif @tab == "api" %>
+      <div class="panel-body">
+        <div class="kpis">
+          <div>
+            <p class="kpi-label">Opted in</p>
+            <p class="kpi-val"><%= number_with_delimiter(@opted_in) %></p>
+            <p class="car"><%= pluralize(Api::Capability::KEYS.size, "capability") %></p>
+          </div>
+          <div>
+            <p class="kpi-label">Live tokens</p>
+            <p class="kpi-val"><%= @tokens.count { |one| !one.revoked? } %></p>
+            <p class="car">across <%= @tokens.map(&:owner_user_id).uniq.size %> owners</p>
+          </div>
+          <div>
+            <p class="kpi-label">Checks, 30 days</p>
+            <p class="kpi-val"><%= number_with_delimiter(@checks) %></p>
+            <p class="car"><%= pluralize(@channels, "channel") %></p>
+          </div>
+          <div>
+            <p class="kpi-label">Withheld</p>
+            <p class="kpi-val"><%= number_with_delimiter(@withheld) %></p>
+            <p class="car"><%= withheld_share(@withheld, @checks) %></p>
+          </div>
+        </div>
+
+        <div class="fbox">
+          <div class="ft">
+            <span>How it runs</span>
+            <span class="cap-do">
+              <%= api_state_chip %>
+              <%= flag_switch(:public_api) %>
+            </span>
+          </div>
+          <div class="rows">
+            <% @dials.each do |key, value| %>
+              <div class="row">
+                <span class="row-k"><%= dial_label(key) %></span>
+                <span class="cap-do">
+                  <b class="row-v"><%= value %></b>
+                  <label for="dial-<%= key %>" class="text-btn" tabindex="0"
+                         role="button">Change</label>
+                </span>
+              </div>
+            <% end %>
+            <div class="row">
+              <span class="row-k">Manager data last read</span>
+              <b class="row-v <%= "is-none" unless @synced %>"><%= synced_line(@synced) %></b>
+            </div>
+            <div class="row">
+              <span class="row-k">Last changed</span>
+              <b class="row-v <%= "is-none" unless @last_dial %>"><%= dial_change(@last_dial) %></b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-head">
+        <b>Every token</b>
+        <span class="qspacer"></span>
+        <span class="qlab">
+          <%= @tokens.count { |one| !one.revoked? } %> live &middot;
+          <%= @tokens.count(&:revoked?) %> revoked
+        </span>
+      </div>
+
+      <% if @tokens.any? %>
+        <div class="scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>owner</th>
+                <th>name</th>
+                <th>key</th>
+                <th class="col-num">rate</th>
+                <th class="col-num">asks 30d</th>
+                <th class="col-date">last used</th>
+                <th class="col-btn"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @tokens.each do |token| %>
+                <tr>
+                  <td>
+                    <span class="row-name">
+                      <%= face(token.owner_user_id) %>
+                      <b><%= names[token.owner_user_id] %></b>
+                    </span>
+                  </td>
+                  <td class="<%= "sub2" if token.revoked? %>"><%= token.name %></td>
+                  <td class="mono"><%= token.shown %></td>
+                  <td class="col-num mono <%= "rate-own" if token.rate_limit %>">
+                    <%= token.revoked? ? "n/a" : token.rate %>
+                  </td>
+                  <td class="col-num"><%= number_with_delimiter(@asks[token.id].to_i) %></td>
+                  <td class="col-date mono">
+                    <%= token.last_used_at ? time_ago_in_words(token.last_used_at) : "never" %>
+                  </td>
+                  <td class="col-btn">
+                    <% if token.revoked? %>
+                      <span class="chip chip-crit">
+                        Revoked <%= token.revoked_at.strftime("%-d %b") %>
+                      </span>
+                    <% else %>
+                      <label for="rate-<%= token.id %>" class="text-btn" tabindex="0"
+                             role="button">Set rate</label>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="empty">
+          <p class="empty-title">Nobody holds a token</p>
+        </div>
+      <% end %>
+
     <% elsif @tab == "sections" %>
       <div class="scroll">
         <table class="data-table">
@@ -506,6 +624,9 @@
 </div>
 
 <% if current_staff.may?("access.grant") %>
+  <% if @tab == "api" %>
+    <%= render "fd/settings/api_modals" %>
+  <% end %>
   <%= render "fd/settings/give_modal" %>
   <% if @person %>
     <%= render "fd/settings/change_modal", grant: @person %>

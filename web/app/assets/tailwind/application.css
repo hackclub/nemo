@@ -2827,6 +2827,17 @@
     flex: none;
   }
 
+  .num-in {
+    font-family: var(--font-code);
+    font-variant-numeric: tabular-nums;
+    max-width: 8rem;
+  }
+
+  .rate-own {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
   .secret-warn {
     margin: 0;
     font-size: var(--t-small);

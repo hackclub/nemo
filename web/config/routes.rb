@@ -37,6 +37,9 @@ Rails.application.routes.draw do
     end
     resource :search, only: [:show], controller: "searches"
     resource :settings, only: [:show]
+    patch "api_setting", to: "api_settings#update", as: :api_setting
+    patch "api_tokens/:id/rate", to: "api_settings#rate", as: :api_token_rate
+    delete "api_tokens/:id", to: "api_settings#destroy", as: :api_token
     get "audit", to: "audits#show", as: :audit
     get "slack_account/callback", to: "slack_accounts#callback", as: :slack_account_callback
     resource :slack_account, only: [:create, :destroy], controller: "slack_accounts"

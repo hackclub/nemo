@@ -1226,6 +1226,48 @@ module FdHelper
     [deed.said, ("on #{names[deed.who]}" if deed.who.present?)].compact.join(" ")
   end
 
+  DIAL_LABELS = {
+    "rate_per_minute" => "Requests a minute, per token",
+    "batch_max" => "People per batch call",
+    "tokens_per_owner" => "Live tokens per owner"
+  }.freeze
+
+  def dial_label(key)
+    DIAL_LABELS.fetch(key, key.tr("_", " "))
+  end
+
+  def api_state_chip
+    on = Fd::Flag.on?(:public_api)
+    tag.span(class: "chip #{on ? 'chip-good' : 'chip-off'}") do
+      tag.span(class: "chip-dot", aria: { hidden: true }) + (on ? "On" : "Off")
+    end
+  end
+
+  def withheld_share(withheld, checks)
+    return "none yet" if checks.zero?
+
+    "#{(withheld * 100.0 / checks).round(1)}% of checks"
+  end
+
+  def synced_line(at)
+    return "never" if at.nil?
+
+    "#{at.strftime('%-d %b %H:%M')}, #{Api::ChannelSweep.count} channels"
+  end
+
+  def dial_reach(key, tokens)
+    live = tokens.reject(&:revoked?)
+    return "#{live.count { |one| one.rate_limit.nil? }} of #{live.size}" if key == "rate_per_minute"
+
+    "every caller"
+  end
+
+  def dial_change(setting)
+    return "never" if setting.nil?
+
+    [names[setting.changed_by], setting.changed_at.strftime("%-d %b")].compact.join(", ")
+  end
+
   def acted_line(at)
     at ? "acted #{last_case_label(at)}" : "nothing yet"
   end
