@@ -8,6 +8,8 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
   INSIDE = %i[root_path fd_root_path fd_members_path fd_decisions_path fd_settings_path].freeze
 
+  MEMBER = %w[you/api].freeze
+
   setup do
     Rails.application.eager_load!
     @me = Staff.create!(user_id: "UNOROLE", community_manager: false)
@@ -17,13 +19,20 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     Rails.application.routes.routes.filter_map { |route| route.defaults[:controller] }.uniq
   end
 
+  def filters_of(name)
+    "#{name}_controller".camelize.constantize._process_action_callbacks.map(&:filter)
+  end
+
   def guarded?(name)
-    "#{name}_controller".camelize.constantize._process_action_callbacks
-      .any? { |callback| callback.filter == :require_staff }
+    filters_of(name).include?(:require_staff)
+  end
+
+  def member_guarded?(name)
+    filters_of(name).include?(:require_a_member)
   end
 
   def guarded_controllers
-    (self.class.controllers - OPEN).select { |name| guarded?(name) }
+    (self.class.controllers - OPEN).select { |name| guarded?(name) || member_guarded?(name) }
   end
 
   test "the only routes open to the world are signing in and the health check" do
@@ -31,10 +40,22 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
       "a route opened up or closed, so this test needs updating"
   end
 
-  test "every controller behind the login demands a role, not merely a session" do
-    (self.class.controllers - OPEN).each do |name|
+  test "every controller behind the login demands a role, bar the member area" do
+    (self.class.controllers - OPEN - MEMBER).each do |name|
       assert guarded?(name), "#{name} lets anybody through"
+      assert_not member_guarded?(name), "#{name} settles for a session where a role is needed"
     end
+  end
+
+  test "the member area demands a session and never a role, and is only what is listed" do
+    MEMBER.each do |name|
+      assert member_guarded?(name), "#{name} lets anybody through"
+      assert_not guarded?(name), "#{name} still demands a role, so it is not a member page"
+    end
+
+    assert_equal MEMBER.sort,
+      (self.class.controllers - OPEN).reject { |name| guarded?(name) }.sort,
+      "a controller dropped its role check, so this test needs updating"
   end
 
   test "the turbo routes are open because they carry nothing but a go back" do
@@ -45,11 +66,17 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "holding no grant means no session, whatever the staff table says" do
+  test "holding no grant opens the member area and nothing behind it" do
     sign_in_as(@me)
 
-    assert_redirected_to auth_failure_path(message: "not_allowlisted")
-    assert_nil session[:user_id]
+    assert_redirected_to you_api_path
+    assert_equal "UNOROLE", session[:user_id]
+
+    INSIDE.each do |path|
+      get send(path)
+      assert_redirected_to auth_failure_path(message: "not_allowlisted"),
+        "#{path} took a session for a role"
+    end
   end
 
   test "a live grant is enough on its own, with no staff row behind it" do
@@ -64,21 +91,24 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "somebody unknown to the staff table is refused the same way" do
+  test "somebody unknown to the staff table gets the same member area and no more" do
     sign_in_as(Staff.new(user_id: "USTRANGER"))
 
+    assert_redirected_to you_api_path
+    get fd_cases_path
     assert_redirected_to auth_failure_path(message: "not_allowlisted")
-    assert_nil session[:user_id]
   end
 
   test "the refusal says one thing, and offers the way back" do
     sign_in_as(@me)
+    get root_path
     follow_redirect!
 
     assert_response :success
     assert_select "h1", text: "Access denied"
     assert_select "p", text: /You are not allowlisted/
-    assert_select "a[href=?]", login_path
+    assert_select "a[href=?]", you_api_path, 1, "the way out is their own page"
+    assert_select "form[action=?]", logout_path
     assert_select ".auth-alt", count: 0
   end
 
@@ -111,15 +141,16 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     assert_redirected_to auth_failure_path(message: "not_allowlisted")
   end
 
-  test "a stale session lands on the sign in page rather than bouncing forever" do
+  test "a stale session lands on the member area rather than bouncing forever" do
     grant = Fd::AccessGrant.give!("UNOROLE", role: "firefighter", by: "UBOSS")
     sign_in_as(@me)
     grant.take_back!(by: "UBOSS")
 
     get login_path
+    assert_redirected_to you_api_path
 
+    follow_redirect!
     assert_response :success
-    assert_select "h1", text: /sign in/i
   end
 
   test "the sign in switch for development is not routed anywhere else" do

@@ -10,6 +10,10 @@ Rails.application.routes.draw do
     get "dev/be/:user_id", to: "dev_sessions#create", as: :dev_be
   end
 
+  namespace :you do
+    get "api", to: "api#show", as: :api
+  end
+
   namespace :fd do
     root to: "fire#show"
     post "cases/merge", to: "merges#create", as: :merge_cases

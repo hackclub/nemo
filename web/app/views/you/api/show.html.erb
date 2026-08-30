@@ -1,0 +1,32 @@
+<% content_for :page_title, "API access" %>
+
+<div class="cols c-2">
+  <div></div>
+
+  <div class="facts">
+    <p class="facts-h">Your account</p>
+
+    <div class="fcard">
+      <div class="fcard-who">
+        <% if current_profile&.image_url %>
+          <img class="avatar" src="<%= current_profile.image_url %>" alt="" width="30" height="30">
+        <% else %>
+          <span class="avatar"><%= member_id.first %></span>
+        <% end %>
+        <span class="two-line">
+          <b><%= current_profile&.display_name.presence || member_id %></b>
+          <span><%= member_id %></span>
+        </span>
+      </div>
+
+      <div class="frows">
+        <div class="frow">
+          <span>Channels you are in</span>
+          <b class="<%= "is-none" if @rooms.empty? %>">
+            <%= @rooms.any? ? number_with_delimiter(@rooms.size) : "n/a" %>
+          </b>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

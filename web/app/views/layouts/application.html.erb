@@ -41,7 +41,8 @@
 
   <body>
     <%= render "shared/synthetic_banner" %>
-    <% fire_engine = on?(:fire_engine) %>
+    <% staffer = current_staff&.role.present? %>
+    <% fire_engine = staffer && on?(:fire_engine) %>
     <div class="shell" data-controller="dismiss<%= " palette" if fire_engine %>"
          data-palette-url-value="<%= fd_search_path(format: :json) %>"
          data-palette-on-value="<%= content_for(:palette_on) %>"
@@ -52,7 +53,7 @@
           <span class="brand-name">Mnemosyne</span>
         </div>
 
-        <% if on?(:analytics) %>
+        <% if staffer && on?(:analytics) %>
         <div class="navsec">
           <nav class="rail-nav" aria-label="Overview">
             <%= link_to root_path, class: "rail-item",
@@ -143,6 +144,19 @@
           </nav>
         </div>
         <% end %>
+
+        <div class="navsec">
+          <p class="rail-label">Your account</p>
+          <nav class="rail-nav" aria-label="Your account">
+            <%= link_to you_api_path, class: "rail-item",
+                  aria: { current: ("page" if controller_path == "you/api") } do %>
+              <span class="rail-ic" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="m10.9 12.1 7.1-7.1M17 5l2.5 2.5M14.5 7.5 17 10"/></svg>
+              </span>
+              <span class="rail-text">API access</span>
+            <% end %>
+          </nav>
+        </div>
 
         <% if fire_engine %>
           <div class="rail-foot">

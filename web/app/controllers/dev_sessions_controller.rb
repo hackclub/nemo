@@ -6,10 +6,15 @@ class DevSessionsController < ApplicationController
     staff = Staff.find_or_initialize_by(user_id: params[:user_id])
     reset_session
 
+    unless You::BaseController::MEMBER_ID.match?(staff.user_id)
+      return redirect_to login_path, alert: "#{staff.user_id} is not a slack id"
+    end
+
+    session[:user_id] = staff.user_id
+
     if staff.role.nil?
-      redirect_to login_path, alert: "#{staff.user_id} is not allowlisted"
+      redirect_to you_api_path, notice: "signed in as #{staff.user_id}, no role"
     else
-      session[:user_id] = staff.user_id
       redirect_to fd_root_path, notice: "signed in as #{staff.user_id}, #{staff.role}"
     end
   end
