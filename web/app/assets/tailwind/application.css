@@ -675,6 +675,21 @@
     margin-top: 3px;
   }
 
+  .data-table tbody .two-line:has(> .row-priors) {
+    position: relative;
+  }
+
+  .data-table tbody .two-line .row-priors {
+    position: absolute;
+    top: 100%;
+    inset-inline-start: 0;
+    margin-top: 1px;
+    font-size: var(--t-fine);
+    color: var(--ink-4);
+    white-space: nowrap;
+    overflow: visible;
+  }
+
   .data-table tbody .two-line .row-violation {
     display: inline;
     margin-inline-start: 5px;
@@ -2308,6 +2323,16 @@
     border-radius: 50%;
     cursor: pointer;
     list-style: none;
+  }
+
+  .you-menu {
+    align-self: center;
+  }
+
+  .you-face .avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
   }
 
   .you-face::-webkit-details-marker {

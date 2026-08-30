@@ -62,7 +62,7 @@
           <% if priors.positive? %>
             <span class="two-line">
               <b><%= row_subject_label(kase) %></b>
-              <span class="mchip warn"><%= priors %> priors</span>
+              <span class="row-priors"><%= pluralize(priors, "prior") %></span>
             </span>
           <% else %>
             <span><%= row_subject_label(kase) %></span>

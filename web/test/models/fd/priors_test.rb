@@ -9,7 +9,8 @@ class Fd::PriorsTest < ActiveSupport::TestCase
 
   def act_on(kase, target: SUBJECT, **attrs)
     Fd::Action.create!({ case_id: kase.id, type_key: "warning", target_user_id: target,
-                         decided_by: "UFF1", performed_by: "UFF1" }.merge(attrs))
+                         decided_by: "UFF1", performed_by: "UFF1",
+                         performed_at: kase.resolved_at || kase.opened_at }.merge(attrs))
   end
 
   test "a resolved case with an action against them is a prior" do
@@ -17,10 +18,16 @@ class Fd::PriorsTest < ActiveSupport::TestCase
     assert_equal 1, Fd::Case.prior_count(SUBJECT)
   end
 
-  test "an open case is not a prior, however bad it looks" do
+  test "an action counts as a prior even while its case is still open" do
     act_on make_case(subject: SUBJECT, opened_at: 3.days.ago)
+    assert_equal 1, Fd::Case.prior_count(SUBJECT),
+      "a prior is an action taken against them, not a case that happens to have closed"
+  end
+
+  test "an open case with no action against them is still not a prior" do
+    make_case(subject: SUBJECT, opened_at: 3.days.ago)
     assert_equal 0, Fd::Case.prior_count(SUBJECT),
-      "nothing has been decided, so an accusation must not count as a finding"
+      "an accusation on its own must not count against anybody"
   end
 
   test "a resolved case with no action logged is not a prior" do
@@ -70,7 +77,7 @@ class Fd::PriorsTest < ActiveSupport::TestCase
       before: later.opened_at), "but it was inside a year when that case was opened"
   end
 
-  test "the window is measured from when the case was resolved" do
+  test "the window is measured from when the action was taken" do
     act_on resolved_case(opened: 20.months.ago, resolved: 19.months.ago)
     act_on resolved_case(opened: 3.months.ago, resolved: 2.months.ago)
 

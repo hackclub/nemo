@@ -60,12 +60,10 @@ module Fd
     PRIOR_WINDOW = 12.months
 
     def self.priors_for(user_id, within: nil, before: nil)
-      scope = where.not(resolved_at: nil)
-        .with_subject(user_id)
-        .with_live_action_against(user_id)
-      scope = scope.where(resolved_at: ...before) if before
-      scope = scope.where(resolved_at: ((before || Time.current) - within)..) if within
-      scope
+      acted = Action.where(target_user_id: user_id, reversed_at: nil)
+      acted = acted.where(performed_at: ...before) if before
+      acted = acted.where(performed_at: ((before || Time.current) - within)..) if within
+      where(id: acted.select(:case_id))
     end
 
     def self.prior_count(user_id, within: nil, before: nil)
@@ -76,18 +74,10 @@ module Fd
       ids = user_ids.compact.uniq
       return {} if ids.empty?
 
-      CaseParticipant.subjects
-        .where(user_id: ids)
-        .where(case_id: where(resolved_at: within.ago..).select(:id))
-        .where(<<~SQL.squish)
-          EXISTS (
-            SELECT 1 FROM fd.actions a
-            WHERE a.case_id = fd.case_participants.case_id
-              AND a.target_user_id = fd.case_participants.user_id
-              AND a.reversed_at IS NULL
-          )
-        SQL
-        .group(:user_id).count
+      Action.where(target_user_id: ids, reversed_at: nil)
+        .where(performed_at: within.ago..)
+        .group(:target_user_id)
+        .distinct.count(:case_id)
     end
 
     def self.thread_message_counts_for(case_ids)

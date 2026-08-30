@@ -144,7 +144,7 @@ class FdYouTabTest < ActionDispatch::IntegrationTest
     get fd_cases_path
 
     assert_select ".you-menu .menu-pop a[href=?]", fd_settings_path
-    assert_select ".you-menu .you-head", { text: /#{@me.role.tr("_", " ")}/ },
+    assert_select ".you-menu .you-head", { text: /#{@me.role.tr("_", " ").titleize}/ },
       "the menu names the role you are acting with"
   end
 end

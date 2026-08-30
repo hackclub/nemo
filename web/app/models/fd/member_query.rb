@@ -413,17 +413,10 @@ module Fd
     end
 
     def prior_counts
-      CaseParticipant.subjects
-        .where(case_id: Case.where(resolved_at: Case::PRIOR_WINDOW.ago..).select(:id))
-        .where(<<~SQL.squish)
-          EXISTS (
-            SELECT 1 FROM fd.actions a
-            WHERE a.case_id = fd.case_participants.case_id
-              AND a.target_user_id = fd.case_participants.user_id
-              AND a.reversed_at IS NULL
-          )
-        SQL
-        .group(:user_id).count
+      Action.where(reversed_at: nil)
+        .where(performed_at: Case::PRIOR_WINDOW.ago..)
+        .group(:target_user_id)
+        .distinct.count(:case_id)
     end
   end
 end

@@ -21,7 +21,7 @@
       <% end %>
       <span class="two-line">
         <b><%= name %></b>
-        <span><%= staff.role.present? ? staff.role.tr("_", " ") : "no access" %></span>
+        <span><%= staff.role.present? ? staff.role.tr("_", " ").titleize : "no access" %></span>
       </span>
     </div>
 
