@@ -23,7 +23,7 @@ class ApiAuthTest < ActionDispatch::IntegrationTest
     ask
 
     assert_response :success
-    assert_equal ["Toolbox", "UOWNER1", 100], body.values_at("name", "owner_user_id",
+    assert_equal ["Toolbox", "UOWNER1", 20], body.values_at("name", "owner_user_id",
       "rate_per_minute")
     assert_equal @token.prefix, body["prefix"]
     assert_no_match(/#{@secret}/, response.body, "the key itself must never come back")

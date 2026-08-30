@@ -26,6 +26,14 @@ module ActiveSupport
       kase
     end
 
+    def with_a_real_cache
+      was = Rails.cache
+      Rails.cache = ActiveSupport::Cache::MemoryStore.new
+      yield
+    ensure
+      Rails.cache = was
+    end
+
     def sign_in_as(staff)
       OmniAuth.config.test_mode = true
       OmniAuth.config.mock_auth[:hackclub] = OmniAuth::AuthHash.new(

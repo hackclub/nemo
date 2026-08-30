@@ -3,11 +3,39 @@ module Api
     class BaseController < ActionController::API
       BEARER = /\ABearer (.+)\z/i
 
+      WINDOW = 60
+      KEPT_FOR = 2.minutes
+
       before_action :require_a_token
+      before_action :within_budget
 
       private
 
       attr_reader :current_token
+
+      def within_budget
+        limit = current_token.rate
+        used = Rails.cache.increment(bucket, 1, expires_in: KEPT_FOR).to_i
+        budget!(limit, used)
+        return if used <= limit
+
+        response.headers["Retry-After"] = left.to_s
+        refuse(:too_many_requests, "rate_limited", retry_after: left)
+      end
+
+      def bucket
+        "api/rate/#{current_token.id}/#{Time.current.to_i / WINDOW}"
+      end
+
+      def left
+        WINDOW - (Time.current.to_i % WINDOW)
+      end
+
+      def budget!(limit, used)
+        response.headers["RateLimit-Limit"] = limit.to_s
+        response.headers["RateLimit-Remaining"] = [limit - used, 0].max.to_s
+        response.headers["RateLimit-Reset"] = left.to_s
+      end
 
       def require_a_token
         return refuse(:service_unavailable, "api_off") if Fd::Flag.off?(:public_api)
@@ -34,7 +62,8 @@ module Api
         "bad_channel_id" => "a channel id looks like C0123456789",
         "bad_user_id" => "a user id looks like U0123456789",
         "channel_not_found" => "no public channel with that id",
-        "user_not_found" => "no member with that id"
+        "too_many_subjects" => "ask about fewer people in one call",
+        "rate_limited" => "too many calls this minute, wait and try again"
       }.freeze
 
       def refuse(status, error, **extra)

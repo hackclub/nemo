@@ -4,7 +4,7 @@ module Api
     self.primary_key = "key"
 
     DEFAULTS = {
-      "rate_per_minute" => 100,
+      "rate_per_minute" => 20,
       "batch_max" => 100,
       "tokens_per_owner" => 3
     }.freeze

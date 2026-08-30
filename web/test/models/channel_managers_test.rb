@@ -112,7 +112,32 @@ class ChannelManagersTest < ActiveSupport::TestCase
     assert_not ChannelManagers.manages?(CHANNEL, "U1")
   end
 
-  test "only one refresh of a stale channel goes out at a time" do
+  test "a stale channel already being refreshed is not fetched a second time" do
+    with_a_real_cache do
+      answering(page("U1")) { ChannelManagers.for(CHANNEL) }
+      Api::ChannelSweep.find(CHANNEL).update!(synced_at: 2.hours.ago)
+      @asked.clear
+      ChannelManagers.claim(CHANNEL)
+
+      found = answering(page("U2")) { ChannelManagers.for(CHANNEL) }
+
+      assert_empty @asked, "somebody else holds the lock, so this caller serves what we have"
+      assert_equal %w[U1], found
+    end
+  end
+
+  test "a cold channel is always fetched, lock or no lock" do
+    with_a_real_cache do
+      ChannelManagers.claim(CHANNEL)
+
+      found = answering(page("U1")) { ChannelManagers.for(CHANNEL) }
+
+      assert_equal %w[U1], found,
+        "answering false about a channel we never read is worse than waiting"
+    end
+  end
+
+  test "a refreshed channel is fresh again, so the next caller asks nothing" do
     answering(page("U1")) { ChannelManagers.for(CHANNEL) }
     Api::ChannelSweep.find(CHANNEL).update!(synced_at: 2.hours.ago)
     @asked.clear
@@ -120,16 +145,8 @@ class ChannelManagersTest < ActiveSupport::TestCase
     answering(page("U2")) { ChannelManagers.for(CHANNEL) }
     answering(page("U3")) { ChannelManagers.for(CHANNEL) }
 
-    assert_equal 1, @asked.size, "the second caller serves what the first stored"
+    assert_equal 1, @asked.size
     assert_equal %w[U2], Api::ChannelManager.user_ids_in(CHANNEL)
-  end
-
-  test "a cold channel is always fetched, lock or no lock" do
-    ChannelManagers.claim(CHANNEL)
-
-    found = answering(page("U1")) { ChannelManagers.for(CHANNEL) }
-
-    assert_equal %w[U1], found, "answering false about a channel we never read is worse than waiting"
   end
 
   test "slack falling over serves what we already hold and leaves the stamp alone" do
