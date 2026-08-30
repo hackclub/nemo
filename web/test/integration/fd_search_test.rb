@@ -211,4 +211,48 @@ class FdSearchTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller~=palette]"
     assert_select ".palette-host input[data-palette-target=input]"
   end
+
+  def with_decisions_off
+    Fd::Flag.set!(:decisions, false, by: "UME")
+    yield
+  ensure
+    Fd::Flag.set!(:decisions, true, by: "UME")
+  end
+
+  test "a switched off decision is not searchable" do
+    decision = Fd::Decision.create!(title: "Throwaway accounts", proposed_by: "UFF1",
+      statement: "banjo", state: "proposed")
+    decision.settle!(by: "ULEAD")
+
+    assert group("banjo", "decision"), "it is findable while the flag is on"
+
+    with_decisions_off do
+      assert_nil group("banjo", "decision"),
+        "a feature that is switched off must not be reachable through search"
+    end
+  end
+
+  test "the palette stops offering decisions when they are switched off" do
+    with_decisions_off do
+      get fd_search_path(format: :json), params: { q: ">" }
+      titles = JSON.parse(response.body)["groups"].flat_map { |one| one["rows"] }
+        .map { |row| row["title"] }
+
+      assert_includes titles, "Go to the cases"
+      assert_not titles.any? { |title| title.include?("decision") },
+        "no command may lead to a switched off section"
+    end
+  end
+
+  test "a proposal waiting to settle is not offered while decisions are off" do
+    Fd::Decision.create!(title: "Raid nights", proposed_by: "UFF1",
+      statement: "quiet hours", state: "proposed")
+
+    with_decisions_off do
+      get fd_search_path(format: :json), params: { q: "" }
+      rows = JSON.parse(response.body)["groups"].flat_map { |one| one["rows"] }
+
+      assert_not rows.any? { |row| row["url"].to_s.include?("decisions") }
+    end
+  end
 end

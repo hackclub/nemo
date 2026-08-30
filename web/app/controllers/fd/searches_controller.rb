@@ -57,16 +57,21 @@ module Fd
       end
     end
 
+    def decisions?
+      Flag.on?(:decisions)
+    end
+
     def commands
       here + [
         { kind: "do", icon: "⚡", title: "Open a case", sub: nil, key: "case.open",
           url: fd_cases_path(open: "1") },
-        { kind: "do", icon: "📓", title: "Write a decision", sub: nil, key: "decision.write",
-          url: fd_decisions_path(new: "1") },
+        ({ kind: "do", icon: "📓", title: "Write a decision", sub: nil, key: "decision.write",
+           url: fd_decisions_path(new: "1") } if decisions?),
         { kind: "do", icon: "📁", title: "Go to the cases", sub: nil, url: fd_cases_path },
         { kind: "do", icon: "👤", title: "Go to the members", sub: nil, url: fd_members_path },
-        { kind: "do", icon: "📓", title: "Go to the decisions", sub: nil, url: fd_decisions_path }
-      ]
+        ({ kind: "do", icon: "📓", title: "Go to the decisions", sub: nil,
+           url: fd_decisions_path } if decisions?)
+      ].compact
     end
 
     def here
@@ -83,12 +88,14 @@ module Fd
           key: "case.note", url: fd_case_path(kase, do: "note") },
         { kind: "do", icon: "🔗", title: "Attach a thread", sub: on,
           key: "case.thread", on: kase, url: fd_case_path(kase, do: "thread") },
-        { kind: "do", icon: "📓", title: "Link a decision", sub: on,
-          key: "decision.link", url: fd_case_path(kase, do: "decision") }
-      ]
+        ({ kind: "do", icon: "📓", title: "Link a decision", sub: on,
+           key: "decision.link", url: fd_case_path(kase, do: "decision") } if decisions?)
+      ].compact
     end
 
     def decision_commands
+      return [] unless decisions?
+
       decision = Decision.find_by(id: params[:on_decision])
       return [] if decision.nil?
 
@@ -117,9 +124,9 @@ module Fd
         { key: "do", label: "Do", total: 2, rows: gated([
           { kind: "do", icon: "⚡", title: "Open a case", sub: nil, key: "case.open",
             url: fd_cases_path },
-          { kind: "do", icon: "📓", title: "Write a decision", sub: nil,
-            key: "decision.write", url: fd_decisions_path }
-        ]) }
+          ({ kind: "do", icon: "📓", title: "Write a decision", sub: nil,
+             key: "decision.write", url: fd_decisions_path } if decisions?)
+        ].compact) }
       ].reject { |group| group[:rows].empty? }
     end
 
@@ -131,7 +138,7 @@ module Fd
                   sub: oldest_unassigned, url: fd_cases_path(view: "unassigned") }
       end
 
-      proposals = Decision.unsettled.count
+      proposals = decisions? ? Decision.unsettled.count : 0
       if proposals.positive?
         rows << { kind: "decision", icon: "⏳",
                   title: "#{helpers.pluralize(proposals, 'proposal')} to settle",

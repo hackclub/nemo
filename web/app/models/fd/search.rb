@@ -43,7 +43,7 @@ module Fd
     end
 
     def groups
-      @groups ||= asked? ? built.reject { |group| group.rows.empty? } : []
+      @groups ||= asked? ? built.reject { |group| group.rows.empty? || hidden?(group) } : []
     end
 
     def total
@@ -62,6 +62,10 @@ module Fd
     end
 
     private
+
+    def hidden?(group)
+      group.key == "decision" && !Flag.on?(:decisions)
+    end
 
     def built
       return holding_the_thread if thread
