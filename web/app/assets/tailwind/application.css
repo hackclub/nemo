@@ -2755,10 +2755,17 @@
     border-bottom: 0;
   }
 
-  .fbox > .rows > .cap-row {
+  .cap-row {
+    display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 14px;
-    padding: 11px;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .cap-row:last-child {
+    border-bottom: 0;
   }
 
   .cap-two {
@@ -2782,6 +2789,48 @@
     align-items: center;
     gap: var(--s-2xs);
     flex: none;
+  }
+
+  .btn-crit {
+    background-color: var(--sev-crit);
+    border-color: var(--sev-crit);
+    color: var(--accent-on);
+  }
+
+  .btn-crit:hover {
+    background-color: var(--sev-crit-deep);
+    border-color: var(--sev-crit-deep);
+    color: var(--accent-on);
+  }
+
+  .secret {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs);
+    padding: 11px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    background-color: var(--card-2);
+    overflow-x: auto;
+  }
+
+  .secret code {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-code);
+    font-size: var(--t-small);
+    color: var(--ink);
+  }
+
+  .secret .btn {
+    height: 24px;
+    flex: none;
+  }
+
+  .secret-warn {
+    margin: 0;
+    font-size: var(--t-small);
+    color: var(--warn);
   }
 
   .row-k { color: var(--ink-3); }

@@ -1,0 +1,27 @@
+<%= render layout: "fd/modal", locals: { id: "kill-#{token.id}",
+      title: "Revoke #{token.name}?" } do %>
+  <%= form_with url: you_token_path(token), method: :delete do %>
+    <div class="modal-body">
+      <p class="rail-line">
+        Calls using <span class="mono"><%= token.shown %></span> start failing straight away.
+        It cannot be un-revoked, and a replacement is a new key.
+      </p>
+      <div class="facts-grid">
+        <div class="cell">
+          <span class="fg-k">created</span>
+          <span class="fg-v"><%= token.created_at.strftime("%-d %b %Y") %></span>
+        </div>
+        <div class="cell">
+          <span class="fg-k">last used</span>
+          <span class="fg-v">
+            <%= token.last_used_at ? time_ago_in_words(token.last_used_at) : "never" %>
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <label for="kill-<%= token.id %>" class="btn btn-ghost">Cancel</label>
+      <%= submit_tag "Revoke it", class: "btn btn-crit" %>
+    </div>
+  <% end %>
+<% end %>

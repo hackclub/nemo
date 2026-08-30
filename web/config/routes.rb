@@ -13,6 +13,7 @@ Rails.application.routes.draw do
   namespace :you do
     get "api", to: "api#show", as: :api
     resource :consent, only: [:update], controller: "consents"
+    resources :tokens, only: [:create, :destroy]
   end
 
   namespace :fd do

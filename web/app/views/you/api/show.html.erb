@@ -1,32 +1,101 @@
 <% content_for :page_title, "API access" %>
 <% api_off = Fd::Flag.off?(:public_api) %>
 <% granted = Api::Capability::KEYS.count { |key| @consents[key] == Api::Consent::GRANTED } %>
+<% live = @tokens.reject(&:revoked?) %>
+<% cap = Api::Setting.value("tokens_per_owner") %>
 
 <div class="cols c-2">
   <div>
-    <div class="fbox">
-      <div class="ft">
-        <span>What apps may ask about you</span>
-        <span><%= granted %> of <%= Api::Capability::KEYS.size %></span>
-      </div>
-      <div class="rows">
-        <% Api::Capability::KEYS.each do |key| %>
-          <% on = @consents[key] == Api::Consent::GRANTED %>
-          <div class="row cap-row">
-            <span class="cap-two">
-              <b><%= Api::Capability.label(key) %></b>
-              <span><%= Api::Capability.covers(key) %></span>
+    <div class="panel">
+      <div class="views">
+        <% You::ApiController::TABS.each do |key, label| %>
+          <%= link_to you_api_path(key == "permissions" ? {} : { tab: key }), class: "view",
+                aria: { current: ("true" if key == @tab) } do %>
+            <span><%= label %></span>
+            <span class="view-count">
+              <%= key == "permissions" ? Api::Capability::KEYS.size : live.size %>
             </span>
-            <span class="cap-do">
-              <%= button_to on ? "Opt out" : "Opt in",
-                    you_consent_path(capability: key, on: on ? "0" : "1"),
-                    method: :patch, disabled: api_off,
-                    class: "btn #{'btn-primary' unless on} #{'is-off' if api_off}",
-                    form: { class: "contents" } %>
-            </span>
-          </div>
+          <% end %>
         <% end %>
       </div>
+
+      <% if @tab == "permissions" %>
+        <div class="rows">
+          <% Api::Capability::KEYS.each do |key| %>
+            <% on = @consents[key] == Api::Consent::GRANTED %>
+            <div class="row cap-row">
+              <span class="cap-two">
+                <b><%= Api::Capability.label(key) %></b>
+                <span><%= Api::Capability.covers(key) %></span>
+              </span>
+              <span class="cap-do">
+                <%= button_to on ? "Opt out" : "Opt in",
+                      you_consent_path(capability: key, on: on ? "0" : "1"),
+                      method: :patch, disabled: api_off,
+                      class: "btn #{'btn-primary' unless on} #{'is-off' if api_off}",
+                      form: { class: "contents" } %>
+              </span>
+            </div>
+          <% end %>
+        </div>
+
+      <% else %>
+        <div class="panel-head">
+          <b>Keys you hold</b>
+          <span class="qspacer"></span>
+          <span class="qlab"><%= live.size %> of <%= cap %></span>
+          <% if live.size < cap && !api_off %>
+            <label for="mint-token" class="btn" tabindex="0" role="button">Generate a token</label>
+          <% end %>
+        </div>
+
+        <% if @tokens.any? %>
+          <div class="scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>name</th>
+                  <th>key</th>
+                  <th class="col-num">rate</th>
+                  <th class="col-date">created</th>
+                  <th class="col-date">last used</th>
+                  <th class="col-btn"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @tokens.each do |token| %>
+                  <tr>
+                    <td><b class="<%= "sub2" if token.revoked? %>"><%= token.name %></b></td>
+                    <td class="mono"><%= token.shown %></td>
+                    <td class="col-num mono">
+                      <%= token.revoked? ? "n/a" : "#{token.rate}/min" %>
+                    </td>
+                    <td class="col-date mono"><%= token.created_at.strftime("%-d %b") %></td>
+                    <td class="col-date mono">
+                      <%= token.last_used_at ? time_ago_in_words(token.last_used_at) : "never" %>
+                    </td>
+                    <td class="col-btn">
+                      <% if token.revoked? %>
+                        <span class="chip chip-crit">
+                          Revoked <%= token.revoked_at.strftime("%-d %b") %>
+                        </span>
+                      <% else %>
+                        <label for="kill-<%= token.id %>" class="text-btn" tabindex="0"
+                               role="button">Revoke</label>
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <div class="empty">
+            <p class="empty-title">No tokens</p>
+            <p class="sub2">Opting in does not need one.</p>
+          </div>
+        <% end %>
+      <% end %>
     </div>
   </div>
 
@@ -54,6 +123,10 @@
           </b>
         </div>
         <div class="frow">
+          <span>Live tokens</span>
+          <b class="<%= "is-none" if live.empty? %>"><%= live.size %> of <%= cap %></b>
+        </div>
+        <div class="frow">
           <span>Channels you are in</span>
           <b class="<%= "is-none" if @rooms.empty? %>">
             <%= @rooms.any? ? number_with_delimiter(@rooms.size) : "n/a" %>
@@ -63,3 +136,10 @@
     </div>
   </div>
 </div>
+
+<% if @tab == "tokens" && !api_off %>
+  <%= render "mint" %>
+  <% live.each do |token| %>
+    <%= render "kill", token: token %>
+  <% end %>
+<% end %>

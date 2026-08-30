@@ -1151,6 +1151,8 @@ module FdHelper
     "decision/superseded" => "Retired",
     "consent/granted" => "Opted in to",
     "consent/withheld" => "Opted out of",
+    "api/token_minted" => "Generated a token,",
+    "api/token_revoked" => "Revoked a token,",
     "decision_thread/attached" => "Linked a thread to",
     "decision_thread/detached" => "Unlinked a thread from",
     "grant/granted" => "Gave access to",

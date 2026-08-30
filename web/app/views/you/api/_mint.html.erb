@@ -1,0 +1,54 @@
+<%= render layout: "fd/modal", locals: { id: "mint-token", title: "Generate a token",
+      sub: "shown once", open: @secret.present? } do %>
+  <% if @secret.present? %>
+    <div class="modal-body">
+      <div class="secret">
+        <code><%= @secret %></code>
+        <button type="button" class="btn" data-controller="copy"
+                data-copy-id-value="<%= @secret %>" data-action="copy#write">Copy</button>
+      </div>
+      <div class="facts-grid">
+        <div class="cell">
+          <span class="fg-k">it can do</span>
+          <span class="fg-v">check channel managers</span>
+        </div>
+        <div class="cell">
+          <span class="fg-k">rate</span>
+          <span class="fg-v"><%= @token.rate %> a minute</span>
+        </div>
+      </div>
+      <p class="secret-warn">
+        This is the only time the key is shown. Mnemosyne keeps a hash, not the key.
+      </p>
+    </div>
+    <div class="modal-foot">
+      <%= link_to "Done", you_api_path(tab: "tokens"), class: "btn btn-primary" %>
+    </div>
+  <% else %>
+    <%= form_with url: you_tokens_path, method: :post, html: { autocomplete: "off" } do %>
+      <div class="modal-body">
+        <label class="field-label">
+          What is it for
+          <span class="field">
+            <%= text_field_tag :name, nil, id: nil, maxlength: Api::Token::MAX_NAME,
+                  placeholder: "Toolbox" %>
+          </span>
+        </label>
+        <div class="facts-grid">
+          <div class="cell">
+            <span class="fg-k">it can do</span>
+            <span class="fg-v">check channel managers</span>
+          </div>
+          <div class="cell">
+            <span class="fg-k">rate</span>
+            <span class="fg-v"><%= Api::Setting.value("rate_per_minute") %> a minute</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <label for="mint-token" class="btn btn-ghost">Cancel</label>
+        <%= submit_tag "Generate", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

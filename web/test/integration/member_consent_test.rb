@@ -84,13 +84,13 @@ class MemberConsentTest < ActionDispatch::IntegrationTest
     get you_api_path
 
     assert_select ".cap-row .btn", text: "Opt in"
-    assert_select ".fbox > .ft", text: /0 of 1/
+    assert_select ".facts .frow b", text: /nothing/
 
     flip("1")
     get you_api_path
 
     assert_select ".cap-row .btn", text: "Opt out"
-    assert_select ".fbox > .ft", text: /1 of 1/
+    assert_select ".facts .frow b", text: /1 of 1/
   end
 
   test "the switch is dead on the page while the public api is off" do

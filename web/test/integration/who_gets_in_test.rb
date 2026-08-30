@@ -8,7 +8,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
   INSIDE = %i[root_path fd_root_path fd_members_path fd_decisions_path fd_settings_path].freeze
 
-  MEMBER = %w[you/api you/consents].freeze
+  MEMBER = %w[you/api you/consents you/tokens].freeze
 
   setup do
     Rails.application.eager_load!

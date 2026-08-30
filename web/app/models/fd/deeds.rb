@@ -12,6 +12,10 @@ module Fd
 
     VIA = { "dashboard" => "from the dashboard", "command" => "from Slack" }.freeze
 
+    KIND_VIEWS = {
+      "audit" => "audit", "read" => "read", "consent" => "api", "event" => "api"
+    }.freeze
+
     Row = Struct.new(:at, :event, :kind, :id, :about, :who, :said, :actor, keyword_init: true)
 
     ON_CASE = %w[case participant assignee thread citation].freeze
@@ -64,7 +68,7 @@ module Fd
     end
 
     def union
-      "#{audit_side}#{reads_side}#{consent_side}"
+      "#{audit_side}#{reads_side}#{consent_side}#{event_side}"
     end
 
     def nothing_asked?
@@ -77,7 +81,7 @@ module Fd
 
     def tallied
       counted = VIEWS.keys.excluding("all").index_with(0)
-      return counted if nothing_asked?
+      return counted.merge("all" => 0) if nothing_asked?
 
       sql = <<~SQL
         WITH picked AS (#{union})
@@ -86,7 +90,10 @@ module Fd
       found = AuditEntry.connection.select_all(
         AuditEntry.sanitize_sql([sql, { since: @since, who: @user_id }])
       )
-      found.each { |row| counted[row["kind"]] = row["found"].to_i }
+      found.each do |row|
+        view = KIND_VIEWS.fetch(row["kind"])
+        counted[view] += row["found"].to_i
+      end
       counted.merge("all" => counted.values.sum)
     end
 
@@ -121,13 +128,29 @@ module Fd
       return "" if @only
 
       mine = @user_id ? "AND c.user_id = :who" : ""
-      lead = audit_side.empty? && reads_side.empty? ? "" : "UNION ALL"
       <<~SQL
-        #{lead}
-        SELECT 'api' AS kind, c.id AS id, c.at AS at
+        #{lead_for(audit_side, reads_side)}
+        SELECT 'consent' AS kind, c.id AS id, c.at AS at
         FROM api.consent_log c
         WHERE c.at >= :since #{mine}
       SQL
+    end
+
+    def event_side
+      return "" unless wanted?("api")
+      return "" if @only
+
+      mine = @user_id ? "AND e.actor_user_id = :who" : ""
+      <<~SQL
+        #{lead_for(audit_side, reads_side, consent_side)}
+        SELECT 'event' AS kind, e.id AS id, e.at AS at
+        FROM api.event_log e
+        WHERE e.at >= :since #{mine}
+      SQL
+    end
+
+    def lead_for(*sides)
+      sides.all?(&:empty?) ? "" : "UNION ALL"
     end
 
     def only_clause
@@ -157,7 +180,8 @@ module Fd
       chosen = picked.to_a
       @picked_ids = chosen.select { |row| row["kind"] == "audit" }.map { |row| row["id"] }
       read_rows = reads_for(chosen.select { |row| row["kind"] == "read" }.map { |row| row["id"] })
-      consent_rows = consents_for(chosen.select { |row| row["kind"] == "api" }.map { |row| row["id"] })
+      consent_rows = consents_for(ids_of(chosen, "consent"))
+      event_rows = events_for(ids_of(chosen, "event"))
 
       found = entries
       @actions = Action.where(id: ids(found, "action")).index_by(&:id)
@@ -168,7 +192,20 @@ module Fd
         .pluck(:id, :title).to_h
 
       made = found.map { |row| row_for(row).tap { |one| one.actor = row.actor_user_id } }
-      (made + read_rows + consent_rows).sort_by { |row| -row.at.to_i }
+      (made + read_rows + consent_rows + event_rows).sort_by { |row| -row.at.to_i }
+    end
+
+    def ids_of(chosen, kind)
+      chosen.select { |row| row["kind"] == kind }.map { |row| row["id"] }
+    end
+
+    def events_for(ids)
+      return [] if ids.empty?
+
+      ::Api::Event.where(id: ids).map do |event|
+        Row.new(at: event.at, event: "api/#{event.verb}", kind: "capability",
+          about: event.detail, actor: event.actor_user_id, said: event.subject)
+      end
     end
 
     def consents_for(ids)
