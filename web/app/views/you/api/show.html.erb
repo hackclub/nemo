@@ -1,7 +1,34 @@
 <% content_for :page_title, "API access" %>
+<% api_off = Fd::Flag.off?(:public_api) %>
+<% granted = Api::Capability::KEYS.count { |key| @consents[key] == Api::Consent::GRANTED } %>
 
 <div class="cols c-2">
-  <div></div>
+  <div>
+    <div class="fbox">
+      <div class="ft">
+        <span>What apps may ask about you</span>
+        <span><%= granted %> of <%= Api::Capability::KEYS.size %></span>
+      </div>
+      <div class="rows">
+        <% Api::Capability::KEYS.each do |key| %>
+          <% on = @consents[key] == Api::Consent::GRANTED %>
+          <div class="row cap-row">
+            <span class="cap-two">
+              <b><%= Api::Capability.label(key) %></b>
+              <span><%= Api::Capability.covers(key) %></span>
+            </span>
+            <span class="cap-do">
+              <%= button_to on ? "Opt out" : "Opt in",
+                    you_consent_path(capability: key, on: on ? "0" : "1"),
+                    method: :patch, disabled: api_off,
+                    class: "btn #{'btn-primary' unless on} #{'is-off' if api_off}",
+                    form: { class: "contents" } %>
+            </span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
 
   <div class="facts">
     <p class="facts-h">Your account</p>
@@ -20,6 +47,12 @@
       </div>
 
       <div class="frows">
+        <div class="frow">
+          <span>Opted in to</span>
+          <b class="<%= "is-none" if granted.zero? %>">
+            <%= granted.zero? ? "nothing" : "#{granted} of #{Api::Capability::KEYS.size}" %>
+          </b>
+        </div>
         <div class="frow">
           <span>Channels you are in</span>
           <b class="<%= "is-none" if @rooms.empty? %>">

@@ -2755,6 +2755,35 @@
     border-bottom: 0;
   }
 
+  .fbox > .rows > .cap-row {
+    align-items: center;
+    gap: 14px;
+    padding: 11px;
+  }
+
+  .cap-two {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .cap-two b {
+    font-size: var(--t-body);
+    font-weight: 600;
+  }
+
+  .cap-two span {
+    font-size: var(--t-small);
+    color: var(--ink-3);
+  }
+
+  .cap-do {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs);
+    flex: none;
+  }
+
   .row-k { color: var(--ink-3); }
 
   .row-v {
