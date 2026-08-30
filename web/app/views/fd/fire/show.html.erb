@@ -31,40 +31,9 @@
   </div>
 </div>
 
-<div class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">What firefighters did</h2>
-      <p class="card-sub">last 30 days, worst first</p>
-    </div>
-  </div>
-  <% if @actions.any? %>
-    <% peak = @actions.values.max %>
-    <div class="scroll">
-      <table class="data-table">
-        <tbody>
-          <% Fd::Action::WORST_FIRST.each do |key| %>
-            <% count = @actions[key].to_i %>
-            <% next if count.zero? %>
-            <tr>
-              <td><b><%= action_label(key) %></b></td>
-              <td class="col-num"><%= count %></td>
-              <td style="width:38%">
-                <span class="bar-track">
-                  <span class="bar-fill" style="width: <%= share_of(count, peak) %>%"></span>
-                </span>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  <% else %>
-    <div class="empty">
-      <p class="empty-title">Nothing logged in 30 days</p>
-    </div>
-  <% end %>
-</div>
+<% if @endings.any? %>
+  <%= render "endings", endings: @endings, closed: @closed_count %>
+<% end %>
 
 <div class="card card-flush">
   <div class="card-head">

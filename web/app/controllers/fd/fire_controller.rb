@@ -9,9 +9,11 @@ module Fd
       @claim_lag = median_claim_lag
 
       acted = Action.where(performed_at: WINDOW.ago..)
-      @actions = acted.group(:type_key).count
-      @actions_total = @actions.values.sum
+      @actions_total = acted.count
       @reversed = acted.reversed.count
+
+      @endings = Case.ending_tally
+      @closed_count = Case.where.not(resolved_at: nil).count
 
       @reads = AccessLog.where(field_class: "identity", looked_at: WINDOW.ago..)
         .order(looked_at: :desc).limit(READS_SHOWN).to_a

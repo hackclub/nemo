@@ -73,10 +73,6 @@
     <% end %>
   <% end %>
   </turbo-frame>
-
-  <% if @endings.any? %>
-    <%= render "endings", endings: @endings, closed: @closed_count %>
-  <% end %>
 </div>
 
 <%= render "open_case_modal" %>
