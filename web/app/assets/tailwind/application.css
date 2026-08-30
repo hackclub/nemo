@@ -1274,6 +1274,7 @@
     height: 22px;
     flex: none;
     border-radius: 50%;
+    object-fit: cover;
     background-color: var(--count);
     color: var(--count-ink);
     display: grid;

@@ -720,6 +720,9 @@ module FdHelper
   end
 
   def face(user_id, css: "row-avatar")
+    shown = user_id.present? ? names.image(user_id) : nil
+    return tag.img(src: shown, class: css, alt: "", loading: "lazy") if shown
+
     letter = user_id ? names.initial(user_id) : "?"
     tag.span(letter, class: "#{css} #{avatar_tone(user_id)}", aria: { hidden: true })
   end
