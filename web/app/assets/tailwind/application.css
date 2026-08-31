@@ -59,7 +59,7 @@
     --t-title: 1.25rem;
     --t-display: 2rem;
 
-    --s-page: 22px;
+    --s-page: 28px;
     --s-3xs: 0.25rem;
     --s-2xs: 0.5rem;
     --s-xs: 0.75rem;
@@ -71,7 +71,7 @@
     --r-card: 8px;
     --r-ctl: 6px;
     --r-pill: 999px;
-    --chat-ctl: 27px;
+    --chat-ctl: 32px;
     --chat-line: 1.5;
 
     --e-1: 0 10px 30px rgb(0 0 0 / 0.12);
@@ -875,7 +875,7 @@
   .body {
     padding: var(--s-page);
     display: grid;
-    gap: var(--s-page);
+    gap: var(--s-md);
     min-width: 0;
     align-content: start;
   }
@@ -5841,7 +5841,7 @@
     text-transform: uppercase;
     color: var(--ink-3);
     text-align: left;
-    padding: 9px 14px;
+    padding: 12px var(--s-sm);
     background-color: var(--card-2);
     border-bottom: 1px solid var(--line);
     white-space: nowrap;
@@ -5850,11 +5850,11 @@
 
   .panel .data-table th,
   .panel .data-table td {
-    padding-inline: var(--s-xs);
+    padding-inline: var(--s-sm);
   }
 
   .panel .data-table tbody td {
-    padding-block: 7px;
+    padding-block: 12px;
   }
 
   .panel .data-table tbody tr:hover {
@@ -5870,12 +5870,12 @@
 
   .panel .data-table th:first-child,
   .panel .data-table td:first-child {
-    padding-inline-start: var(--s-sm);
+    padding-inline-start: var(--s-md);
   }
 
   .panel .data-table th:last-child,
   .panel .data-table td:last-child {
-    padding-inline-end: var(--s-sm);
+    padding-inline-end: var(--s-md);
   }
 
   .data-table th.num,
@@ -5924,7 +5924,7 @@
   }
 
   .data-table tbody td {
-    padding: 9px var(--s-xs);
+    padding: 12px var(--s-sm);
     border-bottom: 1px solid var(--line-soft);
     text-align: start;
     vertical-align: middle;
