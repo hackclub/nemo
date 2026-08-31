@@ -51,13 +51,12 @@
     --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-code: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-    --t-micro: 0.625rem;
-    --t-fine: 0.6875rem;
-    --t-small: 0.75rem;
-    --t-body: 0.8125rem;
-    --t-head: 0.8125rem;
-    --t-title: 1.0625rem;
-    --t-display: 1.875rem;
+    --t-fine: 0.75rem;
+    --t-small: 0.8125rem;
+    --t-body: 0.875rem;
+    --t-head: 0.9375rem;
+    --t-title: 1.25rem;
+    --t-display: 2rem;
 
     --s-page: 22px;
     --s-3xs: 0.25rem;
@@ -399,7 +398,7 @@
 
   .rail-ix {
     font-family: var(--font-code);
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     letter-spacing: -0.02em;
     color: var(--ink-4);
     width: 15px;
@@ -535,7 +534,7 @@
   }
 
   .car {
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     color: var(--ink-3);
   }
 
@@ -1378,7 +1377,7 @@
 
   .sheet-day {
     font-family: var(--font-code);
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     font-weight: 500;
     letter-spacing: 0.11em;
     text-transform: uppercase;
@@ -1416,7 +1415,7 @@
 
   .sheet-at {
     font-family: var(--font-code);
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     color: var(--ink-3);
     font-variant-numeric: tabular-nums;
   }
@@ -1531,7 +1530,7 @@
 
   .msg-at {
     font-family: var(--font-code);
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     color: var(--ink-3);
     margin-inline-start: 5px;
     font-weight: 400;
@@ -2288,7 +2287,7 @@
 
   .menu-group {
     font-family: var(--font-code);
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     font-weight: 500;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -2705,7 +2704,7 @@
 
   .facts-h {
     font-family: var(--font-code);
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     font-weight: 500;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -2786,7 +2785,7 @@
 
   .facts-grid .fg-k {
     font-family: var(--font-code);
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     font-weight: 500;
     letter-spacing: 0.09em;
     text-transform: uppercase;
@@ -2901,7 +2900,7 @@
     background-color: var(--card-2);
     border-bottom: 1px solid var(--line);
     font-family: var(--font-code);
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     font-weight: 500;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -3512,7 +3511,7 @@
 
   .standing-t {
     font-family: var(--font-code);
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     font-weight: 500;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -3539,7 +3538,7 @@
 
   .seg-count {
     font-family: var(--font-code);
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     color: var(--ink-3);
     margin-inline-start: 5px;
     font-variant-numeric: tabular-nums;
@@ -3613,7 +3612,7 @@
     display: flex;
     align-items: baseline;
     gap: var(--s-2xs);
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     color: var(--ink-3);
   }
 
@@ -4124,7 +4123,7 @@
   .chat-pick .avatar {
     width: 18px;
     height: 18px;
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
   }
 
   .chat-pick-from {
@@ -4213,7 +4212,7 @@
 
   .said-at {
     font-family: var(--font-code);
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     font-weight: 400;
     color: var(--ink-3);
   }
@@ -4789,7 +4788,7 @@
     grid-row: 2;
     display: flex;
     gap: 4px;
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     color: var(--ink-3);
     font-variant-numeric: tabular-nums;
   }
@@ -5363,7 +5362,7 @@
   }
 
   .sub2 {
-    font-size: var(--t-micro);
+    font-size: var(--t-fine);
     color: var(--ink-3);
   }
 
