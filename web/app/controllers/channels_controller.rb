@@ -1,7 +1,7 @@
 class ChannelsController < ApplicationController
   before_action { needs(:analytics) }
 
-  PER_PAGE = 100
+  PER_PAGE = 50
   RANGE_PRESETS = [7, 28, 90].freeze
   DEFAULT_RANGE_DAYS = 28
 
@@ -22,6 +22,9 @@ class ChannelsController < ApplicationController
     "spoke_under_2" => ["Who spoke", "under 2%", "#{SPOKE_SHARE} < 0.02"],
     "members_over_10000" => ["Members", "over 10,000", "r.total_members > 10000"],
     "members_under_2000" => ["Members", "under 2,000", "r.total_members < 2000"],
+    "read_not_written" => ["Read", "but not written in",
+                           "r.members_who_posted >= 25 " \
+                           "AND r.members_who_viewed > r.members_who_posted"],
     "never_posted" => ["Last post", "never",
                        "r.channel_id IS NOT NULL AND r.last_message_at IS NULL"],
     "quiet_90d" => ["Last post", "over 90 days ago",
@@ -29,9 +32,6 @@ class ChannelsController < ApplicationController
     "quiet_1y" => ["Last post", "over a year ago",
                    "r.last_message_at < now() - interval '365 days'"]
   }.freeze
-
-  QUIET_FLOOR = 25
-  QUIET_LIMIT = 8
 
   RANGE_JOIN = "LEFT JOIN analytics.mart_channel_range r ON r.channel_id = dim_channel.channel_id".freeze
   RANGE_COLUMNS = "dim_channel.*, r.messages_posted_by_members AS range_messages, " \
@@ -62,13 +62,10 @@ class ChannelsController < ApplicationController
     @has_more = (@page + 1) * PER_PAGE < @total
     @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
 
-    @bands = Analytics::MartChannelBands.by_measure
-
-    @quiet_page = [params[:quiet_page].to_i, 1].max
-    @quiet_total = quiet_scope.count
-    @quiet_pages = [(@quiet_total / QUIET_LIMIT.to_f).ceil, 1].max
-    @quiet_page = @quiet_page.clamp(1, @quiet_pages)
-    @quiet_rooms = quiet_rooms
+    @band_measures = Analytics::MartChannelBands.in_order.to_a.group_by(&:measure)
+    @default_measure = @band_measures.keys.first
+    @measure = @band_measures.key?(params[:measure]) ? params[:measure] : @default_measure
+    @band_rows = @band_measures[@measure] || []
   end
 
   def show
@@ -115,20 +112,6 @@ class ChannelsController < ApplicationController
   end
 
   private
-
-  def quiet_scope
-    Analytics::MartChannelRange
-      .where(visibility: "public")
-      .where("members_who_posted >= ?", QUIET_FLOOR)
-      .where("members_who_viewed > members_who_posted")
-  end
-
-  def quiet_rooms
-    quiet_scope
-      .order(Arel.sql("members_who_viewed::numeric / members_who_posted DESC"))
-      .limit(QUIET_LIMIT)
-      .offset((@quiet_page - 1) * QUIET_LIMIT)
-  end
 
   def parse_range_date(value)
     Date.iso8601(value.to_s)

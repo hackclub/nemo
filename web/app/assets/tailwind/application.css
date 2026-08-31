@@ -5144,6 +5144,55 @@
     margin-bottom: 8px;
   }
 
+  .reveal {
+    padding: 0;
+  }
+
+  .reveal-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2xs);
+    padding: var(--s-xs) var(--s-md);
+    cursor: pointer;
+    list-style: none;
+    border-radius: var(--r-card);
+  }
+
+  .reveal-head::-webkit-details-marker {
+    display: none;
+  }
+
+  .reveal-head:hover {
+    background-color: var(--hover);
+  }
+
+  .reveal-head .car {
+    margin-inline-start: auto;
+    color: var(--ink-3);
+    transition: transform var(--dur) var(--ease-out);
+  }
+
+  .reveal[open] .reveal-head .car {
+    transform: rotate(180deg);
+  }
+
+  .reveal-note {
+    font-size: var(--t-small);
+    color: var(--ink-3);
+  }
+
+  .reveal-body {
+    display: grid;
+    gap: var(--s-xs);
+    padding: 0 var(--s-md) var(--s-md);
+    border-top: 1px solid var(--line-soft);
+    padding-top: var(--s-sm);
+  }
+
+  .reveal-body .segmented {
+    justify-self: start;
+  }
+
   .acts-row {
     display: flex;
     align-items: baseline;

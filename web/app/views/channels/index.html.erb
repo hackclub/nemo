@@ -1,94 +1,35 @@
 <% content_for :page_title, "Public channels" %>
 <div class="stack">
-  <% if @bands.any? %>
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <h2 class="card-title">Channels activity</h2>
-        </div>
-      </div>
-      <div class="cols c-3">
-        <% @bands.each do |label, rows| %>
-          <div>
-            <p class="acts-h"><%= label %></p>
-            <div
-              data-controller="svg-chart"
-              data-svg-chart-kind-value="bars"
-              data-svg-chart-height-value="180"
-              data-svg-chart-data-value="<%= {
-                labels: rows.map(&:activity_band),
-                datasets: [{ label: "channels", data: rows.map(&:channels) }]
-              }.to_json %>"
-            ></div>
-          </div>
-        <% end %>
-      </div>
-    </div>
-  <% end %>
-
-  <% if @quiet_rooms.any? %>
-    <div class="card card-flush">
-      <div class="card-head">
-        <div>
-          <h2 class="card-title">Read, but not written in</h2>
-          <p class="card-sub">readers per person who posted</p>
-        </div>
-      </div>
-      <div class="scroll">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>channel</th>
-              <th class="col-num">read</th>
-              <th class="col-num">posted</th>
-              <th class="col-num">ratio</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @quiet_rooms.each do |room| %>
-              <tr>
-                <td>
-                  <%= link_to "##{room.name}", channel_path(room.channel_id) %>
-                </td>
-                <td class="col-num"><%= number_with_delimiter(room.members_who_viewed) %></td>
-                <td class="col-num"><%= number_with_delimiter(room.members_who_posted) %></td>
-                <td class="col-num is-loud">
-                  <%= channel_read_ratio(room.members_who_viewed, room.members_who_posted) %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    </div>
-      <% if @quiet_pages > 1 %>
-        <div class="pager">
-          <% if @quiet_page > 1 %>
-            <%= link_to "Back",
-                  channels_path(request.query_parameters.merge(quiet_page: @quiet_page - 1)),
-                  class: "btn" %>
-          <% else %>
-            <span class="btn is-off">Back</span>
-          <% end %>
-          <span class="pager-at">
-            Page <%= @quiet_page %> of <%= @quiet_pages %>
-          </span>
-          <% if @quiet_page < @quiet_pages %>
-            <%= link_to "Next",
-                  channels_path(request.query_parameters.merge(quiet_page: @quiet_page + 1)),
-                  class: "btn" %>
-          <% else %>
-            <span class="btn is-off">Next</span>
+  <% if @band_rows.any? %>
+    <details class="card reveal" <%= "open" if params[:measure].present? %>>
+      <summary class="reveal-head">
+        <span class="card-title">Channels activity</span>
+        <span class="car" aria-hidden="true">▾</span>
+      </summary>
+      <div class="reveal-body">
+        <div class="segmented" role="group" aria-label="measure">
+          <% @band_measures.each do |key, rows| %>
+            <%= link_to rows.first.measure_label, channel_query(measure: key),
+                  aria: { current: ("true" if key == @measure) } %>
           <% end %>
         </div>
-      <% end %>
-    </div>
+        <div
+          data-controller="svg-chart"
+          data-svg-chart-kind-value="bars"
+          data-svg-chart-height-value="220"
+          data-svg-chart-data-value="<%= {
+            labels: @band_rows.map(&:activity_band),
+            datasets: [{ label: "channels", data: @band_rows.map(&:channels) }]
+          }.to_json %>"
+        ></div>
+      </div>
+    </details>
   <% end %>
 
-  <div class="qbar">
+  <% content_for :page_controls do %>
     <%= form_with url: channels_path, method: :get, class: "qsearch",
           data: { controller: "live-search", action: "input->live-search#go",
-                  turbo_action: "advance" } do %>
+                  turbo_frame: "channels", turbo_action: "advance" } do %>
       <% { sort: @sort, direction: @direction, view: @view }.each do |key, value| %>
         <%= hidden_field_tag key, value, id: nil %>
       <% end %>
@@ -127,59 +68,61 @@
               aria: { current: ("true" if @view == value) } %>
       <% end %>
     </div>
-  </div>
+  <% end %>
 
-  <div class="card card-flush">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">Channels</h2>
-        <p class="card-sub"><%= number_with_delimiter(@total) %> channels</p>
+  <turbo-frame id="channels" target="_top" data-turbo-action="advance">
+    <div class="card card-flush">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">Channels</h2>
+          <p class="card-sub"><%= number_with_delimiter(@total) %> channels</p>
+        </div>
       </div>
+
+      <% if @view == "grid" %>
+        <div class="tiles">
+          <%= render "tiles", channels: @channels %>
+        </div>
+      <% else %>
+        <div class="scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <%= channel_sort_th("channel", "name") %>
+                <%= channel_sort_th("member messages", "messages") %>
+                <%= channel_sort_th("posted", "posters", "col-num") %>
+                <%= channel_sort_th("read", "viewers", "col-num") %>
+                <%= channel_sort_th("members", "members", "col-num") %>
+                <%= channel_sort_th("last post", "quiet", "col-date") %>
+                <th class="col-num">who spoke</th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= render "rows", channels: @channels %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
     </div>
 
-    <% if @view == "grid" %>
-      <div class="tiles">
-        <%= render "tiles", channels: @channels %>
-      </div>
-    <% else %>
-      <div class="scroll">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <%= channel_sort_th("channel", "name") %>
-              <%= channel_sort_th("member messages", "messages") %>
-              <%= channel_sort_th("posted", "posters", "col-num") %>
-              <%= channel_sort_th("read", "viewers", "col-num") %>
-              <%= channel_sort_th("members", "members", "col-num") %>
-              <%= channel_sort_th("last post", "quiet", "col-date") %>
-              <th class="col-num">who spoke</th>
-            </tr>
-          </thead>
-          <tbody>
-            <%= render "rows", channels: @channels %>
-          </tbody>
-        </table>
+    <% if @pages > 1 %>
+      <div class="pager">
+        <% if @page.positive? %>
+          <%= link_to "Back", channels_path(request.query_parameters.merge(page: @page - 1)),
+                class: "btn" %>
+        <% else %>
+          <span class="btn is-off">Back</span>
+        <% end %>
+        <span class="pager-at">
+          Page <%= @page + 1 %> of <%= @pages %>
+        </span>
+        <% if @has_more %>
+          <%= link_to "Next", channels_path(request.query_parameters.merge(page: @page + 1)),
+                class: "btn" %>
+        <% else %>
+          <span class="btn is-off">Next</span>
+        <% end %>
       </div>
     <% end %>
-  </div>
-
-  <% if @pages > 1 %>
-    <div class="pager">
-      <% if @page.positive? %>
-        <%= link_to "Back", channels_path(request.query_parameters.merge(page: @page - 1)),
-              class: "btn" %>
-      <% else %>
-        <span class="btn is-off">Back</span>
-      <% end %>
-      <span class="pager-at">
-        Page <%= @page + 1 %> of <%= @pages %>
-      </span>
-      <% if @has_more %>
-        <%= link_to "Next", channels_path(request.query_parameters.merge(page: @page + 1)),
-              class: "btn" %>
-      <% else %>
-        <span class="btn is-off">Next</span>
-      <% end %>
-    </div>
-  <% end %>
+  </turbo-frame>
 </div>

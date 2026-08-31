@@ -1,7 +1,8 @@
 module ChannelsHelper
   def channel_query(**overrides)
     base = { q: @q.presence, sort: @sort, direction: @direction,
-             view: (@view unless @view == "table"), f: @filters.presence }
+             view: (@view unless @view == "table"), f: @filters.presence,
+             measure: (@measure unless @measure == @default_measure) }
     channels_path(**base.merge(overrides).compact)
   end
 

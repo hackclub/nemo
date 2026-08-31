@@ -4,14 +4,14 @@ with ranged as (
         messages_posted,
         members_who_posted,
         members_who_viewed
-    from {{ ref('fct_channel_range') }}
+    from {{ ref('fct_channel_span') }}
 ),
 
 coverage as (
     select
         min(window_start) as window_start,
         max(window_end) as window_end
-    from {{ ref('fct_channel_range') }}
+    from {{ ref('fct_channel_span') }}
 ),
 
 measured as (
