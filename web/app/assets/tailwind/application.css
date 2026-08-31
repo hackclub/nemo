@@ -382,18 +382,6 @@
     opacity: 0.75;
   }
 
-  .rail-ix {
-    font-size: var(--t-fine);
-    letter-spacing: -0.02em;
-    color: var(--ink-3);
-    width: 15px;
-    flex: none;
-  }
-
-  .rail-item[aria-current="page"] .rail-ix {
-    color: var(--accent);
-  }
-
   .rail-item svg {
     flex: none;
     display: block;
@@ -464,16 +452,6 @@
 
   .rhead-said {
     min-width: 0;
-  }
-
-  .rkicker {
-    font-size: var(--t-fine);
-    color: var(--accent);
-    margin: 0 0 6px;
-  }
-
-  .rkicker-plain {
-    color: var(--ink-3);
   }
 
   .rtitle {

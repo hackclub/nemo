@@ -8,11 +8,11 @@ module ApplicationHelper
   end
 
   JOURNEY = [
-    ["01", "Acquisition", "acquisition"],
-    ["02", "Activation", "activation"],
-    ["03", "Response", "response"],
-    ["04", "Retention", "retention"],
-    ["05", "Distribution", "distribution"]
+    ["Joining", "acquisition"],
+    ["Newcomers", "activation"],
+    ["Getting replies", "response"],
+    ["Coming back", "retention"],
+    ["Who is active", "distribution"]
   ].freeze
 
   ACTIONS = {

@@ -51,109 +51,16 @@
           <span class="brand-name">Mnemosyne</span>
         </div>
 
-        <% if on?(:analytics) %>
-        <div class="navsec">
-          <nav class="rail-nav" aria-label="Overview">
-            <%= link_to root_path, class: "rail-item",
-                  aria: { current: ("page" if current_page?(root_path)) } do %>
-              <span class="rail-ic" aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-              </span>
-              <span class="rail-text">Overview</span>
-            <% end %>
-            <div class="rail-nest">
-              <% journey_stages.each do |number, label, stage| %>
-                <%= link_to public_send(:"#{stage}_journey_path"), class: "rail-item",
-                      aria: { current: ("page" if current_page?(public_send(:"#{stage}_journey_path"))) } do %>
-                  <span class="rail-ix" aria-hidden="true"><%= number %></span>
-                  <span class="rail-text"><%= label %></span>
-                <% end %>
-              <% end %>
-            </div>
-          </nav>
-        </div>
-
-        <div class="navsec">
-          <p class="rail-label">Places</p>
-          <nav class="rail-nav" aria-label="Places">
-            <%= link_to channels_path, class: "rail-item",
-                  aria: { current: ("page" if controller_name == "channels") } do %>
-              <span class="rail-ic" aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg>
-              </span>
-              <span class="rail-text">Channels</span>
-            <% end %>
-          </nav>
-        </div>
-
-        <div class="navsec">
-          <p class="rail-label">The engine</p>
-          <nav class="rail-nav" aria-label="The engine">
-            <%= link_to engine_path, class: "rail-item",
-                  aria: { current: ("page" if controller_name == "engine") } do %>
-              <span class="rail-ic" aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
-              </span>
-              <span class="rail-text">Engine</span>
-            <% end %>
-          </nav>
-        </div>
-        <% end %>
-
-        <% if fire_engine %>
-        <div class="navsec">
-          <p class="rail-label">Fire Engine</p>
-          <nav class="rail-nav" aria-label="Fire Engine">
-            <%= link_to fd_root_path, class: "rail-item",
-                  aria: { current: ("page" if controller_path == "fd/fire") } do %>
-              <span class="rail-ic" aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c4 0 7-2.7 7-6.5 0-4-3-6-4.5-9C13 4 12 2 12 2S9 5 8 8c-.6 1.8-1 2.5-1 2.5S5.5 9 5.5 7C4 9 3 12 3 15.5 3 19.3 8 22 12 22Z"/></svg>
-              </span>
-              <span class="rail-text">Overview</span>
-            <% end %>
-            <div class="rail-nest">
-            <%= link_to fd_cases_path, class: "rail-item",
-                  aria: { current: ("page" if controller_path == "fd/cases") } do %>
-              <span class="rail-ic" aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4 6v6c0 4 3.4 7.4 8 8 4.6-.6 8-4 8-8V6l-8-3Z"/></svg>
-              </span>
-              <span class="rail-text">Cases</span>
-              <% if open_case_count.positive? %>
-                <span class="rail-badge"><%= open_case_count %></span>
-              <% end %>
-            <% end %>
-            <%= link_to fd_members_path, class: "rail-item",
-                  aria: { current: ("page" if controller_path.start_with?("fd/member")) } do %>
-              <span class="rail-ic" aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M18 20a6 6 0 0 0-2.4-4.8"/></svg>
-              </span>
-              <span class="rail-text">Members</span>
-            <% end %>
-            <% if on?(:decisions) %>
-            <%= link_to fd_decisions_path, class: "rail-item",
-                  aria: { current: ("page" if controller_path.start_with?("fd/decision")) } do %>
-              <span class="rail-ic" aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v14H6.5A1.5 1.5 0 0 0 5 18.5V4.5Z"/><path d="M5 18.5A1.5 1.5 0 0 0 6.5 20H19"/><path d="M8.5 7.5h7M8.5 11h4.5"/></svg>
-              </span>
-              <span class="rail-text">Decisions</span>
-            <% end %>
-            <% end %>
-            </div>
-          </nav>
-        </div>
+        <% sections = [] %>
+        <% sections << "layouts/rail_analytics" if on?(:analytics) %>
+        <% sections << "layouts/rail_fire" if fire_engine %>
+        <% sections.reverse! unless current_staff&.manager? %>
+        <% sections.each do |section| %>
+          <%= render section %>
         <% end %>
 
         <% if fire_engine %>
           <div class="rail-foot">
-            <% if current_staff&.may?("access.read") %>
-              <%= link_to fd_audit_path, class: "rail-item",
-                    aria: { current: ("page" if controller_path == "fd/audits") } do %>
-                <span class="rail-ic" aria-hidden="true">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h13l3 3v13H4z"/><path d="M8 10h8M8 14h8M8 18h5"/></svg>
-                </span>
-                <span class="rail-text">Audit log</span>
-              <% end %>
-            <% end %>
             <button type="button" class="rail-item rail-find" data-action="palette#open"
                     aria-label="Search cases, members, notes">
               <span class="rail-ic" aria-hidden="true">
@@ -170,9 +77,6 @@
         <div class="rhead">
           <div class="rtop">
             <div class="rhead-said">
-              <% if content_for?(:page_kicker) %>
-                <p class="rkicker"><%= content_for(:page_kicker) %></p>
-              <% end %>
               <% page_title = content_for(:page_title) || "Mnemosyne" %>
               <h1 class="rtitle" title="<%= page_title %>">
                 <%= yield :page_face %><%= page_title %>
