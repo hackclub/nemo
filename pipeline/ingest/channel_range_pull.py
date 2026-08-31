@@ -1,6 +1,6 @@
 import argparse
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 
@@ -19,8 +19,9 @@ RANGE_SQL = """
 INSERT INTO raw.channel_activity_snapshot
     (channel_id, window_start, window_end, source, messages_posted, messages_posted_by_members,
      members_who_posted, members_who_viewed, reactions_added, members_who_reacted,
-     huddles_initiated, total_members, full_members, guests)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+     huddles_initiated, total_members, full_members, guests,
+     date_created, last_message_at)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (channel_id, window_start, window_end, source) DO UPDATE SET
     messages_posted = EXCLUDED.messages_posted,
     messages_posted_by_members = EXCLUDED.messages_posted_by_members,
@@ -31,13 +32,30 @@ ON CONFLICT (channel_id, window_start, window_end, source) DO UPDATE SET
     huddles_initiated = EXCLUDED.huddles_initiated,
     total_members = EXCLUDED.total_members,
     full_members = EXCLUDED.full_members,
-    guests = EXCLUDED.guests
+    guests = EXCLUDED.guests,
+    date_created = EXCLUDED.date_created,
+    last_message_at = EXCLUDED.last_message_at
 """
 
 PRUNE_SQL = """
 DELETE FROM raw.channel_activity_snapshot
 WHERE source = %s AND (window_start, window_end) <> (%s, %s)
 """
+
+
+def stamp(value):
+    if value in (None, ""):
+        return None
+    try:
+        seconds = int(value)
+    except (TypeError, ValueError):
+        return None
+    if seconds <= 0:
+        return None
+    try:
+        return datetime.fromtimestamp(seconds, tz=timezone.utc)
+    except (OSError, OverflowError, ValueError):
+        return None
 
 
 def range_row(rec, start, end):
@@ -56,6 +74,8 @@ def range_row(rec, start, end):
         rec.get("total_members_count"),
         rec.get("full_members_count"),
         rec.get("guest_members_count"),
+        stamp(rec.get("date_create")),
+        stamp(rec.get("last_message_posted")),
     )
 
 

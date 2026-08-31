@@ -11,6 +11,8 @@ select
     huddles_initiated,
     total_members,
     full_members,
-    guests
+    guests,
+    date_created,
+    last_message_at
 from {{ source('raw', 'channel_activity_snapshot') }}
 where source = 'admin_analytics_channel_range'

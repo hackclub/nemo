@@ -250,7 +250,7 @@ def test_range_row_maps_chats_to_member_messages():
         "guest_members_count": 1578,
     }
     row = channel_range_pull.range_row(rec, WINDOW_START, WINDOW_END)
-    assert len(row) == 14
+    assert len(row) == 16
     assert row[0:4] == ("C1", WINDOW_START, WINDOW_END, channel_range_pull.SOURCE)
     assert row[4] == 151576
     assert row[5] == 9
@@ -265,6 +265,35 @@ def test_range_row_keeps_the_membership_the_response_already_carries():
            "full_members_count": 42717, "guest_members_count": 1578}
     row = channel_range_pull.range_row(rec, WINDOW_START, WINDOW_END)
     assert row[11:14] == (44295, 42717, 1578)
+
+
+def test_stamp_reads_slack_seconds_as_utc():
+    assert channel_range_pull.stamp(1768352025) == datetime(
+        2026, 1, 14, 0, 53, 45, tzinfo=timezone.utc)
+
+
+def test_stamp_treats_a_missing_date_as_nothing_rather_than_1970():
+    for empty in (None, "", 0):
+        assert channel_range_pull.stamp(empty) is None
+
+
+def test_stamp_reads_slacks_never_happened_marker_as_nothing():
+    assert channel_range_pull.stamp(-1) is None, \
+        "slack sends -1 for a channel nothing was ever posted in"
+
+
+def test_stamp_refuses_a_value_it_cannot_read():
+    for bad in ("not a stamp", 10 ** 20, [1]):
+        assert channel_range_pull.stamp(bad) is None
+
+
+def test_range_row_carries_the_dates_the_response_already_holds():
+    rec = {"channel_id": "C1", "date_create": 1768352025,
+           "last_message_posted": 1787964291}
+    row = channel_range_pull.range_row(rec, WINDOW_START, WINDOW_END)
+    assert row[14] == channel_range_pull.stamp(1768352025)
+    assert row[15] == channel_range_pull.stamp(1787964291)
+    assert row[14] < row[15]
 
 
 class FakeClient:
