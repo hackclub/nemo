@@ -11,7 +11,8 @@ class ChannelsController < ApplicationController
     "created" => "dim_channel.date_created",
     "messages" => "r.messages_posted_by_members",
     "posters" => "r.members_who_posted",
-    "viewers" => "r.members_who_viewed"
+    "viewers" => "r.members_who_viewed",
+    "quiet" => "r.last_message_at"
   }.freeze
 
   SPOKE_SHARE = "r.members_who_posted::numeric / NULLIF(r.total_members, 0)".freeze
@@ -20,7 +21,13 @@ class ChannelsController < ApplicationController
     "spoke_over_10" => ["Who spoke", "over 10%", "#{SPOKE_SHARE} > 0.10"],
     "spoke_under_2" => ["Who spoke", "under 2%", "#{SPOKE_SHARE} < 0.02"],
     "members_over_10000" => ["Members", "over 10,000", "r.total_members > 10000"],
-    "members_under_2000" => ["Members", "under 2,000", "r.total_members < 2000"]
+    "members_under_2000" => ["Members", "under 2,000", "r.total_members < 2000"],
+    "never_posted" => ["Last post", "never",
+                       "r.channel_id IS NOT NULL AND r.last_message_at IS NULL"],
+    "quiet_90d" => ["Last post", "over 90 days ago",
+                    "r.last_message_at < now() - interval '90 days'"],
+    "quiet_1y" => ["Last post", "over a year ago",
+                   "r.last_message_at < now() - interval '365 days'"]
   }.freeze
 
   QUIET_FLOOR = 25
@@ -29,7 +36,8 @@ class ChannelsController < ApplicationController
   RANGE_JOIN = "LEFT JOIN analytics.mart_channel_range r ON r.channel_id = dim_channel.channel_id".freeze
   RANGE_COLUMNS = "dim_channel.*, r.messages_posted_by_members AS range_messages, " \
                   "r.members_who_posted AS range_posters, r.total_members AS range_members, " \
-                  "r.members_who_viewed AS range_viewers".freeze
+                  "r.members_who_viewed AS range_viewers, " \
+                  "r.last_message_at AS range_last_post".freeze
 
   def index
     @q = params[:q].to_s.strip
