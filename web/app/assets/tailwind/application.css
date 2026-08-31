@@ -51,6 +51,7 @@
     --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-code: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
+    --t-mark: 0.625rem;
     --t-fine: 0.75rem;
     --t-small: 0.8125rem;
     --t-body: 0.875rem;
@@ -554,7 +555,7 @@
     align-items: center;
     gap: 6px;
     padding: 4px 5px 4px 9px;
-    font-size: 12px;
+    font-size: var(--t-small);
     color: var(--accent);
     background-color: var(--accent-soft);
     border: 1px solid var(--accent-line);
@@ -576,7 +577,7 @@
     border: 0;
     background: none;
     font: inherit;
-    font-size: 12px;
+    font-size: var(--t-small);
     line-height: 1;
     color: var(--accent);
     cursor: pointer;
@@ -595,7 +596,7 @@
   .gist {
     display: block;
     margin-top: 4px;
-    font-size: 11.5px;
+    font-size: var(--t-fine);
     color: var(--ink-3);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -649,14 +650,14 @@
 
   .subjcell .two-line b {
     font-family: var(--font-code);
-    font-size: 11.5px;
+    font-size: var(--t-small);
   }
 
   .mchip {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    font-size: 10.5px;
+    font-size: var(--t-fine);
     line-height: 1.7;
     border: 1px solid var(--line);
     border-radius: var(--r-pill);
@@ -671,7 +672,7 @@
   }
 
   .two-line .mchip {
-    font-size: 10.5px;
+    font-size: var(--t-fine);
     margin-top: 3px;
   }
 
@@ -773,7 +774,7 @@
   }
 
   .tile-v {
-    font-size: 21px;
+    font-size: var(--t-title);
     font-weight: 600;
     letter-spacing: -0.025em;
     margin-top: 11px;
@@ -2597,7 +2598,7 @@
   .token .avatar {
     width: 18px;
     height: 18px;
-    font-size: 9px;
+    font-size: var(--t-mark);
     font-weight: 700;
     background-color: var(--select);
     color: var(--select-on);
@@ -3320,12 +3321,12 @@
   }
 
   .person-row .two-line b {
-    font-size: 12.5px;
+    font-size: var(--t-small);
     font-weight: 600;
   }
 
   .person-row .two-line span {
-    font-size: 11.5px;
+    font-size: var(--t-fine);
     color: var(--ink-3);
   }
 
@@ -3448,7 +3449,7 @@
 
   .fstat-n {
     font-family: var(--font-code);
-    font-size: 19px;
+    font-size: var(--t-title);
     font-weight: 600;
     letter-spacing: -0.02em;
     line-height: 1;
@@ -3716,7 +3717,7 @@
   .row-avatar.av-lg {
     width: 30px;
     height: 30px;
-    font-size: 11px;
+    font-size: var(--t-fine);
     border-radius: 8px;
   }
 
@@ -3734,17 +3735,17 @@
     margin: 0 16px 11px 49px;
     padding: 2px 0 2px 11px;
     border-left: 2px solid var(--line);
-    font-size: 12px;
+    font-size: var(--t-small);
     color: var(--ink-2);
   }
 
   .person-note .note-body {
-    font-size: 12px;
+    font-size: var(--t-small);
     color: var(--ink-2);
   }
 
   .person-note .sub2 {
-    font-size: 11px;
+    font-size: var(--t-fine);
     color: var(--ink-4);
     margin-top: 3px;
   }
@@ -3828,7 +3829,7 @@
     border-radius: 50%;
     background-color: var(--card-2);
     color: var(--ink-2);
-    font-size: 9px;
+    font-size: var(--t-mark);
     font-weight: 700;
     flex: none;
   }
@@ -4123,7 +4124,7 @@
   .chat-pick .avatar {
     width: 18px;
     height: 18px;
-    font-size: var(--t-fine);
+    font-size: var(--t-mark);
   }
 
   .chat-pick-from {
@@ -5044,8 +5045,8 @@
     border-bottom: 1px solid var(--line-soft);
   }
 
-  .pm-head b { font-size: 13.5px; font-weight: 600; }
-  .pm-head span { font-size: 11.5px; color: var(--ink-3); }
+  .pm-head b { font-size: var(--t-body); font-weight: 600; }
+  .pm-head span { font-size: var(--t-fine); color: var(--ink-3); }
 
   .pm-x {
     margin-left: auto;
@@ -5088,7 +5089,7 @@
 
   .pm-stats .fstat b {
     display: block;
-    font-size: 19px;
+    font-size: var(--t-title);
     font-weight: 600;
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
@@ -5096,7 +5097,7 @@
 
   .pm-stats .fstat span {
     display: block;
-    font-size: 11px;
+    font-size: var(--t-fine);
     color: var(--ink-3);
     margin-top: 3px;
   }
@@ -5104,7 +5105,7 @@
   .pm-group { display: grid; gap: 6px; }
 
   .pm-label {
-    font-size: 11.5px;
+    font-size: var(--t-fine);
     color: var(--ink-2);
     font-weight: 500;
   }
@@ -5118,8 +5119,8 @@
     text-decoration: none;
   }
 
-  .pm-case .two-line b { font-size: 12.5px; font-weight: 600; }
-  .pm-case .two-line span { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+  .pm-case .two-line b { font-size: var(--t-small); font-weight: 600; }
+  .pm-case .two-line span { font-size: var(--t-fine); color: var(--ink-3); margin-top: 2px; }
 
   .pm-stats .fstat b.is-none { color: var(--ink-4); }
 
@@ -5137,8 +5138,8 @@
     gap: 7px;
   }
 
-  .pm-act-top b { font-size: 12px; font-weight: 600; }
-  .pm-act-said { font-size: 11.5px; color: var(--ink-3); }
+  .pm-act-top b { font-size: var(--t-small); font-weight: 600; }
+  .pm-act-said { font-size: var(--t-fine); color: var(--ink-3); }
 
   .field-label .seg-radio {
     display: flex;
@@ -5156,7 +5157,7 @@
 
   .note-line .note-said {
     font-weight: 400;
-    font-size: 12.5px;
+    font-size: var(--t-small);
     color: var(--ink);
   }
 
@@ -5400,7 +5401,7 @@
 
   .ax {
     font-family: var(--font-code);
-    font-size: 10px;
+    font-size: var(--t-mark);
     fill: var(--ink-3);
   }
 
@@ -6251,24 +6252,24 @@
   }
 
   .bf:last-child { border-right: 0; }
-  .bf .k { font-size: 11px; color: var(--ink-3); white-space: nowrap; }
+  .bf .k { font-size: var(--t-fine); color: var(--ink-3); white-space: nowrap; }
 
   .bf .v {
-    font-size: 15px;
+    font-size: var(--t-head);
     font-weight: 600;
     letter-spacing: -0.015em;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
 
-  .bf .s { font-size: 11.5px; color: var(--ink-4); white-space: nowrap; }
+  .bf .s { font-size: var(--t-fine); color: var(--ink-4); white-space: nowrap; }
   .bf.bad .v { color: var(--down); }
   .bf.good .v { color: var(--up); }
   .bf.push { margin-left: auto; border-right: 0; }
 
   .val {
     font-family: var(--font-code);
-    font-size: 12px;
+    font-size: var(--t-small);
     padding: 3px 8px;
     border-radius: 5px;
     border: 1px solid var(--line);
@@ -6299,7 +6300,7 @@
     align-items: end;
     border-bottom: 1px solid var(--line);
     background-color: var(--card-2);
-    font-size: 10.5px;
+    font-size: var(--t-fine);
     font-weight: 500;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -6314,7 +6315,7 @@
     min-width: 0;
     text-align: center;
     font-family: var(--font-code);
-    font-size: 9.5px;
+    font-size: var(--t-mark);
     letter-spacing: 0;
     text-transform: none;
     color: var(--ink-4);
@@ -6343,7 +6344,7 @@
 
   .skey b {
     font-family: var(--font-code);
-    font-size: 12px;
+    font-size: var(--t-small);
     font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -6351,7 +6352,7 @@
   }
 
   .skey .dot { align-self: center; }
-  .skey em { font-style: normal; font-size: 10.5px; color: var(--ink-4); white-space: nowrap; }
+  .skey em { font-style: normal; font-size: var(--t-fine); color: var(--ink-4); white-space: nowrap; }
 
   .dot {
     width: 6px;
@@ -6386,7 +6387,7 @@
 
   .snum {
     font-family: var(--font-code);
-    font-size: 11.5px;
+    font-size: var(--t-fine);
     text-align: right;
     font-variant-numeric: tabular-nums;
     color: var(--ink-2);
@@ -6396,7 +6397,7 @@
 
   .scar {
     color: var(--ink-4);
-    font-size: 9px;
+    font-size: var(--t-mark);
     text-align: center;
     transition: transform 120ms var(--ease-out);
   }
@@ -6413,7 +6414,7 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    font-size: 11.5px;
+    font-size: var(--t-fine);
     color: var(--ink-3);
   }
 
@@ -6435,24 +6436,24 @@
 
   .rung .ri {
     font-family: var(--font-code);
-    font-size: 10.5px;
+    font-size: var(--t-fine);
     color: var(--ink-4);
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
 
-  .rung .rn { font-size: 12.5px; min-width: 0; }
+  .rung .rn { font-size: var(--t-small); min-width: 0; }
 
   .rung .rn b {
     font-family: var(--font-code);
     font-weight: 500;
-    font-size: 12px;
+    font-size: var(--t-small);
   }
 
   .rung .rn span {
     display: block;
     color: var(--ink-4);
-    font-size: 10.5px;
+    font-size: var(--t-fine);
     margin-top: 1px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -6475,7 +6476,7 @@
   }
 
   .rung.run .rbar i { background-color: var(--accent); opacity: 1; }
-  .rung .rst { font-size: 11px; text-align: right; color: var(--ink-4); }
+  .rung .rst { font-size: var(--t-fine); text-align: right; color: var(--ink-4); }
   .rung.ok .rst { color: var(--up); }
   .rung.run .rst { color: var(--accent); font-weight: 500; }
 
@@ -6505,7 +6506,7 @@
     padding: 9px 16px;
     background-color: var(--card-2);
     border-bottom: 1px solid var(--line);
-    font-size: 10.5px;
+    font-size: var(--t-fine);
     font-weight: 500;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -6528,7 +6529,7 @@
 
   .exp-k {
     font-family: var(--font-code);
-    font-size: 10px;
+    font-size: var(--t-fine);
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--ink-4);
@@ -6539,7 +6540,7 @@
     display: grid;
     grid-template-columns: 96px minmax(0, 1fr);
     gap: 6px 12px;
-    font-size: 12.5px;
+    font-size: var(--t-small);
   }
 
   .facts2 dt { color: var(--ink-3); }
@@ -6548,10 +6549,10 @@
     margin: 0;
     color: var(--ink);
     font-family: var(--font-code);
-    font-size: 12px;
+    font-size: var(--t-small);
   }
 
-  .facts2 dd.plain { font-family: inherit; font-size: 12.5px; }
+  .facts2 dd.plain { font-family: inherit; font-size: var(--t-small); }
 
   .dialrow {
     display: grid;
@@ -6563,18 +6564,18 @@
   }
 
   .dialrow:last-of-type { border-bottom: 0; }
-  .dialrow .dn { font-size: 12.5px; }
+  .dialrow .dn { font-size: var(--t-small); }
 
   .dialrow .dn span {
     display: block;
-    font-size: 11px;
+    font-size: var(--t-fine);
     color: var(--ink-4);
     margin-top: 1px;
   }
 
   .dialrow .dd {
     font-family: var(--font-code);
-    font-size: 11px;
+    font-size: var(--t-fine);
     color: var(--ink-4);
   }
 
@@ -6585,7 +6586,7 @@
     border: 1px solid var(--line);
     border-radius: var(--r-ctl);
     font-family: var(--font-code);
-    font-size: 11.5px;
+    font-size: var(--t-fine);
     line-height: 1.62;
     color: var(--ink-2);
     overflow-x: auto;
@@ -6614,7 +6615,7 @@
   .tgrid.thead {
     background-color: var(--card-2);
     border-bottom: 1px solid var(--line);
-    font-size: 10.5px;
+    font-size: var(--t-fine);
     font-weight: 500;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -6622,17 +6623,17 @@
   }
 
   .tgrid.thead:hover { background-color: var(--card-2); }
-  .tgrid .tn { font-size: 12.5px; min-width: 0; }
+  .tgrid .tn { font-size: var(--t-small); min-width: 0; }
 
   .tgrid .tn b {
     font-family: var(--font-code);
     font-weight: 500;
-    font-size: 12px;
+    font-size: var(--t-small);
   }
 
   .tgrid .tn span {
     display: block;
-    font-size: 10.5px;
+    font-size: var(--t-fine);
     color: var(--ink-4);
     margin-top: 1px;
   }
@@ -6646,12 +6647,12 @@
 
   .tcell .was {
     font-family: var(--font-code);
-    font-size: 10.5px;
+    font-size: var(--t-fine);
     color: var(--ink-4);
     white-space: nowrap;
   }
 
-  .tcell .none { font-size: 11px; color: var(--ink-4); }
+  .tcell .none { font-size: var(--t-fine); color: var(--ink-4); }
 
   .cov {
     display: flex;
@@ -6665,6 +6666,6 @@
   .cov i.un { background-color: var(--ink-4); opacity: 0.55; }
   .cov i.no { background-color: var(--line); }
 
-  .swatch { display: inline-flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--ink-3); }
+  .swatch { display: inline-flex; align-items: center; gap: 8px; font-size: var(--t-fine); color: var(--ink-3); }
   .swatch i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
 }
