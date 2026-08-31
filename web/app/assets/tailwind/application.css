@@ -92,16 +92,16 @@
     --line-soft: #efeff3;
     --ink: #17171c;
     --ink-2: #55555f;
-    --ink-3: #7a7a86;
+    --ink-3: #6d6d78;
     --ink-4: #8b8b99;
     --accent: #6c4ef5;
     --accent-deep: #8a72f8;
     --accent-on: #ffffff;
     --accent-soft: #f1eeff;
     --accent-line: #d9d1fb;
-    --good: #1f9d6b;
+    --good: #107556;
     --good-soft: #e7f5ef;
-    --warn: #d2740a;
+    --warn: #a25508;
     --warn-soft: #fbf0e3;
     --off: #b9b9c6;
     --up: #157a52;
@@ -146,8 +146,8 @@
       --line-soft: #24242d;
       --ink: #ecedf2;
       --ink-2: #a9aab6;
-      --ink-3: #7e7f8c;
-      --ink-4: #5d5e6b;
+      --ink-3: #8e8f9c;
+      --ink-4: #6c6d7a;
       --accent: #9b84ff;
       --accent-deep: #7c62f0;
       --accent-on: #16121f;
@@ -194,8 +194,8 @@
     --line-soft: #24242d;
     --ink: #ecedf2;
     --ink-2: #a9aab6;
-    --ink-3: #7e7f8c;
-    --ink-4: #5d5e6b;
+    --ink-3: #8e8f9c;
+    --ink-4: #6c6d7a;
     --accent: #9b84ff;
     --accent-deep: #7c62f0;
     --accent-on: #16121f;
@@ -301,7 +301,7 @@
     font-weight: 500;
     letter-spacing: 0.07em;
     text-transform: uppercase;
-    color: var(--ink-4);
+    color: var(--ink-3);
     margin: 0 0 var(--s-3xs);
     padding: 0 6px;
     white-space: nowrap;
@@ -401,7 +401,7 @@
     font-family: var(--font-code);
     font-size: var(--t-fine);
     letter-spacing: -0.02em;
-    color: var(--ink-4);
+    color: var(--ink-3);
     width: 15px;
     flex: none;
   }
@@ -605,7 +605,7 @@
 
   .gist i {
     font-style: normal;
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   .gist q {
@@ -624,7 +624,7 @@
 
   .needs-said {
     font-size: var(--t-fine);
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   .lane-said .gist {
@@ -686,7 +686,7 @@
     inset-inline-start: 0;
     margin-top: 1px;
     font-size: var(--t-fine);
-    color: var(--ink-4);
+    color: var(--ink-3);
     white-space: nowrap;
     overflow: visible;
   }
@@ -844,7 +844,7 @@
   }
 
   .qsearch-in::placeholder {
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   .qsearch-in:focus {
@@ -3426,7 +3426,7 @@
   .rooms-shut {
     margin-inline-start: 6px;
     font-size: var(--t-fine);
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   .fstats {
@@ -3746,7 +3746,7 @@
 
   .person-note .sub2 {
     font-size: var(--t-fine);
-    color: var(--ink-4);
+    color: var(--ink-3);
     margin-top: 3px;
   }
 
@@ -5122,7 +5122,7 @@
   .pm-case .two-line b { font-size: var(--t-small); font-weight: 600; }
   .pm-case .two-line span { font-size: var(--t-fine); color: var(--ink-3); margin-top: 2px; }
 
-  .pm-stats .fstat b.is-none { color: var(--ink-4); }
+  .pm-stats .fstat b.is-none { color: var(--ink-3); }
 
   .pm-act {
     display: grid;
@@ -5211,7 +5211,7 @@
   }
 
   .why-none {
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   .ledger-why {
@@ -5839,7 +5839,7 @@
     font-weight: 500;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: var(--ink-4);
+    color: var(--ink-3);
     text-align: left;
     padding: 9px 14px;
     background-color: var(--card-2);
@@ -6262,7 +6262,7 @@
     white-space: nowrap;
   }
 
-  .bf .s { font-size: var(--t-fine); color: var(--ink-4); white-space: nowrap; }
+  .bf .s { font-size: var(--t-fine); color: var(--ink-3); white-space: nowrap; }
   .bf.bad .v { color: var(--down); }
   .bf.good .v { color: var(--up); }
   .bf.push { margin-left: auto; border-right: 0; }
@@ -6304,7 +6304,7 @@
     font-weight: 500;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   .grid-h .r { text-align: right; }
@@ -6318,7 +6318,7 @@
     font-size: var(--t-mark);
     letter-spacing: 0;
     text-transform: none;
-    color: var(--ink-4);
+    color: var(--ink-3);
     overflow: hidden;
   }
 
@@ -6352,7 +6352,7 @@
   }
 
   .skey .dot { align-self: center; }
-  .skey em { font-style: normal; font-size: var(--t-fine); color: var(--ink-4); white-space: nowrap; }
+  .skey em { font-style: normal; font-size: var(--t-fine); color: var(--ink-3); white-space: nowrap; }
 
   .dot {
     width: 6px;
@@ -6437,7 +6437,7 @@
   .rung .ri {
     font-family: var(--font-code);
     font-size: var(--t-fine);
-    color: var(--ink-4);
+    color: var(--ink-3);
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
@@ -6452,7 +6452,7 @@
 
   .rung .rn span {
     display: block;
-    color: var(--ink-4);
+    color: var(--ink-3);
     font-size: var(--t-fine);
     margin-top: 1px;
     overflow: hidden;
@@ -6476,7 +6476,7 @@
   }
 
   .rung.run .rbar i { background-color: var(--accent); opacity: 1; }
-  .rung .rst { font-size: var(--t-fine); text-align: right; color: var(--ink-4); }
+  .rung .rst { font-size: var(--t-fine); text-align: right; color: var(--ink-3); }
   .rung.ok .rst { color: var(--up); }
   .rung.run .rst { color: var(--accent); font-weight: 500; }
 
@@ -6510,7 +6510,7 @@
     font-weight: 500;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   .lhead .r,
@@ -6532,7 +6532,7 @@
     font-size: var(--t-fine);
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--ink-4);
+    color: var(--ink-3);
     margin-bottom: 10px;
   }
 
@@ -6569,14 +6569,14 @@
   .dialrow .dn span {
     display: block;
     font-size: var(--t-fine);
-    color: var(--ink-4);
+    color: var(--ink-3);
     margin-top: 1px;
   }
 
   .dialrow .dd {
     font-family: var(--font-code);
     font-size: var(--t-fine);
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   .exp pre {
@@ -6619,7 +6619,7 @@
     font-weight: 500;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   .tgrid.thead:hover { background-color: var(--card-2); }
@@ -6634,7 +6634,7 @@
   .tgrid .tn span {
     display: block;
     font-size: var(--t-fine);
-    color: var(--ink-4);
+    color: var(--ink-3);
     margin-top: 1px;
   }
 
@@ -6648,11 +6648,11 @@
   .tcell .was {
     font-family: var(--font-code);
     font-size: var(--t-fine);
-    color: var(--ink-4);
+    color: var(--ink-3);
     white-space: nowrap;
   }
 
-  .tcell .none { font-size: var(--t-fine); color: var(--ink-4); }
+  .tcell .none { font-size: var(--t-fine); color: var(--ink-3); }
 
   .cov {
     display: flex;
