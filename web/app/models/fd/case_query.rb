@@ -14,7 +14,8 @@ module Fd
       "quarter" => "this quarter", "year" => "this year"
     }.freeze
     SORT = {
-      "opened" => "when it opened", "case" => "case number", "actions" => "most actions"
+      "opened" => "when it opened", "resolved" => "when it closed",
+      "case" => "case number", "actions" => "most actions"
     }.freeze
     DIRS = %w[asc desc].freeze
     ASSIGNEE = { "anyone" => "anyone", "me" => "me", "nobody" => "nobody" }.freeze
@@ -43,7 +44,7 @@ module Fd
       "unassigned" => { "status" => "open", "assignee" => "nobody" },
       "acted" => { "status" => "open", "actions" => "some" },
       "aging" => { "status" => "open", "age" => "5d" },
-      "resolved" => { "status" => "resolved" },
+      "resolved" => { "status" => "resolved", "sort" => "resolved", "dir" => "desc" },
       "everything" => {}
     }.freeze
 
@@ -79,7 +80,7 @@ module Fd
     end
 
     def filtered?
-      FACET_KEYS.excluding("sort").any? { |key| !default?(key) }
+      FACET_KEYS.excluding("sort", "dir").any? { |key| !default?(key) }
     end
 
     def view
@@ -365,6 +366,9 @@ module Fd
       case self["sort"]
       when "case" then scope.order(Arel.sql("fd.cases.id #{way}"))
       when "actions" then scope.order(Arel.sql(ACTION_COUNT_SQL)).order(:opened_at)
+      when "resolved"
+        scope.order(Arel.sql("fd.cases.resolved_at #{way} NULLS LAST"))
+          .order(Arel.sql("fd.cases.opened_at #{way}"))
       else scope.order(Arel.sql("fd.cases.opened_at #{way}"))
       end
     end

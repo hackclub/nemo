@@ -72,7 +72,7 @@
       <% end %>
     </td>
     <td class="col-state"><%= case_status_chip(kase) %></td>
-    <td>
+    <td class="col-who">
       <% if kase.assigned? %>
         <%= assignee_faces(kase.assignee_user_ids) %>
       <% elsif kase.resolved? %>

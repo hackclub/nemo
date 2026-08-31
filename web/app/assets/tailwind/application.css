@@ -1598,22 +1598,27 @@
 
   .segmented {
     display: inline-flex;
+    align-items: stretch;
     gap: 2px;
-    padding: 2px;
+    height: var(--chat-ctl);
+    padding: 0;
     border: 1px solid var(--line);
     border-radius: var(--r-ctl);
     background-color: var(--card-2);
+    overflow: hidden;
   }
 
   .segmented button,
   .segmented a {
+    display: inline-flex;
+    align-items: center;
     font-family: inherit;
     font-size: var(--t-small);
     font-weight: 600;
     color: var(--ink-2);
-    padding: 4px 10px;
+    padding: 0 12px;
     border: 0;
-    border-radius: 6px;
+    border-radius: 0;
     background: transparent;
     cursor: pointer;
     white-space: nowrap;
@@ -4609,6 +4614,14 @@
     display: inline-flex;
     align-items: center;
     gap: var(--s-2xs);
+    max-width: 100%;
+  }
+
+  .face-name .handle {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .queue-table .tick {
@@ -5691,6 +5704,7 @@
   .data-table .col-date { min-width: 7rem; }
   .data-table .col-btn { min-width: 3rem; }
   .data-table .col-state { min-width: 6rem; }
+  .data-table .col-who { min-width: 9rem; }
   .data-table .col-role { min-width: 7rem; }
 
   .data-table .switch {
