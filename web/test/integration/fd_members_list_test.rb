@@ -257,6 +257,6 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     make_case(subject: "UOPEN", opened_at: 2.days.ago)
     get fd_members_path
 
-    assert_select "td .swatch", text: "open case"
+    assert_select "td .state", text: "open case"
   end
 end

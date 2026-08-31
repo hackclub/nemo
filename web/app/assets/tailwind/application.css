@@ -299,8 +299,6 @@
   .rail-label {
     font-size: var(--t-fine);
     font-weight: 500;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
     color: var(--ink-3);
     margin: 0 0 var(--s-3xs);
     padding: 0 6px;
@@ -315,23 +313,10 @@
     padding: 4px 14px 10px;
   }
 
-  .brand-mark {
-    width: 22px;
-    height: 22px;
-    flex: none;
-    border-radius: 6px;
-    background-color: var(--accent);
-    display: grid;
-    place-items: center;
-    color: var(--accent-on);
-    font-weight: 600;
-    font-size: var(--t-small);
-  }
-
   .brand-name {
     font-weight: 600;
-    font-size: var(--t-body);
-    letter-spacing: -0.01em;
+    font-size: var(--t-head);
+    letter-spacing: -0.015em;
   }
 
   .rail-nav {
@@ -398,7 +383,6 @@
   }
 
   .rail-ix {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     letter-spacing: -0.02em;
     color: var(--ink-3);
@@ -416,7 +400,6 @@
   }
 
   .rail-badge {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     font-weight: 500;
     background-color: var(--count);
@@ -484,10 +467,7 @@
   }
 
   .rkicker {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
     color: var(--accent);
     margin: 0 0 6px;
   }
@@ -649,7 +629,6 @@
   }
 
   .subjcell .two-line b {
-    font-family: var(--font-code);
     font-size: var(--t-small);
   }
 
@@ -761,7 +740,6 @@
   }
 
   .tile-t {
-    font-family: var(--font-code);
     font-size: var(--t-small);
     font-weight: 500;
     color: var(--ink);
@@ -984,7 +962,6 @@
 
   .synthetic-meta {
     color: color-mix(in oklab, var(--warn) 70%, var(--ink));
-    font-family: var(--font-code);
     font-size: var(--t-small);
   }
 
@@ -1233,13 +1210,15 @@
     text-overflow: ellipsis;
   }
 
-  .chip-dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background-color: currentColor;
-    flex: none;
+  .state {
+    font-size: var(--t-small);
+    font-weight: 600;
+    white-space: nowrap;
   }
+
+  .state-crit { color: var(--sev-crit); }
+  .state-warn { color: var(--warn); }
+  .state-off { color: var(--ink-3); font-weight: 400; }
 
   .chip-good { background-color: var(--good-soft); color: var(--good); border-color: transparent; }
   .chip-warn { background-color: var(--warn-soft); color: var(--warn); border-color: transparent; }
@@ -1255,6 +1234,24 @@
     font-family: var(--font-code);
     font-size: var(--t-small);
     color: var(--ink-3);
+  }
+
+  .rail-badge,
+  .lane-head b,
+  .lane-id,
+  .msg-at,
+  .said-at,
+  .nights span,
+  .tip .row b,
+  .skey b,
+  .rung .rn b,
+  .tgrid .tn b,
+  .dialrow .dd,
+  .facts2 dd,
+  .tcell .was,
+  .tile-t,
+  .ax {
+    font-variant-numeric: tabular-nums;
   }
 
   .subject {
@@ -1315,7 +1312,6 @@
   }
 
   .thr-where {
-    font-family: var(--font-code);
     font-size: var(--t-small);
     font-weight: 700;
     color: var(--ink);
@@ -1377,11 +1373,8 @@
   }
 
   .sheet-day {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     font-weight: 500;
-    letter-spacing: 0.11em;
-    text-transform: uppercase;
     color: var(--ink-3);
     margin: 0;
     padding: var(--s-xs) 0 var(--s-2xs);
@@ -1415,14 +1408,12 @@
   }
 
   .sheet-at {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     color: var(--ink-3);
     font-variant-numeric: tabular-nums;
   }
 
   .sheet-mark {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     font-weight: 600;
     letter-spacing: 0.06em;
@@ -1530,7 +1521,6 @@
   }
 
   .msg-at {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     color: var(--ink-3);
     margin-inline-start: 5px;
@@ -2057,8 +2047,6 @@
 
   .palette-group {
     font-size: var(--t-fine);
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
     color: var(--ink-3);
     font-weight: 500;
     padding: var(--s-2xs) 14px 3px;
@@ -2287,11 +2275,8 @@
   }
 
   .menu-group {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
     color: var(--ink-3);
     margin: 0;
     padding: 10px 9px 3px;
@@ -2704,11 +2689,8 @@
   }
 
   .facts-h {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
     color: var(--ink-3);
     padding: 0 2px;
     margin: 0;
@@ -2785,11 +2767,8 @@
   .facts-grid .cell:last-child { border-bottom-right-radius: 9px; }
 
   .facts-grid .fg-k {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     font-weight: 500;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
     color: var(--ink-3);
   }
 
@@ -2900,11 +2879,8 @@
     padding: 9px var(--s-sm) 7px;
     background-color: var(--card-2);
     border-bottom: 1px solid var(--line);
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
     color: var(--ink-3);
     text-align: start;
   }
@@ -3059,7 +3035,6 @@
   }
 
   .view-count {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     color: var(--ink-3);
     font-weight: 500;
@@ -3448,7 +3423,6 @@
   }
 
   .fstat-n {
-    font-family: var(--font-code);
     font-size: var(--t-title);
     font-weight: 600;
     letter-spacing: -0.02em;
@@ -3511,11 +3485,8 @@
   }
 
   .standing-t {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
     color: var(--warn);
     margin: 0;
   }
@@ -3538,7 +3509,6 @@
   }
 
   .seg-count {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     color: var(--ink-3);
     margin-inline-start: 5px;
@@ -3556,11 +3526,8 @@
   }
 
   .record-month {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     font-weight: 500;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
     color: var(--ink-3);
     margin: 0;
     padding: var(--s-xs) 16px var(--s-3xs);
@@ -3586,7 +3553,6 @@
   }
 
   .record-day {
-    font-family: var(--font-code);
     font-size: var(--t-small);
     color: var(--ink-2);
     font-variant-numeric: tabular-nums;
@@ -3760,8 +3726,6 @@
 
   .band-label {
     font-size: var(--t-fine);
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
     font-weight: 500;
     color: var(--ink-3);
   }
@@ -4212,7 +4176,6 @@
   }
 
   .said-at {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     font-weight: 400;
     color: var(--ink-3);
@@ -5180,8 +5143,6 @@
 
   .acts-h {
     font-size: var(--t-fine);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
     color: var(--ink-3);
     margin-bottom: 8px;
   }
@@ -5347,8 +5308,6 @@
   .lbl {
     font-size: var(--t-small);
     font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
     color: var(--ink-3);
     margin-bottom: 6px;
   }
@@ -5400,7 +5359,6 @@
   .chart svg { display: block; width: 100%; overflow: visible; }
 
   .ax {
-    font-family: var(--font-code);
     font-size: var(--t-mark);
     fill: var(--ink-3);
   }
@@ -5452,7 +5410,6 @@
 
   .tip .row b {
     margin-inline-start: auto;
-    font-family: var(--font-code);
     color: var(--ink);
     font-weight: 500;
   }
@@ -5490,7 +5447,6 @@
   .inbar.soft i { background-color: var(--off); }
 
   .inbar > span:last-child {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     color: var(--ink-3);
     text-align: end;
@@ -5651,7 +5607,6 @@
   }
 
   .lane-head b {
-    font-family: var(--font-code);
     font-weight: 400;
     color: var(--ink-3);
   }
@@ -5685,7 +5640,6 @@
   }
 
   .lane-id {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     color: var(--ink-3);
     display: flex;
@@ -5834,12 +5788,9 @@
   }
 
   .data-table thead th {
-    font-family: var(--font-code);
-    font-size: var(--t-fine);
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--ink-3);
+    font-size: var(--t-small);
+    font-weight: 600;
+    color: var(--ink-2);
     text-align: left;
     padding: 12px var(--s-sm);
     background-color: var(--card-2);
@@ -5917,7 +5868,6 @@
   .data-table td.num,
   .data-table td.col-num {
     text-align: right;
-    font-family: var(--font-code);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--ink);
@@ -6168,16 +6118,12 @@
     margin: 0 0 var(--s-md);
   }
 
-  .auth-mark {
-    width: 40px;
-    height: 40px;
-    border-radius: 11px;
-    background-color: var(--accent);
-    color: var(--accent-on);
-    display: grid;
-    place-items: center;
-    font-weight: 700;
-    margin-inline: auto;
+  .auth-word {
+    display: block;
+    font-size: var(--t-title);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--ink);
   }
 
   .auth-card .auth-alt {
@@ -6268,7 +6214,6 @@
   .bf.push { margin-left: auto; border-right: 0; }
 
   .val {
-    font-family: var(--font-code);
     font-size: var(--t-small);
     padding: 3px 8px;
     border-radius: 5px;
@@ -6300,11 +6245,9 @@
     align-items: end;
     border-bottom: 1px solid var(--line);
     background-color: var(--card-2);
-    font-size: var(--t-fine);
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--ink-3);
+    font-size: var(--t-small);
+    font-weight: 600;
+    color: var(--ink-2);
   }
 
   .grid-h .r { text-align: right; }
@@ -6314,7 +6257,6 @@
     flex: 1 1 0;
     min-width: 0;
     text-align: center;
-    font-family: var(--font-code);
     font-size: var(--t-mark);
     letter-spacing: 0;
     text-transform: none;
@@ -6343,7 +6285,6 @@
   }
 
   .skey b {
-    font-family: var(--font-code);
     font-size: var(--t-small);
     font-weight: 500;
     overflow: hidden;
@@ -6386,7 +6327,6 @@
   .srow:hover .cells i { transform: scaleY(1.12); }
 
   .snum {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     text-align: right;
     font-variant-numeric: tabular-nums;
@@ -6435,7 +6375,6 @@
   .rung:hover { background-color: var(--hover); }
 
   .rung .ri {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     color: var(--ink-3);
     text-align: right;
@@ -6445,7 +6384,6 @@
   .rung .rn { font-size: var(--t-small); min-width: 0; }
 
   .rung .rn b {
-    font-family: var(--font-code);
     font-weight: 500;
     font-size: var(--t-small);
   }
@@ -6506,11 +6444,9 @@
     padding: 9px 16px;
     background-color: var(--card-2);
     border-bottom: 1px solid var(--line);
-    font-size: var(--t-fine);
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--ink-3);
+    font-size: var(--t-small);
+    font-weight: 600;
+    color: var(--ink-2);
   }
 
   .lhead .r,
@@ -6528,10 +6464,7 @@
   .exp > div + div { border-left: 1px solid var(--line-soft); }
 
   .exp-k {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
     color: var(--ink-3);
     margin-bottom: 10px;
   }
@@ -6548,7 +6481,6 @@
   .facts2 dd {
     margin: 0;
     color: var(--ink);
-    font-family: var(--font-code);
     font-size: var(--t-small);
   }
 
@@ -6574,7 +6506,6 @@
   }
 
   .dialrow .dd {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     color: var(--ink-3);
   }
@@ -6586,8 +6517,8 @@
     border: 1px solid var(--line);
     border-radius: var(--r-ctl);
     font-family: var(--font-code);
-    font-size: var(--t-fine);
-    line-height: 1.62;
+    font-size: var(--t-small);
+    line-height: 1.7;
     color: var(--ink-2);
     overflow-x: auto;
     white-space: pre-wrap;
@@ -6615,18 +6546,15 @@
   .tgrid.thead {
     background-color: var(--card-2);
     border-bottom: 1px solid var(--line);
-    font-size: var(--t-fine);
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--ink-3);
+    font-size: var(--t-small);
+    font-weight: 600;
+    color: var(--ink-2);
   }
 
   .tgrid.thead:hover { background-color: var(--card-2); }
   .tgrid .tn { font-size: var(--t-small); min-width: 0; }
 
   .tgrid .tn b {
-    font-family: var(--font-code);
     font-weight: 500;
     font-size: var(--t-small);
   }
@@ -6646,7 +6574,6 @@
   }
 
   .tcell .was {
-    font-family: var(--font-code);
     font-size: var(--t-fine);
     color: var(--ink-3);
     white-space: nowrap;

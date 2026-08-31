@@ -182,17 +182,14 @@ module FdHelper
   end
 
   def member_standing_swatch(row)
-    word, tint =
-      if row.open_cases.positive? then ["open case", "var(--series-3)"]
-      elsif row.in_force.positive? then ["in force", "var(--down)"]
-      elsif row.notes.positive? || row.cases.positive? then ["noted", "var(--series-3)"]
-      else ["clean", "var(--series-2)"]
+    word, tone =
+      if row.open_cases.positive? then ["open case", "state-warn"]
+      elsif row.in_force.positive? then ["in force", "state-crit"]
+      elsif row.notes.positive? || row.cases.positive? then ["noted", "state-warn"]
+      else ["clean", "state-off"]
       end
 
-    tag.span(class: "swatch") do
-      concat tag.i(nil, style: "background-color: #{tint}")
-      concat word
-    end
+    tag.span(word, class: "state #{tone}")
   end
 
   def member_state_chips(row)
@@ -201,7 +198,7 @@ module FdHelper
     chips << tag.span("#{row.in_force} in force", class: "chip chip-warn") if
       row.in_force.positive?
     if chips.empty? && row.subject_of.zero? && row.logged_in.zero?
-      chips << tag.span("nothing on record", class: "chip chip-good")
+      chips << tag.span("nothing on record", class: "chip chip-off")
     end
     chips << tag.span("resolved", class: "chip chip-off") if chips.empty?
     safe_join(chips, " ")
@@ -901,9 +898,9 @@ module FdHelper
   end
 
   def case_status_chip(kase)
-    return tag.span(kase.resolution.tr("_", " "), class: "chip chip-off") if kase.resolved?
+    return tag.span(kase.resolution.tr("_", " "), class: "state state-off") if kase.resolved?
 
-    tag.span(safe_join([tag.span(class: "chip-dot"), "open"]), class: "chip chip-crit")
+    tag.span("open", class: "state state-crit")
   end
 
   def case_head_meta(kase, reports)
