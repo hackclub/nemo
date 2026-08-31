@@ -1,5 +1,31 @@
 <% content_for :page_title, "Public channels" %>
 <div class="stack">
+  <% if @bands.any? %>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">Channels activity</h2>
+        </div>
+      </div>
+      <div class="cols c-3">
+        <% @bands.each do |label, rows| %>
+          <div>
+            <p class="acts-h"><%= label %></p>
+            <div
+              data-controller="svg-chart"
+              data-svg-chart-kind-value="bars"
+              data-svg-chart-height-value="180"
+              data-svg-chart-data-value="<%= {
+                labels: rows.map(&:activity_band),
+                datasets: [{ label: "channels", data: rows.map(&:channels) }]
+              }.to_json %>"
+            ></div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
   <% if @quiet_rooms.any? %>
     <div class="card card-flush">
       <div class="card-head">

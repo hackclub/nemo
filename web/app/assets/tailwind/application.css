@@ -5298,8 +5298,14 @@
     grid-template-columns: minmax(0, 1fr) 272px;
   }
 
+  .c-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--s-md);
+  }
+
   @media (max-width: 820px) {
     .c-2 { grid-template-columns: minmax(0, 1fr); }
+    .c-3 { grid-template-columns: minmax(0, 1fr); }
   }
 
   .lbl {

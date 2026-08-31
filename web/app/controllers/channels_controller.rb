@@ -54,6 +54,8 @@ class ChannelsController < ApplicationController
     @has_more = (@page + 1) * PER_PAGE < @total
     @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
 
+    @bands = Analytics::MartChannelBands.by_measure
+
     @quiet_page = [params[:quiet_page].to_i, 1].max
     @quiet_total = quiet_scope.count
     @quiet_pages = [(@quiet_total / QUIET_LIMIT.to_f).ceil, 1].max
