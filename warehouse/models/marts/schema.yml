@@ -91,6 +91,34 @@ models:
         data_type: boolean
       - name: metric_version
         data_type: text
+  - name: mart_channel_bands
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: measure
+        data_type: text
+        data_tests: [not_null]
+      - name: measure_label
+        data_type: text
+      - name: measure_order
+        data_type: integer
+      - name: band_order
+        data_type: integer
+        data_tests: [not_null]
+      - name: activity_band
+        data_type: text
+      - name: channels
+        data_type: bigint
+      - name: window_start
+        data_type: date
+      - name: window_end
+        data_type: date
+      - name: metric_version
+        data_type: text
+    data_tests:
+      - unique:
+          column_name: "measure || '-' || band_order"
   - name: mart_channel_range
     config:
       contract:
