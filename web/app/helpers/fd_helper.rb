@@ -1149,6 +1149,13 @@ module FdHelper
     "decision/dropped" => "Dropped",
     "decision/settled" => "Settled",
     "decision/superseded" => "Retired",
+    "consent/granted" => "Opted in to",
+    "consent/withheld" => "Opted out of",
+    "api/checked" => "Checked",
+    "api/setting_changed" => "Changed the",
+    "api/token_minted" => "Generated a token,",
+    "api/token_rate_set" => "Set the rate on",
+    "api/token_revoked" => "Revoked a token,",
     "decision_thread/attached" => "Linked a thread to",
     "decision_thread/detached" => "Unlinked a thread from",
     "grant/granted" => "Gave access to",
@@ -1213,12 +1220,62 @@ module FdHelper
     case deed.kind
     when "case" then link_to deed.about, fd_case_path(deed.id), class: "lnk"
     when "decision" then link_to deed.about, fd_decision_path(deed.id), class: "lnk"
+    when "capability" then deed.about
     else member_link(deed.id)
     end
   end
 
   def deed_said(deed)
     [deed.said, ("on #{names[deed.who]}" if deed.who.present?)].compact.join(" ")
+  end
+
+  DIAL_LABELS = {
+    "rate_per_minute" => "Requests a minute, per token",
+    "batch_max" => "People per batch call",
+    "tokens_per_owner" => "Live tokens per owner"
+  }.freeze
+
+  def token_life_line(token)
+    return "never expires" if token.expires_at.nil?
+
+    "expires #{token.expires_at.strftime('%-d %b %Y')}"
+  end
+
+  def dial_label(key)
+    DIAL_LABELS.fetch(key, key.tr("_", " "))
+  end
+
+  def api_state_chip
+    on = Fd::Flag.on?(:public_api)
+    tag.span(class: "chip #{on ? 'chip-good' : 'chip-off'}") do
+      tag.span(class: "chip-dot", aria: { hidden: true }) + (on ? "On" : "Off")
+    end
+  end
+
+  def withheld_share(withheld, checks)
+    return "none yet" if checks.zero?
+
+    "#{(withheld * 100.0 / checks).round(1)}% of checks"
+  end
+
+  def synced_line(at)
+    return "never" if at.nil?
+
+    swept = Api::ChannelSweep.count
+    "#{at.strftime('%-d %b %H:%M')}, #{swept} #{'channel'.pluralize(swept)}"
+  end
+
+  def dial_reach(key, tokens)
+    live = tokens.reject(&:revoked?)
+    return "#{live.count { |one| one.rate_limit.nil? }} of #{live.size}" if key == "rate_per_minute"
+
+    "every caller"
+  end
+
+  def dial_change(setting)
+    return "never" if setting.nil? || setting.changed_by.blank?
+
+    "#{names[setting.changed_by]}, #{setting.changed_at.strftime('%-d %b')}"
   end
 
   def acted_line(at)

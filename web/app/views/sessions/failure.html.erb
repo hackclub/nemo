@@ -1,14 +1,15 @@
 <h1>Access denied</h1>
 
 <% if @message.in?(["not_allowlisted", "no_access"]) %>
-  <p>You are not allowlisted. Ask a community manager to grant you a role.</p>
+  <p>You are not allowlisted for the dashboard. Ask a community manager for a role.</p>
 <% else %>
   <p>Something went wrong signing in.</p>
   <p><span class="chip chip-off"><%= @message %></span></p>
 <% end %>
 
 <% if current_staff %>
-  <%= button_to "Sign out", logout_path, method: :delete, class: "btn w-full" %>
+  <%= link_to "Go to your API settings", you_api_path, class: "btn btn-primary w-full" %>
+  <%= button_to "Sign out", logout_path, method: :delete, class: "btn w-full mt-2" %>
 <% else %>
   <%= link_to "Back to sign in", login_path, class: "btn w-full" %>
 <% end %>

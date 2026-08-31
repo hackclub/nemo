@@ -29,6 +29,7 @@ ALLOWED_METHODS = {
     "admin": frozenset(
         {
             "admin.users.list",
+            "admin.roles.listAssignments",
             "search.messages",
             "conversations.replies",
         }
@@ -42,6 +43,11 @@ WEB_METHODS = {
         {
             "admin.analytics.getChannelAnalytics",
             "admin.analytics.getAvailableDateRange",
+        }
+    ),
+    "admin": frozenset(
+        {
+            "admin.roles.listAssignments",
         }
     ),
 }

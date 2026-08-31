@@ -10,6 +10,22 @@ Rails.application.routes.draw do
     get "dev/be/:user_id", to: "dev_sessions#create", as: :dev_be
   end
 
+  namespace :api do
+    namespace :v1 do
+      resource :token, only: [:show], controller: "tokens"
+      get "channels/:channel_id/managers/:user_id", to: "channel_managers#show",
+        as: :channel_manager
+    end
+  end
+
+  get "docs", to: "docs#show", as: :docs
+
+  namespace :you do
+    get "api", to: "api#show", as: :api
+    resource :consent, only: [:update], controller: "consents"
+    resources :tokens, only: [:create, :destroy]
+  end
+
   namespace :fd do
     root to: "fire#show"
     post "cases/merge", to: "merges#create", as: :merge_cases
@@ -21,6 +37,9 @@ Rails.application.routes.draw do
     end
     resource :search, only: [:show], controller: "searches"
     resource :settings, only: [:show]
+    patch "api_setting", to: "api_settings#update", as: :api_setting
+    patch "api_tokens/:id/rate", to: "api_settings#rate", as: :api_token_rate
+    delete "api_tokens/:id", to: "api_settings#destroy", as: :api_token
     get "audit", to: "audits#show", as: :audit
     get "slack_account/callback", to: "slack_accounts#callback", as: :slack_account_callback
     resource :slack_account, only: [:create, :destroy], controller: "slack_accounts"

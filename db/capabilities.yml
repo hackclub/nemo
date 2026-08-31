@@ -1,0 +1,4 @@
+capabilities:
+  channel_manager:
+    label: Channel manager lookups
+    covers: Apps can ask whether you manage a given channel. They are told yes, no, or nothing.

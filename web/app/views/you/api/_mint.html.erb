@@ -1,0 +1,47 @@
+<%= render layout: "fd/modal", locals: { id: "mint-token",
+      title: @secret.present? ? "Copy your key" : "New API key",
+      open: @secret.present? } do %>
+  <% if @secret.present? %>
+    <div class="modal-body">
+      <p class="warn-line">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5"/><path d="M12 16.5v.4"/></svg>
+        <span>Shown once, and never again.</span>
+      </p>
+      <div class="secret">
+        <code><%= @secret %></code>
+        <button type="button" class="btn btn-primary" data-controller="copy"
+                data-copy-id-value="<%= @secret %>" data-action="copy#write">Copy</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <%= link_to "Done", you_api_path(tab: "tokens"), class: "btn btn-primary" %>
+    </div>
+  <% else %>
+    <%= form_with url: you_tokens_path, method: :post,
+          data: { turbo: false }, html: { autocomplete: "off" } do %>
+      <div class="modal-body form-body">
+        <label class="field-label">
+          Name
+          <span class="field">
+            <%= text_field_tag :name, nil, id: nil, maxlength: Api::Token::MAX_NAME,
+                  placeholder: "Toolbox", autofocus: true %>
+          </span>
+        </label>
+
+        <label class="field-label">
+          Expires
+          <span class="drop">
+            <%= select_tag :lasting,
+                  options_for_select(Api::Token::LIFE_WORDS.map(&:reverse),
+                    Api::Token::DEFAULT_LIFE),
+                  id: nil, class: "drop-in" %>
+          </span>
+        </label>
+      </div>
+      <div class="modal-foot">
+        <label for="mint-token" class="btn btn-ghost">Cancel</label>
+        <%= submit_tag "Create key", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

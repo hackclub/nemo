@@ -66,7 +66,7 @@ class FdAccessTest < ActionDispatch::IntegrationTest
     end.map(&:first).uniq
 
     assert_equal %w[fd/settlements fd/supersessions fd/retirements fd/grants
-                    fd/role_permissions fd/flags].sort,
+                    fd/role_permissions fd/flags fd/api_settings].sort,
       lead_only.sort,
       "a lead-only route appeared or vanished, so this test needs updating"
   end
