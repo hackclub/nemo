@@ -5,8 +5,8 @@ class Docs
   CHANNEL_MANAGERS = Topic.new(
     slug: "channel-managers",
     title: "Channel manager API",
-    blurb: "Resolves whether a member holds the channel manager role on a public channel. " \
-           "Gated on that member's consent. Returns nothing else about them.",
+    blurb: "Resolves whether a member holds the channel manager role on a channel, public or " \
+           "private. Gated on that member's consent. Returns nothing else about them.",
     sections: [
       Section.new(id: "auth", title: "Authentication"),
       Section.new(id: "check", title: "Check a member"),

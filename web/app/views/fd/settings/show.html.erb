@@ -101,7 +101,7 @@
           <div>
             <p class="kpi-label">Live tokens</p>
             <p class="kpi-val"><%= @tokens.count { |one| !one.spent? } %></p>
-            <p class="car">across <%= @tokens.map(&:owner_user_id).uniq.size %> owners</p>
+            <p class="car">across <%= pluralize(@tokens.map(&:owner_user_id).uniq.size, "owner") %></p>
           </div>
           <div>
             <p class="kpi-label">Checks, 30 days</p>

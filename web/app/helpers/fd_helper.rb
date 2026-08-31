@@ -1261,7 +1261,8 @@ module FdHelper
   def synced_line(at)
     return "never" if at.nil?
 
-    "#{at.strftime('%-d %b %H:%M')}, #{Api::ChannelSweep.count} channels"
+    swept = Api::ChannelSweep.count
+    "#{at.strftime('%-d %b %H:%M')}, #{swept} #{'channel'.pluralize(swept)}"
   end
 
   def dial_reach(key, tokens)
@@ -1272,9 +1273,9 @@ module FdHelper
   end
 
   def dial_change(setting)
-    return "never" if setting.nil?
+    return "never" if setting.nil? || setting.changed_by.blank?
 
-    [names[setting.changed_by], setting.changed_at.strftime("%-d %b")].compact.join(", ")
+    "#{names[setting.changed_by]}, #{setting.changed_at.strftime('%-d %b')}"
   end
 
   def acted_line(at)
