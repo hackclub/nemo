@@ -322,17 +322,13 @@ models:
         data_type: bigint
       - name: signed_in
         data_type: bigint
-      - name: sent_message
+      - name: posted_once
         data_type: bigint
-      - name: returned_next_day
+      - name: posted_twice
         data_type: bigint
-      - name: third_visit_in_7_days
-        data_type: bigint
-      - name: fourth_visit_in_14_days
+      - name: posted_three_times
         data_type: bigint
       - name: posts_knowable
-        data_type: boolean
-      - name: visits_knowable
         data_type: boolean
       - name: metric_version
         data_type: text

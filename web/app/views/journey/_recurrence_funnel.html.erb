@@ -10,8 +10,7 @@
       <div class="card-tools">
         <% if recurrence_funnel %>
           <%= incomplete_chip(
-                ("the sent-message step needs every member of this cohort searched" unless recurrence_funnel.posts_knowable),
-                ("the visit steps need 15 consecutive days of member activity after a first post" unless recurrence_funnel.visits_knowable)
+                ("the post steps need every member of this cohort searched" unless recurrence_funnel.posts_knowable)
               ) %>
         <% end %>
       </div>
@@ -25,19 +24,18 @@
         data-svg-chart-kind-value="bars"
         data-svg-chart-height-value="240"
         data-svg-chart-data-value="<%= {
-          labels: ["Created account", "Signed in", "Sent message", "Returned next day", "3rd visit in 7 days", "4th visit in 14 days"],
+          labels: ["Created", "Joined", "Posted", "2nd post", "3rd post"],
           datasets: [{
             label: "members",
             data: [
               recurrence_funnel.created_account,
               recurrence_funnel.signed_in,
-              recurrence_funnel.sent_message,
-              recurrence_funnel.returned_next_day,
-              recurrence_funnel.third_visit_in_7_days,
-              recurrence_funnel.fourth_visit_in_14_days
+              recurrence_funnel.posted_once,
+              recurrence_funnel.posted_twice,
+              recurrence_funnel.posted_three_times
             ]
           }]
-        }.to_json %>"y", maintainAspectRatio: false, plugins: { legend: { display: false } } }.to_json %>"
+        }.to_json %>"
       ></div>
     </div>
   <% else %>
