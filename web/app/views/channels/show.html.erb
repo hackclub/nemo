@@ -154,7 +154,13 @@
               <td class="col-date"><%= row.post_month.strftime("%b %Y") %></td>
               <td class="col-num"><%= number_with_delimiter(row.newcomer_volume) %></td>
               <td class="col-num"><%= row.fast_reply_share ? rate_chip((row.fast_reply_share.to_f * 100).round(1)) : "n/a" %></td>
-              <td class="col-num"><%= row.retained_90_share ? rate_chip((row.retained_90_share.to_f * 100).round(1)) : "n/a" %></td>
+              <td class="col-num">
+                <% if row.day_90_mature %>
+                  <%= rate_chip((row.retained_90_share.to_f * 100).round(1)) %>
+                <% else %>
+                  <span class="chip chip-off">TBD</span>
+                <% end %>
+              </td>
             </tr>
           <% end %>
         </tbody>

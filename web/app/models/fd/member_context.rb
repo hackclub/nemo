@@ -43,10 +43,6 @@ module Fd
       @window&.messages_posted
     end
 
-    def channels_joined
-      @window&.channels_joined
-    end
-
     def last_active_at
       @window&.last_active_at
     end

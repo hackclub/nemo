@@ -35,7 +35,6 @@
             <tr>
               <%= member_sort_header("Member", "name") %>
               <%= member_sort_header("Messages", "name", numeric: true) %>
-              <%= member_sort_header("Channels", "name", numeric: true) %>
               <%= member_sort_header("Cases", "subject", numeric: true) %>
               <%= member_sort_header("Actions", "actions", numeric: true) %>
               <%= member_sort_header("Notes", "notes", numeric: true) %>
@@ -60,7 +59,6 @@
                   </span>
                 </td>
                 <td class="col-num"><%= seen&.messages_posted ? number_with_delimiter(seen.messages_posted) : "n/a" %></td>
-                <td class="col-num"><%= seen&.channels_joined || "n/a" %></td>
                 <td class="col-num col-cases <%= "is-none" if row.cases.zero? %>"><%= row.cases %></td>
                 <td class="col-num col-actions <%= "is-none" if row.actions.zero? %>">
                   <%= row.actions %><% if row.in_force.positive? %> <span class="delta-down">&middot;<%= row.in_force %></span><% end %>

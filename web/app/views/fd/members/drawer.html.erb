@@ -16,8 +16,8 @@
             <% if @context&.messages_posted %>
               &middot; <%= number_with_delimiter(@context.messages_posted) %> messages
             <% end %>
-            <% if @context&.channels_joined %>
-              &middot; <%= @context.channels_joined %> public channels
+            <% if @rooms.any? %>
+              &middot; <%= number_with_delimiter(@rooms.size) %> channels
             <% end %>
           </span>
         </span>
