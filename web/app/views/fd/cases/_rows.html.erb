@@ -76,7 +76,7 @@
       <% if kase.assigned? %>
         <%= assignee_faces(kase.assignee_user_ids) %>
       <% elsif kase.resolved? %>
-        <span class="sub2">n/a</span>
+        <span class="sub2">nobody</span>
       <% else %>
         <%= gated_button "case.open", "Claim", fd_case_claim_path(kase), on: kase,
               css: "btn btn-primary", method: :post %>

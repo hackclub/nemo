@@ -14,8 +14,15 @@ module FdHelper
     channels[channel_id]
   end
 
+  def channel_link(channel_id)
+    return tag.span(channels[channel_id], class: "sub2") if channel_id.blank?
+
+    link_to channels[channel_id], slack_channel_url(channel_id), class: "handle",
+      title: channel_id, target: "_blank", rel: "noopener"
+  end
+
   def handle(user_id)
-    return "n/a" if user_id.blank?
+    return "nobody" if user_id.blank?
 
     tag.button(names[user_id], type: "button", class: "handle", title: "copy #{user_id}",
       data: { controller: "copy", copy_id_value: user_id, action: "click->copy#write" })
@@ -716,6 +723,15 @@ module FdHelper
     "av-#{(user_id.sum % AVATAR_TONES) + 1}"
   end
 
+  def slack_face(user_id, css: "row-avatar")
+    return face(user_id, css: css) if user_id.blank?
+
+    link_to slack_member_url(user_id), class: "face-link", target: "_blank",
+      rel: "noopener", title: "#{names[user_id]} in Slack" do
+      face(user_id, css: css)
+    end
+  end
+
   def face(user_id, css: "row-avatar")
     shown = user_id.present? ? names.image(user_id) : nil
     return tag.img(src: shown, class: css, alt: "", loading: "lazy") if shown
@@ -730,10 +746,10 @@ module FdHelper
   end
 
   def assignee_faces(user_ids)
-    return "n/a" if user_ids.blank?
+    return "nobody" if user_ids.blank?
 
     safe_join(Array(user_ids).map { |id|
-      tag.span(class: "face-name") { safe_join([face(id), handle(id)]) }
+      tag.span(class: "face-name") { safe_join([slack_face(id), handle(id)]) }
     }, " ")
   end
 

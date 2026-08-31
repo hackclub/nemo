@@ -2,8 +2,7 @@
   <% case_lanes(cases, action_counts).each do |lane, held| %>
     <div class="lane">
       <div class="lane-head">
-        <i class="lane-dot lane-<%= lane %>" aria-hidden="true"></i>
-        <span class="grow"><%= lane %></span>
+        <span><%= lane %></span>
         <b><%= held.size %></b>
       </div>
       <% if held.any? %>
@@ -40,7 +39,7 @@
 
             <div class="lane-foot">
               <% where = thread_channels[kase.id]&.first %>
-              <span class="mono"><%= where ? channel_label(where) : "n/a" %></span>
+              <%= channel_link(where) %>
               <span class="grow"></span>
               <% if kase.assigned? %>
                 <%= assignee_faces(kase.assignee_user_ids) %>

@@ -29,7 +29,7 @@
             <div class="msg-text"><%= cited.readable? ? cited.body : "no text held" %></div>
             <div class="sub2">
               the message it cites · <%= member_link(cited.author_user_id) %> ·
-              <%= channel_label(cited.channel_id) %> ·
+              <%= channel_link(cited.channel_id) %> ·
               <%= cited.posted_at.strftime("%-d %b %H:%M") %>
             </div>
           </div>

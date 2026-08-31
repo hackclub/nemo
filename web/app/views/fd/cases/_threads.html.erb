@@ -9,7 +9,7 @@
         <%= link_to fd_case_path(kase, tab: "evidence", thread: one.id, person: params[:person]),
               data: { turbo_frame: "threads" },
               aria: { current: (threads.chosen?(one) ? "true" : nil) } do %>
-          <span class="<%= "mono" unless channels.named?(one.channel_id) %>"><%= channel_label(one.channel_id) %></span>
+          <span><%= channel_label(one.channel_id) %></span>
           <span class="seg-count"><%= one.held %></span>
         <% end %>
       <% end %>

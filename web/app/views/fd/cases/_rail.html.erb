@@ -53,7 +53,7 @@
       <% if on.nil? %>
         <b class="is-none">n/a</b>
       <% elsif channels.named?(on.channel_id) %>
-        <b><%= channel_label(on.channel_id) %></b>
+        <b><%= channel_link(on.channel_id) %></b>
       <% else %>
         <b class="is-none">unknown</b>
       <% end %>

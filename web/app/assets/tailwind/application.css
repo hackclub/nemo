@@ -4595,6 +4595,12 @@
     max-width: 100%;
   }
 
+  .face-link {
+    display: inline-flex;
+    flex: none;
+    border-radius: 50%;
+  }
+
   .face-name .handle {
     min-width: 0;
     overflow: hidden;
@@ -5577,48 +5583,44 @@
   .board {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--s-xs);
+    gap: 0;
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    overflow: hidden;
   }
 
   .lane {
-    background-color: var(--card-2);
-    border: 1px solid var(--line-soft);
-    border-radius: var(--r-card);
-    padding: 9px;
+    padding: var(--s-sm);
     min-width: 0;
+  }
+
+  .lane + .lane {
+    border-left: 1px solid var(--line);
   }
 
   .lane-head {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: 7px;
-    padding: 2px 3px 9px;
-    font-size: var(--t-small);
-    color: var(--ink-2);
+    padding: 0 0 var(--s-xs);
+    font-size: var(--t-head);
+    font-weight: 600;
+    color: var(--ink);
   }
 
   .lane-head b {
-    font-weight: 400;
+    font-weight: 500;
     color: var(--ink-3);
+    margin-left: auto;
   }
-
-  .lane-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
-    flex: none;
-  }
-
-  .lane-open { background-color: var(--warn); }
-  .lane-acting { background-color: var(--series-4); }
-  .lane-resolved { background-color: var(--good); }
 
   .lane-card {
     background-color: var(--card);
     border: 1px solid var(--line);
     border-radius: var(--r-ctl);
-    padding: 9px 10px;
-    margin-bottom: 7px;
+    padding: var(--s-xs) 13px;
+    margin-bottom: var(--s-2xs);
     cursor: pointer;
     transition: border-color var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
   }

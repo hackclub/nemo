@@ -15,10 +15,10 @@ module Fd
     end
 
     def [](channel_id)
-      return "n/a" if channel_id.blank?
+      return "no channel" if channel_id.blank?
 
       name = @names[channel_id]
-      name.present? ? "##{name}" : channel_id
+      name.present? ? "##{name}" : "unnamed channel"
     end
 
     def named?(channel_id)

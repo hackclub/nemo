@@ -31,11 +31,11 @@ class FdMergedCaseTest < ActionDispatch::IntegrationTest
   end
 
   test "the folded case's evidence threads show" do
-    Fd::CaseThread.create!(case_id: @folded.id, channel_id: "C0LOUNGE", thread_ts: "1700.1",
-      kind: "evidence", added_by: "UFF1")
+    thread = Fd::CaseThread.create!(case_id: @folded.id, channel_id: "C0LOUNGE",
+      thread_ts: "1700.1", kind: "evidence", added_by: "UFF1")
     get fd_case_path(@root, tab: "evidence")
 
-    assert_select "body", text: /C0LOUNGE/
+    assert_select "a[href*=?]", "thread=#{thread.id}"
   end
 
   test "the same person on both cases is listed once, not twice" do
