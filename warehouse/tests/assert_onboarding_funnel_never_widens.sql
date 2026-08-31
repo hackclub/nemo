@@ -2,11 +2,13 @@ select
     cohort_month,
     invited,
     joined,
-    first_post,
-    retained_day_30,
-    retained_day_90
+    active_by_day_1,
+    active_by_day_7,
+    active_by_day_30
 from {{ ref('mart_onboarding_funnel') }}
 where joined > invited
-    or first_post > joined
-    or retained_day_30 > first_post
-    or retained_day_90 > first_post
+    or active_by_day_1 > joined
+    or active_by_day_7 > joined
+    or active_by_day_30 > joined
+    or active_by_day_7 < active_by_day_1
+    or active_by_day_30 < active_by_day_7

@@ -295,15 +295,17 @@ models:
         data_type: bigint
       - name: joined
         data_type: bigint
-      - name: first_post
+      - name: active_by_day_1
         data_type: bigint
-      - name: retained_day_30
+      - name: active_by_day_7
         data_type: bigint
-      - name: retained_day_90
+      - name: active_by_day_30
         data_type: bigint
-      - name: day_30_mature
+      - name: day_1_knowable
         data_type: boolean
-      - name: day_90_mature
+      - name: day_7_knowable
+        data_type: boolean
+      - name: day_30_knowable
         data_type: boolean
       - name: metric_version
         data_type: text

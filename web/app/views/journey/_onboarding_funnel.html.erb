@@ -2,16 +2,15 @@
   <div class="card-head">
     <div>
       <h2 class="card-title">Onboarding funnel</h2>
-      <p class="card-sub">
-        one created-account cohort &middot; the last two are windows, not stages
-      </p>
+      <p class="card-sub">one created-account cohort</p>
     </div>
     <% if cohort_months.present? %>
       <div class="card-tools">
         <% if onboarding_funnel %>
           <%= incomplete_chip(
-                ("first post needs every member of this cohort searched" if onboarding_funnel.first_post.nil?),
-                ("retention needs daily member activity covering each member's day-30 and day-90 window" unless onboarding_funnel.day_30_mature)
+                ("day 1 needs the day after each member joined" unless onboarding_funnel.day_1_knowable),
+                ("day 7 needs the week after each member joined" unless onboarding_funnel.day_7_knowable),
+                ("day 30 needs the month after each member joined" unless onboarding_funnel.day_30_knowable)
               ) %>
         <% end %>
       </div>
@@ -25,15 +24,15 @@
         data-svg-chart-kind-value="bars"
         data-svg-chart-height-value="240"
         data-svg-chart-data-value="<%= {
-          labels: ["Created", "Joined", "First post", "Active in days 23-30", "Active in days 83-90"],
+          labels: ["Created", "Joined", "Active after day 1", "Active after day 7", "Active after day 30"],
           datasets: [{
             label: "members",
             data: [
               onboarding_funnel.invited,
               onboarding_funnel.joined,
-              onboarding_funnel.first_post,
-              onboarding_funnel.day_30_mature ? onboarding_funnel.retained_day_30 : nil,
-              onboarding_funnel.day_90_mature ? onboarding_funnel.retained_day_90 : nil
+              onboarding_funnel.active_by_day_1,
+              onboarding_funnel.active_by_day_7,
+              onboarding_funnel.active_by_day_30
             ]
           }]
         }.to_json %>"
