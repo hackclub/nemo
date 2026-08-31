@@ -10,6 +10,7 @@ from lib.proxy_client import ProxyClient
 from lib.walk import check_walk
 
 SOURCE = "admin_analytics_channel_range"
+SPAN_SOURCE = "admin_analytics_channel_span"
 METHOD = "admin.analytics.getChannelAnalytics"
 RANGE_METHOD = "admin.analytics.getAvailableDateRange"
 PAGE_SIZE = 500
@@ -58,12 +59,12 @@ def stamp(value):
         return None
 
 
-def range_row(rec, start, end):
+def range_row(rec, start, end, source=SOURCE):
     return (
         rec["channel_id"],
         start,
         end,
-        SOURCE,
+        source,
         rec.get("messages_count"),
         rec.get("chats_count"),
         rec.get("writers_count"),
@@ -92,9 +93,14 @@ def resolve_window(client, days=WINDOW_DAYS, end=None):
     return max(floor, end - timedelta(days=days - 1)), end
 
 
-def run(conn, days=WINDOW_DAYS, end=None):
+def span_window(client, end=None):
+    floor, edge = channel_calendar(client)
+    return floor, (end or edge)
+
+
+def run(conn, days=WINDOW_DAYS, end=None, source=SOURCE, span=False):
     client = ProxyClient()
-    start, stop = resolve_window(client, days, end)
+    start, stop = span_window(client, end) if span else resolve_window(client, days, end)
     params = {
         "start_date": start.isoformat(),
         "end_date": stop.isoformat(),
@@ -104,9 +110,10 @@ def run(conn, days=WINDOW_DAYS, end=None):
         "team_ids": os.environ.get("SLACK_TEAM_ID") or None,
     }
     window_key = f"{start}..{stop}"
-    resume_at, already = get_walk(conn, SOURCE, window_key)
+    label = "channel span" if span else "channel range"
+    resume_at, already = get_walk(conn, source, window_key)
 
-    with ingest_run(conn, SOURCE) as counts:
+    with ingest_run(conn, source) as counts:
         counts.rows_in = already
         rows = []
 
@@ -114,12 +121,12 @@ def run(conn, days=WINDOW_DAYS, end=None):
             with conn.cursor() as cur:
                 cur.executemany(RANGE_SQL, rows)
             rows.clear()
-            save_walk(conn, SOURCE, window_key, cursor, already + seen)
+            save_walk(conn, source, window_key, cursor, already + seen)
             counts.total_expected = client.last_num_found
             counts.progress()
 
         if resume_at:
-            print(f"channel range {window_key}: resuming after {already} rows")
+            print(f"{label} {window_key}: resuming after {already} rows")
 
         for rec in client.paginate(
             METHOD,
@@ -130,36 +137,45 @@ def run(conn, days=WINDOW_DAYS, end=None):
             max_retries=8,
             start_cursor=resume_at,
             on_page=flush,
+            allow_empty_pages=span,
         ):
             counts.rows_in += 1
             try:
-                rows.append(range_row(rec, start, stop))
+                rows.append(range_row(rec, start, stop, source))
             except KeyError as exc:
                 counts.rows_rejected += 1
-                dead_letter(conn, SOURCE, {"keys": sorted(rec)}, str(exc))
+                dead_letter(conn, source, {"keys": sorted(rec)}, str(exc))
 
-        check_walk(f"channel range {window_key}", counts.rows_in,
+        check_walk(f"{label} {window_key}", counts.rows_in,
             client.last_num_found, PAGE_SIZE)
 
         with conn.cursor() as cur:
             cur.executemany(RANGE_SQL, rows)
-            cur.execute(PRUNE_SQL, (SOURCE, start, stop))
+            cur.execute(PRUNE_SQL, (source, start, stop))
             pruned = cur.rowcount
-        save_walk(conn, SOURCE, window_key, None, counts.rows_in)
+        save_walk(conn, source, window_key, None, counts.rows_in)
     print(
-        f"channel range {window_key}: {counts.rows_in} rows, "
+        f"{label} {window_key}: {counts.rows_in} rows, "
         f"{counts.rows_rejected} rejected, {pruned} stale rows pruned"
     )
+
+
+def run_span(conn, end=None):
+    return run(conn, source=SPAN_SOURCE, span=True, end=end)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--days", type=int, default=WINDOW_DAYS)
     parser.add_argument("--end", type=date.fromisoformat)
+    parser.add_argument("--span", action="store_true")
     args = parser.parse_args()
     load_dotenv(ENV_FILE)
     with connect() as conn:
-        run(conn, days=args.days, end=args.end)
+        if args.span:
+            run_span(conn, end=args.end)
+        else:
+            run(conn, days=args.days, end=args.end)
 
 
 if __name__ == "__main__":

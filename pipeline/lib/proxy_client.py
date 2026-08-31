@@ -93,6 +93,7 @@ class ProxyClient:
         credential="internal",
         start_cursor=None,
         on_page=None,
+        allow_empty_pages=False,
     ):
         base = dict(params)
         base["count"] = page_size
@@ -124,7 +125,7 @@ class ProxyClient:
                 self.last_num_found = num_found
             if on_page:
                 on_page(cursor, seen)
-            if not cursor or not items:
+            if not cursor or (not items and not allow_empty_pages):
                 break
             if num_found is not None and seen >= num_found:
                 break

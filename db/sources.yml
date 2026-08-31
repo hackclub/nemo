@@ -81,6 +81,19 @@ sources:
     runs_as: [admin_analytics_channel_range]
     feeds: [mart_channel_range]
 
+  channel_span:
+    label: Channel analytics over the whole available window
+    endpoint: admin.analytics.getChannelAnalytics
+    credential: internal
+    cadence: daily
+    window: 13 months
+    guard: num_found
+    resume: none
+    retention: newest window only
+    writes: [raw.channel_activity_snapshot]
+    runs_as: [admin_analytics_channel_span]
+    feeds: [mart_channel_bands]
+
   users_list:
     label: Account flags and deactivation
     endpoint: users.list

@@ -530,3 +530,21 @@ def test_unreadable_row_marks_a_permanent_skip():
         "channel_not_found",
         first_reply.WALK_VERSION,
     )
+
+
+def test_channel_span_row_carries_its_own_source():
+    rec = {"channel_id": "C1", "messages_count": 5}
+    row = channel_range_pull.range_row(
+        rec, WINDOW_START, WINDOW_END, channel_range_pull.SPAN_SOURCE
+    )
+
+    assert row[3] == "admin_analytics_channel_span"
+    assert row[3] != channel_range_pull.SOURCE
+
+
+def test_channel_range_row_still_defaults_to_the_range_source():
+    rec = {"channel_id": "C1", "messages_count": 5}
+
+    assert channel_range_pull.range_row(rec, WINDOW_START, WINDOW_END)[3] == (
+        "admin_analytics_channel_range"
+    )
