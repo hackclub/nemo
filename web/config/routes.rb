@@ -54,7 +54,12 @@ Rails.application.routes.draw do
       as: :"#{stage}_journey"
   end
 
-  resources :channels, only: [:index, :show]
+  resources :channels, only: [:index, :show] do
+    member do
+      post "replies", to: "channels#opt_in_replies", as: :opt_in
+      delete "replies", to: "channels#opt_out_replies", as: :opt_out
+    end
+  end
   get "engine", to: "engine#index"
   get "engine/runs/:id", to: "engine#show", as: :engine_run
   post "engine/sync", to: "engine#sync", as: :engine_sync

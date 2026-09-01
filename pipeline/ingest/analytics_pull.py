@@ -1,6 +1,7 @@
 import argparse
 import gzip
 import json
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta, timezone
 
@@ -180,7 +181,7 @@ def channel_dim_row(rec):
 
 MEMBER_DAY_LIMIT = 6
 CHANNEL_DAY_LIMIT = 30
-DAY_WORKERS = 3
+DAY_WORKERS = int(os.environ.get("ANALYTICS_DAY_WORKERS", "") or 8)
 CALENDAR_DAYS_MAX = 500
 
 

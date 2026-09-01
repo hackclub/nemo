@@ -1,0 +1,55 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Thread reply backfill</h2>
+      <p class="card-sub">
+        <%= number_with_delimiter(backfills.count { |b| b.open? }) %> open ·
+        <%= number_with_delimiter(queued_requests.to_i) %> requests queued
+      </p>
+    </div>
+  </div>
+  <% if backfills.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>channel</th>
+            <th>state</th>
+            <th class="col-num">threads</th>
+            <th class="col-num">replies</th>
+            <th class="col-num">est. requests</th>
+            <th>asked by</th>
+            <th class="col-date">asked</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% backfills.each do |row| %>
+            <tr>
+              <td>
+                <%= link_to "##{names[row.channel_id] || row.channel_id}",
+                      channel_path(row.channel_id) %>
+              </td>
+              <td>
+                <span class="chip <%= row.state == 'complete' ? 'chip-good' : 'chip-off' %>">
+                  <%= row.state %>
+                </span>
+              </td>
+              <td class="col-num">
+                <%= number_with_delimiter(row.threads_fetched) %><%=
+                  " of #{number_with_delimiter(row.threads_expected)}" if row.threads_expected %>
+              </td>
+              <td class="col-num"><%= number_with_delimiter(row.replies_fetched) %></td>
+              <td class="col-num"><%= row.estimated_requests ? number_with_delimiter(row.estimated_requests) : "n/a" %></td>
+              <td><%= row.requested_by %></td>
+              <td class="col-date"><%= time_ago_in_words(row.requested_at) %> ago</td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="card-body">
+      <p class="sub">No channel has thread replies switched on.</p>
+    </div>
+  <% end %>
+</div>

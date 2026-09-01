@@ -29,7 +29,14 @@
               <td>#<%= row.channel_name %></td>
               <td class="col-date"><%= row.post_month.strftime("%b %Y") %></td>
               <td class="col-num"><%= number_with_delimiter(row.newcomer_volume) %></td>
-              <td class="col-num"><%= rate_chip((row.fast_reply_share.to_f * 100).round(1)) %></td>
+              <td class="col-num">
+                <% if row.fast_reply_share %>
+                  <%= rate_chip((row.fast_reply_share.to_f * 100).round(1)) %>
+                <% else %>
+                  <span class="chip chip-off"><%= number_with_delimiter(row.newcomers_checked) %> of
+                    <%= number_with_delimiter(row.newcomer_volume) %> checked</span>
+                <% end %>
+              </td>
               <td class="col-num">
                 <% if row.day_90_mature %>
                   <%= rate_chip((row.retained_90_share.to_f * 100).round(1)) %>

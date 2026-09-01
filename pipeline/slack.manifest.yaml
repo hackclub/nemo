@@ -12,11 +12,19 @@ oauth_config:
   scopes:
     bot:
       - channels:read
+      - channels:history
+      - channels:join
+      - reactions:read
       - users:read
     user:
       - admin.analytics:read
-      - admin.users:read
+      - admin.conversations:read
       - admin.teams:read
+      - admin.users:read
+      - auditlogs:read
+      - channels:history
+      - search:read
+      - users:read
 
 settings:
   event_subscriptions:

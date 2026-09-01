@@ -3,7 +3,7 @@ import os
 
 from psycopg.types.json import Jsonb
 
-from bot.engine import access, audit, parse, session
+from bot.engine import access, audit, events, parse, session
 from bot.nemo import answer, chat, who
 from bot.nemo import cards
 from bot.nemo import files as carry
@@ -905,8 +905,18 @@ def register(app, on_reply=None):
             text=cards.resolve.done(said, case_id, told),
         )
 
+    @app.event("reaction_added")
+    def on_reaction_added(event, body):
+        events.land(body.get("event_id"), event)
+
+    @app.event("reaction_removed")
+    def on_reaction_removed(event, body):
+        events.land(body.get("event_id"), event)
+
     @app.event("message")
-    def on_message(event):
+    def on_message(event, body):
+        events.land(body.get("event_id"), event)
+
         if event.get("channel") != firehouse_channel():
             return
 

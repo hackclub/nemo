@@ -95,7 +95,9 @@ models:
     columns:
       - name: newcomer_id
         data_tests: [unique, not_null]
-      - name: replier_id
+      - name: answered
+        data_tests: [not_null]
+      - name: replied_by_bot
         data_tests: [not_null]
   - name: fct_team_stats
     columns:

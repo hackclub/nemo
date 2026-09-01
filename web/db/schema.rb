@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_30_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_01_010000) do
   create_schema "app"
 
   # These are extensions that must be enabled in order to support this database
@@ -34,6 +34,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_160000) do
     t.string "image_url"
     t.string "pronouns"
     t.index ["display_name"], name: "index_cachet_profiles_on_display_name"
+  end
+
+  create_table "app.channel_backfill", force: :cascade do |t|
+    t.string "cancelled_by"
+    t.string "channel_id", null: false
+    t.datetime "claimed_at"
+    t.datetime "created_at", null: false
+    t.integer "estimated_requests"
+    t.datetime "finished_at"
+    t.string "kind", default: "thread_replies", null: false
+    t.string "last_error"
+    t.datetime "last_progress_at"
+    t.integer "priority", default: 100, null: false
+    t.integer "replies_fetched", default: 0, null: false
+    t.datetime "requested_at", default: -> { "now()" }, null: false
+    t.string "requested_by", null: false
+    t.string "state", default: "queued", null: false
+    t.integer "threads_expected"
+    t.integer "threads_fetched", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["channel_id"], name: "index_channel_backfill_on_channel_id", unique: true
+    t.index ["state", "priority", "requested_at"], name: "channel_backfill_ready_idx"
+    t.check_constraint "state::text = ANY (ARRAY['queued'::character varying, 'draining'::character varying, 'paused'::character varying, 'complete'::character varying, 'cancelled'::character varying]::text[])", name: "channel_backfill_state_known"
   end
 
   create_table "app.engine_setting", force: :cascade do |t|

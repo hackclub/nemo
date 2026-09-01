@@ -70,6 +70,7 @@ class ChannelsController < ApplicationController
 
   def show
     @channel = Analytics::DimChannel.find(params[:id])
+    @backfill = ChannelBackfill.find_by(channel_id: @channel.channel_id)
     @activity_trend = Analytics::MartChannelActivity.where(channel_id: @channel.channel_id).order(:window_start)
     @scorecard_rows = Analytics::MartChannelOnboardingScorecard
       .where(channel_id: @channel.channel_id, newcomer_volume: HomeHelper::MIN_SAMPLE..)
@@ -111,7 +112,43 @@ class ChannelsController < ApplicationController
     @member_count = @all_time.stats&.dig("total_members_count")
   end
 
+  def opt_in_replies
+    return refuse_backfill unless current_staff.may?("app.flip")
+
+    channel = Analytics::DimChannel.find(params[:id])
+    row = ChannelBackfill.opt_in!(
+      channel_id: channel.channel_id,
+      requested_by: current_staff.user_id,
+      estimated_requests: ChannelBackfill.estimate(channel),
+      threads_expected: channel.try(:thread_parents)
+    )
+    Fd::Audit.record(row, "turned_on",
+      actor: current_staff.user_id, request_id: request.request_id,
+      after: { "channel_id" => row.channel_id, "estimated_requests" => row.estimated_requests })
+
+    redirect_to channel_path(channel.channel_id), notice: "thread replies queued for ##{channel.name}"
+  end
+
+  def opt_out_replies
+    return refuse_backfill unless current_staff.may?("app.flip")
+
+    channel = Analytics::DimChannel.find(params[:id])
+    row = ChannelBackfill.find_by(channel_id: channel.channel_id)
+    return redirect_to(channel_path(channel.channel_id), alert: "not opted in") if row.nil?
+
+    row.opt_out!(by: current_staff.user_id)
+    Fd::Audit.record(row, "turned_off",
+      actor: current_staff.user_id, request_id: request.request_id,
+      after: { "channel_id" => row.channel_id })
+
+    redirect_to channel_path(channel.channel_id), notice: "thread replies stopped for ##{channel.name}"
+  end
+
   private
+
+  def refuse_backfill
+    redirect_to channels_path, alert: "you may not queue a backfill"
+  end
 
   def parse_range_date(value)
     Date.iso8601(value.to_s)

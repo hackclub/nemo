@@ -1,0 +1,31 @@
+<% may = current_staff.may?("app.flip") %>
+<% case backfill&.state %>
+<% when "queued" %>
+  <span class="chip chip-off">Queued<%= " · #{backfill.place_in_line.ordinalize} in line" if backfill.place_in_line %></span>
+  <%= button_to "Stop", opt_out_channel_path(channel.channel_id), method: :delete,
+        class: "btn", form: { data: { turbo_confirm: "Stop fetching thread replies?" } } if may %>
+<% when "draining" %>
+  <span class="chip chip-off">
+    Fetching · <%= number_with_delimiter(backfill.threads_fetched) %>
+    of <%= number_with_delimiter(backfill.threads_expected || 0) %> threads
+    <%= "(#{(backfill.progress * 100).round}%)" if backfill.progress %>
+  </span>
+  <%= button_to "Stop", opt_out_channel_path(channel.channel_id), method: :delete,
+        class: "btn", form: { data: { turbo_confirm: "Stop fetching thread replies?" } } if may %>
+<% when "complete" %>
+  <% if backfill.threads_expected.to_i.zero? %>
+    <span class="chip chip-warn">No threads found</span>
+  <% else %>
+    <span class="chip chip-good">Thread replies complete ·
+      <%= number_with_delimiter(backfill.threads_fetched) %> threads</span>
+  <% end %>
+  <%= button_to "Fetch again", opt_in_channel_path(channel.channel_id), method: :post,
+        class: "btn" if may %>
+<% else %>
+  <% if may %>
+    <% estimate = ChannelBackfill.estimate(channel) %>
+    <%= button_to opt_in_channel_path(channel.channel_id), method: :post, class: "btn" do %>
+      Fetch thread replies<%= " · ~#{number_with_delimiter(estimate)} requests" if estimate %>
+    <% end %>
+  <% end %>
+<% end %>

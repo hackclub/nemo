@@ -18,7 +18,8 @@ module Fd
       "Engine::Setting" => "engine_setting",
       "Fd::RolePermission" => "permission",
       "Fd::StaffSlack" => "slack_account",
-      "Fd::Flag" => "flag"
+      "Fd::Flag" => "flag",
+      "ChannelBackfill" => "channel_backfill"
     }.freeze
 
     VERBS = %w[

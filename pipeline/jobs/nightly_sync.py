@@ -14,6 +14,9 @@ from ingest.analytics_pull import (
 )
 from ingest.autojoin import name_unknown, record_channel_names
 from ingest.channel_range_pull import run as pull_channel_range
+from ingest.channel_history_pull import run as pull_channel_history
+from ingest.channel_replies_pull import run as pull_channel_replies
+from ingest.dim_snapshot import run as snapshot_dimensions
 from ingest.channel_range_pull import run_span as pull_channel_span
 from ingest.first_reply import run as pull_first_reply
 from ingest.member_channels import read_membership as pull_channel_membership
@@ -96,7 +99,12 @@ def stages():
         ("member_range", lambda conn: pull_member_range(conn)),
         ("channel_range", lambda conn: pull_channel_range(conn)),
         ("channel_span", lambda conn: pull_channel_span(conn)),
+        ("channel_history", lambda conn: pull_channel_history(
+            conn, tuned(conn, "channel_history", "batch"))),
         ("users_list", lambda conn: pull_users_list(conn)),
+        ("dim_snapshot", lambda conn: snapshot_dimensions(conn)),
+        ("channel_replies", lambda conn: pull_channel_replies(
+            conn, tuned(conn, "channel_replies", "batch"))),
         ("autojoin", lambda conn: record_channel_names(conn, bot_client())),
         ("channel_names", lambda conn: name_unknown(conn, bot_client())),
         ("member_history", lambda conn: pull_member_history(

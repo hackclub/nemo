@@ -30,7 +30,9 @@ ALLOWED_METHODS = {
         {
             "admin.users.list",
             "search.messages",
+            "conversations.history",
             "conversations.replies",
+            "conversations.members",
         }
     ),
 }

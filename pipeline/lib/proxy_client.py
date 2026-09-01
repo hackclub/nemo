@@ -94,9 +94,11 @@ class ProxyClient:
         start_cursor=None,
         on_page=None,
         allow_empty_pages=False,
+        page_param="count",
+        cursor_field="next_cursor_mark",
     ):
         base = dict(params)
-        base["count"] = page_size
+        base[page_param] = page_size
         cursor = start_cursor
         seen = 0
         previous_page = None
@@ -119,7 +121,10 @@ class ProxyClient:
 
             yield from items
             seen += len(items)
-            cursor = data.get("next_cursor_mark")
+            if cursor_field == "response_metadata.next_cursor":
+                cursor = (data.get("response_metadata") or {}).get("next_cursor")
+            else:
+                cursor = data.get(cursor_field)
             num_found = data.get("num_found")
             if num_found is not None:
                 self.last_num_found = num_found

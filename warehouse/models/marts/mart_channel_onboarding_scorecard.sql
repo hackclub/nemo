@@ -11,7 +11,8 @@ with newcomer_first_posts as (
 reply_info as (
     select
         newcomer_id,
-        latency_seconds < 3600 and not replied_by_bot as fast_reply
+        answered,
+        answered and latency_seconds < 3600 and not replied_by_bot as fast_reply
     from {{ ref('fct_first_reply') }}
 ),
 
@@ -20,6 +21,7 @@ scorecard_rows as (
         nfp.channel_id,
         nfp.post_month,
         nfp.user_id,
+        ri.newcomer_id is not null as reply_checked,
         ri.fast_reply,
         r.retained_day_90,
         r.day_90_covered
@@ -33,8 +35,12 @@ select
     c.name as channel_name,
     r.post_month,
     count(*) as newcomer_volume,
+    count(*) filter (where r.reply_checked) as newcomers_checked,
     count(*) filter (where r.fast_reply) as fast_reply_count,
-    round(count(*) filter (where r.fast_reply)::numeric / nullif(count(*), 0), 4) as fast_reply_share,
+    case when count(*) filter (where not r.reply_checked) = 0
+         then round(count(*) filter (where r.fast_reply)::numeric / nullif(count(*), 0), 4)
+    end as fast_reply_share,
+    count(*) filter (where not r.reply_checked) = 0 as reply_coverage_complete,
     case when count(*) filter (where not r.day_90_covered) = 0
          then count(*) filter (where r.retained_day_90) end as retained_90_count,
     case when count(*) filter (where not r.day_90_covered) = 0
@@ -42,7 +48,7 @@ select
     end as retained_90_share,
     (r.post_month + interval '1 month' + interval '90 days') <= now()
         and count(*) filter (where not r.day_90_covered) = 0 as day_90_mature,
-    'v5' as metric_version
+    'v6' as metric_version
 from scorecard_rows r
 left join {{ ref('dim_channel') }} c on c.channel_id = r.channel_id
 group by r.channel_id, c.name, r.post_month

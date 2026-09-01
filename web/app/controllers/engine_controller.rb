@@ -8,7 +8,7 @@ class EngineController < ApplicationController
   VISIT_STEPS_NEED = 15
 
   TABS = { "runs" => "Runs", "sources" => "Sources", "coverage" => "Coverage",
-           "tuning" => "Tuning" }.freeze
+           "backfill" => "Backfill", "tuning" => "Tuning" }.freeze
 
   def index
     @tab = TABS.key?(params[:tab]) ? params[:tab] : "runs"
@@ -28,11 +28,24 @@ class EngineController < ApplicationController
     when "sources" then @sources = source_rows
     when "coverage" then coverage_facts
     when "tuning" then @sources = source_rows
+    when "backfill" then backfill_facts
     end
   end
 
   HOLDING = [["Recurrence funnel, visit steps", 15], ["Retention, day 30", 30],
              ["Retention, day 90", 90]].freeze
+
+  def backfill_facts
+    @backfills = ChannelBackfill.order(
+      Arel.sql("case state when 'draining' then 1 when 'queued' then 2 " \
+               "when 'paused' then 3 when 'complete' then 4 else 5 end"),
+      :priority, :requested_at
+    ).to_a
+    ids = @backfills.map(&:channel_id)
+    @backfill_names = ids.any? ? Analytics::DimChannel.where(channel_id: ids)
+      .pluck(:channel_id, :name).to_h : {}
+    @backfill_queued_requests = ChannelBackfill.open_work.sum(:estimated_requests)
+  end
 
   def coverage_facts
     @day_coverage = day_coverage

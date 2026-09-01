@@ -9,6 +9,13 @@ sources:
       - name: channel_dim
       - name: channel_activity_snapshot
       - name: message_activity_snapshot
+      - name: message
+      - name: message_observation
+      - name: thread
+      - name: channel_walk
+      - name: event_delivery
+      - name: member_dim_snapshot
+      - name: channel_dim_snapshot
       - name: team_stats_snapshot
       - name: top_posters_snapshot
       - name: ingest_run

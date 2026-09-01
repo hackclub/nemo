@@ -28,7 +28,7 @@ class JourneyController < ApplicationController
     @response_rate_totals = Analytics::MartResponseRate.totals
     @fast_reply_vs_retention = Analytics::MartFastReplyVsRetention
       .where(newcomers: HomeHelper::MIN_SAMPLE..)
-      .order(fast_reply: :desc)
+      .order(Arel.sql("case reply_class when 'fast' then 1 when 'slow' then 2 else 3 end"))
   end
 
   def retention

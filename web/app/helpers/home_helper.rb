@@ -85,6 +85,16 @@ module HomeHelper
       class: "delta-share")
   end
 
+  REPLY_CLASS_LABEL = {
+    "fast" => "fast reply, under 1 hour",
+    "slow" => "slower reply",
+    "none" => "no reply at all"
+  }.freeze
+
+  def reply_class_label(reply_class)
+    REPLY_CLASS_LABEL.fetch(reply_class, reply_class)
+  end
+
   def rate_chip(pct, label = nil)
     style = if pct >= 60 then "chip chip-good"
     elsif pct >= 30 then "chip chip-off"

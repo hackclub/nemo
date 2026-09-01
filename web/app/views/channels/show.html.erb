@@ -4,6 +4,7 @@
 <% end %>
 
 <% content_for :head_actions do %>
+  <%= render "backfill_button", channel: @channel, backfill: @backfill %>
   <%= link_to "Open in Slack", slack_channel_url(@channel.channel_id), class: "btn",
         target: "_blank", rel: "noopener" %>
 <% end %>
@@ -153,7 +154,14 @@
             <tr>
               <td class="col-date"><%= row.post_month.strftime("%b %Y") %></td>
               <td class="col-num"><%= number_with_delimiter(row.newcomer_volume) %></td>
-              <td class="col-num"><%= row.fast_reply_share ? rate_chip((row.fast_reply_share.to_f * 100).round(1)) : "n/a" %></td>
+              <td class="col-num">
+                <% if row.fast_reply_share %>
+                  <%= rate_chip((row.fast_reply_share.to_f * 100).round(1)) %>
+                <% else %>
+                  <span class="chip chip-off"><%= number_with_delimiter(row.newcomers_checked) %> of
+                    <%= number_with_delimiter(row.newcomer_volume) %> checked</span>
+                <% end %>
+              </td>
               <td class="col-num">
                 <% if row.day_90_mature %>
                   <%= rate_chip((row.retained_90_share.to_f * 100).round(1)) %>

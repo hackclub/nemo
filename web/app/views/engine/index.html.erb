@@ -84,6 +84,10 @@
 <% elsif @tab == "coverage" %>
   <%= render "coverage", day_coverage: @day_coverage, held: @held %>
 
+<% elsif @tab == "backfill" %>
+  <%= render "backfill", backfills: @backfills, names: @backfill_names,
+        queued_requests: @backfill_queued_requests %>
+
 <% elsif @tab == "tuning" %>
   <%= render "tuning", may_tune: @may_tune, sources: @sources %>
 <% end %>

@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from lib.db import connect_admin
 from lib.paths import ENV_FILE, MIGRATIONS_DIR
 
-SCHEMAS = ("raw", "analytics", "app", "fd")
+SCHEMAS = ("raw", "analytics", "app", "fd", "ingest")
 BASELINE_WITNESS = "raw.member_dim"
 
 VERSION_TABLE_SQL = """

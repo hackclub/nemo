@@ -115,6 +115,39 @@ def refuse_if_seeded(conn: psycopg.Connection) -> None:
         )
 
 
+def _mirrored(conn: psycopg.Connection, sql: str, params: tuple) -> None:
+    try:
+        with conn.transaction():
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+    except psycopg.Error:
+        pass
+
+
+MIRROR_RUN_SQL = """
+INSERT INTO ingest.sync_run (logical_date, trigger, legacy_run_id)
+VALUES (current_date, %s, %s)
+"""
+
+MIRROR_TASK_SQL = """
+INSERT INTO ingest.sync_task (run_id, recipe_key, idempotency_key)
+VALUES ((SELECT run_id FROM ingest.sync_run WHERE legacy_run_id = %s), %s, %s)
+ON CONFLICT (idempotency_key, attempt) DO NOTHING
+"""
+
+MIRROR_FINISH_SQL = """
+UPDATE ingest.sync_task
+SET status = %s, rows_in = %s, rows_rejected = %s, finished_at = clock_timestamp()
+WHERE idempotency_key = %s
+"""
+
+MIRROR_RUN_FINISH_SQL = """
+UPDATE ingest.sync_run
+SET status = %s, finished_at = clock_timestamp()
+WHERE legacy_run_id = %s
+"""
+
+
 def start_run(conn: psycopg.Connection, source: str) -> int:
     parent_run_id, step_index, step_total = _step.get()
     if parent_run_id is None:
@@ -129,7 +162,13 @@ def start_run(conn: psycopg.Connection, source: str) -> int:
             """,
             (source, parent_run_id, step_index, step_total),
         )
-        return cur.fetchone()[0]
+        run_id = cur.fetchone()[0]
+
+    if parent_run_id is None:
+        _mirrored(conn, MIRROR_RUN_SQL, (source, run_id))
+    _mirrored(conn, MIRROR_TASK_SQL,
+        (parent_run_id if parent_run_id is not None else run_id, source, f"legacy:{run_id}"))
+    return run_id
 
 
 def finish_run(conn: psycopg.Connection, run_id: int, status: str, rows_in: int, rows_rejected: int) -> None:
@@ -142,6 +181,8 @@ def finish_run(conn: psycopg.Connection, run_id: int, status: str, rows_in: int,
             """,
             (status, rows_in, rows_rejected, run_id),
         )
+    _mirrored(conn, MIRROR_FINISH_SQL, (status, rows_in, rows_rejected, f"legacy:{run_id}"))
+    _mirrored(conn, MIRROR_RUN_FINISH_SQL, (status, run_id))
 
 
 @dataclass

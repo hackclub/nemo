@@ -79,10 +79,14 @@ models:
         data_type: date
       - name: newcomer_volume
         data_type: bigint
+      - name: newcomers_checked
+        data_type: bigint
       - name: fast_reply_count
         data_type: bigint
       - name: fast_reply_share
         data_type: numeric
+      - name: reply_coverage_complete
+        data_type: boolean
       - name: retained_90_count
         data_type: bigint
       - name: retained_90_share
@@ -166,8 +170,8 @@ models:
       contract:
         enforced: true
     columns:
-      - name: fast_reply
-        data_type: boolean
+      - name: reply_class
+        data_type: text
         data_tests: [not_null, unique]
       - name: newcomers
         data_type: bigint

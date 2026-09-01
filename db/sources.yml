@@ -94,6 +94,48 @@ sources:
     runs_as: [admin_analytics_channel_span]
     feeds: [mart_channel_bands]
 
+  channel_replies:
+    label: Thread replies for opted-in channels
+    endpoint: conversations.replies
+    credential: admin
+    cadence: daily
+    window: per thread
+    guard: none
+    resume: pending set
+    retention: keep
+    writes: [raw.message, raw.message_observation, raw.thread]
+    runs_as: [channel_replies]
+    feeds: [fct_message, fct_thread]
+    limits:
+      batch: {default: 500, min: 50, max: 5000}
+
+  dim_snapshot:
+    label: Daily member and channel state, append only
+    endpoint: none
+    credential: none
+    cadence: daily
+    window: snapshot
+    guard: none
+    resume: none
+    retention: keep
+    writes: [raw.member_dim_snapshot, raw.channel_dim_snapshot]
+    feeds: [dim_member_scd, dim_channel_scd]
+
+  channel_history:
+    label: Public channel messages, the message spine
+    endpoint: conversations.history
+    credential: admin
+    cadence: daily
+    window: all time
+    guard: none
+    resume: cursor
+    retention: keep
+    writes: [raw.message, raw.message_observation, raw.thread, raw.channel_walk]
+    runs_as: [conversations_history]
+    feeds: [fct_message, fct_thread]
+    limits:
+      batch: {default: 200, min: 10, max: 2000}
+
   users_list:
     label: Account flags and deactivation
     endpoint: users.list
