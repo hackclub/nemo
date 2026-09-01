@@ -32,7 +32,6 @@
             <div class="rep-head">
               <% if report.anonymous? %>
                 <span class="rep-anon">anonymous</span>
-                <span class="rep-tag">identity withheld</span>
               <% else %>
                 <%= link_to names[report.reporter_user_id],
                       fd_member_path(report.reporter_user_id), class: "rep-name",

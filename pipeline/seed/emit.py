@@ -1,10 +1,8 @@
 import collections
-import itertools
 from datetime import datetime, time, timedelta, timezone
 
 from lib.db import connect_admin
-from seed import SEED_REF_PREFIX, SEED_SOURCE_PREFIX, SEED_USER_PREFIX
-from seed import conduct as conduct_module
+from seed import SEED_SOURCE_PREFIX, SEED_USER_PREFIX
 from seed import hostile as hostile_module
 from seed import runs as runs_module
 from seed.generate import COVERED_DAYS, Sampler
@@ -20,45 +18,7 @@ UNAVAILABLE_DAYS = 3
 UNAVAILABLE_OFFSET = 2
 IDLE_ROWS_PER_DAY = 25
 
-SEED_PREDICATES = {
-    "fd.audit": f"request_id LIKE '{SEED_REF_PREFIX}%'",
-    "fd.notes": f"author LIKE '{SEED_USER_PREFIX}%'",
-    "fd.actions": f"external_ref LIKE '{SEED_REF_PREFIX}%'",
-    "fd.cases": f"external_ref LIKE '{SEED_REF_PREFIX}%'",
-    "fd.member": f"user_id LIKE '{SEED_USER_PREFIX}%'",
-    "fd.thread_messages": f"source_app = '{SEED_SOURCE_PREFIX}slack'",
-    "fd.case_citations": f"flagged_by LIKE '{SEED_USER_PREFIX}%'",
-    "fd.decision_threads": f"added_by LIKE '{SEED_USER_PREFIX}%'",
-    "fd.decisions": f"proposed_by LIKE '{SEED_USER_PREFIX}%'",
-    "fd.access_grants": f"granted_by LIKE '{SEED_USER_PREFIX}%'",
-}
-
-APPEND_ONLY_TABLES = ("fd.audit",)
-
-DEPENDENTS = (
-    ("fd.case_chat", "case_id", "fd.cases"),
-    ("fd.case_citations", "thread_message_id", "fd.thread_messages"),
-    ("fd.actions", "case_id", "fd.cases"),
-)
-
-DETACH = (
-    ("fd.actions", "cites_message_id", "fd.thread_messages"),
-    ("fd.cases", "followed_decision_id", "fd.decisions"),
-    ("fd.cases", "duplicate_of", "fd.cases"),
-    ("fd.decisions", "replaced_by_id", "fd.decisions"),
-)
-
 SEEDED_TABLES = (
-    "fd.audit",
-    "fd.notes",
-    "fd.actions",
-    "fd.case_citations",
-    "fd.thread_messages",
-    "fd.cases",
-    "fd.decision_threads",
-    "fd.decisions",
-    "fd.access_grants",
-    "fd.member",
     "raw.member_activity_snapshot",
     "raw.channel_activity_snapshot",
     "raw.team_stats_snapshot",
@@ -106,47 +66,10 @@ def noon(day):
     return datetime.combine(day, time(12, 0), tzinfo=timezone.utc)
 
 
-def clear_append_only(force=False):
-    with connect_admin() as admin, admin.cursor() as cur:
-        for table in APPEND_ONLY_TABLES:
-            if force:
-                cur.execute(f"DELETE FROM {table}")
-            else:
-                cur.execute(f"DELETE FROM {table} WHERE {SEED_PREDICATES[table]}")
-        admin.commit()
-
-
-def staff_for_grant_holders():
-    with connect_admin() as admin:
-        rows = admin.execute(
-            "INSERT INTO app.staff (user_id, community_manager, created_at, updated_at) "
-            "SELECT DISTINCT g.user_id, false, now(), now() FROM fd.access_grants g "
-            "ON CONFLICT (user_id) DO NOTHING RETURNING user_id"
-        ).rowcount
-        admin.commit()
-    return rows
-
-
 def clear_seeded_staff():
     with connect_admin() as admin:
         admin.execute(f"DELETE FROM app.staff WHERE user_id LIKE '{SEED_USER_PREFIX}%'")
         admin.commit()
-
-
-def going(table, force):
-    if force or table not in SEED_PREDICATES:
-        return f"SELECT id FROM {table}"
-    return f"SELECT id FROM {table} WHERE {SEED_PREDICATES[table]}"
-
-
-def release(cur, force=False):
-    for child, column, parent in DETACH:
-        cur.execute(
-            f"UPDATE {child} SET {column} = NULL "
-            f"WHERE {column} IN ({going(parent, force)})"
-        )
-    for child, column, parent in DEPENDENTS:
-        cur.execute(f"DELETE FROM {child} WHERE {column} IN ({going(parent, force)})")
 
 
 def unstamp(conn):
@@ -156,19 +79,13 @@ def unstamp(conn):
 
 
 def clear(conn, force=False):
-    clear_append_only(force=force)
     clear_seeded_staff()
     with conn.cursor() as cur:
-        release(cur, force=force)
         for table in LOG_TABLES:
             cur.execute(f"DELETE FROM {table}")
         for table in dict.fromkeys(SEEDED_TABLES):
-            if table in APPEND_ONLY_TABLES:
-                continue
             if force:
                 cur.execute(f"DELETE FROM {table}")
-            elif table in SEED_PREDICATES:
-                cur.execute(f"DELETE FROM {table} WHERE {SEED_PREDICATES[table]}")
             elif has_column(cur, table, "channel_id"):
                 cur.execute(f"DELETE FROM {table} WHERE channel_id LIKE 'CSEED%'")
             elif has_column(cur, table, "user_id"):
@@ -562,156 +479,6 @@ def write_runs(conn, rng, members, as_of, hostile=False):
             runs_module.dead_letter_rows(rng, as_of, hostile=hostile),
         ),
     }
-    conn.commit()
-    return counts
-
-
-def ref_ids(conn, table):
-    with conn.cursor() as cur:
-        cur.execute(
-            f"SELECT external_ref, id FROM {table} WHERE external_ref LIKE %s",
-            (f"{SEED_REF_PREFIX}%",),
-        )
-        return dict(cur.fetchall())
-
-
-def case_ids(conn):
-    return ref_ids(conn, "fd.cases")
-
-
-def live_titles(conn):
-    with conn.cursor() as cur:
-        cur.execute("SELECT title FROM fd.decisions WHERE state <> 'superseded'")
-        return [title for (title,) in cur.fetchall()]
-
-
-def decision_ids(conn):
-    with conn.cursor() as cur:
-        cur.execute("SELECT title, id FROM fd.decisions")
-        return dict(cur.fetchall())
-
-
-def link_replacements(conn, pairs, ids):
-    with conn.cursor() as cur:
-        for old_title, new_title in pairs:
-            old_id, new_id = ids.get(old_title), ids.get(new_title)
-            if old_id is None or new_id is None:
-                continue
-            cur.execute(
-                "UPDATE fd.decisions SET replaced_by_id = %s WHERE id = %s",
-                (new_id, old_id),
-            )
-
-
-def apply_follows(conn, follows, cases, decisions):
-    written = 0
-    with conn.cursor() as cur:
-        for external_ref, title, _at, _by in follows:
-            case_id, decision_id = cases.get(external_ref), decisions.get(title)
-            if case_id is None or decision_id is None:
-                continue
-            cur.execute(
-                "UPDATE fd.cases SET followed_decision_id = %s WHERE id = %s",
-                (decision_id, case_id),
-            )
-            written += 1
-    return written
-
-
-def write_conduct(conn, seed, members, as_of):
-    cases = conduct_module.build_cases(conduct_module.rng_for(seed), members, as_of)
-    conduct_module.attach_all_reports(conduct_module.rng_for(seed, "reports"), cases, members)
-    conduct_module.attach_all_actions(conduct_module.rng_for(seed, "actions"), cases, as_of)
-    standing = conduct_module.attach_all_notes(
-        conduct_module.rng_for(seed, "notes"), cases, members, as_of
-    )
-    thread_rng = conduct_module.rng_for(seed, "threads")
-    conduct_module.attach_internal_threads(thread_rng, cases, members)
-    conduct_module.attach_shared_evidence(thread_rng, cases)
-    conduct_module.settle_priors(cases)
-    profiles = conduct_module.profiles_for(
-        conduct_module.rng_for(seed, "profiles"), members, as_of
-    )
-    counts = {
-        "fd.member": copy_rows(
-            conn, "fd.member", conduct_module.MEMBER_COLUMNS,
-            conduct_module.member_rows(profiles, members),
-        ),
-        "fd.member_identity": copy_rows(
-            conn, "fd.member_identity", conduct_module.IDENTITY_COLUMNS,
-            conduct_module.identity_rows(profiles, members),
-        ),
-        "fd.cases": copy_rows(
-            conn, "fd.cases", conduct_module.CASE_COLUMNS,
-            (conduct_module.case_row(case) for case in cases),
-        ),
-    }
-    ids = case_ids(conn)
-    counts["fd.case_threads"] = copy_rows(
-        conn, "fd.case_threads", conduct_module.THREAD_COLUMNS,
-        conduct_module.thread_rows(cases, ids),
-    )
-    counts["fd.thread_messages"] = copy_rows(
-        conn, "fd.thread_messages", conduct_module.MESSAGE_COLUMNS,
-        conduct_module.message_rows(conduct_module.rng_for(seed, "messages"), cases),
-    )
-    counts["fd.case_participants"] = copy_rows(
-        conn, "fd.case_participants", conduct_module.PARTICIPANT_COLUMNS,
-        conduct_module.participant_rows(cases, ids),
-    )
-    counts["fd.case_assignees"] = copy_rows(
-        conn, "fd.case_assignees", conduct_module.ASSIGNEE_COLUMNS,
-        conduct_module.assignee_rows(cases, ids),
-    )
-    counts["fd.case_reports"] = copy_rows(
-        conn, "fd.case_reports", conduct_module.REPORT_COLUMNS,
-        conduct_module.report_rows(cases, ids),
-    )
-    counts["fd.actions"] = copy_rows(
-        conn, "fd.actions", conduct_module.ACTION_COLUMNS,
-        conduct_module.action_rows(cases, ids),
-    )
-    counts["fd.notes"] = copy_rows(
-        conn, "fd.notes", conduct_module.NOTE_COLUMNS,
-        conduct_module.note_rows(cases, ids, standing),
-    )
-    decisions = conduct_module.without_titles(
-        conduct_module.build_decisions(
-            conduct_module.rng_for(seed, "decisions"), members, cases, as_of
-        ),
-        live_titles(conn),
-    )
-    counts["fd.decisions"] = copy_rows(
-        conn, "fd.decisions", conduct_module.DECISION_COLUMNS,
-        conduct_module.decision_rows(decisions),
-    )
-    told = decision_ids(conn)
-    link_replacements(conn, conduct_module.replacement_pairs(decisions), told)
-    counts["fd.decision_threads"] = copy_rows(
-        conn, "fd.decision_threads", conduct_module.DECISION_THREAD_COLUMNS,
-        conduct_module.decision_thread_rows(decisions, told),
-    )
-    follows = conduct_module.decision_follows(
-        conduct_module.rng_for(seed, "follows"), cases, decisions
-    )
-    counts["fd.cases followed"] = apply_follows(conn, follows, ids, told)
-    counts["fd.access_grants"] = copy_rows(
-        conn, "fd.access_grants", conduct_module.GRANT_COLUMNS,
-        conduct_module.access_grants(conduct_module.rng_for(seed, "grants"), members, as_of),
-    )
-    counts["fd.audit"] = copy_rows(
-        conn, "fd.audit", conduct_module.AUDIT_COLUMNS,
-        itertools.chain(
-            conduct_module.audit_rows(
-                cases, ids, ref_ids(conn, "fd.actions"), ref_ids(conn, "fd.case_reports")
-            ),
-            conduct_module.decision_audit_rows(decisions, told),
-            conduct_module.follow_audit_rows(follows, ids, told),
-            conduct_module.refusal_rows(
-                conduct_module.rng_for(seed, "refusals"), members, as_of
-            ),
-        ),
-    )
     conn.commit()
     return counts
 
