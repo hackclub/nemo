@@ -21,7 +21,7 @@
   <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months, top_posters_month: @top_posters_month %>
 </div>
 
-<div class="card card-stretch">
+<div class="card">
   <div class="card-head">
     <div>
       <h2 class="card-title">Activity distribution</h2>
@@ -36,47 +36,15 @@
       </p>
     </div>
   </div>
-  <% total_banded = @activity_bands.sum(&:members) %>
-  <% peak = @activity_bands.map(&:members).max.to_i %>
-  <div class="scroll">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>band</th>
-          <th class="col-num">members</th>
-          <th class="col-num">share</th>
-          <th>distribution</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @activity_bands.each do |b| %>
-          <% share = total_banded.positive? ? b.members.to_f / total_banded * 100 : 0 %>
-          <tr>
-            <td>
-              <span class="swatch">
-                <i style="background: <%= b.band_order.zero? ? "var(--off)" : "var(--accent)" %>"></i>
-                <%= b.band_order.zero? ? b.activity_band : "messages posted: #{b.activity_band}" %>
-              </span>
-            </td>
-            <td class="col-num"><%= number_with_delimiter(b.members) %></td>
-            <td class="col-num"><%= number_to_percentage(share.round(1), precision: 1) %></td>
-            <td style="width: 42%">
-              <div class="inbar <%= "soft" if b.band_order.zero? %>">
-                <span><i style="width: <%= peak.positive? ? [(b.members.to_f / peak * 100), 1.5].max.round(1) : 0 %>%"></i></span>
-                <span></span>
-              </div>
-            </td>
-          </tr>
-        <% end %>
-        <tr class="total">
-          <td>searched so far</td>
-          <td class="col-num"><%= number_with_delimiter(total_banded) %></td>
-          <td class="col-num">100%</td>
-          <td></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <div
+    data-controller="svg-chart"
+    data-svg-chart-kind-value="bars"
+    data-svg-chart-height-value="240"
+    data-svg-chart-data-value="<%= {
+      labels: @activity_bands.map { |b| b.band_order.zero? ? "none" : b.activity_band },
+      datasets: [{ label: "members", data: @activity_bands.map(&:members) }]
+    }.to_json %>"
+  ></div>
 </div>
 
 <% top_channels_stale = stale_note("mart_channel_range") %>
