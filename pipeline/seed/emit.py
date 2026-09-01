@@ -5,6 +5,7 @@ from lib.db import connect_admin
 from seed import SEED_SOURCE_PREFIX, SEED_USER_PREFIX
 from seed import hostile as hostile_module
 from seed import runs as runs_module
+from seed import spine as spine_module
 from seed.generate import COVERED_DAYS, Sampler
 
 MEMBER_DAY_SOURCE = f"{SEED_SOURCE_PREFIX}member_day"
@@ -19,6 +20,10 @@ UNAVAILABLE_OFFSET = 2
 IDLE_ROWS_PER_DAY = 25
 
 SEEDED_TABLES = (
+    "raw.message_observation",
+    "raw.thread",
+    "raw.message",
+    "raw.channel_walk",
     "raw.member_activity_snapshot",
     "raw.channel_activity_snapshot",
     "raw.team_stats_snapshot",
@@ -365,9 +370,8 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
           days=COVERED_DAYS, hostile=False):
     start = as_of - timedelta(days=days - 1)
     holes = {start + timedelta(days=UNAVAILABLE_OFFSET + i) for i in range(UNAVAILABLE_DAYS)}
-    by_member, by_channel, totals, last_active = fold(
-        event for event in stream if event.day not in holes
-    )
+    kept = [event for event in stream if event.day not in holes]
+    by_member, by_channel, totals, last_active = fold(kept)
 
     counts = {}
     counts["member_dim"] = copy_rows(
@@ -441,6 +445,20 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
     counts["analytics_day"] = copy_rows(
         conn, "raw.analytics_day", ["source", "ds", "loaded", "rows_in", "unavailable", "reason"],
         analytics_days(start, days, holes),
+    )
+
+    messages, threads, walks, observations = spine_module.build(rng, kept, members, as_of)
+    counts["message"] = copy_rows(
+        conn, "raw.message", spine_module.MESSAGE_COLUMNS, messages
+    )
+    counts["thread"] = copy_rows(
+        conn, "raw.thread", spine_module.THREAD_COLUMNS, threads
+    )
+    counts["channel_walk"] = copy_rows(
+        conn, "raw.channel_walk", spine_module.WALK_COLUMNS, walks
+    )
+    counts["message_observation"] = copy_rows(
+        conn, "raw.message_observation", spine_module.OBSERVATION_COLUMNS, observations
     )
 
     with conn.cursor() as cur:
