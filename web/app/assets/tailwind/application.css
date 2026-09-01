@@ -2790,10 +2790,6 @@
     font-weight: 500;
   }
 
-  .theme-opt .chip {
-    margin-inline-start: auto;
-  }
-
   .theme-auto {
     margin-inline-start: auto;
     font-size: var(--t-mark);
@@ -2811,7 +2807,6 @@
     display: none;
   }
 
-  .theme-opt .chip ~ .theme-mark,
   .theme-opt.auto .theme-mark {
     margin-inline-start: var(--s-3xs);
   }
@@ -2820,42 +2815,6 @@
     display: inline;
   }
 
-  .theme-follow {
-    justify-content: flex-start;
-    width: 100%;
-  }
-
-  .theme-track {
-    margin-inline-start: auto;
-    width: 30px;
-    height: 17px;
-    flex: none;
-    border-radius: var(--r-pill);
-    background-color: var(--off);
-    position: relative;
-    transition: background-color var(--dur) var(--ease-out);
-  }
-
-  .theme-track::after {
-    content: "";
-    position: absolute;
-    top: 2px;
-    inset-inline-start: 2px;
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
-    background-color: var(--knob);
-    box-shadow: 0 1px 2px var(--veil);
-    transition: inset-inline-start var(--dur) var(--ease-out);
-  }
-
-  .theme-follow[aria-checked="true"] .theme-track {
-    background-color: var(--accent);
-  }
-
-  .theme-follow[aria-checked="true"] .theme-track::after {
-    inset-inline-start: 15px;
-  }
 
   .menu-pop .you-out {
     color: var(--ink-2);

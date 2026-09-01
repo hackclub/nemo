@@ -122,10 +122,6 @@
       <div class="card">
         <div class="empty">
           <p class="empty-title">No evidence attached</p>
-          <p class="card-note">
-            A case can be resolved without it, but an action that cites a message needs
-            the thread on file first.
-          </p>
           <div class="empty-do">
             <%= opens_modal "case.thread", "Attach a thread", opens: "attach-thread",
                   on: @case, css: "btn btn-primary" %>
@@ -260,10 +256,6 @@
           </label>
         </div>
       </div>
-      <p class="card-note">
-        The messages are copied here as they are now. If the thread is later locked or
-        deleted in Slack, what is held on the case stays readable.
-      </p>
     </div>
     <div class="modal-foot">
       <label for="attach-thread" class="btn btn-ghost">Cancel</label>
