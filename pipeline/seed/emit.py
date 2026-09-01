@@ -3,6 +3,7 @@ from datetime import datetime, time, timedelta, timezone
 
 from lib.db import connect_admin
 from seed import SEED_SOURCE_PREFIX, SEED_USER_PREFIX
+from seed import dims as dims_module
 from seed import hostile as hostile_module
 from seed import runs as runs_module
 from seed import spine as spine_module
@@ -20,6 +21,8 @@ UNAVAILABLE_OFFSET = 2
 IDLE_ROWS_PER_DAY = 25
 
 SEEDED_TABLES = (
+    "raw.member_dim_snapshot",
+    "raw.channel_dim_snapshot",
     "raw.message_observation",
     "raw.thread",
     "raw.message",
@@ -460,6 +463,16 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
     counts["message_observation"] = copy_rows(
         conn, "raw.message_observation", spine_module.OBSERVATION_COLUMNS, observations
     )
+
+    counts["member_dim_snapshot"] = copy_rows(
+        conn, "raw.member_dim_snapshot", dims_module.MEMBER_COLUMNS,
+        dims_module.member_rows(rng, members, as_of),
+    )
+    counts["channel_dim_snapshot"] = copy_rows(
+        conn, "raw.channel_dim_snapshot", dims_module.CHANNEL_COLUMNS,
+        dims_module.channel_rows(rng, channels, as_of),
+    )
+    dims_module.rehash(conn)
 
     with conn.cursor() as cur:
         cur.execute(STAMP_SQL, (profile["captured_at"], scale, seed))

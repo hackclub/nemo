@@ -7,7 +7,15 @@ from lib.paths import ENV_FILE
 
 SOURCE = "dim_snapshot"
 
-MEMBER_SQL = """
+MEMBER_HASH = (
+    "md5(concat_ws('|', is_bot, is_admin, is_owner, is_primary_owner, is_restricted, "
+    "is_ultra_restricted, is_invited_member, is_invited_guest, is_deleted, "
+    "invite_pending, deactivated_at, claimed_at))"
+)
+
+CHANNEL_HASH = "md5(concat_ws('|', name, visibility, archived))"
+
+MEMBER_SQL = f"""
 INSERT INTO raw.member_dim_snapshot
     (user_id, observed_on, record_hash, account_created, account_created_verified,
      claimed_at, deactivated_at, is_bot, is_admin, is_owner, is_primary_owner,
@@ -15,9 +23,7 @@ INSERT INTO raw.member_dim_snapshot
      is_deleted, invite_pending)
 SELECT
     user_id, current_date,
-    md5(concat_ws('|', is_bot, is_admin, is_owner, is_primary_owner, is_restricted,
-        is_ultra_restricted, is_invited_member, is_invited_guest, is_deleted,
-        invite_pending, deactivated_at, claimed_at)),
+    {MEMBER_HASH},
     account_created, account_created_verified, claimed_at, deactivated_at,
     is_bot, is_admin, is_owner, is_primary_owner, is_restricted, is_ultra_restricted,
     is_invited_member, is_invited_guest, is_deleted, invite_pending
@@ -30,12 +36,12 @@ ON CONFLICT (user_id, observed_on) DO UPDATE SET
     observed_at = now()
 """
 
-CHANNEL_SQL = """
+CHANNEL_SQL = f"""
 INSERT INTO raw.channel_dim_snapshot
     (channel_id, observed_on, record_hash, name, visibility, archived, date_created)
 SELECT
     channel_id, current_date,
-    md5(concat_ws('|', name, visibility, archived)),
+    {CHANNEL_HASH},
     name, visibility, archived, date_created
 FROM raw.channel_dim
 ON CONFLICT (channel_id, observed_on) DO UPDATE SET
