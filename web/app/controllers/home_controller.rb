@@ -1,7 +1,25 @@
 class HomeController < ApplicationController
   before_action { needs(:analytics) }
 
+  OPEN_SHOWN = 25
+
   def index
+    return front_door unless may_community?("analytics.workspace.read")
+
+    workspace
+  end
+
+  private
+
+  def front_door
+    @open_channels = Channels::Audience.open_to_all
+      .order(Arel.sql("dim_channel.name"))
+      .limit(OPEN_SHOWN)
+      .to_a
+    render :front_door
+  end
+
+  def workspace
     @team_stats = Analytics::MartTeamStatsDaily.order(ds: :desc).first
     @team_stats_prior =
       if @team_stats
@@ -13,8 +31,6 @@ class HomeController < ApplicationController
     @people_trend = activity_trend_for(@people_granularity)
     @messages_trend = activity_trend_for(@messages_granularity)
   end
-
-  private
 
   def activity_trend_for(granularity)
     @activity_trends ||= {}

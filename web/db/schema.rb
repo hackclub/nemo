@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_01_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_02_120000) do
   create_schema "app"
 
   # These are extensions that must be enabled in order to support this database
@@ -36,6 +36,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_010000) do
     t.index ["display_name"], name: "index_cachet_profiles_on_display_name"
   end
 
+  create_table "app.channel_audience", primary_key: "channel_id", id: :string, force: :cascade do |t|
+    t.string "audience", null: false
+    t.datetime "set_at", default: -> { "now()" }, null: false
+    t.string "set_by", null: false
+    t.index ["audience"], name: "channel_audience_open", where: "((audience)::text <> 'private'::text)"
+    t.check_constraint "audience::text = ANY (ARRAY['private'::character varying, 'shared'::character varying, 'everyone'::character varying]::text[])", name: "channel_audience_kind"
+  end
+
   create_table "app.channel_backfill", force: :cascade do |t|
     t.string "cancelled_by"
     t.string "channel_id", null: false
@@ -57,6 +65,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_010000) do
     t.index ["channel_id"], name: "index_channel_backfill_on_channel_id", unique: true
     t.index ["state", "priority", "requested_at"], name: "channel_backfill_ready_idx"
     t.check_constraint "state::text = ANY (ARRAY['queued'::character varying, 'draining'::character varying, 'paused'::character varying, 'complete'::character varying, 'cancelled'::character varying]::text[])", name: "channel_backfill_state_known"
+  end
+
+  create_table "app.channel_grants", force: :cascade do |t|
+    t.string "channel_id", null: false
+    t.datetime "granted_at", default: -> { "now()" }, null: false
+    t.string "granted_by", null: false
+    t.string "reason"
+    t.datetime "revoked_at"
+    t.string "revoked_by"
+    t.string "user_id", null: false
+    t.index ["channel_id"], name: "channel_grants_by_channel", where: "(revoked_at IS NULL)"
+    t.index ["user_id", "channel_id"], name: "channel_grants_one_live", unique: true, where: "(revoked_at IS NULL)"
+  end
+
+  create_table "app.community_grants", force: :cascade do |t|
+    t.string "family", null: false
+    t.datetime "granted_at", default: -> { "now()" }, null: false
+    t.string "granted_by", null: false
+    t.string "reason"
+    t.datetime "revoked_at"
+    t.string "revoked_by"
+    t.string "role", null: false
+    t.string "user_id", null: false
+    t.index ["user_id", "family"], name: "community_grants_one_live", unique: true, where: "(revoked_at IS NULL)"
+    t.index ["user_id"], name: "community_grants_live", where: "(revoked_at IS NULL)"
+    t.check_constraint "family::text = ANY (ARRAY['read'::character varying, 'ops'::character varying]::text[])", name: "community_grants_family"
   end
 
   create_table "app.engine_setting", force: :cascade do |t|

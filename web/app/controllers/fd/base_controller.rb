@@ -1,5 +1,6 @@
 module Fd
   class BaseController < ApplicationController
+    before_action :require_fd
     before_action :needs_the_engine
     before_action :require_a_declaration, unless: :read_only_request?
 
@@ -15,6 +16,13 @@ module Fd
     end
 
     private
+
+    def require_fd
+      return if current_staff&.role.present?
+      return head :forbidden if request.format.json?
+
+      redirect_to root_path, alert: "Fire Engine is for the conduct team"
+    end
 
     def needs_the_engine
       needs(:fire_engine)

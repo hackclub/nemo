@@ -1,5 +1,6 @@
 class JourneyController < ApplicationController
   before_action { needs(:analytics) }
+  before_action :require_reading
 
   def acquisition
     asked = params[:growth_months].to_i

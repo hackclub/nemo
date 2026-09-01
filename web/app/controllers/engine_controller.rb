@@ -1,5 +1,6 @@
 class EngineController < ApplicationController
   before_action { needs(:analytics) }
+  before_action :require_operating
 
   HISTORY = 12
   FRESHNESS_WINDOW = 30.days

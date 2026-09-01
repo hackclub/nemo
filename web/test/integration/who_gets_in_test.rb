@@ -45,11 +45,14 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "holding no grant means no session, whatever the staff table says" do
+  test "holding no grant still gets a session, and only the front door" do
     sign_in_as(@me)
 
-    assert_redirected_to auth_failure_path(message: "not_allowlisted")
-    assert_nil session[:user_id]
+    assert_equal @me.user_id, session[:user_id]
+
+    get root_path
+    assert_response :success
+    assert_select ".card-title", text: "Open to everyone"
   end
 
   test "a live grant is enough on its own, with no staff row behind it" do
@@ -64,16 +67,18 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "somebody unknown to the staff table is refused the same way" do
+  test "somebody unknown to the staff table signs in and gets a row" do
     sign_in_as(Staff.new(user_id: "USTRANGER"))
 
-    assert_redirected_to auth_failure_path(message: "not_allowlisted")
-    assert_nil session[:user_id]
+    assert_equal "USTRANGER", session[:user_id]
+    assert Staff.exists?("USTRANGER"), "signing in through Hack Club makes the row"
+
+    get fd_cases_path
+    assert_redirected_to root_path, "a stranger still holds nothing"
   end
 
   test "the refusal says one thing, and offers the way back" do
-    sign_in_as(@me)
-    follow_redirect!
+    get auth_failure_path(message: "not_allowlisted")
 
     assert_response :success
     assert_select "h1", text: "Access denied"
@@ -108,7 +113,9 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     grant.take_back!(by: "UBOSS")
 
     get fd_root_path
-    assert_redirected_to auth_failure_path(message: "not_allowlisted")
+    assert_redirected_to root_path,
+      "losing the grant shuts Fire Engine, it no longer shuts the whole app"
+    assert_match(/conduct team/, flash[:alert])
   end
 
   test "a stale session lands on the sign in page rather than bouncing forever" do
@@ -118,8 +125,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
     get login_path
 
-    assert_response :success
-    assert_select "h1", text: /sign in/i
+    assert_redirected_to root_path, "a live session is sent on, not asked to sign in again"
   end
 
   test "the sign in switch for development is not routed anywhere else" do

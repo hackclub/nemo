@@ -1,0 +1,57 @@
+<% content_for :page_title, "Community analytics" %>
+
+<div class="stack">
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Open to everyone</h2>
+        <p class="card-sub">
+          <%= pluralize(@open_channels.size, "channel") %> the team has opened up
+        </p>
+      </div>
+    </div>
+
+    <% if @open_channels.any? %>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>channel</th>
+              <th class="col-num">members</th>
+              <th class="col-date">made</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @open_channels.each do |channel| %>
+              <tr data-controller="row-link"
+                  data-row-link-href-value="<%= channel_path(channel.channel_id) %>"
+                  data-action="click->row-link#go">
+                <td>
+                  <span class="two-line">
+                    <%= link_to "##{channel.name}", channel_path(channel.channel_id) %>
+                    <span><%= channel.channel_id %></span>
+                  </span>
+                </td>
+                <td class="col-num"><%= number_with_delimiter(channel.total_members) %></td>
+                <td class="col-date"><%= on_day(channel.date_created) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">No channel is open to everyone yet</p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <p class="card-note">
+        Workspace analytics, member analytics and the rest of the channels need access.
+        Ask a community manager for it.
+      </p>
+    </div>
+  </div>
+</div>

@@ -98,8 +98,8 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
       post engine_sync_path
     end
 
-    assert_redirected_to engine_path
-    assert_match(/community manager/, flash[:alert])
+    assert_redirected_to root_path
+    assert_match(/no community access/, flash[:alert])
   end
 
   test "a firefighter cannot trigger a stage" do
@@ -109,8 +109,8 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
       post engine_trigger_stage_path(stage: "member_channels")
     end
 
-    assert_redirected_to engine_path
-    assert_match(/lead/, flash[:alert])
+    assert_redirected_to root_path
+    assert_match(/no community access/, flash[:alert])
   end
 
   test "a firefighter cannot cancel a sync somebody else queued" do
@@ -120,7 +120,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
 
     post engine_cancel_path
 
-    assert_redirected_to engine_path
+    assert_redirected_to root_path
     assert_not_equal "cancelling", queued.reload.status,
       "a firefighter must not be able to stop a run"
   end

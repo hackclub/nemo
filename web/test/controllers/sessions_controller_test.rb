@@ -20,23 +20,25 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "UTESTALLOWED", session[:user_id]
   end
 
-  test "a staff row with no grant is rejected like a stranger" do
+  test "a staff row with no grant still signs in, holding nothing" do
     Staff.create!(user_id: "UTESTNOGRANT", community_manager: false)
     mock_hca_auth("UTESTNOGRANT")
 
     get "/auth/hackclub/callback"
 
-    assert_redirected_to auth_failure_path(message: "not_allowlisted")
-    assert_nil session[:user_id]
+    assert_redirected_to root_path
+    assert_equal "UTESTNOGRANT", session[:user_id]
+    assert_equal "Signed in", flash[:notice], "it must not claim a role they do not hold"
   end
 
-  test "unknown slack id is rejected" do
+  test "a slack id nobody has seen becomes a staff row on first sign in" do
     mock_hca_auth("UNOTALLOWED")
 
     get "/auth/hackclub/callback"
 
-    assert_redirected_to auth_failure_path(message: "not_allowlisted")
-    assert_nil session[:user_id]
+    assert_redirected_to root_path
+    assert_equal "UNOTALLOWED", session[:user_id]
+    assert Staff.exists?("UNOTALLOWED")
   end
 
   test "missing slack_id claim is rejected" do

@@ -38,10 +38,37 @@ class ApplicationController < ActionController::Base
   end
 
   def require_staff
-    return if current_staff&.role.present?
+    return if current_staff.present?
     return head :unauthorized if request.format.json?
-    return redirect_to auth_failure_path(message: "not_allowlisted") if current_staff
 
     redirect_to login_path, alert: "sign in to continue"
+  end
+
+  def community_role(family)
+    Community::Access.role(current_staff, family)
+  end
+  helper_method :community_role
+
+  def may_community?(key, record = nil)
+    Community::Access.allow?(current_staff, key, record)
+  end
+  helper_method :may_community?
+
+  def require_reading
+    return if may_community?("analytics.workspace.read")
+
+    refuse_community("analytics.workspace.read")
+  end
+
+  def require_operating
+    return if may_community?("ops.engine.read")
+
+    refuse_community("ops.engine.read")
+  end
+
+  def refuse_community(key)
+    return head :forbidden if request.format.json?
+
+    redirect_to root_path, alert: Community::Access.why_not(current_staff, key)
   end
 end

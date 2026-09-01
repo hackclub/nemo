@@ -22,12 +22,13 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to login_path
   end
 
-  test "a staff row with no roles cannot sign in, so it never reaches the dashboard" do
+  test "a staff row with no roles reaches the front door, not the dashboard" do
     staff = Staff.create!(user_id: "UTESTNONE1")
     sign_in_as(staff)
-    assert_redirected_to auth_failure_path(message: "not_allowlisted")
 
     get root_path
-    assert_redirected_to login_path
+
+    assert_response :success
+    assert_select ".card-title", text: "Open to everyone"
   end
 end

@@ -1,0 +1,67 @@
+families:
+  read:
+    label: Reads
+    roles: [observer, analyst, curator]
+  ops:
+    label: Operates
+    roles: [operator, steward]
+
+role_labels:
+  observer: Observer
+  analyst: Analyst
+  curator: Curator
+  operator: Operator
+  steward: Steward
+
+superadmin:
+  read: curator
+  ops: steward
+
+areas:
+  analytics: Community analytics
+  ops: Running the engine
+
+permissions:
+  analytics.workspace.read:
+    label: See growth, funnels and team stats
+    least: observer
+
+  analytics.member.read:
+    label: See member names in the analytics
+    least: analyst
+
+  analytics.channel.read:
+    label: See a channel that is shared with them
+    least: analyst
+
+  analytics.channel.share:
+    label: Set a channel's audience, and name who may read it
+    least: curator
+
+  analytics.grant:
+    label: Give or take back community access
+    least: curator
+
+  ops.engine.read:
+    label: See the engine, its runs and its coverage
+    least: operator
+
+  ops.engine.stage:
+    label: Trigger a stage, or cancel a sync that is running
+    least: operator
+
+  ops.channel.backfill:
+    label: Queue a thread replies backfill for a channel
+    least: operator
+
+  ops.engine.sync:
+    label: Queue a full sync of every source
+    least: steward
+
+  ops.engine.tune:
+    label: Tune the engine, retention and pruning
+    least: steward
+
+  ops.flag.flip:
+    label: Turn a section of the dashboard on or off
+    least: steward
