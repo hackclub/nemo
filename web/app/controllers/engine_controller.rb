@@ -86,6 +86,8 @@ class EngineController < ApplicationController
   end
 
   def sync
+    return refuse_running("engine.sync") unless current_staff.may?("engine.sync")
+
     if SyncRequest.active.exists?
       redirect_to engine_path, alert: "a sync is already queued or running"
       return
@@ -96,6 +98,8 @@ class EngineController < ApplicationController
   end
 
   def cancel
+    return refuse_running("engine.run") unless current_staff.may?("engine.run")
+
     request = SyncRequest.active.recent_first.first
     if request&.cancel!
       redirect_to engine_path, notice: "cancel requested"
@@ -105,6 +109,8 @@ class EngineController < ApplicationController
   end
 
   def trigger_stage
+    return refuse_running("engine.run") unless current_staff.may?("engine.run")
+
     if SyncRequest.active.exists?
       redirect_to engine_path, alert: "a sync is already queued or running"
       return
@@ -172,6 +178,10 @@ class EngineController < ApplicationController
 
   def refuse_tuning
     redirect_to engine_path(tab: "tuning"), alert: "tuning the engine is community manager only"
+  end
+
+  def refuse_running(key)
+    redirect_to engine_path, alert: Fd::Access.why_not(current_staff, key)
   end
 
   def stage_for_source(source)

@@ -320,7 +320,7 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     give("UFF1")
     get fd_settings_path(person: "UFF1")
 
-    assert_select ".ft", text: /What the role does not cover\s*5/
+    assert_select ".ft", text: /What the role does not cover\s*7/
     assert_select ".fbox .row", text: /Settle a proposal.*lead only/m
     assert_select ".fbox .row", text: /Give or take back access.*community manager only/m
   end
@@ -329,7 +329,7 @@ class FdSettingsTest < ActionDispatch::IntegrationTest
     give("ULEAD", role: "lead")
     get fd_settings_path(person: "ULEAD")
 
-    assert_select ".ft", text: /What the role does not cover\s*3/
+    assert_select ".ft", text: /What the role does not cover\s*4/
   end
 
   test "identity reads are counted for everybody, since everybody may read" do

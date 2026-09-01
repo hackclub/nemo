@@ -84,4 +84,44 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to login_path
   end
+
+  def firefighter
+    boss = Staff.create!(user_id: "UTESTCM9", community_manager: true)
+    Fd::AccessGrant.give!("UHAND9", role: "firefighter", by: boss.user_id, reason: "works here")
+    Staff.find("UHAND9")
+  end
+
+  test "a firefighter cannot queue a full sync" do
+    sign_in_as(firefighter)
+
+    assert_no_difference -> { SyncRequest.count } do
+      post engine_sync_path
+    end
+
+    assert_redirected_to engine_path
+    assert_match(/community manager/, flash[:alert])
+  end
+
+  test "a firefighter cannot trigger a stage" do
+    sign_in_as(firefighter)
+
+    assert_no_difference -> { SyncRequest.count } do
+      post engine_trigger_stage_path(stage: "member_channels")
+    end
+
+    assert_redirected_to engine_path
+    assert_match(/lead/, flash[:alert])
+  end
+
+  test "a firefighter cannot cancel a sync somebody else queued" do
+    boss = Staff.create!(user_id: "UTESTCM8", community_manager: true)
+    queued = SyncRequest.queue!(kind: "full", requested_by: boss.user_id)
+    sign_in_as(firefighter)
+
+    post engine_cancel_path
+
+    assert_redirected_to engine_path
+    assert_not_equal "cancelling", queued.reload.status,
+      "a firefighter must not be able to stop a run"
+  end
 end
