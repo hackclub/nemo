@@ -38,9 +38,9 @@ TAIL_SAMPLES_PER_TAIL = 50
 KNOWN_GAPS = []
 
 MART_CHECKS = [
-    ("mart_onboarding_funnel", "retained_day_30"),
-    ("mart_onboarding_funnel", "retained_day_90"),
-    ("mart_onboarding_recurrence_funnel", "returned_next_day"),
+    ("mart_onboarding_funnel", "active_by_day_7"),
+    ("mart_onboarding_funnel", "active_by_day_30"),
+    ("mart_onboarding_recurrence_funnel", "posted_twice"),
     ("mart_response_rate", "answered_by_member"),
     ("mart_response_rate", "median_member_latency_seconds"),
     ("mart_fast_reply_vs_retention", "retained_day_30_rate"),
@@ -55,6 +55,17 @@ MART_CHECKS = [
     ("mart_top_posters", "messages_posted"),
     ("mart_channel_activity", "messages_posted"),
     ("mart_channel_range", "members_who_posted"),
+    ("fct_message", "thread_root_ts"),
+    ("fct_message", "mention_count"),
+    ("fct_thread", "reply_users_count"),
+    ("fct_channel_walk", "messages_seen"),
+    ("fct_message_history", "channels_posted_in"),
+    ("fct_message_first_post", "posted_at"),
+    ("fct_member_channel_messages", "messages"),
+    ("fct_first_response", "detection_method"),
+    ("fct_first_response", "latency_seconds"),
+    ("dim_member_scd", "valid_to"),
+    ("dim_channel_scd", "valid_to"),
 ]
 
 CONSISTENCY_CHECKS = [
@@ -80,6 +91,59 @@ CONSISTENCY_CHECKS = [
     (
         "no day ledger gap inside the covered span",
         "select (max(ds) - min(ds) + 1) - count(*) from raw.analytics_day where source like 'seed_%member_day'",
+    ),
+    (
+        "every reply points at a message that exists",
+        "select count(*) from raw.message r left join raw.message m "
+        "on m.channel_id = r.channel_id and m.ts = r.thread_root_ts "
+        "where r.is_reply and m.ts is null",
+    ),
+    (
+        "nobody replies to themselves",
+        "select count(*) from raw.message r join raw.message m "
+        "on m.channel_id = r.channel_id and m.ts = r.thread_root_ts "
+        "where r.is_reply and r.author_id = m.author_id",
+    ),
+    (
+        "every thread counts the replies it actually has",
+        "select count(*) from raw.thread t where t.reply_count <> ("
+        "select count(*) from raw.message m where m.channel_id = t.channel_id "
+        "and m.thread_root_ts = t.root_ts and m.is_reply)",
+    ),
+    (
+        "every walk counts the messages it actually saw",
+        "select count(*) from raw.channel_walk w where w.messages_seen <> ("
+        "select count(*) from raw.message m where m.channel_id = w.channel_id)",
+    ),
+    (
+        "every message was observed arriving",
+        "select count(*) from raw.message m where not exists ("
+        "select 1 from raw.message_observation o "
+        "where o.channel_id = m.channel_id and o.ts = m.ts)",
+    ),
+]
+
+ANALYTICS_CHECKS = [
+    (
+        "every member holds exactly one current version",
+        "select count(*) from (select user_id from analytics.dim_member_scd "
+        "where is_current group by user_id having count(*) <> 1) t",
+    ),
+    (
+        "every channel holds exactly one current version",
+        "select count(*) from (select channel_id from analytics.dim_channel_scd "
+        "where is_current group by channel_id having count(*) <> 1) t",
+    ),
+    (
+        "no member version starts before the one it replaces",
+        "select count(*) from analytics.dim_member_scd "
+        "where valid_to is not null and valid_to <= valid_from",
+    ),
+    (
+        "no message is counted in a channel that was never walked",
+        "select count(*) from analytics.fct_message m "
+        "left join analytics.fct_channel_walk w on w.channel_id = m.channel_id "
+        "where w.channel_id is null",
     ),
 ]
 
@@ -121,8 +185,8 @@ def check_marts(admin):
         yield f"{table}.{column}", count, "> 0", count > 0, "at least one row"
 
 
-def check_consistency(conn):
-    for label, sql in CONSISTENCY_CHECKS:
+def check_consistency(conn, checks=None):
+    for label, sql in checks or CONSISTENCY_CHECKS:
         delta = conn.execute(sql).fetchone()[0] or 0
         yield label, delta, 0, delta == 0, "exactly 0"
 
@@ -162,6 +226,8 @@ def main(argv=None):
         admin.read_only = True
         print("marts populated")
         failures += report(check_marts(admin))
+        print("model consistency")
+        failures += report(check_consistency(admin, ANALYTICS_CHECKS))
         print("known gaps, reported but not counted")
         for table, column, why in KNOWN_GAPS:
             count = admin.execute(
