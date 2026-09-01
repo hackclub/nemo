@@ -963,20 +963,6 @@
     color: var(--ink-3);
   }
 
-  .lane-said .gist {
-    margin-top: 0;
-    white-space: normal;
-    overflow: visible;
-  }
-
-  .lane-who {
-    margin: 0 0 6px;
-  }
-
-  .lane-needs {
-    margin: 0 0 7px;
-  }
-
   .subjcell {
     display: flex;
     align-items: center;
@@ -1593,8 +1579,6 @@
   }
 
   .rail-badge,
-  .lane-head b,
-  .lane-id,
   .msg-at,
   .said-at,
   .nights span,
@@ -6056,98 +6040,246 @@
     overflow-x: auto;
   }
 
-  .board {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0;
-    background-color: var(--card);
+  .rep-feed {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2xs);
+    padding: var(--s-sm);
+  }
+
+  .rep-card {
     border: 1px solid var(--line);
     border-radius: var(--r-card);
-    overflow: hidden;
-  }
-
-  .lane {
-    padding: var(--s-sm);
-    min-width: 0;
-  }
-
-  .lane + .lane {
-    border-left: 1px solid var(--line);
-  }
-
-  .lane-head {
-    display: flex;
-    align-items: baseline;
-    gap: 7px;
-    padding: 0 0 var(--s-xs);
-    font-size: var(--t-head);
-    font-weight: 600;
-    color: var(--ink);
-  }
-
-  .lane-head b {
-    font-weight: 500;
-    color: var(--ink-3);
-    margin-left: auto;
-  }
-
-  .lane-card {
     background-color: var(--card);
-    border: 1px solid var(--line);
-    border-radius: var(--r-ctl);
-    padding: var(--s-xs) 13px;
-    margin-bottom: var(--s-2xs);
+    overflow: hidden;
     cursor: pointer;
-    transition: border-color var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
+    transition: border-color var(--dur) var(--ease-out);
   }
 
-  .lane-card:last-child { margin-bottom: 0; }
-
-  .lane-card:hover {
+  .rep-card:hover {
     border-color: var(--accent-line);
-    transform: translateY(-1px);
   }
 
-  .lane-id {
+  .rep-card.is-resolved {
+    opacity: 0.62;
+  }
+
+  .rep-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs);
+    padding: 5px var(--s-xs) 5px var(--s-sm);
+    background-color: var(--card-2);
+    border-bottom: 1px solid var(--line-soft);
     font-size: var(--t-fine);
     color: var(--ink-3);
-    display: flex;
-    gap: 7px;
-    min-width: 0;
   }
 
-  .lane-id span {
+  .rep-id {
+    font-family: var(--font-code);
+    font-size: var(--t-small);
+    font-weight: 500;
+    color: var(--ink-2);
+  }
+
+  .rep-id:hover {
+    color: var(--accent);
+  }
+
+  .rep-cat {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .lane-said {
+  .rep-age {
     font-size: var(--t-small);
-    margin: 4px 0 7px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
   }
 
-  .lane-foot {
+  .rep-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 248px;
+  }
+
+  .rep-said {
+    padding: 11px var(--s-md) 12px;
+    min-width: 0;
+  }
+
+  .rep-msg {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    column-gap: 9px;
+  }
+
+  .rep-msg + .rep-msg {
+    margin-top: var(--s-xs);
+  }
+
+  .rep-face {
+    grid-row: span 3;
+    align-self: start;
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border-radius: 8px;
+    object-fit: cover;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: var(--t-small);
+  }
+
+  .rep-face.av-none {
+    border: 1px dashed var(--line);
+  }
+
+  .rep-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2xs);
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .rep-name {
+    font-size: var(--t-body);
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .rep-anon {
+    font-size: var(--t-body);
+    font-weight: 700;
+    color: var(--ink-2);
+  }
+
+  .rep-at {
+    font-family: var(--font-code);
+    font-size: var(--t-fine);
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rep-tag {
+    font-size: var(--t-mark);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 0 4px;
+    line-height: 1.6;
+  }
+
+  .rep-text {
+    grid-column: 2;
+    margin: 2px 0 0;
+    font-size: var(--t-body);
+    line-height: 1.6;
+    color: var(--ink);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .rep-empty {
+    grid-column: 2;
+    margin: 2px 0 0;
+    font-size: var(--t-body);
+    color: var(--ink-3);
+  }
+
+  .rep-foot {
+    grid-column: 2;
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2xs);
+    flex-wrap: wrap;
+    margin-top: 4px;
+    font-size: var(--t-fine);
+    color: var(--ink-3);
+  }
+
+  .rep-waiting {
+    color: var(--warn);
+    font-weight: 600;
+  }
+
+  .rep-told,
+  .rep-replied {
+    color: var(--good);
+  }
+
+  .rep-rail {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-content: start;
+    column-gap: var(--s-xs);
+    row-gap: 10px;
+    min-width: 0;
+    padding: 11px var(--s-sm) 12px;
+    background-color: var(--card-2);
+    border-left: 1px solid var(--line-soft);
+  }
+
+  .rep-rail > b {
+    font-size: var(--t-fine);
+    font-weight: 500;
+    color: var(--ink-3);
+    line-height: 22px;
+  }
+
+  .rep-rail > div {
     display: flex;
     align-items: center;
-    gap: 7px;
+    flex-wrap: wrap;
+    column-gap: 6px;
+    row-gap: 2px;
+    min-width: 0;
+  }
+
+  .rep-rail .face-name .handle {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .rep-who {
+    min-width: 0;
+    font-size: var(--t-small);
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+
+  .rep-warn {
+    flex: none;
     font-size: var(--t-fine);
+    color: var(--warn);
+  }
+
+  .rep-quiet {
+    font-size: var(--t-small);
     color: var(--ink-3);
   }
 
-  .lane-none {
-    margin: 0;
-    padding: 4px 3px 6px;
+  .rep-rail .btn {
+    height: 26px;
+    padding: 0 10px;
     font-size: var(--t-fine);
-    color: var(--ink-3);
   }
 
   @media (max-width: 900px) {
-    .board { grid-template-columns: minmax(0, 1fr); }
+    .rep-body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .rep-rail {
+      border-left: 0;
+      border-top: 1px solid var(--line-soft);
+    }
   }
 
   .data-table {

@@ -278,7 +278,7 @@ module Fd
       @subject_preset = preset_for(asked_subjects)
       @names = Names.for(@cases.flat_map { |kase|
         kase.subject_user_ids + kase.assignee_user_ids + [kase.opened_by] +
-          kase.reports.map(&:reporter_user_id)
+          kase.reports.map(&:reporter_user_id) + kase.reports.map(&:closed_by)
       })
       @open_for_subject ||= []
       @flags = CaseFlags.for_queue

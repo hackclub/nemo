@@ -175,4 +175,30 @@ class FdHelperTest < ActionView::TestCase
     assert_equal "Three things before this can close",
       still_needed([:subject, :violation, :evidence])
   end
+
+  def report(**attrs)
+    saved = make_case(subject: "UAAA")
+    Fd::CaseReport.create!(case_id: saved.id, reporter_user_id: "UREP1", is_anonymous: false,
+      source_app: "shroud", received_at: 3.days.ago, **attrs)
+  end
+
+  test "an unanswered report says how long the reporter has been waiting" do
+    state, line = report_reply_state(report)
+    assert_equal :waiting, state
+    assert_equal "no reply to the reporter yet, 3d", line
+  end
+
+  test "an answered report gives the date, not the wait" do
+    state, line = report_reply_state(report(first_replied_at: Time.utc(2026, 3, 4, 12)))
+    assert_equal :replied, state
+    assert_equal "replied 4 Mar 2026", line
+  end
+
+  test "a closed report names who told the reporter the outcome" do
+    said = report(first_replied_at: 2.days.ago, closed_at: Time.utc(2026, 3, 5, 12),
+      closed_by: "USTAFF")
+    state, line = report_reply_state(said)
+    assert_equal :told, state
+    assert_equal "told the outcome 5 Mar by @USTAFF", line
+  end
 end

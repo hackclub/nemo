@@ -396,19 +396,6 @@ module FdHelper
     ""
   end
 
-  LANES = ["open", "acting", "resolved"].freeze
-
-  def case_lanes(cases, action_counts)
-    LANES.index_with { |lane| cases.select { |kase| case_lane(kase, action_counts) == lane } }
-  end
-
-  def case_lane(kase, action_counts)
-    return "resolved" if kase.resolved?
-    return "acting" if action_counts[kase.id].to_i.positive?
-
-    "open"
-  end
-
   def case_age_label(seconds)
     days = (seconds / 1.day).floor
     return "#{days}d" if days.positive?
@@ -778,6 +765,21 @@ module FdHelper
     return [] if kase.subject_user_ids.any?
 
     ["a subject"]
+  end
+
+  def case_reports_shown(kase)
+    kase.reports.sort_by(&:received_at)
+  end
+
+  def report_reply_state(report)
+    return [:told, report.closed_line(names)] if report.told_of_outcome?
+    return [:replied, "replied #{on_day(report.first_replied_at)}"] if report.replied?
+
+    [:waiting, "no reply to the reporter yet, #{case_age_label(report.waiting_for)}"]
+  end
+
+  def case_opened_by_line(kase)
+    safe_join(["opened by ", member_link(kase.opened_by), " on #{on_day(kase.opened_at)}"])
   end
 
   def to_sentence_words(words)

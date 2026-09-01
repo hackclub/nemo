@@ -1,0 +1,106 @@
+<% reports = case_reports_shown(kase) %>
+<article class="rep-card <%= "is-resolved" if kase.resolved? %>"
+         data-controller="row-link" data-row-link-href-value="<%= fd_case_path(kase) %>"
+         data-action="click->row-link#go">
+  <div class="rep-bar">
+    <%= link_to "##{kase.id}", fd_case_path(kase), class: "rep-id" %>
+    <% said = violations_label(violations[kase.id] || [kase.category_key].compact) %>
+    <span class="rep-cat"><%= said || "no category yet" %></span>
+    <% if kase.duplicate_of %>
+      <span class="rep-cat"><%= row_merged_phrase(kase) %></span>
+    <% end %>
+    <span class="grow"></span>
+    <% if reports.many? %>
+      <span><%= pluralize(reports.size, "report") %></span>
+    <% end %>
+    <%= case_status_chip(kase) %>
+    <span class="rep-age <%= age_ink(case_age_seconds(kase)) unless kase.resolved? %>">
+      <%= kase.resolved? ? "resolved" : case_age_label(case_age_seconds(kase)) %>
+    </span>
+  </div>
+
+  <div class="rep-body">
+    <div class="rep-said">
+      <% if reports.any? %>
+        <% reports.each do |report| %>
+          <div class="rep-msg">
+            <% if report.anonymous? %>
+              <%= face(nil, css: "rep-face") %>
+            <% else %>
+              <%= face(report.reporter_user_id, css: "rep-face") %>
+            <% end %>
+            <div class="rep-head">
+              <% if report.anonymous? %>
+                <span class="rep-anon">anonymous</span>
+                <span class="rep-tag">identity withheld</span>
+              <% else %>
+                <%= link_to names[report.reporter_user_id],
+                      fd_member_path(report.reporter_user_id), class: "rep-name",
+                      data: { turbo_frame: "person-drawer" } %>
+              <% end %>
+              <span class="rep-at"><%= report.received_at.strftime("%-d %b at %H:%M") %></span>
+            </div>
+            <% if report.body.present? %>
+              <p class="rep-text"><%= mentioned(report.body) %></p>
+            <% else %>
+              <p class="rep-empty">no message on file</p>
+            <% end %>
+            <% state, line = report_reply_state(report) %>
+            <div class="rep-foot">
+              <span class="rep-<%= state %>"><%= line %></span>
+              <% if state == :waiting && !kase.resolved? %>
+                <span>&middot;</span>
+                <%= link_to "Reply", fd_case_path(kase, tab: "report"), class: "text-btn" %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      <% else %>
+        <div class="rep-msg">
+          <%= face(nil, css: "rep-face") %>
+          <div class="rep-head">
+            <span class="rep-anon">no report on file</span>
+            <span class="rep-tag">opened by staff</span>
+          </div>
+          <p class="rep-empty"><%= case_opened_by_line(kase) %></p>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="rep-rail">
+      <b>About</b>
+      <div>
+        <% if kase.subject_user_ids.any? %>
+          <%= row_subject_avatar(kase) %>
+          <span class="rep-who"><%= row_subject_label(kase) %></span>
+          <% priors = case_priors(kase, priors_by_user) %>
+          <% if priors.positive? %>
+            <span class="rep-warn"><%= pluralize(priors, "prior") %></span>
+          <% end %>
+        <% elsif kase.resolved? %>
+          <span class="rep-quiet">nobody</span>
+        <% else %>
+          <span class="rep-warn">nobody named yet</span>
+        <% end %>
+      </div>
+
+      <b>On it</b>
+      <div>
+        <% if kase.assigned? %>
+          <%= assignee_faces(kase.assignee_user_ids) %>
+        <% elsif kase.resolved? %>
+          <span class="rep-quiet">nobody</span>
+        <% else %>
+          <%= gated_button "case.open", "Claim", fd_case_claim_path(kase), on: kase,
+                css: "btn btn-primary", method: :post %>
+        <% end %>
+      </div>
+
+      <% acted = action_counts[kase.id].to_i %>
+      <% if acted.positive? %>
+        <b>Done</b>
+        <div><span class="rep-quiet"><%= pluralize(acted, "action") %></span></div>
+      <% end %>
+    </div>
+  </div>
+</article>

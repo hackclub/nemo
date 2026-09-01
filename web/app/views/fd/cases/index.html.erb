@@ -18,7 +18,7 @@
   <div class="panel">
   <div class="views">
     <% tabs.each do |view| %>
-      <%= link_to fd_cases_path(view: view.key), class: "view",
+      <%= link_to fd_cases_path(view: view.key, layout: params[:layout].presence), class: "view",
             data: { turbo_frame: "queue" },
             aria: { current: ("true" if view.current) } do %>
         <%= view.label %>
@@ -30,9 +30,8 @@
 
     <% if @cases.any? %>
       <% if @layout == "board" %>
-        <%= render "board", cases: @cases, thread_channels: @thread_channels,
-              priors_by_user: @priors, action_counts: @action_counts,
-              violations: @violations %>
+        <%= render "board", cases: @cases, priors_by_user: @priors,
+              action_counts: @action_counts, violations: @violations %>
       <% else %>
         <%= render "queue", cases: @cases, priors_by_user: @priors,
               thread_counts: @thread_counts, flagged_counts: @flagged_counts,
