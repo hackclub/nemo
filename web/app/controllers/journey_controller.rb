@@ -46,10 +46,16 @@ class JourneyController < ApplicationController
   end
 
   def distribution
-    @top_poster_months = Analytics::MartTopPosters.distinct.order(month: :desc).pluck(:month)
+    @may_read_members = may_community?("analytics.member.read")
+    @top_poster_months = @may_read_members ?
+      Analytics::MartTopPosters.distinct.order(month: :desc).pluck(:month) : []
     @top_posters_month = params[:top_posters_month].presence&.then { |d| Date.parse(d) } ||
       @top_poster_months.first
-    @top_posters = Analytics::MartTopPosters.where(month: @top_posters_month).order(:rank).limit(10)
+    @top_posters = if @may_read_members
+      Analytics::MartTopPosters.where(month: @top_posters_month).order(:rank).limit(10)
+    else
+      Analytics::MartTopPosters.none
+    end
 
     @activity_bands = Analytics::MartActivityDistribution.order(:band_order)
     @top_channels = Analytics::MartChannelRange

@@ -45,9 +45,15 @@ class ChannelsController < ApplicationController
     @sort = SORT_SQL.key?(params[:sort]) ? params[:sort] : "members"
     @direction = params[:direction] == "asc" ? "asc" : "desc"
     @view = params[:view] == "grid" ? "grid" : "table"
-    @filters = Array(params[:f]).select { |key| FILTERS.key?(key) }.uniq
+    @scope_all = params[:scope] == "all"
+    @filters = @scope_all ? [] : Array(params[:f]).select { |key| FILTERS.key?(key) }.uniq
 
-    scope = Analytics::DimChannel.where(archived: false).joins(RANGE_JOIN)
+    mine = Channels::Audience.for(current_staff)
+    @mine_total = mine.count
+    @all_total = Channels::Audience.everything.count
+    @locked_total = @all_total - @mine_total
+
+    scope = mine.joins(RANGE_JOIN)
     scope = scope.where("dim_channel.name ILIKE ?", "%#{@q}%") if @q.present?
     @filters.each { |key| scope = scope.where(Arel.sql(FILTERS.fetch(key).last)) }
 
@@ -61,6 +67,7 @@ class ChannelsController < ApplicationController
       .to_a
     @has_more = (@page + 1) * PER_PAGE < @total
     @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
+    @locked = @scope_all ? locked_rows : []
 
     @cohorts = Analytics::MartChannelBands.cohorts
     @default_cohort = @cohorts.first
@@ -72,7 +79,7 @@ class ChannelsController < ApplicationController
   end
 
   def show
-    @channel = Analytics::DimChannel.find(params[:id])
+    @channel = Channels::Audience.for(current_staff).find(params[:id])
     @backfill = ChannelBackfill.find_by(channel_id: @channel.channel_id)
     @activity_trend = Analytics::MartChannelActivity.where(channel_id: @channel.channel_id).order(:window_start)
     @scorecard_rows = Analytics::MartChannelOnboardingScorecard
@@ -118,7 +125,7 @@ class ChannelsController < ApplicationController
   def opt_in_replies
     return refuse_backfill unless current_staff.may?("app.flip")
 
-    channel = Analytics::DimChannel.find(params[:id])
+    channel = Channels::Audience.for(current_staff).find(params[:id])
     row = ChannelBackfill.opt_in!(
       channel_id: channel.channel_id,
       requested_by: current_staff.user_id,
@@ -135,7 +142,7 @@ class ChannelsController < ApplicationController
   def opt_out_replies
     return refuse_backfill unless current_staff.may?("app.flip")
 
-    channel = Analytics::DimChannel.find(params[:id])
+    channel = Channels::Audience.for(current_staff).find(params[:id])
     row = ChannelBackfill.find_by(channel_id: channel.channel_id)
     return redirect_to(channel_path(channel.channel_id), alert: "not opted in") if row.nil?
 
@@ -162,6 +169,15 @@ class ChannelsController < ApplicationController
   def asked_cohort
     wanted = parse_range_date(params[:cohort])
     wanted if wanted && @cohorts.include?(wanted)
+  end
+
+  LOCKED_SHOWN = 50
+
+  def locked_rows
+    mine = Channels::Audience.for(current_staff).select(:channel_id)
+    rows = Channels::Audience.everything.where.not(channel_id: mine)
+    rows = rows.where("dim_channel.name ILIKE ?", "%#{@q}%") if @q.present?
+    rows.order(Arel.sql("dim_channel.name")).limit(LOCKED_SHOWN).to_a
   end
 
   def order_clause

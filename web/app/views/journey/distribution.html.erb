@@ -18,7 +18,19 @@
 <% end %>
 
 <div id="distribution">
-  <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months, top_posters_month: @top_posters_month %>
+  <% if @may_read_members %>
+    <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months, top_posters_month: @top_posters_month %>
+  <% else %>
+    <div class="card card-flush">
+      <div class="card-head">
+        <div><h2 class="card-title">Top posters</h2></div>
+      </div>
+      <div class="empty">
+        <p class="empty-title">Member names are not shown to you</p>
+        <p class="card-note"><%= Community::Access.why_not(current_staff, "analytics.member.read") %></p>
+      </div>
+    </div>
+  <% end %>
 </div>
 
 <div class="card">

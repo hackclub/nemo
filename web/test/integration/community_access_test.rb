@@ -79,6 +79,79 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
     assert Community::Access.allow?(staff, "ops.engine.sync")
   end
 
+  def some_channels(count = 3)
+    Analytics::DimChannel.where(archived: false).order(:channel_id).limit(count).to_a
+  end
+
+  def open_up(channel, audience)
+    Channels::Audience::Setting.create!(channel_id: channel.channel_id,
+      audience: audience, set_by: @boss.user_id)
+  end
+
+  test "an observer sees only the channels opened to everyone" do
+    shown, hidden, = some_channels
+    open_up(shown, "everyone")
+    open_up(hidden, "shared")
+    staff = reading("observer")
+
+    ids = Channels::Audience.for(staff).pluck(:channel_id)
+
+    assert_includes ids, shown.channel_id
+    assert_not_includes ids, hidden.channel_id, "shared is for analysts, not observers"
+  end
+
+  test "an analyst sees shared channels and the ones granted to them" do
+    shared, granted, other = some_channels
+    open_up(shared, "shared")
+    staff = reading("analyst")
+    Channels::Audience::Grant.create!(user_id: staff.user_id, channel_id: granted.channel_id,
+      granted_by: @boss.user_id, granted_at: Time.current)
+
+    ids = Channels::Audience.for(staff).pluck(:channel_id)
+
+    assert_includes ids, shared.channel_id
+    assert_includes ids, granted.channel_id
+    assert_not_includes ids, other.channel_id
+  end
+
+  test "a channel outside your audience is missing, not forbidden" do
+    hidden = some_channels(1).first
+    sign_in_as(reading("analyst"))
+
+    get channel_path(hidden.channel_id)
+
+    assert_response :not_found,
+      "a 403 would confirm the channel exists, which is the thing being hidden"
+  end
+
+  test "filters are unavailable while looking at every channel" do
+    sign_in_as(reading("analyst"))
+
+    get channels_path(scope: "all", f: ["never_posted"])
+
+    assert_response :success
+    assert_select ".btn.is-off", text: /Filter/
+    assert_select ".pill", count: 0, message: "a filter plus a count reads the hidden numbers"
+  end
+
+  test "an observer is told member names are withheld, not shown them" do
+    sign_in_as(reading("observer"))
+
+    get distribution_journey_path
+
+    assert_response :success
+    assert_select ".empty-title", text: "Member names are not shown to you"
+  end
+
+  test "an analyst sees the top posters" do
+    sign_in_as(reading("analyst"))
+
+    get distribution_journey_path
+
+    assert_response :success
+    assert_select ".empty-title", text: "Member names are not shown to you", count: 0
+  end
+
   test "a new grant in one family retires only that family" do
     staff = Staff.create!(user_id: "UCASWAP")
     Community::Grant.give!(staff.user_id, role: "observer", by: @boss.user_id)

@@ -59,7 +59,23 @@
             aria: { label: "Search public channels by name" } %>
     <% end %>
 
-    <% if channel_filter_options.any? %>
+    <span class="segmented" role="group" aria-label="which channels">
+      <%= link_to channel_query(scope: nil, page: nil),
+            aria: { current: ("true" unless @scope_all) } do %>
+        Yours <span class="view-count"><%= number_with_delimiter(@mine_total) %></span>
+      <% end %>
+      <%= link_to channel_query(scope: "all", page: nil, f: nil),
+            aria: { current: ("true" if @scope_all) } do %>
+        All <span class="view-count"><%= number_with_delimiter(@all_total) %></span>
+      <% end %>
+    </span>
+
+    <% if @scope_all %>
+      <span class="btn is-off" aria-disabled="true"
+            title="filters read the numbers, which the locked channels do not show you">
+        Filter<span class="btn-why">needs channel access</span>
+      </span>
+    <% elsif channel_filter_options.any? %>
       <details class="menu" data-controller="menu">
         <summary class="btn">Filter<span class="car" aria-hidden="true">▾</span></summary>
         <div class="menu-pop menu-start">
@@ -119,6 +135,25 @@
             </thead>
             <tbody>
               <%= render "rows", channels: @channels %>
+              <% if @locked.any? %>
+                <tr class="band-row">
+                  <td colspan="7">
+                    Not shared with you &middot; <%= number_with_delimiter(@locked_total) %>
+                  </td>
+                </tr>
+                <% @locked.each do |channel| %>
+                  <tr class="row-locked">
+                    <td>
+                      <span class="two-line">
+                        <b>#<%= channel.name %></b>
+                        <span><%= channel.channel_id %></span>
+                      </span>
+                    </td>
+                    <td colspan="5" class="sub2">n/a</td>
+                    <td class="col-num sub2">private</td>
+                  </tr>
+                <% end %>
+              <% end %>
             </tbody>
           </table>
         </div>

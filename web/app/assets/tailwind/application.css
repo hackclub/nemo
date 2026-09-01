@@ -1644,6 +1644,15 @@
     transition: opacity var(--dur) var(--ease-out);
   }
 
+  .row-locked {
+    color: var(--ink-4);
+  }
+
+  .row-locked b {
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+
   .thr-head {
     display: flex;
     align-items: baseline;

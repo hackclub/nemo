@@ -3,7 +3,8 @@ module ChannelsHelper
     base = { q: @q.presence, sort: @sort, direction: @direction,
              view: (@view unless @view == "table"), f: @filters.presence,
              measure: (@measure unless @measure == @default_measure),
-             cohort: (@cohort&.iso8601 unless @cohort == @default_cohort) }
+             cohort: (@cohort&.iso8601 unless @cohort == @default_cohort),
+             scope: ("all" if @scope_all) }
     channels_path(**base.merge(overrides).compact)
   end
 
