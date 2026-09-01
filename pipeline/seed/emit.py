@@ -1,6 +1,7 @@
 import collections
-from datetime import datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
+from ingest.channel_range_pull import MONTH_SOURCE as CHANNEL_MONTH_SOURCE
 from lib.db import connect_admin
 from seed import SEED_SOURCE_PREFIX, SEED_USER_PREFIX
 from seed import dims as dims_module
@@ -213,6 +214,28 @@ def channel_ranges(by_channel, start, end, members_of):
             len(posters), len(posters) * 3, reactions, max(1, len(posters) // 2), 0,
             total, total - guests, guests,
         )
+
+
+def channel_months(by_channel, members_of):
+    rolled = collections.defaultdict(lambda: [0, 0, set()])
+    for (channel_id, day), (messages, reactions, posters) in by_channel.items():
+        row = rolled[(channel_id, day.replace(day=1))]
+        row[0] += messages
+        row[1] += reactions
+        row[2] |= posters
+    for (channel_id, month), (messages, reactions, posters) in rolled.items():
+        total, guests = members_of[channel_id]
+        last = month_end(month)
+        yield (
+            channel_id, month, last, CHANNEL_MONTH_SOURCE, messages, messages,
+            len(posters), len(posters) * 3, reactions, max(1, len(posters) // 2), 0,
+            total, total - guests, guests,
+        )
+
+
+def month_end(month):
+    nxt = date(month.year + month.month // 12, month.month % 12 + 1, 1)
+    return nxt - timedelta(days=1)
 
 
 def team_days(by_member, channels, members, start, days):
@@ -431,6 +454,10 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
     counts["channel_range"] = copy_rows(
         conn, "raw.channel_activity_snapshot", channel_columns,
         channel_ranges(by_channel, start, as_of, members_of),
+    )
+    counts["channel_month"] = copy_rows(
+        conn, "raw.channel_activity_snapshot", channel_columns,
+        channel_months(by_channel, members_of),
     )
     counts["team_stats"] = copy_rows(
         conn, "raw.team_stats_snapshot",

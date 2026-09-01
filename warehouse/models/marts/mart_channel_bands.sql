@@ -1,21 +1,26 @@
 with ranged as (
     select
-        channel_id,
+        cohort_month,
+        window_start,
+        window_end,
         messages_posted,
         members_who_posted,
         members_who_viewed
-    from {{ ref('fct_channel_span') }}
+    from {{ ref('fct_channel_month') }}
 ),
 
-coverage as (
+cohorts as (
     select
+        cohort_month,
         min(window_start) as window_start,
         max(window_end) as window_end
-    from {{ ref('fct_channel_span') }}
+    from ranged
+    group by cohort_month
 ),
 
 measured as (
     select
+        r.cohort_month,
         m.measure,
         m.value
     from ranged r
@@ -28,6 +33,7 @@ measured as (
 
 placed as (
     select
+        cohort_month,
         measure,
         case
             when value is null then null
@@ -65,6 +71,7 @@ measures (measure, measure_label, measure_order) as (
 )
 
 select
+    c.cohort_month,
     m.measure,
     m.measure_label,
     m.measure_order,
@@ -73,11 +80,14 @@ select
     count(p.band_order) as channels,
     c.window_start,
     c.window_end,
-    'v1' as metric_version
-from measures m
+    'v2' as metric_version
+from cohorts c
+cross join measures m
 cross join bands b
-cross join coverage c
-left join placed p on p.measure = m.measure and p.band_order = b.band_order
-group by m.measure, m.measure_label, m.measure_order, b.band_order, b.activity_band,
-    c.window_start, c.window_end
-order by m.measure_order, b.band_order
+left join placed p
+    on p.cohort_month = c.cohort_month
+   and p.measure = m.measure
+   and p.band_order = b.band_order
+group by c.cohort_month, m.measure, m.measure_label, m.measure_order,
+    b.band_order, b.activity_band, c.window_start, c.window_end
+order by c.cohort_month desc, m.measure_order, b.band_order

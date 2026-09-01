@@ -28,27 +28,29 @@ member_bands as (
     select
         case
             when total_messages = 0 then 0
-            when total_messages < 2 then 1
-            when total_messages < 5 then 2
-            when total_messages < 10 then 3
-            when total_messages < 20 then 4
-            when total_messages < 50 then 5
-            when total_messages < 100 then 6
-            else 7
+            when total_messages = 1 then 1
+            when total_messages <= 4 then 2
+            when total_messages <= 16 then 3
+            when total_messages <= 64 then 4
+            when total_messages <= 256 then 5
+            when total_messages <= 1024 then 6
+            when total_messages <= 4096 then 7
+            else 8
         end as band_order
     from population
 ),
 
 bands (band_order, activity_band) as (
     values
-        (0, 'no messages ever'),
+        (0, '0'),
         (1, '1'),
         (2, '2-4'),
-        (3, '5-9'),
-        (4, '10-19'),
-        (5, '20-49'),
-        (6, '50-99'),
-        (7, '100+')
+        (3, '5-16'),
+        (4, '17-64'),
+        (5, '65-256'),
+        (6, '257-1024'),
+        (7, '1025-4096'),
+        (8, '>4096')
 )
 
 select
@@ -58,7 +60,7 @@ select
     c.workspace_members,
     c.window_start,
     c.window_end,
-    'v11' as metric_version
+    'v12' as metric_version
 from bands b
 cross join coverage c
 left join member_bands mb on mb.band_order = b.band_order

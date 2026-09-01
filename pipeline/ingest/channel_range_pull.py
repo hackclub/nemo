@@ -11,6 +11,7 @@ from lib.walk import check_walk
 
 SOURCE = "admin_analytics_channel_range"
 SPAN_SOURCE = "admin_analytics_channel_span"
+MONTH_SOURCE = "admin_analytics_channel_month"
 METHOD = "admin.analytics.getChannelAnalytics"
 RANGE_METHOD = "admin.analytics.getAvailableDateRange"
 PAGE_SIZE = 500
@@ -98,6 +99,14 @@ def span_window(client, end=None):
     return floor, (end or edge)
 
 
+def month_start(day):
+    return day.replace(day=1)
+
+
+def next_month(day):
+    return date(day.year + day.month // 12, day.month % 12 + 1, 1)
+
+
 def run(conn, days=WINDOW_DAYS, end=None, source=SOURCE, span=False):
     client = ProxyClient()
     start, stop = span_window(client, end) if span else resolve_window(client, days, end)
@@ -110,7 +119,9 @@ def run(conn, days=WINDOW_DAYS, end=None, source=SOURCE, span=False):
         "team_ids": os.environ.get("SLACK_TEAM_ID") or None,
     }
     window_key = f"{start}..{stop}"
-    label = "channel span" if span else "channel range"
+    label = {SPAN_SOURCE: "channel span", MONTH_SOURCE: "channel month"}.get(
+        source, "channel range"
+    )
     resume_at, already = get_walk(conn, source, window_key)
 
     with ingest_run(conn, source) as counts:
@@ -158,6 +169,7 @@ def run(conn, days=WINDOW_DAYS, end=None, source=SOURCE, span=False):
         f"{label} {window_key}: {counts.rows_in} rows, "
         f"{counts.rows_rejected} rejected, {pruned} stale rows pruned"
     )
+    return counts.rows_in
 
 
 def run_span(conn, end=None):

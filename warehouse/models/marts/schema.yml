@@ -100,6 +100,9 @@ models:
       contract:
         enforced: true
     columns:
+      - name: cohort_month
+        data_type: date
+        data_tests: [not_null]
       - name: measure
         data_type: text
         data_tests: [not_null]
@@ -122,7 +125,7 @@ models:
         data_type: text
     data_tests:
       - unique:
-          column_name: "measure || '-' || band_order"
+          column_name: "cohort_month || '-' || measure || '-' || band_order"
   - name: mart_channel_range
     config:
       contract:

@@ -62,7 +62,10 @@ class ChannelsController < ApplicationController
     @has_more = (@page + 1) * PER_PAGE < @total
     @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
 
-    @band_measures = Analytics::MartChannelBands.in_order.to_a.group_by(&:measure)
+    @cohorts = Analytics::MartChannelBands.cohorts
+    @default_cohort = @cohorts.first
+    @cohort = asked_cohort || @default_cohort
+    @band_measures = Analytics::MartChannelBands.for_cohort(@cohort).to_a.group_by(&:measure)
     @default_measure = @band_measures.keys.first
     @measure = @band_measures.key?(params[:measure]) ? params[:measure] : @default_measure
     @band_rows = @band_measures[@measure] || []
@@ -154,6 +157,11 @@ class ChannelsController < ApplicationController
     Date.iso8601(value.to_s)
   rescue ArgumentError
     nil
+  end
+
+  def asked_cohort
+    wanted = parse_range_date(params[:cohort])
+    wanted if wanted && @cohorts.include?(wanted)
   end
 
   def order_clause

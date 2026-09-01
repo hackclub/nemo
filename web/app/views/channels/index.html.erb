@@ -1,16 +1,35 @@
 <% content_for :page_title, "Public channels" %>
 <div class="stack">
   <% if @band_rows.any? %>
-    <details class="card reveal" <%= "open" if params[:measure].present? %>>
+    <details class="card reveal"
+             <%= "open" if params[:measure].present? || params[:cohort].present? %>>
       <summary class="reveal-head">
         <span class="card-title">Channels activity</span>
         <span class="car" aria-hidden="true">▾</span>
       </summary>
       <div class="reveal-body">
-        <div class="segmented" role="group" aria-label="measure">
-          <% @band_measures.each do |key, rows| %>
-            <%= link_to rows.first.measure_label, channel_query(measure: key),
-                  aria: { current: ("true" if key == @measure) } %>
+        <turbo-frame id="bands" data-turbo-action="advance">
+        <div class="band-bar">
+          <div class="segmented" role="group" aria-label="measure">
+            <% @band_measures.each do |key, rows| %>
+              <%= link_to rows.first.measure_label, channel_query(measure: key),
+                    aria: { current: ("true" if key == @measure) } %>
+            <% end %>
+          </div>
+          <span class="grow"></span>
+          <% if @cohorts.many? %>
+            <span class="qlab">Month</span>
+            <details class="menu" data-controller="menu">
+              <summary class="btn">
+                <%= @cohort.strftime("%b %Y") %><span class="car" aria-hidden="true">▾</span>
+              </summary>
+              <div class="menu-pop">
+                <% @cohorts.each do |month| %>
+                  <%= link_to month.strftime("%b %Y"), channel_query(cohort: month.iso8601),
+                        class: "btn", aria: { current: ("true" if month == @cohort) } %>
+                <% end %>
+              </div>
+            </details>
           <% end %>
         </div>
         <div
@@ -22,6 +41,7 @@
             datasets: [{ label: "channels", data: @band_rows.map(&:channels) }]
           }.to_json %>"
         ></div>
+        </turbo-frame>
       </div>
     </details>
   <% end %>

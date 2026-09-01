@@ -41,7 +41,7 @@
     data-svg-chart-kind-value="bars"
     data-svg-chart-height-value="240"
     data-svg-chart-data-value="<%= {
-      labels: @activity_bands.map { |b| b.band_order.zero? ? "none" : b.activity_band },
+      labels: @activity_bands.map(&:activity_band),
       datasets: [{ label: "members", data: @activity_bands.map(&:members) }]
     }.to_json %>"
   ></div>

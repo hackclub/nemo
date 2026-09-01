@@ -11,6 +11,9 @@ import urllib.request
 
 LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "host.docker.internal"})
 TRUTHY = frozenset({"1", "true", "yes", "on"})
+EMPTY_PAGE_LIMIT = 40
+EMPTY_PAGE_BACKOFF = 2.0
+EMPTY_PAGE_BACKOFF_CAP = 20.0
 
 
 class ProxyError(RuntimeError):
@@ -102,7 +105,9 @@ class ProxyClient:
         cursor = start_cursor
         seen = 0
         previous_page = None
+        empty_pages = 0
         while True:
+            asked_with = cursor
             page = dict(base)
             if cursor:
                 page[cursor_param] = cursor
@@ -128,10 +133,23 @@ class ProxyClient:
             num_found = data.get("num_found")
             if num_found is not None:
                 self.last_num_found = num_found
+            empty_pages = empty_pages + 1 if not items else 0
+            if empty_pages and allow_empty_pages:
+                time.sleep(min(EMPTY_PAGE_BACKOFF * empty_pages, EMPTY_PAGE_BACKOFF_CAP))
             if on_page:
                 on_page(cursor, seen)
             if not cursor or (not items and not allow_empty_pages):
                 break
+            if cursor == asked_with:
+                raise ProxyError(
+                    f"{method}: {cursor_param} came back unchanged after {seen} records, "
+                    f"so the next request would repeat this one"
+                )
+            if empty_pages >= EMPTY_PAGE_LIMIT:
+                raise ProxyError(
+                    f"{method}: {empty_pages} empty pages in a row after {seen} records, "
+                    f"so the walk has stalled short of the {num_found} it expected"
+                )
             if num_found is not None and seen >= num_found:
                 break
 

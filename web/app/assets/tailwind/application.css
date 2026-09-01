@@ -5598,6 +5598,13 @@
     justify-self: start;
   }
 
+  .band-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs);
+    flex-wrap: wrap;
+  }
+
   .acts-row {
     display: flex;
     align-items: baseline;
