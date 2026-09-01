@@ -2,8 +2,8 @@ with reply_speed as (
     select
         r.newcomer_id,
         case
-            when not r.answered then 'none'
-            when r.latency_seconds < 3600 and not r.replied_by_bot then 'fast'
+            when not r.answered or r.replied_by_bot then 'none'
+            when r.latency_seconds < 3600 then 'fast'
             else 'slow'
         end as reply_class
     from {{ ref('fct_first_reply') }} r
@@ -48,7 +48,7 @@ select
     ) as retained_day_90_rate,
     c.window_start,
     c.window_end,
-    'v7' as metric_version
+    'v8' as metric_version
 from scoped
 cross join covered c
 group by reply_class, c.window_start, c.window_end

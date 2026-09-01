@@ -1,11 +1,10 @@
 <% content_for :page_title, "Getting replies" %>
 
-<% checked, by_member, bot_first, bot_first_then_member = @response_rate_totals %>
+<% checked, by_member = @response_rate_totals %>
 <div id="response" class="card card-flush">
   <div class="card-head">
     <div>
       <h2 class="card-title">Response rate</h2>
-      <p class="card-sub">whether a newcomer&rsquo;s first post got a reply, and how long it took</p>
     </div>
     <div class="card-tools">
       <% if checked.positive? %>
@@ -24,10 +23,8 @@
             <th>first posted</th>
             <th class="col-num">checked</th>
             <th class="col-num">by a member</th>
-            <th class="col-num">by a bot</th>
             <th class="col-num">no reply</th>
-            <th class="col-num">bot first</th>
-            <th class="col-num">median wait</th>
+            <th class="col-num">median member wait</th>
           </tr>
         </thead>
         <tbody>
@@ -41,24 +38,13 @@
               </td>
               <td class="col-num"><%= number_with_delimiter(r.first_posts_checked) %></td>
               <td class="col-num"><%= number_with_delimiter(r.answered_by_member) %></td>
-              <td class="col-num"><%= number_with_delimiter(r.answered_by_bot) %></td>
               <td class="col-num"><%= number_with_delimiter(r.unanswered) %></td>
-              <td class="col-num"><%= number_with_delimiter(r.bot_replied_first) %></td>
               <td class="col-num"><%= reply_wait(r.median_member_latency_seconds) %></td>
             </tr>
           <% end %>
         </tbody>
       </table>
     </div>
-    <% if bot_first.positive? %>
-      <p class="delta-note">
-        A bot replied before any person on
-        <b><%= number_to_percentage(share_pct(bot_first, checked), precision: 1) %></b>
-        of these first posts, and
-        <b><%= number_with_delimiter(bot_first_then_member) %> of <%= number_with_delimiter(bot_first) %></b>
-        of those did then get a person.
-      </p>
-    <% end %>
   <% else %>
     <p class="card-note">
       No first post has been checked yet. The member history backfill finds first posts, then the replies walk

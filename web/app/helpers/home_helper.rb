@@ -86,9 +86,9 @@ module HomeHelper
   end
 
   REPLY_CLASS_LABEL = {
-    "fast" => "fast reply, under 1 hour",
-    "slow" => "slower reply",
-    "none" => "no reply at all"
+    "fast" => "member replied, under 1 hour",
+    "slow" => "member replied, over 1 hour",
+    "none" => "no member reply"
   }.freeze
 
   def reply_class_label(reply_class)
