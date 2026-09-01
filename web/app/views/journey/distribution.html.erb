@@ -9,7 +9,7 @@
       </summary>
       <div class="menu-pop menu-start">
         <% @top_poster_months.each do |m| %>
-          <%= link_to m.strftime("%b %Y"), distribution_journey_path(top_posters_month: m.iso8601),
+          <%= link_to m.strftime("%b %Y"), active_journey_path(top_posters_month: m.iso8601),
                 class: "btn", aria: { current: ("true" if m == @top_posters_month) } %>
         <% end %>
       </div>

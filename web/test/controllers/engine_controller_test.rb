@@ -35,7 +35,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
     sign_in_as(Staff.create!(user_id: "UTESTCM1", community_manager: true))
 
     assert_difference -> { SyncRequest.count }, 1 do
-      post engine_trigger_stage_path(stage: "member_channels")
+      post engine_stage_path(stage: "member_channels")
     end
 
     assert_equal "member_channels", SyncRequest.recent_first.first.stage
@@ -106,7 +106,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
     sign_in_as(firefighter)
 
     assert_no_difference -> { SyncRequest.count } do
-      post engine_trigger_stage_path(stage: "member_channels")
+      post engine_stage_path(stage: "member_channels")
     end
 
     assert_redirected_to root_path

@@ -50,8 +50,12 @@ Rails.application.routes.draw do
   end
 
   ApplicationHelper::JOURNEY.each do |_label, stage|
-    get stage, to: "journey##{ApplicationHelper::ACTIONS.fetch(stage)}",
+    get "journey/#{stage}", to: "journey##{ApplicationHelper::ACTIONS.fetch(stage)}",
       as: :"#{stage}_journey"
+  end
+
+  ApplicationHelper::MOVED.each do |was, now|
+    get was, to: redirect("/journey/#{now}")
   end
 
   resources :channels, only: [:index, :show] do
@@ -61,12 +65,14 @@ Rails.application.routes.draw do
     end
   end
   get "engine", to: "engine#index"
-  get "engine/runs/:id", to: "engine#show", as: :engine_run
-  post "engine/sync", to: "engine#sync", as: :engine_sync
-  post "engine/cancel", to: "engine#cancel", as: :engine_cancel
-  post "engine/trigger_stage", to: "engine#trigger_stage", as: :engine_trigger_stage
-  patch "engine/tune", to: "engine#tune", as: :engine_tune
-  delete "engine/tune", to: "engine#untune", as: :engine_untune
+  scope "engine", as: :engine, controller: "engine" do
+    get "runs/:id", action: :show, as: :run
+    post "sync", action: :sync, as: :sync
+    post "cancel", action: :cancel, as: :cancel
+    post "stages/:stage", action: :trigger_stage, as: :stage
+    patch "tune", action: :tune, as: :tune
+    delete "tune", action: :untune, as: :untune
+  end
 
   get "pipeline", to: redirect("/engine")
   get "pipeline/runs/:id", to: redirect("/engine/runs/%{id}")

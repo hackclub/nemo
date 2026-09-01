@@ -24,7 +24,7 @@ class JourneyController < ApplicationController
     @channel_scorecard_total = Analytics::MartChannelOnboardingScorecard.count
   end
 
-  def answered
+  def replies
     @response_rate = Analytics::MartResponseRate.order(post_month: :desc).limit(13)
     @response_rate_totals = Analytics::MartResponseRate.totals
     @fast_reply_vs_retention = Analytics::MartFastReplyVsRetention

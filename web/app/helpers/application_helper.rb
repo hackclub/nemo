@@ -8,17 +8,23 @@ module ApplicationHelper
   end
 
   JOURNEY = [
-    ["Joining", "acquisition"],
-    ["Newcomers", "activation"],
-    ["Getting replies", "response"],
-    ["Coming back", "retention"],
-    ["Who is active", "distribution"]
+    ["Joining", "joining"],
+    ["Newcomers", "newcomers"],
+    ["Getting replies", "replies"],
+    ["Coming back", "returning"],
+    ["Who is active", "active"]
   ].freeze
 
   ACTIONS = {
-    "acquisition" => "acquisition", "activation" => "activation",
-    "response" => "answered", "retention" => "retention",
-    "distribution" => "distribution"
+    "joining" => "acquisition", "newcomers" => "activation",
+    "replies" => "replies", "returning" => "retention",
+    "active" => "distribution"
+  }.freeze
+
+  MOVED = {
+    "acquisition" => "joining", "activation" => "newcomers",
+    "response" => "replies", "retention" => "returning",
+    "distribution" => "active"
   }.freeze
 
   def journey_stages

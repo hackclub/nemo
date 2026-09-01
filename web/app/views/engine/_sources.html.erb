@@ -89,7 +89,7 @@
           <% end %>
           <div class="exp-act">
             <% if active_request.nil? %>
-              <%= button_to "Run it now", engine_trigger_stage_path(stage: source.key),
+              <%= button_to "Run it now", engine_stage_path(stage: source.key),
                     class: "btn", form: { class: "contents" } %>
             <% end %>
           </div>

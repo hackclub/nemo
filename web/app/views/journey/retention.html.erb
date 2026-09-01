@@ -11,7 +11,7 @@
       <div class="menu-pop menu-start">
         <% @cohort_months.each do |m| %>
           <%= link_to m.strftime("%b %Y"),
-                retention_journey_path(cohort_month: m.iso8601, recurrence_month: m.iso8601),
+                returning_journey_path(cohort_month: m.iso8601, recurrence_month: m.iso8601),
                 class: "btn", aria: { current: ("true" if m == @onboarding_funnel&.cohort_month) } %>
         <% end %>
       </div>

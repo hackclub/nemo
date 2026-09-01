@@ -4,7 +4,7 @@
   <span class="qlab">Span</span>
   <div class="segmented" role="group" aria-label="months of growth">
     <% HomeHelper::GROWTH_SPANS.each do |span| %>
-      <%= link_to "#{span}m", acquisition_journey_path(growth_months: span),
+      <%= link_to "#{span}m", joining_journey_path(growth_months: span),
             aria: { current: ("true" if span == @growth_span) } %>
     <% end %>
   </div>

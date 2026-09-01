@@ -137,7 +137,7 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
   test "an observer is told member names are withheld, not shown them" do
     sign_in_as(reading("observer"))
 
-    get distribution_journey_path
+    get active_journey_path
 
     assert_response :success
     assert_select ".empty-title", text: "Member names are not shown to you"
@@ -146,7 +146,7 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
   test "an analyst sees the top posters" do
     sign_in_as(reading("analyst"))
 
-    get distribution_journey_path
+    get active_journey_path
 
     assert_response :success
     assert_select ".empty-title", text: "Member names are not shown to you", count: 0
