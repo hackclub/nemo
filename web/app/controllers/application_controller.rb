@@ -4,9 +4,13 @@ class ApplicationController < ActionController::Base
 
   before_action :require_staff
 
-  helper_method :current_staff, :current_profile
+  helper_method :current_staff, :current_profile, :page_section
 
   private
+
+  def page_section
+    controller_path.start_with?("fd/") ? "fd" : "mn"
+  end
 
   def needs(key)
     return if Fd::Flag.on?(key)

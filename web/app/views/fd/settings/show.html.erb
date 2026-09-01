@@ -54,6 +54,9 @@
         </div>
       <% end %>
 
+    <% elsif @tab == "appearance" %>
+      <%= render "appearance" %>
+
     <% elsif @tab == "you" %>
       <%= render "you", account: @account, linkable: @linkable %>
 

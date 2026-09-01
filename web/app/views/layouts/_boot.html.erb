@@ -1,0 +1,82 @@
+<%= javascript_tag nonce: true do %>
+  window.MnTheme = (function () {
+    var BANDS = <%= raw Appearance::BAND_OF.to_json %>;
+    var LIGHT = <%= raw Appearance::DEFAULT_LIGHT.to_json %>;
+    var DARK = <%= raw Appearance::DEFAULT_DARK.to_json %>;
+    var WAS_LIGHT = ["light", "paper", "fog"];
+    var WAS_DARK = ["dark", "slate", "midnight", "ember"];
+
+    function get(key, fallback) {
+      try { return localStorage.getItem(key) || fallback } catch (e) { return fallback }
+    }
+    function put(key, value) {
+      try { localStorage.setItem(key, value) } catch (e) {}
+    }
+    function query() {
+      return window.matchMedia("(prefers-color-scheme: dark)");
+    }
+    function state() {
+      return {
+        follow: get("mn-theme-follow", "1") !== "0",
+        pinned: get("mn-theme", LIGHT)
+      };
+    }
+    function resolve(now) {
+      now = now || state();
+      if (now.follow) return query().matches ? DARK : LIGHT;
+      return BANDS[now.pinned] ? now.pinned : LIGHT;
+    }
+    function apply() {
+      var key = resolve();
+      if (!BANDS[key]) key = LIGHT;
+      document.documentElement.setAttribute("data-theme", key);
+      return key;
+    }
+    function announce() {
+      document.dispatchEvent(new CustomEvent("mn:theme"));
+    }
+    function migrate() {
+      if (get("mn-theme-v", "") === "2") return;
+      var was = get("mn-theme", "");
+      var dark = WAS_DARK.indexOf(was) >= 0;
+      if (dark || WAS_LIGHT.indexOf(was) >= 0) {
+        put("mn-theme-follow", "0");
+        put("mn-theme", dark ? DARK : LIGHT);
+      }
+      put("mn-theme-v", "2");
+    }
+    function pick(key) {
+      if (!BANDS[key]) return apply();
+      put("mn-theme", key);
+      put("mn-theme-follow", "0");
+      var applied = apply();
+      announce();
+      return applied;
+    }
+    function follow(on) {
+      if (!on) put("mn-theme", resolve());
+      put("mn-theme-follow", on ? "1" : "0");
+      var applied = apply();
+      announce();
+      return applied;
+    }
+
+    migrate();
+    apply();
+    query().addEventListener("change", function () { apply(); announce() });
+
+    return { state: state, resolve: resolve, apply: apply, pick: pick,
+             follow: follow, bands: BANDS };
+  })();
+
+  (function () {
+    try {
+      if (localStorage.getItem("mn-dock") === "open") {
+        document.documentElement.classList.add("dock-open");
+      }
+      if (localStorage.getItem("mn-dock-pin") === "pinned") {
+        document.documentElement.classList.add("dock-pinned");
+      }
+    } catch (e) {}
+  })();
+<% end %>

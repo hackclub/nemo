@@ -15,31 +15,13 @@
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <%= javascript_tag nonce: true do %>
-      (function () {
-        try {
-          var stored = localStorage.getItem("mn-theme");
-          if (stored === "paper" || stored === "fog") stored = "light";
-          if (stored === "slate" || stored === "midnight" || stored === "ember") stored = "dark";
-          if (stored === "dark" || stored === "light") {
-            document.documentElement.setAttribute("data-theme", stored);
-            localStorage.setItem("mn-theme", stored);
-          }
-          if (localStorage.getItem("mn-dock") === "open") {
-            document.documentElement.classList.add("dock-open");
-          }
-          if (localStorage.getItem("mn-dock-pin") === "pinned") {
-            document.documentElement.classList.add("dock-pinned");
-          }
-        } catch (e) {}
-      })();
-    <% end %>
+    <%= render "layouts/boot" %>
 
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
+  <body data-section="<%= page_section %>">
     <%= render "shared/synthetic_banner" %>
     <% fire_engine = on?(:fire_engine) %>
     <div class="shell" data-controller="dismiss<%= " palette" if fire_engine %>"

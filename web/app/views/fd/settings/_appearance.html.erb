@@ -1,0 +1,65 @@
+<div class="panel-body" data-controller="theme">
+  <div class="fbox">
+    <div class="ft">Follow the system</div>
+    <div class="fb">
+      <button type="button" class="btn theme-follow" role="switch" aria-checked="true"
+              data-theme-target="follow" data-action="theme#follow">
+        <span>Follow the system</span>
+        <span class="theme-track" aria-hidden="true"></span>
+      </button>
+      <div class="sub2">
+        While on, <b><%= Appearance.find(Appearance::DEFAULT_LIGHT).label %></b> by day and
+        <b><%= Appearance.find(Appearance::DEFAULT_DARK).label %></b> at night.
+        Picking a theme below turns it off.
+      </div>
+    </div>
+  </div>
+
+  <% Appearance::BANDS.each do |band, label| %>
+    <div class="fbox">
+      <div class="ft"><%= label %></div>
+      <div class="fb">
+        <div class="theme-grid" role="group" aria-label="<%= label %> themes">
+          <% Appearance.of_band(band).each do |theme| %>
+            <button type="button" class="theme-opt" aria-pressed="false"
+                    data-theme-target="option" data-theme-key="<%= theme.key %>"
+                    data-action="theme#pick">
+              <span class="theme-chip" aria-hidden="true">
+                <% theme.swatch.each do |colour| %>
+                  <i style="background: <%= colour %>"></i>
+                <% end %>
+              </span>
+              <span class="theme-name"><%= theme.label %></span>
+              <% if theme.note %>
+                <span class="chip"><%= theme.note %></span>
+              <% end %>
+              <span class="theme-auto">auto</span>
+              <span class="theme-mark" aria-hidden="true">&#10003;</span>
+            </button>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="fbox">
+    <div class="ft">Contrast</div>
+    <div class="rows">
+      <% [["Body on card", "ink/card"], ["Muted on card", "ink-3/card"],
+          ["Accent on card", "accent/card"],
+          ["Label on accent", "accent-on/accent"]].each do |label, pair| %>
+        <span class="row">
+          <span class="row-k"><%= label %></span>
+          <span class="row-v mono" data-theme-target="ratio" data-pair="<%= pair %>">n/a</span>
+        </span>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="fbox">
+    <div class="ft">Saved</div>
+    <div class="fb">
+      <div class="sub2">On this browser only. Nothing about how you read is sent anywhere.</div>
+    </div>
+  </div>
+</div>

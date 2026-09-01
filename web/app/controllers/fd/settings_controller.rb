@@ -5,8 +5,9 @@ module Fd
 
     TABS = { "access" => "Access", "roles" => "Roles", "sections" => "Sections",
              "usage" => "Usage", "history" => "Grant history",
-             "activity" => "Activity", "you" => "You" }.freeze
-    MINE = %w[you activity].freeze
+             "activity" => "Activity", "you" => "You",
+             "appearance" => "Appearance" }.freeze
+    MINE = %w[you activity appearance].freeze
     WINDOW = 30.days
     DORMANT_AFTER = 30.days
 
@@ -21,6 +22,7 @@ module Fd
       @tab = tab
       @tabs = may_read_access? ? TABS : TABS.slice(*MINE)
       return activity_facts if @tab == "activity"
+      return appearance_facts if @tab == "appearance"
       return you_facts if just_me?
 
       @grants = AccessGrant.live.newest_first.to_a
@@ -40,6 +42,10 @@ module Fd
 
     private
 
+    def page_section
+      Fd::Flag.on?(:fire_engine) ? "fd" : "mn"
+    end
+
     def tab
       @tab ||= TABS.key?(params[:tab]) ? params[:tab] : (may_read_access? ? "access" : "you")
     end
@@ -57,6 +63,10 @@ module Fd
       @yours = mine_lately
       @counts = may_read_access? ? tally_without_grants : {}
       @names = Names.for(@deeds.member_ids + [current_staff.user_id])
+    end
+
+    def appearance_facts
+      @counts = may_read_access? ? tally_without_grants : {}
     end
 
     def you_facts
