@@ -9,6 +9,9 @@
         <p class="card-sub">
           <%= first_poster.days_in_window %> of <%= full_days %> days
           <%= "(month in progress)" if first_poster.days_in_window < full_days %>
+          <% if days_measured.to_i.positive? %>
+            &middot; posting days measured on <%= days_measured %> of them
+          <% end %>
         </p>
       <% end %>
     </div>
@@ -21,12 +24,10 @@
           <th class="col-rank">rank</th>
           <th>member</th>
           <th class="col-num">messages</th>
-          <th>share of the top ten</th>
+          <th class="col-num">days posted</th>
         </tr>
       </thead>
       <tbody>
-        <% peak = top_posters.map(&:messages_posted).max.to_i %>
-        <% total = top_posters.sum(&:messages_posted) %>
         <% if top_posters.any? %>
           <% top_posters.each do |p| %>
             <tr>
@@ -38,11 +39,8 @@
                 </span>
               </td>
               <td class="col-num"><%= number_with_delimiter(p.messages_posted) %></td>
-              <td style="width: 38%">
-                <div class="inbar">
-                  <span><i style="width: <%= peak.positive? ? [(p.messages_posted.to_f / peak * 100), 1.5].max.round(1) : 0 %>%"></i></span>
-                  <span><%= total.positive? ? number_to_percentage(p.messages_posted.to_f / total * 100, precision: 0) : "0%" %></span>
-                </div>
+              <td class="col-num">
+                <%= days_posted[p.user_id] || tag.span("n/a", class: "sub2") %>
               </td>
             </tr>
           <% end %>

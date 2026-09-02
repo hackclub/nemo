@@ -45,7 +45,9 @@
 
 <div id="distribution">
   <% if @may_read_members %>
-    <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months, top_posters_month: @top_posters_month %>
+    <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months,
+          top_posters_month: @top_posters_month, days_posted: @days_posted,
+          days_measured: @days_measured %>
   <% else %>
     <div class="card card-flush">
       <div class="card-head">
