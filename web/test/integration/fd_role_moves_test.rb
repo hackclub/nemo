@@ -16,17 +16,15 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
     row&.css("td.col-num")&.[](at)&.css("button, span")&.first
   end
 
-  test "the roles table offers a switch to a manager and a plain answer to anyone else" do
+  test "the roles table offers a switch to a manager, and nobody else gets in" do
     get admin_roles_path
     assert_equal "button", switch_for("decision.settle", "firefighter").name
 
-    move("lead", "access.read", "1")
     Staff.find("UME").update!(community_manager: false)
     Fd::AccessGrant.give!("UME", role: "lead", by: "UME")
 
     get admin_roles_path
-    assert_response :success
-    assert_equal "span", switch_for("decision.settle", "firefighter").name
+    assert_redirected_to root_path, "the admin section is managers only"
   end
 
   test "moving a permission changes what the table says and what is enforced" do
@@ -86,7 +84,6 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
 
   test "the move shows up in what that manager did" do
     move("lead", "case.reverse", "0")
-    Fd::AccessGrant.give!("UME", role: "community_manager", by: "UME")
 
     get admin_person_path("UME", did: "access.grant")
 

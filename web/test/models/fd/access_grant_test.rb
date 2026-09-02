@@ -76,11 +76,19 @@ class Fd::AccessGrantTest < ActiveSupport::TestCase
     assert_predicate Staff.find("UFF1"), :lead?
   end
 
-  test "a community manager holds the tool with or without a grant" do
-    boss = Staff.create!(user_id: "UBOSS", community_manager: true)
+  test "a community manager holds the tool from the flag, with no grant row" do
+    boss = Staff.create!(user_id: "UBOSS2", community_manager: true)
 
-    assert_equal "community_manager", boss.role
+    assert_nil boss.role
+    assert_predicate boss, :manager?
     assert boss.may?("access.grant")
+    assert_equal 0, Fd::AccessGrant.live.for_person("UBOSS2").count
+  end
+
+  test "the manager role is held by the flag, never handed out as a grant" do
+    assert_raises(Fd::AccessGrant::NotAllowed) do
+      Fd::AccessGrant.give!("UFF1", role: "community_manager", by: "UBOSS")
+    end
   end
 
   test "how long a grant was held is answerable after it ends" do

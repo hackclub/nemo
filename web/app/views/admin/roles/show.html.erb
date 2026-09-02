@@ -36,16 +36,20 @@
                   <span class="view-count"><%= @holders[role] || 0 %></span>
                 </th>
               <% end %>
-              <th class="col-num">
-                <%= Fd::Access::MANAGER_LABEL %>
-                <span class="view-count"><%= @holders[Fd::Access::MANAGER_ROLE] || 0 %></span>
-              </th>
+              <% if @family != "fd" %>
+                <th class="col-num">
+                  <%= Fd::Access::MANAGER_LABEL %>
+                  <span class="view-count"><%= @holders[Fd::Access::MANAGER_ROLE] || 0 %></span>
+                </th>
+              <% end %>
             </tr>
           </thead>
           <tbody>
             <% @keys.each do |area, keys| %>
               <tr class="band-row">
-                <td colspan="<%= @roles.size + 3 %>"><%= area %> &middot; <%= keys.size %></td>
+                <td colspan="<%= @roles.size + (@family == "fd" ? 2 : 3) %>">
+                  <%= area %> &middot; <%= keys.size %>
+                </td>
               </tr>
               <% keys.each do |key| %>
                 <tr>
@@ -61,7 +65,9 @@
                   <% @roles.each do |role| %>
                     <td class="col-num"><%= holds_switch(@family, key, role) %></td>
                   <% end %>
-                  <td class="col-num"><%= holds_mark(true) %></td>
+                  <% if @family != "fd" %>
+                    <td class="col-num"><%= holds_mark(true) %></td>
+                  <% end %>
                 </tr>
               <% end %>
             <% end %>

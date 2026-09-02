@@ -14,7 +14,7 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
 
   test "one table names every section by the routes that stop resolving" do
     sign_in_as(@boss)
-    get admin_product_path
+    get admin_flags_path
 
     assert_response :success
     assert_select "td b", text: "Community analytics"
@@ -26,7 +26,7 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
     sign_in_as(@boss)
     Fd::Flag.set!("fire_engine", false, by: @boss.user_id)
 
-    get admin_product_path
+    get admin_flags_path
 
     assert_select "tbody tr:first-child td b", text: "Fire Engine"
   end
@@ -39,7 +39,7 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
     sign_in_as(@boss)
 
     patch fd_flag_path, params: { key: "decisions", on: "0" }
-    assert_redirected_to admin_product_path
+    assert_redirected_to admin_flags_path
     assert_match(/decisions is turned off/, flash[:notice])
     assert_equal false, standing(:decisions)
 
@@ -75,7 +75,7 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
 
     patch fd_flag_path, params: { key: "teleporter", on: "0" }
 
-    assert_redirected_to admin_product_path
+    assert_redirected_to admin_flags_path
     assert_match(/not a flag/, flash[:alert])
   end
 end

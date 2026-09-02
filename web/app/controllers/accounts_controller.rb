@@ -17,7 +17,8 @@ class AccountsController < ApplicationController
   private
 
   def held_families
-    [["Fire Department", current_staff.role]] +
+    fd = current_staff.manager? ? Fd::Access::MANAGER_ROLE : current_staff.role
+    [["Fire Department", fd]] +
       Community::Permission.families.map { |family|
         [Community::Permission.family_label(family), community_role(family)]
       }

@@ -49,7 +49,7 @@ class FireEngineFlagTest < ActionDispatch::IntegrationTest
   test "with it off, settings stays reachable so it can be turned back on" do
     turn_it_off
 
-    get admin_product_path
+    get admin_flags_path
     assert_response :success
 
     patch fd_flag_path(key: "fire_engine", on: "1")

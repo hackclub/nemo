@@ -6,6 +6,7 @@ module Fd
     TABLE = YAML.load_file(PATH).freeze
 
     ROLES = TABLE.fetch("roles").freeze
+    GRANTABLE = TABLE.fetch("grantable").freeze
     ROLE_LABELS = TABLE.fetch("role_labels").freeze
     ROLE_SETS = TABLE.fetch("role_sets").transform_values(&:freeze).freeze
 

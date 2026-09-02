@@ -26,7 +26,7 @@ module Fd
 
     def self.allow?(staff, key, record = nil)
       return false if staff.nil?
-      return true if manager?(staff)
+      return within_scope?(staff, Permission.scope(key), record) if manager?(staff)
 
       held = staff.role
       return false if held.nil?
@@ -36,9 +36,7 @@ module Fd
     end
 
     def self.why_not(staff, key, record = nil)
-      return nil if manager?(staff)
-
-      held = staff&.role
+      held = manager?(staff) ? MANAGER_ROLE : staff&.role
       return "you hold no access" if held.nil?
       return Permission.refusal(key) unless Permission.roles(key).include?(held)
       return nil if within_scope?(staff, Permission.scope(key), record)

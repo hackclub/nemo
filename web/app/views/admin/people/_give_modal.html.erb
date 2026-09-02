@@ -27,11 +27,6 @@
               <%= Fd::Permission::ROLE_LABELS.fetch(role) %>
             </label>
           <% end %>
-          <label data-action="mousedown->unpick#down click->unpick#press">
-            <%= radio_button_tag "fd_role", Fd::Access::MANAGER_ROLE,
-                  held["fd"] == Fd::Access::MANAGER_ROLE, id: nil %>
-            <%= Fd::Access::MANAGER_LABEL %>
-          </label>
         </div>
       </div>
 

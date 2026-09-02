@@ -1,5 +1,5 @@
 module Admin
-  class ProductController < BaseController
+  class FlagsController < BaseController
     ROUTES = {
       "fire_engine" => [["/fd/cases", :path], ["/fd/members", :path],
                         ["and the search palette", :note]],

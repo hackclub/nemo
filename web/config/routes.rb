@@ -73,7 +73,7 @@ Rails.application.routes.draw do
     end
     resources :grants, only: [:create, :destroy]
     resource :roles, only: [:show], controller: "roles"
-    resource :product, only: [:show], controller: "product"
+    resource :flags, only: [:show], controller: "flags"
     resources :channels, only: [:index, :update], param: :channel_id
   end
 

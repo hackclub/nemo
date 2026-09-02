@@ -20,6 +20,8 @@ module Fd
 
     def self.give!(user_id, role:, by:, reason: nil, at: Time.current)
       refuse "#{role} is not a role" unless Permission::ROLES.include?(role.to_s)
+      refuse "#{role} is held by the flag, not a grant" unless
+        Permission::GRANTABLE.include?(role.to_s)
 
       transaction do
         Staff.find_or_create_by!(user_id: user_id)

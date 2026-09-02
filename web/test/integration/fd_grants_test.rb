@@ -61,7 +61,7 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
   end
 
   test "nobody takes their own access back" do
-    Fd::AccessGrant.give!("UME", role: "community_manager", by: "UME")
+    Fd::AccessGrant.give!("UME", role: "lead", by: "UME")
     mine = Fd::AccessGrant.live.find_by(user_id: "UME")
 
     delete fd_grant_path(mine)
@@ -91,13 +91,13 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     assert_select "form form", count: 0
   end
 
-  test "the change modal posts the person it is about" do
+  test "the edit modal posts the person it is about, prefilled with what they hold" do
     Fd::AccessGrant.give!("U0AFF1", role: "firefighter", by: "UME")
     get admin_person_path("U0AFF1")
 
-    assert_select "form[action=?]", fd_grants_path do
+    assert_select "form[action=?]", admin_grants_path do
       assert_select "input[name=user_id][value=?]", "U0AFF1"
-      assert_select "input[name=role][value=lead]"
+      assert_select "input[name=fd_role][value=firefighter][checked]"
     end
   end
 
@@ -108,7 +108,7 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     assert_select "label[for=give-access]", text: "Give access"
 
     get admin_person_path("U0AFF1")
-    assert_select "label[for=change-access]"
+    assert_select "label[for=give-access]", text: "Edit access"
 
     delete logout_path
     lead = Staff.create!(user_id: "ULEAD", community_manager: false)
@@ -116,7 +116,7 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     sign_in_as(lead)
 
     get admin_people_path
-    assert_select "label[for=give-access]", count: 0
+    assert_redirected_to root_path, "the admin section is managers only"
   end
 
   test "a reason is kept on the grant when one is given" do
@@ -143,11 +143,11 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     get admin_people_path
 
     assert_select "#give-access ~ * .seg-radio input[name=fd_role]",
-      Fd::Permission::ROLES.size + 1,
-      "every family offers none as well, so a grant is always deliberate"
+      Fd::Permission::ROLES.size,
+      "the manager rung is offered, clicking a picked one again clears it"
     Community::Permission.families.each do |family|
       assert_select "#give-access ~ * .seg-radio input[name=#{family}_role]",
-        Community::Permission.roles(family).size + 1
+        Community::Permission.roles(family).size
     end
     assert_select "#give-access ~ * input[name=reason]", 1
   end

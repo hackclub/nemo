@@ -1,15 +1,21 @@
 roles:
   - firefighter
   - lead
+  - community_manager
+
+grantable:
+  - firefighter
+  - lead
 
 role_labels:
   firefighter: Firefighter
   lead: Lead
+  community_manager: Community manager
 
 role_sets:
-  everyone: [firefighter, lead]
-  lead: [lead]
-  manager: []
+  everyone: [firefighter, lead, community_manager]
+  lead: [lead, community_manager]
+  manager: [community_manager]
 
 areas:
   case: Cases

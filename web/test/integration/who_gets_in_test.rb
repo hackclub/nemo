@@ -144,8 +144,8 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     assert_empty response.body
   end
 
-  test "the three roles are the only things that count as a role" do
-    %w[firefighter lead community_manager].each do |role|
+  test "the grantable roles are the only things that count as a role" do
+    Fd::Permission::GRANTABLE.each do |role|
       Fd::AccessGrant.give!("UNOROLE", role: role, by: "UBOSS")
       assert_equal role, Staff.find("UNOROLE").role
     end
@@ -153,5 +153,15 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     assert_raises(Fd::AccessGrant::NotAllowed) do
       Fd::AccessGrant.give!("UNOROLE", role: "observer", by: "UBOSS")
     end
+  end
+
+  test "the manager sits above both ladders, held by the flag" do
+    boss = Staff.create!(user_id: "UABOVE", community_manager: true)
+
+    assert_nil boss.role
+    assert_predicate boss, :manager?
+    assert boss.may?("case.read"), "a manager runs the Fire Department"
+    assert_equal "curator", Community::Access.role(boss, "read")
+    assert_equal "steward", Community::Access.role(boss, "ops")
   end
 end
