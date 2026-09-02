@@ -87,10 +87,10 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
     channel = Analytics::DimChannel.where(archived: false).first
     sign_in_as(@boss)
 
-    patch admin_channel_path(channel.channel_id), params: { audience: "everyone" }
+    patch admin_channel_path(channel.channel_id), params: { audience: "public" }
 
     assert_redirected_to admin_channels_path
-    assert_equal "everyone", Channels::Audience.of(channel.channel_id)
+    assert_equal "public", Channels::Audience.of(channel.channel_id)
   end
 
   test "an analyst cannot reach the admin section at all" do
@@ -115,14 +115,14 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
 
   test "the channel ledger bands by audience and counts each band" do
     channel = Analytics::DimChannel.where(archived: false).first
-    Channels::Audience::Setting.create!(channel_id: channel.channel_id, audience: "everyone",
+    Channels::Audience::Setting.create!(channel_id: channel.channel_id, audience: "public",
       set_by: @boss.user_id, set_at: Time.current)
     sign_in_as(@boss)
 
     get admin_channels_path
 
-    assert_select "tr.band-row td", text: /Everyone &middot; 1|Everyone · 1/
-    assert_select "td .chip-warn", text: "everyone"
+    assert_select "tr.band-row td", text: /Everyone signed in &middot; 1|Everyone signed in · 1/
+    assert_select "td .chip-warn", text: "public"
     assert_select ".panel-head span", text: /are not private/
   end
 
@@ -132,9 +132,9 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
     channel = Analytics::DimChannel.where(archived: false).first
     sign_in_as(staff)
 
-    patch admin_channel_path(channel.channel_id), params: { audience: "everyone" }
+    patch admin_channel_path(channel.channel_id), params: { audience: "public" }
 
-    assert_equal "private", Channels::Audience.of(channel.channel_id)
+    assert_equal "granted", Channels::Audience.of(channel.channel_id)
   end
 
   test "an unknown audience is refused" do
@@ -144,7 +144,7 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
     patch admin_channel_path(channel.channel_id), params: { audience: "world" }
 
     assert_match(/not an audience/, flash[:alert])
-    assert_equal "private", Channels::Audience.of(channel.channel_id)
+    assert_equal "granted", Channels::Audience.of(channel.channel_id)
   end
 
   test "the account menu is how you reach your account and the admin section" do

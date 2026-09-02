@@ -44,7 +44,7 @@
 </div>
 
 <div id="distribution">
-  <% if @may_read_members %>
+  <% if visible_panel?("journey.top_posters") %>
     <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months,
           top_posters_month: @top_posters_month, days_posted: @days_posted,
           days_measured: @days_measured %>

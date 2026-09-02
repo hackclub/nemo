@@ -4,7 +4,8 @@ class HomeController < ApplicationController
   OPEN_SHOWN = 25
 
   def index
-    return front_door unless may_community?("analytics.workspace.read")
+    @panels = Panel.visible_to(current_staff)
+    return front_door if @panels.empty?
 
     workspace
   end

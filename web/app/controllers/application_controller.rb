@@ -66,6 +66,11 @@ class ApplicationController < ActionController::Base
   end
   helper_method :may_community?
 
+  def visible_panel?(key)
+    Panel.visible?(key, current_staff)
+  end
+  helper_method :visible_panel?
+
   def require_reading
     return if may_community?("analytics.workspace.read")
 

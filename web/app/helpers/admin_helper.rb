@@ -72,11 +72,13 @@ module AdminHelper
     end || tag.span("n/a", class: "sub2")
   end
 
-  AUDIENCE_TONE = { "everyone" => "chip chip-warn", "shared" => "chip" }.freeze
+  AUDIENCE_TONE = { "public" => "chip chip-warn", "everyone" => "chip chip-warn" }.freeze
 
   AUDIENCE_NOTE = {
-    "private" => "only curators and the people you name",
-    "shared" => "anyone with member analytics",
+    "granted" => "only the people you name",
+    "private" => "only the people you name",
+    "shared" => "only the people you name",
+    "public" => "anyone signed in, no grant needed",
     "everyone" => "anyone signed in, no grant needed"
   }.freeze
 
@@ -90,7 +92,8 @@ module AdminHelper
   end
 
   def named_faces(named, kind)
-    return tag.span("anyone signed in", class: "sub2") if kind == "everyone"
+    return tag.span("anyone signed in", class: "sub2") if
+      Channels::Audience::OPEN.include?(kind)
     return tag.span("nobody", class: "sub2") if named.empty?
 
     shown = named.first(FACES_SHOWN)

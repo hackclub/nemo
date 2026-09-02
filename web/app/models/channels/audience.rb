@@ -1,9 +1,14 @@
 module Channels
   class Audience
-    KINDS = %w[private shared everyone].freeze
-    DEFAULT = "private".freeze
-    OPEN_TO_ALL = "everyone".freeze
-    SHARED = %w[shared everyone].freeze
+    KINDS = %w[granted public].freeze
+    DEFAULT = "granted".freeze
+    OPEN_TO_ALL = "public".freeze
+    OPEN = %w[public everyone].freeze
+    WAS = { "everyone" => "public", "shared" => "granted", "private" => "granted" }.freeze
+
+    def self.settled(audience)
+      WAS.fetch(audience.to_s, audience.to_s)
+    end
 
     JOIN = "LEFT JOIN app.channel_audience ca ON ca.channel_id = dim_channel.channel_id".freeze
 
@@ -12,7 +17,7 @@ module Channels
     end
 
     def self.open_to_all
-      everything.joins(JOIN).where("ca.audience = ?", OPEN_TO_ALL)
+      everything.joins(JOIN).where("ca.audience IN (?)", OPEN)
     end
 
     VISIBLE = "app.may_see_channel(?, dim_channel.channel_id)".freeze
@@ -41,7 +46,7 @@ module Channels
     end
 
     def self.of(channel_id)
-      Setting.where(channel_id: channel_id).pick(:audience) || DEFAULT
+      settled(Setting.where(channel_id: channel_id).pick(:audience) || DEFAULT)
     end
 
     class Setting < ApplicationRecord

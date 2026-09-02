@@ -48,7 +48,7 @@ class JourneyController < ApplicationController
   end
 
   def distribution
-    @may_read_members = may_community?("analytics.member.read")
+    @may_read_members = Panel.visible?("journey.top_posters", current_staff)
     @top_poster_months = @may_read_members ?
       Analytics::MartTopPosters.distinct.order(month: :desc).pluck(:month) : []
     @top_posters_month = asked_month(:top_posters_month) || @top_poster_months.first

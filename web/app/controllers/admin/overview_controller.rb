@@ -14,7 +14,8 @@ module Admin
       @can_grant = can_grant
       @moved = Fd::Permission.keys.select { |key| Fd::RolePermission.moved?(key) }
       @dark = Fd::Flag::KEYS.reject { |key| Fd::Flag.on?(key) }
-      @open_to_all = Channels::Audience::Setting.where(audience: "everyone").count
+      @open_to_all = Channels::Audience::Setting
+        .where(audience: Channels::Audience::OPEN).count
       @changed = Fd::AuditEntry.where(entity_type: CHANGED)
         .where(occurred_at: WINDOW.ago..).recent_first.first(SHOWN)
       @dormant = dormant

@@ -3,9 +3,8 @@ module Admin
     SEARCH_SHOWN = 100
 
     BANDS = [
-      ["everyone", "Everyone"],
-      ["shared", "Shared"],
-      ["private", "Named people only"]
+      ["public", "Everyone signed in"],
+      ["granted", "Named people only"]
     ].freeze
 
     def index
@@ -14,7 +13,7 @@ module Admin
       @grants = Channels::Audience::Grant.live.to_a.group_by(&:channel_id)
       @total = Analytics::DimChannel.where(archived: false).count
       @bands = band(listed)
-      @open = @bands.reject { |kind, _label, _rows| kind == "private" }
+      @open = @bands.reject { |kind, _label, _rows| kind == "granted" }
         .sum { |_kind, _label, rows| rows.size }
       named = @grants.values.flatten
       @names = Fd::Names.for(named.map(&:user_id) + named.map(&:granted_by))
@@ -31,7 +30,7 @@ module Admin
       row = Channels::Audience::Setting.find_or_initialize_by(channel_id: params[:channel_id])
       was = row.audience
       row.update!(audience: wanted, set_by: current_staff.user_id, set_at: Time.current)
-      Fd::Audit.record(row, wanted == "private" ? "revoked" : "granted",
+      Fd::Audit.record(row, wanted == "granted" ? "revoked" : "granted",
         actor: current_staff.user_id, request_id: request.request_id,
         entity_id: row.channel_id,
         before: { "channel_id" => row.channel_id, "audience" => was },
@@ -55,7 +54,8 @@ module Admin
       scope = Analytics::DimChannel.where(archived: false)
       return scope.where("name ILIKE ?", "%#{like_q}%").order(:name).limit(SEARCH_SHOWN) if @q.present?
 
-      open_ids = @settings.values.reject { |row| row.audience == "private" }.map(&:channel_id)
+      open_ids = @settings.values.select { |row| Channels::Audience::OPEN.include?(row.audience) }
+        .map(&:channel_id)
       scope.where(channel_id: open_ids).or(scope.where(channel_id: @grants.keys)).order(:name)
     end
 
@@ -68,7 +68,8 @@ module Admin
     end
 
     def audience(channel_id)
-      @settings[channel_id]&.audience || Channels::Audience::DEFAULT
+      Channels::Audience.settled(@settings[channel_id]&.audience ||
+        Channels::Audience::DEFAULT)
     end
     helper_method :audience
   end
