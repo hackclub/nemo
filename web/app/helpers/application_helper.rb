@@ -7,10 +7,10 @@ module ApplicationHelper
     return Fd::Access::MANAGER_LABEL if Fd::Access.manager?(staff)
     return "no access" if staff.nil?
 
-    held = [staff.role, *Community::Grant.held_by(staff.user_id).values].compact
-    return "no access" if held.empty?
+    roles = Authz.roles_held(staff.user_id)
+    return "no access" if roles.empty?
 
-    held.map { |role| role.tr("_", " ") }.to_sentence.upcase_first
+    roles.map { |role| Authz.role_label(role) }.to_sentence
   end
 
   def on?(key)

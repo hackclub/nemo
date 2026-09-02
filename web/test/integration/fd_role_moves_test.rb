@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdRoleMovesTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     sign_in_as(@me)
   end
 
@@ -11,7 +11,7 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
   end
 
   def switch_for(key, role)
-    at = Fd::Permission::ROLES.index(role)
+    at = Authz.grantable_roles.reject { |name| Authz.superadmin?(name) }.index(role)
     row = css_select("tr").find { |tr| tr.css("td.mono").text.include?(key) }
     row&.css("td.col-num")&.[](at)&.css("button, span")&.first
   end
@@ -20,8 +20,8 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
     get admin_roles_path
     assert_equal "button", switch_for("decision.settle", "firefighter").name
 
-    Staff.find("UME").update!(community_manager: false)
-    Fd::AccessGrant.give!("UME", role: "lead", by: "UME")
+    drop_roles!("UME")
+    hold_role!("UME", "firefighter")
 
     get admin_roles_path
     assert_redirected_to root_path, "the admin section is managers only"
@@ -47,43 +47,49 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
   end
 
   test "every move is written to the audit with the pair it changed" do
-    move("lead", "case.reverse", "0")
+    move("firefighter", "case.reverse", "0")
 
     entry = Fd::AuditEntry.where(entity_type: "permission").recent_first.first
     assert_equal ["revoked", "UME"], [entry.verb, entry.actor_user_id]
-    assert_equal({ "permission" => "case.reverse", "role" => "lead", "allowed" => false },
-      entry.after)
+    assert_equal "firefighter/case.reverse", entry.entity_ref
+    assert_equal({ "permission" => "case.reverse", "role" => "firefighter",
+                   "allowed" => false }, entry.after)
   end
 
   test "access.grant has no switch at all" do
     get admin_roles_path
 
-    assert_equal "span", switch_for("access.grant", "community_manager").name
+    assert_equal "span", switch_for("access.grant", "firefighter").name
     move("firefighter", "access.grant", "1")
     assert_equal "access.grant cannot be moved", flash[:alert]
   end
 
-  test "the last role holding a permission cannot be stripped of it" do
+  test "a manager keeps a capability even after every other role loses it" do
     move("firefighter", "decision.settle", "0")
-    move("lead", "decision.settle", "0")
+
+    assert_nil flash[:alert]
+    refute Authz.holds?(hold_role!("UFFONLY", "firefighter"), "decision.settle")
+    assert Authz.holds?(@me, "decision.settle"), "a manager holds everything"
+  end
+
+  test "the superadmin role has nothing to move" do
     move("community_manager", "decision.settle", "0")
 
-    assert_equal "decision.settle would then be held by nobody", flash[:alert]
-    assert_equal %w[community_manager], Fd::Permission.roles("decision.settle")
+    assert_equal "community_manager holds everything already", flash[:alert]
   end
 
   test "a firefighter cannot move anything" do
-    Staff.find("UME").update!(community_manager: false)
-    Fd::AccessGrant.give!("UME", role: "firefighter", by: "UME")
+    drop_roles!("UME")
+    hold_role!("UME", "firefighter")
 
-    move("firefighter", "decision.settle", "1")
+    move("firefighter", "case.reverse", "0")
 
-    assert_equal Fd::Permission::LEAD, Fd::Permission.roles("decision.settle")
+    assert_empty Authz::Override.all
     assert_equal 1, Fd::AuditEntry.where(verb: "refused", actor_user_id: "UME").count
   end
 
   test "the move shows up in what that manager did" do
-    move("lead", "case.reverse", "0")
+    move("firefighter", "case.reverse", "0")
 
     get admin_person_path("UME", did: "access.grant")
 

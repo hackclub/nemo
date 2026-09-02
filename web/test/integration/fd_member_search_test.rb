@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdMemberSearchTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     lone = Fd::Member.live.where.not(display_name: "")
       .group(:display_name).having("count(*) = 1").order(:display_name).pluck(:display_name)
     @member = Fd::Member.live.find_by(display_name: lone.first)

@@ -14,20 +14,6 @@ module AdminHelper
     role_cell(role)
   end
 
-  def implied_role(user_id, family)
-    return nil unless manager?(user_id)
-
-    Community::Permission.superadmin(family)
-  end
-
-  def manager?(user_id)
-    managers.include?(user_id)
-  end
-
-  def managers
-    @managers ||= Staff.where(community_manager: true).pluck(:user_id)
-  end
-
   def role_label_for(family, role)
     return Fd::Permission::ROLE_LABELS.fetch(role) if family == "fd"
 

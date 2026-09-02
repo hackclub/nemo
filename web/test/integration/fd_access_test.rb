@@ -3,7 +3,7 @@ require "test_helper"
 class FdAccessTest < ActionDispatch::IntegrationTest
   setup do
     Rails.application.eager_load!
-    @me = Staff.create!(user_id: "UFF1", community_manager: false)
+    @me = Staff.create!(user_id: "UFF1")
     Fd::AccessGrant.give!("UFF1", role: "firefighter", by: "UBOSS")
     sign_in_as(@me)
   end
@@ -139,7 +139,7 @@ class FdAccessTest < ActionDispatch::IntegrationTest
 
   test "somebody holding no grant writes nothing at all" do
     delete logout_path
-    stranger = Staff.create!(user_id: "USTRANGER", community_manager: false)
+    stranger = Staff.create!(user_id: "USTRANGER")
     sign_in_as(stranger)
     kase = make_case(opened_at: 2.days.ago)
 
@@ -150,14 +150,14 @@ class FdAccessTest < ActionDispatch::IntegrationTest
   end
 
   test "a lead holds the undoing, and a manager holds the tool" do
-    lead = Staff.create!(user_id: "ULEAD", community_manager: false)
+    lead = Staff.create!(user_id: "ULEAD")
     Fd::AccessGrant.give!("ULEAD", role: "lead", by: "UBOSS")
 
     assert lead.may?("case.reverse")
     assert lead.may?("decision.settle")
     assert_not lead.may?("access.grant")
 
-    boss = Staff.create!(user_id: "UBOSS", community_manager: true)
+    boss = hold_role!("UBOSS", "community_manager")
     assert boss.may?("access.grant")
   end
 end

@@ -3,7 +3,7 @@ import hashlib
 from dotenv import load_dotenv
 
 from lib.db import connect_admin
-from lib.paths import ENV_FILE, MIGRATIONS_DIR
+from lib.paths import ENV_FILE, MIGRATIONS_DIR, MIGRATIONS_POST_DIR
 
 SCHEMAS = ("raw", "analytics", "app", "fd", "ingest")
 BASELINE_WITNESS = "raw.member_dim"
@@ -17,8 +17,9 @@ CREATE TABLE IF NOT EXISTS raw.schema_version (
 """
 
 
-def migrations():
-    return sorted(MIGRATIONS_DIR.glob("*.sql"))
+def migrations(stage="pre"):
+    where = MIGRATIONS_DIR if stage == "pre" else MIGRATIONS_POST_DIR
+    return sorted(where.glob("*.sql"))
 
 
 def checksum(path):
@@ -63,9 +64,9 @@ def apply(conn, path):
     print(f"migrate: applied {path.name}")
 
 
-def main() -> None:
+def main(stage="pre") -> None:
     load_dotenv(ENV_FILE)
-    files = migrations()
+    files = migrations(stage)
     with connect_admin() as conn:
         for schema in SCHEMAS:
             conn.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
@@ -89,8 +90,9 @@ def main() -> None:
 
     pending = [p.name for p in files if p.name not in seen]
     if not pending:
-        print(f"migrate: up to date, {len(files)} migration(s) applied")
+        print(f"migrate: {stage} up to date, {len(files)} migration(s) applied")
 
 
 if __name__ == "__main__":
-    main()
+    main("pre")
+    main("post")

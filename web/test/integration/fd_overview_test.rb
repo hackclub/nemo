@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdOverviewTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UFF1", community_manager: false)
+    @me = Staff.create!(user_id: "UFF1")
     Fd::AccessGrant.give!("UFF1", role: "firefighter", by: "UBOSS")
     sign_in_as(@me)
 

@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdClaimsTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @kase = make_case
   end
 
@@ -18,7 +18,7 @@ class FdClaimsTest < ActionDispatch::IntegrationTest
   end
 
   test "a staff row without the flag cannot claim" do
-    denied = Staff.create!(user_id: "UNOPE", community_manager: false)
+    denied = Staff.create!(user_id: "UNOPE")
     sign_in_as(denied)
     post fd_case_claim_path(@kase)
     assert_not @kase.reload.assigned?

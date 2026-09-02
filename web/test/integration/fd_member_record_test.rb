@@ -4,7 +4,7 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
   SUBJECT = "UPRIOR".freeze
 
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     sign_in_as(@me)
   end
 

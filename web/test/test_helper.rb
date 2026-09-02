@@ -19,6 +19,25 @@ module ActiveSupport
 
     fixtures :all
 
+    def hold_role!(user_id, role)
+      Staff.find_or_create_by!(user_id: user_id)
+      Authz::Grant.give!(user_id, kind: "role", name: role, by: "test")
+      Current.forget_roles
+      Staff.find(user_id)
+    end
+
+    def drop_roles!(user_id)
+      Authz::Grant.live.for_person(user_id).roles.find_each { |row| row.take_back!(by: "test") }
+      Current.forget_roles
+    end
+
+    def move_capability!(role, key, allowed, by: "test")
+      Authz::Override.upsert({ role: role, capability: key, allowed: allowed,
+                               changed_by: by, changed_at: Time.current },
+        unique_by: %i[role capability])
+      Current.forget_roles
+    end
+
     def make_case(subject: "USUB", assign: nil, **attrs)
       kase = Fd::Case.create!({ opened_by: "UFF1", opened_at: 2.days.ago }.merge(attrs))
       kase.add_subject!(subject) if subject

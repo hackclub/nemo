@@ -11,7 +11,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "allowlisted slack id signs in" do
-    Staff.create!(user_id: "UTESTALLOWED", community_manager: true)
+    hold_role!("UTESTALLOWED", "community_manager")
     mock_hca_auth("UTESTALLOWED")
 
     get "/auth/hackclub/callback"
@@ -21,7 +21,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a staff row with no grant still signs in, holding nothing" do
-    Staff.create!(user_id: "UTESTNOGRANT", community_manager: false)
+    Staff.create!(user_id: "UTESTNOGRANT")
     mock_hca_auth("UTESTNOGRANT")
 
     get "/auth/hackclub/callback"
@@ -55,7 +55,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "logout clears the session" do
-    Staff.create!(user_id: "UTESTLOGOUT", community_manager: true)
+    hold_role!("UTESTLOGOUT", "community_manager")
     mock_hca_auth("UTESTLOGOUT")
     get "/auth/hackclub/callback"
     assert_equal "UTESTLOGOUT", session[:user_id]

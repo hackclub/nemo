@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdChatTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @kase = make_case
     sign_in_as(@me)
   end
@@ -130,7 +130,7 @@ class FdChatTest < ActionDispatch::IntegrationTest
     with_a_reporter
     hand = Staff.create!(user_id: "UHAND")
     Fd::AccessGrant.give!("UHAND", role: "firefighter", by: @me.user_id, reason: "works here")
-    Fd::RolePermission.set!("firefighter", "case.reply", false, by: @me.user_id)
+    move_capability!("firefighter", "case.reply", false, by: @me.user_id)
     sign_in_as(hand)
 
     post fd_case_chats_path(@kase), params: { body: "?we are looking at it" }

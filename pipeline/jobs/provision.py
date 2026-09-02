@@ -6,7 +6,7 @@ import sys
 from dotenv import load_dotenv
 from psycopg import sql
 
-from jobs.migrate import main as apply_raw_schema
+from jobs.migrate import main as apply_migrations
 from lib import capabilities
 from lib.db import connect_admin
 from lib.paths import ENV_FILE, INIT_SQL, REPO_ROOT
@@ -103,10 +103,13 @@ def main():
         set_role_passwords(conn)
 
     print("provision: raw schema")
-    apply_raw_schema()
+    apply_migrations("pre")
 
     print("provision: app schema from the rails migrations")
     apply_app_schema()
+
+    print("provision: the migrations that build on the app tables")
+    apply_migrations("post")
 
     print("provision: grants over the tables the migrations just made")
     with connect_admin() as conn:

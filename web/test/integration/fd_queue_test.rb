@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdQueueTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @mine = make_case
     @theirs = make_case
     @free = make_case

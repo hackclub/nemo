@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdOfferedTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @kase = make_case
     sign_in_as(@me)
   end
@@ -47,7 +47,7 @@ class FdOfferedTest < ActionDispatch::IntegrationTest
   end
 
   test "a firefighter named in a note is not offered as involved" do
-    Staff.create!(user_id: "UFF9", community_manager: true)
+    hold_role!("UFF9", "community_manager")
     note "asked <@UFF9> to read the thread"
     get fd_case_path(@kase, tab: "people")
 

@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdOpenCaseTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @watermark = Fd::Case.maximum(:id).to_i
   end
 

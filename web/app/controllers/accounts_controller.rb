@@ -6,14 +6,13 @@ class AccountsController < ApplicationController
   def show
     @account = Fd::StaffSlack.find_by(staff_user_id: current_staff.user_id)
     @linkable = Slack::Oauth.configured?
-    @held = held_families
-    @holding = @held.any? { |_family, role| role.present? }
+    @roles = Authz.roles_held(current_staff.user_id)
+    @capabilities = Authz.held(current_staff.user_id)
+    @holding = @roles.any? || @capabilities.any?
     @open_to_all = Channels::Audience.open_to_all.count unless @holding
     @ask = who_can_grant unless @holding
     @deeds = @holding ? Fd::Deeds.new(current_staff.user_id, since: WINDOW.ago)
       .rows.first(DEEDS_SHOWN) : []
-    @roles = Authz.roles_held(current_staff.user_id)
-    @capabilities = Authz.held(current_staff.user_id)
     @panels = Panel.visible_to(current_staff)
     @my_channels = Channels::Audience::Grant.live
       .where(user_id: current_staff.user_id).pluck(:channel_id)
@@ -22,18 +21,8 @@ class AccountsController < ApplicationController
 
   private
 
-  def held_families
-    fd = current_staff.manager? ? Fd::Access::MANAGER_ROLE : current_staff.role
-    [["Fire Department", fd]] +
-      Community::Permission.families.map { |family|
-        [Community::Permission.family_label(family), community_role(family)]
-      }
-  end
-
   def who_can_grant
-    managers = Staff.where(community_manager: true).pluck(:user_id)
-    curators = Community::Grant.live.of_family("read")
-      .where(role: Community::Permission.superadmin("read")).pluck(:user_id)
-    (managers | curators).reject { |id| id == current_staff.user_id }.first(ASK_SHOWN)
+    Authz.who_holds("access.grant")
+      .reject { |id| id == current_staff.user_id }.first(ASK_SHOWN)
   end
 end

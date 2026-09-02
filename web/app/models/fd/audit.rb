@@ -16,7 +16,7 @@ module Fd
       "Fd::DecisionThread" => "decision_thread",
       "Fd::AccessGrant" => "grant",
       "Engine::Setting" => "engine_setting",
-      "Fd::RolePermission" => "permission",
+      "Authz::Override" => "permission",
       "Fd::StaffSlack" => "slack_account",
       "Fd::Flag" => "flag",
       "ChannelBackfill" => "channel_backfill",

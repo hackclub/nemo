@@ -5,36 +5,39 @@
     <div class="card card-flush">
       <div class="card-head"><div><h2 class="card-title">What you hold</h2></div></div>
       <% if @holding %>
-        <% @held.each do |family, role| %>
-          <div class="line-row">
-            <b><%= family %></b>
-            <% if role %>
-              <span class="chip <%= "chip-crit" if role == Fd::Access::MANAGER_ROLE %>">
-                <%= role.tr("_", " ") %>
+        <div class="line-row">
+          <b>Role</b>
+          <% if @roles.any? %>
+            <% @roles.each do |role| %>
+              <span class="chip <%= "chip-crit" if Authz.superadmin?(role) %>">
+                <%= Authz.role_label(role) %>
               </span>
-            <% else %>
-              <span class="sub2">n/a</span>
             <% end %>
-            <span class="grow"></span>
-          </div>
-          <% may = you_may(role) %>
-          <% if may.any? %>
-            <details class="reveal">
-              <summary class="reveal-head">
-                <span class="reveal-note"><%= may.size %> of <%= whole_family(role) %> permissions</span>
-                <span class="car" aria-hidden="true">▾</span>
-              </summary>
-              <div class="reveal-body">
-                <% may.each do |key, label| %>
-                  <div class="line-row">
-                    <span class="mono"><%= key %></span>
-                    <span class="grow"></span>
-                    <span class="sub2"><%= label %></span>
-                  </div>
-                <% end %>
-              </div>
-            </details>
+          <% else %>
+            <span class="sub2">no role</span>
           <% end %>
+          <span class="grow"></span>
+        </div>
+        <% if @capabilities.any? %>
+          <details class="reveal">
+            <summary class="reveal-head">
+              <span class="reveal-note"><%= @capabilities.size %> of
+                <%= Authz.keys.size %> capabilities</span>
+              <span class="car" aria-hidden="true">▾</span>
+            </summary>
+            <div class="reveal-body">
+              <% @capabilities.sort.each do |key, via| %>
+                <div class="line-row">
+                  <span class="mono"><%= key %></span>
+                  <span class="grow"></span>
+                  <span class="sub2"><%= Authz.label(key) %></span>
+                  <% if via == "added" %>
+                    <span class="chip chip-good">extra</span>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          </details>
         <% end %>
       <% else %>
         <div class="empty">

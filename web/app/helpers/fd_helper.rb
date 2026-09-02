@@ -1133,7 +1133,7 @@ module FdHelper
   end
 
   def moved_chip(key)
-    return nil unless Fd::RolePermission.moved?(key)
+    return nil unless Authz::Override.moved?(key)
 
     tag.span("moved", class: "chip chip-warn")
   end

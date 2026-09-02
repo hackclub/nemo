@@ -4,7 +4,7 @@ class FdThreadsTest < ActionDispatch::IntegrationTest
   LINK = "https://hackclub.slack.com/archives/C0266FRGV/p1754487721123456".freeze
 
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @kase = make_case
   end
 

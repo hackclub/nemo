@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdMergesTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @main = make_case
     @dup_one = make_case
     @dup_two = make_case

@@ -2,7 +2,8 @@ class Current < ActiveSupport::CurrentAttributes
   attribute :moved, :flipped, :tuned, :fresh, :effective_capabilities, :held_roles
 
   def role_permissions
-    self.moved ||= Fd::RolePermission.overrides
+    self.moved ||= Authz::Override.pluck(:role, :capability, :allowed)
+      .each_with_object({}) { |(role, key, allowed), map| map[[role, key]] = allowed }
   end
 
   def forget_roles

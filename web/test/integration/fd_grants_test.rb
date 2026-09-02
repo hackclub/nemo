@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdGrantsTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     sign_in_as(@me)
   end
 
@@ -76,7 +76,7 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
 
   test "a lead cannot reach the grant endpoints at all" do
     delete logout_path
-    hand = Staff.create!(user_id: "ULEAD", community_manager: false)
+    hand = Staff.create!(user_id: "ULEAD")
     Authz::Grant.give!("ULEAD", kind: "role", name: "firefighter", by: "UME")
     Current.forget_roles
     sign_in_as(hand)
@@ -129,7 +129,7 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     assert_select "label[for=give-access]", text: "Edit access"
 
     delete logout_path
-    lead = Staff.create!(user_id: "ULEAD", community_manager: false)
+    lead = Staff.create!(user_id: "ULEAD")
     Authz::Grant.give!("ULEAD", kind: "role", name: "firefighter", by: "UME")
     sign_in_as(lead)
 

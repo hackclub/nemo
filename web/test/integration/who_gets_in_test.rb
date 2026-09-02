@@ -10,7 +10,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
   setup do
     Rails.application.eager_load!
-    @me = Staff.create!(user_id: "UNOROLE", community_manager: false)
+    @me = Staff.create!(user_id: "UNOROLE")
   end
 
   def self.controllers
@@ -168,7 +168,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
   end
 
   test "the manager sits above both ladders, held by the flag" do
-    boss = Staff.create!(user_id: "UABOVE", community_manager: true)
+    boss = hold_role!("UABOVE", "community_manager")
 
     assert_equal Fd::Access::MANAGER_ROLE, boss.role,
       "the manager role is what a manager holds now"

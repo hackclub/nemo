@@ -23,8 +23,8 @@ checks:
     case: theirs
     allowed: false
 
-  - name: a lead may not act on somebody else's case either
-    role: lead
+  - name: a firefighter may not act on somebody else's case either
+    role: firefighter
     key: case.act
     case: theirs
     allowed: false
@@ -58,18 +58,13 @@ checks:
     key: decision.settle
     allowed: true
 
-  - name: a lead may settle a decision
-    role: lead
+  - name: a firefighter may settle a decision
+    role: firefighter
     key: decision.settle
     allowed: true
 
-  - name: a lead may not grant access
-    role: lead
-    key: access.grant
-    allowed: false
-
-  - name: a lead may not grant access
-    role: lead
+  - name: a firefighter may not grant access
+    role: firefighter
     key: access.grant
     allowed: false
 
@@ -129,5 +124,4 @@ checks:
     key: case.resolve
     moved:
       firefighter: false
-      lead: false
     allowed: true

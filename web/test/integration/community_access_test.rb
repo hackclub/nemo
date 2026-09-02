@@ -2,7 +2,7 @@ require "test_helper"
 
 class CommunityAccessTest < ActionDispatch::IntegrationTest
   setup do
-    @boss = Staff.create!(user_id: "UCABOSS", community_manager: true)
+    @boss = hold_role!("UCABOSS", "community_manager")
   end
 
   def holding_nothing

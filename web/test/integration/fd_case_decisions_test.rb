@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdCaseDecisionsTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     sign_in_as(@me)
     @case = make_case(opened_at: 3.days.ago, category_key: "spam")
   end

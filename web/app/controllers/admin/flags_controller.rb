@@ -18,10 +18,7 @@ module Admin
     private
 
     def lose(key)
-      managers = Staff.where(community_manager: true).pluck(:user_id)
-      return (Fd::AccessGrant.live.distinct.pluck(:user_id) | managers).size if fd?(key)
-
-      (Community::Grant.live.distinct.pluck(:user_id) | managers).size
+      Authz.who_holds(fd?(key) ? "case.read" : "channel.read").size
     end
 
     def fd?(key)

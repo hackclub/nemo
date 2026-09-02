@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdNotesTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @kase = make_case
   end
 
@@ -133,7 +133,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     Fd::Note.create!(case_id: @kase.id, body: "spoke to them in DM", author: "UFF1")
     Fd::Note.create!(subject_user_id: "USUB", body: "escalates in public", author: "UFF2")
 
-    sign_in_as(Staff.create!(user_id: "UOTHER", community_manager: true))
+    sign_in_as(hold_role!("UOTHER", "community_manager"))
     get fd_case_path(@kase, tab: "notes")
 
     assert_select ".note-row", 1

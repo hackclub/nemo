@@ -35,7 +35,6 @@ module Admin
       @community = Community::Grant.live.for_person(@user_id).to_a
       @past = Community::Grant.ended.for_person(@user_id).newest_first.to_a +
         Fd::AccessGrant.ended.for_person(@user_id).newest_first.to_a
-      @implied = Staff.find_by(user_id: @user_id)&.community_manager? || false
       @names = Fd::Names.for([@user_id, @fd&.granted_by] +
         (@community + @past).map(&:granted_by) +
         Authz::Grant.for_person(@user_id).pluck(:granted_by) +
@@ -82,7 +81,6 @@ module Admin
     # anyone the new model knows, plus whoever is still only in the old tables
     def everyone
       (Authz::Grant.live.pluck(:user_id) +
-        Staff.where(community_manager: true).pluck(:user_id) +
         Fd::AccessGrant.live.pluck(:user_id) +
         Community::Grant.live.pluck(:user_id) +
         Channels::Audience::Grant.live.where.not(user_id: nil).pluck(:user_id)).compact.uniq

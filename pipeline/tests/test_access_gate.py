@@ -30,26 +30,24 @@ def clear(conn):
     conn.execute("DELETE FROM app.grant WHERE granted_by = %s", (BY,))
     conn.execute("DELETE FROM app.role_override")
     conn.execute("DELETE FROM app.staff WHERE user_id = %s", (ME,))
-    conn.execute("DELETE FROM fd.access_grants WHERE granted_by = %s", (BY,))
 
 
 def hold(conn, check):
-    if check.get("manager"):
+    role = "community_manager" if check.get("manager") else check.get("role")
+    if role:
         conn.execute(
-            "INSERT INTO app.staff (user_id, community_manager, created_at, updated_at) "
-            "VALUES (%s, true, now(), now())", (ME,)
+            "INSERT INTO app.staff (user_id, created_at, updated_at) "
+            "VALUES (%s, now(), now()) ON CONFLICT (user_id) DO NOTHING", (ME,)
         )
-    elif check.get("role"):
         conn.execute(
             "INSERT INTO app.grant (user_id, kind, name, granted_by) VALUES (%s,'role',%s,%s)",
-            (ME, "firefighter" if check["role"] == "lead" else check["role"], BY),
+            (ME, role, BY),
         )
-    for role, allowed in (check.get("moved") or {}).items():
-        want = "firefighter" if role == "lead" else role
+    for moved, allowed in (check.get("moved") or {}).items():
         conn.execute(
             "INSERT INTO app.role_override (role, capability, allowed, changed_by) "
             "VALUES (%s,%s,%s,%s) ON CONFLICT (role, capability) DO UPDATE SET allowed = EXCLUDED.allowed",
-            (want, check["key"], allowed, BY),
+            (moved, check["key"], allowed, BY),
         )
 
 

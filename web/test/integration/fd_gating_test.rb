@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdGatingTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UFF1", community_manager: false)
+    @me = Staff.create!(user_id: "UFF1")
     Fd::AccessGrant.give!("UFF1", role: "firefighter", by: "UBOSS")
     sign_in_as(@me)
   end
@@ -94,13 +94,13 @@ class FdGatingTest < ActionDispatch::IntegrationTest
     get fd_decision_path(decision)
     assert_nil dead("Settle it"), "settling belongs to every firefighter now"
 
-    Fd::RolePermission.set!("firefighter", "decision.settle", false, by: "UME")
+    move_capability!("firefighter", "decision.settle", false, by: "UME")
     get fd_decision_path(decision)
     assert_not_nil dead("Settle it"), "an override takes it back off them"
   end
 
   test "the greyed control is not a form that could still be posted" do
-    Fd::RolePermission.set!("firefighter", "decision.settle", false, by: "UME")
+    move_capability!("firefighter", "decision.settle", false, by: "UME")
     get fd_decision_path(proposal)
 
     assert_select "form[action=?]", fd_decision_settlement_path(Fd::Decision.last), count: 0
@@ -108,7 +108,7 @@ class FdGatingTest < ActionDispatch::IntegrationTest
 
   test "filing a report on the way out needs the permission to log an action" do
     kase = make_case(assign: "UFF1")
-    Fd::RolePermission.set!("firefighter", "case.act", false, by: "UME")
+    move_capability!("firefighter", "case.act", false, by: "UME")
 
     post fd_case_resolution_path(kase), params: { outcome: "report", type_key: "temp_ban",
       target_user_id: "USUB" }

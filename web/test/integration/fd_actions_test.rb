@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdActionsTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @kase = make_case
   end
 

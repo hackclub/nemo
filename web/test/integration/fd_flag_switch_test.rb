@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdFlagSwitchTest < ActionDispatch::IntegrationTest
   setup do
-    @boss = Staff.create!(user_id: "UBOSS", community_manager: true)
+    @boss = hold_role!("UBOSS", "community_manager")
     Fd::Flag.delete_all
     Current.forget_flags
   end

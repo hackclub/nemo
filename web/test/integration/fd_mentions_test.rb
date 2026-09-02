@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdMentionsTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @kase = make_case
     @named = Fd::Member.live.order(:user_id).first
     sign_in_as(@me)

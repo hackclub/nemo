@@ -2,7 +2,7 @@ require "test_helper"
 
 class AdminScreensTest < ActionDispatch::IntegrationTest
   setup do
-    @boss = Staff.create!(user_id: "UADBOSS", community_manager: true)
+    @boss = hold_role!("UADBOSS", "community_manager")
   end
 
   test "every signed in person reaches their own account" do
@@ -23,15 +23,14 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
     assert_select ".empty .btn", text: /Ask/
   end
 
-  test "holding something names every family and what it lets you do" do
+  test "holding something names the role and what it lets you do" do
     sign_in_as(@boss)
 
     get account_path
 
-    assert_select ".line-row b", text: "Fire Department"
-    assert_select ".line-row b", text: "Reads"
-    assert_select ".line-row b", text: "Operates"
-    assert_select ".reveal-body .mono", text: "analytics.grant"
+    assert_select ".line-row b", text: "Role"
+    assert_select ".line-row .chip-crit", text: /Community manager/
+    assert_select ".reveal-body .mono", text: "access.grant"
   end
 
   test "the admin screens each render for a manager" do
@@ -70,7 +69,7 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
 
   test "the roles matrix says how many sit off default" do
     sign_in_as(@boss)
-    Fd::RolePermission.set!("firefighter", "decision.settle", false, by: @boss.user_id)
+    move_capability!("firefighter", "decision.settle", false, by: @boss.user_id)
 
     get admin_roles_path
 
@@ -96,20 +95,16 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
     assert_equal "public", Channels::Audience.of(channel.channel_id)
   end
 
-  test "an analyst cannot reach the admin section at all" do
-    staff = Staff.create!(user_id: "UADANA")
-    Community::Grant.give!(staff.user_id, role: "analyst", by: @boss.user_id)
-    sign_in_as(staff)
+  test "the analytics role cannot reach the admin section at all" do
+    sign_in_as(hold_role!("UADANA", "analytics"))
 
     get admin_channels_path
 
     assert_redirected_to root_path
   end
 
-  test "a curator reaches it, because a curator is a manager now" do
-    staff = Staff.create!(user_id: "UADCUR")
-    Community::Grant.give!(staff.user_id, role: "curator", by: @boss.user_id)
-    sign_in_as(staff)
+  test "only a role holding access.grant reaches the admin section" do
+    sign_in_as(hold_role!("UADCUR", "community_manager"))
 
     get admin_channels_path
 
@@ -129,9 +124,8 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
     assert_select ".panel-head span", text: /1 are public/
   end
 
-  test "an analyst cannot set a channel audience" do
-    staff = Staff.create!(user_id: "UADANA")
-    Community::Grant.give!(staff.user_id, role: "analyst", by: @boss.user_id)
+  test "the analytics role cannot set a channel audience" do
+    staff = hold_role!("UADANA2", "analytics")
     channel = Analytics::DimChannel.where(archived: false).first
     sign_in_as(staff)
 

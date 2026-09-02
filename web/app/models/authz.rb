@@ -55,6 +55,9 @@ class Authz
 
     ROLES_HELD = "SELECT role FROM app.effective_role WHERE user_id = ? ORDER BY role".freeze
 
+    WHO_HOLDS = "SELECT DISTINCT user_id FROM app.effective_capability " \
+                "WHERE capability = ? ORDER BY user_id".freeze
+
     def held(user_id)
       return {} if user_id.blank?
 
@@ -86,6 +89,12 @@ class Authz
       return false if account.nil?
 
       roles_held(account.user_id).any? || held(account.user_id).any?
+    end
+
+    def who_holds(key)
+      ApplicationRecord.connection.select_values(
+        ApplicationRecord.sanitize_sql([WHO_HOLDS, key.to_s])
+      )
     end
 
     def holds?(account, key)

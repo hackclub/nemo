@@ -2,7 +2,7 @@ require "test_helper"
 
 class JourneyRoutesTest < ActionDispatch::IntegrationTest
   setup do
-    @boss = Staff.create!(user_id: "UJRBOSS", community_manager: true)
+    @boss = hold_role!("UJRBOSS", "community_manager")
     sign_in_as(@boss)
   end
 

@@ -7,7 +7,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "community manager sees the home dashboard" do
-    staff = Staff.create!(user_id: "UTESTCM1", community_manager: true)
+    staff = hold_role!("UTESTCM1", "community_manager")
     sign_in_as(staff)
 
     get root_path

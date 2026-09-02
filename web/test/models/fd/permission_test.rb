@@ -2,7 +2,7 @@ require "test_helper"
 
 class Fd::PermissionTest < ActiveSupport::TestCase
   def manager
-    @manager ||= Staff.create!(user_id: "UBOSS", community_manager: true)
+    @manager ||= hold_role!("UBOSS", "community_manager")
   end
 
   def firefighter
@@ -14,7 +14,7 @@ class Fd::PermissionTest < ActiveSupport::TestCase
   end
 
   def holding(user_id, role)
-    Staff.create!(user_id: user_id, community_manager: false)
+    Staff.create!(user_id: user_id)
     Fd::AccessGrant.give!(user_id, role: role, by: "UBOSS")
     Staff.find(user_id)
   end

@@ -7,7 +7,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the three tabs each render, and an unknown tab falls back to runs" do
-    sign_in_as(Staff.create!(user_id: "UTESTCM1", community_manager: true))
+    sign_in_as(hold_role!("UTESTCM1", "community_manager"))
 
     get engine_path
     assert_response :success
@@ -20,7 +20,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the sources tab lists every source with what it declares" do
-    sign_in_as(Staff.create!(user_id: "UTESTCM1", community_manager: true))
+    sign_in_as(hold_role!("UTESTCM1", "community_manager"))
 
     get engine_path(tab: "sources")
 
@@ -32,7 +32,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a source can be triggered from the row that describes it" do
-    sign_in_as(Staff.create!(user_id: "UTESTCM1", community_manager: true))
+    sign_in_as(hold_role!("UTESTCM1", "community_manager"))
 
     assert_difference -> { SyncRequest.count }, 1 do
       post engine_stage_path(stage: "member_channels")
@@ -42,7 +42,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a community manager queues a full sync" do
-    sign_in_as(Staff.create!(user_id: "UTESTCM1", community_manager: true))
+    sign_in_as(hold_role!("UTESTCM1", "community_manager"))
 
     assert_difference -> { SyncRequest.count }, 1 do
       post engine_sync_path
@@ -57,7 +57,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a second request is refused while one is already active" do
-    sign_in_as(Staff.create!(user_id: "UTESTCM1", community_manager: true))
+    sign_in_as(hold_role!("UTESTCM1", "community_manager"))
     post engine_sync_path
 
     assert_no_difference -> { SyncRequest.count } do
@@ -68,7 +68,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a finished request does not block a new one" do
-    sign_in_as(Staff.create!(user_id: "UTESTCM1", community_manager: true))
+    sign_in_as(hold_role!("UTESTCM1", "community_manager"))
     post engine_sync_path
     SyncRequest.recent_first.first.update!(status: "done")
 
@@ -86,7 +86,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
   end
 
   def firefighter
-    boss = Staff.create!(user_id: "UTESTCM9", community_manager: true)
+    boss = hold_role!("UTESTCM9", "community_manager")
     Fd::AccessGrant.give!("UHAND9", role: "firefighter", by: boss.user_id, reason: "works here")
     Staff.find("UHAND9")
   end
@@ -114,7 +114,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a firefighter cannot cancel a sync somebody else queued" do
-    boss = Staff.create!(user_id: "UTESTCM8", community_manager: true)
+    boss = hold_role!("UTESTCM8", "community_manager")
     queued = SyncRequest.queue!(kind: "full", requested_by: boss.user_id)
     sign_in_as(firefighter)
 

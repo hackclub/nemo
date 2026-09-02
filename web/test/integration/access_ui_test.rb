@@ -2,7 +2,7 @@ require "test_helper"
 
 class AccessUiTest < ActionDispatch::IntegrationTest
   setup do
-    @boss = Staff.create!(user_id: "UAUIBOSS", community_manager: true)
+    @boss = hold_role!("UAUIBOSS", "community_manager")
     @them = Staff.create!(user_id: "UAUITHEM")
     Fd::AccessGrant.give!(@them.user_id, role: "firefighter", by: @boss.user_id)
     Current.forget_roles

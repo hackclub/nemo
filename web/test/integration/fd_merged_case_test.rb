@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdMergedCaseTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     sign_in_as(@me)
     @root = make_case(subject: "USUB", opened_at: 10.days.ago)
     @folded = make_case(subject: "USUB", opened_at: 4.days.ago)

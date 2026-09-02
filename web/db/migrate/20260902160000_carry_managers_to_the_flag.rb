@@ -1,5 +1,7 @@
 class CarryManagersToTheFlag < ActiveRecord::Migration[8.1]
   def up
+    return if connection.select_value("SELECT to_regclass('fd.access_grants')").nil?
+
     execute <<~SQL
       UPDATE staff SET community_manager = true
       WHERE user_id IN (

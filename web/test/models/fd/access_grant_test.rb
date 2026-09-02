@@ -62,7 +62,7 @@ class Fd::AccessGrantTest < ActiveSupport::TestCase
   end
 
   test "the grant decides what somebody may do" do
-    staff = Staff.create!(user_id: "UFF1", community_manager: false)
+    staff = Staff.create!(user_id: "UFF1")
     assert_nil staff.role
     assert_not staff.may?("case.act")
 
@@ -81,7 +81,7 @@ class Fd::AccessGrantTest < ActiveSupport::TestCase
   end
 
   test "a community manager holds the tool from the flag, with no grant row" do
-    boss = Staff.create!(user_id: "UBOSS2", community_manager: true)
+    boss = hold_role!("UBOSS2", "community_manager")
 
     assert_equal Fd::Access::MANAGER_ROLE, boss.role
     assert_predicate boss, :manager?

@@ -13,7 +13,7 @@ module Admin
       @holders = ApplicationRecord.connection
         .select_values("SELECT DISTINCT user_id FROM app.effective_role")
       @can_grant = can_grant
-      @moved = Fd::Permission.keys.select { |key| Fd::RolePermission.moved?(key) }
+      @moved = Authz.keys.select { |key| Authz::Override.moved?(key) }
       @dark = Fd::Flag::KEYS.reject { |key| Fd::Flag.on?(key) }
       @open_to_all = Channels::Audience::Setting
         .where(audience: Channels::Audience::OPEN).count
@@ -30,9 +30,7 @@ module Admin
     private
 
     def can_grant
-      (Staff.where(community_manager: true).pluck(:user_id) +
-        Community::Grant.live.of_family("read")
-          .where(role: Community::Permission.superadmin("read")).pluck(:user_id)).uniq.size
+      Authz.who_holds("access.grant").size
     end
 
     def dormant

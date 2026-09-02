@@ -2,7 +2,7 @@ require "test_helper"
 
 class Fd::MemberIdentityTest < ActiveSupport::TestCase
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
   end
 
   test "the app holds no write grant on either member table" do
@@ -40,9 +40,9 @@ class Fd::MemberIdentityTest < ActiveSupport::TestCase
   end
 
   test "somebody whose role does not carry identity.read is handed nothing" do
-    them = Staff.create!(user_id: "UFF1", community_manager: false)
+    them = Staff.create!(user_id: "UFF1")
     Fd::AccessGrant.give!("UFF1", role: "firefighter", by: "UME")
-    Fd::RolePermission.set!("firefighter", "identity.read", false, by: "UME")
+    move_capability!("firefighter", "identity.read", false, by: "UME")
     before = AccessLog.count
 
     row = Fd::MemberIdentity.look_up(Fd::Member.order(:user_id).first.user_id, actor: them)
