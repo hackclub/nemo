@@ -1,15 +1,34 @@
 GIVE_UP_AFTER = 3
 
-WAITING = """
+STALE_CLAIM = "5 minutes"
+
+CLAIM = """
+UPDATE fd.intake_outbox SET claimed_at = now()
+WHERE id IN (
+    SELECT id FROM fd.intake_outbox
+    WHERE sent_at IS NULL AND failed_at IS NULL
+      AND (claimed_at IS NULL OR claimed_at < now() - interval '%(stale)s')
+      %(mine)s
+    ORDER BY requested_at
+    LIMIT 20
+    FOR UPDATE SKIP LOCKED
+)
+RETURNING id
+"""
+
+CLAIMED = """
 SELECT o.id, o.conversation_id, o.kind, o.body, o.mode, o.requested_by, o.attempts,
        c.channel_id, c.thread_ts, c.closed_at
 FROM fd.intake_outbox o
 JOIN fd.intake_conversations c ON c.id = o.conversation_id
-WHERE o.sent_at IS NULL AND o.failed_at IS NULL
+WHERE o.id = ANY(%s)
+ORDER BY o.requested_at
 """
 
-BY_CONVERSATION = " AND o.conversation_id = %s"
-ORDER = " ORDER BY o.requested_at LIMIT 20"
+
+def claim_sql(conversation_id=None):
+    mine = "AND conversation_id = %s" if conversation_id is not None else ""
+    return CLAIM % {"stale": STALE_CLAIM, "mine": mine}
 
 ANY_WAITING = """
 SELECT DISTINCT conversation_id FROM fd.intake_outbox
@@ -80,10 +99,15 @@ class Queued:
 
 
 def waiting(conn, conversation_id=None):
+    sql = claim_sql(conversation_id)
     if conversation_id is None:
-        rows = conn.execute(WAITING + ORDER).fetchall()
+        claimed = conn.execute(sql).fetchall()
     else:
-        rows = conn.execute(WAITING + BY_CONVERSATION + ORDER, (conversation_id,)).fetchall()
+        claimed = conn.execute(sql, (conversation_id,)).fetchall()
+    if not claimed:
+        return []
+
+    rows = conn.execute(CLAIMED, ([one[0] for one in claimed],)).fetchall()
     return [Queued(row) for row in rows]
 
 

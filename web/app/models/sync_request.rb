@@ -16,12 +16,16 @@ class SyncRequest < ApplicationRecord
   validates :stage, presence: true, inclusion: { in: STAGES }, if: -> { kind == "stage" }
   validates :stage, absence: true, if: -> { kind == "full" }
 
+  class AlreadyRunning < StandardError; end
+
   def self.queue!(kind:, requested_by:, stage: nil)
     transaction do
       request = create!(kind: kind, requested_by: requested_by, stage: stage)
       connection.execute("NOTIFY #{CHANNEL}")
       request
     end
+  rescue ActiveRecord::RecordNotUnique
+    raise AlreadyRunning, "a sync is already queued or running"
   end
 
   def active?
@@ -31,18 +35,26 @@ class SyncRequest < ApplicationRecord
   def cancel!
     return false unless active?
 
+    stopped = false
     transaction do
       still_queued = self.class.where(id: id, status: "queued")
         .update_all(status: "cancelled", finished_at: Time.current, updated_at: Time.current)
 
-      if still_queued.zero?
-        update!(status: "cancelling")
-        sql = self.class.sanitize_sql_array(["select pg_notify(?, ?)", CANCEL_CHANNEL, id.to_s])
-        self.class.connection.execute(sql)
-      else
+      if still_queued.positive?
+        stopped = true
         reload
+        next
       end
+
+      running = self.class.where(id: id, status: "claimed")
+        .update_all(status: "cancelling", updated_at: Time.current)
+      next if running.zero?
+
+      stopped = true
+      reload
+      sql = self.class.sanitize_sql_array(["select pg_notify(?, ?)", CANCEL_CHANNEL, id.to_s])
+      self.class.connection.execute(sql)
     end
-    true
+    stopped
   end
 end

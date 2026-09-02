@@ -61,7 +61,7 @@ module Fd
     private
 
     def ending
-      return "action_taken" if @case.actions.live.any?
+      return "action_taken" if Action.where(case_id: @case.family_ids).live.any?
 
       reason = params[:close_reason].to_s
       Case::CLOSE_REASONS.include?(reason) ? reason : nil
@@ -89,7 +89,7 @@ module Fd
     def close_reports
       said = told
 
-      @case.reports.where(closed_at: nil).find_each do |report|
+      CaseReport.where(case_id: @case.family_ids, closed_at: nil).find_each do |report|
         report.update!(closed_at: @now, closed_by: current_staff.user_id)
         audit(report, "closed", entity_id: @case.id,
           before: { "closed_at" => nil }, after: { "closed_at" => @now })

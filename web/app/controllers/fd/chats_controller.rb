@@ -21,7 +21,9 @@ module Fd
 
     def conversation_for(kase)
       family = IntakeConversation.for_case(kase.family_ids).open_ones
-      family.find_by(id: params[:conversation_id]) || family.first
+      return family.first if params[:conversation_id].blank?
+
+      family.find_by(id: params[:conversation_id])
     end
 
     def send_it(kase, read)
@@ -31,7 +33,7 @@ module Fd
       sent = nil
       writing do
         sent = Outgoing.queue(conversation_for(kase), read.said, mode: mode(read),
-          by: current_staff.user_id)
+          by: current_staff.user_id, asked: params[:conversation_id].present?)
         answered(kase, sent.queued) if sent.queued
       end
 

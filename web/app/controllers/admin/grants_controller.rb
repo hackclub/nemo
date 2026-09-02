@@ -5,8 +5,9 @@ module Admin
       return refuse("search for somebody, or paste their Slack user id") if user_id.blank?
       return refuse("#{user_id} is not a Slack user id") unless user_id.match?(PeopleSearch::MEMBER_ID)
       return refuse(Community::Access.why_not(current_staff, "analytics.grant")) unless may_grant?
+      return refuse("somebody else has to take yours back") if dropping_myself?(user_id)
 
-      changed = settle(user_id)
+      changed = ActiveRecord::Base.transaction { settle(user_id) }
       return redirect_to(admin_person_path(user_id), notice: "nothing changed") if changed.zero?
 
       redirect_to admin_person_path(user_id), notice: "#{changed} change(s) saved"
@@ -32,6 +33,13 @@ module Admin
     end
 
     private
+
+    def dropping_myself?(user_id)
+      return false unless user_id == current_staff.user_id
+      return false unless Staff.find_by(user_id: user_id)&.community_manager?
+
+      params[:fd_role].to_s != Fd::Access::MANAGER_ROLE
+    end
 
     def settle(user_id)
       settle_fd(user_id) +

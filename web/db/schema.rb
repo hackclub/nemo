@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_02_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_02_190000) do
   create_schema "app"
 
   # These are extensions that must be enabled in order to support this database
@@ -131,6 +131,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_160000) do
     t.string "stage"
     t.string "status", default: "queued", null: false
     t.datetime "updated_at", null: false
+    t.index "(((status)::text = ANY ((ARRAY['queued'::character varying, 'claimed'::character varying])::text[])))", name: "one_active_sync_request", unique: true, where: "((status)::text = ANY ((ARRAY['queued'::character varying, 'claimed'::character varying])::text[]))"
     t.index ["run_id"], name: "index_sync_request_on_run_id"
     t.index ["status"], name: "index_sync_request_on_status"
     t.check_constraint "kind::text = 'full'::text AND stage IS NULL OR kind::text = 'stage'::text AND stage IS NOT NULL", name: "sync_request_stage_matches_kind"

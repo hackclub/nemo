@@ -96,6 +96,8 @@ class EngineController < ApplicationController
 
     SyncRequest.queue!(kind: "full", requested_by: current_staff.user_id)
     redirect_to engine_path, notice: "sync queued"
+  rescue SyncRequest::AlreadyRunning => e
+    redirect_to engine_path, alert: e.message
   end
 
   def cancel
@@ -119,6 +121,8 @@ class EngineController < ApplicationController
 
     SyncRequest.queue!(kind: "stage", stage: params[:stage], requested_by: current_staff.user_id)
     redirect_to engine_path, notice: "#{params[:stage]} queued"
+  rescue SyncRequest::AlreadyRunning => e
+    redirect_to engine_path, alert: e.message
   rescue ActiveRecord::RecordInvalid => e
     redirect_to engine_path, alert: e.record.errors.full_messages.to_sentence
   end

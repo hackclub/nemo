@@ -96,10 +96,12 @@ class ChannelsController < ApplicationController
     custom_start = parse_range_date(params[:start])
     custom_end = parse_range_date(params[:end])
 
+    floor = [@channel.date_created&.to_date, last_available - 400].compact.max
     if custom_start || custom_end
       @range_preset = nil
-      @end_date = custom_end || last_available
-      @start_date = custom_start || (@end_date - (DEFAULT_RANGE_DAYS - 1))
+      @end_date = (custom_end || last_available).clamp(floor, last_available)
+      @start_date = (custom_start || (@end_date - (DEFAULT_RANGE_DAYS - 1)))
+        .clamp(floor, last_available)
       @start_date = @end_date if @start_date > @end_date
     else
       @range_preset = RANGE_PRESETS.include?(params[:days].to_i) ? params[:days].to_i : DEFAULT_RANGE_DAYS
@@ -108,7 +110,7 @@ class ChannelsController < ApplicationController
     end
 
     @range_max = last_available
-    @range_min = [@channel.date_created&.to_date, last_available - 400].compact.max
+    @range_min = floor
     all_time_start = @channel.date_created&.to_date || (last_available - 400)
     @range, @all_time = Slack::Analytics.parallel(
       -> {
