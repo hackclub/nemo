@@ -24,10 +24,7 @@ module Fd
       return redirect_to(admin_roles_path, alert: "nothing is off default") if rows.empty?
 
       writing do
-        rows.each do |row|
-          audit(row, "revoked", after: { "permission" => row.permission_key,
-                                         "role" => row.role, "allowed" => false })
-        end
+        rows.each { |row| audit(row, back_to_default(row) ? "granted" : "revoked", **reset(row)) }
         RolePermission.where(id: rows.map(&:id)).delete_all
         Current.forget_roles
       end
@@ -36,6 +33,20 @@ module Fd
     end
 
     private
+
+    def back_to_default(row)
+      Permission.default_roles(row.permission_key).include?(row.role)
+    end
+
+    def reset(row)
+      held = back_to_default(row)
+      {
+        before: { "permission" => row.permission_key, "role" => row.role,
+                  "allowed" => row.allowed },
+        after: { "permission" => row.permission_key, "role" => row.role,
+                 "allowed" => held, "why" => "put back to default" }
+      }
+    end
 
     def moved_note(role, key, allowed)
       said = Permission::ROLE_LABELS.fetch(role, role).downcase

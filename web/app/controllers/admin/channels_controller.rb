@@ -34,7 +34,8 @@ module Admin
       Fd::Audit.record(row, wanted == "private" ? "revoked" : "granted",
         actor: current_staff.user_id, request_id: request.request_id,
         entity_id: row.channel_id,
-        before: { "audience" => was }, after: { "audience" => wanted })
+        before: { "channel_id" => row.channel_id, "audience" => was },
+        after: { "channel_id" => row.channel_id, "audience" => wanted })
       redirect_to admin_channels_path(q: params[:q].presence),
         notice: "##{params[:channel_id]} is #{wanted}"
     end

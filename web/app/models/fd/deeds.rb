@@ -59,16 +59,19 @@ module Fd
       SQL
     end
 
+    IDENTITY_READS = %w[identity identity_search].freeze
+
     def reads_side
       return "" if @only && @only != READ
 
       mine = @user_id ? "AND l.actor_id = :who" : ""
       lead = audit_side.empty? ? "" : "UNION ALL"
+      classes = AuditEntry.sanitize_sql(["l.field_class IN (?)", IDENTITY_READS])
       <<~SQL
         #{lead}
         SELECT 'read' AS kind, l.id AS id, l.looked_at AS at
         FROM access_log l
-        WHERE l.looked_at >= :since AND l.field_class = 'identity' #{mine}
+        WHERE l.looked_at >= :since AND #{classes} #{mine}
       SQL
     end
 
@@ -105,6 +108,7 @@ module Fd
       @notes = Note.where(id: ids(found, "note")).index_by(&:id)
       @reports = CaseReport.where(id: ids(found, "report")).index_by(&:id)
       @grants = AccessGrant.where(id: ids(found, "grant")).index_by(&:id)
+      @community_grants = Community::Grant.where(id: ids(found, "community_grant")).index_by(&:id)
       @titles = Decision.where(id: ids(found, "decision", "decision_thread"))
         .pluck(:id, :title).to_h
 
@@ -116,8 +120,10 @@ module Fd
       return [] if ids.empty?
 
       AccessLog.where(id: ids).map do |log|
+        searched = log.field_class == "identity_search"
         Row.new(at: log.looked_at, event: "identity/read", kind: "member",
-          id: log.subject_user_id, actor: log.actor_id)
+          id: log.subject_user_id, actor: log.actor_id,
+          said: ("found by searching" if searched))
       end
     end
 
@@ -133,6 +139,7 @@ module Fd
       when "note" then note_row(row, event)
       when "decision", "decision_thread" then decision_row(row, event)
       when "grant" then grant_row(row, event)
+      when "community_grant" then community_grant_row(row, event)
       when "permission" then moved_row(row, event)
       when "report" then report_row(row, event)
       when *ON_CASE then on_case(row, event, row.entity_id)
@@ -188,6 +195,14 @@ module Fd
 
       Row.new(at: row.occurred_at, event: event, kind: "member", id: grant.user_id,
         said: grant.role.tr("_", " "))
+    end
+
+    def community_grant_row(row, event)
+      grant = @community_grants[row.entity_id]
+      return Row.new(at: row.occurred_at, event: event) if grant.nil?
+
+      Row.new(at: row.occurred_at, event: event, kind: "member", id: grant.user_id,
+        said: "#{grant.role.tr('_', ' ')}, #{grant.family}")
     end
   end
 end

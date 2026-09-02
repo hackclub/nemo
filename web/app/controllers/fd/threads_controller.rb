@@ -19,7 +19,7 @@ module Fd
           is_primary: first_evidence?(kase, kind),
           added_by: current_staff.user_id
         )
-        audit(thread, "attached")
+        audit(thread, "attached", entity_id: kase.id)
       end
 
       redirect_to fd_case_path(kase, tab: "evidence"), notice: attached_notice(kind)

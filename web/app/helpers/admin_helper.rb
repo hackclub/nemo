@@ -47,6 +47,8 @@ module AdminHelper
   CHANGE_WORDS = {
     ["grant", "granted"] => "Gave access",
     ["grant", "revoked"] => "Took access back",
+    ["community_grant", "granted"] => "Gave community access",
+    ["community_grant", "revoked"] => "Took community access back",
     ["permission", "granted"] => "Gave to a role",
     ["permission", "revoked"] => "Took from a role",
     ["flag", "turned_on"] => "Turned a section on",
@@ -62,10 +64,11 @@ module AdminHelper
   def change_said(entry)
     said = entry.after || {}
     case entry.entity_type
-    when "grant" then [names[said["user_id"]], said["role"]].compact.join(", ").presence
+    when "grant", "community_grant"
+      [names[said["user_id"]], said["role"]].compact.join(", ").presence
     when "permission" then [said["permission"], said["role"]].compact.join(" · ").presence
     when "flag" then said["flag"]
-    when "channel_audience" then channel_label(entry.entity_id)
+    when "channel_audience" then channel_label(entry.entity_ref)
     end || tag.span("n/a", class: "sub2")
   end
 

@@ -21,7 +21,7 @@ module Fd
       "Fd::Flag" => "flag",
       "ChannelBackfill" => "channel_backfill",
       "Channels::Audience::Setting" => "channel_audience",
-      "Community::Grant" => "grant"
+      "Community::Grant" => "community_grant"
     }.freeze
 
     VERBS = %w[
@@ -47,18 +47,31 @@ module Fd
     class UnauditableRecord < ArgumentError; end
     class UnknownVerb < ArgumentError; end
 
+    NUMERIC = /\A-?\d+\z/
+
+    def self.identify(subject)
+      return [subject, nil] if subject.is_a?(Integer)
+
+      said = subject.to_s
+      return [said.to_i, nil] if said.match?(NUMERIC)
+
+      [0, said.presence]
+    end
+
     def self.record(record, verb, actor:, request_id: nil, actor_kind: "human",
       source_app: SOURCE_APP, entity_id: nil, before: nil, after: nil)
       type = entity_type(record)
       raise UnknownVerb, "#{verb} is not an audited verb" unless VERBS.include?(verb)
 
       changes = record.previous_changes.except(*IGNORED_COLUMNS)
+      id, ref = identify(entity_id || record.id)
 
       AuditEntry.create!(
         actor_user_id: actor,
         actor_kind: actor_kind,
         entity_type: type,
-        entity_id: entity_id || record.id,
+        entity_id: id,
+        entity_ref: ref,
         verb: verb,
         before: redact(type, before || previous_values(record, changes)),
         after: redact(type, after || next_values(record, changes)),

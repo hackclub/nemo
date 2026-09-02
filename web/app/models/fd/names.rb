@@ -7,7 +7,7 @@ module Fd
       return none if wanted.empty?
 
       known = remembered(wanted)
-      RefreshProfilesJob.later(wanted - known.keys)
+      ::RefreshProfilesJob.later(wanted - known.keys)
 
       new(members: Member.where(user_id: wanted).index_by(&:user_id), profiles: known)
     end

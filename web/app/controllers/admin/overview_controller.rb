@@ -1,7 +1,7 @@
 module Admin
   class OverviewController < BaseController
     WINDOW = 30.days
-    CHANGED = %w[grant permission flag channel_audience].freeze
+    CHANGED = %w[grant community_grant permission flag channel_audience].freeze
     SHOWN = 8
 
     def index
@@ -21,7 +21,7 @@ module Admin
       @names = Fd::Names.for(@holders + @changed.map(&:actor_user_id) +
         @changed.filter_map { |entry| entry.after&.dig("user_id") })
       @channels = Fd::ChannelNames.for(
-        @changed.select { |entry| entry.entity_type == "channel_audience" }.map(&:entity_id)
+        @changed.select { |entry| entry.entity_type == "channel_audience" }.map(&:entity_ref)
       )
     end
 
