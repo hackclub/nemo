@@ -29,5 +29,14 @@ oauth_config:
 settings:
   event_subscriptions:
     bot_events:
+      - channel_archive
+      - channel_created
+      - channel_rename
+      - channel_unarchive
+      - member_joined_channel
+      - member_left_channel
+      - message.channels
+      - reaction_added
+      - reaction_removed
       - team_join
   socket_mode_enabled: true

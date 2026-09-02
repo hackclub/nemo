@@ -172,6 +172,13 @@ def thread_row(channel_id, message):
     )
 
 
+def revisit_from(newest):
+    try:
+        return f"{max(float(newest) - LOOKBACK_SECONDS, 0):.6f}"
+    except (TypeError, ValueError):
+        return newest
+
+
 def walk_channel(conn, client, channel_id, oldest=None, counts=None):
     params = {"channel": channel_id}
     if oldest:
@@ -233,7 +240,7 @@ def run(conn, limit=200, full=False, channels=None):
     with ingest_run(conn, SOURCE) as counts:
         counts.total_expected = len(targets)
         for channel_id, newest in targets:
-            oldest = None if full or not newest else newest
+            oldest = None if full or not newest else revisit_from(newest)
             try:
                 counts.rows_in += walk_channel(conn, client, channel_id, oldest, counts)
             except Exception as exc:

@@ -77,6 +77,10 @@ def sweep(client, interval, shards, found, depth=0):
     return sweep(client, interval, deeper, found, depth + 1)
 
 
+class IncompleteSweep(RuntimeError):
+    """The month was not swept whole, so its rows would undercount"""
+
+
 def run_month(conn, month, alphabet=None):
     client = ProxyClient()
     start, stop = month_window(client, month)
@@ -99,12 +103,18 @@ def run_month(conn, month, alphabet=None):
             cur.executemany(RANGE_SQL, rows)
         counts.rows_in = len(rows)
 
-    missed = expected - len(found)
-    print(
-        f"channel month {interval}: {len(rows)} of {expected} channels over "
-        f"{len(shards)} shard(s), {missed} missed, {counts.rows_rejected} rejected"
-        + (f", still truncated: {short}" if short else "")
-    )
+        missed = expected - len(found)
+        print(
+            f"channel month {interval}: {len(rows)} of {expected} channels over "
+            f"{len(shards)} shard(s), {missed} missed, {counts.rows_rejected} rejected"
+            + (f", still truncated: {short}" if short else "")
+        )
+        if short or missed > 0:
+            raise IncompleteSweep(
+                f"{interval} swept {len(found)} of {expected} channels"
+                + (f", still truncated: {', '.join(short)}" if short else "")
+            )
+
     return len(rows)
 
 
@@ -119,12 +129,30 @@ def months_between(client, first=None, last=None):
     return months
 
 
-def run(conn, months=None):
+def trailing(client, count):
+    _, edge = channel_calendar(client)
+    months = [month_start(edge)]
+    while len(months) < max(1, int(count or 1)):
+        months.insert(0, month_start(months[0] - timedelta(days=1)))
+    return months
+
+
+def run(conn, months=None, recent=None):
     client = ProxyClient()
     alphabet = shard_alphabet(conn)
+    if months is None:
+        months = trailing(client, recent) if recent else months_between(client)
+
     total = 0
-    for month in months or months_between(client):
-        total += run_month(conn, month, alphabet)
+    gaps = []
+    for month in months:
+        try:
+            total += run_month(conn, month, alphabet)
+        except IncompleteSweep as gap:
+            gaps.append(str(gap))
+
+    if gaps:
+        raise IncompleteSweep("; ".join(gaps))
     return total
 
 

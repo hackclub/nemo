@@ -6,7 +6,11 @@ from bot.spine import events
 
 
 def build():
-    app = App(token=os.environ["SLACK_BOT_TOKEN"], raise_error_for_unhandled_request=False)
+    app = App(
+        token=os.environ["SLACK_BOT_TOKEN"],
+        raise_error_for_unhandled_request=False,
+        process_before_response=True,
+    )
     events.register(app)
     return app
 

@@ -94,6 +94,21 @@ sources:
     runs_as: [admin_analytics_channel_span]
     feeds: [mart_channel_bands]
 
+  channel_month:
+    label: Channel analytics month by month
+    endpoint: admin.analytics.getChannelAnalytics
+    credential: internal
+    cadence: daily
+    window: 1 month
+    guard: num_found
+    resume: none
+    retention: replace
+    writes: [raw.channel_activity_snapshot]
+    runs_as: [admin_analytics_channel_month]
+    feeds: [mart_channel_bands]
+    limits:
+      months: {default: 2, min: 1, max: 24}
+
   channel_replies:
     label: Thread replies for opted-in channels
     endpoint: conversations.replies
