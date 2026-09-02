@@ -43,35 +43,38 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "the roles matrix has a tab per family, each carrying its key count" do
+  test "the roles matrix is one table over every capability and role" do
     sign_in_as(@boss)
 
-    get admin_roles_path(family: "read")
+    get admin_roles_path
 
     assert_response :success
-    assert_select ".view[aria-current]", text: /Reads/
-    assert_select ".view[aria-current] .view-count", text: "5"
+    Authz.grantable_roles.reject { |r| Authz.superadmin?(r) }.each do |role|
+      assert_select "thead th", text: /#{Authz.role_label(role)}/
+    end
+    assert_select "td.mono", text: "case.act"
+    assert_select "td.mono", text: "engine.sync"
+    assert_select "tr.band-row td", text: /Cases/
   end
 
-  test "a community family draws the same matrix the fire department does" do
+  test "the roles matrix offers no family tab any more" do
     sign_in_as(@boss)
 
-    get admin_roles_path(family: "read")
+    get admin_roles_path
 
-    assert_select "thead th", text: /Observer/
-    assert_select "thead th", text: /Curator/
-    assert_select "thead th", text: /#{Fd::Access::MANAGER_LABEL}/
-    assert_select "td.mono", text: "analytics.workspace.read"
-    assert_select "tr.band-row td", text: /Community analytics/
+    %w[Reads Operates Observer Curator Steward Operator Analyst].each do |gone|
+      assert_select "thead th", text: /#{gone}/, count: 0
+      assert_select ".view", text: /#{gone}/, count: 0
+    end
   end
 
-  test "the fire department matrix says how many sit off default" do
+  test "the roles matrix says how many sit off default" do
     sign_in_as(@boss)
-    Fd::RolePermission.set!("firefighter", "decision.settle", true, by: @boss.user_id)
+    Fd::RolePermission.set!("firefighter", "decision.settle", false, by: @boss.user_id)
 
-    get admin_roles_path(family: "fd")
+    get admin_roles_path
 
-    assert_select ".panel-head span", text: /1 moved off default/
+    assert_select ".warnbar", text: /1 capability off the catalogue default/
     assert_select "form[action=?]", fd_role_permission_path
   end
 
@@ -123,7 +126,7 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
 
     assert_select "tr.band-row td", text: /Everyone signed in &middot; 1|Everyone signed in · 1/
     assert_select "td .chip-warn", text: "public"
-    assert_select ".panel-head span", text: /are not private/
+    assert_select ".panel-head span", text: /1 are public/
   end
 
   test "an analyst cannot set a channel audience" do

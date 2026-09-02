@@ -10,7 +10,13 @@ class AccountsController < ApplicationController
     @holding = @held.any? { |_family, role| role.present? }
     @open_to_all = Channels::Audience.open_to_all.count unless @holding
     @ask = who_can_grant unless @holding
-    @deeds = Fd::Deeds.new(current_staff.user_id, since: WINDOW.ago).rows.first(DEEDS_SHOWN)
+    @deeds = @holding ? Fd::Deeds.new(current_staff.user_id, since: WINDOW.ago)
+      .rows.first(DEEDS_SHOWN) : []
+    @roles = Authz.roles_held(current_staff.user_id)
+    @capabilities = Authz.held(current_staff.user_id)
+    @panels = Panel.visible_to(current_staff)
+    @my_channels = Channels::Audience::Grant.live
+      .where(user_id: current_staff.user_id).pluck(:channel_id)
     @names = Fd::Names.for([current_staff.user_id] + Array(@ask))
   end
 

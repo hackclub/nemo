@@ -12,9 +12,15 @@ class DevSessionsController < ApplicationController
   private
 
   def held(staff)
-    said = [staff.manager? ? Fd::Access::MANAGER_ROLE : staff.role,
-            *Community::Access.held(staff).values].compact
-    said.empty? ? "holding nothing" : said.map { |role| role.tr("_", " ") }.to_sentence
+    roles = Authz.roles_held(staff.user_id).map { |role| Authz.role_label(role) }
+    extras = Authz::Grant.live.for_person(staff.user_id).capabilities
+      .where(effect: "allow").count
+    return "holding nothing" if roles.empty? && extras.zero?
+
+    said = roles.any? ? roles.to_sentence : "no role"
+    return said if extras.zero?
+
+    "#{said}, #{extras} #{'extra scope'.pluralize(extras)}"
   end
 
   def only_in_development

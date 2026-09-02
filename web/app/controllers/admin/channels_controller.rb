@@ -7,6 +7,30 @@ module Admin
       ["granted", "Named people only"]
     ].freeze
 
+    PICK_SHOWN = 40
+
+    def search
+      term = params[:q].to_s.strip.delete_prefix("#")
+      scope = Analytics::DimChannel.where(archived: false)
+      if term.present?
+        like = "%#{ActiveRecord::Base.sanitize_sql_like(term)}%"
+        scope = scope.where("name ILIKE :like OR channel_id ILIKE :like", like: like)
+      end
+
+      render json: {
+        channels: biggest_first(scope).limit(PICK_SHOWN)
+          .pluck(:channel_id, :name).map { |id, name| { id: id, name: name } },
+        total: scope.count
+      }
+    end
+
+    SPAN = "LEFT JOIN analytics.fct_channel_span s " \
+           "ON s.channel_id = dim_channel.channel_id".freeze
+
+    def biggest_first(scope)
+      scope.joins(SPAN).order(Arel.sql("s.total_members DESC NULLS LAST, dim_channel.name"))
+    end
+
     def index
       @q = params[:q].to_s.strip
       @settings = Channels::Audience::Setting.all.index_by(&:channel_id)

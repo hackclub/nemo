@@ -36,15 +36,30 @@
           <span class="brand-name">Mnemosyne</span>
         </div>
 
-        <% sections = [] %>
-        <% sections << "layouts/rail_analytics" if on?(:analytics) %>
-        <% sections << "layouts/rail_fire" if fire_engine %>
-        <% sections.reverse! unless current_staff&.manager? %>
-        <% sections.each do |section| %>
-          <%= render section %>
+        <% if page_section == "admin" %>
+          <%= render "layouts/rail_admin" %>
+        <% else %>
+          <% sections = [] %>
+          <% sections << "layouts/rail_analytics" if on?(:analytics) %>
+          <% sections << "layouts/rail_fire" if fire_engine %>
+          <% sections.reverse! unless current_staff&.manager? %>
+          <% sections.each do |section| %>
+            <%= render section %>
+          <% end %>
         <% end %>
 
-        <% if fire_engine %>
+        <% if page_section == "admin" %>
+          <div class="rail-foot">
+            <%= link_to root_path, class: "rail-item" do %>
+              <span class="rail-ic" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              </span>
+              <span class="rail-text">Back to Mnemosyne</span>
+            <% end %>
+          </div>
+        <% end %>
+
+        <% if fire_engine && page_section != "admin" %>
           <div class="rail-foot">
             <button type="button" class="rail-item rail-find" data-action="palette#open"
                     aria-label="Search cases, members, notes">

@@ -1,16 +1,17 @@
 module Admin
   class OverviewController < BaseController
     WINDOW = 30.days
-    CHANGED = %w[grant community_grant permission flag channel_audience].freeze
+    CHANGED = %w[grant community_grant capability_grant permission flag channel_audience].freeze
     SHOWN = 8
 
     def index
-      @fd = Fd::AccessGrant.live.group(:role).count
-      @community = Community::Permission.families.index_with { |family|
-        Community::Grant.live.of_family(family).group(:role).count
-      }
-      @holders = (Fd::AccessGrant.live.pluck(:user_id) +
-        Community::Grant.live.pluck(:user_id)).uniq
+      rows = ApplicationRecord.connection.select_all(
+        "SELECT role, count(*) AS held FROM app.effective_role GROUP BY role"
+      )
+      @by_role = rows.to_h { |row| [row["role"], row["held"].to_i] }
+      @fd = @by_role
+      @holders = ApplicationRecord.connection
+        .select_values("SELECT DISTINCT user_id FROM app.effective_role")
       @can_grant = can_grant
       @moved = Fd::Permission.keys.select { |key| Fd::RolePermission.moved?(key) }
       @dark = Fd::Flag::KEYS.reject { |key| Fd::Flag.on?(key) }

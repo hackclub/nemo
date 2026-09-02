@@ -12,9 +12,26 @@
           </span>
         <% end %>
       <% end %>
-      <% if named.any? %>
+      <div class="menu-sep"></div>
+      <% Admin::RoleChannelsController::SHARED_ROLES.each do |role| %>
+        <% in_set = named.any? { |grant| grant.role == role } %>
+        <%= button_to admin_role_channels_path,
+              method: in_set ? :delete : :post,
+              params: { role: role, channel_id: channel.channel_id,
+                        from: "channels", q: @q.presence },
+              class: "btn" do %>
+          <span class="mi-body">
+            <span class="mi-t"><%= in_set ? "Take out of" : "Give to" %>
+              the <%= role_said(role) %> set</span>
+            <span class="mi-note"><%= in_set ? "every #{role_said(role)} stops reading it" :
+                                                "every #{role_said(role)} may read it" %></span>
+          </span>
+        <% end %>
+      <% end %>
+      <% people = named.select { |grant| grant.user_id.present? } %>
+      <% if people.any? %>
         <div class="menu-sep"></div>
-        <% named.each do |grant| %>
+        <% people.each do |grant| %>
           <span class="btn">
             <span class="who">
               <%= face(grant.user_id) %>

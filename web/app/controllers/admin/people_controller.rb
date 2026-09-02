@@ -1,21 +1,20 @@
 module Admin
   class PeopleController < BaseController
     WINDOW = 30.days
-    FAMILIES = %w[fd read ops].freeze
     BANDS = [
       ["Can hand access out", :grants],
-      ["Can act", :acts],
-      ["Can only read", :reads]
+      ["Holds a role", :role],
+      ["Extra scopes only", :scopes]
     ].freeze
 
     def index
-      @family = FAMILIES.include?(params[:family]) ? params[:family] : nil
+      @role = Authz.role_names.include?(params[:role]) ? params[:role] : nil
       @term = params[:q].to_s.strip
-      @grants = Fd::AccessGrant.live.newest_first.to_a
-      @community = Community::Grant.live.to_a.group_by(&:user_id)
-      @managers = Staff.where(community_manager: true).pluck(:user_id)
-      @people = (@grants.map(&:user_id) + @community.keys + @managers).uniq
+      @people = everyone
       @names = Fd::Names.for(@people)
+      @roles_of = roles_of(@people)
+      @extras_of = extras_of(@people)
+      @granters = granters(@people)
       @acted = Fd::AuditEntry.where(occurred_at: WINDOW.ago..)
         .where(actor_user_id: @people).group(:actor_user_id).count
       @busiest = @acted.values.max || 0
@@ -38,20 +37,91 @@ module Admin
         Fd::AccessGrant.ended.for_person(@user_id).newest_first.to_a
       @implied = Staff.find_by(user_id: @user_id)&.community_manager? || false
       @names = Fd::Names.for([@user_id, @fd&.granted_by] +
-        (@community + @past).map(&:granted_by))
+        (@community + @past).map(&:granted_by) +
+        Authz::Grant.for_person(@user_id).pluck(:granted_by) +
+        Channels::Audience::Grant.live.where(user_id: @user_id).pluck(:granted_by))
       @deeds = Fd::Deeds.new(@user_id, since: WINDOW.ago).rows.first(20)
       @held_since = ([@fd] + @community).compact.filter_map(&:granted_at).min
       @last_acted = @deeds.first&.at
       @identity_reads = AccessLog.where(actor_id: @user_id, field_class: "identity")
         .where(looked_at: WINDOW.ago..).count
       @channels_named = Channels::Audience::Grant.live.where(user_id: @user_id).count
+      load_capabilities
     end
 
     private
 
+    def load_capabilities
+      @account = Staff.find_by(user_id: @user_id) || Staff.new(user_id: @user_id)
+      @roles = Authz.roles_held(@user_id)
+      @effective = Authz.held(@user_id)
+      @baseline = @roles.flat_map { |role| Authz.baseline(role) }.uniq
+      @deviations = Authz::Grant.live.for_person(@user_id).capabilities
+        .pluck(:name, :effect).to_h
+      @added_scopes = @deviations.select { |_key, effect| effect == "allow" }.keys
+      @channel_rows = Channels::Audience::Grant.live.where(user_id: @user_id).to_a
+      @role_channels = @roles.index_with { |role|
+        Channels::Audience::Grant.live.where(role: role).pluck(:channel_id)
+      }
+      named = (@channel_rows.map(&:channel_id) + @role_channels.values.flatten).uniq
+      @channel_names = Analytics::DimChannel.where(channel_id: named).index_by(&:channel_id)
+      @grant_rows = Authz::Grant.for_person(@user_id).newest_first.to_a
+    end
+
+    # inherited from the role, added by hand, taken away by hand, or simply off
+    def standing(key)
+      effect = @deviations[key]
+      return :added if effect == "allow"
+      return :removed if effect == "deny"
+      return :inherited if @effective.key?(key)
+
+      :off
+    end
+    helper_method :standing
+
+    # anyone the new model knows, plus whoever is still only in the old tables
+    def everyone
+      (Authz::Grant.live.pluck(:user_id) +
+        Staff.where(community_manager: true).pluck(:user_id) +
+        Fd::AccessGrant.live.pluck(:user_id) +
+        Community::Grant.live.pluck(:user_id) +
+        Channels::Audience::Grant.live.where.not(user_id: nil).pluck(:user_id)).compact.uniq
+    end
+
+    ROLES_OF = "SELECT user_id, role FROM app.effective_role " \
+               "WHERE user_id = ANY(ARRAY[?]::text[])".freeze
+
+    GRANTERS = "SELECT DISTINCT user_id FROM app.effective_capability " \
+               "WHERE capability = 'access.grant' AND user_id = ANY(ARRAY[?]::text[])".freeze
+
+    def roles_of(people)
+      return {} if people.empty?
+
+      ask(ROLES_OF, people).group_by(&:first).transform_values { |group|
+        group.map(&:last).sort
+      }
+    end
+
+    def granters(people)
+      return Set.new if people.empty?
+
+      ask(GRANTERS, people).flatten.to_set
+    end
+
+    def ask(sql, people)
+      ApplicationRecord.connection.select_rows(ApplicationRecord.sanitize_sql([sql, people]))
+    end
+
+    def extras_of(people)
+      return {} if people.empty?
+
+      Authz::Grant.live.capabilities.where(effect: "allow", user_id: people)
+        .group(:user_id).count
+    end
+
     def narrow(people)
       kept = people
-      kept = kept.select { |id| holds?(id, @family) } if @family
+      kept = kept.select { |id| (@roles_of[id] || []).include?(@role) } if @role
       kept = kept.select { |id| matches?(id) } if @term.present?
       kept.sort_by { |id| @names[id].to_s.downcase }
     end
@@ -59,12 +129,6 @@ module Admin
     def matches?(user_id)
       needle = @term.downcase
       user_id.downcase.include?(needle) || @names[user_id].to_s.downcase.include?(needle)
-    end
-
-    def holds?(user_id, family)
-      return fd_role(user_id).present? if family == "fd"
-
-      held(user_id)[family].present?
     end
 
     def band(people)
@@ -76,27 +140,10 @@ module Admin
     end
 
     def rung(user_id)
-      return :grants if manager?(user_id)
-      return :grants if held(user_id)["read"] == Community::Permission.superadmin("read")
-      return :acts if held(user_id)["ops"].present? || fd_role(user_id).present?
+      return :grants if @granters.include?(user_id)
+      return :role if (@roles_of[user_id] || []).any?
 
-      :reads
+      :scopes
     end
-
-    def manager?(user_id)
-      @managers.include?(user_id)
-    end
-
-    def fd_role(user_id)
-      return @fd&.role if @grants.nil?
-
-      @grants.find { |grant| grant.user_id == user_id }&.role
-    end
-    helper_method :fd_role
-
-    def held(user_id)
-      (@community[user_id] || []).to_h { |grant| [grant.family, grant.role] }
-    end
-    helper_method :held
   end
 end

@@ -1,14 +1,11 @@
 <% content_for :page_title, "Channels" %>
 
-<div class="admin-split">
-  <%= render "admin/nav", channel_count: @open %>
-  <div class="admin-main">
     <%= form_with url: admin_channels_path, method: :get, class: "qbar",
           data: { controller: "live-search", turbo_frame: "admin-channels",
                   turbo_action: "advance" } do %>
       <input class="field" type="search" name="q" value="<%= @q %>"
              placeholder="Search every channel by name" aria-label="Search channels"
-             data-action="input->live-search#go">
+             autocomplete="off" data-action="input->live-search#go">
       <% if @q.present? %>
         <%= link_to "Clear", admin_channels_path, class: "btn",
               data: { turbo_frame: "admin-channels" } %>
@@ -23,7 +20,7 @@
             Every channel matching <b><%= @q %></b>
           <% else %>
             <b><%= number_with_delimiter(@total) %></b> channels.
-            <b><%= number_with_delimiter(@open) %></b> are not private.
+            <b><%= number_with_delimiter(@open) %></b> are public.
           <% end %>
         </span>
       </div>
@@ -73,5 +70,3 @@
       <% end %>
     </div>
     </turbo-frame>
-  </div>
-</div>

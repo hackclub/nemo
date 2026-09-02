@@ -37,6 +37,20 @@ roles:
     capabilities: [channel.read]
     grantable: true
 
+  analytics:
+    label: Analytics
+    capabilities:
+      - member.read
+      - channel.read
+      - channel.all
+      - channel.share
+      - channel.backfill
+      - engine.read
+      - engine.stage
+      - engine.sync
+      - engine.tune
+    grantable: true
+
 areas:
   case: Cases
   decision: Decisions
@@ -153,6 +167,10 @@ capabilities:
     label: See the analytics for a channel they hold
     area: channel
     record_scope: channel
+
+  channel.all:
+    label: See the analytics for every channel
+    area: channel
 
   channel.share:
     label: Set a channel's audience, and name who may read it

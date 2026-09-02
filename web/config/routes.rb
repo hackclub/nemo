@@ -74,7 +74,14 @@ Rails.application.routes.draw do
     resources :grants, only: [:create, :destroy]
     resource :roles, only: [:show], controller: "roles"
     resource :flags, only: [:show], controller: "flags"
-    resources :channels, only: [:index, :update], param: :channel_id
+    resources :channels, only: [:index, :update], param: :channel_id do
+      collection { get "search", as: :search }
+    end
+    resources :people, only: [], param: :user_id do
+      resource :capability, only: [:update, :destroy], controller: "capabilities"
+      resources :channel_grants, only: [:create, :destroy], param: :channel_id
+    end
+    resource :role_channels, only: [:show, :create, :destroy], controller: "role_channels"
   end
 
   get "engine", to: "engine#index"

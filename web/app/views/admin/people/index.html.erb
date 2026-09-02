@@ -1,21 +1,18 @@
 <% content_for :page_title, "People" %>
 
-<div class="admin-split">
-  <%= render "admin/nav", people_count: @people.size %>
-  <div class="admin-main">
     <%= form_with url: admin_people_path, method: :get, class: "qbar" do %>
-      <%= hidden_field_tag :family, @family, id: nil if @family %>
+      <%= hidden_field_tag :role, @role, id: nil if @role %>
       <input class="field" type="search" name="q" value="<%= @term %>"
-             placeholder="Search by name or U-id" aria-label="Search people">
-      <span class="segmented" role="group" aria-label="family">
+             placeholder="Search by name or U-id" aria-label="Search people"
+             autocomplete="off">
+      <span class="segmented" role="group" aria-label="role">
         <%= link_to "All", admin_people_path(q: @term.presence),
-              aria: { current: ("true" if @family.nil?) } %>
-        <%= link_to "Fire Dept", admin_people_path(family: "fd", q: @term.presence),
-              aria: { current: ("true" if @family == "fd") } %>
-        <%= link_to "Reads", admin_people_path(family: "read", q: @term.presence),
-              aria: { current: ("true" if @family == "read") } %>
-        <%= link_to "Operates", admin_people_path(family: "ops", q: @term.presence),
-              aria: { current: ("true" if @family == "ops") } %>
+              aria: { current: ("true" if @role.nil?) } %>
+        <% Authz.role_names.each do |name| %>
+          <%= link_to Authz.role_label(name),
+                admin_people_path(role: name, q: @term.presence),
+                aria: { current: ("true" if @role == name) } %>
+        <% end %>
       </span>
       <span class="grow"></span>
       <% if may_grant? %>
@@ -29,14 +26,14 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>person</th><th>fire dept</th><th>reads</th><th>operates</th>
+                <th>person</th><th>role</th>
                 <th style="width: 18%">acted 30d</th><th class="col-btn"></th>
               </tr>
             </thead>
             <tbody>
               <% @bands.each do |label, people| %>
                 <tr class="band-row">
-                  <td colspan="6"><%= label %> &middot; <%= people.size %></td>
+                  <td colspan="4"><%= label %> &middot; <%= people.size %></td>
                 </tr>
                 <% people.each do |user_id| %>
                   <tr>
@@ -49,11 +46,8 @@
                         </span>
                       </div>
                     </td>
-                    <td><%= fd_role_cell(user_id, fd_role(user_id), manager?(user_id)) %></td>
-                    <% Community::Permission.families.each do |family| %>
-                      <td><%= role_cell(held(user_id)[family],
-                            implied: implied_role(user_id, family)) %></td>
-                    <% end %>
+                    <td><%= role_standing(user_id, roles: @roles_of[user_id] || [],
+                              extras: @extras_of[user_id] || 0) %></td>
                     <td><%= acted_bar(@acted[user_id], @busiest) %></td>
                     <td class="col-btn">
                       <%= link_to "Open", admin_person_path(user_id), class: "btn" %>
@@ -64,14 +58,12 @@
             </tbody>
           </table>
         </div>
-      <% elsif @term.present? || @family %>
+      <% elsif @term.present? || @role %>
         <div class="empty"><p class="empty-title">Nobody matches</p></div>
       <% else %>
         <div class="empty"><p class="empty-title">Nobody holds a grant yet</p></div>
       <% end %>
     </div>
-  </div>
-</div>
 
 <% if may_grant? %>
   <%= render "admin/people/give_modal" %>

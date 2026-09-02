@@ -57,6 +57,39 @@
 
     <div class="panel">
       <div class="panel-head">
+        <span>What you hold</span>
+        <span class="grow"></span>
+        <span class="sub2"><%= @capabilities.size %> of <%= Authz.keys.size %></span>
+      </div>
+      <% if @capabilities.any? %>
+        <div class="scroll">
+          <table class="data-table">
+            <tbody>
+              <% @capabilities.sort.each do |key, via| %>
+                <tr>
+                  <td><%= Authz.label(key) %></td>
+                  <td class="sub2"><%= Authz.area(key) %></td>
+                  <td><span class="chip <%= via == "added" ? "chip-warn" : "" %>"><%= via %></span></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <p class="card-note">
+          Nothing yet. You can read the overview, and any channel set to public.
+        </p>
+      <% end %>
+      <% if @my_channels.any? %>
+        <p class="card-note">
+          <%= pluralize(@my_channels.size, "channel") %> named to you:
+          <%= @my_channels.map { |id| "##{id}" }.to_sentence %>
+        </p>
+      <% end %>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
         <span>What you did</span>
         <span class="grow"></span>
         <span class="sub2">last 30 days</span>

@@ -1,0 +1,105 @@
+<div class="panel">
+  <div class="tiles">
+    <div class="tile">
+      <span class="tile-t">Role</span>
+      <span class="tile-s"><%= @roles.any? ? "#{@baseline.size} in the baseline" : "a member" %></span>
+      <span class="tile-v" style="font-size:var(--t-head)">
+        <%= @roles.any? ? @roles.map { |r| Authz.role_label(r) }.to_sentence : "No role" %>
+      </span>
+    </div>
+    <div class="tile">
+      <span class="tile-t">In force</span>
+      <span class="tile-s">of <%= Authz.keys.size %> capabilities</span>
+      <span class="tile-v"><%= @effective.size %></span>
+      <div class="meter">
+        <i style="width: <%= (@effective.size * 100.0 / Authz.keys.size).round %>%"></i>
+      </div>
+    </div>
+    <div class="tile">
+      <span class="tile-t">Off default</span>
+      <span class="tile-s">
+        <%= @deviations.any? ? @deviations.keys.first(2).join(", ") : "nothing by hand" %>
+      </span>
+      <span class="tile-v"><%= @deviations.any? ? @deviations.size : "0" %></span>
+    </div>
+    <div class="tile">
+      <span class="tile-t">Channels</span>
+      <span class="tile-s">
+        <% shared = @role_channels.values.flatten.size %>
+        <%= shared.positive? ? "plus #{pluralize(shared, 'shared')}" : "plus anything public" %>
+      </span>
+      <span class="tile-v"><%= @channel_rows.size %></span>
+    </div>
+    <div class="tile">
+      <span class="tile-t">Identity reads</span>
+      <span class="tile-s">last 30 days</span>
+      <span class="tile-v"><%= @identity_reads %></span>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="name-a-channel">
+  <div class="panel-head">
+    <span>Channels they read</span>
+    <span class="grow"></span>
+    <span class="sub2">plus anything public</span>
+  </div>
+
+  <% if @roles.include?("promethean") && @channel_rows.empty? %>
+    <div class="warnbar">A promethean with no channel reads nothing but public ones.</div>
+  <% end %>
+
+  <% if @channel_rows.any? || @role_channels.values.flatten.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <tbody>
+          <% @channel_rows.each do |row| %>
+            <tr>
+              <td>
+                <b>#<%= @channel_names[row.channel_id]&.name || row.channel_id %></b>
+                <span class="mono sub2"><%= row.channel_id %></span>
+              </td>
+              <td><span class="chip chip-good">named to them</span></td>
+              <td class="said-cell"><%= @names[row.granted_by] %></td>
+              <td>
+                <% if may_grant? %>
+                  <%= button_to "Take back",
+                        admin_person_channel_grant_path(@user_id, row.channel_id),
+                        method: :delete, class: "btn" %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+          <% @role_channels.each do |role, ids| %>
+            <% ids.each do |id| %>
+              <tr>
+                <td>
+                  <b>#<%= @channel_names[id]&.name || id %></b>
+                  <span class="mono sub2"><%= id %></span>
+                </td>
+                <td><span class="chip"><%= Authz.role_label(role).downcase %> set</span></td>
+                <td class="said-cell">shared, not theirs alone</td>
+                <td>
+                  <%= link_to "Edit the set", admin_role_channels_path(role: role), class: "btn" %>
+                </td>
+              </tr>
+            <% end %>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty">
+      <p class="empty-title">No channel is theirs to read</p>
+      <p class="card-note">They still see anything set to public.</p>
+    </div>
+  <% end %>
+
+  <% if may_grant? %>
+    <%= form_with url: admin_person_channel_grants_path(@user_id), method: :post,
+          class: "rowform" do %>
+      <%= render "admin/channel_picker", field: :channel_id, submit: true,
+            said: "Add a channel", id: "pick-person-channel" %>
+    <% end %>
+  <% end %>
+</div>

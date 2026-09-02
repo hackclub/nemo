@@ -2708,6 +2708,7 @@
     box-shadow: var(--e-1);
     display: grid;
     gap: 1px;
+    text-align: start;
   }
 
   .menu-pop .btn {
@@ -2718,6 +2719,7 @@
     height: auto;
     font-weight: 500;
     padding: 7px 9px;
+    text-align: start;
   }
 
   .menu-group {
@@ -6579,7 +6581,8 @@
     padding-block: 12px;
   }
 
-  .panel .data-table tbody tr:hover {
+  .panel .data-table tbody tr:hover,
+  .panel .data-table tbody tr:has(.menu[open]) {
     background-color: var(--card-2);
   }
 
@@ -6682,7 +6685,8 @@
     border-bottom: 0;
   }
 
-  .data-table tbody tr:hover {
+  .data-table tbody tr:hover,
+  .data-table tbody tr:has(.menu[open]) {
     background-color: color-mix(in oklab, var(--ink) 5%, transparent);
   }
 
@@ -7443,4 +7447,119 @@
 
   .swatch { display: inline-flex; align-items: center; gap: 8px; font-size: var(--t-fine); color: var(--ink-3); }
   .swatch i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+
+  .meter {
+    height: 5px;
+    background-color: var(--line-soft);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 7px;
+  }
+
+  .meter i {
+    display: block;
+    height: 100%;
+    background-color: var(--accent);
+  }
+
+  .warnbar {
+    display: flex;
+    gap: var(--s-2xs);
+    align-items: baseline;
+    flex-wrap: wrap;
+    padding: 9px var(--s-sm);
+    font-size: var(--t-small);
+    line-height: 1.5;
+    background-color: var(--warn-soft);
+    color: var(--warn);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .warnbar > * { min-width: 0; }
+
+  .warnbar b { font-weight: 600; }
+
+  .legend {
+    display: flex;
+    gap: var(--s-md);
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 9px var(--s-sm);
+    border-bottom: 1px solid var(--line);
+    font-size: var(--t-fine);
+    color: var(--ink-3);
+  }
+
+  .legend .grow { flex: 1 1 auto; }
+
+  .rowform {
+    display: flex;
+    gap: var(--s-2xs);
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 11px var(--s-sm);
+    border-top: 1px solid var(--line);
+    background-color: var(--card-2);
+  }
+
+  .rowform .note {
+    flex-basis: 100%;
+    color: var(--ink-3);
+    font-size: var(--t-fine);
+  }
+
+  .rowform .grow { flex: 1 1 auto; }
+
+  .optlist {
+    display: grid;
+    gap: 2px;
+    max-height: 16rem;
+    overflow-y: auto;
+    padding: 0 var(--s-sm) var(--s-2xs);
+  }
+
+  .opt-band {
+    margin: var(--s-2xs) 0 2px;
+    font-size: var(--t-mark);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  .opt-note {
+    display: block;
+    font-size: var(--t-fine);
+    color: var(--ink-3);
+  }
+
+  .pick-body {
+    overflow: visible;
+    display: grid;
+    gap: var(--s-2xs);
+  }
+
+  .pick-list {
+    display: grid;
+    gap: 1px;
+    max-height: 17rem;
+    overflow-y: auto;
+    margin-top: var(--s-2xs);
+  }
+
+  .pick-none {
+    padding: var(--s-sm);
+    color: var(--ink-3);
+    font-size: var(--t-small);
+  }
+
+  .pick-note {
+    display: block;
+    font-size: var(--t-fine);
+    color: var(--ink-3);
+  }
+
+  .pick-chosen {
+    margin-left: var(--s-2xs);
+  }
 }

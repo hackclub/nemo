@@ -1,8 +1,5 @@
 <% content_for :page_title, @names[@user_id] %>
 
-<div class="admin-split">
-  <%= render "admin/nav" %>
-  <div class="admin-main">
     <div class="cols c-2">
       <div class="stack">
         <div class="card card-flush">
@@ -22,61 +19,18 @@
             <% end %>
           </div>
 
-          <% if @implied || @fd %>
-            <div class="line-row">
-              <b>Fire Department</b>
-              <%= fd_role_cell(@user_id, @fd&.role, @implied) %>
-              <% if @implied %>
-                <span class="sub2">holds everything, in both ladders</span>
-              <% else %>
-                <span class="sub2">since <%= @fd.granted_at.strftime("%b %Y") %>,
-                  given by <%= @names[@fd.granted_by] %></span>
-              <% end %>
-              <span class="grow"></span>
-            </div>
-          <% end %>
-          <% Community::Permission.families.each do |family| %>
-            <% grant = @community.find { |row| row.family == family } %>
-            <% implied = implied_role(@user_id, family) %>
-            <% next if grant.nil? && implied.nil? %>
-            <div class="line-row">
-              <b><%= Community::Permission.family_label(family) %></b>
-              <%= role_cell(grant&.role, implied: implied) %>
-              <% if grant %>
-                <span class="sub2">since <%= grant.granted_at.strftime("%b %Y") %>,
-                  given by <%= @names[grant.granted_by] %></span>
-              <% end %>
-              <span class="grow"></span>
-            </div>
-          <% end %>
-          <% if @fd.nil? && @community.empty? && !@implied %>
+          <div class="line-row">
+            <b>Role</b>
+            <%= role_standing(@user_id) %>
+            <% if @grant_rows.any?(&:role?) %>
+              <% row = @grant_rows.find(&:role?) %>
+              <span class="sub2">since <%= row.granted_at.strftime("%b %Y") %>,
+                given by <%= @names[row.granted_by] %></span>
+            <% end %>
+            <span class="grow"></span>
+          </div>
+          <% if @roles.empty? && @effective.empty? %>
             <div class="empty"><p class="empty-title">Holds nothing yet</p></div>
-          <% end %>
-
-          <% Community::Permission.families.each do |family| %>
-            <% role = implied_role(@user_id, family) ||
-                 @community.find { |row| row.family == family }&.role %>
-            <% may = you_may(role) %>
-            <% next if may.empty? %>
-            <details class="reveal">
-              <summary class="reveal-head">
-                <% whole = Community::Permission.keys.count { |key|
-                     Community::Permission.family(key) == family } %>
-                <span><%= Community::Permission.role_label(role) %>,
-                  <%= may.size %> of <%= whole %> permissions</span>
-                <span class="reveal-note">what that lets them do</span>
-                <span class="car" aria-hidden="true">▾</span>
-              </summary>
-              <div class="reveal-body">
-                <% may.each do |key, label| %>
-                  <div class="line-row">
-                    <span class="mono"><%= key %></span>
-                    <span class="grow"></span>
-                    <span class="sub2"><%= label %></span>
-                  </div>
-                <% end %>
-              </div>
-            </details>
           <% end %>
         </div>
 
@@ -148,11 +102,10 @@
         </div>
       </div>
     </div>
-  </div>
-</div>
+
+<%= render "admin/people/capabilities" %>
 
 <% if may_grant? %>
-  <%= render "admin/people/give_modal", person: @user_id,
-        held: { "fd" => @implied ? Fd::Access::MANAGER_ROLE : @fd&.role }
-                .merge(@community.to_h { |g| [g.family, g.role] }) %>
+  <%= render "admin/people/give_modal", person: @user_id, role: @roles.first,
+        held_scopes: @added_scopes %>
 <% end %>

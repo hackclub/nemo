@@ -32,18 +32,18 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to admin_roles_path
     follow_redirect!
-    assert_equal "yes", switch_for("decision.settle", "firefighter").text.strip
-    assert_includes Fd::Permission.roles("decision.settle"), "firefighter"
+    assert_equal "on", switch_for("decision.settle", "firefighter").text.strip
+    assert_includes Authz.baseline("firefighter"), "decision.settle"
   end
 
   test "a moved key is marked, and unmarked when it goes back" do
-    move("firefighter", "decision.settle", "1")
-    get admin_roles_path
-    assert_select "td.mono", text: /decision\.settle\s+moved/
-
     move("firefighter", "decision.settle", "0")
     get admin_roles_path
-    assert_select "td.mono", text: /decision\.settle\s+moved/, count: 0
+    assert_select ".chip-crit", text: /taken from firefighter/
+
+    move("firefighter", "decision.settle", "1")
+    get admin_roles_path
+    assert_select ".chip-crit", text: /taken from firefighter/, count: 0
   end
 
   test "every move is written to the audit with the pair it changed" do

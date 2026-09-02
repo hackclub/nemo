@@ -21,7 +21,8 @@ module Fd
       "Fd::Flag" => "flag",
       "ChannelBackfill" => "channel_backfill",
       "Channels::Audience::Setting" => "channel_audience",
-      "Community::Grant" => "community_grant"
+      "Community::Grant" => "community_grant",
+      "Authz::Grant" => "capability_grant"
     }.freeze
 
     VERBS = %w[

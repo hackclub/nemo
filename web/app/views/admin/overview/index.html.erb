@@ -1,8 +1,5 @@
 <% content_for :page_title, "Admin" %>
 
-<div class="admin-split">
-  <%= render "admin/nav" %>
-  <div class="admin-main">
     <div class="stack">
       <div class="card">
         <div class="card-head">
@@ -21,32 +18,12 @@
         </div>
       </div>
 
-      <% @dark.each do |key| %>
-        <div class="dup">
-          <b><%= Fd::Flag.label(key) %> is off.</b>
-          <%= pluralize(@holders.size, "person") %> hold a role and cannot see it.
-          <%= gated_button "app.flip", "Turn it on", fd_flag_path(key: key, on: "1"),
-                method: :patch %>
-        </div>
-      <% end %>
-
       <% @moved.each do |key| %>
         <div class="dup">
           <b><%= key %></b> sits off its default.
-          <%= link_to "Open the matrix", admin_roles_path(family: "fd"), class: "btn" %>
+          <%= link_to "Open the matrix", admin_roles_path, class: "btn" %>
         </div>
       <% end %>
-
-      <div class="dup dup-calm">
-        <% if @open_to_all.zero? %>
-          No channel is open to everyone.
-          <span class="chip chip-off">as expected</span>
-        <% else %>
-          <b><%= pluralize(@open_to_all, "channel") %></b>
-          open to anyone signed in.
-          <%= link_to "Open the ledger", admin_channels_path, class: "btn" %>
-        <% end %>
-      </div>
 
       <div class="cols c-3">
         <div class="fbox">
@@ -55,24 +32,11 @@
             <span><%= @fd.values.sum %></span>
           </div>
           <div class="rows">
-            <%= render "admin/overview/ladder", counts: @fd,
-                  roles: Fd::Permission::ROLES.reverse,
-                  labels: Fd::Permission::ROLE_LABELS %>
+            <%= render "admin/overview/ladder", counts: @by_role,
+                  roles: Authz.role_names,
+                  labels: Authz.role_names.index_with { |r| Authz.role_label(r) } %>
           </div>
         </div>
-        <% Community::Permission.families.each do |family| %>
-          <div class="fbox">
-            <div class="ft">
-              <span><%= Community::Permission.family_label(family) %></span>
-              <span><%= @community[family].values.sum %></span>
-            </div>
-            <div class="rows">
-              <%= render "admin/overview/ladder", counts: @community[family],
-                    roles: Community::Permission.roles(family).reverse,
-                    labels: Community::Permission::ROLE_LABELS %>
-            </div>
-          </div>
-        <% end %>
       </div>
 
       <div class="card card-flush">
@@ -127,5 +91,3 @@
         </div>
       <% end %>
     </div>
-  </div>
-</div>

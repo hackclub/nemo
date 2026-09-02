@@ -1,0 +1,77 @@
+<% content_for :page_title, "#{Authz.role_label(@role)} channels" %>
+
+    <div class="panel">
+      <div class="warnbar">
+        Changing this set changes what <b><%= pluralize(@holders, Authz.role_label(@role).downcase) %></b>
+        can see, at once. To give one person a channel alone, name them on it instead.
+      </div>
+
+      <% if @channels.any? %>
+        <div class="scroll">
+          <table class="data-table">
+            <thead>
+              <tr><th>channel</th><th>added</th><th></th></tr>
+            </thead>
+            <tbody>
+              <% @channels.each do |row| %>
+                <tr>
+                  <td>
+                    <span class="two-line">
+                      <b>#<%= @named[row.channel_id]&.name || row.channel_id %></b>
+                      <span class="mono"><%= row.channel_id %></span>
+                    </span>
+                  </td>
+                  <td class="said-cell">
+                    <span class="two-line">
+                      <span><%= @names[row.granted_by] %></span>
+                      <span><%= row.granted_at.strftime("%-d %b %Y") %></span>
+                    </span>
+                  </td>
+                  <td>
+                    <% if may_grant? %>
+                      <%= button_to "Take out",
+                            admin_role_channels_path(role: @role, channel_id: row.channel_id),
+                            method: :delete, class: "btn" %>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="empty">
+          <p class="empty-title">The set is empty</p>
+          <p class="card-note">
+            Every <%= Authz.role_label(@role).downcase %> reads nothing but public channels.
+          </p>
+        </div>
+      <% end %>
+
+      <% if may_grant? %>
+        <%= form_with url: admin_role_channels_path(role: @role), method: :post,
+              class: "rowform" do %>
+          <%= render "admin/channel_picker", field: :channel_id, submit: true,
+                said: "Add a channel", id: "pick-role-channel" %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <% if @reaches.any? %>
+      <div class="panel">
+        <div class="panel-head"><span>Who this reaches</span></div>
+        <div class="scroll">
+          <table class="data-table">
+            <tbody>
+              <% @reaches.each do |user_id| %>
+                <tr>
+                  <td><b><%= @names[user_id] %></b></td>
+                  <td><span class="chip"><%= pluralize(@channels.size, "shared channel") %></span></td>
+                  <td><%= link_to "Manage", admin_person_path(user_id), class: "btn" %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% end %>

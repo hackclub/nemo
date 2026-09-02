@@ -1,0 +1,29 @@
+<% id = local_assigns.fetch(:id, "pick-a-channel") %>
+<% field = local_assigns.fetch(:field, :channel_id) %>
+<% said = local_assigns.fetch(:said, "Add channel") %>
+<div data-controller="channel-picker"
+     data-channel-picker-name-value="<%= field %>"
+     data-channel-picker-url-value="<%= search_admin_channels_path %>"
+     data-channel-picker-submit-value="<%= local_assigns.fetch(:submit, false) %>">
+  <label for="<%= id %>" class="btn" data-action="click->channel-picker#opened"><%= said %></label>
+  <span data-channel-picker-target="chosen" class="pick-chosen"></span>
+  <span data-channel-picker-target="store"></span>
+
+  <%= render layout: "fd/modal", locals: { id: id, title: "Pick a channel" } do %>
+    <div class="modal-body pick-body">
+      <div class="pick">
+        <div class="pick-field">
+          <input type="text" class="pick-input" autocomplete="off"
+                 aria-label="Search channels" placeholder="every channel, or type to narrow"
+                 data-channel-picker-target="input"
+                 data-action="input->channel-picker#type keydown->channel-picker#keys">
+        </div>
+        <div class="pick-list" data-channel-picker-target="results"></div>
+      </div>
+      <p class="card-note" data-channel-picker-target="count"></p>
+    </div>
+    <div class="modal-foot">
+      <label for="<%= id %>" class="btn btn-ghost">Cancel</label>
+    </div>
+  <% end %>
+</div>

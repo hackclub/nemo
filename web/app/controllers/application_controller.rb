@@ -9,6 +9,8 @@ class ApplicationController < ActionController::Base
   private
 
   def page_section
+    return "admin" if controller_path.start_with?("admin/")
+
     controller_path.start_with?("fd/") ? "fd" : "mn"
   end
 
@@ -57,7 +59,7 @@ class ApplicationController < ActionController::Base
   def may_use_fire_engine?
     return false unless Fd::Flag.on?(:fire_engine)
 
-    Fd::Access.manager?(current_staff) || current_staff&.role.present?
+    Fd::Access.manager?(current_staff) || Authz.holds?(current_staff, "case.read")
   end
   helper_method :may_use_fire_engine?
 
