@@ -21,7 +21,6 @@ areas:
   access: People and access
   slack: Your own account
   app: The dashboard
-  engine: Engine
 
 locked:
   - access.grant
@@ -137,13 +136,3 @@ permissions:
     label: Turn a section of the dashboard on or off
     held_by: manager
     events: [flag/turned_on, flag/turned_off]
-
-  engine.run:
-    label: Trigger a stage, or cancel a sync that is running
-    held_by: lead
-    events: []
-
-  engine.sync:
-    label: Queue a full sync of every source
-    held_by: manager
-    events: []

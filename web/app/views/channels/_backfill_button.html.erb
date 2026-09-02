@@ -1,4 +1,6 @@
-<% may = current_staff.may?("app.flip") %>
+<% may = may_community?("ops.channel.backfill") %>
+<% steward = may_community?("ops.engine.sync") %>
+<% why = Community::Access.why_not(current_staff, "ops.channel.backfill") %>
 <% case backfill&.state %>
 <% when "queued" %>
   <span class="chip chip-off">Queued<%= " · #{backfill.place_in_line.ordinalize} in line" if backfill.place_in_line %></span>
@@ -19,13 +21,9 @@
     <span class="chip chip-good">Thread replies complete ·
       <%= number_with_delimiter(backfill.threads_fetched) %> threads</span>
   <% end %>
-  <%= button_to "Fetch again", opt_in_channel_path(channel.channel_id), method: :post,
-        class: "btn" if may %>
+  <%= render "backfill_start", channel: channel, may: may, steward: steward, why: why,
+        label: "Fetch again" %>
 <% else %>
-  <% if may %>
-    <% estimate = ChannelBackfill.estimate(channel) %>
-    <%= button_to opt_in_channel_path(channel.channel_id), method: :post, class: "btn" do %>
-      Fetch thread replies<%= " · ~#{number_with_delimiter(estimate)} requests" if estimate %>
-    <% end %>
-  <% end %>
+  <%= render "backfill_start", channel: channel, may: may, steward: steward, why: why,
+        label: "Fetch thread replies" %>
 <% end %>

@@ -152,6 +152,56 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
     assert_select ".empty-title", text: "Member names are not shown to you", count: 0
   end
 
+  def operating(role)
+    staff = Staff.create!(user_id: "UCAOP#{role.upcase}")
+    Community::Grant.give!(staff.user_id, role: role, by: @boss.user_id)
+    staff
+  end
+
+  def priceable_channel
+    Analytics::DimChannel.where(archived: false).order(:channel_id).find do |channel|
+      ChannelBackfill.estimate(channel).to_i.positive?
+    end
+  end
+
+  test "an analyst cannot queue a backfill, however cheap" do
+    channel = some_channels(1).first
+    open_up(channel, "everyone")
+    sign_in_as(reading("analyst"))
+
+    assert_no_difference -> { ChannelBackfill.count } do
+      post opt_in_channel_path(channel.channel_id)
+    end
+
+    assert_match(/operator only/, flash[:alert])
+  end
+
+  test "an operator is stopped by the ceiling, and told what it would cost" do
+    channel = priceable_channel
+    skip "the seed priced no channel" if channel.nil?
+    open_up(channel, "everyone")
+    Engine::Setting.set!("engine", "backfill_ceiling", "0", by: @boss.user_id)
+    sign_in_as(operating("operator"))
+
+    assert_no_difference -> { ChannelBackfill.count } do
+      post opt_in_channel_path(channel.channel_id)
+    end
+
+    assert_match(/needs a steward/, flash[:alert])
+  end
+
+  test "a steward is not stopped by the ceiling" do
+    channel = priceable_channel
+    skip "the seed priced no channel" if channel.nil?
+    open_up(channel, "everyone")
+    Engine::Setting.set!("engine", "backfill_ceiling", "0", by: @boss.user_id)
+    sign_in_as(operating("steward"))
+
+    assert_difference -> { ChannelBackfill.count }, 1 do
+      post opt_in_channel_path(channel.channel_id)
+    end
+  end
+
   test "a new grant in one family retires only that family" do
     staff = Staff.create!(user_id: "UCASWAP")
     Community::Grant.give!(staff.user_id, role: "observer", by: @boss.user_id)

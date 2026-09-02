@@ -31,10 +31,10 @@ module Community
     end
 
     def self.why_not(staff, key, record = nil)
-      return "you hold no community access" if role(staff, Permission.family(key)).nil?
-      return Permission.refusal(key) unless allow?(staff, key, record)
+      return nil if allow?(staff, key, record)
+      return "you hold no community access" unless anything?(staff)
 
-      nil
+      Permission.refusal(key)
     end
 
     def self.within_scope?(staff, key, record)

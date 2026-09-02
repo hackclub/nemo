@@ -15,8 +15,14 @@ module Engine
       "run_at" => { label: "Nightly at", default: "03:00", kind: :time },
       "budget_minutes" => { label: "Budget for one night", default: "480", kind: :number,
                             min: 5, max: 720 },
-      Engine::Freshness::SWITCH => { label: "Stale cards read n/a", default: "true", kind: :switch }
+      Engine::Freshness::SWITCH => { label: "Stale cards read n/a", default: "true", kind: :switch },
+      "backfill_ceiling" => { label: "Backfill needs a steward over", default: "1000",
+                              kind: :number, min: 0, max: 100_000 }
     }.freeze
+
+    def self.backfill_ceiling
+      value(ENGINE, "backfill_ceiling").to_i
+    end
 
     def self.overrides
       Current.tuned ||= pluck(:source, :name, :value)

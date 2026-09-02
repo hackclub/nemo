@@ -123,13 +123,16 @@ class ChannelsController < ApplicationController
   end
 
   def opt_in_replies
-    return refuse_backfill unless current_staff.may?("app.flip")
+    return refuse_backfill unless may_community?("ops.channel.backfill")
 
     channel = Channels::Audience.for(current_staff).find(params[:id])
+    estimate = ChannelBackfill.estimate(channel)
+    return refuse_spend(channel, estimate) if over_ceiling?(estimate)
+
     row = ChannelBackfill.opt_in!(
       channel_id: channel.channel_id,
       requested_by: current_staff.user_id,
-      estimated_requests: ChannelBackfill.estimate(channel),
+      estimated_requests: estimate,
       threads_expected: channel.try(:thread_parents)
     )
     Fd::Audit.record(row, "turned_on",
@@ -140,7 +143,7 @@ class ChannelsController < ApplicationController
   end
 
   def opt_out_replies
-    return refuse_backfill unless current_staff.may?("app.flip")
+    return refuse_backfill unless may_community?("ops.channel.backfill")
 
     channel = Channels::Audience.for(current_staff).find(params[:id])
     row = ChannelBackfill.find_by(channel_id: channel.channel_id)
@@ -157,7 +160,20 @@ class ChannelsController < ApplicationController
   private
 
   def refuse_backfill
-    redirect_to channels_path, alert: "you may not queue a backfill"
+    redirect_to channels_path,
+      alert: Community::Access.why_not(current_staff, "ops.channel.backfill")
+  end
+
+  def over_ceiling?(estimate)
+    return false if estimate.nil?
+    return false if may_community?("ops.engine.sync")
+
+    estimate > Engine::Setting.backfill_ceiling
+  end
+
+  def refuse_spend(channel, estimate)
+    redirect_to channel_path(channel.channel_id),
+      alert: "#{helpers.number_with_delimiter(estimate)} requests needs a steward"
   end
 
   def parse_range_date(value)

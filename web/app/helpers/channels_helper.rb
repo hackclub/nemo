@@ -8,6 +8,13 @@ module ChannelsHelper
     channels_path(**base.merge(overrides).compact)
   end
 
+  def backfill_cost(channel, estimate, ceiling)
+    lines = ["Fetch thread replies for ##{channel.name}?",
+             "About #{number_with_delimiter(estimate)} requests to Slack."]
+    lines << "That is over the #{number_with_delimiter(ceiling)} request line." if estimate > ceiling
+    lines.join(" ")
+  end
+
   def channel_sort_th(label, column, css = nil)
     active = @sort == column
     next_direction = active ? (@direction == "asc" ? "desc" : "asc") : "desc"

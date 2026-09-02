@@ -1,0 +1,25 @@
+<% estimate = ChannelBackfill.estimate(channel) %>
+<% ceiling = Engine::Setting.backfill_ceiling %>
+<% priced = estimate ? "#{label} · ~#{number_with_delimiter(estimate)} requests" : label %>
+
+<% if !may %>
+  <span class="btn is-off" aria-disabled="true" title="<%= why %>">
+    <%= label %><span class="btn-why"><%= why %></span>
+  </span>
+<% elsif estimate.nil? %>
+  <span class="btn is-off" aria-disabled="true"
+        title="run the channel activity stage first">
+    <%= label %><span class="btn-why">no estimate yet</span>
+  </span>
+<% elsif estimate > ceiling && !steward %>
+  <span class="btn is-off" aria-disabled="true">
+    <%= label %>
+    <span class="btn-why">
+      <%= number_with_delimiter(estimate) %> requests needs a steward
+    </span>
+  </span>
+<% else %>
+  <%= button_to priced, opt_in_channel_path(channel.channel_id), method: :post,
+        class: "btn#{" btn-primary" if estimate > ceiling}",
+        form: { data: { turbo_confirm: backfill_cost(channel, estimate, ceiling) } } %>
+<% end %>
