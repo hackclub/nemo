@@ -49,7 +49,7 @@
                         </span>
                       </div>
                     </td>
-                    <td><%= role_cell(fd_role(user_id)) %></td>
+                    <td><%= fd_role_cell(user_id, fd_role(user_id), manager?(user_id)) %></td>
                     <% Community::Permission.families.each do |family| %>
                       <td><%= role_cell(held(user_id)[family],
                             implied: implied_role(user_id, family)) %></td>

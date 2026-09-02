@@ -22,19 +22,16 @@
             <% end %>
           </div>
 
-          <% if @implied %>
+          <% if @implied || @fd %>
             <div class="line-row">
               <b>Fire Department</b>
-              <span class="chip chip-crit"><%= Fd::Access::MANAGER_LABEL %></span>
-              <span class="sub2">holds everything, in both ladders</span>
-              <span class="grow"></span>
-            </div>
-          <% elsif @fd %>
-            <div class="line-row">
-              <b>Fire Department</b>
-              <span class="chip"><%= @fd.role.tr("_", " ") %></span>
-              <span class="sub2">since <%= @fd.granted_at.strftime("%b %Y") %>,
-                given by <%= @names[@fd.granted_by] %></span>
+              <%= fd_role_cell(@user_id, @fd&.role, @implied) %>
+              <% if @implied %>
+                <span class="sub2">holds everything, in both ladders</span>
+              <% else %>
+                <span class="sub2">since <%= @fd.granted_at.strftime("%b %Y") %>,
+                  given by <%= @names[@fd.granted_by] %></span>
+              <% end %>
               <span class="grow"></span>
             </div>
           <% end %>

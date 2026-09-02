@@ -8,6 +8,12 @@ module AdminHelper
     tag.span("n/a", class: "sub2")
   end
 
+  def fd_role_cell(_user_id, role, manager)
+    return tag.span(Fd::Access::MANAGER_LABEL, class: "chip chip-crit") if manager
+
+    role_cell(role)
+  end
+
   def implied_role(user_id, family)
     return nil unless manager?(user_id)
 
