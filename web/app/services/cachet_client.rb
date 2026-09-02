@@ -6,8 +6,8 @@ class CachetClient
   BASE_URL = "https://cachet.hackclub.com".freeze
   CACHE_TTL = 12.hours
   PENDING_TTL = 1.minute
-  BATCH = 8
   FETCH_CAP = 24
+  BATCH = FETCH_CAP
   PENDING = :pending
   MISSING = false
 

@@ -58,7 +58,7 @@ class Fd::NamesTest < ActiveSupport::TestCase
     assert_equal "", names.list([])
   end
 
-  test "a page of seeded members costs one query, not one per member" do
+  test "a page of seeded members costs two queries, not one per member" do
     ids = Fd::Member.order(:user_id).limit(20).pluck(:user_id)
     queries = 0
     counter = ->(*, payload) { queries += 1 unless payload[:name] == "SCHEMA" }
@@ -67,7 +67,7 @@ class Fd::NamesTest < ActiveSupport::TestCase
       Fd::Names.for(ids)
     end
 
-    assert_equal 1, queries
+    assert_equal 2, queries, "the members, then the profiles we already hold"
   end
 
   test "the member row itself is reachable, for pages that want more than a name" do
@@ -88,29 +88,30 @@ class Fd::NamesTest < ActiveSupport::TestCase
     CachetClient.define_singleton_method(:profiles, was)
   end
 
-  test "somebody nobody thought to look up is still named, not shown as an id" do
-    answering({ "ULATE" => profile("Grace") }) do
-      names = Fd::Names.new
-      assert_equal "Grace", names["ULATE"],
-        "a name we can reach must never render as a raw slack id"
-    end
-  end
-
-  test "a late lookup happens once, however often the name is asked for" do
+  test "somebody nobody preloaded reads as their id, without reaching for the network" do
     answering({ "ULATE" => profile("Grace") }) do |calls|
       names = Fd::Names.new
-      3.times { names["ULATE"] }
 
-      assert_equal 1, calls.size
+      assert_equal "@ULATE", names["ULATE"]
+      assert_empty calls, "rendering must never call cachet, it blocks the request"
     end
   end
 
-  test "late lookups are capped so one page cannot fan out forever" do
+  test "no number of unknown names makes a single call while rendering" do
     answering({}) do |calls|
       names = Fd::Names.new
       20.times { |i| names["UNONE#{i}"] }
 
-      assert_equal Fd::Names::LATE_LOOKUPS, calls.size
+      assert_empty calls
+    end
+  end
+
+  test "a profile already fetched once is read back from the table, not the network" do
+    CachetProfile.remember("UKEPT", profile("Grace"))
+
+    answering({}) do |calls|
+      assert_equal "Grace", Fd::Names.for(["UKEPT"])["UKEPT"]
+      assert_empty calls, "a remembered profile costs one query, never a fetch"
     end
   end
 end

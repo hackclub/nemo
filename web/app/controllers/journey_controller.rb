@@ -65,9 +65,11 @@ class JourneyController < ApplicationController
   private
 
   DAYS_POSTED = <<~SQL.freeze
-    SELECT user_id, count(DISTINCT window_start)
+    SELECT user_id,
+           count(DISTINCT window_start) FILTER (WHERE messages_posted > 0) AS posted,
+           count(DISTINCT window_start) AS measured
     FROM analytics.fct_member_activity
-    WHERE user_id IN (?) AND messages_posted > 0 AND window_start BETWEEN ? AND ?
+    WHERE user_id IN (?) AND window_start BETWEEN ? AND ?
     GROUP BY 1
   SQL
 
@@ -76,26 +78,15 @@ class JourneyController < ApplicationController
     first = rows.first
     return {} if first.nil? || first.window_start.nil? || first.window_end.nil?
 
-    @days_measured = days_measured_in(first.window_start..first.window_end)
-    return {} if @days_measured.zero?
-
-    ActiveRecord::Base.connection.select_rows(
+    found = ActiveRecord::Base.connection.select_rows(
       ActiveRecord::Base.sanitize_sql(
         [DAYS_POSTED, rows.map(&:user_id), first.window_start, first.window_end]
       )
-    ).to_h
-  end
+    )
+    @days_measured = found.map { |row| row[2].to_i }.max.to_i
+    return {} if @days_measured.zero?
 
-  def days_measured_in(window)
-    Rails.cache.fetch("journey/daily_days/#{window.first}/#{window.last}",
-      expires_in: 1.hour) do
-      ActiveRecord::Base.connection.select_value(
-        ActiveRecord::Base.sanitize_sql(
-          ["SELECT count(DISTINCT window_start) FROM analytics.fct_member_activity " \
-           "WHERE window_start BETWEEN ? AND ?", window.first, window.last]
-        )
-      ).to_i
-    end
+    found.to_h { |user_id, posted, _measured| [user_id, posted.to_i] }
   end
 
   def asked_month(key)

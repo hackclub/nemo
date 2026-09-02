@@ -1,13 +1,23 @@
 module Fd
   class Names
-    LATE_LOOKUPS = 8
+    FRESH_FOR = 12.hours
 
     def self.for(user_ids)
       wanted = Array(user_ids).flatten.compact.uniq
       return none if wanted.empty?
 
+      known = remembered(wanted)
+      stale = wanted - known.keys
+
       new(members: Member.where(user_id: wanted).index_by(&:user_id),
-        profiles: CachetClient.profiles(wanted))
+        profiles: known.merge(stale.any? ? CachetClient.profiles(stale) : {}))
+    end
+
+    def self.remembered(user_ids)
+      CachetProfile.where(user_id: user_ids, fetched_at: FRESH_FOR.ago..).to_h { |row|
+        [row.user_id, CachetClient::Profile.new(display_name: row.display_name,
+          image_url: row.image_url, pronouns: row.pronouns)]
+      }
     end
 
     def self.none = new
@@ -60,11 +70,8 @@ module Fd
       @profiles[user_id] = late(user_id)
     end
 
-    def late(user_id)
-      return nil if @late >= LATE_LOOKUPS
-
-      @late += 1
-      CachetClient.profiles([user_id])[user_id]
+    def late(_user_id)
+      nil
     end
   end
 end
