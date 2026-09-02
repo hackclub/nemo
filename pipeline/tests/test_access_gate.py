@@ -22,14 +22,17 @@ class Answer:
 
 
 class Conn:
-    def __init__(self, role=None, moved=None, holders=()):
+    def __init__(self, role=None, moved=None, holders=(), manager=False):
         self.role = role
         self.moved = moved or {}
         self.holders = holders
+        self.manager = manager
 
     def execute(self, sql, params):
         if sql is access.ROLE:
             return Answer([(self.role,)] if self.role else [])
+        if sql is access.MANAGER:
+            return Answer([(1,)] if self.manager else [])
         if sql is access.MOVED:
             return Answer(list(self.moved.items()))
         if sql is access.HOLDERS:
@@ -40,7 +43,8 @@ class Conn:
 
 def conn_for(check):
     holders = {"free": (), "mine": (ME,), "theirs": (THEM,)}[check.get("case", "free")]
-    return Conn(role=check.get("role"), moved=check.get("moved"), holders=holders)
+    return Conn(role=check.get("role"), moved=check.get("moved"), holders=holders,
+                manager=check.get("manager", False))
 
 
 def test_every_check_in_the_shared_file_agrees():

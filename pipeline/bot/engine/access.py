@@ -1,3 +1,5 @@
+import os
+
 import yaml
 
 from lib.paths import PERMISSIONS_FILE
@@ -8,6 +10,13 @@ WHERE user_id = %s AND revoked_at IS NULL
 ORDER BY granted_at DESC
 LIMIT 1
 """
+
+MANAGER = """
+SELECT 1 FROM app.staff WHERE user_id = %s AND community_manager
+"""
+
+MANAGER_ROLE = "community_manager"
+BOOTSTRAP = "BOOTSTRAP_ADMIN_SLACK_ID"
 
 MOVED = """
 SELECT role, allowed FROM fd.role_permissions
@@ -49,9 +58,23 @@ def default_roles(key):
     return table()["role_sets"][entry(key)["held_by"]]
 
 
+def bootstrap_ids():
+    return [one.strip() for one in os.environ.get(BOOTSTRAP, "").split(",") if one.strip()]
+
+
+def manager(conn, user_id):
+    if not user_id:
+        return False
+    if user_id in bootstrap_ids():
+        return True
+    return conn.execute(MANAGER, (user_id,)).fetchone() is not None
+
+
 def role(conn, user_id):
     if not user_id:
         return None
+    if manager(conn, user_id):
+        return MANAGER_ROLE
     row = conn.execute(ROLE, (user_id,)).fetchone()
     return row[0] if row else None
 

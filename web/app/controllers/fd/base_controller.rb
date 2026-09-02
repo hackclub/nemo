@@ -7,11 +7,28 @@ module Fd
     class << self
       def permit(key, on: nil, **filters)
         declared << key
+        gates << {
+          only: Array(filters[:only]).map(&:to_s).presence,
+          except: Array(filters[:except]).map(&:to_s).presence
+        }
         before_action(**filters) { gate(key, on) }
       end
 
       def declared
         @declared ||= []
+      end
+
+      def gates
+        @gates ||= []
+      end
+
+      def gated?(action)
+        gates.any? do |one|
+          next false if one[:only] && !one[:only].include?(action.to_s)
+          next false if one[:except] && one[:except].include?(action.to_s)
+
+          true
+        end
       end
     end
 
@@ -33,13 +50,16 @@ module Fd
     end
 
     def require_a_declaration
-      return if self.class.declared.any?
+      return if self.class.gated?(action_name)
 
-      raise "#{self.class} writes without declaring a permission"
+      raise "#{self.class}##{action_name} writes without declaring a permission"
     end
+
+    MISSING = :the_record_this_gate_needs_is_gone
 
     def gate(key, on)
       record = subject_for(on)
+      return refuse!(key, nil) if record == MISSING
       return if current_staff&.may?(key, record)
 
       refuse!(key, record)
@@ -50,7 +70,7 @@ module Fd
 
       on.respond_to?(:call) ? instance_exec(&on) : send(on)
     rescue ActiveRecord::RecordNotFound
-      nil
+      MISSING
     end
 
     CARRIES = 900

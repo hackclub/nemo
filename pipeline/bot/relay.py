@@ -1,6 +1,6 @@
 import logging
 
-from bot.engine import case, evidence, intake, outbox, session
+from bot.engine import audit, case, evidence, intake, outbox, session
 from bot.nemo import answer
 from bot.engine.whoami import bot_user_id
 from bot.nemo import channel, who
@@ -263,6 +263,14 @@ class Relay:
             )
             if report_id:
                 conn.execute(FIRST_ANSWER, (report_id,))
+                audit.record(
+                    conn,
+                    "report",
+                    report_id,
+                    "answered",
+                    sent_by,
+                    after={"mode": "signed" if signed else "body", "source": "shroud"},
+                )
 
         if files:
             carry.to_member(

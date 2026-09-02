@@ -1,6 +1,7 @@
 module Fd
   class CasesController < BaseController
-    permit "case.open", only: [:create, :update]
+    permit "case.open", only: :create
+    permit "case.people", on: -> { Case.find(params[:id]) }, only: :update
 
     TABS = %w[report evidence actions notes people].freeze
     PER_PAGE = 50
@@ -98,6 +99,9 @@ module Fd
 
     def update
       kase = Case.find(params[:id])
+      problem = not_yours(kase)
+      return redirect_to(fd_case_path(kase), alert: problem) if problem
+
       wanted = params[:category_key].to_s
       unless Case::CATEGORIES.include?(wanted)
         wrong!(:category_key, "Pick one of these.")

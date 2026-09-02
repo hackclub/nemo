@@ -7,10 +7,9 @@ module Fd
       return none if wanted.empty?
 
       known = remembered(wanted)
-      stale = wanted - known.keys
+      RefreshProfilesJob.later(wanted - known.keys)
 
-      new(members: Member.where(user_id: wanted).index_by(&:user_id),
-        profiles: known.merge(stale.any? ? CachetClient.profiles(stale) : {}))
+      new(members: Member.where(user_id: wanted).index_by(&:user_id), profiles: known)
     end
 
     def self.remembered(user_ids)
@@ -26,7 +25,6 @@ module Fd
       @members = members
       @profiles = profiles
       @shown = {}
-      @late = 0
     end
 
     def [](user_id)
@@ -65,13 +63,7 @@ module Fd
     end
 
     def profile(user_id)
-      return @profiles[user_id] if @profiles.key?(user_id)
-
-      @profiles[user_id] = late(user_id)
-    end
-
-    def late(_user_id)
-      nil
+      @profiles[user_id]
     end
   end
 end

@@ -12,7 +12,12 @@ module Fd
       @by = Staff.create!(user_id: "UBOSS", community_manager: true)
     end
 
-    def staff_holding(role)
+    def staff_holding(role, manager: false)
+      if manager
+        staff = Staff.find_or_create_by!(user_id: ME)
+        staff.update!(community_manager: true)
+        return staff.tap { Current.forget_roles }
+      end
       return Staff.new(user_id: ME) if role.nil?
 
       staff = Staff.find_or_create_by!(user_id: ME)
@@ -36,9 +41,10 @@ module Fd
       wrong = CHECKS.filter_map do |check|
         AccessGrant.where(user_id: ME).delete_all
         RolePermission.delete_all
+        Staff.where(user_id: ME).update_all(community_manager: false)
         Current.forget_roles
 
-        staff = staff_holding(check["role"])
+        staff = staff_holding(check["role"], manager: check["manager"] == true)
         move(check["key"], check["moved"])
         record = case_for(check["case"])
 

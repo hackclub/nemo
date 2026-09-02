@@ -720,7 +720,7 @@ def register(app, on_reply=None):
 
     MORE = {
         cards.edit.SUBJECT: ("case.people", cards.edit.subject_view),
-        cards.edit.CATEGORY: ("case.open", cards.edit.category_view),
+        cards.edit.CATEGORY: ("case.people", cards.edit.category_view),
         cards.edit.NOTE: ("case.note", cards.edit.note_view),
     }
 
@@ -797,7 +797,7 @@ def register(app, on_reply=None):
         key = cards.edit.what_picked(view["state"])
 
         with session() as conn:
-            allowed, refusal = access.may(conn, user_id, "case.open", case_id)
+            allowed, refusal = access.may(conn, user_id, "case.people", case_id)
             if not allowed:
                 return ack(response_action="errors", errors={cards.edit.WHAT: refusal})
             settled = set_category(conn, case_id, key, user_id)
@@ -917,8 +917,30 @@ def register(app, on_reply=None):
             text=cards.resolve.done(said, case_id, told),
         )
 
+    def may_answer(event, thread_ts, client):
+        with session() as conn:
+            case_id = chat.case_of_thread(conn, thread_ts)
+            allowed, refusal = access.may(conn, event.get("user"), "case.reply", case_id)
+        if allowed:
+            return True
+
+        try:
+            client.reactions_add(
+                channel=event["channel"], timestamp=event["ts"], name=answer.STUCK
+            )
+            client.chat_postEphemeral(
+                channel=event["channel"],
+                user=event["user"],
+                thread_ts=thread_ts,
+                text=f"nothing was sent. {refusal}",
+            )
+        except Exception as failure:
+            log.warning("nemo: could not say why the answer was refused: %s", failure)
+        log.info("nemo: refused an answer from %s on case %s", event.get("user"), case_id)
+        return False
+
     @app.event("message")
-    def on_message(event):
+    def on_message(event, client):
         if event.get("channel") != firehouse_channel():
             return
 
@@ -939,6 +961,8 @@ def register(app, on_reply=None):
             return ours(event, thread_ts)
 
         if on_reply is None:
+            return
+        if not may_answer(event, thread_ts, client):
             return
         on_reply(
             thread_ts,
