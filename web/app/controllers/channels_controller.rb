@@ -70,7 +70,7 @@ class ChannelsController < ApplicationController
     @locked = @scope_all || @q.present? ? locked_rows : []
     @locked_total = locked_scope.count if @q.present?
 
-    @may_see_bands = community_role("read") == "curator"
+    @may_see_bands = Authz.holds?(current_staff, "channel.all")
     @cohorts = @may_see_bands ? Analytics::MartChannelBands.cohorts : []
     @default_cohort = @cohorts.first
     @cohort = asked_cohort || @default_cohort
@@ -188,7 +188,7 @@ class ChannelsController < ApplicationController
 
   def refuse_spend(channel, estimate)
     redirect_to channel_path(channel.channel_id),
-      alert: "#{helpers.number_with_delimiter(estimate)} requests needs a steward"
+      alert: "#{helpers.number_with_delimiter(estimate)} requests needs engine.sync"
   end
 
   def parse_range_date(value)

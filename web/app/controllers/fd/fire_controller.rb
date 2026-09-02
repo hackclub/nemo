@@ -1,5 +1,6 @@
 module Fd
   class FireController < BaseController
+    permit "case.read"
     WINDOW = 30.days
 
     def show

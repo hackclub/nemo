@@ -35,7 +35,8 @@ module Fd
     private
 
     def require_fd
-      return if Fd::Access.manager?(current_staff) || current_staff&.role.present?
+      return if Fd::Access.manager?(current_staff)
+      return if Authz.holds?(current_staff, "case.read")
       return head :forbidden if request.format.json?
 
       redirect_to root_path, alert: "Fire Engine is for the conduct team"

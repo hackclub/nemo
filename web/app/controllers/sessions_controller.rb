@@ -35,9 +35,13 @@ class SessionsController < ApplicationController
   private
 
   def welcome(staff)
-    held = [staff.role, *Community::Access.held(staff).values].compact
-    return "Signed in" if held.empty?
+    roles = Authz.roles_held(staff.user_id).map { |role| Authz.role_label(role) }
+    extras = Authz::Grant.live.for_person(staff.user_id).capabilities
+      .where(effect: "allow").count
+    return "Signed in" if roles.empty? && extras.zero?
+    return "Signed in as #{roles.to_sentence}" if extras.zero?
 
-    "Signed in as #{held.map { |role| role.tr('_', ' ') }.to_sentence}"
+    "Signed in as #{roles.presence&.to_sentence || 'a member'}, " \
+      "#{extras} #{'extra scope'.pluralize(extras)}"
   end
 end

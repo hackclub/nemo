@@ -1,5 +1,6 @@
 module Fd
   class CasesController < BaseController
+    permit "case.read", only: [:index, :show]
     permit "case.open", only: :create
     permit "case.people", on: -> { Case.find(params[:id]) }, only: :update
 

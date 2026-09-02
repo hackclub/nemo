@@ -174,7 +174,8 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
       "the manager role is what a manager holds now"
     assert_predicate boss, :manager?
     assert boss.may?("case.read"), "a manager runs the Fire Department"
-    assert_equal "curator", Community::Access.role(boss, "read")
-    assert_equal "steward", Community::Access.role(boss, "ops")
+    assert Authz.holds?(boss, "channel.all"), "a manager reads every channel"
+    assert Authz.holds?(boss, "engine.tune"), "a manager runs the engine"
+    assert Authz.holds?(boss, "access.grant"), "a manager hands access out"
   end
 end

@@ -46,11 +46,6 @@ class ApplicationController < ActionController::Base
     redirect_to login_path, alert: "sign in to continue"
   end
 
-  def community_role(family)
-    Community::Access.role(current_staff, family)
-  end
-  helper_method :community_role
-
   def may_administer?
     Fd::Access.manager?(current_staff)
   end

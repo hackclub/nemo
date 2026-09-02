@@ -1,5 +1,6 @@
 module Fd
   class SearchesController < BaseController
+    permit "case.read"
     ICONS = { "member" => "👤", "case" => "📁", "decision" => "📓",
               "note" => "📝", "report" => "📨" }.freeze
 

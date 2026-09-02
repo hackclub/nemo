@@ -16,7 +16,7 @@ module Engine
       "budget_minutes" => { label: "Budget for one night", default: "480", kind: :number,
                             min: 5, max: 720 },
       Engine::Freshness::SWITCH => { label: "Stale cards read n/a", default: "true", kind: :switch },
-      "backfill_ceiling" => { label: "Backfill needs a steward over", default: "1000",
+      "backfill_ceiling" => { label: "Backfill needs engine.sync over", default: "1000",
                               kind: :number, min: 0, max: 100_000 }
     }.freeze
 

@@ -14,7 +14,8 @@ module Admin
       scope = Analytics::DimChannel.where(archived: false)
       if term.present?
         like = "%#{ActiveRecord::Base.sanitize_sql_like(term)}%"
-        scope = scope.where("name ILIKE :like OR channel_id ILIKE :like", like: like)
+        scope = scope.where("dim_channel.name ILIKE :like OR " \
+                            "dim_channel.channel_id ILIKE :like", like: like)
       end
 
       render json: {
@@ -76,7 +77,11 @@ module Admin
 
     def listed
       scope = Analytics::DimChannel.where(archived: false)
-      return scope.where("name ILIKE ?", "%#{like_q}%").order(:name).limit(SEARCH_SHOWN) if @q.present?
+      if @q.present?
+        return scope.where("dim_channel.name ILIKE ?", "%#{like_q}%")
+          .order(:name).limit(SEARCH_SHOWN)
+      end
+
 
       open_ids = @settings.values.select { |row| Channels::Audience::OPEN.include?(row.audience) }
         .map(&:channel_id)

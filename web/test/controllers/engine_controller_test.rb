@@ -99,7 +99,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to root_path
-    assert_match(/no community access/, flash[:alert])
+    assert_match(/Analytics only/, flash[:alert])
   end
 
   test "a firefighter cannot trigger a stage" do
@@ -110,7 +110,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to root_path
-    assert_match(/no community access/, flash[:alert])
+    assert_match(/Analytics only/, flash[:alert])
   end
 
   test "a firefighter cannot cancel a sync somebody else queued" do

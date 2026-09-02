@@ -1,5 +1,6 @@
 module Fd
   class MembersController < BaseController
+    permit "case.read"
     def index
       @query = MemberQuery.new(params, actor: current_staff)
       @rows = @query.rows

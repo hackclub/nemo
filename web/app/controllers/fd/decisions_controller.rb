@@ -4,6 +4,7 @@ module Fd
 
     include DecisionWords
 
+    permit "case.read", only: [:index, :show]
     permit "decision.write", except: [:index, :show]
 
     VIEWS = {

@@ -11,11 +11,11 @@
         title="run the channel activity stage first">
     <%= label %><span class="btn-why">no estimate yet</span>
   </span>
-<% elsif estimate > ceiling && !steward %>
+<% elsif estimate > ceiling && !may_sync %>
   <span class="btn is-off" aria-disabled="true">
     <%= label %>
     <span class="btn-why">
-      <%= number_with_delimiter(estimate) %> requests needs a steward
+      <%= number_with_delimiter(estimate) %> requests needs engine.sync
     </span>
   </span>
 <% else %>
