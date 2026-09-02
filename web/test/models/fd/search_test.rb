@@ -169,7 +169,7 @@ class Fd::SearchTest < ActiveSupport::TestCase
   end
 
   test "a prefix on its own shows that kind straight away" do
-    kase = make_case(opened_at: 2.days.ago)
+    kase = make_case(subject: Fd::Member.live.first.user_id, opened_at: 2.days.ago)
     decision(title: "Raid nights", statement: "a raid is locked on sight")
     Fd::Note.create!(case_id: kase.id, body: "a note about the raid", author: "UFF1")
 
