@@ -10,7 +10,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
   setup do
     Rails.application.eager_load!
-    @me = Staff.create!(user_id: "UNOROLE")
+    @me = Account.create!(user_id: "UNOROLE")
   end
 
   def self.controllers
@@ -19,7 +19,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
   def guarded?(name)
     "#{name}_controller".camelize.constantize._process_action_callbacks
-      .any? { |callback| callback.filter == :require_staff }
+      .any? { |callback| callback.filter == :require_account }
   end
 
   def guarded_controllers
@@ -65,11 +65,11 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
   end
 
   test "a live grant is enough on its own, with no staff row behind it" do
-    Fd::AccessGrant.create!(user_id: "UNOROW", role: "firefighter",
-      granted_by: "UNOROLE", granted_at: Time.current)
-    assert_nil Staff.find_by(user_id: "UNOROW"), "the seeder writes grants without staff rows"
+    Authz::Grant.create!(user_id: "UNOROW", kind: "role", name: "firefighter",
+      effect: "allow", granted_by: "UNOROLE", granted_at: Time.current)
+    assert_nil Account.find_by(user_id: "UNOROW"), "a grant can land without a staff row"
 
-    sign_in_as(Staff.new(user_id: "UNOROW"))
+    sign_in_as(Account.new(user_id: "UNOROW"))
 
     assert_equal "UNOROW", session[:user_id]
     get fd_cases_path
@@ -77,10 +77,10 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
   end
 
   test "somebody unknown to the staff table signs in and gets a row" do
-    sign_in_as(Staff.new(user_id: "USTRANGER"))
+    sign_in_as(Account.new(user_id: "USTRANGER"))
 
     assert_equal "USTRANGER", session[:user_id]
-    assert Staff.exists?("USTRANGER"), "signing in through Hack Club makes the row"
+    assert Account.exists?("USTRANGER"), "signing in through Hack Club makes the row"
 
     get fd_cases_path
     assert_redirected_to root_path, "a stranger still holds nothing"
@@ -104,22 +104,22 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
   end
 
   test "giving somebody a grant is what puts them on the staff table" do
-    assert_not Staff.exists?("UFRESH")
+    assert_not Account.exists?("UFRESH")
 
-    Fd::AccessGrant.give!("UFRESH", role: "firefighter", by: "UBOSS")
+    hold_role!("UFRESH", "firefighter")
 
-    assert Staff.exists?("UFRESH")
-    assert_equal "firefighter", Staff.find("UFRESH").role
+    assert Account.exists?("UFRESH")
+    assert_equal %w[firefighter], Authz.roles_held("UFRESH")
   end
 
   test "a grant taken back shuts the door on the next request" do
-    grant = Fd::AccessGrant.give!("UNOROLE", role: "firefighter", by: "UBOSS")
+    hold_role!("UNOROLE", "firefighter")
     sign_in_as(@me)
 
     get fd_root_path
     assert_response :success
 
-    grant.take_back!(by: "UBOSS")
+    drop_roles!("UNOROLE")
 
     get fd_root_path
     assert_redirected_to root_path,
@@ -128,9 +128,9 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
   end
 
   test "a stale session lands on the sign in page rather than bouncing forever" do
-    grant = Fd::AccessGrant.give!("UNOROLE", role: "firefighter", by: "UBOSS")
+    hold_role!("UNOROLE", "firefighter")
     sign_in_as(@me)
-    grant.take_back!(by: "UBOSS")
+    drop_roles!("UNOROLE")
 
     get login_path
 
@@ -154,23 +154,22 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
   end
 
   test "the grantable roles are the only things that count as a role" do
-    Fd::Permission::GRANTABLE.each do |role|
-      Fd::AccessGrant.give!("UNOROLE", role: role, by: "UBOSS")
+    Authz.grantable_roles.each do |role|
+      hold_role!("UNOROLE", role)
       Current.forget_roles
-      wanted = role == "lead" ? "firefighter" : role
-      assert_equal wanted, Staff.find("UNOROLE").role,
-        "the lead ladder is gone, a lead grant reads as a firefighter"
+      assert_equal [role], Authz.roles_held("UNOROLE"),
+        "the role a grant names is the role they hold"
     end
 
-    assert_raises(Fd::AccessGrant::NotAllowed) do
-      Fd::AccessGrant.give!("UNOROLE", role: "observer", by: "UBOSS")
+    assert_raises(Authz::Grant::NotAllowed) do
+      Authz::Grant.give!("UNOROLE", kind: "role", name: "wizard", by: "test")
     end
   end
 
   test "the manager sits above both ladders, held by the flag" do
     boss = hold_role!("UABOVE", "community_manager")
 
-    assert_equal Fd::Access::MANAGER_ROLE, boss.role,
+    assert_equal [Fd::Access::MANAGER_ROLE], Authz.roles_held(boss.user_id),
       "the manager role is what a manager holds now"
     assert_predicate boss, :manager?
     assert boss.may?("case.read"), "a manager runs the Fire Department"

@@ -54,9 +54,9 @@ module Admin
 
       row = Channels::Audience::Setting.find_or_initialize_by(channel_id: params[:channel_id])
       was = row.audience
-      row.update!(audience: wanted, set_by: current_staff.user_id, set_at: Time.current)
+      row.update!(audience: wanted, set_by: current_account.user_id, set_at: Time.current)
       Fd::Audit.record(row, wanted == "granted" ? "revoked" : "granted",
-        actor: current_staff.user_id, request_id: request.request_id,
+        actor: current_account.user_id, request_id: request.request_id,
         entity_id: row.channel_id,
         before: { "channel_id" => row.channel_id, "audience" => was },
         after: { "channel_id" => row.channel_id, "audience" => wanted })
@@ -72,7 +72,7 @@ module Admin
 
     def refuse
       redirect_to admin_channels_path,
-        alert: Community::Access.why_not(current_staff, "analytics.channel.share")
+        alert: Community::Access.why_not(current_account, "analytics.channel.share")
     end
 
     def listed

@@ -42,7 +42,7 @@
           <% sections = [] %>
           <% sections << "layouts/rail_analytics" if on?(:analytics) %>
           <% sections << "layouts/rail_fire" if fire_engine %>
-          <% sections.reverse! unless current_staff&.manager? %>
+          <% sections.reverse! unless current_account&.manager? %>
           <% sections.each do |section| %>
             <%= render section %>
           <% end %>
@@ -87,7 +87,7 @@
               <%= content_for(:head_actions) if content_for?(:head_actions) %>
             </div>
 
-            <%= render "layouts/you", staff: current_staff, profile: current_profile %>
+            <%= render "layouts/you", staff: current_account, profile: current_profile %>
           </div>
 
           <% if content_for?(:page_controls) %>

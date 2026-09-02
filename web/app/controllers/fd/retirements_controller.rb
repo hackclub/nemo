@@ -8,7 +8,7 @@ module Fd
       decision = Decision.find(params[:decision_id])
 
       writing do
-        decision.retire!(by: current_staff.user_id)
+        decision.retire!(by: current_account.user_id)
         audit(decision, "superseded", after: { "state" => "superseded",
           "replaced_by_id" => nil })
       end

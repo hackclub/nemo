@@ -3,8 +3,8 @@ require "test_helper"
 class AccessUiTest < ActionDispatch::IntegrationTest
   setup do
     @boss = hold_role!("UAUIBOSS", "community_manager")
-    @them = Staff.create!(user_id: "UAUITHEM")
-    Fd::AccessGrant.give!(@them.user_id, role: "firefighter", by: @boss.user_id)
+    @them = Account.create!(user_id: "UAUITHEM")
+    hold_role!(@them.user_id, "firefighter")
     Current.forget_roles
     sign_in_as(@boss)
   end
@@ -66,7 +66,7 @@ class AccessUiTest < ActionDispatch::IntegrationTest
 
   test "naming somebody with no role on a channel makes them a promethean" do
     channel = Analytics::DimChannel.where(archived: false).first
-    bare = Staff.create!(user_id: "UAUIBARE2")
+    bare = Account.create!(user_id: "UAUIBARE2")
 
     post admin_person_channel_grants_path(bare.user_id),
       params: { channel_id: channel.channel_id }
@@ -97,7 +97,7 @@ class AccessUiTest < ActionDispatch::IntegrationTest
   end
 
   test "a member with no grant sees what they hold on their own page" do
-    bare = Staff.create!(user_id: "UAUIBARE")
+    bare = Account.create!(user_id: "UAUIBARE")
     sign_in_as(bare)
 
     get account_path

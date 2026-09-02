@@ -1,9 +1,9 @@
 class DevSessionsController < ApplicationController
-  skip_before_action :require_staff
+  skip_before_action :require_account
   before_action :only_in_development
 
   def create
-    staff = Staff.find_or_create_by!(user_id: params[:user_id])
+    staff = Account.find_or_create_by!(user_id: params[:user_id])
     reset_session
     session[:user_id] = staff.user_id
     redirect_to root_path, notice: "signed in as #{staff.user_id}, #{held(staff)}"

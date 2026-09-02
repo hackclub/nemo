@@ -188,15 +188,11 @@ module Fd
       end
       parts << "decided by #{names[action.decided_by]}"
       unless action.performed_by_decider?
-        parts << "performed by #{performer(action.performed_by)}"
+        parts << "performed by #{names[action.performed_by]}"
       end
       channel = action.details.is_a?(Hash) ? action.details["channel_id"] : nil
       parts << "in #{channel}" if channel
       parts.join(" · ")
-    end
-
-    def performer(user_id)
-      user_id == "UMNEMOSYNE" ? "Mnemosyne" : names[user_id]
     end
 
     def note_entries

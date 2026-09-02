@@ -40,7 +40,7 @@
               </td>
               <td class="col-num"><%= number_with_delimiter(p.messages_posted) %></td>
               <td class="col-num">
-                <%= days_posted[p.user_id] || tag.span("n/a", class: "sub2") %>
+                <%= p.days_measured.to_i.positive? ? p.days_posted : tag.span("n/a", class: "sub2") %>
               </td>
             </tr>
           <% end %>

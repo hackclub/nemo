@@ -43,7 +43,7 @@ module Fd
       problem = missing_words
       return redirect_to(fd_decisions_path, alert: problem) if problem
 
-      decision = Decision.new(written.merge(proposed_by: current_staff.user_id))
+      decision = Decision.new(written.merge(proposed_by: current_account.user_id))
 
       writing do
         decision.save!
@@ -95,7 +95,7 @@ module Fd
 
     def not_droppable(decision)
       return "a settled decision is superseded, never dropped" unless decision.droppable?
-      return nil if decision.proposed_by == current_staff.user_id
+      return nil if decision.proposed_by == current_account.user_id
 
       "only @#{decision.proposed_by} can drop it"
     end

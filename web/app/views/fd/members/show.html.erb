@@ -20,7 +20,7 @@
 
 <div class="cols c-2">
   <div>
-    <% show_write = current_staff.may?("member.note") && @only == "notes" %>
+    <% show_write = current_account.may?("member.note") && @only == "notes" %>
 
     <% if @standing.in_force.any? %>
       <div class="standing">
@@ -45,7 +45,7 @@
         <% end %>
       </span>
       <span class="grow"></span>
-      <% if current_staff.may?("member.note") && !show_write %>
+      <% if current_account.may?("member.note") && !show_write %>
         <%= link_to "Write a note", fd_member_path(@user_id, show: "notes"), class: "btn" %>
       <% end %>
     </div>

@@ -19,21 +19,14 @@ module Fd
       Authz.everything?(staff)
     end
 
-    def self.role(staff)
-      return nil if staff.nil?
-      return MANAGER_ROLE if manager?(staff)
-
-      Authz.roles_held(staff.user_id).first
-    end
-
     def self.allow?(staff, key, record = nil)
       Authz.may?(staff, key, record)
     end
 
     def self.why_not(staff, key, record = nil)
       return nil if allow?(staff, key, record)
-      return "you hold no access" if role(staff).nil?
-      return Permission.refusal(key) unless Authz.holds?(staff, key)
+      return "you hold no access" if staff.nil? || Authz.roles_held(staff.user_id).empty?
+      return Authz.refusal(key) unless Authz.holds?(staff, key)
       return not_yours(record) if record.respond_to?(:mine_or_free?)
 
       "that is not yours"

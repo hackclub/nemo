@@ -29,14 +29,14 @@ def conn():
 def clear(conn):
     conn.execute("DELETE FROM app.grant WHERE granted_by = %s", (BY,))
     conn.execute("DELETE FROM app.role_override")
-    conn.execute("DELETE FROM app.staff WHERE user_id = %s", (ME,))
+    conn.execute("DELETE FROM app.account WHERE user_id = %s", (ME,))
 
 
 def hold(conn, check):
     role = "community_manager" if check.get("manager") else check.get("role")
     if role:
         conn.execute(
-            "INSERT INTO app.staff (user_id, created_at, updated_at) "
+            "INSERT INTO app.account (user_id, created_at, updated_at) "
             "VALUES (%s, now(), now()) ON CONFLICT (user_id) DO NOTHING", (ME,)
         )
         conn.execute(

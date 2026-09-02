@@ -1,35 +1,4 @@
 module AdminHelper
-  IMPLIED = "implied by community manager, no grant row".freeze
-
-  def role_cell(role, implied: nil)
-    return tag.span(role.tr("_", " "), class: "chip") if role.present?
-    return tag.span(implied, class: "chip chip-off", title: IMPLIED) if implied.present?
-
-    tag.span("n/a", class: "sub2")
-  end
-
-  def fd_role_cell(_user_id, role, manager)
-    return tag.span(Fd::Access::MANAGER_LABEL, class: "chip chip-crit") if manager
-
-    role_cell(role)
-  end
-
-  def role_label_for(family, role)
-    return Fd::Permission::ROLE_LABELS.fetch(role) if family == "fd"
-
-    Community::Permission.role_label(role)
-  end
-
-  def permission_label_for(family, key)
-    family == "fd" ? Fd::Permission.label(key) : Community::Permission.label(key)
-  end
-
-  def holds_switch(family, key, role)
-    return role_switch(key, role) if family == "fd"
-
-    holds_mark(Community::Permission.holds?(role, key))
-  end
-
   def role_capability_switch(role, key, override)
     held = override ? override.allowed : Authz.baseline(role).include?(key)
     return tag.span("&mdash;".html_safe, class: "sub2") if Authz.locked?(key)

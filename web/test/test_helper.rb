@@ -20,10 +20,10 @@ module ActiveSupport
     fixtures :all
 
     def hold_role!(user_id, role)
-      Staff.find_or_create_by!(user_id: user_id)
+      Account.find_or_create_by!(user_id: user_id)
       Authz::Grant.give!(user_id, kind: "role", name: role, by: "test")
       Current.forget_roles
-      Staff.find(user_id)
+      Account.find(user_id)
     end
 
     def drop_roles!(user_id)

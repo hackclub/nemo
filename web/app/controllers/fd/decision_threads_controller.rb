@@ -21,7 +21,7 @@ module Fd
         fresh.each do |ref|
           thread = decision.threads.create!(channel_id: ref.channel_id,
             thread_ts: ref.thread_ts, why: params[:why], kind: kind,
-            added_by: current_staff.user_id)
+            added_by: current_account.user_id)
           audit(thread, "attached", entity_id: decision.id)
         end
       end

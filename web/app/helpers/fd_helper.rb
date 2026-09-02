@@ -118,11 +118,11 @@ module FdHelper
 
   def may_open_channel?(channel_id)
     return false unless on?(:analytics)
-    return true unless respond_to?(:current_staff)
+    return true unless respond_to?(:current_account)
 
     @may_open ||= {}
     @may_open.fetch(channel_id) {
-      @may_open[channel_id] = Channels::Audience.may_see?(current_staff, channel_id)
+      @may_open[channel_id] = Channels::Audience.may_see?(current_account, channel_id)
     }
   end
 
@@ -250,11 +250,6 @@ module FdHelper
       concat tag.span(label)
       concat tag.span(count, class: "seg-count")
     end
-  end
-
-  def role_reach(role)
-    held = Fd::Permission.keys.count { |key| Fd::Permission.roles(key).include?(role) }
-    "#{held} of #{Fd::Permission.keys.size} permissions"
   end
 
   def menu_item(icon, label, note: nil)
@@ -1108,22 +1103,9 @@ module FdHelper
     tag.span(held ? "yes" : "no", class: held ? "yes" : "no")
   end
 
-  def role_switch(key, role)
-    held = Fd::Permission.roles(key).include?(role)
-    return holds_mark(held) unless Fd::Permission::GRANTABLE.include?(role)
-    return holds_mark(held) if Fd::Permission.locked?(key) || !current_staff.may?("access.grant")
-
-    button_to held ? "yes" : "no",
-      fd_role_permission_path(role: role, key: key, allowed: held ? "0" : "1"),
-      method: :patch, class: "switch #{held ? 'yes' : 'no'}",
-      title: "#{held ? 'take' : 'give'} #{key} #{held ? 'from' : 'to'} " \
-        "#{Fd::Permission::ROLE_LABELS.fetch(role).downcase}",
-      form: { class: "contents" }
-  end
-
   def flag_switch(key)
     showing = Fd::Flag.on?(key)
-    return holds_mark(showing) unless current_staff.may?("app.flip")
+    return holds_mark(showing) unless current_account.may?("app.flip")
 
     button_to showing ? "yes" : "no",
       fd_flag_path(key: key, on: showing ? "0" : "1"),
@@ -1190,7 +1172,7 @@ module FdHelper
   }.freeze
 
   def why_not(key, record = nil)
-    Fd::Access.why_not(current_staff, key, record)
+    Fd::Access.why_not(current_account, key, record)
   end
 
   def opens_modal(key, text = nil, opens:, on: nil, css: "btn", &block)

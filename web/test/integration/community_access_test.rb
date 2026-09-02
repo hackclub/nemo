@@ -6,11 +6,11 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
   end
 
   def holding_nothing
-    Staff.create!(user_id: "UCANONE")
+    Account.create!(user_id: "UCANONE")
   end
 
   def scoped(name, *keys)
-    staff = Staff.find_or_create_by!(user_id: "UCA#{name.upcase}")
+    staff = Account.find_or_create_by!(user_id: "UCA#{name.upcase}")
     keys.each do |key|
       Authz::Grant.give!(staff.user_id, kind: "capability", name: key, by: "test")
     end
@@ -111,7 +111,7 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
   test "a promethean sees the channels named to them, and nothing else" do
     public_one, granted, other = some_channels
     open_up(public_one, "everyone")
-    staff = Staff.create!(user_id: "UCAPROM")
+    staff = Account.create!(user_id: "UCAPROM")
     Authz::Grant.give!(staff.user_id, kind: "role", name: "promethean", by: @boss.user_id)
     Channels::Audience::Grant.create!(user_id: staff.user_id, channel_id: granted.channel_id,
       granted_by: @boss.user_id, granted_at: Time.current)

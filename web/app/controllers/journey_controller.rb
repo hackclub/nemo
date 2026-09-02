@@ -48,7 +48,7 @@ class JourneyController < ApplicationController
   end
 
   def distribution
-    @may_read_members = Panel.visible?("journey.top_posters", current_staff)
+    @may_read_members = Panel.visible?("journey.top_posters", current_account)
     @top_poster_months = @may_read_members ?
       Analytics::MartTopPosters.distinct.order(month: :desc).pluck(:month) : []
     @top_posters_month = asked_month(:top_posters_month) || @top_poster_months.first
@@ -58,36 +58,11 @@ class JourneyController < ApplicationController
       Analytics::MartTopPosters.none
     end
 
-    @days_posted = days_posted_for(@top_posters)
+    @days_measured = @top_posters.map(&:days_measured).max.to_i
     @activity_bands = Analytics::MartActivityDistribution.order(:band_order)
   end
 
   private
-
-  DAYS_POSTED = <<~SQL.freeze
-    SELECT user_id,
-           count(DISTINCT window_start) FILTER (WHERE messages_posted > 0) AS posted,
-           count(DISTINCT window_start) AS measured
-    FROM analytics.fct_member_activity
-    WHERE user_id IN (?) AND window_start BETWEEN ? AND ?
-    GROUP BY 1
-  SQL
-
-  def days_posted_for(posters)
-    rows = posters.to_a
-    first = rows.first
-    return {} if first.nil? || first.window_start.nil? || first.window_end.nil?
-
-    found = ActiveRecord::Base.connection.select_rows(
-      ActiveRecord::Base.sanitize_sql(
-        [DAYS_POSTED, rows.map(&:user_id), first.window_start, first.window_end]
-      )
-    )
-    @days_measured = found.map { |row| row[2].to_i }.max.to_i
-    return {} if @days_measured.zero?
-
-    found.to_h { |user_id, posted, _measured| [user_id, posted.to_i] }
-  end
 
   def asked_month(key)
     Date.iso8601(params[key].to_s)
@@ -96,6 +71,6 @@ class JourneyController < ApplicationController
   end
 
   def visible_channels
-    Channels::Audience.for(current_staff).select(:channel_id)
+    Channels::Audience.for(current_account).select(:channel_id)
   end
 end

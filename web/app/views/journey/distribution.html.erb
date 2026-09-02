@@ -46,8 +46,7 @@
 <div id="distribution">
   <% if visible_panel?("journey.top_posters") %>
     <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months,
-          top_posters_month: @top_posters_month, days_posted: @days_posted,
-          days_measured: @days_measured %>
+          top_posters_month: @top_posters_month, days_measured: @days_measured %>
   <% else %>
     <div class="card card-flush">
       <div class="card-head">
@@ -55,7 +54,7 @@
       </div>
       <div class="empty">
         <p class="empty-title">Member names are not shown to you</p>
-        <p class="card-note"><%= Community::Access.why_not(current_staff, "analytics.member.read") %></p>
+        <p class="card-note"><%= Community::Access.why_not(current_account, "analytics.member.read") %></p>
       </div>
     </div>
   <% end %>

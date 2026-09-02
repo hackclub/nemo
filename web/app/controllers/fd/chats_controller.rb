@@ -27,13 +27,13 @@ module Fd
     end
 
     def send_it(kase, read)
-      why_not = Access.why_not(current_staff, "case.reply", kase)
+      why_not = Access.why_not(current_account, "case.reply", kase)
       return redirect_to(back_to(kase), alert: why_not) if why_not
 
       sent = nil
       writing do
         sent = Outgoing.queue(conversation_for(kase), read.said, mode: mode(read),
-          by: current_staff.user_id, asked: params[:conversation_id].present?)
+          by: current_account.user_id, asked: params[:conversation_id].present?)
         answered(kase, sent.queued) if sent.queued
       end
 
@@ -54,10 +54,10 @@ module Fd
     def keep(kase, body)
       CaseChat.create!(
         case_id: kase.id,
-        author_user_id: current_staff.user_id,
+        author_user_id: current_account.user_id,
         body: body,
         source_app: Audit::SOURCE_APP,
-        mirrored_as: (SlackPost.claimable?(kase.id, current_staff.user_id) ? "user" : nil)
+        mirrored_as: (SlackPost.claimable?(kase.id, current_account.user_id) ? "user" : nil)
       )
     end
 

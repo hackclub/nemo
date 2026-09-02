@@ -137,8 +137,15 @@ class Authz
       "that is not yours"
     end
 
+    # name the roles the catalogue gives it to, ordinary ones before superadmins
     def refusal(key)
-      "#{label(key).downcase} is not yours to use"
+      said = label(key).downcase
+      ordinary, supers = role_names.partition { |role| !superadmin?(role) }
+      carried = ordinary.select { |role| baseline(role).include?(key) }
+      carried = supers.select { |role| baseline(role).include?(key) } if carried.empty?
+      return "#{said} is not yours to use" if carried.empty?
+
+      "#{said} is #{carried.map { |role| role_label(role) }.to_sentence} only"
     end
 
     def not_yours(kase)

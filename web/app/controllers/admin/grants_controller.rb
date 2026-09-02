@@ -4,7 +4,7 @@ module Admin
       user_id = asked_for
       return refuse("search for somebody, or paste their Slack user id") if user_id.blank?
       return refuse("#{user_id} is not a Slack user id") unless user_id.match?(PeopleSearch::MEMBER_ID)
-      return refuse(Community::Access.why_not(current_staff, "analytics.grant")) unless may_grant?
+      return refuse(Community::Access.why_not(current_account, "analytics.grant")) unless may_grant?
       return refuse("somebody else has to take yours back") if dropping_myself?(user_id)
 
       changed = ActiveRecord::Base.transaction { settle_capability_model(user_id) }
@@ -16,11 +16,11 @@ module Admin
     end
 
     def destroy
-      return refuse(Community::Access.why_not(current_staff, "analytics.grant")) unless may_grant?
+      return refuse(Community::Access.why_not(current_account, "analytics.grant")) unless may_grant?
 
       user_id = params[:id].to_s.strip.upcase
       return refuse("#{user_id} is not a Slack user id") unless user_id.match?(PeopleSearch::MEMBER_ID)
-      return refuse("somebody else has to take yours back") if user_id == current_staff.user_id
+      return refuse("somebody else has to take yours back") if user_id == current_account.user_id
 
       ActiveRecord::Base.transaction { take_it_all_back(user_id) }
       redirect_to admin_people_path, notice: "access taken back"
@@ -29,14 +29,14 @@ module Admin
     private
 
     def dropping_myself?(user_id)
-      return false unless user_id == current_staff.user_id
-      return false unless Fd::Access.manager?(current_staff)
+      return false unless user_id == current_account.user_id
+      return false unless Fd::Access.manager?(current_account)
 
       params[:role].to_s != Fd::Access::MANAGER_ROLE
     end
 
     def settle_capability_model(user_id)
-      Staff.find_or_create_by!(user_id: user_id)
+      Account.find_or_create_by!(user_id: user_id)
       changed = give_role(user_id) + give_scopes(user_id) + name_channels(user_id)
       Current.forget_roles
       changed
@@ -44,11 +44,11 @@ module Admin
 
     def take_it_all_back(user_id)
       Authz::Grant.live.for_person(user_id).find_each do |row|
-        row.take_back!(by: current_staff.user_id)
+        row.take_back!(by: current_account.user_id)
         audit(row, "revoked", after: { "user_id" => user_id, row.kind => row.name })
       end
       Channels::Audience::Grant.live.where(user_id: user_id).find_each do |row|
-        row.update!(revoked_by: current_staff.user_id, revoked_at: Time.current)
+        row.update!(revoked_by: current_account.user_id, revoked_at: Time.current)
       end
       Current.forget_roles
     end
@@ -69,11 +69,11 @@ module Admin
 
       if asked.present?
         Authz::Grant.give!(user_id, kind: "role", name: asked,
-          by: current_staff.user_id, reason: params[:reason].presence)
+          by: current_account.user_id, reason: params[:reason].presence)
         audit_grant(user_id, "role", asked, "granted")
       else
         Authz::Grant.live.for_person(user_id).roles.find_each do |row|
-          row.take_back!(by: current_staff.user_id)
+          row.take_back!(by: current_account.user_id)
           audit_grant(user_id, "role", row.name, "revoked")
         end
       end
@@ -92,7 +92,7 @@ module Admin
     def add_scopes(user_id, keys)
       keys.count do |key|
         Authz::Grant.give!(user_id, kind: "capability", name: key,
-          by: current_staff.user_id, reason: params[:reason].presence)
+          by: current_account.user_id, reason: params[:reason].presence)
         audit_grant(user_id, "capability", key, "granted")
         true
       end
@@ -103,7 +103,7 @@ module Admin
 
       Authz::Grant.live.for_person(user_id).capabilities.where(effect: "allow", name: keys)
         .count do |row|
-          row.take_back!(by: current_staff.user_id)
+          row.take_back!(by: current_account.user_id)
           audit(row, "revoked", after: { "user_id" => user_id, "capability" => row.name })
           true
         end
@@ -119,10 +119,10 @@ module Admin
           .where(user_id: user_id, channel_id: channel_id).exists?
 
         Channels::Audience::Grant.create!(user_id: user_id, channel_id: channel_id,
-          granted_by: current_staff.user_id, granted_at: Time.current,
+          granted_by: current_account.user_id, granted_at: Time.current,
           reason: params[:reason].presence)
       end
-      Admin::ChannelGrantsController.make_readable(user_id, by: current_staff.user_id)
+      Admin::ChannelGrantsController.make_readable(user_id, by: current_account.user_id)
       known.size
     end
 

@@ -71,12 +71,12 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     delete admin_grant_path("UME")
 
     assert_match(/somebody else has to take yours back/, flash[:alert])
-    assert_predicate Staff.find("UME"), :manager?
+    assert_predicate Account.find("UME"), :manager?
   end
 
   test "a lead cannot reach the grant endpoints at all" do
     delete logout_path
-    hand = Staff.create!(user_id: "ULEAD")
+    hand = Account.create!(user_id: "ULEAD")
     Authz::Grant.give!("ULEAD", kind: "role", name: "firefighter", by: "UME")
     Current.forget_roles
     sign_in_as(hand)
@@ -92,7 +92,7 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     post admin_grants_path, params: { user_id: "U0AFF1", role: "community_manager" }
     Current.forget_roles
 
-    assert_predicate Staff.find("U0AFF1"), :manager?
+    assert_predicate Account.find("U0AFF1"), :manager?
     assert_equal "community_manager", held.name
     assert_equal 1, Authz::Grant.for_person("U0AFF1").roles.where.not(revoked_at: nil).count
     assert Fd::AuditEntry.where(verb: "granted")
@@ -129,7 +129,7 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     assert_select "label[for=give-access]", text: "Edit access"
 
     delete logout_path
-    lead = Staff.create!(user_id: "ULEAD")
+    lead = Account.create!(user_id: "ULEAD")
     Authz::Grant.give!("ULEAD", kind: "role", name: "firefighter", by: "UME")
     sign_in_as(lead)
 

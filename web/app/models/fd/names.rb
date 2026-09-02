@@ -1,9 +1,10 @@
 module Fd
   class Names
     FRESH_FOR = 12.hours
+    PERSON = /\A[UW][A-Z0-9]+\z/
 
     def self.for(user_ids)
-      wanted = Array(user_ids).flatten.compact.uniq
+      wanted = Array(user_ids).flatten.compact.uniq.grep(PERSON)
       return none if wanted.empty?
 
       known = remembered(wanted)
@@ -30,7 +31,8 @@ module Fd
     def [](user_id)
       return "n/a" if user_id.blank?
 
-      @shown[user_id] ||= said_for(user_id) || "@#{user_id}"
+      @shown[user_id] ||= said_for(user_id) ||
+        (user_id.match?(PERSON) ? "@#{user_id}" : user_id)
     end
 
     def image(user_id)

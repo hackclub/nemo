@@ -8,7 +8,7 @@ module Fd
       decision = Decision.find(params[:decision_id])
 
       writing do
-        decision.settle!(by: current_staff.user_id)
+        decision.settle!(by: current_account.user_id)
         audit(decision, "settled")
       end
 

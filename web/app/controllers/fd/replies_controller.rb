@@ -9,7 +9,7 @@ module Fd
 
       writing do
         sent = Outgoing.queue(conversation_for(kase), read.said, mode: mode(read),
-          by: current_staff.user_id, asked: params[:conversation_id].present?)
+          by: current_account.user_id, asked: params[:conversation_id].present?)
         answered(kase, sent.queued) if sent.queued
       end
 

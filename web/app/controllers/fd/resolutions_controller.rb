@@ -90,7 +90,7 @@ module Fd
       said = told
 
       CaseReport.where(case_id: @case.family_ids, closed_at: nil).find_each do |report|
-        report.update!(closed_at: @now, closed_by: current_staff.user_id)
+        report.update!(closed_at: @now, closed_by: current_account.user_id)
         audit(report, "closed", entity_id: @case.id,
           before: { "closed_at" => nil }, after: { "closed_at" => @now })
         queue(report, said)
@@ -102,7 +102,7 @@ module Fd
       return if conversation.nil?
 
       IntakeOutbox.create!(conversation_id: conversation.id, kind: "outcome", body: said,
-        requested_by: current_staff.user_id)
+        requested_by: current_account.user_id)
     end
 
     def refusal(kase)

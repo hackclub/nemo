@@ -3,8 +3,8 @@ require "test_helper"
 class FdAccessTest < ActionDispatch::IntegrationTest
   setup do
     Rails.application.eager_load!
-    @me = Staff.create!(user_id: "UFF1")
-    Fd::AccessGrant.give!("UFF1", role: "firefighter", by: "UBOSS")
+    @me = Account.create!(user_id: "UFF1")
+    hold_role!("UFF1", "firefighter")
     sign_in_as(@me)
   end
 
@@ -36,14 +36,17 @@ class FdAccessTest < ActionDispatch::IntegrationTest
     }.uniq.select { |name| name.start_with?("fd/") }
 
     declared = controllers.flat_map { |name| "#{name}_controller".camelize.constantize.declared }
-    asked = Dir["#{Rails.root}/app/**/*.rb"].flat_map { |path|
-      File.read(path).scan(/(?:may\?|allow\?|why_not)\(\s*(?:\w+,\s*)?"([\w.]+)"/).flatten
+    found = Dir["#{Rails.root}/app/**/*.{rb,erb}"].flat_map { |path|
+      File.read(path)
+        .scan(/(?:may\?|allow\?|why_not|holds\?|may_community\?)\(\s*(?:[\w.@]+,\s*)?"([\w.]+)"/)
+        .flatten
     }
+    asked = found + found.filter_map { |key| Community::Access::CAPABILITY[key] }
     (declared + asked).uniq
   end
 
   test "a permission that guards something has somewhere it is actually checked" do
-    unenforced = Fd::Permission.keys - self.class.enforced - DECORATIVE
+    unenforced = Authz.keys - self.class.enforced - DECORATIVE
 
     assert_empty unenforced,
       "#{unenforced.join(', ')} can be moved on the roles tab but nothing reads it, " \
@@ -55,26 +58,28 @@ class FdAccessTest < ActionDispatch::IntegrationTest
       keys = controller_for(name).declared
       assert keys.any?, "#{name}##{action} writes without declaring a permission"
       keys.each do |key|
-        assert_includes Fd::Permission.keys, key, "#{name} names #{key}, which does not exist"
+        assert_includes Authz.keys, key, "#{name} names #{key}, which does not exist"
       end
     end
   end
 
-  test "the lead-only routes are the ones this test covers, and no others" do
-    lead_only = self.class.fd_writes.select do |name, _action|
-      controller_for(name).declared.intersect?(Fd::Permission.lead_only)
+  RULEBOOK = %w[decision.settle decision.retire access.grant app.flip].freeze
+
+  test "the rulebook routes are the ones this test covers, and no others" do
+    rulebook = self.class.fd_writes.select do |name, _action|
+      controller_for(name).declared.intersect?(RULEBOOK)
     end.map(&:first).uniq
 
     assert_equal %w[fd/settlements fd/supersessions fd/retirements
                     fd/role_permissions fd/flags].sort,
-      lead_only.sort,
-      "a lead-only route appeared or vanished, so this test needs updating"
+      rulebook.sort,
+      "a rulebook route appeared or vanished, so this test needs updating"
   end
 
   test "a firefighter cannot hand out access" do
-    post admin_grants_path, params: { user_id: "U0NEW", fd_role: "lead", reason: "why not" }
+    post admin_grants_path, params: { user_id: "U0NEW", role: "firefighter", reason: "why not" }
 
-    assert_nil Fd::AccessGrant.role_for("U0NEW")
+    assert_empty Authz.roles_held("U0NEW")
     assert_redirected_to root_path
   end
 
@@ -102,7 +107,7 @@ class FdAccessTest < ActionDispatch::IntegrationTest
     assert_nil action.reload.reversed_at
     assert_match(/not to you/, flash[:alert])
     assert_equal "case.reverse", refusals.sole.after["permission"]
-    assert_equal "firefighter", refusals.sole.after["role"]
+    assert_equal %w[firefighter], refusals.sole.after["roles"]
   end
 
   test "a firefighter settles and retires now the lead ladder is gone" do
@@ -139,19 +144,19 @@ class FdAccessTest < ActionDispatch::IntegrationTest
 
   test "somebody holding no grant writes nothing at all" do
     delete logout_path
-    stranger = Staff.create!(user_id: "USTRANGER")
+    stranger = Account.create!(user_id: "USTRANGER")
     sign_in_as(stranger)
     kase = make_case(opened_at: 2.days.ago)
 
     post fd_case_notes_path(kase), params: { body: "hello" }
 
     assert_equal 0, kase.notes.count
-    assert_nil stranger.role
+    assert_empty Authz.roles_held(stranger.user_id)
   end
 
   test "a lead holds the undoing, and a manager holds the tool" do
-    lead = Staff.create!(user_id: "ULEAD")
-    Fd::AccessGrant.give!("ULEAD", role: "lead", by: "UBOSS")
+    lead = Account.create!(user_id: "ULEAD")
+    hold_role!("ULEAD", "firefighter")
 
     assert lead.may?("case.reverse")
     assert lead.may?("decision.settle")

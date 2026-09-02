@@ -48,7 +48,7 @@ class ChannelsController < ApplicationController
     @scope_all = params[:scope] == "all"
     @filters = @scope_all ? [] : Array(params[:f]).select { |key| FILTERS.key?(key) }.uniq
 
-    mine = Channels::Audience.for(current_staff)
+    mine = Channels::Audience.for(current_account)
     @mine_total = mine.count
     @all_total = Channels::Audience.everything.count
     @locked_total = @all_total - @mine_total
@@ -70,7 +70,7 @@ class ChannelsController < ApplicationController
     @locked = @scope_all || @q.present? ? locked_rows : []
     @locked_total = locked_scope.count if @q.present?
 
-    @may_see_bands = Authz.holds?(current_staff, "channel.all")
+    @may_see_bands = Authz.holds?(current_account, "channel.all")
     @cohorts = @may_see_bands ? Analytics::MartChannelBands.cohorts : []
     @default_cohort = @cohorts.first
     @cohort = asked_cohort || @default_cohort
@@ -82,7 +82,7 @@ class ChannelsController < ApplicationController
   end
 
   def show
-    @channel = Channels::Audience.for(current_staff).find_by(channel_id: params[:id])
+    @channel = Channels::Audience.for(current_account).find_by(channel_id: params[:id])
     return refuse_channel if @channel.nil?
 
     @backfill = ChannelBackfill.find_by(channel_id: @channel.channel_id)
@@ -132,7 +132,7 @@ class ChannelsController < ApplicationController
   def opt_in_replies
     return refuse_backfill unless may_community?("ops.channel.backfill")
 
-    channel = Channels::Audience.for(current_staff).find_by(channel_id: params[:id])
+    channel = Channels::Audience.for(current_account).find_by(channel_id: params[:id])
     return refuse_channel if channel.nil?
 
     estimate = ChannelBackfill.estimate(channel)
@@ -140,12 +140,12 @@ class ChannelsController < ApplicationController
 
     row = ChannelBackfill.opt_in!(
       channel_id: channel.channel_id,
-      requested_by: current_staff.user_id,
+      requested_by: current_account.user_id,
       estimated_requests: estimate,
       threads_expected: channel.try(:thread_parents)
     )
     Fd::Audit.record(row, "turned_on",
-      actor: current_staff.user_id, request_id: request.request_id,
+      actor: current_account.user_id, request_id: request.request_id,
       after: { "channel_id" => row.channel_id, "estimated_requests" => row.estimated_requests })
 
     redirect_to channel_path(channel.channel_id), notice: "thread replies queued for ##{channel.name}"
@@ -154,15 +154,15 @@ class ChannelsController < ApplicationController
   def opt_out_replies
     return refuse_backfill unless may_community?("ops.channel.backfill")
 
-    channel = Channels::Audience.for(current_staff).find_by(channel_id: params[:id])
+    channel = Channels::Audience.for(current_account).find_by(channel_id: params[:id])
     return refuse_channel if channel.nil?
 
     row = ChannelBackfill.find_by(channel_id: channel.channel_id)
     return redirect_to(channel_path(channel.channel_id), alert: "not opted in") if row.nil?
 
-    row.opt_out!(by: current_staff.user_id)
+    row.opt_out!(by: current_account.user_id)
     Fd::Audit.record(row, "turned_off",
-      actor: current_staff.user_id, request_id: request.request_id,
+      actor: current_account.user_id, request_id: request.request_id,
       after: { "channel_id" => row.channel_id })
 
     redirect_to channel_path(channel.channel_id), notice: "thread replies stopped for ##{channel.name}"
@@ -176,7 +176,7 @@ class ChannelsController < ApplicationController
 
   def refuse_backfill
     redirect_to channels_path,
-      alert: Community::Access.why_not(current_staff, "ops.channel.backfill")
+      alert: Community::Access.why_not(current_account, "ops.channel.backfill")
   end
 
   def over_ceiling?(estimate)
@@ -207,7 +207,7 @@ class ChannelsController < ApplicationController
   def refuse_channel
     known = Channels::Audience.everything.exists?(channel_id: params[:id])
     said = if known
-      Community::Access.why_not(current_staff, "analytics.channel.read") ||
+      Community::Access.why_not(current_account, "analytics.channel.read") ||
         "that channel is not shared with you"
     else
       "no such channel"
@@ -216,7 +216,7 @@ class ChannelsController < ApplicationController
   end
 
   def locked_scope
-    mine = Channels::Audience.for(current_staff).select(:channel_id)
+    mine = Channels::Audience.for(current_account).select(:channel_id)
     rows = Channels::Audience.everything.where.not(channel_id: mine)
     return rows if @q.blank?
 

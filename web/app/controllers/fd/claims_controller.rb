@@ -8,10 +8,10 @@ module Fd
 
       writing do
         locked = Case.lock.find(kase.id)
-        next if locked.resolved? || locked.assigned_to?(current_staff.user_id)
+        next if locked.resolved? || locked.assigned_to?(current_account.user_id)
 
         taken = true
-        audit(locked.assign!(current_staff.user_id), "claimed", entity_id: locked.id)
+        audit(locked.assign!(current_account.user_id), "claimed", entity_id: locked.id)
       end
 
       if taken
@@ -23,7 +23,7 @@ module Fd
 
     def destroy
       kase = Case.find(params[:case_id])
-      mine = kase.assignees.find_by(user_id: current_staff.user_id)
+      mine = kase.assignees.find_by(user_id: current_account.user_id)
 
       return redirect_to(fd_case_path(kase), alert: release_refusal(kase)) if mine.nil?
 
@@ -40,7 +40,7 @@ module Fd
     private
 
     def claim_notice(kase)
-      others = kase.assignee_user_ids - [current_staff.user_id]
+      others = kase.assignee_user_ids - [current_account.user_id]
       return "case #{kase.id} is yours" if others.empty?
 
       "case #{kase.id} is yours, alongside #{others.map { |id| "@#{id}" }.to_sentence}"

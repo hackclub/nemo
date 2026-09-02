@@ -2,7 +2,7 @@ module Fd
   class CasesController < BaseController
     permit "case.read", only: [:index, :show]
     permit "case.open", only: :create
-    permit "case.people", on: -> { Case.find(params[:id]) }, only: :update
+    permit "case.categorise", on: -> { Case.find(params[:id]) }, only: :update
 
     TABS = %w[report evidence actions notes people].freeze
     PER_PAGE = 50
@@ -136,14 +136,14 @@ module Fd
       writing do
         kase = Case.create!(
           category_key: params[:category_key].presence,
-          opened_by: current_staff.user_id,
+          opened_by: current_account.user_id,
           opened_at: Time.current,
           source_app: Audit::SOURCE_APP
         )
         audit(kase, "opened")
         subjects.each { |id| audit(kase.add_subject!(id), "attached", entity_id: kase.id) }
         if params[:assign_to_me] == "1"
-          audit(kase.assign!(current_staff.user_id), "claimed", entity_id: kase.id)
+          audit(kase.assign!(current_account.user_id), "claimed", entity_id: kase.id)
         end
         write_first_note(kase)
       end
@@ -247,7 +247,7 @@ module Fd
       body = Mentions.normalise(params[:body].to_s.strip)
       return if body.blank?
 
-      note = Note.create!(case_id: kase.id, body: body, author: current_staff.user_id)
+      note = Note.create!(case_id: kase.id, body: body, author: current_account.user_id)
       audit(note, "noted")
     end
 
@@ -259,7 +259,7 @@ module Fd
     end
 
     def load_queue
-      @query = CaseQuery.new(params, viewer: current_staff&.user_id)
+      @query = CaseQuery.new(params, viewer: current_account&.user_id)
       @page = [params[:page].to_i, 1].max
       found = @query.relation.includes(:subjects, :assignees, :reports)
         .offset((@page - 1) * PER_PAGE).limit(PER_PAGE + 1).to_a

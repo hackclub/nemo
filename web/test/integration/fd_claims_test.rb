@@ -18,7 +18,7 @@ class FdClaimsTest < ActionDispatch::IntegrationTest
   end
 
   test "a staff row without the flag cannot claim" do
-    denied = Staff.create!(user_id: "UNOPE")
+    denied = Account.create!(user_id: "UNOPE")
     sign_in_as(denied)
     post fd_case_claim_path(@kase)
     assert_not @kase.reload.assigned?

@@ -6,7 +6,7 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
   end
 
   test "every signed in person reaches their own account" do
-    sign_in_as(Staff.create!(user_id: "UADNONE"))
+    sign_in_as(Account.create!(user_id: "UADNONE"))
 
     get account_path
 
@@ -15,7 +15,7 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
   end
 
   test "holding nothing offers a way forward instead of three n/a rows" do
-    sign_in_as(Staff.create!(user_id: "UADEMPTY"))
+    sign_in_as(Account.create!(user_id: "UADEMPTY"))
 
     get account_path
 
@@ -78,7 +78,7 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
   end
 
   test "somebody holding nothing cannot administer access" do
-    sign_in_as(Staff.create!(user_id: "UADOUT"))
+    sign_in_as(Account.create!(user_id: "UADOUT"))
 
     get admin_people_path
 
@@ -153,7 +153,7 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
   end
 
   test "somebody holding nothing still reaches their own account from the menu" do
-    sign_in_as(Staff.create!(user_id: "UADMENU"))
+    sign_in_as(Account.create!(user_id: "UADMENU"))
     get root_path
 
     assert_select ".you-pop a[href=?]", account_path

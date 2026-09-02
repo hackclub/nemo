@@ -2,8 +2,8 @@ require "test_helper"
 
 class FdOverviewTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UFF1")
-    Fd::AccessGrant.give!("UFF1", role: "firefighter", by: "UBOSS")
+    @me = Account.create!(user_id: "UFF1")
+    hold_role!("UFF1", "firefighter")
     sign_in_as(@me)
 
     AccessLog.create!(actor_id: "UOTHER", subject_user_id: "USUB",

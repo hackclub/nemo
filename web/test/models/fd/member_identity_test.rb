@@ -40,8 +40,8 @@ class Fd::MemberIdentityTest < ActiveSupport::TestCase
   end
 
   test "somebody whose role does not carry identity.read is handed nothing" do
-    them = Staff.create!(user_id: "UFF1")
-    Fd::AccessGrant.give!("UFF1", role: "firefighter", by: "UME")
+    them = Account.create!(user_id: "UFF1")
+    hold_role!("UFF1", "firefighter")
     move_capability!("firefighter", "identity.read", false, by: "UME")
     before = AccessLog.count
 

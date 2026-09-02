@@ -8,7 +8,7 @@ module Fd
       on = params[:on] == "1"
 
       writing do
-        row = Flag.set!(key, on, by: current_staff.user_id)
+        row = Flag.set!(key, on, by: current_account.user_id)
         audit(row, on ? "turned_on" : "turned_off",
           after: { "flag" => key, "on" => on })
       end

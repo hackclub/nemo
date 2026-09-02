@@ -54,7 +54,7 @@ module Fd
       rows.map do |row|
         key = row.delete(:key)
         on = row.delete(:on)
-        row.merge(why: key && Access.why_not(current_staff, key, on))
+        row.merge(why: key && Access.why_not(current_account, key, on))
       end
     end
 

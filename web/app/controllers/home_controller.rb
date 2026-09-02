@@ -4,7 +4,7 @@ class HomeController < ApplicationController
   OPEN_SHOWN = 25
 
   def index
-    @panels = Panel.visible_to(current_staff)
+    @panels = Panel.visible_to(current_account)
     return front_door if @panels.empty?
 
     workspace

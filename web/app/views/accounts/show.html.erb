@@ -120,10 +120,10 @@
   <div class="stack">
     <div class="card">
       <div class="who">
-        <%= face(current_staff.user_id, css: "row-avatar av-lg") %>
+        <%= face(current_account.user_id, css: "row-avatar av-lg") %>
         <span class="two-line">
-          <b><%= current_profile&.display_name || @names[current_staff.user_id] %></b>
-          <span class="mono"><%= current_staff.user_id %></span>
+          <b><%= current_profile&.display_name || @names[current_account.user_id] %></b>
+          <span class="mono"><%= current_account.user_id %></span>
         </span>
       </div>
       <div class="line-row">

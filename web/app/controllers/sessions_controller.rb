@@ -1,9 +1,9 @@
 class SessionsController < ApplicationController
   layout "auth"
-  skip_before_action :require_staff
+  skip_before_action :require_account
 
   def new
-    redirect_to root_path if current_staff.present?
+    redirect_to root_path if current_account.present?
   end
 
   def create
@@ -15,7 +15,7 @@ class SessionsController < ApplicationController
       return redirect_to auth_failure_path(message: "not_allowlisted")
     end
 
-    staff = Staff.find_or_create_by!(user_id: slack_id)
+    staff = Account.find_or_create_by!(user_id: slack_id)
     reset_session
     session[:user_id] = staff.user_id
     flash[:said] = "Everything you do from here is recorded against #{staff.user_id}."

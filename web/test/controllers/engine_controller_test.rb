@@ -87,8 +87,8 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
 
   def firefighter
     boss = hold_role!("UTESTCM9", "community_manager")
-    Fd::AccessGrant.give!("UHAND9", role: "firefighter", by: boss.user_id, reason: "works here")
-    Staff.find("UHAND9")
+    hold_role!("UHAND9", "firefighter")
+    Account.find("UHAND9")
   end
 
   test "a firefighter cannot queue a full sync" do

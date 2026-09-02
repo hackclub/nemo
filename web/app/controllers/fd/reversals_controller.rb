@@ -18,7 +18,7 @@ module Fd
 
       writing do
         rows = Action.where(id: params[:action_id], case_id: kase.id, reversed_at: nil)
-          .update_all(reversed_at: now, reversed_by: current_staff.user_id,
+          .update_all(reversed_at: now, reversed_by: current_account.user_id,
             reversal_reason: reason)
         next if rows.zero?
 

@@ -8,7 +8,7 @@
   <% end %>
 
   <div class="modal-foot">
-    <% if decision.proposed? && decision.proposed_by == current_staff.user_id %>
+    <% if decision.proposed? && decision.proposed_by == current_account.user_id %>
       <%= button_to "Drop it", fd_decision_path(decision), method: :delete,
             class: "btn", form: { class: "contents",
             data: { turbo_confirm: "Drop this proposal?" } } %>

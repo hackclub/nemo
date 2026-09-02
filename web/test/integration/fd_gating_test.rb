@@ -2,13 +2,13 @@ require "test_helper"
 
 class FdGatingTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UFF1")
-    Fd::AccessGrant.give!("UFF1", role: "firefighter", by: "UBOSS")
+    @me = Account.create!(user_id: "UFF1")
+    hold_role!("UFF1", "firefighter")
     sign_in_as(@me)
   end
 
   def become(role)
-    Fd::AccessGrant.give!("UFF1", role: role, by: "UBOSS")
+    hold_role!("UFF1", role)
   end
 
   def dead(text)

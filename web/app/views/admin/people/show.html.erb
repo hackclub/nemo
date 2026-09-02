@@ -64,19 +64,15 @@
         <div class="fbox">
           <div class="ft"><span>Grant history</span></div>
           <div class="rows">
-            <% (@community + [@fd].compact).each do |grant| %>
-              <div class="row">
-                <span class="row-k"><%= grant.role.tr("_", " ") %></span>
-                <span class="row-v"><%= grant.granted_at&.strftime("%b %Y") || "n/a" %></span>
+            <% @history.each do |grant| %>
+              <div class="row <%= "row-locked" if grant.revoked? %>">
+                <span class="row-k"><%= grant.label %><%= ", taken back" if grant.revoked? %></span>
+                <span class="row-v">
+                  <%= (grant.revoked_at || grant.granted_at)&.strftime("%b %Y") || "n/a" %>
+                </span>
               </div>
             <% end %>
-            <% @past.each do |grant| %>
-              <div class="row row-locked">
-                <span class="row-k"><%= grant.role.tr("_", " ") %>, taken back</span>
-                <span class="row-v"><%= grant.revoked_at&.strftime("%b %Y") || "n/a" %></span>
-              </div>
-            <% end %>
-            <% if @community.empty? && @fd.nil? && @past.empty? %>
+            <% if @history.empty? %>
               <div class="row"><span class="row-k sub2">never held anything</span></div>
             <% end %>
           </div>

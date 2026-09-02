@@ -21,7 +21,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a staff row with no grant still signs in, holding nothing" do
-    Staff.create!(user_id: "UTESTNOGRANT")
+    Account.create!(user_id: "UTESTNOGRANT")
     mock_hca_auth("UTESTNOGRANT")
 
     get "/auth/hackclub/callback"
@@ -38,7 +38,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_path
     assert_equal "UNOTALLOWED", session[:user_id]
-    assert Staff.exists?("UNOTALLOWED")
+    assert Account.exists?("UNOTALLOWED")
   end
 
   test "missing slack_id claim is rejected" do

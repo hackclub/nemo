@@ -48,7 +48,7 @@ module Fd
     end
 
     def audit_side
-      return "" if @only && @only != READ && Permission.events(@only).empty?
+      return "" if @only && @only != READ && Authz.events(@only).empty?
       return "" if @only == READ
 
       mine = @user_id ? "AND a.actor_user_id = :who" : ""
@@ -78,7 +78,7 @@ module Fd
     def only_clause
       return "" unless @only
 
-      pairs = Permission.events(@only).map { |event| event.split("/") }
+      pairs = Authz.events(@only).map { |event| event.split("/") }
       return "AND false" if pairs.empty?
 
       said = pairs.map { |type, verb|
@@ -107,8 +107,6 @@ module Fd
       @actions = Action.where(id: ids(found, "action")).index_by(&:id)
       @notes = Note.where(id: ids(found, "note")).index_by(&:id)
       @reports = CaseReport.where(id: ids(found, "report")).index_by(&:id)
-      @grants = AccessGrant.where(id: ids(found, "grant")).index_by(&:id)
-      @community_grants = Community::Grant.where(id: ids(found, "community_grant")).index_by(&:id)
       @titles = Decision.where(id: ids(found, "decision", "decision_thread"))
         .pluck(:id, :title).to_h
 
@@ -138,7 +136,7 @@ module Fd
       when "action" then action_row(row, event)
       when "note" then note_row(row, event)
       when "decision", "decision_thread" then decision_row(row, event)
-      when "grant" then grant_row(row, event)
+      when "grant", "capability_grant" then grant_row(row, event)
       when "community_grant" then community_grant_row(row, event)
       when "permission" then moved_row(row, event)
       when "report" then report_row(row, event)
@@ -190,19 +188,19 @@ module Fd
     end
 
     def grant_row(row, event)
-      grant = @grants[row.entity_id]
-      return Row.new(at: row.occurred_at, event: event) if grant.nil?
+      said = row.after.presence || row.before.presence || {}
+      return Row.new(at: row.occurred_at, event: event) if said["user_id"].blank?
 
-      Row.new(at: row.occurred_at, event: event, kind: "member", id: grant.user_id,
-        said: grant.role.tr("_", " "))
+      Row.new(at: row.occurred_at, event: event, kind: "member", id: said["user_id"],
+        said: said["role"]&.tr("_", " "))
     end
 
     def community_grant_row(row, event)
-      grant = @community_grants[row.entity_id]
-      return Row.new(at: row.occurred_at, event: event) if grant.nil?
+      said = row.after.presence || row.before.presence || {}
+      return Row.new(at: row.occurred_at, event: event) if said["user_id"].blank?
 
-      Row.new(at: row.occurred_at, event: event, kind: "member", id: grant.user_id,
-        said: "#{grant.role.tr('_', ' ')}, #{grant.family}")
+      Row.new(at: row.occurred_at, event: event, kind: "member", id: said["user_id"],
+        said: [said["role"]&.tr("_", " "), said["family"]].compact.join(", ").presence)
     end
   end
 end

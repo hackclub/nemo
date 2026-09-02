@@ -58,7 +58,7 @@ namespace :dev do
   end
 
   def settle_person(one, pool, by)
-    Staff.find_or_create_by!(user_id: one[:id])
+    Account.find_or_create_by!(user_id: one[:id])
     settle_role(one, by)
     Array(one[:added]).each do |key|
       Authz::Grant.give!(one[:id], kind: "capability", name: key, by: by, reason: "dev seed")

@@ -28,12 +28,12 @@ module Fd
     end
 
     def destroy
-      held = StaffSlack.held_by(current_staff.user_id)
+      held = StaffSlack.held_by(current_account.user_id)
       return stop("your slack account is not linked") if held.nil?
 
       Slack::Oauth.give_back(held.user_token)
       writing do
-        held.give_back!(current_staff.user_id)
+        held.give_back!(current_account.user_id)
         audit(held, "unlinked", entity_id: 0, before: { "scopes" => held.scopes })
       end
 
@@ -59,7 +59,7 @@ module Fd
       return problem if problem
 
       writing do
-        row = StaffSlack.keep!(current_staff.user_id, token: authed["access_token"],
+        row = StaffSlack.keep!(current_account.user_id, token: authed["access_token"],
           team_id: granted.dig("team", "id").to_s, scopes: authed["scope"].to_s)
         audit(row, "linked", entity_id: 0,
           after: { "scopes" => row.scopes, "team_id" => row.team_id })
@@ -70,7 +70,7 @@ module Fd
 
     def wrong_with(authed, team_id)
       return "slack granted an app token, not a token for you" if authed["access_token"].blank?
-      return "that is not the account you are signed in as" if authed["id"] != current_staff.user_id
+      return "that is not the account you are signed in as" if authed["id"] != current_account.user_id
       unless authed["scope"].to_s.split(",").include?(StaffSlack::SCOPE)
         return "slack granted #{authed["scope"]}, which is not #{StaffSlack::SCOPE}"
       end

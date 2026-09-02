@@ -478,6 +478,12 @@ models:
       - name: messages_posted
         data_type: integer
         data_tests: [not_null]
+      - name: days_posted
+        data_type: integer
+        data_tests: [not_null]
+      - name: days_measured
+        data_type: integer
+        data_tests: [not_null]
       - name: rank
         data_type: bigint
         data_tests: [not_null]

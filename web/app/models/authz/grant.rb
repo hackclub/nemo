@@ -19,7 +19,7 @@ class Authz
       check!(kind.to_s, name.to_s, effect.to_s)
 
       transaction do
-        Staff.find_or_create_by!(user_id: user_id)
+        Account.find_or_create_by!(user_id: user_id)
         live.for_person(user_id).where(kind: kind, name: name).find_each do |held|
           held.take_back!(by: by)
         end

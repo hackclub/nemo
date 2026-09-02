@@ -7,7 +7,7 @@
   <p><span class="chip chip-off"><%= @message %></span></p>
 <% end %>
 
-<% if current_staff %>
+<% if current_account %>
   <%= button_to "Sign out", logout_path, method: :delete, class: "btn w-full" %>
 <% else %>
   <%= link_to "Back to sign in", login_path, class: "btn w-full" %>

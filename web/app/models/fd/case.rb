@@ -279,7 +279,7 @@ module Fd
       said = (notes + reports).flat_map { |row| Mentions.ids(row.body) }.uniq
       return [] if said.empty?
 
-      (said - participants.map(&:user_id) - Staff.where(user_id: said).pluck(:user_id)) -
+      (said - participants.map(&:user_id) - Account.where(user_id: said).pluck(:user_id)) -
         [opened_by]
     end
 

@@ -31,16 +31,11 @@ module Admin
 
     def show
       @user_id = params[:user_id]
-      @fd = Fd::AccessGrant.live.for_person(@user_id).first
-      @community = Community::Grant.live.for_person(@user_id).to_a
-      @past = Community::Grant.ended.for_person(@user_id).newest_first.to_a +
-        Fd::AccessGrant.ended.for_person(@user_id).newest_first.to_a
-      @names = Fd::Names.for([@user_id, @fd&.granted_by] +
-        (@community + @past).map(&:granted_by) +
-        Authz::Grant.for_person(@user_id).pluck(:granted_by) +
+      @history = Authz::Grant.for_person(@user_id).newest_first.to_a
+      @names = Fd::Names.for([@user_id] + @history.map(&:granted_by) +
         Channels::Audience::Grant.live.where(user_id: @user_id).pluck(:granted_by))
       @deeds = Fd::Deeds.new(@user_id, since: WINDOW.ago).rows.first(20)
-      @held_since = ([@fd] + @community).compact.filter_map(&:granted_at).min
+      @held_since = @history.filter_map(&:granted_at).min
       @last_acted = @deeds.first&.at
       @identity_reads = AccessLog.where(actor_id: @user_id, field_class: "identity")
         .where(looked_at: WINDOW.ago..).count
@@ -51,7 +46,7 @@ module Admin
     private
 
     def load_capabilities
-      @account = Staff.find_by(user_id: @user_id) || Staff.new(user_id: @user_id)
+      @account = Account.find_by(user_id: @user_id) || Account.new(user_id: @user_id)
       @roles = Authz.roles_held(@user_id)
       @effective = Authz.held(@user_id)
       @baseline = @roles.flat_map { |role| Authz.baseline(role) }.uniq
@@ -81,9 +76,8 @@ module Admin
     # anyone the new model knows, plus whoever is still only in the old tables
     def everyone
       (Authz::Grant.live.pluck(:user_id) +
-        Fd::AccessGrant.live.pluck(:user_id) +
-        Community::Grant.live.pluck(:user_id) +
-        Channels::Audience::Grant.live.where.not(user_id: nil).pluck(:user_id)).compact.uniq
+        Channels::Audience::Grant.live.where.not(user_id: nil)
+          .pluck(:user_id)).compact.uniq
     end
 
     ROLES_OF = "SELECT user_id, role FROM app.effective_role " \

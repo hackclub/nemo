@@ -51,6 +51,19 @@ class Fd::NamesTest < ActiveSupport::TestCase
     assert_equal "n/a", Fd::Names.none[""]
   end
 
+  test "an actor that is not a slack id reads as itself, and is never looked up" do
+    queries = 0
+    counter = ->(*, payload) { queries += 1 unless payload[:name] == "SCHEMA" }
+
+    names = ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      Fd::Names.for(%w[migration seed dev:people])
+    end
+
+    assert_equal 0, queries, "provenance strings are not members"
+    assert_equal "migration", names["migration"]
+    assert_equal "dev:people", names["dev:people"]
+  end
+
   test "a list reads as a sentence, mixing known and unknown" do
     names = Fd::Names.new(profiles: { "U1" => profile("Ada") })
     assert_equal "Ada and @U2", names.list(%w[U1 U2])

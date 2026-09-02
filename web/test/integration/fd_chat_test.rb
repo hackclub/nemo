@@ -128,8 +128,8 @@ class FdChatTest < ActionDispatch::IntegrationTest
 
   test "somebody who may not reply cannot get there through the team endpoint" do
     with_a_reporter
-    hand = Staff.create!(user_id: "UHAND")
-    Fd::AccessGrant.give!("UHAND", role: "firefighter", by: @me.user_id, reason: "works here")
+    hand = Account.create!(user_id: "UHAND")
+    hold_role!("UHAND", "firefighter")
     move_capability!("firefighter", "case.reply", false, by: @me.user_id)
     sign_in_as(hand)
 

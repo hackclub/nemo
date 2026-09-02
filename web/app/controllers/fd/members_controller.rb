@@ -2,12 +2,12 @@ module Fd
   class MembersController < BaseController
     permit "case.read"
     def index
-      @query = MemberQuery.new(params, actor: current_staff)
+      @query = MemberQuery.new(params, actor: current_account)
       @rows = @query.rows
       log_identity_search
       @names = Names.for(@rows.map(&:user_id))
       @context = MemberContext.for(@rows.map(&:user_id))
-      @grants = AccessGrant.where(user_id: @rows.map(&:user_id), revoked_at: nil)
+      @grants = Authz::Grant.live.roles.where(user_id: @rows.map(&:user_id))
         .index_by(&:user_id)
       @views = @query.views
     end
@@ -22,7 +22,7 @@ module Fd
       @counts = @entries.group_by(&:kind).transform_values(&:size)
       @counts["all"] = @entries.size
       @history = @only == "all" ? @entries : @entries.select { |entry| entry.kind == @only }
-      @identity = MemberIdentity.look_up(@user_id, actor: current_staff)
+      @identity = MemberIdentity.look_up(@user_id, actor: current_account)
       @context = MemberContext.for([@user_id])[@user_id]
       @rooms = SlackScan.channels(@user_id)
       @standing = MemberStanding.new(@record)
@@ -44,7 +44,7 @@ module Fd
       return unless @query.looked_up_identity?
 
       @rows.each do |row|
-        AccessLog.record!(actor: current_staff, subject_user_id: row.user_id,
+        AccessLog.record!(actor: current_account, subject_user_id: row.user_id,
           field_class: "identity_search")
       end
     end

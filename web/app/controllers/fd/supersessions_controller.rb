@@ -13,11 +13,11 @@ module Fd
 
       fresh = nil
       writing do
-        fresh = Decision.create!(written.merge(proposed_by: current_staff.user_id,
-          state: "settled", settled_by: current_staff.user_id, settled_at: Time.current))
+        fresh = Decision.create!(written.merge(proposed_by: current_account.user_id,
+          state: "settled", settled_by: current_account.user_id, settled_at: Time.current))
         audit(fresh, "proposed")
         audit(fresh, "settled")
-        old.supersede!(fresh, by: current_staff.user_id)
+        old.supersede!(fresh, by: current_account.user_id)
         audit(old, "superseded", after: { "replaced_by_id" => fresh.id })
       end
 

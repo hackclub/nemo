@@ -31,19 +31,9 @@ module Community
     def self.why_not(staff, key, record = nil)
       return nil if allow?(staff, key, record)
       return "you hold no access yet" if staff.nil? || Authz.held(staff.user_id).empty?
-      return refusal(capability_for(key)) unless Authz.holds?(staff, capability_for(key))
+      return Authz.refusal(capability_for(key)) unless Authz.holds?(staff, capability_for(key))
 
       "that channel is not yours"
-    end
-
-    # name the roles that carry it from the catalogue, not the retired ladder
-    def self.refusal(capability)
-      carried = Authz.role_names.reject { |role| Authz.superadmin?(role) }
-        .select { |role| Authz.baseline(role).include?(capability) }
-      said = Authz.label(capability).downcase
-      return "#{said} is not yours to use" if carried.empty?
-
-      "#{said} is #{carried.map { |role| Authz.role_label(role) }.to_sentence} only"
     end
 
     def self.within_scope?(staff, key, record)

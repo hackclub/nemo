@@ -18,7 +18,7 @@ module Admin
 
       key = params[:key].to_s
       Authz::Grant.live.for_person(who).capabilities.where(name: key)
-        .find_each { |held| held.take_back!(by: current_staff.user_id) }
+        .find_each { |held| held.take_back!(by: current_account.user_id) }
       Current.forget_roles
       redirect_to admin_person_path(who), notice: "#{Authz.label(key)} is back to the role default"
     end
@@ -31,7 +31,7 @@ module Admin
 
     def settle(key, effect)
       Authz::Grant.give!(who, kind: "capability", name: key, effect: effect,
-        by: current_staff.user_id, reason: params[:reason].presence)
+        by: current_account.user_id, reason: params[:reason].presence)
       audit_change(key, effect)
       Current.forget_roles
     end
@@ -41,7 +41,7 @@ module Admin
       return if row.nil?
 
       Fd::Audit.record(row, effect == "deny" ? "revoked" : "granted",
-        actor: current_staff.user_id, request_id: request.request_id,
+        actor: current_account.user_id, request_id: request.request_id,
         after: { "user_id" => who, "capability" => key, "effect" => effect })
     end
 
@@ -51,7 +51,7 @@ module Admin
 
     def refuse(why = nil)
       redirect_to admin_person_path(who),
-        alert: why || Community::Access.why_not(current_staff, "analytics.grant")
+        alert: why || Community::Access.why_not(current_account, "analytics.grant")
     end
   end
 end

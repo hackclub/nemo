@@ -2,9 +2,9 @@ class ApplicationController < ActionController::Base
   allow_browser versions: :modern
   stale_when_importmap_changes
 
-  before_action :require_staff
+  before_action :require_account
 
-  helper_method :current_staff, :current_profile, :page_section
+  helper_method :current_account, :current_profile, :page_section
 
   private
 
@@ -27,44 +27,44 @@ class ApplicationController < ActionController::Base
     account_path
   end
 
-  def current_staff
+  def current_account
     return nil unless session[:user_id]
 
-    @current_staff ||= Staff.find_or_initialize_by(user_id: session[:user_id])
+    @current_account ||= Account.find_or_initialize_by(user_id: session[:user_id])
   end
 
   def current_profile
-    return nil unless current_staff
+    return nil unless current_account
 
-    @current_profile ||= CachetClient.profile(current_staff.user_id)
+    @current_profile ||= CachetClient.profile(current_account.user_id)
   end
 
-  def require_staff
-    return if current_staff.present?
+  def require_account
+    return if current_account.present?
     return head :unauthorized if request.format.json?
 
     redirect_to login_path, alert: "sign in to continue"
   end
 
   def may_administer?
-    Fd::Access.manager?(current_staff)
+    Fd::Access.manager?(current_account)
   end
   helper_method :may_administer?
 
   def may_use_fire_engine?
     return false unless Fd::Flag.on?(:fire_engine)
 
-    Fd::Access.manager?(current_staff) || Authz.holds?(current_staff, "case.read")
+    Fd::Access.manager?(current_account) || Authz.holds?(current_account, "case.read")
   end
   helper_method :may_use_fire_engine?
 
   def may_community?(key, record = nil)
-    Community::Access.allow?(current_staff, key, record)
+    Community::Access.allow?(current_account, key, record)
   end
   helper_method :may_community?
 
   def visible_panel?(key)
-    Panel.visible?(key, current_staff)
+    Panel.visible?(key, current_account)
   end
   helper_method :visible_panel?
 
@@ -83,6 +83,6 @@ class ApplicationController < ActionController::Base
   def refuse_community(key)
     return head :forbidden if request.format.json?
 
-    redirect_to root_path, alert: Community::Access.why_not(current_staff, key)
+    redirect_to root_path, alert: Community::Access.why_not(current_account, key)
   end
 end

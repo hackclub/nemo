@@ -80,7 +80,7 @@ def noon(day):
 
 def clear_seeded_staff():
     with connect_admin() as admin:
-        admin.execute(f"DELETE FROM app.staff WHERE user_id LIKE '{SEED_USER_PREFIX}%'")
+        admin.execute(f"DELETE FROM app.account WHERE user_id LIKE '{SEED_USER_PREFIX}%'")
         admin.commit()
 
 

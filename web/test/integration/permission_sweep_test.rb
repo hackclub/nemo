@@ -34,7 +34,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
   def become(name)
     one = PERSONAS.fetch(name)
     id = "USWEEP#{name.upcase[0, 4]}"
-    Staff.find_or_create_by!(user_id: id)
+    Account.find_or_create_by!(user_id: id)
     hold_role!(id, one[:role]) if one[:role]
     Array(one[:scopes]).each do |key|
       Authz::Grant.give!(id, kind: "capability", name: key, by: "sweep")
@@ -44,7 +44,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
         granted_by: @boss.user_id, granted_at: Time.current)
     end
     Current.forget_roles
-    sign_in_as(Staff.find(id))
+    sign_in_as(Account.find(id))
     id
   end
 
@@ -74,7 +74,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     leaked = []
     PERSONAS.each_key do |name|
       id = become(name)
-      may = Authz.holds?(Staff.find(id), "case.read")
+      may = Authz.holds?(Account.find(id), "case.read")
       FD_PATHS.each do |path|
         next if reached?(path) == may
 
@@ -88,7 +88,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     leaked = []
     PERSONAS.each_key do |name|
       id = become(name)
-      may = Authz.holds?(Staff.find(id), "access.read")
+      may = Authz.holds?(Account.find(id), "access.read")
       next if reached?(AUDIT_PATH) == may
 
       leaked << "#{name} on #{AUDIT_PATH}: access.read=#{may}, got #{response.status}"
@@ -101,7 +101,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     leaked = []
     PERSONAS.each_key do |name|
       id = become(name)
-      may = Authz.holds?(Staff.find(id), "access.grant")
+      may = Authz.holds?(Account.find(id), "access.grant")
       ADMIN_PATHS.each do |path|
         next if reached?(path) == may
 
@@ -116,7 +116,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     leaked = []
     PERSONAS.each_key do |name|
       id = become(name)
-      may = Authz.holds?(Staff.find(id), "engine.read")
+      may = Authz.holds?(Account.find(id), "engine.read")
       ENGINE_PATHS.each do |path|
         next if reached?(path) == may
 
@@ -131,7 +131,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     leaked = []
     PERSONAS.each_key do |name|
       id = become(name)
-      staff = Staff.find(id)
+      staff = Account.find(id)
       [@mine, @theirs].each do |channel_id|
         may = Channels::Audience.may_see?(staff, channel_id)
         next if reached?("/channels/#{channel_id}") == may
@@ -158,7 +158,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     leaked = []
     PERSONAS.each_key do |name|
       id = become(name)
-      next if Authz.holds?(Staff.find(id), "member.read")
+      next if Authz.holds?(Account.find(id), "member.read")
 
       %w[/ /channels /journey/joining /account].each do |path|
         get path
@@ -176,7 +176,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     leaked = []
     PERSONAS.each_key do |name|
       id = become(name)
-      staff = Staff.find(id)
+      staff = Account.find(id)
       [["/admin/people/search?q=see", "access.grant"],
        ["/admin/channels/search?q=see", "access.grant"],
        ["/fd/members/search?q=see", "case.read"]].each do |path, key|
@@ -259,7 +259,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     leaked = []
     PERSONAS.each_key do |name|
       id = become(name)
-      staff = Staff.find(id)
+      staff = Account.find(id)
       WRITES.each do |verb, path, key, params|
         next if Authz.holds?(staff, key)
 
@@ -277,7 +277,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     leaked = []
     PERSONAS.each_key do |name|
       id = become(name)
-      staff = Staff.find(id)
+      staff = Account.find(id)
       get "/channels"
       next unless response.status == 200
 
@@ -337,12 +337,12 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
   # 17. taking a capability away really takes it away
   test "a denied capability is refused even though the role carries it" do
     id = become("firefighter")
-    assert Authz.holds?(Staff.find(id), "case.act"), "the role should carry it"
+    assert Authz.holds?(Account.find(id), "case.act"), "the role should carry it"
 
     Authz::Grant.give!(id, kind: "capability", name: "case.act", effect: "deny", by: "sweep")
     Current.forget_roles
 
-    refute Authz.holds?(Staff.find(id), "case.act"), "the denial did not bite"
+    refute Authz.holds?(Account.find(id), "case.act"), "the denial did not bite"
     kase = make_case(assign: id)
     post "/fd/cases/#{kase.id}/actions", params: { kind: "warned", note: "x" }
 
@@ -359,7 +359,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     Authz::Grant.give!(id, kind: "capability", name: "identity.read", effect: "deny",
       by: "sweep")
     Current.forget_roles
-    refute Authz.holds?(Staff.find(id), "identity.read")
+    refute Authz.holds?(Account.find(id), "identity.read")
 
     get "/fd/members/#{named.user_id}"
     skip "member page did not render" unless response.status == 200
@@ -376,7 +376,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     leaked = []
     PERSONAS.each_key do |name|
       id = become(name)
-      staff = Staff.find(id)
+      staff = Account.find(id)
       [["/fd/cases", "case.read"], ["/admin/people", "access.grant"],
        ["/engine", "engine.read"]].each do |path, key|
         next if Authz.holds?(staff, key)

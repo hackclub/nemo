@@ -50,8 +50,8 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
   end
 
   test "a firefighter cannot flip anything" do
-    hand = Staff.create!(user_id: "UHAND")
-    Fd::AccessGrant.give!("UHAND", role: "firefighter", by: @boss.user_id, reason: "works here")
+    hand = Account.create!(user_id: "UHAND")
+    hold_role!("UHAND", "firefighter")
     sign_in_as(hand)
 
     patch fd_flag_path, params: { key: "analytics", on: "0" }

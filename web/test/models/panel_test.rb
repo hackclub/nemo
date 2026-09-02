@@ -11,12 +11,12 @@ class PanelTest < ActiveSupport::TestCase
   end
 
   test "an open panel is visible to any signed-in member and to nobody else" do
-    assert Panel.visible?("overview.team_stats", Staff.new(user_id: "UANY"))
+    assert Panel.visible?("overview.team_stats", Account.new(user_id: "UANY"))
     assert_not Panel.visible?("overview.team_stats", nil)
   end
 
   test "a gated panel stays shut without the capability" do
-    bare = Staff.new(user_id: "UBARE1")
+    bare = Account.new(user_id: "UBARE1")
 
     assert_not Panel.visible?("journey.top_posters", bare)
     assert_not Panel.visible?("members.directory", bare)

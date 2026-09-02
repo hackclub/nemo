@@ -14,14 +14,12 @@ module Fd
       "Fd::CaseCitation" => "citation",
       "Fd::Decision" => "decision",
       "Fd::DecisionThread" => "decision_thread",
-      "Fd::AccessGrant" => "grant",
       "Engine::Setting" => "engine_setting",
       "Authz::Override" => "permission",
       "Fd::StaffSlack" => "slack_account",
       "Fd::Flag" => "flag",
       "ChannelBackfill" => "channel_backfill",
       "Channels::Audience::Setting" => "channel_audience",
-      "Community::Grant" => "community_grant",
       "Authz::Grant" => "capability_grant"
     }.freeze
 

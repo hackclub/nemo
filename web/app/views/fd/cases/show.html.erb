@@ -34,7 +34,7 @@
       <% end %>
 
       <% unless @case.resolved? %>
-        <% if @case.assigned_to?(current_staff.user_id) %>
+        <% if @case.assigned_to?(current_account.user_id) %>
           <p class="menu-group">Who holds it</p>
           <%= gated_button "case.open", menu_item("hand", "Put it back in the queue"),
                 fd_case_claim_path(@case), on: @case, method: :delete %>

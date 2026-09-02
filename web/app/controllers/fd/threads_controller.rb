@@ -17,7 +17,7 @@ module Fd
           thread_ts: ref.thread_ts,
           kind: kind,
           is_primary: first_evidence?(kase, kind),
-          added_by: current_staff.user_id
+          added_by: current_account.user_id
         )
         audit(thread, "attached", entity_id: kase.id)
       end

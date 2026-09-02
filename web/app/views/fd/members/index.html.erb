@@ -53,7 +53,7 @@
                         <b><%= names[row.user_id] %></b>
                       <% end %>
                       <span>
-                        here since <%= seen&.cohort_at ? on_day(seen.cohort_at).downcase : "n/a" %><% if @grants[row.user_id] %> &middot; <%= @grants[row.user_id].role.tr("_", " ") %><% end %>
+                        here since <%= seen&.cohort_at ? on_day(seen.cohort_at).downcase : "n/a" %><% if @grants[row.user_id] %> &middot; <%= @grants[row.user_id].label %><% end %>
                       </span>
                     </span>
                   </span>

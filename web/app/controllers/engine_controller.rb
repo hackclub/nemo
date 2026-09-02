@@ -57,9 +57,9 @@ class EngineController < ApplicationController
     return refuse_tuning unless may_community?("ops.engine.tune")
 
     row = Engine::Setting.set!(params[:source], params[:name], params[:value],
-      by: current_staff.user_id)
+      by: current_account.user_id)
     Fd::Audit.record(row, "tuned",
-      actor: current_staff.user_id, request_id: request.request_id,
+      actor: current_account.user_id, request_id: request.request_id,
       after: { "source" => row.source, "name" => row.name, "value" => row.value })
 
     redirect_to engine_path(tab: "tuning"), notice: "#{row.name} is #{row.value}"
@@ -70,10 +70,10 @@ class EngineController < ApplicationController
   def untune
     return refuse_tuning unless may_community?("ops.engine.tune")
 
-    row = Engine::Setting.reset!(params[:source], params[:name], by: current_staff.user_id)
+    row = Engine::Setting.reset!(params[:source], params[:name], by: current_account.user_id)
     if row
       Fd::Audit.record(row, "reset",
-        actor: current_staff.user_id, request_id: request.request_id,
+        actor: current_account.user_id, request_id: request.request_id,
         after: { "source" => row.source, "name" => row.name })
     end
 
@@ -94,7 +94,7 @@ class EngineController < ApplicationController
       return
     end
 
-    SyncRequest.queue!(kind: "full", requested_by: current_staff.user_id)
+    SyncRequest.queue!(kind: "full", requested_by: current_account.user_id)
     redirect_to engine_path, notice: "sync queued"
   rescue SyncRequest::AlreadyRunning => e
     redirect_to engine_path, alert: e.message
@@ -119,7 +119,7 @@ class EngineController < ApplicationController
       return
     end
 
-    SyncRequest.queue!(kind: "stage", stage: params[:stage], requested_by: current_staff.user_id)
+    SyncRequest.queue!(kind: "stage", stage: params[:stage], requested_by: current_account.user_id)
     redirect_to engine_path, notice: "#{params[:stage]} queued"
   rescue SyncRequest::AlreadyRunning => e
     redirect_to engine_path, alert: e.message
@@ -183,11 +183,11 @@ class EngineController < ApplicationController
 
   def refuse_tuning
     redirect_to engine_path(tab: "tuning"),
-      alert: Community::Access.why_not(current_staff, "ops.engine.tune")
+      alert: Community::Access.why_not(current_account, "ops.engine.tune")
   end
 
   def refuse_running(key)
-    redirect_to engine_path, alert: Community::Access.why_not(current_staff, key)
+    redirect_to engine_path, alert: Community::Access.why_not(current_account, key)
   end
 
   def stage_for_source(source)

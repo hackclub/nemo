@@ -5,6 +5,18 @@ checks:
     case: free
     allowed: true
 
+  - name: a firefighter may categorise a case assigned to them
+    role: firefighter
+    key: case.categorise
+    case: mine
+    allowed: true
+
+  - name: a firefighter may not categorise somebody else's case
+    role: firefighter
+    key: case.categorise
+    case: theirs
+    allowed: false
+
   - name: a firefighter may act on a case nobody holds
     role: firefighter
     key: case.act

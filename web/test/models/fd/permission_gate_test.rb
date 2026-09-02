@@ -14,11 +14,11 @@ module Fd
 
     def staff_holding(role, manager: false)
       if manager
-        staff = Staff.find_or_create_by!(user_id: ME)
+        staff = Account.find_or_create_by!(user_id: ME)
         hold_role!(staff.user_id, "community_manager")
         return staff.tap { Current.forget_roles }
       end
-      return Staff.new(user_id: ME) if role.nil?
+      return Account.new(user_id: ME) if role.nil?
 
       hold_role!(ME, role).tap { Current.forget_roles }
     end
@@ -55,7 +55,7 @@ module Fd
     end
 
     test "the file covers every scoped permission, so a new scope cannot slip in unchecked" do
-      scoped = Permission.keys.select { |key| Permission.scope(key) == :assigned }
+      scoped = Authz.keys.select { |key| Authz.record_scope(key) == :assigned }
       checked = CHECKS.filter_map { |check| check["key"] if check["case"] == "theirs" }.uniq
 
       assert_equal [], scoped - checked,
@@ -65,7 +65,7 @@ module Fd
     test "a refusal says why, in words the bot can say too" do
       staff = staff_holding("firefighter")
 
-      assert_equal "give or take back access is community manager only",
+      assert_equal "give or take back access is Community manager only",
         Access.why_not(staff, "access.grant")
     end
   end

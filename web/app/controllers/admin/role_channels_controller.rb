@@ -27,7 +27,7 @@ module Admin
       end
 
       Channels::Audience::Grant.create!(role: wanted, channel_id: channel_id,
-        granted_by: current_staff.user_id, granted_at: Time.current)
+        granted_by: current_account.user_id, granted_at: Time.current)
       redirect_to back_to,
         notice: "##{channel_id} is now read by every #{Authz.role_label(wanted).downcase}"
     rescue ActiveRecord::RecordNotUnique
@@ -38,7 +38,7 @@ module Admin
       return refuse unless may_grant?
 
       Channels::Audience::Grant.live.where(role: wanted, channel_id: params[:channel_id])
-        .find_each { |held| held.update!(revoked_by: current_staff.user_id,
+        .find_each { |held| held.update!(revoked_by: current_account.user_id,
                                         revoked_at: Time.current) }
       redirect_to back_to, notice: "##{params[:channel_id]} taken out of the set"
     end
@@ -58,7 +58,7 @@ module Admin
 
     def refuse(why = nil)
       redirect_to back_to,
-        alert: why || Community::Access.why_not(current_staff, "analytics.grant")
+        alert: why || Community::Access.why_not(current_account, "analytics.grant")
     end
   end
 end

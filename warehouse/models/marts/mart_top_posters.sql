@@ -17,19 +17,38 @@ scoped as (
     join latest_window
         on latest_window.month = date_trunc('month', f.window_start)::date
         and latest_window.window_end = f.window_end
+),
+days as (
+    select
+        s.user_id,
+        s.window_start,
+        s.window_end,
+        count(distinct a.window_start) filter (where a.messages_posted > 0)::integer as days_posted,
+        count(distinct a.window_start)::integer as days_measured
+    from scoped s
+    left join {{ ref('fct_member_activity') }} a
+        on a.user_id = s.user_id
+        and a.window_start between s.window_start and s.window_end
+    group by 1, 2, 3
 )
 select
-    month,
-    window_start,
-    window_end,
-    (window_end - window_start + 1) as days_in_window,
-    user_id,
-    display_name,
-    messages_posted,
+    s.month,
+    s.window_start,
+    s.window_end,
+    (s.window_end - s.window_start + 1) as days_in_window,
+    s.user_id,
+    s.display_name,
+    s.messages_posted,
+    d.days_posted,
+    d.days_measured,
     row_number() over (
-        partition by month
-        order by messages_posted desc, user_id
+        partition by s.month
+        order by s.messages_posted desc, s.user_id
     ) as rank,
-    'v2' as metric_version
-from scoped
+    'v3' as metric_version
+from scoped s
+join days d
+    on d.user_id = s.user_id
+    and d.window_start = s.window_start
+    and d.window_end = s.window_end
 order by month desc, rank

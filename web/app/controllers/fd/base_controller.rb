@@ -35,8 +35,8 @@ module Fd
     private
 
     def require_fd
-      return if Fd::Access.manager?(current_staff)
-      return if Authz.holds?(current_staff, "case.read")
+      return if Fd::Access.manager?(current_account)
+      return if Authz.holds?(current_account, "case.read")
       return head :forbidden if request.format.json?
 
       redirect_to root_path, alert: "Fire Engine is for the conduct team"
@@ -61,7 +61,7 @@ module Fd
     def gate(key, on)
       record = subject_for(on)
       return refuse!(key, nil) if record == MISSING
-      return if current_staff&.may?(key, record)
+      return if current_account&.may?(key, record)
 
       refuse!(key, record)
     end
@@ -85,26 +85,22 @@ module Fd
     def refuse!(key, record = nil)
       log_refusal(key, record)
       flash[:tone] = "bad"
-      flash[:said] = "Nothing was changed. #{Permission.label(key)} is #{least_for(key)} only."
+      flash[:said] = "Nothing was changed. #{Authz.refusal(key).upcase_first}."
       redirect_back fallback_location: fd_cases_path, alert: refusal_for(key, record)
     end
 
-    def least_for(key)
-      Permission::ROLE_LABELS.fetch(Permission.least(key)).downcase
-    end
-
     def refusal_for(key, record)
-      Access.why_not(current_staff, key, record)
+      Access.why_not(current_account, key, record)
     end
 
     def log_refusal(key, record)
       AuditEntry.create!(
-        actor_user_id: current_staff&.user_id,
+        actor_user_id: current_account&.user_id,
         actor_kind: "human",
         entity_type: record ? Audit.entity_type(record) : "permission",
         entity_id: record.respond_to?(:id) ? record.id : 0,
         verb: "refused",
-        after: { "permission" => key, "role" => current_staff&.role },
+        after: { "permission" => key, "roles" => Authz.roles_held(current_account&.user_id) },
         source_app: Audit::SOURCE_APP,
         request_id: request.request_id
       )
@@ -115,7 +111,7 @@ module Fd
     end
 
     def not_yours(kase)
-      return nil if kase.mine_or_free?(current_staff.user_id)
+      return nil if kase.mine_or_free?(current_account.user_id)
 
       Access.not_yours(kase)
     end
@@ -123,7 +119,7 @@ module Fd
     def audit(record, verb, **options)
       Fd::Audit.record(
         record, verb,
-        actor: current_staff.user_id,
+        actor: current_account.user_id,
         request_id: request.request_id,
         **options
       )

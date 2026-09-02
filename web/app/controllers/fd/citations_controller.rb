@@ -13,7 +13,7 @@ module Fd
 
       writing do
         flag = CaseCitation.create!(case_id: kase.id, thread_message_id: said.id,
-          flagged_by: current_staff.user_id)
+          flagged_by: current_account.user_id)
         audit(flag, "flagged", entity_id: kase.id)
       end
 

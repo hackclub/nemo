@@ -3,9 +3,10 @@ require "test_helper"
 class Fd::DeedsTest < ActiveSupport::TestCase
   WHO = "UFF1".freeze
 
-  def audit(entity_type, entity_id, verb, at: 1.hour.ago, actor: WHO)
+  def audit(entity_type, entity_id, verb, at: 1.hour.ago, actor: WHO, after: nil)
     Fd::AuditEntry.create!(actor_user_id: actor, actor_kind: "human", entity_type: entity_type,
-      entity_id: entity_id, verb: verb, source_app: "fire_engine", occurred_at: at)
+      entity_id: entity_id, verb: verb, source_app: "fire_engine", occurred_at: at,
+      after: after)
   end
 
   def deeds(only: nil, **opts)
@@ -58,11 +59,12 @@ class Fd::DeedsTest < ActiveSupport::TestCase
   end
 
   test "a grant deed names who got it and what they got" do
-    grant = Fd::AccessGrant.give!("UNEW", role: "lead", by: WHO)
-    audit("grant", grant.id, "granted")
+    grant = Authz::Grant.give!("UNEW", kind: "role", name: "firefighter", by: WHO)
+    audit("capability_grant", grant.id, "granted",
+      after: { "user_id" => "UNEW", "role" => "firefighter" })
 
     row = deeds.sole
-    assert_equal ["member", "UNEW", "lead"], [row.kind, row.id, row.said]
+    assert_equal ["member", "UNEW", "firefighter"], [row.kind, row.id, row.said]
   end
 
   test "asking for one permission keeps only the events that permission covers" do

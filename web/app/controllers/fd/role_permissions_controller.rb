@@ -42,7 +42,7 @@ module Fd
     def move!(role, key, allowed)
       check!(role, key, allowed)
       Authz::Override.upsert({ role: role, capability: key, allowed: allowed,
-                               changed_by: current_staff.user_id, changed_at: Time.current },
+                               changed_by: current_account.user_id, changed_at: Time.current },
         unique_by: %i[role capability])
       Current.forget_roles
       Authz::Override.find_by(role: role, capability: key)

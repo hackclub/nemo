@@ -23,7 +23,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a staff row with no roles reaches the front door, not the dashboard" do
-    staff = Staff.create!(user_id: "UTESTNONE1")
+    staff = Account.create!(user_id: "UTESTNONE1")
     sign_in_as(staff)
 
     get root_path

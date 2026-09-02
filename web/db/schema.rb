@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_03_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_02_190000) do
   create_schema "app"
 
   # These are extensions that must be enabled in order to support this database
@@ -26,6 +26,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_000000) do
     t.datetime "updated_at", null: false
     t.index ["actor_id"], name: "index_access_log_on_actor_id"
     t.index ["subject_user_id"], name: "index_access_log_on_subject_user_id"
+  end
+
+  create_table "app.account", primary_key: "user_id", id: :string, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "app.cachet_profiles", primary_key: "user_id", id: :string, force: :cascade do |t|
@@ -92,20 +97,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_000000) do
     t.check_constraint "(user_id IS NULL) <> (role IS NULL)", name: "channel_grants_one_subject"
   end
 
-  create_table "app.community_grants", force: :cascade do |t|
-    t.string "family", null: false
-    t.datetime "granted_at", default: -> { "now()" }, null: false
-    t.string "granted_by", null: false
-    t.string "reason"
-    t.datetime "revoked_at"
-    t.string "revoked_by"
-    t.string "role", null: false
-    t.string "user_id", null: false
-    t.index ["user_id", "family"], name: "community_grants_one_live", unique: true, where: "(revoked_at IS NULL)"
-    t.index ["user_id"], name: "community_grants_live", where: "(revoked_at IS NULL)"
-    t.check_constraint "family::text = ANY (ARRAY['read'::character varying, 'ops'::character varying]::text[])", name: "community_grants_family"
-  end
-
   create_table "app.engine_setting", force: :cascade do |t|
     t.datetime "changed_at", default: -> { "now()" }, null: false
     t.string "changed_by", null: false
@@ -163,11 +154,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_000000) do
     t.index ["byte_size"], name: "index_solid_cache_entries_on_byte_size"
     t.index ["key_hash", "byte_size"], name: "index_solid_cache_entries_on_key_hash_and_byte_size"
     t.index ["key_hash"], name: "index_solid_cache_entries_on_key_hash", unique: true
-  end
-
-  create_table "app.staff", primary_key: "user_id", id: :string, force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
   end
 
   create_table "app.sync_request", force: :cascade do |t|
