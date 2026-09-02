@@ -13,6 +13,7 @@ from seed.emit import (
     clear,
     unstamp,
     write,
+    write_directory,
     write_runs,
 )
 from seed.generate import HISTORY_MONTHS, build, events
@@ -92,6 +93,7 @@ def main(argv=None):
             conn, channels, members, profile, as_of, rng, stream, args.scale, args.seed,
             hostile=args.hostile,
         )
+        counts.update(write_directory(conn, args.seed, members, as_of))
         counts.update(write_runs(conn, rng, members, as_of, hostile=args.hostile))
         notices = analyze(conn)
 

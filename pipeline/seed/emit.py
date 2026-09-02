@@ -5,6 +5,7 @@ from ingest.channel_range_pull import MONTH_SOURCE as CHANNEL_MONTH_SOURCE
 from lib.db import connect_admin
 from seed import SEED_SOURCE_PREFIX, SEED_USER_PREFIX
 from seed import dims as dims_module
+from seed import directory as directory_module
 from seed import hostile as hostile_module
 from seed import runs as runs_module
 from seed import spine as spine_module
@@ -42,6 +43,8 @@ SEEDED_TABLES = (
     "raw.top_posters_snapshot",
     "raw.member_dim",
     "raw.channel_dim",
+    "fd.member_identity",
+    "fd.member",
 )
 
 LOG_TABLES = (
@@ -509,6 +512,20 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
 
 RUN_COLUMNS = ["source", "started_at", "finished_at", "status", "rows_in", "rows_rejected",
                "total_expected", "parent_run_id", "step_index", "step_total"]
+
+
+def write_directory(conn, seed, members, as_of):
+    profiles = directory_module.profiles_for(directory_module.rng_for(seed), members, as_of)
+    return {
+        "fd.member": copy_rows(
+            conn, "fd.member", directory_module.MEMBER_COLUMNS,
+            directory_module.member_rows(profiles, members),
+        ),
+        "fd.member_identity": copy_rows(
+            conn, "fd.member_identity", directory_module.IDENTITY_COLUMNS,
+            directory_module.identity_rows(profiles, members),
+        ),
+    }
 
 
 def write_runs(conn, rng, members, as_of, hostile=False):
