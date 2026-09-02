@@ -17,12 +17,15 @@ module Admin
     def destroy
       return refuse(Community::Access.why_not(current_staff, "analytics.grant")) unless may_grant?
 
-      user_id = params[:id]
+      user_id = params[:id].to_s.strip.upcase
       wanted = params[:family].presence
+      return refuse("#{user_id} is not a Slack user id") unless user_id.match?(PeopleSearch::MEMBER_ID)
       return refuse("#{wanted} is not a family") if wanted && !families.include?(wanted)
+      return refuse("somebody else has to take yours back") if
+        wanted.nil? && user_id == current_staff.user_id
 
       (wanted ? [wanted] : families).each do |family|
-        Community::Grant.take_back!(user_id, family: family, by: current_staff.user_id)
+        take_back_family(user_id, family)
       end
       take_back_everything(user_id) if wanted.nil?
       redirect_to admin_people_path, notice: taken_back(wanted)
@@ -43,8 +46,10 @@ module Admin
       return count + 1 if asked == Fd::Access::MANAGER_ROLE && make_manager(user_id)
 
       if asked.present?
-        Fd::AccessGrant.give!(user_id, role: asked, by: current_staff.user_id,
+        grant = Fd::AccessGrant.give!(user_id, role: asked, by: current_staff.user_id,
           reason: params[:reason])
+        audit(grant, "granted",
+          after: { "user_id" => user_id, "role" => asked, "reason" => grant.reason })
         return count + 1
       end
 
@@ -56,12 +61,21 @@ module Admin
       return 0 if asked == Community::Grant.role_for(user_id, family).to_s
 
       if asked.present?
-        Community::Grant.give!(user_id, role: asked, by: current_staff.user_id,
+        grant = Community::Grant.give!(user_id, role: asked, by: current_staff.user_id,
           reason: params[:reason])
+        audit(grant, "granted",
+          after: { "user_id" => user_id, "role" => asked, "reason" => grant.reason })
       else
-        Community::Grant.take_back!(user_id, family: family, by: current_staff.user_id)
+        take_back_family(user_id, family)
       end
       1
+    end
+
+    def take_back_family(user_id, family)
+      Community::Grant.live.of_family(family).where(user_id: user_id).find_each do |held|
+        held.take_back!(by: current_staff.user_id)
+        audit(held, "revoked", before: { "user_id" => user_id, "role" => held.role }, after: nil)
+      end
     end
 
     def held_fd(user_id)
@@ -75,26 +89,37 @@ module Admin
       return 0 unless staff&.community_manager?
 
       staff.update!(community_manager: false)
+      note_manager(user_id, "revoked")
       1
     end
 
     def revoke_fd(user_id)
       live = Fd::AccessGrant.live.for_person(user_id).to_a
-      live.each { |held| held.take_back!(by: current_staff.user_id) }
+      live.each do |held|
+        held.take_back!(by: current_staff.user_id)
+        audit(held, "revoked", before: { "user_id" => user_id, "role" => held.role }, after: nil)
+      end
       live.size
     end
 
     def take_back_everything(user_id)
-      Staff.where(user_id: user_id).update_all(community_manager: false)
-      Fd::AccessGrant.live.for_person(user_id)
-        .find_each { |held| held.take_back!(by: current_staff.user_id) }
+      drop_manager(user_id)
+      revoke_fd(user_id)
     end
 
     def make_manager(user_id)
       staff = Staff.find_or_create_by!(user_id: user_id)
       staff.update!(community_manager: true)
       revoke_fd(user_id)
+      note_manager(user_id, "granted")
       true
+    end
+
+    def note_manager(user_id, verb)
+      Fd::AuditEntry.create!(actor_user_id: current_staff.user_id, actor_kind: "human",
+        entity_type: "grant", entity_id: 0, verb: verb,
+        after: { "user_id" => user_id, "role" => Fd::Access::MANAGER_ROLE },
+        source_app: Fd::Audit::SOURCE_APP, request_id: request.request_id)
     end
 
     def asked_for

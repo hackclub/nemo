@@ -37,13 +37,12 @@ class JourneyController < ApplicationController
 
   def retention
     @cohort_months = Analytics::MartOnboardingFunnel.order(cohort_month: :desc).pluck(:cohort_month)
-    chosen = params[:cohort_month].presence&.then { |d| Date.parse(d) } || @cohort_months.first
+    chosen = asked_month(:cohort_month) || @cohort_months.first
     @onboarding_funnel = Analytics::MartOnboardingFunnel.find_by(cohort_month: chosen)
 
     @recurrence_cohort_months = Analytics::MartOnboardingRecurrenceFunnel
       .order(cohort_month: :desc).pluck(:cohort_month)
-    @recurrence_month = params[:recurrence_month].presence&.then { |d| Date.parse(d) } ||
-      @recurrence_cohort_months.first
+    @recurrence_month = asked_month(:recurrence_month) || @recurrence_cohort_months.first
     @recurrence_funnel = Analytics::MartOnboardingRecurrenceFunnel
       .find_by(cohort_month: @recurrence_month)
   end
@@ -52,8 +51,7 @@ class JourneyController < ApplicationController
     @may_read_members = may_community?("analytics.member.read")
     @top_poster_months = @may_read_members ?
       Analytics::MartTopPosters.distinct.order(month: :desc).pluck(:month) : []
-    @top_posters_month = params[:top_posters_month].presence&.then { |d| Date.parse(d) } ||
-      @top_poster_months.first
+    @top_posters_month = asked_month(:top_posters_month) || @top_poster_months.first
     @top_posters = if @may_read_members
       Analytics::MartTopPosters.where(month: @top_posters_month).order(:rank).limit(10)
     else
@@ -68,6 +66,12 @@ class JourneyController < ApplicationController
   end
 
   private
+
+  def asked_month(key)
+    Date.iso8601(params[key].to_s)
+  rescue ArgumentError
+    nil
+  end
 
   def visible_channels
     Channels::Audience.for(current_staff).select(:channel_id)

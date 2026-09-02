@@ -7,7 +7,7 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
   end
 
   def give(user_id: "U0AFF1", role: "firefighter", **rest)
-    post fd_grants_path, params: { user_id: user_id, role: role }.merge(rest)
+    post admin_grants_path, params: { user_id: user_id, fd_role: role }.merge(rest)
   end
 
   test "giving access records the role and who gave it" do
@@ -20,12 +20,12 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     assert Fd::AuditEntry.exists?(entity_type: "grant", entity_id: grant.id, verb: "granted")
   end
 
-  test "a grant needs somebody and a role" do
+  test "a grant needs somebody" do
     give(user_id: "")
     assert_match(/search for somebody/, flash[:alert])
 
-    give(role: "boss")
-    assert_match(/pick a role/, flash[:alert])
+    give(user_id: "not-an-id")
+    assert_match(/is not a Slack user id/, flash[:alert])
 
     assert_equal 0, Fd::AccessGrant.where(user_id: "U0AFF1").count
   end
@@ -39,38 +39,35 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     assert_equal 1, Fd::AccessGrant.for_person("U0AFF1").ended.count
   end
 
-  test "taking a grant back leaves the person holding nothing" do
+  test "taking everything back leaves the person holding nothing, and says so in the trail" do
     give
     grant = Fd::AccessGrant.live.find_by(user_id: "U0AFF1")
 
-    delete fd_grant_path(grant)
+    delete admin_grant_path("U0AFF1")
 
     assert_nil Fd::AccessGrant.role_for("U0AFF1")
     assert_equal "UME", grant.reload.revoked_by
     assert Fd::AuditEntry.exists?(entity_type: "grant", entity_id: grant.id, verb: "revoked")
   end
 
-  test "a grant that already ended cannot be taken back twice" do
+  test "unpicking the fire department rung takes that grant back" do
     give
     grant = Fd::AccessGrant.live.find_by(user_id: "U0AFF1")
-    delete fd_grant_path(grant)
-    delete fd_grant_path(grant)
 
-    assert_match(/already ended/, flash[:alert])
-    assert_equal 1, Fd::AuditEntry.where(entity_type: "grant", verb: "revoked").count
+    post admin_grants_path, params: { user_id: "U0AFF1" }
+
+    assert_nil Fd::AccessGrant.role_for("U0AFF1")
+    assert Fd::AuditEntry.exists?(entity_type: "grant", entity_id: grant.id, verb: "revoked")
   end
 
-  test "nobody takes their own access back" do
-    Fd::AccessGrant.give!("UME", role: "lead", by: "UME")
-    mine = Fd::AccessGrant.live.find_by(user_id: "UME")
-
-    delete fd_grant_path(mine)
+  test "the last manager cannot lock everybody out by taking their own back" do
+    delete admin_grant_path("UME")
 
     assert_match(/somebody else has to take yours back/, flash[:alert])
-    assert_predicate mine.reload, :live?
+    assert_predicate Staff.find("UME"), :manager?
   end
 
-  test "a lead cannot hand out access, and the attempt is kept" do
+  test "a lead cannot reach the grant endpoints at all" do
     delete logout_path
     lead = Staff.create!(user_id: "ULEAD", community_manager: false)
     Fd::AccessGrant.give!("ULEAD", role: "lead", by: "UME")
@@ -79,8 +76,17 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     give
 
     assert_nil Fd::AccessGrant.role_for("U0AFF1")
-    assert_match(/community manager only/, flash[:alert])
-    assert Fd::AuditEntry.exists?(verb: "refused")
+    assert_redirected_to root_path
+  end
+
+  test "making somebody a manager is written to the trail, and takes their fd grant" do
+    give
+    post admin_grants_path, params: { user_id: "U0AFF1", fd_role: "community_manager" }
+
+    assert_predicate Staff.find("U0AFF1"), :manager?
+    assert_nil Fd::AccessGrant.role_for("U0AFF1")
+    assert Fd::AuditEntry.where(verb: "granted")
+      .any? { |row| row.after&.dig("role") == "community_manager" }
   end
 
   test "no form on the settings page sits inside another one" do

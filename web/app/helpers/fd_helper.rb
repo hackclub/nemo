@@ -1107,6 +1107,7 @@ module FdHelper
 
   def role_switch(key, role)
     held = Fd::Permission.roles(key).include?(role)
+    return holds_mark(held) unless Fd::Permission::GRANTABLE.include?(role)
     return holds_mark(held) if Fd::Permission.locked?(key) || !current_staff.may?("access.grant")
 
     button_to held ? "yes" : "no",

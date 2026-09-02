@@ -3,16 +3,11 @@ module ApplicationHelper
     @open_case_count ||= Fd::Case.unresolved.count
   end
 
-  def fd_role_label(staff)
-    return Fd::Access::MANAGER_LABEL if Fd::Access.manager?(staff)
-
-    staff&.role&.tr("_", " ")&.titleize
-  end
-
   def held_label(staff)
     return Fd::Access::MANAGER_LABEL if Fd::Access.manager?(staff)
+    return "no access" if staff.nil?
 
-    held = [staff&.role, *Community::Access.held(staff).values].compact
+    held = [staff.role, *Community::Grant.held_by(staff.user_id).values].compact
     return "no access" if held.empty?
 
     held.map { |role| role.tr("_", " ") }.to_sentence.upcase_first

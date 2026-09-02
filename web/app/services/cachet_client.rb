@@ -75,7 +75,8 @@ class CachetClient
 
     Profile.new(display_name: body["displayName"], image_url: body["imageUrl"],
       pronouns: body["pronouns"])
-  rescue Net::OpenTimeout, Net::ReadTimeout, SocketError, JSON::ParserError => e
+  rescue Net::OpenTimeout, Net::ReadTimeout, SocketError, SystemCallError, IOError,
+         OpenSSL::SSL::SSLError, JSON::ParserError => e
     Rails.logger.error("cachet lookup failed for #{user_id}: #{e.message}")
     nil
   end

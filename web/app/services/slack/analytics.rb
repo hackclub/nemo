@@ -7,9 +7,11 @@ module Slack
     Result = Struct.new(:stats, :error, keyword_init: true)
 
     def self.coverage
-      Rails.cache.fetch("slack/analytics/coverage", expires_in: COVERAGE_TTL) do
+      Rails.cache.fetch("slack/analytics/coverage", expires_in: COVERAGE_TTL, skip_nil: true) do
         response = ProxyClient.call("admin.analytics.getAvailableDateRange", { "type" => "member" })
-        { "start_date" => response["start_date"], "end_date" => response["end_date"] }
+        from = response["start_date"]
+        to = response["end_date"]
+        { "start_date" => from, "end_date" => to } if from.present? && to.present?
       end
     rescue ProxyClient::NotConfigured => e
       Rails.logger.error("slack analytics proxy is not configured: #{e.message}")

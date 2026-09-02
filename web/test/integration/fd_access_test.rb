@@ -65,17 +65,17 @@ class FdAccessTest < ActionDispatch::IntegrationTest
       controller_for(name).declared.intersect?(Fd::Permission.lead_only)
     end.map(&:first).uniq
 
-    assert_equal %w[fd/settlements fd/supersessions fd/retirements fd/grants
+    assert_equal %w[fd/settlements fd/supersessions fd/retirements
                     fd/role_permissions fd/flags].sort,
       lead_only.sort,
       "a lead-only route appeared or vanished, so this test needs updating"
   end
 
   test "a firefighter cannot hand out access" do
-    post fd_grants_path, params: { user_id: "U0NEW", role: "lead", reason: "why not" }
+    post admin_grants_path, params: { user_id: "U0NEW", fd_role: "lead", reason: "why not" }
 
     assert_nil Fd::AccessGrant.role_for("U0NEW")
-    assert_equal "access.grant", refusals.sole.after["permission"]
+    assert_redirected_to root_path
   end
 
   test "a firefighter undoes the work, on a case that is theirs to work" do

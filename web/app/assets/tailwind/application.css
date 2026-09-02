@@ -749,7 +749,6 @@
   .rail-item[aria-current="page"] {
     background-color: var(--hover);
     color: var(--ink);
-    box-shadow: inset 2px 0 0 var(--accent);
   }
 
   .rail-ic {

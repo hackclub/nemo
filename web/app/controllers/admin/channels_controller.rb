@@ -16,7 +16,8 @@ module Admin
       @bands = band(listed)
       @open = @bands.reject { |kind, _label, _rows| kind == "private" }
         .sum { |_kind, _label, rows| rows.size }
-      @names = Fd::Names.for(@grants.values.flatten.map(&:user_id).uniq)
+      named = @grants.values.flatten
+      @names = Fd::Names.for(named.map(&:user_id) + named.map(&:granted_by))
     end
 
     def update

@@ -25,7 +25,6 @@ Rails.application.routes.draw do
     resource :slack_account, only: [:create, :destroy], controller: "slack_accounts"
     resource :role_permission, only: [:update, :destroy], controller: "role_permissions"
     resource :flag, only: [:update], controller: "flags"
-    resources :grants, only: [:create, :destroy]
     resources :decisions, only: [:index, :show, :create, :update, :destroy] do
       resources :threads, only: [:create, :destroy], controller: "decision_threads"
       resource :settlement, only: [:create]

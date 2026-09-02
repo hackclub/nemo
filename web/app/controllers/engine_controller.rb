@@ -227,7 +227,8 @@ class EngineController < ApplicationController
     end
   end
 
-  RANK = { "skipped" => 1, "ok" => 2, "running" => 3, "abandoned" => 4, "error" => 5 }.freeze
+  RANK = { "skipped" => 1, "ok" => 2, "running" => 3, "cancelled" => 4, "abandoned" => 5,
+           "failed" => 6 }.freeze
 
   BandFact = Struct.new(:key, :value, :said, :tone, keyword_init: true)
 
@@ -294,6 +295,12 @@ class EngineController < ApplicationController
   SourceRow = Struct.new(:source, :last_ok, :typical, :rows, :state, keyword_init: true)
 
   def source_rows
+    return @source_rows if defined?(@source_rows)
+
+    @source_rows = build_source_rows
+  end
+
+  def build_source_rows
     last_ok = last_success_by_stage
     seconds = typical_seconds
     rows = last_rows_in

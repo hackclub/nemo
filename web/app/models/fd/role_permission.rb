@@ -24,10 +24,11 @@ module Fd
       refuse "#{role} is not a role" unless Permission::ROLES.include?(role)
       refuse "#{key} is not a permission" unless Permission.keys.include?(key)
       refuse "#{key} cannot be moved" if Permission.locked?(key)
-      return if allowed
-      return unless (Permission.roles(key) - [role]).empty?
+      if !allowed && (Permission.roles(key) - [role]).empty?
+        refuse "#{key} would then be held by nobody"
+      end
 
-      refuse "#{key} would then be held by nobody"
+      refuse "#{role} holds everything already" unless Permission::GRANTABLE.include?(role)
     end
 
     def self.moved?(key)
