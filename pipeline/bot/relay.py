@@ -169,6 +169,10 @@ class Relay:
         worn = {"username": seen["name"]}
         if seen["icon"]:
             worn["icon_url"] = seen["icon"]
+        worn["metadata"] = {
+            "event_type": "nemo_message",
+            "event_payload": {"source_user_id": user_id},
+        }
         return worn
 
     def tell_the_thread(self, conn, queued, signed):
