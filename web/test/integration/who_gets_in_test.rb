@@ -1,7 +1,7 @@
 require "test_helper"
 
 class WhoGetsInTest < ActionDispatch::IntegrationTest
-  OPEN = %w[sessions rails/health turbo/native/navigation].freeze
+  OPEN = %w[sessions rails/health rails/pwa turbo/native/navigation].freeze
 
   TURBO = %w[/recede_historical_location /resume_historical_location
              /refresh_historical_location].freeze
@@ -43,6 +43,14 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_no_match(/case|member|note|decision/i, response.body, "#{path} said something")
     end
+  end
+
+  test "the manifest is open because the browser fetches it before anybody signs in" do
+    get pwa_manifest_path(format: :json)
+
+    assert_response :success
+    assert_equal "Mnemosyne", JSON.parse(response.body)["name"]
+    assert_no_match(/case|member|note|decision/i, response.body, "the manifest said something")
   end
 
   test "holding no grant still gets a session, and only the front door" do
