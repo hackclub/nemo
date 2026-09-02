@@ -1,5 +1,6 @@
 Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
+  get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
 
   get "login", to: "sessions#new", as: :login
   match "auth/:provider/callback", to: "sessions#create", via: [:get, :post], as: :auth_callback

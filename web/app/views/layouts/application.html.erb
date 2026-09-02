@@ -12,7 +12,9 @@
 
     <%= yield :head %>
 
-    <link rel="icon" href="/icon.png" type="image/png">
+    <meta name="theme-color" content="#143252">
+    <link rel="manifest" href="<%= pwa_manifest_path(format: :json) %>">
+    <link rel="icon" href="/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="/icon.png">
 
     <%= render "layouts/boot" %>
@@ -30,6 +32,7 @@
          data-action="keydown@document->palette#key">
       <aside class="rail">
         <div class="brand">
+          <%= image_tag "nemo.png", class: "brand-mark", alt: "", width: 22, height: 14 %>
           <span class="brand-name">Mnemosyne</span>
         </div>
 

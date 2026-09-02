@@ -8,7 +8,9 @@
 
     <%= yield :head %>
 
-    <link rel="icon" href="/icon.png" type="image/png">
+    <meta name="theme-color" content="#143252">
+    <link rel="manifest" href="<%= pwa_manifest_path(format: :json) %>">
+    <link rel="icon" href="/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="/icon.png">
 
     <%= render "layouts/boot" %>
@@ -20,12 +22,19 @@
   <body data-section="mn">
     <%= render "shared/synthetic_banner" %>
     <div class="auth">
-      <div class="auth-card">
-        <span class="auth-word">Mnemosyne</span>
-        <%= yield %>
-        <% if notice || alert %>
-          <p class="auth-alt"><%= notice || alert %></p>
-        <% end %>
+      <%= render "layouts/ground" %>
+      <div class="auth-stack">
+        <%= image_tag "nemo-pod.png", class: "auth-pod", alt: "", width: 900, height: 613 %>
+        <div class="auth-card">
+          <span class="auth-word">
+            <%= image_tag "nemo.png", class: "brand-mark", alt: "", width: 26, height: 16 %>
+            Mnemosyne
+          </span>
+          <%= yield %>
+          <% if notice || alert %>
+            <p class="auth-alt"><%= notice || alert %></p>
+          <% end %>
+        </div>
       </div>
     </div>
   </body>

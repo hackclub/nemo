@@ -1,15 +1,16 @@
 <% content_for :page_title, "Overview" %>
 <% if @team_stats.nil? %>
   <div class="card">
-    <div class="card-head">
-      <div>
+    <div class="empty-aside">
+      <%= image_tag "nemo.png", class: "empty-fish", alt: "", width: 800, height: 483 %>
+      <div class="empty-said">
         <h2 class="card-title">No team statistics loaded</h2>
         <p class="card-sub">the headline figures come from Slack&rsquo;s team.stats pull</p>
+        <p class="delta-note">
+          Run the nightly sync, or the team_stats stage on its own, from the Engine page.
+        </p>
       </div>
     </div>
-    <p class="delta-note">
-      Run the nightly sync, or the team_stats stage on its own, from the Engine page.
-    </p>
   </div>
 <% else %>
   <div class="kpis">
