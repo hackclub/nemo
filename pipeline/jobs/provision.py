@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from psycopg import sql
 
 from jobs.migrate import main as apply_raw_schema
+from lib import capabilities
 from lib.db import connect_admin
 from lib.paths import ENV_FILE, INIT_SQL, REPO_ROOT
 
@@ -110,6 +111,12 @@ def main():
     print("provision: grants over the tables the migrations just made")
     with connect_admin() as conn:
         apply_init_sql(conn)
+
+    print("provision: the capability catalogue")
+    with connect_admin() as conn:
+        keys, pairs = capabilities.sync(conn)
+        conn.commit()
+    print(f"provision: {keys} capabilities, {pairs} role baseline entries")
 
     print("provision: the first staff row")
     seed_staff()

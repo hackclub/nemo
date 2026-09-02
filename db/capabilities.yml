@@ -1,0 +1,201 @@
+roles:
+  community_manager:
+    label: Community manager
+    everything: true
+    grantable: true
+
+  firefighter:
+    label: Firefighter
+    capabilities:
+      - case.read
+      - case.open
+      - case.categorise
+      - case.note
+      - case.people
+      - case.thread
+      - case.chat
+      - case.reply
+      - case.act
+      - case.resolve
+      - case.reverse
+      - case.reopen
+      - decision.write
+      - decision.link
+      - decision.settle
+      - decision.retire
+      - member.note
+      - identity.read
+    grantable: true
+
+  promethean:
+    label: Promethean
+    capabilities: [channel.read]
+    grantable: true
+
+  gardener:
+    label: Gardener
+    capabilities: [channel.read]
+    grantable: true
+
+areas:
+  case: Cases
+  decision: Decisions
+  member: People
+  identity: People
+  channel: Channels
+  engine: Running the engine
+  slack: Your own account
+  access: Access
+  app: The dashboard
+
+record_scopes: [assigned, author, channel]
+
+capabilities:
+  case.read:
+    label: Read every case, note and thread
+    area: case
+
+  case.open:
+    label: Open a case, claim it, hand it back
+    area: case
+    events: [case/opened, assignee/claimed, assignee/unclaimed]
+
+  case.categorise:
+    label: Set the violation on a case
+    area: case
+    record_scope: assigned
+    events: [case/categorised]
+
+  case.note:
+    label: Write a note, delete their own
+    area: case
+    record_scope: author
+    events: [note/noted, note/deleted]
+
+  case.people:
+    label: Add somebody, take somebody off
+    area: case
+    record_scope: assigned
+    events: [participant/attached, participant/detached]
+
+  case.thread:
+    label: Attach a thread, flag a message
+    area: case
+    record_scope: assigned
+    events: [thread/attached, thread/detached, citation/flagged, citation/unflagged]
+
+  case.chat:
+    label: Talk to the team on a case
+    area: case
+
+  case.reply:
+    label: Answer the reporter
+    area: case
+    events: [report/answered]
+
+  case.act:
+    label: Log an action against somebody
+    area: case
+    record_scope: assigned
+    events: [action/performed]
+
+  case.resolve:
+    label: Resolve a case, mark a duplicate
+    area: case
+    events: [case/resolved]
+
+  case.reverse:
+    label: Reverse an action somebody logged
+    area: case
+    record_scope: assigned
+    events: [action/reversed]
+
+  case.reopen:
+    label: Put a resolved case back in the queue
+    area: case
+    events: [case/reopened]
+
+  decision.write:
+    label: Propose one, reword any of them, drop their own
+    area: decision
+    record_scope: author
+    events: [decision/proposed, decision/amended, decision/dropped]
+
+  decision.link:
+    label: Link threads, link a case to a decision
+    area: decision
+    events: [decision_thread/attached, decision_thread/detached, case/followed, case/unfollowed]
+
+  decision.settle:
+    label: Settle a proposal, putting it in force
+    area: decision
+    events: [decision/settled]
+
+  decision.retire:
+    label: Supersede or retire a rule
+    area: decision
+    events: [decision/superseded]
+
+  member.note:
+    label: Write a standing note about a member
+    area: member
+
+  member.read:
+    label: See member names in the analytics
+    area: member
+
+  identity.read:
+    label: See the real name and email behind an id
+    area: identity
+    logged: true
+
+  channel.read:
+    label: See the analytics for a channel they hold
+    area: channel
+    record_scope: channel
+
+  channel.share:
+    label: Set a channel's audience, and name who may read it
+    area: channel
+    events: [channel_audience/granted, channel_audience/revoked]
+
+  channel.backfill:
+    label: Queue a thread replies backfill for a channel
+    area: channel
+
+  engine.read:
+    label: See the engine, its runs and its coverage
+    area: engine
+
+  engine.stage:
+    label: Trigger a stage, or cancel a sync that is running
+    area: engine
+
+  engine.sync:
+    label: Queue a full sync of every source
+    area: engine
+
+  engine.tune:
+    label: Tune the engine, retention and pruning
+    area: engine
+
+  slack.link:
+    label: Link their own Slack account, to send as themselves
+    area: slack
+    every_account: true
+    events: [slack_account/linked, slack_account/unlinked]
+
+  access.read:
+    label: See who holds access and what they did with it
+    area: access
+
+  access.grant:
+    label: Give or take back access
+    area: access
+    locked: true
+    events: [grant/granted, grant/revoked, community_grant/granted, community_grant/revoked, permission/granted, permission/revoked]
+
+  app.flip:
+    label: Turn a section of the dashboard on or off
+    area: app
+    events: [flag/turned_on, flag/turned_off]

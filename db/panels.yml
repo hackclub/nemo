@@ -1,0 +1,32 @@
+panels:
+  overview.team_stats:
+    label: Workspace statistics
+    needs: ~
+
+  overview.active_people:
+    label: Active people over time
+    needs: ~
+
+  overview.member_messages:
+    label: Messages over time
+    needs: ~
+
+  journey.distribution:
+    label: Activity distribution
+    needs: ~
+
+  journey.top_posters:
+    label: Top posters
+    needs: member.read
+
+  members.directory:
+    label: The member directory
+    needs: member.read
+
+  channels.index:
+    label: The channel list
+    needs: ~
+
+  engine.runs:
+    label: The engine, its runs and coverage
+    needs: engine.read

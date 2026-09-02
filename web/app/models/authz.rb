@@ -1,0 +1,118 @@
+class Authz
+  class Unknown < ArgumentError; end
+
+  PATH = Rails.root.join("../db/capabilities.yml").freeze
+  TABLE = YAML.load_file(PATH).freeze
+
+  CAPABILITIES = TABLE.fetch("capabilities").freeze
+  ROLES = TABLE.fetch("roles").freeze
+  AREAS = TABLE.fetch("areas").freeze
+  SCOPES = TABLE.fetch("record_scopes").map(&:to_sym).freeze
+
+  HELD = "SELECT capability, via FROM app.effective_capability WHERE user_id = ?".freeze
+
+  class << self
+    def keys = CAPABILITIES.keys
+
+    def fetch(key)
+      CAPABILITIES.fetch(key.to_s) { raise Unknown, "#{key} is not a capability" }
+    end
+
+    def label(key) = fetch(key).fetch("label")
+
+    def area(key) = AREAS.fetch(fetch(key).fetch("area"))
+
+    def record_scope(key) = fetch(key)["record_scope"]&.to_sym
+
+    def scoped?(key) = record_scope(key).present?
+
+    def logged?(key) = fetch(key)["logged"] == true
+
+    def every_account?(key) = fetch(key)["every_account"] == true
+
+    def locked?(key) = fetch(key)["locked"] == true
+
+    def events(key) = fetch(key)["events"] || []
+
+    def role_names = ROLES.keys
+
+    def role_label(role) = ROLES.fetch(role.to_s).fetch("label")
+
+    def grantable_roles = ROLES.select { |_, one| one.fetch("grantable", true) }.keys
+
+    def superadmin?(role) = ROLES.fetch(role.to_s, {})["everything"] == true
+
+    def baseline(role)
+      one = ROLES.fetch(role.to_s, {})
+      return keys if one["everything"]
+
+      one["capabilities"] || []
+    end
+
+    def by_area
+      keys.group_by { |key| area(key) }
+    end
+
+    def held(user_id)
+      return {} if user_id.blank?
+
+      cache = Current.effective_capabilities ||= {}
+      cache[user_id] ||= load_held(user_id)
+    end
+
+    def holds?(account, key)
+      return false if account.nil?
+      return true if every_account?(key)
+
+      held(account.user_id).key?(key.to_s)
+    end
+
+    def via(account, key)
+      return nil if account.nil?
+
+      held(account.user_id)[key.to_s]
+    end
+
+    def may?(account, key, record = nil)
+      return false unless holds?(account, key)
+
+      within_scope?(account, key, record)
+    end
+
+    def within_scope?(account, key, record)
+      scope = record_scope(key)
+      return true if scope.nil? || record.nil?
+
+      case scope
+      when :assigned then record.respond_to?(:mine_or_free?) && record.mine_or_free?(account.user_id)
+      when :author then record.respond_to?(:author) && record.author == account.user_id
+      when :channel then Channels::Audience.may_see?(account, record)
+      else false
+      end
+    end
+
+    def why_not(account, key, record = nil)
+      return nil if may?(account, key, record)
+      return "you hold no access" if account.nil? || held(account.user_id).empty?
+      return refusal(key) unless holds?(account, key)
+      return not_yours(record) if record.respond_to?(:mine_or_free?)
+
+      "that is not yours"
+    end
+
+    def refusal(key)
+      "#{label(key).downcase} is not yours to use"
+    end
+
+    def not_yours(kase)
+      "case #{kase.id} is assigned to #{kase.assignee_handles}, not to you"
+    end
+
+    def load_held(user_id)
+      rows = ApplicationRecord.connection.select_all(
+        ApplicationRecord.sanitize_sql([HELD, user_id])
+      )
+      rows.to_h { |row| [row["capability"], row["via"]] }
+    end
+  end
+end
