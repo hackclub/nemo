@@ -65,7 +65,7 @@ class FdSlackAccountTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     start_linking
 
-    assert_redirected_to fd_settings_path(tab: "you")
+    assert_redirected_to account_path
     assert_match(/not set up/, flash[:alert])
   end
 

@@ -20,11 +20,10 @@ Rails.application.routes.draw do
       resources :notes, only: [:create, :destroy], controller: "member_notes"
     end
     resource :search, only: [:show], controller: "searches"
-    resource :settings, only: [:show]
     get "audit", to: "audits#show", as: :audit
     get "slack_account/callback", to: "slack_accounts#callback", as: :slack_account_callback
     resource :slack_account, only: [:create, :destroy], controller: "slack_accounts"
-    resource :role_permission, only: [:update], controller: "role_permissions"
+    resource :role_permission, only: [:update, :destroy], controller: "role_permissions"
     resource :flag, only: [:update], controller: "flags"
     resources :grants, only: [:create, :destroy]
     resources :decisions, only: [:index, :show, :create, :update, :destroy] do
@@ -64,6 +63,20 @@ Rails.application.routes.draw do
       delete "replies", to: "channels#opt_out_replies", as: :opt_out
     end
   end
+  resource :account, only: [:show], controller: "accounts"
+  get "fd/settings", to: redirect("/account")
+
+  namespace :admin do
+    root to: "overview#index"
+    resources :people, only: [:index, :show], param: :user_id do
+      collection { get "search" }
+    end
+    resources :grants, only: [:create, :destroy]
+    resource :roles, only: [:show], controller: "roles"
+    resource :product, only: [:show], controller: "product"
+    resources :channels, only: [:index, :update], param: :channel_id
+  end
+
   get "engine", to: "engine#index"
   scope "engine", as: :engine, controller: "engine" do
     get "runs/:id", action: :show, as: :run

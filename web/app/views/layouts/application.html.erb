@@ -23,7 +23,7 @@
 
   <body data-section="<%= page_section %>">
     <%= render "shared/synthetic_banner" %>
-    <% fire_engine = on?(:fire_engine) %>
+    <% fire_engine = may_use_fire_engine? %>
     <div class="shell" data-controller="dismiss<%= " palette" if fire_engine %>"
          data-palette-url-value="<%= fd_search_path(format: :json) %>"
          data-palette-on-value="<%= content_for(:palette_on) %>"

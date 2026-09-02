@@ -25,13 +25,19 @@
       </span>
     </div>
 
-    <% if staff.role.present? %>
-      <%= link_to fd_settings_path, class: "btn" do %>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
-        <span>Settings</span>
-      <% end %>
-      <div class="menu-sep"></div>
+    <%= link_to account_path, class: "btn" do %>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+      <span>Your account</span>
     <% end %>
+
+    <% if may_administer? %>
+      <%= link_to admin_root_path, class: "btn" do %>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-8 0v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Admin</span>
+      <% end %>
+    <% end %>
+
+    <div class="menu-sep"></div>
 
     <%= button_to logout_path, method: :delete, class: "btn you-out",
           form: { class: "contents" } do %>

@@ -68,10 +68,10 @@ checks:
     key: access.grant
     allowed: false
 
-  - name: a community manager may grant access
-    role: community_manager
+  - name: a lead may not grant access
+    role: lead
     key: access.grant
-    allowed: true
+    allowed: false
 
   - name: nobody without a grant gets anything
     role: null

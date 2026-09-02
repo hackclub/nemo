@@ -18,7 +18,7 @@ module Fd
     private
 
     def require_fd
-      return if current_staff&.role.present?
+      return if Fd::Access.manager?(current_staff) || current_staff&.role.present?
       return head :forbidden if request.format.json?
 
       redirect_to root_path, alert: "Fire Engine is for the conduct team"

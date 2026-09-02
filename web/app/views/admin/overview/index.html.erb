@@ -1,0 +1,131 @@
+<% content_for :page_title, "Admin" %>
+
+<div class="admin-split">
+  <%= render "admin/nav" %>
+  <div class="admin-main">
+    <div class="stack">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">The state of access</h2>
+            <p class="card-sub">
+              <%= link_to admin_people_path, class: "lnk" do %><b><%= @holders.size %></b><% end %>
+              people hold something.
+              <b><%= @can_grant %></b> can hand access out.
+              <%= link_to admin_roles_path, class: "lnk" do %><b><%= @moved.size %></b><% end %>
+              permissions sit off their default.
+              <%= link_to admin_product_path, class: "lnk" do %><b><%= @dark.size %></b><% end %>
+              <%= @dark.one? ? "section is" : "sections are" %> dark.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <% @dark.each do |key| %>
+        <div class="dup">
+          <b><%= Fd::Flag.label(key) %> is off.</b>
+          <%= pluralize(@holders.size, "person") %> hold a role and cannot see it.
+          <%= gated_button "app.flip", "Turn it on", fd_flag_path(key: key, on: "1"),
+                method: :patch %>
+        </div>
+      <% end %>
+
+      <% @moved.each do |key| %>
+        <div class="dup">
+          <b><%= key %></b> sits off its default.
+          <%= link_to "Open the matrix", admin_roles_path(family: "fd"), class: "btn" %>
+        </div>
+      <% end %>
+
+      <div class="dup dup-calm">
+        <% if @open_to_all.zero? %>
+          No channel is open to everyone.
+          <span class="chip chip-off">as expected</span>
+        <% else %>
+          <b><%= pluralize(@open_to_all, "channel") %></b>
+          open to anyone signed in.
+          <%= link_to "Open the ledger", admin_channels_path, class: "btn" %>
+        <% end %>
+      </div>
+
+      <div class="cols c-3">
+        <div class="fbox">
+          <div class="ft">
+            <span>Fire Department</span>
+            <span><%= @fd.values.sum %></span>
+          </div>
+          <div class="rows">
+            <%= render "admin/overview/ladder", counts: @fd,
+                  roles: Fd::Permission::ROLES.reverse,
+                  labels: Fd::Permission::ROLE_LABELS %>
+          </div>
+        </div>
+        <% Community::Permission.families.each do |family| %>
+          <div class="fbox">
+            <div class="ft">
+              <span><%= Community::Permission.family_label(family) %></span>
+              <span><%= @community[family].values.sum %></span>
+            </div>
+            <div class="rows">
+              <%= render "admin/overview/ladder", counts: @community[family],
+                    roles: Community::Permission.roles(family).reverse,
+                    labels: Community::Permission::ROLE_LABELS %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="card card-flush">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">What changed</h2>
+            <p class="card-sub">grants, permission moves, flags and audiences only</p>
+          </div>
+          <span class="grow"></span>
+          <div class="card-tools"><%= link_to "Open the log", fd_audit_path, class: "text-btn" %></div>
+        </div>
+        <% if @changed.any? %>
+          <div class="scroll">
+            <table class="data-table">
+              <tbody>
+                <% @changed.each do |entry| %>
+                  <tr>
+                    <td><b><%= change_head(entry) %></b></td>
+                    <td class="said-cell"><%= change_said(entry) %></td>
+                    <td class="mono col-num"><%= entry.occurred_at.strftime("%-d %b %H:%M") %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <div class="empty"><p class="empty-title">Nothing changed in 30 days</p></div>
+        <% end %>
+      </div>
+
+      <% if @dormant.any? %>
+        <div class="card card-flush">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Holding access, doing nothing</h2>
+              <p class="card-sub">30 days</p>
+            </div>
+          </div>
+          <% @dormant.each do |user_id| %>
+            <div class="line-row">
+              <span class="who">
+                <%= face(user_id) %>
+                <span class="two-line">
+                  <b><%= @names[user_id] %></b>
+                  <span class="mono"><%= user_id %></span>
+                </span>
+              </span>
+              <span class="grow"></span>
+              <%= link_to "Open their page", admin_person_path(user_id), class: "btn" %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

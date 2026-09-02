@@ -119,6 +119,12 @@
         <div class="tiles">
           <%= render "tiles", channels: @channels %>
         </div>
+        <% if @locked.any? %>
+          <p class="card-note">
+            <%= number_with_delimiter(@locked_total) %> more match but are not shared with you.
+            <%= link_to "See them in the table", channel_query(view: nil), class: "lnk" %>
+          </p>
+        <% end %>
       <% else %>
         <div class="scroll">
           <table class="data-table">
@@ -139,6 +145,9 @@
                 <tr class="band-row">
                   <td colspan="7">
                     Not shared with you &middot; <%= number_with_delimiter(@locked_total) %>
+                    <% if @locked_total > @locked.size %>
+                      <span class="sub2">showing <%= @locked.size %></span>
+                    <% end %>
                   </td>
                 </tr>
                 <% @locked.each do |channel| %>

@@ -1,0 +1,72 @@
+<% person = local_assigns[:person] %>
+<% held = local_assigns[:held] || {} %>
+<%= render layout: "fd/modal", locals: { id: "give-access",
+      title: person ? "What #{names[person]} holds" : "Give access" } do %>
+  <%= form_with url: admin_grants_path, method: :post,
+        html: { autocomplete: "off", id: "give-access-form" } do %>
+    <div class="modal-body">
+      <% if person %>
+        <%= hidden_field_tag :user_id, person, id: nil %>
+      <% else %>
+        <div class="field-label">
+          <span>Who</span>
+          <%= render "fd/member_picker", name: "user_id", single: true,
+                label: "search for who to give it to", url: search_admin_people_path %>
+        </div>
+      <% end %>
+
+      <div class="card">
+        <div class="idline">
+          <b>Fire Department</b>
+          <span class="sub2">&middot; cases, members, decisions</span>
+        </div>
+        <div class="segmented seg-radio" data-controller="unpick">
+          <% Fd::Permission::ROLES.each do |role| %>
+            <label data-action="mousedown->unpick#down click->unpick#press">
+              <%= radio_button_tag "fd_role", role, held["fd"] == role, id: nil %>
+              <%= Fd::Permission::ROLE_LABELS.fetch(role) %>
+            </label>
+          <% end %>
+          <label data-action="mousedown->unpick#down click->unpick#press">
+            <%= radio_button_tag "fd_role", Fd::Access::MANAGER_ROLE,
+                  held["fd"] == Fd::Access::MANAGER_ROLE, id: nil %>
+            <%= Fd::Access::MANAGER_LABEL %>
+          </label>
+        </div>
+      </div>
+
+      <% Community::Permission.families.each do |family| %>
+        <div class="card">
+          <div class="idline">
+            <b><%= Community::Permission.family_label(family) %></b>
+            <span class="sub2">&middot; <%= Community::Permission.family_covers(family) %></span>
+          </div>
+          <div class="segmented seg-radio" data-controller="unpick">
+            <% Community::Permission.roles(family).each do |role| %>
+              <label data-action="mousedown->unpick#down click->unpick#press">
+                <%= radio_button_tag "#{family}_role", role, held[family] == role, id: nil %>
+                <%= Community::Permission.role_label(role) %>
+              </label>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <label class="field-label">
+        <span>Why they are getting it</span>
+        <%= text_field_tag :reason, nil, class: "field", placeholder: "kept on every grant this makes" %>
+      </label>
+    </div>
+  <% end %>
+
+  <div class="modal-foot">
+    <% if person && held.values.any?(&:present?) %>
+      <%= button_to "Take it all back", admin_grant_path(person), method: :delete,
+            class: "btn btn-ghost btn-undo",
+            form: { class: "contents", data: { turbo_confirm:
+              "Take everything back from #{names[person]}?" } } %>
+    <% end %>
+    <label for="give-access" class="btn btn-ghost">Cancel</label>
+    <%= submit_tag(person ? "Save" : "Give it", class: "btn btn-primary", form: "give-access-form") %>
+  </div>
+<% end %>

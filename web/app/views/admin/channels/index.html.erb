@@ -1,0 +1,77 @@
+<% content_for :page_title, "Channels" %>
+
+<div class="admin-split">
+  <%= render "admin/nav", channel_count: @open %>
+  <div class="admin-main">
+    <%= form_with url: admin_channels_path, method: :get, class: "qbar",
+          data: { controller: "live-search", turbo_frame: "admin-channels",
+                  turbo_action: "advance" } do %>
+      <input class="field" type="search" name="q" value="<%= @q %>"
+             placeholder="Search every channel by name" aria-label="Search channels"
+             data-action="input->live-search#go">
+      <% if @q.present? %>
+        <%= link_to "Clear", admin_channels_path, class: "btn",
+              data: { turbo_frame: "admin-channels" } %>
+      <% end %>
+    <% end %>
+
+    <turbo-frame id="admin-channels" target="_top">
+    <div class="panel">
+      <div class="panel-head">
+        <span>
+          <% if @q.present? %>
+            Every channel matching <b><%= @q %></b>
+          <% else %>
+            <b><%= number_with_delimiter(@total) %></b> channels.
+            <b><%= number_with_delimiter(@open) %></b> are not private.
+          <% end %>
+        </span>
+      </div>
+
+      <% if @bands.any? %>
+        <div class="scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>channel</th><th>audience</th><th>who</th>
+                <th>last active</th><th class="col-btn"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @bands.each do |kind, label, channels| %>
+                <tr class="band-row">
+                  <td colspan="5"><%= label %> &middot; <%= channels.size %></td>
+                </tr>
+                <% channels.each do |channel| %>
+                  <% named = @grants[channel.channel_id] || [] %>
+                  <tr>
+                    <td>
+                      <span class="two-line">
+                        <%= link_to "##{channel.name}", channel_path(channel.channel_id) %>
+                        <span class="mono"><%= channel.channel_id %></span>
+                      </span>
+                    </td>
+                    <td><%= audience_chip(kind) %></td>
+                    <td><%= named_faces(named, kind) %></td>
+                    <td><%= ago_label(channel.last_active_at, none: "never") %></td>
+                    <td class="col-btn">
+                      <%= render "admin/channels/row_menu", channel: channel, kind: kind,
+                            named: named %>
+                    </td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="empty">
+          <p class="empty-title">
+            <%= @q.present? ? "No channel matches" : "No channel is opened up yet" %>
+          </p>
+        </div>
+      <% end %>
+    </div>
+    </turbo-frame>
+  </div>
+</div>

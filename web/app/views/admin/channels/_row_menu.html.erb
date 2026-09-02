@@ -1,0 +1,32 @@
+<% if may_community?("analytics.channel.share") %>
+  <details class="menu" data-controller="menu">
+    <summary class="btn btn-only" aria-label="Set who may read #<%= channel.name %>">&hellip;</summary>
+    <div class="menu-pop">
+      <% Channels::Audience::KINDS.each do |wanted| %>
+        <%= button_to admin_channel_path(channel.channel_id), method: :patch,
+              params: { audience: wanted, q: @q.presence }, class: "btn",
+              aria: { current: ("true" if wanted == kind) } do %>
+          <span class="mi-body">
+            <span class="mi-t"><%= wanted.capitalize %></span>
+            <span class="mi-note"><%= AdminHelper::AUDIENCE_NOTE.fetch(wanted) %></span>
+          </span>
+        <% end %>
+      <% end %>
+      <% if named.any? %>
+        <div class="menu-sep"></div>
+        <% named.each do |grant| %>
+          <span class="btn">
+            <span class="who">
+              <%= face(grant.user_id) %>
+              <span class="two-line">
+                <b><%= @names[grant.user_id] %></b>
+                <span>named by <%= @names[grant.granted_by] %>,
+                  <%= on_day(grant.granted_at) %></span>
+              </span>
+            </span>
+          </span>
+        <% end %>
+      <% end %>
+    </div>
+  </details>
+<% end %>

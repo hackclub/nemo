@@ -166,7 +166,7 @@
               <summary class="rooms-count"><%= number_with_delimiter(@rooms.size) %></summary>
               <div class="menu-pop menu-end rooms-pop">
                 <% @rooms.sort_by { |room| [room.private ? 1 : 0, room.name] }.each do |room| %>
-                  <% if on?(:analytics) && !room.private %>
+                  <% if !room.private && may_open_channel?(room.channel_id) %>
                     <%= link_to "##{room.name}", channel_path(room.channel_id), class: "rooms-row" %>
                   <% else %>
                     <span class="rooms-row">

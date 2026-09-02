@@ -1,0 +1,73 @@
+<% content_for :page_title, "Roles" %>
+
+<div class="admin-split">
+  <%= render "admin/nav" %>
+  <div class="admin-main">
+    <div class="panel">
+      <div class="views">
+        <% { "fd" => "Fire Department", "read" => "Reads", "ops" => "Operates" }.each do |key, label| %>
+          <%= link_to admin_roles_path(family: key), class: "view",
+                aria: { current: ("true" if key == @family) } do %>
+            <%= label %>
+            <span class="view-count"><%= @counts[key] %></span>
+          <% end %>
+        <% end %>
+      </div>
+
+      <% if @moved.positive? %>
+        <div class="panel-head">
+          <span><%= @moved %> moved off default</span>
+          <span class="grow"></span>
+          <%= gated_button "access.grant", "Put back the defaults", fd_role_permission_path,
+                method: :delete,
+                form: { data: { turbo_confirm: "Put every permission back to its default?" } } %>
+        </div>
+      <% end %>
+
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>permission</th>
+              <th class="said-cell">what it lets them do</th>
+              <% @roles.each do |role| %>
+                <th class="col-num">
+                  <%= role_label_for(@family, role) %>
+                  <span class="view-count"><%= @holders[role] || 0 %></span>
+                </th>
+              <% end %>
+              <th class="col-num">
+                <%= Fd::Access::MANAGER_LABEL %>
+                <span class="view-count"><%= @holders[Fd::Access::MANAGER_ROLE] || 0 %></span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @keys.each do |area, keys| %>
+              <tr class="band-row">
+                <td colspan="<%= @roles.size + 3 %>"><%= area %> &middot; <%= keys.size %></td>
+              </tr>
+              <% keys.each do |key| %>
+                <tr>
+                  <td class="mono">
+                    <% if @family == "fd" && Fd::Permission.locked?(key) %>
+                      <%= locked_note(key) %>
+                    <% else %>
+                      <%= key %>
+                    <% end %>
+                    <%= moved_chip(key) if @family == "fd" %>
+                  </td>
+                  <td class="said-cell"><%= permission_label_for(@family, key) %></td>
+                  <% @roles.each do |role| %>
+                    <td class="col-num"><%= holds_switch(@family, key, role) %></td>
+                  <% end %>
+                  <td class="col-num"><%= holds_mark(true) %></td>
+                </tr>
+              <% end %>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

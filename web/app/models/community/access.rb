@@ -1,9 +1,7 @@
 module Community
   class Access
-    SUPERADMIN_FD_ROLE = "community_manager".freeze
-
     def self.superadmin?(staff)
-      staff.present? && Fd::Access.role(staff) == SUPERADMIN_FD_ROLE
+      Fd::Access.manager?(staff)
     end
 
     def self.role(staff, family)

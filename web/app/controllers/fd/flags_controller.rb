@@ -13,9 +13,9 @@ module Fd
           after: { "flag" => key, "on" => on })
       end
 
-      redirect_to fd_settings_path(tab: "sections"), notice: flipped_note(key, on)
+      redirect_to admin_product_path, notice: flipped_note(key, on)
     rescue Flag::Unknown => e
-      redirect_to fd_settings_path(tab: "sections"), alert: e.message
+      redirect_to admin_product_path, alert: e.message
     end
 
     private

@@ -30,6 +30,8 @@ module Community
 
     def self.family_label(family) = FAMILIES.fetch(family.to_s).fetch("label")
 
+    def self.family_covers(family) = FAMILIES.fetch(family.to_s).fetch("covers")
+
     def self.role_label(role) = ROLE_LABELS.fetch(role.to_s, role.to_s)
 
     def self.superadmin(family) = SUPERADMIN.fetch(family.to_s)

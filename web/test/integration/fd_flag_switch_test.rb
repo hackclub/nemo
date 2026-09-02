@@ -12,14 +12,23 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
     Current.forget_flags
   end
 
-  test "settings lists every section with what it covers" do
+  test "one table names every section by the routes that stop resolving" do
     sign_in_as(@boss)
-    get fd_settings_path(tab: "sections")
+    get admin_product_path
 
     assert_response :success
-    assert_select "td", text: "Community analytics"
-    assert_select ".said-cell", text: /Overview, Channels and Engine/
+    assert_select "td b", text: "Community analytics"
+    assert_select "td.said-cell .mono", text: "/channels"
     assert_select "form[action=?]", fd_flag_path(key: "analytics", on: "0")
+  end
+
+  test "a dark section sorts to the top of the table" do
+    sign_in_as(@boss)
+    Fd::Flag.set!("fire_engine", false, by: @boss.user_id)
+
+    get admin_product_path
+
+    assert_select "tbody tr:first-child td b", text: "Fire Engine"
   end
 
   def standing(key)
@@ -30,7 +39,7 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
     sign_in_as(@boss)
 
     patch fd_flag_path, params: { key: "decisions", on: "0" }
-    assert_redirected_to fd_settings_path(tab: "sections")
+    assert_redirected_to admin_product_path
     assert_match(/decisions is turned off/, flash[:notice])
     assert_equal false, standing(:decisions)
 
@@ -66,7 +75,7 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
 
     patch fd_flag_path, params: { key: "teleporter", on: "0" }
 
-    assert_redirected_to fd_settings_path(tab: "sections")
+    assert_redirected_to admin_product_path
     assert_match(/not a flag/, flash[:alert])
   end
 end

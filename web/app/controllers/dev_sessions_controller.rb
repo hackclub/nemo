@@ -3,18 +3,19 @@ class DevSessionsController < ApplicationController
   before_action :only_in_development
 
   def create
-    staff = Staff.find_or_initialize_by(user_id: params[:user_id])
+    staff = Staff.find_or_create_by!(user_id: params[:user_id])
     reset_session
-
-    if staff.role.nil?
-      redirect_to login_path, alert: "#{staff.user_id} is not allowlisted"
-    else
-      session[:user_id] = staff.user_id
-      redirect_to fd_root_path, notice: "signed in as #{staff.user_id}, #{staff.role}"
-    end
+    session[:user_id] = staff.user_id
+    redirect_to root_path, notice: "signed in as #{staff.user_id}, #{held(staff)}"
   end
 
   private
+
+  def held(staff)
+    said = [staff.manager? ? Fd::Access::MANAGER_ROLE : staff.role,
+            *Community::Access.held(staff).values].compact
+    said.empty? ? "holding nothing" : said.map { |role| role.tr("_", " ") }.to_sentence
+  end
 
   def only_in_development
     head :not_found unless Rails.env.development?

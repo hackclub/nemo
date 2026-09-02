@@ -1,9 +1,11 @@
 families:
   read:
     label: Reads
+    covers: aggregates, member analytics, channels
     roles: [observer, analyst, curator]
   ops:
     label: Operates
+    covers: trigger stages, cancel runs, tuning
     roles: [operator, steward]
 
 role_labels:
@@ -60,8 +62,4 @@ permissions:
 
   ops.engine.tune:
     label: Tune the engine, retention and pruning
-    least: steward
-
-  ops.flag.flip:
-    label: Turn a section of the dashboard on or off
     least: steward

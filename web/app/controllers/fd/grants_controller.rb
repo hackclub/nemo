@@ -10,7 +10,7 @@ module Fd
       user_id = Array(params[:user_id]).first.to_s.strip.upcase
       role = params[:role].to_s
       problem = objection(user_id, role)
-      return redirect_to(fd_settings_path, alert: problem) if problem
+      return redirect_to(admin_people_path, alert: problem) if problem
 
       grant = nil
       writing do
@@ -20,14 +20,14 @@ module Fd
           after: { "user_id" => user_id, "role" => role, "reason" => grant.reason })
       end
 
-      redirect_to fd_settings_path(person: user_id),
+      redirect_to admin_person_path(user_id),
         notice: "#{who(user_id)} is a #{role.tr('_', ' ')}"
     end
 
     def destroy
       grant = AccessGrant.live.find_by(id: params[:id])
-      return redirect_to(fd_settings_path, alert: "that grant already ended") if grant.nil?
-      return redirect_to(fd_settings_path,
+      return redirect_to(admin_people_path, alert: "that grant already ended") if grant.nil?
+      return redirect_to(admin_people_path,
         alert: "somebody else has to take yours back") if grant.user_id == current_staff.user_id
 
       writing do
@@ -35,7 +35,7 @@ module Fd
         audit(grant, "revoked", before: { "role" => grant.role }, after: nil)
       end
 
-      redirect_to fd_settings_path, notice: "#{who(grant.user_id)} holds nothing now"
+      redirect_to admin_people_path, notice: "#{who(grant.user_id)} holds nothing now"
     end
 
     private

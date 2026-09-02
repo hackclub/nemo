@@ -22,7 +22,7 @@ class ApplicationController < ActionController::Base
     return fd_cases_path if Fd::Flag.on?(:fire_engine)
     return root_path if Fd::Flag.on?(:analytics)
 
-    fd_settings_path
+    account_path
   end
 
   def current_staff
@@ -48,6 +48,18 @@ class ApplicationController < ActionController::Base
     Community::Access.role(current_staff, family)
   end
   helper_method :community_role
+
+  def may_administer?
+    Fd::Access.manager?(current_staff)
+  end
+  helper_method :may_administer?
+
+  def may_use_fire_engine?
+    return false unless Fd::Flag.on?(:fire_engine)
+
+    Fd::Access.manager?(current_staff) || current_staff&.role.present?
+  end
+  helper_method :may_use_fire_engine?
 
   def may_community?(key, record = nil)
     Community::Access.allow?(current_staff, key, record)

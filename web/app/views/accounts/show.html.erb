@@ -1,0 +1,114 @@
+<% content_for :page_title, "Your account" %>
+
+<div class="stack">
+  <div class="card">
+    <div class="card-head"><div><h2 class="card-title">Your Slack account</h2></div></div>
+    <div class="who">
+      <%= face(current_staff.user_id) %>
+      <span class="two-line">
+        <b><%= current_profile&.display_name || @names[current_staff.user_id] %></b>
+        <span class="mono"><%= current_staff.user_id %></span>
+      </span>
+      <span class="grow"></span>
+      <% if @account %>
+        <span class="chip chip-good">linked</span>
+      <% elsif @linkable %>
+        <%= link_to "Link Slack", fd_slack_account_callback_path, class: "btn" %>
+      <% end %>
+    </div>
+    <% unless @account %>
+      <p class="card-note">Until it is linked, replies to reporters cannot be sent as you.</p>
+    <% end %>
+  </div>
+
+  <div class="card card-flush">
+    <div class="card-head"><div><h2 class="card-title">What you hold</h2></div></div>
+    <% if @holding %>
+      <% @held.each do |family, role| %>
+        <div class="line-row">
+          <b><%= family %></b>
+          <% if role %>
+            <span class="chip"><%= role.tr("_", " ") %></span>
+          <% else %>
+            <span class="sub2">n/a</span>
+          <% end %>
+          <span class="grow"></span>
+        </div>
+        <% held = you_may(role) %>
+        <% if held.any? %>
+          <details class="reveal">
+            <summary class="reveal-head">
+              <span class="reveal-note"><%= pluralize(held.size, "permission") %></span>
+              <span class="car" aria-hidden="true">▾</span>
+            </summary>
+            <div class="reveal-body">
+              <% held.each do |key, label| %>
+                <div class="line-row">
+                  <span class="mono"><%= key %></span>
+                  <span class="grow"></span>
+                  <span class="sub2"><%= label %></span>
+                </div>
+              <% end %>
+            </div>
+          </details>
+        <% end %>
+      <% end %>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">Nothing yet</p>
+        <p class="card-note">
+          You can see the <%= pluralize(@open_to_all, "channel") %> opened to everyone.
+          Workspace analytics, member names and the rest need a grant.
+        </p>
+        <% if @ask.any? %>
+          <div class="who">
+            <% @ask.each do |user_id| %>
+              <%= link_to admin_person_path(user_id), class: "btn" do %>
+                <%= face(user_id) %> Ask <%= @names[user_id] %>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Theme</h2>
+      </div>
+    </div>
+    <%= render "accounts/theme" %>
+  </div>
+
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">What you did</h2>
+        <p class="card-sub">last 30 days</p>
+      </div>
+      <span class="grow"></span>
+      <% if current_staff&.may?("access.read") %>
+        <div class="card-tools"><%= link_to "Open the log", fd_audit_path, class: "text-btn" %></div>
+      <% end %>
+    </div>
+    <% if @deeds.any? %>
+      <div class="scroll">
+        <table class="data-table">
+          <tbody>
+            <% @deeds.each do |deed| %>
+              <tr>
+                <td><b><%= deed_head(deed) %></b></td>
+                <td class="said-cell"><%= deed_said(deed) %></td>
+                <td class="mono col-num"><%= deed.at.strftime("%-d %b %H:%M") %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty"><p class="empty-title">Nothing in 30 days</p></div>
+    <% end %>
+  </div>
+</div>

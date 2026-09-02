@@ -111,9 +111,19 @@ module FdHelper
   def channel_mention(channel_id, said = nil)
     named = channels.named?(channel_id) ? channel_label(channel_id) : nil
     shown = named || (said.present? ? "##{said}" : channel_id)
-    return tag.span(shown, class: "mention", title: channel_id) unless on?(:analytics)
+    return tag.span(shown, class: "mention", title: channel_id) unless may_open_channel?(channel_id)
 
     link_to shown, channel_path(channel_id), class: "mention", title: channel_id
+  end
+
+  def may_open_channel?(channel_id)
+    return false unless on?(:analytics)
+    return true unless respond_to?(:current_staff)
+
+    @may_open ||= {}
+    @may_open.fetch(channel_id) {
+      @may_open[channel_id] = Channels::Audience.may_see?(current_staff, channel_id)
+    }
   end
 
   def already_open_line(cases, preset)
@@ -1205,13 +1215,13 @@ module FdHelper
   end
 
   def did_path(person, key, asked)
-    fd_settings_path(tab: "usage", person: person.user_id, did: (key unless asked == key))
+    admin_person_path(person.user_id)
   end
 
   def tally_link(user_id, count, key = nil)
     return count.to_s if count.zero?
 
-    link_to count, fd_settings_path(tab: "usage", person: user_id, did: key), class: "lnk"
+    link_to count, admin_person_path(user_id), class: "lnk"
   end
 
   def deed_words(event)

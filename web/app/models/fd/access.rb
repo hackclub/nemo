@@ -1,6 +1,8 @@
 module Fd
   class Access
     BOOTSTRAP = "BOOTSTRAP_ADMIN_SLACK_ID".freeze
+    MANAGER_ROLE = "community_manager".freeze
+    MANAGER_LABEL = "Community manager".freeze
 
     def self.bootstrap_ids
       ENV[BOOTSTRAP].to_s.split(",").map(&:strip).reject(&:empty?)
@@ -10,15 +12,23 @@ module Fd
       user_id.present? && bootstrap_ids.include?(user_id)
     end
 
+    def self.manager?(staff)
+      return false if staff.nil?
+
+      staff.community_manager? || bootstrap?(staff.user_id)
+    end
+
     def self.role(staff)
       return nil if staff.nil?
-      return "community_manager" if bootstrap?(staff.user_id)
 
       AccessGrant.role_for(staff.user_id)
     end
 
     def self.allow?(staff, key, record = nil)
-      held = staff&.role
+      return false if staff.nil?
+      return true if manager?(staff)
+
+      held = staff.role
       return false if held.nil?
       return false unless Permission.roles(key).include?(held)
 
@@ -26,6 +36,8 @@ module Fd
     end
 
     def self.why_not(staff, key, record = nil)
+      return nil if manager?(staff)
+
       held = staff&.role
       return "you hold no access" if held.nil?
       return Permission.refusal(key) unless Permission.roles(key).include?(held)

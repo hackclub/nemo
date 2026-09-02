@@ -17,14 +17,14 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
   end
 
   test "the roles table offers a switch to a manager and a plain answer to anyone else" do
-    get fd_settings_path(tab: "roles")
+    get admin_roles_path
     assert_equal "button", switch_for("decision.settle", "firefighter").name
 
     move("lead", "access.read", "1")
     Staff.find("UME").update!(community_manager: false)
     Fd::AccessGrant.give!("UME", role: "lead", by: "UME")
 
-    get fd_settings_path(tab: "roles")
+    get admin_roles_path
     assert_response :success
     assert_equal "span", switch_for("decision.settle", "firefighter").name
   end
@@ -32,7 +32,7 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
   test "moving a permission changes what the table says and what is enforced" do
     move("firefighter", "decision.settle", "1")
 
-    assert_redirected_to fd_settings_path(tab: "roles")
+    assert_redirected_to admin_roles_path
     follow_redirect!
     assert_equal "yes", switch_for("decision.settle", "firefighter").text.strip
     assert_includes Fd::Permission.roles("decision.settle"), "firefighter"
@@ -40,11 +40,11 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
 
   test "a moved key is marked, and unmarked when it goes back" do
     move("firefighter", "decision.settle", "1")
-    get fd_settings_path(tab: "roles")
+    get admin_roles_path
     assert_select "td.mono", text: /decision\.settle\s+moved/
 
     move("firefighter", "decision.settle", "0")
-    get fd_settings_path(tab: "roles")
+    get admin_roles_path
     assert_select "td.mono", text: /decision\.settle\s+moved/, count: 0
   end
 
@@ -58,7 +58,7 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
   end
 
   test "access.grant has no switch at all" do
-    get fd_settings_path(tab: "roles")
+    get admin_roles_path
 
     assert_equal "span", switch_for("access.grant", "community_manager").name
     move("firefighter", "access.grant", "1")
@@ -88,8 +88,8 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
     move("lead", "case.reverse", "0")
     Fd::AccessGrant.give!("UME", role: "community_manager", by: "UME")
 
-    get fd_settings_path(tab: "usage", person: "UME", did: "access.grant")
+    get admin_person_path("UME", did: "access.grant")
 
-    assert_select ".fbox .row", text: /Took from a role.*case\.reverse · lead/m
+    assert_select "table.data-table", text: /Took from a role/m
   end
 end

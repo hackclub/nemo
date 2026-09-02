@@ -67,7 +67,8 @@ class ChannelsController < ApplicationController
       .to_a
     @has_more = (@page + 1) * PER_PAGE < @total
     @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
-    @locked = @scope_all ? locked_rows : []
+    @locked = @scope_all || @q.present? ? locked_rows : []
+    @locked_total = locked_scope.count if @q.present?
 
     @may_see_bands = community_role("read") == "curator"
     @cohorts = @may_see_bands ? Analytics::MartChannelBands.cohorts : []
@@ -81,7 +82,9 @@ class ChannelsController < ApplicationController
   end
 
   def show
-    @channel = Channels::Audience.for(current_staff).find(params[:id])
+    @channel = Channels::Audience.for(current_staff).find_by(channel_id: params[:id])
+    return refuse_channel if @channel.nil?
+
     @backfill = ChannelBackfill.find_by(channel_id: @channel.channel_id)
     @activity_trend = Analytics::MartChannelActivity.where(channel_id: @channel.channel_id).order(:window_start)
     @scorecard_rows = Analytics::MartChannelOnboardingScorecard
@@ -127,7 +130,9 @@ class ChannelsController < ApplicationController
   def opt_in_replies
     return refuse_backfill unless may_community?("ops.channel.backfill")
 
-    channel = Channels::Audience.for(current_staff).find(params[:id])
+    channel = Channels::Audience.for(current_staff).find_by(channel_id: params[:id])
+    return refuse_channel if channel.nil?
+
     estimate = ChannelBackfill.estimate(channel)
     return refuse_spend(channel, estimate) if over_ceiling?(estimate)
 
@@ -147,7 +152,9 @@ class ChannelsController < ApplicationController
   def opt_out_replies
     return refuse_backfill unless may_community?("ops.channel.backfill")
 
-    channel = Channels::Audience.for(current_staff).find(params[:id])
+    channel = Channels::Audience.for(current_staff).find_by(channel_id: params[:id])
+    return refuse_channel if channel.nil?
+
     row = ChannelBackfill.find_by(channel_id: channel.channel_id)
     return redirect_to(channel_path(channel.channel_id), alert: "not opted in") if row.nil?
 
@@ -191,11 +198,27 @@ class ChannelsController < ApplicationController
 
   LOCKED_SHOWN = 50
 
-  def locked_rows
+  def refuse_channel
+    known = Channels::Audience.everything.exists?(channel_id: params[:id])
+    said = if known
+      Community::Access.why_not(current_staff, "analytics.channel.read") ||
+        "that channel is not shared with you"
+    else
+      "no such channel"
+    end
+    redirect_to channels_path(q: params[:id]), alert: said
+  end
+
+  def locked_scope
     mine = Channels::Audience.for(current_staff).select(:channel_id)
     rows = Channels::Audience.everything.where.not(channel_id: mine)
-    rows = rows.where("dim_channel.name ILIKE ?", "%#{@q}%") if @q.present?
-    rows.order(Arel.sql("dim_channel.name")).limit(LOCKED_SHOWN).to_a
+    return rows if @q.blank?
+
+    rows.where("dim_channel.name ILIKE ?", "%#{@q}%")
+  end
+
+  def locked_rows
+    locked_scope.order(Arel.sql("dim_channel.name")).limit(LOCKED_SHOWN).to_a
   end
 
   def order_clause

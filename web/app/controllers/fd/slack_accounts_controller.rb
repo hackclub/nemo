@@ -85,11 +85,11 @@ module Fd
     end
 
     def stop(problem)
-      redirect_to fd_settings_path(tab: "you"), alert: problem
+      redirect_to account_path, alert: problem
     end
 
     def done(said)
-      redirect_to fd_settings_path(tab: "you"), notice: said
+      redirect_to account_path, notice: said
     end
   end
 end

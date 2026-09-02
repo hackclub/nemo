@@ -1,0 +1,58 @@
+<% content_for :page_title, "Product" %>
+
+<div class="admin-split">
+  <%= render "admin/nav" %>
+  <div class="admin-main">
+    <div class="stack">
+      <div class="panel">
+        <div class="panel-head">
+          <span>
+            <%= pluralize(@flags.size, "section") %>.
+            <%= @dark.empty? ? "All are showing." : "#{@dark.size} dark." %>
+          </span>
+        </div>
+        <div class="scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>section</th>
+                <th class="said-cell">what stops resolving</th>
+                <th class="col-num">who loses it</th>
+                <th>last flipped</th>
+                <th class="col-num">showing</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @flags.each do |key| %>
+                <tr>
+                  <td><b><%= Fd::Flag.label(key) %></b></td>
+                  <td class="said-cell">
+                    <span class="idline">
+                      <% routes(key).each do |said, kind| %>
+                        <% if kind == :path %>
+                          <span class="chip chip-off mono"><%= said %></span>
+                        <% else %>
+                          <span class="sub2"><%= said %></span>
+                        <% end %>
+                      <% end %>
+                    </span>
+                  </td>
+                  <td class="col-num"><%= @losers[key] %></td>
+                  <td>
+                    <% row = @flipped[key.to_s] %>
+                    <% if row&.changed_at %>
+                      <%= @names[row.changed_by] %>, <%= row.changed_at.strftime("%-d %b") %>
+                    <% else %>
+                      <span class="sub2">default, never flipped</span>
+                    <% end %>
+                  </td>
+                  <td class="col-num"><%= flag_switch(key) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

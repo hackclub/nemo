@@ -43,16 +43,27 @@ class AnalyticsFlagTest < ActionDispatch::IntegrationTest
   end
 
   test "a channel named in a case reads the same either way, but stops linking" do
+    real = Analytics::DimChannel.where(archived: false).first.channel_id
     kase = make_case
-    Fd::Note.create!(case_id: kase.id, body: "it was in <#C0LOUNGE>", author: @me.user_id)
+    Fd::Note.create!(case_id: kase.id, body: "it was in <##{real}>", author: @me.user_id)
 
     get fd_case_path(kase)
-    assert_select "a.mention[href=?]", channel_path("C0LOUNGE")
+    assert_select "a.mention[href=?]", channel_path(real)
 
     turn_it_off
     get fd_case_path(kase)
-    assert_select "a.mention[href=?]", channel_path("C0LOUNGE"), count: 0
-    assert_select "span.mention", text: /C0LOUNGE/
+    assert_select "a.mention[href=?]", channel_path(real), count: 0
+    assert_select "span.mention"
+  end
+
+  test "a channel nobody can open is named but never linked" do
+    kase = make_case
+    Fd::Note.create!(case_id: kase.id, body: "it was in <#C0GONE>", author: @me.user_id)
+
+    get fd_case_path(kase)
+
+    assert_select "a.mention[href=?]", channel_path("C0GONE"), count: 0
+    assert_select "span.mention", text: /C0GONE/
   end
 
   test "turning it off does not take the channel names with it" do

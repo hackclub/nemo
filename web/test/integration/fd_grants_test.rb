@@ -16,7 +16,7 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     grant = Fd::AccessGrant.live.find_by(user_id: "U0AFF1")
     assert_equal "firefighter", grant.role
     assert_equal "UME", grant.granted_by
-    assert_redirected_to fd_settings_path(person: "U0AFF1")
+    assert_redirected_to admin_person_path("U0AFF1")
     assert Fd::AuditEntry.exists?(entity_type: "grant", entity_id: grant.id, verb: "granted")
   end
 
@@ -86,14 +86,14 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
   test "no form on the settings page sits inside another one" do
     Fd::AccessGrant.give!("U0AFF1", role: "firefighter", by: "UME")
 
-    get fd_settings_path(person: "U0AFF1")
+    get admin_person_path("U0AFF1")
 
     assert_select "form form", count: 0
   end
 
   test "the change modal posts the person it is about" do
     Fd::AccessGrant.give!("U0AFF1", role: "firefighter", by: "UME")
-    get fd_settings_path(person: "U0AFF1")
+    get admin_person_path("U0AFF1")
 
     assert_select "form[action=?]", fd_grants_path do
       assert_select "input[name=user_id][value=?]", "U0AFF1"
@@ -104,18 +104,18 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
   test "the controls are only drawn for somebody who may use them" do
     Fd::AccessGrant.give!("U0AFF1", role: "firefighter", by: "UME")
 
-    get fd_settings_path
+    get admin_people_path
     assert_select "label[for=give-access]", text: "Give access"
 
-    get fd_settings_path(person: "U0AFF1")
-    assert_select "label[for=change-access]", text: "Change"
+    get admin_person_path("U0AFF1")
+    assert_select "label[for=change-access]"
 
     delete logout_path
     lead = Staff.create!(user_id: "ULEAD", community_manager: false)
     Fd::AccessGrant.give!("ULEAD", role: "lead", by: "UME")
     sign_in_as(lead)
 
-    get fd_settings_path
+    get admin_people_path
     assert_select "label[for=give-access]", count: 0
   end
 
@@ -140,10 +140,15 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
   end
 
   test "the give modal offers the role as a segmented row and an optional reason" do
-    get fd_settings_path
+    get admin_people_path
 
-    assert_select "#give-access ~ * .seg-radio input[name=role]",
-      Fd::Permission::ROLES.size
+    assert_select "#give-access ~ * .seg-radio input[name=fd_role]",
+      Fd::Permission::ROLES.size + 1,
+      "every family offers none as well, so a grant is always deliberate"
+    Community::Permission.families.each do |family|
+      assert_select "#give-access ~ * .seg-radio input[name=#{family}_role]",
+        Community::Permission.roles(family).size + 1
+    end
     assert_select "#give-access ~ * input[name=reason]", 1
   end
 end

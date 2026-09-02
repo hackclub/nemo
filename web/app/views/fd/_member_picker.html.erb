@@ -1,6 +1,6 @@
 <div class="pick" data-controller="member-picker"
      data-member-picker-name-value="<%= name %>"
-     data-member-picker-url-value="<%= fd_member_search_path %>"
+     data-member-picker-url-value="<%= local_assigns[:url] || fd_member_search_path %>"
      data-member-picker-single-value="<%= single %>"
      data-member-picker-preset-value="<%= (defined?(preset) ? preset : []).to_json %>">
   <div class="input pick-field" data-member-picker-target="field">

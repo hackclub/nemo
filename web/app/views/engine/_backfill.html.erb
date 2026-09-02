@@ -26,8 +26,12 @@
           <% backfills.each do |row| %>
             <tr>
               <td>
-                <%= link_to "##{names[row.channel_id] || row.channel_id}",
-                      channel_path(row.channel_id) %>
+                <% shown = "##{names[row.channel_id] || row.channel_id}" %>
+                <% if may_open_channel?(row.channel_id) %>
+                  <%= link_to shown, channel_path(row.channel_id) %>
+                <% else %>
+                  <%= shown %>
+                <% end %>
               </td>
               <td>
                 <span class="chip <%= row.state == 'complete' ? 'chip-good' : 'chip-off' %>">

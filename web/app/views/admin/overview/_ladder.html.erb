@@ -1,0 +1,12 @@
+<% total = counts.values.sum %>
+<% roles.each_with_index do |role, at| %>
+  <% held = counts[role] || 0 %>
+  <div class="bar-row">
+    <span class="row-k"><%= labels.fetch(role, role).downcase %></span>
+    <span class="row-v"><%= held %></span>
+    <span class="bar-track">
+      <i class="bar-fill" style="width: <%= total.zero? ? 0 : (held * 100.0 / total).round %>%;
+         background-color: var(<%= at.zero? ? "--accent" : "--accent-line" %>)"></i>
+    </span>
+  </div>
+<% end %>

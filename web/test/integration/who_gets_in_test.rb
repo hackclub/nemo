@@ -6,7 +6,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
   TURBO = %w[/recede_historical_location /resume_historical_location
              /refresh_historical_location].freeze
 
-  INSIDE = %i[root_path fd_root_path fd_members_path fd_decisions_path fd_settings_path].freeze
+  INSIDE = %i[root_path fd_root_path fd_members_path fd_decisions_path admin_people_path].freeze
 
   setup do
     Rails.application.eager_load!

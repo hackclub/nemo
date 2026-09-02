@@ -114,14 +114,14 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
     assert_not_includes ids, other.channel_id
   end
 
-  test "a channel outside your audience is missing, not forbidden" do
+  test "a channel outside your audience sends you back with the reason, not an error page" do
     hidden = some_channels(1).first
     sign_in_as(reading("analyst"))
 
     get channel_path(hidden.channel_id)
 
-    assert_response :not_found,
-      "a 403 would confirm the channel exists, which is the thing being hidden"
+    assert_redirected_to channels_path(q: hidden.channel_id)
+    assert_match(/not shared with you|channel/, flash[:alert])
   end
 
   test "filters are unavailable while looking at every channel" do
