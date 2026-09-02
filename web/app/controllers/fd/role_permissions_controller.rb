@@ -25,6 +25,7 @@ module Fd
 
       writing do
         rows.each { |row| audit(row, back_to_default(row) ? "granted" : "revoked", **reset(row)) }
+        Authz::Mirror.forget_overrides!(rows.map { |row| [row.role, row.permission_key] })
         RolePermission.where(id: rows.map(&:id)).delete_all
         Current.forget_roles
       end

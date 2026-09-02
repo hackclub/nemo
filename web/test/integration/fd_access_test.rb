@@ -105,7 +105,7 @@ class FdAccessTest < ActionDispatch::IntegrationTest
     assert_equal "firefighter", refusals.sole.after["role"]
   end
 
-  test "a firefighter cannot settle, supersede or retire a decision" do
+  test "a firefighter settles and retires now the lead ladder is gone" do
     proposal = Fd::Decision.create!(title: "Second chances", statement: "read by somebody else",
       proposed_by: "UFF1")
     rule = Fd::Decision.create!(title: "Dogpiling", statement: "one lock and a note",
@@ -113,17 +113,12 @@ class FdAccessTest < ActionDispatch::IntegrationTest
     rule.settle!(by: "UBOSS")
 
     post fd_decision_settlement_path(proposal)
-    assert_predicate proposal.reload, :proposed?
-
-    post fd_decision_supersession_path(rule), params: { title: "Dogpiling, again",
-      statement: "something else" }
-    assert_predicate rule.reload, :settled?
+    assert_predicate proposal.reload, :settled?
 
     post fd_decision_retirement_path(rule)
-    assert_predicate rule.reload, :settled?
+    assert_predicate rule.reload, :superseded?
 
-    assert_equal %w[decision.retire decision.retire decision.settle],
-      refusals.map { |row| row.after["permission"] }.sort
+    assert_empty refusals, "settling and retiring belong to every firefighter now"
   end
 
   test "a firefighter still does the work the role is for" do

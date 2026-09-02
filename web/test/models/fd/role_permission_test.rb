@@ -78,7 +78,9 @@ class Fd::RolePermissionTest < ActiveSupport::TestCase
     staff = Staff.create!(user_id: "UFF9", community_manager: false)
     Fd::AccessGrant.give!("UFF9", role: "firefighter", by: "UME")
 
-    assert_not staff.may?("decision.settle")
+    assert staff.may?("decision.settle"), "a firefighter settles by default now"
+    move("firefighter", "decision.settle", false)
+    assert_not staff.reload.may?("decision.settle"), "an override takes it back off them"
     move("firefighter", "decision.settle", true)
     assert Staff.find("UFF9").may?("decision.settle")
   end

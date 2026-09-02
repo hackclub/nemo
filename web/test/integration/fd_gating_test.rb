@@ -88,19 +88,19 @@ class FdGatingTest < ActionDispatch::IntegrationTest
     assert_nil dead("Log an action")
   end
 
-  test "a firefighter is told settling is not theirs, and a lead is not" do
+  test "settling is offered to a firefighter, and refused once an override removes it" do
     decision = proposal
 
     get fd_decision_path(decision)
-    assert_equal "settle a proposal, putting it in force is lead only",
-      dead("Settle it")["title"]
+    assert_nil dead("Settle it"), "settling belongs to every firefighter now"
 
-    become("lead")
+    Fd::RolePermission.set!("firefighter", "decision.settle", false, by: "UME")
     get fd_decision_path(decision)
-    assert_nil dead("Settle it")
+    assert_not_nil dead("Settle it"), "an override takes it back off them"
   end
 
   test "the greyed control is not a form that could still be posted" do
+    Fd::RolePermission.set!("firefighter", "decision.settle", false, by: "UME")
     get fd_decision_path(proposal)
 
     assert_select "form[action=?]", fd_decision_settlement_path(Fd::Decision.last), count: 0

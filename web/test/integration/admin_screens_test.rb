@@ -93,14 +93,24 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
     assert_equal "everyone", Channels::Audience.of(channel.channel_id)
   end
 
-  test "a curator cannot reach the admin section at all" do
+  test "an analyst cannot reach the admin section at all" do
+    staff = Staff.create!(user_id: "UADANA")
+    Community::Grant.give!(staff.user_id, role: "analyst", by: @boss.user_id)
+    sign_in_as(staff)
+
+    get admin_channels_path
+
+    assert_redirected_to root_path
+  end
+
+  test "a curator reaches it, because a curator is a manager now" do
     staff = Staff.create!(user_id: "UADCUR")
     Community::Grant.give!(staff.user_id, role: "curator", by: @boss.user_id)
     sign_in_as(staff)
 
     get admin_channels_path
 
-    assert_redirected_to root_path
+    assert_response :success
   end
 
   test "the channel ledger bands by audience and counts each band" do

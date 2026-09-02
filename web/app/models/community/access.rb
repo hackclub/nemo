@@ -4,6 +4,24 @@ module Community
       Fd::Access.manager?(staff)
     end
 
+    EVERY_ACCOUNT = "analytics.workspace.read".freeze
+
+    CAPABILITY = {
+      "analytics.member.read" => "member.read",
+      "analytics.channel.read" => "channel.read",
+      "analytics.channel.share" => "channel.share",
+      "analytics.grant" => "access.grant",
+      "ops.engine.read" => "engine.read",
+      "ops.engine.stage" => "engine.stage",
+      "ops.engine.sync" => "engine.sync",
+      "ops.engine.tune" => "engine.tune",
+      "ops.channel.backfill" => "channel.backfill"
+    }.freeze
+
+    def self.capability_for(key)
+      CAPABILITY.fetch(key.to_s) { raise Permission::Unknown, "#{key} is not a permission" }
+    end
+
     def self.role(staff, family)
       return nil if staff.nil?
       return Permission.superadmin(family) if superadmin?(staff)
@@ -22,10 +40,9 @@ module Community
     end
 
     def self.allow?(staff, key, record = nil)
-      held = role(staff, Permission.family(key))
-      return false unless Permission.holds?(held, key)
+      return staff.present? if key.to_s == EVERY_ACCOUNT
 
-      within_scope?(staff, key, record)
+      Authz.may?(staff, capability_for(key), record)
     end
 
     def self.why_not(staff, key, record = nil)

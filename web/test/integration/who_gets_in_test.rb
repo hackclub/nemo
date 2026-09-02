@@ -60,7 +60,8 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
     get root_path
     assert_response :success
-    assert_select ".card-title", text: "Open to everyone"
+    assert_select ".card-title", text: "Open to everyone", count: 0,
+      message: "the overview is open to every signed-in member now"
   end
 
   test "a live grant is enough on its own, with no staff row behind it" do
@@ -155,7 +156,10 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
   test "the grantable roles are the only things that count as a role" do
     Fd::Permission::GRANTABLE.each do |role|
       Fd::AccessGrant.give!("UNOROLE", role: role, by: "UBOSS")
-      assert_equal role, Staff.find("UNOROLE").role
+      Current.forget_roles
+      wanted = role == "lead" ? "firefighter" : role
+      assert_equal wanted, Staff.find("UNOROLE").role,
+        "the lead ladder is gone, a lead grant reads as a firefighter"
     end
 
     assert_raises(Fd::AccessGrant::NotAllowed) do
@@ -166,7 +170,8 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
   test "the manager sits above both ladders, held by the flag" do
     boss = Staff.create!(user_id: "UABOVE", community_manager: true)
 
-    assert_nil boss.role
+    assert_equal Fd::Access::MANAGER_ROLE, boss.role,
+      "the manager role is what a manager holds now"
     assert_predicate boss, :manager?
     assert boss.may?("case.read"), "a manager runs the Fire Department"
     assert_equal "curator", Community::Access.role(boss, "read")

@@ -1,5 +1,5 @@
 class Current < ActiveSupport::CurrentAttributes
-  attribute :moved, :flipped, :tuned, :fresh, :effective_capabilities
+  attribute :moved, :flipped, :tuned, :fresh, :effective_capabilities, :held_roles
 
   def role_permissions
     self.moved ||= Fd::RolePermission.overrides
@@ -8,6 +8,7 @@ class Current < ActiveSupport::CurrentAttributes
   def forget_roles
     self.moved = nil
     self.effective_capabilities = nil
+    self.held_roles = nil
   end
 
   def flags

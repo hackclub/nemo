@@ -53,10 +53,10 @@ checks:
     case: theirs
     allowed: true
 
-  - name: a firefighter may not settle a decision
+  - name: a firefighter may settle a decision, the lead ladder is gone
     role: firefighter
     key: decision.settle
-    allowed: false
+    allowed: true
 
   - name: a lead may settle a decision
     role: lead
@@ -84,11 +84,11 @@ checks:
     moved: { firefighter: false }
     allowed: false
 
-  - name: an override can hand a lead permission to a firefighter
+  - name: an override can take settling away from a firefighter
     role: firefighter
     key: decision.settle
-    moved: { firefighter: true }
-    allowed: true
+    moved: { firefighter: false }
+    allowed: false
 
   - name: an override does not widen the scope check
     role: firefighter

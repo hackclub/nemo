@@ -21,7 +21,8 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
     get root_path
 
     assert_response :success
-    assert_select ".card-title", text: "Open to everyone"
+    assert_select ".card-title", text: "Open to everyone", count: 0,
+      message: "the overview is open to every signed-in member now"
   end
 
   test "somebody holding nothing is kept out of fire engine" do
@@ -51,13 +52,15 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
-  test "a firefighter holds no community access at all" do
+  test "a firefighter holds no community grant, but the overview is open to them" do
     hand = Staff.create!(user_id: "UCAFF")
     Fd::AccessGrant.give!(hand.user_id, role: "firefighter", by: @boss.user_id)
 
     assert_nil Community::Access.role(hand, "read")
     assert_nil Community::Access.role(hand, "ops")
-    assert_not Community::Access.allow?(hand, "analytics.workspace.read")
+    assert Community::Access.allow?(hand, "analytics.workspace.read"),
+      "every signed-in member reads the overview now"
+    assert_not Community::Access.allow?(hand, "analytics.member.read")
   end
 
   test "a community manager holds the top of both ladders without a grant" do
@@ -100,18 +103,32 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
     assert_not_includes ids, hidden.channel_id, "shared is for analysts, not observers"
   end
 
-  test "an analyst sees shared channels and the ones granted to them" do
-    shared, granted, other = some_channels
-    open_up(shared, "shared")
-    staff = reading("analyst")
+  test "a promethean sees the channels named to them, and nothing else" do
+    public_one, granted, other = some_channels
+    open_up(public_one, "everyone")
+    staff = Staff.create!(user_id: "UCAPROM")
+    Authz::Grant.give!(staff.user_id, kind: "role", name: "promethean", by: @boss.user_id)
     Channels::Audience::Grant.create!(user_id: staff.user_id, channel_id: granted.channel_id,
       granted_by: @boss.user_id, granted_at: Time.current)
+    Current.forget_roles
 
     ids = Channels::Audience.for(staff).pluck(:channel_id)
 
-    assert_includes ids, shared.channel_id
-    assert_includes ids, granted.channel_id
+    assert_includes ids, granted.channel_id, "the channel named to them"
+    assert_includes ids, public_one.channel_id, "and anything public"
     assert_not_includes ids, other.channel_id
+  end
+
+  test "a channel grant without channel.read shows nothing, so the picker must grant both" do
+    _open, granted, = some_channels
+    staff = reading("analyst")
+    Channels::Audience::Grant.create!(user_id: staff.user_id, channel_id: granted.channel_id,
+      granted_by: @boss.user_id, granted_at: Time.current)
+    Current.forget_roles
+
+    ids = Channels::Audience.for(staff).pluck(:channel_id)
+
+    assert_not_includes ids, granted.channel_id
   end
 
   test "a channel outside your audience sends you back with the reason, not an error page" do

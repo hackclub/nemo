@@ -53,11 +53,39 @@ class Authz
       keys.group_by { |key| area(key) }
     end
 
+    ROLES_HELD = "SELECT role FROM app.effective_role WHERE user_id = ? ORDER BY role".freeze
+
     def held(user_id)
       return {} if user_id.blank?
 
       cache = Current.effective_capabilities ||= {}
       cache[user_id] ||= load_held(user_id)
+    end
+
+    def roles_held(user_id)
+      return [] if user_id.blank?
+
+      cache = Current.held_roles ||= {}
+      cache[user_id] ||= ApplicationRecord.connection
+        .select_values(ApplicationRecord.sanitize_sql([ROLES_HELD, user_id]))
+    end
+
+    def role?(account, role)
+      return false if account.nil?
+
+      roles_held(account.user_id).include?(role.to_s)
+    end
+
+    def everything?(account)
+      return false if account.nil?
+
+      roles_held(account.user_id).any? { |role| superadmin?(role) }
+    end
+
+    def anything?(account)
+      return false if account.nil?
+
+      roles_held(account.user_id).any? || held(account.user_id).any?
     end
 
     def holds?(account, key)

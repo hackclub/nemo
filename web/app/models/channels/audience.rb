@@ -15,21 +15,13 @@ module Channels
       everything.joins(JOIN).where("ca.audience = ?", OPEN_TO_ALL)
     end
 
+    VISIBLE = "app.may_see_channel(?, dim_channel.channel_id)".freeze
+
     def self.for(staff)
       return open_to_all if staff.nil?
+      return everything if Fd::Access.manager?(staff)
 
-      case Community::Access.role(staff, "read")
-      when "curator" then everything
-      when "analyst" then shared_or_granted(staff)
-      else open_to_all
-      end
-    end
-
-    def self.shared_or_granted(staff)
-      everything.joins(JOIN).where(
-        "ca.audience IN (?) OR dim_channel.channel_id IN (?)",
-        SHARED, granted_ids(staff)
-      )
+      everything.where(ApplicationRecord.sanitize_sql([VISIBLE, staff.user_id]))
     end
 
     def self.granted_ids(staff)
@@ -41,7 +33,11 @@ module Channels
 
     def self.may_see?(staff, channel)
       id = channel.respond_to?(:channel_id) ? channel.channel_id : channel.to_s
-      self.for(staff).where(dim_channel: { channel_id: id }).exists?
+      return false if staff.nil? || id.blank?
+
+      ApplicationRecord.connection.select_value(
+        ApplicationRecord.sanitize_sql(["SELECT app.may_see_channel(?, ?)", staff.user_id, id])
+      )
     end
 
     def self.of(channel_id)

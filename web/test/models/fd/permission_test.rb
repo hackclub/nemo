@@ -69,7 +69,7 @@ class Fd::PermissionTest < ActiveSupport::TestCase
     assert firefighter.may?("case.reverse")
     assert firefighter.may?("case.reopen")
     assert firefighter.may?("identity.read")
-    assert_not firefighter.may?("decision.settle")
+    assert firefighter.may?("decision.settle"), "the lead ladder is gone"
   end
 
   test "a lead settles the rules but does not hand out access" do

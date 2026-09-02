@@ -67,19 +67,23 @@ class Fd::AccessGrantTest < ActiveSupport::TestCase
     assert_not staff.may?("case.act")
 
     give("UFF1", role: "firefighter")
+    Current.forget_roles
     fresh = Staff.find("UFF1")
     assert_equal "firefighter", fresh.role
     assert fresh.may?("case.act")
-    assert_not fresh.may?("decision.settle")
+    assert fresh.may?("decision.settle"), "the lead ladder is gone"
 
     give("UFF1", role: "lead")
-    assert_predicate Staff.find("UFF1"), :lead?
+    Current.forget_roles
+    later = Staff.find("UFF1")
+    assert_equal "firefighter", later.role, "a lead grant reads as a firefighter now"
+    assert later.may?("decision.settle"), "and still settles, which is what lead was for"
   end
 
   test "a community manager holds the tool from the flag, with no grant row" do
     boss = Staff.create!(user_id: "UBOSS2", community_manager: true)
 
-    assert_nil boss.role
+    assert_equal Fd::Access::MANAGER_ROLE, boss.role
     assert_predicate boss, :manager?
     assert boss.may?("access.grant")
     assert_equal 0, Fd::AccessGrant.live.for_person("UBOSS2").count

@@ -16,6 +16,7 @@ module Fd
 
       row = find_or_initialize_by(role: role, permission_key: key)
       row.update!(allowed: allowed, changed_by: by, changed_at: Time.current)
+      Authz::Mirror.override!(role, key, allowed, by: by)
       Current.forget_roles
       row
     end

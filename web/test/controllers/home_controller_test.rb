@@ -29,6 +29,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     get root_path
 
     assert_response :success
-    assert_select ".card-title", text: "Open to everyone"
+    assert_select ".card-title", text: "Open to everyone", count: 0,
+      message: "the overview is open to every signed-in member now"
   end
 end

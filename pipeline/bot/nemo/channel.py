@@ -720,7 +720,7 @@ def register(app, on_reply=None):
 
     MORE = {
         cards.edit.SUBJECT: ("case.people", cards.edit.subject_view),
-        cards.edit.CATEGORY: ("case.people", cards.edit.category_view),
+        cards.edit.CATEGORY: ("case.categorise", cards.edit.category_view),
         cards.edit.NOTE: ("case.note", cards.edit.note_view),
     }
 
@@ -797,7 +797,7 @@ def register(app, on_reply=None):
         key = cards.edit.what_picked(view["state"])
 
         with session() as conn:
-            allowed, refusal = access.may(conn, user_id, "case.people", case_id)
+            allowed, refusal = access.may(conn, user_id, "case.categorise", case_id)
             if not allowed:
                 return ack(response_action="errors", errors={cards.edit.WHAT: refusal})
             settled = set_category(conn, case_id, key, user_id)
