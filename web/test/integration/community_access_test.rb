@@ -202,6 +202,33 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "no journey page ranks a channel you cannot see" do
+    sign_in_as(reading("observer"))
+
+    get newcomers_journey_path
+    assert_response :success
+    assert_select "table.data-table a[href^='/channels/']", count: 0,
+      message: "where newcomers land must not name a hidden channel"
+
+    get active_journey_path
+    assert_response :success
+    assert_select ".card-title", text: "Top public channels", count: 1
+    assert_select "table.data-table a[href^='/channels/']", count: 0,
+      message: "top public channels must not link a hidden channel"
+  end
+
+  test "the activity band chart is for curators, who see every channel anyway" do
+    sign_in_as(reading("analyst"))
+    get channels_path
+    assert_response :success
+    assert_select ".card-title", text: "Channels activity", count: 0,
+      message: "band counts would difference out the hidden channels"
+
+    sign_in_as(reading("curator"))
+    get channels_path
+    assert_response :success
+  end
+
   test "a new grant in one family retires only that family" do
     staff = Staff.create!(user_id: "UCASWAP")
     Community::Grant.give!(staff.user_id, role: "observer", by: @boss.user_id)

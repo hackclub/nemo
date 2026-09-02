@@ -69,10 +69,12 @@ class ChannelsController < ApplicationController
     @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
     @locked = @scope_all ? locked_rows : []
 
-    @cohorts = Analytics::MartChannelBands.cohorts
+    @may_see_bands = community_role("read") == "curator"
+    @cohorts = @may_see_bands ? Analytics::MartChannelBands.cohorts : []
     @default_cohort = @cohorts.first
     @cohort = asked_cohort || @default_cohort
-    @band_measures = Analytics::MartChannelBands.for_cohort(@cohort).to_a.group_by(&:measure)
+    @band_measures = @cohort ?
+      Analytics::MartChannelBands.for_cohort(@cohort).to_a.group_by(&:measure) : {}
     @default_measure = @band_measures.keys.first
     @measure = @band_measures.key?(params[:measure]) ? params[:measure] : @default_measure
     @band_rows = @band_measures[@measure] || []

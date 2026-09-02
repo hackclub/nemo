@@ -14,14 +14,17 @@ class JourneyController < ApplicationController
   end
 
   def activation
-    @newcomer_reach = Analytics::MartNewcomerChannels.order(:channel_id).first
-    @newcomer_channels = Analytics::MartNewcomerChannels.ranked(
-      Analytics::MartNewcomerChannels::DEFAULT_MEASURE, floor: HomeHelper::MIN_SAMPLE)
+    @newcomer_reach = Analytics::MartNewcomerChannels.where(channel_id: visible_channels)
+      .order(:channel_id).first
+    @newcomer_channels = Analytics::MartNewcomerChannels
+      .where(channel_id: visible_channels)
+      .ranked(Analytics::MartNewcomerChannels::DEFAULT_MEASURE, floor: HomeHelper::MIN_SAMPLE)
 
-    @channel_scorecard = Analytics::MartChannelOnboardingScorecard
+    scorecard = Analytics::MartChannelOnboardingScorecard.where(channel_id: visible_channels)
+    @channel_scorecard = scorecard
       .where(newcomer_volume: HomeHelper::MIN_SAMPLE..)
       .order(post_month: :desc, newcomer_volume: :desc).limit(10)
-    @channel_scorecard_total = Analytics::MartChannelOnboardingScorecard.count
+    @channel_scorecard_total = scorecard.count
   end
 
   def replies
@@ -59,7 +62,14 @@ class JourneyController < ApplicationController
 
     @activity_bands = Analytics::MartActivityDistribution.order(:band_order)
     @top_channels = Analytics::MartChannelRange
+      .where(channel_id: visible_channels)
       .order(messages_posted_by_members: :desc)
       .limit(8)
+  end
+
+  private
+
+  def visible_channels
+    Channels::Audience.for(current_staff).select(:channel_id)
   end
 end
