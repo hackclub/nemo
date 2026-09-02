@@ -38,6 +38,9 @@ ROLE="${1:-${NEMO_ROLE:-}}"
 
 case "$ROLE" in
   serve)
+    if [ "${NEMO_PROVISION_ON_BOOT:-0}" = "1" ]; then
+      py -m jobs.provision
+    fi
     cd "$WEB" || exit 1
     export NEMO_STREAM="${NEMO_STREAM:-1}"
     if [ -n "${PORT:-}" ]; then
