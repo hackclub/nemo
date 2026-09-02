@@ -207,14 +207,9 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
 
     get newcomers_journey_path
     assert_response :success
+    assert_select ".card-title", text: "Where newcomers land", count: 1
     assert_select "table.data-table a[href^='/channels/']", count: 0,
       message: "where newcomers land must not name a hidden channel"
-
-    get active_journey_path
-    assert_response :success
-    assert_select ".card-title", text: "Top public channels", count: 1
-    assert_select "table.data-table a[href^='/channels/']", count: 0,
-      message: "top public channels must not link a hidden channel"
   end
 
   test "the activity band chart is for curators, who see every channel anyway" do

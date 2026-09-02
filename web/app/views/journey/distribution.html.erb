@@ -17,22 +17,6 @@
   <% end %>
 <% end %>
 
-<div id="distribution">
-  <% if @may_read_members %>
-    <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months, top_posters_month: @top_posters_month %>
-  <% else %>
-    <div class="card card-flush">
-      <div class="card-head">
-        <div><h2 class="card-title">Top posters</h2></div>
-      </div>
-      <div class="empty">
-        <p class="empty-title">Member names are not shown to you</p>
-        <p class="card-note"><%= Community::Access.why_not(current_staff, "analytics.member.read") %></p>
-      </div>
-    </div>
-  <% end %>
-</div>
-
 <div class="card">
   <div class="card-head">
     <div>
@@ -59,62 +43,18 @@
   ></div>
 </div>
 
-<% top_channels_stale = stale_note("mart_channel_range") %>
-<% if top_channels_stale %>
-  <%= stale_card("Top public channels", top_channels_stale) %>
-<% else %>
-<div class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Top public channels</h2>
-      <p class="card-sub">
-        by member messages<% if @top_channels.first %> &middot;
-          <%= window_note(@top_channels.first.window_start, @top_channels.first.window_end) %>
-        <% end %>
-      </p>
+<div id="distribution">
+  <% if @may_read_members %>
+    <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months, top_posters_month: @top_posters_month %>
+  <% else %>
+    <div class="card card-flush">
+      <div class="card-head">
+        <div><h2 class="card-title">Top posters</h2></div>
+      </div>
+      <div class="empty">
+        <p class="empty-title">Member names are not shown to you</p>
+        <p class="card-note"><%= Community::Access.why_not(current_staff, "analytics.member.read") %></p>
+      </div>
     </div>
-  </div>
-  <% chan_peak = @top_channels.map(&:messages_posted_by_members).max.to_i %>
-  <% chan_total = @top_channels.sum(&:messages_posted_by_members) %>
-  <div class="scroll">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>channel</th>
-          <th class="col-num">member messages</th>
-          <th>share of the ten</th>
-          <th class="col-num">posters</th>
-          <th class="col-num">reactions</th>
-          <th class="col-num">reactors</th>
-          <th class="col-num">huddles</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @top_channels.each do |c| %>
-          <tr>
-            <td>
-              <span class="two-line">
-                <%= link_to channel_path(c.channel_id) do %>
-                  <b>#<%= c.name %></b>
-                <% end %>
-                <span><%= c.channel_id %></span>
-              </span>
-            </td>
-            <td class="col-num"><%= number_with_delimiter(c.messages_posted_by_members) %></td>
-            <td style="width: 30%">
-              <div class="inbar">
-                <span><i style="width: <%= chan_peak.positive? ? [(c.messages_posted_by_members.to_f / chan_peak * 100), 1.5].max.round(1) : 0 %>%"></i></span>
-                <span><%= chan_total.positive? ? number_to_percentage(c.messages_posted_by_members.to_f / chan_total * 100, precision: 0) : "0%" %></span>
-              </div>
-            </td>
-            <td class="col-num"><%= number_with_delimiter(c.members_who_posted) %></td>
-            <td class="col-num"><%= number_with_delimiter(c.reactions_added) %></td>
-            <td class="col-num"><%= number_with_delimiter(c.members_who_reacted) %></td>
-            <td class="col-num"><%= number_with_delimiter(c.huddles_initiated) %></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
+  <% end %>
 </div>
-<% end %>

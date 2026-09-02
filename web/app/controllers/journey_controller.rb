@@ -59,10 +59,6 @@ class JourneyController < ApplicationController
     end
 
     @activity_bands = Analytics::MartActivityDistribution.order(:band_order)
-    @top_channels = Analytics::MartChannelRange
-      .where(channel_id: visible_channels)
-      .order(messages_posted_by_members: :desc)
-      .limit(8)
   end
 
   private
