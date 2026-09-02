@@ -229,6 +229,10 @@ def as_reporter(client, anonymous, reporter_user_id):
     wearing = {"username": seen["name"]}
     if seen["icon"]:
         wearing["icon_url"] = seen["icon"]
+    wearing["metadata"] = {
+        "event_type": "nemo_message",
+        "event_payload": {"source_user_id": reporter_user_id},
+    }
     return wearing
 
 
@@ -580,6 +584,10 @@ def echo(client, thread_ts, sent_by, body, signed, channel_id=None):
     wearing = {"username": seen["name"]}
     if seen["icon"]:
         wearing["icon_url"] = seen["icon"]
+    wearing["metadata"] = {
+        "event_type": "nemo_message",
+        "event_payload": {"source_user_id": sent_by},
+    }
 
     said = f"{answer.PREFIX}{cards.report.escape_but_mentions(body)}"
     if not signed:
@@ -610,6 +618,10 @@ def mirror(client, conn, case_id, channel_id=None):
         wearing = {"username": seen["name"]}
         if seen["icon"]:
             wearing["icon_url"] = seen["icon"]
+        wearing["metadata"] = {
+            "event_type": "nemo_message",
+            "event_payload": {"source_user_id": author},
+        }
 
         try:
             sent = client.chat_postMessage(
