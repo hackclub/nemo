@@ -1,7 +1,7 @@
 require "test_helper"
 
 class WhoGetsInTest < ActionDispatch::IntegrationTest
-  OPEN = %w[sessions rails/health rails/pwa turbo/native/navigation].freeze
+  OPEN = %w[sessions health rails/pwa turbo/native/navigation].freeze
 
   TURBO = %w[/recede_historical_location /resume_historical_location
              /refresh_historical_location].freeze
