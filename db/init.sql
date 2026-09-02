@@ -31,6 +31,8 @@ BEGIN
         CREATE ROLE rails_app LOGIN;
     END IF;
 
+    EXECUTE 'ALTER ROLE pipeline_writer SET idle_in_transaction_session_timeout = ''10min''';
+
     EXECUTE 'GRANT USAGE ON SCHEMA raw TO pipeline_writer';
     EXECUTE 'GRANT INSERT, SELECT, UPDATE, DELETE, MAINTAIN ON ALL TABLES IN SCHEMA raw '
         'TO pipeline_writer';
@@ -116,3 +118,5 @@ EXCEPTION
             'on this server', current_user, SQLERRM, current_user;
 END
 $$;
+
+ALTER ROLE CURRENT_USER SET idle_in_transaction_session_timeout = '10min';

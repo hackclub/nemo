@@ -13,7 +13,7 @@ else
 fi
 
 py() {
-  cd "$PIPELINE" && PYTHONPATH=. "$PY" "$@"
+  cd "$PIPELINE" && PGOPTIONS="${PGOPTIONS:-} -c lock_timeout=3000" PYTHONPATH=. "$PY" "$@"
 }
 
 usage() {
