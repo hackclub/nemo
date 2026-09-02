@@ -304,12 +304,10 @@ module Fd
       pairs = threads.evidence.map(&:coordinates)
       return Case.none if pairs.empty?
 
-      tuples = Array.new(pairs.size, "(?, ?)").join(", ")
-      ids = CaseThread.evidence
-        .where("(channel_id, thread_ts) IN (#{tuples})", *pairs.flatten)
-        .where.not(case_id: id)
-        .distinct
-        .pluck(:case_id)
+      evidence = pairs
+        .map { |channel_id, thread_ts| CaseThread.evidence.where(channel_id:, thread_ts:) }
+        .reduce { |scope, pair| scope.or(pair) }
+      ids = evidence.where.not(case_id: id).distinct.pluck(:case_id)
       ids.any? ? Case.where(id: ids) : Case.none
     end
   end
