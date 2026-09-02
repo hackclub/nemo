@@ -12,12 +12,24 @@ VALUES (%s, %s, %s, %s, %s, %s)
 ON CONFLICT (event_id) DO NOTHING
 """
 
-REDACT = ("text", "blocks", "attachments", "files", "message", "previous_message")
+REDACT = ("text", "blocks", "attachments", "files", "message", "previous_message", "profile")
+
+USER_KEPT = ("id", "team_id", "is_bot", "is_admin", "deleted", "updated")
+
+
+def thin_user(value):
+    if not isinstance(value, dict):
+        return value
+    return {k: v for k, v in value.items() if k in USER_KEPT}
 
 
 def scrub(value):
     if isinstance(value, dict):
-        return {k: scrub(v) for k, v in value.items() if k not in REDACT}
+        return {
+            k: (thin_user(v) if k == "user" else scrub(v))
+            for k, v in value.items()
+            if k not in REDACT
+        }
     if isinstance(value, list):
         return [scrub(v) for v in value]
     return value

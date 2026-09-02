@@ -54,7 +54,7 @@ class ChannelsController < ApplicationController
     @locked_total = @all_total - @mine_total
 
     scope = mine.joins(RANGE_JOIN)
-    scope = scope.where("dim_channel.name ILIKE ?", "%#{@q}%") if @q.present?
+    scope = scope.where("dim_channel.name ILIKE ?", "%#{like_q}%") if @q.present?
     @filters.each { |key| scope = scope.where(Arel.sql(FILTERS.fetch(key).last)) }
 
     @total = scope.count
@@ -168,6 +168,10 @@ class ChannelsController < ApplicationController
 
   private
 
+  def like_q
+    ActiveRecord::Base.sanitize_sql_like(@q.to_s)
+  end
+
   def refuse_backfill
     redirect_to channels_path,
       alert: Community::Access.why_not(current_staff, "ops.channel.backfill")
@@ -214,7 +218,7 @@ class ChannelsController < ApplicationController
     rows = Channels::Audience.everything.where.not(channel_id: mine)
     return rows if @q.blank?
 
-    rows.where("dim_channel.name ILIKE ?", "%#{@q}%")
+    rows.where("dim_channel.name ILIKE ?", "%#{like_q}%")
   end
 
   def locked_rows
@@ -225,7 +229,7 @@ class ChannelsController < ApplicationController
     metric = "#{SORT_SQL[@sort]} #{@direction} NULLS LAST"
     return metric if @q.blank?
 
-    ql = @q.downcase
+    ql = like_q.downcase
     rank = ActiveRecord::Base.sanitize_sql_array(
       ["CASE WHEN lower(dim_channel.name) = ? THEN 0 WHEN lower(dim_channel.name) LIKE ? THEN 1 ELSE 2 END", ql, "#{ql}%"]
     )

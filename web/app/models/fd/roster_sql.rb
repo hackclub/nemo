@@ -1,5 +1,7 @@
 module Fd
   module RosterSql
+    IDENTITY_READ = "identity.read".freeze
+
     AGGREGATES = <<~SQL
       conduct AS (
         SELECT p.user_id,
@@ -93,7 +95,7 @@ module Fd
         joins << CONTEXT_JOIN
       end
 
-      if asked?
+      if asked? && identity?
         columns += IDENTITY_COLUMNS
         joins << IDENTITY_JOIN
       end
@@ -143,12 +145,16 @@ module Fd
       end
     end
 
-    TERM_FIELDS = %w[
-      user_id display_name handle title shown_name real_name first_name last_name email
-    ].freeze
+    TERM_FIELDS = %w[user_id display_name handle title].freeze
+
+    IDENTITY_TERM_FIELDS = %w[shown_name real_name first_name last_name email].freeze
+
+    def term_fields
+      identity? ? TERM_FIELDS + IDENTITY_TERM_FIELDS : TERM_FIELDS
+    end
 
     def term_clause
-      "(#{TERM_FIELDS.map { |field| "#{field} ILIKE :term" }.join(' OR ')})"
+      "(#{term_fields.map { |field| "#{field} ILIKE :term" }.join(' OR ')})"
     end
 
     def roster_order
@@ -168,7 +174,8 @@ module Fd
 
     def roster_binds
       { category: self["category"], now: Time.current,
-        prior_since: Case::PRIOR_WINDOW.ago, term: "%#{term}%" }
+        prior_since: Case::PRIOR_WINDOW.ago,
+        term: "%#{Case.sanitize_sql_like(term)}%" }
     end
 
     def ask(sql, extra = {})

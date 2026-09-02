@@ -201,4 +201,47 @@ class FdHelperTest < ActionView::TestCase
     assert_equal :told, state
     assert_equal "told the outcome 5 Mar by @USTAFF", line
   end
+
+  def intake(conversation_id, author:)
+    Fd::IntakeMessage.create!(conversation_id: conversation_id, channel_id: "D0REP",
+      ts: "#{Time.current.to_i}.0001", direction: "inbound", author_user_id: author,
+      body: "they said something", posted_at: 2.days.ago)
+  end
+
+  def conversation_for(said)
+    Fd::IntakeConversation.create!(report_id: said.id, channel_id: "D0REP",
+      thread_ts: "1.0", opened_at: 3.days.ago).id
+  end
+
+  test "an anonymous reporter is not named in their own transcript" do
+    said = report(is_anonymous: true, reporter_user_id: nil)
+    message = intake(conversation_for(said), author: "UREP1")
+
+    entry = chat_entries([said], [], [message]).first
+
+    assert_nil entry.who, "the author id must not reach the avatar"
+    assert_equal "anonymous", entry.name
+    assert_equal said.reporter_label(names), entry.name
+  end
+
+  test "an anonymous transcript never resolves the author against the name table" do
+    said = report(is_anonymous: true, reporter_user_id: nil)
+    message = intake(conversation_for(said), author: "UREP1")
+    @names = Fd::Names.for(["UREP1"])
+
+    entry = chat_entries([said], [], [message]).first
+
+    assert_not_equal @names["UREP1"], entry.name
+    assert_no_match(/UREP1/, entry.name)
+  end
+
+  test "a signed reporter is still named in their transcript" do
+    said = report
+    message = intake(conversation_for(said), author: "UREP1")
+
+    entry = chat_entries([said], [], [message]).first
+
+    assert_equal "UREP1", entry.who
+    assert_match(/UREP1/, entry.name)
+  end
 end

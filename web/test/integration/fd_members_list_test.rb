@@ -195,7 +195,7 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     make_case(subject: "UHASONE", opened_at: 2.days.ago)
     get fd_members_path(priors: "2")
 
-    assert_operator Fd::MemberQuery.new("priors" => "2").total, :<=, Fd::MemberQuery::LIMIT
+    assert_operator Fd::MemberQuery.new({ "priors" => "2" }).total, :<=, Fd::MemberQuery::LIMIT
     assert_select ".pager", 0
   end
 

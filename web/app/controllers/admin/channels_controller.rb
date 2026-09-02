@@ -41,6 +41,10 @@ module Admin
 
     private
 
+    def like_q
+      ActiveRecord::Base.sanitize_sql_like(@q)
+    end
+
     def refuse
       redirect_to admin_channels_path,
         alert: Community::Access.why_not(current_staff, "analytics.channel.share")
@@ -48,7 +52,7 @@ module Admin
 
     def listed
       scope = Analytics::DimChannel.where(archived: false)
-      return scope.where("name ILIKE ?", "%#{@q}%").order(:name).limit(SEARCH_SHOWN) if @q.present?
+      return scope.where("name ILIKE ?", "%#{like_q}%").order(:name).limit(SEARCH_SHOWN) if @q.present?
 
       open_ids = @settings.values.reject { |row| row.audience == "private" }.map(&:channel_id)
       scope.where(channel_id: open_ids).or(scope.where(channel_id: @grants.keys)).order(:name)

@@ -1,8 +1,9 @@
 module Fd
   class MembersController < BaseController
     def index
-      @query = MemberQuery.new(params)
+      @query = MemberQuery.new(params, actor: current_staff)
       @rows = @query.rows
+      log_identity_search
       @names = Names.for(@rows.map(&:user_id))
       @context = MemberContext.for(@rows.map(&:user_id))
       @grants = AccessGrant.where(user_id: @rows.map(&:user_id), revoked_at: nil)
@@ -34,6 +35,17 @@ module Fd
       end
 
       render json: { members: found }
+    end
+
+    private
+
+    def log_identity_search
+      return unless @query.looked_up_identity?
+
+      @rows.each do |row|
+        AccessLog.record!(actor: current_staff, subject_user_id: row.user_id,
+          field_class: "identity_search")
+      end
     end
   end
 end

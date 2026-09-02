@@ -25,9 +25,12 @@ module Fd
     private
 
     def said_by
-      @reports.map(&:reporter_user_id) + @reports.map(&:closed_by) +
-        @conversation_said.map(&:author_user_id) + @conversation_said.map(&:sent_by) +
+      named = @reports.map(&:reporter_user_id) + @reports.map(&:closed_by) +
+        @conversation_said.map(&:sent_by) +
         @queued.map(&:requested_by) + @chat.map(&:author_user_id) + [@case.opened_by]
+      return named if @reports.any?(&:anonymous?)
+
+      named + @conversation_said.map(&:author_user_id)
     end
   end
 end

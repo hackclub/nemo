@@ -50,8 +50,9 @@ module Fd
     DEFAULT_VIEW = "everyone".freeze
     NO_VIEW = "none".freeze
 
-    def initialize(params = {})
+    def initialize(params = {}, actor: nil)
       @params = params
+      @actor = actor
     end
 
     def term
@@ -59,6 +60,16 @@ module Fd
     end
 
     def asked? = term.present?
+
+    def identity?
+      return @identity if defined?(@identity)
+
+      @identity = @actor.present? && @actor.may?(RosterSql::IDENTITY_READ)
+    end
+
+    def looked_up_identity?
+      asked? && identity?
+    end
 
     def [](key)
       raw = @params[key].to_s

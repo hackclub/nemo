@@ -469,7 +469,8 @@ module FdHelper
   end
 
   def chat_entries(reports, chat, messages = [], queued = [])
-    said = messages.any? ? messages.map { |one| message_entry(one) } : opening(reports)
+    hidden = reports.any?(&:anonymous?)
+    said = messages.any? ? messages.map { |one| message_entry(one, hidden) } : opening(reports)
     said += reports.filter_map { |report| told_entry(report) }
     said += chat.map { |line| chat_entry(line) }
     said += queued.map { |row| queued_entry(row) }
@@ -485,20 +486,22 @@ module FdHelper
     end
   end
 
-  def message_entry(said)
+  def message_entry(said, hidden = false)
     theirs = said.theirs?
+    masked = theirs && hidden
     ChatEntry.new(
       at: said.posted_at,
       side: theirs ? "in" : "out",
       kind: theirs ? "them" : "us",
-      who: theirs ? said.author_user_id : said.sent_by,
-      name: message_name(said),
+      who: masked ? nil : (theirs ? said.author_user_id : said.sent_by),
+      name: message_name(said, hidden),
       body: message_body(said),
       state: ("deleted in Slack" if said.deleted?)
     )
   end
 
-  def message_name(said)
+  def message_name(said, hidden = false)
+    return "anonymous" if said.theirs? && hidden
     return names[said.author_user_id] if said.theirs? && said.author_user_id
     return "them" if said.theirs?
     return names[said.sent_by] if said.sent_by
