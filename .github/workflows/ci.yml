@@ -82,3 +82,7 @@ jobs:
           bundler-cache: true
           working-directory: web
       - run: bundle exec rubocop
+      - name: Audit Ruby dependencies
+        run: bundle exec bundler-audit check --update
+      - name: Scan Rails application
+        run: bundle exec brakeman --no-pager --exit-on-warn --exit-on-error
