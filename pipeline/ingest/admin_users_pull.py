@@ -57,6 +57,7 @@ def run(conn):
             if len(rows) >= PAGE_SIZE:
                 write(conn, rows)
                 counts.progress()
+                print(f"admin.users.list: {counts.rows_in} rows so far, {counts.rows_rejected} rejected")
                 rows = []
         if rows:
             write(conn, rows)

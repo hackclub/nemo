@@ -4,7 +4,9 @@
 # See the Securing Rails Applications Guide for more information:
 # https://guides.rubyonrails.org/security.html#content-security-policy-header
 
-AVATAR_HOSTS = ["https://avatars.slack-edge.com", "https://*.dunkirk.sh"].freeze
+AVATAR_HOSTS = [
+  "https://avatars.slack-edge.com", "https://*.dunkirk.sh", "https://secure.gravatar.com"
+].freeze
 
 AUTH_ORIGIN = begin
   issuer = URI.parse(ENV.fetch("HCA_ISSUER", "https://auth.hackclub.com"))
