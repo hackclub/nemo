@@ -28,6 +28,75 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_select ".chat-log[data-version=?]", version
   end
 
+  test "asked what changed, the log answers with the new rows and the new version" do
+    with_a_reporter
+    before = Fd::ChatVersion.for(@kase.id)
+    line = Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "on it",
+      source_app: "fire_engine")
+
+    get fd_case_chat_log_path(@kase, since: before), as: :turbo_stream
+
+    assert_response :success
+    assert_match(/action="upsert" target="chat-said-#{@kase.id}" /, response.body)
+    assert_match(/version="#{Regexp.escape(Fd::ChatVersion.for(@kase.id))}"/, response.body)
+    assert_select "template #said-chat-#{line.id} .said-body", text: "on it"
+    assert_match(/action="remove" target="chat-empty-#{@kase.id}"/, response.body)
+    assert_no_match(/said-open-/, response.body, "the opening report is already on the page")
+  end
+
+  test "asked what changed when nothing did, the log says nothing" do
+    get fd_case_chat_log_path(@kase, since: Fd::ChatVersion.for(@kase.id)), as: :turbo_stream
+    assert_response :no_content
+  end
+
+  test "a reply that went out is taken off the log" do
+    conversation = with_a_reporter
+    row = Fd::IntakeOutbox.create!(conversation_id: conversation.id, kind: "reply",
+      body: "hold on", mode: "signed", requested_by: "UME")
+    before = Fd::ChatVersion.for(@kase.id)
+    row.update!(sent_at: Time.current)
+
+    get fd_case_chat_log_path(@kase, since: before), as: :turbo_stream
+
+    assert_response :success
+    assert_match(/action="remove" target="said-queued-#{row.id}"/, response.body)
+  end
+
+  test "an anonymous reporter stays anonymous in what changed" do
+    reporter = Fd::Member.first.user_id
+    report = Fd::CaseReport.create!(case_id: @kase.id, is_anonymous: true,
+      body: "look at this", source_app: "shroud", received_at: 2.days.ago)
+    conversation = Fd::IntakeConversation.create!(report_id: report.id, member_user_id: reporter,
+      channel_id: "D0REP", thread_ts: "1700.5", opened_at: 2.days.ago)
+    before = Fd::ChatVersion.for(@kase.id)
+    Fd::IntakeMessage.create!(conversation_id: conversation.id, channel_id: "D0REP",
+      ts: "#{Time.current.to_i}.0001", direction: "inbound", author_user_id: reporter,
+      body: "it was me", posted_at: Time.current)
+
+    get fd_case_chat_log_path(@kase, since: before), as: :turbo_stream
+
+    assert_response :success
+    assert_select "template .said-top b", text: "anonymous"
+    assert_no_match(/#{reporter}/, response.body)
+  end
+
+  test "a since it cannot read gets the whole log as one upsert" do
+    get fd_case_chat_log_path(@kase, since: "garbage"), as: :turbo_stream
+
+    assert_response :success
+    assert_match(/action="upsert"/, response.body)
+  end
+
+  test "a deletion sends the browser back for a full reload" do
+    line = Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "oops",
+      source_app: "fire_engine")
+    before = Fd::ChatVersion.for(@kase.id)
+    line.destroy!
+
+    get fd_case_chat_log_path(@kase, since: before), as: :turbo_stream
+    assert_response :reset_content
+  end
+
   test "the message is kept as working chat, not as a note" do
     post fd_case_chats_path(@kase), params: { body: "who wants this one?" },
       as: :turbo_stream

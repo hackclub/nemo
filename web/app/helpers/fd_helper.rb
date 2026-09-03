@@ -446,7 +446,7 @@ module FdHelper
     ROLE_TONES.fetch(role, "chip-off")
   end
 
-  ChatEntry = Struct.new(:at, :side, :kind, :who, :name, :body, :state, keyword_init: true)
+  ChatEntry = Struct.new(:key, :at, :side, :kind, :who, :name, :body, :state, keyword_init: true)
 
   def chat_stream(kase)
     "case_#{kase.id}_chat"
@@ -464,9 +464,14 @@ module FdHelper
   end
 
   def chat_entries(reports, chat, messages = [], queued = [])
-    hidden = reports.any?(&:anonymous?)
-    said = messages.any? ? messages.map { |one| message_entry(one, hidden) } : opening(reports)
+    said = messages.any? ? [] : opening(reports)
     said += reports.filter_map { |report| told_entry(report) }
+    (said + changed_chat_entries(reports, chat, messages, queued)).sort_by(&:at)
+  end
+
+  def changed_chat_entries(reports, chat, messages, queued)
+    hidden = reports.any?(&:anonymous?)
+    said = messages.map { |one| message_entry(one, hidden) }
     said += chat.map { |line| chat_entry(line) }
     said += queued.map { |row| queued_entry(row) }
     said.sort_by(&:at)
@@ -474,7 +479,7 @@ module FdHelper
 
   def opening(reports)
     reports.map do |report|
-      ChatEntry.new(at: report.received_at, side: "in", kind: "them",
+      ChatEntry.new(key: "open-#{report.id}", at: report.received_at, side: "in", kind: "them",
         who: (report.reporter_user_id unless report.anonymous?),
         name: report.reporter_label(names),
         body: report.body.presence || "No words with it.")
@@ -485,6 +490,7 @@ module FdHelper
     theirs = said.theirs?
     masked = theirs && hidden
     ChatEntry.new(
+      key: "msg-#{said.id}",
       at: said.posted_at,
       side: theirs ? "in" : "out",
       kind: theirs ? "them" : "us",
@@ -509,7 +515,7 @@ module FdHelper
   end
 
   def queued_entry(row)
-    ChatEntry.new(at: row.requested_at, side: "out", kind: "us",
+    ChatEntry.new(key: "queued-#{row.id}", at: row.requested_at, side: "out", kind: "us",
       who: row.requested_by, name: names[row.requested_by], body: row.body,
       state: row.failed? ? "undelivered, #{row.error}" : "sending, #{signing(row)}")
   end
@@ -521,14 +527,14 @@ module FdHelper
   def told_entry(report)
     return nil unless report.told_of_outcome?
 
-    ChatEntry.new(at: report.closed_at, side: "out", kind: "us",
+    ChatEntry.new(key: "told-#{report.id}", at: report.closed_at, side: "out", kind: "us",
       who: report.closed_by, name: names[report.closed_by],
       body: "Told them how it ended.")
   end
 
   def chat_entry(line)
-    ChatEntry.new(at: line.said_at, side: "out", kind: "chat", who: line.author_user_id,
-      name: names[line.author_user_id], body: chat_body(line))
+    ChatEntry.new(key: "chat-#{line.id}", at: line.said_at, side: "out", kind: "chat",
+      who: line.author_user_id, name: names[line.author_user_id], body: chat_body(line))
   end
 
   def chat_body(line)

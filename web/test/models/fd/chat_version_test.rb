@@ -9,7 +9,7 @@ class Fd::ChatVersionTest < ActiveSupport::TestCase
   end
 
   test "an empty case still has a version to compare against" do
-    assert_equal "0.0-0.0-0.0", Fd::ChatVersion.for(@kase.id)
+    assert_equal "0.0.0-0.0.0-0.0.0", Fd::ChatVersion.for(@kase.id)
   end
 
   test "a new message moves the version" do

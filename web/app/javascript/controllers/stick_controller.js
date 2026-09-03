@@ -10,12 +10,14 @@ export default class extends Controller {
 
     this.element.addEventListener("scroll", this.onScroll, true)
     this.element.addEventListener("turbo:frame-load", this.onLoad)
+    this.element.addEventListener("chat:changed", this.onLoad)
     this.pin()
   }
 
   disconnect() {
     this.element.removeEventListener("scroll", this.onScroll, true)
     this.element.removeEventListener("turbo:frame-load", this.onLoad)
+    this.element.removeEventListener("chat:changed", this.onLoad)
   }
 
   get log() {

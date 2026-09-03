@@ -1,0 +1,7 @@
+<% entries = @everything ? chat_entries(@reports, @chat, @conversation_said, @queued) :
+     changed_chat_entries(@reports, @chat_changed, @said_changed, @queued_changed) %>
+<% if entries.any? %><%= turbo_stream.remove("chat-empty-#{@case.id}") %><% end %>
+<% @gone.each do |id| %><%= turbo_stream.remove("said-queued-#{id}") %><% end %>
+<turbo-stream action="upsert" target="chat-said-<%= @case.id %>" version="<%= @version %>">
+  <template><%= render partial: "fd/cases/said", collection: entries, as: :entry, formats: [:html] %></template>
+</turbo-stream>
