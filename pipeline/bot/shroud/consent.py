@@ -71,7 +71,7 @@ def forwarded(channels):
     return f"{counted}, from {where}"
 
 
-def blocks(bodies, files=0, channels=()):
+def blocks(bodies, files=0, channels=(), held=None):
     built = [
         {
             "type": "section",
@@ -107,7 +107,7 @@ def blocks(bodies, files=0, channels=()):
                 {
                     "type": "radio_buttons",
                     "action_id": ACTION,
-                    "initial_option": ANONYMOUS_OPTION,
+                    "initial_option": NAMED_OPTION if held == NAMED else ANONYMOUS_OPTION,
                     "options": [ANONYMOUS_OPTION, NAMED_OPTION],
                 }
             ],
@@ -133,15 +133,19 @@ def blocks(bodies, files=0, channels=()):
     return built
 
 
-def chosen(state):
-    picked = (
+def picked(state):
+    found = (
         (state or {})
         .get("values", {})
         .get(BLOCK, {})
         .get(ACTION, {})
         .get("selected_option")
     )
-    return (picked or {}).get("value") or ANONYMOUS
+    return (found or {}).get("value")
+
+
+def chosen(state, held=None):
+    return picked(state) or held or ANONYMOUS
 
 
 DROPPED = "Nothing was sent. Say more here whenever you want, and I will ask again."
