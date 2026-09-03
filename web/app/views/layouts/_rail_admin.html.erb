@@ -1,12 +1,5 @@
         <div class="navsec">
           <nav class="rail-nav" aria-label="Admin">
-            <%= link_to admin_root_path, class: "rail-item",
-                  aria: { current: ("page" if controller_path == "admin/overview") } do %>
-              <span class="rail-ic" aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-              </span>
-              <span class="rail-text">Overview</span>
-            <% end %>
             <%= link_to admin_people_path, class: "rail-item",
                   aria: { current: ("page" if controller_path == "admin/people") } do %>
               <span class="rail-ic" aria-hidden="true">

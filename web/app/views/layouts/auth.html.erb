@@ -26,14 +26,8 @@
       <div class="auth-stack">
         <%= image_tag "nemo-pod.png", class: "auth-pod", alt: "", width: 900, height: 613 %>
         <div class="auth-card">
-          <span class="auth-word">
-            <%= image_tag "nemo.png", class: "brand-mark", alt: "", width: 26, height: 16 %>
-            Mnemosyne
-          </span>
+          <span class="auth-word">Mnemosyne</span>
           <%= yield %>
-          <% if notice || alert %>
-            <p class="auth-alt"><%= notice || alert %></p>
-          <% end %>
         </div>
       </div>
     </div>

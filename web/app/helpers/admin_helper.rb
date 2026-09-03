@@ -32,38 +32,6 @@ module AdminHelper
     ROLE_NOTES.fetch(name.to_s, "")
   end
 
-  CHANGE_WORDS = {
-    ["grant", "granted"] => "Gave access",
-    ["grant", "revoked"] => "Took access back",
-    ["community_grant", "granted"] => "Gave community access",
-    ["community_grant", "revoked"] => "Took community access back",
-    ["capability_grant", "granted"] => "Gave one capability",
-    ["capability_grant", "revoked"] => "Took one capability away",
-    ["permission", "granted"] => "Gave to a role",
-    ["permission", "revoked"] => "Took from a role",
-    ["flag", "turned_on"] => "Turned a section on",
-    ["flag", "turned_off"] => "Turned a section off",
-    ["channel_audience", "granted"] => "Opened a channel up",
-    ["channel_audience", "revoked"] => "Made a channel private"
-  }.freeze
-
-  def change_head(entry)
-    CHANGE_WORDS.fetch([entry.entity_type, entry.verb], entry.verb.tr("_", " ").capitalize)
-  end
-
-  def change_said(entry)
-    said = entry.after || {}
-    case entry.entity_type
-    when "grant", "community_grant"
-      [names[said["user_id"]], said["role"]].compact.join(", ").presence
-    when "capability_grant"
-      [names[said["user_id"]], said["capability"]].compact.join(", ").presence
-    when "permission" then [said["permission"], said["role"]].compact.join(" · ").presence
-    when "flag" then said["flag"]
-    when "channel_audience" then channel_label(entry.entity_ref)
-    end || tag.span("n/a", class: "sub2")
-  end
-
   AUDIENCE_TONE = { "public" => "chip chip-warn", "everyone" => "chip chip-warn" }.freeze
 
   AUDIENCE_NOTE = {

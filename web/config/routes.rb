@@ -67,7 +67,7 @@ Rails.application.routes.draw do
   get "fd/settings", to: redirect("/account")
 
   namespace :admin do
-    root to: "overview#index"
+    root to: "people#index"
     resources :people, only: [:index, :show], param: :user_id do
       collection { get "search" }
     end

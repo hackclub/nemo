@@ -19,6 +19,8 @@ module Admin
         .where(actor_user_id: @people).group(:actor_user_id).count
       @busiest = @acted.values.max || 0
       @bands = band(narrow(@people))
+      @moved = Authz.keys.select { |key| Authz::Override.moved?(key) }
+      @dark = Fd::Flag::KEYS.reject { |key| Fd::Flag.on?(key) }
     end
 
     def search

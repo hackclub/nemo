@@ -1,5 +1,22 @@
 <% content_for :page_title, "People" %>
 
+    <% if @moved.any? || @dark.any? %>
+      <div class="dup dup-calm">
+        <% if @moved.any? %>
+          <span>
+            <%= link_to admin_roles_path, class: "lnk" do %><b><%= @moved.size %></b><% end %>
+            <%= "permission".pluralize(@moved.size) %> off default.
+          </span>
+        <% end %>
+        <% if @dark.any? %>
+          <span>
+            <%= link_to admin_flags_path, class: "lnk" do %><b><%= @dark.size %></b><% end %>
+            <%= @dark.one? ? "flag is" : "flags are" %> off.
+          </span>
+        <% end %>
+      </div>
+    <% end %>
+
     <%= form_with url: admin_people_path, method: :get, class: "qbar" do %>
       <%= hidden_field_tag :role, @role, id: nil if @role %>
       <input class="field" type="search" name="q" value="<%= @term %>"

@@ -3351,35 +3351,6 @@
     font-weight: 600;
   }
 
-  .bar-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: baseline;
-    gap: 4px var(--s-2xs);
-    padding: 8px 11px;
-    border-bottom: 1px solid var(--line-soft);
-    font-size: var(--t-small);
-  }
-
-  .fbox > .rows > .bar-row:last-child {
-    border-bottom: 0;
-  }
-
-  .bar-track {
-    grid-column: 1 / -1;
-    height: 4px;
-    border-radius: 2px;
-    background-color: var(--line);
-    overflow: hidden;
-  }
-
-  .bar-fill {
-    display: block;
-    height: 100%;
-    border-radius: 2px;
-    background-color: var(--ink-3);
-  }
-
   .data-table tbody td.said-cell,
   .data-table tbody td:has(> .two-line):not(.col-num):not(.num),
   .data-table tbody td:has(> .row-name):not(.col-num):not(.num) {
@@ -6989,6 +6960,8 @@
     font-weight: 600;
     letter-spacing: -0.02em;
     color: var(--ink);
+    margin-top: var(--s-sm);
+    margin-bottom: var(--s-sm);
   }
 
   .auth-card .auth-alt {
