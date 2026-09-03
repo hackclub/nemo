@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { reloadFrame } from "turbo_actions"
+import { catchUp } from "turbo_actions"
 
 export default class extends Controller {
   static values = { frame: String }
@@ -7,6 +7,9 @@ export default class extends Controller {
   connect() {
     this.dropped = false
     this.onChange = this.onChange.bind(this)
+    this.onVisible = this.onVisible.bind(this)
+
+    document.addEventListener("visibilitychange", this.onVisible)
 
     const source = this.source
     if (!source) return
@@ -16,6 +19,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    document.removeEventListener("visibilitychange", this.onVisible)
     if (this.watch) this.watch.disconnect()
   }
 
@@ -38,7 +42,11 @@ export default class extends Controller {
     this.catchUp()
   }
 
+  onVisible() {
+    if (document.visibilityState === "visible") this.catchUp()
+  }
+
   catchUp() {
-    reloadFrame(document.getElementById(this.frameValue))
+    catchUp(document.getElementById(this.frameValue))
   }
 }

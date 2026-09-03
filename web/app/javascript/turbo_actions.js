@@ -48,6 +48,18 @@ export function reloadFrame(frame, src = null, version = null) {
   fullReload(frame, want)
 }
 
+export function catchUp(frame) {
+  if (!frame || frame.dataset.pendingVersion) return
+
+  const want = frame.dataset.src
+  const held = frame.querySelector("[data-version]")?.dataset.version
+  if (!want) return
+  if (!held) return fullReload(frame, want)
+
+  frame.dataset.pendingVersion = held
+  fetchChanges(frame, want, held)
+}
+
 Turbo.StreamActions.reload_frame = function () {
   reloadFrame(document.getElementById(this.target), this.getAttribute("src"),
     this.getAttribute("version"))
