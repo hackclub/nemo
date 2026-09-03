@@ -51,7 +51,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     get "/auth/hackclub/callback"
 
-    assert_redirected_to auth_failure_path(message: "not_allowlisted")
+    assert_redirected_to auth_failure_path(message: "no_slack_id")
   end
 
   test "logout clears the session" do

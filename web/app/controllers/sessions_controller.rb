@@ -12,7 +12,7 @@ class SessionsController < ApplicationController
 
     if slack_id.blank?
       reset_session
-      return redirect_to auth_failure_path(message: "not_allowlisted")
+      return redirect_to auth_failure_path(message: "no_slack_id")
     end
 
     staff = Account.find_or_create_by!(user_id: slack_id)

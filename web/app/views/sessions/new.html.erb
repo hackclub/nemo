@@ -1,8 +1,7 @@
 <h1>Sign in</h1>
-<p>Only people a community manager has given access can sign in.</p>
+<p>Use the Hack Club account linked to your Slack.</p>
 
 <%= form_tag "/auth/hackclub", method: :post, authenticity_token: false, data: { turbo: false } do %>
   <%= hidden_field_tag :authenticity_token, Rack::Protection::AuthenticityToken.token(session) %>
-  <%= submit_tag "Continue with Hack Club auth", class: "btn btn-primary w-full",
-        data: { turbo_submits_with: "redirecting" } %>
+  <%= submit_tag "Continue with Hack Club Auth", class: "btn btn-primary w-full" %>
 <% end %>

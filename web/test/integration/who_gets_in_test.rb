@@ -87,11 +87,11 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
   end
 
   test "the refusal says one thing, and offers the way back" do
-    get auth_failure_path(message: "not_allowlisted")
+    get auth_failure_path(message: "no_slack_id")
 
     assert_response :success
-    assert_select "h1", text: "Access denied"
-    assert_select "p", text: /You are not allowlisted/
+    assert_select "h1", text: "Sign-in did not finish"
+    assert_select "p", text: /no Slack ID linked/
     assert_select "a[href=?]", login_path
     assert_select ".auth-alt", count: 0
   end
