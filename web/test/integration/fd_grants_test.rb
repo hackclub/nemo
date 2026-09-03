@@ -123,10 +123,10 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     Authz::Grant.give!("U0AFF1", kind: "role", name: "firefighter", by: "UME")
 
     get admin_people_path
-    assert_select "label[for=give-access]", text: "Give access"
+    assert_select "button[data-modal-open=give-access]", text: "Give access"
 
     get admin_person_path("U0AFF1")
-    assert_select "label[for=give-access]", text: "Edit access"
+    assert_select "button[data-modal-open=give-access]", text: "Edit access"
 
     delete logout_path
     lead = Account.create!(user_id: "ULEAD")

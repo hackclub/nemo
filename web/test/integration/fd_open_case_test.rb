@@ -25,7 +25,7 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     get fd_cases_path
 
     assert_response :success
-    assert_select "label[for=open-case]", text: "Open a case"
+    assert_select "button[data-modal-open=open-case]", text: "Open a case"
     assert_select "input#open-case.modal-flip"
     assert_select "input#open-case[checked]", count: 0
     assert_select "form[action=?] .pick[data-member-picker-name-value='subject_user_ids[]']",

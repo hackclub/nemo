@@ -119,7 +119,10 @@ export default class extends Controller {
     this.picked = { id, name }
     this.render()
     const flip = this.element.querySelector(".modal-flip")
-    if (flip) flip.checked = false
+    if (flip) {
+      flip.checked = false
+      flip.dispatchEvent(new Event("change", { bubbles: true }))
+    }
     if (this.submitValue) this.element.closest("form")?.requestSubmit()
   }
 

@@ -5,7 +5,8 @@
      data-channel-picker-name-value="<%= field %>"
      data-channel-picker-url-value="<%= search_admin_channels_path %>"
      data-channel-picker-submit-value="<%= local_assigns.fetch(:submit, false) %>">
-  <label for="<%= id %>" class="btn" data-action="click->channel-picker#opened"><%= said %></label>
+  <button type="button" class="btn" data-modal-open="<%= id %>" aria-haspopup="dialog"
+          data-action="click->channel-picker#opened"><%= said %></button>
   <span data-channel-picker-target="chosen" class="pick-chosen"></span>
   <span data-channel-picker-target="store"></span>
 
@@ -23,7 +24,7 @@
       <p class="card-note" data-channel-picker-target="count"></p>
     </div>
     <div class="modal-foot">
-      <label for="<%= id %>" class="btn btn-ghost">Cancel</label>
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
     </div>
   <% end %>
 </div>

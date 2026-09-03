@@ -1185,7 +1185,8 @@ module FdHelper
     why = why_not(key, on)
     body = block ? capture(&block) : text
     if why.nil?
-      return tag.label(body, for: opens, class: css, tabindex: "0", role: "button")
+      return tag.button(body, type: "button", class: css, data: { modal_open: opens },
+        aria: { haspopup: "dialog" })
     end
 
     dead_button(body, why, css)

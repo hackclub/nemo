@@ -43,11 +43,11 @@ class FdGatingTest < ActionDispatch::IntegrationTest
     get fd_case_path(kase)
 
     assert_select ".ractions details.menu[data-controller=menu]", 1
-    live = css_select(".ractions details.menu .menu-pop label")
-    assert live.any?, "the menu opens modals through labels"
-    live.each do |label|
-      assert_equal "0", label["tabindex"],
-        "a bare label is not in the tab order, so #{label.text.strip} was unreachable"
+    live = css_select(".ractions details.menu .menu-pop [data-modal-open]")
+    assert live.any?, "the menu opens modals through buttons"
+    live.each do |opener|
+      assert_equal "button", opener.name,
+        "#{opener.text.strip} must be a real button so Enter and Space open it"
     end
   end
 
@@ -68,7 +68,7 @@ class FdGatingTest < ActionDispatch::IntegrationTest
 
     assert_nil dead("Resolve")
     assert_nil dead("Log an action")
-    assert_select "label[for=?]", "resolve-case", text: "Resolve"
+    assert_select "button[data-modal-open=?]", "resolve-case", text: "Resolve"
   end
 
   test "a resolved case anybody can reopen, whoever it was assigned to" do

@@ -178,7 +178,7 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
   test "the violation can still be set once it stopped being a blocker" do
     get fd_case_path(@kase)
 
-    assert_select ".menu-pop label[for=set-category]", 1,
+    assert_select ".menu-pop button[data-modal-open=set-category]", 1,
       "taking it out of the banner must not make it unreachable"
   end
 

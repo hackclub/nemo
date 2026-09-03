@@ -90,7 +90,7 @@
             form: { class: "contents", data: { turbo_confirm:
               "Take everything back from #{names[person]}?" } } %>
     <% end %>
-    <label for="give-access" class="btn btn-ghost">Cancel</label>
+    <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
     <%= submit_tag(person ? "Save" : "Give it", class: "btn btn-primary",
           form: "give-access-form") %>
   </div>

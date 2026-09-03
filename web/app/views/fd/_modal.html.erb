@@ -1,9 +1,11 @@
-<div class="modal-host">
-  <input type="checkbox" id="<%= id %>" class="modal-flip" autocomplete="off"
+<div class="modal-host" data-controller="modal" data-modal-id-value="<%= id %>">
+  <input type="checkbox" id="<%= id %>" class="modal-flip" autocomplete="off" tabindex="-1"
+         aria-hidden="true" data-modal-target="flip" data-action="change->modal#sync"
          <%= "checked" if local_assigns[:open] %>>
   <label for="<%= id %>" class="modal-veil" aria-hidden="true"></label>
   <div class="modal-wrap">
-    <div class="modal" role="dialog" aria-label="<%= local_assigns[:label] || title %>">
+    <div class="modal" role="dialog" aria-modal="true" tabindex="-1"
+         aria-label="<%= local_assigns[:label] || title %>" data-modal-target="box">
       <div class="modal-head">
         <h2 class="modal-title"><%= title %></h2>
         <% if local_assigns[:sub].present? %>

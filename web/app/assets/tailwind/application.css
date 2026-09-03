@@ -2673,8 +2673,9 @@
     place-items: center;
     padding: var(--s-md);
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
-    transition: opacity var(--dur) var(--ease-out);
+    transition: opacity var(--dur) var(--ease-out), visibility var(--dur);
   }
 
   .menu {
@@ -4904,6 +4905,11 @@
 
   .modal-host:has(> .modal-flip:checked) > .modal-wrap {
     opacity: 1;
+    visibility: visible;
+  }
+
+  .modal:focus {
+    outline: none;
   }
 
   .modal-host:has(> .modal-flip:checked) > .modal-wrap > .modal {

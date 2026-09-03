@@ -202,7 +202,7 @@
       </div>
       <div class="modal-foot">
         <p class="modal-note">It stops standing. The record keeps both it and the reversal.</p>
-        <label for="reverse-<%= action.id %>" class="btn btn-ghost">Cancel</label>
+        <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
         <%= submit_tag "Reverse it", class: "btn btn-primary" %>
       </div>
     <% end %>
@@ -228,7 +228,7 @@
 
     </div>
     <div class="modal-foot">
-      <label for="log-action" class="btn btn-ghost">Cancel</label>
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
       <%= submit_tag "Log it", class: "btn btn-primary" %>
     </div>
   <% end %>
@@ -258,7 +258,7 @@
       </div>
     </div>
     <div class="modal-foot">
-      <label for="attach-thread" class="btn btn-ghost">Cancel</label>
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
       <%= submit_tag "Attach", class: "btn btn-primary" %>
     </div>
   <% end %>
@@ -291,7 +291,7 @@
       <%= field_wrong(:category_key) %>
     </div>
     <div class="modal-foot">
-      <label for="set-category" class="btn btn-ghost">Cancel</label>
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
       <%= submit_tag "Set it", class: "btn btn-primary" %>
     </div>
   <% end %>
@@ -329,7 +329,7 @@
       <%= field_wrong(:body) %>
     </div>
     <div class="modal-foot">
-      <label for="add-note" class="btn btn-ghost">Cancel</label>
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
       <%= submit_tag "Save the note", class: "btn btn-primary" %>
     </div>
   <% end %>
@@ -387,7 +387,7 @@
           <% if @open_reports.positive? %>
             <p class="modal-note">A reply to the reporter cannot be unsent.</p>
           <% end %>
-          <label for="resolve-case" class="btn btn-ghost">Cancel</label>
+          <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
           <%= submit_tag "Resolve", class: "btn btn-primary" %>
         </div>
       <% end %>

@@ -68,7 +68,7 @@
             <%= link_to "Add to ##{@open_for_subject.first.id} instead",
                   fd_case_path(@open_for_subject.first), class: "btn btn-aside" %>
           <% end %>
-          <label for="open-case" class="btn btn-ghost">Cancel</label>
+          <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
           <% if @open_for_subject.any? %>
             <%= button_tag "Open it anyway, this is separate", name: "separate", value: "1",
                   class: "btn btn-primary" %>

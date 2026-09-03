@@ -25,6 +25,7 @@ export default class extends Controller {
     const asked = new URLSearchParams()
     ticked.forEach((box) => asked.append("case_ids[]", box.value))
     flip.checked = true
+    flip.dispatchEvent(new Event("change", { bubbles: true }))
     frame.src = `${this.urlValue}?${asked}`
   }
 

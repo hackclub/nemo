@@ -18,7 +18,7 @@
               method: :delete, class: "btn btn-ghost btn-undo",
               form: { class: "contents" } %>
       <% end %>
-      <label for="follow-decision" class="btn btn-ghost">Cancel</label>
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
       <%= submit_tag "Record it", class: "btn btn-primary" %>
     </div>
   <% end %>

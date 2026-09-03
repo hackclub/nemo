@@ -5,7 +5,7 @@
       <%= render "fd/decisions/words", decision: nil, with_reasons: false %>
     </div>
     <div class="modal-foot">
-      <label for="new-decision" class="btn btn-ghost">Cancel</label>
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
       <%= submit_tag "Write it down", class: "btn btn-primary" %>
     </div>
   <% end %>

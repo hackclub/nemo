@@ -128,7 +128,7 @@ class FdActionsTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase)
 
     assert_select "input#log-action.modal-flip"
-    assert_select ".menu-pop label[for=log-action]"
+    assert_select ".menu-pop button[data-modal-open=log-action]"
     assert_select "form[action=?] select[name=type_key]", fd_case_actions_path(@kase)
   end
 

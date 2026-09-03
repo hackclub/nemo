@@ -116,7 +116,7 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
 
     get fd_case_path(@kase, tab: "actions")
     assert_select ".chip", text: "reversed"
-    assert_select "label[for=?]", "reverse-#{@action.id}", count: 0
+    assert_select "button[data-modal-open=?]", "reverse-#{@action.id}", count: 0
     assert_select "input##{'reverse-' + @action.id.to_s}", count: 0
   end
 

@@ -71,11 +71,11 @@ class DecisionsFlagTest < ActionDispatch::IntegrationTest
     kase = make_case
 
     get fd_case_path(kase)
-    assert_select "label[for=follow-decision]", minimum: 1
+    assert_select "button[data-modal-open=follow-decision]", minimum: 1
 
     turn_it_off
     get fd_case_path(kase)
-    assert_select "label[for=follow-decision]", count: 0
+    assert_select "button[data-modal-open=follow-decision]", count: 0
     assert_response :success
   end
 
