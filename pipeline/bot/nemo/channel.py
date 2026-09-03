@@ -950,13 +950,7 @@ def register(app, on_reply=None):
             text=cards.resolve.done(said, case_id, told),
         )
 
-    def may_answer(event, thread_ts, client):
-        with session() as conn:
-            case_id = chat.case_of_thread(conn, thread_ts)
-            allowed, refusal = access.may(conn, event.get("user"), "case.reply", case_id)
-        if allowed:
-            return True
-
+    def say_no(event, thread_ts, client, said, refusal):
         try:
             client.reactions_add(
                 channel=event["channel"], timestamp=event["ts"], name=answer.STUCK
@@ -965,10 +959,19 @@ def register(app, on_reply=None):
                 channel=event["channel"],
                 user=event["user"],
                 thread_ts=thread_ts,
-                text=f"nothing was sent. {refusal}",
+                text=f"{said}. {refusal}",
             )
         except Exception as failure:
-            log.warning("nemo: could not say why the answer was refused: %s", failure)
+            log.warning("nemo: could not say why it was refused: %s", failure)
+
+    def may_answer(event, thread_ts, client):
+        with session() as conn:
+            case_id = chat.case_of_thread(conn, thread_ts)
+            allowed, refusal = access.may(conn, event.get("user"), "case.reply", case_id)
+        if allowed:
+            return True
+
+        say_no(event, thread_ts, client, "nothing was sent", refusal)
         log.info("nemo: refused an answer from %s on case %s", event.get("user"), case_id)
         return False
 
@@ -991,7 +994,7 @@ def register(app, on_reply=None):
 
         aimed = answer.read(event.get("text"))
         if aimed is None:
-            return ours(event, thread_ts)
+            return ours(event, thread_ts, client)
 
         if on_reply is None:
             return
@@ -1006,11 +1009,19 @@ def register(app, on_reply=None):
             at=(event["channel"], event["ts"]),
         )
 
-    def ours(event, thread_ts):
+    def ours(event, thread_ts, client):
         with session() as conn:
             case_id = chat.case_of_thread(conn, thread_ts)
             if case_id is None:
                 return
+            allowed, refusal = access.may(conn, event.get("user"), "case.chat", case_id)
+
+        if not allowed:
+            say_no(event, thread_ts, client, "nothing was kept", refusal)
+            log.info("nemo: refused chat from %s on case %s", event.get("user"), case_id)
+            return
+
+        with session() as conn:
             chat_id, fresh = chat.keep(conn, case_id, event)
 
         if fresh:
