@@ -18,7 +18,7 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
 
   test "the roles table offers a switch to a manager, and nobody else gets in" do
     get admin_roles_path
-    assert_equal "button", switch_for("member.note", "firefighter").name
+    assert_equal "button", switch_for("slack.link", "firefighter").name
 
     drop_roles!("UME")
     hold_role!("UME", "firefighter")
@@ -28,29 +28,29 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
   end
 
   test "moving a permission changes what the table says and what is enforced" do
-    move("firefighter", "member.note", "0")
+    move("firefighter", "slack.link", "0")
 
     assert_redirected_to admin_roles_path
     follow_redirect!
-    assert_equal "off", switch_for("member.note", "firefighter").text.strip
-    refute Authz::Override.find_by(role: "firefighter", capability: "member.note").allowed
+    assert_equal "off", switch_for("slack.link", "firefighter").text.strip
+    refute Authz::Override.find_by(role: "firefighter", capability: "slack.link").allowed
   end
 
   test "a moved key is marked, and unmarked when it goes back" do
-    move("firefighter", "member.note", "0")
-    assert_equal false, Authz::Override.find_by(role: "firefighter", capability: "member.note").allowed
+    move("firefighter", "slack.link", "0")
+    assert_equal false, Authz::Override.find_by(role: "firefighter", capability: "slack.link").allowed
 
-    move("firefighter", "member.note", "1")
-    assert_equal true, Authz::Override.find_by(role: "firefighter", capability: "member.note").allowed
+    move("firefighter", "slack.link", "1")
+    assert_equal true, Authz::Override.find_by(role: "firefighter", capability: "slack.link").allowed
   end
 
   test "every move is written to the audit with the pair it changed" do
-    move("firefighter", "member.note", "0")
+    move("firefighter", "slack.link", "0")
 
     entry = Fd::AuditEntry.where(entity_type: "permission").recent_first.first
     assert_equal ["revoked", "UME"], [entry.verb, entry.actor_user_id]
-    assert_equal "firefighter/member.note", entry.entity_ref
-    assert_equal({ "permission" => "member.note", "role" => "firefighter",
+    assert_equal "firefighter/slack.link", entry.entity_ref
+    assert_equal({ "permission" => "slack.link", "role" => "firefighter",
                    "allowed" => false }, entry.after)
   end
 
@@ -76,15 +76,15 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
   end
 
   test "a manager keeps a capability even after every other role loses it" do
-    move("firefighter", "member.note", "0")
+    move("firefighter", "slack.link", "0")
 
     assert_nil flash[:alert]
-    refute Authz.holds?(hold_role!("UFFONLY", "firefighter"), "member.note")
-    assert Authz.holds?(@me, "member.note"), "a manager holds everything"
+    refute Authz.holds?(hold_role!("UFFONLY", "firefighter"), "slack.link")
+    assert Authz.holds?(@me, "slack.link"), "a manager holds everything"
   end
 
   test "the superadmin role has nothing to move" do
-    move("community_manager", "member.note", "0")
+    move("community_manager", "slack.link", "0")
 
     assert_equal "community_manager holds everything already", flash[:alert]
   end
@@ -100,7 +100,7 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
   end
 
   test "the move shows up in what that manager did" do
-    move("firefighter", "member.note", "0")
+    move("firefighter", "slack.link", "0")
 
     get admin_person_path("UME", did: "access.grant")
 

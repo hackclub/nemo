@@ -51,13 +51,14 @@ class AuthzTest < ActiveSupport::TestCase
   test "nobody holds anything without a grant, apart from every-account keys" do
     nobody = Account.new(user_id: "UNOBODY9")
 
-    assert Authz.may?(nobody, "slack.link")
+    assert Authz.may?(nobody, "channel.read")
+    assert_not Authz.may?(nobody, "slack.link")
     assert_not Authz.may?(nobody, "case.read")
     assert_not Authz.may?(nobody, "access.grant")
   end
 
   test "a nil account holds nothing at all" do
-    assert_not Authz.may?(nil, "slack.link")
+    assert_not Authz.may?(nil, "channel.read")
     assert_not Authz.may?(nil, "case.read")
   end
 end

@@ -124,16 +124,16 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
     assert_not_includes ids, other.channel_id
   end
 
-  test "a channel grant without channel.read shows nothing, so the picker must grant both" do
+  test "a channel grant is enough on its own, channel.read is everyone's by default" do
     _open, granted, = some_channels
-    staff = reads_names
+    staff = holding_nothing
     Channels::Audience::Grant.create!(user_id: staff.user_id, channel_id: granted.channel_id,
       granted_by: @boss.user_id, granted_at: Time.current)
     Current.forget_roles
 
     ids = Channels::Audience.for(staff).pluck(:channel_id)
 
-    assert_not_includes ids, granted.channel_id
+    assert_includes ids, granted.channel_id
   end
 
   test "a channel outside your audience sends you back with the reason, not an error page" do
@@ -197,7 +197,7 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
       post opt_in_channel_path(channel.channel_id)
     end
 
-    assert_match(/Analytics only/, flash[:alert])
+    assert_match(/Community manager only/, flash[:alert])
   end
 
   test "channel.backfill alone is stopped by the ceiling, and told what it would cost" do

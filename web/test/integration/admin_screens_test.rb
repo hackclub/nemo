@@ -69,7 +69,7 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
 
   test "the roles matrix says how many sit off default" do
     sign_in_as(@boss)
-    move_capability!("firefighter", "member.note", false, by: @boss.user_id)
+    move_capability!("firefighter", "slack.link", false, by: @boss.user_id)
 
     get admin_roles_path
 

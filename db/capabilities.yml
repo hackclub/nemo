@@ -21,6 +21,7 @@ roles:
       - case.reopen
       - member.note
       - identity.read
+      - slack.link
     grantable: true
 
   promethean:
@@ -36,11 +37,8 @@ roles:
   analytics:
     label: Analytics
     capabilities:
-      - member.read
       - channel.read
       - channel.all
-      - channel.share
-      - channel.backfill
     grantable: true
 
 areas:
@@ -136,6 +134,7 @@ capabilities:
   member.note:
     label: Write a standing note about a member
     area: member
+    locked: true
 
   member.read:
     label: See member names in the analytics
@@ -151,6 +150,7 @@ capabilities:
     label: See the analytics for a channel they hold
     area: channel
     record_scope: channel
+    every_account: true
 
   channel.all:
     label: See the analytics for every channel
@@ -159,6 +159,7 @@ capabilities:
   channel.share:
     label: Set a channel's audience, and name who may read it
     area: channel
+    locked: true
     events: [channel_audience/granted, channel_audience/revoked]
 
   channel.backfill:
@@ -184,7 +185,6 @@ capabilities:
   slack.link:
     label: Link their own Slack account, to send as themselves
     area: slack
-    every_account: true
     events: [slack_account/linked, slack_account/unlinked]
 
   access.read:

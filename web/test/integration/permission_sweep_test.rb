@@ -337,16 +337,15 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
   # 17. taking a capability away really takes it away
   test "a denied capability is refused even though the role carries it" do
     id = become("firefighter")
-    assert Authz.holds?(Account.find(id), "member.note"), "the role should carry it"
+    assert Authz.holds?(Account.find(id), "slack.link"), "the role should carry it"
 
-    Authz::Grant.give!(id, kind: "capability", name: "member.note", effect: "deny", by: "sweep")
+    Authz::Grant.give!(id, kind: "capability", name: "slack.link", effect: "deny", by: "sweep")
     Current.forget_roles
 
-    refute Authz.holds?(Account.find(id), "member.note"), "the denial did not bite"
-    post "/fd/members/USUB/notes", params: { body: "x" }
+    refute Authz.holds?(Account.find(id), "slack.link"), "the denial did not bite"
+    delete "/fd/slack_account"
 
     refute_equal 200, response.status, "acted with the capability denied"
-    assert_equal 0, Fd::Note.where(subject_user_id: "USUB").count
   end
 
   # 18. identity.read is FD only, it cannot be moved off a firefighter one person at a time

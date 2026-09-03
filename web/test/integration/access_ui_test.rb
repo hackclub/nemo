@@ -24,15 +24,15 @@ class AccessUiTest < ActionDispatch::IntegrationTest
   end
 
   test "a manager takes one capability off a firefighter, and puts it back" do
-    assert_includes held.keys, "member.note"
+    assert_includes held.keys, "slack.link"
 
     patch admin_person_capability_path(@them.user_id),
-      params: { key: "member.note", effect: "deny" }
+      params: { key: "slack.link", effect: "deny" }
     assert_redirected_to admin_person_path(@them.user_id)
-    assert_not_includes held.keys, "member.note", "the deny takes it off them"
+    assert_not_includes held.keys, "slack.link", "the deny takes it off them"
 
-    delete admin_person_capability_path(@them.user_id), params: { key: "member.note" }
-    assert_includes held.keys, "member.note", "back to the role default"
+    delete admin_person_capability_path(@them.user_id), params: { key: "slack.link" }
+    assert_includes held.keys, "slack.link", "back to the role default"
   end
 
   test "a manager gives a capability no role carries" do
@@ -52,7 +52,7 @@ class AccessUiTest < ActionDispatch::IntegrationTest
     assert_not_includes held.keys, "access.grant"
   end
 
-  test "naming a firefighter on a channel keeps their role and adds channel.read" do
+  test "naming a firefighter on a channel keeps their role, and they can already see it" do
     channel = Analytics::DimChannel.where(archived: false).first
     assert_not_includes held.keys, "channel.read"
 
@@ -60,7 +60,7 @@ class AccessUiTest < ActionDispatch::IntegrationTest
       params: { channel_id: channel.channel_id }
 
     assert_equal ["firefighter"], Authz.roles_held(@them.user_id), "they are not demoted"
-    assert_equal "added", held["channel.read"]
+    assert_not_includes held.keys, "channel.read", "everybody already holds it, nothing to add"
     assert Channels::Audience.may_see?(@them, channel)
   end
 
