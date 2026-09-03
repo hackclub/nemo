@@ -42,17 +42,14 @@ module Fd
 
       held = @case.assignee_user_ids
       was = { "resolved_at" => @case.resolved_at, "resolution" => @case.resolution,
-              "duplicate_of" => @case.duplicate_of,
-              "followed_decision_id" => @case.followed_decision_id,
-              "assignees" => held }
+              "duplicate_of" => @case.duplicate_of, "assignees" => held }
 
       writing do
-        @case.update!(resolved_at: nil, resolution: nil, duplicate_of: nil,
-          followed_decision_id: nil, updated_at: @now)
+        @case.update!(resolved_at: nil, resolution: nil, duplicate_of: nil, updated_at: @now)
         @case.assignees.destroy_all
         audit(@case, "reopened", before: was,
           after: { "resolved_at" => nil, "resolution" => nil, "duplicate_of" => nil,
-                   "followed_decision_id" => nil, "assignees" => [] })
+                   "assignees" => [] })
       end
 
       redirect_to fd_case_path(@case), notice: "case #{@case.id} is open again"

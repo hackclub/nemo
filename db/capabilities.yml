@@ -19,10 +19,6 @@ roles:
       - case.resolve
       - case.reverse
       - case.reopen
-      - decision.write
-      - decision.link
-      - decision.settle
-      - decision.retire
       - member.note
       - identity.read
     grantable: true
@@ -45,15 +41,10 @@ roles:
       - channel.all
       - channel.share
       - channel.backfill
-      - engine.read
-      - engine.stage
-      - engine.sync
-      - engine.tune
     grantable: true
 
 areas:
   case: Cases
-  decision: Decisions
   member: People
   identity: People
   channel: Channels
@@ -68,88 +59,79 @@ capabilities:
   case.read:
     label: Read every case, note and thread
     area: case
+    locked: true
     events: [member/looked_up]
 
   case.open:
     label: Open a case, claim it, hand it back
     area: case
+    locked: true
     events: [case/opened, assignee/claimed, assignee/unclaimed, assignee/attached, assignee/detached]
 
   case.categorise:
     label: Set the violation on a case
     area: case
     record_scope: assigned
+    locked: true
     events: [case/categorised]
 
   case.note:
     label: Write a note, delete their own
     area: case
     record_scope: author
+    locked: true
     events: [note/noted, note/deleted]
 
   case.people:
     label: Add somebody, take somebody off
     area: case
     record_scope: assigned
+    locked: true
     events: [participant/attached, participant/detached]
 
   case.thread:
     label: Attach a thread, flag a message
     area: case
     record_scope: assigned
+    locked: true
     events: [thread/attached, thread/detached, citation/flagged, citation/unflagged]
 
   case.chat:
     label: Talk to the team on a case
     area: case
+    locked: true
 
   case.reply:
     label: Answer the reporter
     area: case
+    locked: true
     events: [report/answered]
 
   case.act:
     label: Log an action against somebody
     area: case
     record_scope: assigned
+    locked: true
     events: [action/performed]
 
   case.resolve:
     label: Resolve a case, mark a duplicate
     area: case
+    locked: true
     events: [case/resolved]
 
   case.reverse:
     label: Reverse an action somebody logged
     area: case
     record_scope: assigned
+    locked: true
     events: [action/reversed]
 
   case.reopen:
     label: Put a resolved case back in the queue
     area: case
+    locked: true
     events: [case/reopened]
-
-  decision.write:
-    label: Propose one, reword any of them, drop their own
-    area: decision
-    record_scope: author
-    events: [decision/proposed, decision/amended, decision/dropped]
-
-  decision.link:
-    label: Link threads, link a case to a decision
-    area: decision
-    events: [decision_thread/attached, decision_thread/detached, case/followed, case/unfollowed]
-
-  decision.settle:
-    label: Settle a proposal, putting it in force
-    area: decision
-    events: [decision/settled]
-
-  decision.retire:
-    label: Supersede or retire a rule
-    area: decision
-    events: [decision/superseded]
 
   member.note:
     label: Write a standing note about a member
@@ -162,6 +144,7 @@ capabilities:
   identity.read:
     label: See the real name and email behind an id
     area: identity
+    locked: true
     logged: true
 
   channel.read:

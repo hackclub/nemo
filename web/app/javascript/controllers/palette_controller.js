@@ -7,7 +7,6 @@ export default class extends Controller {
   static kinds = {
     member: "members", members: "members",
     case: "cases", cases: "cases",
-    decision: "decisions", decisions: "decisions",
     note: "notes", notes: "notes",
     report: "reports", reports: "reports",
   }
@@ -82,8 +81,8 @@ export default class extends Controller {
     const asked = new URLSearchParams({ q: term })
     if (this.only) asked.set("scope", this.only)
     if (this.hasOnValue && this.onValue) {
-      const [key, id] = this.onValue.split(":")
-      asked.set(key === "case" ? "on_case" : "on_decision", id)
+      const [, id] = this.onValue.split(":")
+      asked.set("on_case", id)
     }
 
     let payload
@@ -114,7 +113,7 @@ export default class extends Controller {
   adopt(scope) {
     if (!scope || scope === this.only || scope === "command") return
 
-    const marks = { "@": "member", "#": "case", "d:": "decision", "n:": "note", "r:": "report" }
+    const marks = { "@": "member", "#": "case", "n:": "note", "r:": "report" }
     const typed = this.inputTarget.value.toLowerCase()
     const mark = Object.keys(marks).find((one) => typed.startsWith(one) && marks[one] === scope)
     if (!mark) return

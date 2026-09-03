@@ -1,8 +1,7 @@
 module Fd
   class SearchesController < BaseController
     permit "case.read"
-    ICONS = { "member" => "👤", "case" => "📁", "decision" => "📓",
-              "note" => "📝", "report" => "📨" }.freeze
+    ICONS = { "member" => "👤", "case" => "📁", "note" => "📝", "report" => "📨" }.freeze
 
     PAGE_LIMIT = 20
 
@@ -58,26 +57,18 @@ module Fd
       end
     end
 
-    def decisions?
-      Flag.on?(:decisions)
-    end
-
     def commands
       here + [
         { kind: "do", icon: "⚡", title: "Open a case", sub: nil, key: "case.open",
           url: fd_cases_path(open: "1") },
-        ({ kind: "do", icon: "📓", title: "Write a decision", sub: nil, key: "decision.write",
-           url: fd_decisions_path(new: "1") } if decisions?),
         { kind: "do", icon: "📁", title: "Go to the cases", sub: nil, url: fd_cases_path },
-        { kind: "do", icon: "👤", title: "Go to the members", sub: nil, url: fd_members_path },
-        ({ kind: "do", icon: "📓", title: "Go to the decisions", sub: nil,
-           url: fd_decisions_path } if decisions?)
+        { kind: "do", icon: "👤", title: "Go to the members", sub: nil, url: fd_members_path }
       ].compact
     end
 
     def here
       kase = Case.find_by(id: params[:on_case])
-      return decision_commands if kase.nil?
+      return [] if kase.nil?
 
       on = "on case #{kase.id}"
       [
@@ -88,25 +79,8 @@ module Fd
         { kind: "do", icon: "📝", title: "Add a note", sub: on,
           key: "case.note", url: fd_case_path(kase, do: "note") },
         { kind: "do", icon: "🔗", title: "Attach a thread", sub: on,
-          key: "case.thread", on: kase, url: fd_case_path(kase, do: "thread") },
-        ({ kind: "do", icon: "📓", title: "Link a decision", sub: on,
-           key: "decision.link", url: fd_case_path(kase, do: "decision") } if decisions?)
+          key: "case.thread", on: kase, url: fd_case_path(kase, do: "thread") }
       ].compact
-    end
-
-    def decision_commands
-      return [] unless decisions?
-
-      decision = Decision.find_by(id: params[:on_decision])
-      return [] if decision.nil?
-
-      on = "on #{decision.title}"
-      [
-        { kind: "do", icon: "📝", title: "Edit the wording", sub: on, key: "decision.write",
-          url: fd_decision_path(decision, do: "edit") },
-        { kind: "do", icon: "🔗", title: "Link threads", sub: on, key: "decision.link",
-          url: fd_decision_path(decision, do: "threads") }
-      ]
     end
 
     def shown(found)
@@ -121,13 +95,11 @@ module Fd
 
     def resting
       [
-        { key: "waiting", label: "Waiting on you", total: 2, rows: waiting },
-        { key: "do", label: "Do", total: 2, rows: gated([
+        { key: "waiting", label: "Waiting on you", total: 1, rows: waiting },
+        { key: "do", label: "Do", total: 1, rows: gated([
           { kind: "do", icon: "⚡", title: "Open a case", sub: nil, key: "case.open",
-            url: fd_cases_path },
-          ({ kind: "do", icon: "📓", title: "Write a decision", sub: nil,
-             key: "decision.write", url: fd_decisions_path } if decisions?)
-        ].compact) }
+            url: fd_cases_path }
+        ]) }
       ].reject { |group| group[:rows].empty? }
     end
 
@@ -139,12 +111,6 @@ module Fd
                   sub: oldest_unassigned, url: fd_cases_path(view: "unassigned") }
       end
 
-      proposals = decisions? ? Decision.unsettled.count : 0
-      if proposals.positive?
-        rows << { kind: "decision", icon: "⏳",
-                  title: "#{helpers.pluralize(proposals, 'proposal')} to settle",
-                  sub: nil, url: fd_decisions_path(view: "proposed") }
-      end
       rows
     end
 
@@ -186,7 +152,6 @@ module Fd
       case record
       when Member then "@#{record.handle.presence || record.display_name}"
       when Case then "case #{record.id}"
-      when Decision then record.title
       when Note then record.case_id ? "case #{record.case_id}" : @names[record.subject_user_id]
       when CaseReport then "case #{record.case_id}"
       end
@@ -196,7 +161,6 @@ module Fd
       case record
       when Member then member_sub(record)
       when Case then case_sub(record)
-      when Decision then decision_sub(record)
       when Note then "#{@names[record.author]} · #{record.created_at.strftime('%-d %b')}"
       when CaseReport then report_sub(record)
       end
@@ -225,15 +189,6 @@ module Fd
       parts.join(" · ")
     end
 
-    STATES = { "settled" => "in force", "proposed" => "proposed",
-               "superseded" => "retired" }.freeze
-
-    def decision_sub(decision)
-      followed = decision.cases_followed.count
-      [STATES.fetch(decision.state), followed.positive? ? "#{followed} cases" : nil]
-        .compact.join(" · ")
-    end
-
     def report_sub(report)
       who = report.anonymous? ? "anonymous" : @names[report.reporter_user_id]
       "#{who} · #{report.received_at.strftime('%-d %b')}"
@@ -243,7 +198,6 @@ module Fd
       case record
       when Member then fd_member_path(record.user_id)
       when Case then fd_case_path(record)
-      when Decision then fd_decision_path(record)
       when Note then record.case_id ? fd_case_path(record.case_id) : fd_member_path(record.subject_user_id)
       when CaseReport then fd_case_path(record.case_id)
       end

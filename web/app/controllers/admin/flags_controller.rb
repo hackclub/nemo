@@ -3,8 +3,7 @@ module Admin
     ROUTES = {
       "fire_engine" => [["/fd/cases", :path], ["/fd/members", :path],
                         ["and the search palette", :note]],
-      "analytics" => [["/", :path], ["/channels", :path], ["/engine", :path]],
-      "decisions" => [["/fd/decisions", :path], ["and the case-to-decision link", :note]]
+      "analytics" => [["/", :path], ["/channels", :path], ["/engine", :path]]
     }.freeze
 
     def show
@@ -22,7 +21,7 @@ module Admin
     end
 
     def fd?(key)
-      %w[fire_engine decisions].include?(key.to_s)
+      key.to_s == "fire_engine"
     end
 
     def routes(key)

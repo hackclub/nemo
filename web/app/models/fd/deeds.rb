@@ -107,8 +107,6 @@ module Fd
       @actions = Action.where(id: ids(found, "action")).index_by(&:id)
       @notes = Note.where(id: ids(found, "note")).index_by(&:id)
       @reports = CaseReport.where(id: ids(found, "report")).index_by(&:id)
-      @titles = Decision.where(id: ids(found, "decision", "decision_thread"))
-        .pluck(:id, :title).to_h
 
       made = found.map { |row| row_for(row).tap { |one| one.actor = row.actor_user_id } }
       (made + read_rows).sort_by { |row| -row.at.to_i }
@@ -135,7 +133,6 @@ module Fd
       case row.entity_type
       when "action" then action_row(row, event)
       when "note" then note_row(row, event)
-      when "decision", "decision_thread" then decision_row(row, event)
       when "grant", "capability_grant" then grant_row(row, event)
       when "community_grant" then community_grant_row(row, event)
       when "permission" then moved_row(row, event)
@@ -172,14 +169,6 @@ module Fd
     def report_row(row, event)
       report = @reports[row.entity_id]
       on_case(row, event, report ? report.case_id : row.entity_id)
-    end
-
-    def decision_row(row, event)
-      title = @titles[row.entity_id]
-      return Row.new(at: row.occurred_at, event: event) if title.nil?
-
-      Row.new(at: row.occurred_at, event: event, kind: "decision", id: row.entity_id,
-        about: title)
     end
 
     def moved_row(row, event)

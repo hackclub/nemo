@@ -25,12 +25,8 @@
       <%= opens_modal "case.act", menu_item("act", "Log an action"), opens: "log-action",
             on: @case %>
       <% unless @case.resolved? %>
-        <%= opens_modal "case.people", menu_item("decision", "Set the violation"),
+        <%= opens_modal "case.people", menu_item("category", "Set the violation"),
               opens: "set-category", on: @case %>
-      <% end %>
-      <% if @decisions.any? %>
-        <%= opens_modal "decision.link", menu_item("decision", "Link a decision"),
-              opens: "follow-decision" %>
       <% end %>
 
       <% unless @case.resolved? %>
@@ -84,7 +80,6 @@
       <% if @case.member_note.present? %>
         <span class="closed-why"><%= mentioned(@case.member_note) %></span>
       <% end %>
-      <%= followed_chip(@case) %>
       <span class="closed-end">
         <% if @case.assigned? %>
           <span class="faces"><%= assignee_faces(@case.assignee_user_ids) %></span>
@@ -307,9 +302,6 @@
 
 <%= render "add_person_modal", kase: @case %>
 <%= render "assign_modal", kase: @case %>
-<% if @decisions.any? %>
-  <%= render "follow_decision_modal", kase: @case, decisions: @decisions %>
-<% end %>
 
 <%= render layout: "fd/modal", locals: { id: "add-note", title: "Add a note",
       sub: "internal", open: params[:do] == "note" } do %>

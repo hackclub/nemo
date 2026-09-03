@@ -1813,6 +1813,10 @@
     transform: none;
   }
 
+  .tog-off {
+    color: var(--ink-3);
+  }
+
   .btn-why {
     display: none;
   }
@@ -6836,6 +6840,8 @@
   .data-table .said-cell {
     text-align: left;
     white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
     color: var(--ink-2);
     font-size: var(--t-small);
   }
@@ -6997,7 +7003,6 @@
     white-space: normal;
   }
 
-  .data-table tbody td.said-cell,
   .data-table tbody td .note-body,
   .data-table tbody .two-line span {
     display: -webkit-box;

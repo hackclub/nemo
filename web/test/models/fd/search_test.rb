@@ -17,11 +17,6 @@ class Fd::SearchTest < ActiveSupport::TestCase
     rows(term, "member", limit: 50).map { |row| row.record.user_id }
   end
 
-  def decision(**attrs)
-    Fd::Decision.create!({ title: "Referral accounts", proposed_by: "UFF1",
-      statement: "A brand new handle posting a banjo link is banned on sight." }.merge(attrs))
-  end
-
   test "a term nobody typed asks the database nothing" do
     assert_not_predicate look(""), :asked?
     assert_not_predicate look(" a "), :asked?
@@ -29,19 +24,10 @@ class Fd::SearchTest < ActiveSupport::TestCase
   end
 
   test "a group with nothing in it is left out" do
-    decision(title: "Dogpiling", statement: "one lock and a note to the noisiest three")
+    kase = make_case(opened_at: 2.days.ago)
+    Fd::Note.create!(case_id: kase.id, body: "the noisiest one yet", author: "UFF1")
 
-    assert_equal ["decision"], kinds("noisiest")
-  end
-
-  test "a decision is found by its name, its sentence or one of its reasons" do
-    decision(reasons: ["warning a kazoo does nothing"])
-
-    %w[referral banjo kazoo].each do |typed|
-      assert_equal ["Referral accounts"], rows(typed, "decision").map { |row| row.record.title },
-        "#{typed} should find the decision under test and nothing else"
-    end
-    assert_empty rows("harpsichord", "decision")
+    assert_equal ["note"], kinds("noisiest")
   end
 
   test "a case is found by its number, however it is typed" do
@@ -134,18 +120,6 @@ class Fd::SearchTest < ActiveSupport::TestCase
     assert_equal asked.id, rows(asked.id.to_s, "case").first.record.id
   end
 
-  test "a rule in force outranks a proposal, and a retired one comes last" do
-    dead = decision(title: "Warnings in public", statement: "a raid gets a warning")
-    dead.settle!(by: "ULEAD")
-    rule = decision(title: "Raid nights", statement: "a raid is locked on sight")
-    rule.settle!(by: "ULEAD")
-    dead.supersede!(rule, by: "ULEAD")
-    proposal = decision(title: "Raid appeals", statement: "a raid ban is appealable")
-
-    assert_equal [rule.id, proposal.id, dead.id],
-      rows("raid", "decision").map { |row| row.record.id }
-  end
-
   test "somebody with a conduct history outranks a quiet namesake" do
     before = ranked("na")
     quiet, noisy = before.last(2)
@@ -170,11 +144,9 @@ class Fd::SearchTest < ActiveSupport::TestCase
 
   test "a prefix on its own shows that kind straight away" do
     kase = make_case(subject: Fd::Member.live.first.user_id, opened_at: 2.days.ago)
-    decision(title: "Raid nights", statement: "a raid is locked on sight")
     Fd::Note.create!(case_id: kase.id, body: "a note about the raid", author: "UFF1")
 
     assert_equal ["case"], kinds("#")
-    assert_equal ["decision"], kinds("d:")
     assert_equal ["note"], kinds("n:")
     assert_equal ["member"], kinds("@")
     assert rows("#", "case").any?, "an empty case scope still lists cases"
@@ -197,11 +169,12 @@ class Fd::SearchTest < ActiveSupport::TestCase
   end
 
   test "a scope passed on its own does the same as a prefix" do
-    decision(title: "Raid nights", statement: "a raid is locked on sight")
-    make_case(opened_at: 2.days.ago).update!(member_note: "a raid, six accounts")
+    kase = make_case(opened_at: 2.days.ago)
+    kase.update!(member_note: "a raid, six accounts")
+    Fd::Note.create!(case_id: kase.id, body: "a note about the raid", author: "UFF1")
 
-    assert_equal ["case", "decision"], kinds("raid")
-    assert_equal ["decision"], look("raid", scope: "decision").groups.map(&:key)
+    assert_equal ["case", "note"], kinds("raid")
+    assert_equal ["note"], look("raid", scope: "note").groups.map(&:key)
   end
 
   test "a scoped search shows more of the one kind it kept" do
@@ -213,22 +186,18 @@ class Fd::SearchTest < ActiveSupport::TestCase
   end
 
   test "a scope nobody offered is ignored" do
-    decision(title: "Raid nights", statement: "a raid is locked on sight")
+    Fd::Note.create!(subject_user_id: "USUB", body: "a raid, six accounts", author: "UFF1")
 
-    assert_equal ["decision"], look("raid", scope: "vibes").groups.map(&:key)
+    assert_equal ["note"], look("raid", scope: "vibes").groups.map(&:key)
   end
 
   test "a pasted Slack link finds the case holding that thread" do
     kase = make_case(opened_at: 2.days.ago)
     Fd::CaseThread.create!(case_id: kase.id, channel_id: "C0266FRGV",
       thread_ts: "1754487721.123456", added_by: "UFF1", is_primary: true)
-    ruled = decision(title: "Raid nights", statement: "a raid is locked on sight")
-    ruled.threads.create!(channel_id: "C0266FRGV", thread_ts: "1754487721.123456",
-      added_by: "UFF1")
 
     link = "https://hackclub.slack.com/archives/C0266FRGV/p1754487721123456"
     assert_equal [kase.id], rows(link, "case").map { |row| row.record.id }
-    assert_equal [ruled.id], rows(link, "decision").map { |row| row.record.id }
   end
 
   test "a link to a thread nobody kept finds nothing" do
@@ -241,8 +210,7 @@ class Fd::SearchTest < ActiveSupport::TestCase
   test "the groups keep one order, whatever matched" do
     member = Fd::Member.live.first
     make_case(subject: member.user_id, opened_at: 2.days.ago)
-    decision(title: member.display_name.to_s, statement: "something about them")
 
-    assert_equal ["member", "case", "decision"], kinds(member.display_name)
+    assert_equal ["member", "case"], kinds(member.display_name)
   end
 end

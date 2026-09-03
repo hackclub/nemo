@@ -63,15 +63,14 @@ class FdAccessTest < ActionDispatch::IntegrationTest
     end
   end
 
-  RULEBOOK = %w[decision.settle decision.retire access.grant app.flip].freeze
+  RULEBOOK = %w[access.grant app.flip].freeze
 
   test "the rulebook routes are the ones this test covers, and no others" do
     rulebook = self.class.fd_writes.select do |name, _action|
       controller_for(name).declared.intersect?(RULEBOOK)
     end.map(&:first).uniq
 
-    assert_equal %w[fd/settlements fd/supersessions fd/retirements
-                    fd/role_permissions fd/flags].sort,
+    assert_equal %w[fd/role_permissions fd/flags].sort,
       rulebook.sort,
       "a rulebook route appeared or vanished, so this test needs updating"
   end
@@ -110,22 +109,6 @@ class FdAccessTest < ActionDispatch::IntegrationTest
     assert_equal %w[firefighter], refusals.sole.after["roles"]
   end
 
-  test "a firefighter settles and retires now the lead ladder is gone" do
-    proposal = Fd::Decision.create!(title: "Second chances", statement: "read by somebody else",
-      proposed_by: "UFF1")
-    rule = Fd::Decision.create!(title: "Dogpiling", statement: "one lock and a note",
-      proposed_by: "UFF1")
-    rule.settle!(by: "UBOSS")
-
-    post fd_decision_settlement_path(proposal)
-    assert_predicate proposal.reload, :settled?
-
-    post fd_decision_retirement_path(rule)
-    assert_predicate rule.reload, :superseded?
-
-    assert_empty refusals, "settling and retiring belong to every firefighter now"
-  end
-
   test "a firefighter still does the work the role is for" do
     kase = make_case(opened_at: 2.days.ago)
 
@@ -159,7 +142,6 @@ class FdAccessTest < ActionDispatch::IntegrationTest
     hold_role!("ULEAD", "firefighter")
 
     assert lead.may?("case.reverse")
-    assert lead.may?("decision.settle")
     assert_not lead.may?("access.grant")
 
     boss = hold_role!("UBOSS", "community_manager")

@@ -6,7 +6,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
   TURBO = %w[/recede_historical_location /resume_historical_location
              /refresh_historical_location].freeze
 
-  INSIDE = %i[root_path fd_root_path fd_members_path fd_decisions_path admin_people_path].freeze
+  INSIDE = %i[root_path fd_root_path fd_members_path admin_people_path].freeze
 
   setup do
     Rails.application.eager_load!
@@ -41,7 +41,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     TURBO.each do |path|
       get path
       assert_response :success
-      assert_no_match(/case|member|note|decision/i, response.body, "#{path} said something")
+      assert_no_match(/case|member|note/i, response.body, "#{path} said something")
     end
   end
 
@@ -50,7 +50,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal "Mnemosyne", JSON.parse(response.body)["name"]
-    assert_no_match(/case|member|note|decision/i, response.body, "the manifest said something")
+    assert_no_match(/case|member|note/i, response.body, "the manifest said something")
   end
 
   test "holding no grant still gets a session, and only the front door" do

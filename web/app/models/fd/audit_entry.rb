@@ -8,11 +8,6 @@ module Fd
 
     ERASING = %w[deleted detached unflagged].freeze
     CASE_FILED = %w[participant thread citation].freeze
-    LINKING = %w[followed unfollowed].freeze
-
-    def self.decision_links_for(case_id:)
-      where(verb: LINKING, entity_type: "case", entity_id: case_id).oldest_first
-    end
 
     def self.erasures_for(case_id:, note_ids: [])
       scope = where(verb: ERASING)

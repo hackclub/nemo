@@ -17,11 +17,6 @@ class FdGatingTest < ActionDispatch::IntegrationTest
     end
   end
 
-  def proposal
-    Fd::Decision.create!(title: "Dogpiling", statement: "one warning each",
-      proposed_by: "UFF1", proposed_at: 2.days.ago)
-  end
-
   test "a case somebody else is holding offers nothing but the reason why" do
     kase = make_case(assign: "UOTHER")
 
@@ -86,24 +81,6 @@ class FdGatingTest < ActionDispatch::IntegrationTest
 
     assert_nil dead("Claim")
     assert_nil dead("Log an action")
-  end
-
-  test "settling is offered to a firefighter, and refused once an override removes it" do
-    decision = proposal
-
-    get fd_decision_path(decision)
-    assert_nil dead("Settle it"), "settling belongs to every firefighter now"
-
-    move_capability!("firefighter", "decision.settle", false, by: "UME")
-    get fd_decision_path(decision)
-    assert_not_nil dead("Settle it"), "an override takes it back off them"
-  end
-
-  test "the greyed control is not a form that could still be posted" do
-    move_capability!("firefighter", "decision.settle", false, by: "UME")
-    get fd_decision_path(proposal)
-
-    assert_select "form[action=?]", fd_decision_settlement_path(Fd::Decision.last), count: 0
   end
 
   test "filing a report on the way out needs the permission to log an action" do

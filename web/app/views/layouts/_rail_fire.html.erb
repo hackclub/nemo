@@ -26,15 +26,6 @@
               </span>
               <span class="rail-text">Members</span>
             <% end %>
-            <% if on?(:decisions) %>
-            <%= link_to fd_decisions_path, class: "rail-item",
-                  aria: { current: ("page" if controller_path.start_with?("fd/decision")) } do %>
-              <span class="rail-ic" aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v14H6.5A1.5 1.5 0 0 0 5 18.5V4.5Z"/><path d="M5 18.5A1.5 1.5 0 0 0 6.5 20H19"/><path d="M8.5 7.5h7M8.5 11h4.5"/></svg>
-              </span>
-              <span class="rail-text">Decisions</span>
-            <% end %>
-            <% end %>
             <% if current_account&.may?("access.read") %>
             <%= link_to fd_audit_path, class: "rail-item",
                   aria: { current: ("page" if controller_path == "fd/audits") } do %>

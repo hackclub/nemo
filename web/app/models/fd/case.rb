@@ -33,8 +33,6 @@ module Fd
       inverse_of: :kase, dependent: nil
     has_many :citations, -> { oldest_first }, class_name: "Fd::CaseCitation",
       foreign_key: :case_id, inverse_of: :kase, dependent: nil
-    belongs_to :followed_decision, class_name: "Fd::Decision",
-      foreign_key: :followed_decision_id, inverse_of: :cases_followed, optional: true
 
     scope :unresolved, -> { where(resolved_at: nil) }
     scope :not_duplicate, -> { where(duplicate_of: nil) }

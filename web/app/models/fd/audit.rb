@@ -12,8 +12,6 @@ module Fd
       "Fd::CaseAssignee" => "assignee",
       "Fd::MemberIdentity" => "identity",
       "Fd::CaseCitation" => "citation",
-      "Fd::Decision" => "decision",
-      "Fd::DecisionThread" => "decision_thread",
       "Engine::Setting" => "engine_setting",
       "Authz::Override" => "permission",
       "Fd::StaffSlack" => "slack_account",
@@ -27,7 +25,6 @@ module Fd
       opened claimed unclaimed resolved reopened categorised
       performed reversed received
       noted deleted attached detached flagged unflagged closed answered
-      proposed settled amended superseded dropped followed unfollowed
       granted revoked refused
       linked unlinked
       turned_on turned_off

@@ -24,15 +24,15 @@ class AccessUiTest < ActionDispatch::IntegrationTest
   end
 
   test "a manager takes one capability off a firefighter, and puts it back" do
-    assert_includes held.keys, "case.resolve"
+    assert_includes held.keys, "member.note"
 
     patch admin_person_capability_path(@them.user_id),
-      params: { key: "case.resolve", effect: "deny" }
+      params: { key: "member.note", effect: "deny" }
     assert_redirected_to admin_person_path(@them.user_id)
-    assert_not_includes held.keys, "case.resolve", "the deny takes it off them"
+    assert_not_includes held.keys, "member.note", "the deny takes it off them"
 
-    delete admin_person_capability_path(@them.user_id), params: { key: "case.resolve" }
-    assert_includes held.keys, "case.resolve", "back to the role default"
+    delete admin_person_capability_path(@them.user_id), params: { key: "member.note" }
+    assert_includes held.keys, "member.note", "back to the role default"
   end
 
   test "a manager gives a capability no role carries" do

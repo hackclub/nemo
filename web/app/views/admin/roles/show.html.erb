@@ -30,13 +30,12 @@
               <span class="view-count"><%= @holders[role] || 0 %></span>
             </th>
           <% end %>
-          <th>state</th>
         </tr>
       </thead>
       <tbody>
         <% @keys.each do |area, keys| %>
           <tr class="band-row">
-            <td colspan="<%= @roles.size + 3 %>"><%= area %> &middot; <%= keys.size %></td>
+            <td colspan="<%= @roles.size + 2 %>"><%= area %> &middot; <%= keys.size %></td>
           </tr>
           <% keys.each do |key| %>
             <tr>
@@ -49,29 +48,10 @@
                   <%= role_capability_switch(role, key, @overrides[[role, key]]) %>
                 </td>
               <% end %>
-              <td>
-                <% moved = @roles.filter_map { |role| [role, @overrides[[role, key]]] if @overrides[[role, key]] } %>
-                <% moved.each do |role, row| %>
-                  <span class="chip <%= row.allowed ? "chip-good" : "chip-crit" %>">
-                    <%= row.allowed ? "given to" : "taken from" %>
-                    <%= Authz.role_label(role).downcase %>
-                  </span>
-                <% end %>
-                <% if Authz.every_account?(key) %>
-                  <span class="chip">every member</span>
-                <% elsif Authz.locked?(key) %>
-                  <span class="chip chip-off">manager only</span>
-                <% end %>
-              </td>
             </tr>
           <% end %>
         <% end %>
       </tbody>
     </table>
-  </div>
-  <div class="rowform">
-    <span class="sub2">
-      Community manager holds all <%= Authz.keys.size %> and is not shown as a column.
-    </span>
   </div>
 </div>

@@ -362,8 +362,7 @@ RETURNING assigned_by
 
 REOPEN = """
 UPDATE fd.cases
-SET resolved_at = NULL, resolution = NULL, duplicate_of = NULL,
-    followed_decision_id = NULL, updated_at = now()
+SET resolved_at = NULL, resolution = NULL, duplicate_of = NULL, updated_at = now()
 WHERE id = %s AND resolved_at IS NOT NULL
 RETURNING resolution
 """

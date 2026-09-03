@@ -43,9 +43,13 @@ def test_every_panel_needs_a_real_capability_or_nothing():
         assert want is None or want in known, f"panel {name} needs {want!r}, not a capability"
 
 
-def test_the_locked_capability_is_the_granting_one():
+def test_the_locked_capabilities_are_fd_only_and_fixed():
     locked = [k for k, one in capabilities.capabilities(SAID).items() if one.get("locked")]
-    assert locked == ["access.grant"], locked
+    assert locked == [
+        "case.read", "case.open", "case.categorise", "case.note", "case.people",
+        "case.thread", "case.chat", "case.reply", "case.act", "case.resolve",
+        "case.reverse", "case.reopen", "identity.read", "access.grant",
+    ], locked
 
 
 def test_only_one_role_is_a_superadmin():

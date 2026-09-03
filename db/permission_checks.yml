@@ -65,16 +65,6 @@ checks:
     case: theirs
     allowed: true
 
-  - name: a firefighter may settle a decision, the lead ladder is gone
-    role: firefighter
-    key: decision.settle
-    allowed: true
-
-  - name: a firefighter may settle a decision
-    role: firefighter
-    key: decision.settle
-    allowed: true
-
   - name: a firefighter may not grant access
     role: firefighter
     key: access.grant
@@ -88,12 +78,6 @@ checks:
   - name: an override can take a permission away from a role
     role: firefighter
     key: case.resolve
-    moved: { firefighter: false }
-    allowed: false
-
-  - name: an override can take settling away from a firefighter
-    role: firefighter
-    key: decision.settle
     moved: { firefighter: false }
     allowed: false
 
@@ -115,11 +99,6 @@ checks:
     key: case.act
     case: theirs
     allowed: false
-
-  - name: a community manager holds a lead permission without a grant
-    manager: true
-    key: decision.settle
-    allowed: true
 
   - name: a community manager may take access back
     manager: true

@@ -49,15 +49,6 @@ class Fd::DeedsTest < ActiveSupport::TestCase
     assert_equal ["case"] * 4, deeds.map(&:kind)
   end
 
-  test "a thread linked to a decision reads as the decision, not the thread" do
-    decision = Fd::Decision.create!(title: "Dogpiling", statement: "one warning each",
-      proposed_by: WHO, proposed_at: 2.days.ago)
-    audit("decision_thread", decision.id, "attached")
-
-    row = deeds.sole
-    assert_equal ["decision", decision.id, "Dogpiling"], [row.kind, row.id, row.about]
-  end
-
   test "a grant deed names who got it and what they got" do
     grant = Authz::Grant.give!("UNEW", kind: "role", name: "firefighter", by: WHO)
     audit("capability_grant", grant.id, "granted",

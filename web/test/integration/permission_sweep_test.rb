@@ -13,7 +13,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     "manager" => { role: "community_manager" }
   }.freeze
 
-  FD_PATHS = %w[/fd /fd/cases /fd/members /fd/decisions /fd/search
+  FD_PATHS = %w[/fd /fd/cases /fd/members /fd/search
                 /fd/members/search].freeze
 
   # the audit is its own gate, access.read, not the conduct team's
@@ -247,7 +247,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     [:delete, "/admin/role_channels", "access.grant", { role: "gardener" }],
     [:patch, "/fd/role_permission", "access.grant",
      { role: "firefighter", key: "case.act", allowed: "0" }],
-    [:patch, "/fd/flag", "app.flip", { key: "decisions", on: "0" }],
+    [:patch, "/fd/flag", "app.flip", { key: "fire_engine", on: "0" }],
     [:post, "/engine/sync", "engine.sync", {}],
     [:post, "/engine/cancel", "engine.stage", {}],
     [:post, "/engine/stages/members", "engine.stage", {}],
@@ -337,38 +337,28 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
   # 17. taking a capability away really takes it away
   test "a denied capability is refused even though the role carries it" do
     id = become("firefighter")
-    assert Authz.holds?(Account.find(id), "case.act"), "the role should carry it"
+    assert Authz.holds?(Account.find(id), "member.note"), "the role should carry it"
 
-    Authz::Grant.give!(id, kind: "capability", name: "case.act", effect: "deny", by: "sweep")
+    Authz::Grant.give!(id, kind: "capability", name: "member.note", effect: "deny", by: "sweep")
     Current.forget_roles
 
-    refute Authz.holds?(Account.find(id), "case.act"), "the denial did not bite"
-    kase = make_case(assign: id)
-    post "/fd/cases/#{kase.id}/actions", params: { kind: "warned", note: "x" }
+    refute Authz.holds?(Account.find(id), "member.note"), "the denial did not bite"
+    post "/fd/members/USUB/notes", params: { body: "x" }
 
     refute_equal 200, response.status, "acted with the capability denied"
-    assert_equal 0, Fd::Action.where(case_id: kase.id).count
+    assert_equal 0, Fd::Note.where(subject_user_id: "USUB").count
   end
 
-  # 18. the real name behind an id needs identity.read
-  test "a firefighter without identity.read sees no email" do
+  # 18. identity.read is FD only, it cannot be moved off a firefighter one person at a time
+  test "identity.read cannot be individually denied, only the role file can lock it" do
     id = become("firefighter")
-    named = Fd::Member.first
-    skip "no member fixture" if named.nil?
+    assert Authz.holds?(Account.find(id), "identity.read"), "the role should carry it"
 
-    Authz::Grant.give!(id, kind: "capability", name: "identity.read", effect: "deny",
-      by: "sweep")
-    Current.forget_roles
-    refute Authz.holds?(Account.find(id), "identity.read")
-
-    get "/fd/members/#{named.user_id}"
-    skip "member page did not render" unless response.status == 200
-
-    Fd::MemberIdentity.where(user_id: named.user_id).each do |row|
-      [row.email, row.real_name].compact_blank.each do |secret|
-        refute_includes response.body, secret, "leaked #{secret} without identity.read"
-      end
+    assert_raises(Authz::Grant::NotAllowed) do
+      Authz::Grant.give!(id, kind: "capability", name: "identity.read", effect: "deny",
+        by: "sweep")
     end
+    assert Authz.holds?(Account.find(id), "identity.read"), "the refused deny must not bite"
   end
 
   # 19. asking for json is not a way round the gate

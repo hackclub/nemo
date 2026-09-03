@@ -1,12 +1,12 @@
 module AdminHelper
   def role_capability_switch(role, key, override)
     held = override ? override.allowed : Authz.baseline(role).include?(key)
-    return tag.span("&mdash;".html_safe, class: "sub2") if Authz.locked?(key)
+    return dead_button(held ? "on" : "off", "#{key} is FD only, it cannot be moved") if Authz.locked?(key)
 
     gated_button "access.grant", held ? "on" : "off",
       fd_role_permission_path(role: role, key: key, allowed: held ? "0" : "1"),
       method: :patch,
-      class: held ? "btn btn-on" : "btn btn-off"
+      class: held ? "btn btn-on" : "btn tog-off"
   end
 
   def role_standing(user_id, roles: nil, extras: nil)
@@ -23,7 +23,7 @@ module AdminHelper
 
   ROLE_NOTES = {
     "community_manager" => "Everything, including handing access out",
-    "firefighter" => "Works cases, writes decisions",
+    "firefighter" => "Works cases",
     "promethean" => "Reads the channels you name to them",
     "gardener" => "Reads one shared set of channels"
   }.freeze

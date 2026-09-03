@@ -963,7 +963,6 @@ module FdHelper
     parts << reversal_line(action) if action.reversed?
     parts << "via #{action.source_app}" if action.source_app != "fire_engine"
     parts << action_performer_note(action) unless action.performed_by_decider?
-    parts << "follows #{kase.followed_decision.title}" if kase.followed_decision
     parts.compact.join(" · ").presence
   end
 
@@ -1054,42 +1053,6 @@ module FdHelper
     ago_label(at)
   end
 
-  DECISION_CHIPS = {
-    "settled" => ["chip-good", "in force"],
-    "proposed" => ["chip-warn", "proposed"],
-    "superseded" => ["chip-off", "retired"]
-  }.freeze
-
-  def decision_state_chip(decision)
-    tone, label = DECISION_CHIPS.fetch(decision.state)
-    tag.span(label, class: "chip #{tone}")
-  end
-
-  def decision_when_line(decision)
-    case decision.state
-    when "proposed"
-      safe_join(["written #{decision.proposed_at.strftime('%-d %b')} by ",
-        member_link(decision.proposed_by)])
-    when "settled"
-      safe_join(["settled #{decision.settled_at.strftime('%-d %b')} by ",
-        member_link(decision.settled_by)])
-    else
-      retired = safe_join(["retired #{decision.retired_at.strftime('%-d %b')} by ",
-        member_link(decision.retired_by)])
-      return retired if decision.replacement.nil?
-
-      safe_join([retired, "replaced by #{decision.replacement.title}"], " · ")
-    end
-  end
-
-  def decision_thread_note(count)
-    count.to_i.zero? ? "no threads" : pluralize(count, "thread")
-  end
-
-  def decision_row_line(decision, threads)
-    safe_join([decision_when_line(decision), decision_thread_note(threads)], " · ")
-  end
-
   ROLE_CHIPS = { "community_manager" => ["chip-crit", "manager"],
                  "lead" => ["chip-warn", "lead"],
                  "firefighter" => ["chip-off", "firefighter"] }.freeze
@@ -1137,8 +1100,6 @@ module FdHelper
     "case/resolved" => "Resolved",
     "case/reopened" => "Reopened",
     "case/categorised" => "Set what kind of thing",
-    "case/followed" => "Linked a decision to",
-    "case/unfollowed" => "Unlinked a decision from",
     "note/noted" => "Wrote a note on",
     "note/deleted" => "Deleted a note on",
     "participant/attached" => "Added somebody to",
@@ -1156,13 +1117,6 @@ module FdHelper
     "member/looked_up" => "Looked up",
     "report/received" => "Took a report on",
     "report/closed" => "Told the reporter on",
-    "decision/proposed" => "Proposed",
-    "decision/amended" => "Reworded",
-    "decision/dropped" => "Dropped",
-    "decision/settled" => "Settled",
-    "decision/superseded" => "Retired",
-    "decision_thread/attached" => "Linked a thread to",
-    "decision_thread/detached" => "Unlinked a thread from",
     "grant/granted" => "Gave access to",
     "grant/revoked" => "Took access from",
     "permission/granted" => "Gave a role",
@@ -1225,7 +1179,6 @@ module FdHelper
   def deed_link(deed)
     case deed.kind
     when "case" then link_to deed.about, fd_case_path(deed.id), class: "lnk"
-    when "decision" then link_to deed.about, fd_decision_path(deed.id), class: "lnk"
     else member_link(deed.id)
     end
   end
@@ -1276,59 +1229,6 @@ module FdHelper
     return tag.span("live", class: "chip chip-good") if grant.live?
 
     tag.span("ended", class: "chip chip-off")
-  end
-
-  def followed_chip(kase)
-    decision = kase.followed_decision
-    return nil if decision.nil?
-
-    tone = decision.proposed? ? "chip-warn" : "chip-crit"
-    said = decision.proposed? ? "behind #{decision.title}" : "followed #{decision.title}"
-    link_to said, fd_decision_path(decision), class: "chip #{tone}"
-  end
-
-  DECISION_GROUPS ={ "settled" => "In force", "proposed" => "Proposed",
-                      "superseded" => "Retired" }.freeze
-  DECISION_ORDER = { "settled" => 0, "proposed" => 1, "superseded" => 2 }.freeze
-
-  def decision_groups(kase, decisions)
-    decisions.group_by(&:state).sort_by { |state, _| DECISION_ORDER.fetch(state) }
-      .map { |state, group| [DECISION_GROUPS.fetch(state), ordered_for(kase, group)] }
-  end
-
-  def ordered_for(kase, decisions)
-    decisions.sort_by { |one| [one.category_key == kase.category_key ? 0 : 1, one.title] }
-      .map { |one| [one.title, one.id] }
-  end
-
-  def cases_band_label(decision)
-    decision.settled? ? "Cases that followed it" : "Cases behind it"
-  end
-
-  def decision_case_note(count)
-    count.to_i.zero? ? "n/a" : pluralize(count, "case")
-  end
-
-  def decision_history_line(decision)
-    parts = [safe_join(["proposed #{decision.proposed_at.strftime('%-d %b %Y')} by ",
-      member_link(decision.proposed_by)])]
-
-    if decision.settled_at
-      parts << safe_join(["settled #{decision.settled_at.strftime('%-d %b %Y')} by ",
-        member_link(decision.settled_by)])
-    end
-
-    if decision.retired_at
-      parts << safe_join(["retired #{decision.retired_at.strftime('%-d %b %Y')} by ",
-        member_link(decision.retired_by)])
-    end
-
-    if decision.replacement
-      parts << safe_join(["replaced by ",
-        link_to(decision.replacement.title, fd_decision_path(decision.replacement), class: "lnk")])
-    end
-
-    safe_join(parts, " · ")
   end
 
   def timeline_standing(kase, timeline)

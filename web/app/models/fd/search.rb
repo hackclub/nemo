@@ -6,9 +6,9 @@ module Fd
     WINDOW = 90
     LEAD_IN = 30
 
-    PREFIXES = { "@" => "member", "#" => "case", "d:" => "decision",
+    PREFIXES = { "@" => "member", "#" => "case",
                  "n:" => "note", "r:" => "report" }.freeze
-    SCOPES = %w[member case decision note report].freeze
+    SCOPES = %w[member case note report].freeze
 
     Row = Struct.new(:kind, :record, :said, keyword_init: true)
     Group = Struct.new(:key, :label, :rows, :total, keyword_init: true)
@@ -16,7 +16,6 @@ module Fd
     LABELS = {
       "member" => "Members",
       "case" => "Cases",
-      "decision" => "Decisions",
       "note" => "Notes",
       "report" => "Reports"
     }.freeze
@@ -43,7 +42,7 @@ module Fd
     end
 
     def groups
-      @groups ||= asked? ? built.reject { |group| group.rows.empty? || hidden?(group) } : []
+      @groups ||= asked? ? built.reject { |group| group.rows.empty? } : []
     end
 
     def total
@@ -63,17 +62,12 @@ module Fd
 
     private
 
-    def hidden?(group)
-      group.key == "decision" && !Flag.on?(:decisions)
-    end
-
     def built
       return holding_the_thread if thread
 
       all = [
         group("member", members),
         group("case", cases),
-        group("decision", decisions),
         group("note", notes) { |note| note.body },
         group("report", reports) { |report| report.body }
       ]
@@ -82,10 +76,7 @@ module Fd
 
     def holding_the_thread
       [
-        group("case", Case.where(id: CaseThread.where(coordinates).select(:case_id)).newest_first),
-        group("decision", Decision.where(
-          id: DecisionThread.where(coordinates).select(:decision_id)
-        ).newest_first)
+        group("case", Case.where(id: CaseThread.where(coordinates).select(:case_id)).newest_first)
       ]
     end
 
@@ -102,10 +93,6 @@ module Fd
         total: searching? ? found.count : rows.size)
     end
 
-    def like
-      @like ||= "%#{Member.sanitize_sql_like(term.downcase)}%"
-    end
-
     MEMBER_ORDER = <<~SQL.squish
       (lower(coalesce(handle, '')) = :term OR lower(coalesce(display_name, '')) = :term) DESC,
       EXISTS (
@@ -115,12 +102,6 @@ module Fd
     SQL
 
     CASE_ORDER = "(id = :asked) DESC, (resolved_at IS NOT NULL), opened_at DESC".freeze
-
-    DECISION_ORDER = <<~SQL.squish
-      (lower(title) = :term) DESC,
-      CASE state WHEN 'settled' THEN 0 WHEN 'proposed' THEN 1 ELSE 2 END,
-      coalesce(settled_at, proposed_at) DESC
-    SQL
 
     RECENT_CASES = 40
 
@@ -162,17 +143,6 @@ module Fd
       Case.where(<<~SQL.squish, q: term)
         member_note IS NOT NULL AND to_tsvector('simple', coalesce(member_note, ''))
           @@ websearch_to_tsquery('simple', :q)
-      SQL
-    end
-
-    def decisions
-      ordered = Arel.sql(Decision.sanitize_sql_array([DECISION_ORDER, term: term.downcase]))
-      return Decision.reorder(ordered) unless searching?
-
-      Decision.reorder(ordered).where(<<~SQL.squish, q: term, like: like)
-        to_tsvector('simple', title || ' ' || statement) @@ websearch_to_tsquery('simple', :q)
-          OR lower(title) LIKE :like
-          OR EXISTS (SELECT 1 FROM unnest(reasons) reason WHERE lower(reason) LIKE :like)
       SQL
     end
 
