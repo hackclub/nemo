@@ -1,11 +1,12 @@
 from dotenv import load_dotenv
 
-from lib.db import connect, dead_letter, get_cursor, ingest_run, save_cursor
+from lib.db import connect, dead_letter, ingest_run
 from lib.paths import ENV_FILE
-from lib.slack_client import admin_client
+from lib.proxy_client import ProxyClient
 
 SOURCE = "admin_users"
-PAGE_SIZE = 200
+METHOD = "admin.users.list"
+PAGE_SIZE = 100
 
 KNOWN_SQL = """
 INSERT INTO fd.member (user_id) VALUES (%s) ON CONFLICT (user_id) DO NOTHING
@@ -30,29 +31,35 @@ def identity_row(user):
     )
 
 
+def write(conn, rows):
+    with conn.cursor() as cur:
+        cur.executemany(KNOWN_SQL, [(row[0],) for row in rows])
+        cur.executemany(IDENTITY_SQL, rows)
+    conn.commit()
+
+
 def run(conn):
-    client = admin_client()
+    client = ProxyClient()
     with ingest_run(conn, SOURCE) as counts:
-        cursor = get_cursor(conn, SOURCE) or ""
-        while True:
-            page = client.admin_users_list(limit=PAGE_SIZE, cursor=cursor)
-            rows = []
-            for user in page.get("users", []):
-                counts.rows_in += 1
-                try:
-                    rows.append(identity_row(user))
-                except KeyError as exc:
-                    counts.rows_rejected += 1
-                    dead_letter(conn, SOURCE, {"keys": sorted(user)}, str(exc))
-            with conn.cursor() as cur:
-                cur.executemany(KNOWN_SQL, [(row[0],) for row in rows])
-                cur.executemany(IDENTITY_SQL, rows)
-            cursor = page.get("response_metadata", {}).get("next_cursor") or ""
-            save_cursor(conn, SOURCE, cursor)
-            conn.commit()
-            counts.progress()
-            if not cursor:
-                break
+        rows = []
+        for user in client.paginate(
+            METHOD, {}, "users",
+            page_size=PAGE_SIZE, cursor_param="cursor", max_retries=8, credential="admin",
+            page_param="limit", cursor_field="response_metadata.next_cursor",
+        ):
+            counts.rows_in += 1
+            try:
+                rows.append(identity_row(user))
+            except KeyError as exc:
+                counts.rows_rejected += 1
+                dead_letter(conn, SOURCE, {"keys": sorted(user)}, str(exc))
+                continue
+            if len(rows) >= PAGE_SIZE:
+                write(conn, rows)
+                counts.progress()
+                rows = []
+        if rows:
+            write(conn, rows)
     print(f"admin.users.list: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
 

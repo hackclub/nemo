@@ -49,7 +49,6 @@ ROLES = {
         "required": DATABASE + ["INTERNAL_PROXY_URL", "INTERNAL_PROXY_TOKEN"],
         "optional": PIPELINE_ROLE + DBT_ROLE + [
             "SLACK_BOT_TOKEN",
-            "SLACK_ADMIN_TOKEN",
             "SLACK_TEAM_ID",
             "NIGHTLY_AT",
             "NIGHTLY_RUN_AT_START",
@@ -139,6 +138,7 @@ NEVER = {
         "SLACK_ADMIN_TOKEN",
         "INTERNAL_PROXY_TOKEN",
     ],
+    "sync": ["SLACK_ADMIN_TOKEN"],
 }
 
 

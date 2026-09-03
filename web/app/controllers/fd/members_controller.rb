@@ -30,7 +30,10 @@ module Fd
     end
 
     def search
-      found = Member.search(params[:q]).map do |member|
+      results = Member.search(params[:q], actor: current_account)
+      log_identity_picker_hits(results) if identity_search?(params[:q])
+
+      found = results.map do |member|
         { id: member.user_id, name: member.name, handle: member.handle,
           initial: member.initial, deleted: member.is_deleted }
       end
@@ -45,6 +48,17 @@ module Fd
 
       @rows.each do |row|
         AccessLog.record!(actor: current_account, subject_user_id: row.user_id,
+          field_class: "identity_search")
+      end
+    end
+
+    def identity_search?(term)
+      term.to_s.strip.present? && current_account.may?("identity.read")
+    end
+
+    def log_identity_picker_hits(results)
+      results.each do |member|
+        AccessLog.record!(actor: current_account, subject_user_id: member.user_id,
           field_class: "identity_search")
       end
     end

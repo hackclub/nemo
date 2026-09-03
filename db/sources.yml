@@ -170,10 +170,10 @@ sources:
     cadence: daily
     window: snapshot
     guard: none
-    resume: sync_cursor
+    resume: none
     retention: replace
     writes: [fd.member, fd.member_identity]
-    feeds: []
+    feeds: [nothing]
 
   autojoin:
     label: Public channel names
