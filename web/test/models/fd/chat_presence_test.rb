@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Fd::ChatPresenceTest < ActiveSupport::TestCase
+  include ActionCable::TestHelper
+
   setup do
     @was = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new

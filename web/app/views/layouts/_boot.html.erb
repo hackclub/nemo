@@ -3,8 +3,8 @@
     var BANDS = <%= raw Appearance::BAND_OF.to_json %>;
     var LIGHT = <%= raw Appearance::DEFAULT_LIGHT.to_json %>;
     var DARK = <%= raw Appearance::DEFAULT_DARK.to_json %>;
-    var WAS_LIGHT = ["light", "paper", "fog"];
-    var WAS_DARK = ["dark", "slate", "midnight", "ember"];
+    var WAS_LIGHT = ["light", "paper", "fog", "chalk", "sepia"];
+    var WAS_DARK = ["dark", "slate", "midnight", "ember", "moss", "dim", "void"];
 
     function get(key, fallback) {
       try { return localStorage.getItem(key) || fallback } catch (e) { return fallback }
@@ -34,11 +34,11 @@
       document.dispatchEvent(new CustomEvent("mn:theme"));
     }
     function migrate() {
-      if (get("mn-theme-v", "") === "2") return;
+      if (get("mn-theme-v", "") === "3") return;
       var was = get("mn-theme", "");
       var dark = WAS_DARK.indexOf(was) >= 0;
       if (dark || WAS_LIGHT.indexOf(was) >= 0) put("mn-theme", dark ? DARK : LIGHT);
-      put("mn-theme-v", "2");
+      put("mn-theme-v", "3");
     }
     function pick(key) {
       if (!BANDS[key]) return apply();
