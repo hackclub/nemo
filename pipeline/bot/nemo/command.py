@@ -3,6 +3,7 @@ import re
 
 from bot.engine import access, audit, richtext, session
 from bot.nemo import channel, record
+from bot.nemo.cards import help as helping
 from bot.nemo.cards import report
 
 log = logging.getLogger("bot.nemo")
@@ -19,13 +20,6 @@ NEEDS_WORDS = (NOTE, OPEN)
 WHO = re.compile(r"<@([UW][A-Z0-9]+)(?:\|[^>]*)?>")
 CASE = re.compile(r"\A#?(\d+)\Z")
 MEMBER_ID = re.compile(r"\A[UW][A-Z0-9]{2,}\Z")
-
-HELP = (
-    "*/nemo lookup @somebody* for their whole record, "
-    "*/nemo note @somebody what you found*, "
-    "*/nemo open @somebody what happened*, "
-    "or */nemo 3864* for a case."
-)
 
 ASK_FOR_SOMEBODY = {
     LOOKUP: "Name somebody: */nemo lookup @them*",
@@ -161,6 +155,15 @@ def opened(case_id, user_id, noted):
     return said if noted else f"{said}, with nothing written on it yet"
 
 
+def helped(user_id):
+    with session() as conn:
+        held = {row[0] for row in conn.execute(helping.HELD, (user_id,)).fetchall()}
+        granters = (
+            [row[0] for row in conn.execute(helping.GRANTERS).fetchall()] if not held else []
+        )
+    return helping.view(held, granters)
+
+
 def register(app):
     @app.action(OPEN_RECORD)
     def on_open_record(ack):
@@ -173,7 +176,7 @@ def register(app):
         user_id = command["user_id"]
 
         if verb is None:
-            return respond(**said_only(HELP))
+            return respond(**helped(user_id))
         if verb in ABOUT_SOMEBODY and wanted is None:
             return respond(**said_only(ASK_FOR_SOMEBODY[verb]))
         if verb in NEEDS_WORDS and not body:
