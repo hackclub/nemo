@@ -15,7 +15,14 @@ export default class extends Controller {
 
   pick(event) {
     const key = event.currentTarget.dataset.themeKey
-    if (key) window.MnTheme?.pick(key)
+    if (!key) return
+
+    const box = event.currentTarget.getBoundingClientRect()
+    const pointer = event.clientX || event.clientY
+    const at = pointer
+      ? { x: event.clientX, y: event.clientY }
+      : { x: box.left + box.width / 2, y: box.top + box.height / 2 }
+    window.MnTheme?.pick(key, at)
   }
 
   render() {

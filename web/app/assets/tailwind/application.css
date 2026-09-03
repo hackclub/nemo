@@ -3151,6 +3151,37 @@
     flex: 1;
   }
 
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+
+  ::view-transition-old(root) {
+    z-index: 0;
+  }
+
+  ::view-transition-new(root) {
+    z-index: 1;
+    animation: theme-spread 360ms var(--ease-out) both;
+  }
+
+  @keyframes theme-spread {
+    from { clip-path: circle(0 at var(--mn-x, 50%) var(--mn-y, 50%)); }
+    to { clip-path: circle(150% at var(--mn-x, 50%) var(--mn-y, 50%)); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-new(root) {
+      animation: theme-fade 200ms linear both;
+    }
+
+    @keyframes theme-fade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  }
+
   .theme-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));

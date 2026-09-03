@@ -40,12 +40,23 @@
       if (dark || WAS_LIGHT.indexOf(was) >= 0) put("mn-theme", dark ? DARK : LIGHT);
       put("mn-theme-v", "3");
     }
-    function pick(key) {
+    function pick(key, at) {
       if (!BANDS[key]) return apply();
       put("mn-theme", key);
-      var applied = apply();
-      announce();
-      return applied;
+      var root = document.documentElement;
+      if (typeof document.startViewTransition !== "function" || key === root.getAttribute("data-theme")) {
+        var applied = apply();
+        announce();
+        return applied;
+      }
+      root.style.setProperty("--mn-x", (at && at.x != null ? at.x : window.innerWidth / 2) + "px");
+      root.style.setProperty("--mn-y", (at && at.y != null ? at.y : window.innerHeight / 2) + "px");
+      var swap = document.startViewTransition(function () { apply(); announce(); });
+      swap.finished.then(function () {
+        root.style.removeProperty("--mn-x");
+        root.style.removeProperty("--mn-y");
+      });
+      return key;
     }
 
     migrate();
