@@ -16,7 +16,13 @@ class CaseChatPresenceChannelTest < ActionCable::Channel::TestCase
     subscribe(case_id: @kase.id)
 
     assert subscription.confirmed?
-    assert_equal %w[UME], Fd::ChatPresence.here(@kase.id).keys
+    assert_equal %w[UME], Fd::ChatPresence.here(@kase.id)
+
+    travel 100.seconds do
+      assert_empty Fd::ChatPresence.here(@kase.id), "no beat, so gone"
+      perform :beat
+      assert_equal %w[UME], Fd::ChatPresence.here(@kase.id), "a beat brings them back"
+    end
 
     unsubscribe
     assert_empty Fd::ChatPresence.here(@kase.id)

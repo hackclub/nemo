@@ -8,6 +8,10 @@ class CaseChatPresenceChannel < ApplicationCable::Channel
     Fd::ChatPresence.arrive(@case_id, user_id)
   end
 
+  def beat
+    Fd::ChatPresence.beat(@case_id, user_id) if @case_id
+  end
+
   def unsubscribed
     Fd::ChatPresence.leave(@case_id, user_id) if @case_id
   end

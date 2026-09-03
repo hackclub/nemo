@@ -1,21 +1,30 @@
 import { Controller } from "@hotwired/stimulus"
 import { cable } from "@hotwired/turbo-rails"
 
+const BEAT_EVERY = 30_000
+
 export default class extends Controller {
   static values = { case: Number, me: String }
 
   async connect() {
+    this.gone = false
     this.hideMe = this.hideMe.bind(this)
     this.watch = new MutationObserver(this.hideMe)
     this.watch.observe(this.element, { childList: true, subtree: true })
     this.hideMe()
 
-    this.subscription = await cable.subscribeTo(
+    const subscription = await cable.subscribeTo(
       { channel: "CaseChatPresenceChannel", case_id: this.caseValue }, {}
     )
+    if (this.gone) return subscription.unsubscribe()
+
+    this.subscription = subscription
+    this.beating = setInterval(() => subscription.perform("beat"), BEAT_EVERY)
   }
 
   disconnect() {
+    this.gone = true
+    if (this.beating) clearInterval(this.beating)
     if (this.subscription) this.subscription.unsubscribe()
     if (this.watch) this.watch.disconnect()
   }

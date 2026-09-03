@@ -39,7 +39,7 @@
         <span>no report came in, so this is the internal chat</span>
       </span>
     <% end %>
-    <% here = Fd::ChatPresence.here(kase.id).keys %>
+    <% here = Fd::ChatPresence.here(kase.id) %>
     <%= render "fd/cases/presence", case_id: kase.id, user_ids: here, names: Fd::Names.for(here) %>
   </div>
 
