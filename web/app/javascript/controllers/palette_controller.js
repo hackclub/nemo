@@ -86,14 +86,29 @@ export default class extends Controller {
       asked.set(key === "case" ? "on_case" : "on_decision", id)
     }
 
-    const response = await fetch(`${this.urlValue}?${asked}`, {
-      headers: { Accept: "application/json" },
-    })
-    if (!response.ok) return
+    let payload
+    try {
+      const response = await fetch(`${this.urlValue}?${asked}`, {
+        headers: { Accept: "application/json" },
+      })
+      if (!response.ok) throw new Error(response.status)
+      payload = await response.json()
+    } catch {
+      return this.failed()
+    }
 
-    const payload = await response.json()
     this.adopt(payload.scope)
     this.draw(payload.groups, term)
+  }
+
+  failed() {
+    this.resultsTarget.innerHTML = ""
+    this.rows = []
+    this.at = 0
+    const row = document.createElement("div")
+    row.className = "palette-group"
+    row.textContent = "Search did not answer. Type again to retry."
+    this.resultsTarget.append(row)
   }
 
   adopt(scope) {

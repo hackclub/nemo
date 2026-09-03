@@ -3,7 +3,7 @@
     <%= form_with url: admin_people_path, method: :get, class: "qbar" do %>
       <%= hidden_field_tag :role, @role, id: nil if @role %>
       <input class="field" type="search" name="q" value="<%= @term %>"
-             placeholder="Search by name or U-id" aria-label="Search people"
+             placeholder="Search by name or Slack ID" aria-label="Search people"
              autocomplete="off">
       <span class="segmented" role="group" aria-label="role">
         <%= link_to "All", admin_people_path(q: @term.presence),

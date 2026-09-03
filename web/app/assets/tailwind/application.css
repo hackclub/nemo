@@ -791,6 +791,15 @@
     margin-inline-start: auto;
   }
 
+  .mod-meta,
+  html[data-mod="meta"] .mod-ctrl {
+    display: none;
+  }
+
+  html[data-mod="meta"] .mod-meta {
+    display: inline;
+  }
+
   .rail-foot {
     margin-top: auto;
     padding: 12px 14px 0;

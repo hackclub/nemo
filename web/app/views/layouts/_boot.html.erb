@@ -50,6 +50,8 @@
 
     migrate();
     apply();
+    document.documentElement.dataset.mod =
+      /Mac|iPhone|iPad/.test(navigator.platform) ? "meta" : "ctrl";
     query().addEventListener("change", function () { apply(); announce() });
 
     return { state: state, resolve: resolve, apply: apply, pick: pick, bands: BANDS };

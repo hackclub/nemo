@@ -103,6 +103,6 @@ class AccessUiTest < ActionDispatch::IntegrationTest
     get account_path
 
     assert_response :success
-    assert_select ".panel-head span", text: "What you hold"
+    assert_select ".panel-head span", text: "What you can do"
   end
 end
