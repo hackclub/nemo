@@ -1,5 +1,6 @@
 import yaml
 
+from bot.nemo.cards import edit
 from lib.paths import ACTIONS_FILE
 
 CALLBACK = "case_action_log"
@@ -8,6 +9,10 @@ TARGET = "action_target"
 KIND = "action_kind"
 UNTIL = "action_until"
 WHERE = "action_where"
+REASON = "action_reason"
+CATEGORY = "action_category"
+
+REASON_LIMIT = 2000
 
 TABLE = None
 
@@ -43,7 +48,16 @@ def choices():
     ]
 
 
-def view(case_id, subjects=()):
+def category_choices():
+    return [edit.option(label, key) for key, label in edit.categories().items()]
+
+
+def category_pick(held):
+    picked = [one for one in category_choices() if one["value"] == held]
+    return {"initial_option": picked[0]} if picked else {}
+
+
+def view(case_id, subjects=(), category=None):
     return {
         "type": "modal",
         "callback_id": CALLBACK,
@@ -101,6 +115,31 @@ def view(case_id, subjects=()):
                     "placeholder": {"type": "plain_text", "text": "pick a channel"},
                 },
             },
+            {
+                "type": "input",
+                "block_id": CATEGORY,
+                "optional": True,
+                "label": {"type": "plain_text", "text": "The violation"},
+                "element": {
+                    "type": "static_select",
+                    "action_id": CATEGORY,
+                    "placeholder": {"type": "plain_text", "text": "pick one"},
+                    "options": category_choices(),
+                    **category_pick(category),
+                },
+            },
+            {
+                "type": "input",
+                "block_id": REASON,
+                "label": {"type": "plain_text", "text": "Resolution summary"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": REASON,
+                    "multiline": True,
+                    "max_length": REASON_LIMIT,
+                    "placeholder": {"type": "plain_text", "text": "what they did"},
+                },
+            },
         ],
     }
 
@@ -114,6 +153,11 @@ def picked(view_state):
         ),
         "expires_on": values.get(UNTIL, {}).get(UNTIL, {}).get("selected_date"),
         "channel_id": values.get(WHERE, {}).get(WHERE, {}).get("selected_conversation"),
+        "reason": (values.get(REASON, {}).get(REASON, {}).get("value") or "").strip(),
+        "category_key": (
+            (values.get(CATEGORY, {}).get(CATEGORY, {}).get("selected_option") or {})
+            .get("value")
+        ),
     }
 
 
@@ -127,6 +171,8 @@ def objection(said):
         return {UNTIL: f"A {label(key).lower()} needs a date it runs until."}
     if needs_channel(key) and not said.get("channel_id"):
         return {WHERE: f"A {label(key).lower()} needs a channel."}
+    if not said.get("reason"):
+        return {REASON: "Say why this was the answer."}
     return None
 
 

@@ -388,12 +388,15 @@ INSERT INTO fd.intake_outbox (conversation_id, kind, body, requested_by)
 VALUES (%s, 'outcome', %s, %s)
 """
 
+CASE_CATEGORY = "SELECT category_key FROM fd.cases WHERE id = %s"
+
 LOG_ACTION = """
 INSERT INTO fd.actions
     (case_id, type_key, target_user_id, decided_by, performed_by, performed_at,
-     source_app, expires_at, details)
-VALUES (%s, %s, %s, %s, %s, now(), %s, %s, %s)
-RETURNING id, performed_at
+     source_app, expires_at, details, reason, category_key)
+VALUES (%s, %s, %s, %s, %s, now(), %s, %s, %s, %s,
+        coalesce(%s, (SELECT category_key FROM fd.cases WHERE id = %s)))
+RETURNING id, performed_at, category_key
 """
 
 
@@ -560,6 +563,9 @@ def log_action(conn, case_id, said, user_id):
             audit.SOURCE_APP,
             expires,
             Jsonb(cards.action.details(said)),
+            said["reason"],
+            said.get("category_key"),
+            case_id,
         ),
     ).fetchone()
 
@@ -574,6 +580,7 @@ def log_action(conn, case_id, said, user_id):
             "type_key": said["type_key"],
             "target_user_id": said["target_user_id"],
             "expires_at": expires,
+            "category_key": row[2],
         },
     )
     return row[0]
@@ -683,10 +690,11 @@ def register(app, on_reply=None):
             if not allowed:
                 return whisper(client, body, refusal)
             subjects = [row[0] for row in conn.execute(SUBJECTS, (case_id,)).fetchall()]
+            held = conn.execute(CASE_CATEGORY, (case_id,)).fetchone()
 
         client.views_open(
             trigger_id=body["trigger_id"],
-            view=cards.action.view(case_id, subjects),
+            view=cards.action.view(case_id, subjects, held[0] if held else None),
         )
 
     @app.view(cards.action.CALLBACK)

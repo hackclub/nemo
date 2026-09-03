@@ -11,6 +11,7 @@ COMMAND = "/nemo"
 LOOKUP = "lookup"
 NOTE = "note"
 OPEN = "open"
+OPEN_RECORD = "open_record"
 
 ABOUT_SOMEBODY = (LOOKUP, NOTE, OPEN)
 NEEDS_WORDS = (NOTE, OPEN)
@@ -128,7 +129,7 @@ def looked_up(found, names=None):
                 "elements": [
                     {
                         "type": "button",
-                        "action_id": "open_record",
+                        "action_id": OPEN_RECORD,
                         "text": {"type": "plain_text", "text": "Their whole record"},
                         "url": where,
                     }
@@ -161,6 +162,10 @@ def opened(case_id, user_id, noted):
 
 
 def register(app):
+    @app.action(OPEN_RECORD)
+    def on_open_record(ack):
+        ack()
+
     @app.command(COMMAND)
     def on_nemo(ack, command, respond):
         ack()
