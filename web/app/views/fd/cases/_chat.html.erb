@@ -7,8 +7,10 @@
 <% conversation = local_assigns.fetch(:conversation, nil) %>
 <% said_count = local_assigns.fetch(:said_count, messages.size) %>
 
-<div class="chat" data-controller="stick catch-up"
-     data-catch-up-frame-value="<%= chat_log_id(kase) %>">
+<div class="chat" data-controller="stick catch-up presence"
+     data-catch-up-frame-value="<%= chat_log_id(kase) %>"
+     data-presence-case-value="<%= kase.id %>"
+     data-presence-me-value="<%= current_account&.user_id %>">
   <% if reports.size > 1 %>
     <div class="chat-picks">
       <% reports.each do |report| %>
@@ -37,6 +39,8 @@
         <span>no report came in, so this is the internal chat</span>
       </span>
     <% end %>
+    <% here = Fd::ChatPresence.here(kase.id).keys %>
+    <%= render "fd/cases/presence", case_id: kase.id, user_ids: here, names: Fd::Names.for(here) %>
   </div>
 
   <%= turbo_stream_from chat_stream(kase) %>

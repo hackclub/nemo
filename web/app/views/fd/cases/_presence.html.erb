@@ -1,0 +1,11 @@
+<div id="chat-presence-<%= case_id %>" class="chat-here face-stack"<%= " hidden" if user_ids.empty? %>>
+  <% user_ids.each do |user_id| %>
+    <% if (image = names.image(user_id)) %>
+      <img src="<%= image %>" class="row-avatar" alt="" loading="lazy"
+           data-user="<%= user_id %>" data-name="<%= names[user_id] %>">
+    <% else %>
+      <span class="row-avatar <%= avatar_tone(user_id) %>" data-user="<%= user_id %>"
+            data-name="<%= names[user_id] %>" aria-hidden="true"><%= names.initial(user_id) %></span>
+    <% end %>
+  <% end %>
+</div>

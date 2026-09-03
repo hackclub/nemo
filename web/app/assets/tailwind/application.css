@@ -4641,6 +4641,20 @@
     border-bottom: 1px solid var(--line);
   }
 
+  .chat-here {
+    margin-inline-start: auto;
+    flex: none;
+  }
+
+  .chat-here .row-avatar {
+    box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--good);
+    margin-inline-start: -2px;
+  }
+
+  .chat-here .row-avatar:first-child {
+    margin-inline-start: 0;
+  }
+
   .chat-log {
     display: grid;
     gap: var(--s-2xs);
