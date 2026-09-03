@@ -1016,12 +1016,6 @@ module FdHelper
     tag.q(said, class: "why-said")
   end
 
-  def off_subject_chip(action, kase)
-    return if kase.subject_user_ids.include?(action.target_user_id)
-
-    tag.span("not the subject", class: "chip chip-crit")
-  end
-
   def action_performer_note(action)
     return "performed themselves" if action.performed_by_decider?
 

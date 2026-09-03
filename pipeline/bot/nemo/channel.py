@@ -58,6 +58,10 @@ THREADS = """
 SELECT count(*) FROM fd.case_threads WHERE case_id = %s AND kind = 'evidence'
 """
 
+LIVE_ACTION_COUNT = """
+SELECT count(*) FROM fd.actions WHERE case_id = %s AND reversed_at IS NULL
+"""
+
 SHARES = """
 SELECT s.kind, s.source_channel_id, s.source_channel_name, s.source_ts, s.permalink,
        s.is_reachable, s.source_author_user_id, s.source_body
@@ -151,6 +155,7 @@ def gather(conn, case_id):
         else 0
     )
     case["threads"] = conn.execute(THREADS, (case["case_id"],)).fetchone()[0]
+    case["live_actions"] = conn.execute(LIVE_ACTION_COUNT, (case["case_id"],)).fetchone()[0]
 
     convo = case["conversation_id"]
     if convo is None:
@@ -323,11 +328,21 @@ MEMBER_NOTE = """
 INSERT INTO fd.notes (subject_user_id, body, author) VALUES (%s, %s, %s) RETURNING id
 """
 
-ADD_SUBJECT = """
-INSERT INTO fd.case_participants (case_id, user_id, role)
-VALUES (%s, %s, 'subject')
+PARTICIPANTS = """
+SELECT user_id, role, detail FROM fd.case_participants
+WHERE case_id = %s ORDER BY noted_at
+"""
+
+ADD_PARTICIPANT = """
+INSERT INTO fd.case_participants (case_id, user_id, role, detail)
+VALUES (%s, %s, %s, %s)
 ON CONFLICT DO NOTHING
 RETURNING user_id
+"""
+
+REMOVE_PARTICIPANT = """
+DELETE FROM fd.case_participants WHERE case_id = %s AND user_id = %s AND role = %s
+RETURNING detail
 """
 
 SET_CATEGORY = """
@@ -358,7 +373,7 @@ DELETE FROM fd.case_assignees WHERE case_id = %s RETURNING user_id
 """
 
 LIVE_ACTIONS = """
-SELECT target_user_id, type_key, expires_at, details FROM fd.actions
+SELECT id, target_user_id, type_key, expires_at, details FROM fd.actions
 WHERE case_id = %s AND reversed_at IS NULL
 ORDER BY performed_at, id
 """
@@ -400,14 +415,36 @@ RETURNING id, performed_at, category_key
 """
 
 
-def add_subject(conn, case_id, user_id, by):
-    row = conn.execute(ADD_SUBJECT, (case_id, user_id)).fetchone()
+def participants(conn, case_id):
+    return [
+        {"user_id": row[0], "role": row[1], "detail": row[2]}
+        for row in conn.execute(PARTICIPANTS, (case_id,)).fetchall()
+    ]
+
+
+def add_participants(conn, case_id, user_ids, role, detail, by):
+    added = []
+    for user_id in user_ids:
+        row = conn.execute(ADD_PARTICIPANT, (case_id, user_id, role, detail)).fetchone()
+        if row is None:
+            continue
+        audit.record(
+            conn, "participant", case_id, "attached", by,
+            after={"user_id": user_id, "role": role, "detail": detail},
+        )
+        added.append(user_id)
+    return added
+
+
+def remove_participant(conn, case_id, user_id, role, by):
+    row = conn.execute(REMOVE_PARTICIPANT, (case_id, user_id, role)).fetchone()
     if row is None:
         return False
 
     audit.record(
-        conn, "participant", case_id, "attached", by,
-        after={"user_id": user_id, "role": "subject"},
+        conn, "participant", case_id, "detached", by,
+        before={"user_id": user_id, "role": role, "detail": row[0]},
+        after=None,
     )
     return True
 
@@ -483,7 +520,7 @@ def open_about(conn, user_id):
 def open_case(conn, subject, body, by):
     case_id = conn.execute(OPEN_CASE, (by, audit.SOURCE_APP)).fetchone()[0]
     audit.record(conn, "case", case_id, "opened", by, after={"opened_by": by})
-    add_subject(conn, case_id, subject, by)
+    add_participants(conn, case_id, [subject], "subject", None, by)
     if body:
         keep_note(conn, case_id, body, by)
     return case_id
@@ -505,10 +542,11 @@ def counted(conn, sql, case_id):
 def live_actions(conn, case_id):
     return [
         {
-            "target_user_id": row[0],
-            "type_key": row[1],
-            "expires_at": row[2],
-            "details": row[3],
+            "id": row[0],
+            "target_user_id": row[1],
+            "type_key": row[2],
+            "expires_at": row[3],
+            "details": row[4],
         }
         for row in conn.execute(LIVE_ACTIONS, (case_id,)).fetchall()
     ]
@@ -548,6 +586,30 @@ def resolve(conn, case_id, said, user_id):
     )
     told = close_reports(conn, case_id, said["said"], user_id) if said["telling"] else 0
     return told
+
+
+REVERSE_ACTION = """
+UPDATE fd.actions SET reversed_at = now(), reversed_by = %s, reversal_reason = %s
+WHERE id = %s AND case_id = %s AND reversed_at IS NULL
+RETURNING reversed_at
+"""
+
+
+def reverse_action(conn, case_id, action_id, reason, user_id):
+    row = conn.execute(REVERSE_ACTION, (user_id, reason, action_id, case_id)).fetchone()
+    if row is None:
+        return False
+
+    audit.record(
+        conn,
+        "action",
+        action_id,
+        "reversed",
+        user_id,
+        before={"reversed_at": None},
+        after={"reversed_at": str(row[0]), "reversed_by": user_id, "reason": reason},
+    )
+    return True
 
 
 def log_action(conn, case_id, said, user_id):
@@ -752,7 +814,6 @@ def register(app, on_reply=None):
         )
 
     MORE = {
-        cards.edit.SUBJECT: ("case.people", cards.edit.subject_view),
         cards.edit.CATEGORY: ("case.categorise", cards.edit.category_view),
         cards.edit.NOTE: ("case.note", cards.edit.note_view),
     }
@@ -767,6 +828,10 @@ def register(app, on_reply=None):
 
         if verb == cards.edit.HAND_BACK:
             return on_hand_back(body, client, case_id, user_id)
+        if verb == cards.edit.REVERSE:
+            return on_reverse_asked(body, client, case_id, user_id)
+        if verb == cards.edit.PEOPLE:
+            return on_people_asked(body, client, case_id, user_id)
 
         wanted = MORE.get(verb)
         if wanted is None:
@@ -780,6 +845,54 @@ def register(app, on_reply=None):
 
         client.views_open(trigger_id=body["trigger_id"], view=view_of(case_id))
         return None
+
+    def on_reverse_asked(body, client, case_id, user_id):
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, "case.reverse", case_id)
+            if not allowed:
+                return whisper(client, body, refusal)
+            live = live_actions(conn, case_id)
+
+        if not live:
+            return whisper(client, body, f"nothing live to reverse on *case {case_id}*")
+
+        client.views_open(
+            trigger_id=body["trigger_id"],
+            view=cards.reverse.view(case_id, live),
+        )
+        return None
+
+    @app.view(cards.reverse.CALLBACK)
+    def on_reversed(ack, body, view, client):
+        case_id = int(view["private_metadata"])
+        user_id = body["user"]["id"]
+        said = cards.reverse.picked(view["state"])
+
+        wrong = cards.reverse.objection(said)
+        if wrong:
+            return ack(response_action="errors", errors=wrong)
+
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, "case.reverse", case_id)
+            if not allowed:
+                return ack(response_action="errors", errors={cards.reverse.WHICH: refusal})
+            done = reverse_action(conn, case_id, said["action_id"], said["reason"], user_id)
+
+        if not done:
+            return ack(
+                response_action="errors",
+                errors={cards.reverse.WHICH: "That action is not live on this case anymore."},
+            )
+
+        ack()
+        with session() as conn:
+            redraw(client, conn, case_id)
+        log.info("nemo: action %s reversed on case %s by %s", said["action_id"], case_id, user_id)
+        client.chat_postEphemeral(
+            channel=firehouse_channel(),
+            user=user_id,
+            text=cards.reverse.told(case_id),
+        )
 
     def on_hand_back(body, client, case_id, user_id):
         with session() as conn:
@@ -796,30 +909,77 @@ def register(app, on_reply=None):
         log.info("nemo: case %s handed back by %s", case_id, user_id)
         return whisper(client, body, f"you are off *case {case_id}*")
 
-    @app.view(cards.edit.SUBJECT)
-    def on_subject(ack, body, view, client):
+    def on_people_asked(body, client, case_id, user_id):
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, "case.people", case_id)
+            if not allowed:
+                return whisper(client, body, refusal)
+            held = participants(conn, case_id)
+
+        client.views_open(
+            trigger_id=body["trigger_id"],
+            view=cards.people.view(case_id, held),
+        )
+        return None
+
+    @app.action(cards.people.REMOVE)
+    def on_people_removed(ack, body, client):
+        ack()
+        user_id, role, case_id = cards.people.removed(body["actions"][0]["value"])
+        actor = body["user"]["id"]
+        if case_id is None:
+            return None
+
+        with session() as conn:
+            allowed, refusal = access.may(conn, actor, "case.people", case_id)
+            if not allowed:
+                return whisper(client, body, refusal)
+            remove_participant(conn, case_id, user_id, role, actor)
+            held = participants(conn, case_id)
+
+        try:
+            client.views_update(
+                view_id=body["view"]["id"],
+                hash=body["view"]["hash"],
+                view=cards.people.view(case_id, held),
+            )
+        except Exception as failure:
+            log.warning("nemo: could not refresh the people modal: %s", failure)
+
+        with session() as conn:
+            redraw(client, conn, case_id)
+        log.info("nemo: %s taken off case %s (%s) by %s", user_id, case_id, role, actor)
+        return None
+
+    @app.view(cards.people.CALLBACK)
+    def on_people_submitted(ack, body, view, client):
         case_id = int(view["private_metadata"])
         user_id = body["user"]["id"]
-        wanted = cards.edit.who_picked(view["state"])
+        said = cards.people.picked(view["state"])
+
+        wrong = cards.people.objection(said)
+        if wrong:
+            return ack(response_action="errors", errors=wrong)
 
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, "case.people", case_id)
             if not allowed:
-                return ack(response_action="errors", errors={cards.edit.WHO: refusal})
-            added = add_subject(conn, case_id, wanted, user_id)
+                return ack(response_action="errors", errors={cards.people.WHO: refusal})
+            added = add_participants(
+                conn, case_id, said["user_ids"], said["role"], said["detail"], user_id
+            )
+            held = participants(conn, case_id)
 
-        ack()
+        ack(response_action="update", view=cards.people.view(case_id, held))
         with session() as conn:
             redraw(client, conn, case_id)
-        log.info("nemo: case %s is about %s (new: %s)", case_id, wanted, added)
+        already = [one for one in said["user_ids"] if one not in added]
+        log.info("nemo: case %s people added %s (already: %s) by %s",
+                 case_id, added, already, user_id)
         client.chat_postEphemeral(
             channel=firehouse_channel(),
             user=user_id,
-            text=(
-                f"*case {case_id}* is about <@{wanted}>"
-                if added
-                else f"<@{wanted}> was already on *case {case_id}*"
-            ),
+            text=cards.people.added_notice(said["role"], added, already),
         )
         return None
 

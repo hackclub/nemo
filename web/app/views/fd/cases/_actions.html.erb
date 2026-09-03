@@ -5,14 +5,12 @@
 
 <div class="ledger">
   <% actions.each do |action| %>
-    <div class="ledger-row">
+    <div class="ledger-row <%= "row-resolved" if action.reversed? %>">
       <i class="ledger-rail <%= action_rail_tone(action) %>" aria-hidden="true"></i>
       <div class="ledger-main">
         <div class="ledger-top">
-          <%= tag.b action_label(action.type_key),
-                class: ("action-undone" if action.reversed?) %>
-          <%= action_state_chip(action) %>
-          <%= off_subject_chip(action, kase) %>
+          <%= tag.b action_label(action.type_key) %>
+          <%= action_state_chip(action) unless action.reversed? %>
           <span class="grow"></span>
           <% unless action.reversed? %>
             <%= opens_modal "case.reverse", "Reverse", opens: "reverse-#{action.id}",

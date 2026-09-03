@@ -4478,12 +4478,6 @@
     height: 26px;
   }
 
-  .action-undone {
-    color: var(--ink-2);
-    text-decoration: line-through;
-    text-decoration-color: var(--ink-3);
-  }
-
   .ledger-said {
     margin: 0;
     font-size: var(--t-small);
