@@ -57,7 +57,125 @@ def category_pick(held):
     return {"initial_option": picked[0]} if picked else {}
 
 
-def view(case_id, subjects=(), category=None):
+def kind_pick(held):
+    picked = [one for one in choices() if one["value"] == held]
+    return {"initial_option": picked[0]} if picked else {}
+
+
+def opening(subjects=(), category=None):
+    return {
+        "target_user_id": subjects[0] if subjects else None,
+        "category_key": category,
+    }
+
+
+def blocks(case_id, said):
+    key = said.get("type_key")
+    built = [
+        {
+            "type": "context",
+            "elements": [{"type": "mrkdwn", "text": f"*case {case_id}*"}],
+        },
+        {
+            "type": "input",
+            "block_id": TARGET,
+            "label": {"type": "plain_text", "text": "Against"},
+            "element": {
+                "type": "users_select",
+                "action_id": TARGET,
+                "placeholder": {"type": "plain_text", "text": "who it was aimed at"},
+                **(
+                    {"initial_user": said["target_user_id"]}
+                    if said.get("target_user_id")
+                    else {}
+                ),
+            },
+        },
+        {
+            "type": "input",
+            "block_id": KIND,
+            "dispatch_action": True,
+            "label": {"type": "plain_text", "text": "What was done"},
+            "element": {
+                "type": "static_select",
+                "action_id": KIND,
+                "placeholder": {"type": "plain_text", "text": "pick one"},
+                "options": choices(),
+                **kind_pick(key),
+            },
+        },
+    ]
+
+    if needs_expiry(key):
+        built.append(
+            {
+                "type": "input",
+                "block_id": UNTIL,
+                "label": {"type": "plain_text", "text": "Until"},
+                "element": {
+                    "type": "datepicker",
+                    "action_id": UNTIL,
+                    **(
+                        {"initial_date": said["expires_on"]}
+                        if said.get("expires_on")
+                        else {}
+                    ),
+                },
+            }
+        )
+
+    if takes_channel(key):
+        built.append(
+            {
+                "type": "input",
+                "block_id": WHERE,
+                "optional": not needs_channel(key),
+                "label": {"type": "plain_text", "text": "Which channel"},
+                "element": {
+                    "type": "conversations_select",
+                    "action_id": WHERE,
+                    "placeholder": {"type": "plain_text", "text": "pick a channel"},
+                    **(
+                        {"initial_conversation": said["channel_id"]}
+                        if said.get("channel_id")
+                        else {}
+                    ),
+                },
+            }
+        )
+
+    built += [
+        {
+            "type": "input",
+            "block_id": CATEGORY,
+            "optional": True,
+            "label": {"type": "plain_text", "text": "The violation"},
+            "element": {
+                "type": "static_select",
+                "action_id": CATEGORY,
+                "placeholder": {"type": "plain_text", "text": "pick one"},
+                "options": category_choices(),
+                **category_pick(said.get("category_key")),
+            },
+        },
+        {
+            "type": "input",
+            "block_id": REASON,
+            "label": {"type": "plain_text", "text": "Resolution summary"},
+            "element": {
+                "type": "plain_text_input",
+                "action_id": REASON,
+                "multiline": True,
+                "max_length": REASON_LIMIT,
+                "placeholder": {"type": "plain_text", "text": "what they did"},
+                **({"initial_value": said["reason"]} if said.get("reason") else {}),
+            },
+        },
+    ]
+    return built
+
+
+def view(case_id, subjects=(), category=None, said=None):
     return {
         "type": "modal",
         "callback_id": CALLBACK,
@@ -65,83 +183,15 @@ def view(case_id, subjects=(), category=None):
         "title": {"type": "plain_text", "text": "Log an action"},
         "submit": {"type": "plain_text", "text": "Log it"},
         "close": {"type": "plain_text", "text": "Cancel"},
-        "blocks": [
-            {
-                "type": "context",
-                "elements": [{"type": "mrkdwn", "text": f"*case {case_id}*"}],
-            },
-            {
-                "type": "input",
-                "block_id": TARGET,
-                "label": {"type": "plain_text", "text": "Against"},
-                "element": {
-                    "type": "users_select",
-                    "action_id": TARGET,
-                    "placeholder": {"type": "plain_text", "text": "who it was aimed at"},
-                    **({"initial_user": subjects[0]} if subjects else {}),
-                },
-            },
-            {
-                "type": "input",
-                "block_id": KIND,
-                "label": {"type": "plain_text", "text": "What was done"},
-                "element": {
-                    "type": "static_select",
-                    "action_id": KIND,
-                    "placeholder": {"type": "plain_text", "text": "pick one"},
-                    "options": choices(),
-                },
-            },
-            {
-                "type": "input",
-                "block_id": UNTIL,
-                "optional": True,
-                "label": {"type": "plain_text", "text": "Until"},
-                "hint": {
-                    "type": "plain_text",
-                    "text": "A shush, a temporary ban and a channel ban all need a date.",
-                },
-                "element": {"type": "datepicker", "action_id": UNTIL},
-            },
-            {
-                "type": "input",
-                "block_id": WHERE,
-                "optional": True,
-                "label": {"type": "plain_text", "text": "Which channel"},
-                "hint": {"type": "plain_text", "text": "A channel ban needs one."},
-                "element": {
-                    "type": "conversations_select",
-                    "action_id": WHERE,
-                    "placeholder": {"type": "plain_text", "text": "pick a channel"},
-                },
-            },
-            {
-                "type": "input",
-                "block_id": CATEGORY,
-                "optional": True,
-                "label": {"type": "plain_text", "text": "The violation"},
-                "element": {
-                    "type": "static_select",
-                    "action_id": CATEGORY,
-                    "placeholder": {"type": "plain_text", "text": "pick one"},
-                    "options": category_choices(),
-                    **category_pick(category),
-                },
-            },
-            {
-                "type": "input",
-                "block_id": REASON,
-                "label": {"type": "plain_text", "text": "Resolution summary"},
-                "element": {
-                    "type": "plain_text_input",
-                    "action_id": REASON,
-                    "multiline": True,
-                    "max_length": REASON_LIMIT,
-                    "placeholder": {"type": "plain_text", "text": "what they did"},
-                },
-            },
-        ],
+        "blocks": blocks(case_id, said or opening(subjects, category)),
     }
+
+
+def unasked(said, shown):
+    key = said.get("type_key")
+    if needs_expiry(key) and UNTIL not in shown:
+        return True
+    return needs_channel(key) and WHERE not in shown
 
 
 def picked(view_state):

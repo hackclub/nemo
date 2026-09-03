@@ -697,11 +697,36 @@ def register(app, on_reply=None):
             view=cards.action.view(case_id, subjects, held[0] if held else None),
         )
 
+    @app.action(cards.action.KIND)
+    def on_action_kind(ack, body, client):
+        ack()
+        asked = body.get("view") or {}
+        if asked.get("callback_id") != cards.action.CALLBACK:
+            return
+
+        case_id = int(asked["private_metadata"])
+        said = cards.action.picked(asked["state"])
+        try:
+            client.views_update(
+                view_id=asked["id"],
+                hash=asked["hash"],
+                view=cards.action.view(case_id, said=said),
+            )
+        except Exception as failure:
+            log.warning("nemo: could not reshape the action modal: %s", failure)
+
     @app.view(cards.action.CALLBACK)
     def on_action_logged(ack, body, view, client):
         case_id = int(view["private_metadata"])
         user_id = body["user"]["id"]
         said = cards.action.picked(view["state"])
+
+        shown = {block.get("block_id") for block in view.get("blocks", [])}
+        if cards.action.unasked(said, shown):
+            return ack(
+                response_action="update",
+                view=cards.action.view(case_id, said=said),
+            )
 
         wrong = cards.action.objection(said)
         if wrong:
