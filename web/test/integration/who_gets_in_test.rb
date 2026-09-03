@@ -174,7 +174,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     assert_predicate boss, :manager?
     assert boss.may?("case.read"), "a manager runs the Fire Department"
     assert Authz.holds?(boss, "channel.all"), "a manager reads every channel"
-    assert Authz.holds?(boss, "engine.tune"), "a manager runs the engine"
+    assert Authz.holds?(boss, "engine.manage"), "a manager runs the engine"
     assert Authz.holds?(boss, "access.grant"), "a manager hands access out"
   end
 end

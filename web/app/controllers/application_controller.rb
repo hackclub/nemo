@@ -75,9 +75,9 @@ class ApplicationController < ActionController::Base
   end
 
   def require_operating
-    return if may_community?("ops.engine.read")
+    return if may_community?("ops.engine")
 
-    refuse_community("ops.engine.read")
+    refuse_community("ops.engine")
   end
 
   def refuse_community(key)

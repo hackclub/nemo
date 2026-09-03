@@ -166,21 +166,10 @@ capabilities:
     label: Queue a thread replies backfill for a channel
     area: channel
 
-  engine.read:
-    label: See the engine, its runs and its coverage
+  engine.manage:
+    label: Run and tune the engine
     area: engine
-
-  engine.stage:
-    label: Trigger a stage, or cancel a sync that is running
-    area: engine
-
-  engine.sync:
-    label: Queue a full sync of every source
-    area: engine
-
-  engine.tune:
-    label: Tune the engine, retention and pruning
-    area: engine
+    locked: true
 
   slack.link:
     label: Link their own Slack account, to send as themselves

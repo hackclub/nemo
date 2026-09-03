@@ -52,7 +52,7 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
       assert_select "thead th", text: /#{Authz.role_label(role)}/
     end
     assert_select "td.mono", text: "case.act"
-    assert_select "td.mono", text: "engine.sync"
+    assert_select "td.mono", text: "engine.manage"
     assert_select "tr.band-row td", text: /Cases/
   end
 

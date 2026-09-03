@@ -63,14 +63,14 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
     hand = hold_role!("UCAFF", "firefighter")
 
     refute Authz.holds?(hand, "channel.all"), "a firefighter reads no analytics"
-    refute Authz.holds?(hand, "engine.read"), "a firefighter runs no engine"
+    refute Authz.holds?(hand, "engine.manage"), "a firefighter runs no engine"
     assert Community::Access.allow?(hand, "analytics.workspace.read"),
       "every signed-in member reads the overview now"
     assert_not Community::Access.allow?(hand, "analytics.member.read")
   end
 
   test "a manager holds everything without one capability row" do
-    assert Community::Access.allow?(@boss, "ops.engine.sync")
+    assert Community::Access.allow?(@boss, "ops.engine")
     assert Authz.holds?(@boss, "channel.all")
     assert_equal 0, Authz::Grant.live.for_person(@boss.user_id).capabilities.count,
       "the manager is superadmin by role, not by a pile of capability grants"
@@ -78,11 +78,11 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
 
   test "a role and an extra scope are held independently" do
     staff = hold_role!("UCABOTH", "promethean")
-    Authz::Grant.give!(staff.user_id, kind: "capability", name: "engine.sync", by: "test")
+    Authz::Grant.give!(staff.user_id, kind: "capability", name: "channel.backfill", by: "test")
     Current.forget_roles
 
     assert_equal %w[promethean], Authz.roles_held(staff.user_id)
-    assert Community::Access.allow?(staff, "ops.engine.sync"), "the extra scope stands alone"
+    assert Community::Access.allow?(staff, "ops.channel.backfill"), "the extra scope stands alone"
     assert_not Community::Access.allow?(staff, "analytics.member.read"),
       "the scope did not drag anything else in"
   end
@@ -178,10 +178,6 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
     scoped("backfill", "channel.read", "channel.backfill")
   end
 
-  def syncer
-    scoped("sync", "channel.read", "channel.backfill", "engine.sync")
-  end
-
   def priceable_channel
     Analytics::DimChannel.where(archived: false).order(:channel_id).find do |channel|
       ChannelBackfill.estimate(channel).to_i.positive?
@@ -211,16 +207,20 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
       post opt_in_channel_path(channel.channel_id)
     end
 
-    assert_match(/needs engine.sync/, flash[:alert])
+    assert_match(/needs engine.manage/, flash[:alert])
   end
 
-  test "engine.sync is not stopped by the ceiling" do
+  test "engine.manage cannot be handed out piecemeal, only a manager bypasses the ceiling" do
     channel = priceable_channel
     skip "the seed priced no channel" if channel.nil?
     open_up(channel, "everyone")
     Engine::Setting.set!("engine", "backfill_ceiling", "0", by: @boss.user_id)
-    sign_in_as(syncer)
 
+    assert_raises(Authz::Grant::NotAllowed) do
+      Authz::Grant.give!("UCASYNC", kind: "capability", name: "engine.manage", by: "test")
+    end
+
+    sign_in_as(@boss)
     assert_difference -> { ChannelBackfill.count }, 1 do
       post opt_in_channel_path(channel.channel_id)
     end
@@ -250,13 +250,13 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
 
   test "a new role retires the old one and leaves the extra scopes alone" do
     staff = hold_role!("UCASWAP", "promethean")
-    Authz::Grant.give!(staff.user_id, kind: "capability", name: "engine.sync", by: "test")
+    Authz::Grant.give!(staff.user_id, kind: "capability", name: "channel.backfill", by: "test")
     hold_role!("UCASWAP", "gardener")
     Current.forget_roles
 
     assert_equal %w[gardener], Authz.roles_held(staff.user_id),
       "a second role replaces the first, it does not stack"
-    assert_equal %w[engine.sync],
+    assert_equal %w[channel.backfill],
       Authz::Grant.live.for_person(staff.user_id).capabilities.pluck(:name),
       "swapping the role must not disturb the extra scopes"
   end

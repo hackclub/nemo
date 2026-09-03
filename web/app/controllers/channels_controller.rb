@@ -181,14 +181,14 @@ class ChannelsController < ApplicationController
 
   def over_ceiling?(estimate)
     return false if estimate.nil?
-    return false if may_community?("ops.engine.sync")
+    return false if may_community?("ops.engine")
 
     estimate > Engine::Setting.backfill_ceiling
   end
 
   def refuse_spend(channel, estimate)
     redirect_to channel_path(channel.channel_id),
-      alert: "#{helpers.number_with_delimiter(estimate)} requests needs engine.sync"
+      alert: "#{helpers.number_with_delimiter(estimate)} requests needs engine.manage"
   end
 
   def parse_range_date(value)

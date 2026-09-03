@@ -36,12 +36,12 @@ class AccessUiTest < ActionDispatch::IntegrationTest
   end
 
   test "a manager gives a capability no role carries" do
-    assert_not_includes held.keys, "engine.sync"
+    assert_not_includes held.keys, "channel.backfill"
 
     patch admin_person_capability_path(@them.user_id),
-      params: { key: "engine.sync", effect: "allow" }
+      params: { key: "channel.backfill", effect: "allow" }
 
-    assert_equal "added", held["engine.sync"]
+    assert_equal "added", held["channel.backfill"]
   end
 
   test "the locked granting capability cannot be handed out" do

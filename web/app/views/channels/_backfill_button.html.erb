@@ -1,5 +1,5 @@
 <% may = may_community?("ops.channel.backfill") %>
-<% may_sync = may_community?("ops.engine.sync") %>
+<% may_sync = may_community?("ops.engine") %>
 <% why = Community::Access.why_not(current_account, "ops.channel.backfill") %>
 <% case backfill&.state %>
 <% when "queued" %>

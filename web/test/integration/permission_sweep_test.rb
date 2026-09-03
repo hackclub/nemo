@@ -5,7 +5,7 @@ require "test_helper"
 class PermissionSweepTest < ActionDispatch::IntegrationTest
   PERSONAS = {
     "member" => { role: nil },
-    "scoped" => { role: nil, scopes: %w[member.read engine.read] },
+    "scoped" => { role: nil, scopes: %w[member.read channel.backfill] },
     "promethean" => { role: "promethean", channels: 1 },
     "gardener" => { role: "gardener" },
     "analytics" => { role: "analytics" },
@@ -111,16 +111,16 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     assert_empty leaked, leaked.join("\n")
   end
 
-  # 4. the engine is engine.read only
-  test "only engine.read reaches the engine" do
+  # 4. the engine is engine.manage only
+  test "only engine.manage reaches the engine" do
     leaked = []
     PERSONAS.each_key do |name|
       id = become(name)
-      may = Authz.holds?(Account.find(id), "engine.read")
+      may = Authz.holds?(Account.find(id), "engine.manage")
       ENGINE_PATHS.each do |path|
         next if reached?(path) == may
 
-        leaked << "#{name} on #{path} with engine.read=#{may}, got #{response.status}"
+        leaked << "#{name} on #{path} with engine.manage=#{may}, got #{response.status}"
       end
     end
     assert_empty leaked, leaked.join("\n")
@@ -248,11 +248,11 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     [:patch, "/fd/role_permission", "access.grant",
      { role: "firefighter", key: "case.act", allowed: "0" }],
     [:patch, "/fd/flag", "app.flip", { key: "fire_engine", on: "0" }],
-    [:post, "/engine/sync", "engine.sync", {}],
-    [:post, "/engine/cancel", "engine.stage", {}],
-    [:post, "/engine/stages/members", "engine.stage", {}],
-    [:patch, "/engine/tune", "engine.tune", { retention_days: "30" }],
-    [:delete, "/engine/tune", "engine.tune", {}]
+    [:post, "/engine/sync", "engine.manage", {}],
+    [:post, "/engine/cancel", "engine.manage", {}],
+    [:post, "/engine/stages/members", "engine.manage", {}],
+    [:patch, "/engine/tune", "engine.manage", { retention_days: "30" }],
+    [:delete, "/engine/tune", "engine.manage", {}]
   ].freeze
 
   test "every mutating route turns away everyone who does not hold its capability" do
@@ -367,7 +367,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
       id = become(name)
       staff = Account.find(id)
       [["/fd/cases", "case.read"], ["/admin/people", "access.grant"],
-       ["/engine", "engine.read"]].each do |path, key|
+       ["/engine", "engine.manage"]].each do |path, key|
         next if Authz.holds?(staff, key)
 
         get "#{path}.json"

@@ -193,12 +193,12 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     channel = Analytics::DimChannel.where(archived: false).first
 
     post admin_grants_path, params: { user_id: "U0AFF1", role: "promethean",
-      scopes: ["engine.stage"], channels: [channel.channel_id], reason: "the sync rota" }
+      scopes: ["channel.backfill"], channels: [channel.channel_id], reason: "the sync rota" }
     Current.forget_roles
 
     assert_equal "promethean", held.name
     got = Authz.held("U0AFF1")
-    assert_equal "added", got["engine.stage"]
+    assert_equal "added", got["channel.backfill"]
     assert_equal "baseline", got["channel.read"],
       "promethean already carries channel.read, so it is not granted twice"
     assert Channels::Audience::Grant.live

@@ -17,7 +17,7 @@ class EngineController < ApplicationController
     @run = Analytics::FctIngestRun.parents.recent_first.first
     @auto_refresh = @run&.running? || @active_request.present?
 
-    @may_tune = may_community?("ops.engine.tune")
+    @may_tune = may_community?("ops.engine")
     @open = params[:open].presence
     @steps = @run ? steps_for(@run) : []
     @step_output = @run ? step_output_for(@run) : []
@@ -54,7 +54,7 @@ class EngineController < ApplicationController
   end
 
   def tune
-    return refuse_tuning unless may_community?("ops.engine.tune")
+    return refuse_tuning unless may_community?("ops.engine")
 
     row = Engine::Setting.set!(params[:source], params[:name], params[:value],
       by: current_account.user_id)
@@ -68,7 +68,7 @@ class EngineController < ApplicationController
   end
 
   def untune
-    return refuse_tuning unless may_community?("ops.engine.tune")
+    return refuse_tuning unless may_community?("ops.engine")
 
     row = Engine::Setting.reset!(params[:source], params[:name], by: current_account.user_id)
     if row
@@ -87,7 +87,7 @@ class EngineController < ApplicationController
   end
 
   def sync
-    return refuse_running("ops.engine.sync") unless may_community?("ops.engine.sync")
+    return refuse_running unless may_community?("ops.engine")
 
     if SyncRequest.active.exists?
       redirect_to engine_path, alert: "a sync is already queued or running"
@@ -101,7 +101,7 @@ class EngineController < ApplicationController
   end
 
   def cancel
-    return refuse_running("ops.engine.stage") unless may_community?("ops.engine.stage")
+    return refuse_running unless may_community?("ops.engine")
 
     request = SyncRequest.active.recent_first.first
     if request&.cancel!
@@ -112,7 +112,7 @@ class EngineController < ApplicationController
   end
 
   def trigger_stage
-    return refuse_running("ops.engine.stage") unless may_community?("ops.engine.stage")
+    return refuse_running unless may_community?("ops.engine")
 
     if SyncRequest.active.exists?
       redirect_to engine_path, alert: "a sync is already queued or running"
@@ -183,11 +183,11 @@ class EngineController < ApplicationController
 
   def refuse_tuning
     redirect_to engine_path(tab: "tuning"),
-      alert: Community::Access.why_not(current_account, "ops.engine.tune")
+      alert: Community::Access.why_not(current_account, "ops.engine")
   end
 
-  def refuse_running(key)
-    redirect_to engine_path, alert: Community::Access.why_not(current_account, key)
+  def refuse_running
+    redirect_to engine_path, alert: Community::Access.why_not(current_account, "ops.engine")
   end
 
   def stage_for_source(source)

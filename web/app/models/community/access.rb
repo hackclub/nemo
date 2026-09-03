@@ -11,15 +11,12 @@ module Community
       "analytics.channel.read" => "channel.read",
       "analytics.channel.share" => "channel.share",
       "analytics.grant" => "access.grant",
-      "ops.engine.read" => "engine.read",
-      "ops.engine.stage" => "engine.stage",
-      "ops.engine.sync" => "engine.sync",
-      "ops.engine.tune" => "engine.tune",
+      "ops.engine" => "engine.manage",
       "ops.channel.backfill" => "channel.backfill"
     }.freeze
 
     def self.capability_for(key)
-      CAPABILITY.fetch(key.to_s) { raise Permission::Unknown, "#{key} is not a permission" }
+      CAPABILITY.fetch(key.to_s) { raise Authz::Unknown, "#{key} is not a permission" }
     end
 
     def self.allow?(staff, key, record = nil)
