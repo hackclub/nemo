@@ -73,7 +73,7 @@ capabilities:
   case.open:
     label: Open a case, claim it, hand it back
     area: case
-    events: [case/opened, assignee/claimed, assignee/unclaimed]
+    events: [case/opened, assignee/claimed, assignee/unclaimed, assignee/attached, assignee/detached]
 
   case.categorise:
     label: Set the violation on a case

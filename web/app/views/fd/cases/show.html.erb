@@ -34,15 +34,23 @@
       <% end %>
 
       <% unless @case.resolved? %>
+        <p class="menu-group">Who holds it</p>
         <% if @case.assigned_to?(current_account.user_id) %>
-          <p class="menu-group">Who holds it</p>
           <%= gated_button "case.open", menu_item("hand", "Put it back in the queue"),
                 fd_case_claim_path(@case), on: @case, method: :delete %>
         <% elsif @case.assigned? %>
-          <p class="menu-group">Who holds it</p>
           <%= gated_button "case.open", menu_item("join", "Put myself on it too"),
                 fd_case_claim_path(@case), on: @case, method: :post %>
         <% end %>
+        <% @case.assignees.oldest_first.each do |row| %>
+          <% next if row.user_id == current_account.user_id %>
+          <%= gated_button "case.open", menu_item("hand", "Take @#{row.user_id} off it"),
+                fd_case_assignee_path(@case, row.user_id), on: @case, method: :delete,
+                form: { class: "contents", data: { turbo_confirm:
+                  "Take @#{row.user_id} off case #{@case.id}?" } } %>
+        <% end %>
+        <%= opens_modal "case.open", menu_item("join", "Assign somebody"),
+              opens: "assign-case", on: @case %>
 
         <p class="menu-group">Closes this case</p>
         <%= opens_modal "case.resolve", menu_item("merge", "Merge into another case",
@@ -298,6 +306,7 @@
 <% end %>
 
 <%= render "add_person_modal", kase: @case %>
+<%= render "assign_modal", kase: @case %>
 <% if @decisions.any? %>
   <%= render "follow_decision_modal", kase: @case, decisions: @decisions %>
 <% end %>

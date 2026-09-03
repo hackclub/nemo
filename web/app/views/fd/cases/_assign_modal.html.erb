@@ -1,0 +1,16 @@
+<%= render layout: "fd/modal", locals: { id: "assign-case",
+      title: "Assign case #{kase.id}", label: "Assign the case to somebody" } do %>
+  <%= form_with url: fd_case_assignees_path(kase), method: :post, html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <div class="field-label">
+        <span>Who</span>
+        <%= render "fd/member_picker", name: "user_ids[]", single: false,
+              label: "search for the people to assign" %>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+      <%= submit_tag "Assign to the case", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>

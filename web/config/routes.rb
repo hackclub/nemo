@@ -34,6 +34,7 @@ Rails.application.routes.draw do
     end
     resources :cases, only: [:index, :show, :create, :update] do
       resource :claim, only: [:create, :destroy]
+      resources :assignees, only: [:create, :destroy]
       resource :resolution, only: [:create, :destroy]
       resources :replies, only: [:create]
       resources :chats, only: [:create]
