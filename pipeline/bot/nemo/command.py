@@ -1,7 +1,7 @@
 import logging
 import re
 
-from bot.engine import access, richtext, session
+from bot.engine import access, audit, richtext, session
 from bot.nemo import channel, record
 from bot.nemo.cards import report
 
@@ -140,7 +140,7 @@ def looked_up(found, names=None):
 
 
 NEEDED = {
-    LOOKUP: "identity.read",
+    LOOKUP: "case.read",
     NOTE: "member.note",
     OPEN: "case.open",
     "case": "case.read",
@@ -181,6 +181,8 @@ def register(app):
 
             if verb == LOOKUP:
                 answer = looked_up(record.read(conn, wanted))
+                audit.record(conn, "member", 0, "looked_up", user_id,
+                             after={"user_id": wanted})
             elif verb == NOTE:
                 channel.member_note(conn, wanted, body, user_id)
                 answer = said_only(

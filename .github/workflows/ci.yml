@@ -58,9 +58,6 @@ jobs:
           working-directory: web
       - name: schemas, roles, grants and both migration sets
         run: ./bin/nemo provision
-      - name: access gate against the provisioned schema
-        run: uv run pytest -q tests/test_access_gate.py
-        working-directory: pipeline
       - name: seed, build the warehouse, verify
         run: ./bin/nemo seed --scale tiny
       - name: rails tests

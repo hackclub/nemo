@@ -140,6 +140,7 @@ module Fd
       when "community_grant" then community_grant_row(row, event)
       when "permission" then moved_row(row, event)
       when "report" then report_row(row, event)
+      when "member" then member_row(row, event)
       when *ON_CASE then on_case(row, event, row.entity_id)
       else Row.new(at: row.occurred_at, event: event)
       end
@@ -185,6 +186,14 @@ module Fd
       said = row.after || {}
       Row.new(at: row.occurred_at, event: event,
         said: [said["permission"], said["role"]&.tr("_", " ")].compact.join(" · ").presence)
+    end
+
+    def member_row(row, event)
+      said = row.after.presence || {}
+      return Row.new(at: row.occurred_at, event: event) if said["user_id"].blank?
+
+      Row.new(at: row.occurred_at, event: event, kind: "member", id: said["user_id"],
+        said: ("from Slack" if row.source_app != Audit::SOURCE_APP))
     end
 
     def grant_row(row, event)

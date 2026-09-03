@@ -68,6 +68,7 @@ capabilities:
   case.read:
     label: Read every case, note and thread
     area: case
+    events: [member/looked_up]
 
   case.open:
     label: Open a case, claim it, hand it back
