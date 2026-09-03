@@ -78,6 +78,7 @@
     --dur: 110ms;
 
     --rail-open-w: 214px;
+    --rail-slim-w: 56px;
     --head-h: 62px;
 
     --sev-crit: var(--down);
@@ -726,6 +727,7 @@
   }
 
   .rail-item {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 9px;
@@ -6980,9 +6982,68 @@
     color: var(--ink-3);
   }
 
+  @media (min-width: 601px) and (max-width: 1100px) and (hover: hover) {
+    .shell {
+      grid-template-columns: var(--rail-slim-w) minmax(0, 1fr);
+    }
+
+    .rail {
+      width: var(--rail-slim-w);
+      transition: box-shadow var(--dur) var(--ease-out);
+    }
+
+    .rail:hover,
+    .rail:focus-within {
+      width: var(--rail-open-w);
+      box-shadow: var(--e-2);
+    }
+
+    .rail:not(:hover):not(:focus-within) .brand {
+      justify-content: center;
+      padding-inline: 0;
+    }
+
+    .rail:not(:hover):not(:focus-within) .brand-name,
+    .rail:not(:hover):not(:focus-within) .rail-label,
+    .rail:not(:hover):not(:focus-within) .rail-text,
+    .rail:not(:hover):not(:focus-within) .rail-find .kbd,
+    .rail:not(:hover):not(:focus-within) .rail-nest::before,
+    .rail:not(:hover):not(:focus-within) .rail-nest .rail-item:not(:has(.rail-ic)) {
+      display: none;
+    }
+
+    .rail:not(:hover):not(:focus-within) .rail-nest {
+      margin-inline-start: 0;
+      padding-inline-start: 0;
+    }
+
+    .rail:not(:hover):not(:focus-within) .rail-item {
+      justify-content: center;
+      gap: 0;
+      min-height: 32px;
+      padding-inline: 0;
+    }
+
+    .rail:not(:hover):not(:focus-within) .rail-foot {
+      padding-inline: 8px;
+    }
+
+    .rail:not(:hover):not(:focus-within) .rail-badge {
+      position: absolute;
+      top: 1px;
+      inset-inline-end: 2px;
+      margin: 0;
+      min-width: 14px;
+      padding: 0 4px;
+      font-size: var(--t-mark);
+      line-height: 14px;
+      text-align: center;
+    }
+  }
+
   /* ── narrow screens ────────────────────────────────────── */
 
-  @media (max-width: 760px) {
+  @media (max-width: 600px), (max-width: 1100px) and (hover: none) {
     .shell {
       grid-template-columns: minmax(0, 1fr);
       grid-template-rows: auto minmax(0, 1fr);
