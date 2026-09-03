@@ -200,4 +200,5 @@ capabilities:
   app.flip:
     label: Turn a section of the dashboard on or off
     area: app
+    locked: true
     events: [flag/turned_on, flag/turned_off]
