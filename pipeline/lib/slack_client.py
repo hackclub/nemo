@@ -17,3 +17,7 @@ RETRY_HANDLERS = [
 def bot_client() -> WebClient:
     return WebClient(token=os.environ["SLACK_BOT_TOKEN"], retry_handlers=RETRY_HANDLERS)
 
+
+def admin_client() -> WebClient:
+    return WebClient(token=os.environ["SLACK_ADMIN_TOKEN"], retry_handlers=RETRY_HANDLERS)
+
