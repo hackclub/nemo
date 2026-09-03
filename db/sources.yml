@@ -163,6 +163,18 @@ sources:
     writes: [raw.member_dim]
     feeds: [mart_account_type, mart_growth]
 
+  admin_users:
+    label: Real name and email, from the Enterprise Grid admin API
+    endpoint: admin.users.list
+    credential: admin
+    cadence: daily
+    window: snapshot
+    guard: none
+    resume: sync_cursor
+    retention: replace
+    writes: [fd.member, fd.member_identity]
+    feeds: []
+
   autojoin:
     label: Public channel names
     endpoint: conversations.list

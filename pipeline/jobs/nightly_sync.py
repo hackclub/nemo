@@ -27,6 +27,7 @@ from ingest.prune import run as prune_rows
 from ingest.member_range_pull import run as pull_member_range
 from ingest.team_stats_pull import run as pull_team_stats
 from ingest.top_posters_pull import run as pull_top_posters
+from ingest.admin_users_pull import run as pull_admin_users
 from ingest.users_list_pull import run as pull_users_list
 from lib.db import (
     CHANNEL_DAY,
@@ -105,6 +106,7 @@ def stages():
         ("channel_history", lambda conn: pull_channel_history(
             conn, tuned(conn, "channel_history", "batch"))),
         ("users_list", lambda conn: pull_users_list(conn)),
+        ("admin_users", lambda conn: pull_admin_users(conn)),
         ("dim_snapshot", lambda conn: snapshot_dimensions(conn)),
         ("channel_replies", lambda conn: pull_channel_replies(
             conn, tuned(conn, "channel_replies", "batch"))),
