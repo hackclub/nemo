@@ -17,6 +17,17 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_no_match(/src=/, response.body, "each viewer reloads the thread they are on")
   end
 
+  test "the stream carries the log's version, so a reload already done is skipped" do
+    post fd_case_chats_path(@kase), params: { body: "who wants this one?" },
+      as: :turbo_stream
+    version = Fd::ChatVersion.for(@kase.id)
+
+    assert_match(/version="#{Regexp.escape(version)}"/, response.body)
+
+    get fd_case_chat_log_path(@kase)
+    assert_select ".chat-log[data-version=?]", version
+  end
+
   test "the message is kept as working chat, not as a note" do
     post fd_case_chats_path(@kase), params: { body: "who wants this one?" },
       as: :turbo_stream
