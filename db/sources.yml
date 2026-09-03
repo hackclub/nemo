@@ -152,7 +152,7 @@ sources:
       batch: {default: 200, min: 10, max: 2000}
 
   users_list:
-    label: Account flags and deactivation
+    label: Account flags and deactivation, display name, handle, and avatar
     endpoint: users.list
     credential: bot
     cadence: daily
@@ -160,7 +160,7 @@ sources:
     guard: none
     resume: sync_cursor
     retention: replace
-    writes: [raw.member_dim]
+    writes: [raw.member_dim, fd.member, fd.member_identity]
     feeds: [mart_account_type, mart_growth]
 
   admin_users:
