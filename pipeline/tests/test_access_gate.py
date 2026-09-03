@@ -10,6 +10,10 @@ from lib.paths import DB_DIR
 load_dotenv(DB_DIR.parent / "deploy" / ".env")
 os.environ["POSTGRES_DB"] = os.environ.get("POSTGRES_TEST_DB", "mnemosyne_test")
 
+pytestmark = pytest.mark.skipif(
+    "POSTGRES_HOST" not in os.environ, reason="needs the provisioned database"
+)
+
 from lib.db import connect_admin  # noqa: E402
 
 CHECKS = yaml.safe_load((DB_DIR / "permission_checks.yml").read_text())["checks"]

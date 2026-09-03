@@ -8,6 +8,10 @@ module Fd
 
     SHAPE = /\A(\d+)\.(\d+)\.(\d+)\z/
 
+    CHAT_STAMPS = Arel.sql("count(*), max(id), max(greatest(said_at, edited_at, deleted_at))")
+    MESSAGE_STAMPS = Arel.sql("count(*), max(id), max(greatest(posted_at, edited_at, deleted_at))")
+    OUTBOX_STAMPS = Arel.sql("count(*), max(id), max(greatest(requested_at, sent_at, failed_at))")
+
     def self.for(case_id)
       parts(case_id).join("-")
     end
@@ -17,9 +21,9 @@ module Fd
       conversations = IntakeConversation.for_case(family).unscope(:order).select(:id)
 
       [
-        part(CaseChat.where(case_id: family), "said_at, edited_at, deleted_at"),
-        part(IntakeMessage.where(conversation_id: conversations), "posted_at, edited_at, deleted_at"),
-        part(IntakeOutbox.where(conversation_id: conversations), "requested_at, sent_at, failed_at")
+        part(CaseChat.where(case_id: family), CHAT_STAMPS),
+        part(IntakeMessage.where(conversation_id: conversations), MESSAGE_STAMPS),
+        part(IntakeOutbox.where(conversation_id: conversations), OUTBOX_STAMPS)
       ]
     end
 
@@ -38,8 +42,8 @@ module Fd
       latest ? (latest.to_f * 1000).to_i : 0
     end
 
-    def self.part(rows, columns)
-      count, max_id, latest = rows.pick(Arel.sql("count(*), max(id), max(greatest(#{columns}))"))
+    def self.part(rows, stamps)
+      count, max_id, latest = rows.pick(stamps)
       Part.new(count, max_id.to_i, stamp(latest))
     end
   end
