@@ -269,7 +269,7 @@ class EngineController < ApplicationController
         said: "of #{VISIT_STEPS_NEED}, which is what the visit steps need",
         tone: held >= VISIT_STEPS_NEED ? "good" : ""),
       BandFact.new(key: "Behind", value: behind.size,
-        said: worst ? "#{worst.source.key}, #{short_age(worst.last_ok)}" : "nothing",
+        said: worst ? "#{worst.source.key}, #{helpers.short_age(worst.last_ok)}" : "nothing",
         tone: behind.any? ? "bad" : "good"),
       BandFact.new(key: "Tonight", value: "#{done}/#{planned}",
         said: @run ? run_span(@run) : "not started", tone: "push")
@@ -292,13 +292,6 @@ class EngineController < ApplicationController
       run += 1
     end
     run
-  end
-
-  def short_age(at)
-    return "never" if at.nil?
-
-    hours = ((Time.current - at) / 1.hour).round
-    hours < 24 ? "#{hours}h" : "#{(hours / 24.0).round}d"
   end
 
   def run_span(run)
