@@ -151,6 +151,15 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
     assert_match(/appeal upheld/, response.body)
   end
 
+  test "a reversal with no action says so instead of silently doing nothing" do
+    sign_in_as(@me)
+    reverse(action_id: "")
+
+    assert_redirected_to fd_case_path(@kase, tab: "actions")
+    assert_equal "pick the action to reverse", flash[:alert]
+    assert_nil @action.reload.reversed_at
+  end
+
   def entries
     Fd::AuditEntry.where(entity_type: "action", entity_id: @action.id, verb: "reversed")
   end

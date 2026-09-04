@@ -148,6 +148,14 @@ class CallRequest(BaseModel):
     max_retries: int = Field(3, ge=0, le=MAX_RETRIES_CEILING)
 
 
+@app.get("/health")
+def health():
+    return {
+        "ok": True,
+        "credentials": {name: credential_present(name) for name in CREDENTIALS},
+    }
+
+
 @app.get("/verify")
 def verify(response: Response, client: Client = Depends(current_client)):
     credentials = {}

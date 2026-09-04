@@ -6,6 +6,11 @@ module Fd
 
     def create
       kase = Case.find(params[:case_id])
+      if params[:action_id].blank?
+        return redirect_to(fd_case_path(kase, tab: "actions"),
+          alert: "pick the action to reverse")
+      end
+
       reason = params[:reversal_reason].to_s.strip
 
       problem = objection(reason)
@@ -45,8 +50,6 @@ module Fd
     private
 
     def objection(reason)
-      return "pick the action to reverse" if params[:action_id].blank?
-
       if reason.blank?
         return wrong!(:reversal_reason, "Say why it is being reversed. It goes on the record.")
       end

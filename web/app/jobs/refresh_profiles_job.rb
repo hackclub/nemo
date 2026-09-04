@@ -15,8 +15,8 @@ class RefreshProfilesJob < ApplicationJob
   end
 
   def self.fresh_asks(user_ids)
-    user_ids.reject { |id| Rails.cache.exist?("#{ASKED_KEY}/#{id}") }.tap do |asking|
-      asking.each { |id| Rails.cache.write("#{ASKED_KEY}/#{id}", true, expires_in: ASKED_TTL) }
+    user_ids.select do |id|
+      Rails.cache.write("#{ASKED_KEY}/#{id}", true, expires_in: ASKED_TTL, unless_exist: true)
     end
   end
 
