@@ -55,9 +55,7 @@
       </table>
     </div>
   <% else %>
-    <p class="card-note">
-      <%= run.running? ? "No stage has started yet." : "This run predates per-stage tracking." %>
-    </p>
+    <p class="card-note">n/a</p>
   <% end %>
 </div>
 
@@ -65,7 +63,6 @@
   <div class="card-head">
     <div>
       <h2 class="card-title">Stage output</h2>
-      <p class="card-sub">everything each stage printed, captured as it ran</p>
     </div>
     <% if step_output.any? %>
       <div class="card-tools"><span class="chip chip-off"><%= pluralize(step_output.size, "stage") %></span></div>
@@ -83,9 +80,6 @@
       </details>
     <% end %>
   <% else %>
-    <p class="card-note">
-      Nothing captured for this run. Stage output is recorded from the run that follows the capture
-      being added, so it stays empty until the next nightly.
-    </p>
+    <p class="card-note">n/a</p>
   <% end %>
 </div>
