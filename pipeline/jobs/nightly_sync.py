@@ -174,6 +174,14 @@ def record_step_output(run_id, index, source, text):
         pass
 
 
+def discard(conn):
+    try:
+        conn.rollback()
+    except Exception as exc:
+        return f"{type(exc).__name__}: {exc}"
+    return None
+
+
 def run_stage(conn, name, stage, run_id, index, total):
     buffer = io.StringIO()
     for attempt in range(1, STAGE_ATTEMPTS + 1):
@@ -181,15 +189,19 @@ def run_stage(conn, name, stage, run_id, index, total):
             with run_step(run_id, index, total), redirect_stdout(Tee(sys.stdout, buffer)):
                 stage(conn)
         except SyncCancelled:
-            conn.rollback()
+            torn = discard(conn)
+            if torn:
+                buffer.write(f"rollback failed, {torn}\n")
             record_step_output(run_id, index, name, buffer.getvalue())
             raise
         except Exception as exc:
-            conn.rollback()
+            torn = discard(conn)
             detail = f"{type(exc).__name__}: {exc}"
+            if torn:
+                detail = f"{detail}, then rollback failed, {torn}"
             buffer.write(f"{detail}\n")
             record_step_output(run_id, index, name, buffer.getvalue())
-            if attempt == STAGE_ATTEMPTS or not retryable(exc):
+            if torn or attempt == STAGE_ATTEMPTS or not retryable(exc):
                 return detail
             buffer.write(f"attempt {attempt + 1}\n")
             print(f"[{index}/{total}] {name}: {detail}, retrying")
