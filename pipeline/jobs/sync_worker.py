@@ -22,6 +22,7 @@ from lib.db import (
 DEFAULT_AT = "03:00"
 DEFAULT_POLL_SECONDS = 60
 CANCEL_POLL_SECONDS = 30
+BEAT_SECONDS = 60
 CHANNEL = "sync_request"
 CANCEL_CHANNEL = "sync_cancel"
 
@@ -187,6 +188,29 @@ def alive(note):
         print(f"sync worker: heartbeat failed, {type(exc).__name__}: {exc}")
 
 
+def waiting_note(scheduled):
+    return f"next scheduled run at {scheduled:%Y-%m-%dT%H:%M}"
+
+
+@contextmanager
+def beating(note):
+    stop = threading.Event()
+
+    def pulse():
+        while True:
+            alive(note())
+            if stop.wait(BEAT_SECONDS):
+                return
+
+    thread = threading.Thread(target=pulse, daemon=True)
+    thread.start()
+    try:
+        yield
+    finally:
+        stop.set()
+        thread.join(timeout=5)
+
+
 def run_scheduled(label="scheduled"):
     print(f"sync worker: {label} run starting at {datetime.now():%Y-%m-%dT%H:%M:%S}")
     try:
@@ -214,33 +238,38 @@ def main():
     )
     waiting = listener()
     reap()
-    alive(f"next scheduled run at {scheduled:%Y-%m-%dT%H:%M}")
+    state = {"note": waiting_note(scheduled)}
 
-    if run_at_start_enabled():
-        run_scheduled("startup")
-        scheduled = next_run_at(at, datetime.now())
-        print(f"sync worker: next scheduled run at {scheduled:%Y-%m-%dT%H:%M}")
-
-    while True:
-        alive(f"next scheduled run at {scheduled:%Y-%m-%dT%H:%M}")
-        if datetime.now() >= scheduled:
-            run_scheduled()
+    with beating(lambda: state["note"]):
+        if run_at_start_enabled():
+            state["note"] = "startup run"
+            run_scheduled("startup")
             scheduled = next_run_at(at, datetime.now())
             print(f"sync worker: next scheduled run at {scheduled:%Y-%m-%dT%H:%M}")
-            continue
 
-        request = claim()
-        if request:
-            serve(*request)
-            reap()
-            continue
+        while True:
+            state["note"] = waiting_note(scheduled)
+            if datetime.now() >= scheduled:
+                state["note"] = "scheduled run"
+                run_scheduled()
+                scheduled = next_run_at(at, datetime.now())
+                print(f"sync worker: next scheduled run at {scheduled:%Y-%m-%dT%H:%M}")
+                continue
 
-        try:
-            if not wait_for_request(waiting, wait_seconds(poll, scheduled, datetime.now())):
+            request = claim()
+            if request:
+                request_id, kind, stage = request
+                state["note"] = f"sync request {request_id} ({stage or kind})"
+                serve(*request)
                 reap()
-        except psycopg.OperationalError as exc:
-            print(f"sync worker: listener reconnecting after {type(exc).__name__}: {exc}")
-            waiting = listener()
+                continue
+
+            try:
+                if not wait_for_request(waiting, wait_seconds(poll, scheduled, datetime.now())):
+                    reap()
+            except psycopg.OperationalError as exc:
+                print(f"sync worker: listener reconnecting after {type(exc).__name__}: {exc}")
+                waiting = listener()
 
 
 if __name__ == "__main__":
