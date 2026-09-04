@@ -179,7 +179,7 @@ def discard(conn):
     return None
 
 
-def run_stage(conn, name, stage, run_id, index, total):
+def run_stage(conn, name, stage, run_id, index, total, budget=None, started=None):
     buffer = io.StringIO()
     for attempt in range(1, STAGE_ATTEMPTS + 1):
         try:
@@ -196,9 +196,13 @@ def run_stage(conn, name, stage, run_id, index, total):
             detail = f"{type(exc).__name__}: {exc}"
             if torn:
                 detail = f"{detail}, then rollback failed, {torn}"
+            over = started is not None and over_budget(
+                (time.monotonic() - started) / 60, budget, 1, name)
+            if over:
+                detail = f"{detail}, {over}, not retrying"
             buffer.write(f"{detail}\n")
             record_step_output(run_id, index, name, buffer.getvalue())
-            if torn or attempt == STAGE_ATTEMPTS or not retryable(exc):
+            if torn or over or attempt == STAGE_ATTEMPTS or not retryable(exc):
                 return detail
             buffer.write(f"attempt {attempt + 1}\n")
             print(f"[{index}/{total}] {name}: {detail}, retrying")
@@ -266,7 +270,7 @@ def run_stages(conn, plan, run_id, budget=None):
             continue
         ran += 1
         print(f"[{index}/{len(plan)}] {name}")
-        detail = run_stage(conn, name, stage, run_id, index, len(plan))
+        detail = run_stage(conn, name, stage, run_id, index, len(plan), budget=budget, started=started)
         if detail:
             failed.append((name, detail))
             print(f"[{index}/{len(plan)}] {name}: FAILED {detail}")
