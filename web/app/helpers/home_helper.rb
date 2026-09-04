@@ -86,9 +86,9 @@ module HomeHelper
   end
 
   REPLY_CLASS_LABEL = {
-    "fast" => "member replied, under 1 hour",
-    "slow" => "member replied, over 1 hour",
-    "none" => "no member reply"
+    "fast" => "under 1 h",
+    "slow" => "over 1 h",
+    "none" => "none"
   }.freeze
 
   def reply_class_label(reply_class)
@@ -102,6 +102,12 @@ module HomeHelper
     end
     text = number_to_percentage(pct, precision: 1)
     tag.span(label ? "#{text} #{label}" : text, class: style)
+  end
+
+  def retention_chip(rate, measured)
+    return tag.span("n/a", class: "chip chip-off") if rate.nil?
+
+    rate_chip((rate.to_f * 100).round(1), "of #{number_with_delimiter(measured)}")
   end
 
   def incomplete_chip(*reasons)

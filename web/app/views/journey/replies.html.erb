@@ -54,33 +54,42 @@
 </div>
 
 <% if @fast_reply_vs_retention.any? %>
-  <div class="grid-3">
-    <% @fast_reply_vs_retention.each do |row| %>
-      <div class="card">
-        <p class="kpi-label">
-          <%= reply_class_label(row.reply_class) %>
-          <%= incomplete_chip(
-                ("no newcomer here has a covered retention window yet" if row.retained_day_30_rate.nil?)
-              ) %>
-        </p>
-        <p class="kpi-val"><%= number_with_delimiter(row.newcomers) %></p>
-        <% if row.retained_day_30_rate %>
-          <div class="delta">
-            <span class="chip chip-off">
-              day 30: <%= number_to_percentage((row.retained_day_30_rate.to_f * 100).round(1), precision: 1) %>
-              of <%= number_with_delimiter(row.measured_day_30) %>
-            </span>
-            <% if row.retained_day_90_rate %>
-              <span class="chip chip-off">
-                day 90: <%= number_to_percentage((row.retained_day_90_rate.to_f * 100).round(1), precision: 1) %>
-                of <%= number_with_delimiter(row.measured_day_90) %>
-              </span>
-            <% else %>
-              <span class="chip chip-off">day 90: n/a</span>
-            <% end %>
-          </div>
+  <% window = @fast_reply_vs_retention.first %>
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Fast reply vs retention</h2>
+        <% if (note = window_note(window.window_start, window.window_end)) %>
+          <p class="card-sub"><%= note %></p>
         <% end %>
       </div>
-    <% end %>
+      <div class="card-tools">
+        <span class="chip chip-off">
+          <%= pluralize(number_with_delimiter(@fast_reply_vs_retention.sum(&:newcomers)), "newcomer") %>
+        </span>
+      </div>
+    </div>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>first member reply</th>
+            <th class="col-num">newcomers</th>
+            <th class="col-num">still here at day 30</th>
+            <th class="col-num">still here at day 90</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @fast_reply_vs_retention.each do |row| %>
+            <tr>
+              <td><%= reply_class_label(row.reply_class) %></td>
+              <td class="col-num"><%= number_with_delimiter(row.newcomers) %></td>
+              <td class="col-num"><%= retention_chip(row.retained_day_30_rate, row.measured_day_30) %></td>
+              <td class="col-num"><%= retention_chip(row.retained_day_90_rate, row.measured_day_90) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
   </div>
 <% end %>
