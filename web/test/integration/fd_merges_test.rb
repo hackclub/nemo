@@ -75,6 +75,15 @@ class FdMergesTest < ActionDispatch::IntegrationTest
     assert_match(/1 case closed as duplicate of case #{@main.id}, which stays open, 1 left alone/, flash[:notice])
   end
 
+  test "every ticked case being resolved already says only that" do
+    @dup_one.update!(resolved_at: 1.hour.ago, resolution: "no_action")
+    @dup_two.update!(resolved_at: 1.hour.ago, resolution: "no_action")
+    sign_in_as(@me)
+    merge([@dup_one.id, @dup_two.id], @main.id)
+
+    assert_equal "nothing to mark: those cases are resolved already", flash[:alert]
+  end
+
   test "a case assigned to somebody else still merges" do
     @dup_one.assign!("UOTHER")
     sign_in_as(@me)

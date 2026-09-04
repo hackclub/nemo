@@ -48,7 +48,7 @@ module Fd
       marked = mark(ids - [root], root)
 
       if marked.zero?
-        refuse("nothing to mark: they are resolved already, or assigned to somebody else")
+        refuse("nothing to mark: those cases are resolved already")
       else
         redirect_to fd_cases_path(query_params), notice: outcome(marked, ids, root)
       end
