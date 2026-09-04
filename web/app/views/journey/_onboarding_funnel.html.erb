@@ -20,10 +20,10 @@
   <% if onboarding_funnel %>
     <div class="chart-short">
       <div
-        data-controller="svg-chart"
-        data-svg-chart-kind-value="bars"
-        data-svg-chart-height-value="240"
-        data-svg-chart-data-value="<%= {
+        data-controller="chart"
+        data-chart-kind-value="bars"
+        data-chart-height-value="240"
+        data-chart-data-value="<%= {
           labels: ["Created", "Joined", "Active after day 1", "Active after day 7", "Active after day 30"],
           datasets: [{
             label: "members",

@@ -114,11 +114,11 @@
   <% if @activity_trend.any? %>
     <div class="chart-short">
       <div
-        data-controller="svg-chart"
-        data-svg-chart-kind-value="line"
-        data-svg-chart-switchable-value="true"
-        data-svg-chart-height-value="240"
-        data-svg-chart-data-value="<%= {
+        data-controller="chart"
+        data-chart-kind-value="line"
+        data-chart-switchable-value="true"
+        data-chart-height-value="240"
+        data-chart-data-value="<%= {
           labels: @activity_trend.map { |a| a.window_start.strftime("%b %d") },
           datasets: [{
             label: "messages posted",

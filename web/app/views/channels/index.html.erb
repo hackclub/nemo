@@ -33,10 +33,10 @@
           <% end %>
         </div>
         <div
-          data-controller="svg-chart"
-          data-svg-chart-kind-value="bars"
-          data-svg-chart-height-value="220"
-          data-svg-chart-data-value="<%= {
+          data-controller="chart"
+          data-chart-kind-value="bars"
+          data-chart-height-value="220"
+          data-chart-data-value="<%= {
             labels: @band_rows.map(&:activity_band),
             datasets: [{ label: "channels", data: @band_rows.map(&:channels) }]
           }.to_json %>"

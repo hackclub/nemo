@@ -8,20 +8,20 @@
     </div>
   </div>
   <div
-    data-controller="svg-chart"
-    data-svg-chart-kind-value="bars"
-    data-svg-chart-height-value="240"
-    data-svg-chart-data-value="<%= {
+    data-controller="chart"
+    data-chart-kind-value="bars"
+    data-chart-height-value="240"
+    data-chart-data-value="<%= {
       labels: s[:labels],
       datasets: [{ label: "channel messages", data: s[:messages] }]
     }.to_json %>"
   ></div>
   <div
-    data-controller="svg-chart"
-    data-svg-chart-kind-value="line"
-    data-svg-chart-height-value="120"
-    data-svg-chart-pct-value="true"
-    data-svg-chart-data-value="<%= {
+    data-controller="chart"
+    data-chart-kind-value="line"
+    data-chart-height-value="120"
+    data-chart-pct-value="true"
+    data-chart-data-value="<%= {
       labels: s[:labels],
       datasets: [{ label: "public share", data: s[:public_share] }]
     }.to_json %>"

@@ -6512,8 +6512,6 @@
     height: 220px;
   }
 
-  .chart-short:has([data-controller~="svg-chart"]),
-  .chart-tall:has([data-controller~="svg-chart"]),
   .chart-short:has([data-controller~="chart"]),
   .chart-tall:has([data-controller~="chart"]) {
     height: auto;

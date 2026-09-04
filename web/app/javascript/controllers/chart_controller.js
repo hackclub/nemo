@@ -292,8 +292,6 @@ export default class extends Controller {
     if (mx < PAD.l || mx > g.wide - PAD.r || my > g.high - PAD.b) return this.clear()
 
     const i = clamp(Math.floor((mx - PAD.l) / g.x.step()), 0, g.rows.length - 1)
-    if (!g.line && my < g.tops[i] - 6) return this.clear()
-
     this.show(i)
   }
 
@@ -330,9 +328,16 @@ export default class extends Controller {
     tip.classList.add("on")
 
     const at = g.mid(i)
-    const wide = tip.offsetWidth || 190
-    tip.style.left = `${clamp(at - wide / 2, 0, Math.max(0, g.wide - wide))}px`
-    tip.style.top = g.line ? "0px" : `${clamp(g.tops[i] - 12, 0, g.high)}px`
+    const tipWide = tip.offsetWidth || 190
+    const bandL = g.line ? at : g.x(i)
+    const bandR = g.line ? at : g.x(i) + g.x.bandwidth()
+
+    let left = bandR + 12
+    if (left + tipWide > g.wide) left = bandL - 12 - tipWide
+    if (left < 0) left = clamp(at - tipWide / 2, 0, Math.max(0, g.wide - tipWide))
+
+    tip.style.left = `${left}px`
+    tip.style.top = `${PAD.t}px`
 
     chart.querySelectorAll(".mark").forEach((mark) =>
       mark.classList.toggle("fade", +mark.dataset.i !== i))
