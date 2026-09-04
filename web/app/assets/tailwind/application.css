@@ -3220,6 +3220,10 @@
     width: 26px;
   }
 
+  .panel-head .theme-chip {
+    width: 26px;
+  }
+
   .theme-name {
     font-weight: 500;
   }
@@ -6373,6 +6377,28 @@
   .is-loud { color: var(--ink); font-weight: 600; }
 
   .is-quiet { color: var(--ink-3); }
+
+  .is-good { color: var(--good); font-weight: 600; }
+
+  .is-high { color: var(--sev-crit); font-weight: 600; }
+
+  .strip {
+    display: flex;
+    align-items: center;
+    gap: var(--s-md);
+    flex-wrap: wrap;
+    padding: var(--s-xs) var(--s-md);
+  }
+
+  .strip-div {
+    width: 1px;
+    align-self: stretch;
+    background-color: var(--line-soft);
+  }
+
+  @media (max-width: 640px) {
+    .strip-div { display: none; }
+  }
 
   .inbar {
     display: grid;

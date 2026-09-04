@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["option"]
+  static targets = ["option", "name", "swatch"]
 
   connect() {
     this.onTheme = () => this.render()
@@ -37,5 +37,19 @@ export default class extends Controller {
       el.classList.toggle("on", key === live)
       el.classList.toggle("auto", !pinned && key === live)
     })
+
+    this.mirror(this.optionTargets.find((el) => el.dataset.themeKey === live), pinned)
+  }
+
+  mirror(option, pinned) {
+    if (!option) return
+
+    if (this.hasNameTarget) {
+      const label = option.querySelector(".theme-name")?.textContent
+      this.nameTarget.textContent = pinned ? label : `${label}, auto`
+    }
+    if (this.hasSwatchTarget) {
+      this.swatchTarget.innerHTML = option.querySelector(".theme-chip")?.innerHTML || ""
+    }
   }
 }

@@ -1,151 +1,86 @@
 <% content_for :page_title, "Your account" %>
 
-<div class="cols c-2">
-  <div class="stack">
-    <div class="card card-flush">
-      <div class="card-head"><div><h2 class="card-title">What you hold</h2></div></div>
-      <% if @holding %>
-        <div class="line-row">
-          <b>Role</b>
-          <% if @roles.any? %>
-            <% @roles.each do |role| %>
-              <span class="chip <%= "chip-crit" if Authz.superadmin?(role) %>">
-                <%= Authz.role_label(role) %>
-              </span>
-            <% end %>
-          <% else %>
-            <span class="sub2">no role</span>
-          <% end %>
-          <span class="grow"></span>
-        </div>
-        <% if @capabilities.any? %>
-          <details class="reveal">
-            <summary class="reveal-head">
-              <span class="reveal-note"><%= @capabilities.size %> of
-                <%= Authz.keys.size %> capabilities</span>
-              <span class="car" aria-hidden="true">▾</span>
-            </summary>
-            <div class="reveal-body">
-              <% @capabilities.sort.each do |key, via| %>
-                <div class="line-row">
-                  <span class="mono"><%= key %></span>
-                  <span class="grow"></span>
-                  <span class="sub2"><%= Authz.label(key) %></span>
-                  <% if via == "added" %>
-                    <span class="chip chip-good">extra</span>
-                  <% end %>
-                </div>
-              <% end %>
-            </div>
-          </details>
-        <% end %>
-      <% else %>
-        <div class="empty">
-          <p class="empty-title">Nothing yet</p>
-          <p class="card-note">
-            You can see the <%= pluralize(@open_to_all, "channel") %> opened to everyone.
-          </p>
-          <% if @ask.any? %>
-            <div class="who">
-              <% @ask.each do |user_id| %>
-                <%= link_to admin_person_path(user_id), class: "btn" do %>
-                  <%= face(user_id) %> Ask <%= @names[user_id] %>
-                <% end %>
-              <% end %>
-            </div>
-          <% end %>
-        </div>
-      <% end %>
+<div class="card card-flush">
+  <div class="strip">
+    <div class="who">
+      <%= face(current_account.user_id, css: "row-avatar av-lg") %>
+      <span class="two-line">
+        <b><%= current_profile&.display_name || @names[current_account.user_id] %></b>
+        <span class="mono"><%= current_account.user_id %></span>
+      </span>
     </div>
 
-    <div class="panel">
-      <div class="panel-head">
-        <span>What you can do</span>
-        <span class="grow"></span>
-        <span class="sub2"><%= @capabilities.size %> of <%= Authz.keys.size %></span>
-      </div>
-      <% if @capabilities.any? %>
-        <div class="scroll">
-          <table class="data-table">
-            <tbody>
-              <% @capabilities.sort.each do |key, via| %>
-                <tr>
-                  <td><%= Authz.label(key) %></td>
-                  <td class="sub2"><%= Authz.area(key) %></td>
-                  <td><span class="chip <%= via == "added" ? "chip-warn" : "" %>"><%= via %></span></td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      <% else %>
-        <p class="card-note">
-          Nothing yet. You can read the overview, and any channel set to public.
-        </p>
-      <% end %>
-      <% if @my_channels.any? %>
-        <p class="card-note">
-          <%= pluralize(@my_channels.size, "channel") %> named to you:
-          <%= @my_channels.map { |id| "##{id}" }.to_sentence %>
-        </p>
-      <% end %>
-    </div>
+    <span class="strip-div" aria-hidden="true"></span>
 
-    <div class="panel">
-      <div class="panel-head">
-        <span>What you did</span>
-        <span class="grow"></span>
-        <span class="sub2">last 30 days</span>
-      </div>
-      <% if @deeds.any? %>
-        <div class="scroll">
-          <table class="data-table">
-            <tbody>
-              <% @deeds.each do |deed| %>
-                <tr>
-                  <td><b><%= deed_head(deed) %></b></td>
-                  <td class="said-cell"><%= deed_said(deed) %></td>
-                  <td class="mono col-num"><%= deed.at.strftime("%-d %b %H:%M") %></td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      <% else %>
-        <div class="empty"><p class="empty-title">Nothing in 30 days</p></div>
-      <% end %>
-    </div>
-  </div>
-
-  <div class="stack">
-    <div class="card">
-      <div class="who">
-        <%= face(current_account.user_id, css: "row-avatar av-lg") %>
-        <span class="two-line">
-          <b><%= current_profile&.display_name || @names[current_account.user_id] %></b>
-          <span class="mono"><%= current_account.user_id %></span>
+    <span class="two-line">
+      <span class="sub2">Role</span>
+      <% if @roles.any? %>
+        <span class="<%= Authz.superadmin?(@roles.first) ? "is-high" : "is-loud" %>">
+          <%= @roles.map { |role| Authz.role_label(role) }.to_sentence %>
         </span>
-      </div>
-      <div class="line-row">
-        <b>Slack</b>
-        <% if @account %>
-          <span class="chip chip-good">linked</span>
-        <% else %>
-          <span class="sub2">not linked</span>
-        <% end %>
-        <span class="grow"></span>
-        <% if @account %>
-          <%= button_to "Unlink", fd_slack_account_path, method: :delete, class: "btn",
-                form: { class: "contents" } %>
-        <% elsif @linkable %>
-          <%= link_to "Link Slack", fd_slack_account_callback_path, class: "btn" %>
-        <% end %>
-      </div>
-    </div>
+      <% else %>
+        <span class="is-quiet">none</span>
+      <% end %>
+    </span>
 
-    <div class="card card-flush">
-      <div class="card-head"><div><h2 class="card-title">Theme</h2></div></div>
-      <%= render "accounts/theme" %>
-    </div>
+    <span class="strip-div" aria-hidden="true"></span>
+
+    <span class="two-line">
+      <span class="sub2">Slack</span>
+      <% if @account %>
+        <span class="is-good">linked</span>
+      <% else %>
+        <span class="is-quiet">not linked</span>
+      <% end %>
+    </span>
+
+    <span class="grow"></span>
+
+    <% if @account %>
+      <%= button_to "Unlink Slack", fd_slack_account_path, method: :delete, class: "btn",
+            form: { class: "contents" } %>
+    <% elsif @linkable %>
+      <%= link_to "Link Slack", fd_slack_account_callback_path, class: "btn" %>
+    <% end %>
   </div>
+</div>
+
+<div class="panel" data-controller="theme">
+  <div class="panel-head">
+    <span>Theme</span>
+    <span class="theme-chip" data-theme-target="swatch" aria-hidden="true"></span>
+    <span class="sub2" data-theme-target="name"></span>
+  </div>
+  <%= render "accounts/theme" %>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <span>What you did</span>
+    <span class="grow"></span>
+    <span class="sub2">
+      <% if @deed_count.positive? %>
+        <%= pluralize(@deed_count, "action") %> &middot; last 30 days
+      <% else %>
+        last 30 days
+      <% end %>
+    </span>
+  </div>
+  <% if @deeds.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <tbody>
+          <% @deeds.each do |deed| %>
+            <tr>
+              <td><b><%= deed_head(deed) %></b></td>
+              <td class="said-cell"><%= deed_said(deed) %></td>
+              <td class="mono col-date"><%= deed.at.strftime("%-d %b %H:%M") %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty"><p class="empty-title">Nothing in 30 days</p></div>
+  <% end %>
 </div>
