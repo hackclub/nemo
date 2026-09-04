@@ -151,6 +151,7 @@ def run(conn, limit=BATCH_LIMIT):
             except (InternalApiError, KeyError, ValueError, TypeError) as exc:
                 counts.rows_rejected += 1
                 dead_letter(conn, SOURCE, {"user_id": user_id}, str(exc))
+                conn.commit()
             if len(rows) >= FLUSH_EVERY:
                 flush(cohort_month)
             time.sleep(max(0.0, MIN_SECONDS_PER_SEARCH - (time.monotonic() - started)))

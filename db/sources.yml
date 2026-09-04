@@ -204,7 +204,7 @@ sources:
     label: All-time message count and first post
     endpoint: search.messages
     credential: admin
-    cadence: daily
+    cadence: live
     window: all time
     guard: none
     resume: pending set
@@ -212,7 +212,7 @@ sources:
     writes: [raw.member_message_history]
     feeds: [mart_monthly_cohorts, mart_activity_distribution]
     limits:
-      batch: {default: 8000, min: 500, max: 20000}
+      batch: {default: 1000, min: 500, max: 20000}
 
   member_channels:
     label: Newcomer messages by channel

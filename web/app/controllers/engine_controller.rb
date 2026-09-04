@@ -362,8 +362,11 @@ class EngineController < ApplicationController
       .each do |source, parent_run_id, count|
         stage = stage_for_source(source)
         next unless stage
-        next unless newest.fetch(stage) { newest[stage] = parent_run_id } == parent_run_id
 
+        first_seen = !totals.key?(stage)
+        next if !first_seen && (parent_run_id.nil? || parent_run_id != newest[stage])
+
+        newest[stage] = parent_run_id if first_seen
         totals[stage] = totals.fetch(stage, 0) + count
       end
 

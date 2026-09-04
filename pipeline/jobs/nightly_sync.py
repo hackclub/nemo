@@ -22,7 +22,6 @@ from ingest.channel_range_pull import run_span as pull_channel_span
 from ingest.first_reply import run as pull_first_reply
 from ingest.member_channels import read_membership as pull_channel_membership
 from ingest.member_channels import run as pull_member_channels
-from ingest.member_history import run as pull_member_history
 from ingest.prune import run as prune_rows
 from ingest.member_range_pull import run as pull_member_range
 from ingest.team_stats_pull import run as pull_team_stats
@@ -112,8 +111,6 @@ def stages():
             conn, tuned(conn, "channel_replies", "batch"))),
         ("autojoin", lambda conn: record_channel_names(conn, bot_client())),
         ("channel_names", lambda conn: name_unknown(conn, bot_client())),
-        ("member_history", lambda conn: pull_member_history(
-            conn, tuned(conn, "member_history", "batch"))),
         ("member_channels", lambda conn: pull_member_channels(
             conn, tuned(conn, "member_channels", "batch"),
             tuned(conn, "member_channels", "cohort_days"))),

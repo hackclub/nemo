@@ -59,6 +59,14 @@ ROLES = {
             "TZ",
         ],
     },
+    "history": {
+        "required": DATABASE + ["INTERNAL_PROXY_URL", "INTERNAL_PROXY_TOKEN", "SLACK_TEAM_ID"],
+        "optional": PIPELINE_ROLE + [
+            "MEMBER_HISTORY_POLL_SECONDS",
+            "PROXY_ALLOW_PLAINTEXT",
+            "TZ",
+        ],
+    },
     "transform": {
         "required": DATABASE,
         "optional": DBT_ROLE + ["TZ"],
@@ -120,6 +128,7 @@ DEFAULTS = {
 HEADINGS = {
     "serve": "the dashboard. the only role with a public URL",
     "sync": "the nightly sync worker. long running",
+    "history": "member_history's search backfill, drained continuously off the nightly budget. long running",
     "transform": "dbt build. one shot",
     "seed": "synthetic data, then transform, then verify. one shot",
     "provision": "schemas, roles, grants and both migration sets. one shot",
@@ -139,6 +148,7 @@ NEVER = {
         "INTERNAL_PROXY_TOKEN",
     ],
     "sync": ["SLACK_ADMIN_TOKEN"],
+    "history": ["SLACK_ADMIN_TOKEN"],
 }
 
 

@@ -24,6 +24,7 @@ nemo <role> [args]
                  thruster serves it on 80, which is the container path
   bot            shroud takes the reports, nemo works them
   sync           the nightly sync worker
+  history        member_history's search backfill, drained continuously
   transform      dbt build
   seed           generate synthetic data, transform, then verify
   provision      schemas, roles, grants and both migration sets
@@ -53,6 +54,9 @@ case "$ROLE" in
     ;;
   sync)
     py -m jobs.sync_worker "$@"
+    ;;
+  history)
+    py -m jobs.member_history_worker "$@"
     ;;
   transform)
     py -m jobs.transform "$@"

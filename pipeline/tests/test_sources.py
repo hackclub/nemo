@@ -31,9 +31,16 @@ def test_a_prune_floor_only_belongs_to_a_source_that_keeps_rows():
             assert sources.source(key)["retention"] == "keep", key
 
 
+STANDALONE_SOURCES = {"member_history"}
+
+
 def test_the_nightly_runs_exactly_what_the_file_declares():
-    ran = [name for name, _ in nightly_sync.stages()]
-    assert sorted(ran) == sorted(sources.KEYS)
+    ran = {name for name, _ in nightly_sync.stages()}
+    assert ran <= set(sources.KEYS), "a stage must be a declared source"
+    assert set(sources.KEYS) - ran == STANDALONE_SOURCES, (
+        "a declared source missing from the nightly must be accounted for in STANDALONE_SOURCES, "
+        "its own always-on worker rather than a nightly stage"
+    )
 
 
 def test_limits_are_ordered_and_hold_their_default():
