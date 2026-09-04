@@ -12,7 +12,7 @@
     </div>
     <div class="card-tools">
       <%= run_age(run) %>
-      <%= run_status(run) %>
+      <%= orphaned ? worker_chip(worker) : run_status(run) %>
     </div>
   </div>
 

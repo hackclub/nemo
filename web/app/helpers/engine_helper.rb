@@ -50,6 +50,12 @@ module EngineHelper
     safe_join(chips, " ")
   end
 
+  def worker_chip(worker)
+    return tag.span("orphaned, no worker heartbeat", class: "chip chip-crit") if worker.nil?
+
+    tag.span("orphaned, worker cold #{short_age(worker.beat_at)}", class: "chip chip-crit")
+  end
+
   def step_progress(steps)
     last = steps.last
     return nil if last.nil?

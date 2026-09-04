@@ -15,7 +15,8 @@ class EngineController < ApplicationController
     @tab = TABS.key?(params[:tab]) ? params[:tab] : "runs"
     @active_request = SyncRequest.active.recent_first.first
     @run = Analytics::FctIngestRun.parents.recent_first.first
-    @auto_refresh = @run&.running? || @active_request.present?
+    @orphaned = orphaned?
+    @auto_refresh = (@run&.running? || @active_request.present?) && !@orphaned
 
     @may_tune = may_community?("ops.engine")
     @open = params[:open].presence
@@ -84,6 +85,7 @@ class EngineController < ApplicationController
     @run = Analytics::FctIngestRun.parents.find(params[:id])
     @steps = steps_for(@run)
     @step_output = step_output_for(@run)
+    @orphaned = orphaned?
   end
 
   def sync
@@ -143,6 +145,18 @@ class EngineController < ApplicationController
   end
 
   STATUS_ORDER = %w[failed cancelled abandoned running ok].freeze
+
+  def worker
+    return @worker if defined?(@worker)
+
+    @worker = Analytics::FctWorkerHeartbeat.sync_worker
+  end
+
+  def orphaned?
+    return false unless @run&.running? || @active_request.present?
+
+    worker.nil? || worker.cold?
+  end
 
   def steps_for(run)
     Analytics::FctIngestRun

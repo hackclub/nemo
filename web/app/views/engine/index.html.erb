@@ -26,10 +26,14 @@
   <span class="qlab">minutes</span>
 
   <% if @active_request %>
-    <span class="chip">
-      <i class="dot run"></i>
-      <%= step_progress(@steps) || @active_request.status %>
-    </span>
+    <% if @orphaned %>
+      <span class="chip chip-crit">worker down</span>
+    <% else %>
+      <span class="chip">
+        <i class="dot run"></i>
+        <%= step_progress(@steps) || @active_request.status %>
+      </span>
+    <% end %>
     <% if @active_request.status != "cancelling" %>
       <%= button_to "Cancel", engine_cancel_path, class: "btn", form: { class: "contents" } %>
     <% end %>
@@ -60,11 +64,13 @@
       </div>
       <% if @run %>
         <div class="card-tools">
-          <% if @run.running? %>
+          <% if @run.running? && !@orphaned %>
             <%= image_tag "nemo.png", class: "sync-fish", alt: "", width: 800, height: 483 %>
           <% end %>
           <%= run_age(@run) if run_stale?(@run) %>
-          <% if @run.running? %>
+          <% if @orphaned %>
+            <%= worker_chip(@worker) %>
+          <% elsif @run.running? %>
             <span class="swatch"><i class="dot run"></i>running</span>
           <% else %>
             <%= run_status(@run) %>
