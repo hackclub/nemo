@@ -227,6 +227,8 @@ models:
       - name: members
         data_type: bigint
         data_tests: [not_null]
+      - name: known
+        data_type: bigint
       - name: searched
         data_type: bigint
       - name: ever_posted

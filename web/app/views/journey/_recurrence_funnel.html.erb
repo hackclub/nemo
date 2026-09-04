@@ -11,7 +11,7 @@
         <% if recurrence_funnel %>
           <% coverage = recurrence_funnel.signed_in.to_i.positive? ? recurrence_funnel.knowable.to_f / recurrence_funnel.signed_in : nil %>
           <%= incomplete_chip(
-                ("#{number_to_percentage(coverage * 100, precision: 0)} of this cohort searched" if coverage && coverage < 1)
+                ("#{number_to_percentage(coverage * 100, precision: 0)} of this cohort known" if coverage && coverage < 1)
               ) %>
         <% end %>
       </div>

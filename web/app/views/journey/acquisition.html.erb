@@ -38,35 +38,27 @@
               <td>
                 <span class="two-line">
                   <b><%= c.cohort_month.strftime("%b %Y") %></b>
-                  <% unless c.complete? %>
-                    <span><%= number_with_delimiter(c.searched) %> of <%= number_with_delimiter(c.members) %> searched</span>
+                  <% unless c.fully_known? %>
+                    <span><%= number_with_delimiter(c.known) %> of <%= number_with_delimiter(c.members) %> known</span>
                   <% end %>
                 </span>
               </td>
               <td class="col-num"><%= number_with_delimiter(c.members) %></td>
-              <% if c.complete? %>
-                <td class="col-num"><%= number_to_percentage(c.ever_posted.to_f / c.members * 100, precision: 1) %></td>
-                <td class="col-num">
-                  <% if c.mature? %>
-                    <%= number_to_percentage(c.posted_within_30d.to_f / c.members * 100, precision: 1) %>
-                  <% else %>
-                    <span class="sub2">matures <%= c.matures_on.strftime("%-d %b") %></span>
-                  <% end %>
-                </td>
-                <td class="col-num"><%= c.median_days_to_first_post || "n/a" %></td>
-              <% else %>
-                <td class="col-num">n/a</td>
-                <td class="col-num">n/a</td>
-                <td class="col-num">n/a</td>
-              <% end %>
+              <td class="col-num"><%= number_to_percentage(c.ever_posted.to_f / c.members * 100, precision: 1) %></td>
+              <td class="col-num">
+                <% if c.mature? %>
+                  <%= number_to_percentage(c.posted_within_30d.to_f / c.members * 100, precision: 1) %>
+                <% else %>
+                  <span class="sub2">matures <%= c.matures_on.strftime("%-d %b") %></span>
+                <% end %>
+              </td>
+              <td class="col-num"><%= c.complete? ? (c.median_days_to_first_post || "n/a") : "n/a" %></td>
             </tr>
           <% end %>
         </tbody>
       </table>
     </div>
   <% else %>
-    <p class="card-note">
-      No cohort has been searched yet. The member history backfill fills this in, newest months first.
-    </p>
+    <p class="card-note">n/a</p>
   <% end %>
 </div>

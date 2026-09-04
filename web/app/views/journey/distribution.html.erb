@@ -25,7 +25,7 @@
       <p class="card-sub">
         messages posted over each member&rsquo;s whole history &middot;
         <%= number_with_delimiter(@activity_bands.sum(&:members)) %> of
-        <%= number_with_delimiter(coverage&.workspace_members) %> members searched
+        <%= number_with_delimiter(coverage&.workspace_members) %> members counted
         <% if coverage && window_note(coverage.window_start, coverage.window_end) %>
           &middot; searched <%= window_note(coverage.window_start, coverage.window_end) %>
         <% end %>

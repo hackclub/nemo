@@ -1,8 +1,9 @@
-with searched as (
+with known as (
     select
-        user_id,
-        total_messages
-    from {{ ref('fct_member_history') }}
+        coalesce(w.user_id, h.user_id) as user_id,
+        coalesce(w.channel_messages_posted, h.total_messages, 0) as total_messages
+    from {{ ref('fct_member_window') }} w
+    full outer join {{ ref('fct_member_history') }} h using (user_id)
 ),
 
 member_funnel as (
@@ -10,10 +11,10 @@ member_funnel as (
         date_trunc('month', m.cohort_at)::date as cohort_month,
         m.cohort_at is not null as created_account,
         not m.invite_pending as signed_in,
-        m.invite_pending or s.user_id is not null as post_knowable,
-        coalesce(s.total_messages, 0) as total_messages
+        m.invite_pending or k.user_id is not null as post_knowable,
+        coalesce(k.total_messages, 0) as total_messages
     from {{ ref('dim_member') }} m
-    left join searched s on s.user_id = m.user_id
+    left join known k on k.user_id = m.user_id
     where not m.is_bot and m.cohort_at is not null
 ),
 
@@ -52,6 +53,6 @@ select
     case when knowable > 0 then posted_once end as posted_once,
     case when knowable > 0 then posted_twice end as posted_twice,
     case when knowable > 0 then posted_three_times end as posted_three_times,
-    'v13' as metric_version
+    'v14' as metric_version
 from gated
 order by cohort_month

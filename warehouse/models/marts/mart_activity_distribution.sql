@@ -1,8 +1,9 @@
-with searched as (
+with known as (
     select
-        user_id,
-        total_messages
-    from {{ ref('fct_member_history') }}
+        coalesce(w.user_id, h.user_id) as user_id,
+        coalesce(w.channel_messages_posted, h.total_messages, 0) as total_messages
+    from {{ ref('fct_member_window') }} w
+    full outer join {{ ref('fct_member_history') }} h using (user_id)
 ),
 
 walkable as (
@@ -12,9 +13,9 @@ walkable as (
 ),
 
 population as (
-    select s.total_messages
+    select k.total_messages
     from walkable w
-    inner join searched s on s.user_id = w.user_id
+    inner join known k on k.user_id = w.user_id
 ),
 
 coverage as (
@@ -60,7 +61,7 @@ select
     c.workspace_members,
     c.window_start,
     c.window_end,
-    'v12' as metric_version
+    'v13' as metric_version
 from bands b
 cross join coverage c
 left join member_bands mb on mb.band_order = b.band_order

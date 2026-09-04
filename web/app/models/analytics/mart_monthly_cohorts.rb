@@ -11,6 +11,10 @@ module Analytics
       searched >= members
     end
 
+    def fully_known?
+      known >= members
+    end
+
     def mature?
       cohort_month.end_of_month <= Date.current - 30
     end
