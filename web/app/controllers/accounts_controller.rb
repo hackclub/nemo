@@ -5,7 +5,7 @@ class AccountsController < ApplicationController
 
   def show
     @account = Fd::StaffSlack.find_by(staff_user_id: current_account.user_id)
-    @linkable = Slack::Oauth.configured?
+    @linkable = Slack::Oauth.configured? && current_account.may?("slack.link")
     @roles = Authz.roles_held(current_account.user_id)
     @capabilities = Authz.held(current_account.user_id)
     @holding = @roles.any? || @capabilities.any?
