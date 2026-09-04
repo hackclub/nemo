@@ -241,9 +241,21 @@ def refresh_statistics(kind):
         print(f"{table}: statistics refreshed")
 
 
+def note_unavailable(source, day, reason):
+    try:
+        with connect() as note_conn:
+            mark_day_unavailable(note_conn, source, day, reason)
+            note_conn.commit()
+    except Exception as exc:
+        print(f"{source}: {day} could not be marked unavailable, {type(exc).__name__}: {exc}")
+        return False
+    return True
+
+
 def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
     floor, edge = calendar(ProxyClient(), kind)
     days = pending_days(settled_days(conn, source), floor, edge, limit)
+    conn.commit()
     if not days:
         print(f"{source}: every day in {floor}..{edge} is loaded")
         return
@@ -268,9 +280,10 @@ def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
                 raise
             except Exception as exc:
                 if str(exc).startswith(PERMANENT_DAY_ERRORS):
-                    mark_day_unavailable(conn, source, day, str(exc))
-                    conn.commit()
-                    unavailable.append(str(day))
+                    if note_unavailable(source, day, str(exc)):
+                        unavailable.append(str(day))
+                    else:
+                        failed.append(f"{day}: {type(exc).__name__}: {exc}")
                 elif str(exc).startswith(PENDING_DAY_ERRORS):
                     pending.append(str(day))
                 else:
