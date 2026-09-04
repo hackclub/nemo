@@ -184,40 +184,46 @@ def walk_channel(conn, client, channel_id, oldest=None, counts=None):
     if oldest:
         params["oldest"] = oldest
 
-    messages, threads, observations = [], [], []
+    state = {"messages": [], "threads": [], "observations": [], "oldest_ts": None, "newest_ts": None}
     seen = 0
-    oldest_ts = newest_ts = None
     complete = oldest is None
+
+    def checkpoint(done):
+        with conn.cursor() as cur:
+            if state["messages"]:
+                cur.executemany(MESSAGE_SQL, state["messages"])
+                cur.executemany(OBSERVATION_SQL, state["observations"])
+            if state["threads"]:
+                cur.executemany(THREAD_SQL, state["threads"])
+            cur.execute(WALK_SQL, (
+                channel_id, state["oldest_ts"], state["newest_ts"], len(state["messages"]), done))
+        conn.commit()
+        state["messages"], state["threads"], state["observations"] = [], [], []
+        state["oldest_ts"] = state["newest_ts"] = None
 
     for message in client.paginate(
         METHOD, params, "messages",
         page_size=PAGE_SIZE, cursor_param="cursor", max_retries=8, credential="admin",
         page_param="limit", cursor_field="response_metadata.next_cursor",
+        on_page=lambda cursor, total: checkpoint(False),
     ):
         try:
-            messages.append(message_row(channel_id, message))
+            state["messages"].append(message_row(channel_id, message))
         except (KeyError, TypeError, ValueError) as exc:
             if counts:
                 counts.rows_rejected += 1
             dead_letter(conn, SOURCE, {"channel": channel_id, "keys": sorted(message)}, str(exc))
             continue
-        observations.append((channel_id, message["ts"], TRANSPORT))
+        state["observations"].append((channel_id, message["ts"], TRANSPORT))
         thread = thread_row(channel_id, message)
         if thread:
-            threads.append(thread)
+            state["threads"].append(thread)
         seen += 1
         ts = message["ts"]
-        oldest_ts = ts if oldest_ts is None or ts < oldest_ts else oldest_ts
-        newest_ts = ts if newest_ts is None or ts > newest_ts else newest_ts
+        state["oldest_ts"] = ts if state["oldest_ts"] is None or ts < state["oldest_ts"] else state["oldest_ts"]
+        state["newest_ts"] = ts if state["newest_ts"] is None or ts > state["newest_ts"] else state["newest_ts"]
 
-    with conn.cursor() as cur:
-        if messages:
-            cur.executemany(MESSAGE_SQL, messages)
-            cur.executemany(OBSERVATION_SQL, observations)
-        if threads:
-            cur.executemany(THREAD_SQL, threads)
-        cur.execute(WALK_SQL, (channel_id, oldest_ts, newest_ts, seen, complete))
-    conn.commit()
+    checkpoint(complete)
     return seen
 
 
