@@ -97,6 +97,8 @@ def stages():
             conn, MEMBER_DAY, "member", pull_member_day, tuned(conn, "member_days", "batch"))),
         ("channel_days", lambda conn: backfill_days(
             conn, CHANNEL_DAY, "channel", pull_channel_day, tuned(conn, "channel_days", "batch"))),
+        ("autojoin", lambda conn: record_channel_names(conn, bot_client())),
+        ("channel_names", lambda conn: name_unknown(conn, bot_client())),
         ("member_range", lambda conn: pull_member_range(conn)),
         ("channel_range", lambda conn: pull_channel_range(conn)),
         ("channel_span", lambda conn: pull_channel_span(conn)),
@@ -109,8 +111,6 @@ def stages():
         ("dim_snapshot", lambda conn: snapshot_dimensions(conn)),
         ("channel_replies", lambda conn: pull_channel_replies(
             conn, tuned(conn, "channel_replies", "batch"))),
-        ("autojoin", lambda conn: record_channel_names(conn, bot_client())),
-        ("channel_names", lambda conn: name_unknown(conn, bot_client())),
         ("member_channels", lambda conn: pull_member_channels(
             conn, tuned(conn, "member_channels", "batch"),
             tuned(conn, "member_channels", "cohort_days"))),
