@@ -32,7 +32,7 @@ class SyncRequest < ApplicationRecord
     ACTIVE.include?(status)
   end
 
-  def cancel!
+  def cancel!(worker_gone: false)
     return false unless active?
 
     stopped = false
@@ -46,12 +46,18 @@ class SyncRequest < ApplicationRecord
         next
       end
 
-      running = self.class.where(id: id, status: "claimed")
-        .update_all(status: "cancelling", updated_at: Time.current)
+      claimed = self.class.where(id: id, status: "claimed")
+      running = if worker_gone
+        claimed.update_all(status: "cancelled", finished_at: Time.current, updated_at: Time.current)
+      else
+        claimed.update_all(status: "cancelling", updated_at: Time.current)
+      end
       next if running.zero?
 
       stopped = true
       reload
+      next if worker_gone
+
       sql = self.class.sanitize_sql_array(["select pg_notify(?, ?)", CANCEL_CHANNEL, id.to_s])
       self.class.connection.execute(sql)
     end

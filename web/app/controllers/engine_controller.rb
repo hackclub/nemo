@@ -105,9 +105,10 @@ class EngineController < ApplicationController
   def cancel
     return refuse_running unless may_community?("ops.engine")
 
-    request = SyncRequest.active.recent_first.first
-    if request&.cancel!
-      redirect_to engine_path, notice: "cancel requested"
+    @active_request = SyncRequest.active.recent_first.first
+    gone = orphaned?
+    if @active_request&.cancel!(worker_gone: gone)
+      redirect_to engine_path, notice: gone ? "released, no worker" : "cancel requested"
     else
       redirect_to engine_path, alert: "nothing to cancel"
     end

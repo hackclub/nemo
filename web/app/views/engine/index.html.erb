@@ -34,9 +34,8 @@
         <%= step_progress(@steps) || @active_request.status %>
       </span>
     <% end %>
-    <% if @active_request.status != "cancelling" %>
-      <%= button_to "Cancel", engine_cancel_path, class: "btn", form: { class: "contents" } %>
-    <% end %>
+    <%= button_to(@orphaned ? "Release" : "Cancel", engine_cancel_path,
+          class: "btn", form: { class: "contents" }) %>
   <% else %>
     <%= button_to "Run the nightly now", engine_sync_path,
           class: "btn btn-primary", form: { class: "contents" } %>
