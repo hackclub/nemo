@@ -313,6 +313,7 @@ def pull_member_day(conn, pull_date):
             with conn.cursor() as cur:
                 cur.executemany(MEMBER_ACTIVITY_SQL, activity_rows)
                 cur.executemany(MEMBER_DIM_MERGE_SQL, by_key(dim_rows))
+            conn.commit()
             activity_rows.clear()
             dim_rows.clear()
             counts.total_expected = client.last_num_found
@@ -329,6 +330,7 @@ def pull_member_day(conn, pull_date):
             except KeyError as exc:
                 counts.rows_rejected += 1
                 dead_letter(conn, ANALYTICS_SOURCE, rec, str(exc))
+                conn.commit()
             if (i + 1) % 2000 == 0:
                 flush()
         flush()
