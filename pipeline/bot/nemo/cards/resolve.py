@@ -176,10 +176,3 @@ def objection(said):
     if said.get("telling") and richtext.mentions(said.get("said")):
         return {SAID: "The reporter cannot be sent a mention. Say it in words."}
     return None
-
-
-def done(said, case_id, told):
-    closed = f"*case {case_id}* closed as {label(said['resolution']).lower()}"
-    if not told:
-        return closed
-    return f"{closed}, {told} reporter" + ("s told" if told != 1 else " told")

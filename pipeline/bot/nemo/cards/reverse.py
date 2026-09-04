@@ -72,7 +72,3 @@ def objection(said):
     if not said.get("reason"):
         return {REASON: "Say why it is being reversed. It goes on the record."}
     return None
-
-
-def told(case_id):
-    return f"action reversed on *case {case_id}*, and the record keeps both"

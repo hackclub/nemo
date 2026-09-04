@@ -92,6 +92,12 @@ INSERT INTO fd.case_assignees (case_id, user_id, assigned_by) VALUES (%s, %s, %s
 ON CONFLICT DO NOTHING
 """
 
+ASSIGN = """
+INSERT INTO fd.case_assignees (case_id, user_id, assigned_by) VALUES (%s, %s, %s)
+ON CONFLICT DO NOTHING
+RETURNING user_id
+"""
+
 STILL_OPEN = """
 SELECT resolved_at IS NULL FROM fd.cases WHERE id = %s
 """
@@ -481,6 +487,29 @@ def hand_back(conn, case_id, user_id):
     return True
 
 
+def assign_people(conn, case_id, user_ids, by):
+    added = []
+    for user_id in user_ids:
+        row = conn.execute(ASSIGN, (case_id, user_id, by)).fetchone()
+        if row is None:
+            continue
+        audit.record(conn, "assignee", case_id, "attached", by, after={"user_id": user_id})
+        added.append(user_id)
+    return added
+
+
+def remove_assignee(conn, case_id, user_id, by):
+    row = conn.execute(HAND_BACK, (case_id, user_id)).fetchone()
+    if row is None:
+        return False
+
+    audit.record(
+        conn, "assignee", case_id, "detached", by,
+        before={"user_id": user_id, "assigned_by": row[0]}, after=None,
+    )
+    return True
+
+
 def reopen(conn, case_id, by):
     row = conn.execute(REOPEN, (case_id,)).fetchone()
     if row is None:
@@ -806,11 +835,6 @@ def register(app, on_reply=None):
         with session() as conn:
             redraw(client, conn, case_id)
         log.info("nemo: action %s logged on case %s by %s", action_id, case_id, user_id)
-        client.chat_postEphemeral(
-            channel=firehouse_channel(),
-            user=user_id,
-            text=cards.action.told(said, case_id),
-        )
 
     MORE = {
         cards.edit.CATEGORY: ("case.categorise", cards.edit.category_view),
@@ -831,6 +855,8 @@ def register(app, on_reply=None):
             return on_reverse_asked(body, client, case_id, user_id)
         if verb == cards.edit.PEOPLE:
             return on_people_asked(body, client, case_id, user_id)
+        if verb == cards.edit.ASSIGNEES:
+            return on_assignees_asked(body, client, case_id, user_id)
 
         wanted = MORE.get(verb)
         if wanted is None:
@@ -887,11 +913,6 @@ def register(app, on_reply=None):
         with session() as conn:
             redraw(client, conn, case_id)
         log.info("nemo: action %s reversed on case %s by %s", said["action_id"], case_id, user_id)
-        client.chat_postEphemeral(
-            channel=firehouse_channel(),
-            user=user_id,
-            text=cards.reverse.told(case_id),
-        )
 
     def on_hand_back(body, client, case_id, user_id):
         with session() as conn:
@@ -906,7 +927,7 @@ def register(app, on_reply=None):
         with session() as conn:
             redraw(client, conn, case_id)
         log.info("nemo: case %s handed back by %s", case_id, user_id)
-        return whisper(client, body, f"you are off *case {case_id}*")
+        return None
 
     def on_people_asked(body, client, case_id, user_id):
         with session() as conn:
@@ -975,11 +996,78 @@ def register(app, on_reply=None):
         already = [one for one in said["user_ids"] if one not in added]
         log.info("nemo: case %s people added %s (already: %s) by %s",
                  case_id, added, already, user_id)
-        client.chat_postEphemeral(
-            channel=firehouse_channel(),
-            user=user_id,
-            text=cards.people.added_notice(said["role"], added, already),
+        return None
+
+    def on_assignees_asked(body, client, case_id, user_id):
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, "case.open", case_id)
+            if not allowed:
+                return whisper(client, body, refusal)
+            held = [row[0] for row in conn.execute(ASSIGNEES, (case_id,)).fetchall()]
+
+        client.views_open(
+            trigger_id=body["trigger_id"],
+            view=cards.assignees.view(case_id, held),
         )
+        return None
+
+    @app.action(cards.assignees.REMOVE)
+    def on_assignee_removed(ack, body, client):
+        ack()
+        user_id, case_id = cards.assignees.removed(body["actions"][0]["value"])
+        actor = body["user"]["id"]
+        if case_id is None:
+            return None
+
+        with session() as conn:
+            allowed, refusal = access.may(conn, actor, "case.open", case_id)
+            if not allowed:
+                return whisper(client, body, refusal)
+            remove_assignee(conn, case_id, user_id, actor)
+            held = [row[0] for row in conn.execute(ASSIGNEES, (case_id,)).fetchall()]
+
+        try:
+            client.views_update(
+                view_id=body["view"]["id"],
+                hash=body["view"]["hash"],
+                view=cards.assignees.view(case_id, held),
+            )
+        except Exception as failure:
+            log.warning("nemo: could not refresh the assignees modal: %s", failure)
+
+        with session() as conn:
+            redraw(client, conn, case_id)
+        log.info("nemo: %s taken off case %s by %s", user_id, case_id, actor)
+        return None
+
+    @app.view(cards.assignees.CALLBACK)
+    def on_assignees_submitted(ack, body, view, client):
+        case_id = int(view["private_metadata"])
+        user_id = body["user"]["id"]
+        said = cards.assignees.picked(view["state"])
+
+        wrong = cards.assignees.objection(said)
+        if wrong:
+            return ack(response_action="errors", errors=wrong)
+
+        with session() as conn:
+            allowed, refusal = access.may(conn, user_id, "case.open", case_id)
+            if not allowed:
+                return ack(response_action="errors", errors={cards.assignees.WHO: refusal})
+            if not conn.execute(STILL_OPEN, (case_id,)).fetchone()[0]:
+                return ack(
+                    response_action="errors",
+                    errors={cards.assignees.WHO: f"case {case_id} is already resolved"},
+                )
+            added = assign_people(conn, case_id, said["user_ids"], user_id)
+            held = [row[0] for row in conn.execute(ASSIGNEES, (case_id,)).fetchall()]
+
+        ack(response_action="update", view=cards.assignees.view(case_id, held))
+        with session() as conn:
+            redraw(client, conn, case_id)
+        already = [one for one in said["user_ids"] if one not in added]
+        log.info("nemo: case %s assignees added %s (already: %s) by %s",
+                 case_id, added, already, user_id)
         return None
 
     @app.view(cards.edit.CATEGORY)
@@ -1004,11 +1092,6 @@ def register(app, on_reply=None):
         with session() as conn:
             redraw(client, conn, case_id)
         log.info("nemo: case %s is %s", case_id, key)
-        client.chat_postEphemeral(
-            channel=firehouse_channel(),
-            user=user_id,
-            text=f"*case {case_id}* is {cards.edit.category_label(key).lower()}",
-        )
         return None
 
     @app.view(cards.edit.NOTE)
@@ -1029,11 +1112,6 @@ def register(app, on_reply=None):
 
         ack()
         log.info("nemo: note %s kept on case %s", note_id, case_id)
-        client.chat_postEphemeral(
-            channel=firehouse_channel(),
-            user=user_id,
-            text=f"noted on *case {case_id}*",
-        )
         return None
 
     @app.action(cards.report.REOPEN)
@@ -1054,7 +1132,7 @@ def register(app, on_reply=None):
         with session() as conn:
             redraw(client, conn, case_id)
         log.info("nemo: case %s reopened by %s", case_id, user_id)
-        return whisper(client, body, f"*case {case_id}* is open again, and unclaimed")
+        return None
 
     @app.action(cards.report.RESOLVE)
     def on_resolve_asked(ack, body, client):
@@ -1103,11 +1181,6 @@ def register(app, on_reply=None):
         with session() as conn:
             redraw(client, conn, case_id)
         log.info("nemo: case %s resolved by %s, %s told", case_id, user_id, told)
-        client.chat_postEphemeral(
-            channel=firehouse_channel(),
-            user=user_id,
-            text=cards.resolve.done(said, case_id, told),
-        )
 
     def say_no(event, thread_ts, client, said, refusal):
         try:

@@ -6,6 +6,7 @@ from lib.paths import CATEGORIES_FILE
 MENU = "case_more"
 
 PEOPLE = "case_people"
+ASSIGNEES = "case_assignees_open"
 CATEGORY = "case_category"
 NOTE = "case_note"
 HAND_BACK = "case_hand_back"
@@ -33,7 +34,7 @@ def option(text, value):
 
 
 def choices(case, mine):
-    out = [option("People", PEOPLE)]
+    out = [option("People", PEOPLE), option("Assignees", ASSIGNEES)]
     if not case.get("category_key"):
         out.append(option("Set the violation", CATEGORY))
     out.append(option("Leave a note", NOTE))

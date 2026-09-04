@@ -44,12 +44,7 @@ def row(case_id, one):
 
 
 def view(case_id, participants=()):
-    blocks = [
-        {
-            "type": "context",
-            "elements": [{"type": "mrkdwn", "text": f"*case {case_id}*"}],
-        },
-    ]
+    blocks = []
 
     if participants:
         blocks += [row(case_id, one) for one in participants]
@@ -123,19 +118,3 @@ def objection(said):
     if said["role"] not in ROLE_LABEL:
         return {ROLE: "Pick their part in it."}
     return None
-
-
-def role_word(role):
-    return "involved" if role == "involved" else f"the {role}"
-
-
-def added_notice(role, added, already):
-    if not added:
-        return "everybody you picked was already on this case, nothing changed"
-
-    who = ", ".join(f"<@{one}>" for one in added)
-    note = {
-        "subject": f"the case is now also about {who}",
-        "reporter": f"{who} recorded as reporting it",
-    }.get(role, f"{who} added as {role_word(role)}")
-    return f"{note}, {len(already)} already there" if already else note

@@ -230,7 +230,3 @@ def details(said):
     if not takes_channel(said["type_key"]) or not said.get("channel_id"):
         return {}
     return {"channel_id": said["channel_id"]}
-
-
-def told(said, case_id):
-    return f"{label(said['type_key']).lower()} logged on *case {case_id}*"
