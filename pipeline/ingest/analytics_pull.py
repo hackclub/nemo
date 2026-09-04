@@ -288,14 +288,18 @@ def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
                     pending.append(str(day))
                 else:
                     failed.append(f"{day}: {type(exc).__name__}: {exc}")
-    if len(unavailable) + len(pending) + len(failed) < len(days):
+    landed = len(days) - len(unavailable) - len(pending) - len(failed)
+    if landed:
         refresh_statistics(kind)
     if unavailable:
         print(f"{source}: {len(unavailable)} day(s) have no export and will not be retried")
     if pending:
         print(f"{source}: {len(pending)} day(s) not exported yet, left for the next run")
     if failed:
-        raise RuntimeError(f"{source}: {len(failed)} of {len(days)} days failed: " + "; ".join(failed))
+        print(f"{source}: {len(failed)} of {len(days)} day(s) failed, left for the next run: "
+              + "; ".join(failed))
+    if failed and not landed:
+        raise RuntimeError(f"{source}: no day landed, {len(failed)} failed: " + "; ".join(failed))
 
 
 def pull_member_day(conn, pull_date):
