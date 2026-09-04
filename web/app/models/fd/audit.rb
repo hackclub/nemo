@@ -18,6 +18,7 @@ module Fd
       "Fd::Flag" => "flag",
       "ChannelBackfill" => "channel_backfill",
       "Channels::Audience::Setting" => "channel_audience",
+      "Channels::Audience::Grant" => "channel_audience",
       "Authz::Grant" => "capability_grant"
     }.freeze
 

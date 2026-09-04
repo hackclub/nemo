@@ -17,8 +17,10 @@ module Admin
       return refuse unless may_grant?
 
       key = params[:key].to_s
+      return refuse("#{key} is not a capability") unless Authz.keys.include?(key)
+
       Authz::Grant.live.for_person(who).capabilities.where(name: key)
-        .find_each { |held| held.take_back!(by: current_account.user_id) }
+        .find_each { |held| take_back(held, key) }
       Current.forget_roles
       redirect_to admin_person_path(who), notice: "#{Authz.label(key)} is back to the role default"
     end
@@ -34,6 +36,17 @@ module Admin
         by: current_account.user_id, reason: params[:reason].presence)
       audit_change(key, effect)
       Current.forget_roles
+    end
+
+    def take_back(held, key)
+      was = held.effect
+      ActiveRecord::Base.transaction do
+        held.take_back!(by: current_account.user_id)
+        Fd::Audit.record(held, "revoked",
+          actor: current_account.user_id, request_id: request.request_id,
+          before: { "user_id" => who, "capability" => key, "effect" => was },
+          after: { "user_id" => who, "capability" => key, "effect" => "revoked" })
+      end
     end
 
     def audit_change(key, effect)

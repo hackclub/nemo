@@ -4,6 +4,7 @@ import os
 import threading
 from pathlib import Path
 
+import psycopg
 from psycopg.types.json import Jsonb
 
 from bot.engine import session
@@ -14,10 +15,16 @@ SPILL_ENV = "SPINE_SPILL_FILE"
 SPILL_DEFAULT = Path("/tmp/nemo-spine-spill.jsonl")
 SPILL_LOCK = threading.Lock()
 
+NEVER = (psycopg.ProgrammingError, psycopg.DataError, psycopg.IntegrityError)
+
 
 def spill_file():
     named = os.environ.get(SPILL_ENV)
     return Path(named) if named else SPILL_DEFAULT
+
+
+def stuck_file():
+    return spill_file().with_suffix(".stuck.jsonl")
 
 
 def spill(row):
@@ -29,14 +36,22 @@ def spill(row):
         log.error("events: could not spill %s, it is lost: %s", row[0], exc)
 
 
-def drain():
-    path = spill_file()
-    if not path.exists():
-        return 0
+def set_aside(lines):
+    try:
+        with stuck_file().open("a", encoding="utf-8") as out:
+            out.write("\n".join(lines) + "\n")
+    except Exception as exc:
+        log.error("events: could not set aside %d line(s): %s", len(lines), exc)
 
+
+def drain():
     with SPILL_LOCK:
+        path = spill_file()
+        if not path.exists():
+            return 0
+
         kept = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
-        landed, stuck = 0, []
+        landed, waiting, hopeless = 0, [], []
         for line in kept:
             try:
                 row = json.loads(line)
@@ -47,12 +62,17 @@ def drain():
                 with session() as conn:
                     write(conn, row)
                 landed += 1
+            except NEVER as exc:
+                log.error("events: spilled %s will never land, setting it aside: %s", row[0], exc)
+                hopeless.append(line)
             except Exception as exc:
                 log.warning("events: spilled %s still will not land: %s", row[0], exc)
-                stuck.append(line)
+                waiting.append(line)
 
-        if stuck:
-            path.write_text("\n".join(stuck) + "\n", encoding="utf-8")
+        if hopeless:
+            set_aside(hopeless)
+        if waiting:
+            path.write_text("\n".join(waiting) + "\n", encoding="utf-8")
         else:
             path.unlink(missing_ok=True)
 
@@ -94,11 +114,16 @@ def target(event):
     return event.get("deleted_ts") or message.get("ts") or event.get("ts")
 
 
+def channel_of(event):
+    named = event.get("channel")
+    return named.get("id") if isinstance(named, dict) else named
+
+
 def row_for(event_id, event):
     return (
         event_id,
         event.get("subtype") or event.get("type") or "unknown",
-        event.get("channel"),
+        channel_of(event),
         target(event),
         event.get("event_ts"),
         scrub(event),
@@ -120,6 +145,11 @@ def land(event_id, event):
         with session() as conn:
             write(conn, row)
         return True
+    except NEVER as exc:
+        log.error("events: %s can never land, setting it aside: %s", event_id, exc)
+        with SPILL_LOCK:
+            set_aside([json.dumps(row, default=str)])
+        return False
     except Exception as exc:
         log.warning("events: could not land %s, spilling it: %s", event_id, exc)
         spill(row)

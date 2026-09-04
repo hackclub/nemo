@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
-from lib.db import connect, dead_letter, get_cursor, ingest_run, save_cursor
+from lib.db import connect, dead_letter, get_cursor, ingest_run, refuse_if_seeded, save_cursor
 from lib.paths import ENV_FILE
 from lib.slack_client import bot_client
 
@@ -106,6 +106,7 @@ def identity_name_row(user):
 
 
 def run(conn):
+    refuse_if_seeded(conn)
     team = team_id()
     with ingest_run(conn, SOURCE) as counts:
         cursor = get_cursor(conn, SOURCE) or ""

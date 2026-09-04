@@ -82,6 +82,46 @@ class AccessUiTest < ActionDispatch::IntegrationTest
     assert_match(/is not a channel/, flash[:alert])
   end
 
+  def audits(type, ref)
+    Fd::AuditEntry.where(entity_type: type, entity_ref: ref).oldest_first
+  end
+
+  test "naming somebody on a channel and taking it back both reach the audit" do
+    channel = Analytics::DimChannel.where(archived: false).first
+
+    post admin_person_channel_grants_path(@them.user_id),
+      params: { channel_id: channel.channel_id }
+    delete admin_person_channel_grant_path(@them.user_id, channel.channel_id)
+
+    trail = audits("channel_audience", channel.channel_id)
+    assert_equal %w[granted revoked], trail.map(&:verb)
+    assert_equal [@boss.user_id, @boss.user_id], trail.map(&:actor_user_id)
+    assert_equal @them.user_id, trail.first.after["user_id"]
+    assert_equal @boss.user_id, trail.last.after["revoked_by"]
+    assert_nil Channels::Audience::Grant.live
+      .find_by(user_id: @them.user_id, channel_id: channel.channel_id)
+  end
+
+  test "taking a capability back reaches the audit" do
+    patch admin_person_capability_path(@them.user_id),
+      params: { key: "channel.backfill", effect: "allow" }
+    delete admin_person_capability_path(@them.user_id), params: { key: "channel.backfill" }
+
+    taken = Fd::AuditEntry.where(entity_type: "capability_grant", verb: "revoked").recent_first.first
+    assert_equal "channel.backfill", taken.after["capability"]
+    assert_equal @them.user_id, taken.after["user_id"]
+    assert_equal "allow", taken.before["effect"]
+    assert_equal @boss.user_id, taken.actor_user_id
+    assert_not_includes held.keys, "channel.backfill"
+  end
+
+  test "taking back a capability that does not exist is refused, not a 500" do
+    delete admin_person_capability_path(@them.user_id), params: { key: "case.explode" }
+
+    assert_redirected_to admin_person_path(@them.user_id)
+    assert_match(/is not a capability/, flash[:alert])
+  end
+
   test "the gardener set is shared, and says how many it reaches" do
     channel = Analytics::DimChannel.where(archived: false).first
     Authz::Grant.give!(@them.user_id, kind: "role", name: "gardener", by: @boss.user_id)
@@ -96,13 +136,14 @@ class AccessUiTest < ActionDispatch::IntegrationTest
     assert Channels::Audience.may_see?(@them, channel), "the set reaches everyone holding the role"
   end
 
-  test "a member with no grant sees what they hold on their own page" do
+  test "a member with no grant still reaches their own page" do
     bare = Account.create!(user_id: "UAUIBARE")
     sign_in_as(bare)
 
     get account_path
 
     assert_response :success
-    assert_select ".panel-head span", text: "What you can do"
+    assert_select ".strip .is-quiet", text: "none"
+    assert_select ".panel-head span", text: "What you did"
   end
 end

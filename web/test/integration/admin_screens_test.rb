@@ -11,26 +11,26 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
     get account_path
 
     assert_response :success
-    assert_select ".card-title", text: "What you hold"
+    assert_select ".strip .mono", text: "UADNONE"
+    assert_select ".panel-head span", text: "Theme"
   end
 
-  test "holding nothing offers a way forward instead of three n/a rows" do
+  test "holding nothing says so rather than reading n/a" do
     sign_in_as(Account.create!(user_id: "UADEMPTY"))
 
     get account_path
 
-    assert_select ".empty-title", text: "Nothing yet"
-    assert_select ".empty .btn", text: /Ask/
+    assert_select ".strip .is-quiet", text: "none"
+    assert_select ".empty-title", text: "Nothing in 30 days"
   end
 
-  test "holding something names the role and what it lets you do" do
+  test "holding something names the role in the strip" do
     sign_in_as(@boss)
 
     get account_path
 
-    assert_select ".line-row b", text: "Role"
-    assert_select ".line-row .chip-crit", text: /Community manager/
-    assert_select ".reveal-body .mono", text: "access.grant"
+    assert_select ".strip .sub2", text: "Role"
+    assert_select ".strip .is-high", text: /Community manager/
   end
 
   test "the admin screens each render for a manager" do
