@@ -131,8 +131,14 @@ class EngineController < ApplicationController
 
   StepGroup = Struct.new(:source, :step_index, :step_total, :statuses, :children,
     :rows_in, :total_expected, :seconds, :pct, keyword_init: true) do
+    SETTLED = %w[ok skipped].freeze
+
     def running?
       statuses.key?("running")
+    end
+
+    def settled?
+      statuses.keys.all? { |status| SETTLED.include?(status) }
     end
   end
 
@@ -240,7 +246,8 @@ class EngineController < ApplicationController
     held = consecutive_member_days
     behind = source_rows.select { |row| row.state == "stale" || row.state == "never run" }
     worst = behind.min_by { |row| row.last_ok || Time.at(0) }
-    done = @steps.count { |step| step.statuses.to_s.include?("ok") }
+    done = @steps.count(&:settled?)
+    planned = @steps.last&.step_total || Engine::Source::KEYS.size
 
     [
       BandFact.new(key: "Consecutive member-days", value: held,
@@ -249,7 +256,7 @@ class EngineController < ApplicationController
       BandFact.new(key: "Behind", value: behind.size,
         said: worst ? "#{worst.source.key}, #{short_age(worst.last_ok)}" : "nothing",
         tone: behind.any? ? "bad" : "good"),
-      BandFact.new(key: "Tonight", value: "#{done}/#{Engine::Source::KEYS.size}",
+      BandFact.new(key: "Tonight", value: "#{done}/#{planned}",
         said: @run ? run_span(@run) : "not started", tone: "push")
     ]
   end
@@ -290,10 +297,11 @@ class EngineController < ApplicationController
     scope = Analytics::FctIngestRun.where(status: "ok")
     scope = scope.where(finished_at: since..) if since
     scope
-      .pluck(:source, :finished_at)
+      .group(:source)
+      .maximum(:finished_at)
       .filter_map { |source, finished_at| [stage_for_source(source), finished_at] if stage_for_source(source) }
       .group_by(&:first)
-      .transform_values { |pairs| pairs.map(&:last).max }
+      .transform_values { |pairs| pairs.map(&:last).compact.max }
   end
 
   SourceRow = Struct.new(:source, :last_ok, :typical, :rows, :state, keyword_init: true)
@@ -325,8 +333,8 @@ class EngineController < ApplicationController
     Analytics::FctIngestRun
       .where(status: "ok")
       .where.not(finished_at: nil)
+      .where(started_at: FRESHNESS_WINDOW.ago..)
       .order(id: :desc)
-      .limit(TYPICAL_OF * Engine::Source::KEYS.size)
       .pluck(:source, Arel.sql("extract(epoch from finished_at - started_at)"))
       .filter_map { |source, taken| [stage_for_source(source), taken.to_f] if stage_for_source(source) }
       .group_by(&:first)
@@ -334,13 +342,24 @@ class EngineController < ApplicationController
   end
 
   def last_rows_in
+    newest = {}
+    totals = {}
+
     Analytics::FctIngestRun
       .where(status: "ok")
       .where.not(rows_in: nil)
-      .order(id: :asc)
-      .pluck(:source, :rows_in)
-      .filter_map { |source, count| [stage_for_source(source), count] if stage_for_source(source) }
-      .to_h
+      .where(started_at: FRESHNESS_WINDOW.ago..)
+      .order(id: :desc)
+      .pluck(:source, :parent_run_id, :rows_in)
+      .each do |source, parent_run_id, count|
+        stage = stage_for_source(source)
+        next unless stage
+        next unless newest.fetch(stage) { newest[stage] = parent_run_id } == parent_run_id
+
+        totals[stage] = totals.fetch(stage, 0) + count
+      end
+
+    totals
   end
 
   def median(values)

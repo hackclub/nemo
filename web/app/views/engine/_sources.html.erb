@@ -78,14 +78,14 @@
         </div>
 
         <div>
-          <div class="exp-k">What it said last night</div>
-          <% said = @step_output.find { |out| out.source.to_s.start_with?(source.key) } %>
+          <div class="exp-k">
+            What it said<% if run %> &middot; run <%= run.id %>, <%= run.started_at.strftime("%-d %b, %H:%M") %><% end %>
+          </div>
+          <% said = step_output.find { |out| out.source == source.key } %>
           <% if said&.output.present? %>
             <pre><%= said.output %></pre>
           <% else %>
-            <p class="card-sub" style="margin: 0">
-              Nothing captured. Output is recorded from the run after the capture was added.
-            </p>
+            <p class="card-sub" style="margin: 0">n/a</p>
           <% end %>
           <div class="exp-act">
             <% if active_request.nil? %>

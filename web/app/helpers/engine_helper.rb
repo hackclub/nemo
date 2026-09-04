@@ -50,6 +50,13 @@ module EngineHelper
     safe_join(chips, " ")
   end
 
+  def step_progress(steps)
+    last = steps.last
+    return nil if last.nil?
+
+    "step #{last.step_index} of #{last.step_total || steps.size}"
+  end
+
   def run_stale?(row)
     Time.current - row.age_from > STALE_AFTER
   end

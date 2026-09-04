@@ -16,7 +16,7 @@
       </div>
       <div class="snum"><%= run_duration(step) %></div>
       <div class="snum"><%= step.rows_in ? number_with_delimiter(step.rows_in) : "n/a" %></div>
-      <div class="rst"><%= leading %></div>
+      <div class="rst"><%= run_status_tally(step.statuses) %></div>
     </div>
   <% end %>
 </div>

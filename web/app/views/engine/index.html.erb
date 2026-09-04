@@ -28,7 +28,7 @@
   <% if @active_request %>
     <span class="chip">
       <i class="dot run"></i>
-      step <%= @steps.size %> of <%= Engine::Source::KEYS.size %>
+      <%= step_progress(@steps) || @active_request.status %>
     </span>
     <% if @active_request.status != "cancelling" %>
       <%= button_to "Cancel", engine_cancel_path, class: "btn", form: { class: "contents" } %>
@@ -48,17 +48,27 @@
         <h2 class="card-title">Tonight</h2>
         <p class="card-sub">
           <% if @run %>
-            <%= @run.started_at.strftime("%-d %b, %H:%M") %> &middot; <%= run_duration(@run) %> so far
-            &middot; step <%= @steps.size %> of <%= Engine::Source::KEYS.size %>
+            <%= @run.started_at.strftime("%-d %b, %H:%M") %>
+            &middot; <%= run_duration(@run) %><%= " so far" if @run.running? %>
+            <% if (progress = step_progress(@steps)) %>
+              &middot; <%= progress %>
+            <% end %>
           <% else %>
             nothing recorded yet
           <% end %>
         </p>
       </div>
-      <% if @run&.running? %>
+      <% if @run %>
         <div class="card-tools">
-          <%= image_tag "nemo.png", class: "sync-fish", alt: "", width: 800, height: 483 %>
-          <span class="swatch"><i class="dot run"></i>running</span>
+          <% if @run.running? %>
+            <%= image_tag "nemo.png", class: "sync-fish", alt: "", width: 800, height: 483 %>
+          <% end %>
+          <%= run_age(@run) if run_stale?(@run) %>
+          <% if @run.running? %>
+            <span class="swatch"><i class="dot run"></i>running</span>
+          <% else %>
+            <%= run_status(@run) %>
+          <% end %>
         </div>
       <% end %>
     </div>
@@ -80,7 +90,8 @@
 
 <% elsif @tab == "sources" %>
   <%= render "sources", sources: @sources, active_request: @active_request,
-        matrix: @matrix, open: @open, may_tune: @may_tune %>
+        matrix: @matrix, open: @open, may_tune: @may_tune,
+        run: @run, step_output: @step_output %>
 
 <% elsif @tab == "coverage" %>
   <%= render "coverage", day_coverage: @day_coverage, held: @held %>
