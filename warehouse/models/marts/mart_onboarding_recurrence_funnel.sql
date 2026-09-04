@@ -35,7 +35,7 @@ gated as (
         count(*) as total_members,
         count(*) filter (where created_account) as created_account,
         count(*) filter (where signed_in) as signed_in,
-        count(*) filter (where not post_knowable) = 0 as posts_knowable,
+        count(*) filter (where post_knowable) as knowable,
         count(*) filter (where posted_once) as posted_once,
         count(*) filter (where posted_twice) as posted_twice,
         count(*) filter (where posted_three_times) as posted_three_times
@@ -48,10 +48,10 @@ select
     total_members,
     created_account,
     signed_in,
-    case when posts_knowable then posted_once end as posted_once,
-    case when posts_knowable then posted_twice end as posted_twice,
-    case when posts_knowable then posted_three_times end as posted_three_times,
-    posts_knowable,
-    'v12' as metric_version
+    knowable,
+    case when knowable > 0 then posted_once end as posted_once,
+    case when knowable > 0 then posted_twice end as posted_twice,
+    case when knowable > 0 then posted_three_times end as posted_three_times,
+    'v13' as metric_version
 from gated
 order by cohort_month

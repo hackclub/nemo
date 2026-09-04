@@ -9,8 +9,9 @@
     <% if recurrence_cohort_months.present? %>
       <div class="card-tools">
         <% if recurrence_funnel %>
+          <% coverage = recurrence_funnel.signed_in.to_i.positive? ? recurrence_funnel.knowable.to_f / recurrence_funnel.signed_in : nil %>
           <%= incomplete_chip(
-                ("the post steps need every member of this cohort searched" unless recurrence_funnel.posts_knowable)
+                ("#{number_to_percentage(coverage * 100, precision: 0)} of this cohort searched" if coverage && coverage < 1)
               ) %>
         <% end %>
       </div>

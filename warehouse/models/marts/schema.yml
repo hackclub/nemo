@@ -331,14 +331,14 @@ models:
         data_type: bigint
       - name: signed_in
         data_type: bigint
+      - name: knowable
+        data_type: bigint
       - name: posted_once
         data_type: bigint
       - name: posted_twice
         data_type: bigint
       - name: posted_three_times
         data_type: bigint
-      - name: posts_knowable
-        data_type: boolean
       - name: metric_version
         data_type: text
   - name: mart_response_rate
