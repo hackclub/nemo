@@ -33,17 +33,25 @@ def every():
     return int(os.environ.get("NEMO_SWEEP_SECONDS", DEFAULT_SECONDS))
 
 
+GIVE_UP_AFTER = 3
+
+
 def each(cases, doing, work, client, channel_id):
-    done = 0
+    done, failing = 0, 0
     for case_id in cases:
         with session() as conn:
             try:
                 work(client, conn, case_id, channel_id)
                 done += 1
+                failing = 0
             except Exception as failure:
+                failing += 1
                 log.warning("bot: case %s %s: %s", case_id, doing, failure)
-                if done == 0:
-                    log.warning("bot: giving up this sweep, %s is failing for every case", doing)
+                if failing >= GIVE_UP_AFTER:
+                    log.warning(
+                        "bot: giving up this sweep, %s is failing for %d case(s) in a row",
+                        doing, failing,
+                    )
                     break
     return done
 

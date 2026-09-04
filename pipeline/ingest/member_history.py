@@ -140,7 +140,7 @@ def run(conn, limit=BATCH_LIMIT):
             try:
                 rows.append(search_member(client, team_id, user_id))
                 counts.rows_in += 1
-            except InternalApiError as exc:
+            except (InternalApiError, KeyError, ValueError, TypeError) as exc:
                 counts.rows_rejected += 1
                 dead_letter(conn, SOURCE, {"user_id": user_id}, str(exc))
             if len(rows) >= FLUSH_EVERY:

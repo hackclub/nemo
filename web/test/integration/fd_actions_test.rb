@@ -185,4 +185,31 @@ class FdActionsTest < ActionDispatch::IntegrationTest
 
     assert_nil actions.sole.category_key
   end
+
+  test "an unparseable expiry is refused instead of raising" do
+    sign_in_as(@me)
+    log(type_key: "shush", expires_on: "2026-13-45")
+
+    assert_response :redirect
+    assert_equal 0, actions.count
+    assert_match(/is not a date/, flash[:alert])
+  end
+
+  test "a target that is not a member id is refused instead of raising" do
+    sign_in_as(@me)
+    log(target_user_id: ["USUB"])
+
+    assert_response :redirect
+    assert_equal 0, actions.count
+    assert_match(/is not a member id/, flash[:alert])
+  end
+
+  test "a channel sent as a list is refused instead of stored as nonsense" do
+    sign_in_as(@me)
+    log(type_key: "channel_ban", expires_on: "2026-09-01", channel_id: ["C0266FRGV"])
+
+    assert_response :redirect
+    assert_equal 0, actions.count
+    assert_match(/is not a channel id/, flash[:alert])
+  end
 end

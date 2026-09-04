@@ -10,6 +10,9 @@ TIMEOUT = 30
 
 
 def download(url, token, limit):
+    if not files.slack_url(url):
+        return None, "refused", "the file url is not an https slack url"
+
     request = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as answer:

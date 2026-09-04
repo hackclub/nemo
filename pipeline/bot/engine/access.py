@@ -10,9 +10,7 @@ ROLES = """
 SELECT role FROM app.effective_role WHERE user_id = %s ORDER BY role
 """
 
-HOLDERS = """
-SELECT user_id FROM fd.case_assignees WHERE case_id = %s
-"""
+CARRIED = ("author", "channel")
 
 
 class Unknown(KeyError):
@@ -47,18 +45,11 @@ def refusal(said):
     return f"{said['label'].lower()} is not yours to use"
 
 
-def free_or_theirs(conn, case_id, user_id):
-    held = [row[0] for row in conn.execute(HOLDERS, (case_id,)).fetchall()]
-    if not held or user_id in held:
+def in_scope(said):
+    scope = said["record_scope"]
+    if scope is None or scope in CARRIED:
         return True, None
-    who = ", ".join(f"<@{one}>" for one in held)
-    return False, f"case {case_id} is with {who}, not with you"
-
-
-def in_scope(conn, said, user_id, case_id):
-    if said["record_scope"] != "assigned" or case_id is None:
-        return True, None
-    return free_or_theirs(conn, case_id, user_id)
+    return False, f"{said['label'].lower()} is scoped to {scope}, which nemo cannot weigh"
 
 
 def may(conn, user_id, key, case_id=None):
@@ -68,4 +59,4 @@ def may(conn, user_id, key, case_id=None):
     if not holds(conn, user_id, key):
         return False, refusal(said)
 
-    return in_scope(conn, said, user_id, case_id)
+    return in_scope(said)

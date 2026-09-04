@@ -87,7 +87,7 @@ def run(conn, days=None, end=None):
             try:
                 rows.append(member_activity_row(rec, start, stop, SOURCE))
                 dates.append(verified_date_row(rec))
-            except KeyError as exc:
+            except (KeyError, ValueError, TypeError) as exc:
                 counts.rows_rejected += 1
                 dead_letter(conn, SOURCE, {"keys": sorted(rec)}, str(exc))
 

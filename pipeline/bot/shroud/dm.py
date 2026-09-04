@@ -191,6 +191,13 @@ def register(app, on_taken=None):
             )
             return
 
+        if on_taken is None:
+            log.error(
+                "shroud: nobody is taking reports, conversation %s stays with the reporter",
+                conversation_id,
+            )
+            return
+
         with session() as conn:
             conn.execute(RETIRE_PROMPT, (consent.DONE, channel_id, prompt_ts))
             conn.execute(FORGET_CHOICE, (conversation_id,))
@@ -198,7 +205,7 @@ def register(app, on_taken=None):
         log.info(
             "shroud: conversation %s handed over, anonymous=%s", conversation_id, anonymous
         )
-        case_id = on_taken(conversation_id, message_id, anonymous) if on_taken else None
+        case_id = on_taken(conversation_id, message_id, anonymous)
 
         said, blocks = receipt(case_id, anonymous)
         client.chat_update(channel=channel_id, ts=prompt_ts, text=said, blocks=blocks)
@@ -224,9 +231,13 @@ def register(app, on_taken=None):
             changed = intake.edit(conn, event["channel"], message)
             if not changed:
                 return
-            conversation_id = conn.execute(
+            found = conn.execute(
                 CONVERSATION_OF, (event["channel"], message["ts"])
-            ).fetchone()[0]
+            ).fetchone()
+            if not found:
+                log.warning("shroud: edited message %s has no conversation", changed)
+                return
+            conversation_id = found[0]
             handed_off, prompt_ts, held = conn.execute(
                 STANDING, (consent.SUBTYPE, conversation_id)
             ).fetchone()

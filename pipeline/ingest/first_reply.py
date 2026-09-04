@@ -135,8 +135,8 @@ def run(conn, limit=BATCH_LIMIT):
                 counts.rows_in += 1
                 by_member += 1 if human else 0
                 by_bot += 1 if bot and not human else 0
-            except InternalApiError as exc:
-                if str(exc).startswith(PERMANENT_ERRORS):
+            except (InternalApiError, KeyError, ValueError, TypeError) as exc:
+                if isinstance(exc, InternalApiError) and str(exc).startswith(PERMANENT_ERRORS):
                     rows.append(unreadable_row(user_id, str(exc)))
                     counts.rows_in += 1
                     unreadable += 1

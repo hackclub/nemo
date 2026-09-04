@@ -1,5 +1,6 @@
 import yaml
 
+from bot.engine import access
 from lib import capabilities
 from lib.paths import PANELS_FILE
 
@@ -34,6 +35,21 @@ def test_record_scopes_come_from_the_declared_set():
     for key, one in capabilities.capabilities(SAID).items():
         scope = one.get("record_scope")
         assert scope is None or scope in allowed, f"{key} declares scope {scope!r}"
+
+
+def test_nemo_carries_every_scope_the_catalogue_declares():
+    for scope in SAID["record_scopes"]:
+        assert scope in access.CARRIED, f"nemo does not weigh the {scope} scope"
+
+
+def test_nemo_refuses_a_scope_it_cannot_weigh():
+    allowed, refusal = access.in_scope({"label": "Do a thing", "record_scope": "assigned"})
+    assert allowed is False
+    assert "assigned" in refusal
+
+
+def test_nemo_allows_an_unscoped_capability():
+    assert access.in_scope({"label": "Do a thing", "record_scope": None}) == (True, None)
 
 
 def test_every_panel_needs_a_real_capability_or_nothing():

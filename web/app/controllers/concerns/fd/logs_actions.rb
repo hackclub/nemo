@@ -3,8 +3,17 @@ module Fd
     NEEDS_EXPIRY = Action::NEEDS_EXPIRY
     NEEDS_CHANNEL = Action::NEEDS_CHANNEL
     TAKES_CHANNEL = Action::TAKES_CHANNEL
+    MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/
 
     private
+
+    def target_user_id
+      params[:target_user_id].to_s.strip
+    end
+
+    def channel_id
+      params[:channel_id].to_s.strip
+    end
 
     def type_key
       params[:type_key].to_s
@@ -16,12 +25,17 @@ module Fd
 
     def action_objection
       return "pick what was done" unless FdHelper::ACTION_LABELS.key?(type_key)
-      return "say who it was directed at" if params[:target_user_id].blank?
-      if NEEDS_EXPIRY.include?(type_key) && params[:expires_on].blank?
-        return "#{type_name.downcase} needs a date it runs until"
+      return "say who it was directed at" if target_user_id.blank?
+      return "#{target_user_id} is not a member id" unless target_user_id.match?(MEMBER_ID)
+      if NEEDS_EXPIRY.include?(type_key)
+        return "#{type_name.downcase} needs a date it runs until" if params[:expires_on].blank?
+        return "#{params[:expires_on]} is not a date" if expiry.nil?
       end
-      if NEEDS_CHANNEL.include?(type_key) && params[:channel_id].blank?
+      if NEEDS_CHANNEL.include?(type_key) && channel_id.blank?
         return "#{type_name.downcase} needs a channel"
+      end
+      if channel_id.present? && !channel_id.match?(SlackLink::CHANNEL)
+        return "#{channel_id} is not a channel id"
       end
       if params[:reason].to_s.strip.blank?
         return wrong!(:reason, "say why this was the answer", params[:reason])
@@ -34,7 +48,7 @@ module Fd
       Action.create!(
         case_id: kase.id,
         type_key: type_key,
-        target_user_id: params[:target_user_id].strip,
+        target_user_id: target_user_id,
         decided_by: current_account.user_id,
         performed_by: current_account.user_id,
         performed_at: at,
@@ -64,14 +78,19 @@ module Fd
     def expiry
       return nil unless NEEDS_EXPIRY.include?(type_key)
 
-      params[:expires_on].presence&.to_date&.end_of_day
+      said = params[:expires_on].to_s.strip
+      return nil if said.blank?
+
+      Date.strptime(said, "%Y-%m-%d").end_of_day
+    rescue Date::Error
+      nil
     end
 
     def channel
       return {} unless TAKES_CHANNEL.include?(type_key)
-      return {} if params[:channel_id].blank?
+      return {} if channel_id.blank?
 
-      { "channel_id" => params[:channel_id].strip }
+      { "channel_id" => channel_id }
     end
   end
 end

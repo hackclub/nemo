@@ -1,8 +1,21 @@
 import hashlib
 import os
+from urllib.parse import urlparse
 
 DEFAULT_CAP = 25 * 1024 * 1024
 HTML = ("text/html", "application/xhtml+xml")
+SLACK_HOSTS = (".slack.com", ".slack-edge.com", ".slack-files.com")
+
+
+def slack_url(url):
+    try:
+        seen = urlparse(url or "")
+    except ValueError:
+        return False
+    host = (seen.hostname or "").lower()
+    return seen.scheme == "https" and (
+        host == "slack.com" or host.endswith(SLACK_HOSTS)
+    )
 
 PENDING = """
 SELECT id, slack_file_id, url_private, size_bytes, mimetype

@@ -200,7 +200,7 @@ def run(conn, limit=BATCH_LIMIT, cohort_days=COHORT_DAYS):
             started = time.monotonic()
             try:
                 tally, pages, truncated = walk_member(client, team_id, user_id)
-            except InternalApiError as exc:
+            except (InternalApiError, KeyError, ValueError, TypeError) as exc:
                 conn.rollback()
                 counts.rows_rejected += 1
                 dead_letter(conn, SOURCE, {"user_id": user_id}, str(exc))

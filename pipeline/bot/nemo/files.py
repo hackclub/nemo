@@ -60,6 +60,10 @@ def share(client, conn, message_id, channel_id, thread_ts):
 
 
 def fetch(url, token, limit):
+    if not files.slack_url(url):
+        log.warning("nemo: %s is not an https slack url, not asking for it", url)
+        return None
+
     request = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as answer:

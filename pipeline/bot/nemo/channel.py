@@ -731,7 +731,7 @@ def mirror(client, conn, case_id, channel_id=None):
             )
         except Exception as failure:
             log.warning("nemo: chat %s did not reach the thread: %s", chat_id, failure)
-            break
+            continue
 
         chat.mirrored(conn, chat_id, sent["ts"])
         carried += 1

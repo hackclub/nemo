@@ -27,6 +27,9 @@ module Fd
       true
     rescue Slack::Chat::Unavailable => failure
       let_go(queued, grant, failure.message)
+    rescue StandardError
+      release(queued)
+      raise
     end
 
     def self.shaped(queued)
@@ -41,6 +44,10 @@ module Fd
 
     def self.let_go(queued, grant, why)
       grant&.stumbled!(why)
+      release(queued)
+    end
+
+    def self.release(queued)
       IntakeOutbox.where(id: queued.id, echoed_ts: nil).update_all(echoed_at: nil)
       false
     end
