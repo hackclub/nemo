@@ -188,6 +188,10 @@ CALENDAR_DAYS_MAX = 500
 PERMANENT_DAY_ERRORS = ("file_not_found", "data_not_available")
 PENDING_DAY_ERRORS = ("file_not_yet_available",)
 
+
+def day_has_no_export(exc):
+    return str(exc).startswith(PERMANENT_DAY_ERRORS + PENDING_DAY_ERRORS)
+
 DAY_TABLES = {
     "member": "raw.member_activity_snapshot",
     "channel": "raw.channel_activity_snapshot",
@@ -303,7 +307,7 @@ def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
 
 
 def pull_member_day(conn, pull_date):
-    with ingest_run(conn, f"{ANALYTICS_SOURCE}:member") as counts:
+    with ingest_run(conn, f"{ANALYTICS_SOURCE}:member", benign=day_has_no_export) as counts:
         activity_rows, dim_rows = [], []
         client = ProxyClient()
         params = {
@@ -347,7 +351,7 @@ def pull_member_day(conn, pull_date):
 
 
 def pull_channel_day(conn, pull_date):
-    with ingest_run(conn, f"{ANALYTICS_SOURCE}:public_channel") as counts:
+    with ingest_run(conn, f"{ANALYTICS_SOURCE}:public_channel", benign=day_has_no_export) as counts:
         activity_rows, dim_rows = [], []
         raw = ProxyClient().fetch_file(
             "admin.analytics.getFile",

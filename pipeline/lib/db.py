@@ -220,7 +220,7 @@ class RunCounts:
 
 
 @contextmanager
-def ingest_run(conn: psycopg.Connection, source: str) -> Iterator[RunCounts]:
+def ingest_run(conn: psycopg.Connection, source: str, benign=None) -> Iterator[RunCounts]:
     run_id = start_run(conn, source)
     conn.commit()
     counts = RunCounts(run_id=run_id)
@@ -231,9 +231,10 @@ def ingest_run(conn: psycopg.Connection, source: str) -> Iterator[RunCounts]:
         finish_run(conn, run_id, "cancelled", counts.rows_in, counts.rows_rejected)
         conn.commit()
         raise
-    except BaseException:
+    except BaseException as exc:
         conn.rollback()
-        finish_run(conn, run_id, "failed", counts.rows_in, counts.rows_rejected)
+        status = "skipped" if benign and benign(exc) else "failed"
+        finish_run(conn, run_id, status, counts.rows_in, counts.rows_rejected)
         conn.commit()
         raise
     finally:
