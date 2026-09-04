@@ -1,6 +1,6 @@
 <% content_for :page_title, "Getting replies" %>
 
-<% checked, by_member = @response_rate_totals %>
+<% checked = @response_rate_totals.first %>
 <div id="response" class="card card-flush">
   <div class="card-head">
     <div>
@@ -8,7 +8,6 @@
     </div>
     <div class="card-tools">
       <% if checked.positive? %>
-        <%= rate_chip(share_pct(by_member, checked), "answered by a member") %>
         <span class="chip chip-off"><%= pluralize(number_with_delimiter(checked), "first post") %> checked</span>
       <% else %>
         <span class="chip chip-warn">not measured yet</span>
@@ -30,12 +29,7 @@
         <tbody>
           <% @response_rate.each do |r| %>
             <tr>
-              <td>
-                <span class="two-line">
-                  <b><%= r.post_month.strftime("%b %Y") %></b>
-                  <span><%= number_to_percentage(share_pct(r.answered_by_member, r.first_posts_checked), precision: 1) %> answered by a member</span>
-                </span>
-              </td>
+              <td><%= r.post_month.strftime("%b %Y") %></td>
               <td class="col-num"><%= number_with_delimiter(r.first_posts_checked) %></td>
               <td class="col-num"><%= number_with_delimiter(r.answered_by_member) %></td>
               <td class="col-num"><%= number_with_delimiter(r.unanswered) %></td>
@@ -53,30 +47,34 @@
   <% end %>
 </div>
 
-<% if @fast_reply_vs_retention.any? %>
-  <% window = @fast_reply_vs_retention.first %>
-  <div class="card card-flush">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">Fast reply vs retention</h2>
-        <% if (note = window_note(window.window_start, window.window_end)) %>
-          <p class="card-sub"><%= note %></p>
-        <% end %>
-      </div>
-      <div class="card-tools">
+<% window = @fast_reply_classes.first %>
+<div class="card<%= " card-flush" if @fast_reply_classes.any? %>">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Fast reply vs retention</h2>
+      <% if window && (note = window_note(window.window_start, window.window_end)) %>
+        <p class="card-sub"><%= note %></p>
+      <% end %>
+    </div>
+    <div class="card-tools">
+      <% if @fast_reply_vs_retention.any? %>
         <span class="chip chip-off">
           <%= pluralize(number_with_delimiter(@fast_reply_vs_retention.sum(&:newcomers)), "newcomer") %>
         </span>
-      </div>
+      <% else %>
+        <span class="chip chip-warn">not measured yet</span>
+      <% end %>
     </div>
+  </div>
+  <% if @fast_reply_vs_retention.any? %>
     <div class="scroll">
       <table class="data-table">
         <thead>
           <tr>
             <th>first member reply</th>
             <th class="col-num">newcomers</th>
-            <th class="col-num">still here at day 30</th>
-            <th class="col-num">still here at day 90</th>
+            <th class="col-num">day 30</th>
+            <th class="col-num">day 90</th>
           </tr>
         </thead>
         <tbody>
@@ -84,12 +82,14 @@
             <tr>
               <td><%= reply_class_label(row.reply_class) %></td>
               <td class="col-num"><%= number_with_delimiter(row.newcomers) %></td>
-              <td class="col-num"><%= retention_chip(row.retained_day_30_rate, row.measured_day_30) %></td>
-              <td class="col-num"><%= retention_chip(row.retained_day_90_rate, row.measured_day_90) %></td>
+              <td class="col-num"><%= retention_cell(row.retained_day_30_rate) %></td>
+              <td class="col-num"><%= retention_cell(row.retained_day_90_rate) %></td>
             </tr>
           <% end %>
         </tbody>
       </table>
     </div>
-  </div>
-<% end %>
+  <% elsif @fast_reply_classes.any? %>
+    <p class="card-note">Each reply speed needs <%= HomeHelper::MIN_SAMPLE %> newcomers.</p>
+  <% end %>
+</div>

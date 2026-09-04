@@ -104,10 +104,10 @@ module HomeHelper
     tag.span(label ? "#{text} #{label}" : text, class: style)
   end
 
-  def retention_chip(rate, measured)
-    return tag.span("n/a", class: "chip chip-off") if rate.nil?
+  def retention_cell(rate)
+    return tag.span("n/a", class: "sub2") if rate.nil?
 
-    rate_chip((rate.to_f * 100).round(1), "of #{number_with_delimiter(measured)}")
+    number_to_percentage((rate.to_f * 100).round(1), precision: 1)
   end
 
   def incomplete_chip(*reasons)
@@ -118,7 +118,7 @@ module HomeHelper
   end
 
   def reply_wait(seconds)
-    return "n/a" if seconds.nil?
+    return tag.span("n/a", class: "sub2") if seconds.nil?
 
     seconds = seconds.to_i
     return "#{seconds}s" if seconds < 90

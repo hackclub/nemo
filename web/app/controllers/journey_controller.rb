@@ -30,9 +30,12 @@ class JourneyController < ApplicationController
   def replies
     @response_rate = Analytics::MartResponseRate.order(post_month: :desc).limit(13)
     @response_rate_totals = Analytics::MartResponseRate.totals
-    @fast_reply_vs_retention = Analytics::MartFastReplyVsRetention
-      .where(newcomers: HomeHelper::MIN_SAMPLE..)
+    @fast_reply_classes = Analytics::MartFastReplyVsRetention
       .order(Arel.sql("case reply_class when 'fast' then 1 when 'slow' then 2 else 3 end"))
+      .to_a
+    @fast_reply_vs_retention = @fast_reply_classes.select do |row|
+      row.newcomers >= HomeHelper::MIN_SAMPLE
+    end
   end
 
   def retention
