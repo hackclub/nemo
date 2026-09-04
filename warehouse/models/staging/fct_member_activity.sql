@@ -19,5 +19,12 @@ select
     last_active_desktop_at,
     last_active_android_at,
     last_active_ios_at
-from {{ source('raw', 'member_activity_snapshot') }}
+from {{ source('raw', 'member_activity_snapshot') }} a
 where window_start = window_end
+  and exists (
+      select 1
+      from {{ ref('fct_analytics_day') }} d
+      where d.source = 'member_day'
+        and d.ds = a.window_start
+        and d.loaded
+  )

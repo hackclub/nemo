@@ -14,5 +14,12 @@ select
     total_members,
     full_members,
     guests
-from {{ source('raw', 'channel_activity_snapshot') }}
+from {{ source('raw', 'channel_activity_snapshot') }} a
 where window_start = window_end
+  and exists (
+      select 1
+      from {{ ref('fct_analytics_day') }} d
+      where d.source = 'channel_day'
+        and d.ds = a.window_start
+        and d.loaded
+  )
