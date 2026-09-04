@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
+from ingest.member_range_pull import SOURCE as MEMBER_RANGE_SOURCE
 from lib.db import connect, dead_letter, ingest_run
 from lib.paths import ENV_FILE
 from lib.proxy_client import InternalApiError, ProxyClient
@@ -17,6 +18,11 @@ MIN_SECONDS_PER_SEARCH = 0.6
 PENDING_SQL = """
 WITH horizon AS (
     SELECT max(account_created_verified) AS max_verified FROM raw.member_dim
+),
+range_activity AS (
+    SELECT user_id, channel_messages_posted
+    FROM raw.member_activity_snapshot
+    WHERE source = %s
 )
 SELECT
     m.user_id,
@@ -27,9 +33,11 @@ SELECT
 FROM raw.member_dim m
 CROSS JOIN horizon h
 LEFT JOIN raw.member_message_history mh ON mh.user_id = m.user_id
+LEFT JOIN range_activity r ON r.user_id = m.user_id
 WHERE mh.user_id IS NULL
   AND NOT coalesce(m.is_bot, false)
   AND NOT coalesce(m.invite_pending, false)
+  AND (r.user_id IS NULL OR coalesce(r.channel_messages_posted, 0) > 0)
 ORDER BY 2 DESC NULLS LAST, m.user_id
 LIMIT %s
 """
@@ -92,7 +100,7 @@ def history_row(user_id, messages):
 
 def pending_members(conn, limit):
     with conn.cursor() as cur:
-        cur.execute(PENDING_SQL, (limit,))
+        cur.execute(PENDING_SQL, (MEMBER_RANGE_SOURCE, limit))
         return cur.fetchall()
 
 
