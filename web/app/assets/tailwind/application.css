@@ -6458,6 +6458,41 @@
 
   .chart-legend i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
 
+  .ser-1 { color: var(--series-1); }
+  .ser-2 { color: var(--series-2); }
+  .ser-3 { color: var(--series-3); }
+  .ser-4 { color: var(--series-4); }
+  .ser-5 { color: var(--series-5); }
+  .ser-0 { color: var(--series-0); }
+
+  .chart-legend i,
+  .tip .row i { background-color: currentColor; }
+
+  .chart stop { stop-color: currentColor; }
+
+  .chart stop.top { stop-opacity: 0.22; }
+
+  .chart stop.bot { stop-opacity: 0; }
+
+  .chart .dot { stroke: var(--card); stroke-width: 2; }
+
+  .chart .cur { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+
+  .chart:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: var(--r-ctl);
+  }
+
+  .chart-say {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   .chart-ratio {
     height: 84px;
     margin-top: var(--s-2xs);
@@ -6478,7 +6513,9 @@
   }
 
   .chart-short:has([data-controller~="svg-chart"]),
-  .chart-tall:has([data-controller~="svg-chart"]) {
+  .chart-tall:has([data-controller~="svg-chart"]),
+  .chart-short:has([data-controller~="chart"]),
+  .chart-tall:has([data-controller~="chart"]) {
     height: auto;
   }
 
