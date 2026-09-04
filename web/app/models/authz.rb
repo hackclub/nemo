@@ -121,7 +121,6 @@ class Authz
       return true if scope.nil? || record.nil?
 
       case scope
-      when :assigned then record.respond_to?(:mine_or_free?) && record.mine_or_free?(account.user_id)
       when :author then record.respond_to?(:author) && record.author == account.user_id
       when :channel then Channels::Audience.may_see?(account, record)
       else false
@@ -132,7 +131,6 @@ class Authz
       return nil if may?(account, key, record)
       return "you hold no access" if account.nil? || held(account.user_id).empty?
       return refusal(key) unless holds?(account, key)
-      return not_yours(record) if record.respond_to?(:mine_or_free?)
 
       "that is not yours"
     end
@@ -146,10 +144,6 @@ class Authz
       return "#{said} is not yours to use" if carried.empty?
 
       "#{said} is #{carried.map { |role| role_label(role) }.to_sentence} only"
-    end
-
-    def not_yours(kase)
-      "case #{kase.id} is assigned to #{kase.assignee_handles}, not to you"
     end
 
     def load_held(user_id)

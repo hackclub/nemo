@@ -30,7 +30,7 @@ module Fd
       if settled
         redirect_to fd_case_path(@case), notice: "case #{@case.id} resolved"
       else
-        refuse(refusal(@case.reload))
+        refuse("case #{@case.id} was already resolved")
       end
     end
 
@@ -100,12 +100,6 @@ module Fd
 
       IntakeOutbox.create!(conversation_id: conversation.id, kind: "outcome", body: said,
         requested_by: current_account.user_id)
-    end
-
-    def refusal(kase)
-      return "case #{kase.id} was already resolved" if kase.resolved?
-
-      not_yours(kase)
     end
 
     def refuse(message)

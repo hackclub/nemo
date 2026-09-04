@@ -19,13 +19,14 @@ class FdMessagesTest < ActionDispatch::IntegrationTest
   end
 
   test "a refusal holds until it is closed, and says what was not done" do
-    kase = make_case(assign: "UOTHER")
+    kase = make_case
+    move_capability!("firefighter", "case.act", false, by: "UME")
 
     post fd_case_actions_path(kase), params: { kind: "warning", about: "USUB" }
     follow_redirect!
 
     assert_select ".topbar-msg.topbar-msg-bad[data-toast-delay-value=?]", "0"
-    assert_select ".topbar-msg .msg-title", text: /assigned to @UOTHER, not to you/
+    assert_select ".topbar-msg .msg-title", text: /Firefighter only/
     assert_select ".topbar-msg .msg-said", text: /Nothing was changed/
     assert_select ".topbar-msg .msg-shut"
   end

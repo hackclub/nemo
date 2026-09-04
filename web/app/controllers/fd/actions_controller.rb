@@ -7,7 +7,7 @@ module Fd
     def create
       kase = Case.find(params[:case_id])
 
-      problem = action_objection || not_yours(kase)
+      problem = action_objection
       if problem
         return redirect_to(fd_case_path(kase, do: "action"),
           alert: (problem unless flash[:wrong]))

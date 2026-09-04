@@ -10,7 +10,7 @@ module Fd
       role = params[:role].to_s
       detail = role == "involved" ? params[:detail].to_s.strip : ""
 
-      problem = objection(kase, wanted, role)
+      problem = objection(wanted, role)
       return redirect_to(fd_case_path(kase, tab: "people"), alert: problem) if problem
 
       added = []
@@ -41,9 +41,6 @@ module Fd
         return redirect_to(fd_case_path(kase, tab: "people"), alert: "they are not on this case")
       end
 
-      problem = not_yours(kase)
-      return redirect_to(fd_case_path(kase, tab: "people"), alert: problem) if problem
-
       writing do
         audit(person, "detached", entity_id: kase.id,
           before: {
@@ -66,14 +63,12 @@ module Fd
       Array(raw).map { |id| id.to_s.strip.delete_prefix("@").upcase }.reject(&:blank?).uniq
     end
 
-    def objection(kase, wanted, role)
+    def objection(wanted, role)
       return "say who to add" if wanted.empty?
       unless wanted.all? { |id| id.match?(MEMBER_ID) }
         return "that does not look like a Slack member id"
       end
-      return "pick how they were on this case" unless CaseParticipant::ROLES.include?(role)
-
-      not_yours(kase)
+      "pick how they were on this case" unless CaseParticipant::ROLES.include?(role)
     end
 
     def role_word(role)

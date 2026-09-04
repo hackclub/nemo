@@ -173,13 +173,12 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     assert_nil flash[:alert]
   end
 
-  test "an action on a case somebody else holds is refused" do
+  test "an action on a case somebody else holds is allowed" do
     @kase.assign!("UOTHER")
     sign_in_as(@me)
     act
 
-    assert_equal 0, actions.count
-    assert_match(/assigned to @UOTHER, not to you/, flash[:alert])
+    assert_equal 1, actions.count
   end
 
   test "resolving twice does not overwrite the first outcome" do

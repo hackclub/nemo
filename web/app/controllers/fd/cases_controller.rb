@@ -95,9 +95,6 @@ module Fd
 
     def update
       kase = Case.find(params[:id])
-      problem = not_yours(kase)
-      return redirect_to(fd_case_path(kase), alert: problem) if problem
-
       wanted = params[:category_key].to_s
       unless Case::CATEGORIES.include?(wanted)
         wrong!(:category_key, "Pick one of these.")

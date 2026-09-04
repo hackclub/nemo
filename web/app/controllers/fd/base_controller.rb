@@ -110,12 +110,6 @@ module Fd
       ActiveRecord::Base.transaction { yield }
     end
 
-    def not_yours(kase)
-      return nil if kase.mine_or_free?(current_account.user_id)
-
-      Access.not_yours(kase)
-    end
-
     def audit(record, verb, **options)
       Fd::Audit.record(
         record, verb,

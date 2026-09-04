@@ -8,9 +8,6 @@ module Fd
 
       return refuse(kase, "that message is not on this case") if said.nil?
 
-      problem = not_yours(kase)
-      return redirect_to(fd_case_path(kase, tab: "evidence"), alert: problem) if problem
-
       writing do
         flag = CaseCitation.create!(case_id: kase.id, thread_message_id: said.id,
           flagged_by: current_account.user_id)
@@ -28,9 +25,6 @@ module Fd
       flag = CaseCitation.where(case_id: kase.family_ids).find_by(id: params[:id])
 
       return refuse(kase, "that flag is not on this case") if flag.nil?
-
-      problem = not_yours(kase)
-      return redirect_to(fd_case_path(kase, tab: "evidence"), alert: problem) if problem
 
       said = flag.message
       writing do

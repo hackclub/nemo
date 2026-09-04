@@ -94,7 +94,7 @@ class FdAccessTest < ActionDispatch::IntegrationTest
     assert_equal 0, refusals.count
   end
 
-  test "a firefighter is refused on a case assigned to somebody else" do
+  test "a firefighter undoes the work on a case assigned to somebody else" do
     kase = make_case(opened_at: 2.days.ago)
     kase.assign!("UOTHER")
     action = Fd::Action.create!(case_id: kase.id, type_key: "warning", target_user_id: "USUB",
@@ -103,10 +103,8 @@ class FdAccessTest < ActionDispatch::IntegrationTest
     post fd_case_reversals_path(kase), params: { action_id: action.id,
       reversal_reason: "they appealed" }
 
-    assert_nil action.reload.reversed_at
-    assert_match(/not to you/, flash[:alert])
-    assert_equal "case.reverse", refusals.sole.after["permission"]
-    assert_equal %w[firefighter], refusals.sole.after["roles"]
+    assert_not_nil action.reload.reversed_at
+    assert_equal 0, refusals.count
   end
 
   test "a firefighter still does the work the role is for" do

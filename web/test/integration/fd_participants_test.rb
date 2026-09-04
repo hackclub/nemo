@@ -133,13 +133,13 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
     assert_equal %w[involved reporter], people.map(&:role).sort
   end
 
-  test "somebody else's case cannot be added to" do
+  test "a case assigned to somebody else can still be added to" do
     @kase.assign!("UOTHER")
     sign_in_as(@me)
     add
 
-    assert_empty people.to_a
-    assert_match(/assigned to @UOTHER, not to you/, flash[:alert])
+    assert_equal 1, people.count
+    assert_match(/@UNEW added to who else is logged/, flash[:notice])
   end
 
   test "adding writes a trail entry filed under the case" do

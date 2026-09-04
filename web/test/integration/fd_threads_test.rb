@@ -114,13 +114,12 @@ class FdThreadsTest < ActionDispatch::IntegrationTest
       "two cases citing one evidence thread are siblings"
   end
 
-  test "I cannot attach to a case assigned to somebody else" do
+  test "I can attach to a case assigned to somebody else" do
     @kase.assign!("UOTHER")
     sign_in_as(@me)
     attach
 
-    assert_equal 0, threads.count
-    assert_match(/assigned to @UOTHER, not to you/, flash[:alert])
+    assert_equal 1, threads.count
   end
 
   test "attaching is recorded in the trail" do
@@ -160,7 +159,7 @@ class FdThreadsTest < ActionDispatch::IntegrationTest
     assert_match(/not on this case/, flash[:alert])
   end
 
-  test "I cannot detach from a case assigned to somebody else" do
+  test "I can detach from a case assigned to somebody else" do
     thread = Fd::CaseThread.create!(case_id: @kase.id, channel_id: "C1", thread_ts: "1.1",
       added_by: "UFF1")
     @kase.assign!("UOTHER")
@@ -168,8 +167,7 @@ class FdThreadsTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     delete fd_case_thread_path(@kase, thread)
 
-    assert_equal 1, threads.count
-    assert_match(/assigned to @UOTHER/, flash[:alert])
+    assert_equal 0, threads.count
   end
 
   test "the page offers the attach modal and a detach control per row" do

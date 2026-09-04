@@ -11,11 +11,11 @@ checks:
     case: mine
     allowed: true
 
-  - name: a firefighter may not categorise somebody else's case
+  - name: a firefighter may categorise somebody else's case too
     role: firefighter
     key: case.categorise
     case: theirs
-    allowed: false
+    allowed: true
 
   - name: a firefighter may act on a case nobody holds
     role: firefighter
@@ -29,35 +29,29 @@ checks:
     case: mine
     allowed: true
 
-  - name: a firefighter may not act on somebody else's case
+  - name: a firefighter may act on somebody else's case too
     role: firefighter
     key: case.act
     case: theirs
-    allowed: false
+    allowed: true
 
-  - name: a firefighter may not act on somebody else's case either
-    role: firefighter
-    key: case.act
-    case: theirs
-    allowed: false
-
-  - name: a firefighter may not reverse an action on somebody else's case
+  - name: a firefighter may reverse an action on somebody else's case
     role: firefighter
     key: case.reverse
     case: theirs
-    allowed: false
+    allowed: true
 
-  - name: a firefighter may not put somebody on a case that is not theirs
+  - name: a firefighter may put somebody on a case that is not theirs
     role: firefighter
     key: case.people
     case: theirs
-    allowed: false
+    allowed: true
 
-  - name: a firefighter may not attach a thread to somebody else's case
+  - name: a firefighter may attach a thread to somebody else's case
     role: firefighter
     key: case.thread
     case: theirs
-    allowed: false
+    allowed: true
 
   - name: resolving is not scoped, so anybody holding it may resolve
     role: firefighter
@@ -81,24 +75,17 @@ checks:
     moved: { firefighter: false }
     allowed: false
 
-  - name: an override does not widen the scope check
-    role: firefighter
-    key: case.act
-    case: theirs
-    moved: { firefighter: true }
-    allowed: false
-
   - name: a community manager may act on a case nobody holds
     manager: true
     key: case.act
     case: free
     allowed: true
 
-  - name: a community manager may not act on somebody else's case either
+  - name: a community manager may act on somebody else's case too
     manager: true
     key: case.act
     case: theirs
-    allowed: false
+    allowed: true
 
   - name: a community manager may take access back
     manager: true

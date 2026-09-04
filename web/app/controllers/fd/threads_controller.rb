@@ -7,7 +7,7 @@ module Fd
       ref = SlackLink.parse(params[:link])
       kind = CaseThread::KINDS.include?(params[:kind]) ? params[:kind] : "evidence"
 
-      problem = objection(kase, ref)
+      problem = objection(ref)
       return redirect_to(fd_case_path(kase, tab: "evidence"), alert: problem) if problem
 
       writing do
@@ -36,9 +36,6 @@ module Fd
           alert: "that thread is not on this case")
       end
 
-      problem = not_yours(kase)
-      return redirect_to(fd_case_path(kase, tab: "evidence"), alert: problem) if problem
-
       writing do
         audit(thread, "detached", entity_id: kase.id,
           before: {
@@ -56,10 +53,8 @@ module Fd
 
     private
 
-    def objection(kase, ref)
-      return "paste a link to a Slack thread in this workspace" if ref.nil?
-
-      not_yours(kase)
+    def objection(ref)
+      "paste a link to a Slack thread in this workspace" if ref.nil?
     end
 
     def first_evidence?(kase, kind)

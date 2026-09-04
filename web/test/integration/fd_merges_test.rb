@@ -75,13 +75,13 @@ class FdMergesTest < ActionDispatch::IntegrationTest
     assert_match(/1 case closed as duplicate of case #{@main.id}, which stays open, 1 left alone/, flash[:notice])
   end
 
-  test "somebody else's case is left alone" do
+  test "a case assigned to somebody else still merges" do
     @dup_one.assign!("UOTHER")
     sign_in_as(@me)
     merge([@dup_one.id], @main.id)
 
-    assert_nil @dup_one.reload.resolved_at
-    assert_match(/nothing to mark/, flash[:alert])
+    assert_not_nil @dup_one.reload.resolved_at
+    assert_equal @main.id, @dup_one.duplicate_of
   end
 
   test "with no case named, the oldest of the ticked ones stays open" do

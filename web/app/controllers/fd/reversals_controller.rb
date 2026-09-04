@@ -8,7 +8,7 @@ module Fd
       kase = Case.find(params[:case_id])
       reason = params[:reversal_reason].to_s.strip
 
-      problem = objection(kase, reason)
+      problem = objection(reason)
       if problem
         return redirect_to(fd_case_path(kase, tab: "actions", do: "reverse-#{params[:action_id]}"))
       end
@@ -44,7 +44,7 @@ module Fd
 
     private
 
-    def objection(kase, reason)
+    def objection(reason)
       return "pick the action to reverse" if params[:action_id].blank?
 
       if reason.blank?
@@ -55,8 +55,7 @@ module Fd
           "Keep it under #{MAX_REASON} characters. That one is #{reason.length}.", reason)
       end
 
-      refusal = not_yours(kase)
-      refusal && wrong!(:reversal_reason, refusal, reason)
+      nil
     end
   end
 end

@@ -43,8 +43,8 @@ class AuthzTest < ActiveSupport::TestCase
   end
 
   test "a scoped capability still answers the unscoped question for the UI" do
-    assert_equal :assigned, Authz.record_scope("case.act")
-    assert Authz.scoped?("case.act")
+    assert_equal :author, Authz.record_scope("case.note")
+    assert Authz.scoped?("case.note")
     assert_not Authz.scoped?("case.resolve")
   end
 

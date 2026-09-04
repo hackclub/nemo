@@ -17,19 +17,16 @@ class FdGatingTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "a case somebody else is holding offers nothing but the reason why" do
+  test "a case somebody else is holding still offers everything to act on" do
     kase = make_case(assign: "UOTHER")
 
     get fd_case_path(kase)
 
     assert_response :success
-    why = "case #{kase.id} is assigned to @UOTHER, not to you"
-    assert_equal why, dead("Log an action")["title"]
-    assert_equal why, dead("Log an action").at_css(".btn-why").text.strip,
-      "a tooltip is no use on a keyboard, so the reason is in the row"
+    assert_nil dead("Log an action"), "assignment is not who may act"
 
     get fd_case_path(kase, tab: "people")
-    assert_select ".panel-head .btn-off", text: /Add somebody/
+    assert_select ".panel-head .btn-off", text: /Add somebody/, count: 0
   end
 
   test "every item in the overflow menu can be reached by keyboard" do
@@ -99,18 +96,20 @@ class FdGatingTest < ActionDispatch::IntegrationTest
 
   test "the palette says why a command is closed rather than hiding it" do
     kase = make_case(assign: "UOTHER")
+    move_capability!("firefighter", "case.act", false, by: "UME")
 
     get fd_search_path(format: :json, q: ">", on_case: kase.id)
 
     rows = response.parsed_body["groups"].first["rows"]
     act = rows.find { |row| row["title"] == "Log an action" }
-    assert_equal "case #{kase.id} is assigned to @UOTHER, not to you", act["why"]
+    assert_equal "log an action against somebody is Firefighter only", act["why"]
     assert_nil rows.find { |row| row["title"] == "Resolve this case" }["why"]
     assert_nil rows.find { |row| row["title"] == "Go to the cases" }["why"]
   end
 
   test "the wording a greyed control shows is the wording the refusal uses" do
-    kase = make_case(assign: "UOTHER")
+    kase = make_case
+    move_capability!("firefighter", "case.act", false, by: "UME")
     get fd_case_path(kase)
     shown = dead("Log an action")["title"]
 

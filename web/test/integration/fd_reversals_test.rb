@@ -92,13 +92,12 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
     assert_equal 1, entries.count
   end
 
-  test "I cannot reverse on a case assigned to somebody else" do
+  test "I can reverse on a case assigned to somebody else" do
     @kase.assign!("UOTHER")
     sign_in_as(@me)
     reverse
 
-    assert_nil @action.reload.reversed_at
-    assert_match(/assigned to @UOTHER, not to you/, flash[:alert])
+    assert_not_nil @action.reload.reversed_at
   end
 
   test "the trail keeps the reason, which is not a member note" do

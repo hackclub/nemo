@@ -27,23 +27,8 @@ module Fd
       return nil if allow?(staff, key, record)
       return "you hold no access" if staff.nil? || Authz.roles_held(staff.user_id).empty?
       return Authz.refusal(key) unless Authz.holds?(staff, key)
-      return not_yours(record) if record.respond_to?(:mine_or_free?)
 
       "that is not yours"
-    end
-
-    def self.not_yours(kase)
-      "case #{kase.id} is assigned to #{kase.assignee_handles}, not to you"
-    end
-
-    def self.within_scope?(staff, scope, record)
-      return true if scope.nil? || record.nil?
-
-      case scope
-      when :assigned then record.respond_to?(:mine_or_free?) && record.mine_or_free?(staff.user_id)
-      when :author then record.respond_to?(:author) && record.author == staff.user_id
-      else true
-      end
     end
   end
 end

@@ -48,9 +48,6 @@ module Fd
     scope :unassigned, -> {
       where.not(id: CaseAssignee.select(:case_id))
     }
-    scope :free_or_assigned_to, ->(user_id) {
-      unassigned.or(assigned_to(user_id))
-    }
     scope :with_live_action_against, ->(user_id) {
       where(id: Action.live.for_target(user_id).select(:case_id))
     }
@@ -279,10 +276,6 @@ module Fd
 
       (said - participants.map(&:user_id) - Account.where(user_id: said).pluck(:user_id)) -
         [opened_by]
-    end
-
-    def mine_or_free?(user_id)
-      !assigned? || assigned_to?(user_id)
     end
 
     def assignee_handles

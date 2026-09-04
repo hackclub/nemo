@@ -89,13 +89,12 @@ class FdActionsTest < ActionDispatch::IntegrationTest
     assert_empty action.details
   end
 
-  test "I cannot act on a case assigned to somebody else" do
+  test "I can act on a case assigned to somebody else" do
     @kase.assign!("UOTHER")
     sign_in_as(@me)
     log
 
-    assert_equal 0, actions.count
-    assert_match(/assigned to @UOTHER, not to you/, flash[:alert])
+    assert_equal 1, actions.count
   end
 
   test "I can act on my own case" do
