@@ -78,7 +78,8 @@ module Engine
     end
 
     def self.for_run(run_source)
-      @by_run ||= all.flat_map { |source| source.runs_as.map { |name| [name, source] } }.to_h
+      @by_run ||= all.to_h { |source| [source.key, source] }
+        .merge(all.flat_map { |source| source.runs_as.map { |name| [name, source] } }.to_h)
       @by_run[run_source] || @by_run[run_source.split(":", 2).first]
     end
   end
