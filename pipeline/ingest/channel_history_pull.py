@@ -96,8 +96,18 @@ TARGETS_SQL = """
 SELECT d.channel_id, w.newest_ts
 FROM raw.channel_dim d
 LEFT JOIN raw.channel_walk w ON w.channel_id = d.channel_id
+LEFT JOIN (
+    SELECT first_post_channel AS channel_id, count(*) AS first_posts
+    FROM raw.member_message_history
+    WHERE first_post_channel IS NOT NULL
+    GROUP BY first_post_channel
+) f ON f.channel_id = d.channel_id
 WHERE d.archived IS NOT TRUE
-ORDER BY w.last_walked_at NULLS FIRST, d.channel_id
+ORDER BY
+    (w.last_walked_at IS NULL) DESC,
+    coalesce(f.first_posts, 0) DESC,
+    w.last_walked_at NULLS FIRST,
+    d.channel_id
 LIMIT %s
 """
 
