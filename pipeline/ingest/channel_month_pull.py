@@ -118,10 +118,18 @@ def run_month(conn, month, alphabet=None):
     return len(rows)
 
 
+def complete_edge(edge):
+    """The latest month-start Slack has fully finished computing, given the newest available day."""
+    this_month = month_start(edge)
+    if edge >= next_month(this_month) - timedelta(days=1):
+        return this_month
+    return month_start(this_month - timedelta(days=1))
+
+
 def months_between(client, first=None, last=None):
     floor, edge = channel_calendar(client)
     cursor = month_start(first or floor)
-    stop = month_start(last or edge)
+    stop = month_start(last) if last else complete_edge(edge)
     months = []
     while cursor <= stop:
         months.append(cursor)
@@ -131,7 +139,7 @@ def months_between(client, first=None, last=None):
 
 def trailing(client, count):
     _, edge = channel_calendar(client)
-    months = [month_start(edge)]
+    months = [complete_edge(edge)]
     while len(months) < max(1, int(count or 1)):
         months.insert(0, month_start(months[0] - timedelta(days=1)))
     return months
