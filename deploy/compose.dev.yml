@@ -139,6 +139,24 @@ services:
       - --history-months
       - ${SEED_HISTORY_MONTHS:-16}
 
+  transform:
+    image: mnemosyne:latest
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: ${TZ:-UTC}
+    restart: "no"
+    command: ["transform"]
+
   web:
     image: mnemosyne:latest
     build:
@@ -147,6 +165,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      transform:
+        condition: service_completed_successfully
     env_file:
       - .env
     environment:

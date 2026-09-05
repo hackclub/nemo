@@ -4,6 +4,8 @@ class EngineController < ApplicationController
 
   HISTORY = 12
   FRESHNESS_WINDOW = 30.days
+  SUCCESS_FLOOR = 60.days
+  MATRIX_ROW_CAP = 50_000
   TYPICAL_OF = 10
   NIGHTS = 30
   VISIT_STEPS_NEED = 15
@@ -226,8 +228,10 @@ class EngineController < ApplicationController
     index = Hash.new { |store, key| store[key] = {} }
 
     Analytics::FctIngestRun
-      .where(started_at: nights.first.beginning_of_day..)
+      .where(started_at: nights.first.beginning_of_day..Time.current.end_of_day)
       .where.not(source: Analytics::FctIngestRun::PARENT_SOURCE)
+      .order(started_at: :desc)
+      .limit(MATRIX_ROW_CAP)
       .pluck(:source, :status, :started_at)
       .each do |source, status, started_at|
         stage = stage_for_source(source)
@@ -301,10 +305,10 @@ class EngineController < ApplicationController
     seconds < 60 ? "#{seconds}s" : "#{seconds / 60}m"
   end
 
-  def last_success_by_stage(since = nil)
-    scope = Analytics::FctIngestRun.where(status: "ok")
-    scope = scope.where(finished_at: since..) if since
-    scope
+  def last_success_by_stage(since = SUCCESS_FLOOR.ago)
+    Analytics::FctIngestRun
+      .where(status: "ok")
+      .where(finished_at: since..)
       .group(:source)
       .maximum(:finished_at)
       .filter_map { |source, finished_at| [stage_for_source(source), finished_at] if stage_for_source(source) }

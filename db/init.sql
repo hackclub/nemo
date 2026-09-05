@@ -32,6 +32,7 @@ BEGIN
     END IF;
 
     EXECUTE 'ALTER ROLE pipeline_writer SET idle_in_transaction_session_timeout = ''10min''';
+    EXECUTE 'ALTER ROLE rails_app SET statement_timeout = ''5s''';
 
     EXECUTE 'GRANT USAGE ON SCHEMA raw TO pipeline_writer';
     EXECUTE 'GRANT INSERT, SELECT, UPDATE, DELETE, MAINTAIN ON ALL TABLES IN SCHEMA raw '

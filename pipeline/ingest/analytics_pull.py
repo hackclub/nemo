@@ -181,7 +181,7 @@ def channel_dim_row(rec):
 
 MEMBER_DAY_LIMIT = 6
 CHANNEL_DAY_LIMIT = 30
-DAY_WORKERS = int(os.environ.get("ANALYTICS_DAY_WORKERS", "") or 8)
+DAY_WORKERS = int(os.environ.get("ANALYTICS_DAY_WORKERS", "") or 2)
 CALENDAR_DAYS_MAX = 500
 
 

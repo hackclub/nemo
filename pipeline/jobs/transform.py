@@ -2,6 +2,7 @@ import sys
 
 from dotenv import load_dotenv
 
+from jobs import verify_views
 from jobs.nightly_sync import run_dbt
 from lib.paths import ENV_FILE
 
@@ -9,6 +10,7 @@ from lib.paths import ENV_FILE
 def main():
     load_dotenv(ENV_FILE)
     run_dbt()
+    return verify_views.main()
 
 
 if __name__ == "__main__":

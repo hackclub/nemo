@@ -13,7 +13,7 @@ else
 fi
 
 py() {
-  cd "$PIPELINE" && PGOPTIONS="${PGOPTIONS:-} -c lock_timeout=3000" PYTHONPATH=. "$PY" "$@"
+  cd "$PIPELINE" && PGOPTIONS="${PGOPTIONS:-} -c lock_timeout=${NEMO_LOCK_TIMEOUT:-3000}" PYTHONPATH=. "$PY" "$@"
 }
 
 usage() {
@@ -39,9 +39,6 @@ ROLE="${1:-${NEMO_ROLE:-}}"
 
 case "$ROLE" in
   serve)
-    if [ "${NEMO_PROVISION_ON_BOOT:-0}" = "1" ]; then
-      py -m jobs.provision
-    fi
     cd "$WEB" || exit 1
     export NEMO_STREAM="${NEMO_STREAM:-1}"
     if [ -n "${PORT:-}" ]; then
@@ -59,6 +56,7 @@ case "$ROLE" in
     py -m jobs.member_history_worker "$@"
     ;;
   transform)
+    export NEMO_LOCK_TIMEOUT="${NEMO_LOCK_TIMEOUT:-60000}"
     py -m jobs.transform "$@"
     ;;
   seed)
@@ -67,6 +65,7 @@ case "$ROLE" in
     py -m seed.verify
     ;;
   provision)
+    export NEMO_LOCK_TIMEOUT="${NEMO_LOCK_TIMEOUT:-60000}"
     py -m jobs.provision "$@"
     ;;
   doctor)
