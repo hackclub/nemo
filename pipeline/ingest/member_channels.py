@@ -4,13 +4,13 @@ import time
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
-from slack_sdk.errors import SlackApiError
 
 from ingest.member_history import is_public
-from lib.db import connect, dead_letter, ingest_run
+from lib.db import connect, ingest_run
 from lib.paths import ENV_FILE
-from lib.proxy_client import InternalApiError, ProxyClient
+from lib.proxy_client import ProxyClient
 from lib.slack_client import bot_client
+from lib.task import per_entity
 
 SOURCE = "member_channels"
 MEMBERSHIP_SOURCE = "channel_membership"
@@ -198,17 +198,11 @@ def run(conn, limit=BATCH_LIMIT, cohort_days=COHORT_DAYS):
 
         for user_id in members:
             started = time.monotonic()
-            try:
+            with per_entity(conn, SOURCE, counts, {"user_id": user_id}):
                 tally, pages, truncated = walk_member(client, team_id, user_id)
-            except (InternalApiError, KeyError, ValueError, TypeError) as exc:
-                conn.rollback()
-                counts.rows_rejected += 1
-                dead_letter(conn, SOURCE, {"user_id": user_id}, str(exc))
-                conn.commit()
-                continue
-            channels += write_member(conn, user_id, tally, pages, truncated)
-            cut_short += int(truncated)
-            counts.rows_in += 1
+                channels += write_member(conn, user_id, tally, pages, truncated)
+                cut_short += int(truncated)
+                counts.rows_in += 1
             if counts.rows_in % REPORT_EVERY == 0:
                 counts.progress()
                 print(f"{SOURCE}: {counts.rows_in}/{len(members)} walked, {channels} channel rows")
@@ -281,17 +275,11 @@ def read_membership(conn, client=None, limit=BATCH_LIMIT, cohort_days=COHORT_DAY
 
         for user_id in members:
             started = time.monotonic()
-            try:
+            with per_entity(conn, MEMBERSHIP_SOURCE, counts, {"user_id": user_id}):
                 channel_ids = read_member(client, team_id, user_id)
-            except SlackApiError as exc:
-                conn.rollback()
-                counts.rows_rejected += 1
-                dead_letter(conn, MEMBERSHIP_SOURCE, {"user_id": user_id}, exc.response["error"])
-                conn.commit()
-                continue
-            left += write_membership(conn, user_id, channel_ids)
-            joined += len(channel_ids)
-            counts.rows_in += 1
+                left += write_membership(conn, user_id, channel_ids)
+                joined += len(channel_ids)
+                counts.rows_in += 1
             if counts.rows_in % REPORT_EVERY == 0:
                 counts.progress()
                 print(f"{MEMBERSHIP_SOURCE}: {counts.rows_in}/{len(members)} read, {joined} memberships")

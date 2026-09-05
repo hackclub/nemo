@@ -124,7 +124,7 @@ def run(conn, days=WINDOW_DAYS, end=None, source=SOURCE, span=False):
     )
     resume_at, already = get_walk(conn, source, window_key)
 
-    with ingest_run(conn, source) as counts:
+    with ingest_run(conn, source, slice_key=window_key) as counts:
         counts.rows_in = already
         rows = []
 

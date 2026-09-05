@@ -106,7 +106,7 @@ def run_month(conn, month, alphabet=None):
     shards = alphabet or shard_alphabet(conn)
     found = {}
 
-    with ingest_run(conn, SOURCE) as counts:
+    with ingest_run(conn, SOURCE, slice_key=interval) as counts:
         _, expected = ask(client, interval)
         counts.total_expected = expected
 

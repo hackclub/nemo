@@ -53,3 +53,20 @@ def prune_floor(key):
 
 def runs_as(key):
     return source(key).get("runs_as") or [key]
+
+
+def parser_version(key):
+    try:
+        return int(source(key).get("parser_version", 1))
+    except Unknown:
+        return 1
+
+
+BY_RUN = {name: key for key in KEYS for name in runs_as(key)}
+
+
+def key_for_run(run_source):
+    if run_source in BY_RUN:
+        return BY_RUN[run_source]
+    head = run_source.split(":", 1)[0]
+    return BY_RUN.get(head, run_source)

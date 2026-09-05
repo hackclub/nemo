@@ -5,14 +5,15 @@ from dotenv import load_dotenv
 
 from ingest.member_history import run as run_member_history
 from lib import settings
-from lib.db import SeededDeployment, beat, connect, refuse_if_seeded
+from lib.db import SeededDeployment, connect, refuse_if_seeded, set_worker
+from lib.heartbeat import beating
 from lib.paths import ENV_FILE
 
 WORKER = "member_history_worker"
 DEFAULT_POLL_SECONDS = 1800
 
 
-def drain(conn):
+def drain(conn, progress=None):
     searched = 0
     while True:
         limit = settings.limit(conn, "member_history", "batch")
@@ -20,10 +21,13 @@ def drain(conn):
         if not found:
             return searched
         searched += found
+        if progress is not None:
+            progress(searched)
 
 
 def main():
     load_dotenv(ENV_FILE)
+    set_worker(WORKER)
     poll = int(os.environ.get("MEMBER_HISTORY_POLL_SECONDS", "") or DEFAULT_POLL_SECONDS)
 
     with connect() as conn:
@@ -35,12 +39,13 @@ def main():
 
     print(f"{WORKER}: draining member_history continuously, {poll}s idle poll")
     while True:
+        state = {"note": "draining"}
         try:
-            with connect() as conn:
-                beat(conn, WORKER, "draining")
-                searched = drain(conn)
-                beat(conn, WORKER,
-                    "idle, every member searched" if not searched else f"idle after searching {searched}")
+            with connect() as conn, beating(WORKER, lambda: state["note"]):
+                searched = drain(conn, lambda n: state.update(note=f"draining, {n} searched this wake"))
+                state["note"] = (
+                    "idle, every member searched" if not searched else f"idle after searching {searched}"
+                )
                 if searched:
                     print(f"{WORKER}: searched {searched} member(s) this wake")
         except Exception as exc:

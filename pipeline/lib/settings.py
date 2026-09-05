@@ -1,5 +1,7 @@
 from datetime import timedelta
 
+import psycopg
+
 from lib import sources
 
 TUNED_SQL = "SELECT source, name, value FROM app.engine_setting"
@@ -20,18 +22,30 @@ PERIOD = {
 }
 
 
+UNREADABLE = object()
+_warned = False
+
+
 def tuned(conn):
+    global _warned
     try:
         with conn.cursor() as cur:
             cur.execute(TUNED_SQL)
             return {(source, name): value for source, name, value in cur.fetchall()}
-    except Exception:
+    except psycopg.Error as exc:
         conn.rollback()
-        return {}
+        if not _warned:
+            print(f"settings: app.engine_setting is unreadable, running on file defaults, "
+                  f"{type(exc).__name__}: {exc}")
+            _warned = True
+        return UNREADABLE
 
 
 def said(conn, source, name, fallback):
-    return tuned(conn).get((source, name), fallback)
+    got = tuned(conn)
+    if got is UNREADABLE:
+        return fallback
+    return got.get((source, name), fallback)
 
 
 def cadence(conn, key):

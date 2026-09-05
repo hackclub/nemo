@@ -1,13 +1,29 @@
 import contextvars
 import json
 import os
+import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
 import psycopg
 
+from lib import faults, sources
+
 STALE_AFTER_HOURS = 6
+RUN_SUSPECT_SECONDS = 300
+REJECT_PARTIAL_AT = 0.10
+WORKER_BOOT = str(uuid.uuid4())
+_worker = "manual"
+
+
+def set_worker(name: str) -> None:
+    global _worker
+    _worker = name
+
+
+def worker() -> str:
+    return _worker
 
 _step = contextvars.ContextVar("ingest_step", default=(None, None, None))
 _cancel = contextvars.ContextVar("cancel_check", default=None)
@@ -148,20 +164,42 @@ WHERE legacy_run_id = %s
 """
 
 
-def start_run(conn: psycopg.Connection, source: str) -> int:
+START_RUN_SQL = """
+INSERT INTO raw.ingest_run
+    (source, started_at, parent_run_id, step_index, step_total,
+     source_key, logical_date, worker, worker_boot, stream_key, slice_key, attempt, parser_version)
+VALUES
+    (%(source)s, clock_timestamp(), %(parent)s, %(step_index)s, %(step_total)s,
+     %(source_key)s,
+     coalesce((SELECT logical_date FROM raw.ingest_run WHERE id = %(parent)s), current_date),
+     %(worker)s, %(boot)s, %(stream_key)s, %(slice_key)s,
+     CASE WHEN %(parent)s IS NULL THEN 1 ELSE 1 + (
+         SELECT count(*) FROM raw.ingest_run
+         WHERE parent_run_id = %(parent)s AND source_key = %(source_key)s
+           AND stream_key IS NOT DISTINCT FROM %(stream_key)s
+           AND slice_key IS NOT DISTINCT FROM %(slice_key)s) END,
+     %(parser_version)s)
+RETURNING id
+"""
+
+
+def start_run(
+    conn: psycopg.Connection, source: str, stream_key: str | None = None, slice_key: str | None = None
+) -> int:
     parent_run_id, step_index, step_total = _step.get()
     if parent_run_id is None:
         for stale_id, stale_source in sweep_stale_runs(conn):
             print(f"abandoned stale run {stale_id} ({stale_source})")
+        for dead_id, dead_source in suspect_dead_runs(conn):
+            print(f"run {dead_id} ({dead_source}) has no heartbeat behind it")
+    source_key = sources.key_for_run(source)
     with conn.cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO raw.ingest_run (source, started_at, parent_run_id, step_index, step_total)
-            VALUES (%s, clock_timestamp(), %s, %s, %s)
-            RETURNING id
-            """,
-            (source, parent_run_id, step_index, step_total),
-        )
+        cur.execute(START_RUN_SQL, {
+            "source": source, "parent": parent_run_id, "step_index": step_index,
+            "step_total": step_total, "source_key": source_key, "worker": worker(),
+            "boot": WORKER_BOOT, "stream_key": stream_key, "slice_key": slice_key,
+            "parser_version": sources.parser_version(source_key),
+        })
         run_id = cur.fetchone()[0]
 
     if parent_run_id is None:
@@ -171,16 +209,22 @@ def start_run(conn: psycopg.Connection, source: str) -> int:
     return run_id
 
 
-def finish_run(conn: psycopg.Connection, run_id: int, status: str, rows_in: int, rows_rejected: int) -> None:
+def finish_run(
+    conn: psycopg.Connection, run_id: int, status: str, rows_in: int, rows_rejected: int,
+    error_class: str | None = None, error_detail: str | None = None,
+) -> None:
     with conn.cursor() as cur:
         cur.execute(
             """
             UPDATE raw.ingest_run
-            SET finished_at = clock_timestamp(), status = %s, rows_in = %s, rows_rejected = %s
-            WHERE id = %s
+            SET finished_at = clock_timestamp(), status = %s, rows_in = %s, rows_rejected = %s,
+                error_class = %s, error_detail = %s
+            WHERE id = %s AND status IN ('running', 'abandoned')
             """,
-            (status, rows_in, rows_rejected, run_id),
+            (status, rows_in, rows_rejected, error_class, error_detail, run_id),
         )
+        if cur.rowcount == 0:
+            print(f"finish_run: run {run_id} was not running or abandoned, its status was left alone")
     _mirrored(conn, MIRROR_FINISH_SQL, (status, rows_in, rows_rejected, f"legacy:{run_id}"))
     _mirrored(conn, MIRROR_RUN_FINISH_SQL, (status, run_id))
 
@@ -196,6 +240,7 @@ class RunCounts:
     run_id: int | None = None
     monitor: psycopg.Connection | None = None
     status: str = "ok"
+    consecutive_faults: int = 0
 
     def progress(self) -> None:
         raise_if_cancelled()
@@ -223,29 +268,80 @@ class RunCounts:
         self.monitor = None
 
 
+def clean_outcome(counts: RunCounts) -> str:
+    if counts.status in CLEAN_OUTCOMES and counts.status != "ok":
+        return counts.status
+    seen = counts.rows_in + counts.rows_rejected
+    if counts.rows_rejected and seen and counts.rows_rejected / seen > REJECT_PARTIAL_AT:
+        return "partial"
+    return "ok"
+
+
 @contextmanager
-def ingest_run(conn: psycopg.Connection, source: str, benign=None) -> Iterator[RunCounts]:
-    run_id = start_run(conn, source)
+def ingest_run(
+    conn: psycopg.Connection, source: str, benign=None,
+    stream_key: str | None = None, slice_key: str | None = None,
+) -> Iterator[RunCounts]:
+    run_id = start_run(conn, source, stream_key=stream_key, slice_key=slice_key)
     conn.commit()
     counts = RunCounts(run_id=run_id)
     try:
         yield counts
-    except SyncCancelled:
+    except SyncCancelled as exc:
         conn.rollback()
-        finish_run(conn, run_id, "cancelled", counts.rows_in, counts.rows_rejected)
+        finish_run(conn, run_id, "cancelled", counts.rows_in, counts.rows_rejected,
+                   "cancelled", str(exc)[:500])
         conn.commit()
         raise
     except BaseException as exc:
         conn.rollback()
         status = "skipped" if benign and benign(exc) else "failed"
-        finish_run(conn, run_id, status, counts.rows_in, counts.rows_rejected)
+        fault = faults.classify(exc)
+        finish_run(conn, run_id, status, counts.rows_in, counts.rows_rejected,
+                   fault.name, fault.detail)
         conn.commit()
         raise
     finally:
         counts.close()
-    outcome = counts.status if counts.status in CLEAN_OUTCOMES else "ok"
-    finish_run(conn, run_id, outcome, counts.rows_in, counts.rows_rejected)
+    finish_run(conn, run_id, clean_outcome(counts), counts.rows_in, counts.rows_rejected)
     conn.commit()
+
+
+SUSPECT_SQL = """
+UPDATE raw.ingest_run r
+SET suspected_dead_at = now()
+FROM raw.worker_heartbeat h
+WHERE r.status = 'running' AND r.suspected_dead_at IS NULL AND r.worker = h.worker
+  AND h.beat_at < now() - make_interval(secs => %s)
+RETURNING r.id, r.source
+"""
+
+REVIVE_SQL = """
+UPDATE raw.ingest_run r
+SET suspected_dead_at = NULL
+FROM raw.worker_heartbeat h
+WHERE r.status = 'running' AND r.suspected_dead_at IS NOT NULL AND r.worker = h.worker
+  AND h.beat_at >= now() - make_interval(secs => %s)
+"""
+
+MY_BEAT_IS_FRESH_SQL = """
+SELECT 1 FROM raw.worker_heartbeat
+WHERE worker = %s AND beat_at >= now() - make_interval(secs => %s)
+"""
+
+
+def suspect_dead_runs(
+    conn: psycopg.Connection, after_seconds: int = RUN_SUSPECT_SECONDS
+) -> list[tuple[int, str]]:
+    with conn.cursor() as cur:
+        cur.execute(MY_BEAT_IS_FRESH_SQL, (worker(), after_seconds))
+        if cur.fetchone() is None:
+            return []
+        cur.execute(REVIVE_SQL, (after_seconds,))
+        cur.execute(SUSPECT_SQL, (after_seconds,))
+        suspected = cur.fetchall()
+    conn.commit()
+    return suspected
 
 
 def sweep_stale_runs(

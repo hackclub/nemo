@@ -318,7 +318,8 @@ def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
 
 
 def pull_member_day(conn, pull_date):
-    with ingest_run(conn, f"{ANALYTICS_SOURCE}:member", benign=day_has_no_export) as counts:
+    with ingest_run(conn, f"{ANALYTICS_SOURCE}:member", benign=day_has_no_export,
+                    stream_key=pull_date.isoformat(), slice_key=pull_date.isoformat()) as counts:
         activity_rows, dim_rows = [], []
         client = ProxyClient()
         params = {
@@ -362,7 +363,8 @@ def pull_member_day(conn, pull_date):
 
 
 def pull_channel_day(conn, pull_date):
-    with ingest_run(conn, f"{ANALYTICS_SOURCE}:public_channel", benign=day_has_no_export) as counts:
+    with ingest_run(conn, f"{ANALYTICS_SOURCE}:public_channel", benign=day_has_no_export,
+                    stream_key=pull_date.isoformat(), slice_key=pull_date.isoformat()) as counts:
         activity_rows, dim_rows = [], []
         raw = ProxyClient().fetch_file(
             "admin.analytics.getFile",

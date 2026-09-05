@@ -4,11 +4,14 @@ import sys
 from dotenv import load_dotenv
 from slack_sdk.errors import SlackApiError
 
-from lib.db import connect, dead_letter, get_cursor, ingest_run, save_cursor
+from lib.db import connect, get_cursor, ingest_run, save_cursor
 from lib.paths import ENV_FILE
 from lib.slack_client import bot_client
-SOURCE = "autojoin"
+from lib.task import per_entity
+
+SOURCE = "channel_roster"
 NAME_SOURCE = "channel_info_names"
+NAME_COMMIT_EVERY = 100
 TEAM_ERRORS = ("team_not_found", "team_access_not_granted", "invalid_team_id")
 UNREACHABLE_ERRORS = (
     "channel_not_found",
@@ -30,11 +33,17 @@ MARK_UNREACHABLE_SQL = """
 UPDATE raw.channel_dim SET name_unavailable = true, updated_at = now() WHERE channel_id = %s
 """
 
+ARCHIVE_UNSEEN_SQL = """
+UPDATE raw.channel_dim
+SET archived = true, updated_at = now()
+WHERE coalesce(archived, false) = false AND channel_id <> ALL(%s)
+"""
+
 
 def resolve_team_id():
     configured = os.environ.get("SLACK_TEAM_ID", "").strip()
     if not configured:
-        raise RuntimeError("SLACK_TEAM_ID must be set to the workspace autojoin scans")
+        raise RuntimeError("SLACK_TEAM_ID must be set to the workspace the channel roster lists")
     return configured
 
 
@@ -57,10 +66,13 @@ def record_channel_names(conn, client):
     team_id = resolve_team_id()
     with ingest_run(conn, SOURCE) as counts:
         cursor = get_cursor(conn, SOURCE)
+        started_fresh = not cursor
+        seen = []
         while True:
             page = list_public_channels(client, team_id, cursor)
             for channel in page.get("channels", []):
                 counts.rows_in += 1
+                seen.append(channel["id"])
                 with conn.cursor() as cur:
                     cur.execute(CHANNEL_NAME_SQL, (channel["id"], channel.get("name"), channel.get("is_archived", False)))
             cursor = page.get("response_metadata", {}).get("next_cursor") or ""
@@ -68,7 +80,14 @@ def record_channel_names(conn, client):
             conn.commit()
             if not cursor:
                 break
-    print(f"{SOURCE}: {counts.rows_in} channels named, {counts.rows_rejected} failed")
+        newly_archived = 0
+        if started_fresh and seen:
+            with conn.cursor() as cur:
+                cur.execute(ARCHIVE_UNSEEN_SQL, (seen,))
+                newly_archived = cur.rowcount
+            conn.commit()
+    print(f"{SOURCE}: {counts.rows_in} channels named, {newly_archived} marked archived, "
+          f"{counts.rows_rejected} failed")
 
 
 def name_unknown(conn, client):
@@ -82,22 +101,22 @@ def name_unknown(conn, client):
     with ingest_run(conn, NAME_SOURCE) as counts:
         for channel_id in pending:
             counts.rows_in += 1
-            try:
-                channel = client.conversations_info(channel=channel_id)["channel"]
-            except SlackApiError as exc:
+
+            def unreachable(fault, channel_id=channel_id):
                 counts.rows_rejected += 1
-                error = exc.response.get("error") or str(exc)
-                if error in UNREACHABLE_ERRORS:
-                    with conn.cursor() as cur:
-                        cur.execute(MARK_UNREACHABLE_SQL, (channel_id,))
-                    continue
-                dead_letter(conn, NAME_SOURCE, {"channel_id": channel_id}, error)
-                continue
-            with conn.cursor() as cur:
-                cur.execute(
-                    CHANNEL_NAME_SQL,
-                    (channel_id, channel.get("name"), channel.get("is_archived", False)),
-                )
+                with conn.cursor() as cur:
+                    cur.execute(MARK_UNREACHABLE_SQL, (channel_id,))
+                conn.commit()
+
+            with per_entity(conn, NAME_SOURCE, counts, {"channel_id": channel_id}, on_entity=unreachable):
+                channel = client.conversations_info(channel=channel_id)["channel"]
+                with conn.cursor() as cur:
+                    cur.execute(
+                        CHANNEL_NAME_SQL,
+                        (channel_id, channel.get("name"), channel.get("is_archived", False)),
+                    )
+            if counts.rows_in % NAME_COMMIT_EVERY == 0:
+                conn.commit()
     print(f"channel names: {counts.rows_in} looked up, {counts.rows_rejected} unavailable")
 
 

@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from lib.db import connect, dead_letter, ingest_run
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
+from lib.task import per_entity
 
 SOURCE = "conversations_history"
 METHOD = "conversations.history"
@@ -257,18 +258,18 @@ def run(conn, limit=200, full=False, channels=None):
         counts.total_expected = len(targets)
         for channel_id, newest in targets:
             oldest = None if full or not newest else revisit_from(newest)
-            try:
-                counts.rows_in += walk_channel(conn, client, channel_id, oldest, counts)
-            except Exception as exc:
-                conn.rollback()
+
+            def remember_error(fault, channel_id=channel_id):
                 with conn.cursor() as cur:
                     cur.execute(
                         "INSERT INTO raw.channel_walk (channel_id, last_error, updated_at) "
                         "VALUES (%s, %s, now()) ON CONFLICT (channel_id) DO UPDATE SET "
                         "last_error = EXCLUDED.last_error, updated_at = now()",
-                        (channel_id, str(exc)[:400]))
+                        (channel_id, f"{fault.name}: {fault.detail[:380]}"))
                 conn.commit()
-                counts.rows_rejected += 1
+
+            with per_entity(conn, SOURCE, counts, {"channel_id": channel_id}, on_fault=remember_error):
+                counts.rows_in += walk_channel(conn, client, channel_id, oldest, counts)
             counts.progress()
 
         with conn.cursor() as cur:

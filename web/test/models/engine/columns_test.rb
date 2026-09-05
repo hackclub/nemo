@@ -11,7 +11,7 @@ module Engine
     end
 
     test "a column the view does not have yet is reported absent without raising" do
-      assert_not Engine::Columns.has?(:fct_ingest_run, :error_class)
+      assert_not Engine::Columns.has?(:fct_ingest_run, :coverage_ratio)
     end
 
     test "a relation that does not exist is reported empty without raising" do

@@ -1,4 +1,5 @@
 import io
+import json
 import re
 import subprocess
 import sys
@@ -13,7 +14,7 @@ from ingest.analytics_pull import (
     pull_channel_day,
     pull_member_day,
 )
-from ingest.autojoin import name_unknown, record_channel_names
+from ingest.channel_roster import name_unknown, record_channel_names
 from ingest.channel_range_pull import run as pull_channel_range
 from ingest.channel_history_pull import run as pull_channel_history
 from ingest.channel_month_pull import run as pull_channel_month
@@ -40,9 +41,11 @@ from lib.db import (
     raise_if_cancelled,
     refuse_if_seeded,
     run_step,
+    set_worker,
     start_run,
 )
 from lib import settings, sources
+from lib.heartbeat import beating
 from lib.paths import ENV_FILE, WAREHOUSE_DIR
 from lib.proxy_client import InternalAuthError, ProxyClient, ProxyError, ProxyUnavailableError
 from lib.slack_client import bot_client
@@ -72,27 +75,59 @@ def ensure_dbt_profile():
     print(f"dbt: wrote {profile.name} from {example.name}")
 
 
+RUN_RESULTS = DBT_DIR / "target" / "run_results.json"
+
+
+def dbt(*args):
+    proc = subprocess.Popen(
+        ["dbt", *args, "--profiles-dir", str(DBT_DIR)],
+        cwd=DBT_DIR,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    for line in proc.stdout:
+        print(line, end="")
+    return proc.wait()
+
+
+def dbt_outcomes(results):
+    failed, warned = [], []
+    for result in results.get("results", []):
+        name = result.get("unique_id", "?").split(".")[-1]
+        status = result.get("status")
+        if status in ("fail", "error"):
+            failed.append((name, status))
+        elif status == "warn":
+            warned.append((name, status))
+    return failed, warned
+
+
 def run_dbt(conn=None):
     ensure_dbt_profile()
 
-    def build():
-        proc = subprocess.Popen(
-            ["dbt", "build", "--profiles-dir", str(DBT_DIR)],
-            cwd=DBT_DIR,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
-        for line in proc.stdout:
-            print(line, end="")
-        if proc.wait() != 0:
-            raise RuntimeError(f"dbt build exited {proc.returncode}")
+    def build(counts=None):
+        if dbt("run") != 0:
+            raise RuntimeError("dbt run exited non-zero, no mart was rebuilt")
+        code = dbt("test")
+        results = json.loads(RUN_RESULTS.read_text()) if RUN_RESULTS.exists() else {}
+        failed, warned = dbt_outcomes(results)
+        for name, status in warned:
+            print(f"dbt test {status}: {name}")
+        for name, status in failed:
+            print(f"dbt test {status}: {name}")
+        if failed:
+            print(f"dbt: {len(failed)} test(s) failed, the marts were still rebuilt")
+            if counts is not None:
+                counts.status = "partial"
+        elif code != 0:
+            raise RuntimeError(f"dbt test exited {code} without recording a failure")
 
     if conn is None:
         build()
         return
-    with ingest_run(conn, "dbt"):
-        build()
+    with ingest_run(conn, "dbt") as counts:
+        build(counts)
 
 
 def tuned(conn, key, name):
@@ -107,7 +142,7 @@ def stages():
             conn, MEMBER_DAY, "member", pull_member_day, tuned(conn, "member_days", "batch"))),
         ("channel_days", lambda conn: backfill_days(
             conn, CHANNEL_DAY, "channel", pull_channel_day, tuned(conn, "channel_days", "batch"))),
-        ("autojoin", lambda conn: record_channel_names(conn, bot_client())),
+        ("channel_roster", lambda conn: record_channel_names(conn, bot_client())),
         ("channel_names", lambda conn: name_unknown(conn, bot_client())),
         ("member_range", lambda conn: pull_member_range(conn)),
         ("channel_range", lambda conn: pull_channel_range(conn)),
@@ -328,6 +363,18 @@ def preflight(run_id):
     return faults
 
 
+def parent_status(cancelled, ran, skipped, cut, failed):
+    if cancelled:
+        return "cancelled"
+    if ran == 0 and skipped == 0:
+        return "failed"
+    if ran and len(failed) == ran:
+        return "failed"
+    if cut or failed:
+        return "partial"
+    return "ok"
+
+
 def stage_plan(name):
     plan = [(key, stage, None) for key, stage in stages() if key == name]
     if not plan:
@@ -353,19 +400,9 @@ def run_sync(plan=None):
             failed = []
             cancelled = True
 
-        if cancelled:
-            status = "cancelled"
-        elif ran == 0 and skipped == 0:
-            status = "failed"
+        status = parent_status(cancelled, ran, skipped, cut, failed)
+        if status == "failed" and ran == 0 and skipped == 0 and not cancelled:
             failed = [("plan", "the plan was empty, so no stage ran and none was skipped")]
-        elif cut:
-            status = "partial"
-        elif not failed:
-            status = "ok"
-        elif len(failed) == ran:
-            status = "failed"
-        else:
-            status = "partial"
         finish_run(conn, run_id, status, 0, 0)
         conn.commit()
 
@@ -378,7 +415,9 @@ def run_sync(plan=None):
 
 def main():
     load_dotenv(ENV_FILE)
-    _, status = run_sync()
+    set_worker("manual")
+    with beating("manual", "nightly_sync, run by hand"):
+        _, status = run_sync()
     if status != "ok":
         raise SystemExit(1)
 

@@ -59,7 +59,8 @@ def sweep(conn, key, table, column, days, stamp=None, dry_run=False):
 def run(conn, dry_run=False):
     asked = windows(conn)
     if not asked:
-        print(f"{SOURCE}: no retention window is set, so nothing is deleted")
+        with ingest_run(conn, SOURCE):
+            print(f"{SOURCE}: no retention window is set, so nothing is deleted")
         return 0
 
     with ingest_run(conn, SOURCE) as counts:

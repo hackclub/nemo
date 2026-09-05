@@ -1,4 +1,4 @@
-from jobs.nightly_sync import credential_faults, retryable
+from jobs.nightly_sync import credential_faults, parent_status, retryable, dbt_outcomes
 from lib.db import SyncCancelled
 from lib.proxy_client import (
     InternalApiError,
@@ -70,6 +70,35 @@ def test_preflight_is_quiet_when_both_credentials_hold():
 
 def test_preflight_reports_a_missing_credential_without_an_error_string():
     assert credential_faults({"credentials": {"admin": {"ok": False}}}) == ["admin: not ok"]
+
+
+def test_parent_status_cases():
+    ok = []
+    fails = [("a", "x")]
+    assert parent_status(True, 5, 0, 0, ok) == "cancelled"
+    assert parent_status(False, 0, 0, 0, ok) == "failed"
+    assert parent_status(False, 0, 20, 0, ok) == "ok"
+    assert parent_status(False, 20, 0, 0, ok) == "ok"
+    assert parent_status(False, 20, 0, 0, fails) == "partial"
+    assert parent_status(False, 1, 0, 0, fails) == "failed"
+    assert parent_status(False, 20, 0, 3, ok) == "partial"
+    assert parent_status(False, 19, 0, 1, fails * 19) == "failed"
+    assert parent_status(False, 20, 5, 1, fails) == "partial"
+    assert parent_status(True, 0, 0, 0, ok) == "cancelled"
+
+
+def test_dbt_outcomes_split_fail_and_error_from_warn():
+    results = {"results": [
+        {"unique_id": "test.mnemosyne.not_null_dim_member_user_id", "status": "pass"},
+        {"unique_id": "test.mnemosyne.assert_cohort_dates_are_not_stamped", "status": "warn"},
+        {"unique_id": "test.mnemosyne.unique_mart_growth_month", "status": "fail"},
+        {"unique_id": "test.mnemosyne.assert_member_dates_are_plausible", "status": "error"},
+        {"unique_id": "model.mnemosyne.mart_growth", "status": "success"},
+    ]}
+    failed, warned = dbt_outcomes(results)
+    assert failed == [("unique_mart_growth_month", "fail"), ("assert_member_dates_are_plausible", "error")]
+    assert warned == [("assert_cohort_dates_are_not_stamped", "warn")]
+    assert dbt_outcomes({}) == ([], [])
 
 
 def test_preflight_treats_a_reply_with_no_credentials_as_a_fault():

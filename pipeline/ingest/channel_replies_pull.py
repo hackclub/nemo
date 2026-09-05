@@ -176,7 +176,8 @@ def run(conn, budget=500, stale_hours=6):
 
     channel_id = claim(conn)
     if channel_id is None:
-        print(f"{SOURCE}: nothing opted in")
+        with ingest_run(conn, SOURCE):
+            print(f"{SOURCE}: nothing opted in")
         return 0
 
     total = 0

@@ -14,7 +14,7 @@ STAGE_SOURCES = [
     ("admin_analytics_member_range", 120, 215_000),
     ("admin_analytics_channel_range", 45, 13_000),
     ("users_list", 30, 215_000),
-    ("autojoin", 6, 13_000),
+    ("channel_roster", 6, 13_000),
     ("channel_info_names", 5, 60),
     ("member_history", 200, 900),
     ("first_reply", 150, 200),

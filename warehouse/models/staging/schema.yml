@@ -31,8 +31,21 @@ models:
         data_tests: [unique, not_null]
       - name: source
         data_tests: [not_null]
-      - name: status
+      - name: source_key
         data_tests: [not_null]
+      - name: logical_date
+        data_tests: [not_null]
+      - name: status
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [running, ok, failed, skipped, partial, cancelled, abandoned]
+      - name: attempt
+        data_tests: [not_null]
+      - name: error_class
+        data_tests:
+          - accepted_values:
+              values: [cancelled, auth, transport, throttle, local, upstream, contract, entity]
   - name: fct_ingest_step_output
     columns:
       - name: parent_run_id

@@ -6,9 +6,10 @@ from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 from ingest.member_range_pull import SOURCE as MEMBER_RANGE_SOURCE
-from lib.db import connect, dead_letter, ingest_run
+from lib.db import connect, ingest_run
 from lib.paths import ENV_FILE
-from lib.proxy_client import InternalApiError, ProxyClient
+from lib.proxy_client import ProxyClient
+from lib.task import per_entity
 
 SOURCE = "member_history"
 BATCH_LIMIT = int(os.environ.get("MEMBER_HISTORY_LIMIT", "8000"))
@@ -145,13 +146,9 @@ def run(conn, limit=BATCH_LIMIT):
 
         for user_id, cohort_month in members:
             started = time.monotonic()
-            try:
+            with per_entity(conn, SOURCE, counts, {"user_id": user_id}):
                 rows.append(search_member(client, team_id, user_id))
                 counts.rows_in += 1
-            except (InternalApiError, KeyError, ValueError, TypeError) as exc:
-                counts.rows_rejected += 1
-                dead_letter(conn, SOURCE, {"user_id": user_id}, str(exc))
-                conn.commit()
             if len(rows) >= FLUSH_EVERY:
                 flush(cohort_month)
             time.sleep(max(0.0, MIN_SECONDS_PER_SEARCH - (time.monotonic() - started)))

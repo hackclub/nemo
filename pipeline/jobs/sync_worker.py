@@ -9,8 +9,9 @@ from dotenv import load_dotenv
 
 from jobs.nightly_sync import ENV_FILE, TRUTHY, run_sync, stage_plan
 from lib import settings
+from lib.heartbeat import beating
 from lib.db import (
-    beat,
+    set_worker,
     STALE_AFTER_HOURS,
     SeededDeployment,
     cancel_scope,
@@ -180,35 +181,11 @@ def run_at_start_enabled():
 WORKER = "sync_worker"
 
 
-def alive(note):
-    try:
-        with connect() as conn:
-            beat(conn, WORKER, note)
-    except Exception as exc:
-        print(f"sync worker: heartbeat failed, {type(exc).__name__}: {exc}")
+set_worker(WORKER)
 
 
 def waiting_note(scheduled):
     return f"next scheduled run at {scheduled:%Y-%m-%dT%H:%M}"
-
-
-@contextmanager
-def beating(note):
-    stop = threading.Event()
-
-    def pulse():
-        while True:
-            alive(note())
-            if stop.wait(BEAT_SECONDS):
-                return
-
-    thread = threading.Thread(target=pulse, daemon=True)
-    thread.start()
-    try:
-        yield
-    finally:
-        stop.set()
-        thread.join(timeout=5)
 
 
 def run_scheduled(label="scheduled"):
@@ -240,7 +217,7 @@ def main():
     reap()
     state = {"note": waiting_note(scheduled)}
 
-    with beating(lambda: state["note"]):
+    with beating(WORKER, lambda: state["note"], every=BEAT_SECONDS):
         if run_at_start_enabled():
             state["note"] = "startup run"
             run_scheduled("startup")

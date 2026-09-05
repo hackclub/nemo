@@ -5,9 +5,10 @@ from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
-from lib.db import connect, dead_letter, ingest_run
+from lib.db import connect, ingest_run
 from lib.paths import ENV_FILE
-from lib.proxy_client import InternalApiError, ProxyClient
+from lib.proxy_client import ProxyClient
+from lib.task import per_entity
 
 SOURCE = "first_reply"
 BATCH_LIMIT = int(os.environ.get("FIRST_REPLY_LIMIT", "4000"))
@@ -129,20 +130,20 @@ def run(conn, limit=BATCH_LIMIT):
 
         for user_id, channel, first_post_ts, _ in members:
             started = time.monotonic()
-            try:
+
+            def unreadable_first_post(fault, user_id=user_id):
+                nonlocal unreadable
+                rows.append(unreadable_row(user_id, fault.detail))
+                counts.rows_in += 1
+                unreadable += 1
+
+            with per_entity(conn, SOURCE, counts, {"user_id": user_id, "channel": channel},
+                            on_entity=unreadable_first_post):
                 human, bot = fetch_reply(client, user_id, channel, first_post_ts)
                 rows.append(reply_row(user_id, human, bot))
                 counts.rows_in += 1
                 by_member += 1 if human else 0
                 by_bot += 1 if bot and not human else 0
-            except (InternalApiError, KeyError, ValueError, TypeError) as exc:
-                if isinstance(exc, InternalApiError) and str(exc).startswith(PERMANENT_ERRORS):
-                    rows.append(unreadable_row(user_id, str(exc)))
-                    counts.rows_in += 1
-                    unreadable += 1
-                else:
-                    counts.rows_rejected += 1
-                    dead_letter(conn, SOURCE, {"user_id": user_id, "channel": channel}, str(exc))
             if len(rows) >= FLUSH_EVERY:
                 flush()
             time.sleep(max(0.0, MIN_SECONDS_PER_FETCH - (time.monotonic() - started)))

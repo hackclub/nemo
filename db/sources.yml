@@ -175,8 +175,8 @@ sources:
     writes: [fd.member, fd.member_identity]
     feeds: [nothing]
 
-  autojoin:
-    label: Public channel names
+  channel_roster:
+    label: Public channel roster, names and archived flags
     endpoint: conversations.list
     credential: bot
     cadence: daily
@@ -186,6 +186,7 @@ sources:
     retention: replace
     writes: [raw.channel_dim]
     feeds: [dim_channel]
+    runs_as: [channel_roster, autojoin]
 
   channel_names:
     label: Names for channels the list never returned

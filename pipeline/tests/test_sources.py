@@ -31,6 +31,21 @@ def test_a_prune_floor_only_belongs_to_a_source_that_keeps_rows():
             assert sources.source(key)["retention"] == "keep", key
 
 
+def test_key_for_run_maps_legacy_and_suffixed_run_names_back_to_a_source():
+    assert sources.key_for_run("channel_roster") == "channel_roster"
+    assert sources.key_for_run("autojoin") == "channel_roster"
+    assert sources.key_for_run("channel_info_names") == "channel_names"
+    assert sources.key_for_run("admin_analytics_api:member") == "member_days"
+    assert sources.key_for_run("admin_analytics_api:public_channel") == "channel_days"
+    assert sources.key_for_run("admin_analytics_channel_month") == "channel_month"
+    assert sources.key_for_run("nightly_sync") == "nightly_sync"
+
+
+def test_parser_version_defaults_to_one():
+    assert sources.parser_version("member_days") == 1
+    assert sources.parser_version("not_a_source") == 1
+
+
 STANDALONE_SOURCES = {"member_history"}
 
 

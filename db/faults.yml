@@ -1,0 +1,45 @@
+classes:
+  cancelled:
+    disposition: raise
+    means: the operator asked this run to stop
+  auth:
+    disposition: raise
+    means: a credential is dead or lacks a scope, nothing downstream can succeed
+  transport:
+    disposition: raise
+    means: the proxy, the ingress or the network failed before Slack answered
+  throttle:
+    disposition: raise
+    means: Slack or the proxy rate-limited us, back off rather than hammer
+  local:
+    disposition: raise
+    means: our own code, database or walk assertion failed
+  upstream:
+    disposition: continue
+    means: Slack answered ok false for this one entity
+  contract:
+    disposition: continue
+    means: a record did not have the shape the row builder expects
+  entity:
+    disposition: continue
+    means: this one entity is gone or unreadable, permanently
+
+slack_errors:
+  auth:
+    - invalid_auth
+    - not_authed
+    - token_revoked
+    - token_expired
+    - account_inactive
+    - no_permission
+    - missing_scope
+  throttle:
+    - ratelimited
+  entity:
+    - channel_not_found
+    - thread_not_found
+    - message_not_found
+    - user_not_found
+    - team_access_not_granted
+    - method_not_supported_for_channel_type
+    - is_archived
