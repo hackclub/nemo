@@ -35,6 +35,7 @@ from lib.db import (
     analyze,
     connect,
     finish_run,
+    ingest_run,
     raise_if_cancelled,
     refuse_if_seeded,
     run_step,
@@ -70,19 +71,27 @@ def ensure_dbt_profile():
     print(f"dbt: wrote {profile.name} from {example.name}")
 
 
-def run_dbt():
+def run_dbt(conn=None):
     ensure_dbt_profile()
-    proc = subprocess.Popen(
-        ["dbt", "build", "--profiles-dir", str(DBT_DIR)],
-        cwd=DBT_DIR,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-    )
-    for line in proc.stdout:
-        print(line, end="")
-    if proc.wait() != 0:
-        raise RuntimeError(f"dbt build exited {proc.returncode}")
+
+    def build():
+        proc = subprocess.Popen(
+            ["dbt", "build", "--profiles-dir", str(DBT_DIR)],
+            cwd=DBT_DIR,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        for line in proc.stdout:
+            print(line, end="")
+        if proc.wait() != 0:
+            raise RuntimeError(f"dbt build exited {proc.returncode}")
+
+    if conn is None:
+        build()
+        return
+    with ingest_run(conn, "dbt"):
+        build()
 
 
 def tuned(conn, key, name):
@@ -120,7 +129,7 @@ def stages():
             tuned(conn, "channel_membership", "cohort_days"))),
         ("first_reply", lambda conn: pull_first_reply(conn)),
         ("prune", lambda conn: prune_rows(conn)),
-        ("dbt", lambda conn: run_dbt()),
+        ("dbt", lambda conn: run_dbt(conn)),
     ]
 
 
