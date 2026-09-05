@@ -1,5 +1,6 @@
 import argparse
 import re
+import time
 from datetime import date, timedelta
 
 from dotenv import load_dotenv
@@ -24,10 +25,16 @@ TOKEN_SPLIT = re.compile(r"[^0-9a-zÀ-￿]+")
 
 SHARD_SQL = "SELECT name FROM raw.channel_dim WHERE name IS NOT NULL"
 ALPHABET_SUFFIX = "abcdefghijklmnopqrstuvwxyz0123456789"
+QUERYABLE = re.compile(r"^[0-9a-z]$")
+MIN_SECONDS_PER_CALL = 0.5
 
 
 def token_heads(name):
     return {token[0] for token in TOKEN_SPLIT.split(name.lower()) if token}
+
+
+def queryable_shards(letters):
+    return sorted(letter for letter in letters if QUERYABLE.match(letter))
 
 
 def shard_alphabet(conn):
@@ -36,7 +43,7 @@ def shard_alphabet(conn):
         cur.execute(SHARD_SQL)
         for (name,) in cur:
             letters |= token_heads(name)
-    return sorted(letters)
+    return queryable_shards(letters)
 
 
 def month_window(client, month):
@@ -49,12 +56,12 @@ def interval_of(month):
     return f"{month.year:04d}-{month.month:02d}"
 
 
-def ask(client, interval, query=None):
+def ask(client, interval, query=None, direction="asc"):
     params = {
         "date_interval": interval,
         "privacy": "public",
         "sort_column": "name",
-        "sort_direction": "asc",
+        "sort_direction": direction,
         "count": PAGE_SIZE,
     }
     if query is not None:
@@ -63,22 +70,33 @@ def ask(client, interval, query=None):
     return data.get("channel_analytics") or [], data.get("num_found") or 0
 
 
-def sweep(client, interval, shards, found, depth=0):
+def absorb(records, found, on_fresh=None):
+    fresh = [record for record in records if record["channel_id"] not in found]
+    for record in records:
+        found[record["channel_id"]] = record
+    if on_fresh and fresh:
+        on_fresh(fresh)
+    return len(fresh)
+
+
+def sweep(client, interval, shards, found, on_fresh=None, depth=0):
     truncated = []
     for shard in shards:
+        started = time.monotonic()
         records, num_found = ask(client, interval, shard)
-        for record in records:
-            found[record["channel_id"]] = record
+        absorb(records, found, on_fresh)
         if num_found > len(records):
             truncated.append(shard)
+        time.sleep(max(0.0, MIN_SECONDS_PER_CALL - (time.monotonic() - started)))
     if not truncated or depth >= SPLIT_DEPTH:
         return truncated
     deeper = [shard + letter for shard in truncated for letter in ALPHABET_SUFFIX]
-    return sweep(client, interval, deeper, found, depth + 1)
+    return sweep(client, interval, deeper, found, on_fresh, depth + 1)
 
 
-class IncompleteSweep(RuntimeError):
-    """The month was not swept whole, so its rows would undercount"""
+def tail_sweep(client, interval, found, on_fresh=None):
+    records, _ = ask(client, interval, direction="desc")
+    return absorb(records, found, on_fresh)
 
 
 def run_month(conn, month, alphabet=None):
@@ -91,31 +109,35 @@ def run_month(conn, month, alphabet=None):
     with ingest_run(conn, SOURCE) as counts:
         _, expected = ask(client, interval)
         counts.total_expected = expected
-        short = sweep(client, interval, shards, found)
-        rows = []
-        for record in found.values():
-            try:
-                rows.append(range_row(record, start, stop, SOURCE))
-            except KeyError as exc:
-                counts.rows_rejected += 1
-                dead_letter(conn, SOURCE, {"keys": sorted(record)}, str(exc))
-        with conn.cursor() as cur:
-            cur.executemany(RANGE_SQL, rows)
-        counts.rows_in = len(rows)
 
-        missed = expected - len(found)
+        def land(records):
+            rows = []
+            for record in records:
+                try:
+                    rows.append(range_row(record, start, stop, SOURCE))
+                except KeyError as exc:
+                    counts.rows_rejected += 1
+                    dead_letter(conn, SOURCE, {"keys": sorted(record)}, str(exc))
+            with conn.cursor() as cur:
+                cur.executemany(RANGE_SQL, rows)
+            conn.commit()
+            counts.rows_in = len(found)
+            counts.progress()
+
+        short = sweep(client, interval, shards, found, land)
+        tail = tail_sweep(client, interval, found, land)
+        missed = max(0, expected - len(found))
+        if short or missed:
+            counts.status = "partial"
+
         print(
-            f"channel month {interval}: {len(rows)} of {expected} channels over "
-            f"{len(shards)} shard(s), {missed} missed, {counts.rows_rejected} rejected"
+            f"channel month {interval}: {len(found)} of {expected} channels over "
+            f"{len(shards)} shard(s) plus a tail page that added {tail}, "
+            f"{missed} missed, {counts.rows_rejected} rejected"
             + (f", still truncated: {short}" if short else "")
         )
-        if short or missed > 0:
-            raise IncompleteSweep(
-                f"{interval} swept {len(found)} of {expected} channels"
-                + (f", still truncated: {', '.join(short)}" if short else "")
-            )
 
-    return len(rows)
+    return len(found), expected, missed
 
 
 def complete_edge(edge):
@@ -151,17 +173,17 @@ def run(conn, months=None, recent=None):
     if months is None:
         months = trailing(client, recent) if recent else months_between(client)
 
-    total = 0
-    gaps = []
+    landed = 0
+    short = []
     for month in months:
-        try:
-            total += run_month(conn, month, alphabet)
-        except IncompleteSweep as gap:
-            gaps.append(str(gap))
+        got, expected, missed = run_month(conn, month, alphabet)
+        landed += got
+        if missed:
+            short.append(f"{interval_of(month)} short by {missed} of {expected}")
 
-    if gaps:
-        raise IncompleteSweep("; ".join(gaps))
-    return total
+    if short:
+        print(f"{SOURCE}: " + "; ".join(short))
+    return landed
 
 
 def main():

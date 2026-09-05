@@ -72,17 +72,4 @@ class Fd::NamesTest < ActiveSupport::TestCase
     assert_equal seeded.user_id, names.member(seeded.user_id).user_id
     assert_nil names.member("UNOBODY")
   end
-
-  def answering(found)
-    was = CachetClient.method(:profiles)
-    calls = []
-    CachetClient.define_singleton_method(:profiles) do |ids|
-      calls << ids
-      found.slice(*ids)
-    end
-    yield calls
-  ensure
-    CachetClient.define_singleton_method(:profiles, was)
-  end
-
 end

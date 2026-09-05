@@ -72,6 +72,23 @@ class ProxyClient:
         }
         return self._request(f"{self.url}/call", body, headers, max_retries)
 
+    def verify(self, timeout=30):
+        req = urllib.request.Request(
+            f"{self.url}/verify",
+            headers={"Authorization": f"Bearer {self.token}"},
+            method="GET",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as exc:
+            try:
+                return json.loads(exc.read())
+            except (ValueError, OSError):
+                raise ProxyError(f"proxy returned {exc.code} from /verify") from exc
+        except (urllib.error.URLError, TimeoutError) as exc:
+            raise ProxyUnavailableError(f"proxy unreachable at {self.url}: {exc}") from exc
+
     def fetch_file(self, method, params=None, max_retries=3, credential="admin"):
         payload = {
             "method": method,

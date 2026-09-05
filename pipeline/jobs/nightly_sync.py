@@ -1,4 +1,5 @@
 import io
+import re
 import subprocess
 import sys
 import time
@@ -43,7 +44,7 @@ from lib.db import (
 )
 from lib import settings, sources
 from lib.paths import ENV_FILE, WAREHOUSE_DIR
-from lib.proxy_client import InternalAuthError, ProxyError, ProxyUnavailableError
+from lib.proxy_client import InternalAuthError, ProxyClient, ProxyError, ProxyUnavailableError
 from lib.slack_client import bot_client
 
 DBT_DIR = WAREHOUSE_DIR
@@ -141,12 +142,17 @@ def tonight(conn, now=None):
     ]
 
 
+GATEWAY_FAILURE = re.compile(r"proxy returned 50[234]\b")
+
+
 def retryable(exc):
     if isinstance(exc, (SyncCancelled, InternalAuthError)):
         return False
     if isinstance(exc, ProxyUnavailableError):
         return True
-    return not isinstance(exc, ProxyError)
+    if isinstance(exc, ProxyError):
+        return bool(GATEWAY_FAILURE.search(str(exc)))
+    return True
 
 
 class Tee(io.TextIOBase):
@@ -286,6 +292,42 @@ def run_stages(conn, plan, run_id, budget=None):
     return failed, ran, skipped, cut
 
 
+PREFLIGHT = "preflight"
+
+
+def credential_faults(report):
+    if "credentials" not in report:
+        return [f"proxy: {report.get('detail') or 'no credential report'}"]
+    faults = []
+    for name, state in (report.get("credentials") or {}).items():
+        if not state.get("ok"):
+            faults.append(f"{name}: {state.get('error') or 'not ok'}")
+    return faults
+
+
+def preflight(run_id):
+    try:
+        report = ProxyClient().verify()
+    except (ProxyError, ProxyUnavailableError) as exc:
+        line = f"{PREFLIGHT}: could not reach the proxy, {type(exc).__name__}: {exc}"
+        print(line)
+        record_step_output(run_id, 0, PREFLIGHT, line + "\n")
+        return [line]
+
+    faults = credential_faults(report)
+    if faults:
+        line = f"{PREFLIGHT}: credential FAILED, " + "; ".join(faults)
+    else:
+        who = ", ".join(
+            f"{name} ok ({state.get('user')})"
+            for name, state in (report.get("credentials") or {}).items()
+        )
+        line = f"{PREFLIGHT}: {who}"
+    print(line)
+    record_step_output(run_id, 0, PREFLIGHT, line + "\n")
+    return faults
+
+
 def stage_plan(name):
     plan = [(key, stage, None) for key, stage in stages() if key == name]
     if not plan:
@@ -299,6 +341,7 @@ def run_sync(plan=None):
         plan = plan or tonight(conn)
         run_id = start_run(conn, SOURCE)
         conn.commit()
+        preflight(run_id)
 
         cancelled = False
         ran = skipped = cut = 0

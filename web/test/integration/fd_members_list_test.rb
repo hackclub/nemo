@@ -216,5 +216,4 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     assert_equal "UHASONE", query.facet_params("priors" => "2")["q"],
       "narrowing must not drop the search"
   end
-
 end

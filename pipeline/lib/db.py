@@ -185,6 +185,9 @@ def finish_run(conn: psycopg.Connection, run_id: int, status: str, rows_in: int,
     _mirrored(conn, MIRROR_RUN_FINISH_SQL, (status, run_id))
 
 
+CLEAN_OUTCOMES = frozenset({"ok", "partial"})
+
+
 @dataclass
 class RunCounts:
     rows_in: int = 0
@@ -192,6 +195,7 @@ class RunCounts:
     total_expected: int | None = None
     run_id: int | None = None
     monitor: psycopg.Connection | None = None
+    status: str = "ok"
 
     def progress(self) -> None:
         raise_if_cancelled()
@@ -239,7 +243,8 @@ def ingest_run(conn: psycopg.Connection, source: str, benign=None) -> Iterator[R
         raise
     finally:
         counts.close()
-    finish_run(conn, run_id, "ok", counts.rows_in, counts.rows_rejected)
+    outcome = counts.status if counts.status in CLEAN_OUTCOMES else "ok"
+    finish_run(conn, run_id, outcome, counts.rows_in, counts.rows_rejected)
     conn.commit()
 
 

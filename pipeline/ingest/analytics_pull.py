@@ -256,6 +256,21 @@ def note_unavailable(source, day, reason):
     return True
 
 
+def lane_outcome(source, asked, landed, failed, pending, unavailable):
+    lines = []
+    if unavailable:
+        lines.append(f"{source}: {len(unavailable)} day(s) have no export and will not be retried")
+    if pending:
+        lines.append(f"{source}: {len(pending)} day(s) not exported yet, left for the next run")
+    if failed:
+        lines.append(f"{source}: {len(failed)} of {asked} day(s) failed, left for the next run: "
+                     + "; ".join(failed))
+    if not failed:
+        return lines, None
+    what = "no day landed" if not landed else f"{landed} of {asked} landed"
+    return lines, f"{source}: {what}, {len(failed)} failed: " + "; ".join(failed)
+
+
 def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
     floor, edge = calendar(ProxyClient(), kind)
     days = pending_days(settled_days(conn, source), floor, edge, limit)
@@ -295,15 +310,11 @@ def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
     landed = len(days) - len(unavailable) - len(pending) - len(failed)
     if landed:
         refresh_statistics(kind)
-    if unavailable:
-        print(f"{source}: {len(unavailable)} day(s) have no export and will not be retried")
-    if pending:
-        print(f"{source}: {len(pending)} day(s) not exported yet, left for the next run")
-    if failed:
-        print(f"{source}: {len(failed)} of {len(days)} day(s) failed, left for the next run: "
-              + "; ".join(failed))
-    if failed and not landed:
-        raise RuntimeError(f"{source}: no day landed, {len(failed)} failed: " + "; ".join(failed))
+    lines, error = lane_outcome(source, len(days), landed, failed, pending, unavailable)
+    for line in lines:
+        print(line)
+    if error:
+        raise RuntimeError(error)
 
 
 def pull_member_day(conn, pull_date):

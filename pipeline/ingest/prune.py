@@ -13,11 +13,17 @@ AGED_BY = {
     "raw.channel_activity_snapshot": "window_start",
     "raw.member_channel_message": "searched_at",
     "raw.member_channel_membership": "seen_at",
-    "raw.analytics_day": "ds",
 }
 
-COUNT_SQL = "SELECT count(*) FROM {table} WHERE {column} < now() - make_interval(days => %s)"
-DELETE_SQL = "DELETE FROM {table} WHERE {column} < now() - make_interval(days => %s)"
+SHARED = frozenset({"raw.member_activity_snapshot", "raw.channel_activity_snapshot"})
+
+COUNT_SQL = "SELECT count(*) FROM {table} WHERE {column} < now() - make_interval(days => %s){scope}"
+DELETE_SQL = "DELETE FROM {table} WHERE {column} < now() - make_interval(days => %s){scope}"
+SCOPE = " AND source = %s"
+
+
+def stamp_of(key):
+    return sources.runs_as(key)[0].split(":")[0]
 
 
 def windows(conn):
@@ -32,17 +38,20 @@ def windows(conn):
         for table in sources.says(key, "writes"):
             column = AGED_BY.get(table)
             if column:
-                asked.append((key, table, column, days))
+                stamp = stamp_of(key) if table in SHARED else None
+                asked.append((key, table, column, days, stamp))
     return asked
 
 
-def sweep(conn, key, table, column, days, dry_run=False):
+def sweep(conn, key, table, column, days, stamp=None, dry_run=False):
+    scope = SCOPE if stamp else ""
+    params = (days, stamp) if stamp else (days,)
     with conn.cursor() as cur:
-        cur.execute(COUNT_SQL.format(table=table, column=column), (days,))
+        cur.execute(COUNT_SQL.format(table=table, column=column, scope=scope), params)
         doomed = cur.fetchone()[0]
         if dry_run or not doomed:
             return doomed
-        cur.execute(DELETE_SQL.format(table=table, column=column), (days,))
+        cur.execute(DELETE_SQL.format(table=table, column=column, scope=scope), params)
     conn.commit()
     return doomed
 
@@ -55,11 +64,12 @@ def run(conn, dry_run=False):
 
     with ingest_run(conn, SOURCE) as counts:
         dropped = 0
-        for key, table, column, days in asked:
-            gone = sweep(conn, key, table, column, days, dry_run)
+        for key, table, column, days, stamp in asked:
+            gone = sweep(conn, key, table, column, days, stamp, dry_run)
             dropped += gone
             word = "would drop" if dry_run else "dropped"
-            print(f"{SOURCE}: {table} keeps {days} days by {column}, {word} {gone} rows ({key})")
+            scope = f" where source = {stamp}" if stamp else ""
+            print(f"{SOURCE}: {table} keeps {days} days by {column}{scope}, {word} {gone} rows ({key})")
         counts.rows_in = dropped
     print(f"{SOURCE}: {dropped} rows past their window across {len(asked)} table(s)")
     return dropped

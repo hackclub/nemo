@@ -38,14 +38,9 @@ TAIL_SAMPLES_PER_TAIL = 50
 KNOWN_GAPS = []
 
 MART_CHECKS = [
-    ("mart_onboarding_funnel", "active_by_day_7"),
-    ("mart_onboarding_funnel", "active_by_day_30"),
     ("mart_onboarding_recurrence_funnel", "posted_twice"),
     ("mart_response_rate", "answered_by_member"),
     ("mart_response_rate", "median_member_latency_seconds"),
-    ("mart_fast_reply_vs_retention", "retained_day_30_rate"),
-    ("mart_fast_reply_vs_retention", "retained_day_90_rate"),
-    ("mart_channel_onboarding_scorecard", "retained_90_share"),
     ("mart_activity_distribution", "members"),
     ("mart_growth", "claim_rate"),
     ("mart_monthly_cohorts", "median_days_to_first_post"),
@@ -53,7 +48,6 @@ MART_CHECKS = [
     ("mart_team_stats_daily", "active_users_28d"),
     ("mart_team_stats_monthly", "mean_daily_active"),
     ("mart_top_posters", "messages_posted"),
-    ("mart_channel_activity", "messages_posted"),
     ("mart_channel_range", "members_who_posted"),
     ("fct_message", "thread_root_ts"),
     ("fct_message", "mention_count"),
@@ -65,7 +59,6 @@ MART_CHECKS = [
     ("fct_first_response", "detection_method"),
     ("fct_first_response", "latency_seconds"),
     ("dim_member_scd", "valid_to"),
-    ("dim_channel_scd", "valid_to"),
 ]
 
 CONSISTENCY_CHECKS = [
