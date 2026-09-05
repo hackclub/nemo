@@ -67,6 +67,18 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
     assert_equal "a sync is already queued or running", flash[:alert]
   end
 
+  test "a cancelling request still blocks a new one" do
+    sign_in_as(hold_role!("UTESTCM1", "community_manager"))
+    post engine_sync_path
+    SyncRequest.recent_first.first.update!(status: "cancelling")
+
+    assert_no_difference -> { SyncRequest.count } do
+      post engine_sync_path
+    end
+
+    assert_equal "a sync is already queued or running", flash[:alert]
+  end
+
   test "a finished request does not block a new one" do
     sign_in_as(hold_role!("UTESTCM1", "community_manager"))
     post engine_sync_path

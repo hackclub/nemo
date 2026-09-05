@@ -4,7 +4,7 @@ class SyncRequest < ApplicationRecord
   CHANNEL = "sync_request".freeze
   CANCEL_CHANNEL = "sync_cancel".freeze
   KINDS = %w[full stage].freeze
-  ACTIVE = %w[queued claimed].freeze
+  ACTIVE = %w[queued claimed cancelling].freeze
 
   STAGES = Engine::Source::KEYS
 
