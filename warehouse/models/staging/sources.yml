@@ -5,6 +5,7 @@ sources:
     schema: raw
     tables:
       - name: member_dim
+      - name: member_created_override
       - name: member_activity_snapshot
       - name: channel_dim
       - name: channel_activity_snapshot

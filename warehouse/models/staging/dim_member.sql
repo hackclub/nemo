@@ -1,26 +1,28 @@
 with scoped as (
     select
-        user_id,
-        account_created_verified,
-        claimed_at,
-        deactivated_at,
-        invite_pending,
-        is_invited_member,
-        is_invited_guest,
-        is_bot,
-        is_admin,
-        is_owner,
-        is_primary_owner,
-        is_restricted,
-        is_ultra_restricted,
+        m.user_id,
+        coalesce(o.account_created_verified, m.account_created_verified) as account_created_verified,
+        m.claimed_at,
+        m.deactivated_at,
+        m.invite_pending,
+        m.is_invited_member,
+        m.is_invited_guest,
+        m.is_bot,
+        m.is_admin,
+        m.is_owner,
+        m.is_primary_owner,
+        m.is_restricted,
+        m.is_ultra_restricted,
         case
-            when account_created_verified is not null then account_created_verified
-            when account_created > (
+            when coalesce(o.account_created_verified, m.account_created_verified) is not null
+                then coalesce(o.account_created_verified, m.account_created_verified)
+            when m.account_created > (
                 select max(account_created_verified) from {{ source('raw', 'member_dim') }}
-            ) then account_created
+            ) then m.account_created
         end as cohort_at,
-        coalesce(is_deleted, deactivated_at is not null) as resolved_is_deleted
-    from {{ source('raw', 'member_dim') }}
+        coalesce(m.is_deleted, m.deactivated_at is not null) as resolved_is_deleted
+    from {{ source('raw', 'member_dim') }} m
+    left join {{ source('raw', 'member_created_override') }} o on o.user_id = m.user_id
 )
 
 select
