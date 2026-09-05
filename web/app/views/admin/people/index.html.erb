@@ -1,27 +1,11 @@
 <% content_for :page_title, "People" %>
 
-    <% if @moved.any? || @dark.any? %>
-      <div class="dup dup-calm">
-        <% if @moved.any? %>
-          <span>
-            <%= link_to admin_roles_path, class: "lnk" do %><b><%= @moved.size %></b><% end %>
-            <%= "permission".pluralize(@moved.size) %> off default.
-          </span>
-        <% end %>
-        <% if @dark.any? %>
-          <span>
-            <%= link_to admin_flags_path, class: "lnk" do %><b><%= @dark.size %></b><% end %>
-            <%= @dark.one? ? "flag is" : "flags are" %> off.
-          </span>
-        <% end %>
-      </div>
-    <% end %>
-
-    <%= form_with url: admin_people_path, method: :get, class: "qbar" do %>
-      <%= hidden_field_tag :role, @role, id: nil if @role %>
-      <input class="field" type="search" name="q" value="<%= @term %>"
-             placeholder="Search by name or Slack ID" aria-label="Search people"
-             autocomplete="off">
+    <% content_for :page_controls do %>
+      <%= form_with url: admin_people_path, method: :get, class: "qsearch" do %>
+        <%= hidden_field_tag :role, @role, id: nil if @role %>
+        <%= search_field_tag :q, @term, placeholder: "Search by name or Slack ID",
+              class: "qsearch-in", autocomplete: "off", aria: { label: "Search people" } %>
+      <% end %>
       <span class="segmented" role="group" aria-label="role">
         <%= link_to "All", admin_people_path(q: @term.presence),
               aria: { current: ("true" if @role.nil?) } %>
@@ -31,8 +15,9 @@
                 aria: { current: ("true" if @role == name) } %>
         <% end %>
       </span>
-      <span class="grow"></span>
-      <% if may_grant? %>
+    <% end %>
+    <% if may_grant? %>
+      <% content_for :head_actions do %>
         <%= opens_modal "access.grant", "Give access", opens: "give-access", css: "btn btn-primary" %>
       <% end %>
     <% end %>

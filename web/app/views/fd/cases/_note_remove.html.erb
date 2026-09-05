@@ -1,5 +1,5 @@
 <% if note.author == current_account.user_id %>
   <%= button_to "Remove", fd_case_note_path(kase, note), method: :delete,
-        class: "text-btn", form: { class: "contents", data: { turbo_frame: "_top",
+        class: "btn btn-sm", form: { class: "contents", data: { turbo_frame: "_top",
         turbo_confirm: "Remove this note? The trail keeps that you wrote and removed one." } } %>
 <% end %>

@@ -3,19 +3,17 @@
 <div class="panel">
   <div class="panel-head">
     <span>What each role carries</span>
+    <% if @moved.positive? %>
+      <span class="sub"><%= pluralize(@moved, "capability") %> off default</span>
+    <% end %>
     <span class="grow"></span>
-  </div>
-
-  <% if @moved.positive? %>
-    <div class="warnbar">
-      <b><%= pluralize(@moved, "capability") %></b> off the catalogue default.
-      A change here reaches every person holding the role.
-      <span class="grow"></span>
+    <% if @moved.positive? %>
       <%= gated_button "access.grant", "Put back the defaults", fd_role_permission_path,
-            method: :delete,
-            form: { data: { turbo_confirm: "Put every capability back to its default?" } } %>
-    </div>
-  <% end %>
+            method: :delete, css: "btn btn-sm",
+            form: { class: "contents",
+                    data: { turbo_confirm: "Put every capability back to its default?" } } %>
+    <% end %>
+  </div>
 
   <div class="scroll">
     <table class="data-table role-matrix">

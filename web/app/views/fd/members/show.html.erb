@@ -113,7 +113,7 @@
               <% entries.each do |entry| %>
                 <% event_icon = entry.kind == "cases" ? "shield" : entry.kind == "actions" ? "gauge" : "note" %>
                 <% event_tone = entry.word == "reversal" ? "good" : entry.kind == "actions" ? "warn" : entry.state == "open" ? "crit" : "" %>
-                <div class="evrow">
+                <div class="evrow<%= " is-reversed" if entry.state == "reversed" && entry.word != "reversal" %>">
                   <span class="evdot <%= event_tone %>"><%= case_action_icon(event_icon) %></span>
                   <div>
                     <div class="member-event-head">
@@ -122,7 +122,6 @@
                       <% else %>
                         <b><%= entry.title %></b>
                       <% end %>
-                      <span class="evwhen"><%= entry.at.strftime("%-d %b") %></span>
                     </div>
                     <% if entry.said.present? %>
                       <p class="member-event-said"><%= mentioned(entry.said) %></p>
@@ -132,11 +131,14 @@
                     <% end %>
                     <span class="member-event-by">
                       <%= entry.who ? member_link(entry.who) : "n/a" %>
-                      <% if entry.ref.is_a?(Fd::Note) %>
-                        <%= render "note_remove", user_id: @user_id, note: entry.ref %>
-                      <% end %>
                     </span>
                   </div>
+                  <span class="evrow-right">
+                    <span class="evwhen"><%= entry.at.strftime("%-d %b") %></span>
+                    <% if entry.ref.is_a?(Fd::Note) %>
+                      <%= render "note_remove", user_id: @user_id, note: entry.ref %>
+                    <% end %>
+                  </span>
                 </div>
               <% end %>
             </div>

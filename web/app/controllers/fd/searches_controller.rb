@@ -18,21 +18,22 @@ module Fd
     def payload
       return commanding if commanding?
 
-      found = Search.new(params[:q], scope: params[:scope])
+      found = Search.new(params[:q], scope: params[:scope], actor: current_account)
       { term: found.term, scope: found.scope,
         groups: found.asked? ? shown(found) : resting }
     end
 
     def page
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      @found = Search.new(params[:q], scope: params[:scope], limit: PAGE_LIMIT)
+      @found = Search.new(params[:q], scope: params[:scope], limit: PAGE_LIMIT,
+        actor: current_account)
       @groups = @found.asked? ? shown(@found) : []
       @took = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
       @counts = every_count
     end
 
     def every_count
-      whole = Search.new(params[:q], limit: 1)
+      whole = Search.new(params[:q], limit: 1, actor: current_account)
       return {} unless whole.asked?
 
       whole.groups.to_h { |group| [group.key, group.total] }

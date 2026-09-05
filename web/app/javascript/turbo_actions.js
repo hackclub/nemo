@@ -60,6 +60,32 @@ export function catchUp(frame) {
   fetchChanges(frame, want, held)
 }
 
+const KEEPS_SCROLL = ".views a, .segmented a, .member-record-tabs a"
+const SCROLLERS = [".scrollarea", ".pane-list", ".member-record-content", ".case-tab-body"]
+let heldScroll = null
+
+document.addEventListener("click", (event) => {
+  const link = event.target.closest(KEEPS_SCROLL)
+  if (!link || link.target === "_blank" || link.dataset.turboFrame) return
+
+  heldScroll = SCROLLERS.map((selector) => document.querySelector(selector)?.scrollTop ?? null)
+})
+
+document.addEventListener("turbo:render", () => {
+  if (!heldScroll) return
+
+  const held = heldScroll
+  heldScroll = null
+  SCROLLERS.forEach((selector, at) => {
+    const box = document.querySelector(selector)
+    if (box && held[at] !== null) box.scrollTop = held[at]
+  })
+})
+
+document.addEventListener("turbo:visit", (event) => {
+  if (heldScroll && event.detail?.action === "restore") heldScroll = null
+})
+
 Turbo.StreamActions.reload_frame = function () {
   reloadFrame(document.getElementById(this.target), this.getAttribute("src"),
     this.getAttribute("version"))

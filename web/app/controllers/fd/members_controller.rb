@@ -45,7 +45,7 @@ module Fd
       render partial: "fd/members/pane_rows", layout: false, locals: {
         rows: rows, context: MemberContext.for(ids),
         grants: Authz::Grant.live.roles.where(user_id: ids).index_by(&:user_id),
-        open_id: params[:open].to_s.presence, more: more
+        open_id: params[:open].to_s.presence, more: more, carry: query.to_params
       }
     end
 
@@ -79,7 +79,9 @@ module Fd
     end
 
     def load_member_pane
-      @pane_query = MemberQuery.new({}, actor: current_account)
+      carried = params.to_unsafe_h.slice(*MemberQuery::KEYS, "q")
+      @pane_query = MemberQuery.new(carried, actor: current_account)
+      @pane_params = @pane_query.to_params
       @pane_rows = @pane_query.rows
       user_ids = @pane_rows.map(&:user_id)
       @pane_context = MemberContext.for(user_ids)

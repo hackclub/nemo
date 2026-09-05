@@ -1,9 +1,17 @@
 <% content_for :page_title, "#{Authz.role_label(@role)} channels" %>
 
     <div class="panel">
-      <div class="warnbar">
-        Changing this set changes what <b><%= pluralize(@holders, Authz.role_label(@role).downcase) %></b>
-        can see, at once. To give one person a channel alone, name them on it instead.
+      <div class="panel-head">
+        <span>Shared set</span>
+        <span class="sub">reaches <%= pluralize(@holders, Authz.role_label(@role).downcase) %></span>
+        <span class="grow"></span>
+        <% if may_grant? %>
+          <%= form_with url: admin_role_channels_path(role: @role), method: :post,
+                class: "contents" do %>
+            <%= render "admin/channel_picker", field: :channel_id, submit: true,
+                  said: "Add a channel", id: "pick-role-channel" %>
+          <% end %>
+        <% end %>
       </div>
 
       <% if @channels.any? %>
@@ -47,14 +55,6 @@
           </p>
         </div>
       <% end %>
-
-      <% if may_grant? %>
-        <%= form_with url: admin_role_channels_path(role: @role), method: :post,
-              class: "rowform" do %>
-          <%= render "admin/channel_picker", field: :channel_id, submit: true,
-                said: "Add a channel", id: "pick-role-channel" %>
-        <% end %>
-      <% end %>
     </div>
 
     <% if @reaches.any? %>
@@ -66,7 +66,7 @@
               <% @reaches.each do |user_id| %>
                 <tr>
                   <td><b><%= @names[user_id] %></b></td>
-                  <td><span class="chip"><%= pluralize(@channels.size, "shared channel") %></span></td>
+                  <td class="said-cell"><%= pluralize(@channels.size, "shared channel") %></td>
                   <td><%= link_to "Manage", admin_person_path(user_id), class: "btn" %></td>
                 </tr>
               <% end %>

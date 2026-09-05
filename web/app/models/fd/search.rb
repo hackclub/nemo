@@ -20,7 +20,8 @@ module Fd
       "report" => "Reports"
     }.freeze
 
-    def initialize(term, scope: nil, limit: nil)
+    def initialize(term, scope: nil, limit: nil, actor: nil)
+      @actor = actor
       raw = term.to_s.strip
       prefix = PREFIXES.keys.find { |mark| raw.downcase.start_with?(mark) }
 
@@ -93,14 +94,6 @@ module Fd
         total: searching? ? found.count : rows.size)
     end
 
-    MEMBER_ORDER = <<~SQL.squish
-      (lower(coalesce(handle, '')) = :term OR lower(coalesce(display_name, '')) = :term) DESC,
-      EXISTS (
-        SELECT 1 FROM fd.case_participants p WHERE p.user_id = fd.member.user_id
-      ) DESC,
-      display_name
-    SQL
-
     CASE_ORDER = "(id = :asked) DESC, (resolved_at IS NOT NULL), opened_at DESC".freeze
 
     RECENT_CASES = 40
@@ -108,8 +101,10 @@ module Fd
     def members
       return recent_members unless searching?
 
-      Member.search(term, limit: 50)
-        .reorder(Arel.sql(Member.sanitize_sql_array([MEMBER_ORDER, term: term.downcase])))
+      ids = MemberQuery.new({ "q" => term }, actor: @actor).rows.map(&:user_id)
+      return Member.none if ids.empty?
+
+      Member.where(user_id: ids).in_order_of(:user_id, ids)
     end
 
     def recent_members

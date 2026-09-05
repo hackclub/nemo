@@ -247,7 +247,7 @@ module FdHelper
   end
 
   def member_tab_link(user_id, key, label, count)
-    link_to fd_member_path(user_id, show: (key unless key == "all")),
+    link_to fd_member_path(user_id, (@pane_params || {}).merge(show: (key unless key == "all")).compact),
       class: "view", aria: { current: ("true" if key == @only) } do
       concat tag.span(label)
       concat tag.span(count, class: "tab-count")
@@ -300,7 +300,8 @@ module FdHelper
   def actions_phrase(standing)
     return nil if standing.actions.zero?
 
-    parts = ["#{pluralize(standing.in_force.size, 'action')} still standing"]
+    parts = [pluralize(standing.actions, "action")]
+    parts << "#{standing.in_force.size} in force" if standing.in_force.any?
     parts << "#{standing.reversed} reversed" if standing.reversed.positive?
     "#{parts.join(', ')}."
   end
@@ -1057,9 +1058,12 @@ module FdHelper
   end
 
   def actions_head_line(actions)
-    standing = actions.count(&:active?)
-    tail = standing.zero? ? "none still standing" : "#{standing} still standing"
-    "#{pluralize(actions.size, "action")} · #{tail}"
+    reversed = actions.count(&:reversed?)
+    in_force = actions.count(&:in_force?)
+    parts = [pluralize(actions.size, "action")]
+    parts << "#{in_force} in force" if in_force.positive?
+    parts << "#{reversed} reversed" if reversed.positive?
+    parts.join(" · ")
   end
 
   def action_sentence(action)

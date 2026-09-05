@@ -19,19 +19,35 @@
             <% end %>
           </div>
 
-          <div class="line-row">
-            <b>Role</b>
-            <%= role_standing(@user_id) %>
-            <% if @grant_rows.any?(&:role?) %>
-              <% row = @grant_rows.find(&:role?) %>
-              <span class="sub2">since <%= row.granted_at.strftime("%b %Y") %>,
-                given by <%= @names[row.granted_by] %></span>
-            <% end %>
-            <span class="grow"></span>
-          </div>
-          <% if @roles.empty? && @effective.empty? %>
-            <div class="empty"><p class="empty-title">Holds nothing yet</p></div>
-          <% end %>
+          <% role_row = @grant_rows.find(&:role?) %>
+          <dl class="facts-strip facts-wrap">
+            <div class="fact">
+              <dt>Role</dt>
+              <dd class="<%= "is-none" if @roles.empty? %>">
+                <%= @roles.any? ? @roles.map { |r| Authz.role_label(r) }.to_sentence : "No role" %>
+              </dd>
+            </div>
+            <div class="fact">
+              <dt>Since</dt>
+              <dd class="<%= "is-none" unless role_row %>"><%= role_row ? role_row.granted_at.strftime("%b %Y") : "n/a" %></dd>
+            </div>
+            <div class="fact">
+              <dt>Given by</dt>
+              <dd class="<%= "is-none" unless role_row %>"><%= role_row ? @names[role_row.granted_by] : "n/a" %></dd>
+            </div>
+            <div class="fact">
+              <dt>In force</dt>
+              <dd><%= @effective.size %> <span class="sub">of <%= Authz.keys.size %></span></dd>
+            </div>
+            <div class="fact">
+              <dt>Off default</dt>
+              <dd class="<%= "is-none" if @deviations.empty? %>"><%= @deviations.size %></dd>
+            </div>
+            <div class="fact">
+              <dt>Channels</dt>
+              <dd class="<%= "is-none" if @channel_rows.empty? %>"><%= @channel_rows.size %></dd>
+            </div>
+          </dl>
         </div>
 
         <div class="panel">
@@ -61,39 +77,27 @@
       </div>
 
       <div class="stack">
-        <div class="fbox">
-          <div class="ft"><span>Grant history</span></div>
-          <div class="rows">
+        <div class="panel">
+          <div class="panel-head">
+            <span>Grant history</span>
+            <span class="grow"></span>
+            <span class="sub">held since <%= @held_since&.strftime("%b %Y") || "n/a" %></span>
+          </div>
+          <div class="list">
             <% @history.each do |grant| %>
-              <div class="row <%= "row-locked" if grant.revoked? %>">
-                <span class="row-k"><%= grant.label %><%= ", taken back" if grant.revoked? %></span>
-                <span class="row-v">
+              <div class="lrow">
+                <span class="grow">
+                  <b><%= grant.label %></b>
+                  <% if grant.revoked? %><span class="sub">taken back</span><% end %>
+                </span>
+                <span class="lrow-right sub">
                   <%= (grant.revoked_at || grant.granted_at)&.strftime("%b %Y") || "n/a" %>
                 </span>
               </div>
             <% end %>
             <% if @history.empty? %>
-              <div class="row"><span class="row-k sub2">never held anything</span></div>
+              <div class="empty"><p class="empty-title">Never held anything</p></div>
             <% end %>
-          </div>
-        </div>
-
-        <div class="facts-grid">
-          <div class="cell">
-            <span class="fg-k">Held since</span>
-            <span class="fg-v"><%= @held_since&.strftime("%b %Y") || "n/a" %></span>
-          </div>
-          <div class="cell">
-            <span class="fg-k">Last acted</span>
-            <span class="fg-v"><%= acted_label(@last_acted) %></span>
-          </div>
-          <div class="cell">
-            <span class="fg-k">Identity reads</span>
-            <span class="fg-v"><%= @identity_reads %></span>
-          </div>
-          <div class="cell">
-            <span class="fg-k">Channels named on</span>
-            <span class="fg-v"><%= @channels_named %></span>
           </div>
         </div>
       </div>

@@ -81,7 +81,7 @@ module Fd
             word: "action",
             who: action.decided_by,
             mark: "act",
-            state: action.reversed? ? "reversed" : "standing",
+            state: action.reversed? ? "reversed" : nil,
             detail: action_detail(action),
             case_id: action.case_id
           )

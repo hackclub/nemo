@@ -1,47 +1,14 @@
-<div class="panel">
-  <div class="tiles">
-    <div class="tile">
-      <span class="tile-t">Role</span>
-      <span class="tile-s"><%= @roles.any? ? "#{@baseline.size} in the baseline" : "a member" %></span>
-      <span class="tile-v" style="font-size:var(--t-head)">
-        <%= @roles.any? ? @roles.map { |r| Authz.role_label(r) }.to_sentence : "No role" %>
-      </span>
-    </div>
-    <div class="tile">
-      <span class="tile-t">In force</span>
-      <span class="tile-s">of <%= Authz.keys.size %> capabilities</span>
-      <span class="tile-v"><%= @effective.size %></span>
-      <div class="meter">
-        <i style="width: <%= (@effective.size * 100.0 / Authz.keys.size).round %>%"></i>
-      </div>
-    </div>
-    <div class="tile">
-      <span class="tile-t">Off default</span>
-      <span class="tile-s">
-        <%= @deviations.any? ? @deviations.keys.first(2).join(", ") : "nothing by hand" %>
-      </span>
-      <span class="tile-v"><%= @deviations.any? ? @deviations.size : "0" %></span>
-    </div>
-    <div class="tile">
-      <span class="tile-t">Channels</span>
-      <span class="tile-s">
-        <% shared = @role_channels.values.flatten.size %>
-        <%= shared.positive? ? pluralize(shared, "shared") : "named one by one" %>
-      </span>
-      <span class="tile-v"><%= @channel_rows.size %></span>
-    </div>
-    <div class="tile">
-      <span class="tile-t">Identity reads</span>
-      <span class="tile-s">last 30 days</span>
-      <span class="tile-v"><%= @identity_reads %></span>
-    </div>
-  </div>
-</div>
-
 <div class="panel" id="name-a-channel">
   <div class="panel-head">
     <span>Channels they read</span>
     <span class="grow"></span>
+    <% if may_grant? %>
+      <%= form_with url: admin_person_channel_grants_path(@user_id), method: :post,
+            class: "contents" do %>
+        <%= render "admin/channel_picker", field: :channel_id, submit: true,
+              said: "Add a channel", id: "pick-person-channel" %>
+      <% end %>
+    <% end %>
   </div>
 
   <% if @roles.include?("promethean") && @channel_rows.empty? %>
@@ -92,13 +59,5 @@
       <p class="empty-title">No channel is theirs to read</p>
       <p class="card-note">They still see anything set to public.</p>
     </div>
-  <% end %>
-
-  <% if may_grant? %>
-    <%= form_with url: admin_person_channel_grants_path(@user_id), method: :post,
-          class: "panel-foot channel-add" do %>
-      <%= render "admin/channel_picker", field: :channel_id, submit: true,
-            said: "Add a channel", id: "pick-person-channel" %>
-    <% end %>
   <% end %>
 </div>

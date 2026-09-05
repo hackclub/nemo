@@ -20,10 +20,8 @@
         </label>
       <% end %>
 
-      <div class="card">
-        <div class="idline">
-          <b>Role</b>
-        </div>
+      <div class="field-label">
+        <span>Role</span>
         <div class="segmented seg-radio" data-controller="unpick">
           <% Authz.grantable_roles.each do |name| %>
             <label data-action="mousedown->unpick#down click->unpick#press">
@@ -36,10 +34,8 @@
         <p class="card-note" data-give-access-target="note"></p>
       </div>
 
-      <div class="card">
-        <div class="idline">
-          <b>Extra scopes</b>
-        </div>
+      <div class="field-label">
+        <span>Extra scopes</span>
         <%= hidden_field_tag :scopes_settled, "1", id: nil %>
         <div class="optlist" data-give-access-target="scopes">
           <% Authz.by_area.each do |area, keys| %>
@@ -53,7 +49,6 @@
                      data-area="<%= area %>">
                 <%= check_box_tag "scopes[]", key, held_scopes.include?(key),
                       id: nil, class: "tick" %>
-                <span class="opt-dot" aria-hidden="true"></span>
                 <span>
                   <span class="opt-label"><%= Authz.label(key) %></span>
                   <span class="opt-note mono"><%= key %></span>
@@ -67,11 +62,8 @@
         </p>
       </div>
 
-      <div class="card" data-give-access-target="channels" hidden>
-        <div class="idline">
-          <b>Channels</b>
-          <span class="sub2">&middot; a promethean reads only what you name</span>
-        </div>
+      <div class="field-label" data-give-access-target="channels" hidden>
+        <span>Channels</span>
         <%= render "admin/channel_picker", field: "channels[]" %>
       </div>
 
