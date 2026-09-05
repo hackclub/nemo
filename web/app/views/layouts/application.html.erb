@@ -26,91 +26,92 @@
   <body data-section="<%= page_section %>">
     <%= render "shared/synthetic_banner" %>
     <% fire_engine = may_use_fire_engine? %>
-    <div class="shell" data-controller="dismiss<%= " palette" if fire_engine %>"
+    <% pane_partial = content_for?(:pane) ? nil : section_pane %>
+    <% pane = content_for?(:pane) || pane_partial.present? %>
+
+    <div class="shell" data-controller="cachet dismiss<%= " palette" if fire_engine %>"
          data-palette-url-value="<%= fd_search_path(format: :json) %>"
          data-palette-on-value="<%= content_for(:palette_on) %>"
          data-action="keydown@document->palette#key">
-      <aside class="rail">
-        <div class="brand">
-          <%= image_tag "nemo.png", class: "brand-mark", alt: "", width: 22, height: 14 %>
+
+      <header class="top">
+        <%= link_to root_path, class: "brand", aria: { label: "Mnemosyne home" } do %>
+          <%= image_tag "nemo.png", class: "brand-mark", alt: "", width: 800, height: 483 %>
           <span class="brand-name">Mnemosyne</span>
-        </div>
-
-        <% if page_section == "admin" %>
-          <%= render "layouts/rail_admin" %>
-        <% else %>
-          <% sections = [] %>
-          <% sections << "layouts/rail_analytics" if on?(:analytics) %>
-          <% sections << "layouts/rail_fire" if fire_engine %>
-          <% sections.reverse! unless current_account&.manager? %>
-          <% sections.each do |section| %>
-            <%= render section %>
-          <% end %>
         <% end %>
 
-        <% if page_section == "admin" %>
-          <div class="rail-foot">
-            <%= link_to root_path, class: "rail-item" do %>
-              <span class="rail-ic" aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-              </span>
-              <span class="rail-text">Back to Mnemosyne</span>
-            <% end %>
-          </div>
-        <% end %>
+        <%= render "layouts/areas", fire_engine: fire_engine %>
 
-        <% if fire_engine && page_section != "admin" %>
-          <div class="rail-foot">
-            <button type="button" class="rail-item rail-find" data-action="palette#open"
+        <div class="topright">
+          <% if fire_engine %>
+            <button type="button" class="findbar" data-action="palette#open"
                     aria-label="Search cases, members, notes">
-              <span class="rail-ic" aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-              </span>
-              <span class="rail-text">Search</span>
-              <span class="kbd"><span class="mod-meta">⌘</span><span class="mod-ctrl">Ctrl </span>K</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+              <span class="findbar-text">Search</span>
+              <span class="kbd"><span class="mod-meta">⌘K</span><span class="mod-ctrl">Ctrl K</span></span>
             </button>
-          </div>
-        <% end %>
-      </aside>
-
-      <div class="main" data-controller="case-timeline">
-        <div class="rhead">
-          <div class="rtop">
-            <div class="rhead-said">
-              <% page_title = content_for(:page_title) || "Mnemosyne" %>
-              <h1 class="rtitle" title="<%= page_title %>">
-                <%= yield :page_face %><%= page_title %>
-              </h1>
-            </div>
-
-            <div class="ractions">
-              <%= content_for(:head_actions) if content_for?(:head_actions) %>
-            </div>
-
-            <%= render "layouts/you", staff: current_account, profile: current_profile %>
-          </div>
-
-          <% if content_for?(:page_controls) %>
-            <div class="qbar"><%= content_for(:page_controls) %></div>
           <% end %>
 
-          <div class="topbar-msgs" aria-live="polite" aria-atomic="false">
-            <% if alert || notice %>
-              <%= render "layouts/told", alert: alert, notice: notice,
-                    said: flash[:said], did: flash[:did], tone: flash[:tone] %>
+          <%= render "layouts/you", staff: current_account %>
+        </div>
+      </header>
+
+      <div class="work<%= " has-pane" if pane %>"
+           data-view="<%= content_for(:pane_default).presence || "main" %>"
+           data-controller="case-timeline<%= " pane" if pane %>">
+        <% if content_for?(:pane) %>
+          <%= content_for :pane %>
+        <% elsif pane_partial %>
+          <%= render pane_partial %>
+        <% end %>
+
+        <main class="main">
+          <div class="rhead">
+            <div class="rtop">
+              <div class="rhead-said">
+                <% if pane %>
+                  <button type="button" class="btn btn-ghost btn-only backbtn" aria-label="Back"
+                          data-action="click->pane#show" hidden>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                  </button>
+                <% end %>
+                <h1 class="rtitle" title="<%= strip_tags(content_for(:page_title).to_s).presence || "Mnemosyne" %>">
+                  <%= yield :page_face %><%= content_for(:page_title) || "Mnemosyne" %>
+                </h1>
+                <%= content_for(:head_context) if content_for?(:head_context) %>
+              </div>
+
+              <div class="ractions">
+                <%= content_for(:head_actions) if content_for?(:head_actions) %>
+              </div>
+            </div>
+
+            <% if content_for?(:page_controls) %>
+              <div class="qbar"><%= content_for(:page_controls) %></div>
+            <% end %>
+
+            <% if content_for?(:page_tabs) %>
+              <nav class="views" aria-label="Sections"><%= content_for(:page_tabs) %></nav>
             <% end %>
           </div>
-        </div>
 
-        <div class="scrollarea">
-          <main class="body">
-            <%= yield %>
-          </main>
-        </div>
+          <div class="scrollarea<%= " flush" if content_for?(:flush) %>">
+            <div class="body<%= " flush" if content_for?(:flush) %>">
+              <%= yield %>
+            </div>
+          </div>
+        </main>
       </div>
 
       <% if fire_engine %>
         <%= render "fd/palette" %>
+      <% end %>
+    </div>
+
+    <div class="topbar-msgs" aria-live="polite" aria-atomic="false">
+      <% if alert || notice %>
+        <%= render "layouts/told", alert: alert, notice: notice,
+              said: flash[:said], did: flash[:did], tone: flash[:tone] %>
       <% end %>
     </div>
 

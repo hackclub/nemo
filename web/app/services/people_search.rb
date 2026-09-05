@@ -38,10 +38,7 @@ class PeopleSearch
   end
 
   def by_name
-    like = "%#{ActiveRecord::Base.sanitize_sql_like(@term.downcase)}%"
-    cached = CachetProfile.where("lower(display_name) LIKE ?", like)
-      .order(:display_name).limit(@limit).pluck(:user_id)
-    (cached + Fd::Member.search(@term, limit: @limit).pluck(:user_id)).uniq
+    Fd::Member.search(@term, limit: @limit).pluck(:user_id)
   end
 
   def shown(id, names)

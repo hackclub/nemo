@@ -24,14 +24,14 @@ module FdHelper
   def handle(user_id)
     return "nobody" if user_id.blank?
 
-    tag.button(names[user_id], type: "button", class: "handle", title: "copy #{user_id}",
+    tag.button(person_name(user_id), type: "button", class: "handle", title: "copy #{user_id}",
       data: { controller: "copy", copy_id_value: user_id, action: "click->copy#write" })
   end
 
   def member_link(user_id)
     return "n/a" if user_id.blank?
 
-    link_to names[user_id], fd_member_path(user_id), class: "lnk", title: user_id,
+    link_to person_name(user_id), fd_member_path(user_id), class: "lnk", title: user_id,
       data: { turbo_frame: "person-drawer" }
   end
 
@@ -147,7 +147,9 @@ module FdHelper
 
     tag.th(class: css.join(" "),
       aria: { sort: sort_state(key) }) do
-      link_to fd_members_path(@query.sort_params(key)), data: { turbo_frame: "roster" } do
+      path_params = @query.sort_params(key)
+      path_params = path_params.merge(layout: params[:layout]) if params[:layout].present?
+      link_to fd_members_path(path_params), data: { turbo_frame: "roster" } do
         concat tag.span(label)
         concat sort_caret(key)
       end
@@ -246,14 +248,22 @@ module FdHelper
 
   def member_tab_link(user_id, key, label, count)
     link_to fd_member_path(user_id, show: (key unless key == "all")),
-      aria: { current: ("true" if key == @only) } do
+      class: "view", aria: { current: ("true" if key == @only) } do
       concat tag.span(label)
-      concat tag.span(count, class: "seg-count")
+      concat tag.span(count, class: "tab-count")
     end
   end
 
   def menu_item(icon, label, note: nil)
     render "fd/menu_item", icon: icon, label: label, note: note
+  end
+
+  def case_action_button(icon, label, shortcut: nil)
+    render "fd/case_action_button", icon: icon, label: label, shortcut: shortcut
+  end
+
+  def case_action_icon(icon)
+    render "fd/case_action_button", icon: icon, label: nil, shortcut: nil
   end
 
   def history_by_month(entries)
@@ -733,12 +743,22 @@ module FdHelper
     end
   end
 
-  def face(user_id, css: "row-avatar")
-    shown = user_id.present? ? names.image(user_id) : nil
-    return tag.img(src: shown, class: css, alt: "", loading: "lazy") if shown
+  def face(user_id, css: "row-avatar", data: {})
+    if user_id.blank?
+      return tag.span("?", class: "#{css} av-none", aria: { hidden: true }, data: data)
+    end
 
-    letter = user_id ? names.initial(user_id) : "?"
-    tag.span(letter, class: "#{css} #{avatar_tone(user_id)}", aria: { hidden: true })
+    tag.img(src: cachet_face_url(user_id), class: css, alt: "", loading: "lazy",
+      width: 22, height: 22,
+      data: data.merge(cachet_face: user_id, cachet_initial: names.initial(user_id),
+        cachet_tone: avatar_tone(user_id)))
+  end
+
+  def person_name(user_id)
+    said = names[user_id]
+    return said unless names.unknown?(user_id)
+
+    tag.span(said, data: { cachet_name: user_id })
   end
 
   def row_avatar(kase)
@@ -912,9 +932,28 @@ module FdHelper
   end
 
   CASE_TAB_LABELS = {
-    "report" => "Report", "evidence" => "Evidence", "actions" => "Actions",
-    "notes" => "Notes", "people" => "People"
+    "report" => "Report", "people" => "People", "evidence" => "Evidence",
+    "actions" => "Actions", "notes" => "Notes", "timeline" => "Timeline"
   }.freeze
+
+  TIMELINE_TONES = {
+    "report" => "crit", "action" => "act", "resolve" => "good", "close" => "good",
+    "claim" => "", "note" => "", "thread" => "", "person" => "", "open" => "", "reply" => ""
+  }.freeze
+
+  TIMELINE_GLYPHS = {
+    "report" => "R", "action" => "A", "resolve" => "C", "close" => "C",
+    "claim" => "@", "note" => "N", "thread" => "T", "person" => "P",
+    "open" => "+", "reply" => "@"
+  }.freeze
+
+  def timeline_tone(mark)
+    TIMELINE_TONES.fetch(mark.to_s, "")
+  end
+
+  def timeline_glyph(mark)
+    tag.span(TIMELINE_GLYPHS.fetch(mark.to_s, "\u00b7"), class: "mono", style: "font-size:10px")
+  end
 
   STILL_NEEDED = { 1 => "One thing", 2 => "Two things", 3 => "Three things" }.freeze
 
@@ -933,6 +972,38 @@ module FdHelper
     return tag.span(kase.resolution.tr("_", " "), class: "state state-off") if kase.resolved?
 
     tag.span("open", class: "state state-crit")
+  end
+
+  def case_state_chip(kase, acted: nil, reachable: nil)
+    said, tone = case_state(kase, acted: acted, reachable: reachable)
+    tag.span(said, class: "state #{tone}")
+  end
+
+  def case_state(kase, acted: nil, reachable: nil)
+    return ["folded into #{kase.duplicate_of}", "state-off"] if kase.duplicate_of
+    return ["closed as #{kase.resolution.to_s.tr('_', ' ')}", "state-off"] if kase.resolved?
+
+    reports = kase.reports.to_a
+    reachable ||= reachable_reports(reports)
+    unanswered = reports.any? do |one|
+      reachable.include?(one.id) && !one.replied? && !one.told_of_outcome?
+    end
+    return ["no reply yet", "state-crit"] if unanswered
+    return ["nobody on it", "state-warn"] unless kase.assigned?
+    return ["needs a subject", "state-warn"] if kase.subject_user_ids.empty?
+
+    taken = acted || kase.actions.reject(&:reversed?).size
+    return ["acted, not closed", "state-live"] if taken.positive?
+    return ["waiting on the reporter", "state"] if reports.any?(&:replied?)
+
+    ["working", "state-live"]
+  end
+
+  def reachable_reports(reports)
+    ids = reports.map(&:id)
+    return Set.new if ids.empty?
+
+    Fd::IntakeConversation.open_ones.where(report_id: ids).pluck(:report_id).to_set
   end
 
   def case_head_meta(kase, reports)
@@ -1130,11 +1201,12 @@ module FdHelper
     Fd::Access.why_not(current_account, key, record)
   end
 
-  def opens_modal(key, text = nil, opens:, on: nil, css: "btn", &block)
+  def opens_modal(key, text = nil, opens:, on: nil, css: "btn", data: {}, &block)
     why = why_not(key, on)
     body = block ? capture(&block) : text
     if why.nil?
-      return tag.button(body, type: "button", class: css, data: { modal_open: opens },
+      return tag.button(body, type: "button", class: css,
+        data: data.merge(modal_open: opens),
         aria: { haspopup: "dialog" })
     end
 
@@ -1236,13 +1308,6 @@ module FdHelper
 
     if kase.resolved?
       "Resolved #{on_day(kase.resolved_at)} as #{kase.resolution.tr('_', ' ')}."
-    else
-      assigned = if kase.assigned?
-        "assigned to #{names.list(kase.assignee_user_ids)}"
-      else
-        "still unassigned"
-      end
-      "Still open. #{case_age_label(case_age_seconds(kase))}, #{assigned}."
     end
   end
 end

@@ -13,21 +13,20 @@ module Fd
     scope :live, -> { where(is_deleted: false, is_bot: false) }
     scope :by_name, -> { order(Arel.sql("lower(coalesce(nullif(display_name, ''), handle))")) }
 
+    TERM_FIELDS = %w[user_id display_name handle title].freeze
+    IDENTITY_TERM_FIELDS = %w[real_name first_name last_name email].freeze
+
     def self.search(term, actor: nil, limit: LIMIT)
-      term = term.to_s.strip
-      return where(user_id: term.upcase).limit(1) if term.match?(MEMBER_ID)
+      term = term.to_s.strip.delete_prefix("@")
+      return where(user_id: term.upcase).limit(1) if term.match?(MEMBER_ID) && exists?(user_id: term.upcase)
       return none if term.length < MIN_TERM
 
-      like = "%#{sanitize_sql_like(term.downcase)}%"
-      return live.where("lower(display_name) LIKE :q OR lower(handle) LIKE :q", q: like)
-        .by_name.limit(limit) unless actor&.may?("identity.read")
-
-      live.left_joins(:identity)
-        .where(
-          "lower(display_name) LIKE :q OR lower(handle) LIKE :q OR " \
-          "lower(fd.member_identity.real_name) LIKE :q OR lower(fd.member_identity.email) LIKE :q",
-          q: like
-        ).by_name.limit(limit)
+      like = "%#{sanitize_sql_like(term)}%"
+      fields = TERM_FIELDS.map { |field| "#{table_name}.#{field} ILIKE :q" }
+      if actor&.may?("identity.read")
+        fields += IDENTITY_TERM_FIELDS.map { |field| "fd.member_identity.#{field} ILIKE :q" }
+      end
+      left_joins(:identity).where(fields.join(" OR "), q: like).by_name.limit(limit)
     end
 
     def readonly?

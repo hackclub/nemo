@@ -4,7 +4,7 @@ class ApplicationController < ActionController::Base
 
   before_action :require_account
 
-  helper_method :current_account, :current_profile, :page_section
+  helper_method :current_account, :page_section
 
   private
 
@@ -31,12 +31,6 @@ class ApplicationController < ActionController::Base
     return nil unless session[:user_id]
 
     @current_account ||= Account.find_or_initialize_by(user_id: session[:user_id])
-  end
-
-  def current_profile
-    return nil unless current_account
-
-    @current_profile ||= CachetClient.profile(current_account.user_id)
   end
 
   def require_account

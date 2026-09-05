@@ -17,6 +17,7 @@ Rails.application.routes.draw do
     get "cases/merge", to: "merges#confirm", as: :confirm_merge_cases
     get "cases/:id/merge", to: "merges#show", as: :case_merge
     get "members/search", to: "members#search", as: :member_search
+    get "members/pane", to: "members#pane", as: :member_pane
     resources :members, only: [:index, :show] do
       resources :notes, only: [:create, :destroy], controller: "member_notes"
     end

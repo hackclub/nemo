@@ -96,7 +96,7 @@
 
   <% if may_grant? %>
     <%= form_with url: admin_person_channel_grants_path(@user_id), method: :post,
-          class: "rowform" do %>
+          class: "panel-foot channel-add" do %>
       <%= render "admin/channel_picker", field: :channel_id, submit: true,
             said: "Add a channel", id: "pick-person-channel" %>
     <% end %>

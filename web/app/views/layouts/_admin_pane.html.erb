@@ -1,0 +1,48 @@
+<nav class="pane cpane" aria-label="Admin sections">
+  <div class="cnav-head">
+    <b>Admin</b>
+    <span>access, roles and flags</span>
+  </div>
+
+  <div class="cnav">
+    <div class="cnav-group">
+      <%= link_to admin_people_path, aria: { current: ("page" if controller_path == "admin/people") } do %>
+        <svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+        <span>People</span>
+      <% end %>
+      <%= link_to admin_roles_path, aria: { current: ("page" if controller_path == "admin/roles") } do %>
+        <svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 8 10 8 10s8-5 8-10V6z"/></svg>
+        <span>Roles</span>
+      <% end %>
+    </div>
+
+    <p class="cnav-lab">Channels by role</p>
+    <div class="cnav-group">
+      <% Admin::RoleChannelsController::SHARED_ROLES.each do |role| %>
+        <%= link_to admin_role_channels_path(role: role),
+              aria: { current: ("page" if controller_path == "admin/role_channels" &&
+                params[:role].to_s == role) } do %>
+          <i class="knot"></i>
+          <span class="trunc"><%= Authz.role_label(role) %></span>
+        <% end %>
+      <% end %>
+    </div>
+
+    <p class="cnav-lab">The dashboard</p>
+    <div class="cnav-group">
+      <%= link_to admin_channels_path, aria: { current: ("page" if controller_path == "admin/channels") } do %>
+        <svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5 9h14M5 15h14M10 3 8 21M16 3l-2 18"/></svg>
+        <span>Channels</span>
+      <% end %>
+      <%= link_to admin_flags_path, aria: { current: ("page" if controller_path == "admin/flags") } do %>
+        <svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18M6 4h11l-2 4 2 4H6"/></svg>
+        <span>Flags</span>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="cfoot">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4.5" y="10" width="15" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+    <span>Every change here is logged</span>
+  </div>
+</nav>

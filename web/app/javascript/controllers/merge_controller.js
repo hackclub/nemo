@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["count", "ids"]
+  static targets = ["count", "ids", "bar"]
   static values = { url: String }
 
   connect() {
@@ -13,6 +13,7 @@ export default class extends Controller {
 
     this.countTarget.textContent = numbers.length
     this.idsTarget.textContent = numbers.join(", ")
+    if (this.hasBarTarget) this.barTarget.hidden = numbers.length === 0
   }
 
   confirm(event) {

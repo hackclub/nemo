@@ -11,8 +11,10 @@ export default class extends Controller {
 
   connect() {
     this.onOpenClick = this.onOpenClick.bind(this)
+    this.onDocumentKey = this.onDocumentKey.bind(this)
     this.onKeys = this.onKeys.bind(this)
     document.addEventListener("click", this.onOpenClick)
+    document.addEventListener("keydown", this.onDocumentKey)
     this.boxTarget.addEventListener("keydown", this.onKeys)
     this.was = this.flipTarget.checked
     if (this.was) this.entered()
@@ -20,17 +22,31 @@ export default class extends Controller {
 
   disconnect() {
     document.removeEventListener("click", this.onOpenClick)
+    document.removeEventListener("keydown", this.onDocumentKey)
     this.boxTarget.removeEventListener("keydown", this.onKeys)
   }
 
   onOpenClick(event) {
     const trigger = event.target.closest(`[data-modal-open="${this.idValue}"]`)
-    if (!trigger) return
+    if (trigger) {
+      event.preventDefault()
+      this.opener = trigger
+      trigger.closest("details[open]")?.removeAttribute("open")
+      this.open()
+      return
+    }
+
+    if (!this.flipTarget.checked || event.composedPath().includes(this.boxTarget)) return
 
     event.preventDefault()
-    this.opener = trigger
-    trigger.closest("details[open]")?.removeAttribute("open")
-    this.open()
+    this.shut()
+  }
+
+  onDocumentKey(event) {
+    if (event.key !== "Escape" || !this.flipTarget.checked) return
+
+    event.preventDefault()
+    this.shut()
   }
 
   sync() {
@@ -65,6 +81,12 @@ export default class extends Controller {
   }
 
   left() {
+    const url = new URL(location.href)
+    if (url.searchParams.has("open") || url.searchParams.has("do")) {
+      url.searchParams.delete("open")
+      url.searchParams.delete("do")
+      history.replaceState(history.state, "", url)
+    }
     const back = this.opener
     this.opener = null
     if (back && back.isConnected && typeof back.focus === "function") back.focus()

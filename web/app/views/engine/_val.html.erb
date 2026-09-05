@@ -6,17 +6,20 @@
 <% end %>
 <% if may_tune %>
   <%= form_with url: engine_tune_path, method: :patch, class: "contents" do |f| %>
-    <%= f.hidden_field :source, value: source %>
-    <%= f.hidden_field :name, value: name %>
+    <%= f.hidden_field :source, value: source, id: nil %>
+    <%= f.hidden_field :name, value: name, id: nil %>
     <% if name == Engine::Setting::CADENCE %>
       <%= f.select :value, Engine::Source::CADENCES, { selected: now },
-            class: "val #{"tuned" if tuned}", onchange: "this.form.requestSubmit()" %>
+            class: "val #{"tuned" if tuned}", id: nil,
+            aria: { label: "#{source} #{name}" }, onchange: "this.form.requestSubmit()" %>
     <% elsif name == Engine::Freshness::SWITCH || name == Engine::Setting::ENABLED %>
       <%= f.select :value, %w[true false], { selected: now },
-            class: "val #{"tuned" if tuned}", onchange: "this.form.requestSubmit()" %>
+            class: "val #{"tuned" if tuned}", id: nil,
+            aria: { label: "#{source} #{name}" }, onchange: "this.form.requestSubmit()" %>
     <% else %>
       <%= f.text_field :value, value: now, inputmode: "numeric", size: 6,
-            class: "val #{"tuned" if tuned}", onchange: "this.form.requestSubmit()" %>
+            class: "val #{"tuned" if tuned}", id: nil,
+            aria: { label: "#{source} #{name}" }, onchange: "this.form.requestSubmit()" %>
     <% end %>
   <% end %>
 <% else %>

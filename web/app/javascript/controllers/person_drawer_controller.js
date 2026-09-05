@@ -28,7 +28,6 @@ export default class extends Controller {
 
   onKey(event) {
     if (this.element.matches(":empty")) return
-    if (document.activeElement?.closest("input, textarea, select")) return
 
     if (event.key === "Escape") this.close()
   }

@@ -1,99 +1,126 @@
 <% content_for :page_title, "Members" %>
+<% split = @layout == "split" %>
 
-<% content_for :page_controls do %>
-  <%= form_with url: fd_members_path, method: :get, class: "qsearch",
-        data: { controller: "live-search", action: "input->live-search#go",
-                turbo_frame: "roster", turbo_action: "advance" } do %>
-    <% @query.picked.each do |key, value| %>
-      <%= hidden_field_tag key, value, id: nil %>
-    <% end %>
-    <%= search_field_tag :q, @query.term, placeholder: "Find a member",
-          class: "qsearch-in", autocomplete: "off",
-          aria: { label: "Find a member" } %>
+<% if split %>
+  <% content_for :pane_default, "pane" %>
+  <% content_for :pane do %>
+    <%= render "pane", rows: @pane_rows, views: @pane_views, query: @pane_query,
+          context: @pane_context, grants: @pane_grants, open_id: nil %>
   <% end %>
 <% end %>
 
-<div class="stack">
-  <turbo-frame id="roster" target="_top" data-turbo-action="advance">
-  <div class="panel">
-  <div class="views">
-    <% @views.select { |view| Fd::MemberQuery::TABS.include?(view.key) }.each do |view| %>
-      <%= link_to fd_members_path(view: view.key), class: "view",
-            data: { turbo_frame: "roster" },
-            aria: { current: ("true" if view.current) } do %>
-        <%= view.label %>
-        <span class="view-count"><%= view.count %></span>
-      <% end %>
-    <% end %>
+<% content_for :head_actions do %>
+  <span class="segmented">
+    <%= link_to "Split", fd_members_path(request.query_parameters.except("layout")),
+          aria: { current: ("true" if split) } %>
+    <%= link_to "Table", fd_members_path(request.query_parameters.merge(layout: "table")),
+          aria: { current: ("true" if @layout == "table") } %>
+  </span>
+<% end %>
 
+<% if split %>
+  <div class="empty">
+    <span class="empty-mark" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 8h5M18.5 5.5v5"/></svg>
+    </span>
+    <p class="empty-title">No member open</p>
+    <p>Opening a member record is written to the access log, with your name and the time.</p>
   </div>
+<% else %>
+  <% content_for :page_controls do %>
+    <%= form_with url: fd_members_path, method: :get, class: "qsearch",
+          data: { controller: "live-search", action: "input->live-search#go",
+                  turbo_frame: "roster", turbo_action: "advance" } do %>
+      <%= hidden_field_tag :layout, "table", id: nil %>
+      <% @query.picked.each do |key, value| %>
+        <%= hidden_field_tag key, value, id: nil %>
+      <% end %>
+      <%= search_field_tag :q, @query.term, placeholder: "Find a member",
+            class: "qsearch-in", autocomplete: "off",
+            aria: { label: "Find a member" } %>
+    <% end %>
+  <% end %>
 
-    <% if @rows.any? %>
-      <div class="scroll">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <%= member_sort_header("Member", "name") %>
-              <%= member_sort_header("Messages", "name", numeric: true) %>
-              <%= member_sort_header("Cases", "subject", numeric: true) %>
-              <%= member_sort_header("Actions", "actions", numeric: true) %>
-              <%= member_sort_header("Notes", "notes", numeric: true) %>
-              <th>Standing</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @rows.each do |row| %>
-              <% seen = @context[row.user_id] %>
-              <tr>
-                <td>
-                  <span class="row-name">
-                    <%= face(row.user_id) %>
-                    <span class="two-line">
-                      <%= link_to fd_member_path(row.user_id) do %>
-                        <b><%= names[row.user_id] %></b>
-                      <% end %>
-                      <span>
-                        here since <%= seen&.cohort_at ? on_day(seen.cohort_at).downcase : "n/a" %><% if @grants[row.user_id] %> &middot; <%= @grants[row.user_id].label %><% end %>
-                      </span>
-                    </span>
-                  </span>
-                </td>
-                <td class="col-num"><%= seen&.messages_posted ? number_with_delimiter(seen.messages_posted) : "n/a" %></td>
-                <td class="col-num col-cases <%= "is-none" if row.cases.zero? %>"><%= row.cases %></td>
-                <td class="col-num col-actions <%= "is-none" if row.actions.zero? %>">
-                  <%= row.actions %><% if row.in_force.positive? %> <span class="delta-down">&middot;<%= row.in_force %></span><% end %>
-                </td>
-                <td class="col-num <%= "is-none" if row.notes.zero? %>"><%= row.notes %></td>
-                <td><%= member_standing_swatch(row) %></td>
-              </tr>
+  <div class="stack">
+    <turbo-frame id="roster" target="_top" data-turbo-action="advance">
+      <div class="panel">
+        <div class="views">
+          <% @views.select { |view| Fd::MemberQuery::TABS.include?(view.key) }.each do |view| %>
+            <%= link_to fd_members_path(view: view.key, layout: "table"), class: "view",
+                  data: { turbo_frame: "roster" },
+                  aria: { current: ("true" if view.current) } do %>
+              <%= view.label %>
+              <span class="view-count"><%= number_with_delimiter(view.count) %></span>
             <% end %>
-          </tbody>
-        </table>
-      </div>
-      <% if @query.pages > 1 %>
-        <div class="pager">
-          <% if @query.page > 1 %>
-            <%= link_to "Back", fd_members_path(@query.page_params(@query.page - 1)),
-                  class: "btn", data: { turbo_frame: "roster" } %>
-          <% else %>
-            <span class="btn is-off">Back</span>
-          <% end %>
-          <span class="pager-at">
-            Page <%= @query.page %> of <%= @query.pages %>
-          </span>
-          <% if @query.page < @query.pages %>
-            <%= link_to "Next", fd_members_path(@query.page_params(@query.page + 1)),
-                  class: "btn", data: { turbo_frame: "roster" } %>
-          <% else %>
-            <span class="btn is-off">Next</span>
           <% end %>
         </div>
-      <% end %>
-    <% else %>
-      <div class="empty">
-        <p class="empty-title"><%= @query.empty_note %></p>
+
+        <% if @rows.any? %>
+          <div class="scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <%= member_sort_header("Member", "name") %>
+                  <th class="col-num">Messages</th>
+                  <%= member_sort_header("Cases", "subject", numeric: true) %>
+                  <%= member_sort_header("Actions", "actions", numeric: true) %>
+                  <%= member_sort_header("Notes", "notes", numeric: true) %>
+                  <th>Standing</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @rows.each do |row| %>
+                  <% seen = @context[row.user_id] %>
+                  <tr>
+                    <td>
+                      <span class="row-name">
+                        <%= face(row.user_id) %>
+                        <span class="two-line">
+                          <%= link_to fd_member_path(row.user_id) do %>
+                            <b><%= person_name(row.user_id) %></b>
+                          <% end %>
+                          <span>
+                            here since <%= seen&.cohort_at ? on_day(seen.cohort_at).downcase : "n/a" %><% if @grants[row.user_id] %> &middot; <%= @grants[row.user_id].label %><% end %>
+                          </span>
+                        </span>
+                      </span>
+                    </td>
+                    <td class="col-num"><%= seen&.messages_posted ? number_with_delimiter(seen.messages_posted) : "n/a" %></td>
+                    <td class="col-num col-cases <%= "is-none" if row.cases.zero? %>"><%= row.cases %></td>
+                    <td class="col-num col-actions <%= "is-none" if row.actions.zero? %>">
+                      <%= row.actions %><% if row.in_force.positive? %> <span class="delta-down">&middot;<%= row.in_force %></span><% end %>
+                    </td>
+                    <td class="col-num <%= "is-none" if row.notes.zero? %>"><%= row.notes %></td>
+                    <td><%= member_standing_swatch(row) %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+
+          <% if @query.pages > 1 %>
+            <div class="pager">
+              <% if @query.page > 1 %>
+                <%= link_to "Back", fd_members_path(@query.page_params(@query.page - 1).merge(layout: "table")),
+                      class: "btn", data: { turbo_frame: "roster" } %>
+              <% else %>
+                <span class="btn is-off">Back</span>
+              <% end %>
+              <span class="pager-at">Page <%= @query.page %> of <%= @query.pages %></span>
+              <% if @query.page < @query.pages %>
+                <%= link_to "Next", fd_members_path(@query.page_params(@query.page + 1).merge(layout: "table")),
+                      class: "btn", data: { turbo_frame: "roster" } %>
+              <% else %>
+                <span class="btn is-off">Next</span>
+              <% end %>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="empty">
+            <p class="empty-title"><%= @query.empty_note %></p>
+          </div>
+        <% end %>
       </div>
-    <% end %>
+    </turbo-frame>
   </div>
-  </turbo-frame>
-</div>
+<% end %>

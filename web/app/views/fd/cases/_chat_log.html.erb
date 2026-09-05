@@ -2,21 +2,31 @@
 
 <%= turbo_frame_tag chat_log_id(kase),
       data: { src: fd_case_chat_log_path(kase, thread: reports.first&.id) } do %>
-<div id="chat-said-<%= kase.id %>" class="chat-log" data-version="<%= Fd::ChatVersion.for(kase.id) %>">
+<div id="chat-said-<%= kase.id %>" class="chatscroll" data-version="<%= Fd::ChatVersion.for(kase.id) %>">
   <% if earlier.positive? %>
-    <p class="sub2 chat-earlier"><%= pluralize(earlier, "earlier message") %> on the case page</p>
+    <p class="dayrule"><%= pluralize(earlier, "earlier message") %></p>
   <% end %>
 
-  <%= render partial: "fd/cases/said", collection: said, as: :entry %>
+  <% last_day = nil %>
+  <% said.each do |entry| %>
+    <% day = entry.at.to_date %>
+    <% if day != last_day %>
+      <p class="dayrule"><%= day.strftime("%-d %B %Y") %></p>
+      <% last_day = day %>
+    <% end %>
+    <%= render "fd/cases/said", entry: entry %>
+  <% end %>
 
   <% if said.empty? %>
-    <p id="chat-empty-<%= kase.id %>" class="card-note">
-      <% if reports.any? %>
-        Nothing said yet.
-      <% else %>
-        No report on file. <%= member_link(kase.opened_by) %> opened this case directly.
+    <div id="chat-empty-<%= kase.id %>" class="empty">
+      <span class="empty-mark">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v12H8l-3 3z"/></svg>
+      </span>
+      <p class="empty-title"><%= reports.any? ? "Nothing said yet" : "No report on file" %></p>
+      <% unless reports.any? %>
+        <p class="card-note"><%= member_link(kase.opened_by) %> opened this case directly, so there is nobody to reply to.</p>
       <% end %>
-    </p>
+    </div>
   <% end %>
 </div>
 <% end %>

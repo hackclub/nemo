@@ -1,12 +1,12 @@
-<div id="said-<%= entry.key %>" class="said-row said-<%= entry.side %>">
-  <% if entry.side == "in" %><%= face(entry.who) %><% end %>
-  <div class="said-bubble">
-    <div class="said-top">
-      <b><%= entry.name %></b>
-      <% if entry.kind == "chat" %><span class="chip chip-warn">internal</span><% end %>
-      <% if entry.state %><span class="chip <%= state_tone(entry.state) %>"><%= entry.state %></span><% end %>
-      <span class="said-at"><%= entry.at.strftime("%-d %b, %H:%M") %></span>
+<div id="said-<%= entry.key %>" class="msg <%= entry.side == "out" ? "out" : "in" %>">
+  <%= face(entry.who) %>
+  <div>
+    <div class="msg-head">
+      <span class="msg-who"><%= entry.name %></span>
+      <span class="msg-at"><%= entry.at.strftime("%-d %b, %H:%M") %></span>
+      <% if entry.kind == "chat" %><span class="tag">internal</span><% end %>
+      <% if entry.state %><span class="tag <%= state_tone(entry.state).sub("chip-", "") %>"><%= entry.state %></span><% end %>
     </div>
-    <div class="said-body"><%= mentioned(entry.body) %></div>
+    <p class="msg-body"><%= mentioned(entry.body) %></p>
   </div>
 </div>

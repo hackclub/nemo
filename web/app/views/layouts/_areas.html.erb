@@ -1,0 +1,47 @@
+<nav class="areas" aria-label="Areas">
+  <% if fire_engine %>
+    <details class="menu area-menu" data-controller="menu">
+      <summary class="area-summary" aria-haspopup="menu"
+               aria-label="Fire Engine sections" aria-current="<%= "page" if page_section == "fd" %>">
+        <span>Fire Engine</span>
+        <svg class="area-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m7 9 5 5 5-5"/></svg>
+        <% if page_section == "fd" %><i class="line"></i><% end %>
+      </summary>
+      <div class="menu-pop menu-start area-pop">
+        <%= link_to case_action_button("gauge", "Overview"), fd_root_path,
+              aria: { current: ("true" if current_page?(fd_root_path)) } %>
+        <%= link_to case_action_button("shield", "Cases"), fd_cases_path,
+              aria: { current: ("true" if controller_path == "fd/cases") } %>
+        <%= link_to case_action_button("people", "Members"), fd_members_path,
+              aria: { current: ("true" if controller_path == "fd/members") } %>
+        <% if current_account.may?("access.read") %>
+          <div class="menu-sep"></div>
+          <%= link_to case_action_button("history", "Audit log"), fd_audit_path,
+                aria: { current: ("true" if controller_path == "fd/audits") } %>
+        <% end %>
+      </div>
+    </details>
+  <% end %>
+
+  <% if on?(:analytics) %>
+    <%= link_to root_path, aria: { current: ("page" if page_section == "mn" && controller_name != "engine") } do %>
+      <span>Community</span>
+      <% if page_section == "mn" && controller_name != "engine" %><i class="line"></i><% end %>
+    <% end %>
+  <% end %>
+
+  <% if may_community?("ops.engine") %>
+    <%= link_to engine_path, aria: { current: ("page" if controller_name == "engine") } do %>
+      <span>Engine</span>
+      <% if controller_name == "engine" %><i class="line"></i><% end %>
+    <% end %>
+  <% end %>
+
+  <% if may_administer? %>
+    <%= link_to admin_root_path, aria: { current: ("page" if page_section == "admin") } do %>
+      <span>Admin</span>
+      <% if page_section == "admin" %><i class="line"></i><% end %>
+    <% end %>
+  <% end %>
+</nav>

@@ -150,7 +150,7 @@ export default class extends Controller {
     const all = groups.reduce((sum, group) => sum + group.total, 0)
     if (term.length > 0 && all > held) {
       this.resultsTarget.append(this.line({
-        icon: "→", title: `See all ${all}`, sub: null, said: null,
+        icon: "arrow", title: `See all ${all}`, sub: null, said: null,
         url: `/fd/search?q=${encodeURIComponent(term)}${this.only ? `&scope=${this.only}` : ""}`,
       }, term))
     }
@@ -173,17 +173,31 @@ export default class extends Controller {
     line.dataset.at = this.rows.length
 
     const icon = document.createElement("span")
-    icon.textContent = row.icon
+    icon.className = "palette-icon"
+    if (row.kind === "member" && row.id) {
+      const img = document.createElement("img")
+      img.className = "avatar"
+      img.src = `https://cachet.hackclub.com/users/${encodeURIComponent(row.id)}/r`
+      img.alt = ""
+      img.dataset.cachetFace = row.id
+      img.dataset.cachetInitial = row.initial || "?"
+      icon.append(img)
+    } else {
+      icon.innerHTML = this.icon(row.icon)
+    }
 
     const what = document.createElement("span")
+    what.className = "pal-what"
     const title = document.createElement("b")
+    title.className = "pal-t"
     title.textContent = row.title
+    if (row.kind === "member" && row.id && row.title === `@${row.id}`) title.dataset.cachetName = row.id
     what.append(title)
 
     if (row.why || row.sub) {
       const sub = document.createElement("span")
       sub.className = "sub"
-      sub.textContent = ` ${row.why || row.sub}`
+      sub.textContent = row.why || row.sub
       what.append(sub)
     }
 
@@ -228,8 +242,27 @@ export default class extends Controller {
   }
 
   mark() {
-    this.rows.forEach((row, index) => row.classList.toggle("sel", index === this.at))
+    this.rows.forEach((row, index) => {
+      row.setAttribute("aria-selected", index === this.at ? "true" : "false")
+    })
     this.rows[this.at]?.scrollIntoView({ block: "nearest" })
+  }
+
+  icon(name) {
+    const paths = {
+      person: '<circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 8h5M18.5 5.5v5"/>',
+      case: '<path d="M12 3 4 6v6c0 4 3.4 7.4 8 8 4.6-.6 8-4 8-8V6z"/>',
+      note: '<path d="M5 4h14v12H8l-3 3z"/>',
+      report: '<path d="M4 5h16v14H4zM4 7l8 6 8-6"/>',
+      plus: '<path d="M12 5v14M5 12h14"/>',
+      resolve: '<circle cx="12" cy="12" r="9"/><path d="m8.2 12.2 2.6 2.6 5-5.4"/>',
+      action: '<path d="M20 14a8 8 0 1 0-16 0M15 10l-3.4 3.4"/>',
+      thread: '<path d="M4 6h16M4 11h10M4 16h13"/>',
+      waiting: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+      arrow: '<path d="M5 12h14m-5-5 5 5-5 5"/>'
+    }
+    const body = paths[name] || '<circle cx="12" cy="12" r="3"/>'
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`
   }
 
   go(event) {

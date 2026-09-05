@@ -1,0 +1,49 @@
+<section class="pane" aria-label="Member roster" data-controller="pane-filter">
+  <div class="pane-head">
+    <nav class="views" aria-label="Member views">
+      <% views.select { |view| Fd::MemberQuery::TABS.include?(view.key) }.each do |view| %>
+        <%= link_to fd_members_path(view: view.key), class: "view",
+              aria: { current: ("true" if view.current) } do %>
+          <%= view.label %>
+          <span class="view-count"><%= number_with_delimiter(view.count) %></span>
+        <% end %>
+      <% end %>
+    </nav>
+
+    <%= form_with url: fd_members_path, method: :get, class: "qtools" do %>
+      <% query.picked.each do |key, value| %>
+        <%= hidden_field_tag key, value, id: nil %>
+      <% end %>
+      <label class="vh" for="pane-member-filter">Find a member</label>
+      <%= search_field_tag :q, query.term, id: "pane-member-filter",
+            class: "input input-sm grow", autocomplete: "off", placeholder: "Find a member",
+            data: { pane_filter_target: "query", action: "input->pane-filter#filter" } %>
+    <% end %>
+  </div>
+
+  <div class="pane-list" data-pane-filter-target="list">
+    <% if rows.any? %>
+      <div role="listbox" aria-label="Members" id="member-listbox">
+        <%= render "fd/members/pane_rows", rows: rows, context: context, grants: grants,
+              open_id: open_id %>
+      </div>
+      <% if query.pages > query.page %>
+        <div class="pane-more" data-controller="more" data-more-into-value="member-listbox"
+             data-more-url-value="<%= fd_member_pane_path(query.page_params(query.page + 1).merge({ open: open_id }.compact)) %>"
+             aria-hidden="true"><i class="dot run"></i></div>
+      <% end %>
+
+      <div class="empty pane-filter-empty" data-pane-filter-target="empty" hidden>
+        <span class="empty-mark" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 8h5M18.5 5.5v5"/></svg>
+        </span>
+        <p class="empty-title">Nobody matches that filter</p>
+        <p>Try a handle, display name, or Slack ID.</p>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title"><%= query.empty_note %></p>
+      </div>
+    <% end %>
+  </div>
+</section>

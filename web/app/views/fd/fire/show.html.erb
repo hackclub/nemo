@@ -1,6 +1,6 @@
 <% content_for :page_title, "Overview" %>
 <% content_for :head_actions do %>
-  <%= opens_modal "case.open", "Open a case", opens: "open-case", css: "btn btn-primary" %>
+  <%= link_to "Open a case", fd_cases_path(open: "1"), class: "btn btn-primary" %>
 <% end %>
 
 <div class="kpis">

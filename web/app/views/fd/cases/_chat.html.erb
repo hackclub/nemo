@@ -7,27 +7,22 @@
 <% conversation = local_assigns.fetch(:conversation, nil) %>
 <% said_count = local_assigns.fetch(:said_count, messages.size) %>
 
-<div class="chat" data-controller="stick catch-up presence"
+<div class="chatwrap" data-controller="stick catch-up presence"
      data-catch-up-frame-value="<%= chat_log_id(kase) %>"
      data-presence-case-value="<%= kase.id %>"
      data-presence-me-value="<%= current_account&.user_id %>">
-  <% if reports.size > 1 %>
-    <div class="chat-picks">
-      <% reports.each do |report| %>
-        <%= link_to fd_case_path(kase, tab: "report", thread: report.id),
-              class: "chat-pick", aria: { current: ("true" if report.id == thread&.id) } do %>
-          <%= face(report.anonymous? ? nil : report.reporter_user_id) %>
-          <span><%= report.reporter_label(names) %></span>
-          <% if report.case_id != kase.id %>
-            <span class="chat-pick-from">from #<%= report.case_id %></span>
-          <% end %>
-        <% end %>
-      <% end %>
-    </div>
-  <% end %>
 
   <div class="chat-head">
-    <% if thread %>
+    <% if reports.size > 1 %>
+      <span class="segmented">
+        <% reports.each do |report| %>
+          <%= link_to fd_case_path(kase, tab: "report", thread: report.id),
+                aria: { current: ("true" if report.id == thread&.id) } do %>
+            <%= report.reporter_label(names) %>
+          <% end %>
+        <% end %>
+      </span>
+    <% elsif thread %>
       <%= face(thread.anonymous? ? nil : thread.reporter_user_id) %>
       <span class="grow two-line">
         <b><%= thread.reporter_label(names) %></b>
@@ -35,8 +30,8 @@
       </span>
     <% else %>
       <span class="grow two-line">
-        <b>Nobody to reply to</b>
-        <span>no report came in, so this is the internal chat</span>
+        <b>Team chat</b>
+        <span>no report came in, so nothing here reaches a reporter</span>
       </span>
     <% end %>
     <% here = Fd::ChatPresence.here(kase.id) %>
@@ -48,36 +43,40 @@
         messages: messages, queued: queued %>
 
   <% if composer && !kase.resolved? %>
-    <%= form_with url: fd_case_chats_path(kase), method: :post, class: "chat-composer",
-          data: { controller: "chat", chat_reporter_value: thread.present?,
-                  chat_note_url_value: fd_case_chats_path(kase),
-                  chat_reply_url_value: fd_case_replies_path(kase) },
-          html: { autocomplete: "off" } do %>
-      <% if conversation %>
-        <%= hidden_field_tag :conversation_id, conversation.id, id: nil %>
-      <% end %>
-      <div class="chat-field" data-action="click->chat#focus">
-        <span class="chat-pill" data-chat-target="pill" hidden>
-          <span data-chat-target="aim">to reporter</span>
-          <button type="button" class="chat-pill-x" data-action="click->chat#drop"
-                  aria-label="talk to the team instead">&times;</button>
-        </span>
-        <%= hidden_field_tag :anon, "", data: { chat_target: "anon" }, id: nil %>
-        <div class="mention-field" data-controller="mention"
-             data-mention-url-value="<%= fd_member_search_path %>">
-          <%= text_area_tag :body, nil, rows: 1, class: "chat-input", id: nil,
-                maxlength: Fd::CaseChat::MAX_LENGTH,
-                placeholder: composer_hint(thread, names),
-                data: { chat_target: "field", mention_target: "field",
-                        action: "input->mention#type input->chat#type " \
-                                "keydown->mention#keys keydown->chat#keys" } %>
-          <div class="menu-pop pick-pop mention-pop" hidden data-mention-target="results"></div>
-        </div>
+    <div class="composer">
+      <%= form_with url: fd_case_chats_path(kase), method: :post,
+            data: { controller: "chat", chat_reporter_value: thread.present?,
+                    chat_note_url_value: fd_case_chats_path(kase),
+                    chat_reply_url_value: fd_case_replies_path(kase) },
+            html: { autocomplete: "off" } do %>
+        <% if conversation %>
+          <%= hidden_field_tag :conversation_id, conversation.id, id: nil %>
+        <% end %>
+        <div class="cfield" data-action="click->chat#focus">
+          <span class="chat-pill" data-chat-target="pill" hidden>
+            <span data-chat-target="aim">internal</span>
+            <button type="button" class="chat-pill-x" data-action="click->chat#drop"
+                    data-chat-target="drop" aria-label="talk to the team instead">&times;</button>
+          </span>
+          <%= hidden_field_tag :anon, "", data: { chat_target: "anon" }, id: nil %>
+          <div class="mention-field" data-controller="mention"
+               data-mention-url-value="<%= fd_member_search_path %>">
+            <%= text_area_tag :body, nil, rows: 1, class: "chat-input", id: nil,
+                  maxlength: Fd::CaseChat::MAX_LENGTH,
+                  aria: { label: "Message the team or reporter" },
+                  placeholder: composer_hint(thread, names),
+                  data: { chat_target: "field", mention_target: "field",
+                          action: "input->mention#type input->chat#type " \
+                                  "keydown->mention#keys keydown->chat#keys" } %>
+            <div class="menu-pop pick-pop mention-pop" hidden data-mention-target="results"></div>
+          </div>
 
-        <button type="submit" class="chat-send" data-chat-target="send" aria-label="Send">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
-        </button>
-      </div>
-    <% end %>
+          <button type="submit" class="chat-send" data-chat-target="send" aria-label="Send">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+          </button>
+        </div>
+      <% end %>
+
+    </div>
   <% end %>
 </div>

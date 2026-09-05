@@ -13,19 +13,21 @@
   <td>
     <% if may_tune %>
       <%= form_with url: engine_tune_path, method: :patch, class: "contents" do |f| %>
-        <%= f.hidden_field :source, value: source %>
-        <%= f.hidden_field :name, value: name %>
+        <%= f.hidden_field :source, value: source, id: nil %>
+        <%= f.hidden_field :name, value: name, id: nil %>
         <span class="dial-set">
           <% if name == Engine::Setting::CADENCE %>
             <%= f.select :value, Engine::Source::CADENCES,
-                  { selected: Engine::Setting.value(source, name) }, class: "select" %>
+                  { selected: Engine::Setting.value(source, name) }, class: "select", id: nil,
+                  aria: { label: "#{title} value" } %>
           <% elsif name == Engine::Freshness::SWITCH %>
             <%= f.select :value, %w[true false],
-                  { selected: Engine::Setting.value(source, name) }, class: "select" %>
+                  { selected: Engine::Setting.value(source, name) }, class: "select", id: nil,
+                  aria: { label: "#{title} value" } %>
           <% else %>
             <span class="field field-tune">
               <%= f.text_field :value, value: Engine::Setting.value(source, name),
-                    inputmode: "numeric" %>
+                    inputmode: "numeric", id: nil, aria: { label: "#{title} value" } %>
             </span>
           <% end %>
           <%= f.submit "save", class: "run-btn" %>

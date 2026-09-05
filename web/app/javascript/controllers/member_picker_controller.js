@@ -7,6 +7,22 @@ function said(className, text) {
   return span
 }
 
+function face(id, initial) {
+  const img = document.createElement("img")
+  img.className = "avatar"
+  img.src = `https://cachet.hackclub.com/users/${encodeURIComponent(id)}/r`
+  img.alt = ""
+  img.dataset.cachetFace = id
+  img.dataset.cachetInitial = initial || "?"
+  return img
+}
+
+function named(id, name) {
+  const span = said("pick-name", name)
+  if (name === `@${id}`) span.dataset.cachetName = id
+  return span
+}
+
 export default class extends Controller {
   static targets = ["field", "input", "results", "store"]
   static values = { name: String, url: String, single: Boolean, preset: Array }
@@ -14,8 +30,8 @@ export default class extends Controller {
   connect() {
     this.chosen = new Map()
     this.timer = null
-    for (const { id, name, initial } of this.presetValue) {
-      this.chosen.set(id, { name, initial })
+    for (const { id, name, initial, image } of this.presetValue) {
+      this.chosen.set(id, { name, initial, image })
     }
     this.render()
     this.away = this.away.bind(this)
@@ -64,11 +80,15 @@ export default class extends Controller {
       row.dataset.id = member.id
       row.dataset.name = member.name
       row.dataset.initial = member.initial
-      row.append(
-        said("avatar", member.initial),
-        said("pick-name", member.name),
-        said("pick-id mono", member.id)
-      )
+      row.dataset.image = member.image || ""
+      const bare = member.name.replace(/^@/, "")
+      const sub = [
+        member.handle && member.handle !== bare ? `@${member.handle}` : null,
+        member.id !== bare ? member.id : null
+      ].filter(Boolean).join(" · ")
+      const body = said("pick-body-text", "")
+      body.append(named(member.id, member.name), said("pick-id mono", sub))
+      row.append(face(member.id, member.initial), body)
       this.resultsTarget.append(row)
     }
     this.resultsTarget.hidden = false
@@ -104,13 +124,13 @@ export default class extends Controller {
   }
 
   choose(event) {
-    const { id, name, initial } = event.currentTarget.dataset
-    this.add(id, name, initial)
+    const { id, name, initial, image } = event.currentTarget.dataset
+    this.add(id, name, initial, image)
   }
 
-  add(id, name, initial) {
+  add(id, name, initial, image = "") {
     if (this.singleValue) this.chosen.clear()
-    this.chosen.set(id, { name, initial })
+    this.chosen.set(id, { name, initial, image })
     this.inputTarget.value = ""
     this.clearResults()
     this.render()
@@ -155,10 +175,13 @@ export default class extends Controller {
   render() {
     for (const token of this.fieldTarget.querySelectorAll(".token")) token.remove()
 
-    for (const [id, { name, initial }] of this.chosen) {
+    for (const [id, { name, initial, image }] of this.chosen) {
       const token = document.createElement("span")
       token.className = "token"
-      token.append(said("avatar", initial), document.createTextNode(name))
+      const label = document.createElement("span")
+      label.textContent = name
+      if (name === `@${id}`) label.dataset.cachetName = id
+      token.append(face(id, initial), label)
 
       const remove = document.createElement("button")
       remove.type = "button"

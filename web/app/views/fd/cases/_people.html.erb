@@ -35,9 +35,9 @@
         <span class="row-right">
           <% count = priors.fetch(person.user_id, 0) %>
           <% if count.positive? %>
-            <span class="mchip warn"><%= pluralize(count, "prior case") %></span>
+            <span class="prior-count"><%= pluralize(count, "prior case") %></span>
           <% else %>
-            <span class="mchip good">no priors</span>
+            <span class="prior-count is-none">no priors</span>
           <% end %>
           <%= link_to "History", fd_member_path(person.user_id), class: "btn",
                 data: { turbo_frame: "person-drawer" } %>

@@ -1,7 +1,8 @@
 module Fd
   class SearchesController < BaseController
     permit "case.read"
-    ICONS = { "member" => "👤", "case" => "📁", "note" => "📝", "report" => "📨" }.freeze
+    ICONS = { "member" => "person", "case" => "case", "note" => "note",
+              "report" => "report" }.freeze
 
     PAGE_LIMIT = 20
 
@@ -59,10 +60,10 @@ module Fd
 
     def commands
       here + [
-        { kind: "do", icon: "⚡", title: "Open a case", sub: nil, key: "case.open",
+        { kind: "do", icon: "plus", title: "Open a case", sub: nil, key: "case.open",
           url: fd_cases_path(open: "1") },
-        { kind: "do", icon: "📁", title: "Go to the cases", sub: nil, url: fd_cases_path },
-        { kind: "do", icon: "👤", title: "Go to the members", sub: nil, url: fd_members_path }
+        { kind: "do", icon: "case", title: "Go to the cases", sub: nil, url: fd_cases_path },
+        { kind: "do", icon: "person", title: "Go to the members", sub: nil, url: fd_members_path }
       ].compact
     end
 
@@ -72,13 +73,13 @@ module Fd
 
       on = "on case #{kase.id}"
       [
-        { kind: "do", icon: "⚡", title: "Resolve this case", sub: on,
+        { kind: "do", icon: "resolve", title: "Resolve this case", sub: on,
           key: "case.resolve", on: kase, url: fd_case_path(kase, do: "resolve") },
-        { kind: "do", icon: "⚡", title: "Log an action", sub: on,
+        { kind: "do", icon: "action", title: "Log an action", sub: on,
           key: "case.act", on: kase, url: fd_case_path(kase, do: "action") },
-        { kind: "do", icon: "📝", title: "Add a note", sub: on,
+        { kind: "do", icon: "note", title: "Add a note", sub: on,
           key: "case.note", url: fd_case_path(kase, do: "note") },
-        { kind: "do", icon: "🔗", title: "Attach a thread", sub: on,
+        { kind: "do", icon: "thread", title: "Attach a thread", sub: on,
           key: "case.thread", on: kase, url: fd_case_path(kase, do: "thread") }
       ].compact
     end
@@ -97,7 +98,7 @@ module Fd
       [
         { key: "waiting", label: "Waiting on you", total: 1, rows: waiting },
         { key: "do", label: "Do", total: 1, rows: gated([
-          { kind: "do", icon: "⚡", title: "Open a case", sub: nil, key: "case.open",
+          { kind: "do", icon: "plus", title: "Open a case", sub: nil, key: "case.open",
             url: fd_cases_path }
         ]) }
       ].reject { |group| group[:rows].empty? }
@@ -107,7 +108,7 @@ module Fd
       rows = []
       unassigned = Case.unresolved.unassigned.count
       if unassigned.positive?
-        rows << { kind: "case", icon: "⏳", title: helpers.pluralize(unassigned, "unassigned case"),
+        rows << { kind: "case", icon: "waiting", title: helpers.pluralize(unassigned, "unassigned case"),
                   sub: oldest_unassigned, url: fd_cases_path(view: "unassigned") }
       end
 
@@ -144,13 +145,15 @@ module Fd
         title: title_for(record),
         sub: sub_for(record),
         said: row.said,
-        url: url_for_record(record)
+        url: url_for_record(record),
+        id: (record.user_id if record.is_a?(Member)),
+        initial: (@names.initial(record.user_id) if record.is_a?(Member))
       }
     end
 
     def title_for(record)
       case record
-      when Member then "@#{record.handle.presence || record.display_name}"
+      when Member then @names[record.user_id]
       when Case then "case #{record.id}"
       when Note then record.case_id ? "case #{record.case_id}" : @names[record.subject_user_id]
       when CaseReport then "case #{record.case_id}"
@@ -168,7 +171,9 @@ module Fd
 
     def member_sub(member)
       seen = @context[member.user_id]
-      parts = [helpers.tenure_label(seen&.tenure_days)]
+      parts = [member.user_id]
+      parts << "@#{member.handle}" if member.handle.present? && "@#{member.handle}" != @names[member.user_id]
+      parts << helpers.tenure_label(seen&.tenure_days)
       parts << "#{helpers.number_with_delimiter(seen.messages_posted)} messages" if
         seen&.messages_posted
       priors = Case.prior_count(member.user_id, within: Case::PRIOR_WINDOW)

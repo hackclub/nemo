@@ -2,6 +2,7 @@ module Fd
   class MembersController < BaseController
     permit "case.read"
     def index
+      @layout = params[:layout] == "table" ? "table" : "split"
       @query = MemberQuery.new(params, actor: current_account)
       @rows = @query.rows
       log_identity_search
@@ -10,12 +11,14 @@ module Fd
       @grants = Authz::Grant.live.roles.where(user_id: @rows.map(&:user_id))
         .index_by(&:user_id)
       @views = @query.views
+      assign_pane_from_index
     end
 
     def show
       @user_id = params[:id].to_s.upcase
       @record = MemberRecord.new(@user_id)
-      @names = Names.for(@record.people_named)
+      load_member_pane
+      @names = Names.for(@record.people_named + @pane_rows.map(&:user_id))
       @member = @names.member(@user_id)
       @only = MemberTimeline::TABS.key?(params[:show]) ? params[:show] : "all"
       @entries = MemberTimeline.for(@record, names: @names)
@@ -26,22 +29,60 @@ module Fd
       @context = MemberContext.for([@user_id])[@user_id]
       @rooms = SlackScan.channels(@user_id)
       @standing = MemberStanding.new(@record)
+      @member_grant = @pane_grants[@user_id] || Authz::Grant.live.roles.find_by(user_id: @user_id)
       render "drawer" if turbo_frame_request_id == "person-drawer"
     end
 
-    def search
-      results = Member.search(params[:q], actor: current_account)
-      log_identity_picker_hits(results) if identity_search?(params[:q])
+    def pane
+      query = MemberQuery.new(params, actor: current_account)
+      rows = query.rows
+      ids = rows.map(&:user_id)
+      @names = Names.for(ids)
+      more = if query.pages > query.page
+        fd_member_pane_path(query.page_params(query.page + 1).merge({ open: params[:open].presence }.compact))
+      end
 
-      found = results.map do |member|
-        { id: member.user_id, name: member.name, handle: member.handle,
-          initial: member.initial, deleted: member.is_deleted }
+      render partial: "fd/members/pane_rows", layout: false, locals: {
+        rows: rows, context: MemberContext.for(ids),
+        grants: Authz::Grant.live.roles.where(user_id: ids).index_by(&:user_id),
+        open_id: params[:open].to_s.presence, more: more
+      }
+    end
+
+    def search
+      term = params[:q].to_s.strip
+      query = MemberQuery.new({ "q" => term }, actor: current_account)
+      results = term.length >= Member::MIN_TERM ? query.rows.first(Member::LIMIT) : []
+      log_identity_picker_hits(results) if identity_search?(term)
+
+      faces = Names.for(results.map(&:user_id))
+      found = results.map do |row|
+        member = faces.member(row.user_id)
+        { id: row.user_id, name: faces[row.user_id], handle: member&.handle.presence,
+          initial: faces.initial(row.user_id), deleted: member&.is_deleted || false }
       end
 
       render json: { members: found }
     end
 
     private
+
+    def assign_pane_from_index
+      @pane_query = @query
+      @pane_rows = @rows
+      @pane_context = @context
+      @pane_grants = @grants
+      @pane_views = @views
+    end
+
+    def load_member_pane
+      @pane_query = MemberQuery.new({}, actor: current_account)
+      @pane_rows = @pane_query.rows
+      user_ids = @pane_rows.map(&:user_id)
+      @pane_context = MemberContext.for(user_ids)
+      @pane_grants = Authz::Grant.live.roles.where(user_id: user_ids).index_by(&:user_id)
+      @pane_views = @pane_query.views
+    end
 
     def log_identity_search
       return unless @query.looked_up_identity?

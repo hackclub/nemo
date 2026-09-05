@@ -33,9 +33,16 @@
             <tr>
               <td class="col-rank"><%= p.rank %></td>
               <td>
-                <span class="two-line">
-                  <b><%= p.display_name.presence || "n/a" %></b>
-                  <span><%= p.user_id %></span>
+                <span class="row-name">
+                  <%= tag.img(src: cachet_face_url(p.user_id), class: "row-avatar", alt: "",
+                        loading: "lazy", width: 22, height: 22,
+                        data: { cachet_face: p.user_id,
+                                cachet_initial: (p.display_name.presence || p.user_id.delete_prefix("U"))[0].upcase,
+                                cachet_tone: avatar_tone(p.user_id) }) %>
+                  <span class="two-line">
+                    <b><%= p.display_name.presence || tag.span("@#{p.user_id}", data: { cachet_name: p.user_id }) %></b>
+                    <span><%= p.user_id %></span>
+                  </span>
                 </span>
               </td>
               <td class="col-num"><%= number_with_delimiter(p.messages_posted) %></td>

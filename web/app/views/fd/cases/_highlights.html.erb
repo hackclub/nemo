@@ -1,0 +1,52 @@
+<% first = reports.min_by(&:received_at) %>
+<% on = threads.find(&:is_primary) || threads.first %>
+<dl class="facts-strip">
+  <div class="fact">
+    <dt>About</dt>
+    <dd class="<%= "is-none" unless subject %>">
+      <% if subject %>
+        <%= slack_face(subject) %><span class="trunc"><%= member_link(subject) %></span>
+      <% else %>
+        nobody named yet
+      <% end %>
+    </dd>
+  </div>
+  <div class="fact">
+    <dt>Violation</dt>
+    <dd class="<%= "is-none" if kase.violations.empty? %>">
+      <span class="trunc"><%= violations_label(kase.violations, short: true) || "not set" %></span>
+    </dd>
+  </div>
+  <div class="fact">
+    <dt>Where</dt>
+    <dd class="<%= "is-none" if on.nil? || !channels.named?(on.channel_id) %>">
+      <% if on && channels.named?(on.channel_id) %>
+        <span class="trunc"><%= channel_link(on.channel_id) %></span>
+      <% else %>
+        n/a
+      <% end %>
+    </dd>
+  </div>
+  <div class="fact">
+    <dt>Opened</dt>
+    <dd><%= on_day(kase.opened_at) %></dd>
+  </div>
+  <div class="fact">
+    <dt>Reported by</dt>
+    <dd class="<%= "is-none" if first.nil? %>">
+      <% if first.nil? %>
+        nobody
+      <% elsif first.anonymous? %>
+        Anonymous
+      <% else %>
+        <%= slack_face(first.reporter_user_id) %><span class="trunc"><%= member_link(first.reporter_user_id) %></span>
+      <% end %>
+    </dd>
+  </div>
+  <div class="fact">
+    <dt>Actions</dt>
+    <dd class="<%= "is-none" if actions.empty? %>">
+      <%= actions.any? ? pluralize(actions.size, "action") : "none logged" %>
+    </dd>
+  </div>
+</dl>

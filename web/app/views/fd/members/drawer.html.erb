@@ -1,7 +1,7 @@
 <turbo-frame id="person-drawer" data-controller="person-drawer">
   <div class="person-modal" role="dialog" aria-label="<%= names[@user_id] %>">
     <div class="pm-head">
-      <b><%= names[@user_id] %></b>
+      <b><%= person_name(@user_id) %></b>
       <button type="button" class="pm-x" aria-label="Close"
               data-action="click->person-drawer#close">&#10005;</button>
     </div>
@@ -10,7 +10,7 @@
       <div class="who">
         <%= face(@user_id, css: "row-avatar av-lg") %>
         <span class="two-line">
-          <b><%= names[@user_id] %></b>
+          <b><%= person_name(@user_id) %></b>
           <span>
             <%= @context&.cohort_at ? "here since #{on_day(@context.cohort_at)}" : "join date unknown" %>
             <% if @context&.messages_posted %>

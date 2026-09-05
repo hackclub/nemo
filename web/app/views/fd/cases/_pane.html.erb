@@ -1,0 +1,72 @@
+<section class="pane" aria-label="Case queue" data-controller="pane-filter">
+  <div class="pane-head">
+    <nav class="views" aria-label="Case views">
+      <% views.select { |view| Fd::CaseQuery::TABS.include?(view.key) }.each do |view| %>
+        <%= link_to fd_cases_path(view: view.key), class: "view",
+              aria: { current: ("true" if view.current) } do %>
+          <%= view.label %>
+          <span class="view-count"><%= view.count %></span>
+        <% end %>
+      <% end %>
+    </nav>
+    <div class="qtools">
+      <label class="vh" for="pane-case-filter">Filter the queue</label>
+      <input class="input input-sm grow" id="pane-case-filter" type="search"
+             autocomplete="off" placeholder="Filter by number, handle, or words"
+             data-pane-filter-target="query" data-action="input->pane-filter#filter">
+      <%= link_to "Table", fd_cases_path(query.to_params.merge(layout: "table")),
+            class: "btn btn-ghost btn-sm", title: "Open the full case table" %>
+    </div>
+    <% if query.view.nil? %>
+      <div class="pane-filt">
+        <span class="trunc"><%= query.title %></span>
+        <%= link_to "Clear", fd_cases_path, class: "lnk" %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="pane-list" data-pane-filter-target="list">
+    <% if cases.any? %>
+      <div role="listbox" aria-label="Cases">
+        <% cases.each do |kase| %>
+          <% said = violations_label(violations[kase.id] || [kase.category_key].compact, short: true) %>
+          <% priors = case_priors(kase, priors_by_user) %>
+          <%= link_to fd_case_path(kase, query.to_params), class: "qrow", role: "option",
+                aria: { selected: (open_id == kase.id).to_s },
+                data: { pane_filter_target: "row", action: "click->pane#hide" } do %>
+            <span class="qtop">
+              <span class="qid">#<%= kase.id %></span>
+              <span class="qcat trunc"><%= said || "no violation set" %></span>
+              <span class="qage <%= age_ink(case_age_seconds(kase)) unless kase.resolved? %>">
+                <%= kase.resolved? ? "closed" : case_age_label(case_age_seconds(kase)) %>
+              </span>
+            </span>
+
+            <% gist = case_first_report(kase)&.body.presence %>
+            <span class="qsubj"><%= gist || "no report on file" %></span>
+
+            <span class="qmeta">
+              <%= case_state_chip(kase, reachable: local_assigns[:reachable]) %>
+              <% if priors.positive? %>
+                <span class="chip chip-warn"><%= pluralize(priors, "prior") %></span>
+              <% end %>
+              <% if kase.assigned? %>
+                <span class="faces">
+                  <%= safe_join(kase.assignee_user_ids.map { |id| face(id) }) %>
+                </span>
+              <% end %>
+            </span>
+          <% end %>
+        <% end %>
+      </div>
+      <div class="empty pane-filter-empty" data-pane-filter-target="empty" hidden>
+        <p class="empty-title">No case matches that filter</p>
+        <p>Try a case number, handle, or phrase from the report.</p>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title"><%= query.empty_note %></p>
+      </div>
+    <% end %>
+  </div>
+</section>

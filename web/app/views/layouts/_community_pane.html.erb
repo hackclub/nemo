@@ -1,0 +1,48 @@
+<nav class="pane cpane" aria-label="Community contents">
+  <div class="cnav-head">
+    <b>Community</b>
+    <span>Hack Club Slack</span>
+  </div>
+
+  <div class="cnav">
+    <% if may_community?("analytics.workspace.read") %>
+      <p class="cnav-lab">The journey</p>
+      <div class="cnav-group stepped">
+        <%= link_to root_path, aria: { current: ("page" if current_page?(root_path)) } do %>
+          <i class="knot"></i><span class="trunc">Overview</span>
+        <% end %>
+        <% journey_stages.each do |label, stage| %>
+          <% path = public_send(:"#{stage}_journey_path") %>
+          <%= link_to path, aria: { current: ("page" if current_page?(path)) } do %>
+            <i class="knot"></i><span class="trunc"><%= label %></span>
+          <% end %>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="cnav-group">
+        <%= link_to root_path, aria: { current: ("page" if current_page?(root_path)) } do %>
+          <i class="knot"></i><span class="trunc">Overview</span>
+        <% end %>
+      </div>
+    <% end %>
+
+    <p class="cnav-lab">Places</p>
+    <div class="cnav-group">
+      <%= link_to channels_path, aria: { current: ("page" if controller_name == "channels") } do %>
+        <svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5 9h14M5 15h14M10 3 8 21M16 3l-2 18"/></svg>
+        <span>Channels</span>
+      <% end %>
+    </div>
+
+    <% if may_community?("ops.engine") %>
+      <p class="cnav-lab">Data</p>
+      <div class="cnav-group">
+        <%= link_to engine_path do %>
+          <svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M20 14a8 8 0 1 0-16 0"/><path d="m15 10-3.4 3.4"/></svg>
+          <span>Nightly sync</span>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+</nav>

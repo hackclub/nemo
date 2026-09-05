@@ -1,193 +1,171 @@
-<% content_for :page_title, names[@user_id] %>
-<% content_for :page_face do %>
-  <span class="crumb"><%= link_to "Members", fd_members_path %> /</span>
+<% raw_handle = @member&.handle.presence || @user_id %>
+<% member_handle = raw_handle.start_with?("@") ? raw_handle : "@#{raw_handle}" %>
+<% member_name = @member&.display_name.presence || names[@user_id] %>
+<% may_note = current_account.may?("member.note") %>
+
+<% content_for :page_title, (names.unknown?(@user_id) ? person_name(@user_id) : member_handle) %>
+<% content_for :page_face do %><%= face(@user_id) %><% end %>
+<% if member_name.present? && member_name.delete_prefix("@") != member_handle.delete_prefix("@") %>
+  <% content_for :head_context do %>
+    <span class="triad-sep">&middot;</span>
+    <span class="triad-who"><%= member_name %></span>
+  <% end %>
 <% end %>
 <% content_for :head_actions do %>
-  <%= link_to "Open a case", fd_cases_path(subject_user_id: @user_id, open: "1"),
-        class: "btn btn-primary" %>
-  <details class="menu" data-controller="menu">
-    <summary class="btn btn-only" aria-label="More actions">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
-    </summary>
-    <div class="menu-pop">
-      <%= link_to menu_item("cases", "Their cases"), fd_cases_path(subject: @user_id),
-            class: "btn" %>
-      <%= link_to menu_item("external", "Open in Slack"), slack_member_url(@user_id),
-            class: "btn", target: "_blank", rel: "noopener" %>
-    </div>
-  </details>
+  <%= link_to case_action_button("external", "Slack"), slack_member_url(@user_id),
+        class: "btn btn-ghost", target: "_blank", rel: "noopener" %>
+  <% if may_note %>
+    <button type="button" class="btn" data-modal-open="member-note" aria-haspopup="dialog">
+      <%= case_action_button("note", "Write a note") %>
+    </button>
+  <% end %>
+  <%= link_to case_action_button("plus", "Open a case"),
+        fd_cases_path(subject_user_id: @user_id, open: "1"), class: "btn btn-primary" %>
 <% end %>
+<% content_for :pane do %>
+  <%= render "pane", rows: @pane_rows, views: @pane_views, query: @pane_query,
+        context: @pane_context, grants: @pane_grants, open_id: @user_id %>
+<% end %>
+<% content_for :flush, true %>
 
-<div class="cols c-2">
-  <div>
-    <% show_write = current_account.may?("member.note") && @only == "notes" %>
+<div class="stack member-record">
+  <dl class="facts-strip member-facts">
+    <div class="fact">
+      <dt>Slack ID</dt>
+      <dd class="mono"><%= @user_id %></dd>
+    </div>
+    <div class="fact">
+      <dt>Email</dt>
+      <dd class="<%= "is-none" unless @identity&.email.present? && !@identity.refused? && !@identity.purged? %>"><%= identity_line(@identity) %></dd>
+    </div>
+    <div class="fact">
+      <dt>Here since</dt>
+      <dd class="<%= "is-none" unless @context&.cohort_at %>"><%= here_since(@context) %></dd>
+    </div>
+    <div class="fact">
+      <dt>Messages</dt>
+      <dd class="<%= "is-none" unless @context&.messages_posted %>"><%= fact_number(@context&.messages_posted) %></dd>
+    </div>
+    <div class="fact">
+      <dt>Cases</dt>
+      <dd class="<%= "is-none" if @standing.cases_named.zero? %>"><%= @standing.cases_named.zero? ? "none" : @standing.cases_named %></dd>
+    </div>
+    <div class="fact">
+      <dt>Actions</dt>
+      <dd class="<%= "is-none" if @standing.actions.zero? %>"><%= @standing.actions.zero? ? "none" : @standing.actions %></dd>
+    </div>
+  </dl>
 
+  <div class="member-record-content">
     <% if @standing.in_force.any? %>
       <div class="standing">
         <p class="standing-t">In force now</p>
         <% @standing.in_force.each do |action| %>
           <div class="standing-row">
+            <span class="evdot crit"><%= case_action_icon("gauge") %></span>
             <span class="grow standing-line"><%= in_force_line(action, names) %></span>
-            <%= link_to "Reverse it", fd_case_path(action.case_id, tab: "actions"),
-                  class: "btn" %>
-            <%= link_to "Open case #{action.case_id}", fd_case_path(action.case_id),
-                  class: "btn btn-ghost" %>
+            <%= link_to "Reverse it", fd_case_path(action.case_id, tab: "actions"), class: "btn" %>
+            <%= link_to "Open case ##{action.case_id}", fd_case_path(action.case_id), class: "btn btn-ghost" %>
           </div>
         <% end %>
       </div>
     <% end %>
 
-  <div class="panel">
-    <div class="panel-head">
-      <span class="segmented">
-        <% Fd::MemberTimeline::KINDS.each do |key, label| %>
-          <%= member_tab_link(@user_id, key, label, @counts.fetch(key, 0)) %>
-        <% end %>
-      </span>
-      <span class="grow"></span>
-      <% if current_account.may?("member.note") && !show_write %>
-        <%= link_to "Write a note", fd_member_path(@user_id, show: "notes"), class: "btn" %>
-      <% end %>
-    </div>
-
-    <% if @history.any? %>
-      <div class="record-list">
-        <% history_by_month(@history).each do |month, entries| %>
-          <p class="record-month"><%= month.strftime("%B %Y") %></p>
-          <% entries.each do |entry| %>
-            <div class="record-row">
-              <span class="record-when">
-                <span class="record-day"><%= entry.at.strftime("%-d %b") %></span>
-                <%= history_word_chip(entry) %>
+    <% if @record.subject_cases.any? %>
+      <section class="member-section">
+        <h2 class="member-section-title">Cases</h2>
+        <div class="list member-case-list">
+          <% @record.subject_cases.reverse_each do |kase| %>
+            <div class="lrow">
+              <span class="evdot <%= kase.resolved? ? "good" : "crit" %>"><%= case_action_icon("shield") %></span>
+              <span class="grow">
+                <b>#<%= kase.id %> <%= kase.category_key ? category_label(kase.category_key) : "No violation set" %></b>
+                <span class="sub"><%= case_first_report(kase)&.body.presence || (kase.resolved? ? "resolved" : "open case") %></span>
               </span>
-              <span class="record-what">
-                <% if entry.case_id %>
-                  <b><%= link_to entry.title, fd_case_path(entry.case_id) %></b>
-                <% else %>
-                  <b><%= entry.title %></b>
-                <% end %>
-                <% if entry.said.present? %>
-                  <span class="record-said"><%= mentioned(entry.said) %></span>
-                <% else %>
-                  <% under = [entry.state, entry.detail].reject(&:blank?).join(" · ") %>
-                  <% if under.present? %><span class="record-said"><%= under %></span><% end %>
-                <% end %>
-                <span class="record-by">
-                  <%= entry.who ? member_link(entry.who) : "n/a" %>
-                  <% if entry.ref.is_a?(Fd::Note) %>
-                    <%= render "note_remove", user_id: @user_id, note: entry.ref %>
-                  <% end %>
-                </span>
-              </span>
+              <span class="lrow-right"><%= link_to "Open", fd_case_path(kase), class: "btn" %></span>
             </div>
           <% end %>
-        <% end %>
-      </div>
-    <% else %>
-      <div class="empty">
-        <p class="empty-title"><%= history_empty_note(@only) %></p>
-      </div>
+        </div>
+      </section>
     <% end %>
 
-    <% if show_write %>
-      <div class="panel-foot">
-        <%= field_wrong(:body) %>
-        <%= form_with url: fd_member_notes_path(@user_id), method: :post,
-              class: "note-composer", html: { autocomplete: "off" } do %>
-          <div class="mention-field" data-controller="mention"
-               data-mention-send-value="true"
-               data-mention-url-value="<%= fd_member_search_path %>">
-            <%= text_area_tag :body, field_was(:body), rows: 1, class: "note-input", id: nil,
-                  maxlength: Fd::NotesController::MAX_LENGTH,
-                  placeholder: "Write a note about #{names[@user_id]}, Enter saves it",
-                  data: { mention_target: "field", action: "input->mention#type " \
-                          "keydown->mention#keys" } %>
-            <div class="menu-pop pick-pop mention-pop" hidden data-mention-target="results"></div>
-          </div>
-          <button type="submit" class="chat-send" aria-label="Save the note">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+    <section class="member-section member-history-section">
+      <div class="member-section-head">
+        <h2 class="member-section-title">History</h2>
+        <% if may_note %>
+          <button type="button" class="btn" data-modal-open="member-note" aria-haspopup="dialog">
+            <%= case_action_button("note", "Write a note") %>
           </button>
         <% end %>
       </div>
-    <% end %>
-  </div>
-  </div>
 
-  <div class="facts">
-    <p class="facts-h">Member facts</p>
+      <nav class="views member-record-tabs" aria-label="Member history">
+        <% Fd::MemberTimeline::KINDS.each do |key, label| %>
+          <%= member_tab_link(@user_id, key, label, @counts.fetch(key, 0)) %>
+        <% end %>
+      </nav>
 
-    <div class="fcard">
-      <div class="fcard-who">
-        <%= face(@user_id) %>
-        <span class="two-line">
-          <b><%= names[@user_id] %></b>
-          <span><%= identity_line(@identity) %></span>
-        </span>
-      </div>
-
-      <div class="fstats">
-        <div class="fstat">
-          <span class="fstat-n <%= "is-none" if @standing.cases_named.zero? %>">
-            <%= @standing.cases_named %>
-          </span>
-          <span class="fstat-k"><%= "case".pluralize(@standing.cases_named) %></span>
-        </div>
-        <div class="fstat">
-          <span class="fstat-n <%= "is-none" if @standing.actions.zero? %>">
-            <%= @standing.actions %>
-          </span>
-          <span class="fstat-k"><%= "action".pluralize(@standing.actions) %></span>
-        </div>
-        <div class="fstat">
-          <span class="fstat-n <%= "is-none" if @standing.in_force.empty? %>">
-            <%= @standing.in_force.size %>
-          </span>
-          <span class="fstat-k">in force</span>
-        </div>
-      </div>
-
-      <div class="frows">
-        <div class="frow">
-          <span>Here since</span>
-          <b class="<%= "is-none" unless @context&.cohort_at %>">
-            <%= here_since(@context) %>
-          </b>
-        </div>
-        <div class="frow">
-          <span>Messages</span>
-          <b class="<%= "is-none" unless @context&.messages_posted %>">
-            <%= fact_number(@context&.messages_posted) %>
-          </b>
-        </div>
-        <div class="frow">
-          <span>Channels</span>
-          <% if @rooms.any? %>
-            <details class="menu rooms-menu" data-controller="menu">
-              <summary class="rooms-count"><%= number_with_delimiter(@rooms.size) %></summary>
-              <div class="menu-pop menu-end rooms-pop">
-                <% @rooms.sort_by { |room| [room.private ? 1 : 0, room.name] }.each do |room| %>
-                  <% if !room.private && may_open_channel?(room.channel_id) %>
-                    <%= link_to "##{room.name}", channel_path(room.channel_id), class: "rooms-row" %>
-                  <% else %>
-                    <span class="rooms-row">
-                      #<%= room.name %>
-                      <% if room.private %><span class="rooms-shut">private</span><% end %>
+      <% if @history.any? %>
+        <div class="member-timeline">
+          <% history_by_month(@history).each do |month, entries| %>
+            <p class="record-month"><%= month.strftime("%B %Y") %></p>
+            <div class="list">
+              <% entries.each do |entry| %>
+                <% event_icon = entry.kind == "cases" ? "shield" : entry.kind == "actions" ? "gauge" : "note" %>
+                <% event_tone = entry.word == "reversal" ? "good" : entry.kind == "actions" ? "warn" : entry.state == "open" ? "crit" : "" %>
+                <div class="evrow">
+                  <span class="evdot <%= event_tone %>"><%= case_action_icon(event_icon) %></span>
+                  <div>
+                    <div class="member-event-head">
+                      <% if entry.case_id %>
+                        <b><%= link_to entry.title, fd_case_path(entry.case_id) %></b>
+                      <% else %>
+                        <b><%= entry.title %></b>
+                      <% end %>
+                      <span class="evwhen"><%= entry.at.strftime("%-d %b") %></span>
+                    </div>
+                    <% if entry.said.present? %>
+                      <p class="member-event-said"><%= mentioned(entry.said) %></p>
+                    <% else %>
+                      <% under = [entry.state, entry.detail].reject(&:blank?).join(" · ") %>
+                      <% if under.present? %><p class="member-event-said"><%= under %></p><% end %>
+                    <% end %>
+                    <span class="member-event-by">
+                      <%= entry.who ? member_link(entry.who) : "n/a" %>
+                      <% if entry.ref.is_a?(Fd::Note) %>
+                        <%= render "note_remove", user_id: @user_id, note: entry.ref %>
+                      <% end %>
                     </span>
-                  <% end %>
-                <% end %>
-              </div>
-            </details>
-          <% else %>
-            <b class="is-none">n/a</b>
+                  </div>
+                </div>
+              <% end %>
+            </div>
           <% end %>
         </div>
-        <div class="frow">
-          <span>Standing notes</span>
-          <b class="<%= "is-none" if @record.notes.empty? %>">
-            <%= @record.notes.empty? ? "none" : @record.notes.size %>
-          </b>
-        </div>
-      </div>
-    </div>
+      <% else %>
+        <div class="empty"><p class="empty-title"><%= history_empty_note(@only) %></p></div>
+      <% end %>
+
+    </section>
   </div>
 </div>
+
+<% if may_note %>
+  <%= render layout: "fd/modal", locals: { id: "member-note", title: "Write a note",
+        sub: names[@user_id], open: field_was(:body).present? } do %>
+    <%= form_with url: fd_member_notes_path(@user_id), method: :post, html: { autocomplete: "off" } do %>
+      <div class="modal-body">
+        <label class="field-label">
+          The note
+          <%= render "fd/mention_field", name: :body, value: field_was(:body), rows: 4,
+                placeholder: "type @ to name somebody" %>
+        </label>
+        <%= field_wrong(:body) %>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+        <%= submit_tag "Save the note", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

@@ -57,7 +57,6 @@
             <%= hidden_field_tag :assign_to_me, "0", id: nil %>
             <%= check_box_tag :assign_to_me, "1", params.fetch(:assign_to_me, "1") == "1",
                   class: "tick" %>
-            <span class="opt-dot" aria-hidden="true"></span>
             <span>
               <span class="opt-label">Assign it to me</span>
             </span>

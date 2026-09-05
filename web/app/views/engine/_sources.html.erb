@@ -6,7 +6,7 @@
     </div>
   </div>
 
-  <div class="lhead">
+  <div class="source-head">
     <div>Source</div>
     <div>Cadence</div>
     <div>Window</div>
@@ -26,7 +26,7 @@
     <% state = row.state == "live" ? "live" : "stale" %>
     <% is_open = open == source.key %>
     <%= link_to engine_path(tab: "sources", open: (source.key unless is_open)),
-          class: "lrow", aria: { expanded: is_open.to_s } do %>
+          class: "source-row", aria: { expanded: is_open.to_s } do %>
       <div class="skey"><i class="dot <%= state %>"></i><b><%= source.key %></b></div>
       <div style="font-size: 12px"><%= Engine::Setting.value(source.key, Engine::Setting::CADENCE) %></div>
       <div class="sub mono" style="font-size: 11.5px"><%= source.window %></div>

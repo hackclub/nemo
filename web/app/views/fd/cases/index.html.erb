@@ -1,8 +1,19 @@
 <% content_for :page_title, "Cases" %>
+<% split = @layout == "queue" %>
+<% if split %>
+  <% content_for :pane_default, params[:open].present? ? "main" : "pane" %>
+  <% content_for :pane do %>
+    <%= render "pane", cases: @pane_cases, views: @pane_views, query: @pane_query,
+          priors_by_user: @pane_priors, violations: @pane_violations, open_id: nil,
+          reachable: @pane_reachable %>
+  <% end %>
+<% end %>
 <% content_for :head_actions do %>
   <span class="segmented">
-    <%= link_to "Queue", fd_cases_path(request.query_parameters.except("layout")),
-          aria: { current: ("true" unless @layout == "board") } %>
+    <%= link_to "Split", fd_cases_path(request.query_parameters.except("layout")),
+          aria: { current: ("true" if split) } %>
+    <%= link_to "Table", fd_cases_path(request.query_parameters.merge(layout: "table")),
+          aria: { current: ("true" if @layout == "table") } %>
     <%= link_to "Board", fd_cases_path(request.query_parameters.merge(layout: "board")),
           aria: { current: ("true" if @layout == "board") } %>
   </span>
@@ -12,6 +23,18 @@
 <% tabs, pill_views = @views.partition { |view| Fd::CaseQuery::TABS.include?(view.key) } %>
 <% pinned, tucked = pill_views.partition { |view| Fd::CaseQuery::PINNED_PILLS.include?(view.key) } %>
 
+<% if split %>
+  <div class="empty">
+    <span class="empty-mark">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h4l1.5 3h5L16 13h4"/><path d="M5.4 5h13.2l1.4 8v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4z"/></svg>
+    </span>
+    <p class="empty-title">No case open</p>
+    <p class="card-note">
+      <%= pluralize(@stats.open_count, "case") %> open,
+      <%= @stats.unassigned %> with nobody on them.
+    </p>
+  </div>
+<% else %>
 <div class="stack" data-controller="merge"
      data-merge-url-value="<%= fd_confirm_merge_cases_path %>">
   <turbo-frame id="queue" target="_top" data-turbo-action="advance">
@@ -67,7 +90,8 @@
 
   <% if @cases.any? { |kase| !kase.resolved? } %>
     <%= form_with url: fd_confirm_merge_cases_path, method: :get, id: "merge-form",
-          class: "bulk", data: { action: "submit->merge#confirm" } do %>
+          class: "bulk", html: { hidden: true },
+          data: { action: "submit->merge#confirm", merge_target: "bar" } do %>
       <% @query.to_params.each do |key, value| %>
         <%= hidden_field_tag key, value, id: nil %>
       <% end %>
@@ -81,6 +105,8 @@
   <% end %>
   </turbo-frame>
 </div>
+
+<% end %>
 
 <%= render "open_case_modal" %>
 <%= render "merge_modal", kase: nil %>

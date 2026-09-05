@@ -1,10 +1,12 @@
 module Fd
   class CasesController < BaseController
     permit "case.read", only: [:index, :show]
+
+    before_action :load_pane, only: [:index, :show]
     permit "case.open", only: :create
     permit "case.categorise", on: -> { Case.find(params[:id]) }, only: :update
 
-    TABS = %w[report evidence actions notes people].freeze
+    TABS = %w[report people evidence actions notes timeline].freeze
     PER_PAGE = 50
 
     def index
@@ -28,6 +30,7 @@ module Fd
       @duplicate_candidates = Case.candidates_for(@case, @siblings)
       @notes = Note.where(case_id: family).visible.recent_first.to_a
       @conversations = IntakeConversation.for_case(family).to_a
+      @reachable = @conversations.reject(&:closed?).map(&:report_id).to_set
       @thread = chosen_thread(@reports)
       @thread_conversation = @conversations.find { |one| one.report_id == @thread&.id }
       @conversation_said = IntakeMessage.tail([@thread_conversation&.id].compact)
@@ -80,10 +83,12 @@ module Fd
       )
       @tab = params[:tab].presence_in(TABS) || (@case.resolved? ? "actions" : "report")
       @tab_counts = {
+        "report" => @reports.size,
         "evidence" => @thread_messages.size.positive? ? @thread_messages.size : @thread_list.size,
         "actions" => @actions.size,
         "notes" => @notes.size,
-        "people" => @participants.size
+        "people" => @participants.size,
+        "timeline" => @timeline.size
       }
       @flags = CaseFlags.for_case(@case, names: @names)
       @subject = @case.subject_user_ids.first
@@ -244,6 +249,26 @@ module Fd
       render :index, status: :unprocessable_content
     end
 
+    PANE_LIMIT = 60
+
+    def load_pane
+      asked = params[:view].presence || (action_name == "show" ? "attention" : nil)
+      @pane_query = CaseQuery.new(params.merge(view: asked), viewer: current_account&.user_id)
+      @pane_views = @pane_query.views
+      @pane_params = @pane_query.to_params
+      @pane_cases = @pane_query.relation
+        .includes(:subjects, :assignees, :reports, :actions)
+        .limit(PANE_LIMIT).to_a
+      @pane_priors = Case.prior_counts_for(@pane_cases.flat_map(&:subject_user_ids))
+      @pane_violations = Case.violations_for(@pane_cases.map(&:id))
+      @pane_reachable = IntakeConversation.open_ones
+        .where(report_id: @pane_cases.flat_map { |kase| kase.reports.map(&:id) })
+        .pluck(:report_id).to_set
+      @pane_names = Names.for(@pane_cases.flat_map { |kase|
+        kase.subject_user_ids + kase.assignee_user_ids
+      })
+    end
+
     def load_queue
       @query = CaseQuery.new(params, viewer: current_account&.user_id)
       @page = [params[:page].to_i, 1].max
@@ -264,7 +289,7 @@ module Fd
       @channels = ChannelNames.for(@thread_channels.values.flatten)
       @stats = QueueStats.load
       @total_count = @stats.total
-      @layout = params[:layout] == "board" ? "board" : "queue"
+      @layout = %w[board table].include?(params[:layout]) ? params[:layout] : "queue"
       @views = @query.views
       @subject_preset = preset_for(asked_subjects)
       @names = Names.for(@cases.flat_map { |kase|
