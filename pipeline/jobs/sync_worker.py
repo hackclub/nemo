@@ -7,10 +7,12 @@ from datetime import datetime, timedelta
 import psycopg
 from dotenv import load_dotenv
 
-from jobs.nightly_sync import ENV_FILE, TRUTHY, run_sync, stage_plan
+from jobs.nightly_sync import ENV_FILE, TRUTHY, credential_faults, run_sync, stage_plan
 from lib import settings
 from lib.heartbeat import beating
+from lib.proxy_client import ProxyClient
 from lib.db import (
+    beat,
     set_worker,
     STALE_AFTER_HOURS,
     SeededDeployment,
@@ -183,6 +185,37 @@ WORKER = "sync_worker"
 
 set_worker(WORKER)
 
+PROXY_WORKER = "proxy"
+VERIFY_EVERY_SECONDS = 300
+
+
+def proxy_note():
+    try:
+        report = ProxyClient().verify()
+    except Exception as exc:
+        return f"FAILED unreachable, {type(exc).__name__}: {exc}"[:240]
+    faults = credential_faults(report)
+    if faults:
+        return "FAILED " + "; ".join(faults)
+    who = ", ".join(
+        f"{name} {state.get('user')}" for name, state in (report.get("credentials") or {}).items()
+    )
+    return f"ok, {who}"
+
+
+def probe_proxy(last_at):
+    if time.monotonic() - last_at < VERIFY_EVERY_SECONDS:
+        return last_at
+    note = proxy_note()
+    try:
+        with connect() as conn:
+            beat(conn, PROXY_WORKER, note)
+    except Exception as exc:
+        print(f"sync worker: proxy probe could not be recorded, {type(exc).__name__}: {exc}")
+    if note.startswith("FAILED"):
+        print(f"sync worker: proxy {note}")
+    return time.monotonic()
+
 
 def waiting_note(scheduled):
     return f"next scheduled run at {scheduled:%Y-%m-%dT%H:%M}"
@@ -216,6 +249,7 @@ def main():
     waiting = listener()
     reap()
     state = {"note": waiting_note(scheduled)}
+    probed = 0.0
 
     with beating(WORKER, lambda: state["note"], every=BEAT_SECONDS):
         if run_at_start_enabled():
@@ -225,6 +259,7 @@ def main():
             print(f"sync worker: next scheduled run at {scheduled:%Y-%m-%dT%H:%M}")
 
         while True:
+            probed = probe_proxy(probed)
             state["note"] = waiting_note(scheduled)
             if datetime.now() >= scheduled:
                 state["note"] = "scheduled run"

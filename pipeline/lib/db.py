@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 import psycopg
 
-from lib import faults, sources
+from lib import faults, settings, sources
 
 STALE_AFTER_HOURS = 6
 RUN_SUSPECT_SECONDS = 300
@@ -131,39 +131,6 @@ def refuse_if_seeded(conn: psycopg.Connection) -> None:
         )
 
 
-def _mirrored(conn: psycopg.Connection, sql: str, params: tuple) -> None:
-    try:
-        with conn.transaction():
-            with conn.cursor() as cur:
-                cur.execute(sql, params)
-    except psycopg.Error:
-        pass
-
-
-MIRROR_RUN_SQL = """
-INSERT INTO ingest.sync_run (logical_date, trigger, legacy_run_id)
-VALUES (current_date, %s, %s)
-"""
-
-MIRROR_TASK_SQL = """
-INSERT INTO ingest.sync_task (run_id, recipe_key, idempotency_key)
-VALUES ((SELECT run_id FROM ingest.sync_run WHERE legacy_run_id = %s), %s, %s)
-ON CONFLICT (idempotency_key, attempt) DO NOTHING
-"""
-
-MIRROR_FINISH_SQL = """
-UPDATE ingest.sync_task
-SET status = %s, rows_in = %s, rows_rejected = %s, finished_at = clock_timestamp()
-WHERE idempotency_key = %s
-"""
-
-MIRROR_RUN_FINISH_SQL = """
-UPDATE ingest.sync_run
-SET status = %s, finished_at = clock_timestamp()
-WHERE legacy_run_id = %s
-"""
-
-
 START_RUN_SQL = """
 INSERT INTO raw.ingest_run
     (source, started_at, parent_run_id, step_index, step_total,
@@ -190,7 +157,7 @@ def start_run(
     if parent_run_id is None:
         for stale_id, stale_source in sweep_stale_runs(conn):
             print(f"abandoned stale run {stale_id} ({stale_source})")
-        for dead_id, dead_source in suspect_dead_runs(conn):
+        for dead_id, dead_source in suspect_dead_runs(conn, reclaim_seconds=settings.reclaim_seconds(conn)):
             print(f"run {dead_id} ({dead_source}) has no heartbeat behind it")
     source_key = sources.key_for_run(source)
     with conn.cursor() as cur:
@@ -201,11 +168,6 @@ def start_run(
             "parser_version": sources.parser_version(source_key),
         })
         run_id = cur.fetchone()[0]
-
-    if parent_run_id is None:
-        _mirrored(conn, MIRROR_RUN_SQL, (source, run_id))
-    _mirrored(conn, MIRROR_TASK_SQL,
-        (parent_run_id if parent_run_id is not None else run_id, source, f"legacy:{run_id}"))
     return run_id
 
 
@@ -219,14 +181,15 @@ def finish_run(
             UPDATE raw.ingest_run
             SET finished_at = clock_timestamp(), status = %s, rows_in = %s, rows_rejected = %s,
                 error_class = %s, error_detail = %s
-            WHERE id = %s AND status IN ('running', 'abandoned')
+            WHERE id = %s
+              AND (status = 'running'
+                   OR (status = 'abandoned' AND worker = %s AND worker_boot = %s::uuid))
             """,
-            (status, rows_in, rows_rejected, error_class, error_detail, run_id),
+            (status, rows_in, rows_rejected, error_class, error_detail, run_id, worker(), WORKER_BOOT),
         )
         if cur.rowcount == 0:
-            print(f"finish_run: run {run_id} was not running or abandoned, its status was left alone")
-    _mirrored(conn, MIRROR_FINISH_SQL, (status, rows_in, rows_rejected, f"legacy:{run_id}"))
-    _mirrored(conn, MIRROR_RUN_FINISH_SQL, (status, run_id))
+            print(f"finish_run: run {run_id} was not running or was reclaimed by another owner, "
+                  "its status was left alone")
 
 
 CLEAN_OUTCOMES = frozenset({"ok", "partial"})
@@ -330,8 +293,21 @@ WHERE worker = %s AND beat_at >= now() - make_interval(secs => %s)
 """
 
 
+RECLAIM_SQL = """
+UPDATE raw.ingest_run
+SET status = 'abandoned',
+    finished_at = suspected_dead_at + make_interval(secs => %s),
+    error_class = 'local',
+    error_detail = 'reclaimed, the worker stopped beating'
+WHERE status = 'running'
+  AND suspected_dead_at IS NOT NULL
+  AND suspected_dead_at < now() - make_interval(secs => %s)
+RETURNING id, source
+"""
+
+
 def suspect_dead_runs(
-    conn: psycopg.Connection, after_seconds: int = RUN_SUSPECT_SECONDS
+    conn: psycopg.Connection, after_seconds: int = RUN_SUSPECT_SECONDS, reclaim_seconds=None
 ) -> list[tuple[int, str]]:
     with conn.cursor() as cur:
         cur.execute(MY_BEAT_IS_FRESH_SQL, (worker(), after_seconds))
@@ -340,6 +316,10 @@ def suspect_dead_runs(
         cur.execute(REVIVE_SQL, (after_seconds,))
         cur.execute(SUSPECT_SQL, (after_seconds,))
         suspected = cur.fetchall()
+        if reclaim_seconds is not None:
+            cur.execute(RECLAIM_SQL, (reclaim_seconds, reclaim_seconds))
+            for dead_id, dead_source in cur.fetchall():
+                print(f"reclaimed run {dead_id} ({dead_source}), no heartbeat for {reclaim_seconds}s")
     conn.commit()
     return suspected
 

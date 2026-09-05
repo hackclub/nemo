@@ -491,7 +491,7 @@ def verdict(name, ours, theirs, tolerance):
     return "differs", delta
 
 
-def run(only=None, tolerance=TOLERANCE, cross_only=False):
+def collect(only=None, tolerance=TOLERANCE, cross_only=False):
     load_dotenv(ENV_FILE)
     client = None if cross_only else ProxyClient()
     results = []
@@ -536,7 +536,41 @@ def run(only=None, tolerance=TOLERANCE, cross_only=False):
             graded.append((name, kind, source, ours, theirs, state, delta))
         else:
             graded.append(row)
-    results = graded
+    return graded, skipped
+
+
+STATUS_OF = {"ok": "pass", "known": "pass", "differs": "fail", "stale": "fail", "error": "fail",
+             "no data": "warn", "no record": "warn"}
+
+RECORD_SQL = """
+INSERT INTO ingest.quality_result (run_id, subject, assertion, severity, status, observed, expected)
+VALUES (%s, 'headline', %s, %s, %s, %s, %s)
+"""
+
+
+def shown(value):
+    if value is None:
+        return None
+    return f"{value:,.2f}" if isinstance(value, float) else str(value)
+
+
+def record_verdicts(conn, run_id, results):
+    with conn.cursor() as cur:
+        for name, kind, source, ours, theirs, state, delta in results:
+            status = STATUS_OF.get(state, "warn")
+            severity = "info" if status == "pass" else ("error" if status == "fail" else "warn")
+            observed = shown(ours) if delta is None else f"{shown(ours)} ({delta * 100:+.2f}%)"
+            cur.execute(RECORD_SQL, (run_id, f"{kind}:{name}", severity, status, observed,
+                                     f"{shown(theirs)} from {source}"))
+    conn.commit()
+    return len(results)
+
+
+def run(only=None, tolerance=TOLERANCE, cross_only=False, record=False, run_id=None):
+    results, skipped = collect(only, tolerance, cross_only)
+    if record:
+        with connect() as conn:
+            record_verdicts(conn, run_id, results)
 
     width = max(len(r[0]) for r in results)
     print(f"{'headline':<{width}}  {'kind':<6}{'ours':>14}{'second source':>16}{'delta':>9}  state")
@@ -568,8 +602,10 @@ def main():
     parser.add_argument("--tolerance", type=float, default=TOLERANCE)
     parser.add_argument("--cross-only", action="store_true",
                         help="skip the checks that call Slack, for a machine without credentials")
+    parser.add_argument("--record", action="store_true",
+                        help="write every verdict to ingest.quality_result")
     args = parser.parse_args()
-    sys.exit(1 if run(args.only, args.tolerance, args.cross_only) else 0)
+    sys.exit(1 if run(args.only, args.tolerance, args.cross_only, args.record) else 0)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import logging
 import os
 import secrets
+import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -156,20 +157,36 @@ def health():
     }
 
 
-@app.get("/verify")
-def verify(response: Response, client: Client = Depends(current_client)):
+VERIFY_CACHE_SECONDS = 60
+_verify_cache = {"at": 0.0, "credentials": None}
+
+
+def credentials_report():
+    now = time.monotonic()
+    cached = _verify_cache["credentials"]
+    if cached is not None and now - _verify_cache["at"] < VERIFY_CACHE_SECONDS:
+        return cached
     credentials = {}
     for name in CREDENTIALS:
         if not credential_present(name):
             credentials[name] = {"ok": False, "error": "not configured"}
             continue
         credentials[name] = whoami(name)
+    _verify_cache["at"] = now
+    _verify_cache["credentials"] = credentials
+    return credentials
 
+
+@app.get("/verify")
+def verify(response: Response, client: Client = Depends(current_client)):
+    credentials = credentials_report()
     ok = all(c["ok"] for c in credentials.values())
     if not ok:
         response.status_code = 503
+    failing = [f"{name}: {state.get('error') or 'not ok'}" for name, state in credentials.items() if not state["ok"]]
     return {
         "ok": ok,
+        "detail": None if ok else "; ".join(failing),
         "client": client.name,
         "credentials": credentials,
         "allowed_methods": {k: sorted(v) for k, v in client.methods.items()},

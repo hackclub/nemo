@@ -46,6 +46,28 @@ models:
         data_tests:
           - accepted_values:
               values: [cancelled, auth, transport, throttle, local, upstream, contract, entity]
+  - name: fct_ingest_incident
+    columns:
+      - name: kind
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [source_failing, credential, quality]
+      - name: source_key
+        data_tests: [not_null]
+      - name: consecutive
+        data_tests: [not_null]
+      - name: muted
+        data_tests: [not_null]
+  - name: fct_quality_result
+    columns:
+      - name: quality_result_id
+        data_tests: [unique, not_null]
+      - name: status
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [pass, fail, warn]
   - name: fct_ingest_step_output
     columns:
       - name: parent_run_id

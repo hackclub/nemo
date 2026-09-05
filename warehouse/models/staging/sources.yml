@@ -29,3 +29,9 @@ sources:
       - name: member_channel_walk
       - name: worker_heartbeat
       - name: deployment
+
+  - name: ingest
+    schema: ingest
+    tables:
+      - name: quality_result
+      - name: incident_ack

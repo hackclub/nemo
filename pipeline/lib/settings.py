@@ -80,6 +80,16 @@ def floor_days(key):
     return int(count) * (30 if unit.startswith("month") else 1)
 
 
+RECLAIM_FLOOR_SECONDS = 300
+
+
+def reclaim_seconds(conn):
+    asked = said(conn, ENGINE, "reclaim_seconds", None)
+    if asked in (None, "", "off"):
+        return None
+    return max(int(asked), RECLAIM_FLOOR_SECONDS)
+
+
 def retention_days(conn, key):
     asked = said(conn, key, "retention_days", KEEP)
     if asked == KEEP:
