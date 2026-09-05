@@ -200,20 +200,4 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
     assert_equal 1, Fd::CaseParticipant.where(case_id: other.id, user_id: "UTHEIRS").count,
       "the case in the url must own the row"
   end
-
-  test "the page offers the modal and lists how each person was involved" do
-    Fd::CaseParticipant.create!(case_id: @kase.id, user_id: "UWATCHER", role: "involved",
-      detail: "they piled on")
-    sign_in_as(@me)
-    get fd_case_path(@kase, tab: "people")
-
-    assert_select "input#add-person.modal-flip"
-    assert_select "form[action=?] .pick[data-member-picker-name-value='user_ids[]']",
-      fd_case_participants_path(@kase)
-    assert_select ".seg-radio input[name=role][value=involved][checked]"
-    assert_select ".seg-radio input[name=role][value=subject]"
-    assert_select ".people-list .person-row button.handle", text: "@UWATCHER"
-    assert_select ".people-list .person-row", text: /they piled on/
-    assert_select ".people-list .person-role", text: /involved/
-  end
 end

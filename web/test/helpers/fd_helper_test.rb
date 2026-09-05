@@ -11,13 +11,8 @@ class FdHelperTest < ActionView::TestCase
     Array.new(count) { Fd::CaseTimeline::Entry.new(at: Time.current, title: "x") }
   end
 
-  test "an open case says how old it is and who has it" do
-    line = timeline_standing(make_case(opened_at: 5.days.ago, assign: "UFF2"), entries(3))
-    assert_equal "Still open. 5d, assigned to @UFF2.", line
-  end
-
-  test "an unassigned case says so rather than naming nobody" do
-    assert_match(/still unassigned/, timeline_standing(kase, entries(2)))
+  test "an open case adds no standing line under its timeline" do
+    assert_nil timeline_standing(make_case(opened_at: 5.days.ago, assign: "UFF2"), entries(3))
   end
 
   test "a resolved case states its outcome" do

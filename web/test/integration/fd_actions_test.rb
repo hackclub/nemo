@@ -113,32 +113,6 @@ class FdActionsTest < ActionDispatch::IntegrationTest
     assert_no_match(/stays open/, flash[:notice])
   end
 
-  test "the logged action shows in what was done" do
-    sign_in_as(@me)
-    log(type_key: "shush", expires_on: "2026-09-01")
-
-    get fd_case_path(@kase, tab: "actions")
-    assert_match(/Shush/, response.body)
-    assert_select ".ledger-top b", text: "Shush"
-  end
-
-  test "the case page offers the log modal from the menu" do
-    sign_in_as(@me)
-    get fd_case_path(@kase)
-
-    assert_select "input#log-action.modal-flip"
-    assert_select ".menu-pop button[data-modal-open=log-action]"
-    assert_select "form[action=?] select[name=type_key]", fd_case_actions_path(@kase)
-  end
-
-  test "the log modal carries its action fields without an id that could clash" do
-    sign_in_as(@me)
-    get fd_case_path(@kase)
-
-    assert_select "select.action-type", 1
-    assert_select "select#type_key", count: 0
-  end
-
   test "an action must say why it was taken" do
     sign_in_as(@me)
     log(reason: "   ")

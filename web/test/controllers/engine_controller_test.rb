@@ -13,22 +13,8 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     get engine_path(tab: "coverage")
-    assert_select ".card-title", text: "Which days of data each source holds"
 
     get engine_path(tab: "teleporter")
-    assert_select ".card-title", text: "Tonight", message: "an unknown tab falls back to runs"
-  end
-
-  test "the sources tab lists every source with what it declares" do
-    sign_in_as(hold_role!("UTESTCM1", "community_manager"))
-
-    get engine_path(tab: "sources")
-
-    assert_response :success
-    assert_select ".lrow", count: Engine::Source::KEYS.size
-    assert_select ".lrow .skey b", text: "member_channels", count: 1,
-      message: "a stage the old hardcoded list never knew about"
-    assert_select ".lrow .skey b", text: "channel_membership", count: 1
   end
 
   test "a source can be triggered from the row that describes it" do

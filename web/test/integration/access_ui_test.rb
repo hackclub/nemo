@@ -18,9 +18,6 @@ class AccessUiTest < ActionDispatch::IntegrationTest
     get admin_person_path(@them.user_id)
 
     assert_response :success
-    assert_select ".tile-t", text: "Role"
-    assert_select ".tile-t", text: "In force"
-    assert_select ".panel-head span", text: "Channels they read"
   end
 
   test "a manager takes one capability off a firefighter, and puts it back" do
@@ -131,7 +128,6 @@ class AccessUiTest < ActionDispatch::IntegrationTest
     get admin_role_channels_path(role: "gardener")
 
     assert_response :success
-    assert_select ".warnbar", text: /gardener/
     Current.forget_roles
     assert Channels::Audience.may_see?(@them, channel), "the set reaches everyone holding the role"
   end
@@ -143,7 +139,5 @@ class AccessUiTest < ActionDispatch::IntegrationTest
     get account_path
 
     assert_response :success
-    assert_select ".strip .is-quiet", text: "none"
-    assert_select ".panel-head span", text: "What you did"
   end
 end

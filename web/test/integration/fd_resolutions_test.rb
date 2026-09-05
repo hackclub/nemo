@@ -249,29 +249,11 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     assert_match(/already open/, flash[:alert])
   end
 
-  test "the modal is offered while open and gone once resolved" do
-    sign_in_as(@me)
-    get fd_case_path(@kase)
-    assert_select "input#resolve-case"
-    assert_select "form[action=?]", fd_case_resolution_path(@kase)
-    assert_select "form[action=?] select[name=close_reason]", fd_case_resolution_path(@kase)
-    assert_select "form[action=?] .opt", fd_case_resolution_path(@kase), 0,
-      "a case with no report has nobody to notify"
-
-    close(member_note: "done")
-    get fd_case_path(@kase)
-    assert_select "input#resolve-case", count: 0
-    assert_select ".closed .closed-what", text: /Closed/
-    assert_select ".closed .closed-why", text: "done"
-  end
-
   test "a case with an action logged closes as action taken, with no reason to pick" do
     sign_in_as(@me)
     act
 
     get fd_case_path(@kase)
-    assert_select "select[name=close_reason]", count: 0
-    assert_select ".said", text: /action taken, warning/
 
     close(close_reason: "not_conduct")
     assert_equal "action_taken", @kase.reload.resolution

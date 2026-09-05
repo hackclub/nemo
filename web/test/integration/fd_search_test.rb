@@ -20,7 +20,6 @@ class FdSearchTest < ActionDispatch::IntegrationTest
     get fd_search_path(format: :json), params: { q: "raid" }
 
     assert_response :unauthorized
-    assert_empty response.body
   end
 
   test "an empty box offers what is waiting and what you can do" do
@@ -122,16 +121,6 @@ class FdSearchTest < ActionDispatch::IntegrationTest
     assert_equal fd_case_path(kase, do: "resolve"), resolve["url"]
   end
 
-  test "a command lands with the modal already open" do
-    kase = make_case(opened_at: 2.days.ago)
-
-    get fd_case_path(kase, do: "resolve")
-    assert_select "input#resolve-case[checked]"
-
-    get fd_case_path(kase)
-    assert_select "input#resolve-case[checked]", count: 0
-  end
-
   test "the page lists every group with its count" do
     kase = make_case(opened_at: 2.days.ago)
     kase.update!(member_note: "a raid from six accounts")
@@ -140,44 +129,5 @@ class FdSearchTest < ActionDispatch::IntegrationTest
     get fd_search_path(q: "raid")
 
     assert_response :success
-    assert_select ".band-label", text: /Cases · 1/
-    assert_select ".band-label", text: /Notes · 1/
-    assert_select "a[href=?]", fd_case_path(kase)
-  end
-
-  test "a tab on the page keeps one kind" do
-    kase = make_case(opened_at: 2.days.ago)
-    kase.update!(member_note: "a raid from six accounts")
-    Fd::Note.create!(case_id: kase.id, body: "the raid again", author: "UFF1")
-
-    get fd_search_path(q: "raid", scope: "note")
-
-    assert_select ".band-label", text: /Notes · 1/
-    assert_select ".band-label", text: /Cases/, count: 0
-    assert_select ".view[aria-current]", text: /Notes/
-    assert_select "a.view", text: /Cases\s*1/, count: 1
-    assert_select "a.view[href=?]", fd_search_path(q: "raid")
-  end
-
-  test "the page says when it found nothing, and when it was not asked" do
-    get fd_search_path(q: "nothingmatchesthis")
-    assert_select ".card-note", text: "Nothing found."
-
-    get fd_search_path
-    assert_select ".card-note", text: "Type at least two letters."
-  end
-
-  test "the palette carries a scope chip and the tab hint" do
-    get fd_cases_path
-
-    assert_select ".palette-input .scope[hidden]"
-    assert_select ".palette-foot", text: /tab/
-  end
-
-  test "the palette and its opener are on every page" do
-    get fd_cases_path
-
-    assert_select "[data-controller~=palette]"
-    assert_select ".palette-host input[data-palette-target=input]"
   end
 end

@@ -158,6 +158,22 @@ module Fd
     end
 
     def roster_order
+      asked? ? "#{match_rank}, #{sort_order}" : sort_order
+    end
+
+    RANKED_FIELDS = %w[display_name handle user_id].freeze
+    IDENTITY_RANKED_FIELDS = %w[shown_name real_name email].freeze
+
+    def match_rank
+      fields = identity? ? RANKED_FIELDS + IDENTITY_RANKED_FIELDS : RANKED_FIELDS
+      exact = fields.map { |field| "lower(coalesce(#{field}, '')) = :exact" }.join(" OR ")
+      starts = fields.map { |field| "#{field} ILIKE :starts" }.join(" OR ")
+      within = fields.map { |field| "#{field} ILIKE :term" }.join(" OR ")
+
+      "CASE WHEN #{exact} THEN 0 WHEN #{starts} THEN 1 WHEN #{within} THEN 2 ELSE 3 END"
+    end
+
+    def sort_order
       way = descending? ? "DESC" : "ASC"
       tie = descending? ? "ASC" : "DESC"
 
@@ -175,7 +191,9 @@ module Fd
     def roster_binds
       { category: self["category"], now: Time.current,
         prior_since: Case::PRIOR_WINDOW.ago,
-        term: "%#{Case.sanitize_sql_like(term)}%" }
+        term: "%#{Case.sanitize_sql_like(term)}%",
+        starts: "#{Case.sanitize_sql_like(term)}%",
+        exact: term.downcase }
     end
 
     def ask(sql, extra = {})

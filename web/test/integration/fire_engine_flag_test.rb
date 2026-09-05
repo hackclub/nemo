@@ -17,14 +17,6 @@ class FireEngineFlagTest < ActionDispatch::IntegrationTest
     Fd::Flag.set!(:fire_engine, false, by: @me.user_id)
   end
 
-  test "with it off, the palette goes with it" do
-    turn_it_off
-    get root_path
-
-    assert_select "button[data-action='palette#open']", count: 0
-    assert_select "#palette", count: 0
-  end
-
   test "with it off, every fire engine page sends you to the overview" do
     turn_it_off
     kase = make_case

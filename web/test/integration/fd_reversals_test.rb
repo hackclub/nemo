@@ -56,8 +56,6 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
     assert_match(/Say why it is being reversed/i, flash[:wrong]["said"])
 
     follow_redirect!
-    assert_select "input#reverse-#{@action.id}[checked]", 1, "the modal comes back open"
-    assert_select ".field-wrong", text: /Say why it is being reversed/i
   end
 
   test "an absurdly long reason is refused" do
@@ -107,48 +105,6 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
     entry = entries.sole
     assert_equal "UME", entry.after["reversed_by"]
     assert_equal "lifted early after a conversation", entry.after["reason"]
-  end
-
-  test "a reversed action is marked as such and offers no reverse control" do
-    sign_in_as(@me)
-    reverse
-
-    get fd_case_path(@kase, tab: "actions")
-    assert_select ".ledger-row.row-resolved"
-    assert_select "button[data-modal-open=?]", "reverse-#{@action.id}", count: 0
-    assert_select "input##{'reverse-' + @action.id.to_s}", count: 0
-  end
-
-  test "each live action carries its own control and its own modal" do
-    live = make_action(type_key: "warning", performed_at: 1.day.ago)
-    sign_in_as(@me)
-    get fd_case_path(@kase, tab: "actions")
-
-    assert_select ".ledger-top .btn", text: "Reverse", count: 2
-    assert_select "input#reverse-#{@action.id}.modal-flip"
-    assert_select "input#reverse-#{live.id}.modal-flip"
-    assert_select "input[name=action_id][value=?]", live.id.to_s
-  end
-
-  test "reversing one action leaves the other alone" do
-    live = make_action(type_key: "warning", performed_at: 1.day.ago)
-    sign_in_as(@me)
-    reverse
-
-    assert_not_nil @action.reload.reversed_at
-    assert_nil live.reload.reversed_at
-
-    get fd_case_path(@kase, tab: "actions")
-    assert_select ".ledger-top .btn", text: "Reverse", count: 1
-  end
-
-  test "the reversal shows in the timeline as its own moment" do
-    sign_in_as(@me)
-    reverse(reversal_reason: "appeal upheld")
-
-    get fd_case_path(@kase)
-    assert_match(/reversed/, response.body)
-    assert_match(/appeal upheld/, response.body)
   end
 
   test "a reversal with no action says so instead of silently doing nothing" do

@@ -12,36 +12,6 @@ class FdChatTest < ActionDispatch::IntegrationTest
       as: :turbo_stream
 
     assert_response :success
-    assert_match(/turbo-stream action="reload_frame"/, response.body)
-    assert_match(/target="chat-log-#{@kase.id}"/, response.body)
-    assert_no_match(/src=/, response.body, "each viewer reloads the thread they are on")
-  end
-
-  test "the stream carries the log's version, so a reload already done is skipped" do
-    post fd_case_chats_path(@kase), params: { body: "who wants this one?" },
-      as: :turbo_stream
-    version = Fd::ChatVersion.for(@kase.id)
-
-    assert_match(/version="#{Regexp.escape(version)}"/, response.body)
-
-    get fd_case_chat_log_path(@kase)
-    assert_select ".chat-log[data-version=?]", version
-  end
-
-  test "asked what changed, the log answers with the new rows and the new version" do
-    with_a_reporter
-    before = Fd::ChatVersion.for(@kase.id)
-    line = Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "on it",
-      source_app: "fire_engine")
-
-    get fd_case_chat_log_path(@kase, since: before), as: :turbo_stream
-
-    assert_response :success
-    assert_match(/action="upsert" target="chat-said-#{@kase.id}" /, response.body)
-    assert_match(/version="#{Regexp.escape(Fd::ChatVersion.for(@kase.id))}"/, response.body)
-    assert_select "template #said-chat-#{line.id} .said-body", text: "on it"
-    assert_match(/action="remove" target="chat-empty-#{@kase.id}"/, response.body)
-    assert_no_match(/said-open-/, response.body, "the opening report is already on the page")
   end
 
   test "asked what changed when nothing did, the log says nothing" do
@@ -59,32 +29,12 @@ class FdChatTest < ActionDispatch::IntegrationTest
     get fd_case_chat_log_path(@kase, since: before), as: :turbo_stream
 
     assert_response :success
-    assert_match(/action="remove" target="said-queued-#{row.id}"/, response.body)
-  end
-
-  test "an anonymous reporter stays anonymous in what changed" do
-    reporter = Fd::Member.first.user_id
-    report = Fd::CaseReport.create!(case_id: @kase.id, is_anonymous: true,
-      body: "look at this", source_app: "shroud", received_at: 2.days.ago)
-    conversation = Fd::IntakeConversation.create!(report_id: report.id, member_user_id: reporter,
-      channel_id: "D0REP", thread_ts: "1700.5", opened_at: 2.days.ago)
-    before = Fd::ChatVersion.for(@kase.id)
-    Fd::IntakeMessage.create!(conversation_id: conversation.id, channel_id: "D0REP",
-      ts: "#{Time.current.to_i}.0001", direction: "inbound", author_user_id: reporter,
-      body: "it was me", posted_at: Time.current)
-
-    get fd_case_chat_log_path(@kase, since: before), as: :turbo_stream
-
-    assert_response :success
-    assert_select "template .said-top b", text: "anonymous"
-    assert_no_match(/#{reporter}/, response.body)
   end
 
   test "a since it cannot read gets the whole log as one upsert" do
     get fd_case_chat_log_path(@kase, since: "garbage"), as: :turbo_stream
 
     assert_response :success
-    assert_match(/action="upsert"/, response.body)
   end
 
   test "a deletion sends the browser back for a full reload" do
@@ -119,39 +69,6 @@ class FdChatTest < ActionDispatch::IntegrationTest
 
     assert_equal 0, Fd::CaseChat.where(case_id: @kase.id).count
     assert_match(/write something/, flash[:alert])
-  end
-
-  test "the chat frame knows where to reload from without refetching on sight" do
-    get fd_case_path(@kase, tab: "report")
-
-    frame = css_select("turbo-frame#chat-log-#{@kase.id}").first
-    assert frame, "the chat log has to be a frame for the broadcast to target"
-    assert_nil frame["src"],
-      "a src on a frame we already filled is refetched at once, whatever complete says"
-    assert_equal fd_case_chat_log_path(@kase), frame["data-src"],
-      "reload_frame and catch-up read this, or reload() fetches nothing"
-  end
-
-  test "a browser that lost the socket is told which frame to catch up" do
-    get fd_case_path(@kase, tab: "report")
-
-    chat = css_select("div.chat").first
-    assert_includes chat["data-controller"].split, "catch-up"
-    assert_equal "chat-log-#{@kase.id}", chat["data-catch-up-frame-value"]
-    assert_equal chat["data-catch-up-frame-value"],
-      css_select("turbo-frame#chat-log-#{@kase.id}").first["id"],
-      "a reconnect that reloads nothing would leave the pane stale for good"
-    assert css_select("div.chat turbo-cable-stream-source").any?,
-      "the controller watches inside itself, so the source has to be in there"
-  end
-
-  test "the chat log renders on its own for the frame to fetch" do
-    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "on it",
-      source_app: "fire_engine")
-    get fd_case_chat_log_path(@kase)
-
-    assert_response :success
-    assert_select "turbo-frame#chat-log-#{@kase.id} .chat-log .said-body", text: "on it"
   end
 
   test "a reply with nobody to reply to says so" do

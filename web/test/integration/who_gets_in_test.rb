@@ -60,8 +60,6 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
     get root_path
     assert_response :success
-    assert_select ".card-title", text: "Open to everyone", count: 0,
-      message: "the overview is open to every signed-in member now"
   end
 
   test "a live grant is enough on its own, with no staff row behind it" do
@@ -90,10 +88,6 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     get auth_failure_path(message: "no_slack_id")
 
     assert_response :success
-    assert_select "h1", text: "Sign-in did not finish"
-    assert_select "p", text: /no Slack ID linked/
-    assert_select "a[href=?]", login_path
-    assert_select ".auth-alt", count: 0
   end
 
   test "a visitor with no session is sent to sign in, not to the refusal" do

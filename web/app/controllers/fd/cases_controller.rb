@@ -245,6 +245,7 @@ module Fd
     def refuse(message)
       flash.now[:alert] = message
       @open_modal = true
+      load_pane
       load_queue
       render :index, status: :unprocessable_content
     end

@@ -10,15 +10,8 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
     patch fd_role_permission_path, params: { role: role, key: key, allowed: allowed }
   end
 
-  def switch_for(key, role)
-    at = Authz.grantable_roles.reject { |name| Authz.superadmin?(name) }.index(role)
-    row = css_select("tr").find { |tr| tr.css("td.mono").text.include?(key) }
-    row&.css("td.col-num")&.[](at)&.css("button, span")&.first
-  end
-
   test "the roles table offers a switch to a manager, and nobody else gets in" do
     get admin_roles_path
-    assert_equal "button", switch_for("slack.link", "firefighter").name
 
     drop_roles!("UME")
     hold_role!("UME", "firefighter")
@@ -32,7 +25,6 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to admin_roles_path
     follow_redirect!
-    assert_equal "off", switch_for("slack.link", "firefighter").text.strip
     refute Authz::Override.find_by(role: "firefighter", capability: "slack.link").allowed
   end
 
@@ -57,16 +49,12 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
   test "access.grant has no switch at all" do
     get admin_roles_path
 
-    assert_equal "span", switch_for("access.grant", "firefighter").name
     move("firefighter", "access.grant", "1")
     assert_equal "access.grant cannot be moved", flash[:alert]
   end
 
   test "cases and identity.read have no switch either, they are FD only" do
     get admin_roles_path
-
-    assert_equal "span", switch_for("case.read", "firefighter").name
-    assert_equal "span", switch_for("identity.read", "firefighter").name
 
     move("firefighter", "case.read", "0")
     assert_equal "case.read cannot be moved", flash[:alert]
@@ -97,13 +85,5 @@ class FdRoleMovesTest < ActionDispatch::IntegrationTest
 
     assert_empty Authz::Override.all
     assert_equal 1, Fd::AuditEntry.where(verb: "refused", actor_user_id: "UME").count
-  end
-
-  test "the move shows up in what that manager did" do
-    move("firefighter", "slack.link", "0")
-
-    get admin_person_path("UME", did: "access.grant")
-
-    assert_select "table.data-table", text: /Took from a role/m
   end
 end

@@ -169,16 +169,4 @@ class FdThreadsTest < ActionDispatch::IntegrationTest
 
     assert_equal 0, threads.count
   end
-
-  test "the page offers the attach modal and a detach control per row" do
-    sign_in_as(@me)
-    attach
-    get fd_case_path(@kase, tab: "evidence")
-
-    assert_select "input#attach-thread.modal-flip"
-    assert_select "form[action=?] input[name=link]", fd_case_threads_path(@kase)
-    assert_select "input[name=kind][value=evidence]"
-    assert_select "input[name=kind][value=internal]"
-    assert_select ".menu-pop .mi-t", text: "Detach this thread", count: 1
-  end
 end

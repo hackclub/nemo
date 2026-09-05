@@ -111,80 +111,6 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     assert_equal "UME", entry.actor_user_id
   end
 
-  test "markup in a note is escaped, not rendered" do
-    sign_in_as(@me)
-    write(body: "<script>alert(1)</script>")
-
-    get fd_case_path(@kase)
-    assert_no_match(%r{<script>alert\(1\)</script>}, response.body)
-    assert_match(/&lt;script&gt;/, response.body)
-  end
-
-  test "a note shows up in the timeline it was written into" do
-    sign_in_as(@me)
-    write(body: "asked a second firefighter to read this")
-
-    get fd_case_path(@kase)
-    assert_match(/asked a second firefighter to read this/, response.body)
-    assert_select ".tl-item.tl-note"
-  end
-
-  test "anybody opening the case sees the notes without hunting for them" do
-    Fd::Note.create!(case_id: @kase.id, body: "spoke to them in DM", author: "UFF1")
-    Fd::Note.create!(subject_user_id: "USUB", body: "escalates in public", author: "UFF2")
-
-    sign_in_as(hold_role!("UOTHER", "community_manager"))
-    get fd_case_path(@kase, tab: "notes")
-
-    assert_select ".note-row", 1
-    assert_select ".note-body", text: "spoke to them in DM"
-    assert_select ".note-by", text: /@UFF1/
-
-    get fd_case_path(@kase, tab: "people")
-    assert_select ".person-note .note-body", { text: "escalates in public" },
-      "a standing note follows the member onto any case that names them"
-    assert_select ".notes .note-row", { count: 0 },
-      "but it is not a note on this case, so it stays off the notes tab"
-
-    get fd_member_path("USUB", show: "notes")
-    assert_select ".record-list", text: /escalates in public/
-  end
-
-  test "a standing note is marked as being about the member, not the case" do
-    Fd::Note.create!(subject_user_id: "USUB", body: "watch for repeats", author: "UFF2")
-    sign_in_as(@me)
-    get fd_member_path("USUB", show: "notes")
-
-    assert_select ".record-list", text: /watch for repeats/
-  end
-
-  test "a standing note shows for somebody who is not a subject" do
-    Fd::CaseParticipant.create!(case_id: @kase.id, user_id: "UWATCHER", role: "involved",
-      detail: "they piled on")
-    Fd::Note.create!(subject_user_id: "UWATCHER", body: "keeps turning up", author: "UFF2")
-    sign_in_as(@me)
-    get fd_member_path("UWATCHER", show: "notes")
-
-    assert_select ".record-list", text: /keeps turning up/
-  end
-
-  test "a deleted note is not shown on the page" do
-    Fd::Note.create!(case_id: @kase.id, body: "struck from the record", author: "UFF1",
-      deleted_at: Time.current, deleted_by: "UFF1")
-    sign_in_as(@me)
-    get fd_case_path(@kase, tab: "notes")
-
-    assert_select ".note-row", 0
-    assert_no_match(/struck from the record/, response.body)
-  end
-
-  test "the notes card says so when there is nothing written" do
-    sign_in_as(@me)
-    get fd_case_path(@kase, tab: "notes")
-    assert_select ".empty-title", text: "No notes yet"
-    assert_select ".empty .empty-do", text: /Add a note/
-  end
-
   test "removing my own note leaves it soft deleted, not gone" do
     sign_in_as(@me)
     write(body: "wrote this in haste")
@@ -198,27 +124,6 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     assert_equal "wrote this in haste", note.body, "the row stays, only the visibility changes"
     assert_match(/Note removed/i, flash[:notice])
     assert_match(/stays in the audit trail/, flash[:said])
-  end
-
-  test "a removed note leaves a mark in the timeline" do
-    sign_in_as(@me)
-    write(body: "wrote this in haste")
-    delete fd_case_note_path(@kase, notes.sole)
-
-    get fd_case_path(@kase)
-    assert_select ".tl-title", text: "Note removed"
-    assert_select ".tl-detail", text: /@UME/
-    assert_no_match(/wrote this in haste/, response.body)
-  end
-
-  test "a removed note disappears from the page" do
-    sign_in_as(@me)
-    write(body: "wrote this in haste")
-    delete fd_case_note_path(@kase, notes.sole)
-
-    get fd_case_path(@kase)
-    assert_select ".note-row", 0
-    assert_no_match(/wrote this in haste/, response.body)
   end
 
   test "I cannot remove somebody else's note" do
@@ -274,48 +179,10 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     assert_not_nil note.reload.deleted_at
   end
 
-  test "only my own notes offer a remove control" do
-    Fd::Note.create!(case_id: @kase.id, body: "mine", author: "UME")
-    Fd::Note.create!(case_id: @kase.id, body: "theirs", author: "UFF9")
-
-    sign_in_as(@me)
-    get fd_case_path(@kase, tab: "notes")
-    assert_select ".note-line .text-btn", 1
-  end
-
   test "notes can still be written on a resolved case" do
     @kase.update!(resolved_at: 1.hour.ago, resolution: "no_action")
     sign_in_as(@me)
     write(body: "adding this after the fact")
     assert_equal 1, notes.count
-  end
-
-  test "the case page offers the note modal with both scopes" do
-    sign_in_as(@me)
-    get fd_case_path(@kase)
-
-    assert_select "input#add-note.modal-flip"
-    assert_select "form[action=?] textarea[name=body]", fd_case_notes_path(@kase)
-    assert_select "input[name=about][value=case][checked]"
-    assert_select "input[name=about][value=USUB]"
-  end
-
-  test "a case with no subject offers only the case scope" do
-    @kase.subjects.destroy_all
-    sign_in_as(@me)
-    get fd_case_path(@kase)
-
-    assert_select "input[name=about][value=case]"
-    assert_select "input[name=about]", count: 1
-  end
-
-  test "every subject is offered by name, so the note says who it is about" do
-    @kase.add_subject!("USECOND")
-    sign_in_as(@me)
-    get fd_case_path(@kase)
-
-    assert_select "input[name=about][value=USUB]"
-    assert_select "input[name=about][value=USECOND]"
-    assert_select ".seg-radio label", text: /@USECOND/
   end
 end

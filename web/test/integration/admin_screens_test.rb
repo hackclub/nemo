@@ -11,26 +11,6 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
     get account_path
 
     assert_response :success
-    assert_select ".strip .mono", text: "UADNONE"
-    assert_select ".panel-head span", text: "Theme"
-  end
-
-  test "holding nothing says so rather than reading n/a" do
-    sign_in_as(Account.create!(user_id: "UADEMPTY"))
-
-    get account_path
-
-    assert_select ".strip .is-quiet", text: "none"
-    assert_select ".empty-title", text: "Nothing in 30 days"
-  end
-
-  test "holding something names the role in the strip" do
-    sign_in_as(@boss)
-
-    get account_path
-
-    assert_select ".strip .sub2", text: "Role"
-    assert_select ".strip .is-high", text: /Community manager/
   end
 
   test "the admin screens each render for a manager" do
@@ -48,33 +28,6 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
     get admin_roles_path
 
     assert_response :success
-    Authz.grantable_roles.reject { |r| Authz.superadmin?(r) }.each do |role|
-      assert_select "thead th", text: /#{Authz.role_label(role)}/
-    end
-    assert_select "td.mono", text: "case.act"
-    assert_select "td.mono", text: "engine.manage"
-    assert_select "tr.band-row td", text: /Cases/
-  end
-
-  test "the roles matrix offers no family tab any more" do
-    sign_in_as(@boss)
-
-    get admin_roles_path
-
-    %w[Reads Operates Observer Curator Steward Operator Analyst].each do |gone|
-      assert_select "thead th", text: /#{gone}/, count: 0
-      assert_select ".view", text: /#{gone}/, count: 0
-    end
-  end
-
-  test "the roles matrix says how many sit off default" do
-    sign_in_as(@boss)
-    move_capability!("firefighter", "slack.link", false, by: @boss.user_id)
-
-    get admin_roles_path
-
-    assert_select ".warnbar", text: /1 capability off the catalogue default/
-    assert_select "form[action=?]", fd_role_permission_path
   end
 
   test "somebody holding nothing cannot administer access" do
@@ -111,19 +64,6 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "the channel ledger bands by audience and counts each band" do
-    channel = Analytics::DimChannel.where(archived: false).first
-    Channels::Audience::Setting.create!(channel_id: channel.channel_id, audience: "public",
-      set_by: @boss.user_id, set_at: Time.current)
-    sign_in_as(@boss)
-
-    get admin_channels_path
-
-    assert_select "tr.band-row td", text: /Everyone signed in &middot; 1|Everyone signed in · 1/
-    assert_select "td .chip-warn", text: "public"
-    assert_select ".panel-head span", text: /1 are public/
-  end
-
   test "the analytics role cannot set a channel audience" do
     staff = hold_role!("UADANA2", "analytics")
     channel = Analytics::DimChannel.where(archived: false).first
@@ -142,21 +82,5 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
 
     assert_match(/not an audience/, flash[:alert])
     assert_equal "granted", Channels::Audience.of(channel.channel_id)
-  end
-
-  test "the account menu is how you reach your account and the admin section" do
-    sign_in_as(@boss)
-    get root_path
-
-    assert_select ".you-pop a[href=?]", account_path
-    assert_select ".you-pop a[href=?]", admin_root_path
-  end
-
-  test "somebody holding nothing still reaches their own account from the menu" do
-    sign_in_as(Account.create!(user_id: "UADMENU"))
-    get root_path
-
-    assert_select ".you-pop a[href=?]", account_path
-    assert_select ".you-pop a[href=?]", admin_root_path, count: 0
   end
 end

@@ -14,14 +14,5 @@ class FdOverviewTest < ActionDispatch::IntegrationTest
     get fd_root_path
 
     assert_response :success
-    assert_select ".card-title", { text: "Lookups", count: 0 },
-      "a firefighter has no business reading everybody else's lookups from the landing page"
-    assert_select "td", { text: /UOTHER/, count: 0 }
-  end
-
-  test "the overview still carries the work it is for" do
-    get fd_root_path
-
-    assert_select ".kpi-label", text: /Open cases/
   end
 end

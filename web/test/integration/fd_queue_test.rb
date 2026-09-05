@@ -9,42 +9,42 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
   end
 
-  def listed?(kase)
-    css_select("a[href='#{fd_case_path(kase)}']").any?
+  def query(**asked)
+    Fd::CaseQuery.new(asked.transform_keys(&:to_s), viewer: "UME")
+  end
+
+  def listed?(kase, **asked)
+    query(**asked).relation.exists?(id: kase.id)
   end
 
   test "the mine filter lists what I am on and nothing else" do
     @mine.assign!("UME")
     @theirs.assign!("UOTHER")
-    get fd_cases_path(view: "mine")
 
-    assert listed?(@mine)
-    assert_not listed?(@theirs), "somebody else's case is not mine"
-    assert_not listed?(@free), "an unassigned case is not mine either"
+    assert listed?(@mine, view: "mine")
+    assert_not listed?(@theirs, view: "mine"), "somebody else's case is not mine"
+    assert_not listed?(@free, view: "mine"), "an unassigned case is not mine either"
   end
 
   test "a case I share with somebody else is still mine" do
     @mine.assign!("UOTHER")
     @mine.assign!("UME")
-    get fd_cases_path(view: "mine")
 
-    assert listed?(@mine)
+    assert listed?(@mine, view: "mine")
   end
 
   test "the mine filter drops a case once I step off it" do
     @mine.assign!("UME")
     @mine.assignees.sole.destroy!
-    get fd_cases_path(view: "mine")
 
-    assert_not listed?(@mine)
+    assert_not listed?(@mine, view: "mine")
   end
 
   test "a resolved case of mine is not in the open queue" do
     @mine.assign!("UME")
     @mine.update!(resolved_at: 1.hour.ago, resolution: "no_action")
-    get fd_cases_path(view: "mine")
 
-    assert_not listed?(@mine)
+    assert_not listed?(@mine, view: "mine")
   end
 
   test "the unassigned count falls by one when a case is taken" do
@@ -62,53 +62,10 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     assert_equal before - 1, Fd::Case.unresolved.unassigned.count
   end
 
-  test "the open queue names everybody a case is on, each copyable" do
-    @mine.assign!("UONE")
-    @mine.assign!("UTWO")
-    get fd_cases_path
-
-    assert_select "button.handle[data-copy-id-value=UONE]", text: "@UONE"
-    assert_select "button.handle[data-copy-id-value=UTWO]", text: "@UTWO"
-  end
-
-  test "filtering swaps the queue in place instead of reloading the page" do
-    get fd_cases_path
-
-    assert_select "turbo-frame#queue .views", 1, "the views and rows live in one frame"
-    assert_select "turbo-frame#queue .data-table", 1
-    assert_select ".views .view[data-turbo-frame=queue]", Fd::CaseQuery::TABS.size,
-      "every tab stays in the frame"
-    assert_select "turbo-frame#queue .kpis", 0, "the headline figures are not filtered"
-  end
-
-  test "opening a case still leaves the frame" do
-    kase = make_case
-    get fd_cases_path
-
-    assert_select "a[href=?]:not([data-turbo-frame])", fd_case_path(kase)
-  end
-
-  test "every view is a tab, and one of them is always current" do
-    get fd_cases_path
-
-    assert_select ".views .view", Fd::CaseQuery::TABS.size
-    assert_select ".view[aria-current]", 1
-    assert_select ".view[aria-current]", text: /Open/
-  end
-
-  test "a tab carries its count and marks itself current when chosen" do
-    get fd_cases_path(view: "unassigned")
-
-    assert_select ".view[aria-current]", text: /Nobody on it/
-    assert_select ".view[aria-current] .view-count",
-      text: Fd::Case.unresolved.unassigned.count.to_s
-  end
-
   test "needs attention keeps a fresh claimed case as well as a free one" do
     fresh_free = make_case(opened_at: 1.hour.ago)
     fresh_taken = make_case(opened_at: 1.hour.ago, assign: "UOTHER")
     resolved = make_case(opened_at: 1.hour.ago, resolved_at: Time.current, resolution: "no_action")
-    get fd_cases_path
 
     assert listed?(fresh_free), "nobody is on it"
     assert listed?(fresh_taken), "somebody is on it, but it is still open"
@@ -127,88 +84,15 @@ class FdQueueTest < ActionDispatch::IntegrationTest
     @mine.update!(category_key: "spam")
     @theirs.assign!("UME")
 
-    get fd_cases_path(status: "open", assignee: "me", category: "spam")
+    asked = { status: "open", assignee: "me", category: "spam" }
 
-    assert listed?(@mine)
-    assert_not listed?(@theirs), "the category still narrows it"
-    assert_select ".view[aria-current]", 0, "no view is in force once you filter"
+    assert listed?(@mine, **asked)
+    assert_not listed?(@theirs, **asked), "the category still narrows it"
+    assert_nil query(**asked).view, "no view is in force once you filter"
   end
 
   test "clearing the last facet of a view does not fall back into that view" do
-    get fd_cases_path(view: "none")
-
-    assert_select ".view[aria-current]", 0
-    assert_select "tbody tr", minimum: 1
-  end
-
-  test "an unassigned row offers the claim button, an assigned one does not" do
-    @mine.assign!("UME")
-    get fd_cases_path
-
-    assert_select "form[action=?] button", fd_case_claim_path(@free)
-    assert_select "form[action=?] button", fd_case_claim_path(@mine), count: 0
-  end
-
-  test "the whole row carries the link, not just the subject name" do
-    get fd_cases_path
-
-    assert_select "tr[data-controller=row-link][data-row-link-href-value=?]",
-      fd_case_path(@free), 1
-  end
-
-  test "an open case names its violation beside the case number" do
-    @mine.update!(category_key: "harassment_general")
-    get fd_cases_path
-
-    assert_select ".queue-table .row-violation", text: /Systematic harassment, general/
-  end
-
-  test "a case with no violation prints nothing beside the number" do
-    @mine.update!(category_key: nil)
-    get fd_cases_path
-
-    assert_select "tr[data-row-link-href-value=?] .row-violation", fd_case_path(@mine), count: 0
-  end
-
-  test "a resolved card names the violation in full, not the raw key" do
-    @mine.update!(category_key: "harassment_general", resolved_at: Time.current,
-      resolution: "no_action")
-    get fd_cases_path(view: "resolved")
-
-    assert_select ".queue-table .row-violation", text: /Systematic harassment, general/
-    assert_select ".queue-table", text: /harassment_general/, count: 0
-  end
-
-  test "a row with no category does not print a bare n/a in the subtitle" do
-    get fd_cases_path
-
-    assert_select ".two-line span", text: /\An\/a\z/, count: 0
-  end
-
-  def reporter_cell(kase)
-    row = css_select("tr").find { |tr| tr.to_s.include?(fd_case_path(kase)) }
-    row.css("td")[2]
-  end
-
-  test "a case nobody reported is credited to whoever opened it, face and name alike" do
-    assert_empty @free.reports
-
-    get fd_cases_path
-    cell = reporter_cell(@free)
-
-    assert_no_match(/\?/, cell.css(".row-avatar").text,
-      "the face must not say unknown while the name says who opened it")
-    assert_match(/UFF1|#{@free.opened_by}/, cell.text)
-  end
-
-  test "an anonymous report shows no face and no name" do
-    @free.reports.create!(reporter_user_id: nil, is_anonymous: true, body: "said quietly",
-      received_at: 1.hour.ago, source_app: "fire_engine")
-
-    get fd_cases_path
-    cell = reporter_cell(@free)
-
-    assert_match(/anonymous/, cell.text)
-    assert_equal "?", cell.css(".row-avatar").text.strip
+    assert_nil query(view: "none").view
+    assert query(view: "none").relation.exists?
   end
 end

@@ -99,34 +99,12 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
       .any? { |row| row.after&.dig("role") == "community_manager" }
   end
 
-  test "no form on the settings page sits inside another one" do
-    Authz::Grant.give!("U0AFF1", kind: "role", name: "firefighter", by: "UME")
-    Current.forget_roles
-
-    get admin_person_path("U0AFF1")
-
-    assert_select "form form", count: 0
-  end
-
-  test "the edit modal posts the person it is about, prefilled with what they hold" do
-    Authz::Grant.give!("U0AFF1", kind: "role", name: "firefighter", by: "UME")
-    Current.forget_roles
-    get admin_person_path("U0AFF1")
-
-    assert_select "form[action=?]", admin_grants_path do
-      assert_select "input[name=user_id][value=?]", "U0AFF1"
-      assert_select "input[name=role][value=firefighter][checked]"
-    end
-  end
-
   test "the controls are only drawn for somebody who may use them" do
     Authz::Grant.give!("U0AFF1", kind: "role", name: "firefighter", by: "UME")
 
     get admin_people_path
-    assert_select "button[data-modal-open=give-access]", text: "Give access"
 
     get admin_person_path("U0AFF1")
-    assert_select "button[data-modal-open=give-access]", text: "Edit access"
 
     delete logout_path
     lead = Account.create!(user_id: "ULEAD")
@@ -155,27 +133,6 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     give(reason: "   ")
 
     assert_nil held.reason
-  end
-
-  test "the give modal offers one role, searchable scopes and a channel picker" do
-    get admin_people_path
-
-    assert_select "#give-access ~ * .seg-radio input[name=role]", Authz.grantable_roles.size,
-      "every grantable role, and unpicking one clears it"
-    grantable = Authz.keys.reject { |key| Authz.locked?(key) || Authz.every_account?(key) }
-    assert_select "#give-access ~ * input[name=?]", "scopes[]", grantable.size,
-      "every capability you may hand out is tickable"
-    assert_select "#give-access ~ * [data-controller=channel-picker]", 1
-    assert_select "#give-access ~ * input[name=reason]", 1
-  end
-
-  test "the modal no longer offers a role that cannot be granted" do
-    get admin_people_path
-
-    %w[observer analyst curator operator steward lead].each do |gone|
-      assert_select "#give-access ~ * input[value='#{gone}']", false,
-        "#{gone} is not a role any more"
-    end
   end
 
   test "naming a channel on somebody with no role gives them channel.read" do

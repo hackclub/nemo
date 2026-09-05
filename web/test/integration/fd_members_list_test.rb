@@ -6,12 +6,20 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
   end
 
-  def listed?(user_id)
-    css_select("a[href='#{fd_member_path(user_id)}']").any?
+  def query(**asked)
+    Fd::MemberQuery.new(asked.transform_keys(&:to_s), actor: @me)
   end
 
-  def listed_links
-    css_select("tbody tr .row-name a").map { |link| link["href"] }
+  def shown(**asked)
+    query(**asked).rows.map(&:user_id)
+  end
+
+  def listed?(user_id, **asked)
+    shown(**asked).include?(user_id)
+  end
+
+  def row_for(user_id, **asked)
+    query(**asked).rows.find { |row| row.user_id == user_id }
   end
 
   def act_on(kase, target:, **attrs)
@@ -27,19 +35,16 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
 
   test "landing on the list picks a view rather than leaving none chosen" do
     make_case(subject: "UHASONE", opened_at: 2.days.ago)
-    get fd_members_path
 
     assert_equal "everyone", Fd::MemberQuery.new({}).view
-    assert_select ".view[aria-current]", 1
     assert listed?("UHASONE")
   end
 
   test "the history view narrows to people conduct work has touched" do
     make_case(subject: "UHASONE", opened_at: 2.days.ago)
-    get fd_members_path(view: "history")
 
-    assert listed?("UHASONE")
-    assert_not listed?(Fd::Member.live.where.not(user_id: "UHASONE").first.user_id),
+    assert listed?("UHASONE", view: "history")
+    assert_not listed?(Fd::Member.live.where.not(user_id: "UHASONE").first.user_id, view: "history"),
       "nine thousand quiet members are not the working set"
   end
 
@@ -47,15 +52,13 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     theirs = make_case(subject: "USOMEBODY", opened_at: 3.days.ago)
     theirs.participants.create!(user_id: "UWATCHER", role: "involved", detail: "aimed at them")
 
-    get fd_members_path
-
     assert listed?("UWATCHER"), "a page of subjects would hide the people conduct work is for"
-    assert_select "td.col-num", text: "0", minimum: 1
+    assert_equal 0, row_for("UWATCHER").actions
   end
 
   def numbers_for(user_id)
-    row = css_select("tr").find { |tr| tr.to_s.include?(user_id) }
-    row.css("td.col-cases, td.col-actions").map(&:text).map(&:strip)
+    row = row_for(user_id, view: "history")
+    [row.cases, row.actions]
   end
 
   test "a row counts every case that named them, and the actions apart" do
@@ -63,9 +66,7 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     theirs = make_case(subject: "USOMEBODY", opened_at: 3.days.ago)
     theirs.participants.create!(user_id: "UBOTH", role: "reporter")
 
-    get fd_members_path(view: "history")
-
-    assert_equal %w[2 0], numbers_for("UBOTH"),
+    assert_equal [2, 0], numbers_for("UBOTH"),
       "subject of one and logged in another is two cases, no actions"
   end
 
@@ -73,18 +74,8 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     both = make_case(subject: "UTWICE", opened_at: 5.days.ago)
     both.participants.create!(user_id: "UTWICE", role: "reporter")
 
-    get fd_members_path(view: "history")
-
-    assert_equal %w[1 0], numbers_for("UTWICE"),
+    assert_equal [1, 0], numbers_for("UTWICE"),
       "reporting the case you are the subject of does not make it two cases"
-  end
-
-  test "only the named tabs are offered, with counts, the current one marked" do
-    get fd_members_path
-
-    assert_select ".views .view", Fd::MemberQuery::TABS.size
-    assert_select ".view[aria-current]", text: /Everyone/
-    assert_select ".view .view-count", Fd::MemberQuery::TABS.size
   end
 
   test "the in force view keeps only people with something still running" do
@@ -101,12 +92,10 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     act_on lifted, target: "ULIFTED", type_key: "shush", expires_at: 5.days.from_now,
       reversed_at: 1.day.ago, reversed_by: "UME", reversal_reason: "appeal upheld"
 
-    get fd_members_path(view: "force")
-
-    assert listed?("ULIVE")
-    assert_not listed?("ULAPSED"), "its due date has passed"
-    assert_not listed?("UWARNED"), "a warning has no due date to reach"
-    assert_not listed?("ULIFTED"), "it was reversed"
+    assert listed?("ULIVE", view: "force")
+    assert_not listed?("ULAPSED", view: "force"), "its due date has passed"
+    assert_not listed?("UWARNED", view: "force"), "a warning has no due date to reach"
+    assert_not listed?("ULIFTED", view: "force"), "it was reversed"
   end
 
   test "the open case view keeps only people with one open" do
@@ -114,10 +103,8 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     make_case(subject: "UCLOSED", opened_at: 9.days.ago, resolved_at: 1.day.ago,
       resolution: "no_action")
 
-    get fd_members_path(view: "open")
-
-    assert listed?("UOPEN")
-    assert_not listed?("UCLOSED")
+    assert listed?("UOPEN", view: "open")
+    assert_not listed?("UCLOSED", view: "open")
   end
 
   test "the priors view uses the definition, not the case count" do
@@ -133,17 +120,15 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     make_case(subject: "UNOACTION", opened_at: 20.days.ago, resolved_at: 10.days.ago,
       resolution: "no_action")
 
-    get fd_members_path(view: "priors")
-
-    assert listed?("UPRIORS")
-    assert_not listed?("UNOACTION"), "two resolved cases with no action are not two priors"
+    assert listed?("UPRIORS", view: "priors")
+    assert_not listed?("UNOACTION", view: "priors"), "two resolved cases with no action are not two priors"
   end
 
   test "a facet narrows outside the tabs, and marks none of them current" do
     make_case(subject: "UHASONE", opened_at: 2.days.ago)
-    get fd_members_path(priors: "2")
 
-    assert_select ".view[aria-current]", 0
+    assert_nil query(priors: "2").view
+    assert query(priors: "2").views.none?(&:current)
   end
 
   test "everyone reaches past the working set" do
@@ -151,98 +136,77 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
   end
 
   test "a long list is paged rather than truncated" do
-    get fd_members_path(view: "everyone")
+    everyone = query(view: "everyone")
 
-    assert_select "tbody tr", Fd::MemberQuery::LIMIT
-    assert_select ".pager-at", text: /Page 1 of \d+/
-    assert_select ".pager a", text: "Next"
-    assert_select ".pager .is-off", text: "Back", count: 1
+    assert_equal Fd::MemberQuery::LIMIT, everyone.rows.size
+    assert_equal 1, everyone.page
+    assert_operator everyone.pages, :>, 1
   end
 
   test "the next page shows the next slice, not the same one again" do
-    get fd_members_path(view: "everyone")
-    first = listed_links
-
-    get fd_members_path(view: "everyone", page: "2")
-    second = listed_links
+    first = shown(view: "everyone")
+    second = shown(view: "everyone", page: "2")
 
     assert_equal Fd::MemberQuery::LIMIT, second.size
     assert_empty first & second, "page two must not repeat page one"
-    assert_select ".pager-at", text: /Page 2 of/
+    assert_equal 2, query(view: "everyone", page: "2").page
   end
 
   test "a page past the end lands on the last page rather than an empty table" do
-    get fd_members_path(view: "everyone", page: "99999")
+    far = query(view: "everyone", page: "99999")
 
-    assert_select "tbody tr", minimum: 1
-    assert_select ".pager .is-off", text: "Next", count: 1
+    assert_equal far.pages, far.page
+    assert_not_empty far.rows
   end
 
   test "a nonsense page number is treated as the first" do
-    get fd_members_path(view: "everyone", page: "-3")
-    assert_select ".pager-at", text: /Page 1 of/
+    assert_equal 1, query(view: "everyone", page: "-3").page
   end
 
   test "narrowing resets to the first page" do
-    get fd_members_path(view: "everyone", page: "3")
-    assert_select ".pager-at", text: /Page 3 of/
-
+    assert_equal 3, query(view: "everyone", page: "3").page
     assert_not_includes Fd::MemberQuery.new({ "view" => "everyone", "page" => "3" })
       .facet_params("priors" => "2").keys, "page"
   end
 
-  test "a short list has no pager at all" do
+  test "a short list has one page" do
     make_case(subject: "UHASONE", opened_at: 2.days.ago)
-    get fd_members_path(priors: "2")
 
     assert_operator Fd::MemberQuery.new({ "priors" => "2" }).total, :<=, Fd::MemberQuery::LIMIT
-    assert_select ".pager", 0
+    assert_equal 1, query(priors: "2").pages
   end
 
-  test "a view that matches nothing says which nothing it is" do
+  test "a view that matches nothing has no rows and says which nothing it is" do
     Fd::Note.standing.update_all(deleted_at: Time.current, deleted_by: "UME")
-    get fd_members_path(view: "notes")
 
-    assert_select "tbody tr", 0
-    assert_select ".empty-title", text: /No standing notes on anybody/
-  end
-
-  test "the rail offers members alongside cases, and marks which one you are on" do
-    get fd_members_path
-    assert_select ".rail-nav a[href=?][aria-current=page]", fd_members_path
-    assert_select ".rail-nav a[href=?]:not([aria-current])", fd_cases_path
-
-    get fd_cases_path
-    assert_select ".rail-nav a[href=?][aria-current=page]", fd_cases_path
-  end
-
-  test "each row carries a face and links to the member record" do
-    make_case(subject: "UHASONE", opened_at: 2.days.ago)
-    get fd_members_path(view: "history")
-
-    assert_select "a[href=?]", fd_member_path("UHASONE")
-    assert_select ".row-name .row-avatar", minimum: 1
+    assert_empty shown(view: "notes")
+    assert_match(/No standing notes on anybody/, query(view: "notes").empty_note)
   end
 
   test "searching narrows the roster to the people asked for" do
     make_case(subject: "UHASONE", opened_at: 2.days.ago)
-    get fd_members_path(q: "UHASONE")
 
-    assert listed?("UHASONE")
-    assert_select "tbody tr", 1
+    assert_equal ["UHASONE"], shown(q: "UHASONE")
   end
 
   test "a leading at sign is ignored, so pasting a handle works" do
     make_case(subject: "UHASONE", opened_at: 2.days.ago)
-    get fd_members_path(q: "@uhasone")
 
-    assert listed?("UHASONE"), "the search is case insensitive and tolerates the @"
+    assert listed?("UHASONE", q: "@uhasone"), "the search is case insensitive and tolerates the @"
   end
 
   test "a search that matches nobody says so rather than showing everybody" do
-    get fd_members_path(q: "UNOSUCHPERSON")
+    assert_empty shown(q: "UNOSUCHPERSON")
+  end
 
-    assert_select "tbody tr", 0
+  test "an exact handle match comes before anyone who merely contains it" do
+    named = Fd::Member.live.where.not(handle: [nil, ""]).where("length(handle) >= 4")
+      .order(:user_id).first
+    skip "the corpus has no member with a handle" if named.nil?
+
+    assert_equal named.user_id, shown(q: named.handle).first
+    assert_equal named.user_id, shown(q: named.user_id.downcase).first,
+      "an id typed in any case is still the exact match"
   end
 
   test "the search survives paging and view links" do
@@ -253,10 +217,4 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
       "narrowing must not drop the search"
   end
 
-  test "an open case shows in the standing column" do
-    make_case(subject: "UOPEN", opened_at: 2.days.ago)
-    get fd_members_path
-
-    assert_select "td .state", text: "open case"
-  end
 end

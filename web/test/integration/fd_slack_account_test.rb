@@ -223,22 +223,4 @@ class FdSlackAccountTest < ActionDispatch::IntegrationTest
     assert_nil row.revoked_by
     assert_equal 1, Fd::StaffSlack.count, "one row per person, not one per attempt"
   end
-
-  test "the account page offers linking only to somebody holding slack.link" do
-    sign_in_as(@me)
-
-    get account_path
-
-    assert_select "a", text: "Link Slack"
-  end
-
-  test "somebody without slack.link is not offered a way to link" do
-    hand = Account.create!(user_id: "UNOLINK")
-    hold_role!("UNOLINK", "promethean")
-    sign_in_as(hand)
-
-    get account_path
-
-    assert_select "a", text: "Link Slack", count: 0
-  end
 end

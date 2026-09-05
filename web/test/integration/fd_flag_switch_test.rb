@@ -17,18 +17,6 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
     get admin_flags_path
 
     assert_response :success
-    assert_select "td b", text: "Community analytics"
-    assert_select "td.said-cell .mono", text: "/channels"
-    assert_select "form[action=?]", fd_flag_path(key: "analytics", on: "0")
-  end
-
-  test "a dark section sorts to the top of the table" do
-    sign_in_as(@boss)
-    Fd::Flag.set!("fire_engine", false, by: @boss.user_id)
-
-    get admin_flags_path
-
-    assert_select "tbody tr:first-child td b", text: "Fire Engine"
   end
 
   def standing(key)

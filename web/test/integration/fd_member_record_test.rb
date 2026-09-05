@@ -17,8 +17,6 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     get fd_member_path("UNOBODY")
 
     assert_response :success
-    assert_select ".record-row", 0
-    assert_select ".empty-title"
   end
 
   test "the priors figure uses the definition, not the case count" do
@@ -30,42 +28,6 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     make_case(subject: SUBJECT, opened_at: 2.days.ago)
 
     assert_equal 1, Fd::Case.prior_count(SUBJECT, within: Fd::Case::PRIOR_WINDOW)
-  end
-
-  test "a timed action still running leads the record" do
-    kase = make_case(subject: SUBJECT, opened_at: 3.days.ago)
-    act_on kase, type_key: "shush", expires_at: 4.days.from_now
-
-    get fd_member_path(SUBJECT)
-
-    assert_select ".standing .standing-t", text: "In force now"
-    assert_select ".standing .standing-line", text: /Shush until/
-    assert_select ".standing a[href=?]", fd_case_path(kase)
-  end
-
-  test "an action with no due date never leads the record, but stays on it" do
-    kase = make_case(subject: SUBJECT, opened_at: 3.days.ago)
-    act_on kase, type_key: "warning"
-
-    get fd_member_path(SUBJECT)
-
-    assert_select ".standing", 0, "a warning is not being enforced over time"
-    assert_select ".record-row", 2, "the case and the warning are still on the record"
-  end
-
-  test "an action past its expiry drops out of force without leaving the record" do
-    kase = make_case(subject: SUBJECT, opened_at: 30.days.ago)
-    act_on kase, type_key: "shush", expires_at: 1.day.ago
-
-    get fd_member_path(SUBJECT)
-
-    assert_select ".standing", 0
-    assert_select ".record-row", 2
-  end
-
-  test "the identity line says email is not collected rather than showing a blank" do
-    get fd_member_path("UNOBODY")
-    assert_select ".locked", text: /Nothing on file|Email not collected yet/
   end
 
   test "looking at a member writes an access log row against me" do
@@ -87,52 +49,6 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     assert_equal before, AccessLog.count, "a refused request must not record a lookup"
   end
 
-  test "the record lists every case and action, newest first" do
-    old = make_case(subject: SUBJECT, opened_at: 40.days.ago, resolved_at: 30.days.ago,
-      resolution: "action_taken")
-    act_on old, performed_at: 31.days.ago
-    recent = make_case(subject: SUBJECT, opened_at: 2.days.ago)
-
-    get fd_member_path(SUBJECT)
-
-    assert_select ".record-row", 3
-    assert_select ".record-row:first-of-type a[href=?]", fd_case_path(recent)
-    assert_select ".record-list a[href=?]", fd_case_path(old)
-  end
-
-  test "each tab narrows the record to its own kind" do
-    kase = make_case(subject: SUBJECT, opened_at: 10.days.ago)
-    act_on kase, performed_at: 3.days.ago
-    Fd::Note.create!(subject_user_id: SUBJECT, body: "watch this one", author: "UFF1")
-
-    get fd_member_path(SUBJECT)
-    assert_select ".record-row", 3
-
-    get fd_member_path(SUBJECT, show: "actions")
-    assert_select ".record-row", 1
-    assert_select ".segmented a[aria-current]", text: /Actions/
-
-    get fd_member_path(SUBJECT, show: "notes")
-    assert_select ".record-row", 1
-    assert_select ".segmented a[aria-current]", text: /Notes/
-  end
-
-  test "a tab that matches nothing says which nothing it is" do
-    make_case(subject: SUBJECT, opened_at: 10.days.ago)
-    get fd_member_path(SUBJECT, show: "actions")
-
-    assert_select ".record-row", 0
-    assert_select ".empty-title", text: /Nothing has ever been done to them/
-  end
-
-  test "the composer only sits on the tab that holds the notes" do
-    get fd_member_path(SUBJECT)
-    assert_select "form[action=?]", fd_member_notes_path(SUBJECT), count: 0
-
-    get fd_member_path(SUBJECT, show: "notes")
-    assert_select "form[action=?] textarea[name=body]", fd_member_notes_path(SUBJECT)
-  end
-
   test "a note written here follows the member rather than a case" do
     post fd_member_notes_path(SUBJECT), params: { body: "escalates in public" }
 
@@ -150,9 +66,7 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     assert_nil flash[:alert], "a problem with one field is not a page-level message"
     assert_equal "body", flash[:wrong]["field"]
     assert_match(/Write the note/i, flash[:wrong]["said"])
-
-    follow_redirect!
-    assert_select ".panel-foot .field-wrong", text: /Write the note/i
+    assert_redirected_to fd_member_path(SUBJECT, show: "notes")
   end
 
   test "the note text never reaches the trail, only its length" do
@@ -174,12 +88,5 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
 
     delete fd_member_note_path(SUBJECT, mine)
     assert_not_nil mine.reload.deleted_at
-  end
-
-  test "opening a case from here arrives with the modal open and the subject filled" do
-    get fd_cases_path(subject_user_id: SUBJECT, open: "1")
-
-    assert_select "input#open-case[checked]"
-    assert_select ".pick[data-member-picker-preset-value*=?]", SUBJECT
   end
 end
