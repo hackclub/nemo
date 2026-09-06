@@ -77,3 +77,32 @@ class Fd::MemberQueryTest < ActiveSupport::TestCase
     assert_equal counts["notes"], query("view" => "notes").total
   end
 end
+
+class Fd::MemberQueryCountsCacheTest < ActiveSupport::TestCase
+  setup do
+    @store = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+  end
+
+  teardown do
+    Rails.cache = @store
+  end
+
+  test "view counts are computed once per cache window rather than once per request" do
+    roster_passes = lambda do |&block|
+      passes = 0
+      listener = ActiveSupport::Notifications.subscribe("sql.active_record") do |_, _, _, _, load|
+        passes += 1 if load[:sql].include?("conduct AS")
+      end
+      block.call
+      passes
+    ensure
+      ActiveSupport::Notifications.unsubscribe(listener)
+    end
+
+    first = roster_passes.call { Fd::MemberQuery.new({}).views }
+    second = roster_passes.call { Fd::MemberQuery.new({}).views }
+    assert_equal 1, first
+    assert_equal 0, second
+  end
+end
