@@ -45,13 +45,10 @@ class ChannelsController < ApplicationController
     @sort = SORT_SQL.key?(params[:sort]) ? params[:sort] : "members"
     @direction = params[:direction] == "asc" ? "asc" : "desc"
     @view = params[:view] == "grid" ? "grid" : "table"
-    @scope_all = params[:scope] == "all"
-    @filters = @scope_all ? [] : Array(params[:f]).select { |key| FILTERS.key?(key) }.uniq
+    @filters = Array(params[:f]).select { |key| FILTERS.key?(key) }.uniq
 
     mine = Channels::Audience.for(current_account)
     @mine_total = mine.count
-    @all_total = Channels::Audience.everything.count
-    @locked_total = @all_total - @mine_total
 
     scope = mine.joins(RANGE_JOIN)
     scope = scope.where("dim_channel.name ILIKE ?", "%#{like_q}%") if @q.present?
@@ -67,8 +64,6 @@ class ChannelsController < ApplicationController
       .to_a
     @has_more = (@page + 1) * PER_PAGE < @total
     @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
-    @locked = @scope_all || @q.present? ? locked_rows : []
-    @locked_total = locked_scope.count if @q.present?
 
     @may_see_bands = Authz.holds?(current_account, "channel.all")
     @cohorts = @may_see_bands ? Analytics::MartChannelBands.cohorts : []
@@ -202,8 +197,6 @@ class ChannelsController < ApplicationController
     wanted if wanted && @cohorts.include?(wanted)
   end
 
-  LOCKED_SHOWN = 50
-
   def refuse_channel
     known = Channels::Audience.everything.exists?(channel_id: params[:id])
     said = if known
@@ -213,18 +206,6 @@ class ChannelsController < ApplicationController
       "no such channel"
     end
     redirect_to channels_path(q: params[:id]), alert: said
-  end
-
-  def locked_scope
-    mine = Channels::Audience.for(current_account).select(:channel_id)
-    rows = Channels::Audience.everything.where.not(channel_id: mine)
-    return rows if @q.blank?
-
-    rows.where("dim_channel.name ILIKE ?", "%#{like_q}%")
-  end
-
-  def locked_rows
-    locked_scope.order(Arel.sql("dim_channel.name")).limit(LOCKED_SHOWN).to_a
   end
 
   def order_clause

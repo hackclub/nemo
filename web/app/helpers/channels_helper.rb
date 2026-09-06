@@ -3,9 +3,16 @@ module ChannelsHelper
     base = { q: @q.presence, sort: @sort, direction: @direction,
              view: (@view unless @view == "table"), f: @filters.presence,
              measure: (@measure unless @measure == @default_measure),
-             cohort: (@cohort&.iso8601 unless @cohort == @default_cohort),
-             scope: ("all" if @scope_all) }
+             cohort: (@cohort&.iso8601 unless @cohort == @default_cohort) }
     channels_path(**base.merge(overrides).compact)
+  end
+
+  def channels_empty_title
+    return "No channel matches that search" if @q.present?
+    return "No channel matches those filters" if @filters.any?
+    return "No channel is shared with you" if @mine_total.to_i.zero?
+
+    "No channel yet"
   end
 
   def backfill_cost(channel, estimate, ceiling)

@@ -1398,7 +1398,6 @@
   .col-state, .col-who { width: 1%; white-space: nowrap; }
   .said-cell { color: var(--ink-3); max-width: 420px; }
   .row-resolved td { color: var(--ink-3); }
-  .row-locked td { color: var(--ink-4); }
   .band-row td {
     background: var(--sunk);
     font-size: var(--t-fine);
