@@ -37,7 +37,8 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     make_case(subject: "UHASONE", opened_at: 2.days.ago)
 
     assert_equal "everyone", Fd::MemberQuery.new({}).view
-    assert listed?("UHASONE")
+    assert listed?("UHASONE", view: "history")
+    assert_equal ["UHASONE"], shown(q: "UHASONE"), "everyone sorts by messages, so a quiet subject is found by search"
   end
 
   test "the history view narrows to people conduct work has touched" do
@@ -52,8 +53,8 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     theirs = make_case(subject: "USOMEBODY", opened_at: 3.days.ago)
     theirs.participants.create!(user_id: "UWATCHER", role: "involved", detail: "aimed at them")
 
-    assert listed?("UWATCHER"), "a page of subjects would hide the people conduct work is for"
-    assert_equal 0, row_for("UWATCHER").actions
+    assert listed?("UWATCHER", view: "history"), "a page of subjects would hide the people conduct work is for"
+    assert_equal 0, row_for("UWATCHER", view: "history").actions
   end
 
   def numbers_for(user_id)

@@ -106,3 +106,16 @@ class Fd::MemberQueryCountsCacheTest < ActiveSupport::TestCase
     assert_equal 0, second
   end
 end
+
+class Fd::MemberQueryDefaultSortTest < ActiveSupport::TestCase
+  test "the list opens sorted by message count, busiest first, people without a count last" do
+    query = Fd::MemberQuery.new({})
+    assert_equal "messages", query["sort"]
+    assert_equal "most messages", query.sort_label
+
+    counts = query.rows.map(&:messages_posted)
+    known = counts.compact
+    assert_equal known.sort.reverse, known, "rows with a count come in descending order"
+    assert_equal counts.compact + [nil] * counts.count(nil), counts, "unknown counts sit at the end"
+  end
+end

@@ -52,7 +52,7 @@
   </div>
 
   <% if @range_preset.nil? %>
-    <%= form_with url: channel_path(@channel), method: :get, class: "qbar" do %>
+    <%= form_with url: channel_path(@channel), method: :get, class: "qbar qbar-range" do %>
       <%= render "datepicker", caption: "from", name: :start, value: @start_date,
             min: @range_min, max: @range_max %>
       <%= render "datepicker", caption: "to", name: :end, value: @end_date,
@@ -174,17 +174,5 @@
         </tbody>
       </table>
     </div>
-  </div>
-<% else %>
-  <div class="card">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">Onboarding scorecard</h2>
-        <p class="card-sub">no month qualifies for this channel</p>
-      </div>
-    </div>
-    <p class="delta-note">
-      A row needs newcomers whose first post here can be matched to a reply, and no month reaches the <%= HomeHelper::MIN_SAMPLE %>-newcomer threshold yet.
-    </p>
   </div>
 <% end %>

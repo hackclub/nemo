@@ -121,7 +121,7 @@ module Fd
         LEFT JOIN fd.member m ON m.user_id = people.user_id
         LEFT JOIN analytics.dim_member_cohort dm ON dm.user_id = people.user_id
         LEFT JOIN LATERAL (
-          SELECT last_active_at FROM analytics.fct_member_window w
+          SELECT last_active_at, messages_posted FROM analytics.fct_member_window w
           WHERE w.source = 'admin_analytics_member_range' AND w.user_id = people.user_id LIMIT 1
         ) w ON true
         CONTEXT_JOIN
@@ -138,7 +138,7 @@ module Fd
       UNION SELECT user_id FROM cachet_profiles WHERE lower(display_name) LIKE :term
     SQL
 
-    CONTEXT_COLUMNS = ", dm.cohort_at, w.last_active_at".freeze
+    CONTEXT_COLUMNS = ", dm.cohort_at, w.last_active_at, w.messages_posted".freeze
 
     IDENTITY_COLUMNS =
       ", mi.real_name, mi.first_name, mi.last_name, mi.email, cp.display_name AS shown_name".freeze
@@ -156,6 +156,7 @@ module Fd
     SQL
 
     SORTS = {
+      "messages" => "messages_posted",
       "subject" => "cases",
       "logged" => "logged_in",
       "actions" => "actions",
@@ -183,7 +184,7 @@ module Fd
     end
 
     def context_asked?
-      asked? || !default?("tenure") || !default?("active")
+      asked? || !default?("tenure") || !default?("active") || self["sort"] == "messages"
     end
 
     def roster_where
@@ -237,7 +238,7 @@ module Fd
     end
 
     def roster_order
-      asked? ? "#{match_rank}, last_active_at DESC NULLS LAST, #{sort_order}" : sort_order
+      asked? ? "#{match_rank}, last_case_at DESC NULLS LAST, #{sort_order}" : sort_order
     end
 
     UNIQUE_FIELDS = %w[handle user_id].freeze
@@ -274,7 +275,7 @@ module Fd
         "lower(coalesce(nullif(display_name, ''), nullif(handle, ''), user_id)) " \
           "#{descending? ? 'ASC' : 'DESC'}, user_id #{tie}"
       when *SORTS.keys
-        "#{SORTS.fetch(self['sort'])} #{way}, user_id #{tie}"
+        "#{SORTS.fetch(self['sort'])} #{way} NULLS LAST, user_id #{tie}"
       else
         "last_case_at #{way} NULLS LAST, user_id #{tie}"
       end

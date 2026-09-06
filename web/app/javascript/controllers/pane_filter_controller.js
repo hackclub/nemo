@@ -13,6 +13,7 @@ export default class extends Controller {
       this.queryTarget.focus()
     }
     document.addEventListener("keydown", this.onKey)
+    this.served = this.queryTarget.value.trim().length > 0
   }
 
   disconnect() {
@@ -37,7 +38,7 @@ export default class extends Controller {
     if (!this.hasUrlValue) return
     if (shown === 0 && term.length >= this.minValue) {
       this.timer = setTimeout(() => this.search(term), this.waitValue)
-    } else if (!term && this.replaced) {
+    } else if (!term && (this.replaced || this.served)) {
       this.timer = setTimeout(() => this.search(""), this.waitValue)
     }
   }
@@ -62,6 +63,7 @@ export default class extends Controller {
 
     this.replace(html)
     this.replaced = term.length > 0
+    this.served = this.replaced
   }
 
   replace(html) {
