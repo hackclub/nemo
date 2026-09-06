@@ -5,12 +5,12 @@ import time
 
 logger = logging.getLogger("uvicorn.error")
 
-MODE = os.environ.get("PROXY_BUDGET", "observe").strip().lower()
+MODE = os.environ.get("PROXY_BUDGET", "on").strip().lower()
 
 PER_MINUTE = {
     ("pipeline", "internal"): 150,
     ("pipeline", "admin"): 240,
-    ("pipeline", "admin", "search.messages"): 120,
+    ("pipeline", "admin", "search.messages"): 100,
     ("web", "internal"): 60,
 }
 

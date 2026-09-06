@@ -1,6 +1,5 @@
 import argparse
 import os
-import time
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
@@ -15,7 +14,6 @@ from lib.task import per_entity
 SOURCE = "member_history"
 BATCH_LIMIT = int(os.environ.get("MEMBER_HISTORY_LIMIT", "8000"))
 FLUSH_EVERY = 200
-MIN_SECONDS_PER_SEARCH = 0.6
 
 PENDING_BODY = """
 WITH horizon AS (
@@ -185,7 +183,6 @@ def run(conn, limit=BATCH_LIMIT):
             print(f"{SOURCE}: {counts.rows_in}/{len(items)} searched, through {label}")
 
         for item in items:
-            started = time.monotonic()
             with per_entity(conn, SOURCE, counts, {"user_id": item.target_key},
                             on_fault=lambda fault, item=item: work.fail(conn, item, fault.detail)):
                 rows.append(search_member(client, team_id, item.target_key))
@@ -193,7 +190,6 @@ def run(conn, limit=BATCH_LIMIT):
                 counts.rows_in += 1
             if len(rows) >= FLUSH_EVERY:
                 flush(item.payload.get("cohort_month"))
-            time.sleep(max(0.0, MIN_SECONDS_PER_SEARCH - (time.monotonic() - started)))
         if rows or done:
             flush(items[-1].payload.get("cohort_month"))
 

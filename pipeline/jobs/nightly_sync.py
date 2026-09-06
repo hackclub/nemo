@@ -46,6 +46,7 @@ from lib.db import (
 )
 from checks import headlines
 from jobs import invariants, reconcile
+from lib import breaker
 from lib import settings, sources
 from lib.heartbeat import beating
 from lib.paths import ENV_FILE, WAREHOUSE_DIR
@@ -315,6 +316,8 @@ def run_stages(conn, plan, run_id, budget=None):
             why = over_budget(spent, budget, ran, name)
             if why:
                 cut += 1
+        if not why:
+            why = breaker.blocked(conn, name)
         if why:
             skipped += 1
             print(f"[{index}/{len(plan)}] {name}: skipped, {why}")
@@ -369,6 +372,7 @@ def record_quality(conn, run_id):
     for name, job in (
         ("invariants", lambda: invariants.record(conn, run_id)),
         ("reconcile", lambda: reconcile.record(conn, run_id)),
+        ("breaker", lambda: breaker.record(conn, run_id)),
         ("headlines", lambda: headlines.run(cross_only=True, record=True, run_id=run_id)),
     ):
         try:

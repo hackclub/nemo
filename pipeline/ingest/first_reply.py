@@ -1,6 +1,5 @@
 import argparse
 import os
-import time
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
@@ -14,7 +13,6 @@ from lib.task import per_entity
 SOURCE = "first_reply"
 BATCH_LIMIT = int(os.environ.get("FIRST_REPLY_LIMIT", "4000"))
 FLUSH_EVERY = 200
-MIN_SECONDS_PER_FETCH = 1.2
 THREAD_PAGE = 20
 THREAD_PAGES_MAX = 5
 WALK_VERSION = 2
@@ -156,7 +154,6 @@ def run(conn, limit=BATCH_LIMIT):
             print(f"{SOURCE}: {counts.rows_in}/{len(items)} checked")
 
         for item in items:
-            started = time.monotonic()
             channel, first_post_ts = post_of(item)
 
             def unreadable_first_post(fault, item=item):
@@ -178,7 +175,6 @@ def run(conn, limit=BATCH_LIMIT):
                 by_bot += 1 if bot and not human else 0
             if len(rows) >= FLUSH_EVERY:
                 flush()
-            time.sleep(max(0.0, MIN_SECONDS_PER_FETCH - (time.monotonic() - started)))
         if rows or done:
             flush()
 

@@ -1,6 +1,5 @@
 import argparse
 import re
-import time
 from datetime import date, timedelta
 
 from dotenv import load_dotenv
@@ -29,7 +28,6 @@ TOKEN_SPLIT = re.compile(r"[^0-9a-zÀ-￿]+")
 SHARD_SQL = "SELECT name FROM raw.channel_dim WHERE name IS NOT NULL"
 ALPHABET_SUFFIX = "abcdefghijklmnopqrstuvwxyz0123456789"
 QUERYABLE = re.compile(r"^[0-9a-z]$")
-MIN_SECONDS_PER_CALL = 0.5
 
 
 def token_heads(name):
@@ -85,12 +83,10 @@ def absorb(records, found, on_fresh=None):
 def sweep(client, interval, shards, found, on_fresh=None, depth=0):
     truncated = []
     for shard in shards:
-        started = time.monotonic()
         records, num_found = ask(client, interval, shard)
         absorb(records, found, on_fresh)
         if num_found > len(records):
             truncated.append(shard)
-        time.sleep(max(0.0, MIN_SECONDS_PER_CALL - (time.monotonic() - started)))
     if not truncated or depth >= SPLIT_DEPTH:
         return truncated
     deeper = [shard + letter for shard in truncated for letter in ALPHABET_SUFFIX]

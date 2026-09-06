@@ -2,7 +2,7 @@ module Ingest
   class IncidentAck < ApplicationRecord
     self.table_name = "ingest.incident_ack"
 
-    KINDS = %w[source_failing credential quality].freeze
+    KINDS = %w[source_failing credential quality breaker].freeze
 
     validates :source_key, presence: true
     validates :kind, presence: true, inclusion: { in: KINDS }

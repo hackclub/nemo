@@ -1,6 +1,5 @@
 import argparse
 import os
-import time
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
@@ -21,8 +20,6 @@ PAGE_SIZE = 100
 PAGE_CAP = 100
 MEMBERSHIP_PAGE = 999
 REPORT_EVERY = 50
-MIN_SECONDS_PER_SEARCH = 0.6
-MIN_SECONDS_PER_READ = 0.6
 
 PENDING_BODY = """
 WITH edge AS MATERIALIZED (SELECT max(claimed_at)::date AS d FROM raw.member_dim)
@@ -221,7 +218,6 @@ def run(conn, limit=BATCH_LIMIT, cohort_days=COHORT_DAYS):
         channels, cut_short = 0, 0
 
         for item in items:
-            started = time.monotonic()
             with per_entity(conn, SOURCE, counts, {"user_id": item.target_key},
                             on_fault=lambda fault, item=item: work.fail(conn, item, fault.detail)):
                 tally, pages, truncated = walk_member(client, team_id, item.target_key)
@@ -233,7 +229,6 @@ def run(conn, limit=BATCH_LIMIT, cohort_days=COHORT_DAYS):
             if counts.rows_in % REPORT_EVERY == 0:
                 counts.progress()
                 print(f"{SOURCE}: {counts.rows_in}/{len(items)} walked, {channels} channel rows")
-            time.sleep(max(0.0, MIN_SECONDS_PER_SEARCH - (time.monotonic() - started)))
 
         counts.progress()
 
@@ -304,7 +299,6 @@ def read_membership(conn, client=None, limit=BATCH_LIMIT, cohort_days=COHORT_DAY
         joined, left = 0, 0
 
         for item in items:
-            started = time.monotonic()
             with per_entity(conn, MEMBERSHIP_SOURCE, counts, {"user_id": item.target_key},
                             on_fault=lambda fault, item=item: work.fail(conn, item, fault.detail)):
                 channel_ids = read_member(client, team_id, item.target_key)
@@ -316,7 +310,6 @@ def read_membership(conn, client=None, limit=BATCH_LIMIT, cohort_days=COHORT_DAY
             if counts.rows_in % REPORT_EVERY == 0:
                 counts.progress()
                 print(f"{MEMBERSHIP_SOURCE}: {counts.rows_in}/{len(items)} read, {joined} memberships")
-            time.sleep(max(0.0, MIN_SECONDS_PER_READ - (time.monotonic() - started)))
 
         counts.progress()
 
