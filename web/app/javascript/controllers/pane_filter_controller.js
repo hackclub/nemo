@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["query", "row", "empty"]
+  static values = { wait: { type: Number, default: 400 }, min: { type: Number, default: 2 } }
 
   connect() {
     this.onKey = (event) => {
@@ -16,6 +17,7 @@ export default class extends Controller {
 
   disconnect() {
     document.removeEventListener("keydown", this.onKey)
+    clearTimeout(this.timer)
   }
 
   filter() {
@@ -29,5 +31,10 @@ export default class extends Controller {
     })
 
     if (this.hasEmptyTarget) this.emptyTarget.hidden = shown > 0
+
+    clearTimeout(this.timer)
+    if (shown === 0 && term.length >= this.minValue) {
+      this.timer = setTimeout(() => this.queryTarget.form?.requestSubmit(), this.waitValue)
+    }
   }
 }

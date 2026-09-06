@@ -130,10 +130,11 @@ def run_month(conn, month, alphabet=None):
         short = sweep(client, interval, shards, found, land)
         tail = tail_sweep(client, interval, found, land)
         missed = max(0, expected - len(found))
-        if short or missed:
-            counts.status = "partial"
         reached = len(found) >= int(expected * SHORT_AT)
-        coverage.settle(conn, KEY, interval, fence, "complete" if reached and not short else "short",
+        complete = reached and not short
+        if not complete:
+            counts.status = "partial"
+        coverage.settle(conn, KEY, interval, fence, "complete" if complete else "short",
                         expected, len(found), note=f"{missed} missed" if missed else None)
 
         print(
