@@ -22,6 +22,8 @@ roles:
       - member.note
       - identity.read
       - slack.link
+      - channel.read
+      - channel.all
     grantable: true
 
   promethean:

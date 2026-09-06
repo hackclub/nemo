@@ -55,10 +55,11 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
-  test "a firefighter holds no community grant, but the overview is open to them" do
+  test "a firefighter reads every channel, but holds no member names and no engine" do
     hand = hold_role!("UCAFF", "firefighter")
 
-    refute Authz.holds?(hand, "channel.all"), "a firefighter reads no analytics"
+    assert Authz.holds?(hand, "channel.all"), "a firefighter reads every channel by default"
+    assert Community::Access.allow?(hand, "analytics.channel.read")
     refute Authz.holds?(hand, "engine.manage"), "a firefighter runs no engine"
     assert Community::Access.allow?(hand, "analytics.workspace.read"),
       "every signed-in member reads the overview now"

@@ -51,13 +51,14 @@ class AccessUiTest < ActionDispatch::IntegrationTest
 
   test "naming a firefighter on a channel keeps their role, and they can already see it" do
     channel = Analytics::DimChannel.where(archived: false).first
-    assert_not_includes held.keys, "channel.read"
+    assert_includes held.keys, "channel.all", "a firefighter already reads every channel"
 
     post admin_person_channel_grants_path(@them.user_id),
       params: { channel_id: channel.channel_id }
 
     assert_equal ["firefighter"], Authz.roles_held(@them.user_id), "they are not demoted"
-    assert_not_includes held.keys, "channel.read", "everybody already holds it, nothing to add"
+    assert_empty Authz::Grant.live.for_person(@them.user_id).capabilities,
+      "the baseline already covers it, nothing is added"
     assert Channels::Audience.may_see?(@them, channel)
   end
 
