@@ -13,7 +13,7 @@ namespace :dev do
     { id: "UDEVANA01", name: "Dev Analytics", handle: "dev.analytics",
       role: "analytics" },
     { id: "UDEVSCO01", name: "Dev Scoped", handle: "dev.scoped",
-      added: %w[member.read engine.read] },
+      added: %w[member.read engine.manage] },
     { id: "UDEVMEM01", name: "Dev Member", handle: "dev.member" }
   ].freeze
 
