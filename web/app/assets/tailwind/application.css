@@ -2047,7 +2047,6 @@
   .facts-strip dd .row-avatar, .facts-strip dd .avatar { width: 18px; height: 18px; font-size: 9px; }
   .facts-strip a { color: inherit; text-decoration: none; }
   .facts-strip a:hover { color: var(--accent); }
-  .facts-strip.member-facts { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .facts-strip dd .locked {
     display: inline-flex;
     align-items: center;
@@ -2059,6 +2058,9 @@
     white-space: nowrap;
   }
   .facts-strip dd .locked svg { flex: none; color: var(--ink-4); }
+  .facts-strip.member-facts {
+    grid-template-columns: repeat(3, minmax(max-content, 1fr)) repeat(3, minmax(0, 1fr));
+  }
   .facts-strip dd.is-none .locked { color: var(--ink-3); }
   .member-record-content {
     flex: 1 1 auto;

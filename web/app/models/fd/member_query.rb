@@ -5,7 +5,7 @@ module Fd
     Facet = Struct.new(:key, :label, :value, :value_label, :options, :on, keyword_init: true)
     View = Struct.new(:key, :label, :count, :current, keyword_init: true)
     Row = Struct.new(:user_id, :cases, :subject_of, :logged_in, :open_cases, :actions, :in_force,
-      :notes, :priors, :last_case_at, keyword_init: true)
+      :notes, :priors, :last_case_at, :messages_posted, keyword_init: true)
 
     VIEWS = {
       "everyone" => "Everyone",
@@ -35,14 +35,14 @@ module Fd
     STATE = { "any" => "any", "open" => "open case", "noted" => "standing notes",
               "clean" => "nothing on record" }.freeze
     WHO = { "history" => "with a history", "everyone" => "everyone" }.freeze
-    SORT = { "recent" => "last case", "subject" => "cases as subject",
+    SORT = { "messages" => "messages", "recent" => "last case", "subject" => "cases as subject",
              "logged" => "cases logged in", "actions" => "actions",
              "notes" => "notes", "name" => "name" }.freeze
     DIRS = %w[desc asc].freeze
 
     DEFAULTS = {
       "who" => "everyone", "priors" => "any", "tenure" => "any", "active" => "any",
-      "category" => "any", "state" => "any", "sort" => "recent", "dir" => "desc"
+      "category" => "any", "state" => "any", "sort" => "messages", "dir" => "desc"
     }.freeze
     FACET_KEYS = DEFAULTS.keys.freeze
     KEYS = (FACET_KEYS + ["view"]).freeze
@@ -302,7 +302,8 @@ module Fd
         subject_of: row["subject_of"].to_i, logged_in: row["logged_in"].to_i,
         open_cases: row["open_cases"].to_i, actions: row["actions"].to_i,
         in_force: row["in_force"].to_i, notes: row["notes"].to_i,
-        priors: row["priors"].to_i, last_case_at: row["last_case_at"])
+        priors: row["priors"].to_i, last_case_at: row["last_case_at"],
+        messages_posted: row.key?("messages_posted") ? row["messages_posted"]&.to_i : nil)
     end
 
     def priors_phrase

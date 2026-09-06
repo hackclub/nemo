@@ -37,7 +37,8 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     make_case(subject: "UHASONE", opened_at: 2.days.ago)
 
     assert_equal "everyone", Fd::MemberQuery.new({}).view
-    assert listed?("UHASONE")
+    assert listed?("UHASONE", view: "history")
+    assert_equal ["UHASONE"], shown(q: "UHASONE"), "everyone sorts by messages, so a quiet subject is found by search"
   end
 
   test "the history view narrows to people conduct work has touched" do
@@ -52,8 +53,8 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
     theirs = make_case(subject: "USOMEBODY", opened_at: 3.days.ago)
     theirs.participants.create!(user_id: "UWATCHER", role: "involved", detail: "aimed at them")
 
-    assert listed?("UWATCHER"), "a page of subjects would hide the people conduct work is for"
-    assert_equal 0, row_for("UWATCHER").actions
+    assert listed?("UWATCHER", view: "history"), "a page of subjects would hide the people conduct work is for"
+    assert_equal 0, row_for("UWATCHER", view: "history").actions
   end
 
   def numbers_for(user_id)
@@ -200,9 +201,10 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
   end
 
   test "an exact handle match comes before anyone who merely contains it" do
-    named = Fd::Member.live.where.not(handle: [nil, ""]).where("length(handle) >= 4")
-      .order(:user_id).first
-    skip "the corpus has no member with a handle" if named.nil?
+    handle = Fd::Member.live.where.not(handle: [nil, ""]).where("length(handle) >= 4")
+      .group(:handle).having("count(*) = 1").order(Arel.sql("min(user_id)")).limit(1).pluck(:handle).first
+    named = handle && Fd::Member.live.find_by(handle: handle)
+    skip "the corpus has no member with a handle of its own" if named.nil?
 
     assert_equal named.user_id, shown(q: named.handle).first
     assert_equal named.user_id, shown(q: named.user_id.downcase).first,

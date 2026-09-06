@@ -13,6 +13,7 @@ export default class extends Controller {
       this.queryTarget.focus()
     }
     document.addEventListener("keydown", this.onKey)
+    this.served = this.queryTarget.value.trim().length > 0
   }
 
   disconnect() {
@@ -34,6 +35,8 @@ export default class extends Controller {
 
     clearTimeout(this.timer)
     if (shown === 0 && term.length >= this.minValue) {
+      this.timer = setTimeout(() => this.queryTarget.form?.requestSubmit(), this.waitValue)
+    } else if (!term && this.served) {
       this.timer = setTimeout(() => this.queryTarget.form?.requestSubmit(), this.waitValue)
     }
   }
