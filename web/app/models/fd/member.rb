@@ -13,7 +13,7 @@ module Fd
     scope :live, -> { where(is_deleted: false, is_bot: false) }
     scope :by_name, -> { order(Arel.sql("lower(coalesce(nullif(display_name, ''), handle))")) }
 
-    TERM_FIELDS = %w[user_id display_name handle title].freeze
+    TERM_FIELDS = %w[display_name handle].freeze
     IDENTITY_TERM_FIELDS = %w[real_name first_name last_name email].freeze
 
     def self.search(term, actor: nil, limit: LIMIT)
@@ -21,15 +21,20 @@ module Fd
       return where(user_id: term.upcase).limit(1) if term.match?(MEMBER_ID) && exists?(user_id: term.upcase)
       return none if term.length < MIN_TERM
 
-      like = "%#{sanitize_sql_like(term)}%"
-      fields = TERM_FIELDS.map { |field| "#{table_name}.#{field} ILIKE :q" }
+      like = "%#{sanitize_sql_like(term.downcase)}%"
       identity = actor&.may?("identity.read")
-      if identity
-        fields += IDENTITY_TERM_FIELDS.map { |field| "fd.member_identity.#{field} ILIKE :q" }
-      end
-      left_joins(:identity).where(fields.join(" OR "), q: like)
+      left_joins(:identity).where("#{table_name}.user_id IN (#{hits_sql(identity)})", q: like)
         .order(Arel.sql(match_rank(term, identity)), :is_deleted, :is_bot)
         .by_name.limit(limit)
+    end
+
+    def self.hits_sql(identity)
+      own = TERM_FIELDS.map { |field| "lower(#{field}) LIKE :q" }.join(" OR ")
+      sql = "SELECT user_id FROM #{table_name} WHERE #{own}"
+      return sql unless identity
+
+      theirs = IDENTITY_TERM_FIELDS.map { |field| "lower(#{field}) LIKE :q" }.join(" OR ")
+      "#{sql} UNION SELECT user_id FROM fd.member_identity WHERE #{theirs}"
     end
 
     UNIQUE_FIELDS = %W[#{table_name}.handle #{table_name}.user_id].freeze
@@ -42,13 +47,13 @@ module Fd
       tiers << [IDENTITY_RANKED_FIELDS, :starts] if identity
       whens = tiers.each_with_index.map do |(fields, how), rank|
         test = fields.map do |field|
-          how == :exact ? "lower(coalesce(#{field}, '')) = :exact" : "#{field} ILIKE :starts"
+          how == :exact ? "lower(coalesce(#{field}, '')) = :exact" : "lower(#{field}) LIKE :starts"
         end
         "WHEN #{test.join(' OR ')} THEN #{rank}"
       end
       sanitize_sql_array([
         "CASE #{whens.join(' ')} ELSE #{tiers.size} END",
-        { exact: term.downcase, starts: "#{sanitize_sql_like(term)}%" }
+        { exact: term.downcase, starts: "#{sanitize_sql_like(term.downcase)}%" }
       ])
     end
 

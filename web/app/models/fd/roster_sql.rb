@@ -145,7 +145,7 @@ module Fd
       end
     end
 
-    TERM_FIELDS = %w[user_id display_name handle title].freeze
+    TERM_FIELDS = %w[display_name handle].freeze
 
     IDENTITY_TERM_FIELDS = %w[shown_name real_name first_name last_name email].freeze
 
@@ -154,7 +154,7 @@ module Fd
     end
 
     def term_clause
-      "(#{term_fields.map { |field| "#{field} ILIKE :term" }.join(' OR ')})"
+      "(user_id = :id OR #{term_fields.map { |field| "lower(#{field}) LIKE :term" }.join(' OR ')})"
     end
 
     def roster_order
@@ -177,8 +177,8 @@ module Fd
         test = fields.map do |field|
           case how
           when :exact then "lower(coalesce(#{field}, '')) = :exact"
-          when :starts then "#{field} ILIKE :starts"
-          else "#{field} ILIKE :term"
+          when :starts then "lower(#{field}) LIKE :starts"
+          else "lower(#{field}) LIKE :term"
           end
         end
         "WHEN #{test.join(' OR ')} THEN #{rank}"
@@ -204,9 +204,9 @@ module Fd
     def roster_binds
       { category: self["category"], now: Time.current,
         prior_since: Case::PRIOR_WINDOW.ago,
-        term: "%#{Case.sanitize_sql_like(term)}%",
-        starts: "#{Case.sanitize_sql_like(term)}%",
-        exact: term.downcase }
+        term: "%#{Case.sanitize_sql_like(term.downcase)}%",
+        starts: "#{Case.sanitize_sql_like(term.downcase)}%",
+        exact: term.downcase, id: term.upcase }
     end
 
     def ask(sql, extra = {})
