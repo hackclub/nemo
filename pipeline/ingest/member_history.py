@@ -20,24 +20,32 @@ WITH horizon AS (
     SELECT max(account_created_verified) AS max_verified FROM raw.member_dim
 ),
 range_activity AS (
-    SELECT user_id, channel_messages_posted
+    SELECT user_id, channel_messages_posted, window_start
     FROM raw.member_activity_snapshot
     WHERE source = %s
+),
+range_window AS (
+    SELECT min(window_start) AS opened_at FROM range_activity
 )
 SELECT
     m.user_id,
     date_trunc('month', CASE
-        WHEN m.account_created_verified IS NOT NULL THEN m.account_created_verified
+        WHEN coalesce(o.account_created_verified, m.account_created_verified) IS NOT NULL
+            THEN coalesce(o.account_created_verified, m.account_created_verified)
         WHEN m.account_created > h.max_verified THEN m.account_created
     END)::date AS cohort_month
 FROM raw.member_dim m
 CROSS JOIN horizon h
+CROSS JOIN range_window rw
+LEFT JOIN raw.member_created_override o ON o.user_id = m.user_id
 LEFT JOIN raw.member_message_history mh ON mh.user_id = m.user_id
 LEFT JOIN range_activity r ON r.user_id = m.user_id
 WHERE mh.user_id IS NULL
   AND NOT coalesce(m.is_bot, false)
   AND NOT coalesce(m.invite_pending, false)
-  AND (r.user_id IS NULL OR coalesce(r.channel_messages_posted, 0) > 0)
+  AND (r.user_id IS NULL
+       OR coalesce(r.channel_messages_posted, 0) > 0
+       OR coalesce(o.account_created_verified, m.account_created_verified) < rw.opened_at)
 ORDER BY 2 DESC NULLS LAST, m.user_id
 """
 
