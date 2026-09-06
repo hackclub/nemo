@@ -208,7 +208,7 @@ def run(conn, limit=BATCH_LIMIT, cohort_days=COHORT_DAYS):
         print(f"{SOURCE}: every newcomer of the last {cohort_days} days is walked, queue empty")
         return 0
 
-    client = ProxyClient()
+    client = ProxyClient.for_source(KIND)
     team_id = os.environ["SLACK_TEAM_ID"]
     print(f"{SOURCE}: {len(items)} newcomer(s) claimed off the queue"
           + (f", {queued} newly queued" if queued else ""))

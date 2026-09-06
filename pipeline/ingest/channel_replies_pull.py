@@ -179,7 +179,7 @@ def enqueue_threads(conn):
 
 
 def run(conn, budget=500, stale_hours=6):
-    client = ProxyClient()
+    client = ProxyClient.for_source(KIND)
     with conn.cursor() as cur:
         cur.execute(RELEASE_STALE_SQL, (stale_hours,))
         for (stranded,) in cur.fetchall():

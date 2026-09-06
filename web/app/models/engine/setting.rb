@@ -15,10 +15,15 @@ module Engine
       "run_at" => { label: "Nightly at", default: "03:00", kind: :time },
       "budget_minutes" => { label: "Budget for one night", default: "480", kind: :number,
                             min: 5, max: 720 },
-      Engine::Freshness::SWITCH => { label: "Stale cards read n/a", default: "true", kind: :switch },
+      "breaker_mode" => { label: "Breakers", default: "observe", kind: :choice,
+                          choices: %w[observe on off] },
       "backfill_ceiling" => { label: "Backfill needs engine.sync over", default: "1000",
                               kind: :number, min: 0, max: 100_000 }
     }.freeze
+
+    def self.choices(name)
+      ENGINE_DIALS.dig(name.to_s, :choices)
+    end
 
     def self.backfill_ceiling
       value(ENGINE, "backfill_ceiling").to_i
@@ -117,6 +122,11 @@ module Engine
         return value if %w[true false].include?(value)
 
         raise Refused, "#{value} is not true or false"
+      end
+      if dial[:kind] == :choice
+        return value if dial[:choices].include?(value)
+
+        raise Refused, "#{value} is not one of #{dial[:choices].join(', ')}"
       end
       return value if dial[:kind] == :time && value.match?(/\A([01]\d|2[0-3]):[0-5]\d\z/)
       raise Refused, "#{value} is not a time of day" if dial[:kind] == :time

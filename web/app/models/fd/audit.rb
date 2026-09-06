@@ -13,6 +13,7 @@ module Fd
       "Fd::MemberIdentity" => "identity",
       "Fd::CaseCitation" => "citation",
       "Engine::Setting" => "engine_setting",
+      "Ingest::IncidentAck" => "incident_ack",
       "Authz::Override" => "permission",
       "Fd::StaffSlack" => "slack_account",
       "Fd::Flag" => "flag",
@@ -30,6 +31,7 @@ module Fd
       linked unlinked
       turned_on turned_off
       tuned reset
+      acked muted
     ].freeze
 
     REDACTED_COLUMNS = {

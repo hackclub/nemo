@@ -99,7 +99,7 @@ def tail_sweep(client, interval, found, on_fresh=None):
 
 
 def run_month(conn, month, alphabet=None):
-    client = ProxyClient()
+    client = ProxyClient.for_source(KEY)
     start, stop = month_window(client, month)
     interval = interval_of(month)
     shards = alphabet or shard_alphabet(conn)

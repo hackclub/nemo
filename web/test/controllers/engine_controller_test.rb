@@ -6,15 +6,54 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
     OmniAuth.config.mock_auth[:hackclub] = nil
   end
 
-  test "the three tabs each render, and an unknown tab falls back to runs" do
+  test "every tab renders, and an unknown tab falls back to runs" do
     sign_in_as(hold_role!("UTESTCM1", "community_manager"))
 
     get engine_path
     assert_response :success
 
-    get engine_path(tab: "coverage")
+    EngineController::TABS.each_key do |tab|
+      get engine_path(tab: tab)
+      assert_response :success, tab
+    end
 
     get engine_path(tab: "teleporter")
+    assert_response :success
+  end
+
+  test "a breaker override writes a one-night ack the pipeline honours" do
+    sign_in_as(hold_role!("UTESTCM1", "community_manager"))
+
+    assert_difference -> { Ingest::IncidentAck.count }, 1 do
+      post engine_override_breaker_path(source_key: "team_stats")
+    end
+
+    row = Ingest::IncidentAck.find_by!(source_key: "team_stats", kind: "breaker")
+    assert row.muted?
+    assert_equal "UTESTCM1", row.acked_by
+    assert_redirected_to engine_path(tab: "faults")
+  end
+
+  test "an incident can be acknowledged without muting it, and muted for a day" do
+    sign_in_as(hold_role!("UTESTCM1", "community_manager"))
+
+    post engine_ack_incident_path(source_key: "member_days", kind: "source_failing")
+    row = Ingest::IncidentAck.find_by!(source_key: "member_days", kind: "source_failing")
+    assert_not row.muted?
+    assert row.acked_at
+
+    post engine_mute_incident_path(source_key: "member_days", kind: "source_failing")
+    assert row.reload.muted?
+    assert_equal 1, Ingest::IncidentAck.where(source_key: "member_days").count
+  end
+
+  test "a visitor without ops.engine cannot touch incidents" do
+    sign_in_as(hold_role!("UTESTCM2", "community_manager"))
+    drop_roles!("UTESTCM2")
+
+    assert_no_difference -> { Ingest::IncidentAck.count } do
+      post engine_override_breaker_path(source_key: "team_stats")
+    end
   end
 
   test "a source can be triggered from the row that describes it" do

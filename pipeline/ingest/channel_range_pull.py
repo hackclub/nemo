@@ -99,7 +99,7 @@ next_month = planners.next_month
 
 
 def run(conn, days=WINDOW_DAYS, end=None, source=SOURCE, span=False):
-    client = ProxyClient()
+    client = ProxyClient.for_source(sources.key_for_run(source))
     start, stop = span_window(client, end) if span else resolve_window(client, days, end)
     params = {
         "start_date": start.isoformat(),

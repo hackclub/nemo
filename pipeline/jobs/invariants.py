@@ -11,7 +11,7 @@ COUNT_COLUMNS = (
     "rows_in", "rows_rejected", "total_expected", "pages", "rate_limited_ms",
     "expected", "landed", "fetched", "expected_count", "landed_count",
 )
-COUNT_TABLES = (("raw", "ingest_run"), ("ingest", "coverage"), ("ingest", "work_item"))
+COUNT_TABLES = (("raw", "ingest_run"), ("ingest", "slice_coverage"), ("ingest", "work_item"))
 
 RECORD_SQL = """
 INSERT INTO ingest.quality_result (run_id, subject, assertion, severity, status, observed, expected)

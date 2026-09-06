@@ -44,7 +44,7 @@ def resolve_window(client, days=None, end=None):
 
 
 def run(conn, days=None, end=None):
-    client = ProxyClient()
+    client = ProxyClient.for_source(KEY)
     start, stop = resolve_window(client, days, end)
     params = {
         "start_date": start.isoformat(),

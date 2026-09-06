@@ -1,0 +1,220 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Incidents</h2>
+      <p class="card-sub"><%= incidents.count { |i| !i.muted } %> open &middot; <%= incidents.count(&:muted) %> muted</p>
+    </div>
+  </div>
+  <% if incidents.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>kind</th>
+            <th>source</th>
+            <th class="col-num">nights</th>
+            <th>class</th>
+            <th>detail</th>
+            <th class="col-num">last seen</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% incidents.each do |incident| %>
+            <tr>
+              <td class="mono"><%= incident.kind %></td>
+              <td class="mono"><%= incident.source_key %></td>
+              <td class="col-num"><%= incident.consecutive %></td>
+              <td><span class="chip <%= fault_class_chip(incident.error_class) %>"><%= incident.error_class || "n/a" %></span></td>
+              <td class="sub" style="max-width: 36ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap" title="<%= incident.error_detail %>"><%= incident.error_detail || "n/a" %></td>
+              <td class="col-num mono"><%= short_age(incident.last_seen) %></td>
+              <td>
+                <% if incident.muted %>
+                  <span class="chip chip-off">muted until <%= incident.muted_until.strftime("%-d %b %H:%M") %></span>
+                <% elsif incident.acked_at %>
+                  <span class="chip chip-off">acked by <%= incident.acked_by %></span>
+                <% elsif may_tune %>
+                  <span class="dial-set">
+                    <%= button_to "ack", engine_ack_incident_path(source_key: incident.source_key, kind: incident.kind),
+                          class: "btn", form: { class: "contents" } %>
+                    <%= button_to "mute a day", engine_mute_incident_path(source_key: incident.source_key, kind: incident.kind),
+                          class: "btn", form: { class: "contents" } %>
+                  </span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">n/a</p>
+  <% end %>
+</div>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Suppressed</h2>
+      <p class="card-sub">breakers <%= breaker_mode %><%= ", recording only" if breaker_mode == "observe" %></p>
+    </div>
+    <div class="card-tools">
+      <span class="qlab">Mode</span>
+      <%= render "val", source: Engine::Setting::ENGINE, name: "breaker_mode", may_tune: may_tune %>
+    </div>
+  </div>
+  <% open = breakers.select { |row| row.status == "fail" } %>
+  <% if breakers.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>scope</th>
+            <th>state</th>
+            <th class="col-num">streak</th>
+            <th class="col-num">trips at</th>
+            <th class="col-num">checked</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% breakers.each do |row| %>
+            <tr>
+              <td class="mono"><%= row.assertion %></td>
+              <td>
+                <% if row.status == "fail" %>
+                  <span class="chip chip-crit"><%= breaker_mode == "on" ? "open, skipping" : "would open" %></span>
+                <% elsif row.assertion.start_with?("mode:") %>
+                  <span class="chip chip-good">none open</span>
+                <% else %>
+                  <span class="chip chip-off">held closed</span>
+                <% end %>
+              </td>
+              <td class="col-num"><%= row.observed %></td>
+              <td class="col-num"><%= row.expected.to_i + 1 %></td>
+              <td class="col-num mono"><%= short_age(row.checked_at) %></td>
+              <td>
+                <% if row.status == "fail" && may_tune %>
+                  <%= button_to "hold closed tonight", engine_override_breaker_path(source_key: row.assertion.split(":", 2).last),
+                        class: "btn", form: { class: "contents" } %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">n/a</p>
+  <% end %>
+</div>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Credentials</h2>
+    </div>
+  </div>
+  <div class="scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>probe</th>
+          <th>state</th>
+          <th class="col-num">last beat</th>
+          <th>said</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">proxy</td>
+          <td>
+            <% if proxy.nil? %>
+              <span class="chip chip-off">never probed</span>
+            <% elsif proxy.note.to_s.start_with?("FAILED") %>
+              <span class="chip chip-crit">failed</span>
+            <% elsif proxy.cold? %>
+              <span class="chip chip-warn">silent</span>
+            <% else %>
+              <span class="chip chip-good">ok</span>
+            <% end %>
+          </td>
+          <td class="col-num mono"><%= proxy ? short_age(proxy.beat_at) : "n/a" %></td>
+          <td class="sub"><%= proxy&.note || "n/a" %></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Taxonomy</h2>
+      <p class="card-sub">failed stage runs, last <%= EngineController::TAXONOMY_WINDOW.inspect %></p>
+    </div>
+  </div>
+  <% if taxonomy.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>class</th>
+            <th class="col-num">runs</th>
+            <th class="col-num">sources</th>
+            <th>latest detail</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% taxonomy.each do |taxon| %>
+            <tr>
+              <td><span class="chip <%= fault_class_chip(taxon.error_class) %>"><%= taxon.error_class %></span></td>
+              <td class="col-num"><%= taxon.count %></td>
+              <td class="col-num"><%= taxon.sources %></td>
+              <td class="sub mono" style="font-size: 11.5px"><%= taxon.sample || "n/a" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">n/a</p>
+  <% end %>
+</div>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Local</h2>
+      <p class="card-sub">invariants and queue reconciliation failing in the last two days</p>
+    </div>
+  </div>
+  <% if local_faults.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>check</th>
+            <th>severity</th>
+            <th class="col-num">observed</th>
+            <th class="col-num">expected</th>
+            <th class="col-num">checked</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% local_faults.each do |row| %>
+            <tr>
+              <td class="mono"><%= row.subject %>:<%= row.assertion %></td>
+              <td><span class="chip <%= row.severity == "error" ? "chip-crit" : "chip-warn" %>"><%= row.severity %></span></td>
+              <td class="col-num mono"><%= row.observed %></td>
+              <td class="col-num mono"><%= row.expected %></td>
+              <td class="col-num mono"><%= short_age(row.checked_at) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">n/a</p>
+  <% end %>
+</div>

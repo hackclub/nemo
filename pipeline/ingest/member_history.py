@@ -161,7 +161,7 @@ def run(conn, limit=BATCH_LIMIT):
         print(f"{SOURCE}: every member is searched, queue empty")
         return 0
 
-    client = ProxyClient()
+    client = ProxyClient.for_source(KIND)
     team_id = os.environ["SLACK_TEAM_ID"]
     print(f"{SOURCE}: {len(items)} member(s) claimed off the queue, newest cohorts first"
           + (f", {queued} newly queued" if queued else ""))

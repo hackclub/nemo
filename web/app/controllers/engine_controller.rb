@@ -11,7 +11,12 @@ class EngineController < ApplicationController
   VISIT_STEPS_NEED = 15
 
   TABS = { "runs" => "Runs", "sources" => "Sources", "coverage" => "Coverage",
-           "backfill" => "Backfill", "tuning" => "Tuning" }.freeze
+           "queues" => "Queues", "backfill" => "Backfill", "faults" => "Faults",
+           "tuning" => "Tuning" }.freeze
+  MUTE_FOR = 1.day
+  TAXONOMY_WINDOW = 30.days
+  SLICE_STRIP_DAYS = 60
+  DAY_SOURCES = %w[member_days channel_days].freeze
 
   def index
     @tab = TABS.key?(params[:tab]) ? params[:tab] : "runs"
@@ -26,14 +31,55 @@ class EngineController < ApplicationController
     @step_output = @run ? step_output_for(@run) : []
     @nights = night_dates
     @matrix = night_matrix(@nights)
-    @band = band_facts
 
     case @tab
     when "sources" then @sources = source_rows
     when "coverage" then coverage_facts
+    when "queues" then queue_facts
+    when "faults" then fault_facts
     when "tuning" then @sources = source_rows
     when "backfill" then backfill_facts
     end
+  end
+
+  def queue_facts
+    @queues = Analytics::FctWorkQueue.busiest_first.to_a
+  end
+
+  def fault_facts
+    @incidents = Analytics::FctIngestIncident.worst_first.to_a
+    @breakers = latest_quality("breaker")
+    @local_faults = latest_quality("invariant", "work_queue").select { |row| row.status == "fail" }
+    @taxonomy = fault_taxonomy
+    @proxy = Analytics::FctWorkerHeartbeat.find_by(worker: "proxy")
+    @breaker_mode = Engine::Setting.value(Engine::Setting::ENGINE, "breaker_mode")
+  end
+
+  def ack_incident
+    return refuse_tuning unless may_community?("ops.engine")
+
+    row = remember_incident(params[:source_key], params[:kind], muted_until: nil)
+    redirect_to engine_path(tab: "faults"), notice: "#{row.source_key} acknowledged"
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to engine_path(tab: "faults"), alert: e.record.errors.full_messages.to_sentence
+  end
+
+  def mute_incident
+    return refuse_tuning unless may_community?("ops.engine")
+
+    row = remember_incident(params[:source_key], params[:kind], muted_until: MUTE_FOR.from_now)
+    redirect_to engine_path(tab: "faults"), notice: "#{row.source_key} muted for a day"
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to engine_path(tab: "faults"), alert: e.record.errors.full_messages.to_sentence
+  end
+
+  def override_breaker
+    return refuse_tuning unless may_community?("ops.engine")
+
+    row = remember_incident(params[:source_key], "breaker", muted_until: MUTE_FOR.from_now)
+    redirect_to engine_path(tab: "faults"), notice: "breaker #{row.source_key} held closed for a night"
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to engine_path(tab: "faults"), alert: e.record.errors.full_messages.to_sentence
   end
 
   HOLDING = [["Recurrence funnel, visit steps", 15], ["Retention, day 30", 30],
@@ -54,6 +100,8 @@ class EngineController < ApplicationController
   def coverage_facts
     @day_coverage = day_coverage
     @held = consecutive_member_days
+    @slices = slice_summary
+    @day_strips = day_strips
   end
 
   def tune
@@ -259,25 +307,77 @@ class EngineController < ApplicationController
   RANK = { "skipped" => 1, "ok" => 2, "running" => 3, "cancelled" => 4, "abandoned" => 5,
            "failed" => 6 }.freeze
 
-  BandFact = Struct.new(:key, :value, :said, :tone, keyword_init: true)
+  def remember_incident(source_key, kind, muted_until:)
+    row = Ingest::IncidentAck.find_or_initialize_by(source_key: source_key.to_s, kind: kind.to_s)
+    row.update!(acked_by: current_account.user_id, acked_at: Time.current, muted_until: muted_until)
+    Fd::Audit.record(row, muted_until ? "muted" : "acked",
+      actor: current_account.user_id, request_id: request.request_id,
+      after: { "source_key" => row.source_key, "kind" => row.kind,
+               "muted_until" => row.muted_until&.iso8601 })
+    row
+  end
 
-  def band_facts
-    held = consecutive_member_days
-    behind = source_rows.select { |row| row.state == "stale" || row.state == "never run" }
-    worst = behind.min_by { |row| row.last_ok || Time.at(0) }
-    done = @steps.count(&:settled?)
-    planned = @steps.last&.step_total || Engine::Source::KEYS.size
+  def latest_quality(*subjects)
+    Analytics::FctQualityResult.where(subject: subjects)
+      .where("checked_at > ?", 2.days.ago)
+      .order(checked_at: :desc)
+      .to_a
+      .uniq { |row| [row.subject, row.assertion] }
+  end
 
-    [
-      BandFact.new(key: "Consecutive member-days", value: held,
-        said: "of #{VISIT_STEPS_NEED}, which is what the visit steps need",
-        tone: held >= VISIT_STEPS_NEED ? "good" : ""),
-      BandFact.new(key: "Behind", value: behind.size,
-        said: worst ? "#{worst.source.key}, #{helpers.short_age(worst.last_ok)}" : "nothing",
-        tone: behind.any? ? "bad" : "good"),
-      BandFact.new(key: "Tonight", value: "#{done}/#{planned}",
-        said: @run ? run_span(@run) : "not started", tone: "push")
-    ]
+  Taxon = Struct.new(:error_class, :count, :sources, :sample, keyword_init: true)
+
+  def fault_taxonomy
+    Analytics::FctIngestRun.where(status: "failed")
+      .where.not(parent_run_id: nil)
+      .where("started_at > ?", TAXONOMY_WINDOW.ago)
+      .group(:error_class)
+      .pluck(:error_class, Arel.sql("count(*)"), Arel.sql("count(distinct source_key)"),
+        Arel.sql("(array_agg(left(error_detail, 140) order by started_at desc))[1]"))
+      .map { |klass, count, sources, sample|
+        Taxon.new(error_class: klass || "unclassified", count: count, sources: sources, sample: sample)
+      }
+      .sort_by { |taxon| -taxon.count }
+  end
+
+  SliceSummary = Struct.new(:source_key, :complete, :short, :claimed, :superseded, :unavailable,
+    :latest, :worst_ratio, :settled_week, keyword_init: true)
+
+  def slice_summary
+    Analytics::FctSliceCoverage.group(:source_key).pluck(
+      :source_key,
+      Arel.sql("count(*) filter (where state = 'complete')"),
+      Arel.sql("count(*) filter (where state = 'short')"),
+      Arel.sql("count(*) filter (where state = 'claimed')"),
+      Arel.sql("count(*) filter (where state = 'superseded')"),
+      Arel.sql("count(*) filter (where state = 'unavailable')"),
+      Arel.sql("max(slice_end)"),
+      Arel.sql("min(landed_ratio) filter (where state in ('complete', 'short'))"),
+      Arel.sql("count(*) filter (where state = 'complete' and settled_at > now() - interval '7 days')")
+    ).map { |key, complete, short, claimed, superseded, unavailable, latest, ratio, week|
+      SliceSummary.new(source_key: key, complete: complete, short: short, claimed: claimed,
+        superseded: superseded, unavailable: unavailable, latest: latest, worst_ratio: ratio,
+        settled_week: week)
+    }.sort_by(&:source_key)
+  end
+
+  def day_strips
+    since = SLICE_STRIP_DAYS.days.ago.to_date
+    by_source = Analytics::FctSliceCoverage.where(source_key: DAY_SOURCES)
+      .where("slice_start >= ?", since)
+      .pluck(:source_key, :slice_start, :state)
+      .group_by(&:first)
+      .transform_values { |rows| rows.to_h { |_, day, state| [day, state] } }
+    DAY_SOURCES.filter_map do |key|
+      states = by_source[key]
+      next nil if states.nil?
+
+      days = (since..Date.current).map { |day| [day, states[day] || "missing"] }
+      missing = days.count { |_, state| %w[missing short claimed].include?(state) }
+      per_day = @slices&.find { |row| row.source_key == key }&.settled_week.to_f / 7
+      eta = per_day.positive? && missing.positive? ? (missing / per_day).ceil : nil
+      [key, days, missing, per_day, eta]
+    end
   end
 
   MEMBER_DAY_SOURCE = "member_day".freeze

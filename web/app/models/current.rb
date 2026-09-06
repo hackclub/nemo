@@ -1,5 +1,5 @@
 class Current < ActiveSupport::CurrentAttributes
-  attribute :moved, :flipped, :tuned, :fresh, :effective_capabilities, :held_roles
+  attribute :moved, :flipped, :tuned, :effective_capabilities, :held_roles
 
   def role_permissions
     self.moved ||= Authz::Override.pluck(:role, :capability, :allowed)
@@ -22,9 +22,5 @@ class Current < ActiveSupport::CurrentAttributes
 
   def forget_tuned
     self.tuned = nil
-  end
-
-  def forget_fresh
-    self.fresh = nil
   end
 end

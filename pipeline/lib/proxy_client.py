@@ -67,6 +67,12 @@ class ProxyClient:
         if refusal:
             raise ProxyError(refusal)
 
+    @classmethod
+    def for_source(cls, key, **kwargs):
+        from lib import sources
+        budget = sources.unit_budget_seconds(key)
+        return cls(deadline_seconds=budget, read_timeout=min(120, budget), **kwargs)
+
     def call(self, method, params=None, max_retries=3, credential="internal"):
         payload = {
             "method": method,

@@ -1,0 +1,28 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Limits</h2>
+    </div>
+  </div>
+  <div class="card-body flush">
+    <div class="tgrid thead" style="grid-template-columns: minmax(0, 1fr) 118px 120px minmax(0, 1.4fr)">
+      <div>Source</div>
+      <div class="tcell">Value</div>
+      <div class="tcell">Bounds</div>
+      <div>One step costs</div>
+    </div>
+    <% sources.each do |row| %>
+      <% source = row.source %>
+      <% source.limits.each do |name, bounds| %>
+        <div class="tgrid" style="grid-template-columns: minmax(0, 1fr) 118px 120px minmax(0, 1.4fr)">
+          <div class="tn"><b><%= source.key %></b><span><%= name %></span></div>
+          <div class="tcell">
+            <%= render "val", source: source.key, name: name, may_tune: may_tune, show_was: true %>
+          </div>
+          <div class="tcell mono sub"><%= bounds["min"] %> to <%= bounds["max"] %></div>
+          <div class="sub"><%= unit_cost(source, name) %></div>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>

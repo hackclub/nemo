@@ -1,0 +1,46 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Queues</h2>
+      <p class="card-sub"><%= number_with_delimiter(queues.sum(&:pending)) %> waiting &middot; <%= queues.sum(&:claimed) %> in flight</p>
+    </div>
+  </div>
+  <% if queues.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>queue</th>
+            <th class="col-num">waiting</th>
+            <th class="col-num">in flight</th>
+            <th class="col-num">settled, hour</th>
+            <th class="col-num">settled, day</th>
+            <th class="col-num">arrived, day</th>
+            <th class="col-num">short</th>
+            <th class="col-num">dead</th>
+            <th class="col-num">oldest</th>
+            <th class="col-num">drains in</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% queues.each do |queue| %>
+            <tr>
+              <td class="mono"><%= queue.work_kind %></td>
+              <td class="col-num"><%= number_with_delimiter(queue.pending) %></td>
+              <td class="col-num"><%= queue.claimed %></td>
+              <td class="col-num"><%= number_with_delimiter(queue.settled_last_hour) %></td>
+              <td class="col-num"><%= number_with_delimiter(queue.settled_last_day) %></td>
+              <td class="col-num"><%= number_with_delimiter(queue.arrived_last_day) %></td>
+              <td class="col-num"><%= queue.short %></td>
+              <td class="col-num <%= "warn" if queue.dead.positive? %>"><%= queue.dead %></td>
+              <td class="col-num mono"><%= queue.oldest_pending_at ? short_age(queue.oldest_pending_at) : "n/a" %></td>
+              <td class="col-num mono"><%= queue_eta(queue) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">n/a</p>
+  <% end %>
+</div>

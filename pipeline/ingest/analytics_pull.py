@@ -326,7 +326,7 @@ def pull_member_day(conn, pull_date):
             print(f"member analytics {pull_date}: another worker holds this day, skipping")
             return
         activity_rows, dim_rows = [], []
-        client = ProxyClient()
+        client = ProxyClient.for_source(MEMBER_DAYS_KEY)
         params = {
             "start_date": pull_date.isoformat(),
             "end_date": pull_date.isoformat(),
@@ -387,7 +387,7 @@ def pull_channel_day(conn, pull_date):
             return
         activity_rows, dim_rows = [], []
         try:
-            raw = ProxyClient().fetch_file(
+            raw = ProxyClient.for_source(CHANNEL_DAYS_KEY).fetch_file(
                 "admin.analytics.getFile",
                 {"type": "public_channel", "date": iso},
             )

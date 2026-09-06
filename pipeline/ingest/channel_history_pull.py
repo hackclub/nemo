@@ -383,7 +383,7 @@ def drain_backfill(conn, client, counts, limit, pages=BACKFILL_PAGES, targets=No
 
 
 def run(conn, limit=200, full=False, channels=None, backfill_limit=None):
-    client = ProxyClient()
+    client = ProxyClient.for_source("channel_history")
     work.reclaim(conn, TAIL_KIND)
     work.reclaim(conn, BACKFILL_KIND)
     if channels:

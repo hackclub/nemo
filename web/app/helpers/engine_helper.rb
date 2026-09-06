@@ -14,12 +14,6 @@ module EngineHelper
     tag.span row.status, class: STATUS_CHIP.fetch(row.status, "chip chip-off")
   end
 
-  SOURCE_STATE_CLASS = { "stale" => "state-stale", "never run" => "state-never" }.freeze
-
-  def source_state_class(state)
-    SOURCE_STATE_CLASS.fetch(state, "state-live")
-  end
-
   def short_age(at)
     return "n/a" if at.nil?
 
@@ -31,14 +25,51 @@ module EngineHelper
     "#{seconds / 86_400}d"
   end
 
-  def short_seconds(seconds)
-    return "n/a" if seconds.nil?
+  FAULT_CHIP = {
+    "transport" => "chip-warn", "throttle" => "chip-warn", "auth" => "chip-crit",
+    "upstream" => "chip-crit", "contract" => "chip-crit", "cancelled" => "chip-off",
+    "local" => "chip-crit", "entity" => "chip-off"
+  }.freeze
 
-    seconds = seconds.round
-    return "#{seconds}s" if seconds < 60
-    return "#{seconds / 60}m #{seconds % 60}s" if seconds < 3600
+  def fault_class_chip(error_class)
+    FAULT_CHIP.fetch(error_class.to_s, "chip-off")
+  end
 
-    "#{seconds / 3600}h #{(seconds % 3600) / 60}m"
+  def queue_eta(queue)
+    return "idle" if queue.pending.to_i.zero?
+    return "n/a" if queue.eta_minutes.nil?
+
+    minutes = queue.eta_minutes.to_f
+    return "#{minutes.round} min" if minutes < 90
+    return "#{(minutes / 60).round(1)} h" if minutes < 48 * 60
+
+    "#{(minutes / 1440).round(1)} d"
+  end
+
+  SLICE_CELL = { "complete" => "on", "superseded" => "on", "unavailable" => "un",
+                 "short" => "sh", "claimed" => "sh", "missing" => "no" }.freeze
+
+  def slice_cell(state)
+    SLICE_CELL.fetch(state, "no")
+  end
+
+  UNIT_COST = {
+    "search.messages" => "one admin search per member",
+    "conversations.replies" => "one admin call per thread",
+    "conversations.history" => "one admin call per page of 999 messages",
+    "conversations.members" => "one bot call per member",
+    "admin.analytics.getMemberAnalytics" => "one internal call per 500 members",
+    "admin.analytics.getChannelAnalytics" => "37 internal calls per month",
+    "admin.analytics.getFile" => "one internal download per day",
+    "admin.users.list" => "one admin call per 100 members",
+    "team.stats.timeSeries" => "one internal call per window"
+  }.freeze
+
+  def unit_cost(source, name)
+    per = UNIT_COST[source.endpoint]
+    return "n/a" if per.nil?
+
+    "#{name} of #{Engine::Setting.value(source.key, name)}, #{per}"
   end
 
   def run_status_tally(statuses)

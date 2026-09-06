@@ -134,7 +134,7 @@ def run(conn, limit=BATCH_LIMIT):
         print(f"{SOURCE}: every first post is checked, queue empty")
         return 0
 
-    client = ProxyClient()
+    client = ProxyClient.for_source(KIND)
     print(f"{SOURCE}: {len(items)} first post(s) claimed off the queue"
           + (f", {queued} newly queued" if queued else ""))
 

@@ -24,6 +24,7 @@ sources:
     feeds: [mart_top_posters]
 
   member_days:
+    unit_budget_seconds: 180
     label: Member activity, one day at a time
     endpoint: admin.analytics.getMemberAnalytics
     credential: internal
@@ -40,6 +41,7 @@ sources:
       batch: {default: 6, min: 1, max: 30}
 
   channel_days:
+    unit_budget_seconds: 300
     label: Channel activity, one day at a time
     endpoint: admin.analytics.getFile
     credential: admin
@@ -56,6 +58,7 @@ sources:
       batch: {default: 30, min: 1, max: 60}
 
   member_range:
+    unit_budget_seconds: 180
     label: Member analytics over the whole available window
     endpoint: admin.analytics.getMemberAnalytics
     credential: internal
@@ -69,6 +72,7 @@ sources:
     feeds: [mart_activity_distribution, mart_monthly_cohorts]
 
   channel_range:
+    unit_budget_seconds: 180
     label: Channel analytics over a rolling window
     endpoint: admin.analytics.getChannelAnalytics
     credential: internal
@@ -82,6 +86,7 @@ sources:
     feeds: [mart_channel_range]
 
   channel_span:
+    unit_budget_seconds: 180
     label: Channel analytics over the whole available window
     endpoint: admin.analytics.getChannelAnalytics
     credential: internal
@@ -95,6 +100,7 @@ sources:
     feeds: [mart_channel_bands]
 
   channel_month:
+    unit_budget_seconds: 120
     label: Channel analytics month by month
     endpoint: admin.analytics.getChannelAnalytics
     credential: internal
@@ -110,6 +116,7 @@ sources:
       months: {default: 2, min: 1, max: 24}
 
   channel_replies:
+    unit_budget_seconds: 60
     label: Thread replies for opted-in channels
     endpoint: conversations.replies
     credential: admin
@@ -137,6 +144,7 @@ sources:
     feeds: [dim_member_scd, dim_channel_scd]
 
   channel_history:
+    unit_budget_seconds: 120
     label: Public channel messages, the message spine
     endpoint: conversations.history
     credential: admin
@@ -202,6 +210,7 @@ sources:
     runs_as: [channel_info_names]
 
   member_history:
+    unit_budget_seconds: 60
     label: All-time message count and first post
     endpoint: search.messages
     credential: admin
@@ -216,6 +225,7 @@ sources:
       batch: {default: 1000, min: 500, max: 20000}
 
   member_channels:
+    unit_budget_seconds: 60
     label: Newcomer messages by channel
     endpoint: search.messages
     credential: admin
@@ -232,6 +242,7 @@ sources:
       cohort_days: {default: 30, min: 7, max: 90}
 
   channel_membership:
+    unit_budget_seconds: 60
     label: Which public channels a newcomer joined
     endpoint: users.conversations
     credential: bot
@@ -248,6 +259,7 @@ sources:
       cohort_days: {default: 30, min: 7, max: 90}
 
   first_reply:
+    unit_budget_seconds: 45
     label: The first reply a newcomer received
     endpoint: conversations.replies
     credential: admin

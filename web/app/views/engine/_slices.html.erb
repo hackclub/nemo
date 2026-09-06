@@ -1,0 +1,78 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Slices</h2>
+    </div>
+  </div>
+  <% if slices.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>source</th>
+            <th class="col-num">complete</th>
+            <th class="col-num">short</th>
+            <th class="col-num">claimed</th>
+            <th class="col-num">superseded</th>
+            <th class="col-num">no data</th>
+            <th class="col-num">worst landed</th>
+            <th class="col-num">through</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% slices.each do |row| %>
+            <tr>
+              <td class="mono"><%= row.source_key %></td>
+              <td class="col-num"><%= number_with_delimiter(row.complete) %></td>
+              <td class="col-num <%= "warn" if row.short.positive? %>"><%= row.short %></td>
+              <td class="col-num"><%= row.claimed %></td>
+              <td class="col-num sub"><%= row.superseded %></td>
+              <td class="col-num sub"><%= row.unavailable %></td>
+              <td class="col-num mono"><%= row.worst_ratio ? number_to_percentage(row.worst_ratio.to_f * 100, precision: 1) : "n/a" %></td>
+              <td class="col-num mono"><%= row.latest ? row.latest.strftime("%-d %b") : "n/a" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">n/a</p>
+  <% end %>
+</div>
+
+<% if day_strips.any? %>
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Last <%= EngineController::SLICE_STRIP_DAYS %> days by slice</h2>
+      </div>
+    </div>
+    <div class="card-body" style="display: flex; flex-direction: column; gap: 18px; padding: 16px">
+      <% day_strips.each do |key, days, missing, per_day, eta| %>
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px">
+            <span class="mono" style="font-size: 12px; font-weight: 500"><%= key %></span>
+            <span class="sub mono">
+              <%= missing %> not complete
+              <% if per_day.positive? %>
+                &middot; <%= per_day.round(1) %> a day this week
+              <% end %>
+              <% if eta %>
+                &middot; caught up <%= (Date.current + eta).strftime("~%-d %b") %>
+              <% end %>
+            </span>
+          </div>
+          <div class="cov">
+            <% days.each do |day, state| %><i class="<%= slice_cell(state) %>" title="<%= day %> <%= state %>"></i><% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    <div class="key">
+      <span><i style="background-color: var(--series-2); opacity: .82"></i>complete</span>
+      <span><i style="background-color: var(--warn)"></i>short or claimed</span>
+      <span><i style="background-color: var(--ink-4); opacity: .55"></i>Slack has no file</span>
+      <span><i style="background-color: var(--line)"></i>never fetched</span>
+    </div>
+  </div>
+<% end %>

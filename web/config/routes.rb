@@ -87,6 +87,9 @@ Rails.application.routes.draw do
     post "stages/:stage", action: :trigger_stage, as: :stage
     patch "tune", action: :tune, as: :tune
     delete "tune", action: :untune, as: :untune
+    post "incidents/ack", action: :ack_incident, as: :ack_incident
+    post "incidents/mute", action: :mute_incident, as: :mute_incident
+    post "breakers/override", action: :override_breaker, as: :override_breaker
   end
 
   get "pipeline", to: redirect("/engine")

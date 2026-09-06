@@ -2841,38 +2841,7 @@
   .rung.ok .rbar > i { background: var(--series-2); }
   .rung .rst { display: flex; gap: 4px; justify-content: flex-end; }
 
-  .runband {
-    display: flex;
-    align-items: stretch;
-    gap: 0;
-    flex-wrap: wrap;
-    padding: 0;
-  }
-  .bf {
-    display: grid;
-    gap: 2px;
-    padding: var(--s-xs) var(--s-sm);
-    border-right: 1px solid var(--line-soft);
-    min-width: 156px;
-  }
-  .bf:last-child { border-right: 0; }
-  .bf .k {
-    font-size: var(--t-mark);
-    font-weight: 600;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    color: var(--ink-4);
-  }
-  .bf .v {
-    font-size: var(--t-head);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.018em;
-  }
-  .bf .s { font-size: var(--t-fine); color: var(--ink-3); }
-  .bf.warn .v { color: var(--warn); }
-  .bf.crit .v, .bf.bad .v { color: var(--crit); }
-  .bf.good .v, .bf.ok .v { color: var(--good); }
+  .cov i.sh { background: var(--warn); opacity: 0.8; }
 
   .run-btn { margin-left: auto; }
   .dialrow { display: flex; align-items: center; gap: var(--s-sm); flex-wrap: wrap; }

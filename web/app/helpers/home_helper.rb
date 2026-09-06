@@ -3,10 +3,6 @@ module HomeHelper
   GROWTH_SPANS = [6, 12, 24].freeze
   DEFAULT_GROWTH_SPAN = 6
 
-  def stale_note(mart)
-    Engine::Freshness.note(mart)
-  end
-
   def window_note(from, to)
     return nil if from.nil? || to.nil?
 
@@ -14,17 +10,6 @@ module HomeHelper
 
     same_year = from.year == to.year
     "#{from.strftime(same_year ? '%-d %b' : '%-d %b %Y')} to #{to.strftime('%-d %b %Y')}"
-  end
-
-  def stale_card(title, note)
-    tag.div(class: "card") do
-      tag.div(class: "card-head") do
-        tag.div do
-          tag.h2(title, class: "card-title") +
-            tag.p("n/a", class: "card-sub")
-        end
-      end + tag.p(note, class: "card-note")
-    end
   end
 
   ACTIVITY_GRANULARITIES = { "daily" => "daily", "monthly" => "monthly" }.freeze

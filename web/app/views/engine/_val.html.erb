@@ -12,7 +12,11 @@
       <%= f.select :value, Engine::Source::CADENCES, { selected: now },
             class: "val #{"tuned" if tuned}", id: nil,
             aria: { label: "#{source} #{name}" }, onchange: "this.form.requestSubmit()" %>
-    <% elsif name == Engine::Freshness::SWITCH || name == Engine::Setting::ENABLED %>
+    <% elsif (choices = Engine::Setting.choices(name)) && source == Engine::Setting::ENGINE %>
+      <%= f.select :value, choices, { selected: now },
+            class: "val #{"tuned" if tuned}", id: nil,
+            aria: { label: "#{source} #{name}" }, onchange: "this.form.requestSubmit()" %>
+    <% elsif name == Engine::Setting::ENABLED %>
       <%= f.select :value, %w[true false], { selected: now },
             class: "val #{"tuned" if tuned}", id: nil,
             aria: { label: "#{source} #{name}" }, onchange: "this.form.requestSubmit()" %>

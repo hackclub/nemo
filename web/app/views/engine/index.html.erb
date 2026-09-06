@@ -42,8 +42,6 @@
   <% end %>
 <% end %>
 
-<%= render "band", band: @band %>
-
 <% if @tab == "runs" %>
   <div class="card card-flush">
     <div class="card-head">
@@ -99,7 +97,15 @@
         run: @run, step_output: @step_output %>
 
 <% elsif @tab == "coverage" %>
+  <%= render "slices", slices: @slices, day_strips: @day_strips %>
   <%= render "coverage", day_coverage: @day_coverage, held: @held %>
+
+<% elsif @tab == "queues" %>
+  <%= render "queues", queues: @queues %>
+
+<% elsif @tab == "faults" %>
+  <%= render "faults", incidents: @incidents, breakers: @breakers, local_faults: @local_faults,
+        taxonomy: @taxonomy, proxy: @proxy, breaker_mode: @breaker_mode, may_tune: @may_tune %>
 
 <% elsif @tab == "backfill" %>
   <%= render "backfill", backfills: @backfills, names: @backfill_names,
