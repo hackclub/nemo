@@ -1,6 +1,5 @@
 <% may = may_community?("ops.channel.backfill") %>
 <% may_sync = may_community?("ops.engine") %>
-<% why = Community::Access.why_not(current_account, "ops.channel.backfill") %>
 <% case backfill&.state %>
 <% when "queued" %>
   <span class="chip chip-off">Queued<%= " · #{backfill.place_in_line.ordinalize} in line" if backfill.place_in_line %></span>
@@ -21,9 +20,9 @@
     <span class="chip chip-good">Thread replies complete ·
       <%= number_with_delimiter(backfill.threads_fetched) %> threads</span>
   <% end %>
-  <%= render "backfill_start", channel: channel, may: may, may_sync: may_sync, why: why,
+  <%= render "backfill_start", channel: channel, may: may, may_sync: may_sync,
         label: "Fetch again" %>
 <% else %>
-  <%= render "backfill_start", channel: channel, may: may, may_sync: may_sync, why: why,
+  <%= render "backfill_start", channel: channel, may: may, may_sync: may_sync,
         label: "Fetch thread replies" %>
 <% end %>

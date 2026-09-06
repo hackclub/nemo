@@ -42,7 +42,8 @@ class FdAccessTest < ActionDispatch::IntegrationTest
         .flatten
     }
     asked = found + found.filter_map { |key| Community::Access::CAPABILITY[key] }
-    (declared + asked).uniq
+    panelled = Panel.keys.filter_map { |key| Panel.needs(key) }
+    (declared + asked + panelled).uniq
   end
 
   test "a permission that guards something has somewhere it is actually checked" do

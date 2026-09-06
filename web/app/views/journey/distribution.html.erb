@@ -1,22 +1,5 @@
 <% content_for :page_title, "Who is active" %>
 
-<% if @top_poster_months.present? %>
-  <% content_for :page_controls do %>
-    <span class="qlab">Month</span>
-    <details class="menu" data-controller="menu">
-      <summary class="btn">
-        <%= @top_posters_month.strftime("%b %Y") %><span class="car" aria-hidden="true">▾</span>
-      </summary>
-      <div class="menu-pop menu-start">
-        <% @top_poster_months.each do |m| %>
-          <%= link_to m.strftime("%b %Y"), active_journey_path(top_posters_month: m.iso8601),
-                class: "btn", aria: { current: ("true" if m == @top_posters_month) } %>
-        <% end %>
-      </div>
-    </details>
-  <% end %>
-<% end %>
-
 <div class="card">
   <div class="card-head">
     <div>
@@ -43,19 +26,9 @@
   ></div>
 </div>
 
-<div id="distribution">
-  <% if visible_panel?("journey.top_posters") %>
+<% if visible_panel?("journey.top_posters") %>
+  <%= turbo_frame_tag "top-posters" do %>
     <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months,
           top_posters_month: @top_posters_month, days_measured: @days_measured %>
-  <% else %>
-    <div class="card card-flush">
-      <div class="card-head">
-        <div><h2 class="card-title">Top posters</h2></div>
-      </div>
-      <div class="empty">
-        <p class="empty-title">Member names are not shown to you</p>
-        <p class="card-note"><%= Community::Access.why_not(current_account, "analytics.member.read") %></p>
-      </div>
-    </div>
   <% end %>
-</div>
+<% end %>
