@@ -200,9 +200,10 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
   end
 
   test "an exact handle match comes before anyone who merely contains it" do
-    named = Fd::Member.live.where.not(handle: [nil, ""]).where("length(handle) >= 4")
-      .order(:user_id).first
-    skip "the corpus has no member with a handle" if named.nil?
+    handle = Fd::Member.live.where.not(handle: [nil, ""]).where("length(handle) >= 4")
+      .group(:handle).having("count(*) = 1").order(Arel.sql("min(user_id)")).limit(1).pluck(:handle).first
+    named = handle && Fd::Member.live.find_by(handle: handle)
+    skip "the corpus has no member with a handle of its own" if named.nil?
 
     assert_equal named.user_id, shown(q: named.handle).first
     assert_equal named.user_id, shown(q: named.user_id.downcase).first,

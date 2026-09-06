@@ -23,10 +23,33 @@ module Fd
 
       like = "%#{sanitize_sql_like(term)}%"
       fields = TERM_FIELDS.map { |field| "#{table_name}.#{field} ILIKE :q" }
-      if actor&.may?("identity.read")
+      identity = actor&.may?("identity.read")
+      if identity
         fields += IDENTITY_TERM_FIELDS.map { |field| "fd.member_identity.#{field} ILIKE :q" }
       end
-      left_joins(:identity).where(fields.join(" OR "), q: like).by_name.limit(limit)
+      left_joins(:identity).where(fields.join(" OR "), q: like)
+        .order(Arel.sql(match_rank(term, identity)), :is_deleted, :is_bot)
+        .by_name.limit(limit)
+    end
+
+    UNIQUE_FIELDS = %W[#{table_name}.handle #{table_name}.user_id].freeze
+    RANKED_FIELDS = %W[#{table_name}.display_name #{table_name}.handle #{table_name}.user_id].freeze
+    IDENTITY_RANKED_FIELDS = %w[fd.member_identity.real_name fd.member_identity.email].freeze
+
+    def self.match_rank(term, identity)
+      tiers = [[UNIQUE_FIELDS, :exact], [RANKED_FIELDS, :exact], [RANKED_FIELDS, :starts]]
+      tiers.insert(2, [IDENTITY_RANKED_FIELDS, :exact]) if identity
+      tiers << [IDENTITY_RANKED_FIELDS, :starts] if identity
+      whens = tiers.each_with_index.map do |(fields, how), rank|
+        test = fields.map do |field|
+          how == :exact ? "lower(coalesce(#{field}, '')) = :exact" : "#{field} ILIKE :starts"
+        end
+        "WHEN #{test.join(' OR ')} THEN #{rank}"
+      end
+      sanitize_sql_array([
+        "CASE #{whens.join(' ')} ELSE #{tiers.size} END",
+        { exact: term.downcase, starts: "#{sanitize_sql_like(term)}%" }
+      ])
     end
 
     def readonly?

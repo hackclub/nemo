@@ -104,7 +104,7 @@ module Fd
     end
 
     def context_asked?
-      !default?("tenure") || !default?("active")
+      asked? || !default?("tenure") || !default?("active")
     end
 
     def roster_where
@@ -158,19 +158,32 @@ module Fd
     end
 
     def roster_order
-      asked? ? "#{match_rank}, #{sort_order}" : sort_order
+      asked? ? "#{match_rank}, last_active_at DESC NULLS LAST, #{sort_order}" : sort_order
     end
 
+    UNIQUE_FIELDS = %w[handle user_id].freeze
     RANKED_FIELDS = %w[display_name handle user_id].freeze
     IDENTITY_RANKED_FIELDS = %w[shown_name real_name email].freeze
 
     def match_rank
-      fields = identity? ? RANKED_FIELDS + IDENTITY_RANKED_FIELDS : RANKED_FIELDS
-      exact = fields.map { |field| "lower(coalesce(#{field}, '')) = :exact" }.join(" OR ")
-      starts = fields.map { |field| "#{field} ILIKE :starts" }.join(" OR ")
-      within = fields.map { |field| "#{field} ILIKE :term" }.join(" OR ")
-
-      "CASE WHEN #{exact} THEN 0 WHEN #{starts} THEN 1 WHEN #{within} THEN 2 ELSE 3 END"
+      tiers = [[UNIQUE_FIELDS, :exact], [RANKED_FIELDS, :exact], [RANKED_FIELDS, :starts],
+               [RANKED_FIELDS, :within]]
+      if identity?
+        tiers.insert(2, [IDENTITY_RANKED_FIELDS, :exact])
+        tiers.insert(4, [IDENTITY_RANKED_FIELDS, :starts])
+        tiers << [IDENTITY_RANKED_FIELDS, :within]
+      end
+      whens = tiers.each_with_index.map do |(fields, how), rank|
+        test = fields.map do |field|
+          case how
+          when :exact then "lower(coalesce(#{field}, '')) = :exact"
+          when :starts then "#{field} ILIKE :starts"
+          else "#{field} ILIKE :term"
+          end
+        end
+        "WHEN #{test.join(' OR ')} THEN #{rank}"
+      end
+      "CASE #{whens.join(' ')} ELSE #{tiers.size} END"
     end
 
     def sort_order
