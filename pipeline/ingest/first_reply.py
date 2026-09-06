@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
+from lib import work
 from lib.db import connect, ingest_run
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
@@ -20,14 +21,28 @@ WALK_VERSION = 2
 
 PERMANENT_ERRORS = ("team_access_not_granted", "channel_not_found", "thread_not_found", "message_not_found")
 
-PENDING_SQL = """
+PENDING_BODY = """
 SELECT h.user_id, h.first_post_channel, h.first_post_ts, r.user_id IS NOT NULL AS rewalk
 FROM raw.member_message_history h
 LEFT JOIN raw.member_first_reply r ON r.user_id = h.user_id
 WHERE h.first_post_ts IS NOT NULL
   AND (r.user_id IS NULL OR r.walk_version < %s)
 ORDER BY r.user_id IS NOT NULL, h.searched_at DESC, h.user_id
-LIMIT %s
+"""
+
+PENDING_SQL = PENDING_BODY + "LIMIT %s"
+
+KIND = "first_reply"
+
+QUEUE_SELECT = f"""
+SELECT p.user_id AS target_key, '' AS target_sub_key,
+       CASE WHEN p.rewalk THEN 200 ELSE 100 END AS priority,
+       jsonb_build_object('channel', p.first_post_channel, 'first_post_ts', p.first_post_ts) AS payload,
+       NULL::integer AS expected
+FROM ({PENDING_BODY.replace('%s', '%(p0)s')}) p
+LEFT JOIN ingest.work_item w
+       ON w.work_kind = '{KIND}' AND w.target_key = p.user_id AND w.target_sub_key = ''
+WHERE w.work_item_id IS NULL OR w.state = 'short'
 """
 
 MERGE_SQL = """
@@ -105,56 +120,73 @@ def fetch_reply(client, user_id, channel, first_post_ts):
     return human, bot
 
 
+def enqueue_pending(conn):
+    return work.enqueue_select(conn, KIND, QUEUE_SELECT, (WALK_VERSION,), requested_by=SOURCE)
+
+
+def post_of(item):
+    return item.payload["channel"], datetime.fromisoformat(item.payload["first_post_ts"])
+
+
 def run(conn, limit=BATCH_LIMIT):
-    members = pending_members(conn, limit)
-    if not members:
-        print(f"{SOURCE}: every first post is checked")
+    work.reclaim(conn, KIND)
+    queued = enqueue_pending(conn)
+    items = work.claim(conn, KIND, limit)
+    if not items:
+        print(f"{SOURCE}: every first post is checked, queue empty")
         return 0
 
     client = ProxyClient()
-    rewalked = sum(1 for _, _, _, walked in members if walked)
-    print(f"{SOURCE}: {len(members)} first post(s) to check, {rewalked} of them re-walked")
+    print(f"{SOURCE}: {len(items)} first post(s) claimed off the queue"
+          + (f", {queued} newly queued" if queued else ""))
 
     with ingest_run(conn, SOURCE) as counts:
-        counts.total_expected = len(members)
-        rows, unreadable = [], 0
+        counts.total_expected = len(items)
+        rows, done, unreadable = [], [], 0
         by_member, by_bot = 0, 0
 
         def flush():
             with conn.cursor() as cur:
                 cur.executemany(MERGE_SQL, rows)
+            work.settle_many(conn, done)
             conn.commit()
             rows.clear()
+            done.clear()
             counts.progress()
-            print(f"{SOURCE}: {counts.rows_in}/{len(members)} checked")
+            print(f"{SOURCE}: {counts.rows_in}/{len(items)} checked")
 
-        for user_id, channel, first_post_ts, _ in members:
+        for item in items:
             started = time.monotonic()
+            channel, first_post_ts = post_of(item)
 
-            def unreadable_first_post(fault, user_id=user_id):
+            def unreadable_first_post(fault, item=item):
                 nonlocal unreadable
-                rows.append(unreadable_row(user_id, fault.detail))
+                rows.append(unreadable_row(item.target_key, fault.detail))
+                done.append((item, "unavailable", 0))
                 counts.rows_in += 1
                 unreadable += 1
 
-            with per_entity(conn, SOURCE, counts, {"user_id": user_id, "channel": channel},
-                            on_entity=unreadable_first_post):
-                human, bot = fetch_reply(client, user_id, channel, first_post_ts)
-                rows.append(reply_row(user_id, human, bot))
+            with per_entity(conn, SOURCE, counts, {"user_id": item.target_key, "channel": channel},
+                            on_entity=unreadable_first_post,
+                            on_fault=lambda fault, item=item: (
+                                None if fault.name == "entity" else work.fail(conn, item, fault.detail))):
+                human, bot = fetch_reply(client, item.target_key, channel, first_post_ts)
+                rows.append(reply_row(item.target_key, human, bot))
+                done.append((item, "complete", 1))
                 counts.rows_in += 1
                 by_member += 1 if human else 0
                 by_bot += 1 if bot and not human else 0
             if len(rows) >= FLUSH_EVERY:
                 flush()
             time.sleep(max(0.0, MIN_SECONDS_PER_FETCH - (time.monotonic() - started)))
-        if rows:
+        if rows or done:
             flush()
 
     if unreadable:
         print(f"{SOURCE}: {unreadable} first post(s) in unreadable channels, will not be retried")
     print(f"{SOURCE}: {by_member} answered by a member, {by_bot} by a bot only")
     print(f"{SOURCE}: {counts.rows_in} checked, {counts.rows_rejected} rejected")
-    return len(members)
+    return len(items)
 
 
 def main():

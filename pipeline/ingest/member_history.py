@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 from ingest.member_range_pull import SOURCE as MEMBER_RANGE_SOURCE
+from lib import work
 from lib.db import connect, ingest_run
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
@@ -16,7 +17,7 @@ BATCH_LIMIT = int(os.environ.get("MEMBER_HISTORY_LIMIT", "8000"))
 FLUSH_EVERY = 200
 MIN_SECONDS_PER_SEARCH = 0.6
 
-PENDING_SQL = """
+PENDING_BODY = """
 WITH horizon AS (
     SELECT max(account_created_verified) AS max_verified FROM raw.member_dim
 ),
@@ -40,7 +41,30 @@ WHERE mh.user_id IS NULL
   AND NOT coalesce(m.invite_pending, false)
   AND (r.user_id IS NULL OR coalesce(r.channel_messages_posted, 0) > 0)
 ORDER BY 2 DESC NULLS LAST, m.user_id
-LIMIT %s
+"""
+
+PENDING_SQL = PENDING_BODY + "LIMIT %s"
+
+KIND = "member_history"
+REPLY_KIND = "first_reply"
+
+QUEUE_SELECT = f"""
+SELECT p.user_id AS target_key, '' AS target_sub_key,
+       coalesce(current_date - p.cohort_month, 9999) AS priority,
+       jsonb_build_object('cohort_month', p.cohort_month) AS payload,
+       NULL::integer AS expected
+FROM ({PENDING_BODY.replace('%s', '%(p0)s')}) p
+LEFT JOIN ingest.work_item w
+       ON w.work_kind = '{KIND}' AND w.target_key = p.user_id AND w.target_sub_key = ''
+WHERE w.work_item_id IS NULL OR w.state IN ('short')
+"""
+
+REPLY_SELECT = """
+SELECT h.user_id AS target_key, '' AS target_sub_key, 100 AS priority,
+       jsonb_build_object('channel', h.first_post_channel, 'first_post_ts', h.first_post_ts) AS payload,
+       NULL::integer AS expected
+FROM raw.member_message_history h
+WHERE h.user_id = ANY(%(p0)s) AND h.first_post_ts IS NOT NULL AND h.first_post_channel IS NOT NULL
 """
 
 MERGE_SQL = """
@@ -120,43 +144,61 @@ def search_member(client, team_id, user_id):
     return history_row(user_id, resp.get("messages") or {})
 
 
+def enqueue_pending(conn):
+    return work.enqueue_select(conn, KIND, QUEUE_SELECT, (MEMBER_RANGE_SOURCE,), requested_by=SOURCE)
+
+
+def enqueue_first_reply(conn, user_ids):
+    if not user_ids:
+        return 0
+    return work.enqueue_select(conn, REPLY_KIND, REPLY_SELECT, (list(user_ids),), requested_by=SOURCE)
+
+
 def run(conn, limit=BATCH_LIMIT):
     carry_forward(conn)
-    members = pending_members(conn, limit)
-    if not members:
-        print(f"{SOURCE}: every member is searched")
+    work.reclaim(conn, KIND)
+    queued = enqueue_pending(conn)
+    items = work.claim(conn, KIND, limit)
+    if not items:
+        print(f"{SOURCE}: every member is searched, queue empty")
         return 0
 
     client = ProxyClient()
     team_id = os.environ["SLACK_TEAM_ID"]
-    print(f"{SOURCE}: {len(members)} unsearched member(s), newest cohorts first")
+    print(f"{SOURCE}: {len(items)} member(s) claimed off the queue, newest cohorts first"
+          + (f", {queued} newly queued" if queued else ""))
 
     with ingest_run(conn, SOURCE) as counts:
-        counts.total_expected = len(members)
-        rows = []
+        counts.total_expected = len(items)
+        rows, done = [], []
 
         def flush(month):
             with conn.cursor() as cur:
                 cur.executemany(MERGE_SQL, rows)
+            work.settle_many(conn, done)
             conn.commit()
+            enqueue_first_reply(conn, [item.target_key for item, _, _ in done])
             rows.clear()
+            done.clear()
             counts.progress()
-            label = month.strftime("%Y-%m") if month else "unknown cohort"
-            print(f"{SOURCE}: {counts.rows_in}/{len(members)} searched, through {label}")
+            label = str(month)[:7] if month else "unknown cohort"
+            print(f"{SOURCE}: {counts.rows_in}/{len(items)} searched, through {label}")
 
-        for user_id, cohort_month in members:
+        for item in items:
             started = time.monotonic()
-            with per_entity(conn, SOURCE, counts, {"user_id": user_id}):
-                rows.append(search_member(client, team_id, user_id))
+            with per_entity(conn, SOURCE, counts, {"user_id": item.target_key},
+                            on_fault=lambda fault, item=item: work.fail(conn, item, fault.detail)):
+                rows.append(search_member(client, team_id, item.target_key))
+                done.append((item, "complete", 1))
                 counts.rows_in += 1
             if len(rows) >= FLUSH_EVERY:
-                flush(cohort_month)
+                flush(item.payload.get("cohort_month"))
             time.sleep(max(0.0, MIN_SECONDS_PER_SEARCH - (time.monotonic() - started)))
-        if rows:
-            flush(members[-1][1])
+        if rows or done:
+            flush(items[-1].payload.get("cohort_month"))
 
     print(f"{SOURCE}: {counts.rows_in} searched, {counts.rows_rejected} rejected")
-    return len(members)
+    return len(items)
 
 
 def main():

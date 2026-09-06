@@ -2,7 +2,9 @@ import argparse
 
 from dotenv import load_dotenv
 
+from lib import work
 from lib.db import connect, ingest_run
+from lib.task import per_entity
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
 from ingest import channel_history_pull as history
@@ -121,49 +123,66 @@ def still_draining(conn, channel_id):
         return cur.fetchone() is not None
 
 
-def drain(conn, client, channel_id, budget):
-    if not walked(conn, channel_id):
-        print(f"{SOURCE}: {channel_id} has no history yet, walking it first")
-        try:
-            history.walk_channel(conn, client, channel_id, None)
-        except Exception as exc:
-            conn.rollback()
-            with conn.cursor() as cur:
-                cur.execute(HOLD_SQL, (f"history walk failed: {str(exc)[:200]}", channel_id))
-            conn.commit()
-            raise
+KIND = "channel_replies"
 
-    with conn.cursor() as cur:
-        cur.execute(PENDING_THREADS_SQL, (channel_id, budget))
-        threads = cur.fetchall()
+THREAD_SELECT = """
+SELECT t.channel_id AS target_key, t.root_ts AS target_sub_key, b.priority AS priority,
+       '{}'::jsonb AS payload, t.reply_count AS expected
+FROM raw.thread t
+JOIN app.channel_backfill b ON b.channel_id = t.channel_id
+WHERE b.state = 'draining' AND t.replies_fetched < t.reply_count
+"""
 
-    replies = 0
-    walked_threads = 0
-    for root_ts, _expected in threads:
-        if not still_draining(conn, channel_id):
-            print(f"{SOURCE}: {channel_id} was stopped, leaving it where it is")
-            with conn.cursor() as cur:
-                cur.execute(PROGRESS_SQL, (channel_id, channel_id, channel_id, channel_id))
-            conn.commit()
-            return walked_threads, replies, True
-        replies += fetch_thread(conn, client, channel_id, root_ts)
-        walked_threads += 1
+OPEN_UNITS_SQL = """
+SELECT 1 FROM ingest.work_item
+WHERE work_kind = %s AND target_key = %s AND state IN ('pending', 'claimed')
+LIMIT 1
+"""
 
+
+def prepare(conn, client, channel_id):
+    if walked(conn, channel_id):
+        return True
+    print(f"{SOURCE}: {channel_id} has no history yet, walking it first")
+    try:
+        history.walk_channel(conn, client, channel_id, None)
+    except Exception as exc:
+        conn.rollback()
+        with conn.cursor() as cur:
+            cur.execute(HOLD_SQL, (f"history walk failed: {str(exc)[:200]}", channel_id))
+        conn.commit()
+        print(f"{SOURCE}: {channel_id} held, {type(exc).__name__}: {str(exc)[:120]}")
+        return False
+    return True
+
+
+def claim_channels(conn):
+    claimed = []
+    while True:
+        with conn.cursor() as cur:
+            cur.execute(CLAIM_SQL)
+            row = cur.fetchone()
+        conn.commit()
+        if row is None:
+            return claimed
+        claimed.append(row[0])
+
+
+def settle_channel(conn, channel_id):
     with conn.cursor() as cur:
         cur.execute(PROGRESS_SQL, (channel_id, channel_id, channel_id, channel_id))
-        cur.execute(PENDING_THREADS_SQL, (channel_id, 1))
-        done = not cur.fetchall()
+        cur.execute(OPEN_UNITS_SQL, (KIND, channel_id))
+        done = cur.fetchone() is None
+        if done:
+            cur.execute(PENDING_THREADS_SQL, (channel_id, 1))
+            done = not cur.fetchall()
         cur.execute(SETTLE_SQL, (done, done, channel_id))
     conn.commit()
-    return walked_threads, replies, done
+    return done
 
 
-def claim(conn):
-    with conn.cursor() as cur:
-        cur.execute(CLAIM_SQL)
-        row = cur.fetchone()
-    conn.commit()
-    return row[0] if row else None
+def enqueue_threads(conn):
+    return work.enqueue_select(conn, KIND, THREAD_SELECT, requested_by=SOURCE, requeue_when_grown=True)
 
 
 def run(conn, budget=500, stale_hours=6):
@@ -174,27 +193,44 @@ def run(conn, budget=500, stale_hours=6):
             print(f"{SOURCE}: returned stranded channel {stranded} to the queue")
     conn.commit()
 
-    channel_id = claim(conn)
-    if channel_id is None:
+    for channel_id in claim_channels(conn):
+        prepare(conn, client, channel_id)
+    work.reclaim(conn, KIND)
+    queued = enqueue_threads(conn)
+    items = work.claim(conn, KIND, budget)
+    if not items:
         with ingest_run(conn, SOURCE):
-            print(f"{SOURCE}: nothing opted in")
+            print(f"{SOURCE}: no thread waiting" + (f", {queued} newly queued" if queued else ""))
         return 0
 
-    total = 0
+    print(f"{SOURCE}: {len(items)} thread(s) claimed off the queue of a {budget} budget"
+          + (f", {queued} newly queued" if queued else ""))
+    total, touched = 0, set()
     with ingest_run(conn, SOURCE) as counts:
-        remaining = budget
-        while channel_id is not None and remaining > 0:
-            threads, replies, done = drain(conn, client, channel_id, remaining)
-            total += replies
-            remaining -= max(threads, 1)
+        counts.total_expected = len(items)
+        for item in items:
+            channel_id, root_ts = item.target_key, item.sub_key
+            if not still_draining(conn, channel_id):
+                work.release(conn, item)
+                continue
+            with per_entity(conn, SOURCE, counts, {"channel": channel_id, "root_ts": root_ts},
+                            on_fault=lambda fault, item=item: work.fail(conn, item, fault.detail)):
+                replies = fetch_thread(conn, client, channel_id, root_ts)
+                reached = item.expected is None or replies >= item.expected
+                work.settle(conn, item, "complete" if reached else "short", fetched=replies,
+                            note=None if reached else f"{replies} of {item.expected}")
+                conn.commit()
+                total += replies
+                touched.add(channel_id)
             counts.rows_in = total
-            counts.progress()
-            print(f"{SOURCE}: {channel_id} drained {threads} thread(s), {replies} replies, "
-                  f"{'complete' if done else 'more to do'}")
-            channel_id = claim(conn) if done else None
+            if len(touched) and counts.rows_in % 50 == 0:
+                counts.progress()
+        for channel_id in touched:
+            done = settle_channel(conn, channel_id)
+            print(f"{SOURCE}: {channel_id} {'complete' if done else 'still draining'}")
+        counts.progress()
 
-    print(f"{SOURCE}: {total} reply message(s) this run, {max(budget - remaining, 0)} "
-          f"thread(s) of a {budget} budget")
+    print(f"{SOURCE}: {total} reply message(s) over {len(items)} thread(s)")
     return total
 
 

@@ -36,3 +36,4 @@ sources:
       - name: quality_result
       - name: incident_ack
       - name: slice_coverage
+      - name: work_item

@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 from ingest.member_history import is_public
+from lib import work
 from lib.db import connect, ingest_run
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
@@ -23,7 +24,7 @@ REPORT_EVERY = 50
 MIN_SECONDS_PER_SEARCH = 0.6
 MIN_SECONDS_PER_READ = 0.6
 
-PENDING_SQL = """
+PENDING_BODY = """
 WITH edge AS MATERIALIZED (SELECT max(claimed_at)::date AS d FROM raw.member_dim)
 SELECT m.user_id
 FROM raw.member_dim m
@@ -35,7 +36,22 @@ WHERE m.claimed_at >= edge.d - %s
   AND NOT coalesce(m.invite_pending, false)
   AND w.messages_searched_at IS NULL
 ORDER BY m.claimed_at DESC
-LIMIT %s
+"""
+
+PENDING_SQL = PENDING_BODY + "LIMIT %s"
+
+KIND = "member_channels"
+MEMBERSHIP_KIND = "channel_membership"
+
+
+def queue_select(kind, body):
+    return f"""
+SELECT p.user_id AS target_key, '' AS target_sub_key, 100 AS priority, '{{}}'::jsonb AS payload,
+       NULL::integer AS expected
+FROM ({body.replace('%s', '%(p0)s')}) p
+LEFT JOIN ingest.work_item w
+       ON w.work_kind = '{kind}' AND w.target_key = p.user_id AND w.target_sub_key = ''
+WHERE w.work_item_id IS NULL
 """
 
 CLEAR_SQL = "DELETE FROM raw.member_channel_message WHERE user_id = %s"
@@ -61,7 +77,7 @@ ON CONFLICT (user_id) DO UPDATE SET
     updated_at = now()
 """
 
-UNREAD_SQL = """
+UNREAD_BODY = """
 WITH edge AS MATERIALIZED (SELECT max(claimed_at)::date AS d FROM raw.member_dim)
 SELECT m.user_id
 FROM raw.member_dim m
@@ -73,8 +89,9 @@ WHERE m.claimed_at >= edge.d - %s
   AND NOT coalesce(m.invite_pending, false)
   AND w.membership_read_at IS NULL
 ORDER BY m.claimed_at DESC
-LIMIT %s
 """
+
+UNREAD_SQL = UNREAD_BODY + "LIMIT %s"
 
 LEFT_SQL = """
 DELETE FROM raw.member_channel_membership
@@ -182,30 +199,40 @@ def pending_members(conn, cohort_days, limit):
         return [row[0] for row in cur.fetchall()]
 
 
+def enqueue_newcomers(conn, kind, body, cohort_days, requested_by):
+    return work.enqueue_select(conn, kind, queue_select(kind, body), (cohort_days,), requested_by=requested_by)
+
+
 def run(conn, limit=BATCH_LIMIT, cohort_days=COHORT_DAYS):
-    members = pending_members(conn, cohort_days, limit)
-    if not members:
-        print(f"{SOURCE}: every newcomer of the last {cohort_days} days is walked")
+    work.reclaim(conn, KIND)
+    queued = enqueue_newcomers(conn, KIND, PENDING_BODY, cohort_days, SOURCE)
+    items = work.claim(conn, KIND, limit)
+    if not items:
+        print(f"{SOURCE}: every newcomer of the last {cohort_days} days is walked, queue empty")
         return 0
 
     client = ProxyClient()
     team_id = os.environ["SLACK_TEAM_ID"]
-    print(f"{SOURCE}: {len(members)} newcomer(s) to walk, newest first")
+    print(f"{SOURCE}: {len(items)} newcomer(s) claimed off the queue"
+          + (f", {queued} newly queued" if queued else ""))
 
     with ingest_run(conn, SOURCE) as counts:
-        counts.total_expected = len(members)
+        counts.total_expected = len(items)
         channels, cut_short = 0, 0
 
-        for user_id in members:
+        for item in items:
             started = time.monotonic()
-            with per_entity(conn, SOURCE, counts, {"user_id": user_id}):
-                tally, pages, truncated = walk_member(client, team_id, user_id)
-                channels += write_member(conn, user_id, tally, pages, truncated)
+            with per_entity(conn, SOURCE, counts, {"user_id": item.target_key},
+                            on_fault=lambda fault, item=item: work.fail(conn, item, fault.detail)):
+                tally, pages, truncated = walk_member(client, team_id, item.target_key)
+                channels += write_member(conn, item.target_key, tally, pages, truncated)
                 cut_short += int(truncated)
+                work.settle(conn, item, "short" if truncated else "complete", fetched=len(tally))
+                conn.commit()
                 counts.rows_in += 1
             if counts.rows_in % REPORT_EVERY == 0:
                 counts.progress()
-                print(f"{SOURCE}: {counts.rows_in}/{len(members)} walked, {channels} channel rows")
+                print(f"{SOURCE}: {counts.rows_in}/{len(items)} walked, {channels} channel rows")
             time.sleep(max(0.0, MIN_SECONDS_PER_SEARCH - (time.monotonic() - started)))
 
         counts.progress()
@@ -214,7 +241,7 @@ def run(conn, limit=BATCH_LIMIT, cohort_days=COHORT_DAYS):
         f"{SOURCE}: {counts.rows_in} walked, {channels} channel rows, "
         f"{cut_short} cut short at {PAGE_CAP} pages, {counts.rows_rejected} rejected"
     )
-    return len(members)
+    return len(items)
 
 
 def joined_channels(channels):
@@ -260,29 +287,35 @@ def unread_members(conn, cohort_days, limit):
 
 
 def read_membership(conn, client=None, limit=BATCH_LIMIT, cohort_days=COHORT_DAYS):
-    members = unread_members(conn, cohort_days, limit)
-    if not members:
-        print(f"{MEMBERSHIP_SOURCE}: every newcomer of the last {cohort_days} days is read")
+    work.reclaim(conn, MEMBERSHIP_KIND)
+    queued = enqueue_newcomers(conn, MEMBERSHIP_KIND, UNREAD_BODY, cohort_days, MEMBERSHIP_SOURCE)
+    items = work.claim(conn, MEMBERSHIP_KIND, limit)
+    if not items:
+        print(f"{MEMBERSHIP_SOURCE}: every newcomer of the last {cohort_days} days is read, queue empty")
         return 0
 
     client = client or bot_client()
     team_id = os.environ["SLACK_TEAM_ID"]
-    print(f"{MEMBERSHIP_SOURCE}: {len(members)} newcomer(s) to read, newest first")
+    print(f"{MEMBERSHIP_SOURCE}: {len(items)} newcomer(s) claimed off the queue"
+          + (f", {queued} newly queued" if queued else ""))
 
     with ingest_run(conn, MEMBERSHIP_SOURCE) as counts:
-        counts.total_expected = len(members)
+        counts.total_expected = len(items)
         joined, left = 0, 0
 
-        for user_id in members:
+        for item in items:
             started = time.monotonic()
-            with per_entity(conn, MEMBERSHIP_SOURCE, counts, {"user_id": user_id}):
-                channel_ids = read_member(client, team_id, user_id)
-                left += write_membership(conn, user_id, channel_ids)
+            with per_entity(conn, MEMBERSHIP_SOURCE, counts, {"user_id": item.target_key},
+                            on_fault=lambda fault, item=item: work.fail(conn, item, fault.detail)):
+                channel_ids = read_member(client, team_id, item.target_key)
+                left += write_membership(conn, item.target_key, channel_ids)
                 joined += len(channel_ids)
+                work.settle(conn, item, "complete", fetched=len(channel_ids))
+                conn.commit()
                 counts.rows_in += 1
             if counts.rows_in % REPORT_EVERY == 0:
                 counts.progress()
-                print(f"{MEMBERSHIP_SOURCE}: {counts.rows_in}/{len(members)} read, {joined} memberships")
+                print(f"{MEMBERSHIP_SOURCE}: {counts.rows_in}/{len(items)} read, {joined} memberships")
             time.sleep(max(0.0, MIN_SECONDS_PER_READ - (time.monotonic() - started)))
 
         counts.progress()
@@ -291,7 +324,7 @@ def read_membership(conn, client=None, limit=BATCH_LIMIT, cohort_days=COHORT_DAY
         f"{MEMBERSHIP_SOURCE}: {counts.rows_in} read, {joined} memberships, "
         f"{left} dropped, {counts.rows_rejected} rejected"
     )
-    return len(members)
+    return len(items)
 
 
 def main():

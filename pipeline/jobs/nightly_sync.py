@@ -45,7 +45,7 @@ from lib.db import (
     start_run,
 )
 from checks import headlines
-from jobs import invariants
+from jobs import invariants, reconcile
 from lib import settings, sources
 from lib.heartbeat import beating
 from lib.paths import ENV_FILE, WAREHOUSE_DIR
@@ -368,6 +368,7 @@ def preflight(run_id):
 def record_quality(conn, run_id):
     for name, job in (
         ("invariants", lambda: invariants.record(conn, run_id)),
+        ("reconcile", lambda: reconcile.record(conn, run_id)),
         ("headlines", lambda: headlines.run(cross_only=True, record=True, run_id=run_id)),
     ):
         try:
