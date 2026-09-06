@@ -33,6 +33,7 @@ from ingest.users_list_pull import run as pull_users_list
 from lib.db import (
     CHANNEL_DAY,
     MEMBER_DAY,
+    WORKER_BOOT,
     SyncCancelled,
     analyze,
     connect,
@@ -43,6 +44,7 @@ from lib.db import (
     run_step,
     set_worker,
     start_run,
+    worker,
 )
 from checks import headlines
 from jobs import invariants, reconcile
@@ -294,14 +296,17 @@ def over_budget(spent_minutes, budget_minutes, ran, name):
 
 SKIP_SQL = """
 INSERT INTO raw.ingest_run
-    (source, started_at, finished_at, status, parent_run_id, step_index, step_total)
-VALUES (%s, clock_timestamp(), clock_timestamp(), 'skipped', %s, %s, %s)
+    (source, source_key, logical_date, worker, worker_boot, started_at, finished_at, status,
+     parent_run_id, step_index, step_total, error_detail)
+VALUES (%s, %s, (clock_timestamp() AT TIME ZONE 'UTC')::date, %s, %s::uuid,
+        clock_timestamp(), clock_timestamp(), 'skipped', %s, %s, %s, %s)
 """
 
 
 def record_skip(conn, run_id, index, total, name, why):
     with conn.cursor() as cur:
-        cur.execute(SKIP_SQL, (name, run_id, index, total))
+        cur.execute(SKIP_SQL, (name, sources.key_for_run(name), worker(), WORKER_BOOT,
+                               run_id, index, total, str(why)[:500]))
     conn.commit()
     record_step_output(run_id, index, name, f"{name}: skipped, {why}\n")
 
