@@ -10,23 +10,35 @@ module Channels
       WAS.fetch(audience.to_s, audience.to_s)
     end
 
-    JOIN = "LEFT JOIN app.channel_audience ca ON ca.channel_id = dim_channel.channel_id".freeze
-
     def self.everything
       Analytics::DimChannel.where(archived: false)
     end
 
-    def self.open_to_all
-      everything.joins(JOIN).where("ca.audience IN (?)", OPEN)
+    def self.open_ids
+      Setting.where(audience: OPEN).select(:channel_id)
     end
 
-    VISIBLE = "app.may_see_channel(?, dim_channel.channel_id)".freeze
+    def self.open_to_all
+      everything.where(channel_id: open_ids)
+    end
 
     def self.for(staff)
       return open_to_all if staff.nil?
-      return everything if Fd::Access.manager?(staff)
+      return everything if everywhere?(staff)
+      return open_to_all unless Authz.holds?(staff, "channel.read")
 
-      everything.where(ApplicationRecord.sanitize_sql([VISIBLE, staff.user_id]))
+      open_to_all.or(everything.where(channel_id: granted_ids_for(staff)))
+    end
+
+    def self.everywhere?(staff)
+      Fd::Access.manager?(staff) || Authz.holds?(staff, "channel.all")
+    end
+
+    def self.granted_ids_for(staff)
+      roles = Authz.roles_held(staff.user_id)
+      Grant.live.where(user_id: staff.user_id)
+        .or(Grant.live.where(role: roles))
+        .select(:channel_id)
     end
 
     def self.granted_ids(staff)
