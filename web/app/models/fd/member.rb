@@ -23,18 +23,27 @@ module Fd
 
       like = "%#{sanitize_sql_like(term.downcase)}%"
       identity = actor&.may?("identity.read")
-      left_joins(:identity).where("#{table_name}.user_id IN (#{hits_sql(identity)})", q: like)
-        .order(Arel.sql(match_rank(term, identity)), :is_deleted, :is_bot)
+      joined = left_joins(:identity)
+      hits = joined.where(user_id: named(like))
+      hits = hits.or(joined.where(user_id: identified(like))) if identity
+      hits.order(Arel.sql(match_rank(term, identity)), :is_deleted, :is_bot)
         .by_name.limit(limit)
     end
 
-    def self.hits_sql(identity)
-      own = TERM_FIELDS.map { |field| "lower(#{field}) LIKE :q" }.join(" OR ")
-      sql = "SELECT user_id FROM #{table_name} WHERE #{own}"
-      return sql unless identity
+    def self.named(like)
+      unscoped.where(lower_like(arel_table, TERM_FIELDS, like)).select(:user_id)
+    end
 
-      theirs = IDENTITY_TERM_FIELDS.map { |field| "lower(#{field}) LIKE :q" }.join(" OR ")
-      "#{sql} UNION SELECT user_id FROM fd.member_identity WHERE #{theirs}"
+    def self.identified(like)
+      MemberIdentity.unscoped
+        .where(lower_like(MemberIdentity.arel_table, IDENTITY_TERM_FIELDS, like))
+        .select(:user_id)
+    end
+
+    def self.lower_like(table, fields, like)
+      fields
+        .map { |field| Arel::Nodes::NamedFunction.new("lower", [table[field]]).matches(like, nil, true) }
+        .reduce(:or)
     end
 
     UNIQUE_FIELDS = %W[#{table_name}.handle #{table_name}.user_id].freeze
