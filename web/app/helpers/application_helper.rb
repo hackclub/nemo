@@ -49,6 +49,48 @@ module ApplicationHelper
     JOURNEY
   end
 
+  NAV_ICONS = {
+    "overview" => ["M3 3h7v7H3z", "M14 3h7v7h-7z", "M14 14h7v7h-7z", "M3 14h7v7H3z"],
+    "joining" => ["M15 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M8.5 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8",
+                  "M19 8v6", "M22 11h-6"],
+    "newcomers" => ["M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M9.5 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8",
+                    "M19 3v4", "M21 5h-4"],
+    "replies" => ["M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"],
+    "returning" => ["M3 12a9 9 0 0 1 15-6.7L21 8", "M21 3v5h-5",
+                    "M21 12a9 9 0 0 1-15 6.7L3 16", "M3 21v-5h5"],
+    "active" => ["M3 12h4l3 8 4-16 3 8h4"],
+    "channels" => ["M5 9h14", "M5 15h14", "M10 3 8 21", "M16 3l-2 18"],
+    "engine" => ["M20 14a8 8 0 1 0-16 0", "m15 10-3.4 3.4"],
+    "people" => ["M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8",
+                 "M22 21v-2a4 4 0 0 0-3-3.87"],
+    "roles" => ["M12 3 4 6v6c0 5 8 10 8 10s8-5 8-10V6z"],
+    "flags" => ["M6 3v18", "M6 4h11l-2 4 2 4H6"],
+    "group" => ["M4 7h16", "M4 12h16", "M4 17h10"]
+  }.freeze
+
+  SIDEBAR_MIN = 200
+  SIDEBAR_MAX = 460
+
+  def sidebar_class
+    "sidebar-icon" if cookies[:sidebar] == "icon"
+  end
+
+  def sidebar_style
+    width = cookies[:sidebarw].to_i
+    return nil unless width.between?(SIDEBAR_MIN, SIDEBAR_MAX)
+
+    "--sidebar-w: #{width}px"
+  end
+
+  def nav_icon(key)
+    paths = NAV_ICONS.fetch(key.to_s, NAV_ICONS.fetch("group"))
+    tag.svg(class: "ic", width: 15, height: 15, viewBox: "0 0 24 24", fill: "none",
+      stroke: "currentColor", "stroke-width": 1.7, "stroke-linecap": "round",
+      "stroke-linejoin": "round", "aria-hidden": "true") do
+      safe_join(paths.map { |d| tag.path(d: d) })
+    end
+  end
+
   CACHET_FACES = "https://cachet.hackclub.com/users".freeze
 
   def cachet_face_url(user_id)

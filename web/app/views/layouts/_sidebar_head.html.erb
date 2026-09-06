@@ -1,0 +1,13 @@
+<div class="cnav-head">
+  <span class="cnav-mark" data-controller="logo" aria-hidden="true">
+    <span class="cnav-mark-letter"><%= letter %></span>
+    <%= image_tag workspace_logo_path, class: "cnav-mark-img", alt: "",
+          data: { logo_target: "img", action: "error->logo#gone" } %>
+  </span>
+  <span class="cnav-said">
+    <b><%= title %></b>
+    <% if local_assigns[:said].present? %>
+      <span><%= said %></span>
+    <% end %>
+  </span>
+</div>

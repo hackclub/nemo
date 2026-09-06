@@ -53,12 +53,11 @@
   <% else %>
     <p class="card-note">
       <% if newcomer_reach %>
-        No channel has reached <%= HomeHelper::MIN_SAMPLE %> newcomers yet.
-        <%= number_with_delimiter(newcomer_reach.searched_of_cohort) %>
-        of <%= number_with_delimiter(newcomer_reach.cohort_size) %> newcomers are searched,
-        and the walk fills the rest in, newest first.
+        No channel has reached <%= HomeHelper::MIN_SAMPLE %> newcomers &middot;
+        <%= number_with_delimiter(newcomer_reach.searched_of_cohort) %> of
+        <%= number_with_delimiter(newcomer_reach.cohort_size) %> searched
       <% else %>
-        No newcomer has been walked yet. The member channels stage fills this in, newest first.
+        No newcomer walked yet
       <% end %>
     </p>
   <% end %>

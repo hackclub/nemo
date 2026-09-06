@@ -95,5 +95,7 @@ Rails.application.routes.draw do
   get "pipeline", to: redirect("/engine")
   get "pipeline/runs/:id", to: redirect("/engine/runs/%{id}")
 
+  get "workspace-logo", to: "workspace_logo#show", as: :workspace_logo
+
   root "home#index"
 end

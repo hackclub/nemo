@@ -1,8 +1,5 @@
-<nav class="pane cpane" aria-label="Admin sections">
-  <div class="cnav-head">
-    <b>Admin</b>
-    <span>access, roles and flags</span>
-  </div>
+<nav id="section-nav" class="pane cpane" aria-label="Admin sections">
+  <%= render "layouts/sidebar_head", letter: "A", title: "Admin" %>
 
   <div class="cnav">
     <div class="cnav-group">
@@ -22,8 +19,7 @@
         <%= link_to admin_role_channels_path(role: role),
               aria: { current: ("page" if controller_path == "admin/role_channels" &&
                 params[:role].to_s == role) } do %>
-          <i class="knot"></i>
-          <span class="trunc"><%= Authz.role_label(role) %></span>
+          <%= nav_icon("group") %><span class="trunc"><%= Authz.role_label(role) %></span>
         <% end %>
       <% end %>
     </div>
@@ -41,4 +37,5 @@
     </div>
   </div>
 
+  <%= render "layouts/sidebar_foot" %>
 </nav>

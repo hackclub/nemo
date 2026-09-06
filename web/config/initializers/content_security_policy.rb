@@ -8,7 +8,8 @@ CACHET_HOST = "https://cachet.hackclub.com".freeze
 
 AVATAR_HOSTS = [
   CACHET_HOST, "https://avatars.slack-edge.com", "https://*.dunkirk.sh",
-  "https://secure.gravatar.com", "https://i0.wp.com", "https://i1.wp.com", "https://i2.wp.com"
+  "https://secure.gravatar.com", "https://i0.wp.com", "https://i1.wp.com", "https://i2.wp.com",
+  "https://cdn.hackclub.com", "https://*.hackclub-assets.com"
 ].freeze
 
 AUTH_ORIGIN = begin
