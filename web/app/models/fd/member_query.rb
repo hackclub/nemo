@@ -141,8 +141,12 @@ module Fd
       SQL
     end
 
+    COUNTS_FOR = 5.minutes
+
     def population
-      @population ||= Member.live.count
+      @population ||= Rails.cache.fetch("fd/member_query/population", expires_in: COUNTS_FOR) do
+        Member.live.count
+      end
     end
 
     def views
@@ -153,7 +157,9 @@ module Fd
     end
 
     def self.view_counts
-      new({}).send(:counts_per_view)
+      Rails.cache.fetch("fd/member_query/view_counts", expires_in: COUNTS_FOR) do
+        new({}).send(:counts_per_view)
+      end
     end
 
     def summary_rows

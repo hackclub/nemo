@@ -1,4 +1,5 @@
-<section class="pane" aria-label="Member roster" data-controller="pane-filter">
+<section class="pane" aria-label="Member roster" data-controller="pane-filter"
+         data-pane-filter-url-value="<%= fd_member_pane_path %>">
   <div class="pane-head">
     <nav class="views" aria-label="Member views">
       <% views.select { |view| Fd::MemberQuery::TABS.include?(view.key) }.each do |view| %>
