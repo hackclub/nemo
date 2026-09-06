@@ -143,17 +143,10 @@ LIMIT 1
 def prepare(conn, client, channel_id):
     if walked(conn, channel_id):
         return True
-    print(f"{SOURCE}: {channel_id} has no history yet, walking it first")
-    try:
-        history.walk_channel(conn, client, channel_id, None)
-    except Exception as exc:
-        conn.rollback()
-        with conn.cursor() as cur:
-            cur.execute(HOLD_SQL, (f"history walk failed: {str(exc)[:200]}", channel_id))
-        conn.commit()
-        print(f"{SOURCE}: {channel_id} held, {type(exc).__name__}: {str(exc)[:120]}")
-        return False
-    return True
+    queued = history.enqueue_backfill(conn, [channel_id], priority=0)
+    print(f"{SOURCE}: {channel_id} has no history yet, backfill "
+          + ("queued at the front" if queued else "already queued") + ", threads follow once it lands")
+    return False
 
 
 def claim_channels(conn):

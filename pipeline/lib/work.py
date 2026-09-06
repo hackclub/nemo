@@ -28,12 +28,18 @@ WHERE ingest.work_item.state <> 'claimed'
   AND EXCLUDED.expected > coalesce(ingest.work_item.fetched, 0)
   AND ingest.work_item.state <> 'pending'"""
 
+CONFLICT_SETTLED_AGO = """DO UPDATE SET
+    state = 'pending', next_attempt_at = NULL, priority = EXCLUDED.priority, updated_at = now()
+WHERE ingest.work_item.state IN ('complete', 'short', 'unavailable')
+  AND ingest.work_item.settled_at < now() - make_interval(secs => %(requeue_after)s)"""
+
 CLAIM_SQL = """
 WITH picked AS (
     SELECT work_item_id
     FROM   ingest.work_item
     WHERE  work_kind = %(kind)s AND state = 'pending'
       AND  (next_attempt_at IS NULL OR next_attempt_at <= now())
+      AND  (%(targets)s::text[] IS NULL OR target_key = ANY(%(targets)s::text[]))
     ORDER BY priority, created_at
     LIMIT  %(limit)s
     FOR UPDATE SKIP LOCKED
@@ -84,10 +90,17 @@ SELECT state, count(*) FROM ingest.work_item WHERE work_kind = %s GROUP BY state
 """
 
 
-def enqueue_select(conn, kind, select_sql, params=(), requested_by=None, requeue_when_grown=False):
-    sql = ENQUEUE_SQL.format(select=select_sql, conflict=CONFLICT_GROWN if requeue_when_grown else CONFLICT_IGNORE)
+def enqueue_select(conn, kind, select_sql, params=(), requested_by=None, requeue_when_grown=False,
+                   requeue_settled_after=None):
+    conflict = CONFLICT_IGNORE
+    if requeue_when_grown:
+        conflict = CONFLICT_GROWN
+    elif requeue_settled_after is not None:
+        conflict = CONFLICT_SETTLED_AGO
+    sql = ENQUEUE_SQL.format(select=select_sql, conflict=conflict)
     with conn.cursor() as cur:
-        cur.execute(sql, {"kind": kind, "requested_by": requested_by, **_positional(params)})
+        cur.execute(sql, {"kind": kind, "requested_by": requested_by, "requeue_after": requeue_settled_after,
+                          **_positional(params)})
         queued = cur.rowcount
     conn.commit()
     return queued
@@ -97,9 +110,10 @@ def _positional(params):
     return {f"p{i}": value for i, value in enumerate(params)}
 
 
-def claim(conn, kind, limit=1, ttl_seconds=LEASE_SECONDS):
+def claim(conn, kind, limit=1, ttl_seconds=LEASE_SECONDS, targets=None):
     with conn.cursor() as cur:
-        cur.execute(CLAIM_SQL, {"kind": kind, "limit": limit, "ttl": ttl_seconds, "worker": worker(), "boot": WORKER_BOOT})
+        cur.execute(CLAIM_SQL, {"kind": kind, "limit": limit, "ttl": ttl_seconds, "worker": worker(),
+                               "boot": WORKER_BOOT, "targets": list(targets) if targets else None})
         items = [Item(*row) for row in cur.fetchall()]
     conn.commit()
     return items
@@ -152,6 +166,21 @@ def reclaim(conn, kind=None, max_attempts=MAX_ATTEMPTS):
         dead = sum(1 for _, state in rows if state == "dead")
         print(f"work: reclaimed {len(rows)} expired lease(s)" + (f", {dead} now dead" if dead else ""))
     return len(rows)
+
+
+PRIORITIZE_SQL = """
+UPDATE ingest.work_item
+SET    priority = least(priority, %(priority)s), updated_at = now()
+WHERE  work_kind = %(kind)s AND target_key = ANY(%(keys)s) AND state = 'pending'
+"""
+
+
+def prioritize(conn, kind, keys, priority):
+    with conn.cursor() as cur:
+        cur.execute(PRIORITIZE_SQL, {"kind": kind, "keys": list(keys), "priority": priority})
+        moved = cur.rowcount
+    conn.commit()
+    return moved
 
 
 def depth(conn, kind):
