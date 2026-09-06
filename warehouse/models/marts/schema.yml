@@ -33,10 +33,8 @@ models:
         data_type: bigint
       - name: workspace_members
         data_type: bigint
-      - name: window_start
-        data_type: date
-      - name: window_end
-        data_type: date
+      - name: full_history_members
+        data_type: bigint
       - name: metric_version
         data_type: text
   - name: mart_channel_activity

@@ -192,7 +192,7 @@ def finish_run(
                   "its status was left alone")
 
 
-CLEAN_OUTCOMES = frozenset({"ok", "partial"})
+CLEAN_OUTCOMES = frozenset({"ok", "partial", "skipped"})
 
 
 @dataclass

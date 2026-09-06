@@ -1,7 +1,9 @@
 with known as (
     select
         coalesce(w.user_id, h.user_id) as user_id,
-        coalesce(w.channel_messages_posted, h.total_messages, 0) as total_messages
+        greatest(coalesce(h.total_messages, 0), coalesce(w.channel_messages_posted, 0))
+            as total_messages,
+        h.user_id is not null as full_history
     from {{ ref('fct_member_window') }} w
     full outer join {{ ref('fct_member_history') }} h using (user_id)
 ),
@@ -13,7 +15,7 @@ walkable as (
 ),
 
 population as (
-    select k.total_messages
+    select k.total_messages, k.full_history
     from walkable w
     inner join known k on k.user_id = w.user_id
 ),
@@ -21,8 +23,7 @@ population as (
 coverage as (
     select
         (select count(*) from walkable) as workspace_members,
-        (select min(searched_at)::date from {{ ref('fct_member_history') }}) as window_start,
-        (select max(searched_at)::date from {{ ref('fct_member_history') }}) as window_end
+        (select count(*) from population where full_history) as full_history_members
 ),
 
 member_bands as (
@@ -59,11 +60,10 @@ select
     b.activity_band,
     count(mb.band_order) as members,
     c.workspace_members,
-    c.window_start,
-    c.window_end,
-    'v13' as metric_version
+    c.full_history_members,
+    'v14' as metric_version
 from bands b
 cross join coverage c
 left join member_bands mb on mb.band_order = b.band_order
-group by b.band_order, b.activity_band, c.workspace_members, c.window_start, c.window_end
+group by b.band_order, b.activity_band, c.workspace_members, c.full_history_members
 order by b.band_order

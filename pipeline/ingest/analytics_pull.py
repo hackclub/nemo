@@ -259,8 +259,13 @@ def note_unavailable(source, day, reason):
     return True
 
 
-def lane_outcome(source, asked, landed, failed, pending, unavailable):
+HELD = "held"
+
+
+def lane_outcome(source, asked, landed, failed, pending, unavailable, held=()):
     lines = []
+    if held:
+        lines.append(f"{source}: {len(held)} day(s) held by another worker, left for the next run")
     if unavailable:
         lines.append(f"{source}: {len(unavailable)} day(s) have no export and will not be retried")
     if pending:
@@ -289,15 +294,15 @@ def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
 
     def work(day):
         with connect() as worker_conn, run_step(*step), cancel_scope(cancel):
-            pull_fn(worker_conn, day)
+            return pull_fn(worker_conn, day)
 
-    failed, unavailable, pending = [], [], []
+    failed, unavailable, pending, held = [], [], [], []
     with ThreadPoolExecutor(max_workers=lanes) as pool:
         submitted = {pool.submit(work, day): day for day in days}
         for future in as_completed(submitted):
             day = submitted[future]
             try:
-                future.result()
+                outcome = future.result()
             except SyncCancelled:
                 raise
             except Exception as exc:
@@ -310,10 +315,13 @@ def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
                     pending.append(str(day))
                 else:
                     failed.append(f"{day}: {type(exc).__name__}: {exc}")
-    landed = len(days) - len(unavailable) - len(pending) - len(failed)
+            else:
+                if outcome == HELD:
+                    held.append(str(day))
+    landed = len(days) - len(unavailable) - len(pending) - len(failed) - len(held)
     if landed:
         refresh_statistics(kind)
-    lines, error = lane_outcome(source, len(days), landed, failed, pending, unavailable)
+    lines, error = lane_outcome(source, len(days), landed, failed, pending, unavailable, held)
     for line in lines:
         print(line)
     if error:
@@ -330,8 +338,9 @@ def pull_member_day(conn, pull_date):
                     stream_key=iso, slice_key=iso) as counts:
         fence = coverage.claim_slice(conn, MEMBER_DAYS_KEY, iso, pull_date, pull_date, counts.run_id)
         if fence is None:
+            counts.status = "skipped"
             print(f"member analytics {pull_date}: another worker holds this day, skipping")
-            return
+            return HELD
         activity_rows, dim_rows = [], []
         client = ProxyClient.for_source(MEMBER_DAYS_KEY)
         params = {
@@ -391,8 +400,9 @@ def pull_channel_day(conn, pull_date):
                     stream_key=iso, slice_key=iso) as counts:
         fence = coverage.claim_slice(conn, CHANNEL_DAYS_KEY, iso, pull_date, pull_date, counts.run_id)
         if fence is None:
+            counts.status = "skipped"
             print(f"channel analytics {pull_date}: another worker holds this day, skipping")
-            return
+            return HELD
         activity_rows, dim_rows = [], []
         try:
             raw = ProxyClient.for_source(CHANNEL_DAYS_KEY).fetch_file(
