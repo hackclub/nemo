@@ -6,47 +6,58 @@
 </div>
 
 <% if @channel_scorecard.any? %>
-  <div class="card card-flush">
+  <div class="card card-flush" data-controller="month-filter">
     <div class="card-head">
       <div>
         <h2 class="card-title">Channel onboarding scorecard</h2>
       </div>
+      <% if @scorecard_months.many? %>
+        <div class="card-tools">
+          <label class="qlab" for="scorecard-month">Month</label>
+          <select id="scorecard-month" class="select"
+                  data-month-filter-target="picker" data-action="month-filter#pick">
+            <% @scorecard_months.each do |month| %>
+              <option value="<%= month.iso8601 %>"><%= month.strftime("%b %Y") %></option>
+            <% end %>
+          </select>
+        </div>
+      <% end %>
     </div>
     <div class="scroll">
       <table class="data-table">
         <thead>
           <tr>
             <th>channel</th>
-            <th class="col-date">month</th>
             <th class="col-num">newcomers</th>
             <th class="col-num">fast reply</th>
             <th class="col-num">90-day retention</th>
           </tr>
         </thead>
-        <tbody>
-          <% @channel_scorecard.each do |row| %>
-            <tr>
-              <td>#<%= row.channel_name %></td>
-              <td class="col-date"><%= row.post_month.strftime("%b %Y") %></td>
-              <td class="col-num"><%= number_with_delimiter(row.newcomer_volume) %></td>
-              <td class="col-num">
-                <% if row.fast_reply_share %>
-                  <%= rate_chip((row.fast_reply_share.to_f * 100).round(1)) %>
-                <% else %>
-                  <span class="chip chip-off"><%= number_with_delimiter(row.newcomers_checked) %> of
-                    <%= number_with_delimiter(row.newcomer_volume) %> checked</span>
-                <% end %>
-              </td>
-              <td class="col-num">
-                <% if row.day_90_mature %>
-                  <%= rate_chip((row.retained_90_share.to_f * 100).round(1)) %>
-                <% else %>
-                  <span class="chip chip-off">TBD</span>
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
+        <% @scorecard_months.each do |month| %>
+          <tbody data-month-filter-target="group" data-month="<%= month.iso8601 %>">
+            <% @channel_scorecard.fetch(month).each do |row| %>
+              <tr>
+                <td>#<%= row.channel_name %></td>
+                <td class="col-num"><%= number_with_delimiter(row.newcomer_volume) %></td>
+                <td class="col-num">
+                  <% if row.fast_reply_share %>
+                    <%= rate_chip((row.fast_reply_share.to_f * 100).round(1)) %>
+                  <% else %>
+                    <span class="chip chip-off"><%= number_with_delimiter(row.newcomers_checked) %> of
+                      <%= number_with_delimiter(row.newcomer_volume) %> checked</span>
+                  <% end %>
+                </td>
+                <td class="col-num">
+                  <% if row.day_90_mature %>
+                    <%= rate_chip((row.retained_90_share.to_f * 100).round(1)) %>
+                  <% else %>
+                    <span class="chip chip-off">TBD</span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        <% end %>
       </table>
     </div>
   </div>

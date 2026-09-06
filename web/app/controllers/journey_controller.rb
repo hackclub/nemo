@@ -2,6 +2,8 @@ class JourneyController < ApplicationController
   before_action { needs(:analytics) }
   before_action :require_reading
 
+  SCORECARD_PER_MONTH = 10
+
   def acquisition
     asked = params[:growth_months].to_i
     @growth_span = HomeHelper::GROWTH_SPANS.include?(asked) ? asked : HomeHelper::DEFAULT_GROWTH_SPAN
@@ -23,7 +25,11 @@ class JourneyController < ApplicationController
     scorecard = Analytics::MartChannelOnboardingScorecard.where(channel_id: visible_channels)
     @channel_scorecard = scorecard
       .where(newcomer_volume: HomeHelper::MIN_SAMPLE..)
-      .order(post_month: :desc, newcomer_volume: :desc).limit(10)
+      .order(post_month: :desc, newcomer_volume: :desc)
+      .to_a
+      .group_by(&:post_month)
+      .transform_values { |rows| rows.first(SCORECARD_PER_MONTH) }
+    @scorecard_months = @channel_scorecard.keys.sort.reverse
     @channel_scorecard_total = scorecard.count
   end
 
