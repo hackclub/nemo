@@ -19,7 +19,8 @@ module Slack
         "credential" => credential
       }.to_json
 
-      response = Net::HTTP.start(uri.host, uri.port, open_timeout: 5, read_timeout: read_timeout) do |http|
+      response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
+                                 open_timeout: 5, read_timeout: read_timeout) do |http|
         http.request(request)
       end
 

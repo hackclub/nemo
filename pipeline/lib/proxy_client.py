@@ -9,6 +9,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from lib.deadline import Deadline
+
 LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "host.docker.internal"})
 TRUTHY = frozenset({"1", "true", "yes", "on"})
 EMPTY_PAGE_LIMIT = 40
@@ -47,11 +49,16 @@ def plaintext_refused(url, allow_plaintext=None):
     )
 
 
+RETRY_STATUS = frozenset({429, 502, 503, 504})
+FAULT_ORIGIN_HEADER = "X-Fault-Origin"
+
+
 class ProxyClient:
-    def __init__(self, url=None, token=None, read_timeout=120):
+    def __init__(self, url=None, token=None, read_timeout=120, deadline_seconds=None):
         self.url = (url or os.environ.get("INTERNAL_PROXY_URL", "")).rstrip("/")
         self.token = token or os.environ.get("INTERNAL_PROXY_TOKEN", "")
         self.read_timeout = read_timeout
+        self.deadline_seconds = deadline_seconds if deadline_seconds is not None else read_timeout
         self.last_num_found = None
         if not self.url or not self.token:
             raise ProxyError("INTERNAL_PROXY_URL and INTERNAL_PROXY_TOKEN must both be set")
@@ -171,30 +178,54 @@ class ProxyClient:
                 break
 
     def _request(self, url, body, headers, max_retries, raw=False):
+        deadline = Deadline(self.deadline_seconds)
         attempt = 0
         while True:
             req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+            timeout = deadline.clamp(self.read_timeout)
+            if timeout <= 0:
+                raise ProxyUnavailableError(
+                    f"deadline of {deadline.seconds:.0f}s spent after {attempt} attempt(s) at {self.url}")
             try:
-                with urllib.request.urlopen(req, timeout=self.read_timeout) as resp:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
                     payload = resp.read()
                     return payload if raw else json.loads(payload)
             except urllib.error.HTTPError as exc:
-                self._raise_for_status(exc)
-            except (urllib.error.URLError, http.client.IncompleteRead, TimeoutError) as exc:
-                if attempt < max_retries:
-                    time.sleep(1 + attempt)
+                if exc.code in RETRY_STATUS and attempt < max_retries and not deadline.expired():
+                    time.sleep(deadline.clamp(retry_after(exc, 1 + attempt)))
                     attempt += 1
                     continue
-                raise ProxyUnavailableError(f"proxy unreachable at {self.url}: {exc}") from exc
+                self._raise_for_status(exc)
+            except (urllib.error.URLError, http.client.IncompleteRead, TimeoutError) as exc:
+                if attempt < max_retries and not deadline.expired():
+                    time.sleep(deadline.clamp(1 + attempt))
+                    attempt += 1
+                    continue
+                raise ProxyUnavailableError(
+                    f"proxy unreachable at {self.url} after {attempt + 1} attempt(s): {exc}") from exc
 
     def _raise_for_status(self, exc):
         try:
             detail = json.loads(exc.read()).get("detail", "")
         except (ValueError, OSError):
             detail = ""
+        from_proxy = exc.headers.get(FAULT_ORIGIN_HEADER) is not None
 
         if exc.code == 502:
             if str(detail).startswith("invalid_auth"):
-                raise InternalAuthError(detail) from exc
-            raise InternalApiError(detail or "upstream error") from exc
-        raise ProxyError(f"proxy returned {exc.code}: {detail}") from exc
+                raise stamped(InternalAuthError(detail), exc.code, from_proxy) from exc
+            raise stamped(InternalApiError(detail or "upstream error"), exc.code, from_proxy) from exc
+        raise stamped(ProxyError(f"proxy returned {exc.code}: {detail}"), exc.code, from_proxy) from exc
+
+
+def retry_after(exc, fallback):
+    try:
+        return max(0.0, float(exc.headers.get("Retry-After", fallback)))
+    except (TypeError, ValueError):
+        return float(fallback)
+
+
+def stamped(error, http_status, had_fault_body):
+    error.http_status = http_status
+    error.had_fault_body = had_fault_body
+    return error

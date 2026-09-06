@@ -61,3 +61,50 @@ def test_reading_past_empty_pages_still_ends_when_the_cursor_runs_out():
 
     assert walked == []
     assert len(client.asked) == 3
+
+
+def test_a_proxy_error_carries_its_status_and_whether_the_proxy_answered():
+    import io
+    import urllib.error
+    from email.message import Message
+    from lib.proxy_client import ProxyClient, ProxyError
+    headers = Message()
+    headers["X-Fault-Origin"] = "proxy"
+    exc = urllib.error.HTTPError("http://x/call", 503, "Service Unavailable", headers, io.BytesIO(b'{"detail":"budget: spent"}'))
+    try:
+        ProxyClient(url="http://localhost:1", token="t")._raise_for_status(exc)
+    except ProxyError as caught:
+        assert caught.http_status == 503
+        assert caught.had_fault_body is True
+        assert "budget: spent" in str(caught)
+    else:
+        raise AssertionError("expected ProxyError")
+
+
+def test_an_edge_answer_with_no_proxy_header_is_marked_as_such():
+    import io
+    import urllib.error
+    from email.message import Message
+    from lib.proxy_client import ProxyClient, ProxyError
+    exc = urllib.error.HTTPError("http://x/call", 504, "Gateway Timeout", Message(), io.BytesIO(b"<html>"))
+    try:
+        ProxyClient(url="http://localhost:1", token="t")._raise_for_status(exc)
+    except ProxyError as caught:
+        assert caught.http_status == 504
+        assert caught.had_fault_body is False
+
+
+def test_retry_after_prefers_the_header_and_falls_back_cleanly():
+    from email.message import Message
+    from lib.proxy_client import retry_after
+
+    class Exc:
+        headers = Message()
+    Exc.headers["Retry-After"] = "7"
+    assert retry_after(Exc(), 2) == 7.0
+
+    class Bad:
+        headers = Message()
+    Bad.headers["Retry-After"] = "soon"
+    assert retry_after(Bad(), 3) == 3.0
+    assert retry_after(type("E", (), {"headers": Message()})(), 4) == 4.0

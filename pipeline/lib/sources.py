@@ -55,6 +55,16 @@ def runs_as(key):
     return source(key).get("runs_as") or [key]
 
 
+DEFAULT_UNIT_BUDGET_SECONDS = 90
+
+
+def unit_budget_seconds(key):
+    try:
+        return int(source(key).get("unit_budget_seconds", DEFAULT_UNIT_BUDGET_SECONDS))
+    except Unknown:
+        return DEFAULT_UNIT_BUDGET_SECONDS
+
+
 def parser_version(key):
     try:
         return int(source(key).get("parser_version", 1))

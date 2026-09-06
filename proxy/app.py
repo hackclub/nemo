@@ -1,13 +1,19 @@
+import http.client
 import logging
 import os
 import secrets
+import socket
 import time
+import urllib.error
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
+
+import budget
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from slack_sdk.errors import SlackApiError
@@ -83,6 +89,8 @@ def whoami(name):
         return {"ok": False, "error": str(exc)}
     except SlackApiError as exc:
         return {"ok": False, "error": exc.response.get("error", "unknown_error")}
+    except (OSError, ValueError) as exc:
+        return {"ok": False, "error": f"unreachable: {type(exc).__name__}: {exc}"}
     return {
         "ok": bool(data.get("ok")),
         "user": data.get("user"),
@@ -218,6 +226,12 @@ def admin_api_call(method, params):
         return client.api_call(method, params=params)
     except SlackApiError as exc:
         error = exc.response.get("error", "unknown_error")
+        if exc.response.status_code == 429:
+            raise HTTPException(
+                status_code=429,
+                detail=f"upstream {error}",
+                headers={"Retry-After": str(exc.response.headers.get("Retry-After", "1"))},
+            ) from exc
         if error in AUTH_ERRORS:
             raise HTTPException(status_code=502, detail=f"invalid_auth: {error}") from exc
         raise HTTPException(status_code=502, detail=error) from exc
@@ -254,6 +268,54 @@ def call(req: CallRequest, client: Client = Depends(current_client)):
             ),
         )
 
+    refused = budget.take(client.name, req.credential, req.method)
+    if refused:
+        wait, label = refused
+        raise HTTPException(
+            status_code=429,
+            detail=f"budget: {label} is spent, retry in {wait}s",
+            headers={"Retry-After": str(wait)},
+        )
+
     if req.credential == "admin":
         return call_admin(req)
     return call_internal(req)
+
+
+@app.get("/budget")
+def budget_report(client: Client = Depends(current_client)):
+    return budget.report()
+
+
+TRANSPORT_ERRORS = (urllib.error.URLError, http.client.IncompleteRead, ConnectionError, OSError)
+FAULT_ORIGIN = "X-Fault-Origin"
+
+
+@app.exception_handler(Exception)
+async def upstream_escaped(request: Request, exc: Exception):
+    if isinstance(exc, urllib.error.HTTPError):
+        if exc.code == 429:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "upstream ratelimited"},
+                headers={"Retry-After": exc.headers.get("Retry-After", "1"), FAULT_ORIGIN: "proxy"},
+            )
+        status, detail = 502, f"upstream http {exc.code}: {exc.reason}"
+    elif isinstance(exc, (TimeoutError, socket.timeout)):
+        status, detail = 504, f"upstream timeout: {exc}"
+    elif isinstance(exc, TRANSPORT_ERRORS):
+        status, detail = 502, f"upstream unreachable: {type(exc).__name__}: {exc}"
+    elif isinstance(exc, ValueError):
+        status, detail = 502, f"upstream returned a body that was not JSON: {exc}"
+    else:
+        status, detail = 500, f"{type(exc).__name__}: {exc}"
+    logger.error("escaped into the catch-all: %s", detail)
+    return JSONResponse(status_code=status, content={"detail": detail[:500]}, headers={FAULT_ORIGIN: "proxy"})
+
+
+@app.middleware("http")
+async def fault_origin(request: Request, call_next):
+    response = await call_next(request)
+    if response.status_code >= 400:
+        response.headers[FAULT_ORIGIN] = "proxy"
+    return response

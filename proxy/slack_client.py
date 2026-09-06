@@ -1,17 +1,8 @@
 import os
-from http.client import IncompleteRead, RemoteDisconnected
-from urllib.error import URLError
 
 from slack_sdk import WebClient
-from slack_sdk.http_retry.builtin_handlers import ConnectionErrorRetryHandler, RateLimitErrorRetryHandler
 
-RETRY_HANDLERS = [
-    ConnectionErrorRetryHandler(
-        max_retry_count=5,
-        error_types=[URLError, ConnectionResetError, RemoteDisconnected, IncompleteRead],
-    ),
-    RateLimitErrorRetryHandler(max_retry_count=3),
-]
+UPSTREAM_TIMEOUT = 60
 
 AUTH_ERRORS = {
     "invalid_auth",
@@ -39,4 +30,4 @@ def admin_client() -> WebClient:
     token = admin_token()
     if not token:
         raise RuntimeError(f"one of {' or '.join(ADMIN_TOKEN_VARS)} must be set")
-    return WebClient(token=token, retry_handlers=RETRY_HANDLERS)
+    return WebClient(token=token, timeout=UPSTREAM_TIMEOUT, retry_handlers=[])
