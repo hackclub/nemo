@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 import psycopg
 
-from lib import sources
+from lib import calendar, sources
 from lib.db import connect, credentials
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
@@ -189,12 +189,12 @@ def team_stats_today(client):
 
 
 def one_date(client):
-    avail = client.call("admin.analytics.getAvailableDateRange", {"type": "member"})
+    avail = calendar.available_iso(client, "member")
     return date.fromisoformat(avail["end_date"])
 
 
 def member_page(client, count=500):
-    avail = client.call("admin.analytics.getAvailableDateRange", {"type": "member"})
+    avail = calendar.available_iso(client, "member")
     resp = client.call(
         "admin.analytics.getMemberAnalytics",
         {

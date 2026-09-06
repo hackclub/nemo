@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 from seed import hostile as hostile_module
 
@@ -108,6 +108,45 @@ def step_output_rows(rng, parent_ids, hostile=False):
                 source,
                 hostile_module.reason(rng, output, hostile),
             )
+
+
+COVERAGE_COLUMNS = [
+    "source_key", "slice_key", "slice_start", "slice_end", "state",
+    "expected", "landed", "attempts", "claimed_at", "settled_at", "lease_until",
+]
+
+COVERAGE_DAYS = 60
+
+
+def coverage_rows(rng, as_of):
+    for offset in range(COVERAGE_DAYS):
+        day = as_of - timedelta(days=offset)
+        expected = 120_000 + rng.randrange(2_000)
+        if offset == 0:
+            yield ("member_days", day.isoformat(), day, day, "claimed", expected, 2000, 1,
+                   midnight(day), None, midnight(day) + timedelta(hours=1))
+            continue
+        state = "short" if offset in (3, 17) else "complete"
+        landed = expected - rng.randrange(20_000, 40_000) if state == "short" else expected
+        yield ("member_days", day.isoformat(), day, day, state, expected, landed,
+               2 if state == "short" else 1, midnight(day), midnight(day, 3, 40), None)
+        yield ("channel_days", day.isoformat(), day, day, "complete", 40_000, 40_000, 1,
+               midnight(day), midnight(day, 3, 10), None)
+    first = (as_of - timedelta(days=COVERAGE_DAYS)).replace(day=1)
+    cursor = first
+    while cursor <= as_of.replace(day=1):
+        last = date(cursor.year + cursor.month // 12, cursor.month % 12 + 1, 1) - timedelta(days=1)
+        whole = last < as_of
+        yield ("channel_month", cursor.strftime("%Y-%m"), cursor, min(last, as_of),
+               "complete" if whole else "short", 13_308, 13_306 if whole else 9_800, 1,
+               midnight(cursor), midnight(cursor, 4), None)
+        cursor = last + timedelta(days=1)
+    for offset in range(3):
+        stop = as_of - timedelta(days=offset)
+        start = stop - timedelta(days=364)
+        yield ("member_range", f"{start}..{stop}", start, stop,
+               "complete" if offset == 0 else "superseded", 216_540, 216_540, 1,
+               midnight(stop), midnight(stop, 5), None)
 
 
 def dead_letter_rows(rng, as_of, count=40, hostile=False):

@@ -14,11 +14,14 @@ from ingest.channel_range_pull import (
     next_month,
     range_row,
 )
+from lib import coverage, sources
 from lib.db import connect, dead_letter, ingest_run
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
+from lib.walk import SHORT_AT
 
 SOURCE = MONTH_SOURCE
+KEY = sources.key_for_run(SOURCE)
 PAGE_SIZE = 500
 SPLIT_DEPTH = 3
 TOKEN_SPLIT = re.compile(r"[^0-9a-zÀ-￿]+")
@@ -107,6 +110,10 @@ def run_month(conn, month, alphabet=None):
     found = {}
 
     with ingest_run(conn, SOURCE, slice_key=interval) as counts:
+        fence = coverage.claim_slice(conn, KEY, interval, start, stop, counts.run_id)
+        if fence is None:
+            print(f"channel month {interval}: another worker holds this month, skipping")
+            return 0, 0, 0
         _, expected = ask(client, interval)
         counts.total_expected = expected
 
@@ -129,6 +136,9 @@ def run_month(conn, month, alphabet=None):
         missed = max(0, expected - len(found))
         if short or missed:
             counts.status = "partial"
+        reached = len(found) >= int(expected * SHORT_AT)
+        coverage.settle(conn, KEY, interval, fence, "complete" if reached and not short else "short",
+                        expected, len(found), note=f"{missed} missed" if missed else None)
 
         print(
             f"channel month {interval}: {len(found)} of {expected} channels over "

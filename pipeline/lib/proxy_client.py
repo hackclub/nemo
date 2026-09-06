@@ -50,6 +50,7 @@ def plaintext_refused(url, allow_plaintext=None):
 
 
 RETRY_STATUS = frozenset({429, 502, 503, 504})
+UPSTREAM_TRANSPORT = ("upstream unreachable", "upstream timeout", "upstream http")
 FAULT_ORIGIN_HEADER = "X-Fault-Origin"
 
 
@@ -211,6 +212,8 @@ class ProxyClient:
             detail = ""
         from_proxy = exc.headers.get(FAULT_ORIGIN_HEADER) is not None
 
+        if exc.code in (502, 504) and str(detail).startswith(UPSTREAM_TRANSPORT):
+            raise stamped(ProxyUnavailableError(f"proxy could not reach slack: {detail}"), exc.code, from_proxy) from exc
         if exc.code == 502:
             if str(detail).startswith("invalid_auth"):
                 raise stamped(InternalAuthError(detail), exc.code, from_proxy) from exc

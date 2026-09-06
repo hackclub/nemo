@@ -553,6 +553,10 @@ def write_runs(conn, rng, members, as_of, hostile=False):
             conn, "raw.dead_letter", ["source", "payload", "reason", "created_at"],
             runs_module.dead_letter_rows(rng, as_of, hostile=hostile),
         ),
+        "slice_coverage": copy_rows(
+            conn, "ingest.slice_coverage", runs_module.COVERAGE_COLUMNS,
+            runs_module.coverage_rows(rng, as_of),
+        ),
     }
     conn.commit()
     return counts

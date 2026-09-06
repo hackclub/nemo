@@ -35,3 +35,4 @@ sources:
     tables:
       - name: quality_result
       - name: incident_ack
+      - name: slice_coverage

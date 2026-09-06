@@ -1,14 +1,17 @@
 import argparse
 import calendar
-from datetime import date
+from datetime import date, timedelta
 
 from dotenv import load_dotenv
 
+from lib import coverage, planners, sources
+from lib import calendar as slack_calendar
 from lib.db import connect, dead_letter, ingest_run
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
 
 SOURCE = "top_posters"
+KEY = sources.key_for_run(SOURCE)
 METHOD = "admin.analytics.getMemberAnalytics"
 RANGE_METHOD = "admin.analytics.getAvailableDateRange"
 TOP_N = 100
@@ -32,9 +35,7 @@ GROUP BY 1
 
 
 def available_range(client):
-    resp = client.call(RANGE_METHOD, {"type": "member"})
-    rng = resp.get("available_date_range") or resp
-    return date.fromisoformat(rng["start_date"]), date.fromisoformat(rng["end_date"])
+    return slack_calendar.available(client, "member")
 
 
 def next_month(d):
@@ -130,11 +131,20 @@ def run(conn, month=None, backfill=False):
                 print(f"{SOURCE}: every month in range is already complete")
 
         for m in months:
+            slice_key = planners.month_key(m)
+            fence = coverage.claim_slice(conn, KEY, slice_key, *month_bounds(m, avail_start, avail_end),
+                                         run_id=counts.run_id)
+            if fence is None:
+                print(f"{SOURCE} {slice_key}: another worker holds this month, skipping")
+                continue
             count, rejected, window_start, window_end = pull_month(
                 conn, client, m, avail_start, avail_end
             )
             counts.rows_in += count
             counts.rows_rejected += rejected
+            whole = window_end == planners.next_month(m) - timedelta(days=1)
+            coverage.settle(conn, KEY, slice_key, fence, "complete" if whole else "short", None, count,
+                            note=None if whole else f"through {window_end}")
             print(f"{SOURCE} {window_start}..{window_end}: {count} rows")
 
     print(f"{SOURCE}: {counts.rows_in} rows, {counts.rows_rejected} rejected across {len(months)} months")

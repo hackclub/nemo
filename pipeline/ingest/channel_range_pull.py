@@ -1,13 +1,14 @@
 import argparse
 import os
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 
 from dotenv import load_dotenv
 
+from lib import calendar, coverage, planners, sources
 from lib.db import connect, dead_letter, get_walk, ingest_run, save_walk
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
-from lib.walk import check_walk
+from lib.walk import check_walk, should_prune
 
 SOURCE = "admin_analytics_channel_range"
 SPAN_SOURCE = "admin_analytics_channel_span"
@@ -82,29 +83,19 @@ def range_row(rec, start, end, source=SOURCE):
 
 
 def channel_calendar(client):
-    resp = client.call(RANGE_METHOD, {"type": "channel"})
-    rng = resp.get("available_date_range") or resp
-    return date.fromisoformat(rng["start_date"]), date.fromisoformat(rng["end_date"])
+    return calendar.available(client, "channel")
 
 
 def resolve_window(client, days=WINDOW_DAYS, end=None):
-    floor, edge = channel_calendar(client)
-    if end is None:
-        end = edge
-    return max(floor, end - timedelta(days=days - 1)), end
+    return planners.window(*channel_calendar(client), days=days, end=end)
 
 
 def span_window(client, end=None):
-    floor, edge = channel_calendar(client)
-    return floor, (end or edge)
+    return planners.window(*channel_calendar(client), end=end)
 
 
-def month_start(day):
-    return day.replace(day=1)
-
-
-def next_month(day):
-    return date(day.year + day.month // 12, day.month % 12 + 1, 1)
+month_start = planners.month_start
+next_month = planners.next_month
 
 
 def run(conn, days=WINDOW_DAYS, end=None, source=SOURCE, span=False):
@@ -124,7 +115,12 @@ def run(conn, days=WINDOW_DAYS, end=None, source=SOURCE, span=False):
     )
     resume_at, already = get_walk(conn, source, window_key)
 
+    key = sources.key_for_run(source)
     with ingest_run(conn, source, slice_key=window_key) as counts:
+        fence = coverage.claim_slice(conn, key, window_key, start, stop, counts.run_id)
+        if fence is None:
+            print(f"{label} {window_key}: another worker holds this slice, skipping")
+            return 0
         counts.rows_in = already
         rows = []
 
@@ -157,13 +153,21 @@ def run(conn, days=WINDOW_DAYS, end=None, source=SOURCE, span=False):
                 counts.rows_rejected += 1
                 dead_letter(conn, source, {"keys": sorted(rec)}, str(exc))
 
-        check_walk(f"{label} {window_key}", counts.rows_in,
+        verdict = check_walk(f"{label} {window_key}", counts.rows_in,
             client.last_num_found, PAGE_SIZE)
 
+        pruned = 0
         with conn.cursor() as cur:
             cur.executemany(RANGE_SQL, rows)
-            cur.execute(PRUNE_SQL, (source, start, stop))
-            pruned = cur.rowcount
+            if should_prune(verdict):
+                cur.execute(PRUNE_SQL, (source, start, stop))
+                pruned = cur.rowcount
+        if should_prune(verdict):
+            coverage.supersede(conn, key, window_key)
+        else:
+            counts.status = "partial"
+        coverage.settle(conn, key, window_key, fence, verdict or "short",
+                        client.last_num_found, counts.rows_in)
         save_walk(conn, source, window_key, None, counts.rows_in)
     print(
         f"{label} {window_key}: {counts.rows_in} rows, "

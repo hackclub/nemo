@@ -3,6 +3,7 @@ from datetime import date, timedelta
 
 from dotenv import load_dotenv
 
+from lib import calendar
 from lib.db import connect, dead_letter, ingest_run
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
@@ -60,10 +61,7 @@ def team_stats_row(rec):
 
 
 def probe_date(client):
-    hint = client.call(RANGE_METHOD, {"type": "member"})
-    rng = hint.get("available_date_range") or hint
-    first = date.fromisoformat(rng["start_date"])
-    last = date.fromisoformat(rng["end_date"])
+    first, last = calendar.available(client, "member")
     return first + (last - first) // 2
 
 

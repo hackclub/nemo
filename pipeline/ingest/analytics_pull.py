@@ -3,7 +3,7 @@ import gzip
 import json
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 
 from dotenv import load_dotenv
 
@@ -21,11 +21,15 @@ from lib.db import (
     record_day,
     run_step,
 )
+from lib import calendar as slack_calendar
+from lib import coverage, planners, sources
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
-from lib.walk import check_walk
+from lib.walk import SHORT, check_walk
 
 ANALYTICS_SOURCE = "admin_analytics_api"
+MEMBER_DAYS_KEY = sources.key_for_run(f"{ANALYTICS_SOURCE}:member")
+CHANNEL_DAYS_KEY = sources.key_for_run(f"{ANALYTICS_SOURCE}:public_channel")
 MEMBER_PAGE_SIZE = 500
 
 MEMBER_ACTIVITY_SQL = """
@@ -208,19 +212,11 @@ def settled_days(conn, source):
 
 
 def calendar(client, kind):
-    avail = client.call("admin.analytics.getAvailableDateRange", {"type": kind})
-    return date.fromisoformat(avail["start_date"]), date.fromisoformat(avail["end_date"])
+    return slack_calendar.available(client, kind)
 
 
 def pending_days(loaded, floor, edge, limit):
-    missing, day = [], floor
-    while day <= edge:
-        if day not in loaded:
-            missing.append(day)
-        day += timedelta(days=1)
-    if not missing or limit < 1:
-        return []
-    return missing[::-1][:limit]
+    return planners.day(floor, edge, loaded, limit)
 
 
 def by_key(rows):
@@ -317,9 +313,18 @@ def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
         raise RuntimeError(error)
 
 
+def aside_state(exc):
+    return "unavailable" if str(exc).startswith(PERMANENT_DAY_ERRORS) else "short"
+
+
 def pull_member_day(conn, pull_date):
+    iso = pull_date.isoformat()
     with ingest_run(conn, f"{ANALYTICS_SOURCE}:member", benign=day_has_no_export,
-                    stream_key=pull_date.isoformat(), slice_key=pull_date.isoformat()) as counts:
+                    stream_key=iso, slice_key=iso) as counts:
+        fence = coverage.claim_slice(conn, MEMBER_DAYS_KEY, iso, pull_date, pull_date, counts.run_id)
+        if fence is None:
+            print(f"member analytics {pull_date}: another worker holds this day, skipping")
+            return
         activity_rows, dim_rows = [], []
         client = ProxyClient()
         params = {
@@ -339,37 +344,57 @@ def pull_member_day(conn, pull_date):
             counts.total_expected = client.last_num_found
             counts.progress()
 
-        for i, rec in enumerate(client.paginate(
-            "admin.analytics.getMemberAnalytics", params, "member_activity",
-            page_size=MEMBER_PAGE_SIZE, cursor_param="cursor_mark", max_retries=8,
-        )):
-            counts.rows_in += 1
-            try:
-                activity_rows.append(member_activity_row(rec, pull_date))
-                dim_rows.append(member_dim_row(rec, pull_date))
-            except KeyError as exc:
-                counts.rows_rejected += 1
-                dead_letter(conn, ANALYTICS_SOURCE, rec, str(exc))
-                conn.commit()
-            if (i + 1) % 2000 == 0:
-                flush()
-        flush()
+        try:
+            for i, rec in enumerate(client.paginate(
+                "admin.analytics.getMemberAnalytics", params, "member_activity",
+                page_size=MEMBER_PAGE_SIZE, cursor_param="cursor_mark", max_retries=8,
+            )):
+                counts.rows_in += 1
+                try:
+                    activity_rows.append(member_activity_row(rec, pull_date))
+                    dim_rows.append(member_dim_row(rec, pull_date))
+                except KeyError as exc:
+                    counts.rows_rejected += 1
+                    dead_letter(conn, ANALYTICS_SOURCE, rec, str(exc))
+                    conn.commit()
+                if (i + 1) % 2000 == 0:
+                    flush()
+            flush()
+        except Exception as exc:
+            coverage.settle_aside(MEMBER_DAYS_KEY, iso, fence, aside_state(exc),
+                                  client.last_num_found, counts.rows_in, note=f"{type(exc).__name__}: {exc}")
+            raise
 
-        check_walk(f"member analytics {pull_date}", counts.rows_in,
+        verdict = check_walk(f"member analytics {pull_date}", counts.rows_in,
             client.last_num_found, MEMBER_PAGE_SIZE)
 
-        record_day(conn, MEMBER_DAY, pull_date, counts.rows_in)
+        if verdict == SHORT:
+            counts.status = "partial"
+        else:
+            record_day(conn, MEMBER_DAY, pull_date, counts.rows_in)
+        coverage.settle(conn, MEMBER_DAYS_KEY, iso, fence, verdict or "complete",
+                        client.last_num_found, counts.rows_in)
     print(f"member analytics {pull_date}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
 
 def pull_channel_day(conn, pull_date):
+    iso = pull_date.isoformat()
     with ingest_run(conn, f"{ANALYTICS_SOURCE}:public_channel", benign=day_has_no_export,
-                    stream_key=pull_date.isoformat(), slice_key=pull_date.isoformat()) as counts:
+                    stream_key=iso, slice_key=iso) as counts:
+        fence = coverage.claim_slice(conn, CHANNEL_DAYS_KEY, iso, pull_date, pull_date, counts.run_id)
+        if fence is None:
+            print(f"channel analytics {pull_date}: another worker holds this day, skipping")
+            return
         activity_rows, dim_rows = [], []
-        raw = ProxyClient().fetch_file(
-            "admin.analytics.getFile",
-            {"type": "public_channel", "date": pull_date.isoformat()},
-        )
+        try:
+            raw = ProxyClient().fetch_file(
+                "admin.analytics.getFile",
+                {"type": "public_channel", "date": iso},
+            )
+        except Exception as exc:
+            coverage.settle_aside(CHANNEL_DAYS_KEY, iso, fence, aside_state(exc), None, 0,
+                                  note=f"{type(exc).__name__}: {exc}")
+            raise
         for line in fetch_ndjson(raw):
             counts.rows_in += 1
             try:
@@ -384,6 +409,7 @@ def pull_channel_day(conn, pull_date):
             cur.executemany(CHANNEL_DIM_MERGE_SQL, by_key(dim_rows))
 
         record_day(conn, CHANNEL_DAY, pull_date, counts.rows_in)
+        coverage.settle(conn, CHANNEL_DAYS_KEY, iso, fence, "complete", counts.rows_in, counts.rows_in)
     print(f"channel analytics {pull_date}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
 

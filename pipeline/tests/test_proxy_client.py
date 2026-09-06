@@ -108,3 +108,21 @@ def test_retry_after_prefers_the_header_and_falls_back_cleanly():
     Bad.headers["Retry-After"] = "soon"
     assert retry_after(Bad(), 3) == 3.0
     assert retry_after(type("E", (), {"headers": Message()})(), 4) == 4.0
+
+
+def test_a_proxy_that_could_not_reach_slack_is_a_transport_fault_not_an_api_error():
+    import io
+    import urllib.error
+    from email.message import Message
+    from lib.proxy_client import ProxyClient, ProxyUnavailableError
+    headers = Message()
+    headers["X-Fault-Origin"] = "proxy"
+    body = io.BytesIO(b'{"detail":"upstream unreachable: URLError: <urlopen error [Errno -3] Temporary failure in name resolution>"}')
+    exc = urllib.error.HTTPError("http://localhost:1/call", 502, "Bad Gateway", headers, body)
+    try:
+        ProxyClient(url="http://localhost:1", token="t")._raise_for_status(exc)
+    except ProxyUnavailableError as caught:
+        assert caught.http_status == 502 and caught.had_fault_body is True
+        assert "name resolution" in str(caught)
+    else:
+        raise AssertionError("expected ProxyUnavailableError")

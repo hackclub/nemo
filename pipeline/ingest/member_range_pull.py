@@ -1,15 +1,17 @@
 import argparse
-from datetime import date, timedelta
+from datetime import date
 
 from dotenv import load_dotenv
 
 from ingest.analytics_pull import MEMBER_ACTIVITY_SQL, member_activity_row, parse_epoch
+from lib import calendar, coverage, planners, sources
 from lib.db import connect, dead_letter, get_walk, ingest_run, save_walk
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
-from lib.walk import check_walk
+from lib.walk import check_walk, should_prune
 
 SOURCE = "admin_analytics_member_range"
+KEY = sources.key_for_run(SOURCE)
 PAGE_SIZE = 500
 
 PRUNE_SQL = """
@@ -37,13 +39,8 @@ def verified_date_row(rec):
 
 
 def resolve_window(client, days=None, end=None):
-    avail = client.call("admin.analytics.getAvailableDateRange", {"type": "member"})
-    floor = date.fromisoformat(avail["start_date"])
-    if end is None:
-        end = date.fromisoformat(avail["end_date"])
-    if days is None:
-        return floor, end
-    return max(floor, end - timedelta(days=days - 1)), end
+    floor, edge = calendar.available(client, "member")
+    return planners.window(floor, edge, days=days, end=end)
 
 
 def run(conn, days=None, end=None):
@@ -58,7 +55,11 @@ def run(conn, days=None, end=None):
     window_key = f"{start}..{stop}"
     resume_at, already = get_walk(conn, SOURCE, window_key)
 
-    with ingest_run(conn, SOURCE) as counts:
+    with ingest_run(conn, SOURCE, slice_key=window_key) as counts:
+        fence = coverage.claim_slice(conn, KEY, window_key, start, stop, counts.run_id)
+        if fence is None:
+            print(f"member range {window_key}: another worker holds this slice, skipping")
+            return
         counts.rows_in = already
         rows, dates = [], []
         dates_written = 0
@@ -91,12 +92,19 @@ def run(conn, days=None, end=None):
                 counts.rows_rejected += 1
                 dead_letter(conn, SOURCE, {"keys": sorted(rec)}, str(exc))
 
-        check_walk(f"member range {window_key}", counts.rows_in,
+        verdict = check_walk(f"member range {window_key}", counts.rows_in,
             client.last_num_found, PAGE_SIZE)
 
-        with conn.cursor() as cur:
-            cur.execute(PRUNE_SQL, (SOURCE, start, stop))
-            pruned = cur.rowcount
+        pruned = 0
+        if should_prune(verdict):
+            with conn.cursor() as cur:
+                cur.execute(PRUNE_SQL, (SOURCE, start, stop))
+                pruned = cur.rowcount
+            coverage.supersede(conn, KEY, window_key)
+        else:
+            counts.status = "partial"
+        coverage.settle(conn, KEY, window_key, fence, verdict or "short",
+                        client.last_num_found, counts.rows_in)
         save_walk(conn, SOURCE, window_key, None, counts.rows_in)
     print(
         f"member range {window_key}: {counts.rows_in} rows, {dates_written} dates, "
