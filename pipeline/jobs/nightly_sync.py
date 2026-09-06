@@ -57,6 +57,7 @@ from lib.slack_client import bot_client
 
 DBT_DIR = WAREHOUSE_DIR
 SOURCE = "nightly_sync"
+TRANSFORM = "dbt"
 TRUTHY = {"1", "true", "yes", "on"}
 STAGE_ATTEMPTS = 2
 STEP_OUTPUT_LIMIT = 8000
@@ -170,7 +171,7 @@ def stages():
             tuned(conn, "channel_membership", "cohort_days"))),
         ("first_reply", lambda conn: pull_first_reply(conn)),
         ("prune", lambda conn: prune_rows(conn)),
-        ("dbt", lambda conn: run_dbt(conn)),
+        (TRANSFORM, lambda conn: run_dbt(conn)),
     ]
 
 
@@ -281,17 +282,39 @@ def refresh_statistics(name):
         print(f"{name}: statistics NOT refreshed, {refused}")
 
 
-ALWAYS_RUNS = "dbt"
-
-
 def over_budget(spent_minutes, budget_minutes, ran, name):
-    if not budget_minutes or name == ALWAYS_RUNS:
+    if not budget_minutes or name == TRANSFORM:
         return None
     if ran < 1:
         return None
     if spent_minutes < budget_minutes:
         return None
     return f"over budget, {spent_minutes:.0f} of {budget_minutes} minutes spent"
+
+
+LANDED_SQL = """
+SELECT coalesce(sum(rows_in), 0)
+  FROM raw.ingest_run
+ WHERE parent_run_id = %s
+"""
+
+
+def landed(conn, run_id):
+    with conn.cursor() as cur:
+        cur.execute(LANDED_SQL, (run_id,))
+        return int(cur.fetchone()[0] or 0)
+
+
+def due_anyway(conn, run_id, name, why):
+    if name != TRANSFORM or not why:
+        return why
+    if not settings.enabled(conn, name):
+        return why
+    rows = landed(conn, run_id)
+    if not rows:
+        return why
+    print(f"{name}: {why}, but {rows} rows landed tonight")
+    return None
 
 
 SKIP_SQL = """
@@ -316,6 +339,7 @@ def run_stages(conn, plan, run_id, budget=None):
     failed, ran, skipped, cut = [], 0, 0, 0
     for index, (name, stage, why) in enumerate(plan, start=1):
         raise_if_cancelled()
+        why = due_anyway(conn, run_id, name, why)
         if not why:
             spent = (time.monotonic() - started) / 60
             why = over_budget(spent, budget, ran, name)
