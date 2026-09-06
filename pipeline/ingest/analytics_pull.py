@@ -223,6 +223,13 @@ def by_key(rows):
     return sorted(rows, key=lambda row: row[0])
 
 
+LANE_LOCK_TIMEOUT_MS = 120_000
+
+
+def patient(cur):
+    cur.execute(f"SET LOCAL lock_timeout = '{int(LANE_LOCK_TIMEOUT_MS)}ms'")
+
+
 def refresh_statistics(kind):
     table = DAY_TABLES.get(kind)
     if table is None:
@@ -336,6 +343,7 @@ def pull_member_day(conn, pull_date):
 
         def flush():
             with conn.cursor() as cur:
+                patient(cur)
                 cur.executemany(MEMBER_ACTIVITY_SQL, activity_rows)
                 cur.executemany(MEMBER_DIM_MERGE_SQL, by_key(dim_rows))
             conn.commit()
@@ -391,22 +399,23 @@ def pull_channel_day(conn, pull_date):
                 "admin.analytics.getFile",
                 {"type": "public_channel", "date": iso},
             )
+            for line in fetch_ndjson(raw):
+                counts.rows_in += 1
+                try:
+                    rec = json.loads(line)
+                    activity_rows.append(channel_activity_row(rec, pull_date))
+                    dim_rows.append(channel_dim_row(rec))
+                except (json.JSONDecodeError, KeyError) as exc:
+                    counts.rows_rejected += 1
+                    dead_letter(conn, ANALYTICS_SOURCE, {"raw_line": line}, str(exc))
+            with conn.cursor() as cur:
+                patient(cur)
+                cur.executemany(CHANNEL_ACTIVITY_SQL, activity_rows)
+                cur.executemany(CHANNEL_DIM_MERGE_SQL, by_key(dim_rows))
         except Exception as exc:
-            coverage.settle_aside(CHANNEL_DAYS_KEY, iso, fence, aside_state(exc), None, 0,
+            coverage.settle_aside(CHANNEL_DAYS_KEY, iso, fence, aside_state(exc), None, counts.rows_in,
                                   note=f"{type(exc).__name__}: {exc}")
             raise
-        for line in fetch_ndjson(raw):
-            counts.rows_in += 1
-            try:
-                rec = json.loads(line)
-                activity_rows.append(channel_activity_row(rec, pull_date))
-                dim_rows.append(channel_dim_row(rec))
-            except (json.JSONDecodeError, KeyError) as exc:
-                counts.rows_rejected += 1
-                dead_letter(conn, ANALYTICS_SOURCE, {"raw_line": line}, str(exc))
-        with conn.cursor() as cur:
-            cur.executemany(CHANNEL_ACTIVITY_SQL, activity_rows)
-            cur.executemany(CHANNEL_DIM_MERGE_SQL, by_key(dim_rows))
 
         record_day(conn, CHANNEL_DAY, pull_date, counts.rows_in)
         coverage.settle(conn, CHANNEL_DAYS_KEY, iso, fence, "complete", counts.rows_in, counts.rows_in)
