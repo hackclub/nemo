@@ -56,43 +56,6 @@
     </turbo-frame>
   <% end %>
 
-  <% content_for :page_controls do %>
-    <%= form_with url: channels_path, method: :get, class: "qsearch",
-          data: { controller: "live-search", action: "input->live-search#go",
-                  turbo_frame: "channels", turbo_action: "advance" } do %>
-      <% { sort: @sort, direction: @direction, view: @view }.each do |key, value| %>
-        <%= hidden_field_tag key, value, id: nil %>
-      <% end %>
-      <% @filters.each { |key| concat hidden_field_tag("f[]", key, id: nil) } %>
-      <%= search_field_tag :q, @q, placeholder: "Search public channels by name",
-            class: "qsearch-in", autocomplete: "off",
-            aria: { label: "Search public channels by name" } %>
-    <% end %>
-
-    <% if channel_filter_options.any? %>
-      <details class="menu" data-controller="menu">
-        <summary class="btn">Filter<span class="car" aria-hidden="true">▾</span></summary>
-        <div class="menu-pop menu-start">
-          <% channel_filter_options.each do |key, (label, value, _sql)| %>
-            <%= link_to channel_query(f: @filters + [key]), class: "btn" do %>
-              <%= label %><span class="menu-val"><%= value %></span>
-            <% end %>
-          <% end %>
-        </div>
-      </details>
-    <% end %>
-
-    <% @filters.each do |key| %>
-      <% label, value, _sql = ChannelsController::FILTERS.fetch(key) %>
-      <span class="pill">
-        <%= label %> <em><%= value %></em>
-        <%= link_to "✕", channel_query(f: (@filters - [key]).presence),
-              aria: { label: "Remove #{label} #{value}" } %>
-      </span>
-    <% end %>
-
-  <% end %>
-
   <% if @momentum.any? %>
     <% head = @momentum.first %>
     <details class="foldcard" open
@@ -115,6 +78,35 @@
           <p class="card-sub"><%= number_with_delimiter(@total) %> channels</p>
         </div>
         <div class="card-tools">
+          <%= form_with url: channels_path, method: :get, class: "qsearch",
+                data: { controller: "live-search", action: "input->live-search#go",
+                        turbo_frame: "channels", turbo_action: "advance" } do %>
+            <% { sort: @sort, direction: @direction, view: @view }.each do |key, value| %>
+              <%= hidden_field_tag key, value, id: nil %>
+            <% end %>
+            <% @filter.to_params.each do |i, row| %>
+              <%= hidden_field_tag "c[#{i}][f]", row["f"], id: nil %>
+              <%= hidden_field_tag "c[#{i}][op]", row["op"], id: nil %>
+              <% row["v"].each { |v| concat hidden_field_tag("c[#{i}][v][]", v, id: nil) } %>
+            <% end %>
+            <%= hidden_field_tag :match, @filter.match, id: nil %>
+            <%= search_field_tag :q, @q, placeholder: "Search public channels by name",
+                  class: "qsearch-in", autocomplete: "off",
+                  aria: { label: "Search public channels by name" } %>
+          <% end %>
+
+          <span class="splitbtn">
+            <button type="button" class="btn" data-modal-open="channel-filters"
+                    aria-haspopup="dialog">
+              Filter<% if @filter.any? %><span class="menu-val"><%= @filter.size %></span><% end %>
+            </button>
+            <% if @filter.any? %>
+              <%= link_to "\u2715", channels_path(q: @q.presence, sort: @sort,
+                    direction: @direction, view: @view),
+                    class: "btn splitbtn-off", data: { turbo_frame: "channels" },
+                    aria: { label: "Clear every condition" } %>
+            <% end %>
+          </span>
           <div class="segmented" role="group" aria-label="channel view">
             <% { "table" => "Table", "grid" => "Grid" }.each do |value, label| %>
               <%= link_to label, channel_query(view: (value unless value == "table")),
@@ -124,6 +116,21 @@
           </div>
         </div>
       </div>
+
+      <% if @filter.any? %>
+        <div class="cardchips">
+        <% @filter.conditions.each_with_index do |condition, i| %>
+          <span class="pill">
+            <%= condition.label %>
+            <%= link_to "\u2715", channels_path(
+                  q: @q.presence, sort: @sort, direction: @direction, view: @view,
+                  match: @filter.match, c: @filter.to_params.except(i.to_s).values),
+                  data: { turbo_frame: "channels" },
+                  aria: { label: "Remove #{condition.label}" } %>
+          </span>
+        <% end %>
+        </div>
+      <% end %>
 
       <% if @channels.empty? %>
         <div class="empty">
@@ -184,4 +191,6 @@
       </div>
     <% end %>
   </turbo-frame>
+
+  <%= render "filter_modal" %>
 </div>

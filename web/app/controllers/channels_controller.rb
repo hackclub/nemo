@@ -16,36 +16,6 @@ class ChannelsController < ApplicationController
     "change" => "m.pct_change"
   }.freeze
 
-  SPOKE_SHARE = "r.members_who_posted::numeric / NULLIF(r.total_members, 0)".freeze
-  POSTER_FLOOR = "r.members_who_posted >= 25".freeze
-  READ_RATIO = "r.members_who_viewed::numeric / NULLIF(r.members_who_posted, 0)".freeze
-
-  FILTERS = {
-    "spoke_over_10" => ["Who spoke", "over 10%", "#{SPOKE_SHARE} > 0.10"],
-    "spoke_mid" => ["Who spoke", "2% to 10%",
-                    "#{SPOKE_SHARE} >= 0.02 AND #{SPOKE_SHARE} <= 0.10"],
-    "spoke_under_2" => ["Who spoke", "under 2%", "#{SPOKE_SHARE} < 0.02"],
-    "members_over_10000" => ["Members", "over 10,000", "r.total_members > 10000"],
-    "members_mid" => ["Members", "2,000 to 10,000",
-                      "r.total_members BETWEEN 2000 AND 10000"],
-    "members_under_2000" => ["Members", "under 2,000", "r.total_members < 2000"],
-    "read_over_10x" => ["Read against posted", "over 10x",
-                        "#{POSTER_FLOOR} AND #{READ_RATIO} > 10"],
-    "read_2x_10x" => ["Read against posted", "2x to 10x",
-                      "#{POSTER_FLOOR} AND #{READ_RATIO} >= 2 AND #{READ_RATIO} <= 10"],
-    "read_under_2x" => ["Read against posted", "under 2x",
-                        "#{POSTER_FLOOR} AND #{READ_RATIO} < 2"],
-    "recent_90d" => ["Last post", "under 90 days ago",
-                     "r.last_message_at >= now() - interval '90 days'"],
-    "quiet_90d" => ["Last post", "90 days to a year ago",
-                    "r.last_message_at >= now() - interval '365 days' " \
-                    "AND r.last_message_at < now() - interval '90 days'"],
-    "quiet_1y" => ["Last post", "over a year ago",
-                   "r.last_message_at < now() - interval '365 days'"],
-    "never_posted" => ["Last post", "never",
-                       "r.channel_id IS NOT NULL AND r.last_message_at IS NULL"]
-  }.freeze
-
   RANGE_JOIN = "LEFT JOIN analytics.mart_channel_range r ON r.channel_id = dim_channel.channel_id".freeze
   MOMENTUM_JOIN = "LEFT JOIN analytics.mart_channel_momentum m " \
                   "ON m.channel_id = dim_channel.channel_id".freeze
@@ -62,15 +32,15 @@ class ChannelsController < ApplicationController
     @sort = SORT_SQL.key?(params[:sort]) ? params[:sort] : "members"
     @direction = params[:direction] == "asc" ? "asc" : "desc"
     @view = params[:view] == "grid" ? "grid" : "table"
-    @filters = Array(params[:f]).select { |key| FILTERS.key?(key) }.uniq
+    @filter = Channels::Filter.from(params)
 
     mine = Channels::Audience.for(current_account)
     @mine_total = mine.count
 
     scope = mine.joins(RANGE_JOIN).joins(MOMENTUM_JOIN)
     scope = scope.where("dim_channel.name ILIKE ?", "%#{like_q}%") if @q.present?
-    @filters.group_by { |key| FILTERS.fetch(key).first }.each_value do |keys|
-      scope = scope.where(Arel.sql(keys.map { |k| "(#{FILTERS.fetch(k).last})" }.join(" OR ")))
+    if (clause = @filter.clause)
+      scope = scope.where(clause.first, *clause.drop(1))
     end
 
     @total = scope.count

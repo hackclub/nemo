@@ -1,0 +1,34 @@
+<%= render "fd/modal", id: "channel-filters", title: "Filter channels",
+      sub: "#{Channels::Filter::FIELDS.size} fields" do %>
+  <%= form_with url: channels_path, method: :get, class: "filter-form",
+        data: { controller: "conditions", turbo_frame: "channels", turbo_action: "advance" } do %>
+    <% { q: @q.presence, sort: @sort, direction: @direction, view: @view }.compact
+         .each { |key, value| concat hidden_field_tag(key, value, id: nil) } %>
+
+    <div class="filter-match">
+      <span>Channels matching</span>
+      <select name="match" class="select">
+        <% { "all" => "all of these", "any" => "any of these" }.each do |value, label| %>
+          <option value="<%= value %>" <%= "selected" if @filter.match == value %>><%= label %></option>
+        <% end %>
+      </select>
+    </div>
+
+    <div class="filter-rows" data-conditions-target="rows">
+      <% @filter.conditions.each_with_index do |condition, i| %>
+        <%= render "condition_row", index: i, condition: condition %>
+      <% end %>
+    </div>
+
+    <template data-conditions-target="blank">
+      <%= render "condition_row", index: "__i__", condition: nil %>
+    </template>
+
+    <div class="filter-foot">
+      <button type="button" class="btn" data-action="conditions#add">Add a condition</button>
+      <%= link_to "Clear all", channels_path(q: @q.presence, sort: @sort, direction: @direction),
+            class: "btn", data: { turbo_frame: "channels" } %>
+      <%= submit_tag "Apply", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>

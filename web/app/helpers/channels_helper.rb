@@ -1,7 +1,9 @@
 module ChannelsHelper
   def channel_query(**overrides)
     base = { q: @q.presence, sort: @sort, direction: @direction,
-             view: (@view unless @view == "table"), f: @filters.presence,
+             view: (@view unless @view == "table"),
+             match: (@filter.match if @filter&.any?),
+             c: (@filter.to_params.values if @filter&.any?),
              measure: (@measure unless @measure == @default_measure),
              cohort: (@cohort&.iso8601 unless @cohort == @default_cohort) }
     channels_path(**base.merge(overrides).compact)
@@ -9,7 +11,7 @@ module ChannelsHelper
 
   def channels_empty_title
     return "No channel matches that search" if @q.present?
-    return "No channel matches those filters" if @filters.any?
+    return "No channel matches those conditions" if @filter&.any?
     return "No channel is shared with you" if @mine_total.to_i.zero?
 
     "No channel yet"
@@ -38,10 +40,6 @@ module ChannelsHelper
         channel_query(sort: column, direction: next_direction),
         class: "sortable", data: { turbo_frame: "channels" }
     end
-  end
-
-  def channel_filter_options
-    ChannelsController::FILTERS.reject { |key, _| @filters.include?(key) }
   end
 
   def channel_read_ratio(read, posted)

@@ -935,6 +935,75 @@
     grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   }
   .duo > * { min-width: 0; }
+  .cardchips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2xs);
+    padding: var(--s-xs) var(--s-sm);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .card-tools .qsearch { flex: 0 1 260px; min-width: 150px; }
+  /* one block, two zones: the seam is a single shared hairline */
+  .splitbtn {
+    display: inline-flex;
+    flex: none;
+    align-items: stretch;
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    background: var(--card);
+    overflow: hidden;
+  }
+  .splitbtn > .btn {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    height: 26px;
+  }
+  .splitbtn > .btn + .btn { border-left: 1px solid var(--line); }
+  .splitbtn > .btn:hover { background: var(--hover); }
+  .splitbtn-off {
+    padding-inline: 9px;
+    color: var(--ink-3);
+    font-size: var(--t-fine);
+  }
+  .splitbtn-off:hover { color: var(--crit); }
+  .splitbtn:has(.btn:focus-visible) { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .splitbtn > .btn:focus-visible { outline: 0; }
+
+  .filter-form { display: grid; gap: var(--s-sm); padding: var(--s-sm) var(--s-md) var(--s-md); }
+  .filter-match {
+    display: flex;
+    align-items: center;
+    gap: var(--s-xs);
+    font-size: var(--t-small);
+    color: var(--ink-3);
+  }
+  .filter-match > span { white-space: nowrap; flex: none; }
+  .filter-match .select { width: auto; flex: none; }
+  .filter-rows { display: grid; gap: var(--s-2xs); }
+  .cond {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.9fr) 28px;
+    gap: var(--s-2xs);
+    align-items: center;
+  }
+  .cond .select, .cond .input { min-width: 0; width: 100%; }
+  .cond-vals { display: flex; align-items: center; gap: 5px; min-width: 0; }
+  .cond-unit { font-size: var(--t-small); color: var(--ink-4); flex: none; }
+  .filter-foot {
+    display: flex;
+    align-items: center;
+    gap: var(--s-xs);
+    justify-content: flex-end;
+    border-top: 1px solid var(--line-soft);
+    padding-top: var(--s-sm);
+  }
+  .filter-foot .btn:first-child { margin-right: auto; }
+  @media (max-width: 620px) {
+    .cond { grid-template-columns: minmax(0, 1fr) 28px; }
+    .cond-vals { grid-column: 1 / -1; }
+  }
+
   .panel-name {
     margin: 0 0 var(--s-2xs);
     font-size: var(--t-small);

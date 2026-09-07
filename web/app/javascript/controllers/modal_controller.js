@@ -13,9 +13,11 @@ export default class extends Controller {
     this.onOpenClick = this.onOpenClick.bind(this)
     this.onDocumentKey = this.onDocumentKey.bind(this)
     this.onKeys = this.onKeys.bind(this)
+    this.onSubmit = this.onSubmit.bind(this)
     document.addEventListener("click", this.onOpenClick)
     document.addEventListener("keydown", this.onDocumentKey)
     this.boxTarget.addEventListener("keydown", this.onKeys)
+    this.boxTarget.addEventListener("submit", this.onSubmit)
     this.was = this.flipTarget.checked
     if (this.was) this.entered()
   }
@@ -24,6 +26,7 @@ export default class extends Controller {
     document.removeEventListener("click", this.onOpenClick)
     document.removeEventListener("keydown", this.onDocumentKey)
     this.boxTarget.removeEventListener("keydown", this.onKeys)
+    this.boxTarget.removeEventListener("submit", this.onSubmit)
   }
 
   onOpenClick(event) {
@@ -39,6 +42,12 @@ export default class extends Controller {
     if (!this.flipTarget.checked || event.composedPath().includes(this.boxTarget)) return
 
     event.preventDefault()
+    this.shut()
+  }
+
+  // a form that targets a turbo frame leaves the page in place, so the dialog
+  // has to stand down on its own
+  onSubmit() {
     this.shut()
   }
 
