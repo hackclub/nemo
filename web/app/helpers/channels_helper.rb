@@ -22,6 +22,11 @@ module ChannelsHelper
     lines.join(" ")
   end
 
+  def band_title(row)
+    "Distribution of channels by #{number_with_delimiter(row.measure_total)} " \
+      "of #{row.measure_label}"
+  end
+
   def channel_sort_th(label, column, css = nil)
     active = @sort == column
     next_direction = active ? (@direction == "asc" ? "desc" : "asc") : "desc"

@@ -108,6 +108,8 @@ models:
         data_type: text
       - name: measure_order
         data_type: integer
+      - name: measure_total
+        data_type: bigint
       - name: band_order
         data_type: integer
         data_tests: [not_null]

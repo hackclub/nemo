@@ -3146,10 +3146,13 @@
   .facet { display: flex; flex-direction: column; min-width: 0; }
   .facet-name {
     margin: 0;
-    font-size: var(--t-small);
+    font-size: var(--t-fine);
     font-weight: 600;
     color: var(--ink);
     letter-spacing: -0.005em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .facet-zero {
     display: flex;

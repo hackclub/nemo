@@ -31,6 +31,15 @@ measured as (
     ) as m (measure, value)
 ),
 
+totals as (
+    select
+        cohort_month,
+        measure,
+        coalesce(sum(value), 0)::bigint as measure_total
+    from measured
+    group by cohort_month, measure
+),
+
 placed as (
     select
         cohort_month,
@@ -65,9 +74,9 @@ bands (band_order, activity_band) as (
 
 measures (measure, measure_label, measure_order) as (
     values
-        ('messages_posted', 'Messages sent', 1),
-        ('members_who_posted', 'Unique messagers', 2),
-        ('members_who_viewed', 'Unique readers', 3)
+        ('messages_posted', 'messages sent', 1),
+        ('members_who_posted', 'unique messagers', 2),
+        ('members_who_viewed', 'unique readers', 3)
 )
 
 select
@@ -75,6 +84,7 @@ select
     m.measure,
     m.measure_label,
     m.measure_order,
+    coalesce(t.measure_total, 0) as measure_total,
     b.band_order,
     b.activity_band,
     count(p.band_order) as channels,
@@ -88,6 +98,9 @@ left join placed p
     on p.cohort_month = c.cohort_month
    and p.measure = m.measure
    and p.band_order = b.band_order
-group by c.cohort_month, m.measure, m.measure_label, m.measure_order,
+left join totals t
+    on t.cohort_month = c.cohort_month
+   and t.measure = m.measure
+group by c.cohort_month, m.measure, m.measure_label, m.measure_order, t.measure_total,
     b.band_order, b.activity_band, c.window_start, c.window_end
 order by c.cohort_month desc, m.measure_order, b.band_order

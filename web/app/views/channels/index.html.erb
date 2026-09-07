@@ -34,7 +34,7 @@
             <% busy = rows.reject { |r| r.band_order.zero? } %>
             <% total = rows.sum(&:channels) %>
             <div class="facet">
-              <p class="facet-name"><%= rows.first.measure_label %></p>
+              <p class="facet-name"><%= band_title(rows.first) %></p>
               <% if silent && total.positive? %>
                 <% quiet = (silent.channels.to_f / total * 100).round(1) %>
                 <p class="facet-zero"
