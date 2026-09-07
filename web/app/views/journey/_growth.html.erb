@@ -32,8 +32,8 @@
     data-chart-height-value="120"
     data-chart-pct-value="true"
     <% if voids.any? %>data-chart-voids-value="<%= voids.to_json %>"<% end %>
-    <% if mean %>data-chart-rule-value="<%= { at: mean, label: "settled mean #{mean.round}%",
-      note: "signed in within 30 days of their own account creation" }.to_json %>"<% end %>
+    <% if mean %>data-chart-rule-value="<%= { at: mean,
+      label: "settled mean #{mean.round}%" }.to_json %>"<% end %>
     data-chart-data-value="<%= {
       labels: growth_months.map { |m| m.month.strftime("%b %Y") },
       datasets: [{ label: "claim rate, 30 days",

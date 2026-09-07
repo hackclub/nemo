@@ -31,6 +31,7 @@ ANALYTICS_SOURCE = "admin_analytics_api"
 MEMBER_DAYS_KEY = sources.key_for_run(f"{ANALYTICS_SOURCE}:member")
 CHANNEL_DAYS_KEY = sources.key_for_run(f"{ANALYTICS_SOURCE}:public_channel")
 MEMBER_PAGE_SIZE = 500
+MEMBER_SHORT_AT = 0
 
 MEMBER_ACTIVITY_SQL = """
 INSERT INTO raw.member_activity_snapshot
@@ -383,7 +384,7 @@ def pull_member_day(conn, pull_date):
             raise
 
         verdict = check_walk(f"member analytics {pull_date}", counts.rows_in,
-            client.last_num_found, MEMBER_PAGE_SIZE)
+            client.last_num_found, MEMBER_PAGE_SIZE, short_at=MEMBER_SHORT_AT)
 
         if verdict == SHORT:
             counts.status = "partial"
