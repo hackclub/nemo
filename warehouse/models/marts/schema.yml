@@ -605,3 +605,67 @@ models:
         data_tests: [not_null]
       - name: metric_version
         data_type: text
+
+  - name: mart_activity_clock
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: day_of_week
+        data_type: integer
+        data_tests: [not_null]
+      - name: hour_of_day
+        data_type: integer
+        data_tests: [not_null]
+      - name: messages
+        data_type: bigint
+        data_tests: [not_null]
+      - name: channels_counted
+        data_type: integer
+        data_tests: [not_null]
+      - name: messages_counted
+        data_type: bigint
+        data_tests: [not_null]
+      - name: covered_messages
+        data_type: bigint
+      - name: workspace_messages
+        data_type: bigint
+      - name: window_start
+        data_type: date
+      - name: window_end
+        data_type: date
+      - name: metric_version
+        data_type: text
+    data_tests:
+      - unique:
+          column_name: "day_of_week || '-' || hour_of_day"
+
+  - name: mart_channel_clock
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: channel_id
+        data_type: text
+        data_tests: [not_null]
+      - name: day_of_week
+        data_type: integer
+        data_tests: [not_null]
+      - name: hour_of_day
+        data_type: integer
+        data_tests: [not_null]
+      - name: messages
+        data_type: bigint
+        data_tests: [not_null]
+      - name: channel_messages
+        data_type: bigint
+        data_tests: [not_null]
+      - name: window_start
+        data_type: date
+      - name: window_end
+        data_type: date
+      - name: metric_version
+        data_type: text
+    data_tests:
+      - unique:
+          column_name: "channel_id || '-' || day_of_week || '-' || hour_of_day"
