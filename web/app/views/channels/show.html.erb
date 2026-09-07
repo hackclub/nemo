@@ -129,6 +129,8 @@
   <% end %>
 </div>
 
+<%= render "shared/clock", clock: @clock, title: "When this channel is busy" %>
+
 <% if @scorecard_rows.any? %>
   <div class="card card-flush">
     <div class="card-head">

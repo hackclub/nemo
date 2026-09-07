@@ -31,6 +31,7 @@ class HomeController < ApplicationController
 
     @trend = @span[:granularity] == "monthly" ? monthly_window : @spark
     @trend_prior = @span[:granularity] == "monthly" ? [] : @spark_prior
+    @clock = Community::Clock.workspace_wide
   end
 
   YEAR_DAYS = 365

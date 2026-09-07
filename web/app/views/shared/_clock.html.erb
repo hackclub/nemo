@@ -1,0 +1,50 @@
+<% title = local_assigns.fetch(:title, "When people post") %>
+<% if clock.any? %>
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title"><%= title %></h2>
+        <p class="card-sub"><%= clock_note(clock) %></p>
+      </div>
+      <div class="card-tools">
+        <span class="ramp" aria-hidden="true">
+          <span class="ramp-lo">quiet</span>
+          <% Community::Clock::RAMP.each do |tone| %>
+            <i style="background: <%= tone %>"></i>
+          <% end %>
+          <span class="ramp-hi"><%= number_with_delimiter(clock.peak) %></span>
+        </span>
+      </div>
+    </div>
+    <div class="clockwrap" data-controller="marktip"
+         data-action="mouseover->marktip#show mouseleave->marktip#clear">
+      <div class="scroll">
+        <table class="clock">
+          <thead>
+            <tr>
+              <td></td>
+              <% Community::Clock::HOURS.each do |hour| %>
+                <th scope="col" class="clock-hour">
+                  <%= hour.even? ? hour.to_s.rjust(2, "0") : "" %>
+                </th>
+              <% end %>
+            </tr>
+          </thead>
+          <tbody>
+            <% clock.rows.each do |day, cells| %>
+              <tr>
+                <th scope="row" class="clock-day"><%= day %></th>
+                <% cells.each do |cell| %>
+                  <td class="clock-cell">
+                    <i style="background: <%= cell.tone %>"
+                       data-tip="<%= clock_tip(cell, clock).to_json %>"></i>
+                  </td>
+                <% end %>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+<% end %>

@@ -4193,6 +4193,41 @@
     .dock-open .drawer { box-shadow: none; }
   }
 
+  .clockwrap { position: relative; }
+  .clock { border-collapse: separate; border-spacing: 2px; table-layout: fixed; width: 100%; }
+  .clock th { font-weight: 500; color: var(--ink-3); }
+  .clock-hour {
+    font-family: var(--font-code);
+    font-size: var(--t-fine);
+    text-align: center;
+    padding-bottom: var(--s-2xs);
+  }
+  .clock-day {
+    font-size: var(--t-fine);
+    text-align: right;
+    padding-right: var(--s-xs);
+    width: 42px;
+    white-space: nowrap;
+  }
+  .clock-cell { padding: 0; }
+  .clock-cell i {
+    display: block;
+    height: 18px;
+    border-radius: 2px;
+    background: var(--sunk);
+    outline: 1px solid transparent;
+  }
+  .clock-cell i:hover { outline-color: var(--ink); }
+  .ramp { display: flex; align-items: center; gap: 2px; }
+  .ramp i { width: 10px; height: 10px; border-radius: 2px; }
+  .ramp-lo, .ramp-hi {
+    font-size: var(--t-fine);
+    color: var(--ink-3);
+    font-family: var(--font-code);
+  }
+  .ramp-lo { margin-right: var(--s-2xs); }
+  .ramp-hi { margin-left: var(--s-2xs); }
+
   @media (max-width: 1359px) {
     :root { --queue-w: 344px; }
     .cols.c-2 { grid-template-columns: minmax(0, 1fr) 288px; }
