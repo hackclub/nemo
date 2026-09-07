@@ -13,44 +13,4 @@
   <%= render "growth", growth_months: @growth_months, growth_span: @growth_span %>
 </div>
 
-<div class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Monthly cohorts</h2>
-    </div>
-  </div>
-  <% if @monthly_cohorts.any? %>
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>cohort</th>
-            <th class="col-num">members</th>
-            <th class="col-num">ever posted</th>
-            <th class="col-num">posted in 30d</th>
-            <th class="col-num">median days</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @monthly_cohorts.each do |c| %>
-            <tr>
-              <td><b><%= c.cohort_month.strftime("%b %Y") %></b></td>
-              <td class="col-num"><%= number_with_delimiter(c.members) %></td>
-              <td class="col-num"><%= rate_cell(c.ever_posted, c.searched) %></td>
-              <td class="col-num">
-                <% if c.mature? %>
-                  <%= rate_cell(c.posted_within_30d, c.searched) %>
-                <% else %>
-                  <span class="sub2" title="settles on <%= c.matures_on.strftime("%-d %b %Y") %>, 30 days after the month closes">n/a</span>
-                <% end %>
-              </td>
-              <td class="col-num"><%= c.median_days_to_first_post || tag.span("n/a", class: "sub2") %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  <% else %>
-    <p class="card-note">n/a</p>
-  <% end %>
-</div>
+<%= render "lifecycle", lifecycle: @lifecycle %>

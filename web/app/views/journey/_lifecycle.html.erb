@@ -1,0 +1,50 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Cohort lifecycle</h2>
+    </div>
+  </div>
+
+  <% if lifecycle.any? %>
+    <% peak = lifecycle.map { |r| r.claimed.to_i }.max %>
+    <% tops = Journey::Lifecycle::STAGES.to_h { |s| [s[:key], lifecycle.filter_map { |r| r.public_send(s[:key])&.to_f }.max] } %>
+    <div class="scroll">
+      <div class="lifegrid" style="--stages: <%= Journey::Lifecycle::STAGES.size %>">
+        <span class="lg-head lg-left">cohort</span>
+        <span class="lg-head lg-left">signed in</span>
+        <% Journey::Lifecycle::STAGES.each do |stage| %>
+          <span class="lg-head"><%= stage[:head] %></span>
+        <% end %>
+        <span class="lg-head">median days</span>
+
+        <% lifecycle.each do |row| %>
+          <span class="lg-row">
+            <b><%= row.month.strftime("%b %Y") %></b>
+            <span><%= number_with_delimiter(row.invited) %> created</span>
+          </span>
+          <span class="lg-size" title="<%= number_with_delimiter(row.claimed) %> of <%= number_with_delimiter(row.invited) %> created accounts signed in">
+            <span><i style="width: <%= peak.positive? ? (row.claimed.to_f / peak * 100).round(1) : 0 %>%"></i></span>
+            <b><%= number_with_delimiter(row.claimed) %></b>
+          </span>
+          <% Journey::Lifecycle::STAGES.each do |stage| %>
+            <%= lifecycle_cell(row, stage, tops[stage[:key]]) %>
+          <% end %>
+          <span class="lg-plain">
+            <%= row.median_days ? number_with_precision(row.median_days, precision: 1) : tag.span("n/a", class: "sub2") %>
+          </span>
+        <% end %>
+      </div>
+    </div>
+    <div class="key">
+      <span class="lg-ramp">
+        low
+        <% HomeHelper::HEAT_STEPS.times do |i| %><i class="lg-h<%= i %>"></i><% end %>
+        high, per column
+      </span>
+      <span><i class="lg-swatch-open"></i>window still open</span>
+      <span><i class="lg-swatch-none"></i>no publishable rate, reason on hover</span>
+    </div>
+  <% else %>
+    <p class="card-note">n/a</p>
+  <% end %>
+</div>

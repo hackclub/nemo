@@ -3,16 +3,14 @@ class JourneyController < ApplicationController
   before_action :require_reading
 
   SCORECARD_PER_MONTH = 10
+  LIFECYCLE_COHORTS = 12
 
   def acquisition
     asked = params[:growth_months].to_i
     @growth_span = HomeHelper::GROWTH_SPANS.include?(asked) ? asked : HomeHelper::DEFAULT_GROWTH_SPAN
     @growth_months = Analytics::MartGrowth.order(month: :desc).limit(@growth_span).to_a.reverse
 
-    @monthly_cohorts = Analytics::MartMonthlyCohorts
-      .where(searched: 1..)
-      .order(cohort_month: :desc)
-      .limit(13)
+    @lifecycle = Journey::Lifecycle.recent(LIFECYCLE_COHORTS)
   end
 
   def activation

@@ -138,6 +138,78 @@ module HomeHelper
     end
   end
 
+  HEAT_STEPS = 6
+
+  def heat_step(value, peak)
+    return 0 if value.nil? || peak.nil? || peak.to_f <= 0
+
+    [[(value.to_f / peak * (HEAT_STEPS - 1)).round, 0].max, HEAT_STEPS - 1].min
+  end
+
+  def lifecycle_cell(row, stage, peak)
+    value = row.public_send(stage[:key])
+    return heat_cell(value, peak, lifecycle_reason(row, stage)) if value
+
+    if lifecycle_open?(row, stage)
+      tag.span("pending", class: "lg-cell lg-open",
+        title: "#{lifecycle_reason(row, stage)}, closes " \
+               "#{lifecycle_closes(row, stage).strftime('%-d %b %Y')}")
+    else
+      tag.span("n/a", class: "lg-cell lg-none", title: lifecycle_reason(row, stage))
+    end
+  end
+
+  def heat_cell(value, peak, title)
+    tag.span(number_to_percentage(value.to_f * 100, precision: 1),
+      class: "lg-cell lg-h#{heat_step(value, peak)}", title: title)
+  end
+
+  def lifecycle_open?(row, stage)
+    case stage[:key]
+    when :claim_rate_30d then false
+    when :posted_rate_30d then row.searched.to_i.positive?
+    when :rate_30, :rate_90 then row.searched.to_i.positive?
+    end
+  end
+
+  def lifecycle_closes(row, stage)
+    row.closes_on(stage[:key])
+  end
+
+  def lifecycle_reason(row, stage)
+    case stage[:key]
+    when :claim_rate_30d
+      if row.claim_rate_30d
+        "#{number_with_delimiter(row.claimed_within_30d)} of " \
+          "#{number_with_delimiter(row.invited)} created accounts signed in within 30 days"
+      else
+        "#{number_with_delimiter(row.invited.to_i - row.claimed.to_i)} accounts carry no claim " \
+          "date, so a 30-day rate cannot be published"
+      end
+    when :posted_rate_30d
+      if row.searched.to_i.positive?
+        "#{number_with_delimiter(row.posted_30d)} of #{number_with_delimiter(row.searched)} " \
+          "searched members posted inside their first 30 days"
+      else
+        "no searched message history for this cohort, so posting is unobservable"
+      end
+    when :rate_30
+      lifecycle_window_reason(row.retained_30, row.measured_30, row.searched, 30)
+    when :rate_90
+      lifecycle_window_reason(row.retained_90, row.measured_90, row.searched, 90)
+    end
+  end
+
+  def lifecycle_window_reason(hits, measured, searched, day)
+    return "no searched message history for this cohort" if searched.to_i.zero?
+    if measured.to_i.zero?
+      return "the day-#{day} window has not closed for enough of this cohort"
+    end
+
+    "#{number_with_delimiter(hits)} of #{number_with_delimiter(measured)} first posters were " \
+      "active in the 7 days ending on day #{day}"
+  end
+
   BAND_TOP = { 0 => 0, 1 => 1, 2 => 4, 3 => 16, 4 => 64, 5 => 256, 6 => 1024, 7 => 4096 }.freeze
 
   def band_split(value, bands, label)

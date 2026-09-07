@@ -25,38 +25,6 @@
       ></div>
     </div>
 
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>cohort</th>
-            <th class="col-num">cohort size</th>
-            <th class="col-num">first posters</th>
-            <th class="col-num">day 30</th>
-            <th class="col-num">day 90</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% retention.reverse.each do |r| %>
-            <tr>
-              <td><b><%= r.cohort_month.strftime("%b %Y") %></b></td>
-              <td class="col-num"><%= number_with_delimiter(r.cohort_size) %></td>
-              <td class="col-num"><%= number_with_delimiter(r.first_posters) %></td>
-              <td class="col-num"><%= rate_cell(r.retained_day_30, r.measured_day_30) %></td>
-              <td class="col-num">
-                <% if r.measured_day_90.to_i.positive? %>
-                  <%= rate_cell(r.retained_day_90, r.measured_day_90) %>
-                <% elsif !r.day_90_mature %>
-                  <span class="sub2" title="90 days after the month closes">not yet</span>
-                <% else %>
-                  <span class="sub2">n/a</span>
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
   <% else %>
     <p class="card-note">
       No cohort has a covered day-30 or day-90 window yet. The member activity snapshots the
