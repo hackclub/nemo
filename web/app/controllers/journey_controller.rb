@@ -14,10 +14,8 @@ class JourneyController < ApplicationController
   end
 
   def activation
-    @newcomer_reach = Analytics::MartNewcomerChannels.where(channel_id: visible_channels)
-      .order(:channel_id).first
+    @newcomer_reach = Analytics::MartNewcomerChannels.order(:channel_id).first
     @newcomer_channels = Analytics::MartNewcomerChannels
-      .where(channel_id: visible_channels)
       .ranked(Analytics::MartNewcomerChannels::DEFAULT_MEASURE, floor: HomeHelper::MIN_SAMPLE)
   end
 
@@ -70,9 +68,5 @@ class JourneyController < ApplicationController
     Date.iso8601(params[key].to_s)
   rescue ArgumentError
     nil
-  end
-
-  def visible_channels
-    Channels::Audience.for(current_account).select(:channel_id)
   end
 end

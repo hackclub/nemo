@@ -71,10 +71,9 @@ class ChannelsController < ApplicationController
     @has_more = (@page + 1) * PER_PAGE < @total
     @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
 
-    @may_see_bands = Authz.holds?(current_account, "channel.all")
-    @momentum = @may_see_bands ? Analytics::MartChannelMomentum.top : []
+    @momentum = Analytics::MartChannelMomentum.top
     @momentum_head = @momentum.first
-    @cohorts = @may_see_bands ? Analytics::MartChannelBands.cohorts : []
+    @cohorts = Analytics::MartChannelBands.cohorts
     @default_cohort = @cohorts.first
     @cohort = asked_cohort || @default_cohort
     @band_measures = @cohort ?

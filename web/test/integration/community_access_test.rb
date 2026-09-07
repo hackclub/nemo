@@ -219,21 +219,33 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "no journey page ranks a channel you cannot see" do
+  test "a journey page names newcomer channels but only links the ones you may open" do
     sign_in_as(holding_nothing)
 
     get newcomers_journey_path
     assert_response :success
+
+    Analytics::MartNewcomerChannels
+      .ranked(Analytics::MartNewcomerChannels::DEFAULT_MEASURE, floor: HomeHelper::MIN_SAMPLE)
+      .each do |row|
+        next if Channels::Audience.may_see?(Current.staff, row.channel_id)
+
+        refute_match %r{href="/channels/#{row.channel_id}"}, response.body,
+          "#{row.channel_id} is named on Newcomers but must not link to its statistics"
+      end
   end
 
-  test "the activity band chart needs channel.all, which sees every channel anyway" do
+  test "the workspace-wide channel charts do not need a channel grant" do
     sign_in_as(reads_names)
     get channels_path
     assert_response :success
+    assert_match "Channels activity", response.body,
+      "the activity bands count channels per band and name none, so no grant is needed"
 
     sign_in_as(hold_role!("UCABANDS", "analytics"))
     get channels_path
     assert_response :success
+    assert_match "Channels activity", response.body
   end
 
   test "a new role retires the old one and leaves the extra scopes alone" do
