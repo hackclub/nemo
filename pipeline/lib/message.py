@@ -4,7 +4,29 @@ MENTION = re.compile(r"<@([UW][A-Z0-9]+)")
 EMOJI_ONLY = re.compile(r"(:[a-z0-9_+'-]+:\s*)+\Z")
 SUBSTANTIVE_CHARS = 80
 
-REDACT = ("text", "blocks", "attachments", "files", "message", "previous_message", "profile")
+REDACT = (
+    "text",
+    "blocks",
+    "attachments",
+    "files",
+    "previous_message",
+    "profile",
+    "user_profile",
+    "bot_profile",
+    "purpose",
+    "topic",
+    "comment",
+    "permalink",
+    "plain_text",
+    "rich_text",
+    "fallback",
+    "pretext",
+    "title",
+    "title_link",
+    "footer",
+    "canvas",
+    "huddle",
+)
 
 USER_KEPT = ("id", "team_id", "is_bot", "is_admin", "deleted", "updated")
 

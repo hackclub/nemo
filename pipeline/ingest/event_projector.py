@@ -55,7 +55,7 @@ ON CONFLICT (channel_id, ts) DO UPDATE SET
     bot_id = coalesce(EXCLUDED.bot_id, archive.message.bot_id),
     app_id = coalesce(EXCLUDED.app_id, archive.message.app_id),
     parent_user_id = coalesce(EXCLUDED.parent_user_id, archive.message.parent_user_id),
-    subtype = EXCLUDED.subtype,
+    subtype = coalesce(EXCLUDED.subtype, archive.message.subtype),
     thread_root_ts = coalesce(EXCLUDED.thread_root_ts, archive.message.thread_root_ts),
     is_reply = EXCLUDED.is_reply,
     is_broadcast = EXCLUDED.is_broadcast,
@@ -89,7 +89,17 @@ VALUES (%s, %s, %s, %s)
 ON CONFLICT (channel_id, ts, transport, revision) DO UPDATE SET observed_at = now()
 """
 
+DELETED_SQL = """
+UPDATE archive.message
+SET deleted_at = coalesce(%s, now()), updated_at = now()
+WHERE channel_id = %s AND ts = %s AND deleted_at IS NULL
+"""
+
 DONE_SQL = "UPDATE raw.event_delivery SET projected_at = now() WHERE event_id = ANY(%s)"
+
+GONE = "message_deleted"
+CHANGED = "message_changed"
+WRAPPERS = frozenset({GONE, CHANGED})
 
 
 def stamp(ts):
@@ -107,7 +117,9 @@ def digest(payload):
 def body_of(envelope):
     if envelope.get("type") != "message":
         return None
-    if envelope.get("subtype") == "message_changed":
+    if envelope.get("subtype") == GONE:
+        return None
+    if envelope.get("subtype") == CHANGED:
         changed = envelope.get("message")
         return changed if isinstance(changed, dict) else None
     return envelope
@@ -135,6 +147,8 @@ def message_row(channel_id, ts, revision, envelope, measured):
     thread_root = body.get("thread_ts")
     edited = body.get("edited") or {}
     counted = measured or {}
+    wrapper = envelope.get("subtype")
+    subtype = body.get("subtype") or (None if wrapper in WRAPPERS else wrapper)
     return (
         channel_id, ts, revision, posted,
         body.get("user") or envelope.get("user"),
@@ -142,7 +156,7 @@ def message_row(channel_id, ts, revision, envelope, measured):
         body.get("bot_id"),
         body.get("app_id"),
         body.get("parent_user_id"),
-        body.get("subtype") or envelope.get("subtype"),
+        subtype,
         thread_root,
         bool(thread_root) and thread_root != ts,
         body.get("subtype") == "thread_broadcast",
@@ -169,10 +183,22 @@ def message_row(channel_id, ts, revision, envelope, measured):
     )
 
 
+def erase(conn, channel_id, ts, envelope, counts):
+    when = stamp(envelope.get("event_ts"))
+    with conn.cursor() as cur:
+        cur.execute(DELETED_SQL, (when, channel_id, ts))
+        if cur.rowcount:
+            counts.rows_in += 1
+
+
 def project(conn, row, counts):
     event_id, channel_id, ts, envelope, measured = row
     if not channel_id or not ts or not isinstance(envelope, dict):
         counts.rows_rejected += 1
+        return event_id
+
+    if envelope.get("type") == "message" and envelope.get("subtype") == GONE:
+        erase(conn, channel_id, ts, envelope, counts)
         return event_id
 
     if body_of(envelope) is None:

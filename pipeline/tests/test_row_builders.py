@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime, timedelta, timezone
 
 from ingest import (
@@ -648,7 +649,6 @@ def test_scrub_drops_every_redacted_key_at_any_depth():
         "blocks": [{"text": {"text": "secret"}}],
         "files": [{"url_private": "https://files/x"}],
         "attachments": [{"fallback": "secret"}],
-        "message": {"text": "secret", "ts": "1.0"},
         "previous_message": {"text": "older secret"},
         "edited": {"user": "U1", "ts": "2.0"},
         "reactions": [{"name": "tada", "count": 1, "users": ["U1"]}],
@@ -657,6 +657,54 @@ def test_scrub_drops_every_redacted_key_at_any_depth():
     assert set(scrubbed) == {"type", "ts", "edited", "reactions"}
     assert "secret" not in repr(scrubbed)
     assert scrubbed["edited"] == {"user": "U1", "ts": "2.0"}
+
+
+def test_scrub_lets_no_free_text_through_from_any_subtype():
+    marked = "WORDSOMEBODYWROTE"
+    event = {
+        "type": "message", "subtype": "channel_purpose", "ts": "1.0", "user": "U1",
+        "text": marked,
+        "blocks": [{"elements": [{"text": marked}]}],
+        "attachments": [{"fallback": marked, "title": marked, "text": marked,
+                         "pretext": marked, "footer": marked, "title_link": marked}],
+        "files": [{"id": "F1", "name": f"{marked}.png", "title": marked,
+                   "url_private": f"https://files.slack.com/{marked}", "preview": marked}],
+        "message": {"ts": "1.0", "user": "U1", "text": marked, "purpose": marked,
+                    "edited": {"user": "U1", "ts": "2.0"}, "reply_count": 2},
+        "previous_message": {"text": marked},
+        "root": {"ts": "0.9", "text": marked, "reply_count": 4},
+        "user_profile": {"real_name": marked, "display_name": marked},
+        "bot_profile": {"name": marked},
+        "profile": {"email": marked},
+        "purpose": marked, "topic": marked, "comment": {"comment": marked},
+        "permalink": f"https://hackclub.slack.com/{marked}",
+        "canvas": {"title": marked}, "huddle": {"title": marked},
+        "reactions": [{"name": "tada", "count": 1, "users": ["U2"]}],
+        "edited": {"user": "U1", "ts": "2.0"},
+        "client_msg_id": "abc", "thread_ts": "1.0", "reply_count": 2, "team": "T1",
+    }
+
+    scrubbed = shaping.scrub(event)
+
+    assert marked not in json.dumps(scrubbed, default=str), "a field carrying words survived"
+    assert scrubbed["reactions"] == [{"name": "tada", "count": 1, "users": ["U2"]}]
+    assert scrubbed["message"] == {"ts": "1.0", "user": "U1", "reply_count": 2,
+                                   "edited": {"user": "U1", "ts": "2.0"}}
+    assert scrubbed["root"] == {"ts": "0.9", "reply_count": 4}
+
+
+def test_scrub_keeps_an_edited_message_but_not_its_words():
+    scrubbed = shaping.scrub({
+        "type": "message", "subtype": "message_changed", "ts": "2.0",
+        "message": {"ts": "1.0", "user": "U1", "text": "the new words",
+                    "blocks": [{"text": "the new words"}], "files": [{"id": "F1"}],
+                    "edited": {"user": "U1", "ts": "2.0"}, "reply_count": 2},
+        "previous_message": {"ts": "1.0", "text": "the old words"},
+    })
+
+    assert "previous_message" not in scrubbed, "the pre-edit version has nothing to add"
+    assert set(scrubbed["message"]) == {"ts", "user", "edited", "reply_count"}
+    assert "words" not in repr(scrubbed)
 
 
 def test_scrub_thins_the_user_object_but_keeps_the_id():
