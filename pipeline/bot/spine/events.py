@@ -18,7 +18,7 @@ ACTIVITY_EVENTS = (
     "channel_rename",
 )
 
-SUBSCRIBED_AS = {"message": ("message.channels",)}
+SUBSCRIBED_AS = {"message": ("message.channels", "message.groups")}
 
 
 def subscriptions():

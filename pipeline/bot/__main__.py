@@ -14,7 +14,7 @@ from bot.nemo import app as nemo_app
 from bot.nemo import sweep, watch
 from bot.relay import Relay
 from bot.shroud import app as shroud_app
-from bot.spine import app as spine_app
+from bot.spine import join
 from lib.config import DATABASE
 from lib.db import SeededDeployment, refuse_if_seeded
 from lib.paths import ENV_FILE
@@ -48,8 +48,6 @@ def wire(apps, relay):
     if "nemo" in apps:
         built["nemo"] = (nemo_app.build(relay.answered), nemo_app.app_token())
         relay.nemo_client = built["nemo"][0].client
-    if "spine" in apps:
-        built["spine"] = (spine_app.build(), spine_app.app_token())
     return built
 
 
@@ -93,6 +91,8 @@ def main(argv=None):
     if built:
         watch.start(relay, stopping)
         sweep.start(relay, stopping)
+    if relay.nemo_client is not None:
+        join.start(relay.nemo_client, stopping)
 
     def stop(*_):
         stopping.set()

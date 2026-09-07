@@ -3,12 +3,14 @@ import os
 from slack_bolt import App
 
 from bot.nemo import channel, command
+from bot.spine import events as spine
 
 
 def build(on_reply=None):
     app = App(token=os.environ["NEMO_BOT_TOKEN"], raise_error_for_unhandled_request=False)
     channel.register(app, on_reply)
     command.register(app)
+    spine.register(app)
     return app
 
 

@@ -24,7 +24,10 @@ oauth_config:
       - chat:write.customize
       - files:read
       - files:write
+      - channels:read
       - channels:history
+      - channels:join
+      - groups:read
       - groups:history
       - reactions:read
       - reactions:write
@@ -33,10 +36,17 @@ oauth_config:
 settings:
   event_subscriptions:
     bot_events:
+      - channel_archive
+      - channel_created
+      - channel_rename
+      - channel_unarchive
+      - member_joined_channel
+      - member_left_channel
       - message.channels
       - message.groups
       - reaction_added
       - reaction_removed
+      - team_join
   interactivity:
     is_enabled: true
   socket_mode_enabled: true

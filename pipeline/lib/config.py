@@ -83,8 +83,6 @@ ROLES = {
     },
     "bot": {
         "required": DATABASE + [
-            "SLACK_BOT_TOKEN",
-            "SLACK_APP_TOKEN",
             "SHROUD_BOT_TOKEN",
             "SHROUD_APP_TOKEN",
             "NEMO_BOT_TOKEN",
@@ -132,7 +130,7 @@ HEADINGS = {
     "transform": "dbt build. one shot",
     "seed": "synthetic data, then transform, then verify. one shot",
     "provision": "schemas, roles, grants and both migration sets. one shot",
-    "bot": "shroud takes the reports, nemo works them, the spine lands events. long running",
+    "bot": "shroud takes the reports, nemo works them and lands events. long running",
 }
 
 NEVER = {
@@ -141,6 +139,8 @@ NEVER = {
         "INTERNAL_PROXY_TOKEN",
     ],
     "bot": [
+        "SLACK_BOT_TOKEN",
+        "SLACK_APP_TOKEN",
         "SLACK_TOKEN",
         "SLACK_ADMIN_TOKEN",
         "INTERNAL_PROXY_TOKEN",
