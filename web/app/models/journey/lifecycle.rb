@@ -56,6 +56,15 @@ module Journey
         retained_90.to_f / invited
       end
 
+      def step_of(stage)
+        return nil if public_send(stage[:key]).nil?
+
+        before = public_send(stage[:prev]).to_i
+        return nil if before.zero?
+
+        public_send(stage[:num]).to_f / before
+      end
+
       def closes_on(stage)
         base = month.end_of_month
         stage == :funnel_90 ? base + 90 : base + 30
@@ -65,10 +74,10 @@ module Journey
     COVER_FLOOR = 0.9
 
     STAGES = [
-      { key: :signed_rate, head: "signed in" },
-      { key: :posted_rate_30d, head: "posted in 30 days" },
-      { key: :funnel_30, head: "still there at day 30" },
-      { key: :funnel_90, head: "still there at day 90" }
+      { key: :signed_rate, head: "signed in", num: :claimed, prev: :invited },
+      { key: :posted_rate_30d, head: "posted in 30 days", num: :posted_30d, prev: :claimed },
+      { key: :funnel_30, head: "still there at day 30", num: :retained_30, prev: :posted_30d },
+      { key: :funnel_90, head: "still there at day 90", num: :retained_90, prev: :retained_30 }
     ].freeze
 
     def self.recent(limit)

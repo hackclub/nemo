@@ -168,7 +168,7 @@ module HomeHelper
 
   def lifecycle_cell(row, stage, peak)
     value = row.public_send(stage[:key])
-    return heat_cell(value, peak, lifecycle_reason(row, stage)) if value
+    return heat_cell(row, stage, peak, lifecycle_reason(row, stage)) if value
 
     if lifecycle_open?(row, stage)
       tag.span("pending", class: "lg-cell lg-open",
@@ -179,9 +179,21 @@ module HomeHelper
     end
   end
 
-  def heat_cell(value, peak, title)
-    tag.span(number_to_percentage(value.to_f * 100, precision: 1),
-      class: "lg-cell lg-h#{heat_step(value, peak)}", title: title)
+  def heat_cell(row, stage, peak, title)
+    value = row.public_send(stage[:key])
+    shade = "lg-cell lg-h#{heat_step(value, peak)}"
+
+    # the opening stage divides by created, so its step and its cumulative are one number
+    if stage[:prev] == :invited
+      return tag.span(number_to_percentage(value.to_f * 100, precision: 1),
+        class: shade, title: title)
+    end
+
+    step = row.step_of(stage)
+    tag.span(class: "#{shade} lg-two", title: title) do
+      concat tag.b(step ? number_to_percentage(step * 100, precision: 1) : "n/a")
+      concat tag.span("#{number_to_percentage(value.to_f * 100, precision: 1)} of created")
+    end
   end
 
   def lifecycle_open?(row, stage)
@@ -198,6 +210,19 @@ module HomeHelper
   end
 
   def lifecycle_reason(row, stage)
+    step = row.step_of(stage)
+    if step
+      before = row.public_send(stage[:prev])
+      here = row.public_send(stage[:num])
+      return "#{number_with_delimiter(here)} of #{number_with_delimiter(before)} from the stage " \
+             "before, #{number_with_delimiter(here)} of #{number_with_delimiter(row.invited)} " \
+             "created &middot; #{lifecycle_note(row, stage)}"
+    end
+
+    lifecycle_note(row, stage)
+  end
+
+  def lifecycle_note(row, stage)
     case stage[:key]
     when :signed_rate
       claimed = if row.claim_rate_30d

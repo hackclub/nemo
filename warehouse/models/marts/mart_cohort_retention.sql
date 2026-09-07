@@ -21,6 +21,7 @@ posted as (
         r.visits_knowable
     from cohort c
     inner join {{ ref('fct_member_retention') }} r on r.user_id = c.user_id
+    where r.posted_within_30d
 ),
 
 rolled as (
@@ -64,7 +65,7 @@ select
     coalesce(r.third_visit_in_7_days, 0) as third_visit_in_7_days,
     (s.cohort_month + interval '1 month' + interval '90 days')::date <= current_date
         as day_90_mature,
-    'v1' as metric_version
+    'v2' as metric_version
 from sized s
 left join rolled r on r.cohort_month = s.cohort_month
 order by s.cohort_month

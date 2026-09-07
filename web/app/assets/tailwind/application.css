@@ -3615,8 +3615,20 @@
   .lg-row { display: flex; flex-direction: column; justify-content: center; }
   .lg-row b { font-weight: 600; }
   .lg-row > span { font-family: var(--font-code); font-size: 10.5px; color: var(--ink-4); }
+  .lg-two {
+    flex-direction: column;
+    gap: 1px;
+    height: 54px;
+    line-height: 1.2;
+  }
+  .lg-two > b { font-weight: 600; font-size: 13px; }
+  .lg-two > span {
+    font-size: var(--t-fine);
+    color: color-mix(in oklab, var(--ink) 64%, transparent);
+  }
+
   .lg-cell {
-    height: 44px;
+    height: 54px;
     border-radius: var(--r-tight);
     display: flex;
     align-items: center;
