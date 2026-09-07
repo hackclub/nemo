@@ -4,17 +4,7 @@
        pct: m.pct_change&.to_f, thin: m.prior_below_floor }
    end %>
 
-<div class="card">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Channels treemap</h2>
-      <p class="card-sub"
-         title="area is member messages in the window, colour is the change against the <%= head.window_end - head.prior_start + 1 - (head.window_end - head.window_start + 1) %> days before it">
-        <%= window_note(head.window_start, head.window_end) %>
-      </p>
-    </div>
-  </div>
-
+<div class="fold-body">
   <div
     data-controller="treemap"
     data-treemap-height-value="380"

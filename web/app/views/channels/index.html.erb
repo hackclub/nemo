@@ -1,9 +1,5 @@
 <% content_for :page_title, "Public channels" %>
 <div class="stack">
-  <% if @momentum.any? %>
-    <%= render "momentum", momentum: @momentum %>
-  <% end %>
-
   <% if @band_rows.any? %>
     <turbo-frame id="bands" data-turbo-action="advance">
       <div class="card">
@@ -95,6 +91,20 @@
       </span>
     <% end %>
 
+  <% end %>
+
+  <% if @momentum.any? %>
+    <% head = @momentum.first %>
+    <details class="foldcard" open
+             data-controller="remember"
+             data-remember-key-value="channels-treemap"
+             data-action="toggle->remember#keep">
+      <summary>
+        <span class="fold-title">Channels treemap</span>
+        <span class="fold-sub"><%= window_note(head.window_start, head.window_end) %></span>
+      </summary>
+      <%= render "momentum", momentum: @momentum %>
+    </details>
   <% end %>
 
   <turbo-frame id="channels" target="_top" data-turbo-action="advance">

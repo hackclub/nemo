@@ -1284,6 +1284,39 @@
   }
   .panel, .card-flush { padding: 0; }
   .card-stretch { display: grid; align-content: start; }
+  .foldcard {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    overflow: hidden;
+  }
+  .foldcard > summary {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-xs);
+    padding: var(--s-xs) var(--s-md);
+    min-height: 42px;
+    cursor: pointer;
+    list-style: none;
+  }
+  .foldcard > summary::-webkit-details-marker { display: none; }
+  .foldcard > summary::before {
+    content: "";
+    align-self: center;
+    width: 0;
+    height: 0;
+    border-left: 5px solid var(--ink-3);
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transition: transform var(--dur-2) var(--ease);
+    flex: none;
+  }
+  .foldcard[open] > summary::before { transform: rotate(90deg); }
+  .foldcard > summary:hover .fold-title { color: var(--accent-deep); }
+  .fold-title { font-size: var(--t-body); font-weight: 600; color: var(--ink); }
+  .fold-sub { font-size: var(--t-small); color: var(--ink-3); }
+  .foldcard[open] > summary { border-bottom: 1px solid var(--line-soft); }
+  .fold-body { padding: var(--s-sm) var(--s-md) var(--s-md); }
   .card-thin { padding: var(--s-xs) var(--s-sm); }
 
   .card-head, .panel-head {
