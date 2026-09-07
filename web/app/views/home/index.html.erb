@@ -17,21 +17,21 @@
   <% joins = @spark.each_cons(2).map { |a, b| b.total_members_count.to_i - a.total_members_count.to_i } %>
   <div class="kpis">
     <%= render "kpi", label: "Total members", value: @team_stats.total_members_count,
-          prior: @team_stats_prior&.total_members_count, span: @span, compare: @compare,
+          prior: @team_stats_prior&.total_members_count, span: @span,
           spark: { labels: spark_days.drop(1), name: "created per day", data: joins },
           spark_title: "accounts created per day, the daily change in the total" %>
 
     <%= render "kpi", label: "Claimed accounts", value: @team_stats.total_claimed_count,
-          prior: @team_stats_prior&.total_claimed_count, span: @span, compare: @compare,
+          prior: @team_stats_prior&.total_claimed_count, span: @span,
           share_of: @team_stats.total_members_count, share_note: "of members" %>
 
     <%= render "kpi", label: "Active, last 28 days", value: @team_stats.active_users_28d,
-          prior: @team_stats_prior&.active_users_28d, span: @span, compare: @compare,
+          prior: @team_stats_prior&.active_users_28d, span: @span,
           spark: { labels: spark_days, name: "active",
                    data: @spark.map(&:active_users_28d) } %>
 
     <%= render "kpi", label: "Posted, last 28 days", value: @team_stats.writers_count_28d,
-          prior: @team_stats_prior&.writers_count_28d, span: @span, compare: @compare,
+          prior: @team_stats_prior&.writers_count_28d, span: @span,
           spark: { labels: spark_days, name: "posted",
                    data: @spark.map(&:writers_count_28d) },
           spark_title: "#{number_to_percentage(share_pct(@team_stats.writers_count_28d, @team_stats.active_users_28d) || 0, precision: 1)} of active people posted" %>
@@ -41,15 +41,9 @@
 <% content_for :page_controls do %>
   <div class="segmented" role="group" aria-label="range">
     <% HomeHelper::OVERVIEW_SPANS.each do |key, span| %>
-      <%= link_to span[:label], root_path(span: key, compare: ("off" unless @compare)),
+      <%= link_to span[:label], root_path(span: key),
             aria: { current: ("true" if key == @span_key) } %>
     <% end %>
-  </div>
-  <div class="segmented" role="group" aria-label="comparison">
-    <%= link_to "compare", root_path(span: @span_key),
-          aria: { current: ("true" if @compare) } %>
-    <%= link_to "off", root_path(span: @span_key, compare: "off"),
-          aria: { current: ("true" unless @compare) } %>
   </div>
 <% end %>
 

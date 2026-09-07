@@ -1,75 +1,52 @@
 <div class="card card-flush">
   <div class="card-head">
     <div>
-      <h2 class="card-title">Repeat posting</h2>
-      <% if recurrence_funnel %>
-        <p class="card-sub"
-           title="<%= number_with_delimiter(recurrence_funnel.searched) %> of <%= number_with_delimiter(recurrence_funnel.signed_in) %> signed-in members have a searched message history">
-          lifetime messages
-          <% if recurrence_funnel.searched_share %>
-            &middot; <%= number_with_delimiter(recurrence_funnel.searched) %> of
-            <%= number_with_delimiter(recurrence_funnel.signed_in) %> searched
-          <% end %>
-        </p>
-      <% end %>
+      <h2 class="card-title">Repeat posting by cohort</h2>
+      <p class="card-sub">share of each cohort's searched members, by how many times they posted</p>
     </div>
-    <% if recurrence_cohort_months.present? %>
-      <div class="card-tools">
-        <details class="menu" data-controller="menu">
-          <summary class="btn" aria-label="cohort month">
-            <%= recurrence_month&.strftime("%b %Y") || "pick a month" %>
-            <span class="car" aria-hidden="true">&#9662;</span>
-          </summary>
-          <div class="menu-pop">
-            <% recurrence_cohort_months.each do |m| %>
-              <%= link_to m.strftime("%b %Y"), returning_journey_path(recurrence_month: m.iso8601),
-                    class: "btn", aria: { current: ("true" if m == recurrence_month) } %>
-            <% end %>
-          </div>
-        </details>
-      </div>
-    <% end %>
   </div>
 
-  <% if recurrence_funnel && recurrence_funnel.searched.to_i.positive? %>
-    <% f = recurrence_funnel %>
-    <% stages = [
-         ["Searched", f.searched, nil],
-         ["Posted", f.posted_once, f.searched],
-         ["2nd post", f.posted_twice, f.posted_once],
-         ["3rd post", f.posted_three_times, f.posted_twice]
+  <% if recurrence.any? %>
+    <% bands = [
+         { label: "three or more posts", tone: 88,
+           count: ->(f) { f.posted_three_times.to_i } },
+         { label: "exactly twice", tone: 58,
+           count: ->(f) { f.posted_twice.to_i - f.posted_three_times.to_i } },
+         { label: "exactly once", tone: 30,
+           count: ->(f) { f.posted_once.to_i - f.posted_twice.to_i } },
+         { label: "never posted", tone: nil,
+           count: ->(f) { [f.searched.to_i - f.posted_once.to_i, 0].max } }
        ] %>
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>stage</th>
-            <th class="col-num">members</th>
-            <th class="col-num">from previous</th>
-            <th class="col-num">of searched</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% stages.each do |label, count, previous| %>
-            <tr>
-              <td><b><%= label %></b></td>
-              <td class="col-num"><%= number_with_delimiter(count) %></td>
-              <td class="col-num">
-                <%= previous ? rate_cell(count, previous) : tag.span("n/a", class: "sub2") %>
-              </td>
-              <td class="col-num"><%= rate_cell(count, f.searched) %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
+    <div style="padding: 0 var(--s-sm) var(--s-2xs)">
+      <div
+        data-controller="chart"
+        data-chart-kind-value="bars"
+        data-chart-stacked-value="true"
+        data-chart-pct-value="true"
+        data-chart-height-value="260"
+        data-chart-data-value="<%= {
+          labels: recurrence.map { |f| f.cohort_month.strftime("%b %Y") },
+          datasets: bands.map do |band|
+            {
+              label: band[:label],
+              color: band[:tone] ? "color-mix(in oklab, var(--series-1) #{band[:tone]}%, var(--card))" : "var(--series-0)",
+              data: recurrence.map { |f| share_pct(band[:count].call(f), f.searched) },
+              counts: recurrence.map { |f| band[:count].call(f) }
+            }
+          end
+        }.to_json %>"
+      ></div>
+    </div>
+    <div class="key">
+      <% recurrence.each do |f| %>
+        <span title="<%= number_with_delimiter(f.searched) %> of <%= number_with_delimiter(f.signed_in) %> who signed in have a searched message history">
+          <%= f.cohort_month.strftime("%b %Y") %>
+          <b><%= number_to_percentage(share_pct(f.posted_once, f.searched) || 0, precision: 1) %></b>
+          posted
+        </span>
+      <% end %>
     </div>
   <% else %>
-    <p class="card-note">
-      <% if recurrence_funnel %>
-        No member of this cohort has a searched message history yet.
-      <% else %>
-        No cohort searched yet.
-      <% end %>
-    </p>
+    <p class="card-note">No cohort searched yet.</p>
   <% end %>
 </div>

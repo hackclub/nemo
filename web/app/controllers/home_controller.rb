@@ -24,12 +24,10 @@ class HomeController < ApplicationController
     @team_stats = Analytics::MartTeamStatsDaily.order(ds: :desc).first
     @span_key = helpers.overview_span(params[:span])
     @span = helpers.span_of(@span_key)
-    @compare = params[:compare] != "off"
-
     window = @span[:days] || YEAR_DAYS
     @spark = daily_window(window)
-    @spark_prior = @compare ? daily_window(window, back: window) : []
-    @team_stats_prior = @compare ? prior_row(window) : nil
+    @spark_prior = daily_window(window, back: window)
+    @team_stats_prior = prior_row(window)
 
     @trend = @span[:granularity] == "monthly" ? monthly_window : @spark
     @trend_prior = @span[:granularity] == "monthly" ? [] : @spark_prior

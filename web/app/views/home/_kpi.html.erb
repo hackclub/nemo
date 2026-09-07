@@ -29,14 +29,11 @@
   </div>
 
   <div class="delta">
-    <% if compare && prior %>
+    <% if prior %>
       <%= delta_chip(value, prior) %>
       <span class="delta-note">vs previous <%= span[:label] %></span>
-    <% elsif compare %>
+    <% else %>
       <span class="delta-note">no prior <%= span[:label] %> held</span>
-    <% elsif local_assigns[:share_of] %>
-      <%= share_chip(value, share_of) %>
-      <span class="delta-note"><%= share_note %></span>
     <% end %>
   </div>
 </div>

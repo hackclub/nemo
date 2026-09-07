@@ -81,7 +81,10 @@ export default class extends Controller {
     const given = labels.map((label, i) => {
       const key = Array.isArray(label) ? label[0] : label
       const row = { label: key, key }
-      datasets.forEach((set, s) => { row[`s${s}`] = set.data[i] })
+      datasets.forEach((set, s) => {
+        row[`s${s}`] = set.data[i]
+        if (set.counts) row[`c${s}`] = set.counts[i]
+      })
       if (blanked.has(i)) {
         row.gap = true
         row.why = blanked.get(i)
@@ -100,14 +103,15 @@ export default class extends Controller {
       if (row) return { ...row, label: dayName(day) }
 
       const gap = { label: dayName(day), key: day, gap: true }
-      datasets.forEach((_, s) => { gap[`s${s}`] = null })
+      datasets.forEach((_, s) => { gap[`s${s}`] = null; gap[`c${s}`] = null })
       return gap
     })
   }
 
   get series() {
     return (this.dataValue.datasets || []).map((set, i) => ({
-      k: `s${i}`, n: set.label, ink: INK[i % INK.length], own: set.color, ghost: !!set.ghost
+      k: `s${i}`, c: `c${i}`, n: set.label, ink: INK[i % INK.length], own: set.color,
+      ghost: !!set.ghost
     }))
   }
 
@@ -470,9 +474,10 @@ export default class extends Controller {
         esc(row.why || "not fetched")}<b>n/a</b></div>`
       : g.series.map((s) => row[s.k] == null ? "" :
         `<div class="row"><i class="${this.paint(s)}"${this.tint(s)}></i>${esc(s.n)}<b>${
-          this.said(row[s.k])}</b></div>`).join("")
+          this.said(row[s.k])}${row[s.c] == null ? "" : ` <u>${F(row[s.c])}</u>`}</b></div>`)
+        .join("")
 
-    const whole = this.stack && !row.gap
+    const whole = this.stack && !row.gap && !this.pctValue
       ? `<div class="row row-sum"><i></i>total<b>${this.said(this.sum(row, g.series))}</b></div>`
       : ""
 

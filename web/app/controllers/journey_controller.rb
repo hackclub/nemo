@@ -44,16 +44,18 @@ class JourneyController < ApplicationController
   end
 
   RETENTION_COHORTS = 12
+  RECURRENCE_COHORTS = 12
 
   def retention
     @retention = Analytics::MartCohortRetention.measured
       .order(cohort_month: :desc).limit(RETENTION_COHORTS).to_a.reverse
 
-    @recurrence_cohort_months = Analytics::MartOnboardingRecurrenceFunnel
-      .where(searched: 1..).order(cohort_month: :desc).pluck(:cohort_month)
-    @recurrence_month = asked_month(:recurrence_month) || @recurrence_cohort_months.first
-    @recurrence_funnel = Analytics::MartOnboardingRecurrenceFunnel
-      .find_by(cohort_month: @recurrence_month)
+    @recurrence = Analytics::MartOnboardingRecurrenceFunnel
+      .where(searched: 1..)
+      .order(cohort_month: :desc)
+      .limit(RECURRENCE_COHORTS)
+      .to_a
+      .reverse
   end
 
   def distribution

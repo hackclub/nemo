@@ -2958,6 +2958,12 @@
   .chart > .tip .row i.hole-dot { background: var(--warn); }
   .chart > .tip .row-sum { border-top: 1px solid color-mix(in oklab, var(--tip-ink) 12%, transparent); padding-top: 4px; }
   .chart > .tip .row-note { color: color-mix(in oklab, var(--tip-ink) 70%, transparent); }
+  .chart > .tip .row b u {
+    text-decoration: none;
+    font-weight: 400;
+    margin-left: 4px;
+    color: color-mix(in oklab, var(--tip-ink) 62%, transparent);
+  }
   .chart .fair { stroke: var(--series-0); stroke-width: 1.2; stroke-dasharray: 5 3; }
   .chart .curve { stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
   .chart .wash-fill { fill: var(--accent); fill-opacity: 0.12; }
