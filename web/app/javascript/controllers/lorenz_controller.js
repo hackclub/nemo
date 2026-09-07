@@ -64,15 +64,8 @@ export default class extends Controller {
 
     const fair = `<line class="fair" x1="${x(0)}" y1="${y(0)}" x2="${x(100)}" y2="${y(100)}"/>`
 
-    const marks = (this.hasMarksValue ? this.marksValue : []).map((m) => {
-      const [px, py] = m
-      const say = `bottom ${px}% hold ${pct(py)}`
-      const room = wide - PAD.r - x(px)
-      const flip = room < say.length * 6.2 + 14
-      return `<circle class="pin" cx="${x(px).toFixed(1)}" cy="${y(py).toFixed(1)}" r="4"/>` +
-        `<text class="pin-say" x="${(x(px) + (flip ? -9 : 9)).toFixed(1)}" y="${
-          (y(py) - 8).toFixed(1)}" text-anchor="${flip ? "end" : "start"}">${esc(say)}</text>`
-    }).join("")
+    const marks = (this.hasMarksValue ? this.marksValue : []).map(([px, py]) =>
+      `<circle class="pin" cx="${x(px).toFixed(1)}" cy="${y(py).toFixed(1)}" r="4"/>`).join("")
 
     chart.querySelector("svg")?.remove()
     chart.insertAdjacentHTML("afterbegin",

@@ -25,16 +25,6 @@
       </div>
     </div>
     <div class="card">
-      <p class="kpi-label">Never posted</p>
-      <p class="kpi-val">
-        <%= number_to_percentage(@never_posted.members.to_f / searched * 100, precision: 1) %>
-      </p>
-      <div class="kpi-micro"></div>
-      <div class="delta">
-        <span class="delta-note"><%= number_with_delimiter(@never_posted.members) %> of <%= number_with_delimiter(searched) %> counted</span>
-      </div>
-    </div>
-    <div class="card">
       <p class="kpi-label">Concentration</p>
       <p class="kpi-val"><%= curve.first&.gini&.to_f&.round(3) || "n/a" %></p>
       <div class="kpi-micro"></div>
@@ -145,6 +135,14 @@
         data-lorenz-points-value="<%= curve.map { |p| [p.poster_pct, p.message_pct.to_f] }.to_json %>"
         data-lorenz-marks-value="<%= [half, tenth].compact.map { |p| [p.poster_pct, p.message_pct.to_f] }.to_json %>"
       ></div>
+      <div class="legend">
+        <% [half, tenth].compact.each do |p| %>
+          <span>
+            bottom <%= p.poster_pct %>% hold
+            <b><%= number_to_percentage(p.message_pct.to_f, precision: 1) %></b>
+          </span>
+        <% end %>
+      </div>
     <% else %>
       <p class="card-note">n/a</p>
     <% end %>

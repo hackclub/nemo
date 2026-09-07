@@ -72,7 +72,6 @@ class JourneyController < ApplicationController
     @days_measured = @top_posters.map(&:days_measured).max.to_i
     @activity_bands = Analytics::MartActivityDistribution.order(:band_order).to_a
     @poster_bands = @activity_bands.reject { |b| b.band_order.zero? }
-    @never_posted = @activity_bands.find { |b| b.band_order.zero? }
     @concentration = Analytics::MartParticipationConcentration.curve.to_a
   end
 

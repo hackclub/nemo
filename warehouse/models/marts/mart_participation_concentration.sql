@@ -1,19 +1,35 @@
-with walkable as (
+with known as (
+    select
+        coalesce(w.user_id, h.user_id) as user_id,
+        greatest(coalesce(h.total_messages, 0), coalesce(w.channel_messages_posted, 0))
+            as total_messages,
+        h.user_id is not null as full_history
+    from {{ ref('fct_member_window') }} w
+    full outer join {{ ref('fct_member_history') }} h using (user_id)
+),
+
+walkable as (
     select user_id
     from {{ ref('dim_member') }}
     where not is_bot and not invite_pending
 ),
 
+searched as (
+    select k.user_id, k.total_messages
+    from walkable w
+    inner join known k on k.user_id = w.user_id
+    where k.full_history
+),
+
 posters as (
     select
-        h.user_id,
-        h.total_messages,
-        row_number() over (order by h.total_messages, h.user_id) as rn,
+        user_id,
+        total_messages,
+        row_number() over (order by total_messages, user_id) as rn,
         count(*) over () as posters,
-        sum(h.total_messages) over () as messages
-    from {{ ref('fct_member_history') }} h
-    inner join walkable w on w.user_id = h.user_id
-    where h.total_messages > 0
+        sum(total_messages) over () as messages
+    from searched
+    where total_messages > 0
 ),
 
 cumulative as (
@@ -72,8 +88,8 @@ select
     s.median_messages,
     s.p90_messages,
     (select count(*) from walkable) as workspace_members,
-    (select count(*) from {{ ref('fct_member_history') }}) as searched_members,
-    'v2' as metric_version
+    (select count(*) from searched) as searched_members,
+    'v3' as metric_version
 from points p
 cross join gini g
 cross join spread s

@@ -2962,7 +2962,6 @@
   .chart .curve { stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
   .chart .wash-fill { fill: var(--accent); fill-opacity: 0.12; }
   .chart .pin { fill: var(--accent); stroke: var(--card); stroke-width: 2; }
-  .chart .pin-say { fill: var(--ink); font-size: 10.5px; font-family: var(--font-code); }
   .chart-spark .chart { cursor: crosshair; }
   .chart-spark .chart svg { overflow: visible; }
   .chart-spark .wash { display: block; }
@@ -3020,6 +3019,7 @@
   }
   .chart-legend, .legend { display: flex; gap: var(--s-sm); flex-wrap: wrap; padding-top: var(--s-2xs); }
   .chart-legend span, .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-fine); color: var(--ink-3); }
+  .chart-legend b, .legend b { color: var(--ink); font-variant-numeric: tabular-nums; }
   .chart-legend span i, .legend span i {
     display: inline-block;
     width: 8px;
