@@ -17,9 +17,12 @@ from bot.shroud import app as shroud_app
 from bot.spine import join
 from lib.config import DATABASE
 from lib.db import SeededDeployment, refuse_if_seeded
+from lib.heartbeat import beating
 from lib.paths import ENV_FILE
 
 log = logging.getLogger("bot")
+
+WORKER = "bot"
 
 
 def parse_args(argv):
@@ -38,6 +41,11 @@ def needed(apps):
     for name in apps:
         wanted += NEEDS[name]
     return [name for name in wanted if not os.environ.get(name)]
+
+
+def said(apps):
+    note = " and ".join(apps)
+    return f"{note}, joining channels" if join.joining() else f"{note}, not joining"
 
 
 def wire(apps, relay):
@@ -101,7 +109,8 @@ def main(argv=None):
     signal.signal(signal.SIGINT, stop)
 
     log.info("bot: up, %s", " and ".join(apps))
-    stopping.wait()
+    with beating(WORKER, lambda: said(apps)):
+        stopping.wait()
 
     for handler in running:
         handler.close()

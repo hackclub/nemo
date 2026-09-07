@@ -51,7 +51,7 @@ class EngineController < ApplicationController
     @breakers = latest_quality("breaker")
     @local_faults = latest_quality("invariant", "work_queue").select { |row| row.status == "fail" }
     @taxonomy = fault_taxonomy
-    @proxy = Analytics::FctWorkerHeartbeat.find_by(worker: "proxy")
+    @beats = Analytics::FctWorkerHeartbeat.order(:worker).to_a
     @breaker_mode = Engine::Setting.value(Engine::Setting::ENGINE, "breaker_mode")
   end
 

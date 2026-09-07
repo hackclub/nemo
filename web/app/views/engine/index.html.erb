@@ -105,7 +105,7 @@
 
 <% elsif @tab == "faults" %>
   <%= render "faults", incidents: @incidents, breakers: @breakers, local_faults: @local_faults,
-        taxonomy: @taxonomy, proxy: @proxy, breaker_mode: @breaker_mode, may_tune: @may_tune %>
+        taxonomy: @taxonomy, beats: @beats, breaker_mode: @breaker_mode, may_tune: @may_tune %>
 
 <% elsif @tab == "backfill" %>
   <%= render "backfill", backfills: @backfills, names: @backfill_names,

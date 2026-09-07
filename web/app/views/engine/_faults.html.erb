@@ -112,39 +112,38 @@
 <div class="card card-flush">
   <div class="card-head">
     <div>
-      <h2 class="card-title">Credentials</h2>
+      <h2 class="card-title">Workers</h2>
+      <p class="card-sub"><%= worker_note(beats) %></p>
     </div>
   </div>
-  <div class="scroll">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>probe</th>
-          <th>state</th>
-          <th class="col-num">last beat</th>
-          <th>said</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="mono">proxy</td>
-          <td>
-            <% if proxy.nil? %>
-              <span class="chip chip-off">never probed</span>
-            <% elsif proxy.note.to_s.start_with?("FAILED") %>
-              <span class="chip chip-crit">failed</span>
-            <% elsif proxy.cold? %>
-              <span class="chip chip-warn">silent</span>
-            <% else %>
-              <span class="chip chip-good">ok</span>
-            <% end %>
-          </td>
-          <td class="col-num mono"><%= proxy ? short_age(proxy.beat_at) : "n/a" %></td>
-          <td class="sub"><%= proxy&.note || "n/a" %></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <% if beats.empty? %>
+    <div class="empty">
+      <p class="empty-title">No worker has ever reported</p>
+    </div>
+  <% else %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>worker</th>
+            <th>state</th>
+            <th class="col-num">last beat</th>
+            <th>said</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% beats.each do |beat| %>
+            <tr>
+              <td class="mono"><%= beat.worker %></td>
+              <td><%= worker_state(beat) %></td>
+              <td class="col-num mono"><%= short_age(beat.beat_at) %></td>
+              <td class="sub"><%= beat.note.presence || "n/a" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
 </div>
 
 <div class="card card-flush">

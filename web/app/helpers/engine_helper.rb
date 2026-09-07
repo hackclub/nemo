@@ -81,6 +81,21 @@ module EngineHelper
     safe_join(chips, " ")
   end
 
+  def worker_state(beat)
+    return tag.span("failed", class: "chip chip-crit") if beat.note.to_s.start_with?("FAILED")
+    return tag.span("silent", class: "chip chip-warn") if beat.cold?
+
+    tag.span("ok", class: "chip chip-good")
+  end
+
+  def worker_note(beats)
+    cold = beats.count(&:cold?)
+    said = "#{pluralize(beats.size, 'worker')} reporting"
+    return said if cold.zero?
+
+    "#{said} · #{cold} silent"
+  end
+
   def worker_chip(worker)
     return tag.span("orphaned, no worker heartbeat", class: "chip chip-crit") if worker.nil?
 
