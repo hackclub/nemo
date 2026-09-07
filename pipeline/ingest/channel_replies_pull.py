@@ -2,7 +2,7 @@ import argparse
 
 from dotenv import load_dotenv
 
-from lib import work
+from lib import archive, work
 from lib.db import connect, ingest_run
 from lib.task import per_entity
 from lib.paths import ENV_FILE
@@ -76,7 +76,7 @@ WHERE channel_id = %s AND state = 'draining'
 
 
 def fetch_thread(conn, client, channel_id, root_ts):
-    rows, observations = [], []
+    rows, observations, kept = [], [], []
     for message in client.paginate(
         METHOD, {"channel": channel_id, "ts": root_ts}, "messages",
         page_size=PAGE_SIZE, cursor_param="cursor", max_retries=8, credential="admin",
@@ -86,6 +86,7 @@ def fetch_thread(conn, client, channel_id, root_ts):
             continue
         rows.append(message_row(channel_id, message))
         observations.append((channel_id, message["ts"], TRANSPORT))
+        kept.append(message)
 
     with conn.cursor() as cur:
         if rows:
@@ -93,6 +94,8 @@ def fetch_thread(conn, client, channel_id, root_ts):
             cur.executemany(OBSERVATION_SQL, observations)
         cur.execute(THREAD_DONE_SQL,
             (len(rows), rows[-1][1] if rows else None, channel_id, root_ts))
+    for reply in kept:
+        archive.from_api(conn, channel_id, reply, METHOD, TRANSPORT)
     conn.commit()
     return len(rows)
 
@@ -107,7 +110,9 @@ WHERE channel_id = %s
 
 
 DRAINING_SQL = """
-SELECT 1 FROM app.channel_backfill WHERE channel_id = %s AND state = 'draining'
+SELECT 1
+FROM app.channel_backfill
+WHERE channel_id = %s AND state <> 'draining'
 """
 
 
@@ -120,17 +125,19 @@ def walked(conn, channel_id):
 def still_draining(conn, channel_id):
     with conn.cursor() as cur:
         cur.execute(DRAINING_SQL, (channel_id,))
-        return cur.fetchone() is not None
+        return cur.fetchone() is None
 
 
 KIND = "channel_replies"
 
 THREAD_SELECT = """
-SELECT t.channel_id AS target_key, t.root_ts AS target_sub_key, b.priority AS priority,
+SELECT t.channel_id AS target_key, t.root_ts AS target_sub_key,
+       coalesce(b.priority, 1000 - least(t.reply_count, 999)) AS priority,
        '{}'::jsonb AS payload, t.reply_count AS expected
 FROM raw.thread t
-JOIN app.channel_backfill b ON b.channel_id = t.channel_id
-WHERE b.state = 'draining' AND t.replies_fetched < t.reply_count
+LEFT JOIN app.channel_backfill b
+       ON b.channel_id = t.channel_id AND b.state = 'draining'
+WHERE t.replies_fetched < t.reply_count
 """
 
 OPEN_UNITS_SQL = """

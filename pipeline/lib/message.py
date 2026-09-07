@@ -26,7 +26,21 @@ REDACT = (
     "footer",
     "canvas",
     "huddle",
+    "room",
+    "metadata",
 )
+
+REDACT_SUFFIX = ("_blocks", "_text", "_summary", "_name")
+REDACT_SUBSTRING = ("file", "attachment", "transcript")
+
+
+def redacted(key):
+    name = str(key)
+    if name in REDACT:
+        return True
+    if name.endswith(REDACT_SUFFIX):
+        return True
+    return any(part in name for part in REDACT_SUBSTRING)
 
 USER_KEPT = ("id", "team_id", "is_bot", "is_admin", "deleted", "updated")
 
@@ -42,7 +56,7 @@ def scrub(value):
         return {
             k: (thin_user(v) if k == "user" else scrub(v))
             for k, v in value.items()
-            if k not in REDACT
+            if not redacted(k)
         }
     if isinstance(value, list):
         return [scrub(v) for v in value]

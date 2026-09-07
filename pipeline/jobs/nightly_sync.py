@@ -16,11 +16,8 @@ from ingest.analytics_pull import (
 )
 from ingest.channel_roster import name_unknown, record_channel_names
 from ingest.channel_range_pull import run as pull_channel_range
-from ingest.channel_history_pull import run as pull_channel_history
 from ingest.channel_month_pull import run as pull_channel_month
-from ingest.channel_replies_pull import run as pull_channel_replies
 from ingest.dim_snapshot import run as snapshot_dimensions
-from ingest.event_projector import run as project_events
 from ingest.channel_range_pull import run_span as pull_channel_span
 from ingest.first_reply import run as pull_first_reply
 from ingest.member_channels import read_membership as pull_channel_membership
@@ -156,14 +153,9 @@ def stages():
         ("channel_span", lambda conn: pull_channel_span(conn)),
         ("channel_month", lambda conn: pull_channel_month(
             conn, recent=tuned(conn, "channel_month", "months"))),
-        ("channel_history", lambda conn: pull_channel_history(
-            conn, tuned(conn, "channel_history", "batch"))),
-        ("event_projector", lambda conn: project_events(conn)),
         ("users_list", lambda conn: pull_users_list(conn)),
         ("admin_users", lambda conn: pull_admin_users(conn)),
         ("dim_snapshot", lambda conn: snapshot_dimensions(conn)),
-        ("channel_replies", lambda conn: pull_channel_replies(
-            conn, tuned(conn, "channel_replies", "batch"))),
         ("member_channels", lambda conn: pull_member_channels(
             conn, tuned(conn, "member_channels", "batch"),
             tuned(conn, "member_channels", "cohort_days"))),

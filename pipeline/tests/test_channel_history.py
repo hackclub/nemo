@@ -10,9 +10,17 @@ def test_tail_walks_forward_from_the_lookback_and_backfill_walks_older_ward_excl
 
 
 def test_revisit_from_steps_back_one_lookback_and_never_below_zero():
-    assert history.revisit_from("1700000000.000000") == f"{1700000000 - history.LOOKBACK_SECONDS:.6f}"
+    week = history.LOOKBACK_DAYS * 86400
+    assert history.revisit_from("1700000000.000000") == f"{1700000000 - week:.6f}"
     assert history.revisit_from("10.000000") == "0.000000"
     assert history.revisit_from("not a ts") == "not a ts"
+
+
+def test_revisit_from_reaches_back_less_once_events_are_landing():
+    day = history.LIVE_LOOKBACK_DAYS * 86400
+    assert history.LIVE_LOOKBACK_DAYS < history.LOOKBACK_DAYS
+    assert history.revisit_from("1700000000.000000", history.LIVE_LOOKBACK_DAYS) == \
+        f"{1700000000 - day:.6f}"
 
 
 def test_enqueue_selects_name_both_kinds_and_only_unfinished_channels_for_backfill():

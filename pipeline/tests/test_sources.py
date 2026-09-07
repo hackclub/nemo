@@ -46,7 +46,12 @@ def test_parser_version_defaults_to_one():
     assert sources.parser_version("not_a_source") == 1
 
 
-STANDALONE_SOURCES = {"member_history"}
+STANDALONE_SOURCES = {
+    "member_history",
+    "channel_history",
+    "channel_replies",
+    "event_projector",
+}
 
 
 def test_the_nightly_runs_exactly_what_the_file_declares():

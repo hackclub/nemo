@@ -1,9 +1,10 @@
 import argparse
+import os
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
-from lib import work
+from lib import archive, work
 from lib.db import connect, dead_letter, ingest_run
 from lib.message import author_kind, shape
 from lib.paths import ENV_FILE
@@ -13,7 +14,8 @@ from lib.task import per_entity
 SOURCE = "conversations_history"
 METHOD = "conversations.history"
 PAGE_SIZE = 999
-LOOKBACK_SECONDS = 7 * 86400
+LOOKBACK_DAYS = 7
+LIVE_LOOKBACK_DAYS = 1
 TRANSPORT = "history"
 
 MESSAGE_SQL = """
@@ -95,15 +97,15 @@ SELECT d.channel_id, w.newest_ts
 FROM raw.channel_dim d
 LEFT JOIN raw.channel_walk w ON w.channel_id = d.channel_id
 LEFT JOIN (
-    SELECT first_post_channel AS channel_id, count(*) AS first_posts
-    FROM raw.member_message_history
-    WHERE first_post_channel IS NOT NULL
-    GROUP BY first_post_channel
-) f ON f.channel_id = d.channel_id
+    SELECT channel_id, sum(messages_posted) AS messages
+    FROM raw.channel_activity_snapshot
+    WHERE source = 'admin_analytics_api'
+    GROUP BY channel_id
+) v ON v.channel_id = d.channel_id
 WHERE d.archived IS NOT TRUE
 ORDER BY
     (w.last_walked_at IS NULL) DESC,
-    coalesce(f.first_posts, 0) DESC,
+    coalesce(v.messages, 0) DESC,
     w.last_walked_at NULLS FIRST,
     d.channel_id
 LIMIT %s
@@ -158,9 +160,21 @@ def thread_row(channel_id, message):
     )
 
 
-def revisit_from(newest):
+def lookback_days(conn):
+    if os.environ.get("CHANNEL_TAIL_LOOKBACK_DAYS"):
+        return int(os.environ["CHANNEL_TAIL_LOOKBACK_DAYS"])
+    return LIVE_LOOKBACK_DAYS if events_landing(conn) else LOOKBACK_DAYS
+
+
+def events_landing(conn):
+    with conn.cursor() as cur:
+        cur.execute(EVENTS_LIVE_SQL)
+        return bool(cur.fetchone()[0])
+
+
+def revisit_from(newest, days=LOOKBACK_DAYS):
     try:
-        return f"{max(float(newest) - LOOKBACK_SECONDS, 0):.6f}"
+        return f"{max(float(newest) - days * 86400, 0):.6f}"
     except (TypeError, ValueError):
         return newest
 
@@ -177,7 +191,8 @@ def walk_params(channel_id, oldest=None, latest=None):
 
 def walk_channel(conn, client, channel_id, oldest=None, counts=None, latest=None, max_pages=None, on_page=None):
     params = walk_params(channel_id, oldest, latest)
-    state = {"messages": [], "threads": [], "observations": [], "oldest_ts": None, "newest_ts": None, "pages": 0}
+    state = {"messages": [], "threads": [], "observations": [], "kept": [],
+             "oldest_ts": None, "newest_ts": None, "pages": 0}
     seen = 0
     exhausted = True
 
@@ -190,7 +205,10 @@ def walk_channel(conn, client, channel_id, oldest=None, counts=None, latest=None
                 cur.executemany(THREAD_SQL, state["threads"])
             cur.execute(WALK_SQL, (
                 channel_id, state["oldest_ts"], state["newest_ts"], len(state["messages"]), done))
+        for raw_message in state["kept"]:
+            archive.from_api(conn, channel_id, raw_message, METHOD, TRANSPORT)
         conn.commit()
+        state["kept"] = []
         state["messages"], state["threads"], state["observations"] = [], [], []
         state["oldest_ts"] = state["newest_ts"] = None
         if page:
@@ -215,6 +233,7 @@ def walk_channel(conn, client, channel_id, oldest=None, counts=None, latest=None
             dead_letter(conn, SOURCE, {"channel": channel_id, "keys": sorted(message)}, str(exc))
             continue
         state["observations"].append((channel_id, message["ts"], TRANSPORT))
+        state["kept"].append(message)
         thread = thread_row(channel_id, message)
         if thread:
             state["threads"].append(thread)
@@ -233,18 +252,22 @@ BACKFILL_PAGES = 10
 TAIL_EVERY_SECONDS = 20 * 3600
 LEASE_SECONDS = 1800
 
+EVENTS_LIVE_SQL = """
+SELECT count(*) FROM raw.event_delivery WHERE received_at > now() - interval '48 hours'
+"""
+
 BACKFILL_SELECT = """
 SELECT d.channel_id AS target_key, '' AS target_sub_key,
-       1000 - least(coalesce(f.first_posts, 0), 999) AS priority,
+       1000 - least(coalesce(v.messages, 0) / 100, 999) AS priority,
        '{}'::jsonb AS payload, NULL::integer AS expected
 FROM raw.channel_dim d
 LEFT JOIN raw.channel_walk w ON w.channel_id = d.channel_id
 LEFT JOIN (
-    SELECT first_post_channel AS channel_id, count(*) AS first_posts
-    FROM raw.member_message_history
-    WHERE first_post_channel IS NOT NULL
-    GROUP BY first_post_channel
-) f ON f.channel_id = d.channel_id
+    SELECT channel_id, sum(messages_posted) AS messages
+    FROM raw.channel_activity_snapshot
+    WHERE source = 'admin_analytics_api'
+    GROUP BY channel_id
+) v ON v.channel_id = d.channel_id
 WHERE d.archived IS NOT TRUE AND coalesce(w.history_complete, false) = false
 """
 
@@ -273,7 +296,9 @@ def enqueue_backfill(conn, channels=None, priority=None):
         select = select + " AND d.channel_id = ANY(%(p0)s)"
         params = (list(channels),)
     if priority is not None:
-        select = select.replace("1000 - least(coalesce(f.first_posts, 0), 999) AS priority", f"{int(priority)} AS priority")
+        select = select.replace(
+            "1000 - least(coalesce(v.messages, 0) / 100, 999) AS priority",
+            f"{int(priority)} AS priority")
     queued = work.enqueue_select(conn, BACKFILL_KIND, select, params, requested_by=SOURCE)
     if channels and priority is not None:
         work.prioritize(conn, BACKFILL_KIND, channels, int(priority))
@@ -301,6 +326,7 @@ def remember_error(conn, channel_id, fault):
 def drain_tail(conn, client, counts, limit, targets=None):
     items = work.claim(conn, TAIL_KIND, limit, ttl_seconds=LEASE_SECONDS, targets=targets)
     messages = 0
+    days = lookback_days(conn)
     for item in items:
         channel_id = item.target_key
         _, newest, _ = cursors(conn, channel_id)
@@ -310,8 +336,10 @@ def drain_tail(conn, client, counts, limit, targets=None):
             work.fail(conn, item, fault.detail)
 
         with per_entity(conn, SOURCE, counts, {"channel_id": channel_id, "kind": TAIL_KIND}, on_fault=on_fault):
-            seen, pages, _ = walk_channel(conn, client, channel_id, oldest=revisit_from(newest) if newest else None,
-                                          counts=counts, max_pages=None if newest else BACKFILL_PAGES)
+            seen, pages, _ = walk_channel(
+                conn, client, channel_id,
+                oldest=revisit_from(newest, days) if newest else None,
+                counts=counts, max_pages=None if newest else BACKFILL_PAGES)
             work.settle(conn, item, "complete", fetched=seen, note=f"{pages} page(s)")
             conn.commit()
             messages += seen

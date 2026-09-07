@@ -66,6 +66,18 @@ ROLES = {
             "TZ",
         ],
     },
+    "archive": {
+        "required": DATABASE + ["INTERNAL_PROXY_URL", "INTERNAL_PROXY_TOKEN"],
+        "optional": PIPELINE_ROLE + [
+            "ARCHIVE_POLL_SECONDS",
+            "ARCHIVE_HISTORY_BATCH",
+            "ARCHIVE_REPLIES_BUDGET",
+            "CHANNEL_TAIL_LOOKBACK_DAYS",
+            "PROXY_ALLOW_PLAINTEXT",
+            "SLACK_TEAM_ID",
+            "TZ",
+        ],
+    },
     "transform": {
         "required": DATABASE,
         "optional": DBT_ROLE + ["TZ"],
@@ -125,6 +137,7 @@ DEFAULTS = {
     "SPINE_JOIN_ENABLED": "false",
     "SPINE_JOIN_SECONDS": "3600",
     "SPINE_JOIN_PACE": "1.05",
+    "ARCHIVE_POLL_SECONDS": "300",
     "SYNC_POLL_SECONDS": "60",
     "SEED_SCALE": "dev",
     "SEED_RNG": "1",
@@ -139,6 +152,7 @@ HEADINGS = {
     "seed": "synthetic data, then transform, then verify. one shot",
     "provision": "schemas, roles, grants and both migration sets. one shot",
     "bot": "shroud takes the reports, nemo works them and lands events. long running",
+    "archive": "channel history, thread replies and event projection. long running",
 }
 
 NEVER = {
@@ -155,6 +169,7 @@ NEVER = {
     ],
     "sync": ["SLACK_ADMIN_TOKEN"],
     "history": ["SLACK_ADMIN_TOKEN"],
+    "archive": ["SLACK_ADMIN_TOKEN"],
 }
 
 

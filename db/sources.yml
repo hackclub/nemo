@@ -117,15 +117,17 @@ sources:
 
   channel_replies:
     unit_budget_seconds: 60
-    label: Thread replies for opted-in channels
+    standalone: true
+    label: Thread replies, every thread the walk has found
     endpoint: conversations.replies
     credential: admin
-    cadence: daily
+    cadence: live
     window: per thread
     guard: none
     resume: pending set
     retention: keep
-    writes: [raw.message, raw.message_observation, raw.thread]
+    writes: [raw.message, raw.message_observation, raw.thread,
+             archive.envelope, archive.message, archive.observation]
     runs_as: [channel_replies]
     feeds: [fct_message, fct_thread]
     limits:
@@ -145,15 +147,17 @@ sources:
 
   channel_history:
     unit_budget_seconds: 120
+    standalone: true
     label: Public channel messages, the message spine
     endpoint: conversations.history
     credential: admin
-    cadence: daily
+    cadence: live
     window: all time
     guard: none
     resume: cursor
     retention: keep
-    writes: [raw.message, raw.message_observation, raw.thread, raw.channel_walk]
+    writes: [raw.message, raw.message_observation, raw.thread, raw.channel_walk,
+             archive.envelope, archive.message, archive.observation]
     runs_as: [conversations_history]
     feeds: [fct_message, fct_thread]
     limits:
@@ -164,11 +168,12 @@ sources:
     label: Slack events become archive message rows
     endpoint: none
     credential: none
-    cadence: daily
+    cadence: live
     window: all time
     guard: none
     resume: none
     retention: keep
+    standalone: true
     writes: [archive.envelope, archive.message, archive.observation, raw.event_delivery]
     runs_as: [event_projector]
     feeds: []
