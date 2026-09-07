@@ -7,35 +7,46 @@
       <h2 class="card-title">Messages from members</h2>
       <p class="card-sub">last <%= s[:span] %></p>
     </div>
+    <div class="card-tools">
+      <div class="legend">
+        <span><i class="ser-1"></i>public share</span>
+        <% if was %><span><i class="ghost"></i>previous period</span><% end %>
+      </div>
+    </div>
   </div>
-  <div
-    data-controller="chart"
-    data-chart-kind-value="bars"
-    data-chart-stacked-value="true"
-    <% if s[:partial].any? %>data-chart-partial-value="<%= s[:partial].to_json %>"<% end %>
-    data-chart-days-value="<%= s[:days] %>"
-    data-chart-height-value="240"
-    data-chart-data-value="<%= {
-      labels: s[:labels],
-      datasets: [
-        { label: s[:public_label], data: s[:public] },
-        { label: s[:private_label], data: s[:private] }
-      ]
-    }.to_json %>"
-  ></div>
-  <div
-    data-controller="chart"
-    data-chart-kind-value="line"
-    data-chart-days-value="<%= s[:days] %>"
-    data-chart-height-value="120"
-    data-chart-pct-value="true"
-    data-chart-data-value="<%= {
-      labels: s[:labels],
-      datasets: [
-        { label: "public share", data: s[:public_share] },
-        (was ? { label: "previous period", data: was[:public_share],
-                 color: "var(--ink-4)", ghost: true } : nil)
-      ].compact
-    }.to_json %>"
-  ></div>
+  <div class="duo">
+    <figure>
+      <p class="panel-name">Channel messages</p>
+      <div
+        data-controller="chart"
+        data-chart-kind-value="bars"
+        <% if s[:partial].any? %>data-chart-partial-value="<%= s[:partial].to_json %>"<% end %>
+        data-chart-days-value="<%= s[:days] %>"
+        data-chart-height-value="190"
+        data-chart-data-value="<%= {
+          labels: s[:labels],
+          datasets: [{ label: "channel messages", data: s[:messages] }]
+        }.to_json %>"
+      ></div>
+    </figure>
+    <figure>
+      <p class="panel-name">Public share</p>
+      <div
+        data-controller="chart"
+        data-chart-kind-value="line"
+        data-chart-days-value="<%= s[:days] %>"
+        data-chart-height-value="190"
+        data-chart-pct-value="true"
+        data-chart-nokey-value="true"
+        data-chart-data-value="<%= {
+          labels: s[:labels],
+          datasets: [
+            { label: "public share", data: s[:public_share] },
+            (was ? { label: "previous period", data: was[:public_share],
+                     color: "var(--ink-4)", ghost: true } : nil)
+          ].compact
+        }.to_json %>"
+      ></div>
+    </figure>
+  </div>
 </div>

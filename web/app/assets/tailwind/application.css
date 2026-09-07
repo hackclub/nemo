@@ -935,6 +935,14 @@
     grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   }
   .duo > * { min-width: 0; }
+  .panel-name {
+    margin: 0 0 var(--s-2xs);
+    font-size: var(--t-small);
+    font-weight: 600;
+    color: var(--ink);
+  }
+  figure { margin: 0; min-width: 0; }
+
   .trio {
     display: grid;
     gap: var(--s-md);
@@ -3072,6 +3080,7 @@
     clip-path: inset(50%);
     white-space: nowrap;
   }
+  .card-tools > .legend { padding-top: 0; }
   .chart-legend, .legend { display: flex; gap: var(--s-sm); flex-wrap: wrap; padding-top: var(--s-2xs); }
   .chart-legend span, .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-fine); color: var(--ink-3); }
   .chart-legend b, .legend b { color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -3083,6 +3092,7 @@
     background: currentColor;
     flex: none;
   }
+  .legend span i.ghost,
   .chart-legend span i.ghost {
     width: 14px;
     height: 0;

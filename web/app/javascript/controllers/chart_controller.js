@@ -53,7 +53,7 @@ export default class extends Controller {
   static values = {
     kind: String, data: Object, height: Number, pct: Boolean,
     stacked: Boolean, days: Boolean, spark: Boolean, rule: Object, splits: Array,
-    voids: Array, partial: Array, partialNote: String, notes: Array, caps: Array
+    voids: Array, partial: Array, partialNote: String, notes: Array, caps: Array, nokey: Boolean
   }
 
   connect() {
@@ -150,7 +150,7 @@ export default class extends Controller {
     const swatch = (s) =>
       `<span><i class="${this.paint(s)}${s.ghost ? " ghost" : ""}"${
         this.tint(s)}></i>${esc(s.n)}</span>`
-    if (series.length < 2 || this.sparkValue) return ""
+    if (series.length < 2 || this.sparkValue || this.nokeyValue) return ""
 
     const order = this.stack ? series.slice().reverse() : series
     return `<div class="chart-legend">${order.map(swatch).join("")}</div>`
