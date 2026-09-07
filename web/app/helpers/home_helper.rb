@@ -12,10 +12,20 @@ module HomeHelper
     "#{from.strftime(same_year ? '%-d %b' : '%-d %b %Y')} to #{to.strftime('%-d %b %Y')}"
   end
 
-  ACTIVITY_GRANULARITIES = { "daily" => "daily", "monthly" => "monthly" }.freeze
+  OVERVIEW_SPANS = {
+    "7d" => { label: "7 days", days: 7, granularity: "daily" },
+    "28d" => { label: "28 days", days: 28, granularity: "daily" },
+    "90d" => { label: "90 days", days: 90, granularity: "daily" },
+    "12m" => { label: "12 months", months: 12, granularity: "monthly" }
+  }.freeze
+  DEFAULT_OVERVIEW_SPAN = "28d".freeze
 
-  def activity_granularity(value)
-    ACTIVITY_GRANULARITIES.fetch(value.to_s, "daily")
+  def overview_span(value)
+    OVERVIEW_SPANS.key?(value.to_s) ? value.to_s : DEFAULT_OVERVIEW_SPAN
+  end
+
+  def span_of(key)
+    OVERVIEW_SPANS.fetch(overview_span(key))
   end
 
   def activity_series(rows, granularity)

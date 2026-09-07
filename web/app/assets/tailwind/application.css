@@ -3028,6 +3028,13 @@
     background: currentColor;
     flex: none;
   }
+  .chart-legend span i.ghost {
+    width: 14px;
+    height: 0;
+    border-radius: 0;
+    background: none;
+    border-top: 2px dashed currentColor;
+  }
   .chart-pick { margin-left: auto; }
   .ser-0 { color: var(--series-0); } .ser-1 { color: var(--series-1); }
   .ser-2 { color: var(--series-2); } .ser-3 { color: var(--series-3); }

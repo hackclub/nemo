@@ -107,7 +107,7 @@ export default class extends Controller {
 
   get series() {
     return (this.dataValue.datasets || []).map((set, i) => ({
-      k: `s${i}`, n: set.label, ink: INK[i % INK.length], own: set.color
+      k: `s${i}`, n: set.label, ink: INK[i % INK.length], own: set.color, ghost: !!set.ghost
     }))
   }
 
@@ -142,7 +142,8 @@ export default class extends Controller {
 
   head(series) {
     const swatch = (s) =>
-      `<span><i class="${this.paint(s)}"${this.tint(s)}></i>${esc(s.n)}</span>`
+      `<span><i class="${this.paint(s)}${s.ghost ? " ghost" : ""}"${
+        this.tint(s)}></i>${esc(s.n)}</span>`
     if (series.length < 2 || this.sparkValue) return ""
 
     const order = this.stack ? series.slice().reverse() : series
@@ -394,13 +395,17 @@ export default class extends Controller {
       .curve(bend)
     const under = areaOf().defined((d) => d.v != null).x((d) => mid(d.i)).y0(floor)
       .y1((d) => y(d.v)).curve(bend)
-    const wash = series.length === 1 && (lo === 0 || this.sparkValue)
+    const solid = series.filter((s) => !s.ghost)
+    const wash = solid.length === 1 && (lo === 0 || this.sparkValue)
 
     return series.map((s) => {
       const seen = pts(s)
-      const fill = wash ? `<path class="wash" fill="url(#${this.gid})" d="${under(seen)}"/>` : ""
+      const fill = wash && !s.ghost
+        ? `<path class="wash" fill="url(#${this.gid})" d="${under(seen)}"/>` : ""
+      const dash = s.ghost ? ' stroke-dasharray="5 4"' : ""
       return `${fill}<path class="${this.paint(s)}"${this.tint(s)} fill="none" stroke="currentColor"
-        stroke-width="2" stroke-linejoin="round" stroke-linecap="round" d="${path(seen)}"/>`
+        stroke-width="${s.ghost ? 1.5 : 2}"${dash} stroke-linejoin="round" stroke-linecap="round"
+        d="${path(seen)}"/>`
     }).join("")
   }
 

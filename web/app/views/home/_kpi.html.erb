@@ -1,0 +1,42 @@
+<div class="card">
+  <p class="kpi-label"><%= label %></p>
+  <p class="kpi-val"><%= number_with_delimiter(value) %></p>
+
+  <div class="kpi-micro">
+    <% if local_assigns[:spark] && spark[:data].compact.many? %>
+      <div
+        title="<%= local_assigns[:spark_title] %>"
+        data-controller="chart"
+        data-chart-kind-value="line"
+        data-chart-spark-value="true"
+        data-chart-days-value="true"
+        data-chart-height-value="30"
+        data-chart-data-value="<%= {
+          labels: spark[:labels],
+          datasets: [{ label: spark[:name], data: spark[:data] }]
+        }.to_json %>"
+      ></div>
+    <% elsif local_assigns[:share_of] %>
+      <% share = share_pct(value, share_of) %>
+      <% if share %>
+        <span class="ratiobar" role="img"
+              aria-label="<%= number_to_percentage(share, precision: 1) %> <%= share_note %>"
+              title="<%= number_with_delimiter(value) %> of <%= number_with_delimiter(share_of) %>">
+          <i style="width: <%= share.round(1) %>%"></i>
+        </span>
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="delta">
+    <% if compare && prior %>
+      <%= delta_chip(value, prior) %>
+      <span class="delta-note">vs previous <%= span[:label] %></span>
+    <% elsif compare %>
+      <span class="delta-note">no prior <%= span[:label] %> held</span>
+    <% elsif local_assigns[:share_of] %>
+      <%= share_chip(value, share_of) %>
+      <span class="delta-note"><%= share_note %></span>
+    <% end %>
+  </div>
+</div>

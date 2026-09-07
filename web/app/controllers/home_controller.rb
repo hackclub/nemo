@@ -20,37 +20,43 @@ class HomeController < ApplicationController
     render :front_door
   end
 
-  SPARK_DAYS = 90
-
   def workspace
     @team_stats = Analytics::MartTeamStatsDaily.order(ds: :desc).first
-    @team_stats_prior =
-      if @team_stats
-        Analytics::MartTeamStatsDaily.where(ds: ..(@team_stats.ds - 28)).order(ds: :desc).first
-      end
-    @people_granularity = helpers.activity_granularity(params[:people_granularity])
-    @messages_granularity = helpers.activity_granularity(params[:messages_granularity])
+    @span_key = helpers.overview_span(params[:span])
+    @span = helpers.span_of(@span_key)
+    @compare = params[:compare] != "off"
 
-    @people_trend = activity_trend_for(@people_granularity)
-    @messages_trend = activity_trend_for(@messages_granularity)
-    @spark = spark_series
+    window = @span[:days] || YEAR_DAYS
+    @spark = daily_window(window)
+    @spark_prior = @compare ? daily_window(window, back: window) : []
+    @team_stats_prior = @compare ? prior_row(window) : nil
+
+    @trend = @span[:granularity] == "monthly" ? monthly_window : @spark
+    @trend_prior = @span[:granularity] == "monthly" ? [] : @spark_prior
   end
 
-  def spark_series
-    return [] if @team_stats.nil?
+  YEAR_DAYS = 365
+  PRIOR_SLACK = 2
 
+  def daily_window(days, back: 0)
+    return [] if @team_stats.nil? || days.zero?
+
+    last = @team_stats.ds - back
     Analytics::MartTeamStatsDaily
-      .where(ds: (@team_stats.ds - (SPARK_DAYS - 1))..@team_stats.ds)
+      .where(ds: (last - (days - 1))..last)
       .order(:ds).to_a
   end
 
-  def activity_trend_for(granularity)
-    @activity_trends ||= {}
-    @activity_trends[granularity] ||=
-      if granularity == "monthly"
-        Analytics::MartTeamStatsMonthly.order(month: :desc).limit(12).to_a.reverse
-      else
-        Analytics::MartTeamStatsDaily.order(ds: :desc).limit(90).to_a.reverse
-      end
+  def prior_row(days)
+    return nil if @team_stats.nil? || days.zero?
+
+    target = @team_stats.ds - days
+    Analytics::MartTeamStatsDaily
+      .where(ds: (target - PRIOR_SLACK)..target)
+      .order(ds: :desc).first
+  end
+
+  def monthly_window
+    Analytics::MartTeamStatsMonthly.order(month: :desc).limit(@span[:months]).to_a.reverse
   end
 end

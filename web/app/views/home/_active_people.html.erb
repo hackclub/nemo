@@ -1,4 +1,5 @@
 <% s = activity_series(activity_trend, granularity) %>
+<% was = prior_trend.any? ? activity_series(prior_trend, granularity) : nil %>
 
 <div class="card">
   <div class="card-head">
@@ -30,7 +31,11 @@
     data-chart-pct-value="true"
     data-chart-data-value="<%= {
       labels: s[:labels],
-      datasets: [{ label: "share of active who posted", data: s[:posted_share] }]
+      datasets: [
+        { label: "share of active who posted", data: s[:posted_share] },
+        (was ? { label: "previous period", data: was[:posted_share],
+                 color: "var(--ink-4)", ghost: true } : nil)
+      ].compact
     }.to_json %>"
   ></div>
 </div>
