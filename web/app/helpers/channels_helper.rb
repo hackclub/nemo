@@ -31,7 +31,7 @@ module ChannelsHelper
     tag.th(class: css, **{ "aria-sort": sort_state }) do
       link_to safe_join([label, arrow.html_safe]),
         channel_query(sort: column, direction: next_direction),
-        class: "sortable"
+        class: "sortable", data: { turbo_frame: "channels" }
     end
   end
 
@@ -45,10 +45,22 @@ module ChannelsHelper
     (read.to_f / posted).round(1)
   end
 
-  def channel_voice(channel)
-    return "n/a" if channel.range_posters.nil? || channel.range_members.to_i.zero?
+  def channel_change_cell(channel)
+    if channel.try(:prior_thin)
+      return tag.span("n/a", class: "sub2",
+        title: "the previous window held #{number_with_delimiter(channel.prior_messages)} " \
+               "member messages, under the floor of #{number_with_delimiter(channel.prior_floor)}")
+    end
 
-    number_to_percentage(channel.range_posters.to_f / channel.range_members * 100, precision: 1)
+    change = channel.try(:range_change)
+    return tag.span("n/a", class: "sub2") if change.nil?
+
+    change = change.to_f
+    tone = change.positive? ? "delta-up" : change.negative? ? "delta-down" : "share"
+    tag.span("#{change.positive? ? '+' : ''}#{number_to_percentage(change, precision: 1)}",
+      class: tone,
+      title: "#{number_with_delimiter(channel.range_messages)} member messages against " \
+             "#{number_with_delimiter(channel.prior_messages)} in the window before")
   end
 
   def channel_voice_tone(channel)

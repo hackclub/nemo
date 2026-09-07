@@ -2,7 +2,7 @@ class JourneyController < ApplicationController
   before_action { needs(:analytics) }
   before_action :require_reading
 
-  SCORECARD_PER_MONTH = 10
+  RESPONSE_MONTHS = 13
   LIFECYCLE_COHORTS = 12
 
   def acquisition
@@ -19,22 +19,11 @@ class JourneyController < ApplicationController
     @newcomer_channels = Analytics::MartNewcomerChannels
       .where(channel_id: visible_channels)
       .ranked(Analytics::MartNewcomerChannels::DEFAULT_MEASURE, floor: HomeHelper::MIN_SAMPLE)
-
-    scorecard = Analytics::MartChannelOnboardingScorecard.where(channel_id: visible_channels)
-    @channel_scorecard = scorecard
-      .where(newcomer_volume: HomeHelper::MIN_SAMPLE..)
-      .order(post_month: :desc, newcomer_volume: :desc)
-      .to_a
-      .group_by(&:post_month)
-      .transform_values { |rows| rows.first(SCORECARD_PER_MONTH) }
-    @scorecard_months = @channel_scorecard.keys.sort.reverse
-    @channel_scorecard_total = scorecard.count
   end
 
   def replies
-    @response_rate = Analytics::MartResponseRate.order(post_month: :desc).limit(13)
-    @response_rate_thin = @response_rate.count { |r| r.first_posts_checked < HomeHelper::MIN_SAMPLE }
-    @response_rate_totals = Analytics::MartResponseRate.totals
+    @response_rate = Analytics::MartResponseRate
+      .order(post_month: :desc).limit(RESPONSE_MONTHS).to_a.reverse
     @fast_reply_classes = Analytics::MartFastReplyVsRetention
       .order(Arel.sql("case reply_class when 'fast' then 1 when 'slow' then 2 else 3 end"))
       .to_a

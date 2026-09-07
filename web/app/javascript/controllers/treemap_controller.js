@@ -92,7 +92,7 @@ export default class extends Controller {
 
   connect() {
     this.at = null
-    this.element.innerHTML = `<div class="tree" tabindex="0"
+    this.element.innerHTML = `<div class="tree tipped" tabindex="0"
       data-action="mousemove->treemap#track mouseleave->treemap#clear keydown->treemap#key"
       ><div class="tip"></div><span class="chart-say" aria-live="polite"></span></div>`
     const box = this.element.querySelector(".tree")

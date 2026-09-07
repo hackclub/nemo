@@ -1523,6 +1523,15 @@
     vertical-align: middle;
   }
   .data-table tbody tr:last-child td { border-bottom: 0; }
+  .data-table.cols-fixed { table-layout: fixed; }
+  .data-table.cols-fixed td, .data-table.cols-fixed thead th { overflow: hidden; }
+  .data-table.cols-fixed td .two-line > b,
+  .data-table.cols-fixed td .two-line > a,
+  .data-table.cols-fixed td .two-line > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .data-table tbody tr:hover td { background: var(--hover); }
   .data-table tbody tr[data-controller="row-link"] { cursor: pointer; }
   .col-num, .data-table th.col-num, .data-table td.col-num { text-align: right; }
@@ -2955,10 +2964,10 @@
   .chart .rule-say { fill: var(--ink-3); }
   .chart .split { stroke: var(--ink-4); stroke-width: 1; stroke-dasharray: 3 3; }
   .chart .split-say { fill: var(--ink-3); }
-  .chart > .tip .row i.hole-dot { background: var(--warn); }
-  .chart > .tip .row-sum { border-top: 1px solid color-mix(in oklab, var(--tip-ink) 12%, transparent); padding-top: 4px; }
-  .chart > .tip .row-note { color: color-mix(in oklab, var(--tip-ink) 70%, transparent); }
-  .chart > .tip .row b u {
+  .tipped > .tip .row i.hole-dot { background: var(--warn); }
+  .tipped > .tip .row-sum { border-top: 1px solid color-mix(in oklab, var(--tip-ink) 12%, transparent); padding-top: 4px; }
+  .tipped > .tip .row-note { color: color-mix(in oklab, var(--tip-ink) 70%, transparent); }
+  .tipped > .tip .row b u {
     text-decoration: none;
     font-weight: 400;
     margin-left: 4px;
@@ -2985,7 +2994,7 @@
   .chart .mark.fade { opacity: 0.22; }
   .chart .cur { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
   .chart .dot { vector-effect: non-scaling-stroke; stroke: var(--card); stroke-width: 2; }
-  .chart > .tip {
+  .tipped > .tip {
     position: absolute;
     z-index: 3;
     display: none;
@@ -2994,26 +3003,26 @@
     pointer-events: none;
     border: 1px solid color-mix(in oklab, var(--tip-ink) 14%, transparent);
   }
-  .chart > .tip.on { display: grid; gap: 5px; }
-  .chart > .tip .t {
+  .tipped > .tip.on { display: grid; gap: 5px; }
+  .tipped > .tip .t {
     font-weight: 600;
     padding-bottom: 3px;
     border-bottom: 1px solid color-mix(in oklab, var(--tip-ink) 12%, transparent);
   }
-  .chart > .tip .row {
+  .tipped > .tip .row {
     display: grid;
     grid-template-columns: 8px minmax(0, 1fr) auto;
     gap: var(--s-2xs);
     font-size: var(--t-fine);
   }
-  .chart > .tip .row i {
+  .tipped > .tip .row i {
     width: 7px;
     height: 7px;
     margin-top: 4px;
     border-radius: 2px;
     background: currentColor;
   }
-  .chart > .tip .row b { font-family: var(--font-code); font-weight: 500; }
+  .tipped > .tip .row b { font-family: var(--font-code); font-weight: 500; }
   .chart-head { display: flex; align-items: baseline; gap: var(--s-xs); margin-bottom: var(--s-2xs); }
   .chart-say {
     position: absolute;
@@ -3117,37 +3126,6 @@
   .tree-key .ramp { display: flex; border-radius: 2px; overflow: hidden; }
   .tree-key .sep { width: 1px; height: 13px; background: var(--line); margin: 0 5px; }
   .tree-key .push { margin-left: auto; }
-
-  .card > details.twin {
-    margin: var(--s-sm) calc(-1 * var(--s-sm)) calc(-1 * var(--s-sm));
-    border-top: 1px solid var(--line-soft);
-    border-radius: 0 0 var(--r-card) var(--r-card);
-    overflow: hidden;
-  }
-  .card > details.twin > summary {
-    cursor: pointer;
-    list-style: none;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    padding: 10px var(--s-sm);
-    background: var(--card-2);
-    font-size: var(--t-small);
-    font-weight: 500;
-    color: var(--ink-3);
-  }
-  .card > details.twin > summary::-webkit-details-marker { display: none; }
-  .card > details.twin > summary::before {
-    content: "";
-    width: 0;
-    height: 0;
-    border-left: 5px solid currentColor;
-    border-top: 4px solid transparent;
-    border-bottom: 4px solid transparent;
-    transition: transform var(--dur-2) var(--ease);
-  }
-  .card > details.twin[open] > summary::before { transform: rotate(90deg); }
-  .card > details.twin > summary:hover { color: var(--ink); }
 
   .facets {
     display: grid;
@@ -3506,6 +3484,43 @@
   .key { display: flex; gap: var(--s-xs); flex-wrap: wrap; padding: var(--s-xs) var(--s-sm); border-top: 1px solid var(--line-soft); }
   .key span { display: inline-flex; align-items: center; gap: 5px; font-size: var(--t-fine); color: var(--ink-3); }
   .key i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+  .key .push { margin-left: auto; }
+
+  .funnelrows { display: grid; gap: 6px; padding: var(--s-sm); position: relative; }
+  .fn-row {
+    display: grid;
+    grid-template-columns: minmax(148px, 1fr) minmax(0, 3.4fr) 62px;
+    gap: var(--s-sm);
+    align-items: center;
+    padding: 3px 0;
+    border-radius: var(--r-tight);
+  }
+  .fn-row:hover { background: var(--card-2); }
+  .fn-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fn-bar {
+    position: relative;
+    height: 24px;
+    border-radius: var(--r-tight);
+    background: var(--mute-soft);
+  }
+  .fn-bar > i {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 24px;
+    border-radius: var(--r-tight);
+    transition: filter var(--dur-2) var(--ease);
+  }
+  .fn-row:hover .fn-bar > i { filter: brightness(1.08); }
+  .fn-a, .key i.fn-a { background: color-mix(in oklab, var(--series-1) 24%, var(--card)); }
+  .fn-b, .key i.fn-b { background: color-mix(in oklab, var(--series-1) 66%, var(--card)); }
+  .fn-c, .key i.fn-c { background: var(--series-2); }
+  .fn-bar > i.fn-b, .fn-bar > i.fn-c { box-shadow: 1px 0 0 var(--card); }
+  .fn-lift { font-family: var(--font-code); font-size: var(--t-small); color: var(--ink-2); }
+  .fn-lift.lift-strong { color: var(--good); font-weight: 500; }
+  @media (max-width: 760px) {
+    .fn-row { grid-template-columns: minmax(104px, 1fr) minmax(0, 2fr) 52px; gap: var(--s-xs); }
+  }
 
   .lifegrid {
     display: grid;

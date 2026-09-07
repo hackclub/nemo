@@ -7,46 +7,39 @@
     </div>
   </div>
   <% if @response_rate.any? %>
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>first posted</th>
-            <th class="col-num">checked</th>
-            <th class="col-num">answered by a member</th>
-            <th class="col-num">bot answered only</th>
-            <th class="col-num">no reply</th>
-            <th class="col-num">median member wait</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @response_rate.each do |r| %>
-            <% thin = r.first_posts_checked < HomeHelper::MIN_SAMPLE %>
-            <tr>
-              <td>
-                <b><%= r.post_month.strftime("%b %Y") %></b>
-              </td>
-              <td class="col-num"><%= number_with_delimiter(r.first_posts_checked) %></td>
-              <td class="col-num">
-                <% if thin %>
-                  <%= number_with_delimiter(r.answered_by_member) %>
-                <% else %>
-                  <%= rate_cell(r.answered_by_member, r.first_posts_checked) %>
-                <% end %>
-              </td>
-              <td class="col-num"><%= number_with_delimiter(r.answered_by_bot) %></td>
-              <td class="col-num"><%= number_with_delimiter(r.unanswered) %></td>
-              <td class="col-num">
-                <% if thin %>
-                  <span class="sub2">n/a</span>
-                <% else %>
-                  <%= reply_wait(r.median_member_latency_seconds) %>
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
+    <% bands = [
+         { label: "answered by a member", color: "var(--series-2)",
+           count: ->(r) { r.answered_by_member.to_i } },
+         { label: "bot answered only", color: "var(--series-3)",
+           count: ->(r) { r.answered_by_bot.to_i } },
+         { label: "no reply", color: "var(--series-0)",
+           count: ->(r) { r.unanswered.to_i } }
+       ] %>
+    <% thin = @response_rate.each_with_index.filter_map { |r, i| i if r.first_posts_checked < HomeHelper::MIN_SAMPLE } %>
+    <div style="padding: 0 var(--s-sm) var(--s-2xs)">
+      <div
+        data-controller="chart"
+        data-chart-kind-value="bars"
+        data-chart-stacked-value="true"
+        data-chart-pct-value="true"
+        data-chart-height-value="250"
+        <% if thin.any? %>data-chart-partial-value="<%= thin.to_json %>"
+        data-chart-partial-note-value="under <%= HomeHelper::MIN_SAMPLE %> checked, no rate published"<% end %>
+        data-chart-notes-value="<%= @response_rate.map { |r|
+          r.median_member_latency_seconds ? "median member wait #{reply_wait(r.median_member_latency_seconds)}" : nil
+        }.to_json %>"
+        data-chart-data-value="<%= {
+          labels: @response_rate.map { |r| r.post_month.strftime("%b %Y") },
+          datasets: bands.map do |band|
+            {
+              label: band[:label],
+              color: band[:color],
+              data: @response_rate.map { |r| share_pct(band[:count].call(r), r.first_posts_checked) },
+              counts: @response_rate.map { |r| band[:count].call(r) }
+            }
+          end
+        }.to_json %>"
+      ></div>
     </div>
   <% else %>
     <p class="card-note">

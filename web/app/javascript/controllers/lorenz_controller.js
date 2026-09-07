@@ -15,7 +15,7 @@ export default class extends Controller {
 
   connect() {
     this.at = null
-    this.element.innerHTML = `<div class="chart" tabindex="0"
+    this.element.innerHTML = `<div class="chart tipped" tabindex="0"
       data-action="mousemove->lorenz#track mouseleave->lorenz#clear keydown->lorenz#key"
       ><div class="tip"></div><span class="chart-say" aria-live="polite"></span></div>`
     const chart = this.element.querySelector(".chart")

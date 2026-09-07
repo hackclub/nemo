@@ -10,7 +10,7 @@
         <span><%= channel.channel_id %></span>
       </span>
     </td>
-    <td style="width: 26%">
+    <td>
       <% if channel.range_messages %>
         <div class="inbar">
           <span><i style="width: <%= peak.positive? ? [(channel.range_messages.to_f / peak * 100), 1.5].max.round(1) : 0 %>%"></i></span>
@@ -36,6 +36,6 @@
         <span class="sub2">never</span>
       <% end %>
     </td>
-    <td class="col-num <%= channel_voice_tone(channel) %>"><%= channel_voice(channel) %></td>
+    <td class="col-num"><%= channel_change_cell(channel) %></td>
   </tr>
 <% end %>

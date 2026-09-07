@@ -53,7 +53,7 @@ export default class extends Controller {
   static values = {
     kind: String, data: Object, height: Number, pct: Boolean,
     stacked: Boolean, days: Boolean, spark: Boolean, rule: Object, splits: Array,
-    voids: Array, partial: Array
+    voids: Array, partial: Array, partialNote: String, notes: Array
   }
 
   connect() {
@@ -78,6 +78,7 @@ export default class extends Controller {
     const { labels = [], datasets = [] } = this.dataValue
     const blanked = new Map((this.hasVoidsValue ? this.voidsValue : [])
       .map((v) => [Number(v.at), v.note || ""]))
+    const notes = this.hasNotesValue ? this.notesValue : []
     const given = labels.map((label, i) => {
       const key = Array.isArray(label) ? label[0] : label
       const row = { label: key, key }
@@ -85,6 +86,7 @@ export default class extends Controller {
         row[`s${s}`] = set.data[i]
         if (set.counts) row[`c${s}`] = set.counts[i]
       })
+      if (notes[i]) row.tip = notes[i]
       if (blanked.has(i)) {
         row.gap = true
         row.why = blanked.get(i)
@@ -128,7 +130,7 @@ export default class extends Controller {
     if (!this.rows.length || !series.length) return
 
     this.element.classList.toggle("chart-spark", this.sparkValue)
-    this.element.innerHTML = `${this.head(series)}<div class="chart" tabindex="0"
+    this.element.innerHTML = `${this.head(series)}<div class="chart tipped" tabindex="0"
       data-action="mousemove->chart#track mouseleave->chart#clear keydown->chart#key"
       ><div class="tip"></div><span class="chart-say" aria-live="polite"></span></div>`
     this.wide = 0
@@ -482,7 +484,12 @@ export default class extends Controller {
       : ""
 
     const short = this.hasPartialValue && this.partialValue.map(Number).includes(i)
-      ? `<div class="row row-note"><i class="hole-dot"></i>period not complete</div>`
+      ? `<div class="row row-note"><i class="hole-dot"></i>${
+        esc(this.partialNoteValue || "period not complete")}</div>`
+      : ""
+
+    const said = row.tip
+      ? `<div class="row row-note"><i></i>${esc(row.tip)}</div>`
       : ""
 
     const note = this.hasRuleValue && this.ruleValue.note
@@ -490,7 +497,7 @@ export default class extends Controller {
       : ""
 
     const tip = chart.querySelector(".tip")
-    tip.innerHTML = `<div class="t">${esc(row.label)}</div>${lines}${whole}${short}${note}`
+    tip.innerHTML = `<div class="t">${esc(row.label)}</div>${lines}${whole}${said}${short}${note}`
     tip.classList.add("on")
 
     const at = g.mid(i)

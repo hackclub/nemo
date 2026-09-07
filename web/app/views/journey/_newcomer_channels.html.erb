@@ -13,40 +13,49 @@
   </div>
 
   <% if newcomer_channels.any? %>
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>channel</th>
-            <th class="col-num" title="first-ever public message landed here">posted here first</th>
-            <th class="col-num" title="from the member channel walk, a narrower search">posted</th>
-            <th class="col-num">came back</th>
-            <th class="col-num">messages</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% peak = newcomer_channels.map { |c| c.newcomer_first_posts.to_i }.max.to_i %>
-          <% newcomer_channels.each do |c| %>
-            <tr>
-              <td>
-                <span class="two-line">
-                  <%= channel_name_cell(c.channel_id, c.name) %>
-                  <span><%= c.channel_id %></span>
-                </span>
-              </td>
-              <td class="col-num">
-                <div class="inbar" title="<%= number_with_delimiter(c.newcomer_first_posts) %> first posts">
-                  <span><i style="width: <%= peak.positive? ? [(c.newcomer_first_posts.to_f / peak * 100), 1.5].max.round(1) : 0 %>%"></i></span>
-                  <span><%= number_with_delimiter(c.newcomer_first_posts) %></span>
-                </div>
-              </td>
-              <td class="col-num"><%= number_with_delimiter(c.newcomers_posting) %></td>
-              <td class="col-num"><%= rate_cell(c.newcomers_returning, c.newcomers_posting, precision: 0) %></td>
-              <td class="col-num"><%= number_with_delimiter(c.newcomer_messages) %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
+    <% peak = newcomer_channels.map { |c| c.newcomer_first_posts.to_i }.max.to_i %>
+    <div class="funnelrows" data-controller="marktip"
+         data-action="mouseover->marktip#show mouseleave->marktip#clear">
+      <% newcomer_channels.each do |c| %>
+        <% first = c.newcomer_first_posts.to_i %>
+        <% again = c.newcomers_posting.to_i %>
+        <% back = c.newcomers_returning.to_i %>
+        <% width = ->(v) { peak.positive? ? [(v.to_f / peak * 100), (v.positive? ? 1.2 : 0)].max.round(2) : 0 } %>
+        <div class="fn-row">
+          <span class="fn-name"><%= channel_name_cell(c.channel_id, c.name) %></span>
+          <span class="fn-bar" data-tip="<%= {
+            title: "##{c.name}",
+            rows: [
+              { label: "first post landed here", value: number_with_delimiter(first) },
+              { label: "posted again in the window", value: number_with_delimiter(again),
+                of: number_to_percentage(share_pct(again, first) || 0, precision: 1) },
+              { label: "came back on a later day", value: number_with_delimiter(back),
+                of: number_to_percentage(share_pct(back, again) || 0, precision: 1) }
+            ]
+          }.to_json %>">
+            <i class="fn-a" style="width: <%= width.call(first) %>%"></i>
+            <i class="fn-b" style="width: <%= width.call(again) %>%"></i>
+            <i class="fn-c" style="width: <%= width.call(back) %>%"></i>
+          </span>
+          <span class="fn-lift col-num <%= newcomer_lift_tone(c.newcomer_lift) %>"
+                data-tip="<%= {
+                  title: "##{c.name}",
+                  rows: [
+                    { label: "newcomer share of messages",
+                      value: number_to_percentage(c.newcomer_message_share.to_f * 100, precision: 1) },
+                    { label: "against the workspace baseline",
+                      value: c.newcomer_lift ? "#{number_with_precision(c.newcomer_lift, precision: 1)}×" : "n/a" }
+                  ]
+                }.to_json %>">
+            <%= c.newcomer_lift ? "#{number_with_precision(c.newcomer_lift, precision: 1)}×" : "n/a" %>
+          </span>
+        </div>
+      <% end %>
+    </div>
+    <div class="key">
+      <span><i class="fn-a"></i>first post landed here</span>
+      <span><i class="fn-b"></i>posted again in the window</span>
+      <span><i class="fn-c"></i>came back on a later day</span>
     </div>
   <% else %>
     <p class="card-note">

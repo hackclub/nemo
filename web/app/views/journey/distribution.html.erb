@@ -83,33 +83,6 @@
           datasets: [{ label: "posters", data: @poster_bands.map(&:members) }]
         }.to_json %>"
       ></div>
-      <details class="twin">
-        <summary>Exact values</summary>
-        <div class="scroll">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>lifetime messages</th>
-                <th class="col-num">posters</th>
-                <th class="col-num">of posters</th>
-                <th class="col-num">cumulative</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% running = 0 %>
-              <% @poster_bands.each do |b| %>
-                <% running += b.members %>
-                <tr>
-                  <td><b><%= b.activity_band %></b></td>
-                  <td class="col-num"><%= number_with_delimiter(b.members) %></td>
-                  <td class="col-num"><%= rate_cell(b.members, posters) %></td>
-                  <td class="col-num"><%= number_to_percentage(running.to_f / posters * 100, precision: 1) %></td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      </details>
     <% else %>
       <p class="card-note">n/a</p>
     <% end %>

@@ -45,40 +45,6 @@
     <% end %>
   </div>
 
-  <div class="scroll" style="margin-top: var(--s-sm)">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>first member reply</th>
-          <th class="col-num">retained</th>
-          <th class="col-num">measured</th>
-          <th class="col-num">day 30</th>
-          <th class="col-num">95% interval</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% rows.each do |r| %>
-          <tr>
-            <td><b><%= r[:label] %></b></td>
-            <td class="col-num"><%= number_with_delimiter(r[:hits]) %></td>
-            <td class="col-num">
-              <% if r[:thin] %>
-                <span class="short"
-                      title="a rate needs <%= HomeHelper::MIN_SAMPLE %> newcomers"><%= r[:sample] %></span>
-              <% else %>
-                <%= number_with_delimiter(r[:sample]) %>
-              <% end %>
-            </td>
-            <td class="col-num"><%= number_to_percentage(r[:rate], precision: 1) %></td>
-            <td class="col-num">
-              <%= number_to_percentage(r[:low], precision: 1) %> to
-              <%= number_to_percentage(r[:high], precision: 1) %>
-            </td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
 <% else %>
   <p class="card-note">No reply class has a covered day-30 window yet.</p>
 <% end %>

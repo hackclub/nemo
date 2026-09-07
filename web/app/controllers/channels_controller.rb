@@ -12,7 +12,8 @@ class ChannelsController < ApplicationController
     "messages" => "r.messages_posted_by_members",
     "posters" => "r.members_who_posted",
     "viewers" => "r.members_who_viewed",
-    "quiet" => "r.last_message_at"
+    "quiet" => "r.last_message_at",
+    "change" => "m.pct_change"
   }.freeze
 
   SPOKE_SHARE = "r.members_who_posted::numeric / NULLIF(r.total_members, 0)".freeze
@@ -34,10 +35,14 @@ class ChannelsController < ApplicationController
   }.freeze
 
   RANGE_JOIN = "LEFT JOIN analytics.mart_channel_range r ON r.channel_id = dim_channel.channel_id".freeze
+  MOMENTUM_JOIN = "LEFT JOIN analytics.mart_channel_momentum m " \
+                  "ON m.channel_id = dim_channel.channel_id".freeze
   RANGE_COLUMNS = "dim_channel.*, r.messages_posted_by_members AS range_messages, " \
                   "r.members_who_posted AS range_posters, r.total_members AS range_members, " \
                   "r.members_who_viewed AS range_viewers, " \
-                  "r.last_message_at AS range_last_post".freeze
+                  "r.last_message_at AS range_last_post, " \
+                  "m.pct_change AS range_change, m.prior_messages AS prior_messages, " \
+                  "m.prior_below_floor AS prior_thin, m.prior_floor AS prior_floor".freeze
 
   def index
     @q = params[:q].to_s.strip
@@ -50,7 +55,7 @@ class ChannelsController < ApplicationController
     mine = Channels::Audience.for(current_account)
     @mine_total = mine.count
 
-    scope = mine.joins(RANGE_JOIN)
+    scope = mine.joins(RANGE_JOIN).joins(MOMENTUM_JOIN)
     scope = scope.where("dim_channel.name ILIKE ?", "%#{like_q}%") if @q.present?
     @filters.each { |key| scope = scope.where(Arel.sql(FILTERS.fetch(key).last)) }
 
