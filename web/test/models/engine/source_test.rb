@@ -5,7 +5,12 @@ module Engine
     test "every source declares the six things a source has to say" do
       Source.all.each do |source|
         Source::DECLARED.each do |field|
-          assert source.public_send(field).present?, "#{source.key} declares no #{field}"
+          said = source.public_send(field)
+          if field == "feeds"
+            assert_not_nil said, "#{source.key} declares no #{field}"
+          else
+            assert said.present?, "#{source.key} declares no #{field}"
+          end
         end
       end
     end

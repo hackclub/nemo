@@ -159,6 +159,20 @@ sources:
     limits:
       batch: {default: 200, min: 10, max: 2000}
 
+  event_projector:
+    unit_budget_seconds: 30
+    label: Slack events become archive message rows
+    endpoint: none
+    credential: none
+    cadence: daily
+    window: all time
+    guard: none
+    resume: none
+    retention: keep
+    writes: [archive.envelope, archive.message, archive.observation, raw.event_delivery]
+    runs_as: [event_projector]
+    feeds: []
+
   users_list:
     label: Account flags and deactivation, display name, handle, and avatar
     endpoint: users.list

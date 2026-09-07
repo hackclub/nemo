@@ -8,7 +8,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from bot.engine import session
-from lib.message import scrub
+from lib.message import scrub, shape
 
 log = logging.getLogger("bot.events")
 
@@ -82,8 +82,8 @@ def drain():
     return landed
 
 LAND_SQL = """
-INSERT INTO raw.event_delivery (event_id, event_type, channel_id, ts, event_ts, envelope)
-VALUES (%s, %s, %s, %s, %s, %s)
+INSERT INTO raw.event_delivery (event_id, event_type, channel_id, ts, event_ts, envelope, shape)
+VALUES (%s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (event_id) DO NOTHING
 """
 
@@ -97,6 +97,20 @@ def channel_of(event):
     return named.get("id") if isinstance(named, dict) else named
 
 
+def bodied(event):
+    if event.get("type") != "message":
+        return None
+    if event.get("subtype") == "message_deleted":
+        return None
+    changed = event.get("message")
+    return changed if event.get("subtype") == "message_changed" else event
+
+
+def shape_of(event):
+    body = bodied(event)
+    return shape(body) if isinstance(body, dict) else None
+
+
 def row_for(event_id, event):
     return (
         event_id,
@@ -105,13 +119,16 @@ def row_for(event_id, event):
         target(event),
         event.get("event_ts"),
         scrub(event),
+        shape_of(event),
     )
 
 
 def write(conn, row):
     channel, ts, event_ts, envelope = row[2], row[3], row[4], row[5]
+    measured = row[6] if len(row) > 6 else None
     with conn.cursor() as cur:
-        cur.execute(LAND_SQL, (row[0], row[1], channel, ts, event_ts, Jsonb(envelope)))
+        cur.execute(LAND_SQL, (row[0], row[1], channel, ts, event_ts, Jsonb(envelope),
+                               Jsonb(measured) if measured else None))
 
 
 def land(event_id, event):
