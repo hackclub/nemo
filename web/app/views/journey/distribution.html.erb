@@ -1,29 +1,154 @@
 <% content_for :page_title, "Who is active" %>
 
-<div class="card">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Activity distribution</h2>
-      <% coverage = @activity_bands.first %>
-      <p class="card-sub">
-        lifetime messages posted &middot;
-        <%= number_with_delimiter(@activity_bands.sum(&:members)) %> of
-        <%= number_with_delimiter(coverage&.workspace_members) %> members counted
-        <% if coverage&.full_history_members.to_i.positive? %>
-          &middot; <%= number_with_delimiter(coverage.full_history_members) %> from full-history search
-        <% end %>
+<% searched = @activity_bands.first&.full_history_members.to_i %>
+<% workspace = @activity_bands.first&.workspace_members.to_i %>
+<% posters = @poster_bands.sum(&:members) %>
+<% curve = @concentration %>
+<% half = curve.find { |p| p.poster_pct == 50 } %>
+<% tenth = curve.find { |p| p.poster_pct == 90 } %>
+
+<% if searched.positive? %>
+  <div class="kpis">
+    <div class="card">
+      <p class="kpi-label">Ever posted</p>
+      <p class="kpi-val"><%= number_to_percentage(posters.to_f / searched * 100, precision: 1) %></p>
+      <div class="kpi-micro">
+        <span class="ratiobar" role="img" aria-label="share who ever posted"
+              title="<%= number_with_delimiter(posters) %> of <%= number_with_delimiter(searched) %> searched members">
+          <i style="width: <%= (posters.to_f / searched * 100).round(1) %>%"></i>
+        </span>
+      </div>
+      <div class="delta">
+        <span class="delta-note">
+          <%= number_with_delimiter(posters) %> of <%= number_with_delimiter(searched) %> searched
+        </span>
+      </div>
+    </div>
+    <div class="card">
+      <p class="kpi-label">Never posted</p>
+      <p class="kpi-val">
+        <%= number_to_percentage(@never_posted.members.to_f / searched * 100, precision: 1) %>
       </p>
+      <div class="kpi-micro"></div>
+      <div class="delta">
+        <span class="delta-note"><%= number_with_delimiter(@never_posted.members) %> of <%= number_with_delimiter(searched) %> searched</span>
+      </div>
+    </div>
+    <div class="card">
+      <p class="kpi-label">Concentration</p>
+      <p class="kpi-val"><%= curve.first&.gini&.to_f&.round(3) || "n/a" %></p>
+      <div class="kpi-micro"></div>
+      <div class="delta">
+        <span class="delta-note" title="0 means every poster posts equally, 1 means one person posts everything">
+          Gini, among posters
+        </span>
+      </div>
+    </div>
+    <div class="card">
+      <p class="kpi-label">Top tenth of posters</p>
+      <p class="kpi-val">
+        <%= tenth ? number_to_percentage(100 - tenth.message_pct.to_f, precision: 1) : "n/a" %>
+      </p>
+      <div class="kpi-micro"></div>
+      <div class="delta">
+        <% if half %>
+          <span class="delta-note"
+                title="the bottom half of posters hold <%= number_to_percentage(half.message_pct.to_f, precision: 1) %> of all messages">
+            of all messages
+          </span>
+        <% end %>
+      </div>
     </div>
   </div>
-  <div
-    data-controller="chart"
-    data-chart-kind-value="bars"
-    data-chart-height-value="240"
-    data-chart-data-value="<%= {
-      labels: @activity_bands.map(&:activity_band),
-      datasets: [{ label: "members", data: @activity_bands.map(&:members) }]
-    }.to_json %>"
-  ></div>
+  <p class="card-note">
+    <span class="short"
+          title="<%= number_with_delimiter(workspace - searched) %> workspace members have no searched message history, so their posting is unknown">
+      <%= number_with_delimiter(searched) %> of <%= number_with_delimiter(workspace) %> members searched
+    </span>
+  </p>
+<% end %>
+
+<div class="duo">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Messages per poster</h2>
+        <p class="card-sub" title="each band spans four times the range of the one before it, drawn at equal width">
+          posters only
+        </p>
+      </div>
+    </div>
+    <% if @poster_bands.any? %>
+      <% splits = [
+           band_split(curve.first&.median_messages, @poster_bands, "median"),
+           band_split(curve.first&.p90_messages, @poster_bands, "p90")
+         ].compact %>
+      <div
+        data-controller="chart"
+        data-chart-kind-value="bars"
+        data-chart-height-value="240"
+        <% if splits.any? %>data-chart-splits-value="<%= splits.to_json %>"<% end %>
+        data-chart-data-value="<%= {
+          labels: @poster_bands.map(&:activity_band),
+          datasets: [{ label: "posters", data: @poster_bands.map(&:members) }]
+        }.to_json %>"
+      ></div>
+      <details class="twin">
+        <summary>Exact values</summary>
+        <div class="scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>lifetime messages</th>
+                <th class="col-num">posters</th>
+                <th class="col-num">of posters</th>
+                <th class="col-num">cumulative</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% running = 0 %>
+              <% @poster_bands.each do |b| %>
+                <% running += b.members %>
+                <tr>
+                  <td><b><%= b.activity_band %></b></td>
+                  <td class="col-num"><%= number_with_delimiter(b.members) %></td>
+                  <td class="col-num"><%= rate_cell(b.members, posters) %></td>
+                  <td class="col-num"><%= number_to_percentage(running.to_f / posters * 100, precision: 1) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    <% else %>
+      <p class="card-note">n/a</p>
+    <% end %>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Share of messages by share of posters</h2>
+        <% if curve.first %>
+          <p class="card-sub">
+            <%= number_with_delimiter(curve.first.posters) %> posters &middot;
+            <%= number_with_delimiter(curve.first.messages) %> messages
+          </p>
+        <% end %>
+      </div>
+    </div>
+    <% if curve.any? %>
+      <div
+        data-controller="lorenz"
+        data-lorenz-height-value="240"
+        data-lorenz-gini-value="<%= curve.first.gini.to_f %>"
+        data-lorenz-points-value="<%= curve.map { |p| [p.poster_pct, p.message_pct.to_f] }.to_json %>"
+        data-lorenz-marks-value="<%= [half, tenth].compact.map { |p| [p.poster_pct, p.message_pct.to_f] }.to_json %>"
+      ></div>
+    <% else %>
+      <p class="card-note">n/a</p>
+    <% end %>
+  </div>
 </div>
 
 <% if visible_panel?("journey.top_posters") %>

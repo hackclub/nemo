@@ -17,9 +17,8 @@
     </div>
     <% if top_poster_months.many? %>
       <div class="card-tools">
-        <span class="qlab">Month</span>
         <details class="menu" data-controller="menu">
-          <summary class="btn">
+          <summary class="btn" aria-label="month">
             <%= top_posters_month.strftime("%b %Y") %><span class="car" aria-hidden="true">▾</span>
           </summary>
           <div class="menu-pop">

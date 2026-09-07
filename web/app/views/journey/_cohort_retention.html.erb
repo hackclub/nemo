@@ -1,0 +1,66 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Retention by cohort</h2>
+      <% if retention.any? %>
+        <p class="card-sub">active in the 7 days ending on day 30 and day 90</p>
+      <% end %>
+    </div>
+  </div>
+
+  <% if retention.any? %>
+    <div style="padding: 0 var(--s-sm) var(--s-2xs)">
+      <div
+        data-controller="chart"
+        data-chart-kind-value="line"
+        data-chart-height-value="220"
+        data-chart-pct-value="true"
+        data-chart-data-value="<%= {
+          labels: retention.map { |r| r.cohort_month.strftime("%b %Y") },
+          datasets: [
+            { label: "day 30", data: retention.map { |r| r.retained_day_30_rate && r.retained_day_30_rate.to_f * 100 } },
+            { label: "day 90", data: retention.map { |r| r.retained_day_90_rate && r.retained_day_90_rate.to_f * 100 } }
+          ]
+        }.to_json %>"
+      ></div>
+    </div>
+
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>cohort</th>
+            <th class="col-num">cohort size</th>
+            <th class="col-num">first posters</th>
+            <th class="col-num">day 30</th>
+            <th class="col-num">day 90</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% retention.reverse.each do |r| %>
+            <tr>
+              <td><b><%= r.cohort_month.strftime("%b %Y") %></b></td>
+              <td class="col-num"><%= number_with_delimiter(r.cohort_size) %></td>
+              <td class="col-num"><%= number_with_delimiter(r.first_posters) %></td>
+              <td class="col-num"><%= rate_cell(r.retained_day_30, r.measured_day_30) %></td>
+              <td class="col-num">
+                <% if r.measured_day_90.to_i.positive? %>
+                  <%= rate_cell(r.retained_day_90, r.measured_day_90) %>
+                <% elsif !r.day_90_mature %>
+                  <span class="sub2" title="90 days after the month closes">not yet</span>
+                <% else %>
+                  <span class="sub2">n/a</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">
+      No cohort has a covered day-30 or day-90 window yet. The member activity snapshots the
+      window needs are filled by the nightly sync.
+    </p>
+  <% end %>
+</div>

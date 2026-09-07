@@ -4,7 +4,8 @@ with cohort as (
         d.cohort_at,
         h.user_id is not null as searched,
         h.user_id is not null or w.user_id is not null as known,
-        coalesce(w.channel_messages_posted, h.total_messages, 0) > 0 as posted,
+        greatest(coalesce(h.total_messages, 0), coalesce(w.channel_messages_posted, 0)) > 0
+            as posted,
         h.first_post_ts
     from {{ ref('dim_member') }} d
     left join {{ ref('fct_member_history') }} h using (user_id)

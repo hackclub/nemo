@@ -22,27 +22,35 @@ module HomeHelper
     if granularity == "monthly"
       {
         labels: rows.map { |r| r.month.strftime("%b %Y") },
-        tick_every: 1,
+        days: false,
         span: "#{rows.size} months",
-        people: rows.map(&:active_users_28d),
-        people_label: "active in last 28 days",
+        partial: rows.each_with_index.filter_map { |r, i| i unless r.is_complete },
         posted: rows.map(&:writers_count_28d),
-        posted_label: "posted in last 28 days",
+        posted_label: "posted",
+        silent: rows.map { |r| r.active_users_28d.to_i - r.writers_count_28d.to_i },
+        silent_label: "active, did not post",
         posted_share: rows.map { |r| share_pct(r.writers_count_28d, r.active_users_28d) },
-        messages: rows.map(&:channel_messages),
+        public: rows.map(&:public_channel_messages),
+        public_label: "public channels",
+        private: rows.map { |r| r.channel_messages.to_i - r.public_channel_messages.to_i },
+        private_label: "private channels",
         public_share: rows.map { |r| share_pct(r.public_channel_messages, r.channel_messages) }
       }
     else
       {
-        labels: rows.map { |r| r.ds.strftime("%b %d") },
-        tick_every: 15,
+        labels: rows.map { |r| r.ds.iso8601 },
+        days: true,
         span: "#{rows.size} days",
-        people: rows.map(&:active_users_1d),
-        people_label: "active",
+        partial: [],
         posted: rows.map(&:writers_count_1d),
         posted_label: "posted",
+        silent: rows.map { |r| r.active_users_1d.to_i - r.writers_count_1d.to_i },
+        silent_label: "active, did not post",
         posted_share: rows.map { |r| share_pct(r.writers_count_1d, r.active_users_1d) },
-        messages: rows.map(&:channel_messages_1d),
+        public: rows.map(&:chats_channels_count_1d),
+        public_label: "public channels",
+        private: rows.map { |r| r.channel_messages_1d.to_i - r.chats_channels_count_1d.to_i },
+        private_label: "private channels",
         public_share: rows.map { |r| share_pct(r.chats_channels_count_1d, r.channel_messages_1d) }
       }
     end
@@ -73,7 +81,7 @@ module HomeHelper
   REPLY_CLASS_LABEL = {
     "fast" => "under 1 h",
     "slow" => "over 1 h",
-    "none" => "none"
+    "none" => "no member reply"
   }.freeze
 
   def reply_class_label(reply_class)
@@ -81,12 +89,8 @@ module HomeHelper
   end
 
   def rate_chip(pct, label = nil)
-    style = if pct >= 60 then "chip chip-good"
-    elsif pct >= 30 then "chip chip-off"
-    else "chip chip-warn"
-    end
     text = number_to_percentage(pct, precision: 1)
-    tag.span(label ? "#{text} #{label}" : text, class: style)
+    tag.span(label ? "#{text} #{label}" : text, class: "tn")
   end
 
   def retention_cell(rate)
@@ -118,22 +122,41 @@ module HomeHelper
   end
 
   def share_pct(numerator, denominator)
-    return 0.0 if denominator.nil? || denominator.to_i.zero?
+    return nil if denominator.nil? || denominator.to_i.zero? || numerator.nil?
 
     ((numerator.to_f / denominator) * 100).round(1)
   end
 
-  def ratio_line_dataset(label, data)
-    {
-      label: label,
-      data: data,
-      type: "line",
-      yAxisID: "y1",
-      borderWidth: 2,
-      pointRadius: 0,
-      pointHitRadius: 8,
-      tension: 0,
-      order: 0
-    }
+  def rate_cell(numerator, denominator, precision: 1)
+    pct = share_pct(numerator, denominator)
+    return tag.span("n/a", class: "sub2") if pct.nil?
+
+    tag.span(class: "two-line", title: "#{number_with_delimiter(numerator)} of " \
+      "#{number_with_delimiter(denominator)}") do
+      concat tag.b(number_to_percentage(pct, precision: precision))
+      concat tag.span("#{number_with_delimiter(numerator)}/#{number_with_delimiter(denominator)}")
+    end
+  end
+
+  BAND_TOP = { 0 => 0, 1 => 1, 2 => 4, 3 => 16, 4 => 64, 5 => 256, 6 => 1024, 7 => 4096 }.freeze
+
+  def band_split(value, bands, label)
+    return nil if value.nil?
+
+    at = bands.index { |b| BAND_TOP.fetch(b.band_order, Float::INFINITY) >= value.to_i }
+    return nil if at.nil? || at >= bands.size - 1
+
+    { after: at, label: "#{label} #{number_with_delimiter(value)}" }
+  end
+
+  def wilson_bounds(hits, sample)
+    return nil if sample.nil? || sample.to_i.zero?
+
+    z = 1.96
+    p = hits.to_f / sample
+    d = 1 + (z**2 / sample)
+    centre = (p + (z**2 / (2.0 * sample))) / d
+    margin = z * Math.sqrt((p * (1 - p) / sample) + (z**2 / (4.0 * sample**2))) / d
+    [[centre - margin, 0].max * 100, [centre + margin, 1].min * 100]
   end
 end

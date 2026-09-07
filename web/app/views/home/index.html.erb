@@ -13,37 +13,94 @@
     </div>
   </div>
 <% else %>
+  <% spark_days = @spark.map { |r| r.ds.iso8601 } %>
   <div class="kpis">
-    <% [
-      ["Total members", nil, @team_stats.total_members_count,
-       delta_chip(@team_stats.total_members_count, @team_stats_prior&.total_members_count),
-       "vs 28 days earlier"],
-      ["Claimed accounts", nil, @team_stats.total_claimed_count,
-       share_chip(@team_stats.total_claimed_count, @team_stats.total_members_count),
-       nil],
-      ["Active, last 28 days", nil, @team_stats.active_users_28d,
-       delta_chip(@team_stats.active_users_28d, @team_stats_prior&.active_users_28d),
-       "vs 28 days earlier"],
-      ["Posted, last 28 days", nil, @team_stats.writers_count_28d,
-       share_chip(@team_stats.writers_count_28d, @team_stats.active_users_28d),
-       "of active members"]
-    ].each do |label, qualifier, value, chip, note| %>
-      <div class="card">
-        <p class="kpi-label">
-          <%= label %><% if qualifier %> <span class="delta-note"><%= qualifier %></span><% end %>
-        </p>
-        <p class="kpi-val"><%= number_with_delimiter(value) %></p>
-        <div class="delta">
-          <%= chip %>
-          <% if note %><span class="delta-note"><%= note %></span><% end %>
-        </div>
+    <div class="card">
+      <p class="kpi-label">Total members</p>
+      <p class="kpi-val"><%= number_with_delimiter(@team_stats.total_members_count) %></p>
+      <div class="kpi-micro"></div>
+      <div class="delta">
+        <%= delta_chip(@team_stats.total_members_count, @team_stats_prior&.total_members_count) %>
+        <span class="delta-note">vs 28 days earlier</span>
       </div>
-    <% end %>
+    </div>
+
+    <div class="card">
+      <p class="kpi-label">Claimed accounts</p>
+      <p class="kpi-val"><%= number_with_delimiter(@team_stats.total_claimed_count) %></p>
+      <% claimed = share_pct(@team_stats.total_claimed_count, @team_stats.total_members_count) %>
+      <div class="kpi-micro">
+        <% if claimed %>
+          <span class="ratiobar" role="img"
+                aria-label="<%= number_to_percentage(claimed, precision: 1) %> of members"
+                title="<%= number_with_delimiter(@team_stats.total_claimed_count) %> of <%= number_with_delimiter(@team_stats.total_members_count) %> members">
+            <i style="width: <%= claimed.round(1) %>%"></i>
+          </span>
+        <% end %>
+      </div>
+      <div class="delta">
+        <%= share_chip(@team_stats.total_claimed_count, @team_stats.total_members_count) %>
+        <span class="delta-note">of members</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="kpi-label">Active, last 28 days</p>
+      <p class="kpi-val"><%= number_with_delimiter(@team_stats.active_users_28d) %></p>
+      <div class="kpi-micro">
+        <% if @spark.many? %>
+          <div
+            data-controller="chart"
+            data-chart-kind-value="line"
+            data-chart-spark-value="true"
+            data-chart-days-value="true"
+            data-chart-height-value="30"
+            data-chart-data-value="<%= {
+              labels: spark_days,
+              datasets: [{ label: "active", data: @spark.map(&:active_users_28d) }]
+            }.to_json %>"
+          ></div>
+        <% end %>
+      </div>
+      <div class="delta">
+        <%= delta_chip(@team_stats.active_users_28d, @team_stats_prior&.active_users_28d) %>
+        <% if @spark.many? %>
+          <span class="delta-note"
+                title="lowest and highest value across the last <%= @spark.size %> days">
+            <%= number_with_delimiter(@spark.map(&:active_users_28d).min) %>
+            to <%= number_with_delimiter(@spark.map(&:active_users_28d).max) %>
+          </span>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="kpi-label">Posted, last 28 days</p>
+      <p class="kpi-val"><%= number_with_delimiter(@team_stats.writers_count_28d) %></p>
+      <div class="kpi-micro">
+        <% if @spark.many? %>
+          <div
+            data-controller="chart"
+            data-chart-kind-value="line"
+            data-chart-spark-value="true"
+            data-chart-days-value="true"
+            data-chart-height-value="30"
+            data-chart-data-value="<%= {
+              labels: spark_days,
+              datasets: [{ label: "posted", data: @spark.map(&:writers_count_28d) }]
+            }.to_json %>"
+          ></div>
+        <% end %>
+      </div>
+      <div class="delta">
+        <%= share_chip(@team_stats.writers_count_28d, @team_stats.active_users_28d) %>
+        <span class="delta-note">of active</span>
+      </div>
+    </div>
   </div>
 <% end %>
 
 <% content_for :page_controls do %>
-  <span class="qlab">Grain</span>
   <div class="segmented" role="group" aria-label="granularity">
     <% HomeHelper::ACTIVITY_GRANULARITIES.each_value.to_a.uniq.each do |g| %>
       <%= link_to g, root_path(people_granularity: g, messages_granularity: g),

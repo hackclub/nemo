@@ -79,7 +79,7 @@
           <div class="rhead">
             <div class="rtop">
               <div class="rhead-said">
-                <% if pane %>
+                <% if content_for?(:pane) %>
                   <button type="button" class="btn btn-ghost btn-only backbtn" aria-label="Back"
                           data-action="click->pane#show" hidden>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -91,14 +91,14 @@
                 <%= content_for(:head_context) if content_for?(:head_context) %>
               </div>
 
-              <div class="ractions">
-                <%= content_for(:head_actions) if content_for?(:head_actions) %>
-              </div>
-            </div>
+              <% if content_for?(:page_controls) %>
+                <div class="qbar"><%= content_for(:page_controls) %></div>
+              <% end %>
 
-            <% if content_for?(:page_controls) %>
-              <div class="qbar"><%= content_for(:page_controls) %></div>
-            <% end %>
+              <% if content_for?(:head_actions) %>
+                <div class="ractions"><%= content_for(:head_actions) %></div>
+              <% end %>
+            </div>
 
             <% if content_for?(:page_tabs) %>
               <nav class="views" aria-label="Sections"><%= content_for(:page_tabs) %></nav>

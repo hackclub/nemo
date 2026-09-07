@@ -1,0 +1,40 @@
+<% head = momentum.first %>
+<% tiles = momentum.map do |m|
+     { name: m.name, messages: m.messages, prior: m.prior_messages,
+       pct: m.pct_change&.to_f, thin: m.prior_below_floor }
+   end %>
+
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Channels treemap</h2>
+      <p class="card-sub"
+         title="area is member messages in the window, colour is the change against the <%= head.window_end - head.prior_start + 1 - (head.window_end - head.window_start + 1) %> days before it">
+        <%= window_note(head.window_start, head.window_end) %>
+      </p>
+    </div>
+  </div>
+
+  <div
+    data-controller="treemap"
+    data-treemap-height-value="380"
+    data-treemap-total-value="<%= head.total_messages %>"
+    data-treemap-floor-value="<%= head.prior_floor %>"
+    data-treemap-tiles-value="<%= tiles.to_json %>"
+  ></div>
+
+  <div class="tree-key">
+    <span>shrank</span>
+    <span class="ramp">
+      <% %w[dv-d3 dv-d2 dv-d1 dv-z dv-u1 dv-u2 dv-u3].each do |step| %>
+        <i style="background: var(--<%= step %>)"></i>
+      <% end %>
+    </span>
+    <span>grew</span>
+    <span class="sep"></span>
+    <i style="background: var(--dv-na); border-radius: 2px"></i>
+    <span title="a percentage on a small base is noise, so these carry no colour">
+      under <%= number_with_delimiter(head.prior_floor) %> before
+    </span>
+  </div>
+</div>

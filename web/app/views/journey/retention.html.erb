@@ -1,26 +1,8 @@
 <% content_for :page_title, "Coming back" %>
 
-<% if @cohort_months.present? %>
-  <% content_for :page_controls do %>
-    <span class="qlab">Cohort</span>
-    <details class="menu" data-controller="menu">
-      <summary class="btn">
-        <%= @onboarding_funnel&.cohort_month&.strftime("%b %Y") || "pick a month" %>
-        <span class="car" aria-hidden="true">▾</span>
-      </summary>
-      <div class="menu-pop menu-start">
-        <% @cohort_months.each do |m| %>
-          <%= link_to m.strftime("%b %Y"),
-                returning_journey_path(cohort_month: m.iso8601, recurrence_month: m.iso8601),
-                class: "btn", aria: { current: ("true" if m == @onboarding_funnel&.cohort_month) } %>
-        <% end %>
-      </div>
-    </details>
-  <% end %>
-<% end %>
-
 <div id="retention">
-  <%= render "onboarding_funnel", onboarding_funnel: @onboarding_funnel, cohort_months: @cohort_months %>
+  <%= render "cohort_retention", retention: @retention %>
 </div>
 
-<%= render "recurrence_funnel", recurrence_funnel: @recurrence_funnel, recurrence_cohort_months: @recurrence_cohort_months, recurrence_month: @recurrence_month %>
+<%= render "recurrence_funnel", recurrence_funnel: @recurrence_funnel,
+      recurrence_cohort_months: @recurrence_cohort_months, recurrence_month: @recurrence_month %>

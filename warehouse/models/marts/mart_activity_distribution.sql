@@ -15,15 +15,16 @@ walkable as (
 ),
 
 population as (
-    select k.total_messages, k.full_history
+    select k.total_messages
     from walkable w
     inner join known k on k.user_id = w.user_id
+    where k.full_history
 ),
 
 coverage as (
     select
         (select count(*) from walkable) as workspace_members,
-        (select count(*) from population where full_history) as full_history_members
+        (select count(*) from population) as full_history_members
 ),
 
 member_bands as (
@@ -61,7 +62,7 @@ select
     count(mb.band_order) as members,
     c.workspace_members,
     c.full_history_members,
-    'v14' as metric_version
+    'v15' as metric_version
 from bands b
 cross join coverage c
 left join member_bands mb on mb.band_order = b.band_order

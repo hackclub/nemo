@@ -1,0 +1,84 @@
+<% rows = classes.map do |c|
+     bounds = wilson_bounds(c.retained_day_30_count, c.measured_day_30)
+     {
+       label: reply_class_label(c.reply_class),
+       hits: c.retained_day_30_count.to_i,
+       sample: c.measured_day_30.to_i,
+       rate: share_pct(c.retained_day_30_count, c.measured_day_30),
+       low: bounds&.first,
+       high: bounds&.last,
+       thin: c.newcomers.to_i < HomeHelper::MIN_SAMPLE
+     }
+   end.select { |r| r[:rate] } %>
+
+<% if rows.any? %>
+  <% dom = [(rows.map { |r| r[:high] }.max.to_f * 1.06).ceil, 10].max %>
+  <div class="ivrows">
+    <div class="ivrow ivscale">
+      <span></span>
+      <span class="ivtrack ivticks">
+        <% [0, dom / 4, dom / 2, (dom * 3) / 4, dom].uniq.each_with_index do |t, i| %>
+          <i style="left: <%= (t.to_f / dom * 100).round(2) %>%"
+             data-edge="<%= i.zero? ? "start" : (t == dom ? "end" : "mid") %>"><%= t %>%</i>
+        <% end %>
+      </span>
+      <span></span>
+    </div>
+    <% rows.each do |r| %>
+      <div class="ivrow<%= " is-thin" if r[:thin] %>">
+        <span class="ivname"><%= r[:label] %></span>
+        <span class="ivtrack"
+              title="<%= number_to_percentage(r[:rate], precision: 1) %>, 95% interval <%= number_to_percentage(r[:low], precision: 1) %> to <%= number_to_percentage(r[:high], precision: 1) %>, from <%= number_with_delimiter(r[:hits]) %> of <%= number_with_delimiter(r[:sample]) %>">
+          <i class="ivband"
+             style="left: <%= (r[:low] / dom * 100).round(2) %>%; width: <%= ((r[:high] - r[:low]) / dom * 100).round(2) %>%"></i>
+          <i class="ivdot" style="left: <%= (r[:rate] / dom * 100).round(2) %>%"></i>
+        </span>
+        <span class="ivval">
+          <% if r[:thin] %>
+            n&nbsp;=&nbsp;<%= r[:sample] %>, below floor
+          <% else %>
+            <b><%= number_to_percentage(r[:rate], precision: 1) %></b>
+            <span><%= r[:hits] %>/<%= r[:sample] %></span>
+          <% end %>
+        </span>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="scroll" style="margin-top: var(--s-sm)">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>first member reply</th>
+          <th class="col-num">retained</th>
+          <th class="col-num">measured</th>
+          <th class="col-num">day 30</th>
+          <th class="col-num">95% interval</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.each do |r| %>
+          <tr>
+            <td><b><%= r[:label] %></b></td>
+            <td class="col-num"><%= number_with_delimiter(r[:hits]) %></td>
+            <td class="col-num">
+              <% if r[:thin] %>
+                <span class="short"
+                      title="a rate needs <%= HomeHelper::MIN_SAMPLE %> newcomers"><%= r[:sample] %></span>
+              <% else %>
+                <%= number_with_delimiter(r[:sample]) %>
+              <% end %>
+            </td>
+            <td class="col-num"><%= number_to_percentage(r[:rate], precision: 1) %></td>
+            <td class="col-num">
+              <%= number_to_percentage(r[:low], precision: 1) %> to
+              <%= number_to_percentage(r[:high], precision: 1) %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <p class="card-note">No reply class has a covered day-30 window yet.</p>
+<% end %>

@@ -35,6 +35,7 @@ class JourneyController < ApplicationController
 
   def replies
     @response_rate = Analytics::MartResponseRate.order(post_month: :desc).limit(13)
+    @response_rate_thin = @response_rate.count { |r| r.first_posts_checked < HomeHelper::MIN_SAMPLE }
     @response_rate_totals = Analytics::MartResponseRate.totals
     @fast_reply_classes = Analytics::MartFastReplyVsRetention
       .order(Arel.sql("case reply_class when 'fast' then 1 when 'slow' then 2 else 3 end"))
@@ -44,13 +45,14 @@ class JourneyController < ApplicationController
     end
   end
 
+  RETENTION_COHORTS = 12
+
   def retention
-    @cohort_months = Analytics::MartOnboardingFunnel.order(cohort_month: :desc).pluck(:cohort_month)
-    chosen = asked_month(:cohort_month) || @cohort_months.first
-    @onboarding_funnel = Analytics::MartOnboardingFunnel.find_by(cohort_month: chosen)
+    @retention = Analytics::MartCohortRetention.measured
+      .order(cohort_month: :desc).limit(RETENTION_COHORTS).to_a.reverse
 
     @recurrence_cohort_months = Analytics::MartOnboardingRecurrenceFunnel
-      .order(cohort_month: :desc).pluck(:cohort_month)
+      .where(searched: 1..).order(cohort_month: :desc).pluck(:cohort_month)
     @recurrence_month = asked_month(:recurrence_month) || @recurrence_cohort_months.first
     @recurrence_funnel = Analytics::MartOnboardingRecurrenceFunnel
       .find_by(cohort_month: @recurrence_month)
@@ -68,7 +70,10 @@ class JourneyController < ApplicationController
     end
 
     @days_measured = @top_posters.map(&:days_measured).max.to_i
-    @activity_bands = Analytics::MartActivityDistribution.order(:band_order)
+    @activity_bands = Analytics::MartActivityDistribution.order(:band_order).to_a
+    @poster_bands = @activity_bands.reject { |b| b.band_order.zero? }
+    @never_posted = @activity_bands.find { |b| b.band_order.zero? }
+    @concentration = Analytics::MartParticipationConcentration.curve.to_a
   end
 
   private

@@ -61,6 +61,18 @@ module ChannelsHelper
     ""
   end
 
+  def viewable_channel_ids
+    @viewable_channel_ids ||=
+      Channels::Audience.for(current_account).pluck(:channel_id).to_set
+  end
+
+  def channel_name_cell(channel_id, name)
+    label = tag.b("##{name}")
+    return label unless viewable_channel_ids.include?(channel_id)
+
+    link_to(label, channel_path(channel_id))
+  end
+
   def channel_spoke_share(posted, members)
     return "n/a" if posted.nil? || members.to_i.zero?
 

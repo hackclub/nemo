@@ -1,23 +1,31 @@
-<% peak = channels.map { |c| c.range_messages.to_i }.max.to_i %>
+<% given = defined?(peak_messages) ? peak_messages.to_i : 0 %>
+<% peak = given.positive? ? given : channels.map { |c| c.range_messages.to_i }.max.to_i %>
 <% channels.each do |channel| %>
-  <%= link_to channel_path(channel), class: "tile" do %>
+  <% messages = channel.range_messages %>
+  <% share = (peak.positive? && messages.to_i.positive?) ? [(messages.to_f / peak * 100), 2].max.round(1) : 0 %>
+  <%= link_to channel_path(channel), class: "tile #{channel_voice_tone(channel)}" do %>
     <span class="tile-t">#<%= channel.name %></span>
-    <span class="tile-s"><%= channel.channel_id %></span>
-    <span class="tile-v">
-      <%= channel.range_messages ? number_with_delimiter(channel.range_messages) : "n/a" %>
-    </span>
-    <span class="tile-s">
-      member messages
-      <% if channel.range_posters || channel.range_viewers %>
-        &middot; <%= number_with_delimiter(channel.range_posters.to_i) %> posted,
-        <%= number_with_delimiter(channel.range_viewers.to_i) %> read
-      <% end %>
-    </span>
-    <span class="tile-b">
-      <span class="inbar <%= "soft" if channel_voice_tone(channel) == "is-quiet" %>">
-        <span><i style="width: <%= peak.positive? ? [(channel.range_messages.to_f / peak * 100), 1.5].max.round(1) : 0 %>%"></i></span>
-        <span><%= channel_voice(channel) %></span>
+
+    <span class="tile-meter"
+          title="<%= messages ? "#{number_with_delimiter(messages)} member messages, against #{number_with_delimiter(peak)} in the busiest channel here" : "no ranged analytics for this channel" %>">
+      <span class="tile-track"><i style="width: <%= share %>%"></i></span>
+      <span class="tile-v">
+        <%= messages ? number_with_delimiter(messages) : "n/a" %>
       </span>
+    </span>
+
+    <span class="tile-pair">
+      <span><b><%= channel.range_posters ? number_with_delimiter(channel.range_posters) : "n/a" %></b> posted</span>
+      <span><b><%= channel.range_viewers ? number_with_delimiter(channel.range_viewers) : "n/a" %></b> read</span>
+    </span>
+
+    <span class="tile-s">
+      <% if channel.range_members %>
+        <%= number_with_delimiter(channel.range_members) %> members
+      <% end %>
+      <% if channel.range_last_post %>
+        &middot; <%= channel.range_last_post.strftime("%-d %b %Y") %>
+      <% end %>
     </span>
   <% end %>
 <% end %>

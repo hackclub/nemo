@@ -55,6 +55,7 @@ class ChannelsController < ApplicationController
     @filters.each { |key| scope = scope.where(Arel.sql(FILTERS.fetch(key).last)) }
 
     @total = scope.count
+    @peak_messages = scope.maximum(Arel.sql("r.messages_posted_by_members")).to_i
 
     @channels = scope
       .select(RANGE_COLUMNS)
@@ -66,6 +67,8 @@ class ChannelsController < ApplicationController
     @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
 
     @may_see_bands = Authz.holds?(current_account, "channel.all")
+    @momentum = @may_see_bands ? Analytics::MartChannelMomentum.top : []
+    @momentum_head = @momentum.first
     @cohorts = @may_see_bands ? Analytics::MartChannelBands.cohorts : []
     @default_cohort = @cohorts.first
     @cohort = asked_cohort || @default_cohort

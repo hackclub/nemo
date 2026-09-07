@@ -10,18 +10,22 @@
   <div
     data-controller="chart"
     data-chart-kind-value="bars"
+    data-chart-stacked-value="true"
+    <% if s[:partial].any? %>data-chart-partial-value="<%= s[:partial].to_json %>"<% end %>
+    data-chart-days-value="<%= s[:days] %>"
     data-chart-height-value="240"
     data-chart-data-value="<%= {
       labels: s[:labels],
       datasets: [
-        { label: s[:people_label], data: s[:people] },
-        { label: s[:posted_label], data: s[:posted] }
+        { label: s[:posted_label], data: s[:posted] },
+        { label: s[:silent_label], data: s[:silent] }
       ]
     }.to_json %>"
   ></div>
   <div
     data-controller="chart"
     data-chart-kind-value="line"
+    data-chart-days-value="<%= s[:days] %>"
     data-chart-height-value="120"
     data-chart-pct-value="true"
     data-chart-data-value="<%= {

@@ -1,49 +1,63 @@
 <% content_for :page_title, "Public channels" %>
 <div class="stack">
+  <% if @momentum.any? %>
+    <%= render "momentum", momentum: @momentum %>
+  <% end %>
+
   <% if @band_rows.any? %>
-    <details class="card reveal"
-             <%= "open" if params[:measure].present? || params[:cohort].present? %>>
-      <summary class="reveal-head">
-        <span class="card-title">Channels activity</span>
-        <span class="car" aria-hidden="true">▾</span>
-      </summary>
-      <div class="reveal-body">
-        <turbo-frame id="bands" data-turbo-action="advance">
-        <div class="band-bar">
-          <div class="segmented" role="group" aria-label="measure">
-            <% @band_measures.each do |key, rows| %>
-              <%= link_to rows.first.measure_label, channel_query(measure: key),
-                    aria: { current: ("true" if key == @measure) } %>
-            <% end %>
+    <turbo-frame id="bands" data-turbo-action="advance">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">Channels activity</h2>
+            <p class="card-sub"><%= window_note(@band_rows.first.window_start, @band_rows.first.window_end) %></p>
           </div>
-          <span class="grow"></span>
           <% if @cohorts.many? %>
-            <span class="qlab">Month</span>
-            <details class="menu" data-controller="menu">
-              <summary class="btn">
-                <%= @cohort.strftime("%b %Y") %><span class="car" aria-hidden="true">▾</span>
-              </summary>
-              <div class="menu-pop">
-                <% @cohorts.each do |month| %>
-                  <%= link_to month.strftime("%b %Y"), channel_query(cohort: month.iso8601),
-                        class: "btn", aria: { current: ("true" if month == @cohort) } %>
-                <% end %>
-              </div>
-            </details>
+            <div class="card-tools">
+              <details class="menu" data-controller="menu">
+                <summary class="btn" aria-label="activity month">
+                  <%= @cohort.strftime("%b %Y") %><span class="car" aria-hidden="true">&#9662;</span>
+                </summary>
+                <div class="menu-pop">
+                  <% @cohorts.each do |month| %>
+                    <%= link_to month.strftime("%b %Y"), channel_query(cohort: month.iso8601),
+                          class: "btn", aria: { current: ("true" if month == @cohort) } %>
+                  <% end %>
+                </div>
+              </details>
+            </div>
           <% end %>
         </div>
-        <div
-          data-controller="chart"
-          data-chart-kind-value="bars"
-          data-chart-height-value="220"
-          data-chart-data-value="<%= {
-            labels: @band_rows.map(&:activity_band),
-            datasets: [{ label: "channels", data: @band_rows.map(&:channels) }]
-          }.to_json %>"
-        ></div>
-        </turbo-frame>
+        <div class="facets">
+          <% @band_measures.each do |_key, rows| %>
+            <% silent = rows.find { |r| r.band_order.zero? } %>
+            <% busy = rows.reject { |r| r.band_order.zero? } %>
+            <% total = rows.sum(&:channels) %>
+            <div class="facet">
+              <p class="facet-name"><%= rows.first.measure_label %></p>
+              <% if silent && total.positive? %>
+                <% quiet = (silent.channels.to_f / total * 100).round(1) %>
+                <p class="facet-zero"
+                   title="<%= number_with_delimiter(silent.channels) %> of <%= number_with_delimiter(total) %> channels recorded zero in this month">
+                  <b><%= number_with_delimiter(silent.channels) %></b>
+                  <span>at zero</span>
+                  <span class="facet-share"><%= number_to_percentage(quiet, precision: 0) %></span>
+                </p>
+              <% end %>
+              <div
+                data-controller="chart"
+                data-chart-kind-value="bars"
+                data-chart-height-value="200"
+                data-chart-data-value="<%= {
+                  labels: busy.map(&:activity_band),
+                  datasets: [{ label: rows.first.measure_label, data: busy.map(&:channels) }]
+                }.to_json %>"
+              ></div>
+            </div>
+          <% end %>
+        </div>
       </div>
-    </details>
+    </turbo-frame>
   <% end %>
 
   <% content_for :page_controls do %>
@@ -81,13 +95,6 @@
       </span>
     <% end %>
 
-    <span class="qspacer"></span>
-    <div class="segmented" role="group" aria-label="channel view">
-      <% { "table" => "Table", "grid" => "Grid" }.each do |value, label| %>
-        <%= link_to label, channel_query(view: (value unless value == "table")),
-              aria: { current: ("true" if @view == value) } %>
-      <% end %>
-    </div>
   <% end %>
 
   <turbo-frame id="channels" target="_top" data-turbo-action="advance">
@@ -97,6 +104,15 @@
           <h2 class="card-title">Channels</h2>
           <p class="card-sub"><%= number_with_delimiter(@total) %> channels</p>
         </div>
+        <div class="card-tools">
+          <div class="segmented" role="group" aria-label="channel view">
+            <% { "table" => "Table", "grid" => "Grid" }.each do |value, label| %>
+              <%= link_to label, channel_query(view: (value unless value == "table")),
+                    data: { turbo_frame: "channels" },
+                    aria: { current: ("true" if @view == value) } %>
+            <% end %>
+          </div>
+        </div>
       </div>
 
       <% if @channels.empty? %>
@@ -105,7 +121,7 @@
         </div>
       <% elsif @view == "grid" %>
         <div class="tiles">
-          <%= render "tiles", channels: @channels %>
+          <%= render "tiles", channels: @channels, peak_messages: @peak_messages %>
         </div>
       <% else %>
         <div class="scroll">
@@ -122,7 +138,7 @@
               </tr>
             </thead>
             <tbody>
-              <%= render "rows", channels: @channels %>
+              <%= render "rows", channels: @channels, peak_messages: @peak_messages %>
             </tbody>
           </table>
         </div>

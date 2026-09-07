@@ -11,23 +11,20 @@
 
 <% stats = @range.stats %>
 <% posted = stats && stats["unique_posters"].to_i %>
-<% read = stats && stats["unique_viewers"].to_i %>
 <div class="kpis">
   <div class="card">
     <p class="kpi-label">Members</p>
     <p class="kpi-val"><%= @member_count ? number_with_delimiter(@member_count) : "n/a" %></p>
   </div>
   <div class="card">
-    <p class="kpi-label">Member messages</p>
-    <p class="kpi-val"><%= stats ? number_with_delimiter(stats["messages_count"].to_i) : "n/a" %></p>
-  </div>
-  <div class="card">
     <p class="kpi-label">Who spoke</p>
     <p class="kpi-val"><%= channel_spoke_share(posted, @member_count) %></p>
-  </div>
-  <div class="card">
-    <p class="kpi-label">Who read</p>
-    <p class="kpi-val"><%= read ? number_with_delimiter(read) : "n/a" %></p>
+    <% if posted && @member_count.to_i.positive? %>
+      <span class="ratiobar" role="img" aria-label="share of members who spoke"
+            title="<%= number_with_delimiter(posted) %> of <%= number_with_delimiter(@member_count) %> members">
+        <i style="width: <%= [(posted.to_f / @member_count * 100), 1.0].max.round(1) %>%"></i>
+      </span>
+    <% end %>
   </div>
 </div>
 
@@ -105,7 +102,7 @@
       <% span_days = (@activity_trend.last.window_start - @activity_trend.first.window_start).to_i + 1 %>
       <% if @activity_trend.size < span_days %>
         <div class="card-tools">
-          <span class="chip chip-warn"><%= pluralize(span_days - @activity_trend.size, "day") %> never fetched</span>
+          <span class="short"><%= pluralize(span_days - @activity_trend.size, "day") %> never fetched</span>
         </div>
       <% end %>
     <% end %>
@@ -116,10 +113,10 @@
       <div
         data-controller="chart"
         data-chart-kind-value="line"
-        data-chart-switchable-value="true"
+        data-chart-days-value="true"
         data-chart-height-value="240"
         data-chart-data-value="<%= {
-          labels: @activity_trend.map { |a| a.window_start.strftime("%b %d") },
+          labels: @activity_trend.map { |a| a.window_start.iso8601 },
           datasets: [{
             label: "messages posted",
             data: @activity_trend.map(&:messages_posted)
@@ -158,7 +155,7 @@
                 <% if row.fast_reply_share %>
                   <%= rate_chip((row.fast_reply_share.to_f * 100).round(1)) %>
                 <% else %>
-                  <span class="chip chip-off"><%= number_with_delimiter(row.newcomers_checked) %> of
+                  <span class="short"><%= number_with_delimiter(row.newcomers_checked) %> of
                     <%= number_with_delimiter(row.newcomer_volume) %> checked</span>
                 <% end %>
               </td>
@@ -166,7 +163,7 @@
                 <% if row.day_90_mature %>
                   <%= rate_chip((row.retained_90_share.to_f * 100).round(1)) %>
                 <% else %>
-                  <span class="chip chip-off">TBD</span>
+                  <span class="short">not yet</span>
                 <% end %>
               </td>
             </tr>

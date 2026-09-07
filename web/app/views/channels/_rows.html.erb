@@ -1,4 +1,5 @@
-<% peak = channels.map { |c| c.range_messages.to_i }.max.to_i %>
+<% given = defined?(peak_messages) ? peak_messages.to_i : 0 %>
+<% peak = given.positive? ? given : channels.map { |c| c.range_messages.to_i }.max.to_i %>
 <% channels.each do |channel| %>
   <tr>
     <td>
@@ -16,7 +17,7 @@
           <span><%= channel.range_messages >= 1000 ? "#{(channel.range_messages / 1000.0).round}k" : number_with_delimiter(channel.range_messages) %></span>
         </div>
       <% else %>
-        <span class="chip chip-off">no range</span>
+        <span class="short">no range</span>
       <% end %>
     </td>
     <td class="col-num"><%= channel.range_posters ? number_with_delimiter(channel.range_posters) : "n/a" %></td>
@@ -25,7 +26,7 @@
       <% if channel.range_members %>
         <%= number_with_delimiter(channel.range_members) %>
       <% else %>
-        <span class="chip chip-off">n/a</span>
+        <span class="sub2">n/a</span>
       <% end %>
     </td>
     <td class="col-date">

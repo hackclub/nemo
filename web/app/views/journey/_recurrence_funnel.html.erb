@@ -1,45 +1,75 @@
-<div class="card">
+<div class="card card-flush">
   <div class="card-head">
     <div>
-      <h2 class="card-title">Onboarding recurrence</h2>
+      <h2 class="card-title">Repeat posting</h2>
       <% if recurrence_funnel %>
-        <p class="card-sub">of <%= number_with_delimiter(recurrence_funnel.total_members) %> total known members</p>
+        <p class="card-sub"
+           title="<%= number_with_delimiter(recurrence_funnel.searched) %> of <%= number_with_delimiter(recurrence_funnel.signed_in) %> signed-in members have a searched message history">
+          lifetime messages
+          <% if recurrence_funnel.searched_share %>
+            &middot; <%= number_with_delimiter(recurrence_funnel.searched) %> of
+            <%= number_with_delimiter(recurrence_funnel.signed_in) %> searched
+          <% end %>
+        </p>
       <% end %>
     </div>
     <% if recurrence_cohort_months.present? %>
       <div class="card-tools">
-        <% if recurrence_funnel %>
-          <% coverage = recurrence_funnel.signed_in.to_i.positive? ? recurrence_funnel.knowable.to_f / recurrence_funnel.signed_in : nil %>
-          <%= incomplete_chip(
-                ("#{number_to_percentage(coverage * 100, precision: 0)} of this cohort known" if coverage && coverage < 1)
-              ) %>
-        <% end %>
+        <details class="menu" data-controller="menu">
+          <summary class="btn" aria-label="cohort month">
+            <%= recurrence_month&.strftime("%b %Y") || "pick a month" %>
+            <span class="car" aria-hidden="true">&#9662;</span>
+          </summary>
+          <div class="menu-pop">
+            <% recurrence_cohort_months.each do |m| %>
+              <%= link_to m.strftime("%b %Y"), returning_journey_path(recurrence_month: m.iso8601),
+                    class: "btn", aria: { current: ("true" if m == recurrence_month) } %>
+            <% end %>
+          </div>
+        </details>
       </div>
     <% end %>
   </div>
 
-  <% if recurrence_funnel %>
-    <div class="chart-short">
-      <div
-        data-controller="chart"
-        data-chart-kind-value="bars"
-        data-chart-height-value="240"
-        data-chart-data-value="<%= {
-          labels: ["Created", "Joined", "Posted", "2nd post", "3rd post"],
-          datasets: [{
-            label: "members",
-            data: [
-              recurrence_funnel.created_account,
-              recurrence_funnel.signed_in,
-              recurrence_funnel.posted_once,
-              recurrence_funnel.posted_twice,
-              recurrence_funnel.posted_three_times
-            ]
-          }]
-        }.to_json %>"
-      ></div>
+  <% if recurrence_funnel && recurrence_funnel.searched.to_i.positive? %>
+    <% f = recurrence_funnel %>
+    <% stages = [
+         ["Searched", f.searched, nil],
+         ["Posted", f.posted_once, f.searched],
+         ["2nd post", f.posted_twice, f.posted_once],
+         ["3rd post", f.posted_three_times, f.posted_twice]
+       ] %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>stage</th>
+            <th class="col-num">members</th>
+            <th class="col-num">from previous</th>
+            <th class="col-num">of searched</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% stages.each do |label, count, previous| %>
+            <tr>
+              <td><b><%= label %></b></td>
+              <td class="col-num"><%= number_with_delimiter(count) %></td>
+              <td class="col-num">
+                <%= previous ? rate_cell(count, previous) : tag.span("n/a", class: "sub2") %>
+              </td>
+              <td class="col-num"><%= rate_cell(count, f.searched) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
     </div>
   <% else %>
-    <p class="card-note">no data loaded yet</p>
+    <p class="card-note">
+      <% if recurrence_funnel %>
+        No member of this cohort has a searched message history yet.
+      <% else %>
+        No cohort searched yet.
+      <% end %>
+    </p>
   <% end %>
 </div>

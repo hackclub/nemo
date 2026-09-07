@@ -6,6 +6,8 @@ module Appearance
       swatch: ["oklch(96.6% 0.005 253)", "oklch(99.3% 0.003 253)", "oklch(22.5% 0.020 253)"]),
     Theme.new(key: "dark", label: "Dark", band: "dark",
       swatch: ["oklch(18.2% 0.006 75)", "oklch(22.2% 0.007 75)", "oklch(94.5% 0.008 82)"]),
+    Theme.new(key: "lightsout", label: "Lights out", band: "dark",
+      swatch: ["oklch(0% 0 0)", "oklch(17% 0.006 75)", "oklch(74% 0.148 48)"]),
     Theme.new(key: "contrast", label: "Contrast", band: "dark",
       swatch: ["oklch(0% 0 0)", "oklch(14% 0 0)", "oklch(100% 0 0)"])
   ].freeze

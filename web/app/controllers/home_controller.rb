@@ -20,6 +20,8 @@ class HomeController < ApplicationController
     render :front_door
   end
 
+  SPARK_DAYS = 90
+
   def workspace
     @team_stats = Analytics::MartTeamStatsDaily.order(ds: :desc).first
     @team_stats_prior =
@@ -31,15 +33,22 @@ class HomeController < ApplicationController
 
     @people_trend = activity_trend_for(@people_granularity)
     @messages_trend = activity_trend_for(@messages_granularity)
+    @spark = spark_series
+  end
+
+  def spark_series
+    return [] if @team_stats.nil?
+
+    Analytics::MartTeamStatsDaily
+      .where(ds: (@team_stats.ds - (SPARK_DAYS - 1))..@team_stats.ds)
+      .order(:ds).to_a
   end
 
   def activity_trend_for(granularity)
     @activity_trends ||= {}
     @activity_trends[granularity] ||=
       if granularity == "monthly"
-        Analytics::MartTeamStatsMonthly
-          .where("is_complete or month = ?", Date.current.beginning_of_month)
-          .order(month: :desc).limit(12).to_a.reverse
+        Analytics::MartTeamStatsMonthly.order(month: :desc).limit(12).to_a.reverse
       else
         Analytics::MartTeamStatsDaily.order(ds: :desc).limit(90).to_a.reverse
       end

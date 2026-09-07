@@ -1,7 +1,6 @@
 <% content_for :page_title, "Joining" %>
 
 <% content_for :page_controls do %>
-  <span class="qlab">Span</span>
   <div class="segmented" role="group" aria-label="months of growth">
     <% HomeHelper::GROWTH_SPANS.each do |span| %>
       <%= link_to "#{span}m", joining_journey_path(growth_months: span),
@@ -35,24 +34,17 @@
         <tbody>
           <% @monthly_cohorts.each do |c| %>
             <tr>
-              <td>
-                <span class="two-line">
-                  <b><%= c.cohort_month.strftime("%b %Y") %></b>
-                  <% unless c.fully_known? %>
-                    <span><%= number_with_delimiter(c.known) %> of <%= number_with_delimiter(c.members) %> known</span>
-                  <% end %>
-                </span>
-              </td>
+              <td><b><%= c.cohort_month.strftime("%b %Y") %></b></td>
               <td class="col-num"><%= number_with_delimiter(c.members) %></td>
-              <td class="col-num"><%= number_to_percentage(c.ever_posted.to_f / c.members * 100, precision: 1) %></td>
+              <td class="col-num"><%= rate_cell(c.ever_posted, c.searched) %></td>
               <td class="col-num">
                 <% if c.mature? %>
-                  <%= number_to_percentage(c.posted_within_30d.to_f / c.members * 100, precision: 1) %>
+                  <%= rate_cell(c.posted_within_30d, c.searched) %>
                 <% else %>
-                  <span class="sub2">matures <%= c.matures_on.strftime("%-d %b") %></span>
+                  <span class="sub2" title="settles on <%= c.matures_on.strftime("%-d %b %Y") %>, 30 days after the month closes">n/a</span>
                 <% end %>
               </td>
-              <td class="col-num"><%= c.complete? ? (c.median_days_to_first_post || "n/a") : "n/a" %></td>
+              <td class="col-num"><%= c.median_days_to_first_post || tag.span("n/a", class: "sub2") %></td>
             </tr>
           <% end %>
         </tbody>

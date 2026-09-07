@@ -51,8 +51,7 @@ module ApplicationHelper
 
   NAV_ICONS = {
     "overview" => ["M3 3h7v7H3z", "M14 3h7v7h-7z", "M14 14h7v7h-7z", "M3 14h7v7H3z"],
-    "joining" => ["M15 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M8.5 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8",
-                  "M19 8v6", "M22 11h-6"],
+    "joining" => ["M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4", "M10 17l5-5-5-5", "M15 12H3"],
     "newcomers" => ["M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M9.5 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8",
                     "M19 3v4", "M21 5h-4"],
     "replies" => ["M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"],

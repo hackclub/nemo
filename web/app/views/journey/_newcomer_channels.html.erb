@@ -6,8 +6,7 @@
         <p class="card-sub">
           <%= number_with_delimiter(newcomer_reach.cohort_size) %> members who first signed in
           in the 30 days to <%= newcomer_reach.cohort_end.strftime("%-d %b %Y") %> &middot;
-          <%= number_with_delimiter(newcomer_reach.searched_of_cohort) %> searched,
-          <%= number_with_delimiter(newcomer_reach.read_of_cohort) %> read
+          <%= number_with_delimiter(newcomer_reach.searched_of_cohort) %> searched
         </p>
       <% end %>
     </div>
@@ -19,31 +18,30 @@
         <thead>
           <tr>
             <th>channel</th>
-            <th class="col-num">posted</th>
+            <th class="col-num" title="first-ever public message landed here">posted here first</th>
+            <th class="col-num" title="from the member channel walk, a narrower search">posted</th>
             <th class="col-num">came back</th>
-            <th class="col-num">posted here first</th>
             <th class="col-num">messages</th>
           </tr>
         </thead>
         <tbody>
+          <% peak = newcomer_channels.map { |c| c.newcomer_first_posts.to_i }.max.to_i %>
           <% newcomer_channels.each do |c| %>
             <tr>
               <td>
                 <span class="two-line">
-                  <%= link_to channel_path(c.channel_id) do %>
-                    <b>#<%= c.name %></b>
-                  <% end %>
+                  <%= channel_name_cell(c.channel_id, c.name) %>
                   <span><%= c.channel_id %></span>
                 </span>
               </td>
-              <td class="col-num"><%= number_with_delimiter(c.newcomers_posting) %></td>
               <td class="col-num">
-                <span class="two-line">
-                  <b><%= number_with_delimiter(c.newcomers_returning) %></b>
-                  <span><%= c.returning_share ? number_to_percentage(c.returning_share * 100, precision: 0) : "n/a" %></span>
-                </span>
+                <div class="inbar" title="<%= number_with_delimiter(c.newcomer_first_posts) %> first posts">
+                  <span><i style="width: <%= peak.positive? ? [(c.newcomer_first_posts.to_f / peak * 100), 1.5].max.round(1) : 0 %>%"></i></span>
+                  <span><%= number_with_delimiter(c.newcomer_first_posts) %></span>
+                </div>
               </td>
-              <td class="col-num"><%= number_with_delimiter(c.newcomer_first_posts) %></td>
+              <td class="col-num"><%= number_with_delimiter(c.newcomers_posting) %></td>
+              <td class="col-num"><%= rate_cell(c.newcomers_returning, c.newcomers_posting, precision: 0) %></td>
               <td class="col-num"><%= number_with_delimiter(c.newcomer_messages) %></td>
             </tr>
           <% end %>
@@ -53,7 +51,7 @@
   <% else %>
     <p class="card-note">
       <% if newcomer_reach %>
-        No channel has reached <%= HomeHelper::MIN_SAMPLE %> newcomers &middot;
+        No channel has reached <%= HomeHelper::MIN_SAMPLE %> newcomer first posts &middot;
         <%= number_with_delimiter(newcomer_reach.searched_of_cohort) %> of
         <%= number_with_delimiter(newcomer_reach.cohort_size) %> searched
       <% else %>
