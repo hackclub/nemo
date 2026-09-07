@@ -11,6 +11,7 @@ from ingest import (
     top_posters_pull,
     users_list_pull,
 )
+from lib import message as shaping
 
 PULL_DATE = date(2026, 7, 20)
 WINDOW_START = date(2026, 6, 30)
@@ -552,7 +553,7 @@ def test_channel_range_row_still_defaults_to_the_range_source():
 
 
 def test_history_derived_flags_never_keep_the_text():
-    flags = channel_history_pull.derived("does anyone know how <@U123> fixed https://x.com ?")
+    flags = shaping.derived("does anyone know how <@U123> fixed https://x.com ?")
 
     assert flags["is_question"] is True
     assert flags["has_link"] is True
@@ -563,14 +564,14 @@ def test_history_derived_flags_never_keep_the_text():
 
 
 def test_history_derived_marks_emoji_only():
-    assert channel_history_pull.derived(":tada: :rocket:")["emoji_only"] is True
-    assert channel_history_pull.derived("nice :tada:")["emoji_only"] is False
-    assert channel_history_pull.derived("")["emoji_only"] is False
+    assert shaping.derived(":tada: :rocket:")["emoji_only"] is True
+    assert shaping.derived("nice :tada:")["emoji_only"] is False
+    assert shaping.derived("")["emoji_only"] is False
 
 
 def test_history_derived_substantive_threshold():
-    assert channel_history_pull.derived("x" * 79)["is_substantive"] is False
-    assert channel_history_pull.derived("x" * 80)["is_substantive"] is True
+    assert shaping.derived("x" * 79)["is_substantive"] is False
+    assert shaping.derived("x" * 80)["is_substantive"] is True
 
 
 def test_history_message_row_stores_no_text():
@@ -607,3 +608,69 @@ def test_history_thread_row_is_none_without_replies():
     assert channel_history_pull.thread_row("C1", {"ts": "1.0"}) is None
     assert channel_history_pull.thread_row("C1", {"ts": "1.0", "reply_count": 0}) is None
     assert channel_history_pull.thread_row("C1", {"ts": "1.0", "reply_count": 2})[2] == 2
+
+
+def test_shape_counts_the_content_it_then_drops():
+    counted = shaping.shape({
+        "ts": "1.0", "user": "U1", "text": "look <@U9> https://x.com ?",
+        "blocks": [{"type": "rich_text"}, {"type": "divider"}],
+        "attachments": [{"id": 1}],
+        "files": [{"id": "F1"}, {"id": "F2"}],
+        "reactions": [{"name": "tada", "count": 2, "users": ["U1", "U2"]},
+                      {"name": "eyes", "count": 1, "users": ["U2"]}],
+    })
+
+    assert counted["text_length"] == len("look <@U9> https://x.com ?")
+    assert counted["has_text"] is True
+    assert counted["block_count"] == 2
+    assert counted["attachment_count"] == 1
+    assert counted["file_count"] == 2
+    assert counted["reaction_count"] == 3
+    assert counted["reactor_count"] == 2
+    assert counted["mentioned_ids"] == ["U9"]
+    assert all(k not in counted for k in shaping.REDACT)
+
+
+def test_shape_holds_up_with_nothing_in_the_message():
+    counted = shaping.shape({"ts": "1.0"})
+
+    assert counted["text_length"] == 0
+    assert counted["has_text"] is False
+    assert counted["block_count"] == 0
+    assert counted["file_count"] == 0
+    assert counted["reaction_count"] == 0
+    assert counted["mentioned_ids"] == []
+
+
+def test_scrub_drops_every_redacted_key_at_any_depth():
+    scrubbed = shaping.scrub({
+        "type": "message", "ts": "1.0", "text": "secret",
+        "blocks": [{"text": {"text": "secret"}}],
+        "files": [{"url_private": "https://files/x"}],
+        "attachments": [{"fallback": "secret"}],
+        "message": {"text": "secret", "ts": "1.0"},
+        "previous_message": {"text": "older secret"},
+        "edited": {"user": "U1", "ts": "2.0"},
+        "reactions": [{"name": "tada", "count": 1, "users": ["U1"]}],
+    })
+
+    assert set(scrubbed) == {"type", "ts", "edited", "reactions"}
+    assert "secret" not in repr(scrubbed)
+    assert scrubbed["edited"] == {"user": "U1", "ts": "2.0"}
+
+
+def test_scrub_thins_the_user_object_but_keeps_the_id():
+    scrubbed = shaping.scrub({
+        "type": "team_join",
+        "user": {"id": "U1", "team_id": "T1", "is_bot": False,
+                 "real_name": "a person", "profile": {"email": "a@b.c"}},
+    })
+
+    assert scrubbed["user"] == {"id": "U1", "team_id": "T1", "is_bot": False}
+
+
+def test_author_kind_reads_bots_by_either_marker():
+    assert shaping.author_kind({"user": "U1"}) == "member"
+    assert shaping.author_kind({"bot_id": "B1"}) == "bot"
+    assert shaping.author_kind({"user": "U1", "subtype": "bot_message"}) == "bot"
+    assert shaping.author_kind({}) == "unknown"

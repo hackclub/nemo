@@ -1,11 +1,11 @@
 import argparse
-import re
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
 from lib import work
 from lib.db import connect, dead_letter, ingest_run
+from lib.message import author_kind, shape
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
 from lib.task import per_entity
@@ -15,10 +15,6 @@ METHOD = "conversations.history"
 PAGE_SIZE = 999
 LOOKBACK_SECONDS = 7 * 86400
 TRANSPORT = "history"
-SUBSTANTIVE_CHARS = 80
-
-MENTION = re.compile(r"<@([UW][A-Z0-9]+)")
-EMOJI_ONLY = re.compile(r"(:[a-z0-9_+'-]+:\s*)+\Z")
 
 MESSAGE_SQL = """
 INSERT INTO raw.message
@@ -114,27 +110,6 @@ LIMIT %s
 """
 
 
-def author_kind(message):
-    if message.get("bot_id") or message.get("subtype") == "bot_message":
-        return "bot"
-    if message.get("user"):
-        return "member"
-    return "unknown"
-
-
-def derived(text):
-    stripped = (text or "").strip()
-    return {
-        "text_length": len(text or ""),
-        "mentioned_ids": MENTION.findall(text or ""),
-        "mention_count": len(MENTION.findall(text or "")),
-        "is_question": "?" in (text or ""),
-        "is_substantive": len(text or "") >= SUBSTANTIVE_CHARS,
-        "has_link": "http" in (text or ""),
-        "emoji_only": bool(stripped) and bool(EMOJI_ONLY.fullmatch(stripped)),
-    }
-
-
 def stamp(ts):
     return datetime.fromtimestamp(float(ts), tz=timezone.utc)
 
@@ -142,8 +117,7 @@ def stamp(ts):
 def message_row(channel_id, message):
     thread_root = message.get("thread_ts")
     edited = message.get("edited") or {}
-    reactions = message.get("reactions") or []
-    flags = derived(message.get("text"))
+    flags = shape(message)
     return (
         channel_id,
         message["ts"],
@@ -159,9 +133,9 @@ def message_row(channel_id, message):
         message.get("reply_count"),
         message.get("reply_users_count"),
         message.get("latest_reply"),
-        sum(r.get("count") or 0 for r in reactions),
-        len({u for r in reactions for u in (r.get("users") or [])}),
-        len(message.get("files") or []),
+        flags["reaction_count"],
+        flags["reactor_count"],
+        flags["file_count"],
         flags["text_length"],
         flags["mention_count"],
         flags["is_question"],
