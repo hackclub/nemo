@@ -3547,10 +3547,9 @@
   .lifegrid {
     display: grid;
     grid-template-columns:
-      minmax(118px, 0.85fr)
-      minmax(180px, 1.25fr)
-      repeat(var(--stages), minmax(102px, 1fr))
-      minmax(100px, 0.8fr);
+      minmax(126px, 0.9fr)
+      repeat(var(--stages), minmax(120px, 1fr))
+      minmax(104px, 0.8fr);
     gap: 8px 10px;
     padding: var(--s-sm) var(--s-sm) var(--s-sm);
   }
@@ -3580,21 +3579,6 @@
   .lg-row { display: flex; flex-direction: column; justify-content: center; }
   .lg-row b { font-weight: 600; }
   .lg-row > span { font-family: var(--font-code); font-size: 10.5px; color: var(--ink-4); }
-  .lg-size { display: flex; align-items: center; gap: 9px; height: 44px; padding-right: 4px; }
-  .lg-size > span {
-    flex: 1 1 auto;
-    height: 7px;
-    border-radius: 999px;
-    background: var(--mute-soft);
-    overflow: hidden;
-  }
-  .lg-size > span > i { display: block; height: 100%; background: var(--series-0); }
-  .lg-size b {
-    font-family: var(--font-code);
-    font-weight: 400;
-    font-variant-numeric: tabular-nums;
-    color: var(--ink-2);
-  }
   .lg-cell {
     height: 44px;
     border-radius: var(--r-tight);

@@ -172,7 +172,7 @@ module HomeHelper
 
     if lifecycle_open?(row, stage)
       tag.span("pending", class: "lg-cell lg-open",
-        title: "#{lifecycle_reason(row, stage)}, closes " \
+        title: "this window closes " \
                "#{lifecycle_closes(row, stage).strftime('%-d %b %Y')}")
     else
       tag.span("n/a", class: "lg-cell lg-none", title: lifecycle_reason(row, stage))
@@ -186,9 +186,10 @@ module HomeHelper
 
   def lifecycle_open?(row, stage)
     case stage[:key]
-    when :claim_rate_30d then false
-    when :posted_rate_30d then row.searched.to_i.positive?
-    when :rate_30, :rate_90 then row.searched.to_i.positive?
+    when :signed_rate then false
+    when :posted_rate_30d then Date.current < row.closes_on(:posted_rate_30d)
+    when :funnel_30 then Date.current < row.closes_on(:funnel_30)
+    when :funnel_90 then Date.current < row.closes_on(:funnel_90)
     end
   end
 
@@ -198,36 +199,41 @@ module HomeHelper
 
   def lifecycle_reason(row, stage)
     case stage[:key]
-    when :claim_rate_30d
-      if row.claim_rate_30d
-        "#{number_with_delimiter(row.claimed_within_30d)} of " \
-          "#{number_with_delimiter(row.invited)} created accounts signed in within 30 days"
-      else
-        "#{number_with_delimiter(row.invited.to_i - row.claimed.to_i)} accounts carry no claim " \
-          "date, so a 30-day rate cannot be published"
+    when :signed_rate
+      claimed = if row.claim_rate_30d
+        ", #{number_to_percentage(row.claim_rate_30d.to_f * 100, precision: 1)} of them " \
+          "within 30 days"
       end
+      "#{number_with_delimiter(row.claimed)} of #{number_with_delimiter(row.invited)} " \
+        "created accounts signed in#{claimed}"
     when :posted_rate_30d
       if row.searched.to_i.positive?
-        "#{number_with_delimiter(row.posted_30d)} of #{number_with_delimiter(row.searched)} " \
-          "searched members posted inside their first 30 days"
+        "#{number_with_delimiter(row.posted_30d)} of #{number_with_delimiter(row.invited)} " \
+          "created accounts posted inside their first 30 days. A floor: only " \
+          "#{number_with_delimiter(row.searched)} of the cohort has searched history, and a " \
+          "first post needs a searched timestamp to count"
       else
         "no searched message history for this cohort, so posting is unobservable"
       end
-    when :rate_30
-      lifecycle_window_reason(row.retained_30, row.measured_30, row.searched, 30)
-    when :rate_90
-      lifecycle_window_reason(row.retained_90, row.measured_90, row.searched, 90)
+    when :funnel_30 then lifecycle_window_reason(row, 30, row.retained_30, row.cover_30)
+    when :funnel_90 then lifecycle_window_reason(row, 90, row.retained_90, row.cover_90)
     end
   end
 
-  def lifecycle_window_reason(hits, measured, searched, day)
-    return "no searched message history for this cohort" if searched.to_i.zero?
-    if measured.to_i.zero?
-      return "the day-#{day} window has not closed for enough of this cohort"
+  def lifecycle_window_reason(row, day, retained, cover)
+    return "no first poster in this cohort is measurable at day #{day} yet" if cover.nil?
+
+    held = "#{number_to_percentage(cover * 100, precision: 0)} of the cohort's " \
+           "#{number_with_delimiter(row.first_posters)} first posters have a held day in the " \
+           "day-#{day} window"
+    if cover < Journey::Lifecycle::COVER_FLOOR
+      return "#{held}, under the " \
+             "#{number_to_percentage(Journey::Lifecycle::COVER_FLOOR * 100, precision: 0)} " \
+             "needed before a cohort share can be published"
     end
 
-    "#{number_with_delimiter(hits)} of #{number_with_delimiter(measured)} first posters were " \
-      "active in the 7 days ending on day #{day}"
+    "#{number_with_delimiter(retained)} of #{number_with_delimiter(row.invited)} created " \
+      "accounts were active in the 7 days ending on day #{day} &middot; #{held}"
   end
 
   BAND_TOP = { 0 => 0, 1 => 1, 2 => 4, 3 => 16, 4 => 64, 5 => 256, 6 => 1024, 7 => 4096 }.freeze
