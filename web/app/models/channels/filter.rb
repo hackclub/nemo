@@ -75,8 +75,8 @@ module Channels
     attr_reader :conditions, :match
 
     # c can arrive keyed by index, c[3][f]=..., or as a plain list, so unwrap both
-    def self.from(params)
-      new(rows: rows_in(params[:c]), match: params[:match])
+    def self.from(params, measures: {})
+      new(rows: rows_in(params[:c]), match: params[:match], measures: measures)
     end
 
     def self.rows_in(raw)
@@ -85,8 +85,9 @@ module Channels
       list.map { |row| row.respond_to?(:to_unsafe_h) ? row.to_unsafe_h : row }
     end
 
-    def initialize(rows:, match: nil)
+    def initialize(rows:, match: nil, measures: {})
       @match = MATCHES.include?(match.to_s) ? match.to_s : "all"
+      @fields = rebound(measures)
       @conditions = Array(rows).first(MAX_CONDITIONS).filter_map { |row| build(row) }
     end
 
@@ -115,10 +116,20 @@ module Channels
 
     private
 
+    # only a known key can be repointed, so the whitelist still decides what is queryable
+    def rebound(measures)
+      return BY_KEY if measures.blank?
+
+      BY_KEY.transform_values do |field|
+        sql = measures[field.key]
+        sql ? Field.new(**field.to_h.merge(sql: sql)) : field
+      end
+    end
+
     def build(row)
       return nil unless row.is_a?(Hash)
 
-      field = BY_KEY[row["f"].to_s]
+      field = @fields[row["f"].to_s]
       return nil if field.nil?
 
       ops = field.ops

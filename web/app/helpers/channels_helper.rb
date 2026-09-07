@@ -2,11 +2,24 @@ module ChannelsHelper
   def channel_query(**overrides)
     base = { q: @q.presence, sort: @sort, direction: @direction,
              view: (@view unless @view == "table"),
+             days: @window&.asked,
              match: (@filter.match if @filter&.any?),
              c: (@filter.to_params.values if @filter&.any?),
              measure: (@measure unless @measure == @default_measure),
              cohort: (@cohort&.iso8601 unless @cohort == @default_cohort) }
     channels_path(**base.merge(overrides).compact)
+  end
+
+  def channels_window_note(total, window)
+    said = "#{number_with_delimiter(total)} channels"
+    return said if window.nil?
+
+    messages = window_note(window.start_date, window.end_date)
+    return said if messages.nil?
+    return "#{said} · #{messages}" if window.pulled?
+
+    people = window_note(window.pulled_start, window.pulled_end)
+    "#{said} · messages #{messages}#{" · people #{people}" if people}"
   end
 
   def channels_empty_title

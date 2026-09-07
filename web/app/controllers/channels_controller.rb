@@ -9,7 +9,7 @@ class ChannelsController < ApplicationController
     "name" => "dim_channel.name",
     "members" => "r.total_members",
     "created" => "dim_channel.date_created",
-    "messages" => "r.messages_posted_by_members",
+    "messages" => nil,
     "posters" => "r.members_who_posted",
     "viewers" => "r.members_who_viewed",
     "quiet" => "r.last_message_at",
@@ -19,7 +19,7 @@ class ChannelsController < ApplicationController
   RANGE_JOIN = "LEFT JOIN analytics.mart_channel_range r ON r.channel_id = dim_channel.channel_id".freeze
   MOMENTUM_JOIN = "LEFT JOIN analytics.mart_channel_momentum m " \
                   "ON m.channel_id = dim_channel.channel_id".freeze
-  RANGE_COLUMNS = "dim_channel.*, r.messages_posted_by_members AS range_messages, " \
+  RANGE_COLUMNS = "dim_channel.*, " \
                   "r.members_who_posted AS range_posters, r.total_members AS range_members, " \
                   "r.members_who_viewed AS range_viewers, " \
                   "r.last_message_at AS range_last_post, " \
@@ -32,22 +32,24 @@ class ChannelsController < ApplicationController
     @sort = SORT_SQL.key?(params[:sort]) ? params[:sort] : "members"
     @direction = params[:direction] == "asc" ? "asc" : "desc"
     @view = params[:view] == "grid" ? "grid" : "table"
-    @filter = Channels::Filter.from(params)
+    @window = Channels::Window.from(params)
+    @filter = Channels::Filter.from(params, measures: @window.measures)
 
     mine = Channels::Audience.for(current_account)
     @mine_total = mine.count
 
     scope = mine.joins(RANGE_JOIN).joins(MOMENTUM_JOIN)
+    scope = scope.joins(@window.join) if @window.join
     scope = scope.where("dim_channel.name ILIKE ?", "%#{like_q}%") if @q.present?
     if (clause = @filter.clause)
       scope = scope.where(clause.first, *clause.drop(1))
     end
 
     @total = scope.count
-    @peak_messages = scope.maximum(Arel.sql("r.messages_posted_by_members")).to_i
+    @peak_messages = scope.maximum(Arel.sql(@window.measure_sql)).to_i
 
     @channels = scope
-      .select(RANGE_COLUMNS)
+      .select("#{RANGE_COLUMNS}, #{@window.column}")
       .order(Arel.sql(order_clause))
       .limit(PER_PAGE)
       .offset(@page * PER_PAGE)
@@ -199,8 +201,12 @@ class ChannelsController < ApplicationController
     redirect_to channels_path(q: params[:id]), alert: said
   end
 
+  def sort_sql
+    SORT_SQL[@sort] || @window.measure_sql
+  end
+
   def order_clause
-    metric = "#{SORT_SQL[@sort]} #{@direction} NULLS LAST"
+    metric = "#{sort_sql} #{@direction} NULLS LAST"
     return metric if @q.blank?
 
     ql = like_q.downcase

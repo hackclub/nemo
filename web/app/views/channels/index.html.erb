@@ -75,13 +75,24 @@
       <div class="card-head">
         <div>
           <h2 class="card-title">Channels</h2>
-          <p class="card-sub"><%= number_with_delimiter(@total) %> channels</p>
+          <p class="card-sub"><%= channels_window_note(@total, @window) %></p>
         </div>
         <div class="card-tools">
+          <% if @window.adjustable? %>
+            <div class="segmented" role="group" aria-label="message range">
+              <% @window.choices.each do |days| %>
+                <%= link_to "#{days}d",
+                      channel_query(days: (days unless days == @window.pulled_days)),
+                      data: { turbo_frame: "channels" },
+                      aria: { current: ("true" if days == @window.days) } %>
+              <% end %>
+            </div>
+          <% end %>
           <%= form_with url: channels_path, method: :get, class: "qsearch",
                 data: { controller: "live-search", action: "input->live-search#go",
                         turbo_frame: "channels", turbo_action: "advance" } do %>
-            <% { sort: @sort, direction: @direction, view: @view }.each do |key, value| %>
+            <% { sort: @sort, direction: @direction, view: @view,
+                 days: @window.asked }.compact.each do |key, value| %>
               <%= hidden_field_tag key, value, id: nil %>
             <% end %>
             <% @filter.to_params.each do |i, row| %>
@@ -101,8 +112,8 @@
               Filter<% if @filter.any? %><span class="menu-val"><%= @filter.size %></span><% end %>
             </button>
             <% if @filter.any? %>
-              <%= link_to "\u2715", channels_path(q: @q.presence, sort: @sort,
-                    direction: @direction, view: @view),
+              <%= link_to "\u2715", channels_path({ q: @q.presence, sort: @sort,
+                    direction: @direction, view: @view, days: @window.asked }.compact),
                     class: "btn splitbtn-off", data: { turbo_frame: "channels" },
                     aria: { label: "Clear every condition" } %>
             <% end %>
@@ -122,9 +133,10 @@
         <% @filter.conditions.each_with_index do |condition, i| %>
           <span class="pill">
             <%= condition.label %>
-            <%= link_to "\u2715", channels_path(
+            <%= link_to "\u2715", channels_path({
                   q: @q.presence, sort: @sort, direction: @direction, view: @view,
-                  match: @filter.match, c: @filter.to_params.except(i.to_s).values),
+                  days: @window.asked, match: @filter.match,
+                  c: @filter.to_params.except(i.to_s).values }.compact),
                   data: { turbo_frame: "channels" },
                   aria: { label: "Remove #{condition.label}" } %>
           </span>

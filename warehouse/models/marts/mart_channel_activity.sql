@@ -1,4 +1,7 @@
-{{ config(indexes=[{'columns': ['channel_id', 'window_start']}]) }}
+{{ config(indexes=[
+    {'columns': ['channel_id', 'window_start']},
+    {'columns': ['window_start', 'channel_id']}
+]) }}
 
 select
     channel_id,

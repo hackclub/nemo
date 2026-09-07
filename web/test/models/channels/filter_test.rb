@@ -119,6 +119,33 @@ class Channels::FilterTest < ActiveSupport::TestCase
     assert_empty Channels::Filter.from(ActionController::Parameters.new).conditions
   end
 
+  test "a measure override repoints one field and leaves the rest alone" do
+    params = ActionController::Parameters.new(
+      "c" => { "0" => { "f" => "messages", "op" => "gt", "v" => ["100"] },
+               "1" => { "f" => "members", "op" => "gt", "v" => ["10"] } }
+    )
+    f = Channels::Filter.from(params, measures: { "messages" => "a.range_messages" })
+
+    assert_equal ["a.range_messages > ? AND r.total_members > ?", 100, 10], f.clause
+  end
+
+  test "a measure override cannot introduce a field the whitelist does not hold" do
+    params = ActionController::Parameters.new(
+      "c" => [{ "f" => "spend", "op" => "gt", "v" => ["1"] }]
+    )
+
+    assert_empty Channels::Filter.from(params, measures: { "spend" => "1=1" }).conditions
+  end
+
+  test "an overridden field still reports itself unset against its own alias" do
+    f = Channels::Filter.from(
+      ActionController::Parameters.new("c" => [{ "f" => "messages", "op" => "unset", "v" => [] }]),
+      measures: { "messages" => "a.range_messages" }
+    )
+
+    assert_equal ["a.range_messages IS NULL"], f.clause
+  end
+
   test "every field offers only its own kind of operator" do
     Channels::Filter::FIELDS.each do |field|
       assert Channels::Filter::OPS.key?(field.kind), "#{field.key} has no operator set"

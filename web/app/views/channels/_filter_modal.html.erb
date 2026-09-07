@@ -2,7 +2,8 @@
       sub: "#{Channels::Filter::FIELDS.size} fields" do %>
   <%= form_with url: channels_path, method: :get, class: "filter-form",
         data: { controller: "conditions", turbo_frame: "channels", turbo_action: "advance" } do %>
-    <% { q: @q.presence, sort: @sort, direction: @direction, view: @view }.compact
+    <% { q: @q.presence, sort: @sort, direction: @direction, view: @view,
+         days: @window.asked }.compact
          .each { |key, value| concat hidden_field_tag(key, value, id: nil) } %>
 
     <div class="filter-match">
@@ -26,7 +27,8 @@
 
     <div class="filter-foot">
       <button type="button" class="btn" data-action="conditions#add">Add a condition</button>
-      <%= link_to "Clear all", channels_path(q: @q.presence, sort: @sort, direction: @direction),
+      <%= link_to "Clear all", channels_path({ q: @q.presence, sort: @sort,
+            direction: @direction, days: @window.asked }.compact),
             class: "btn", data: { turbo_frame: "channels" } %>
       <%= submit_tag "Apply", class: "btn btn-primary" %>
     </div>
