@@ -14,13 +14,13 @@
       <p class="kpi-val"><%= number_to_percentage(posters.to_f / searched * 100, precision: 1) %></p>
       <div class="kpi-micro">
         <span class="ratiobar" role="img" aria-label="share who ever posted"
-              title="<%= number_with_delimiter(posters) %> of <%= number_with_delimiter(searched) %> searched members">
+              title="<%= number_with_delimiter(posters) %> of <%= number_with_delimiter(searched) %> members with a known lifetime total">
           <i style="width: <%= (posters.to_f / searched * 100).round(1) %>%"></i>
         </span>
       </div>
       <div class="delta">
         <span class="delta-note">
-          <%= number_with_delimiter(posters) %> of <%= number_with_delimiter(searched) %> searched
+          <%= number_with_delimiter(posters) %> of <%= number_with_delimiter(searched) %> counted
         </span>
       </div>
     </div>
@@ -31,7 +31,7 @@
       </p>
       <div class="kpi-micro"></div>
       <div class="delta">
-        <span class="delta-note"><%= number_with_delimiter(@never_posted.members) %> of <%= number_with_delimiter(searched) %> searched</span>
+        <span class="delta-note"><%= number_with_delimiter(@never_posted.members) %> of <%= number_with_delimiter(searched) %> counted</span>
       </div>
     </div>
     <div class="card">
@@ -62,8 +62,8 @@
   </div>
   <p class="card-note">
     <span class="short"
-          title="<%= number_with_delimiter(workspace - searched) %> workspace members have no searched message history, so their posting is unknown">
-      <%= number_with_delimiter(searched) %> of <%= number_with_delimiter(workspace) %> members searched
+          title="<%= number_with_delimiter(workspace - searched) %> workspace members have no lifetime total yet, so their posting is unknown">
+      <%= number_with_delimiter(searched) %> of <%= number_with_delimiter(workspace) %> members counted
     </span>
   </p>
 <% end %>

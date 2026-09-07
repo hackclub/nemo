@@ -102,12 +102,44 @@ WHERE h.user_id = delta.user_id
 """
 
 
+RANGE_SETTLE_SQL = """
+WITH r AS (
+    SELECT user_id, messages_posted, channel_messages_posted, window_start, window_end
+    FROM raw.member_activity_snapshot
+    WHERE source = %s
+),
+rw AS (
+    SELECT min(window_start) AS opened_at, max(window_end) AS closed_at FROM r
+)
+INSERT INTO raw.member_message_history
+    (user_id, total_messages, first_post_ts, first_post_channel, searched_at, counted_through)
+SELECT m.user_id, coalesce(r.messages_posted, 0), NULL, NULL, now(), rw.closed_at
+FROM raw.member_dim m
+JOIN r ON r.user_id = m.user_id
+LEFT JOIN raw.member_created_override o ON o.user_id = m.user_id
+CROSS JOIN rw
+WHERE NOT coalesce(m.is_bot, false)
+  AND NOT coalesce(m.invite_pending, false)
+  AND coalesce(r.channel_messages_posted, 0) = 0
+  AND coalesce(o.account_created_verified, m.account_created_verified) >= rw.opened_at
+ON CONFLICT (user_id) DO NOTHING
+"""
+
+
 def carry_forward(conn):
     with conn.cursor() as cur:
         cur.execute(CARRY_FORWARD_SQL)
         advanced = cur.rowcount
     conn.commit()
     print(f"{SOURCE}: {advanced} member(s) carried forward from daily rows")
+
+
+def settle_from_range(conn):
+    with conn.cursor() as cur:
+        cur.execute(RANGE_SETTLE_SQL, (MEMBER_RANGE_SOURCE,))
+        settled = cur.rowcount
+    conn.commit()
+    print(f"{SOURCE}: {settled} member(s) settled from the range, no search needed")
 
 
 def is_public(match):
@@ -161,6 +193,7 @@ def enqueue_first_reply(conn, user_ids):
 
 
 def run(conn, limit=BATCH_LIMIT):
+    settle_from_range(conn)
     carry_forward(conn)
     work.reclaim(conn, KIND)
     queued = enqueue_pending(conn)
