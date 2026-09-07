@@ -24,6 +24,10 @@
         data-chart-stacked-value="true"
         data-chart-pct-value="true"
         data-chart-height-value="260"
+        data-chart-caps-value="<%= recurrence.map { |f|
+          share = share_pct(f.posted_once, f.searched)
+          share ? { v: share, t: number_to_percentage(share, precision: 1) } : nil
+        }.to_json %>"
         data-chart-data-value="<%= {
           labels: recurrence.map { |f| f.cohort_month.strftime("%b %Y") },
           datasets: bands.map do |band|
@@ -36,15 +40,6 @@
           end
         }.to_json %>"
       ></div>
-    </div>
-    <div class="key">
-      <% recurrence.each do |f| %>
-        <span title="<%= number_with_delimiter(f.searched) %> of <%= number_with_delimiter(f.signed_in) %> who signed in have a searched message history">
-          <%= f.cohort_month.strftime("%b %Y") %>
-          <b><%= number_to_percentage(share_pct(f.posted_once, f.searched) || 0, precision: 1) %></b>
-          posted
-        </span>
-      <% end %>
     </div>
   <% else %>
     <p class="card-note">No cohort searched yet.</p>

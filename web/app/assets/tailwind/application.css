@@ -2964,6 +2964,13 @@
   .chart .rule-say { fill: var(--ink-3); }
   .chart .split { stroke: var(--ink-4); stroke-width: 1; stroke-dasharray: 3 3; }
   .chart .split-say { fill: var(--ink-3); }
+  .chart .cap {
+    fill: var(--ink);
+    font-size: 10.5px;
+    font-weight: 600;
+    font-family: var(--font-code);
+    font-variant-numeric: tabular-nums;
+  }
   .tipped > .tip .row i.hole-dot { background: var(--warn); }
   .tipped > .tip .row-sum { border-top: 1px solid color-mix(in oklab, var(--tip-ink) 12%, transparent); padding-top: 4px; }
   .tipped > .tip .row-note { color: color-mix(in oklab, var(--tip-ink) 70%, transparent); }

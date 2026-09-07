@@ -53,7 +53,7 @@ export default class extends Controller {
   static values = {
     kind: String, data: Object, height: Number, pct: Boolean,
     stacked: Boolean, days: Boolean, spark: Boolean, rule: Object, splits: Array,
-    voids: Array, partial: Array, partialNote: String, notes: Array
+    voids: Array, partial: Array, partialNote: String, notes: Array, caps: Array
   }
 
   connect() {
@@ -366,6 +366,9 @@ export default class extends Controller {
   }
 
   drawStack(rows, series, { x, y, floor }) {
+    const caps = this.hasCapsValue ? this.capsValue : []
+    const ceiling = this.pad.t + 9
+
     return rows.map((r, i) => {
       let wide = x.bandwidth()
       let at = x(i)
@@ -390,7 +393,13 @@ export default class extends Controller {
           topBar(at, top, wide, tall, cap)}"/>`
       }).reverse().join("")
 
-      return `<g class="mark" data-i="${i}">${bars}</g>`
+      const cap = caps[i]
+      const say = cap == null || cap.v == null ? "" :
+        `<text class="cap" x="${(at + wide / 2).toFixed(1)}" y="${
+          Math.max(ceiling, y(Number(cap.v)) - 7).toFixed(1)}" text-anchor="middle">${
+          esc(cap.t)}</text>`
+
+      return `<g class="mark" data-i="${i}">${bars}${say}</g>`
     }).join("")
   }
 
