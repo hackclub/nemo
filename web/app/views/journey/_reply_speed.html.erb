@@ -12,17 +12,20 @@
    end.select { |r| r[:rate] } %>
 
 <% if rows.any? %>
-  <% dom = [(rows.map { |r| r[:high] }.max.to_f * 1.06).ceil, 10].max %>
+  <% top = rows.map { |r| r[:high] }.max.to_f %>
+  <% step = [2, 5, 10, 20, 25].find { |v| (top / v).ceil <= 5 } || 25 %>
+  <% dom = [(top / step).ceil * step, step].max %>
+  <% ticks = (0..dom).step(step).to_a %>
   <div class="ivrows">
     <div class="ivrow ivscale">
-      <span></span>
+      <span class="ivhead">first member reply</span>
       <span class="ivtrack ivticks">
-        <% [0, dom / 4, dom / 2, (dom * 3) / 4, dom].uniq.each_with_index do |t, i| %>
+        <% ticks.each_with_index do |t, i| %>
           <i style="left: <%= (t.to_f / dom * 100).round(2) %>%"
              data-edge="<%= i.zero? ? "start" : (t == dom ? "end" : "mid") %>"><%= t %>%</i>
         <% end %>
       </span>
-      <span></span>
+      <span class="ivhead ivhead-end">day-30 return</span>
     </div>
     <% rows.each do |r| %>
       <div class="ivrow<%= " is-thin" if r[:thin] %>">
@@ -43,6 +46,10 @@
         </span>
       </div>
     <% end %>
+  </div>
+  <div class="key">
+    <span><i class="iv-key-dot"></i>day-30 return rate</span>
+    <span><i class="iv-key-band"></i>95% interval</span>
   </div>
 
 <% else %>

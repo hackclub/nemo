@@ -3201,6 +3201,21 @@
   }
   .ivrow:hover { background: var(--hover); }
   .ivname { font-size: var(--t-small); color: var(--ink-2); font-weight: 500; }
+  .ivhead {
+    font-size: var(--t-fine);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--ink-4);
+  }
+  .ivhead-end { text-align: right; }
+  .key i.iv-key-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); }
+  .key i.iv-key-band {
+    width: 22px;
+    height: 4px;
+    border-radius: 2px;
+    background: color-mix(in oklab, var(--accent) 42%, var(--card));
+  }
   .ivtrack {
     position: relative;
     display: block;
