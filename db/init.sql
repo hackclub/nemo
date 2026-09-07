@@ -3,6 +3,7 @@ CREATE SCHEMA IF NOT EXISTS analytics;
 CREATE SCHEMA IF NOT EXISTS app;
 CREATE SCHEMA IF NOT EXISTS fd;
 CREATE SCHEMA IF NOT EXISTS ingest;
+CREATE SCHEMA IF NOT EXISTS archive;
 
 DO $$
 DECLARE
@@ -66,6 +67,12 @@ BEGIN
     EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA fd '
         'GRANT USAGE ON SEQUENCES TO pipeline_writer';
 
+    EXECUTE 'GRANT USAGE ON SCHEMA archive TO pipeline_writer';
+    EXECUTE 'GRANT INSERT, SELECT, UPDATE, DELETE, MAINTAIN ON ALL TABLES IN SCHEMA archive '
+        'TO pipeline_writer';
+    EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA archive '
+        'GRANT INSERT, SELECT, UPDATE, DELETE, MAINTAIN ON TABLES TO pipeline_writer';
+
     EXECUTE 'GRANT USAGE ON SCHEMA raw TO dbt_owner';
     EXECUTE 'GRANT SELECT ON ALL TABLES IN SCHEMA raw TO dbt_owner';
     EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA raw GRANT SELECT ON TABLES TO dbt_owner';
@@ -94,6 +101,14 @@ BEGIN
 
     IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'app' AND tablename = 'sync_request') THEN
         EXECUTE 'GRANT SELECT, UPDATE ON app.sync_request TO pipeline_writer';
+    END IF;
+
+    EXECUTE 'REVOKE ALL ON SCHEMA archive FROM rails_app';
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'archive' AND tablename = 'message') THEN
+        EXECUTE 'GRANT USAGE ON SCHEMA archive TO dbt_owner';
+        EXECUTE 'GRANT SELECT ON archive.message TO dbt_owner';
+        EXECUTE 'REVOKE ALL ON archive.envelope FROM dbt_owner';
+        EXECUTE 'REVOKE ALL ON ALL TABLES IN SCHEMA archive FROM rails_app';
     END IF;
 
     IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'fd' AND tablename = 'audit') THEN
