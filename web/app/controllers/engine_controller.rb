@@ -11,8 +11,8 @@ class EngineController < ApplicationController
   VISIT_STEPS_NEED = 15
 
   TABS = { "runs" => "Runs", "sources" => "Sources", "coverage" => "Coverage",
-           "queues" => "Queues", "backfill" => "Backfill", "faults" => "Faults",
-           "tuning" => "Tuning" }.freeze
+           "queues" => "Queues", "backfill" => "Backfill", "archive" => "Archive",
+           "faults" => "Faults", "tuning" => "Tuning" }.freeze
   MUTE_FOR = 1.day
   TAXONOMY_WINDOW = 30.days
   SLICE_STRIP_DAYS = 60
@@ -39,7 +39,12 @@ class EngineController < ApplicationController
     when "faults" then fault_facts
     when "tuning" then @sources = source_rows
     when "backfill" then backfill_facts
+    when "archive" then archive_facts
     end
+  end
+
+  def archive_facts
+    @archive = Engine::Archive.report
   end
 
   def queue_facts

@@ -111,6 +111,9 @@
   <%= render "backfill", backfills: @backfills, names: @backfill_names,
         queued_requests: @backfill_queued_requests %>
 
+<% elsif @tab == "archive" %>
+  <%= render "archive", archive: @archive %>
+
 <% elsif @tab == "tuning" %>
   <%= render "tuning", may_tune: @may_tune, sources: @sources %>
 <% end %>

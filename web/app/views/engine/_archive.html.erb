@@ -1,0 +1,79 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Archive</h2>
+      <p class="card-sub">
+        <%= number_with_delimiter(archive.walked) %> messages walked
+        <% if archive.beat %>
+          &middot; beat <%= short_age(archive.beat.beat_at) %> ago
+          <% if archive.beat.note.present? %>&middot; <%= archive.beat.note %><% end %>
+        <% else %>
+          &middot; no worker heartbeat
+        <% end %>
+      </p>
+    </div>
+  </div>
+  <div class="scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>stage</th>
+          <th class="col-num">held</th>
+          <th class="col-num">outstanding</th>
+          <th class="col-num">of</th>
+          <th class="col-num">share</th>
+          <th class="col-num">last</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% archive.stages.each do |stage| %>
+          <tr>
+            <td class="mono"><%= stage.name %></td>
+            <td class="col-num"><%= number_with_delimiter(stage.done) %></td>
+            <td class="col-num">
+              <%= stage.outstanding ? number_with_delimiter(stage.outstanding) : "n/a" %>
+            </td>
+            <td class="col-num"><%= stage.total ? number_with_delimiter(stage.total) : "n/a" %></td>
+            <td class="col-num">
+              <%= stage.share ? number_to_percentage(stage.share, precision: 1) : "n/a" %>
+            </td>
+            <td class="col-num mono"><%= stage.at ? "#{short_age(stage.at)} ago" : "n/a" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Channels the walk could not read</h2>
+      <p class="card-sub">
+        <%= number_with_delimiter(archive.errors.sum(&:last)) %> channels holding an error
+      </p>
+    </div>
+  </div>
+  <% if archive.errors.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>error</th>
+            <th class="col-num">channels</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% archive.errors.each do |error, count| %>
+            <tr>
+              <td class="mono"><%= error %></td>
+              <td class="col-num"><%= number_with_delimiter(count) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">n/a</p>
+  <% end %>
+</div>
