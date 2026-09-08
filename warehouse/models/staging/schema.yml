@@ -166,3 +166,119 @@ models:
         data_tests: [not_null, unique]
       - name: beat_at
         data_tests: [not_null]
+  - name: fct_message
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: channel_id
+        data_type: text
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_channel')
+              field: channel_id
+      - name: ts
+        data_type: text
+        data_tests: [not_null]
+      - name: author_id
+        data_type: text
+      - name: author_kind
+        data_type: text
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [member, bot, unknown]
+      - name: bot_id
+        data_type: text
+      - name: app_id
+        data_type: text
+      - name: parent_user_id
+        data_type: text
+      - name: subtype
+        data_type: text
+      - name: thread_root_ts
+        data_type: text
+      - name: is_reply
+        data_type: boolean
+        data_tests: [not_null]
+      - name: is_broadcast
+        data_type: boolean
+        data_tests: [not_null]
+      - name: posted_at
+        data_type: timestamp with time zone
+        data_tests: [not_null]
+      - name: edited_at
+        data_type: timestamp with time zone
+      - name: reply_count
+        data_type: integer
+      - name: reply_users_count
+        data_type: integer
+      - name: latest_reply_ts
+        data_type: text
+      - name: reaction_count
+        data_type: integer
+      - name: reactor_count
+        data_type: integer
+      - name: file_count
+        data_type: integer
+      - name: text_length
+        data_type: integer
+      - name: mention_count
+        data_type: integer
+      - name: mentioned_ids
+        data_type: text[]
+      - name: is_question
+        data_type: boolean
+      - name: is_substantive
+        data_type: boolean
+      - name: has_link
+        data_type: boolean
+      - name: emoji_only
+        data_type: boolean
+      - name: settled
+        data_type: boolean
+        data_tests: [not_null]
+      - name: observed_at
+        data_type: timestamp with time zone
+        data_tests: [not_null]
+    data_tests:
+      - unique:
+          column_name: "channel_id || '-' || ts"
+  - name: fct_member_message
+    columns:
+      - name: author_id
+        data_tests: [not_null]
+      - name: author_kind
+        data_tests:
+          - accepted_values:
+              values: [member]
+      - name: posted_at
+        data_tests: [not_null]
+    data_tests:
+      - unique:
+          column_name: "channel_id || '-' || ts"
+  - name: fct_message_first_post
+    columns:
+      - name: user_id
+        data_tests: [not_null, unique]
+      - name: channel_id
+        data_tests: [not_null]
+      - name: posted_at
+        data_tests: [not_null]
+  - name: fct_first_response
+    columns:
+      - name: newcomer_id
+        data_tests: [not_null, unique]
+      - name: detection_method
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [thread_reply, in_channel_mention, bot_only, none]
+      - name: confidence
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [high, medium, none]
+      - name: answered
+        data_tests: [not_null]

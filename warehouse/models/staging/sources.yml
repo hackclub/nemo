@@ -34,6 +34,10 @@ sources:
     schema: archive
     tables:
       - name: message
+        loaded_at_field: updated_at
+        freshness:
+          warn_after: {count: 6, period: hour}
+          error_after: {count: 24, period: hour}
 
   - name: ingest
     schema: ingest
