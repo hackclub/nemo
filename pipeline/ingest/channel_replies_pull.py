@@ -86,8 +86,7 @@ def fetch_thread(conn, client, channel_id, root_ts, item=None):
                 cur.executemany(MESSAGE_SQL, rows)
                 cur.executemany(OBSERVATION_SQL, observations)
             cur.execute(THREAD_DONE_SQL, (total, through, channel_id, root_ts))
-        for reply in kept:
-            archive.from_api(conn, channel_id, reply, METHOD, TRANSPORT)
+        archive.from_api_many(conn, channel_id, kept, METHOD, TRANSPORT)
         conn.commit()
         rows, observations, kept = [], [], []
         if item is not None:

@@ -186,8 +186,7 @@ def walk_channel(conn, client, channel_id, oldest=None, counts=None, latest=None
                 cur.executemany(THREAD_SQL, state["threads"])
             cur.execute(WALK_SQL, (
                 channel_id, state["oldest_ts"], state["newest_ts"], len(state["messages"]), done))
-        for raw_message in state["kept"]:
-            archive.from_api(conn, channel_id, raw_message, METHOD, TRANSPORT)
+        archive.from_api_many(conn, channel_id, state["kept"], METHOD, TRANSPORT)
         conn.commit()
         state["kept"] = []
         state["messages"], state["threads"], state["observations"] = [], [], []

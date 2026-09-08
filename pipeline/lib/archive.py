@@ -156,6 +156,74 @@ def message_row(channel_id, ts, revision, envelope, measured):
     )
 
 
+LATEST_MANY_SQL = """
+SELECT ts, revision, payload_hash
+FROM (
+    SELECT ts, revision, payload_hash,
+           row_number() OVER (PARTITION BY ts ORDER BY revision DESC) AS rn
+    FROM archive.envelope
+    WHERE channel_id = %s AND ts = ANY(%s)
+) latest
+WHERE rn = 1
+"""
+
+
+def latest_for(conn, channel_id, stamps):
+    if not stamps:
+        return {}
+    with conn.cursor() as cur:
+        cur.execute(LATEST_MANY_SQL, (channel_id, list(stamps)))
+        return {ts: (revision, bytes(held)) for ts, revision, held in cur.fetchall()}
+
+
+def next_revision(held, payload_hash):
+    if held is None:
+        return 1, True
+    revision, kept = held
+    return (revision, False) if kept == payload_hash else (revision + 1, True)
+
+
+def record_many(conn, channel_id, entries, method, transport, settled):
+    shaped = []
+    for ts, envelope, measured in entries:
+        if not channel_id or not ts or not isinstance(envelope, dict):
+            continue
+        if body_of(envelope) is None:
+            continue
+        shaped.append((ts, envelope, measured, digest(envelope)))
+    if not shaped:
+        return 0
+
+    held = latest_for(conn, channel_id, {ts for ts, *_ in shaped})
+    envelopes, messages, observations = [], [], []
+    for ts, envelope, measured, payload_hash in shaped:
+        revision, fresh = next_revision(held.get(ts), payload_hash)
+        built = message_row(channel_id, ts, revision, envelope, measured)
+        if built is None:
+            continue
+        if fresh:
+            envelopes.append((channel_id, ts, revision, Jsonb(envelope), payload_hash, method))
+        messages.append((*built, settled))
+        observations.append((channel_id, ts, transport, revision))
+        held[ts] = (revision, payload_hash)
+
+    with conn.cursor() as cur:
+        if envelopes:
+            cur.executemany(ENVELOPE_SQL, envelopes)
+        if messages:
+            cur.executemany(MESSAGE_SQL, messages)
+        if observations:
+            cur.executemany(OBSERVED_SQL, observations)
+    return len(messages)
+
+
+def from_api_many(conn, channel_id, messages, method, transport):
+    return record_many(
+        conn, channel_id,
+        [(message.get("ts"), scrub(message), shape(message)) for message in messages],
+        method, transport, True)
+
+
 def record(conn, channel_id, ts, envelope, measured, method, transport, settled):
     if not channel_id or not ts or not isinstance(envelope, dict):
         return False
