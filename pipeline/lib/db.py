@@ -102,15 +102,17 @@ class SeededDeployment(RuntimeError):
 
 
 BEAT_SQL = """
-INSERT INTO raw.worker_heartbeat (worker, beat_at, note)
-VALUES (%s, now(), %s)
-ON CONFLICT (worker) DO UPDATE SET beat_at = now(), note = EXCLUDED.note
+INSERT INTO raw.worker_heartbeat (worker, beat_at, note, worker_boot)
+VALUES (%s, now(), %s, %s::uuid)
+ON CONFLICT (worker) DO UPDATE SET
+    beat_at = now(), note = EXCLUDED.note, worker_boot = EXCLUDED.worker_boot
 """
 
 
-def beat(conn: psycopg.Connection, worker: str, note: str | None = None) -> None:
+def beat(conn: psycopg.Connection, name: str, note: str | None = None) -> None:
+    boot = WORKER_BOOT if name == worker() else None
     try:
-        conn.execute(BEAT_SQL, (worker, note))
+        conn.execute(BEAT_SQL, (name, note, boot))
         conn.commit()
     except psycopg.Error:
         conn.rollback()
@@ -275,7 +277,9 @@ UPDATE raw.ingest_run r
 SET suspected_dead_at = now()
 FROM raw.worker_heartbeat h
 WHERE r.status = 'running' AND r.suspected_dead_at IS NULL AND r.worker = h.worker
-  AND h.beat_at < now() - make_interval(secs => %s)
+  AND r.worker_boot IS DISTINCT FROM %(boot)s::uuid
+  AND (h.beat_at < now() - make_interval(secs => %(after)s)
+       OR (h.worker_boot IS NOT NULL AND h.worker_boot IS DISTINCT FROM r.worker_boot))
 RETURNING r.id, r.source
 """
 
@@ -284,7 +288,8 @@ UPDATE raw.ingest_run r
 SET suspected_dead_at = NULL
 FROM raw.worker_heartbeat h
 WHERE r.status = 'running' AND r.suspected_dead_at IS NOT NULL AND r.worker = h.worker
-  AND h.beat_at >= now() - make_interval(secs => %s)
+  AND h.beat_at >= now() - make_interval(secs => %(after)s)
+  AND (h.worker_boot IS NULL OR h.worker_boot IS NOT DISTINCT FROM r.worker_boot)
 """
 
 MY_BEAT_IS_FRESH_SQL = """
@@ -313,8 +318,8 @@ def suspect_dead_runs(
         cur.execute(MY_BEAT_IS_FRESH_SQL, (worker(), after_seconds))
         if cur.fetchone() is None:
             return []
-        cur.execute(REVIVE_SQL, (after_seconds,))
-        cur.execute(SUSPECT_SQL, (after_seconds,))
+        cur.execute(REVIVE_SQL, {"after": after_seconds})
+        cur.execute(SUSPECT_SQL, {"after": after_seconds, "boot": WORKER_BOOT})
         suspected = cur.fetchall()
         if reclaim_seconds is not None:
             cur.execute(RECLAIM_SQL, (reclaim_seconds, reclaim_seconds))
