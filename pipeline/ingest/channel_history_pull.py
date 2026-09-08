@@ -262,6 +262,22 @@ LEFT JOIN raw.channel_walk w ON w.channel_id = d.channel_id
 WHERE d.archived IS NOT TRUE
 """
 
+WALK_LEFT_SQL = """
+SELECT count(*)
+FROM raw.channel_dim d
+LEFT JOIN raw.channel_walk w ON w.channel_id = d.channel_id
+WHERE coalesce(w.history_complete, false) = false
+"""
+
+SETTLE_WALKED_SQL = """
+UPDATE ingest.work_item i
+SET state = 'complete', settled_at = now(), lease_until = NULL,
+    note = 'the walk finished elsewhere', updated_at = now()
+FROM raw.channel_walk w
+WHERE i.work_kind = %s AND i.state = 'pending'
+  AND w.channel_id = i.target_key AND w.history_complete
+"""
+
 CURSORS_SQL = "SELECT oldest_ts, newest_ts, history_complete FROM raw.channel_walk WHERE channel_id = %s"
 
 ERROR_SQL = """
@@ -291,6 +307,30 @@ def enqueue_backfill(conn, channels=None, priority=None):
 def enqueue_tail(conn):
     return work.enqueue_select(conn, TAIL_KIND, TAIL_SELECT, requested_by=SOURCE,
                                requeue_settled_after=TAIL_EVERY_SECONDS)
+
+
+def backfill_share(limit, left, full=False):
+    return limit if full or left else max(1, limit // 4)
+
+
+def pass_order(left, channels=None):
+    if channels:
+        return ("backfill",)
+    return ("backfill", "tail") if left else ("tail", "backfill")
+
+
+def walk_left(conn):
+    with conn.cursor() as cur:
+        cur.execute(WALK_LEFT_SQL)
+        return cur.fetchone()[0]
+
+
+def settle_walked(conn):
+    with conn.cursor() as cur:
+        cur.execute(SETTLE_WALKED_SQL, (BACKFILL_KIND,))
+        settled = cur.rowcount
+    conn.commit()
+    return settled
 
 
 def cursors(conn, channel_id):
@@ -371,19 +411,34 @@ def run(conn, limit=200, full=False, channels=None, backfill_limit=None):
     client = ProxyClient.for_source("channel_history")
     work.reclaim(conn, TAIL_KIND)
     work.reclaim(conn, BACKFILL_KIND)
+    tidied = settle_walked(conn)
     if channels:
         queued_tail = 0
         queued_back = enqueue_backfill(conn, channels, priority=0)
     else:
         queued_tail = enqueue_tail(conn)
         queued_back = enqueue_backfill(conn)
-    backfill_limit = max(1, limit // 4) if backfill_limit is None else backfill_limit
-    if full:
-        backfill_limit = limit
+    left = 0 if channels else walk_left(conn)
+    if backfill_limit is None:
+        backfill_limit = backfill_share(limit, left, full)
 
     with ingest_run(conn, SOURCE) as counts:
-        tails, tail_messages = (0, 0) if channels else drain_tail(conn, client, counts, limit)
-        backfills, back_messages, finished = drain_backfill(conn, client, counts, backfill_limit, targets=channels)
+        tails, tail_messages = 0, 0
+        backfills, back_messages, finished = 0, 0, 0
+
+        def tail_pass():
+            nonlocal tails, tail_messages
+            tails, tail_messages = drain_tail(conn, client, counts, limit)
+
+        def backfill_pass():
+            nonlocal backfills, back_messages, finished
+            backfills, back_messages, finished = drain_backfill(
+                conn, client, counts, backfill_limit, targets=channels)
+
+        runners = {"tail": tail_pass, "backfill": backfill_pass}
+        for name in pass_order(left, channels):
+            runners[name]()
+
         touched = tails + backfills
         counts.total_expected = touched
         if touched:
@@ -393,7 +448,8 @@ def run(conn, limit=200, full=False, channels=None, backfill_limit=None):
 
     print(f"{SOURCE}: {tails} tail walk(s), {tail_messages} messages; {backfills} backfill unit(s), "
           f"{back_messages} messages, {finished} channel(s) reached their start; "
-          f"queued {queued_tail} tail, {queued_back} backfill; {counts.rows_rejected} failed")
+          f"queued {queued_tail} tail, {queued_back} backfill; {tidied} settled by another unit; "
+          f"{left} channel(s) still to walk; {counts.rows_rejected} failed")
     return counts.rows_in
 
 
