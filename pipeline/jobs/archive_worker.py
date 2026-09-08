@@ -1,5 +1,6 @@
 import os
-import time
+import signal
+import threading
 
 from dotenv import load_dotenv
 
@@ -13,8 +14,14 @@ from lib.paths import ENV_FILE
 
 WORKER = "archive_worker"
 DEFAULT_POLL_SECONDS = 300
+DEFAULT_EVENT_POLL_SECONDS = 60
 DEFAULT_HISTORY_BATCH = 200
 DEFAULT_REPLIES_BUDGET = 500
+JOIN_TIMEOUT = 10
+
+
+def seconds(name, fallback):
+    return int(os.environ.get(name, "") or fallback)
 
 
 def batch(conn):
@@ -25,24 +32,50 @@ def batch(conn):
 
 
 def budget():
-    return int(os.environ.get("ARCHIVE_REPLIES_BUDGET", "") or DEFAULT_REPLIES_BUDGET)
+    return seconds("ARCHIVE_REPLIES_BUDGET", DEFAULT_REPLIES_BUDGET)
 
 
-def pass_over(conn, note=None):
-    projected = project_events(conn)
-    if note:
-        note("walking channel history")
-    walked = walk_channels(conn, batch(conn))
-    if note:
-        note("draining thread replies")
-    replies = walk_replies(conn, budget())
-    return projected, walked, replies
+def history(conn):
+    return walk_channels(conn, batch(conn))
+
+
+def replies(conn):
+    return walk_replies(conn, budget())
+
+
+LANES = (
+    ("history", history, "ARCHIVE_POLL_SECONDS", DEFAULT_POLL_SECONDS),
+    ("replies", replies, "ARCHIVE_POLL_SECONDS", DEFAULT_POLL_SECONDS),
+    ("events", project_events, "ARCHIVE_EVENT_POLL_SECONDS", DEFAULT_EVENT_POLL_SECONDS),
+)
+
+
+def note(state):
+    return ", ".join(f"{name} {state[name]}" for name, *_ in LANES)
+
+
+def lane(name, work, state, stopping, poll):
+    def loop():
+        while not stopping.is_set():
+            try:
+                with connect() as conn:
+                    moved = work(conn)
+                state[name] = f"idle after {moved}" if moved else "idle"
+            except Exception as failure:
+                state[name] = f"failed, {type(failure).__name__}"
+                print(f"{WORKER}: the {name} lane failed, trying again after the poll: {failure}")
+            if stopping.wait(poll):
+                return
+        state[name] = "stopped"
+
+    thread = threading.Thread(target=loop, name=f"{WORKER}-{name}", daemon=True)
+    thread.start()
+    return thread
 
 
 def main():
     load_dotenv(ENV_FILE)
     set_worker(WORKER)
-    poll = int(os.environ.get("ARCHIVE_POLL_SECONDS", "") or DEFAULT_POLL_SECONDS)
 
     with connect() as conn:
         try:
@@ -51,27 +84,25 @@ def main():
             print(f"{WORKER}: {refusal}")
             raise SystemExit(1) from refusal
 
-    print(f"{WORKER}: archiving continuously, {poll}s idle poll")
-    while True:
-        state = {"note": "starting"}
-        try:
-            with connect() as conn, beating(WORKER, lambda: state["note"]):
-                state["note"] = "projecting events"
-                projected, walked, replies = pass_over(
-                    conn, lambda said: state.update(note=said))
-                moved = projected + walked + replies
-                state["note"] = (
-                    f"idle, {projected} event(s), {walked} channel(s), {replies} thread(s)"
-                    if moved else "idle, nothing waiting"
-                )
-                print(f"{WORKER}: {projected} event(s) projected, {walked} channel(s) walked, "
-                      f"{replies} thread(s) drained")
-        except KeyboardInterrupt:
-            print(f"{WORKER}: stopped")
-            return 0
-        except Exception as failure:
-            print(f"{WORKER}: pass failed, trying again after the poll: {failure}")
-        time.sleep(poll)
+    stopping = threading.Event()
+    state = {name: "starting" for name, *_ in LANES}
+
+    def stop(*_):
+        stopping.set()
+
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+
+    print(f"{WORKER}: {len(LANES)} lane(s) running independently")
+    with beating(WORKER, lambda: note(state)):
+        running = [lane(name, work, state, stopping, seconds(var, fallback))
+                   for name, work, var, fallback in LANES]
+        stopping.wait()
+        for thread in running:
+            thread.join(timeout=JOIN_TIMEOUT)
+
+    print(f"{WORKER}: stopped")
+    return 0
 
 
 if __name__ == "__main__":

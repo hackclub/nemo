@@ -70,6 +70,7 @@ ROLES = {
         "required": DATABASE + ["INTERNAL_PROXY_URL", "INTERNAL_PROXY_TOKEN"],
         "optional": PIPELINE_ROLE + [
             "ARCHIVE_POLL_SECONDS",
+            "ARCHIVE_EVENT_POLL_SECONDS",
             "ARCHIVE_HISTORY_BATCH",
             "ARCHIVE_REPLIES_BUDGET",
             "CHANNEL_TAIL_LOOKBACK_DAYS",
@@ -138,6 +139,7 @@ DEFAULTS = {
     "SPINE_JOIN_SECONDS": "3600",
     "SPINE_JOIN_PACE": "1.05",
     "ARCHIVE_POLL_SECONDS": "300",
+    "ARCHIVE_EVENT_POLL_SECONDS": "60",
     "SYNC_POLL_SECONDS": "60",
     "SEED_SCALE": "dev",
     "SEED_RNG": "1",
