@@ -2,7 +2,8 @@ import collections
 import math
 from datetime import datetime, time, timedelta, timezone
 
-from ingest.channel_history_pull import SOURCE, SUBSTANTIVE_CHARS, TRANSPORT
+from ingest.channel_history_pull import SOURCE, TRANSPORT
+from lib.message import SUBSTANTIVE_CHARS
 
 EVENT_TRANSPORT = "events"
 
