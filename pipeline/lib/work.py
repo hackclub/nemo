@@ -7,6 +7,7 @@ TABLE = "ingest.work_item"
 WHERE_ID = "work_item_id = %(id)s"
 LEASE_SECONDS = 600
 MAX_ATTEMPTS = 5
+MAX_LAPSES = 10
 OPEN = ("pending", "claimed")
 SETTLED = ("complete", "short", "unavailable")
 
@@ -77,7 +78,9 @@ WHERE  work_item_id = %(id)s AND fence = %(fence)s AND state = 'claimed'
 
 RECLAIM_SQL = """
 UPDATE ingest.work_item
-SET    state = CASE WHEN attempts >= %(max_attempts)s THEN 'dead' ELSE 'pending' END,
+SET    state = CASE WHEN lapses + 1 >= %(max_lapses)s THEN 'dead' ELSE 'pending' END,
+       attempts = greatest(attempts - 1, 0),
+       lapses = lapses + 1,
        lease_until = NULL, next_attempt_at = now(),
        last_error = coalesce(last_error, 'lease expired'), updated_at = now()
 WHERE  state = 'claimed' AND lease_until < now()
@@ -157,9 +160,9 @@ def release(conn, item):
     conn.commit()
 
 
-def reclaim(conn, kind=None, max_attempts=MAX_ATTEMPTS):
+def reclaim(conn, kind=None, max_lapses=MAX_LAPSES):
     with conn.cursor() as cur:
-        cur.execute(RECLAIM_SQL, {"kind": kind, "max_attempts": max_attempts})
+        cur.execute(RECLAIM_SQL, {"kind": kind, "max_lapses": max_lapses})
         rows = cur.fetchall()
     conn.commit()
     if rows:
@@ -191,3 +194,7 @@ def depth(conn, kind):
 
 def outcome_after_failure(attempts, max_attempts=MAX_ATTEMPTS):
     return "dead" if attempts >= max_attempts else "pending"
+
+
+def outcome_after_lapse(lapses, max_lapses=MAX_LAPSES):
+    return "dead" if lapses + 1 >= max_lapses else "pending"
