@@ -196,8 +196,13 @@ def run(conn, budget=500, stale_hours=6):
     for channel_id in claim_channels(conn):
         prepare(conn, client, channel_id)
     work.reclaim(conn, KIND)
-    queued = enqueue_threads(conn)
+
     items = work.claim(conn, KIND, budget)
+    queued = 0
+    if len(items) < budget:
+        queued = enqueue_threads(conn)
+        items += work.claim(conn, KIND, budget - len(items))
+
     if not items:
         with ingest_run(conn, SOURCE):
             print(f"{SOURCE}: no thread waiting" + (f", {queued} newly queued" if queued else ""))
