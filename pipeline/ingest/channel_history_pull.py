@@ -92,25 +92,6 @@ FROM (
 WHERE d.channel_id = t.channel_id
 """
 
-TARGETS_SQL = """
-SELECT d.channel_id, w.newest_ts
-FROM raw.channel_dim d
-LEFT JOIN raw.channel_walk w ON w.channel_id = d.channel_id
-LEFT JOIN (
-    SELECT channel_id, sum(messages_posted) AS messages
-    FROM raw.channel_activity_snapshot
-    WHERE source = 'admin_analytics_api'
-    GROUP BY channel_id
-) v ON v.channel_id = d.channel_id
-WHERE d.archived IS NOT TRUE
-ORDER BY
-    (w.last_walked_at IS NULL) DESC,
-    coalesce(v.messages, 0) DESC,
-    w.last_walked_at NULLS FIRST,
-    d.channel_id
-LIMIT %s
-"""
-
 
 def stamp(ts):
     return datetime.fromtimestamp(float(ts), tz=timezone.utc)
@@ -258,7 +239,8 @@ SELECT count(*) FROM raw.event_delivery WHERE received_at > now() - interval '48
 
 BACKFILL_SELECT = """
 SELECT d.channel_id AS target_key, '' AS target_sub_key,
-       1000 - least(coalesce(v.messages, 0) / 100, 999) AS priority,
+       CASE WHEN d.archived THEN 2000 ELSE 0 END
+           + 1000 - least(coalesce(v.messages, 0) / 100, 999) AS priority,
        '{}'::jsonb AS payload, NULL::integer AS expected
 FROM raw.channel_dim d
 LEFT JOIN raw.channel_walk w ON w.channel_id = d.channel_id
@@ -268,7 +250,7 @@ LEFT JOIN (
     WHERE source = 'admin_analytics_api'
     GROUP BY channel_id
 ) v ON v.channel_id = d.channel_id
-WHERE d.archived IS NOT TRUE AND coalesce(w.history_complete, false) = false
+WHERE coalesce(w.history_complete, false) = false
 """
 
 TAIL_SELECT = """
@@ -297,7 +279,8 @@ def enqueue_backfill(conn, channels=None, priority=None):
         params = (list(channels),)
     if priority is not None:
         select = select.replace(
-            "1000 - least(coalesce(v.messages, 0) / 100, 999) AS priority",
+            "CASE WHEN d.archived THEN 2000 ELSE 0 END\n"
+            "           + 1000 - least(coalesce(v.messages, 0) / 100, 999) AS priority",
             f"{int(priority)} AS priority")
     queued = work.enqueue_select(conn, BACKFILL_KIND, select, params, requested_by=SOURCE)
     if channels and priority is not None:

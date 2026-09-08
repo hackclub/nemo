@@ -27,3 +27,16 @@ def test_enqueue_selects_name_both_kinds_and_only_unfinished_channels_for_backfi
     assert "coalesce(w.history_complete, false) = false" in history.BACKFILL_SELECT
     assert "d.archived IS NOT TRUE" in history.TAIL_SELECT
     assert history.BACKFILL_KIND != history.TAIL_KIND
+
+
+def test_an_archived_channel_is_walked_once_and_never_revisited():
+    assert "d.archived IS NOT TRUE" not in history.BACKFILL_SELECT, \
+        "the backfill has to reach archived channels, their history is still readable"
+    assert "d.archived IS NOT TRUE" in history.TAIL_SELECT, \
+        "an archived channel takes no new messages, so the tail must never re-read it"
+    assert "coalesce(w.history_complete, false) = false" in history.BACKFILL_SELECT, \
+        "once its walk has reached the start an archived channel drops out for good"
+
+
+def test_the_backfill_takes_live_channels_before_archived_ones():
+    assert "CASE WHEN d.archived THEN 2000 ELSE 0 END" in history.BACKFILL_SELECT
