@@ -34,7 +34,7 @@ export default class extends Controller {
     if (trigger) {
       event.preventDefault()
       this.opener = trigger
-      trigger.closest("details[open]")?.removeAttribute("open")
+      trigger.closest("details.menu[open], details.picker[open]")?.removeAttribute("open")
       this.open()
       return
     }
