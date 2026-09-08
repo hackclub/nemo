@@ -3,9 +3,13 @@ select
     ts,
     author_id,
     author_kind,
+    bot_id,
+    app_id,
+    parent_user_id,
     subtype,
     thread_root_ts,
     is_reply,
+    is_broadcast,
     posted_at,
     edited_at,
     reply_count,
@@ -21,6 +25,7 @@ select
     is_substantive,
     has_link,
     emoji_only,
+    settled,
     first_seen_at as observed_at
 from {{ source('archive', 'message') }}
 where deleted_at is null
