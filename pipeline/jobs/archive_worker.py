@@ -7,8 +7,15 @@ from dotenv import load_dotenv
 from ingest.channel_history_pull import run as walk_channels
 from ingest.channel_replies_pull import run as walk_replies
 from ingest.event_projector import run as project_events
-from lib import settings
-from lib.db import SeededDeployment, connect, refuse_if_seeded, set_worker
+from lib import settings, work
+from lib.db import (
+    SeededDeployment,
+    SyncCancelled,
+    cancel_scope,
+    connect,
+    refuse_if_seeded,
+    set_worker,
+)
 from lib.heartbeat import beating
 from lib.paths import ENV_FILE
 
@@ -58,9 +65,12 @@ def lane(name, work, state, stopping, poll):
     def loop():
         while not stopping.is_set():
             try:
-                with connect() as conn:
+                with connect() as conn, cancel_scope(stopping.is_set):
                     moved = work(conn)
                 state[name] = f"idle after {moved}" if moved else "idle"
+            except SyncCancelled:
+                state[name] = "stopped mid-pass"
+                return
             except Exception as failure:
                 state[name] = f"failed, {type(failure).__name__}"
                 print(f"{WORKER}: the {name} lane failed, trying again after the poll: {failure}")
@@ -100,6 +110,11 @@ def main():
         stopping.wait()
         for thread in running:
             thread.join(timeout=JOIN_TIMEOUT)
+        try:
+            with connect() as conn:
+                work.release_mine(conn)
+        except Exception as failure:
+            print(f"{WORKER}: could not hand the claimed work back, {type(failure).__name__}: {failure}")
 
     print(f"{WORKER}: stopped")
     return 0

@@ -76,6 +76,15 @@ SET    state = 'pending', attempts = greatest(attempts - 1, 0), lease_until = NU
 WHERE  work_item_id = %(id)s AND fence = %(fence)s AND state = 'claimed'
 """
 
+RELEASE_MINE_SQL = """
+UPDATE ingest.work_item
+SET    state = 'pending', attempts = greatest(attempts - 1, 0), lease_until = NULL,
+       next_attempt_at = now(), updated_at = now()
+WHERE  state = 'claimed' AND worker = %(worker)s AND worker_boot = %(boot)s::uuid
+  AND  (%(kind)s::text IS NULL OR work_kind = %(kind)s)
+RETURNING work_kind
+"""
+
 RECLAIM_SQL = """
 UPDATE ingest.work_item
 SET    state = CASE WHEN lapses + 1 >= %(max_lapses)s THEN 'dead' ELSE 'pending' END,
@@ -158,6 +167,16 @@ def release(conn, item):
     with conn.cursor() as cur:
         cur.execute(RELEASE_SQL, {"id": item.id, "fence": item.fence})
     conn.commit()
+
+
+def release_mine(conn, kind=None):
+    with conn.cursor() as cur:
+        cur.execute(RELEASE_MINE_SQL, {"kind": kind, "worker": worker(), "boot": WORKER_BOOT})
+        rows = cur.fetchall()
+    conn.commit()
+    if rows:
+        print(f"work: handed back {len(rows)} claimed unit(s) on the way out")
+    return len(rows)
 
 
 def reclaim(conn, kind=None, max_lapses=MAX_LAPSES):
