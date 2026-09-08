@@ -24,13 +24,10 @@ posts as (
     select
         extract(isodow from m.posted_at at time zone 'UTC')::integer as day_of_week,
         extract(hour from m.posted_at at time zone 'UTC')::integer as hour_of_day
-    from {{ ref('fct_message') }} m
+    from {{ ref('fct_member_message') }} m
     cross join span s
     inner join walked c on c.channel_id = m.channel_id
-    where m.author_kind = 'member'
-      and m.author_id is not null
-      and coalesce(m.subtype, '') <> 'channel_join'
-      and (m.posted_at at time zone 'UTC')::date between s.window_start and s.window_end
+    where (m.posted_at at time zone 'UTC')::date between s.window_start and s.window_end
 ),
 
 counted as (

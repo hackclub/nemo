@@ -4,6 +4,5 @@ select
     min(posted_at) as first_post_at,
     max(posted_at) as last_post_at,
     count(distinct channel_id) as channels_posted_in
-from {{ ref('fct_message') }}
-where author_kind = 'member' and author_id is not null
+from {{ ref('fct_member_message') }}
 group by author_id
