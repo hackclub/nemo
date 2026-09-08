@@ -21,5 +21,6 @@ select
     is_substantive,
     has_link,
     emoji_only,
-    observed_at
-from {{ source('raw', 'message') }}
+    first_seen_at as observed_at
+from {{ source('archive', 'message') }}
+where deleted_at is null

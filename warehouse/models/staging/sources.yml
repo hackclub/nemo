@@ -30,6 +30,11 @@ sources:
       - name: worker_heartbeat
       - name: deployment
 
+  - name: archive
+    schema: archive
+    tables:
+      - name: message
+
   - name: ingest
     schema: ingest
     tables:
