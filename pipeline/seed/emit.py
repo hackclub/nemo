@@ -511,7 +511,8 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
 
 
 RUN_COLUMNS = ["source", "started_at", "finished_at", "status", "rows_in", "rows_rejected",
-               "total_expected", "parent_run_id", "step_index", "step_total"]
+               "total_expected", "parent_run_id", "step_index", "step_total",
+               "source_key", "logical_date", "worker"]
 
 
 def write_directory(conn, seed, members, as_of):

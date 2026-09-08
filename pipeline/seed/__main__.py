@@ -5,6 +5,7 @@ from datetime import date
 
 from dotenv import load_dotenv
 
+from jobs import seed_archive
 from lib.db import connect
 from lib.paths import ENV_FILE
 from seed import SCALES
@@ -95,6 +96,7 @@ def main(argv=None):
         )
         counts.update(write_directory(conn, args.seed, members, as_of))
         counts.update(write_runs(conn, rng, members, as_of, hostile=args.hostile))
+        counts["archive.message"] = seed_archive.run(conn, quiet=True)
         notices = analyze(conn)
 
     for name, count in counts.items():

@@ -1,10 +1,12 @@
 import json
 from datetime import date, datetime, time, timedelta, timezone
 
+from lib import sources
 from seed import hostile as hostile_module
 
 PARENT_SOURCE = "nightly_sync"
 RUN_HISTORY = 14
+SYNC_WORKER = "sync_worker"
 
 STAGE_SOURCES = [
     ("team_stats", 4, 40),
@@ -58,15 +60,16 @@ def runs(rng, as_of, history=RUN_HISTORY):
 
 
 def parent_rows(rng, as_of, history=RUN_HISTORY):
-    for index, _, status, started in runs(rng, as_of, history):
+    for index, day, status, started in runs(rng, as_of, history):
         total = sum(seconds for _, seconds, _ in STAGE_SOURCES)
         finished = None if status == "running" else started + timedelta(seconds=total)
-        yield (PARENT_SOURCE, started, finished, status, None, None, None, None, None, None)
+        yield (PARENT_SOURCE, started, finished, status, None, None, None, None, None, None,
+               sources.key_for_run(PARENT_SOURCE), day, SYNC_WORKER)
 
 
 def child_rows(rng, as_of, parent_ids, history=RUN_HISTORY):
     total = len(STAGE_SOURCES)
-    for index, _, status, started in runs(rng, as_of, history):
+    for index, day, status, started in runs(rng, as_of, history):
         parent_id = parent_ids[index]
         cursor = started
         reached = 4 if status == "running" else total
@@ -91,6 +94,9 @@ def child_rows(rng, as_of, parent_ids, history=RUN_HISTORY):
                 parent_id,
                 step,
                 total,
+                sources.key_for_run(source),
+                day,
+                SYNC_WORKER,
             )
             cursor += spent
 

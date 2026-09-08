@@ -105,10 +105,17 @@ def fill(conn, channel_id):
     return messages, observations
 
 
-def run(conn, dry_run=False, every=25):
+def run(conn, dry_run=False, every=25, quiet=False):
     queue = owed(conn)
     skipped = unusable(conn)
     total = sum(count for _, count in queue)
+
+    if quiet:
+        messages = 0
+        for channel_id, _ in queue:
+            wrote, _ = fill(conn, channel_id)
+            messages += wrote
+        return messages
 
     print(f"{total} message(s) the archive does not hold, across {len(queue)} channel(s)")
     if skipped:

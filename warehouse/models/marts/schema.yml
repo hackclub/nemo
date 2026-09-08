@@ -302,32 +302,6 @@ models:
         data_type: date
       - name: metric_version
         data_type: text
-  - name: mart_onboarding_funnel
-    config:
-      contract:
-        enforced: true
-    columns:
-      - name: cohort_month
-        data_type: date
-        data_tests: [not_null, unique]
-      - name: invited
-        data_type: bigint
-      - name: joined
-        data_type: bigint
-      - name: active_by_day_1
-        data_type: bigint
-      - name: active_by_day_7
-        data_type: bigint
-      - name: active_by_day_30
-        data_type: bigint
-      - name: day_1_knowable
-        data_type: boolean
-      - name: day_7_knowable
-        data_type: boolean
-      - name: day_30_knowable
-        data_type: boolean
-      - name: metric_version
-        data_type: text
   - name: mart_onboarding_recurrence_funnel
     config:
       contract:
