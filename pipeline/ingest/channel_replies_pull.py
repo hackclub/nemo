@@ -75,8 +75,24 @@ WHERE channel_id = %s AND state = 'draining'
 """
 
 
-def fetch_thread(conn, client, channel_id, root_ts):
+def fetch_thread(conn, client, channel_id, root_ts, item=None):
     rows, observations, kept = [], [], []
+    total, through = 0, None
+
+    def flush():
+        nonlocal rows, observations, kept
+        with conn.cursor() as cur:
+            if rows:
+                cur.executemany(MESSAGE_SQL, rows)
+                cur.executemany(OBSERVATION_SQL, observations)
+            cur.execute(THREAD_DONE_SQL, (total, through, channel_id, root_ts))
+        for reply in kept:
+            archive.from_api(conn, channel_id, reply, METHOD, TRANSPORT)
+        conn.commit()
+        rows, observations, kept = [], [], []
+        if item is not None:
+            work.renew(conn, item)
+
     for message in client.paginate(
         METHOD, {"channel": channel_id, "ts": root_ts}, "messages",
         page_size=PAGE_SIZE, cursor_param="cursor", max_retries=8, credential="admin",
@@ -84,20 +100,17 @@ def fetch_thread(conn, client, channel_id, root_ts):
     ):
         if message.get("ts") == root_ts:
             continue
-        rows.append(message_row(channel_id, message))
+        row = message_row(channel_id, message)
+        rows.append(row)
         observations.append((channel_id, message["ts"], TRANSPORT))
         kept.append(message)
+        total += 1
+        through = row[1]
+        if len(rows) >= PAGE_SIZE:
+            flush()
 
-    with conn.cursor() as cur:
-        if rows:
-            cur.executemany(MESSAGE_SQL, rows)
-            cur.executemany(OBSERVATION_SQL, observations)
-        cur.execute(THREAD_DONE_SQL,
-            (len(rows), rows[-1][1] if rows else None, channel_id, root_ts))
-    for reply in kept:
-        archive.from_api(conn, channel_id, reply, METHOD, TRANSPORT)
-    conn.commit()
-    return len(rows)
+    flush()
+    return total
 
 
 WALKED_SQL = "SELECT 1 FROM raw.channel_walk WHERE channel_id = %s"
@@ -220,7 +233,7 @@ def run(conn, budget=500, stale_hours=6):
                 continue
             with per_entity(conn, SOURCE, counts, {"channel": channel_id, "root_ts": root_ts},
                             on_fault=lambda fault, item=item: work.fail(conn, item, fault.detail)):
-                replies = fetch_thread(conn, client, channel_id, root_ts)
+                replies = fetch_thread(conn, client, channel_id, root_ts, item)
                 reached = item.expected is None or replies >= item.expected
                 work.settle(conn, item, "complete" if reached else "short", fetched=replies,
                             note=None if reached else f"{replies} of {item.expected}")
