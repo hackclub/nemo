@@ -20,6 +20,7 @@ from lib.db import (
     mark_day_unavailable,
     record_day,
     run_step,
+    set_worker,
 )
 from lib import calendar as slack_calendar
 from lib import coverage, planners, sources
@@ -28,6 +29,7 @@ from lib.proxy_client import ProxyClient
 from lib.walk import SHORT, check_walk
 
 ANALYTICS_SOURCE = "admin_analytics_api"
+BY_HAND = "analytics_by_hand"
 MEMBER_DAYS_KEY = sources.key_for_run(f"{ANALYTICS_SOURCE}:member")
 CHANNEL_DAYS_KEY = sources.key_for_run(f"{ANALYTICS_SOURCE}:public_channel")
 MEMBER_PAGE_SIZE = 500
@@ -453,6 +455,7 @@ def main():
 
     args = parser.parse_args()
     load_dotenv(ENV_FILE)
+    set_worker(BY_HAND)
 
     source, pull_fn = DAY_WALKS[args.kind]
     with connect() as conn:

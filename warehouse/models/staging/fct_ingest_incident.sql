@@ -4,6 +4,7 @@ with stage_runs as (
     where status in ('ok', 'partial', 'failed', 'abandoned')
       and source_key is not null
       and source_key <> 'nightly_sync'
+      and not (status = 'abandoned' and error_class = 'local')
 ),
 
 ranked as (

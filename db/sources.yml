@@ -176,7 +176,7 @@ sources:
     standalone: true
     writes: [archive.envelope, archive.message, archive.observation, raw.event_delivery]
     runs_as: [event_projector]
-    feeds: []
+    feeds: [fct_message]
 
   users_list:
     label: Account flags and deactivation, display name, handle, and avatar
@@ -200,7 +200,7 @@ sources:
     resume: none
     retention: replace
     writes: [fd.member, fd.member_identity]
-    feeds: [nothing]
+    feeds: []
 
   channel_roster:
     label: Public channel roster, names and archived flags
@@ -300,7 +300,7 @@ sources:
     resume: none
     retention: n/a
     writes: [raw]
-    feeds: [nothing]
+    feeds: []
 
   dbt:
     label: Build the warehouse

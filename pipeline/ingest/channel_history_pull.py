@@ -250,6 +250,7 @@ LEFT JOIN (
     GROUP BY channel_id
 ) v ON v.channel_id = d.channel_id
 WHERE coalesce(w.history_complete, false) = false
+  AND coalesce(w.last_error, '') NOT LIKE 'entity:%%'
 """
 
 TAIL_SELECT = """
@@ -266,6 +267,7 @@ SELECT count(*)
 FROM raw.channel_dim d
 LEFT JOIN raw.channel_walk w ON w.channel_id = d.channel_id
 WHERE coalesce(w.history_complete, false) = false
+  AND coalesce(w.last_error, '') NOT LIKE 'entity:%'
 """
 
 SETTLE_WALKED_SQL = """

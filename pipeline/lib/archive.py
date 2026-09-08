@@ -35,14 +35,14 @@ FIELDS = (
 )
 
 KEPT_WHEN_ABSENT = (
-    "author_id", "bot_id", "app_id", "parent_user_id", "subtype", "thread_root_ts",
-    "reply_count", "reply_users_count", "latest_reply_ts", "text_length", "has_text",
+    "author_id", "bot_id", "app_id", "parent_user_id", "subtype", "text_length", "has_text",
     "block_count", "attachment_count", "file_count", "mention_count", "mentioned_ids",
     "is_question", "is_substantive", "has_link", "emoji_only", "reaction_count",
     "reactor_count", "edited_at", "edited_by", "client_msg_id", "team_id",
 )
 
-ALWAYS = ("revision", "posted_at", "author_kind", "is_reply", "is_broadcast")
+ALWAYS = ("revision", "posted_at", "author_kind", "is_reply", "is_broadcast",
+          "thread_root_ts", "reply_count", "reply_users_count", "latest_reply_ts")
 
 
 def _upsert():
@@ -66,6 +66,15 @@ OBSERVED_SQL = """
 INSERT INTO archive.observation (channel_id, ts, transport, revision)
 VALUES (%s, %s, %s, %s)
 ON CONFLICT (channel_id, ts, transport, revision) DO UPDATE SET observed_at = now()
+"""
+
+LOCK_SQL = "SELECT pg_advisory_xact_lock(hashtext(%s))"
+
+TOMBSTONE_SQL = """
+INSERT INTO archive.message
+    (channel_id, ts, revision, posted_at, author_kind, deleted_at, settled)
+VALUES (%s, %s, 1, %s, 'unknown', coalesce(%s, now()), false)
+ON CONFLICT (channel_id, ts) DO NOTHING
 """
 
 DELETED_SQL = """
@@ -96,6 +105,11 @@ def body_of(envelope):
         changed = envelope.get("message")
         return changed if isinstance(changed, dict) else None
     return envelope
+
+
+def hold(conn, channel_id):
+    with conn.cursor() as cur:
+        cur.execute(LOCK_SQL, (channel_id,))
 
 
 def revision_for(conn, channel_id, ts, payload_hash):
@@ -194,6 +208,7 @@ def record_many(conn, channel_id, entries, method, transport, settled):
     if not shaped:
         return 0
 
+    hold(conn, channel_id)
     held = latest_for(conn, channel_id, {ts for ts, *_ in shaped})
     envelopes, messages, observations = [], [], []
     for ts, envelope, measured, payload_hash in shaped:
@@ -230,6 +245,7 @@ def record(conn, channel_id, ts, envelope, measured, method, transport, settled)
     if body_of(envelope) is None:
         return False
 
+    hold(conn, channel_id)
     payload_hash = digest(envelope)
     revision, fresh = revision_for(conn, channel_id, ts, payload_hash)
     built = message_row(channel_id, ts, revision, envelope, measured)
@@ -254,4 +270,10 @@ def from_api(conn, channel_id, message, method, transport):
 def mark_deleted(conn, channel_id, ts, when):
     with conn.cursor() as cur:
         cur.execute(DELETED_SQL, (when, channel_id, ts))
+        if cur.rowcount:
+            return cur.rowcount
+        posted = stamp(ts)
+        if posted is None:
+            return 0
+        cur.execute(TOMBSTONE_SQL, (channel_id, ts, posted, when))
         return cur.rowcount

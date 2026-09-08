@@ -275,11 +275,13 @@ def ingest_run(
 SUSPECT_SQL = """
 UPDATE raw.ingest_run r
 SET suspected_dead_at = now()
-FROM raw.worker_heartbeat h
-WHERE r.status = 'running' AND r.suspected_dead_at IS NULL AND r.worker = h.worker
+WHERE r.status = 'running' AND r.suspected_dead_at IS NULL
   AND r.worker_boot IS DISTINCT FROM %(boot)s::uuid
-  AND (h.beat_at < now() - make_interval(secs => %(after)s)
-       OR (h.worker_boot IS NOT NULL AND h.worker_boot IS DISTINCT FROM r.worker_boot))
+  AND NOT EXISTS (
+      SELECT 1 FROM raw.worker_heartbeat h
+      WHERE h.worker = r.worker
+        AND h.beat_at >= now() - make_interval(secs => %(after)s)
+        AND (h.worker_boot IS NULL OR h.worker_boot IS NOT DISTINCT FROM r.worker_boot))
 RETURNING r.id, r.source
 """
 
