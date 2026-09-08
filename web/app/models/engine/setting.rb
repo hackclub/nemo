@@ -18,7 +18,9 @@ module Engine
       "breaker_mode" => { label: "Breakers", default: "observe", kind: :choice,
                           choices: %w[observe on off] },
       "backfill_ceiling" => { label: "Backfill needs engine.sync over", default: "1000",
-                              kind: :number, min: 0, max: 100_000 }
+                              kind: :number, min: 0, max: 100_000 },
+      "reclaim_seconds" => { label: "Reclaim a dead run after, seconds", default: "900",
+                             kind: :number, min: 300, max: 21_600 }
     }.freeze
 
     def self.choices(name)

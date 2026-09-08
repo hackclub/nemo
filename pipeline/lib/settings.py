@@ -13,7 +13,7 @@ WHERE status = 'ok' AND source = ANY(%s)
 """
 
 ENGINE = "engine"
-DEFAULTS = {"run_at": "03:00", "budget_minutes": "480"}
+DEFAULTS = {"run_at": "03:00", "budget_minutes": "480", "reclaim_seconds": "900"}
 
 PERIOD = {
     "daily": timedelta(hours=20),
@@ -81,12 +81,15 @@ def floor_days(key):
 
 
 RECLAIM_FLOOR_SECONDS = 300
+OFF = "off"
 
 
 def reclaim_seconds(conn):
-    asked = said(conn, ENGINE, "reclaim_seconds", None)
-    if asked in (None, "", "off"):
+    asked = said(conn, ENGINE, "reclaim_seconds", DEFAULTS["reclaim_seconds"])
+    if asked == OFF:
         return None
+    if asked in (None, ""):
+        asked = DEFAULTS["reclaim_seconds"]
     return max(int(asked), RECLAIM_FLOOR_SECONDS)
 
 
