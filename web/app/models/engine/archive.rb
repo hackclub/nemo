@@ -3,6 +3,8 @@ module Engine
     WORKER = "archive_worker".freeze
     ERRORS_SHOWN = 8
     ERROR_WIDTH = 90
+    WORST_SHOWN = 12
+    WORST_FLOOR = 500
 
     Stage = Struct.new(:name, :done, :total, :at, keyword_init: true) do
       def outstanding
@@ -18,41 +20,49 @@ module Engine
       end
     end
 
-    Report = Struct.new(:stages, :walked, :errors, :beat, keyword_init: true)
+    Report = Struct.new(:stages, :walked, :unreachable, :errors, :worst, :beat, keyword_init: true)
 
     def self.report
-      walked, complete, last_walk = walk
-      Report.new(stages: stages(complete, last_walk), walked: walked,
-                 errors: errors, beat: beat)
+      totals = coverage
+      Report.new(stages: stages(totals), walked: totals[:messages_held],
+                 unreachable: totals[:unreachable], errors: errors, worst: worst, beat: beat)
     end
 
-    def self.walk
-      row = Analytics::FctChannelWalk.pick(
-        Arel.sql("coalesce(sum(messages_seen), 0)"),
+    def self.coverage
+      row = Analytics::MartArchiveChannelCoverage.pick(
+        Arel.sql("count(*)"),
+        Arel.sql("count(*) filter (where unreachable_reason is not null)"),
         Arel.sql("count(*) filter (where history_complete)"),
+        Arel.sql("coalesce(sum(messages_held), 0)"),
+        Arel.sql("coalesce(sum(threads_known), 0)"),
+        Arel.sql("coalesce(sum(threads_fetched), 0)"),
+        Arel.sql("coalesce(sum(replies_held), 0)"),
+        Arel.sql("coalesce(sum(replies_declared), 0)"),
         Arel.sql("max(last_walked_at)")
       )
-      [row[0].to_i, row[1].to_i, row[2]]
+      { channels: row[0].to_i, unreachable: row[1].to_i, complete: row[2].to_i,
+        messages_held: row[3].to_i, threads_known: row[4].to_i, threads_fetched: row[5].to_i,
+        replies_held: row[6].to_i, replies_declared: row[7].to_i, last_walk: row[8] }
     end
 
-    def self.stages(complete, last_walk)
-      threads, fetched, held, owed = replies
+    def self.stages(totals)
       [
-        Stage.new(name: "channels walked", done: complete,
-                  total: Analytics::DimChannel.count, at: last_walk),
-        Stage.new(name: "threads fetched", done: fetched, total: threads, at: nil),
-        Stage.new(name: "replies held", done: held, total: held + owed, at: nil)
+        Stage.new(name: "channels walked", done: totals[:complete],
+                  total: totals[:channels] - totals[:unreachable], at: totals[:last_walk]),
+        Stage.new(name: "threads fetched", done: totals[:threads_fetched],
+                  total: totals[:threads_known], at: nil),
+        Stage.new(name: "replies held", done: totals[:replies_held],
+                  total: totals[:replies_declared], at: nil)
       ]
     end
 
-    def self.replies
-      row = Analytics::FctThread.pick(
-        Arel.sql("count(*)"),
-        Arel.sql("count(*) filter (where fetched_at is not null)"),
-        Arel.sql("coalesce(sum(replies_fetched), 0)"),
-        Arel.sql("coalesce(sum(reply_count) filter (where fetched_at is null), 0)")
-      )
-      row.map(&:to_i)
+    def self.worst
+      Analytics::MartArchiveChannelCoverage
+        .reachable
+        .where("slack_messages >= ?", WORST_FLOOR)
+        .where("held_share is not null")
+        .order(held_share: :asc, slack_messages: :desc)
+        .limit(WORST_SHOWN)
     end
 
     def self.errors
