@@ -412,6 +412,7 @@ def run(conn, limit=200, full=False, channels=None, backfill_limit=None):
     client = ProxyClient.for_source("channel_history")
     work.reclaim(conn, TAIL_KIND)
     work.reclaim(conn, BACKFILL_KIND)
+    work.revive(conn, BACKFILL_KIND)
     tidied = settle_walked(conn)
     if channels:
         queued_tail = 0

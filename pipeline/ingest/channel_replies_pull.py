@@ -24,6 +24,7 @@ TRANSPORT = "replies"
 DEFAULT_FETCHERS = 4
 PROGRESS_SECONDS = 5
 CONTENDED_ATTEMPTS = 20
+TOPUP_LIMIT = 20000
 
 CLAIM_SQL = """
 UPDATE app.channel_backfill
@@ -158,6 +159,16 @@ LEFT JOIN app.channel_backfill b
 WHERE t.replies_fetched < t.reply_count
 """
 
+TOPUP_SELECT = THREAD_SELECT + """
+  AND NOT EXISTS (
+      SELECT 1 FROM ingest.work_item w
+      WHERE w.work_kind = %(kind)s
+        AND w.target_key = t.channel_id
+        AND w.target_sub_key = t.root_ts
+  )
+LIMIT %(p0)s
+"""
+
 OPEN_UNITS_SQL = """
 SELECT 1 FROM ingest.work_item
 WHERE work_kind = %s AND target_key = %s AND state IN ('pending', 'claimed')
@@ -199,7 +210,11 @@ def settle_channel(conn, channel_id):
     return done
 
 
-def enqueue_threads(conn):
+def enqueue_threads(conn, limit=TOPUP_LIMIT):
+    return work.enqueue_select(conn, KIND, TOPUP_SELECT, (limit,), requested_by=SOURCE)
+
+
+def enqueue_grown(conn):
     return work.enqueue_select(conn, KIND, THREAD_SELECT, requested_by=SOURCE, requeue_when_grown=True)
 
 
@@ -268,11 +283,12 @@ def run(conn, budget=500, fetchers=DEFAULT_FETCHERS, stale_hours=6):
     for channel_id in claim_channels(conn):
         prepare(conn, client, channel_id)
     work.reclaim(conn, KIND)
+    work.revive(conn, KIND)
 
+    queued = enqueue_threads(conn)
     items = work.claim(conn, KIND, budget)
-    queued = 0
     if len(items) < budget:
-        queued = enqueue_threads(conn)
+        queued += enqueue_grown(conn)
         items += work.claim(conn, KIND, budget - len(items))
 
     if not items:

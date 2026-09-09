@@ -8,6 +8,8 @@ WHERE_ID = "work_item_id = %(id)s"
 LEASE_SECONDS = 600
 MAX_ATTEMPTS = 5
 MAX_LAPSES = 10
+REVIVE_HOURS = 6
+REFUSALS = ("channel_not_found", "team_access_not_granted")
 OPEN = ("pending", "claimed")
 SETTLED = ("complete", "short", "unavailable")
 
@@ -95,6 +97,18 @@ SET    state = CASE WHEN lapses + 1 >= %(max_lapses)s THEN 'dead' ELSE 'pending'
 WHERE  state = 'claimed' AND lease_until < now()
   AND  (%(kind)s::text IS NULL OR work_kind = %(kind)s)
 RETURNING work_kind, state
+"""
+
+REVIVE_SQL = """
+UPDATE ingest.work_item
+SET    state = 'pending', attempts = 0, next_attempt_at = now(),
+       lease_until = NULL, updated_at = now()
+WHERE  state = 'dead'
+  AND  (%(kind)s::text IS NULL OR work_kind = %(kind)s)
+  AND  left(coalesce(last_error, ''), 7) <> 'entity:'
+  AND  coalesce(last_error, '') <> ALL(%(refusals)s::text[])
+  AND  next_attempt_at < now() - make_interval(hours => %(after)s)
+RETURNING work_kind
 """
 
 DEPTH_SQL = """
@@ -187,6 +201,16 @@ def reclaim(conn, kind=None, max_lapses=MAX_LAPSES):
     if rows:
         dead = sum(1 for _, state in rows if state == "dead")
         print(f"work: reclaimed {len(rows)} expired lease(s)" + (f", {dead} now dead" if dead else ""))
+    return len(rows)
+
+
+def revive(conn, kind=None, after_hours=REVIVE_HOURS):
+    with conn.cursor() as cur:
+        cur.execute(REVIVE_SQL, {"kind": kind, "after": after_hours, "refusals": list(REFUSALS)})
+        rows = cur.fetchall()
+    conn.commit()
+    if rows:
+        print(f"work: revived {len(rows)} dead unit(s) that failed for a fixable reason")
     return len(rows)
 
 
