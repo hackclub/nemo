@@ -204,7 +204,10 @@ def proxy_note():
         f"{key.rsplit(':', 1)[-1]} {rate}/min"
         for key, rate in sorted((report.get("pacing") or {}).items())
     )
-    return f"ok, {who}" + (f" | {pacing}" if pacing else "")
+    build = (report.get("build") or {}).get("fingerprint")
+    return (f"ok, {who}"
+            + (f" | build {build}" if build else "")
+            + (f" | {pacing}" if pacing else ""))
 
 
 def probe_proxy(last_at):

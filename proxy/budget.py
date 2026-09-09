@@ -130,6 +130,15 @@ def rates():
 def report():
     return {
         "mode": MODE,
+        "tuning": {
+            "burst": BURST,
+            "floor_boost": FLOOR_BOOST,
+            "backoff_factor": BACKOFF_FACTOR,
+            "backoff_cooldown": BACKOFF_COOLDOWN,
+            "heal_step": HEAL_STEP,
+            "heal_seconds": HEAL_SECONDS,
+            "pause_ceiling": PAUSE_CEILING,
+        },
         "methods": {
             ":".join(key): {
                 "per_minute": round(bucket.per_minute, 1),

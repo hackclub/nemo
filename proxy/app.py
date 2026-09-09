@@ -14,6 +14,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 
 import budget
+import version
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from slack_sdk.errors import SlackApiError
@@ -162,6 +163,7 @@ def health():
     return {
         "ok": True,
         "credentials": {name: credential_present(name) for name in CREDENTIALS},
+        "build": version.build(),
     }
 
 
@@ -200,6 +202,7 @@ def verify(response: Response, client: Client = Depends(current_client)):
         "allowed_methods": {k: sorted(v) for k, v in client.methods.items()},
         "allowed_file_methods": sorted(client.file_methods),
         "pacing": budget.rates(),
+        "build": version.build(),
     }
 
 

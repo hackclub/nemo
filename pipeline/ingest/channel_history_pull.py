@@ -254,12 +254,40 @@ WHERE coalesce(w.history_complete, false) = false
 """
 
 TAIL_SELECT = """
-SELECT d.channel_id AS target_key, '' AS target_sub_key,
-       CASE WHEN w.newest_ts IS NULL THEN 500 ELSE 100 END AS priority,
+WITH rate AS (
+    SELECT s.channel_id, sum(s.messages_posted) / 7.0 AS per_day
+    FROM raw.channel_activity_snapshot s
+    WHERE s.source = 'admin_analytics_api' AND s.window_start = s.window_end
+      AND s.window_start > current_date - 8
+    GROUP BY 1
+),
+ladder AS (
+    SELECT d.channel_id, w.newest_ts, coalesce(r.per_day, 0) AS per_day,
+           CASE
+               WHEN coalesce(r.per_day, 0) >= 100 THEN 300
+               WHEN coalesce(r.per_day, 0) >= 10 THEN 1800
+               WHEN coalesce(r.per_day, 0) >= 1 THEN 14400
+               WHEN coalesce(r.per_day, 0) > 0 THEN 86400
+               WHEN w.newest_ts IS NOT NULL
+                    AND to_timestamp(w.newest_ts::numeric) > now() - interval '2 days'
+                   THEN 14400
+               ELSE 604800
+           END AS every_seconds
+    FROM raw.channel_dim d
+    LEFT JOIN raw.channel_walk w ON w.channel_id = d.channel_id
+    LEFT JOIN rate r ON r.channel_id = d.channel_id
+    WHERE d.archived IS NOT TRUE
+)
+SELECT l.channel_id AS target_key, '' AS target_sub_key,
+       CASE WHEN l.newest_ts IS NULL THEN 0
+            ELSE greatest(1, 1000 - (l.per_day * 10)::integer) END AS priority,
        '{}'::jsonb AS payload, NULL::integer AS expected
-FROM raw.channel_dim d
-LEFT JOIN raw.channel_walk w ON w.channel_id = d.channel_id
-WHERE d.archived IS NOT TRUE
+FROM ladder l
+LEFT JOIN ingest.work_item i
+       ON i.work_kind = 'channel_tail' AND i.target_key = l.channel_id AND i.target_sub_key = ''
+WHERE i.work_item_id IS NULL
+   OR (i.state IN ('complete', 'short', 'unavailable')
+       AND i.settled_at < now() - make_interval(secs => l.every_seconds))
 """
 
 WALK_LEFT_SQL = """
@@ -307,7 +335,7 @@ def enqueue_backfill(conn, channels=None, priority=None):
 
 def enqueue_tail(conn):
     return work.enqueue_select(conn, TAIL_KIND, TAIL_SELECT, requested_by=SOURCE,
-                               requeue_settled_after=TAIL_EVERY_SECONDS)
+                               requeue_settled_after=0)
 
 
 def backfill_share(limit, left, full=False):

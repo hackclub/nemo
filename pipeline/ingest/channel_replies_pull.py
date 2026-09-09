@@ -166,6 +166,7 @@ TOPUP_SELECT = THREAD_SELECT + """
       WHERE w.work_kind = %(kind)s
         AND w.target_key = t.channel_id
         AND w.target_sub_key = t.root_ts
+        AND w.state IN ('pending', 'claimed')
   )
 ORDER BY t.reply_count DESC
 LIMIT %(p0)s
@@ -213,11 +214,8 @@ def settle_channel(conn, channel_id):
 
 
 def enqueue_threads(conn, limit=TOPUP_LIMIT):
-    return work.enqueue_select(conn, KIND, TOPUP_SELECT, (limit,), requested_by=SOURCE)
-
-
-def enqueue_grown(conn):
-    return work.enqueue_select(conn, KIND, THREAD_SELECT, requested_by=SOURCE, requeue_when_grown=True)
+    return work.enqueue_select(conn, KIND, TOPUP_SELECT, (limit,), requested_by=SOURCE,
+                               requeue_when_grown=True)
 
 
 def deal(items, hands):
@@ -289,9 +287,6 @@ def run(conn, budget=500, fetchers=DEFAULT_FETCHERS, stale_hours=6):
 
     queued = enqueue_threads(conn)
     items = work.claim(conn, KIND, budget)
-    if len(items) < budget:
-        queued += enqueue_grown(conn)
-        items += work.claim(conn, KIND, budget - len(items))
 
     if not items:
         with ingest_run(conn, SOURCE):
