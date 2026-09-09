@@ -11,9 +11,12 @@ TIER2, TIER3, TIER4 = 20, 50, 100
 
 BURST = 5
 HEAL_SECONDS = 60
-HEAL_STEP = 10
+HEAL_STEP = 20
 BACKOFF_COOLDOWN = 10
-FLOOR_BOOST = 10
+BACKOFF_FACTOR = 0.75
+FLOOR_BOOST = 40
+PAUSE_CEILING = 1.0
+PAUSE_TRIES = 3
 
 LIMITS = {
     ("pipeline", "admin", "conversations.replies"): (TIER3, 120),
@@ -63,7 +66,7 @@ class Bucket:
             now = time.monotonic()
             if now - self.backed_off_at < BACKOFF_COOLDOWN:
                 return None
-            self.boost = max(FLOOR_BOOST, self.boost / 2.0)
+            self.boost = max(FLOOR_BOOST, self.boost * BACKOFF_FACTOR)
             self.backed_off_at = now
             self.healed_at = now
             return self.per_minute
@@ -71,6 +74,7 @@ class Bucket:
 
 _buckets = {key: Bucket(tier, boost) for key, (tier, boost) in LIMITS.items()}
 _refused = {}
+_paused = {}
 
 
 def keys_for(client, credential, method):
@@ -81,14 +85,20 @@ def keys_for(client, credential, method):
 
 
 def take(client, credential, method):
-    waits = []
-    for key in keys_for(client, credential, method):
-        ok, wait = _buckets[key].take()
-        if not ok:
-            waits.append((key, wait))
-    if not waits:
+    keys = keys_for(client, credential, method)
+    if not keys:
         return None
-    key, wait = max(waits, key=lambda pair: pair[1])
+    key = keys[0]
+    bucket = _buckets[key]
+    wait = 0.0
+    for _ in range(PAUSE_TRIES):
+        ok, wait = bucket.take()
+        if ok:
+            return None
+        if wait > PAUSE_CEILING or MODE != "on":
+            break
+        _paused[key] = _paused.get(key, 0) + 1
+        time.sleep(wait)
     _refused[key] = _refused.get(key, 0) + 1
     label = ":".join(key)
     if MODE == "on":
@@ -127,6 +137,7 @@ def report():
                 "boost": round(bucket.boost, 1),
                 "ceiling": int(bucket.ceiling),
                 "burst": int(bucket.burst),
+                "paused": _paused.get(key, 0),
                 "refused": _refused.get(key, 0),
                 "upstream_429": bucket.throttles,
             }
