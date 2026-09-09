@@ -44,6 +44,7 @@ from lib.db import (
     start_run,
     worker,
 )
+from checks import archive as archive_check
 from checks import headlines
 from jobs import invariants, reconcile
 from lib import breaker
@@ -397,6 +398,7 @@ def record_quality(conn, run_id):
         ("reconcile", lambda: reconcile.record(conn, run_id)),
         ("breaker", lambda: breaker.record(conn, run_id)),
         ("headlines", lambda: headlines.run(cross_only=True, record=True, run_id=run_id)),
+        ("archive", lambda: archive_check.record(conn, run_id)),
     ):
         try:
             job()
