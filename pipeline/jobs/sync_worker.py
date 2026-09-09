@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import psycopg
 from dotenv import load_dotenv
 
-from jobs.nightly_sync import ENV_FILE, TRUTHY, credential_faults, run_sync, stage_plan
+from jobs.nightly_sync import ENV_FILE, TRUTHY, credential_faults, run_dbt, run_sync, stage_plan
 from lib import settings
 from lib.heartbeat import beating
 from lib.proxy_client import ProxyClient
@@ -24,6 +24,7 @@ from lib.db import (
 
 DEFAULT_AT = "03:00"
 DEFAULT_POLL_SECONDS = 60
+DEFAULT_TRANSFORM_SECONDS = 900
 CANCEL_POLL_SECONDS = 30
 BEAT_SECONDS = 60
 CHANNEL = "sync_request"
@@ -224,6 +225,25 @@ def probe_proxy(last_at):
     return time.monotonic()
 
 
+def transform_every():
+    return int(os.environ.get("TRANSFORM_EVERY_SECONDS", "") or DEFAULT_TRANSFORM_SECONDS)
+
+
+def refresh_marts(last_at, state):
+    every = transform_every()
+    if every <= 0 or time.monotonic() - last_at < every:
+        return last_at
+    held = state["note"]
+    state["note"] = "rebuilding the marts"
+    try:
+        with connect() as conn:
+            run_dbt(conn)
+    except Exception as exc:
+        print(f"sync worker: mart refresh failed {type(exc).__name__}: {exc}")
+    state["note"] = held
+    return time.monotonic()
+
+
 def waiting_note(scheduled):
     return f"next scheduled run at {scheduled:%Y-%m-%dT%H:%M}"
 
@@ -257,6 +277,7 @@ def main():
     reap()
     state = {"note": waiting_note(scheduled)}
     probed = 0.0
+    refreshed = 0.0
 
     with beating(WORKER, lambda: state["note"], every=BEAT_SECONDS):
         if run_at_start_enabled():
@@ -268,6 +289,7 @@ def main():
         while True:
             probed = probe_proxy(probed)
             state["note"] = waiting_note(scheduled)
+            refreshed = refresh_marts(refreshed, state)
             if datetime.now() >= scheduled:
                 state["note"] = "scheduled run"
                 run_scheduled()

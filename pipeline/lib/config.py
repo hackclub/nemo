@@ -52,6 +52,7 @@ ROLES = {
             "NIGHTLY_AT",
             "NIGHTLY_RUN_AT_START",
             "SYNC_POLL_SECONDS",
+            "TRANSFORM_EVERY_SECONDS",
             "PROXY_ALLOW_PLAINTEXT",
             "MEMBER_HISTORY_LIMIT",
             "FIRST_REPLY_LIMIT",
