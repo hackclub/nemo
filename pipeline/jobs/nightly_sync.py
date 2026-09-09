@@ -108,13 +108,16 @@ def dbt_outcomes(results):
     return failed, warned
 
 
-def run_dbt(conn=None):
+TABLES_ONLY = ("--select", "config.materialized:table")
+
+
+def run_dbt(conn=None, select=()):
     ensure_dbt_profile()
 
     def build(counts=None):
-        if dbt("run") != 0:
+        if dbt("run", *select) != 0:
             raise RuntimeError("dbt run exited non-zero, no mart was rebuilt")
-        code = dbt("test")
+        code = dbt("test", *select)
         results = json.loads(RUN_RESULTS.read_text()) if RUN_RESULTS.exists() else {}
         failed, warned = dbt_outcomes(results)
         for name, status in warned:

@@ -7,7 +7,15 @@ from datetime import datetime, timedelta
 import psycopg
 from dotenv import load_dotenv
 
-from jobs.nightly_sync import ENV_FILE, TRUTHY, credential_faults, run_dbt, run_sync, stage_plan
+from jobs.nightly_sync import (
+    ENV_FILE,
+    TABLES_ONLY,
+    TRUTHY,
+    credential_faults,
+    run_dbt,
+    run_sync,
+    stage_plan,
+)
 from lib import settings
 from lib.heartbeat import beating
 from lib.proxy_client import ProxyClient
@@ -237,7 +245,7 @@ def refresh_marts(last_at, state):
     state["note"] = "rebuilding the marts"
     try:
         with connect() as conn:
-            run_dbt(conn)
+            run_dbt(conn, select=TABLES_ONLY)
     except Exception as exc:
         print(f"sync worker: mart refresh failed {type(exc).__name__}: {exc}")
     state["note"] = held
