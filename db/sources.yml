@@ -116,7 +116,7 @@ sources:
       months: {default: 2, min: 1, max: 24}
 
   channel_replies:
-    unit_budget_seconds: 60
+    unit_budget_seconds: 180
     standalone: true
     label: Thread replies, every thread the walk has found
     endpoint: conversations.replies

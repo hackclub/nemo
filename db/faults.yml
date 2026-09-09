@@ -9,8 +9,8 @@ classes:
     disposition: raise
     means: the proxy, the ingress or the network failed before Slack answered
   throttle:
-    disposition: raise
-    means: Slack or the proxy rate-limited us, back off rather than hammer
+    disposition: continue
+    means: Slack or the proxy rate-limited us, retire this unit and let the pass carry on
   local:
     disposition: raise
     means: our own code, database or walk assertion failed

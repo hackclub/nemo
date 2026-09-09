@@ -199,6 +199,7 @@ def verify(response: Response, client: Client = Depends(current_client)):
         "credentials": credentials,
         "allowed_methods": {k: sorted(v) for k, v in client.methods.items()},
         "allowed_file_methods": sorted(client.file_methods),
+        "pacing": budget.rates(),
     }
 
 
@@ -278,7 +279,12 @@ def call(req: CallRequest, client: Client = Depends(current_client)):
         )
 
     if req.credential == "admin":
-        return call_admin(req)
+        try:
+            return call_admin(req)
+        except HTTPException as exc:
+            if exc.status_code == 429:
+                budget.back_off(client.name, req.credential, req.method)
+            raise
     return call_internal(req)
 
 

@@ -2,7 +2,7 @@ import os
 
 from slack_sdk import WebClient
 
-UPSTREAM_TIMEOUT = 60
+UPSTREAM_TIMEOUT = 30
 
 AUTH_ERRORS = {
     "invalid_auth",

@@ -25,6 +25,7 @@ DEFAULT_FETCHERS = 4
 PROGRESS_SECONDS = 5
 CONTENDED_ATTEMPTS = 20
 TOPUP_LIMIT = 20000
+FORGIVEN = frozenset({"contended", "throttle"})
 
 CLAIM_SQL = """
 UPDATE app.channel_backfill
@@ -236,7 +237,7 @@ def deal(items, hands):
 
 
 def gave_way(conn, item, fault):
-    limit = CONTENDED_ATTEMPTS if fault.name == "contended" else work.MAX_ATTEMPTS
+    limit = CONTENDED_ATTEMPTS if fault.name in FORGIVEN else work.MAX_ATTEMPTS
     work.fail(conn, item, fault.detail, max_attempts=limit)
 
 

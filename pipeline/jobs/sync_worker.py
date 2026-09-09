@@ -200,7 +200,11 @@ def proxy_note():
     who = ", ".join(
         f"{name} {state.get('user')}" for name, state in (report.get("credentials") or {}).items()
     )
-    return f"ok, {who}"
+    pacing = ", ".join(
+        f"{key.rsplit(':', 1)[-1]} {rate}/min"
+        for key, rate in sorted((report.get("pacing") or {}).items())
+    )
+    return f"ok, {who}" + (f" | {pacing}" if pacing else "")
 
 
 def probe_proxy(last_at):

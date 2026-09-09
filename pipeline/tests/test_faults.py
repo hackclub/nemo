@@ -44,9 +44,9 @@ def test_every_exception_lands_in_exactly_one_class(exc, expected):
 
 
 def test_the_dispositions_split_abort_from_continue():
-    for name in ("cancelled", "auth", "transport", "throttle", "local"):
+    for name in ("cancelled", "auth", "transport", "local"):
         assert faults.CLASSES[name]["disposition"] == "raise"
-    for name in ("upstream", "contract", "entity"):
+    for name in ("upstream", "contract", "entity", "throttle", "contended"):
         assert faults.CLASSES[name]["disposition"] == "continue"
 
 
