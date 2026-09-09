@@ -3,7 +3,7 @@
     <div>
       <h2 class="card-title">Archive</h2>
       <p class="card-sub">
-        <%= number_with_delimiter(archive.walked) %> messages held
+        <%= number_with_delimiter(archive.walked) %> messages walked
         <% if archive.unreachable.positive? %>
           &middot; <%= number_with_delimiter(archive.unreachable) %> channels Slack will not return
         <% end %>

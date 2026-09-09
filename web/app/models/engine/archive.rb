@@ -23,36 +23,43 @@ module Engine
     Report = Struct.new(:stages, :walked, :unreachable, :errors, :worst, :beat, keyword_init: true)
 
     def self.report
-      totals = coverage
-      Report.new(stages: stages(totals), walked: totals[:messages_held],
-                 unreachable: totals[:unreachable], errors: errors, worst: worst, beat: beat)
+      walk = walked_totals
+      threads = thread_totals
+      Report.new(stages: stages(walk, threads), walked: walk[:messages],
+                 unreachable: walk[:unreachable], errors: errors, worst: worst, beat: beat)
     end
 
-    def self.coverage
-      row = Analytics::MartArchiveChannelCoverage.pick(
+    def self.walked_totals
+      row = Analytics::FctChannelWalk.pick(
         Arel.sql("count(*)"),
-        Arel.sql("count(*) filter (where unreachable_reason is not null)"),
+        Arel.sql("count(*) filter (where left(coalesce(last_error, ''), 7) = 'entity:')"),
         Arel.sql("count(*) filter (where history_complete)"),
-        Arel.sql("coalesce(sum(messages_held), 0)"),
-        Arel.sql("coalesce(sum(threads_known), 0)"),
-        Arel.sql("coalesce(sum(threads_fetched), 0)"),
-        Arel.sql("coalesce(sum(replies_held), 0)"),
-        Arel.sql("coalesce(sum(replies_declared), 0)"),
+        Arel.sql("coalesce(sum(messages_seen), 0)"),
         Arel.sql("max(last_walked_at)")
       )
       { channels: row[0].to_i, unreachable: row[1].to_i, complete: row[2].to_i,
-        messages_held: row[3].to_i, threads_known: row[4].to_i, threads_fetched: row[5].to_i,
-        replies_held: row[6].to_i, replies_declared: row[7].to_i, last_walk: row[8] }
+        messages: row[3].to_i, last_walk: row[4] }
     end
 
-    def self.stages(totals)
+    def self.thread_totals
+      row = Analytics::FctThread.pick(
+        Arel.sql("count(*)"),
+        Arel.sql("count(*) filter (where fetched_at is not null)"),
+        Arel.sql("coalesce(sum(replies_fetched), 0)"),
+        Arel.sql("coalesce(sum(reply_count), 0)")
+      )
+      { known: row[0].to_i, fetched: row[1].to_i,
+        replies_held: row[2].to_i, replies_declared: row[3].to_i }
+    end
+
+    def self.stages(walk, threads)
       [
-        Stage.new(name: "channels walked", done: totals[:complete],
-                  total: totals[:channels] - totals[:unreachable], at: totals[:last_walk]),
-        Stage.new(name: "threads fetched", done: totals[:threads_fetched],
-                  total: totals[:threads_known], at: nil),
-        Stage.new(name: "replies held", done: totals[:replies_held],
-                  total: totals[:replies_declared], at: nil)
+        Stage.new(name: "channels walked", done: walk[:complete],
+                  total: walk[:channels] - walk[:unreachable], at: walk[:last_walk]),
+        Stage.new(name: "threads fetched", done: threads[:fetched],
+                  total: threads[:known], at: nil),
+        Stage.new(name: "replies held", done: threads[:replies_held],
+                  total: threads[:replies_declared], at: nil)
       ]
     end
 

@@ -166,6 +166,7 @@ TOPUP_SELECT = THREAD_SELECT + """
         AND w.target_key = t.channel_id
         AND w.target_sub_key = t.root_ts
   )
+ORDER BY t.reply_count DESC
 LIMIT %(p0)s
 """
 
