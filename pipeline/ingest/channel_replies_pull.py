@@ -1,9 +1,12 @@
 import argparse
+import threading
+import time
+from queue import Empty, Queue
 
 from dotenv import load_dotenv
 
 from lib import archive, work
-from lib.db import connect, ingest_run
+from lib.db import RunCounts, cancel_scope, connect, current_cancel, ingest_run
 from lib.task import per_entity
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
@@ -18,6 +21,8 @@ SOURCE = "channel_replies"
 METHOD = "conversations.replies"
 PAGE_SIZE = 999
 TRANSPORT = "replies"
+DEFAULT_FETCHERS = 4
+PROGRESS_SECONDS = 5
 
 CLAIM_SQL = """
 UPDATE app.channel_backfill
@@ -197,7 +202,40 @@ def enqueue_threads(conn):
     return work.enqueue_select(conn, KIND, THREAD_SELECT, requested_by=SOURCE, requeue_when_grown=True)
 
 
-def run(conn, budget=500, stale_hours=6):
+def drain(client, pending, tally, guard, halt, broken, check):
+    local = RunCounts()
+    try:
+        with connect() as conn, cancel_scope(check):
+            while not halt.is_set():
+                try:
+                    item = pending.get_nowait()
+                except Empty:
+                    return
+                channel_id, root_ts = item.target_key, item.sub_key
+                if not still_draining(conn, channel_id):
+                    work.release(conn, item)
+                    continue
+                rejected = local.rows_rejected
+                with per_entity(conn, SOURCE, local, {"channel": channel_id, "root_ts": root_ts},
+                                on_fault=lambda fault, item=item: work.fail(conn, item, fault.detail)):
+                    work.renew(conn, item)
+                    conn.commit()
+                    replies = fetch_thread(conn, client, channel_id, root_ts, item)
+                    reached = item.expected is None or replies >= item.expected
+                    work.settle(conn, item, "complete" if reached else "short", fetched=replies,
+                                note=None if reached else f"{replies} of {item.expected}")
+                    conn.commit()
+                    with guard:
+                        tally["replies"] += replies
+                        tally["touched"].add(channel_id)
+                with guard:
+                    tally["rejected"] += local.rows_rejected - rejected
+    except BaseException as failure:
+        broken.append(failure)
+        halt.set()
+
+
+def run(conn, budget=500, fetchers=DEFAULT_FETCHERS, stale_hours=6):
     client = ProxyClient.for_source(KIND)
     with conn.cursor() as cur:
         cur.execute(RELEASE_STALE_SQL, (stale_hours,))
@@ -220,44 +258,58 @@ def run(conn, budget=500, stale_hours=6):
             print(f"{SOURCE}: no thread waiting" + (f", {queued} newly queued" if queued else ""))
         return 0
 
+    hands = max(1, min(fetchers, len(items)))
     print(f"{SOURCE}: {len(items)} thread(s) claimed off the queue of a {budget} budget"
-          + (f", {queued} newly queued" if queued else ""))
-    total, touched = 0, set()
+          + (f", {queued} newly queued" if queued else "")
+          + f", {hands} fetcher(s)")
+
+    pending = Queue()
+    for item in items:
+        pending.put(item)
+    tally = {"replies": 0, "rejected": 0, "touched": set()}
+    guard, halt, broken = threading.Lock(), threading.Event(), []
+    check = current_cancel()
+
     with ingest_run(conn, SOURCE) as counts:
         counts.total_expected = len(items)
-        for item in items:
-            channel_id, root_ts = item.target_key, item.sub_key
-            if not still_draining(conn, channel_id):
-                work.release(conn, item)
-                continue
-            with per_entity(conn, SOURCE, counts, {"channel": channel_id, "root_ts": root_ts},
-                            on_fault=lambda fault, item=item: work.fail(conn, item, fault.detail)):
-                replies = fetch_thread(conn, client, channel_id, root_ts, item)
-                reached = item.expected is None or replies >= item.expected
-                work.settle(conn, item, "complete" if reached else "short", fetched=replies,
-                            note=None if reached else f"{replies} of {item.expected}")
-                conn.commit()
-                total += replies
-                touched.add(channel_id)
-            counts.rows_in = total
-            if len(touched) and counts.rows_in % 50 == 0:
+        crew = [threading.Thread(target=drain, name=f"{SOURCE}-{hand}", daemon=True,
+                                 args=(client, pending, tally, guard, halt, broken, check))
+                for hand in range(hands)]
+        for hand in crew:
+            hand.start()
+        try:
+            while any(hand.is_alive() for hand in crew):
+                with guard:
+                    counts.rows_in, counts.rows_rejected = tally["replies"], tally["rejected"]
                 counts.progress()
-        for channel_id in touched:
+                time.sleep(PROGRESS_SECONDS)
+        except BaseException:
+            halt.set()
+            raise
+        finally:
+            for hand in crew:
+                hand.join()
+        if broken:
+            raise broken[0]
+        with guard:
+            counts.rows_in, counts.rows_rejected = tally["replies"], tally["rejected"]
+        for channel_id in sorted(tally["touched"]):
             done = settle_channel(conn, channel_id)
             print(f"{SOURCE}: {channel_id} {'complete' if done else 'still draining'}")
         counts.progress()
 
-    print(f"{SOURCE}: {total} reply message(s) over {len(items)} thread(s)")
-    return total
+    print(f"{SOURCE}: {tally['replies']} reply message(s) over {len(items)} thread(s)")
+    return tally["replies"]
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--budget", type=int, default=500)
+    parser.add_argument("--fetchers", type=int, default=DEFAULT_FETCHERS)
     args = parser.parse_args()
     load_dotenv(ENV_FILE)
     with connect() as conn:
-        run(conn, budget=args.budget)
+        run(conn, budget=args.budget, fetchers=args.fetchers)
 
 
 if __name__ == "__main__":

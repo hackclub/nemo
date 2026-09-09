@@ -24,6 +24,7 @@ DEFAULT_POLL_SECONDS = 300
 DEFAULT_EVENT_POLL_SECONDS = 60
 DEFAULT_HISTORY_BATCH = 200
 DEFAULT_REPLIES_BUDGET = 500
+DEFAULT_REPLIES_FETCHERS = 4
 JOIN_TIMEOUT = 10
 
 
@@ -42,12 +43,16 @@ def budget():
     return seconds("ARCHIVE_REPLIES_BUDGET", DEFAULT_REPLIES_BUDGET)
 
 
+def fetchers():
+    return seconds("ARCHIVE_REPLIES_FETCHERS", DEFAULT_REPLIES_FETCHERS)
+
+
 def history(conn):
     return walk_channels(conn, batch(conn))
 
 
 def replies(conn):
-    return walk_replies(conn, budget())
+    return walk_replies(conn, budget(), fetchers())
 
 
 LANES = (
