@@ -23,6 +23,9 @@ classes:
   entity:
     disposition: continue
     means: this one entity is gone or unreadable, permanently
+  contended:
+    disposition: continue
+    means: another writer held a lock we needed, this unit can be tried again
 
 slack_errors:
   auth:

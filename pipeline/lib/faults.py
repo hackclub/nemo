@@ -60,6 +60,8 @@ def classify(exc):
         return fault(SLACK_ERRORS.get(slack_error_of(exc) or "", "upstream"), exc)
     if isinstance(exc, (KeyError, ValueError, TypeError)):
         return fault("contract", exc)
+    if isinstance(exc, (psycopg.errors.LockNotAvailable, psycopg.errors.DeadlockDetected)):
+        return fault("contended", exc)
     if isinstance(exc, (WalkWrong, psycopg.Error)):
         return fault("local", exc)
     if isinstance(exc, (TimeoutError, ConnectionError, OSError)):
