@@ -152,16 +152,6 @@ module HomeHelper
     end
   end
 
-  LIFT_STRONG = 5
-
-  def newcomer_lift_tone(lift)
-    return "sub2" if lift.nil?
-    return "lift-strong" if lift.to_f >= LIFT_STRONG
-    return "sub2" if lift.to_f < 1
-
-    nil
-  end
-
   HEAT_STEPS = 6
 
   def heat_step(value, peak)

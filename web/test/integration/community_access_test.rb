@@ -222,7 +222,7 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
   test "a journey page names newcomer channels but only links the ones you may open" do
     sign_in_as(holding_nothing)
 
-    get newcomers_journey_path
+    get joining_journey_path
     assert_response :success
 
     Analytics::MartNewcomerChannels

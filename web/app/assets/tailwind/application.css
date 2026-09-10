@@ -3626,7 +3626,7 @@
   .funnelrows { display: grid; gap: 6px; padding: var(--s-sm); position: relative; }
   .fn-row {
     display: grid;
-    grid-template-columns: minmax(148px, 1fr) minmax(0, 3.4fr) 62px;
+    grid-template-columns: minmax(148px, 1fr) minmax(0, 3.4fr);
     gap: var(--s-sm);
     align-items: center;
     padding: 3px 0;
@@ -3653,10 +3653,8 @@
   .fn-b, .key i.fn-b { background: color-mix(in oklab, var(--series-1) 66%, var(--card)); }
   .fn-c, .key i.fn-c { background: var(--series-2); }
   .fn-bar > i.fn-b, .fn-bar > i.fn-c { box-shadow: 1px 0 0 var(--card); }
-  .fn-lift { font-family: var(--font-code); font-size: var(--t-small); color: var(--ink-2); }
-  .fn-lift.lift-strong { color: var(--good); font-weight: 500; }
   @media (max-width: 760px) {
-    .fn-row { grid-template-columns: minmax(104px, 1fr) minmax(0, 2fr) 52px; gap: var(--s-xs); }
+    .fn-row { grid-template-columns: minmax(104px, 1fr) minmax(0, 2fr); gap: var(--s-xs); }
   }
 
   .lifegrid {

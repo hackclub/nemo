@@ -37,18 +37,6 @@
             <i class="fn-b" style="width: <%= width.call(again) %>%"></i>
             <i class="fn-c" style="width: <%= width.call(back) %>%"></i>
           </span>
-          <span class="fn-lift col-num <%= newcomer_lift_tone(c.newcomer_lift) %>"
-                data-tip="<%= {
-                  title: "##{c.name}",
-                  rows: [
-                    { label: "newcomer share of messages",
-                      value: number_to_percentage(c.newcomer_message_share.to_f * 100, precision: 1) },
-                    { label: "against the workspace baseline",
-                      value: c.newcomer_lift ? "#{number_with_precision(c.newcomer_lift, precision: 1)}×" : "n/a" }
-                  ]
-                }.to_json %>">
-            <%= c.newcomer_lift ? "#{number_with_precision(c.newcomer_lift, precision: 1)}×" : "n/a" %>
-          </span>
         </div>
       <% end %>
     </div>

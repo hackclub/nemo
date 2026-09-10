@@ -27,20 +27,19 @@ module ApplicationHelper
 
   JOURNEY = [
     ["Joining", "joining"],
-    ["Newcomers", "newcomers"],
     ["Getting replies", "replies"],
     ["Coming back", "returning"],
     ["Who is active", "active"]
   ].freeze
 
   ACTIONS = {
-    "joining" => "acquisition", "newcomers" => "activation",
+    "joining" => "acquisition",
     "replies" => "replies", "returning" => "retention",
     "active" => "distribution"
   }.freeze
 
   MOVED = {
-    "acquisition" => "joining", "activation" => "newcomers",
+    "acquisition" => "joining",
     "response" => "replies", "retention" => "returning",
     "distribution" => "active"
   }.freeze
