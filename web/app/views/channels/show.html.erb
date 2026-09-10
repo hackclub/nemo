@@ -36,7 +36,7 @@
         <%= @start_date.strftime("%b %-d") %> to <%= @end_date.strftime("%b %-d, %Y") %>
       </p>
     </div>
-    <div class="card-tools">
+    <div class="card-tools channel-range-tools">
       <div class="segmented" role="group" aria-label="range length">
         <% ChannelsController::RANGE_PRESETS.each do |days| %>
           <%= link_to "#{days}d", channel_path(@channel, days: days),
@@ -49,7 +49,7 @@
   </div>
 
   <% if @range_preset.nil? %>
-    <%= form_with url: channel_path(@channel), method: :get, class: "qbar qbar-range" do %>
+    <%= form_with url: channel_path(@channel), method: :get, class: "qbar qbar-range channel-date-range" do %>
       <%= render "datepicker", caption: "from", name: :start, value: @start_date,
             min: @range_min, max: @range_max %>
       <%= render "datepicker", caption: "to", name: :end, value: @end_date,

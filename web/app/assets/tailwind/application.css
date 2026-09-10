@@ -1000,8 +1000,19 @@
   }
   .filter-foot .btn:first-child { margin-right: auto; }
   @media (max-width: 620px) {
-    .cond { grid-template-columns: minmax(0, 1fr) 28px; }
-    .cond-vals { grid-column: 1 / -1; }
+    .cond {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
+      align-items: start;
+    }
+    .cond-field { grid-column: 1 / 3; }
+    .cond-op { grid-column: 1; }
+    .cond-vals { grid-column: 2; }
+    .cond > .iconbtn { grid-column: 3; grid-row: 1; width: 44px; height: 44px; }
+  }
+  @media (max-width: 359px) {
+    .cond { grid-template-columns: minmax(0, 1fr) 44px; }
+    .cond-field, .cond-op, .cond-vals { grid-column: 1; }
+    .cond > .iconbtn { grid-column: 2; grid-row: 1; }
   }
 
   .panel-name {
@@ -4312,14 +4323,36 @@
     }
     .card-head { flex-wrap: wrap; }
     .card-head > :first-child { min-width: 0; }
-    .card-head .card-tools {
+    .card-head:has(.legend) .card-tools {
       width: 100%;
       margin-left: 0;
-      justify-content: flex-end;
+      justify-content: flex-start;
     }
     .card-head .legend { gap: 6px var(--s-xs); }
     .clock { min-width: 540px; }
     #top-posters .data-table { min-width: 480px; }
+    .channel-index-tools {
+      width: 100%;
+      margin-left: 0;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+    .channel-index-tools .qsearch {
+      order: -1;
+      flex: 1 0 100%;
+      min-width: 0;
+    }
+    .channel-index-tools .segmented,
+    .channel-range-tools .segmented {
+      max-width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .channel-index-tools .segmented::-webkit-scrollbar,
+    .channel-range-tools .segmented::-webkit-scrollbar { display: none; }
+    .channel-table { min-width: 680px; }
+    .channel-date-range .field-label { flex: 1 1 132px; }
+    .channel-date-range > .btn { align-self: flex-end; }
   }
 
   @media (max-width: 479px) {
@@ -4430,6 +4463,7 @@
     .you-face { width: 26px; height: 26px; }
     .field, .input, .qsearch-in, .select { min-height: 44px; }
     .qsearch-in { height: 44px; }
+    .card-head .card-tools .btn { min-height: 28px; }
     .modal-foot { min-height: 60px; }
   }
 

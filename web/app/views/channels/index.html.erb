@@ -77,7 +77,7 @@
           <h2 class="card-title">Channels</h2>
           <p class="card-sub"><%= channels_window_note(@total, @window) %></p>
         </div>
-        <div class="card-tools">
+        <div class="card-tools channel-index-tools">
           <% if @window.adjustable? %>
             <div class="segmented" role="group" aria-label="message range">
               <% @window.choices.each do |days| %>
@@ -154,7 +154,7 @@
         </div>
       <% else %>
         <div class="scroll">
-          <table class="data-table cols-fixed">
+          <table class="data-table cols-fixed channel-table">
             <colgroup>
               <col style="width: 26%">
               <col style="width: 21%">
