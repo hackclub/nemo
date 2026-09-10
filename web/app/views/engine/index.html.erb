@@ -8,6 +8,7 @@
 <% content_for :page_title, "Engine" %>
 
 <% content_for :page_controls do %>
+  <div class="engine-controls">
   <span class="segmented">
     <% EngineController::TABS.each do |key, label| %>
       <%= link_to engine_path(key == "runs" ? {} : { tab: key }),
@@ -40,6 +41,7 @@
     <%= button_to "Run the nightly now", engine_sync_path,
           class: "btn btn-primary", form: { class: "contents" } %>
   <% end %>
+  </div>
 <% end %>
 
 <% if @tab == "runs" %>
