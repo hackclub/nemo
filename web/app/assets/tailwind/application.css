@@ -4301,6 +4301,15 @@
     .areas a { padding: 0 9px; font-size: var(--t-small); }
     .kpi-val { font-size: var(--t-title); }
     .said-cell { max-width: 220px; }
+    .rtop > .qbar {
+      flex: 1 0 100%;
+      margin-left: 0;
+      justify-content: flex-start;
+    }
+    .qbar > .field, .qbar > .input, .qbar > .qsearch-in {
+      max-width: none;
+      flex-basis: 100%;
+    }
   }
 
   @media (max-width: 479px) {
@@ -4332,6 +4341,35 @@
     .sheet-row { grid-template-columns: 22px minmax(0, 1fr); }
     .rep-msg { grid-template-columns: minmax(0, 1fr); }
     .rep-face { grid-row: auto; }
+  }
+
+  @media (max-width: 899px) {
+    body {
+      padding: env(safe-area-inset-top) env(safe-area-inset-right)
+        env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+    .shell {
+      height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    }
+  }
+
+  @media (pointer: coarse) {
+    .btn, .iconbtn, .areas a, .areas .area-summary, .cnav a, .cnav-toggle,
+    .menu-pop > a, .menu-pop > button {
+      min-height: 44px;
+    }
+    .btn-only { width: 44px; }
+    .findbar, .you-face { position: relative; }
+    .findbar::after, .you-face::after {
+      content: "";
+      position: absolute;
+      inset: -7px;
+    }
+    .you-menu { min-width: 44px; display: grid; place-items: center; }
+    .you-face { width: 26px; height: 26px; }
+    .field, .input, .qsearch-in, .select { min-height: 44px; }
+    .qsearch-in { height: 44px; }
+    .modal-foot { min-height: 60px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
