@@ -5,6 +5,7 @@ import threading
 from dotenv import load_dotenv
 
 from ingest.channel_history_pull import run as walk_channels
+from ingest.channel_replies_pull import LIVE as replies_pool
 from ingest.channel_replies_pull import run as walk_replies
 from ingest.event_projector import run as project_events
 from lib import settings, shards, work
@@ -63,7 +64,9 @@ LANES = (
 
 
 def note(state):
-    return ", ".join(f"{name} {state[name]}" for name, *_ in LANES)
+    lanes = ", ".join(f"{name} {state[name]}" for name, *_ in LANES)
+    pool = replies_pool.get("pool")
+    return f"{lanes} | {pool.summary()}" if pool else lanes
 
 
 def lane(name, work, state, stopping, poll):

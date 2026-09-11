@@ -189,6 +189,19 @@ class Pool:
             for shard in self.shards
         ]
 
+    def summary(self):
+        if not self.shards:
+            return "no pool"
+        parts = []
+        for shard, taken, throttles, parked in self.rates():
+            piece = f"{shard.replace(PREFIX, 's')} {taken}"
+            if throttles:
+                piece += f"/{throttles}t"
+            if parked:
+                piece += f" parked {parked:.0f}s"
+            parts.append(piece)
+        return f"{len(self.shards)} shard(s): " + ", ".join(parts)
+
 
 class NoPool(RuntimeError):
     pass

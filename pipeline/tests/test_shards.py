@@ -242,3 +242,55 @@ def test_an_empty_pool_refuses_to_build_a_client():
 
     with pytest.raises(shards.NoPool):
         shards.ShardedClient(pool=shards.Pool(env={}))
+
+
+def test_the_pool_summary_reads_as_a_heartbeat_note():
+    pool, _ = pool_of(2)
+    pool.acquire("m")
+    pool.acquire("m")
+    pool.park(pool.shards[0], "m", 7)
+    line = pool.summary()
+    assert line.startswith("2 shard(s): ")
+    assert "s1" in line and "s2" in line
+    assert "1t" in line
+    assert "xoxp" not in line
+    assert shards.Pool(env={}).summary() == "no pool"
+
+
+def test_the_shard_check_reads_a_survey_without_calling_slack():
+    from checks import shards as check
+
+    found = [
+        (1, ({"ok": True, "team_id": "T1", "user_id": "U1"}, None)),
+        (2, ({"ok": True, "team_id": "T1", "user_id": "U1"}, None)),
+    ]
+    assert check.the_pool_is_configured(None, found)[1] == "pass"
+    assert check.every_token_is_live(None, found)[1] == "pass"
+    assert check.every_token_is_a_user_token(None, found)[1] == "pass"
+    assert check.every_token_points_at_one_workspace(None, found)[1] == "pass"
+
+
+def test_the_shard_check_catches_a_dead_a_bot_and_a_foreign_token():
+    from checks import shards as check
+
+    dead = [(1, (None, "invalid_auth"))]
+    assert check.every_token_is_live(None, dead)[1] == "fail"
+    assert "invalid_auth" in check.every_token_is_live(None, dead)[2]
+
+    bot = [(1, ({"ok": True, "team_id": "T1", "bot_id": "B1"}, None))]
+    assert check.every_token_is_a_user_token(None, bot)[1] == "fail"
+
+    foreign = [
+        (1, ({"ok": True, "team_id": "T1"}, None)),
+        (2, ({"ok": True, "team_id": "T2"}, None)),
+    ]
+    assert check.every_token_points_at_one_workspace(None, foreign)[1] == "fail"
+
+
+def test_an_unconfigured_pool_warns_rather_than_failing():
+    from checks import shards as check
+
+    assertion, status, observed, _ = check.the_pool_is_configured(None, [])
+    assert status == "warn"
+    assert "stay on the proxy" in observed
+    assert check.severity_of(assertion, status) == "warn"

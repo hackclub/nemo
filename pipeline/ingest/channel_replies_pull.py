@@ -18,6 +18,8 @@ from ingest.channel_history_pull import (
 )
 
 SOURCE = "channel_replies"
+LIVE = {}
+
 METHOD = "conversations.replies"
 PAGE_SIZE = 999
 TRANSPORT = "replies"
@@ -274,6 +276,7 @@ def drain(client, pending, tally, guard, halt, broken, check):
 
 def run(conn, budget=500, fetchers=DEFAULT_FETCHERS, stale_hours=6):
     client, carrier = shards.client_for(KIND)
+    LIVE["pool"] = getattr(client, "pool", None)
     print(f"{KIND}: fetching replies on {carrier}")
     with conn.cursor() as cur:
         cur.execute(RELEASE_STALE_SQL, (stale_hours,))
