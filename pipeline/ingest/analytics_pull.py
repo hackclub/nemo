@@ -26,7 +26,7 @@ from lib import calendar as slack_calendar
 from lib import coverage, planners, sources
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
-from lib.walk import NO_FLOOR, SHORT, check_walk
+from lib.walk import NO_FLOOR, SHORT, UNVERIFIED, check_walk
 
 ANALYTICS_SOURCE = "admin_analytics_api"
 BY_HAND = "analytics_by_hand"
@@ -392,7 +392,7 @@ def pull_member_day(conn, pull_date):
             counts.status = "partial"
         else:
             record_day(conn, MEMBER_DAY, pull_date, counts.rows_in)
-        coverage.settle(conn, MEMBER_DAYS_KEY, iso, fence, verdict or "complete",
+        coverage.settle(conn, MEMBER_DAYS_KEY, iso, fence, verdict or UNVERIFIED,
                         client.last_num_found, counts.rows_in)
     print(f"member analytics {pull_date}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 

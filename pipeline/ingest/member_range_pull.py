@@ -8,7 +8,7 @@ from lib import calendar, coverage, planners, sources
 from lib.db import connect, dead_letter, get_walk, ingest_run, save_walk
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
-from lib.walk import check_walk, should_prune
+from lib.walk import UNVERIFIED, check_walk, should_prune
 
 SOURCE = "admin_analytics_member_range"
 KEY = sources.key_for_run(SOURCE)
@@ -103,7 +103,7 @@ def run(conn, days=None, end=None):
             coverage.supersede(conn, KEY, window_key)
         else:
             counts.status = "partial"
-        coverage.settle(conn, KEY, window_key, fence, verdict or "short",
+        coverage.settle(conn, KEY, window_key, fence, verdict or UNVERIFIED,
                         client.last_num_found, counts.rows_in)
         save_walk(conn, SOURCE, window_key, None, counts.rows_in)
     print(

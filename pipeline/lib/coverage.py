@@ -30,7 +30,7 @@ RETURNING id
 SUPERSEDE_SQL = """
 UPDATE ingest.slice_coverage
 SET    state = 'superseded', updated_at = now()
-WHERE  source_key = %s AND slice_key <> %s AND state IN ('complete', 'short')
+WHERE  source_key = %s AND slice_key <> %s AND state IN ('complete', 'short', 'unverified')
 """
 
 ENUMERATE_SQL = """

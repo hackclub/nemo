@@ -3,6 +3,7 @@ NO_FLOOR = None
 
 COMPLETE = "complete"
 SHORT = "short"
+UNVERIFIED = "unverified"
 
 
 class WalkWrong(RuntimeError):
@@ -26,7 +27,7 @@ def check_walk(what, seen, expected, page_size, short_at=SHORT_AT):
         )
 
     if short_at is NO_FLOOR:
-        return COMPLETE
+        return UNVERIFIED
 
     floor = int(expected * short_at)
     if expected > 0 and seen < floor:
