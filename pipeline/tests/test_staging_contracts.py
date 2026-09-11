@@ -117,7 +117,7 @@ def test_every_contracted_mart_column_summed_from_staging_is_typed_consistently(
 
 def test_the_expensive_response_model_is_materialized_not_recomputed_per_test():
     sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_first_response.sql").read_text()
-    assert "materialized='table'" in sql, (
+    assert "materialized='table'" in sql or "materialized='incremental'" in sql, (
         "fct_first_response joins fct_message twice over 50M rows and has 6 tests; "
         "as a view each test recomputes the whole chain"
     )
@@ -173,3 +173,13 @@ def test_the_cutover_marts_bumped_their_versions():
     for name, version in want.items():
         sql = (WAREHOUSE_DIR / "models" / "marts" / f"{name}.sql").read_text()
         assert f"'{version}' as metric_version" in sql, f"{name} is not at {version}"
+
+
+def test_the_response_model_is_incremental_with_a_lookback():
+    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_first_response.sql").read_text()
+    assert "materialized='incremental'" in sql
+    assert "unique_key='newcomer_id'" in sql
+    assert "is_incremental()" in sql
+    assert "lookback_hours" in sql, (
+        "an unanswered first post can become answered later, so the window must reach back"
+    )

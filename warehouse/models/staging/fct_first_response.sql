@@ -1,4 +1,11 @@
-{{ config(materialized='table', indexes=[{'columns': ['newcomer_id'], 'unique': True}]) }}
+{{ config(
+    materialized='incremental',
+    unique_key='newcomer_id',
+    indexes=[{'columns': ['newcomer_id'], 'unique': True}]
+) }}
+
+{% set detection_window_hours = 1 %}
+{% set lookback_hours = 24 %}
 
 with first_posts as (
     select
@@ -7,6 +14,13 @@ with first_posts as (
         ts as post_ts,
         posted_at
     from {{ ref('fct_message_first_post') }}
+    {% if is_incremental() %}
+    where posted_at > (
+        select coalesce(max(post_at), '-infinity'::timestamptz)
+             - interval '{{ lookback_hours }} hours'
+        from {{ this }}
+    )
+    {% endif %}
 ),
 
 thread_replies as (

@@ -223,6 +223,31 @@ def tonight(conn, now=None):
 
 
 GATEWAY_FAILURE = re.compile(r"proxy returned 50[234]\b")
+LOCK_TIMEOUT = re.compile(r"canceling statement due to lock timeout")
+ORPHAN_AFTER_SECONDS = 120
+
+ORPHANED_DBT_SQL = """
+SELECT pg_terminate_backend(pid)
+FROM   pg_stat_activity
+WHERE  usename = current_user
+  AND  query LIKE '%"app": "dbt"%'
+  AND  query_start < now() - make_interval(secs => %s)
+  AND  pid <> pg_backend_pid()
+"""
+
+
+def reap_orphaned_dbt(after_seconds=ORPHAN_AFTER_SECONDS):
+    try:
+        with connect() as conn, conn.cursor() as cur:
+            cur.execute(ORPHANED_DBT_SQL, (after_seconds,))
+            killed = cur.rowcount
+            conn.commit()
+    except Exception as exc:
+        print(f"nightly: could not reap orphaned dbt backends, {type(exc).__name__}: {exc}")
+        return 0
+    if killed > 0:
+        print(f"nightly: terminated {killed} dbt backend(s) left by an earlier attempt")
+    return killed
 
 
 def retryable(exc):
@@ -299,6 +324,8 @@ def run_stage(conn, name, stage, run_id, index, total, budget=None, started=None
             record_step_output(run_id, index, name, buffer.getvalue())
             if torn or over or attempt == STAGE_ATTEMPTS or not retryable(exc):
                 return detail
+            if LOCK_TIMEOUT.search(str(exc)):
+                reap_orphaned_dbt()
             buffer.write(f"attempt {attempt + 1}\n")
             print(f"[{index}/{total}] {name}: {detail}, retrying")
         else:

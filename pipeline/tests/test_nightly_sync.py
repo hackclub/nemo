@@ -192,3 +192,32 @@ def test_a_failing_check_cannot_break_the_nightly():
     src = inspect.getsource(nightly_sync.record_quality)
     assert "except Exception" in src
     assert "conn.rollback()" in src
+
+
+def test_a_lock_timeout_reaps_the_previous_attempt_before_retrying():
+    import inspect
+
+    from jobs import nightly_sync
+
+    src = inspect.getsource(nightly_sync.run_stage)
+    assert "LOCK_TIMEOUT.search" in src
+    assert "reap_orphaned_dbt()" in src
+
+
+def test_the_reap_only_touches_this_user_s_own_stale_dbt_backends():
+    from jobs import nightly_sync
+
+    sql = nightly_sync.ORPHANED_DBT_SQL
+    assert "usename = current_user" in sql
+    assert 'query LIKE \'%"app": "dbt"%\'' in sql
+    assert "pid <> pg_backend_pid()" in sql
+    assert "query_start < now() - make_interval" in sql
+
+
+def test_the_reap_survives_a_database_that_refuses_it():
+    from unittest import mock
+
+    from jobs import nightly_sync
+
+    with mock.patch.object(nightly_sync, "connect", side_effect=RuntimeError("nope")):
+        assert nightly_sync.reap_orphaned_dbt() == 0
