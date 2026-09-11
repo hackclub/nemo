@@ -15,9 +15,7 @@ span as (
 walked as (
     select w.channel_id
     from {{ ref('fct_channel_walk') }} w
-    cross join span s
-    where w.oldest_ts is not null
-      and to_timestamp(w.oldest_ts::numeric)::date <= s.window_start
+    where coalesce(w.history_complete, false)
 ),
 
 posts as (
@@ -72,7 +70,7 @@ select
     v.workspace_messages as workspace_messages,
     s.window_start,
     s.window_end,
-    'v1' as metric_version
+    'v2' as metric_version
 from grid g
 cross join coverage v
 cross join span s
