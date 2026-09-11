@@ -1,3 +1,8 @@
+import inspect
+from unittest import mock
+
+import pytest
+
 from lib import work
 
 
@@ -33,3 +38,63 @@ def test_positional_params_become_named_for_the_enqueue_select():
 def test_the_grown_conflict_never_touches_a_claimed_unit():
     assert "state <> 'claimed'" in work.CONFLICT_GROWN
     assert "EXCLUDED.expected > coalesce(ingest.work_item.fetched, 0)" in work.CONFLICT_GROWN
+
+
+def test_the_singleton_lock_is_session_scoped_and_namespaced():
+    from lib import db
+
+    assert db.SINGLETON_NAMESPACE == 8571
+    source = inspect.getsource(db.sole_instance)
+    assert "pg_try_advisory_lock" in source
+    assert "pg_advisory_xact_lock" not in source
+    assert "pg_advisory_unlock" in source
+    assert "holder.close()" in source
+
+
+def test_a_second_instance_is_refused_rather_than_left_to_double_the_budget():
+    from lib import db
+
+    class Taken:
+        def execute(self, *_args):
+            return self
+
+        def fetchone(self):
+            return (False,)
+
+        def commit(self):
+            pass
+
+        def close(self):
+            self.closed = True
+
+    holder = Taken()
+    with mock.patch.object(db, "connect", lambda *a, **k: holder):
+        with pytest.raises(db.AlreadyRunning, match="double every in-process rate budget"):
+            with db.sole_instance("archive_worker"):
+                raise AssertionError("the body must not run")
+    assert getattr(holder, "closed", False)
+
+
+def test_the_sole_holder_runs_the_body_and_unlocks_after():
+    from lib import db
+
+    calls = []
+
+    class Free:
+        def execute(self, sql, *_args):
+            calls.append("lock" if "try_advisory" in sql else "unlock")
+            return self
+
+        def fetchone(self):
+            return (True,)
+
+        def commit(self):
+            pass
+
+        def close(self):
+            calls.append("close")
+
+    with mock.patch.object(db, "connect", lambda *a, **k: Free()):
+        with db.sole_instance("archive_worker"):
+            calls.append("body")
+    assert calls == ["lock", "body", "unlock", "close"]

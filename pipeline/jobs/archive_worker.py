@@ -10,12 +10,14 @@ from ingest.channel_replies_pull import run as walk_replies
 from ingest.event_projector import run as project_events
 from lib import settings, shards, work
 from lib.db import (
+    AlreadyRunning,
     SeededDeployment,
     SyncCancelled,
     cancel_scope,
     connect,
     refuse_if_seeded,
     set_worker,
+    sole_instance,
 )
 from lib.heartbeat import beating
 from lib.paths import ENV_FILE
@@ -95,7 +97,15 @@ def main():
     load_dotenv(ENV_FILE)
     set_worker(WORKER)
     shards.report()
+    try:
+        with sole_instance(WORKER):
+            return serve()
+    except AlreadyRunning as clash:
+        print(f"{WORKER}: {clash}")
+        return 1
 
+
+def serve():
     with connect() as conn:
         try:
             refuse_if_seeded(conn)

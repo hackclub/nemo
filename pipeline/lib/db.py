@@ -194,6 +194,39 @@ def finish_run(
                   "its status was left alone")
 
 
+SINGLETON_NAMESPACE = 8571
+
+
+class AlreadyRunning(RuntimeError):
+    pass
+
+
+@contextmanager
+def sole_instance(name: str):
+    holder = connect()
+    try:
+        taken = holder.execute(
+            "SELECT pg_try_advisory_lock(%s, hashtext(%s))",
+            (SINGLETON_NAMESPACE, name),
+        ).fetchone()[0]
+        holder.commit()
+        if not taken:
+            raise AlreadyRunning(
+                f"another {name} already holds the singleton lock on this database, "
+                "so this one would double every in-process rate budget"
+            )
+        try:
+            yield holder
+        finally:
+            holder.execute(
+                "SELECT pg_advisory_unlock(%s, hashtext(%s))",
+                (SINGLETON_NAMESPACE, name),
+            )
+            holder.commit()
+    finally:
+        holder.close()
+
+
 CLEAN_OUTCOMES = frozenset({"ok", "partial", "skipped"})
 
 
