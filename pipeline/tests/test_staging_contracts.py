@@ -151,3 +151,25 @@ def test_every_repointed_mart_bumped_its_version():
     for name, version in want.items():
         sql = (WAREHOUSE_DIR / "models" / "marts" / f"{name}.sql").read_text()
         assert f"'{version}' as metric_version" in sql, f"{name} is not at {version}"
+
+
+def test_top_posters_carries_no_name_because_cachet_resolves_it():
+    sql = (WAREHOUSE_DIR / "models" / "marts" / "mart_top_posters.sql").read_text()
+    assert "display_name" not in sql
+    assert "fct_member_month_messages" in sql
+    assert "fct_top_posters" not in sql
+
+
+def test_no_mart_reads_the_search_based_reply_or_poster_sources():
+    for name in ("mart_fast_reply_vs_retention", "mart_channel_onboarding_scorecard"):
+        sql = (WAREHOUSE_DIR / "models" / "marts" / f"{name}.sql").read_text()
+        assert "fct_first_response" in sql, f"{name} not cut over"
+        assert "fct_first_reply" not in sql, f"{name} still on the search crawl"
+
+
+def test_the_cutover_marts_bumped_their_versions():
+    want = {"mart_top_posters": "v4", "mart_fast_reply_vs_retention": "v10",
+            "mart_channel_onboarding_scorecard": "v8"}
+    for name, version in want.items():
+        sql = (WAREHOUSE_DIR / "models" / "marts" / f"{name}.sql").read_text()
+        assert f"'{version}' as metric_version" in sql, f"{name} is not at {version}"

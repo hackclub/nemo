@@ -563,8 +563,6 @@ models:
       - name: user_id
         data_type: text
         data_tests: [not_null]
-      - name: display_name
-        data_type: text
       - name: messages_posted
         data_type: integer
         data_tests: [not_null]
