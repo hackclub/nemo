@@ -127,3 +127,27 @@ def test_the_response_model_is_indexed_on_the_key_its_tests_check():
     sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_first_response.sql").read_text()
     assert "'columns': ['newcomer_id']" in sql
     assert "'unique': True" in sql
+
+
+def test_the_four_marts_read_lifetime_messages_not_the_slack_window():
+    marts = ("mart_participation_concentration", "mart_activity_distribution",
+             "mart_onboarding_recurrence_funnel", "mart_monthly_cohorts")
+    for name in marts:
+        sql = (WAREHOUSE_DIR / "models" / "marts" / f"{name}.sql").read_text()
+        assert "fct_member_lifetime_messages" in sql, f"{name} still on the Slack window"
+        assert "channel_messages_posted" not in sql, f"{name} still reads the windowed count"
+
+
+def test_lifetime_messages_comes_from_the_archive():
+    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_member_lifetime_messages.sql").read_text()
+    assert "fct_member_month_messages" in sql
+    assert "fct_member_window" not in sql
+    assert "::integer" in sql
+
+
+def test_every_repointed_mart_bumped_its_version():
+    want = {"mart_participation_concentration": "v5", "mart_activity_distribution": "v17",
+            "mart_onboarding_recurrence_funnel": "v17", "mart_monthly_cohorts": "v3"}
+    for name, version in want.items():
+        sql = (WAREHOUSE_DIR / "models" / "marts" / f"{name}.sql").read_text()
+        assert f"'{version}' as metric_version" in sql, f"{name} is not at {version}"

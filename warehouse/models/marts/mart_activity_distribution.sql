@@ -1,9 +1,9 @@
 with known as (
     select
-        coalesce(w.user_id, h.user_id) as user_id,
-        coalesce(w.channel_messages_posted, 0) as total_messages,
+        coalesce(l.user_id, h.user_id) as user_id,
+        coalesce(l.total_messages, 0) as total_messages,
         h.user_id is not null as full_history
-    from {{ ref('fct_member_window') }} w
+    from {{ ref('fct_member_lifetime_messages') }} l
     full outer join {{ ref('fct_member_history') }} h using (user_id)
 ),
 
@@ -61,7 +61,7 @@ select
     count(mb.band_order) as members,
     c.workspace_members,
     c.full_history_members,
-    'v16' as metric_version
+    'v17' as metric_version
 from bands b
 cross join coverage c
 left join member_bands mb on mb.band_order = b.band_order
