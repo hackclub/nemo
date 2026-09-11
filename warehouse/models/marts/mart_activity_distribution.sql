@@ -1,8 +1,7 @@
 with known as (
     select
         coalesce(w.user_id, h.user_id) as user_id,
-        greatest(coalesce(h.total_messages, 0), coalesce(w.channel_messages_posted, 0))
-            as total_messages,
+        coalesce(w.channel_messages_posted, 0) as total_messages,
         h.user_id is not null as full_history
     from {{ ref('fct_member_window') }} w
     full outer join {{ ref('fct_member_history') }} h using (user_id)
@@ -62,7 +61,7 @@ select
     count(mb.band_order) as members,
     c.workspace_members,
     c.full_history_members,
-    'v15' as metric_version
+    'v16' as metric_version
 from bands b
 cross join coverage c
 left join member_bands mb on mb.band_order = b.band_order

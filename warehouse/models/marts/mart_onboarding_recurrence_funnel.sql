@@ -1,8 +1,7 @@
 with known as (
     select
         coalesce(w.user_id, h.user_id) as user_id,
-        greatest(coalesce(h.total_messages, 0), coalesce(w.channel_messages_posted, 0))
-            as total_messages,
+        coalesce(w.channel_messages_posted, 0) as total_messages,
         h.user_id is not null as searched
     from {{ ref('fct_member_window') }} w
     full outer join {{ ref('fct_member_history') }} h using (user_id)
@@ -54,6 +53,6 @@ select
     case when searched > 0 then posted_twice end as posted_twice,
     case when searched > 0 then posted_three_times end as posted_three_times,
     case when signed_in > 0 then round(searched::numeric / signed_in, 4) end as searched_share,
-    'v15' as metric_version
+    'v16' as metric_version
 from gated
 order by cohort_month

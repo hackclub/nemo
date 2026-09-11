@@ -1,8 +1,7 @@
 with known as (
     select
         coalesce(w.user_id, h.user_id) as user_id,
-        greatest(coalesce(h.total_messages, 0), coalesce(w.channel_messages_posted, 0))
-            as total_messages,
+        coalesce(w.channel_messages_posted, 0) as total_messages,
         h.user_id is not null as full_history
     from {{ ref('fct_member_window') }} w
     full outer join {{ ref('fct_member_history') }} h using (user_id)
@@ -89,7 +88,7 @@ select
     s.p90_messages,
     (select count(*) from walkable) as workspace_members,
     (select count(*) from searched) as searched_members,
-    'v3' as metric_version
+    'v4' as metric_version
 from points p
 cross join gini g
 cross join spread s
