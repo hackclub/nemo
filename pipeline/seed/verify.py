@@ -9,18 +9,18 @@ from seed.generate import Sampler
 from seed.profile import ENV_FILE, PROFILE_FILE, capture
 
 SHAPE_CHECKS = [
-    ("members.rates.claimed", 0.05),
-    ("members.rates.invite_pending", 0.05),
-    ("members.rates.is_bot", 0.03),
-    ("members.rates.is_admin", 0.03),
-    ("members.rates.is_restricted", 0.03),
-    ("members.rates.is_deleted", 0.05),
-    ("messaging.ever_posted_rate", 0.08),
-    ("replies.human_share", 0.10),
-    ("replies.bot_only_share", 0.06),
-    ("replies.no_reply_share", 0.10),
-    ("replies.bot_first_share", 0.10),
-    ("channels.archived_rate", 0.03),
+    ("members.rates.claimed", 0.05, "members.count"),
+    ("members.rates.invite_pending", 0.05, "members.count"),
+    ("members.rates.is_bot", 0.03, "members.count"),
+    ("members.rates.is_admin", 0.03, "members.count"),
+    ("members.rates.is_restricted", 0.03, "members.count"),
+    ("members.rates.is_deleted", 0.05, "members.count"),
+    ("messaging.ever_posted_rate", 0.08, "messaging.total_messages.n"),
+    ("replies.human_share", 0.10, "replies.n"),
+    ("replies.bot_only_share", 0.06, "replies.n"),
+    ("replies.no_reply_share", 0.10, "replies.n"),
+    ("replies.bot_first_share", 0.10, "replies.n"),
+    ("channels.archived_rate", 0.03, "channels.count"),
 ]
 
 QUANTILE_CHECKS = [
@@ -33,6 +33,7 @@ QUANTILE_CHECKS = [
 ]
 
 MIN_QUANTILE_SAMPLE = 500
+MIN_SHARE_SAMPLE = 500
 TAIL_SAMPLES_PER_TAIL = 50
 
 KNOWN_GAPS = []
@@ -147,8 +148,12 @@ def dig(node, path):
 
 
 def compare_shape(reference, seeded):
-    for path, tolerance in SHAPE_CHECKS:
+    for path, tolerance, size_path in SHAPE_CHECKS:
         want, got = dig(reference, path), dig(seeded, path)
+        sample = dig(seeded, size_path) or 0
+        if sample < MIN_SHARE_SAMPLE:
+            yield path, got, want, None, f"skipped, {sample} rows, needs {MIN_SHARE_SAMPLE}"
+            continue
         yield path, got, want, abs(got - want) <= tolerance, f"+-{tolerance}"
 
 

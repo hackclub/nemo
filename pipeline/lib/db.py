@@ -364,6 +364,26 @@ def suspect_dead_runs(
     return suspected
 
 
+ORPHAN_SQL = """
+UPDATE raw.ingest_run
+SET status = 'abandoned', finished_at = clock_timestamp(),
+    error_class = coalesce(error_class, 'local'),
+    error_detail = coalesce(error_detail, %s)
+WHERE status = 'running' AND worker = %s
+  AND worker_boot IS DISTINCT FROM %s::uuid
+RETURNING id, source
+"""
+
+
+def sweep_my_earlier_boots(conn: psycopg.Connection) -> list[tuple[int, str]]:
+    gone = "swept: the worker restarted, so this run's process is gone"
+    with conn.cursor() as cur:
+        cur.execute(ORPHAN_SQL, (gone, worker(), WORKER_BOOT))
+        orphans = cur.fetchall()
+    conn.commit()
+    return orphans
+
+
 def sweep_stale_runs(
     conn: psycopg.Connection, max_age_hours: int = STALE_AFTER_HOURS
 ) -> list[tuple[int, str]]:

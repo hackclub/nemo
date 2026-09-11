@@ -18,6 +18,7 @@ from lib.db import (
     refuse_if_seeded,
     set_worker,
     sole_instance,
+    sweep_my_earlier_boots,
 )
 from lib.heartbeat import beating
 from lib.paths import ENV_FILE
@@ -29,6 +30,10 @@ DEFAULT_HISTORY_BATCH = 200
 DEFAULT_REPLIES_BUDGET = 500
 DEFAULT_REPLIES_FETCHERS = 4
 JOIN_TIMEOUT = 10
+PASS_MINUTES = 4
+FETCHER_CEILING = 32
+FETCHER_PER_MINUTE = 60
+BUSY_POLL_SECONDS = 2
 
 
 def seconds(name, fallback):
@@ -43,11 +48,22 @@ def batch(conn):
 
 
 def budget():
-    return seconds("ARCHIVE_REPLIES_BUDGET", DEFAULT_REPLIES_BUDGET)
+    asked = os.environ.get("ARCHIVE_REPLIES_BUDGET")
+    if asked:
+        return int(asked)
+    pace = shards.expected_per_minute()
+    return int(pace * PASS_MINUTES) if pace else DEFAULT_REPLIES_BUDGET
 
 
 def fetchers():
-    return seconds("ARCHIVE_REPLIES_FETCHERS", DEFAULT_REPLIES_FETCHERS)
+    asked = os.environ.get("ARCHIVE_REPLIES_FETCHERS")
+    if asked:
+        return int(asked)
+    pace = shards.expected_per_minute()
+    if not pace:
+        return DEFAULT_REPLIES_FETCHERS
+    wanted = -(-int(pace) // FETCHER_PER_MINUTE)
+    return max(DEFAULT_REPLIES_FETCHERS, min(FETCHER_CEILING, wanted))
 
 
 def history(conn):
@@ -74,6 +90,7 @@ def note(state):
 def lane(name, work, state, stopping, poll):
     def loop():
         while not stopping.is_set():
+            moved = 0
             try:
                 with connect() as conn, cancel_scope(stopping.is_set):
                     moved = work(conn)
@@ -84,7 +101,7 @@ def lane(name, work, state, stopping, poll):
             except Exception as failure:
                 state[name] = f"failed, {type(failure).__name__}"
                 print(f"{WORKER}: the {name} lane failed, trying again after the poll: {failure}")
-            if stopping.wait(poll):
+            if stopping.wait(BUSY_POLL_SECONDS if moved else poll):
                 return
         state[name] = "stopped"
 
@@ -112,6 +129,8 @@ def serve():
         except SeededDeployment as refusal:
             print(f"{WORKER}: {refusal}")
             raise SystemExit(1) from refusal
+        for orphan, source in sweep_my_earlier_boots(conn):
+            print(f"{WORKER}: swept run {orphan} ({source}), left running by an earlier boot")
 
     stopping = threading.Event()
     state = {name: "starting" for name, *_ in LANES}

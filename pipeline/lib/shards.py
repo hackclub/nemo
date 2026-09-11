@@ -50,7 +50,11 @@ def describe(env=None):
     if not pool:
         return f"ingest pool: no {PREFIX}n set, thread replies stay on the proxy"
     listed = ", ".join(str(index) for index, _ in pool)
-    line = f"ingest pool: {len(pool)} token(s), {PREFIX}[{listed}]"
+    held = pinned_rate(env)
+    pace = (f"pinned at {held:.0f}/min each" if held is not None
+            else f"finding its own pace from {START_PER_MINUTE:.0f}/min each")
+    line = (f"ingest pool: {len(pool)} token(s), {PREFIX}[{listed}], {pace}, "
+            f"{expected_per_minute(env):.0f}/min across the pool")
     trouble = problems(env)
     if trouble:
         line += "".join(f"\ningest pool: {note}" for note in trouble)
@@ -69,12 +73,49 @@ class Throttled(RuntimeError):
 
 
 TIER3 = 50
-DEFAULT_PER_MINUTE = float(os.environ.get("INGEST_SHARD_PER_MINUTE", TIER3))
+START_PER_MINUTE = float(TIER3)
+MIN_PER_MINUTE = 20.0
+MAX_PER_MINUTE = 600.0
+CLIMB_PER_MINUTE = 15.0
+CLIMB_AFTER = 20.0
+BACKOFF = 0.75
+CEILING_MARGIN = 0.95
+CEILING_PROBE_AFTER = 600.0
+CEILING_PROBE_BY = 1.1
 BURST = 5.0
 PARK_CEILING = 300.0
 WAIT_SLICE = 5.0
 WAIT_CEILING = 900
 SHARD_TIMEOUT = 60
+
+_learned = {}
+_learned_lock = threading.Lock()
+
+
+def pinned_rate(env=None):
+    env = env if env is not None else os.environ
+    asked = (env.get("INGEST_SHARD_PER_MINUTE") or "").strip()
+    return float(asked) if asked else None
+
+
+def learned_rate(index):
+    with _learned_lock:
+        return _learned.get(index, START_PER_MINUTE)
+
+
+def remember_rate(index, per_minute):
+    with _learned_lock:
+        _learned[index] = per_minute
+
+
+def expected_per_minute(env=None):
+    found = discover(env)
+    if not found:
+        return None
+    pinned = pinned_rate(env)
+    if pinned is not None:
+        return pinned * len(found)
+    return sum(learned_rate(index) for index, _ in found)
 
 
 class Bucket:
@@ -102,7 +143,9 @@ class Shard:
     def __init__(self, index, token, per_minute=None, clock=time.monotonic):
         self.index = index
         self.token = token
-        self.per_minute = DEFAULT_PER_MINUTE if per_minute is None else float(per_minute)
+        held = pinned_rate() if per_minute is None else float(per_minute)
+        self.pinned = held is not None
+        self.per_minute = held if self.pinned else learned_rate(index)
         self.clock = clock
         self.buckets = {}
         self.parked_until = {}
@@ -110,6 +153,9 @@ class Shard:
         self.lock = threading.Lock()
         self.taken = 0
         self.throttles = 0
+        self.changed_at = clock()
+        self.ceiling = None
+        self.throttled_at = None
 
     def name(self):
         return f"{PREFIX}{self.index}"
@@ -153,11 +199,39 @@ class Shard:
                 self.taken += 1
         return ok, wait
 
+    def _retune(self, per_minute):
+        per_minute = min(max(float(per_minute), MIN_PER_MINUTE), MAX_PER_MINUTE)
+        self.per_minute = per_minute
+        for bucket in self.buckets.values():
+            bucket.per_minute = per_minute
+        self.changed_at = self.clock()
+        remember_rate(self.index, per_minute)
+        return per_minute
+
+    def thrived(self):
+        if self.pinned:
+            return self.per_minute
+        with self.lock:
+            now = self.clock()
+            if now - self.changed_at < CLIMB_AFTER:
+                return self.per_minute
+            target = self.per_minute + CLIMB_PER_MINUTE
+            if self.ceiling is not None:
+                if now - self.throttled_at >= CEILING_PROBE_AFTER:
+                    self.ceiling *= CEILING_PROBE_BY
+                    self.throttled_at = now
+                target = min(target, self.ceiling * CEILING_MARGIN)
+            return self._retune(target)
+
     def park(self, method, seconds):
         seconds = min(max(float(seconds), 0.0), PARK_CEILING)
         with self.lock:
             self.throttles += 1
             self.parked_until[method] = self.clock() + seconds
+            if not self.pinned:
+                self.ceiling = self.per_minute
+                self.throttled_at = self.clock()
+                self._retune(self.per_minute * BACKOFF)
         return seconds
 
 
@@ -212,7 +286,8 @@ class Pool:
             if parked:
                 piece += f" parked {parked:.0f}s"
             parts.append(piece)
-        return f"{len(self.shards)} shard(s): " + ", ".join(parts)
+        return (f"{len(self.shards)} shard(s): " + ", ".join(parts)
+                + f" @{self.per_minute():.0f}/min")
 
 
 class NoPool(RuntimeError):
@@ -256,11 +331,13 @@ class ShardedClient(ProxyClient):
             except Throttled as throttle:
                 throttles += 1
                 self.pool.park(shard, method, throttle.retry_after)
-                if throttles > max_retries:
+                if throttles > max(max_retries, len(self.pool) * 2):
                     raise ProxyError(
-                        f"{method}: {throttles} throttle(s) across the pool, giving up"
+                        f"{method}: {throttles} throttle(s) across {len(self.pool)} shard(s), "
+                        f"giving up"
                     ) from throttle
                 continue
+            shard.thrived()
             num_found = data.get("num_found")
             if num_found is not None:
                 self.last_num_found = num_found

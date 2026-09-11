@@ -180,6 +180,14 @@ WHERE work_kind = %s AND target_key = %s AND state IN ('pending', 'claimed')
 LIMIT 1
 """
 
+TOPUP_FLOOR = 4
+
+ENOUGH_QUEUED_SQL = """
+SELECT 1 FROM ingest.work_item
+WHERE work_kind = %s AND state = 'pending'
+OFFSET %s LIMIT 1
+"""
+
 
 def prepare(conn, client, channel_id):
     if walked(conn, channel_id):
@@ -220,20 +228,17 @@ def enqueue_threads(conn, limit=TOPUP_LIMIT):
                                requeue_when_grown=True)
 
 
+def enough_queued(conn, floor):
+    with conn.cursor() as cur:
+        cur.execute(ENOUGH_QUEUED_SQL, (KIND, floor))
+        return cur.fetchone() is not None
+
+
 def deal(items, hands):
-    channels = {}
+    shared = Queue()
     for item in items:
-        channels.setdefault(item.target_key, []).append(item)
-    lanes = [[] for _ in range(hands)]
-    for channel in sorted(channels, key=lambda key: -len(channels[key])):
-        min(lanes, key=len).extend(channels[channel])
-    shares = []
-    for lane in lanes:
-        share = Queue()
-        for item in lane:
-            share.put(item)
-        shares.append(share)
-    return shares
+        shared.put(item)
+    return [shared] * max(1, hands)
 
 
 def gave_way(conn, item, fault):
@@ -289,7 +294,7 @@ def run(conn, budget=500, fetchers=DEFAULT_FETCHERS, stale_hours=6):
     work.reclaim(conn, KIND)
     work.revive(conn, KIND)
 
-    queued = enqueue_threads(conn)
+    queued = 0 if enough_queued(conn, budget * TOPUP_FLOOR) else enqueue_threads(conn)
     items = work.claim(conn, KIND, budget)
 
     if not items:
@@ -298,7 +303,7 @@ def run(conn, budget=500, fetchers=DEFAULT_FETCHERS, stale_hours=6):
         return 0
 
     spread = len({item.target_key for item in items})
-    hands = max(1, min(fetchers, spread))
+    hands = max(1, min(fetchers, len(items)))
     print(f"{SOURCE}: {len(items)} thread(s) claimed off the queue of a {budget} budget"
           + (f", {queued} newly queued" if queued else "")
           + f", {spread} channel(s) over {hands} fetcher(s)")

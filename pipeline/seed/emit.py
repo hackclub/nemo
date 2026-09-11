@@ -370,7 +370,8 @@ def first_reply_rows(rng, members, profile, hostile=False):
             continue
         roll = rng.random()
         posted = posted_at(member)
-        bot_latency = int(max(1, bot(rng.random()))) if rng.random() < shares["bot_first_share"] else None
+        bot_chance = min(1.0, shares["bot_first_share"] / max(shares["human_share"], 1e-9))
+        bot_latency = int(max(1, bot(rng.random()))) if rng.random() < bot_chance else None
         bot_ts = posted + timedelta(seconds=bot_latency) if bot_latency else None
         if roll < shares["human_share"]:
             latency = int(max(1, human(rng.random())))
