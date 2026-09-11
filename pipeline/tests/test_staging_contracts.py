@@ -113,3 +113,17 @@ def test_every_contracted_mart_column_summed_from_staging_is_typed_consistently(
     mart = (WAREHOUSE_DIR / "models" / "marts" / "mart_newcomer_channels.sql").read_text()
     summed = re.search(r"sum\(f\.messages\)", mart)
     assert summed, "the mart no longer sums f.messages; recheck the declared type"
+
+
+def test_the_expensive_response_model_is_materialized_not_recomputed_per_test():
+    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_first_response.sql").read_text()
+    assert "materialized='table'" in sql, (
+        "fct_first_response joins fct_message twice over 50M rows and has 6 tests; "
+        "as a view each test recomputes the whole chain"
+    )
+
+
+def test_the_response_model_is_indexed_on_the_key_its_tests_check():
+    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_first_response.sql").read_text()
+    assert "'columns': ['newcomer_id']" in sql
+    assert "'unique': True" in sql

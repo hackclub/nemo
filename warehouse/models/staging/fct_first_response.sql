@@ -1,3 +1,5 @@
+{{ config(materialized='table', indexes=[{'columns': ['newcomer_id'], 'unique': True}]) }}
+
 with first_posts as (
     select
         user_id as newcomer_id,
