@@ -156,6 +156,7 @@ class Shard:
         self.changed_at = clock()
         self.ceiling = None
         self.throttled_at = None
+        self.starved = False
 
     def name(self):
         return f"{PREFIX}{self.index}"
@@ -194,9 +195,11 @@ class Shard:
         if held > 0:
             return False, held
         ok, wait = self.bucket(method).take()
-        if ok:
-            with self.lock:
+        with self.lock:
+            if ok:
                 self.taken += 1
+            else:
+                self.starved = True
         return ok, wait
 
     def _retune(self, per_minute):
@@ -213,8 +216,9 @@ class Shard:
             return self.per_minute
         with self.lock:
             now = self.clock()
-            if now - self.changed_at < CLIMB_AFTER:
+            if not self.starved or now - self.changed_at < CLIMB_AFTER:
                 return self.per_minute
+            self.starved = False
             target = self.per_minute + CLIMB_PER_MINUTE
             if self.ceiling is not None:
                 if now - self.throttled_at >= CEILING_PROBE_AFTER:
