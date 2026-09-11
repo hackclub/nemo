@@ -1,6 +1,11 @@
 import os
 import time
 
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
+
+from lib.proxy_client import ProxyClient, ProxyError
+
 PREFIX = "INGEST_TOKEN_"
 USER_TOKEN_PREFIX = "xoxp-"
 
@@ -56,10 +61,18 @@ def report(env=None):
     return discover(env)
 
 
+class Throttled(RuntimeError):
+    def __init__(self, retry_after):
+        super().__init__(f"slack asked for {retry_after}s")
+        self.retry_after = retry_after
+
+
 TIER3 = 50
 DEFAULT_PER_MINUTE = float(os.environ.get("INGEST_SHARD_PER_MINUTE", TIER3))
 BURST = 5.0
 PARK_CEILING = 300.0
+MAX_PARK_WAITS = 6
+SHARD_TIMEOUT = 60
 
 
 class Bucket:
@@ -89,11 +102,28 @@ class Shard:
         self.clock = clock
         self.buckets = {}
         self.parked_until = {}
+        self._client = None
         self.taken = 0
         self.throttles = 0
 
     def name(self):
         return f"{PREFIX}{self.index}"
+
+    def client(self, timeout=SHARD_TIMEOUT):
+        if self._client is None:
+            self._client = WebClient(token=self.token, timeout=timeout, retry_handlers=[])
+        return self._client
+
+    def invoke(self, method, params, timeout=SHARD_TIMEOUT):
+        try:
+            return self.client(timeout).api_call(method, http_verb="GET", params=params).data
+        except SlackApiError as failure:
+            response = getattr(failure, "response", None)
+            status = getattr(response, "status_code", None)
+            if status == 429:
+                headers = getattr(response, "headers", {}) or {}
+                raise Throttled(float(headers.get("Retry-After", 1) or 1)) from failure
+            raise
 
     def parked_for(self, method=None):
         if method is not None:
@@ -158,3 +188,62 @@ class Pool:
             (shard.name(), shard.taken, shard.throttles, round(shard.parked_for(), 1))
             for shard in self.shards
         ]
+
+
+class NoPool(RuntimeError):
+    pass
+
+
+class ShardedClient(ProxyClient):
+    def __init__(self, pool=None, read_timeout=SHARD_TIMEOUT, deadline_seconds=None, sleep=time.sleep):
+        self.pool = pool if pool is not None else Pool()
+        if not len(self.pool):
+            raise NoPool(f"no {PREFIX}n is set, so there is no pool to call on")
+        self.read_timeout = read_timeout
+        self.deadline_seconds = deadline_seconds if deadline_seconds is not None else read_timeout
+        self.last_num_found = None
+        self.sleep = sleep
+
+    @classmethod
+    def for_source(cls, key, **kwargs):
+        from lib import sources
+        budget = sources.unit_budget_seconds(key)
+        return cls(deadline_seconds=budget, read_timeout=min(SHARD_TIMEOUT, budget), **kwargs)
+
+    def call(self, method, params=None, max_retries=3, credential="internal"):
+        cleaned = {k: v for k, v in dict(params or {}).items() if v is not None}
+        waits = 0
+        throttles = 0
+        while True:
+            shard, wait = self.pool.acquire(method)
+            if shard is None:
+                waits += 1
+                if waits > MAX_PARK_WAITS:
+                    raise ProxyError(
+                        f"{method}: every shard stayed parked across {MAX_PARK_WAITS} waits"
+                    )
+                self.sleep(max(wait, 0.01))
+                continue
+            try:
+                data = shard.invoke(method, cleaned, timeout=self.read_timeout)
+            except Throttled as throttle:
+                throttles += 1
+                self.pool.park(shard, method, throttle.retry_after)
+                if throttles > max_retries:
+                    raise ProxyError(
+                        f"{method}: {throttles} throttle(s) across the pool, giving up"
+                    ) from throttle
+                continue
+            num_found = data.get("num_found")
+            if num_found is not None:
+                self.last_num_found = num_found
+            return data
+
+
+def client_for(key, **kwargs):
+    try:
+        client = ShardedClient.for_source(key, **kwargs)
+    except NoPool:
+        return ProxyClient.for_source(key, **kwargs), "proxy"
+    return client, f"{len(client.pool)} shard(s)"
+

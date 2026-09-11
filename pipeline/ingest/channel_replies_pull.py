@@ -9,7 +9,7 @@ from lib import archive, work
 from lib.db import RunCounts, cancel_scope, connect, current_cancel, ingest_run
 from lib.task import per_entity
 from lib.paths import ENV_FILE
-from lib.proxy_client import ProxyClient
+from lib import shards
 from ingest import channel_history_pull as history
 from ingest.channel_history_pull import (
     MESSAGE_SQL,
@@ -273,7 +273,8 @@ def drain(client, pending, tally, guard, halt, broken, check):
 
 
 def run(conn, budget=500, fetchers=DEFAULT_FETCHERS, stale_hours=6):
-    client = ProxyClient.for_source(KIND)
+    client, carrier = shards.client_for(KIND)
+    print(f"{KIND}: fetching replies on {carrier}")
     with conn.cursor() as cur:
         cur.execute(RELEASE_STALE_SQL, (stale_hours,))
         for (stranded,) in cur.fetchall():

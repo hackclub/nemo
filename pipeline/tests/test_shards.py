@@ -163,3 +163,82 @@ def test_rates_report_counts_and_never_a_token():
     line = str(pool.rates())
     assert "INGEST_TOKEN_1" in line
     assert "xoxp" not in line
+
+
+def fake_pool(n, per_minute=600.0, throttle_first=()):
+    clock = Clock()
+    env = {f"INGEST_TOKEN_{i}": f"xoxp-{i}" for i in range(1, n + 1)}
+    pool = shards.Pool(env=env, per_minute=per_minute, clock=clock)
+    seen = []
+    for shard in pool.shards:
+        def invoke(method, params, timeout=None, _s=shard):
+            seen.append(_s.name())
+            if _s.name() in throttle_first and seen.count(_s.name()) == 1:
+                raise shards.Throttled(5)
+            cursor = params.get("cursor")
+            page = 0 if not cursor else int(cursor)
+            nxt = str(page + 1) if page + 1 < 3 else ""
+            return {
+                "messages": [{"ts": f"{page}.{i}"} for i in range(2)],
+                "response_metadata": {"next_cursor": nxt},
+            }
+        shard.invoke = invoke
+    return pool, clock, seen
+
+
+def walk(client):
+    return list(client.paginate(
+        "conversations.replies", {"channel": "C1", "ts": "1"}, "messages",
+        page_size=200, cursor_param="cursor", page_param="limit",
+        cursor_field="response_metadata.next_cursor", credential="admin",
+    ))
+
+
+def test_the_sharded_client_inherits_pagination_and_walks_every_page():
+    pool, clock, seen = fake_pool(2)
+    client = shards.ShardedClient(pool=pool, sleep=clock.advance)
+    assert len(walk(client)) == 6
+    assert len(seen) == 3
+
+
+def test_pages_of_one_walk_spread_across_shards():
+    pool, clock, seen = fake_pool(2)
+    client = shards.ShardedClient(pool=pool, sleep=clock.advance)
+    walk(client)
+    assert seen == ["INGEST_TOKEN_1", "INGEST_TOKEN_2", "INGEST_TOKEN_1"]
+
+
+def test_a_throttle_parks_that_shard_and_another_finishes_the_walk():
+    pool, clock, seen = fake_pool(2, throttle_first=("INGEST_TOKEN_1",))
+    client = shards.ShardedClient(pool=pool, sleep=clock.advance)
+    assert len(walk(client)) == 6
+    first, second = pool.shards
+    assert first.throttles == 1
+    assert first.parked_for("conversations.replies") == 5.0
+    assert second.taken == 3
+
+
+def test_a_lone_throttled_shard_waits_and_then_recovers():
+    pool, clock, seen = fake_pool(1, throttle_first=("INGEST_TOKEN_1",))
+    client = shards.ShardedClient(pool=pool, sleep=clock.advance)
+    assert len(walk(client)) == 6
+    assert pool.shards[0].throttles == 1
+
+
+def test_num_found_still_reaches_the_walk_guard():
+    pool, clock, _ = fake_pool(1)
+    pool.shards[0].invoke = lambda m, p, timeout=None: {
+        "messages": [{"ts": "1"}], "num_found": 4242,
+        "response_metadata": {"next_cursor": ""},
+    }
+    client = shards.ShardedClient(pool=pool, sleep=clock.advance)
+    list(client.paginate("conversations.replies", {"channel": "C1"}, "messages",
+                         cursor_field="response_metadata.next_cursor"))
+    assert client.last_num_found == 4242
+
+
+def test_an_empty_pool_refuses_to_build_a_client():
+    import pytest
+
+    with pytest.raises(shards.NoPool):
+        shards.ShardedClient(pool=shards.Pool(env={}))
