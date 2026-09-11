@@ -134,11 +134,15 @@ class FdMergesTest < ActionDispatch::IntegrationTest
     assert_equal [@main.id, @main.id], rows.map { |r| r.after["duplicate_of"] }
   end
 
-  test "the merge body groups the candidates and names the outcome" do
+  test "the merge body groups candidates and allows selecting several" do
     sign_in_as(@me)
     get fd_case_merge_path(@dup_one)
 
     assert_response :success
+    assert_select ".merge-find.qsearch input.qsearch-in[aria-label='Search cases']", count: 1
+    assert_select ".merge-group", minimum: 1
+    assert_select "input.tick[type='checkbox'][name='case_ids[]']", minimum: 2
+    assert_select "input[type='submit'][disabled]", count: 1
   end
 
   def in_order

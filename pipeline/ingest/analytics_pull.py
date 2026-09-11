@@ -33,7 +33,7 @@ BY_HAND = "analytics_by_hand"
 MEMBER_DAYS_KEY = sources.key_for_run(f"{ANALYTICS_SOURCE}:member")
 CHANNEL_DAYS_KEY = sources.key_for_run(f"{ANALYTICS_SOURCE}:public_channel")
 MEMBER_PAGE_SIZE = 500
-MEMBER_SHORT_AT = 0
+MEMBER_SHORT_AT = 0.9
 
 MEMBER_ACTIVITY_SQL = """
 INSERT INTO raw.member_activity_snapshot

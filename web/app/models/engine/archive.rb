@@ -31,14 +31,13 @@ module Engine
 
     def self.walked_totals
       row = Analytics::FctChannelWalk.pick(
-        Arel.sql("count(*)"),
         Arel.sql("count(*) filter (where left(coalesce(last_error, ''), 7) = 'entity:')"),
         Arel.sql("count(*) filter (where history_complete)"),
         Arel.sql("coalesce(sum(messages_seen), 0)"),
         Arel.sql("max(last_walked_at)")
       )
-      { channels: row[0].to_i, unreachable: row[1].to_i, complete: row[2].to_i,
-        messages: row[3].to_i, last_walk: row[4] }
+      { channels: Analytics::DimChannel.count, unreachable: row[0].to_i, complete: row[1].to_i,
+        messages: row[2].to_i, last_walk: row[3] }
     end
 
     def self.thread_totals

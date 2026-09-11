@@ -2,6 +2,7 @@ sources:
   team_stats:
     label: Workspace daily statistics
     endpoint: team.stats.timeSeries
+    documented: false
     credential: internal
     cadence: daily
     window: 1 day
@@ -14,6 +15,7 @@ sources:
   top_posters:
     label: Top posters by month
     endpoint: admin.analytics.getMemberAnalytics
+    documented: false
     credential: internal
     cadence: daily
     window: 1 month
@@ -27,6 +29,7 @@ sources:
     unit_budget_seconds: 180
     label: Member activity, one day at a time
     endpoint: admin.analytics.getMemberAnalytics
+    documented: false
     credential: internal
     cadence: daily
     window: 1 day
@@ -36,7 +39,7 @@ sources:
     prune_floor: 13 months
     writes: [raw.member_activity_snapshot, raw.analytics_day]
     runs_as: [admin_analytics_api:member]
-    feeds: [mart_onboarding_funnel, mart_onboarding_recurrence_funnel]
+    feeds: [mart_onboarding_recurrence_funnel]
     limits:
       batch: {default: 6, min: 1, max: 30}
 
@@ -44,6 +47,7 @@ sources:
     unit_budget_seconds: 300
     label: Channel activity, one day at a time
     endpoint: admin.analytics.getFile
+    documented: true
     credential: admin
     cadence: daily
     window: 1 day
@@ -61,6 +65,7 @@ sources:
     unit_budget_seconds: 180
     label: Member analytics over the whole available window
     endpoint: admin.analytics.getMemberAnalytics
+    documented: false
     credential: internal
     cadence: daily
     window: 13 months
@@ -75,6 +80,7 @@ sources:
     unit_budget_seconds: 180
     label: Channel analytics over a rolling window
     endpoint: admin.analytics.getChannelAnalytics
+    documented: false
     credential: internal
     cadence: daily
     window: 30 days
@@ -89,6 +95,7 @@ sources:
     unit_budget_seconds: 180
     label: Channel analytics over the whole available window
     endpoint: admin.analytics.getChannelAnalytics
+    documented: false
     credential: internal
     cadence: daily
     window: 13 months
@@ -103,6 +110,7 @@ sources:
     unit_budget_seconds: 120
     label: Channel analytics month by month
     endpoint: admin.analytics.getChannelAnalytics
+    documented: false
     credential: internal
     cadence: daily
     window: 1 month
@@ -120,6 +128,7 @@ sources:
     standalone: true
     label: Thread replies, every thread the walk has found
     endpoint: conversations.replies
+    documented: true
     credential: admin
     cadence: live
     window: per thread
@@ -150,6 +159,7 @@ sources:
     standalone: true
     label: Public channel messages, the message spine
     endpoint: conversations.history
+    documented: true
     credential: admin
     cadence: live
     window: all time
@@ -181,6 +191,7 @@ sources:
   users_list:
     label: Account flags and deactivation, display name, handle, and avatar
     endpoint: users.list
+    documented: true
     credential: bot
     cadence: daily
     window: snapshot
@@ -193,6 +204,7 @@ sources:
   admin_users:
     label: Real name and email, from the Enterprise Grid admin API
     endpoint: admin.users.list
+    documented: true
     credential: admin
     cadence: daily
     window: snapshot
@@ -205,6 +217,7 @@ sources:
   channel_roster:
     label: Public channel roster, names and archived flags
     endpoint: conversations.list
+    documented: true
     credential: bot
     cadence: daily
     window: snapshot
@@ -218,6 +231,7 @@ sources:
   channel_names:
     label: Names for channels the list never returned
     endpoint: conversations.info
+    documented: true
     credential: bot
     cadence: daily
     window: snapshot
@@ -232,6 +246,7 @@ sources:
     unit_budget_seconds: 60
     label: All-time message count and first post
     endpoint: search.messages
+    documented: true
     credential: admin
     cadence: live
     window: all time
@@ -247,6 +262,7 @@ sources:
     unit_budget_seconds: 60
     label: Newcomer messages by channel
     endpoint: search.messages
+    documented: true
     credential: admin
     cadence: daily
     window: cohort
@@ -264,6 +280,7 @@ sources:
     unit_budget_seconds: 60
     label: Which public channels a newcomer joined
     endpoint: users.conversations
+    documented: true
     credential: bot
     cadence: daily
     window: cohort
@@ -281,6 +298,7 @@ sources:
     unit_budget_seconds: 45
     label: The first reply a newcomer received
     endpoint: conversations.replies
+    documented: true
     credential: admin
     cadence: daily
     window: per newcomer

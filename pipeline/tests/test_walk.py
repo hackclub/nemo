@@ -27,3 +27,18 @@ def test_backoff_doubles_and_caps():
     assert [lease.backoff(n) for n in range(4)] == [1.0, 2.0, 4.0, 8.0]
     assert lease.backoff(20) == 60.0
     assert 1.0 <= lease.backoff(0, jitter=0.5) <= 1.5
+
+
+def test_a_floor_of_zero_is_refused_rather_than_silently_disabling_the_guard():
+    with pytest.raises(ValueError, match="no floor"):
+        check_walk("member analytics", 1, 216_540, 500, short_at=0)
+    with pytest.raises(ValueError, match="no floor"):
+        check_walk("member analytics", 1, 216_540, 500, short_at=-0.1)
+
+
+def test_the_member_day_floor_passes_the_shortfall_slack_actually_returns():
+    from ingest.analytics_pull import MEMBER_SHORT_AT
+
+    assert MEMBER_SHORT_AT > 0
+    assert check_walk("member analytics", 99_660, 100_000, 500, short_at=MEMBER_SHORT_AT) == COMPLETE
+    assert check_walk("member analytics", 80_000, 100_000, 500, short_at=MEMBER_SHORT_AT) == SHORT

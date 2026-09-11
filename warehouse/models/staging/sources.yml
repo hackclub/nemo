@@ -5,12 +5,32 @@ sources:
     schema: raw
     tables:
       - name: member_dim
+        loaded_at_field: updated_at
+        freshness:
+          warn_after: {count: 26, period: hour}
+          error_after: {count: 50, period: hour}
       - name: member_created_override
       - name: member_activity_snapshot
+        loaded_at_field: created_at
+        freshness:
+          warn_after: {count: 26, period: hour}
+          error_after: {count: 50, period: hour}
       - name: channel_dim
+        loaded_at_field: updated_at
+        freshness:
+          warn_after: {count: 26, period: hour}
+          error_after: {count: 50, period: hour}
       - name: channel_activity_snapshot
+        loaded_at_field: created_at
+        freshness:
+          warn_after: {count: 26, period: hour}
+          error_after: {count: 50, period: hour}
       - name: message_activity_snapshot
       - name: message
+        loaded_at_field: observed_at
+        freshness:
+          warn_after: {count: 26, period: hour}
+          error_after: {count: 50, period: hour}
       - name: message_observation
       - name: thread
       - name: channel_walk
@@ -18,10 +38,22 @@ sources:
       - name: member_dim_snapshot
       - name: channel_dim_snapshot
       - name: team_stats_snapshot
+        loaded_at_field: created_at
+        freshness:
+          warn_after: {count: 26, period: hour}
+          error_after: {count: 50, period: hour}
       - name: top_posters_snapshot
+        loaded_at_field: created_at
+        freshness:
+          warn_after: {count: 26, period: hour}
+          error_after: {count: 50, period: hour}
       - name: ingest_run
       - name: ingest_step_output
       - name: analytics_day
+        loaded_at_field: updated_at
+        freshness:
+          warn_after: {count: 26, period: hour}
+          error_after: {count: 50, period: hour}
       - name: member_message_history
       - name: member_first_reply
       - name: member_channel_message

@@ -95,7 +95,7 @@
     <% end %>
   <% end %>
 
-  <span class="qspacer"></span>
+  <span class="qspacer case-action-spacer"></span>
 
   <% if @subject %>
     <%= link_to case_action_button("history", "Their history"), fd_member_path(@subject),
@@ -434,8 +434,7 @@
 
           <% if @open_reports.positive? %>
             <label class="opt">
-              <%= check_box_tag :tell_reporter, "1", true %>
-              <span class="opt-box" aria-hidden="true"></span>
+              <%= check_box_tag :tell_reporter, "1", true, class: "tick" %>
               <span>
                 <span class="opt-label">Notify the reporter</span>
               </span>

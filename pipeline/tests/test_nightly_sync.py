@@ -1,3 +1,6 @@
+import pytest
+import json
+
 from jobs.nightly_sync import credential_faults, parent_status, retryable, dbt_outcomes
 from lib.db import SyncCancelled
 from lib.proxy_client import (
@@ -104,3 +107,44 @@ def test_dbt_outcomes_split_fail_and_error_from_warn():
 def test_preflight_treats_a_reply_with_no_credentials_as_a_fault():
     assert credential_faults({"detail": "invalid bearer token"}) == ["proxy: invalid bearer token"]
     assert credential_faults({}) == ["proxy: no credential report"]
+
+
+def test_a_gate_test_failure_refuses_to_publish(monkeypatch, tmp_path):
+    from jobs import nightly_sync
+
+    results = tmp_path / "run_results.json"
+    results.write_text(json.dumps({"results": [
+        {"unique_id": "test.mnemosyne.assert_claimed_counts_track_slack", "status": "fail"},
+    ]}))
+    monkeypatch.setattr(nightly_sync, "RUN_RESULTS", results)
+    monkeypatch.setattr(nightly_sync, "ensure_dbt_profile", lambda: None)
+    monkeypatch.setattr(nightly_sync, "check_freshness", lambda counts=None: 0)
+    monkeypatch.setattr(nightly_sync, "dbt", lambda *a: 0)
+
+    with pytest.raises(RuntimeError, match="refusing to publish"):
+        nightly_sync.run_dbt()
+
+
+def test_an_ungated_test_failure_still_publishes_and_marks_the_run_partial(monkeypatch, tmp_path):
+    from jobs import nightly_sync
+
+    results = tmp_path / "run_results.json"
+    results.write_text(json.dumps({"results": [
+        {"unique_id": "test.mnemosyne.not_null_fct_message_ts", "status": "fail"},
+    ]}))
+    monkeypatch.setattr(nightly_sync, "RUN_RESULTS", results)
+    monkeypatch.setattr(nightly_sync, "ensure_dbt_profile", lambda: None)
+    monkeypatch.setattr(nightly_sync, "check_freshness", lambda counts=None: 0)
+    monkeypatch.setattr(nightly_sync, "dbt", lambda *a: 0)
+
+    nightly_sync.run_dbt()
+
+
+def test_every_gate_test_names_a_singular_test_that_exists():
+    from pathlib import Path
+
+    from jobs.nightly_sync import GATE_TESTS
+    from lib.paths import WAREHOUSE_DIR
+
+    on_disk = {p.stem for p in Path(WAREHOUSE_DIR, "tests").glob("*.sql")}
+    assert set(GATE_TESTS) <= on_disk, set(GATE_TESTS) - on_disk

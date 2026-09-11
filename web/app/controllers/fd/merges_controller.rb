@@ -8,9 +8,7 @@ module Fd
       @siblings = @case.sibling_cases.includes(:subjects).oldest_first.to_a
       @groups = @term.present? ? found_groups : Case.candidate_groups(@case, @siblings)
       @candidates = @groups.flat_map(&:last)
-      @target = asked_for || @candidates.first
-      @plan = MergePlan.for(@case, @target, keeper: params[:keep]) if @target
-      @names = Names.for((@candidates + [@case, @target].compact)
+      @names = Names.for((@candidates + [@case])
         .flat_map(&:subject_user_ids) + [@case.opened_by] +
         @candidates.flat_map(&:assignee_user_ids))
     end
@@ -65,13 +63,6 @@ module Fd
         .flat_map(&:rows).map(&:record)
         .reject { |kase| @case.family_ids.include?(kase.id) }
       found.empty? ? [] : [["matching \"#{@term}\"", found]]
-    end
-
-    def asked_for
-      wanted = params[:into].to_i
-      return nil if wanted.zero? || @case.family_ids.include?(wanted)
-
-      @candidates.find { |kase| kase.id == wanted } || Case.find_by(id: wanted)
     end
 
     def query_params

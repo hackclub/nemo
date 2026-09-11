@@ -81,6 +81,7 @@ def ensure_dbt_profile():
 
 
 RUN_RESULTS = DBT_DIR / "target" / "run_results.json"
+SOURCES_JSON = DBT_DIR / "target" / "sources.json"
 
 
 def dbt(*args):
@@ -111,10 +112,42 @@ def dbt_outcomes(results):
 TABLES_ONLY = ("--select", "config.materialized:table")
 
 
+GATE_TESTS = (
+    "assert_claimed_counts_track_slack",
+    "assert_recurrence_funnel_never_widens",
+    "assert_pending_invites_are_never_claimed",
+    "assert_cohort_dates_are_not_stamped",
+    "assert_member_dates_are_plausible",
+    "assert_claim_rarely_precedes_creation",
+    "assert_channel_membership_is_current",
+    "assert_channel_membership_covers_the_window",
+)
+
+
+def check_freshness(counts=None):
+    """Record how stale each declared source is. Stale is loud, never blocking:
+    old data is a fact about the world, a failing test is a fact about the data."""
+    code = dbt("source", "freshness")
+    results = json.loads(SOURCES_JSON.read_text()) if SOURCES_JSON.exists() else {}
+    stale = [
+        r.get("unique_id", "?").split(".")[-1]
+        for r in results.get("results", [])
+        if r.get("status") in ("warn", "error", "runtime error")
+    ]
+    for name in stale:
+        print(f"dbt source freshness: {name} is stale")
+    if stale:
+        print(f"dbt: {len(stale)} source(s) stale, the build continues on the data that is there")
+        if counts is not None:
+            counts.status = "partial"
+    return code
+
+
 def run_dbt(conn=None, select=()):
     ensure_dbt_profile()
 
     def build(counts=None):
+        check_freshness(counts)
         if dbt("run", *select) != 0:
             raise RuntimeError("dbt run exited non-zero, no mart was rebuilt")
         code = dbt("test", *select)
@@ -124,6 +157,11 @@ def run_dbt(conn=None, select=()):
             print(f"dbt test {status}: {name}")
         for name, status in failed:
             print(f"dbt test {status}: {name}")
+        gated = [name for name, _ in failed if name in GATE_TESTS]
+        if gated:
+            raise RuntimeError(
+                f"dbt: {len(gated)} gate test(s) failed, refusing to publish: {', '.join(sorted(gated))}"
+            )
         if failed:
             print(f"dbt: {len(failed)} test(s) failed, the marts were still rebuilt")
             if counts is not None:
