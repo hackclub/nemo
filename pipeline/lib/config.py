@@ -2,6 +2,8 @@ import argparse
 import os
 import sys
 
+from lib import shards
+
 DATABASE = [
     "POSTGRES_HOST",
     "POSTGRES_PORT",
@@ -198,6 +200,9 @@ def forbidden(role, env=None):
     return [name for name in NEVER.get(role, []) if env.get(name)]
 
 
+POOLS = {"archive": shards.PREFIX}
+
+
 def report(role, env=None):
     gone = missing(role, env)
     extra = unexpected(role, env)
@@ -211,6 +216,8 @@ def report(role, env=None):
         print("  unexpected for this role, the repo does not read these here:")
         for name in extra:
             print(f"    {name}")
+    if role in POOLS:
+        print(f"  pool      {shards.describe(env)}")
     if banned:
         print("  MUST NOT be set for this role:")
         for name in banned:

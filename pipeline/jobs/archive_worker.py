@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from ingest.channel_history_pull import run as walk_channels
 from ingest.channel_replies_pull import run as walk_replies
 from ingest.event_projector import run as project_events
-from lib import settings, work
+from lib import settings, shards, work
 from lib.db import (
     SeededDeployment,
     SyncCancelled,
@@ -91,6 +91,7 @@ def lane(name, work, state, stopping, poll):
 def main():
     load_dotenv(ENV_FILE)
     set_worker(WORKER)
+    shards.report()
 
     with connect() as conn:
         try:
