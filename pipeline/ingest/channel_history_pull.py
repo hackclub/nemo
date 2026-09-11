@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 
 from lib import archive, work
 from lib.db import connect, dead_letter, ingest_run
-from lib.message import author_kind, shape
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
 from lib.task import per_entity
@@ -17,43 +16,6 @@ PAGE_SIZE = 999
 LOOKBACK_DAYS = 7
 LIVE_LOOKBACK_DAYS = 1
 TRANSPORT = "history"
-
-MESSAGE_SQL = """
-INSERT INTO raw.message
-    (channel_id, ts, source, author_id, author_kind, subtype, thread_root_ts, is_reply,
-     posted_at, edited_at, edited_by, reply_count, reply_users_count, latest_reply_ts,
-     reaction_count, reactor_count, file_count, text_length, mention_count,
-     is_question, is_substantive, has_link, emoji_only, mentioned_ids, observed_at)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
-ON CONFLICT (channel_id, ts) DO UPDATE SET
-    author_id = EXCLUDED.author_id,
-    author_kind = EXCLUDED.author_kind,
-    subtype = EXCLUDED.subtype,
-    thread_root_ts = EXCLUDED.thread_root_ts,
-    is_reply = EXCLUDED.is_reply,
-    edited_at = EXCLUDED.edited_at,
-    edited_by = EXCLUDED.edited_by,
-    reply_count = EXCLUDED.reply_count,
-    reply_users_count = EXCLUDED.reply_users_count,
-    latest_reply_ts = EXCLUDED.latest_reply_ts,
-    reaction_count = EXCLUDED.reaction_count,
-    reactor_count = EXCLUDED.reactor_count,
-    file_count = EXCLUDED.file_count,
-    text_length = EXCLUDED.text_length,
-    mention_count = EXCLUDED.mention_count,
-    is_question = EXCLUDED.is_question,
-    is_substantive = EXCLUDED.is_substantive,
-    has_link = EXCLUDED.has_link,
-    emoji_only = EXCLUDED.emoji_only,
-    mentioned_ids = EXCLUDED.mentioned_ids,
-    observed_at = now()
-"""
-
-OBSERVATION_SQL = """
-INSERT INTO raw.message_observation (channel_id, ts, transport)
-VALUES (%s, %s, %s)
-ON CONFLICT (channel_id, ts, transport) DO UPDATE SET observed_at = now()
-"""
 
 THREAD_SQL = """
 INSERT INTO raw.thread
@@ -97,37 +59,6 @@ def stamp(ts):
     return datetime.fromtimestamp(float(ts), tz=timezone.utc)
 
 
-def message_row(channel_id, message):
-    thread_root = message.get("thread_ts")
-    edited = message.get("edited") or {}
-    flags = shape(message)
-    return (
-        channel_id,
-        message["ts"],
-        SOURCE,
-        message.get("user") or message.get("bot_id"),
-        author_kind(message),
-        message.get("subtype"),
-        thread_root,
-        bool(thread_root) and thread_root != message["ts"],
-        stamp(message["ts"]),
-        stamp(edited["ts"]) if edited.get("ts") else None,
-        edited.get("user"),
-        message.get("reply_count"),
-        message.get("reply_users_count"),
-        message.get("latest_reply"),
-        flags["reaction_count"],
-        flags["reactor_count"],
-        flags["file_count"],
-        flags["text_length"],
-        flags["mention_count"],
-        flags["is_question"],
-        flags["is_substantive"],
-        flags["has_link"],
-        flags["emoji_only"],
-        flags["mentioned_ids"],
-    )
-
 
 def thread_row(channel_id, message):
     if not message.get("reply_count"):
@@ -170,26 +101,30 @@ def walk_params(channel_id, oldest=None, latest=None):
     return params
 
 
+def reject(conn, channel_id, ts, why, counts=None):
+    if counts is not None:
+        counts.rows_rejected += 1
+    dead_letter(conn, SOURCE, {"channel": channel_id, "ts": ts}, why)
+
+
 def walk_channel(conn, client, channel_id, oldest=None, counts=None, latest=None, max_pages=None, on_page=None):
     params = walk_params(channel_id, oldest, latest)
-    state = {"messages": [], "threads": [], "observations": [], "kept": [],
+    state = {"threads": [], "kept": [],
              "oldest_ts": None, "newest_ts": None, "pages": 0}
     seen = 0
     exhausted = True
 
     def checkpoint(done, page=True):
         with conn.cursor() as cur:
-            if state["messages"]:
-                cur.executemany(MESSAGE_SQL, state["messages"])
-                cur.executemany(OBSERVATION_SQL, state["observations"])
             if state["threads"]:
                 cur.executemany(THREAD_SQL, state["threads"])
             cur.execute(WALK_SQL, (
-                channel_id, state["oldest_ts"], state["newest_ts"], len(state["messages"]), done))
-        archive.from_api_many(conn, channel_id, state["kept"], METHOD, TRANSPORT)
+                channel_id, state["oldest_ts"], state["newest_ts"], len(state["kept"]), done))
+        archive.from_api_many(conn, channel_id, state["kept"], METHOD, TRANSPORT,
+                              on_reject=lambda ts, why: reject(conn, channel_id, ts, why, counts))
         conn.commit()
         state["kept"] = []
-        state["messages"], state["threads"], state["observations"] = [], [], []
+        state["threads"] = []
         state["oldest_ts"] = state["newest_ts"] = None
         if page:
             state["pages"] += 1
@@ -205,14 +140,6 @@ def walk_channel(conn, client, channel_id, oldest=None, counts=None, latest=None
         if max_pages is not None and state["pages"] >= max_pages:
             exhausted = False
             break
-        try:
-            state["messages"].append(message_row(channel_id, message))
-        except (KeyError, TypeError, ValueError) as exc:
-            if counts:
-                counts.rows_rejected += 1
-            dead_letter(conn, SOURCE, {"channel": channel_id, "keys": sorted(message)}, str(exc))
-            continue
-        state["observations"].append((channel_id, message["ts"], TRANSPORT))
         state["kept"].append(message)
         thread = thread_row(channel_id, message)
         if thread:
@@ -222,7 +149,7 @@ def walk_channel(conn, client, channel_id, oldest=None, counts=None, latest=None
         state["oldest_ts"] = ts if state["oldest_ts"] is None or ts < state["oldest_ts"] else state["oldest_ts"]
         state["newest_ts"] = ts if state["newest_ts"] is None or ts > state["newest_ts"] else state["newest_ts"]
 
-    checkpoint(exhausted and oldest is None, page=bool(state["messages"]))
+    checkpoint(exhausted and oldest is None, page=bool(state["kept"]))
     return seen, state["pages"], exhausted
 
 

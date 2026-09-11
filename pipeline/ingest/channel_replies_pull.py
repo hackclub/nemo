@@ -11,11 +11,7 @@ from lib.task import per_entity
 from lib.paths import ENV_FILE
 from lib import shards
 from ingest import channel_history_pull as history
-from ingest.channel_history_pull import (
-    MESSAGE_SQL,
-    OBSERVATION_SQL,
-    message_row,
-)
+from ingest.channel_history_pull import reject
 
 SOURCE = "channel_replies"
 LIVE = {}
@@ -86,19 +82,17 @@ WHERE channel_id = %s AND state = 'draining'
 
 
 def fetch_thread(conn, client, channel_id, root_ts, item=None):
-    rows, observations, kept = [], [], []
+    kept = []
     total, through = 0, None
 
     def flush():
-        nonlocal rows, observations, kept
+        nonlocal kept
         with conn.cursor() as cur:
-            if rows:
-                cur.executemany(MESSAGE_SQL, rows)
-                cur.executemany(OBSERVATION_SQL, observations)
             cur.execute(THREAD_DONE_SQL, (total, through, channel_id, root_ts))
-        archive.from_api_many(conn, channel_id, kept, METHOD, TRANSPORT)
+        archive.from_api_many(conn, channel_id, kept, METHOD, TRANSPORT,
+                              on_reject=lambda ts, why: reject(conn, channel_id, ts, why))
         conn.commit()
-        rows, observations, kept = [], [], []
+        kept = []
         if item is not None:
             work.renew(conn, item)
 
@@ -109,13 +103,10 @@ def fetch_thread(conn, client, channel_id, root_ts, item=None):
     ):
         if message.get("ts") == root_ts:
             continue
-        row = message_row(channel_id, message)
-        rows.append(row)
-        observations.append((channel_id, message["ts"], TRANSPORT))
         kept.append(message)
         total += 1
-        through = row[1]
-        if len(rows) >= PAGE_SIZE:
+        through = message["ts"]
+        if len(kept) >= PAGE_SIZE:
             flush()
 
     flush()

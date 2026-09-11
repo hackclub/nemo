@@ -197,12 +197,18 @@ def next_revision(held, payload_hash):
     return (revision, False) if kept == payload_hash else (revision + 1, True)
 
 
-def record_many(conn, channel_id, entries, method, transport, settled):
+def record_many(conn, channel_id, entries, method, transport, settled, on_reject=None):
+    def refuse(ts, reason):
+        if on_reject is not None:
+            on_reject(ts, reason)
+
     shaped = []
     for ts, envelope, measured in entries:
         if not channel_id or not ts or not isinstance(envelope, dict):
+            refuse(ts, "no channel, no ts, or the envelope is not an object")
             continue
         if body_of(envelope) is None:
+            refuse(ts, "the envelope carries no message body")
             continue
         shaped.append((ts, envelope, measured, digest(envelope)))
     if not shaped:
@@ -215,6 +221,7 @@ def record_many(conn, channel_id, entries, method, transport, settled):
         revision, fresh = next_revision(held.get(ts), payload_hash)
         built = message_row(channel_id, ts, revision, envelope, measured)
         if built is None:
+            refuse(ts, "the envelope would not build a message row")
             continue
         if fresh:
             envelopes.append((channel_id, ts, revision, Jsonb(envelope), payload_hash, method))
@@ -232,11 +239,11 @@ def record_many(conn, channel_id, entries, method, transport, settled):
     return len(messages)
 
 
-def from_api_many(conn, channel_id, messages, method, transport):
+def from_api_many(conn, channel_id, messages, method, transport, on_reject=None):
     return record_many(
         conn, channel_id,
         [(message.get("ts"), scrub(message), shape(message)) for message in messages],
-        method, transport, True)
+        method, transport, True, on_reject=on_reject)
 
 
 def record(conn, channel_id, ts, envelope, measured, method, transport, settled):

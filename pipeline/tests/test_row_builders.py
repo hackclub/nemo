@@ -575,34 +575,7 @@ def test_history_derived_substantive_threshold():
     assert shaping.derived("x" * 80)["is_substantive"] is True
 
 
-def test_history_message_row_stores_no_text():
-    row = channel_history_pull.message_row("C1", {
-        "ts": "1700000000.000100", "user": "U1", "text": "secret words here",
-        "thread_ts": "1699999999.000000",
-    })
 
-    assert "secret words here" not in row
-    assert row[0] == "C1"
-    assert row[7] is True
-    assert row[17] == len("secret words here")
-
-
-def test_history_message_row_flags_a_thread_parent_as_not_a_reply():
-    row = channel_history_pull.message_row("C1", {
-        "ts": "1700000000.000100", "user": "U1", "text": "hi",
-        "thread_ts": "1700000000.000100", "reply_count": 3,
-    })
-
-    assert row[7] is False
-    assert row[11] == 3
-
-
-def test_history_message_row_reads_the_author_kind():
-    human = channel_history_pull.message_row("C1", {"ts": "1.0", "user": "U1", "text": ""})
-    bot = channel_history_pull.message_row("C1", {"ts": "1.0", "bot_id": "B1", "text": ""})
-
-    assert human[4] == "member"
-    assert bot[4] == "bot"
 
 
 def test_history_thread_row_is_none_without_replies():
