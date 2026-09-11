@@ -246,25 +246,92 @@ models:
       - unique:
           column_name: "channel_id || '-' || ts"
   - name: fct_member_message
+    config:
+      contract:
+        enforced: true
     columns:
+      - name: channel_id
+        data_type: text
+        data_tests: [not_null]
+      - name: ts
+        data_type: text
+        data_tests: [not_null]
       - name: author_id
+        data_type: text
         data_tests: [not_null]
       - name: author_kind
+        data_type: text
         data_tests:
           - accepted_values:
               values: [member]
+      - name: bot_id
+        data_type: text
+      - name: app_id
+        data_type: text
+      - name: parent_user_id
+        data_type: text
+      - name: subtype
+        data_type: text
+      - name: thread_root_ts
+        data_type: text
+      - name: is_reply
+        data_type: boolean
+      - name: is_broadcast
+        data_type: boolean
       - name: posted_at
+        data_type: timestamp with time zone
         data_tests: [not_null]
+      - name: edited_at
+        data_type: timestamp with time zone
+      - name: reply_count
+        data_type: integer
+      - name: reply_users_count
+        data_type: integer
+      - name: latest_reply_ts
+        data_type: text
+      - name: reaction_count
+        data_type: integer
+      - name: reactor_count
+        data_type: integer
+      - name: file_count
+        data_type: integer
+      - name: text_length
+        data_type: integer
+      - name: mention_count
+        data_type: integer
+      - name: mentioned_ids
+        data_type: text[]
+      - name: is_question
+        data_type: boolean
+      - name: is_substantive
+        data_type: boolean
+      - name: has_link
+        data_type: boolean
+      - name: emoji_only
+        data_type: boolean
+      - name: settled
+        data_type: boolean
+      - name: observed_at
+        data_type: timestamp with time zone
     data_tests:
       - unique:
           column_name: "channel_id || '-' || ts"
   - name: fct_message_first_post
+    config:
+      contract:
+        enforced: true
     columns:
       - name: user_id
+        data_type: text
         data_tests: [not_null, unique]
       - name: channel_id
+        data_type: text
+        data_tests: [not_null]
+      - name: ts
+        data_type: text
         data_tests: [not_null]
       - name: posted_at
+        data_type: timestamp with time zone
         data_tests: [not_null]
   - name: fct_first_response
     columns:
