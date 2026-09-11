@@ -367,21 +367,19 @@ def suspect_dead_runs(
 def sweep_stale_runs(
     conn: psycopg.Connection, max_age_hours: int = STALE_AFTER_HOURS
 ) -> list[tuple[int, str]]:
+    swept = f"swept: still running {max_age_hours} hours after it started, no worker claimed it"
     with conn.cursor() as cur:
         cur.execute(
             """
             UPDATE raw.ingest_run
             SET status = 'abandoned', finished_at = clock_timestamp(),
                 error_class = coalesce(error_class, 'local'),
-                error_detail = coalesce(
-                    error_detail,
-                    format('swept: still running %s hours after it started, no worker claimed it',
-                           %s::text))
+                error_detail = coalesce(error_detail, %s)
             WHERE status = 'running'
               AND started_at < now() - make_interval(hours => %s)
             RETURNING id, source
             """,
-            (max_age_hours, max_age_hours),
+            (swept, max_age_hours),
         )
         return cur.fetchall()
 

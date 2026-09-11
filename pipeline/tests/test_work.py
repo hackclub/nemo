@@ -98,3 +98,12 @@ def test_the_sole_holder_runs_the_body_and_unlocks_after():
         with db.sole_instance("archive_worker"):
             calls.append("body")
     assert calls == ["lock", "body", "unlock", "close"]
+
+
+def test_sweep_stale_runs_passes_one_parameter_per_placeholder():
+    from lib import db
+
+    src = inspect.getsource(db.sweep_stale_runs)
+    sql = src[src.index('"""') + 3:src.rindex('"""')]
+    assert sql.count("%s") == 2
+    assert "format(" not in sql
