@@ -88,6 +88,8 @@ models:
     columns:
       - name: user_id
         data_tests: [unique, not_null]
+      - name: channel_id
+        data_tests: [not_null]
       - name: posted_at
         data_tests: [not_null]
   - name: fct_member_retention

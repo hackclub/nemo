@@ -65,7 +65,7 @@ select
     coalesce(r.third_visit_in_7_days, 0) as third_visit_in_7_days,
     (s.cohort_month + interval '1 month' + interval '90 days')::date <= current_date
         as day_90_mature,
-    'v2' as metric_version
+    'v3' as metric_version
 from sized s
 left join rolled r on r.cohort_month = s.cohort_month
 order by s.cohort_month

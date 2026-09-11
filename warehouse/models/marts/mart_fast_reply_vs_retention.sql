@@ -48,7 +48,7 @@ select
     ) as retained_day_90_rate,
     c.window_start,
     c.window_end,
-    'v8' as metric_version
+    'v9' as metric_version
 from scoped
 cross join covered c
 group by reply_class, c.window_start, c.window_end

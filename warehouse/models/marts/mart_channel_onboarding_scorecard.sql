@@ -48,7 +48,7 @@ select
     end as retained_90_share,
     (r.post_month + interval '1 month' + interval '90 days') <= now()
         and count(*) filter (where not r.day_90_covered) = 0 as day_90_mature,
-    'v6' as metric_version
+    'v7' as metric_version
 from scorecard_rows r
 left join {{ ref('dim_channel') }} c on c.channel_id = r.channel_id
 group by r.channel_id, c.name, r.post_month
