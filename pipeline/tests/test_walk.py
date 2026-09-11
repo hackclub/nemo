@@ -1,7 +1,7 @@
 import pytest
 
 from lib import lease
-from lib.walk import COMPLETE, SHORT, WalkWrong, check_walk, should_prune
+from lib.walk import COMPLETE, NO_FLOOR, SHORT, WalkWrong, check_walk, should_prune
 
 
 def test_a_full_walk_is_complete_and_may_prune():
@@ -29,16 +29,21 @@ def test_backoff_doubles_and_caps():
     assert 1.0 <= lease.backoff(0, jitter=0.5) <= 1.5
 
 
-def test_a_floor_of_zero_is_refused_rather_than_silently_disabling_the_guard():
+def test_a_floor_of_zero_is_refused_so_the_guard_is_never_disabled_by_accident():
     with pytest.raises(ValueError, match="no floor"):
         check_walk("member analytics", 1, 216_540, 500, short_at=0)
     with pytest.raises(ValueError, match="no floor"):
         check_walk("member analytics", 1, 216_540, 500, short_at=-0.1)
 
 
-def test_the_member_day_floor_passes_the_shortfall_slack_actually_returns():
+def test_no_floor_skips_the_shortfall_but_still_refuses_an_over_read():
+    assert check_walk("member analytics", 61_940, 100_000, 500, short_at=NO_FLOOR) == COMPLETE
+    with pytest.raises(WalkWrong):
+        check_walk("member analytics", 101_000, 100_000, 500, short_at=NO_FLOOR)
+
+
+def test_member_days_declares_no_floor_because_num_found_over_reports():
     from ingest.analytics_pull import MEMBER_SHORT_AT
 
-    assert MEMBER_SHORT_AT > 0
-    assert check_walk("member analytics", 99_660, 100_000, 500, short_at=MEMBER_SHORT_AT) == COMPLETE
-    assert check_walk("member analytics", 80_000, 100_000, 500, short_at=MEMBER_SHORT_AT) == SHORT
+    assert MEMBER_SHORT_AT is NO_FLOOR
+    assert check_walk("member analytics", 75_660, 100_000, 500, short_at=MEMBER_SHORT_AT) == COMPLETE

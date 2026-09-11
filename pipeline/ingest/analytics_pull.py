@@ -26,14 +26,14 @@ from lib import calendar as slack_calendar
 from lib import coverage, planners, sources
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
-from lib.walk import SHORT, check_walk
+from lib.walk import NO_FLOOR, SHORT, check_walk
 
 ANALYTICS_SOURCE = "admin_analytics_api"
 BY_HAND = "analytics_by_hand"
 MEMBER_DAYS_KEY = sources.key_for_run(f"{ANALYTICS_SOURCE}:member")
 CHANNEL_DAYS_KEY = sources.key_for_run(f"{ANALYTICS_SOURCE}:public_channel")
 MEMBER_PAGE_SIZE = 500
-MEMBER_SHORT_AT = 0.9
+MEMBER_SHORT_AT = NO_FLOOR
 
 MEMBER_ACTIVITY_SQL = """
 INSERT INTO raw.member_activity_snapshot

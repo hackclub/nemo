@@ -58,6 +58,7 @@ DBT_DIR = WAREHOUSE_DIR
 SOURCE = "nightly_sync"
 TRANSFORM = "dbt"
 TRUTHY = {"1", "true", "yes", "on"}
+CLEAN_PARENT_OUTCOMES = frozenset({"ok", "partial"})
 STAGE_ATTEMPTS = 2
 STEP_OUTPUT_LIMIT = 8000
 
@@ -460,6 +461,18 @@ def parent_status(cancelled, ran, skipped, cut, failed):
     return "ok"
 
 
+def parent_fault(status, cancelled, failed):
+    if status in CLEAN_PARENT_OUTCOMES:
+        return None, None
+    if cancelled:
+        return "cancelled", "the run was cancelled before its stages finished"
+    if not failed:
+        return "local", f"the run ended {status} with no stage reporting a fault"
+    named = ", ".join(name for name, _ in failed[:6])
+    more = f" and {len(failed) - 6} more" if len(failed) > 6 else ""
+    return "local", f"{len(failed)} stage(s) failed: {named}{more}"[:500]
+
+
 def stage_plan(name):
     plan = [(key, stage, None) for key, stage in stages() if key == name]
     if not plan:
@@ -490,7 +503,8 @@ def run_sync(plan=None):
         status = parent_status(cancelled, ran, skipped, cut, failed)
         if status == "failed" and ran == 0 and skipped == 0 and not cancelled:
             failed = [("plan", "the plan was empty, so no stage ran and none was skipped")]
-        finish_run(conn, run_id, status, 0, 0)
+        error_class, error_detail = parent_fault(status, cancelled, failed)
+        finish_run(conn, run_id, status, 0, 0, error_class, error_detail)
         conn.commit()
 
     print(f"{SOURCE}: {status}, {ran - len(failed)}/{ran} stages ok, "

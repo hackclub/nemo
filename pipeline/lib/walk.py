@@ -1,4 +1,5 @@
 SHORT_AT = 0.9
+NO_FLOOR = None
 
 COMPLETE = "complete"
 SHORT = "short"
@@ -9,10 +10,10 @@ class WalkWrong(RuntimeError):
 
 
 def check_walk(what, seen, expected, page_size, short_at=SHORT_AT):
-    if short_at <= 0:
+    if short_at is not NO_FLOOR and short_at <= 0:
         raise ValueError(
             f"{what}: short_at={short_at} leaves no floor, so no walk can ever read short. "
-            "Pass a fraction above 0, or drop the completeness claim from db/sources.yml"
+            "Pass a fraction above 0, or pass walk.NO_FLOOR to say the endpoint has no usable count"
         )
 
     if expected is None:
@@ -23,6 +24,9 @@ def check_walk(what, seen, expected, page_size, short_at=SHORT_AT):
             f"{what}: walked {seen} rows against a num_found of {expected}, "
             "refusing to commit"
         )
+
+    if short_at is NO_FLOOR:
+        return COMPLETE
 
     floor = int(expected * short_at)
     if expected > 0 and seen < floor:

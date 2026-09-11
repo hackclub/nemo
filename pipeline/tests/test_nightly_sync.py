@@ -148,3 +148,24 @@ def test_every_gate_test_names_a_singular_test_that_exists():
 
     on_disk = {p.stem for p in Path(WAREHOUSE_DIR, "tests").glob("*.sql")}
     assert set(GATE_TESTS) <= on_disk, set(GATE_TESTS) - on_disk
+
+
+def test_a_clean_parent_records_no_fault():
+    from jobs.nightly_sync import parent_fault
+
+    assert parent_fault("ok", False, []) == (None, None)
+    assert parent_fault("partial", False, [("dbt", "x")]) == (None, None)
+
+
+def test_every_terminal_parent_outcome_is_classified():
+    from jobs.nightly_sync import parent_fault, parent_status
+
+    for cancelled, ran, skipped, cut, failed in [
+        (True, 0, 0, 0, []),
+        (False, 0, 0, 0, []),
+        (False, 2, 0, 0, [("a", "x"), ("b", "y")]),
+    ]:
+        status = parent_status(cancelled, ran, skipped, cut, failed)
+        klass, detail = parent_fault(status, cancelled, failed)
+        assert klass is not None, status
+        assert detail

@@ -338,12 +338,17 @@ def sweep_stale_runs(
         cur.execute(
             """
             UPDATE raw.ingest_run
-            SET status = 'abandoned', finished_at = clock_timestamp()
+            SET status = 'abandoned', finished_at = clock_timestamp(),
+                error_class = coalesce(error_class, 'local'),
+                error_detail = coalesce(
+                    error_detail,
+                    format('swept: still running %s hours after it started, no worker claimed it',
+                           %s::text))
             WHERE status = 'running'
               AND started_at < now() - make_interval(hours => %s)
             RETURNING id, source
             """,
-            (max_age_hours,),
+            (max_age_hours, max_age_hours),
         )
         return cur.fetchall()
 
