@@ -18,7 +18,6 @@ class PanelTest < ActiveSupport::TestCase
   test "a gated panel stays shut without the capability" do
     bare = Account.new(user_id: "UBARE1")
 
-    assert_not Panel.visible?("journey.top_posters", bare)
     assert_not Panel.visible?("members.directory", bare)
   end
 
@@ -26,10 +25,17 @@ class PanelTest < ActiveSupport::TestCase
     assert_raises(Panel::Unknown) { Panel.visible?("overview.teleporter", nil) }
   end
 
-  test "the overview is open and the member panels are not" do
+  test "the analytics panels are open and the member directory is not" do
     assert Panel.open?("overview.team_stats")
     assert Panel.open?("journey.distribution")
-    assert_not Panel.open?("journey.top_posters")
-    assert_equal "member.read", Panel.needs("journey.top_posters")
+    assert Panel.open?("journey.top_posters")
+    assert_nil Panel.needs("journey.top_posters")
+    assert_not Panel.open?("members.directory")
+    assert_equal "member.read", Panel.needs("members.directory")
+  end
+
+  test "top posters is visible to any signed-in member and to nobody else" do
+    assert Panel.visible?("journey.top_posters", Account.new(user_id: "UBARE1"))
+    assert_not Panel.visible?("journey.top_posters", nil)
   end
 end

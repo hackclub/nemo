@@ -142,6 +142,19 @@ models:
     columns:
       - name: ds
         data_tests: [unique, not_null]
+  - name: fct_member_month_messages
+    columns:
+      - name: month
+        data_tests: [not_null]
+      - name: user_id
+        data_tests: [not_null]
+      - name: messages_posted
+        data_tests: [not_null]
+      - name: days_posted
+        data_tests: [not_null]
+    data_tests:
+      - unique:
+          column_name: "month::text || '-' || user_id"
   - name: fct_top_posters
     columns:
       - name: user_id
