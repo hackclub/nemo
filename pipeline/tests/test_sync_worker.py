@@ -58,3 +58,20 @@ def test_stage_plan_selects_one_named_stage():
 def test_stage_plan_rejects_an_unknown_stage():
     with pytest.raises(ValueError):
         stage_plan("not_a_stage")
+
+
+def test_sync_worker_sweeps_its_own_orphans_at_startup():
+    import inspect
+
+    from jobs import sync_worker
+
+    assert "sweep_my_earlier_boots" in inspect.getsource(sync_worker.main)
+
+
+def test_both_long_lived_workers_sweep_their_earlier_boots():
+    import inspect
+
+    from jobs import archive_worker, sync_worker
+
+    for mod, fn in ((sync_worker, sync_worker.main), (archive_worker, archive_worker.serve)):
+        assert "sweep_my_earlier_boots" in inspect.getsource(fn), mod.__name__

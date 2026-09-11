@@ -27,6 +27,7 @@ from lib.db import (
     cancel_scope,
     connect,
     refuse_if_seeded,
+    sweep_my_earlier_boots,
     sweep_stale_runs,
 )
 
@@ -273,6 +274,8 @@ def main():
         except SeededDeployment as exc:
             print(f"sync worker: {exc}")
             raise SystemExit(1) from exc
+        for orphan, source in sweep_my_earlier_boots(conn):
+            print(f"sync worker: swept run {orphan} ({source}), left running by an earlier boot")
 
     at = scheduled_at()
     poll = int(os.environ.get("SYNC_POLL_SECONDS", "") or DEFAULT_POLL_SECONDS)
