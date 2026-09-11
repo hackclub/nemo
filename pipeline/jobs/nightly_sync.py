@@ -46,6 +46,9 @@ from lib.db import (
 )
 from checks import archive as archive_check
 from checks import headlines
+from checks import parity as parity_check
+from checks import roles as roles_check
+from checks import shards as shards_check
 from jobs import invariants, reconcile
 from lib import breaker
 from lib import settings, sources
@@ -441,6 +444,9 @@ def record_quality(conn, run_id):
         ("breaker", lambda: breaker.record(conn, run_id)),
         ("headlines", lambda: headlines.run(cross_only=True, record=True, run_id=run_id)),
         ("archive", lambda: archive_check.record(conn, run_id)),
+        ("parity", lambda: parity_check.record(conn, run_id)),
+        ("roles", lambda: roles_check.record(conn, run_id)),
+        ("shards", lambda: shards_check.record(conn, run_id)),
     ):
         try:
             job()

@@ -169,3 +169,26 @@ def test_every_terminal_parent_outcome_is_classified():
         klass, detail = parent_fault(status, cancelled, failed)
         assert klass is not None, status
         assert detail
+
+
+def test_every_check_module_is_wired_into_the_nightly():
+    import inspect
+    from pathlib import Path
+
+    from jobs import nightly_sync
+
+    modules = {p.stem for p in (Path(__file__).parent.parent / "checks").glob("*.py")
+               if p.stem != "__init__"}
+    src = inspect.getsource(nightly_sync.record_quality)
+    missing = [m for m in sorted(modules) if f'("{m}"' not in src]
+    assert missing == [], f"check modules written but never run: {missing}"
+
+
+def test_a_failing_check_cannot_break_the_nightly():
+    import inspect
+
+    from jobs import nightly_sync
+
+    src = inspect.getsource(nightly_sync.record_quality)
+    assert "except Exception" in src
+    assert "conn.rollback()" in src
