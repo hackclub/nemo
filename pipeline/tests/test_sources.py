@@ -107,3 +107,20 @@ def test_every_declared_guard_is_in_the_vocabulary():
 
     for key in sources.KEYS:
         assert sources.SOURCES[key]["guard"] in sources.GUARDS
+
+
+def test_the_dbt_error_class_list_matches_the_declared_fault_vocabulary():
+    import re
+
+    import yaml
+
+    from lib.paths import DB_DIR, WAREHOUSE_DIR
+
+    declared = set(yaml.safe_load((DB_DIR / "faults.yml").read_text())["classes"])
+    schema = (WAREHOUSE_DIR / "models" / "staging" / "schema.yml").read_text()
+    listed = re.search(r"error_class.*?values: \[(.*?)\]", schema, re.S)
+    assert listed, "the error_class accepted_values block moved"
+    accepted = {name.strip() for name in listed.group(1).split(",")}
+    assert accepted == declared, (
+        f"dbt accepts {sorted(accepted)} but db/faults.yml declares {sorted(declared)}"
+    )

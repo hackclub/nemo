@@ -87,31 +87,31 @@ CONSISTENCY_CHECKS = [
     ),
     (
         "every reply points at a message that exists",
-        "select count(*) from raw.message r left join raw.message m "
+        "select count(*) from archive.message r left join archive.message m "
         "on m.channel_id = r.channel_id and m.ts = r.thread_root_ts "
         "where r.is_reply and m.ts is null",
     ),
     (
         "nobody replies to themselves",
-        "select count(*) from raw.message r join raw.message m "
+        "select count(*) from archive.message r join archive.message m "
         "on m.channel_id = r.channel_id and m.ts = r.thread_root_ts "
         "where r.is_reply and r.author_id = m.author_id",
     ),
     (
         "every thread counts the replies it actually has",
         "select count(*) from raw.thread t where t.reply_count <> ("
-        "select count(*) from raw.message m where m.channel_id = t.channel_id "
+        "select count(*) from archive.message m where m.channel_id = t.channel_id "
         "and m.thread_root_ts = t.root_ts and m.is_reply)",
     ),
     (
         "every walk counts the messages it actually saw",
         "select count(*) from raw.channel_walk w where w.messages_seen <> ("
-        "select count(*) from raw.message m where m.channel_id = w.channel_id)",
+        "select count(*) from archive.message m where m.channel_id = w.channel_id)",
     ),
     (
         "every message was observed arriving",
-        "select count(*) from raw.message m where not exists ("
-        "select 1 from raw.message_observation o "
+        "select count(*) from archive.message m where not exists ("
+        "select 1 from archive.observation o "
         "where o.channel_id = m.channel_id and o.ts = m.ts)",
     ),
 ]

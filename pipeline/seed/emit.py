@@ -25,9 +25,7 @@ IDLE_ROWS_PER_DAY = 25
 SEEDED_TABLES = (
     "raw.member_dim_snapshot",
     "raw.channel_dim_snapshot",
-    "raw.message_observation",
     "raw.thread",
-    "raw.message",
     "raw.channel_walk",
     "raw.member_activity_snapshot",
     "raw.channel_activity_snapshot",
@@ -482,8 +480,9 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
     )
 
     messages, threads, walks, observations = spine_module.build(rng, kept, members, as_of)
-    counts["message"] = copy_rows(
-        conn, "raw.message", spine_module.MESSAGE_COLUMNS, messages
+    counts["archive.message"] = copy_rows(
+        conn, "archive.message", spine_module.ARCHIVE_MESSAGE_COLUMNS,
+        [spine_module.archive_message_row(row) for row in messages]
     )
     counts["thread"] = copy_rows(
         conn, "raw.thread", spine_module.THREAD_COLUMNS, threads
@@ -491,8 +490,9 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
     counts["channel_walk"] = copy_rows(
         conn, "raw.channel_walk", spine_module.WALK_COLUMNS, walks
     )
-    counts["message_observation"] = copy_rows(
-        conn, "raw.message_observation", spine_module.OBSERVATION_COLUMNS, observations
+    counts["archive.observation"] = copy_rows(
+        conn, "archive.observation", spine_module.ARCHIVE_OBSERVATION_COLUMNS,
+        [spine_module.archive_observation_row(row) for row in observations]
     )
 
     counts["member_dim_snapshot"] = copy_rows(

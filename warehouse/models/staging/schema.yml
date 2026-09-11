@@ -45,7 +45,7 @@ models:
       - name: error_class
         data_tests:
           - accepted_values:
-              values: [cancelled, auth, transport, throttle, local, upstream, contract, entity]
+              values: [auth, cancelled, contended, contract, entity, local, throttle, transport, upstream]
   - name: fct_ingest_incident
     columns:
       - name: kind

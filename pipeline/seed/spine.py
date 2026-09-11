@@ -216,3 +216,38 @@ def build(rng, events, members, as_of):
         walks.append(walk_row(channel_id, made, stamped))
         observations.extend(observation_rows(made, cutoff, stamped))
     return messages, threads, walks, observations
+
+
+ARCHIVE_REVISION = 0
+
+ARCHIVE_MESSAGE_COLUMNS = [
+    "channel_id", "ts", "revision", "posted_at", "author_id", "author_kind", "subtype",
+    "thread_root_ts", "is_reply", "is_broadcast", "reply_count", "reply_users_count",
+    "latest_reply_ts", "text_length", "has_text", "file_count", "mention_count",
+    "mentioned_ids", "is_question", "is_substantive", "has_link", "emoji_only",
+    "reaction_count", "reactor_count", "edited_at", "edited_by", "settled", "first_seen_at",
+]
+
+ARCHIVE_OBSERVATION_COLUMNS = ["channel_id", "ts", "transport", "revision", "observed_at"]
+
+
+def archive_message_row(row):
+    held = dict(zip(MESSAGE_COLUMNS, row))
+    length = held["text_length"]
+    return (
+        held["channel_id"], held["ts"], ARCHIVE_REVISION, held["posted_at"],
+        held["author_id"], held["author_kind"], held["subtype"], held["thread_root_ts"],
+        held["is_reply"], held["subtype"] == "thread_broadcast",
+        held["reply_count"], held["reply_users_count"], held["latest_reply_ts"],
+        length, None if length is None else length > 0,
+        held["file_count"], held["mention_count"], held["mentioned_ids"],
+        held["is_question"], held["is_substantive"], held["has_link"], held["emoji_only"],
+        held["reaction_count"], held["reactor_count"], held["edited_at"], held["edited_by"],
+        False, held["observed_at"],
+    )
+
+
+def archive_observation_row(row):
+    held = dict(zip(OBSERVATION_COLUMNS, row))
+    return (held["channel_id"], held["ts"], held["transport"],
+            ARCHIVE_REVISION, held["observed_at"])
