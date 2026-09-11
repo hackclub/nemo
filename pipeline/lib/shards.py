@@ -79,6 +79,7 @@ MAX_PER_MINUTE = 600.0
 CLIMB_PER_MINUTE = 15.0
 CLIMB_AFTER = 20.0
 BACKOFF = 0.75
+BACKOFF_AFTER = 15.0
 CEILING_MARGIN = 0.95
 CEILING_PROBE_AFTER = 600.0
 CEILING_PROBE_BY = 1.1
@@ -230,11 +231,14 @@ class Shard:
     def park(self, method, seconds):
         seconds = min(max(float(seconds), 0.0), PARK_CEILING)
         with self.lock:
+            now = self.clock()
             self.throttles += 1
-            self.parked_until[method] = self.clock() + seconds
-            if not self.pinned:
+            racing = self.parked_until.get(method, 0.0) > now
+            settling = self.throttled_at is not None and now - self.throttled_at < BACKOFF_AFTER
+            self.parked_until[method] = now + seconds
+            if not self.pinned and not racing and not settling:
                 self.ceiling = self.per_minute
-                self.throttled_at = self.clock()
+                self.throttled_at = now
                 self._retune(self.per_minute * BACKOFF)
         return seconds
 
