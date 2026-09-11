@@ -26,12 +26,6 @@ sources:
           warn_after: {count: 26, period: hour}
           error_after: {count: 50, period: hour}
       - name: message_activity_snapshot
-      - name: message
-        loaded_at_field: observed_at
-        freshness:
-          warn_after: {count: 26, period: hour}
-          error_after: {count: 50, period: hour}
-      - name: message_observation
       - name: thread
       - name: channel_walk
       - name: event_delivery
