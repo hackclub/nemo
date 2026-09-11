@@ -1,4 +1,5 @@
 import os
+import threading
 import time
 
 from slack_sdk import WebClient
@@ -71,7 +72,8 @@ TIER3 = 50
 DEFAULT_PER_MINUTE = float(os.environ.get("INGEST_SHARD_PER_MINUTE", TIER3))
 BURST = 5.0
 PARK_CEILING = 300.0
-MAX_PARK_WAITS = 6
+WAIT_SLICE = 5.0
+WAIT_CEILING = 900
 SHARD_TIMEOUT = 60
 
 
@@ -82,16 +84,18 @@ class Bucket:
         self.tokens = float(burst)
         self.clock = clock
         self.filled_at = clock()
+        self.lock = threading.Lock()
 
     def take(self):
-        now = self.clock()
-        rate = self.per_minute / 60.0
-        self.tokens = min(self.burst, self.tokens + (now - self.filled_at) * rate)
-        self.filled_at = now
-        if self.tokens >= 1.0:
-            self.tokens -= 1.0
-            return True, 0.0
-        return False, (1.0 - self.tokens) / rate
+        with self.lock:
+            now = self.clock()
+            rate = self.per_minute / 60.0
+            self.tokens = min(self.burst, self.tokens + (now - self.filled_at) * rate)
+            self.filled_at = now
+            if self.tokens >= 1.0:
+                self.tokens -= 1.0
+                return True, 0.0
+            return False, (1.0 - self.tokens) / rate
 
 
 class Shard:
@@ -103,6 +107,7 @@ class Shard:
         self.buckets = {}
         self.parked_until = {}
         self._client = None
+        self.lock = threading.Lock()
         self.taken = 0
         self.throttles = 0
 
@@ -110,9 +115,10 @@ class Shard:
         return f"{PREFIX}{self.index}"
 
     def client(self, timeout=SHARD_TIMEOUT):
-        if self._client is None:
-            self._client = WebClient(token=self.token, timeout=timeout, retry_handlers=[])
-        return self._client
+        with self.lock:
+            if self._client is None:
+                self._client = WebClient(token=self.token, timeout=timeout, retry_handlers=[])
+            return self._client
 
     def invoke(self, method, params, timeout=SHARD_TIMEOUT):
         try:
@@ -132,9 +138,10 @@ class Shard:
         return max([0.0, *held])
 
     def bucket(self, method):
-        if method not in self.buckets:
-            self.buckets[method] = Bucket(self.per_minute, clock=self.clock)
-        return self.buckets[method]
+        with self.lock:
+            if method not in self.buckets:
+                self.buckets[method] = Bucket(self.per_minute, clock=self.clock)
+            return self.buckets[method]
 
     def take(self, method):
         held = self.parked_for(method)
@@ -142,13 +149,15 @@ class Shard:
             return False, held
         ok, wait = self.bucket(method).take()
         if ok:
-            self.taken += 1
+            with self.lock:
+                self.taken += 1
         return ok, wait
 
     def park(self, method, seconds):
-        self.throttles += 1
         seconds = min(max(float(seconds), 0.0), PARK_CEILING)
-        self.parked_until[method] = self.clock() + seconds
+        with self.lock:
+            self.throttles += 1
+            self.parked_until[method] = self.clock() + seconds
         return seconds
 
 
@@ -160,6 +169,7 @@ class Pool:
             for index, token in discover(env)
         ]
         self.cursor = 0
+        self.lock = threading.Lock()
 
     def __len__(self):
         return len(self.shards)
@@ -170,12 +180,14 @@ class Pool:
     def acquire(self, method):
         if not self.shards:
             return None, 0.0
+        with self.lock:
+            start = self.cursor
+            self.cursor = (self.cursor + 1) % len(self.shards)
         waits = []
         for step in range(len(self.shards)):
-            shard = self.shards[(self.cursor + step) % len(self.shards)]
+            shard = self.shards[(start + step) % len(self.shards)]
             ok, wait = shard.take(method)
             if ok:
-                self.cursor = (self.cursor + step + 1) % len(self.shards)
                 return shard, 0.0
             waits.append(wait)
         return None, min(waits)
@@ -216,6 +228,7 @@ class ShardedClient(ProxyClient):
         self.deadline_seconds = deadline_seconds if deadline_seconds is not None else read_timeout
         self.last_num_found = None
         self.sleep = sleep
+        self.wait_ceiling = max(WAIT_CEILING, self.deadline_seconds or 0)
 
     @classmethod
     def for_source(cls, key, **kwargs):
@@ -225,17 +238,18 @@ class ShardedClient(ProxyClient):
 
     def call(self, method, params=None, max_retries=3, credential="internal"):
         cleaned = {k: v for k, v in dict(params or {}).items() if v is not None}
-        waits = 0
+        waited = 0.0
         throttles = 0
         while True:
             shard, wait = self.pool.acquire(method)
             if shard is None:
-                waits += 1
-                if waits > MAX_PARK_WAITS:
+                pause = min(max(wait, 0.01), WAIT_SLICE)
+                waited += pause
+                if waited > self.wait_ceiling:
                     raise ProxyError(
-                        f"{method}: every shard stayed parked across {MAX_PARK_WAITS} waits"
+                        f"{method}: waited {waited:.0f}s for a shard and the pool never opened"
                     )
-                self.sleep(max(wait, 0.01))
+                self.sleep(pause)
                 continue
             try:
                 data = shard.invoke(method, cleaned, timeout=self.read_timeout)

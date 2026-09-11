@@ -294,3 +294,79 @@ def test_an_unconfigured_pool_warns_rather_than_failing():
     assert status == "warn"
     assert "stay on the proxy" in observed
     assert check.severity_of(assertion, status) == "warn"
+
+
+def test_the_bucket_never_over_issues_under_concurrent_fetchers():
+    import threading
+    import time as clocklib
+
+    def yielding_clock():
+        clocklib.sleep(0)
+        return 0.0
+
+    bucket = shards.Bucket(per_minute=6000.0, burst=50.0, clock=yielding_clock)
+    granted = []
+    barrier = threading.Barrier(20)
+
+    def grab():
+        barrier.wait()
+        for _ in range(20):
+            ok, _ = bucket.take()
+            if ok:
+                granted.append(1)
+
+    threads = [threading.Thread(target=grab) for _ in range(20)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(granted) == 50
+
+
+def test_the_pool_hands_every_fetcher_a_distinct_turn():
+    import threading
+    from collections import Counter
+
+    pool, _ = pool_of(5, per_minute=60000.0)
+    seen = []
+    guard = threading.Lock()
+    barrier = threading.Barrier(20)
+
+    def grab():
+        barrier.wait()
+        for _ in range(50):
+            shard, _ = pool.acquire("m")
+            if shard:
+                with guard:
+                    seen.append(shard.name())
+
+    threads = [threading.Thread(target=grab) for _ in range(20)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    spread = Counter(seen)
+    assert len(spread) == 5
+    assert max(spread.values()) - min(spread.values()) <= len(seen) // 10
+    assert sum(spread.values()) == sum(s.taken for s in pool.shards)
+
+
+def test_parking_and_counting_survive_concurrent_throttles():
+    import threading
+
+    pool, _ = pool_of(3, per_minute=60000.0)
+    barrier = threading.Barrier(15)
+
+    def churn():
+        barrier.wait()
+        for _ in range(30):
+            shard, _ = pool.acquire("m")
+            if shard:
+                pool.park(shard, "m", 0)
+
+    threads = [threading.Thread(target=churn) for _ in range(15)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert sum(s.throttles for s in pool.shards) == sum(s.taken for s in pool.shards)
