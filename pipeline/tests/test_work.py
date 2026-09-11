@@ -107,3 +107,33 @@ def test_sweep_stale_runs_passes_one_parameter_per_placeholder():
     sql = src[src.index('"""') + 3:src.rindex('"""')]
     assert sql.count("%s") == 2
     assert "format(" not in sql
+
+
+def test_a_clean_settle_clears_the_attempt_count():
+    from lib import work
+
+    sql = work.SETTLE_SQL
+    assert "attempts = CASE WHEN %(state)s = 'complete' THEN 0 ELSE attempts END" in sql
+
+
+def test_a_short_settle_keeps_its_attempt_count():
+    from lib import work
+
+    assert "THEN 0 ELSE attempts END" in work.SETTLE_SQL
+    assert "attempts = 0," not in work.SETTLE_SQL
+
+
+def test_both_settle_paths_share_the_reset():
+    from lib import work
+
+    assert "SETTLE_SQL" in inspect.getsource(work.settle)
+    assert "SETTLE_SQL" in inspect.getsource(work.settle_many)
+
+
+def test_a_lifetime_claim_count_can_no_longer_exhaust_the_retry_budget():
+    from lib import work
+
+    claim_bumps = "attempts = w.attempts + 1" in work.CLAIM_SQL
+    fail_caps = "attempts >= %(max_attempts)s" in work.FAIL_SQL
+    settle_resets = "THEN 0 ELSE attempts END" in work.SETTLE_SQL
+    assert claim_bumps and fail_caps and settle_resets

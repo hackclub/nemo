@@ -59,6 +59,7 @@ RETURNING w.work_item_id, w.target_key, w.target_sub_key, w.payload, w.expected,
 SETTLE_SQL = """
 UPDATE ingest.work_item
 SET    state = %(state)s, fetched = %(fetched)s, note = %(note)s, lease_until = NULL,
+       attempts = CASE WHEN %(state)s = 'complete' THEN 0 ELSE attempts END,
        settled_at = now(), updated_at = now()
 WHERE  work_item_id = %(id)s AND fence = %(fence)s AND state = 'claimed'
 """
