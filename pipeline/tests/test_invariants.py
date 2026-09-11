@@ -55,4 +55,42 @@ def test_severity_is_info_on_pass_and_error_on_fail_except_i4():
 
 def test_every_check_is_registered_once():
     names = [check.__name__ for check in invariants.CHECKS]
-    assert len(names) == len(set(names)) == 5
+    assert len(names) == len(set(names)) == 6
+
+
+class DaySource:
+    def __init__(self, rows):
+        self.rows = rows
+
+    def execute(self, sql, params=None):
+        return self
+
+    def fetchall(self):
+        return self.rows
+
+
+def test_a_fresh_day_source_passes():
+    conn = DaySource([("member_day", "2026-09-09", 2), ("channel_day", "2026-09-09", 2)])
+    assertion, status, observed, _ = invariants.i11_every_day_source_is_recent(conn)
+    assert (assertion, status) == ("I11", "pass")
+    assert "worst 2d" in observed
+
+
+def test_a_frozen_day_source_fails_and_names_itself():
+    conn = DaySource([("member_day", "2026-09-09", 2), ("channel_day", "2026-07-01", 72)])
+    assertion, status, observed, _ = invariants.i11_every_day_source_is_recent(conn)
+    assert (assertion, status) == ("I11", "fail")
+    assert "channel_day stopped at 2026-07-01 (72d)" in observed
+    assert "member_day" not in observed
+
+
+def test_the_lag_bar_sits_above_slacks_normal_two_day_lag():
+    assert invariants.DAY_LAG_LIMIT > 2
+    conn = DaySource([("member_day", "2026-09-08", invariants.DAY_LAG_LIMIT)])
+    assert invariants.i11_every_day_source_is_recent(conn)[1] == "pass"
+    conn = DaySource([("member_day", "2026-09-08", invariants.DAY_LAG_LIMIT + 1)])
+    assert invariants.i11_every_day_source_is_recent(conn)[1] == "fail"
+
+
+def test_a_frozen_source_is_an_error_not_a_warning():
+    assert invariants.severity_of("I11", "fail") == "error"

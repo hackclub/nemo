@@ -12,6 +12,7 @@ COUNT_COLUMNS = (
     "expected", "landed", "fetched", "expected_count", "landed_count",
 )
 COUNT_TABLES = (("raw", "ingest_run"), ("ingest", "slice_coverage"), ("ingest", "work_item"))
+DAY_LAG_LIMIT = 4
 
 RECORD_SQL = """
 INSERT INTO ingest.quality_result (run_id, subject, assertion, severity, status, observed, expected)
@@ -42,9 +43,11 @@ def i4_counts_are_nullable(conn):
     rows = conn.execute("""
         SELECT table_schema || '.' || table_name || '.' || column_name, is_nullable, column_default
         FROM information_schema.columns
-        WHERE (table_schema, table_name) IN (('raw','ingest_run'), ('ingest','coverage'), ('ingest','work_item'))
+        WHERE (table_schema, table_name) IN (SELECT * FROM unnest(%s::text[], %s::text[]))
           AND column_name = ANY(%s)
-    """, (list(COUNT_COLUMNS),)).fetchall()
+    """, ([schema for schema, _ in COUNT_TABLES],
+          [table for _, table in COUNT_TABLES],
+          list(COUNT_COLUMNS))).fetchall()
     bad = [name for name, nullable, default in rows if nullable == "NO" and default and "0" in default]
     return ("I4", "fail" if bad else "pass",
             ", ".join(bad) if bad else "every count column is nullable",
@@ -76,10 +79,28 @@ def every_terminal_failure_is_classified(conn):
     return ("I3", "pass" if count == 0 else "fail", f"{count} unclassified failure(s) in 24h", "0")
 
 
+def i11_every_day_source_is_recent(conn):
+    rows = conn.execute("""
+        SELECT source, max(ds), (current_date - max(ds))::integer
+        FROM raw.analytics_day
+        GROUP BY source
+        ORDER BY source
+    """).fetchall()
+    if not rows:
+        return ("I11", "pass", "no day source has loaded yet", f"within {DAY_LAG_LIMIT} days")
+    stale = [f"{source} stopped at {newest} ({behind}d)" for source, newest, behind in rows
+             if behind > DAY_LAG_LIMIT]
+    worst = max(behind for _, _, behind in rows)
+    return ("I11", "fail" if stale else "pass",
+            "; ".join(stale) if stale else f"{len(rows)} source(s), worst {worst}d behind",
+            f"within {DAY_LAG_LIMIT} days")
+
+
 CHECKS = (
     i1_every_planned_stage_has_a_row,
     i4_counts_are_nullable,
     i10_status_vocabulary_matches_the_check,
+    i11_every_day_source_is_recent,
     no_running_row_outlives_the_sweep,
     every_terminal_failure_is_classified,
 )
