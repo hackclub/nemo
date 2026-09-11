@@ -81,3 +81,29 @@ def test_an_unknown_source_is_refused_rather_than_empty():
         sources.source("teleporter")
     with pytest.raises(sources.Unknown):
         sources.limit("team_stats", "batch")
+
+
+def test_a_source_claiming_num_found_actually_enforces_a_floor():
+    import re
+
+    from lib import sources
+    from lib.paths import PACKAGE_ROOT
+
+    claimed = {key for key in sources.KEYS if sources.SOURCES[key].get("guard") == "num_found"}
+    pulls = "\n".join(p.read_text() for p in (PACKAGE_ROOT / "ingest").glob("*.py"))
+    unfloored = set(re.findall(r"(\w+_SHORT_AT)\s*=\s*NO_FLOOR", pulls))
+    assert "MEMBER_SHORT_AT" in unfloored
+    assert "member_days" not in claimed
+
+
+def test_member_days_says_it_has_no_usable_count():
+    from lib import sources
+
+    assert sources.says("member_days", "guard") == "none"
+
+
+def test_every_declared_guard_is_in_the_vocabulary():
+    from lib import sources
+
+    for key in sources.KEYS:
+        assert sources.SOURCES[key]["guard"] in sources.GUARDS
