@@ -156,6 +156,11 @@ models:
         data_tests: [not_null]
       - name: messages
         data_tests: [not_null]
+      - name: returned
+        data_tests: [not_null]
+    data_tests:
+      - unique:
+          column_name: "user_id || '-' || channel_id"
   - name: fct_member_channel_membership
     columns:
       - name: user_id

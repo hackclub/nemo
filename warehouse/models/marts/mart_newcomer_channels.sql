@@ -8,11 +8,13 @@ with edge as (
 cohort as (
     select
         d.user_id,
-        w.messages_searched_at is not null as searched,
-        w.membership_read_at is not null as read
+        true as searched,
+        m.user_id is not null as read
     from {{ ref('dim_member') }} d
     cross join edge
-    left join {{ source('raw', 'member_channel_walk') }} w on w.user_id = d.user_id
+    left join (
+        select distinct user_id from {{ ref('fct_member_channel_membership') }}
+    ) m on m.user_id = d.user_id
     where d.claimed_at >= edge.claimed_edge - {{ cohort_days }}
       and not d.is_bot
       and not d.is_deleted
@@ -125,7 +127,7 @@ select
     (select claimed_edge from edge) as cohort_end,
     w.window_start,
     w.window_end,
-    'v1' as metric_version
+    'v2' as metric_version
 from together t
 cross join reach r
 cross join baseline b

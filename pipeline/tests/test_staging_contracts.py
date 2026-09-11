@@ -68,3 +68,24 @@ def test_every_mart_downstream_of_first_post_declares_a_version():
     for name in marts:
         sql = (WAREHOUSE_DIR / "models" / "marts" / f"{name}.sql").read_text()
         assert re.search(r"'v\d+' as metric_version", sql), f"{name} has no metric_version"
+
+
+def test_no_mart_reaches_around_the_staging_layer():
+    marts = (WAREHOUSE_DIR / "models" / "marts").glob("*.sql")
+    offenders = [p.name for p in marts if "source(" in p.read_text()]
+    assert offenders == []
+
+
+def test_member_channel_is_built_from_the_archive_not_search():
+    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_member_channel.sql").read_text()
+    assert "fct_member_message" in sql
+    assert "member_channel_message" not in sql
+    assert "source(" not in sql
+
+
+def test_member_channel_still_gives_the_mart_every_column_it_reads():
+    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_member_channel.sql").read_text()
+    mart = (WAREHOUSE_DIR / "models" / "marts" / "mart_newcomer_channels.sql").read_text()
+    for col in ("user_id", "channel_id", "messages", "returned"):
+        assert col in sql, f"fct_member_channel lost {col}"
+        assert f"f.{col}" in mart or "c.user_id = f.user_id" in mart
