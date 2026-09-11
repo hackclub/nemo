@@ -135,7 +135,7 @@ sources:
     guard: none
     resume: pending set
     retention: keep
-    writes: [raw.message, raw.message_observation, raw.thread,
+    writes: [raw.thread,
              archive.envelope, archive.message, archive.observation]
     runs_as: [channel_replies]
     feeds: [fct_message, fct_thread]
@@ -166,7 +166,7 @@ sources:
     guard: none
     resume: cursor
     retention: keep
-    writes: [raw.message, raw.message_observation, raw.thread, raw.channel_walk,
+    writes: [raw.thread, raw.channel_walk,
              archive.envelope, archive.message, archive.observation]
     runs_as: [conversations_history]
     feeds: [fct_message, fct_thread]
