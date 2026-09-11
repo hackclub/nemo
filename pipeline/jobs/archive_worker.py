@@ -31,9 +31,14 @@ DEFAULT_REPLIES_BUDGET = 500
 DEFAULT_REPLIES_FETCHERS = 4
 JOIN_TIMEOUT = 10
 PASS_MINUTES = 4
-FETCHER_CEILING = 32
+FETCHER_CEILING = 64
 FETCHER_PER_MINUTE = 60
+CONNECTION_HEADROOM = 25
 BUSY_POLL_SECONDS = 2
+
+SPARE_SQL = """
+SELECT current_setting('max_connections')::int - (SELECT count(*) FROM pg_stat_activity)
+"""
 
 
 def seconds(name, fallback):
@@ -55,7 +60,14 @@ def budget():
     return int(pace * PASS_MINUTES) if pace else DEFAULT_REPLIES_BUDGET
 
 
-def fetchers():
+def spare(conn):
+    try:
+        return (conn.execute(SPARE_SQL).fetchone()[0] or 0) - CONNECTION_HEADROOM
+    except Exception:
+        return DEFAULT_REPLIES_FETCHERS
+
+
+def fetchers(conn=None):
     asked = os.environ.get("ARCHIVE_REPLIES_FETCHERS")
     if asked:
         return int(asked)
@@ -63,7 +75,8 @@ def fetchers():
     if not pace:
         return DEFAULT_REPLIES_FETCHERS
     wanted = -(-int(pace) // FETCHER_PER_MINUTE)
-    return max(DEFAULT_REPLIES_FETCHERS, min(FETCHER_CEILING, wanted))
+    room = FETCHER_CEILING if conn is None else spare(conn)
+    return max(DEFAULT_REPLIES_FETCHERS, min(FETCHER_CEILING, wanted, room))
 
 
 def history(conn):
@@ -71,7 +84,7 @@ def history(conn):
 
 
 def replies(conn):
-    return walk_replies(conn, budget(), fetchers())
+    return walk_replies(conn, budget(), fetchers(conn))
 
 
 LANES = (
