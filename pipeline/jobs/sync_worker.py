@@ -160,11 +160,11 @@ def serve(request_id, kind, stage):
     print(f"{label}: {status}, run {run_id}")
 
 
-def reap():
+def reap(stale_after_hours=STALE_AFTER_HOURS):
     try:
         with connect() as conn, conn.cursor() as cur:
             swept = sweep_stale_runs(conn)
-            cur.execute(RELEASE_STALE_SQL, (STALE_AFTER_HOURS,))
+            cur.execute(RELEASE_STALE_SQL, (stale_after_hours,))
             stranded = [row[0] for row in cur.fetchall()]
             conn.commit()
     except psycopg.Error as exc:
@@ -285,7 +285,7 @@ def main():
         f"next scheduled run at {scheduled:%Y-%m-%dT%H:%M}"
     )
     waiting = listener()
-    reap()
+    reap(stale_after_hours=0)
     state = {"note": waiting_note(scheduled)}
     probed = 0.0
     refreshed = 0.0
