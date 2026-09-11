@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from lib import archive
 from lib.db import connect, ingest_run
 from lib.paths import ENV_FILE
+from lib.task import per_entity
 
 SOURCE = "event_projector"
 TRANSPORT = "event"
@@ -51,7 +52,14 @@ def run(conn, limit=BATCH_LIMIT):
         return 0
 
     with ingest_run(conn, SOURCE) as counts:
-        done = [project(conn, row, counts) for row in waiting]
+        done = []
+        for row in waiting:
+            event_id, channel_id, ts = row[0], row[1], row[2]
+            with per_entity(conn, SOURCE, counts,
+                            {"event_id": str(event_id), "channel": channel_id, "ts": ts}):
+                project(conn, row, counts)
+                conn.commit()
+            done.append(event_id)
         with conn.cursor() as cur:
             cur.execute(DONE_SQL, (done,))
         conn.commit()
