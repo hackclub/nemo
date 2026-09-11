@@ -1,3 +1,4 @@
+import re
 import inspect
 from unittest import mock
 
@@ -137,3 +138,50 @@ def test_a_lifetime_claim_count_can_no_longer_exhaust_the_retry_budget():
     fail_caps = "attempts >= %(max_attempts)s" in work.FAIL_SQL
     settle_resets = "THEN 0 ELSE attempts END" in work.SETTLE_SQL
     assert claim_bumps and fail_caps and settle_resets
+
+
+def test_the_failure_backoff_is_no_longer_identical_for_a_whole_batch():
+    from lib import lease, work
+
+    waits = {lease.backoff(3, base=30.0, cap=6 * 3600, spread=work.RETRY_SPREAD)
+             for _ in range(200)}
+    assert len(waits) > 100
+    assert all(240.0 <= w <= 240.0 * (1 + work.RETRY_SPREAD) for w in waits)
+
+
+def test_spread_is_proportional_so_it_still_matters_at_the_cap():
+    from lib import lease
+
+    short = [lease.backoff(0, base=30.0, cap=6 * 3600, spread=0.25) for _ in range(200)]
+    long = [lease.backoff(20, base=30.0, cap=6 * 3600, spread=0.25) for _ in range(200)]
+    assert (max(short) - min(short)) / 30.0 > 0.1
+    assert (max(long) - min(long)) / 21600.0 > 0.1
+
+
+def test_absolute_jitter_keeps_its_old_meaning():
+    from lib import lease
+
+    assert [lease.backoff(n) for n in range(4)] == [1.0, 2.0, 4.0, 8.0]
+    assert 1.0 <= lease.backoff(0, jitter=0.5) <= 1.5
+
+
+def test_a_reclaimed_lease_waits_instead_of_being_grabbed_again():
+    from lib import work
+
+    assert "next_attempt_at = now()," not in work.RECLAIM_SQL
+    assert "make_interval" in work.RECLAIM_SQL
+    assert "2 ^ lapses" in work.RECLAIM_SQL
+    assert "random()" in work.RECLAIM_SQL
+
+
+def test_reclaim_passes_a_parameter_for_every_placeholder():
+    from lib import work
+
+    names = set(re.findall(r"%\((\w+)\)s", work.RECLAIM_SQL))
+    assert names == {"kind", "max_lapses", "lapse_base", "lapse_cap"}
+
+
+def test_revive_clears_the_lapse_count_so_it_is_not_born_condemned():
+    from lib import work
+
+    assert "attempts = 0, lapses = 0" in work.REVIVE_SQL

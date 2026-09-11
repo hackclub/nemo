@@ -8,6 +8,9 @@ WHERE_ID = "work_item_id = %(id)s"
 LEASE_SECONDS = 600
 MAX_ATTEMPTS = 5
 MAX_LAPSES = 10
+RETRY_SPREAD = 0.25
+LAPSE_BASE_SECONDS = 15.0
+LAPSE_CAP_SECONDS = 30 * 60
 REVIVE_HOURS = 6
 REFUSALS = ("channel_not_found", "team_access_not_granted")
 OPEN = ("pending", "claimed")
@@ -93,7 +96,11 @@ UPDATE ingest.work_item
 SET    state = CASE WHEN lapses + 1 >= %(max_lapses)s THEN 'dead' ELSE 'pending' END,
        attempts = greatest(attempts - 1, 0),
        lapses = lapses + 1,
-       lease_until = NULL, next_attempt_at = now(),
+       lease_until = NULL,
+       next_attempt_at = now() + make_interval(secs => least(
+           %(lapse_cap)s::float,
+           %(lapse_base)s::float * (2 ^ lapses)
+       ) * (0.75 + random() * 0.5)),
        last_error = coalesce(last_error, 'lease expired'), updated_at = now()
 WHERE  state = 'claimed' AND lease_until < now()
   AND  (%(kind)s::text IS NULL OR work_kind = %(kind)s)
@@ -102,7 +109,7 @@ RETURNING work_kind, state
 
 REVIVE_SQL = """
 UPDATE ingest.work_item
-SET    state = 'pending', attempts = 0, next_attempt_at = now(),
+SET    state = 'pending', attempts = 0, lapses = 0, next_attempt_at = now(),
        lease_until = NULL, updated_at = now()
 WHERE  state = 'dead'
   AND  (%(kind)s::text IS NULL OR work_kind = %(kind)s)
@@ -172,7 +179,8 @@ def settle_many(conn, outcomes):
 def fail(conn, item, note, max_attempts=MAX_ATTEMPTS):
     with conn.cursor() as cur:
         cur.execute(FAIL_SQL, {"id": item.id, "fence": item.fence, "note": str(note)[:500],
-                               "wait": lease.backoff(item.attempts, base=30.0, cap=6 * 3600),
+                               "wait": lease.backoff(item.attempts, base=30.0, cap=6 * 3600,
+                                                     spread=RETRY_SPREAD),
                                "max_attempts": max_attempts})
         row = cur.fetchone()
     return row[0] if row else None
@@ -196,7 +204,9 @@ def release_mine(conn, kind=None):
 
 def reclaim(conn, kind=None, max_lapses=MAX_LAPSES):
     with conn.cursor() as cur:
-        cur.execute(RECLAIM_SQL, {"kind": kind, "max_lapses": max_lapses})
+        cur.execute(RECLAIM_SQL, {"kind": kind, "max_lapses": max_lapses,
+                                  "lapse_base": LAPSE_BASE_SECONDS,
+                                  "lapse_cap": LAPSE_CAP_SECONDS})
         rows = cur.fetchall()
     conn.commit()
     if rows:

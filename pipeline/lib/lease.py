@@ -7,8 +7,10 @@ class FencedOut(RuntimeError):
     pass
 
 
-def backoff(attempt, base=1.0, cap=60.0, jitter=0.0):
+def backoff(attempt, base=1.0, cap=60.0, jitter=0.0, spread=0.0):
     wait = min(cap, base * (2 ** max(0, attempt)))
+    if spread:
+        wait += random.uniform(0, wait * spread)
     if jitter:
         wait += random.uniform(0, jitter)
     return wait
