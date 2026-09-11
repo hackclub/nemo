@@ -89,3 +89,27 @@ def test_member_channel_still_gives_the_mart_every_column_it_reads():
     for col in ("user_id", "channel_id", "messages", "returned"):
         assert col in sql, f"fct_member_channel lost {col}"
         assert f"f.{col}" in mart or "c.user_id = f.user_id" in mart
+
+
+def test_member_channel_messages_stays_integer_so_the_mart_contract_holds():
+    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_member_channel.sql").read_text()
+    assert "count(*)::integer as messages" in sql
+
+
+def test_every_contracted_mart_column_summed_from_staging_is_typed_consistently():
+    import re
+
+    import yaml
+
+    marts = yaml.safe_load((WAREHOUSE_DIR / "models" / "marts" / "schema.yml").read_text())
+    contracted = {m["name"]: m for m in marts["models"]
+                  if m.get("config", {}).get("contract", {}).get("enforced")}
+    assert "mart_newcomer_channels" in contracted
+
+    declared = {c["name"]: c.get("data_type")
+                for c in contracted["mart_newcomer_channels"]["columns"]}
+    assert declared["newcomer_messages"] == "bigint"
+
+    mart = (WAREHOUSE_DIR / "models" / "marts" / "mart_newcomer_channels.sql").read_text()
+    summed = re.search(r"sum\(f\.messages\)", mart)
+    assert summed, "the mart no longer sums f.messages; recheck the declared type"

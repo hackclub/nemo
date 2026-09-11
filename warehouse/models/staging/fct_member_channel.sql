@@ -1,7 +1,7 @@
 select
     author_id as user_id,
     channel_id,
-    count(*) as messages,
+    count(*)::integer as messages,
     min(ts) as first_ts,
     max(ts) as last_ts,
     max(posted_at)::date > min(posted_at)::date as returned
