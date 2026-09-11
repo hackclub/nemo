@@ -221,3 +221,13 @@ def test_the_reap_survives_a_database_that_refuses_it():
 
     with mock.patch.object(nightly_sync, "connect", side_effect=RuntimeError("nope")):
         assert nightly_sync.reap_orphaned_dbt() == 0
+
+
+def test_the_periodic_refresh_is_closed_under_its_dependencies():
+    from jobs import nightly_sync
+
+    assert nightly_sync.TABLES_ONLY == ("--select", "+config.materialized:table"), (
+        "config.materialized:table selects the tables but not the views they read, so a view "
+        "the last run failed to build stays missing until a full nightly; the + pulls the "
+        "ancestors in and lets the refresh rebuild them"
+    )

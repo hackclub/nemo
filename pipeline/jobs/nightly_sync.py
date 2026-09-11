@@ -112,7 +112,7 @@ def dbt_outcomes(results):
     return failed, warned
 
 
-TABLES_ONLY = ("--select", "config.materialized:table")
+TABLES_ONLY = ("--select", "+config.materialized:table")
 
 
 GATE_TESTS = (

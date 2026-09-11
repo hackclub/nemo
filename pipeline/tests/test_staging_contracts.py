@@ -1,6 +1,6 @@
 import yaml
 
-from lib.paths import WAREHOUSE_DIR
+from lib.paths import MIGRATIONS_DIR, WAREHOUSE_DIR
 
 SCHEMA = WAREHOUSE_DIR / "models" / "staging" / "schema.yml"
 CONTRACTED = ("fct_message", "fct_member_message", "fct_message_first_post")
@@ -183,3 +183,30 @@ def test_the_response_model_is_incremental_with_a_lookback():
     assert "lookback_hours" in sql, (
         "an unanswered first post can become answered later, so the window must reach back"
     )
+
+
+def test_the_message_spine_is_a_relation_not_a_view_over_the_archive():
+    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_message.sql").read_text()
+    assert "materialized='incremental'" in sql, (
+        "seven models read fct_message; as a view each one rescans the whole archive, "
+        "and every run has to CREATE OR REPLACE it behind whichever reader is still open"
+    )
+    assert "unique_key=['channel_id', 'ts']" in sql
+    assert "incremental_strategy='delete+insert'" in sql
+    assert "is_incremental()" in sql
+    assert "updated_at >" in sql, "the window must key off the archive's own change stamp"
+    assert "lookback_hours" in sql
+
+
+def test_the_message_spine_sweeps_rows_the_archive_has_tombstoned():
+    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_message.sql").read_text()
+    assert "deleted_at is not null" in sql, (
+        "a deleted message never enters the incremental batch, so it has to be swept out "
+        "of the table it was already written to"
+    )
+
+
+def test_the_archive_carries_the_indexes_the_incremental_leans_on():
+    sql = (MIGRATIONS_DIR / "0095_archive_message_change_markers.sql").read_text()
+    assert "archive.message (updated_at)" in sql
+    assert "WHERE deleted_at IS NOT NULL" in sql
