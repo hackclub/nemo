@@ -200,6 +200,15 @@ def test_the_response_model_exposes_when_the_bot_replied_not_just_whether():
     )
 
 
+def test_the_spine_carries_the_indexes_the_response_model_joins_on():
+    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_message.sql").read_text()
+    assert "['channel_id', 'thread_root_ts']" in sql, (
+        "fct_first_response joins fct_message on (channel_id, thread_root_ts); without the "
+        "index that is a sequential scan over every message in the workspace, on every "
+        "nightly run, and archive.message already carries the same index"
+    )
+
+
 def test_the_response_model_is_incremental_with_a_lookback():
     sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_first_response.sql").read_text()
     assert "materialized='incremental'" in sql

@@ -4,7 +4,8 @@
     incremental_strategy='delete+insert',
     on_schema_change='fail',
     indexes=[{'columns': ['channel_id', 'ts'], 'unique': True},
-             {'columns': ['posted_at']}],
+             {'columns': ['posted_at']},
+             {'columns': ['channel_id', 'thread_root_ts']}],
     post_hook="delete from {{ this }} t using archive.message m where m.channel_id = t.channel_id and m.ts = t.ts and m.deleted_at is not null"
 ) }}
 

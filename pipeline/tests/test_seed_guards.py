@@ -36,3 +36,24 @@ def test_the_override_has_to_match_exactly():
 def test_check_names_the_database_it_refused():
     with pytest.raises(SeedRefused, match="mnemosyne is not a seed target"):
         check_target_name("mnemosyne", allow="")
+
+
+def test_every_shape_check_resolves_against_the_captured_profile():
+    import json
+
+    from seed import verify
+    from seed.profile import PROFILE_FILE
+
+    profile = json.loads(PROFILE_FILE.read_text())
+    paths = ([path for path, _, _ in verify.SHAPE_CHECKS]
+             + [size for _, _, size in verify.SHAPE_CHECKS]
+             + [path for path, _, _ in verify.QUANTILE_CHECKS])
+
+    for path in sorted(set(paths)):
+        try:
+            verify.dig(profile, path)
+        except KeyError:
+            pytest.fail(
+                f"verify.py checks {path!r} but profile.json has no such key, so "
+                "`nemo seed` dies on a KeyError after the whole build has already run"
+            )

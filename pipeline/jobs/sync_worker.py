@@ -37,6 +37,7 @@ DEFAULT_AT = "03:00"
 DEFAULT_POLL_SECONDS = 60
 DEFAULT_TRANSFORM_SECONDS = 900
 DEFAULT_SPINE_SECONDS = 3600
+NEVER = float("-inf")
 REFRESH_WAIT_SECONDS = 0
 CANCEL_POLL_SECONDS = 30
 BEAT_SECONDS = 60
@@ -304,9 +305,9 @@ def main():
     waiting = listener()
     reap(stale_after_hours=0)
     state = {"note": waiting_note(scheduled)}
-    probed = 0.0
-    refreshed = 0.0
-    spined = 0.0
+    probed = NEVER
+    refreshed = NEVER
+    spined = NEVER
 
     with beating(WORKER, lambda: state["note"], every=BEAT_SECONDS):
         if run_at_start_enabled():

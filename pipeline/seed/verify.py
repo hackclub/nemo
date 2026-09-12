@@ -16,16 +16,10 @@ SHAPE_CHECKS = [
     ("members.rates.is_restricted", 0.03, "members.count"),
     ("members.rates.is_deleted", 0.05, "members.count"),
     ("messaging.ever_posted_rate", 0.08, "messaging.total_messages.n"),
-    ("replies.human_share", 0.10, "replies.n"),
-    ("replies.bot_only_share", 0.06, "replies.n"),
-    ("replies.no_reply_share", 0.10, "replies.n"),
-    ("replies.bot_first_share", 0.10, "replies.n"),
     ("channels.archived_rate", 0.03, "channels.count"),
 ]
 
 QUANTILE_CHECKS = [
-    ("replies.latency_seconds", 0.5, 1.5),
-    ("replies.latency_seconds", 0.9, 1.5),
     ("channels.total_members", 0.5, 1.5),
     ("activity.messages_per_active_day", 0.9, 2.5),
     ("activity.messages_per_active_day", 0.99, 2.5),

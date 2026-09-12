@@ -302,6 +302,25 @@ def test_the_spine_tier_runs_on_its_own_slower_clock():
     assert sync_worker.DEFAULT_SPINE_SECONDS > sync_worker.DEFAULT_TRANSFORM_SECONDS
 
 
+def test_the_first_pass_builds_on_a_freshly_booted_node():
+    from unittest import mock
+
+    from jobs import sync_worker
+
+    calls = []
+    with mock.patch.object(sync_worker.time, "monotonic", return_value=3.0), \
+         mock.patch.object(sync_worker, "run_dbt", lambda *a, **kw: calls.append(kw["select"])), \
+         mock.patch.object(sync_worker, "connect", mock.MagicMock()), \
+         mock.patch.object(sync_worker, "transform_every", return_value=900), \
+         mock.patch.object(sync_worker, "spine_every", return_value=3600):
+        sync_worker.refresh_marts(sync_worker.NEVER, {"note": "idle"}, sync_worker.NEVER)
+
+    assert calls == [sync_worker.TABLES_ONLY], (
+        "monotonic() counts from boot, so a 0.0 baseline reads as 'ran at boot' and holds the "
+        "first build back until the node's uptime passes the interval"
+    )
+
+
 def test_the_two_tiers_keep_separate_clocks():
     from unittest import mock
 
@@ -313,8 +332,8 @@ def test_the_two_tiers_keep_separate_clocks():
          mock.patch.object(sync_worker, "transform_every", return_value=1), \
          mock.patch.object(sync_worker, "spine_every", return_value=10_000):
         state = {"note": "idle"}
-        refreshed, spined = sync_worker.refresh_marts(0.0, state, 0.0)
+        refreshed, spined = sync_worker.refresh_marts(sync_worker.NEVER, state, sync_worker.NEVER)
         assert calls == [sync_worker.TABLES_ONLY], "the first pass has to build the spine once"
-        refreshed, spined = sync_worker.refresh_marts(0.0, state, spined)
+        refreshed, spined = sync_worker.refresh_marts(sync_worker.NEVER, state, spined)
         assert calls[-1] == sync_worker.OFF_THE_SPINE, "the spine is not due again yet"
         assert state["note"] == "idle", "the worker's note has to come back"
