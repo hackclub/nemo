@@ -1,0 +1,31 @@
+<% earlier_said = local_assigns.fetch(:earlier_said, 0) %>
+<% limit = local_assigns.fetch(:limit, Fd::CaseChat::SHOWN) %>
+<% more = earlier + earlier_said %>
+<% if more.positive? %>
+  <%= link_to fd_case_chat_log_path(kase, limit: limit + Fd::CaseChat::SHOWN, thread: reports.first&.id),
+        class: "dayrule dayrule-more", data: { turbo_stream: true } do %>
+    Show <%= pluralize(more, "earlier message") %>
+  <% end %>
+<% end %>
+
+<% last_day = nil %>
+<% entries.each do |entry| %>
+  <% day = entry.at.to_date %>
+  <% if day != last_day %>
+    <p class="dayrule"><%= day.strftime("%-d %B %Y") %></p>
+    <% last_day = day %>
+  <% end %>
+  <%= render "fd/cases/said", entry: entry %>
+<% end %>
+
+<% if entries.empty? %>
+  <div id="chat-empty-<%= kase.id %>" class="empty">
+    <span class="empty-mark">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v12H8l-3 3z"/></svg>
+    </span>
+    <p class="empty-title"><%= reports.any? ? "Nothing said yet" : "No report on file" %></p>
+    <% unless reports.any? %>
+      <p class="card-note"><%= member_link(kase.opened_by) %> opened this case directly, so there is nobody to reply to.</p>
+    <% end %>
+  </div>
+<% end %>

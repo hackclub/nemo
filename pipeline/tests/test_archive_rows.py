@@ -2,6 +2,71 @@ from lib import archive
 from lib.message import scrub, shape
 
 
+class FakeCursor:
+    def __init__(self, envelope_rows):
+        self.envelope_rows = envelope_rows
+        self._result = None
+
+    def execute(self, sql, params):
+        if sql is archive.EXACT_REVISION_SQL:
+            channel_id, ts, payload_hash = params
+            match = next((r for r in self.envelope_rows
+                          if r[0] == channel_id and r[1] == ts and r[3] == payload_hash), None)
+            self._result = (match[2],) if match else None
+        elif sql is archive.HIGHEST_REVISION_SQL:
+            channel_id, ts = params
+            revisions = [r[2] for r in self.envelope_rows if r[0] == channel_id and r[1] == ts]
+            self._result = (max(revisions) if revisions else None,)
+        else:
+            raise AssertionError(f"unexpected SQL passed to the fake cursor: {sql}")
+
+    def fetchone(self):
+        return self._result
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+class FakeConn:
+    def __init__(self, envelope_rows):
+        self.envelope_rows = envelope_rows
+
+    def cursor(self):
+        return FakeCursor(self.envelope_rows)
+
+
+def test_revision_for_a_brand_new_ts_starts_at_one():
+    conn = FakeConn([])
+    assert archive.revision_for(conn, "C1", "1.0", b"hash-a") == (1, True)
+
+
+def test_revision_for_a_genuinely_new_payload_increments_from_the_highest_seen():
+    conn = FakeConn([("C1", "1.0", 1, b"hash-a"), ("C1", "1.0", 2, b"hash-b")])
+    assert archive.revision_for(conn, "C1", "1.0", b"hash-c") == (3, True)
+
+
+def test_revision_for_an_old_duplicate_returns_its_own_past_revision_not_a_new_one():
+    # a delayed resend of the original content must not outrank the edit that
+    # already superseded it, or the upsert gate would let it overwrite the edit
+    conn = FakeConn([("C1", "1.0", 1, b"hash-a"), ("C1", "1.0", 2, b"hash-b")])
+    assert archive.revision_for(conn, "C1", "1.0", b"hash-a") == (1, False)
+
+
+def test_next_revision_matches_revision_for_when_batched():
+    seen = {b"hash-a": 1, b"hash-b": 2}
+    assert archive.next_revision(seen, b"hash-c") == (3, True)
+    assert archive.next_revision(seen, b"hash-a") == (1, False)
+    assert archive.next_revision(None, b"hash-a") == (1, True)
+
+
+def test_the_upsert_gate_keys_off_revision_not_settled():
+    assert "EXCLUDED.revision >= archive.message.revision" in archive.MESSAGE_SQL
+    assert "settled" not in archive.MESSAGE_SQL.split("WHERE")[-1]
+
+
 def built(message, channel_id="C1"):
     return archive.message_row(channel_id, message["ts"], 1, scrub(message), shape(message))
 

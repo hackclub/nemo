@@ -138,13 +138,46 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
   end
 
   test "resolution quotes what the member was told and flags when they were told nothing" do
+    told_report = report
+    told_report.define_singleton_method(:outcome_state) { :sent }
     told = build(kase(resolved_at: OPENED + 1.day, resolution: "action_taken",
-      member_note: "we spoke to them")).last
+      member_note: "we spoke to them"), reports: [told_report]).last
     assert_equal "we spoke to them", told.said
     assert_no_match(/not told/, told.detail)
 
-    silent = build(kase(resolved_at: OPENED + 1.day, resolution: "no_action")).last
+    silent = build(kase(resolved_at: OPENED + 1.day, resolution: "no_action"),
+      reports: [report]).last
     assert_match(/the member was not told/, silent.detail)
+  end
+
+  test "a resolution with nobody to tell says nothing about telling" do
+    entry = build(kase(resolved_at: OPENED + 1.day, resolution: "no_action")).last
+    assert_no_match(/told/, entry.detail)
+  end
+
+  test "a resolution note that never fully sent flags it without claiming they were told" do
+    stuck_report = report
+    stuck_report.define_singleton_method(:outcome_state) { :failed }
+    entry = build(kase(resolved_at: OPENED + 1.day, resolution: "no_action"),
+      reports: [stuck_report]).last
+    assert_match(/telling the member did not go through/, entry.detail)
+  end
+
+  test "resolution is attributed to whoever actually resolved it, not the first assignee" do
+    Fd::AuditEntry.create!(actor_user_id: "UWHO", actor_kind: "human", entity_type: "case",
+      entity_id: 1, verb: "resolved", source_app: "fire_engine")
+
+    entry = build(kase(resolved_at: OPENED + 1.day, resolution: "no_action"),
+      assignees: [assignee("UFF2", OPENED + 20.minutes)]).last
+
+    assert_match(/\Aby @UWHO/, entry.detail)
+  end
+
+  test "with no audit trail, resolution attribution falls back to the assignee" do
+    entry = build(kase(resolved_at: OPENED + 1.day, resolution: "no_action"),
+      assignees: [assignee("UFF2", OPENED + 20.minutes)]).last
+
+    assert_match(/\Aby @UFF2/, entry.detail)
   end
 
   test "a case with nothing attached still records that it was opened" do

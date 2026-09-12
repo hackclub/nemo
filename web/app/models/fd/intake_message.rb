@@ -26,6 +26,12 @@ module Fd
         .newest_first.limit(limit).to_a.reverse
     end
 
+    def self.earlier_than(conversation_ids, shown)
+      return 0 if conversation_ids.blank?
+
+      [where(conversation_id: conversation_ids).said_by_somebody.count - shown, 0].max
+    end
+
     def theirs?
       direction == "inbound"
     end

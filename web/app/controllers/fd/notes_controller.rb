@@ -72,8 +72,8 @@ module Fd
     end
 
     def on_this_page(kase)
-      Note.where(case_id: kase.id)
-        .or(Note.standing.where(subject_user_id: kase.subject_user_ids))
+      Note.where(case_id: kase.family_ids)
+        .or(Note.standing.where(subject_user_id: kase.family_subject_user_ids))
     end
 
     def objection(kase, body, standing, about)
@@ -82,7 +82,7 @@ module Fd
         return wrong!(:body,
           "Keep it under #{MAX_LENGTH} characters. That one is #{body.length}.", body)
       end
-      if standing && !kase.subject_user_ids.include?(about)
+      if standing && !kase.family_subject_user_ids.include?(about)
         return "that member is not a subject of this case"
       end
 

@@ -133,10 +133,33 @@ module Fd
     end
 
     def resolved_detail
-      parts = ["by #{names[assignees.first&.user_id || kase.opened_by]}"]
+      parts = ["by #{names[resolution_actor]}"]
       parts << "#{span(kase.resolved_at - kase.opened_at)} after opening"
-      parts << "the member was not told" if kase.member_note.blank?
+      note = notification_note
+      parts << note if note
       parts.join(" · ")
+    end
+
+    def resolution_actor
+      resolution_entry&.actor_user_id || assignees.first&.user_id || kase.opened_by
+    end
+
+    def resolution_entry
+      @resolution_entry ||= AuditEntry.for_entity("case", kase.id).where(verb: "resolved")
+        .recent_first.first
+    end
+
+    # member_note is free-text staff commentary, unrelated to whether tell_reporter was
+    # even asked for - the per-report outbox delivery is what tells us whether, and how,
+    # the reporter actually heard back.
+    def notification_note
+      return nil if reports.empty?
+
+      attempted = reports.map(&:outcome_state).compact
+      return "the member was not told" if attempted.empty?
+      return nil if attempted.all? { |state| state == :sent }
+
+      "telling the member did not go through"
     end
 
     def action_entries

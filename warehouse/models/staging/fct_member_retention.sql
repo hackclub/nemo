@@ -24,6 +24,14 @@ first_post as (
     {% if is_incremental() %}
     where f.posted_at::date > current_date - {{ settles_after_days + 1 }}
        or not exists (select 1 from {{ this }} t where t.user_id = f.user_id)
+       -- a member outside the settling window still needs rebuilding if their last
+       -- pass never saw full day-90 coverage - a delayed activity or coverage
+       -- backfill has to be able to repair them, not just members recent enough
+       -- to fall in the 91-day window on their own
+       or exists (
+           select 1 from {{ this }} t
+           where t.user_id = f.user_id and not t.day_90_covered
+       )
     {% endif %}
 ),
 
@@ -35,22 +43,28 @@ active as (
     where coalesce(days_active, 0) > 0
 ),
 
+-- the daily coverage ledger, not activity-row presence: a day with zero active
+-- members would never appear in fct_member_activity even once fully loaded, and a
+-- day that only landed for some members would appear after just one row lands
 covered as (
-    select distinct window_start as day
-    from {{ ref('fct_member_activity') }}
+    select ds as day
+    from {{ ref('fct_analytics_day') }}
+    where source = 'member_day' and loaded
 ),
 
 coverage as (
     select
         w.first_post_on,
+        -- the card labels this a seven-day window ending on day 30/90, so the range
+        -- has to be 24-30 (and 84-90) inclusive - not 23-30, which is eight days
         count(*) filter (
-            where c.day between w.first_post_on + 23 and w.first_post_on + 30
-        ) > 0 as day_30_covered,
+            where c.day between w.first_post_on + 24 and w.first_post_on + 30
+        ) = 7 as day_30_covered,
         count(*) filter (
-            where c.day between w.first_post_on + 83 and w.first_post_on + 90
-        ) > 0 and count(*) filter (
-            where c.day between w.first_post_on + 23 and w.first_post_on + 30
-        ) > 0 as day_90_covered,
+            where c.day between w.first_post_on + 84 and w.first_post_on + 90
+        ) = 7 and count(*) filter (
+            where c.day between w.first_post_on + 24 and w.first_post_on + 30
+        ) = 7 as day_90_covered,
         count(*) filter (
             where c.day between w.first_post_on and w.first_post_on + 14
         ) = 15 as visits_knowable
@@ -75,12 +89,12 @@ per_member as (
         f.first_post_on,
         f.posted_within_30d_of_joining,
         coalesce(bool_or(
-            v.active_date between f.first_post_on + 23 and f.first_post_on + 30
+            v.active_date between f.first_post_on + 24 and f.first_post_on + 30
         ), false) as retained_day_30,
         coalesce(bool_or(
-            v.active_date between f.first_post_on + 83 and f.first_post_on + 90
+            v.active_date between f.first_post_on + 84 and f.first_post_on + 90
         ), false) and coalesce(bool_or(
-            v.active_date between f.first_post_on + 23 and f.first_post_on + 30
+            v.active_date between f.first_post_on + 24 and f.first_post_on + 30
         ), false) as retained_day_90,
         coalesce(bool_or(
             v.visit_number = 2 and v.active_date <= f.first_post_on + 1

@@ -188,8 +188,10 @@ def test_the_response_rate_counts_newcomers_not_everyone_with_a_first_post():
 
 
 def test_the_response_model_exposes_when_the_bot_replied_not_just_whether():
+    import re
+
     sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_first_response.sql").read_text()
-    assert "t.bot_at as bot_at" in sql, (
+    assert re.search(r"\w+\.bot_at as bot_at", sql), (
         "mart_response_rate splits bot_replied_first from bot_first_then_member, "
         "which needs the bot timestamp to compare against responded_at"
     )

@@ -3,6 +3,8 @@ import { Controller } from "@hotwired/stimulus"
 const NEARLY = 60
 
 export default class extends Controller {
+  static targets = ["log"]
+
   connect() {
     this.following = true
     this.onScroll = this.onScroll.bind(this)
@@ -20,14 +22,10 @@ export default class extends Controller {
     this.element.removeEventListener("chat:changed", this.onLoad)
   }
 
-  get log() {
-    return this.element.querySelector(".chat-log")
-  }
-
   onScroll(event) {
-    const log = event.target
-    if (!log.classList?.contains("chat-log")) return
+    if (event.target !== this.logTarget) return
 
+    const log = event.target
     const left = log.scrollHeight - log.scrollTop - log.clientHeight
     this.following = left < NEARLY
   }
@@ -37,7 +35,6 @@ export default class extends Controller {
   }
 
   pin() {
-    const log = this.log
-    if (log) log.scrollTop = log.scrollHeight
+    if (this.hasLogTarget) this.logTarget.scrollTop = this.logTarget.scrollHeight
   }
 }

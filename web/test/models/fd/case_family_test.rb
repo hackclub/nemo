@@ -61,7 +61,22 @@ class Fd::CaseFamilyTest < ActiveSupport::TestCase
     two.update_columns(duplicate_of: one.id)
 
     assert_equal 2, Fd::Case.family_of(one.id).size
-    assert_includes [one.id, two.id], one.root.id
+    assert_raises(Fd::Case::Cycle) { one.root }
+  end
+
+  test "a chain deeper than the old five-hop cap is still one family" do
+    root = make_case(opened_at: 30.days.ago)
+    previous = root
+    chain = []
+    12.times do |i|
+      kase = fold(make_case(opened_at: (29 - i).days.ago), into: previous)
+      chain << kase
+      previous = kase
+    end
+
+    assert_equal 13, root.family_ids.size
+    assert_includes root.family_ids, chain.last.id
+    assert_equal root.id, Fd::Case.root_for(chain.last.id)
   end
 
   test "family_of takes a bare id, for callers that have no record" do

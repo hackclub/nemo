@@ -22,7 +22,7 @@ module Fd
       reversed = false
 
       writing do
-        rows = Action.where(id: params[:action_id], case_id: kase.id, reversed_at: nil)
+        rows = Action.where(id: params[:action_id], case_id: kase.family_ids, reversed_at: nil)
           .update_all(reversed_at: now, reversed_by: current_account.user_id,
             reversal_reason: reason)
         next if rows.zero?

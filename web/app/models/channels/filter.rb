@@ -54,6 +54,7 @@ module Channels
 
     MATCHES = %w[all any].freeze
     MAX_CONDITIONS = 12
+    DAY_COUNT_OPS = %w[within before_days].freeze
 
     Condition = Struct.new(:field, :op, :values, keyword_init: true) do
       def label
@@ -65,7 +66,7 @@ module Channels
       end
 
       def shown(value)
-        return "#{value} days" if field.kind == :date && %w[within before_days].include?(op)
+        return "#{value} days" if field.kind == :date && DAY_COUNT_OPS.include?(op)
         return value.to_s if field.kind == :text
 
         "#{value}#{field.unit}"
@@ -140,7 +141,7 @@ module Channels
       values = Array(row["v"]).reject { |v| v.to_s.strip.empty? }.first(wanted)
       return nil unless values.size == wanted
 
-      cast = values.filter_map { |v| coerce(field, v) }
+      cast = values.filter_map { |v| coerce(field, op, v) }
       return nil unless cast.size == wanted
 
       # a range reads and queries the same way round, so settle the order here
@@ -148,11 +149,11 @@ module Channels
       Condition.new(field: field, op: op, values: cast)
     end
 
-    def coerce(field, raw)
+    def coerce(field, op, raw)
       value = raw.to_s.strip
       case field.kind
       when :number then numeric(value)
-      when :date then date_for(value)
+      when :date then date_for(op, value)
       when :text then value.presence
       end
     end
@@ -163,10 +164,20 @@ module Channels
       value.include?(".") ? value.to_f : value.to_i
     end
 
-    def date_for(value)
-      return value.to_i if value.match?(/\A\d+\z/)
+    MAX_DAYS = 36_500
 
-      Date.iso8601(value)
+    # the operator decides the shape, not the value's own look: within/before_days
+    # need a bounded day count, after/before need an actual calendar date, and
+    # neither one is a valid stand-in for the other even though both parse cleanly
+    def date_for(op, value)
+      if DAY_COUNT_OPS.include?(op)
+        return nil unless value.match?(/\A\d+\z/)
+
+        days = value.to_i
+        days <= MAX_DAYS ? days : nil
+      else
+        Date.iso8601(value)
+      end
     rescue ArgumentError
       nil
     end

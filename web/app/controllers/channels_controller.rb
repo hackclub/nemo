@@ -82,10 +82,22 @@ class ChannelsController < ApplicationController
 
     coverage = Slack::Analytics.coverage
     last_available = coverage ? Date.iso8601(coverage["end_date"]) : (Date.current - 2)
+    floor = [@channel.date_created&.to_date, last_available - 400].compact.max
+
+    if floor > last_available
+      # the channel was created after analytics coverage ends, so no range can overlap
+      # any data yet - render the same "nothing here" state every range param would hit,
+      # without clamping a floor that is already past the ceiling or asking upstream for
+      # an inverted interval
+      @range_preset = DEFAULT_RANGE_DAYS
+      @start_date = @end_date = @range_min = @range_max = last_available
+      @range = @all_time = Slack::Analytics::Result.new(error: :not_found)
+      return
+    end
+
     custom_start = parse_range_date(params[:start])
     custom_end = parse_range_date(params[:end])
 
-    floor = [@channel.date_created&.to_date, last_available - 400].compact.max
     if custom_start || custom_end
       @range_preset = nil
       @end_date = (custom_end || last_available).clamp(floor, last_available)

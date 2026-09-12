@@ -3,13 +3,56 @@ import pytest
 import json
 
 from jobs.nightly_sync import credential_faults, parent_status, retryable, dbt_outcomes
-from lib.db import SyncCancelled
+from lib.db import RunCounts, SyncCancelled
 from lib.proxy_client import (
     InternalApiError,
     InternalAuthError,
     ProxyError,
     ProxyUnavailableError,
 )
+
+
+class FakeSchemaCursor:
+    def __init__(self, role_present=True, live_schema_present=True):
+        self.log = []
+        self.role_present = role_present
+        self.live_schema_present = live_schema_present
+        self._result = None
+
+    def execute(self, query, params=None):
+        text = query.as_string(None) if hasattr(query, "as_string") else query
+        self.log.append(text)
+        if "pg_roles" in text:
+            self._result = (1,) if self.role_present else None
+        elif "pg_namespace" in text:
+            self._result = (1,) if self.live_schema_present else None
+        else:
+            self._result = None
+
+    def fetchone(self):
+        return self._result
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+class FakeSchemaConn:
+    def __init__(self, role_present=True, live_schema_present=True):
+        self.cur = FakeSchemaCursor(role_present, live_schema_present)
+        self.commits = 0
+
+    def cursor(self):
+        return self.cur
+
+    def commit(self):
+        self.commits += 1
+
+    @property
+    def log(self):
+        return self.cur.log
 
 
 def test_a_dead_credential_is_not_retried():
@@ -240,6 +283,142 @@ def test_the_periodic_refresh_is_closed_under_its_dependencies():
         "the last run failed to build stays missing until a full nightly; the + pulls the "
         "ancestors in and lets the refresh rebuild them"
     )
+
+
+def test_reset_candidate_schema_drops_creates_and_grants_usage():
+    from jobs import nightly_sync
+
+    conn = FakeSchemaConn(role_present=True)
+    nightly_sync.reset_candidate_schema(conn, "analytics_build")
+
+    assert conn.log == [
+        'DROP SCHEMA IF EXISTS "analytics_build" CASCADE',
+        'CREATE SCHEMA "analytics_build"',
+        "SELECT 1 FROM pg_roles WHERE rolname = %s",
+        'GRANT USAGE ON SCHEMA "analytics_build" TO "rails_app"',
+    ]
+    assert conn.commits == 1
+
+
+def test_reset_candidate_schema_skips_the_grant_when_the_role_is_absent():
+    from jobs import nightly_sync
+
+    conn = FakeSchemaConn(role_present=False)
+    nightly_sync.reset_candidate_schema(conn, "analytics_build")
+
+    assert "GRANT" not in " ".join(conn.log)
+
+
+def test_promote_schema_swaps_live_and_candidate_and_drops_the_old_prior():
+    from jobs import nightly_sync
+
+    conn = FakeSchemaConn(live_schema_present=True)
+    nightly_sync.promote_schema(conn, "analytics", "analytics_build", "analytics_prior")
+
+    assert conn.log == [
+        'DROP SCHEMA IF EXISTS "analytics_prior" CASCADE',
+        "SELECT 1 FROM pg_namespace WHERE nspname = %s",
+        'ALTER SCHEMA "analytics" RENAME TO "analytics_prior"',
+        'ALTER SCHEMA "analytics_build" RENAME TO "analytics"',
+    ]
+    assert conn.commits == 1
+
+
+def test_promote_schema_skips_the_rename_away_when_live_does_not_exist_yet():
+    # first-ever build on a fresh database: there is no live schema to preserve
+    from jobs import nightly_sync
+
+    conn = FakeSchemaConn(live_schema_present=False)
+    nightly_sync.promote_schema(conn, "analytics", "analytics_build", "analytics_prior")
+
+    assert 'ALTER SCHEMA "analytics" RENAME TO "analytics_prior"' not in conn.log
+    assert 'ALTER SCHEMA "analytics_build" RENAME TO "analytics"' in conn.log
+
+
+def test_a_full_build_builds_the_candidate_schema_and_promotes_on_success(monkeypatch, tmp_path):
+    from jobs import nightly_sync
+
+    results = tmp_path / "run_results.json"
+    results.write_text(json.dumps({"results": []}))
+    monkeypatch.setattr(nightly_sync, "RUN_RESULTS", results)
+    monkeypatch.setattr(nightly_sync, "ensure_dbt_profile", lambda: None)
+    monkeypatch.setattr(nightly_sync, "check_freshness", lambda counts=None: 0)
+    monkeypatch.setattr(nightly_sync, "sole_build", lambda **kw: contextlib.nullcontext())
+    monkeypatch.setattr(nightly_sync, "ingest_run",
+                        lambda conn, source: contextlib.nullcontext(RunCounts()))
+
+    dbt_calls = []
+    monkeypatch.setattr(nightly_sync, "dbt", lambda *a: dbt_calls.append(a) or 0)
+    reset_calls = []
+    monkeypatch.setattr(nightly_sync, "reset_candidate_schema",
+                        lambda conn, name: reset_calls.append(name))
+    promote_calls = []
+    monkeypatch.setattr(nightly_sync, "promote_schema",
+                        lambda conn, live, candidate, prior: promote_calls.append((live, candidate, prior)))
+
+    nightly_sync.run_dbt(conn=object(), select=())
+
+    assert reset_calls == [nightly_sync.CANDIDATE_SCHEMA]
+    assert promote_calls == [
+        (nightly_sync.LIVE_SCHEMA, nightly_sync.CANDIDATE_SCHEMA, nightly_sync.PRIOR_SCHEMA)
+    ]
+    assert len(dbt_calls) == 2, "dbt run then dbt test"
+    for call in dbt_calls:
+        assert "--vars" in call
+        assert json.dumps({"candidate_schema": nightly_sync.CANDIDATE_SCHEMA}) in call
+
+
+def test_a_full_build_does_not_promote_when_a_gate_test_fails(monkeypatch, tmp_path):
+    from jobs import nightly_sync
+
+    results = tmp_path / "run_results.json"
+    results.write_text(json.dumps({"results": [
+        {"unique_id": "test.mnemosyne.assert_claimed_counts_track_slack", "status": "fail"},
+    ]}))
+    monkeypatch.setattr(nightly_sync, "RUN_RESULTS", results)
+    monkeypatch.setattr(nightly_sync, "ensure_dbt_profile", lambda: None)
+    monkeypatch.setattr(nightly_sync, "check_freshness", lambda counts=None: 0)
+    monkeypatch.setattr(nightly_sync, "dbt", lambda *a: 0)
+    monkeypatch.setattr(nightly_sync, "sole_build", lambda **kw: contextlib.nullcontext())
+    monkeypatch.setattr(nightly_sync, "ingest_run",
+                        lambda conn, source: contextlib.nullcontext(RunCounts()))
+    monkeypatch.setattr(nightly_sync, "reset_candidate_schema", lambda conn, name: None)
+    promote_calls = []
+    monkeypatch.setattr(nightly_sync, "promote_schema",
+                        lambda conn, live, candidate, prior: promote_calls.append(1))
+
+    with pytest.raises(RuntimeError, match="refusing to publish"):
+        nightly_sync.run_dbt(conn=object(), select=())
+
+    assert promote_calls == [], "a gated failure must never promote the candidate"
+
+
+def test_a_partial_select_never_touches_the_candidate_schema(monkeypatch, tmp_path):
+    # the periodic mart refresh in sync_worker.py always passes a non-empty select and
+    # must keep landing directly - it only ever rebuilds a subset of models
+    from jobs import nightly_sync
+
+    results = tmp_path / "run_results.json"
+    results.write_text(json.dumps({"results": []}))
+    monkeypatch.setattr(nightly_sync, "RUN_RESULTS", results)
+    monkeypatch.setattr(nightly_sync, "ensure_dbt_profile", lambda: None)
+    monkeypatch.setattr(nightly_sync, "check_freshness", lambda counts=None: 0)
+    monkeypatch.setattr(nightly_sync, "sole_build", lambda **kw: contextlib.nullcontext())
+    monkeypatch.setattr(nightly_sync, "ingest_run",
+                        lambda conn, source: contextlib.nullcontext(RunCounts()))
+
+    dbt_calls = []
+    monkeypatch.setattr(nightly_sync, "dbt", lambda *a: dbt_calls.append(a) or 0)
+    monkeypatch.setattr(nightly_sync, "reset_candidate_schema",
+                        lambda conn, name: (_ for _ in ()).throw(AssertionError("not for a partial select")))
+    monkeypatch.setattr(nightly_sync, "promote_schema",
+                        lambda *a: (_ for _ in ()).throw(AssertionError("not for a partial select")))
+
+    nightly_sync.run_dbt(conn=object(), select=nightly_sync.TABLES_ONLY)
+
+    for call in dbt_calls:
+        assert "--vars" not in call
+    assert dbt_calls[0] == ("run", *nightly_sync.TABLES_ONLY)
 
 
 def test_every_dbt_build_takes_the_single_build_lock():
