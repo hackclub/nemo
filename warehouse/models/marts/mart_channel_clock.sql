@@ -33,12 +33,6 @@ counted as (
     select channel_id, day_of_week, hour_of_day, count(*) as messages
     from posts
     group by channel_id, day_of_week, hour_of_day
-),
-
-sized as (
-    select channel_id, sum(messages)::bigint as channel_messages
-    from counted
-    group by channel_id
 )
 
 select
@@ -46,11 +40,9 @@ select
     c.day_of_week,
     c.hour_of_day,
     c.messages,
-    z.channel_messages,
     s.window_start,
     s.window_end,
-    'v2' as metric_version
+    'v3' as metric_version
 from counted c
-join sized z on z.channel_id = c.channel_id
 cross join span s
 order by c.channel_id, c.day_of_week, c.hour_of_day

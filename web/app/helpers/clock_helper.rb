@@ -2,18 +2,7 @@ module ClockHelper
   def clock_note(clock)
     said = [window_note(clock.window_start, clock.window_end)]
     said << "#{number_with_delimiter(clock.total)} messages"
-    said << clock_coverage(clock)
     said.compact.join(" · ")
-  end
-
-  def clock_coverage(clock)
-    held = share_pct(clock.total, clock.covered)
-    return nil if held.nil?
-
-    across = if clock.channels.to_i > 1
-      " across #{number_with_delimiter(clock.channels)} channels"
-    end
-    "#{number_to_percentage(held, precision: 1)} of what was posted#{across}"
   end
 
   def clock_tip(cell, clock)

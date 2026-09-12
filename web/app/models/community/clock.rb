@@ -12,29 +12,22 @@ module Community
 
     Cell = Struct.new(:day, :hour, :messages, :share, :tone, keyword_init: true)
 
-    attr_reader :rows, :peak, :total, :channels, :covered, :workspace,
-      :window_start, :window_end
+    attr_reader :rows, :peak, :total, :window_start, :window_end
 
     def self.workspace_wide
       rows = Analytics::MartActivityClock.order(:day_of_week, :hour_of_day).to_a
       head = rows.first
-      new(rows: rows, channels: head&.channels_counted, covered: head&.covered_messages,
-          workspace: head&.workspace_messages,
-          window_start: head&.window_start, window_end: head&.window_end)
+      new(rows: rows, window_start: head&.window_start, window_end: head&.window_end)
     end
 
     def self.for_channel(channel_id)
       rows = Analytics::MartChannelClock
         .where(channel_id: channel_id).order(:day_of_week, :hour_of_day).to_a
       head = rows.first
-      new(rows: rows, channels: (1 if head), covered: head&.channel_messages,
-          workspace: nil, window_start: head&.window_start, window_end: head&.window_end)
+      new(rows: rows, window_start: head&.window_start, window_end: head&.window_end)
     end
 
-    def initialize(rows:, channels:, covered:, workspace:, window_start:, window_end:)
-      @channels = channels
-      @covered = covered
-      @workspace = workspace
+    def initialize(rows:, window_start:, window_end:)
       @window_start = window_start
       @window_end = window_end
       @counts = rows.to_h { |r| [[r.day_of_week, r.hour_of_day], r.messages.to_i] }
@@ -45,19 +38,6 @@ module Community
 
     def any?
       @peak.positive?
-    end
-
-    # what we hold against what the covered channels actually posted
-    def coverage
-      return nil if @covered.to_i.zero?
-
-      @total.to_f / @covered
-    end
-
-    def workspace_share
-      return nil if @workspace.to_i.zero?
-
-      @total.to_f / @workspace
     end
 
     def busiest

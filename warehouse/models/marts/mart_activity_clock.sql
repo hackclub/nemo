@@ -34,26 +34,6 @@ counted as (
     group by day_of_week, hour_of_day
 ),
 
-workspace as (
-    select
-        coalesce(sum(a.messages_posted_by_members), 0) as workspace_messages,
-        coalesce(sum(a.messages_posted_by_members) filter (
-            where w.channel_id is not null
-        ), 0) as covered_messages
-    from {{ ref('mart_channel_activity') }} a
-    cross join span s
-    left join walked w on w.channel_id = a.channel_id
-    where a.window_start between s.window_start and s.window_end
-),
-
-coverage as (
-    select
-        (select count(*) from walked) as channels_counted,
-        (select count(*) from posts) as messages_counted,
-        (select covered_messages from workspace) as covered_messages,
-        (select workspace_messages from workspace) as workspace_messages
-),
-
 grid as (
     select d.day_of_week, h.hour_of_day
     from generate_series(1, 7) d(day_of_week)
@@ -64,15 +44,10 @@ select
     g.day_of_week,
     g.hour_of_day,
     coalesce(c.messages, 0) as messages,
-    v.channels_counted::integer as channels_counted,
-    v.messages_counted as messages_counted,
-    v.covered_messages as covered_messages,
-    v.workspace_messages as workspace_messages,
     s.window_start,
     s.window_end,
-    'v2' as metric_version
+    'v3' as metric_version
 from grid g
-cross join coverage v
 cross join span s
 left join counted c
     on c.day_of_week = g.day_of_week and c.hour_of_day = g.hour_of_day

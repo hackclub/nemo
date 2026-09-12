@@ -592,16 +592,6 @@ models:
       - name: messages
         data_type: bigint
         data_tests: [not_null]
-      - name: channels_counted
-        data_type: integer
-        data_tests: [not_null]
-      - name: messages_counted
-        data_type: bigint
-        data_tests: [not_null]
-      - name: covered_messages
-        data_type: bigint
-      - name: workspace_messages
-        data_type: bigint
       - name: window_start
         data_type: date
       - name: window_end
@@ -627,9 +617,6 @@ models:
         data_type: integer
         data_tests: [not_null]
       - name: messages
-        data_type: bigint
-        data_tests: [not_null]
-      - name: channel_messages
         data_type: bigint
         data_tests: [not_null]
       - name: window_start
