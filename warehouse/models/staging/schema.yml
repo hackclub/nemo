@@ -115,13 +115,21 @@ models:
       - name: archived
         data_tests: [not_null]
   - name: fct_member_activity
+    description: >
+      One row per member per day, for days the member-day source has loaded.
+      Grain (user_id, window_start, source), inherited from the primary key of
+      raw.member_activity_snapshot and the window_start = window_end filter.
     columns:
       - name: user_id
         data_tests: [not_null]
   - name: fct_member_window
+    description: >
+      One row per member per source, for the single newest window the
+      member-range source holds. Grain (source, user_id), enforced by the
+      model's own unique index.
     columns:
       - name: user_id
-        data_tests: [not_null, unique]
+        data_tests: [not_null]
   - name: fct_channel_activity
     columns:
       - name: channel_id

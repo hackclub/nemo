@@ -1,3 +1,4 @@
+import calendar
 import collections
 from datetime import date, datetime, time, timedelta, timezone
 
@@ -16,7 +17,6 @@ CHANNEL_DAY_SOURCE = f"{SEED_SOURCE_PREFIX}channel_day"
 MEMBER_RANGE_SOURCE = "admin_analytics_member_range"
 CHANNEL_RANGE_SOURCE = "admin_analytics_channel_range"
 TEAM_SOURCE = f"{SEED_SOURCE_PREFIX}team_stats"
-TOP_POSTER_WINDOWS = (7, 30, 90)
 TOP_POSTER_LIMIT = 50
 UNAVAILABLE_DAYS = 3
 UNAVAILABLE_OFFSET = 2
@@ -280,16 +280,19 @@ def team_days(by_member, channels, members, start, days):
 
 
 def top_posters(rng, by_member, end, hostile=False):
-    for window in TOP_POSTER_WINDOWS:
-        start = end - timedelta(days=window - 1)
+    for month in sorted({day.replace(day=1) for _, day in by_member}):
+        if month > end:
+            continue
+        last = month.replace(day=calendar.monthrange(month.year, month.month)[1])
+        stop = min(last, end)
         totals = collections.Counter()
         for (user_id, day), (messages, _) in by_member.items():
-            if start <= day <= end:
+            if month <= day <= stop:
                 totals[user_id] += messages
         for user_id, messages in totals.most_common(TOP_POSTER_LIMIT):
             yield (
-                start, end, user_id,
-                hostile_module.display_name(rng, user_id, hostile), messages, noon(end),
+                month, stop, user_id,
+                hostile_module.display_name(rng, user_id, hostile), messages, noon(stop),
             )
 
 

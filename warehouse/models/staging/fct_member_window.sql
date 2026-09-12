@@ -1,4 +1,4 @@
-{{ config(materialized='table', indexes=[{'columns': ['source', 'user_id']}]) }}
+{{ config(materialized='table', indexes=[{'columns': ['source', 'user_id'], 'unique': True}]) }}
 
 with latest as (
     select window_start, window_end
