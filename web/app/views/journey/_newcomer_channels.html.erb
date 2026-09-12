@@ -14,9 +14,12 @@
 
   <% if newcomer_channels.any? %>
     <% bands = ->(c) { [
-         { cls: "fn-a", label: "posted here", value: c.newcomers_posting.to_i },
-         { cls: "fn-b", label: "first post landed here", value: c.newcomer_first_posts.to_i },
-         { cls: "fn-c", label: "came back on a later day", value: c.newcomers_returning.to_i }
+         { cls: "fn-a", label: "posted here", value: c.newcomers_posting.to_i,
+           tone: "color-mix(in oklab, var(--series-1) 24%, var(--card))" },
+         { cls: "fn-b", label: "first post landed here", value: c.newcomer_first_posts.to_i,
+           tone: "color-mix(in oklab, var(--series-1) 66%, var(--card))" },
+         { cls: "fn-c", label: "came back on a later day", value: c.newcomers_returning.to_i,
+           tone: "var(--series-2)" }
        ] } %>
     <% peak = newcomer_channels.flat_map { |c| bands.call(c).map { |b| b[:value] } }.max.to_i %>
     <% width = ->(v) { peak.positive? ? [(v.to_f / peak * 100), (v.positive? ? 1.2 : 0)].max.round(2) : 0 } %>
@@ -30,7 +33,8 @@
           <span class="fn-bar" data-tip="<%= {
             title: "##{c.name}",
             rows: drawn.map do |band|
-              row = { label: band[:label], value: number_with_delimiter(band[:value]) }
+              row = { label: band[:label], value: number_with_delimiter(band[:value]),
+                      tone: band[:tone] }
               unless band[:cls] == "fn-a"
                 row[:of] = number_to_percentage(share_pct(band[:value], posting) || 0, precision: 1)
               end
