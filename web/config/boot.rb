@@ -7,7 +7,8 @@ begin
   env_file = File.expand_path("../../deploy/.env", __dir__)
   if File.exist?(env_file)
     Dotenv.parse(env_file).each do |name, value|
-      ENV[name] = value unless value.to_s.empty? || ENV.key?(name)
+      ENV[name] = value if ENV[name].to_s.empty?
+      ENV.delete(name) if ENV[name].to_s.empty?
     end
   end
 rescue LoadError
