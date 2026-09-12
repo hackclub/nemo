@@ -1,3 +1,5 @@
+{{ config(materialized='table', indexes=[{'columns': ['user_id'], 'unique': True}]) }}
+
 with search as (
     select
         user_id,

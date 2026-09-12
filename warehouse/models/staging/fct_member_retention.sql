@@ -1,3 +1,13 @@
+{{ config(
+    materialized='incremental',
+    unique_key='user_id',
+    incremental_strategy='delete+insert',
+    indexes=[{'columns': ['user_id'], 'unique': True},
+             {'columns': ['first_post_on']}]
+) }}
+
+{% set settles_after_days = 90 %}
+
 with joined as (
     select user_id, cohort_at
     from {{ ref('dim_member') }}
@@ -8,9 +18,13 @@ first_post as (
     select
         f.user_id,
         f.posted_at::date as first_post_on,
-        coalesce(f.posted_at < j.cohort_at + interval '30 days', false) as posted_within_30d
+        coalesce(f.posted_at < j.cohort_at + interval '30 days', false) as posted_within_30d_of_joining
     from {{ ref('fct_first_post') }} f
     left join joined j on j.user_id = f.user_id
+    {% if is_incremental() %}
+    where f.posted_at::date > current_date - {{ settles_after_days + 1 }}
+       or not exists (select 1 from {{ this }} t where t.user_id = f.user_id)
+    {% endif %}
 ),
 
 active as (
@@ -59,7 +73,7 @@ per_member as (
     select
         f.user_id,
         f.first_post_on,
-        f.posted_within_30d,
+        f.posted_within_30d_of_joining,
         coalesce(bool_or(
             v.active_date between f.first_post_on + 23 and f.first_post_on + 30
         ), false) as retained_day_30,
@@ -79,13 +93,13 @@ per_member as (
         ), false) as fourth_visit_in_14_days
     from first_post f
     left join visits v on v.user_id = f.user_id
-    group by f.user_id, f.first_post_on, f.posted_within_30d
+    group by f.user_id, f.first_post_on, f.posted_within_30d_of_joining
 )
 
 select
     m.user_id,
     m.first_post_on,
-    m.posted_within_30d,
+    m.posted_within_30d_of_joining,
     m.retained_day_30,
     m.retained_day_90,
     m.returned_next_day,

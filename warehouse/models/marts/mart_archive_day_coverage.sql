@@ -11,12 +11,12 @@ with slack as (
 
 held as (
     select
-        (posted_at at time zone 'UTC')::date as ds,
-        count(*) as messages_held,
-        count(*) filter (where not is_reply) as parents_held,
-        count(*) filter (where is_reply) as replies_held,
+        ds,
+        sum(messages) as messages_held,
+        sum(messages) - sum(replies) as parents_held,
+        sum(replies) as replies_held,
         count(distinct channel_id) as channels_held
-    from {{ ref('fct_message') }}
+    from {{ ref('fct_message_hour') }}
     group by 1
 ),
 

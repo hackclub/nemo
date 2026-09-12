@@ -98,7 +98,7 @@ models:
         data_tests: [unique, not_null]
       - name: first_post_on
         data_tests: [not_null]
-      - name: posted_within_30d
+      - name: posted_within_30d_of_joining
         data_tests: [not_null]
       - name: day_30_covered
         data_tests: [not_null]

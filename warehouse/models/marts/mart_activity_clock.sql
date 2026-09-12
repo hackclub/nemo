@@ -1,8 +1,8 @@
 {% set window_days = 90 %}
 
 with edge as (
-    select max((posted_at at time zone 'UTC')::date) as last_day
-    from {{ ref('fct_message') }}
+    select max(ds) as last_day
+    from {{ ref('fct_message_hour') }}
 ),
 
 span as (
@@ -18,20 +18,16 @@ walked as (
     where coalesce(w.history_complete, false)
 ),
 
-posts as (
-    select
-        extract(isodow from m.posted_at at time zone 'UTC')::integer as day_of_week,
-        extract(hour from m.posted_at at time zone 'UTC')::integer as hour_of_day
-    from {{ ref('fct_member_message') }} m
-    cross join span s
-    inner join walked c on c.channel_id = m.channel_id
-    where (m.posted_at at time zone 'UTC')::date between s.window_start and s.window_end
-),
-
 counted as (
-    select day_of_week, hour_of_day, count(*) as messages
-    from posts
-    group by day_of_week, hour_of_day
+    select
+        extract(isodow from h.ds)::integer as day_of_week,
+        h.hour_of_day,
+        sum(h.member_messages)::bigint as messages
+    from {{ ref('fct_message_hour') }} h
+    cross join span s
+    inner join walked c on c.channel_id = h.channel_id
+    where h.ds between s.window_start and s.window_end
+    group by 1, 2
 ),
 
 grid as (

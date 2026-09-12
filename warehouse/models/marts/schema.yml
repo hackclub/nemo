@@ -115,6 +115,8 @@ models:
         data_tests: [not_null]
       - name: activity_band
         data_type: text
+      - name: band_top
+        data_type: integer
       - name: channels
         data_type: bigint
       - name: window_start

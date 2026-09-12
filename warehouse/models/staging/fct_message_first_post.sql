@@ -1,3 +1,5 @@
+{{ config(materialized='table', indexes=[{'columns': ['user_id'], 'unique': True}]) }}
+
 select distinct on (author_id)
     author_id as user_id,
     channel_id,

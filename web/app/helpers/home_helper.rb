@@ -255,12 +255,10 @@ module HomeHelper
       "accounts were active in the 7 days ending on day #{day} &middot; #{held}"
   end
 
-  BAND_TOP = { 0 => 0, 1 => 1, 2 => 4, 3 => 16, 4 => 64, 5 => 256, 6 => 1024, 7 => 4096 }.freeze
-
   def band_split(value, bands, label)
     return nil if value.nil?
 
-    at = bands.index { |b| BAND_TOP.fetch(b.band_order, Float::INFINITY) >= value.to_i }
+    at = bands.index { |b| (b.band_top || Float::INFINITY) >= value.to_i }
     return nil if at.nil? || at >= bands.size - 1
 
     { after: at, label: "#{label} #{number_with_delimiter(value)}" }

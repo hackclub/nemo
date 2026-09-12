@@ -21,7 +21,7 @@ posted as (
         r.visits_knowable
     from cohort c
     inner join {{ ref('fct_member_retention') }} r on r.user_id = c.user_id
-    where r.posted_within_30d
+    where r.posted_within_30d_of_joining
 ),
 
 rolled as (

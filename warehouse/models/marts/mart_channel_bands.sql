@@ -59,17 +59,17 @@ placed as (
     from measured
 ),
 
-bands (band_order, activity_band) as (
+bands (band_order, activity_band, band_top) as (
     values
-        (0, '0'),
-        (1, '1'),
-        (2, '2-4'),
-        (3, '5-16'),
-        (4, '17-64'),
-        (5, '65-256'),
-        (6, '257-1024'),
-        (7, '1025-4096'),
-        (8, '4097+')
+        (0, '0', 0),
+        (1, '1', 1),
+        (2, '2-4', 4),
+        (3, '5-16', 16),
+        (4, '17-64', 64),
+        (5, '65-256', 256),
+        (6, '257-1024', 1024),
+        (7, '1025-4096', 4096),
+        (8, '4097+', null)
 ),
 
 measures (measure, measure_label, measure_order) as (
@@ -87,10 +87,11 @@ select
     coalesce(t.measure_total, 0) as measure_total,
     b.band_order,
     b.activity_band,
+    b.band_top::integer as band_top,
     count(p.band_order) as channels,
     c.window_start,
     c.window_end,
-    'v2' as metric_version
+    'v3' as metric_version
 from cohorts c
 cross join measures m
 cross join bands b
@@ -102,5 +103,5 @@ left join totals t
     on t.cohort_month = c.cohort_month
    and t.measure = m.measure
 group by c.cohort_month, m.measure, m.measure_label, m.measure_order, t.measure_total,
-    b.band_order, b.activity_band, c.window_start, c.window_end
+    b.band_order, b.activity_band, b.band_top, c.window_start, c.window_end
 order by c.cohort_month desc, m.measure_order, b.band_order

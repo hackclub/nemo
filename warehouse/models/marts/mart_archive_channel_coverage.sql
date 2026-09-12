@@ -3,12 +3,12 @@
 with held as (
     select
         channel_id,
-        count(*) as messages_held,
-        count(*) filter (where is_reply) as replies_held,
-        count(*) filter (where not is_reply) as parents_held,
-        min(posted_at) as oldest_held,
-        max(posted_at) as newest_held
-    from {{ ref('fct_message') }}
+        sum(messages) as messages_held,
+        sum(replies) as replies_held,
+        sum(messages) - sum(replies) as parents_held,
+        min(first_at) as oldest_held,
+        max(last_at) as newest_held
+    from {{ ref('fct_message_hour') }}
     group by channel_id
 ),
 

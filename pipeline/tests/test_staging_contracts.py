@@ -168,8 +168,8 @@ def test_no_mart_reads_the_search_based_reply_or_poster_sources():
 
 
 def test_the_cutover_marts_bumped_their_versions():
-    want = {"mart_top_posters": "v4", "mart_fast_reply_vs_retention": "v10",
-            "mart_channel_onboarding_scorecard": "v8"}
+    want = {"mart_top_posters": "v4", "mart_fast_reply_vs_retention": "v11",
+            "mart_channel_onboarding_scorecard": "v9"}
     for name, version in want.items():
         sql = (WAREHOUSE_DIR / "models" / "marts" / f"{name}.sql").read_text()
         assert f"'{version}' as metric_version" in sql, f"{name} is not at {version}"
@@ -236,3 +236,66 @@ def test_the_dead_onboarding_funnel_is_dropped_rather_than_left_granted():
     assert "DROP TABLE IF EXISTS analytics.mart_onboarding_funnel" in sql
     models = {p.stem for p in (WAREHOUSE_DIR / "models").rglob("*.sql")}
     assert "mart_onboarding_funnel" not in models, "dropping a model dbt still builds would loop"
+
+
+def test_the_bot_only_reply_is_its_own_class_not_silence():
+    sql = (WAREHOUSE_DIR / "models" / "marts" / "mart_fast_reply_vs_retention.sql").read_text()
+    assert "when not r.answered or r.bot_replied then 'none'" not in sql, (
+        "that or also swallowed newcomers a member did answer, whenever a bot replied too"
+    )
+    assert "when r.bot_replied then 'bot'" in sql
+    assert "'v11' as metric_version" in sql
+
+
+def test_the_scorecard_counts_a_fast_member_reply_even_when_a_bot_also_replied():
+    sql = (WAREHOUSE_DIR / "models" / "marts" / "mart_channel_onboarding_scorecard.sql").read_text()
+    assert "and not bot_replied as fast_reply" not in sql
+    assert "'v9' as metric_version" in sql
+
+
+def test_the_band_ladder_is_declared_once_in_the_mart():
+    sql = (WAREHOUSE_DIR / "models" / "marts" / "mart_channel_bands.sql").read_text()
+    assert "band_top" in sql, "the mart has to publish the edge Rails used to hold"
+    helper = (WAREHOUSE_DIR.parent / "web" / "app" / "helpers" / "home_helper.rb").read_text()
+    assert "BAND_TOP" not in helper, "Rails declared dbt's ladder a third time"
+    assert "b.band_top" in helper
+
+
+def test_the_two_day_thirty_windows_no_longer_share_a_name():
+    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_member_retention.sql").read_text()
+    assert "posted_within_30d_of_joining" in sql, "one anchors on cohort_at, the other on first_post_on"
+    assert "as posted_within_30d\n" not in sql
+
+
+def test_retention_is_incremental_over_a_window_that_outlasts_day_ninety():
+    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_member_retention.sql").read_text()
+    assert "materialized='incremental'" in sql
+    assert "settles_after_days = 90" in sql, (
+        "day_90_covered flips up to 90 days after a first post, so a shorter window "
+        "would freeze a stale false"
+    )
+    assert "not exists (select 1 from {{ this }}" in sql
+
+
+def test_the_hot_staging_views_are_relations_so_their_tests_stop_re_deriving_them():
+    for name in ("fct_first_post", "fct_message_first_post", "fct_member_channel"):
+        sql = (WAREHOUSE_DIR / "models" / "staging" / f"{name}.sql").read_text()
+        assert "materialized='table'" in sql, f"{name} is still re-derived once per test"
+
+
+def test_the_four_spine_marts_read_the_rollup_not_the_spine():
+    for name in ("mart_activity_clock", "mart_channel_clock",
+                 "mart_archive_day_coverage", "mart_archive_channel_coverage"):
+        sql = (WAREHOUSE_DIR / "models" / "marts" / f"{name}.sql").read_text()
+        assert "fct_message_hour" in sql, f"{name} still aggregates the spine directly"
+    for name in ("mart_activity_clock", "mart_channel_clock"):
+        sql = (WAREHOUSE_DIR / "models" / "marts" / f"{name}.sql").read_text()
+        assert "ref('fct_message')" not in sql, f"{name} still touches 54M rows for its window edge"
+
+
+def test_the_rollup_and_the_month_model_carry_their_own_watermark():
+    for name in ("fct_message_hour", "fct_member_month_messages"):
+        sql = (WAREHOUSE_DIR / "models" / "staging" / f"{name}.sql").read_text()
+        assert "materialized='incremental'" in sql
+        assert "observed_through" in sql, f"{name} has no watermark to window on"
+        assert "is_incremental()" in sql

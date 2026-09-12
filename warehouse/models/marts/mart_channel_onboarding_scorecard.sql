@@ -12,7 +12,7 @@ reply_info as (
     select
         newcomer_id,
         answered,
-        answered and latency_seconds < 3600 and not bot_replied as fast_reply
+        answered and latency_seconds < 3600 as fast_reply
     from {{ ref('fct_first_response') }}
 ),
 
@@ -48,7 +48,7 @@ select
     end as retained_90_share,
     (r.post_month + interval '1 month' + interval '90 days') <= now()
         and count(*) filter (where not r.day_90_covered) = 0 as day_90_mature,
-    'v8' as metric_version
+    'v9' as metric_version
 from scorecard_rows r
 left join {{ ref('dim_channel') }} c on c.channel_id = r.channel_id
 group by r.channel_id, c.name, r.post_month
