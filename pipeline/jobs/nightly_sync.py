@@ -41,6 +41,7 @@ from lib.db import (
     refuse_if_seeded,
     run_step,
     set_worker,
+    sole_build,
     start_run,
     worker,
 )
@@ -146,7 +147,7 @@ def check_freshness(counts=None):
     return code
 
 
-def run_dbt(conn=None, select=()):
+def run_dbt(conn=None, select=(), wait_seconds=None):
     ensure_dbt_profile()
 
     def build(counts=None):
@@ -172,11 +173,12 @@ def run_dbt(conn=None, select=()):
         elif code != 0:
             raise RuntimeError(f"dbt test exited {code} without recording a failure")
 
-    if conn is None:
-        build()
-        return
-    with ingest_run(conn, "dbt") as counts:
-        build(counts)
+    with sole_build(wait_seconds=wait_seconds):
+        if conn is None:
+            build()
+            return
+        with ingest_run(conn, "dbt") as counts:
+            build(counts)
 
 
 def tuned(conn, key, name):
@@ -230,16 +232,17 @@ ORPHANED_DBT_SQL = """
 SELECT pg_terminate_backend(pid)
 FROM   pg_stat_activity
 WHERE  usename = current_user
-  AND  query LIKE '%"app": "dbt"%'
+  AND  query LIKE '%%"app": "dbt"%%'
   AND  query_start < now() - make_interval(secs => %s)
+  AND  backend_start < %s
   AND  pid <> pg_backend_pid()
 """
 
 
-def reap_orphaned_dbt(after_seconds=ORPHAN_AFTER_SECONDS):
+def reap_orphaned_dbt(before, after_seconds=ORPHAN_AFTER_SECONDS):
     try:
         with connect() as conn, conn.cursor() as cur:
-            cur.execute(ORPHANED_DBT_SQL, (after_seconds,))
+            cur.execute(ORPHANED_DBT_SQL, (after_seconds, before))
             killed = cur.rowcount
             conn.commit()
     except Exception as exc:
@@ -302,6 +305,7 @@ def discard(conn):
 def run_stage(conn, name, stage, run_id, index, total, budget=None, started=None):
     buffer = io.StringIO()
     for attempt in range(1, STAGE_ATTEMPTS + 1):
+        began = datetime.now(timezone.utc)
         try:
             with run_step(run_id, index, total), redirect_stdout(Tee(sys.stdout, buffer)):
                 stage(conn)
@@ -325,7 +329,7 @@ def run_stage(conn, name, stage, run_id, index, total, budget=None, started=None
             if torn or over or attempt == STAGE_ATTEMPTS or not retryable(exc):
                 return detail
             if LOCK_TIMEOUT.search(str(exc)):
-                reap_orphaned_dbt()
+                reap_orphaned_dbt(began)
             buffer.write(f"attempt {attempt + 1}\n")
             print(f"[{index}/{total}] {name}: {detail}, retrying")
         else:

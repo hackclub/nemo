@@ -1,6 +1,7 @@
 import contextvars
 import json
 import os
+import time
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -11,6 +12,7 @@ import psycopg
 from lib import faults, settings, sources
 
 STALE_AFTER_HOURS = 6
+STALE_GRACE_HOURS = 2
 RUN_SUSPECT_SECONDS = 300
 REJECT_PARTIAL_AT = 0.10
 WORKER_BOOT = str(uuid.uuid4())
@@ -227,6 +229,55 @@ def sole_instance(name: str):
         holder.close()
 
 
+BUILD_LOCK = "dbt-build"
+BUILD_WAIT_SECONDS = 3600
+BUILD_POLL_SECONDS = 5
+
+
+def build_wait_seconds():
+    return int(os.environ.get("NEMO_BUILD_WAIT_SECONDS", "") or BUILD_WAIT_SECONDS)
+
+
+@contextmanager
+def sole_build(wait_seconds=None, poll_seconds=BUILD_POLL_SECONDS,
+               clock=time.monotonic, sleep=time.sleep):
+    if wait_seconds is None:
+        wait_seconds = build_wait_seconds()
+    holder = connect()
+    deadline = clock() + wait_seconds
+    waited = False
+    try:
+        while True:
+            taken = holder.execute(
+                "SELECT pg_try_advisory_lock(%s, hashtext(%s))",
+                (SINGLETON_NAMESPACE, BUILD_LOCK),
+            ).fetchone()[0]
+            holder.commit()
+            if taken:
+                if waited:
+                    print(f"dbt: the {BUILD_LOCK} lock came free, building now")
+                break
+            if clock() >= deadline:
+                raise AlreadyRunning(
+                    f"another dbt build has held the {BUILD_LOCK} lock for more than "
+                    f"{wait_seconds}s, and two builds race each other for the same relations"
+                )
+            if not waited:
+                waited = True
+                print(f"dbt: another build holds the {BUILD_LOCK} lock, waiting up to {wait_seconds}s")
+            sleep(poll_seconds)
+        try:
+            yield holder
+        finally:
+            holder.execute(
+                "SELECT pg_advisory_unlock(%s, hashtext(%s))",
+                (SINGLETON_NAMESPACE, BUILD_LOCK),
+            )
+            holder.commit()
+    finally:
+        holder.close()
+
+
 CLEAN_OUTCOMES = frozenset({"ok", "partial", "skipped"})
 
 
@@ -384,9 +435,16 @@ def sweep_my_earlier_boots(conn: psycopg.Connection) -> list[tuple[int, str]]:
     return orphans
 
 
+def stale_after_hours(conn: psycopg.Connection) -> int:
+    budgeted = -(-settings.budget_minutes(conn) // 60)
+    return max(STALE_AFTER_HOURS, budgeted + STALE_GRACE_HOURS)
+
+
 def sweep_stale_runs(
-    conn: psycopg.Connection, max_age_hours: int = STALE_AFTER_HOURS
+    conn: psycopg.Connection, max_age_hours: int | None = None
 ) -> list[tuple[int, str]]:
+    if max_age_hours is None:
+        max_age_hours = stale_after_hours(conn)
     swept = f"swept: still running {max_age_hours} hours after it started, no worker claimed it"
     with conn.cursor() as cur:
         cur.execute(

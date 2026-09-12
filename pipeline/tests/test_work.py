@@ -185,3 +185,36 @@ def test_revive_clears_the_lapse_count_so_it_is_not_born_condemned():
     from lib import work
 
     assert "attempts = 0, lapses = 0" in work.REVIVE_SQL
+
+
+def test_the_abandon_sweep_outlasts_the_nightly_budget():
+    from unittest import mock
+
+    from lib import db
+
+    with mock.patch.object(db.settings, "budget_minutes", return_value=720):
+        assert db.stale_after_hours(object()) == 14
+    with mock.patch.object(db.settings, "budget_minutes", return_value=60):
+        assert db.stale_after_hours(object()) == db.STALE_AFTER_HOURS
+
+
+def test_the_sweep_message_quotes_the_threshold_it_actually_used():
+    import inspect
+
+    from lib import db
+
+    src = inspect.getsource(db.sweep_stale_runs)
+    assert "if max_age_hours is None" in src
+    assert "stale_after_hours(conn)" in src
+
+
+def test_the_build_wait_can_be_dialled_without_a_deploy():
+    import os
+    from unittest import mock
+
+    from lib import db
+
+    with mock.patch.dict(os.environ, {"NEMO_BUILD_WAIT_SECONDS": "45"}):
+        assert db.build_wait_seconds() == 45
+    with mock.patch.dict(os.environ, {"NEMO_BUILD_WAIT_SECONDS": ""}):
+        assert db.build_wait_seconds() == db.BUILD_WAIT_SECONDS

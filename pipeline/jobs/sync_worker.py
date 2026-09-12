@@ -23,6 +23,7 @@ from lib.db import (
     beat,
     set_worker,
     STALE_AFTER_HOURS,
+    AlreadyRunning,
     SeededDeployment,
     cancel_scope,
     connect,
@@ -34,6 +35,7 @@ from lib.db import (
 DEFAULT_AT = "03:00"
 DEFAULT_POLL_SECONDS = 60
 DEFAULT_TRANSFORM_SECONDS = 900
+REFRESH_WAIT_SECONDS = 0
 CANCEL_POLL_SECONDS = 30
 BEAT_SECONDS = 60
 CHANNEL = "sync_request"
@@ -246,7 +248,9 @@ def refresh_marts(last_at, state):
     state["note"] = "rebuilding the marts"
     try:
         with connect() as conn:
-            run_dbt(conn, select=TABLES_ONLY)
+            run_dbt(conn, select=TABLES_ONLY, wait_seconds=REFRESH_WAIT_SECONDS)
+    except AlreadyRunning as exc:
+        print(f"sync worker: mart refresh skipped, {exc}")
     except Exception as exc:
         print(f"sync worker: mart refresh failed {type(exc).__name__}: {exc}")
     state["note"] = held

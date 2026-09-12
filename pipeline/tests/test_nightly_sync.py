@@ -1,3 +1,4 @@
+import contextlib
 import pytest
 import json
 
@@ -120,6 +121,8 @@ def test_a_gate_test_failure_refuses_to_publish(monkeypatch, tmp_path):
     monkeypatch.setattr(nightly_sync, "ensure_dbt_profile", lambda: None)
     monkeypatch.setattr(nightly_sync, "check_freshness", lambda counts=None: 0)
     monkeypatch.setattr(nightly_sync, "dbt", lambda *a: 0)
+    monkeypatch.setattr(nightly_sync, "sole_build",
+                        lambda **kw: contextlib.nullcontext())
 
     with pytest.raises(RuntimeError, match="refusing to publish"):
         nightly_sync.run_dbt()
@@ -136,6 +139,8 @@ def test_an_ungated_test_failure_still_publishes_and_marks_the_run_partial(monke
     monkeypatch.setattr(nightly_sync, "ensure_dbt_profile", lambda: None)
     monkeypatch.setattr(nightly_sync, "check_freshness", lambda counts=None: 0)
     monkeypatch.setattr(nightly_sync, "dbt", lambda *a: 0)
+    monkeypatch.setattr(nightly_sync, "sole_build",
+                        lambda **kw: contextlib.nullcontext())
 
     nightly_sync.run_dbt()
 
@@ -201,7 +206,7 @@ def test_a_lock_timeout_reaps_the_previous_attempt_before_retrying():
 
     src = inspect.getsource(nightly_sync.run_stage)
     assert "LOCK_TIMEOUT.search" in src
-    assert "reap_orphaned_dbt()" in src
+    assert "reap_orphaned_dbt(began)" in src
 
 
 def test_the_reap_only_touches_this_user_s_own_stale_dbt_backends():
@@ -209,18 +214,22 @@ def test_the_reap_only_touches_this_user_s_own_stale_dbt_backends():
 
     sql = nightly_sync.ORPHANED_DBT_SQL
     assert "usename = current_user" in sql
-    assert 'query LIKE \'%"app": "dbt"%\'' in sql
+    assert 'query LIKE \'%%"app": "dbt"%%\'' in sql, (
+        "psycopg reads a single %% as a placeholder, so the LIKE pattern has to double them "
+        "or every reap dies with ProgrammingError before it terminates anything"
+    )
     assert "pid <> pg_backend_pid()" in sql
     assert "query_start < now() - make_interval" in sql
 
 
 def test_the_reap_survives_a_database_that_refuses_it():
+    from datetime import datetime, timezone
     from unittest import mock
 
     from jobs import nightly_sync
 
     with mock.patch.object(nightly_sync, "connect", side_effect=RuntimeError("nope")):
-        assert nightly_sync.reap_orphaned_dbt() == 0
+        assert nightly_sync.reap_orphaned_dbt(datetime.now(timezone.utc)) == 0
 
 
 def test_the_periodic_refresh_is_closed_under_its_dependencies():
@@ -231,3 +240,44 @@ def test_the_periodic_refresh_is_closed_under_its_dependencies():
         "the last run failed to build stays missing until a full nightly; the + pulls the "
         "ancestors in and lets the refresh rebuild them"
     )
+
+
+def test_every_dbt_build_takes_the_single_build_lock():
+    import inspect
+
+    from jobs import nightly_sync
+
+    src = inspect.getsource(nightly_sync.run_dbt)
+    assert "with sole_build(wait_seconds=wait_seconds):" in src, (
+        "the nightly, the fifteen-minute refresh and the transform CLI all reach dbt through "
+        "run_dbt, so the lock belongs here or a hand-run build still races the scheduler"
+    )
+
+
+def test_the_reap_cannot_kill_a_backend_this_attempt_started():
+    from jobs import nightly_sync
+
+    sql = nightly_sync.ORPHANED_DBT_SQL
+    assert "backend_start < %s" in sql, (
+        "without a floor the reaper kills any dbt backend older than two minutes, including "
+        "the long build it was called to protect"
+    )
+
+
+def test_the_reap_demands_a_floor_rather_than_defaulting_to_none():
+    import inspect
+
+    from jobs import nightly_sync
+
+    floor = inspect.signature(nightly_sync.reap_orphaned_dbt).parameters["before"]
+    assert floor.default is inspect.Parameter.empty
+
+
+def test_a_refused_build_is_a_skip_for_the_refresh_not_a_failure():
+    import inspect
+
+    from jobs import sync_worker
+
+    src = inspect.getsource(sync_worker.refresh_marts)
+    assert "except AlreadyRunning" in src
+    assert src.index("except AlreadyRunning") < src.index("except Exception")
