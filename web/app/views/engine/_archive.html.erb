@@ -1,59 +1,175 @@
+<% totals = archive.totals %>
+
 <div class="card card-flush">
   <div class="card-head">
     <div>
-      <h2 class="card-title">Archive</h2>
+      <h2 class="card-title">What the archive holds</h2>
       <p class="card-sub">
-        <%= number_with_delimiter(archive.walked) %> messages walked
-        <% if archive.unreachable.positive? %>
-          &middot; <%= number_with_delimiter(archive.unreachable) %> channels Slack will not return
+        <% if totals.held_days %>
+          <%= totals.oldest_held.to_date.strftime("%-d %b %Y") %>
+          to <%= totals.newest_held.to_date.strftime("%-d %b %Y") %>
+          &middot; <%= pluralize(totals.held_days, "day") %> spanned
+        <% else %>
+          nothing has landed yet
         <% end %>
         <% if archive.beat %>
-          &middot; beat <%= short_age(archive.beat.beat_at) %> ago
+          &middot; walker beat <%= short_age(archive.beat.beat_at) %> ago
           <% if archive.beat.note.present? %>&middot; <%= archive.beat.note %><% end %>
-        <% else %>
-          &middot; no worker heartbeat
         <% end %>
       </p>
     </div>
+    <% if archive.beat %>
+      <div class="card-tools"><%= worker_state(archive.beat) %></div>
+    <% end %>
   </div>
-  <div class="scroll">
-    <table class="data-table engine-wide-table">
-      <thead>
-        <tr>
-          <th>stage</th>
-          <th class="col-num">held</th>
-          <th class="col-num">outstanding</th>
-          <th class="col-num">of</th>
-          <th class="col-num">share</th>
-          <th class="col-num">last</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% archive.stages.each do |stage| %>
-          <tr>
-            <td class="mono"><%= stage.name %></td>
-            <td class="col-num"><%= number_with_delimiter(stage.done) %></td>
-            <td class="col-num">
-              <%= stage.outstanding ? number_with_delimiter(stage.outstanding) : "n/a" %>
-            </td>
-            <td class="col-num"><%= stage.total ? number_with_delimiter(stage.total) : "n/a" %></td>
-            <td class="col-num">
-              <%= stage.share ? number_to_percentage(stage.share, precision: 1) : "n/a" %>
-            </td>
-            <td class="col-num mono"><%= stage.at ? "#{short_age(stage.at)} ago" : "n/a" %></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
+
+  <dl class="facts-strip facts-wrap">
+    <div class="fact">
+      <dt>Messages held</dt>
+      <dd><%= number_with_delimiter(totals.messages_held) %></dd>
+    </div>
+    <div class="fact">
+      <dt>Parents</dt>
+      <dd><%= number_with_delimiter(totals.parents_held) %></dd>
+    </div>
+    <div class="fact">
+      <dt>Replies</dt>
+      <dd><%= number_with_delimiter(totals.replies_held) %></dd>
+    </div>
+    <div class="fact">
+      <dt>Channels holding</dt>
+      <dd><%= number_with_delimiter(totals.holding) %> <span class="sub">of <%= number_with_delimiter(totals.reachable) %></span></dd>
+    </div>
+    <div class="fact">
+      <dt>Threads waiting</dt>
+      <dd class="<%= "is-none" if totals.threads_waiting.zero? %>">
+        <%= totals.threads_waiting.zero? ? "none" : number_with_delimiter(totals.threads_waiting) %>
+      </dd>
+    </div>
+    <div class="fact">
+      <dt>Slack will not open</dt>
+      <dd class="<%= "is-none" if totals.unreachable.zero? %>">
+        <%= totals.unreachable.zero? ? "no channel" : pluralize(totals.unreachable, "channel") %>
+      </dd>
+    </div>
+    <div class="fact">
+      <dt>Replies waiting</dt>
+      <dd class="<%= "is-none" if totals.replies_waiting.zero? %>">
+        <%= totals.replies_waiting.zero? ? "none" : number_with_delimiter(totals.replies_waiting) %>
+      </dd>
+    </div>
+    <div class="fact">
+      <dt>Last walk</dt>
+      <dd class="<%= "is-none" if totals.last_walked_at.nil? %>">
+        <%= totals.last_walked_at ? "#{short_age(totals.last_walked_at)} ago" : "never" %>
+      </dd>
+    </div>
+  </dl>
+
+  <div class="arcrows">
+    <% archive.stages.each do |stage| %>
+      <div class="arcrow">
+        <div class="arcn"><b><%= stage.name %></b></div>
+        <div class="arcpct <%= "is-none" if stage.share.nil? %>">
+          <%= stage.share ? number_to_percentage(stage.share, precision: 1) : "nothing to measure it against yet" %>
+        </div>
+        <div class="arcnum">
+          <%= number_with_delimiter(stage.done.to_i) %>
+          <% if stage.total %>
+            <span class="sub">of <%= number_with_delimiter(stage.total) %></span>
+          <% end %>
+        </div>
+        <div class="arcnum">
+          <% if stage.outstanding.nil? %>
+            <span class="sub">n/a</span>
+          <% elsif stage.outstanding.zero? %>
+            <span class="sub">none left</span>
+          <% else %>
+            <%= number_with_delimiter(stage.outstanding.to_i) %> <span class="sub">left</span>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
   </div>
 </div>
+
+<% if archive.queues.any? %>
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">What the walker is working through</h2>
+        <p class="card-sub">the queues the archive worker drains, oldest work first</p>
+      </div>
+    </div>
+    <div class="scroll">
+      <table class="data-table engine-wide-table">
+        <thead>
+          <tr>
+            <th>queue</th>
+            <th class="col-num">waiting</th>
+            <th class="col-num">in flight</th>
+            <th class="col-num">settled, hour</th>
+            <th class="col-num">settled, day</th>
+            <th class="col-num">short</th>
+            <th class="col-num">dead</th>
+            <th class="col-num">oldest</th>
+            <th class="col-num">drains in</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% archive.queues.each do |queue| %>
+            <tr>
+              <td class="mono"><%= queue.work_kind %></td>
+              <td class="col-num"><%= number_with_delimiter(queue.pending) %></td>
+              <td class="col-num"><%= queue.claimed %></td>
+              <td class="col-num"><%= number_with_delimiter(queue.settled_last_hour) %></td>
+              <td class="col-num"><%= number_with_delimiter(queue.settled_last_day) %></td>
+              <td class="col-num"><%= queue.short %></td>
+              <td class="col-num <%= "warn" if queue.dead.positive? %>"><%= queue.dead %></td>
+              <td class="col-num mono"><%= queue.oldest_pending_at ? short_age(queue.oldest_pending_at) : "n/a" %></td>
+              <td class="col-num mono"><%= queue_eta(queue) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% end %>
+
+<% if archive.days.many? %>
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Held against what Slack counted</h2>
+        <p class="card-sub">
+          messages landed each day beside the number Slack's own analytics report for that day,
+          last <%= pluralize(archive.days.size, "day") %>
+        </p>
+      </div>
+    </div>
+    <div
+      data-controller="chart"
+      data-chart-kind-value="line"
+      data-chart-days-value="true"
+      data-chart-height-value="220"
+      data-chart-data-value="<%= {
+        labels: archive.days.map { |row| row.ds.to_s },
+        datasets: [
+          { label: "Slack counted", data: archive.days.map { |row| row.slack_messages.to_i } },
+          { label: "Held here", data: archive.days.map { |row| row.messages_held.to_i } }
+        ]
+      }.to_json %>"
+    ></div>
+  </div>
+<% end %>
 
 <div class="card card-flush">
   <div class="card-head">
     <div>
       <h2 class="card-title">Channels the archive covers least</h2>
       <p class="card-sub">
-        against Slack's own count, channels holding <%= number_with_delimiter(Engine::Archive::WORST_FLOOR) %> messages or more
+        against Slack's own count, channels holding
+        <%= number_with_delimiter(Engine::Archive::WORST_FLOOR) %> messages or more
       </p>
     </div>
   </div>
@@ -65,30 +181,31 @@
             <th>channel</th>
             <th class="col-num">held</th>
             <th class="col-num">Slack says</th>
-            <th class="col-num">share</th>
+            <th class="col-num">share held</th>
             <th class="col-num">threads</th>
+            <th class="col-num">replies</th>
             <th class="col-num">oldest held</th>
+            <th class="col-num">newest held</th>
           </tr>
         </thead>
         <tbody>
           <% archive.worst.each do |row| %>
             <tr>
-              <td>
-                <% shown = "##{row.name || row.channel_id}" %>
-                <% if may_open_channel?(row.channel_id) %>
-                  <%= link_to shown, channel_path(row.channel_id) %>
-                <% else %>
-                  <%= shown %>
-                <% end %>
-              </td>
-              <td class="col-num"><%= number_with_delimiter(row.messages_held) %></td>
+              <td><%= render "channel_cell", row: row %></td>
+              <td class="col-num"><%= number_with_delimiter(row.messages_held.to_i) %></td>
               <td class="col-num"><%= number_with_delimiter(row.slack_messages) %></td>
-              <td class="col-num"><%= number_to_percentage(row.held_share, precision: 1) %></td>
+              <td class="col-num mono"><%= number_to_percentage(row.held_share, precision: 1) %></td>
               <td class="col-num">
-                <%= number_with_delimiter(row.threads_fetched) %> of <%= number_with_delimiter(row.threads_known) %>
+                <%= number_with_delimiter(row.threads_fetched) %> <span class="sub">of <%= number_with_delimiter(row.threads_known) %></span>
+              </td>
+              <td class="col-num">
+                <%= row.reply_share ? number_to_percentage(row.reply_share, precision: 0) : "n/a" %>
               </td>
               <td class="col-num mono">
                 <%= row.oldest_held ? row.oldest_held.to_date.to_fs(:db) : "n/a" %>
+              </td>
+              <td class="col-num mono">
+                <%= row.newest_held ? row.newest_held.to_date.to_fs(:db) : "n/a" %>
               </td>
             </tr>
           <% end %>
@@ -96,7 +213,57 @@
       </table>
     </div>
   <% else %>
-    <p class="card-note">n/a</p>
+    <p class="card-note">
+      no channel has both a Slack count and <%= number_with_delimiter(Engine::Archive::WORST_FLOOR) %> messages to compare it against yet
+    </p>
+  <% end %>
+</div>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Channels the walk has not finished</h2>
+      <p class="card-sub">
+        <%= number_with_delimiter(totals.untouched) %> never walked &middot;
+        <%= number_with_delimiter([totals.reachable - totals.complete, 0].max) %> short of complete
+      </p>
+    </div>
+  </div>
+  <% if archive.waiting.any? %>
+    <div class="scroll">
+      <table class="data-table engine-wide-table">
+        <thead>
+          <tr>
+            <th>channel</th>
+            <th>state</th>
+            <th class="col-num">held</th>
+            <th class="col-num">threads left</th>
+            <th class="col-num">last walked</th>
+            <th>why it stopped</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% archive.waiting.each do |row| %>
+            <tr>
+              <td><%= render "channel_cell", row: row %></td>
+              <td>
+                <span class="chip <%= row.walked ? "chip-warn" : "chip-off" %>">
+                  <%= row.walked ? "part walked" : "never walked" %>
+                </span>
+              </td>
+              <td class="col-num"><%= number_with_delimiter(row.messages_held.to_i) %></td>
+              <td class="col-num"><%= number_with_delimiter([row.threads_known - row.threads_fetched, 0].max) %></td>
+              <td class="col-num mono"><%= row.last_walked_at ? "#{short_age(row.last_walked_at)} ago" : "n/a" %></td>
+              <td class="sub trunc-cell" title="<%= row.unreachable_reason %>">
+                <%= row.unreachable_reason.presence || "still queued" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">every reachable channel has been walked to the end</p>
   <% end %>
 </div>
 
@@ -105,7 +272,7 @@
     <div>
       <h2 class="card-title">Channels the walk could not read</h2>
       <p class="card-sub">
-        <%= number_with_delimiter(archive.errors.sum(&:last)) %> channels holding an error
+        <%= pluralize(archive.errors.sum { |row| row[1] }, "channel") %> holding an error
       </p>
     </div>
   </div>
@@ -116,19 +283,21 @@
           <tr>
             <th>error</th>
             <th class="col-num">channels</th>
+            <th class="col-num">last tried</th>
           </tr>
         </thead>
         <tbody>
-          <% archive.errors.each do |error, count| %>
+          <% archive.errors.each do |said, count, at| %>
             <tr>
-              <td class="mono"><%= error %></td>
+              <td class="mono"><%= said %></td>
               <td class="col-num"><%= number_with_delimiter(count) %></td>
+              <td class="col-num mono"><%= at ? "#{short_age(at)} ago" : "n/a" %></td>
             </tr>
           <% end %>
         </tbody>
       </table>
     </div>
   <% else %>
-    <p class="card-note">n/a</p>
+    <p class="card-note">no channel is holding a walk error</p>
   <% end %>
 </div>

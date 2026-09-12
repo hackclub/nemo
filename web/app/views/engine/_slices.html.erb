@@ -47,12 +47,12 @@
         <h2 class="card-title">Last <%= EngineController::SLICE_STRIP_DAYS %> days by slice</h2>
       </div>
     </div>
-    <div class="card-body" style="display: flex; flex-direction: column; gap: 18px; padding: 16px">
+    <div class="covrows">
       <% day_strips.each do |key, days, missing, per_day, eta| %>
-        <div>
-          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px">
-            <span class="mono" style="font-size: 12px; font-weight: 500"><%= key %></span>
-            <span class="sub mono">
+        <div class="covrow">
+          <div class="covhead">
+            <span class="covkey"><%= key %></span>
+            <span class="covsaid">
               <%= missing %> not complete
               <% if per_day.positive? %>
                 &middot; <%= per_day.round(1) %> a day this week
@@ -69,10 +69,10 @@
       <% end %>
     </div>
     <div class="key">
-      <span><i style="background-color: var(--series-2); opacity: .82"></i>complete</span>
-      <span><i style="background-color: var(--warn)"></i>short or claimed</span>
-      <span><i style="background-color: var(--ink-4); opacity: .55"></i>Slack has no file</span>
-      <span><i style="background-color: var(--line)"></i>never fetched</span>
+      <span><i class="lg-held"></i>complete</span>
+      <span><i class="lg-short"></i>short or claimed</span>
+      <span><i class="lg-nofile"></i>Slack has no file</span>
+      <span><i class="lg-before"></i>never fetched</span>
     </div>
   </div>
 <% end %>

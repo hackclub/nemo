@@ -5,7 +5,7 @@
     </div>
   </div>
   <div class="card-body flush">
-    <div class="tgrid thead" style="grid-template-columns: minmax(0, 1fr) 118px 120px minmax(0, 1.4fr)">
+    <div class="tgrid tgrid-limits thead">
       <div>Source</div>
       <div class="tcell">Value</div>
       <div class="tcell">Bounds</div>
@@ -14,7 +14,7 @@
     <% sources.each do |row| %>
       <% source = row.source %>
       <% source.limits.each do |name, bounds| %>
-        <div class="tgrid" style="grid-template-columns: minmax(0, 1fr) 118px 120px minmax(0, 1.4fr)">
+        <div class="tgrid tgrid-limits">
           <div class="tn"><b><%= source.key %></b><span><%= name %></span></div>
           <div class="tcell">
             <%= render "val", source: source.key, name: name, may_tune: may_tune, show_was: true %>

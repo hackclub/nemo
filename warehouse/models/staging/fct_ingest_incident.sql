@@ -5,6 +5,7 @@ with stage_runs as (
       and source_key is not null
       and source_key <> 'nightly_sync'
       and not (status = 'abandoned' and error_class = 'local')
+      and started_at > now() - interval '90 days'
 ),
 
 ranked as (

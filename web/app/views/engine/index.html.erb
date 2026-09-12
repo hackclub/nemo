@@ -1,38 +1,17 @@
 <% if @auto_refresh %>
-  <% content_for :head do %>
-    <meta name="turbo-refresh-method" content="morph">
-    <meta name="turbo-refresh-scroll" content="preserve">
-  <% end %>
+  <div data-controller="run-refresh" data-run-refresh-seconds-value="10" hidden></div>
 <% end %>
 
-<% content_for :page_title, "Engine" %>
+<% content_for :page_title, EngineController::TABS.fetch(@tab) %>
 
-<% content_for :page_controls do %>
-  <div class="engine-controls">
-  <span class="segmented">
-    <% EngineController::TABS.each do |key, label| %>
-      <%= link_to engine_path(key == "runs" ? {} : { tab: key }),
-            aria: { current: ("true" if key == @tab) } do %>
-        <%= label %>
-      <% end %>
-    <% end %>
-  </span>
-
-  <span class="qspacer"></span>
-
-  <span class="qlab">Nightly at</span>
-  <%= render "val", source: Engine::Setting::ENGINE, name: "run_at", may_tune: @may_tune %>
-  <span class="qlab">Budget</span>
-  <%= render "val", source: Engine::Setting::ENGINE, name: "budget_minutes", may_tune: @may_tune %>
-  <span class="qlab">minutes</span>
-
+<% content_for :head_actions do %>
   <% if @active_request %>
     <% if @orphaned %>
       <span class="chip chip-crit">worker down</span>
     <% else %>
       <span class="chip">
         <i class="dot run"></i>
-        <%= step_progress(@steps) || @active_request.status %>
+        <%= step_progress(@progress) || @active_request.status %>
       </span>
     <% end %>
     <%= button_to(@orphaned ? "Release" : "Cancel", engine_cancel_path,
@@ -41,7 +20,6 @@
     <%= button_to "Run the nightly now", engine_sync_path,
           class: "btn btn-primary", form: { class: "contents" } %>
   <% end %>
-  </div>
 <% end %>
 
 <% if @tab == "runs" %>
@@ -53,7 +31,7 @@
           <% if @run %>
             <%= @run.started_at.strftime("%-d %b, %H:%M") %>
             &middot; <%= run_duration(@run) %><%= " so far" if @run.running? %>
-            <% if (progress = step_progress(@steps)) %>
+            <% if (progress = step_progress(@progress)) %>
               &middot; <%= progress %>
             <% end %>
           <% else %>
@@ -74,6 +52,7 @@
           <% else %>
             <%= run_status(@run) %>
           <% end %>
+          <%= link_to "Open the run", engine_run_path(@run.id), class: "btn btn-ghost" %>
         </div>
       <% end %>
     </div>
@@ -88,6 +67,7 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">The last <%= EngineController::NIGHTS %> nights</h2>
+        <p class="card-sub">one square a night, worst run of that night wins the colour</p>
       </div>
     </div>
     <%= render "matrix", matrix: @matrix, nights: @nights %>

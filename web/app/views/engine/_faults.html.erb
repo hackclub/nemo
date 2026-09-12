@@ -26,7 +26,7 @@
               <td class="mono"><%= incident.source_key %></td>
               <td class="col-num"><%= incident.consecutive %></td>
               <td><span class="chip <%= fault_class_chip(incident.error_class) %>"><%= incident.error_class || "n/a" %></span></td>
-              <td class="sub" style="max-width: 36ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap" title="<%= incident.error_detail %>"><%= incident.error_detail || "n/a" %></td>
+              <td class="sub trunc-cell" title="<%= incident.error_detail %>"><%= incident.error_detail || "n/a" %></td>
               <td class="col-num mono"><%= short_age(incident.last_seen) %></td>
               <td>
                 <% if incident.muted %>
@@ -170,7 +170,7 @@
               <td><span class="chip <%= fault_class_chip(taxon.error_class) %>"><%= taxon.error_class %></span></td>
               <td class="col-num"><%= taxon.count %></td>
               <td class="col-num"><%= taxon.sources %></td>
-              <td class="sub mono" style="font-size: 11.5px"><%= taxon.sample || "n/a" %></td>
+              <td class="sub fine-mono"><%= taxon.sample || "n/a" %></td>
             </tr>
           <% end %>
         </tbody>

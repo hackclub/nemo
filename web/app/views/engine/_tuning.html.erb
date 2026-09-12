@@ -6,7 +6,7 @@
   </div>
   <div class="card-body flush">
     <% Engine::Setting::ENGINE_DIALS.each do |name, dial| %>
-      <div class="tgrid" style="grid-template-columns: minmax(0, 1fr) 118px 190px">
+      <div class="tgrid tgrid-schedule">
         <div class="tn"><%= dial[:label] %></div>
         <div class="tcell">
           <%= render "val", source: Engine::Setting::ENGINE, name: name,

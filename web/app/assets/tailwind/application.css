@@ -377,6 +377,9 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     overflow: hidden;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
   }
 
   ::selection { background: var(--select); color: var(--select-on); }
@@ -419,7 +422,8 @@
 
 
   .shell {
-    height: 100dvh;
+    flex: 1 1 auto;
+    min-height: 0;
     display: grid;
     grid-template-rows: var(--top-h) minmax(0, 1fr);
     grid-template-columns: minmax(0, 1fr);
@@ -3593,16 +3597,14 @@
   .dialrow { display: flex; align-items: center; gap: var(--s-sm); flex-wrap: wrap; }
   .dial-set { display: flex; align-items: center; gap: 6px; }
 
-  .grid-h, .srow {
+  .nights-h, .srow {
     display: grid;
     grid-template-columns: 190px minmax(0, 1fr) 64px;
     gap: var(--s-xs);
     align-items: center;
     padding: 6px var(--s-sm);
-    stroke: none;
   }
-  .grid-h > *:nth-child(n+4), .srow > *:nth-child(n+4) { display: none; }
-  .grid-h {
+  .nights-h {
     border-bottom: 1px solid var(--line-soft);
     font-size: var(--t-mark);
     font-weight: 600;
@@ -3610,7 +3612,7 @@
     text-transform: uppercase;
     color: var(--ink-4);
   }
-  .grid-h .r, .srow .snum { text-align: right; }
+  .nights-h .r, .srow .snum { text-align: right; }
   .srow {
     border-bottom: 1px solid var(--line-soft);
     text-decoration: none;
@@ -3784,9 +3786,12 @@
   .skey b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
   .snum { font-family: var(--font-code); font-variant-numeric: tabular-nums; }
   .snum.warn { color: var(--warn); }
+  .srclist { display: grid; min-width: 760px; }
   .source-head, .source-row {
     display: grid;
-    grid-template-columns: minmax(150px, 1.3fr) 76px 96px 110px minmax(120px, 1fr) 64px 64px 76px 0 18px;
+    grid-template-columns:
+      minmax(0, 1.3fr) minmax(0, 76px) minmax(0, 96px) minmax(0, 110px)
+      minmax(0, 1fr) minmax(0, 64px) minmax(0, 64px) minmax(0, 76px) 0 18px;
     gap: var(--s-xs);
     align-items: center;
     padding: 8px var(--s-sm);
@@ -3938,6 +3943,87 @@
   .when, .when-cell, .when-channel, .when-expiry { font-size: var(--t-small); color: var(--ink-2); }
   .field-tune { width: 76px; text-align: right; font-family: var(--font-code); }
   .val { display: inline-flex; align-items: center; gap: 4px; }
+
+  .key i.lg-ran, .key i.lg-held { background: var(--series-2); opacity: 0.82; }
+  .key i.lg-skip { background: var(--series-0); opacity: 0.5; }
+  .key i.lg-fail { background: var(--down); }
+  .key i.lg-none { background: var(--line-soft); border: 1px dashed var(--line); }
+  .key i.lg-wait { background: var(--card-2); border: 1px solid var(--line-soft); }
+  .key i.lg-run { background: var(--accent); }
+  .key i.lg-short { background: var(--warn); opacity: 0.8; }
+  .key i.lg-nofile { background: var(--ink-4); opacity: 0.55; }
+  .key i.lg-before { background: var(--line); }
+
+  .covrows { display: grid; gap: var(--s-md); padding: var(--s-sm); }
+  .covrow { display: grid; gap: 7px; min-width: 0; }
+  .covhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--s-xs);
+    flex-wrap: wrap;
+  }
+  .covkey { font-family: var(--font-code); font-size: var(--t-small); font-weight: 500; }
+  .covsaid { font-family: var(--font-code); font-size: var(--t-fine); color: var(--ink-3); }
+  .covbar {
+    display: flex;
+    height: 10px;
+    border-radius: var(--r-tight);
+    overflow: hidden;
+    background: var(--sunk);
+  }
+  .covbar i { display: block; height: 100%; }
+  .covbar i.on { background: var(--series-2); opacity: 0.82; }
+  .covbar i.un { background: var(--ink-4); opacity: 0.55; }
+  .covbar i.no { background: var(--line); }
+
+  .arcrows { display: grid; }
+  .arcrow {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.7fr);
+    gap: var(--s-sm);
+    align-items: baseline;
+    padding: 10px var(--s-sm);
+    border-bottom: 1px solid var(--line-soft);
+    font-size: var(--t-body);
+  }
+  .arcrow:last-child { border-bottom: 0; }
+  .arcn { min-width: 0; }
+  .arcn b { font-weight: 600; }
+  .arcpct {
+    font-family: var(--font-code);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--t-small);
+    text-align: right;
+  }
+  .arcpct.is-none {
+    font-family: var(--font-sans);
+    font-size: var(--t-fine);
+    color: var(--ink-3);
+    text-align: left;
+  }
+  .arcnum {
+    font-family: var(--font-code);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--t-small);
+    text-align: right;
+    min-width: 0;
+  }
+  .arcnum .sub { font-family: var(--font-sans); font-size: var(--t-fine); }
+  .trunc-cell {
+    max-width: 34ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cell-share { width: 22%; min-width: 96px; }
+  .fine-mono { font-family: var(--font-code); font-size: var(--t-fine); }
+  .src-cell { font-size: var(--t-small); }
+  .src-floor { display: block; color: var(--ink-3); font-size: var(--t-fine); }
+  .exp-k-next { margin-top: var(--s-sm); }
+  .card-sub.flat { margin: 0; }
+  .tgrid-limits { grid-template-columns: minmax(0, 1fr) 118px 120px minmax(0, 1.4fr); }
+  .tgrid-schedule { grid-template-columns: minmax(0, 1fr) 118px 190px; }
 
   .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(184px, 1fr)); gap: var(--s-2xs); }
   .theme-opt {
@@ -4446,27 +4532,14 @@
     .channel-date-range .field-label { flex: 1 1 132px; }
     .channel-date-range > .btn { align-self: flex-end; }
 
-    /* Engine keeps operational detail readable: compact controls, then reflow or scroll its dense data. */
-    .engine-controls {
-      display: flex;
-      flex: 1 1 100%;
-      min-width: 0;
-      align-items: center;
-      gap: var(--s-xs);
-      flex-wrap: wrap;
+    /* Engine keeps operational detail readable: reflow or scroll its dense data. */
+    .arcrow {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 4px var(--s-xs);
     }
-    .engine-controls > .segmented {
-      order: -2;
-      flex: 1 0 100%;
-      max-width: 100%;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-    .engine-controls > .segmented::-webkit-scrollbar { display: none; }
-    .engine-controls > .qspacer { display: none; }
-    .engine-controls > .qlab:first-of-type { margin-left: 0; }
-    .engine-controls .btn { min-height: 28px; }
-    .engine-controls .btn-primary { margin-left: auto; }
+    .arcrow > .arcnum { text-align: left; }
+    .arcrow > .arcpct, .arcrow > .arcnum:last-child { text-align: right; }
+    .covrows { padding: var(--s-xs); }
 
     .engine-wide-table { min-width: 620px; }
     .engine-table { min-width: 500px; }
@@ -4477,9 +4550,10 @@
     }
     .rung .rbar { display: none; }
     .rung .rst { grid-column: 2 / -1; justify-content: flex-start; }
-    .grid-h, .srow { grid-template-columns: minmax(0, 1fr) minmax(92px, 1fr) auto; }
-    .grid-h { padding-inline: var(--s-xs); }
+    .nights-h, .srow { grid-template-columns: minmax(0, 1fr) minmax(92px, 1fr) auto; }
+    .nights-h { padding-inline: var(--s-xs); }
     .srow { padding-inline: var(--s-xs); }
+    .srclist { min-width: 0; }
     .source-head { display: none; }
     .source-row {
       grid-template-columns: minmax(0, 1fr) auto 14px;
@@ -4493,7 +4567,7 @@
     .source-row > :nth-child(6) { grid-column: 2; }
     .source-row .scar { grid-column: 3; }
     .exp { grid-template-columns: minmax(0, 1fr); padding: var(--s-sm); }
-    .tgrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; }
+    .tgrid, .tgrid-limits, .tgrid-schedule { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     .tgrid.thead { display: none; }
     .tgrid .tn { grid-column: 1 / -1; }
     .tgrid .tcell { align-items: flex-start; }
@@ -4572,9 +4646,6 @@
     body {
       padding: env(safe-area-inset-top) env(safe-area-inset-right)
         env(safe-area-inset-bottom) env(safe-area-inset-left);
-    }
-    .shell {
-      height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     }
     .work { grid-row: 2; }
     .work.has-pane > .cpane {

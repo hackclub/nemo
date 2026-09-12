@@ -1,0 +1,20 @@
+<nav id="section-nav" class="pane cpane" aria-label="Engine sections">
+  <%= render "layouts/sidebar_head", letter: "E", title: "Engine", said: "Ingestion and warehouse" %>
+
+  <div class="cnav">
+    <% EngineController::GROUPS.each do |heading, keys| %>
+      <p class="cnav-lab"><%= heading %></p>
+      <div class="cnav-group">
+        <% keys.each do |key| %>
+          <% label = EngineController::TABS.fetch(key) %>
+          <%= link_to engine_tab_path(key), title: label,
+                aria: { current: ("page" if engine_tab == key) } do %>
+            <%= nav_icon(key) %><span class="trunc"><%= label %></span>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <%= render "layouts/sidebar_foot" %>
+</nav>

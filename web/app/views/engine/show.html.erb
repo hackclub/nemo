@@ -1,11 +1,16 @@
 <% content_for :page_title, "Run #{@run.id}" %>
 
+<% content_for :head_context do %>
+  <span class="triad-sep" aria-hidden="true">&middot;</span>
+  <span class="triad-who"><%= @run.started_at.strftime("%-d %b %Y, %H:%M") %></span>
+<% end %>
+
+<% content_for :head_actions do %>
+  <%= link_to engine_path, class: "btn" do %>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    <span>Back to the night</span>
+  <% end %>
+<% end %>
+
 <%= render "run_detail", run: @run, steps: @steps, step_output: @step_output, heading: "This run",
       orphaned: @orphaned, worker: @worker %>
-
-<div>
-  <%= link_to engine_path, class: "crumb" do %>
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-    back to pipeline
-  <% end %>
-</div>

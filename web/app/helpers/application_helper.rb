@@ -59,6 +59,15 @@ module ApplicationHelper
     "active" => ["M3 12h4l3 8 4-16 3 8h4"],
     "channels" => ["M5 9h14", "M5 15h14", "M10 3 8 21", "M16 3l-2 18"],
     "engine" => ["M20 14a8 8 0 1 0-16 0", "m15 10-3.4 3.4"],
+    "runs" => ["M20 14a8 8 0 1 0-16 0", "m15 10-3.4 3.4"],
+    "sources" => ["M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3",
+                  "M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6", "M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"],
+    "coverage" => ["M3 4h7v7H3z", "M14 4h7v7h-7z", "M3 15h7v5H3z", "M14 15h7v5h-7z"],
+    "queues" => ["M4 6h16", "M4 12h11", "M4 18h6"],
+    "backfill" => ["M12 21V7", "m6 13 6 6 6-6", "M5 3h14"],
+    "archive" => ["M3 7h18v4H3z", "M5 11v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8", "M10 15h4"],
+    "faults" => ["M12 4 3 19h18L12 4Z", "M12 10v4", "M12 17v.01"],
+    "tuning" => ["M5 21V10", "M12 21V4", "M19 21v-7", "M3 10h4", "M10 4h4", "M17 14h4"],
     "people" => ["M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8",
                  "M22 21v-2a4 4 0 0 0-3-3.87"],
     "roles" => ["M12 3 4 6v6c0 5 8 10 8 10s8-5 8-10V6z"],
@@ -98,6 +107,7 @@ module ApplicationHelper
   def section_pane
     return "layouts/admin_pane" if page_section == "admin"
     return nil unless on?(:analytics)
+    return "layouts/engine_pane" if controller_name == "engine"
     return "layouts/community_pane" if %w[home journey channels].include?(controller_name)
 
     nil

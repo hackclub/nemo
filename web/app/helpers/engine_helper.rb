@@ -102,11 +102,31 @@ module EngineHelper
     tag.span("orphaned, worker cold #{short_age(worker.beat_at)}", class: "chip chip-crit")
   end
 
-  def step_progress(steps)
-    last = steps.last
-    return nil if last.nil?
+  def step_progress(progress)
+    return nil if progress.nil?
 
-    "step #{last.step_index} of #{last.step_total || steps.size}"
+    total = progress.step_total
+    total ? "step #{progress.step_index} of #{total}" : "step #{progress.step_index}"
+  end
+
+  DAY_STATES = { "no" => "before the job existed", "un" => "Slack has no file for",
+                 "on" => "held" }.freeze
+
+  def day_shares(never_fetched, unavailable, loaded)
+    total = never_fetched + unavailable + loaded
+    return [] if total.zero?
+
+    [["no", never_fetched], ["un", unavailable], ["on", loaded]]
+      .reject { |_, count| count.zero? }
+      .map { |state, count| [state, count, (count.to_f / total * 100).round(2)] }
+  end
+
+  def engine_tab
+    @tab || "runs"
+  end
+
+  def engine_tab_path(key)
+    engine_path(key == "runs" ? {} : { tab: key })
   end
 
   def run_stale?(row)

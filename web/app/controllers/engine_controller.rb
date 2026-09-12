@@ -2,21 +2,22 @@ class EngineController < ApplicationController
   before_action { needs(:analytics) }
   before_action :require_operating
 
-  HISTORY = 12
   FRESHNESS_WINDOW = 30.days
   SUCCESS_FLOOR = 60.days
-  MATRIX_ROW_CAP = 50_000
   TYPICAL_OF = 10
   NIGHTS = 30
-  VISIT_STEPS_NEED = 15
 
   TABS = { "runs" => "Runs", "sources" => "Sources", "coverage" => "Coverage",
            "queues" => "Queues", "backfill" => "Backfill", "archive" => "Archive",
            "faults" => "Faults", "tuning" => "Tuning" }.freeze
+  GROUPS = { "The night" => %w[runs sources], "What landed" => %w[coverage archive],
+             "Work waiting" => %w[queues backfill],
+             "Whether to trust it" => %w[faults tuning] }.freeze
   MUTE_FOR = 1.day
   TAXONOMY_WINDOW = 30.days
   SLICE_STRIP_DAYS = 60
   DAY_SOURCES = %w[member_days channel_days].freeze
+  NIGHT_TABS = %w[runs sources].freeze
 
   def index
     @tab = TABS.key?(params[:tab]) ? params[:tab] : "runs"
@@ -26,14 +27,16 @@ class EngineController < ApplicationController
     @auto_refresh = (@run&.running? || @active_request.present?) && !@orphaned
 
     @may_tune = may_community?("ops.engine")
-    @open = params[:open].presence
-    @steps = @run ? steps_for(@run) : []
-    @step_output = @run ? step_output_for(@run) : []
-    @nights = night_dates
-    @matrix = night_matrix(@nights)
+    @progress = @run&.running? ? run_progress(@run) : nil
+
+    if NIGHT_TABS.include?(@tab)
+      @nights = night_dates
+      @matrix = night_matrix(@nights)
+    end
 
     case @tab
-    when "sources" then @sources = source_rows
+    when "runs" then @steps = @run ? steps_for(@run) : []
+    when "sources" then source_facts
     when "coverage" then coverage_facts
     when "queues" then queue_facts
     when "faults" then fault_facts
@@ -41,6 +44,12 @@ class EngineController < ApplicationController
     when "backfill" then backfill_facts
     when "archive" then archive_facts
     end
+  end
+
+  def source_facts
+    @open = params[:open].presence
+    @sources = source_rows
+    @step_output = @run ? step_output_for(@run) : []
   end
 
   def archive_facts
@@ -137,6 +146,7 @@ class EngineController < ApplicationController
   end
 
   def show
+    @tab = "runs"
     @run = Analytics::FctIngestRun.parents.find(params[:id])
     @steps = steps_for(@run)
     @step_output = step_output_for(@run)
@@ -189,18 +199,13 @@ class EngineController < ApplicationController
 
   StepGroup = Struct.new(:source, :step_index, :step_total, :statuses, :children,
     :rows_in, :total_expected, :seconds, :pct, keyword_init: true) do
-    SETTLED = %w[ok skipped].freeze
-
     def running?
       statuses.key?("running")
-    end
-
-    def settled?
-      statuses.keys.all? { |status| SETTLED.include?(status) }
     end
   end
 
   STATUS_ORDER = %w[failed cancelled abandoned running ok].freeze
+  STATUSES = %w[running ok failed skipped partial cancelled abandoned].freeze
 
   def worker
     return @worker if defined?(@worker)
@@ -214,47 +219,67 @@ class EngineController < ApplicationController
     worker.nil? || worker.cold?
   end
 
+  STEPS_SQL = <<~SQL.freeze
+    SELECT step_index,
+           (array_agg(source ORDER BY id))[1]                             AS first_source,
+           count(DISTINCT source)                                         AS sources,
+           (array_agg(step_total ORDER BY id))[1]                         AS step_total,
+           count(*)                                                       AS children,
+           count(*) FILTER (WHERE finished_at IS NULL)                    AS unfinished,
+           min(started_at)                                                AS started_at,
+           max(finished_at)                                               AS finished_at,
+           sum(rows_in) FILTER (WHERE status IN ('ok', 'running'))        AS rows_in,
+           sum(total_expected) FILTER (WHERE status IN ('ok', 'running')) AS total_expected,
+           avg(progress_share) FILTER (WHERE status = 'running')          AS share,
+           #{STATUSES.map { |s| "count(*) FILTER (WHERE status = '#{s}') AS #{s}" }.join(",\n       ")}
+    FROM   analytics.fct_ingest_run
+    WHERE  parent_run_id = :parent
+    GROUP  BY step_index
+    ORDER  BY step_index
+  SQL
+
   def steps_for(run)
-    Analytics::FctIngestRun
-      .where(parent_run_id: run.id)
-      .order(:step_index, :id)
-      .group_by(&:step_index)
-      .sort
-      .map { |index, group| collapse_step(index, group) }
+    ApplicationRecord.connection
+      .select_all(ApplicationRecord.sanitize_sql([STEPS_SQL, parent: run.id]))
+      .map { |row| collapse_step(row) }
   end
 
-  def collapse_step(index, group)
-    sources = group.map(&:source).uniq
-    landed = group.select { |row| %w[ok running].include?(row.status) }
-    rows = landed.filter_map(&:rows_in)
-    expected = landed.filter_map(&:total_expected)
-    started = group.map(&:started_at).min
-    finished = group.all?(&:finished_at) ? group.map(&:finished_at).max : Time.current
-    shares = group.select(&:running?).filter_map(&:progress_share)
+  def collapse_step(row)
+    source = row["first_source"]
+    finished = row["unfinished"].to_i.zero? ? row["finished_at"]&.to_time : Time.current
+    started = row["started_at"].to_time
 
     StepGroup.new(
-      source: sources.size == 1 ? sources.first : sources.first.split(":", 2).first,
-      step_index: index,
-      step_total: group.first.step_total,
-      statuses: group.map(&:status).tally.sort_by { |status, _| STATUS_ORDER.index(status) || 99 }.to_h,
-      children: group.size,
-      rows_in: rows.empty? ? nil : rows.sum,
-      total_expected: expected.empty? ? nil : expected.sum,
-      seconds: (finished - started).to_i,
-      pct: shares.empty? ? nil : (shares.sum.to_f / shares.size * 100).round(1)
+      source: row["sources"].to_i == 1 ? source : source.split(":", 2).first,
+      step_index: row["step_index"].to_i,
+      step_total: row["step_total"]&.to_i,
+      statuses: step_statuses(row),
+      children: row["children"].to_i,
+      rows_in: row["rows_in"]&.to_i,
+      total_expected: row["total_expected"]&.to_i,
+      seconds: ((finished || started) - started).to_i,
+      pct: row["share"] ? (row["share"].to_f * 100).round(1) : nil
     )
+  end
+
+  def step_statuses(row)
+    STATUSES.filter_map { |status| [status, row[status].to_i] if row[status].to_i.positive? }
+      .sort_by { |status, _| STATUS_ORDER.index(status) || 99 }
+      .to_h
   end
 
   def step_output_for(run)
     Analytics::FctIngestStepOutput.where(parent_run_id: run.id).order(:step_index).to_a
   end
 
-  def first_step_by_parent(run_ids)
-    Analytics::FctIngestRun
-      .where(parent_run_id: run_ids)
-      .order(:step_index, :id)
-      .group_by(&:parent_run_id)
-      .transform_values(&:first)
+  Progress = Struct.new(:step_index, :step_total, keyword_init: true)
+
+  def run_progress(run)
+    index, total = Analytics::FctIngestRun.where(parent_run_id: run.id)
+      .order(step_index: :desc).limit(1).pick(:step_index, :step_total)
+    return nil if index.nil?
+
+    Progress.new(step_index: index, step_total: total)
   end
 
   def refuse_tuning
@@ -266,51 +291,45 @@ class EngineController < ApplicationController
     redirect_to engine_path, alert: Community::Access.why_not(current_account, "ops.engine")
   end
 
-  def stage_for_source(source)
-    return nil if source == "nightly_sync"
-
-    Engine::Source.for_run(source)&.key
-  end
-
   def night_dates
     last = Date.current
     ((last - (NIGHTS - 1))..last).to_a
   end
 
   def night_matrix(nights)
-    index = Hash.new { |store, key| store[key] = {} }
-
-    Analytics::FctIngestRun
-      .where(started_at: nights.first.beginning_of_day..Time.current.end_of_day)
-      .where.not(source: Analytics::FctIngestRun::PARENT_SOURCE)
-      .order(started_at: :desc)
-      .limit(MATRIX_ROW_CAP)
-      .pluck(:source, :status, :started_at)
-      .each do |source, status, started_at|
-        stage = stage_for_source(source)
-        next unless stage
-
-        on = started_at.to_date
-        was = index[stage][on]
-        index[stage][on] = status if was.nil? || RANK.fetch(status, 0) > RANK.fetch(was, 0)
-      end
+    worst = worst_by_night(nights)
 
     Engine::Source.all.map do |source|
       cells = nights.map do |on|
-        case index[source.key][on]
-        when "ok" then "ok"
-        when "running" then "run"
-        when "skipped" then "skip"
-        when nil then on == Date.current ? "wait" : "none"
-        else "fail"
-        end
+        rank = worst.dig(source.key, on)
+        next (on == Date.current ? "wait" : "none") if rank.nil?
+
+        CELL_BY_RANK.fetch(rank, "fail")
       end
       [source, cells]
     end
   end
 
+  def worst_by_night(nights)
+    index = Hash.new { |store, key| store[key] = {} }
+
+    Analytics::FctIngestRun
+      .where(logical_date: nights.first..nights.last, source_key: Engine::Source::KEYS)
+      .group(:source_key, :logical_date)
+      .pluck(:source_key, :logical_date, Arel.sql("max(#{RANK_SQL})"))
+      .each { |key, on, rank| index[key][on] = rank }
+
+    index
+  end
+
   RANK = { "skipped" => 1, "ok" => 2, "running" => 3, "cancelled" => 4, "abandoned" => 5,
            "failed" => 6 }.freeze
+
+  RANK_SQL = ["case status",
+              *RANK.map { |status, rank| "when '#{status}' then #{rank}" },
+              "else 0 end"].join(" ").freeze
+
+  CELL_BY_RANK = { 1 => "skip", 2 => "ok", 3 => "run" }.freeze
 
   def remember_incident(source_key, kind, muted_until:)
     row = Ingest::IncidentAck.find_or_initialize_by(source_key: source_key.to_s, kind: kind.to_s)
@@ -412,13 +431,10 @@ class EngineController < ApplicationController
 
   def last_success_by_stage(since = SUCCESS_FLOOR.ago)
     Analytics::FctIngestRun
-      .where(status: "ok")
+      .where(status: "ok", source_key: Engine::Source::KEYS)
       .where(finished_at: since..)
-      .group(:source)
+      .group(:source_key)
       .maximum(:finished_at)
-      .filter_map { |source, finished_at| [stage_for_source(source), finished_at] if stage_for_source(source) }
-      .group_by(&:first)
-      .transform_values { |pairs| pairs.map(&:last).compact.max }
   end
 
   SourceRow = Struct.new(:source, :last_ok, :typical, :rows, :state, keyword_init: true)
@@ -446,47 +462,58 @@ class EngineController < ApplicationController
     end
   end
 
+  TYPICAL_SQL = <<~SQL.freeze
+    SELECT s.source_key,
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY recent.seconds) AS typical
+    FROM   unnest(ARRAY[:keys]::text[]) AS s(source_key)
+    CROSS  JOIN LATERAL (
+      SELECT extract(epoch FROM finished_at - started_at) AS seconds
+      FROM   analytics.fct_ingest_run
+      WHERE  source_key = s.source_key AND status = 'ok'
+        AND  finished_at IS NOT NULL AND finished_at >= :since
+      ORDER  BY finished_at DESC
+      LIMIT  :of
+    ) recent
+    GROUP  BY s.source_key
+  SQL
+
   def typical_seconds
-    Analytics::FctIngestRun
-      .where(status: "ok")
-      .where.not(finished_at: nil)
-      .where(started_at: FRESHNESS_WINDOW.ago..)
-      .order(id: :desc)
-      .pluck(:source, Arel.sql("extract(epoch from finished_at - started_at)"))
-      .filter_map { |source, taken| [stage_for_source(source), taken.to_f] if stage_for_source(source) }
-      .group_by(&:first)
-      .transform_values { |pairs| median(pairs.map(&:last).first(TYPICAL_OF)) }
+    rows = ApplicationRecord.connection.select_rows(
+      ApplicationRecord.sanitize_sql([TYPICAL_SQL, keys: Engine::Source::KEYS,
+                                      since: FRESHNESS_WINDOW.ago, of: TYPICAL_OF])
+    )
+    rows.filter_map { |key, typical| [key, typical.to_f] if typical }.to_h
   end
+
+  ROWS_IN_SQL = <<~SQL.freeze
+    WITH newest AS (
+      SELECT s.source_key, latest.parent_run_id, latest.rows_in
+      FROM   unnest(ARRAY[:keys]::text[]) AS s(source_key)
+      CROSS  JOIN LATERAL (
+        SELECT parent_run_id, rows_in
+        FROM   analytics.fct_ingest_run
+        WHERE  source_key = s.source_key AND status = 'ok'
+          AND  rows_in IS NOT NULL AND finished_at >= :since
+        ORDER  BY finished_at DESC
+        LIMIT  1
+      ) latest
+    )
+    SELECT n.source_key,
+           CASE WHEN n.parent_run_id IS NULL THEN n.rows_in
+                ELSE (SELECT sum(rows_in) FROM analytics.fct_ingest_run sibling
+                      WHERE sibling.parent_run_id = n.parent_run_id
+                        AND sibling.source_key = n.source_key
+                        AND sibling.status = 'ok' AND sibling.rows_in IS NOT NULL)
+           END AS rows_in
+    FROM   newest n
+  SQL
 
   def last_rows_in
-    newest = {}
-    totals = {}
-
-    Analytics::FctIngestRun
-      .where(status: "ok")
-      .where.not(rows_in: nil)
-      .where(started_at: FRESHNESS_WINDOW.ago..)
-      .order(id: :desc)
-      .pluck(:source, :parent_run_id, :rows_in)
-      .each do |source, parent_run_id, count|
-        stage = stage_for_source(source)
-        next unless stage
-
-        first_seen = !totals.key?(stage)
-        next if !first_seen && (parent_run_id.nil? || parent_run_id != newest[stage])
-
-        newest[stage] = parent_run_id if first_seen
-        totals[stage] = totals.fetch(stage, 0) + count
-      end
-
-    totals
-  end
-
-  def median(values)
-    return nil if values.empty?
-
-    sorted = values.sort
-    sorted[sorted.size / 2]
+    rows = ApplicationRecord.connection.select_rows(
+      ApplicationRecord.sanitize_sql([ROWS_IN_SQL, keys: Engine::Source::KEYS,
+                                      since: FRESHNESS_WINDOW.ago])
+    )
+    rows.filter_map { |key, count| [key, count.to_i] if count }.to_h
   end
 
   DayCoverage = Struct.new(:source, :loaded, :unavailable, :never_fetched, :span, :first_ds, :last_ds, keyword_init: true)
