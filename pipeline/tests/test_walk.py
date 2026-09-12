@@ -1,7 +1,19 @@
+from datetime import date
+
 import pytest
 
 from lib import lease
-from lib.walk import COMPLETE, NO_FLOOR, SHORT, UNVERIFIED, WalkWrong, check_walk, should_prune
+from lib.walk import (
+    COMPLETE,
+    NO_FLOOR,
+    SHORT,
+    UNVERIFIED,
+    WalkWrong,
+    check_walk,
+    covers_what_it_replaces,
+    should_prune,
+    window_totals,
+)
 
 
 def test_a_full_walk_is_complete_and_may_prune():
@@ -70,3 +82,36 @@ def test_every_verdict_the_walk_returns_is_a_legal_ledger_state():
     allowed = set(re.findall(r"'(\w+)'", sql.split("CHECK")[1].split(")")[0]))
     for verdict in (walk.COMPLETE, walk.SHORT, walk.UNVERIFIED):
         assert verdict in allowed
+
+
+NEW = (date(2026, 3, 1), date(2026, 3, 30))
+OLD = (date(2026, 2, 1), date(2026, 2, 28))
+OLDER = (date(2026, 1, 1), date(2026, 1, 31))
+
+
+def test_a_window_that_matches_what_it_replaces_may_prune():
+    landed, held = window_totals([(*NEW, 40_000), (*OLD, 39_900)], NEW)
+    assert (landed, held) == (40_000, 39_900)
+    assert covers_what_it_replaces(landed, held)
+
+
+def test_a_window_that_collapses_may_not_prune():
+    landed, held = window_totals([(*NEW, 1_200), (*OLD, 40_000)], NEW)
+    assert not covers_what_it_replaces(landed, held)
+
+
+def test_ordinary_churn_still_prunes():
+    assert covers_what_it_replaces(39_000, 40_000)
+    assert not covers_what_it_replaces(35_000, 40_000)
+
+
+def test_the_widest_prior_window_is_the_one_to_beat():
+    landed, held = window_totals([(*NEW, 30_000), (*OLD, 12_000), (*OLDER, 40_000)], NEW)
+    assert held == 40_000
+    assert not covers_what_it_replaces(landed, held)
+
+
+def test_a_first_ever_window_has_nothing_to_replace():
+    landed, held = window_totals([(*NEW, 12)], NEW)
+    assert (landed, held) == (12, 0)
+    assert covers_what_it_replaces(landed, held)

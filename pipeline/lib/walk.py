@@ -39,3 +39,17 @@ def check_walk(what, seen, expected, page_size, short_at=SHORT_AT):
 
 def should_prune(verdict):
     return verdict == COMPLETE
+
+
+def window_totals(counted, window):
+    landed, held = 0, 0
+    for start, stop, rows in counted:
+        if (start, stop) == window:
+            landed = rows
+        else:
+            held = max(held, rows)
+    return landed, held
+
+
+def covers_what_it_replaces(landed, held, floor=SHORT_AT):
+    return landed >= int(held * floor)

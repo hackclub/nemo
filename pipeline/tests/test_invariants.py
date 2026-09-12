@@ -1,3 +1,5 @@
+from datetime import date
+
 from jobs import invariants
 
 
@@ -55,7 +57,7 @@ def test_severity_is_info_on_pass_and_error_on_fail_except_i4():
 
 def test_every_check_is_registered_once():
     names = [check.__name__ for check in invariants.CHECKS]
-    assert len(names) == len(set(names)) == 6
+    assert len(names) == len(set(names)) == 7
 
 
 class DaySource:
@@ -94,3 +96,47 @@ def test_the_lag_bar_sits_above_slacks_normal_two_day_lag():
 
 def test_a_frozen_source_is_an_error_not_a_warning():
     assert invariants.severity_of("I11", "fail") == "error"
+
+
+class Ledgers:
+    def __init__(self, answers):
+        self.answers = list(answers)
+        self.last = None
+
+    def execute(self, sql, params=None):
+        self.last = self.answers.pop(0)
+        return self
+
+    def fetchone(self):
+        return self.last
+
+
+ERA = (date(2026, 7, 15), date(2026, 9, 11))
+
+
+def test_ledgers_with_no_slices_yet_pass():
+    conn = Ledgers([(None, None), (None, None)])
+    assertion, status, observed, _ = invariants.i12_the_day_ledgers_agree(conn)
+    assert (assertion, status) == ("I12", "pass")
+    assert "no day source has claimed a slice" in observed
+
+
+def test_agreeing_ledgers_pass():
+    conn = Ledgers([ERA, (0, 0), ERA, (0, 0)])
+    _, status, observed, _ = invariants.i12_the_day_ledgers_agree(conn)
+    assert status == "pass"
+    assert "2 day source(s) agree" in observed
+
+
+def test_a_complete_slice_with_no_loaded_day_fails():
+    conn = Ledgers([ERA, (0, 3), ERA, (0, 0)])
+    _, status, observed, _ = invariants.i12_the_day_ledgers_agree(conn)
+    assert status == "fail"
+    assert "3 complete slice(s) with no loaded day" in observed
+
+
+def test_a_loaded_day_inside_the_era_with_no_slice_fails():
+    conn = Ledgers([ERA, (0, 0), ERA, (4, 0)])
+    _, status, observed, _ = invariants.i12_the_day_ledgers_agree(conn)
+    assert status == "fail"
+    assert "4 loaded day(s) with no slice" in observed

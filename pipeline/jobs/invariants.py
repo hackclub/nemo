@@ -3,7 +3,8 @@ import sys
 
 from dotenv import load_dotenv
 
-from lib.db import connect
+from lib import sources
+from lib.db import CHANNEL_DAY, MEMBER_DAY, connect
 from lib.paths import ENV_FILE
 
 STATUSES = frozenset({"running", "ok", "failed", "skipped", "partial", "cancelled", "abandoned"})
@@ -13,6 +14,10 @@ COUNT_COLUMNS = (
 )
 COUNT_TABLES = (("raw", "ingest_run"), ("ingest", "slice_coverage"), ("ingest", "work_item"))
 DAY_LAG_LIMIT = 4
+DAY_LEDGERS = (
+    (MEMBER_DAY, sources.key_for_run("admin_analytics_api:member")),
+    (CHANNEL_DAY, sources.key_for_run("admin_analytics_api:public_channel")),
+)
 
 RECORD_SQL = """
 INSERT INTO ingest.quality_result (run_id, subject, assertion, severity, status, observed, expected)
@@ -96,11 +101,52 @@ def i11_every_day_source_is_recent(conn):
             f"within {DAY_LAG_LIMIT} days")
 
 
+def i12_the_day_ledgers_agree(conn):
+    torn = []
+    measured = 0
+    for day_source, coverage_key in DAY_LEDGERS:
+        era = conn.execute("""
+            SELECT min(slice_key::date), max(slice_key::date)
+            FROM ingest.slice_coverage
+            WHERE source_key = %s AND slice_key ~ '^\\d{4}-\\d{2}-\\d{2}$'
+        """, (coverage_key,)).fetchone()
+        if era is None or era[0] is None:
+            continue
+        measured += 1
+        loaded_without_slice, complete_without_day = conn.execute("""
+            SELECT
+                (SELECT count(*) FROM raw.analytics_day d
+                  WHERE d.source IN (%(day)s, 'seed_' || %(day)s) AND d.loaded
+                    AND d.ds BETWEEN %(from)s AND %(to)s
+                    AND NOT EXISTS (
+                        SELECT 1 FROM ingest.slice_coverage c
+                        WHERE c.source_key = %(key)s AND c.slice_key = d.ds::text
+                    )),
+                (SELECT count(*) FROM ingest.slice_coverage c
+                  WHERE c.source_key = %(key)s AND c.state = 'complete'
+                    AND NOT EXISTS (
+                        SELECT 1 FROM raw.analytics_day d
+                        WHERE d.source IN (%(day)s, 'seed_' || %(day)s)
+                          AND d.ds::text = c.slice_key AND d.loaded
+                    ))
+        """, {"day": day_source, "key": coverage_key, "from": era[0], "to": era[1]}).fetchone()
+        if loaded_without_slice:
+            torn.append(f"{day_source}: {loaded_without_slice} loaded day(s) with no slice")
+        if complete_without_day:
+            torn.append(f"{coverage_key}: {complete_without_day} complete slice(s) with no loaded day")
+    if not measured:
+        return ("I12", "pass", "no day source has claimed a slice yet", "both ledgers agree")
+    return ("I12", "fail" if torn else "pass",
+            "; ".join(torn) if torn else f"{measured} day source(s) agree across both ledgers",
+            "every loaded day in the slice era has a slice, and every complete slice has a loaded day")
+
+
 CHECKS = (
     i1_every_planned_stage_has_a_row,
     i4_counts_are_nullable,
     i10_status_vocabulary_matches_the_check,
     i11_every_day_source_is_recent,
+    i12_the_day_ledgers_agree,
     no_running_row_outlives_the_sweep,
     every_terminal_failure_is_classified,
 )

@@ -8,7 +8,13 @@ from lib import calendar, coverage, planners, sources
 from lib.db import connect, dead_letter, get_walk, ingest_run, save_walk
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
-from lib.walk import UNVERIFIED, check_walk, should_prune
+from lib.walk import (
+    UNVERIFIED,
+    check_walk,
+    covers_what_it_replaces,
+    should_prune,
+    window_totals,
+)
 
 SOURCE = "admin_analytics_channel_range"
 SPAN_SOURCE = "admin_analytics_channel_span"
@@ -43,6 +49,13 @@ ON CONFLICT (channel_id, window_start, window_end, source) DO UPDATE SET
 PRUNE_SQL = """
 DELETE FROM raw.channel_activity_snapshot
 WHERE source = %s AND (window_start, window_end) <> (%s, %s)
+"""
+
+WINDOW_COUNTS_SQL = """
+SELECT window_start, window_end, count(*)
+FROM raw.channel_activity_snapshot
+WHERE source = %s
+GROUP BY window_start, window_end
 """
 
 
@@ -159,10 +172,18 @@ def run(conn, days=WINDOW_DAYS, end=None, source=SOURCE, span=False):
         pruned = 0
         with conn.cursor() as cur:
             cur.executemany(RANGE_SQL, rows)
-            if should_prune(verdict):
+            cur.execute(WINDOW_COUNTS_SQL, (source,))
+            landed, held = window_totals(cur.fetchall(), (start, stop))
+            replacing = should_prune(verdict) and covers_what_it_replaces(landed, held)
+            if replacing:
                 cur.execute(PRUNE_SQL, (source, start, stop))
                 pruned = cur.rowcount
-        if should_prune(verdict):
+        if should_prune(verdict) and not replacing:
+            print(
+                f"{label} {window_key}: walked {landed} rows against {held} already held, "
+                "refusing to prune the fuller window"
+            )
+        if replacing:
             coverage.supersede(conn, key, window_key)
         else:
             counts.status = "partial"

@@ -8,7 +8,13 @@ from lib import calendar, coverage, planners, sources
 from lib.db import connect, dead_letter, get_walk, ingest_run, save_walk
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
-from lib.walk import UNVERIFIED, check_walk, should_prune
+from lib.walk import (
+    UNVERIFIED,
+    check_walk,
+    covers_what_it_replaces,
+    should_prune,
+    window_totals,
+)
 
 SOURCE = "admin_analytics_member_range"
 KEY = sources.key_for_run(SOURCE)
@@ -17,6 +23,13 @@ PAGE_SIZE = 500
 PRUNE_SQL = """
 DELETE FROM raw.member_activity_snapshot
 WHERE source = %s AND (window_start, window_end) <> (%s, %s)
+"""
+
+WINDOW_COUNTS_SQL = """
+SELECT window_start, window_end, count(*)
+FROM raw.member_activity_snapshot
+WHERE source = %s
+GROUP BY window_start, window_end
 """
 
 VERIFIED_DATE_SQL = """
@@ -96,7 +109,16 @@ def run(conn, days=None, end=None):
             client.last_num_found, PAGE_SIZE)
 
         pruned = 0
-        if should_prune(verdict):
+        with conn.cursor() as cur:
+            cur.execute(WINDOW_COUNTS_SQL, (SOURCE,))
+            landed, held = window_totals(cur.fetchall(), (start, stop))
+        replacing = should_prune(verdict) and covers_what_it_replaces(landed, held)
+        if should_prune(verdict) and not replacing:
+            print(
+                f"member range {window_key}: walked {landed} rows against {held} already held, "
+                "refusing to prune the fuller window"
+            )
+        if replacing:
             with conn.cursor() as cur:
                 cur.execute(PRUNE_SQL, (SOURCE, start, stop))
                 pruned = cur.rowcount
