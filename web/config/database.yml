@@ -7,7 +7,7 @@ default: &default
   username: <%= [ENV["RAILS_DB_USER"], ENV["POSTGRES_USER"], "rails_app"].find { |v| !v.to_s.empty? } %>
   password: <%= [ENV["RAILS_DB_PASSWORD"], ENV["POSTGRES_PASSWORD"], "change_me"].find { |v| !v.to_s.empty? } %>
   schema_search_path: "app,public"
-  pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS", 3) %>
   variables:
     statement_timeout: 15000
     lock_timeout: 3000

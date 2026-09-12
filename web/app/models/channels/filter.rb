@@ -8,23 +8,23 @@ module Channels
     end
 
     FIELDS = [
-      Field.new(key: "name", label: "Name", kind: :text, sql: "dim_channel.name"),
-      Field.new(key: "members", label: "Members", kind: :number, sql: "r.total_members"),
+      Field.new(key: "name", label: "Name", kind: :text, sql: "#{Joins::SPINE}.name"),
+      Field.new(key: "members", label: "Members", kind: :number, sql: "#{Joins::RANGE}.total_members"),
       Field.new(key: "messages", label: "Member messages", kind: :number,
-        sql: "r.messages_posted_by_members"),
+        sql: "#{Joins::RANGE}.messages_posted_by_members"),
       Field.new(key: "posters", label: "People who posted", kind: :number,
-        sql: "r.members_who_posted"),
+        sql: "#{Joins::RANGE}.members_who_posted"),
       Field.new(key: "readers", label: "People who read", kind: :number,
-        sql: "r.members_who_viewed"),
+        sql: "#{Joins::RANGE}.members_who_viewed"),
       Field.new(key: "spoke", label: "Share who spoke", kind: :number, unit: "%",
-        sql: "(r.members_who_posted::numeric / NULLIF(r.total_members, 0) * 100)"),
+        sql: "(#{Joins::RANGE}.members_who_posted::numeric / NULLIF(#{Joins::RANGE}.total_members, 0) * 100)"),
       Field.new(key: "read_ratio", label: "Readers per poster", kind: :number, unit: "x",
-        sql: "(r.members_who_viewed::numeric / NULLIF(r.members_who_posted, 0))"),
+        sql: "(#{Joins::RANGE}.members_who_viewed::numeric / NULLIF(#{Joins::RANGE}.members_who_posted, 0))"),
       Field.new(key: "change", label: "Change on the window before", kind: :number, unit: "%",
-        sql: "m.pct_change"),
-      Field.new(key: "last_post", label: "Last post", kind: :date, sql: "r.last_message_at"),
+        sql: "#{Joins::MOMENTUM}.pct_change"),
+      Field.new(key: "last_post", label: "Last post", kind: :date, sql: "#{Joins::RANGE}.last_message_at"),
       Field.new(key: "created", label: "Created", kind: :date,
-        sql: "dim_channel.date_created", omit: %w[unset])
+        sql: "#{Joins::SPINE}.date_created", omit: %w[unset])
     ].freeze
 
     BY_KEY = FIELDS.index_by(&:key).freeze
@@ -53,6 +53,7 @@ module Channels
     }.freeze
 
     MATCHES = %w[all any].freeze
+    DAY_COUNT_OPS = %w[within before_days].freeze
     MAX_CONDITIONS = 12
 
     Condition = Struct.new(:field, :op, :values, keyword_init: true) do
@@ -140,7 +141,7 @@ module Channels
       values = Array(row["v"]).reject { |v| v.to_s.strip.empty? }.first(wanted)
       return nil unless values.size == wanted
 
-      cast = values.filter_map { |v| coerce(field, v) }
+      cast = values.filter_map { |v| coerce(field, op, v) }
       return nil unless cast.size == wanted
 
       # a range reads and queries the same way round, so settle the order here
@@ -148,11 +149,11 @@ module Channels
       Condition.new(field: field, op: op, values: cast)
     end
 
-    def coerce(field, raw)
+    def coerce(field, op, raw)
       value = raw.to_s.strip
       case field.kind
       when :number then numeric(value)
-      when :date then date_for(value)
+      when :date then DAY_COUNT_OPS.include?(op) ? day_count(value) : calendar_date(value)
       when :text then value.presence
       end
     end
@@ -163,9 +164,11 @@ module Channels
       value.include?(".") ? value.to_f : value.to_i
     end
 
-    def date_for(value)
-      return value.to_i if value.match?(/\A\d+\z/)
+    def day_count(value)
+      value.to_i if value.match?(/\A\d+\z/)
+    end
 
+    def calendar_date(value)
       Date.iso8601(value)
     rescue ArgumentError
       nil
@@ -194,7 +197,9 @@ module Channels
     # a channel with no range row has nothing to say, so "never" means it has a
     # row and the column is empty
     def unset_for(condition, col)
-      return ["(r.channel_id IS NOT NULL AND #{col} IS NULL)"] if condition.field.sql.start_with?("r.")
+      if condition.field.sql.start_with?("#{Joins::RANGE}.")
+        return ["(#{Joins::RANGE}.channel_id IS NOT NULL AND #{col} IS NULL)"]
+      end
 
       ["#{col} IS NULL"]
     end

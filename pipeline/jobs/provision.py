@@ -6,6 +6,7 @@ import sys
 from dotenv import load_dotenv
 from psycopg import sql
 
+from checks import roles
 from jobs.migrate import main as apply_migrations
 from lib import capabilities
 from lib.db import connect_admin
@@ -46,6 +47,17 @@ def apply_init_sql(conn):
             print(f"provision: {note}")
 
 
+def report_mode(conn):
+    found = roles.roles_present(conn)
+    if len(found) == len(roles.EXPECTED_ROLES):
+        print(f"provision: {roles.SEPARATED_MODE} deployment, grants enforced by "
+              f"{', '.join(found)}")
+        return
+    print(f"provision: {roles.SHARED_MODE} deployment, every service shares "
+          f"{os.environ.get('POSTGRES_USER', 'one login')} and the boundary is the "
+          "application's own capability checks")
+
+
 def set_role_passwords(conn):
     applied = []
     for user_var, password_var in ROLE_PASSWORDS:
@@ -65,7 +77,7 @@ def set_role_passwords(conn):
     if applied:
         print(f"provision: set passwords for {', '.join(applied)}")
     else:
-        print("provision: no role passwords to set, single-role deployment")
+        print("provision: no role passwords to set")
 
 
 def rails(*args):
@@ -101,6 +113,7 @@ def main():
     with connect_admin() as conn:
         apply_init_sql(conn)
         set_role_passwords(conn)
+        report_mode(conn)
 
     print("provision: raw schema")
     apply_migrations("pre")

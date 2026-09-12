@@ -26,6 +26,24 @@ module Slack
         .map(&:value)
     end
 
+    def self.channel_windows(channel_id:, name:, privacy:, windows:)
+      spans = windows.map { |from, to| clamp(from, to) }
+      keys = spans.map { |from, to| channel_key(channel_id, from, to, privacy) }
+      held = keys.map { |key| Rails.cache.read(key) }
+
+      fetched = parallel(*spans.each_with_index.map { |(from, to), i|
+        -> { asked(channel_id: channel_id, name: name, from: from, to: to, privacy: privacy) if held[i].nil? }
+      })
+
+      spans.each_index.map do |i|
+        next Result.new(stats: held[i]) if held[i]
+
+        got = fetched[i]
+        Rails.cache.write(keys[i], got.stats, expires_in: CHANNEL_TTL) if got&.stats
+        got
+      end
+    end
+
     def self.channel_activity(channel_id:, name:, from:, to:, privacy: "public")
       from, to = clamp(from, to)
       key = channel_key(channel_id, from, to, privacy)

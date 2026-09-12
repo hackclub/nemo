@@ -250,10 +250,25 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     [:patch, "/fd/flag", "app.flip", { key: "fire_engine", on: "0" }],
     [:post, "/engine/sync", "engine.manage", {}],
     [:post, "/engine/cancel", "engine.manage", {}],
-    [:post, "/engine/stages/members", "engine.manage", {}],
+    [:post, "/engine/stages/member_days", "engine.manage", {}],
     [:patch, "/engine/tune", "engine.manage", { retention_days: "30" }],
     [:delete, "/engine/tune", "engine.manage", {}]
   ].freeze
+
+  # 11a. a sweep row nobody can reach proves nothing, whoever asks
+  test "every mutating route the sweep checks is one the app actually serves" do
+    unrouted = WRITES.reject do |verb, path, _key, _params|
+      Rails.application.routes.recognize_path(path, method: verb)
+    rescue ActionController::RoutingError
+      false
+    end
+    assert_empty unrouted.map { |verb, path, _, _| "#{verb.upcase} #{path}" }
+
+    named = WRITES.filter_map { |_verb, path, _key, _params| path[%r{/engine/stages/(.+)}, 1] }
+    refute_empty named, "no stage row left to check"
+    assert_empty named - SyncRequest::STAGES,
+      "the sweep posts to stages the app does not know, so those rows refuse everyone"
+  end
 
   test "every mutating route turns away everyone who does not hold its capability" do
     leaked = []

@@ -2,8 +2,8 @@ module Channels
   class Window
     PRESETS = [7, 30, 90].freeze
 
-    PULLED_SQL = "r.messages_posted_by_members".freeze
-    ROLLED_SQL = "a.range_messages".freeze
+    PULLED_SQL = "#{Joins::RANGE}.messages_posted_by_members".freeze
+    ROLLED_SQL = "#{Joins::ROLLUP}.range_messages".freeze
 
     attr_reader :days, :start_date, :end_date, :pulled_start, :pulled_end, :edge
 
@@ -52,8 +52,8 @@ module Channels
       ActiveRecord::Base.sanitize_sql_array(
         ["LEFT JOIN (SELECT channel_id, sum(messages_posted_by_members) AS range_messages " \
          "FROM analytics.mart_channel_activity " \
-         "WHERE window_start BETWEEN ? AND ? GROUP BY channel_id) a " \
-         "ON a.channel_id = dim_channel.channel_id", @start_date, @end_date]
+         "WHERE window_start BETWEEN ? AND ? GROUP BY channel_id) #{Joins::ROLLUP} " \
+         "ON #{Joins::ROLLUP}.channel_id = #{Joins::SPINE}.channel_id", @start_date, @end_date]
       )
     end
 

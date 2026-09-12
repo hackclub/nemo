@@ -6,25 +6,27 @@ class ChannelsController < ApplicationController
   DEFAULT_RANGE_DAYS = 28
 
   SORT_SQL = {
-    "name" => "dim_channel.name",
-    "members" => "r.total_members",
-    "created" => "dim_channel.date_created",
+    "name" => "#{Channels::Joins::SPINE}.name",
+    "members" => "#{Channels::Joins::RANGE}.total_members",
+    "created" => "#{Channels::Joins::SPINE}.date_created",
     "messages" => nil,
-    "posters" => "r.members_who_posted",
-    "viewers" => "r.members_who_viewed",
-    "quiet" => "r.last_message_at",
-    "change" => "m.pct_change"
+    "posters" => "#{Channels::Joins::RANGE}.members_who_posted",
+    "viewers" => "#{Channels::Joins::RANGE}.members_who_viewed",
+    "quiet" => "#{Channels::Joins::RANGE}.last_message_at",
+    "change" => "#{Channels::Joins::MOMENTUM}.pct_change"
   }.freeze
 
-  RANGE_JOIN = "LEFT JOIN analytics.mart_channel_range r ON r.channel_id = dim_channel.channel_id".freeze
-  MOMENTUM_JOIN = "LEFT JOIN analytics.mart_channel_momentum m " \
-                  "ON m.channel_id = dim_channel.channel_id".freeze
-  RANGE_COLUMNS = "dim_channel.*, " \
-                  "r.members_who_posted AS range_posters, r.total_members AS range_members, " \
-                  "r.members_who_viewed AS range_viewers, " \
-                  "r.last_message_at AS range_last_post, " \
-                  "m.pct_change AS range_change, m.prior_messages AS prior_messages, " \
-                  "m.prior_below_floor AS prior_thin, m.prior_floor AS prior_floor".freeze
+  RANGE_JOIN = Channels::Joins::RANGE_JOIN
+  MOMENTUM_JOIN = Channels::Joins::MOMENTUM_JOIN
+  RANGE_COLUMNS = "#{Channels::Joins::SPINE}.*, " \
+                  "#{Channels::Joins::RANGE}.members_who_posted AS range_posters, " \
+                  "#{Channels::Joins::RANGE}.total_members AS range_members, " \
+                  "#{Channels::Joins::RANGE}.members_who_viewed AS range_viewers, " \
+                  "#{Channels::Joins::RANGE}.last_message_at AS range_last_post, " \
+                  "#{Channels::Joins::MOMENTUM}.pct_change AS range_change, " \
+                  "#{Channels::Joins::MOMENTUM}.prior_messages AS prior_messages, " \
+                  "#{Channels::Joins::MOMENTUM}.prior_below_floor AS prior_thin, " \
+                  "#{Channels::Joins::MOMENTUM}.prior_floor AS prior_floor".freeze
 
   def index
     @q = params[:q].to_s.strip
@@ -40,7 +42,7 @@ class ChannelsController < ApplicationController
 
     scope = mine.joins(RANGE_JOIN).joins(MOMENTUM_JOIN)
     scope = scope.joins(@window.join) if @window.join
-    scope = scope.where("dim_channel.name ILIKE ?", "%#{like_q}%") if @q.present?
+    scope = scope.where("#{Channels::Joins::SPINE}.name ILIKE ?", "%#{like_q}%") if @q.present?
     if (clause = @filter.clause)
       scope = scope.where(clause.first, *clause.drop(1))
     end
@@ -101,19 +103,9 @@ class ChannelsController < ApplicationController
     @range_max = last_available
     @range_min = floor
     all_time_start = @channel.date_created&.to_date || (last_available - 400)
-    @range, @all_time = Slack::Analytics.parallel(
-      -> {
-        Slack::Analytics.channel_activity(
-          channel_id: @channel.channel_id, name: @channel.name,
-          from: @start_date, to: @end_date, privacy: @channel.visibility
-        )
-      },
-      -> {
-        Slack::Analytics.channel_activity(
-          channel_id: @channel.channel_id, name: @channel.name,
-          from: all_time_start, to: last_available, privacy: @channel.visibility
-        )
-      }
+    @range, @all_time = Slack::Analytics.channel_windows(
+      channel_id: @channel.channel_id, name: @channel.name, privacy: @channel.visibility,
+      windows: [[@start_date, @end_date], [all_time_start, last_available]]
     )
     @member_count = @all_time.stats&.dig("total_members_count")
   end
@@ -212,7 +204,8 @@ class ChannelsController < ApplicationController
 
     ql = like_q.downcase
     rank = ActiveRecord::Base.sanitize_sql_array(
-      ["CASE WHEN lower(dim_channel.name) = ? THEN 0 WHEN lower(dim_channel.name) LIKE ? THEN 1 ELSE 2 END", ql, "#{ql}%"]
+      ["CASE WHEN lower(#{Channels::Joins::SPINE}.name) = ? THEN 0 " \
+       "WHEN lower(#{Channels::Joins::SPINE}.name) LIKE ? THEN 1 ELSE 2 END", ql, "#{ql}%"]
     )
     "#{rank}, #{metric}"
   end

@@ -260,4 +260,28 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
       Authz::Grant.live.for_person(staff.user_id).capabilities.pluck(:name),
       "swapping the role must not disturb the extra scopes"
   end
+
+  test "every community permission names a capability the catalogue actually declares" do
+    refute_empty Community::Access::CAPABILITY
+
+    unknown = Community::Access::CAPABILITY.reject { |_key, capability|
+      Authz.keys.include?(capability)
+    }
+
+    assert_empty unknown, "these permissions name capabilities that do not exist: #{unknown.inspect}"
+  end
+
+  test "the permission keys the views ask for are the ones the model maps" do
+    asked = Dir[Rails.root.join("app/views/**/*.erb"), Rails.root.join("app/**/*.rb")]
+      .flat_map { |path| File.read(path).scan(/may_community\?\(?\s*["']([\w.]+)["']/) }
+      .flatten.uniq
+
+    refute_empty asked, "nothing asks for a community permission, so this checks nothing"
+
+    unmapped = asked.reject { |key|
+      key == Community::Access::EVERY_ACCOUNT || Community::Access::CAPABILITY.key?(key)
+    }
+
+    assert_empty unmapped, "these permission keys are asked for but not mapped: #{unmapped.inspect}"
+  end
 end
