@@ -210,3 +210,29 @@ def test_the_archive_carries_the_indexes_the_incremental_leans_on():
     sql = (MIGRATIONS_DIR / "0095_archive_message_change_markers.sql").read_text()
     assert "archive.message (updated_at)" in sql
     assert "WHERE deleted_at IS NOT NULL" in sql
+
+
+def test_the_spine_proves_uniqueness_with_its_index_not_a_54m_row_group_by():
+    schema = (WAREHOUSE_DIR / "models" / "staging" / "schema.yml").read_text()
+    assert "channel_id || '-' || ts" not in schema, (
+        "the expression test cost 225.78s on fct_message and 191.22s on fct_member_message "
+        "to re-prove what the unique index already guarantees"
+    )
+    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_message.sql").read_text()
+    assert "'unique': True" in sql, "something has to enforce it, and the index is the cheap half"
+
+
+def test_no_tombstone_can_reach_the_message_spine():
+    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_message.sql").read_text()
+    assert "where deleted_at is null" in sql
+    assert "m.deleted_at is not null" in sql, (
+        "a tombstone always carries deleted_at, so the filter keeps it out on the way in and "
+        "the sweep takes it out if a live row is tombstoned later"
+    )
+
+
+def test_the_dead_onboarding_funnel_is_dropped_rather_than_left_granted():
+    sql = (MIGRATIONS_DIR / "0096_drop_onboarding_funnel.sql").read_text()
+    assert "DROP TABLE IF EXISTS analytics.mart_onboarding_funnel" in sql
+    models = {p.stem for p in (WAREHOUSE_DIR / "models").rglob("*.sql")}
+    assert "mart_onboarding_funnel" not in models, "dropping a model dbt still builds would loop"

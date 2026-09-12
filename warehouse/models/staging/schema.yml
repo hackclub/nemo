@@ -270,9 +270,6 @@ models:
       - name: observed_at
         data_type: timestamp with time zone
         data_tests: [not_null]
-    data_tests:
-      - unique:
-          column_name: "channel_id || '-' || ts"
   - name: fct_member_message
     config:
       contract:
@@ -341,9 +338,6 @@ models:
         data_type: boolean
       - name: observed_at
         data_type: timestamp with time zone
-    data_tests:
-      - unique:
-          column_name: "channel_id || '-' || ts"
   - name: fct_message_first_post
     config:
       contract:

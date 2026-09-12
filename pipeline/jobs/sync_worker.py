@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 
 from jobs.nightly_sync import (
     ENV_FILE,
+    OFF_THE_SPINE,
     TABLES_ONLY,
     TRUTHY,
     credential_faults,
@@ -35,6 +36,7 @@ from lib.db import (
 DEFAULT_AT = "03:00"
 DEFAULT_POLL_SECONDS = 60
 DEFAULT_TRANSFORM_SECONDS = 900
+DEFAULT_SPINE_SECONDS = 3600
 REFRESH_WAIT_SECONDS = 0
 CANCEL_POLL_SECONDS = 30
 BEAT_SECONDS = 60
@@ -240,21 +242,32 @@ def transform_every():
     return int(os.environ.get("TRANSFORM_EVERY_SECONDS", "") or DEFAULT_TRANSFORM_SECONDS)
 
 
-def refresh_marts(last_at, state):
-    every = transform_every()
-    if every <= 0 or time.monotonic() - last_at < every:
-        return last_at
+def spine_every():
+    return int(os.environ.get("SPINE_TRANSFORM_EVERY_SECONDS", "") or DEFAULT_SPINE_SECONDS)
+
+
+def due(last_at, every):
+    return every > 0 and time.monotonic() - last_at >= every
+
+
+def refresh_marts(last_at, state, spine_at=None):
+    spine_at = last_at if spine_at is None else spine_at
+    spine = due(spine_at, spine_every())
+    if not spine and not due(last_at, transform_every()):
+        return last_at, spine_at
+    select, tier = (TABLES_ONLY, "every mart") if spine else (OFF_THE_SPINE, "the marts off the spine")
     held = state["note"]
-    state["note"] = "rebuilding the marts"
+    state["note"] = f"rebuilding {tier}"
     try:
         with connect() as conn:
-            run_dbt(conn, select=TABLES_ONLY, wait_seconds=REFRESH_WAIT_SECONDS)
+            run_dbt(conn, select=select, wait_seconds=REFRESH_WAIT_SECONDS)
     except AlreadyRunning as exc:
         print(f"sync worker: mart refresh skipped, {exc}")
     except Exception as exc:
         print(f"sync worker: mart refresh failed {type(exc).__name__}: {exc}")
     state["note"] = held
-    return time.monotonic()
+    now = time.monotonic()
+    return now, (now if spine else spine_at)
 
 
 def waiting_note(scheduled):
@@ -293,6 +306,7 @@ def main():
     state = {"note": waiting_note(scheduled)}
     probed = 0.0
     refreshed = 0.0
+    spined = 0.0
 
     with beating(WORKER, lambda: state["note"], every=BEAT_SECONDS):
         if run_at_start_enabled():
@@ -304,7 +318,7 @@ def main():
         while True:
             probed = probe_proxy(probed)
             state["note"] = waiting_note(scheduled)
-            refreshed = refresh_marts(refreshed, state)
+            refreshed, spined = refresh_marts(refreshed, state, spined)
             if datetime.now() >= scheduled:
                 state["note"] = "scheduled run"
                 run_scheduled()

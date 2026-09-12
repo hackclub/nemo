@@ -114,6 +114,7 @@ def dbt_outcomes(results):
 
 
 TABLES_ONLY = ("--select", "+config.materialized:table")
+OFF_THE_SPINE = TABLES_ONLY + ("--exclude", "fct_message+")
 
 
 GATE_TESTS = (

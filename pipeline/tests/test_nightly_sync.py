@@ -281,3 +281,40 @@ def test_a_refused_build_is_a_skip_for_the_refresh_not_a_failure():
     src = inspect.getsource(sync_worker.refresh_marts)
     assert "except AlreadyRunning" in src
     assert src.index("except AlreadyRunning") < src.index("except Exception")
+
+
+def test_the_cheap_tier_leaves_the_spine_and_everything_under_it_alone():
+    from jobs import nightly_sync
+
+    assert nightly_sync.OFF_THE_SPINE == (
+        "--select", "+config.materialized:table", "--exclude", "fct_message+"
+    ), "24 models refresh without touching the 22 that queue behind a 54M-row scan"
+
+
+def test_the_spine_tier_runs_on_its_own_slower_clock():
+    import inspect
+
+    from jobs import sync_worker
+
+    src = inspect.getsource(sync_worker.refresh_marts)
+    assert "spine_every()" in src and "transform_every()" in src
+    assert "OFF_THE_SPINE" in src and "TABLES_ONLY" in src
+    assert sync_worker.DEFAULT_SPINE_SECONDS > sync_worker.DEFAULT_TRANSFORM_SECONDS
+
+
+def test_the_two_tiers_keep_separate_clocks():
+    from unittest import mock
+
+    from jobs import sync_worker
+
+    calls = []
+    with mock.patch.object(sync_worker, "run_dbt", lambda *a, **kw: calls.append(kw["select"])), \
+         mock.patch.object(sync_worker, "connect", mock.MagicMock()), \
+         mock.patch.object(sync_worker, "transform_every", return_value=1), \
+         mock.patch.object(sync_worker, "spine_every", return_value=10_000):
+        state = {"note": "idle"}
+        refreshed, spined = sync_worker.refresh_marts(0.0, state, 0.0)
+        assert calls == [sync_worker.TABLES_ONLY], "the first pass has to build the spine once"
+        refreshed, spined = sync_worker.refresh_marts(0.0, state, spined)
+        assert calls[-1] == sync_worker.OFF_THE_SPINE, "the spine is not due again yet"
+        assert state["note"] == "idle", "the worker's note has to come back"
