@@ -9,7 +9,7 @@ from seed import directory as directory_module
 from seed import hostile as hostile_module
 from seed import runs as runs_module
 from seed import spine as spine_module
-from seed.generate import COVERED_DAYS, Sampler
+from seed.generate import COVERED_DAYS
 
 MEMBER_DAY_SOURCE = f"{SEED_SOURCE_PREFIX}member_day"
 CHANNEL_DAY_SOURCE = f"{SEED_SOURCE_PREFIX}channel_day"
@@ -34,7 +34,6 @@ SEEDED_TABLES = (
     "raw.message_activity_snapshot",
     "raw.analytics_day",
     "raw.member_message_history",
-    "raw.member_first_reply",
     "raw.member_channel_message",
     "raw.member_channel_membership",
     "raw.member_channel_walk",
@@ -359,41 +358,6 @@ def history_rows(members, totals, as_of):
         )
 
 
-def first_reply_rows(rng, members, profile, hostile=False):
-    shares = profile["replies"]
-    human = Sampler(shares["latency_seconds"])
-    bot = Sampler(shares["bot_latency_seconds"])
-    for member in members:
-        if not member.first_post_at:
-            continue
-        roll = rng.random()
-        posted = posted_at(member)
-        bot_chance = min(1.0, shares["bot_first_share"] / max(shares["human_share"], 1e-9))
-        bot_latency = int(max(1, bot(rng.random()))) if rng.random() < bot_chance else None
-        bot_ts = posted + timedelta(seconds=bot_latency) if bot_latency else None
-        if roll < shares["human_share"]:
-            latency = int(max(1, human(rng.random())))
-            yield (
-                member.user_id, f"USEED{rng.randrange(1000):07d}",
-                posted + timedelta(seconds=latency), latency, False, None,
-                bot_latency and f"USEED{rng.randrange(50):07d}", bot_ts, bot_latency, 2,
-            )
-        elif roll < shares["human_share"] + shares["bot_only_share"]:
-            latency = int(max(1, bot(rng.random())))
-            yield (
-                member.user_id, None, None, None, False, None,
-                f"USEED{rng.randrange(50):07d}", posted + timedelta(seconds=latency), latency, 2,
-            )
-        elif roll < shares["human_share"] + shares["bot_only_share"] + 0.02:
-            yield (
-                member.user_id, None, None, None, True,
-                hostile_module.reason(rng, "thread unreadable", hostile),
-                None, None, None, 2,
-            )
-        else:
-            yield (member.user_id, None, None, None, False, None, None, None, None, 2)
-
-
 def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
           days=COVERED_DAYS, hostile=False):
     start = as_of - timedelta(days=days - 1)
@@ -421,12 +385,6 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
         ["user_id", "total_messages", "first_post_ts", "first_post_channel", "searched_at",
          "counted_through"],
         history_rows(members, totals, as_of),
-    )
-    counts["member_first_reply"] = copy_rows(
-        conn, "raw.member_first_reply",
-        ["user_id", "replier_id", "reply_ts", "latency_seconds", "unreadable", "reason",
-         "bot_replier_id", "bot_reply_ts", "bot_latency_seconds", "walk_version"],
-        first_reply_rows(rng, members, profile, hostile),
     )
 
     member_columns = ["user_id", "window_start", "window_end", "source", "days_active",

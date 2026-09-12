@@ -76,12 +76,6 @@ CONSISTENCY_CHECKS = [
         "where window_start = window_end)",
     ),
     (
-        "every first poster has a history row",
-        "select count(*) from raw.member_first_reply r "
-        "left join raw.member_message_history h on h.user_id = r.user_id "
-        "where h.user_id is null",
-    ),
-    (
         "no day ledger gap inside the covered span",
         "select (max(ds) - min(ds) + 1) - count(*) from raw.analytics_day where source like 'seed_%member_day'",
     ),

@@ -19,13 +19,10 @@ STAGE_SOURCES = [
     ("channel_roster", 6, 13_000),
     ("channel_info_names", 5, 60),
     ("member_history", 200, 900),
-    ("first_reply", 150, 200),
     ("dbt", 25, 0),
 ]
 
 DEAD_LETTER_REASONS = [
-    ("first_reply", "thread head vanished before the walk reached it"),
-    ("first_reply", "conversations.replies returned channel_not_found"),
     ("member_history", "search.messages paging repeated a page"),
     ("admin_analytics_api:member", "'date' missing from a member_activity record"),
     ("users_list", "member arrived without a team_id"),
@@ -33,7 +30,6 @@ DEAD_LETTER_REASONS = [
 
 STEP_OUTPUT = {
     "dbt": "Done. PASS=106 WARN=0 ERROR=0 SKIP=0 TOTAL=106",
-    "first_reply": "first reply: {rows} walked, {rejected} rejected",
 }
 
 
@@ -78,7 +74,7 @@ def child_rows(rng, as_of, parent_ids, history=RUN_HISTORY):
             child_status = "ok"
             if status == "failed" and step == total:
                 child_status = "failed"
-            elif status == "partial" and source == "first_reply":
+            elif status == "partial" and source == "member_history":
                 child_status = "failed"
             elif status == "running" and step == reached:
                 child_status = "running"

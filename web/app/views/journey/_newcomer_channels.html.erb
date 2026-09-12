@@ -13,36 +13,40 @@
   </div>
 
   <% if newcomer_channels.any? %>
-    <% peak = newcomer_channels.map { |c| c.newcomer_first_posts.to_i }.max.to_i %>
+    <% bands = ->(c) { [
+         { cls: "fn-a", label: "posted here", value: c.newcomers_posting.to_i },
+         { cls: "fn-b", label: "first post landed here", value: c.newcomer_first_posts.to_i },
+         { cls: "fn-c", label: "came back on a later day", value: c.newcomers_returning.to_i }
+       ] } %>
+    <% peak = newcomer_channels.flat_map { |c| bands.call(c).map { |b| b[:value] } }.max.to_i %>
+    <% width = ->(v) { peak.positive? ? [(v.to_f / peak * 100), (v.positive? ? 1.2 : 0)].max.round(2) : 0 } %>
     <div class="funnelrows" data-controller="marktip"
          data-action="mouseover->marktip#show mouseleave->marktip#clear">
       <% newcomer_channels.each do |c| %>
-        <% first = c.newcomer_first_posts.to_i %>
-        <% again = c.newcomers_posting.to_i %>
-        <% back = c.newcomers_returning.to_i %>
-        <% width = ->(v) { peak.positive? ? [(v.to_f / peak * 100), (v.positive? ? 1.2 : 0)].max.round(2) : 0 } %>
+        <% drawn = bands.call(c) %>
+        <% posting = c.newcomers_posting.to_i %>
         <div class="fn-row">
           <span class="fn-name"><%= channel_name_cell(c.channel_id, c.name) %></span>
           <span class="fn-bar" data-tip="<%= {
             title: "##{c.name}",
-            rows: [
-              { label: "first post landed here", value: number_with_delimiter(first) },
-              { label: "posted again in the window", value: number_with_delimiter(again),
-                of: number_to_percentage(share_pct(again, first) || 0, precision: 1) },
-              { label: "came back on a later day", value: number_with_delimiter(back),
-                of: number_to_percentage(share_pct(back, again) || 0, precision: 1) }
-            ]
+            rows: drawn.map do |band|
+              row = { label: band[:label], value: number_with_delimiter(band[:value]) }
+              unless band[:cls] == "fn-a"
+                row[:of] = number_to_percentage(share_pct(band[:value], posting) || 0, precision: 1)
+              end
+              row
+            end
           }.to_json %>">
-            <i class="fn-a" style="width: <%= width.call(first) %>%"></i>
-            <i class="fn-b" style="width: <%= width.call(again) %>%"></i>
-            <i class="fn-c" style="width: <%= width.call(back) %>%"></i>
+            <% drawn.sort_by { |band| -band[:value] }.each do |band| %>
+              <i class="<%= band[:cls] %>" style="width: <%= width.call(band[:value]) %>%"></i>
+            <% end %>
           </span>
         </div>
       <% end %>
     </div>
     <div class="key">
-      <span><i class="fn-a"></i>first post landed here</span>
-      <span><i class="fn-b"></i>posted again in the window</span>
+      <span><i class="fn-a"></i>posted here</span>
+      <span><i class="fn-b"></i>first post landed here</span>
       <span><i class="fn-c"></i>came back on a later day</span>
     </div>
   <% else %>

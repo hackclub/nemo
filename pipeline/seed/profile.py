@@ -84,34 +84,6 @@ def messaging_shape(conn):
     }
 
 
-def reply_shape(conn):
-    counts = conn.execute(
-        """
-        SELECT
-            count(*),
-            count(*) FILTER (WHERE replier_id IS NOT NULL),
-            count(*) FILTER (WHERE replier_id IS NULL AND bot_replier_id IS NOT NULL),
-            count(*) FILTER (WHERE replier_id IS NULL AND bot_replier_id IS NULL
-                             AND coalesce(unreadable, false) IS FALSE),
-            count(*) FILTER (WHERE coalesce(unreadable, false)),
-            count(*) FILTER (WHERE bot_replier_id IS NOT NULL AND replier_id IS NOT NULL
-                             AND bot_reply_ts < reply_ts)
-        FROM raw.member_first_reply
-        """
-    ).fetchone()
-    total = counts[0] or 1
-    return {
-        "n": counts[0],
-        "human_share": round(counts[1] / total, 6),
-        "bot_only_share": round(counts[2] / total, 6),
-        "no_reply_share": round(counts[3] / total, 6),
-        "unreadable_share": round(counts[4] / total, 6),
-        "bot_first_share": round(counts[5] / total, 6),
-        "latency_seconds": quantiles(conn, "latency_seconds", "raw.member_first_reply"),
-        "bot_latency_seconds": quantiles(conn, "bot_latency_seconds", "raw.member_first_reply"),
-    }
-
-
 NEWEST_WINDOW = "source = 'admin_analytics_channel_range'"
 
 
@@ -266,7 +238,6 @@ def capture(conn):
         "quantiles": QUANTILES,
         "members": members,
         "messaging": messaging_shape(conn),
-        "replies": reply_shape(conn),
         "channels": channel_shape(conn),
         "activity": activity_shape(conn),
         "seasonality": seasonality_shape(conn),
@@ -283,11 +254,6 @@ def summarise(profile):
         f"deleted {profile['members']['rates']['is_deleted']:.1%}",
         f"ever posted {profile['messaging']['ever_posted_rate']:.1%}, "
         f"median lifetime messages {median(profile['messaging']['total_messages'])}",
-        f"replies human {profile['replies']['human_share']:.1%}, "
-        f"bot only {profile['replies']['bot_only_share']:.1%}, "
-        f"none {profile['replies']['no_reply_share']:.1%}, "
-        f"bot first {profile['replies']['bot_first_share']:.1%}",
-        f"median human reply latency {median(profile['replies']['latency_seconds'])}s",
         f"channels {profile['channels']['count']}, "
         f"archived {profile['channels']['archived_rate']:.1%}, "
         f"median members {median(profile['channels']['total_members'])}",

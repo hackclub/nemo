@@ -44,7 +44,7 @@ def test_a_transport_fault_aborts_the_lane(quiet_dead_letter):
 
 def test_an_entity_fault_goes_to_the_handler_instead_of_the_dead_letter(quiet_dead_letter):
     conn, counts, handled = FakeConn(), RunCounts(), []
-    with task.per_entity(conn, "first_reply", counts, {"user_id": "U1"}, on_entity=handled.append):
+    with task.per_entity(conn, "member_history", counts, {"user_id": "U1"}, on_entity=handled.append):
         raise InternalApiError("channel_not_found")
     assert [f.name for f in handled] == ["entity"]
     assert quiet_dead_letter == []

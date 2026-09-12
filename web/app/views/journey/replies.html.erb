@@ -15,7 +15,9 @@
          { label: "no reply", color: "var(--series-0)",
            count: ->(r) { r.unanswered.to_i } }
        ] %>
-    <% thin = @response_rate.each_with_index.filter_map { |r, i| i if r.first_posts_checked < HomeHelper::MIN_SAMPLE } %>
+    <% unsettled = @response_rate.each_with_index.filter_map { |r, i|
+         i if r.first_posts_checked < HomeHelper::MIN_SAMPLE ||
+              r.post_month >= Date.current.beginning_of_month } %>
     <div style="padding: 0 var(--s-sm) var(--s-2xs)">
       <div
         data-controller="chart"
@@ -23,8 +25,8 @@
         data-chart-stacked-value="true"
         data-chart-pct-value="true"
         data-chart-height-value="250"
-        <% if thin.any? %>data-chart-partial-value="<%= thin.to_json %>"
-        data-chart-partial-note-value="under <%= HomeHelper::MIN_SAMPLE %> checked, no rate published"<% end %>
+        <% if unsettled.any? %>data-chart-partial-value="<%= unsettled.to_json %>"
+        data-chart-partial-note-value="still filling in, the rate can still move"<% end %>
         data-chart-notes-value="<%= @response_rate.map { |r|
           r.median_member_latency_seconds ? "median member wait #{reply_wait(r.median_member_latency_seconds)}" : nil
         }.to_json %>"
@@ -43,8 +45,8 @@
     </div>
   <% else %>
     <p class="card-note">
-      No first post has been checked yet. The member history backfill finds first posts, then the replies walk
-      fills this in, newest cohorts first.
+      No first post has been checked yet. First posts come from the message archive, and a reply counts when
+      a member answers in the thread or names the newcomer in the channel within the hour.
     </p>
   <% end %>
 </div>

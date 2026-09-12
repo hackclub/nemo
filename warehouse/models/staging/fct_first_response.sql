@@ -48,7 +48,7 @@ channel_mentions as (
     join {{ ref('fct_message') }} m
       on m.channel_id = f.channel_id
      and m.posted_at > f.posted_at
-     and m.posted_at <= f.posted_at + interval '1 hour'
+     and m.posted_at <= f.posted_at + interval '{{ detection_window_hours }} hour'
      and m.author_id is distinct from f.newcomer_id
      and f.newcomer_id = any(m.mentioned_ids)
     group by f.newcomer_id
@@ -76,7 +76,6 @@ select
     end as confidence,
     extract(epoch from least(t.member_at, c.member_at) - f.posted_at)::integer
         as latency_seconds,
-    3600 as max_window_seconds,
     t.member_at is not null as answered_in_thread,
     c.member_at is not null as answered_in_channel,
     t.bot_at is not null as bot_replied,

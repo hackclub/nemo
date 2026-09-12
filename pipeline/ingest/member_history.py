@@ -52,7 +52,6 @@ ORDER BY 2 DESC NULLS LAST, m.user_id
 PENDING_SQL = PENDING_BODY + "LIMIT %s"
 
 KIND = "member_history"
-REPLY_KIND = "first_reply"
 
 QUEUE_SELECT = f"""
 SELECT p.user_id AS target_key, '' AS target_sub_key,
@@ -63,14 +62,6 @@ FROM ({PENDING_BODY.replace('%s', '%(p0)s')}) p
 LEFT JOIN ingest.work_item w
        ON w.work_kind = '{KIND}' AND w.target_key = p.user_id AND w.target_sub_key = ''
 WHERE w.work_item_id IS NULL OR w.state IN ('short')
-"""
-
-REPLY_SELECT = """
-SELECT h.user_id AS target_key, '' AS target_sub_key, 100 AS priority,
-       jsonb_build_object('channel', h.first_post_channel, 'first_post_ts', h.first_post_ts) AS payload,
-       NULL::integer AS expected
-FROM raw.member_message_history h
-WHERE h.user_id = ANY(%(p0)s) AND h.first_post_ts IS NOT NULL AND h.first_post_channel IS NOT NULL
 """
 
 MERGE_SQL = """
@@ -186,12 +177,6 @@ def enqueue_pending(conn):
     return work.enqueue_select(conn, KIND, QUEUE_SELECT, (MEMBER_RANGE_SOURCE,), requested_by=SOURCE)
 
 
-def enqueue_first_reply(conn, user_ids):
-    if not user_ids:
-        return 0
-    return work.enqueue_select(conn, REPLY_KIND, REPLY_SELECT, (list(user_ids),), requested_by=SOURCE)
-
-
 def run(conn, limit=BATCH_LIMIT):
     settle_from_range(conn)
     carry_forward(conn)
@@ -216,7 +201,6 @@ def run(conn, limit=BATCH_LIMIT):
                 cur.executemany(MERGE_SQL, rows)
             work.settle_many(conn, done)
             conn.commit()
-            enqueue_first_reply(conn, [item.target_key for item, _, _ in done])
             rows.clear()
             done.clear()
             counts.progress()

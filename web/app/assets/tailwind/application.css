@@ -3663,6 +3663,7 @@
     height: 24px;
     border-radius: var(--r-tight);
     background: var(--mute-soft);
+    overflow: hidden;
   }
   .fn-bar > i {
     position: absolute;

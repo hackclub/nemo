@@ -49,7 +49,6 @@ sources:
           warn_after: {count: 26, period: hour}
           error_after: {count: 50, period: hour}
       - name: member_message_history
-      - name: member_first_reply
       - name: member_channel_message
       - name: member_channel_membership
       - name: member_channel_walk

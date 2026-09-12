@@ -394,14 +394,20 @@ def check_retention_coverage(conn, client):
 
 def check_response_rate_totals(conn, client):
     ours = one(conn, """
-        select sum(first_posts_checked) - sum(unanswered)
+        select coalesce(sum(answered_by_member), 0)
         from analytics.mart_response_rate""")
     theirs = one(conn, """
-        select count(*) from analytics.fct_first_reply
-        where date_trunc('month', post_at) in
-              (select post_month from analytics.mart_response_rate)""")
-    return ("mart_response_rate, posts that drew a reply", "cross",
-            "fct_first_reply rows", ours, theirs)
+        select count(*)
+        from analytics.fct_first_response r
+        join analytics.dim_member d on d.user_id = r.newcomer_id
+        where r.answered
+          and d.cohort_at is not null
+          and not coalesce(d.is_bot, false)
+          and not coalesce(d.is_deleted, false)
+          and not coalesce(d.invite_pending, false)
+          and r.post_at <= d.cohort_at + interval '30 days'""")
+    return ("mart_response_rate, first posts a member answered", "cross",
+            "fct_first_response rows inside the newcomer window", ours, theirs)
 
 
 def check_claimed_against_slack(conn, client):

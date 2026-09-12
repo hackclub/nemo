@@ -19,7 +19,6 @@ from ingest.channel_range_pull import run as pull_channel_range
 from ingest.channel_month_pull import run as pull_channel_month
 from ingest.dim_snapshot import run as snapshot_dimensions
 from ingest.channel_range_pull import run_span as pull_channel_span
-from ingest.first_reply import run as pull_first_reply
 from ingest.member_channels import read_membership as pull_channel_membership
 from ingest.member_channels import run as pull_member_channels
 from ingest.prune import run as prune_rows
@@ -211,7 +210,6 @@ def stages():
             conn, bot_client(),
             tuned(conn, "channel_membership", "batch"),
             tuned(conn, "channel_membership", "cohort_days"))),
-        ("first_reply", lambda conn: pull_first_reply(conn)),
         ("prune", lambda conn: prune_rows(conn)),
         (TRANSFORM, lambda conn: run_dbt(conn)),
     ]
