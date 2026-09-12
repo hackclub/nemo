@@ -42,28 +42,29 @@ member_bands as (
     from population
 ),
 
-bands (band_order, activity_band) as (
+bands (band_order, activity_band, band_top) as (
     values
-        (0, '0'),
-        (1, '1'),
-        (2, '2-4'),
-        (3, '5-16'),
-        (4, '17-64'),
-        (5, '65-256'),
-        (6, '257-1024'),
-        (7, '1025-4096'),
-        (8, '>4096')
+        (0, '0', 0),
+        (1, '1', 1),
+        (2, '2-4', 4),
+        (3, '5-16', 16),
+        (4, '17-64', 64),
+        (5, '65-256', 256),
+        (6, '257-1024', 1024),
+        (7, '1025-4096', 4096),
+        (8, '>4096', null)
 )
 
 select
     b.band_order,
     b.activity_band,
+    b.band_top::integer as band_top,
     count(mb.band_order) as members,
     c.workspace_members,
     c.full_history_members,
-    'v17' as metric_version
+    'v18' as metric_version
 from bands b
 cross join coverage c
 left join member_bands mb on mb.band_order = b.band_order
-group by b.band_order, b.activity_band, c.workspace_members, c.full_history_members
+group by b.band_order, b.activity_band, b.band_top, c.workspace_members, c.full_history_members
 order by b.band_order

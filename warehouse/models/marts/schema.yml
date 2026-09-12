@@ -29,6 +29,8 @@ models:
         data_tests: [not_null, unique]
       - name: activity_band
         data_type: text
+      - name: band_top
+        data_type: integer
       - name: members
         data_type: bigint
       - name: workspace_members
