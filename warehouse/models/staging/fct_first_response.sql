@@ -1,6 +1,7 @@
 {{ config(
     materialized='incremental',
     unique_key='newcomer_id',
+    on_schema_change='fail',
     indexes=[{'columns': ['newcomer_id'], 'unique': True}]
 ) }}
 
@@ -79,6 +80,7 @@ select
     t.member_at is not null as answered_in_thread,
     c.member_at is not null as answered_in_channel,
     t.bot_at is not null as bot_replied,
+    t.bot_at as bot_at,
     least(t.member_at, c.member_at) is not null as answered,
     coalesce(w.history_complete, false) as channel_history_complete
 from first_posts f

@@ -161,18 +161,43 @@ def test_top_posters_carries_no_name_because_cachet_resolves_it():
 
 
 def test_no_mart_reads_the_search_based_reply_or_poster_sources():
-    for name in ("mart_fast_reply_vs_retention", "mart_channel_onboarding_scorecard"):
+    for name in ("mart_fast_reply_vs_retention", "mart_channel_onboarding_scorecard",
+                 "mart_response_rate"):
         sql = (WAREHOUSE_DIR / "models" / "marts" / f"{name}.sql").read_text()
         assert "fct_first_response" in sql, f"{name} not cut over"
         assert "fct_first_reply" not in sql, f"{name} still on the search crawl"
+        assert "fct_member_first_reply" not in sql, f"{name} still on the search crawl"
 
 
 def test_the_cutover_marts_bumped_their_versions():
     want = {"mart_top_posters": "v4", "mart_fast_reply_vs_retention": "v11",
-            "mart_channel_onboarding_scorecard": "v9"}
+            "mart_channel_onboarding_scorecard": "v9", "mart_response_rate": "v3"}
     for name, version in want.items():
         sql = (WAREHOUSE_DIR / "models" / "marts" / f"{name}.sql").read_text()
         assert f"'{version}' as metric_version" in sql, f"{name} is not at {version}"
+
+
+def test_the_response_rate_counts_newcomers_not_everyone_with_a_first_post():
+    sql = (WAREHOUSE_DIR / "models" / "marts" / "mart_response_rate.sql").read_text()
+    assert "cohort_at" in sql, (
+        "the archive's first post is the oldest message it holds, so a member who lurked "
+        "for years lands in whatever month they finally posted; gate on the join date"
+    )
+    for guard in ("is_bot", "is_deleted", "invite_pending"):
+        assert guard in sql, f"mart_response_rate counts {guard} accounts as newcomers"
+
+
+def test_the_response_model_exposes_when_the_bot_replied_not_just_whether():
+    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_first_response.sql").read_text()
+    assert "t.bot_at as bot_at" in sql, (
+        "mart_response_rate splits bot_replied_first from bot_first_then_member, "
+        "which needs the bot timestamp to compare against responded_at"
+    )
+    assert "on_schema_change='fail'" in sql, (
+        "on the default 'ignore' a new column never reaches the table and on "
+        "'append_new_columns' it arrives null for every row already built; either way "
+        "bot_replied_first reads zero for all of history, so fail and force a full refresh"
+    )
 
 
 def test_the_response_model_is_incremental_with_a_lookback():
