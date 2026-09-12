@@ -9,19 +9,25 @@ module Fd
       @thread = reports.find { |report| report.id == params[:thread].to_i } || reports.last
       @reports = [@thread].compact
       @conversation = IntakeConversation.for_case(family).find_by(report_id: @thread&.id)
-      @conversation_said = IntakeMessage.tail([@conversation&.id].compact)
+      @chat_limit = [params[:limit].to_i, CaseChat::SHOWN].max
+      @conversation_said = IntakeMessage.tail([@conversation&.id].compact, limit: @chat_limit)
       @queued = if @conversation
         IntakeOutbox.where(conversation_id: @conversation.id, sent_at: nil).oldest_first.to_a
       else
         []
       end
-      @chat = CaseChat.tail(family)
+      @chat = CaseChat.tail(family, limit: @chat_limit)
       @earlier_chat = CaseChat.earlier_than(family, @chat.size)
+      @earlier_said = IntakeMessage.earlier_than([@conversation&.id].compact, @conversation_said.size)
       @names = Names.for(said_by)
+      @version = ChatVersion.for(@case.id)
 
       respond_to do |format|
         format.html { render layout: false }
-        format.turbo_stream { changes_since(params[:since]) }
+        # a `limit` request (load earlier) always wants the full current window
+        # rendered, same as show.turbo_stream.erb already does by default; only a
+        # `since` catch-up poll needs changes_since's no-content/reset short-circuits
+        format.turbo_stream { changes_since(params[:since]) unless params[:limit].present? }
       end
     end
 
@@ -37,23 +43,23 @@ module Fd
     end
 
     def changes_since(since)
-      @version = ChatVersion.for(@case.id)
       return head :no_content if since == @version
 
       had = ChatVersion.parse(since)
-      @gone = []
-      return @everything = true if had.nil?
+      return if had.nil?
 
       now = ChatVersion.parts(@case.id)
       return head :reset_content if now.zip(had).any? { |here, there| here.count < there.count }
 
+      # the template always renders the full current tail (see replace_chat), so this
+      # only has to decide whether anything changed at all, not compute the delta
       chat_had, said_had, queued_had = had
-      @chat_changed = @chat.select { |line| moved?(line, chat_had, :said_at, :edited_at, :deleted_at) }
-      @said_changed = @conversation_said.select { |one| moved?(one, said_had, :posted_at, :edited_at, :deleted_at) }
-      @queued_changed = @queued.select { |row| moved?(row, queued_had, :requested_at, :sent_at, :failed_at) }
-      @gone = sent_since(queued_had)
+      changed = @chat.any? { |line| moved?(line, chat_had, :said_at, :edited_at, :deleted_at) } ||
+        @conversation_said.any? { |one| moved?(one, said_had, :posted_at, :edited_at, :deleted_at) } ||
+        @queued.any? { |row| moved?(row, queued_had, :requested_at, :sent_at, :failed_at) } ||
+        sent_since(queued_had).any?
 
-      head :no_content if [@chat_changed, @said_changed, @queued_changed, @gone].all?(&:empty?)
+      head :no_content unless changed
     end
 
     def moved?(row, had, *columns)

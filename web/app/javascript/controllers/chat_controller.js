@@ -44,6 +44,8 @@ export default class extends Controller {
   }
 
   keys(event) {
+    if (event.isComposing || event.defaultPrevented) return
+
     if (event.key === "Enter" && !event.shiftKey && !this.pickingAMention()) {
       event.preventDefault()
       if (!this.sendTarget.disabled && this.fieldTarget.value.trim()) {

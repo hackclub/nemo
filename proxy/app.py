@@ -13,17 +13,20 @@ from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 
-import budget
-import version
+# .env must be loaded before `import budget`: budget.py reads PROXY_BUDGET from the
+# process environment at import time, so importing it any earlier would see the
+# default rather than whatever .env sets.
+ENV_FILE = Path(__file__).resolve().parent / ".env"
+load_dotenv(ENV_FILE)
+
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from slack_sdk.errors import SlackApiError
 
+import budget
+import version
 from internal_client import InternalApiError, InternalAuthError, InternalClient
 from slack_client import AUTH_ERRORS, admin_client, admin_token
-
-ENV_FILE = Path(__file__).resolve().parent / ".env"
-load_dotenv(ENV_FILE)
 
 ALLOWED_METHODS = {
     "internal": frozenset(

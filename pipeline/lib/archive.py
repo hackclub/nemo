@@ -10,12 +10,14 @@ GONE = "message_deleted"
 CHANGED = "message_changed"
 WRAPPERS = frozenset({GONE, CHANGED})
 
-LATEST_SQL = """
-SELECT revision, payload_hash
-FROM archive.envelope
+EXACT_REVISION_SQL = """
+SELECT revision FROM archive.envelope
+WHERE channel_id = %s AND ts = %s AND payload_hash = %s
+"""
+
+HIGHEST_REVISION_SQL = """
+SELECT max(revision) FROM archive.envelope
 WHERE channel_id = %s AND ts = %s
-ORDER BY revision DESC
-LIMIT 1
 """
 
 ENVELOPE_SQL = """
@@ -56,7 +58,7 @@ def _upsert():
     return (
         f"INSERT INTO archive.message ({columns}, settled) VALUES ({holders}, %s) "
         f"ON CONFLICT (channel_id, ts) DO UPDATE SET {sets} "
-        f"WHERE NOT archive.message.settled OR EXCLUDED.settled"
+        f"WHERE EXCLUDED.revision >= archive.message.revision"
     )
 
 
@@ -113,13 +115,18 @@ def hold(conn, channel_id):
 
 
 def revision_for(conn, channel_id, ts, payload_hash):
+    # A payload can resurface out of order (a delayed duplicate of content that has
+    # since been superseded), so this checks every revision seen for ts, not just the
+    # latest - matching an older payload must return its own (lower) revision rather
+    # than being minted a new, higher one that would then look newer than an edit.
     with conn.cursor() as cur:
-        cur.execute(LATEST_SQL, (channel_id, ts))
+        cur.execute(EXACT_REVISION_SQL, (channel_id, ts, payload_hash))
         row = cur.fetchone()
-    if row is None:
-        return 1, True
-    revision, held = row
-    return (revision, False) if bytes(held) == payload_hash else (revision + 1, True)
+        if row is not None:
+            return row[0], False
+        cur.execute(HIGHEST_REVISION_SQL, (channel_id, ts))
+        highest = cur.fetchone()[0]
+    return (highest + 1, True) if highest is not None else (1, True)
 
 
 def message_row(channel_id, ts, revision, envelope, measured):
@@ -172,13 +179,8 @@ def message_row(channel_id, ts, revision, envelope, measured):
 
 LATEST_MANY_SQL = """
 SELECT ts, revision, payload_hash
-FROM (
-    SELECT ts, revision, payload_hash,
-           row_number() OVER (PARTITION BY ts ORDER BY revision DESC) AS rn
-    FROM archive.envelope
-    WHERE channel_id = %s AND ts = ANY(%s)
-) latest
-WHERE rn = 1
+FROM archive.envelope
+WHERE channel_id = %s AND ts = ANY(%s)
 """
 
 
@@ -187,14 +189,22 @@ def latest_for(conn, channel_id, stamps):
         return {}
     with conn.cursor() as cur:
         cur.execute(LATEST_MANY_SQL, (channel_id, list(stamps)))
-        return {ts: (revision, bytes(held)) for ts, revision, held in cur.fetchall()}
+        rows = cur.fetchall()
+    held = {}
+    for ts, revision, payload_hash in rows:
+        held.setdefault(ts, {})[bytes(payload_hash)] = revision
+    return held
 
 
-def next_revision(held, payload_hash):
-    if held is None:
+def next_revision(seen, payload_hash):
+    # seen holds every payload_hash -> revision already recorded for this ts, so an
+    # out-of-order resend of older content is recognised by its own past revision
+    # rather than minted a new one that would look newer than what has superseded it.
+    if not seen:
         return 1, True
-    revision, kept = held
-    return (revision, False) if kept == payload_hash else (revision + 1, True)
+    if payload_hash in seen:
+        return seen[payload_hash], False
+    return max(seen.values()) + 1, True
 
 
 def record_many(conn, channel_id, entries, method, transport, settled, on_reject=None):
@@ -227,7 +237,7 @@ def record_many(conn, channel_id, entries, method, transport, settled, on_reject
             envelopes.append((channel_id, ts, revision, Jsonb(envelope), payload_hash, method))
         messages.append((*built, settled))
         observations.append((channel_id, ts, transport, revision))
-        held[ts] = (revision, payload_hash)
+        held.setdefault(ts, {})[payload_hash] = revision
 
     with conn.cursor() as cur:
         if envelopes:

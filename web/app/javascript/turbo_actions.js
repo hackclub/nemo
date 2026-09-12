@@ -19,6 +19,7 @@ async function fetchChanges(frame, want, held) {
       credentials: "same-origin"
     })
     if (response.status === 204) return
+    if (response.status === 205) return fullReload(frame, want)
     if (!response.ok) return fullReload(frame, want)
 
     Turbo.renderStreamMessage(await response.text())
@@ -91,17 +92,23 @@ Turbo.StreamActions.reload_frame = function () {
     this.getAttribute("version"))
 }
 
-Turbo.StreamActions.upsert = function () {
+// The server always renders the full current tail, in order, with day headings -
+// replacing wholesale keeps chronology and headings correct even when a delayed
+// message lands out of order, which appending individual rows could not do. It also
+// covers "load earlier messages": the reply carries a wider window of the same
+// timeline, and the scrollHeight delta keeps whatever the reader was looking at in
+// place instead of jumping now that older content sits above it. stick#onLoad (see
+// the chat:changed listener below) then overrides that back to the bottom if the
+// reader was already following the live tail.
+Turbo.StreamActions.replace_chat = function () {
   const version = this.getAttribute("version")
-  const rows = Array.from(this.templateContent.children)
 
   this.targetElements.forEach((target) => {
+    const before = target.scrollHeight
+    const stuck = target.scrollTop
     if (version) target.dataset.version = version
-    rows.forEach((row) => {
-      const had = row.id && document.getElementById(row.id)
-      if (had) had.replaceWith(row)
-      else target.appendChild(row)
-    })
+    target.replaceChildren(this.templateContent.cloneNode(true))
+    target.scrollTop = stuck + (target.scrollHeight - before)
     target.dispatchEvent(new CustomEvent("chat:changed", { bubbles: true }))
   })
 }

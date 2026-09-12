@@ -55,11 +55,19 @@ def run(conn, limit=BATCH_LIMIT):
         done = []
         for row in waiting:
             event_id, channel_id, ts = row[0], row[1], row[2]
+            retry_later = False
+
+            def on_fault(fault):
+                nonlocal retry_later
+                retry_later = fault.name == "contended"
+
             with per_entity(conn, SOURCE, counts,
-                            {"event_id": str(event_id), "channel": channel_id, "ts": ts}):
+                            {"event_id": str(event_id), "channel": channel_id, "ts": ts},
+                            on_fault=on_fault):
                 project(conn, row, counts)
                 conn.commit()
-            done.append(event_id)
+            if not retry_later:
+                done.append(event_id)
         with conn.cursor() as cur:
             cur.execute(DONE_SQL, (done,))
         conn.commit()

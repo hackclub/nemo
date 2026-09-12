@@ -147,6 +147,7 @@
   <div class="<%= @tab == "report" ? "panel" : "case-tab-body" %>">
     <% if @tab == "report" %>
       <%= render "chat", kase: @case, reports: @reports, chat: @chat, earlier: @earlier_chat,
+            earlier_said: @earlier_said, limit: @chat_limit,
             messages: @conversation_said, queued: @queued, thread: @thread,
             conversation: @thread_conversation, said_count: @conversation_count %>
     <% end %>

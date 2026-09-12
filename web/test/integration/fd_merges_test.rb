@@ -84,6 +84,40 @@ class FdMergesTest < ActionDispatch::IntegrationTest
     assert_equal "nothing to mark: those cases are resolved already", flash[:alert]
   end
 
+  test "merging into an already resolved case is refused, not silently accepted" do
+    @main.update!(resolved_at: 1.hour.ago, resolution: "no_action")
+    sign_in_as(@me)
+    merge([@dup_one.id], @main.id)
+
+    assert_nil @dup_one.reload.duplicate_of
+    assert_nil @dup_one.resolved_at
+    assert_match(/already resolved, so it can't be the case that stays open/, flash[:alert])
+  end
+
+  test "merging the loser of a race does not create a cycle" do
+    sign_in_as(@me)
+    # stand in for a concurrent request that already folded @main into @dup_one
+    @main.update!(resolved_at: Time.current, resolution: "duplicate", duplicate_of: @dup_one.id)
+
+    merge([@dup_one.id], @main.id)
+
+    assert_nil @dup_one.reload.duplicate_of,
+      "the case the rest of the family already points at must stay the root"
+    assert_nil @dup_one.resolved_at
+    assert_equal @dup_one.id, @main.reload.duplicate_of, "no cycle: the earlier merge stands"
+    assert_match(/already the open case for this family/, flash[:alert])
+  end
+
+  test "a pre-existing cycle in the data is refused cleanly, not a server error" do
+    @main.update_columns(duplicate_of: @dup_one.id)
+    @dup_one.update_columns(duplicate_of: @main.id)
+    sign_in_as(@me)
+
+    merge([@dup_two.id], @main.id)
+
+    assert_match(/loops back on itself/, flash[:alert])
+  end
+
   test "a case assigned to somebody else still merges" do
     @dup_one.assign!("UOTHER")
     sign_in_as(@me)

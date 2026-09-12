@@ -11,6 +11,10 @@ export default class extends Controller {
     report: "reports", reports: "reports",
   }
 
+  // a class field, not set in connect(), so it is never undefined for a request
+  // that lands before connect() runs or fires after disconnect()
+  requestId = 0
+
   connect() {
     this.timer = null
     this.rows = []
@@ -20,6 +24,7 @@ export default class extends Controller {
 
   disconnect() {
     clearTimeout(this.timer)
+    this.requestId += 1
   }
 
   key(event) {
@@ -67,6 +72,7 @@ export default class extends Controller {
   }
 
   close() {
+    this.requestId += 1
     this.hostTarget.hidden = true
     this.inputTarget.blur()
   }
@@ -85,6 +91,7 @@ export default class extends Controller {
       asked.set("on_case", id)
     }
 
+    const id = ++this.requestId
     let payload
     try {
       const response = await fetch(`${this.urlValue}?${asked}`, {
@@ -93,8 +100,10 @@ export default class extends Controller {
       if (!response.ok) throw new Error(response.status)
       payload = await response.json()
     } catch {
-      return this.failed()
+      if (id === this.requestId) this.failed()
+      return
     }
+    if (id !== this.requestId) return
 
     this.adopt(payload.scope)
     this.draw(payload.groups, term)

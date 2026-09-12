@@ -2,6 +2,8 @@ module Fd
   class MergesController < BaseController
     permit "case.resolve"
 
+    class ClosedKeeper < StandardError; end
+
     def show
       @case = Case.find(params[:id])
       @term = params[:q].to_s.strip
@@ -42,11 +44,23 @@ module Fd
       target = chosen_target || oldest_of(ids)
       return refuse("those cases are gone") if target.nil?
 
-      root = Case.root_for(target.id)
-      marked = mark(ids - [root], root)
+      root, marked = begin
+        mark(ids, target)
+      rescue Case::Cycle
+        return refuse("case #{target.id}'s merge history loops back on itself; " \
+          "this needs a data fix before it can be merged further")
+      rescue ClosedKeeper
+        return refuse("case #{target.id} is already resolved, so it can't be the case " \
+          "that stays open; pick an open case, or reopen this one first")
+      end
 
       if marked.zero?
-        refuse("nothing to mark: those cases are resolved already")
+        if ids.include?(root)
+          refuse("case #{root} is already the open case for this family; " \
+            "refresh and check what changed")
+        else
+          refuse("nothing to mark: those cases are resolved already")
+        end
       else
         redirect_to fd_cases_path(query_params), notice: outcome(marked, ids, root)
       end
@@ -79,12 +93,23 @@ module Fd
       Case.where(id: ids).order(:opened_at, :id).first
     end
 
-    def mark(ids, root)
+    # Locks every case this request might read or write, in one fixed order, before
+    # computing the root - that serializes it against a concurrent merge touching the
+    # same cases (e.g. the opposite merge of the same pair) instead of racing it on a
+    # stale root_for read, which could otherwise fold two cases into each other.
+    def mark(ids, target)
       now = Time.current
       marked = 0
+      root = nil
 
       writing do
-        Case.where(id: ids).unresolved.order(:id).each do |kase|
+        lock_ids = (ids + [target.id]).uniq.sort
+        Case.where(id: lock_ids).order(:id).lock.load
+
+        root = Case.root_for(target.id)
+        raise ClosedKeeper if Case.where(id: root).unresolved.none?
+
+        Case.where(id: ids - [root]).unresolved.order(:id).each do |kase|
           rows = Case.where(id: kase.id, resolved_at: nil)
             .update_all(
               resolved_at: now, resolution: "duplicate",
@@ -103,7 +128,7 @@ module Fd
         end
       end
 
-      marked
+      [root, marked]
     end
 
     def outcome(marked, ids, root)

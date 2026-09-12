@@ -16,8 +16,19 @@ module Fd
     def call
       return unless Case.exists?(id: @case_id)
 
-      Turbo::StreamsChannel.broadcast_stream_to("case_#{@case_id}_chat",
-        content: self.class.tag(@case_id))
+      # the changed record's own case_id may be a case folded into a family the
+      # viewer has open under its root - ChatVersion/ChatLogsController are already
+      # family-aware, so it is enough to also reach the root's own stream
+      streamed_to.each do |target_id|
+        Turbo::StreamsChannel.broadcast_stream_to("case_#{target_id}_chat",
+          content: self.class.tag(target_id))
+      end
+    end
+
+    private
+
+    def streamed_to
+      [@case_id, Case.root_for(@case_id)].uniq
     end
   end
 end

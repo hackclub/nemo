@@ -27,6 +27,10 @@ export default class extends Controller {
   static targets = ["field", "input", "results", "store"]
   static values = { name: String, url: String, single: Boolean, preset: Array }
 
+  // a class field, not set in connect(), so it is never undefined for a request
+  // that lands before connect() runs or fires after disconnect()
+  requestId = 0
+
   connect() {
     this.chosen = new Map()
     this.timer = null
@@ -41,6 +45,7 @@ export default class extends Controller {
   disconnect() {
     clearTimeout(this.timer)
     document.removeEventListener("click", this.away)
+    this.requestId += 1
   }
 
   away(event) {
@@ -56,12 +61,15 @@ export default class extends Controller {
     const term = this.inputTarget.value.trim()
     if (term.length < 2) return this.clearResults()
 
+    const id = ++this.requestId
     const response = await fetch(`${this.urlValue}?q=${encodeURIComponent(term)}`, {
       headers: { Accept: "application/json" },
     })
+    if (id !== this.requestId) return
     if (!response.ok) return this.clearResults()
 
     const { members } = await response.json()
+    if (id !== this.requestId) return
     this.show(members.filter((member) => !this.chosen.has(member.id)))
   }
 
@@ -168,6 +176,7 @@ export default class extends Controller {
   }
 
   clearResults() {
+    this.requestId += 1
     this.resultsTarget.innerHTML = ""
     this.resultsTarget.hidden = true
   }

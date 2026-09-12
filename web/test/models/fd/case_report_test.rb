@@ -36,6 +36,33 @@ class Fd::CaseReportTest < ActiveSupport::TestCase
 
     refute report.told_of_outcome?, "a reply is not the outcome"
     report.update!(closed_at: Time.current, closed_by: "UFF1")
+    refute report.told_of_outcome?, "closing the case only means telling them was requested"
+  end
+
+  test "closing the case without a reachable conversation cannot claim delivery" do
+    report = file(closed_at: Time.current, closed_by: "UFF1")
+
+    assert_equal :unreachable, report.outcome_state
+    refute report.told_of_outcome?
+  end
+
+  test "an outcome message only counts once it is actually sent" do
+    report = file(closed_at: Time.current, closed_by: "UFF1")
+    conversation = Fd::IntakeConversation.create!(report_id: report.id, channel_id: "D0REP",
+      thread_ts: "1.0", opened_at: 6.days.ago)
+    outbox = Fd::IntakeOutbox.create!(conversation_id: conversation.id, kind: "outcome",
+      body: "here's what happened", mode: "signed", requested_by: "UFF1")
+
+    assert_equal :queued, report.outcome_state
+    refute report.told_of_outcome?
+
+    outbox.update!(failed_at: Time.current, error: "channel_not_found")
+    assert_equal :failed, report.outcome_state
+    refute report.told_of_outcome?
+
+    outbox.update!(failed_at: nil, error: nil, sent_at: Time.current)
+    assert_equal :sent, report.outcome_state
     assert report.told_of_outcome?
+    assert_match(/told the outcome/, report.closed_line({ "UFF1" => "Robin" }))
   end
 end

@@ -25,9 +25,16 @@
     <% end %>
   </select>
 
+  <% input_type = if field.kind == :text
+      "text"
+    elsif field.kind == :date && !Channels::Filter::DAY_COUNT_OPS.include?(op)
+      "date"
+    else
+      "number"
+    end %>
   <span class="cond-vals">
     <% 2.times do |slot| %>
-      <input type="<%= field.kind == :text ? "text" : "number" %>"
+      <input type="<%= input_type %>"
              name="<%= base %>[v][]" value="<%= values[slot] %>"
              class="input cond-val" step="any" autocomplete="off"
              aria-label="value <%= slot + 1 %>"

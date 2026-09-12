@@ -2884,6 +2884,9 @@
     font-weight: 500;
   }
   .dayrule::before, .dayrule::after { content: ""; height: 1px; background: var(--line-soft); flex: 1; }
+  .dayrule-more { cursor: pointer; color: var(--ink-3); }
+  .dayrule-more:hover { color: var(--ink-2); }
+  .dayrule-more:hover::before, .dayrule-more:hover::after { background: var(--line); }
 
   .composer { border-top: 1px solid var(--line); background: var(--card); padding: var(--s-xs) var(--s-md); }
   .cfield {

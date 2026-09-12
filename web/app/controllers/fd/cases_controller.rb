@@ -41,8 +41,11 @@ module Fd
       else
         []
       end
-      @chat = CaseChat.tail(family)
+      @chat_limit = CaseChat::SHOWN
+      @chat = CaseChat.tail(family, limit: @chat_limit)
       @earlier_chat = CaseChat.earlier_than(family, @chat.size)
+      @earlier_said = IntakeMessage.earlier_than([@thread_conversation&.id].compact,
+        @conversation_said.size)
       @standing_notes = Note.for_subjects(@participants.map(&:user_id)).visible.recent_first
         .group_by(&:subject_user_id)
       @thread_messages = ThreadMessage.for_threads(@threads).to_a

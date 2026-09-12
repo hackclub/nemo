@@ -190,13 +190,16 @@ module Fd
       ordered.filter_map { |id| by_id[id] }
     end
 
-    FAMILY_HOPS = 5
+    class Cycle < StandardError; end
 
-    def self.family_of(root_id, hops: FAMILY_HOPS)
+    # both walks exclude ids already seen before querying the next step, so a
+    # cycle in duplicate_of can only shrink the remaining search space - it
+    # cannot make either loop run forever.
+    def self.family_of(root_id)
       ids = [root_id]
       frontier = [root_id]
 
-      hops.times do
+      loop do
         frontier = where(duplicate_of: frontier).where.not(id: ids).ids
         break if frontier.empty?
 
@@ -206,14 +209,21 @@ module Fd
       ids
     end
 
-    def self.root_for(id, hops: 10)
+    def self.root_for(id)
+      seen = [id]
       current = id
-      hops.times do
+
+      loop do
         parent = where(id: current).pick(:duplicate_of)
         break if parent.nil?
+        if seen.include?(parent)
+          raise Cycle, "duplicate_of cycle reached case #{parent} again via #{seen.join(' -> ')}"
+        end
 
+        seen << parent
         current = parent
       end
+
       current
     end
     scope :oldest_first, -> { order(:opened_at) }
@@ -226,6 +236,15 @@ module Fd
     def merged_in
       @merged_in ||= self.class.where(id: family_ids - [id])
         .includes(:subjects).oldest_first.to_a
+    end
+
+    def family_threads
+      @family_threads ||= CaseThread.where(case_id: family_ids).to_a
+    end
+
+    def family_subject_user_ids
+      @family_subject_user_ids ||= CaseParticipant.subjects.where(case_id: family_ids)
+        .distinct.pluck(:user_id)
     end
 
     def merged?

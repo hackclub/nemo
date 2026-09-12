@@ -153,7 +153,7 @@ export default class extends Controller {
 
       let text = ""
       const label = `#${r.name}`
-      const value = r.thin || r.pct == null ? "new" : signed(r.pct)
+      const value = r.thin || r.pct == null ? (r.prior ? "n/a" : "new") : signed(r.pct)
       const cx = x + w / 2
 
       // both lines always; shrink toward the floor until the pair fits the tile

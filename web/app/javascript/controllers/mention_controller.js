@@ -13,6 +13,10 @@ export default class extends Controller {
   static targets = ["field", "results"]
   static values = { url: String, send: Boolean }
 
+  // a class field, not set in connect(), so it is never undefined for a request
+  // that lands before connect() runs or fires after disconnect()
+  requestId = 0
+
   connect() {
     this.timer = null
     this.away = this.away.bind(this)
@@ -22,6 +26,7 @@ export default class extends Controller {
   disconnect() {
     clearTimeout(this.timer)
     document.removeEventListener("click", this.away)
+    this.requestId += 1
   }
 
   away(event) {
@@ -42,12 +47,15 @@ export default class extends Controller {
     const found = this.token()
     if (!found || found[1].length < 2) return this.close()
 
+    const id = ++this.requestId
     const response = await fetch(`${this.urlValue}?q=${encodeURIComponent(found[1])}`, {
       headers: { Accept: "application/json" },
     })
+    if (id !== this.requestId) return
     if (!response.ok) return this.close()
 
     const { members } = await response.json()
+    if (id !== this.requestId) return
     this.show(members)
   }
 
@@ -119,6 +127,8 @@ export default class extends Controller {
   }
 
   keys(event) {
+    if (event.isComposing) return
+
     if (this.resultsTarget.hidden) {
       if (this.sendValue && event.key === "Enter" && !event.shiftKey) {
         event.preventDefault()
@@ -152,6 +162,7 @@ export default class extends Controller {
   }
 
   close() {
+    this.requestId += 1
     this.resultsTarget.innerHTML = ""
     this.resultsTarget.hidden = true
   }

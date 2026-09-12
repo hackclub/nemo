@@ -19,6 +19,27 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_response :no_content
   end
 
+  test "older messages beyond the default tail are reachable with a wider limit" do
+    65.times { |i| Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME",
+      body: "message #{i}", source_app: "fire_engine", said_at: (65 - i).hours.ago) }
+
+    default_tail = Fd::CaseChat.tail(@kase.id)
+    assert_equal 50, default_tail.size
+    assert_equal 15, Fd::CaseChat.earlier_than(@kase.id, default_tail.size)
+
+    get fd_case_chat_log_path(@kase, limit: 100), as: :turbo_stream
+    assert_response :success
+
+    widened = Fd::CaseChat.tail(@kase.id, limit: 100)
+    assert_equal 65, widened.size
+    assert_equal 0, Fd::CaseChat.earlier_than(@kase.id, widened.size)
+  end
+
+  test "a limit request does not fall through to the since catch-up logic" do
+    get fd_case_chat_log_path(@kase, limit: 100, since: "garbage"), as: :turbo_stream
+    assert_response :success
+  end
+
   test "a reply that went out is taken off the log" do
     conversation = with_a_reporter
     row = Fd::IntakeOutbox.create!(conversation_id: conversation.id, kind: "reply",

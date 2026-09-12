@@ -1,6 +1,9 @@
 import { Controller } from "@hotwired/stimulus"
 
 const MAX = 12
+// mirrors Channels::Filter::DAY_COUNT_OPS - these operators want a bounded day
+// count, every other date operator wants an actual calendar date
+const DAY_COUNT_OPS = new Set(["within", "before_days"])
 
 export default class extends Controller {
   static targets = ["rows", "row", "blank"]
@@ -50,10 +53,14 @@ export default class extends Controller {
       first.selected = true
     }
 
+    const opKey = ops.selectedOptions[0]?.value
     const arity = Number(ops.selectedOptions[0]?.dataset.arity ?? 1)
+    const type = kind === "text" ? "text"
+      : kind === "date" && !DAY_COUNT_OPS.has(opKey) ? "date"
+      : "number"
     row.querySelectorAll(".cond-val").forEach((box, slot) => {
       box.hidden = slot >= arity
-      box.type = kind === "text" ? "text" : "number"
+      box.type = type
       if (box.hidden) box.value = ""
     })
     const unit = row.querySelector(".cond-unit")

@@ -1,3 +1,4 @@
+import psycopg
 import pytest
 
 from ingest import event_projector
@@ -87,6 +88,35 @@ def test_the_poison_event_is_still_marked_so_the_head_advances(monkeypatch):
     run_with(monkeypatch, conn, poison_at="0.0")
     event_projector.run(conn)
     assert "E0" in conn.marked
+
+
+def test_a_lock_contention_fault_stays_pending_for_the_next_pass(monkeypatch):
+    conn = Conn(rows(3))
+    run_with(monkeypatch, conn)
+
+    def contended_at_one(conn_, channel_id, ts, envelope, measured, method, transport, settled):
+        if ts == "1.0":
+            raise psycopg.errors.LockNotAvailable("could not obtain lock")
+        return True
+
+    monkeypatch.setattr(event_projector.archive, "record", contended_at_one)
+
+    assert event_projector.run(conn) == 2
+    assert conn.marked == ["E0", "E2"]
+    assert "E1" not in conn.marked
+
+
+def test_a_deadlock_fault_also_stays_pending(monkeypatch):
+    conn = Conn(rows(1))
+    run_with(monkeypatch, conn)
+
+    def always_deadlocked(*a, **k):
+        raise psycopg.errors.DeadlockDetected("deadlock detected")
+
+    monkeypatch.setattr(event_projector.archive, "record", always_deadlocked)
+
+    assert event_projector.run(conn) == 0
+    assert conn.marked == []
 
 
 def test_a_systemic_failure_still_aborts_the_lane(monkeypatch):

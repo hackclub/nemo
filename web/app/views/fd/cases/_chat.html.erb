@@ -3,6 +3,8 @@
 <% messages = local_assigns.fetch(:messages, []) %>
 <% queued = local_assigns.fetch(:queued, []) %>
 <% earlier = local_assigns.fetch(:earlier, 0) %>
+<% earlier_said = local_assigns.fetch(:earlier_said, 0) %>
+<% limit = local_assigns.fetch(:limit, Fd::CaseChat::SHOWN) %>
 <% thread = local_assigns.fetch(:thread, reports.last) %>
 <% conversation = local_assigns.fetch(:conversation, nil) %>
 <% said_count = local_assigns.fetch(:said_count, messages.size) %>
@@ -40,7 +42,7 @@
 
   <%= turbo_stream_from chat_stream(kase) %>
   <%= render "chat_log", kase: kase, reports: [thread].compact, chat: chat, earlier: earlier,
-        messages: messages, queued: queued %>
+        earlier_said: earlier_said, limit: limit, messages: messages, queued: queued %>
 
   <% if composer && !kase.resolved? %>
     <div class="composer">

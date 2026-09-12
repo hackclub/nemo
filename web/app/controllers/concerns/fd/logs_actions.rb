@@ -23,7 +23,7 @@ module Fd
       FdHelper::ACTION_LABELS.fetch(type_key, type_key)
     end
 
-    def action_objection
+    def action_objection(kase)
       return "pick what was done" unless FdHelper::ACTION_LABELS.key?(type_key)
       return "say who it was directed at" if target_user_id.blank?
       return "#{target_user_id} is not a member id" unless target_user_id.match?(MEMBER_ID)
@@ -36,6 +36,9 @@ module Fd
       end
       if channel_id.present? && !channel_id.match?(SlackLink::CHANNEL)
         return "#{channel_id} is not a channel id"
+      end
+      if params[:cites_message_id].present? && cited_message_id(kase).nil?
+        return "that flagged message is not on this case"
       end
       if params[:reason].to_s.strip.blank?
         return wrong!(:reason, "say why this was the answer", params[:reason])
@@ -72,7 +75,7 @@ module Fd
       asked = params[:cites_message_id].presence
       return nil if asked.nil?
 
-      ThreadMessage.for_threads(kase.threads.to_a).find_by(id: asked)&.id
+      ThreadMessage.for_threads(kase.family_threads).find_by(id: asked)&.id
     end
 
     def expiry

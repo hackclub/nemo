@@ -8,6 +8,7 @@ from contextlib import redirect_stdout
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
+from psycopg import sql
 
 from ingest.analytics_pull import (
     backfill_days,
@@ -115,6 +116,52 @@ def dbt_outcomes(results):
 TABLES_ONLY = ("--select", "+config.materialized:table")
 OFF_THE_SPINE = TABLES_ONLY + ("--exclude", "fct_message+")
 
+# A full nightly build runs entirely inside this candidate schema, invisible to readers,
+# and is only swapped in for LIVE_SCHEMA (see promote_schema) once it passes its gate
+# tests - so a failing or half-finished build never touches what dashboards are reading.
+# The periodic partial refreshes in sync_worker.py deliberately skip all of this: they
+# touch a subset of models and are meant to land directly, same as before.
+LIVE_SCHEMA = "analytics"
+CANDIDATE_SCHEMA = f"{LIVE_SCHEMA}_build"
+PRIOR_SCHEMA = f"{LIVE_SCHEMA}_prior"
+READ_ROLE = "rails_app"
+
+
+def role_exists(conn, name):
+    with conn.cursor() as cur:
+        cur.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (name,))
+        return cur.fetchone() is not None
+
+
+def schema_exists(conn, name):
+    with conn.cursor() as cur:
+        cur.execute("SELECT 1 FROM pg_namespace WHERE nspname = %s", (name,))
+        return cur.fetchone() is not None
+
+
+def reset_candidate_schema(conn, name):
+    with conn.cursor() as cur:
+        cur.execute(sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(sql.Identifier(name)))
+        cur.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(name)))
+        # dbt (dbt_owner) creates and therefore owns every object it builds here, but
+        # readers need USAGE on the schema itself before promotion; grant_read's
+        # per-table post-hook only ever reaches the table, never the schema it lives in.
+        if role_exists(conn, READ_ROLE):
+            cur.execute(sql.SQL("GRANT USAGE ON SCHEMA {} TO {}")
+                        .format(sql.Identifier(name), sql.Identifier(READ_ROLE)))
+    conn.commit()
+
+
+def promote_schema(conn, live, candidate, prior):
+    with conn.cursor() as cur:
+        cur.execute(sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(sql.Identifier(prior)))
+        if schema_exists(conn, live):
+            cur.execute(sql.SQL("ALTER SCHEMA {} RENAME TO {}")
+                        .format(sql.Identifier(live), sql.Identifier(prior)))
+        cur.execute(sql.SQL("ALTER SCHEMA {} RENAME TO {}")
+                    .format(sql.Identifier(candidate), sql.Identifier(live)))
+    conn.commit()
+
 
 GATE_TESTS = (
     "assert_claimed_counts_track_slack",
@@ -149,12 +196,17 @@ def check_freshness(counts=None):
 
 def run_dbt(conn=None, select=(), wait_seconds=None):
     ensure_dbt_profile()
+    full_build = conn is not None and not select
 
     def build(counts=None):
         check_freshness(counts)
-        if dbt("run", *select) != 0:
+        candidate_args = ()
+        if full_build:
+            reset_candidate_schema(conn, CANDIDATE_SCHEMA)
+            candidate_args = ("--vars", json.dumps({"candidate_schema": CANDIDATE_SCHEMA}))
+        if dbt("run", *candidate_args, *select) != 0:
             raise RuntimeError("dbt run exited non-zero, no mart was rebuilt")
-        code = dbt("test", *select)
+        code = dbt("test", *candidate_args, *select)
         results = json.loads(RUN_RESULTS.read_text()) if RUN_RESULTS.exists() else {}
         failed, warned = dbt_outcomes(results)
         for name, status in warned:
@@ -163,8 +215,11 @@ def run_dbt(conn=None, select=(), wait_seconds=None):
             print(f"dbt test {status}: {name}")
         gated = [name for name, _ in failed if name in GATE_TESTS]
         if gated:
+            kept = f" ({CANDIDATE_SCHEMA} kept for inspection, {LIVE_SCHEMA} still serves " \
+                "the last validated build)" if full_build else ""
             raise RuntimeError(
-                f"dbt: {len(gated)} gate test(s) failed, refusing to publish: {', '.join(sorted(gated))}"
+                f"dbt: {len(gated)} gate test(s) failed, refusing to publish{kept}: "
+                f"{', '.join(sorted(gated))}"
             )
         if failed:
             print(f"dbt: {len(failed)} test(s) failed, the marts were still rebuilt")
@@ -172,6 +227,9 @@ def run_dbt(conn=None, select=(), wait_seconds=None):
                 counts.status = "partial"
         elif code != 0:
             raise RuntimeError(f"dbt test exited {code} without recording a failure")
+        if full_build:
+            promote_schema(conn, LIVE_SCHEMA, CANDIDATE_SCHEMA, PRIOR_SCHEMA)
+            print(f"dbt: promoted {CANDIDATE_SCHEMA} to {LIVE_SCHEMA}")
 
     with sole_build(wait_seconds=wait_seconds):
         if conn is None:

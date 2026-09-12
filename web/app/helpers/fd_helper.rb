@@ -536,11 +536,19 @@ module FdHelper
   end
 
   def told_entry(report)
-    return nil unless report.told_of_outcome?
-
-    ChatEntry.new(key: "told-#{report.id}", at: report.closed_at, side: "out", kind: "us",
-      who: report.closed_by, name: names[report.closed_by],
-      body: "Told them how it ended.")
+    case report.outcome_state
+    when :sent
+      ChatEntry.new(key: "told-#{report.id}", at: report.closed_at, side: "out", kind: "us",
+        who: report.closed_by, name: names[report.closed_by],
+        body: "Told them how it ended.")
+    when :unreachable
+      ChatEntry.new(key: "told-#{report.id}", at: report.closed_at, side: "out", kind: "us",
+        who: report.closed_by, name: names[report.closed_by],
+        state: "undelivered, no open conversation to tell them through",
+        body: "Could not tell them how it ended.")
+    end
+    # :queued and :failed already appear via changed_chat_entries, which renders the
+    # outbox row itself while it is unsent - showing it again here would duplicate it.
   end
 
   def chat_entry(line)
@@ -808,9 +816,18 @@ module FdHelper
 
   def report_reply_state(report)
     return [:told, report.closed_line(names)] if report.told_of_outcome?
+    return [:warn, report_outcome_problem(report)] if report.outcome_state
     return [:replied, "replied #{on_day(report.first_replied_at)}"] if report.replied?
 
     [:waiting, "no reply to the reporter yet, #{case_age_label(report.waiting_for)}"]
+  end
+
+  def report_outcome_problem(report)
+    case report.outcome_state
+    when :failed then "could not tell them the outcome: #{report.outcome_message.error}"
+    when :queued then "telling them the outcome now"
+    when :unreachable then "could not tell them the outcome: no open conversation"
+    end
   end
 
   def case_opened_by_line(kase)
