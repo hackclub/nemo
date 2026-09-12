@@ -11,7 +11,6 @@ SOURCE = "prune"
 AGED_BY = {
     "raw.member_activity_snapshot": "window_start",
     "raw.channel_activity_snapshot": "window_start",
-    "raw.member_channel_message": "searched_at",
     "raw.member_channel_membership": "seen_at",
 }
 

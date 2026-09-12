@@ -60,10 +60,10 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
     sign_in_as(hold_role!("UTESTCM1", "community_manager"))
 
     assert_difference -> { SyncRequest.count }, 1 do
-      post engine_stage_path(stage: "member_channels")
+      post engine_stage_path(stage: "channel_membership")
     end
 
-    assert_equal "member_channels", SyncRequest.recent_first.first.stage
+    assert_equal "channel_membership", SyncRequest.recent_first.first.stage
   end
 
   test "a community manager queues a full sync" do
@@ -143,7 +143,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
     sign_in_as(firefighter)
 
     assert_no_difference -> { SyncRequest.count } do
-      post engine_stage_path(stage: "member_channels")
+      post engine_stage_path(stage: "channel_membership")
     end
 
     assert_redirected_to root_path

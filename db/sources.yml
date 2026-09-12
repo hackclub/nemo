@@ -23,7 +23,7 @@ sources:
     resume: none
     retention: keep
     writes: [raw.top_posters_snapshot]
-    feeds: [mart_top_posters]
+    feeds: [fct_top_posters]
 
   member_days:
     unit_budget_seconds: 180
@@ -39,7 +39,7 @@ sources:
     prune_floor: 13 months
     writes: [raw.member_activity_snapshot, raw.analytics_day]
     runs_as: [admin_analytics_api:member]
-    feeds: [mart_onboarding_recurrence_funnel]
+    feeds: [fct_member_activity, fct_member_window]
     limits:
       batch: {default: 6, min: 1, max: 30}
 
@@ -257,24 +257,6 @@ sources:
     feeds: [mart_monthly_cohorts, mart_activity_distribution]
     limits:
       batch: {default: 1000, min: 500, max: 20000}
-
-  member_channels:
-    unit_budget_seconds: 60
-    label: Newcomer messages by channel
-    endpoint: search.messages
-    documented: true
-    credential: admin
-    cadence: daily
-    window: cohort
-    guard: page assert
-    resume: pending set
-    retention: keep
-    prune_floor: 30 days
-    writes: [raw.member_channel_message, raw.member_channel_walk]
-    feeds: [mart_newcomer_channels]
-    limits:
-      batch: {default: 600, min: 50, max: 2000}
-      cohort_days: {default: 30, min: 7, max: 90}
 
   channel_membership:
     unit_budget_seconds: 60

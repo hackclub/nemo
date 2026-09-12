@@ -34,7 +34,6 @@ SEEDED_TABLES = (
     "raw.message_activity_snapshot",
     "raw.analytics_day",
     "raw.member_message_history",
-    "raw.member_channel_message",
     "raw.member_channel_membership",
     "raw.member_channel_walk",
     "raw.top_posters_snapshot",

@@ -20,7 +20,6 @@ from ingest.channel_month_pull import run as pull_channel_month
 from ingest.dim_snapshot import run as snapshot_dimensions
 from ingest.channel_range_pull import run_span as pull_channel_span
 from ingest.member_channels import read_membership as pull_channel_membership
-from ingest.member_channels import run as pull_member_channels
 from ingest.prune import run as prune_rows
 from ingest.member_range_pull import run as pull_member_range
 from ingest.team_stats_pull import run as pull_team_stats
@@ -203,9 +202,6 @@ def stages():
         ("users_list", lambda conn: pull_users_list(conn)),
         ("admin_users", lambda conn: pull_admin_users(conn)),
         ("dim_snapshot", lambda conn: snapshot_dimensions(conn)),
-        ("member_channels", lambda conn: pull_member_channels(
-            conn, tuned(conn, "member_channels", "batch"),
-            tuned(conn, "member_channels", "cohort_days"))),
         ("channel_membership", lambda conn: pull_channel_membership(
             conn, bot_client(),
             tuned(conn, "channel_membership", "batch"),

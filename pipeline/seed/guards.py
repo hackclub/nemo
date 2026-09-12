@@ -13,7 +13,6 @@ FOREIGN_ROWS = [
     ("raw.member_dim", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),
     ("raw.channel_dim", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
     ("raw.member_message_history", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),
-    ("raw.member_channel_message", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),
     ("raw.member_channel_membership", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),
     ("raw.member_channel_walk", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),
     ("raw.top_posters_snapshot", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),

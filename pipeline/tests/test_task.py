@@ -70,7 +70,7 @@ def test_the_same_outage_is_not_dead_lettered_forever(quiet_dead_letter):
     conn, counts = FakeConn(), RunCounts()
     with pytest.raises(task.LaneAborted) as caught:
         for _ in range(task.CONSECUTIVE_FAULTS):
-            with task.per_entity(conn, "member_channels", counts, {"user_id": "U"}):
+            with task.per_entity(conn, "channel_membership", counts, {"user_id": "U"}):
                 raise InternalApiError("internal_error")
     assert f"{task.CONSECUTIVE_FAULTS} consecutive upstream faults" in str(caught.value)
     assert len(quiet_dead_letter) == task.CONSECUTIVE_FAULTS

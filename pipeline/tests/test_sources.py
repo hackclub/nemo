@@ -70,10 +70,10 @@ def test_limits_are_ordered_and_hold_their_default():
 
 
 def test_clamped_holds_a_value_inside_its_bounds():
-    assert sources.clamped("member_channels", "batch", 5) == 50
-    assert sources.clamped("member_channels", "batch", 9000) == 2000
-    assert sources.clamped("member_channels", "batch", 750) == 750
-    assert sources.clamped("member_channels", "batch", None) == 600
+    assert sources.clamped("channel_membership", "batch", 5) == 50
+    assert sources.clamped("channel_membership", "batch", 9000) == 2000
+    assert sources.clamped("channel_membership", "batch", 750) == 750
+    assert sources.clamped("channel_membership", "batch", None) == 600
 
 
 def test_an_unknown_source_is_refused_rather_than_empty():
@@ -124,3 +124,55 @@ def test_the_dbt_error_class_list_matches_the_declared_fault_vocabulary():
     assert accepted == declared, (
         f"dbt accepts {sorted(accepted)} but db/faults.yml declares {sorted(declared)}"
     )
+
+
+BUILDS_THE_WHOLE_WAREHOUSE = {"dbt"}
+
+
+def warehouse_models():
+    import re
+
+    from lib.paths import WAREHOUSE_DIR
+
+    models = {}
+    for path in (WAREHOUSE_DIR / "models").rglob("*.sql"):
+        if "target" in path.parts:
+            continue
+        body = path.read_text()
+        models[path.stem] = (
+            {tuple(pair) for pair in re.findall(r"source\(\s*'([^']+)'\s*,\s*'([^']+)'\s*\)", body)},
+            set(re.findall(r"ref\(\s*'([^']+)'\s*\)", body)),
+        )
+    return models
+
+
+def reached_from(models, tables):
+    reached = {name for name, (read, _) in models.items() if read & tables}
+    growing = True
+    while growing:
+        growing = False
+        for name, (_, refs) in models.items():
+            if name not in reached and refs & reached:
+                reached.add(name)
+                growing = True
+    return reached
+
+
+def test_every_feeds_entry_names_a_model_the_source_actually_reaches():
+    models = warehouse_models()
+    for key in sources.KEYS:
+        if key in BUILDS_THE_WHOLE_WAREHOUSE:
+            continue
+        said = sources.source(key)
+        tables = {tuple(w.split(".", 1)) for w in said["writes"] if "." in w}
+        reached = reached_from(models, tables)
+        for fed in said["feeds"]:
+            assert fed in models, f"{key} says it feeds {fed}, which is not a warehouse model"
+            assert fed in reached, (
+                f"{key} says it feeds {fed}, but nothing downstream of {sorted(tables)} reads it"
+            )
+
+
+def test_the_warehouse_build_is_the_only_source_without_a_model_list():
+    for key in BUILDS_THE_WHOLE_WAREHOUSE:
+        assert sources.source(key)["writes"] == ["analytics"], key

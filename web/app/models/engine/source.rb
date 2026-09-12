@@ -70,13 +70,6 @@ module Engine
       last_ok.nil? || last_ok < stale_after.ago
     end
 
-    def self.feeding(mart)
-      @by_mart ||= all.flat_map { |source| source.feeds.map { |fed| [fed, source] } }
-        .group_by(&:first)
-        .transform_values { |pairs| pairs.map(&:last) }
-      @by_mart[mart.to_s] || []
-    end
-
     def self.for_run(run_source)
       @by_run ||= all.to_h { |source| [source.key, source] }
         .merge(all.flat_map { |source| source.runs_as.map { |name| [name, source] } }.to_h)

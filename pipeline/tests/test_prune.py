@@ -8,7 +8,6 @@ def test_the_day_sources_share_a_table_stamp_that_is_not_their_run_name():
 
 
 def test_single_source_tables_keep_their_own_key_as_stamp():
-    assert prune.stamp_of("member_channels") == "member_channels"
     assert prune.stamp_of("channel_membership") == "channel_membership"
 
 
@@ -22,7 +21,6 @@ def test_windows_scope_shared_tables_by_source_and_leave_private_ones_alone(monk
     by_table = {(key, table): stamp for key, table, _, _, stamp in asked}
     assert by_table[("member_days", "raw.member_activity_snapshot")] == "admin_analytics_api"
     assert by_table[("channel_days", "raw.channel_activity_snapshot")] == "admin_analytics_api"
-    assert by_table[("member_channels", "raw.member_channel_message")] is None
     assert by_table[("channel_membership", "raw.member_channel_membership")] is None
     assert not any(table == "raw.analytics_day" for _, table, _, _, _ in asked)
 
@@ -68,7 +66,7 @@ def test_sweep_adds_a_source_predicate_for_a_shared_table():
 
 def test_sweep_has_no_source_predicate_for_a_private_table():
     conn = Recorder(doomed=0)
-    prune.sweep(conn, "member_channels", "raw.member_channel_message", "searched_at", 60,
+    prune.sweep(conn, "channel_membership", "raw.member_channel_membership", "seen_at", 60,
                 stamp=None, dry_run=True)
     sql, params = conn.executed[0]
     assert "source" not in sql

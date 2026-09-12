@@ -32,8 +32,7 @@ module Engine
 
     test "the stages a person can trigger are the sources themselves" do
       assert_equal Source::KEYS, SyncRequest::STAGES
-      assert_includes SyncRequest::STAGES, "member_channels", "the newest stages are triggerable"
-      assert_includes SyncRequest::STAGES, "channel_membership"
+      assert_includes SyncRequest::STAGES, "channel_membership", "the newest stages are triggerable"
     end
 
     test "a stage the file does not know is refused" do
