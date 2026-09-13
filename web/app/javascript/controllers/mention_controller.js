@@ -55,7 +55,7 @@ export default class extends Controller {
     if (!response.ok) return this.close()
 
     const { members } = await response.json()
-    if (id !== this.requestId) return
+    if (id !== this.requestId || this.token()?.[0] !== found[0]) return
     this.show(members)
   }
 
