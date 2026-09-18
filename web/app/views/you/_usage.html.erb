@@ -1,0 +1,51 @@
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Usage</h2>
+      <p class="card-sub">
+        <%= figure(profile.slack[:days_active]) %> active days
+      </p>
+    </div>
+  </div>
+  <div class="you-usage">
+    <div class="you-clients">
+      <% if profile.platforms_known? %>
+        <span class="splitbar" aria-hidden="true">
+          <i class="p-ios" style="width: <%= profile.platform_share(:days_ios) %>%"></i>
+          <i class="p-desk" style="width: <%= profile.platform_share(:days_desktop) %>%"></i>
+          <i class="p-droid" style="width: <%= profile.platform_share(:days_android) %>%"></i>
+        </span>
+        <div class="legend">
+          <span><i class="ser-1"></i>iOS <%= profile.platform_share(:days_ios) %>%</span>
+          <span><i class="ser-2"></i>desktop <%= profile.platform_share(:days_desktop) %>%</span>
+          <span><i class="ser-3"></i>Android <%= profile.platform_share(:days_android) %>%</span>
+        </div>
+      <% else %>
+        <p class="card-note">Slack has reported no platform for these days</p>
+      <% end %>
+    </div>
+
+    <dl class="facts-strip facts-wrap you-extras">
+      <div class="fact">
+        <dt>huddles</dt>
+        <dd><%= figure(profile.slack[:huddles]) %></dd>
+      </div>
+      <div class="fact">
+        <dt>files shared</dt>
+        <dd><%= figure(profile.slack[:files]) %></dd>
+      </div>
+      <div class="fact">
+        <dt>searches</dt>
+        <dd><%= figure(profile.slack[:searches]) %></dd>
+      </div>
+      <div class="fact">
+        <dt>threads started</dt>
+        <dd><%= figure(profile.held[:threads_started]) %></dd>
+      </div>
+      <div class="fact">
+        <dt>replies</dt>
+        <dd><%= figure(profile.held[:replies]) %></dd>
+      </div>
+    </dl>
+  </div>
+</div>

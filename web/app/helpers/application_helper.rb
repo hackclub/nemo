@@ -49,6 +49,8 @@ module ApplicationHelper
   end
 
   NAV_ICONS = {
+    "you" => ["M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8", "M4 21v-1a6 6 0 0 1 6-6h4",
+              "M15 21l2.5-4 2 2.5 2.5-5"],
     "overview" => ["M3 3h7v7H3z", "M14 3h7v7h-7z", "M14 14h7v7h-7z", "M3 14h7v7H3z"],
     "joining" => ["M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4", "M10 17l5-5-5-5", "M15 12H3"],
     "newcomers" => ["M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M9.5 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8",
@@ -98,6 +100,27 @@ module ApplicationHelper
     end
   end
 
+  THEME_ICONS = {
+    "light" => ["M12 2v2", "M12 20v2", "M2 12h2", "M20 12h2", "M4.9 4.9l1.4 1.4",
+                "M17.7 17.7l1.4 1.4", "M19.1 4.9l-1.4 1.4", "M6.3 17.7l-1.4 1.4"],
+    "lightsout" => ["M20 14.5A8.5 8.5 0 0 1 9.5 4a7.5 7.5 0 1 0 10.5 10.5Z"],
+    "contrast" => []
+  }.freeze
+
+  THEME_DISC = { "light" => 4, "contrast" => 8 }.freeze
+
+  def theme_icon(key)
+    tag.svg(width: 13, height: 13, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor",
+      "stroke-width": 1.8, "stroke-linecap": "round", "stroke-linejoin": "round",
+      "aria-hidden": "true") do
+      radius = THEME_DISC[key]
+      concat tag.circle(cx: 12, cy: 12, r: radius) if radius
+      concat tag.path(d: "M12 4a8 8 0 0 1 0 16Z", fill: "currentColor", stroke: "none") if
+        key == "contrast"
+      THEME_ICONS.fetch(key, []).each { |d| concat tag.path(d: d) }
+    end
+  end
+
   CACHET_FACES = "https://cachet.hackclub.com/users".freeze
 
   def menu_dots
@@ -115,7 +138,7 @@ module ApplicationHelper
     return "layouts/admin_pane" if page_section == "admin"
     return nil unless on?(:analytics)
     return "layouts/engine_pane" if controller_name == "engine"
-    return "layouts/community_pane" if %w[home journey channels].include?(controller_name)
+    return "layouts/community_pane" if %w[home journey channels you].include?(controller_name)
 
     nil
   end

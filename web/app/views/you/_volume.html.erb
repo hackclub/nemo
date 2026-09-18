@@ -1,0 +1,30 @@
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Weekly volume</h2>
+      <p class="card-sub"><%= pluralize(profile.weeks.size, "week") %></p>
+    </div>
+    <div class="card-tools">
+      <div class="legend">
+        <span><i class="ser-1"></i>messages</span>
+        <span><i class="ser-5"></i>reactions given</span>
+      </div>
+    </div>
+  </div>
+  <div
+    data-controller="chart"
+    data-chart-kind-value="line"
+    data-chart-height-value="164"
+    data-chart-days-value="false"
+    data-chart-data-value="<%= {
+      labels: profile.weeks.map { |w| w[:on].strftime("%-d %b") },
+      datasets: [
+        { label: "messages", data: profile.weeks.map { |w| w[:messages] } },
+        { label: "reactions given", data: profile.weeks.map { |w| w[:reactions] },
+          color: "var(--series-5)" }
+      ]
+    }.to_json %>"
+    data-chart-notes-value="<%= profile.weeks.map { |w|
+      "the week of #{w[:on].strftime('%-d %b %Y')}" }.to_json %>"
+  ></div>
+</div>

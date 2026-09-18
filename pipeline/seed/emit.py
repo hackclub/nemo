@@ -1,4 +1,5 @@
 import collections
+import zlib
 from datetime import date, datetime, time, timedelta, timezone
 
 from ingest.channel_range_pull import MONTH_SOURCE as CHANNEL_MONTH_SOURCE
@@ -144,10 +145,31 @@ def fold(stream):
     return by_member, by_channel, totals, first_seen
 
 
+def a_day_on(user_id, day):
+    roll = zlib.crc32(f"{user_id}:{day.isoformat()}".encode())
+    ios = 1 if roll % 100 < 62 else 0
+    desktop = 1 if (roll // 100) % 100 < 46 else 0
+    android = 1 if (roll // 10000) % 100 < 7 else 0
+    if not (ios or desktop or android):
+        desktop = 1
+    return ios, desktop, android
+
+
+def a_day_of_use(user_id, day, messages):
+    roll = zlib.crc32(f"use:{user_id}:{day.isoformat()}".encode())
+    huddles = 1 if roll % 100 < 9 else 0
+    files = min(messages, (roll // 100) % 3)
+    searches = (roll // 10000) % 7
+    return huddles, files, searches
+
+
 def member_days(by_member):
     for (user_id, day), (messages, reactions) in by_member.items():
+        ios, desktop, android = a_day_on(user_id, day)
+        huddles, files, searches = a_day_of_use(user_id, day, messages)
         yield (
-            user_id, day, day, MEMBER_DAY_SOURCE, 1, messages, messages, reactions, noon(day),
+            user_id, day, day, MEMBER_DAY_SOURCE, 1, desktop, android, ios,
+            messages, messages, reactions, huddles, files, searches, noon(day),
         )
 
 
@@ -168,7 +190,8 @@ def idle_days(by_member, members, start, days, holes):
             if (member.user_id, day) in by_member:
                 continue
             emitted += 1
-            yield (member.user_id, day, day, MEMBER_DAY_SOURCE, 0, 0, 0, 0, None)
+            yield (member.user_id, day, day, MEMBER_DAY_SOURCE,
+                   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None)
 
 
 def channel_days(by_channel, members_of):
@@ -182,16 +205,25 @@ def channel_days(by_channel, members_of):
 
 
 def member_ranges(by_member, start, end):
-    rolled = collections.defaultdict(lambda: [0, 0, 0])
-    for (user_id, _), (messages, reactions) in by_member.items():
+    rolled = collections.defaultdict(lambda: [0, 0, 0, 0, 0, 0, 0, 0, 0])
+    for (user_id, day), (messages, reactions) in by_member.items():
+        ios, desktop, android = a_day_on(user_id, day)
+        huddles, files, searches = a_day_of_use(user_id, day, messages)
         row = rolled[user_id]
         row[0] += 1
         row[1] += messages
         row[2] += reactions
-    for user_id, (days, messages, reactions) in rolled.items():
+        row[3] += desktop
+        row[4] += android
+        row[5] += ios
+        row[6] += huddles
+        row[7] += files
+        row[8] += searches
+    for user_id, counts in rolled.items():
+        days, messages, reactions, desktop, android, ios, huddles, files, searches = counts
         yield (
-            user_id, start, end, MEMBER_RANGE_SOURCE, days, messages, messages, reactions,
-            noon(end),
+            user_id, start, end, MEMBER_RANGE_SOURCE, days, desktop, android, ios,
+            messages, messages, reactions, huddles, files, searches, noon(end),
         )
 
 
@@ -373,8 +405,9 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
     )
 
     member_columns = ["user_id", "window_start", "window_end", "source", "days_active",
+                      "days_active_desktop", "days_active_android", "days_active_ios",
                       "messages_posted", "channel_messages_posted", "reactions_added",
-                      "last_active_at"]
+                      "huddles", "files_uploaded", "searches", "last_active_at"]
     channel_columns = ["channel_id", "window_start", "window_end", "source", "messages_posted",
                        "messages_posted_by_members", "members_who_posted", "members_who_viewed",
                        "reactions_added", "members_who_reacted", "huddles_initiated",

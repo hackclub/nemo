@@ -1,0 +1,62 @@
+<% content_for :page_title, "You" %>
+
+<% content_for :head_actions do %>
+  <%= render "shared/range_button", id: "you-range", label: you_range_label(@profile) %>
+  <%= link_to case_action_button("external", "Open in Slack"), slack_member_url(@profile.user_id),
+        class: "btn btn-ghost", target: "_blank", rel: "noopener" %>
+<% end %>
+
+<%= render "shared/range_modal", id: "you-range", title: "Range",
+      sub: window_note(@profile.window_start, @profile.window_end), url: you_here(@profile),
+      start_on: @profile.window_start, end_on: @profile.window_end,
+      min: @profile.floor, max: @profile.ceiling,
+      presets: You::Profile::SPANS.keys.map { |key| {
+        label: you_span_label(key),
+        current: !@profile.custom? && key == @profile.span_key,
+        href: you_here(@profile, span: (key unless key == You::Profile::DEFAULT_SPAN),
+                       start: nil, end: nil) } } %>
+
+<%= render "identity", profile: @profile %>
+
+<% unless @profile.any? %>
+  <div class="card">
+    <div class="empty-aside">
+      <%= image_tag "nemo.png", class: "empty-fish", alt: "", width: 800, height: 483 %>
+      <div class="empty-said">
+        <h2 class="card-title">Nothing to show yet</h2>
+        <p class="card-sub">your numbers start the day you first post</p>
+        <p class="delta-note">
+          <%= link_to "Find a channel", channels_path %> and say something &mdash; the nightly
+          sync picks it up from there.
+        </p>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Daily activity</h2>
+      <p class="card-sub"><%= calendar_note(@profile.calendar) %></p>
+    </div>
+    <div class="card-tools">
+      <span class="ramp" aria-hidden="true">
+        <span class="ramp-lo">quiet</span>
+        <% (0..5).each do |step| %><i class="cal-key h<%= step %>"></i><% end %>
+        <span class="ramp-hi"><%= number_with_delimiter(@profile.calendar.peak) %></span>
+      </span>
+    </div>
+  </div>
+  <%= render "shared/calendar", calendar: @profile.calendar,
+        streak_days: @profile.streak&.current_days.to_i %>
+</div>
+
+<%= render "volume", profile: @profile %>
+
+<%= render "shared/clock", clock: @profile.clock, title: "Clock" %>
+
+<%= render "channels", profile: @profile %>
+
+<%= render "usage", profile: @profile %>
+

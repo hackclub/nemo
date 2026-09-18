@@ -2,6 +2,14 @@
   <%= render "layouts/sidebar_head", letter: "C", title: "Community", said: "Hack Club Slack" %>
 
   <div class="cnav">
+    <p class="cnav-lab">Yours</p>
+    <div class="cnav-group">
+      <%= link_to you_path, title: "You",
+            aria: { current: ("page" if current_page?(you_path)) } do %>
+        <%= nav_icon("you") %><span class="trunc">You</span>
+      <% end %>
+    </div>
+
     <% if may_community?("analytics.workspace.read") %>
       <p class="cnav-lab">The journey</p>
       <div class="cnav-group">

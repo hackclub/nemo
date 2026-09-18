@@ -58,6 +58,7 @@ Rails.application.routes.draw do
       delete "replies", to: "channels#opt_out_replies", as: :opt_out
     end
   end
+  get "you", to: "you#show", as: :you
   resource :account, only: [:show], controller: "accounts"
   get "fd/settings", to: redirect("/account")
 

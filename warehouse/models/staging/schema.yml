@@ -385,6 +385,12 @@ models:
         data_type: integer
       - name: replies
         data_type: integer
+      - name: threads_started
+        data_type: integer
+      - name: questions
+        data_type: integer
+      - name: reactions_received
+        data_type: integer
       - name: channels
         data_type: integer
       - name: metric_version

@@ -1,0 +1,56 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Channels</h2>
+      <p class="card-sub">
+        top <%= profile.channels.size %> of
+        <%= number_with_delimiter(profile.channels_posted_in) %>
+      </p>
+    </div>
+  </div>
+  <% if profile.channels.empty? %>
+    <p class="card-note">you have not posted in a channel the archive holds</p>
+  <% else %>
+    <% top = profile.channels.first.first.messages.to_f %>
+    <div class="scroll">
+      <table class="data-table cols-fixed you-channel-table">
+        <colgroup>
+          <col style="width: 44px">
+          <col style="width: 30%">
+          <col>
+          <col style="width: 90px">
+          <col style="width: 88px">
+          <col style="width: 120px">
+        </colgroup>
+        <thead>
+          <tr>
+            <th class="col-rank">#</th>
+            <th>channel</th>
+            <th></th>
+            <th class="col-num">messages</th>
+            <th class="col-num">of yours</th>
+            <th class="col-num">last posted</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% profile.channels.each_with_index do |(row, name), at| %>
+            <tr>
+              <td class="col-rank"><%= at + 1 %></td>
+              <td><%= channel_name_cell(row.channel_id, name || row.channel_id) %></td>
+              <td>
+                <span class="rowbar" aria-hidden="true">
+                  <i style="width: <%= ((row.messages / top) * 100).round(1) %>%"></i>
+                </span>
+              </td>
+              <td class="col-num"><%= number_with_delimiter(row.messages) %></td>
+              <td class="col-num">
+                <%= channel_spoke_share(row.messages, profile.channel_messages_all_time) %>
+              </td>
+              <td class="col-num"><%= last_posted(row.last_at) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+</div>

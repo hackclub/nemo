@@ -81,6 +81,32 @@ module Community
 
     SQL
 
+    MEMBER = (<<~SQL + FOLD).freeze
+      with edge as (
+          select max(ds) as last_day
+          from analytics.mart_member_hour
+      ),
+
+      span as (
+          select (last_day - ?)::date as window_start, last_day as window_end
+          from edge
+      ),
+
+      local_at as (
+          select
+              ((h.ds + h.hour_of_day * interval '1 hour') at time zone 'UTC')
+                  at time zone ? as at_local,
+              h.messages,
+              s.window_start,
+              s.window_end
+          from analytics.mart_member_hour h
+          cross join span s
+          where h.ds between s.window_start - 1 and s.window_end + 1
+            and h.user_id = ?
+      )
+
+    SQL
+
     Cell = Struct.new(:day, :hour, :messages, :share, :tone, keyword_init: true)
 
     attr_reader :rows, :peak, :total, :window_start, :window_end, :zone
@@ -102,11 +128,20 @@ module Community
       build(zone, channel_id)
     end
 
-    def self.build(zone, channel_id)
+    def self.for_member(user_id, zone: DEFAULT_ZONE)
+      build(zone, nil, member_id: user_id)
+    end
+
+    def self.build(zone, channel_id, member_id: nil)
       zone = known_zone(zone)
       sql = ApplicationRecord.sanitize_sql_array(
-        channel_id ? [CHANNEL, WINDOW_DAYS - 1, zone, channel_id]
-                   : [WORKSPACE, WINDOW_DAYS - 1, zone]
+        if member_id
+          [MEMBER, WINDOW_DAYS - 1, zone, member_id]
+        elsif channel_id
+          [CHANNEL, WINDOW_DAYS - 1, zone, channel_id]
+        else
+          [WORKSPACE, WINDOW_DAYS - 1, zone]
+        end
       )
       rows = ApplicationRecord.connection.select_all(sql, "Community::Clock").to_a
       head = rows.first
