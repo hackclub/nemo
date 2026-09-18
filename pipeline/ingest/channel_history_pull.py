@@ -314,11 +314,15 @@ def drain_tail(conn, client, counts, limit, targets=None):
             remember_error(conn, channel_id, fault)
             work.fail(conn, item, fault.detail)
 
+        def renew(page, item=item):
+            work.renew(conn, item, LEASE_SECONDS)
+
         with per_entity(conn, SOURCE, counts, {"channel_id": channel_id, "kind": TAIL_KIND}, on_fault=on_fault):
             seen, pages, _ = walk_channel(
                 conn, client, channel_id,
                 oldest=revisit_from(newest, days) if newest else None,
-                counts=counts, max_pages=None if newest else BACKFILL_PAGES)
+                counts=counts, max_pages=None if newest else BACKFILL_PAGES,
+                on_page=renew)
             work.settle(conn, item, "complete", fetched=seen, note=f"{pages} page(s)")
             conn.commit()
             messages += seen
@@ -367,6 +371,7 @@ def run(conn, limit=200, full=False, channels=None, backfill_limit=None):
     client = ProxyClient.for_source("channel_history")
     work.reclaim(conn, TAIL_KIND)
     work.reclaim(conn, BACKFILL_KIND)
+    work.revive(conn, TAIL_KIND)
     work.revive(conn, BACKFILL_KIND)
     tidied = settle_walked(conn)
     if channels:
