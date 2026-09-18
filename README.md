@@ -25,3 +25,4 @@ built with rails, postgres, python, dbt, and d3. fueled by slack and an unreason
 - [palantir foundry's](https://www.palantir.com/platforms/foundry/) and [data protection and governance guidance](https://www.palantir.com/docs/foundry/security/data-protection-and-governance/). mnemosyne is independent and hackclub isn't affilated with palantir.
 - [d3](https://d3js.org/) my beloved tool for making charts that do exactly what I need them to do.
 - the hack club community and fire department are the reason this exists, and the people teaching the fish what is useful deserve the biggest thanks.
+<!-- literally 1984 -->
