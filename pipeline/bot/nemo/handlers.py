@@ -1,7 +1,7 @@
 import logging
 
 from bot.core import access, session
-from bot.nemo import answer, cards, chat
+from bot.nemo import answer, cards, chat, surface
 from bot.nemo.casework import (
     CASE_CATEGORY,
     HELD_BY,
@@ -494,7 +494,6 @@ def register(app, on_reply=None):
         log.info("nemo: refused an answer from %s on case %s", event.get("user"), case_id)
         return False
 
-    @app.event("message")
     def on_message(event, client):
         if event.get("channel") != firehouse_channel():
             return
@@ -562,3 +561,9 @@ def register(app, on_reply=None):
             gone = chat.delete(conn, event["channel"], event["deleted_ts"])
         if gone:
             log.info("nemo: chat %s was deleted in slack, the words are kept", gone)
+
+    surface.bind(
+        surface.EVENT, "message",
+        lambda ctx: on_message(ctx.payload, ctx.client),
+        tag="handlers.on_message",
+    )

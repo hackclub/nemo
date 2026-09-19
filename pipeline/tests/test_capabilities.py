@@ -64,7 +64,8 @@ def test_the_locked_capabilities_are_fd_only_and_fixed():
     assert locked == [
         "case.read", "case.open", "case.categorise", "case.note", "case.people",
         "case.thread", "case.chat", "case.reply", "case.act", "case.resolve",
-        "case.reverse", "case.reopen", "member.note", "identity.read", "channel.share",
+        "case.reverse", "case.reopen", "thread.guard", "member.note", "identity.read",
+        "channel.share",
         "engine.manage", "access.grant", "app.flip",
     ], locked
 

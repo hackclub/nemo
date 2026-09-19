@@ -97,7 +97,10 @@ def start(name, app, token):
 
 
 def main(argv=None):
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+    logging.basicConfig(
+        level=os.environ.get("LOG_LEVEL", "INFO").upper(),
+        format="%(asctime)s %(name)s %(message)s",
+    )
     load_dotenv(ENV_FILE)
 
     apps = parse_args(sys.argv[1:] if argv is None else argv).apps or list(APPS)

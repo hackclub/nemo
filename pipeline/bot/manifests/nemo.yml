@@ -7,6 +7,15 @@ features:
   bot_user:
     display_name: nemo
     always_online: true
+  shortcuts:
+    - name: Destroy thread
+      type: message
+      callback_id: destroy_thread
+      description: Keep the thread on the record, then remove it from Slack
+    - name: Lock thread
+      type: message
+      callback_id: lock_thread
+      description: Stop new replies until the lock lifts
   slash_commands:
     - command: /nemo
       description: Look somebody up, note something, open a case, or pull one up
@@ -26,8 +35,11 @@ oauth_config:
       - files:write
       - channels:read
       - channels:history
+      - channels:join
+      - channels:manage
       - groups:read
       - groups:history
+      - groups:write
       - reactions:write
       - users:read
 

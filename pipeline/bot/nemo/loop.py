@@ -1,8 +1,9 @@
 import logging
 import os
+import threading
 
 from bot.core import loops, session
-from bot.nemo import channel, chat
+from bot.nemo import channel, chat, guards, guardwork
 
 log = logging.getLogger("bot.nemo")
 
@@ -11,6 +12,7 @@ CASES = "fd_case_changed"
 CHAT = "fd_chat_changed"
 OUTBOX = "fd_outbox_waiting"
 CONVERSATION = "fd_conversation_changed"
+GUARD = "fd_thread_guard"
 
 DEFAULT_SECONDS = 300
 GIVE_UP_AFTER = 3
@@ -68,6 +70,9 @@ def once(desk, channel_id=None):
         unmirrored = chat.waiting_anywhere(conn)
         following = channel.waiting_follow_ups(conn)
         woke = channel.untold_wakes(conn)
+        guards.refresh(conn)
+        destroying = guards.pending(conn)
+        lifting = guards.lifting(conn)
 
     posted = each(missing, "still has no card", channel.post_report, client, channel_id)
     drawn = each(standing, "could not be redrawn", channel.redraw, client, channel_id)
@@ -81,16 +86,31 @@ def once(desk, channel_id=None):
     desk.echo_queued()
     desk.tick_queued()
 
+    for guard_id in destroying:
+        guardwork.run_destroy(client, guard_id)
+    for guard_id in lifting:
+        guardwork.lift_lock(client, guard_id)
+
     return posted, drawn, carried
 
 
 def start(desk, stopping, channel_id=None):
+    with session() as conn:
+        log.info("nemo: watching %s guarded thread(s)", guards.refresh(conn))
+
     def heard(channel_name, told):
         if channel_name == CHAT:
             desk.mirror(told)
         elif channel_name == OUTBOX:
             desk.echo_queued()
             desk.tick_queued()
+        elif channel_name == GUARD:
+            with session() as conn:
+                guards.refresh(conn)
+            threading.Thread(
+                target=guardwork.run_destroy, args=(desk.client, told),
+                name=f"nemo-guard-{told}", daemon=True,
+            ).start()
         elif channel_name == CONVERSATION:
             desk.caught_up(told)
             desk.tick_queued()
@@ -98,6 +118,6 @@ def start(desk, stopping, channel_id=None):
             desk.caught_up(told)
 
     return (
-        loops.watching(NAME, (CASES, CHAT, OUTBOX, CONVERSATION), heard, stopping),
+        loops.watching(NAME, (CASES, CHAT, OUTBOX, CONVERSATION, GUARD), heard, stopping),
         loops.sweeping(NAME, every(), lambda: once(desk, channel_id), stopping),
     )

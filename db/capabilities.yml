@@ -19,6 +19,7 @@ roles:
       - case.resolve
       - case.reverse
       - case.reopen
+      - thread.guard
       - member.note
       - identity.read
       - slack.link
@@ -127,6 +128,12 @@ capabilities:
     area: case
     locked: true
     events: [case/reopened]
+
+  thread.guard:
+    label: Lock or destroy a thread in Slack
+    area: case
+    locked: true
+    events: [thread_guard/opened, thread_guard/lifted, member/session_reset]
 
   member.note:
     label: Write a standing note about a member

@@ -56,6 +56,15 @@ WEB_METHODS = {
     ),
 }
 
+WRITE_METHODS = {
+    "admin": frozenset(
+        {
+            "chat.delete",
+            "admin.users.session.reset",
+        }
+    ),
+}
+
 CREDENTIALS = ("internal", "admin")
 
 
@@ -69,7 +78,10 @@ class Client:
 CLIENTS = (
     ("pipeline", "PROXY_TOKEN", ALLOWED_METHODS, ALLOWED_FILE_METHODS),
     ("web", "PROXY_TOKEN_WEB", WEB_METHODS, frozenset()),
+    ("nemo", "PROXY_TOKEN_NEMO", WRITE_METHODS, frozenset()),
 )
+
+WRITES = frozenset().union(*WRITE_METHODS.values())
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -270,6 +282,13 @@ def call(req: CallRequest, client: Client = Depends(current_client)):
                 f"method not allowed for {client.name} on the "
                 f"{req.credential} credential: {req.method}"
             ),
+        )
+
+    if req.method in WRITES:
+        logger.warning(
+            "WRITE %s by %s on %s: %s",
+            req.method, client.name, req.credential,
+            {k: v for k, v in req.params.items() if k in ("user_id", "channel", "ts")},
         )
 
     refused = budget.take(client.name, req.credential, req.method)
