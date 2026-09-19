@@ -34,13 +34,6 @@ def unconfirmed_rows(conn):
             f"{count} row(s) seeded and never fetched", "0")
 
 
-def events_waiting_to_be_projected(conn):
-    count = conn.execute(
-        "SELECT count(*) FROM raw.event_delivery WHERE projected_at IS NULL"
-    ).fetchone()[0]
-    return ("events to project", "pass" if count == 0 else "fail", f"{count} waiting", "0")
-
-
 def channels_still_to_walk(conn):
     count = conn.execute("""
         SELECT count(*)
@@ -100,7 +93,6 @@ def share_of_slacks_day_held(conn):
 CHECKS = (
     hours_since_the_last_write,
     unconfirmed_rows,
-    events_waiting_to_be_projected,
     channels_still_to_walk,
     channels_slack_will_not_return,
     threads_still_to_fetch,

@@ -14,7 +14,6 @@ from bot.nemo import app as nemo_app
 from bot.nemo import sweep, watch
 from bot.relay import Relay
 from bot.shroud import app as shroud_app
-from bot.spine import join
 from lib.config import DATABASE
 from lib.db import SeededDeployment, refuse_if_seeded
 from lib.heartbeat import beating
@@ -43,9 +42,12 @@ def needed(apps):
     return [name for name in wanted if not os.environ.get(name)]
 
 
+def worker(apps):
+    return ".".join([WORKER] + sorted(apps))
+
+
 def said(apps):
-    note = " and ".join(apps)
-    return f"{note}, joining channels" if join.joining() else f"{note}, not joining"
+    return " and ".join(apps)
 
 
 def wire(apps, relay):
@@ -99,8 +101,6 @@ def main(argv=None):
     if built:
         watch.start(relay, stopping)
         sweep.start(relay, stopping)
-    if relay.nemo_client is not None:
-        join.start(relay.nemo_client, stopping)
 
     def stop(*_):
         stopping.set()
@@ -109,7 +109,7 @@ def main(argv=None):
     signal.signal(signal.SIGINT, stop)
 
     log.info("bot: up, %s", " and ".join(apps))
-    with beating(WORKER, lambda: said(apps)):
+    with beating(worker(apps), lambda: said(apps)):
         stopping.wait()
 
     for handler in running:

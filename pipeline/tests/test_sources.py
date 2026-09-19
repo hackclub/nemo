@@ -50,7 +50,6 @@ STANDALONE_SOURCES = {
     "member_history",
     "channel_history",
     "channel_replies",
-    "event_projector",
 }
 
 

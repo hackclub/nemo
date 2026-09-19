@@ -16,6 +16,14 @@ PIPELINE_ROLE = ["PIPELINE_DB_USER", "PIPELINE_DB_PASSWORD"]
 DBT_ROLE = ["DBT_DB_USER", "DBT_DB_PASSWORD"]
 RAILS_ROLE = ["RAILS_DB_USER", "RAILS_DB_PASSWORD"]
 
+BOT_OPTIONAL = PIPELINE_ROLE + [
+    "APP_HOST",
+    "INTAKE_FILE_MAX_BYTES",
+    "NEMO_SWEEP_SECONDS",
+    "SLACK_TEAM_ID",
+    "TZ",
+]
+
 ROLES = {
     "serve": {
         "required": DATABASE + ["APP_HOST"],
@@ -108,17 +116,23 @@ ROLES = {
             "NEMO_APP_TOKEN",
             "FIREHOUSE_CHANNEL_ID",
         ],
-        "optional": PIPELINE_ROLE + [
-            "APP_HOST",
-            "INTAKE_FILE_MAX_BYTES",
-            "SLACK_TEAM_ID",
-            "SPINE_JOIN_ENABLED",
-            "SPINE_JOIN_SECONDS",
-            "SPINE_JOIN_PACE",
-            "SPINE_JOIN_LIMIT",
-            "SPINE_SPILL_FILE",
-            "TZ",
+        "optional": BOT_OPTIONAL,
+    },
+    "bot.shroud": {
+        "required": DATABASE + ["SHROUD_BOT_TOKEN", "SHROUD_APP_TOKEN"],
+        "optional": BOT_OPTIONAL + [
+            "NEMO_BOT_TOKEN",
+            "NEMO_APP_TOKEN",
+            "FIREHOUSE_CHANNEL_ID",
         ],
+    },
+    "bot.nemo": {
+        "required": DATABASE + [
+            "NEMO_BOT_TOKEN",
+            "NEMO_APP_TOKEN",
+            "FIREHOUSE_CHANNEL_ID",
+        ],
+        "optional": BOT_OPTIONAL + ["SHROUD_BOT_TOKEN", "SHROUD_APP_TOKEN"],
     },
     "provision": {
         "required": DATABASE,
@@ -141,11 +155,7 @@ DEFAULTS = {
     "TZ": "UTC",
     "NIGHTLY_AT": "03:00",
     "NIGHTLY_RUN_AT_START": "false",
-    "SPINE_JOIN_ENABLED": "false",
-    "SPINE_JOIN_SECONDS": "3600",
-    "SPINE_JOIN_PACE": "1.05",
     "ARCHIVE_POLL_SECONDS": "300",
-    "ARCHIVE_EVENT_POLL_SECONDS": "60",
     "SYNC_POLL_SECONDS": "60",
     "SEED_SCALE": "dev",
     "SEED_RNG": "1",
@@ -159,22 +169,28 @@ HEADINGS = {
     "transform": "dbt build. one shot",
     "seed": "synthetic data, then transform, then verify. one shot",
     "provision": "schemas, roles, grants and both migration sets. one shot",
-    "bot": "shroud takes the reports, nemo works them and lands events. long running",
-    "archive": "channel history, thread replies and event projection. long running",
+    "bot": "shroud takes the reports, nemo works them. long running",
+    "bot.shroud": "shroud alone, taking reports and carrying the outbox. long running",
+    "bot.nemo": "nemo alone, working the cases in the firehouse. long running",
+    "archive": "channel history and thread replies. long running",
 }
+
+BOT_NEVER = [
+    "SLACK_BOT_TOKEN",
+    "SLACK_APP_TOKEN",
+    "SLACK_TOKEN",
+    "SLACK_ADMIN_TOKEN",
+    "INTERNAL_PROXY_TOKEN",
+]
 
 NEVER = {
     "serve": [
         "SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "SLACK_TOKEN", "SLACK_ADMIN_TOKEN",
         "INTERNAL_PROXY_TOKEN",
     ],
-    "bot": [
-        "SLACK_BOT_TOKEN",
-        "SLACK_APP_TOKEN",
-        "SLACK_TOKEN",
-        "SLACK_ADMIN_TOKEN",
-        "INTERNAL_PROXY_TOKEN",
-    ],
+    "bot": BOT_NEVER,
+    "bot.shroud": BOT_NEVER,
+    "bot.nemo": BOT_NEVER,
     "sync": ["SLACK_ADMIN_TOKEN"],
     "history": ["SLACK_ADMIN_TOKEN"],
     "archive": ["SLACK_ADMIN_TOKEN"],

@@ -14,7 +14,6 @@ SOURCE = "conversations_history"
 METHOD = "conversations.history"
 PAGE_SIZE = 999
 LOOKBACK_DAYS = 7
-LIVE_LOOKBACK_DAYS = 1
 TRANSPORT = "history"
 
 THREAD_SQL = """
@@ -75,13 +74,7 @@ def thread_row(channel_id, message):
 def lookback_days(conn):
     if os.environ.get("CHANNEL_TAIL_LOOKBACK_DAYS"):
         return int(os.environ["CHANNEL_TAIL_LOOKBACK_DAYS"])
-    return LIVE_LOOKBACK_DAYS if events_landing(conn) else LOOKBACK_DAYS
-
-
-def events_landing(conn):
-    with conn.cursor() as cur:
-        cur.execute(EVENTS_LIVE_SQL)
-        return bool(cur.fetchone()[0])
+    return LOOKBACK_DAYS
 
 
 def revisit_from(newest, days=LOOKBACK_DAYS):
@@ -158,10 +151,6 @@ TAIL_KIND = "channel_tail"
 BACKFILL_PAGES = 10
 TAIL_EVERY_SECONDS = 20 * 3600
 LEASE_SECONDS = 1800
-
-EVENTS_LIVE_SQL = """
-SELECT count(*) FROM raw.event_delivery WHERE received_at > now() - interval '48 hours'
-"""
 
 BACKFILL_SELECT = """
 SELECT d.channel_id AS target_key, '' AS target_sub_key,

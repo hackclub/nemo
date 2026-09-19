@@ -20,7 +20,28 @@ services:
       timeout: 5s
       retries: 5
 
-  bot:
+  shroud:
+    profiles: ["live"]
+    image: mnemosyne:latest
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: ${TZ:-UTC}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    command: ["bot", "shroud"]
+
+  nemo:
     profiles: ["live"]
     image: mnemosyne:latest
     build:
@@ -40,7 +61,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
-    command: ["bot"]
+    command: ["bot", "nemo"]
 
   nightly-sync:
     profiles: ["live"]

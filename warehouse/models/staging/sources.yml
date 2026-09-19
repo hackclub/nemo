@@ -28,7 +28,6 @@ sources:
       - name: message_activity_snapshot
       - name: thread
       - name: channel_walk
-      - name: event_delivery
       - name: member_dim_snapshot
       - name: channel_dim_snapshot
       - name: team_stats_snapshot

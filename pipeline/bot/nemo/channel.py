@@ -280,8 +280,10 @@ def post_follow_up(client, conn, message_id, channel_id=None):
 
 def redraw(client, conn, case_id, channel_id=None):
     case = gather(conn, case_id)
-    if case is None or not case["forwarded_ts"]:
+    if case is None:
         return None
+    if not case["forwarded_ts"]:
+        return post_report(client, conn, case_id, channel_id)
 
     built = cards.report.blocks(case)
     fingerprint = digest_of(built)
@@ -522,6 +524,70 @@ def reopen(conn, case_id, by):
         after={"resolved_at": None, "resolution": None, "assignees": []},
     )
     return True
+
+
+WOKE = """
+SELECT woke_from FROM fd.cases
+WHERE id = %s AND woke_at IS NOT NULL AND woke_told_at IS NULL
+"""
+
+WOKE_TOLD = """
+UPDATE fd.cases SET woke_told_at = now() WHERE id = %s AND woke_told_at IS NULL
+"""
+
+WOKE_UNTOLD = """
+SELECT id FROM fd.cases
+WHERE woke_at IS NOT NULL AND woke_told_at IS NULL
+ORDER BY woke_at LIMIT 50
+"""
+
+FOLLOW_UPS_WAITING = """
+SELECT m.id
+FROM fd.intake_messages m
+JOIN fd.intake_conversations c ON c.id = m.conversation_id
+JOIN fd.case_reports r ON r.id = c.report_id
+WHERE r.case_id = %s AND m.direction = 'inbound' AND m.mirrored_ts IS NULL
+  AND m.deleted_at IS NULL AND c.handed_off_at IS NOT NULL
+  AND m.posted_at > c.handed_off_at
+ORDER BY m.posted_at, m.id
+"""
+
+FOLLOW_UPS_ANYWHERE = """
+SELECT DISTINCT r.case_id
+FROM fd.intake_messages m
+JOIN fd.intake_conversations c ON c.id = m.conversation_id
+JOIN fd.case_reports r ON r.id = c.report_id
+WHERE m.direction = 'inbound' AND m.mirrored_ts IS NULL AND m.deleted_at IS NULL
+  AND c.handed_off_at IS NOT NULL AND m.posted_at > c.handed_off_at
+LIMIT 100
+"""
+
+
+def waiting_follow_ups(conn):
+    return [row[0] for row in conn.execute(FOLLOW_UPS_ANYWHERE).fetchall()]
+
+
+def untold_wakes(conn):
+    return [row[0] for row in conn.execute(WOKE_UNTOLD).fetchall()]
+
+
+def carry_follow_ups(client, conn, case_id, channel_id=None):
+    carried = 0
+    for (message_id,) in conn.execute(FOLLOW_UPS_WAITING, (case_id,)).fetchall():
+        if post_follow_up(client, conn, message_id, channel_id):
+            carried += 1
+    return carried
+
+
+def tell_the_wake(client, conn, case_id, channel_id=None):
+    row = conn.execute(WOKE, (case_id,)).fetchone()
+    if row is None:
+        return None
+
+    was = row[0]
+    told = said_again(client, conn, case_id, was, channel_id)
+    conn.execute(WOKE_TOLD, (case_id,))
+    return told
 
 
 def said_again(client, conn, case_id, was, channel_id=None):

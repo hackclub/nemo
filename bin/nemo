@@ -25,7 +25,7 @@ nemo <role> [args]
   bot            shroud takes the reports, nemo works them
   sync           the nightly sync worker
   history        member_history's search backfill, drained continuously
-  archive        channel history, thread replies and event projection
+  archive        channel history and thread replies
   transform      dbt build
   seed           generate synthetic data, transform, then verify
   provision      schemas, roles, grants and both migration sets

@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 from ingest.channel_history_pull import run as walk_channels
 from ingest.channel_replies_pull import LIVE as replies_pool
 from ingest.channel_replies_pull import run as walk_replies
-from ingest.event_projector import run as project_events
 from lib import settings, shards, work
 from lib.db import (
     AlreadyRunning,
@@ -25,7 +24,6 @@ from lib.paths import ENV_FILE
 
 WORKER = "archive_worker"
 DEFAULT_POLL_SECONDS = 300
-DEFAULT_EVENT_POLL_SECONDS = 60
 DEFAULT_HISTORY_BATCH = 200
 DEFAULT_REPLIES_BUDGET = 500
 DEFAULT_REPLIES_FETCHERS = 4
@@ -90,7 +88,6 @@ def replies(conn):
 LANES = (
     ("history", history, "ARCHIVE_POLL_SECONDS", DEFAULT_POLL_SECONDS),
     ("replies", replies, "ARCHIVE_POLL_SECONDS", DEFAULT_POLL_SECONDS),
-    ("events", project_events, "ARCHIVE_EVENT_POLL_SECONDS", DEFAULT_EVENT_POLL_SECONDS),
 )
 
 

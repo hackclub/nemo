@@ -8,14 +8,15 @@ log = logging.getLogger("bot.nemo")
 CASES = "fd_case_changed"
 CHAT = "fd_chat_changed"
 OUTBOX = "fd_outbox_waiting"
+CONVERSATION = "fd_conversation_changed"
 
 
 def listen(relay, stopping):
     conn = connect()
     conn.autocommit = True
-    for heard in (CASES, CHAT, OUTBOX):
+    for heard in (CASES, CHAT, OUTBOX, CONVERSATION):
         conn.execute(f"LISTEN {heard}")
-    log.info("bot: listening for cases, chat and the outbox")
+    log.info("bot: listening for cases, chat, conversations and the outbox")
 
     try:
         for note in conn.notifies(stop_after=None, timeout=None):
@@ -29,8 +30,12 @@ def listen(relay, stopping):
                     relay.mirror(told)
                 elif note.channel == OUTBOX:
                     relay.deliver(told)
+                    relay.echo_queued()
+                elif note.channel == CONVERSATION:
+                    relay.caught_up(told)
+                    relay.tick_queued()
                 else:
-                    relay.redraw(told)
+                    relay.caught_up(told)
             except Exception as failure:
                 log.warning("bot: %s %s could not be handled: %s", note.channel, told, failure)
     finally:

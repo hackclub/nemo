@@ -63,6 +63,8 @@ def once(relay, channel_id=None):
         missing = [row[0] for row in conn.execute(UNCARDED).fetchall()]
         standing = [row[0] for row in conn.execute(WORTH_REDRAWING).fetchall()]
         unmirrored = chat.waiting_anywhere(conn)
+        following = channel.waiting_follow_ups(conn)
+        woke = channel.untold_wakes(conn)
         queued = outbox.any_waiting(conn)
 
     posted = drawn = carried = 0
@@ -72,6 +74,12 @@ def once(relay, channel_id=None):
         carried = each(
             unmirrored, "has chat that did not go out", channel.mirror, client, channel_id
         )
+        each(following, "has a follow-up still waiting",
+             channel.carry_follow_ups, client, channel_id)
+        each(woke, "was reopened without saying so",
+             channel.tell_the_wake, client, channel_id)
+        relay.echo_queued()
+        relay.tick_queued()
 
     handed = sum(relay.deliver(conversation_id) for conversation_id in queued)
     return posted, drawn, carried, handed

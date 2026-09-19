@@ -88,6 +88,16 @@ def keep(conn, file_id, body, mimetype):
     return sha
 
 
+def stash(conn, body, mimetype):
+    sha = hashlib.sha256(body).hexdigest()
+    conn.execute(
+        "INSERT INTO fd.intake_file_blobs (sha256, body, size_bytes, mimetype) "
+        "VALUES (%s, %s, %s, %s) ON CONFLICT (sha256) DO NOTHING",
+        (sha, body, len(body), mimetype),
+    )
+    return sha
+
+
 def give_up(conn, file_id, state, error):
     conn.execute(
         "UPDATE fd.intake_files SET fetch_state = %s, fetch_error = %s, "
@@ -99,6 +109,10 @@ def give_up(conn, file_id, state, error):
 ORPHAN_BLOBS = """
 DELETE FROM fd.intake_file_blobs b
 WHERE NOT EXISTS (SELECT 1 FROM fd.intake_files f WHERE f.stored_key = b.sha256)
+  AND NOT EXISTS (
+      SELECT 1 FROM fd.intake_outbox o
+      WHERE o.files @> jsonb_build_array(jsonb_build_object('sha256', b.sha256))
+  )
 """
 
 

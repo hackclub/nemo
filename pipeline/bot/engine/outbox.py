@@ -1,3 +1,5 @@
+from psycopg.types.json import Jsonb
+
 GIVE_UP_AFTER = 3
 
 STALE_CLAIM = "5 minutes"
@@ -18,12 +20,40 @@ RETURNING id
 
 CLAIMED = """
 SELECT o.id, o.conversation_id, o.kind, o.body, o.mode, o.requested_by, o.attempts,
-       c.channel_id, c.thread_ts, c.closed_at
+       c.channel_id, c.thread_ts, c.closed_at, o.files
 FROM fd.intake_outbox o
 JOIN fd.intake_conversations c ON c.id = o.conversation_id
 WHERE o.id = ANY(%s)
 ORDER BY o.requested_at
 """
+
+QUEUE = """
+INSERT INTO fd.intake_outbox
+    (conversation_id, kind, body, mode, requested_by, files, asked_in_channel, asked_at_ts)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+RETURNING id
+"""
+
+TO_ECHO = """
+SELECT o.id, o.body, o.mode, o.requested_by, r.forwarded_ts
+FROM fd.intake_outbox o
+JOIN fd.intake_conversations c ON c.id = o.conversation_id
+JOIN fd.case_reports r ON r.id = c.report_id
+WHERE o.echoed_at IS NULL AND r.forwarded_ts IS NOT NULL
+"""
+
+TO_TICK = """
+SELECT o.id, o.asked_in_channel, o.asked_at_ts, o.failed_at, o.error
+FROM fd.intake_outbox o
+WHERE o.ticked_at IS NULL AND o.asked_at_ts IS NOT NULL
+  AND (o.sent_at IS NOT NULL OR o.failed_at IS NOT NULL)
+"""
+
+ON_CASE = """
+ AND c.report_id IN (SELECT id FROM fd.case_reports WHERE case_id = %s)
+"""
+
+ECHO_ORDER = " ORDER BY o.requested_at LIMIT 50"
 
 
 def claim_sql(conversation_id=None):
@@ -59,13 +89,7 @@ DROP_ECHO = """
 UPDATE fd.intake_outbox SET echoed_at = NULL WHERE id = %s AND echoed_ts IS NULL
 """
 
-UNTICKED = """
-SELECT id, echoed_ts FROM fd.intake_outbox
-WHERE echoed_ts IS NOT NULL AND ticked_at IS NULL
-"""
-
-BY_CONVO = " AND conversation_id = %s"
-TICK_ORDER = " ORDER BY echoed_at LIMIT 20"
+TICK_ORDER = " ORDER BY o.requested_at LIMIT 50"
 
 TICKED = """
 UPDATE fd.intake_outbox SET ticked_at = now() WHERE id = %s
@@ -91,6 +115,7 @@ class Queued:
             self.channel_id,
             self.thread_ts,
             self.closed_at,
+            self.files,
         ) = row
 
     @property
@@ -115,15 +140,26 @@ def any_waiting(conn):
     return [row[0] for row in conn.execute(ANY_WAITING).fetchall()]
 
 
+def queue(conn, conversation_id, kind, body, requested_by, mode="signed",
+          files=None, asked_in=None, asked_at=None):
+    return conn.execute(
+        QUEUE,
+        (conversation_id, kind, body, mode, requested_by,
+         Jsonb(files or []), asked_in, asked_at),
+    ).fetchone()[0]
+
+
+def to_echo(conn, case_id=None):
+    sql = TO_ECHO + (ON_CASE if case_id is not None else "") + ECHO_ORDER
+    return conn.execute(sql, (case_id,) if case_id is not None else ()).fetchall()
+
+
+def to_tick(conn):
+    return conn.execute(TO_TICK + TICK_ORDER).fetchall()
+
+
 def sent(conn, outbox_id, message_id):
     conn.execute(SENT, (message_id, outbox_id))
-
-
-def unticked(conn, conversation_id=None):
-    if conversation_id is None:
-        return conn.execute(UNTICKED + TICK_ORDER).fetchall()
-
-    return conn.execute(UNTICKED + BY_CONVO + TICK_ORDER, (conversation_id,)).fetchall()
 
 
 def ticked(conn, outbox_id):

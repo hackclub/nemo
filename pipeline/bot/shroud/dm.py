@@ -3,7 +3,7 @@ import logging
 from bot.engine import intake, session
 from bot.engine import files as store
 from bot.shroud import consent, files
-from bot.shroud.reply import GOT_IT, receipt
+from bot.shroud.reply import GOT_IT, nemo_is_behind, not_taken, receipt
 
 log = logging.getLogger("bot.shroud")
 
@@ -202,6 +202,8 @@ def register(app, on_taken=None):
                 "shroud: nobody is taking reports, conversation %s stays with the reporter",
                 conversation_id,
             )
+            said, blocks = not_taken()
+            client.chat_update(channel=channel_id, ts=prompt_ts, text=said, blocks=blocks)
             return
 
         with session() as conn:
@@ -211,9 +213,21 @@ def register(app, on_taken=None):
         log.info(
             "shroud: conversation %s handed over, anonymous=%s", conversation_id, anonymous
         )
-        case_id = on_taken(conversation_id, message_id, anonymous)
+        try:
+            case_id = on_taken(conversation_id, message_id, anonymous)
+        except Exception:
+            log.exception(
+                "shroud: conversation %s could not be handed over, telling them to try again",
+                conversation_id,
+            )
+            said, blocks = not_taken()
+            client.chat_update(channel=channel_id, ts=prompt_ts, text=said, blocks=blocks)
+            return
 
-        said, blocks = receipt(case_id, anonymous)
+        with session() as conn:
+            behind = nemo_is_behind(conn)
+
+        said, blocks = receipt(case_id, anonymous, behind)
         client.chat_update(channel=channel_id, ts=prompt_ts, text=said, blocks=blocks)
 
     @app.action(consent.CANCEL)

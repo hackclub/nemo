@@ -29,7 +29,9 @@ SELECT resolved_at, resolution, duplicate_of FROM fd.cases WHERE id = %s
 """
 
 WAKE = """
-UPDATE fd.cases SET resolved_at = NULL, resolution = NULL, updated_at = now()
+UPDATE fd.cases
+SET resolved_at = NULL, resolution = NULL, updated_at = now(),
+    woke_at = now(), woke_from = %s, woke_told_at = NULL
 WHERE id = %s AND resolved_at IS NOT NULL AND duplicate_of IS NULL
 """
 
@@ -40,7 +42,7 @@ def wake(conn, case_id, by):
         return None
 
     was = row[1]
-    conn.execute(WAKE, (case_id,))
+    conn.execute(WAKE, (was, case_id))
     audit.record(
         conn,
         "case",
