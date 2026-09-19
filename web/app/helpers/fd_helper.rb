@@ -476,7 +476,6 @@ module FdHelper
 
   def chat_entries(reports, chat, messages = [], queued = [])
     said = messages.any? ? [] : opening(reports)
-    said += reports.filter_map { |report| told_entry(report) }
     (said + changed_chat_entries(reports, chat, messages, queued)).sort_by(&:at)
   end
 
@@ -533,14 +532,6 @@ module FdHelper
 
   def signing(row)
     row.mode == "signed" ? "from #{names[row.requested_by]}" : "anonymous"
-  end
-
-  def told_entry(report)
-    return nil unless report.told_of_outcome?
-
-    ChatEntry.new(key: "told-#{report.id}", at: report.closed_at, side: "out", kind: "us",
-      who: report.closed_by, name: names[report.closed_by],
-      body: "Told them how it ended.")
   end
 
   def chat_entry(line)
