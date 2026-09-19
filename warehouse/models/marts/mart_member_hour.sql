@@ -2,7 +2,8 @@
 
 {{ config(indexes=[
     {'columns': ['user_id', 'ds', 'hour_of_day'], 'unique': True},
-    {'columns': ['user_id']}
+    {'columns': ['user_id']},
+    {'columns': ['ds']}
 ]) }}
 
 with edge as (
