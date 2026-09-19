@@ -1,4 +1,4 @@
-from bot.engine import richtext
+from bot.core import richtext
 
 QUOTE_LIMIT = 2000
 CUT = "\n> [there is more, and they will see all of it]"

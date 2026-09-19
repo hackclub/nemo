@@ -1,6 +1,6 @@
 from psycopg.types.json import Jsonb
 
-from bot.engine import parse
+from bot.core import parse
 from bot.nemo.cards import report as cards
 
 CASE_OF_THREAD = """

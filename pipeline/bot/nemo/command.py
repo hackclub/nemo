@@ -1,8 +1,8 @@
 import logging
 import re
 
-from bot.engine import access, audit, richtext, session
-from bot.nemo import channel, record
+from bot.core import access, audit, richtext, session
+from bot.nemo import casework, channel, record
 from bot.nemo.cards import help as helping
 from bot.nemo.cards import report
 
@@ -192,16 +192,16 @@ def register(app):
                 audit.record(conn, "member", 0, "looked_up", user_id,
                              after={"user_id": wanted})
             elif verb == NOTE:
-                channel.member_note(conn, wanted, body, user_id)
+                casework.member_note(conn, wanted, body, user_id)
                 answer = said_only(
                     f"noted about <@{wanted}>, and it follows them to every case"
                 )
             elif verb == OPEN:
-                held = channel.open_about(conn, wanted)
+                held = casework.open_about(conn, wanted)
                 if held:
                     answer = said_only(already_open(wanted, held))
                 else:
-                    case_id = channel.open_case(conn, wanted, body, user_id)
+                    case_id = casework.open_case(conn, wanted, body, user_id)
                     answer = said_only(opened(case_id, wanted, body))
             else:
                 case = channel.gather(conn, wanted)

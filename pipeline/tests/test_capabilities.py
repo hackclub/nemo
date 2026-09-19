@@ -1,6 +1,6 @@
 import yaml
 
-from bot.engine import access
+from bot.core import access
 from lib import capabilities
 from lib.paths import PANELS_FILE
 

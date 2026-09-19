@@ -1,6 +1,6 @@
 import yaml
 
-from bot.engine import richtext
+from bot.core import richtext
 from lib.paths import CATEGORIES_FILE
 
 MENU = "case_more"

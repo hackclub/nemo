@@ -1,7 +1,7 @@
 from psycopg.types.json import Jsonb
 
-from bot.engine import parse
-from bot.engine.identity import ensure_member
+from bot.core import parse
+from bot.core.identity import ensure_member
 
 
 def root_ts(event):

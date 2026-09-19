@@ -2,21 +2,22 @@ import re
 
 import yaml
 
-from bot.engine import richtext
+from bot.core import richtext
+from bot.core.wording import (
+    escape,
+    said,
+)
 from bot.nemo.cards import edit
 from lib.paths import CATEGORIES_FILE
 
 MENTION = re.compile(r"(<[@#][A-Z0-9][A-Z0-9]*(?:\|[^>]*)?>)")
-LINK = re.compile(r"(<https?://[^\s<>]+?(?:\|[^>]*)?>)")
 SLACK_BIT = re.compile(
     r"(<[@#][A-Z0-9][A-Z0-9]*(?:\|[^>]*)?>|<https?://[^\s<>]+?(?:\|[^>]*)?>)"
 )
 
 SECTION_LIMIT = 3000
 CONTEXT_ELEMENTS = 10
-QUOTE_LIMIT = 2400
 HEADER_LIMIT = 150
-CUT = "\n[truncated, the whole thing is on the case page]"
 
 CLAIM = "case_claim"
 LOG_ACTION = "case_log_action"
@@ -35,10 +36,6 @@ def category_label(key):
     return LABELS.get(key, key.replace("_", " "))
 
 
-def escape(text):
-    return (text or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-
 def escape_but_slack(text):
     return "".join(
         part if SLACK_BIT.fullmatch(part) else escape(part)
@@ -48,15 +45,6 @@ def escape_but_slack(text):
 
 def escape_but_mentions(text):
     return escape_but_slack(text)
-
-
-def said(body):
-    text = (body or "").strip()
-    if not text:
-        return "they sent no words, only what is attached"
-    if len(text) > QUOTE_LIMIT:
-        text = text[:QUOTE_LIMIT].rstrip() + CUT
-    return text
 
 
 def quote(body):
@@ -300,14 +288,3 @@ def metadata(case):
         "event_type": "fd_case_card",
         "event_payload": {"case_id": case["case_id"], "report_id": case.get("report_id")},
     }
-
-
-def escape_but_links(text):
-    return "".join(
-        part if LINK.fullmatch(part) else escape(part)
-        for part in LINK.split(text or "")
-    )
-
-
-def to_member(body):
-    return escape_but_links(said(body))

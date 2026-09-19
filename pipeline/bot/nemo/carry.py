@@ -2,7 +2,7 @@ import logging
 import urllib.error
 import urllib.request
 
-from bot.engine import files
+from bot.core import blobs
 
 TIMEOUT = 30
 
@@ -28,7 +28,7 @@ def share(client, conn, message_id, channel_id, thread_ts):
     sent = 0
 
     for file_id, name, mimetype, sha, width in rows:
-        body, kept_type = files.body_of(conn, sha)
+        body, kept_type = blobs.body_of(conn, sha)
         if body is None:
             log.warning("nemo: file %s says stored but has no bytes", file_id)
             continue
@@ -60,7 +60,7 @@ def share(client, conn, message_id, channel_id, thread_ts):
 
 
 def fetch(url, token, limit):
-    if not files.slack_url(url):
+    if not blobs.slack_url(url):
         log.warning("nemo: %s is not an https slack url, not asking for it", url)
         return None
 

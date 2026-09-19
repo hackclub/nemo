@@ -8,12 +8,8 @@ import threading
 from dotenv import load_dotenv
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
-from bot import APPS, NEEDS
-from bot.engine import session, shutdown
-from bot.nemo import app as nemo_app
-from bot.nemo import sweep, watch
-from bot.relay import Relay
-from bot.shroud import app as shroud_app
+from bot import APPS, NEEDS, NEMO, SHROUD
+from bot.core import session, shutdown
 from lib.config import DATABASE
 from lib.db import SeededDeployment, refuse_if_seeded
 from lib.heartbeat import beating
@@ -50,15 +46,46 @@ def said(apps):
     return " and ".join(apps)
 
 
-def wire(apps, relay):
-    built = {}
-    if "shroud" in apps:
-        built["shroud"] = (shroud_app.build(relay.taken), shroud_app.app_token())
-        relay.shroud_client = built["shroud"][0].client
-    if "nemo" in apps:
-        built["nemo"] = (nemo_app.build(relay.answered), nemo_app.app_token())
-        relay.nemo_client = built["nemo"][0].client
-    return built
+def wire_shroud(built, sides):
+    from bot.shroud import app as shroud_app
+    from bot.shroud.carrier import Carrier
+
+    carrier = Carrier()
+    app = shroud_app.build(carrier.taken)
+    carrier.client = app.client
+    built[SHROUD] = (app, shroud_app.app_token())
+    sides[SHROUD] = carrier
+
+
+def wire_nemo(built, sides):
+    from bot.nemo import app as nemo_app
+    from bot.nemo.desk import Desk
+
+    desk = Desk()
+    app = nemo_app.build(desk.answered)
+    desk.client = app.client
+    built[NEMO] = (app, nemo_app.app_token())
+    sides[NEMO] = desk
+
+
+def wire(apps):
+    built, sides = {}, {}
+    if SHROUD in apps:
+        wire_shroud(built, sides)
+    if NEMO in apps:
+        wire_nemo(built, sides)
+    return built, sides
+
+
+def start_loops(sides, stopping):
+    if SHROUD in sides:
+        from bot.shroud import loop as shroud_loop
+
+        shroud_loop.start(sides[SHROUD], stopping)
+    if NEMO in sides:
+        from bot.nemo import loop as nemo_loop
+
+        nemo_loop.start(sides[NEMO], stopping)
 
 
 def start(name, app, token):
@@ -93,14 +120,11 @@ def main(argv=None):
         shutdown()
         return 78
 
-    relay = Relay()
-    built = wire(apps, relay)
+    built, sides = wire(apps)
     running = [start(name, *made) for name, made in built.items()]
     stopping = threading.Event()
 
-    if built:
-        watch.start(relay, stopping)
-        sweep.start(relay, stopping)
+    start_loops(sides, stopping)
 
     def stop(*_):
         stopping.set()

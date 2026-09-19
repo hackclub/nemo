@@ -1,4 +1,4 @@
-from bot.engine import audit
+from bot.core import audit
 
 SHARED = """
 SELECT s.source_channel_id,

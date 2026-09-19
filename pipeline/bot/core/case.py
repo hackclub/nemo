@@ -1,4 +1,4 @@
-from bot.engine import audit
+from bot.core import audit
 
 CONVERSATION = """
 SELECT c.report_id, r.case_id, c.member_user_id

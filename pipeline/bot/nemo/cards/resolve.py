@@ -1,6 +1,6 @@
 import yaml
 
-from bot.engine import richtext
+from bot.core import richtext
 from bot.nemo.cards import action
 from lib.paths import RESOLUTIONS_FILE
 

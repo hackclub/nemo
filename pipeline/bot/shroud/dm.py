@@ -1,8 +1,7 @@
 import logging
 
-from bot.engine import intake, session
-from bot.engine import files as store
-from bot.shroud import consent, files
+from bot.core import blobs, intake, session
+from bot.shroud import consent, intake_files
 from bot.shroud.reply import GOT_IT, nemo_is_behind, not_taken, receipt
 
 log = logging.getLogger("bot.shroud")
@@ -120,7 +119,7 @@ def register(app, on_taken=None):
 
     def keep_files(client):
         try:
-            return files.drain(client.token)
+            return intake_files.drain(client.token)
         except Exception:
             log.exception("shroud: could not keep the files, they stay pending")
             return 0
@@ -240,11 +239,11 @@ def register(app, on_taken=None):
             conn.execute(RETIRE_PROMPT, (consent.DONE, channel_id, prompt_ts))
             row = conn.execute(CONVERSATION_OF, (channel_id, prompt_ts)).fetchone()
             if row:
-                dropped, blobs = store.purge_conversation(conn, row[0], DECLINED_BY)
+                dropped, removed = blobs.purge_conversation(conn, row[0], DECLINED_BY)
                 if dropped:
                     log.info(
                         "shroud: conversation %s was declined, %s file(s) purged, "
-                        "%s blob(s) removed", row[0], dropped, blobs,
+                        "%s blob(s) removed", row[0], dropped, removed,
                     )
 
         client.chat_update(
