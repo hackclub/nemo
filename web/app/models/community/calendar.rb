@@ -73,10 +73,11 @@ module Community
 
     def thresholds_for(counts)
       live = counts.reject(&:zero?).sort
-      return [] if live.empty?
+      under = live.take_while { |count| count < live.last.to_i }
+      return [] if under.empty?
 
       (1...STEPS).map do |i|
-        live[((live.length * i) / STEPS.to_f).floor.clamp(0, live.length - 1)]
+        under[((under.length * i) / STEPS.to_f).floor.clamp(0, under.length - 1)]
       end
     end
 
