@@ -6,14 +6,6 @@
 <% if people.size.zero? %>
   <div class="empty">
     <p class="empty-title">Nobody is on this case yet</p>
-    <p class="card-note">
-      A case needs a subject before it can be resolved. If a note named somebody,
-      they are offered below.
-    </p>
-    <div class="empty-do">
-      <%= opens_modal "case.people", "Say who it is about", opens: "add-person", on: kase,
-            css: "btn btn-primary" %>
-    </div>
   </div>
 <% end %>
 
