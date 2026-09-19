@@ -117,8 +117,9 @@ models:
   - name: fct_member_activity
     description: >
       One row per member per day, for days the member-day source has loaded.
-      Grain (user_id, window_start, source), inherited from the primary key of
-      raw.member_activity_snapshot and the window_start = window_end filter.
+      Grain (user_id, window_start): where a day carries both an API pull and an
+      imported row, the API pull wins, so a later repull of an imported day
+      replaces it rather than adding to it.
     columns:
       - name: user_id
         data_tests: [not_null]

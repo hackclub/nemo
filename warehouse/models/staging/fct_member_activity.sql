@@ -1,4 +1,4 @@
-select
+select distinct on (user_id, window_start)
     user_id,
     window_start,
     window_end,
@@ -24,7 +24,12 @@ where window_start = window_end
   and exists (
       select 1
       from {{ ref('fct_analytics_day') }} d
-      where d.source = 'member_day'
+      where d.source in ('member_day', 'member_day_import')
         and d.ds = a.window_start
         and d.loaded
   )
+order by
+    user_id,
+    window_start,
+    case source when 'admin_analytics_api' then 0 else 1 end,
+    source
