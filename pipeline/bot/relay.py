@@ -302,9 +302,10 @@ class Relay:
             waiting = outbox.to_tick(conn)
 
         for outbox_id, channel_id, ts, failed_at, error in waiting:
-            self.mark((channel_id, ts), answer.STUCK if failed_at else answer.SENT)
+            room = channel_id or channel.firehouse_channel()
+            self.mark((room, ts), answer.STUCK if failed_at else answer.SENT)
             if failed_at:
-                self.tell_them_why(channel_id, ts, error)
+                self.tell_them_why(room, ts, error)
             with session() as conn:
                 outbox.ticked(conn, outbox_id)
 

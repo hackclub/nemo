@@ -43,9 +43,10 @@ WHERE o.echoed_at IS NULL AND r.forwarded_ts IS NOT NULL
 """
 
 TO_TICK = """
-SELECT o.id, o.asked_in_channel, o.asked_at_ts, o.failed_at, o.error
+SELECT o.id, o.asked_in_channel, coalesce(o.asked_at_ts, o.echoed_ts), o.failed_at, o.error
 FROM fd.intake_outbox o
-WHERE o.ticked_at IS NULL AND o.asked_at_ts IS NOT NULL
+WHERE o.ticked_at IS NULL
+  AND coalesce(o.asked_at_ts, o.echoed_ts) IS NOT NULL
   AND (o.sent_at IS NOT NULL OR o.failed_at IS NOT NULL)
 """
 

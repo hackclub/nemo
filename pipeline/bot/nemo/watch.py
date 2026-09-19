@@ -31,6 +31,7 @@ def listen(relay, stopping):
                 elif note.channel == OUTBOX:
                     relay.deliver(told)
                     relay.echo_queued()
+                    relay.tick_queued()
                 elif note.channel == CONVERSATION:
                     relay.caught_up(told)
                     relay.tick_queued()
