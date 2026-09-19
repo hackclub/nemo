@@ -1,4 +1,5 @@
-<div id="said-<%= entry.key %>" class="msg <%= entry.side == "out" ? "out" : "in" %>">
+<div id="said-<%= entry.key %>" class="msg <%= entry.side == "out" ? "out" : "in" %>"
+     data-kind="<%= entry.kind %>">
   <%= face(entry.who) %>
   <div>
     <div class="msg-head">

@@ -4,7 +4,7 @@
       data: { src: fd_case_chat_log_path(kase, thread: reports.first&.id) } do %>
 <div id="chat-said-<%= kase.id %>" class="chatscroll" data-version="<%= Fd::ChatVersion.for(kase.id) %>">
   <% if earlier.positive? %>
-    <p class="dayrule"><%= pluralize(earlier, "earlier message") %></p>
+    <p class="dayrule" data-earlier><%= pluralize(earlier, "earlier message") %></p>
   <% end %>
 
   <% last_day = nil %>
@@ -16,6 +16,8 @@
     <% end %>
     <%= render "fd/cases/said", entry: entry %>
   <% end %>
+
+  <p class="dayrule" data-nothing hidden>Nothing has gone to the reporter yet.</p>
 
   <% if said.empty? %>
     <div id="chat-empty-<%= kase.id %>" class="empty">

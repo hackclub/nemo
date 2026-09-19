@@ -2899,6 +2899,8 @@
     flex-direction: column;
   }
   .chatscroll > :first-child { margin-top: auto; }
+  .chat-only { flex: none; margin-left: auto; }
+  .chatwrap.only-replies .msg[data-kind="chat"] { display: none; }
 
   .msg {
     display: grid;

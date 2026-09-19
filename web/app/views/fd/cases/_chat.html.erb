@@ -7,7 +7,8 @@
 <% conversation = local_assigns.fetch(:conversation, nil) %>
 <% said_count = local_assigns.fetch(:said_count, messages.size) %>
 
-<div class="chatwrap" data-controller="stick catch-up presence"
+<div class="chatwrap" data-controller="stick catch-up presence chat-filter"
+     data-chat-filter-key-value="<%= kase.id %>"
      data-catch-up-frame-value="<%= chat_log_id(kase) %>"
      data-presence-case-value="<%= kase.id %>"
      data-presence-me-value="<%= current_account&.user_id %>">
@@ -32,6 +33,14 @@
       <span class="grow two-line">
         <b>Team chat</b>
         <span>no report came in, so nothing here reaches a reporter</span>
+      </span>
+    <% end %>
+    <% if thread %>
+      <span class="segmented chat-only" role="group" aria-label="Which messages to show">
+        <button type="button" aria-pressed="true" data-chat-filter-target="all"
+                data-action="chat-filter#showAll">All</button>
+        <button type="button" aria-pressed="false" data-chat-filter-target="replies"
+                data-action="chat-filter#onlyReplies">Replies</button>
       </span>
     <% end %>
     <% here = Fd::ChatPresence.here(kase.id) %>
