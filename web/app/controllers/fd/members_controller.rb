@@ -51,11 +51,8 @@ module Fd
 
     def search
       term = params[:q].to_s.strip
-      query = MemberQuery.new({ "q" => term }, actor: current_account)
-      results = term.length >= Member::MIN_TERM ? query.rows.first(Member::LIMIT) : []
-      if results.empty? && term.match?(Member::MEMBER_ID)
-        results = Member.where(user_id: term.delete_prefix("@").upcase).to_a
-      end
+      results = Member.search(term, actor: current_account, limit: Member::LIMIT,
+        live_only: true).to_a
       log_identity_picker_hits(results) if identity_search?(term)
 
       faces = Names.for(results.map(&:user_id))

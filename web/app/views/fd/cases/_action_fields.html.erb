@@ -3,10 +3,11 @@
   <%= select_tag :type_key, options_for_select(action_options),
         class: "select action-type", id: nil %>
 </label>
-<label class="field-label">
-  Directed at
-  <%= text_field_tag :target_user_id, target, class: "input", id: nil %>
-</label>
+<div class="field-label">
+  <span>Directed at</span>
+  <%= render "fd/member_picker", name: "target_user_id", single: true,
+        label: "search for who this is directed at", preset: preset_faces(target) %>
+</div>
 <label class="field-label when when-expiry">
   Until when
   <%= date_field_tag :expires_on, nil, class: "input", id: nil %>

@@ -1,6 +1,6 @@
 class PeopleSearch
   MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/i
-  MIN_TERM = 2
+  MIN_TERM = Fd::Member::MIN_TERM
   LIMIT = 8
 
   Found = Struct.new(:id, :name, :handle, :initial, :deleted, :source, keyword_init: true)

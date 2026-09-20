@@ -750,6 +750,14 @@ module FdHelper
     tag.span(class: ["subjfaces", ("subjfaces-many" if ids.many?)]) { safe_join(parts) }
   end
 
+  def preset_faces(user_ids)
+    ids = Array(user_ids).compact.reject(&:blank?).uniq
+    return [] if ids.empty?
+
+    known = Fd::Names.for(ids)
+    ids.map { |id| { id: id, name: known[id], initial: known.member(id)&.initial || id[0] } }
+  end
+
   def slack_face(user_id, css: "row-avatar")
     return face(user_id, css: css) if user_id.blank?
 

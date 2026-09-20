@@ -25,7 +25,7 @@ function named(id, name) {
 
 export default class extends Controller {
   static targets = ["field", "input", "results", "store"]
-  static values = { name: String, url: String, single: Boolean, preset: Array }
+  static values = { name: String, url: String, single: Boolean, preset: Array, least: Number }
 
   connect() {
     this.chosen = new Map()
@@ -40,6 +40,7 @@ export default class extends Controller {
 
   disconnect() {
     clearTimeout(this.timer)
+    this.asking?.abort()
     document.removeEventListener("click", this.away)
   }
 
@@ -54,14 +55,27 @@ export default class extends Controller {
 
   async look() {
     const term = this.inputTarget.value.trim()
-    if (term.length < 2) return this.clearResults()
+    this.asking?.abort()
+    if (term.length < (this.leastValue || 3)) return this.clearResults()
 
-    const response = await fetch(`${this.urlValue}?q=${encodeURIComponent(term)}`, {
-      headers: { Accept: "application/json" },
-    })
+    const asking = new AbortController()
+    this.asking = asking
+
+    let response
+    try {
+      response = await fetch(`${this.urlValue}?q=${encodeURIComponent(term)}`, {
+        headers: { Accept: "application/json" },
+        signal: asking.signal,
+      })
+    } catch (error) {
+      if (error.name !== "AbortError") this.clearResults()
+      return
+    }
+    if (asking.signal.aborted) return
     if (!response.ok) return this.clearResults()
 
     const { members } = await response.json()
+    if (asking.signal.aborted) return
     this.show(members.filter((member) => !this.chosen.has(member.id)))
   }
 

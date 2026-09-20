@@ -131,4 +131,18 @@ class FdMemberSearchTest < ActionDispatch::IntegrationTest
     assert_includes look(@member.name).map { |row| row["id"] }, @member.user_id
     assert_equal before, AccessLog.count
   end
+  test "the picker never runs the roster aggregates" do
+    sql = Fd::Member.search("dra", actor: @me, limit: 8, live_only: true).to_sql
+
+    assert_not_includes sql, "case_participants", "a type-ahead must not aggregate conduct"
+    assert_not_includes sql, "fd.actions"
+    assert_not_includes sql, "notes"
+  end
+
+  test "a term too short for a trigram is refused rather than scanned" do
+    sign_in_as(@me)
+
+    assert_empty look("dr"), "two characters cannot use the trigram index"
+    assert_equal 3, Fd::Member::MIN_TERM
+  end
 end

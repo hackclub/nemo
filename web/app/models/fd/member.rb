@@ -7,7 +7,7 @@ module Fd
       inverse_of: :member, dependent: nil
 
     MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/i
-    MIN_TERM = 2
+    MIN_TERM = 3
     LIMIT = 8
 
     scope :live, -> { where(is_deleted: false, is_bot: false) }
@@ -16,7 +16,7 @@ module Fd
     TERM_FIELDS = %w[display_name handle].freeze
     IDENTITY_TERM_FIELDS = %w[real_name first_name last_name email].freeze
 
-    def self.search(term, actor: nil, limit: LIMIT)
+    def self.search(term, actor: nil, limit: LIMIT, live_only: false)
       term = term.to_s.strip.delete_prefix("@")
       return where(user_id: term.upcase).limit(1) if term.match?(MEMBER_ID) && exists?(user_id: term.upcase)
       return none if term.length < MIN_TERM
@@ -26,6 +26,7 @@ module Fd
       joined = left_joins(:identity)
       hits = joined.where(user_id: named(like))
       hits = hits.or(joined.where(user_id: identified(like))) if identity
+      hits = hits.where(is_deleted: false, is_bot: false) if live_only
       hits.order(Arel.sql(match_rank(term, identity)), :is_deleted, :is_bot)
         .by_name.limit(limit)
     end
