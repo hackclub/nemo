@@ -1,6 +1,6 @@
 from bot.core.wording import said, to_member
 from bot.nemo import carry, channel
-from bot.nemo.cards import report
+from bot.nemo.cards import edit, report
 
 ROOM = "C1"
 THREAD = "100.000"
@@ -274,3 +274,23 @@ def test_nemo_cites_every_reachable_source_itself():
 def test_a_source_with_no_words_is_not_cited_as_an_empty_quote():
     case = dict(card_case(), shares=[linked(source_body="", is_reachable=False)])
     assert report.what_they_reported(case) == []
+
+
+def test_the_card_menu_holds_every_choice_slack_allows():
+    case = {"case_id": 19, "category_key": None, "live_actions": 1,
+            "assignees": ["UME"], "resolved_at": None}
+    menu = edit.menu(case, mine=True)
+
+    assert menu["type"] != "overflow", "an overflow takes no more than five options"
+    assert len(menu["options"]) == 6
+    assert menu["placeholder"]["type"] == "plain_text"
+
+
+def test_every_card_menu_option_carries_the_case_it_acts_on():
+    case = {"case_id": 19, "category_key": None, "live_actions": 1,
+            "assignees": ["UME"], "resolved_at": None}
+
+    for one in edit.menu(case, mine=True)["options"]:
+        verb, case_id = edit.asked(one["value"])
+        assert case_id == 19
+        assert verb

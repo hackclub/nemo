@@ -1,11 +1,11 @@
 <% first = reports.min_by(&:received_at) %>
 <% on = threads.find(&:is_primary) || threads.first %>
-<dl class="facts-strip">
+<dl class="facts-strip facts-fit">
   <div class="fact">
     <dt>About</dt>
-    <dd class="<%= "is-none" unless subject %>">
-      <% if subject %>
-        <%= slack_face(subject) %><span class="trunc"><%= member_link(subject) %></span>
+    <dd class="<%= "is-none" if kase.subject_user_ids.empty? %>">
+      <% if kase.subject_user_ids.any? %>
+        <%= subject_faces(kase) %>
       <% else %>
         nobody named yet
       <% end %>

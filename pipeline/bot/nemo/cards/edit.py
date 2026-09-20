@@ -51,8 +51,9 @@ def menu(case, mine):
         return None
 
     return {
-        "type": "overflow",
+        "type": "static_select",
         "action_id": MENU,
+        "placeholder": {"type": "plain_text", "text": "More"},
         "options": [
             option(pick["text"]["text"], f"{pick['value']}:{case['case_id']}")
             for pick in picks

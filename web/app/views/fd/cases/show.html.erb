@@ -2,10 +2,10 @@
 <% content_for :page_face do %>
   <span class="triad-id">#<%= @case.id %></span>
 <% end %>
-<% if @subject %>
+<% if @case.subject_user_ids.any? %>
   <% content_for :head_context do %>
     <span class="triad-sep" aria-hidden="true">&middot;</span>
-    <span class="triad-who"><%= slack_face(@subject) %><%= member_link(@subject) %></span>
+    <span class="triad-who"><%= subject_faces(@case) %></span>
   <% end %>
 <% end %>
 <% content_for :palette_on, "case:#{@case.id}" %>
@@ -290,9 +290,18 @@
       <% if standing %>
         <div class="flag flag-mid">
           <span class="flag-icon" aria-hidden="true">◆</span>
-          <div><b><%= names[standing.target_user_id] %> already has a
-            <%= action_label(standing.type_key).downcase %> from
-            <%= standing.performed_at.strftime("%-d %b") %> that still stands.</b></div>
+          <div><b>
+            <% if standing.expires? %>
+              <%= names[standing.target_user_id] %> has a
+              <%= action_label(standing.type_key).downcase %> from
+              <%= standing.performed_at.strftime("%-d %b") %> that runs until
+              <%= standing.expires_at.strftime("%-d %b") %>.
+            <% else %>
+              A <%= action_label(standing.type_key).downcase %> from
+              <%= standing.performed_at.strftime("%-d %b") %> is a prior on
+              <%= names[standing.target_user_id] %>'s record.
+            <% end %>
+          </b></div>
         </div>
       <% end %>
 

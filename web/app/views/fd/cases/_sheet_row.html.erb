@@ -1,14 +1,20 @@
 <% flag = flags[said.id] %>
 <div class="sheet-row <%= "is-flagged" if flag %>">
-  <div class="sheet-who">
-    <span class="sheet-name"><%= names[said.author_user_id] %></span>
-    <span class="sheet-at"><%= said.posted_at.strftime("%H:%M") %></span>
+  <span class="sheet-gutter">
     <% if flag %>
       <span class="sheet-mark"><%= marks[said.id] %></span>
+    <% else %>
+      <%= face(said.author_user_id, css: "row-avatar sheet-face") %>
     <% end %>
-  </div>
+  </span>
 
-  <div class="sheet-said">
+  <div class="sheet-body">
+    <div class="sheet-who">
+      <span class="sheet-name"><%= names[said.author_user_id] %></span>
+      <span class="sheet-at"><%= said.posted_at.strftime("%H:%M") %></span>
+    </div>
+
+    <div class="sheet-said">
     <% if said.readable? %>
       <div class="sheet-text<%= " msg-gone" if said.deleted? || said.purged? %>"><% if said.deleted? || said.purged? %>kept here: <% end %><%= mentioned(said.body) %></div>
     <% end %>
@@ -40,6 +46,7 @@
                         only: params[:only] },
               form: { class: "contents", data: { turbo_frame: "threads" } } %>
       <% end %>
+      </div>
     </div>
   </div>
 </div>

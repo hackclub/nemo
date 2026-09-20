@@ -306,4 +306,64 @@ class FdHelperTest < ActionView::TestCase
 
     assert_empty chat_entries([said], [], [message]).first.shares
   end
+  def listed(kase, **over)
+    @cited_words = { kase.id => Fd::IntakeShare::Cited.new(
+      { case_id: kase.id, body: "the message they reported", kind: "forward",
+        author: "UBAD", channel: "C0LOUNGE", permalink: nil }.merge(over)
+    ) }
+  end
+
+  test "a case whose report is only a link is summed up by what it points at" do
+    saved = make_case(subject: "UAAA")
+    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "shroud",
+      received_at: Time.current, body: "<https://hackclub.slack.com/archives/C0L/p1|x>")
+    kase = Fd::Case.find(saved.id)
+    listed(kase)
+
+    assert_equal "the message they reported", case_cited(kase).body
+    assert case_cited(kase).forwarded?
+    assert_equal "forwarded", case_cited(kase).word
+  end
+
+  test "a report with words of its own is not replaced by what it links to" do
+    saved = make_case(subject: "UAAA")
+    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "shroud",
+      received_at: Time.current, body: "they keep following me")
+    kase = Fd::Case.find(saved.id)
+    listed(kase)
+
+    assert_nil case_cited(kase), "their own words win"
+    assert_equal "they keep following me", case_words(kase)
+  end
+
+  test "a report whose words are empty but carries files is summed up by the files" do
+    saved = make_case(subject: "UAAA")
+    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "shroud",
+      received_at: Time.current, body: "")
+    kase = Fd::Case.find(saved.id)
+    @held_counts = { kase.id => 9 }
+
+    assert_equal "9 attachments", case_words(kase),
+      "the reporter typed nothing, they did not send nothing"
+  end
+
+  test "a report with neither words nor anything attached says only that" do
+    saved = make_case(subject: "UAAA")
+    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "shroud",
+      received_at: Time.current, body: nil)
+    kase = Fd::Case.find(saved.id)
+
+    assert_equal "a report with nothing in it", case_words(kase)
+  end
+
+  test "a case with no report at all still says so" do
+    kase = Fd::Case.find(make_case(subject: "UAAA").id)
+
+    assert_equal "no report on file", case_words(kase)
+  end
+
+  test "slack link markup is never shown raw in the list" do
+    assert_equal "look here", plain_words("<https://slack.com/x|look here>")
+    assert_equal "https://slack.com/x", plain_words("<https://slack.com/x>")
+  end
 end

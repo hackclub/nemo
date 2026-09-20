@@ -36,6 +36,24 @@ module Fd
       kept? ? nil : WHY_NOT.fetch(fetch_state, "could not be kept")
     end
 
+    HELD_PER_CASE = <<~SQL.freeze
+      SELECT r.case_id, count(DISTINCT mf.file_id) AS held
+      FROM fd.intake_message_files mf
+      JOIN fd.intake_messages m ON m.id = mf.message_id
+      JOIN fd.intake_conversations v ON v.id = m.conversation_id
+      JOIN fd.case_reports r ON r.id = v.report_id
+      WHERE r.case_id IN (:case_ids) AND m.direction = 'inbound'
+      GROUP BY r.case_id
+    SQL
+
+    def self.counts_for_cases(case_ids)
+      ids = Array(case_ids).compact.uniq
+      return {} if ids.empty?
+
+      connection.select_all(sanitize_sql([HELD_PER_CASE, { case_ids: ids }]))
+        .to_a.to_h { |row| [row["case_id"], row["held"].to_i] }
+    end
+
     def self.for_messages(message_ids)
       ids = Array(message_ids).compact.uniq
       return {} if ids.empty?

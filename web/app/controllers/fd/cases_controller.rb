@@ -272,12 +272,14 @@ module Fd
         .limit(PANE_LIMIT).to_a
       @pane_priors = Case.prior_counts_for(@pane_cases.flat_map(&:subject_user_ids))
       @pane_violations = Case.violations_for(@pane_cases.map(&:id))
+      @cited_words = IntakeShare.first_words_for(@pane_cases.map(&:id))
+      @held_counts = IntakeFile.counts_for_cases(@pane_cases.map(&:id))
       @pane_reachable = IntakeConversation.open_ones
         .where(report_id: @pane_cases.flat_map { |kase| kase.reports.map(&:id) })
         .pluck(:report_id).to_set
       @pane_names = Names.for(@pane_cases.flat_map { |kase|
         kase.subject_user_ids + kase.assignee_user_ids
-      })
+      } + @cited_words.values.map(&:author))
     end
 
     def load_queue
@@ -287,6 +289,8 @@ module Fd
         .offset((@page - 1) * PER_PAGE).limit(PER_PAGE + 1).to_a
       @more = found.size > PER_PAGE
       @cases = found.first(PER_PAGE)
+      @cited_words = IntakeShare.first_words_for(@cases.map(&:id))
+      @held_counts = IntakeFile.counts_for_cases(@cases.map(&:id))
       @total = @query.relation.count
       @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
       case_ids = @cases.map(&:id)
@@ -297,7 +301,8 @@ module Fd
       @flagged_counts = Case.flagged_counts_for(case_ids)
       @live_action_counts = Case.live_action_counts_for(case_ids)
       @action_counts = Case.action_counts_for(case_ids)
-      @channels = ChannelNames.for(@thread_channels.values.flatten)
+      @channels = ChannelNames.for(@thread_channels.values.flatten +
+        @cited_words.values.map(&:channel))
       @stats = QueueStats.load
       @total_count = @stats.total
       @layout = %w[board table].include?(params[:layout]) ? params[:layout] : "queue"
@@ -306,7 +311,7 @@ module Fd
       @names = Names.for(@cases.flat_map { |kase|
         kase.subject_user_ids + kase.assignee_user_ids + [kase.opened_by] +
           kase.reports.map(&:reporter_user_id) + kase.reports.map(&:closed_by)
-      })
+      } + @cited_words.values.map(&:author))
       @open_for_subject ||= []
       @flags = CaseFlags.for_queue
     end

@@ -734,6 +734,22 @@ module FdHelper
     "av-#{(user_id.sum % AVATAR_TONES) + 1}"
   end
 
+  SUBJECTS_SHOWN = 3
+
+  def subject_faces(kase)
+    ids = kase.subject_user_ids
+    return nil if ids.empty?
+
+    shown = ids.first(SUBJECTS_SHOWN)
+    parts = shown.map { |id|
+      tag.span(class: "face-name", title: names[id]) {
+        safe_join([slack_face(id), tag.span(member_link(id), class: "face-said")])
+      }
+    }
+    parts << tag.span("+#{ids.size - shown.size}", class: "face-more") if ids.size > shown.size
+    tag.span(class: ["subjfaces", ("subjfaces-many" if ids.many?)]) { safe_join(parts) }
+  end
+
   def slack_face(user_id, css: "row-avatar")
     return face(user_id, css: css) if user_id.blank?
 
@@ -793,6 +809,44 @@ module FdHelper
     tag.span(class: "gist") { tag.q(body) }
   end
 
+  def cited_words
+    @cited_words || {}
+  end
+
+  ONLY_A_LINK = %r{\A(?:<https?://[^\s<>]+?(?:\|[^>]*)?>|https?://\S+|\s)+\z}
+
+  def plain_words(text)
+    text.to_s
+      .gsub(/<(https?:\/\/[^\s<>|]+)\|([^>]*)>/) { Regexp.last_match(2) }
+      .gsub(/<(https?:\/\/[^\s<>]+)>/) { Regexp.last_match(1) }
+      .squish
+  end
+
+  def case_cited(kase)
+    cited = cited_words[kase.id]
+    return nil if cited.nil? || cited.body.blank?
+
+    body = case_first_report(kase)&.body.presence
+    return nil if body.present? && !body.match?(ONLY_A_LINK)
+
+    cited
+  end
+
+  def held_counts
+    @held_counts || {}
+  end
+
+  def case_words(kase)
+    body = case_first_report(kase)&.body.presence
+    return plain_words(body) if body
+    return "no report on file" if kase.reports.empty?
+
+    held = held_counts[kase.id].to_i
+    return pluralize(held, "attachment") if held.positive?
+
+    "a report with nothing in it"
+  end
+
   def case_needs(kase)
     return [] if kase.resolved?
 
@@ -829,8 +883,14 @@ module FdHelper
     reports.reject(&:anonymous?).first&.reporter_user_id
   end
 
+  ANONYMOUS_FACE = "/anonymous.png".freeze
+
   def row_reporter_face(kase)
-    face(row_reporter(kase))
+    who = row_reporter(kase)
+    return face(who) if who.present?
+
+    image_tag(ANONYMOUS_FACE, class: "row-avatar", alt: "", width: 22, height: 22,
+      loading: "lazy", title: "Anonymous")
   end
 
   def case_priors(kase, counts)
