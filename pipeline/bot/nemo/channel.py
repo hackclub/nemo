@@ -78,6 +78,11 @@ ORDER BY m.posted_at, s.id
 """
 
 
+CLAIM_CARD = """
+SELECT forwarded_ts FROM fd.case_reports WHERE id = %s FOR UPDATE
+"""
+
+
 FOLLOW_UP = """
 SELECT m.body, m.mirrored_ts, r.forwarded_ts, m.conversation_id,
        r.is_anonymous, r.reporter_user_id
@@ -191,6 +196,11 @@ def post_report(client, conn, case_id, channel_id=None):
     if case["forwarded_ts"]:
         log.info("nemo: case %s is already in the firehouse", case_id)
         return case["forwarded_ts"]
+
+    held = conn.execute(CLAIM_CARD, (case["report_id"],)).fetchone()
+    if held and held[0]:
+        log.info("nemo: case %s went up while we were asking, leaving it", case_id)
+        return held[0]
 
     built = cards.report.blocks(case)
     sent = client.chat_postMessage(

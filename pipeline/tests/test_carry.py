@@ -1,6 +1,7 @@
 from bot.core.wording import said, to_member
 from bot.nemo import carry, channel
 from bot.nemo.cards import edit, report
+from bot.shroud import consent
 
 ROOM = "C1"
 THREAD = "100.000"
@@ -294,3 +295,72 @@ def test_every_card_menu_option_carries_the_case_it_acts_on():
         verb, case_id = edit.asked(one["value"])
         assert case_id == 19
         assert verb
+
+
+def test_the_reporter_is_asked_with_their_name_first_and_chosen():
+    built = consent.blocks(["they keep following me"])
+    radio = next(
+        one for block in built if block.get("type") == "actions"
+        for one in block.get("elements", []) if one.get("type") == "radio_buttons"
+    )
+
+    labels = [one["text"]["text"] for one in radio["options"]]
+    assert labels == ["*Send it with my name*", "*Send it anonymously*"]
+    assert radio["initial_option"]["value"] == consent.NAMED
+    assert all("description" not in one for one in radio["options"])
+
+
+def test_a_reporter_who_chose_anonymity_before_keeps_it():
+    built = consent.blocks(["x"], held=consent.ANONYMOUS)
+    radio = next(
+        one for block in built if block.get("type") == "actions"
+        for one in block.get("elements", []) if one.get("type") == "radio_buttons"
+    )
+
+    assert radio["initial_option"]["value"] == consent.ANONYMOUS
+    assert consent.chosen(None, consent.ANONYMOUS) == consent.ANONYMOUS
+
+
+def test_the_consent_block_opens_with_their_words_not_a_preamble():
+    built = consent.blocks(["they keep following me"])
+
+    assert built[0]["type"] == "rich_text", "no 'Ready when you are' line above it"
+
+
+class Held:
+    def __init__(self, ts=None):
+        self.ts = ts
+        self.asked = []
+
+    def execute(self, sql, args=None):
+        self.asked.append(" ".join(sql.split())[:60])
+        return self
+
+    def fetchone(self):
+        return (self.ts,)
+
+
+def test_the_card_row_is_claimed_before_slack_is_asked():
+    assert "FOR UPDATE" in channel.CLAIM_CARD, "two threads must not both post a card"
+    assert "forwarded_ts" in channel.CLAIM_CARD
+
+
+def test_a_bodyless_report_names_nobody_rather_than_saying_so():
+    built = report.blocks({"case_id": 1, "body": "x", "files": [], "shares": [],
+                           "subjects": [], "is_anonymous": True, "reporter_user_id": None,
+                           "other_cases": 0, "assignees": []})
+    line = " ".join(
+        e["text"] for b in built if b["type"] == "context" for e in b["elements"]
+    )
+    assert "nobody named yet" not in line
+    assert "reported anonymously" in line
+
+
+def test_a_report_with_subjects_still_names_them():
+    built = report.blocks({"case_id": 1, "body": "x", "files": [], "shares": [],
+                           "subjects": ["UBOB"], "is_anonymous": True,
+                           "reporter_user_id": None, "other_cases": 0, "assignees": []})
+    line = " ".join(
+        e["text"] for b in built if b["type"] == "context" for e in b["elements"]
+    )
+    assert "about <@UBOB>" in line
