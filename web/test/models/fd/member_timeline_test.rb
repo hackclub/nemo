@@ -29,15 +29,14 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
     assert_equal "open", entries.sole.state
   end
 
-  test "a case they were only logged in carries their role and their reason" do
+  test "a case they were only logged in is told apart from one about them" do
     theirs = make_case(subject: "USOMEBODY", opened_at: 3.days.ago, category_key: "bullying")
-    theirs.participants.create!(user_id: SUBJECT, role: "involved", detail: "it was aimed at them")
+    theirs.participants.create!(user_id: SUBJECT, role: "reporter")
 
     entry = entries.sole
     assert_equal "cases", entry.kind
     assert_equal "in", entry.mark, "the mark still tells it from a case about them"
     assert_equal "logged in", entry.state
-    assert_match(/it was aimed at them/, entry.detail)
     assert_match(/they were not the subject/, entry.detail)
   end
 

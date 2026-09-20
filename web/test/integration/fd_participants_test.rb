@@ -8,7 +8,7 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
 
   def add(**params)
     post fd_case_participants_path(@kase),
-      params: { user_id: "UNEW", role: "involved", detail: "they piled on" }.merge(params)
+      params: { user_id: "UNEW" }.merge(params)
   end
 
   def people
@@ -21,46 +21,28 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
     assert_empty people.to_a
   end
 
-  test "somebody involved is recorded with how they were involved" do
+  test "anybody added by hand is a subject" do
     sign_in_as(@me)
-    add(user_id: "UNEW", detail: "it was aimed at them")
+    add(user_id: "UNEW")
 
-    person = people.sole
-    assert_equal "involved", person.role
-    assert_equal "it was aimed at them", person.detail
-    assert_match(/@UNEW added to who else is logged/, flash[:notice])
+    assert_equal "subject", people.sole.role
+    assert_match(/the case is now also about @UNEW/, flash[:notice])
   end
 
-  test "involved without a reason is allowed, the reason is optional" do
+  test "a role asked for by hand is ignored, the menu only adds subjects" do
     sign_in_as(@me)
-    add(detail: "  ")
+    add(user_id: "UTOLDUS", role: "reporter")
 
-    assert_equal "involved", people.sole.role
-    assert_nil people.sole.detail
-    assert_nil flash[:alert]
-  end
-
-  test "a reason typed against a role that has none is dropped rather than stored" do
-    sign_in_as(@me)
-    add(user_id: "UTOLDUS", role: "reporter", detail: "left over from the other option")
-
-    assert_nil people.sole.detail
+    assert_equal "subject", people.sole.role,
+      "several reporters only come from a merge, never from this menu"
   end
 
   test "a second subject makes the case about both of them" do
     sign_in_as(@me)
-    add(user_id: "USECOND", role: "subject", detail: "")
+    add(user_id: "USECOND")
 
     assert_equal %w[USECOND USUB], @kase.reload.subject_user_ids
     assert_match(/the case is now also about @USECOND/, flash[:notice])
-  end
-
-  test "a reporter needs no reason" do
-    sign_in_as(@me)
-    add(user_id: "UTOLDUS", role: "reporter", detail: "")
-
-    assert_equal "reporter", people.sole.role
-    assert_nil people.sole.detail
   end
 
   test "a handle typed with the at sign and in lower case still lands" do
@@ -78,12 +60,12 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
     assert_match(/does not look like a Slack member id/, flash[:alert])
   end
 
-  test "a role outside the three is refused" do
+  test "a role asked for outside the menu is ignored, not obeyed" do
     sign_in_as(@me)
     add(role: "witness")
 
-    assert_empty people.to_a
-    assert_match(/pick how they were on this case/, flash[:alert])
+    assert_equal "subject", people.sole.role
+    assert_nil flash[:alert]
   end
 
   test "adding the same person in the same role twice changes nothing" do
@@ -96,30 +78,30 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
     assert_match(/already on this case, nothing changed/, flash[:notice])
   end
 
-  test "several people are added in one go, at the same role" do
+  test "several subjects are added in one go" do
     sign_in_as(@me)
     post fd_case_participants_path(@kase),
-      params: { user_ids: %w[UONE UTWO UTHREE], role: "involved", detail: "all in the thread" }
+      params: { user_ids: %w[UONE UTWO UTHREE], role: "subject" }
 
     assert_equal %w[UONE UTHREE UTWO], people.map(&:user_id).sort
-    assert_match(/@UONE, @UTWO, and @UTHREE added to who else is logged/, flash[:notice])
+    assert_match(/the case is now also about @UONE, @UTWO, and @UTHREE/, flash[:notice])
   end
 
   test "a repeat among several does not stop the rest from landing" do
     sign_in_as(@me)
     add(user_id: "UONE")
     post fd_case_participants_path(@kase),
-      params: { user_ids: %w[UONE UTWO], role: "involved", detail: "piled on" }
+      params: { user_ids: %w[UONE UTWO], role: "subject" }
 
     assert_equal %w[UONE UTWO], people.map(&:user_id).sort,
       "the duplicate must not abort the transaction the others are riding in"
-    assert_match(/@UTWO added to who else is logged, 1 already there/, flash[:notice])
+    assert_match(/the case is now also about @UTWO, 1 already there/, flash[:notice])
   end
 
   test "one bad id in a batch refuses the whole batch" do
     sign_in_as(@me)
     post fd_case_participants_path(@kase),
-      params: { user_ids: %w[UONE bob], role: "involved", detail: "x" }
+      params: { user_ids: %w[UONE bob], role: "subject" }
 
     assert_empty people.to_a
     assert_match(/does not look like a Slack member id/, flash[:alert])
@@ -127,10 +109,10 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
 
   test "one person can hold two roles on one case" do
     sign_in_as(@me)
-    add(user_id: "UBOTH", role: "reporter", detail: "")
-    add(user_id: "UBOTH", role: "involved", detail: "they were in the thread")
+    add(user_id: "UBOTH")
+    Fd::CaseParticipant.create!(case_id: @kase.id, user_id: "UBOTH", role: "reporter")
 
-    assert_equal %w[involved reporter], people.map(&:role).sort
+    assert_equal %w[reporter subject], people.map(&:role).sort
   end
 
   test "a case assigned to somebody else can still be added to" do
@@ -139,7 +121,7 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
     add
 
     assert_equal 1, people.count
-    assert_match(/@UNEW added to who else is logged/, flash[:notice])
+    assert_match(/the case is now also about @UNEW/, flash[:notice])
   end
 
   test "adding writes a trail entry filed under the case" do
@@ -149,14 +131,14 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
     entry = Fd::AuditEntry.where(entity_type: "participant", entity_id: @kase.id,
       verb: "attached").sole
     assert_equal "UNEW", entry.after["user_id"]
-    assert_equal "involved", entry.after["role"]
+    assert_equal "subject", entry.after["role"]
     assert_equal "UME", entry.actor_user_id
   end
 
   test "taking somebody off the case removes the row but not the record of it" do
     sign_in_as(@me)
     add(user_id: "UWRONG")
-    delete fd_case_participant_path(@kase, "UWRONG"), params: { role: "involved" }
+    delete fd_case_participant_path(@kase, "UWRONG"), params: { role: "subject" }
 
     assert_empty people.to_a
     entry = Fd::AuditEntry.where(entity_type: "participant", entity_id: @kase.id,
@@ -167,17 +149,17 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
 
   test "removing names the role, so the other one stays" do
     sign_in_as(@me)
-    add(user_id: "UBOTH", role: "reporter", detail: "")
-    add(user_id: "UBOTH", role: "involved", detail: "they were in the thread")
+    add(user_id: "UBOTH")
+    Fd::CaseParticipant.create!(case_id: @kase.id, user_id: "UBOTH", role: "reporter")
 
     delete fd_case_participant_path(@kase, "UBOTH"), params: { role: "reporter" }
 
-    assert_equal ["involved"], people.map(&:role)
+    assert_equal ["subject"], people.map(&:role)
   end
 
   test "a mistaken subject can be taken back off" do
     sign_in_as(@me)
-    add(user_id: "UINNOCENT", role: "subject", detail: "")
+    add(user_id: "UINNOCENT", role: "subject")
     delete fd_case_participant_path(@kase, "UINNOCENT"), params: { role: "subject" }
 
     assert_equal ["USUB"], @kase.reload.subject_user_ids
@@ -185,17 +167,16 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
 
   test "somebody who is not on the case cannot be removed from it" do
     sign_in_as(@me)
-    delete fd_case_participant_path(@kase, "USTRANGER"), params: { role: "involved" }
+    delete fd_case_participant_path(@kase, "USTRANGER"), params: { role: "subject" }
     assert_match(/not on this case/, flash[:alert])
   end
 
   test "a member on another case cannot be removed through this one" do
     other = make_case(subject: "UELSE", opened_at: 1.day.ago)
-    Fd::CaseParticipant.create!(case_id: other.id, user_id: "UTHEIRS", role: "involved",
-      detail: "not our business")
+    Fd::CaseParticipant.create!(case_id: other.id, user_id: "UTHEIRS", role: "subject")
 
     sign_in_as(@me)
-    delete fd_case_participant_path(@kase, "UTHEIRS"), params: { role: "involved" }
+    delete fd_case_participant_path(@kase, "UTHEIRS"), params: { role: "subject" }
 
     assert_equal 1, Fd::CaseParticipant.where(case_id: other.id, user_id: "UTHEIRS").count,
       "the case in the url must own the row"

@@ -2,31 +2,20 @@ CALLBACK = "case_people"
 REMOVE = "case_people_remove"
 
 WHO = "people_who"
-ROLE = "people_role"
-DETAIL = "people_detail"
 
 TITLE_LIMIT = 24
 
-ROLES = (
-    ("subject", "Subject"),
-    ("involved", "Involved"),
-    ("reporter", "Reporter"),
-)
+SUBJECT = "subject"
 
-ROLE_LABEL = dict(ROLES)
+ROLE_LABEL = {"subject": "Subject", "reporter": "Reporter"}
 
 
 def option(text, value):
     return {"text": {"type": "plain_text", "text": text}, "value": value}
 
 
-def role_option(role):
-    return option(ROLE_LABEL[role], role)
-
-
 def said_of(one):
-    said = f"<@{one['user_id']}> · {ROLE_LABEL.get(one['role'], one['role'])}"
-    return f"{said} · {one['detail']}" if one.get("detail") else said
+    return f"<@{one['user_id']}> · {ROLE_LABEL.get(one['role'], one['role'])}"
 
 
 def row(case_id, one):
@@ -54,33 +43,11 @@ def view(case_id, participants=()):
         {
             "type": "input",
             "block_id": WHO,
-            "label": {"type": "plain_text", "text": "Add"},
+            "label": {"type": "plain_text", "text": "Subject"},
             "element": {
                 "type": "multi_users_select",
                 "action_id": WHO,
-                "placeholder": {"type": "plain_text", "text": "who to add"},
-            },
-        },
-        {
-            "type": "input",
-            "block_id": ROLE,
-            "label": {"type": "plain_text", "text": "Their part in it"},
-            "element": {
-                "type": "static_select",
-                "action_id": ROLE,
-                "options": [role_option(role) for role, _ in ROLES],
-                "initial_option": role_option("involved"),
-            },
-        },
-        {
-            "type": "input",
-            "block_id": DETAIL,
-            "optional": True,
-            "label": {"type": "plain_text", "text": "How they were involved"},
-            "element": {
-                "type": "plain_text_input",
-                "action_id": DETAIL,
-                "placeholder": {"type": "plain_text", "text": "it was aimed at them"},
+                "placeholder": {"type": "plain_text", "text": "who the case is about"},
             },
         },
     ]
@@ -89,7 +56,7 @@ def view(case_id, participants=()):
         "type": "modal",
         "callback_id": CALLBACK,
         "private_metadata": str(case_id),
-        "title": {"type": "plain_text", "text": f"People · case {case_id}"[:TITLE_LIMIT]},
+        "title": {"type": "plain_text", "text": f"Subjects · case {case_id}"[:TITLE_LIMIT]},
         "submit": {"type": "plain_text", "text": "Add"},
         "close": {"type": "plain_text", "text": "Close"},
         "blocks": blocks,
@@ -98,12 +65,10 @@ def view(case_id, participants=()):
 
 def picked(state):
     values = state.get("values", {})
-    role = (values.get(ROLE, {}).get(ROLE, {}).get("selected_option") or {}).get("value")
-    detail = (values.get(DETAIL, {}).get(DETAIL, {}).get("value") or "").strip()
     return {
         "user_ids": values.get(WHO, {}).get(WHO, {}).get("selected_users") or [],
-        "role": role,
-        "detail": detail if role == "involved" else None,
+        "role": SUBJECT,
+        "detail": None,
     }
 
 
@@ -114,7 +79,5 @@ def removed(value):
 
 def objection(said):
     if not said.get("user_ids"):
-        return {WHO: "Say who to add."}
-    if said["role"] not in ROLE_LABEL:
-        return {ROLE: "Pick their part in it."}
+        return {WHO: "Say who the subject is."}
     return None

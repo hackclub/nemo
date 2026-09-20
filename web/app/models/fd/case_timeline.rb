@@ -36,10 +36,6 @@ module Fd
       "from ##{record.case_id}"
     end
 
-    def role_of(user_id)
-      participants.find { |person| person.user_id == user_id }&.role
-    end
-
     def subject_user_ids
       @subject_user_ids ||= participants.select { |person| person.role == "subject" }
         .map(&:user_id)
@@ -63,10 +59,7 @@ module Fd
     def report_detail(report, standing: false)
       parts = []
       unless report.anonymous?
-        role = role_of(report.reporter_user_id)
-        who = "by #{report.reporter_label(names)}"
-        who += ", who was involved" if role == "involved"
-        parts << who
+        parts << "by #{report.reporter_label(names)}"
       end
       parts << "via #{report.source_app}"
       parts << (report.replied? ? "replied in #{span(report.reply_latency)}" : "no reply yet")

@@ -128,10 +128,6 @@
     </div>
   <% end %>
 
-  <% if @missing.any? %>
-    <%= render "finish_off", kase: @case, missing: @missing %>
-  <% end %>
-
   <% if @case.duplicate_of %>
     <div class="warnbar">
       <span>Closed as a duplicate of

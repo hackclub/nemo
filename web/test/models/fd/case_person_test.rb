@@ -64,8 +64,7 @@ class Fd::CasePersonTest < ActiveSupport::TestCase
 
     onlooker = make_case(subject: "USOMEBODY", opened_at: 15.days.ago)
     onlooker.update!(resolved_at: 12.days.ago, resolution: "action_taken")
-    Fd::CaseParticipant.create!(case_id: onlooker.id, user_id: "UDEX", role: "involved",
-      detail: "they were in the thread")
+    Fd::CaseParticipant.create!(case_id: onlooker.id, user_id: "UDEX", role: "reporter")
     action(target: "USOMEBODY", case_id: onlooker.id, performed_at: 13.days.ago)
 
     here = build
@@ -103,8 +102,7 @@ class Fd::CasePersonTest < ActiveSupport::TestCase
 
   test "cases ever counts every case they appear on, in any role" do
     other = make_case(subject: "USOMEBODY")
-    Fd::CaseParticipant.create!(case_id: other.id, user_id: "UDEX", role: "involved",
-      detail: "they were in the thread")
+    Fd::CaseParticipant.create!(case_id: other.id, user_id: "UDEX", role: "reporter")
 
     assert_equal 2, build.cases_ever
   end

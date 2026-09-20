@@ -37,14 +37,13 @@ class FdMergesTest < ActionDispatch::IntegrationTest
   test "each duplicate keeps its own threads and people" do
     Fd::CaseThread.create!(case_id: @dup_one.id, channel_id: "C1", thread_ts: "1.1",
       is_primary: true, added_by: "UFF1")
-    Fd::CaseParticipant.create!(case_id: @dup_one.id, user_id: "UINV", role: "involved",
-      detail: "they piled on")
+    Fd::CaseParticipant.create!(case_id: @dup_one.id, user_id: "UINV", role: "subject")
 
     sign_in_as(@me)
     merge([@dup_one.id], @main.id)
 
     assert_equal 1, @dup_one.reload.threads.count
-    assert_equal %w[involved subject], @dup_one.participants.map(&:role).sort
+    assert_equal %w[subject subject], @dup_one.participants.map(&:role).sort
     assert_equal 0, @main.reload.threads.count
   end
 

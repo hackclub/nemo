@@ -96,7 +96,6 @@ module Fd
       @subject_priors = @subject ? Case.prior_count(@subject, within: Case::PRIOR_WINDOW) : 0
       @merge_into = @duplicate_candidates.find { |other| !other.resolved? }
       @open_reports = @reports.count { |report| !report.told_of_outcome? }
-      @missing = missing_on(@case, @subject)
     end
 
     def update
@@ -201,12 +200,6 @@ module Fd
       subjects.map do |id|
         { id: id, name: known[id], initial: known.member(id)&.initial || id[0] }
       end
-    end
-
-    def missing_on(kase, subject)
-      return [] if kase.resolved?
-
-      subject.nil? ? [:subject] : []
     end
 
     def open_cases_for(subjects)

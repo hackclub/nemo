@@ -1,16 +1,15 @@
 module Fd
   class ParticipantsController < BaseController
     MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/
+    SUBJECT = "subject".freeze
 
     permit "case.people", on: -> { Case.find(params[:case_id]) }
 
     def create
       kase = Case.find(params[:case_id])
       wanted = asked_for
-      role = params[:role].to_s
-      detail = role == "involved" ? params[:detail].to_s.strip : ""
 
-      problem = objection(wanted, role)
+      problem = objection(wanted)
       return redirect_to(fd_case_path(kase, tab: "people"), alert: problem) if problem
 
       added = []
@@ -19,8 +18,7 @@ module Fd
       writing do
         wanted.each do |user_id|
           ActiveRecord::Base.transaction(requires_new: true) do
-            person = kase.participants.create!(user_id: user_id, role: role,
-              detail: detail.presence)
+            person = kase.participants.create!(user_id: user_id, role: SUBJECT)
             audit(person, "attached", entity_id: kase.id)
           end
           added << user_id
@@ -29,7 +27,7 @@ module Fd
         end
       end
 
-      redirect_to fd_case_path(kase, tab: "people"), notice: added_notice(role, added, already)
+      redirect_to fd_case_path(kase, tab: "people"), notice: added_notice(added, already)
     end
 
     def destroy
@@ -43,11 +41,7 @@ module Fd
 
       writing do
         audit(person, "detached", entity_id: kase.id,
-          before: {
-            "user_id" => person.user_id,
-            "role" => person.role,
-            "detail" => person.detail
-          },
+          before: { "user_id" => person.user_id, "role" => person.role },
           after: nil)
         person.destroy!
       end
@@ -63,27 +57,18 @@ module Fd
       Array(raw).map { |id| id.to_s.strip.delete_prefix("@").upcase }.reject(&:blank?).uniq
     end
 
-    def objection(wanted, role)
+    def objection(wanted)
       return "say who to add" if wanted.empty?
-      unless wanted.all? { |id| id.match?(MEMBER_ID) }
-        return "that does not look like a Slack member id"
-      end
-      "pick how they were on this case" unless CaseParticipant::ROLES.include?(role)
+      return nil if wanted.all? { |id| id.match?(MEMBER_ID) }
+
+      "that does not look like a Slack member id"
     end
 
-    def role_word(role)
-      role == "involved" ? "involved" : "the #{role}"
-    end
-
-    def added_notice(role, added, already)
+    def added_notice(added, already)
       return "everybody you picked was already on this case, nothing changed" if added.empty?
 
       who = added.map { |id| "@#{id}" }.to_sentence
-      note = case role
-      when "subject" then "the case is now also about #{who}"
-      when "reporter" then "#{who} recorded as reporting it"
-      else "#{who} added to who else is logged"
-      end
+      note = "the case is now also about #{who}"
       already.any? ? "#{note}, #{already.size} already there" : note
     end
   end

@@ -19,13 +19,12 @@ class FdOfferedTest < ActionDispatch::IntegrationTest
       "naming somebody must never log them behind your back"
   end
 
-  test "one click logs them as involved" do
+  test "one click adds them as a subject" do
     note "spoke to <@U0NAMED01> about it"
     post fd_case_participants_path(@kase),
-      params: { user_ids: ["U0NAMED01"], role: "involved" }
+      params: { user_ids: ["U0NAMED01"] }
 
     person = @kase.participants.find_by(user_id: "U0NAMED01")
-    assert_equal "involved", person.role
-    assert_nil person.detail, "the reason is optional, so one click is enough"
+    assert_equal "subject", person.role
   end
 end

@@ -1,36 +1,12 @@
 <%= render layout: "fd/modal", locals: { id: "add-person",
-      title: "Add people to case #{kase.id}", label: "Add people to the case" } do %>
+      title: "Add a subject to case #{kase.id}", label: "Add a subject to the case" } do %>
   <%= form_with url: fd_case_participants_path(kase), method: :post, html: { autocomplete: "off" } do %>
     <div class="modal-body">
       <div class="field-label">
-        <span>Who</span>
+        <span>Subject</span>
         <%= render "fd/member_picker", name: "user_ids[]", single: false,
-              label: "search for the people to add" %>
+              label: "search for the subject of the case" %>
       </div>
-
-      <div class="field-label">
-        <span>Their part in it</span>
-        <div class="segmented seg-radio">
-          <label>
-            <%= radio_button_tag :role, "subject", false, id: nil %>
-            Subject
-          </label>
-          <label>
-            <%= radio_button_tag :role, "involved", true, id: "role-involved" %>
-            Involved
-          </label>
-          <label>
-            <%= radio_button_tag :role, "reporter", false, id: nil %>
-            Reporter
-          </label>
-        </div>
-      </div>
-
-      <label class="field-label why">
-        How they were involved
-        <%= text_area_tag :detail, nil, rows: 2, class: "textarea", id: nil,
-              placeholder: "it was aimed at them" %>
-      </label>
     </div>
     <div class="modal-foot">
       <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>

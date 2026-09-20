@@ -51,7 +51,7 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
 
   test "somebody only ever logged in another case still belongs here" do
     theirs = make_case(subject: "USOMEBODY", opened_at: 3.days.ago)
-    theirs.participants.create!(user_id: "UWATCHER", role: "involved", detail: "aimed at them")
+    theirs.participants.create!(user_id: "UWATCHER", role: "reporter")
 
     assert listed?("UWATCHER", view: "history"), "a page of subjects would hide the people conduct work is for"
     assert_equal 0, row_for("UWATCHER", view: "history").actions

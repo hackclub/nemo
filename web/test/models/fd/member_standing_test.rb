@@ -120,7 +120,7 @@ class Fd::MemberStandingTest < ActiveSupport::TestCase
   test "the counts split what they were the subject of from what they were only logged in" do
     subject_case = make_case(subject: SUBJECT)
     other = make_case(subject: "USOMEBODY")
-    other.participants.create!(user_id: SUBJECT, role: "involved", detail: "aimed at them")
+    other.participants.create!(user_id: SUBJECT, role: "reporter")
 
     said = standing
     assert_equal 1, said.cases

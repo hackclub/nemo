@@ -319,11 +319,10 @@ module FdHelper
     parts << "here #{tenure_label(context.tenure_days)}" if context&.tenure_days
     parts << "active #{last_active_label(context.last_active_at)}" if context&.last_active_at
     parts << said_phrase(said_counts.fetch(person.user_id, 0), total_messages)
-    parts += person.records.filter_map { |record| record.detail.presence }
     parts.compact.join(" · ").presence || person.user_id
   end
 
-  PEOPLE_ORDER = %w[subject involved reporter].freeze
+  PEOPLE_ORDER = %w[subject reporter].freeze
 
   def role_rank(role)
     PEOPLE_ORDER.index(role) || PEOPLE_ORDER.size
@@ -350,7 +349,6 @@ module FdHelper
 
   REMOVE_LABELS = {
     "subject" => "Remove as the subject",
-    "involved" => "Remove as involved",
     "reporter" => "Remove as a reporter"
   }.freeze
 
@@ -435,8 +433,7 @@ module FdHelper
 
   ROLE_LABELS = {
     "subject" => "subject",
-    "reporter" => "reported it",
-    "involved" => "involved"
+    "reporter" => "reported it"
   }.freeze
 
   def slack_thread_url(channel_id, thread_ts)
@@ -448,7 +445,6 @@ module FdHelper
   end
 
   ROLE_TONES = {
-    "involved" => "chip-warn",
     "reporter" => "chip-off",
     "subject" => "chip-crit"
   }.freeze
@@ -1021,14 +1017,6 @@ module FdHelper
 
   def timeline_glyph(mark)
     tag.span(TIMELINE_GLYPHS.fetch(mark.to_s, "\u00b7"), class: "mono", style: "font-size:10px")
-  end
-
-  STILL_NEEDED = { 1 => "One thing", 2 => "Two things", 3 => "Three things" }.freeze
-
-  def still_needed(missing)
-    return if missing.empty?
-
-    "#{STILL_NEEDED.fetch(missing.size, "#{missing.size} things")} before this can close"
   end
 
   def case_tabs(counts)
