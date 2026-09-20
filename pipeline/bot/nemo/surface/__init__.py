@@ -32,7 +32,6 @@ class Entry:
 
 
 def bind(kind, key, fn, tag=None):
-    """Hold a handler written outside the registry, so one key can have several."""
     name = tag or getattr(fn, "__qualname__", repr(fn))
     ENTRIES[:] = [one for one in ENTRIES if one.tag != name]
     ENTRIES.append(Entry(kind, key, None, fn, open_to_all=True, tag=name))
@@ -106,7 +105,6 @@ class Ctx:
         return self.body.get("view") or {}
 
     def acknowledge(self):
-        """Bolt hands events no ack of their own, so only answer when there is one."""
         if self.entry.kind != VIEW and callable(self.ack):
             self.ack()
 
@@ -176,8 +174,6 @@ def declared():
 
 
 def fanned(entries):
-    """Bolt stops dispatching once a listener answers, so one key gets one listener.
-    Each handler is kept apart: one that fails must not silence the rest."""
     runners = [(one, guarded(one)) for one in entries]
 
     def run(ack=None, body=None, client=None, payload=None):

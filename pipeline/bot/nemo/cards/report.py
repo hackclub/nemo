@@ -63,8 +63,9 @@ def context(parts):
 
 def where(case):
     for share in case.get("shares") or []:
-        if share.get("source_channel_name"):
-            return f"#{share['source_channel_name']}"
+        named = share.get("source_channel_name")
+        if named:
+            return f"#{named}"
     return None
 
 
@@ -133,24 +134,32 @@ def reported(case):
     return f"{reporter(case)} reported it"
 
 
+def who_and_what(case):
+    parts = [reported(case), subjects_line(case), priors(case)]
+    return context([" · ".join(part for part in parts if part)])
+
+
 def footer(case):
-    parts = [
-        standing(case),
-        subjects_line(case),
-        priors(case),
-        reported(case),
-        link(case),
-    ]
+    parts = [standing(case), link(case)]
     return context([" · ".join(part for part in parts if part)])
 
 
 def evidence(shares):
+    shown = brought(shares)
     lines = []
     for share in shares[:CONTEXT_ELEMENTS]:
-        where = share.get("source_channel_name")
-        label = f"#{where}" if where else "a linked message"
+        if any(share is one for one in shown):
+            continue
+        named = share.get("source_channel_name")
         permalink = share.get("permalink")
-        said = f"<{permalink}|{label}>" if permalink else label
+        if named:
+            said = f"<{permalink}|#{named}>" if permalink else f"#{named}"
+        elif room(share):
+            said = room(share)
+            if permalink:
+                said += f" · <{permalink}|open it>"
+        else:
+            said = f"<{permalink}|a linked message>" if permalink else "a linked message"
         if not share.get("is_reachable"):
             said += " (a link, not shared)"
         lines.append(said)
@@ -242,19 +251,27 @@ def brought(shares):
     ][:SHOWN_SHARES]
 
 
+def room(share):
+    held = share.get("source_channel_id")
+    if held:
+        return f"<#{held}>"
+    named = share.get("source_channel_name")
+    return f"#{named}" if named else None
+
+
 def whose(share):
     who = share.get("source_author_user_id")
-    where = share.get("source_channel_name")
+    where = room(share)
     said = f"<@{who}>" if who else "somebody"
     if where:
-        said += f" in #{where}"
+        said += f" in {where}"
     permalink = share.get("permalink")
     return f"{said} · <{permalink}|open it>" if permalink else said
 
 
-def what_they_reported(shares):
+def what_they_reported(case):
     built = []
-    for share in brought(shares):
+    for share in brought(case.get("shares") or []):
         built.append(context([whose(share)]))
         words = quote(share["source_body"])
         if words:
@@ -266,8 +283,8 @@ def blocks(case):
     files = case.get("files") or []
     shares = case.get("shares") or []
 
-    built = [part for part in [title(case), quote(case.get("body"))] if part]
-    built += what_they_reported(shares)
+    built = [part for part in [title(case), who_and_what(case), quote(case.get("body"))] if part]
+    built += what_they_reported(case)
     built.append(footer(case))
 
     trail = [part for part in [attached(case)] if part]

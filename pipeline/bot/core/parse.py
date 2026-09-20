@@ -12,7 +12,6 @@ THREAD_TS = re.compile(r"(?:^|[?&]|&amp;)thread_ts=(\d{1,12}\.\d{6})")
 
 
 def posted_at(ts):
-    """Slack names a message with the second it landed. Ours is now when it will not."""
     if ts is None:
         return datetime.now(tz=timezone.utc)
 

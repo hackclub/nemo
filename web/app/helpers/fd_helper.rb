@@ -457,7 +457,7 @@ module FdHelper
     ROLE_TONES.fetch(role, "chip-off")
   end
 
-  ChatEntry = Struct.new(:key, :at, :side, :kind, :who, :name, :body, :state, :files,
+  ChatEntry = Struct.new(:key, :at, :side, :kind, :who, :name, :body, :state, :files, :shares,
     keyword_init: true)
 
   def chat_stream(kase)
@@ -483,7 +483,10 @@ module FdHelper
   def changed_chat_entries(reports, chat, messages, queued)
     hidden = reports.any?(&:anonymous?)
     held = Fd::IntakeFile.for_messages(messages.map(&:id))
-    said = messages.map { |one| message_entry(one, hidden, held.fetch(one.id, [])) }
+    cited = Fd::IntakeShare.for_messages(messages.map(&:id))
+    said = messages.map do |one|
+      message_entry(one, hidden, held.fetch(one.id, []), cited.fetch(one.id, []))
+    end
     said += chat.map { |line| chat_entry(line) }
     said += queued.map { |row| queued_entry(row) }
     said.sort_by(&:at)
@@ -498,7 +501,7 @@ module FdHelper
     end
   end
 
-  def message_entry(said, hidden = false, files = [])
+  def message_entry(said, hidden = false, files = [], shares = [])
     theirs = said.theirs?
     masked = theirs && hidden
     ChatEntry.new(
@@ -510,7 +513,8 @@ module FdHelper
       name: message_name(said, hidden),
       body: message_body(said, files),
       state: ("deleted in Slack" if said.deleted?),
-      files: files
+      files: files,
+      shares: shares
     )
   end
 

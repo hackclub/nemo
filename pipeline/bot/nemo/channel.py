@@ -70,7 +70,7 @@ SELECT count(*) FROM fd.actions WHERE case_id = %s AND reversed_at IS NULL
 
 SHARES = """
 SELECT s.kind, s.source_channel_id, s.source_channel_name, s.source_ts, s.permalink,
-       s.is_reachable, s.source_author_user_id, s.source_body
+       s.is_reachable, s.source_author_user_id, s.source_body, s.raw
 FROM fd.intake_shares s
 JOIN fd.intake_messages m ON m.id = s.message_id
 WHERE m.conversation_id = %s
@@ -176,6 +176,7 @@ def gather(conn, case_id):
             "is_reachable": s[5],
             "source_author_user_id": s[6],
             "source_body": s[7],
+            "raw": s[8],
         }
         for s in conn.execute(SHARES, (convo,)).fetchall()
     ]
@@ -199,6 +200,7 @@ def post_report(client, conn, case_id, channel_id=None):
         metadata=cards.report.metadata(case),
         unfurl_links=False,
         unfurl_media=False,
+        **only_the_face(client, case["is_anonymous"], case["reporter_user_id"]),
     )
     ts = sent["ts"]
 
@@ -224,7 +226,6 @@ def post_report(client, conn, case_id, channel_id=None):
 
 
 def anonymous_face():
-    """Slack fetches this itself, so it has to be a host Slack can reach."""
     told = os.environ.get("ANONYMOUS_ICON_URL")
     if told:
         return told
@@ -233,6 +234,12 @@ def anonymous_face():
     if not host or host.startswith(("localhost", "127.")):
         return None
     return app_url("/anonymous.png")
+
+
+def only_the_face(client, anonymous, reporter_user_id):
+    worn = as_reporter(client, anonymous, reporter_user_id)
+    worn.pop("metadata", None)
+    return worn
 
 
 def as_reporter(client, anonymous, reporter_user_id):
@@ -336,25 +343,35 @@ ORDER BY woke_at LIMIT 50
 """
 
 
-FOLLOW_UPS_WAITING = """
+SOMETHING_TO_CARRY = """
+coalesce(btrim(m.body), '') <> '' OR EXISTS (
+    SELECT 1 FROM fd.intake_message_files mf
+    JOIN fd.intake_files f ON f.id = mf.file_id
+    WHERE mf.message_id = m.id AND mf.mirrored_at IS NULL
+      AND f.fetch_state IN ('pending', 'stored')
+)
+"""
+
+FOLLOW_UPS_WAITING = f"""
 SELECT m.id
 FROM fd.intake_messages m
 JOIN fd.intake_conversations c ON c.id = m.conversation_id
 JOIN fd.case_reports r ON r.id = c.report_id
 WHERE r.case_id = %s AND m.direction = 'inbound' AND m.mirrored_ts IS NULL
   AND m.deleted_at IS NULL AND c.handed_off_at IS NOT NULL
-  AND m.posted_at > c.handed_off_at
+  AND m.posted_at > c.handed_off_at AND ({SOMETHING_TO_CARRY})
 ORDER BY m.posted_at, m.id
 """
 
 
-FOLLOW_UPS_ANYWHERE = """
+FOLLOW_UPS_ANYWHERE = f"""
 SELECT DISTINCT r.case_id
 FROM fd.intake_messages m
 JOIN fd.intake_conversations c ON c.id = m.conversation_id
 JOIN fd.case_reports r ON r.id = c.report_id
 WHERE m.direction = 'inbound' AND m.mirrored_ts IS NULL AND m.deleted_at IS NULL
   AND c.handed_off_at IS NOT NULL AND m.posted_at > c.handed_off_at
+  AND ({SOMETHING_TO_CARRY})
 LIMIT 100
 """
 
@@ -389,7 +406,6 @@ def waiting_files(conn):
 
 
 def carry_files(client, conn, case_id, channel_id=None):
-    """A file is pending when the card goes up and stored a moment later."""
     room = channel_id or firehouse_channel()
     sent = 0
     for message_id, forwarded_ts, anonymous, reporter in conn.execute(

@@ -17,6 +17,8 @@ module Fd
       end
       @chat = CaseChat.tail(family)
       @earlier_chat = CaseChat.earlier_than(family, @chat.size)
+      @cited_shares = IntakeShare.for_messages(@conversation_said.map(&:id))
+      @channels = ChannelNames.for(cited.map(&:source_channel_id).compact)
       @names = Names.for(said_by)
 
       respond_to do |format|
@@ -27,9 +29,13 @@ module Fd
 
     private
 
+    def cited
+      (@cited_shares || {}).values.flatten
+    end
+
     def said_by
       named = @reports.map(&:reporter_user_id) + @reports.map(&:closed_by) +
-        @conversation_said.map(&:sent_by) +
+        @conversation_said.map(&:sent_by) + cited.map(&:source_author_user_id) +
         @queued.map(&:requested_by) + @chat.map(&:author_user_id) + [@case.opened_by]
       return named if @reports.any?(&:anonymous?)
 

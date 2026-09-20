@@ -32,7 +32,6 @@ WHERE id = (SELECT report_id FROM fd.intake_conversations WHERE id = %s)
 
 
 def shared_at(file, channel_id):
-    """The share carries the ts of the message Slack made for the file."""
     shares = (file or {}).get("shares") or {}
     for kind in ("public", "private"):
         for room, entries in (shares.get(kind) or {}).items():
@@ -146,7 +145,6 @@ class Carrier:
         return posted.get("ts")
 
     def keep_what_went(self, conn, message_id, carried):
-        """What the Fire Department sent belongs on the case too, not only in the DM."""
         for seq, one in enumerate(carried):
             file_id = conn.execute(
                 KEEP_FILE,
@@ -184,7 +182,6 @@ class Carrier:
         return carried
 
     def where_it_landed(self, file, channel_id, thread_ts):
-        """Slack rarely names the message an upload made, so keep asking until it does."""
         ts = shared_at(file, channel_id)
         if ts:
             return ts

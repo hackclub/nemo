@@ -266,4 +266,44 @@ class FdHelperTest < ActionView::TestCase
 
     assert_empty entry.files
   end
+  def cited(message, **attrs)
+    Fd::IntakeShare.create!({ message_id: message.id, kind: "forward",
+      source_channel_id: "C0LOUNGE", source_ts: "1754487721.123456",
+      source_author_user_id: "UBAD", source_body: "the message they reported",
+      permalink: "https://hackclub.slack.com/archives/C0LOUNGE/p1754487721123456",
+      is_reachable: true }.merge(attrs))
+  end
+
+  test "a forwarded message is cited under the words it arrived with" do
+    said = report
+    message = intake(conversation_for(said), author: "UREP1")
+    cited(message)
+
+    entry = chat_entries([said], [], [message]).first
+    share = entry.shares.sole
+
+    assert share.forwarded?
+    assert_equal "forwarded", share.word
+    assert share.said?
+    assert_equal "the message they reported", share.source_body
+  end
+
+  test "a link nobody could open says so rather than quoting nothing" do
+    said = report
+    message = intake(conversation_for(said), author: "UREP1")
+    cited(message, kind: "link", source_body: nil, permalink: nil, is_reachable: false)
+
+    share = chat_entries([said], [], [message]).first.shares.sole
+
+    assert_not share.said?
+    assert_equal "linked", share.word
+    assert_equal "a link we could not open", share.why_not
+  end
+
+  test "a message with nothing cited carries no citation blocks" do
+    said = report
+    message = intake(conversation_for(said), author: "UREP1")
+
+    assert_empty chat_entries([said], [], [message]).first.shares
+  end
 end

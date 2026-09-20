@@ -34,7 +34,6 @@ def shows_inline(mimetype):
 
 
 def held_in_slack(client, name, body, channel_id=None, thread_ts=None):
-    """Uploaded with no channel the file stays private, which is what a block wants."""
     where = {"channel": channel_id, "thread_ts": thread_ts} if channel_id else {}
     answer = client.files_upload_v2(content=body, filename=name, title=name, **where)
     return (answer.get("files") or [{}])[0].get("id")
@@ -54,7 +53,6 @@ def gather(conn, message_id):
 
 
 def share(client, conn, message_id, channel_id, thread_ts, wearing=None, words=None):
-    """The reporter's words and pictures go up together, wearing the reporter's face."""
     inline, on_their_own = gather(conn, message_id)
     said = (words or "").strip()
     if not inline and not on_their_own and not said:
@@ -87,6 +85,12 @@ def post(client, conn, message_id, channel_id, thread_ts, inline, said, alongsid
         if uploaded:
             kept.append((file_id, name, kind, uploaded))
 
+    if inline and not kept:
+        raise RuntimeError("slack would not keep any of the pictures, so this is not settled")
+
+    if said and not kept and not alongside:
+        return spoken(client, channel_id, thread_ts, said, wearing)
+
     blocks = []
     if said:
         blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": said}})
@@ -117,6 +121,18 @@ def post(client, conn, message_id, channel_id, thread_ts, inline, said, alongsid
     if kept:
         log.info("nemo: carried %d file(s) into the firehouse", len(kept))
     return ts
+
+
+def spoken(client, channel_id, thread_ts, said, wearing):
+    sent = client.chat_postMessage(
+        channel=channel_id,
+        thread_ts=thread_ts,
+        text=said,
+        unfurl_links=True,
+        unfurl_media=True,
+        **wearing,
+    )
+    return sent["ts"]
 
 
 def named(alongside):

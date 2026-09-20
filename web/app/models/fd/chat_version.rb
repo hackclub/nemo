@@ -19,6 +19,12 @@ module Fd
     FILES_JOIN = "JOIN fd.intake_message_files mf ON mf.file_id = fd.intake_files.id " \
                  "JOIN fd.intake_messages m ON m.id = mf.message_id"
 
+    SHARE_STAMPS = Arel.sql(
+      "count(*), max(fd.intake_shares.id), " \
+      "max(greatest(fd.intake_shares.observed_at, fd.intake_shares.last_seen_at))"
+    )
+    SHARES_JOIN = "JOIN fd.intake_messages m ON m.id = fd.intake_shares.message_id"
+
     def self.for(case_id)
       parts(case_id).join("-")
     end
@@ -35,13 +41,18 @@ module Fd
           IntakeFile.joins(FILES_JOIN)
             .where("m.conversation_id IN (#{conversations.to_sql})"),
           FILE_STAMPS
+        ),
+        part(
+          IntakeShare.joins(SHARES_JOIN)
+            .where("m.conversation_id IN (#{conversations.to_sql})"),
+          SHARE_STAMPS
         )
       ]
     end
 
     def self.parse(version)
       pieces = version.to_s.split("-", -1)
-      return nil unless pieces.size == 4
+      return nil unless pieces.size == 5
 
       pieces.map do |piece|
         found = piece.match(SHAPE) or return nil

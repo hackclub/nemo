@@ -11,6 +11,37 @@
     <% if entry.body.present? %>
       <p class="msg-body"><%= mentioned(entry.body) %></p>
     <% end %>
+    <% if entry.shares.present? %>
+      <div class="msg-cites">
+        <% entry.shares.each do |cite| %>
+          <figure class="cite <%= "cite-bare" unless cite.said? %>">
+            <figcaption class="cite-head">
+              <%= face(cite.source_author_user_id, css: "row-avatar cite-face") %>
+              <span class="cite-who">
+                <%= cite.source_author_user_id.present? ? handle(cite.source_author_user_id) : "somebody" %>
+              </span>
+              <span class="cite-how">
+                <%= cite.word %><%= " from" if cite.source_channel_id.present? %>
+              </span>
+              <% if cite.source_channel_id.present? %>
+                <%= channel_mention(cite.source_channel_id, cite.source_channel_name) %>
+              <% end %>
+              <% if cite.permalink.present? %>
+                <%= link_to cite.permalink, class: "cite-open", target: "_blank", rel: "noopener",
+                      title: "open it in Slack" do %>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
+                <% end %>
+              <% end %>
+            </figcaption>
+            <% if cite.said? %>
+              <blockquote class="cite-body"><%= mentioned(cite.source_body) %></blockquote>
+            <% else %>
+              <p class="cite-body none"><%= cite.why_not %></p>
+            <% end %>
+          </figure>
+        <% end %>
+      </div>
+    <% end %>
     <% if entry.files.present? %>
       <div class="msg-files">
         <% entry.files.each do |file| %>

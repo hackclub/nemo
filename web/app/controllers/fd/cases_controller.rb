@@ -55,8 +55,9 @@ module Fd
       @flagged_messages = @thread_messages.select { |said| @citations.key?(said.id) }
       @cited_by = @actions.select(&:cites?).group_by(&:cites_message_id)
       @cited_messages = cited_messages
+      @cited_shares = IntakeShare.for_messages(@conversation_said.map(&:id))
       @channels = ChannelNames.for(@threads.map(&:channel_id) +
-        @cited_messages.values.map(&:channel_id))
+        @cited_messages.values.map(&:channel_id) + cited_channel_ids)
       @said_counts = @thread_messages.group_by(&:author_user_id).transform_values(&:size)
       @person_priors = Case.prior_counts_for(@participants.map(&:user_id))
       @assignees = @case.assignees.to_a
@@ -154,6 +155,14 @@ module Fd
       reports.find { |report| report.id == params[:thread].to_i } || reports.last
     end
 
+    def cited_channel_ids
+      (@cited_shares || {}).values.flatten.map(&:source_channel_id).compact
+    end
+
+    def cited_authors
+      (@cited_shares || {}).values.flatten.map(&:source_author_user_id).compact
+    end
+
     def cited_messages
       wanted = @cited_by.keys - @thread_messages.map(&:id)
       held = @thread_messages.index_by(&:id)
@@ -175,7 +184,8 @@ module Fd
         @thread_messages.map(&:purged_by),
         @citations.values.map(&:flagged_by),
         @threads.map(&:added_by),
-        @erasures.map(&:actor_user_id)
+        @erasures.map(&:actor_user_id),
+        cited_authors
       ]
     end
 

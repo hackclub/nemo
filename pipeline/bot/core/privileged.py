@@ -46,7 +46,6 @@ _admin = {}
 
 
 def absent(failure):
-    """Slack says this when the admin account cannot see the channel."""
     said = str(failure)
     return any(one in said for one in NOT_THERE)
 

@@ -123,8 +123,6 @@ def refresh(conn):
 
 
 def watching(channel_id, thread_ts):
-    """False only when we know the thread is free. A cold cache says yes, then the
-    database settles it, so a missed refresh can never quietly stop enforcement."""
     with _guard:
         if not _loaded:
             return True

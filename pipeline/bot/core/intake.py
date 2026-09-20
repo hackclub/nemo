@@ -103,7 +103,22 @@ def attach(conn, message_id, event):
             "(message_id, kind, source_channel_id, source_channel_name, source_ts, "
             " source_thread_ts, source_author_user_id, source_body, permalink, "
             " is_reachable, raw) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
+            "ON CONFLICT (message_id, source_channel_id, source_ts) DO UPDATE SET "
+            " kind = (ARRAY['forward', 'unfurl', 'link'])[least("
+            "   array_position(ARRAY['forward', 'unfurl', 'link'], fd.intake_shares.kind),"
+            "   array_position(ARRAY['forward', 'unfurl', 'link'], EXCLUDED.kind))], "
+            " source_channel_name = "
+            "   coalesce(fd.intake_shares.source_channel_name, EXCLUDED.source_channel_name), "
+            " source_thread_ts = "
+            "   coalesce(fd.intake_shares.source_thread_ts, EXCLUDED.source_thread_ts), "
+            " source_author_user_id = "
+            "   coalesce(fd.intake_shares.source_author_user_id, EXCLUDED.source_author_user_id), "
+            " source_body = coalesce(fd.intake_shares.source_body, EXCLUDED.source_body), "
+            " permalink = coalesce(fd.intake_shares.permalink, EXCLUDED.permalink), "
+            " is_reachable = fd.intake_shares.is_reachable OR EXCLUDED.is_reachable, "
+            " last_seen_at = now(), "
+            " raw = coalesce(fd.intake_shares.raw, EXCLUDED.raw)",
             (
                 message_id,
                 share["kind"],

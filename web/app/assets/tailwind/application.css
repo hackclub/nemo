@@ -2899,6 +2899,69 @@
     flex-direction: column;
   }
   .chatscroll > :first-child { margin-top: auto; }
+  .msg-cites {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2xs);
+    margin-top: 6px;
+  }
+  .cite {
+    margin: 0;
+    padding: 7px 10px 8px;
+    border: 1px solid var(--line-soft);
+    border-left: 2px solid var(--accent-line);
+    border-radius: 0 var(--r-ctl) var(--r-ctl) 0;
+    background: var(--card-2);
+    max-width: 62ch;
+  }
+  .cite-head {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+    font-size: var(--t-small);
+    color: var(--ink-3);
+    line-height: 1.4;
+  }
+  .cite-head img.cite-face,
+  .cite-head .cite-face {
+    width: 17px;
+    height: 17px;
+    border-radius: var(--r-pill);
+    flex: none;
+  }
+  .cite-who .handle {
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+  .cite-how { color: var(--ink-4); }
+  .cite-head .mention { font-size: var(--t-small); }
+  .cite-open {
+    display: inline-flex;
+    margin-left: auto;
+    padding: 2px;
+    border-radius: var(--r-tight);
+    color: var(--ink-4);
+  }
+  .cite-open:hover { color: var(--accent); background: var(--accent-soft); }
+  .cite-body {
+    margin: 8px 0 0;
+    font-size: var(--t-body);
+    line-height: 1.55;
+    color: var(--ink);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .cite-body.none {
+    color: var(--ink-4);
+    font-size: var(--t-small);
+  }
+  .cite-bare {
+    border-left-color: var(--line);
+    background: transparent;
+  }
+  .msg.out .cite { background: var(--card); }
+
   .msg-files {
     display: flex;
     flex-wrap: wrap;
