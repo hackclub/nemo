@@ -40,6 +40,13 @@ ROLE="${1:-${NEMO_ROLE:-}}"
 [ $# -gt 0 ] && shift
 
 case "$ROLE" in
+  bot.*)
+    set -- "${ROLE#bot.}" "$@"
+    ROLE=bot
+    ;;
+esac
+
+case "$ROLE" in
   serve)
     cd "$WEB" || exit 1
     export NEMO_STREAM="${NEMO_STREAM:-1}"
