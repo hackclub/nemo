@@ -113,7 +113,7 @@ def priors(case):
 def subjects_line(case):
     subjects = case.get("subjects") or []
     if not subjects:
-        return "nobody named yet"
+        return None
     return "about " + ", ".join(f"<@{user_id}>" for user_id in subjects)
 
 
