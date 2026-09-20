@@ -37,25 +37,16 @@ def quoted(bodies):
     return richtext.quote(said)
 
 
-def option(value, label, note):
+def option(value, label):
     return {
         "text": {"type": "mrkdwn", "text": f"*{label}*"},
-        "description": {"type": "mrkdwn", "text": note},
         "value": value,
     }
 
 
-ANONYMOUS_OPTION = option(
-    ANONYMOUS,
-    "Send it anonymously",
-    "They see _a member_. Only the bot knows it was you.",
-)
+NAMED_OPTION = option(NAMED, "Send it with my name")
 
-NAMED_OPTION = option(
-    NAMED,
-    "Sign it with my name",
-    "They see your handle, and can thank you properly.",
-)
+ANONYMOUS_OPTION = option(ANONYMOUS, "Send it anonymously")
 
 
 def forwarded(channels):
@@ -73,13 +64,6 @@ def forwarded(channels):
 
 def blocks(bodies, files=0, channels=(), held=None):
     built = [
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "*Ready when you are.* The Fire Department will see this:",
-            },
-        },
         quoted(bodies),
     ]
 
@@ -107,8 +91,8 @@ def blocks(bodies, files=0, channels=(), held=None):
                 {
                     "type": "radio_buttons",
                     "action_id": ACTION,
-                    "initial_option": NAMED_OPTION if held == NAMED else ANONYMOUS_OPTION,
-                    "options": [ANONYMOUS_OPTION, NAMED_OPTION],
+                    "initial_option": ANONYMOUS_OPTION if held == ANONYMOUS else NAMED_OPTION,
+                    "options": [NAMED_OPTION, ANONYMOUS_OPTION],
                 }
             ],
         },
@@ -145,7 +129,7 @@ def picked(state):
 
 
 def chosen(state, held=None):
-    return picked(state) or held or ANONYMOUS
+    return picked(state) or held or NAMED
 
 
 DROPPED = "Nothing was sent. Say more here whenever you want, and I will ask again."
