@@ -143,7 +143,7 @@ class FdHelperTest < ActionView::TestCase
     saved = make_case(subject: "UAAA")
     Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true,
       source_app: "shroud", received_at: Time.current)
-    assert_equal "anonymous", row_reporter_label(Fd::Case.find(saved.id))
+    assert_equal "Anonymous", row_reporter_label(Fd::Case.find(saved.id))
   end
 
   test "a case with no report at all names who opened it directly" do
@@ -215,7 +215,7 @@ class FdHelperTest < ActionView::TestCase
     entry = chat_entries([said], [], [message]).first
 
     assert_nil entry.who, "the author id must not reach the avatar"
-    assert_equal "anonymous", entry.name
+    assert_equal "Anonymous", entry.name
     assert_equal said.reporter_label(names), entry.name
   end
 
@@ -238,5 +238,32 @@ class FdHelperTest < ActionView::TestCase
 
     assert_equal "UREP1", entry.who
     assert_match(/UREP1/, entry.name)
+  end
+  def waiting(said, body = "")
+    Fd::IntakeOutbox.create!(conversation_id: conversation_for(said), kind: "reply",
+      body: body, mode: "signed", requested_by: "UFF1",
+      files: [{ "name" => "shot.png", "sha256" => "abc123" }])
+  end
+
+  test "a reply still on its way shows what it carries, as the reporter's does" do
+    said = report
+
+    entry = chat_entries([said], [], [], [waiting(said)]).last
+
+    assert_equal ["shot.png"], entry.files.map(&:shown_name)
+    assert_equal ["sending"], entry.files.map(&:said)
+    assert_not entry.files.first.kept?
+    assert_not entry.files.first.image?
+  end
+
+  test "a reply carrying nothing has no file chips to show" do
+    said = report
+
+    entry = chat_entries([said], [], [], [Fd::IntakeOutbox.create!(
+      conversation_id: conversation_for(said), kind: "reply", body: "just words",
+      mode: "signed", requested_by: "UFF1"
+    )]).last
+
+    assert_empty entry.files
   end
 end

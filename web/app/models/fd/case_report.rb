@@ -11,7 +11,7 @@ module Fd
     end
 
     def reporter_label(names = nil)
-      return "anonymous" if anonymous?
+      return "Anonymous" if anonymous?
 
       names ? names[reporter_user_id] : "@#{reporter_user_id}"
     end

@@ -12,6 +12,10 @@ THREAD_TS = re.compile(r"(?:^|[?&]|&amp;)thread_ts=(\d{1,12}\.\d{6})")
 
 
 def posted_at(ts):
+    """Slack names a message with the second it landed. Ours is now when it will not."""
+    if ts is None:
+        return datetime.now(tz=timezone.utc)
+
     return datetime.fromtimestamp(float(ts), tz=timezone.utc)
 
 
@@ -172,8 +176,8 @@ def files(event):
                 "filetype": entry.get("filetype"),
                 "mode": mode,
                 "size_bytes": entry.get("size"),
-                "original_w": _int(entry.get("original_w")),
-                "original_h": _int(entry.get("original_h")),
+                "original_w": whole(entry.get("original_w")),
+                "original_h": whole(entry.get("original_h")),
                 "is_external": external,
                 "external_type": entry.get("external_type"),
                 "external_url": entry.get("external_url"),
@@ -190,7 +194,7 @@ def files(event):
     return out
 
 
-def _int(value):
+def whole(value):
     try:
         return int(value)
     except (TypeError, ValueError):

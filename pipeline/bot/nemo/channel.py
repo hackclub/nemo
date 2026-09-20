@@ -2,6 +2,7 @@ import logging
 import os
 
 from bot.core import parse
+from bot.core.wording import to_member
 from bot.nemo import answer, cards, carry, chat, who
 
 log = logging.getLogger("bot.nemo")
@@ -87,7 +88,7 @@ WHERE m.id = %s
 """
 
 
-ANONYMOUS = "Anonymous reporter"
+ANONYMOUS = "Anonymous"
 
 
 def digest_of(blocks):
@@ -213,15 +214,34 @@ def post_report(client, conn, case_id, channel_id=None):
             (ts, case["message_id"]),
         )
     if case["message_id"]:
-        carry.share(client, conn, case["message_id"], channel_id or firehouse_channel(), ts)
+        carry.share(
+            client, conn, case["message_id"], channel_id or firehouse_channel(), ts,
+            wearing=as_reporter(client, case["is_anonymous"], case["reporter_user_id"]),
+        )
 
     log.info("nemo: case %s posted to the firehouse at %s", case_id, ts)
     return ts
 
 
+def anonymous_face():
+    """Slack fetches this itself, so it has to be a host Slack can reach."""
+    told = os.environ.get("ANONYMOUS_ICON_URL")
+    if told:
+        return told
+
+    host = os.environ.get("APP_HOST", "")
+    if not host or host.startswith(("localhost", "127.")):
+        return None
+    return app_url("/anonymous.png")
+
+
 def as_reporter(client, anonymous, reporter_user_id):
     if anonymous or not reporter_user_id:
-        return {"username": ANONYMOUS}
+        worn = {"username": ANONYMOUS}
+        icon = anonymous_face()
+        if icon:
+            worn["icon_url"] = icon
+        return worn
 
     seen = who.face(client, reporter_user_id)
     wearing = {"username": seen["name"]}
@@ -245,22 +265,20 @@ def post_follow_up(client, conn, message_id, channel_id=None):
         log.warning("nemo: message %s has no card to hang under", message_id)
         return None
 
-    sent = client.chat_postMessage(
-        channel=channel_id or firehouse_channel(),
-        thread_ts=forwarded,
-        text=cards.report.to_member(body),
-        unfurl_links=False,
-        unfurl_media=False,
-        **as_reporter(client, anonymous, reporter),
+    ts = carry.share(
+        client, conn, message_id, channel_id or firehouse_channel(), forwarded,
+        wearing=as_reporter(client, anonymous, reporter),
+        words=to_member(body),
     )
-    ts = sent["ts"]
+    if ts is None:
+        log.info("nemo: message %s had nothing to carry", message_id)
+        return None
+
     conn.execute(
         "UPDATE fd.intake_messages SET mirrored_ts = %s, mirrored_at = now() "
         "WHERE id = %s AND mirrored_ts IS NULL",
         (ts, message_id),
     )
-    carry.share(client, conn, message_id, channel_id or firehouse_channel(), forwarded)
-
     log.info("nemo: message %s carried into the firehouse at %s", message_id, ts)
     return ts
 
@@ -339,6 +357,50 @@ WHERE m.direction = 'inbound' AND m.mirrored_ts IS NULL AND m.deleted_at IS NULL
   AND c.handed_off_at IS NOT NULL AND m.posted_at > c.handed_off_at
 LIMIT 100
 """
+
+
+FILES_WAITING = """
+SELECT DISTINCT r.case_id
+FROM fd.intake_message_files mf
+JOIN fd.intake_files f ON f.id = mf.file_id
+JOIN fd.intake_messages m ON m.id = mf.message_id
+JOIN fd.intake_conversations c ON c.id = m.conversation_id
+JOIN fd.case_reports r ON r.id = c.report_id
+WHERE mf.mirrored_at IS NULL AND f.fetch_state = 'stored'
+  AND m.direction = 'inbound' AND r.forwarded_ts IS NOT NULL
+LIMIT 50
+"""
+
+FILES_ON_CASE = """
+SELECT DISTINCT mf.message_id, r.forwarded_ts, r.is_anonymous, r.reporter_user_id
+FROM fd.intake_message_files mf
+JOIN fd.intake_files f ON f.id = mf.file_id
+JOIN fd.intake_messages m ON m.id = mf.message_id
+JOIN fd.intake_conversations c ON c.id = m.conversation_id
+JOIN fd.case_reports r ON r.id = c.report_id
+WHERE r.case_id = %s AND mf.mirrored_at IS NULL AND f.fetch_state = 'stored'
+  AND m.direction = 'inbound' AND r.forwarded_ts IS NOT NULL
+ORDER BY mf.message_id
+"""
+
+
+def waiting_files(conn):
+    return [row[0] for row in conn.execute(FILES_WAITING).fetchall()]
+
+
+def carry_files(client, conn, case_id, channel_id=None):
+    """A file is pending when the card goes up and stored a moment later."""
+    room = channel_id or firehouse_channel()
+    sent = 0
+    for message_id, forwarded_ts, anonymous, reporter in conn.execute(
+        FILES_ON_CASE, (case_id,)
+    ).fetchall():
+        if carry.share(
+            client, conn, message_id, room, forwarded_ts,
+            wearing=as_reporter(client, anonymous, reporter),
+        ):
+            sent += 1
+    return sent
 
 
 def waiting_follow_ups(conn):

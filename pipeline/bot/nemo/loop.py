@@ -70,6 +70,7 @@ def once(desk, channel_id=None):
         unmirrored = chat.waiting_anywhere(conn)
         following = channel.waiting_follow_ups(conn)
         woke = channel.untold_wakes(conn)
+        unshared = channel.waiting_files(conn)
         guards.refresh(conn)
         destroying = guards.pending(conn)
         lifting = guards.lifting(conn)
@@ -79,6 +80,8 @@ def once(desk, channel_id=None):
     carried = each(
         unmirrored, "has chat that did not go out", channel.mirror, client, channel_id
     )
+    each(unshared, "has a file that never went into the thread",
+         channel.carry_files, client, channel_id)
     each(following, "has a follow-up still waiting",
          channel.carry_follow_ups, client, channel_id)
     each(woke, "was reopened without saying so",
@@ -98,12 +101,18 @@ def start(desk, stopping, channel_id=None):
     with session() as conn:
         log.info("nemo: watching %s guarded thread(s)", guards.refresh(conn))
 
+    def apart(*doing):
+        for name, work in doing:
+            try:
+                work()
+            except Exception:
+                log.exception("nemo: %s failed", name)
+
     def heard(channel_name, told):
         if channel_name == CHAT:
             desk.mirror(told)
         elif channel_name == OUTBOX:
-            desk.echo_queued()
-            desk.tick_queued()
+            apart(("echoing", desk.echo_queued), ("ticking", desk.tick_queued))
         elif channel_name == GUARD:
             with session() as conn:
                 guards.refresh(conn)
@@ -112,8 +121,8 @@ def start(desk, stopping, channel_id=None):
                 name=f"nemo-guard-{told}", daemon=True,
             ).start()
         elif channel_name == CONVERSATION:
-            desk.caught_up(told)
-            desk.tick_queued()
+            apart(("catching up", lambda: desk.caught_up(told)),
+                  ("ticking", desk.tick_queued))
         else:
             desk.caught_up(told)
 

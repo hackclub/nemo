@@ -187,7 +187,6 @@ def fanned(entries):
                 runner(**held)
             except Exception:
                 log.exception("nemo: %s:%s failed", entry.kind, entry.key)
-        return None
 
     return run
 

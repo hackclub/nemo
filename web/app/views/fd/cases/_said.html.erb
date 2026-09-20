@@ -8,6 +8,32 @@
       <% if entry.kind == "chat" %><span class="tag">internal</span><% end %>
       <% if entry.state %><span class="tag <%= state_tone(entry.state).sub("chip-", "") %>"><%= entry.state %></span><% end %>
     </div>
-    <p class="msg-body"><%= mentioned(entry.body) %></p>
+    <% if entry.body.present? %>
+      <p class="msg-body"><%= mentioned(entry.body) %></p>
+    <% end %>
+    <% if entry.files.present? %>
+      <div class="msg-files">
+        <% entry.files.each do |file| %>
+          <% if file.image? %>
+            <%= link_to fd_file_path(file), class: "msg-shot", title: file.shown_name,
+                  data: { lightbox: file.shown_name } do %>
+              <%= image_tag fd_file_path(file), alt: file.shown_name, decoding: "async",
+                    width: file.original_w, height: file.original_h %>
+            <% end %>
+          <% elsif file.kept? %>
+            <%= link_to fd_file_path(file), class: "msg-file", target: "_blank", rel: "noopener" do %>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M15 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/></svg>
+              <span class="trunc"><%= file.shown_name %></span>
+            <% end %>
+          <% else %>
+            <span class="msg-file is-out">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M15 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/></svg>
+              <span class="trunc"><%= file.shown_name %></span>
+              <span class="tag off"><%= file.said %></span>
+            </span>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
   </div>
 </div>

@@ -11,6 +11,13 @@ module Fd
     CHAT_STAMPS = Arel.sql("count(*), max(id), max(greatest(said_at, edited_at, deleted_at))")
     MESSAGE_STAMPS = Arel.sql("count(*), max(id), max(greatest(posted_at, edited_at, deleted_at))")
     OUTBOX_STAMPS = Arel.sql("count(*), max(id), max(greatest(requested_at, sent_at, failed_at))")
+    FILE_STAMPS = Arel.sql(
+      "count(*), max(fd.intake_files.id), " \
+      "max(greatest(fd.intake_files.first_seen_at, fd.intake_files.last_seen_at, " \
+      "fd.intake_files.fetched_at, fd.intake_files.deleted_at))"
+    )
+    FILES_JOIN = "JOIN fd.intake_message_files mf ON mf.file_id = fd.intake_files.id " \
+                 "JOIN fd.intake_messages m ON m.id = mf.message_id"
 
     def self.for(case_id)
       parts(case_id).join("-")
@@ -23,13 +30,18 @@ module Fd
       [
         part(CaseChat.where(case_id: family), CHAT_STAMPS),
         part(IntakeMessage.where(conversation_id: conversations), MESSAGE_STAMPS),
-        part(IntakeOutbox.where(conversation_id: conversations), OUTBOX_STAMPS)
+        part(IntakeOutbox.where(conversation_id: conversations), OUTBOX_STAMPS),
+        part(
+          IntakeFile.joins(FILES_JOIN)
+            .where("m.conversation_id IN (#{conversations.to_sql})"),
+          FILE_STAMPS
+        )
       ]
     end
 
     def self.parse(version)
       pieces = version.to_s.split("-", -1)
-      return nil unless pieces.size == 3
+      return nil unless pieces.size == 4
 
       pieces.map do |piece|
         found = piece.match(SHAPE) or return nil

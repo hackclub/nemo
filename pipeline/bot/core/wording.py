@@ -20,7 +20,7 @@ def escape_but_links(text):
 def said(body):
     text = (body or "").strip()
     if not text:
-        return "they sent no words, only what is attached"
+        return ""
     if len(text) > QUOTE_LIMIT:
         text = text[:QUOTE_LIMIT].rstrip() + CUT
     return text

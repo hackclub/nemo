@@ -196,7 +196,7 @@ module Fd
     end
 
     def report_sub(report)
-      who = report.anonymous? ? "anonymous" : @names[report.reporter_user_id]
+      who = report.anonymous? ? "Anonymous" : @names[report.reporter_user_id]
       "#{who} · #{report.received_at.strftime('%-d %b')}"
     end
 

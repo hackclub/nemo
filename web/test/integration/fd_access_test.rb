@@ -30,6 +30,14 @@ class FdAccessTest < ActionDispatch::IntegrationTest
 
   DECORATIVE = %w[case.read].freeze
 
+  BOT = Rails.root.join("..", "pipeline", "bot")
+
+  def self.enforced_by_the_bot
+    Dir["#{BOT}/**/*.py"].flat_map { |path|
+      File.read(path).scan(/(?:needs=|may\(|declared\()[^)]*?"([\w.]+\.[\w.]+)"/).flatten
+    }.uniq
+  end
+
   def self.enforced
     controllers = Rails.application.routes.routes.filter_map { |route|
       route.defaults[:controller].to_s.presence
@@ -47,11 +55,11 @@ class FdAccessTest < ActionDispatch::IntegrationTest
   end
 
   test "a permission that guards something has somewhere it is actually checked" do
-    unenforced = Authz.keys - self.class.enforced - DECORATIVE
+    unenforced = Authz.keys - self.class.enforced - self.class.enforced_by_the_bot - DECORATIVE
 
     assert_empty unenforced,
-      "#{unenforced.join(', ')} can be moved on the roles tab but nothing reads it, " \
-      "so the switch would be inert"
+      "#{unenforced.join(', ')} can be moved on the roles tab but neither the dashboard " \
+      "nor the bot reads it, so the switch would be inert"
   end
 
   test "every route that writes names a permission that exists" do

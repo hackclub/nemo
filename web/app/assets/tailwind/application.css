@@ -2899,6 +2899,134 @@
     flex-direction: column;
   }
   .chatscroll > :first-child { margin-top: auto; }
+  .msg-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2xs);
+    margin-top: 6px;
+  }
+  .msg-shot {
+    display: block;
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    overflow: hidden;
+    background: var(--card-2);
+    line-height: 0;
+    max-width: 320px;
+  }
+  .msg-shot img {
+    display: block;
+    max-width: 100%;
+    max-height: 260px;
+    width: auto;
+    height: auto;
+    min-width: 96px;
+    min-height: 64px;
+    object-fit: contain;
+    background: var(--card-2);
+  }
+  .msg-shot:hover { border-color: var(--accent-line); }
+  .msg-file {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 260px;
+    padding: 5px 9px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    background: var(--card-2);
+    font-size: var(--t-small);
+    color: var(--ink-2);
+    text-decoration: none;
+  }
+  a.msg-file:hover { border-color: var(--accent-line); color: var(--ink); }
+  .msg-file.is-out { color: var(--ink-3); }
+  .msg-file svg { flex: none; }
+
+  .lightbox:not([open]) { display: none; }
+  .lightbox[open] {
+    display: block;
+    margin: auto;
+    inset: 0;
+    position: fixed;
+  }
+  .lightbox {
+    border: 0;
+    padding: 0;
+    width: fit-content;
+    height: fit-content;
+    max-width: 96vw;
+    max-height: 96vh;
+    background: transparent;
+    overflow: visible;
+    color: oklch(97% 0.003 60);
+  }
+  .lightbox::backdrop { background: oklch(12% 0.01 40 / 0.74); }
+  .lightbox-box {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-2xs);
+  }
+  .lightbox img {
+    display: block;
+    max-width: 92vw;
+    max-height: 80vh;
+    width: auto;
+    height: auto;
+    border-radius: var(--r-card);
+    box-shadow: 0 20px 56px oklch(0% 0 0 / 0.55);
+  }
+  .lightbox-cap {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--s-xs);
+    max-width: 92vw;
+    min-width: 0;
+    font-size: var(--t-small);
+    color: oklch(100% 0 0 / 0.6);
+  }
+  .lightbox-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .lightbox-open {
+    flex: none;
+    color: oklch(100% 0 0 / 0.86);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: oklch(100% 0 0 / 0.32);
+  }
+  .lightbox-open:hover { color: oklch(100% 0 0); text-decoration-color: currentColor; }
+  .lightbox-shut {
+    position: fixed;
+    top: var(--s-xs);
+    right: var(--s-xs);
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: var(--r-pill);
+    background: oklch(100% 0 0 / 0.12);
+    color: oklch(100% 0 0 / 0.78);
+    cursor: pointer;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+  }
+  .lightbox-shut:hover { background: oklch(100% 0 0 / 0.22); color: oklch(100% 0 0); }
+  .lightbox-shut:focus-visible,
+  .lightbox-open:focus-visible { outline: 2px solid oklch(100% 0 0 / 0.75); outline-offset: 2px; }
+  .lightbox[open] { animation: lightbox-in var(--dur) var(--ease); }
+  .lightbox[open]::backdrop { animation: lightbox-dim var(--dur) var(--ease); }
+  @keyframes lightbox-in { from { opacity: 0; transform: scale(0.98); } }
+  @keyframes lightbox-dim { from { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .lightbox[open], .lightbox[open]::backdrop { animation: none; }
+  }
   .chat-only { flex: none; margin-left: auto; }
   .chatwrap.only-replies .msg[data-kind="chat"] { display: none; }
 

@@ -1,6 +1,6 @@
 import logging
 
-from bot.core import audit, blobs, outbox, session
+from bot.core import audit, blobs, outbox, parse, session
 from bot.nemo import answer, carry, channel
 
 log = logging.getLogger("bot.nemo")
@@ -31,10 +31,20 @@ class Desk:
             return channel.redraw(self.client, conn, case_id)
 
     def caught_up(self, case_id):
-        with session() as conn:
-            drawn = channel.redraw(self.client, conn, case_id)
-            channel.tell_the_wake(self.client, conn, case_id)
-            channel.carry_follow_ups(self.client, conn, case_id)
+        drawn = None
+        for name, work in (
+            ("redraw", channel.redraw),
+            ("wake", channel.tell_the_wake),
+            ("follow-ups", channel.carry_follow_ups),
+            ("files", channel.carry_files),
+        ):
+            try:
+                with session() as conn:
+                    done = work(self.client, conn, case_id)
+                if name == "redraw":
+                    drawn = done
+            except Exception:
+                log.exception("nemo: case %s could not have its %s seen to", case_id, name)
         return drawn
 
     def mirror(self, case_id):
@@ -122,7 +132,13 @@ class Desk:
             if body is None:
                 log.warning("nemo: %s could not be kept, it is not going out", name)
                 continue
-            kept.append({"name": name, "sha256": blobs.stash(conn, body, item.get("mimetype"))})
+            kept.append({
+                "name": name,
+                "mimetype": item.get("mimetype"),
+                "original_w": parse.whole(item.get("original_w")),
+                "original_h": parse.whole(item.get("original_h")),
+                "sha256": blobs.stash(conn, body, item.get("mimetype")),
+            })
         return kept
 
     def echo_queued(self, case_id=None):

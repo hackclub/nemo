@@ -48,7 +48,8 @@ def escape_but_mentions(text):
 
 
 def quote(body):
-    return richtext.quote(said(body))
+    words = said(body)
+    return richtext.quote(words) if words else None
 
 
 def section(text):
@@ -122,7 +123,7 @@ def link(case):
 
 def reporter(case):
     if case.get("is_anonymous", True) or not case.get("reporter_user_id"):
-        return "anonymous"
+        return "Anonymous"
     return f"<@{case['reporter_user_id']}>"
 
 
@@ -255,7 +256,9 @@ def what_they_reported(shares):
     built = []
     for share in brought(shares):
         built.append(context([whose(share)]))
-        built.append(quote(share["source_body"]))
+        words = quote(share["source_body"])
+        if words:
+            built.append(words)
     return built
 
 
@@ -263,7 +266,7 @@ def blocks(case):
     files = case.get("files") or []
     shares = case.get("shares") or []
 
-    built = [title(case), quote(case.get("body"))]
+    built = [part for part in [title(case), quote(case.get("body"))] if part]
     built += what_they_reported(shares)
     built.append(footer(case))
 

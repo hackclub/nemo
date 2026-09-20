@@ -29,7 +29,7 @@
     <% pane_partial = content_for?(:pane) ? nil : section_pane %>
     <% pane = content_for?(:pane) || pane_partial.present? %>
 
-    <div class="shell" data-controller="cachet dismiss sidebar<%= " palette" if fire_engine %>"
+    <div class="shell" data-controller="cachet dismiss sidebar lightbox<%= " palette" if fire_engine %>"
          data-palette-url-value="<%= fd_search_path(format: :json) %>"
          data-palette-on-value="<%= content_for(:palette_on) %>"
          data-action="keydown@document->palette#key">
@@ -117,6 +117,8 @@
       <% if fire_engine %>
         <%= render "fd/palette" %>
       <% end %>
+
+      <%= render "layouts/lightbox" %>
     </div>
 
     <div class="topbar-msgs" aria-live="polite" aria-atomic="false">

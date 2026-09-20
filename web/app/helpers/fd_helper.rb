@@ -457,7 +457,8 @@ module FdHelper
     ROLE_TONES.fetch(role, "chip-off")
   end
 
-  ChatEntry = Struct.new(:key, :at, :side, :kind, :who, :name, :body, :state, keyword_init: true)
+  ChatEntry = Struct.new(:key, :at, :side, :kind, :who, :name, :body, :state, :files,
+    keyword_init: true)
 
   def chat_stream(kase)
     "case_#{kase.id}_chat"
@@ -481,7 +482,8 @@ module FdHelper
 
   def changed_chat_entries(reports, chat, messages, queued)
     hidden = reports.any?(&:anonymous?)
-    said = messages.map { |one| message_entry(one, hidden) }
+    held = Fd::IntakeFile.for_messages(messages.map(&:id))
+    said = messages.map { |one| message_entry(one, hidden, held.fetch(one.id, [])) }
     said += chat.map { |line| chat_entry(line) }
     said += queued.map { |row| queued_entry(row) }
     said.sort_by(&:at)
@@ -492,11 +494,11 @@ module FdHelper
       ChatEntry.new(key: "open-#{report.id}", at: report.received_at, side: "in", kind: "them",
         who: (report.reporter_user_id unless report.anonymous?),
         name: report.reporter_label(names),
-        body: report.body.presence || "No words with it.")
+        body: report.body.presence)
     end
   end
 
-  def message_entry(said, hidden = false)
+  def message_entry(said, hidden = false, files = [])
     theirs = said.theirs?
     masked = theirs && hidden
     ChatEntry.new(
@@ -506,13 +508,14 @@ module FdHelper
       kind: theirs ? "them" : "us",
       who: masked ? nil : (theirs ? said.author_user_id : said.sent_by),
       name: message_name(said, hidden),
-      body: message_body(said),
-      state: ("deleted in Slack" if said.deleted?)
+      body: message_body(said, files),
+      state: ("deleted in Slack" if said.deleted?),
+      files: files
     )
   end
 
   def message_name(said, hidden = false)
-    return "anonymous" if said.theirs? && hidden
+    return "Anonymous" if said.theirs? && hidden
     return names[said.author_user_id] if said.theirs? && said.author_user_id
     return "them" if said.theirs?
     return names[said.sent_by] if said.sent_by
@@ -520,14 +523,15 @@ module FdHelper
     "the Fire Department"
   end
 
-  def message_body(said)
-    said.body.presence || "no words, only what was attached"
+  def message_body(said, _files = [])
+    said.body.presence
   end
 
   def queued_entry(row)
     ChatEntry.new(key: "queued-#{row.id}", at: row.requested_at, side: "out", kind: "us",
       who: row.requested_by, name: names[row.requested_by], body: row.body,
-      state: row.failed? ? "undelivered, #{row.error}" : "sending, #{signing(row)}")
+      state: row.failed? ? "undelivered, #{row.error}" : "sending, #{signing(row)}",
+      files: Fd::OutgoingFile.queued_on(row))
   end
 
   def signing(row)
@@ -894,7 +898,7 @@ module FdHelper
 
   def row_reporter_label(kase)
     who = row_reporter(kase)
-    return "anonymous" if who.blank?
+    return "Anonymous" if who.blank?
 
     others = kase.reports.size - 1
     return names[who] if others < 1

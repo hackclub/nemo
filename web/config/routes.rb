@@ -21,6 +21,7 @@ Rails.application.routes.draw do
     resources :members, only: [:index, :show] do
       resources :notes, only: [:create, :destroy], controller: "member_notes"
     end
+    resources :files, only: [:show]
     resource :search, only: [:show], controller: "searches"
     get "audit", to: "audits#show", as: :audit
     get "slack_account/callback", to: "slack_accounts#callback", as: :slack_account_callback
