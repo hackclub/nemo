@@ -1,0 +1,37 @@
+<section class="pane" aria-label="Channels" data-controller="pane-filter"
+         data-pane-filter-url-value="<%= fd_channel_pane_path %>"
+         data-pane-filter-list-id-value="channel-listbox"
+         data-pane-filter-label-value="Channels">
+  <div class="pane-head">
+    <%= form_with url: fd_channels_path, method: :get, class: "qtools" do %>
+      <label class="vh" for="pane-channel-filter">Find a channel</label>
+      <%= search_field_tag :q, query.term, id: "pane-channel-filter",
+            class: "input input-sm grow", autocomplete: "off", placeholder: "Find a channel",
+            data: { pane_filter_target: "query", action: "input->pane-filter#filter" } %>
+    <% end %>
+  </div>
+
+  <div class="pane-list" data-pane-filter-target="list">
+    <% if rows.any? %>
+      <div role="listbox" aria-label="Channels" id="channel-listbox">
+        <%= render "fd/channels/pane_rows", rows: rows, open_id: open_id, more: nil %>
+      </div>
+      <% if query.more? %>
+        <div class="pane-more" data-controller="more" data-more-into-value="channel-listbox"
+             data-more-url-value="<%= fd_channel_pane_path(query.to_params.merge(page: query.page + 1, open: open_id).compact) %>"
+             aria-hidden="true"><i class="dot run"></i></div>
+      <% end %>
+
+      <div class="empty pane-filter-empty" data-pane-filter-target="empty" hidden>
+        <p class="empty-title">No channel matches that</p>
+        <p>Try part of the name, or a channel ID.</p>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">
+          <%= query.asked? ? "No channel matches that" : "No channels have been read yet" %>
+        </p>
+      </div>
+    <% end %>
+  </div>
+</section>

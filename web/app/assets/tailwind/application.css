@@ -558,8 +558,8 @@
   }
   :is(.sidebar-icon, .is-icon) .cnav-tally {
     position: absolute;
-    top: 2px;
-    left: 22px;
+    top: 1px;
+    left: 18px;
     min-width: 14px;
     padding: 0 3px;
     line-height: 14px;
@@ -645,7 +645,10 @@
     color: var(--ink-2);
     text-decoration: none;
     font-size: var(--t-body);
-    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+    width: 100%;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease),
+                width var(--dur) var(--ease), padding var(--dur) var(--ease),
+                grid-template-columns var(--dur) var(--ease);
   }
   .cnav-sub {
     display: grid;
@@ -756,6 +759,14 @@
   :is(.sidebar-icon, .is-icon) .cnav-said,
   :is(.sidebar-icon, .is-icon) .cnav a > span:not(.cnav-tally),
   :is(.sidebar-icon, .is-icon) .cnav-toggle > span { opacity: 0; pointer-events: none; }
+  :is(.sidebar-icon, .is-icon) .cnav a,
+  :is(.sidebar-icon, .is-icon) .cnav-toggle {
+    width: 34px;
+    justify-self: center;
+    padding: 9px 0;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    justify-items: center;
+  }
   :is(.sidebar-icon, .is-icon) .cnav-lab {
     opacity: 0;
     max-height: 0;
@@ -5202,6 +5213,8 @@
     }
     :is(.sidebar-icon, .is-icon) .cnav a,
     :is(.sidebar-icon, .is-icon) .cnav-toggle {
+      width: 100%;
+      justify-self: stretch;
       grid-template-columns: 22px minmax(0, 1fr) auto;
       justify-items: stretch;
       padding: 7px 10px;

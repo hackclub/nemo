@@ -2,7 +2,13 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["query", "row", "empty", "list"]
-  static values = { wait: { type: Number, default: 400 }, min: { type: Number, default: 2 }, url: String }
+  static values = {
+    wait: { type: Number, default: 400 },
+    min: { type: Number, default: 2 },
+    url: String,
+    listId: { type: String, default: "member-listbox" },
+    label: { type: String, default: "Members" }
+  }
 
   connect() {
     this.onKey = (event) => {
@@ -72,13 +78,13 @@ export default class extends Controller {
     const next = holder.querySelector("template[data-more-next]")
     next?.remove()
 
-    let listbox = this.listTarget.querySelector("#member-listbox")
+    let listbox = this.listTarget.querySelector(`#${this.listIdValue}`)
     if (!listbox) {
       this.listTarget.querySelectorAll(".empty:not(.pane-filter-empty)").forEach((el) => el.remove())
       listbox = document.createElement("div")
-      listbox.id = "member-listbox"
+      listbox.id = this.listIdValue
       listbox.setAttribute("role", "listbox")
-      listbox.setAttribute("aria-label", "Members")
+      listbox.setAttribute("aria-label", this.labelValue)
       this.listTarget.prepend(listbox)
     }
     listbox.replaceChildren(...holder.children)
@@ -89,7 +95,7 @@ export default class extends Controller {
       more.className = "pane-more"
       more.setAttribute("aria-hidden", "true")
       more.dataset.controller = "more"
-      more.dataset.moreIntoValue = "member-listbox"
+      more.dataset.moreIntoValue = this.listIdValue
       more.dataset.moreUrlValue = next.dataset.moreNext
       more.innerHTML = '<i class="dot run"></i>'
       listbox.after(more)

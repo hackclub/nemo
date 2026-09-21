@@ -1,0 +1,10 @@
+<% content_for :page_title, "Channels" %>
+<% content_for :pane_default, @open_id.present? ? "main" : "pane" %>
+<% content_for :pane do %>
+  <%= render "pane", query: @query, rows: @rows, open_id: @open_id %>
+<% end %>
+
+<div class="empty">
+  <p class="empty-title">Nothing is set up here yet</p>
+  <p>Pick a channel to see what is held on it.</p>
+</div>
