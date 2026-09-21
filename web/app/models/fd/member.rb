@@ -14,6 +14,7 @@ module Fd
     scope :by_name, -> { order(Arel.sql("lower(coalesce(nullif(display_name, ''), handle))")) }
 
     TERM_FIELDS = %w[display_name handle].freeze
+    CACHET_TERM_FIELDS = %w[display_name].freeze
     IDENTITY_TERM_FIELDS = %w[real_name first_name last_name email].freeze
 
     def self.search(term, actor: nil, limit: LIMIT, live_only: false)
@@ -24,7 +25,7 @@ module Fd
       like = "%#{sanitize_sql_like(term.downcase)}%"
       identity = actor&.may?("identity.read")
       joined = left_joins(:identity)
-      hits = joined.where(user_id: named(like))
+      hits = joined.where(user_id: named(like)).or(joined.where(user_id: shown_as(like)))
       hits = hits.or(joined.where(user_id: identified(like))) if identity
       hits = hits.where(is_deleted: false, is_bot: false) if live_only
       hits.order(Arel.sql(match_rank(term, identity)), :is_deleted, :is_bot)
@@ -33,6 +34,12 @@ module Fd
 
     def self.named(like)
       unscoped.where(lower_like(arel_table, TERM_FIELDS, like)).select(:user_id)
+    end
+
+    def self.shown_as(like)
+      CachetProfile.unscoped
+        .where(lower_like(CachetProfile.arel_table, CACHET_TERM_FIELDS, like))
+        .select(:user_id)
     end
 
     def self.identified(like)
