@@ -49,7 +49,7 @@ module Fd
         .where("#{table_name}.user_id IN (#{anybody(like, identity)})")
       hits = hits.where(is_deleted: false, is_bot: false) if live_only
       place = MemberMatch.ranked(term, identity: identity, columns: COLUMNS)
-      hits.select(Arel.sql("#{table_name}.user_id, #{place} AS place, spoke.messages_posted AS said"))
+      hits.select(Arel.sql("#{table_name}.user_id, #{place} AS place, spoke.messages_posted AS talked"))
         .order(Arel.sql(place), :is_deleted, :is_bot, Arel.sql(SAID_MOST))
         .by_name.limit(SHORTLIST)
     end
@@ -62,7 +62,7 @@ module Fd
 
     def self.closest(case_id)
       ["pick.place", on_the_case(case_id), "#{table_name}.is_deleted", "#{table_name}.is_bot",
-       "pick.said DESC NULLS LAST"].compact.join(", ")
+       "pick.talked DESC NULLS LAST"].compact.join(", ")
     end
 
     def self.on_the_case(case_id)
