@@ -1,19 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
+import { askingFor, personRow } from "lib/people_menu"
 
 const TOKEN = /@([\w.\-]*)$/
-
-function asking_for(where, term) {
-  const url = new URL(where, window.location.origin)
-  url.searchParams.set("q", term)
-  return url
-}
-
-function said(className, text) {
-  const span = document.createElement("span")
-  span.className = className
-  span.textContent = text
-  return span
-}
 
 export default class extends Controller {
   static targets = ["field", "results"]
@@ -48,7 +36,7 @@ export default class extends Controller {
     const found = this.token()
     if (!found || found[1].length < 2) return this.close()
 
-    const response = await fetch(asking_for(this.urlValue, found[1]), {
+    const response = await fetch(askingFor(this.urlValue, found[1]), {
       headers: { Accept: "application/json" },
     })
     if (!response.ok) return this.close()
@@ -62,17 +50,9 @@ export default class extends Controller {
     if (members.length === 0) return this.close()
 
     for (const member of members) {
-      const row = document.createElement("button")
-      row.type = "button"
-      row.className = "pick-opt"
-      row.dataset.action = "click->mention#choose mouseenter->mention#hover"
-      row.dataset.id = member.id
-      row.append(
-        said("avatar", member.initial),
-        said("pick-name", member.name),
-        said("pick-id mono", member.id)
+      this.resultsTarget.append(
+        personRow(member, "click->mention#choose mouseenter->mention#hover")
       )
-      this.resultsTarget.append(row)
     }
     this.resultsTarget.hidden = false
     this.at = -1
