@@ -2,15 +2,23 @@ module Fd
   class MergesController < BaseController
     permit "case.resolve"
 
+    PER_PAGE = 8
+
     def show
       @case = Case.find(params[:id])
       @term = params[:q].to_s.strip
+      @page = [params[:page].to_i, 1].max
       @siblings = @case.sibling_cases.includes(:subjects).oldest_first.to_a
-      @groups = @term.present? ? found_groups : Case.candidate_groups(@case, @siblings)
+      @groups, @more = @term.present? ? [found_groups, false] : candidate_page
       @candidates = @groups.flat_map(&:last)
+      read_reports(@candidates)
       @names = Names.for((@candidates + [@case])
         .flat_map(&:subject_user_ids) + [@case.opened_by] +
-        @candidates.flat_map(&:assignee_user_ids))
+        @candidates.flat_map(&:assignee_user_ids) +
+        @candidates.map(&:opened_by) +
+        @candidates.flat_map { |kase| kase.reports.map(&:reporter_user_id) } +
+        @cited_words.values.map(&:author))
+      render "more", layout: false if @page > 1
     end
 
     def confirm
@@ -56,6 +64,32 @@ module Fd
 
     def ticked_ids
       Array(params[:case_ids]).map(&:to_i).reject(&:zero?).uniq
+    end
+
+    def candidate_page
+      shared, subject, seen = Case.candidate_parts(@case, @siblings)
+      around, more = Case.candidates_around(seen, page: @page, per: PER_PAGE)
+      return [[[Case::AROUND, around]].reject { |_, found| found.empty? }, more] if @page > 1
+
+      groups = [["same thread", shared],
+                ["also about #{@case.subject_user_ids.any? ? 'the same person' : 'somebody on this case'}",
+                 subject],
+                [Case::AROUND, around]].reject { |_label, found| found.empty? }
+      [groups, more]
+    end
+
+    def read_reports(cases)
+      ActiveRecord::Associations::Preloader.new(records: cases,
+        associations: [:reports, :assignees]).call
+      ids = cases.map(&:id)
+      @held_counts = IntakeFile.counts_for_cases(ids)
+      @cited_words = IntakeShare.first_words_for(ids)
+      @channels = ChannelNames.for(@cited_words.values.map(&:channel))
+      @violations = Case.violations_for(ids)
+      @priors = Case.prior_counts_for(cases.flat_map(&:subject_user_ids))
+      @reachable = IntakeConversation.open_ones
+        .where(report_id: cases.flat_map { |kase| kase.reports.map(&:id) })
+        .pluck(:report_id).to_set
     end
 
     def found_groups

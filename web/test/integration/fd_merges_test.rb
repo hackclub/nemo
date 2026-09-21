@@ -144,6 +144,138 @@ class FdMergesTest < ActionDispatch::IntegrationTest
     assert_select "input[type='submit'][disabled]", count: 1
   end
 
+  test "a candidate shows what its report said, not only who and when" do
+    said = "they kept posting the same link after being asked to stop"
+    Fd::CaseReport.create!(case_id: @main.id, is_anonymous: true,
+      source_app: "shroud", received_at: Time.current, body: said)
+
+    sign_in_as(@me)
+    get fd_case_merge_path(@dup_one)
+
+    assert_response :success
+    assert_select ".merge-pick .qsubj", text: /#{Regexp.escape(said)}/, minimum: 1
+  end
+
+  test "a candidate with no report says so rather than showing nothing" do
+    sign_in_as(@me)
+    get fd_case_merge_path(@dup_one)
+
+    assert_select ".merge-pick .qsubj", text: /no report on file/, minimum: 1
+  end
+
+  test "a candidate reads like the same case does in the queue" do
+    sign_in_as(@me)
+    get fd_case_merge_path(@dup_one)
+
+    assert_select ".merge-pick .qrow", minimum: 2
+    assert_select ".merge-pick .qrow .qtop .qid", minimum: 2
+    assert_select ".merge-pick .qrow .qmeta .qviol", minimum: 2
+  end
+
+  def forwarded_into(kase, said:, link: "https://hackclub.slack.com/archives/C0LOUNGE/p1754487721123456")
+    report = Fd::CaseReport.create!(case_id: kase.id, reporter_user_id: "UREP1",
+      is_anonymous: false, source_app: "shroud", received_at: Time.current, body: link)
+    conversation = Fd::IntakeConversation.create!(report_id: report.id, channel_id: "D0REP",
+      thread_ts: "1.0", opened_at: 1.hour.ago)
+    message = Fd::IntakeMessage.create!(conversation_id: conversation.id, channel_id: "D0REP",
+      ts: "#{Time.current.to_i}.0001", direction: "inbound", author_user_id: "UREP1",
+      body: link, posted_at: 1.hour.ago)
+    Fd::IntakeShare.create!(message_id: message.id, kind: "forward", source_channel_id: "C0LOUNGE",
+      source_ts: "1754487721.123456", source_author_user_id: "UBAD", source_body: said,
+      permalink: link, is_reachable: true)
+  end
+
+  test "a report that is only a link shows what was forwarded, not the url" do
+    said = "read the room, nobody wants that here"
+    forwarded_into(@main, said: said)
+
+    sign_in_as(@me)
+    get fd_case_merge_path(@dup_one)
+
+    assert_response :success
+    assert_select ".merge-pick .qcite-said", text: /#{Regexp.escape(said)}/, minimum: 1
+    assert_select ".merge-pick .qcite-how", text: /forwarded/, minimum: 1
+    assert_select ".merge-pick .qcite-said", { text: /hackclub\.slack\.com/, count: 0 },
+      "the bare link is what we replaced, so it must not show"
+  end
+
+  test "words of their own outrank anything they also forwarded" do
+    forwarded_into(@main, said: "the forwarded words")
+    @main.reports.first.update!(body: "what the reporter typed themselves")
+
+    sign_in_as(@me)
+    get fd_case_merge_path(@dup_one)
+
+    assert_select ".merge-pick .qsubj", text: /what the reporter typed themselves/, minimum: 1
+    assert_select ".merge-pick .qcite", count: 0
+  end
+
+  def others(count)
+    count.times { |n| make_case(subject: format("UOTHER%02d", n)) }
+  end
+
+  test "the list stops at a page and offers to fetch the next" do
+    others(12)
+    sign_in_as(@me)
+
+    get fd_case_merge_path(@dup_one)
+
+    assert_select "#merge-around .merge-pick", count: Fd::MergesController::PER_PAGE
+    assert_select ".pane-more[data-more-into-value='merge-around']", count: 1
+  end
+
+  test "scrolling on fetches the next page and says whether more follow" do
+    others(20)
+    sign_in_as(@me)
+
+    get fd_case_merge_path(@dup_one)
+    first = css_select("#merge-around .merge-pick input.tick").map { |tick| tick["value"] }
+
+    get fd_case_merge_path(@dup_one, page: 2)
+
+    assert_response :success
+    next_lot = css_select(".merge-pick input.tick").map { |tick| tick["value"] }
+    assert_equal Fd::MergesController::PER_PAGE, next_lot.size
+    assert_empty first & next_lot, "a case must not be offered twice"
+    assert_select "template[data-more-next]", count: 1
+  end
+
+  test "the last page offers nothing further" do
+    sign_in_as(@me)
+
+    get fd_case_merge_path(@dup_one, page: 9)
+
+    assert_response :success
+    assert_select "template[data-more-next]", count: 0
+    assert_select ".merge-pick", count: 0
+  end
+
+  test "a later page carries only the rows, not the whole modal" do
+    others(12)
+    sign_in_as(@me)
+
+    get fd_case_merge_path(@dup_one, page: 2)
+
+    assert_select "turbo-frame", count: 0
+    assert_select "form", count: 0
+    assert_select ".merge-pick", minimum: 1
+  end
+
+  test "reading the candidates' reports does not query once per candidate" do
+    [@main, @dup_two].each do |kase|
+      Fd::CaseReport.create!(case_id: kase.id, is_anonymous: true,
+        source_app: "shroud", received_at: Time.current, body: "a report on #{kase.id}")
+    end
+    sign_in_as(@me)
+
+    asked = []
+    listen = ->(*, payload) { asked << payload[:sql] if payload[:sql].to_s.include?("FROM \"fd\".\"case_reports\"") }
+    ActiveSupport::Notifications.subscribed(listen, "sql.active_record") { get fd_case_merge_path(@dup_one) }
+
+    assert_response :success
+    assert_operator asked.size, :<=, 2, "the reports must be preloaded, not read per candidate"
+  end
+
   def in_order
     @main.update!(opened_at: 3.days.ago)
     @dup_one.update!(opened_at: 2.days.ago)

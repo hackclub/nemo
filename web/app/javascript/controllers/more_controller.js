@@ -1,13 +1,13 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static values = { url: String, into: String }
+  static values = { url: String, into: String, root: { type: String, default: ".pane-list" } }
 
   connect() {
     this.loading = false
     this.watcher = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) this.load()
-    }, { root: this.element.closest(".pane-list"), rootMargin: "320px 0px" })
+    }, { root: this.element.closest(this.rootValue), rootMargin: "320px 0px" })
     this.watcher.observe(this.element)
   }
 

@@ -16,23 +16,25 @@
 
       <% groups.each do |label, found| %>
         <section class="merge-section">
-          <h3 class="merge-group"><%= label %></h3>
-          <div class="merge-list">
+          <% unless label == Fd::Case::AROUND %>
+            <h3 class="merge-group"><%= label %></h3>
+          <% end %>
+          <%= tag.div class: "merge-list",
+                id: ("merge-around" if label == Fd::Case::AROUND) do %>
             <% found.each do |other| %>
-              <label class="merge-pick">
-                <%= check_box_tag "case_ids[]", other.id, false, id: nil, class: "tick",
-                      data: { merge_picker_target: "case", action: "change->merge-picker#change",
-                              opened_at: other.opened_at.iso8601 } %>
-                <span class="merge-who">
-                  <b><%= subject_handles(other) %></b>
-                  <span class="merge-id">#<%= other.id %></span>
-                  <span class="merge-sub"><%= merge_candidate_line(other) %></span>
-                </span>
-                <%= case_status_chip(other) %>
-              </label>
+              <%= render "fd/merges/candidate", other: other, violations: violations,
+                    priors_by_user: priors_by_user, reachable: reachable %>
             <% end %>
-          </div>
+          <% end %>
         </section>
+      <% end %>
+
+      <% if more %>
+        <div class="pane-more" data-controller="more" data-more-into-value="merge-around"
+             data-more-root-value=".merge-results"
+             data-more-url-value="<%= fd_case_merge_path(kase, page: 2) %>">
+          <span class="sub2">Loading more cases</span>
+        </div>
       <% end %>
     </div>
 

@@ -156,7 +156,9 @@ module Fd
         .group_by(&:first).transform_values { |pairs| pairs.map(&:last).uniq }
     end
 
-    def self.candidate_groups(kase, siblings = [], limit: 25)
+    AROUND = "around".freeze
+
+    def self.candidate_parts(kase, siblings = [])
       skip = kase.family_ids
       shared = siblings.reject { |one| skip.include?(one.id) }
       subject = if kase.subject_user_ids.any?
@@ -165,16 +167,14 @@ module Fd
       else
         []
       end
-      seen = skip + shared.map(&:id) + subject.map(&:id)
-      recent = unresolved.where.not(id: seen).order(opened_at: :desc).limit(8).to_a
+      [shared, subject, skip + shared.map(&:id) + subject.map(&:id)]
+    end
 
-      [
-        ["same thread", shared],
-        ["also about #{kase.subject_user_ids.any? ? 'the same person' : 'somebody on this case'}",
-         subject],
-        ["opened around the same time", recent]
-      ].reject { |_label, found| found.empty? }
-        .map { |label, found| [label, found.first(limit)] }
+    def self.candidates_around(seen, page: 1, per: 8)
+      found = unresolved.where.not(id: seen)
+        .order(opened_at: :desc, id: :desc)
+        .offset((page - 1) * per).limit(per + 1).to_a
+      [found.first(per), found.size > per]
     end
 
     def self.candidates_for(kase, siblings = [], limit: 25)

@@ -9,5 +9,6 @@
   <div class="merge-searchbar">
     <%= render "find", kase: @case, term: @term %>
   </div>
-  <%= render "body", kase: @case, groups: @groups, term: @term %>
+  <%= render "body", kase: @case, groups: @groups, term: @term, more: @more,
+        violations: @violations, priors_by_user: @priors, reachable: @reachable %>
 </div>
