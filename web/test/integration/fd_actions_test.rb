@@ -186,4 +186,33 @@ class FdActionsTest < ActionDispatch::IntegrationTest
     assert_equal 0, actions.count
     assert_match(/is not a channel id/, flash[:alert])
   end
+
+  test "acting on somebody the case was not about makes the case about them" do
+    sign_in_as(@me)
+    assert_not_includes @kase.subject_user_ids, "UNEW"
+
+    log(target_user_id: "UNEW")
+
+    assert_includes @kase.reload.subject_user_ids, "UNEW"
+    assert_match(/now also about @UNEW/, flash[:notice])
+    assert Fd::AuditEntry.where(entity_type: "participant", verb: "attached",
+      entity_id: @kase.id).exists?, "putting them on the case belongs in the trail"
+  end
+
+  test "acting on a subject twice leaves them on the case once" do
+    sign_in_as(@me)
+    log
+    log
+
+    assert_equal ["USUB"], @kase.reload.subject_user_ids
+    assert_no_match(/now also about/, flash[:notice])
+  end
+
+  test "a refused action does not put anybody on the case" do
+    sign_in_as(@me)
+    log(target_user_id: "UNEW", reason: "  ")
+
+    assert_equal 0, actions.count
+    assert_not_includes @kase.reload.subject_user_ids, "UNEW"
+  end
 end

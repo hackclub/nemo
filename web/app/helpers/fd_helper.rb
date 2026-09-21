@@ -817,7 +817,12 @@ module FdHelper
     @cited_words || {}
   end
 
-  ONLY_A_LINK = %r{\A(?:<https?://[^\s<>]+?(?:\|[^>]*)?>|https?://\S+|\s)+\z}
+  A_LINK = %r{<https?://[^\s<>|]+(?:\|[^>]*)?>|https?://\S+}
+
+  def only_a_link?(text)
+    said = text.to_s
+    !said.empty? && said.gsub(A_LINK, " ").blank?
+  end
 
   def plain_words(text)
     text.to_s
@@ -831,7 +836,7 @@ module FdHelper
     return nil if cited.nil? || cited.body.blank?
 
     body = case_first_report(kase)&.body.presence
-    return nil if body.present? && !body.match?(ONLY_A_LINK)
+    return nil if body.present? && !only_a_link?(body)
 
     cited
   end

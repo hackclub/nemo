@@ -46,7 +46,7 @@ module Fd
       like = "%#{sanitize_sql_like(term.downcase)}%"
       identity = actor&.may?("identity.read")
       hits = left_joins(:identity, :cachet).joins(HOW_BUSY)
-        .where("#{table_name}.user_id IN (#{anybody(like, identity)})")
+        .where(arel_table[:user_id].in(anybody(like, identity)))
       hits = hits.where(is_deleted: false, is_bot: false) if live_only
       place = MemberMatch.ranked(term, identity: identity, columns: COLUMNS)
       hits.select(Arel.sql("#{table_name}.user_id, #{place} AS place, spoke.messages_posted AS talked"))
@@ -57,7 +57,7 @@ module Fd
     def self.anybody(like, identity)
       ways = [named(like), shown_as(like)]
       ways << identified(like) if identity
-      ways.map(&:to_sql).join(" UNION ")
+      ways.map(&:arel).reduce { |left, right| Arel::Nodes::Union.new(left, right) }
     end
 
     def self.closest(case_id)
