@@ -6,15 +6,17 @@ module Fd
 
       members = Analytics::DimMember.where(user_id: ids).index_by(&:user_id)
       windows = Analytics::MemberWindow.lifetime.where(user_id: ids).index_by(&:user_id)
-      ids.to_h { |id| [id, new(id, members[id], windows[id])] }
+      posts = Analytics::MemberLifetimeMessages.where(user_id: ids).index_by(&:user_id)
+      ids.to_h { |id| [id, new(id, members[id], windows[id], posts[id])] }
     end
 
     attr_reader :user_id
 
-    def initialize(user_id, member, window)
+    def initialize(user_id, member, window, posts = nil)
       @user_id = user_id
       @member = member
       @window = window
+      @posts = posts
     end
 
     def known?
@@ -44,7 +46,11 @@ module Fd
     end
 
     def last_active_at
-      @window&.last_active_at
+      [@window&.last_active_at, @posts&.last_at].compact.max
+    end
+
+    def last_said_at
+      @posts&.last_at
     end
   end
 end

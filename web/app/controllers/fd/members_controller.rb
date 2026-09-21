@@ -17,6 +17,8 @@ module Fd
     def show
       @user_id = params[:id].to_s.upcase
       @record = MemberRecord.new(@user_id)
+      return show_drawer if turbo_frame_request_id == "person-drawer"
+
       load_member_pane
       @names = Names.for(@record.people_named + @pane_rows.map(&:user_id))
       @member = @names.member(@user_id)
@@ -30,7 +32,6 @@ module Fd
       @rooms = SlackScan.channels(@user_id)
       @standing = MemberStanding.new(@record)
       @member_grant = @pane_grants[@user_id] || Authz::Grant.live.roles.find_by(user_id: @user_id)
-      render "drawer" if turbo_frame_request_id == "person-drawer"
     end
 
     def pane
@@ -66,6 +67,16 @@ module Fd
     end
 
     private
+
+    def show_drawer
+      @names = Names.for(@record.people_named + [@user_id])
+      @member = @names.member(@user_id)
+      @identity = MemberIdentity.look_up(@user_id, actor: current_account)
+      @context = MemberContext.for([@user_id])[@user_id]
+      @rooms = SlackScan.channels(@user_id)
+      @standing = MemberStanding.new(@record)
+      render "drawer"
+    end
 
     def assign_pane_from_index
       @pane_query = @query

@@ -2192,6 +2192,32 @@
   .drawer { display: none; }
   .dock-open .drawer { display: grid; }
   .person-drawer-frame:not(:empty) { grid-template-rows: minmax(0, 1fr); }
+
+  .person-drawer-frame[aria-busy="true"]:empty, .person-drawer-frame[busy]:empty {
+    position: fixed;
+    top: var(--top-h);
+    right: 0;
+    bottom: 0;
+    width: min(var(--drawer-w), 100vw);
+    background: var(--card);
+    border-left: 1px solid var(--line);
+    box-shadow: var(--shadow-2);
+    z-index: 70;
+    display: grid;
+    place-items: center;
+    animation: slidein var(--dur-3) var(--ease-out) both;
+  }
+  .person-drawer-frame[aria-busy="true"]:empty::after,
+  .person-drawer-frame[busy]:empty::after {
+    content: "";
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--line);
+    border-top-color: var(--ink-3);
+    border-radius: 50%;
+    animation: waiting 0.7s linear infinite;
+  }
+  @keyframes waiting { to { transform: rotate(1turn); } }
   .drawer-head, .drawer-h {
     display: flex;
     align-items: center;
