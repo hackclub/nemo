@@ -52,7 +52,7 @@ module Fd
     def search
       term = params[:q].to_s.strip
       results = Member.search(term, actor: current_account, limit: Member::LIMIT,
-        live_only: true).to_a
+        live_only: true, case_id: params[:case_id].presence&.to_i).to_a
       log_identity_picker_hits(results) if identity_search?(term)
 
       faces = Names.for(results.map(&:user_id))

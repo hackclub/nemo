@@ -69,7 +69,7 @@
           </span>
           <%= hidden_field_tag :anon, "", data: { chat_target: "anon" }, id: nil %>
           <div class="mention-field" data-controller="mention"
-               data-mention-url-value="<%= fd_member_search_path %>">
+               data-mention-url-value="<%= fd_member_search_path(case_id: kase.id) %>">
             <%= text_area_tag :body, nil, rows: 1, class: "chat-input", id: nil,
                   maxlength: Fd::CaseChat::MAX_LENGTH,
                   aria: { label: "Message the team or reporter" },

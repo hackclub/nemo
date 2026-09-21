@@ -139,6 +139,25 @@ class FdMemberSearchTest < ActionDispatch::IntegrationTest
     assert_not_includes sql, "notes"
   end
 
+  test "asking from a case looks up that one case, and still no aggregates" do
+    sql = Fd::Member.search("dra", actor: @me, limit: 8, live_only: true, case_id: 7).to_sql
+
+    assert_includes sql, "party.case_id = 7"
+    assert_not_includes sql, "count(", "who is on this case is a lookup, not a tally"
+    assert_not_includes sql, "fd.actions"
+  end
+
+  test "the case a search is asked from only reorders it" do
+    sign_in_as(@me)
+    kase = make_case(subject: @member.user_id)
+
+    get fd_member_search_path(q: @member.name, case_id: kase.id)
+    on_case = JSON.parse(response.body).fetch("members").map { |row| row["id"] }
+
+    assert_equal look(@member.name).map { |row| row["id"] }.sort, on_case.sort
+    assert_equal @member.user_id, on_case.first
+  end
+
   test "a term too short for a trigram is refused rather than scanned" do
     sign_in_as(@me)
 

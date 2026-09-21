@@ -2,6 +2,12 @@ import { Controller } from "@hotwired/stimulus"
 
 const TOKEN = /@([\w.\-]*)$/
 
+function asking_for(where, term) {
+  const url = new URL(where, window.location.origin)
+  url.searchParams.set("q", term)
+  return url
+}
+
 function said(className, text) {
   const span = document.createElement("span")
   span.className = className
@@ -42,7 +48,7 @@ export default class extends Controller {
     const found = this.token()
     if (!found || found[1].length < 2) return this.close()
 
-    const response = await fetch(`${this.urlValue}?q=${encodeURIComponent(found[1])}`, {
+    const response = await fetch(asking_for(this.urlValue, found[1]), {
       headers: { Accept: "application/json" },
     })
     if (!response.ok) return this.close()

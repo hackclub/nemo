@@ -5,31 +5,71 @@ module Fd
 
     has_one :identity, class_name: "Fd::MemberIdentity", foreign_key: :user_id,
       inverse_of: :member, dependent: nil
+    has_one :cachet, class_name: "CachetProfile", foreign_key: :user_id, dependent: nil
 
     MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/i
     MIN_TERM = 3
     LIMIT = 8
+    SHORTLIST = 60
 
     scope :live, -> { where(is_deleted: false, is_bot: false) }
-    scope :by_name, -> { order(Arel.sql("lower(coalesce(nullif(display_name, ''), handle))")) }
+    scope :by_name, -> {
+      order(Arel.sql("lower(coalesce(nullif(fd.member.display_name, ''), fd.member.handle))"), :user_id)
+    }
 
     TERM_FIELDS = %w[display_name handle].freeze
     CACHET_TERM_FIELDS = %w[display_name].freeze
     IDENTITY_TERM_FIELDS = %w[real_name first_name last_name email].freeze
 
-    def self.search(term, actor: nil, limit: LIMIT, live_only: false)
+    HOW_BUSY = <<~SQL.squish.freeze
+      LEFT JOIN LATERAL (
+        SELECT messages_posted FROM analytics.fct_member_window busy
+        WHERE busy.source = '#{Analytics::MemberWindow::LIFETIME_SOURCE}'
+          AND busy.user_id = fd.member.user_id
+        LIMIT 1
+      ) spoke ON true
+    SQL
+
+    SAID_MOST = "spoke.messages_posted DESC NULLS LAST".freeze
+
+    def self.search(term, actor: nil, limit: LIMIT, live_only: false, case_id: nil)
       term = term.to_s.strip.delete_prefix("@")
       return where(user_id: term.upcase).limit(1) if term.match?(MEMBER_ID) && exists?(user_id: term.upcase)
       return none if term.length < MIN_TERM
 
+      near = shortlist(term, actor: actor, live_only: live_only)
+      joins("JOIN (#{near.to_sql}) pick ON pick.user_id = #{table_name}.user_id")
+        .order(Arel.sql(closest(case_id))).by_name.limit(limit)
+    end
+
+    def self.shortlist(term, actor:, live_only:)
       like = "%#{sanitize_sql_like(term.downcase)}%"
       identity = actor&.may?("identity.read")
-      joined = left_joins(:identity)
-      hits = joined.where(user_id: named(like)).or(joined.where(user_id: shown_as(like)))
-      hits = hits.or(joined.where(user_id: identified(like))) if identity
+      hits = left_joins(:identity, :cachet).joins(HOW_BUSY)
+        .where("#{table_name}.user_id IN (#{anybody(like, identity)})")
       hits = hits.where(is_deleted: false, is_bot: false) if live_only
-      hits.order(Arel.sql(match_rank(term, identity)), :is_deleted, :is_bot)
-        .by_name.limit(limit)
+      place = MemberMatch.ranked(term, identity: identity, columns: COLUMNS)
+      hits.select(Arel.sql("#{table_name}.user_id, #{place} AS place, spoke.messages_posted AS said"))
+        .order(Arel.sql(place), :is_deleted, :is_bot, Arel.sql(SAID_MOST))
+        .by_name.limit(SHORTLIST)
+    end
+
+    def self.anybody(like, identity)
+      ways = [named(like), shown_as(like)]
+      ways << identified(like) if identity
+      ways.map(&:to_sql).join(" UNION ")
+    end
+
+    def self.closest(case_id)
+      ["pick.place", on_the_case(case_id), "#{table_name}.is_deleted", "#{table_name}.is_bot",
+       "pick.said DESC NULLS LAST"].compact.join(", ")
+    end
+
+    def self.on_the_case(case_id)
+      return nil if case_id.blank?
+
+      sanitize_sql_array(["(EXISTS (SELECT 1 FROM fd.case_participants party " \
+        "WHERE party.user_id = #{table_name}.user_id AND party.case_id = ?)) DESC", case_id])
     end
 
     def self.named(like)
@@ -54,25 +94,14 @@ module Fd
         .reduce(:or)
     end
 
-    UNIQUE_FIELDS = %W[#{table_name}.handle #{table_name}.user_id].freeze
-    RANKED_FIELDS = %W[#{table_name}.display_name #{table_name}.handle #{table_name}.user_id].freeze
-    IDENTITY_RANKED_FIELDS = %w[fd.member_identity.real_name fd.member_identity.email].freeze
-
-    def self.match_rank(term, identity)
-      tiers = [[UNIQUE_FIELDS, :exact], [RANKED_FIELDS, :exact], [RANKED_FIELDS, :starts]]
-      tiers.insert(2, [IDENTITY_RANKED_FIELDS, :exact]) if identity
-      tiers << [IDENTITY_RANKED_FIELDS, :starts] if identity
-      whens = tiers.each_with_index.map do |(fields, how), rank|
-        test = fields.map do |field|
-          how == :exact ? "lower(coalesce(#{field}, '')) = :exact" : "lower(#{field}) LIKE :starts"
-        end
-        "WHEN #{test.join(' OR ')} THEN #{rank}"
-      end
-      sanitize_sql_array([
-        "CASE #{whens.join(' ')} ELSE #{tiers.size} END",
-        { exact: term.downcase, starts: "#{sanitize_sql_like(term.downcase)}%" }
-      ])
-    end
+    COLUMNS = {
+      handle: "#{table_name}.handle",
+      user_id: "#{table_name}.user_id",
+      display_name: "#{table_name}.display_name",
+      shown_name: "app.cachet_profiles.display_name",
+      real_name: "fd.member_identity.real_name",
+      email: "fd.member_identity.email"
+    }.freeze
 
     def readonly?
       persisted?

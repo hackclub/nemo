@@ -238,32 +238,18 @@ module Fd
     end
 
     def roster_order
-      asked? ? "#{match_rank}, last_case_at DESC NULLS LAST, #{sort_order}" : sort_order
+      return sort_order unless asked?
+
+      "#{match_rank}, messages_posted DESC NULLS LAST, last_case_at DESC NULLS LAST, #{sort_order}"
     end
 
-    UNIQUE_FIELDS = %w[handle user_id].freeze
-    RANKED_FIELDS = %w[display_name handle user_id].freeze
-    IDENTITY_RANKED_FIELDS = %w[shown_name real_name email].freeze
+    COLUMNS = {
+      handle: "handle", user_id: "user_id", display_name: "display_name",
+      shown_name: "shown_name", real_name: "real_name", email: "email"
+    }.freeze
 
     def match_rank
-      tiers = [[UNIQUE_FIELDS, :exact], [RANKED_FIELDS, :exact], [RANKED_FIELDS, :starts],
-               [RANKED_FIELDS, :within]]
-      if identity?
-        tiers.insert(2, [IDENTITY_RANKED_FIELDS, :exact])
-        tiers.insert(4, [IDENTITY_RANKED_FIELDS, :starts])
-        tiers << [IDENTITY_RANKED_FIELDS, :within]
-      end
-      whens = tiers.each_with_index.map do |(fields, how), rank|
-        test = fields.map do |field|
-          case how
-          when :exact then "lower(coalesce(#{field}, '')) = :exact"
-          when :starts then "lower(#{field}) LIKE :starts"
-          else "lower(#{field}) LIKE :term"
-          end
-        end
-        "WHEN #{test.join(' OR ')} THEN #{rank}"
-      end
-      "CASE #{whens.join(' ')} ELSE #{tiers.size} END"
+      MemberMatch.rank(identity: identity?, columns: COLUMNS)
     end
 
     def sort_order
@@ -285,6 +271,7 @@ module Fd
       { category: self["category"], now: Time.current,
         prior_since: Case::PRIOR_WINDOW.ago,
         term: "%#{Case.sanitize_sql_like(term.downcase)}%",
+        within: "%#{Case.sanitize_sql_like(term.downcase)}%",
         starts: "#{Case.sanitize_sql_like(term.downcase)}%",
         exact: term.downcase, id: term.upcase }
     end

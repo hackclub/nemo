@@ -1,5 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
 
+function asking_for(where, term) {
+  const url = new URL(where, window.location.origin)
+  url.searchParams.set("q", term)
+  return url
+}
+
 function said(className, text) {
   const span = document.createElement("span")
   span.className = className
@@ -63,7 +69,7 @@ export default class extends Controller {
 
     let response
     try {
-      response = await fetch(`${this.urlValue}?q=${encodeURIComponent(term)}`, {
+      response = await fetch(asking_for(this.urlValue, term), {
         headers: { Accept: "application/json" },
         signal: asking.signal,
       })

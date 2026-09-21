@@ -6,6 +6,7 @@
 <div class="field-label">
   <span>Directed at</span>
   <%= render "fd/member_picker", name: "target_user_id", single: true,
+        url: fd_member_search_path(case_id: kase.id),
         label: "search for who this is directed at", preset: preset_faces(target) %>
 </div>
 <label class="field-label when when-expiry">

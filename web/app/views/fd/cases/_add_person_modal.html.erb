@@ -5,6 +5,7 @@
       <div class="field-label">
         <span>Subject</span>
         <%= render "fd/member_picker", name: "user_ids[]", single: false,
+              url: fd_member_search_path(case_id: kase.id),
               label: "search for the subject of the case" %>
       </div>
     </div>

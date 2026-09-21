@@ -397,6 +397,7 @@
       <label class="field-label">
         The note
         <%= render "fd/mention_field", name: :body, value: field_was(:body), rows: 4,
+              url: fd_member_search_path(case_id: @case.id),
               placeholder: "type @ to name somebody" %>
       </label>
       <%= field_wrong(:body) %>
