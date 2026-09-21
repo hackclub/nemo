@@ -1,26 +1,8 @@
 <nav class="areas" aria-label="Areas">
   <% if fire_engine %>
-    <%= render layout: "shared/dropdown", locals: {
-          css: "area-menu", trigger_css: "area-summary", pop_css: "menu-start area-pop",
-          label: "Fire Engine sections", current: ("page" if page_section == "fd"),
-          trigger: capture {
-            concat tag.span("Fire Engine")
-            concat tag.svg(class: "area-chevron", width: 10, height: 10, viewBox: "0 0 24 24",
-              fill: "none", stroke: "currentColor", "stroke-width": 2,
-              "stroke-linecap": "round") { tag.path(d: "m7 9 5 5 5-5") }
-            concat tag.i(nil, class: "line") if page_section == "fd"
-          } } do %>
-        <%= link_to case_action_button("gauge", "Overview"), fd_root_path,
-              aria: { current: ("true" if current_page?(fd_root_path)) } %>
-        <%= link_to case_action_button("shield", "Cases"), fd_cases_path,
-              aria: { current: ("true" if controller_path == "fd/cases") } %>
-        <%= link_to case_action_button("people", "Members"), fd_members_path,
-              aria: { current: ("true" if controller_path == "fd/members") } %>
-        <% if current_account.may?("access.read") %>
-          <div class="menu-sep"></div>
-          <%= link_to case_action_button("history", "Audit log"), fd_audit_path,
-                aria: { current: ("true" if controller_path == "fd/audits") } %>
-        <% end %>
+    <%= link_to fd_root_path, aria: { current: ("page" if page_section == "fd") } do %>
+      <span>Fire Engine</span>
+      <% if page_section == "fd" %><i class="line"></i><% end %>
     <% end %>
   <% end %>
 

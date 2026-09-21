@@ -74,6 +74,8 @@ module ApplicationHelper
                  "M22 21v-2a4 4 0 0 0-3-3.87"],
     "roles" => ["M12 3 4 6v6c0 5 8 10 8 10s8-5 8-10V6z"],
     "flags" => ["M6 3v18", "M6 4h11l-2 4 2 4H6"],
+    "shield" => ["M12 3 4 6v6c0 4 3.4 7.4 8 8 4.6-.6 8-4 8-8V6z"],
+    "history" => ["M4 12a8 8 0 1 0 2.4-5.7", "M4 3v4.5h4.5", "M12 8v4.4l3 1.8"],
     "group" => ["M4 7h16", "M4 12h16", "M4 17h10"]
   }.freeze
 

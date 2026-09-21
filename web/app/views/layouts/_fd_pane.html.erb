@@ -1,0 +1,23 @@
+<nav id="section-nav" class="pane cpane fdnav<%= " is-icon" if tight %>"
+     aria-label="Fire Engine sections">
+  <%= render "layouts/sidebar_head", letter: "F", title: "Fire Engine", said: "Conduct" %>
+
+  <div class="cnav">
+    <div class="cnav-group">
+      <% fd_nav_stops.each do |stop| %>
+        <%= link_to stop.path, title: stop.label,
+              aria: { current: ("page" if stop.here) } do %>
+          <%= nav_icon(stop.icon) %>
+          <span class="trunc"><%= stop.label %></span>
+          <% if stop.tally.to_i.positive? %>
+            <span class="cnav-tally" title="<%= pluralize(stop.tally, "case") %> nobody is holding">
+              <%= stop.tally > 99 ? "99+" : stop.tally %>
+            </span>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <%= render "layouts/sidebar_foot" unless tight %>
+</nav>

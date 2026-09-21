@@ -258,6 +258,29 @@ module FdHelper
     render "fd/menu_item", icon: icon, label: label, note: note
   end
 
+  Stop = Struct.new(:key, :label, :icon, :path, :here, :tally, keyword_init: true)
+
+  NAV_HOME = { "fd/fire" => "overview", "fd/members" => "members",
+               "fd/audits" => "audit" }.freeze
+
+  def fd_nav_here
+    NAV_HOME.fetch(controller_path, "cases")
+  end
+
+  def fd_nav_stops
+    here = fd_nav_here
+    stops = [
+      Stop.new(key: "overview", label: "Overview", icon: "overview", path: fd_root_path),
+      Stop.new(key: "cases", label: "Cases", icon: "shield", path: fd_cases_path,
+        tally: Fd::Case.unresolved.not_duplicate.unassigned.count),
+      Stop.new(key: "members", label: "Members", icon: "people", path: fd_members_path)
+    ]
+    if current_account&.may?("access.read")
+      stops << Stop.new(key: "audit", label: "Audit log", icon: "history", path: fd_audit_path)
+    end
+    stops.each { |stop| stop.here = stop.key == here }
+  end
+
   def case_action_button(icon, label, shortcut: nil)
     render "fd/case_action_button", icon: icon, label: label, shortcut: shortcut
   end

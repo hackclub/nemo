@@ -26,7 +26,8 @@
   <body data-section="<%= page_section %>">
     <%= render "shared/synthetic_banner" %>
     <% fire_engine = may_use_fire_engine? %>
-    <% pane_partial = content_for?(:pane) ? nil : section_pane %>
+    <% fd_nav = fire_engine && page_section == "fd" %>
+    <% pane_partial = content_for?(:pane) || fd_nav ? nil : section_pane %>
     <% pane = content_for?(:pane) || pane_partial.present? %>
 
     <div class="shell" data-controller="cachet dismiss sidebar lightbox<%= " palette" if fire_engine %>"
@@ -35,7 +36,7 @@
          data-action="keydown@document->palette#key">
 
       <header class="top">
-        <% if pane_partial.present? %>
+        <% if pane_partial.present? || fd_nav %>
           <button type="button" class="iconbtn strigger" data-action="sidebar#toggle"
                   aria-controls="section-nav" aria-label="Toggle sidebar">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -66,13 +67,18 @@
         </div>
       </header>
 
-      <div class="work<%= " has-pane" if pane %>"
+      <div class="work<%= " has-nav" if fd_nav %><%= " has-pane" if pane %>"
            data-view="<%= content_for(:pane_default).presence || "main" %>"
            data-controller="case-timeline<%= " pane" if pane %>">
+        <% if fd_nav %>
+          <%= render "layouts/fd_pane", tight: pane %>
+        <% end %>
         <% if content_for?(:pane) %>
           <%= content_for :pane %>
         <% elsif pane_partial %>
           <%= render pane_partial %>
+        <% end %>
+        <% if pane_partial.present? || fd_nav %>
           <div class="sbackdrop" data-action="click->sidebar#close" aria-hidden="true"></div>
         <% end %>
 
