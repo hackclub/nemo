@@ -57,4 +57,18 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
     @kase.update!(category_key: "harassment")
     get fd_case_path(@kase)
   end
+
+  test "the sidebar names the people on the other cases it lists" do
+    Fd::Member.create!(user_id: "UPANE", display_name: "Pane Person",
+      is_bot: false, is_deleted: false)
+    other = make_case(subject: "UPANE", opened_at: 1.hour.ago)
+
+    get fd_case_path(@kase)
+
+    assert_response :success
+    assert_not_equal other.id, @kase.id
+    assert @controller.view_assigns["names"].known?("UPANE"),
+      "the sidebar lists other cases, so their people must be named too"
+    assert_equal "Pane Person", @controller.view_assigns["names"]["UPANE"]
+  end
 end

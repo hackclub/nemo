@@ -57,7 +57,8 @@ module Fd
       @cited_messages = cited_messages
       @cited_shares = IntakeShare.for_messages(@conversation_said.map(&:id))
       @channels = ChannelNames.for(@threads.map(&:channel_id) +
-        @cited_messages.values.map(&:channel_id) + cited_channel_ids)
+        @cited_messages.values.map(&:channel_id) + cited_channel_ids +
+        Array(@pane_channels))
       @said_counts = @thread_messages.group_by(&:author_user_id).transform_values(&:size)
       @person_priors = Case.prior_counts_for(@participants.map(&:user_id))
       @assignees = @case.assignees.to_a
@@ -184,7 +185,8 @@ module Fd
         @citations.values.map(&:flagged_by),
         @threads.map(&:added_by),
         @erasures.map(&:actor_user_id),
-        cited_authors
+        cited_authors,
+        Array(@pane_people)
       ]
     end
 
@@ -270,9 +272,11 @@ module Fd
       @pane_reachable = IntakeConversation.open_ones
         .where(report_id: @pane_cases.flat_map { |kase| kase.reports.map(&:id) })
         .pluck(:report_id).to_set
-      @pane_names = Names.for(@pane_cases.flat_map { |kase|
-        kase.subject_user_ids + kase.assignee_user_ids
-      } + @cited_words.values.map(&:author))
+      @pane_people = @pane_cases.flat_map { |kase|
+        kase.subject_user_ids + kase.assignee_user_ids + [kase.opened_by] +
+          kase.reports.map(&:reporter_user_id)
+      } + @cited_words.values.map(&:author)
+      @pane_channels = @cited_words.values.map(&:channel)
     end
 
     def load_queue
@@ -282,8 +286,8 @@ module Fd
         .offset((@page - 1) * PER_PAGE).limit(PER_PAGE + 1).to_a
       @more = found.size > PER_PAGE
       @cases = found.first(PER_PAGE)
-      @cited_words = IntakeShare.first_words_for(@cases.map(&:id))
-      @held_counts = IntakeFile.counts_for_cases(@cases.map(&:id))
+      @cited_words = @cited_words.merge(IntakeShare.first_words_for(@cases.map(&:id)))
+      @held_counts = @held_counts.merge(IntakeFile.counts_for_cases(@cases.map(&:id)))
       @total = @query.relation.count
       @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
       case_ids = @cases.map(&:id)
