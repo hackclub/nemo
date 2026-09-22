@@ -4,6 +4,7 @@ from slack_bolt import App
 
 from bot.nemo import channel, command, handlers, surface
 from bot.nemo.surface import (
+    bot_watch,  # noqa: F401
     channel_watch,  # noqa: F401
     thread_destroy,  # noqa: F401
     thread_lock,  # noqa: F401
