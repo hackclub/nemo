@@ -21,6 +21,8 @@ Rails.application.routes.draw do
     get "channels/pane", to: "channels#pane", as: :channel_pane
     post "channels/:channel_id/guard", to: "channel_guards#create", as: :channel_guard
     delete "channels/:channel_id/guard", to: "channel_guards#destroy"
+    post "channels/:channel_id/allows", to: "channel_allows#create", as: :channel_allows
+    delete "channels/:channel_id/allows/:id", to: "channel_allows#destroy", as: :channel_allow
     resources :channels, only: [:index, :show], param: :channel_id
     resources :members, only: [:index, :show] do
       resources :notes, only: [:create, :destroy], controller: "member_notes"

@@ -1,0 +1,18 @@
+<%= render layout: "fd/modal", locals: { id: "allow-bot",
+      title: "Allow a bot in #{label}", label: "Allow a bot to post here" } do %>
+  <%= form_with url: fd_channel_allows_path(channel_id), method: :post,
+        html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <div class="field-label">
+        <span>Which bot</span>
+        <%= render "fd/member_picker", name: "subject_ids[]", single: false,
+              url: fd_member_search_path(bots: 1),
+              label: "search for the bot to allow" %>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+      <%= submit_tag "Allow it here", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>

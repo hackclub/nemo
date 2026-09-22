@@ -8,14 +8,6 @@
 <% content_for :head_actions do %>
   <%= link_to case_action_button("external", "Slack"), slack_channel_url(@channel_id),
         class: "btn btn-ghost", target: "_blank", rel: "noopener" %>
-  <% if @guard %>
-    <%= gated_button("channel.guard", "Lift the guard", fd_channel_guard_path(@channel_id),
-          css: "btn btn-crit", method: :delete,
-          data: { turbo_confirm: "Lift the guard on #{label}? The allow list is kept." }) %>
-  <% else %>
-    <%= opens_modal "channel.guard", "Guard this channel", opens: "guard-channel",
-          css: "btn btn-primary" %>
-  <% end %>
 <% end %>
 <% content_for :pane do %>
   <%= render "pane", query: @query, rows: @rows, open_id: @open_id %>
@@ -25,28 +17,14 @@
   <section class="card">
     <div class="card-head">
       <span class="card-title">Bot allow list</span>
-      <% if @guard %>
-        <span class="card-tools card-sub"><%= channel_guard_line(@guard) %></span>
-      <% end %>
+      <span class="card-tools">
+        <%= channel_guard_switch(@channel_id, @guard) %>
+      </span>
     </div>
 
     <% if @guard %>
-      <div class="facts-strip facts-wrap">
-        <div class="fstat">
-          <b><%= @allows.size %></b>
-          <span><%= "bot".pluralize(@allows.size) %> allowed</span>
-        </div>
-        <div class="fstat">
-          <b class="<%= "is-none" unless @guard.live? %>"><%= @guard.live? ? "on" : "off" %></b>
-          <span>guard</span>
-        </div>
-        <div class="fstat">
-          <b class="<%= channel_seat_tone(@standing) %>"><%= channel_seat_word(@standing) %></b>
-          <span>nemo</span>
-        </div>
-      </div>
-
-      <p class="sub2"><%= channel_guard_why(@guard, names) %></p>
+      <p class="sub2"><%= channel_guard_why(@guard) %></p>
+      <%= channel_seat_chip(@standing) %>
     <% else %>
       <div class="empty">
         <p class="empty-title">This channel is not guarded</p>
@@ -58,6 +36,10 @@
     <section class="card">
       <div class="card-head">
         <span class="card-title">Allowed here</span>
+        <span class="card-tools">
+          <%= opens_modal "channel.guard", "Allow a bot", opens: "allow-bot",
+                css: "btn btn-sm btn-primary" %>
+        </span>
       </div>
 
       <% if @allows.any? %>
@@ -68,12 +50,18 @@
                 <b><%= one.name %></b>
                 <span>
                   <span class="mono"><%= one.subject_id %></span>
-                  &middot; <%= vouched_line(one, names) %>
+                  &middot; <%= vouched_line(one) %>
                 </span>
               </span>
-              <% if one.reason.present? %>
-                <span class="row-right sub2 trunc"><%= one.reason %></span>
-              <% end %>
+              <span class="row-right">
+                <% if one.reason.present? %>
+                  <span class="sub2 trunc"><%= one.reason %></span>
+                <% end %>
+                <%= gated_button("channel.guard", "Remove",
+                      fd_channel_allow_path(@channel_id, one.subject_id),
+                      css: "btn btn-sm", method: :delete,
+                      data: { turbo_confirm: "Put #{one.name} out of #{label}?" }) %>
+              </span>
             </div>
           <% end %>
         </div>
@@ -86,6 +74,6 @@
   <% end %>
 </div>
 
-<% unless @guard %>
-  <%= render "guard_modal", channel_id: @channel_id, label: label %>
+<% if @guard %>
+  <%= render "allow_modal", channel_id: @channel_id, label: label %>
 <% end %>

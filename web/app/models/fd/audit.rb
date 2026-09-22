@@ -29,6 +29,7 @@ module Fd
       opened lifted claimed unclaimed resolved reopened categorised
       performed reversed received
       noted deleted attached detached flagged unflagged closed answered
+      added removed
       granted revoked refused
       linked unlinked
       turned_on turned_off

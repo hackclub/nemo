@@ -4,17 +4,13 @@ module Fd
 
     def create
       channel_id = params[:channel_id].to_s.strip.upcase
-      why = params[:reason].to_s.strip
-
-      return refuse(channel_id, "say why this channel needs guarding") if why.blank?
       if ChannelGuard.live_for(channel_id)
         return refuse(channel_id, "this channel is guarded already")
       end
 
-      guard = nil
       writing do
         guard = ChannelGuard.create!(kind: ChannelGuard::BOT_ALLOWLIST, channel_id: channel_id,
-          opened_by: current_account.user_id, reason: why)
+          opened_by: current_account.user_id, reason: params[:reason].to_s.strip.presence)
         audit(guard, "opened")
       end
 

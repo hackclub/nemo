@@ -32,22 +32,22 @@ module Fd
 
     SAID_MOST = "spoke.messages_posted DESC NULLS LAST".freeze
 
-    def self.search(term, actor: nil, limit: LIMIT, live_only: false, case_id: nil)
+    def self.search(term, actor: nil, limit: LIMIT, live_only: false, case_id: nil, bots: false)
       term = term.to_s.strip.delete_prefix("@")
       return where(user_id: term.upcase).limit(1) if term.match?(MEMBER_ID) && exists?(user_id: term.upcase)
       return none if term.length < MIN_TERM
 
-      near = shortlist(term, actor: actor, live_only: live_only)
+      near = shortlist(term, actor: actor, live_only: live_only, bots: bots)
       joins("JOIN (#{near.to_sql}) pick ON pick.user_id = #{table_name}.user_id")
         .order(Arel.sql(closest(case_id))).by_name.limit(limit)
     end
 
-    def self.shortlist(term, actor:, live_only:)
+    def self.shortlist(term, actor:, live_only:, bots: false)
       like = "%#{sanitize_sql_like(term.downcase)}%"
       identity = actor&.may?("identity.read")
       hits = left_joins(:identity, :cachet).joins(HOW_BUSY)
         .where(arel_table[:user_id].in(anybody(like, identity)))
-      hits = hits.where(is_deleted: false, is_bot: false) if live_only
+      hits = hits.where(is_deleted: false, is_bot: bots) if live_only
       place = MemberMatch.ranked(term, identity: identity, columns: COLUMNS)
       hits.select(Arel.sql("#{table_name}.user_id, #{place} AS place, spoke.messages_posted AS talked"))
         .order(Arel.sql(place), :is_deleted, :is_bot, Arel.sql(SAID_MOST))
