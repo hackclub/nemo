@@ -104,6 +104,7 @@ def once(desk, channel_id=None):
         guardwork.run_destroy(client, guard_id)
     for guard_id in lifting:
         guardwork.lift_lock(client, guard_id)
+    guardwork.sweep_strikes()
 
     return posted, drawn, carried
 

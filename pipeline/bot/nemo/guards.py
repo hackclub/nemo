@@ -1,7 +1,7 @@
 import logging
 import threading
 
-from bot.core import audit, blobs, privileged
+from bot.core import audit, blobs
 
 log = logging.getLogger("bot.nemo")
 
@@ -76,17 +76,33 @@ WHERE kind = 'lock' AND state IN ('warned', 'running') AND expires_at <= now()
 ORDER BY expires_at LIMIT 20
 """
 
-STRIKE = """
-INSERT INTO fd.thread_guard_strikes (guard_id, user_id, messages)
-VALUES (%s, %s, 1)
-ON CONFLICT (guard_id, user_id) DO UPDATE
-SET messages = fd.thread_guard_strikes.messages + 1, last_at = now()
-RETURNING messages, reset_at
+KEPT = """
+INSERT INTO fd.thread_guard_messages (guard_id, message_ts, user_id, channel_id)
+VALUES (%s, %s, %s, %s)
+ON CONFLICT (guard_id, message_ts) DO NOTHING
+RETURNING message_ts
+"""
+
+OVER_THE_LINE = """
+SELECT m.guard_id, m.user_id, count(*)::integer, g.channel_id, g.thread_ts
+FROM fd.thread_guard_messages m
+JOIN fd.thread_guards g ON g.id = m.guard_id
+LEFT JOIN fd.thread_guard_strikes s
+    ON s.guard_id = m.guard_id AND s.user_id = m.user_id
+WHERE s.reset_at IS NULL
+GROUP BY m.guard_id, m.user_id, g.channel_id, g.thread_ts
+HAVING count(*) >= %s
+ORDER BY m.guard_id, m.user_id
+LIMIT 50
 """
 
 CLAIM_RESET = """
-UPDATE fd.thread_guard_strikes SET reset_at = now(), reset_outcome = 'claimed'
-WHERE guard_id = %s AND user_id = %s AND reset_at IS NULL
+INSERT INTO fd.thread_guard_strikes (guard_id, user_id, messages, reset_at, reset_outcome)
+VALUES (%s, %s, %s, now(), 'claimed')
+ON CONFLICT (guard_id, user_id) DO UPDATE
+SET messages = EXCLUDED.messages, reset_at = now(), reset_outcome = 'claimed',
+    last_at = now()
+WHERE fd.thread_guard_strikes.reset_at IS NULL
 RETURNING user_id
 """
 
@@ -169,28 +185,29 @@ def exempt(conn, user_id, opened_by):
     return bool(conn.execute(FD, (user_id,)).fetchone()[0])
 
 
-def strike(conn, guard_id, user_id):
-    return conn.execute(STRIKE, (guard_id, user_id)).fetchone()
+def kept(conn, guard_id, channel_id, user_id, message_ts):
+    conn.execute(KEPT, (guard_id, message_ts, user_id, channel_id))
+
+
+def over_the_line(conn, needed):
+    return conn.execute(OVER_THE_LINE, (needed,)).fetchall()
 
 
 def punished(conn, guard_id):
     return conn.execute(RESET_COUNT, (guard_id,)).fetchone()[0]
 
 
-def reset_for(conn, guard_id, user_id, channel_id, thread_ts):
-    if privileged.mode() == privileged.OFF:
-        return "off"
-    if conn.execute(CLAIM_RESET, (guard_id, user_id)).fetchone() is None:
-        return "already"
+def claim_reset(conn, guard_id, user_id, messages):
+    return conn.execute(CLAIM_RESET, (guard_id, user_id, messages)).fetchone() is not None
 
-    outcome = privileged.reset_sessions(user_id)
+
+def reset_done(conn, guard_id, user_id, outcome, channel_id, thread_ts, messages):
     conn.execute(RESET_DONE, (outcome, guard_id, user_id))
     audit.record(
         conn, "member", 0, "session_reset", user_id, actor_kind="system",
         after={"user_id": user_id, "guard_id": guard_id, "outcome": outcome,
-               "channel_id": channel_id, "thread_ts": thread_ts},
+               "messages": messages, "channel_id": channel_id, "thread_ts": thread_ts},
     )
-    return outcome
 
 
 def transcript(client, channel_id, thread_ts):

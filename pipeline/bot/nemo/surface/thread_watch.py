@@ -27,20 +27,20 @@ def watched(ctx):
     if not guards.watching(channel_id, thread_ts):
         return None
 
+    who = event.get("user")
     with session() as conn:
         guard = guards.held(conn, channel_id, thread_ts)
         if guard is None:
             guards.refresh(conn)
             return None
-        who = event.get("user")
         if guards.exempt(conn, who, guard[5]):
             log.info("nemo: guard %s let %s past, they are exempt", guard[0], who)
             return None
-        outcome = guardwork.took_it_further(ctx.client, conn, guard, who, ts)
-        log.info("nemo: guard %s handled %s from %s -> %s", guard[0], ts, who, outcome)
+        noted = guardwork.note_it(conn, guard, who, ts)
 
-    if outcome in ("reset", "would"):
-        log.warning(
-            "nemo: guard %s -> sessions %s for %s", guard[0], outcome, event.get("user")
-        )
-    return outcome
+    if not noted:
+        return None
+
+    guardwork.took_it_down(ctx.client, guard[0], channel_id, ts)
+    log.info("nemo: guard %s noted %s from %s", guard[0], ts, who)
+    return "noted"
