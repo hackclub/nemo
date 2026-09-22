@@ -65,6 +65,21 @@ def delete_message(channel_id, ts):
                  credential="admin", max_retries=0)
 
 
+def kick(channel_id, user_id):
+    try:
+        proxy().call("conversations.kick", {"channel": channel_id, "user": user_id},
+                     credential="admin", max_retries=0)
+    except Exception as failure:
+        if absent(failure):
+            log.info("privileged: cannot put %s out of %s, we are not in it", user_id, channel_id)
+            return "away"
+        log.warning("privileged: could not put %s out of %s: %s", user_id, channel_id, failure)
+        return f"failed: {str(failure)[:200]}"
+
+    log.info("privileged: put %s out of %s", user_id, channel_id)
+    return "kicked"
+
+
 def reset_sessions(user_id):
     how = mode()
     if how == OFF:
