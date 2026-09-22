@@ -3,7 +3,7 @@ import os
 import threading
 
 from bot.core import loops, session
-from bot.nemo import channel, channels, chat, guards, guardwork
+from bot.nemo import channel, channelguards, channels, chat, guards, guardwork
 
 log = logging.getLogger("bot.nemo")
 
@@ -13,6 +13,7 @@ CHAT = "fd_chat_changed"
 OUTBOX = "fd_outbox_waiting"
 CONVERSATION = "fd_conversation_changed"
 GUARD = "fd_thread_guard"
+CHANNEL_GUARD = "fd_channel_guard"
 
 DEFAULT_SECONDS = 300
 DEFAULT_JOIN_SECONDS = 1800
@@ -81,6 +82,7 @@ def once(desk, channel_id=None):
         woke = channel.untold_wakes(conn)
         unshared = channel.waiting_files(conn)
         guards.refresh(conn)
+        channelguards.refresh(conn)
         destroying = guards.pending(conn)
         lifting = guards.lifting(conn)
 
@@ -108,7 +110,8 @@ def once(desk, channel_id=None):
 
 def start(desk, stopping, channel_id=None):
     with session() as conn:
-        log.info("nemo: watching %s guarded thread(s)", guards.refresh(conn))
+        log.info("nemo: watching %s guarded thread(s) and %s guarded channel(s)",
+                 guards.refresh(conn), channelguards.refresh(conn))
 
     def apart(*doing):
         for name, work in doing:
@@ -129,6 +132,9 @@ def start(desk, stopping, channel_id=None):
                 target=guardwork.run_destroy, args=(desk.client, told),
                 name=f"nemo-guard-{told}", daemon=True,
             ).start()
+        elif channel_name == CHANNEL_GUARD:
+            with session() as conn:
+                channelguards.refresh(conn)
         elif channel_name == CONVERSATION:
             apart(("catching up", lambda: desk.caught_up(told)),
                   ("ticking", desk.tick_queued))
@@ -136,7 +142,8 @@ def start(desk, stopping, channel_id=None):
             desk.caught_up(told)
 
     return (
-        loops.watching(NAME, (CASES, CHAT, OUTBOX, CONVERSATION, GUARD), heard, stopping),
+        loops.watching(NAME, (CASES, CHAT, OUTBOX, CONVERSATION, GUARD, CHANNEL_GUARD),
+                       heard, stopping),
         loops.sweeping(NAME, every(), lambda: once(desk, channel_id), stopping),
         loops.sweeping(f"{NAME}-joins", every_join_sweep(), lambda: join_sweep(desk), stopping),
     )
