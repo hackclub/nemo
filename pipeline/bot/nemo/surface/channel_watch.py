@@ -21,6 +21,7 @@ def left(ctx):
     with session() as conn:
         how = channels.mode(conn)
         wanted = channels.wanted(ctx.client, conn, how)
+        channels.sat(conn, channel_id, False)
         if channel_id not in wanted:
             channels.noted(conn, channel_id, "left")
             log.info("nemo: left %s, which %s mode does not want back", channel_id, how)

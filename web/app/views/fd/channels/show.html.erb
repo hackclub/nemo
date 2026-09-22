@@ -24,7 +24,7 @@
 
     <% if @guard %>
       <p class="sub2"><%= channel_guard_why(@guard) %></p>
-      <%= channel_seat_said(@standing) %>
+      <%= channel_seat_said(@seat, @standing) %>
     <% else %>
       <div class="empty">
         <p class="empty-title">This channel is not guarded</p>
@@ -54,9 +54,6 @@
                 </span>
               </span>
               <span class="row-right">
-                <% if one.reason.present? %>
-                  <span class="sub2 trunc"><%= one.reason %></span>
-                <% end %>
                 <%= gated_button("channel.guard", "Remove",
                       fd_channel_allow_path(@channel_id, one.subject_id),
                       css: "btn btn-sm", method: :delete,

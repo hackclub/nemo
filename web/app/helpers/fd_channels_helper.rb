@@ -18,18 +18,23 @@ module FdChannelsHelper
   def channel_guard_why(guard)
     return nil if guard.nil?
 
-    said = safe_join([member_link(guard.opened_by), " turned it on ",
-                      on_day(guard.created_at)])
-    return said if guard.reason.blank?
-
-    safe_join([said, tag.q(guard.reason)], " ")
+    safe_join([member_link(guard.opened_by), " turned it on ", on_day(guard.created_at)])
   end
 
-  def channel_seat_said(standing)
+  def channel_seat_said(seat, standing)
+    return nil if seat
+    return tag.p(outside_said(standing), class: "sev-crit") if seat == false
     return nil if standing.nil? || standing.inside?
     return tag.p("nemo was taken out of here", class: "sev-crit") if standing.verb == "left"
 
     tag.p("nemo could not get in: #{standing.why.presence || 'refused'}", class: "sev-crit")
+  end
+
+  def outside_said(standing)
+    why = standing&.refused? && standing.why.presence
+    return "nothing is enforced, nemo could not get in: #{why}" if why
+
+    "nothing is enforced, nemo is not in this channel"
   end
 
   MARKETPLACE = "https://hackclub.slack.com/marketplace".freeze
@@ -66,6 +71,45 @@ module FdChannelsHelper
     return "n/a" if at.nil?
 
     at.in_time_zone(Time.zone).strftime("%-d %b %Y, %H:%M")
+  end
+
+  JOIN_MODES = {
+    Fd::AppSetting::ON => "Every channel",
+    Fd::AppSetting::GUARDED => "Guarded only",
+    Fd::AppSetting::OFF => "None"
+  }.freeze
+
+  def join_mode_switch(mode)
+    unless current_account.may?("channel.guard")
+      return tag.div(class: "segmented") { join_mode_options(mode) { |key, label, here|
+        tag.span(label, "aria-pressed": here)
+      } }
+    end
+
+    form_with(url: fd_channel_join_mode_path, method: :post, class: "segmented") do
+      join_mode_options(mode) do |key, label, here|
+        button_tag(label, name: "mode", value: key, "aria-pressed": here)
+      end
+    end
+  end
+
+  def join_mode_options(mode)
+    safe_join(JOIN_MODES.map { |key, label| yield(key, label, (key == mode).to_s) })
+  end
+
+  def join_standing_line(joining)
+    return "nemo has not swept yet" unless joining.swept?
+
+    said = ["in #{pluralize(joining.seated, 'channel')}"]
+    said << "#{joining.waiting} still to join" if joining.waiting.positive?
+    said.join(", ")
+  end
+
+  def join_unattended_said(joining)
+    return nil unless joining.swept? && joining.unattended.positive?
+
+    tag.p("nemo is not in #{pluralize(joining.unattended, 'guarded channel')}",
+      class: "sev-crit")
   end
 
   def vouched_line(allow)

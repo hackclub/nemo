@@ -10,7 +10,7 @@ module Fd
 
       writing do
         guard = ChannelGuard.create!(kind: ChannelGuard::BOT_ALLOWLIST, channel_id: channel_id,
-          opened_by: current_account.user_id, reason: params[:reason].to_s.strip.presence)
+          opened_by: current_account.user_id)
         audit(guard, "opened")
       end
 

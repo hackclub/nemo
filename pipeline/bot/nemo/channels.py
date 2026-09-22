@@ -34,6 +34,15 @@ INSERT INTO fd.channel_joins (channel_id, verb, why, by_user_id)
 VALUES (%s, %s, %s, %s)
 """
 
+SEATED = """
+INSERT INTO fd.channel_membership (channel_id, inside, at)
+VALUES (%s, %s, now())
+ON CONFLICT (channel_id) DO UPDATE
+SET inside = EXCLUDED.inside, at = now()
+"""
+
+WAS_INSIDE = "SELECT channel_id FROM fd.channel_membership WHERE inside"
+
 
 def pace():
     try:
@@ -102,6 +111,10 @@ def noted(conn, channel_id, verb, why=None, by=None):
     conn.execute(NOTED, (channel_id, verb, why, by))
 
 
+def sat(conn, channel_id, inside):
+    conn.execute(SEATED, (channel_id, inside))
+
+
 def refusal(failure):
     answer = getattr(failure, "response", None)
     data = getattr(answer, "data", None) or {}
@@ -118,7 +131,20 @@ def join(client, conn, channel_id, by=None, verb="joined"):
         return False
 
     noted(conn, channel_id, verb, None, by)
+    sat(conn, channel_id, True)
     return True
+
+
+def seen(conn, seated):
+    was = {row[0] for row in conn.execute(WAS_INSIDE).fetchall()}
+
+    for channel_id in sorted(seated - was):
+        conn.execute(SEATED, (channel_id, True))
+    for channel_id in sorted(was - seated):
+        conn.execute(SEATED, (channel_id, False))
+        noted(conn, channel_id, "left", "gone at the sweep")
+
+    return len(seated - was), len(was - seated)
 
 
 def missing(client):
@@ -126,10 +152,16 @@ def missing(client):
         how = mode(conn)
         want = wanted(client, conn, how)
 
+    seated = joined_channels(client)
+    with session() as conn:
+        took, lost = seen(conn, seated)
+    if took or lost:
+        log.info("nemo: sits in %s channel(s), %s new, %s gone", len(seated), took, lost)
+
     if how == OFF or not want:
         return how, []
 
-    return how, sorted(want - joined_channels(client))
+    return how, sorted(want - seated)
 
 
 def reconcile(client, cap=None):

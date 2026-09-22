@@ -46,7 +46,6 @@ class FdChannelsTest < ActionDispatch::IntegrationTest
     guard = Fd::ChannelGuard.live_for(@channel.channel_id)
     assert_not_nil guard
     assert_equal "UME", guard.opened_by
-    assert_nil guard.reason
     assert Fd::AuditEntry.where(entity_type: "channel_guard", entity_id: guard.id,
       verb: "opened").exists?
   end
@@ -55,7 +54,7 @@ class FdChannelsTest < ActionDispatch::IntegrationTest
     guard!
 
     assert_no_difference -> { Fd::ChannelGuard.count } do
-      post fd_channel_guard_path(@channel.channel_id), params: { reason: "again" }
+      post fd_channel_guard_path(@channel.channel_id)
     end
   end
 
@@ -82,12 +81,11 @@ class FdChannelsTest < ActionDispatch::IntegrationTest
     guard = guard!
 
     post fd_channel_allows_path(@channel.channel_id),
-      params: { subject_ids: ["B0CACHET"], reason: "posts the avatars" }
+      params: { subject_ids: ["B0CACHET"] }
 
     allow = guard.allows.find_by(subject_id: "B0CACHET")
     assert_not_nil allow
     assert_equal "UME", allow.added_by
-    assert_equal "posts the avatars", allow.reason
     assert Fd::AuditEntry.where(entity_type: "channel_allow", entity_id: guard.id,
       verb: "added").exists?
   end
@@ -150,7 +148,7 @@ class FdChannelsTest < ActionDispatch::IntegrationTest
     move_capability!("firefighter", "channel.guard", false, by: "UME")
     sign_in_as(them)
 
-    post fd_channel_guard_path(@channel.channel_id), params: { reason: "app spam" }
+    post fd_channel_guard_path(@channel.channel_id)
 
     assert_nil Fd::ChannelGuard.live_for(@channel.channel_id)
   end

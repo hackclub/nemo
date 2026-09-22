@@ -6,6 +6,7 @@ module Fd
       @query = ChannelQuery.new(params)
       @rows = @query.rows
       @open_id = params[:open].to_s.presence
+      @joining = JoinStanding.new
     end
 
     ACTIVITY_SHOWN = 50
@@ -16,6 +17,7 @@ module Fd
       @guard = ChannelGuard.live_for(@channel_id)
       @allows = @guard ? @guard.allows.oldest_first.to_a : []
       @standing = ChannelJoin.latest_for(@channel_id)
+      @seat = ChannelMembership.inside?(@channel_id)
       @events = ChannelGuardEvent.where(channel_id: @channel_id)
         .newest_first.limit(ACTIVITY_SHOWN).to_a
       @labels = labels_for(@events)

@@ -22,6 +22,7 @@ module Fd
       "Channels::Audience::Grant" => "channel_audience",
       "Fd::ChannelGuard" => "channel_guard",
       "Fd::ChannelGuardAllow" => "channel_allow",
+      "Fd::AppSetting" => "app_setting",
       "Authz::Grant" => "capability_grant"
     }.freeze
 

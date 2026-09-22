@@ -20,7 +20,7 @@ module Fd
           next if guard.allows.exists?(subject_id: subject_id)
 
           allow = guard.allows.create!(subject_id: subject_id, label: label_for(subject_id),
-            added_by: current_account.user_id, reason: params[:reason].to_s.strip.presence)
+            added_by: current_account.user_id)
           audit(allow, "added", entity_id: guard.id)
           added << subject_id
         end

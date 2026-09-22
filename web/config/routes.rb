@@ -19,6 +19,7 @@ Rails.application.routes.draw do
     get "members/search", to: "members#search", as: :member_search
     get "members/pane", to: "members#pane", as: :member_pane
     get "channels/pane", to: "channels#pane", as: :channel_pane
+    post "channels/join_mode", to: "join_mode#update", as: :channel_join_mode
     post "channels/:channel_id/guard", to: "channel_guards#create", as: :channel_guard
     delete "channels/:channel_id/guard", to: "channel_guards#destroy"
     post "channels/:channel_id/allows", to: "channel_allows#create", as: :channel_allows

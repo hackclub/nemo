@@ -14,14 +14,14 @@ GROUP BY g.channel_id, g.id
 """
 
 HELD = """
-SELECT id, kind, channel_id, state, opened_by, reason, case_id
+SELECT id, kind, channel_id, state, opened_by, case_id
 FROM fd.channel_guards
 WHERE channel_id = %s AND kind = %s AND state = 'live'
 """
 
 OPEN = """
-INSERT INTO fd.channel_guards (kind, channel_id, opened_by, reason, case_id)
-VALUES (%s, %s, %s, %s, %s)
+INSERT INTO fd.channel_guards (kind, channel_id, opened_by, case_id)
+VALUES (%s, %s, %s, %s)
 ON CONFLICT DO NOTHING
 RETURNING id
 """
@@ -34,8 +34,8 @@ RETURNING channel_id
 """
 
 ALLOW = """
-INSERT INTO fd.channel_guard_allows (guard_id, subject_id, label, added_by, reason)
-VALUES (%s, %s, %s, %s, %s)
+INSERT INTO fd.channel_guard_allows (guard_id, subject_id, label, added_by)
+VALUES (%s, %s, %s, %s)
 ON CONFLICT (guard_id, subject_id) DO UPDATE
 SET label = coalesce(EXCLUDED.label, fd.channel_guard_allows.label)
 RETURNING subject_id
@@ -47,7 +47,7 @@ RETURNING subject_id
 """
 
 ALLOWED = """
-SELECT subject_id, label, added_by, added_at, reason
+SELECT subject_id, label, added_by, added_at
 FROM fd.channel_guard_allows WHERE guard_id = %s ORDER BY added_at
 """
 
@@ -107,15 +107,15 @@ def allowed(conn, guard_id):
     return conn.execute(ALLOWED, (guard_id,)).fetchall()
 
 
-def open_guard(conn, channel_id, by, reason, case_id=None, kind=BOT_ALLOWLIST):
-    row = conn.execute(OPEN, (kind, channel_id, by, reason, case_id)).fetchone()
+def open_guard(conn, channel_id, by, case_id=None, kind=BOT_ALLOWLIST):
+    row = conn.execute(OPEN, (kind, channel_id, by, case_id)).fetchone()
     if row is None:
         return None
 
     guard_id = row[0]
     audit.record(
         conn, "channel_guard", guard_id, "opened", by,
-        after={"kind": kind, "channel_id": channel_id, "reason": reason},
+        after={"kind": kind, "channel_id": channel_id},
     )
     return guard_id
 
@@ -130,13 +130,13 @@ def lift(conn, guard_id, by):
     return row[0]
 
 
-def allow(conn, guard_id, subject_id, by, label=None, reason=None):
-    row = conn.execute(ALLOW, (guard_id, subject_id, label, by, reason)).fetchone()
+def allow(conn, guard_id, subject_id, by, label=None):
+    row = conn.execute(ALLOW, (guard_id, subject_id, label, by)).fetchone()
     if row is None:
         return None
 
     audit.record(conn, "channel_allow", guard_id, "added", by,
-                 after={"subject_id": subject_id, "label": label, "reason": reason})
+                 after={"subject_id": subject_id, "label": label})
     return row[0]
 
 

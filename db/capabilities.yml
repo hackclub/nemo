@@ -180,6 +180,7 @@ capabilities:
       - channel_guard/lifted
       - channel_allow/added
       - channel_allow/removed
+      - app_setting/tuned
 
   engine.manage:
     label: Run and tune the engine
