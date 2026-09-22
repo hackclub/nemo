@@ -3,7 +3,7 @@ import os
 import threading
 
 from bot.core import loops, session
-from bot.nemo import channel, chat, guards, guardwork
+from bot.nemo import channel, channels, chat, guards, guardwork
 
 log = logging.getLogger("bot.nemo")
 
@@ -15,6 +15,7 @@ CONVERSATION = "fd_conversation_changed"
 GUARD = "fd_thread_guard"
 
 DEFAULT_SECONDS = 300
+DEFAULT_JOIN_SECONDS = 1800
 GIVE_UP_AFTER = 3
 
 UNCARDED = """
@@ -39,6 +40,14 @@ LIMIT 200
 
 def every():
     return int(os.environ.get("NEMO_SWEEP_SECONDS", DEFAULT_SECONDS))
+
+
+def every_join_sweep():
+    return int(os.environ.get("NEMO_JOIN_SECONDS", DEFAULT_JOIN_SECONDS))
+
+
+def join_sweep(desk):
+    channels.reconcile(desk.client)
 
 
 def each(cases, doing, work, client, channel_id):
@@ -129,4 +138,5 @@ def start(desk, stopping, channel_id=None):
     return (
         loops.watching(NAME, (CASES, CHAT, OUTBOX, CONVERSATION, GUARD), heard, stopping),
         loops.sweeping(NAME, every(), lambda: once(desk, channel_id), stopping),
+        loops.sweeping(f"{NAME}-joins", every_join_sweep(), lambda: join_sweep(desk), stopping),
     )
