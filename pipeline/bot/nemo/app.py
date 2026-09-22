@@ -1,8 +1,10 @@
 import os
 
 from slack_bolt import App
+from slack_sdk import WebClient
 
 from bot.nemo import channel, command, handlers, surface
+from lib.slack_client import RETRY_HANDLERS
 from bot.nemo.surface import (
     bot_watch,  # noqa: F401
     channel_watch,  # noqa: F401
@@ -13,7 +15,8 @@ from bot.nemo.surface import (
 
 
 def build(on_reply=None):
-    app = App(token=os.environ["NEMO_BOT_TOKEN"], raise_error_for_unhandled_request=False)
+    client = WebClient(token=os.environ["NEMO_BOT_TOKEN"], retry_handlers=RETRY_HANDLERS)
+    app = App(client=client, raise_error_for_unhandled_request=False)
     handlers.register(app, on_reply)
     command.register(app)
     surface.register(app)

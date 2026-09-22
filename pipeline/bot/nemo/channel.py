@@ -312,18 +312,41 @@ def redraw(client, conn, case_id, channel_id=None):
     if fingerprint == case["card_digest"]:
         return case["forwarded_ts"]
 
-    client.chat_update(
-        channel=channel_id or firehouse_channel(),
-        ts=case["forwarded_ts"],
-        text=cards.report.fallback(case),
-        blocks=built,
-    )
+    try:
+        client.chat_update(
+            channel=channel_id or firehouse_channel(),
+            ts=case["forwarded_ts"],
+            text=cards.report.fallback(case),
+            blocks=built,
+        )
+    except Exception as failure:
+        if not somebody_elses(failure):
+            raise
+        return recard(client, conn, case_id, case["report_id"], channel_id)
+
     conn.execute(
         "UPDATE fd.case_reports SET card_digest = %s, card_rendered_at = now() WHERE id = %s",
         (fingerprint, case["report_id"]),
     )
     log.info("nemo: case %s redrawn", case_id)
     return case["forwarded_ts"]
+
+
+NOT_OURS = ("cant_update_message", "message_not_found", "edit_window_closed")
+
+
+def somebody_elses(failure):
+    said = str(failure)
+    return any(one in said for one in NOT_OURS)
+
+
+def recard(client, conn, case_id, report_id, channel_id):
+    conn.execute(
+        "UPDATE fd.case_reports SET forwarded_ts = NULL, card_digest = NULL WHERE id = %s",
+        (report_id,),
+    )
+    log.info("nemo: case %s has a card we cannot edit, putting up a fresh one", case_id)
+    return post_report(client, conn, case_id, channel_id)
 
 
 def whisper(client, body, said):

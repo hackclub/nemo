@@ -15,5 +15,5 @@ RETRY_HANDLERS = [
 
 
 def bot_client() -> WebClient:
-    return WebClient(token=os.environ["SLACK_BOT_TOKEN"], retry_handlers=RETRY_HANDLERS)
+    return WebClient(token=os.environ["NEMO_BOT_TOKEN"], retry_handlers=RETRY_HANDLERS)
 

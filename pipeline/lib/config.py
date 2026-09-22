@@ -71,7 +71,7 @@ ROLES = {
         "required": DATABASE + ["INTERNAL_PROXY_URL", "INTERNAL_PROXY_TOKEN"],
         "optional": PIPELINE_ROLE + DBT_ROLE + [
             "PROMETHEUS_BASE_URL",
-            "SLACK_BOT_TOKEN",
+            "NEMO_BOT_TOKEN",
             "SLACK_TEAM_ID",
             "NIGHTLY_AT",
             "NIGHTLY_RUN_AT_START",
@@ -191,8 +191,6 @@ HEADINGS = {
 }
 
 BOT_NEVER = [
-    "SLACK_BOT_TOKEN",
-    "SLACK_APP_TOKEN",
     "SLACK_TOKEN",
     "SLACK_ADMIN_TOKEN",
     "INTERNAL_PROXY_TOKEN",
@@ -200,7 +198,7 @@ BOT_NEVER = [
 
 NEVER = {
     "serve": [
-        "SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "SLACK_TOKEN", "SLACK_ADMIN_TOKEN",
+        "NEMO_BOT_TOKEN", "NEMO_APP_TOKEN", "SLACK_TOKEN", "SLACK_ADMIN_TOKEN",
         "INTERNAL_PROXY_TOKEN",
     ],
     "bot": BOT_NEVER,

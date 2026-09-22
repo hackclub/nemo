@@ -27,7 +27,21 @@ oauth_config:
     - https://localhost:3000/fd/slack_account/callback
   scopes:
     user:
+      - admin
+      - admin.analytics:read
+      - admin.conversations:read
+      - admin.teams:read
+      - admin.users:read
+      - admin.users:write
+      - auditlogs:read
+      - channels:history
+      - channels:read
+      - channels:write
       - chat:write
+      - groups:history
+      - groups:write
+      - search:read
+      - users:read
     bot:
       - chat:write
       - chat:write.customize
