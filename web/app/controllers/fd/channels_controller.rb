@@ -8,12 +8,17 @@ module Fd
       @open_id = params[:open].to_s.presence
     end
 
+    ACTIVITY_SHOWN = 50
+
     def show
       @channel_id = params[:channel_id].to_s.strip.upcase
       @channel = Analytics::DimChannel.find_by(channel_id: @channel_id)
       @guard = ChannelGuard.live_for(@channel_id)
       @allows = @guard ? @guard.allows.oldest_first.to_a : []
       @standing = ChannelJoin.latest_for(@channel_id)
+      @events = ChannelGuardEvent.where(channel_id: @channel_id)
+        .newest_first.limit(ACTIVITY_SHOWN).to_a
+      @labels = labels_for(@events)
       @names = Names.for(@guard ? @guard.people_named : [])
       load_pane
     end
@@ -28,6 +33,16 @@ module Fd
     end
 
     private
+
+    def labels_for(events)
+      ids = events.map(&:subject_id).uniq
+      return {} if ids.empty?
+
+      vouched = ChannelGuardAllow.where(subject_id: ids).where.not(label: nil)
+        .pluck(:subject_id, :label).to_h
+      known = Member.where(user_id: ids).to_h { |one| [one.user_id, one.name] }
+      known.merge(vouched)
+    end
 
     def load_pane
       @query = ChannelQuery.new(params.to_unsafe_h.slice("q"))

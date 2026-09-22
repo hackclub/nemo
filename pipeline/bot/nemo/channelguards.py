@@ -59,9 +59,9 @@ ORDER BY at DESC LIMIT 1
 
 HAPPENED = """
 INSERT INTO fd.channel_guard_events
-    (guard_id, channel_id, subject_id, verb, message_ts, permalink, app_id,
-     told_ts, told_until)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    (guard_id, channel_id, subject_id, bot_id, label, verb, said, message_ts, permalink,
+     app_id, told_ts, told_until)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 RETURNING id
 """
 
@@ -155,10 +155,14 @@ def told_lately(conn, guard_id, subject_id):
     return row[0] if row else None
 
 
-def happened(conn, guard_id, channel_id, subject_id, verb, message_ts=None,
-             permalink=None, app_id=None, told_ts=None, told_until=None):
+KEPT_WORDS = 8000
+
+
+def happened(conn, guard_id, channel_id, subject_id, verb, bot_id=None, label=None, said=None,
+             message_ts=None, permalink=None, app_id=None, told_ts=None, told_until=None):
     return conn.execute(
         HAPPENED,
-        (guard_id, channel_id, subject_id, verb, message_ts, permalink, app_id,
-         told_ts, told_until),
+        (guard_id, channel_id, subject_id, bot_id, label, verb,
+         (said or None) and said[:KEPT_WORDS],
+         message_ts, permalink, app_id, told_ts, told_until),
     ).fetchone()[0]

@@ -45,6 +45,18 @@ def names_for(client, bot_id, user_id):
     return [one for one in (user_id, bot_id, face_id) if one], label, app_id
 
 
+def words_of(event):
+    said = (event.get("text") or "").strip()
+    if said:
+        return said
+
+    for block in event.get("attachments") or []:
+        fallen = (block.get("text") or block.get("fallback") or "").strip()
+        if fallen:
+            return fallen
+    return None
+
+
 def permalink_for(client, channel_id, ts):
     try:
         return (client.chat_getPermalink(channel=channel_id, message_ts=ts) or {}).get("permalink")
@@ -90,16 +102,19 @@ def posted(ctx):
         return None
 
     guard_id, _allowed = standing
-    subject_id = bot_id or user_id
-    privileged.delete_message(channel_id, ts)
+    face_id = next((one for one in ids if one and one.startswith("U")), None)
+    subject_id = face_id or bot_id or user_id
+    said_words = words_of(event)
     link = permalink_for(ctx.client, channel_id, ts)
+    privileged.delete_message(channel_id, ts)
 
     with session() as conn:
         said = (f":no_entry: Deleted a message from *{label or subject_id}*, which is not on "
                 f"the allow list for <#{channel_id}>." + (f"\n{link}" if link else ""))
         told_ts, told_until = tell(ctx.client, conn, guard_id, subject_id, said)
         channelguards.happened(conn, guard_id, channel_id, subject_id, "deleted",
-                               message_ts=ts, permalink=link, app_id=app_id,
+                               bot_id=bot_id, label=label, said=said_words, message_ts=ts,
+                               permalink=link, app_id=app_id,
                                told_ts=told_ts, told_until=told_until)
 
     log.info("nemo: guard %s deleted %s from %s in %s", guard_id, ts, subject_id, channel_id)
@@ -143,6 +158,7 @@ def joined(ctx):
         told_ts, told_until = tell(ctx.client, conn, guard_id, who, said)
         channelguards.happened(conn, guard_id, channel_id, who,
                                "kicked" if outcome == "kicked" else "let_past",
+                               bot_id=(found.get("profile") or {}).get("bot_id"), label=label,
                                app_id=(found.get("profile") or {}).get("api_app_id"),
                                told_ts=told_ts, told_until=told_until)
 

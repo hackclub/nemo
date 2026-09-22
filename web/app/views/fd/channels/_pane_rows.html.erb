@@ -6,7 +6,7 @@
       <span class="qid">#</span>
       <span class="qby trunc"><%= row.name.presence || row.channel_id %></span>
       <% if row.private? %>
-        <span class="chip chip-off">private</span>
+        <span class="sub2">private</span>
       <% end %>
       <span class="qage"><%= row.members ? number_to_human(row.members, units: { unit: "", thousand: "k" }) : "—" %></span>
     </span>

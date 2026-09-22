@@ -2835,6 +2835,17 @@
   .standing-line { font-size: var(--t-small); }
 
   .people-list { display: grid; }
+
+  .activity { display: grid; gap: var(--s-xs); }
+  .activity-item {
+    display: grid;
+    padding: var(--s-xs) var(--s-sm) var(--s-sm);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-card);
+    background: var(--card-2);
+  }
+  .activity-what { font-size: var(--t-small); color: var(--ink-2); }
+  .activity-item .qcite { margin-top: var(--s-xs); background: var(--sunk); }
   .person-block { border-bottom: 1px solid var(--line-soft); padding: 0 var(--s-sm); }
   .person-block:last-child { border-bottom: 0; }
   .person-role { color: var(--ink-3); font-weight: 400; }

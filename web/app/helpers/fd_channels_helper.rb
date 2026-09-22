@@ -25,12 +25,47 @@ module FdChannelsHelper
     safe_join([said, tag.q(guard.reason)], " ")
   end
 
-  def channel_seat_chip(standing)
+  def channel_seat_said(standing)
     return nil if standing.nil? || standing.inside?
-    return tag.span("nemo was taken out of here", class: "chip chip-crit") if standing.verb == "left"
+    return tag.p("nemo was taken out of here", class: "sev-crit") if standing.verb == "left"
 
-    tag.span("nemo could not get in: #{standing.why.presence || 'refused'}",
-      class: "chip chip-crit")
+    tag.p("nemo could not get in: #{standing.why.presence || 'refused'}", class: "sev-crit")
+  end
+
+  MARKETPLACE = "https://hackclub.slack.com/marketplace".freeze
+
+  ACTIVITY_SAID = {
+    "kicked" => "put out",
+    "deleted" => "message deleted",
+    "let_past" => "stayed, we could not put it out"
+  }.freeze
+
+  def activity_verb(event)
+    said = ACTIVITY_SAID.fetch(event.verb, event.verb)
+    return tag.span(said, class: "sev-crit") if event.verb == Fd::ChannelGuardEvent::LET_PAST
+
+    tag.span(said)
+  end
+
+  def activity_who(event, labels)
+    event.label.presence || labels[event.subject_id].presence || event.subject_id
+  end
+
+  def activity_ids(event)
+    tag.span([event.subject_id, event.bot_id].compact_blank.uniq.join(" - "), class: "mono")
+  end
+
+  def marketplace_link(event)
+    return nil if event.app_id.blank?
+
+    link_to "manage this bot", "#{MARKETPLACE}/#{event.app_id}", class: "lnk",
+      target: "_blank", rel: "noopener"
+  end
+
+  def at_minute(at)
+    return "n/a" if at.nil?
+
+    at.in_time_zone(Time.zone).strftime("%-d %b %Y, %H:%M")
   end
 
   def vouched_line(allow)

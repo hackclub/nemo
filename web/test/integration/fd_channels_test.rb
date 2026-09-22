@@ -134,6 +134,17 @@ class FdChannelsTest < ActionDispatch::IntegrationTest
     assert_not_includes found, bot.user_id
   end
 
+  test "what the guard did survives the guard being lifted" do
+    guard = guard!
+    guard.events.create!(channel_id: @channel.channel_id, subject_id: "B0ZAPIER", verb: "kicked")
+
+    delete fd_channel_guard_path(@channel.channel_id)
+    get fd_channel_path(@channel.channel_id)
+
+    assert_response :success
+    assert_equal 1, Fd::ChannelGuardEvent.where(channel_id: @channel.channel_id).count
+  end
+
   test "somebody without channel.guard cannot turn one on" do
     them = hold_role!("UFF9", "firefighter")
     move_capability!("firefighter", "channel.guard", false, by: "UME")

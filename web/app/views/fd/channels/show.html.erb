@@ -24,7 +24,7 @@
 
     <% if @guard %>
       <p class="sub2"><%= channel_guard_why(@guard) %></p>
-      <%= channel_seat_chip(@standing) %>
+      <%= channel_seat_said(@standing) %>
     <% else %>
       <div class="empty">
         <p class="empty-title">This channel is not guarded</p>
@@ -70,6 +70,39 @@
           <p class="empty-title">Nothing is allowed here yet</p>
         </div>
       <% end %>
+    </section>
+  <% end %>
+
+  <% if @events.any? %>
+    <section class="card">
+      <div class="card-head">
+        <span class="card-title">Activity</span>
+      </div>
+
+      <div class="activity">
+        <% @events.each do |one| %>
+          <div class="activity-item">
+            <div class="line-row">
+              <span class="grow two-line">
+                <b><%= activity_who(one, @labels) %></b>
+                <span><%= activity_ids(one) %></span>
+              </span>
+              <span class="row-right">
+                <%= marketplace_link(one) %>
+                <span class="sub2 mono"><%= at_minute(one.at) %></span>
+              </span>
+            </div>
+
+            <span class="activity-what"><%= activity_verb(one) %></span>
+
+            <% if one.said.present? %>
+              <span class="qcite">
+                <span class="qcite-said"><%= plain_words(one.said) %></span>
+              </span>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
     </section>
   <% end %>
 </div>
