@@ -46,6 +46,8 @@ oauth_config:
 settings:
   event_subscriptions:
     bot_events:
+      - channel_created
+      - member_left_channel
       - message.channels
       - message.groups
   interactivity:
