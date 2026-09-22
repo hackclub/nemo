@@ -20,11 +20,13 @@ module Fd
       "ChannelBackfill" => "channel_backfill",
       "Channels::Audience::Setting" => "channel_audience",
       "Channels::Audience::Grant" => "channel_audience",
+      "Fd::ChannelGuard" => "channel_guard",
+      "Fd::ChannelGuardAllow" => "channel_allow",
       "Authz::Grant" => "capability_grant"
     }.freeze
 
     VERBS = %w[
-      opened claimed unclaimed resolved reopened categorised
+      opened lifted claimed unclaimed resolved reopened categorised
       performed reversed received
       noted deleted attached detached flagged unflagged closed answered
       granted revoked refused

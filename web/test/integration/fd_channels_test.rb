@@ -39,4 +39,58 @@ class FdChannelsTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to login_path
   end
+
+  test "turning the guard on records who did it and why" do
+    post fd_channel_guard_path(@channel.channel_id), params: { reason: "app spam" }
+
+    guard = Fd::ChannelGuard.live_for(@channel.channel_id)
+    assert_not_nil guard
+    assert_equal "UME", guard.opened_by
+    assert_equal "app spam", guard.reason
+    assert Fd::AuditEntry.where(entity_type: "channel_guard", entity_id: guard.id,
+      verb: "opened").exists?
+  end
+
+  test "a guard needs a reason" do
+    post fd_channel_guard_path(@channel.channel_id), params: { reason: "  " }
+
+    assert_nil Fd::ChannelGuard.live_for(@channel.channel_id)
+  end
+
+  test "a channel cannot be guarded twice" do
+    guard!
+
+    assert_no_difference -> { Fd::ChannelGuard.count } do
+      post fd_channel_guard_path(@channel.channel_id), params: { reason: "again" }
+    end
+  end
+
+  test "lifting keeps the allow list and the guard row" do
+    guard = guard!
+    guard.allows.create!(subject_id: "B0CACHET", added_by: "UME")
+
+    delete fd_channel_guard_path(@channel.channel_id)
+
+    assert_nil Fd::ChannelGuard.live_for(@channel.channel_id)
+    assert_equal "lifted", guard.reload.state
+    assert_equal "UME", guard.lifted_by
+    assert_not_nil guard.lifted_at
+    assert_equal 1, guard.allows.count
+  end
+
+  test "lifting a channel nobody guards changes nothing" do
+    delete fd_channel_guard_path(@channel.channel_id)
+
+    assert_equal 0, Fd::ChannelGuard.where(channel_id: @channel.channel_id).count
+  end
+
+  test "somebody without channel.guard cannot turn one on" do
+    them = hold_role!("UFF9", "firefighter")
+    move_capability!("firefighter", "channel.guard", false, by: "UME")
+    sign_in_as(them)
+
+    post fd_channel_guard_path(@channel.channel_id), params: { reason: "app spam" }
+
+    assert_nil Fd::ChannelGuard.live_for(@channel.channel_id)
+  end
 end

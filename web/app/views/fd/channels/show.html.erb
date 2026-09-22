@@ -1,5 +1,6 @@
 <% name = @channel&.name.presence %>
-<% content_for :page_title, name ? "##{name}" : @channel_id %>
+<% label = name ? "##{name}" : @channel_id %>
+<% content_for :page_title, label %>
 <% content_for :head_context do %>
   <span class="triad-sep">&middot;</span>
   <span class="triad-who mono"><%= @channel_id %></span>
@@ -7,6 +8,14 @@
 <% content_for :head_actions do %>
   <%= link_to case_action_button("external", "Slack"), slack_channel_url(@channel_id),
         class: "btn btn-ghost", target: "_blank", rel: "noopener" %>
+  <% if @guard %>
+    <%= gated_button("channel.guard", "Lift the guard", fd_channel_guard_path(@channel_id),
+          css: "btn btn-crit", method: :delete,
+          data: { turbo_confirm: "Lift the guard on #{label}? The allow list is kept." }) %>
+  <% else %>
+    <%= opens_modal "channel.guard", "Guard this channel", opens: "guard-channel",
+          css: "btn btn-primary" %>
+  <% end %>
 <% end %>
 <% content_for :pane do %>
   <%= render "pane", query: @query, rows: @rows, open_id: @open_id %>
@@ -76,3 +85,7 @@
     </section>
   <% end %>
 </div>
+
+<% unless @guard %>
+  <%= render "guard_modal", channel_id: @channel_id, label: label %>
+<% end %>

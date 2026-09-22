@@ -25,6 +25,7 @@ roles:
       - slack.link
       - channel.read
       - channel.all
+      - channel.guard
     grantable: true
 
   promethean:
@@ -169,6 +170,16 @@ capabilities:
   channel.backfill:
     label: Queue a thread replies backfill for a channel
     area: channel
+
+  channel.guard:
+    label: Guard a channel, and say which bots may post in it
+    area: channel
+    locked: true
+    events:
+      - channel_guard/opened
+      - channel_guard/lifted
+      - channel_allow/added
+      - channel_allow/removed
 
   engine.manage:
     label: Run and tune the engine

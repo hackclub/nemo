@@ -65,7 +65,7 @@ def test_the_locked_capabilities_are_fd_only_and_fixed():
         "case.read", "case.open", "case.categorise", "case.note", "case.people",
         "case.thread", "case.chat", "case.reply", "case.act", "case.resolve",
         "case.reverse", "case.reopen", "thread.guard", "member.note", "identity.read",
-        "channel.share",
+        "channel.share", "channel.guard",
         "engine.manage", "access.grant", "app.flip",
     ], locked
 
