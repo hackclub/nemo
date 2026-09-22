@@ -60,6 +60,7 @@ WRITE_METHODS = {
     "admin": frozenset(
         {
             "chat.delete",
+            "conversations.kick",
             "admin.users.session.reset",
         }
     ),
