@@ -49,11 +49,14 @@ module YouHelper
   def calendar_tip_rows(cell)
     return [{ label: "nothing posted", value: "0" }] if cell.messages.zero?
 
-    [
-      { label: "messages", value: number_with_delimiter(cell.messages) },
-      { label: "channels", value: number_with_delimiter(cell.channels) },
-      { label: "replies", value: number_with_delimiter(cell.replies) }
-    ]
+    rows = [{ label: "messages", value: number_with_delimiter(cell.messages) }]
+    rows << { label: "in channels", value: number_with_delimiter(cell.in_channels) }
+    if cell.elsewhere.positive?
+      rows << { label: "elsewhere", value: number_with_delimiter(cell.elsewhere) }
+    end
+    rows << { label: "rooms we hold", value: number_with_delimiter(cell.rooms) } if cell.rooms.positive?
+    rows << { label: "replies", value: number_with_delimiter(cell.replies) } if cell.replies.positive?
+    rows
   end
 
   def calendar_note(calendar)

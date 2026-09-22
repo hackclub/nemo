@@ -1,9 +1,12 @@
 require "test_helper"
 
 class Community::CalendarTest < ActiveSupport::TestCase
-  def build(rows, today: Date.new(2026, 9, 18), **rest)
+  def build(rows, today: Date.new(2026, 9, 18), held: nil, **rest)
     window_end = today.end_of_week(:monday)
-    Community::Calendar.new(rows: rows, window_start: window_end - (53 * 7 - 1),
+    posted = rows.map { |on, messages, _rooms, _replies| [on, messages, messages] }
+    Community::Calendar.new(
+      held: held || rows.map { |on, messages, rooms, replies| [on, rooms, replies, messages] },
+      posted: posted, window_start: window_end - (53 * 7 - 1),
       window_end: window_end, today: today, **rest)
   end
 
@@ -62,6 +65,61 @@ class Community::CalendarTest < ActiveSupport::TestCase
 
   test "no run, no rule" do
     assert_nil build([]).run_columns
+  end
+
+  test "a day spent where the archive cannot see still counts" do
+    on = Date.new(2026, 9, 12)
+    cal = Community::Calendar.new(held: [], posted: [[on, 55, 32]],
+      window_start: Date.new(2026, 9, 18).end_of_week(:monday) - (53 * 7 - 1),
+      window_end: Date.new(2026, 9, 18).end_of_week(:monday), today: Date.new(2026, 9, 18))
+
+    said = cal.cells.find { |cell| cell.on == on }
+    assert_operator said.step, :>, 0, "a day only Slack saw must still be coloured"
+    assert_equal 55, said.messages
+    assert_equal 32, said.in_channels
+    assert_equal 23, said.elsewhere
+    assert_equal 0, said.rooms
+    assert said.unseen?, "the archive holds none of it"
+    assert_equal 1, cal.active_days
+  end
+
+  test "a day the archive holds but Slack has not published yet stays lit" do
+    on = Date.new(2026, 9, 17)
+    cal = Community::Calendar.new(held: [[on, 2, 1, 6]], posted: [],
+      window_start: Date.new(2026, 9, 18).end_of_week(:monday) - (53 * 7 - 1),
+      window_end: Date.new(2026, 9, 18).end_of_week(:monday), today: Date.new(2026, 9, 18))
+
+    said = cal.cells.find { |cell| cell.on == on }
+    assert_equal 6, said.messages, "the archive is the floor when analytics lags"
+    assert_equal 6, said.in_channels
+    assert_equal 0, said.elsewhere
+    assert_operator said.step, :>, 0
+  end
+
+  test "the archive still supplies the breakdown when it has the day" do
+    on = Date.new(2026, 9, 12)
+    cal = Community::Calendar.new(held: [[on, 4, 9, 20]], posted: [[on, 20, 20]],
+      window_start: Date.new(2026, 9, 18).end_of_week(:monday) - (53 * 7 - 1),
+      window_end: Date.new(2026, 9, 18).end_of_week(:monday), today: Date.new(2026, 9, 18))
+
+    said = cal.cells.find { |cell| cell.on == on }
+    assert_equal 20, said.messages
+    assert_equal 4, said.rooms
+    assert_equal 9, said.replies
+    assert_equal 0, said.elsewhere
+    assert_not said.unseen?
+  end
+
+  test "the run follows the days that are lit, not the one it was handed" do
+    today = Date.new(2026, 9, 18)
+    lit = (0..20).map { |n| [today - n, 5, 5] }
+    cal = Community::Calendar.new(held: [], posted: lit,
+      window_start: today.end_of_week(:monday) - (53 * 7 - 1),
+      window_end: today.end_of_week(:monday), today: today,
+      run_from: Date.new(2026, 1, 1), run_to: Date.new(2026, 1, 2))
+
+    assert_equal cal.column_of(today - 20), cal.run_columns.first
+    assert_equal cal.column_of(today), cal.run_columns.last
   end
 
   test "the months cover every column once" do

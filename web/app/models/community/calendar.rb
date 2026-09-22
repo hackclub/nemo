@@ -5,10 +5,12 @@ module Community
     SHOWN_DAYS = [0, 2, 4].freeze
     STEPS = 5
 
-    Cell = Struct.new(:on, :messages, :channels, :replies, :step, :state, keyword_init: true) do
+    Cell = Struct.new(:on, :messages, :in_channels, :elsewhere, :rooms, :replies,
+      :step, :state, keyword_init: true) do
       def measured? = state == :measured
       def before? = state == :before
       def future? = state == :future
+      def unseen? = messages.to_i.positive? && rooms.to_i.zero?
     end
 
     Month = Struct.new(:label, :from, :span, keyword_init: true)
@@ -22,26 +24,30 @@ module Community
       window_end = today.end_of_week(:monday)
       window_start = window_end - (WEEKS * 7 - 1)
 
-      rows = Analytics::MartMemberDay.mine(user_id).between(window_start, window_end)
-        .pluck(:ds, :messages, :channels, :replies)
+      held = Analytics::MartMemberDay.mine(user_id).between(window_start, window_end)
+        .pluck(:ds, :channels, :replies, :messages)
+      posted = Analytics::MemberActivity.mine(user_id).between(window_start, window_end)
+        .where("window_start = window_end")
+        .pluck(:window_start, :messages_posted, :channel_messages_posted)
 
-      new(rows: rows, window_start: window_start, window_end: window_end, today: today,
-        first_post_on: first_post_on, run_from: run_from, run_to: run_to)
+      new(held: held, posted: posted, window_start: window_start, window_end: window_end,
+        today: today, first_post_on: first_post_on, run_from: run_from, run_to: run_to)
     end
 
-    def initialize(rows:, window_start:, window_end:, today:, first_post_on: nil,
+    def initialize(held:, posted:, window_start:, window_end:, today:, first_post_on: nil,
       run_from: nil, run_to: nil)
       @window_start = window_start
       @window_end = window_end
       @today = today
       @first_post_on = first_post_on
-      @run_from = run_from
-      @run_to = run_to
-      @held = rows.to_h { |ds, messages, channels, replies| [ds, [messages, channels, replies]] }
-      @peak = rows.map { |r| r[1].to_i }.max.to_i
-      @active_days = rows.count { |r| r[1].to_i.positive? }
-      @thresholds = thresholds_for(rows.map { |r| r[1].to_i })
+      @held = held.to_h { |ds, rooms, replies, messages| [ds, [rooms, replies, messages]] }
+      @totals = totals_of(posted)
+      counts = @totals.values.map(&:first)
+      @peak = counts.max.to_i
+      @active_days = counts.count(&:positive?)
+      @thresholds = thresholds_for(counts)
       @cells = grid
+      @run_from, @run_to = run_of(run_from, run_to)
       @months = month_spans
     end
 
@@ -88,13 +94,37 @@ module Community
       1 + @thresholds.count { |edge| messages > edge }
     end
 
+    def totals_of(posted)
+      said = posted.to_h { |ds, messages, in_channels| [ds, [messages.to_i, in_channels.to_i]] }
+      (said.keys | @held.keys).to_h do |on|
+        archived = @held[on]&.last.to_i
+        messages, in_channels = said[on] || [0, 0]
+        [on, [[messages, archived].max, [in_channels, archived].max]]
+      end
+    end
+
     def grid
       (0...(WEEKS * 7)).map do |offset|
         on = @window_start + offset
-        held = @held[on]
-        Cell.new(on: on, messages: held&.first.to_i, channels: held&.[](1).to_i,
-          replies: held&.[](2).to_i, step: step_of(held&.first), state: state_of(on))
+        rooms, replies, = @held[on]
+        messages, in_channels = @totals[on] || [0, 0]
+        Cell.new(on: on, messages: messages, in_channels: in_channels,
+          elsewhere: [messages - in_channels, 0].max,
+          rooms: rooms.to_i, replies: replies.to_i,
+          step: step_of(messages), state: state_of(on))
       end
+    end
+
+    def run_of(from, to)
+      live = @cells.select { |cell| cell.measured? && cell.messages.positive? }.map(&:on)
+      return [from, to] if live.empty?
+
+      last = live.last
+      return [from, to] if (@today - last).to_i > 1
+
+      first = last
+      first -= 1 while live.include?(first - 1)
+      [first, last]
     end
 
     def state_of(on)

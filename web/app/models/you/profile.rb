@@ -187,8 +187,9 @@ module You
 
     def weeks
       @weeks ||= begin
-        posted = Analytics::MartMemberDay.mine(@user_id).between(window_start, window_end)
-          .group(Arel.sql("date_trunc('week', ds)::date")).sum(:messages)
+        posted = Analytics::MemberActivity.mine(@user_id).between(window_start, window_end)
+          .where("window_start = window_end")
+          .group(Arel.sql("date_trunc('week', window_start)::date")).sum(:messages_posted)
         reacted = Analytics::MemberActivity.mine(@user_id).between(window_start, window_end)
           .group(Arel.sql("date_trunc('week', window_start)::date")).sum(:reactions_added)
 
