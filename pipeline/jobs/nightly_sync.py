@@ -225,12 +225,11 @@ def stages():
     ]
 
 
-def tonight(conn, now=None):
-    now = now or datetime.now(timezone.utc)
-    return [
-        (name, stage, settings.skip_reason(conn, name, now))
-        for name, stage in stages()
-    ]
+WHEN_DUE = object()
+
+
+def tonight(conn):
+    return [(name, stage, WHEN_DUE) for name, stage in stages()]
 
 
 GATEWAY_FAILURE = re.compile(r"proxy returned 50[234]\b")
@@ -418,6 +417,8 @@ def run_stages(conn, plan, run_id, budget=None):
     failed, ran, skipped, cut = [], 0, 0, 0
     for index, (name, stage, why) in enumerate(plan, start=1):
         raise_if_cancelled()
+        if why is WHEN_DUE:
+            why = settings.skip_reason(conn, name, datetime.now(timezone.utc))
         why = due_anyway(conn, run_id, name, why)
         if not why:
             spent = (time.monotonic() - started) / 60
