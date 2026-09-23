@@ -161,8 +161,10 @@ def took_it_down(client, guard_id, channel_id, ts):
     try:
         remove(client, channel_id, ts)
     except Exception as failure:
-        log.warning("nemo: guard %s could not remove %s yet: %s", guard_id, ts, failure)
-        return False
+        if not privileged.gone(failure):
+            log.warning("nemo: guard %s could not remove %s yet: %s", guard_id, ts, failure)
+            return False
+        log.info("nemo: guard %s found %s already gone", guard_id, ts)
 
     with session() as conn:
         guards.removed(conn, guard_id, ts)

@@ -41,6 +41,7 @@ def proxy():
 
 
 NOT_THERE = ("channel_not_found", "not_in_channel")
+ALREADY_GONE = ("message_not_found", "already_deleted")
 
 _admin = {}
 
@@ -48,6 +49,11 @@ _admin = {}
 def absent(failure):
     said = str(failure)
     return any(one in said for one in NOT_THERE)
+
+
+def gone(failure):
+    said = str(failure)
+    return any(one in said for one in ALREADY_GONE)
 
 
 def admin_user_id():
