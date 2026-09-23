@@ -16,7 +16,6 @@ def asked(ctx):
     if not ctx.thread_ts:
         return ctx.whisper("that is not a thread")
 
-    ctx.join()
     ctx.client.views_open(
         trigger_id=ctx.trigger_id,
         view=card.lock_view(ctx.channel_id, ctx.thread_ts),
@@ -48,6 +47,7 @@ def confirmed(ctx):
     if guard_id is None:
         return ctx.whisper("that thread is already held", channel_id, thread_ts)
 
+    ctx.join(channel_id)
     with session() as conn:
         guards.warn(ctx.client, conn, guard_id, channel_id, thread_ts, guards.LOCK)
         guards.refresh(conn)

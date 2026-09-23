@@ -108,11 +108,16 @@ class Ctx:
         if self.entry.kind != VIEW and callable(self.ack):
             self.ack()
 
+    ALREADY_IN = ("method_not_supported_for_channel_type", "already_in_channel")
+
     def join(self, channel_id=None):
+        where = channel_id or self.channel_id
         try:
-            self.client.conversations_join(channel=channel_id or self.channel_id)
+            self.client.conversations_join(channel=where)
         except Exception as failure:
-            log.info("nemo: could not join %s: %s", channel_id or self.channel_id, failure)
+            if any(one in str(failure) for one in self.ALREADY_IN):
+                return
+            log.info("nemo: could not join %s: %s", where, failure)
 
     def whisper(self, said, channel_id=None, thread_ts=None):
         room = channel_id or self.channel_id
