@@ -234,7 +234,7 @@ def deal(items, hands):
 
 def gave_way(conn, item, fault):
     limit = CONTENDED_ATTEMPTS if fault.name in FORGIVEN else work.MAX_ATTEMPTS
-    work.fail(conn, item, fault.detail, max_attempts=limit)
+    work.fail(conn, item, f"{fault.name}: {fault.detail}", max_attempts=limit)
 
 
 def drain(client, pending, tally, guard, halt, broken, check):
