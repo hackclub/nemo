@@ -51,6 +51,14 @@ def join_sweep(desk):
     channels.reconcile(desk.client)
 
 
+def apart(*doing):
+    for name, work in doing:
+        try:
+            work()
+        except Exception:
+            log.exception("nemo: %s failed", name)
+
+
 def each(cases, doing, work, client, channel_id):
     done, failing = 0, 0
     for case_id in cases:
@@ -101,11 +109,13 @@ def once(desk, channel_id=None):
     desk.tick_queued()
 
     for guard_id in destroying:
-        guardwork.run_destroy(client, guard_id)
+        apart((f"destroying guard {guard_id}", lambda id=guard_id: guardwork.run_destroy(client, id)))
     for guard_id in lifting:
-        guardwork.lift_lock(client, guard_id)
-    guardwork.sweep_removals(client)
-    guardwork.sweep_strikes()
+        apart((f"lifting guard {guard_id}", lambda id=guard_id: guardwork.lift_lock(client, id)))
+    apart(
+        ("clearing what the guard could not remove", lambda: guardwork.sweep_removals(client)),
+        ("resetting sessions the guard has earned", guardwork.sweep_strikes),
+    )
 
     return posted, drawn, carried
 
@@ -114,13 +124,6 @@ def start(desk, stopping, channel_id=None):
     with session() as conn:
         log.info("nemo: watching %s guarded thread(s) and %s guarded channel(s)",
                  guards.refresh(conn), channelguards.refresh(conn))
-
-    def apart(*doing):
-        for name, work in doing:
-            try:
-                work()
-            except Exception:
-                log.exception("nemo: %s failed", name)
 
     def heard(channel_name, told):
         if channel_name == CHAT:

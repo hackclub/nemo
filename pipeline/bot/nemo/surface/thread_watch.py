@@ -43,4 +43,4 @@ def watched(ctx):
 
     guardwork.took_it_down(ctx.client, guard[0], channel_id, ts)
     log.info("nemo: guard %s noted %s from %s", guard[0], ts, who)
-    return "noted"
+    return guardwork.earned_it(guard, who) or "noted"

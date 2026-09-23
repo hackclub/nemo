@@ -169,6 +169,21 @@ def took_it_down(client, guard_id, channel_id, ts):
     return True
 
 
+def earned_it(guard, user_id):
+    gid, _kind, channel_id, thread_ts, _state, _by, _warned, _expires = guard
+
+    with session() as conn:
+        count = guards.struck(conn, gid, user_id)
+    if count < privileged.strikes_needed():
+        return None
+
+    outcome = escalate(gid, user_id, channel_id, thread_ts, count)
+    if outcome:
+        log.warning("nemo: guard %s -> sessions %s for %s after %s message(s)",
+                    gid, outcome, user_id, count)
+    return outcome
+
+
 STILL_UP_PER_SWEEP = 200
 
 

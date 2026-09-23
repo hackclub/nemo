@@ -97,6 +97,11 @@ ORDER BY m.at
 LIMIT %s
 """
 
+STRUCK = """
+SELECT count(*)::integer FROM fd.thread_guard_messages
+WHERE guard_id = %s AND user_id = %s
+"""
+
 OVER_THE_LINE = """
 SELECT m.guard_id, m.user_id, count(*)::integer, g.channel_id, g.thread_ts
 FROM fd.thread_guard_messages m
@@ -210,6 +215,10 @@ def removed(conn, guard_id, message_ts):
 
 def still_up(conn, limit):
     return conn.execute(STILL_UP, (limit,)).fetchall()
+
+
+def struck(conn, guard_id, user_id):
+    return conn.execute(STRUCK, (guard_id, user_id)).fetchone()[0]
 
 
 def over_the_line(conn, needed):

@@ -77,7 +77,15 @@ def guarded_channels(conn):
     return {row[0] for row in conn.execute(GUARDED_CHANNELS).fetchall()}
 
 
+def team():
+    return os.environ.get("SLACK_TEAM_ID", "").strip()
+
+
 def _paged(call, **asked):
+    where = team()
+    if where:
+        asked["team_id"] = where
+
     found = set()
     cursor = None
     while True:
