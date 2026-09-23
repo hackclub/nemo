@@ -19,6 +19,7 @@ vars:
 
 models:
   mnemosyne:
+    +pre-hook: "SET LOCAL work_mem = '256MB'"
     staging:
       +materialized: view
       +post-hook: "{{ grant_read('rails_app') }}"
