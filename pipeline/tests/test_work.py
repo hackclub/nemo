@@ -50,6 +50,16 @@ def test_the_grown_conflict_never_touches_a_claimed_unit():
     assert "EXCLUDED.expected > coalesce(ingest.work_item.fetched, 0)" in work.CONFLICT_GROWN
 
 
+def test_the_grown_conflict_cannot_resurrect_a_dead_unit():
+    assert "state <> 'dead'" in work.CONFLICT_GROWN
+
+
+def test_revive_is_the_only_way_out_of_dead():
+    assert "WHERE  state = 'dead'" in work.REVIVE_SQL
+    assert "left(coalesce(last_error, ''), 7) <> 'entity:'" in work.REVIVE_SQL
+    assert "<> ALL(%(refusals)s::text[])" in work.REVIVE_SQL
+
+
 def test_the_singleton_lock_is_session_scoped_and_namespaced():
     from lib import db
 

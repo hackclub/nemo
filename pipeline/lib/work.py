@@ -34,6 +34,7 @@ CONFLICT_GROWN = """DO UPDATE SET
 WHERE ingest.work_item.state <> 'claimed'
   AND EXCLUDED.expected > coalesce(ingest.work_item.fetched, 0)
   AND ingest.work_item.state <> 'pending'
+  AND ingest.work_item.state <> 'dead'
   AND ingest.work_item.attempts < %(max_revivals)s"""
 
 CONFLICT_SETTLED_AGO = """DO UPDATE SET
