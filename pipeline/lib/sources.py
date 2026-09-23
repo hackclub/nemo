@@ -12,6 +12,8 @@ def _load():
 TABLE = _load()
 SOURCES = TABLE["sources"]
 KEYS = tuple(SOURCES)
+STANDALONE_SOURCES = frozenset(key for key, said in SOURCES.items() if said.get("standalone"))
+NIGHTLY_KEYS = tuple(key for key in KEYS if key not in STANDALONE_SOURCES)
 CADENCES = tuple(TABLE["cadences"])
 GUARDS = tuple(TABLE["guards"])
 RESUMES = tuple(TABLE["resumes"])

@@ -85,12 +85,14 @@ def every_terminal_failure_is_classified(conn):
 
 
 def i11_every_day_source_is_recent(conn):
+    walked = [day_source for day_source, _ in DAY_LEDGERS]
     rows = conn.execute("""
         SELECT source, max(ds), (current_date - max(ds))::integer
         FROM raw.analytics_day
+        WHERE source = ANY(%s)
         GROUP BY source
         ORDER BY source
-    """).fetchall()
+    """, (walked,)).fetchall()
     if not rows:
         return ("I11", "pass", "no day source has loaded yet", f"within {DAY_LAG_LIMIT} days")
     stale = [f"{source} stopped at {newest} ({behind}d)" for source, newest, behind in rows

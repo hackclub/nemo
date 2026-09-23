@@ -98,19 +98,29 @@ def dbt(*args):
     return proc.wait()
 
 
-def reconcile_prometheans():
-    proc = subprocess.Popen(
-        ["bin/rails", "prometheus:reconcile"],
-        cwd=WEB_DIR,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-    )
-    for line in proc.stdout:
-        print(line, end="")
-    code = proc.wait()
-    if code != 0:
-        raise RuntimeError(f"prometheus:reconcile exited {code}")
+PROMETHEANS = "prometheans"
+
+APPOINTMENTS_SQL = "SELECT count(*) FROM app.prometheus_appointment"
+
+
+def reconcile_prometheans(conn):
+    with ingest_run(conn, PROMETHEANS) as counts:
+        proc = subprocess.Popen(
+            ["bin/rails", "prometheus:reconcile"],
+            cwd=WEB_DIR,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        for line in proc.stdout:
+            print(line, end="")
+        code = proc.wait()
+        if code != 0:
+            raise RuntimeError(f"prometheus:reconcile exited {code}")
+        with conn.cursor() as cur:
+            cur.execute(APPOINTMENTS_SQL)
+            counts.rows_in = cur.fetchone()[0]
+        conn.commit()
 
 
 def dbt_outcomes(results):
@@ -220,7 +230,7 @@ def stages():
             tuned(conn, "channel_membership", "batch"),
             tuned(conn, "channel_membership", "cohort_days"))),
         ("prune", lambda conn: prune_rows(conn)),
-        ("prometheans", lambda conn: reconcile_prometheans()),
+        (PROMETHEANS, lambda conn: reconcile_prometheans(conn)),
         (TRANSFORM, lambda conn: run_dbt(conn)),
     ]
 
@@ -507,15 +517,15 @@ def parent_status(cancelled, ran, skipped, cut, failed):
 
 
 def parent_fault(status, cancelled, failed):
+    if failed:
+        named = ", ".join(name for name, _ in failed[:6])
+        more = f" and {len(failed) - 6} more" if len(failed) > 6 else ""
+        return "local", f"{len(failed)} stage(s) failed: {named}{more}"[:500]
     if status in CLEAN_PARENT_OUTCOMES:
         return None, None
     if cancelled:
         return "cancelled", "the run was cancelled before its stages finished"
-    if not failed:
-        return "local", f"the run ended {status} with no stage reporting a fault"
-    named = ", ".join(name for name, _ in failed[:6])
-    more = f" and {len(failed) - 6} more" if len(failed) > 6 else ""
-    return "local", f"{len(failed)} stage(s) failed: {named}{more}"[:500]
+    return "local", f"the run ended {status} with no stage reporting a fault"
 
 
 def stage_plan(name):

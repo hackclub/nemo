@@ -159,7 +159,15 @@ def test_a_clean_parent_records_no_fault():
     from jobs.nightly_sync import parent_fault
 
     assert parent_fault("ok", False, []) == (None, None)
-    assert parent_fault("partial", False, [("dbt", "x")]) == (None, None)
+    assert parent_fault("partial", False, []) == (None, None)
+
+
+def test_a_partial_parent_still_names_the_stage_that_failed():
+    from jobs.nightly_sync import parent_fault
+
+    klass, detail = parent_fault("partial", False, [("prometheans", "boom")])
+    assert klass == "local"
+    assert "prometheans" in detail
 
 
 def test_every_terminal_parent_outcome_is_classified():

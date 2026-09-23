@@ -322,14 +322,15 @@ class EngineController < ApplicationController
     index
   end
 
-  RANK = { "skipped" => 1, "ok" => 2, "running" => 3, "cancelled" => 4, "abandoned" => 5,
-           "failed" => 6 }.freeze
+  RANK = { "skipped" => 1, "ok" => 2, "running" => 3, "partial" => 4, "cancelled" => 5,
+           "abandoned" => 6, "failed" => 7 }.freeze
 
   RANK_SQL = ["case status",
               *RANK.map { |status, rank| "when '#{status}' then #{rank}" },
               "else 0 end"].join(" ").freeze
 
-  CELL_BY_RANK = { 1 => "skip", 2 => "ok", 3 => "run" }.freeze
+  CELL_BY_RANK = { 1 => "skip", 2 => "ok", 3 => "run", 4 => "part", 5 => "stop",
+                   6 => "gone", 7 => "fail" }.freeze
 
   def remember_incident(source_key, kind, muted_until:)
     row = Ingest::IncidentAck.find_or_initialize_by(source_key: source_key.to_s, kind: kind.to_s)

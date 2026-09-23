@@ -72,8 +72,11 @@ WHERE status IN ('claimed', 'cancelling')
 RETURNING id
 """
 
+MAX_CATCH_UPS = 2
+
 RAN_TODAY_SQL = """
-SELECT count(*) FROM raw.ingest_run
+SELECT count(*) FILTER (WHERE status IS DISTINCT FROM 'abandoned'), count(*)
+FROM   raw.ingest_run
 WHERE  source = %s AND parent_run_id IS NULL AND logical_date = current_date
 """
 
@@ -88,18 +91,21 @@ def next_run_at(at, now):
     return scheduled if scheduled > now else scheduled + timedelta(days=1)
 
 
-def ran_today():
+def tonight_so_far():
     try:
         with connect() as conn, conn.cursor() as cur:
             cur.execute(RAN_TODAY_SQL, (SOURCE,))
-            return cur.fetchone()[0] > 0
+            stood, tried = cur.fetchone()
+            return stood > 0, tried
     except Exception as exc:
         print(f"sync worker: cannot tell whether tonight ran, {type(exc).__name__}: {exc}")
-        return True
+        return True, MAX_CATCH_UPS
 
 
-def missed_tonight(at, now, already_ran):
-    return not already_ran and now >= slot_today(at, now)
+def missed_tonight(at, now, already_ran, tried=0):
+    if already_ran or tried >= MAX_CATCH_UPS:
+        return False
+    return now >= slot_today(at, now)
 
 
 def wait_seconds(poll, scheduled, now):
@@ -339,7 +345,7 @@ def main():
             run_scheduled("startup")
             scheduled = next_run_at(at, datetime.now())
             print(f"sync worker: next scheduled run at {scheduled:%Y-%m-%dT%H:%M}")
-        elif missed_tonight(at, datetime.now(), ran_today()):
+        elif missed_tonight(at, datetime.now(), *tonight_so_far()):
             state["note"] = "catch-up run"
             run_scheduled("catch-up")
             scheduled = next_run_at(at, datetime.now())

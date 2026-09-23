@@ -46,20 +46,18 @@ def test_parser_version_defaults_to_one():
     assert sources.parser_version("not_a_source") == 1
 
 
-STANDALONE_SOURCES = {
-    "member_history",
-    "channel_history",
-    "channel_replies",
-}
-
-
 def test_the_nightly_runs_exactly_what_the_file_declares():
     ran = {name for name, _ in nightly_sync.stages()}
     assert ran <= set(sources.KEYS), "a stage must be a declared source"
-    assert set(sources.KEYS) - ran == STANDALONE_SOURCES, (
-        "a declared source missing from the nightly must be accounted for in STANDALONE_SOURCES, "
-        "its own always-on worker rather than a nightly stage"
+    assert set(sources.KEYS) - ran == set(sources.STANDALONE_SOURCES), (
+        "a declared source missing from the nightly must carry standalone: true in "
+        "db/sources.yml, its own always-on worker rather than a nightly stage"
     )
+
+
+def test_the_nightly_keys_are_every_key_that_is_not_standalone():
+    assert set(sources.NIGHTLY_KEYS) == set(sources.KEYS) - set(sources.STANDALONE_SOURCES)
+    assert set(sources.NIGHTLY_KEYS) == {name for name, _ in nightly_sync.stages()}
 
 
 def test_limits_are_ordered_and_hold_their_default():

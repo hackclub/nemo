@@ -87,12 +87,32 @@ def test_a_catch_up_cannot_tell_itself_to_run_twice():
 
 
 def test_an_unreadable_ledger_refuses_to_catch_up():
-    import inspect
-
     from jobs import sync_worker
 
-    body = inspect.getsource(sync_worker.ran_today)
-    assert "return True" in body, "a failed lookup must not queue a second nightly"
+    assert not sync_worker.missed_tonight(
+        "03:00", datetime(2026, 9, 20, 9, 51), *(True, sync_worker.MAX_CATCH_UPS)
+    )
+
+
+def test_an_abandoned_night_does_not_count_as_having_run():
+    from jobs import sync_worker
+
+    assert "FILTER (WHERE status IS DISTINCT FROM 'abandoned')" in sync_worker.RAN_TODAY_SQL
+
+
+def test_a_crash_loop_cannot_keep_starting_nightlies():
+    from jobs import sync_worker
+
+    now = datetime(2026, 9, 20, 9, 51)
+    assert sync_worker.missed_tonight("03:00", now, False, tried=0)
+    assert not sync_worker.missed_tonight("03:00", now, False, tried=sync_worker.MAX_CATCH_UPS)
+
+
+def test_a_cancelled_night_is_respected_and_not_retried():
+    from jobs import sync_worker
+
+    assert "'abandoned'" in sync_worker.RAN_TODAY_SQL
+    assert "cancelled" not in sync_worker.RAN_TODAY_SQL
 
 
 def test_the_catch_up_asks_for_the_same_date_start_run_stamps():

@@ -228,6 +228,7 @@ sources:
 
   member_history:
     unit_budget_seconds: 60
+    standalone: true
     label: All-time message count and first post
     endpoint: search.messages
     documented: true

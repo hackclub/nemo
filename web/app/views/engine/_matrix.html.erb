@@ -1,4 +1,5 @@
 <% said = { "ok" => "ran", "fail" => "failed here", "run" => "running now",
+            "part" => "ran, some of it failed", "stop" => "cancelled", "gone" => "abandoned",
             "skip" => "nothing to do", "wait" => "not started yet", "none" => "did not run" } %>
 <div class="nights-h">
   <div>Source</div>
@@ -29,7 +30,10 @@
 
 <div class="key">
   <span><i class="lg-ran"></i>ran</span>
+  <span><i class="lg-part"></i>ran, some of it failed</span>
   <span><i class="lg-skip"></i>guard skipped it, nothing to do</span>
+  <span><i class="lg-stop"></i>cancelled</span>
+  <span><i class="lg-gone"></i>abandoned</span>
   <span><i class="lg-fail"></i>failed</span>
   <span><i class="lg-none"></i>the job did not run</span>
   <span><i class="lg-wait"></i>not started yet</span>

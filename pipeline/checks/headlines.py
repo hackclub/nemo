@@ -146,7 +146,7 @@ def check_the_worker_is_alive(pipe_conn):
 
 
 def check_the_nightly_ran_the_whole_plan(pipe_conn):
-    total = len(sources.KEYS)
+    total = len(sources.NIGHTLY_KEYS)
     now = datetime.now(timezone.utc)
     rows = []
     with pipe_conn.cursor() as cur:
@@ -482,6 +482,25 @@ def stale_verdict(age, allowed):
     return "stale", (age - allowed) / allowed
 
 
+AT_LEAST = "at least"
+AT_MOST = "at most"
+
+BOUNDS = {
+    "longest unbroken run of member-days": AT_LEAST,
+    "the last nightly, stages planned": AT_LEAST,
+    "channel daily pull, days behind the walk": AT_MOST,
+}
+
+
+def bound_verdict(name, ours, theirs):
+    if ours is None or theirs is None:
+        return "no data", None
+    ours, theirs = float(ours), float(theirs)
+    held = ours >= theirs if BOUNDS[name] == AT_LEAST else ours <= theirs
+    delta = None if theirs == 0 else (ours - theirs) / theirs
+    return ("ok" if held else "differs"), delta
+
+
 def verdict(name, ours, theirs, tolerance):
     if ours is None or theirs is None:
         return "no data", None
@@ -528,14 +547,19 @@ def collect(only=None, tolerance=TOLERANCE, cross_only=False):
                                 None, None, "error", None))
                 continue
             for name, kind, source, ours, theirs in (got if isinstance(got, list) else [got]):
-                state, delta = verdict(name, ours, theirs, tolerance)
+                if name in BOUNDS:
+                    state, delta = bound_verdict(name, ours, theirs)
+                else:
+                    state, delta = verdict(name, ours, theirs, tolerance)
                 results.append((name, kind, source, ours, theirs, state, delta))
 
     graded = []
     for row in results:
         if len(row) == 5:
             name, kind, source, ours, theirs = row
-            if kind in ("plan", "cover"):
+            if name in BOUNDS:
+                state, delta = bound_verdict(name, ours, theirs)
+            elif kind in ("plan", "cover"):
                 state, delta = verdict(name, ours, theirs, 0.0)
             else:
                 state, delta = stale_verdict(ours, theirs)

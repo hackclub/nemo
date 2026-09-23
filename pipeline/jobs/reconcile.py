@@ -3,6 +3,7 @@ import sys
 from dotenv import load_dotenv
 
 from ingest import member_history
+from lib import work
 from lib.db import connect
 from lib.paths import ENV_FILE
 
@@ -33,7 +34,16 @@ SELECT count(*) FROM ingest.work_item
 WHERE state = 'claimed' AND lease_until < now() - interval '15 minutes'
 """
 
-DEAD_SQL = "SELECT count(*) FROM ingest.work_item WHERE state = 'dead'"
+STUCK_AFTER_HOURS = 2 * work.REVIVE_HOURS
+
+DEAD_SQL = f"""
+SELECT count(*) FROM ingest.work_item
+WHERE state = 'dead'
+  AND left(coalesce(last_error, ''), 7) <> 'entity:'
+  AND coalesce(last_error, '') <> ALL(%s::text[])
+  AND (next_attempt_at IS NULL
+       OR next_attempt_at < now() - make_interval(hours => {STUCK_AFTER_HOURS}))
+"""
 
 DUPLICATE_HISTORY_SQL = """
 SELECT count(*) FROM (
@@ -66,7 +76,7 @@ def r5_one_unit_per_member(conn):
 
 
 def r6_dead_units(conn):
-    return "R6", one(conn, DEAD_SQL), 0
+    return "R6", one(conn, DEAD_SQL, (list(work.REFUSALS),)), 0
 
 
 CHECKS = (
