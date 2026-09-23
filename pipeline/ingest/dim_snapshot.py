@@ -15,6 +15,8 @@ MEMBER_HASH = (
 
 CHANNEL_HASH = "md5(concat_ws('|', name, visibility, archived))"
 
+LOGICAL_DATE_SQL = "SELECT logical_date FROM raw.ingest_run WHERE id = %s"
+
 MEMBER_SQL = f"""
 INSERT INTO raw.member_dim_snapshot
     (user_id, observed_on, record_hash, account_created, account_created_verified,
@@ -22,7 +24,7 @@ INSERT INTO raw.member_dim_snapshot
      is_restricted, is_ultra_restricted, is_invited_member, is_invited_guest,
      is_deleted, invite_pending)
 SELECT
-    user_id, current_date,
+    user_id, %(observed_on)s,
     {MEMBER_HASH},
     account_created, account_created_verified, claimed_at, deactivated_at,
     is_bot, is_admin, is_owner, is_primary_owner, is_restricted, is_ultra_restricted,
@@ -40,7 +42,7 @@ CHANNEL_SQL = f"""
 INSERT INTO raw.channel_dim_snapshot
     (channel_id, observed_on, record_hash, name, visibility, archived, date_created)
 SELECT
-    channel_id, current_date,
+    channel_id, %(observed_on)s,
     {CHANNEL_HASH},
     name, visibility, archived, date_created
 FROM raw.channel_dim
@@ -55,13 +57,15 @@ ON CONFLICT (channel_id, observed_on) DO UPDATE SET
 def run(conn):
     with ingest_run(conn, SOURCE) as counts:
         with conn.cursor() as cur:
-            cur.execute(MEMBER_SQL)
+            cur.execute(LOGICAL_DATE_SQL, (counts.run_id,))
+            observed_on = cur.fetchone()[0]
+            cur.execute(MEMBER_SQL, {"observed_on": observed_on})
             members = cur.rowcount
-            cur.execute(CHANNEL_SQL)
+            cur.execute(CHANNEL_SQL, {"observed_on": observed_on})
             channels = cur.rowcount
         conn.commit()
         counts.rows_in = members + channels
-    print(f"{SOURCE}: {members} member and {channels} channel snapshot row(s) for today")
+    print(f"{SOURCE}: {members} member and {channels} channel snapshot row(s) for {observed_on}")
     return members + channels
 
 
