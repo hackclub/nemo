@@ -160,10 +160,32 @@ def note_it(conn, guard, user_id, ts):
 def took_it_down(client, guard_id, channel_id, ts):
     try:
         remove(client, channel_id, ts)
-        return True
     except Exception as failure:
-        log.warning("nemo: guard %s could not remove %s: %s", guard_id, ts, failure)
+        log.warning("nemo: guard %s could not remove %s yet: %s", guard_id, ts, failure)
         return False
+
+    with session() as conn:
+        guards.removed(conn, guard_id, ts)
+    return True
+
+
+STILL_UP_PER_SWEEP = 200
+
+
+def sweep_removals(client):
+    with session() as conn:
+        waiting = guards.still_up(conn, STILL_UP_PER_SWEEP)
+    if not waiting:
+        return 0
+
+    gone = 0
+    for guard_id, channel_id, ts in waiting:
+        if took_it_down(client, guard_id, channel_id, ts):
+            gone += 1
+
+    log.info("nemo: cleared %s of %s message(s) the guard could not remove first time",
+             gone, len(waiting))
+    return gone
 
 
 def escalate(guard_id, user_id, channel_id, thread_ts, messages):

@@ -24,7 +24,7 @@ LIMITS = {
     ("pipeline", "admin", "conversations.info"): (TIER3, 120),
     ("pipeline", "admin", "search.messages"): (TIER2, 80),
     ("nemo", "admin", "admin.users.session.reset"): (TIER2, 0),
-    ("nemo", "admin", "chat.delete"): (TIER3, 60),
+    ("nemo", "admin", "chat.delete"): (TIER3, 60, 30),
     ("nemo", "admin"): (TIER3, 60),
     ("pipeline", "admin"): (TIER4, 500),
     ("pipeline", "internal"): (TIER3, 100),
@@ -75,7 +75,7 @@ class Bucket:
             return self.per_minute
 
 
-_buckets = {key: Bucket(tier, boost) for key, (tier, boost) in LIMITS.items()}
+_buckets = {key: Bucket(*limit) for key, limit in LIMITS.items()}
 _refused = {}
 _paused = {}
 

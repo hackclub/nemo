@@ -83,13 +83,27 @@ ON CONFLICT (guard_id, message_ts) DO NOTHING
 RETURNING message_ts
 """
 
+REMOVED = """
+UPDATE fd.thread_guard_messages SET removed_at = now()
+WHERE guard_id = %s AND message_ts = %s AND removed_at IS NULL
+"""
+
+STILL_UP = """
+SELECT m.guard_id, m.channel_id, m.message_ts
+FROM fd.thread_guard_messages m
+JOIN fd.thread_guards g ON g.id = m.guard_id
+WHERE m.removed_at IS NULL
+ORDER BY m.at
+LIMIT %s
+"""
+
 OVER_THE_LINE = """
 SELECT m.guard_id, m.user_id, count(*)::integer, g.channel_id, g.thread_ts
 FROM fd.thread_guard_messages m
 JOIN fd.thread_guards g ON g.id = m.guard_id
 LEFT JOIN fd.thread_guard_strikes s
     ON s.guard_id = m.guard_id AND s.user_id = m.user_id
-WHERE s.reset_at IS NULL
+WHERE s.reset_at IS NULL OR s.reset_outcome LIKE 'failed:%%'
 GROUP BY m.guard_id, m.user_id, g.channel_id, g.thread_ts
 HAVING count(*) >= %s
 ORDER BY m.guard_id, m.user_id
@@ -103,6 +117,7 @@ ON CONFLICT (guard_id, user_id) DO UPDATE
 SET messages = EXCLUDED.messages, reset_at = now(), reset_outcome = 'claimed',
     last_at = now()
 WHERE fd.thread_guard_strikes.reset_at IS NULL
+   OR fd.thread_guard_strikes.reset_outcome LIKE 'failed:%%'
 RETURNING user_id
 """
 
@@ -187,6 +202,14 @@ def exempt(conn, user_id, opened_by):
 
 def kept(conn, guard_id, channel_id, user_id, message_ts):
     conn.execute(KEPT, (guard_id, message_ts, user_id, channel_id))
+
+
+def removed(conn, guard_id, message_ts):
+    conn.execute(REMOVED, (guard_id, message_ts))
+
+
+def still_up(conn, limit):
+    return conn.execute(STILL_UP, (limit,)).fetchall()
 
 
 def over_the_line(conn, needed):
