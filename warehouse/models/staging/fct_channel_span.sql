@@ -1,3 +1,5 @@
+{{ config(materialized='table', indexes=[{'columns': ['channel_id'], 'unique': True}]) }}
+
 with latest as (
     select window_start, window_end
     from {{ source('raw', 'channel_activity_snapshot') }}
