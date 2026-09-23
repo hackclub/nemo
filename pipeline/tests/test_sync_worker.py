@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 
 from jobs.nightly_sync import stage_plan
-from jobs.sync_worker import next_run_at, wait_seconds
+from jobs.sync_worker import missed_tonight, next_run_at, slot_today, wait_seconds
 
 
 def test_a_later_time_today_stays_today():
@@ -47,6 +47,60 @@ def test_the_wait_never_drops_below_a_second():
     now = datetime(2026, 8, 4, 3, 0)
     scheduled = datetime(2026, 8, 4, 3, 0)
     assert wait_seconds(60, scheduled, now) == 1.0
+
+
+def test_a_boot_after_the_slot_with_no_run_is_a_missed_night():
+    now = datetime(2026, 9, 20, 9, 51)
+    assert missed_tonight("03:00", now, already_ran=False)
+
+
+def test_a_boot_after_the_slot_does_not_rerun_a_night_that_already_ran():
+    now = datetime(2026, 9, 20, 9, 51)
+    assert not missed_tonight("03:00", now, already_ran=True)
+
+
+def test_a_boot_before_the_slot_waits_for_it():
+    now = datetime(2026, 9, 20, 2, 36)
+    assert not missed_tonight("03:00", now, already_ran=False)
+
+
+def test_the_slot_minute_itself_counts_as_missed():
+    now = datetime(2026, 9, 20, 3, 0)
+    assert missed_tonight("03:00", now, already_ran=False)
+
+
+def test_the_slot_is_read_the_same_way_the_schedule_reads_it():
+    now = datetime(2026, 9, 20, 9, 51)
+    assert slot_today("03:00", now) == datetime(2026, 9, 20, 3, 0)
+    assert next_run_at("03:00", now) == slot_today("03:00", now) + timedelta(days=1)
+
+
+def test_a_catch_up_cannot_tell_itself_to_run_twice():
+    import inspect
+
+    from jobs import sync_worker
+
+    main = inspect.getsource(sync_worker.main)
+    assert "elif missed_tonight(" in main, (
+        "the catch-up must not run alongside NIGHTLY_RUN_AT_START, which has no same-day guard"
+    )
+
+
+def test_an_unreadable_ledger_refuses_to_catch_up():
+    import inspect
+
+    from jobs import sync_worker
+
+    body = inspect.getsource(sync_worker.ran_today)
+    assert "return True" in body, "a failed lookup must not queue a second nightly"
+
+
+def test_the_catch_up_asks_for_the_same_date_start_run_stamps():
+    from jobs import sync_worker
+    from lib import db
+
+    assert "logical_date = current_date" in sync_worker.RAN_TODAY_SQL
+    assert "current_date" in db.START_RUN_SQL
 
 
 def test_stage_plan_selects_one_named_stage():

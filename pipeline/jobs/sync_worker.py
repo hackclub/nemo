@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from jobs.nightly_sync import (
     ENV_FILE,
     OFF_THE_SPINE,
+    SOURCE,
     TABLES_ONLY,
     TRUTHY,
     credential_faults,
@@ -71,11 +72,34 @@ WHERE status IN ('claimed', 'cancelling')
 RETURNING id
 """
 
+RAN_TODAY_SQL = """
+SELECT count(*) FROM raw.ingest_run
+WHERE  source = %s AND parent_run_id IS NULL AND logical_date = current_date
+"""
+
+
+def slot_today(at, now):
+    hour, minute = (int(part) for part in at.split(":", 1))
+    return now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+
 
 def next_run_at(at, now):
-    hour, minute = (int(part) for part in at.split(":", 1))
-    scheduled = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    scheduled = slot_today(at, now)
     return scheduled if scheduled > now else scheduled + timedelta(days=1)
+
+
+def ran_today():
+    try:
+        with connect() as conn, conn.cursor() as cur:
+            cur.execute(RAN_TODAY_SQL, (SOURCE,))
+            return cur.fetchone()[0] > 0
+    except Exception as exc:
+        print(f"sync worker: cannot tell whether tonight ran, {type(exc).__name__}: {exc}")
+        return True
+
+
+def missed_tonight(at, now, already_ran):
+    return not already_ran and now >= slot_today(at, now)
 
 
 def wait_seconds(poll, scheduled, now):
@@ -313,6 +337,11 @@ def main():
         if run_at_start_enabled():
             state["note"] = "startup run"
             run_scheduled("startup")
+            scheduled = next_run_at(at, datetime.now())
+            print(f"sync worker: next scheduled run at {scheduled:%Y-%m-%dT%H:%M}")
+        elif missed_tonight(at, datetime.now(), ran_today()):
+            state["note"] = "catch-up run"
+            run_scheduled("catch-up")
             scheduled = next_run_at(at, datetime.now())
             print(f"sync worker: next scheduled run at {scheduled:%Y-%m-%dT%H:%M}")
 
