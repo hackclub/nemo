@@ -1,10 +1,6 @@
-from bot.core import richtext
-
-QUOTE_LIMIT = 2000
-CUT = "\n> [there is more, and they will see all of it]"
-
 ANONYMOUS = "anonymous"
 NAMED = "named"
+ANONYMOUSLY = "anonymously"
 
 BLOCK = "intake_identity"
 ACTION = "intake_name"
@@ -14,39 +10,23 @@ CANCEL = "intake_cancel"
 SUBTYPE = "consent"
 DONE = "consent_done"
 
-FALLBACK = "Send this to the Fire Department?"
+FALLBACK = "Submit this report to FD"
 
 
-def escape(text):
-    return (text or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+READY = (
+    "Ready to send this report to FD with your username. Check the box below "
+    "to send it anonymously."
+)
 
-
-def quote(bodies):
-    said = "\n\n".join(body.strip() for body in bodies if (body or "").strip())
-    if not said:
-        return None
-    if len(said) > QUOTE_LIMIT:
-        said = said[:QUOTE_LIMIT].rstrip() + CUT
-    return said
-
-
-def quoted(bodies):
-    said = quote(bodies)
-    if said is None:
-        return richtext.quote("no words yet, only what you attached", {"italic": True})
-    return richtext.quote(said)
-
-
-def option(value, label):
-    return {
-        "text": {"type": "mrkdwn", "text": f"*{label}*"},
-        "value": value,
-    }
-
-
-NAMED_OPTION = option(NAMED, "Send it with my name")
-
-ANONYMOUS_OPTION = option(ANONYMOUS, "Send it anonymously")
+IDENTITY_OPTION = {
+    "text": {"type": "plain_text", "text": "Send it anonymously"},
+    "description": {
+        "type": "plain_text",
+        "text": "FD will not see who filed this report. Leave unchecked to send it "
+                "with your username.",
+    },
+    "value": ANONYMOUSLY,
+}
 
 
 def forwarded(channels):
@@ -62,10 +42,8 @@ def forwarded(channels):
     return f"{counted}, from {where}"
 
 
-def blocks(bodies, files=0, channels=(), held=None):
-    built = [
-        quoted(bodies),
-    ]
+def blocks(bodies=None, files=0, channels=(), held=None):
+    built = [{"type": "section", "text": {"type": "mrkdwn", "text": READY}}]
 
     coming = []
     brought = forwarded(list(channels))
@@ -83,19 +61,16 @@ def blocks(bodies, files=0, channels=(), held=None):
             }
         )
 
+    ticked = {
+        "type": "checkboxes",
+        "action_id": ACTION,
+        "options": [IDENTITY_OPTION],
+    }
+    if held == ANONYMOUS:
+        ticked["initial_options"] = [IDENTITY_OPTION]
+
     built += [
-        {
-            "type": "actions",
-            "block_id": BLOCK,
-            "elements": [
-                {
-                    "type": "radio_buttons",
-                    "action_id": ACTION,
-                    "initial_option": ANONYMOUS_OPTION if held == ANONYMOUS else NAMED_OPTION,
-                    "options": [NAMED_OPTION, ANONYMOUS_OPTION],
-                }
-            ],
-        },
+        {"type": "actions", "block_id": BLOCK, "elements": [ticked]},
         {
             "type": "actions",
             "block_id": "intake_send",
@@ -104,12 +79,13 @@ def blocks(bodies, files=0, channels=(), held=None):
                     "type": "button",
                     "action_id": CONFIRM,
                     "style": "primary",
-                    "text": {"type": "plain_text", "text": "Send to FD"},
+                    "text": {"type": "plain_text", "text": "Submit"},
                 },
                 {
                     "type": "button",
                     "action_id": CANCEL,
-                    "text": {"type": "plain_text", "text": "Not yet"},
+                    "style": "danger",
+                    "text": {"type": "plain_text", "text": "Cancel"},
                 },
             ],
         },
@@ -118,14 +94,12 @@ def blocks(bodies, files=0, channels=(), held=None):
 
 
 def picked(state):
-    found = (
-        (state or {})
-        .get("values", {})
-        .get(BLOCK, {})
-        .get(ACTION, {})
-        .get("selected_option")
-    )
-    return (found or {}).get("value")
+    held = (state or {}).get("values", {}).get(BLOCK, {})
+    if ACTION not in held:
+        return None
+
+    ticked = held[ACTION].get("selected_options") or []
+    return ANONYMOUS if any(one.get("value") == ANONYMOUSLY for one in ticked) else NAMED
 
 
 def chosen(state, held=None):

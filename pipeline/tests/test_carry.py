@@ -1,7 +1,6 @@
 from bot.core.wording import said, to_member
 from bot.nemo import carry, channel
 from bot.nemo.cards import edit, report
-from bot.shroud import consent
 
 ROOM = "C1"
 THREAD = "100.000"
@@ -294,36 +293,6 @@ def test_every_card_menu_option_carries_the_case_it_acts_on():
         verb, case_id = edit.asked(one["value"])
         assert case_id == 19
         assert verb
-
-
-def test_the_reporter_is_asked_with_their_name_first_and_chosen():
-    built = consent.blocks(["they keep following me"])
-    radio = next(
-        one for block in built if block.get("type") == "actions"
-        for one in block.get("elements", []) if one.get("type") == "radio_buttons"
-    )
-
-    labels = [one["text"]["text"] for one in radio["options"]]
-    assert labels == ["*Send it with my name*", "*Send it anonymously*"]
-    assert radio["initial_option"]["value"] == consent.NAMED
-    assert all("description" not in one for one in radio["options"])
-
-
-def test_a_reporter_who_chose_anonymity_before_keeps_it():
-    built = consent.blocks(["x"], held=consent.ANONYMOUS)
-    radio = next(
-        one for block in built if block.get("type") == "actions"
-        for one in block.get("elements", []) if one.get("type") == "radio_buttons"
-    )
-
-    assert radio["initial_option"]["value"] == consent.ANONYMOUS
-    assert consent.chosen(None, consent.ANONYMOUS) == consent.ANONYMOUS
-
-
-def test_the_consent_block_opens_with_their_words_not_a_preamble():
-    built = consent.blocks(["they keep following me"])
-
-    assert built[0]["type"] == "rich_text", "no 'Ready when you are' line above it"
 
 
 class Held:

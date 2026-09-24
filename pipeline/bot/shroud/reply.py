@@ -29,10 +29,14 @@ def nemo_is_behind(conn):
     return row is None or not row[0]
 
 
+SUBMITTED = (
+    "This report has been submitted. We've received your report and should get "
+    "back to you within a couple hours."
+)
+
+
 def receipt_text(case_id):
-    if case_id:
-        return f"The Fire Department has your report. It is case {case_id}."
-    return "The Fire Department has your report."
+    return SUBMITTED
 
 
 def receipt(case_id, anonymous, behind=False):
