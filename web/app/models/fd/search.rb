@@ -34,7 +34,7 @@ module Fd
 
     def asked? = searching? || scope.present? || thread.present?
 
-    def searching? = term.length >= MIN_TERM
+    def searching? = term.length >= MIN_TERM || case_id.present?
 
     def thread
       return @thread if defined?(@thread)

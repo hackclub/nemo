@@ -4,7 +4,7 @@ import os
 
 from bot.core import privileged, session, whoami
 from bot.core.wording import escape
-from bot.nemo import channel, channelguards
+from bot.nemo import channel, channelguards, channels
 from bot.nemo.surface import on_event
 
 log = logging.getLogger("bot.nemo")
@@ -23,12 +23,21 @@ def ours():
     return {one.strip() for one in said.split(",") if one.strip()}
 
 
+def ask_about(client, bot_id):
+    where = channels.team()
+    asked = {"bot": bot_id, "team_id": where} if where else {"bot": bot_id}
+    try:
+        return (client.bots_info(**asked) or {}).get("bot") or {}
+    except Exception as failure:
+        log.info("nemo: could not look up %s: %s", bot_id, failure)
+        return {}
+
+
 def bot_face(client, bot_id):
     if bot_id not in _apps:
-        try:
-            found = (client.bots_info(bot=bot_id) or {}).get("bot") or {}
-        except Exception:
-            found = {}
+        found = ask_about(client, bot_id)
+        if not found:
+            return None, None, None
         _apps[bot_id] = (found.get("user_id"), found.get("name"), found.get("app_id"))
     return _apps[bot_id]
 
@@ -186,7 +195,7 @@ def joined(ctx):
     outcome = privileged.kick(channel_id, who)
 
     with session() as conn:
-        said = (f":no_entry: Put <@{who}> out of <#{channel_id}>, which is not on its "
+        said = (f"Put <@{who}> out of <#{channel_id}>, which is not on its "
                 f"allow list." if outcome == "kicked" else
                 f":warning: <@{who}> joined <#{channel_id}> off the allow list, and we "
                 f"could not put them out ({outcome}).") + footer(channel_id, app_id=app_id)
