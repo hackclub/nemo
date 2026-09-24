@@ -57,6 +57,12 @@ def words_of(event):
     return None
 
 
+def naming(face_id, label, fallback):
+    if face_id:
+        return f"<@{face_id}>"
+    return f"*{label or fallback}*"
+
+
 def permalink_for(client, channel_id, ts):
     try:
         return (client.chat_getPermalink(channel=channel_id, message_ts=ts) or {}).get("permalink")
@@ -109,8 +115,9 @@ def posted(ctx):
     privileged.delete_message(channel_id, ts)
 
     with session() as conn:
-        said = (f":no_entry: Deleted a message from *{label or subject_id}*, which is not on "
-                f"the allow list for <#{channel_id}>." + (f"\n{link}" if link else ""))
+        said = (f"Deleted a message from {naming(face_id, label, subject_id)}, "
+                f"which is not on the allow list for <#{channel_id}>."
+                + (f"\n{link}" if link else ""))
         told_ts, told_until = tell(ctx.client, conn, guard_id, subject_id, said)
         channelguards.happened(conn, guard_id, channel_id, subject_id, "deleted",
                                bot_id=bot_id, label=label, said=said_words, message_ts=ts,
@@ -151,9 +158,9 @@ def joined(ctx):
     outcome = privileged.kick(channel_id, who)
 
     with session() as conn:
-        said = (f":no_entry: Put *{label}* out of <#{channel_id}>, which is not on its "
+        said = (f":no_entry: Put <@{who}> out of <#{channel_id}>, which is not on its "
                 f"allow list." if outcome == "kicked" else
-                f":warning: *{label}* joined <#{channel_id}> off the allow list, and we "
+                f":warning: <@{who}> joined <#{channel_id}> off the allow list, and we "
                 f"could not put them out ({outcome}).")
         told_ts, told_until = tell(ctx.client, conn, guard_id, who, said)
         channelguards.happened(conn, guard_id, channel_id, who,

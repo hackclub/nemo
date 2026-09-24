@@ -19,8 +19,8 @@ def listen(name, channels, heard, stopping):
         for note in conn.notifies(stop_after=None, timeout=None):
             if stopping.is_set():
                 break
-            told = int(note.payload) if note.payload.isdigit() else None
-            if told is None:
+            told = int(note.payload) if note.payload.isdigit() else note.payload
+            if not told:
                 continue
             try:
                 heard(note.channel, told)
