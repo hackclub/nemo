@@ -22,7 +22,8 @@ module Fd
         .newest_first.limit(ACTIVITY_SHOWN).to_a
       @labels = labels_for(@events)
       @app_ids = app_ids_for(@allows)
-      @names = Names.for(@guard ? @guard.people_named : [])
+      @names = Names.for([(@guard ? @guard.people_named : []),
+                          @allows.map(&:subject_id), @events.map(&:subject_id)])
       load_pane
     end
 

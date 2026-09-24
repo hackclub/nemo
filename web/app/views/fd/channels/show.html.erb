@@ -46,6 +46,7 @@
         <div class="people-list">
           <% @allows.each do |one| %>
             <div class="line-row fat">
+              <%= guard_face(one.subject_id) %>
               <span class="grow two-line">
                 <b><%= one.name %></b>
                 <span>
@@ -81,6 +82,7 @@
         <% @events.each do |one| %>
           <div class="activity-item">
             <div class="line-row">
+              <%= guard_face(one.subject_id) %>
               <span class="grow two-line">
                 <b><%= activity_who(one, @labels) %></b>
                 <span>

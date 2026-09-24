@@ -67,6 +67,10 @@ module FdChannelsHelper
       target: "_blank", rel: "noopener"
   end
 
+  def guard_face(subject_id)
+    face(subject_id.to_s.match?(Fd::Names::PERSON) ? subject_id : nil)
+  end
+
   def at_minute(at)
     return "n/a" if at.nil?
 
