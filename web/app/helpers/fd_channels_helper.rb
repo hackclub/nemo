@@ -21,16 +21,26 @@ module FdChannelsHelper
     safe_join([member_link(guard.opened_by), " turned it on ", on_day(guard.created_at)])
   end
 
+  NEEDS_INVITE = "needs an invite".freeze
+  INVITE_SAID = "a human has to /invite nemo here, a bot cannot join a private channel".freeze
+
+  def needs_invite?(standing)
+    standing&.refused? && standing.why == NEEDS_INVITE
+  end
+
   def channel_seat_said(seat, standing)
     return nil if seat
     return tag.p(outside_said(standing), class: "sev-crit") if seat == false
     return nil if standing.nil? || standing.inside?
     return tag.p("nemo was taken out of here", class: "sev-crit") if standing.verb == "left"
+    return tag.p(INVITE_SAID, class: "sev-warn") if needs_invite?(standing)
 
     tag.p("nemo could not get in: #{standing.why.presence || 'refused'}", class: "sev-crit")
   end
 
   def outside_said(standing)
+    return "nothing is enforced, #{INVITE_SAID}" if needs_invite?(standing)
+
     why = standing&.refused? && standing.why.presence
     return "nothing is enforced, nemo could not get in: #{why}" if why
 

@@ -3,6 +3,7 @@ import os
 import time
 
 from bot.core import session
+from lib import channel_dim
 
 log = logging.getLogger("bot.nemo")
 
@@ -18,6 +19,8 @@ PAGE = 1000
 DEFAULT_PACE = 1.2
 DEFAULT_PER_SWEEP = 300
 SEATED_TYPES = "public_channel,private_channel"
+NEEDS_INVITE = "needs an invite"
+CANNOT_JOIN = ("method_not_supported_for_channel_type", "is_private")
 
 HOW = "SELECT value FROM fd.app_settings WHERE key = %s"
 
@@ -45,6 +48,8 @@ SET inside = EXCLUDED.inside, at = now()
 WAS_INSIDE = "SELECT channel_id FROM fd.channel_membership WHERE inside"
 
 INSIDE = "SELECT inside FROM fd.channel_membership WHERE channel_id = %s"
+
+KNOWN_PRIVATE = "SELECT 1 FROM raw.channel_dim WHERE channel_id = %s AND visibility = %s"
 
 
 def pace():
@@ -137,11 +142,22 @@ def refusal(failure):
     return data.get("error") or type(failure).__name__
 
 
+def joinable(conn, channel_id):
+    return conn.execute(KNOWN_PRIVATE, (channel_id, channel_dim.PRIVATE)).fetchone() is None
+
+
 def join(client, conn, channel_id, by=None, verb="joined"):
+    if not joinable(conn, channel_id):
+        log.info("nemo: %s is private, it takes a human to invite us", channel_id)
+        return False
+
     try:
         client.conversations_join(channel=channel_id)
     except Exception as failure:
         why = refusal(failure)
+        if why in CANNOT_JOIN:
+            channel_dim.record(conn, channel_id, visibility=channel_dim.PRIVATE)
+            why = NEEDS_INVITE
         noted(conn, channel_id, "refused", why, by)
         log.info("nemo: could not join %s: %s", channel_id, why)
         return False
