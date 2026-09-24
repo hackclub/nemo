@@ -11,6 +11,9 @@ Rails.application.routes.draw do
     get "dev/be/:user_id", to: "dev_sessions#create", as: :dev_be
   end
 
+  get "cdn/destroy/:key", to: "fd/transcripts#show", as: :destroy_transcript,
+      constraints: { key: %r{[^/]+} }, format: false
+
   namespace :fd do
     root to: "fire#show"
     post "cases/merge", to: "merges#create", as: :merge_cases

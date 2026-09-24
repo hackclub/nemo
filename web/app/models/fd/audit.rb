@@ -24,7 +24,8 @@ module Fd
       "Fd::ChannelGuard" => "channel_guard",
       "Fd::ChannelGuardAllow" => "channel_allow",
       "Fd::AppSetting" => "app_setting",
-      "Authz::Grant" => "capability_grant"
+      "Authz::Grant" => "capability_grant",
+      "Fd::ThreadTranscript" => "thread_transcript"
     }.freeze
 
     VERBS = %w[
@@ -38,6 +39,7 @@ module Fd
       tuned reset
       acked muted
       queued cancelled
+      read
     ].freeze
 
     REDACTED_COLUMNS = {

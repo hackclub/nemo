@@ -1,7 +1,8 @@
+import datetime as dt
 import logging
 import threading
 
-from bot.core import audit, blobs
+from bot.core import audit
 
 log = logging.getLogger("bot.nemo")
 
@@ -256,14 +257,44 @@ def transcript(client, channel_id, thread_ts):
             return seen
 
 
-def keep_transcript(conn, said):
+KEEP_TRANSCRIPT = """
+INSERT INTO fd.thread_transcripts (guard_id, channel_id, thread_ts, body)
+VALUES (%s, %s, %s, %s)
+RETURNING id
+"""
+
+
+def at(ts):
+    try:
+        when = dt.datetime.fromtimestamp(float(ts), dt.UTC)
+    except (TypeError, ValueError):
+        return str(ts)
+    return when.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def whose(one, named):
+    user_id = one.get("user") or one.get("bot_id") or "unknown"
+    name = named.get(user_id) or one.get("username") or user_id
+    return f"{user_id}|{name}"
+
+
+def line_for(one, named):
+    words = (one.get("text") or "").replace(chr(10), " ")
+    return f"[{at(one.get('ts'))}] <{whose(one, named)}> {words}"
+
+
+def transcript_body(said, named):
     lines = [
-        f"{one.get('ts')}\t{one.get('user') or one.get('bot_id') or 'unknown'}\t"
-        f"{(one.get('text') or '').replace(chr(10), ' ')}"
+        line_for(one, named)
         for one in sorted(said, key=lambda one: float(one.get("ts") or 0))
     ]
-    body = ("\n".join(lines) + "\n").encode("utf-8")
-    return blobs.stash(conn, body, "text/plain")
+    return "\n".join(lines) + "\n"
+
+
+def keep_transcript(conn, guard_id, channel_id, thread_ts, said, named=None):
+    body = transcript_body(said, named or {})
+    conn.execute(KEEP_TRANSCRIPT, (guard_id, channel_id, thread_ts, body))
+    return body
 
 
 def pending(conn):

@@ -2,7 +2,7 @@ import logging
 import threading
 
 from bot.core import privileged, session
-from bot.nemo import guards
+from bot.nemo import guards, who
 
 log = logging.getLogger("bot.nemo")
 
@@ -53,6 +53,16 @@ def remove(client, channel_id, ts):
     return True
 
 
+def names_for(client, said):
+    named = {}
+    for one in said:
+        user_id = one.get("user")
+        if not user_id or user_id in named:
+            continue
+        named[user_id] = who.face(client, user_id)["name"]
+    return named
+
+
 def run_destroy(client, guard_id):
     if not claim(guard_id):
         return 0
@@ -81,8 +91,9 @@ def destroy(client, guard_id):
             guards.refresh(conn)
         return 0
 
+    named = names_for(client, said)
     with session() as conn:
-        sha = guards.keep_transcript(conn, said)
+        guards.keep_transcript(conn, gid, channel_id, thread_ts, said, named)
     log.info("nemo: guard %s kept %s message(s) before deleting", gid, len(said))
 
     deleted, failed = 0, None
@@ -118,7 +129,7 @@ def destroy(client, guard_id):
             break
 
     with session() as conn:
-        guards.finish(conn, gid, "failed" if failed else "done", failed, sha)
+        guards.finish(conn, gid, "failed" if failed else "done", failed, None)
         guards.refresh(conn)
 
     log.info("nemo: guard %s destroyed %s message(s)%s", gid, deleted,
