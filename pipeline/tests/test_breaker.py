@@ -1,6 +1,21 @@
 from lib import breaker
 
 
+def test_the_streak_pool_holds_the_runs_a_worker_owns():
+    assert "parent_run_id" not in breaker.RUNS_SQL, (
+        "channel_history, channel_replies and member_history run as parents, so filtering on "
+        "parent_run_id hid every archive failure from the breaker"
+    )
+
+
+def test_observing_never_skips_a_stage(monkeypatch):
+    monkeypatch.setattr(breaker, "mode", lambda conn: "observe")
+    assert breaker.blocked(None, "channel_days") is None
+
+    monkeypatch.setattr(breaker, "mode", lambda conn: "off")
+    assert breaker.blocked(None, "channel_days") is None
+
+
 def test_a_streak_counts_only_leading_transport_failures():
     rows = [("failed", "transport", False), ("failed", "transport", True), ("ok", None, None), ("failed", "transport", False)]
     assert breaker.streak_of(rows) == (2, True)

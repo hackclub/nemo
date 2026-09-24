@@ -1,5 +1,3 @@
-{{ config(severity='warn') }}
-
 with slack as (
     select
         claimed_full_members_count,

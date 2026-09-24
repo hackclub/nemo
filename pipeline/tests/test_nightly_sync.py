@@ -155,6 +155,22 @@ def test_every_gate_test_names_a_singular_test_that_exists():
     assert set(GATE_TESTS) <= on_disk, set(GATE_TESTS) - on_disk
 
 
+def test_no_gate_test_downgrades_itself_to_a_warning():
+    from pathlib import Path
+
+    from jobs.nightly_sync import GATE_TESTS
+    from lib.paths import WAREHOUSE_DIR
+
+    warned = [
+        name for name in GATE_TESTS
+        if "severity='warn'" in Path(WAREHOUSE_DIR, "tests", f"{name}.sql").read_text()
+    ]
+    assert not warned, (
+        "dbt_outcomes files a warn under `warned`, and `gated` only reads `failed`, so a "
+        f"gate test carrying severity='warn' can never gate: {warned}"
+    )
+
+
 def test_a_clean_parent_records_no_fault():
     from jobs.nightly_sync import parent_fault
 

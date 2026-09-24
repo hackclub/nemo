@@ -14,7 +14,7 @@ WITH ranked AS (
     SELECT source_key, status, error_class, had_fault_body,
            row_number() OVER (PARTITION BY source_key ORDER BY started_at DESC) AS n
     FROM   raw.ingest_run
-    WHERE  parent_run_id IS NOT NULL AND source_key IS NOT NULL
+    WHERE  source_key IS NOT NULL
       AND  status IN ('ok', 'partial', 'failed')
       AND  started_at > now() - make_interval(days => %s)
 )

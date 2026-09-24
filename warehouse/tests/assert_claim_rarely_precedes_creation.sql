@@ -1,5 +1,3 @@
-{{ config(severity='warn') }}
-
 with counted as (
     select
         count(*) filter (where claimed_at < account_created_verified) as backwards,

@@ -1,5 +1,3 @@
-{{ config(severity='warn') }}
-
 with cohorts as (
     select
         cohort_at::date as cohort_day,
