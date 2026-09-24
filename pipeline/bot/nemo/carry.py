@@ -52,14 +52,16 @@ def gather(conn, message_id):
     return inline, on_their_own
 
 
-def share(client, conn, message_id, channel_id, thread_ts, wearing=None, words=None):
+def share(client, conn, message_id, channel_id, thread_ts, wearing=None, words=None,
+          unfurled=None):
     inline, on_their_own = gather(conn, message_id)
     said = (words or "").strip()
     if not inline and not on_their_own and not said:
         return None
 
     ts = post(
-        client, conn, message_id, channel_id, thread_ts, inline, said, on_their_own, wearing or {}
+        client, conn, message_id, channel_id, thread_ts, inline, said, on_their_own,
+        wearing or {}, unfurled or [],
     )
 
     for file_id, name, _, body in on_their_own:
@@ -74,7 +76,8 @@ def share(client, conn, message_id, channel_id, thread_ts, wearing=None, words=N
     return ts
 
 
-def post(client, conn, message_id, channel_id, thread_ts, inline, said, alongside, wearing):
+def post(client, conn, message_id, channel_id, thread_ts, inline, said, alongside, wearing,
+         unfurled=()):
     kept = []
     for file_id, name, kind, body in inline:
         try:
@@ -88,12 +91,13 @@ def post(client, conn, message_id, channel_id, thread_ts, inline, said, alongsid
     if inline and not kept:
         raise RuntimeError("slack would not keep any of the pictures, so this is not settled")
 
-    if said and not kept and not alongside:
+    if said and not kept and not alongside and not unfurled:
         return spoken(client, channel_id, thread_ts, said, wearing)
 
     blocks = []
     if said:
         blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": said}})
+    blocks.extend(unfurled)
     for _, name, kind, uploaded in kept:
         blocks.append({
             "type": "image",

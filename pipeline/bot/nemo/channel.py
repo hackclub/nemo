@@ -193,21 +193,35 @@ def gather(conn, case_id):
         {"slack_file_id": f[0], "name": f[1], "fetch_state": f[2], "external_url": f[3]}
         for f in conn.execute(FILES, (convo,)).fetchall()
     ]
-    case["shares"] = [
-        {
-            "kind": s[0],
-            "source_channel_id": s[1],
-            "source_channel_name": s[2],
-            "source_ts": s[3],
-            "permalink": s[4],
-            "is_reachable": s[5],
-            "source_author_user_id": s[6],
-            "source_body": s[7],
-            "raw": s[8],
-        }
-        for s in conn.execute(SHARES, (case["message_id"],)).fetchall()
-    ]
+    case["shares"] = shares_for(conn, case["message_id"])
     return case
+
+
+def shares_for(conn, message_id):
+    return [
+        {
+            "kind": one[0],
+            "source_channel_id": one[1],
+            "source_channel_name": one[2],
+            "source_ts": one[3],
+            "permalink": one[4],
+            "is_reachable": one[5],
+            "source_author_user_id": one[6],
+            "source_body": one[7],
+            "raw": one[8],
+        }
+        for one in conn.execute(SHARES, (message_id,)).fetchall()
+    ]
+
+
+def unfurled(conn, message_id):
+    built = []
+    for share in cards.report.brought(shares_for(conn, message_id)):
+        built.append(cards.report.context([cards.report.whose(share)]))
+        words = cards.report.quote(share["source_body"])
+        if words:
+            built.append(words)
+    return built
 
 
 def post_report(client, conn, case_id, channel_id=None, thread_ts=None):
@@ -310,6 +324,7 @@ def post_follow_up(client, conn, message_id, channel_id=None):
         client, conn, message_id, channel_id or firehouse_channel(conn), forwarded,
         wearing=as_reporter(client, anonymous, reporter),
         words=to_member(body),
+        unfurled=unfurled(conn, message_id),
     )
     if ts is None:
         log.info("nemo: message %s had nothing to carry", message_id)
