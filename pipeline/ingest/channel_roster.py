@@ -4,6 +4,7 @@ import sys
 from dotenv import load_dotenv
 from slack_sdk.errors import SlackApiError
 
+from lib.channel_dim import PRIVATE, UPSERT as CHANNEL_NAME_SQL, visibility_of
 from lib.db import connect, get_cursor, ingest_run, save_cursor
 from lib.paths import ENV_FILE
 from lib.slack_client import bot_client
@@ -13,25 +14,12 @@ SOURCE = "channel_roster"
 NAME_SOURCE = "channel_info_names"
 NAME_COMMIT_EVERY = 100
 LISTED_TYPES = "public_channel,private_channel"
-PUBLIC = "public"
-PRIVATE = "private"
 TEAM_ERRORS = ("team_not_found", "team_access_not_granted", "invalid_team_id")
 UNREACHABLE_ERRORS = (
     "channel_not_found",
     "team_access_not_granted",
     "method_not_supported_for_channel_type",
 )
-
-CHANNEL_NAME_SQL = """
-INSERT INTO raw.channel_dim (channel_id, name, archived, visibility, updated_at)
-VALUES (%s, %s, %s, %s, now())
-ON CONFLICT (channel_id) DO UPDATE SET
-    name = EXCLUDED.name,
-    archived = EXCLUDED.archived,
-    visibility = COALESCE(EXCLUDED.visibility, raw.channel_dim.visibility),
-    name_unavailable = false,
-    updated_at = now()
-"""
 
 MARK_UNREACHABLE_SQL = """
 UPDATE raw.channel_dim SET name_unavailable = true, updated_at = now() WHERE channel_id = %s
@@ -43,12 +31,6 @@ def resolve_team_id():
     if not configured:
         raise RuntimeError("SLACK_TEAM_ID must be set to the workspace the channel roster lists")
     return configured
-
-
-def visibility_of(channel):
-    if "is_private" not in channel:
-        return None
-    return PRIVATE if channel["is_private"] else PUBLIC
 
 
 def list_channels(client, team_id, cursor):
