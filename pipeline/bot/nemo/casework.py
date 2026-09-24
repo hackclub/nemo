@@ -275,22 +275,6 @@ def open_case(conn, subject, body, by):
     return case_id
 
 
-OPEN_REPORT = """
-INSERT INTO fd.case_reports (case_id, reporter_user_id, is_anonymous, body, source_app)
-VALUES (%s, %s, false, %s, %s)
-RETURNING id
-"""
-
-
-def open_report(conn, case_id, reporter, body):
-    report_id = conn.execute(
-        OPEN_REPORT, (case_id, reporter, body, audit.SOURCE_APP)
-    ).fetchone()[0]
-    audit.record(conn, "report", report_id, "opened", reporter,
-                 after={"case_id": case_id, "reporter_user_id": reporter})
-    return report_id
-
-
 def member_note(conn, subject, body, by):
     note_id = conn.execute(MEMBER_NOTE, (subject, body, by)).fetchone()[0]
     audit.record(

@@ -1,7 +1,7 @@
 import logging
 
 from bot.core import access, evidence, session, whoami
-from bot.nemo import casework, channel, channels
+from bot.nemo import casework, channels, queued
 from bot.nemo.surface import on_event
 
 log = logging.getLogger("bot.nemo")
@@ -72,13 +72,9 @@ def opened(ctx):
             log.info("nemo: %s in %s is already case %s", thread_ts, channel_id, standing)
             return standing
 
-        body = (said.get("text") or "").strip() or None
         case_id = casework.open_case(conn, author, None, who)
-        casework.open_report(conn, case_id, who, body)
-        evidence.attach(conn, case_id,
-                        {"channel_id": channel_id, "thread_ts": thread_ts}, who)
-        channel.post_report(ctx.client, conn, case_id,
-                            channel_id=channel_id, thread_ts=thread_ts)
+        evidence.link(conn, case_id, channel_id, thread_ts, who)
+        queued.post(ctx.client, conn, case_id, channel_id, thread_ts)
 
     log.info("nemo: case %s opened on %s in %s by %s", case_id, thread_ts, channel_id, who)
     return case_id
@@ -104,7 +100,7 @@ def closed(ctx):
         if told is None:
             log.info("nemo: case %s was already resolved", case_id)
             return None
-        channel.redraw(ctx.client, conn, case_id, channel_id)
+        queued.redraw(ctx.client, conn, case_id)
 
     log.info("nemo: case %s resolved from the thread by %s", case_id, who)
     return case_id

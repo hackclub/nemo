@@ -1,7 +1,7 @@
 import logging
 
 from bot.core import audit, blobs, outbox, parse, session
-from bot.nemo import answer, carry, channel
+from bot.nemo import answer, carry, channel, queued
 
 log = logging.getLogger("bot.nemo")
 
@@ -37,6 +37,7 @@ class Desk:
             ("wake", channel.tell_the_wake),
             ("follow-ups", channel.carry_follow_ups),
             ("files", channel.carry_files),
+            ("thread card", queued.redraw),
         ):
             try:
                 with session() as conn:
