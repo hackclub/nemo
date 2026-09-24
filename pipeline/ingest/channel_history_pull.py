@@ -37,7 +37,8 @@ ON CONFLICT (channel_id) DO UPDATE SET
     messages_seen = raw.channel_walk.messages_seen + EXCLUDED.messages_seen,
     history_complete = raw.channel_walk.history_complete OR EXCLUDED.history_complete,
     last_walked_at = now(),
-    last_error = NULL,
+    last_error = CASE WHEN EXCLUDED.messages_seen > 0
+                      THEN NULL ELSE raw.channel_walk.last_error END,
     updated_at = now()
 """
 

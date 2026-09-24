@@ -38,8 +38,11 @@
             <span class="src-floor">floor <%= source.prune_floor %></span>
           <% end %>
         </div>
-        <div class="cells">
-          <% cells.last(14).each do |cell| %><i class="<%= cell %>"></i><% end %>
+        <% shown_nights = nights.last(14) %>
+        <div class="cells" role="group" aria-label="<%= source.key %>, the last 14 nights">
+          <% cells.last(14).each_with_index do |cell, i| %><i class="<%= cell %>" role="img"
+             title="<%= shown_nights[i]&.strftime("%-d %b") %> &middot; <%= cell_said(cell) %>"
+             aria-label="<%= shown_nights[i]&.strftime("%-d %b") %>, <%= cell_said(cell) %>"></i><% end %>
         </div>
         <div class="snum <%= "warn" if state == "stale" %>"><%= short_age(row.last_ok) %></div>
         <div class="snum"><%= row.typical ? "#{row.typical.round}s" : "n/a" %></div>

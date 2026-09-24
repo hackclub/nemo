@@ -1,5 +1,9 @@
 <% content_for :page_title, "Run #{@run.id}" %>
 
+<% if @run.running? && !@orphaned %>
+  <div data-controller="run-refresh" data-run-refresh-seconds-value="10" hidden></div>
+<% end %>
+
 <% content_for :head_context do %>
   <span class="triad-sep" aria-hidden="true">&middot;</span>
   <span class="triad-who"><%= @run.started_at.strftime("%-d %b %Y, %H:%M") %></span>

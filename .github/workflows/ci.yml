@@ -64,6 +64,11 @@ jobs:
         run: bin/rails test
         working-directory: web
 
+      - name: headline checks
+        run: uv run python -m checks.headlines --cross-only
+        working-directory: pipeline
+        continue-on-error: true
+
   image:
     runs-on: ubuntu-latest
     steps:

@@ -55,6 +55,43 @@
 <div class="card card-flush">
   <div class="card-head">
     <div>
+      <h2 class="card-title">Headlines that disagree</h2>
+      <p class="card-sub">every number the nightly checked against a second source</p>
+    </div>
+  </div>
+  <% if headlines.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>headline</th>
+            <th>state</th>
+            <th class="col-num">ours</th>
+            <th>expected</th>
+            <th class="col-num">checked</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% headlines.each do |row| %>
+            <tr>
+              <td class="mono"><%= row.assertion %></td>
+              <td><span class="chip <%= row.status == "fail" ? "chip-crit" : "chip-warn" %>"><%= row.status %></span></td>
+              <td class="col-num mono"><%= row.observed %></td>
+              <td class="sub trunc-cell" title="<%= row.expected %>"><%= row.expected %></td>
+              <td class="col-num mono"><%= short_age(row.checked_at) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="card-note">every headline agrees</p>
+  <% end %>
+</div>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
       <h2 class="card-title">Suppressed</h2>
       <p class="card-sub">breakers <%= breaker_mode %><%= ", recording only" if breaker_mode == "observe" %></p>
     </div>

@@ -1,6 +1,4 @@
-<% said = { "ok" => "ran", "fail" => "failed here", "run" => "running now",
-            "part" => "ran, some of it failed", "stop" => "cancelled", "gone" => "abandoned",
-            "skip" => "nothing to do", "wait" => "not started yet", "none" => "did not run" } %>
+<% said = EngineHelper::CELL_SAID %>
 <div class="nights-h">
   <div>Source</div>
   <div class="nights">
@@ -11,6 +9,24 @@
   <div class="r">Missed</div>
 </div>
 
+<% if defined?(nightly) && nightly.present? %>
+  <% missed = nightly.count { |cell| cell == "none" } %>
+  <div class="srow">
+    <div class="skey">
+      <i class="dot <%= nightly.last == "run" ? "run" : (nightly.last(2).include?("ok") ? "live" : "stale") %>"></i>
+      <b>the nightly</b>
+    </div>
+    <div class="cells" role="group" aria-label="the nightly, the last <%= nights.size %> nights">
+      <% nightly.each_with_index do |cell, i| %>
+        <i class="<%= cell %>" tabindex="0" role="img"
+           title="<%= nights[i].strftime("%-d %b") %> &middot; <%= said[cell] %>"
+           aria-label="<%= nights[i].strftime("%-d %b") %>, <%= said[cell] %>"></i>
+      <% end %>
+    </div>
+    <div class="snum <%= "warn" if missed.positive? %>"><%= missed.positive? ? missed : "n/a" %></div>
+  </div>
+<% end %>
+
 <% matrix.each do |source, cells| %>
   <% missed = cells.count { |cell| cell == "none" || cell == "fail" } %>
   <% state = cells.last == "run" ? "run" : (cells.last(2).include?("ok") ? "live" : "stale") %>
@@ -19,9 +35,11 @@
       <i class="dot <%= state %>"></i>
       <b><%= source.key %></b>
     </div>
-    <div class="cells">
+    <div class="cells" role="group" aria-label="<%= source.key %>, the last <%= nights.size %> nights">
       <% cells.each_with_index do |cell, i| %>
-        <i class="<%= cell %>" title="<%= nights[i].strftime("%-d %b") %> &middot; <%= said[cell] %>"></i>
+        <i class="<%= cell %>" tabindex="0" role="img"
+           title="<%= nights[i].strftime("%-d %b") %> &middot; <%= said[cell] %>"
+           aria-label="<%= nights[i].strftime("%-d %b") %>, <%= said[cell] %>"></i>
       <% end %>
     </div>
     <div class="snum <%= "warn" if missed.positive? %>"><%= missed.positive? ? missed : "n/a" %></div>

@@ -4125,10 +4125,11 @@
     letter-spacing: 0;
   }
   .cells i { height: 16px; border-radius: 2px; display: block; background: var(--line-soft); }
-  .cells i.ok { background: var(--series-2); opacity: 0.82; }
-  .cells i.skip { background: var(--series-0); opacity: 0.5; }
+  .cells i:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .cells i.ok { background: var(--series-2); }
+  .cells i.skip { background: repeating-linear-gradient(45deg, var(--ink-4) 0 2px, var(--card) 2px 5px); }
   .cells i.fail { background: var(--down); }
-  .cells i.none { background: var(--line-soft); border: 1px dashed var(--line); }
+  .cells i.none { background: var(--card-2); border: 1px dashed var(--ink-4); }
   .cells i.wait { background: var(--card-2); border: 1px solid var(--line-soft); }
   .cells i.run { background: var(--accent); animation: pulse 1.7s var(--ease) infinite; }
   .cells i.part { background: repeating-linear-gradient(45deg, var(--warn) 0 3px, var(--card) 3px 6px); }
@@ -4436,7 +4437,7 @@
   .val { display: inline-flex; align-items: center; gap: 4px; }
 
   .key i.lg-ran, .key i.lg-held { background: var(--series-2); opacity: 0.82; }
-  .key i.lg-skip { background: var(--series-0); opacity: 0.5; }
+  .key i.lg-skip { background: repeating-linear-gradient(45deg, var(--ink-4) 0 2px, var(--card) 2px 5px); }
   .key i.lg-fail { background: var(--down); }
   .key i.lg-none { background: var(--line-soft); border: 1px dashed var(--line); }
   .key i.lg-wait { background: var(--card-2); border: 1px solid var(--line-soft); }

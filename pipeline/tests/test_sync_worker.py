@@ -75,15 +75,24 @@ def test_the_slot_is_read_the_same_way_the_schedule_reads_it():
     assert next_run_at("03:00", now) == slot_today("03:00", now) + timedelta(days=1)
 
 
-def test_a_catch_up_cannot_tell_itself_to_run_twice():
-    import inspect
-
+def test_the_startup_flag_and_the_catch_up_share_one_decision(monkeypatch):
     from jobs import sync_worker
 
-    main = inspect.getsource(sync_worker.main)
-    assert "elif missed_tonight(" in main, (
-        "the catch-up must not run alongside NIGHTLY_RUN_AT_START, which has no same-day guard"
-    )
+    now = datetime(2026, 9, 20, 9, 51)
+    monkeypatch.setattr(sync_worker, "run_at_start_enabled", lambda: True)
+    assert sync_worker.boot_run("03:00", now, True, 0) == "startup"
+    monkeypatch.setattr(sync_worker, "run_at_start_enabled", lambda: False)
+    assert sync_worker.boot_run("03:00", now, True, 0) is None
+    assert sync_worker.boot_run("03:00", now, False, 0) == "catch-up"
+
+
+def test_the_cap_holds_even_with_the_startup_flag_on(monkeypatch):
+    from jobs import sync_worker
+
+    monkeypatch.setattr(sync_worker, "run_at_start_enabled", lambda: True)
+    assert sync_worker.boot_run(
+        "03:00", datetime(2026, 9, 20, 9, 51), False, sync_worker.MAX_CATCH_UPS
+    ) is None
 
 
 def test_an_unreadable_ledger_refuses_to_catch_up():
@@ -104,8 +113,16 @@ def test_a_crash_loop_cannot_keep_starting_nightlies():
     from jobs import sync_worker
 
     now = datetime(2026, 9, 20, 9, 51)
-    assert sync_worker.missed_tonight("03:00", now, False, tried=0)
-    assert not sync_worker.missed_tonight("03:00", now, False, tried=sync_worker.MAX_CATCH_UPS)
+    assert sync_worker.missed_tonight("03:00", now, False, crashed=0)
+    assert not sync_worker.missed_tonight("03:00", now, False, crashed=sync_worker.MAX_CATCH_UPS)
+
+
+def test_only_an_abandoned_night_counts_toward_the_cap():
+    from jobs import sync_worker
+
+    assert "FILTER (WHERE status = 'abandoned')" in sync_worker.RAN_TODAY_SQL, (
+        "a clean deploy must not burn a catch-up; only a crashed night should"
+    )
 
 
 def test_a_cancelled_night_is_respected_and_not_retried():

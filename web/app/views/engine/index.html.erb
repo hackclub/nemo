@@ -1,4 +1,4 @@
-<% if @auto_refresh %>
+<% if @auto_refresh && @tab == "runs" %>
   <div data-controller="run-refresh" data-run-refresh-seconds-value="10" hidden></div>
 <% end %>
 
@@ -70,12 +70,12 @@
         <p class="card-sub">one square a night, worst run of that night wins the colour</p>
       </div>
     </div>
-    <%= render "matrix", matrix: @matrix, nights: @nights %>
+    <%= render "matrix", matrix: @matrix, nights: @nights, nightly: @nightly %>
   </div>
 
 <% elsif @tab == "sources" %>
   <%= render "sources", sources: @sources, active_request: @active_request,
-        matrix: @matrix, open: @open, may_tune: @may_tune,
+        matrix: @matrix, nights: @nights, open: @open, may_tune: @may_tune,
         run: @run, step_output: @step_output %>
 
 <% elsif @tab == "coverage" %>
@@ -87,7 +87,8 @@
 
 <% elsif @tab == "faults" %>
   <%= render "faults", incidents: @incidents, breakers: @breakers, local_faults: @local_faults,
-        taxonomy: @taxonomy, beats: @beats, breaker_mode: @breaker_mode, may_tune: @may_tune %>
+        taxonomy: @taxonomy, beats: @beats, breaker_mode: @breaker_mode, may_tune: @may_tune,
+        headlines: @headlines %>
 
 <% elsif @tab == "backfill" %>
   <%= render "backfill", backfills: @backfills, names: @backfill_names,

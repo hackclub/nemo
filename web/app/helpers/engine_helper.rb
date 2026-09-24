@@ -46,6 +46,15 @@ module EngineHelper
     "#{(minutes / 1440).round(1)} d"
   end
 
+  CELL_SAID = { "ok" => "ran", "fail" => "failed here", "run" => "running now",
+                "part" => "ran, some of it failed", "stop" => "cancelled", "gone" => "abandoned",
+                "skip" => "nothing to do", "wait" => "not started yet",
+                "none" => "did not run" }.freeze
+
+  def cell_said(cell)
+    CELL_SAID.fetch(cell, cell)
+  end
+
   SLICE_CELL = { "complete" => "on", "unverified" => "on", "superseded" => "on",
                  "unavailable" => "un", "short" => "sh", "claimed" => "sh",
                  "missing" => "no" }.freeze

@@ -32,6 +32,7 @@ class EngineController < ApplicationController
     if NIGHT_TABS.include?(@tab)
       @nights = night_dates
       @matrix = night_matrix(@nights)
+      @nightly = nightly_cells(@nights)
     end
 
     case @tab
@@ -67,6 +68,7 @@ class EngineController < ApplicationController
     @taxonomy = fault_taxonomy
     @beats = Analytics::FctWorkerHeartbeat.order(:worker).to_a
     @breaker_mode = Engine::Setting.value(Engine::Setting::ENGINE, "breaker_mode")
+    @headlines = latest_quality("headline").reject { |row| row.status == "pass" }
   end
 
   def ack_incident
@@ -324,6 +326,20 @@ class EngineController < ApplicationController
       .each { |key, on, rank| index[key][on] = rank }
 
     index
+  end
+
+  def nightly_cells(nights)
+    best = Analytics::FctIngestRun.parents
+      .where(logical_date: nights.first..nights.last)
+      .group(:logical_date)
+      .minimum(Arel.sql(RANK_SQL))
+
+    nights.map do |on|
+      rank = best[on]
+      next (on == Date.current ? "wait" : "none") if rank.nil?
+
+      CELL_BY_RANK.fetch(rank, "fail")
+    end
   end
 
   RANK = { "skipped" => 1, "ok" => 2, "running" => 3, "partial" => 4, "cancelled" => 5,

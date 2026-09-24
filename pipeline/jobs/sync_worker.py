@@ -75,7 +75,8 @@ RETURNING id
 MAX_CATCH_UPS = 2
 
 RAN_TODAY_SQL = """
-SELECT count(*) FILTER (WHERE status IS DISTINCT FROM 'abandoned'), count(*)
+SELECT count(*) FILTER (WHERE status IS DISTINCT FROM 'abandoned'),
+       count(*) FILTER (WHERE status = 'abandoned')
 FROM   raw.ingest_run
 WHERE  source = %s AND parent_run_id IS NULL AND logical_date = current_date
 """
@@ -95,17 +96,25 @@ def tonight_so_far():
     try:
         with connect() as conn, conn.cursor() as cur:
             cur.execute(RAN_TODAY_SQL, (SOURCE,))
-            stood, tried = cur.fetchone()
-            return stood > 0, tried
+            stood, crashed = cur.fetchone()
+            return stood > 0, crashed
     except Exception as exc:
         print(f"sync worker: cannot tell whether tonight ran, {type(exc).__name__}: {exc}")
         return True, MAX_CATCH_UPS
 
 
-def missed_tonight(at, now, already_ran, tried=0):
-    if already_ran or tried >= MAX_CATCH_UPS:
+def missed_tonight(at, now, already_ran, crashed=0):
+    if already_ran or crashed >= MAX_CATCH_UPS:
         return False
     return now >= slot_today(at, now)
+
+
+def boot_run(at, now, already_ran, crashed=0):
+    if crashed >= MAX_CATCH_UPS:
+        return None
+    if run_at_start_enabled():
+        return "startup"
+    return "catch-up" if missed_tonight(at, now, already_ran, crashed) else None
 
 
 def wait_seconds(poll, scheduled, now):
@@ -340,14 +349,10 @@ def main():
     spined = NEVER
 
     with beating(WORKER, lambda: state["note"], every=BEAT_SECONDS):
-        if run_at_start_enabled():
-            state["note"] = "startup run"
-            run_scheduled("startup")
-            scheduled = next_run_at(at, datetime.now())
-            print(f"sync worker: next scheduled run at {scheduled:%Y-%m-%dT%H:%M}")
-        elif missed_tonight(at, datetime.now(), *tonight_so_far()):
-            state["note"] = "catch-up run"
-            run_scheduled("catch-up")
+        why = boot_run(at, datetime.now(), *tonight_so_far())
+        if why:
+            state["note"] = f"{why} run"
+            run_scheduled(why)
             scheduled = next_run_at(at, datetime.now())
             print(f"sync worker: next scheduled run at {scheduled:%Y-%m-%dT%H:%M}")
 
