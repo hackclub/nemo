@@ -161,7 +161,8 @@ class EngineController < ApplicationController
       return
     end
 
-    SyncRequest.queue!(kind: "full", requested_by: current_account.user_id)
+    queued = SyncRequest.queue!(kind: "full", requested_by: current_account.user_id)
+    audit(queued, "queued", "kind" => "full")
     redirect_to engine_path, notice: "sync queued"
   rescue SyncRequest::AlreadyRunning => e
     redirect_to engine_path, alert: e.message
@@ -173,6 +174,7 @@ class EngineController < ApplicationController
     @active_request = SyncRequest.active.recent_first.first
     gone = orphaned?
     if @active_request&.cancel!(worker_gone: gone)
+      audit(@active_request, "cancelled", "worker_gone" => gone)
       redirect_to engine_path, notice: gone ? "released, no worker" : "cancel requested"
     else
       redirect_to engine_path, alert: "nothing to cancel"
@@ -187,7 +189,9 @@ class EngineController < ApplicationController
       return
     end
 
-    SyncRequest.queue!(kind: "stage", stage: params[:stage], requested_by: current_account.user_id)
+    queued = SyncRequest.queue!(kind: "stage", stage: params[:stage],
+      requested_by: current_account.user_id)
+    audit(queued, "queued", "kind" => "stage", "stage" => queued.stage)
     redirect_to engine_path, notice: "#{params[:stage]} queued"
   rescue SyncRequest::AlreadyRunning => e
     redirect_to engine_path, alert: e.message
@@ -332,6 +336,11 @@ class EngineController < ApplicationController
   CELL_BY_RANK = { 1 => "skip", 2 => "ok", 3 => "run", 4 => "part", 5 => "stop",
                    6 => "gone", 7 => "fail" }.freeze
 
+  def audit(row, verb, after = {})
+    Fd::Audit.record(row, verb,
+      actor: current_account.user_id, request_id: request.request_id, after: after)
+  end
+
   def remember_incident(source_key, kind, muted_until:)
     row = Ingest::IncidentAck.find_or_initialize_by(source_key: source_key.to_s, kind: kind.to_s)
     row.update!(acked_by: current_account.user_id, acked_at: Time.current, muted_until: muted_until)
@@ -365,24 +374,27 @@ class EngineController < ApplicationController
       .sort_by { |taxon| -taxon.count }
   end
 
-  SliceSummary = Struct.new(:source_key, :complete, :short, :claimed, :superseded, :unavailable,
-    :latest, :worst_ratio, :settled_week, keyword_init: true)
+  SliceSummary = Struct.new(:source_key, :complete, :unverified, :short, :claimed, :superseded,
+    :unavailable, :other, :latest, :worst_ratio, :settled_week, keyword_init: true)
+
+  COUNTED_SLICE_STATES = %w[complete unverified short claimed superseded unavailable].freeze
+
+  OTHER_SLICE_STATES = "array[#{COUNTED_SLICE_STATES.map { |s| "'#{s}'" }.join(', ')}]::text[]".freeze
 
   def slice_summary
     Analytics::FctSliceCoverage.group(:source_key).pluck(
       :source_key,
-      Arel.sql("count(*) filter (where state = 'complete')"),
-      Arel.sql("count(*) filter (where state = 'short')"),
-      Arel.sql("count(*) filter (where state = 'claimed')"),
-      Arel.sql("count(*) filter (where state = 'superseded')"),
-      Arel.sql("count(*) filter (where state = 'unavailable')"),
+      *COUNTED_SLICE_STATES.map { |state| Arel.sql("count(*) filter (where state = '#{state}')") },
+      Arel.sql("count(*) filter (where coalesce(state, '') <> all(#{OTHER_SLICE_STATES}))"),
       Arel.sql("max(slice_end)"),
       Arel.sql("min(landed_ratio) filter (where state in ('complete', 'short'))"),
-      Arel.sql("count(*) filter (where state = 'complete' and settled_at > now() - interval '7 days')")
-    ).map { |key, complete, short, claimed, superseded, unavailable, latest, ratio, week|
-      SliceSummary.new(source_key: key, complete: complete, short: short, claimed: claimed,
-        superseded: superseded, unavailable: unavailable, latest: latest, worst_ratio: ratio,
-        settled_week: week)
+      Arel.sql("count(*) filter (where state in ('complete', 'unverified') " \
+               "and settled_at > now() - interval '7 days')")
+    ).map { |key, complete, unverified, short, claimed, superseded, unavailable, other,
+             latest, ratio, week|
+      SliceSummary.new(source_key: key, complete: complete, unverified: unverified, short: short,
+        claimed: claimed, superseded: superseded, unavailable: unavailable, other: other,
+        latest: latest, worst_ratio: ratio, settled_week: week)
     }.sort_by(&:source_key)
   end
 
@@ -405,12 +417,13 @@ class EngineController < ApplicationController
     end
   end
 
-  MEMBER_DAY_SOURCE = "member_day".freeze
+  MEMBER_DAY_SOURCES = %w[member_day member_day_import].freeze
 
   def consecutive_member_days
     days = Analytics::FctAnalyticsDay
-      .where(source: MEMBER_DAY_SOURCE, loaded: true)
+      .where(source: MEMBER_DAY_SOURCES, loaded: true)
       .order(ds: :desc)
+      .distinct
       .pluck(:ds)
     return 0 if days.empty?
 
@@ -519,7 +532,11 @@ class EngineController < ApplicationController
 
   DayCoverage = Struct.new(:source, :loaded, :unavailable, :never_fetched, :span, :first_ds, :last_ds, keyword_init: true)
 
+  WALKED_DAY_SOURCES = %w[member_day channel_day].freeze
+
   def day_coverage
+    floor = Analytics::FctAnalyticsDay.where(source: WALKED_DAY_SOURCES).minimum(:ds)
+
     Analytics::FctAnalyticsDay.group(:source).pluck(
       :source,
       Arel.sql("count(*) filter (where loaded)"),
@@ -528,10 +545,11 @@ class EngineController < ApplicationController
       Arel.sql("max(ds)"),
       Arel.sql("count(*)")
     ).map do |source, loaded, unavailable, first_ds, last_ds, total|
-      span = (last_ds - first_ds).to_i + 1
+      from = WALKED_DAY_SOURCES.include?(source) ? [floor, first_ds].compact.min : first_ds
+      span = (last_ds - from).to_i + 1
       DayCoverage.new(
         source: source, loaded: loaded, unavailable: unavailable,
-        never_fetched: span - total, span: span, first_ds: first_ds, last_ds: last_ds
+        never_fetched: span - total, span: span, first_ds: from, last_ds: last_ds
       )
     end.sort_by(&:source)
   end

@@ -11,10 +11,12 @@
           <tr>
             <th>source</th>
             <th class="col-num">complete</th>
+            <th class="col-num">unverified</th>
             <th class="col-num">short</th>
             <th class="col-num">claimed</th>
             <th class="col-num">superseded</th>
             <th class="col-num">no data</th>
+            <th class="col-num">other</th>
             <th class="col-num">worst landed</th>
             <th class="col-num">through</th>
           </tr>
@@ -24,10 +26,12 @@
             <tr>
               <td class="mono"><%= row.source_key %></td>
               <td class="col-num"><%= number_with_delimiter(row.complete) %></td>
+              <td class="col-num sub"><%= number_with_delimiter(row.unverified) %></td>
               <td class="col-num <%= "warn" if row.short.positive? %>"><%= row.short %></td>
               <td class="col-num"><%= row.claimed %></td>
               <td class="col-num sub"><%= row.superseded %></td>
               <td class="col-num sub"><%= row.unavailable %></td>
+              <td class="col-num <%= "warn" if row.other.positive? %>"><%= row.other %></td>
               <td class="col-num mono"><%= row.worst_ratio ? number_to_percentage(row.worst_ratio.to_f * 100, precision: 1) : "n/a" %></td>
               <td class="col-num mono"><%= row.latest ? row.latest.strftime("%-d %b") : "n/a" %></td>
             </tr>

@@ -53,7 +53,7 @@ class ChannelBackfill < ApplicationRecord
 
     SyncRequest.queue!(kind: "stage", stage: "channel_replies", requested_by: "channel_backfill")
     true
-  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique, SyncRequest::AlreadyRunning
     false
   end
 

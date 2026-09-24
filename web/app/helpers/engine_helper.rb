@@ -46,8 +46,9 @@ module EngineHelper
     "#{(minutes / 1440).round(1)} d"
   end
 
-  SLICE_CELL = { "complete" => "on", "superseded" => "on", "unavailable" => "un",
-                 "short" => "sh", "claimed" => "sh", "missing" => "no" }.freeze
+  SLICE_CELL = { "complete" => "on", "unverified" => "on", "superseded" => "on",
+                 "unavailable" => "un", "short" => "sh", "claimed" => "sh",
+                 "missing" => "no" }.freeze
 
   def slice_cell(state)
     SLICE_CELL.fetch(state, "no")

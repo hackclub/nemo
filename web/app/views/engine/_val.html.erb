@@ -26,6 +26,11 @@
             aria: { label: "#{source} #{name}" }, onchange: "this.form.requestSubmit()" %>
     <% end %>
   <% end %>
+  <% if Engine::Setting.changed?(source, name) %>
+    <%= button_to "reset", engine_untune_path(source: source, name: name), method: :delete,
+          class: "btn btn-ghost", form: { class: "contents" },
+          aria: { label: "reset #{source} #{name} to the file" } %>
+  <% end %>
 <% else %>
   <span class="val <%= "tuned" if tuned %>"><%= now %></span>
 <% end %>

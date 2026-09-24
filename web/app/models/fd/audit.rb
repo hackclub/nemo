@@ -14,6 +14,7 @@ module Fd
       "Fd::CaseCitation" => "citation",
       "Engine::Setting" => "engine_setting",
       "Ingest::IncidentAck" => "incident_ack",
+      "SyncRequest" => "sync_request",
       "Authz::Override" => "permission",
       "Fd::StaffSlack" => "slack_account",
       "Fd::Flag" => "flag",
@@ -36,6 +37,7 @@ module Fd
       turned_on turned_off
       tuned reset
       acked muted
+      queued cancelled
     ].freeze
 
     REDACTED_COLUMNS = {

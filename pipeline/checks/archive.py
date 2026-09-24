@@ -16,6 +16,7 @@ WARN_ONLY = frozenset({
     "channels Slack will not return",
     "threads still to fetch",
     "share of Slack's day held",
+    "channels to walk",
 })
 
 

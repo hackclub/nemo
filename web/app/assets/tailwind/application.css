@@ -4131,6 +4131,9 @@
   .cells i.none { background: var(--line-soft); border: 1px dashed var(--line); }
   .cells i.wait { background: var(--card-2); border: 1px solid var(--line-soft); }
   .cells i.run { background: var(--accent); animation: pulse 1.7s var(--ease) infinite; }
+  .cells i.part { background: repeating-linear-gradient(45deg, var(--warn) 0 3px, var(--card) 3px 6px); }
+  .cells i.gone { background: repeating-linear-gradient(135deg, var(--warn) 0 3px, var(--card) 3px 6px); }
+  .cells i.stop { background: var(--card); box-shadow: inset 0 0 0 2px var(--crit); }
 
   .key { display: flex; gap: var(--s-xs); flex-wrap: wrap; padding: var(--s-xs) var(--s-sm); border-top: 1px solid var(--line-soft); }
   .key span { display: inline-flex; align-items: center; gap: 5px; font-size: var(--t-fine); color: var(--ink-3); }
@@ -4438,6 +4441,9 @@
   .key i.lg-none { background: var(--line-soft); border: 1px dashed var(--line); }
   .key i.lg-wait { background: var(--card-2); border: 1px solid var(--line-soft); }
   .key i.lg-run { background: var(--accent); }
+  .key i.lg-part { background: repeating-linear-gradient(45deg, var(--warn) 0 3px, var(--card) 3px 6px); }
+  .key i.lg-gone { background: repeating-linear-gradient(135deg, var(--warn) 0 3px, var(--card) 3px 6px); }
+  .key i.lg-stop { background: var(--card); box-shadow: inset 0 0 0 2px var(--crit); }
   .key i.lg-short { background: var(--warn); opacity: 0.8; }
   .key i.lg-nofile { background: var(--ink-4); opacity: 0.55; }
   .key i.lg-before { background: var(--line); }
