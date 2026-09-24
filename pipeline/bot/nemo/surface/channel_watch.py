@@ -8,6 +8,12 @@ from lib import channel_dim
 log = logging.getLogger("bot.nemo")
 
 FROM_TYPE = {"C": channel_dim.PUBLIC, "G": channel_dim.PRIVATE}
+SHELVED = {
+    "channel_archive": True,
+    "group_archive": True,
+    "channel_unarchive": False,
+    "group_unarchive": False,
+}
 
 
 def look(client, channel_id, channel_type=None):
@@ -95,6 +101,25 @@ def put_out(ctx):
         return None
 
     return went_out(ctx.client, channel_id, by=event.get("actor_id"))
+
+
+@on_event("channel_archive", open_to_all=True)
+@on_event("channel_unarchive", open_to_all=True)
+@on_event("group_archive", open_to_all=True)
+@on_event("group_unarchive", open_to_all=True)
+def shelved(ctx):
+    event = ctx.payload or {}
+    where = event.get("channel")
+    channel_id = where.get("id") if isinstance(where, dict) else where
+    archived = SHELVED.get(ctx.entry.key)
+    if not channel_id or archived is None:
+        return None
+
+    with session() as conn:
+        channel_dim.record(conn, channel_id, archived=archived)
+
+    log.info("nemo: %s was %s", channel_id, "archived" if archived else "brought back")
+    return channel_id
 
 
 @on_event("channel_created", open_to_all=True)

@@ -8,6 +8,9 @@
       <% if row.private? %>
         <span class="sub2">private</span>
       <% end %>
+      <% if row.archived? %>
+        <span class="sub2">archived</span>
+      <% end %>
       <span class="qage"><%= row.members ? number_to_human(row.members, units: { unit: "", thousand: "k" }) : "—" %></span>
     </span>
 

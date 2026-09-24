@@ -60,9 +60,13 @@ oauth_config:
 settings:
   event_subscriptions:
     bot_events:
+      - channel_archive
       - channel_created
       - channel_left
+      - channel_unarchive
+      - group_archive
       - group_left
+      - group_unarchive
       - member_joined_channel
       - member_left_channel
       - message.channels
