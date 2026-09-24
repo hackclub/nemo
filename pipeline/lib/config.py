@@ -32,7 +32,6 @@ BOT_OPTIONAL = PIPELINE_ROLE + [
     "NEMO_SWEEP_SECONDS",
     "PROXY_TOKEN_NEMO",
     "SHROUD_SWEEP_SECONDS",
-    "SLACK_TEAM_ID",
     "TZ",
 ]
 
@@ -127,6 +126,7 @@ ROLES = {
             "NEMO_BOT_TOKEN",
             "NEMO_APP_TOKEN",
             "FIREHOUSE_CHANNEL_ID",
+            "SLACK_TEAM_ID",
         ],
         "optional": BOT_OPTIONAL,
     },
@@ -136,6 +136,7 @@ ROLES = {
             "NEMO_BOT_TOKEN",
             "NEMO_APP_TOKEN",
             "FIREHOUSE_CHANNEL_ID",
+            "SLACK_TEAM_ID",
         ],
     },
     "bot.nemo": {
@@ -143,6 +144,7 @@ ROLES = {
             "NEMO_BOT_TOKEN",
             "NEMO_APP_TOKEN",
             "FIREHOUSE_CHANNEL_ID",
+            "SLACK_TEAM_ID",
         ],
         "optional": BOT_OPTIONAL + ["SHROUD_BOT_TOKEN", "SHROUD_APP_TOKEN"],
     },
