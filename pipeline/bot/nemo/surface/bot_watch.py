@@ -3,6 +3,7 @@ import logging
 import os
 
 from bot.core import privileged, session, whoami
+from bot.core.wording import escape
 from bot.nemo import channel, channelguards
 from bot.nemo.surface import on_event
 
@@ -10,6 +11,9 @@ log = logging.getLogger("bot.nemo")
 
 CARRIES = (None, "bot_message", "file_share", "thread_broadcast")
 TELL_AGAIN_AFTER = dt.timedelta(hours=1)
+MARKETPLACE = "https://hackclub.slack.com/marketplace"
+QUOTE_LIMIT = 1200
+CUT = "\n[truncated]"
 
 _apps = {}
 
@@ -61,6 +65,29 @@ def naming(face_id, label, fallback):
     if face_id:
         return f"<@{face_id}>"
     return f"*{label or fallback}*"
+
+
+def quoted(words):
+    text = (words or "").strip()
+    if not text:
+        return ""
+    if len(text) > QUOTE_LIMIT:
+        text = text[:QUOTE_LIMIT].rstrip() + CUT
+    return "\n" + "\n".join(f"> {line}" for line in escape(text).splitlines())
+
+
+def marketplace_url(app_id):
+    return f"{MARKETPLACE}/{app_id}" if app_id else None
+
+
+def footer(channel_id, link=None, app_id=None):
+    shown = (
+        (link, "message link"),
+        (marketplace_url(app_id), "marketplace"),
+        (channel.channel_url(channel_id), "open in fire engine"),
+    )
+    parts = [f"<{url}|{said}>" for url, said in shown if url]
+    return "\n" + "  ·  ".join(parts) if parts else ""
 
 
 def permalink_for(client, channel_id, ts):
@@ -117,7 +144,7 @@ def posted(ctx):
     with session() as conn:
         said = (f"Deleted a message from {naming(face_id, label, subject_id)}, "
                 f"which is not on the allow list for <#{channel_id}>."
-                + (f"\n{link}" if link else ""))
+                + quoted(said_words) + footer(channel_id, link, app_id))
         told_ts, told_until = tell(ctx.client, conn, guard_id, subject_id, said)
         channelguards.happened(conn, guard_id, channel_id, subject_id, "deleted",
                                bot_id=bot_id, label=label, said=said_words, message_ts=ts,
@@ -155,18 +182,19 @@ def joined(ctx):
 
     guard_id, _allowed = standing
     label = found.get("real_name") or who
+    app_id = (found.get("profile") or {}).get("api_app_id")
     outcome = privileged.kick(channel_id, who)
 
     with session() as conn:
         said = (f":no_entry: Put <@{who}> out of <#{channel_id}>, which is not on its "
                 f"allow list." if outcome == "kicked" else
                 f":warning: <@{who}> joined <#{channel_id}> off the allow list, and we "
-                f"could not put them out ({outcome}).")
+                f"could not put them out ({outcome}).") + footer(channel_id, app_id=app_id)
         told_ts, told_until = tell(ctx.client, conn, guard_id, who, said)
         channelguards.happened(conn, guard_id, channel_id, who,
                                "kicked" if outcome == "kicked" else "let_past",
                                bot_id=(found.get("profile") or {}).get("bot_id"), label=label,
-                               app_id=(found.get("profile") or {}).get("api_app_id"),
+                               app_id=app_id,
                                told_ts=told_ts, told_until=told_until)
 
     log.info("nemo: guard %s met %s joining %s -> %s", guard_id, who, channel_id, outcome)

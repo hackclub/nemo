@@ -43,6 +43,8 @@ SET inside = EXCLUDED.inside, at = now()
 
 WAS_INSIDE = "SELECT channel_id FROM fd.channel_membership WHERE inside"
 
+INSIDE = "SELECT inside FROM fd.channel_membership WHERE channel_id = %s"
+
 
 def pace():
     try:
@@ -121,6 +123,11 @@ def noted(conn, channel_id, verb, why=None, by=None):
 
 def sat(conn, channel_id, inside):
     conn.execute(SEATED, (channel_id, inside))
+
+
+def inside(conn, channel_id):
+    row = conn.execute(INSIDE, (channel_id,)).fetchone()
+    return bool(row and row[0])
 
 
 def refusal(failure):

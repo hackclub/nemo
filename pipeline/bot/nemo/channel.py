@@ -120,6 +120,10 @@ def member_url(user_id):
     return app_url(f"/fd/members/{user_id}")
 
 
+def channel_url(channel_id):
+    return app_url(f"/fd/channels/{channel_id}")
+
+
 def gather(conn, case_id):
     row = conn.execute(CASE, (case_id,)).fetchone()
     if not row:

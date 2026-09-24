@@ -54,6 +54,7 @@
                 </span>
               </span>
               <span class="row-right">
+                <%= marketplace_link(@app_ids[one.subject_id], "marketplace") %>
                 <%= gated_button("channel.guard", "Remove",
                       fd_channel_allow_path(@channel_id, one.subject_id),
                       css: "btn btn-sm", method: :delete,
@@ -82,10 +83,14 @@
             <div class="line-row">
               <span class="grow two-line">
                 <b><%= activity_who(one, @labels) %></b>
-                <span><%= activity_ids(one) %></span>
+                <span>
+                  <%= activity_ids(one) %>
+                  <% if one.app_id.present? %>
+                    &middot; <%= marketplace_link(one.app_id) %>
+                  <% end %>
+                </span>
               </span>
               <span class="row-right">
-                <%= marketplace_link(one) %>
                 <span class="sub2 mono"><%= at_minute(one.at) %></span>
               </span>
             </div>

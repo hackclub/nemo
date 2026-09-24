@@ -60,10 +60,10 @@ module FdChannelsHelper
     tag.span([event.subject_id, event.bot_id].compact_blank.uniq.join(" - "), class: "mono")
   end
 
-  def marketplace_link(event)
-    return nil if event.app_id.blank?
+  def marketplace_link(app_id, said = "manage this bot")
+    return nil if app_id.blank?
 
-    link_to "manage this bot", "#{MARKETPLACE}/#{event.app_id}", class: "lnk",
+    link_to said, "#{MARKETPLACE}/#{app_id}", class: "lnk",
       target: "_blank", rel: "noopener"
   end
 

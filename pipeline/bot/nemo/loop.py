@@ -51,6 +51,16 @@ def join_sweep(desk):
     channels.reconcile(desk.client)
 
 
+def take_a_seat(client, channel_id):
+    if channelguards.guarding(channel_id) is None:
+        return False
+
+    with session() as conn:
+        if channels.mode(conn) == channels.OFF or channels.inside(conn, channel_id):
+            return False
+        return channels.join(client, conn, channel_id, verb="joined")
+
+
 def apart(*doing):
     for name, work in doing:
         try:
@@ -140,6 +150,10 @@ def start(desk, stopping, channel_id=None):
         elif channel_name == CHANNEL_GUARD:
             with session() as conn:
                 channelguards.refresh(conn)
+            threading.Thread(
+                target=take_a_seat, args=(desk.client, told),
+                name=f"nemo-seat-{told}", daemon=True,
+            ).start()
         elif channel_name == CONVERSATION:
             apart(("catching up", lambda: desk.caught_up(told)),
                   ("ticking", desk.tick_queued))

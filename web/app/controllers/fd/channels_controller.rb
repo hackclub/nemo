@@ -21,6 +21,7 @@ module Fd
       @events = ChannelGuardEvent.where(channel_id: @channel_id)
         .newest_first.limit(ACTIVITY_SHOWN).to_a
       @labels = labels_for(@events)
+      @app_ids = app_ids_for(@allows)
       @names = Names.for(@guard ? @guard.people_named : [])
       load_pane
     end
@@ -35,6 +36,14 @@ module Fd
     end
 
     private
+
+    def app_ids_for(allows)
+      ids = allows.map(&:subject_id)
+      return {} if ids.empty?
+
+      ChannelGuardEvent.where(subject_id: ids).where.not(app_id: nil)
+        .order(:at).pluck(:subject_id, :app_id).to_h
+    end
 
     def labels_for(events)
       ids = events.map(&:subject_id).uniq
