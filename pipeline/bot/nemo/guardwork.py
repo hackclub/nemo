@@ -2,7 +2,7 @@ import logging
 import threading
 
 from bot.core import privileged, session
-from bot.nemo import guards, who
+from bot.nemo import channel, guards, who
 
 log = logging.getLogger("bot.nemo")
 
@@ -53,6 +53,24 @@ def remove(client, channel_id, ts):
     return True
 
 
+def archive_url(channel_id, thread_ts):
+    return channel.app_url(f"/cdn/destroy/{channel_id}_{thread_ts}")
+
+
+def told(client, conn, channel_id, thread_ts, by):
+    said = f"A thread has been destroyed by <@{by}> in <#{channel_id}>."
+    url = archive_url(channel_id, thread_ts)
+    if url:
+        said += f"\narchive: {url}"
+
+    try:
+        client.chat_postMessage(
+            channel=channel.firehouse_channel(conn), text=said, unfurl_links=False
+        )
+    except Exception as failure:
+        log.warning("nemo: could not say that %s was destroyed: %s", channel_id, failure)
+
+
 def names_for(client, said):
     named = {}
     for one in said:
@@ -77,7 +95,7 @@ def destroy(client, guard_id):
         guard = guards.by_id(conn, guard_id)
         if guard is None:
             return 0
-        gid, kind, channel_id, thread_ts, state, _by, _warned, _expires = guard
+        gid, kind, channel_id, thread_ts, state, by, _warned, _expires = guard
         if kind != guards.DESTROY or state not in ("warned", "running"):
             return 0
         guards.start(conn, gid)
@@ -131,6 +149,8 @@ def destroy(client, guard_id):
     with session() as conn:
         guards.finish(conn, gid, "failed" if failed else "done", failed, None)
         guards.refresh(conn)
+        if not failed:
+            told(client, conn, channel_id, thread_ts, by)
 
     log.info("nemo: guard %s destroyed %s message(s)%s", gid, deleted,
              f", stopped on {failed}" if failed else "")
