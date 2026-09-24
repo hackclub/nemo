@@ -21,6 +21,7 @@ DEFAULT_PER_SWEEP = 300
 SEATED_TYPES = "public_channel,private_channel"
 NEEDS_INVITE = "needs an invite"
 CANNOT_JOIN = ("method_not_supported_for_channel_type", "is_private")
+ALREADY_IN = ("already_in_channel",)
 
 HOW = "SELECT value FROM fd.app_settings WHERE key = %s"
 
@@ -146,6 +147,27 @@ def joinable(conn, channel_id):
     return conn.execute(KNOWN_PRIVATE, (channel_id, channel_dim.PRIVATE)).fetchone() is None
 
 
+def seated_already(client, channel_id):
+    try:
+        found = (client.conversations_info(channel=channel_id) or {}).get("channel") or {}
+    except Exception as failure:
+        log.info("nemo: could not tell whether we sit in %s: %s", channel_id, failure)
+        return None
+    return found.get("is_member")
+
+
+def found_private(client, conn, channel_id, by):
+    channel_dim.record(conn, channel_id, visibility=channel_dim.PRIVATE)
+    if seated_already(client, channel_id):
+        sat(conn, channel_id, True)
+        log.info("nemo: %s is private and we are already sitting in it", channel_id)
+        return True
+
+    noted(conn, channel_id, "refused", NEEDS_INVITE, by)
+    log.info("nemo: %s is private, it takes a human to invite us", channel_id)
+    return False
+
+
 def join(client, conn, channel_id, by=None, verb="joined"):
     if not joinable(conn, channel_id):
         log.info("nemo: %s is private, it takes a human to invite us", channel_id)
@@ -156,8 +178,11 @@ def join(client, conn, channel_id, by=None, verb="joined"):
     except Exception as failure:
         why = refusal(failure)
         if why in CANNOT_JOIN:
-            channel_dim.record(conn, channel_id, visibility=channel_dim.PRIVATE)
-            why = NEEDS_INVITE
+            return found_private(client, conn, channel_id, by)
+        if why in ALREADY_IN:
+            sat(conn, channel_id, True)
+            log.info("nemo: %s already had us in it", channel_id)
+            return True
         noted(conn, channel_id, "refused", why, by)
         log.info("nemo: could not join %s: %s", channel_id, why)
         return False
