@@ -5,8 +5,7 @@
     on_schema_change='fail',
     indexes=[{'columns': ['channel_id', 'ts'], 'unique': True},
              {'columns': ['posted_at']},
-             {'columns': ['channel_id', 'thread_root_ts']}],
-    post_hook="delete from {{ this }} t using archive.message m where m.channel_id = t.channel_id and m.ts = t.ts and m.deleted_at is not null"
+             {'columns': ['channel_id', 'thread_root_ts']}]
 ) }}
 
 {% set lookback_hours = 2 %}
@@ -41,11 +40,10 @@ select
     settled,
     first_seen_at as observed_at
 from {{ source('archive', 'message') }}
-where deleted_at is null
 {% if is_incremental() %}
-  and updated_at > (
-      select coalesce(max(observed_at), '-infinity'::timestamptz)
-           - interval '{{ lookback_hours }} hours'
-      from {{ this }}
-  )
+where updated_at > (
+    select coalesce(max(observed_at), '-infinity'::timestamptz)
+         - interval '{{ lookback_hours }} hours'
+    from {{ this }}
+)
 {% endif %}

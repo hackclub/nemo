@@ -70,20 +70,6 @@ ON CONFLICT (channel_id, ts, transport, revision) DO UPDATE SET observed_at = no
 
 LOCK_SQL = "SELECT pg_advisory_xact_lock(hashtext(%s))"
 
-TOMBSTONE_SQL = """
-INSERT INTO archive.message
-    (channel_id, ts, revision, posted_at, author_kind, deleted_at, settled)
-VALUES (%s, %s, 1, %s, 'unknown', coalesce(%s, now()), false)
-ON CONFLICT (channel_id, ts) DO NOTHING
-"""
-
-DELETED_SQL = """
-UPDATE archive.message
-SET deleted_at = coalesce(%s, now()), updated_at = now()
-WHERE channel_id = %s AND ts = %s AND deleted_at IS NULL
-"""
-
-
 def stamp(ts):
     try:
         return datetime.fromtimestamp(float(ts), tz=timezone.utc)
@@ -274,13 +260,3 @@ def from_api(conn, channel_id, message, method, transport):
                   method, transport, True)
 
 
-def mark_deleted(conn, channel_id, ts, when):
-    with conn.cursor() as cur:
-        cur.execute(DELETED_SQL, (when, channel_id, ts))
-        if cur.rowcount:
-            return cur.rowcount
-        posted = stamp(ts)
-        if posted is None:
-            return 0
-        cur.execute(TOMBSTONE_SQL, (channel_id, ts, posted, when))
-        return cur.rowcount

@@ -277,18 +277,37 @@ def test_the_message_spine_is_a_relation_not_a_view_over_the_archive():
     assert "lookback_hours" in sql
 
 
-def test_the_message_spine_sweeps_rows_the_archive_has_tombstoned():
+def test_nothing_writes_a_deletion_the_spine_would_have_to_sweep():
+    from lib import archive
+
+    assert not hasattr(archive, "mark_deleted")
     sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_message.sql").read_text()
-    assert "deleted_at is not null" in sql, (
-        "a deleted message never enters the incremental batch, so it has to be swept out "
-        "of the table it was already written to"
+    assert "deleted_at" not in sql, (
+        "the archive records no deletion, so the spine carries neither a filter nor a sweep "
+        "for one; both come back together if it ever does"
     )
 
 
-def test_the_archive_carries_the_indexes_the_incremental_leans_on():
+def test_the_deletion_wrapper_is_still_refused_a_body():
+    from lib import archive
+
+    assert archive.body_of({"type": "message", "subtype": archive.GONE}) is None, (
+        "body_of must keep returning None for a deletion envelope, or it falls through and "
+        "the wrapper is recorded as if it were a message"
+    )
+
+
+def test_an_edit_wrapper_is_still_unwrapped():
+    from lib import archive
+
+    inner = {"ts": "1.1", "text": "after"}
+    envelope = {"type": "message", "subtype": archive.CHANGED, "message": inner}
+    assert archive.body_of(envelope) == inner
+
+
+def test_the_archive_carries_the_index_the_incremental_leans_on():
     sql = (MIGRATIONS_DIR / "0095_archive_message_change_markers.sql").read_text()
     assert "archive.message (updated_at)" in sql
-    assert "WHERE deleted_at IS NOT NULL" in sql
 
 
 def test_the_spine_proves_uniqueness_with_its_index_not_a_54m_row_group_by():
@@ -301,13 +320,6 @@ def test_the_spine_proves_uniqueness_with_its_index_not_a_54m_row_group_by():
     assert "'unique': True" in sql, "something has to enforce it, and the index is the cheap half"
 
 
-def test_no_tombstone_can_reach_the_message_spine():
-    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_message.sql").read_text()
-    assert "where deleted_at is null" in sql
-    assert "m.deleted_at is not null" in sql, (
-        "a tombstone always carries deleted_at, so the filter keeps it out on the way in and "
-        "the sweep takes it out if a live row is tombstoned later"
-    )
 
 
 def test_the_dead_onboarding_funnel_is_dropped_rather_than_left_granted():
