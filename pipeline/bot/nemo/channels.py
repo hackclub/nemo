@@ -17,6 +17,7 @@ FALL_BACK = GUARDED
 PAGE = 1000
 DEFAULT_PACE = 1.2
 DEFAULT_PER_SWEEP = 300
+SEATED_TYPES = "public_channel,private_channel"
 
 HOW = "SELECT value FROM fd.app_settings WHERE key = %s"
 
@@ -105,7 +106,7 @@ def public_channels(client):
 
 
 def joined_channels(client):
-    return _paged(client.users_conversations, types="public_channel", exclude_archived=True)
+    return _paged(client.users_conversations, types=SEATED_TYPES, exclude_archived=True)
 
 
 def wanted(client, conn, how=None):
