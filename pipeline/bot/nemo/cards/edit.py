@@ -9,7 +9,6 @@ PEOPLE = "case_people"
 ASSIGNEES = "case_assignees_open"
 CATEGORY = "case_category"
 NOTE = "case_note"
-HAND_BACK = "case_hand_back"
 REVERSE = "case_reverse"
 
 WHAT = "category_what"
@@ -33,31 +32,36 @@ def option(text, value):
     return {"text": {"type": "plain_text", "text": text}, "value": value}
 
 
-def choices(case, mine):
+OVERFLOW_LIMIT = 5
+
+
+def choices(case):
     out = [option("People", PEOPLE), option("Assignees", ASSIGNEES)]
     if not case.get("category_key"):
         out.append(option("Set the violation", CATEGORY))
     out.append(option("Leave a note", NOTE))
     if case.get("live_actions"):
         out.append(option("Reverse an action", REVERSE))
-    if mine:
-        out.append(option("Hand it back", HAND_BACK))
     return out
 
 
-def menu(case, mine):
-    picks = choices(case, mine)
+def menu(case):
+    picks = choices(case)
     if not picks:
         return None
+
+    options = [
+        option(pick["text"]["text"], f"{pick['value']}:{case['case_id']}")
+        for pick in picks
+    ]
+    if len(options) <= OVERFLOW_LIMIT:
+        return {"type": "overflow", "action_id": MENU, "options": options}
 
     return {
         "type": "static_select",
         "action_id": MENU,
         "placeholder": {"type": "plain_text", "text": "More"},
-        "options": [
-            option(pick["text"]["text"], f"{pick['value']}:{case['case_id']}")
-            for pick in picks
-        ],
+        "options": options,
     }
 
 

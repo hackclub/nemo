@@ -11,7 +11,7 @@ log = logging.getLogger("bot.nemo")
 CASE = """
 SELECT c.id, c.category_key, c.resolved_at,
        r.id, r.is_anonymous, r.reporter_user_id, r.body, r.forwarded_ts, r.received_at,
-       v.id, r.card_digest, r.forwarded_channel_id
+       v.id, r.card_digest
 FROM fd.cases c
 JOIN fd.case_reports r ON r.case_id = c.id
 LEFT JOIN fd.intake_conversations v ON v.report_id = r.id
@@ -85,7 +85,7 @@ SELECT forwarded_ts FROM fd.case_reports WHERE id = %s FOR UPDATE
 
 FOLLOW_UP = """
 SELECT m.body, m.mirrored_ts, r.forwarded_ts, m.conversation_id,
-       r.is_anonymous, r.reporter_user_id, r.forwarded_channel_id
+       r.is_anonymous, r.reporter_user_id
 FROM fd.intake_messages m
 JOIN fd.intake_conversations c ON c.id = m.conversation_id
 LEFT JOIN fd.case_reports r ON r.id = c.report_id
@@ -110,17 +110,16 @@ def firehouse_channel(conn=None):
 
 
 def card_channel(case, channel_id=None, conn=None):
-    return case.get("forwarded_channel_id") or channel_id or firehouse_channel(conn)
+    return channel_id or firehouse_channel(conn)
 
 
 CARD_ROOM = """
-SELECT forwarded_channel_id FROM fd.case_reports
-WHERE case_id = %s AND forwarded_ts IS NOT NULL ORDER BY id LIMIT 1
+SELECT card_channel_id FROM fd.cases WHERE id = %(case_id)s
 """
 
 
 def card_room(conn, case_id, channel_id=None):
-    row = conn.execute(CARD_ROOM, (case_id,)).fetchone()
+    row = conn.execute(CARD_ROOM, {"case_id": case_id}).fetchone()
     return (row and row[0]) or channel_id or firehouse_channel(conn)
 
 
@@ -160,7 +159,6 @@ def gather(conn, case_id):
         "received_at": row[8],
         "conversation_id": row[9],
         "card_digest": row[10],
-        "forwarded_channel_id": row[11],
         "url": case_url(row[0]),
         "files": [],
         "shares": [],
@@ -242,9 +240,9 @@ def post_report(client, conn, case_id, channel_id=None, thread_ts=None):
     ts = sent["ts"]
 
     conn.execute(
-        "UPDATE fd.case_reports SET forwarded_ts = %s, forwarded_channel_id = %s, "
-        "card_digest = %s, card_rendered_at = now() WHERE id = %s AND forwarded_ts IS NULL",
-        (ts, room, digest_of(built), case["report_id"]),
+        "UPDATE fd.case_reports SET forwarded_ts = %s, card_digest = %s, "
+        "card_rendered_at = now() WHERE id = %s AND forwarded_ts IS NULL",
+        (ts, digest_of(built), case["report_id"]),
     )
     if case["message_id"] and not case.get("mirrored_ts"):
         conn.execute(
@@ -302,7 +300,7 @@ def post_follow_up(client, conn, message_id, channel_id=None):
     row = conn.execute(FOLLOW_UP, (message_id,)).fetchone()
     if not row:
         return None
-    body, mirrored, forwarded, _, anonymous, reporter, room = row
+    body, mirrored, forwarded, _, anonymous, reporter = row
     if mirrored:
         return mirrored
     if not forwarded:
@@ -310,7 +308,7 @@ def post_follow_up(client, conn, message_id, channel_id=None):
         return None
 
     ts = carry.share(
-        client, conn, message_id, room or channel_id or firehouse_channel(conn), forwarded,
+        client, conn, message_id, channel_id or firehouse_channel(conn), forwarded,
         wearing=as_reporter(client, anonymous, reporter),
         words=to_member(body),
     )
@@ -449,8 +447,7 @@ LIMIT 50
 """
 
 FILES_ON_CASE = """
-SELECT DISTINCT mf.message_id, r.forwarded_ts, r.is_anonymous, r.reporter_user_id,
-                r.forwarded_channel_id
+SELECT DISTINCT mf.message_id, r.forwarded_ts, r.is_anonymous, r.reporter_user_id
 FROM fd.intake_message_files mf
 JOIN fd.intake_files f ON f.id = mf.file_id
 JOIN fd.intake_messages m ON m.id = mf.message_id
@@ -468,12 +465,11 @@ def waiting_files(conn):
 
 def carry_files(client, conn, case_id, channel_id=None):
     sent = 0
-    for message_id, forwarded_ts, anonymous, reporter, room in conn.execute(
+    for message_id, forwarded_ts, anonymous, reporter in conn.execute(
         FILES_ON_CASE, (case_id,)
     ).fetchall():
         if carry.share(
-            client, conn, message_id, room or channel_id or firehouse_channel(conn),
-            forwarded_ts,
+            client, conn, message_id, channel_id or firehouse_channel(conn), forwarded_ts,
             wearing=as_reporter(client, anonymous, reporter),
         ):
             sent += 1

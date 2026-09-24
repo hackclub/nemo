@@ -54,7 +54,7 @@ def buttons(case):
     elements.append(report.button(report.LOG_ACTION, "Log an action", case_id))
     elements.append(report.button(report.RESOLVE, "Resolve", case_id, "danger"))
 
-    more = edit.menu(case, mine=bool(held))
+    more = edit.menu(case)
     if more:
         elements.append(more)
 

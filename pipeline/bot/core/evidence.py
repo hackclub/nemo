@@ -41,35 +41,6 @@ RETURNING id
 """
 
 
-BY_THREAD = """
-SELECT case_id FROM fd.case_threads
-WHERE channel_id = %s AND thread_ts = %s
-ORDER BY id LIMIT 1
-"""
-
-
-LINK = """
-INSERT INTO fd.case_threads (case_id, channel_id, thread_ts, kind, is_primary, added_by)
-VALUES (%(case_id)s, %(channel_id)s, %(thread_ts)s, 'internal', false, %(added_by)s)
-ON CONFLICT (case_id, channel_id, thread_ts) DO NOTHING
-RETURNING id
-"""
-
-
-def link(conn, case_id, channel_id, thread_ts, added_by):
-    row = conn.execute(
-        LINK,
-        {"case_id": case_id, "channel_id": channel_id,
-         "thread_ts": thread_ts, "added_by": added_by},
-    ).fetchone()
-    return row[0] if row else None
-
-
-def case_on(conn, channel_id, thread_ts):
-    row = conn.execute(BY_THREAD, (channel_id, thread_ts)).fetchone()
-    return row[0] if row else None
-
-
 def shared(conn, conversation_id):
     return [
         {

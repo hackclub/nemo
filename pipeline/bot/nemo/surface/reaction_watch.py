@@ -1,6 +1,6 @@
 import logging
 
-from bot.core import access, evidence, session, whoami
+from bot.core import access, session, whoami
 from bot.nemo import casework, channels, queued
 from bot.nemo.surface import on_event
 
@@ -59,21 +59,15 @@ def opened(ctx):
     asked = wanted(ctx, OPENS, "case.open")
     if asked is None:
         return None
-    channel_id, thread_ts, said, who = asked
-
-    author = said.get("user")
-    if not author:
-        log.info("nemo: %s in %s has nobody to open a case about", thread_ts, channel_id)
-        return None
+    channel_id, thread_ts, _, who = asked
 
     with session() as conn:
-        standing = evidence.case_on(conn, channel_id, thread_ts)
+        standing = queued.case_on(conn, channel_id, thread_ts)
         if standing is not None:
             log.info("nemo: %s in %s is already case %s", thread_ts, channel_id, standing)
             return standing
 
-        case_id = casework.open_case(conn, author, None, who)
-        evidence.link(conn, case_id, channel_id, thread_ts, who)
+        case_id = casework.open_case(conn, None, None, who)
         queued.post(ctx.client, conn, case_id, channel_id, thread_ts)
 
     log.info("nemo: case %s opened on %s in %s by %s", case_id, thread_ts, channel_id, who)
@@ -88,7 +82,7 @@ def closed(ctx):
     channel_id, thread_ts, _, who = asked
 
     with session() as conn:
-        case_id = evidence.case_on(conn, channel_id, thread_ts)
+        case_id = queued.case_on(conn, channel_id, thread_ts)
         if case_id is None:
             return None
 

@@ -11,8 +11,13 @@ SELECT id, category_key, resolved_at, card_channel_id, card_ts, card_digest
 FROM fd.cases WHERE id = %s
 """
 
+ON_THREAD = """
+SELECT id FROM fd.cases WHERE card_channel_id = %s AND card_thread_ts = %s LIMIT 1
+"""
+
 KEPT = """
-UPDATE fd.cases SET card_channel_id = %s, card_ts = %s, card_digest = %s, updated_at = now()
+UPDATE fd.cases SET card_channel_id = %s, card_thread_ts = %s, card_ts = %s,
+                    card_digest = %s, updated_at = now()
 WHERE id = %s AND card_ts IS NULL
 """
 
@@ -23,6 +28,11 @@ UPDATE fd.cases SET card_digest = %s, updated_at = now() WHERE id = %s
 LOST = """
 UPDATE fd.cases SET card_channel_id = NULL, card_ts = NULL, card_digest = NULL WHERE id = %s
 """
+
+
+def case_on(conn, channel_id, thread_ts):
+    row = conn.execute(ON_THREAD, (channel_id, thread_ts)).fetchone()
+    return row[0] if row else None
 
 
 def digest_of(blocks):
@@ -63,7 +73,7 @@ def post(client, conn, case_id, channel_id, thread_ts):
         unfurl_links=False,
         unfurl_media=False,
     )
-    conn.execute(KEPT, (channel_id, sent["ts"], digest_of(built), case_id))
+    conn.execute(KEPT, (channel_id, thread_ts, sent["ts"], digest_of(built), case_id))
     log.info("nemo: case %s has a card in %s", case_id, channel_id)
     return sent["ts"]
 

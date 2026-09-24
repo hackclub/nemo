@@ -213,18 +213,6 @@ def keep_note(conn, case_id, body, by):
     return note_id
 
 
-def hand_back(conn, case_id, user_id):
-    row = conn.execute(HAND_BACK, (case_id, user_id)).fetchone()
-    if row is None:
-        return False
-
-    audit.record(
-        conn, "assignee", case_id, "unclaimed", user_id,
-        before={"user_id": user_id, "assigned_by": row[0]},
-    )
-    return True
-
-
 def assign_people(conn, case_id, user_ids, by):
     added = []
     for user_id in user_ids:
@@ -269,7 +257,8 @@ def open_about(conn, user_id):
 def open_case(conn, subject, body, by):
     case_id = conn.execute(OPEN_CASE, (by, audit.SOURCE_APP)).fetchone()[0]
     audit.record(conn, "case", case_id, "opened", by, after={"opened_by": by})
-    add_participants(conn, case_id, [subject], "subject", by)
+    if subject:
+        add_participants(conn, case_id, [subject], "subject", by)
     if body:
         keep_note(conn, case_id, body, by)
     return case_id

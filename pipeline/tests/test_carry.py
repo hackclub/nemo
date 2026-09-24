@@ -280,18 +280,17 @@ def test_a_source_with_no_words_is_not_cited_as_an_empty_quote():
 def test_the_card_menu_holds_every_choice_slack_allows():
     case = {"case_id": 19, "category_key": None, "live_actions": 1,
             "assignees": ["UME"], "resolved_at": None}
-    menu = edit.menu(case, mine=True)
+    menu = edit.menu(case)
 
-    assert menu["type"] != "overflow", "an overflow takes no more than five options"
-    assert len(menu["options"]) == 6
-    assert menu["placeholder"]["type"] == "plain_text"
+    assert menu["type"] == "overflow", "five options fit the three-dot menu"
+    assert len(menu["options"]) == 5
 
 
 def test_every_card_menu_option_carries_the_case_it_acts_on():
     case = {"case_id": 19, "category_key": None, "live_actions": 1,
             "assignees": ["UME"], "resolved_at": None}
 
-    for one in edit.menu(case, mine=True)["options"]:
+    for one in edit.menu(case)["options"]:
         verb, case_id = edit.asked(one["value"])
         assert case_id == 19
         assert verb

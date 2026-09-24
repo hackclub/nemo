@@ -11,7 +11,6 @@ from bot.nemo.casework import (
     assign_people,
     claimed,
     counted,
-    hand_back,
     keep_note,
     live_actions,
     log_action,
@@ -136,8 +135,6 @@ def register(app, on_reply=None):
         if case_id is None:
             return None
 
-        if verb == cards.edit.HAND_BACK:
-            return on_hand_back(body, client, case_id, user_id)
         if verb == cards.edit.REVERSE:
             return on_reverse_asked(body, client, case_id, user_id)
         if verb == cards.edit.PEOPLE:
@@ -200,21 +197,6 @@ def register(app, on_reply=None):
         with session() as conn:
             redraw(client, conn, case_id)
         log.info("nemo: action %s reversed on case %s by %s", said["action_id"], case_id, user_id)
-
-    def on_hand_back(body, client, case_id, user_id):
-        with session() as conn:
-            allowed, refusal = access.may(conn, user_id, "case.open", case_id)
-            if not allowed:
-                return whisper(client, body, refusal)
-            given = hand_back(conn, case_id, user_id)
-
-        if not given:
-            return whisper(client, body, f"case {case_id} is not yours to hand back")
-
-        with session() as conn:
-            redraw(client, conn, case_id)
-        log.info("nemo: case %s handed back by %s", case_id, user_id)
-        return None
 
     def on_people_asked(body, client, case_id, user_id):
         with session() as conn:

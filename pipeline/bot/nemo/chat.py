@@ -128,23 +128,31 @@ def delete(conn, channel_id, ts):
     return row[0] if row else None
 
 
-WAITING = """
-SELECT c.id, c.author_user_id, c.body, r.forwarded_ts
+UNDER = """
+coalesce(
+    (SELECT r.forwarded_ts FROM fd.case_reports r
+      WHERE r.case_id = c.case_id AND r.forwarded_ts IS NOT NULL
+      ORDER BY r.id LIMIT 1),
+    (SELECT k.card_thread_ts FROM fd.cases k WHERE k.id = c.case_id)
+)
+"""
+
+WAITING = f"""
+SELECT c.id, c.author_user_id, c.body, {UNDER}
 FROM fd.case_chat c
-JOIN fd.case_reports r ON r.case_id = c.case_id
 WHERE c.case_id = %s AND c.ts IS NULL AND c.mirrored_ts IS NULL
   AND (c.mirrored_as IS NULL OR c.said_at < now() - interval '2 minutes')
-  AND r.forwarded_ts IS NOT NULL
+  AND {UNDER} IS NOT NULL
 ORDER BY c.said_at, c.id
 LIMIT 20
 """
 
-WAITING_ANYWHERE = """
+WAITING_ANYWHERE = f"""
 SELECT DISTINCT c.case_id
 FROM fd.case_chat c
-JOIN fd.case_reports r ON r.case_id = c.case_id
-WHERE c.ts IS NULL AND c.mirrored_ts IS NULL AND r.forwarded_ts IS NOT NULL
+WHERE c.ts IS NULL AND c.mirrored_ts IS NULL
   AND (c.mirrored_as IS NULL OR c.said_at < now() - interval '2 minutes')
+  AND {UNDER} IS NOT NULL
 LIMIT 50
 """
 
