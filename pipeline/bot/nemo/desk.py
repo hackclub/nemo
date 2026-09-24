@@ -154,7 +154,8 @@ class Desk:
                     outbox.echoed(conn, outbox_id, None, "user")
                     continue
                 at = channel.echo(
-                    self.client, forwarded_ts, requested_by, body, mode == "signed"
+                    self.client, forwarded_ts, requested_by, body, mode == "signed",
+                    channel.card_room(conn, case_id),
                 )
                 if at is None:
                     outbox.drop_echo(conn, outbox_id)

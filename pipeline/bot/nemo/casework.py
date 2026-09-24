@@ -64,8 +64,8 @@ WHERE case_id = %s ORDER BY noted_at
 
 
 ADD_PARTICIPANT = """
-INSERT INTO fd.case_participants (case_id, user_id, role, detail)
-VALUES (%s, %s, %s, %s)
+INSERT INTO fd.case_participants (case_id, user_id, role)
+VALUES (%s, %s, %s)
 ON CONFLICT DO NOTHING
 RETURNING user_id
 """
@@ -165,15 +165,15 @@ def participants(conn, case_id):
     ]
 
 
-def add_participants(conn, case_id, user_ids, role, detail, by):
+def add_participants(conn, case_id, user_ids, role, by):
     added = []
     for user_id in user_ids:
-        row = conn.execute(ADD_PARTICIPANT, (case_id, user_id, role, detail)).fetchone()
+        row = conn.execute(ADD_PARTICIPANT, (case_id, user_id, role)).fetchone()
         if row is None:
             continue
         audit.record(
             conn, "participant", case_id, "attached", by,
-            after={"user_id": user_id, "role": role, "detail": detail},
+            after={"user_id": user_id, "role": role},
         )
         added.append(user_id)
     return added
@@ -269,10 +269,26 @@ def open_about(conn, user_id):
 def open_case(conn, subject, body, by):
     case_id = conn.execute(OPEN_CASE, (by, audit.SOURCE_APP)).fetchone()[0]
     audit.record(conn, "case", case_id, "opened", by, after={"opened_by": by})
-    add_participants(conn, case_id, [subject], "subject", None, by)
+    add_participants(conn, case_id, [subject], "subject", by)
     if body:
         keep_note(conn, case_id, body, by)
     return case_id
+
+
+OPEN_REPORT = """
+INSERT INTO fd.case_reports (case_id, reporter_user_id, is_anonymous, body, source_app)
+VALUES (%s, %s, false, %s, %s)
+RETURNING id
+"""
+
+
+def open_report(conn, case_id, reporter, body):
+    report_id = conn.execute(
+        OPEN_REPORT, (case_id, reporter, body, audit.SOURCE_APP)
+    ).fetchone()[0]
+    audit.record(conn, "report", report_id, "opened", reporter,
+                 after={"case_id": case_id, "reporter_user_id": reporter})
+    return report_id
 
 
 def member_note(conn, subject, body, by):

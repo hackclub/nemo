@@ -84,6 +84,17 @@ module AdminHelper
     stack + tag.span("+#{people.size - FACES_SHOWN}", class: "chip chip-off")
   end
 
+  def channel_cell(channel_id, named)
+    marks = [tag.span(channel_id)]
+    marks << tag.span("· private") if named&.visibility == "private"
+    marks << tag.span("· archived") if named&.archived
+
+    tag.span(class: "two-line") do
+      tag.b("##{named&.name.presence || channel_id}") +
+        tag.span(safe_join(marks, " "), class: "mono")
+    end
+  end
+
   def acted_bar(count, busiest)
     return tag.span("never", class: "sub2") if count.to_i.zero?
 

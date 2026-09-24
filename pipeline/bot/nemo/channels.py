@@ -13,6 +13,8 @@ OFF = "off"
 MODES = (ON, GUARDED, OFF)
 
 SETTING = "nemo.join_mode"
+FIREHOUSE = "nemo.firehouse_channel"
+REACT_CHANNELS = "nemo.case_react_channels"
 FALL_BACK = GUARDED
 
 PAGE = 1000
@@ -65,6 +67,24 @@ def per_sweep():
         return max(int(os.environ["NEMO_JOIN_PER_SWEEP"]), 0)
     except (KeyError, ValueError):
         return DEFAULT_PER_SWEEP
+
+
+def setting(conn, key):
+    row = conn.execute(HOW, (key,)).fetchone()
+    return (row[0] if row else "").strip()
+
+
+def set_setting(conn, key, said, by=None):
+    conn.execute(SET_HOW, (key, said, by))
+    return said
+
+
+def listed(said):
+    return [one.strip() for one in (said or "").split(",") if one.strip()]
+
+
+def react_channels(conn):
+    return set(listed(setting(conn, REACT_CHANNELS)))
 
 
 def mode(conn):

@@ -41,6 +41,18 @@ RETURNING id
 """
 
 
+BY_THREAD = """
+SELECT case_id FROM fd.case_threads
+WHERE channel_id = %s AND thread_ts = %s
+ORDER BY id LIMIT 1
+"""
+
+
+def case_on(conn, channel_id, thread_ts):
+    row = conn.execute(BY_THREAD, (channel_id, thread_ts)).fetchone()
+    return row[0] if row else None
+
+
 def shared(conn, conversation_id):
     return [
         {

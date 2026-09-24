@@ -14,6 +14,7 @@ OUTBOX = "fd_outbox_waiting"
 CONVERSATION = "fd_conversation_changed"
 GUARD = "fd_thread_guard"
 CHANNEL_GUARD = "fd_channel_guard"
+APP_SETTING = "fd_app_setting"
 
 DEFAULT_SECONDS = 300
 DEFAULT_JOIN_SECONDS = 1800
@@ -101,6 +102,7 @@ def once(desk, channel_id=None):
         unshared = channel.waiting_files(conn)
         guards.refresh(conn)
         channelguards.refresh(conn)
+        channel.firehouse_channel(conn)
         destroying = guards.pending(conn)
         lifting = guards.lifting(conn)
 
@@ -147,6 +149,9 @@ def start(desk, stopping, channel_id=None):
                 target=guardwork.run_destroy, args=(desk.client, told),
                 name=f"nemo-guard-{told}", daemon=True,
             ).start()
+        elif channel_name == APP_SETTING:
+            with session() as conn:
+                channel.firehouse_channel(conn)
         elif channel_name == CHANNEL_GUARD:
             with session() as conn:
                 channelguards.refresh(conn)
@@ -161,7 +166,8 @@ def start(desk, stopping, channel_id=None):
             desk.caught_up(told)
 
     return (
-        loops.watching(NAME, (CASES, CHAT, OUTBOX, CONVERSATION, GUARD, CHANNEL_GUARD),
+        loops.watching(NAME,
+                       (CASES, CHAT, OUTBOX, CONVERSATION, GUARD, CHANNEL_GUARD, APP_SETTING),
                        heard, stopping),
         loops.sweeping(NAME, every(), lambda: once(desk, channel_id), stopping),
         loops.sweeping(f"{NAME}-joins", every_join_sweep(), lambda: join_sweep(desk), stopping),

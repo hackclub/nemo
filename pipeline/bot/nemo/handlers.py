@@ -273,7 +273,7 @@ def register(app, on_reply=None):
             if not allowed:
                 return ack(response_action="errors", errors={cards.people.WHO: refusal})
             added = add_participants(
-                conn, case_id, said["user_ids"], said["role"], said["detail"], user_id
+                conn, case_id, said["user_ids"], said["role"], user_id
             )
             held = participants(conn, case_id)
 

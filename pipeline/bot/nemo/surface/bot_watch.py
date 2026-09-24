@@ -110,7 +110,7 @@ def tell(client, conn, guard_id, subject_id, said):
     held = channelguards.told_lately(conn, guard_id, subject_id)
     try:
         sent = client.chat_postMessage(
-            channel=channel.firehouse_channel(), text=said,
+            channel=channel.firehouse_channel(conn), text=said,
             thread_ts=held, unfurl_links=False,
         )
     except Exception as failure:

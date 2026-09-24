@@ -35,6 +35,13 @@
         <span>Flags</span>
       <% end %>
     </div>
+
+    <div class="cnav-group">
+      <%= link_to admin_settings_path, aria: { current: ("page" if controller_path == "admin/settings") } do %>
+        <svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+        <span>Settings</span>
+      <% end %>
+    </div>
   </div>
 
   <%= render "layouts/sidebar_foot" %>

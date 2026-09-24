@@ -8,6 +8,7 @@ from lib.slack_client import RETRY_HANDLERS
 from bot.nemo.surface import (
     bot_watch,  # noqa: F401
     channel_watch,  # noqa: F401
+    reaction_watch,  # noqa: F401
     thread_destroy,  # noqa: F401
     thread_lock,  # noqa: F401
     thread_watch,  # noqa: F401

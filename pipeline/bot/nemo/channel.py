@@ -3,7 +3,7 @@ import os
 
 from bot.core import parse
 from bot.core.wording import to_member
-from bot.nemo import answer, cards, carry, chat, who
+from bot.nemo import answer, cards, carry, channels, chat, who
 
 log = logging.getLogger("bot.nemo")
 
@@ -11,7 +11,7 @@ log = logging.getLogger("bot.nemo")
 CASE = """
 SELECT c.id, c.category_key, c.resolved_at,
        r.id, r.is_anonymous, r.reporter_user_id, r.body, r.forwarded_ts, r.received_at,
-       v.id, r.card_digest
+       v.id, r.card_digest, r.forwarded_channel_id
 FROM fd.cases c
 JOIN fd.case_reports r ON r.case_id = c.id
 LEFT JOIN fd.intake_conversations v ON v.report_id = r.id
@@ -85,7 +85,7 @@ SELECT forwarded_ts FROM fd.case_reports WHERE id = %s FOR UPDATE
 
 FOLLOW_UP = """
 SELECT m.body, m.mirrored_ts, r.forwarded_ts, m.conversation_id,
-       r.is_anonymous, r.reporter_user_id
+       r.is_anonymous, r.reporter_user_id, r.forwarded_channel_id
 FROM fd.intake_messages m
 JOIN fd.intake_conversations c ON c.id = m.conversation_id
 LEFT JOIN fd.case_reports r ON r.id = c.report_id
@@ -100,8 +100,28 @@ def digest_of(blocks):
     return parse.digest(None, blocks, None)
 
 
-def firehouse_channel():
-    return os.environ["FIREHOUSE_CHANNEL_ID"]
+_firehouse = {}
+
+
+def firehouse_channel(conn=None):
+    if conn is not None:
+        _firehouse["id"] = channels.setting(conn, channels.FIREHOUSE) or None
+    return _firehouse.get("id") or os.environ["FIREHOUSE_CHANNEL_ID"]
+
+
+def card_channel(case, channel_id=None, conn=None):
+    return case.get("forwarded_channel_id") or channel_id or firehouse_channel(conn)
+
+
+CARD_ROOM = """
+SELECT forwarded_channel_id FROM fd.case_reports
+WHERE case_id = %s AND forwarded_ts IS NOT NULL ORDER BY id LIMIT 1
+"""
+
+
+def card_room(conn, case_id, channel_id=None):
+    row = conn.execute(CARD_ROOM, (case_id,)).fetchone()
+    return (row and row[0]) or channel_id or firehouse_channel(conn)
 
 
 def app_url(path):
@@ -140,6 +160,7 @@ def gather(conn, case_id):
         "received_at": row[8],
         "conversation_id": row[9],
         "card_digest": row[10],
+        "forwarded_channel_id": row[11],
         "url": case_url(row[0]),
         "files": [],
         "shares": [],
@@ -192,7 +213,7 @@ def gather(conn, case_id):
     return case
 
 
-def post_report(client, conn, case_id, channel_id=None):
+def post_report(client, conn, case_id, channel_id=None, thread_ts=None):
     case = gather(conn, case_id)
     if case is None:
         log.warning("nemo: case %s has no report to post", case_id)
@@ -207,8 +228,10 @@ def post_report(client, conn, case_id, channel_id=None):
         return held[0]
 
     built = cards.report.blocks(case)
+    room = channel_id or firehouse_channel(conn)
     sent = client.chat_postMessage(
-        channel=channel_id or firehouse_channel(),
+        channel=room,
+        thread_ts=thread_ts,
         text=cards.report.fallback(case),
         blocks=built,
         metadata=cards.report.metadata(case),
@@ -219,9 +242,9 @@ def post_report(client, conn, case_id, channel_id=None):
     ts = sent["ts"]
 
     conn.execute(
-        "UPDATE fd.case_reports SET forwarded_ts = %s, card_digest = %s, "
-        "card_rendered_at = now() WHERE id = %s AND forwarded_ts IS NULL",
-        (ts, digest_of(built), case["report_id"]),
+        "UPDATE fd.case_reports SET forwarded_ts = %s, forwarded_channel_id = %s, "
+        "card_digest = %s, card_rendered_at = now() WHERE id = %s AND forwarded_ts IS NULL",
+        (ts, room, digest_of(built), case["report_id"]),
     )
     if case["message_id"] and not case.get("mirrored_ts"):
         conn.execute(
@@ -231,7 +254,7 @@ def post_report(client, conn, case_id, channel_id=None):
         )
     if case["message_id"]:
         carry.share(
-            client, conn, case["message_id"], channel_id or firehouse_channel(), ts,
+            client, conn, case["message_id"], room, ts,
             wearing=as_reporter(client, case["is_anonymous"], case["reporter_user_id"]),
         )
 
@@ -279,7 +302,7 @@ def post_follow_up(client, conn, message_id, channel_id=None):
     row = conn.execute(FOLLOW_UP, (message_id,)).fetchone()
     if not row:
         return None
-    body, mirrored, forwarded, _, anonymous, reporter = row
+    body, mirrored, forwarded, _, anonymous, reporter, room = row
     if mirrored:
         return mirrored
     if not forwarded:
@@ -287,7 +310,7 @@ def post_follow_up(client, conn, message_id, channel_id=None):
         return None
 
     ts = carry.share(
-        client, conn, message_id, channel_id or firehouse_channel(), forwarded,
+        client, conn, message_id, room or channel_id or firehouse_channel(conn), forwarded,
         wearing=as_reporter(client, anonymous, reporter),
         words=to_member(body),
     )
@@ -318,7 +341,7 @@ def redraw(client, conn, case_id, channel_id=None):
 
     try:
         client.chat_update(
-            channel=channel_id or firehouse_channel(),
+            channel=card_channel(case, channel_id, conn),
             ts=case["forwarded_ts"],
             text=cards.report.fallback(case),
             blocks=built,
@@ -426,7 +449,8 @@ LIMIT 50
 """
 
 FILES_ON_CASE = """
-SELECT DISTINCT mf.message_id, r.forwarded_ts, r.is_anonymous, r.reporter_user_id
+SELECT DISTINCT mf.message_id, r.forwarded_ts, r.is_anonymous, r.reporter_user_id,
+                r.forwarded_channel_id
 FROM fd.intake_message_files mf
 JOIN fd.intake_files f ON f.id = mf.file_id
 JOIN fd.intake_messages m ON m.id = mf.message_id
@@ -443,13 +467,13 @@ def waiting_files(conn):
 
 
 def carry_files(client, conn, case_id, channel_id=None):
-    room = channel_id or firehouse_channel()
     sent = 0
-    for message_id, forwarded_ts, anonymous, reporter in conn.execute(
+    for message_id, forwarded_ts, anonymous, reporter, room in conn.execute(
         FILES_ON_CASE, (case_id,)
     ).fetchall():
         if carry.share(
-            client, conn, message_id, room, forwarded_ts,
+            client, conn, message_id, room or channel_id or firehouse_channel(conn),
+            forwarded_ts,
             wearing=as_reporter(client, anonymous, reporter),
         ):
             sent += 1
@@ -492,7 +516,7 @@ def said_again(client, conn, case_id, was, channel_id=None):
 
     said = was.replace("_", " ") if was else "resolved"
     return client.chat_postMessage(
-        channel=channel_id or firehouse_channel(),
+        channel=card_channel(case, channel_id, conn),
         thread_ts=case["forwarded_ts"],
         text=f":arrows_counterclockwise: they wrote back, so case {case_id} is open again "
         f"(it was closed as {said})",
@@ -532,6 +556,7 @@ def echo(client, thread_ts, sent_by, body, signed, channel_id=None):
 
 
 def mirror(client, conn, case_id, channel_id=None):
+    room = card_room(conn, case_id, channel_id)
     carried = 0
 
     for chat_id, author, body, thread_ts in chat.waiting(conn, case_id):
@@ -546,7 +571,7 @@ def mirror(client, conn, case_id, channel_id=None):
 
         try:
             sent = client.chat_postMessage(
-                channel=channel_id or firehouse_channel(),
+                channel=room,
                 thread_ts=thread_ts,
                 text=cards.report.escape_but_mentions(body),
                 unfurl_links=False,

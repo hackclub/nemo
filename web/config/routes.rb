@@ -78,6 +78,11 @@ Rails.application.routes.draw do
     resources :grants, only: [:create, :destroy]
     resource :roles, only: [:show], controller: "roles"
     resource :flags, only: [:show], controller: "flags"
+    resource :settings, only: [:show], controller: "settings"
+    post "settings/firehouse", to: "settings#firehouse", as: :settings_firehouse
+    post "settings/react_channels", to: "settings#add_react", as: :settings_react_channels
+    delete "settings/react_channels/:channel_id", to: "settings#drop_react",
+           as: :settings_react_channel
     resources :channels, only: [:index, :update], param: :channel_id do
       collection { get "search", as: :search }
     end

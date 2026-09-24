@@ -54,6 +54,7 @@ oauth_config:
       - groups:read
       - groups:history
       - groups:write
+      - reactions:read
       - reactions:write
       - users:read
 
@@ -71,6 +72,7 @@ settings:
       - member_left_channel
       - message.channels
       - message.groups
+      - reaction_added
   interactivity:
     is_enabled: true
   socket_mode_enabled: true
