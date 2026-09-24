@@ -61,6 +61,8 @@ settings:
   event_subscriptions:
     bot_events:
       - channel_created
+      - channel_left
+      - group_left
       - member_joined_channel
       - member_left_channel
       - message.channels

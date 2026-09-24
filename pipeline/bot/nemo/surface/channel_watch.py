@@ -47,6 +47,30 @@ def joined(ctx):
     return channel_id
 
 
+def went_out(client, channel_id, by=None):
+    with session() as conn:
+        how = channels.mode(conn)
+        wanted = channels.wanted(client, conn, how)
+        channels.sat(conn, channel_id, False)
+        if channel_id not in wanted:
+            channels.noted(conn, channel_id, "left", None, by)
+            log.info("nemo: left %s, which %s mode does not want back", channel_id, how)
+            return None
+
+    if look(client, channel_id).get("archived"):
+        with session() as conn:
+            channels.noted(conn, channel_id, "left", "archived", by)
+        log.info("nemo: %s is archived, staying out", channel_id)
+        return None
+
+    with session() as conn:
+        came_back = channels.join(client, conn, channel_id, by=by, verb="rejoined")
+
+    log.info("nemo: put out of %s, %s", channel_id,
+             "went back in" if came_back else "could not get back in")
+    return came_back
+
+
 @on_event("member_left_channel", open_to_all=True)
 def left(ctx):
     event = ctx.payload or {}
@@ -58,21 +82,19 @@ def left(ctx):
     if who != whoami.bot_user_id(ctx.client, "nemo"):
         return None
 
-    with session() as conn:
-        how = channels.mode(conn)
-        wanted = channels.wanted(ctx.client, conn, how)
-        channels.sat(conn, channel_id, False)
-        if channel_id not in wanted:
-            channels.noted(conn, channel_id, "left")
-            log.info("nemo: left %s, which %s mode does not want back", channel_id, how)
-            return None
+    return went_out(ctx.client, channel_id)
 
-    with session() as conn:
-        came_back = channels.join(ctx.client, conn, channel_id, verb="rejoined")
 
-    log.info("nemo: put out of %s, %s", channel_id,
-             "went back in" if came_back else "could not get back in")
-    return came_back
+@on_event("channel_left", open_to_all=True)
+@on_event("group_left", open_to_all=True)
+def put_out(ctx):
+    event = ctx.payload or {}
+    where = event.get("channel")
+    channel_id = where.get("id") if isinstance(where, dict) else where
+    if not channel_id:
+        return None
+
+    return went_out(ctx.client, channel_id, by=event.get("actor_id"))
 
 
 @on_event("channel_created", open_to_all=True)
