@@ -12,6 +12,9 @@ from lib.task import per_entity
 SOURCE = "channel_roster"
 NAME_SOURCE = "channel_info_names"
 NAME_COMMIT_EVERY = 100
+LISTED_TYPES = "public_channel,private_channel"
+PUBLIC = "public"
+PRIVATE = "private"
 TEAM_ERRORS = ("team_not_found", "team_access_not_granted", "invalid_team_id")
 UNREACHABLE_ERRORS = (
     "channel_not_found",
@@ -20,11 +23,12 @@ UNREACHABLE_ERRORS = (
 )
 
 CHANNEL_NAME_SQL = """
-INSERT INTO raw.channel_dim (channel_id, name, archived, updated_at)
-VALUES (%s, %s, %s, now())
+INSERT INTO raw.channel_dim (channel_id, name, archived, visibility, updated_at)
+VALUES (%s, %s, %s, %s, now())
 ON CONFLICT (channel_id) DO UPDATE SET
     name = EXCLUDED.name,
     archived = EXCLUDED.archived,
+    visibility = COALESCE(EXCLUDED.visibility, raw.channel_dim.visibility),
     name_unavailable = false,
     updated_at = now()
 """
@@ -41,10 +45,16 @@ def resolve_team_id():
     return configured
 
 
-def list_public_channels(client, team_id, cursor):
+def visibility_of(channel):
+    if "is_private" not in channel:
+        return None
+    return PRIVATE if channel["is_private"] else PUBLIC
+
+
+def list_channels(client, team_id, cursor):
     try:
         return client.conversations_list(
-            types="public_channel", exclude_archived=False, limit=200,
+            types=LISTED_TYPES, exclude_archived=False, limit=200,
             team_id=team_id, cursor=cursor,
         )
     except SlackApiError as exc:
@@ -61,20 +71,26 @@ def record_channel_names(conn, client):
     with ingest_run(conn, SOURCE) as counts:
         cursor = get_cursor(conn, SOURCE)
         archived = 0
+        private = 0
         while True:
-            page = list_public_channels(client, team_id, cursor)
+            page = list_channels(client, team_id, cursor)
             for channel in page.get("channels", []):
                 counts.rows_in += 1
                 is_archived = bool(channel.get("is_archived", False))
                 archived += is_archived
+                seen = visibility_of(channel)
+                private += seen == PRIVATE
                 with conn.cursor() as cur:
-                    cur.execute(CHANNEL_NAME_SQL, (channel["id"], channel.get("name"), is_archived))
+                    cur.execute(
+                        CHANNEL_NAME_SQL,
+                        (channel["id"], channel.get("name"), is_archived, seen),
+                    )
             cursor = page.get("response_metadata", {}).get("next_cursor") or ""
             save_cursor(conn, SOURCE, cursor)
             conn.commit()
             if not cursor:
                 break
-    print(f"{SOURCE}: {counts.rows_in} channels named, {archived} archived, "
+    print(f"{SOURCE}: {counts.rows_in} channels named, {private} private, {archived} archived, "
           f"{counts.rows_rejected} failed")
 
 
@@ -101,7 +117,8 @@ def name_unknown(conn, client):
                 with conn.cursor() as cur:
                     cur.execute(
                         CHANNEL_NAME_SQL,
-                        (channel_id, channel.get("name"), channel.get("is_archived", False)),
+                        (channel_id, channel.get("name"), channel.get("is_archived", False),
+                         visibility_of(channel)),
                     )
             if counts.rows_in % NAME_COMMIT_EVERY == 0:
                 conn.commit()
