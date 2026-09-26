@@ -61,7 +61,7 @@ module YouHelper
 
   def calendar_note(calendar)
     said = ["#{number_with_delimiter(calendar.active_days)} active days"]
-    said << "busiest #{number_with_delimiter(calendar.peak)} on " \
+    said << "busiest is #{number_with_delimiter(calendar.peak)} on " \
             "#{calendar.cells.max_by(&:messages).on.strftime('%-d %b')}" if calendar.peak.positive?
     said.join(" · ")
   end

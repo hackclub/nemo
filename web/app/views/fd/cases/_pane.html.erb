@@ -27,7 +27,7 @@
 
   <div class="pane-list" data-pane-filter-target="list">
     <% if cases.any? %>
-      <div role="listbox" aria-label="Cases">
+      <div aria-label="Cases">
         <% cases.each do |kase| %>
           <%= link_to fd_case_path(kase, query.to_params), class: "qrow", role: "option",
                 aria: { selected: (open_id == kase.id).to_s },

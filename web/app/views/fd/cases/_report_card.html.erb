@@ -72,10 +72,6 @@
         <% if kase.subject_user_ids.any? %>
           <%= row_subject_avatar(kase) %>
           <span class="rep-who"><%= row_subject_label(kase) %></span>
-          <% priors = case_priors(kase, priors_by_user) %>
-          <% if priors.positive? %>
-            <span class="rep-warn"><%= pluralize(priors, "prior") %></span>
-          <% end %>
         <% elsif kase.resolved? %>
           <span class="rep-quiet">nobody</span>
         <% else %>

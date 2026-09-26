@@ -1,4 +1,4 @@
-<nav id="section-nav" class="pane cpane" aria-label="Community contents">
+<nav id="section-nav" class="cpane" aria-label="Community contents">
   <%= render "layouts/sidebar_head", letter: "C", title: "Community", said: "Hack Club Slack" %>
 
   <div class="cnav">
@@ -44,14 +44,13 @@
       <% end %>
     </div>
 
-    <% if may_community?("ops.engine") %>
-      <p class="cnav-lab">Data</p>
-      <div class="cnav-group">
-        <%= link_to engine_path, title: "Nightly sync" do %>
-          <%= nav_icon("engine") %><span class="trunc">Nightly sync</span>
-        <% end %>
-      </div>
-    <% end %>
+    <p class="cnav-lab">Mnemosyne</p>
+    <div class="cnav-group">
+      <%= link_to account_path, title: "Your account",
+            aria: { current: ("page" if current_page?(account_path)) } do %>
+        <%= nav_icon("gear") %><span class="trunc">Your account</span>
+      <% end %>
+    </div>
   </div>
 
   <%= render "layouts/sidebar_foot" %>

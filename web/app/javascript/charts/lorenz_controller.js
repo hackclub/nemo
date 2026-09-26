@@ -21,32 +21,40 @@ export default class extends Controller {
     const chart = this.element.querySelector(".chart")
     this.watcher = new ResizeObserver(() => this.measure())
     this.watcher.observe(chart)
+    this.resized = () => this.measure()
+    window.addEventListener("resize", this.resized)
     this.wide = 0
     this.measure()
   }
 
   disconnect() {
     this.watcher?.disconnect()
+    window.removeEventListener("resize", this.resized)
   }
 
   get high() {
+    const chart = this.element.querySelector(".chart")
+    const room = chart ? Math.round(chart.clientHeight) : 0
+    if (room > 160) return room
+
     return this.hasHeightValue && this.heightValue > 0 ? this.heightValue : 226
   }
 
   measure() {
     const chart = this.element.querySelector(".chart")
     const wide = chart ? chart.clientWidth : 0
-    if (!wide || wide === this.wide) return
+    const high = this.high
+    if (!wide || (wide === this.wide && high === this.tall)) return
 
     this.wide = wide
-    this.draw(chart, wide)
+    this.tall = high
+    this.draw(chart, wide, high)
   }
 
-  draw(chart, wide) {
+  draw(chart, wide, high) {
     const pts = this.pointsValue
     if (!pts.length) return
 
-    const high = this.high
     const x = scaleLinear().domain([0, 100]).range([PAD.l, wide - PAD.r])
     const y = scaleLinear().domain([0, 100]).range([high - PAD.b, PAD.t])
 

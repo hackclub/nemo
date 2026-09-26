@@ -12,8 +12,7 @@
   <% end %>
 <% end %>
 <% content_for :head_actions do %>
-  <%= link_to case_action_button("external", "Slack"), slack_member_url(@user_id),
-        class: "btn btn-ghost", target: "_blank", rel: "noopener" %>
+  <%= open_in_slack slack_member_url(@user_id), css: "btn btn-ghost" %>
   <% if may_note %>
     <button type="button" class="btn" data-modal-open="member-note" aria-haspopup="dialog">
       <%= case_action_button("note", "Write a note") %>
@@ -48,11 +47,15 @@
     </div>
     <div class="fact">
       <dt>Cases</dt>
-      <dd class="<%= "is-none" if @standing.cases_named.zero? %>"><%= @standing.cases_named.zero? ? "none" : @standing.cases_named %></dd>
+      <dd class="<%= "is-none" if @standing.cases_named.zero? %>">
+        <%= @standing.cases_named.zero? ? "none" : @standing.cases_named %>
+      </dd>
     </div>
     <div class="fact">
       <dt>Actions</dt>
-      <dd class="<%= "is-none" if @standing.actions.zero? %>"><%= @standing.actions.zero? ? "none" : @standing.actions %></dd>
+      <dd class="<%= "is-none" if @standing.actions.zero? %>">
+        <%= @standing.actions.zero? ? "none" : @standing.actions %>
+      </dd>
     </div>
   </dl>
 
@@ -73,14 +76,16 @@
 
     <% if @record.subject_cases.any? %>
       <section class="member-section">
-        <h2 class="member-section-title">Cases</h2>
+        <div class="member-section-head">
+          <h2 class="member-section-title">Cases</h2>
+        </div>
         <div class="list member-case-list">
           <% @record.subject_cases.reverse_each do |kase| %>
             <div class="lrow">
               <span class="evdot <%= kase.resolved? ? "good" : "crit" %>"><%= case_action_icon("shield") %></span>
               <span class="grow">
                 <b>#<%= kase.id %> <%= kase.category_key ? category_label(kase.category_key) : "No violation set" %></b>
-                <span class="sub"><%= case_first_report(kase)&.body.presence || (kase.resolved? ? "resolved" : "open case") %></span>
+                <span class="sub short"><%= plain_words(case_first_report(kase)&.body.presence) .presence || (kase.resolved? ? "resolved" : "open case") %></span>
               </span>
               <span class="lrow-right"><%= link_to "Open", fd_case_path(kase), class: "btn" %></span>
             </div>

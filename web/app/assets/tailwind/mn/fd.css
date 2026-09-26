@@ -1,0 +1,23 @@
+@layer base {
+  .member-facts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(max-content, 1fr)) repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    margin: 0;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    background: var(--line-soft);
+  }
+  .member-facts > .fact {
+    padding: 9px var(--s-sm) 11px;
+    border-left: 0;
+    background: var(--card);
+  }
+  @media (max-width: 1099px) {
+    .member-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (max-width: 639px) {
+    .member-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+}

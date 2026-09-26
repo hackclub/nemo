@@ -1,16 +1,12 @@
 <% content_for :page_title, "Flags" %>
 
 <div class="stack">
-  <div class="panel">
-    <div class="panel-head">
-      <span>Sections</span>
-      <span class="sub">
-        <%= @dark.empty? ? "all showing" : "#{@dark.size} of #{@flags.size} dark" %>
-      </span>
+  <div class="card card-flush">
+    <div class="card-head">
+      <h2 class="card-title">Sections</h2>
     </div>
-    <div class="list">
+    <div class="list grant-list">
       <% @flags.each do |key| %>
-        <% row = @flipped[key.to_s] %>
         <div class="lrow">
           <span class="grow">
             <b><%= Fd::Flag.label(key) %></b>
@@ -25,18 +21,11 @@
             </span>
           </span>
           <span class="lrow-right">
-            <span class="sub"><%= pluralize(@losers[key], "person") %> lose it</span>
-            <span class="sub">
-              <% if row&.changed_at %>
-                <%= @names[row.changed_by] %>, <%= row.changed_at.strftime("%-d %b") %>
-              <% else %>
-                never flipped
-              <% end %>
-            </span>
             <%= flag_switch(key) %>
           </span>
         </div>
       <% end %>
     </div>
   </div>
+
 </div>

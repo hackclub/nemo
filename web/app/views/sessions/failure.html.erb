@@ -1,9 +1,13 @@
-<h1>Sign-in did not finish</h1>
+<h1 class="auth-lede">Sign-in did not finish</h1>
 
 <% if @message == "no_slack_id" %>
   <p>Hack Club Auth signed you in, but that account has no Slack ID linked. Link your Hack Club Slack account at auth.hackclub.com, then sign in again.</p>
-<% else %>
+<% elsif @message == "access_denied" %>
+  <p>You stopped before Hack Club Auth finished. Sign in again when you are ready.</p>
+<% elsif @message.present? %>
   <p>Try again. If it keeps failing, quote this code when you ask for help: <span class="mono"><%= @message %></span></p>
+<% else %>
+  <p>Something interrupted the sign-in before Hack Club Auth could answer. Try again.</p>
 <% end %>
 
 <% if current_account %>

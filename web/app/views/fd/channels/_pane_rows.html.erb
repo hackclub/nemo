@@ -15,16 +15,7 @@
     </span>
 
     <span class="qmeta">
-      <span class="qviol trunc">
-        <% if row.quiet? %>
-          nothing said yet
-        <% else %>
-          <%= number_with_delimiter(row.messages) %> messages
-        <% end %>
-      </span>
-      <% if row.last_active_at %>
-        <span class="qpriors">active <%= ago_label(row.last_active_at) %></span>
-      <% end %>
+      <span class="qviol trunc mono"><%= row.channel_id %></span>
     </span>
   <% end %>
 <% end %>

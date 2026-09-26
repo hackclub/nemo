@@ -1,0 +1,23 @@
+<nav class="rail" aria-label="Areas">
+  <%= link_to root_path, class: "rail-brand", aria: { label: "Mnemosyne home" } do %>
+    <%= image_tag "nemo.png", class: "brand-mark", alt: "", width: 800, height: 483 %>
+  <% end %>
+
+  <div class="rail-set">
+    <% rail_stops(fire_engine: fire_engine).each do |stop| %>
+      <%= link_to stop.path, class: "rail-btn", title: stop.label,
+            aria: { current: ("page" if stop.here), label: stop.label } do %>
+        <%= rail_icon(stop.icon) %>
+        <span class="rail-tip"><%= stop.label %></span>
+        <% if stop.tally.to_i.positive? %>
+          <i class="rail-dot"><%= stop.tally > 99 ? "99+" : stop.tally %></i>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="rail-foot">
+    <span class="rail-sep" aria-hidden="true"></span>
+    <%= render "layouts/you", staff: current_account %>
+  </div>
+</nav>

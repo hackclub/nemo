@@ -23,28 +23,14 @@
 
           <div class="field-label">
             <span>Category</span>
-            <details class="picker" data-controller="picker menu" data-action="change->picker#choose">
-              <summary class="select">
-                <span data-picker-target="label" data-blank="Not sure yet"><%=
-                  params[:category_key].present? ? category_label(params[:category_key]) : "Not sure yet"
-                %></span>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
-              </summary>
-              <div class="menu-pop picker-pop">
-                <label class="picker-opt">
-                  <%= radio_button_tag :category_key, "", params[:category_key].blank?,
-                        id: nil, data: { label: "Not sure yet" } %>
-                  Not sure yet
-                </label>
-                <% Fd::Case::CATEGORIES.each do |key| %>
-                  <label class="picker-opt">
-                    <%= radio_button_tag :category_key, key, params[:category_key] == key,
-                          id: nil, data: { label: category_label(key) } %>
-                    <%= category_label(key) %>
-                  </label>
-                <% end %>
-              </div>
-            </details>
+            <%= render "shared/choice", name: :category_key, blank: "Not sure yet",
+                  chosen: (params[:category_key].present? ?
+                    category_label(params[:category_key]) : "Not sure yet"),
+                  options: [{ value: "", label: "Not sure yet",
+                              current: params[:category_key].blank? }] +
+                    Fd::Case::CATEGORIES.map { |key| {
+                      value: key, label: category_label(key),
+                      current: params[:category_key] == key } } %>
           </div>
 
           <label class="field-label">

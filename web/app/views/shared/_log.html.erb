@@ -1,0 +1,28 @@
+<% actors = local_assigns.fetch(:actors, false) %>
+<% names = local_assigns[:names] %>
+<div class="deedlog">
+  <% deeds.group_by { |deed| deed.at.to_date }.each do |on, of_day| %>
+    <p class="deedlog-day"><%= on.strftime("%-d %B %Y") %></p>
+    <% of_day.each do |deed| %>
+      <div class="deedlog-row<%= " deedlog-row-wide" unless actors %>">
+        <time class="deedlog-at" datetime="<%= deed.at.iso8601 %>"><%= deed.at.strftime("%H:%M") %></time>
+        <% if actors %>
+          <span class="deedlog-who">
+            <% if deed.actor %>
+              <%= face(deed.actor) %>
+              <b><%= names ? names[deed.actor] : deed.actor %></b>
+            <% else %>
+              <b class="deedlog-none">the system</b>
+            <% end %>
+          </span>
+        <% end %>
+        <span class="deedlog-what">
+          <b><%= deed_head(deed) %></b>
+          <% if (said = deed_said(deed)).present? %>
+            <span class="deedlog-said"><%= said %></span>
+          <% end %>
+        </span>
+      </div>
+    <% end %>
+  <% end %>
+</div>

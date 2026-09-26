@@ -1,58 +1,65 @@
-<div class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Schedule</h2>
-    </div>
+<div class="section">
+  <div class="section-head">
+    <h2 class="section-title">Global dials</h2>
   </div>
-  <div class="card-body flush">
-    <% Engine::Setting::ENGINE_DIALS.each do |name, dial| %>
-      <div class="tgrid tgrid-schedule">
-        <div class="tn"><%= dial[:label] %></div>
-        <div class="tcell">
-          <%= render "val", source: Engine::Setting::ENGINE, name: name,
-                may_tune: may_tune, show_was: true %>
-        </div>
-        <div class="sub r">
-          <% row = Engine::Setting.find_by(source: Engine::Setting::ENGINE, name: name) %>
-          <%= row ? "#{row.changed_by}, #{time_ago_in_words(row.changed_at)} ago" : "from the file" %>
-        </div>
+
+  <div class="grid g-sided">
+    <div class="card card-flush">
+      <div class="card-head">
+        <div><h2 class="card-title">Schedule</h2></div>
       </div>
-    <% end %>
+      <div class="card-body flush">
+        <% Engine::Setting::ENGINE_DIALS.each do |name, dial| %>
+          <div class="tgrid tgrid-schedule">
+            <div class="tn"><%= dial[:label] %></div>
+            <div class="tcell">
+              <%= render "val", source: Engine::Setting::ENGINE, name: name,
+                    may_tune: may_tune, show_was: true %>
+            </div>
+            <div class="sub r">
+              <% row = Engine::Setting.find_by(source: Engine::Setting::ENGINE, name: name) %>
+              <%= row ? "#{row.changed_by}, #{time_ago_in_words(row.changed_at)} ago" : "from the file" %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <%= render "limits", sources: sources, may_tune: may_tune %>
   </div>
 </div>
 
-<%= render "limits", sources: sources, may_tune: may_tune %>
-
-<div class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Per source</h2>
-    </div>
+<div class="section">
+  <div class="section-head">
+    <h2 class="section-title">Per source</h2>
   </div>
-  <div class="card-body flush">
-    <div class="tgrid thead">
-      <div>Source</div>
-      <div class="tcell">Cadence</div>
-      <div class="tcell">Retention</div>
-      <div class="tcell">Enabled</div>
-    </div>
-    <% sources.each do |row| %>
-      <% source = row.source %>
-      <div class="tgrid">
-        <div class="tn"><b><%= source.key %></b><span><%= source.label %></span></div>
-        <div class="tcell">
-          <%= render "val", source: source.key, name: Engine::Setting::CADENCE,
-                may_tune: may_tune, show_was: true %>
-        </div>
-        <div class="tcell">
-          <%= render "val", source: source.key, name: Engine::Setting::RETENTION,
-                may_tune: may_tune, show_was: true %>
-        </div>
-        <div class="tcell">
-          <%= render "val", source: source.key, name: Engine::Setting::ENABLED,
-                may_tune: may_tune, show_was: true %>
-        </div>
+
+  <div class="card card-flush">
+    <div class="card-body flush">
+      <div class="tgrid thead">
+        <div>Source</div>
+        <div class="tcell">Cadence</div>
+        <div class="tcell">Retention</div>
+        <div class="tcell">Enabled</div>
       </div>
-    <% end %>
+      <% sources.each do |row| %>
+        <% source = row.source %>
+        <div class="tgrid">
+          <div class="tn"><b><%= source.key %></b><span><%= source.label %></span></div>
+          <div class="tcell">
+            <%= render "val", source: source.key, name: Engine::Setting::CADENCE,
+                  may_tune: may_tune, show_was: true %>
+          </div>
+          <div class="tcell">
+            <%= render "val", source: source.key, name: Engine::Setting::RETENTION,
+                  may_tune: may_tune, show_was: true %>
+          </div>
+          <div class="tcell">
+            <%= render "val", source: source.key, name: Engine::Setting::ENABLED,
+                  may_tune: may_tune, show_was: true %>
+          </div>
+        </div>
+      <% end %>
+    </div>
   </div>
 </div>

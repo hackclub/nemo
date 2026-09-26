@@ -1,8 +1,3 @@
-<div class="panel-head">
-  <span class="lbl grow"><%= actions_head_line(actions) %></span>
-  <%= opens_modal "case.act", "Log an action", opens: "log-action", on: kase %>
-</div>
-
 <div class="list">
   <% actions.each do |action| %>
     <div class="lrow <%= "is-reversed" if action.reversed? %>">
@@ -10,7 +5,10 @@
         <%= case_action_button("gauge", nil) %>
       </span>
       <span class="grow">
-        <b><%= action_label(action.type_key) %></b>
+        <span class="lrow-head">
+          <b><%= action_label(action.type_key) %></b>
+          <%= action_state_chip(action) %>
+        </span>
         <span class="sub"><%= action_reason(action) %></span>
         <span class="sub"><%= action_sentence(action) %></span>
 
@@ -32,10 +30,9 @@
         <% end %>
       </span>
       <span class="lrow-right">
-        <%= action_state_chip(action) %>
         <% unless action.reversed? %>
           <%= opens_modal "case.reverse", "Reverse it", opens: "reverse-#{action.id}",
-                on: kase, css: "btn btn-danger" %>
+                on: kase, css: "btn btn-sm btn-danger" %>
         <% end %>
       </span>
     </div>

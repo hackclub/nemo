@@ -1,0 +1,101 @@
+@layer base {
+  @keyframes chart-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes bar-in {
+    from { transform: scaleY(0.04); }
+    to { transform: scaleY(1); }
+  }
+  @keyframes sweep {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(400%); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .chart > svg, .hbars > svg, .tree > svg, .lorenz > svg {
+    animation: chart-in var(--dur-3) var(--ease-out) both;
+  }
+  .chart .bar, .chart .bar-good, .chart .bar-warn, .chart .bar-crit, .hbars .bar {
+    transform-box: fill-box;
+    transform-origin: bottom;
+    animation: bar-in 420ms var(--ease-out) both;
+  }
+  .hbars .bar { transform-origin: left; }
+  .tree .cell rect, .parts .cell rect { animation: fade-in var(--dur-3) var(--ease) both; }
+
+  .btn:active:not(.is-off):not([aria-disabled="true"]),
+  .iconbtn:active,
+  .rail-btn:active,
+  .metric:active { scale: 0.985; }
+  .btn, .iconbtn, .rail-btn, .metric { transition-property: background-color, border-color, color, opacity, scale, box-shadow; }
+
+  .work { transition: grid-template-columns var(--dur-3) var(--ease); }
+  html.sidebar-dragging .work { transition: none; }
+
+  .cnav a > .trunc, .cnav-toggle > span, .cnav-find span {
+    transition: opacity var(--dur-2) var(--ease);
+  }
+
+  .turbo-progress-bar {
+    height: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 10px color-mix(in oklab, var(--accent) 60%, transparent);
+  }
+
+  turbo-frame[aria-busy="true"], [aria-busy="true"] > .scrollarea {
+    position: relative;
+  }
+  turbo-frame[aria-busy="true"]::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    overflow: hidden;
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    z-index: 3;
+  }
+  turbo-frame[aria-busy="true"]::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 25%;
+    height: 2px;
+    background: var(--accent);
+    animation: sweep 1.1s var(--ease) infinite;
+    z-index: 4;
+  }
+
+  .qrow, .rep-card, .member-qrow, .merge-qrow, .palette-row, .pick-opt, .picker-opt {
+    transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  }
+
+  .data-table tbody tr td { transition: background-color var(--dur) var(--ease); }
+
+  .card, .panel, .metrics, .lede {
+    transition: border-color var(--dur-2) var(--ease);
+  }
+
+  ::view-transition-new(root) {
+    animation: vt-rise var(--dur-3) var(--ease-out) both;
+  }
+  @keyframes vt-rise {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chart > svg, .hbars > svg, .tree > svg, .lorenz > svg,
+    .chart .bar, .hbars .bar, .tree .cell rect, .parts .cell rect,
+    turbo-frame[aria-busy="true"]::after {
+      animation: none;
+    }
+    .work { transition: none; }
+  }
+}

@@ -1,11 +1,8 @@
-<% title = local_assigns.fetch(:title, "When people post") %>
+<% title = local_assigns.fetch(:title, "Clock") %>
 <% if clock.any? %>
   <div class="card">
     <div class="card-head">
-      <div>
-        <h2 class="card-title"><%= title %></h2>
-        <p class="card-sub"><%= clock_note(clock) %></p>
-      </div>
+      <h2 class="card-title"><%= title %></h2>
       <div class="card-tools">
         <span class="ramp" aria-hidden="true">
           <span class="ramp-lo">quiet</span>
@@ -46,5 +43,6 @@
         </table>
       </div>
     </div>
+    <p class="chart-note"><%= clock_note(clock) %></p>
   </div>
 <% end %>

@@ -1,11 +1,4 @@
 <div class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Cohort lifecycle</h2>
-      <p class="card-sub">every stage as a share of the accounts created that month</p>
-    </div>
-  </div>
-
   <% if lifecycle.any? %>
     <% tops = Journey::Lifecycle::STAGES.to_h { |s| [s[:key], lifecycle.filter_map { |r| r.public_send(s[:key])&.to_f }.max] } %>
     <div class="scroll">
@@ -37,7 +30,7 @@
         high, per column
       </span>
       <span><i class="lg-swatch-open"></i>window still open</span>
-      <span><i class="lg-swatch-none"></i>no publishable rate, reason on hover</span>
+      <span><i class="lg-swatch-none"></i>no publishable rate</span>
     </div>
   <% else %>
     <p class="card-note">n/a</p>

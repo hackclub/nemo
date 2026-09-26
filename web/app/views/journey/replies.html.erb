@@ -1,70 +1,98 @@
 <% content_for :page_title, "Getting replies" %>
 
-<div id="response" class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Response rate</h2>
+<% bands = [
+     { label: "answered by a member", color: "var(--series-2)",
+       count: ->(r) { r.answered_by_member.to_i } },
+     { label: "bot answered only", color: "var(--series-3)",
+       count: ->(r) { r.answered_by_bot.to_i } },
+     { label: "no reply", color: "var(--series-0)",
+       count: ->(r) { r.unanswered.to_i } }
+   ] %>
+<% unsettled = @response_rate.each_with_index.filter_map { |r, i|
+     i if r.first_posts_checked < HomeHelper::MIN_SAMPLE ||
+          r.post_month >= Date.current.beginning_of_month } %>
+<% settled_rows = @response_rate.each_with_index.reject { |_, i| unsettled.include?(i) }.map(&:first) %>
+<% latest = settled_rows.last %>
+
+<% if latest %>
+  <div class="metrics">
+    <div class="metric">
+      <span class="metric-k">Answered</span>
+      <span class="metric-v">
+        <%= number_to_percentage(
+              share_pct(latest.answered_by_member.to_i + latest.answered_by_bot.to_i,
+                latest.first_posts_checked) || 0, precision: 1) %>
+      </span>
+      <span class="metric-say"><span><%= latest.post_month.strftime("%b %Y") %>, last settled month</span></span>
+    </div>
+    <div class="metric">
+      <span class="metric-k">Answered by a member</span>
+      <span class="metric-v">
+        <%= number_to_percentage(
+              share_pct(latest.answered_by_member, latest.first_posts_checked) || 0, precision: 1) %>
+      </span>
+      <span class="metric-say"><span>vs. bot-only or no reply</span></span>
+    </div>
+    <div class="metric">
+      <span class="metric-k">Median wait</span>
+      <span class="metric-v"><%= reply_wait(latest.median_member_latency_seconds) %></span>
+      <span class="metric-say"><span>for a member's first reply</span></span>
     </div>
   </div>
-  <% if @response_rate.any? %>
-    <% bands = [
-         { label: "answered by a member", color: "var(--series-2)",
-           count: ->(r) { r.answered_by_member.to_i } },
-         { label: "bot answered only", color: "var(--series-3)",
-           count: ->(r) { r.answered_by_bot.to_i } },
-         { label: "no reply", color: "var(--series-0)",
-           count: ->(r) { r.unanswered.to_i } }
-       ] %>
-    <% unsettled = @response_rate.each_with_index.filter_map { |r, i|
-         i if r.first_posts_checked < HomeHelper::MIN_SAMPLE ||
-              r.post_month >= Date.current.beginning_of_month } %>
-    <div style="padding: 0 var(--s-sm) var(--s-2xs)">
-      <div
-        data-controller="chart"
-        data-chart-kind-value="bars"
-        data-chart-stacked-value="true"
-        data-chart-pct-value="true"
-        data-chart-height-value="250"
-        <% if unsettled.any? %>data-chart-partial-value="<%= unsettled.to_json %>"
-        data-chart-partial-note-value="still filling in, the rate can still move"<% end %>
-        data-chart-notes-value="<%= @response_rate.map { |r|
-          r.median_member_latency_seconds ? "median member wait #{reply_wait(r.median_member_latency_seconds)}" : nil
-        }.to_json %>"
-        data-chart-data-value="<%= {
-          labels: @response_rate.map { |r| r.post_month.strftime("%b %Y") },
-          datasets: bands.map do |band|
-            {
-              label: band[:label],
-              color: band[:color],
-              data: @response_rate.map { |r| share_pct(band[:count].call(r), r.first_posts_checked) },
-              counts: @response_rate.map { |r| band[:count].call(r) }
-            }
-          end
-        }.to_json %>"
-      ></div>
-    </div>
-  <% else %>
-    <p class="card-note">
-      No first post has been checked yet. First posts come from the message archive, and a reply counts when
-      a member answers in the thread or names the newcomer in the channel within the hour.
-    </p>
-  <% end %>
-</div>
+<% end %>
+
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Response rate</h2>
+  </div>
+
+  <div class="card card-flush">
+    <% if @response_rate.any? %>
+      <div style="padding: 0 var(--s-sm) var(--s-2xs)">
+        <div
+          data-controller="chart"
+          data-chart-kind-value="bars"
+          data-chart-stacked-value="true"
+          data-chart-pct-value="true"
+          data-chart-height-value="250"
+          <% if unsettled.any? %>data-chart-partial-value="<%= unsettled.to_json %>"
+          data-chart-partial-note-value="still filling in, the rate can still move"<% end %>
+          data-chart-notes-value="<%= @response_rate.map { |r|
+            r.median_member_latency_seconds ? "median member wait #{reply_wait(r.median_member_latency_seconds)}" : nil
+          }.to_json %>"
+          data-chart-data-value="<%= {
+            labels: @response_rate.map { |r| r.post_month.strftime("%b %Y") },
+            datasets: bands.map do |band|
+              {
+                label: band[:label],
+                color: band[:color],
+                data: @response_rate.map { |r| share_pct(band[:count].call(r), r.first_posts_checked) },
+                counts: @response_rate.map { |r| band[:count].call(r) }
+              }
+            end
+          }.to_json %>"
+        ></div>
+      </div>
+    <% else %>
+    <% end %>
+  </div>
+</section>
 
 <% window = @fast_reply_classes.first %>
-<div class="card">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">First reply speed and day-30 retention</h2>
-      <% if window && (note = window_note(window.window_start, window.window_end)) %>
-        <p class="card-sub"
-           title="observational: nothing assigned these groups, so a gap between them is not evidence that reply speed causes retention">
-          <%= note %>
-        </p>
-      <% end %>
-    </div>
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">First reply speed and day-30 retention</h2>
+    <p class="section-note"
+       title="observational: nothing assigned these groups, so a gap between them is not evidence that reply speed causes retention">
+      <%= (window && window_note(window.window_start, window.window_end)) ||
+            "how fast a member first replied, against whether the newcomer was still posting 30 days later" %>
+    </p>
   </div>
-  <% if @fast_reply_classes.any? %>
-    <%= render "reply_speed", classes: @fast_reply_classes %>
-  <% end %>
-</div>
+
+  <div class="card card-flush">
+    <% if @fast_reply_classes.any? %>
+      <%= render "reply_speed", classes: @fast_reply_classes %>
+    <% else %>
+    <% end %>
+  </div>
+</section>

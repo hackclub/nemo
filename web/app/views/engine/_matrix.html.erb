@@ -1,4 +1,5 @@
 <% said = EngineHelper::CELL_SAID %>
+<div class="scroll matrix-scroll">
 <div class="nights-h">
   <div>Source</div>
   <div class="nights">
@@ -45,6 +46,8 @@
     <div class="snum <%= "warn" if missed.positive? %>"><%= missed.positive? ? missed : "n/a" %></div>
   <% end %>
 <% end %>
+
+</div>
 
 <div class="key">
   <span><i class="lg-ran"></i>ran</span>

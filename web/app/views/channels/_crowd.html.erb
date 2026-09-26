@@ -9,14 +9,11 @@
   <% end %>
 <% end %>
 
-<div class="cols c-even">
+<div class="grid g-2">
   <div class="card card-stretch">
     <div class="card-head">
       <div>
         <h2 class="card-title">Members</h2>
-        <p class="card-sub">
-          <%= snapshot&.total_members ? number_with_delimiter(snapshot.total_members) : "n/a" %>
-        </p>
       </div>
     </div>
     <% if parts.any? %>
@@ -31,14 +28,17 @@
       <div class="parts-key">
         <% parts.each_with_index do |part, i| %>
           <span>
-            <i class="p-<%= i %>"></i><%= part.label %>
+            <i class="part-<%= i %>"></i><%= part.label %>
             <b><%= number_with_delimiter(part.people) %></b>
             <%= number_to_percentage(part.share, precision: 1) %>
           </span>
         <% end %>
       </div>
     <% else %>
-      <p class="card-note">no membership snapshot yet</p>
+      <div class="empty">
+        <p class="empty-title">No membership snapshot</p>
+        <p>Mnemosyne hasn&rsquo;t captured a membership snapshot for this channel yet.</p>
+      </div>
     <% end %>
   </div>
 
@@ -46,7 +46,6 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">Tenure</h2>
-        <p class="card-sub"><%= crowd.month&.strftime("%B %Y") %></p>
       </div>
       <div class="card-tools"><%= picker %></div>
     </div>
@@ -62,54 +61,19 @@
         }.to_json %>"
       ></div>
     <% else %>
-      <p class="card-note">nobody posted here</p>
+      <div class="empty">
+        <p class="empty-title">Nobody posted here</p>
+        <p>No one posted in this channel during <%= crowd.month&.strftime("%B %Y") %>.</p>
+      </div>
     <% end %>
   </div>
 </div>
 
-<div class="cols c-narrow">
-  <div class="card">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">Concentration</h2>
-        <% if crowd.concentration %>
-          <p class="card-sub">
-            Gini <%= number_with_precision(crowd.gini, precision: 2) %>,
-            <%= number_with_delimiter(crowd.concentration.posters) %> posters
-          </p>
-        <% end %>
-      </div>
-    </div>
-    <% if crowd.curve.any? %>
-      <div
-        data-controller="lorenz"
-        data-lorenz-height-value="228"
-        data-lorenz-gini-value="<%= crowd.gini %>"
-        data-lorenz-points-value="<%= concentration_points(crowd.curve).to_json %>"
-        data-lorenz-marks-value="<%= [crowd.half_mark].compact.map { |p|
-              [p.poster_pct, p.message_pct.to_f] }.to_json %>"
-      ></div>
-      <div class="legend">
-        <span>
-          busiest <b><%= number_with_delimiter(crowd.concentration.people_for_half) %></b> write half
-        </span>
-        <span>
-          busiest 10 write
-          <b><%= number_to_percentage(crowd.concentration.top_10_pct.to_f, precision: 1) %></b>
-        </span>
-      </div>
-    <% else %>
-      <p class="card-note">under <%= HomeHelper::MIN_SAMPLE %> posters</p>
-    <% end %>
-  </div>
-
+<div class="grid g-sided">
   <div class="card card-flush">
     <div class="card-head">
       <div>
         <h2 class="card-title">Top posters</h2>
-        <p class="card-sub">
-          <%= crowd.month&.strftime("%B %Y") %><%= ", #{number_with_delimiter(crowd.posters)} posted" if crowd.any? %>
-        </p>
       </div>
       <div class="card-tools"><%= picker %></div>
     </div>
@@ -140,17 +104,7 @@
               <tr>
                 <td class="col-rank"><%= person.channel_rank %></td>
                 <td>
-                  <span class="row-name">
-                    <%= tag.img(src: cachet_face_url(person.user_id), class: "row-avatar", alt: "",
-                          loading: "lazy", width: 22, height: 22,
-                          data: { cachet_face: person.user_id,
-                                  cachet_initial: person.user_id.delete_prefix("U")[0].upcase,
-                                  cachet_tone: avatar_tone(person.user_id) }) %>
-                    <span class="two-line">
-                      <b><%= tag.span("@#{person.user_id}", data: { cachet_name: person.user_id }) %></b>
-                      <span><%= person.user_id %></span>
-                    </span>
-                  </span>
+                  <%= render "shared/person", user_id: person.user_id, live: true %>
                 </td>
                 <td class="col-num"><%= number_with_delimiter(person.messages) %></td>
                 <td class="col-num">
@@ -164,7 +118,42 @@
         </table>
       </div>
     <% else %>
-      <p class="card-note">nobody posted here</p>
+      <div class="empty">
+        <p class="empty-title">Nobody posted here</p>
+        <p>No one posted in this channel during <%= crowd.month&.strftime("%B %Y") %>.</p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="card card-stretch">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Concentration</h2>
+      </div>
+    </div>
+    <% if crowd.curve.any? %>
+      <div
+        data-controller="lorenz"
+        data-lorenz-height-value="228"
+        data-lorenz-gini-value="<%= crowd.gini %>"
+        data-lorenz-points-value="<%= concentration_points(crowd.curve).to_json %>"
+        data-lorenz-marks-value="<%= [crowd.half_mark].compact.map { |p|
+              [p.poster_pct, p.message_pct.to_f] }.to_json %>"
+      ></div>
+      <div class="legend">
+        <span>
+          busiest <b><%= number_with_delimiter(crowd.concentration.people_for_half) %></b> write half
+        </span>
+        <span>
+          busiest 10 write
+          <b><%= number_to_percentage(crowd.concentration.top_10_pct.to_f, precision: 1) %></b>
+        </span>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">Too few posters</p>
+        <p>Fewer than <%= HomeHelper::MIN_SAMPLE %> people posted here, not enough to plot.</p>
+      </div>
     <% end %>
   </div>
 </div>

@@ -1,4 +1,17 @@
 module ApplicationHelper
+  def open_in_slack(url, css: "btn")
+    link_to case_action_button("external", "Open in Slack"), url,
+      class: css, target: "_blank", rel: "noopener"
+  end
+
+  def theme_swatch_blend(swatch)
+    stops = swatch.each_with_index.map do |colour, i|
+      at = swatch.size < 2 ? 50 : (i * 100.0 / (swatch.size - 1)).round
+      "#{colour} #{at}%"
+    end
+    "linear-gradient(115deg, #{stops.join(', ')})"
+  end
+
   def open_case_count
     @open_case_count ||= Fd::Case.unresolved.count
   end
@@ -76,7 +89,12 @@ module ApplicationHelper
     "flags" => ["M6 3v18", "M6 4h11l-2 4 2 4H6"],
     "shield" => ["M12 3 4 6v6c0 4 3.4 7.4 8 8 4.6-.6 8-4 8-8V6z"],
     "history" => ["M4 12a8 8 0 1 0 2.4-5.7", "M4 3v4.5h4.5", "M12 8v4.4l3 1.8"],
-    "group" => ["M4 7h16", "M4 12h16", "M4 17h10"]
+    "group" => ["M4 7h16", "M4 12h16", "M4 17h10"],
+    "news" => ["M4 5h11a1 1 0 0 1 1 1v12a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2z",
+               "M16 8h3a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2", "M7 9h5", "M7 13h5", "M7 17h3"],
+    "gear" => ["M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6", "M12 2v2.5", "M12 19.5V22", "M2 12h2.5",
+               "M19.5 12H22", "M4.9 4.9l1.8 1.8", "M17.3 17.3l1.8 1.8", "M19.1 4.9l-1.8 1.8",
+               "M6.7 17.3l-1.8 1.8"]
   }.freeze
 
   SIDEBAR_MIN = 200
@@ -136,11 +154,62 @@ module ApplicationHelper
     "#{CACHET_FACES}/#{ERB::Util.url_encode(user_id)}/r"
   end
 
+  RailStop = Struct.new(:key, :label, :icon, :path, :tally, :here, keyword_init: true)
+
+  RAIL_ICONS = {
+    "fire" => ["M12 3c.9 3 2.6 4 4.2 5.7A6.9 6.9 0 0 1 18.5 14a6.5 6.5 0 1 1-13 0c0-2 .8-3.6 2-5",
+               "M12 21a3 3 0 0 0 3-3c0-1.6-1.4-2.6-3-5-1.6 2.4-3 3.4-3 5a3 3 0 0 0 3 3"],
+    "community" => ["M3 20h18", "M6 20V10", "M11 20V5", "M16 20v-8", "M21 20v-4"],
+    "engine" => ["M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3",
+                 "M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6", "M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"],
+    "admin" => ["M4 7h9", "M17 7h3", "M4 12h3", "M11 12h9", "M4 17h12", "M20 17h0",
+                "M15 7a2 2 0 1 0 0-.01", "M9 12a2 2 0 1 0 0-.01", "M18 17a2 2 0 1 0 0-.01"],
+    "news" => ["M4 5h11a1 1 0 0 1 1 1v12a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2z",
+               "M16 8h3a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2", "M7 9h5", "M7 13h5", "M7 17h3"]
+  }.freeze
+
+  def rail_icon(key)
+    paths = RAIL_ICONS.fetch(key.to_s, RAIL_ICONS.fetch("community"))
+    tag.svg(class: "ic", width: 18, height: 18, viewBox: "0 0 24 24", fill: "none",
+      stroke: "currentColor", "stroke-width": 1.6, "stroke-linecap": "round",
+      "stroke-linejoin": "round", "aria-hidden": "true") do
+      safe_join(paths.map { |d| tag.path(d: d) })
+    end
+  end
+
+  def rail_stops(fire_engine:)
+    return @rail_stops if defined?(@rail_stops)
+
+    stops = []
+    if fire_engine
+      stops << RailStop.new(key: "fd", label: "Fire Engine", icon: "fire", path: fd_root_path,
+        tally: Fd::Case.unresolved.not_duplicate.unassigned.count, here: page_section == "fd")
+    end
+    if on?(:analytics)
+      stops << RailStop.new(key: "mn", label: "Community", icon: "community", path: root_path,
+        here: page_section == "mn" && controller_name != "engine")
+    end
+    if may_community?("ops.engine")
+      stops << RailStop.new(key: "engine", label: "Engine", icon: "engine", path: engine_path,
+        here: controller_name == "engine")
+    end
+    if may_administer?
+      stops << RailStop.new(key: "admin", label: "Admin", icon: "admin", path: admin_root_path,
+        here: page_section == "admin")
+    end
+    @rail_stops = stops
+  end
+
+  def here_stop(fire_engine:)
+    rail_stops(fire_engine: fire_engine).find(&:here)
+  end
+
   def section_pane
     return "layouts/admin_pane" if page_section == "admin"
     return nil unless on?(:analytics)
     return "layouts/engine_pane" if controller_name == "engine"
-    return "layouts/community_pane" if %w[home journey channels you].include?(controller_name)
+    return "layouts/community_pane" if
+      %w[home journey channels you accounts].include?(controller_name)
 
     nil
   end

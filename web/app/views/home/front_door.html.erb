@@ -5,14 +5,9 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">Open to everyone</h2>
-        <p class="card-sub">
-          <%= pluralize(@open_channels.size, "channel") %> the team has opened up
-        </p>
-        <p class="card-sub">
-          Nothing else is open to you yet. Ask a community manager in Slack if you should have more.
-        </p>
       </div>
     </div>
+
 
     <% if @open_channels.any? %>
       <div class="scroll">
@@ -48,6 +43,7 @@
         <p class="empty-title">No channel is open to everyone yet</p>
       </div>
     <% end %>
+  <p class="chart-note"><%= pluralize(@open_channels.size, "channel") %> the team has opened up</p>
   </div>
 
 </div>

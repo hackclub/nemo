@@ -13,7 +13,7 @@
 
   <div class="pane-list" data-pane-filter-target="list">
     <% if rows.any? %>
-      <div role="listbox" aria-label="Channels" id="channel-listbox">
+      <div aria-label="Channels" id="channel-listbox">
         <%= render "fd/channels/pane_rows", rows: rows, open_id: open_id, more: nil %>
       </div>
       <% if query.more? %>
@@ -31,6 +31,9 @@
         <p class="empty-title">
           <%= query.asked? ? "No channel matches that" : "No channels have been read yet" %>
         </p>
+        <% unless query.asked? %>
+          <p>Channels show up here once nemo has seen them.</p>
+        <% end %>
       </div>
     <% end %>
   </div>

@@ -1,27 +1,37 @@
 <%= render "fd/modal", id: id, title: title, sub: local_assigns[:sub] do %>
-  <div class="range-form">
-    <% if presets.any? %>
+  <% if local_assigns.fetch(:dates, true) %>
+    <%= form_with url: url, method: :get, class: "contents" do %>
+      <% Array(local_assigns[:carry]).each do |key, value| %>
+        <%= hidden_field_tag key, value, id: nil %>
+      <% end %>
+      <div class="modal-body">
+        <% if presets.any? %>
+          <div class="range-quick" style="--range-cols: <%= [presets.size, 4].min %>">
+            <% presets.each do |option| %>
+              <%= link_to option[:label], option[:href],
+                    class: "btn#{" is-on" if option[:current]}" %>
+            <% end %>
+          </div>
+        <% end %>
+        <div class="range-dates">
+          <%= render "shared/datepicker", caption: "from", name: :start, value: start_on,
+                min: min, max: max %>
+          <%= render "shared/datepicker", caption: "to", name: :end, value: end_on,
+                min: min, max: max %>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <%= submit_tag "Apply", class: "btn btn-primary", name: nil %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="modal-body">
       <div class="range-quick" style="--range-cols: <%= [presets.size, 4].min %>">
         <% presets.each do |option| %>
           <%= link_to option[:label], option[:href],
                 class: "btn#{" is-on" if option[:current]}" %>
         <% end %>
       </div>
-    <% end %>
-
-    <% if local_assigns.fetch(:dates, true) %>
-      <%= form_with url: url, method: :get, class: "range-dates" do %>
-        <% Array(local_assigns[:carry]).each do |key, value| %>
-          <%= hidden_field_tag key, value, id: nil %>
-        <% end %>
-        <%= render "shared/datepicker", caption: "from", name: :start, value: start_on,
-              min: min, max: max %>
-        <%= render "shared/datepicker", caption: "to", name: :end, value: end_on,
-              min: min, max: max %>
-        <div class="range-foot">
-          <%= submit_tag "Apply", class: "btn btn-primary", name: nil %>
-        </div>
-      <% end %>
-    <% end %>
-  </div>
+    </div>
+  <% end %>
 <% end %>

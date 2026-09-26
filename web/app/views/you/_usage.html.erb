@@ -7,9 +7,9 @@
       </p>
     </div>
   </div>
-  <div class="you-usage">
-    <div class="you-clients">
-      <% if profile.platforms_known? %>
+  <div class="you-usage you-usage-narrow">
+    <% if profile.platforms_known? %>
+      <div class="you-clients">
         <span class="splitbar" aria-hidden="true">
           <i class="p-ios" style="width: <%= profile.platform_share(:days_ios) %>%"></i>
           <i class="p-desk" style="width: <%= profile.platform_share(:days_desktop) %>%"></i>
@@ -20,30 +20,28 @@
           <span><i class="ser-2"></i>desktop <%= profile.platform_share(:days_desktop) %>%</span>
           <span><i class="ser-3"></i>Android <%= profile.platform_share(:days_android) %>%</span>
         </div>
-      <% else %>
-        <p class="card-note">Slack has reported no platform for these days</p>
-      <% end %>
-    </div>
+      </div>
+    <% end %>
 
     <dl class="facts-strip facts-wrap you-extras">
       <div class="fact">
-        <dt>huddles</dt>
+        <dt>Huddles</dt>
         <dd><%= figure(profile.slack[:huddles]) %></dd>
       </div>
       <div class="fact">
-        <dt>files shared</dt>
+        <dt>Files shared</dt>
         <dd><%= figure(profile.slack[:files]) %></dd>
       </div>
       <div class="fact">
-        <dt>searches</dt>
+        <dt>Searches</dt>
         <dd><%= figure(profile.slack[:searches]) %></dd>
       </div>
       <div class="fact">
-        <dt>threads started</dt>
+        <dt>Threads started</dt>
         <dd><%= figure(profile.held[:threads_started]) %></dd>
       </div>
       <div class="fact">
-        <dt>replies</dt>
+        <dt>Replies</dt>
         <dd><%= figure(profile.held[:replies]) %></dd>
       </div>
     </dl>

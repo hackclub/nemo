@@ -2,14 +2,13 @@
   <div class="card-head">
     <div>
       <h2 class="card-title">Channels</h2>
-      <p class="card-sub">
-        top <%= profile.channels.size %> of
-        <%= number_with_delimiter(profile.channels_posted_in) %>
-      </p>
+    </div>
+    <div class="card-tools">
+      <span class="card-sub">top <%= profile.channels.size %> of
+        <%= number_with_delimiter(profile.channels_posted_in) %></span>
     </div>
   </div>
   <% if profile.channels.empty? %>
-    <p class="card-note">you have not posted in a channel the archive holds</p>
   <% else %>
     <% top = profile.channels.first.first.messages.to_f %>
     <div class="scroll">

@@ -2,10 +2,6 @@
   <div class="card-head">
     <div>
       <h2 class="card-title">Thread reply backfill</h2>
-      <p class="card-sub">
-        <%= number_with_delimiter(backfills.count { |b| b.open? }) %> open ·
-        <%= number_with_delimiter(queued_requests.to_i) %> requests queued
-      </p>
     </div>
   </div>
   <% if backfills.any? %>
@@ -56,4 +52,6 @@
       <p class="sub">No channel has thread replies switched on.</p>
     </div>
   <% end %>
+<p class="chart-note"><%= number_with_delimiter(backfills.count { |b| b.open? }) %> open ·
+        <%= number_with_delimiter(queued_requests.to_i) %> requests queued</p>
 </div>

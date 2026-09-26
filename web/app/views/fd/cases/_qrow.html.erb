@@ -29,10 +29,6 @@
 
 <span class="qmeta">
   <span class="qviol trunc"><%= said || "no violation set" %></span>
-  <%= case_state_chip(kase, reachable: local_assigns[:reachable]) %>
-  <% if priors.positive? %>
-    <span class="qpriors"><%= pluralize(priors, "prior") %></span>
-  <% end %>
   <% if kase.assigned? %>
     <span class="faces">
       <%= safe_join(kase.assignee_user_ids.map { |id| face(id) }) %>

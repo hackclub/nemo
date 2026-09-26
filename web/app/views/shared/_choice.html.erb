@@ -1,0 +1,16 @@
+<details class="picker" data-controller="picker menu" data-action="change->picker#choose">
+  <summary class="select">
+    <span data-picker-target="label"<%= tag.attributes(data: { blank: blank }) if local_assigns[:blank] %>><%= chosen %></span>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+  </summary>
+  <div class="menu-pop picker-pop">
+    <% options.each do |option| %>
+      <label class="picker-opt">
+        <%= radio_button_tag name, option[:value], option[:current], id: nil,
+              data: { label: option[:label] } %>
+        <%= option[:label] %>
+      </label>
+    <% end %>
+  </div>
+</details>

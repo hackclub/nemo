@@ -338,11 +338,11 @@ module FdHelper
     parts.join(" · ")
   end
 
-  def person_line(person, context, said_counts, total_messages)
+  def person_line(person, context, priors)
     parts = []
     parts << "here #{tenure_label(context.tenure_days)}" if context&.tenure_days
     parts << "active #{last_active_label(context.last_active_at)}" if context&.last_active_at
-    parts << said_phrase(said_counts.fetch(person.user_id, 0), total_messages)
+    parts << prior_phrase(priors.fetch(person.user_id, 0))
     parts.compact.join(" · ").presence || person.user_id
   end
 
@@ -380,13 +380,6 @@ module FdHelper
     return "Take them off the case" if person.records.one?
 
     REMOVE_LABELS.fetch(record.role, "Remove as #{record.role}")
-  end
-
-  def said_phrase(said, total)
-    return nil if said.zero?
-    return pluralize(said, "message") if said == total
-
-    "said #{said} of the #{total} messages"
   end
 
   def prior_chip_for(count)
@@ -789,7 +782,7 @@ module FdHelper
 
   def face(user_id, css: "row-avatar", data: {})
     if user_id.blank?
-      return tag.span("?", class: "#{css} av-none", aria: { hidden: true }, data: data)
+      return tag.span("", class: "#{css} av-none", aria: { hidden: true }, data: data)
     end
 
     tag.img(src: cachet_face_url(user_id), class: css, alt: "", loading: "lazy",
@@ -1198,7 +1191,7 @@ module FdHelper
   end
 
   def fact_number(value)
-    value ? number_with_delimiter(value) : "n/a"
+    value ? number_with_delimiter(value) : "not tracked"
   end
 
   def here_since(context)
@@ -1221,13 +1214,9 @@ module FdHelper
     tag.span(said, class: "chip #{tone}")
   end
 
-  def holds_mark(held)
-    tag.span(held ? "yes" : "no", class: held ? "yes" : "no")
-  end
-
   def flag_switch(key)
     showing = Fd::Flag.on?(key)
-    return holds_mark(showing) unless current_account.may?("app.flip")
+    return nil unless current_account.may?("app.flip")
 
     button_to showing ? "yes" : "no",
       fd_flag_path(key: key, on: showing ? "0" : "1"),
@@ -1310,7 +1299,8 @@ module FdHelper
   end
 
   def dead_button(text, why, css = "btn")
-    tag.span(class: "#{css} btn-off", title: why, aria: { disabled: "true" }) do
+    tag.span(class: "#{css} btn-off", title: why, tabindex: "0",
+      aria: { disabled: "true", description: why }) do
       concat tag.span(text)
       concat tag.span(why, class: "btn-why")
     end

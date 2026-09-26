@@ -1,80 +1,81 @@
-<div class="panel" id="name-a-channel">
-  <div class="panel-head">
-    <span>Channels they read</span>
-    <span class="grow"></span>
-    <% if may_grant? %>
-      <%= form_with url: admin_person_channel_grants_path(@user_id), method: :post,
-            class: "contents" do %>
-        <%= render "admin/channel_picker", field: :channel_id, submit: true,
-              said: "Add a channel", id: "pick-person-channel" %>
-      <% end %>
-    <% end %>
+<section class="section" id="name-a-channel">
+  <div class="section-head">
+    <h2 class="section-title">Channel grants</h2>
   </div>
 
-  <% if @roles.include?("promethean") && @appointments.empty? %>
-    <div class="warnbar">A promethean with no channel reads nothing but public ones.</div>
-  <% end %>
-
   <% if @channel_rows.any? || @role_channels.values.flatten.any? || @appointments.any? %>
-    <div class="scroll">
-      <table class="data-table">
-        <tbody>
-          <% @channel_rows.each do |row| %>
-            <tr>
-              <td>
-                <%= link_to channel_path(row.channel_id) do %>
-                  <b>#<%= @channel_names[row.channel_id]&.name || row.channel_id %></b>
-                <% end %>
-                <span class="mono sub2"><%= row.channel_id %></span>
-              </td>
-              <td><span class="chip chip-good">named to them</span></td>
-              <td class="said-cell"><%= @names[row.granted_by] %></td>
-              <td>
-                <% if may_grant? %>
-                  <%= button_to "Take back",
-                        admin_person_channel_grant_path(@user_id, row.channel_id),
-                        method: :delete, class: "btn" %>
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-          <% @appointments.each do |one| %>
-            <tr>
-              <td>
-                <%= link_to channel_path(one.channel_id) do %>
-                  <b>#<%= @channel_names[one.channel_id]&.name || one.channel_id %></b>
-                <% end %>
-                <span class="mono sub2"><%= one.channel_id %></span>
-              </td>
-              <td>Promethean</td>
-              <td></td>
-              <td></td>
-            </tr>
-          <% end %>
-          <% @role_channels.each do |role, ids| %>
-            <% ids.each do |id| %>
+    <div class="card card-flush">
+      <% if may_grant? %>
+        <div class="cardbar">
+          <div class="toolbar-end">
+            <%= form_with url: admin_person_channel_grants_path(@user_id), method: :post,
+                  class: "contents" do %>
+              <%= render "admin/channel_picker", field: :channel_id, submit: true,
+                    said: "Add a channel", id: "pick-person-channel" %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+      <div class="scroll">
+        <table class="data-table">
+          <tbody>
+            <% @channel_rows.each do |row| %>
               <tr>
                 <td>
-                  <%= link_to channel_path(id) do %>
-                    <b>#<%= @channel_names[id]&.name || id %></b>
+                  <%= link_to channel_path(row.channel_id) do %>
+                    #<%= @channel_names[row.channel_id]&.name || row.channel_id %>
                   <% end %>
-                  <span class="mono sub2"><%= id %></span>
+                  <span class="mono sub2"><%= row.channel_id %></span>
                 </td>
-                <td><span class="chip"><%= Authz.role_label(role).downcase %> set</span></td>
-                <td class="said-cell">shared, not theirs alone</td>
+                <td><span class="sub">named to them</span></td>
+                <td class="said-cell"><%= @names[row.granted_by] %></td>
                 <td>
-                  <%= link_to "Edit the set", admin_role_channels_path(role: role), class: "btn" %>
+                  <% if may_grant? %>
+                    <%= button_to "Take back",
+                          admin_person_channel_grant_path(@user_id, row.channel_id),
+                          method: :delete, class: "btn" %>
+                  <% end %>
                 </td>
               </tr>
             <% end %>
-          <% end %>
-        </tbody>
-      </table>
+            <% @appointments.each do |one| %>
+              <tr>
+                <td>
+                  <%= link_to channel_path(one.channel_id) do %>
+                    #<%= @channel_names[one.channel_id]&.name || one.channel_id %>
+                  <% end %>
+                  <span class="mono sub2"><%= one.channel_id %></span>
+                </td>
+                <td>Promethean</td>
+                <td></td>
+                <td></td>
+              </tr>
+            <% end %>
+            <% @role_channels.each do |role, ids| %>
+              <% ids.each do |id| %>
+                <tr>
+                  <td>
+                    <%= link_to channel_path(id) do %>
+                      #<%= @channel_names[id]&.name || id %>
+                    <% end %>
+                    <span class="mono sub2"><%= id %></span>
+                  </td>
+                  <td><span class="sub"><%= Authz.role_label(role).downcase %> set</span></td>
+                  <td class="said-cell">shared, not theirs alone</td>
+                  <td>
+                    <%= link_to "Edit the set", admin_role_channels_path(role: role), class: "btn" %>
+                  </td>
+                </tr>
+              <% end %>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
     </div>
   <% else %>
     <div class="empty">
       <p class="empty-title">No channel is theirs to read</p>
-      <p class="card-note">They still see anything set to public.</p>
+      <p>They still see anything set to public.</p>
     </div>
   <% end %>
-</div>
+</section>

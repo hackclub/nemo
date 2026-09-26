@@ -11,8 +11,7 @@
     <td colspan="6">
       <span class="unmeasured-cell">
         <span class="said-cell">Mnemosyne has no data for this channel yet</span>
-        <%= link_to "Open in Slack", slack_channel_url(channel_id), class: "btn",
-              target: "_blank", rel: "noopener" %>
+        <%= open_in_slack slack_channel_url(channel_id) %>
       </span>
     </td>
   </tr>

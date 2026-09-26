@@ -1,74 +1,72 @@
 <% content_for :page_title, "Nemo channels" %>
 
-<div class="panel">
-  <div class="panel-head">
-    <span>Firehouse</span>
-    <span class="grow"></span>
-    <% if may_grant? %>
-      <%= form_with url: admin_settings_firehouse_path, method: :post, class: "contents" do %>
-        <%= render "admin/channel_picker", field: :channel_id, submit: true,
-              said: @firehouse ? "Move it" : "Pick a channel", id: "pick-firehouse" %>
-      <% end %>
-    <% end %>
-  </div>
-
-  <% if @firehouse %>
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr><th>channel</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><%= channel_cell(@firehouse, @named[@firehouse]) %></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  <% else %>
-    <div class="empty">
-      <p class="empty-title">Falling back to FIREHOUSE_CHANNEL_ID</p>
-    </div>
-  <% end %>
-</div>
-
-<div class="panel">
-  <div class="panel-head">
-    <span>Cases from reactions</span>
-    <span class="grow"></span>
-    <% if may_grant? %>
-      <%= form_with url: admin_settings_react_channels_path, method: :post,
-            class: "contents" do %>
-        <%= render "admin/channel_picker", field: :channel_id, submit: true,
-              said: "Add a channel", id: "pick-react-channel" %>
-      <% end %>
-    <% end %>
-  </div>
-
-  <% if @react_channels.any? %>
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr><th>channel</th><th class="col-num"></th></tr>
-        </thead>
-        <tbody>
-          <% @react_channels.each do |channel_id| %>
-            <tr>
-              <td><%= channel_cell(channel_id, @named[channel_id]) %></td>
-              <td class="col-num">
-                <% if may_grant? %>
-                  <%= button_to "Take out", admin_settings_react_channel_path(channel_id),
-                        method: :delete, class: "btn" %>
-                <% end %>
-              </td>
-            </tr>
+<div class="grid g-sided">
+  <div class="card card-flush">
+    <div class="card-head">
+      <h2 class="card-title">Cases from reactions</h2>
+      <% if may_grant? %>
+        <div class="card-tools">
+          <%= form_with url: admin_settings_react_channels_path, method: :post,
+                class: "contents" do %>
+            <%= render "admin/channel_picker", field: :channel_id, submit: true,
+                  said: "Add a channel", id: "pick-react-channel" %>
           <% end %>
-        </tbody>
-      </table>
+        </div>
+      <% end %>
     </div>
-  <% else %>
-    <div class="empty">
-      <p class="empty-title">No channel opens cases from a reaction</p>
+
+    <% if @react_channels.any? %>
+      <div class="scroll">
+        <table class="data-table">
+          <thead><tr><th>channel</th><th class="col-num"></th></tr></thead>
+          <tbody>
+            <% @react_channels.each do |channel_id| %>
+              <tr>
+                <td><%= channel_cell(channel_id, @named[channel_id]) %></td>
+                <td class="col-num">
+                  <% if may_grant? %>
+                    <%= button_to "Take out", admin_settings_react_channel_path(channel_id),
+                          method: :delete, class: "btn" %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">No channel opens cases from a reaction</p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="card card-flush">
+    <div class="card-head">
+      <h2 class="card-title">Firehouse</h2>
+      <% if may_grant? %>
+        <div class="card-tools">
+          <%= form_with url: admin_settings_firehouse_path, method: :post, class: "contents" do %>
+            <%= render "admin/channel_picker", field: :channel_id, submit: true,
+                  said: @firehouse ? "Move it" : "Pick a channel", id: "pick-firehouse" %>
+          <% end %>
+        </div>
+      <% end %>
     </div>
-  <% end %>
+
+    <% if @firehouse %>
+      <div class="scroll">
+        <table class="data-table">
+          <thead><tr><th>channel</th></tr></thead>
+          <tbody>
+            <tr><td><%= channel_cell(@firehouse, @named[@firehouse]) %></td></tr>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">Falling back to FIREHOUSE_CHANNEL_ID</p>
+      </div>
+    <% end %>
+  </div>
 </div>

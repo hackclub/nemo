@@ -123,7 +123,7 @@ export default class extends Controller {
           style="fill: var(--parts-ink)">${esc(shownPc)}</text>`
       }
 
-      const tone = `p-${r.tone == null ? i : r.tone}`
+      const tone = `part-${r.tone == null ? i : r.tone}`
       cells += `<g class="cell" data-i="${i}"><rect class="${tone}"
         x="${x.toFixed(1)}" y="${y.toFixed(1)}"
         width="${w.toFixed(1)}" height="${h.toFixed(1)}"/>${text}</g>`

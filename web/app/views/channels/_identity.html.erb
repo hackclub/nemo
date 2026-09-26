@@ -1,55 +1,54 @@
 <% rank = channel_standing(standing) %>
-<dl class="facts-strip channel-facts">
-  <div class="fact">
-    <dt>created</dt>
-    <dd>
-      <% if channel.date_created %>
-        <%= channel.date_created.to_date.strftime("%-d %b %Y") %>
-      <% else %>
-        <span class="sub2">n/a</span>
-      <% end %>
-    </dd>
+<div class="metrics">
+  <div class="metric">
+    <span class="metric-k">Members</span>
+    <span class="metric-v">
+      <%= snapshot&.total_members ? number_with_delimiter(snapshot.total_members) : "n/a" %>
+    </span>
+    <% if team_stats&.total_claimed_count.to_i.positive? %>
+      <span class="metric-say">
+        of <%= number_with_delimiter(team_stats.total_claimed_count) %> claimed accounts
+      </span>
+    <% end %>
   </div>
-  <div class="fact">
-    <dt>members</dt>
-    <dd><%= snapshot&.total_members ? number_with_delimiter(snapshot.total_members) : "n/a" %></dd>
+
+  <div class="metric">
+    <span class="metric-k">People who spoke</span>
+    <span class="metric-v">
+      <%= crowd.any? ? number_with_delimiter(crowd.posters) : "n/a" %>
+    </span>
+    <% if crowd.any? && snapshot&.total_members.to_i.positive? %>
+      <span class="metric-say">
+        <%= channel_spoke_share(crowd.posters, snapshot.total_members) %> of members
+      </span>
+    <% end %>
   </div>
-  <div class="fact">
-    <dt>people who spoke</dt>
-    <dd>
-      <% if crowd.any? %>
-        <%= number_with_delimiter(crowd.posters) %>
-      <% else %>
-        <span class="sub2">n/a</span>
-      <% end %>
-    </dd>
-  </div>
-  <div class="fact">
-    <dt>busiest rank</dt>
-    <dd>
+
+  <div class="metric">
+    <span class="metric-k">Busiest rank</span>
+    <span class="metric-v">
       <% if rank %>
         #<%= number_with_delimiter(rank[:rank]) %>
-        <span class="short">of <%= number_with_delimiter(rank[:of]) %></span>
+        <small>of <%= number_with_delimiter(rank[:of]) %></small>
       <% else %>
-        <span class="sub2">n/a</span>
+        n/a
       <% end %>
-    </dd>
+    </span>
+    <% if standing&.share_of_total %>
+      <span class="metric-say">
+        <%= number_to_percentage(standing.share_of_total.to_f, precision: 2) %> of the workspace
+      </span>
+    <% end %>
   </div>
-  <div class="fact">
-    <dt>share of workspace</dt>
-    <dd>
-      <% if standing&.share_of_total %>
-        <%= number_to_percentage(standing.share_of_total.to_f, precision: 2) %>
-      <% else %>
-        <span class="sub2">n/a</span>
-      <% end %>
-    </dd>
-  </div>
-  <div class="fact">
-    <dt>last post</dt>
-    <dd>
+
+  <div class="metric">
+    <span class="metric-k">Last post</span>
+    <span class="metric-v">
       <% seen = said_ago(snapshot&.last_message_at || channel.last_active_at) %>
-      <%= seen || tag.span("n/a", class: "sub2") %>
-    </dd>
+      <%= seen || "n/a" %>
+    </span>
+    <% if channel.date_created %>
+      <span class="metric-say">created <%= channel.date_created.to_date.strftime("%-d %b %Y") %></span>
+    <% end %>
   </div>
-</dl>
+</div>

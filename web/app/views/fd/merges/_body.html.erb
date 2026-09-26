@@ -9,16 +9,17 @@
       <% if groups.empty? %>
         <div class="empty merge-empty">
           <p class="empty-title">
-          <%= term.present? ? "Nothing matches that." : "Nothing looks like a duplicate of this one." %>
+          <%= term.present? ? "Nothing matches that" : "Nothing looks like a duplicate of this one" %>
+          </p>
+          <p>
+          <%= term.present? ? "Try a case number, a subject, or a channel name." : "There is nothing nearby in time or about the same person to fold this into." %>
           </p>
         </div>
       <% end %>
 
       <% groups.each do |label, found| %>
         <section class="merge-section">
-          <% unless label == Fd::Case::AROUND %>
-            <h3 class="merge-group"><%= label %></h3>
-          <% end %>
+          <h3 class="merge-group"><%= label == Fd::Case::AROUND ? "Nearby cases" : label %></h3>
           <%= tag.div class: "merge-list",
                 id: ("merge-around" if label == Fd::Case::AROUND) do %>
             <% found.each do |other| %>

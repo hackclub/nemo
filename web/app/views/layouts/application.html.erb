@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="<%= sidebar_class %>" style="<%= sidebar_style %>">
+<html lang="en" class="<%= sidebar_class %>" style="<%= sidebar_style %>">
   <head>
     <title><%= content_for(:title) || "Mnemosyne" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -12,7 +12,7 @@
 
     <%= yield :head %>
 
-    <meta name="theme-color" content="#143252">
+    <meta name="theme-color" content="#0b0b0c">
     <link rel="manifest" href="<%= pwa_manifest_path(format: :json) %>">
     <link rel="icon" href="/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="/icon.png">
@@ -26,86 +26,78 @@
   <body data-section="<%= page_section %>">
     <%= render "shared/synthetic_banner" %>
     <% fire_engine = may_use_fire_engine? %>
-    <% fd_nav = fire_engine && page_section == "fd" %>
-    <% pane_partial = content_for?(:pane) || fd_nav ? nil : section_pane %>
-    <% pane = content_for?(:pane) || pane_partial.present? %>
+    <% nav_partial = fire_engine && page_section == "fd" ? "layouts/fd_pane" : section_pane %>
+    <% pane = content_for?(:pane) %>
 
     <div class="shell" data-controller="cachet dismiss sidebar lightbox<%= " palette" if fire_engine %>"
          data-palette-url-value="<%= fd_search_path(format: :json) %>"
          data-palette-on-value="<%= content_for(:palette_on) %>"
          data-action="keydown@document->palette#key">
 
-      <header class="top">
-        <% if pane_partial.present? || fd_nav %>
-          <button type="button" class="iconbtn strigger" data-action="sidebar#toggle"
-                  aria-controls="section-nav" aria-label="Toggle sidebar">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>
-            </svg>
-          </button>
-        <% end %>
-        <%= link_to root_path, class: "brand", aria: { label: "Mnemosyne home" } do %>
-          <%= image_tag "nemo.png", class: "brand-mark", alt: "", width: 800, height: 483 %>
-          <span class="brand-name">Mnemosyne</span>
-        <% end %>
+      <%= render "layouts/rail", fire_engine: fire_engine %>
 
-        <%= render "layouts/areas", fire_engine: fire_engine %>
-
-        <div class="topright">
-          <% if fire_engine %>
-            <button type="button" class="findbar" data-action="palette#open"
-                    aria-label="Search cases, members, notes">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
-              <span class="findbar-text">Search</span>
-              <span class="kbd"><span class="mod-meta">⌘K</span><span class="mod-ctrl">Ctrl K</span></span>
+      <div class="work<%= " has-nav" if nav_partial %><%= " has-pane" if pane %>"
+           data-view="<%= content_for(:pane_default).presence || "main" %>"
+           data-controller="mobar case-timeline<%= " pane pane-size" if pane %>">
+        <header class="mobar">
+          <% if nav_partial %>
+            <button type="button" class="iconbtn mobar-menu" data-action="sidebar#toggle"
+                    aria-controls="section-nav" aria-label="Open navigation">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
+                <path d="M4 7h16M4 12h16M4 17h16"/>
+              </svg>
             </button>
           <% end %>
+          <% if pane %>
+            <button type="button" class="iconbtn backbtn" aria-label="Back to the list"
+                    data-action="click->pane#show" hidden>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+            </button>
+          <% end %>
+          <% here = here_stop(fire_engine: fire_engine) %>
+          <span class="mobar-where">
+            <%= strip_tags(content_for(:page_title).to_s).presence || here&.label || "Mnemosyne" %>
+          </span>
+        </header>
 
-          <%= render "layouts/theme_pills" %>
-          <%= render "layouts/you", staff: current_account %>
-        </div>
-      </header>
-
-      <div class="work<%= " has-nav" if fd_nav %><%= " has-pane" if pane %>"
-           data-view="<%= content_for(:pane_default).presence || "main" %>"
-           data-controller="case-timeline<%= " pane" if pane %>">
-        <% if fd_nav %>
-          <%= render "layouts/fd_pane", tight: pane %>
-        <% end %>
-        <% if content_for?(:pane) %>
-          <%= content_for :pane %>
-        <% elsif pane_partial %>
-          <%= render pane_partial %>
-        <% end %>
-        <% if pane_partial.present? || fd_nav %>
+        <% if nav_partial %>
+          <%= render nav_partial, fire_engine: fire_engine %>
           <div class="sbackdrop" data-action="click->sidebar#close" aria-hidden="true"></div>
+        <% end %>
+
+        <%= content_for :pane if pane %>
+        <% if pane %>
+          <button type="button" class="qrail" tabindex="-1" aria-hidden="true"
+                  data-action="pointerdown->pane-size#drag pointermove->pane-size#move
+                               pointerup->pane-size#drop pointercancel->pane-size#drop"></button>
         <% end %>
 
         <main class="main">
           <div class="rhead">
             <div class="rtop">
               <div class="rhead-said">
-                <% if content_for?(:pane) %>
-                  <button type="button" class="btn btn-ghost btn-only backbtn" aria-label="Back"
-                          data-action="click->pane#show" hidden>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                  </button>
-                <% end %>
                 <h1 class="rtitle" title="<%= strip_tags(content_for(:page_title).to_s).presence || "Mnemosyne" %>">
                   <%= yield :page_face %><%= content_for(:page_title) || "Mnemosyne" %>
                 </h1>
                 <%= content_for(:head_context) if content_for?(:head_context) %>
               </div>
 
-              <% if content_for?(:page_controls) %>
-                <div class="qbar"><%= content_for(:page_controls) %></div>
-              <% end %>
-
               <% if content_for?(:head_actions) %>
                 <div class="ractions"><%= content_for(:head_actions) %></div>
               <% end %>
             </div>
+
+            <% if content_for?(:page_note) %>
+              <p class="intro"><%= content_for(:page_note) %></p>
+            <% end %>
+
+            <% if content_for?(:page_controls) %>
+              <div class="toolbar"><%= content_for(:page_controls) %></div>
+            <% end %>
 
             <% if content_for?(:page_tabs) %>
               <nav class="views" aria-label="Sections"><%= content_for(:page_tabs) %></nav>
@@ -125,6 +117,8 @@
       <% end %>
 
       <%= render "layouts/lightbox" %>
+
+      <%= yield :overlays %>
     </div>
 
     <div class="topbar-msgs" aria-live="polite" aria-atomic="false">

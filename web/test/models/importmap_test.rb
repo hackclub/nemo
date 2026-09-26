@@ -46,7 +46,7 @@ class ImportmapTest < ActiveSupport::TestCase
     used = Dir[Rails.root.join("app/views/**/*.erb")].flat_map { |f|
       File.read(f).scan(/data-controller="([^"]*)"/).flatten
     }.flat_map(&:split).uniq & %w[chart hbars lorenz parts scatter treemap]
-    assert_equal %w[chart hbars lorenz parts scatter treemap], used.sort,
+    assert_equal %w[chart lorenz parts scatter treemap], used.sort,
       "a chart identifier moved or was removed"
     used.each do |name|
       assert imports.key?("charts/#{name}_controller"),

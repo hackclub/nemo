@@ -31,7 +31,6 @@
             </label>
           <% end %>
         </div>
-        <p class="card-note" data-give-access-target="note"></p>
       </div>
 
       <div class="field-label">
@@ -58,7 +57,7 @@
           <% end %>
         </div>
         <p class="card-note" data-give-access-target="empty" hidden>
-          This role already carries everything you can hand out.
+          nothing left to add
         </p>
       </div>
 
@@ -68,7 +67,7 @@
       </div>
 
       <label class="field-label">
-        <span>Why they are getting it</span>
+        <span>Why</span>
         <%= text_field_tag :reason, nil, class: "field",
               placeholder: "kept on every grant this makes" %>
       </label>

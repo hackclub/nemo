@@ -1,4 +1,4 @@
-<div class="you-band">
+<div class="metrics you-band">
   <div class="you-who">
     <%= face(profile.user_id, css: "avatar av-band") %>
     <span class="two-line">
@@ -11,52 +11,49 @@
     </span>
   </div>
 
-  <dl class="facts-strip you-facts">
-    <div class="fact fact-lead">
-      <dt>
-        Streak
-        <span class="pickswitch" role="group" aria-label="What counts towards a streak">
-          <% You::Profile::STREAK_BASES.each_key do |basis| %>
-            <%= link_to basis, you_here(profile, streak: (basis unless
-                  basis == You::Profile::DEFAULT_BASIS)),
-                  class: ("is-on" if basis == profile.streak_basis),
-                  title: You::Profile::STREAK_BASES[basis] %>
-          <% end %>
-        </span>
-      </dt>
-      <dd>
-        <%= number_with_delimiter(profile.streak&.current_days.to_i) %>
-        <span class="fact-unit"><%= "day".pluralize(profile.streak&.current_days.to_i) %></span>
-      </dd>
-      <p class="fact-note"><%= streak_line(profile.streak) %></p>
-    </div>
-    <div class="fact">
-      <dt>Days here</dt>
-      <dd><%= figure(profile.slack[:days_active]) %></dd>
-      <p class="fact-note">
-        <%= figure(profile.held[:days_posted]) %> posted
-        <span class="triad-sep">&middot;</span>
-        <%= number_with_delimiter(profile.days_reacted) %> reacted
-      </p>
-    </div>
-    <div class="fact">
-      <dt>Messages</dt>
-      <dd><%= figure(profile.slack[:messages]) %></dd>
-      <p class="fact-note">
-        <% if profile.prior_slack %>
-          <%= delta_chip(profile.slack[:messages], profile.prior_slack[:messages]) ||
-                "no change on the window before" %>
-        <% else %>
-          <%= figure(profile.slack[:channel_messages]) %> in channels
-        <% end %>
-      </p>
-    </div>
-    <div class="fact">
-      <dt>Reactions given</dt>
-      <dd><%= figure(profile.slack[:reactions_given]) %></dd>
-      <p class="fact-note">
-        <%= figure(profile.held[:reactions_received]) %> received
-      </p>
-    </div>
-  </dl>
+  <div class="metric">
+    <span class="pickswitch" role="group" aria-label="What counts towards a streak">
+      <% You::Profile::STREAK_BASES.each_key do |basis| %>
+        <%= link_to basis, you_here(profile, streak: (basis unless
+              basis == You::Profile::DEFAULT_BASIS)),
+              class: ("is-on" if basis == profile.streak_basis),
+              title: You::Profile::STREAK_BASES[basis] %>
+      <% end %>
+    </span>
+    <span class="metric-k">Streak</span>
+    <span class="metric-v">
+      <%= number_with_delimiter(profile.streak&.current_days.to_i) %>
+      <small><%= "day".pluralize(profile.streak&.current_days.to_i) %></small>
+    </span>
+    <span class="metric-say"><%= streak_line(profile.streak) %></span>
+  </div>
+
+  <div class="metric">
+    <span class="metric-k">Days here</span>
+    <span class="metric-v"><%= figure(profile.slack[:days_active]) %></span>
+    <span class="metric-say">
+      <%= figure(profile.held[:days_posted]) %> posted
+      <span class="triad-sep">&middot;</span>
+      <%= number_with_delimiter(profile.days_reacted) %> reacted
+    </span>
+  </div>
+
+  <div class="metric">
+    <span class="metric-k">Messages</span>
+    <span class="metric-v"><%= figure(profile.slack[:messages]) %></span>
+    <span class="metric-say">
+      <% if profile.prior_slack %>
+        <%= delta_chip(profile.slack[:messages], profile.prior_slack[:messages]) ||
+              "no change on the window before" %>
+      <% else %>
+        <%= figure(profile.slack[:channel_messages]) %> in channels
+      <% end %>
+    </span>
+  </div>
+
+  <div class="metric">
+    <span class="metric-k">Reactions given</span>
+    <span class="metric-v"><%= figure(profile.slack[:reactions_given]) %></span>
+    <span class="metric-say"><%= figure(profile.held[:reactions_received]) %> received</span>
+  </div>
 </div>

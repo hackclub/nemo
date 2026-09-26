@@ -1,31 +1,49 @@
 <% content_for :page_title, @found.term.presence || "Search" %>
-<div class="stack">
-  <% if @found.asked? %>
-    <div class="views">
-      <%= link_to fd_search_path(q: params[:q]), class: "view",
-            aria: { current: ("true" if @found.scope.nil?) } do %>
-        All <span class="view-count"><%= @counts.values.sum %></span>
-      <% end %>
-      <% @counts.each do |key, count| %>
-        <%= link_to fd_search_path(q: params[:q], scope: key), class: "view",
-              aria: { current: ("true" if @found.scope == key) } do %>
-          <%= Fd::Search::LABELS.fetch(key) %>
-          <span class="view-count"><%= count %></span>
-        <% end %>
-      <% end %>
-    </div>
-  <% end %>
 
-  <% if @groups.empty? %>
-    <div class="card">
-      <p class="card-note">
-        <%= @found.asked? ? "Nothing found." : "Type at least two letters." %>
-      </p>
-    </div>
+<% if @found.asked? %>
+  <% content_for :page_tabs do %>
+    <%= link_to fd_search_path(q: params[:q]), class: "view",
+          aria: { current: ("true" if @found.scope.nil?) } do %>
+      All <span class="view-count"><%= @counts.values.sum %></span>
+    <% end %>
+    <% @counts.each do |key, count| %>
+      <%= link_to fd_search_path(q: params[:q], scope: key), class: "view",
+            aria: { current: ("true" if @found.scope == key) } do %>
+        <%= Fd::Search::LABELS.fetch(key) %>
+        <span class="view-count"><%= count %></span>
+      <% end %>
+    <% end %>
   <% end %>
+<% end %>
 
-  <% @groups.each do |group| %>
-    <p class="band-label"><%= group[:label] %> · <%= group[:total] %></p>
+<% if @groups.empty? %>
+  <div class="empty">
+    <span class="empty-mark" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+    </span>
+    <p class="empty-title">
+      <%= @found.asked? ? "Nothing matches #{@found.term}" : "Search the Fire Engine" %>
+    </p>
+    <p>
+      <%= @found.asked? ?
+            "Try a case number, a handle, a Slack ID, or a phrase from a report." :
+            "Type at least two letters. Prefix with @ for a member, # for a case, n: for a note, or r: for a report." %>
+    </p>
+    <% if @found.asked? %>
+      <div class="empty-do">
+        <%= link_to "Every case", fd_cases_path, class: "btn" %>
+        <%= link_to "Every member", fd_members_path, class: "btn" %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<% @groups.each do |group| %>
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title"><%= group[:label] %></h2>
+      <p class="section-note"><%= pluralize(group[:total], "match") %></p>
+    </div>
     <div class="card card-flush">
       <div class="scroll">
         <table class="data-table">
@@ -45,5 +63,5 @@
         </table>
       </div>
     </div>
-  <% end %>
-</div>
+  </section>
+<% end %>
