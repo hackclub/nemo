@@ -37,8 +37,9 @@
     .ractions { flex-wrap: wrap; justify-content: flex-end; }
     .toolbar { gap: 6px; }
     .toolbar-end { margin-left: 0; width: 100%; }
-    .cardbar > .qsearch { flex: 1 1 160px; max-width: none; }
-    .cardbar > .toolbar-end { margin-left: auto; width: auto; }
+    .cardbar:not(:has(.pill)) { flex-wrap: nowrap; }
+    .cardbar > .qsearch { flex: 1 1 120px; min-width: 0; max-width: none; }
+    .cardbar > .toolbar-end { margin-left: auto; width: auto; flex: none; }
     .metric { padding: 10px var(--s-xs) var(--s-xs); }
     .metric-v { font-size: 1.5rem; }
     .metric-spark { display: none; }
@@ -139,7 +140,14 @@
     .rung > .snum { order: 6; flex: none; min-width: 48px; }
 
     .matrix-scroll > .nights-h, .matrix-scroll > .srow { min-width: 460px; }
-    .channel-table { min-width: 680px; }
+    .channel-table { min-width: 0; table-layout: auto; }
+    .channel-table col { width: auto !important; }
+    .channel-table thead th:nth-child(n + 2):not(:nth-child(5)),
+    .channel-table tbody td:nth-child(n + 2):not(:nth-child(5)) { display: none; }
+    .channel-table thead th:nth-child(5), .channel-table tbody td:nth-child(5) {
+      width: 1%;
+      white-space: nowrap;
+    }
     .member-table { min-width: 620px; }
 
     .toolbar .kbd, .ractions .kbd, .qbar .kbd { display: none; }

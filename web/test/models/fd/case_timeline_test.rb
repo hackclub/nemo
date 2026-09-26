@@ -98,7 +98,7 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
     entry = build(kase, actions: [action(type_key: "locked_thread", performed_by: "UMNEMOSYNE",
       details: { "channel_id" => "C123" })]).last
     assert_equal "Locked thread", entry.title
-    assert_equal "decided by @UFF1 · performed by @UMNEMOSYNE · in C123", entry.detail
+    assert_equal "taken by @UFF1 · performed by @UMNEMOSYNE · in C123", entry.detail
   end
 
   test "an action on somebody other than the subject says who" do

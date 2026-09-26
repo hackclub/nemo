@@ -1,5 +1,4 @@
-<h1 class="auth-lede">Community analytics for Hack Club</h1>
-<p>Sign in with the Hack Club account linked to your Slack. You will see what a community manager has granted you a role for.</p>
+<p>Use the Hack Club account linked to your Slack.</p>
 
 <%= form_tag "/auth/hackclub", method: :post, authenticity_token: false, data: { turbo: false } do %>
   <%= hidden_field_tag :authenticity_token, Rack::Protection::AuthenticityToken.token(session) %>

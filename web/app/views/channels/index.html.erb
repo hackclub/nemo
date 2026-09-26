@@ -66,7 +66,7 @@
       <% if @opportunity %>
         <turbo-frame id="newcomer-map" data-turbo-action="advance">
           <%= render "map", map: @opportunity, cohorts: @newcomer_cohorts,
-                title: "Where newcomers land, and where they stay",
+                title: "Newcomers landing",
                 x_label: "newcomers who posted here", y_label: "newcomers who posted again",
                 n_label: "newcomer messages",
                 corners: { tl: "SMALL AND STICKY", tr: "WORKING",

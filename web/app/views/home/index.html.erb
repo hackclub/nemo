@@ -29,6 +29,7 @@
 <% else %>
   <% spark_days = @spark.map { |r| r.ds.iso8601 } %>
   <% joins = @spark.each_cons(2).map { |a, b| b.total_members_count.to_i - a.total_members_count.to_i } %>
+  <% claims = @spark.each_cons(2).map { |a, b| b.total_claimed_count.to_i - a.total_claimed_count.to_i } %>
 
   <div class="metrics">
     <%= render "kpi", label: "Total members", value: @team_stats.total_members_count,
@@ -38,8 +39,7 @@
 
     <%= render "kpi", label: "Claimed accounts", value: @team_stats.total_claimed_count,
           prior: @team_stats_prior&.total_claimed_count, span: @span,
-          spark: { labels: spark_days, name: "claimed",
-                   data: @spark.map(&:total_claimed_count) },
+          spark: { labels: spark_days.drop(1), name: "claimed", data: claims },
           spark_title: "accounts claimed, day by day" %>
 
     <%= render "kpi", label: "Active, last 28 days", value: @team_stats.active_users_28d,
