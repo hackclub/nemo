@@ -24,7 +24,7 @@
 
   <div class="pane-list" data-pane-filter-target="list">
     <% if rows.any? %>
-      <div role="listbox" aria-label="Members" id="member-listbox">
+      <div aria-label="Members" id="member-listbox">
         <%= render "fd/members/pane_rows", rows: rows, context: context, grants: grants,
               open_id: open_id, carry: query.to_params %>
       </div>

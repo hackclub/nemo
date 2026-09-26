@@ -6,7 +6,7 @@ module You
       "all" => { label: "all time", days: nil }
     }.freeze
     DEFAULT_SPAN = "all".freeze
-    TOP_CHANNELS = 6
+    TOP_CHANNELS = 8
 
     STREAK_BASES = {
       "posted" => "days you posted",

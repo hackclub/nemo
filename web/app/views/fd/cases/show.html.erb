@@ -2,8 +2,12 @@
 <% content_for :page_face do %>
   <span class="triad-id">#<%= @case.id %></span>
 <% end %>
-<% if @case.subject_user_ids.any? %>
-  <% content_for :head_context do %>
+<% content_for :head_context do %>
+  <span class="triad-sep" aria-hidden="true">&middot;</span>
+  <span class="qage <%= age_ink(case_age_seconds(@case)) unless @case.resolved? %>">
+    <%= @case.resolved? ? "closed" : case_age_label(case_age_seconds(@case)) %>
+  </span>
+  <% if @case.subject_user_ids.any? %>
     <span class="triad-sep" aria-hidden="true">&middot;</span>
     <span class="triad-who"><%= subject_faces(@case) %></span>
   <% end %>
@@ -17,11 +21,27 @@
 <% end %>
 
 <% content_for :head_actions do %>
-  <span class="qage <%= age_ink(case_age_seconds(@case)) unless @case.resolved? %>">
-    <%= @case.resolved? ? "closed" : case_age_label(case_age_seconds(@case)) %>
-  </span>
   <% if @case.assigned? %>
     <span class="faces"><%= safe_join(@case.assignee_user_ids.map { |id| slack_face(id) }) %></span>
+  <% end %>
+
+  <% if @case.resolved? %>
+    <%= gated_button "case.reopen", case_action_button("history", "Reopen"),
+          fd_case_resolution_path(@case), on: @case,
+          method: :delete, form: { class: "contents", data: { turbo_confirm:
+            "Reopen case #{@case.id}? It goes back in the queue." } } %>
+  <% else %>
+    <% unless @case.assigned_to?(current_account.user_id) %>
+      <%= gated_button "case.open", case_action_button("shield", "Claim", shortcut: "c"),
+            fd_case_claim_path(@case), on: @case, css: "btn btn-primary", method: :post,
+            data: { shortcut: "c" } %>
+    <% end %>
+    <%= opens_modal "case.act", case_action_button("gauge", "Log an action", shortcut: "a"),
+          opens: "log-action", on: @case, data: { shortcut: "a" } %>
+    <% if @case.assigned? %>
+      <%= opens_modal "case.resolve", case_action_button("resolve", "Resolve", shortcut: "r"),
+            opens: "resolve-case", on: @case, data: { shortcut: "r" } %>
+    <% end %>
   <% end %>
 
   <%= render layout: "shared/dropdown", locals: {
@@ -48,8 +68,7 @@
               opens: "assign-case", on: @case %>
 
         <p class="menu-group">Closes this case</p>
-        <%= opens_modal "case.resolve", menu_item("merge", "Merge into another case",
-              note: "Folds it into an older case, which then holds both"),
+        <%= opens_modal "case.resolve", menu_item("merge", "Merge into another case"),
               opens: "merge-case", on: @case %>
         <% unless @case.assigned? %>
           <%= opens_modal "case.resolve", menu_item("resolve", "Resolve without claiming",
@@ -66,41 +85,6 @@
   <% end %>
 <% end %>
 
-<% content_for :page_controls do %>
-  <% if @case.resolved? %>
-    <%= gated_button "case.reopen", case_action_button("history", "Reopen"),
-          fd_case_resolution_path(@case), on: @case,
-          method: :delete, form: { class: "contents", data: { turbo_confirm:
-            "Reopen case #{@case.id}? It goes back in the queue." } } %>
-  <% else %>
-    <% unless @case.assigned_to?(current_account.user_id) %>
-      <%= gated_button "case.open", case_action_button("shield", "Claim", shortcut: "c"),
-            fd_case_claim_path(@case), on: @case, css: "btn btn-primary", method: :post,
-            data: { shortcut: "c" } %>
-    <% end %>
-    <%= opens_modal "case.act", case_action_button("gauge", "Log an action", shortcut: "a"),
-          opens: "log-action", on: @case, data: { shortcut: "a" } %>
-    <%= opens_modal "case.note", case_action_button("note", "Note", shortcut: "n"),
-          opens: "add-note", data: { shortcut: "n" } %>
-    <%= opens_modal "case.thread", case_action_button("thread", "Attach a thread", shortcut: "t"),
-          opens: "attach-thread", on: @case, data: { shortcut: "t" } %>
-    <% if @case.assigned? %>
-      <span class="bar-sep"></span>
-      <%= opens_modal "case.resolve", case_action_button("resolve", "Resolve", shortcut: "r"),
-            opens: "resolve-case", on: @case, data: { shortcut: "r" } %>
-    <% end %>
-  <% end %>
-
-  <span class="qspacer case-action-spacer"></span>
-
-  <% if @subject %>
-    <%= link_to case_action_button("history", "Their history"), fd_member_path(@subject),
-          class: "btn",
-          data: { turbo_frame: "person-drawer" } %>
-  <% end %>
-
-<% end %>
-
 <% content_for :page_tabs do %>
   <% case_tabs(@tab_counts).each do |tab| %>
     <%= link_to fd_case_path(@case, @pane_params.merge(tab: tab[:key])),
@@ -113,9 +97,6 @@
 <% end %>
 
 <div class="stack case-record case-record-<%= @tab %>" data-controller="case-shortcuts">
-  <%= render "highlights", kase: @case, subject: @subject, reports: @reports,
-        threads: @threads, actions: @live_actions %>
-
   <% if @case.resolved? %>
     <div class="closed">
       <span class="closed-what">
@@ -136,7 +117,7 @@
     </div>
   <% end %>
 
-  <div class="<%= @tab == "report" ? "panel" : "case-tab-body" %>">
+  <div class="<%= @tab == "report" ? "panel report-solo" : "case-tab-body" %>">
     <% if @tab == "report" %>
       <%= render "chat", kase: @case, reports: @reports, chat: @chat, earlier: @earlier_chat,
             messages: @conversation_said, queued: @queued, thread: @thread,
@@ -145,11 +126,13 @@
 
     <% if @tab == "people" %>
       <%= render "people", kase: @case, people: @people, contexts: @context,
-            notes: @standing_notes, mentioned: @mentioned, priors: @person_priors,
-            said_counts: @said_counts, total_messages: @thread_messages.size %>
+            notes: @standing_notes, mentioned: @mentioned, priors: @person_priors %>
     <% end %>
 
     <% if @tab == "evidence" %>
+      <div class="section-head">
+        <h2 class="section-title">Evidence</h2>
+      </div>
       <% if @thread_list.any? %>
         <%= render "threads", kase: @case, threads: @thread_list,
               flags: @citations, cited_by: @cited_by %>
@@ -159,7 +142,6 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 6h16M4 11h10M4 16h13"/></svg>
           </span>
           <p class="empty-title">No evidence attached</p>
-          <p class="card-note">A thread is copied here when you attach it, so it stays readable even if the original is deleted or locked.</p>
           <div class="empty-do">
             <%= opens_modal "case.thread", "Attach a thread", opens: "attach-thread",
                   on: @case, css: "btn btn-primary" %>
@@ -169,6 +151,12 @@
     <% end %>
 
     <% if @tab == "actions" %>
+      <div class="section-head">
+        <h2 class="section-title">Actions</h2>
+        <div class="section-tools">
+          <%= opens_modal "case.act", "Log an action", opens: "log-action", on: @case %>
+        </div>
+      </div>
       <% if @actions.any? %>
         <%= render "actions", kase: @case, actions: @actions,
               cited_messages: @cited_messages %>
@@ -178,7 +166,6 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M20 14a8 8 0 1 0-16 0"/><path d="m15 10-3.4 3.4"/></svg>
           </span>
           <p class="empty-title">No action taken yet</p>
-          <p class="card-note">An action is recorded against a person and stays on their history, whether or not it is later reversed.</p>
           <div class="empty-do">
             <%= opens_modal "case.act", "Log an action", opens: "log-action", on: @case,
                   css: "btn btn-primary" %>
@@ -188,6 +175,12 @@
     <% end %>
 
     <% if @tab == "notes" %>
+      <div class="section-head">
+        <h2 class="section-title">Notes</h2>
+        <div class="section-tools">
+          <%= opens_modal "case.note", "Add a note", opens: "add-note" %>
+        </div>
+      </div>
       <% if @notes.any? %>
         <div class="list">
           <% @notes.each do |note| %>
@@ -209,7 +202,6 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v12H8l-3 3z"/></svg>
           </span>
           <p class="empty-title">No notes yet</p>
-          <p class="card-note">Notes are internal. The reporter and the subject never see them.</p>
           <div class="empty-do">
             <%= opens_modal "case.note", "Add a note", opens: "add-note", css: "btn btn-primary" %>
           </div>
@@ -218,6 +210,9 @@
     <% end %>
 
     <% if @tab == "timeline" %>
+      <div class="section-head">
+        <h2 class="section-title">Timeline</h2>
+      </div>
       <% if @timeline.any? %>
         <div class="list">
           <% @timeline.each do |entry| %>
@@ -347,21 +342,10 @@
     <div class="modal-body">
       <div class="field-label">
         <span>What kind of thing it is</span>
-        <details class="picker" data-controller="picker menu" data-action="change->picker#choose">
-          <summary class="select">
-            <span data-picker-target="label"><%= category_label(Fd::Case::CATEGORIES.first) %></span>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
-          </summary>
-          <div class="menu-pop picker-pop">
-            <% Fd::Case::CATEGORIES.each_with_index do |key, i| %>
-              <label class="picker-opt">
-                <%= radio_button_tag :category_key, key, i.zero?, id: nil,
-                      data: { label: category_label(key) } %>
-                <%= category_label(key) %>
-              </label>
-            <% end %>
-          </div>
-        </details>
+        <%= render "shared/choice", name: :category_key,
+              chosen: category_label(Fd::Case::CATEGORIES.first),
+              options: Fd::Case::CATEGORIES.each_with_index.map { |key, i| {
+                value: key, label: category_label(key), current: i.zero? } } %>
       </div>
       <%= field_wrong(:category_key) %>
     </div>
@@ -448,13 +432,6 @@
             </label>
           <% end %>
 
-          <% if @merge_into %>
-            <div class="flag flag-mid">
-              <span class="flag-icon" aria-hidden="true">◆</span>
-              <div><b>#<%= @merge_into.id %> is <%= merge_reason(@case, @merge_into) %> and still open.</b>
-                Merging first would resolve both together.</div>
-            </div>
-          <% end %>
         </div>
         <div class="modal-foot">
           <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>

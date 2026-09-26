@@ -1,67 +1,55 @@
 <% first_poster = top_posters.first %>
 <% full_days = first_poster ? Date.new(first_poster.month.year, first_poster.month.month, -1).day : nil %>
 
-<div class="card card-flush">
-  <div class="card-head">
+<section class="section">
+  <div class="section-head">
     <div>
-      <h2 class="card-title">Top posters<%= ", #{first_poster.month.strftime("%B %Y")}" if first_poster %></h2>
-      <% if first_poster %>
-        <p class="card-sub">
-          <%= first_poster.days_in_window %> of <%= full_days %> days
-          <%= "(month in progress)" if first_poster.days_in_window < full_days %>
-          <% if days_measured.to_i.positive? %>
-            &middot; posting days measured on <%= days_measured %> of them
-          <% end %>
-        </p>
+      <h2 class="section-title">Top posters<%= ", #{first_poster.month.strftime("%B %Y")}" if first_poster %></h2>
+      <% if first_poster && first_poster.days_in_window < full_days %>
+        <p class="section-note">month in progress</p>
       <% end %>
     </div>
     <% if top_poster_months.many? %>
-      <%= render "shared/picker", said: "month",
-            chosen: top_posters_month.strftime("%b %Y"),
-            groups: [{ options: top_poster_months.map { |m| {
-              label: m.strftime("%b %Y"), current: m == top_posters_month,
-              href: active_journey_path(top_posters_month: m.iso8601) } } }] %>
+      <div class="section-tools">
+        <%= render "shared/picker", said: "month",
+              chosen: top_posters_month.strftime("%b %Y"),
+              groups: [{ options: top_poster_months.map { |m| {
+                label: m.strftime("%b %Y"), current: m == top_posters_month,
+                href: active_journey_path(top_posters_month: m.iso8601) } } }] %>
+      </div>
     <% end %>
   </div>
 
-  <div class="scroll">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th class="col-rank">rank</th>
-          <th>member</th>
-          <th class="col-num">messages</th>
-          <th class="col-num">days posted</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% if top_posters.any? %>
-          <% top_posters.each do |p| %>
-            <tr>
-              <td class="col-rank"><%= p.rank %></td>
-              <td>
-                <span class="row-name">
-                  <%= tag.img(src: cachet_face_url(p.user_id), class: "row-avatar", alt: "",
-                        loading: "lazy", width: 22, height: 22,
-                        data: { cachet_face: p.user_id,
-                                cachet_initial: p.user_id.delete_prefix("U")[0].upcase,
-                                cachet_tone: avatar_tone(p.user_id) }) %>
-                  <span class="two-line">
-                    <b><%= tag.span("@#{p.user_id}", data: { cachet_name: p.user_id }) %></b>
-                    <span><%= p.user_id %></span>
-                  </span>
-                </span>
-              </td>
-              <td class="col-num"><%= number_with_delimiter(p.messages_posted) %></td>
-              <td class="col-num">
-                <%= p.days_measured.to_i.positive? ? p.days_posted : tag.span("n/a", class: "sub2") %>
-              </td>
-            </tr>
+  <div class="card card-flush">
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-rank">rank</th>
+            <th>member</th>
+            <th class="col-num">messages</th>
+            <th class="col-num">days posted</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if top_posters.any? %>
+            <% top_posters.each do |p| %>
+              <tr>
+                <td class="col-rank"><%= p.rank %></td>
+                <td>
+                  <%= render "shared/person", user_id: p.user_id, live: true %>
+                </td>
+                <td class="col-num"><%= number_with_delimiter(p.messages_posted) %></td>
+                <td class="col-num">
+                  <%= p.days_measured.to_i.positive? ? p.days_posted : tag.span("n/a", class: "sub2") %>
+                </td>
+              </tr>
+            <% end %>
+          <% else %>
+            <tr><td colspan="4">no top posters loaded</td></tr>
           <% end %>
-        <% else %>
-          <tr><td colspan="4">no top posters loaded</td></tr>
-        <% end %>
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
   </div>
-</div>
+</section>

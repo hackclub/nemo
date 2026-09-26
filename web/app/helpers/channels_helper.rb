@@ -1,7 +1,6 @@
 module ChannelsHelper
   def channel_query(**overrides)
     base = { q: @q.presence, sort: @sort, direction: @direction,
-             view: (@view unless @view == "table"),
              days: @window&.asked,
              start: @window&.asked_start,
              end: @window&.asked_end,
@@ -41,8 +40,23 @@ module ChannelsHelper
   end
 
   def band_title(row)
-    "Distribution of channels by #{number_with_delimiter(row.measure_total)} " \
+    "Distribution by #{number_with_delimiter(row.measure_total)} " \
       "of #{row.measure_label}"
+  end
+
+  FUNNEL_SHORT = {
+    "landed" => "first post",
+    "answered" => "got a reply",
+    "fast" => "fast reply",
+    "returned" => "came back"
+  }.freeze
+
+  def funnel_step_said(step)
+    FUNNEL_SHORT.fetch(step.key, step.label)
+  end
+
+  def latency_bucket_said(bucket)
+    bucket.to_s.sub(/\Aunder /, "<").sub(/\Aover /, ">").gsub(" to ", "-")
   end
 
   def channel_sort_th(label, column, css = nil)

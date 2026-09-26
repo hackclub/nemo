@@ -2,7 +2,6 @@
   <div class="card-head">
     <div>
       <h2 class="card-title">Queues</h2>
-      <p class="card-sub"><%= number_with_delimiter(queues.sum(&:pending)) %> waiting &middot; <%= queues.sum(&:claimed) %> in flight</p>
     </div>
   </div>
   <% if queues.any? %>
@@ -41,6 +40,10 @@
       </table>
     </div>
   <% else %>
-    <p class="card-note">n/a</p>
+    <div class="empty">
+      <p class="empty-title">Nothing queued</p>
+      <p>No work kind has anything waiting or in flight. An empty queues tab is the healthy state.</p>
+    </div>
   <% end %>
+<p class="chart-note"><%= number_with_delimiter(queues.sum(&:pending)) %> waiting &middot; <%= queues.sum(&:claimed) %> in flight</p>
 </div>

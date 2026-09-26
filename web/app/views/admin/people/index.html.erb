@@ -1,71 +1,71 @@
 <% content_for :page_title, "People" %>
 
-    <% content_for :page_controls do %>
-      <%= form_with url: admin_people_path, method: :get, class: "qsearch" do %>
-        <%= hidden_field_tag :role, @role, id: nil if @role %>
-        <%= search_field_tag :q, @term, placeholder: "Search by name or Slack ID",
-              class: "qsearch-in", autocomplete: "off", aria: { label: "Search people" } %>
-      <% end %>
-      <span class="segmented" role="group" aria-label="role">
-        <%= link_to "All", admin_people_path(q: @term.presence),
-              aria: { current: ("true" if @role.nil?) } %>
-        <% Authz.role_names.each do |name| %>
-          <%= link_to Authz.role_label(name),
-                admin_people_path(role: name, q: @term.presence),
-                aria: { current: ("true" if @role == name) } %>
-        <% end %>
-      </span>
+<% content_for :page_controls do %>
+  <%= form_with url: admin_people_path, method: :get, class: "qsearch" do %>
+    <%= hidden_field_tag :role, @role, id: nil if @role %>
+    <%= search_field_tag :q, @term, placeholder: "Search by name or Slack ID",
+          class: "qsearch-in", autocomplete: "off", aria: { label: "Search people" } %>
+  <% end %>
+  <span class="segmented" role="group" aria-label="role">
+    <%= link_to "All", admin_people_path(q: @term.presence),
+          aria: { current: ("true" if @role.nil?) } %>
+    <% Authz.role_names.each do |name| %>
+      <%= link_to Authz.role_label(name),
+            admin_people_path(role: name, q: @term.presence),
+            aria: { current: ("true" if @role == name) } %>
     <% end %>
-    <% if may_grant? %>
-      <% content_for :head_actions do %>
-        <%= opens_modal "access.grant", "Give access", opens: "give-access", css: "btn btn-primary" %>
-      <% end %>
-    <% end %>
+  </span>
+<% end %>
+<% if may_grant? %>
+  <% content_for :head_actions do %>
+    <%= opens_modal "access.grant", "Give access", opens: "give-access", css: "btn btn-primary" %>
+  <% end %>
+<% end %>
 
-    <div class="panel">
-      <% if @bands.any? %>
-        <div class="scroll">
-          <table class="data-table">
-            <thead>
+<div class="card card-flush">
+  <% if @bands.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>person</th><th>role</th>
+            <th style="width: 18%">acted 30d</th><th class="col-btn"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @bands.each do |label, people| %>
+            <tr class="band-row">
+              <td colspan="4"><%= label %> &middot; <%= people.size %></td>
+            </tr>
+            <% people.each do |user_id| %>
               <tr>
-                <th>person</th><th>role</th>
-                <th style="width: 18%">acted 30d</th><th class="col-btn"></th>
+                <td>
+                  <div class="subjcell">
+                    <%= face(user_id) %>
+                    <span class="two-line">
+                      <%= link_to @names[user_id], admin_person_path(user_id) %>
+                      <span class="mono"><%= user_id %></span>
+                    </span>
+                  </div>
+                </td>
+                <td><%= role_standing(user_id, roles: @roles_of[user_id] || [],
+                          extras: @extras_of[user_id] || 0) %></td>
+                <td><%= acted_bar(@acted[user_id], @busiest) %></td>
+                <td class="col-btn">
+                  <%= link_to "Open", admin_person_path(user_id), class: "btn" %>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              <% @bands.each do |label, people| %>
-                <tr class="band-row">
-                  <td colspan="4"><%= label %> &middot; <%= people.size %></td>
-                </tr>
-                <% people.each do |user_id| %>
-                  <tr>
-                    <td>
-                      <div class="subjcell">
-                        <%= face(user_id) %>
-                        <span class="two-line">
-                          <%= link_to @names[user_id], admin_person_path(user_id) %>
-                          <span class="mono"><%= user_id %></span>
-                        </span>
-                      </div>
-                    </td>
-                    <td><%= role_standing(user_id, roles: @roles_of[user_id] || [],
-                              extras: @extras_of[user_id] || 0) %></td>
-                    <td><%= acted_bar(@acted[user_id], @busiest) %></td>
-                    <td class="col-btn">
-                      <%= link_to "Open", admin_person_path(user_id), class: "btn" %>
-                    </td>
-                  </tr>
-                <% end %>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      <% elsif @term.present? || @role %>
-        <div class="empty"><p class="empty-title">Nobody matches</p></div>
-      <% else %>
-        <div class="empty"><p class="empty-title">Nobody holds a grant yet</p></div>
-      <% end %>
+            <% end %>
+          <% end %>
+        </tbody>
+      </table>
     </div>
+  <% elsif @term.present? || @role %>
+    <div class="empty"><p class="empty-title">Nobody matches</p></div>
+  <% else %>
+    <div class="empty"><p class="empty-title">Nobody holds a grant yet</p></div>
+  <% end %>
+</div>
 
 <% if may_grant? %>
   <%= render "admin/people/give_modal" %>

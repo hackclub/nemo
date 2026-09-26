@@ -1,17 +1,4 @@
 <div class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Where newcomers land</h2>
-      <% if newcomer_reach %>
-        <p class="card-sub">
-          <%= number_with_delimiter(newcomer_reach.cohort_size) %> members who first signed in
-          in the 30 days to <%= newcomer_reach.cohort_end.strftime("%-d %b %Y") %> &middot;
-          <%= number_with_delimiter(newcomer_reach.searched_of_cohort) %> searched
-        </p>
-      <% end %>
-    </div>
-  </div>
-
   <% if newcomer_channels.any? %>
     <% bands = ->(c) { [
          { cls: "fn-a", label: "posted here", value: c.newcomers_posting.to_i,

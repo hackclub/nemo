@@ -1,46 +1,47 @@
-<div class="panel-head">
-  <span class="lbl grow"><%= people_head_line(people) %></span>
-  <%= opens_modal "case.people", "Add somebody", opens: "add-person", on: kase %>
-</div>
-
-<% if people.size.zero? %>
-  <div class="empty">
-    <p class="empty-title">Nobody is on this case yet</p>
+<div class="section">
+  <div class="section-head">
+    <h2 class="section-title">People</h2>
+    <div class="section-tools">
+      <%= opens_modal "case.people", "Add somebody", opens: "add-person", on: kase %>
+    </div>
   </div>
-<% end %>
 
-<div class="people-list">
-  <% people_in_order(people).each do |person| %>
-    <div class="person-block">
-      <div class="line-row fat person-row">
-        <%= face(person.user_id, css: "person-face") %>
-        <span class="grow two-line">
-          <b>
-            <%= handle(person.user_id) %>
-            <span class="person-role">· <%= person_roles_line(person) %></span>
-          </b>
-          <span>
-            <%= person_line(person, contexts[person.user_id], said_counts,
-                  total_messages) %>
-          </span>
-        </span>
-        <span class="row-right">
-          <% count = priors.fetch(person.user_id, 0) %>
-          <% if count.positive? %>
-            <span class="prior-count"><%= pluralize(count, "prior case") %></span>
-          <% else %>
-            <span class="prior-count is-none">no priors</span>
-          <% end %>
-          <%= link_to "History", fd_member_path(person.user_id), class: "btn",
-                data: { turbo_frame: "person-drawer" } %>
-          <%= render "person_menu", kase: kase, person: person %>
-        </span>
+  <% if people.size.zero? %>
+    <div class="empty">
+      <p class="empty-title">Nobody is on this case yet</p>
+      <div class="empty-do">
+        <%= opens_modal "case.people", "Add somebody", opens: "add-person", on: kase,
+              css: "btn btn-primary" %>
       </div>
+    </div>
+  <% else %>
+    <div class="people-list">
+      <% people_in_order(people).each do |person| %>
+        <div class="person-block">
+          <div class="line-row fat person-row">
+            <%= face(person.user_id, css: "person-face") %>
+            <span class="grow two-line">
+              <b>
+                <%= handle(person.user_id) %>
+                <span class="person-role">· <%= person_roles_line(person) %></span>
+              </b>
+              <span>
+                <%= person_line(person, contexts[person.user_id], priors) %>
+              </span>
+            </span>
+            <span class="row-right">
+              <%= link_to "History", fd_member_path(person.user_id), class: "btn",
+                    data: { turbo_frame: "person-drawer" } %>
+              <%= render "person_menu", kase: kase, person: person %>
+            </span>
+          </div>
 
-      <% Array(notes[person.user_id]).each do |note| %>
-        <div class="person-note">
-          <div class="note-body"><%= mentioned(note.body) %></div>
-          <div class="sub2"><%= note_byline(note) %></div>
+          <% Array(notes[person.user_id]).each do |note| %>
+            <div class="person-note">
+              <div class="note-body"><%= mentioned(note.body) %></div>
+              <div class="sub2"><%= note_byline(note) %></div>
+            </div>
+          <% end %>
         </div>
       <% end %>
     </div>

@@ -1,8 +1,17 @@
 <% cells_by_key = matrix.to_h { |source, cells| [source.key, cells] } %>
+<% stale_count = sources.count { |row| row.state != "live" } %>
 <div class="card card-flush">
   <div class="card-head">
     <div>
-      <h2 class="card-title">Sources</h2>
+      <h2 class="card-title">Every source</h2>
+      <p class="card-sub">
+        <%= pluralize(sources.size, "source") %>
+        <% if stale_count.positive? %>
+          &middot; <span class="warn"><%= pluralize(stale_count, "source") %> stale</span>
+        <% else %>
+          &middot; all live
+        <% end %>
+      </p>
     </div>
   </div>
 

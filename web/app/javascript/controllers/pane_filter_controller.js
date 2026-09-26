@@ -28,13 +28,27 @@ export default class extends Controller {
     this.request?.abort()
   }
 
+  pick(event) {
+    this.queryTarget.value = event.params.term || ""
+    this.filter()
+  }
+
   filter() {
     const term = this.queryTarget.value.trim().toLocaleLowerCase()
     let shown = 0
 
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+
     this.rowTargets.forEach((row) => {
       const matches = !term || row.textContent.toLocaleLowerCase().includes(term)
+      const changed = matches === row.hidden
       row.hidden = !matches
+      if (matches && changed && !still) {
+        row.animate(
+          [{ opacity: 0, transform: "translateY(2px)" }, { opacity: 1, transform: "none" }],
+          { duration: 150, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
+        )
+      }
       if (matches) shown += 1
     })
 

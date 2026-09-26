@@ -1,9 +1,8 @@
-<div class="cols c-even">
+<div class="grid g-2">
   <div class="card card-stretch">
     <div class="card-head">
       <div>
         <h2 class="card-title">Threads</h2>
-        <p class="card-sub"><%= window_note(start_date, end_date) %></p>
       </div>
     </div>
     <% if pulse.any? %>
@@ -43,8 +42,15 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">Texture</h2>
-        <p class="card-sub"><%= window_note(start_date, end_date) %></p>
       </div>
+      <% if pulse.messages.positive? %>
+        <div class="card-tools">
+          <div class="legend">
+            <span><i class="ser-1"></i>carry a link</span>
+            <span><i class="ser-2"></i>carry a file</span>
+          </div>
+        </div>
+      <% end %>
     </div>
     <% if pulse.messages.positive? %>
       <div
@@ -78,7 +84,13 @@
         <% end %>
       </dl>
     <% else %>
-      <p class="card-note">no message landed in this range</p>
+      <div class="empty">
+        <p class="empty-title">No messages in this range</p>
+        <p>Nothing was posted here in this window. Try a wider range.</p>
+        <div class="empty-do">
+          <button type="button" class="btn" data-modal-open="channel-range">Change range</button>
+        </div>
+      </div>
     <% end %>
   </div>
 </div>

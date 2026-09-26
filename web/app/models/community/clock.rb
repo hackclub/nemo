@@ -5,9 +5,9 @@ module Community
     WINDOW_DAYS = 91
     DEFAULT_ZONE = "UTC".freeze
 
-    RAMP = %w[
-      #30123b #4454c4 #4490fe #1fc8de #29efa2
-      #7dff56 #c1f334 #f1ca3a #fe922a #ea4f0d #7a0403
+    RAMP = [
+      "var(--clk-0)", "var(--clk-1)", "var(--clk-2)",
+      "var(--clk-3)", "var(--clk-4)", "var(--clk-5)"
     ].freeze
 
     FOLD = <<~SQL.freeze
@@ -186,11 +186,26 @@ module Community
       messages = @counts.fetch([dow, hour], 0)
       share = @peak.positive? ? messages.to_f / @peak : 0.0
       Cell.new(day: DAYS[dow - 1], hour: hour, messages: messages, share: share,
-        tone: tone(share))
+        tone: tone(messages))
     end
 
-    def tone(share)
-      RAMP[(share * (RAMP.size - 1)).round]
+    def tone(messages)
+      return RAMP.first if messages.zero?
+
+      step = cuts.count { |cut| messages > cut }
+      RAMP[step + 1]
+    end
+
+    def cuts
+      @cuts ||= begin
+        spoken = @counts.values.reject(&:zero?).sort
+        steps = RAMP.size - 2
+        if spoken.size < steps
+          []
+        else
+          (1...steps).map { |i| spoken[(spoken.size * i) / steps] }
+        end
+      end
     end
   end
 end

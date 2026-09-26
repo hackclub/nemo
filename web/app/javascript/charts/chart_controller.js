@@ -582,12 +582,13 @@ export default class extends Controller {
       ? `<div class="row"><i class="hole-dot"></i>${
         esc(row.why || "not fetched")}<b>n/a</b></div>`
       : g.series.map((s) => row[s.k] == null ? "" :
-        `<div class="row"><i class="${this.paint(s)}"${this.tint(s)}></i>${esc(s.n)}<b>${
-          this.said(row[s.k])}${row[s.c] == null ? "" : ` <u>${F(row[s.c])}</u>`}</b></div>`)
+        `<div class="row"><i class="${this.paint(s)}"${this.tint(s)}></i>${esc(s.n)}<b><span>${
+          this.said(row[s.k])}</span>${row[s.c] == null ? "" : `<u>${F(row[s.c])}</u>`}</b></div>`)
         .join("")
 
     const whole = this.stack && !row.gap && !this.pctValue
-      ? `<div class="row row-sum"><i></i>total<b>${this.said(this.sum(row, g.series))}</b></div>`
+      ? `<div class="row row-sum"><i></i>total<b><span>${
+        this.said(this.sum(row, g.series))}</span></b></div>`
       : ""
 
     const short = this.hasPartialValue && this.partialValue.map(Number).includes(i)

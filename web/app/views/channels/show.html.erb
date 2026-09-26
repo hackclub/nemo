@@ -8,8 +8,7 @@
     <%= render "shared/range_button", id: "channel-range",
           label: range_said(@range_preset, @start_date, @end_date) %>
   <% end %>
-  <%= link_to "Open in Slack", slack_channel_url(@channel.channel_id), class: "btn",
-        target: "_blank", rel: "noopener" %>
+  <%= open_in_slack slack_channel_url(@channel.channel_id) %>
   <%= render "backfill_button", channel: @channel, backfill: @backfill %>
 <% end %>
 
@@ -22,7 +21,7 @@
 
 <div class="stack">
   <%= render "identity", channel: @channel, snapshot: @snapshot, standing: @standing,
-        crowd: @crowd %>
+        crowd: @crowd, team_stats: @team_stats %>
 
   <% case @view %>
   <% when "overview" %>

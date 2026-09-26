@@ -1,66 +1,70 @@
 <% s = activity_series(activity_trend, granularity) %>
 <% was = prior_trend.any? ? activity_series(prior_trend, granularity) : nil %>
 
-<div class="card">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Active people in the workspace</h2>
-      <p class="card-sub">last <%= s[:span] %></p>
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Activity</h2>
+  </div>
+
+  <div class="grid g-3">
+    <div class="card">
+      <div class="card-head"><h2 class="card-title">Active</h2></div>
+      <div class="card-body">
+        <div
+          data-controller="chart"
+          data-chart-kind-value="bars"
+          <% if s[:partial].any? %>data-chart-partial-value="<%= s[:partial].to_json %>"<% end %>
+          data-chart-days-value="<%= s[:days] %>"
+          data-chart-height-value="200"
+          data-chart-data-value="<%= {
+            labels: s[:labels],
+            datasets: [{ label: "active", data: s[:active] }]
+          }.to_json %>"
+        ></div>
+      </div>
     </div>
-    <div class="card-tools">
-      <div class="legend">
-        <span><i class="ser-1"></i>share of active who posted</span>
-        <% if was %><span><i class="ghost"></i>previous period</span><% end %>
+
+    <div class="card">
+      <div class="card-head"><h2 class="card-title">Posted</h2></div>
+      <div class="card-body">
+        <div
+          data-controller="chart"
+          data-chart-kind-value="bars"
+          <% if s[:partial].any? %>data-chart-partial-value="<%= s[:partial].to_json %>"<% end %>
+          data-chart-days-value="<%= s[:days] %>"
+          data-chart-height-value="200"
+          data-chart-data-value="<%= {
+            labels: s[:labels],
+            datasets: [{ label: s[:posted_label], data: s[:posted] }]
+          }.to_json %>"
+        ></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="card-title">Share who posted</h2></div>
+      <div class="card-body">
+        <div
+          data-controller="chart"
+          data-chart-kind-value="line"
+          data-chart-days-value="<%= s[:days] %>"
+          data-chart-height-value="200"
+          data-chart-pct-value="true"
+          data-chart-nokey-value="true"
+          data-chart-data-value="<%= {
+            labels: s[:labels],
+            datasets: [
+              { label: "share of active who posted", data: s[:posted_share] },
+              (was ? { label: "previous period", data: was[:posted_share],
+                       color: "var(--ink-4)", ghost: true } : nil)
+            ].compact
+          }.to_json %>"
+        ></div>
+        <div class="legend chart-legend-under">
+          <span><i class="ser-1"></i>share of active who posted</span>
+          <% if was %><span><i class="ghost"></i>previous period</span><% end %>
+        </div>
       </div>
     </div>
   </div>
-  <div class="trio">
-    <figure>
-      <p class="panel-name">Active</p>
-      <div
-        data-controller="chart"
-        data-chart-kind-value="bars"
-        <% if s[:partial].any? %>data-chart-partial-value="<%= s[:partial].to_json %>"<% end %>
-        data-chart-days-value="<%= s[:days] %>"
-        data-chart-height-value="190"
-        data-chart-data-value="<%= {
-          labels: s[:labels],
-          datasets: [{ label: "active", data: s[:active] }]
-        }.to_json %>"
-      ></div>
-    </figure>
-    <figure>
-      <p class="panel-name">Posted</p>
-      <div
-        data-controller="chart"
-        data-chart-kind-value="bars"
-        <% if s[:partial].any? %>data-chart-partial-value="<%= s[:partial].to_json %>"<% end %>
-        data-chart-days-value="<%= s[:days] %>"
-        data-chart-height-value="190"
-        data-chart-data-value="<%= {
-          labels: s[:labels],
-          datasets: [{ label: s[:posted_label], data: s[:posted] }]
-        }.to_json %>"
-      ></div>
-    </figure>
-    <figure>
-      <p class="panel-name">Share who posted</p>
-      <div
-        data-controller="chart"
-        data-chart-kind-value="line"
-        data-chart-days-value="<%= s[:days] %>"
-        data-chart-height-value="190"
-        data-chart-pct-value="true"
-        data-chart-nokey-value="true"
-        data-chart-data-value="<%= {
-          labels: s[:labels],
-          datasets: [
-            { label: "share of active who posted", data: s[:posted_share] },
-            (was ? { label: "previous period", data: was[:posted_share],
-                     color: "var(--ink-4)", ghost: true } : nil)
-          ].compact
-        }.to_json %>"
-      ></div>
-    </figure>
-  </div>
-</div>
+</section>

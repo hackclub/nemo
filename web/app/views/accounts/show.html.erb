@@ -46,42 +46,33 @@
   </div>
 </div>
 
-<div class="panel" data-controller="theme">
-  <div class="panel-head">
-    <span>Theme</span>
-    <span class="theme-chip" data-theme-target="swatch" aria-hidden="true"></span>
-    <span class="sub2" data-theme-target="name"></span>
-  </div>
-  <%= render "accounts/theme" %>
-</div>
-
-<div class="panel">
-  <div class="panel-head">
-    <span>What you did</span>
-    <span class="grow"></span>
-    <span class="sub2">
-      <% if @deed_count.positive? %>
-        <%= pluralize(@deed_count, "action") %> &middot; last 30 days
-      <% else %>
-        last 30 days
-      <% end %>
-    </span>
-  </div>
-  <% if @deeds.any? %>
-    <div class="scroll">
-      <table class="data-table">
-        <tbody>
-          <% @deeds.each do |deed| %>
-            <tr>
-              <td><b><%= deed_head(deed) %></b></td>
-              <td class="said-cell"><%= deed_said(deed) %></td>
-              <td class="mono col-date"><%= deed.at.strftime("%-d %b %H:%M") %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
+<div class="grid g-sided">
+  <div class="panel" data-controller="theme">
+    <div class="panel-head">
+      <span class="panel-name">Theme</span>
+      <span class="grow"></span>
+      <span class="theme-chip" data-theme-target="swatch" aria-hidden="true"></span>
+      <span class="sub2" data-theme-target="name"></span>
     </div>
-  <% else %>
-    <div class="empty"><p class="empty-title">Nothing in 30 days</p></div>
-  <% end %>
+    <%= render "accounts/theme" %>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-name">What you did</span>
+      <span class="grow"></span>
+      <span class="sub2">
+        <% if @deed_count.positive? %>
+          <%= pluralize(@deed_count, "action") %> &middot; last 30 days
+        <% else %>
+          last 30 days
+        <% end %>
+      </span>
+    </div>
+    <% if @deeds.any? %>
+      <%= render "shared/log", deeds: @deeds %>
+    <% else %>
+      <div class="empty"><p class="empty-title">Nothing in 30 days</p></div>
+    <% end %>
+  </div>
 </div>

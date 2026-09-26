@@ -4,13 +4,21 @@
          <%= "checked" if local_assigns[:open] %>>
   <label for="<%= id %>" class="modal-veil" aria-hidden="true"></label>
   <div class="modal-wrap">
-    <div class="modal" role="dialog" aria-modal="true" tabindex="-1"
+    <div class="modal<%= " modal-#{size}" if local_assigns[:size].present? %>"
+         role="dialog" aria-modal="true" tabindex="-1"
          aria-label="<%= local_assigns[:label] || title %>" data-modal-target="box">
       <div class="modal-head">
         <h2 class="modal-title"><%= title %></h2>
         <% if local_assigns[:sub].present? %>
           <span class="modal-sub"><%= sub %></span>
         <% end %>
+        <button type="button" class="modal-shut" aria-label="Close"
+                data-action="click->modal#shut">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"/>
+          </svg>
+        </button>
       </div>
       <%= yield %>
     </div>

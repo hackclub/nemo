@@ -49,7 +49,9 @@ export default class extends Controller {
       this.nameTarget.textContent = pinned ? label : `${label}, auto`
     }
     if (this.hasSwatchTarget) {
-      this.swatchTarget.innerHTML = option.querySelector(".theme-chip")?.innerHTML || ""
+      const chip = option.querySelector(".theme-chip")
+      this.swatchTarget.style.setProperty("--chip",
+        chip ? chip.style.getPropertyValue("--chip") : "")
     }
   }
 }

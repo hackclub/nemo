@@ -4,16 +4,9 @@
 
 <% content_for :page_title, EngineController::TABS.fetch(@tab) %>
 
+
 <% content_for :head_actions do %>
   <% if @active_request %>
-    <% if @orphaned %>
-      <span class="chip chip-crit">worker down</span>
-    <% else %>
-      <span class="chip">
-        <i class="dot run"></i>
-        <%= step_progress(@progress) || @active_request.status %>
-      </span>
-    <% end %>
     <%= button_to(@orphaned ? "Release" : "Cancel", engine_cancel_path,
           class: "btn", form: { class: "contents" }) %>
   <% else %>
@@ -22,55 +15,98 @@
   <% end %>
 <% end %>
 
+<% if @active_request %>
+  <% content_for :page_controls do %>
+    <% if @orphaned %>
+      <span class="chip chip-crit">worker down</span>
+    <% else %>
+      <span class="chip">
+        <i class="dot run"></i>
+        <%= step_progress(@progress) || @active_request.status %>
+      </span>
+    <% end %>
+  <% end %>
+<% end %>
+
 <% if @tab == "runs" %>
-  <div class="card card-flush">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">Tonight</h2>
-        <p class="card-sub">
-          <% if @run %>
-            <%= @run.started_at.strftime("%-d %b, %H:%M") %>
-            &middot; <%= run_duration(@run) %><%= " so far" if @run.running? %>
-            <% if (progress = step_progress(@progress)) %>
-              &middot; <%= progress %>
-            <% end %>
-          <% else %>
-            nothing recorded yet
-          <% end %>
-        </p>
-      </div>
+  <% missed_nights = @nightly.count { |cell| cell == "none" } %>
+  <div class="metrics">
+    <div class="metric">
+      <span class="metric-k">Tonight</span>
+      <span class="metric-v"><%= @run.nil? ? "no run" : (@orphaned ? "stuck" : @run.status) %></span>
+      <span class="metric-say">
+        <% if @run.nil? %>
+          <span>nothing recorded yet</span>
+        <% elsif @orphaned %>
+          <%= worker_chip(@worker) %>
+        <% else %>
+          <span><%= @run.started_at.strftime("%-d %b, %H:%M") %></span>
+          <%= run_age(@run) if run_stale?(@run) %>
+        <% end %>
+      </span>
+    </div>
+
+    <div class="metric">
+      <span class="metric-k">How far</span>
+      <span class="metric-v">
+        <% if @progress %>
+          <%= @progress.step_index %><% if @progress.step_total %><small>of <%= @progress.step_total %></small><% end %>
+        <% else %>
+          <%= @run ? "done" : "n/a" %>
+        <% end %>
+      </span>
+      <span class="metric-say">
+        <span><%= @run&.running? ? "running now" : (@run ? "finished" : "waiting on the first run") %></span>
+      </span>
+    </div>
+
+    <div class="metric">
+      <span class="metric-k">Running</span>
+      <span class="metric-v">
+        <%= @run ? run_duration(@run) : "n/a" %><% if @run&.running? %><small>so far</small><% end %>
+      </span>
+      <span class="metric-say">
+        <span><%= @run ? "started #{@run.started_at.strftime("%-d %b, %H:%M")}" : "no run yet" %></span>
+      </span>
+    </div>
+
+    <div class="metric">
+      <span class="metric-k">Missed, last <%= EngineController::NIGHTS %></span>
+      <span class="metric-v"><%= missed_nights %></span>
+      <span class="metric-say">
+        <span><%= missed_nights.zero? ? "the nightly ran every night" : "#{"night".pluralize(missed_nights)} it never ran" %></span>
+      </span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <h2 class="section-title">Tonight</h2>
       <% if @run %>
-        <div class="card-tools">
+        <div class="section-tools">
           <% if @run.running? && !@orphaned %>
             <%= image_tag "nemo.png", class: "sync-fish", alt: "", width: 800, height: 483 %>
-          <% end %>
-          <%= run_age(@run) if run_stale?(@run) %>
-          <% if @orphaned %>
-            <%= worker_chip(@worker) %>
-          <% elsif @run.running? %>
-            <span class="swatch"><i class="dot run"></i>running</span>
-          <% else %>
-            <%= run_status(@run) %>
           <% end %>
           <%= link_to "Open the run", engine_run_path(@run.id), class: "btn btn-ghost" %>
         </div>
       <% end %>
     </div>
-    <% if @steps.any? %>
-      <%= render "ladder", steps: @steps %>
-    <% else %>
-      <p class="card-note">n/a</p>
-    <% end %>
+    <div class="card card-flush">
+      <% if @steps.any? %>
+        <%= render "ladder", steps: @steps %>
+      <% else %>
+        <p class="card-note">n/a</p>
+      <% end %>
+    </div>
   </div>
 
-  <div class="card card-flush">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">The last <%= EngineController::NIGHTS %> nights</h2>
-        <p class="card-sub">one square a night, worst run of that night wins the colour</p>
-      </div>
+  <div class="section">
+    <div class="section-head">
+      <h2 class="section-title">The last <%= EngineController::NIGHTS %> nights</h2>
     </div>
-    <%= render "matrix", matrix: @matrix, nights: @nights, nightly: @nightly %>
+    <div class="card card-flush">
+      <%= render "matrix", matrix: @matrix, nights: @nights, nightly: @nightly %>
+    </div>
   </div>
 
 <% elsif @tab == "sources" %>

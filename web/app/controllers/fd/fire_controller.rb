@@ -6,7 +6,7 @@ module Fd
     def show
       @open = Case.unresolved.not_duplicate.count
       @unclaimed = Case.unresolved.not_duplicate.unassigned.count
-      @claim_lag = median_claim_lag
+      @resolve_lag = median_resolve_lag
 
       acted = Action.where(performed_at: WINDOW.ago..)
       @actions_total = acted.count
@@ -18,11 +18,11 @@ module Fd
 
     private
 
-    def median_claim_lag
-      lags = CaseAssignee
-        .joins("JOIN fd.cases ON fd.cases.id = fd.case_assignees.case_id")
-        .where("fd.cases.opened_at > ?", WINDOW.ago)
-        .pluck(Arel.sql("extract(epoch from (assigned_at - fd.cases.opened_at))"))
+    def median_resolve_lag
+      lags = Case.not_duplicate
+        .where.not(resolved_at: nil)
+        .where(opened_at: WINDOW.ago..)
+        .pluck(Arel.sql("extract(epoch from (resolved_at - opened_at))"))
         .compact
         .sort
       return nil if lags.empty?

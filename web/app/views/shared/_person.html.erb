@@ -1,0 +1,13 @@
+<% live = local_assigns.fetch(:live, false) %>
+<span class="row-name<%= " #{local_assigns[:css]}" if local_assigns[:css].present? %>">
+  <%= face(user_id, css: local_assigns.fetch(:avatar_css, "row-avatar")) %>
+  <% label = live ? tag.span("@#{user_id}", data: { cachet_name: user_id }) : name %>
+  <% if local_assigns[:sub].present? %>
+    <span class="two-line">
+      <b><%= local_assigns[:href] ? link_to(label, href) : label %></b>
+      <span><%= sub %></span>
+    </span>
+  <% else %>
+    <b class="row-said"><%= local_assigns[:href] ? link_to(label, href) : label %></b>
+  <% end %>
+</span>

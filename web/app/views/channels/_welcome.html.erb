@@ -1,37 +1,32 @@
-<div class="cols c-even">
+<div class="grid g-2">
   <div class="card card-stretch">
     <div class="card-head">
       <div>
         <h2 class="card-title">First posts</h2>
-        <p class="card-sub">
-          <%= window_note(welcome.window_start, welcome.window_end) %>
-        </p>
+      </div>
+      <div class="card-tools">
+        <span class="card-sub"><%= window_note(welcome.window_start, welcome.window_end) %></span>
       </div>
     </div>
     <% if welcome.any? %>
-      <% steps = welcome.funnel %>
+      <% steps = welcome.funnel + [welcome.returned].compact %>
       <div
-        data-controller="hbars"
-        data-hbars-said-value="newcomers"
-        data-hbars-rows-value="<%= steps.map { |step| {
-          label: step.label, value: step.count,
-          note: number_to_percentage(step.share.to_f, precision: 1)
-        } }.to_json %>"
+        data-controller="chart"
+        data-chart-kind-value="bars"
+        data-chart-height-value="220"
+        data-chart-nokey-value="true"
+        data-chart-data-value="<%= {
+          labels: steps.map { |step| funnel_step_said(step) },
+          datasets: [{ label: "newcomers", data: steps.map(&:count) }]
+        }.to_json %>"
+        data-chart-notes-value="<%= steps.map { |step|
+          number_to_percentage(step.share.to_f, precision: 1) }.to_json %>"
       ></div>
-      <% back = welcome.returned %>
-      <% if back %>
-        <dl class="deflist">
-          <div>
-            <dt><%= back.label %></dt>
-            <dd>
-              <%= number_with_delimiter(back.count) %>
-              <span class="short"><%= number_to_percentage(back.share.to_f, precision: 1) %></span>
-            </dd>
-          </div>
-        </dl>
-      <% end %>
     <% else %>
-      <p class="card-note">no first post landed here in this window</p>
+      <div class="empty">
+        <p class="empty-title">No first posts yet</p>
+        <p>Nobody joined and posted here in this window.</p>
+      </div>
     <% end %>
   </div>
 
@@ -39,21 +34,29 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">Reply time</h2>
-        <p class="card-sub">median <%= duration_said(welcome.median_latency) %></p>
+      </div>
+      <div class="card-tools">
+        <span class="card-sub">median <%= duration_said(welcome.median_latency) %></span>
       </div>
     </div>
     <% if welcome.latency.any? %>
       <div
-        data-controller="hbars"
-        data-hbars-said-value="newcomers"
-        data-hbars-rows-value="<%= welcome.latency.map { |bucket| {
-          label: bucket.bucket, value: bucket.newcomers.to_i,
-          note: number_to_percentage(bucket.share_pct.to_f, precision: 1),
-          tone: ("miss" unless bucket.answered)
-        }.compact } .to_json %>"
+        data-controller="chart"
+        data-chart-kind-value="bars"
+        data-chart-height-value="220"
+        data-chart-nokey-value="true"
+        data-chart-data-value="<%= {
+          labels: welcome.latency.map { |b| latency_bucket_said(b.bucket) },
+          datasets: [{ label: "newcomers", data: welcome.latency.map { |b| b.newcomers.to_i } }]
+        }.to_json %>"
+        data-chart-notes-value="<%= welcome.latency.map { |bucket|
+          number_to_percentage(bucket.share_pct.to_f, precision: 1) }.to_json %>"
       ></div>
     <% else %>
-      <p class="card-note">no reply measurement here yet</p>
+      <div class="empty">
+        <p class="empty-title">No reply measured yet</p>
+        <p>Not enough first posts here to measure a median reply time.</p>
+      </div>
     <% end %>
   </div>
 </div>
@@ -63,10 +66,6 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">Scorecard</h2>
-        <p class="card-sub">
-          <%= scorecard_rows.first.post_month.strftime("%b %Y") %> to
-          <%= scorecard_rows.last.post_month.strftime("%b %Y") %>
-        </p>
       </div>
     </div>
     <div
@@ -78,24 +77,5 @@
         datasets: [{ label: "newcomers", data: scorecard_rows.map(&:newcomer_volume) }]
       }.to_json %>"
     ></div>
-    <div class="substrip">
-      <span class="substrip-k">90-day retention</span>
-      <div
-        data-controller="chart"
-        data-chart-kind-value="line"
-        data-chart-spark-value="true"
-        data-chart-pct-value="true"
-        data-chart-height-value="46"
-        data-chart-data-value="<%= {
-          labels: scorecard_rows.map { |r| r.post_month.strftime("%b %Y") },
-          datasets: [{ label: "90-day retention", data: scorecard_rows.map { |r|
-            ((r.retained_90_share.to_f * 100).round(1) if r.day_90_mature) } }]
-        }.to_json %>"
-      ></div>
-      <span class="substrip-v">
-        <% mature = scorecard_rows.select(&:day_90_mature).last %>
-        <%= mature ? number_to_percentage((mature.retained_90_share.to_f * 100).round(1), precision: 1) : "n/a" %>
-      </span>
-    </div>
   </div>
 <% end %>

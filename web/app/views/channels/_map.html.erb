@@ -2,9 +2,6 @@
   <div class="card-head">
     <div>
       <h2 class="card-title"><%= title %></h2>
-      <p class="card-sub">
-        <%= map.cohort.window %><%= " &middot; still filling" .html_safe unless map.cohort.mature %>
-      </p>
     </div>
     <% if cohorts.many? %>
       <% pick = ->(cohort) { { label: cohort.label, current: cohort.key == map.cohort.key,
@@ -36,8 +33,8 @@
       <% end %>
     </div>
   <% else %>
-    <p class="card-note">
-      No channel reached <%= map.floor %> newcomers who posted in <%= map.cohort.window %>
-    </p>
+    <div class="empty">
+      <p class="empty-title">Not enough newcomers yet</p>
+    </div>
   <% end %>
 </div>

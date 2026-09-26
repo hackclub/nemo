@@ -1,0 +1,159 @@
+@layer base {
+  .scroll {
+    scroll-behavior: smooth;
+    background:
+      linear-gradient(to right, var(--card) 30%, transparent),
+      linear-gradient(to left, var(--card) 30%, transparent) 100% 0,
+      linear-gradient(to right, color-mix(in oklab, var(--ink) 16%, transparent), transparent),
+      linear-gradient(to left, color-mix(in oklab, var(--ink) 16%, transparent), transparent) 100% 0;
+    background-repeat: no-repeat;
+    background-size: 38px 100%, 38px 100%, 12px 100%, 12px 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+  .pane-list, .scrollarea, .case-tab-body, .member-record-content { background-image: none; }
+
+  @media (min-width: 1680px) {
+    :root { --sidebar-w: 260px; --queue-w: 400px; --s-page: 28px; }
+    .body { padding-left: var(--s-lg); padding-right: var(--s-lg); }
+    .rhead { padding: 0 var(--s-lg); }
+  }
+
+  @media (max-width: 1439px) {
+    .rtitle { font-size: var(--t-head); }
+    .metric { padding: var(--s-xs) var(--s-xs) var(--s-sm); }
+    .metric-v { font-size: 1.625rem; }
+  }
+
+  @media (max-width: 1099px) {
+    .metrics { --metric-min: 165px; }
+    .intro { font-size: var(--t-body); }
+    .lede { flex-wrap: wrap; padding: var(--s-xs); }
+    .lede-do { margin-left: 0; width: 100%; }
+  }
+
+  @media (max-width: 899px) {
+    .rtop { min-height: 48px; padding: 8px 0; }
+    .rtitle { font-size: var(--t-head); }
+    .ractions { flex-wrap: wrap; justify-content: flex-end; }
+    .toolbar { gap: 6px; }
+    .toolbar-end { margin-left: 0; width: 100%; }
+    .cardbar > .qsearch { flex: 1 1 160px; max-width: none; }
+    .cardbar > .toolbar-end { margin-left: auto; width: auto; }
+    .metric { padding: 10px var(--s-xs) var(--s-xs); }
+    .metric-v { font-size: 1.5rem; }
+    .metric-spark { display: none; }
+    .facts-strip > div, .facts-strip > .fact { flex-basis: 50%; }
+    .section-head { flex-wrap: wrap; }
+    .section-note { white-space: normal; margin-left: 0; text-align: left; flex: 1 0 100%; }
+    .section-tools { margin-left: auto; width: auto; justify-content: flex-end; }
+    .pagebar { width: 100%; justify-content: space-between; border-radius: var(--r-card); }
+    .card-head { flex-wrap: wrap; }
+    .card-tools { margin-left: auto; }
+    .drawer, .person-drawer-frame:not(:empty) { width: 100vw; }
+    .views { gap: var(--s-xs); }
+  }
+
+  @media (max-width: 640px) {
+    :root {
+      --rail-w: 48px;
+      --s-page: 12px;
+    }
+    .rail { padding: 6px 0; gap: 4px; }
+    .rail-btn, .you-face { width: 36px; height: 36px; }
+    .rail-brand { width: 36px; }
+    .rail-tip { display: none; }
+    .cpane { left: var(--rail-w); }
+
+    .rhead { padding: 0 10px; }
+    .body { padding: var(--s-sm) var(--s-sm) var(--s-xl); gap: var(--s-sm); }
+    .rtitle { font-size: var(--t-mid); }
+    .facts-strip > div, .facts-strip > .fact {
+      flex-basis: 100%;
+      border-left: 0;
+      border-top: 1px solid var(--line-soft);
+    }
+    .facts-strip > div:first-child, .facts-strip > .fact:first-child { border-top: 0; }
+    .strip { gap: var(--s-2xs); }
+    .strip-div { display: none; }
+    .empty { padding: var(--s-lg) var(--s-xs); }
+    .topbar-msgs { left: 10px; right: 10px; translate: none; bottom: 10px; }
+    .toast, .topbar-msg { min-width: 0; max-width: none; }
+    .btn { padding: 0 9px; }
+    .segmented > a, .segmented > button, .segmented > label, .segmented > span { padding: 0 7px; }
+    .palette { padding: 10px; align-items: flex-start; }
+    .palette-card { max-height: 78dvh; }
+    .qbar > .field, .qbar > .input, .qbar > .qsearch-in { max-width: none; }
+  }
+
+  @media (max-width: 460px) {
+    .views .view { font-size: var(--t-small); }
+  }
+
+  @media (pointer: coarse) {
+    .btn, .iconbtn { min-height: 34px; }
+    .btn-sm { min-height: 28px; height: 28px; }
+    .cnav a { height: 36px; }
+    .data-table td { padding: 11px var(--s-xs); }
+    .qrow { padding-top: 11px; padding-bottom: 11px; }
+    .dp-day { height: 34px; }
+    .menu-pop .btn, .menu-pop > a, .menu-pop > button { min-height: 34px; }
+  }
+
+  @media (max-width: 899px) {
+    .rtop { flex-wrap: wrap; row-gap: 6px; min-height: 0; padding: var(--s-2xs) 0 10px; }
+    .rhead-said { flex: 1 1 100%; }
+    .rtop > .ractions { flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-start; }
+    .mobar > .ractions { margin-left: auto; flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: 6px; }
+    .mobar > .ractions > .btn { max-width: 46vw; overflow: hidden; }
+    .toolbar > .btn, .ractions > .btn, .card-tools > .btn, .section-tools > .btn { flex: 0 0 auto; }
+
+    .segmented { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+    .segmented::-webkit-scrollbar { display: none; }
+
+    .card-head, .panel-head, .covhead { flex-wrap: wrap; row-gap: 4px; }
+    .card-head > div, .panel-head > div { min-width: 0; }
+    .card-tools { flex: 0 1 auto; min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
+
+    .lrow, .line-row, .record-row, .source-row { flex-wrap: wrap; row-gap: 5px; }
+    .line-row > .grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .row-right, .lrow-right, .evrow-right { flex: 0 1 auto; min-width: 0; flex-wrap: wrap; row-gap: 4px; }
+    .people-list > .line-row { flex-wrap: nowrap; align-items: center; }
+    .people-list > .line-row > .row-right {
+      width: auto;
+      flex: none;
+      margin-left: auto;
+      justify-content: flex-end;
+    }
+    .people-list > .line-row .lnk-soft { display: none; }
+
+    .rung {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      row-gap: 6px;
+    }
+    .rung > .ri { width: 18px; flex: none; }
+    .rung > .rn { flex: 1 1 110px; min-width: 0; }
+    .rung > .rst { margin-left: auto; flex: none; }
+    .rung > .rbar { order: 5; flex: 1 1 70px; }
+    .rung > .snum { order: 6; flex: none; min-width: 48px; }
+
+    .matrix-scroll > .nights-h, .matrix-scroll > .srow { min-width: 460px; }
+    .channel-table { min-width: 680px; }
+    .member-table { min-width: 620px; }
+
+    .toolbar .kbd, .ractions .kbd, .qbar .kbd { display: none; }
+    .toolbar > .btn, .qbar > .btn { flex: 0 1 auto; min-width: 0; }
+    .toolbar > .btn > span:not(.action-icon),
+    .qbar > .btn > span:not(.action-icon) {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .section-title { flex: 0 1 auto; min-width: 0; }
+    .pagebar { flex-wrap: wrap; row-gap: 6px; }
+    .strip, .ivrow, .ivrows { flex-wrap: wrap; }
+    .strip > * { min-width: 0; max-width: 100%; }
+  }
+}

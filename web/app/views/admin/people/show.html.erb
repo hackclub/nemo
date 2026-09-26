@@ -1,109 +1,131 @@
 <% content_for :page_title, @names[@user_id] %>
 
-    <div class="cols c-2">
-      <div class="stack">
-        <div class="card card-flush">
-          <div class="card-head">
-            <div class="who">
-              <%= face(@user_id) %>
-              <span class="two-line">
-                <b><%= @names[@user_id] %></b>
-                <span class="mono"><%= @user_id %> &middot; <%= acted_label(@last_acted) %></span>
-              </span>
-            </div>
-            <% if may_grant? %>
-              <div class="card-tools">
-                <%= opens_modal "access.grant", "Edit access", opens: "give-access",
-                      css: "btn btn-primary" %>
-              </div>
-            <% end %>
-          </div>
+<% if may_grant? %>
+  <% content_for :head_actions do %>
+    <%= opens_modal "access.grant", "Edit access", opens: "give-access", css: "btn btn-primary" %>
+  <% end %>
+<% end %>
 
-          <% role_row = @grant_rows.find(&:role?) %>
-          <dl class="facts-strip facts-wrap">
-            <div class="fact">
-              <dt>Role</dt>
-              <dd class="<%= "is-none" if @roles.empty? %>">
-                <%= @roles.any? ? @roles.map { |r| Authz.role_label(r) }.to_sentence : "No role" %>
-              </dd>
-            </div>
-            <div class="fact">
-              <dt>Since</dt>
-              <dd class="<%= "is-none" unless role_row %>"><%= role_row ? role_row.granted_at.strftime("%b %Y") : "n/a" %></dd>
-            </div>
-            <div class="fact">
-              <dt>Given by</dt>
-              <dd class="<%= "is-none" unless role_row %>"><%= role_row ? @names[role_row.granted_by] : "n/a" %></dd>
-            </div>
-            <div class="fact">
-              <dt>In force</dt>
-              <dd><%= @effective.size %> <span class="sub">of <%= Authz.keys.size %></span></dd>
-            </div>
-            <div class="fact">
-              <dt>Off default</dt>
-              <dd class="<%= "is-none" if @deviations.empty? %>"><%= @deviations.size %></dd>
-            </div>
-            <div class="fact">
-              <dt>Channels</dt>
-              <dd class="<%= "is-none" if @channel_rows.empty? %>"><%= @channel_rows.size %></dd>
-            </div>
-          </dl>
-        </div>
+<div class="metrics you-band">
+  <div class="you-who">
+    <%= face(@user_id, css: "avatar av-band") %>
+    <span class="two-line">
+      <b><%= @names[@user_id] %></b>
+      <span class="mono"><%= @user_id %> &middot; <%= acted_label(@last_acted) %></span>
+    </span>
+  </div>
 
-        <div class="panel">
-          <div class="panel-head">
-            <span>What they did</span>
-            <span class="grow"></span>
-            <span class="sub2">last 30 days</span>
-          </div>
-          <% if @deeds.any? %>
-            <div class="scroll">
-              <table class="data-table">
-                <tbody>
-                  <% @deeds.each do |deed| %>
-                    <tr>
-                      <td><b><%= deed_head(deed) %></b></td>
-                      <td class="said-cell"><%= deed_said(deed) %></td>
-                      <td class="mono col-num"><%= deed.at.strftime("%-d %b %H:%M") %></td>
-                    </tr>
-                  <% end %>
-                </tbody>
-              </table>
-            </div>
-          <% else %>
-            <div class="empty"><p class="empty-title">Nothing in 30 days</p></div>
-          <% end %>
-        </div>
-      </div>
+  <div class="metric metric-wide">
+    <span class="metric-k">Role</span>
+    <span class="metric-v is-text <%= "is-none" if @roles.empty? %>">
+      <%= @roles.any? ? @roles.map { |r| Authz.role_label(r) }.to_sentence : "No role" %>
+    </span>
+  </div>
 
-      <div class="stack">
-        <div class="panel">
-          <div class="panel-head">
-            <span>Grant history</span>
-            <span class="grow"></span>
-            <span class="sub">held since <%= @held_since&.strftime("%b %Y") || "n/a" %></span>
-          </div>
-          <div class="list">
-            <% @history.each do |grant| %>
-              <div class="lrow">
-                <span class="grow">
-                  <b><%= grant.label %></b>
-                  <% if grant.revoked? %><span class="sub">taken back</span><% end %>
-                </span>
-                <span class="lrow-right sub">
-                  <%= (grant.revoked_at || grant.granted_at)&.strftime("%b %Y") || "n/a" %>
-                </span>
-              </div>
+  <div class="metric">
+    <span class="metric-k">In force</span>
+    <span class="metric-v"><%= @effective.size %></span>
+  </div>
+
+  <div class="metric">
+    <span class="metric-k">Off default</span>
+    <span class="metric-v <%= "is-none" if @deviations.empty? %>"><%= @deviations.size %></span>
+  </div>
+
+  <div class="metric">
+    <span class="metric-k">Channels</span>
+    <span class="metric-v <%= "is-none" if @channel_rows.empty? %>"><%= @channel_rows.size %></span>
+  </div>
+
+  <div class="metric">
+    <span class="metric-k">Looked up</span>
+    <span class="metric-v <%= "is-none" if @identity_reads.zero? %>"><%= @identity_reads %></span>
+  </div>
+</div>
+
+<% live_scopes = @grant_rows.select { |grant| !grant.role? && grant.live? } %>
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Extra scopes</h2>
+  </div>
+
+  <% if live_scopes.any? %>
+    <div class="card card-flush">
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>scope</th><th class="said-cell">what it does</th>
+              <th class="said-cell">given by</th><th class="col-num"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% live_scopes.each do |grant| %>
+              <tr>
+                <td class="mono"><%= grant.name %></td>
+                <td class="said-cell"><%= grant.label %></td>
+                <td class="said-cell">
+                  <%= @names[grant.granted_by] %>, <%= grant.granted_at.strftime("%b %Y") %>
+                </td>
+                <td class="col-num">
+                  <span class="sub"><%= grant.denial? ? "taken away" : "added" %></span>
+                </td>
+              </tr>
             <% end %>
-            <% if @history.empty? %>
-              <div class="empty"><p class="empty-title">Never held anything</p></div>
-            <% end %>
-          </div>
-        </div>
+          </tbody>
+        </table>
       </div>
     </div>
+  <% else %>
+    <div class="empty">
+      <p class="empty-title">Nothing added or removed by hand</p>
+    </div>
+  <% end %>
+</section>
 
 <%= render "admin/people/capabilities" %>
+
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Activity</h2>
+  </div>
+
+  <div class="grid g-sided">
+    <div class="card card-flush">
+      <div class="card-head">
+        <h2 class="card-title">What they did</h2>
+        <span class="card-sub">last 30 days</span>
+      </div>
+      <% if @deeds.any? %>
+        <%= render "shared/log", deeds: @deeds %>
+      <% else %>
+        <div class="empty"><p class="empty-title">Nothing in 30 days</p></div>
+      <% end %>
+    </div>
+
+    <div class="card card-flush">
+      <div class="card-head">
+        <h2 class="card-title">Grant history</h2>
+      </div>
+      <div class="list grant-list">
+        <% @history.each do |grant| %>
+          <div class="lrow">
+            <span class="grow">
+              <%= grant.label %>
+              <% if grant.revoked? %><span class="sub">taken back</span><% end %>
+            </span>
+            <span class="lrow-right sub">
+              <%= (grant.revoked_at || grant.granted_at)&.strftime("%b %Y") || "n/a" %>
+            </span>
+          </div>
+        <% end %>
+        <% if @history.empty? %>
+          <div class="empty"><p class="empty-title">Never held anything</p></div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</section>
 
 <% if may_grant? %>
   <%= render "admin/people/give_modal", person: @user_id, role: @roles.first,

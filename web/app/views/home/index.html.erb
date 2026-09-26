@@ -1,21 +1,36 @@
 <% content_for :page_title, "Overview" %>
+
+<% content_for :head_actions do %>
+  <% unless @team_stats %>
+    <span class="sub2">waiting on the nightly sync</span>
+  <% end %>
+  <%= render "shared/range_button", id: "home-range", label: "Last #{@span[:label]}" %>
+<% end %>
+
+<%= render "shared/range_modal", id: "home-range", title: "Range", dates: false,
+      presets: HomeHelper::OVERVIEW_SPANS.map { |key, span| {
+        label: "Last #{span[:label]}", current: key == @span_key,
+        href: root_path(span: key) } } %>
+
 <% if @team_stats.nil? %>
-  <div class="card">
-    <div class="empty-aside">
-      <%= image_tag "nemo.png", class: "empty-fish", alt: "", width: 800, height: 483 %>
-      <div class="empty-said">
-        <h2 class="card-title">No team statistics loaded</h2>
-        <p class="card-sub">the headline figures come from Slack&rsquo;s team.stats pull</p>
-        <p class="delta-note">
-          Run the nightly sync, or the team_stats stage on its own, from the Engine page.
-        </p>
-      </div>
-    </div>
+  <div class="lede">
+    <%= image_tag "nemo.png", class: "empty-fish", alt: "", width: 800, height: 483 %>
+    <span class="lede-said">
+      <b>No team statistics loaded</b>
+      <span>
+        The headline figures come from Slack&rsquo;s team.stats pull. Run the nightly sync, or the
+        team_stats stage on its own, from the Engine page.
+      </span>
+    </span>
+    <span class="lede-do">
+      <%= link_to "Open the Engine", engine_path, class: "btn btn-primary" %>
+    </span>
   </div>
 <% else %>
   <% spark_days = @spark.map { |r| r.ds.iso8601 } %>
   <% joins = @spark.each_cons(2).map { |a, b| b.total_members_count.to_i - a.total_members_count.to_i } %>
-  <div class="kpis">
+
+  <div class="metrics">
     <%= render "kpi", label: "Total members", value: @team_stats.total_members_count,
           prior: @team_stats_prior&.total_members_count, span: @span,
           spark: { labels: spark_days.drop(1), name: "created per day", data: joins },
@@ -23,7 +38,9 @@
 
     <%= render "kpi", label: "Claimed accounts", value: @team_stats.total_claimed_count,
           prior: @team_stats_prior&.total_claimed_count, span: @span,
-          share_of: @team_stats.total_members_count, share_note: "of members" %>
+          spark: { labels: spark_days, name: "claimed",
+                   data: @spark.map(&:total_claimed_count) },
+          spark_title: "accounts claimed, day by day" %>
 
     <%= render "kpi", label: "Active, last 28 days", value: @team_stats.active_users_28d,
           prior: @team_stats_prior&.active_users_28d, span: @span,
@@ -38,17 +55,9 @@
   </div>
 <% end %>
 
-<% content_for :head_actions do %>
-  <%= render "shared/range_button", id: "home-range", label: "Last #{@span[:label]}" %>
-<% end %>
-
-<%= render "shared/range_modal", id: "home-range", title: "Range", dates: false,
-      presets: HomeHelper::OVERVIEW_SPANS.map { |key, span| {
-        label: "Last #{span[:label]}", current: key == @span_key,
-        href: root_path(span: key) } } %>
-
 <%= render "active_people", activity_trend: @trend, prior_trend: @trend_prior,
       granularity: @span[:granularity] %>
 <%= render "member_messages", activity_trend: @trend, prior_trend: @trend_prior,
       granularity: @span[:granularity] %>
+
 <%= render "shared/clock", clock: @clock %>

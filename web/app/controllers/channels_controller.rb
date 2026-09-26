@@ -44,7 +44,6 @@ class ChannelsController < ApplicationController
     @page = [params[:page].to_i, 0].max
     @sort = SORT_SQL.key?(params[:sort]) ? params[:sort] : "members"
     @direction = params[:direction] == "asc" ? "asc" : "desc"
-    @view = params[:view] == "grid" ? "grid" : "table"
     @window = Channels::Window.from(params)
     @filter = Channels::Filter.from(params, measures: @window.measures)
 
@@ -96,6 +95,7 @@ class ChannelsController < ApplicationController
     @backfill = ChannelBackfill.find_by(channel_id: id)
     @snapshot = Analytics::MartChannelRange.find_by(channel_id: id)
     @standing = Analytics::MartChannelMomentum.find_by(channel_id: id)
+    @team_stats = Analytics::MartTeamStatsDaily.order(ds: :desc).first
 
     coverage = Slack::Analytics.coverage
     proxy_edge = coverage ? Date.iso8601(coverage["end_date"]) : (Date.current - 2)

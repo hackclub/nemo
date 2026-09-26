@@ -3,7 +3,7 @@
   <% steps.each do |step| %>
     <% running = step.running? %>
     <% leading = step.statuses.keys.first %>
-    <% state = running ? "run" : (leading == "ok" ? "ok" : "") %>
+    <% state = running ? "run" : leading.to_s %>
     <% source = Engine::Source.for_run(step.source) %>
     <div class="rung <%= state %>">
       <div class="ri"><%= step.step_index %></div>

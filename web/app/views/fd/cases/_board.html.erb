@@ -1,4 +1,4 @@
-<div class="rep-feed">
+<div class="rep-feed grid g-2">
   <% cases.each do |kase| %>
     <%= render "report_card", kase: kase, priors_by_user: priors_by_user,
           action_counts: action_counts, violations: violations %>

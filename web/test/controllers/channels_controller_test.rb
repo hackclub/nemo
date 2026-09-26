@@ -92,8 +92,8 @@ class ChannelsControllerTest < ActionDispatch::IntegrationTest
     get channel_path(channel.channel_id, start: (edge - 3).iso8601, end: edge.iso8601)
 
     assert_response :success
-    assert_select "form.range-dates input[name=?]", "start"
-    assert_select "form.range-dates input[name=?]", "end"
+    assert_select ".range-dates input[name=?]", "start"
+    assert_select ".range-dates input[name=?]", "end"
     assert_select ".range-open", text: /#{(edge - 3).strftime("%-d %b")}/
   end
 
@@ -121,7 +121,7 @@ class ChannelsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h2.card-title", text: "Top posters"
-    assert_select ".card-sub", text: /#{months.second.strftime("%B %Y")}/
+    assert_select ".card-tools .btn", text: /#{months.second.strftime("%b %Y")}/
   end
 
   test "a channel with no warehouse rows still renders every tab" do

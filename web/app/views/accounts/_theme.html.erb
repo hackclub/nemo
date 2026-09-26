@@ -8,11 +8,8 @@
             <button type="button" class="theme-opt" aria-pressed="false"
                     data-theme-target="option" data-theme-key="<%= theme.key %>"
                     data-action="theme#pick">
-              <span class="theme-chip" aria-hidden="true">
-                <% theme.swatch.each do |colour| %>
-                  <i style="background: <%= colour %>"></i>
-                <% end %>
-              </span>
+              <span class="theme-chip" aria-hidden="true"
+                    style="--chip: <%= theme_swatch_blend(theme.swatch) %>"></span>
               <span class="theme-name"><%= theme.label %></span>
               <span class="theme-auto">auto</span>
               <span class="theme-mark" aria-hidden="true">&#10003;</span>

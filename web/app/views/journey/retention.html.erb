@@ -1,10 +1,57 @@
 <% content_for :page_title, "Coming back" %>
 
-<div id="retention">
+<% last_30 = @retention.reverse.find { |r| r.retained_day_30_rate } %>
+<% last_90 = @retention.reverse.find { |r| r.retained_day_90_rate } %>
+<% last_recurrence = @recurrence.last %>
+
+<% if last_30 || last_90 || last_recurrence %>
+  <div class="metrics">
+    <% if last_30 %>
+      <div class="metric">
+        <span class="metric-k">Day-30 retention</span>
+        <span class="metric-v"><%= retention_cell(last_30.retained_day_30_rate) %></span>
+        <span class="metric-say"><span><%= last_30.cohort_month.strftime("%b %Y") %> cohort</span></span>
+      </div>
+    <% end %>
+    <% if last_90 %>
+      <div class="metric">
+        <span class="metric-k">Day-90 retention</span>
+        <span class="metric-v"><%= retention_cell(last_90.retained_day_90_rate) %></span>
+        <span class="metric-say"><span><%= last_90.cohort_month.strftime("%b %Y") %> cohort</span></span>
+      </div>
+    <% end %>
+    <% if last_recurrence %>
+      <div class="metric">
+        <span class="metric-k">Posted 3+ times</span>
+        <span class="metric-v">
+          <%= number_to_percentage(
+                share_pct(last_recurrence.posted_three_times, last_recurrence.searched) || 0,
+                precision: 1) %>
+        </span>
+        <span class="metric-say"><span><%= last_recurrence.cohort_month.strftime("%b %Y") %> cohort</span></span>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Retention by cohort</h2>
+  </div>
   <%= render "cohort_retention", retention: @retention %>
-</div>
+</section>
 
-<%= render "cohort_survival", survival: @survival, offsets: @survival_offsets,
-      floor: HomeHelper::MIN_SAMPLE %>
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Cohort survival</h2>
+  </div>
+  <%= render "cohort_survival", survival: @survival, offsets: @survival_offsets,
+        floor: HomeHelper::MIN_SAMPLE %>
+</section>
 
-<%= render "recurrence_funnel", recurrence: @recurrence %>
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Recurrence</h2>
+  </div>
+  <%= render "recurrence_funnel", recurrence: @recurrence %>
+</section>

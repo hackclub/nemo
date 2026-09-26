@@ -50,7 +50,7 @@ areas:
   member: People
   identity: People
   channel: Channels
-  engine: Running the engine
+  engine: Engine
   slack: Your own account
   access: Access
   app: The dashboard

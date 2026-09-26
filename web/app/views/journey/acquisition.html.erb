@@ -10,11 +10,43 @@
         label: "Last #{span} months", current: span == @growth_span,
         href: joining_journey_path(growth_months: span) } } %>
 
-<div id="acquisition">
-  <%= render "growth", growth_months: @growth_months, growth_span: @growth_span %>
+<% created_total = @growth_months.sum { |m| m.claimed_members.to_i + m.unclaimed_members.to_i } %>
+<% settled_months = @growth_months.select(&:claim_rate_30d) %>
+<% claim_mean = settled_months.any? ?
+     (settled_months.sum { |m| m.claim_rate_30d.to_f } / settled_months.size * 100).round(1) : nil %>
+
+<div class="metrics">
+  <div class="metric">
+    <span class="metric-k">Accounts created</span>
+    <span class="metric-v"><%= number_with_delimiter(created_total) %></span>
+  </div>
+  <div class="metric">
+    <span class="metric-k">Signed in, 30 days</span>
+    <span class="metric-v">
+      <%= claim_mean ? number_to_percentage(claim_mean, precision: 1) : "n/a" %>
+    </span>
+  </div>
+  <% if @newcomer_reach %>
+    <div class="metric">
+      <span class="metric-k">Newcomers, last 30 days</span>
+      <span class="metric-v"><%= number_with_delimiter(@newcomer_reach.cohort_size) %></span>
+    </div>
+  <% end %>
 </div>
 
-<%= render "lifecycle", lifecycle: @lifecycle %>
+<%= render "growth", growth_months: @growth_months, growth_span: @growth_span %>
 
-<%= render "newcomer_channels", newcomer_channels: @newcomer_channels,
-      newcomer_reach: @newcomer_reach %>
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Cohort lifecycle</h2>
+  </div>
+  <%= render "lifecycle", lifecycle: @lifecycle %>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Where newcomers land</h2>
+  </div>
+  <%= render "newcomer_channels", newcomer_channels: @newcomer_channels,
+        newcomer_reach: @newcomer_reach %>
+</section>

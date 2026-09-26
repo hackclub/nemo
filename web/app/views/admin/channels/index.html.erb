@@ -1,31 +1,34 @@
 <% content_for :page_title, "Channels" %>
 
-    <%= form_with url: admin_channels_path, method: :get, class: "qbar",
-          data: { controller: "live-search", turbo_frame: "admin-channels",
-                  turbo_action: "advance" } do %>
-      <input class="field" type="search" name="q" value="<%= @q %>"
-             placeholder="Search every channel by name" aria-label="Search channels"
-             autocomplete="off" data-action="input->live-search#go">
-      <% if @q.present? %>
-        <%= link_to "Clear", admin_channels_path, class: "btn",
-              data: { turbo_frame: "admin-channels" } %>
-      <% end %>
-    <% end %>
+<% content_for :page_controls do %>
+  <%= form_with url: admin_channels_path, method: :get, class: "qsearch",
+        data: { controller: "live-search", turbo_frame: "admin-channels",
+                turbo_action: "advance" } do %>
+    <%= search_field_tag :q, @q, placeholder: "Search every channel by name",
+          class: "qsearch-in", autocomplete: "off", aria: { label: "Search channels" },
+          data: { action: "input->live-search#go" } %>
+  <% end %>
+  <% if @q.present? %>
+    <%= link_to "Clear", admin_channels_path, class: "btn",
+          data: { turbo_frame: "admin-channels" } %>
+  <% end %>
+<% end %>
 
-    <turbo-frame id="admin-channels" target="_top">
-    <div class="panel">
-      <div class="panel-head">
-        <span>
-          <% if @q.present? %>
-            Every channel matching <b><%= @q %></b>
-          <% else %>
-            <b><%= number_with_delimiter(@total) %></b> channels.
-            <b><%= number_with_delimiter(@open) %></b> are public.
-          <% end %>
-        </span>
-      </div>
+<turbo-frame id="admin-channels" target="_top">
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title"><%= @q.present? ? "Matching" : "Directory" %></h2>
+      <p class="section-note">
+        <% if @q.present? %>
+          every channel matching &ldquo;<%= @q %>&rdquo;
+        <% else %>
+          <%= number_with_delimiter(@total) %> channels &middot; <%= number_with_delimiter(@open) %> public
+        <% end %>
+      </p>
+    </div>
 
-      <% if @bands.any? %>
+    <% if @bands.any? %>
+      <div class="card card-flush">
         <div class="scroll">
           <table class="data-table">
             <thead>
@@ -61,12 +64,13 @@
             </tbody>
           </table>
         </div>
-      <% else %>
-        <div class="empty">
-          <p class="empty-title">
-            <%= @q.present? ? "No channel matches" : "No channel is opened up yet" %>
-          </p>
-        </div>
-      <% end %>
-    </div>
-    </turbo-frame>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">
+          <%= @q.present? ? "No channel matches" : "No channel is opened up yet" %>
+        </p>
+      </div>
+    <% end %>
+  </section>
+</turbo-frame>

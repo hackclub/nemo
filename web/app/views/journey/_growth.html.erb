@@ -1,43 +1,55 @@
 <% settled = growth_months.select(&:claim_rate_30d) %>
 <% mean = settled.any? ? (settled.sum { |m| m.claim_rate_30d.to_f } / settled.size * 100).round(1) : nil %>
 
-<div class="card">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Accounts created, and who signed in</h2>
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Signing up</h2>
+  </div>
+
+  <div class="grid g-2">
+    <div class="card">
+      <div class="card-head"><h2 class="card-title">Accounts created</h2></div>
+      <div class="card-body">
+        <div
+          data-controller="chart"
+          data-chart-kind-value="bars"
+          data-chart-stacked-value="true"
+          data-chart-height-value="220"
+          data-chart-data-value="<%= {
+            labels: growth_months.map { |m| m.month.strftime("%b %Y") },
+            datasets: [
+              { label: "signed in", data: growth_months.map(&:claimed_members) },
+              { label: "invite pending", data: growth_months.map(&:unclaimed_members) }
+            ]
+          }.to_json %>"
+        ></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="card-title">Signed in within 30 days</h2></div>
+      <div class="card-body">
+        <% voids = growth_months.each_with_index.filter_map do |m, i|
+             next if m.claim_dates_complete
+
+             { at: i, note: "#{number_with_delimiter(m.undated_claims)} of " \
+                 "#{number_with_delimiter(m.claimed_members)} sign-ins have no date yet" }
+           end %>
+        <div
+          data-controller="chart"
+          data-chart-kind-value="line"
+          data-chart-height-value="220"
+          data-chart-pct-value="true"
+          <% if voids.any? %>data-chart-voids-value="<%= voids.to_json %>"<% end %>
+          <% if mean %>data-chart-rule-value="<%= { at: mean,
+            label: "settled mean #{mean.round}%" }.to_json %>"<% end %>
+          data-chart-data-value="<%= {
+            labels: growth_months.map { |m| m.month.strftime("%b %Y") },
+            datasets: [{ label: "claim rate, 30 days",
+                         data: growth_months.map { |m| m.claim_rate_30d && m.claim_rate_30d.to_f * 100 } }]
+          }.to_json %>"
+        ></div>
+      </div>
     </div>
   </div>
-  <div
-    data-controller="chart"
-    data-chart-kind-value="bars"
-    data-chart-stacked-value="true"
-    data-chart-height-value="240"
-    data-chart-data-value="<%= {
-      labels: growth_months.map { |m| m.month.strftime("%b %Y") },
-      datasets: [
-        { label: "signed in", data: growth_months.map(&:claimed_members) },
-        { label: "invite pending", data: growth_months.map(&:unclaimed_members) }
-      ]
-    }.to_json %>"
-  ></div>
-  <% voids = growth_months.each_with_index.filter_map do |m, i|
-       next if m.claim_dates_complete
-
-       { at: i, note: "#{number_with_delimiter(m.undated_claims)} of " \
-           "#{number_with_delimiter(m.claimed_members)} sign-ins have no date yet" }
-     end %>
-  <div
-    data-controller="chart"
-    data-chart-kind-value="line"
-    data-chart-height-value="120"
-    data-chart-pct-value="true"
-    <% if voids.any? %>data-chart-voids-value="<%= voids.to_json %>"<% end %>
-    <% if mean %>data-chart-rule-value="<%= { at: mean,
-      label: "settled mean #{mean.round}%" }.to_json %>"<% end %>
-    data-chart-data-value="<%= {
-      labels: growth_months.map { |m| m.month.strftime("%b %Y") },
-      datasets: [{ label: "claim rate, 30 days",
-                   data: growth_months.map { |m| m.claim_rate_30d && m.claim_rate_30d.to_f * 100 } }]
-    }.to_json %>"
-  ></div>
-</div>
+</section>

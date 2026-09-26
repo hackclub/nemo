@@ -4,25 +4,24 @@
   <%= render "pane", query: @query, rows: @rows, open_id: @open_id %>
 <% end %>
 
-<div class="stack">
-  <section class="card">
-    <div class="card-head">
-      <span class="card-title">Channels nemo joins</span>
-      <span class="card-tools">
-        <%= join_mode_switch(@joining.mode) %>
-      </span>
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Channels nemo joins</h2>
+    <p class="section-note"><%= join_standing_line(@joining) %></p>
+    <div class="section-tools">
+      <%= join_mode_switch(@joining.mode) %>
     </div>
+  </div>
+  <%= join_unattended_said(@joining) %>
+</section>
 
-    <p class="sub2"><%= join_standing_line(@joining) %></p>
-    <%= join_unattended_said(@joining) %>
-  </section>
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Could not join</h2>
+  </div>
 
-  <% if @joining.refusals.any? %>
-    <section class="card">
-      <div class="card-head">
-        <span class="card-title">Could not join</span>
-      </div>
-
+  <div class="card card-flush">
+    <% if @joining.refusals.any? %>
       <div class="people-list">
         <% @joining.refusals.each do |one| %>
           <div class="line-row fat">
@@ -37,6 +36,10 @@
           </div>
         <% end %>
       </div>
-    </section>
-  <% end %>
-</div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">Nothing refused</p>
+      </div>
+    <% end %>
+  </div>
+</section>

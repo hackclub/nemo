@@ -3,16 +3,13 @@
   <div class="card-head">
     <div>
       <h2 class="card-title">Neighbours</h2>
-      <% if head %>
-        <p class="card-sub">
-          <%= window_note(head.window_start, head.window_end) %>,
-          <%= number_with_delimiter(head.posters) %> posted here
-        </p>
-      <% end %>
     </div>
   </div>
   <% if head.nil? %>
-    <p class="card-note">no channel shares posters with this one</p>
+    <div class="empty">
+      <p class="empty-title">No shared posters</p>
+      <p>No other channel shares posters with this one yet.</p>
+    </div>
   <% else %>
   <div class="scroll">
     <table class="data-table cols-fixed channel-poster-table">

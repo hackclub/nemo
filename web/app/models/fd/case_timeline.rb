@@ -175,7 +175,7 @@ module Fd
       unless subject_user_ids.include?(action.target_user_id)
         parts << "on #{names[action.target_user_id]}"
       end
-      parts << "decided by #{names[action.decided_by]}"
+      parts << "taken by #{names[action.decided_by]}"
       unless action.performed_by_decider?
         parts << "performed by #{names[action.performed_by]}"
       end

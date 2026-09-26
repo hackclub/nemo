@@ -1,0 +1,8 @@
+<%= tag.section class: ["section", local_assigns[:css]].compact.join(" "), id: local_assigns[:id] do %>
+  <div class="section-head">
+    <h2 class="section-title"><%= title %></h2>
+    <% if local_assigns[:note].present? %><p class="section-note"><%= note %></p><% end %>
+    <% if local_assigns[:tools].present? %><div class="section-tools"><%= tools %></div><% end %>
+  </div>
+  <%= yield %>
+<% end %>

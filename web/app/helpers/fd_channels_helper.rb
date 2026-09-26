@@ -7,11 +7,12 @@ module FdChannelsHelper
 
   def channel_guard_switch(channel_id, guard)
     on = guard.present?
-    return holds_mark(on) unless current_account.may?("channel.guard")
+    return nil unless current_account.may?("channel.guard")
 
     button_to on ? "yes" : "no", fd_channel_guard_path(channel_id),
       method: on ? :delete : :post, class: "switch #{on ? 'yes' : 'no'}",
       title: on ? "stop guarding this channel" : "guard this channel",
+      aria: { label: on ? "stop guarding this channel" : "guard this channel" },
       form: { class: "contents" }
   end
 
@@ -73,8 +74,15 @@ module FdChannelsHelper
   def marketplace_link(app_id, said = "manage this bot")
     return nil if app_id.blank?
 
-    link_to said, "#{MARKETPLACE}/#{app_id}", class: "lnk",
+    link_to said, "#{MARKETPLACE}/#{app_id}", class: "lnk lnk-soft",
       target: "_blank", rel: "noopener"
+  end
+
+  def bot_name_link(said, app_id)
+    return said if app_id.blank?
+
+    link_to said, "#{MARKETPLACE}/#{app_id}", class: "botlink",
+      title: "open #{said} in the Slack marketplace", target: "_blank", rel: "noopener"
   end
 
   def guard_face(subject_id)
@@ -112,7 +120,7 @@ module FdChannelsHelper
   end
 
   def join_standing_line(joining)
-    return "nemo has not swept yet" unless joining.swept?
+    return nil unless joining.swept?
 
     said = ["in #{pluralize(joining.seated, 'channel')}"]
     said << "#{joining.waiting} still to join" if joining.waiting.positive?

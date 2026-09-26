@@ -8,7 +8,12 @@
           reachable: @pane_reachable %>
   <% end %>
 <% end %>
+
 <% content_for :head_actions do %>
+  <%= opens_modal "case.open", "Open a case", opens: "open-case", css: "btn btn-primary" %>
+<% end %>
+
+<% content_for :page_controls do %>
   <span class="segmented">
     <%= link_to "Split", fd_cases_path(request.query_parameters.except("layout")),
           aria: { current: ("true" if split) } %>
@@ -17,29 +22,18 @@
     <%= link_to "Board", fd_cases_path(request.query_parameters.merge(layout: "board")),
           aria: { current: ("true" if @layout == "board") } %>
   </span>
-  <%= opens_modal "case.open", "Open a case", opens: "open-case", css: "btn btn-primary" %>
+  <span class="toolbar-end sub2">
+    <%= pluralize(@stats.open_count, "case") %> open
+    <span aria-hidden="true">&middot;</span>
+    <%= @stats.unassigned %> unassigned
+  </span>
 <% end %>
 
 <% tabs, pill_views = @views.partition { |view| Fd::CaseQuery::TABS.include?(view.key) } %>
 <% pinned, tucked = pill_views.partition { |view| Fd::CaseQuery::PINNED_PILLS.include?(view.key) } %>
 
-<% if split %>
-  <div class="empty">
-    <span class="empty-mark">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h4l1.5 3h5L16 13h4"/><path d="M5.4 5h13.2l1.4 8v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4z"/></svg>
-    </span>
-    <p class="empty-title">No case open</p>
-    <p class="card-note">
-      <%= pluralize(@stats.open_count, "case") %> open,
-      <%= @stats.unassigned %> with nobody on them.
-    </p>
-  </div>
-<% else %>
-<div class="stack" data-controller="merge"
-     data-merge-url-value="<%= fd_confirm_merge_cases_path %>">
-  <turbo-frame id="queue" target="_top" data-turbo-action="advance">
-  <div class="panel">
-  <div class="views">
+<% unless split %>
+  <% content_for :page_tabs do %>
     <% tabs.each do |view| %>
       <%= link_to fd_cases_path(view: view.key, layout: params[:layout].presence), class: "view",
             data: { turbo_frame: "queue" },
@@ -48,9 +42,23 @@
         <span class="view-count"><%= view.count %></span>
       <% end %>
     <% end %>
+  <% end %>
+<% end %>
 
+<% if split %>
+  <div class="empty">
+    <span class="empty-mark">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h4l1.5 3h5L16 13h4"/><path d="M5.4 5h13.2l1.4 8v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4z"/></svg>
+    </span>
+    <p class="empty-title">No case open</p>
+    <div class="empty-do">
+      <%= opens_modal "case.open", "Open a case", opens: "open-case", css: "btn btn-primary" %>
+    </div>
   </div>
-
+<% else %>
+<div class="stack" data-controller="merge"
+     data-merge-url-value="<%= fd_confirm_merge_cases_path %>">
+  <turbo-frame id="queue" target="_top" data-turbo-action="advance">
     <% if @cases.any? %>
       <% if @layout == "board" %>
         <%= render "board", cases: @cases, priors_by_user: @priors,
@@ -62,51 +70,43 @@
               violations: @violations %>
       <% end %>
     <% else %>
-      <div class="empty">
-        <p class="empty-title"><%= @query.empty_note %></p>
+      <div class="card">
+        <div class="empty">
+          <p class="empty-title"><%= @query.empty_note %></p>
+          <div class="empty-do">
+            <%= opens_modal "case.open", "Open a case", opens: "open-case", css: "btn btn-primary" %>
+          </div>
+        </div>
       </div>
     <% end %>
-  </div>
 
-  <% if @pages > 1 %>
-    <div class="pager">
-      <% if @page > 1 %>
-        <%= link_to "Back", fd_cases_path(request.query_parameters.merge(page: @page - 1)),
-              class: "btn", data: { turbo_frame: "queue" } %>
-      <% else %>
-        <span class="btn is-off">Back</span>
-      <% end %>
-      <span class="pager-at">
-        Page <%= @page %> of <%= @pages %>
-      </span>
-      <% if @more %>
-        <%= link_to "Next", fd_cases_path(request.query_parameters.merge(page: @page + 1)),
-              class: "btn", data: { turbo_frame: "queue" } %>
-      <% else %>
-        <span class="btn is-off">Next</span>
-      <% end %>
-    </div>
-  <% end %>
-
-  <% if @cases.any? { |kase| !kase.resolved? } %>
-    <%= form_with url: fd_confirm_merge_cases_path, method: :get, id: "merge-form",
-          class: "bulk", html: { hidden: true },
-          data: { action: "submit->merge#confirm", merge_target: "bar" } do %>
-      <% @query.to_params.each do |key, value| %>
-        <%= hidden_field_tag key, value, id: nil %>
-      <% end %>
-      <span class="bulk-note">
-        <b><span data-merge-target="count">0</span> ticked</b>
-        <span class="bulk-ids" data-merge-target="ids"></span>
-        <span class="bulk-rule">Oldest case stays open</span>
-      </span>
-      <%= submit_tag "Merge ticked", class: "btn btn-primary" %>
+    <% if @pages > 1 %>
+      <%= render "shared/pager", page: @page, pages: @pages, frame: "queue",
+            back_href: (fd_cases_path(request.query_parameters.merge(page: @page - 1)) if @page > 1),
+            next_href: (fd_cases_path(request.query_parameters.merge(page: @page + 1)) if @more) %>
     <% end %>
-  <% end %>
+
+    <% if @cases.any? { |kase| !kase.resolved? } %>
+      <%= form_with url: fd_confirm_merge_cases_path, method: :get, id: "merge-form",
+            class: "bulk", html: { hidden: true },
+            data: { action: "submit->merge#confirm", merge_target: "bar" } do %>
+        <% @query.to_params.each do |key, value| %>
+          <%= hidden_field_tag key, value, id: nil %>
+        <% end %>
+        <span class="bulk-note">
+          <b><span data-merge-target="count">0</span> ticked</b>
+          <span class="bulk-ids" data-merge-target="ids"></span>
+          <span class="bulk-rule">Oldest case stays open</span>
+        </span>
+        <%= submit_tag "Merge ticked", class: "btn btn-primary" %>
+      <% end %>
+    <% end %>
   </turbo-frame>
 </div>
 
 <% end %>
 
-<%= render "open_case_modal" %>
-<%= render "merge_modal", kase: nil %>
+<% content_for :overlays do %>
+  <%= render "open_case_modal" %>
+  <%= render "merge_modal", kase: nil %>
+<% end %>
