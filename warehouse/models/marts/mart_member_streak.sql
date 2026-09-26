@@ -21,16 +21,30 @@ online_days as (
     where coalesce(days_active, 0) > 0
 ),
 
-days as (
-    select 'posted' as basis, user_id, ds from posted_days
+edges as (
+    select 'posted' as basis,
+           least(
+               (select max(ds) from {{ ref('mart_member_day') }} where messages > 0),
+               (select max(window_start) from {{ ref('fct_member_activity') }}
+                where coalesce(messages_posted, 0) > 0)
+           ) as through
+
     union all
-    select 'online' as basis, user_id, ds from online_days
+
+    select 'online',
+           (select max(window_start) from {{ ref('fct_member_activity') }}
+            where coalesce(days_active, 0) > 0)
 ),
 
-edges as (
-    select basis, max(ds) as through
-    from days
-    group by basis
+days as (
+    select b.basis, b.user_id, b.ds
+    from (
+        select 'posted' as basis, user_id, ds from posted_days
+        union all
+        select 'online' as basis, user_id, ds from online_days
+    ) b
+    inner join edges e on e.basis = b.basis
+    where b.ds <= e.through
 ),
 
 marked as (
@@ -101,7 +115,7 @@ select
     l.longest_from,
     l.longest_to,
     e.through as measured_through,
-    'v4' as metric_version
+    'v5' as metric_version
 from longest l
 inner join edges e on e.basis = l.basis
 left join ranked r on r.basis = l.basis and r.user_id = l.user_id
