@@ -20,6 +20,7 @@ module Fd
       "ChannelBackfill" => "channel_backfill",
       "Channels::Audience::Setting" => "channel_audience",
       "Channels::Audience::Grant" => "channel_audience",
+      "Channels::Activity::Setting" => "message_activity",
       "Fd::ChannelGuard" => "channel_guard",
       "Fd::MemberGuard" => "member_guard",
       "Fd::ThreadGuard" => "thread_guard",

@@ -36,6 +36,7 @@ module Admin
       @q = params[:q].to_s.strip
       @settings = Channels::Audience::Setting.all.index_by(&:channel_id)
       @grants = Channels::Audience::Grant.live.to_a.group_by(&:channel_id)
+      @activity = Channels::Activity.shown_ids.to_set
       @total = Analytics::DimChannel.where(archived: false).count
       @bands = band(listed)
       @open = @bands.reject { |kind, _label, _rows| kind == "granted" }
@@ -64,15 +65,41 @@ module Admin
         notice: "##{params[:channel_id]} is #{wanted}"
     end
 
+    SHOWN = %w[on off].freeze
+
+    def activity
+      return refuse("analytics.message.show") unless may_community?("analytics.message.show")
+
+      wanted = params[:shown].to_s
+      unless SHOWN.include?(wanted)
+        return redirect_to(admin_channels_path, alert: "#{wanted} is not on or off")
+      end
+
+      channel_id = params[:channel_id]
+      row = Channels::Activity::Setting.find_or_initialize_by(channel_id: channel_id)
+      was = row.persisted?
+      if wanted == "on"
+        row.update!(set_by: current_account.user_id, set_at: Time.current)
+      elsif was
+        row.destroy!
+      end
+      Fd::Audit.record(row, wanted == "on" ? "turned_on" : "turned_off",
+        actor: current_account.user_id, request_id: request.request_id,
+        entity_id: channel_id,
+        before: { "channel_id" => channel_id, "shown" => was },
+        after: { "channel_id" => channel_id, "shown" => wanted == "on" })
+      redirect_to admin_channels_path(q: params[:q].presence),
+        notice: "##{channel_id} #{wanted == 'on' ? 'now shows' : 'no longer shows'} how posts did"
+    end
+
     private
 
     def like_q
       ActiveRecord::Base.sanitize_sql_like(@q)
     end
 
-    def refuse
-      redirect_to admin_channels_path,
-        alert: Community::Access.why_not(current_account, "analytics.channel.share")
+    def refuse(key = "analytics.channel.share")
+      redirect_to admin_channels_path, alert: Community::Access.why_not(current_account, key)
     end
 
     def listed
@@ -85,7 +112,8 @@ module Admin
 
       open_ids = @settings.values.select { |row| Channels::Audience::OPEN.include?(row.audience) }
         .map(&:channel_id)
-      scope.where(channel_id: open_ids).or(scope.where(channel_id: @grants.keys)).order(:name)
+      scope.where(channel_id: open_ids).or(scope.where(channel_id: @grants.keys))
+        .or(scope.where(channel_id: @activity.to_a)).order(:name)
     end
 
     def band(channels)

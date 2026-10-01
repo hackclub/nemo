@@ -11,10 +11,12 @@ class ChannelsController < ApplicationController
     "activity" => "Activity",
     "newcomers" => "Newcomers",
     "messages" => "Messages",
+    "posts" => "Posts",
     "neighbours" => "Neighbours"
   }.freeze
   DEFAULT_VIEW = "overview".freeze
   RANGED_VIEWS = %w[overview messages].freeze
+  POSTS_VIEW = "posts".freeze
 
   SORT_SQL = {
     "name" => "#{Channels::Joins::SPINE}.name",
@@ -91,7 +93,8 @@ class ChannelsController < ApplicationController
     return refuse_channel if @channel.nil?
 
     id = @channel.channel_id
-    @view = VIEWS.key?(params[:view]) ? params[:view] : DEFAULT_VIEW
+    @views = views_for(id)
+    @view = @views.key?(params[:view]) ? params[:view] : DEFAULT_VIEW
     @backfill = ChannelBackfill.find_by(channel_id: id)
     @snapshot = Analytics::MartChannelRange.find_by(channel_id: id)
     @standing = Analytics::MartChannelMomentum.find_by(channel_id: id)
@@ -121,6 +124,12 @@ class ChannelsController < ApplicationController
         .order(:post_month)
     when "messages"
       @pulse = Channels::Pulse.for(id, from: @start_date, to: @end_date)
+    when "posts"
+      @posts = Channels::Posts.for(channel_id: id, subject_id: current_account.user_id)
+      @names = Fd::Names.for(mentioned_in(@posts) + @posts.map(&:author_id))
+      @rooms = Analytics::DimChannel.where(channel_id: rooms_in(@posts))
+        .pluck(:channel_id, :name).to_h
+      @emoji = Slack::Emoji.for(emoji_in(@posts))
     when "neighbours"
       @neighbours = Analytics::MartChannelNeighbours
         .where(channel_id: id, neighbour_archived: false)
@@ -168,6 +177,26 @@ class ChannelsController < ApplicationController
   end
 
   private
+
+  def views_for(channel_id)
+    return VIEWS if Channels::Activity.shown?(channel_id)
+
+    VIEWS.except(POSTS_VIEW)
+  end
+
+  def mentioned_in(posts)
+    posts.flat_map { |post| Fd::Mentions.ids(post.message&.dig("text")) }.uniq
+  end
+
+  def rooms_in(posts)
+    posts.flat_map { |post| Fd::Mentions.channel_ids(post.message&.dig("text")) }.uniq
+  end
+
+  def emoji_in(posts)
+    posts.flat_map do |post|
+      Slack::RichText.emoji_names(post.message) + post.reactions_said.map { |one| one["name"] }
+    end.uniq
+  end
 
   def like_q
     ActiveRecord::Base.sanitize_sql_like(@q.to_s)

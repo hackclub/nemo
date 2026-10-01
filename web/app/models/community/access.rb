@@ -10,6 +10,8 @@ module Community
       "analytics.member.read" => "member.read",
       "analytics.channel.read" => "channel.read",
       "analytics.channel.share" => "channel.share",
+      "analytics.message.show" => "message.show",
+      "analytics.message.read" => "message.read",
       "analytics.grant" => "access.grant",
       "ops.engine" => "engine.manage",
       "ops.channel.backfill" => "channel.backfill"
@@ -25,12 +27,17 @@ module Community
       Authz.may?(staff, capability_for(key), record)
     end
 
+    SCOPE_REFUSALS = { author: "that post is not yours" }.freeze
+
     def self.why_not(staff, key, record = nil)
       return nil if allow?(staff, key, record)
-      return "you hold no access yet" if staff.nil? || Authz.held(staff.user_id).empty?
-      return Authz.refusal(capability_for(key)) unless Authz.holds?(staff, capability_for(key))
+      return "you hold no access yet" if staff.nil?
 
-      "that channel is not yours"
+      held = capability_for(key)
+      return "you hold no access yet" if !Authz.every_account?(held) && Authz.held(staff.user_id).empty?
+      return Authz.refusal(held) unless Authz.holds?(staff, held)
+
+      SCOPE_REFUSALS.fetch(Authz.record_scope(held), "that channel is not yours")
     end
 
     def self.within_scope?(staff, key, record)

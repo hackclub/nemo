@@ -14,6 +14,13 @@ Rails.application.routes.draw do
   get "cdn/destroy/:key", to: "fd/transcripts#show", as: :destroy_transcript,
       constraints: { key: %r{[^/]+} }, format: false
 
+  get "messages/:channel_id/:ts", to: "messages#show", as: :message_activity,
+      constraints: { channel_id: /[CDG][A-Z0-9]+/, ts: /\d+\.\d+/ }, format: false
+
+  get "messages/:channel_id/:ts/files/:file_id", to: "message_files#show", as: :message_file,
+      constraints: { channel_id: /[CDG][A-Z0-9]+/, ts: /\d+\.\d+/, file_id: /[A-Z0-9]+/ },
+      format: false
+
   namespace :fd do
     root to: "fire#show"
     post "cases/merge", to: "merges#create", as: :merge_cases
@@ -109,6 +116,7 @@ Rails.application.routes.draw do
            as: :settings_react_channel
     resources :channels, only: [:index, :update], param: :channel_id do
       collection { get "search", as: :search }
+      member { patch "activity" }
     end
     resources :people, only: [], param: :user_id do
       resource :capability, only: [:update, :destroy], controller: "capabilities"

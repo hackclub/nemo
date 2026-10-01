@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_02_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_120000) do
   create_schema "app"
 
   # These are extensions that must be enabled in order to support this database
@@ -95,6 +95,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_190000) do
     t.index ["role", "channel_id"], name: "channel_grants_one_live_role", unique: true, where: "((revoked_at IS NULL) AND (role IS NOT NULL))"
     t.index ["user_id", "channel_id"], name: "channel_grants_one_live", unique: true, where: "(revoked_at IS NULL)"
     t.check_constraint "(user_id IS NULL) <> (role IS NULL)", name: "channel_grants_one_subject"
+  end
+
+  create_table "app.channel_message_activity", primary_key: "channel_id", id: :string, force: :cascade do |t|
+    t.datetime "set_at", default: -> { "now()" }, null: false
+    t.string "set_by", null: false
   end
 
   create_table "app.engine_setting", force: :cascade do |t|

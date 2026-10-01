@@ -23,6 +23,9 @@ from audit_client import METHODS as AUDIT_METHODS
 from audit_client import AuditApiError, AuditAuthError
 from audit_client import call as audit_call
 from internal_client import InternalApiError, InternalAuthError, InternalClient
+from file_client import METHODS as FILE_READ_METHODS
+from file_client import FileError
+from file_client import read as read_file
 from scim_client import METHODS as SCIM_METHODS
 from scim_client import ScimError
 from scim_client import call as scim_call
@@ -76,6 +79,15 @@ WRITE_METHODS = {
     ),
 }
 
+ACTIVITY_METHODS = {"internal": frozenset({"insights.messageStats"})}
+
+HISTORY_METHODS = {"admin": frozenset({"conversations.history"})}
+WEB_FILE_METHODS = FILE_READ_METHODS
+
+NEMO_METHODS = {**WRITE_METHODS, **ACTIVITY_METHODS}
+WEB_METHODS["internal"] = WEB_METHODS["internal"] | ACTIVITY_METHODS["internal"]
+WEB_METHODS["admin"] = HISTORY_METHODS["admin"]
+
 CREDENTIALS = ("internal", "admin")
 
 
@@ -88,8 +100,8 @@ class Client:
 
 CLIENTS = (
     ("pipeline", "PROXY_TOKEN", ALLOWED_METHODS, ALLOWED_FILE_METHODS),
-    ("web", "PROXY_TOKEN_WEB", WEB_METHODS, frozenset()),
-    ("nemo", "PROXY_TOKEN_NEMO", WRITE_METHODS, frozenset()),
+    ("web", "PROXY_TOKEN_WEB", WEB_METHODS, WEB_FILE_METHODS),
+    ("nemo", "PROXY_TOKEN_NEMO", NEMO_METHODS, frozenset()),
 )
 
 WRITES = frozenset().union(*WRITE_METHODS.values())
@@ -294,6 +306,24 @@ def file(req: CallRequest, client: Client = Depends(current_client)):
             status_code=403,
             detail=f"method not allowed for file transfer by {client.name}: {req.method}",
         )
+
+    refused = budget.take(client.name,
+                          "internal" if req.method in FILE_READ_METHODS else "admin",
+                          req.method)
+    if refused:
+        wait, label = refused
+        raise HTTPException(
+            status_code=429,
+            detail=f"budget: {label} is spent, retry in {wait}s",
+            headers={"Retry-After": str(wait)},
+        )
+
+    if req.method in FILE_READ_METHODS:
+        try:
+            body, kind = read_file(req.params)
+        except FileError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return Response(content=body, media_type=kind)
 
     raw = admin_api_call(req.method, req.params).data
     if not isinstance(raw, (bytes, bytearray)):

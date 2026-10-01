@@ -16,6 +16,8 @@ const TILT = -32
 const LEAN = Math.abs(TILT) * Math.PI / 180
 const AX_LINE = 12
 const AX_MOST = 14
+const AX_SAY_X = 26
+const AX_SAY_Y = 22
 
 const RULER = typeof document === "undefined"
   ? null
@@ -79,7 +81,8 @@ export default class extends Controller {
   static values = {
     kind: String, data: Object, height: Number, pct: Boolean, pctFit: Boolean,
     stacked: Boolean, days: Boolean, spark: Boolean, rule: Object, splits: Array,
-    voids: Array, partial: Array, partialNote: String, notes: Array, caps: Array, nokey: Boolean
+    voids: Array, partial: Array, partialNote: String, notes: Array, caps: Array, nokey: Boolean,
+    xlabel: String, ylabel: String
   }
 
   connect() {
@@ -204,9 +207,14 @@ export default class extends Controller {
   get pad() {
     if (this.sparkValue) return { l: 1, r: 1, t: 3, b: 3 }
 
-    if (!this.tilt) return PAD
+    const said = {
+      ...PAD,
+      l: PAD.l + (this.xlabelValue || this.ylabelValue ? AX_SAY_Y : 0),
+      b: PAD.b + (this.xlabelValue ? AX_SAY_X : 0)
+    }
+    if (!this.tilt) return said
 
-    return { ...PAD, r: PAD.r + (this.tiltEdge || 0), b: PAD.b + Math.round(this.tiltRoom || 22) }
+    return { ...said, r: said.r + (this.tiltEdge || 0), b: said.b + Math.round(this.tiltRoom || 22) }
   }
 
   get stack() {
@@ -392,11 +400,22 @@ export default class extends Controller {
       ? ""
       : `<line class="base" x1="${pad.l}" y1="${floor}" x2="${right}" y2="${floor}"/>`
 
+    const says = this.sparkValue ? "" : [
+      this.xlabelValue
+        ? `<text class="ax" x="${((pad.l + right) / 2).toFixed(1)}" y="${high - 9}"
+          text-anchor="middle">${esc(this.xlabelValue)}</text>`
+        : "",
+      this.ylabelValue
+        ? `<text class="ax" transform="translate(15 ${((pad.t + floor) / 2).toFixed(1)}) rotate(-90)"
+          text-anchor="middle">${esc(this.ylabelValue)}</text>`
+        : ""
+    ].join("")
+
     chart.querySelector("svg")?.remove()
     chart.insertAdjacentHTML("afterbegin",
       `<svg width="${wide}" height="${high}" viewBox="0 0 ${wide} ${high}" role="img"
         aria-label="${esc(this.summary(rows, series))}"><defs>${defs}</defs>${gaps}${grid}` +
-      `${base}${rule}${body}${marks}${splits}${cursor}${names}</svg>`)
+      `${base}${rule}${body}${marks}${splits}${cursor}${names}${says}</svg>`)
 
     this.geom = {
       x, y, mid, lo, line, wide, high, rows, series, floor, pad,

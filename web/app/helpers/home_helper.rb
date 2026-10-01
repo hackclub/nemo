@@ -135,6 +135,16 @@ module HomeHelper
     format("%.1f d", hours / 24)
   end
 
+  WINDOWS = [[86_400, "day"], [3600, "hour"], [60, "minute"]].freeze
+
+  def window_said(seconds)
+    return "the whole span" if seconds.blank?
+
+    size, word = WINDOWS.find { |step, _| seconds >= step } || [1, "second"]
+    count = (seconds.to_f / size).round
+    "the first #{count == 1 ? word : pluralize(count, word)}"
+  end
+
   def share_pct(numerator, denominator)
     return nil if denominator.nil? || denominator.to_i.zero? || numerator.nil?
 

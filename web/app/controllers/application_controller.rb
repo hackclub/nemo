@@ -78,9 +78,9 @@ class ApplicationController < ActionController::Base
     refuse_community("ops.engine")
   end
 
-  def refuse_community(key)
+  def refuse_community(key, record = nil)
     return head :forbidden if request.format.json?
 
-    redirect_to root_path, alert: Community::Access.why_not(current_account, key)
+    redirect_to root_path, alert: Community::Access.why_not(current_account, key, record)
   end
 end

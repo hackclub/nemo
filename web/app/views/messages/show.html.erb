@@ -1,0 +1,182 @@
+<% content_for :page_title, "Message activity" %>
+<% content_for :page_face do %>
+  <span class="crumb">
+    <% if @channel %>
+      <%= link_to "##{@channel.name}", channel_path(@channel.channel_id) %> /
+    <% else %>
+      <span class="mono"><%= @channel_id %></span> /
+    <% end %>
+  </span>
+<% end %>
+
+<% content_for :head_actions do %>
+  <%= open_in_slack Fd::SlackLink.url_for(@channel_id, @ts) %>
+<% end %>
+
+<% if !@shown %>
+  <div class="lede">
+    <span class="lede-said">
+      <b>Activity is not shown for this channel</b>
+      <span>An admin turns it on per channel from the channels admin.</span>
+    </span>
+  </div>
+<% elsif @post.nil? %>
+  <div class="lede">
+    <span class="lede-said">
+      <b>Post not in the warehouse yet</b>
+      <span>The archive lands new posts every few minutes. The Slack shortcut reads live.</span>
+    </span>
+  </div>
+<% elsif @post.is_reply %>
+  <div class="lede">
+    <span class="lede-said">
+      <b>Replies carry no activity</b>
+      <span>Slack counts views, clicks and shares on top-level posts only.</span>
+    </span>
+  </div>
+<% else %>
+  <% stats = @activity&.stats %>
+  <div class="stack ma">
+    <article class="card ma-post">
+      <header class="ma-post-head">
+        <%= face(@post.author_id, css: "row-avatar ma-face") %>
+        <span class="msg-who"><%= person_name(@post.author_id) %></span>
+        <span class="msg-at">
+          <%= @post.posted_at.in_time_zone(viewer_zone).strftime("%-d %b %Y, %H:%M") %>
+        </span>
+      </header>
+
+      <div class="ma-post-said">
+        <% if @said&.said %>
+          <%= Slack::RichText.for(@said.said, names: @names, channels: @rooms, emoji: @emoji) %>
+        <% else %>
+          <p class="msg-gone">Slack did not return the message.</p>
+        <% end %>
+      </div>
+
+      <% files = Messages::File.listed(@said&.said) %>
+      <% if files.any? %>
+        <div class="post-files">
+          <% files.each do |one| %>
+            <% url = message_file_path(@channel_id, @ts, one["id"]) %>
+            <% if Messages::File.image?(one) %>
+              <%= image_tag url, alt: one["name"].to_s, class: "post-image", loading: "lazy" %>
+            <% else %>
+              <%= link_to one["name"].presence || one["id"], url, class: "chip post-file" %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </article>
+
+    <% if stats.nil? %>
+      <div class="lede">
+        <span class="lede-said">
+          <b>No activity returned</b>
+          <span>
+            <% if @activity&.error == :not_configured %>
+              The analytics proxy is not configured on this deployment.
+            <% elsif @activity&.error == :reauth %>
+              The analytics session needs refreshing.
+            <% elsif @activity&.error == :not_found %>
+              Slack holds no activity for this post.
+            <% else %>
+              Slack did not answer. Reload in a minute.
+            <% end %>
+          </span>
+        </span>
+      </div>
+    <% else %>
+      <dl class="card facts-strip ma-figures">
+        <div class="fact">
+          <dt>Unique viewers</dt>
+          <dd><%= number_with_delimiter(stats.viewers) %></dd>
+        </div>
+        <div class="fact">
+          <dt>Clicks</dt>
+          <dd><%= number_with_delimiter(stats.clicked) %></dd>
+        </div>
+        <div class="fact">
+          <dt>Reactions</dt>
+          <dd><%= number_with_delimiter(stats.reacted) %></dd>
+        </div>
+        <div class="fact">
+          <dt>Forwards</dt>
+          <dd><%= number_with_delimiter(stats.shared) %></dd>
+        </div>
+        <div class="fact">
+          <dt>Unique replies</dt>
+          <dd><%= number_with_delimiter(@post.reply_users_count.to_i) %></dd>
+        </div>
+      </dl>
+
+      <% if stats.any_curve? %>
+        <section class="card">
+          <div class="card-head ma-head">
+            <div>
+              <h2 class="card-title">Reach over time</h2>
+              <p class="card-sub">
+                <%= stats.bucket_said(@span) %> buckets
+                <span class="triad-sep">&middot;</span>
+                <%= window_said(stats.window_seconds(@span)) %> after posting
+                <span class="triad-sep">&middot;</span>
+                <%= number_with_delimiter(stats.seen_within(@span)) %> of
+                <%= number_with_delimiter(stats.viewers) %> viewers<%= " so far" if stats.partial?(@span) %>
+              </p>
+            </div>
+            <nav class="segmented" aria-label="Window">
+              <% Messages::Activity::SPANS.each do |key, label| %>
+                <%= link_to label, message_activity_path(@channel_id, @ts, span: key),
+                      aria: { current: ("true" if @span == key) } %>
+              <% end %>
+            </nav>
+          </div>
+          <div data-controller="chart"
+               data-chart-kind-value="line"
+               data-chart-height-value="240"
+               data-chart-nokey-value="true"
+               data-chart-xlabel-value="<%= Messages::Activity.x_label(@span) %>"
+               data-chart-ylabel-value="<%= Messages::Activity::VIEWERS %>"
+               data-chart-data-value="<%= stats.chart(@span).to_json %>"></div>
+        </section>
+      <% end %>
+
+      <% if stats.daily? %>
+        <section class="card">
+          <div class="card-head">
+            <div><h2 class="card-title">Views, clicks and reactions</h2></div>
+          </div>
+          <div data-controller="chart"
+               data-chart-kind-value="bars"
+               data-chart-height-value="200"
+               data-chart-days-value="true"
+               data-chart-data-value="<%= stats.daily_chart.to_json %>"></div>
+        </section>
+      <% end %>
+
+      <section class="card">
+        <div class="card-head">
+          <div><h2 class="card-title">Where it was read</h2></div>
+        </div>
+        <div class="ma-clients">
+          <div class="ma-bar" role="img"
+               aria-label="<%= stats.clients.map { |label, count, _| "#{label} #{count}" }.join(", ") %>">
+            <% stats.clients.each_with_index do |(label, count, share), i| %>
+              <% next unless count.positive? %>
+              <span class="ma-part ma-part-<%= i + 1 %>" style="flex-grow: <%= count %>"
+                    title="<%= label %> <%= count %>"></span>
+            <% end %>
+          </div>
+          <dl class="ma-key">
+            <% stats.clients.each_with_index do |(label, count, share), i| %>
+              <div>
+                <dt><span class="ma-dot ma-part-<%= i + 1 %>"></span><%= label %></dt>
+                <dd><%= number_with_delimiter(count) %><small><%= share ? "#{share}%" : "n/a" %></small></dd>
+              </div>
+            <% end %>
+          </dl>
+        </div>
+      </section>
+    <% end %>
+  </div>
+<% end %>

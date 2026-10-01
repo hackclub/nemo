@@ -192,6 +192,10 @@
     padding-left: var(--s-sm);
     padding-right: var(--s-sm);
   }
+  .card > [data-controller~="chart"]:last-child > .chart-legend,
+  .panel > [data-controller~="chart"]:last-child > .chart-legend {
+    padding-bottom: var(--s-xs);
+  }
   .card:has(.card-tools > .legend) .chart-legend,
   .panel:has(.card-tools > .legend) .chart-legend { display: none; }
   .legend span, .key span, .chart-legend span, .parts-key span {

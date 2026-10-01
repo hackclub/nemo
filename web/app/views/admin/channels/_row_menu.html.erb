@@ -27,6 +27,18 @@
           </span>
         <% end %>
       <% end %>
+      <% if may_community?("analytics.message.show") %>
+        <div class="menu-sep"></div>
+        <% shown = @activity.include?(channel.channel_id) %>
+        <%= button_to activity_admin_channel_path(channel.channel_id), method: :patch,
+              params: { shown: shown ? "off" : "on", q: @q.presence }, class: "btn" do %>
+          <span class="mi-body">
+            <span class="mi-t"><%= shown ? "Stop showing" : "Show" %> how posts did</span>
+            <span class="mi-note"><%= shown ? "authors lose the \"view message activity\" shortcut here" :
+                                                "authors may ask nemo how their own post did" %></span>
+          </span>
+        <% end %>
+      <% end %>
       <% people = named.select { |grant| grant.user_id.present? } %>
       <% if people.any? %>
         <div class="menu-sep"></div>

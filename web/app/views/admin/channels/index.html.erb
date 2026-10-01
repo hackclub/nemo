@@ -51,7 +51,13 @@
                         <span class="mono"><%= channel.channel_id %></span>
                       </span>
                     </td>
-                    <td><%= audience_chip(kind) %></td>
+                    <td>
+                      <%= audience_chip(kind) %>
+                      <% if @activity.include?(channel.channel_id) %>
+                        <span class="chip chip-good"
+                              title="authors may ask nemo how their own post did">activity</span>
+                      <% end %>
+                    </td>
                     <td><%= named_faces(named, kind) %></td>
                     <td><%= ago_label(channel.last_active_at, none: "never") %></td>
                     <td class="col-btn">

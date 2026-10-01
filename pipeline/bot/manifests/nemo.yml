@@ -16,6 +16,10 @@ features:
       type: message
       callback_id: lock_thread
       description: Stop new replies until the lock lifts
+    - name: View message activity
+      type: message
+      callback_id: message_activity
+      description: Viewers, reactions and clicks on your own post
   slash_commands:
     - command: /nemo
       description: Look somebody up, note something, open a case, or pull one up

@@ -18,6 +18,7 @@ from bot.nemo.surface import (
     bot_watch,  # noqa: F401
     channel_watch,  # noqa: F401
     join_watch,  # noqa: F401
+    message_activity,  # noqa: F401
     reaction_watch,  # noqa: F401
     thread_destroy,  # noqa: F401
     thread_lock,  # noqa: F401

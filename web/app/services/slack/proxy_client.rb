@@ -8,6 +8,38 @@ module Slack
     class Unavailable < Error; end
     class NotConfigured < StandardError; end
 
+    Body = Struct.new(:bytes, :kind, keyword_init: true)
+
+    def self.file(method, params = {}, read_timeout: 30)
+      answer = sent(URI("#{base_url}/file"), {
+        "method" => method, "params" => params.compact, "credential" => "admin"
+      }, read_timeout)
+
+      case answer
+      when Net::HTTPSuccess
+        Body.new(bytes: answer.body, kind: answer["Content-Type"])
+      when Net::HTTPBadGateway
+        detail = detail_of(answer)
+        raise detail.to_s.start_with?("invalid_auth") ? AuthError.new(detail) : ApiError.new(detail)
+      else
+        raise Unavailable, "proxy returned #{answer.code}: #{detail_of(answer)}"
+      end
+    end
+
+    def self.sent(uri, body, read_timeout)
+      request = Net::HTTP::Post.new(uri)
+      request["Content-Type"] = "application/json"
+      request["Authorization"] = "Bearer #{token}"
+      request.body = body.to_json
+
+      Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
+                      open_timeout: 5, read_timeout: read_timeout) do |http|
+        http.request(request)
+      end
+    rescue Net::OpenTimeout, Net::ReadTimeout, SystemCallError, IOError, SocketError => e
+      raise Unavailable, e.message
+    end
+
     def self.call(method, params = {}, credential: "internal", read_timeout: 30)
       uri = URI("#{base_url}/call")
       request = Net::HTTP::Post.new(uri)

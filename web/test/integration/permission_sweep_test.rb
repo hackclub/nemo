@@ -62,7 +62,8 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
   test "a stranger reaches no page that is not the door" do
     open_to_all = ["/login", "/auth/failure"]
     got = (FD_PATHS + ADMIN_PATHS + ENGINE_PATHS + ["/", "/account", "/channels",
-                                                    "/journey/joining"]).reject do |path|
+                                                    "/journey/joining",
+                                                    "/messages/C0SWEEP/1.000001"]).reject do |path|
       get path
       response.redirect? || response.status == 404
     end

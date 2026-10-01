@@ -1,0 +1,73 @@
+<div class="card">
+  <div class="card-head">
+    <div><h2 class="card-title">Your posts</h2></div>
+  </div>
+
+  <% if posts.any? %>
+    <% posts.each do |post| %>
+      <div class="post">
+        <%= face(post.author_id, css: "row-avatar post-face") %>
+        <div class="post-main">
+          <div class="msg-head">
+            <span class="msg-who"><%= names[post.author_id] %></span>
+            <span class="msg-at"><%= post.posted_at.strftime("%-d %b at %H:%M") %></span>
+          </div>
+
+          <div class="post-said">
+            <% if post.message %>
+              <%= Slack::RichText.for(post.message, names: names, channels: rooms, emoji: emoji) %>
+            <% else %>
+              <p class="msg-gone">Slack would not answer for this one.</p>
+            <% end %>
+          </div>
+
+          <% if post.files.any? %>
+            <div class="post-files">
+              <% post.files.each do |one| %>
+                <% url = message_file_path(post.channel_id, post.ts, one["id"]) %>
+                <% if Messages::File.image?(one) %>
+                  <%= image_tag url, alt: one["name"].to_s, class: "post-image", loading: "lazy" %>
+                <% else %>
+                  <%= link_to one["name"].presence || one["id"], url, class: "chip post-file" %>
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+
+          <div class="post-foot">
+            <% if post.reactions_said.any? %>
+              <span class="post-rxns">
+                <% post.reactions_said.each do |one| %>
+                  <span class="chip post-rxn">
+                    <% if emoji[one["name"]].present? %>
+                      <%= image_tag emoji[one["name"]], alt: ":#{one['name']}:",
+                            class: "rt-emoji-img", loading: "lazy", width: 16, height: 16 %>
+                    <% else %>
+                      :<%= one["name"] %>:
+                    <% end %>
+                    <%= one["count"] %>
+                  </span>
+                <% end %>
+              </span>
+            <% end %>
+            <% if post.replies.positive? %>
+              <span class="post-replies"><%= pluralize(post.replies, "reply", plural: "replies") %></span>
+            <% end %>
+            <%= link_to message_activity_path(post.channel_id, post.ts),
+                  class: "btn btn-ghost post-open" do %>
+                Message activity <span aria-hidden="true">&rarr;</span>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <p class="card-note">
+      For an older post, open it in Slack and use <b>View message activity</b>.
+    </p>
+  <% else %>
+    <div class="empty">
+      <p class="empty-title">You have not posted here.</p>
+    </div>
+  <% end %>
+</div>

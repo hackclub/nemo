@@ -63,8 +63,9 @@ class Fd::QueueStatsTest < ActiveSupport::TestCase
   end
 
   test "the median matches the middle of what was resolved this quarter" do
-    make_case(opened_at: 10.days.ago, resolved_at: 8.days.ago, resolution: "no_action")
-    make_case(opened_at: 10.days.ago, resolved_at: 4.days.ago, resolution: "no_action")
+    at = Time.current.beginning_of_quarter + 1.hour
+    make_case(opened_at: at, resolved_at: at + 2.hours, resolution: "no_action")
+    make_case(opened_at: at, resolved_at: at + 6.hours, resolution: "no_action")
 
     spans = Fd::Case.where(resolved_at: Time.current.beginning_of_quarter..)
       .pluck(:opened_at, :resolved_at)

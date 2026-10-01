@@ -11,9 +11,10 @@ class Fd::MemberTest < ActiveSupport::TestCase
   end
 
   test "an exact handle outranks a name that only starts with the term" do
-    named = Fd::Member.live.where.not(handle: [nil, ""]).where("length(handle) >= 4")
-      .where("handle !~ '[%_]'").order(:user_id).first
-    skip "the corpus has no member with a handle" if named.nil?
+    alone = Fd::Member.live.where.not(handle: [nil, ""]).where("length(handle) >= 4")
+      .where("handle !~ '[%_]'").group(:handle).having("count(*) = 1").pluck(:handle)
+    named = Fd::Member.live.where(handle: alone).order(:user_id).first
+    skip "the corpus has no member with a handle of their own" if named.nil?
 
     assert_equal named.user_id, Fd::Member.search(named.handle).first.user_id
   end

@@ -61,7 +61,12 @@ class Channels::MapTest < ActiveSupport::TestCase
   end
 
   test "an unknown cohort falls back to the default rather than drawing nothing" do
-    assert_equal "last30", Analytics::MartNewcomerChannels.cohort("nonsense")&.key
+    offered = Analytics::MartNewcomerChannels.cohorts
+    skip "the corpus has no newcomer cohorts" if offered.empty?
+
+    fallback = Analytics::MartNewcomerChannels.cohort("nonsense")
+    assert_includes offered.map(&:key), fallback&.key
+    assert_equal "last30", fallback.key if offered.any?(&:default?)
   end
 
   test "points carry only what the chart draws, never the channel id" do

@@ -83,4 +83,48 @@ class AdminScreensTest < ActionDispatch::IntegrationTest
     assert_match(/not an audience/, flash[:alert])
     assert_equal "granted", Channels::Audience.of(channel.channel_id)
   end
+
+  test "a manager shows how posts did in a channel, then stops" do
+    channel = Analytics::DimChannel.where(archived: false).first
+    sign_in_as(@boss)
+
+    patch activity_admin_channel_path(channel.channel_id), params: { shown: "on" }
+
+    assert_redirected_to admin_channels_path
+    assert Channels::Activity.shown?(channel.channel_id)
+    assert Fd::AuditEntry.where(entity_type: "message_activity", entity_ref: channel.channel_id,
+      verb: "turned_on", actor_user_id: @boss.user_id).exists?
+
+    get admin_channels_path
+    assert_response :success
+    assert_includes response.body, "Stop showing how posts did"
+
+    patch activity_admin_channel_path(channel.channel_id), params: { shown: "off" }
+
+    refute Channels::Activity.shown?(channel.channel_id)
+    assert Fd::AuditEntry.where(entity_type: "message_activity", entity_ref: channel.channel_id,
+      verb: "turned_off").exists?
+  ensure
+    Channels::Activity::Setting.where(channel_id: channel.channel_id).delete_all
+  end
+
+  test "the analytics role cannot show how posts did" do
+    staff = hold_role!("UADANA3", "analytics")
+    channel = Analytics::DimChannel.where(archived: false).first
+    sign_in_as(staff)
+
+    patch activity_admin_channel_path(channel.channel_id), params: { shown: "on" }
+
+    refute Channels::Activity.shown?(channel.channel_id)
+  end
+
+  test "showing how posts did is on or off, nothing else" do
+    sign_in_as(@boss)
+    channel = Analytics::DimChannel.where(archived: false).first
+
+    patch activity_admin_channel_path(channel.channel_id), params: { shown: "maybe" }
+
+    assert_match(/not on or off/, flash[:alert])
+    refute Channels::Activity.shown?(channel.channel_id)
+  end
 end

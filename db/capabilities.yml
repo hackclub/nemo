@@ -210,6 +210,18 @@ capabilities:
     logged: true
     events: [channel_purge/queued, channel_purge/performed]
 
+  message.read:
+    label: See how their own post did, in a channel that shows it
+    area: channel
+    record_scope: author
+    every_account: true
+
+  message.show:
+    label: Pick the channels whose posts show their activity
+    area: channel
+    locked: true
+    events: [message_activity/turned_on, message_activity/turned_off]
+
   engine.manage:
     label: Run and tune the engine
     area: engine

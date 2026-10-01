@@ -13,7 +13,7 @@
 <% end %>
 
 <% content_for :page_tabs do %>
-  <% ChannelsController::VIEWS.each do |key, label| %>
+  <% @views.each do |key, label| %>
     <%= link_to label, channel_view_path(view: key), class: "view",
           aria: { current: ("true" if @view == key) } %>
   <% end %>
@@ -33,6 +33,8 @@
     <%= render "welcome", welcome: @welcome, scorecard_rows: @scorecard_rows %>
   <% when "messages" %>
     <%= render "talk", pulse: @pulse, start_date: @start_date, end_date: @end_date %>
+  <% when "posts" %>
+    <%= render "posts", posts: @posts, names: @names, rooms: @rooms, emoji: @emoji %>
   <% when "neighbours" %>
     <%= render "context", neighbours: @neighbours %>
   <% end %>
