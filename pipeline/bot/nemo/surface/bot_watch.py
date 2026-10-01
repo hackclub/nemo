@@ -16,6 +16,7 @@ QUOTE_LIMIT = 1200
 CUT = "\n[truncated]"
 
 _apps = {}
+_people = {}
 
 
 def ours():
@@ -42,6 +43,23 @@ def bot_face(client, bot_id):
     return _apps[bot_id]
 
 
+def fetch_user(client, user_id):
+    try:
+        return (client.users_info(user=user_id) or {}).get("user") or {}
+    except Exception as failure:
+        log.info("nemo: could not look up %s: %s", user_id, failure)
+        return {}
+
+
+def get_user(client, user_id):
+    if user_id not in _people:
+        found = fetch_user(client, user_id)
+        if not found:
+            return {}
+        _people[user_id] = found
+    return _people[user_id]
+
+
 def who_posted(event):
     if event.get("subtype") not in CARRIES:
         return None, None
@@ -49,6 +67,15 @@ def who_posted(event):
     if not bot_id and not (event.get("bot_profile") or event.get("subtype") == "bot_message"):
         return None, None
     return bot_id, event.get("user")
+
+
+def is_userbot(client, event, bot_id, user_id):
+    if event.get("subtype") == "bot_message" or not user_id:
+        return False
+    face_id, _label, _app_id = bot_face(client, bot_id) if bot_id else (None, None, None)
+    if user_id == face_id:
+        return False
+    return get_user(client, user_id).get("is_bot") is False
 
 
 def names_for(client, bot_id, user_id):
@@ -133,6 +160,10 @@ def posted(ctx):
 
     standing = channelguards.guarding(channel_id)
     if standing is None:
+        return None
+
+    if is_userbot(ctx.client, event, bot_id, user_id):
+        log.info("nemo: %s posted in %s with a user token, not a bot", user_id, channel_id)
         return None
 
     ids, label, app_id = names_for(ctx.client, bot_id, user_id)
