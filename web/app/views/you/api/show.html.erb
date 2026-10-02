@@ -1,6 +1,6 @@
 <% content_for :page_title, "API access" %>
 <% api_off = Fd::Flag.off?(:public_api) %>
-<% granted = Api::Capability::KEYS.count { |key| @consents[key] == Api::Consent::GRANTED } %>
+<% granted = Api::Scope::KEYS.count { |key| @consents[key] == Api::Consent::GRANTED } %>
 <% live = @tokens.reject(&:spent?) %>
 <% cap = Api::Setting.value("tokens_per_owner") %>
 
@@ -13,7 +13,7 @@
                 aria: { current: ("true" if key == @tab) } do %>
             <span><%= label %></span>
             <span class="view-count">
-              <%= key == "permissions" ? Api::Capability::KEYS.size : live.size %>
+              <%= key == "permissions" ? Api::Scope::KEYS.size : live.size %>
             </span>
           <% end %>
         <% end %>
@@ -21,12 +21,12 @@
 
       <% if @tab == "permissions" %>
         <div class="rows">
-          <% Api::Capability::KEYS.each do |key| %>
+          <% Api::Scope::KEYS.each do |key| %>
             <% on = @consents[key] == Api::Consent::GRANTED %>
             <div class="row cap-row">
               <span class="cap-two">
-                <b><%= Api::Capability.label(key) %></b>
-                <span><%= Api::Capability.covers(key) %></span>
+                <b><%= Api::Scope.label(key) %></b>
+                <span><%= Api::Scope.covers(key) %></span>
               </span>
               <span class="cap-do">
                 <%= button_to on ? "Opt out" : "Opt in",
@@ -125,7 +125,7 @@
         <div class="frow">
           <span>Opted in to</span>
           <b class="<%= "is-none" if granted.zero? %>">
-            <%= granted.zero? ? "nothing" : "#{granted} of #{Api::Capability::KEYS.size}" %>
+            <%= granted.zero? ? "nothing" : "#{granted} of #{Api::Scope::KEYS.size}" %>
           </b>
         </div>
         <div class="frow">

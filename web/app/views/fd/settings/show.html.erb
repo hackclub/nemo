@@ -96,7 +96,7 @@
           <div>
             <p class="kpi-label">Opted in</p>
             <p class="kpi-val"><%= number_with_delimiter(@opted_in) %></p>
-            <p class="car"><%= pluralize(Api::Capability::KEYS.size, "capability") %></p>
+            <p class="car"><%= pluralize(Api::Scope::KEYS.size, "scope") %></p>
           </div>
           <div>
             <p class="kpi-label">Live tokens</p>

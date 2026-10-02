@@ -1,13 +1,13 @@
 module Api
-  class Capability
+  class Scope
     class Unknown < ArgumentError; end
 
-    TABLE = YAML.load_file(Rails.root.join("../db/capabilities.yml"))
-      .fetch("capabilities").freeze
+    TABLE = YAML.load_file(Rails.root.join("../db/api_scopes.yml"))
+      .fetch("scopes").freeze
     KEYS = TABLE.keys.freeze
 
     def self.fetch(key)
-      TABLE.fetch(key.to_s) { raise Unknown, "#{key} is not a capability" }
+      TABLE.fetch(key.to_s) { raise Unknown, "#{key} is not a scope" }
     end
 
     def self.label(key) = fetch(key).fetch("label")

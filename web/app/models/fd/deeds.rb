@@ -272,7 +272,7 @@ module Fd
 
       ::Api::ConsentLog.where(id: ids).map do |log|
         Row.new(at: log.at, event: "consent/#{log.state}", kind: "capability",
-          about: ::Api::Capability.said(log.capability), actor: log.user_id,
+          about: ::Api::Scope.said(log.capability), actor: log.user_id,
           said: VIA.fetch(log.via, log.via))
       end
     end
