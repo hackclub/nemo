@@ -61,6 +61,18 @@ RETURNING id
 """
 
 
+REACHES_A_MEMBER = """
+SELECT 1 FROM fd.intake_messages m
+JOIN fd.intake_conversations c ON c.id = m.conversation_id
+WHERE m.mirrored_ts = %s
+LIMIT 1
+"""
+
+
+def reaches_a_member(conn, thread_ts):
+    return conn.execute(REACHES_A_MEMBER, (thread_ts,)).fetchone() is not None
+
+
 def case_of_thread(conn, thread_ts):
     row = conn.execute(CASE_OF_THREAD, {"ts": thread_ts}).fetchone()
     return row[0] if row else None

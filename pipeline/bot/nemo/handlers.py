@@ -513,14 +513,22 @@ def register(app, on_reply=None):
             return
 
         aimed = answer.read(event.get("text"))
-        if aimed is None:
-            return ours(event, thread_ts, client)
+        if aimed and for_the_member(thread_ts):
+            return reply(event, thread_ts, aimed, client)
 
+        return ours(event, thread_ts, client)
+
+    def for_the_member(thread_ts):
+        with session() as conn:
+            return chat.reaches_a_member(conn, thread_ts)
+
+    def reply(event, thread_ts, aimed, client):
         if on_reply is None:
-            return
+            return None
         if not may_answer(event, thread_ts, client):
-            return
-        on_reply(
+            return None
+
+        return on_reply(
             thread_ts,
             aimed["said"],
             event.get("user"),
