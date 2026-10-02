@@ -22,7 +22,7 @@ from bot.nemo.casework import (
     reverse_action,
     set_category,
 )
-from bot.nemo.channel import ASSIGNEES, SUBJECTS, firehouse_channel, redraw, whisper
+from bot.nemo.channel import ASSIGNEES, SUBJECTS, case_channels, redraw, whisper
 
 log = logging.getLogger("bot.nemo")
 
@@ -497,7 +497,7 @@ def register(app, on_reply=None):
         return False
 
     def on_message(event, client):
-        if event.get("channel") != firehouse_channel():
+        if event.get("channel") not in case_channels():
             return
 
         subtype = event.get("subtype")

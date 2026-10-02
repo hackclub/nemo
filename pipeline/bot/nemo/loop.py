@@ -145,6 +145,7 @@ def once(desk, channel_id=None):
         screening.refresh(conn)
         taking_up = memberguards.uncarried(conn)
         channel.firehouse_channel(conn)
+        channel.react_channels(conn)
         destroying = guards.pending(conn)
         lifting = guards.lifting(conn)
         purging = [row[0] for row in purge.waiting(conn)]
@@ -210,6 +211,7 @@ def start(desk, stopping, channel_id=None):
         elif channel_name == APP_SETTING:
             with session() as conn:
                 channel.firehouse_channel(conn)
+                channel.react_channels(conn)
                 responses.refresh(conn)
         elif channel_name == AUTOMOD_WORD:
             with session() as conn:

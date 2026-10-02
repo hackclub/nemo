@@ -7,7 +7,9 @@ CASE_OF_THREAD = """
 SELECT case_id FROM (
     SELECT case_id, 1 AS rank FROM fd.case_reports WHERE forwarded_ts = %(ts)s
     UNION ALL
-    SELECT id, 2 FROM fd.cases WHERE card_ts = %(ts)s AND card_thread_ts IS NULL
+    SELECT id, 2 FROM fd.cases WHERE card_thread_ts = %(ts)s
+    UNION ALL
+    SELECT id, 3 FROM fd.cases WHERE card_ts = %(ts)s AND card_thread_ts IS NULL
 ) found
 ORDER BY rank
 LIMIT 1

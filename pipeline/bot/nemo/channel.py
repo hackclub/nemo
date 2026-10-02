@@ -108,6 +108,19 @@ def firehouse_channel(conn=None):
     return _firehouse.get("id") or os.environ["FIREHOUSE_CHANNEL_ID"]
 
 
+_react = {}
+
+
+def react_channels(conn=None):
+    if conn is not None:
+        _react["ids"] = channels.react_channels(conn)
+    return _react.get("ids") or set()
+
+
+def case_channels(conn=None):
+    return {firehouse_channel(conn)} | react_channels(conn)
+
+
 def card_channel(case, channel_id=None, conn=None):
     return channel_id or firehouse_channel(conn)
 
