@@ -1,0 +1,42 @@
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">In force now</h2>
+  </div>
+
+  <div class="card card-flush">
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>who</th>
+            <th>what</th>
+            <th>since</th>
+            <th>until</th>
+            <th>case</th>
+            <th>nemo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% guards.each do |guard| %>
+            <tr>
+              <td><%= member_link(guard.subject_id) %></td>
+              <td><%= guard_held_line(guard) %></td>
+              <td><%= guard.opened_at.strftime("%-d %b") %></td>
+              <td class="<%= "is-none" unless guard.expires_at %>">
+                <%= guard.expires_at ? guard.expires_at.strftime("%-d %b") : "no end date" %>
+              </td>
+              <td>
+                <% if guard.case_id %>
+                  <%= link_to "##{guard.case_id}", fd_case_path(guard.case_id) %>
+                <% else %>
+                  <span class="state state-crit">no case</span>
+                <% end %>
+              </td>
+              <td><%= guard_carry_chip(guard) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,45 @@
+<tr class="audit-row">
+  <td class="audit-when">
+    <time datetime="<%= row.at.iso8601 %>" title="<%= row.at.strftime("%-d %b %Y %H:%M:%S") %>">
+      <%= row.at.strftime("%-d %b") %> <span class="audit-clock"><%= row.at.strftime("%H:%M") %></span>
+    </time>
+  </td>
+
+  <td class="audit-who"><%= audit_actor(row) %></td>
+
+  <td class="audit-what">
+    <span class="audit-verb"><%= audit_verb(row) %></span>
+    <% if row.diff? %>
+      <details class="audit-diff">
+        <summary><%= pluralize(row.changed_keys.size, "field") %></summary>
+        <dl class="audit-changes">
+          <% row.changed_keys.each do |key| %>
+            <dt><%= key.tr("_", " ") %></dt>
+            <dd>
+              <% if row.was(key).present? %>
+                <s><%= audit_value(row.was(key)) %></s>
+                <span class="audit-arrow" aria-hidden="true">&rarr;</span>
+              <% end %>
+              <%= audit_value(row.now(key)) %>
+            </dd>
+          <% end %>
+        </dl>
+      </details>
+    <% end %>
+  </td>
+
+  <td class="audit-about"><%= audit_about(row) %></td>
+
+  <td class="audit-tail">
+    <% if row.ip.present? %>
+      <span class="audit-ip mono"><%= row.ip %></span>
+    <% end %>
+    <% if row.raw? %>
+      <%= link_to fd_audit_event_path(source: row.source, id: row.id),
+            class: "iconbtn audit-more", aria: { label: "Everything on this event" },
+            data: { turbo_frame: "audit-panel" } do %>
+        <%= menu_dots %>
+      <% end %>
+    <% end %>
+  </td>
+</tr>

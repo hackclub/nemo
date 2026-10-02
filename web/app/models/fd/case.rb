@@ -31,10 +31,6 @@ module Fd
       inverse_of: :kase, dependent: nil
     has_many :notes, class_name: "Fd::Note", foreign_key: :case_id,
       inverse_of: :kase, dependent: nil
-    has_many :citations, -> { oldest_first }, class_name: "Fd::CaseCitation",
-      foreign_key: :case_id, inverse_of: :kase, dependent: nil
-    belongs_to :followed_decision, class_name: "Fd::Decision",
-      foreign_key: :followed_decision_id, inverse_of: :cases_followed, optional: true
 
     scope :unresolved, -> { where(resolved_at: nil) }
     scope :not_duplicate, -> { where(duplicate_of: nil) }
@@ -49,9 +45,6 @@ module Fd
     }
     scope :unassigned, -> {
       where.not(id: CaseAssignee.select(:case_id))
-    }
-    scope :free_or_assigned_to, ->(user_id) {
-      unassigned.or(assigned_to(user_id))
     }
     scope :with_live_action_against, ->(user_id) {
       where(id: Action.live.for_target(user_id).select(:case_id))
@@ -96,26 +89,6 @@ module Fd
         .distinct.count(:case_id)
     end
 
-    def self.thread_message_counts_for(case_ids)
-      ids = case_ids.compact.uniq
-      return {} if ids.empty?
-
-      CaseThread.where(case_id: ids)
-        .joins(<<~SQL.squish)
-          JOIN fd.thread_messages tm
-            ON tm.channel_id = fd.case_threads.channel_id
-           AND tm.thread_ts = fd.case_threads.thread_ts
-        SQL
-        .group(:case_id).count
-    end
-
-    def self.flagged_counts_for(case_ids)
-      ids = case_ids.compact.uniq
-      return {} if ids.empty?
-
-      CaseCitation.where(case_id: ids).group(:case_id).count
-    end
-
     ACTED = "action_taken".freeze
 
     def self.ending_tally
@@ -139,29 +112,9 @@ module Fd
       acted + rows
     end
 
-    def self.action_counts_for(case_ids)
-      ids = case_ids.compact.uniq
-      return {} if ids.empty?
+    AROUND = "around".freeze
 
-      Action.where(case_id: ids).group(:case_id).count
-    end
-
-    def self.live_action_counts_for(case_ids)
-      ids = case_ids.compact.uniq
-      return {} if ids.empty?
-
-      Action.where(case_id: ids, reversed_at: nil).group(:case_id).count
-    end
-
-    def self.thread_channels_for(case_ids)
-      ids = case_ids.compact.uniq
-      return {} if ids.empty?
-
-      CaseThread.where(case_id: ids).pluck(:case_id, :channel_id)
-        .group_by(&:first).transform_values { |pairs| pairs.map(&:last).uniq }
-    end
-
-    def self.candidate_groups(kase, siblings = [], limit: 25)
+    def self.candidate_parts(kase, siblings = [])
       skip = kase.family_ids
       shared = siblings.reject { |one| skip.include?(one.id) }
       subject = if kase.subject_user_ids.any?
@@ -170,16 +123,14 @@ module Fd
       else
         []
       end
-      seen = skip + shared.map(&:id) + subject.map(&:id)
-      recent = unresolved.where.not(id: seen).order(opened_at: :desc).limit(8).to_a
+      [shared, subject, skip + shared.map(&:id) + subject.map(&:id)]
+    end
 
-      [
-        ["same thread", shared],
-        ["also about #{kase.subject_user_ids.any? ? 'the same person' : 'somebody on this case'}",
-         subject],
-        ["opened around the same time", recent]
-      ].reject { |_label, found| found.empty? }
-        .map { |label, found| [label, found.first(limit)] }
+    def self.candidates_around(seen, page: 1, per: 8)
+      found = unresolved.where.not(id: seen)
+        .order(opened_at: :desc, id: :desc)
+        .offset((page - 1) * per).limit(per + 1).to_a
+      [found.first(per), found.size > per]
     end
 
     def self.candidates_for(kase, siblings = [], limit: 25)
@@ -279,12 +230,8 @@ module Fd
       said = (notes + reports).flat_map { |row| Mentions.ids(row.body) }.uniq
       return [] if said.empty?
 
-      (said - participants.map(&:user_id) - Staff.where(user_id: said).pluck(:user_id)) -
+      (said - participants.map(&:user_id) - Account.where(user_id: said).pluck(:user_id)) -
         [opened_by]
-    end
-
-    def mine_or_free?(user_id)
-      !assigned? || assigned_to?(user_id)
     end
 
     def assignee_handles
@@ -296,20 +243,14 @@ module Fd
     end
 
 
-    def primary_thread
-      threads.detect(&:is_primary)
-    end
-
     def sibling_cases
       pairs = threads.evidence.map(&:coordinates)
       return Case.none if pairs.empty?
 
-      tuples = Array.new(pairs.size, "(?, ?)").join(", ")
-      ids = CaseThread.evidence
-        .where("(channel_id, thread_ts) IN (#{tuples})", *pairs.flatten)
-        .where.not(case_id: id)
-        .distinct
-        .pluck(:case_id)
+      evidence = pairs
+        .map { |channel_id, thread_ts| CaseThread.evidence.where(channel_id:, thread_ts:) }
+        .reduce { |scope, pair| scope.or(pair) }
+      ids = evidence.where.not(case_id: id).distinct.pluck(:case_id)
       ids.any? ? Case.where(id: ids) : Case.none
     end
   end

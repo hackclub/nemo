@@ -1,21 +1,15 @@
 import { Controller } from "@hotwired/stimulus"
-
-function said(className, text) {
-  const span = document.createElement("span")
-  span.className = className
-  span.textContent = text
-  return span
-}
+import { askingFor, face, personRow } from "lib/people_menu"
 
 export default class extends Controller {
   static targets = ["field", "input", "results", "store"]
-  static values = { name: String, url: String, single: Boolean, preset: Array }
+  static values = { name: String, url: String, single: Boolean, preset: Array, least: Number }
 
   connect() {
     this.chosen = new Map()
     this.timer = null
-    for (const { id, name, initial } of this.presetValue) {
-      this.chosen.set(id, { name, initial })
+    for (const { id, name, initial, image } of this.presetValue) {
+      this.chosen.set(id, { name, initial, image })
     }
     this.render()
     this.away = this.away.bind(this)
@@ -24,6 +18,7 @@ export default class extends Controller {
 
   disconnect() {
     clearTimeout(this.timer)
+    this.asking?.abort()
     document.removeEventListener("click", this.away)
   }
 
@@ -38,14 +33,27 @@ export default class extends Controller {
 
   async look() {
     const term = this.inputTarget.value.trim()
-    if (term.length < 2) return this.clearResults()
+    this.asking?.abort()
+    if (term.length < (this.leastValue || 3)) return this.clearResults()
 
-    const response = await fetch(`${this.urlValue}?q=${encodeURIComponent(term)}`, {
-      headers: { Accept: "application/json" },
-    })
+    const asking = new AbortController()
+    this.asking = asking
+
+    let response
+    try {
+      response = await fetch(askingFor(this.urlValue, term), {
+        headers: { Accept: "application/json" },
+        signal: asking.signal,
+      })
+    } catch (error) {
+      if (error.name !== "AbortError") this.clearResults()
+      return
+    }
+    if (asking.signal.aborted) return
     if (!response.ok) return this.clearResults()
 
     const { members } = await response.json()
+    if (asking.signal.aborted) return
     this.show(members.filter((member) => !this.chosen.has(member.id)))
   }
 
@@ -57,19 +65,9 @@ export default class extends Controller {
     }
 
     for (const member of members) {
-      const row = document.createElement("button")
-      row.type = "button"
-      row.className = "pick-opt"
-      row.dataset.action = "click->member-picker#choose mouseenter->member-picker#hover"
-      row.dataset.id = member.id
-      row.dataset.name = member.name
-      row.dataset.initial = member.initial
-      row.append(
-        said("avatar", member.initial),
-        said("pick-name", member.name),
-        said("pick-id mono", member.id)
+      this.resultsTarget.append(
+        personRow(member, "click->member-picker#choose mouseenter->member-picker#hover")
       )
-      this.resultsTarget.append(row)
     }
     this.resultsTarget.hidden = false
     this.at = -1
@@ -104,13 +102,13 @@ export default class extends Controller {
   }
 
   choose(event) {
-    const { id, name, initial } = event.currentTarget.dataset
-    this.add(id, name, initial)
+    const { id, name, initial, image } = event.currentTarget.dataset
+    this.add(id, name, initial, image)
   }
 
-  add(id, name, initial) {
+  add(id, name, initial, image = "") {
     if (this.singleValue) this.chosen.clear()
-    this.chosen.set(id, { name, initial })
+    this.chosen.set(id, { name, initial, image })
     this.inputTarget.value = ""
     this.clearResults()
     this.render()
@@ -155,10 +153,13 @@ export default class extends Controller {
   render() {
     for (const token of this.fieldTarget.querySelectorAll(".token")) token.remove()
 
-    for (const [id, { name, initial }] of this.chosen) {
+    for (const [id, { name, initial, image }] of this.chosen) {
       const token = document.createElement("span")
       token.className = "token"
-      token.append(said("avatar", initial), document.createTextNode(name))
+      const label = document.createElement("span")
+      label.textContent = name
+      if (name === `@${id}`) label.dataset.cachetName = id
+      token.append(face(id, initial), label)
 
       const remove = document.createElement("button")
       remove.type = "button"
@@ -182,5 +183,6 @@ export default class extends Controller {
     }
 
     this.inputTarget.placeholder = this.chosen.size > 0 ? "" : "search by name or paste a user id"
+    this.dispatch("picked", { detail: { chosen: [...this.chosen.keys()] } })
   }
 }

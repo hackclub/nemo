@@ -42,28 +42,61 @@ export default class extends Controller {
     this.detach()
   }
 
+  get shown() {
+    return this.popTarget.matches(":popover-open")
+  }
+
   toggle() {
-    this.popTarget.hidden ? this.open() : this.close()
+    this.shown ? this.close() : this.open()
   }
 
   open() {
     this.view = this.selected() || this.max || new Date()
     this.render()
-    this.popTarget.hidden = false
+    this.popTarget.showPopover()
+    this.place()
     this.triggerTarget.setAttribute("aria-expanded", "true")
+    this.onMove = () => this.place()
     document.addEventListener("click", this.onDoc)
     document.addEventListener("keydown", this.onKey)
+    window.addEventListener("resize", this.onMove)
+    document.addEventListener("scroll", this.onMove, true)
   }
 
   close() {
-    this.popTarget.hidden = true
+    if (this.shown) this.popTarget.hidePopover()
     this.triggerTarget.setAttribute("aria-expanded", "false")
     this.detach()
+  }
+
+  place() {
+    const pop = this.popTarget
+    const btn = this.triggerTarget.getBoundingClientRect()
+    pop.style.left = "0px"
+    pop.style.top = "0px"
+    const box = pop.getBoundingClientRect()
+    const edge = 8
+    const gap = 5
+
+    let top = btn.bottom + gap
+    if (top + box.height > window.innerHeight - edge) {
+      const over = btn.top - gap - box.height
+      top = over >= edge ? over : Math.max(edge, window.innerHeight - edge - box.height)
+    }
+    const left = Math.max(edge, Math.min(btn.left, window.innerWidth - edge - box.width))
+
+    pop.style.left = `${Math.round(left)}px`
+    pop.style.top = `${Math.round(top)}px`
   }
 
   detach() {
     document.removeEventListener("click", this.onDoc)
     document.removeEventListener("keydown", this.onKey)
+    if (!this.onMove) return
+
+    window.removeEventListener("resize", this.onMove)
+    document.removeEventListener("scroll", this.onMove, true)
+    this.onMove = null
   }
 
   selected() {
@@ -104,7 +137,7 @@ export default class extends Controller {
     const nextStart = new Date(year, month + 1, 1)
 
     let cells = ""
-    for (let i = 0; i < lead; i += 1) cells += `<span class="dp-day is-blank"></span>`
+    for (let i = 0; i < lead; i += 1) cells += `<span class="dp-blank"></span>`
     for (let day = 1; day <= days; day += 1) {
       const date = new Date(year, month, day)
       const value = iso(date)

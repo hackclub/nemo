@@ -8,14 +8,14 @@ module Fd
       on = params[:on] == "1"
 
       writing do
-        row = Flag.set!(key, on, by: current_staff.user_id)
+        row = Flag.set!(key, on, by: current_account.user_id)
         audit(row, on ? "turned_on" : "turned_off",
           after: { "flag" => key, "on" => on })
       end
 
-      redirect_to fd_settings_path(tab: "sections"), notice: flipped_note(key, on)
+      redirect_to admin_flags_path, notice: flipped_note(key, on)
     rescue Flag::Unknown => e
-      redirect_to fd_settings_path(tab: "sections"), alert: e.message
+      redirect_to admin_flags_path, alert: e.message
     end
 
     private

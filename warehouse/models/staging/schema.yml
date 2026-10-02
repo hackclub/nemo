@@ -31,8 +31,43 @@ models:
         data_tests: [unique, not_null]
       - name: source
         data_tests: [not_null]
-      - name: status
+      - name: source_key
         data_tests: [not_null]
+      - name: logical_date
+        data_tests: [not_null]
+      - name: status
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [running, ok, failed, skipped, partial, cancelled, abandoned]
+      - name: attempt
+        data_tests: [not_null]
+      - name: error_class
+        data_tests:
+          - accepted_values:
+              values: [auth, cancelled, contended, contract, entity, local, throttle, transport, upstream]
+  - name: fct_ingest_incident
+    columns:
+      - name: kind
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [source_failing, credential, quality]
+      - name: source_key
+        data_tests: [not_null]
+      - name: consecutive
+        data_tests: [not_null]
+      - name: muted
+        data_tests: [not_null]
+  - name: fct_quality_result
+    columns:
+      - name: quality_result_id
+        data_tests: [unique, not_null]
+      - name: status
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [pass, fail, warn, skipped]
   - name: fct_ingest_step_output
     columns:
       - name: parent_run_id
@@ -45,14 +80,12 @@ models:
         data_tests: [unique, not_null]
       - name: total_messages
         data_tests: [not_null]
-  - name: fct_member_first_reply
-    columns:
-      - name: user_id
-        data_tests: [unique, not_null]
   - name: fct_first_post
     columns:
       - name: user_id
         data_tests: [unique, not_null]
+      - name: channel_id
+        data_tests: [not_null]
       - name: posted_at
         data_tests: [not_null]
   - name: fct_member_retention
@@ -60,6 +93,8 @@ models:
       - name: user_id
         data_tests: [unique, not_null]
       - name: first_post_on
+        data_tests: [not_null]
+      - name: posted_within_30d_of_joining
         data_tests: [not_null]
       - name: day_30_covered
         data_tests: [not_null]
@@ -80,33 +115,51 @@ models:
       - name: archived
         data_tests: [not_null]
   - name: fct_member_activity
+    description: >
+      One row per member per day, for days the member-day source has loaded.
+      Grain (user_id, window_start): where a day carries both an API pull and an
+      imported row, the API pull wins, so a later repull of an imported day
+      replaces it rather than adding to it.
     columns:
       - name: user_id
         data_tests: [not_null]
   - name: fct_member_window
+    description: >
+      One row per member per source, for the single newest window the
+      member-range source holds. Grain (source, user_id), enforced by the
+      model's own unique index.
     columns:
       - name: user_id
-        data_tests: [not_null, unique]
+        data_tests: [not_null]
   - name: fct_channel_activity
     columns:
       - name: channel_id
-        data_tests: [not_null]
-  - name: fct_first_reply
-    columns:
-      - name: newcomer_id
-        data_tests: [unique, not_null]
-      - name: replier_id
         data_tests: [not_null]
   - name: fct_team_stats
     columns:
       - name: ds
         data_tests: [unique, not_null]
-  - name: fct_top_posters
+  - name: fct_member_lifetime_messages
     columns:
       - name: user_id
+        data_tests: [not_null, unique]
+      - name: total_messages
         data_tests: [not_null]
-      - name: window_start
+      - name: days_posted
         data_tests: [not_null]
+  - name: fct_member_month_messages
+    columns:
+      - name: month
+        data_tests: [not_null]
+      - name: user_id
+        data_tests: [not_null]
+      - name: messages_posted
+        data_tests: [not_null]
+      - name: days_posted
+        data_tests: [not_null]
+    data_tests:
+      - unique:
+          column_name: "month::text || '-' || user_id"
   - name: fct_member_channel
     columns:
       - name: user_id
@@ -115,6 +168,11 @@ models:
         data_tests: [not_null]
       - name: messages
         data_tests: [not_null]
+      - name: returned
+        data_tests: [not_null]
+    data_tests:
+      - unique:
+          column_name: "user_id || '-' || channel_id"
   - name: fct_member_channel_membership
     columns:
       - name: user_id
@@ -127,3 +185,214 @@ models:
         data_tests: [not_null, unique]
       - name: beat_at
         data_tests: [not_null]
+  - name: fct_message
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: channel_id
+        data_type: text
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_channel')
+              field: channel_id
+      - name: ts
+        data_type: text
+        data_tests: [not_null]
+      - name: author_id
+        data_type: text
+      - name: author_kind
+        data_type: text
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [member, bot, unknown]
+      - name: bot_id
+        data_type: text
+      - name: app_id
+        data_type: text
+      - name: parent_user_id
+        data_type: text
+      - name: subtype
+        data_type: text
+      - name: thread_root_ts
+        data_type: text
+      - name: is_reply
+        data_type: boolean
+        data_tests: [not_null]
+      - name: is_broadcast
+        data_type: boolean
+        data_tests: [not_null]
+      - name: posted_at
+        data_type: timestamp with time zone
+        data_tests: [not_null]
+      - name: edited_at
+        data_type: timestamp with time zone
+      - name: reply_count
+        data_type: integer
+      - name: reply_users_count
+        data_type: integer
+      - name: latest_reply_ts
+        data_type: text
+      - name: reaction_count
+        data_type: integer
+      - name: reactor_count
+        data_type: integer
+      - name: file_count
+        data_type: integer
+      - name: text_length
+        data_type: integer
+      - name: mention_count
+        data_type: integer
+      - name: mentioned_ids
+        data_type: text[]
+      - name: is_question
+        data_type: boolean
+      - name: is_substantive
+        data_type: boolean
+      - name: has_link
+        data_type: boolean
+      - name: emoji_only
+        data_type: boolean
+      - name: settled
+        data_type: boolean
+        data_tests: [not_null]
+      - name: observed_at
+        data_type: timestamp with time zone
+        data_tests: [not_null]
+  - name: fct_member_message
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: channel_id
+        data_type: text
+        data_tests: [not_null]
+      - name: ts
+        data_type: text
+        data_tests: [not_null]
+      - name: author_id
+        data_type: text
+        data_tests: [not_null]
+      - name: author_kind
+        data_type: text
+        data_tests:
+          - accepted_values:
+              values: [member]
+      - name: bot_id
+        data_type: text
+      - name: app_id
+        data_type: text
+      - name: parent_user_id
+        data_type: text
+      - name: subtype
+        data_type: text
+      - name: thread_root_ts
+        data_type: text
+      - name: is_reply
+        data_type: boolean
+      - name: is_broadcast
+        data_type: boolean
+      - name: posted_at
+        data_type: timestamp with time zone
+        data_tests: [not_null]
+      - name: edited_at
+        data_type: timestamp with time zone
+      - name: reply_count
+        data_type: integer
+      - name: reply_users_count
+        data_type: integer
+      - name: latest_reply_ts
+        data_type: text
+      - name: reaction_count
+        data_type: integer
+      - name: reactor_count
+        data_type: integer
+      - name: file_count
+        data_type: integer
+      - name: text_length
+        data_type: integer
+      - name: mention_count
+        data_type: integer
+      - name: mentioned_ids
+        data_type: text[]
+      - name: is_question
+        data_type: boolean
+      - name: is_substantive
+        data_type: boolean
+      - name: has_link
+        data_type: boolean
+      - name: emoji_only
+        data_type: boolean
+      - name: settled
+        data_type: boolean
+      - name: observed_at
+        data_type: timestamp with time zone
+  - name: fct_message_first_post
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: user_id
+        data_type: text
+        data_tests: [not_null, unique]
+      - name: channel_id
+        data_type: text
+        data_tests: [not_null]
+      - name: ts
+        data_type: text
+        data_tests: [not_null]
+      - name: posted_at
+        data_type: timestamp with time zone
+        data_tests: [not_null]
+  - name: fct_first_response
+    columns:
+      - name: newcomer_id
+        data_tests: [not_null, unique]
+      - name: detection_method
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [thread_reply, in_channel_mention, bot_only, none]
+      - name: confidence
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [high, medium, none]
+      - name: answered
+        data_tests: [not_null]
+  - name: fct_member_day
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: user_id
+        data_type: text
+        data_tests: [not_null]
+      - name: ds
+        data_type: date
+        data_tests: [not_null]
+      - name: cohort_month
+        data_type: date
+        data_tests: [not_null]
+      - name: first_post_on
+        data_type: date
+        data_tests: [not_null]
+      - name: day_offset
+        data_type: integer
+        data_tests: [not_null]
+      - name: messages
+        data_type: integer
+      - name: replies
+        data_type: integer
+      - name: threads_started
+        data_type: integer
+      - name: questions
+        data_type: integer
+      - name: reactions_received
+        data_type: integer
+      - name: channels
+        data_type: integer
+      - name: metric_version
+        data_type: text

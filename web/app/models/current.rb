@@ -1,12 +1,15 @@
 class Current < ActiveSupport::CurrentAttributes
-  attribute :moved, :flipped, :tuned, :fresh
+  attribute :moved, :flipped, :tuned, :effective_capabilities, :held_roles
 
   def role_permissions
-    self.moved ||= Fd::RolePermission.overrides
+    self.moved ||= Authz::Override.pluck(:role, :capability, :allowed)
+      .each_with_object({}) { |(role, key, allowed), map| map[[role, key]] = allowed }
   end
 
   def forget_roles
     self.moved = nil
+    self.effective_capabilities = nil
+    self.held_roles = nil
   end
 
   def flags
@@ -19,9 +22,5 @@ class Current < ActiveSupport::CurrentAttributes
 
   def forget_tuned
     self.tuned = nil
-  end
-
-  def forget_fresh
-    self.fresh = nil
   end
 end

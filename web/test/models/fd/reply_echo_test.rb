@@ -120,6 +120,35 @@ class Fd::ReplyEchoTest < ActiveSupport::TestCase
     assert_equal "not_in_channel", grant.reload.last_error
   end
 
+  def with_a_failing_write
+    Fd::IntakeOutbox.class_eval do
+      alias_method :real_update!, :update!
+      define_method(:update!) { |*| raise ActiveRecord::StatementInvalid, "connection lost" }
+    end
+    yield
+  ensure
+    Fd::IntakeOutbox.class_eval do
+      remove_method :update!
+      alias_method :update!, :real_update!
+      remove_method :real_update!
+    end
+  end
+
+  test "a write that fails after the post lets the claim go and raises to be retried" do
+    grant = link
+    queued = queue
+
+    with_a_failing_write do
+      instead_of(->(**) { { "ok" => true, "ts" => "1700.0103" } }) do
+        assert_raises(ActiveRecord::StatementInvalid) { Fd::ReplyEcho.catch_up(@kase.id) }
+      end
+    end
+
+    assert_nil queued.reload.echoed_at, "the claim is released so the job can retry"
+    assert_nil queued.echoed_ts
+    assert_nil grant.reload.last_error, "a database failure is not the grant's fault"
+  end
+
   test "a case with no card in the firehouse echoes nothing" do
     link
     @report.update!(forwarded_ts: nil)

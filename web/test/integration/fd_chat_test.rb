@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdChatTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @kase = make_case
     sign_in_as(@me)
   end
@@ -12,9 +12,39 @@ class FdChatTest < ActionDispatch::IntegrationTest
       as: :turbo_stream
 
     assert_response :success
-    assert_match(/turbo-stream action="reload_frame"/, response.body)
-    assert_match(/target="chat-log-#{@kase.id}"/, response.body)
-    assert_no_match(/src=/, response.body, "each viewer reloads the thread they are on")
+  end
+
+  test "asked what changed when nothing did, the log says nothing" do
+    get fd_case_chat_log_path(@kase, since: Fd::ChatVersion.for(@kase.id)), as: :turbo_stream
+    assert_response :no_content
+  end
+
+  test "a reply that went out is taken off the log" do
+    conversation = with_a_reporter
+    row = Fd::IntakeOutbox.create!(conversation_id: conversation.id, kind: "reply",
+      body: "hold on", mode: "signed", requested_by: "UME")
+    before = Fd::ChatVersion.for(@kase.id)
+    row.update!(sent_at: Time.current)
+
+    get fd_case_chat_log_path(@kase, since: before), as: :turbo_stream
+
+    assert_response :success
+  end
+
+  test "a since it cannot read gets the whole log as one upsert" do
+    get fd_case_chat_log_path(@kase, since: "garbage"), as: :turbo_stream
+
+    assert_response :success
+  end
+
+  test "a deletion sends the browser back for a full reload" do
+    line = Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "oops",
+      source_app: "fire_engine")
+    before = Fd::ChatVersion.for(@kase.id)
+    line.destroy!
+
+    get fd_case_chat_log_path(@kase, since: before), as: :turbo_stream
+    assert_response :reset_content
   end
 
   test "the message is kept as working chat, not as a note" do
@@ -39,39 +69,6 @@ class FdChatTest < ActionDispatch::IntegrationTest
 
     assert_equal 0, Fd::CaseChat.where(case_id: @kase.id).count
     assert_match(/write something/, flash[:alert])
-  end
-
-  test "the chat frame knows where to reload from without refetching on sight" do
-    get fd_case_path(@kase, tab: "report")
-
-    frame = css_select("turbo-frame#chat-log-#{@kase.id}").first
-    assert frame, "the chat log has to be a frame for the broadcast to target"
-    assert_nil frame["src"],
-      "a src on a frame we already filled is refetched at once, whatever complete says"
-    assert_equal fd_case_chat_log_path(@kase), frame["data-src"],
-      "reload_frame and catch-up read this, or reload() fetches nothing"
-  end
-
-  test "a browser that lost the socket is told which frame to catch up" do
-    get fd_case_path(@kase, tab: "report")
-
-    chat = css_select("div.chat").first
-    assert_includes chat["data-controller"].split, "catch-up"
-    assert_equal "chat-log-#{@kase.id}", chat["data-catch-up-frame-value"]
-    assert_equal chat["data-catch-up-frame-value"],
-      css_select("turbo-frame#chat-log-#{@kase.id}").first["id"],
-      "a reconnect that reloads nothing would leave the pane stale for good"
-    assert css_select("div.chat turbo-cable-stream-source").any?,
-      "the controller watches inside itself, so the source has to be in there"
-  end
-
-  test "the chat log renders on its own for the frame to fetch" do
-    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "on it",
-      source_app: "fire_engine")
-    get fd_case_chat_log_path(@kase)
-
-    assert_response :success
-    assert_select "turbo-frame#chat-log-#{@kase.id} .chat-log .said-body", text: "on it"
   end
 
   test "a reply with nobody to reply to says so" do
@@ -128,9 +125,9 @@ class FdChatTest < ActionDispatch::IntegrationTest
 
   test "somebody who may not reply cannot get there through the team endpoint" do
     with_a_reporter
-    hand = Staff.create!(user_id: "UHAND")
-    Fd::AccessGrant.give!("UHAND", role: "firefighter", by: @me.user_id, reason: "works here")
-    Fd::RolePermission.set!("firefighter", "case.reply", false, by: @me.user_id)
+    hand = Account.create!(user_id: "UHAND")
+    hold_role!("UHAND", "firefighter")
+    move_capability!("firefighter", "case.reply", false, by: @me.user_id)
     sign_in_as(hand)
 
     post fd_case_chats_path(@kase), params: { body: "?we are looking at it" }

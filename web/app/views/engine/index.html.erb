@@ -1,88 +1,137 @@
-<% if @auto_refresh %>
-  <% content_for :head do %>
-    <meta name="turbo-refresh-method" content="morph">
-    <meta name="turbo-refresh-scroll" content="preserve">
-  <% end %>
+<% if @auto_refresh && @tab == "runs" %>
+  <div data-controller="run-refresh" data-run-refresh-seconds-value="10" hidden></div>
 <% end %>
 
-<% content_for :page_title, "Engine" %>
+<% content_for :page_title, EngineController::TABS.fetch(@tab) %>
 
-<% content_for :page_controls do %>
-  <span class="segmented">
-    <% EngineController::TABS.each do |key, label| %>
-      <%= link_to engine_path(key == "runs" ? {} : { tab: key }),
-            aria: { current: ("true" if key == @tab) } do %>
-        <%= label %>
-      <% end %>
-    <% end %>
-  </span>
 
-  <span class="qspacer"></span>
-
-  <span class="qlab">Nightly at</span>
-  <%= render "val", source: Engine::Setting::ENGINE, name: "run_at", may_tune: @may_tune %>
-  <span class="qlab">Budget</span>
-  <%= render "val", source: Engine::Setting::ENGINE, name: "budget_minutes", may_tune: @may_tune %>
-  <span class="qlab">minutes</span>
-
+<% content_for :head_actions do %>
   <% if @active_request %>
-    <span class="chip">
-      <i class="dot run"></i>
-      step <%= @steps.size %> of <%= Engine::Source::KEYS.size %>
-    </span>
-    <% if @active_request.status != "cancelling" %>
-      <%= button_to "Cancel", engine_cancel_path, class: "btn", form: { class: "contents" } %>
-    <% end %>
+    <%= button_to(@orphaned ? "Release" : "Cancel", engine_cancel_path,
+          class: "btn", form: { class: "contents" }) %>
   <% else %>
     <%= button_to "Run the nightly now", engine_sync_path,
           class: "btn btn-primary", form: { class: "contents" } %>
   <% end %>
 <% end %>
 
-<%= render "band", band: @band %>
+<% if @active_request %>
+  <% content_for :page_controls do %>
+    <% if @orphaned %>
+      <span class="chip chip-crit">worker down</span>
+    <% else %>
+      <span class="chip">
+        <i class="dot run"></i>
+        <%= step_progress(@progress) || @active_request.status %>
+      </span>
+    <% end %>
+  <% end %>
+<% end %>
 
 <% if @tab == "runs" %>
-  <div class="card card-flush">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">Tonight</h2>
-        <p class="card-sub">
-          <% if @run %>
-            <%= @run.started_at.strftime("%-d %b, %H:%M") %> &middot; <%= run_duration(@run) %> so far
-            &middot; step <%= @steps.size %> of <%= Engine::Source::KEYS.size %>
-          <% else %>
-            nothing recorded yet
+  <% missed_nights = @nightly.count { |cell| cell == "none" } %>
+  <div class="metrics">
+    <div class="metric">
+      <span class="metric-k">Tonight</span>
+      <span class="metric-v"><%= @run.nil? ? "no run" : (@orphaned ? "stuck" : @run.status) %></span>
+      <span class="metric-say">
+        <% if @run.nil? %>
+          <span>nothing recorded yet</span>
+        <% elsif @orphaned %>
+          <%= worker_chip(@worker) %>
+        <% else %>
+          <span><%= @run.started_at.strftime("%-d %b, %H:%M") %></span>
+          <%= run_age(@run) if run_stale?(@run) %>
+        <% end %>
+      </span>
+    </div>
+
+    <div class="metric">
+      <span class="metric-k">How far</span>
+      <span class="metric-v">
+        <% if @progress %>
+          <%= @progress.step_index %><% if @progress.step_total %><small>of <%= @progress.step_total %></small><% end %>
+        <% else %>
+          <%= @run ? "done" : "n/a" %>
+        <% end %>
+      </span>
+      <span class="metric-say">
+        <span><%= @run&.running? ? "running now" : (@run ? "finished" : "waiting on the first run") %></span>
+      </span>
+    </div>
+
+    <div class="metric">
+      <span class="metric-k">Running</span>
+      <span class="metric-v">
+        <%= @run ? run_duration(@run) : "n/a" %><% if @run&.running? %><small>so far</small><% end %>
+      </span>
+      <span class="metric-say">
+        <span><%= @run ? "started #{@run.started_at.strftime("%-d %b, %H:%M")}" : "no run yet" %></span>
+      </span>
+    </div>
+
+    <div class="metric">
+      <span class="metric-k">Missed, last <%= EngineController::NIGHTS %></span>
+      <span class="metric-v"><%= missed_nights %></span>
+      <span class="metric-say">
+        <span><%= missed_nights.zero? ? "the nightly ran every night" : "#{"night".pluralize(missed_nights)} it never ran" %></span>
+      </span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <h2 class="section-title">Tonight</h2>
+      <% if @run %>
+        <div class="section-tools">
+          <% if @run.running? && !@orphaned %>
+            <%= image_tag "nemo.png", class: "sync-fish", alt: "", width: 800, height: 483 %>
           <% end %>
-        </p>
-      </div>
-      <% if @run&.running? %>
-        <div class="card-tools">
-          <span class="swatch"><i class="dot run"></i>running</span>
+          <%= link_to "Open the run", engine_run_path(@run.id), class: "btn btn-ghost" %>
         </div>
       <% end %>
     </div>
-    <% if @steps.any? %>
-      <%= render "ladder", steps: @steps %>
-    <% else %>
-      <p class="card-note">n/a</p>
-    <% end %>
+    <div class="card card-flush">
+      <% if @steps.any? %>
+        <%= render "ladder", steps: @steps %>
+      <% else %>
+        <p class="card-note">n/a</p>
+      <% end %>
+    </div>
   </div>
 
-  <div class="card card-flush">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">The last <%= EngineController::NIGHTS %> nights</h2>
-      </div>
+  <div class="section">
+    <div class="section-head">
+      <h2 class="section-title">The last <%= EngineController::NIGHTS %> nights</h2>
     </div>
-    <%= render "matrix", matrix: @matrix, nights: @nights %>
+    <div class="card card-flush">
+      <%= render "matrix", matrix: @matrix, nights: @nights, nightly: @nightly %>
+    </div>
   </div>
 
 <% elsif @tab == "sources" %>
   <%= render "sources", sources: @sources, active_request: @active_request,
-        matrix: @matrix, open: @open, may_tune: @may_tune %>
+        matrix: @matrix, nights: @nights, open: @open, may_tune: @may_tune,
+        run: @run, step_output: @step_output %>
 
 <% elsif @tab == "coverage" %>
+  <%= render "slices", slices: @slices, day_strips: @day_strips %>
   <%= render "coverage", day_coverage: @day_coverage, held: @held %>
+
+<% elsif @tab == "queues" %>
+  <%= render "queues", queues: @queues %>
+
+<% elsif @tab == "faults" %>
+  <%= render "faults", incidents: @incidents, breakers: @breakers, local_faults: @local_faults,
+        taxonomy: @taxonomy, beats: @beats, breaker_mode: @breaker_mode, may_tune: @may_tune,
+        headlines: @headlines %>
+
+<% elsif @tab == "backfill" %>
+  <%= render "backfill", backfills: @backfills, names: @backfill_names,
+        queued_requests: @backfill_queued_requests %>
+
+<% elsif @tab == "archive" %>
+  <%= render "archive", archive: @archive %>
 
 <% elsif @tab == "tuning" %>
   <%= render "tuning", may_tune: @may_tune, sources: @sources %>

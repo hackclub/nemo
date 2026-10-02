@@ -1,0 +1,21 @@
+<% estimate = ChannelBackfill.estimate(channel) %>
+<% ceiling = Engine::Setting.backfill_ceiling %>
+
+<% if !may %>
+<% elsif estimate.nil? %>
+  <span class="btn is-off" aria-disabled="true" title="run the channel activity stage first">
+    <%= label %><span class="menu-val">no estimate</span>
+  </span>
+<% elsif estimate > ceiling && !may_sync %>
+  <span class="btn is-off" aria-disabled="true"
+        title="<%= number_with_delimiter(estimate) %> requests needs engine.sync">
+    <%= label %><span class="menu-val">needs engine.sync</span>
+  </span>
+<% else %>
+  <%= button_to opt_in_channel_path(channel.channel_id), method: :post, class: "btn",
+        form: { class: "contents",
+                data: { turbo_confirm: backfill_cost(channel, estimate, ceiling) } } do %>
+    <%= label %>
+    <span class="menu-val"><%= number_with_delimiter(estimate) %></span>
+  <% end %>
+<% end %>

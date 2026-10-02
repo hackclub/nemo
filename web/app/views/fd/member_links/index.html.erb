@@ -1,0 +1,49 @@
+<% content_for :page_title, "Linked accounts" %>
+
+<% content_for :page_tabs do %>
+  <%= link_to "All", fd_links_path, class: "view",
+        aria: { current: ("true" if params[:over].blank?) } %>
+  <%= link_to "Strong", fd_links_path(over: "strong"), class: "view",
+        aria: { current: ("true" if params[:over] == "strong") } %>
+  <%= link_to "Certain", fd_links_path(over: "certain"), class: "view",
+        aria: { current: ("true" if params[:over] == "certain") } %>
+<% end %>
+
+<div class="stack">
+  <div class="card card-flush">
+    <div class="card-head">
+      <h2 class="card-title">Accounts that look like one person</h2>
+    </div>
+
+    <% if @links.any? %>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>one</th>
+              <th>the other</th>
+              <th>score</th>
+              <th>on</th>
+              <th>last seen</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @links.each do |one| %>
+              <tr>
+                <td><%= member_link(one.a_user_id) %></td>
+                <td><%= member_link(one.b_user_id) %></td>
+                <td><%= link_score_chip(one.score) %></td>
+                <td class="sub2"><%= Fd::MemberLink.label_for(one.top_signal) %></td>
+                <td class="sub2"><%= one.last_seen ? on_day(one.last_seen) : "n/a" %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">No links</p>
+      </div>
+    <% end %>
+  </div>
+</div>

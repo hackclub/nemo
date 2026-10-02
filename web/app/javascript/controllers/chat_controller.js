@@ -1,14 +1,14 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["field", "pill", "send", "aim", "anon"]
+  static targets = ["field", "pill", "send", "aim", "anon", "drop"]
   static values = { reporter: Boolean, noteUrl: String, replyUrl: String }
 
   connect() {
-    this.toReporter = false
     this.anonymous = false
     this.sent = this.sent.bind(this)
     this.element.addEventListener("turbo:submit-end", this.sent)
+    this.aim(false)
     this.grow()
   }
 
@@ -67,8 +67,12 @@ export default class extends Controller {
   aim(atReporter, anonymous = false) {
     this.toReporter = atReporter
     this.anonymous = atReporter && anonymous
-    this.pillTarget.hidden = !atReporter
-    this.aimTarget.textContent = this.anonymous ? "to reporter, anonymous" : "to reporter, from you"
+    this.pillTarget.hidden = false
+    this.pillTarget.dataset.mode = atReporter ? "reporter" : "team"
+    this.dropTarget.hidden = !atReporter
+    this.aimTarget.textContent = atReporter
+      ? (this.anonymous ? "to reporter, anonymous" : "to reporter, from you")
+      : "internal"
     this.anonTarget.value = this.anonymous ? "1" : ""
     this.element.action = atReporter ? this.replyUrlValue : this.noteUrlValue
     this.sendTarget.title = atReporter ? "Send to the reporter" : "Send to the team"

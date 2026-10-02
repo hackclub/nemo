@@ -1,158 +1,192 @@
 <% content_for :page_title, "Public channels" %>
+
 <div class="stack">
-  <% if @quiet_rooms.any? %>
-    <div class="card card-flush">
-      <div class="card-head">
-        <div>
-          <h2 class="card-title">Read, but not written in</h2>
-          <p class="card-sub">readers per person who posted</p>
-        </div>
-      </div>
-      <div class="scroll">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>channel</th>
-              <th class="col-num">read</th>
-              <th class="col-num">posted</th>
-              <th class="col-num">ratio</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @quiet_rooms.each do |room| %>
-              <tr>
-                <td>
-                  <%= link_to "##{room.name}", channel_path(room.channel_id) %>
-                </td>
-                <td class="col-num"><%= number_with_delimiter(room.members_who_viewed) %></td>
-                <td class="col-num"><%= number_with_delimiter(room.members_who_posted) %></td>
-                <td class="col-num is-loud">
-                  <%= channel_read_ratio(room.members_who_viewed, room.members_who_posted) %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
+  <% if @band_rows.any? || @momentum.any? || @opportunity %>
+    <div class="stack">
+      <% if @band_rows.any? %>
+        <turbo-frame id="bands" data-turbo-action="advance">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Channels activity</h2>
+              </div>
+              <% if @cohorts.many? %>
+                <%= render "shared/picker", said: "activity month",
+                      chosen: @cohort.strftime("%b %Y"),
+                      groups: [{ options: @cohorts.map { |month| {
+                        label: month.strftime("%b %Y"), current: month == @cohort,
+                        href: channel_query(cohort: month.iso8601) } } }] %>
+              <% end %>
+            </div>
+            <div class="facets">
+              <% @band_measures.each do |_key, rows| %>
+                <% silent = rows.find { |r| r.band_order.zero? } %>
+                <% busy = rows.reject { |r| r.band_order.zero? } %>
+                <% total = rows.sum(&:channels) %>
+                <div class="facet">
+                  <p class="facet-name"><%= band_title(rows.first) %></p>
+                  <% if silent && total.positive? %>
+                    <% quiet = (silent.channels.to_f / total * 100).round(1) %>
+                    <p class="facet-zero"
+                       title="<%= number_with_delimiter(silent.channels) %> of <%= number_with_delimiter(total) %> channels recorded zero in this month">
+                      <b><%= number_with_delimiter(silent.channels) %></b>
+                      <span>at zero</span>
+                      <span class="facet-share"><%= number_to_percentage(quiet, precision: 0) %></span>
+                    </p>
+                  <% end %>
+                  <div
+                    data-controller="chart"
+                    data-chart-kind-value="bars"
+                    data-chart-height-value="200"
+                    data-chart-data-value="<%= {
+                      labels: busy.map(&:activity_band),
+                      datasets: [{ label: rows.first.measure_label, data: busy.map(&:channels) }]
+                    }.to_json %>"
+                  ></div>
+                </div>
+              <% end %>
+            </div>
+          <p class="chart-note"><%= window_note(@band_rows.first.window_start, @band_rows.first.window_end) %></p>
+          </div>
+        </turbo-frame>
+      <% end %>
+
+      <% if @momentum.any? %>
+        <details class="foldcard" open
+                 data-controller="remember"
+                 data-remember-key-value="channels-treemap"
+                 data-action="toggle->remember#keep">
+          <summary><span class="fold-title">Channels treemap</span></summary>
+          <div class="fold-body">
+            <%= render "momentum", momentum: @momentum %>
+          </div>
+        </details>
+      <% end %>
+
+      <% if @opportunity %>
+        <turbo-frame id="newcomer-map" data-turbo-action="advance">
+          <%= render "map", map: @opportunity, cohorts: @newcomer_cohorts,
+                title: "Newcomers landing",
+                x_label: "newcomers who posted here", y_label: "newcomers who posted again",
+                n_label: "newcomer messages",
+                corners: { tl: "SMALL AND STICKY", tr: "WORKING",
+                           bl: "QUIET", br: "LANDING, NOT STAYING" } %>
+        </turbo-frame>
+      <% end %>
     </div>
-      <% if @quiet_pages > 1 %>
-        <div class="pager">
-          <% if @quiet_page > 1 %>
-            <%= link_to "Back",
-                  channels_path(request.query_parameters.merge(quiet_page: @quiet_page - 1)),
-                  class: "btn" %>
-          <% else %>
-            <span class="btn is-off">Back</span>
+  <% end %>
+
+  <turbo-frame id="channels" target="_top" data-turbo-action="advance">
+    <div class="stack">
+      <div class="card card-flush">
+        <div class="cardbar">
+          <%= form_with url: channels_path, method: :get, class: "qsearch",
+                data: { controller: "live-search", action: "input->live-search#go",
+                        turbo_frame: "channels", turbo_action: "advance" } do %>
+            <% { sort: @sort, direction: @direction,
+                 days: @window.asked }.compact.each do |key, value| %>
+              <%= hidden_field_tag key, value, id: nil %>
+            <% end %>
+            <% @filter.to_params.each do |i, row| %>
+              <%= hidden_field_tag "c[#{i}][f]", row["f"], id: nil %>
+              <%= hidden_field_tag "c[#{i}][op]", row["op"], id: nil %>
+              <% row["v"].each { |v| concat hidden_field_tag("c[#{i}][v][]", v, id: nil) } %>
+            <% end %>
+            <%= hidden_field_tag :match, @filter.match, id: nil %>
+            <%= search_field_tag :q, @q, placeholder: "Search public channels by name",
+                  class: "qsearch-in", autocomplete: "off",
+                  aria: { label: "Search public channels by name" } %>
           <% end %>
-          <span class="pager-at">
-            Page <%= @quiet_page %> of <%= @quiet_pages %>
+
+          <% @filter.conditions.each_with_index do |condition, i| %>
+            <span class="pill">
+              <%= condition.label %>
+              <%= link_to "✕", channels_path({
+                    q: @q.presence, sort: @sort, direction: @direction,
+                    days: @window.asked, match: @filter.match,
+                    c: @filter.to_params.except(i.to_s).values }.compact),
+                    data: { turbo_frame: "channels" },
+                    aria: { label: "Remove #{condition.label}" } %>
+            </span>
+          <% end %>
+
+          <div class="toolbar-end">
+          <span class="splitbtn">
+            <button type="button" class="btn" data-modal-open="channel-filters"
+                    aria-haspopup="dialog">
+              Filter<% if @filter.any? %><span class="menu-val"><%= @filter.size %></span><% end %>
+            </button>
+            <% if @filter.any? %>
+              <%= link_to "✕", channels_path({ q: @q.presence, sort: @sort,
+                    direction: @direction, days: @window.asked }.compact),
+                    class: "btn splitbtn-off", data: { turbo_frame: "channels" },
+                    aria: { label: "Clear every condition" } %>
+            <% end %>
           </span>
-          <% if @quiet_page < @quiet_pages %>
-            <%= link_to "Next",
-                  channels_path(request.query_parameters.merge(quiet_page: @quiet_page + 1)),
-                  class: "btn" %>
-          <% else %>
-            <span class="btn is-off">Next</span>
-          <% end %>
-        </div>
-      <% end %>
-    </div>
-  <% end %>
-
-  <div class="qbar">
-    <%= form_with url: channels_path, method: :get, class: "qsearch",
-          data: { controller: "live-search", action: "input->live-search#go",
-                  turbo_action: "advance" } do %>
-      <% { sort: @sort, direction: @direction, view: @view }.each do |key, value| %>
-        <%= hidden_field_tag key, value, id: nil %>
-      <% end %>
-      <% @filters.each { |key| concat hidden_field_tag("f[]", key, id: nil) } %>
-      <%= search_field_tag :q, @q, placeholder: "Search public channels by name",
-            class: "qsearch-in", autocomplete: "off",
-            aria: { label: "Search public channels by name" } %>
-    <% end %>
-
-    <% if channel_filter_options.any? %>
-      <details class="menu" data-controller="menu">
-        <summary class="btn">Filter<span class="car" aria-hidden="true">▾</span></summary>
-        <div class="menu-pop menu-start">
-          <% channel_filter_options.each do |key, (label, value, _sql)| %>
-            <%= link_to channel_query(f: @filters + [key]), class: "btn" do %>
-              <%= label %><span class="menu-val"><%= value %></span>
+            <% if @window.adjustable? %>
+              <%= render "shared/range_button", id: "channels-range",
+                    label: channels_range_said(@window) %>
             <% end %>
-          <% end %>
+          </div>
         </div>
-      </details>
-    <% end %>
+        <% if @channels.empty? && @unmeasured.blank? %>
+          <div class="empty">
+            <p class="empty-title"><%= channels_empty_title %></p>
+          </div>
+        <% else %>
+          <div class="scroll">
+            <table class="data-table cols-fixed channel-table">
+              <colgroup>
+                <col style="width: 26%">
+                <col style="width: 21%">
+                <col style="width: 9%">
+                <col style="width: 9%">
+                <col style="width: 10%">
+                <col style="width: 13%">
+                <col style="width: 12%">
+              </colgroup>
+              <thead>
+                <tr>
+                  <%= channel_sort_th("channel", "name") %>
+                  <%= channel_sort_th("member messages", "messages", "col-bar") %>
+                  <%= channel_sort_th("posted", "posters", "col-num") %>
+                  <%= channel_sort_th("read", "viewers", "col-num") %>
+                  <%= channel_sort_th("members", "members", "col-num") %>
+                  <%= channel_sort_th("last post", "quiet", "col-date") %>
+                  <%= channel_sort_th("change", "change", "col-num") %>
+                </tr>
+              </thead>
+              <tbody>
+                <%= render "rows", channels: @channels, peak_messages: @peak_messages %>
+                <% if @unmeasured.present? %>
+                  <%= render "unmeasured_rows", channels: @unmeasured %>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+      </div>
 
-    <% @filters.each do |key| %>
-      <% label, value, _sql = ChannelsController::FILTERS.fetch(key) %>
-      <span class="pill">
-        <%= label %> <em><%= value %></em>
-        <%= link_to "✕", channel_query(f: (@filters - [key]).presence),
-              aria: { label: "Remove #{label} #{value}" } %>
-      </span>
-    <% end %>
-
-    <span class="qspacer"></span>
-    <div class="segmented" role="group" aria-label="channel view">
-      <% { "table" => "Table", "grid" => "Grid" }.each do |value, label| %>
-        <%= link_to label, channel_query(view: (value unless value == "table")),
-              aria: { current: ("true" if @view == value) } %>
+      <% if @pages > 1 %>
+        <%= render "shared/pager", page: @page + 1, pages: @pages,
+              back_href: (channels_path(request.query_parameters.merge(page: @page - 1)) if @page.positive?),
+              next_href: (channels_path(request.query_parameters.merge(page: @page + 1)) if @has_more) %>
       <% end %>
     </div>
-  </div>
+  </turbo-frame>
 
-  <div class="card card-flush">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">Channels</h2>
-        <p class="card-sub"><%= number_with_delimiter(@total) %> channels</p>
-      </div>
-    </div>
-
-    <% if @view == "grid" %>
-      <div class="tiles">
-        <%= render "tiles", channels: @channels %>
-      </div>
-    <% else %>
-      <div class="scroll">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <%= channel_sort_th("channel", "name") %>
-              <%= channel_sort_th("member messages", "messages") %>
-              <%= channel_sort_th("posted", "posters", "col-num") %>
-              <%= channel_sort_th("read", "viewers", "col-num") %>
-              <%= channel_sort_th("members", "members", "col-num") %>
-              <th class="col-num">who spoke</th>
-            </tr>
-          </thead>
-          <tbody>
-            <%= render "rows", channels: @channels %>
-          </tbody>
-        </table>
-      </div>
-    <% end %>
-  </div>
-
-  <% if @pages > 1 %>
-    <div class="pager">
-      <% if @page.positive? %>
-        <%= link_to "Back", channels_path(request.query_parameters.merge(page: @page - 1)),
-              class: "btn" %>
-      <% else %>
-        <span class="btn is-off">Back</span>
-      <% end %>
-      <span class="pager-at">
-        Page <%= @page + 1 %> of <%= @pages %>
-      </span>
-      <% if @has_more %>
-        <%= link_to "Next", channels_path(request.query_parameters.merge(page: @page + 1)),
-              class: "btn" %>
-      <% else %>
-        <span class="btn is-off">Next</span>
-      <% end %>
-    </div>
-  <% end %>
+  <%= render "filter_modal" %>
 </div>
+
+<% if @window.adjustable? %>
+  <%= render "shared/range_modal", id: "channels-range", title: "Message range",
+        sub: window_note(@window.start_date, @window.end_date), url: channels_path,
+        start_on: @window.start_date, end_on: @window.end_date,
+        min: @window.floor, max: @window.ceiling,
+        carry: { q: @q.presence, sort: @sort, direction: @direction }.compact,
+        presets: @window.choices.map { |days| {
+          label: days == @window.pulled_days ? "All measured" : "Last #{days} days",
+          current: !@window.custom? && days == @window.days,
+          href: channel_query(days: (days unless days == @window.pulled_days),
+                              start: nil, end: nil) } } %>
+<% end %>

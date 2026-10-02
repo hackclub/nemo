@@ -1,0 +1,5 @@
+<div id="chat-presence-<%= case_id %>" class="chat-here face-stack"<%= " hidden" if user_ids.empty? %>>
+  <% user_ids.each do |user_id| %>
+    <%= face(user_id, data: { user: user_id, name: names[user_id] }) %>
+  <% end %>
+</div>

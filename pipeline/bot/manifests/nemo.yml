@@ -7,10 +7,23 @@ features:
   bot_user:
     display_name: nemo
     always_online: true
+  shortcuts:
+    - name: Destroy thread
+      type: message
+      callback_id: destroy_thread
+      description: Keep the thread on the record, then remove it from Slack
+    - name: Lock thread
+      type: message
+      callback_id: lock_thread
+      description: Stop new replies until the lock lifts
+    - name: View message activity
+      type: message
+      callback_id: message_activity
+      description: Viewers, reactions and clicks on your own post
   slash_commands:
     - command: /nemo
       description: Look somebody up, note something, open a case, or pull one up
-      usage_hint: lookup @somebody | note @somebody | open @somebody | 3864
+      usage_hint: help | lookup @somebody | note @somebody | open @somebody | shush @somebody 3d | channelban @somebody #channel 3d | 3864
       should_escape: true
 
 oauth_config:
@@ -18,25 +31,55 @@ oauth_config:
     - https://localhost:3000/fd/slack_account/callback
   scopes:
     user:
+      - admin
+      - admin.analytics:read
+      - admin.conversations:read
+      - admin.teams:read
+      - admin.users:read
+      - admin.users:write
+      - auditlogs:read
+      - channels:history
+      - channels:read
+      - channels:write
       - chat:write
+      - groups:history
+      - groups:write
+      - search:read
+      - users:read
     bot:
       - chat:write
       - chat:write.customize
       - files:read
       - files:write
+      - channels:read
       - channels:history
+      - channels:join
+      - channels:manage
+      - groups:read
       - groups:history
+      - groups:write
       - reactions:read
       - reactions:write
       - users:read
+      - users:read.email
 
 settings:
   event_subscriptions:
     bot_events:
+      - channel_archive
+      - channel_created
+      - channel_left
+      - channel_unarchive
+      - group_archive
+      - group_left
+      - group_unarchive
+      - member_joined_channel
+      - member_left_channel
       - message.channels
       - message.groups
       - reaction_added
-      - reaction_removed
+      - team_join
+      - user_change
   interactivity:
     is_enabled: true
   socket_mode_enabled: true

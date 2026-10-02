@@ -6,24 +6,44 @@ actions:
     label: Shush
     expires: true
     weight: 5
+    enforce:
+      guard: shush
+      scope: workspace
+      carry: reactive
   temp_ban:
     label: Temporary ban
     expires: true
     weight: 3
+    enforce:
+      guard: deactivation
+      scope: account
+      carry: applied
   indef_ban:
     label: Indefinite ban
     weight: 2
+    enforce:
+      guard: deactivation
+      scope: account
+      carry: applied
   perma_ban:
     label: Permanent ban
     weight: 1
+    enforce:
+      guard: deactivation
+      scope: account
+      carry: applied
   channel_ban:
     label: Channel ban
     expires: true
     channel: required
     weight: 4
+    enforce:
+      guard: channel_ban
+      scope: channel
+      carry: reactive
   locked_thread:
     label: Locked thread
-    channel: optional
+    thread_lock: true
     weight: 7
   dm:
     label: DM

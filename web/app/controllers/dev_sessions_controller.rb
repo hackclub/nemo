@@ -1,25 +1,27 @@
 class DevSessionsController < ApplicationController
-  skip_before_action :require_staff
+  skip_before_action :require_account
   before_action :only_in_development
 
   def create
-    staff = Staff.find_or_initialize_by(user_id: params[:user_id])
+    staff = Account.find_or_create_by!(user_id: params[:user_id])
     reset_session
-
-    unless You::BaseController::MEMBER_ID.match?(staff.user_id)
-      return redirect_to login_path, alert: "#{staff.user_id} is not a slack id"
-    end
-
     session[:user_id] = staff.user_id
-
-    if staff.role.nil?
-      redirect_to you_api_path, notice: "signed in as #{staff.user_id}, no role"
-    else
-      redirect_to fd_root_path, notice: "signed in as #{staff.user_id}, #{staff.role}"
-    end
+    redirect_to root_path, notice: "signed in as #{staff.user_id}, #{held(staff)}"
   end
 
   private
+
+  def held(staff)
+    roles = Authz.roles_held(staff.user_id).map { |role| Authz.role_label(role) }
+    extras = Authz::Grant.live.for_person(staff.user_id).capabilities
+      .where(effect: "allow").count
+    return "holding nothing" if roles.empty? && extras.zero?
+
+    said = roles.any? ? roles.to_sentence : "no role"
+    return said if extras.zero?
+
+    "#{said}, #{extras} #{'extra scope'.pluralize(extras)}"
+  end
 
   def only_in_development
     head :not_found unless Rails.env.development?

@@ -13,7 +13,7 @@ else
 fi
 
 py() {
-  cd "$PIPELINE" && PYTHONPATH=. "$PY" "$@"
+  cd "$PIPELINE" && PGOPTIONS="${PGOPTIONS:-} -c lock_timeout=${NEMO_LOCK_TIMEOUT:-3000}" PYTHONPATH=. "$PY" "$@"
 }
 
 usage() {
@@ -24,9 +24,13 @@ nemo <role> [args]
                  thruster serves it on 80, which is the container path
   bot            shroud takes the reports, nemo works them
   sync           the nightly sync worker
+  history        member_history's search backfill, drained continuously
+  archive        channel history and thread replies
+  audit          the slack audit log, tailed and backfilled
   transform      dbt build
   seed           generate synthetic data, transform, then verify
   provision      schemas, roles, grants and both migration sets
+  prometheans    replace the appointment mirror from the Prometheus API
   doctor <role>  report the env this role needs and what is missing
 
 the role may also come from NEMO_ROLE when no argument is given.
@@ -35,6 +39,13 @@ TXT
 
 ROLE="${1:-${NEMO_ROLE:-}}"
 [ $# -gt 0 ] && shift
+
+case "$ROLE" in
+  bot.*)
+    set -- "${ROLE#bot.}" "$@"
+    ROLE=bot
+    ;;
+esac
 
 case "$ROLE" in
   serve)
@@ -51,7 +62,17 @@ case "$ROLE" in
   sync)
     py -m jobs.sync_worker "$@"
     ;;
+  history)
+    py -m jobs.member_history_worker "$@"
+    ;;
+  archive)
+    py -m jobs.archive_worker "$@"
+    ;;
+  audit)
+    py -m jobs.audit_worker "$@"
+    ;;
   transform)
+    export NEMO_LOCK_TIMEOUT="${NEMO_LOCK_TIMEOUT:-60000}"
     py -m jobs.transform "$@"
     ;;
   seed)
@@ -60,7 +81,12 @@ case "$ROLE" in
     py -m seed.verify
     ;;
   provision)
+    export NEMO_LOCK_TIMEOUT="${NEMO_LOCK_TIMEOUT:-60000}"
     py -m jobs.provision "$@"
+    ;;
+  prometheans)
+    cd "$WEB" || exit 1
+    exec ./bin/rails prometheus:reconcile "$@"
     ;;
   doctor)
     py -m lib.config "${1:-serve}"

@@ -1,0 +1,91 @@
+<%= javascript_tag nonce: true do %>
+  window.MnTheme = (function () {
+    var BANDS = <%= raw Appearance::BAND_OF.to_json %>;
+    var LIGHT = <%= raw Appearance::DEFAULT_LIGHT.to_json %>;
+    var DARK = <%= raw Appearance::DEFAULT_DARK.to_json %>;
+    var WAS_DARK = <%= raw (Appearance::RETIRED + ["ash", "slate", "midnight", "ember",
+      "moss", "dim", "void", "dracula", "mocha", "nord", "tokyo-night", "gruvbox",
+      "one-dark", "rose-pine", "github-dark", "contrast"]).to_json %>;
+
+    function get(key, fallback) {
+      try { return localStorage.getItem(key) || fallback } catch (e) { return fallback }
+    }
+    function put(key, value) {
+      try { localStorage.setItem(key, value) } catch (e) {}
+    }
+    function query() {
+      return window.matchMedia("(prefers-color-scheme: dark)");
+    }
+    function state() {
+      var pinned = get("mn-theme", "");
+      return { pinned: BANDS[pinned] ? pinned : null };
+    }
+    function resolve(now) {
+      now = now || state();
+      if (now.pinned) return now.pinned;
+      return query().matches ? DARK : LIGHT;
+    }
+    function apply() {
+      var key = resolve();
+      if (!BANDS[key]) key = LIGHT;
+      document.documentElement.setAttribute("data-theme", key);
+      return key;
+    }
+    function announce() {
+      document.dispatchEvent(new CustomEvent("mn:theme"));
+    }
+    function migrate() {
+      if (get("mn-theme-v", "") === "5") return;
+      var was = get("mn-theme", "");
+      if (was && !BANDS[was]) put("mn-theme", WAS_DARK.indexOf(was) >= 0 ? DARK : LIGHT);
+      put("mn-theme-v", "5");
+    }
+    function pick(key, at) {
+      if (!BANDS[key]) return apply();
+      put("mn-theme", key);
+      var root = document.documentElement;
+      if (typeof document.startViewTransition !== "function" || key === root.getAttribute("data-theme")) {
+        var applied = apply();
+        announce();
+        return applied;
+      }
+      root.style.setProperty("--mn-x", (at && at.x != null ? at.x : window.innerWidth / 2) + "px");
+      root.style.setProperty("--mn-y", (at && at.y != null ? at.y : window.innerHeight / 2) + "px");
+      var swap = document.startViewTransition(function () { apply(); announce(); });
+      swap.finished.then(function () {
+        root.style.removeProperty("--mn-x");
+        root.style.removeProperty("--mn-y");
+      });
+      return key;
+    }
+
+    migrate();
+    apply();
+    document.documentElement.dataset.mod =
+      /Mac|iPhone|iPad/.test(navigator.platform) ? "meta" : "ctrl";
+    query().addEventListener("change", function () { apply(); announce() });
+
+    return { state: state, resolve: resolve, apply: apply, pick: pick, bands: BANDS };
+  })();
+
+  (function () {
+    try {
+      if (localStorage.getItem("mn-dock") === "open") {
+        document.documentElement.classList.add("dock-open");
+      }
+      if (localStorage.getItem("mn-dock-pin") === "pinned") {
+        document.documentElement.classList.add("dock-pinned");
+      }
+    } catch (e) {}
+  })();
+
+  (function () {
+    try {
+      var zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (!zone) return;
+      var pair = "mn_tz=" + zone;
+      if (document.cookie.split("; ").indexOf(pair) >= 0) return;
+      document.cookie = pair + ";path=/;max-age=31536000;samesite=lax";
+    } catch (e) {}
+  })();
+<% end %>

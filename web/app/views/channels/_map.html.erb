@@ -1,0 +1,40 @@
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title"><%= title %></h2>
+    </div>
+    <% if cohorts.many? %>
+      <% pick = ->(cohort) { { label: cohort.label, current: cohort.key == map.cohort.key,
+           href: channel_query(newcomers: (cohort.key unless cohort.default?)) } } %>
+      <%= render "shared/picker", said: "newcomer cohort", chosen: map.cohort.label, groups: [
+            { options: cohorts.select(&:default?).map(&pick) },
+            { title: "By month",
+              options: cohorts.reject(&:default?).map(&pick) }
+          ] %>
+    <% end %>
+  </div>
+
+  <% if map.any? %>
+    <div
+      data-controller="scatter"
+      data-scatter-height-value="280"
+      data-scatter-x-label-value="<%= x_label %>"
+      data-scatter-y-label-value="<%= y_label %>"
+      data-scatter-n-label-value="<%= n_label %>"
+      data-scatter-y-pct-value="true"
+      data-scatter-x-mid-value="<%= map.x_mid %>"
+      <% if map.y_mid %>data-scatter-y-mid-value="<%= map.y_mid %>"<% end %>
+      data-scatter-corners-value="<%= corners.to_json %>"
+      data-scatter-points-value="<%= map.points.to_json %>"
+    ></div>
+    <div class="legend">
+      <% map.phases.each do |label, ink| %>
+        <span><i class="ser-<%= ink %>"></i><%= label %></span>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="empty">
+      <p class="empty-title">Not enough newcomers yet</p>
+    </div>
+  <% end %>
+</div>

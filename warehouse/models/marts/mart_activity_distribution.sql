@@ -1,8 +1,10 @@
-with searched as (
+with known as (
     select
-        user_id,
-        total_messages
-    from {{ ref('fct_member_history') }}
+        coalesce(l.user_id, h.user_id) as user_id,
+        coalesce(l.total_messages, 0) as total_messages,
+        h.user_id is not null as full_history
+    from {{ ref('fct_member_lifetime_messages') }} l
+    full outer join {{ ref('fct_member_history') }} h using (user_id)
 ),
 
 walkable as (
@@ -12,55 +14,57 @@ walkable as (
 ),
 
 population as (
-    select s.total_messages
+    select k.total_messages
     from walkable w
-    inner join searched s on s.user_id = w.user_id
+    inner join known k on k.user_id = w.user_id
+    where k.full_history
 ),
 
 coverage as (
     select
         (select count(*) from walkable) as workspace_members,
-        (select min(searched_at)::date from {{ ref('fct_member_history') }}) as window_start,
-        (select max(searched_at)::date from {{ ref('fct_member_history') }}) as window_end
+        (select count(*) from population) as full_history_members
 ),
 
 member_bands as (
     select
         case
             when total_messages = 0 then 0
-            when total_messages < 2 then 1
-            when total_messages < 5 then 2
-            when total_messages < 10 then 3
-            when total_messages < 20 then 4
-            when total_messages < 50 then 5
-            when total_messages < 100 then 6
-            else 7
+            when total_messages = 1 then 1
+            when total_messages <= 4 then 2
+            when total_messages <= 16 then 3
+            when total_messages <= 64 then 4
+            when total_messages <= 256 then 5
+            when total_messages <= 1024 then 6
+            when total_messages <= 4096 then 7
+            else 8
         end as band_order
     from population
 ),
 
-bands (band_order, activity_band) as (
+bands (band_order, activity_band, band_top) as (
     values
-        (0, 'no messages ever'),
-        (1, '1'),
-        (2, '2-4'),
-        (3, '5-9'),
-        (4, '10-19'),
-        (5, '20-49'),
-        (6, '50-99'),
-        (7, '100+')
+        (0, '0', 0),
+        (1, '1', 1),
+        (2, '2-4', 4),
+        (3, '5-16', 16),
+        (4, '17-64', 64),
+        (5, '65-256', 256),
+        (6, '257-1024', 1024),
+        (7, '1025-4096', 4096),
+        (8, '>4096', null)
 )
 
 select
     b.band_order,
     b.activity_band,
+    b.band_top::integer as band_top,
     count(mb.band_order) as members,
     c.workspace_members,
-    c.window_start,
-    c.window_end,
-    'v11' as metric_version
+    c.full_history_members,
+    'v18' as metric_version
 from bands b
 cross join coverage c
 left join member_bands mb on mb.band_order = b.band_order
-group by b.band_order, b.activity_band, c.workspace_members, c.window_start, c.window_end
+group by b.band_order, b.activity_band, b.band_top, c.workspace_members, c.full_history_members
 order by b.band_order

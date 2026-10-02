@@ -1,0 +1,31 @@
+<% content_for :page_title, "Flags" %>
+
+<div class="stack">
+  <div class="card card-flush">
+    <div class="card-head">
+      <h2 class="card-title">Sections</h2>
+    </div>
+    <div class="list grant-list">
+      <% @flags.each do |key| %>
+        <div class="lrow">
+          <span class="grow">
+            <b><%= Fd::Flag.label(key) %></b>
+            <span class="sub flag-paths">
+              <% routes(key).each do |said, kind| %>
+                <% if kind == :path %>
+                  <span class="mono"><%= said %></span>
+                <% else %>
+                  <span><%= said %></span>
+                <% end %>
+              <% end %>
+            </span>
+          </span>
+          <span class="lrow-right">
+            <%= flag_switch(key) %>
+          </span>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+</div>

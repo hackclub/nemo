@@ -1,0 +1,11 @@
+<%= tag.div class: ["empty", local_assigns[:css]].compact.join(" "),
+      data: local_assigns.fetch(:data, {}), hidden: local_assigns[:hidden] do %>
+  <% if local_assigns[:icon].present? %>
+    <span class="empty-mark" aria-hidden="true"><%= icon %></span>
+  <% end %>
+  <p class="empty-title"><%= title %></p>
+  <% if local_assigns[:body].present? %><p><%= body %></p><% end %>
+  <% if local_assigns[:actions].present? %>
+    <div class="empty-do"><%= actions %></div>
+  <% end %>
+<% end %>

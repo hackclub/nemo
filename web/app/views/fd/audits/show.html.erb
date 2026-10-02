@@ -1,76 +1,103 @@
-<% content_for :page_title, "Audit log" %>
+<% content_for :page_title, "Audit" %>
 
-<div class="panel">
-  <div class="views">
-    <% Fd::Deeds::VIEWS.each do |key, labels| %>
-      <%= link_to fd_audit_path(key == "all" ? {} : { view: key }), class: "view",
-            aria: { current: ("true" if key == @view) } do %>
-        <span><%= labels[:tab] %></span>
-        <span class="view-count"><%= number_with_delimiter(@counts.fetch(key, 0)) %></span>
-      <% end %>
+<% content_for :head_actions do %>
+  <%= form_with url: fd_audit_path, method: :get, class: "qsearch audit-search",
+        data: { controller: "live-search", action: "input->live-search#go",
+                turbo_action: "advance" } do %>
+    <% @query.to_params.except("q", "before_at", "before_id").each do |key, value| %>
+      <%= hidden_field_tag key, value, id: nil %>
     <% end %>
-  </div>
+    <%= search_field_tag :q, @query.term,
+          placeholder: "an address, an email, a handle, or ip: about: did: in:",
+          class: "qsearch-in", autocomplete: "off",
+          aria: { label: "Search the record" } %>
+  <% end %>
 
-  <div class="panel-head">
-    <b><%= Fd::Deeds::VIEWS.fetch(@view)[:head] %></b>
-    <span class="qspacer"></span>
-    <span class="qlab">
-      last 30 days &middot; <%= pluralize(@total, "entry") %>
-      &middot; page <%= @page %> of <%= @pages %>
-    </span>
-  </div>
+  <button type="button" class="btn btn-only" data-modal-open="audit-help"
+          aria-haspopup="dialog" aria-label="Audit help">?</button>
+<% end %>
+
+<% content_for :page_tabs do %>
+  <% @views.each do |view| %>
+    <%= link_to fd_audit_path(@query.view_params(view.key)), class: "view",
+          aria: { current: ("true" if view.current) } do %>
+      <%= view.label %>
+      <span class="view-count"><%= number_with_delimiter(view.count) %></span>
+    <% end %>
+  <% end %>
+<% end %>
+
+<div class="stack">
+  <% if @query.terms.any? %>
+    <div class="chiprow audit-chips">
+      <% @query.terms.each do |term| %>
+        <%= link_to fd_audit_path(@query.without_params(term)), class: "chip chip-on" do %>
+          <%= term.label %> <span aria-hidden="true">&times;</span>
+        <% end %>
+      <% end %>
+      <%= link_to "Clear", fd_audit_path(@query.placed), class: "chip" %>
+    </div>
+  <% end %>
 
   <% if @rows.any? %>
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>who</th>
-            <th>what</th>
-            <th class="said-cell">about</th>
-            <th class="col-num">when</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @rows.each do |deed| %>
+    <div class="card card-flush">
+      <div class="scroll">
+        <table class="data-table audit-table">
+          <colgroup>
+            <col style="width: 78px">
+            <col style="width: 20%">
+            <col>
+            <col style="width: 20%">
+            <col style="width: 160px">
+          </colgroup>
+          <thead>
             <tr>
-              <td>
-                <% if deed.actor %>
-                  <span class="row-name">
-                    <%= face(deed.actor) %>
-                    <b><%= names[deed.actor] %></b>
-                  </span>
-                <% else %>
-                  <span class="sub2">n/a</span>
-                <% end %>
-              </td>
-              <td><b><%= deed_head(deed) %></b></td>
-              <td class="said-cell"><%= deed_said(deed) %></td>
-              <td class="mono col-num"><%= deed.at.strftime("%-d %b %H:%M") %></td>
+              <th>When</th>
+              <th>Who</th>
+              <th>What</th>
+              <th>About</th>
+              <th class="audit-tail-head">Slack</th>
             </tr>
-          <% end %>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            <%= render partial: "row", collection: @rows, as: :row %>
+          </tbody>
+        </table>
+      </div>
     </div>
 
-    <% if @pages > 1 %>
-      <div class="pager">
-        <% if @page > 1 %>
-          <%= link_to "Back", fd_audit_path(page: @page - 1, view: @seen), class: "btn" %>
-        <% else %>
-          <span class="btn is-off">Back</span>
-        <% end %>
-        <span class="pager-at">Page <%= @page %> of <%= @pages %></span>
-        <% if @page < @pages %>
-          <%= link_to "Next", fd_audit_path(page: @page + 1, view: @seen), class: "btn" %>
-        <% else %>
-          <span class="btn is-off">Next</span>
-        <% end %>
-      </div>
-    <% end %>
+    <div class="pagebar">
+      <span class="btn is-off">Back</span>
+      <span class="pager-at"><%= @query.summary %></span>
+      <% if @query.next_params %>
+        <%= link_to "Next", fd_audit_path(@query.next_params), class: "btn" %>
+      <% else %>
+        <span class="btn is-off">Next</span>
+      <% end %>
+    </div>
   <% else %>
     <div class="empty">
-      <p class="empty-title">Nothing logged in 30 days</p>
+      <p class="empty-title"><%= @query.empty_note %></p>
     </div>
   <% end %>
 </div>
+
+<%= render layout: "fd/modal", locals: { id: "audit-help", title: "Audit Help",
+      open: false } do %>
+  <div class="modal-body">
+    <dl class="audit-help-list">
+      <% Fd::AuditQuery::HELP.each do |said, what| %>
+        <dt><button type="button" class="chip audit-help-try"
+                    data-controller="fill-search" data-action="click->fill-search#use"
+                    data-fill-search-said-value="<%= said %>"><%= said %></button></dt>
+        <dd><%= what %></dd>
+      <% end %>
+    </dl>
+  </div>
+  <div class="modal-foot">
+    <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Close</button>
+  </div>
+<% end %>
+
+<turbo-frame id="audit-panel" class="audit-panel-frame"
+  data-controller="person-drawer" target="_top"></turbo-frame>

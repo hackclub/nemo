@@ -9,15 +9,18 @@ module Fd
       .fetch("checks").freeze
 
     setup do
-      @by = Staff.create!(user_id: "UBOSS", community_manager: true)
+      @by = hold_role!("UBOSS", "community_manager")
     end
 
-    def staff_holding(role)
-      return Staff.new(user_id: ME) if role.nil?
+    def staff_holding(role, manager: false)
+      if manager
+        staff = Account.find_or_create_by!(user_id: ME)
+        hold_role!(staff.user_id, "community_manager")
+        return staff.tap { Current.forget_roles }
+      end
+      return Account.new(user_id: ME) if role.nil?
 
-      staff = Staff.find_or_create_by!(user_id: ME)
-      AccessGrant.give!(ME, role: role, by: @by.user_id, reason: "for the gate test")
-      staff.tap { Current.forget_roles }
+      hold_role!(ME, role).tap { Current.forget_roles }
     end
 
     def case_for(kind)
@@ -29,16 +32,16 @@ module Fd
     end
 
     def move(key, moved)
-      moved.to_h.each { |role, allowed| RolePermission.set!(role, key, allowed, by: @by.user_id) }
+      moved.to_h.each { |role, allowed| move_capability!(role, key, allowed, by: @by.user_id) }
     end
 
     test "every check in the shared file agrees" do
       wrong = CHECKS.filter_map do |check|
-        AccessGrant.where(user_id: ME).delete_all
-        RolePermission.delete_all
+        Authz::Override.delete_all
+        drop_roles!(ME)
         Current.forget_roles
 
-        staff = staff_holding(check["role"])
+        staff = staff_holding(check["role"], manager: check["manager"] == true)
         move(check["key"], check["moved"])
         record = case_for(check["case"])
 
@@ -52,7 +55,7 @@ module Fd
     end
 
     test "the file covers every scoped permission, so a new scope cannot slip in unchecked" do
-      scoped = Permission.keys.select { |key| Permission.scope(key) == :assigned }
+      scoped = Authz.keys.select { |key| Authz.record_scope(key) == :assigned }
       checked = CHECKS.filter_map { |check| check["key"] if check["case"] == "theirs" }.uniq
 
       assert_equal [], scoped - checked,
@@ -60,9 +63,9 @@ module Fd
     end
 
     test "a refusal says why, in words the bot can say too" do
-      staff = staff_holding("lead")
+      staff = staff_holding("firefighter")
 
-      assert_equal "give or take back access is community manager only",
+      assert_equal "give or take back access is Community manager only",
         Access.why_not(staff, "access.grant")
     end
   end

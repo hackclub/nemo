@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 
 from jobs.nightly_sync import stage_plan
-from jobs.sync_worker import next_run_at, wait_seconds
+from jobs.sync_worker import missed_tonight, next_run_at, slot_today, wait_seconds
 
 
 def test_a_later_time_today_stays_today():
@@ -49,6 +49,97 @@ def test_the_wait_never_drops_below_a_second():
     assert wait_seconds(60, scheduled, now) == 1.0
 
 
+def test_a_boot_after_the_slot_with_no_run_is_a_missed_night():
+    now = datetime(2026, 9, 20, 9, 51)
+    assert missed_tonight("03:00", now, already_ran=False)
+
+
+def test_a_boot_after_the_slot_does_not_rerun_a_night_that_already_ran():
+    now = datetime(2026, 9, 20, 9, 51)
+    assert not missed_tonight("03:00", now, already_ran=True)
+
+
+def test_a_boot_before_the_slot_waits_for_it():
+    now = datetime(2026, 9, 20, 2, 36)
+    assert not missed_tonight("03:00", now, already_ran=False)
+
+
+def test_the_slot_minute_itself_counts_as_missed():
+    now = datetime(2026, 9, 20, 3, 0)
+    assert missed_tonight("03:00", now, already_ran=False)
+
+
+def test_the_slot_is_read_the_same_way_the_schedule_reads_it():
+    now = datetime(2026, 9, 20, 9, 51)
+    assert slot_today("03:00", now) == datetime(2026, 9, 20, 3, 0)
+    assert next_run_at("03:00", now) == slot_today("03:00", now) + timedelta(days=1)
+
+
+def test_the_startup_flag_and_the_catch_up_share_one_decision(monkeypatch):
+    from jobs import sync_worker
+
+    now = datetime(2026, 9, 20, 9, 51)
+    monkeypatch.setattr(sync_worker, "run_at_start_enabled", lambda: True)
+    assert sync_worker.boot_run("03:00", now, True, 0) == "startup"
+    monkeypatch.setattr(sync_worker, "run_at_start_enabled", lambda: False)
+    assert sync_worker.boot_run("03:00", now, True, 0) is None
+    assert sync_worker.boot_run("03:00", now, False, 0) == "catch-up"
+
+
+def test_the_cap_holds_even_with_the_startup_flag_on(monkeypatch):
+    from jobs import sync_worker
+
+    monkeypatch.setattr(sync_worker, "run_at_start_enabled", lambda: True)
+    assert sync_worker.boot_run(
+        "03:00", datetime(2026, 9, 20, 9, 51), False, sync_worker.MAX_CATCH_UPS
+    ) is None
+
+
+def test_an_unreadable_ledger_refuses_to_catch_up():
+    from jobs import sync_worker
+
+    assert not sync_worker.missed_tonight(
+        "03:00", datetime(2026, 9, 20, 9, 51), *(True, sync_worker.MAX_CATCH_UPS)
+    )
+
+
+def test_an_abandoned_night_does_not_count_as_having_run():
+    from jobs import sync_worker
+
+    assert "FILTER (WHERE status IS DISTINCT FROM 'abandoned')" in sync_worker.RAN_TODAY_SQL
+
+
+def test_a_crash_loop_cannot_keep_starting_nightlies():
+    from jobs import sync_worker
+
+    now = datetime(2026, 9, 20, 9, 51)
+    assert sync_worker.missed_tonight("03:00", now, False, crashed=0)
+    assert not sync_worker.missed_tonight("03:00", now, False, crashed=sync_worker.MAX_CATCH_UPS)
+
+
+def test_only_an_abandoned_night_counts_toward_the_cap():
+    from jobs import sync_worker
+
+    assert "FILTER (WHERE status = 'abandoned')" in sync_worker.RAN_TODAY_SQL, (
+        "a clean deploy must not burn a catch-up; only a crashed night should"
+    )
+
+
+def test_a_cancelled_night_is_respected_and_not_retried():
+    from jobs import sync_worker
+
+    assert "'abandoned'" in sync_worker.RAN_TODAY_SQL
+    assert "cancelled" not in sync_worker.RAN_TODAY_SQL
+
+
+def test_the_catch_up_asks_for_the_same_date_start_run_stamps():
+    from jobs import sync_worker
+    from lib import db
+
+    assert "logical_date = current_date" in sync_worker.RAN_TODAY_SQL
+    assert "current_date" in db.START_RUN_SQL
+
+
 def test_stage_plan_selects_one_named_stage():
     plan = stage_plan("team_stats")
     assert len(plan) == 1
@@ -58,3 +149,47 @@ def test_stage_plan_selects_one_named_stage():
 def test_stage_plan_rejects_an_unknown_stage():
     with pytest.raises(ValueError):
         stage_plan("not_a_stage")
+
+
+def test_sync_worker_sweeps_its_own_orphans_at_startup():
+    import inspect
+
+    from jobs import sync_worker
+
+    assert "sweep_my_earlier_boots" in inspect.getsource(sync_worker.main)
+
+
+def test_both_long_lived_workers_sweep_their_earlier_boots():
+    import inspect
+
+    from jobs import archive_worker, sync_worker
+
+    for mod, fn in ((sync_worker, sync_worker.main), (archive_worker, archive_worker.serve)):
+        assert "sweep_my_earlier_boots" in inspect.getsource(fn), mod.__name__
+
+
+def test_startup_releases_strays_immediately_not_after_six_hours():
+    import inspect
+
+    from jobs import sync_worker
+
+    main = inspect.getsource(sync_worker.main)
+    assert "reap(stale_after_hours=0)" in main, (
+        "at startup every claimed request is stranded, because the worker holding it is gone"
+    )
+
+
+def test_the_periodic_reap_keeps_the_six_hour_bar():
+    import inspect
+
+    from jobs import sync_worker
+
+    body = inspect.getsource(sync_worker)
+    loop = body.split("def main(")[1]
+    assert loop.count("reap()") >= 2, "the in-loop reaps must stay time-based"
+
+
+def test_the_stale_release_covers_cancelling_not_just_claimed():
+    from jobs import sync_worker
+
+    assert "status IN ('claimed', 'cancelling')" in sync_worker.RELEASE_STALE_SQL

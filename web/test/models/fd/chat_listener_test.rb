@@ -81,7 +81,7 @@ class Fd::ChatListenerTest < ActiveSupport::TestCase
     assert_raises(PG::ConnectionBad) { Fd::ChatListener.new.send(:listen, cut) }
 
     assert cut.closed, "every retry would otherwise strand a backend and drain the pool"
-    assert_equal ["LISTEN fd_chat_changed", "LISTEN fd_conversation_changed"], cut.listened
+    assert_equal ["LISTEN fd_chat_changed", "LISTEN fd_conversation_changed", "LISTEN fd_member_guard"], cut.listened
   end
 
   test "the pool is untouched by listening" do

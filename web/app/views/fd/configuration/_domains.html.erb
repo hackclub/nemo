@@ -1,0 +1,86 @@
+<div class="stack">
+  <div class="card card-flush">
+    <div class="card-head">
+      <h2 class="card-title">Email domains</h2>
+      <div class="card-tools">
+        <%= opens_modal "app.configure", "Add domain", opens: "block-domain" %>
+      </div>
+    </div>
+
+    <% if domains.any? %>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>domain</th>
+              <th>match</th>
+              <th>on joining</th>
+              <th>on file</th>
+              <th>added by</th>
+              <th class="col-num"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% domains.each do |one| %>
+              <tr>
+                <td><span class="mono"><%= one.domain %></span></td>
+                <td><%= domain_match_chip(one) %></td>
+                <td><%= domain_effect_chip(one) %></td>
+                <td class="<%= "is-none" if one.people_here.zero? %>">
+                  <%= one.people_here.zero? ? "nobody" : pluralize(one.people_here, "account") %>
+                </td>
+                <td>
+                  <%= member_link(one.added_by) %>
+                  <span class="sub2"><%= on_day(one.added_at) %></span>
+                </td>
+                <td class="col-num">
+                  <%= button_to "Remove", fd_blocked_domain_path(one),
+                        method: :delete, class: "btn btn-sm" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">No domains</p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="card card-flush">
+    <div class="card-head">
+      <h2 class="card-title">Activity</h2>
+    </div>
+
+    <% if screens.any? %>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>member</th>
+              <th>domain</th>
+              <th>outcome</th>
+              <th>when</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% screens.each do |screen| %>
+              <tr>
+                <td><%= member_link(screen.user_id) %></td>
+                <td><span class="mono"><%= screen.email_domain || "n/a" %></span></td>
+                <td><%= screen_outcome_chip(screen) %></td>
+                <td class="sub2"><%= on_day(screen.at) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">Nobody caught</p>
+      </div>
+    <% end %>
+  </div>
+</div>

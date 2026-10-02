@@ -1,0 +1,22 @@
+<div class="card card-flush">
+  <% if survival.any? %>
+    <div style="padding: 0 var(--s-sm) var(--s-2xs)">
+      <div
+        data-controller="chart"
+        data-chart-kind-value="line"
+        data-chart-height-value="240"
+        data-chart-pct-value="true"
+        data-chart-data-value="<%= {
+          labels: offsets.map { |offset| offset.zero? ? "first post" : "day #{offset}" },
+          datasets: survival.map { |curve| {
+            label: curve.cohort_month.strftime("%b %Y"), data: curve.shares
+          } }
+        }.to_json %>"
+      ></div>
+    </div>
+  <% else %>
+    <p class="card-note">
+      No cohort has reached <%= floor %> first posters with a day fully observed yet.
+    </p>
+  <% end %>
+</div>

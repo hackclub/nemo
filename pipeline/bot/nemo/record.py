@@ -8,19 +8,17 @@ SELECT
    WHERE user_id = %(who)s AND role = 'subject') AS subject_of,
   (SELECT count(DISTINCT case_id) FROM fd.case_participants
    WHERE user_id = %(who)s) AS logged_in,
-  (SELECT count(*) FROM fd.actions
-   WHERE target_user_id = %(who)s AND reversed_at IS NULL) AS live,
+  (SELECT count(*) FROM fd.member_guards
+   WHERE subject_id = %(who)s AND state IN ('live', 'lifting')) AS live,
   (SELECT count(*) FROM fd.actions
    WHERE target_user_id = %(who)s AND reversed_at IS NOT NULL) AS reversed
 """
 
 IN_FORCE = """
-SELECT type_key, expires_at, details
-FROM fd.actions
-WHERE target_user_id = %(who)s
-  AND reversed_at IS NULL
-  AND (expires_at IS NULL OR expires_at > now())
-ORDER BY array_position(%(worst_first)s::text[], type_key), performed_at DESC
+SELECT kind, expires_at, channel_id, case_id, carry, carried_by
+FROM fd.member_guards
+WHERE subject_id = %(who)s AND state IN ('live', 'lifting')
+ORDER BY array_position(%(worst_first)s::text[], kind), opened_at DESC
 LIMIT 1
 """
 
@@ -75,7 +73,14 @@ def read(conn, user_id, rows=ROWS):
             "reversed": counts[3],
         },
         "in_force": (
-            {"type_key": standing[0], "expires_at": standing[1], "details": standing[2]}
+            {
+                "kind": standing[0],
+                "expires_at": standing[1],
+                "channel_id": standing[2],
+                "case_id": standing[3],
+                "carry": standing[4],
+                "carried_by": standing[5],
+            }
             if standing
             else None
         ),
@@ -102,26 +107,36 @@ def counted(counts):
     parts = [
         f"subject of {counts['subject_of']}",
         f"logged in {counts['logged_in']}",
-        f"{counts['live']} action" + ("s" if counts["live"] != 1 else ""),
+        f"{counts['live']} in force",
     ]
     if counts["reversed"]:
         parts.append(f"{counts['reversed']} reversed")
     return "  ·  ".join(parts)
 
 
+CARRY_SAID = {
+    "pending": "nemo has not carried it yet",
+    "failed": "nemo is not holding it",
+}
+
+
 def standing_line(found):
     if found is None:
         return "nothing standing"
 
-    said = action.label(found["type_key"]).lower()
-    where = (found.get("details") or {}).get("channel_id")
+    said = action.label(found["kind"]).lower()
+    where = found.get("channel_id")
     if where:
         said += f" in <#{where}>"
     if found.get("expires_at"):
         said += f" until {found['expires_at'].strftime('%-d %b')}"
     else:
         said += ", no end date"
-    return said
+
+    if found.get("carried_by") == "by_hand":
+        return f"{said}, done by hand"
+    caveat = CARRY_SAID.get(found.get("carry"))
+    return f"{said}, {caveat}" if caveat else said
 
 
 def line(entry):

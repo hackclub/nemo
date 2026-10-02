@@ -1,15 +1,24 @@
 import argparse
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, timezone
 
 from dotenv import load_dotenv
 
+from lib import calendar, coverage, planners, sources
 from lib.db import connect, dead_letter, get_walk, ingest_run, save_walk
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
-from lib.walk import check_walk
+from lib.walk import (
+    UNVERIFIED,
+    check_walk,
+    covers_what_it_replaces,
+    should_prune,
+    window_totals,
+)
 
 SOURCE = "admin_analytics_channel_range"
+SPAN_SOURCE = "admin_analytics_channel_span"
+MONTH_SOURCE = "admin_analytics_channel_month"
 METHOD = "admin.analytics.getChannelAnalytics"
 RANGE_METHOD = "admin.analytics.getAvailableDateRange"
 PAGE_SIZE = 500
@@ -19,8 +28,9 @@ RANGE_SQL = """
 INSERT INTO raw.channel_activity_snapshot
     (channel_id, window_start, window_end, source, messages_posted, messages_posted_by_members,
      members_who_posted, members_who_viewed, reactions_added, members_who_reacted,
-     huddles_initiated, total_members, full_members, guests)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+     huddles_initiated, total_members, full_members, guests,
+     date_created, last_message_at)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (channel_id, window_start, window_end, source) DO UPDATE SET
     messages_posted = EXCLUDED.messages_posted,
     messages_posted_by_members = EXCLUDED.messages_posted_by_members,
@@ -31,7 +41,9 @@ ON CONFLICT (channel_id, window_start, window_end, source) DO UPDATE SET
     huddles_initiated = EXCLUDED.huddles_initiated,
     total_members = EXCLUDED.total_members,
     full_members = EXCLUDED.full_members,
-    guests = EXCLUDED.guests
+    guests = EXCLUDED.guests,
+    date_created = EXCLUDED.date_created,
+    last_message_at = EXCLUDED.last_message_at
 """
 
 PRUNE_SQL = """
@@ -39,13 +51,35 @@ DELETE FROM raw.channel_activity_snapshot
 WHERE source = %s AND (window_start, window_end) <> (%s, %s)
 """
 
+WINDOW_COUNTS_SQL = """
+SELECT window_start, window_end, count(*)
+FROM raw.channel_activity_snapshot
+WHERE source = %s
+GROUP BY window_start, window_end
+"""
 
-def range_row(rec, start, end):
+
+def stamp(value):
+    if value in (None, ""):
+        return None
+    try:
+        seconds = int(value)
+    except (TypeError, ValueError):
+        return None
+    if seconds <= 0:
+        return None
+    try:
+        return datetime.fromtimestamp(seconds, tz=timezone.utc)
+    except (OSError, OverflowError, ValueError):
+        return None
+
+
+def range_row(rec, start, end, source=SOURCE):
     return (
         rec["channel_id"],
         start,
         end,
-        SOURCE,
+        source,
         rec.get("messages_count"),
         rec.get("chats_count"),
         rec.get("writers_count"),
@@ -56,25 +90,30 @@ def range_row(rec, start, end):
         rec.get("total_members_count"),
         rec.get("full_members_count"),
         rec.get("guest_members_count"),
+        stamp(rec.get("date_create")),
+        stamp(rec.get("last_message_posted")),
     )
 
 
 def channel_calendar(client):
-    resp = client.call(RANGE_METHOD, {"type": "channel"})
-    rng = resp.get("available_date_range") or resp
-    return date.fromisoformat(rng["start_date"]), date.fromisoformat(rng["end_date"])
+    return calendar.available(client, "channel")
 
 
 def resolve_window(client, days=WINDOW_DAYS, end=None):
-    floor, edge = channel_calendar(client)
-    if end is None:
-        end = edge
-    return max(floor, end - timedelta(days=days - 1)), end
+    return planners.window(*channel_calendar(client), days=days, end=end)
 
 
-def run(conn, days=WINDOW_DAYS, end=None):
-    client = ProxyClient()
-    start, stop = resolve_window(client, days, end)
+def span_window(client, end=None):
+    return planners.window(*channel_calendar(client), end=end)
+
+
+month_start = planners.month_start
+next_month = planners.next_month
+
+
+def run(conn, days=WINDOW_DAYS, end=None, source=SOURCE, span=False):
+    client = ProxyClient.for_source(sources.key_for_run(source))
+    start, stop = span_window(client, end) if span else resolve_window(client, days, end)
     params = {
         "start_date": start.isoformat(),
         "end_date": stop.isoformat(),
@@ -84,22 +123,32 @@ def run(conn, days=WINDOW_DAYS, end=None):
         "team_ids": os.environ.get("SLACK_TEAM_ID") or None,
     }
     window_key = f"{start}..{stop}"
-    resume_at, already = get_walk(conn, SOURCE, window_key)
+    label = {SPAN_SOURCE: "channel span", MONTH_SOURCE: "channel month"}.get(
+        source, "channel range"
+    )
+    resume_at, already = get_walk(conn, source, window_key)
 
-    with ingest_run(conn, SOURCE) as counts:
+    key = sources.key_for_run(source)
+    with ingest_run(conn, source, slice_key=window_key) as counts:
+        fence = coverage.claim_slice(conn, key, window_key, start, stop, counts.run_id)
+        if fence is None:
+            print(f"{label} {window_key}: another worker holds this slice, skipping")
+            return 0
         counts.rows_in = already
         rows = []
+        walked = {"cursor": resume_at}
 
         def flush(cursor, seen):
             with conn.cursor() as cur:
                 cur.executemany(RANGE_SQL, rows)
             rows.clear()
-            save_walk(conn, SOURCE, window_key, cursor, already + seen)
+            walked["cursor"] = cursor
+            save_walk(conn, source, window_key, cursor, already + seen)
             counts.total_expected = client.last_num_found
             counts.progress()
 
         if resume_at:
-            print(f"channel range {window_key}: resuming after {already} rows")
+            print(f"{label} {window_key}: resuming after {already} rows")
 
         for rec in client.paginate(
             METHOD,
@@ -110,36 +159,63 @@ def run(conn, days=WINDOW_DAYS, end=None):
             max_retries=8,
             start_cursor=resume_at,
             on_page=flush,
+            allow_empty_pages=span,
         ):
             counts.rows_in += 1
             try:
-                rows.append(range_row(rec, start, stop))
+                rows.append(range_row(rec, start, stop, source))
             except KeyError as exc:
                 counts.rows_rejected += 1
-                dead_letter(conn, SOURCE, {"keys": sorted(rec)}, str(exc))
+                dead_letter(conn, source, {"keys": sorted(rec)}, str(exc))
 
-        check_walk(f"channel range {window_key}", counts.rows_in,
+        verdict = check_walk(f"{label} {window_key}", counts.rows_in,
             client.last_num_found, PAGE_SIZE)
 
+        pruned = 0
         with conn.cursor() as cur:
             cur.executemany(RANGE_SQL, rows)
-            cur.execute(PRUNE_SQL, (SOURCE, start, stop))
-            pruned = cur.rowcount
-        save_walk(conn, SOURCE, window_key, None, counts.rows_in)
+            cur.execute(WINDOW_COUNTS_SQL, (source,))
+            landed, held = window_totals(cur.fetchall(), (start, stop))
+            replacing = should_prune(verdict) and covers_what_it_replaces(landed, held)
+            if replacing:
+                cur.execute(PRUNE_SQL, (source, start, stop))
+                pruned = cur.rowcount
+        if should_prune(verdict) and not replacing:
+            print(
+                f"{label} {window_key}: walked {landed} rows against {held} already held, "
+                "refusing to prune the fuller window"
+            )
+        if replacing:
+            coverage.supersede(conn, key, window_key)
+        else:
+            counts.status = "partial"
+        coverage.settle(conn, key, window_key, fence, verdict or UNVERIFIED,
+                        client.last_num_found, counts.rows_in)
+        save_walk(conn, source, window_key,
+                  None if replacing else walked["cursor"], counts.rows_in)
     print(
-        f"channel range {window_key}: {counts.rows_in} rows, "
+        f"{label} {window_key}: {counts.rows_in} rows, "
         f"{counts.rows_rejected} rejected, {pruned} stale rows pruned"
     )
+    return counts.rows_in
+
+
+def run_span(conn, end=None):
+    return run(conn, source=SPAN_SOURCE, span=True, end=end)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--days", type=int, default=WINDOW_DAYS)
     parser.add_argument("--end", type=date.fromisoformat)
+    parser.add_argument("--span", action="store_true")
     args = parser.parse_args()
     load_dotenv(ENV_FILE)
     with connect() as conn:
-        run(conn, days=args.days, end=args.end)
+        if args.span:
+            run_span(conn, end=args.end)
+        else:
+            run(conn, days=args.days, end=args.end)
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ class FdSlackAccountTest < ActionDispatch::IntegrationTest
   KEPT = %w[NEMO_CLIENT_ID NEMO_CLIENT_SECRET SLACK_TEAM_ID].freeze
 
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @was = ENV.slice(*KEPT)
     KEPT.each { |name| ENV.delete(name) }
     ENV["NEMO_CLIENT_ID"] = "1.2"
@@ -65,7 +65,7 @@ class FdSlackAccountTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     start_linking
 
-    assert_redirected_to fd_settings_path(tab: "you")
+    assert_redirected_to account_path
     assert_match(/not set up/, flash[:alert])
   end
 

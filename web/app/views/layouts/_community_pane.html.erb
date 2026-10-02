@@ -1,0 +1,57 @@
+<nav id="section-nav" class="cpane" aria-label="Community contents">
+  <%= render "layouts/sidebar_head", letter: "C", title: "Community", said: "Hack Club Slack" %>
+
+  <div class="cnav">
+    <p class="cnav-lab">Yours</p>
+    <div class="cnav-group">
+      <%= link_to you_path, title: "You",
+            aria: { current: ("page" if current_page?(you_path)) } do %>
+        <%= nav_icon("you") %><span class="trunc">You</span>
+      <% end %>
+    </div>
+
+    <% if may_community?("analytics.workspace.read") %>
+      <p class="cnav-lab">The journey</p>
+      <div class="cnav-group">
+        <%= link_to community_path, title: "Overview",
+              aria: { current: ("page" if on_community_overview?) } do %>
+          <%= nav_icon("overview") %><span class="trunc">Overview</span>
+        <% end %>
+        <div class="cnav-sub">
+          <% journey_stages.each do |label, stage| %>
+            <% path = public_send(:"#{stage}_journey_path") %>
+            <%= link_to path, title: label,
+                  aria: { current: ("page" if current_page?(path)) } do %>
+              <%= nav_icon(stage) %><span class="trunc"><%= label %></span>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <div class="cnav-group">
+        <%= link_to community_path, title: "Overview",
+              aria: { current: ("page" if on_community_overview?) } do %>
+          <%= nav_icon("overview") %><span class="trunc">Overview</span>
+        <% end %>
+      </div>
+    <% end %>
+
+    <p class="cnav-lab">Places</p>
+    <div class="cnav-group">
+      <%= link_to channels_path, title: "Channels",
+            aria: { current: ("page" if controller_name == "channels") } do %>
+        <%= nav_icon("channels") %><span class="trunc">Channels</span>
+      <% end %>
+    </div>
+
+    <p class="cnav-lab">Mnemosyne</p>
+    <div class="cnav-group">
+      <%= link_to account_path, title: "Your account",
+            aria: { current: ("page" if current_page?(account_path)) } do %>
+        <%= nav_icon("gear") %><span class="trunc">Your account</span>
+      <% end %>
+    </div>
+  </div>
+
+  <%= render "layouts/sidebar_foot" %>
+</nav>

@@ -2,11 +2,7 @@ require "test_helper"
 
 class Fd::ThreadMessageTest < ActiveSupport::TestCase
   test "the app can read messages but never write one" do
-    assert_raises(ActiveRecord::StatementInvalid) do
-      Fd::ThreadMessage.create!(channel_id: "C0LOUNGE", thread_ts: "1754487721.123456",
-        message_ts: "1754487721.123456", is_root: true, author_user_id: "UDEX",
-        posted_at: Time.current, body: "written by the dashboard")
-    end
+    assert_read_only! "fd.thread_messages"
   end
 
   test "asking for the messages of nothing asks the database nothing" do

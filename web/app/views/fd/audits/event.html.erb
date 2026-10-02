@@ -1,0 +1,38 @@
+<turbo-frame id="audit-panel" data-controller="person-drawer">
+  <div class="audit-panel" role="dialog" aria-label="<%= audit_verb(@row) %>">
+    <div class="drawer-head">
+      <b class="grow"><%= audit_verb(@row) %></b>
+      <button type="button" class="pm-x" aria-label="Close"
+              data-action="click->person-drawer#close">&#10005;</button>
+    </div>
+
+    <div class="audit-panel-facts">
+      <div class="fact">
+        <dt>When</dt>
+        <dd><%= @row.at.strftime("%-d %b %Y %H:%M:%S") %></dd>
+      </div>
+      <div class="fact">
+        <dt>Who</dt>
+        <dd><%= audit_actor(@row) %></dd>
+      </div>
+      <div class="fact">
+        <dt>About</dt>
+        <dd><%= audit_about(@row) %></dd>
+      </div>
+      <% if @row.ip.present? %>
+        <div class="fact">
+          <dt>Address</dt>
+          <dd class="mono"><%= @row.ip %></dd>
+        </div>
+      <% end %>
+      <% if @row.app_name.present? %>
+        <div class="fact">
+          <dt>App</dt>
+          <dd><%= @row.app_name %></dd>
+        </div>
+      <% end %>
+    </div>
+
+    <pre class="audit-panel-raw"><code><%= audit_raw(@row) %></code></pre>
+  </div>
+</turbo-frame>

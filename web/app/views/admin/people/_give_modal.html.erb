@@ -1,0 +1,88 @@
+<% person = local_assigns[:person] %>
+<% role = local_assigns[:role] %>
+<% held_scopes = Array(local_assigns[:held_scopes]) %>
+<% grantable = Authz.keys.reject { |key| Authz.locked?(key) || Authz.every_account?(key) } %>
+<% baselines = Authz.role_names.index_with { |name| Authz.baseline(name) }.merge("" => []) %>
+<%= render layout: "fd/modal", locals: { id: "give-access",
+      title: person ? "What #{names[person]} holds" : "Give access" } do %>
+  <%= form_with url: admin_grants_path, method: :post,
+        html: { autocomplete: "off", id: "give-access-form" },
+        data: { controller: "give-access",
+                give_access_baselines_value: baselines.to_json } do %>
+    <div class="modal-body">
+      <% if person %>
+        <%= hidden_field_tag :user_id, person, id: nil %>
+      <% else %>
+        <label class="field-label">
+          <span>Who</span>
+          <%= render "fd/member_picker", name: "user_id", single: true,
+                label: "search for who to give it to", url: search_admin_people_path %>
+        </label>
+      <% end %>
+
+      <div class="field-label">
+        <span>Role</span>
+        <div class="segmented seg-radio" data-controller="unpick">
+          <% Authz.grantable_roles.each do |name| %>
+            <label data-action="mousedown->unpick#down click->unpick#press">
+              <%= radio_button_tag "role", name, role == name, id: nil,
+                    data: { give_access_target: "role", action: "change->give-access#settle" } %>
+              <%= Authz.role_label(name) %>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="field-label">
+        <span>Extra scopes</span>
+        <%= hidden_field_tag :scopes_settled, "1", id: nil %>
+        <div class="optlist" data-give-access-target="scopes">
+          <% Authz.by_area.each do |area, keys| %>
+            <% here = keys & grantable %>
+            <% next if here.empty? %>
+            <p class="opt-band" data-give-access-target="area" data-area="<%= area %>">
+              <%= area %>
+            </p>
+            <% here.each do |key| %>
+              <label class="opt" data-give-access-target="scope" data-key="<%= key %>"
+                     data-area="<%= area %>">
+                <%= check_box_tag "scopes[]", key, held_scopes.include?(key),
+                      id: nil, class: "tick" %>
+                <span>
+                  <span class="opt-label"><%= Authz.label(key) %></span>
+                  <span class="opt-note mono"><%= key %></span>
+                </span>
+              </label>
+            <% end %>
+          <% end %>
+        </div>
+        <p class="card-note" data-give-access-target="empty" hidden>
+          nothing left to add
+        </p>
+      </div>
+
+      <div class="field-label" data-give-access-target="channels" hidden>
+        <span>Channels</span>
+        <%= render "admin/channel_picker", field: "channels[]" %>
+      </div>
+
+      <label class="field-label">
+        <span>Why</span>
+        <%= text_field_tag :reason, nil, class: "field",
+              placeholder: "kept on every grant this makes" %>
+      </label>
+    </div>
+  <% end %>
+
+  <div class="modal-foot">
+    <% if person && role.present? %>
+      <%= button_to "Take it all back", admin_grant_path(person), method: :delete,
+            class: "btn btn-ghost btn-undo",
+            form: { class: "contents", data: { turbo_confirm:
+              "Take everything back from #{names[person]}?" } } %>
+    <% end %>
+    <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+    <%= submit_tag(person ? "Save" : "Give it", class: "btn btn-primary",
+          form: "give-access-form") %>
+  </div>
+<% end %>

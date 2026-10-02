@@ -1,32 +1,57 @@
 import { Controller } from "@hotwired/stimulus"
 
-const KEY = "mn-theme"
-
 export default class extends Controller {
+  static targets = ["option", "name", "swatch"]
+
   connect() {
-    this.render(this.current())
+    this.onTheme = () => this.render()
+    document.addEventListener("mn:theme", this.onTheme)
+    this.render()
   }
 
-  toggle() {
-    const next = this.current() === "dark" ? "light" : "dark"
-    document.documentElement.setAttribute("data-theme", next)
-    try {
-      localStorage.setItem(KEY, next)
-    } catch (e) {}
-    this.render(next)
+  disconnect() {
+    document.removeEventListener("mn:theme", this.onTheme)
   }
 
-  current() {
-    const set = document.documentElement.getAttribute("data-theme")
-    if (set === "dark" || set === "light") return set
+  pick(event) {
+    const key = event.currentTarget.dataset.themeKey
+    if (!key) return
 
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+    const box = event.currentTarget.getBoundingClientRect()
+    const pointer = event.clientX || event.clientY
+    const at = pointer
+      ? { x: event.clientX, y: event.clientY }
+      : { x: box.left + box.width / 2, y: box.top + box.height / 2 }
+    window.MnTheme?.pick(key, at)
   }
 
-  render(theme) {
-    const on = theme === "dark" ? "true" : "false"
-    document.querySelectorAll(".theme-switch").forEach((el) => {
-      el.setAttribute("aria-checked", on)
+  render() {
+    if (!window.MnTheme) return
+
+    const { pinned } = window.MnTheme.state()
+    const live = document.documentElement.getAttribute("data-theme")
+
+    this.optionTargets.forEach((el) => {
+      const key = el.dataset.themeKey
+      el.setAttribute("aria-pressed", key === pinned ? "true" : "false")
+      el.classList.toggle("on", key === live)
+      el.classList.toggle("auto", !pinned && key === live)
     })
+
+    this.mirror(this.optionTargets.find((el) => el.dataset.themeKey === live), pinned)
+  }
+
+  mirror(option, pinned) {
+    if (!option) return
+
+    if (this.hasNameTarget) {
+      const label = option.querySelector(".theme-name")?.textContent
+      this.nameTarget.textContent = pinned ? label : `${label}, auto`
+    }
+    if (this.hasSwatchTarget) {
+      const chip = option.querySelector(".theme-chip")
+      this.swatchTarget.style.setProperty("--chip",
+        chip ? chip.style.getPropertyValue("--chip") : "")
+    }
   }
 }

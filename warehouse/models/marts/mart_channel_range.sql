@@ -14,6 +14,8 @@ select
     a.reactions_added,
     a.members_who_reacted,
     a.huddles_initiated,
-    'v1' as metric_version
+    a.date_created,
+    a.last_message_at,
+    'v2' as metric_version
 from {{ ref('fct_channel_range') }} a
 left join {{ ref('dim_channel') }} c using (channel_id)

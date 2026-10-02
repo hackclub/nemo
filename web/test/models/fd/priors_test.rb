@@ -38,7 +38,7 @@ class Fd::PriorsTest < ActiveSupport::TestCase
   test "a case they were only logged in is not a prior" do
     theirs = make_case(subject: "USOMEBODY", opened_at: 60.days.ago,
       resolved_at: 50.days.ago, resolution: "action_taken")
-    theirs.participants.create!(user_id: SUBJECT, role: "involved", detail: "it was aimed at them")
+    theirs.participants.create!(user_id: SUBJECT, role: "reporter")
     act_on theirs, target: "USOMEBODY"
 
     assert_equal 0, Fd::Case.prior_count(SUBJECT),

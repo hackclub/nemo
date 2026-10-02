@@ -2,6 +2,7 @@ sources:
   team_stats:
     label: Workspace daily statistics
     endpoint: team.stats.timeSeries
+    documented: false
     credential: internal
     cadence: daily
     window: 1 day
@@ -11,37 +12,29 @@ sources:
     writes: [raw.team_stats_snapshot]
     feeds: [mart_team_stats_daily, mart_team_stats_monthly]
 
-  top_posters:
-    label: Top posters by month
-    endpoint: admin.analytics.getMemberAnalytics
-    credential: internal
-    cadence: daily
-    window: 1 month
-    guard: none
-    resume: none
-    retention: keep
-    writes: [raw.top_posters_snapshot]
-    feeds: [mart_top_posters]
-
   member_days:
+    unit_budget_seconds: 180
     label: Member activity, one day at a time
     endpoint: admin.analytics.getMemberAnalytics
+    documented: false
     credential: internal
     cadence: daily
     window: 1 day
-    guard: num_found
+    guard: none
     resume: none
     retention: keep
     prune_floor: 13 months
     writes: [raw.member_activity_snapshot, raw.analytics_day]
     runs_as: [admin_analytics_api:member]
-    feeds: [mart_onboarding_funnel, mart_onboarding_recurrence_funnel]
+    feeds: [fct_member_activity, fct_member_window]
     limits:
       batch: {default: 6, min: 1, max: 30}
 
   channel_days:
+    unit_budget_seconds: 300
     label: Channel activity, one day at a time
     endpoint: admin.analytics.getFile
+    documented: true
     credential: admin
     cadence: daily
     window: 1 day
@@ -56,8 +49,10 @@ sources:
       batch: {default: 30, min: 1, max: 60}
 
   member_range:
+    unit_budget_seconds: 180
     label: Member analytics over the whole available window
     endpoint: admin.analytics.getMemberAnalytics
+    documented: false
     credential: internal
     cadence: daily
     window: 13 months
@@ -69,8 +64,10 @@ sources:
     feeds: [mart_activity_distribution, mart_monthly_cohorts]
 
   channel_range:
+    unit_budget_seconds: 180
     label: Channel analytics over a rolling window
     endpoint: admin.analytics.getChannelAnalytics
+    documented: false
     credential: internal
     cadence: daily
     window: 30 days
@@ -81,21 +78,130 @@ sources:
     runs_as: [admin_analytics_channel_range]
     feeds: [mart_channel_range]
 
+  channel_span:
+    unit_budget_seconds: 180
+    label: Channel analytics over the whole available window
+    endpoint: admin.analytics.getChannelAnalytics
+    documented: false
+    credential: internal
+    cadence: daily
+    window: 13 months
+    guard: num_found
+    resume: none
+    retention: newest window only
+    writes: [raw.channel_activity_snapshot]
+    runs_as: [admin_analytics_channel_span]
+    feeds: [mart_channel_bands]
+
+  channel_month:
+    unit_budget_seconds: 120
+    label: Channel analytics month by month
+    endpoint: admin.analytics.getChannelAnalytics
+    documented: false
+    credential: internal
+    cadence: daily
+    window: 1 month
+    guard: num_found
+    resume: none
+    retention: replace
+    writes: [raw.channel_activity_snapshot]
+    runs_as: [admin_analytics_channel_month]
+    feeds: [mart_channel_bands]
+    limits:
+      months: {default: 2, min: 1, max: 24}
+
+  channel_replies:
+    unit_budget_seconds: 180
+    standalone: true
+    label: Thread replies, every thread the walk has found
+    endpoint: conversations.replies
+    documented: true
+    credential: admin
+    cadence: live
+    window: per thread
+    guard: none
+    resume: pending set
+    retention: keep
+    writes: [raw.thread,
+             archive.envelope, archive.message, archive.observation]
+    runs_as: [channel_replies]
+    feeds: [fct_message, fct_thread]
+    limits:
+      batch: {default: 500, min: 50, max: 5000}
+
+  prometheans:
+    label: Who Prometheus says runs each channel
+    endpoint: /api/public/v1/appointments
+    credential: none
+    cadence: daily
+    window: n/a
+    guard: none
+    resume: none
+    retention: replace
+    writes: [app.prometheus_appointment]
+    feeds: []
+
+  dim_snapshot:
+    label: Daily member and channel state, append only
+    endpoint: none
+    credential: none
+    cadence: daily
+    window: snapshot
+    guard: none
+    resume: none
+    retention: keep
+    writes: [raw.member_dim_snapshot, raw.channel_dim_snapshot]
+    feeds: [dim_member_scd, dim_channel_scd]
+
+  channel_history:
+    unit_budget_seconds: 120
+    standalone: true
+    label: Public channel messages, the message spine
+    endpoint: conversations.history
+    documented: true
+    credential: admin
+    cadence: live
+    window: all time
+    guard: none
+    resume: cursor
+    retention: keep
+    writes: [raw.thread, raw.channel_walk,
+             archive.envelope, archive.message, archive.observation]
+    runs_as: [conversations_history]
+    feeds: [fct_message, fct_thread]
+    limits:
+      batch: {default: 200, min: 10, max: 2000}
+
   users_list:
-    label: Account flags and deactivation
+    label: Account flags and deactivation, display name, handle, and avatar
     endpoint: users.list
+    documented: true
     credential: bot
     cadence: daily
     window: snapshot
     guard: none
     resume: sync_cursor
     retention: replace
-    writes: [raw.member_dim]
+    writes: [raw.member_dim, fd.member, fd.member_identity]
     feeds: [mart_account_type, mart_growth]
 
-  autojoin:
-    label: Public channel names
+  admin_users:
+    label: Real name and email, from the Enterprise Grid admin API
+    endpoint: admin.users.list
+    documented: true
+    credential: admin
+    cadence: daily
+    window: snapshot
+    guard: none
+    resume: none
+    retention: replace
+    writes: [fd.member, fd.member_identity]
+    feeds: []
+
+  channel_roster:
+    label: Public channel roster, names and archived flags
     endpoint: conversations.list
+    documented: true
     credential: bot
     cadence: daily
     window: snapshot
@@ -104,10 +210,12 @@ sources:
     retention: replace
     writes: [raw.channel_dim]
     feeds: [dim_channel]
+    runs_as: [channel_roster, autojoin]
 
   channel_names:
     label: Names for channels the list never returned
     endpoint: conversations.info
+    documented: true
     credential: bot
     cadence: daily
     window: snapshot
@@ -119,10 +227,13 @@ sources:
     runs_as: [channel_info_names]
 
   member_history:
+    unit_budget_seconds: 60
+    standalone: true
     label: All-time message count and first post
     endpoint: search.messages
+    documented: true
     credential: admin
-    cadence: daily
+    cadence: live
     window: all time
     guard: none
     resume: pending set
@@ -130,27 +241,13 @@ sources:
     writes: [raw.member_message_history]
     feeds: [mart_monthly_cohorts, mart_activity_distribution]
     limits:
-      batch: {default: 8000, min: 500, max: 20000}
-
-  member_channels:
-    label: Newcomer messages by channel
-    endpoint: search.messages
-    credential: admin
-    cadence: daily
-    window: cohort
-    guard: page assert
-    resume: pending set
-    retention: keep
-    prune_floor: 30 days
-    writes: [raw.member_channel_message, raw.member_channel_walk]
-    feeds: [mart_newcomer_channels]
-    limits:
-      batch: {default: 600, min: 50, max: 2000}
-      cohort_days: {default: 30, min: 7, max: 90}
+      batch: {default: 1000, min: 500, max: 20000}
 
   channel_membership:
+    unit_budget_seconds: 60
     label: Which public channels a newcomer joined
     endpoint: users.conversations
+    documented: true
     credential: bot
     cadence: daily
     window: cohort
@@ -164,17 +261,95 @@ sources:
       batch: {default: 600, min: 50, max: 2000}
       cohort_days: {default: 30, min: 7, max: 90}
 
-  first_reply:
-    label: The first reply a newcomer received
-    endpoint: conversations.replies
+
+  audit_logs_tail:
+    unit_budget_seconds: 120
+    standalone: true
+    label: Every audit event since the last one we landed
+    endpoint: audit.logs
+    documented: true
     credential: admin
-    cadence: daily
-    window: per newcomer
-    guard: none
-    resume: pending set
+    cadence: live
+    window: since the watermark
+    guard: cursor end
+    resume: sync_cursor
     retention: keep
-    writes: [raw.member_first_reply]
-    feeds: [mart_response_rate, mart_fast_reply_vs_retention]
+    writes: [slack.audit_event, fd.login_event, fd.member_channel_join]
+    feeds: []
+
+  audit_logs_backfill:
+    unit_budget_seconds: 300
+    standalone: true
+    label: Older audit events, one day at a time
+    endpoint: audit.logs
+    documented: true
+    credential: admin
+    cadence: on_demand
+    window: 1 day
+    guard: cursor end
+    resume: cursor
+    retention: keep
+    writes: [slack.audit_event, fd.login_event, fd.member_channel_join]
+    feeds: []
+
+  useragent_reparse:
+    unit_budget_seconds: 120
+    standalone: true
+    label: Agent strings landed before the reader knew how to read them
+    endpoint: none
+    documented: true
+    credential: none
+    cadence: live
+    window: everything we hold
+    guard: none
+    resume: none
+    retention: keep
+    writes: [fd.login_event]
+    feeds: []
+
+  member_links:
+    unit_budget_seconds: 300
+    standalone: true
+    label: Accounts that look like they belong to the same person
+    endpoint: none
+    documented: true
+    credential: none
+    cadence: live
+    window: everything we hold
+    guard: none
+    resume: none
+    retention: replace
+    writes: [fd.member_link]
+    feeds: []
+
+  access_logs:
+    unit_budget_seconds: 180
+    standalone: true
+    label: Where each member signed in from, with the network behind it
+    endpoint: team.accessLogs
+    documented: true
+    credential: admin
+    cadence: live
+    window: all time
+    guard: cursor end
+    resume: cursor
+    retention: keep
+    writes: [fd.login_event]
+    feeds: []
+
+  ip_cohorts:
+    standalone: true
+    label: How many people share each address, so one shared one is not a signal
+    endpoint: none
+    documented: true
+    credential: none
+    cadence: live
+    window: all time
+    guard: none
+    resume: none
+    retention: replace
+    writes: [fd.ip_cohort]
+    feeds: []
 
   prune:
     label: Drop rows past their retention window
@@ -186,7 +361,7 @@ sources:
     resume: none
     retention: n/a
     writes: [raw]
-    feeds: [nothing]
+    feeds: []
 
   dbt:
     label: Build the warehouse

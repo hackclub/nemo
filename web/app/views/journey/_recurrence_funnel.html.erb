@@ -1,46 +1,40 @@
-<div class="card">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Onboarding recurrence</h2>
-      <% if recurrence_funnel %>
-        <p class="card-sub">of <%= number_with_delimiter(recurrence_funnel.total_members) %> total known members</p>
-      <% end %>
-    </div>
-    <% if recurrence_cohort_months.present? %>
-      <div class="card-tools">
-        <% if recurrence_funnel %>
-          <%= incomplete_chip(
-                ("the sent-message step needs every member of this cohort searched" unless recurrence_funnel.posts_knowable),
-                ("the visit steps need 15 consecutive days of member activity after a first post" unless recurrence_funnel.visits_knowable)
-              ) %>
-        <% end %>
-      </div>
-    <% end %>
-  </div>
-
-  <% if recurrence_funnel %>
-    <div class="chart-short">
+<div class="card card-flush">
+  <% if recurrence.any? %>
+    <% bands = [
+         { label: "three or more posts", tone: 88,
+           count: ->(f) { f.posted_three_times.to_i } },
+         { label: "exactly twice", tone: 58,
+           count: ->(f) { f.posted_twice.to_i - f.posted_three_times.to_i } },
+         { label: "exactly once", tone: 30,
+           count: ->(f) { f.posted_once.to_i - f.posted_twice.to_i } },
+         { label: "never posted", tone: nil,
+           count: ->(f) { [f.searched.to_i - f.posted_once.to_i, 0].max } }
+       ] %>
+    <div style="padding: 0 var(--s-sm) var(--s-2xs)">
       <div
-        data-controller="svg-chart"
-        data-svg-chart-kind-value="bars"
-        data-svg-chart-height-value="240"
-        data-svg-chart-data-value="<%= {
-          labels: ["Created account", "Signed in", "Sent message", "Returned next day", "3rd visit in 7 days", "4th visit in 14 days"],
-          datasets: [{
-            label: "members",
-            data: [
-              recurrence_funnel.created_account,
-              recurrence_funnel.signed_in,
-              recurrence_funnel.sent_message,
-              recurrence_funnel.returned_next_day,
-              recurrence_funnel.third_visit_in_7_days,
-              recurrence_funnel.fourth_visit_in_14_days
-            ]
-          }]
-        }.to_json %>"y", maintainAspectRatio: false, plugins: { legend: { display: false } } }.to_json %>"
+        data-controller="chart"
+        data-chart-kind-value="bars"
+        data-chart-stacked-value="true"
+        data-chart-pct-value="true"
+        data-chart-height-value="260"
+        data-chart-caps-value="<%= recurrence.map { |f|
+          share = share_pct(f.posted_once, f.searched)
+          share ? { v: share, t: number_to_percentage(share, precision: 1) } : nil
+        }.to_json %>"
+        data-chart-data-value="<%= {
+          labels: recurrence.map { |f| f.cohort_month.strftime("%b %Y") },
+          datasets: bands.map do |band|
+            {
+              label: band[:label],
+              color: band[:tone] ? "color-mix(in oklab, var(--series-1) #{band[:tone]}%, var(--card))" : "var(--series-0)",
+              data: recurrence.map { |f| share_pct(band[:count].call(f), f.searched) },
+              counts: recurrence.map { |f| band[:count].call(f) }
+            }
+          end
+        }.to_json %>"
       ></div>
     </div>
   <% else %>
-    <p class="card-note">no data loaded yet</p>
+    <p class="card-note">No cohort searched yet.</p>
   <% end %>
 </div>

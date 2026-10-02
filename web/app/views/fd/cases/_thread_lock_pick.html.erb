@@ -1,0 +1,26 @@
+<div class="field-label" data-action-standing-target="locks" hidden>
+  <span>Which thread lock</span>
+  <% if locks.any? %>
+    <% family = kase.family_ids %>
+    <div class="optlist">
+      <% locks.each do |guard| %>
+        <% attached = guard.on_case?(family) %>
+        <% held = attached || logged.include?(guard.id) %>
+        <label class="opt">
+          <%= radio_button_tag :thread_guard_id, guard.id, false, id: nil, disabled: held %>
+          <span class="opt-dot" aria-hidden="true"></span>
+          <span class="opt-body">
+            <span class="opt-label"><%= thread_guard_line(guard) %></span>
+            <span class="opt-note">
+              <%= held ? already_here_note(attached) : thread_lock_note(guard, kase.id) %>
+            </span>
+          </span>
+        </label>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="card-note">
+      Nothing is locked right now. Lock a thread from Slack, then log it here.
+    </p>
+  <% end %>
+</div>

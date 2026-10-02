@@ -1,0 +1,159 @@
+<% parts = crowd.composition(snapshot) %>
+<% picker = capture do %>
+  <% if crowd.months.many? %>
+    <%= render "shared/picker", said: "month",
+          chosen: crowd.month.strftime("%b %Y"),
+          groups: [{ options: crowd.months.map { |m| {
+            label: m.strftime("%b %Y"), current: m == crowd.month,
+            href: channel_view_path(month: m.iso8601) } } }] %>
+  <% end %>
+<% end %>
+
+<div class="grid g-2">
+  <div class="card card-stretch">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Members</h2>
+      </div>
+    </div>
+    <% if parts.any? %>
+      <div
+        data-controller="parts"
+        data-parts-height-value="190"
+        data-parts-said-value="members of this channel"
+        data-parts-tiles-value="<%= parts.each_with_index.map { |part, i| {
+          label: part.label, value: part.people, tone: i
+        } }.to_json %>"
+      ></div>
+      <div class="parts-key">
+        <% parts.each_with_index do |part, i| %>
+          <span>
+            <i class="part-<%= i %>"></i><%= part.label %>
+            <b><%= number_with_delimiter(part.people) %></b>
+            <%= number_to_percentage(part.share, precision: 1) %>
+          </span>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">No membership snapshot</p>
+        <p>Mnemosyne hasn&rsquo;t captured a membership snapshot for this channel yet.</p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="card card-stretch">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Tenure</h2>
+      </div>
+      <div class="card-tools"><%= picker %></div>
+    </div>
+    <% if crowd.tenure.any? %>
+      <div
+        data-controller="chart"
+        data-chart-kind-value="bars"
+        data-chart-height-value="180"
+        data-chart-nokey-value="true"
+        data-chart-data-value="<%= {
+          labels: crowd.tenure.map(&:label),
+          datasets: [{ label: "messages", data: crowd.tenure.map(&:messages) }]
+        }.to_json %>"
+      ></div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">Nobody posted here</p>
+        <p>No one posted in this channel during <%= crowd.month&.strftime("%B %Y") %>.</p>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<div class="grid g-sided">
+  <div class="card card-flush">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Top posters</h2>
+      </div>
+      <div class="card-tools"><%= picker %></div>
+    </div>
+    <% top = crowd.top %>
+    <% if top.any? %>
+      <div class="scroll">
+        <table class="data-table cols-fixed channel-poster-table">
+          <colgroup>
+            <col style="width: 44px">
+            <col style="width: 38%">
+            <col style="width: 15%">
+            <col style="width: 20%">
+            <col style="width: 13%">
+            <col style="width: 11%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="col-rank">#</th>
+              <th>member</th>
+              <th class="col-num">messages</th>
+              <th class="col-num">share</th>
+              <th class="col-num">replies</th>
+              <th class="col-num">days</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% top.each do |person| %>
+              <tr>
+                <td class="col-rank"><%= person.channel_rank %></td>
+                <td>
+                  <%= render "shared/person", user_id: person.user_id, live: true %>
+                </td>
+                <td class="col-num"><%= number_with_delimiter(person.messages) %></td>
+                <td class="col-num">
+                  <%= number_to_percentage(person.share_of_channel.to_f, precision: 1) %>
+                </td>
+                <td class="col-num"><%= number_with_delimiter(person.replies) %></td>
+                <td class="col-num"><%= person.days_posted %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">Nobody posted here</p>
+        <p>No one posted in this channel during <%= crowd.month&.strftime("%B %Y") %>.</p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="card card-stretch">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Concentration</h2>
+      </div>
+    </div>
+    <% if crowd.curve.any? %>
+      <div
+        data-controller="lorenz"
+        data-lorenz-height-value="228"
+        data-lorenz-gini-value="<%= crowd.gini %>"
+        data-lorenz-points-value="<%= concentration_points(crowd.curve).to_json %>"
+        data-lorenz-marks-value="<%= [crowd.half_mark].compact.map { |p|
+              [p.poster_pct, p.message_pct.to_f] }.to_json %>"
+      ></div>
+      <div class="legend">
+        <span>
+          busiest <b><%= number_with_delimiter(crowd.concentration.people_for_half) %></b> write half
+        </span>
+        <span>
+          busiest 10 write
+          <b><%= number_to_percentage(crowd.concentration.top_10_pct.to_f, precision: 1) %></b>
+        </span>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">Too few posters</p>
+        <p>Fewer than <%= HomeHelper::MIN_SAMPLE %> people posted here, not enough to plot.</p>
+      </div>
+    <% end %>
+  </div>
+</div>

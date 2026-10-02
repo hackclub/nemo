@@ -1,0 +1,96 @@
+<%= turbo_frame_tag "joiner-card", target: "_top" do %>
+  <div class="joiner-card">
+    <div class="joiner-head">
+      <%= face(row.user_id) %>
+      <span class="two-line">
+        <%= link_to fd_member_path(row.user_id), class: "lnk" do %>
+          <b><%= row.name || row.user_id %></b>
+        <% end %>
+        <span><%= row.handle.present? ? "@#{row.handle}" : row.user_id %></span>
+      </span>
+    </div>
+
+    <dl class="joiner-facts">
+      <div>
+        <dt>Joined</dt>
+        <dd>
+          <%= time_ago_in_words(row.joined_at) %> ago
+          <span class="sub2"><%= joiner_when(row) %></span>
+        </dd>
+      </div>
+
+      <div>
+        <dt>Email</dt>
+        <dd>
+          <% if row.email.present? %>
+            <%= plain_email(row.email) %>
+            <span class="sub2">&middot;</span>
+            <span class="sub2"><%= number_with_delimiter(row.domain_people) %></span>
+            <% if row.lone_domain? %>
+              <span class="state state-warn">only them</span>
+            <% end %>
+          <% else %>
+            <span class="is-none">not on file</span>
+          <% end %>
+        </dd>
+      </div>
+
+      <div>
+        <dt>Slack id</dt>
+        <dd><span class="mono"><%= row.user_id %></span></dd>
+      </div>
+
+      <div>
+        <dt>Address</dt>
+        <dd>
+          <% if row.ip.present? %>
+            <span class="mono"><%= row.ip %></span>
+            <% if row.flag %><span class="joiner-flag"><%= row.flag %></span><% end %>
+            <% if row.where_from %>
+              <span class="sub2"><%= row.where_from %></span>
+            <% end %>
+            <% if row.crowded? %>
+              <span class="state state-warn"><%= row.seen_people %> on that network</span>
+            <% elsif row.close_company? %>
+              <span class="state"><%= row.seen_people %> on that network</span>
+            <% end %>
+          <% else %>
+            <span class="is-none">never signed in</span>
+          <% end %>
+        </dd>
+      </div>
+
+      <div>
+        <dt>Client</dt>
+        <dd>
+          <% if row.client %>
+            <%= row.client %>
+            <% if row.seen_at %>
+              <span class="sub2">last seen <%= time_ago_in_words(row.seen_at) %> ago</span>
+            <% end %>
+          <% else %>
+            <span class="is-none">unknown</span>
+          <% end %>
+        </dd>
+      </div>
+
+      <% if row.raw_agent.present? %>
+        <div>
+          <dt>Agent</dt>
+          <dd><span class="mono joiner-agent"><%= row.raw_agent %></span></dd>
+        </div>
+      <% end %>
+
+      <div>
+        <dt>Standing</dt>
+        <dd><%= joiner_standing(row) %></dd>
+      </div>
+    </dl>
+
+    <div class="joiner-foot">
+      <%= link_to "Open the member", fd_member_path(row.user_id), class: "btn btn-sm" %>
+      <%= link_to "Open a case", fd_cases_path(subject_user_id: row.user_id, open: "1"),
+            class: "btn btn-sm" %>
+    </div>
+  </div>
+<% end %>

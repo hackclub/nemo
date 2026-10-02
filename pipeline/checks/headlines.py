@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 import psycopg
 
-from lib import sources
+from lib import calendar, sources
 from lib.db import connect, credentials
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
@@ -146,7 +146,7 @@ def check_the_worker_is_alive(pipe_conn):
 
 
 def check_the_nightly_ran_the_whole_plan(pipe_conn):
-    total = len(sources.KEYS)
+    total = len(sources.NIGHTLY_KEYS)
     now = datetime.now(timezone.utc)
     rows = []
     with pipe_conn.cursor() as cur:
@@ -189,12 +189,12 @@ def team_stats_today(client):
 
 
 def one_date(client):
-    avail = client.call("admin.analytics.getAvailableDateRange", {"type": "member"})
+    avail = calendar.available_iso(client, "member")
     return date.fromisoformat(avail["end_date"])
 
 
 def member_page(client, count=500):
-    avail = client.call("admin.analytics.getAvailableDateRange", {"type": "member"})
+    avail = calendar.available_iso(client, "member")
     resp = client.call(
         "admin.analytics.getMemberAnalytics",
         {
@@ -394,14 +394,20 @@ def check_retention_coverage(conn, client):
 
 def check_response_rate_totals(conn, client):
     ours = one(conn, """
-        select sum(first_posts_checked) - sum(unanswered)
+        select coalesce(sum(answered_by_member), 0)
         from analytics.mart_response_rate""")
     theirs = one(conn, """
-        select count(*) from analytics.fct_first_reply
-        where date_trunc('month', post_at) in
-              (select post_month from analytics.mart_response_rate)""")
-    return ("mart_response_rate, posts that drew a reply", "cross",
-            "fct_first_reply rows", ours, theirs)
+        select count(*)
+        from analytics.fct_first_response r
+        join analytics.dim_member d on d.user_id = r.newcomer_id
+        where r.answered
+          and d.cohort_at is not null
+          and not coalesce(d.is_bot, false)
+          and not coalesce(d.is_deleted, false)
+          and not coalesce(d.invite_pending, false)
+          and r.post_at <= d.cohort_at + interval '30 days'""")
+    return ("mart_response_rate, first posts a member answered", "cross",
+            "fct_first_response rows inside the newcomer window", ours, theirs)
 
 
 def check_claimed_against_slack(conn, client):
@@ -476,6 +482,25 @@ def stale_verdict(age, allowed):
     return "stale", (age - allowed) / allowed
 
 
+AT_LEAST = "at least"
+AT_MOST = "at most"
+
+BOUNDS = {
+    "longest unbroken run of member-days": AT_LEAST,
+    "the last nightly, stages planned": AT_LEAST,
+    "channel daily pull, days behind the walk": AT_MOST,
+}
+
+
+def bound_verdict(name, ours, theirs):
+    if ours is None or theirs is None:
+        return "no data", None
+    ours, theirs = float(ours), float(theirs)
+    held = ours >= theirs if BOUNDS[name] == AT_LEAST else ours <= theirs
+    delta = None if theirs == 0 else (ours - theirs) / theirs
+    return ("ok" if held else "differs"), delta
+
+
 def verdict(name, ours, theirs, tolerance):
     if ours is None or theirs is None:
         return "no data", None
@@ -491,7 +516,7 @@ def verdict(name, ours, theirs, tolerance):
     return "differs", delta
 
 
-def run(only=None, tolerance=TOLERANCE, cross_only=False):
+def collect(only=None, tolerance=TOLERANCE, cross_only=False):
     load_dotenv(ENV_FILE)
     client = None if cross_only else ProxyClient()
     results = []
@@ -522,21 +547,60 @@ def run(only=None, tolerance=TOLERANCE, cross_only=False):
                                 None, None, "error", None))
                 continue
             for name, kind, source, ours, theirs in (got if isinstance(got, list) else [got]):
-                state, delta = verdict(name, ours, theirs, tolerance)
+                if name in BOUNDS:
+                    state, delta = bound_verdict(name, ours, theirs)
+                else:
+                    state, delta = verdict(name, ours, theirs, tolerance)
                 results.append((name, kind, source, ours, theirs, state, delta))
 
     graded = []
     for row in results:
         if len(row) == 5:
             name, kind, source, ours, theirs = row
-            if kind in ("plan", "cover"):
+            if name in BOUNDS:
+                state, delta = bound_verdict(name, ours, theirs)
+            elif kind in ("plan", "cover"):
                 state, delta = verdict(name, ours, theirs, 0.0)
             else:
                 state, delta = stale_verdict(ours, theirs)
             graded.append((name, kind, source, ours, theirs, state, delta))
         else:
             graded.append(row)
-    results = graded
+    return graded, skipped
+
+
+STATUS_OF = {"ok": "pass", "known": "pass", "differs": "fail", "stale": "fail", "error": "fail",
+             "no data": "warn", "no record": "warn"}
+
+RECORD_SQL = """
+INSERT INTO ingest.quality_result (run_id, subject, assertion, severity, status, observed, expected)
+VALUES (%s, 'headline', %s, %s, %s, %s, %s)
+"""
+
+
+def shown(value):
+    if value is None:
+        return None
+    return f"{value:,.2f}" if isinstance(value, float) else str(value)
+
+
+def record_verdicts(conn, run_id, results):
+    with conn.cursor() as cur:
+        for name, kind, source, ours, theirs, state, delta in results:
+            status = STATUS_OF.get(state, "warn")
+            severity = "info" if status == "pass" else ("error" if status == "fail" else "warn")
+            observed = shown(ours) if delta is None else f"{shown(ours)} ({delta * 100:+.2f}%)"
+            cur.execute(RECORD_SQL, (run_id, f"{kind}:{name}", severity, status, observed,
+                                     f"{shown(theirs)} from {source}"))
+    conn.commit()
+    return len(results)
+
+
+def run(only=None, tolerance=TOLERANCE, cross_only=False, record=False, run_id=None):
+    results, skipped = collect(only, tolerance, cross_only)
+    if record:
+        with connect() as conn:
+            record_verdicts(conn, run_id, results)
 
     width = max(len(r[0]) for r in results)
     print(f"{'headline':<{width}}  {'kind':<6}{'ours':>14}{'second source':>16}{'delta':>9}  state")
@@ -568,8 +632,10 @@ def main():
     parser.add_argument("--tolerance", type=float, default=TOLERANCE)
     parser.add_argument("--cross-only", action="store_true",
                         help="skip the checks that call Slack, for a machine without credentials")
+    parser.add_argument("--record", action="store_true",
+                        help="write every verdict to ingest.quality_result")
     args = parser.parse_args()
-    sys.exit(1 if run(args.only, args.tolerance, args.cross_only) else 0)
+    sys.exit(1 if run(args.only, args.tolerance, args.cross_only, args.record) else 0)
 
 
 if __name__ == "__main__":

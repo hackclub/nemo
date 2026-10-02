@@ -7,10 +7,6 @@ flags:
     label: Fire Engine
     covers: Cases, Members and the search palette
     default: true
-  decisions:
-    label: Decisions
-    covers: The decisions section, and linking a case to one
-    default: true
   public_api:
     label: Public API
     covers: Channel manager lookups, tokens and opt-in

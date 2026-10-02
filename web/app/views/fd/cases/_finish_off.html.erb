@@ -1,8 +1,0 @@
-<div class="todo">
-  <p class="todo-t"><%= still_needed(missing) %></p>
-  <div class="todo-row">
-    <% if missing.include?(:subject) %>
-      <%= opens_modal "case.people", "Pick a subject", opens: "add-person", on: kase %>
-    <% end %>
-  </div>
-</div>

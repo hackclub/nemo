@@ -5,7 +5,7 @@ module Fd
     Facet = Struct.new(:key, :label, :value, :value_label, :options, :on, keyword_init: true)
     View = Struct.new(:key, :label, :count, :current, keyword_init: true)
     Row = Struct.new(:user_id, :cases, :subject_of, :logged_in, :open_cases, :actions, :in_force,
-      :notes, :priors, :last_case_at, keyword_init: true)
+      :notes, :priors, :last_case_at, :messages_posted, keyword_init: true)
 
     VIEWS = {
       "everyone" => "Everyone",
@@ -35,14 +35,14 @@ module Fd
     STATE = { "any" => "any", "open" => "open case", "noted" => "standing notes",
               "clean" => "nothing on record" }.freeze
     WHO = { "history" => "with a history", "everyone" => "everyone" }.freeze
-    SORT = { "recent" => "last case", "subject" => "cases as subject",
+    SORT = { "messages" => "messages", "recent" => "last case", "subject" => "cases as subject",
              "logged" => "cases logged in", "actions" => "actions",
              "notes" => "notes", "name" => "name" }.freeze
     DIRS = %w[desc asc].freeze
 
     DEFAULTS = {
       "who" => "everyone", "priors" => "any", "tenure" => "any", "active" => "any",
-      "category" => "any", "state" => "any", "sort" => "recent", "dir" => "desc"
+      "category" => "any", "state" => "any", "sort" => "messages", "dir" => "desc"
     }.freeze
     FACET_KEYS = DEFAULTS.keys.freeze
     KEYS = (FACET_KEYS + ["view"]).freeze
@@ -50,8 +50,9 @@ module Fd
     DEFAULT_VIEW = "everyone".freeze
     NO_VIEW = "none".freeze
 
-    def initialize(params = {})
+    def initialize(params = {}, actor: nil)
       @params = params
+      @actor = actor
     end
 
     def term
@@ -59,6 +60,12 @@ module Fd
     end
 
     def asked? = term.present?
+
+    def identity?
+      return @identity if defined?(@identity)
+
+      @identity = @actor.present? && @actor.may?(RosterSql::IDENTITY_READ)
+    end
 
     def [](key)
       raw = @params[key].to_s
@@ -130,8 +137,12 @@ module Fd
       SQL
     end
 
+    COUNTS_FOR = 5.minutes
+
     def population
-      @population ||= Member.live.count
+      @population ||= Rails.cache.fetch("fd/member_query/population", expires_in: COUNTS_FOR) do
+        Member.live.count
+      end
     end
 
     def views
@@ -142,7 +153,9 @@ module Fd
     end
 
     def self.view_counts
-      new({}).send(:counts_per_view)
+      Rails.cache.fetch("fd/member_query/view_counts", expires_in: COUNTS_FOR) do
+        new({}).send(:counts_per_view)
+      end
     end
 
     def summary_rows
@@ -291,7 +304,8 @@ module Fd
         subject_of: row["subject_of"].to_i, logged_in: row["logged_in"].to_i,
         open_cases: row["open_cases"].to_i, actions: row["actions"].to_i,
         in_force: row["in_force"].to_i, notes: row["notes"].to_i,
-        priors: row["priors"].to_i, last_case_at: row["last_case_at"])
+        priors: row["priors"].to_i, last_case_at: row["last_case_at"],
+        messages_posted: row.key?("messages_posted") ? row["messages_posted"]&.to_i : nil)
     end
 
     def priors_phrase

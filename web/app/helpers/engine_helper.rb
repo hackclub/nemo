@@ -14,12 +14,6 @@ module EngineHelper
     tag.span row.status, class: STATUS_CHIP.fetch(row.status, "chip chip-off")
   end
 
-  SOURCE_STATE_CLASS = { "stale" => "state-stale", "never run" => "state-never" }.freeze
-
-  def source_state_class(state)
-    SOURCE_STATE_CLASS.fetch(state, "state-live")
-  end
-
   def short_age(at)
     return "n/a" if at.nil?
 
@@ -31,14 +25,61 @@ module EngineHelper
     "#{seconds / 86_400}d"
   end
 
-  def short_seconds(seconds)
-    return "n/a" if seconds.nil?
+  FAULT_CHIP = {
+    "transport" => "chip-warn", "throttle" => "chip-warn", "auth" => "chip-crit",
+    "upstream" => "chip-crit", "contract" => "chip-crit", "cancelled" => "chip-off",
+    "local" => "chip-crit", "entity" => "chip-off"
+  }.freeze
 
-    seconds = seconds.round
-    return "#{seconds}s" if seconds < 60
-    return "#{seconds / 60}m #{seconds % 60}s" if seconds < 3600
+  def fault_class_chip(error_class)
+    FAULT_CHIP.fetch(error_class.to_s, "chip-off")
+  end
 
-    "#{seconds / 3600}h #{(seconds % 3600) / 60}m"
+  def queue_eta(queue)
+    return "idle" if queue.pending.to_i.zero?
+    return "n/a" if queue.eta_minutes.nil?
+
+    minutes = queue.eta_minutes.to_f
+    return "#{minutes.round} min" if minutes < 90
+    return "#{(minutes / 60).round(1)} h" if minutes < 48 * 60
+
+    "#{(minutes / 1440).round(1)} d"
+  end
+
+  CELL_SAID = { "ok" => "ran", "fail" => "failed here", "run" => "running now",
+                "part" => "ran, some of it failed", "stop" => "cancelled", "gone" => "abandoned",
+                "skip" => "nothing to do", "wait" => "not started yet",
+                "none" => "did not run" }.freeze
+
+  def cell_said(cell)
+    CELL_SAID.fetch(cell, cell)
+  end
+
+  SLICE_CELL = { "complete" => "on", "unverified" => "on", "superseded" => "on",
+                 "unavailable" => "un", "short" => "sh", "claimed" => "sh",
+                 "missing" => "no" }.freeze
+
+  def slice_cell(state)
+    SLICE_CELL.fetch(state, "no")
+  end
+
+  UNIT_COST = {
+    "search.messages" => "one admin search per member",
+    "conversations.replies" => "one admin call per thread",
+    "conversations.history" => "one admin call per page of 999 messages",
+    "conversations.members" => "one bot call per member",
+    "admin.analytics.getMemberAnalytics" => "one internal call per 500 members",
+    "admin.analytics.getChannelAnalytics" => "37 internal calls per month",
+    "admin.analytics.getFile" => "one internal download per day",
+    "admin.users.list" => "one admin call per 100 members",
+    "team.stats.timeSeries" => "one internal call per window"
+  }.freeze
+
+  def unit_cost(source, name)
+    per = UNIT_COST[source.endpoint]
+    return "n/a" if per.nil?
+
+    "#{name} of #{Engine::Setting.value(source.key, name)}, #{per}"
   end
 
   def run_status_tally(statuses)
@@ -48,6 +89,54 @@ module EngineHelper
         class: STATUS_CHIP.fetch(status, "chip chip-off"))
     end
     safe_join(chips, " ")
+  end
+
+  def worker_state(beat)
+    return tag.span("failed", class: "chip chip-crit") if beat.note.to_s.start_with?("FAILED")
+    return tag.span("silent", class: "chip chip-warn") if beat.cold?
+
+    tag.span("ok", class: "chip chip-good")
+  end
+
+  def worker_note(beats)
+    cold = beats.count(&:cold?)
+    said = "#{pluralize(beats.size, 'worker')} reporting"
+    return said if cold.zero?
+
+    "#{said} · #{cold} silent"
+  end
+
+  def worker_chip(worker)
+    return tag.span("orphaned, no worker heartbeat", class: "chip chip-crit") if worker.nil?
+
+    tag.span("orphaned, worker cold #{short_age(worker.beat_at)}", class: "chip chip-crit")
+  end
+
+  def step_progress(progress)
+    return nil if progress.nil?
+
+    total = progress.step_total
+    total ? "step #{progress.step_index} of #{total}" : "step #{progress.step_index}"
+  end
+
+  DAY_STATES = { "no" => "before the job existed", "un" => "Slack has no file for",
+                 "on" => "held" }.freeze
+
+  def day_shares(never_fetched, unavailable, loaded)
+    total = never_fetched + unavailable + loaded
+    return [] if total.zero?
+
+    [["no", never_fetched], ["un", unavailable], ["on", loaded]]
+      .reject { |_, count| count.zero? }
+      .map { |state, count| [state, count, (count.to_f / total * 100).round(2)] }
+  end
+
+  def engine_tab
+    @tab || "runs"
+  end
+
+  def engine_tab_path(key)
+    engine_path(key == "runs" ? {} : { tab: key })
   end
 
   def run_stale?(row)

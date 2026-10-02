@@ -7,9 +7,11 @@ module Slack
     Result = Struct.new(:stats, :error, keyword_init: true)
 
     def self.coverage
-      Rails.cache.fetch("slack/analytics/coverage", expires_in: COVERAGE_TTL) do
+      Rails.cache.fetch("slack/analytics/coverage", expires_in: COVERAGE_TTL, skip_nil: true) do
         response = ProxyClient.call("admin.analytics.getAvailableDateRange", { "type" => "member" })
-        { "start_date" => response["start_date"], "end_date" => response["end_date"] }
+        from = response["start_date"]
+        to = response["end_date"]
+        { "start_date" => from, "end_date" => to } if from.present? && to.present?
       end
     rescue ProxyClient::NotConfigured => e
       Rails.logger.error("slack analytics proxy is not configured: #{e.message}")
@@ -22,6 +24,24 @@ module Slack
       tasks
         .map { |task| Thread.new { Rails.application.executor.wrap { task.call } } }
         .map(&:value)
+    end
+
+    def self.channel_windows(channel_id:, name:, privacy:, windows:)
+      spans = windows.map { |from, to| clamp(from, to) }
+      keys = spans.map { |from, to| channel_key(channel_id, from, to, privacy) }
+      held = keys.map { |key| Rails.cache.read(key) }
+
+      fetched = parallel(*spans.each_with_index.map { |(from, to), i|
+        -> { asked(channel_id: channel_id, name: name, from: from, to: to, privacy: privacy) if held[i].nil? }
+      })
+
+      spans.each_index.map do |i|
+        next Result.new(stats: held[i]) if held[i]
+
+        got = fetched[i]
+        Rails.cache.write(keys[i], got.stats, expires_in: CHANNEL_TTL) if got&.stats
+        got
+      end
     end
 
     def self.channel_activity(channel_id:, name:, from:, to:, privacy: "public")

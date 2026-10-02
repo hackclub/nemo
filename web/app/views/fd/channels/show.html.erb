@@ -1,0 +1,54 @@
+<% name = @channel&.name.presence %>
+<% label = name ? "##{name}" : @channel_id %>
+<% content_for :page_title, label %>
+<% content_for :head_context do %>
+  <span class="triad-sep">&middot;</span>
+  <span class="triad-who mono"><%= @channel_id %></span>
+<% end %>
+<% content_for :head_actions do %>
+  <%= open_in_slack slack_channel_url(@channel_id), css: "btn btn-ghost" %>
+<% end %>
+<% content_for :pane do %>
+  <%= render "pane", query: @query, rows: @rows, open_id: @open_id %>
+<% end %>
+
+<% content_for :page_tabs do %>
+  <% Fd::ChannelsController::TABS.each do |key| %>
+    <%= link_to channel_tab_label(key), fd_channel_path(@channel_id, tab: key),
+          class: "view", aria: { current: ("true" if key == @tab) } %>
+  <% end %>
+<% end %>
+
+<% if @tab == "overview" %>
+  <%= render "overview", channel_id: @channel_id, guards: @guards %>
+<% end %>
+
+<% if @tab == "bots" %>
+  <%= render "bots", channel_id: @channel_id, label: label,
+        guard: @kind_guard, allows: @allows %>
+  <%= render "activity", events: @events, labels: @labels %>
+<% end %>
+
+<% if @tab == "readonly" %>
+  <%= render "readonly", channel_id: @channel_id, guard: @kind_guard, allows: @allows %>
+  <%= render "activity", events: @events, labels: @labels %>
+<% end %>
+
+<% if @tab == "slowmode" %>
+  <%= render "slowmode", channel_id: @channel_id, guard: @kind_guard, allows: @allows %>
+  <%= render "activity", events: @events, labels: @labels %>
+<% end %>
+
+<% if @tab == "account_age" %>
+  <%= render "account_age", channel_id: @channel_id, guard: @kind_guard %>
+  <%= render "activity", events: @events, labels: @labels %>
+<% end %>
+
+<% if @tab == "purge" %>
+  <%= render "purge", channel_id: @channel_id, label: label, purges: @purges %>
+<% end %>
+
+<% if @kind_guard&.takes_allows? %>
+  <%= render "allow_modal", channel_id: @channel_id, label: label,
+        kind: @kind_guard.kind %>
+<% end %>

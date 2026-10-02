@@ -1,13 +1,16 @@
 module Fd
   class CasesController < BaseController
-    permit "case.open", only: [:create, :update]
+    permit "case.read", only: [:index, :show]
 
-    TABS = %w[report evidence actions notes people].freeze
-    PER_PAGE = 50
+    before_action :load_pane, only: [:index, :show]
+    permit "case.open", only: :create
+    permit "case.categorise", on: -> { Case.find(params[:id]) }, only: :update
+
+    TABS = %w[report people actions notes timeline].freeze
 
     def index
       @open_modal = params[:open] == "1"
-      load_queue
+      load_index
     end
 
     def show
@@ -22,10 +25,19 @@ module Fd
       @reports = CaseReport.where(case_id: family).oldest_first.to_a
       @actions = Action.where(case_id: family).oldest_first.to_a
       @live_actions = @actions.reject(&:reversed?)
+      @thread_guards = ThreadGuard.for_case(family).newest_first.to_a
+      @thread_locks = ThreadGuard.pickable_locks(family)
+      @locks_logged = Action.thread_guards_logged_on(family)
+      @guards_logged = Action.guards_logged_on(family)
+      subjects = @case.subject_user_ids
+      @action_standing = MemberGuard.standing_on(
+        @people.chosen&.user_id || (subjects.first if subjects.one?)
+      )
       @siblings = @case.sibling_cases.includes(:subjects).oldest_first.to_a
       @duplicate_candidates = Case.candidates_for(@case, @siblings)
       @notes = Note.where(case_id: family).visible.recent_first.to_a
       @conversations = IntakeConversation.for_case(family).to_a
+      @reachable = @conversations.reject(&:closed?).map(&:report_id).to_set
       @thread = chosen_thread(@reports)
       @thread_conversation = @conversations.find { |one| one.report_id == @thread&.id }
       @conversation_said = IntakeMessage.tail([@thread_conversation&.id].compact)
@@ -43,26 +55,19 @@ module Fd
       @thread_messages = ThreadMessage.for_threads(@threads).to_a
       @case_person = CasePerson.for(@people.chosen, kase: @case, actions: @actions,
         notes: @notes, messages: @thread_messages)
-      @thread_list = CaseThreads.for(@threads, actions: @actions,
-        messages: @thread_messages, asked: params[:thread])
-      @citations = CaseCitation.where(case_id: family).oldest_first
-        .index_by(&:thread_message_id)
-      @flagged_messages = @thread_messages.select { |said| @citations.key?(said.id) }
-      @cited_by = @actions.select(&:cites?).group_by(&:cites_message_id)
-      @cited_messages = cited_messages
-      @channels = ChannelNames.for(@threads.map(&:channel_id) +
-        @cited_messages.values.map(&:channel_id))
-      @said_counts = @thread_messages.group_by(&:author_user_id).transform_values(&:size)
+      @cited_shares = IntakeShare.for_messages(@conversation_said.map(&:id))
+      @channels = ChannelNames.for(@threads.map(&:channel_id) + cited_channel_ids +
+        @thread_guards.map(&:channel_id) + @thread_locks.map(&:channel_id) +
+        @action_standing.map(&:channel_id) +
+        @actions.filter_map { |a| a.details["channel_id"] } +
+        Array(@pane_channels))
       @person_priors = Case.prior_counts_for(@participants.map(&:user_id))
       @assignees = @case.assignees.to_a
-      @decisions = Flag.on?(:decisions) ? Decision.order(:title).to_a : []
       @mentioned = @case.mentioned_but_unlogged(
         notes: @notes + @standing_notes.values.flatten, reports: @reports
       )
       @erasures = AuditEntry.erasures_for(case_id: family,
         note_ids: Note.where(case_id: family).ids).to_a
-      @links = AuditEntry.decision_links_for(case_id: family).to_a
-      @decision_titles = Decision.where(id: linked_decision_ids).pluck(:id, :title).to_h
       @names = Names.for(page_ids)
       @timeline = CaseTimeline.for(
         @case,
@@ -72,8 +77,6 @@ module Fd
         participants: @participants,
         assignees: @assignees,
         erasures: @erasures,
-        links: @links,
-        decisions: @decision_titles,
         names: @names,
       )
       @context = MemberContext.for(
@@ -83,17 +86,17 @@ module Fd
       )
       @tab = params[:tab].presence_in(TABS) || (@case.resolved? ? "actions" : "report")
       @tab_counts = {
-        "evidence" => @thread_messages.size.positive? ? @thread_messages.size : @thread_list.size,
+        "report" => @reports.size,
         "actions" => @actions.size,
         "notes" => @notes.size,
-        "people" => @participants.size
+        "people" => @participants.size,
+        "timeline" => @timeline.size
       }
       @flags = CaseFlags.for_case(@case, names: @names)
       @subject = @case.subject_user_ids.first
       @subject_priors = @subject ? Case.prior_count(@subject, within: Case::PRIOR_WINDOW) : 0
       @merge_into = @duplicate_candidates.find { |other| !other.resolved? }
       @open_reports = @reports.count { |report| !report.told_of_outcome? }
-      @missing = missing_on(@case, @subject)
     end
 
     def update
@@ -121,24 +124,22 @@ module Fd
 
     def create
       subjects = asked_subjects
-      @open_for_subject = open_cases_for(subjects)
 
       problem = objection(subjects)
       return refuse(problem) if problem
-      return refuse(already_open_warning) if warn_about_open_case?
 
       kase = nil
       writing do
         kase = Case.create!(
           category_key: params[:category_key].presence,
-          opened_by: current_staff.user_id,
+          opened_by: current_account.user_id,
           opened_at: Time.current,
           source_app: Audit::SOURCE_APP
         )
         audit(kase, "opened")
         subjects.each { |id| audit(kase.add_subject!(id), "attached", entity_id: kase.id) }
         if params[:assign_to_me] == "1"
-          audit(kase.assign!(current_staff.user_id), "claimed", entity_id: kase.id)
+          audit(kase.assign!(current_account.user_id), "claimed", entity_id: kase.id)
         end
         write_first_note(kase)
       end
@@ -152,10 +153,12 @@ module Fd
       reports.find { |report| report.id == params[:thread].to_i } || reports.last
     end
 
-    def cited_messages
-      wanted = @cited_by.keys - @thread_messages.map(&:id)
-      held = @thread_messages.index_by(&:id)
-      held.merge(ThreadMessage.where(id: wanted).index_by(&:id))
+    def cited_channel_ids
+      (@cited_shares || {}).values.flatten.map(&:source_channel_id).compact
+    end
+
+    def cited_authors
+      (@cited_shares || {}).values.flatten.map(&:source_author_user_id).compact
     end
 
     def page_ids
@@ -171,16 +174,11 @@ module Fd
         @reports.flat_map { |report| Mentions.ids(report.body) },
         @thread_messages.map(&:author_user_id),
         @thread_messages.map(&:purged_by),
-        @citations.values.map(&:flagged_by),
         @threads.map(&:added_by),
         @erasures.map(&:actor_user_id),
-        @links.map(&:actor_user_id)
+        cited_authors,
+        Array(@pane_people)
       ]
-    end
-
-    def linked_decision_ids
-      @links.flat_map { |row| [row.before, row.after] }
-        .compact.filter_map { |values| values["followed_decision_id"] }.uniq
     end
 
     def asked_subjects
@@ -197,18 +195,6 @@ module Fd
       end
     end
 
-    def missing_on(kase, subject)
-      return [] if kase.resolved?
-
-      subject.nil? ? [:subject] : []
-    end
-
-    def open_cases_for(subjects)
-      return [] if subjects.empty?
-
-      Case.unresolved.with_any_subject(subjects).includes(:subjects).oldest_first.to_a
-    end
-
     def objection(subjects)
       unless subjects.all? { |id| id.match?(MEMBER_ID) }
         return "that does not look like a Slack member id"
@@ -218,18 +204,6 @@ module Fd
       end
 
       nil
-    end
-
-    def warn_about_open_case?
-      @open_for_subject.any? && params[:separate] != "1"
-    end
-
-    def already_open_warning
-      caught = (@open_for_subject.flat_map(&:subject_user_ids) & asked_subjects).uniq
-      who = Names.for(caught).list(caught)
-      numbers = @open_for_subject.map { |kase| "##{kase.id}" }.to_sentence
-      "#{who} already #{caught.many? ? 'have' : 'has'} an open case, #{numbers}. " \
-        "Add to that one, or open a new case."
     end
 
     def opened_notice(kase, subjects)
@@ -242,46 +216,46 @@ module Fd
       body = Mentions.normalise(params[:body].to_s.strip)
       return if body.blank?
 
-      note = Note.create!(case_id: kase.id, body: body, author: current_staff.user_id)
+      note = Note.create!(case_id: kase.id, body: body, author: current_account.user_id)
       audit(note, "noted")
     end
 
     def refuse(message)
       flash.now[:alert] = message
       @open_modal = true
-      load_queue
+      load_pane
+      load_index
       render :index, status: :unprocessable_content
     end
 
-    def load_queue
-      @query = CaseQuery.new(params, viewer: current_staff&.user_id)
-      @page = [params[:page].to_i, 1].max
-      found = @query.relation.includes(:subjects, :assignees, :reports)
-        .offset((@page - 1) * PER_PAGE).limit(PER_PAGE + 1).to_a
-      @more = found.size > PER_PAGE
-      @cases = found.first(PER_PAGE)
-      @total = @query.relation.count
-      @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
-      case_ids = @cases.map(&:id)
-      @thread_counts = Case.thread_message_counts_for(case_ids)
-      @thread_channels = Case.thread_channels_for(case_ids)
-      @priors = Case.prior_counts_for(@cases.flat_map(&:subject_user_ids))
-      @violations = Case.violations_for(case_ids)
-      @flagged_counts = Case.flagged_counts_for(case_ids)
-      @live_action_counts = Case.live_action_counts_for(case_ids)
-      @action_counts = Case.action_counts_for(case_ids)
-      @channels = ChannelNames.for(@thread_channels.values.flatten)
-      @stats = QueueStats.load
-      @total_count = @stats.total
-      @layout = params[:layout] == "board" ? "board" : "queue"
-      @views = @query.views
-      @subject_preset = preset_for(asked_subjects)
-      @names = Names.for(@cases.flat_map { |kase|
+    PANE_LIMIT = 60
+
+    def load_pane
+      asked = params[:view].presence || (action_name == "show" ? "attention" : nil)
+      @pane_query = CaseQuery.new(params.merge(view: asked), viewer: current_account&.user_id)
+      @pane_views = @pane_query.views
+      @pane_params = @pane_query.to_params
+      @pane_cases = @pane_query.relation
+        .includes(:subjects, :assignees, :reports, :actions)
+        .limit(PANE_LIMIT).to_a
+      @pane_priors = Case.prior_counts_for(@pane_cases.flat_map(&:subject_user_ids))
+      @pane_violations = Case.violations_for(@pane_cases.map(&:id))
+      @cited_words = IntakeShare.first_words_for(@pane_cases.map(&:id))
+      @held_counts = IntakeFile.counts_for_cases(@pane_cases.map(&:id))
+      @pane_reachable = IntakeConversation.open_ones
+        .where(report_id: @pane_cases.flat_map { |kase| kase.reports.map(&:id) })
+        .pluck(:report_id).to_set
+      @pane_people = @pane_cases.flat_map { |kase|
         kase.subject_user_ids + kase.assignee_user_ids + [kase.opened_by] +
           kase.reports.map(&:reporter_user_id)
-      })
-      @open_for_subject ||= []
-      @flags = CaseFlags.for_queue
+      } + @cited_words.values.map(&:author)
+      @pane_channels = @cited_words.values.map(&:channel)
+    end
+
+    def load_index
+      @names = Names.for(Array(@pane_people))
+      @channels = ChannelNames.for(Array(@pane_channels))
+      @subject_preset = preset_for(asked_subjects)
     end
   end
 end

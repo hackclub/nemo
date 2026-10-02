@@ -1,0 +1,173 @@
+<% content_for :page_title, "Joiners" %>
+<% may_deactivate = current_account.may?("member.deactivate") %>
+
+<% content_for :head_actions do %>
+  <span class="segmented">
+    <% Fd::JoinerQuery::WHEN.each do |key, label| %>
+      <%= link_to label.capitalize, fd_joiners_path(@query.window_params(key)),
+            aria: { current: ("true" if @query[Fd::JoinerQuery::WINDOW_KEY] == key) } %>
+    <% end %>
+  </span>
+<% end %>
+
+<% content_for :page_controls do %>
+  <%= form_with url: fd_joiners_path, method: :get, class: "qsearch",
+        data: { controller: "live-search", action: "input->live-search#go",
+                turbo_action: "advance" } do %>
+    <% @query.to_params.except("q", "page").each do |key, value| %>
+      <%= hidden_field_tag key, value, id: nil %>
+    <% end %>
+    <%= search_field_tag :q, @query.term, placeholder: "Find a joiner",
+          class: "qsearch-in", autocomplete: "off", aria: { label: "Find a joiner" } %>
+  <% end %>
+<% end %>
+
+<% content_for :page_tabs do %>
+  <% @views.select { |view| Fd::JoinerQuery::TABS.include?(view.key) }.each do |view| %>
+    <%= link_to fd_joiners_path(@query.view_params(view.key)), class: "view",
+          aria: { current: ("true" if view.current) } do %>
+      <%= view.label %>
+      <span class="view-count"><%= number_with_delimiter(view.count) %></span>
+    <% end %>
+  <% end %>
+<% end %>
+
+<turbo-frame id="joiners" target="_top" data-turbo-action="advance">
+  <div class="stack" <%= "data-controller=pick-rows".html_safe if may_deactivate %>>
+    <% if @rows.any? %>
+      <div class="card card-flush">
+        <div class="scroll">
+          <table class="data-table cols-fixed">
+            <colgroup>
+              <% if may_deactivate %><col style="width: 40px"><% end %>
+              <col style="width: <%= @query.identity? ? "24%" : "48%" %>">
+              <col style="width: 18%">
+              <% if @query.identity? %>
+                <col style="width: 22%">
+                <col style="width: 14%">
+                <col style="width: 12%">
+              <% end %>
+              <col style="width: 16%">
+              <col style="width: 44px">
+            </colgroup>
+            <thead>
+              <tr>
+                <% if may_deactivate %>
+                  <th class="col-pick">
+                    <%= check_box_tag "pick_all", "1", false, id: nil, class: "tickbox",
+                          aria: { label: "Pick everybody on this page" },
+                          data: { pick_rows_target: "all",
+                                  action: "change->pick-rows#toggleAll" } %>
+                  </th>
+                <% end %>
+                <%= joiner_sort_header("Member", "name") %>
+                <%= joiner_sort_header("Joined", "joined") %>
+                <% if @query.identity? %>
+                  <%= joiner_sort_header("Email", "domain") %>
+                  <th>IP</th>
+                  <th>Country</th>
+                <% end %>
+                <th class="col-num">Standing</th>
+                <th class="col-num"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @rows.each do |row| %>
+                <tr data-picked-row>
+                  <% if may_deactivate %>
+                    <td class="col-pick">
+                      <%= check_box_tag "pick", row.user_id, false, id: nil, class: "tickbox",
+                            aria: { label: "Pick #{row.handle || row.user_id}" },
+                            disabled: row.deactivated?,
+                            data: { pick_rows_target: "box",
+                                    action: "change->pick-rows#toggle" } %>
+                    </td>
+                  <% end %>
+                  <td>
+                    <span class="row-name">
+                      <%= face(row.user_id) %>
+                      <span class="two-line">
+                        <%= link_to fd_member_path(row.user_id) do %>
+                          <b><%= person_name(row.user_id) %></b>
+                        <% end %>
+                        <span>
+                          <%= row.handle.present? ? "@#{row.handle}" : row.user_id %>
+                        </span>
+                      </span>
+                    </span>
+                  </td>
+                  <td>
+                    <span class="two-line">
+                      <b><%= time_ago_in_words(row.joined_at) %> ago</b>
+                      <span><%= joiner_when(row) %></span>
+                    </span>
+                  </td>
+                  <% if @query.identity? %>
+                    <td class="<%= "is-none" if row.email.blank? %>">
+                      <% if row.email.present? %>
+                        <span class="two-line">
+                          <b>
+                            <%= link_to row.domain,
+                                  fd_joiners_path(@query.facet_params("domain" => row.domain)),
+                                  class: "lnk" %>
+                            <% if row.lone_domain? %>
+                              <span class="state state-warn">only them</span>
+                            <% end %>
+                          </b>
+                          <%= plain_email(row.email) %>
+                        </span>
+                      <% else %>
+                        not on file
+                      <% end %>
+                    </td>
+                    <td class="<%= "is-none" if row.ip.blank? %>">
+                      <%= joiner_ip(row) %>
+                    </td>
+                    <td class="<%= "is-none" if row.seen_country.blank? %>">
+                      <%= joiner_country(row) %>
+                    </td>
+                  <% end %>
+                  <td class="col-num"><%= joiner_standing(row) %></td>
+                  <td class="col-num">
+                    <button type="button" class="btn btn-sm"
+                            data-modal-open="joiner-card"
+                            data-joiner-card="<%= fd_joiner_path(row.user_id) %>"
+                            aria-haspopup="dialog"
+                            aria-label="Everything we hold on <%= row.handle || row.user_id %>">
+                      <%= case_action_icon("people") %>
+                    </button>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <%= render "shared/pager", page: @query.page, pages: @query.pages, frame: "joiners",
+            said: @query.summary,
+            back_href: (fd_joiners_path(@query.page_params(@query.page - 1)) if @query.page > 1),
+            next_href: (fd_joiners_path(@query.page_params(@query.page + 1)) if @query.page < @query.pages) %>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title"><%= @query.empty_note %></p>
+      </div>
+    <% end %>
+
+    <% if may_deactivate %>
+      <%= render "picked", query: @query %>
+    <% end %>
+  </div>
+</turbo-frame>
+
+<div data-controller="joiner-card">
+  <%= render layout: "fd/modal", locals: { id: "joiner-card", title: "Joiner",
+        size: "wide", open: false } do %>
+    <div class="modal-body">
+      <%= turbo_frame_tag "joiner-card", target: "_top",
+            data: { joiner_card_target: "frame" } do %>
+        <p class="card-note">Reading what we hold…</p>
+      <% end %>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,19 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <h2 class="card-title">Read-only</h2>
+    <div class="card-tools">
+      <% if guard %>
+        <%= opens_modal "channel.guard", "Allow", opens: "allow-bot",
+              css: "btn btn-sm" %>
+      <% end %>
+      <%= channel_guard_switch(channel_id, guard, kind: Fd::ChannelGuard::READONLY) %>
+    </div>
+  </div>
+
+  <% if guard %>
+    <%= render "allows", channel_id: channel_id, guard: guard, allows: allows,
+          empty: "Nobody may post" %>
+  <% else %>
+    <div class="empty"><p class="empty-title">Off</p></div>
+  <% end %>
+</div>

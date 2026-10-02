@@ -47,12 +47,16 @@ module Fd
       return nil if live.nil?
 
       label = ACTION_WORDS.fetch(live.type_key) { live.type_key.tr("_", " ") }
-      "The #{label} from #{live.performed_at.strftime('%-d %b')} still stands."
+      on = live.performed_at.strftime("%-d %b")
+      return "The #{label} from #{on} runs until #{live.expires_at.strftime('%-d %b')}." if
+        live.expires?
+
+      "The #{label} from #{on} is a prior on their record."
     end
 
     ACTION_WORDS = {
       "warning" => "warning", "shush" => "shush", "temp_ban" => "temporary ban",
-      "indefinite_ban" => "indefinite ban", "perma_ban" => "permanent ban",
+      "indef_ban" => "indefinite ban", "perma_ban" => "permanent ban",
       "channel_ban" => "channel ban", "locked_thread" => "thread lock", "dm" => "DM"
     }.freeze
 

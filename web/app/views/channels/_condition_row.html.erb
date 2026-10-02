@@ -1,0 +1,41 @@
+<% field = condition&.field || Channels::Filter::FIELDS.first %>
+<% op = condition&.op || field.ops.keys.first %>
+<% values = condition&.values || [] %>
+<% base = "c[#{index}]" %>
+
+<div class="cond" data-conditions-target="row">
+  <select name="<%= base %>[f]" class="select cond-field"
+          data-action="conditions#swap" aria-label="field">
+    <% Channels::Filter::FIELDS.each do |f| %>
+      <option value="<%= f.key %>" data-kind="<%= f.kind %>"
+              <%= "selected" if f.key == field.key %>><%= f.label %></option>
+    <% end %>
+  </select>
+
+  <select name="<%= base %>[op]" class="select cond-op" aria-label="operator"
+          data-action="conditions#swap">
+    <% Channels::Filter::FIELDS.each do |f| %>
+      <optgroup label="<%= f.label %>" data-for="<%= f.key %>"
+                <%= "hidden" unless f.key == field.key %>>
+        <% f.ops.each do |key, (words, arity)| %>
+          <option value="<%= key %>" data-arity="<%= arity %>"
+                  <%= "selected" if f.key == field.key && key == op %>><%= words %></option>
+        <% end %>
+      </optgroup>
+    <% end %>
+  </select>
+
+  <span class="cond-vals">
+    <% 2.times do |slot| %>
+      <input type="<%= field.kind == :text ? "text" : "number" %>"
+             name="<%= base %>[v][]" value="<%= values[slot] %>"
+             class="input cond-val" step="any" autocomplete="off"
+             aria-label="value <%= slot + 1 %>"
+             <%= "hidden" if slot >= field.ops.fetch(op).last %>>
+    <% end %>
+    <% if field.unit.present? %><span class="cond-unit"><%= field.unit %></span><% end %>
+  </span>
+
+  <button type="button" class="iconbtn" data-action="conditions#drop"
+          aria-label="Remove this condition">&#10005;</button>
+</div>

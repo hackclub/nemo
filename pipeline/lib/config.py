@@ -2,6 +2,8 @@ import argparse
 import os
 import sys
 
+from lib import shards
+
 DATABASE = [
     "POSTGRES_HOST",
     "POSTGRES_PORT",
@@ -13,6 +15,26 @@ DATABASE = [
 PIPELINE_ROLE = ["PIPELINE_DB_USER", "PIPELINE_DB_PASSWORD"]
 DBT_ROLE = ["DBT_DB_USER", "DBT_DB_PASSWORD"]
 RAILS_ROLE = ["RAILS_DB_USER", "RAILS_DB_PASSWORD"]
+
+BOT_OPTIONAL = PIPELINE_ROLE + [
+    "ANONYMOUS_ICON_URL",
+    "APP_HOST",
+    "EXEMPT_BOT_IDS",
+    "FD_DEACTIVATE",
+    "FD_SESSION_RESET",
+    "FD_SESSION_RESET_MAX",
+    "FD_SESSION_RESET_STRIKES",
+    "INTAKE_FILE_MAX_BYTES",
+    "LOG_LEVEL",
+    "INTERNAL_PROXY_URL",
+    "NEMO_JOIN_PACE_SECONDS",
+    "NEMO_JOIN_PER_SWEEP",
+    "NEMO_JOIN_SECONDS",
+    "NEMO_SWEEP_SECONDS",
+    "PROXY_TOKEN_NEMO",
+    "SHROUD_SWEEP_SECONDS",
+    "TZ",
+]
 
 ROLES = {
     "serve": {
@@ -32,6 +54,7 @@ ROLES = {
             "FD_ENCRYPTION_DETERMINISTIC_KEY",
             "FD_ENCRYPTION_SALT",
             "INTERNAL_PROXY_URL",
+            "PROMETHEUS_BASE_URL",
             "SLACKSCAN_URL",
             "SLACK_CHANNEL_MANAGER_ROLE_ID",
             "PROXY_TOKEN_WEB",
@@ -48,14 +71,55 @@ ROLES = {
     "sync": {
         "required": DATABASE + ["INTERNAL_PROXY_URL", "INTERNAL_PROXY_TOKEN"],
         "optional": PIPELINE_ROLE + DBT_ROLE + [
-            "SLACK_BOT_TOKEN",
+            "PROMETHEUS_BASE_URL",
+            "NEMO_BOT_TOKEN",
             "SLACK_TEAM_ID",
             "NIGHTLY_AT",
             "NIGHTLY_RUN_AT_START",
             "SYNC_POLL_SECONDS",
+            "TRANSFORM_EVERY_SECONDS",
+            "NEMO_BUILD_WAIT_SECONDS",
             "PROXY_ALLOW_PLAINTEXT",
             "MEMBER_HISTORY_LIMIT",
             "FIRST_REPLY_LIMIT",
+            "TZ",
+        ],
+    },
+    "history": {
+        "required": DATABASE + ["INTERNAL_PROXY_URL", "INTERNAL_PROXY_TOKEN", "SLACK_TEAM_ID"],
+        "optional": PIPELINE_ROLE + [
+            "MEMBER_HISTORY_POLL_SECONDS",
+            "PROXY_ALLOW_PLAINTEXT",
+            "TZ",
+        ],
+    },
+    "archive": {
+        "required": DATABASE + ["INTERNAL_PROXY_URL", "INTERNAL_PROXY_TOKEN"],
+        "optional": PIPELINE_ROLE + [
+            "ARCHIVE_POLL_SECONDS",
+            "ARCHIVE_EVENT_POLL_SECONDS",
+            "ARCHIVE_HISTORY_BATCH",
+            "ARCHIVE_REPLIES_BUDGET",
+            "CHANNEL_TAIL_LOOKBACK_DAYS",
+            "PROXY_ALLOW_PLAINTEXT",
+            "SLACK_TEAM_ID",
+            "TZ",
+        ],
+    },
+    "audit": {
+        "required": DATABASE + ["INTERNAL_PROXY_URL", "INTERNAL_PROXY_TOKEN"],
+        "optional": PIPELINE_ROLE + [
+            "AUDIT_ACCESS_SECONDS",
+            "AUDIT_BACKFILL",
+            "AUDIT_BACKFILL_SECONDS",
+            "AUDIT_COHORT_SECONDS",
+            "AUDIT_HORIZON_DAYS",
+            "AUDIT_AGENT_SECONDS",
+            "AUDIT_LINK_SECONDS",
+            "AUDIT_NEMO_ID",
+            "AUDIT_TAIL_ACTIONS",
+            "AUDIT_TAIL_SECONDS",
+            "PROXY_ALLOW_PLAINTEXT",
             "TZ",
         ],
     },
@@ -81,13 +145,27 @@ ROLES = {
             "NEMO_BOT_TOKEN",
             "NEMO_APP_TOKEN",
             "FIREHOUSE_CHANNEL_ID",
-        ],
-        "optional": PIPELINE_ROLE + [
-            "APP_HOST",
-            "INTAKE_FILE_MAX_BYTES",
             "SLACK_TEAM_ID",
-            "TZ",
         ],
+        "optional": BOT_OPTIONAL,
+    },
+    "bot.shroud": {
+        "required": DATABASE + ["SHROUD_BOT_TOKEN", "SHROUD_APP_TOKEN"],
+        "optional": BOT_OPTIONAL + [
+            "NEMO_BOT_TOKEN",
+            "NEMO_APP_TOKEN",
+            "FIREHOUSE_CHANNEL_ID",
+            "SLACK_TEAM_ID",
+        ],
+    },
+    "bot.nemo": {
+        "required": DATABASE + [
+            "NEMO_BOT_TOKEN",
+            "NEMO_APP_TOKEN",
+            "FIREHOUSE_CHANNEL_ID",
+            "SLACK_TEAM_ID",
+        ],
+        "optional": BOT_OPTIONAL + ["SHROUD_BOT_TOKEN", "SHROUD_APP_TOKEN"],
     },
     "provision": {
         "required": DATABASE,
@@ -108,8 +186,20 @@ DEFAULTS = {
     "RAILS_LOG_LEVEL": "info",
     "NEMO_STREAM": "1",
     "TZ": "UTC",
+    "FD_DEACTIVATE": "log",
+    "FD_SESSION_RESET": "log",
+    "FD_SESSION_RESET_MAX": "5",
+    "FD_SESSION_RESET_STRIKES": "2",
     "NIGHTLY_AT": "03:00",
     "NIGHTLY_RUN_AT_START": "false",
+    "ARCHIVE_POLL_SECONDS": "300",
+    "AUDIT_TAIL_SECONDS": "60",
+    "AUDIT_BACKFILL_SECONDS": "120",
+    "AUDIT_ACCESS_SECONDS": "3600",
+    "AUDIT_COHORT_SECONDS": "900",
+    "AUDIT_HORIZON_DAYS": "90",
+    "AUDIT_AGENT_SECONDS": "3600",
+    "AUDIT_LINK_SECONDS": "1800",
     "SYNC_POLL_SECONDS": "60",
     "SEED_SCALE": "dev",
     "SEED_RNG": "1",
@@ -119,20 +209,34 @@ DEFAULTS = {
 HEADINGS = {
     "serve": "the dashboard. the only role with a public URL",
     "sync": "the nightly sync worker. long running",
+    "history": "member_history's search backfill, drained continuously off the nightly budget. long running",
     "transform": "dbt build. one shot",
     "seed": "synthetic data, then transform, then verify. one shot",
     "provision": "schemas, roles, grants and both migration sets. one shot",
     "bot": "shroud takes the reports, nemo works them. long running",
+    "bot.shroud": "shroud alone, taking reports and carrying the outbox. long running",
+    "bot.nemo": "nemo alone, working the cases in the firehouse. long running",
+    "archive": "channel history and thread replies. long running",
+    "audit": "the slack audit log, tailed and backfilled a day at a time. long running",
 }
 
+BOT_NEVER = [
+    "SLACK_TOKEN",
+    "SLACK_ADMIN_TOKEN",
+    "INTERNAL_PROXY_TOKEN",
+]
+
 NEVER = {
-    "serve": ["SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "SLACK_TOKEN", "INTERNAL_PROXY_TOKEN"],
-    "bot": [
-        "SLACK_BOT_TOKEN",
-        "SLACK_APP_TOKEN",
-        "SLACK_TOKEN",
+    "serve": [
+        "NEMO_BOT_TOKEN", "NEMO_APP_TOKEN", "SLACK_TOKEN", "SLACK_ADMIN_TOKEN",
         "INTERNAL_PROXY_TOKEN",
     ],
+    "bot": BOT_NEVER,
+    "bot.shroud": BOT_NEVER,
+    "bot.nemo": BOT_NEVER,
+    "sync": ["SLACK_ADMIN_TOKEN"],
+    "history": ["SLACK_ADMIN_TOKEN"],
+    "archive": ["SLACK_ADMIN_TOKEN"],
 }
 
 
@@ -158,6 +262,9 @@ def forbidden(role, env=None):
     return [name for name in NEVER.get(role, []) if env.get(name)]
 
 
+POOLS = {"archive": shards.PREFIX}
+
+
 def report(role, env=None):
     gone = missing(role, env)
     extra = unexpected(role, env)
@@ -171,6 +278,8 @@ def report(role, env=None):
         print("  unexpected for this role, the repo does not read these here:")
         for name in extra:
             print(f"    {name}")
+    if role in POOLS:
+        print(f"  pool      {shards.describe(env)}")
     if banned:
         print("  MUST NOT be set for this role:")
         for name in banned:

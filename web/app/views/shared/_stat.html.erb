@@ -1,0 +1,19 @@
+<div class="metric">
+  <span class="metric-k"><%= k %></span>
+  <span class="metric-v"><%= v %></span>
+  <% if local_assigns[:spark] && spark[:data]&.compact&.many? %>
+    <span class="metric-spark"
+          data-controller="chart"
+          data-chart-kind-value="line"
+          data-chart-spark-value="true"
+          data-chart-days-value="true"
+          data-chart-height-value="34"
+          data-chart-data-value="<%= {
+            labels: spark[:labels],
+            datasets: [{ label: spark[:name], data: spark[:data] }]
+          }.to_json %>"></span>
+  <% end %>
+  <% if local_assigns[:say].present? %>
+    <span class="metric-say"><%= say %></span>
+  <% end %>
+</div>

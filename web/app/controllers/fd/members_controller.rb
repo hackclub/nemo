@@ -1,39 +1,102 @@
 module Fd
   class MembersController < BaseController
+    permit "case.read"
     def index
-      @query = MemberQuery.new(params)
+      @layout = params[:layout] == "table" ? "table" : "split"
+      @query = MemberQuery.new(params, actor: current_account)
       @rows = @query.rows
       @names = Names.for(@rows.map(&:user_id))
       @context = MemberContext.for(@rows.map(&:user_id))
-      @grants = AccessGrant.where(user_id: @rows.map(&:user_id), revoked_at: nil)
+      @grants = Authz::Grant.live.roles.where(user_id: @rows.map(&:user_id))
         .index_by(&:user_id)
       @views = @query.views
+      assign_pane_from_index
     end
 
     def show
       @user_id = params[:id].to_s.upcase
       @record = MemberRecord.new(@user_id)
-      @names = Names.for(@record.people_named)
+      return show_drawer if turbo_frame_request_id == "person-drawer"
+
+      load_member_pane
+      @names = Names.for(@record.people_named + @pane_rows.map(&:user_id))
       @member = @names.member(@user_id)
       @only = MemberTimeline::TABS.key?(params[:show]) ? params[:show] : "all"
       @entries = MemberTimeline.for(@record, names: @names)
       @counts = @entries.group_by(&:kind).transform_values(&:size)
       @counts["all"] = @entries.size
       @history = @only == "all" ? @entries : @entries.select { |entry| entry.kind == @only }
-      @identity = MemberIdentity.look_up(@user_id, actor: current_staff)
+      @identity = MemberIdentity.look_up(@user_id, actor: current_account)
       @context = MemberContext.for([@user_id])[@user_id]
       @rooms = SlackScan.channels(@user_id)
       @standing = MemberStanding.new(@record)
-      render "drawer" if turbo_frame_request_id == "person-drawer"
+      @guards = @standing.in_force
+      @channels = ChannelNames.for(@guards.map(&:channel_id))
+      @member_grant = @pane_grants[@user_id] || Authz::Grant.live.roles.find_by(user_id: @user_id)
+    end
+
+    def pane
+      query = MemberQuery.new(params, actor: current_account)
+      rows = query.rows
+      ids = rows.map(&:user_id)
+      @names = Names.for(ids)
+      more = if query.pages > query.page
+        fd_member_pane_path(query.page_params(query.page + 1).merge({ open: params[:open].presence }.compact))
+      end
+
+      render partial: "fd/members/pane_rows", layout: false, locals: {
+        rows: rows, context: MemberContext.for(ids),
+        grants: Authz::Grant.live.roles.where(user_id: ids).index_by(&:user_id),
+        open_id: params[:open].to_s.presence, more: more, carry: query.to_params
+      }
     end
 
     def search
-      found = Member.search(params[:q]).map do |member|
-        { id: member.user_id, name: member.name, handle: member.handle,
-          initial: member.initial, deleted: member.is_deleted }
+      term = params[:q].to_s.strip
+      results = Member.search(term, actor: current_account, limit: Member::LIMIT,
+        live_only: true, case_id: params[:case_id].presence&.to_i,
+        bots: params[:bots].present?).to_a
+
+      faces = Names.for(results.map(&:user_id))
+      found = results.map do |row|
+        member = faces.member(row.user_id)
+        { id: row.user_id, name: faces[row.user_id], handle: member&.handle.presence,
+          initial: faces.initial(row.user_id), deleted: member&.is_deleted || false }
       end
 
       render json: { members: found }
+    end
+
+    private
+
+    def show_drawer
+      @names = Names.for(@record.people_named + [@user_id])
+      @member = @names.member(@user_id)
+      @context = MemberContext.for([@user_id])[@user_id]
+      @rooms = SlackScan.channels(@user_id)
+      @standing = MemberStanding.new(@record)
+      @guards = @standing.in_force
+      @channels = ChannelNames.for(@guards.map(&:channel_id))
+      render "drawer"
+    end
+
+    def assign_pane_from_index
+      @pane_query = @query
+      @pane_rows = @rows
+      @pane_context = @context
+      @pane_grants = @grants
+      @pane_views = @views
+    end
+
+    def load_member_pane
+      carried = params.to_unsafe_h.slice(*MemberQuery::KEYS, "q")
+      @pane_query = MemberQuery.new(carried, actor: current_account)
+      @pane_params = @pane_query.to_params
+      @pane_rows = @pane_query.rows
+      user_ids = @pane_rows.map(&:user_id)
+      @pane_context = MemberContext.for(user_ids)
+      @pane_grants = Authz::Grant.live.roles.where(user_id: user_ids).index_by(&:user_id)
+      @pane_views = @pane_query.views
     end
   end
 end

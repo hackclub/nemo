@@ -1,0 +1,21 @@
+<nav id="section-nav" class="cpane fdnav" aria-label="Fire Engine sections">
+  <%= render "layouts/sidebar_head", letter: "F", title: "Fire Engine", said: "Conduct" %>
+
+  <div class="cnav">
+    <button type="button" class="cnav-find" data-action="palette#open"
+            aria-label="Search cases, members, notes">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+      <span>Search</span>
+      <span class="kbd"><span class="mod-meta">⌘K</span><span class="mod-ctrl">Ctrl K</span></span>
+    </button>
+
+    <%= render "layouts/fd_nav_group", stops: fd_nav_stops %>
+
+    <% tools = fd_nav_tools %>
+    <% if tools.any? %>
+      <%= render "layouts/fd_nav_group", stops: tools, css: "cnav-group-end" %>
+    <% end %>
+  </div>
+
+  <%= render "layouts/sidebar_foot" %>
+</nav>

@@ -2,10 +2,15 @@ require "test_helper"
 
 class FdMemberSearchTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     lone = Fd::Member.live.where.not(display_name: "")
       .group(:display_name).having("count(*) = 1").order(:display_name).pluck(:display_name)
     @member = Fd::Member.live.find_by(display_name: lone.first)
+
+    lone_name = Fd::MemberIdentity.where(user_id: Fd::Member.live.select(:user_id))
+      .group(:real_name).having("count(*) = 1").pluck(:real_name)
+    @named = Fd::Member.live.joins(:identity)
+      .where("fd.member_identity.real_name = ?", lone_name.first).first
   end
 
   def look(term)
@@ -79,5 +84,83 @@ class FdMemberSearchTest < ActionDispatch::IntegrationTest
     assert_not_includes look(hidden.name).map { |row| row["id"] }, hidden.user_id
     assert_equal hidden.user_id, look(hidden.user_id).first["id"],
       "a direct id lookup still finds them, since a case may name one"
+  end
+
+  test "a real name finds them, since it is not just a handle search" do
+    sign_in_as(@me)
+    name = @named.identity.real_name.downcase
+
+    assert_includes look(name).map { |row| row["id"] }, @named.user_id
+  end
+
+  test "an email finds the person it belongs to" do
+    sign_in_as(@me)
+
+    assert_includes look(@named.identity.email).map { |row| row["id"] }, @named.user_id
+  end
+
+  test "searching by real name or email is not an identity read" do
+    sign_in_as(@me)
+    before = AccessLog.count
+
+    look(@named.identity.real_name.downcase)
+    look(@named.identity.email)
+
+    assert_equal before, AccessLog.count,
+      "the roster shows no identity field, so finding somebody through one discloses nothing"
+  end
+
+  test "somebody whose role does not carry identity.read cannot find a person by real name" do
+    them = hold_role!("UFF2", "firefighter")
+    move_capability!("firefighter", "identity.read", false, by: "UME")
+    name = @named.identity.real_name.downcase
+
+    sign_in_as(them)
+
+    assert_not_includes look(name).map { |row| row["id"] }, @named.user_id
+  end
+
+  test "somebody without identity.read still finds people by handle or display name" do
+    them = hold_role!("UFF3", "firefighter")
+    move_capability!("firefighter", "identity.read", false, by: "UME")
+    before = AccessLog.count
+
+    sign_in_as(them)
+
+    assert_includes look(@member.name).map { |row| row["id"] }, @member.user_id
+    assert_equal before, AccessLog.count
+  end
+  test "the picker never runs the roster aggregates" do
+    sql = Fd::Member.search("dra", actor: @me, limit: 8, live_only: true).to_sql
+
+    assert_not_includes sql, "case_participants", "a type-ahead must not aggregate conduct"
+    assert_not_includes sql, "fd.actions"
+    assert_not_includes sql, "notes"
+  end
+
+  test "asking from a case looks up that one case, and still no aggregates" do
+    sql = Fd::Member.search("dra", actor: @me, limit: 8, live_only: true, case_id: 7).to_sql
+
+    assert_includes sql, "party.case_id = 7"
+    assert_not_includes sql, "count(", "who is on this case is a lookup, not a tally"
+    assert_not_includes sql, "fd.actions"
+  end
+
+  test "the case a search is asked from only reorders it" do
+    sign_in_as(@me)
+    kase = make_case(subject: @member.user_id)
+
+    get fd_member_search_path(q: @member.name, case_id: kase.id)
+    on_case = JSON.parse(response.body).fetch("members").map { |row| row["id"] }
+
+    assert_equal look(@member.name).map { |row| row["id"] }.sort, on_case.sort
+    assert_equal @member.user_id, on_case.first
+  end
+
+  test "a term too short for a trigram is refused rather than scanned" do
+    sign_in_as(@me)
+
+    assert_empty look("dr"), "two characters cannot use the trigram index"
+    assert_equal 3, Fd::Member::MIN_TERM
   end
 end

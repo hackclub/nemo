@@ -1,0 +1,170 @@
+module Slack
+  class RichText
+    include ActionView::Helpers::TagHelper
+    include ActionView::Helpers::OutputSafetyHelper
+
+    BROADCASTS = { "here" => "@here", "channel" => "@channel", "everyone" => "@everyone" }.freeze
+    LISTS = { "bullet" => "ul", "ordered" => "ol" }.freeze
+    DEEPEST = 5
+    OPENABLE = ["http://", "https://"].freeze
+
+    def self.for(said, names: {}, channels: {}, emoji: {})
+      new(names, channels, emoji).said(said || {})
+    end
+
+    def self.emoji_names(said)
+      found = []
+      walk = lambda do |node|
+        case node
+        when Hash
+          found << node["name"] if node["type"] == "emoji" && node["name"].present?
+          node["elements"]&.each { |one| walk.call(one) }
+        when Array then node.each { |one| walk.call(one) }
+        end
+      end
+      walk.call((said || {})["blocks"])
+      found.uniq
+    end
+
+    def initialize(names = {}, channels = {}, emoji = {})
+      @names = names
+      @channels = channels
+      @emoji = emoji
+    end
+
+    def said(message)
+      shown = blocks(message["blocks"])
+      return shown if shown.present?
+
+      lines(message["text"].to_s)
+    end
+
+    def blocks(given)
+      safe_join(Array(given).filter_map { |one| block(one) })
+    end
+
+    private
+
+    attr_reader :names, :channels, :emoji
+
+    def block(one)
+      case one["type"]
+      when "rich_text" then safe_join(Array(one["elements"]).filter_map { |part| rich(part) })
+      when "section" then paragraph(lines(one.dig("text", "text").to_s))
+      when "divider" then tag.hr(class: "rt-rule")
+      end
+    end
+
+    def rich(part)
+      case part["type"]
+      when "rich_text_section" then paragraph(inline(part["elements"]))
+      when "rich_text_list" then listed(part)
+      when "rich_text_quote" then tag.blockquote(inline(part["elements"]), class: "rt-quote")
+      when "rich_text_preformatted" then tag.pre(tag.code(flat(part["elements"])), class: "rt-pre")
+      end
+    end
+
+    def paragraph(said)
+      said.present? ? tag.p(said, class: "rt-said") : nil
+    end
+
+    def listed(part)
+      kind = LISTS.fetch(part["style"], "ul")
+      rows = safe_join(Array(part["elements"]).map { |row| tag.li(inline(row["elements"])) })
+      depth = part["indent"].to_i.clamp(0, DEEPEST)
+      start = part["offset"].to_i + 1
+
+      tag.send(kind, rows, class: "rt-list rt-indent-#{depth}",
+        **(kind == "ol" && start > 1 ? { start: start } : {}))
+    end
+
+    def inline(elements)
+      safe_join(Array(elements).map { |one| styled(one, piece(one)) })
+    end
+
+    def flat(elements)
+      safe_join(Array(elements).map { |one| plain(one) })
+    end
+
+    def piece(one)
+      case one["type"]
+      when "text" then lines(one["text"].to_s)
+      when "link" then linked(one)
+      when "emoji" then emoji_for(one["name"])
+      when "user" then chip(named(one["user_id"]), one["user_id"])
+      when "usergroup" then chip("@#{one['usergroup_id']}", one["usergroup_id"])
+      when "channel" then chip(roomed(one["channel_id"]), one["channel_id"])
+      when "broadcast" then chip(BROADCASTS.fetch(one["range"], "@#{one['range']}"), one["range"])
+      when "message_mention" then linked(one.merge("text" => one["text"].presence || "a message"))
+      when "date" then dated(one)
+      when "color" then tag.span(one["value"].to_s, class: "rt-colour")
+      else lines(one["text"].to_s)
+      end
+    end
+
+    def plain(one)
+      said = one["type"] == "text" ? one["text"].to_s : one.values_at("text", "name", "url").compact.first.to_s
+      ERB::Util.html_escape(said)
+    end
+
+    def styled(one, said)
+      style = one["style"]
+      return said unless style.is_a?(Hash) && said.present?
+
+      said = tag.code(said, class: "rt-code") if style["code"]
+      said = tag.strong(said) if style["bold"]
+      said = tag.em(said) if style["italic"]
+      said = tag.s(said) if style["strike"]
+      said
+    end
+
+    def linked(one)
+      url = one["url"].to_s
+      label = one["text"].presence || url
+      return ERB::Util.html_escape(label) unless OPENABLE.any? { |scheme| url.start_with?(scheme) }
+
+      link_to_url(label, url)
+    end
+
+    def link_to_url(label, url)
+      tag.a(ERB::Util.html_escape(label), href: url, class: "rt-link",
+        target: "_blank", rel: "noopener")
+    end
+
+    def dated(one)
+      at = Time.zone.at(one["timestamp"].to_i)
+      tag.time(at.strftime("%-d %b %Y"), datetime: at.iso8601, class: "rt-date")
+    rescue StandardError
+      ERB::Util.html_escape(one["timestamp"].to_s)
+    end
+
+    def emoji_for(name)
+      said = ":#{name}:"
+      url = emoji[name].presence
+      return tag.span(said, class: "rt-emoji", title: name) if url.nil?
+
+      tag.img(src: url, class: "rt-emoji-img", alt: said, title: said, loading: "lazy",
+        width: 20, height: 20)
+    end
+
+    def chip(said, title)
+      tag.span(said, class: "rt-mention", title: title)
+    end
+
+    def named(user_id)
+      shown = names[user_id].presence || user_id
+      shown.to_s.start_with?("@") ? shown : "@#{shown}"
+    end
+
+    def roomed(channel_id)
+      shown = channels[channel_id].presence || channel_id
+      shown.to_s.start_with?("#") ? shown : "##{shown}"
+    end
+
+    def lines(said)
+      return "".html_safe if said.empty?
+
+      safe_join(said.split("\n", -1).map { |line| ERB::Util.html_escape(line) }, tag.br)
+    end
+  end
+end

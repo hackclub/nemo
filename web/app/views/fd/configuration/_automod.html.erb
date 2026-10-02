@@ -1,0 +1,99 @@
+<div class="stack">
+  <div class="card card-flush">
+    <div class="card-head">
+      <h2 class="card-title">Automod</h2>
+      <div class="card-tools">
+        <%= opens_modal "app.configure", "Add word", opens: "watch-word" %>
+      </div>
+    </div>
+
+    <% if words.any? %>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>word</th>
+              <th>mode</th>
+              <th>category</th>
+              <th>added by</th>
+              <th class="col-num"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% words.each do |word| %>
+              <tr>
+                <td><span class="masked mono"><%= word.word %></span></td>
+                <td><%= automod_mode_chip(word) %></td>
+                <td><%= word.category_key.present? ? category_label(word.category_key) : "n/a" %></td>
+                <td>
+                  <%= member_link(word.added_by) %>
+                  <span class="sub2"><%= on_day(word.added_at) %></span>
+                </td>
+                <td class="col-num">
+                  <%= button_to "Remove", fd_automod_word_path(word),
+                        method: :delete, class: "btn btn-sm" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">No words</p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="card card-flush">
+    <div class="card-head">
+      <h2 class="card-title">Matches</h2>
+    </div>
+
+    <% if matches.any? %>
+      <div class="list">
+        <% matches.each do |match| %>
+          <div class="lrow">
+            <span class="grow">
+              <b class="masked"><%= match.word %></b>
+              <span class="sub"><%= match.body.presence || "no text held" %></span>
+              <span class="sub">
+                <%= member_link(match.user_id) %> ·
+                <%= channel_link(match.channel_id, permalink: match.permalink) %> ·
+                <%= match.at.strftime("%-d %b %H:%M") %>
+              </span>
+            </span>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">No matches</p>
+      </div>
+    <% end %>
+  </div>
+
+  <% if retired.any? %>
+    <div class="card card-flush">
+      <div class="card-head">
+        <h2 class="card-title">Removed</h2>
+      </div>
+      <div class="scroll">
+        <table class="data-table">
+          <thead><tr><th>word</th><th>removed by</th></tr></thead>
+          <tbody>
+            <% retired.each do |word| %>
+              <tr>
+                <td><span class="masked mono"><%= word.word %></span></td>
+                <td>
+                  <%= member_link(word.retired_by) %>
+                  <span class="sub2"><%= on_day(word.retired_at) %></span>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+</div>

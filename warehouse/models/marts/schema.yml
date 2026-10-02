@@ -29,14 +29,14 @@ models:
         data_tests: [not_null, unique]
       - name: activity_band
         data_type: text
+      - name: band_top
+        data_type: integer
       - name: members
         data_type: bigint
       - name: workspace_members
         data_type: bigint
-      - name: window_start
-        data_type: date
-      - name: window_end
-        data_type: date
+      - name: full_history_members
+        data_type: bigint
       - name: metric_version
         data_type: text
   - name: mart_channel_activity
@@ -79,10 +79,14 @@ models:
         data_type: date
       - name: newcomer_volume
         data_type: bigint
+      - name: newcomers_checked
+        data_type: bigint
       - name: fast_reply_count
         data_type: bigint
       - name: fast_reply_share
         data_type: numeric
+      - name: reply_coverage_complete
+        data_type: boolean
       - name: retained_90_count
         data_type: bigint
       - name: retained_90_share
@@ -91,6 +95,41 @@ models:
         data_type: boolean
       - name: metric_version
         data_type: text
+  - name: mart_channel_bands
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: cohort_month
+        data_type: date
+        data_tests: [not_null]
+      - name: measure
+        data_type: text
+        data_tests: [not_null]
+      - name: measure_label
+        data_type: text
+      - name: measure_order
+        data_type: integer
+      - name: measure_total
+        data_type: bigint
+      - name: band_order
+        data_type: integer
+        data_tests: [not_null]
+      - name: activity_band
+        data_type: text
+      - name: band_top
+        data_type: integer
+      - name: channels
+        data_type: bigint
+      - name: window_start
+        data_type: date
+      - name: window_end
+        data_type: date
+      - name: metric_version
+        data_type: text
+    data_tests:
+      - unique:
+          column_name: "cohort_month || '-' || measure || '-' || band_order"
   - name: mart_channel_range
     config:
       contract:
@@ -127,6 +166,10 @@ models:
         data_type: integer
       - name: huddles_initiated
         data_type: integer
+      - name: date_created
+        data_type: timestamptz
+      - name: last_message_at
+        data_type: timestamptz
       - name: metric_version
         data_type: text
   - name: mart_fast_reply_vs_retention
@@ -134,8 +177,8 @@ models:
       contract:
         enforced: true
     columns:
-      - name: fast_reply
-        data_type: boolean
+      - name: reply_class
+        data_type: text
         data_tests: [not_null, unique]
       - name: newcomers
         data_type: bigint
@@ -171,8 +214,18 @@ models:
         data_type: bigint
       - name: claimed_members
         data_type: bigint
+      - name: undated_claims
+        data_type: bigint
+      - name: claim_dates_complete
+        data_type: boolean
       - name: claim_rate
         data_type: numeric
+      - name: claimed_within_30d
+        data_type: bigint
+      - name: claim_rate_30d
+        data_type: numeric
+      - name: claim_rate_30d_final_on
+        data_type: date
       - name: last_created_on
         data_type: date
       - name: metric_version
@@ -188,6 +241,8 @@ models:
       - name: members
         data_type: bigint
         data_tests: [not_null]
+      - name: known
+        data_type: bigint
       - name: searched
         data_type: bigint
       - name: ever_posted
@@ -203,15 +258,22 @@ models:
       contract:
         enforced: true
     columns:
+      - name: cohort_key
+        data_type: text
+        data_tests: [not_null]
+      - name: cohort_order
+        data_type: integer
       - name: channel_id
         data_type: text
-        data_tests: [not_null, unique]
+        data_tests: [not_null]
       - name: name
         data_type: text
       - name: newcomers_posting
         data_type: bigint
         data_tests: [not_null]
       - name: newcomers_returning
+        data_type: bigint
+      - name: newcomers_returning_anywhere
         data_type: bigint
       - name: newcomer_messages
         data_type: bigint
@@ -232,6 +294,8 @@ models:
         data_type: numeric
       - name: returning_share
         data_type: numeric
+      - name: returning_anywhere_share
+        data_type: numeric
       - name: newcomer_lift
         data_type: numeric
       - name: cohort_size
@@ -245,34 +309,14 @@ models:
         data_type: date
       - name: cohort_end
         data_type: date
+      - name: mature
+        data_type: boolean
+      - name: return_window_days
+        data_type: integer
       - name: window_start
         data_type: date
       - name: window_end
         data_type: date
-      - name: metric_version
-        data_type: text
-  - name: mart_onboarding_funnel
-    config:
-      contract:
-        enforced: true
-    columns:
-      - name: cohort_month
-        data_type: date
-        data_tests: [not_null, unique]
-      - name: invited
-        data_type: bigint
-      - name: joined
-        data_type: bigint
-      - name: first_post
-        data_type: bigint
-      - name: retained_day_30
-        data_type: bigint
-      - name: retained_day_90
-        data_type: bigint
-      - name: day_30_mature
-        data_type: boolean
-      - name: day_90_mature
-        data_type: boolean
       - name: metric_version
         data_type: text
   - name: mart_onboarding_recurrence_funnel
@@ -290,17 +334,117 @@ models:
         data_type: bigint
       - name: signed_in
         data_type: bigint
-      - name: sent_message
+      - name: searched
+        data_type: bigint
+      - name: knowable
+        data_type: bigint
+      - name: posted_once
+        data_type: bigint
+      - name: posted_twice
+        data_type: bigint
+      - name: posted_three_times
+        data_type: bigint
+      - name: searched_share
+        data_type: numeric
+      - name: metric_version
+        data_type: text
+  - name: mart_participation_concentration
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: poster_pct
+        data_type: integer
+        data_tests: [not_null, unique]
+      - name: message_pct
+        data_type: numeric
+      - name: posters
+        data_type: bigint
+      - name: messages
+        data_type: bigint
+      - name: gini
+        data_type: numeric
+      - name: median_messages
+        data_type: integer
+      - name: p90_messages
+        data_type: integer
+      - name: workspace_members
+        data_type: bigint
+      - name: searched_members
+        data_type: bigint
+      - name: metric_version
+        data_type: text
+  - name: mart_channel_momentum
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: channel_id
+        data_type: text
+        data_tests: [not_null, unique]
+      - name: name
+        data_type: text
+      - name: messages
+        data_type: bigint
+      - name: prior_messages
+        data_type: bigint
+      - name: prior_below_floor
+        data_type: boolean
+      - name: pct_change
+        data_type: numeric
+      - name: share_of_total
+        data_type: numeric
+      - name: rank
+        data_type: integer
+        data_tests: [not_null]
+      - name: total_messages
+        data_type: bigint
+      - name: active_channels
+        data_type: integer
+      - name: prior_floor
+        data_type: integer
+      - name: window_start
+        data_type: date
+      - name: window_end
+        data_type: date
+      - name: prior_start
+        data_type: date
+      - name: prior_end
+        data_type: date
+      - name: metric_version
+        data_type: text
+  - name: mart_cohort_retention
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: cohort_month
+        data_type: date
+        data_tests: [not_null, unique]
+      - name: cohort_size
+        data_type: bigint
+        data_tests: [not_null]
+      - name: first_posters
+        data_type: bigint
+      - name: measured_day_30
+        data_type: bigint
+      - name: retained_day_30
+        data_type: bigint
+      - name: retained_day_30_rate
+        data_type: numeric
+      - name: measured_day_90
+        data_type: bigint
+      - name: retained_day_90
+        data_type: bigint
+      - name: retained_day_90_rate
+        data_type: numeric
+      - name: measured_visits
         data_type: bigint
       - name: returned_next_day
         data_type: bigint
       - name: third_visit_in_7_days
         data_type: bigint
-      - name: fourth_visit_in_14_days
-        data_type: bigint
-      - name: posts_knowable
-        data_type: boolean
-      - name: visits_knowable
+      - name: day_90_mature
         data_type: boolean
       - name: metric_version
         data_type: text
@@ -436,9 +580,13 @@ models:
       - name: user_id
         data_type: text
         data_tests: [not_null]
-      - name: display_name
-        data_type: text
       - name: messages_posted
+        data_type: integer
+        data_tests: [not_null]
+      - name: days_posted
+        data_type: integer
+        data_tests: [not_null]
+      - name: days_measured
         data_type: integer
         data_tests: [not_null]
       - name: rank
@@ -446,3 +594,340 @@ models:
         data_tests: [not_null]
       - name: metric_version
         data_type: text
+
+  - name: mart_workspace_hour
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: ds
+        data_type: date
+        data_tests: [not_null]
+      - name: hour_of_day
+        data_type: integer
+        data_tests: [not_null]
+      - name: messages
+        data_type: bigint
+        data_tests: [not_null]
+    data_tests:
+      - unique:
+          column_name: "ds::text || '-' || hour_of_day"
+
+  - name: mart_activity_clock
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: day_of_week
+        data_type: integer
+        data_tests: [not_null]
+      - name: hour_of_day
+        data_type: integer
+        data_tests: [not_null]
+      - name: messages
+        data_type: bigint
+        data_tests: [not_null]
+      - name: window_start
+        data_type: date
+      - name: window_end
+        data_type: date
+      - name: metric_version
+        data_type: text
+    data_tests:
+      - unique:
+          column_name: "day_of_week || '-' || hour_of_day"
+
+  - name: mart_channel_clock
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: channel_id
+        data_type: text
+        data_tests: [not_null]
+      - name: day_of_week
+        data_type: integer
+        data_tests: [not_null]
+      - name: hour_of_day
+        data_type: integer
+        data_tests: [not_null]
+      - name: messages
+        data_type: bigint
+        data_tests: [not_null]
+      - name: window_start
+        data_type: date
+      - name: window_end
+        data_type: date
+      - name: metric_version
+        data_type: text
+    data_tests:
+      - unique:
+          column_name: "channel_id || '-' || day_of_week || '-' || hour_of_day"
+  - name: mart_cohort_survival
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: cohort_month
+        data_type: date
+        data_tests: [not_null]
+      - name: day_offset
+        data_type: integer
+        data_tests: [not_null]
+      - name: members
+        data_type: bigint
+        data_tests: [not_null]
+      - name: still_posting
+        data_type: bigint
+      - name: still_posting_share
+        data_type: numeric
+      - name: observable
+        data_type: boolean
+      - name: observed_through
+        data_type: date
+      - name: horizon_days
+        data_type: integer
+      - name: metric_version
+        data_type: text
+  - name: mart_channel_day
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: channel_id
+        data_type: text
+        data_tests: [not_null]
+      - name: ds
+        data_type: date
+        data_tests: [not_null]
+      - name: messages
+        data_type: integer
+        data_tests: [not_null]
+      - name: member_messages
+        data_type: integer
+      - name: bot_messages
+        data_type: integer
+      - name: authors
+        data_type: integer
+      - name: member_authors
+        data_type: integer
+      - name: thread_replies
+        data_type: integer
+      - name: thread_roots
+        data_type: integer
+      - name: replies_on_roots
+        data_type: integer
+      - name: questions
+        data_type: integer
+      - name: questions_with_replies
+        data_type: integer
+      - name: with_link
+        data_type: integer
+      - name: with_file
+        data_type: integer
+      - name: emoji_only
+        data_type: integer
+      - name: substantive
+        data_type: integer
+      - name: with_mention
+        data_type: integer
+      - name: reactions
+        data_type: bigint
+      - name: unreacted
+        data_type: integer
+      - name: text_length_total
+        data_type: bigint
+      - name: metric_version
+        data_type: text
+    data_tests:
+      - unique:
+          column_name: "channel_id || '-' || ds"
+  - name: mart_channel_person
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: channel_id
+        data_type: text
+        data_tests: [not_null]
+      - name: month
+        data_type: date
+        data_tests: [not_null]
+      - name: user_id
+        data_type: text
+        data_tests: [not_null]
+      - name: messages
+        data_type: integer
+        data_tests: [not_null]
+      - name: replies
+        data_type: integer
+      - name: questions
+        data_type: integer
+      - name: days_posted
+        data_type: integer
+      - name: first_at
+        data_type: timestamptz
+      - name: last_at
+        data_type: timestamptz
+      - name: tenure_days
+        data_type: integer
+      - name: tenure_band
+        data_type: text
+        data_tests:
+          - accepted_values:
+              values: [under_90d, under_1y, under_3y, over_3y, unknown]
+      - name: channel_rank
+        data_type: integer
+        data_tests: [not_null]
+      - name: share_of_channel
+        data_type: numeric
+      - name: channel_messages
+        data_type: bigint
+      - name: channel_posters
+        data_type: integer
+      - name: month_end
+        data_type: date
+      - name: metric_version
+        data_type: text
+    data_tests:
+      - unique:
+          column_name: "channel_id || '-' || month || '-' || user_id"
+  - name: mart_channel_concentration
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: channel_id
+        data_type: text
+        data_tests: [not_null]
+      - name: month
+        data_type: date
+        data_tests: [not_null]
+      - name: poster_pct
+        data_type: integer
+        data_tests: [not_null]
+      - name: message_pct
+        data_type: numeric
+      - name: posters
+        data_type: integer
+      - name: messages
+        data_type: bigint
+      - name: gini
+        data_type: numeric
+      - name: top_10_messages
+        data_type: bigint
+      - name: top_10_pct
+        data_type: numeric
+      - name: people_for_half
+        data_type: integer
+      - name: metric_version
+        data_type: text
+    data_tests:
+      - unique:
+          column_name: "channel_id || '-' || month || '-' || poster_pct"
+  - name: mart_channel_newcomers
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: channel_id
+        data_type: text
+        data_tests: [not_null, unique]
+      - name: channel_name
+        data_type: text
+      - name: newcomers
+        data_type: integer
+        data_tests: [not_null]
+      - name: answered_by_member
+        data_type: integer
+      - name: answered_fast
+        data_type: integer
+      - name: answered_by_bot
+        data_type: integer
+      - name: unanswered
+        data_type: integer
+      - name: measured_day_30
+        data_type: integer
+      - name: returned_day_30
+        data_type: integer
+      - name: answered_share
+        data_type: numeric
+      - name: fast_share
+        data_type: numeric
+      - name: returned_share
+        data_type: numeric
+      - name: median_latency_seconds
+        data_type: integer
+      - name: fast_reply_seconds
+        data_type: integer
+      - name: window_start
+        data_type: date
+      - name: window_end
+        data_type: date
+      - name: metric_version
+        data_type: text
+  - name: mart_channel_reply_latency
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: channel_id
+        data_type: text
+        data_tests: [not_null]
+      - name: bucket_order
+        data_type: integer
+        data_tests: [not_null]
+      - name: bucket
+        data_type: text
+      - name: answered
+        data_type: boolean
+      - name: newcomers
+        data_type: integer
+      - name: checked
+        data_type: integer
+      - name: share_pct
+        data_type: numeric
+      - name: window_start
+        data_type: date
+      - name: window_end
+        data_type: date
+      - name: metric_version
+        data_type: text
+    data_tests:
+      - unique:
+          column_name: "channel_id || '-' || bucket_order"
+  - name: mart_channel_neighbours
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: channel_id
+        data_type: text
+        data_tests: [not_null]
+      - name: neighbour_id
+        data_type: text
+        data_tests: [not_null]
+      - name: neighbour_name
+        data_type: text
+      - name: neighbour_archived
+        data_type: boolean
+      - name: neighbour_rank
+        data_type: integer
+        data_tests: [not_null]
+      - name: shared_posters
+        data_type: integer
+      - name: posters
+        data_type: integer
+      - name: neighbour_posters
+        data_type: integer
+      - name: jaccard
+        data_type: numeric
+      - name: window_start
+        data_type: date
+      - name: window_end
+        data_type: date
+      - name: metric_version
+        data_type: text
+    data_tests:
+      - unique:
+          column_name: "channel_id || '-' || neighbour_id"

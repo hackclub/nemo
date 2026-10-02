@@ -1,8 +1,9 @@
 import argparse
 import gzip
 import json
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 
 from dotenv import load_dotenv
 
@@ -19,13 +20,20 @@ from lib.db import (
     mark_day_unavailable,
     record_day,
     run_step,
+    set_worker,
 )
+from lib import calendar as slack_calendar
+from lib import coverage, planners, sources
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyClient
-from lib.walk import check_walk
+from lib.walk import NO_FLOOR, SHORT, UNVERIFIED, check_walk
 
 ANALYTICS_SOURCE = "admin_analytics_api"
+BY_HAND = "analytics_by_hand"
+MEMBER_DAYS_KEY = sources.key_for_run(f"{ANALYTICS_SOURCE}:member")
+CHANNEL_DAYS_KEY = sources.key_for_run(f"{ANALYTICS_SOURCE}:public_channel")
 MEMBER_PAGE_SIZE = 500
+MEMBER_SHORT_AT = NO_FLOOR
 
 MEMBER_ACTIVITY_SQL = """
 INSERT INTO raw.member_activity_snapshot
@@ -180,12 +188,16 @@ def channel_dim_row(rec):
 
 MEMBER_DAY_LIMIT = 6
 CHANNEL_DAY_LIMIT = 30
-DAY_WORKERS = 3
+DAY_WORKERS = int(os.environ.get("ANALYTICS_DAY_WORKERS", "") or 2)
 CALENDAR_DAYS_MAX = 500
 
 
 PERMANENT_DAY_ERRORS = ("file_not_found", "data_not_available")
 PENDING_DAY_ERRORS = ("file_not_yet_available",)
+
+
+def day_has_no_export(exc):
+    return str(exc).startswith(PERMANENT_DAY_ERRORS + PENDING_DAY_ERRORS)
 
 DAY_TABLES = {
     "member": "raw.member_activity_snapshot",
@@ -203,23 +215,22 @@ def settled_days(conn, source):
 
 
 def calendar(client, kind):
-    avail = client.call("admin.analytics.getAvailableDateRange", {"type": kind})
-    return date.fromisoformat(avail["start_date"]), date.fromisoformat(avail["end_date"])
+    return slack_calendar.available(client, kind)
 
 
 def pending_days(loaded, floor, edge, limit):
-    missing, day = [], floor
-    while day <= edge:
-        if day not in loaded:
-            missing.append(day)
-        day += timedelta(days=1)
-    if not missing or limit < 1:
-        return []
-    return missing[::-1][:limit]
+    return planners.day(floor, edge, loaded, limit)
 
 
 def by_key(rows):
     return sorted(rows, key=lambda row: row[0])
+
+
+LANE_LOCK_TIMEOUT_MS = 120_000
+
+
+def patient(cur):
+    cur.execute(f"SET LOCAL lock_timeout = '{int(LANE_LOCK_TIMEOUT_MS)}ms'")
 
 
 def refresh_statistics(kind):
@@ -240,9 +251,41 @@ def refresh_statistics(kind):
         print(f"{table}: statistics refreshed")
 
 
+def note_unavailable(source, day, reason):
+    try:
+        with connect() as note_conn:
+            mark_day_unavailable(note_conn, source, day, reason)
+            note_conn.commit()
+    except Exception as exc:
+        print(f"{source}: {day} could not be marked unavailable, {type(exc).__name__}: {exc}")
+        return False
+    return True
+
+
+HELD = "held"
+
+
+def lane_outcome(source, asked, landed, failed, pending, unavailable, held=()):
+    lines = []
+    if held:
+        lines.append(f"{source}: {len(held)} day(s) held by another worker, left for the next run")
+    if unavailable:
+        lines.append(f"{source}: {len(unavailable)} day(s) have no export and will not be retried")
+    if pending:
+        lines.append(f"{source}: {len(pending)} day(s) not exported yet, left for the next run")
+    if failed:
+        lines.append(f"{source}: {len(failed)} of {asked} day(s) failed, left for the next run: "
+                     + "; ".join(failed))
+    if not failed:
+        return lines, None
+    what = "no day landed" if not landed else f"{landed} of {asked} landed"
+    return lines, f"{source}: {what}, {len(failed)} failed: " + "; ".join(failed)
+
+
 def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
     floor, edge = calendar(ProxyClient(), kind)
     days = pending_days(settled_days(conn, source), floor, edge, limit)
+    conn.commit()
     if not days:
         print(f"{source}: every day in {floor}..{edge} is loaded")
         return
@@ -254,40 +297,55 @@ def backfill_days(conn, source, kind, pull_fn, limit, workers=DAY_WORKERS):
 
     def work(day):
         with connect() as worker_conn, run_step(*step), cancel_scope(cancel):
-            pull_fn(worker_conn, day)
+            return pull_fn(worker_conn, day)
 
-    failed, unavailable, pending = [], [], []
+    failed, unavailable, pending, held = [], [], [], []
     with ThreadPoolExecutor(max_workers=lanes) as pool:
         submitted = {pool.submit(work, day): day for day in days}
         for future in as_completed(submitted):
             day = submitted[future]
             try:
-                future.result()
+                outcome = future.result()
             except SyncCancelled:
                 raise
             except Exception as exc:
                 if str(exc).startswith(PERMANENT_DAY_ERRORS):
-                    mark_day_unavailable(conn, source, day, str(exc))
-                    conn.commit()
-                    unavailable.append(str(day))
+                    if note_unavailable(source, day, str(exc)):
+                        unavailable.append(str(day))
+                    else:
+                        failed.append(f"{day}: {type(exc).__name__}: {exc}")
                 elif str(exc).startswith(PENDING_DAY_ERRORS):
                     pending.append(str(day))
                 else:
                     failed.append(f"{day}: {type(exc).__name__}: {exc}")
-    if len(unavailable) + len(pending) + len(failed) < len(days):
+            else:
+                if outcome == HELD:
+                    held.append(str(day))
+    landed = len(days) - len(unavailable) - len(pending) - len(failed) - len(held)
+    if landed:
         refresh_statistics(kind)
-    if unavailable:
-        print(f"{source}: {len(unavailable)} day(s) have no export and will not be retried")
-    if pending:
-        print(f"{source}: {len(pending)} day(s) not exported yet, left for the next run")
-    if failed:
-        raise RuntimeError(f"{source}: {len(failed)} of {len(days)} days failed: " + "; ".join(failed))
+    lines, error = lane_outcome(source, len(days), landed, failed, pending, unavailable, held)
+    for line in lines:
+        print(line)
+    if error:
+        raise RuntimeError(error)
+
+
+def aside_state(exc):
+    return "unavailable" if str(exc).startswith(PERMANENT_DAY_ERRORS) else "short"
 
 
 def pull_member_day(conn, pull_date):
-    with ingest_run(conn, f"{ANALYTICS_SOURCE}:member") as counts:
+    iso = pull_date.isoformat()
+    with ingest_run(conn, f"{ANALYTICS_SOURCE}:member", benign=day_has_no_export,
+                    stream_key=iso, slice_key=iso) as counts:
+        fence = coverage.claim_slice(conn, MEMBER_DAYS_KEY, iso, pull_date, pull_date, counts.run_id)
+        if fence is None:
+            counts.status = "skipped"
+            print(f"member analytics {pull_date}: another worker holds this day, skipping")
+            return HELD
         activity_rows, dim_rows = [], []
-        client = ProxyClient()
+        client = ProxyClient.for_source(MEMBER_DAYS_KEY)
         params = {
             "start_date": pull_date.isoformat(),
             "end_date": pull_date.isoformat(),
@@ -297,56 +355,83 @@ def pull_member_day(conn, pull_date):
 
         def flush():
             with conn.cursor() as cur:
+                patient(cur)
                 cur.executemany(MEMBER_ACTIVITY_SQL, activity_rows)
                 cur.executemany(MEMBER_DIM_MERGE_SQL, by_key(dim_rows))
+            conn.commit()
             activity_rows.clear()
             dim_rows.clear()
             counts.total_expected = client.last_num_found
             counts.progress()
 
-        for i, rec in enumerate(client.paginate(
-            "admin.analytics.getMemberAnalytics", params, "member_activity",
-            page_size=MEMBER_PAGE_SIZE, cursor_param="cursor_mark", max_retries=8,
-        )):
-            counts.rows_in += 1
-            try:
-                activity_rows.append(member_activity_row(rec, pull_date))
-                dim_rows.append(member_dim_row(rec, pull_date))
-            except KeyError as exc:
-                counts.rows_rejected += 1
-                dead_letter(conn, ANALYTICS_SOURCE, rec, str(exc))
-            if (i + 1) % 2000 == 0:
-                flush()
-        flush()
+        try:
+            for i, rec in enumerate(client.paginate(
+                "admin.analytics.getMemberAnalytics", params, "member_activity",
+                page_size=MEMBER_PAGE_SIZE, cursor_param="cursor_mark", max_retries=8,
+            )):
+                counts.rows_in += 1
+                try:
+                    activity_rows.append(member_activity_row(rec, pull_date))
+                    dim_rows.append(member_dim_row(rec, pull_date))
+                except KeyError as exc:
+                    counts.rows_rejected += 1
+                    dead_letter(conn, ANALYTICS_SOURCE, rec, str(exc))
+                    conn.commit()
+                if (i + 1) % 2000 == 0:
+                    flush()
+            flush()
+        except Exception as exc:
+            coverage.settle_aside(MEMBER_DAYS_KEY, iso, fence, aside_state(exc),
+                                  client.last_num_found, counts.rows_in, note=f"{type(exc).__name__}: {exc}")
+            raise
 
-        check_walk(f"member analytics {pull_date}", counts.rows_in,
-            client.last_num_found, MEMBER_PAGE_SIZE)
+        verdict = check_walk(f"member analytics {pull_date}", counts.rows_in,
+            client.last_num_found, MEMBER_PAGE_SIZE, short_at=MEMBER_SHORT_AT)
 
-        record_day(conn, MEMBER_DAY, pull_date, counts.rows_in)
+        if verdict == SHORT:
+            counts.status = "partial"
+        else:
+            record_day(conn, MEMBER_DAY, pull_date, counts.rows_in)
+        coverage.settle(conn, MEMBER_DAYS_KEY, iso, fence, verdict or UNVERIFIED,
+                        client.last_num_found, counts.rows_in)
     print(f"member analytics {pull_date}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
 
 def pull_channel_day(conn, pull_date):
-    with ingest_run(conn, f"{ANALYTICS_SOURCE}:public_channel") as counts:
+    iso = pull_date.isoformat()
+    with ingest_run(conn, f"{ANALYTICS_SOURCE}:public_channel", benign=day_has_no_export,
+                    stream_key=iso, slice_key=iso) as counts:
+        fence = coverage.claim_slice(conn, CHANNEL_DAYS_KEY, iso, pull_date, pull_date, counts.run_id)
+        if fence is None:
+            counts.status = "skipped"
+            print(f"channel analytics {pull_date}: another worker holds this day, skipping")
+            return HELD
         activity_rows, dim_rows = [], []
-        raw = ProxyClient().fetch_file(
-            "admin.analytics.getFile",
-            {"type": "public_channel", "date": pull_date.isoformat()},
-        )
-        for line in fetch_ndjson(raw):
-            counts.rows_in += 1
-            try:
-                rec = json.loads(line)
-                activity_rows.append(channel_activity_row(rec, pull_date))
-                dim_rows.append(channel_dim_row(rec))
-            except (json.JSONDecodeError, KeyError) as exc:
-                counts.rows_rejected += 1
-                dead_letter(conn, ANALYTICS_SOURCE, {"raw_line": line}, str(exc))
-        with conn.cursor() as cur:
-            cur.executemany(CHANNEL_ACTIVITY_SQL, activity_rows)
-            cur.executemany(CHANNEL_DIM_MERGE_SQL, by_key(dim_rows))
+        try:
+            raw = ProxyClient.for_source(CHANNEL_DAYS_KEY).fetch_file(
+                "admin.analytics.getFile",
+                {"type": "public_channel", "date": iso},
+            )
+            for line in fetch_ndjson(raw):
+                counts.rows_in += 1
+                try:
+                    rec = json.loads(line)
+                    activity_rows.append(channel_activity_row(rec, pull_date))
+                    dim_rows.append(channel_dim_row(rec))
+                except (json.JSONDecodeError, KeyError) as exc:
+                    counts.rows_rejected += 1
+                    dead_letter(conn, ANALYTICS_SOURCE, {"raw_line": line}, str(exc))
+            with conn.cursor() as cur:
+                patient(cur)
+                cur.executemany(CHANNEL_ACTIVITY_SQL, activity_rows)
+                cur.executemany(CHANNEL_DIM_MERGE_SQL, by_key(dim_rows))
+        except Exception as exc:
+            coverage.settle_aside(CHANNEL_DAYS_KEY, iso, fence, aside_state(exc), None, counts.rows_in,
+                                  note=f"{type(exc).__name__}: {exc}")
+            raise
 
         record_day(conn, CHANNEL_DAY, pull_date, counts.rows_in)
+        coverage.settle(conn, CHANNEL_DAYS_KEY, iso, fence, "complete", counts.rows_in, counts.rows_in)
     print(f"channel analytics {pull_date}: {counts.rows_in} rows, {counts.rows_rejected} rejected")
 
 
@@ -370,6 +455,7 @@ def main():
 
     args = parser.parse_args()
     load_dotenv(ENV_FILE)
+    set_worker(BY_HAND)
 
     source, pull_fn = DAY_WALKS[args.kind]
     with connect() as conn:

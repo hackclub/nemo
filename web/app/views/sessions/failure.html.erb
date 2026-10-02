@@ -1,15 +1,13 @@
-<h1>Access denied</h1>
+<h1>Sign-in did not finish</h1>
 
-<% if @message.in?(["not_allowlisted", "no_access"]) %>
-  <p>You are not allowlisted for the dashboard. Ask a community manager for a role.</p>
+<% if @message == "no_slack_id" %>
+  <p>Hack Club Auth signed you in, but that account has no Slack ID linked. Link your Hack Club Slack account at auth.hackclub.com, then sign in again.</p>
 <% else %>
-  <p>Something went wrong signing in.</p>
-  <p><span class="chip chip-off"><%= @message %></span></p>
+  <p>Try again. If it keeps failing, quote this code when you ask for help: <span class="mono"><%= @message %></span></p>
 <% end %>
 
-<% if current_staff %>
-  <%= link_to "Go to your API settings", you_api_path, class: "btn btn-primary w-full" %>
-  <%= button_to "Sign out", logout_path, method: :delete, class: "btn w-full mt-2" %>
+<% if current_account %>
+  <%= button_to "Sign out", logout_path, method: :delete, class: "btn w-full" %>
 <% else %>
-  <%= link_to "Back to sign in", login_path, class: "btn w-full" %>
+  <%= link_to "Sign in again", login_path, class: "btn w-full" %>
 <% end %>

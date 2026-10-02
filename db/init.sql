@@ -3,6 +3,8 @@ CREATE SCHEMA IF NOT EXISTS analytics;
 CREATE SCHEMA IF NOT EXISTS app;
 CREATE SCHEMA IF NOT EXISTS fd;
 CREATE SCHEMA IF NOT EXISTS api;
+CREATE SCHEMA IF NOT EXISTS ingest;
+CREATE SCHEMA IF NOT EXISTS archive;
 
 DO $$
 DECLARE
@@ -31,11 +33,30 @@ BEGIN
         CREATE ROLE rails_app LOGIN;
     END IF;
 
+    EXECUTE 'ALTER ROLE pipeline_writer SET idle_in_transaction_session_timeout = ''10min''';
+
     EXECUTE 'GRANT USAGE ON SCHEMA raw TO pipeline_writer';
     EXECUTE 'GRANT INSERT, SELECT, UPDATE, DELETE, MAINTAIN ON ALL TABLES IN SCHEMA raw '
         'TO pipeline_writer';
     EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA raw '
         'GRANT INSERT, SELECT, UPDATE, DELETE, MAINTAIN ON TABLES TO pipeline_writer';
+    EXECUTE 'GRANT USAGE ON SCHEMA ingest TO pipeline_writer';
+    EXECUTE 'GRANT INSERT, SELECT, UPDATE, DELETE, MAINTAIN ON ALL TABLES IN SCHEMA ingest '
+        'TO pipeline_writer';
+    EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA ingest '
+        'GRANT INSERT, SELECT, UPDATE, DELETE, MAINTAIN ON TABLES TO pipeline_writer';
+    EXECUTE 'GRANT USAGE ON ALL SEQUENCES IN SCHEMA ingest TO pipeline_writer';
+    EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA ingest '
+        'GRANT USAGE ON SEQUENCES TO pipeline_writer';
+
+    EXECUTE 'GRANT USAGE ON SCHEMA ingest TO dbt_owner';
+    EXECUTE 'GRANT SELECT ON ALL TABLES IN SCHEMA ingest TO dbt_owner';
+    EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA ingest GRANT SELECT ON TABLES TO dbt_owner';
+
+    EXECUTE 'GRANT USAGE ON SCHEMA ingest TO rails_app';
+    EXECUTE 'GRANT SELECT ON ALL TABLES IN SCHEMA ingest TO rails_app';
+    EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA ingest GRANT SELECT ON TABLES TO rails_app';
+
     EXECUTE 'GRANT USAGE ON SCHEMA app TO pipeline_writer';
     EXECUTE 'GRANT USAGE ON SCHEMA fd TO pipeline_writer';
     EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA fd '
@@ -46,13 +67,24 @@ BEGIN
     EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA fd '
         'GRANT USAGE ON SEQUENCES TO pipeline_writer';
 
+    EXECUTE 'GRANT USAGE ON SCHEMA archive TO pipeline_writer';
+    EXECUTE 'GRANT INSERT, SELECT, UPDATE, DELETE, MAINTAIN ON ALL TABLES IN SCHEMA archive '
+        'TO pipeline_writer';
+    EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA archive '
+        'GRANT INSERT, SELECT, UPDATE, DELETE, MAINTAIN ON TABLES TO pipeline_writer';
+
     EXECUTE 'GRANT USAGE ON SCHEMA raw TO dbt_owner';
     EXECUTE 'GRANT SELECT ON ALL TABLES IN SCHEMA raw TO dbt_owner';
     EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA raw GRANT SELECT ON TABLES TO dbt_owner';
     EXECUTE 'GRANT ALL ON SCHEMA analytics TO dbt_owner';
-    EXECUTE 'GRANT USAGE ON SCHEMA fd TO dbt_owner';
-    EXECUTE 'GRANT SELECT ON ALL TABLES IN SCHEMA fd TO dbt_owner';
-    EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA fd GRANT SELECT ON TABLES TO dbt_owner';
+
+    EXECUTE 'REVOKE ALL ON ALL TABLES IN SCHEMA fd FROM dbt_owner';
+    EXECUTE 'REVOKE ALL ON SCHEMA fd FROM dbt_owner';
+    EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA fd REVOKE ALL ON TABLES FROM dbt_owner';
+    EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE pipeline_writer IN SCHEMA fd '
+        'REVOKE ALL ON TABLES FROM dbt_owner';
+    EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE rails_app IN SCHEMA fd '
+        'REVOKE ALL ON TABLES FROM dbt_owner';
 
     EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA app REVOKE SELECT ON TABLES FROM dbt_owner';
     EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE rails_app IN SCHEMA app '
@@ -62,6 +94,7 @@ BEGIN
 
     EXECUTE 'GRANT ALL ON SCHEMA app TO rails_app';
     EXECUTE 'GRANT USAGE ON SCHEMA analytics TO rails_app';
+    EXECUTE 'GRANT USAGE ON SCHEMA analytics TO pipeline_writer';
     EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE rails_app IN SCHEMA app '
         'GRANT SELECT, UPDATE ON TABLES TO pipeline_writer';
 
@@ -95,6 +128,14 @@ BEGIN
         EXECUTE 'GRANT SELECT, UPDATE ON app.sync_request TO pipeline_writer';
     END IF;
 
+    EXECUTE 'REVOKE ALL ON SCHEMA archive FROM rails_app';
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'archive' AND tablename = 'message') THEN
+        EXECUTE 'GRANT USAGE ON SCHEMA archive TO dbt_owner';
+        EXECUTE 'GRANT SELECT ON archive.message TO dbt_owner';
+        EXECUTE 'REVOKE ALL ON archive.envelope FROM dbt_owner';
+        EXECUTE 'REVOKE ALL ON ALL TABLES IN SCHEMA archive FROM rails_app';
+    END IF;
+
     IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'fd' AND tablename = 'audit') THEN
         EXECUTE 'REVOKE UPDATE, DELETE ON fd.audit FROM pipeline_writer';
         EXECUTE 'REVOKE UPDATE, DELETE ON fd.audit FROM rails_app';
@@ -118,3 +159,5 @@ EXCEPTION
             'on this server', current_user, SQLERRM, current_user;
 END
 $$;
+
+ALTER ROLE CURRENT_USER SET idle_in_transaction_session_timeout = '10min';

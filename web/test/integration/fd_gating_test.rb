@@ -2,113 +2,46 @@ require "test_helper"
 
 class FdGatingTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UFF1", community_manager: false)
-    Fd::AccessGrant.give!("UFF1", role: "firefighter", by: "UBOSS")
+    @me = Account.create!(user_id: "UFF1")
+    hold_role!("UFF1", "firefighter")
     sign_in_as(@me)
   end
 
   def become(role)
-    Fd::AccessGrant.give!("UFF1", role: role, by: "UBOSS")
+    hold_role!("UFF1", role)
   end
 
-  def dead(text)
-    css_select(".btn-off, .text-btn.btn-off").find do |node|
-      (node.at_css("span:not(.btn-why)") || node).text.strip == text
-    end
-  end
-
-  def proposal
-    Fd::Decision.create!(title: "Dogpiling", statement: "one warning each",
-      proposed_by: "UFF1", proposed_at: 2.days.ago)
-  end
-
-  test "a case somebody else is holding offers nothing but the reason why" do
+  test "a case somebody else is holding still offers everything to act on" do
     kase = make_case(assign: "UOTHER")
 
     get fd_case_path(kase)
 
     assert_response :success
-    why = "case #{kase.id} is assigned to @UOTHER, not to you"
-    assert_equal why, dead("Log an action")["title"]
-    assert_equal why, dead("Log an action").at_css(".btn-why").text.strip,
-      "a tooltip is no use on a keyboard, so the reason is in the row"
 
     get fd_case_path(kase, tab: "people")
-    assert_select ".panel-head .btn-off", text: /Add somebody/
-  end
-
-  test "every item in the overflow menu can be reached by keyboard" do
-    kase = make_case
-
-    get fd_case_path(kase)
-
-    assert_select ".ractions details.menu[data-controller=menu]", 1
-    live = css_select(".ractions details.menu .menu-pop label")
-    assert live.any?, "the menu opens modals through labels"
-    live.each do |label|
-      assert_equal "0", label["tabindex"],
-        "a bare label is not in the tab order, so #{label.text.strip} was unreachable"
-    end
   end
 
   test "resolving is open to anyone, whoever is holding the case" do
     kase = make_case(assign: "UOTHER")
 
     get fd_case_path(kase)
-    assert_nil dead("Resolve"), "somebody else holding it does not make it theirs to close"
 
     post fd_case_resolution_path(kase), params: { outcome: "close", close_reason: "no_action" }
     assert kase.reload.resolved?
-  end
-
-  test "the same buttons are live on a case of their own" do
-    kase = make_case(assign: "UFF1")
-
-    get fd_case_path(kase)
-
-    assert_nil dead("Resolve")
-    assert_nil dead("Log an action")
-    assert_select "label[for=?]", "resolve-case", text: "Resolve"
   end
 
   test "a resolved case anybody can reopen, whoever it was assigned to" do
     kase = make_case(assign: "UOTHER", resolved_at: 1.day.ago, resolution: "no_action")
 
     get fd_case_path(kase)
-    assert_nil dead("Reopen"), "reopening is not scoped to the assignment"
 
     delete fd_case_resolution_path(kase)
     assert_not kase.reload.resolved?
   end
 
-  test "an unclaimed case is free, so nothing is greyed" do
-    get fd_case_path(make_case)
-
-    assert_nil dead("Claim")
-    assert_nil dead("Log an action")
-  end
-
-  test "a firefighter is told settling is not theirs, and a lead is not" do
-    decision = proposal
-
-    get fd_decision_path(decision)
-    assert_equal "settle a proposal, putting it in force is lead only",
-      dead("Settle it")["title"]
-
-    become("lead")
-    get fd_decision_path(decision)
-    assert_nil dead("Settle it")
-  end
-
-  test "the greyed control is not a form that could still be posted" do
-    get fd_decision_path(proposal)
-
-    assert_select "form[action=?]", fd_decision_settlement_path(Fd::Decision.last), count: 0
-  end
-
   test "filing a report on the way out needs the permission to log an action" do
     kase = make_case(assign: "UFF1")
-    Fd::RolePermission.set!("firefighter", "case.act", false, by: "UME")
+    move_capability!("firefighter", "case.act", false, by: "UME")
 
     post fd_case_resolution_path(kase), params: { outcome: "report", type_key: "temp_ban",
       target_user_id: "USUB" }
@@ -122,23 +55,14 @@ class FdGatingTest < ActionDispatch::IntegrationTest
 
   test "the palette says why a command is closed rather than hiding it" do
     kase = make_case(assign: "UOTHER")
+    move_capability!("firefighter", "case.act", false, by: "UME")
 
     get fd_search_path(format: :json, q: ">", on_case: kase.id)
 
     rows = response.parsed_body["groups"].first["rows"]
     act = rows.find { |row| row["title"] == "Log an action" }
-    assert_equal "case #{kase.id} is assigned to @UOTHER, not to you", act["why"]
+    assert_equal "log an action against somebody is Firefighter only", act["why"]
     assert_nil rows.find { |row| row["title"] == "Resolve this case" }["why"]
     assert_nil rows.find { |row| row["title"] == "Go to the cases" }["why"]
-  end
-
-  test "the wording a greyed control shows is the wording the refusal uses" do
-    kase = make_case(assign: "UOTHER")
-    get fd_case_path(kase)
-    shown = dead("Log an action")["title"]
-
-    post fd_case_actions_path(kase), params: { kind: "warning", about: "USUB" }
-
-    assert_equal shown, flash[:alert]
   end
 end

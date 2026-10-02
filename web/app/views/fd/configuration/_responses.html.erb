@@ -1,0 +1,64 @@
+<div class="stack">
+  <div class="card card-flush">
+    <div class="card-head">
+      <h2 class="card-title">Autoresponse</h2>
+    </div>
+    <div class="card-body">
+      <%= form_with url: fd_configuration_autoresponse_path, method: :post,
+            html: { autocomplete: "off" } do %>
+        <div class="stack">
+          <label class="tickline">
+            <%= check_box_tag :on, "1", @autoresponse_on, class: "switch", id: nil %>
+            <span>On</span>
+          </label>
+          <label class="field-label">
+            Emoji
+            <%= text_field_tag :emoji, @autoresponse_emoji.join(", "), class: "input", id: nil,
+                  placeholder: "fd-reason, blunder" %>
+          </label>
+          <div class="field-label">
+            <span>Channel</span>
+            <%= render "fd/channel_field", name: :channel_id, label: "search for a channel" %>
+            <% if @autoresponse_channel.present? %>
+              <span class="sub2">now <%= channel_link(@autoresponse_channel) %></span>
+            <% end %>
+          </div>
+          <label class="field-label">
+            Cooldown days
+            <%= number_field_tag :cooldown_days, @autoresponse_cooldown, class: "input",
+                  id: nil, min: 1, max: Fd::ResponsesController::SLOWEST %>
+          </label>
+          <label class="field-label">
+            Reply
+            <%= text_area_tag :body, @autoresponse_body, rows: 10, class: "textarea", id: nil,
+                  maxlength: Fd::ResponsesController::LONGEST %>
+          </label>
+          <div><%= submit_tag "Save", class: "btn btn-primary" %></div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="card card-flush">
+    <div class="card-head">
+      <h2 class="card-title">Unsubscribe shield</h2>
+    </div>
+    <div class="card-body">
+      <%= form_with url: fd_configuration_unsub_shield_path, method: :post,
+            html: { autocomplete: "off" } do %>
+        <div class="stack">
+          <label class="tickline">
+            <%= check_box_tag :on, "1", @unsub_on, class: "switch", id: nil %>
+            <span>On</span>
+          </label>
+          <label class="field-label">
+            Link
+            <%= text_field_tag :link, @unsub_link, class: "input", id: nil,
+                  placeholder: "https://unsub.hack.club" %>
+          </label>
+          <div><%= submit_tag "Save", class: "btn btn-primary" %></div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

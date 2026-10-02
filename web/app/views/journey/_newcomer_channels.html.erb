@@ -1,64 +1,53 @@
 <div class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Where newcomers land</h2>
-      <% if newcomer_reach %>
-        <p class="card-sub">
-          <%= number_with_delimiter(newcomer_reach.cohort_size) %> members who first signed in
-          in the 30 days to <%= newcomer_reach.cohort_end.strftime("%-d %b %Y") %> &middot;
-          <%= number_with_delimiter(newcomer_reach.searched_of_cohort) %> searched,
-          <%= number_with_delimiter(newcomer_reach.read_of_cohort) %> read
-        </p>
+  <% if newcomer_channels.any? %>
+    <% bands = ->(c) { [
+         { cls: "fn-a", label: "posted here", value: c.newcomers_posting.to_i,
+           tone: "color-mix(in oklab, var(--series-1) 24%, var(--card))" },
+         { cls: "fn-b", label: "first post landed here", value: c.newcomer_first_posts.to_i,
+           tone: "color-mix(in oklab, var(--series-1) 66%, var(--card))" },
+         { cls: "fn-c", label: "came back on a later day", value: c.newcomers_returning.to_i,
+           tone: "var(--series-2)" }
+       ] } %>
+    <% peak = newcomer_channels.flat_map { |c| bands.call(c).map { |b| b[:value] } }.max.to_i %>
+    <% width = ->(v) { peak.positive? ? [(v.to_f / peak * 100), (v.positive? ? 1.2 : 0)].max.round(2) : 0 } %>
+    <div class="funnelrows" data-controller="marktip"
+         data-action="mouseover->marktip#show mouseleave->marktip#clear">
+      <% newcomer_channels.each do |c| %>
+        <% drawn = bands.call(c) %>
+        <% posting = c.newcomers_posting.to_i %>
+        <div class="fn-row">
+          <span class="fn-name"><%= channel_name_cell(c.channel_id, c.name) %></span>
+          <span class="fn-bar" data-tip="<%= {
+            title: "##{c.name}",
+            rows: drawn.map do |band|
+              row = { label: band[:label], value: number_with_delimiter(band[:value]),
+                      tone: band[:tone] }
+              unless band[:cls] == "fn-a"
+                row[:of] = number_to_percentage(share_pct(band[:value], posting) || 0, precision: 1)
+              end
+              row
+            end
+          }.to_json %>">
+            <% drawn.sort_by { |band| -band[:value] }.each do |band| %>
+              <i class="<%= band[:cls] %>" style="width: <%= width.call(band[:value]) %>%"></i>
+            <% end %>
+          </span>
+        </div>
       <% end %>
     </div>
-  </div>
-
-  <% if newcomer_channels.any? %>
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>channel</th>
-            <th class="col-num">posted</th>
-            <th class="col-num">came back</th>
-            <th class="col-num">posted here first</th>
-            <th class="col-num">messages</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% newcomer_channels.each do |c| %>
-            <tr>
-              <td>
-                <span class="two-line">
-                  <%= link_to channel_path(c.channel_id) do %>
-                    <b>#<%= c.name %></b>
-                  <% end %>
-                  <span><%= c.channel_id %></span>
-                </span>
-              </td>
-              <td class="col-num"><%= number_with_delimiter(c.newcomers_posting) %></td>
-              <td class="col-num">
-                <span class="two-line">
-                  <b><%= number_with_delimiter(c.newcomers_returning) %></b>
-                  <span><%= c.returning_share ? number_to_percentage(c.returning_share * 100, precision: 0) : "n/a" %></span>
-                </span>
-              </td>
-              <td class="col-num"><%= number_with_delimiter(c.newcomer_first_posts) %></td>
-              <td class="col-num"><%= number_with_delimiter(c.newcomer_messages) %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
+    <div class="key">
+      <span><i class="fn-a"></i>posted here</span>
+      <span><i class="fn-b"></i>first post landed here</span>
+      <span><i class="fn-c"></i>came back on a later day</span>
     </div>
   <% else %>
     <p class="card-note">
       <% if newcomer_reach %>
-        No channel has reached <%= HomeHelper::MIN_SAMPLE %> newcomers yet.
-        <%= number_with_delimiter(newcomer_reach.searched_of_cohort) %>
-        of <%= number_with_delimiter(newcomer_reach.cohort_size) %> newcomers are searched,
-        and the walk fills the rest in, newest first.
+        No channel has reached <%= HomeHelper::MIN_SAMPLE %> newcomer first posts &middot;
+        <%= number_with_delimiter(newcomer_reach.searched_of_cohort) %> of
+        <%= number_with_delimiter(newcomer_reach.cohort_size) %> searched
       <% else %>
-        No newcomer has been walked yet. The member channels stage fills this in, newest first.
+        No newcomer walked yet
       <% end %>
     </p>
   <% end %>

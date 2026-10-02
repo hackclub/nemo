@@ -1,0 +1,9 @@
+<% shown = "##{row.name || row.channel_id}" %>
+<span class="two-line">
+  <% if may_open_channel?(row.channel_id) %>
+    <%= link_to shown, channel_path(row.channel_id) %>
+  <% else %>
+    <b><%= shown %></b>
+  <% end %>
+  <span><%= safe_join([row.visibility, ("archived" if row.archived)].compact, " · ") %></span>
+</span>

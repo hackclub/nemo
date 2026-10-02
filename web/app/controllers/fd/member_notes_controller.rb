@@ -13,7 +13,7 @@ module Fd
       end
 
       writing do
-        note = Note.create!(subject_user_id: user_id, body: body, author: current_staff.user_id)
+        note = Note.create!(subject_user_id: user_id, body: body, author: current_account.user_id)
         audit(note, "noted")
       end
 
@@ -29,8 +29,8 @@ module Fd
 
       writing do
         rows = Note.for_subject(user_id)
-          .where(id: params[:id], deleted_at: nil, author: current_staff.user_id)
-          .update_all(deleted_at: now, deleted_by: current_staff.user_id, updated_at: now)
+          .where(id: params[:id], deleted_at: nil, author: current_account.user_id)
+          .update_all(deleted_at: now, deleted_by: current_account.user_id, updated_at: now)
         next if rows.zero?
 
         removed = true

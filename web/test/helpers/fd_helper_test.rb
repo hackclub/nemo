@@ -11,13 +11,8 @@ class FdHelperTest < ActionView::TestCase
     Array.new(count) { Fd::CaseTimeline::Entry.new(at: Time.current, title: "x") }
   end
 
-  test "an open case says how old it is and who has it" do
-    line = timeline_standing(make_case(opened_at: 5.days.ago, assign: "UFF2"), entries(3))
-    assert_equal "Still open. 5d, assigned to @UFF2.", line
-  end
-
-  test "an unassigned case says so rather than naming nobody" do
-    assert_match(/still unassigned/, timeline_standing(kase, entries(2)))
+  test "an open case adds no standing line under its timeline" do
+    assert_nil timeline_standing(make_case(opened_at: 5.days.ago, assign: "UFF2"), entries(3))
   end
 
   test "a resolved case states its outcome" do
@@ -104,17 +99,6 @@ class FdHelperTest < ActionView::TestCase
     assert_no_match(/n\/a/, line)
   end
 
-  test "several subjects are named on the row, not counted in the subtitle" do
-    saved = make_case(subject: "UAAA")
-    saved.add_subject!("UBBB")
-    assert_match(/@UAAA and 1 other/, row_subject_label(Fd::Case.find(saved.id)))
-  end
-
-  test "no subject yet says so plainly, not as a bare n/a" do
-    saved = make_case(subject: nil)
-    assert_equal "nobody identified yet", row_subject_label(Fd::Case.find(saved.id))
-  end
-
   test "the subtitle says who raised it, reporter or opener" do
     reported = make_case(subject: "UAAA")
     Fd::CaseReport.create!(case_id: reported.id, is_anonymous: true,
@@ -148,7 +132,7 @@ class FdHelperTest < ActionView::TestCase
     saved = make_case(subject: "UAAA")
     Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true,
       source_app: "shroud", received_at: Time.current)
-    assert_equal "anonymous", row_reporter_label(Fd::Case.find(saved.id))
+    assert_equal "Anonymous", row_reporter_label(Fd::Case.find(saved.id))
   end
 
   test "a case with no report at all names who opened it directly" do
@@ -165,14 +149,194 @@ class FdHelperTest < ActionView::TestCase
     assert_equal "@UREP1 and 1 other", row_reporter_label(Fd::Case.find(saved.id))
   end
 
-  test "a finished case is asked for nothing" do
-    assert_nil still_needed([])
+  def report(**attrs)
+    saved = make_case(subject: "UAAA")
+    Fd::CaseReport.create!(case_id: saved.id, reporter_user_id: "UREP1", is_anonymous: false,
+      source_app: "shroud", received_at: 3.days.ago, **attrs)
   end
 
-  test "what is still needed is counted, not left to guess" do
-    assert_equal "One thing before this can close", still_needed([:subject])
-    assert_equal "Two things before this can close", still_needed([:subject, :evidence])
-    assert_equal "Three things before this can close",
-      still_needed([:subject, :violation, :evidence])
+  def intake(conversation_id, author:)
+    Fd::IntakeMessage.create!(conversation_id: conversation_id, channel_id: "D0REP",
+      ts: "#{Time.current.to_i}.0001", direction: "inbound", author_user_id: author,
+      body: "they said something", posted_at: 2.days.ago)
+  end
+
+  def conversation_for(said)
+    Fd::IntakeConversation.create!(report_id: said.id, channel_id: "D0REP",
+      thread_ts: "1.0", opened_at: 3.days.ago).id
+  end
+
+  test "an anonymous reporter is not named in their own transcript" do
+    said = report(is_anonymous: true, reporter_user_id: nil)
+    message = intake(conversation_for(said), author: "UREP1")
+
+    entry = chat_entries([said], [], [message]).first
+
+    assert_nil entry.who, "the author id must not reach the avatar"
+    assert_equal "Anonymous", entry.name
+    assert_equal said.reporter_label(names), entry.name
+  end
+
+  test "an anonymous transcript never resolves the author against the name table" do
+    said = report(is_anonymous: true, reporter_user_id: nil)
+    message = intake(conversation_for(said), author: "UREP1")
+    @names = Fd::Names.for(["UREP1"])
+
+    entry = chat_entries([said], [], [message]).first
+
+    assert_not_equal @names["UREP1"], entry.name
+    assert_no_match(/UREP1/, entry.name)
+  end
+
+  test "a signed reporter is still named in their transcript" do
+    said = report
+    message = intake(conversation_for(said), author: "UREP1")
+
+    entry = chat_entries([said], [], [message]).first
+
+    assert_equal "UREP1", entry.who
+    assert_match(/UREP1/, entry.name)
+  end
+  def waiting(said, body = "")
+    Fd::IntakeOutbox.create!(conversation_id: conversation_for(said), kind: "reply",
+      body: body, mode: "signed", requested_by: "UFF1",
+      files: [{ "name" => "shot.png", "sha256" => "abc123" }])
+  end
+
+  test "a reply still on its way shows what it carries, as the reporter's does" do
+    said = report
+
+    entry = chat_entries([said], [], [], [waiting(said)]).last
+
+    assert_equal ["shot.png"], entry.files.map(&:shown_name)
+    assert_equal ["sending"], entry.files.map(&:said)
+    assert_not entry.files.first.kept?
+    assert_not entry.files.first.image?
+  end
+
+  test "a reply carrying nothing has no file chips to show" do
+    said = report
+
+    entry = chat_entries([said], [], [], [Fd::IntakeOutbox.create!(
+      conversation_id: conversation_for(said), kind: "reply", body: "just words",
+      mode: "signed", requested_by: "UFF1"
+    )]).last
+
+    assert_empty entry.files
+  end
+  def cited(message, **attrs)
+    Fd::IntakeShare.create!({ message_id: message.id, kind: "forward",
+      source_channel_id: "C0LOUNGE", source_ts: "1754487721.123456",
+      source_author_user_id: "UBAD", source_body: "the message they reported",
+      permalink: "https://hackclub.slack.com/archives/C0LOUNGE/p1754487721123456",
+      is_reachable: true }.merge(attrs))
+  end
+
+  test "a forwarded message is cited under the words it arrived with" do
+    said = report
+    message = intake(conversation_for(said), author: "UREP1")
+    cited(message)
+
+    entry = chat_entries([said], [], [message]).first
+    share = entry.shares.sole
+
+    assert share.forwarded?
+    assert_equal "forwarded", share.word
+    assert share.said?
+    assert_equal "the message they reported", share.source_body
+  end
+
+  test "a link nobody could open says so rather than quoting nothing" do
+    said = report
+    message = intake(conversation_for(said), author: "UREP1")
+    cited(message, kind: "link", source_body: nil, permalink: nil, is_reachable: false)
+
+    share = chat_entries([said], [], [message]).first.shares.sole
+
+    assert_not share.said?
+    assert_equal "linked", share.word
+    assert_equal "a link we could not open", share.why_not
+  end
+
+  test "a message with nothing cited carries no citation blocks" do
+    said = report
+    message = intake(conversation_for(said), author: "UREP1")
+
+    assert_empty chat_entries([said], [], [message]).first.shares
+  end
+  def listed(kase, **over)
+    @cited_words = { kase.id => Fd::IntakeShare::Cited.new(
+      { case_id: kase.id, body: "the message they reported", kind: "forward",
+        author: "UBAD", channel: "C0LOUNGE", permalink: nil }.merge(over)
+    ) }
+  end
+
+  test "a case whose report is only a link is summed up by what it points at" do
+    saved = make_case(subject: "UAAA")
+    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "shroud",
+      received_at: Time.current, body: "<https://hackclub.slack.com/archives/C0L/p1|x>")
+    kase = Fd::Case.find(saved.id)
+    listed(kase)
+
+    assert_equal "the message they reported", case_cited(kase).body
+    assert case_cited(kase).forwarded?
+    assert_equal "forwarded", case_cited(kase).word
+  end
+
+  test "a report with words of its own is not replaced by what it links to" do
+    saved = make_case(subject: "UAAA")
+    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "shroud",
+      received_at: Time.current, body: "they keep following me")
+    kase = Fd::Case.find(saved.id)
+    listed(kase)
+
+    assert_nil case_cited(kase), "their own words win"
+    assert_equal "they keep following me", case_words(kase)
+  end
+
+  test "a report whose words are empty but carries files is summed up by the files" do
+    saved = make_case(subject: "UAAA")
+    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "shroud",
+      received_at: Time.current, body: "")
+    kase = Fd::Case.find(saved.id)
+    @held_counts = { kase.id => 9 }
+
+    assert_equal "9 attachments", case_words(kase),
+      "the reporter typed nothing, they did not send nothing"
+  end
+
+  test "a report with neither words nor anything attached says only that" do
+    saved = make_case(subject: "UAAA")
+    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "shroud",
+      received_at: Time.current, body: nil)
+    kase = Fd::Case.find(saved.id)
+
+    assert_equal "a report with nothing in it", case_words(kase)
+  end
+
+  test "a case with no report at all still says so" do
+    kase = Fd::Case.find(make_case(subject: "UAAA").id)
+
+    assert_equal "no report on file", case_words(kase)
+  end
+
+  test "slack link markup is never shown raw in the list" do
+    assert_equal "look here", plain_words("<https://slack.com/x|look here>")
+    assert_equal "https://slack.com/x", plain_words("<https://slack.com/x>")
+  end
+  def held(**over)
+    Fd::MemberGuard.new({ kind: "shush", subject_id: "USUB", opened_by: "UMOD",
+                          reason: "being awful" }.merge(over))
+  end
+
+  test "a guard says which case it sits on, or that it sits on none" do
+    assert_equal "on no case", guard_standing_where(held(case_id: nil), 1)
+    assert_equal "on this case", guard_standing_where(held(case_id: 1), 1)
+    assert_equal "on case 9", guard_standing_where(held(case_id: 9), 1)
+  end
+
+  test "a workspace guard names no channel" do
+    assert_equal "Shush, on no case", guard_held_line(held)
+    assert_equal "Shush", guard_held_line(held(case_id: 1))
   end
 end

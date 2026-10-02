@@ -1,27 +1,57 @@
-<% content_for :page_title, "Retention" %>
-<% content_for :page_kicker, "Stage 04" %>
+<% content_for :page_title, "Coming back" %>
 
-<% if @cohort_months.present? %>
-  <% content_for :page_controls do %>
-    <span class="qlab">Cohort</span>
-    <details class="menu" data-controller="menu">
-      <summary class="btn">
-        <%= @onboarding_funnel&.cohort_month&.strftime("%b %Y") || "pick a month" %>
-        <span class="car" aria-hidden="true">▾</span>
-      </summary>
-      <div class="menu-pop menu-start">
-        <% @cohort_months.each do |m| %>
-          <%= link_to m.strftime("%b %Y"),
-                retention_journey_path(cohort_month: m.iso8601, recurrence_month: m.iso8601),
-                class: "btn", aria: { current: ("true" if m == @onboarding_funnel&.cohort_month) } %>
-        <% end %>
+<% last_30 = @retention.reverse.find { |r| r.retained_day_30_rate } %>
+<% last_90 = @retention.reverse.find { |r| r.retained_day_90_rate } %>
+<% last_recurrence = @recurrence.last %>
+
+<% if last_30 || last_90 || last_recurrence %>
+  <div class="metrics">
+    <% if last_30 %>
+      <div class="metric">
+        <span class="metric-k">Day-30 retention</span>
+        <span class="metric-v"><%= retention_cell(last_30.retained_day_30_rate) %></span>
+        <span class="metric-say"><span><%= last_30.cohort_month.strftime("%b %Y") %> cohort</span></span>
       </div>
-    </details>
-  <% end %>
+    <% end %>
+    <% if last_90 %>
+      <div class="metric">
+        <span class="metric-k">Day-90 retention</span>
+        <span class="metric-v"><%= retention_cell(last_90.retained_day_90_rate) %></span>
+        <span class="metric-say"><span><%= last_90.cohort_month.strftime("%b %Y") %> cohort</span></span>
+      </div>
+    <% end %>
+    <% if last_recurrence %>
+      <div class="metric">
+        <span class="metric-k">Posted 3+ times</span>
+        <span class="metric-v">
+          <%= number_to_percentage(
+                share_pct(last_recurrence.posted_three_times, last_recurrence.searched) || 0,
+                precision: 1) %>
+        </span>
+        <span class="metric-say"><span><%= last_recurrence.cohort_month.strftime("%b %Y") %> cohort</span></span>
+      </div>
+    <% end %>
+  </div>
 <% end %>
 
-<div id="retention">
-  <%= render "onboarding_funnel", onboarding_funnel: @onboarding_funnel, cohort_months: @cohort_months %>
-</div>
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Retention by cohort</h2>
+  </div>
+  <%= render "cohort_retention", retention: @retention %>
+</section>
 
-<%= render "recurrence_funnel", recurrence_funnel: @recurrence_funnel, recurrence_cohort_months: @recurrence_cohort_months, recurrence_month: @recurrence_month %>
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Cohort survival</h2>
+  </div>
+  <%= render "cohort_survival", survival: @survival, offsets: @survival_offsets,
+        floor: HomeHelper::MIN_SAMPLE %>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Recurrence</h2>
+  </div>
+  <%= render "recurrence_funnel", recurrence: @recurrence %>
+</section>

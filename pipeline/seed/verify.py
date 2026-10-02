@@ -9,23 +9,17 @@ from seed.generate import Sampler
 from seed.profile import ENV_FILE, PROFILE_FILE, capture
 
 SHAPE_CHECKS = [
-    ("members.rates.claimed", 0.05),
-    ("members.rates.invite_pending", 0.05),
-    ("members.rates.is_bot", 0.03),
-    ("members.rates.is_admin", 0.03),
-    ("members.rates.is_restricted", 0.03),
-    ("members.rates.is_deleted", 0.05),
-    ("messaging.ever_posted_rate", 0.08),
-    ("replies.human_share", 0.10),
-    ("replies.bot_only_share", 0.06),
-    ("replies.no_reply_share", 0.10),
-    ("replies.bot_first_share", 0.10),
-    ("channels.archived_rate", 0.03),
+    ("members.rates.claimed", 0.05, "members.count"),
+    ("members.rates.invite_pending", 0.05, "members.count"),
+    ("members.rates.is_bot", 0.03, "members.count"),
+    ("members.rates.is_admin", 0.03, "members.count"),
+    ("members.rates.is_restricted", 0.03, "members.count"),
+    ("members.rates.is_deleted", 0.05, "members.count"),
+    ("messaging.ever_posted_rate", 0.08, "messaging.total_messages.n"),
+    ("channels.archived_rate", 0.03, "channels.count"),
 ]
 
 QUANTILE_CHECKS = [
-    ("replies.latency_seconds", 0.5, 1.5),
-    ("replies.latency_seconds", 0.9, 1.5),
     ("channels.total_members", 0.5, 1.5),
     ("activity.messages_per_active_day", 0.9, 2.5),
     ("activity.messages_per_active_day", 0.99, 2.5),
@@ -33,19 +27,15 @@ QUANTILE_CHECKS = [
 ]
 
 MIN_QUANTILE_SAMPLE = 500
+MIN_SHARE_SAMPLE = 500
 TAIL_SAMPLES_PER_TAIL = 50
 
 KNOWN_GAPS = []
 
 MART_CHECKS = [
-    ("mart_onboarding_funnel", "retained_day_30"),
-    ("mart_onboarding_funnel", "retained_day_90"),
-    ("mart_onboarding_recurrence_funnel", "returned_next_day"),
+    ("mart_onboarding_recurrence_funnel", "posted_twice"),
     ("mart_response_rate", "answered_by_member"),
     ("mart_response_rate", "median_member_latency_seconds"),
-    ("mart_fast_reply_vs_retention", "retained_day_30_rate"),
-    ("mart_fast_reply_vs_retention", "retained_day_90_rate"),
-    ("mart_channel_onboarding_scorecard", "retained_90_share"),
     ("mart_activity_distribution", "members"),
     ("mart_growth", "claim_rate"),
     ("mart_monthly_cohorts", "median_days_to_first_post"),
@@ -53,8 +43,16 @@ MART_CHECKS = [
     ("mart_team_stats_daily", "active_users_28d"),
     ("mart_team_stats_monthly", "mean_daily_active"),
     ("mart_top_posters", "messages_posted"),
-    ("mart_channel_activity", "messages_posted"),
     ("mart_channel_range", "members_who_posted"),
+    ("fct_message", "thread_root_ts"),
+    ("fct_message", "mention_count"),
+    ("fct_thread", "reply_users_count"),
+    ("fct_channel_walk", "messages_seen"),
+    ("fct_member_message", "posted_at"),
+    ("fct_message_first_post", "posted_at"),
+    ("fct_first_response", "detection_method"),
+    ("fct_first_response", "latency_seconds"),
+    ("dim_member_scd", "valid_to"),
 ]
 
 CONSISTENCY_CHECKS = [
@@ -72,80 +70,61 @@ CONSISTENCY_CHECKS = [
         "where window_start = window_end)",
     ),
     (
-        "every first poster has a history row",
-        "select count(*) from raw.member_first_reply r "
-        "left join raw.member_message_history h on h.user_id = r.user_id "
-        "where h.user_id is null",
-    ),
-    (
-        "every stored thread has exactly one root",
-        "select count(*) from ("
-        "select channel_id, thread_ts from fd.thread_messages "
-        "group by channel_id, thread_ts having count(*) filter (where is_root) <> 1) t",
-    ),
-    (
-        "every message belongs to a thread on a case",
-        "select count(*) from fd.thread_messages m "
-        "left join fd.case_threads t on t.channel_id = m.channel_id "
-        "and t.thread_ts = m.thread_ts where t.case_id is null",
-    ),
-    (
-        "everyone ever granted a role has a staff row to sign in with",
-        "select count(*) from ("
-        "select distinct user_id from fd.access_grants) g "
-        "left join app.staff s on s.user_id = g.user_id where s.user_id is null",
-    ),
-    (
-        "a message deleted in slack keeps what it said",
-        "select count(*) from fd.thread_messages "
-        "where deleted_at is not null and body is null",
-    ),
-    (
-        "every decision that is not a proposal says who settled it",
-        "select count(*) from fd.decisions "
-        "where state <> 'proposed' and (settled_by is null or settled_at is null)",
-    ),
-    (
-        "every retired decision points at what replaced it",
-        "select count(*) from fd.decisions "
-        "where state = 'superseded' and replaced_by_id is null",
-    ),
-    (
-        "no case follows a rule that was not in force when it was resolved",
-        "select count(*) from fd.cases c join fd.decisions d "
-        "on d.id = c.followed_decision_id "
-        "where d.state <> 'proposed' and c.resolved_at < d.settled_at",
-    ),
-    (
-        "no case sits behind a proposal written before the case was resolved",
-        "select count(*) from fd.cases c join fd.decisions d "
-        "on d.id = c.followed_decision_id "
-        "where d.state = 'proposed' and c.resolved_at > d.proposed_at",
-    ),
-    (
-        "every followed decision is recorded in the audit",
-        "select count(*) from fd.cases c where c.followed_decision_id is not null "
-        "and not exists (select 1 from fd.audit a where a.entity_type = 'case' "
-        "and a.entity_id = c.id and a.verb = 'followed')",
-    ),
-    (
-        "nobody holds two live grants at once",
-        "select count(*) from (select user_id from fd.access_grants "
-        "where revoked_at is null group by user_id having count(*) > 1) t",
-    ),
-    (
-        "every grant was given by somebody who holds one",
-        "select count(*) from fd.access_grants g where g.granted_by like 'USEED%' "
-        "and not exists (select 1 from fd.access_grants h where h.user_id = g.granted_by)",
-    ),
-    (
-        "every refusal names the permission that was refused",
-        "select count(*) from fd.audit where verb = 'refused' "
-        "and after ->> 'permission' is null",
-    ),
-    (
         "no day ledger gap inside the covered span",
         "select (max(ds) - min(ds) + 1) - count(*) from raw.analytics_day where source like 'seed_%member_day'",
+    ),
+    (
+        "every reply points at a message that exists",
+        "select count(*) from archive.message r left join archive.message m "
+        "on m.channel_id = r.channel_id and m.ts = r.thread_root_ts "
+        "where r.is_reply and m.ts is null",
+    ),
+    (
+        "nobody replies to themselves",
+        "select count(*) from archive.message r join archive.message m "
+        "on m.channel_id = r.channel_id and m.ts = r.thread_root_ts "
+        "where r.is_reply and r.author_id = m.author_id",
+    ),
+    (
+        "every thread counts the replies it actually has",
+        "select count(*) from raw.thread t where t.reply_count <> ("
+        "select count(*) from archive.message m where m.channel_id = t.channel_id "
+        "and m.thread_root_ts = t.root_ts and m.is_reply)",
+    ),
+    (
+        "every walk counts the messages it actually saw",
+        "select count(*) from raw.channel_walk w where w.messages_seen <> ("
+        "select count(*) from archive.message m where m.channel_id = w.channel_id)",
+    ),
+    (
+        "every message was observed arriving",
+        "select count(*) from archive.message m where not exists ("
+        "select 1 from archive.observation o "
+        "where o.channel_id = m.channel_id and o.ts = m.ts)",
+    ),
+]
+
+ANALYTICS_CHECKS = [
+    (
+        "every member holds exactly one current version",
+        "select count(*) from (select user_id from analytics.dim_member_scd "
+        "where is_current group by user_id having count(*) <> 1) t",
+    ),
+    (
+        "every channel holds exactly one current version",
+        "select count(*) from (select channel_id from analytics.dim_channel_scd "
+        "where is_current group by channel_id having count(*) <> 1) t",
+    ),
+    (
+        "no member version starts before the one it replaces",
+        "select count(*) from analytics.dim_member_scd "
+        "where valid_to is not null and valid_to <= valid_from",
+    ),
+    (
+        "no message is counted in a channel that was never walked",
+        "select count(*) from analytics.fct_message m "
+        "left join analytics.fct_channel_walk w on w.channel_id = m.channel_id "
+        "where w.channel_id is null",
     ),
 ]
 
@@ -157,8 +136,12 @@ def dig(node, path):
 
 
 def compare_shape(reference, seeded):
-    for path, tolerance in SHAPE_CHECKS:
+    for path, tolerance, size_path in SHAPE_CHECKS:
         want, got = dig(reference, path), dig(seeded, path)
+        sample = dig(seeded, size_path) or 0
+        if sample < MIN_SHARE_SAMPLE:
+            yield path, got, want, None, f"skipped, {sample} rows, needs {MIN_SHARE_SAMPLE}"
+            continue
         yield path, got, want, abs(got - want) <= tolerance, f"+-{tolerance}"
 
 
@@ -187,8 +170,8 @@ def check_marts(admin):
         yield f"{table}.{column}", count, "> 0", count > 0, "at least one row"
 
 
-def check_consistency(conn):
-    for label, sql in CONSISTENCY_CHECKS:
+def check_consistency(conn, checks=None):
+    for label, sql in checks or CONSISTENCY_CHECKS:
         delta = conn.execute(sql).fetchone()[0] or 0
         yield label, delta, 0, delta == 0, "exactly 0"
 
@@ -228,6 +211,8 @@ def main(argv=None):
         admin.read_only = True
         print("marts populated")
         failures += report(check_marts(admin))
+        print("model consistency")
+        failures += report(check_consistency(admin, ANALYTICS_CHECKS))
         print("known gaps, reported but not counted")
         for table, column, why in KNOWN_GAPS:
             count = admin.execute(

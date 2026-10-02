@@ -1,0 +1,32 @@
+<% if events.any? %>
+  <div class="card card-flush">
+    <div class="card-head">
+      <h2 class="card-title">Activity</h2>
+    </div>
+    <div class="activity">
+      <% events.each do |one| %>
+        <div class="activity-item">
+          <div class="line-row">
+            <%= guard_face(one.subject_id) %>
+            <span class="grow two-line">
+              <span class="lrow-head">
+                <b><%= bot_name_link(activity_who(one, labels), one.app_id) %></b>
+                <%= activity_verb(one) %>
+              </span>
+              <span><%= activity_ids(one) %></span>
+            </span>
+            <span class="row-right">
+              <span class="sub2 mono"><%= at_minute(one.at) %></span>
+            </span>
+          </div>
+
+          <% if one.said.present? %>
+            <span class="qcite">
+              <span class="qcite-said"><%= plain_words(one.said) %></span>
+            </span>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

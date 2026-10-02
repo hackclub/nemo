@@ -1,0 +1,20 @@
+<div class="pickbar" data-pick-rows-target="bar" hidden>
+  <%= form_with url: fd_bulk_deactivations_path, method: :post,
+        html: { autocomplete: "off", class: "pickbar-row" } do %>
+    <% query.to_params.each do |key, value| %>
+      <%= hidden_field_tag key, value, id: nil %>
+    <% end %>
+    <span data-pick-rows-target="field"></span>
+
+    <span class="pickbar-count">
+      <b data-pick-rows-target="count">0</b>
+      <span>picked</span>
+    </span>
+
+    <button type="button" class="btn btn-ghost btn-sm"
+            data-action="click->pick-rows#clear">Clear</button>
+
+    <%= submit_tag "Deactivate", class: "btn btn-danger btn-sm",
+          data: { pick_rows_target: "go" }, disabled: true %>
+  <% end %>
+</div>

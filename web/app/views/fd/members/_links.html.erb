@@ -1,0 +1,37 @@
+<%= turbo_frame_tag "member-links-#{user_id}", target: "_top" do %>
+<div class="pane-body">
+  <% if links.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr><th>account</th><th>score</th><th>on</th><th>last seen</th></tr>
+        </thead>
+        <tbody>
+          <% links.each do |side| %>
+            <tr>
+              <td><%= member_link(side.other_id) %></td>
+              <td><%= link_band_chip(side) %>
+                <span class="sub2"><%= number_with_precision(side.score, precision: 1) %></span>
+              </td>
+              <td>
+                <% side.evidence.each do |one| %>
+                  <div class="sub2">
+                    <%= one["label"] %>
+                    <span class="mono"><%= one["value"] %></span>
+                    <%= "shared with #{one['people']}" if one["people"].to_i > 2 %>
+                  </div>
+                <% end %>
+              </td>
+              <td class="sub2"><%= side.last_seen ? on_day(side.last_seen) : "n/a" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty">
+      <p class="empty-title">No linked accounts</p>
+    </div>
+  <% end %>
+</div>
+<% end %>

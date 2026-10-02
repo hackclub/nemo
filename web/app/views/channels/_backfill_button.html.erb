@@ -1,0 +1,38 @@
+<% may = may_community?("ops.channel.backfill") %>
+<% may_sync = may_community?("ops.engine") %>
+<% running = %w[queued draining].include?(backfill&.state) %>
+
+<% if may || running %>
+  <%= render layout: "shared/dropdown", locals: {
+        label: "More for this channel", pop_css: "menu-compact", trigger: menu_dots } do %>
+      <p class="menu-group">Thread replies</p>
+      <% case backfill&.state %>
+      <% when "queued" %>
+        <span class="btn is-off" aria-disabled="true">
+          Queued<span class="menu-val"><%= backfill.place_in_line&.ordinalize %></span>
+        </span>
+        <%= button_to "Stop fetching", opt_out_channel_path(channel.channel_id), method: :delete,
+              class: "btn", form: { class: "contents",
+              data: { turbo_confirm: "Stop fetching thread replies?" } } if may %>
+      <% when "draining" %>
+        <span class="btn is-off" aria-disabled="true">
+          Fetching<span class="menu-val">
+            <%= backfill.progress ? "#{(backfill.progress * 100).round}%" : "…" %>
+          </span>
+        </span>
+        <%= button_to "Stop fetching", opt_out_channel_path(channel.channel_id), method: :delete,
+              class: "btn", form: { class: "contents",
+              data: { turbo_confirm: "Stop fetching thread replies?" } } if may %>
+      <% when "complete" %>
+        <span class="btn is-off" aria-disabled="true">
+          <%= backfill.threads_expected.to_i.zero? ? "No threads found" : "Complete" %>
+          <span class="menu-val"><%= number_with_delimiter(backfill.threads_fetched) %></span>
+        </span>
+        <%= render "backfill_start", channel: channel, may: may, may_sync: may_sync,
+              label: "Fetch replies again" %>
+      <% else %>
+        <%= render "backfill_start", channel: channel, may: may, may_sync: may_sync,
+              label: "Fetch thread replies" %>
+      <% end %>
+  <% end %>
+<% end %>

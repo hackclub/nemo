@@ -1,0 +1,255 @@
+roles:
+  community_manager:
+    label: Community manager
+    everything: true
+    grantable: true
+
+  firefighter:
+    label: Firefighter
+    capabilities:
+      - case.read
+      - case.open
+      - case.categorise
+      - case.note
+      - case.people
+      - case.chat
+      - case.reply
+      - case.act
+      - case.resolve
+      - case.reverse
+      - case.reopen
+      - thread.guard
+      - member.note
+      - member.guard
+      - member.deactivate
+      - member.links
+      - identity.read
+      - slack.link
+      - channel.read
+      - channel.all
+      - channel.guard
+      - app.configure
+    grantable: true
+
+  promethean:
+    label: Promethean
+    capabilities: [channel.read]
+    grantable: false
+
+  gardener:
+    label: Gardener
+    capabilities: [channel.read]
+    grantable: true
+
+  analytics:
+    label: Analytics
+    capabilities:
+      - channel.read
+      - channel.all
+    grantable: true
+
+areas:
+  case: Cases
+  member: People
+  identity: People
+  channel: Channels
+  engine: Engine
+  slack: Your own account
+  access: Access
+  app: The dashboard
+
+record_scopes: [author, channel]
+
+capabilities:
+  case.read:
+    label: Read every case, note and thread
+    area: case
+    locked: true
+    events: [member/looked_up]
+
+  case.open:
+    label: Open a case, claim it, hand it back
+    area: case
+    locked: true
+    events: [case/opened, assignee/claimed, assignee/unclaimed, assignee/attached, assignee/detached]
+
+  case.categorise:
+    label: Set the violation on a case
+    area: case
+    locked: true
+    events: [case/categorised]
+
+  case.note:
+    label: Write a note, delete their own
+    area: case
+    record_scope: author
+    locked: true
+    events: [note/noted, note/deleted]
+
+  case.people:
+    label: Add somebody, take somebody off
+    area: case
+    locked: true
+    events: [participant/attached, participant/detached]
+
+  case.chat:
+    label: Talk to the team on a case
+    area: case
+    locked: true
+
+  case.reply:
+    label: Answer the reporter
+    area: case
+    locked: true
+    events: [report/answered]
+
+  case.act:
+    label: Log an action against somebody
+    area: case
+    locked: true
+    events:
+      - action/performed
+      - member_guard/opened
+      - member_guard/attached
+      - member_guard/extended
+
+  case.resolve:
+    label: Resolve a case, mark a duplicate
+    area: case
+    locked: true
+    events: [case/resolved]
+
+  case.reverse:
+    label: Reverse an action somebody logged
+    area: case
+    locked: true
+    events: [action/reversed]
+
+  case.reopen:
+    label: Put a resolved case back in the queue
+    area: case
+    locked: true
+    events: [case/reopened]
+
+  thread.guard:
+    label: Lock or destroy a thread in Slack
+    area: case
+    locked: true
+    events: [thread_guard/opened, thread_guard/lifted, member/session_reset]
+
+  member.note:
+    label: Write a standing note about a member
+    area: member
+    locked: true
+
+  member.guard:
+    label: Hold a shush or channel ban on somebody, with no case behind it
+    area: member
+    locked: true
+    events:
+      - member_guard/opened
+      - member_guard/lifted
+      - member_guard/extended
+
+  member.deactivate:
+    label: Deactivate a Slack account, and put it back
+    area: member
+    locked: true
+
+  member.read:
+    label: See member names in the analytics
+    area: member
+
+  member.links:
+    label: See the accounts that look like the same person
+    area: member
+    locked: true
+    logged: true
+
+  identity.read:
+    label: See the real name and email behind an id
+    area: identity
+    locked: true
+    logged: true
+
+  channel.read:
+    label: See the analytics for a channel they hold
+    area: channel
+    record_scope: channel
+    every_account: true
+
+  channel.all:
+    label: See the analytics for every channel
+    area: channel
+
+  channel.share:
+    label: Set a channel's audience, and name who may read it
+    area: channel
+    locked: true
+    events: [channel_audience/granted, channel_audience/revoked]
+
+  channel.backfill:
+    label: Queue a thread replies backfill for a channel
+    area: channel
+
+  channel.guard:
+    label: Guard a channel, and say which bots may post in it
+    area: channel
+    locked: true
+    events:
+      - channel_guard/opened
+      - channel_guard/lifted
+      - channel_allow/added
+      - channel_allow/removed
+      - app_setting/tuned
+
+  channel.purge:
+    label: Take down the last messages in a channel at once
+    area: channel
+    locked: true
+    logged: true
+    events: [channel_purge/queued, channel_purge/performed]
+
+  message.read:
+    label: See how their own post did, in a channel that shows it
+    area: channel
+    record_scope: author
+    every_account: true
+
+  message.show:
+    label: Pick the channels whose posts show their activity
+    area: channel
+    locked: true
+    events: [message_activity/turned_on, message_activity/turned_off]
+
+  engine.manage:
+    label: Run and tune the engine
+    area: engine
+    locked: true
+
+  slack.link:
+    label: Link their own Slack account, to send as themselves
+    area: slack
+    events: [slack_account/linked, slack_account/unlinked]
+
+  access.read:
+    label: See who holds access and what they did with it
+    area: access
+
+  access.grant:
+    label: Give or take back access
+    area: access
+    locked: true
+    events: [grant/granted, grant/revoked, community_grant/granted, community_grant/revoked, permission/granted, permission/revoked]
+
+  app.flip:
+    label: Turn a section of the dashboard on or off
+    area: app
+    locked: true
+    events: [flag/turned_on, flag/turned_off]
+
+  app.configure:
+    label: Tune the automod list and the canned replies
+    area: app
+    locked: true
+    events: [automod_word/added, automod_word/removed, app_setting/tuned]

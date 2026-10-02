@@ -1,0 +1,14 @@
+<div class="pick" data-controller="channel-picker"
+     data-channel-picker-name-value="<%= name %>"
+     data-channel-picker-url-value="<%= fd_channel_search_path %>">
+  <div class="input pick-field">
+    <span data-channel-picker-target="chosen"></span>
+    <input type="text" class="pick-input" autocomplete="off"
+           aria-label="<%= label %>"
+           placeholder="search by name, or paste a channel id"
+           data-channel-picker-target="input"
+           data-action="input->channel-picker#type keydown->channel-picker#keys">
+  </div>
+  <div class="menu-pop pick-pop" hidden data-channel-picker-target="results"></div>
+  <span data-channel-picker-target="store"></span>
+</div>

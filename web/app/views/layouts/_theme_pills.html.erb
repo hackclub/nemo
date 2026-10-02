@@ -1,0 +1,10 @@
+<div class="theme-pills" data-controller="theme" role="group" aria-label="Theme">
+  <% Appearance::THEMES.each do |theme| %>
+    <button type="button" class="theme-pill" aria-pressed="false"
+            data-theme-target="option" data-theme-key="<%= theme.key %>"
+            data-action="theme#pick" title="<%= theme.label %>"
+            aria-label="<%= theme.label %> theme">
+      <%= theme_icon(theme.key) %>
+    </button>
+  <% end %>
+</div>

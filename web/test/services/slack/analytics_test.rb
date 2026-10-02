@@ -108,4 +108,59 @@ class Slack::AnalyticsTest < ActiveSupport::TestCase
       end
     end
   end
+
+  def windows(**over)
+    Slack::Analytics.channel_windows(
+      **{ channel_id: "C1", name: "general", privacy: "public",
+          windows: [["2026-08-01", "2026-08-07"], ["2026-01-01", "2026-08-07"]] }.merge(over)
+    )
+  end
+
+  test "both windows answer, in the order they were asked for" do
+    caching do
+      answering(one_channel) do |calls|
+        first, second = windows
+
+        assert_equal 2, calls.call
+        assert_equal 12, first.stats["messages_count"]
+        assert_equal 12, second.stats["messages_count"]
+      end
+    end
+  end
+
+  test "the cache is touched only on the calling thread, never on a fetch thread" do
+    caching do
+      answering(one_channel) do |_calls|
+        mine = Thread.current
+        touched = Queue.new
+        store = Rails.cache
+        recorder = Class.new(SimpleDelegator) do
+          define_method(:read) { |*a, **k| touched << Thread.current; __getobj__.read(*a, **k) }
+          define_method(:write) { |*a, **k| touched << Thread.current; __getobj__.write(*a, **k) }
+        end.new(store)
+
+        Rails.cache = recorder
+        windows
+        Rails.cache = store
+
+        seen = []
+        seen << touched.pop until touched.empty?
+
+        refute_empty seen, "the cache was never touched, so this proves nothing"
+        assert_equal [mine], seen.uniq,
+          "a fetch thread reached the cache, which is a table in the request's own pool"
+      end
+    end
+  end
+
+  test "a window already cached is not asked for again" do
+    caching do
+      answering(one_channel) do |calls|
+        windows
+        windows
+
+        assert_equal 2, calls.call, "the second pair of windows must come from the cache"
+      end
+    end
+  end
 end

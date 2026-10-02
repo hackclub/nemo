@@ -1,27 +1,220 @@
 module ApplicationHelper
+  def open_in_slack(url, css: "btn")
+    link_to case_action_button("external", "Open in Slack"), url,
+      class: css, target: "_blank", rel: "noopener"
+  end
+
+  def theme_swatch_blend(swatch)
+    stops = swatch.each_with_index.map do |colour, i|
+      at = swatch.size < 2 ? 50 : (i * 100.0 / (swatch.size - 1)).round
+      "#{colour} #{at}%"
+    end
+    "linear-gradient(115deg, #{stops.join(', ')})"
+  end
+
   def open_case_count
     @open_case_count ||= Fd::Case.unresolved.count
+  end
+
+  def held_label(staff)
+    return Fd::Access::MANAGER_LABEL if Fd::Access.manager?(staff)
+    return "no access" if staff.nil?
+
+    roles = Authz.roles_held(staff.user_id)
+    return "no access" if roles.empty?
+
+    roles.map { |role| Authz.role_label(role) }.to_sentence
   end
 
   def on?(key)
     Fd::Flag.on?(key)
   end
 
+  def engine_running?
+    return @engine_running unless @engine_running.nil?
+
+    @engine_running = SyncRequest.active.exists?
+  rescue StandardError
+    @engine_running = false
+  end
+
   JOURNEY = [
-    ["01", "Acquisition", "acquisition"],
-    ["02", "Activation", "activation"],
-    ["03", "Response", "response"],
-    ["04", "Retention", "retention"],
-    ["05", "Distribution", "distribution"]
+    ["Joining", "joining"],
+    ["Getting replies", "replies"],
+    ["Coming back", "returning"],
+    ["Who is active", "active"]
   ].freeze
 
   ACTIONS = {
-    "acquisition" => "acquisition", "activation" => "activation",
-    "response" => "answered", "retention" => "retention",
-    "distribution" => "distribution"
+    "joining" => "acquisition",
+    "replies" => "replies", "returning" => "retention",
+    "active" => "distribution"
+  }.freeze
+
+  MOVED = {
+    "acquisition" => "joining",
+    "response" => "replies", "retention" => "returning",
+    "distribution" => "active"
   }.freeze
 
   def journey_stages
     JOURNEY
+  end
+
+  NAV_ICONS = {
+    "you" => ["M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8", "M4 21v-1a6 6 0 0 1 6-6h4",
+              "M15 21l2.5-4 2 2.5 2.5-5"],
+    "overview" => ["M3 3h7v7H3z", "M14 3h7v7h-7z", "M14 14h7v7h-7z", "M3 14h7v7H3z"],
+    "joining" => ["M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4", "M10 17l5-5-5-5", "M15 12H3"],
+    "newcomers" => ["M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M9.5 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8",
+                    "M19 3v4", "M21 5h-4"],
+    "replies" => ["M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"],
+    "returning" => ["M3 12a9 9 0 0 1 15-6.7L21 8", "M21 3v5h-5",
+                    "M21 12a9 9 0 0 1-15 6.7L3 16", "M3 21v-5h5"],
+    "active" => ["M3 12h4l3 8 4-16 3 8h4"],
+    "channels" => ["M5 9h14", "M5 15h14", "M10 3 8 21", "M16 3l-2 18"],
+    "engine" => ["M20 14a8 8 0 1 0-16 0", "m15 10-3.4 3.4"],
+    "runs" => ["M20 14a8 8 0 1 0-16 0", "m15 10-3.4 3.4"],
+    "sources" => ["M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3",
+                  "M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6", "M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"],
+    "coverage" => ["M3 4h7v7H3z", "M14 4h7v7h-7z", "M3 15h7v5H3z", "M14 15h7v5h-7z"],
+    "queues" => ["M4 6h16", "M4 12h11", "M4 18h6"],
+    "backfill" => ["M12 21V7", "m6 13 6 6 6-6", "M5 3h14"],
+    "archive" => ["M3 7h18v4H3z", "M5 11v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8", "M10 15h4"],
+    "faults" => ["M12 4 3 19h18L12 4Z", "M12 10v4", "M12 17v.01"],
+    "tuning" => ["M5 21V10", "M12 21V4", "M19 21v-7", "M3 10h4", "M10 4h4", "M17 14h4"],
+    "people" => ["M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8",
+                 "M22 21v-2a4 4 0 0 0-3-3.87"],
+    "roles" => ["M12 3 4 6v6c0 5 8 10 8 10s8-5 8-10V6z"],
+    "flags" => ["M6 3v18", "M6 4h11l-2 4 2 4H6"],
+    "shield" => ["M12 3 4 6v6c0 4 3.4 7.4 8 8 4.6-.6 8-4 8-8V6z"],
+    "history" => ["M4 12a8 8 0 1 0 2.4-5.7", "M4 3v4.5h4.5", "M12 8v4.4l3 1.8"],
+    "group" => ["M4 7h16", "M4 12h16", "M4 17h10"],
+    "news" => ["M4 5h11a1 1 0 0 1 1 1v12a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2z",
+               "M16 8h3a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2", "M7 9h5", "M7 13h5", "M7 17h3"],
+    "gear" => ["M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6", "M12 2v2.5", "M12 19.5V22", "M2 12h2.5",
+               "M19.5 12H22", "M4.9 4.9l1.8 1.8", "M17.3 17.3l1.8 1.8", "M19.1 4.9l-1.8 1.8",
+               "M6.7 17.3l-1.8 1.8"]
+  }.freeze
+
+  SIDEBAR_MIN = 200
+  SIDEBAR_MAX = 460
+
+  def sidebar_class
+    "sidebar-icon" if cookies[:sidebar] == "icon"
+  end
+
+  def sidebar_style
+    width = cookies[:sidebarw].to_i
+    return nil unless width.between?(SIDEBAR_MIN, SIDEBAR_MAX)
+
+    "--sidebar-w: #{width}px"
+  end
+
+  def nav_icon(key)
+    paths = NAV_ICONS.fetch(key.to_s, NAV_ICONS.fetch("group"))
+    tag.svg(class: "ic", width: 15, height: 15, viewBox: "0 0 24 24", fill: "none",
+      stroke: "currentColor", "stroke-width": 1.7, "stroke-linecap": "round",
+      "stroke-linejoin": "round", "aria-hidden": "true") do
+      safe_join(paths.map { |d| tag.path(d: d) })
+    end
+  end
+
+  THEME_ICONS = {
+    "light" => ["M12 2v2", "M12 20v2", "M2 12h2", "M20 12h2", "M4.9 4.9l1.4 1.4",
+                "M17.7 17.7l1.4 1.4", "M19.1 4.9l-1.4 1.4", "M6.3 17.7l-1.4 1.4"],
+    "lightsout" => ["M20 14.5A8.5 8.5 0 0 1 9.5 4a7.5 7.5 0 1 0 10.5 10.5Z"],
+    "contrast" => []
+  }.freeze
+
+  THEME_DISC = { "light" => 4, "contrast" => 8 }.freeze
+
+  def theme_icon(key)
+    tag.svg(width: 13, height: 13, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor",
+      "stroke-width": 1.8, "stroke-linecap": "round", "stroke-linejoin": "round",
+      "aria-hidden": "true") do
+      radius = THEME_DISC[key]
+      concat tag.circle(cx: 12, cy: 12, r: radius) if radius
+      concat tag.path(d: "M12 4a8 8 0 0 1 0 16Z", fill: "currentColor", stroke: "none") if
+        key == "contrast"
+      THEME_ICONS.fetch(key, []).each { |d| concat tag.path(d: d) }
+    end
+  end
+
+  CACHET_FACES = "https://cachet.hackclub.com/users".freeze
+
+  def menu_dots
+    tag.svg(width: 13, height: 13, viewBox: "0 0 24 24", fill: "currentColor",
+      aria: { hidden: true }) do
+      safe_join([5, 12, 19].map { |cx| tag.circle(cx: cx, cy: 12, r: 1.7) })
+    end
+  end
+
+  def cachet_face_url(user_id)
+    "#{CACHET_FACES}/#{ERB::Util.url_encode(user_id)}/r"
+  end
+
+  RailStop = Struct.new(:key, :label, :icon, :path, :tally, :here, keyword_init: true)
+
+  RAIL_ICONS = {
+    "fire" => ["M12 3c.9 3 2.6 4 4.2 5.7A6.9 6.9 0 0 1 18.5 14a6.5 6.5 0 1 1-13 0c0-2 .8-3.6 2-5",
+               "M12 21a3 3 0 0 0 3-3c0-1.6-1.4-2.6-3-5-1.6 2.4-3 3.4-3 5a3 3 0 0 0 3 3"],
+    "community" => ["M3 20h18", "M6 20V10", "M11 20V5", "M16 20v-8", "M21 20v-4"],
+    "engine" => ["M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3",
+                 "M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6", "M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"],
+    "admin" => ["M4 7h9", "M17 7h3", "M4 12h3", "M11 12h9", "M4 17h12", "M20 17h0",
+                "M15 7a2 2 0 1 0 0-.01", "M9 12a2 2 0 1 0 0-.01", "M18 17a2 2 0 1 0 0-.01"],
+    "news" => ["M4 5h11a1 1 0 0 1 1 1v12a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2z",
+               "M16 8h3a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2", "M7 9h5", "M7 13h5", "M7 17h3"]
+  }.freeze
+
+  def rail_icon(key)
+    paths = RAIL_ICONS.fetch(key.to_s, RAIL_ICONS.fetch("community"))
+    tag.svg(class: "ic", width: 18, height: 18, viewBox: "0 0 24 24", fill: "none",
+      stroke: "currentColor", "stroke-width": 1.6, "stroke-linecap": "round",
+      "stroke-linejoin": "round", "aria-hidden": "true") do
+      safe_join(paths.map { |d| tag.path(d: d) })
+    end
+  end
+
+  def rail_stops(fire_engine:)
+    return @rail_stops if defined?(@rail_stops)
+
+    stops = []
+    if fire_engine
+      stops << RailStop.new(key: "fd", label: "Fire Engine", icon: "fire", path: fd_root_path,
+        tally: Fd::Case.unresolved.not_duplicate.unassigned.count, here: page_section == "fd")
+    end
+    if on?(:analytics)
+      stops << RailStop.new(key: "mn", label: "Community", icon: "community",
+        path: community_path, here: page_section == "mn" && controller_name != "engine")
+    end
+    if may_community?("ops.engine")
+      stops << RailStop.new(key: "engine", label: "Engine", icon: "engine", path: engine_path,
+        here: controller_name == "engine")
+    end
+    if may_administer?
+      stops << RailStop.new(key: "admin", label: "Admin", icon: "admin", path: admin_root_path,
+        here: page_section == "admin")
+    end
+    @rail_stops = stops
+  end
+
+  def on_community_overview?
+    controller_name == "home" && action_name == "index"
+  end
+
+  def here_stop(fire_engine:)
+    rail_stops(fire_engine: fire_engine).find(&:here)
+  end
+
+  def section_pane
+    return "layouts/admin_pane" if page_section == "admin"
+    return nil unless on?(:analytics)
+    return "layouts/engine_pane" if controller_name == "engine"
+    return "layouts/community_pane" if
+      %w[home journey channels you accounts].include?(controller_name)
+
+    nil
   end
 end

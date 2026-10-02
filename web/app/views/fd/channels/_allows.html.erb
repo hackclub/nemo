@@ -1,0 +1,23 @@
+<% if allows.any? %>
+  <div class="people-list">
+    <% allows.each do |one| %>
+      <div class="line-row fat">
+        <%= guard_face(one.subject_id) %>
+        <span class="grow two-line">
+          <b><%= bot_name_link(one.name, @app_ids[one.subject_id]) %></b>
+          <span>
+            <span class="mono"><%= one.subject_id %></span>
+            &middot; <%= vouched_line(one) %>
+          </span>
+        </span>
+        <span class="row-right">
+          <%= gated_button("channel.guard", "Remove",
+                fd_channel_allow_path(channel_id, guard.kind, one.subject_id),
+                css: "btn btn-sm btn-ghost", method: :delete) %>
+        </span>
+      </div>
+    <% end %>
+  </div>
+<% else %>
+  <div class="empty"><p class="empty-title"><%= empty %></p></div>
+<% end %>

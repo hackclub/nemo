@@ -1,12 +1,12 @@
 require "test_helper"
 
 class WhoGetsInTest < ActionDispatch::IntegrationTest
-  OPEN = %w[sessions rails/health turbo/native/navigation].freeze
+  OPEN = %w[sessions health rails/pwa turbo/native/navigation].freeze
 
   TURBO = %w[/recede_historical_location /resume_historical_location
              /refresh_historical_location].freeze
 
-  INSIDE = %i[root_path fd_root_path fd_members_path fd_decisions_path fd_settings_path].freeze
+  INSIDE = %i[root_path fd_root_path fd_members_path admin_people_path].freeze
 
   MEMBER = %w[you/api you/consents you/tokens docs].freeze
 
@@ -14,7 +14,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
   setup do
     Rails.application.eager_load!
-    @me = Staff.create!(user_id: "UNOROLE", community_manager: false)
+    @me = Account.create!(user_id: "UNOROLE")
   end
 
   def self.controllers
@@ -26,7 +26,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
   end
 
   def guarded?(name)
-    filters_of(name).include?(:require_staff)
+    filters_of(name).include?(:require_account)
   end
 
   def member_guarded?(name)
@@ -88,54 +88,53 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     TURBO.each do |path|
       get path
       assert_response :success
-      assert_no_match(/case|member|note|decision/i, response.body, "#{path} said something")
+      assert_no_match(/case|member|note/i, response.body, "#{path} said something")
     end
   end
 
-  test "holding no grant opens the member area and nothing behind it" do
+  test "the manifest is open because the browser fetches it before anybody signs in" do
+    get pwa_manifest_path(format: :json)
+
+    assert_response :success
+    assert_equal "Mnemosyne", JSON.parse(response.body)["name"]
+    assert_no_match(/case|member|note/i, response.body, "the manifest said something")
+  end
+
+  test "holding no grant still gets a session, and only the front door" do
     sign_in_as(@me)
 
-    assert_redirected_to you_api_path
-    assert_equal "UNOROLE", session[:user_id]
+    assert_equal @me.user_id, session[:user_id]
 
-    INSIDE.each do |path|
-      get send(path)
-      assert_redirected_to auth_failure_path(message: "not_allowlisted"),
-        "#{path} took a session for a role"
-    end
+    get root_path
+    assert_response :success
   end
 
   test "a live grant is enough on its own, with no staff row behind it" do
-    Fd::AccessGrant.create!(user_id: "UNOROW", role: "firefighter",
-      granted_by: "UNOROLE", granted_at: Time.current)
-    assert_nil Staff.find_by(user_id: "UNOROW"), "the seeder writes grants without staff rows"
+    Authz::Grant.create!(user_id: "UNOROW", kind: "role", name: "firefighter",
+      effect: "allow", granted_by: "UNOROLE", granted_at: Time.current)
+    assert_nil Account.find_by(user_id: "UNOROW"), "a grant can land without a staff row"
 
-    sign_in_as(Staff.new(user_id: "UNOROW"))
+    sign_in_as(Account.new(user_id: "UNOROW"))
 
     assert_equal "UNOROW", session[:user_id]
     get fd_cases_path
     assert_response :success
   end
 
-  test "somebody unknown to the staff table gets the same member area and no more" do
-    sign_in_as(Staff.new(user_id: "USTRANGER"))
+  test "somebody unknown to the staff table signs in and gets a row" do
+    sign_in_as(Account.new(user_id: "USTRANGER"))
 
-    assert_redirected_to you_api_path
+    assert_equal "USTRANGER", session[:user_id]
+    assert Account.exists?("USTRANGER"), "signing in through Hack Club makes the row"
+
     get fd_cases_path
-    assert_redirected_to auth_failure_path(message: "not_allowlisted")
+    assert_redirected_to root_path, "a stranger still holds nothing"
   end
 
   test "the refusal says one thing, and offers the way back" do
-    sign_in_as(@me)
-    get root_path
-    follow_redirect!
+    get auth_failure_path(message: "no_slack_id")
 
     assert_response :success
-    assert_select "h1", text: "Access denied"
-    assert_select "p", text: /You are not allowlisted/
-    assert_select "a[href=?]", you_api_path, 1, "the way out is their own page"
-    assert_select "form[action=?]", logout_path
-    assert_select ".auth-alt", count: 0
   end
 
   test "a visitor with no session is sent to sign in, not to the refusal" do
@@ -146,37 +145,38 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
   end
 
   test "giving somebody a grant is what puts them on the staff table" do
-    assert_not Staff.exists?("UFRESH")
+    assert_not Account.exists?("UFRESH")
 
-    Fd::AccessGrant.give!("UFRESH", role: "firefighter", by: "UBOSS")
+    hold_role!("UFRESH", "firefighter")
 
-    assert Staff.exists?("UFRESH")
-    assert_equal "firefighter", Staff.find("UFRESH").role
+    assert Account.exists?("UFRESH")
+    assert_equal %w[firefighter], Authz.roles_held("UFRESH")
   end
 
   test "a grant taken back shuts the door on the next request" do
-    grant = Fd::AccessGrant.give!("UNOROLE", role: "firefighter", by: "UBOSS")
+    hold_role!("UNOROLE", "firefighter")
     sign_in_as(@me)
 
     get fd_root_path
     assert_response :success
 
-    grant.take_back!(by: "UBOSS")
+    drop_roles!("UNOROLE")
 
     get fd_root_path
-    assert_redirected_to auth_failure_path(message: "not_allowlisted")
+    assert_redirected_to root_path,
+      "losing the grant shuts Fire Engine, it no longer shuts the whole app"
+    assert_match(/conduct team/, flash[:alert])
   end
 
-  test "a stale session lands on the member area rather than bouncing forever" do
-    grant = Fd::AccessGrant.give!("UNOROLE", role: "firefighter", by: "UBOSS")
+  test "a stale session lands on the sign in page rather than bouncing forever" do
+    hold_role!("UNOROLE", "firefighter")
     sign_in_as(@me)
-    grant.take_back!(by: "UBOSS")
+    drop_roles!("UNOROLE")
 
     get login_path
     assert_redirected_to you_api_path
 
-    follow_redirect!
-    assert_response :success
+    assert_redirected_to root_path, "a live session is sent on, not asked to sign in again"
   end
 
   test "the sign in switch for development is not routed anywhere else" do
@@ -195,14 +195,28 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     assert_empty response.body
   end
 
-  test "the three roles are the only things that count as a role" do
-    %w[firefighter lead community_manager].each do |role|
-      Fd::AccessGrant.give!("UNOROLE", role: role, by: "UBOSS")
-      assert_equal role, Staff.find("UNOROLE").role
+  test "the grantable roles are the only things that count as a role" do
+    Authz.grantable_roles.each do |role|
+      hold_role!("UNOROLE", role)
+      Current.forget_roles
+      assert_equal [role], Authz.roles_held("UNOROLE"),
+        "the role a grant names is the role they hold"
     end
 
-    assert_raises(Fd::AccessGrant::NotAllowed) do
-      Fd::AccessGrant.give!("UNOROLE", role: "observer", by: "UBOSS")
+    assert_raises(Authz::Grant::NotAllowed) do
+      Authz::Grant.give!("UNOROLE", kind: "role", name: "wizard", by: "test")
     end
+  end
+
+  test "the manager sits above both ladders, held by the flag" do
+    boss = hold_role!("UABOVE", "community_manager")
+
+    assert_equal [Fd::Access::MANAGER_ROLE], Authz.roles_held(boss.user_id),
+      "the manager role is what a manager holds now"
+    assert_predicate boss, :manager?
+    assert boss.may?("case.read"), "a manager runs the Fire Department"
+    assert Authz.holds?(boss, "channel.all"), "a manager reads every channel"
+    assert Authz.holds?(boss, "engine.manage"), "a manager runs the engine"
+    assert Authz.holds?(boss, "access.grant"), "a manager hands access out"
   end
 end

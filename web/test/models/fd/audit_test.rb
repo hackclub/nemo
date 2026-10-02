@@ -19,7 +19,7 @@ class Fd::AuditTest < ActiveSupport::TestCase
   end
 
   test "a record outside the conduct schema is refused rather than mislabelled" do
-    assert_raises(Fd::Audit::UnauditableRecord) { Fd::Audit.entity_type(Staff.new) }
+    assert_raises(Fd::Audit::UnauditableRecord) { Fd::Audit.entity_type(Account.new) }
   end
 
   test "a verb outside the vocabulary is refused" do

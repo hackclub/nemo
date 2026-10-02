@@ -1,22 +1,43 @@
 module Fd
   class AuditsController < BaseController
-    permit "access.read"
-
-    WINDOW = 30.days
-    PER_PAGE = 100
+    permit "case.read"
 
     def show
-      @counts = Deeds.new(nil, since: WINDOW.ago).totals
-      @view = Deeds.view_for(params[:view])
-      @seen = @view unless @view == "all"
-      @total = @counts.fetch(@view, 0)
-      @pages = [(@total / PER_PAGE.to_f).ceil, 1].max
-      @page = [params[:page].to_i, 1].max.clamp(1, @pages)
+      @query = AuditQuery.new(params, actor: current_account)
+      @rows = @query.rows
+      @views = @query.views
+      @names = Names.for(named_in(@rows))
+      @channels = ChannelNames.for(channel_ids(@rows))
+    end
 
-      @deeds = Deeds.new(nil, since: WINDOW.ago, view: @view, limit: PER_PAGE,
-        offset: (@page - 1) * PER_PAGE)
-      @rows = @deeds.rows
-      @names = Names.for(@deeds.member_ids)
+    def event
+      @query_for_row = AuditQuery.new({}, actor: current_account)
+      @row = AuditQuery.one(params[:source].to_s, params[:id].to_s)
+      return head :not_found if @row.nil?
+      return head :forbidden unless @query_for_row.may_see?(@row.source)
+
+      @names = Names.for([@row.actor_id, @row.subject_id, @row.entity_id].compact)
+      @channels = ChannelNames.for([@row.entity_ref, @row.entity_id].compact)
+      render layout: false
+    end
+
+    private
+
+    def named_in(rows)
+      rows.flat_map { |row| [row.actor_id, row.subject_id, member_in(row)] }.compact
+    end
+
+    MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/
+
+    def member_in(row)
+      row.entity_id if row.entity_id.to_s.match?(MEMBER_ID)
+    end
+
+    CHANNEL_ID = /\A[CGD][A-Z0-9]{2,}\z/
+
+    def channel_ids(rows)
+      rows.flat_map { |row| [row.entity_ref, row.entity_id] }
+        .select { |said| said.to_s.match?(CHANNEL_ID) }
     end
   end
 end

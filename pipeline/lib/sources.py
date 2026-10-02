@@ -12,6 +12,8 @@ def _load():
 TABLE = _load()
 SOURCES = TABLE["sources"]
 KEYS = tuple(SOURCES)
+STANDALONE_SOURCES = frozenset(key for key, said in SOURCES.items() if said.get("standalone"))
+NIGHTLY_KEYS = tuple(key for key in KEYS if key not in STANDALONE_SOURCES)
 CADENCES = tuple(TABLE["cadences"])
 GUARDS = tuple(TABLE["guards"])
 RESUMES = tuple(TABLE["resumes"])
@@ -53,3 +55,30 @@ def prune_floor(key):
 
 def runs_as(key):
     return source(key).get("runs_as") or [key]
+
+
+DEFAULT_UNIT_BUDGET_SECONDS = 90
+
+
+def unit_budget_seconds(key):
+    try:
+        return int(source(key).get("unit_budget_seconds", DEFAULT_UNIT_BUDGET_SECONDS))
+    except Unknown:
+        return DEFAULT_UNIT_BUDGET_SECONDS
+
+
+def parser_version(key):
+    try:
+        return int(source(key).get("parser_version", 1))
+    except Unknown:
+        return 1
+
+
+BY_RUN = {name: key for key in KEYS for name in runs_as(key)}
+
+
+def key_for_run(run_source):
+    if run_source in BY_RUN:
+        return BY_RUN[run_source]
+    head = run_source.split(":", 1)[0]
+    return BY_RUN.get(head, run_source)

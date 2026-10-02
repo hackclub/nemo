@@ -1,0 +1,26 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <h2 class="card-title">Guards</h2>
+  </div>
+  <div class="scroll">
+    <table class="data-table">
+      <thead><tr><th>guard</th><th>state</th><th>turned on by</th></tr></thead>
+      <tbody>
+        <% Fd::ChannelGuard::KINDS.each do |kind| %>
+          <% guard = guards[kind] %>
+          <tr>
+            <td><%= guard_label(kind) %></td>
+            <td>
+              <% if guard %>
+                <span class="state state-good">on</span>
+              <% else %>
+                <span class="state state-off">off</span>
+              <% end %>
+            </td>
+            <td><%= guard ? channel_guard_why(guard) : "n/a" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

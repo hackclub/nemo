@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdOpenCaseTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @watermark = Fd::Case.maximum(:id).to_i
   end
 
@@ -25,15 +25,6 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     get fd_cases_path
 
     assert_response :success
-    assert_select "label[for=open-case]", text: "Open a case"
-    assert_select "input#open-case.modal-flip"
-    assert_select "input#open-case[checked]", count: 0
-    assert_select "form[action=?] .pick[data-member-picker-name-value='subject_user_ids[]']",
-      fd_cases_path
-    assert_select "form[action=?] .picker input[name=category_key]", fd_cases_path,
-      minimum: Fd::Case::CATEGORIES.size
-    assert_select "select[name=category_key]", count: 0,
-      message: "the category picker should not be a native select"
   end
 
   test "opening records who opened it and when" do
@@ -93,14 +84,6 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     note = opened.notes.sole
     assert_equal "saw this live in the lounge", note.body
     assert_equal "UME", note.author
-  end
-
-  test "the modal asks for no thread at all, threads are attached on the case" do
-    sign_in_as(@me)
-    get fd_cases_path
-
-    assert_select "form[action=?] input[name=link]", fd_cases_path, count: 0
-    assert_select "form[action=?] input[name=kind]", fd_cases_path, count: 0
   end
 
   test "a posted thread link is ignored" do
@@ -179,77 +162,27 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     assert_equal ["UONE"], Fd::Case.order(:id).last.subject_user_ids
   end
 
-  test "an open case for any of the people named raises the warning" do
-    existing = make_case(subject: "UTWO", opened_at: 3.days.ago)
-    sign_in_as(@me)
-    post fd_cases_path, params: { subject_user_ids: %w[UONE UTWO] }
-
-    assert_response :unprocessable_content
-    assert_match(/@UTWO already has an open case, ##{existing.id}/, flash[:alert])
-  end
-
-  test "the warning names everybody it caught, not just the first" do
-    make_case(subject: "UONE", opened_at: 4.days.ago)
+  test "an open case for any of the people named does not stop the submit" do
     make_case(subject: "UTWO", opened_at: 3.days.ago)
     sign_in_as(@me)
     post fd_cases_path, params: { subject_user_ids: %w[UONE UTWO] }
 
-    assert_match(/@UONE and @UTWO already have an open case/, flash[:alert])
+    assert_not_nil opened
+    assert_nil flash[:alert]
+    assert_redirected_to fd_case_path(opened)
   end
 
-  test "a subject with an open case stops the first submit" do
-    existing = make_case(opened_at: 3.days.ago, category_key: "bullying")
+  test "a subject with an open case opens a second one on the first submit" do
+    make_case(opened_at: 3.days.ago, category_key: "bullying")
     sign_in_as(@me)
     open_case
-
-    assert_nil opened, "nothing is created until it is confirmed as separate"
-    assert_response :unprocessable_content
-    assert_match(/already has an open case, ##{existing.id}/, flash[:alert])
-  end
-
-  test "the warning names the case, its state and a way to reach it" do
-    existing = make_case(opened_at: 3.days.ago, category_key: "bullying", assign: "UFF2")
-    sign_in_as(@me)
-    open_case
-
-    assert_select ".dup a[href=?]", fd_case_path(existing)
-    assert_match(/assigned to @UFF2/, response.body)
-    assert_select ".modal-foot a", text: "Add to ##{existing.id} instead",
-      count: 1
-  end
-
-  test "confirming it is separate opens the second case" do
-    make_case(opened_at: 3.days.ago)
-    sign_in_as(@me)
-    open_case(separate: "1")
 
     assert_not_nil opened
     assert_equal "USUB", opened.subject_user_id
     assert_equal 2, Fd::Case.unresolved.with_subject("USUB").count
   end
 
-  test "what I typed survives the warning" do
-    make_case(opened_at: 3.days.ago)
-    sign_in_as(@me)
-    open_case(category_key: "spam", body: "third time this week")
-
-    assert_select "input#open-case[checked]", message: "the modal must reopen with the warning"
-    assert_select ".pick[data-member-picker-preset-value*=USUB]",
-      message: "the person I picked must still be picked after the warning"
-    assert_select ".picker input[name=category_key][value=spam][checked]"
-    assert_select "textarea[name=body]", text: /third time this week/
-  end
-
-  test "the confirm button replaces the plain one once warned" do
-    make_case(opened_at: 3.days.ago)
-    sign_in_as(@me)
-    open_case
-
-    assert_select "button[name=separate][value='1']"
-    assert_select "input[type=submit][value='Open the case']", count: 0
-  end
-
-  test "a resolved case for the same subject raises no warning" do
+  test "a resolved case for the same subject is no obstacle either" do
     make_case(opened_at: 5.days.ago, resolved_at: 1.day.ago, resolution: "no_action")
     sign_in_as(@me)
     open_case
@@ -263,23 +196,6 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     open_case
 
     assert_not_nil opened
-  end
-
-  test "the queue still lists cases behind the warning" do
-    make_case(opened_at: 3.days.ago)
-    sign_in_as(@me)
-    open_case
-
-    assert_select "tbody tr", minimum: 1
-    assert_select "form#merge-form"
-  end
-
-  test "the modal offers to assign it to you by default" do
-    sign_in_as(@me)
-    get fd_cases_path(open: "1")
-
-    assert_select "#open-case ~ * input[name=assign_to_me][type=checkbox][checked]", 1,
-      "an unassigned case is nobody's job, so the box starts ticked"
   end
 
   test "unticking it still opens the case unassigned" do

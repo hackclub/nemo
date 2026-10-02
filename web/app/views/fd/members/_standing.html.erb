@@ -1,0 +1,72 @@
+<%= turbo_frame_tag Fd::MemberGuardBroadcast.frame(user_id), target: "_top",
+      data: { src: fd_member_standing_path(user_id) } do %>
+  <% if guards.any? %>
+    <div class="standing">
+      <p class="standing-t">In force now</p>
+      <% guards.each do |guard| %>
+        <% may_lift = guard.deactivation? ? may_deactivate : may_guard %>
+        <div class="standing-row<%= " is-carried" if guard.deactivation? %>"
+             <%= tag.attributes(data: {
+                   controller: ("deactivate" if guard.deactivation?),
+                   carry: (guard.carry_state if guard.deactivation?),
+                   landed: (guard.landed?.to_s if guard.deactivation?)
+                 }.compact) %>>
+          <span class="evdot <%= guard_dot_tone(guard) %>">
+            <%= case_action_icon("gauge") %>
+          </span>
+          <span class="grow standing-line">
+            <b><%= guard_held_line(guard) %></b>
+            <span class="sub"><%= guard_footnote(guard, names) %></span>
+            <% if guard.deactivation? %>
+              <span class="carry-said"><%= guard_carry_said(guard) %></span>
+              <span class="carry-slow" data-deactivate-target="slow" hidden>
+                Slack has not answered yet.
+              </span>
+              <% if guard.failed? && guard.last_error.present? %>
+                <span class="carry-why"><%= guard.last_error %></span>
+              <% end %>
+            <% end %>
+          </span>
+          <% if guard.case_id %>
+            <%= link_to "Open case ##{guard.case_id}", fd_case_path(guard.case_id),
+                  class: "btn btn-ghost" %>
+          <% end %>
+          <% if may_lift %>
+            <button type="button" class="btn" aria-haspopup="dialog"
+                    data-modal-open="guard-lift-<%= guard.id %>">
+              <%= guard.deactivation? ? "Activate" : "Lift it" %>
+            </button>
+          <% end %>
+        </div>
+
+        <% if may_lift %>
+          <%= render layout: "fd/modal", locals: {
+                id: "guard-lift-#{guard.id}",
+                title: guard.deactivation? ? "Activate" : "Lift it",
+                sub: names[user_id], open: false } do %>
+            <%= form_with url: fd_member_guard_path(user_id, guard), method: :delete,
+                  html: { autocomplete: "off" } do %>
+              <div class="modal-body">
+                <% unless guard.deactivation? %>
+                  <p class="modal-note">
+                    It stops standing. The record keeps it, and what it was for.
+                  </p>
+                <% end %>
+                <label class="field-label">
+                  Why it is being lifted
+                  <%= text_area_tag :lift_reason, nil, rows: 3, class: "textarea", id: nil %>
+                </label>
+              </div>
+              <div class="modal-foot">
+                <button type="button" class="btn btn-ghost"
+                        data-action="click->modal#shut">Cancel</button>
+                <%= submit_tag guard.deactivation? ? "Activate" : "Lift it",
+                      class: "btn btn-danger" %>
+              </div>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

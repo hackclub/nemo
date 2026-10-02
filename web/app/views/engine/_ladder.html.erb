@@ -3,7 +3,7 @@
   <% steps.each do |step| %>
     <% running = step.running? %>
     <% leading = step.statuses.keys.first %>
-    <% state = running ? "run" : (leading == "ok" ? "ok" : "") %>
+    <% state = running ? "run" : leading.to_s %>
     <% source = Engine::Source.for_run(step.source) %>
     <div class="rung <%= state %>">
       <div class="ri"><%= step.step_index %></div>
@@ -16,7 +16,7 @@
       </div>
       <div class="snum"><%= run_duration(step) %></div>
       <div class="snum"><%= step.rows_in ? number_with_delimiter(step.rows_in) : "n/a" %></div>
-      <div class="rst"><%= leading %></div>
+      <div class="rst"><%= run_status_tally(step.statuses) %></div>
     </div>
   <% end %>
 </div>

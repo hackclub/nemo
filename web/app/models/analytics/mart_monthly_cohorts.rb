@@ -8,7 +8,11 @@ module Analytics
     end
 
     def complete?
-      searched >= members
+      searched >= ever_posted
+    end
+
+    def fully_known?
+      known >= members
     end
 
     def mature?

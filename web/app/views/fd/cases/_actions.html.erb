@@ -1,45 +1,32 @@
-<div class="panel-head">
-  <span class="lbl grow"><%= actions_head_line(actions) %></span>
-  <%= opens_modal "case.act", "Log an action", opens: "log-action", on: kase %>
-</div>
-
-<div class="ledger">
+<div class="list">
   <% actions.each do |action| %>
-    <div class="ledger-row">
-      <i class="ledger-rail <%= action_rail_tone(action) %>" aria-hidden="true"></i>
-      <div class="ledger-main">
-        <div class="ledger-top">
-          <%= tag.b action_label(action.type_key),
-                class: ("action-undone" if action.reversed?) %>
+    <div class="lrow <%= "is-reversed" if action.reversed? %>">
+      <span class="evdot <%= "act" unless action.reversed? %>" aria-hidden="true">
+        <%= case_action_button("gauge", nil) %>
+      </span>
+      <span class="grow">
+        <span class="lrow-head">
+          <b><%= action_label(action.type_key) %></b>
           <%= action_state_chip(action) %>
-          <%= off_subject_chip(action, kase) %>
-          <span class="grow"></span>
-          <% unless action.reversed? %>
-            <%= opens_modal "case.reverse", "Reverse", opens: "reverse-#{action.id}",
-                  on: kase, css: "btn" %>
-          <% end %>
-        </div>
-
-        <p class="ledger-why"><%= action_reason(action) %></p>
-        <p class="ledger-said"><%= action_sentence(action) %></p>
-
-        <% cited = cited_messages[action.cites_message_id] if action.cites? %>
-        <% if cited %>
-          <div class="said said-cite">
-            <div class="msg-text"><%= cited.readable? ? cited.body : "no text held" %></div>
-            <div class="sub2">
-              the message it cites · <%= member_link(cited.author_user_id) %> ·
-              <%= channel_label(cited.channel_id) %> ·
-              <%= cited.posted_at.strftime("%-d %b %H:%M") %>
-            </div>
-          </div>
-        <% end %>
+        </span>
+        <span class="sub"><%= action_reason(action) %></span>
+        <span class="sub"><%= action_sentence(action) %></span>
 
         <% standing = action_standing_line(action, kase) %>
         <% if standing %>
-          <div class="sub2"><%= standing %></div>
+          <span class="sub"><%= standing %></span>
         <% end %>
-      </div>
+      </span>
+      <span class="lrow-right">
+        <% opened = action_thread_url(action) %>
+        <% if opened %>
+          <%= open_in_slack opened, css: "btn btn-sm" %>
+        <% end %>
+        <% unless action.reversed? %>
+          <%= opens_modal "case.reverse", "Reverse it", opens: "reverse-#{action.id}",
+                on: kase, css: "btn btn-sm btn-danger" %>
+        <% end %>
+      </span>
     </div>
   <% end %>
 </div>

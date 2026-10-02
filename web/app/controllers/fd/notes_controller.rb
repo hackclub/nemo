@@ -21,7 +21,7 @@ module Fd
           case_id: standing ? nil : kase.id,
           subject_user_id: standing ? about : nil,
           body: body,
-          author: current_staff.user_id
+          author: current_account.user_id
         )
         audit(note, "noted")
       end
@@ -38,8 +38,8 @@ module Fd
 
       writing do
         rows = on_this_page(kase)
-          .where(id: params[:id], deleted_at: nil, author: current_staff.user_id)
-          .update_all(deleted_at: now, deleted_by: current_staff.user_id, updated_at: now)
+          .where(id: params[:id], deleted_at: nil, author: current_account.user_id)
+          .update_all(deleted_at: now, deleted_by: current_account.user_id, updated_at: now)
         next if rows.zero?
 
         removed = true

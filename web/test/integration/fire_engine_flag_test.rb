@@ -2,7 +2,7 @@ require "test_helper"
 
 class FireEngineFlagTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     sign_in_as(@me)
     Fd::Flag.delete_all
     Current.forget_flags
@@ -15,14 +15,6 @@ class FireEngineFlagTest < ActionDispatch::IntegrationTest
 
   def turn_it_off
     Fd::Flag.set!(:fire_engine, false, by: @me.user_id)
-  end
-
-  test "with it off, the palette goes with it" do
-    turn_it_off
-    get root_path
-
-    assert_select "button[data-action='palette#open']", count: 0
-    assert_select "#palette", count: 0
   end
 
   test "with it off, every fire engine page sends you to the overview" do
@@ -49,7 +41,7 @@ class FireEngineFlagTest < ActionDispatch::IntegrationTest
   test "with it off, settings stays reachable so it can be turned back on" do
     turn_it_off
 
-    get fd_settings_path(tab: "sections")
+    get admin_flags_path
     assert_response :success
 
     patch fd_flag_path(key: "fire_engine", on: "1")
@@ -61,10 +53,10 @@ class FireEngineFlagTest < ActionDispatch::IntegrationTest
     Fd::Flag.set!(:analytics, false, by: @me.user_id)
 
     get fd_cases_path
-    assert_redirected_to fd_settings_path
+    assert_redirected_to account_path
 
     get root_path
-    assert_redirected_to fd_settings_path
+    assert_redirected_to account_path
   end
 
   test "turning it off deletes nothing" do

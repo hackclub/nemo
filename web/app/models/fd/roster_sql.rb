@@ -1,5 +1,7 @@
 module Fd
   module RosterSql
+    IDENTITY_READ = "identity.read".freeze
+
     AGGREGATES = <<~SQL
       conduct AS (
         SELECT p.user_id,
@@ -16,14 +18,18 @@ module Fd
       acted AS (
         SELECT target_user_id AS user_id,
                count(*) AS actions,
-               count(*) FILTER (
-                 WHERE reversed_at IS NULL AND expires_at > :now
-               ) AS in_force,
                count(DISTINCT case_id) FILTER (
                  WHERE reversed_at IS NULL AND performed_at >= :prior_since
                ) AS priors
         FROM fd.actions
+        WHERE target_user_id IS NOT NULL
         GROUP BY target_user_id
+      ),
+      held AS (
+        SELECT subject_id AS user_id, count(*) AS in_force
+        FROM fd.member_guards
+        WHERE state IN ('live', 'lifting')
+        GROUP BY subject_id
       ),
       noted AS (
         SELECT subject_user_id AS user_id, count(*) AS notes
@@ -35,6 +41,7 @@ module Fd
         SELECT user_id FROM fd.member WHERE is_deleted = false AND is_bot = false
         UNION SELECT user_id FROM conduct
         UNION SELECT user_id FROM acted
+        UNION SELECT user_id FROM held
         UNION SELECT user_id FROM noted
       ),
       roster AS (
@@ -45,20 +52,103 @@ module Fd
                coalesce(conduct.open_cases, 0) AS open_cases,
                conduct.last_case_at,
                coalesce(acted.actions, 0) AS actions,
-               coalesce(acted.in_force, 0) AS in_force,
+               coalesce(held.in_force, 0) AS in_force,
                coalesce(acted.priors, 0) AS priors,
                coalesce(noted.notes, 0) AS notes,
                m.display_name, m.handle
         FROM people
         LEFT JOIN conduct ON conduct.user_id = people.user_id
         LEFT JOIN acted ON acted.user_id = people.user_id
+        LEFT JOIN held ON held.user_id = people.user_id
         LEFT JOIN noted ON noted.user_id = people.user_id
         LEFT JOIN fd.member m ON m.user_id = people.user_id
         CONTEXT_JOIN
       )
     SQL
 
-    CONTEXT_COLUMNS = ", dm.cohort_at, w.last_active_at".freeze
+    SEARCH_AGGREGATES = <<~SQL
+      hit AS (
+        SELECT user_id FROM fd.member
+        WHERE user_id = :id OR lower(display_name) LIKE :term OR lower(handle) LIKE :term
+        UNION SELECT user_id FROM fd.case_participants WHERE user_id = :id
+        UNION SELECT target_user_id FROM fd.actions WHERE target_user_id = :id
+        UNION SELECT subject_user_id FROM fd.notes WHERE subject_user_id = :id
+        IDENTITY_HITS
+      ),
+      conduct AS (
+        SELECT p.user_id,
+               count(DISTINCT p.case_id) AS cases,
+               count(*) FILTER (WHERE p.role = 'subject') AS subject_of,
+               count(*) FILTER (WHERE p.role <> 'subject') AS logged_in,
+               count(*) FILTER (WHERE p.role = 'subject' AND c.resolved_at IS NULL) AS open_cases,
+               max(c.opened_at) AS last_case_at
+        FROM fd.case_participants p
+        JOIN fd.cases c ON c.id = p.case_id
+        WHERE p.user_id IN (SELECT user_id FROM hit)
+          AND (:category = 'any' OR c.category_key = :category)
+        GROUP BY p.user_id
+      ),
+      acted AS (
+        SELECT target_user_id AS user_id,
+               count(*) AS actions,
+               count(DISTINCT case_id) FILTER (
+                 WHERE reversed_at IS NULL AND performed_at >= :prior_since
+               ) AS priors
+        FROM fd.actions
+        WHERE target_user_id IN (SELECT user_id FROM hit)
+        GROUP BY target_user_id
+      ),
+      held AS (
+        SELECT subject_id AS user_id, count(*) AS in_force
+        FROM fd.member_guards
+        WHERE state IN ('live', 'lifting') AND subject_id IN (SELECT user_id FROM hit)
+        GROUP BY subject_id
+      ),
+      noted AS (
+        SELECT subject_user_id AS user_id, count(*) AS notes
+        FROM fd.notes
+        WHERE case_id IS NULL AND subject_user_id IN (SELECT user_id FROM hit) AND deleted_at IS NULL
+        GROUP BY subject_user_id
+      ),
+      people AS (SELECT user_id FROM hit),
+      roster AS (
+        SELECT people.user_id,
+               coalesce(conduct.cases, 0) AS cases,
+               coalesce(conduct.subject_of, 0) AS subject_of,
+               coalesce(conduct.logged_in, 0) AS logged_in,
+               coalesce(conduct.open_cases, 0) AS open_cases,
+               conduct.last_case_at,
+               coalesce(acted.actions, 0) AS actions,
+               coalesce(held.in_force, 0) AS in_force,
+               coalesce(acted.priors, 0) AS priors,
+               coalesce(noted.notes, 0) AS notes,
+               m.display_name, m.handle
+        FROM people
+        LEFT JOIN conduct ON conduct.user_id = people.user_id
+        LEFT JOIN acted ON acted.user_id = people.user_id
+        LEFT JOIN held ON held.user_id = people.user_id
+        LEFT JOIN noted ON noted.user_id = people.user_id
+        LEFT JOIN fd.member m ON m.user_id = people.user_id
+        LEFT JOIN analytics.dim_member_cohort dm ON dm.user_id = people.user_id
+        LEFT JOIN LATERAL (
+          SELECT last_active_at, messages_posted FROM analytics.fct_member_window w
+          WHERE w.source = 'admin_analytics_member_range' AND w.user_id = people.user_id LIMIT 1
+        ) w ON true
+        CONTEXT_JOIN
+        WHERE (m.user_id IS NOT NULL AND m.is_deleted = false AND m.is_bot = false)
+           OR conduct.user_id IS NOT NULL OR acted.user_id IS NOT NULL OR noted.user_id IS NOT NULL
+      )
+    SQL
+
+    IDENTITY_HITS = <<~SQL
+      UNION SELECT user_id FROM fd.member_identity
+      WHERE purged_at IS NULL
+        AND (lower(real_name) LIKE :term OR lower(first_name) LIKE :term
+             OR lower(last_name) LIKE :term OR lower(email) LIKE :term)
+      UNION SELECT user_id FROM cachet_profiles WHERE lower(display_name) LIKE :term
+    SQL
+
+    CONTEXT_COLUMNS = ", dm.cohort_at, w.last_active_at, w.messages_posted".freeze
 
     IDENTITY_COLUMNS =
       ", mi.real_name, mi.first_name, mi.last_name, mi.email, cp.display_name AS shown_name".freeze
@@ -76,6 +166,7 @@ module Fd
     SQL
 
     SORTS = {
+      "messages" => "messages_posted",
       "subject" => "cases",
       "logged" => "logged_in",
       "actions" => "actions",
@@ -90,19 +181,20 @@ module Fd
 
       if context_asked?
         columns += CONTEXT_COLUMNS
-        joins << CONTEXT_JOIN
+        joins << CONTEXT_JOIN unless asked?
       end
 
-      if asked?
+      if asked? && identity?
         columns += IDENTITY_COLUMNS
         joins << IDENTITY_JOIN
       end
 
-      AGGREGATES.sub("m.display_name, m.handle", columns).sub("CONTEXT_JOIN", joins.join("\n"))
+      template = asked? ? SEARCH_AGGREGATES.sub("IDENTITY_HITS", identity? ? IDENTITY_HITS : "") : AGGREGATES
+      template.sub("m.display_name, m.handle", columns).sub("CONTEXT_JOIN", joins.join("\n"))
     end
 
     def context_asked?
-      !default?("tenure") || !default?("active")
+      asked? || !default?("tenure") || !default?("active") || self["sort"] == "messages"
     end
 
     def roster_where
@@ -143,15 +235,34 @@ module Fd
       end
     end
 
-    TERM_FIELDS = %w[
-      user_id display_name handle title shown_name real_name first_name last_name email
-    ].freeze
+    TERM_FIELDS = %w[display_name handle].freeze
+
+    IDENTITY_TERM_FIELDS = %w[shown_name real_name first_name last_name email].freeze
+
+    def term_fields
+      identity? ? TERM_FIELDS + IDENTITY_TERM_FIELDS : TERM_FIELDS
+    end
 
     def term_clause
-      "(#{TERM_FIELDS.map { |field| "#{field} ILIKE :term" }.join(' OR ')})"
+      "(user_id = :id OR #{term_fields.map { |field| "lower(#{field}) LIKE :term" }.join(' OR ')})"
     end
 
     def roster_order
+      return sort_order unless asked?
+
+      "#{match_rank}, messages_posted DESC NULLS LAST, last_case_at DESC NULLS LAST, #{sort_order}"
+    end
+
+    COLUMNS = {
+      handle: "handle", user_id: "user_id", display_name: "display_name",
+      shown_name: "shown_name", real_name: "real_name", email: "email"
+    }.freeze
+
+    def match_rank
+      MemberMatch.rank(identity: identity?, columns: COLUMNS)
+    end
+
+    def sort_order
       way = descending? ? "DESC" : "ASC"
       tie = descending? ? "ASC" : "DESC"
 
@@ -160,7 +271,7 @@ module Fd
         "lower(coalesce(nullif(display_name, ''), nullif(handle, ''), user_id)) " \
           "#{descending? ? 'ASC' : 'DESC'}, user_id #{tie}"
       when *SORTS.keys
-        "#{SORTS.fetch(self['sort'])} #{way}, user_id #{tie}"
+        "#{SORTS.fetch(self['sort'])} #{way} NULLS LAST, user_id #{tie}"
       else
         "last_case_at #{way} NULLS LAST, user_id #{tie}"
       end
@@ -168,7 +279,11 @@ module Fd
 
     def roster_binds
       { category: self["category"], now: Time.current,
-        prior_since: Case::PRIOR_WINDOW.ago, term: "%#{term}%" }
+        prior_since: Case::PRIOR_WINDOW.ago,
+        term: "%#{Case.sanitize_sql_like(term.downcase)}%",
+        within: "%#{Case.sanitize_sql_like(term.downcase)}%",
+        starts: "#{Case.sanitize_sql_like(term.downcase)}%",
+        exact: term.downcase, id: term.upcase }
     end
 
     def ask(sql, extra = {})

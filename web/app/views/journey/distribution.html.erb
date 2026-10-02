@@ -1,141 +1,86 @@
-<% content_for :page_title, "Distribution" %>
-<% content_for :page_kicker, "Stage 05" %>
+<% content_for :page_title, "Who is active" %>
 
-<% if @top_poster_months.present? %>
-  <% content_for :page_controls do %>
-    <span class="qlab">Month</span>
-    <details class="menu" data-controller="menu">
-      <summary class="btn">
-        <%= @top_posters_month.strftime("%b %Y") %><span class="car" aria-hidden="true">▾</span>
-      </summary>
-      <div class="menu-pop menu-start">
-        <% @top_poster_months.each do |m| %>
-          <%= link_to m.strftime("%b %Y"), distribution_journey_path(top_posters_month: m.iso8601),
-                class: "btn", aria: { current: ("true" if m == @top_posters_month) } %>
-        <% end %>
-      </div>
-    </details>
-  <% end %>
+<% searched = @activity_bands.first&.full_history_members.to_i %>
+<% posters = @poster_bands.sum(&:members) %>
+<% curve = @concentration %>
+<% half = curve.find { |p| p.poster_pct == 50 } %>
+<% tenth = curve.find { |p| p.poster_pct == 90 } %>
+
+<% if searched.positive? %>
+  <div class="metrics">
+    <div class="metric">
+      <span class="metric-k">Ever posted</span>
+      <span class="metric-v"><%= number_to_percentage(posters.to_f / searched * 100, precision: 1) %></span>
+    </div>
+    <div class="metric">
+      <span class="metric-k">Concentration</span>
+      <span class="metric-v"><%= curve.first&.gini&.to_f&.round(3) || "n/a" %></span>
+    </div>
+    <div class="metric">
+      <span class="metric-k">Top tenth of posters</span>
+      <span class="metric-v">
+        <%= tenth ? number_to_percentage(100 - tenth.message_pct.to_f, precision: 1) : "n/a" %>
+      </span>
+    </div>
+  </div>
 <% end %>
 
-<div id="distribution">
-  <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months, top_posters_month: @top_posters_month %>
-</div>
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">How posting concentrates</h2>
+  </div>
 
-<div class="card card-stretch">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Activity distribution</h2>
-      <% coverage = @activity_bands.first %>
-      <p class="card-sub">
-        messages posted over each member&rsquo;s whole history &middot;
-        <%= number_with_delimiter(@activity_bands.sum(&:members)) %> of
-        <%= number_with_delimiter(coverage&.workspace_members) %> members searched
-        <% if coverage && window_note(coverage.window_start, coverage.window_end) %>
-          &middot; searched <%= window_note(coverage.window_start, coverage.window_end) %>
-        <% end %>
-      </p>
+  <div class="grid g-2">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">Messages per poster</h2>
+        </div>
+      </div>
+      <% if @poster_bands.any? %>
+        <% splits = [
+             band_split(curve.first&.median_messages, @poster_bands, "median"),
+             band_split(curve.first&.p90_messages, @poster_bands, "p90")
+           ].compact %>
+        <div
+          data-controller="chart"
+          data-chart-kind-value="bars"
+          data-chart-height-value="240"
+          <% if splits.any? %>data-chart-splits-value="<%= splits.to_json %>"<% end %>
+          data-chart-data-value="<%= {
+            labels: @poster_bands.map(&:activity_band),
+            datasets: [{ label: "posters", data: @poster_bands.map(&:members) }]
+          }.to_json %>"
+        ></div>
+      <% else %>
+        <p class="card-note">n/a</p>
+      <% end %>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">Share of messages by share of posters</h2>
+        </div>
+      </div>
+      <% if curve.any? %>
+        <div
+          data-controller="lorenz"
+          data-lorenz-height-value="240"
+          data-lorenz-gini-value="<%= curve.first.gini.to_f %>"
+          data-lorenz-points-value="<%= curve.map { |p| [p.poster_pct, p.message_pct.to_f] }.to_json %>"
+          data-lorenz-marks-value="<%= [half, tenth].compact.map { |p| [p.poster_pct, p.message_pct.to_f] }.to_json %>"
+        ></div>
+      <% else %>
+        <p class="card-note">n/a</p>
+      <% end %>
     </div>
   </div>
-  <% total_banded = @activity_bands.sum(&:members) %>
-  <% peak = @activity_bands.map(&:members).max.to_i %>
-  <div class="scroll">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>band</th>
-          <th class="col-num">members</th>
-          <th class="col-num">share</th>
-          <th>distribution</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @activity_bands.each do |b| %>
-          <% share = total_banded.positive? ? b.members.to_f / total_banded * 100 : 0 %>
-          <tr>
-            <td>
-              <span class="swatch">
-                <i style="background: <%= b.band_order.zero? ? "var(--off)" : "var(--accent)" %>"></i>
-                <%= b.band_order.zero? ? b.activity_band : "messages posted: #{b.activity_band}" %>
-              </span>
-            </td>
-            <td class="col-num"><%= number_with_delimiter(b.members) %></td>
-            <td class="col-num"><%= number_to_percentage(share.round(1), precision: 1) %></td>
-            <td style="width: 42%">
-              <div class="inbar <%= "soft" if b.band_order.zero? %>">
-                <span><i style="width: <%= peak.positive? ? [(b.members.to_f / peak * 100), 1.5].max.round(1) : 0 %>%"></i></span>
-                <span></span>
-              </div>
-            </td>
-          </tr>
-        <% end %>
-        <tr class="total">
-          <td>searched so far</td>
-          <td class="col-num"><%= number_with_delimiter(total_banded) %></td>
-          <td class="col-num">100%</td>
-          <td></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</div>
+</section>
 
-<% top_channels_stale = stale_note("mart_channel_range") %>
-<% if top_channels_stale %>
-  <%= stale_card("Top public channels", top_channels_stale) %>
-<% else %>
-<div class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Top public channels</h2>
-      <p class="card-sub">
-        by member messages<% if @top_channels.first %> &middot;
-          <%= window_note(@top_channels.first.window_start, @top_channels.first.window_end) %>
-        <% end %>
-      </p>
-    </div>
-  </div>
-  <% chan_peak = @top_channels.map(&:messages_posted_by_members).max.to_i %>
-  <% chan_total = @top_channels.sum(&:messages_posted_by_members) %>
-  <div class="scroll">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>channel</th>
-          <th class="col-num">member messages</th>
-          <th>share of the ten</th>
-          <th class="col-num">posters</th>
-          <th class="col-num">reactions</th>
-          <th class="col-num">reactors</th>
-          <th class="col-num">huddles</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @top_channels.each do |c| %>
-          <tr>
-            <td>
-              <span class="two-line">
-                <%= link_to channel_path(c.channel_id) do %>
-                  <b>#<%= c.name %></b>
-                <% end %>
-                <span><%= c.channel_id %></span>
-              </span>
-            </td>
-            <td class="col-num"><%= number_with_delimiter(c.messages_posted_by_members) %></td>
-            <td style="width: 30%">
-              <div class="inbar">
-                <span><i style="width: <%= chan_peak.positive? ? [(c.messages_posted_by_members.to_f / chan_peak * 100), 1.5].max.round(1) : 0 %>%"></i></span>
-                <span><%= chan_total.positive? ? number_to_percentage(c.messages_posted_by_members.to_f / chan_total * 100, precision: 0) : "0%" %></span>
-              </div>
-            </td>
-            <td class="col-num"><%= number_with_delimiter(c.members_who_posted) %></td>
-            <td class="col-num"><%= number_with_delimiter(c.reactions_added) %></td>
-            <td class="col-num"><%= number_with_delimiter(c.members_who_reacted) %></td>
-            <td class="col-num"><%= number_with_delimiter(c.huddles_initiated) %></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
-</div>
+<% if visible_panel?("journey.top_posters") %>
+  <%= turbo_frame_tag "top-posters" do %>
+    <%= render "top_posters", top_posters: @top_posters, top_poster_months: @top_poster_months,
+          top_posters_month: @top_posters_month, days_measured: @days_measured %>
+  <% end %>
 <% end %>

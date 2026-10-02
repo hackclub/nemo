@@ -1,0 +1,45 @@
+<% head = neighbours.first %>
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Neighbours</h2>
+    </div>
+  </div>
+  <% if head.nil? %>
+    <div class="empty">
+      <p class="empty-title">No shared posters</p>
+      <p>No other channel shares posters with this one yet.</p>
+    </div>
+  <% else %>
+  <div class="scroll">
+    <table class="data-table cols-fixed channel-poster-table">
+      <colgroup>
+        <col style="width: 44px">
+        <col style="width: 40%">
+        <col style="width: 20%">
+        <col style="width: 34%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="col-rank">#</th>
+          <th>channel</th>
+          <th class="col-num">shared posters</th>
+          <th class="col-num">overlap</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% neighbours.each do |row| %>
+          <tr>
+            <td class="col-rank"><%= row.neighbour_rank %></td>
+            <td><%= channel_name_cell(row.neighbour_id, row.neighbour_name) %></td>
+            <td class="col-num"><%= number_with_delimiter(row.shared_posters) %></td>
+            <td class="col-num">
+              <%= number_to_percentage(row.jaccard.to_f * 100, precision: 0) %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+  <% end %>
+</div>

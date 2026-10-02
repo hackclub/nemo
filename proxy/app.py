@@ -1,17 +1,34 @@
+import http.client
 import logging
 import os
 import secrets
+import socket
+import time
+import urllib.error
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
+
+import budget
+import version
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from slack_sdk.errors import SlackApiError
 
+from audit_client import METHODS as AUDIT_METHODS
+from audit_client import AuditApiError, AuditAuthError
+from audit_client import call as audit_call
 from internal_client import InternalApiError, InternalAuthError, InternalClient
+from file_client import METHODS as FILE_READ_METHODS
+from file_client import FileError
+from file_client import read as read_file
+from scim_client import METHODS as SCIM_METHODS
+from scim_client import ScimError
+from scim_client import call as scim_call
 from slack_client import AUTH_ERRORS, admin_client, admin_token
 
 ENV_FILE = Path(__file__).resolve().parent / ".env"
@@ -31,8 +48,12 @@ ALLOWED_METHODS = {
             "admin.users.list",
             "admin.roles.listAssignments",
             "search.messages",
+            "conversations.history",
             "conversations.replies",
+            "conversations.members",
+            "team.accessLogs",
         }
+        | set(AUDIT_METHODS)
     ),
 }
 
@@ -52,6 +73,27 @@ WEB_METHODS = {
     ),
 }
 
+WRITE_METHODS = {
+    "admin": frozenset(
+        {
+            "chat.delete",
+            "conversations.kick",
+            "admin.users.session.reset",
+            "users.info",
+        }
+        | set(SCIM_METHODS)
+    ),
+}
+
+ACTIVITY_METHODS = {"internal": frozenset({"insights.messageStats"})}
+
+HISTORY_METHODS = {"admin": frozenset({"conversations.history"})}
+WEB_FILE_METHODS = FILE_READ_METHODS
+
+NEMO_METHODS = {**WRITE_METHODS, **ACTIVITY_METHODS}
+WEB_METHODS["internal"] = WEB_METHODS["internal"] | ACTIVITY_METHODS["internal"]
+WEB_METHODS["admin"] = HISTORY_METHODS["admin"]
+
 CREDENTIALS = ("internal", "admin")
 
 
@@ -64,8 +106,11 @@ class Client:
 
 CLIENTS = (
     ("pipeline", "PROXY_TOKEN", ALLOWED_METHODS, ALLOWED_FILE_METHODS),
-    ("web", "PROXY_TOKEN_WEB", WEB_METHODS, frozenset()),
+    ("web", "PROXY_TOKEN_WEB", WEB_METHODS, WEB_FILE_METHODS),
+    ("nemo", "PROXY_TOKEN_NEMO", NEMO_METHODS, frozenset()),
 )
+
+WRITES = frozenset().union(*WRITE_METHODS.values())
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -86,6 +131,8 @@ def whoami(name):
         return {"ok": False, "error": str(exc)}
     except SlackApiError as exc:
         return {"ok": False, "error": exc.response.get("error", "unknown_error")}
+    except (OSError, ValueError) as exc:
+        return {"ok": False, "error": f"unreachable: {type(exc).__name__}: {exc}"}
     return {
         "ok": bool(data.get("ok")),
         "user": data.get("user"),
@@ -152,24 +199,51 @@ class CallRequest(BaseModel):
     max_retries: int = Field(3, ge=0, le=MAX_RETRIES_CEILING)
 
 
-@app.get("/verify")
-def verify(response: Response, client: Client = Depends(current_client)):
+@app.get("/health")
+def health():
+    return {
+        "ok": True,
+        "credentials": {name: credential_present(name) for name in CREDENTIALS},
+        "build": version.build(),
+    }
+
+
+VERIFY_CACHE_SECONDS = 60
+_verify_cache = {"at": 0.0, "credentials": None}
+
+
+def credentials_report():
+    now = time.monotonic()
+    cached = _verify_cache["credentials"]
+    if cached is not None and now - _verify_cache["at"] < VERIFY_CACHE_SECONDS:
+        return cached
     credentials = {}
     for name in CREDENTIALS:
         if not credential_present(name):
             credentials[name] = {"ok": False, "error": "not configured"}
             continue
         credentials[name] = whoami(name)
+    _verify_cache["at"] = now
+    _verify_cache["credentials"] = credentials
+    return credentials
 
+
+@app.get("/verify")
+def verify(response: Response, client: Client = Depends(current_client)):
+    credentials = credentials_report()
     ok = all(c["ok"] for c in credentials.values())
     if not ok:
         response.status_code = 503
+    failing = [f"{name}: {state.get('error') or 'not ok'}" for name, state in credentials.items() if not state["ok"]]
     return {
         "ok": ok,
+        "detail": None if ok else "; ".join(failing),
         "client": client.name,
         "credentials": credentials,
         "allowed_methods": {k: sorted(v) for k, v in client.methods.items()},
         "allowed_file_methods": sorted(client.file_methods),
+        "pacing": budget.rates(),
+        "build": version.build(),
     }
 
 
@@ -197,6 +271,12 @@ def admin_api_call(method, params):
         return client.api_call(method, params=params)
     except SlackApiError as exc:
         error = exc.response.get("error", "unknown_error")
+        if exc.response.status_code == 429:
+            raise HTTPException(
+                status_code=429,
+                detail=f"upstream {error}",
+                headers={"Retry-After": str(exc.response.headers.get("Retry-After", "1"))},
+            ) from exc
         if error in AUTH_ERRORS:
             raise HTTPException(status_code=502, detail=f"invalid_auth: {error}") from exc
         raise HTTPException(status_code=502, detail=error) from exc
@@ -206,6 +286,25 @@ def call_admin(req: CallRequest):
     return admin_api_call(req.method, req.params).data
 
 
+def call_audit(req: CallRequest):
+    try:
+        return audit_call(req.method, req.params)
+    except AuditAuthError as exc:
+        raise HTTPException(status_code=502, detail=f"invalid_auth: {exc}") from exc
+    except AuditApiError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+def call_scim(req: CallRequest):
+    try:
+        return scim_call(req.method, req.params)
+    except RuntimeError as exc:
+        status = 502 if isinstance(exc, ScimError) else 503
+        raise HTTPException(status_code=status, detail=str(exc)) from exc
+
+
 @app.post("/file")
 def file(req: CallRequest, client: Client = Depends(current_client)):
     if req.method not in client.file_methods:
@@ -213,6 +312,24 @@ def file(req: CallRequest, client: Client = Depends(current_client)):
             status_code=403,
             detail=f"method not allowed for file transfer by {client.name}: {req.method}",
         )
+
+    refused = budget.take(client.name,
+                          "internal" if req.method in FILE_READ_METHODS else "admin",
+                          req.method)
+    if refused:
+        wait, label = refused
+        raise HTTPException(
+            status_code=429,
+            detail=f"budget: {label} is spent, retry in {wait}s",
+            headers={"Retry-After": str(wait)},
+        )
+
+    if req.method in FILE_READ_METHODS:
+        try:
+            body, kind = read_file(req.params)
+        except FileError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return Response(content=body, media_type=kind)
 
     raw = admin_api_call(req.method, req.params).data
     if not isinstance(raw, (bytes, bytearray)):
@@ -233,6 +350,70 @@ def call(req: CallRequest, client: Client = Depends(current_client)):
             ),
         )
 
+    if req.method in WRITES:
+        logger.warning(
+            "WRITE %s by %s on %s: %s",
+            req.method, client.name, req.credential,
+            {k: v for k, v in req.params.items() if k in ("user_id", "channel", "ts")},
+        )
+
+    refused = budget.take(client.name, req.credential, req.method)
+    if refused:
+        wait, label = refused
+        raise HTTPException(
+            status_code=429,
+            detail=f"budget: {label} is spent, retry in {wait}s",
+            headers={"Retry-After": str(wait)},
+        )
+
     if req.credential == "admin":
-        return call_admin(req)
+        if req.method in AUDIT_METHODS:
+            return call_audit(req)
+        if req.method in SCIM_METHODS:
+            return call_scim(req)
+        try:
+            return call_admin(req)
+        except HTTPException as exc:
+            if exc.status_code == 429:
+                budget.back_off(client.name, req.credential, req.method)
+            raise
     return call_internal(req)
+
+
+@app.get("/budget")
+def budget_report(client: Client = Depends(current_client)):
+    return budget.report()
+
+
+TRANSPORT_ERRORS = (urllib.error.URLError, http.client.IncompleteRead, ConnectionError, OSError)
+FAULT_ORIGIN = "X-Fault-Origin"
+
+
+@app.exception_handler(Exception)
+async def upstream_escaped(request: Request, exc: Exception):
+    if isinstance(exc, urllib.error.HTTPError):
+        if exc.code == 429:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "upstream ratelimited"},
+                headers={"Retry-After": exc.headers.get("Retry-After", "1"), FAULT_ORIGIN: "proxy"},
+            )
+        status, detail = 502, f"upstream http {exc.code}: {exc.reason}"
+    elif isinstance(exc, (TimeoutError, socket.timeout)):
+        status, detail = 504, f"upstream timeout: {exc}"
+    elif isinstance(exc, TRANSPORT_ERRORS):
+        status, detail = 502, f"upstream unreachable: {type(exc).__name__}: {exc}"
+    elif isinstance(exc, ValueError):
+        status, detail = 502, f"upstream returned a body that was not JSON: {exc}"
+    else:
+        status, detail = 500, f"{type(exc).__name__}: {exc}"
+    logger.error("escaped into the catch-all: %s", detail)
+    return JSONResponse(status_code=status, content={"detail": detail[:500]}, headers={FAULT_ORIGIN: "proxy"})
+
+
+@app.middleware("http")
+async def fault_origin(request: Request, call_next):
+    response = await call_next(request)
+    if response.status_code >= 400:
+        response.headers[FAULT_ORIGIN] = "proxy"
+    return response

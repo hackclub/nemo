@@ -1,0 +1,20 @@
+<% bots = kind == Fd::ChannelGuard::BOT_ALLOWLIST %>
+<%= render layout: "fd/modal", locals: { id: "allow-bot",
+      title: "#{bots ? "Allow a bot in" : "Let somebody post in"} #{label}",
+      label: bots ? "Allow a bot to post here" : "Let somebody post here" } do %>
+  <%= form_with url: fd_channel_allows_path(channel_id, kind), method: :post,
+        html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <div class="field-label">
+        <span><%= bots ? "Which bot" : "Who" %></span>
+        <%= render "fd/member_picker", name: "subject_ids[]", single: false,
+              url: bots ? fd_member_search_path(bots: 1) : fd_member_search_path,
+              label: bots ? "search for the bot to allow" : "search for who to allow" %>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+      <%= submit_tag "Add", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>

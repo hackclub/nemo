@@ -14,8 +14,12 @@ clean-targets:
 
 on-run-end: "{{ analyze_built() }}"
 
+vars:
+  fast_reply_seconds: 3600
+
 models:
   mnemosyne:
+    +pre-hook: "SET LOCAL work_mem = '256MB'"
     staging:
       +materialized: view
       +post-hook: "{{ grant_read('rails_app') }}"

@@ -1,0 +1,93 @@
+module Channels
+  class Audience
+    KINDS = %w[granted public].freeze
+    DEFAULT = "granted".freeze
+    OPEN_TO_ALL = "public".freeze
+    OPEN = %w[public everyone].freeze
+    WAS = { "everyone" => "public", "shared" => "granted", "private" => "granted" }.freeze
+
+    def self.settled(audience)
+      WAS.fetch(audience.to_s, audience.to_s)
+    end
+
+    def self.everything
+      Analytics::DimChannel.where(archived: false)
+    end
+
+    def self.open_ids
+      Setting.where(audience: OPEN).select(:channel_id)
+    end
+
+    def self.open_to_all
+      everything.where(channel_id: open_ids)
+    end
+
+    def self.for(staff)
+      return open_to_all if staff.nil?
+      return everything if everywhere?(staff)
+      return open_to_all unless Authz.holds?(staff, "channel.read")
+
+      open_to_all
+        .or(everything.where(channel_id: granted_ids_for(staff)))
+        .or(everything.where(channel_id: appointed_ids_for(staff)))
+    end
+
+    def self.appointed_ids_for(staff)
+      ::Prometheus::Appointment.managing.for_person(staff.user_id).select(:channel_id)
+    end
+
+    def self.unmeasured_for(staff)
+      return [] if staff.nil?
+
+      ::Prometheus::Appointment.managing.for_person(staff.user_id)
+        .where.not(channel_id: Analytics::DimChannel.select(:channel_id))
+        .order(:channel_id)
+        .pluck(:channel_id)
+    end
+
+    def self.everywhere?(staff)
+      Fd::Access.manager?(staff) || Authz.holds?(staff, "channel.all")
+    end
+
+    def self.granted_ids_for(staff)
+      roles = Authz.roles_held(staff.user_id)
+      Grant.live.where(user_id: staff.user_id)
+        .or(Grant.live.where(role: roles))
+        .select(:channel_id)
+    end
+
+    def self.granted_ids(staff)
+      return [nil] if staff.nil?
+
+      ids = Grant.live.where(user_id: staff.user_id).pluck(:channel_id)
+      ids.presence || [nil]
+    end
+
+    # the resolver answers on app tables alone, so an archived channel is ruled
+    # out here rather than inside the function
+    def self.may_see?(staff, channel)
+      id = channel.respond_to?(:channel_id) ? channel.channel_id : channel.to_s
+      return false if staff.nil? || id.blank?
+      return false if Analytics::DimChannel.where(channel_id: id, archived: true).exists?
+
+      ApplicationRecord.connection.select_value(
+        ApplicationRecord.sanitize_sql(["SELECT app.may_see_channel(?, ?)", staff.user_id, id])
+      )
+    end
+
+    def self.of(channel_id)
+      settled(Setting.where(channel_id: channel_id).pick(:audience) || DEFAULT)
+    end
+
+    class Setting < ApplicationRecord
+      self.table_name = "app.channel_audience"
+      self.primary_key = "channel_id"
+    end
+
+    class Grant < ApplicationRecord
+      self.table_name = "app.channel_grants"
+
+      scope :live, -> { where(revoked_at: nil) }
+    end
+  end
+end

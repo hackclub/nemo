@@ -1,0 +1,33 @@
+<%= turbo_frame_tag "action-standing" do %>
+  <% if guards.any? %>
+    <% family = kase.family_ids %>
+    <div class="field-label">
+      <span>Already standing on them</span>
+      <div class="optlist">
+        <% guards.each do |guard| %>
+          <% attached = guard.on_case?(family) %>
+          <% held = attached || logged.include?(guard.id) %>
+          <label class="opt">
+            <%= radio_button_tag :standing_guard_id, guard.id, false, id: nil, disabled: held,
+                  data: { action: "change->action-standing#fit" } %>
+            <span class="opt-dot" aria-hidden="true"></span>
+            <span class="opt-body">
+              <span class="opt-label"><%= guard_kind_line(guard) %></span>
+              <span class="opt-note">
+                <%= held ? already_here_note(attached) : guard_option_note(guard, kase.id) %>
+              </span>
+            </span>
+          </label>
+        <% end %>
+        <label class="opt">
+          <%= radio_button_tag :standing_guard_id, "", true, id: nil,
+                data: { action: "change->action-standing#fit" } %>
+          <span class="opt-dot" aria-hidden="true"></span>
+          <span class="opt-body">
+            <span class="opt-label">None of these, take a new action</span>
+          </span>
+        </label>
+      </div>
+    </div>
+  <% end %>
+<% end %>

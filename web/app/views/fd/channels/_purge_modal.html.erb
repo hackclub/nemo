@@ -1,0 +1,23 @@
+<%= render layout: "fd/modal", locals: { id: "purge-channel",
+      title: "Take down messages in #{label}",
+      label: "Take down the last messages in this channel" } do %>
+  <%= form_with url: fd_channel_purges_path(channel_id), method: :post,
+        html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <label class="field-label">
+        Channel messages
+        <%= number_field_tag :wanted, 10, class: "input", id: nil,
+              min: 1, max: Fd::ChannelPurge::MOST %>
+      </label>
+      <label class="field-label">
+        Why
+        <%= text_area_tag :reason, nil, rows: 3, class: "textarea", id: nil,
+              maxlength: Fd::ChannelPurgesController::LONGEST_REASON %>
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+      <%= submit_tag "Take them down", class: "btn btn-danger" %>
+    </div>
+  <% end %>
+<% end %>

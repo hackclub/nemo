@@ -1,0 +1,21 @@
+<div class="card card-flush">
+  <% if retention.any? %>
+    <div style="padding: 0 var(--s-sm) var(--s-2xs)">
+      <div
+        data-controller="chart"
+        data-chart-kind-value="line"
+        data-chart-height-value="220"
+        data-chart-pct-value="true"
+        data-chart-data-value="<%= {
+          labels: retention.map { |r| r.cohort_month.strftime("%b %Y") },
+          datasets: [
+            { label: "day 30", data: retention.map { |r| r.retained_day_30_rate && r.retained_day_30_rate.to_f * 100 } },
+            { label: "day 90", data: retention.map { |r| r.retained_day_90_rate && r.retained_day_90_rate.to_f * 100 } }
+          ]
+        }.to_json %>"
+      ></div>
+    </div>
+
+  <% else %>
+  <% end %>
+</div>

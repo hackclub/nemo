@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdSearchTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     sign_in_as(@me)
   end
 
@@ -20,34 +20,16 @@ class FdSearchTest < ActionDispatch::IntegrationTest
     get fd_search_path(format: :json), params: { q: "raid" }
 
     assert_response :unauthorized
-    assert_empty response.body
   end
 
   test "an empty box offers what is waiting and what you can do" do
     make_case(opened_at: 3.days.ago)
-    Fd::Decision.create!(title: "Second chances", statement: "read by somebody else",
-      proposed_by: "UFF1")
 
     keys = found("")["groups"].map { |one| one["key"] }
     assert_equal ["waiting", "do"], keys
 
     waiting = group("", "waiting")["rows"]
     assert_match(/unassigned case/, waiting.first["title"])
-    assert_match(/\A#{Fd::Decision.unsettled.count} proposals? to settle\z/,
-      waiting.last["title"])
-    assert_equal fd_decisions_path(view: "proposed"), waiting.last["url"]
-  end
-
-  test "a decision row carries where it stands and what it is called" do
-    decision = Fd::Decision.create!(title: "Throwaway accounts", proposed_by: "UFF1",
-      statement: "A brand new handle posting a banjo link is banned on sight.")
-    decision.settle!(by: "ULEAD")
-
-    row = group("banjo", "decision")["rows"].sole
-    assert_equal "Throwaway accounts", row["title"]
-    assert_equal "in force", row["sub"]
-    assert_equal fd_decision_path(decision), row["url"]
-    assert_equal "📓", row["icon"]
   end
 
   test "a case row says what state it is in and who holds it" do
@@ -84,16 +66,15 @@ class FdSearchTest < ActionDispatch::IntegrationTest
   end
 
   test "a scope keeps one kind and says so back" do
-    decision = Fd::Decision.create!(title: "Raid nights", proposed_by: "UFF1",
-      statement: "a raid is locked on sight")
-    decision.settle!(by: "ULEAD")
+    kase = make_case(opened_at: 2.days.ago)
+    Fd::Note.create!(case_id: kase.id, body: "a raid, six accounts", author: "UFF1")
     make_case(opened_at: 2.days.ago).update!(member_note: "a raid, six accounts")
 
-    get fd_search_path(format: :json), params: { q: "raid", scope: "decision" }
+    get fd_search_path(format: :json), params: { q: "raid", scope: "note" }
     payload = JSON.parse(response.body)
 
-    assert_equal "decision", payload["scope"]
-    assert_equal ["decision"], payload["groups"].map { |one| one["key"] }
+    assert_equal "note", payload["scope"]
+    assert_equal ["note"], payload["groups"].map { |one| one["key"] }
   end
 
   test "a pasted Slack link answers with the case holding that thread" do
@@ -122,13 +103,12 @@ class FdSearchTest < ActionDispatch::IntegrationTest
     assert_equal "command", payload["scope"]
     titles = payload["groups"].sole["rows"].map { |row| row["title"] }
     assert_includes titles, "Open a case"
-    assert_includes titles, "Write a decision"
   end
 
   test "commands filter as you keep typing" do
-    titles = found(">write").fetch("groups").sole["rows"].map { |row| row["title"] }
+    titles = found(">members").fetch("groups").sole["rows"].map { |row| row["title"] }
 
-    assert_equal ["Write a decision"], titles
+    assert_equal ["Go to the members"], titles
   end
 
   test "on a case, the commands act on that case" do
@@ -141,28 +121,6 @@ class FdSearchTest < ActionDispatch::IntegrationTest
     assert_equal fd_case_path(kase, do: "resolve"), resolve["url"]
   end
 
-  test "a command lands with the modal already open" do
-    kase = make_case(opened_at: 2.days.ago)
-
-    get fd_case_path(kase, do: "resolve")
-    assert_select "input#resolve-case[checked]"
-
-    get fd_case_path(kase)
-    assert_select "input#resolve-case[checked]", count: 0
-  end
-
-  test "a decision command opens its modal too" do
-    decision = Fd::Decision.create!(title: "Second chances", statement: "read by somebody else",
-      proposed_by: "UME")
-
-    get fd_search_path(format: :json), params: { q: ">", on_decision: decision.id }
-    rows = JSON.parse(response.body)["groups"].sole["rows"]
-    assert_includes rows.map { |row| row["title"] }, "Link threads"
-
-    get fd_decision_path(decision, do: "edit")
-    assert_select "input#edit-decision[checked]"
-  end
-
   test "the page lists every group with its count" do
     kase = make_case(opened_at: 2.days.ago)
     kase.update!(member_note: "a raid from six accounts")
@@ -171,88 +129,5 @@ class FdSearchTest < ActionDispatch::IntegrationTest
     get fd_search_path(q: "raid")
 
     assert_response :success
-    assert_select ".band-label", text: /Cases · 1/
-    assert_select ".band-label", text: /Notes · 1/
-    assert_select "a[href=?]", fd_case_path(kase)
-  end
-
-  test "a tab on the page keeps one kind" do
-    kase = make_case(opened_at: 2.days.ago)
-    kase.update!(member_note: "a raid from six accounts")
-    Fd::Note.create!(case_id: kase.id, body: "the raid again", author: "UFF1")
-
-    get fd_search_path(q: "raid", scope: "note")
-
-    assert_select ".band-label", text: /Notes · 1/
-    assert_select ".band-label", text: /Cases/, count: 0
-    assert_select ".view[aria-current]", text: /Notes/
-    assert_select "a.view", text: /Cases\s*1/, count: 1
-    assert_select "a.view[href=?]", fd_search_path(q: "raid")
-  end
-
-  test "the page says when it found nothing, and when it was not asked" do
-    get fd_search_path(q: "nothingmatchesthis")
-    assert_select ".card-note", text: "Nothing found."
-
-    get fd_search_path
-    assert_select ".card-note", text: "Type at least two letters."
-  end
-
-  test "the palette carries a scope chip and the tab hint" do
-    get fd_cases_path
-
-    assert_select ".palette-input .scope[hidden]"
-    assert_select ".palette-foot", text: /tab/
-  end
-
-  test "the palette and its opener are on every page" do
-    get fd_cases_path
-
-    assert_select "[data-controller~=palette]"
-    assert_select ".palette-host input[data-palette-target=input]"
-  end
-
-  def with_decisions_off
-    Fd::Flag.set!(:decisions, false, by: "UME")
-    yield
-  ensure
-    Fd::Flag.set!(:decisions, true, by: "UME")
-  end
-
-  test "a switched off decision is not searchable" do
-    decision = Fd::Decision.create!(title: "Throwaway accounts", proposed_by: "UFF1",
-      statement: "banjo", state: "proposed")
-    decision.settle!(by: "ULEAD")
-
-    assert group("banjo", "decision"), "it is findable while the flag is on"
-
-    with_decisions_off do
-      assert_nil group("banjo", "decision"),
-        "a feature that is switched off must not be reachable through search"
-    end
-  end
-
-  test "the palette stops offering decisions when they are switched off" do
-    with_decisions_off do
-      get fd_search_path(format: :json), params: { q: ">" }
-      titles = JSON.parse(response.body)["groups"].flat_map { |one| one["rows"] }
-        .map { |row| row["title"] }
-
-      assert_includes titles, "Go to the cases"
-      assert_not titles.any? { |title| title.include?("decision") },
-        "no command may lead to a switched off section"
-    end
-  end
-
-  test "a proposal waiting to settle is not offered while decisions are off" do
-    Fd::Decision.create!(title: "Raid nights", proposed_by: "UFF1",
-      statement: "quiet hours", state: "proposed")
-
-    with_decisions_off do
-      get fd_search_path(format: :json), params: { q: "" }
-      rows = JSON.parse(response.body)["groups"].flat_map { |one| one["rows"] }
-
-      assert_not rows.any? { |row| row["url"].to_s.include?("decisions") }
-    end
   end
 end

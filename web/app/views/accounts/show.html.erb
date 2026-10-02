@@ -1,0 +1,78 @@
+<% content_for :page_title, "Your account" %>
+
+<div class="card card-flush">
+  <div class="strip">
+    <div class="who">
+      <%= face(current_account.user_id, css: "row-avatar av-lg") %>
+      <span class="two-line">
+        <b><%= person_name(current_account.user_id) %></b>
+        <span class="mono"><%= current_account.user_id %></span>
+      </span>
+    </div>
+
+    <span class="strip-div" aria-hidden="true"></span>
+
+    <span class="two-line">
+      <span class="sub2">Role</span>
+      <% if @roles.any? %>
+        <span class="<%= Authz.superadmin?(@roles.first) ? "is-high" : "is-loud" %>">
+          <%= @roles.map { |role| Authz.role_label(role) }.to_sentence %>
+        </span>
+      <% else %>
+        <span class="is-quiet">none</span>
+      <% end %>
+    </span>
+
+    <span class="strip-div" aria-hidden="true"></span>
+
+    <span class="two-line">
+      <span class="sub2">Slack</span>
+      <% if @account %>
+        <span class="is-good">linked</span>
+      <% else %>
+        <span class="is-quiet">not linked</span>
+      <% end %>
+    </span>
+
+    <span class="grow"></span>
+
+    <% if @account %>
+      <%= button_to "Unlink Slack", fd_slack_account_path, method: :delete, class: "btn",
+            form: { class: "contents" } %>
+    <% elsif @linkable %>
+      <%= button_to "Link Slack", fd_slack_account_path, method: :post, class: "btn",
+            form: { class: "contents" } %>
+    <% end %>
+  </div>
+</div>
+
+<div class="grid g-sided">
+  <div class="panel" data-controller="theme">
+    <div class="panel-head">
+      <span class="panel-name">Theme</span>
+      <span class="grow"></span>
+      <span class="theme-chip" data-theme-target="swatch" aria-hidden="true"></span>
+      <span class="sub2" data-theme-target="name"></span>
+    </div>
+    <%= render "accounts/theme" %>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-name">What you did</span>
+      <span class="grow"></span>
+      <span class="sub2">
+        <% if @deed_count.positive? %>
+          <%= pluralize(@deed_count, "action") %> &middot; last 30 days
+        <% else %>
+          last 30 days
+        <% end %>
+      </span>
+    </div>
+    <% if @deeds.any? %>
+      <%= render "shared/log", deeds: @deeds %>
+    <% else %>
+      <div class="empty"><p class="empty-title">Nothing in 30 days</p></div>
+    <% end %>
+  </div>
+</div>

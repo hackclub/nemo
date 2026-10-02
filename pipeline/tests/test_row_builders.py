@@ -1,15 +1,16 @@
+import json
 from datetime import date, datetime, timedelta, timezone
 
 from ingest import (
     analytics_pull,
+    channel_history_pull,
     channel_range_pull,
-    first_reply,
     member_channels,
     member_history,
     member_range_pull,
-    top_posters_pull,
     users_list_pull,
 )
+from lib import message as shaping
 
 PULL_DATE = date(2026, 7, 20)
 WINDOW_START = date(2026, 6, 30)
@@ -186,43 +187,6 @@ AVAIL_START = date(2026, 5, 15)
 AVAIL_END = date(2026, 8, 2)
 
 
-def test_pending_months_repulls_a_month_clipped_by_a_stale_edge():
-    stored = {
-        date(2026, 5, 1): date(2026, 5, 31),
-        date(2026, 6, 1): date(2026, 6, 30),
-        date(2026, 7, 1): date(2026, 7, 30),
-    }
-    assert top_posters_pull.pending_months(stored, AVAIL_START, AVAIL_END) == [
-        date(2026, 7, 1),
-        date(2026, 8, 1),
-    ]
-
-
-def test_pending_months_is_empty_when_every_month_is_complete():
-    stored = {
-        date(2026, 5, 1): date(2026, 5, 31),
-        date(2026, 6, 1): date(2026, 6, 30),
-        date(2026, 7, 1): date(2026, 7, 31),
-        date(2026, 8, 1): AVAIL_END,
-    }
-    assert top_posters_pull.pending_months(stored, AVAIL_START, AVAIL_END) == []
-
-
-def test_pending_months_clamps_the_first_month_to_the_available_floor():
-    stored = {date(2026, 5, 1): date(2026, 5, 31)}
-    pending = top_posters_pull.pending_months(stored, AVAIL_START, AVAIL_END)
-    assert date(2026, 5, 1) not in pending
-
-
-def test_pending_months_returns_everything_when_nothing_is_stored():
-    assert top_posters_pull.pending_months({}, AVAIL_START, AVAIL_END) == [
-        date(2026, 5, 1),
-        date(2026, 6, 1),
-        date(2026, 7, 1),
-        date(2026, 8, 1),
-    ]
-
-
 def test_verified_date_row_carries_both_dates_from_one_record():
     row = member_range_pull.verified_date_row(
         {"user_id": "U1", "date_created": 1600000000, "date_claimed": 1600000500}
@@ -250,7 +214,7 @@ def test_range_row_maps_chats_to_member_messages():
         "guest_members_count": 1578,
     }
     row = channel_range_pull.range_row(rec, WINDOW_START, WINDOW_END)
-    assert len(row) == 14
+    assert len(row) == 16
     assert row[0:4] == ("C1", WINDOW_START, WINDOW_END, channel_range_pull.SOURCE)
     assert row[4] == 151576
     assert row[5] == 9
@@ -265,6 +229,35 @@ def test_range_row_keeps_the_membership_the_response_already_carries():
            "full_members_count": 42717, "guest_members_count": 1578}
     row = channel_range_pull.range_row(rec, WINDOW_START, WINDOW_END)
     assert row[11:14] == (44295, 42717, 1578)
+
+
+def test_stamp_reads_slack_seconds_as_utc():
+    assert channel_range_pull.stamp(1768352025) == datetime(
+        2026, 1, 14, 0, 53, 45, tzinfo=timezone.utc)
+
+
+def test_stamp_treats_a_missing_date_as_nothing_rather_than_1970():
+    for empty in (None, "", 0):
+        assert channel_range_pull.stamp(empty) is None
+
+
+def test_stamp_reads_slacks_never_happened_marker_as_nothing():
+    assert channel_range_pull.stamp(-1) is None, \
+        "slack sends -1 for a channel nothing was ever posted in"
+
+
+def test_stamp_refuses_a_value_it_cannot_read():
+    for bad in ("not a stamp", 10 ** 20, [1]):
+        assert channel_range_pull.stamp(bad) is None
+
+
+def test_range_row_carries_the_dates_the_response_already_holds():
+    rec = {"channel_id": "C1", "date_create": 1768352025,
+           "last_message_posted": 1787964291}
+    row = channel_range_pull.range_row(rec, WINDOW_START, WINDOW_END)
+    assert row[14] == channel_range_pull.stamp(1768352025)
+    assert row[15] == channel_range_pull.stamp(1787964291)
+    assert row[14] < row[15]
 
 
 class FakeClient:
@@ -346,56 +339,6 @@ def test_history_row_has_no_first_post_when_nothing_public_is_visible():
     assert member_history.history_row("U1", messages) == ("U1", 2, None, None)
 
 
-def public_match(channel_id, ts):
-    return {"ts": ts, "channel": {"id": channel_id, "name": channel_id.lower()}}
-
-
-def test_tally_page_counts_per_channel_and_keeps_the_span():
-    matches = [
-        public_match("C1", "1606939916.000100"),
-        public_match("C2", "1606939999.000100"),
-        public_match("C1", "1606950000.000200"),
-        {"ts": "1606960000.000300", "channel": {"id": "D1", "is_im": True}},
-    ]
-    tally = member_channels.tally_page({}, matches)
-    assert tally == {
-        "C1": [2, epoch(1606939916.0001), epoch(1606950000.0002)],
-        "C2": [1, epoch(1606939999.0001), epoch(1606939999.0001)],
-    }
-
-
-def test_tally_page_accumulates_across_pages():
-    tally = member_channels.tally_page({}, [public_match("C1", "1606939916.000100")])
-    member_channels.tally_page(tally, [public_match("C1", "1606950000.000200")])
-    assert tally["C1"][0] == 2
-
-
-def test_message_rows_are_one_row_per_channel():
-    tally = member_channels.tally_page({}, [public_match("C2", "1.0"), public_match("C1", "2.0")])
-    rows = member_channels.message_rows("U1", tally)
-    assert [(row[0], row[1], row[2]) for row in rows] == [("U1", "C1", 1), ("U1", "C2", 1)]
-
-
-def test_keep_paging_continues_while_a_full_page_is_still_short_of_the_total():
-    messages = {"paging": {"page": 1, "total": 350}, "matches": [{}] * 100}
-    assert member_channels.keep_paging(messages, 1, 100) is True
-
-
-def test_keep_paging_stops_on_a_short_page():
-    messages = {"paging": {"page": 2, "total": 350}, "matches": [{}] * 40}
-    assert member_channels.keep_paging(messages, 2, 140) is False
-
-
-def test_keep_paging_stops_when_slack_wraps_back_to_page_one():
-    messages = {"paging": {"page": 1, "total": 76175}, "matches": [{}] * 100}
-    assert member_channels.keep_paging(messages, 101, 10000) is False
-
-
-def test_keep_paging_stops_at_the_hundredth_page():
-    messages = {"paging": {"page": 100, "total": 76175}, "matches": [{}] * 100}
-    assert member_channels.keep_paging(messages, 100, 10000) is False
-
-
 def test_joined_channels_keeps_public_rooms_only_and_dedupes():
     channels = [
         {"id": "C2", "is_channel": True},
@@ -408,96 +351,163 @@ def test_joined_channels_keeps_public_rooms_only_and_dedupes():
     assert member_channels.joined_channels(channels) == ["C1", "C2"]
 
 
-def test_scan_replies_skips_self_replies_and_computes_latency():
-    posted = epoch(1600000000)
-    messages = [
-        {"user": "U1", "ts": "1600000000.000000"},
-        {"user": "U1", "ts": "1600000060.000000"},
-        {"user": "U2", "ts": "1600000840.000000"},
-    ]
-    assert first_reply.scan_replies("U1", posted, messages) == (
-        ("U2", epoch(1600000840), 840),
-        None,
+def test_channel_span_row_carries_its_own_source():
+    rec = {"channel_id": "C1", "messages_count": 5}
+    row = channel_range_pull.range_row(
+        rec, WINDOW_START, WINDOW_END, channel_range_pull.SPAN_SOURCE
+    )
+
+    assert row[3] == "admin_analytics_channel_span"
+    assert row[3] != channel_range_pull.SOURCE
+
+
+def test_channel_range_row_still_defaults_to_the_range_source():
+    rec = {"channel_id": "C1", "messages_count": 5}
+
+    assert channel_range_pull.range_row(rec, WINDOW_START, WINDOW_END)[3] == (
+        "admin_analytics_channel_range"
     )
 
 
-def test_scan_replies_walks_past_a_bot_to_the_first_human():
-    posted = epoch(1600000000)
-    messages = [
-        {"user": "U1", "ts": "1600000000.000000"},
-        {"user": "UBOT", "bot_id": "B1", "ts": "1600000004.000000"},
-        {"subtype": "bot_message", "bot_id": "B2", "ts": "1600000009.000000"},
-        {"user": "U2", "ts": "1600003600.000000"},
-    ]
-    assert first_reply.scan_replies("U1", posted, messages) == (
-        ("U2", epoch(1600003600), 3600),
-        ("UBOT", epoch(1600000004), 4),
-    )
+def test_history_derived_flags_never_keep_the_text():
+    flags = shaping.derived("does anyone know how <@U123> fixed https://x.com ?")
+
+    assert flags["is_question"] is True
+    assert flags["has_link"] is True
+    assert flags["mention_count"] == 1
+    assert flags["emoji_only"] is False
+    assert "text" not in flags
+    assert all(not isinstance(v, str) for v in flags.values())
 
 
-def test_scan_replies_keeps_a_bot_only_thread_separate():
-    posted = epoch(1600000000)
-    messages = [
-        {"user": "U1", "ts": "1600000000.000000"},
-        {"user": "UBOT", "bot_id": "B1", "ts": "1600000004.000000"},
-    ]
-    human, bot = first_reply.scan_replies("U1", posted, messages)
-    assert human is None
-    assert bot == ("UBOT", epoch(1600000004), 4)
+def test_history_derived_marks_emoji_only():
+    assert shaping.derived(":tada: :rocket:")["emoji_only"] is True
+    assert shaping.derived("nice :tada:")["emoji_only"] is False
+    assert shaping.derived("")["emoji_only"] is False
 
 
-def test_scan_replies_carries_a_bot_found_on_an_earlier_page():
-    posted = epoch(1600000000)
-    earlier_bot = ("UBOT", epoch(1600000004), 4)
-    page = [{"user": "U2", "ts": "1600000840.000000"}]
-    assert first_reply.scan_replies("U1", posted, page, earlier_bot) == (
-        ("U2", epoch(1600000840), 840),
-        earlier_bot,
-    )
+def test_history_derived_substantive_threshold():
+    assert shaping.derived("x" * 79)["is_substantive"] is False
+    assert shaping.derived("x" * 80)["is_substantive"] is True
 
 
-def test_reply_row_records_an_unanswered_first_post():
-    assert first_reply.reply_row("U1", None, None) == (
-        "U1",
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        first_reply.WALK_VERSION,
-    )
 
 
-def test_reply_row_carries_both_repliers():
-    human = ("U2", epoch(1600003600), 3600)
-    bot = ("UBOT", epoch(1600000004), 4)
-    assert first_reply.reply_row("U1", human, bot) == (
-        "U1",
-        "U2",
-        epoch(1600003600),
-        3600,
-        "UBOT",
-        epoch(1600000004),
-        4,
-        None,
-        None,
-        first_reply.WALK_VERSION,
-    )
+
+def test_history_thread_row_is_none_without_replies():
+    assert channel_history_pull.thread_row("C1", {"ts": "1.0"}) is None
+    assert channel_history_pull.thread_row("C1", {"ts": "1.0", "reply_count": 0}) is None
+    assert channel_history_pull.thread_row("C1", {"ts": "1.0", "reply_count": 2})[2] == 2
 
 
-def test_unreadable_row_marks_a_permanent_skip():
-    assert first_reply.unreadable_row("U1", "channel_not_found") == (
-        "U1",
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        True,
-        "channel_not_found",
-        first_reply.WALK_VERSION,
-    )
+def test_shape_counts_the_content_it_then_drops():
+    counted = shaping.shape({
+        "ts": "1.0", "user": "U1", "text": "look <@U9> https://x.com ?",
+        "blocks": [{"type": "rich_text"}, {"type": "divider"}],
+        "attachments": [{"id": 1}],
+        "files": [{"id": "F1"}, {"id": "F2"}],
+        "reactions": [{"name": "tada", "count": 2, "users": ["U1", "U2"]},
+                      {"name": "eyes", "count": 1, "users": ["U2"]}],
+    })
+
+    assert counted["text_length"] == len("look <@U9> https://x.com ?")
+    assert counted["has_text"] is True
+    assert counted["block_count"] == 2
+    assert counted["attachment_count"] == 1
+    assert counted["file_count"] == 2
+    assert counted["reaction_count"] == 3
+    assert counted["reactor_count"] == 2
+    assert counted["mentioned_ids"] == ["U9"]
+    assert all(k not in counted for k in shaping.REDACT)
+
+
+def test_shape_holds_up_with_nothing_in_the_message():
+    counted = shaping.shape({"ts": "1.0"})
+
+    assert counted["text_length"] == 0
+    assert counted["has_text"] is False
+    assert counted["block_count"] == 0
+    assert counted["file_count"] == 0
+    assert counted["reaction_count"] == 0
+    assert counted["mentioned_ids"] == []
+
+
+def test_scrub_drops_every_redacted_key_at_any_depth():
+    scrubbed = shaping.scrub({
+        "type": "message", "ts": "1.0", "text": "secret",
+        "blocks": [{"text": {"text": "secret"}}],
+        "files": [{"url_private": "https://files/x"}],
+        "attachments": [{"fallback": "secret"}],
+        "previous_message": {"text": "older secret"},
+        "edited": {"user": "U1", "ts": "2.0"},
+        "reactions": [{"name": "tada", "count": 1, "users": ["U1"]}],
+    })
+
+    assert set(scrubbed) == {"type", "ts", "edited", "reactions"}
+    assert "secret" not in repr(scrubbed)
+    assert scrubbed["edited"] == {"user": "U1", "ts": "2.0"}
+
+
+def test_scrub_lets_no_free_text_through_from_any_subtype():
+    marked = "WORDSOMEBODYWROTE"
+    event = {
+        "type": "message", "subtype": "channel_purpose", "ts": "1.0", "user": "U1",
+        "text": marked,
+        "blocks": [{"elements": [{"text": marked}]}],
+        "attachments": [{"fallback": marked, "title": marked, "text": marked,
+                         "pretext": marked, "footer": marked, "title_link": marked}],
+        "files": [{"id": "F1", "name": f"{marked}.png", "title": marked,
+                   "url_private": f"https://files.slack.com/{marked}", "preview": marked}],
+        "message": {"ts": "1.0", "user": "U1", "text": marked, "purpose": marked,
+                    "edited": {"user": "U1", "ts": "2.0"}, "reply_count": 2},
+        "previous_message": {"text": marked},
+        "root": {"ts": "0.9", "text": marked, "reply_count": 4},
+        "user_profile": {"real_name": marked, "display_name": marked},
+        "bot_profile": {"name": marked},
+        "profile": {"email": marked},
+        "purpose": marked, "topic": marked, "comment": {"comment": marked},
+        "permalink": f"https://hackclub.slack.com/{marked}",
+        "canvas": {"title": marked}, "huddle": {"title": marked},
+        "reactions": [{"name": "tada", "count": 1, "users": ["U2"]}],
+        "edited": {"user": "U1", "ts": "2.0"},
+        "client_msg_id": "abc", "thread_ts": "1.0", "reply_count": 2, "team": "T1",
+    }
+
+    scrubbed = shaping.scrub(event)
+
+    assert marked not in json.dumps(scrubbed, default=str), "a field carrying words survived"
+    assert scrubbed["reactions"] == [{"name": "tada", "count": 1, "users": ["U2"]}]
+    assert scrubbed["message"] == {"ts": "1.0", "user": "U1", "reply_count": 2,
+                                   "edited": {"user": "U1", "ts": "2.0"}}
+    assert scrubbed["root"] == {"ts": "0.9", "reply_count": 4}
+
+
+def test_scrub_keeps_an_edited_message_but_not_its_words():
+    scrubbed = shaping.scrub({
+        "type": "message", "subtype": "message_changed", "ts": "2.0",
+        "message": {"ts": "1.0", "user": "U1", "text": "the new words",
+                    "blocks": [{"text": "the new words"}], "files": [{"id": "F1"}],
+                    "edited": {"user": "U1", "ts": "2.0"}, "reply_count": 2},
+        "previous_message": {"ts": "1.0", "text": "the old words"},
+    })
+
+    assert "previous_message" not in scrubbed, "the pre-edit version has nothing to add"
+    assert set(scrubbed["message"]) == {"ts", "user", "edited", "reply_count"}
+    assert "words" not in repr(scrubbed)
+
+
+def test_scrub_thins_the_user_object_but_keeps_the_id():
+    scrubbed = shaping.scrub({
+        "type": "team_join",
+        "user": {"id": "U1", "team_id": "T1", "is_bot": False,
+                 "real_name": "a person", "profile": {"email": "a@b.c"}},
+    })
+
+    assert scrubbed["user"] == {"id": "U1", "team_id": "T1", "is_bot": False}
+
+
+def test_author_kind_reads_bots_by_either_marker():
+    assert shaping.author_kind({"user": "U1"}) == "member"
+    assert shaping.author_kind({"bot_id": "B1"}) == "bot"
+    assert shaping.author_kind({"user": "U1", "subtype": "bot_message"}) == "bot"
+    assert shaping.author_kind({}) == "unknown"

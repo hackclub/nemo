@@ -2,17 +2,10 @@
   <div class="card-head">
     <div>
       <h2 class="card-title"><%= heading %></h2>
-      <p class="card-sub">
-        started <%= run.started_at.strftime("%b %-d, %Y at %H:%M") %>
-        &middot; <%= run_duration(run) %>
-        <% if run.running? && steps.any? %>
-          &middot; step <%= steps.last.step_index %> of <%= steps.last.step_total %>
-        <% end %>
-      </p>
     </div>
     <div class="card-tools">
       <%= run_age(run) %>
-      <%= run_status(run) %>
+      <%= orphaned ? worker_chip(worker) : run_status(run) %>
     </div>
   </div>
 
@@ -55,17 +48,19 @@
       </table>
     </div>
   <% else %>
-    <p class="card-note">
-      <%= run.running? ? "No stage has started yet." : "This run predates per-stage tracking." %>
-    </p>
+    <p class="card-note">n/a</p>
   <% end %>
+<p class="chart-note">started <%= run.started_at.strftime("%-d %b %Y, %H:%M") %>
+        &middot; <%= run_duration(run) %>
+        <% if run.running? && steps.any? %>
+          &middot; step <%= steps.last.step_index %> of <%= steps.last.step_total %>
+        <% end %></p>
 </div>
 
 <div class="card card-flush">
   <div class="card-head">
     <div>
       <h2 class="card-title">Stage output</h2>
-      <p class="card-sub">everything each stage printed, captured as it ran</p>
     </div>
     <% if step_output.any? %>
       <div class="card-tools"><span class="chip chip-off"><%= pluralize(step_output.size, "stage") %></span></div>
@@ -83,9 +78,6 @@
       </details>
     <% end %>
   <% else %>
-    <p class="card-note">
-      Nothing captured for this run. Stage output is recorded from the run that follows the capture
-      being added, so it stays empty until the next nightly.
-    </p>
+    <p class="card-note">n/a</p>
   <% end %>
 </div>

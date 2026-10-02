@@ -1,10 +1,14 @@
 <%= render layout: "fd/modal", locals: { id: "merge-case",
       title: kase ? "Merge case #{kase.id}" : "Merge ticked cases",
-      sub: kase ? "the older case holds both" : "the older case holds them",
-      label: "Merge this case into another" } do %>
-  <div class="merge-shell">
+      label: "Merge cases" } do %>
+  <div class="merge-shell"
+       <% if kase %>
+         data-controller="merge-picker"
+         data-merge-picker-base-id-value="<%= kase.id %>"
+         data-merge-picker-base-opened-at-value="<%= kase.opened_at.iso8601 %>"
+       <% end %>>
     <% if kase %>
-      <div class="merge-pane">
+      <div class="merge-searchbar">
         <%= render "fd/merges/find", kase: kase, term: nil %>
       </div>
     <% end %>

@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdActionsTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @kase = make_case
   end
 
@@ -14,14 +14,6 @@ class FdActionsTest < ActionDispatch::IntegrationTest
 
   def actions
     @kase.actions
-  end
-
-  test "a citation must point at a message on this case" do
-    sign_in_as(@me)
-    log(cites_message_id: "999999")
-
-    assert_nil actions.sole.cites_message_id,
-      "a message that is not held cannot be cited"
   end
 
   test "a signed out visitor cannot log an action" do
@@ -89,13 +81,12 @@ class FdActionsTest < ActionDispatch::IntegrationTest
     assert_empty action.details
   end
 
-  test "I cannot act on a case assigned to somebody else" do
+  test "I can act on a case assigned to somebody else" do
     @kase.assign!("UOTHER")
     sign_in_as(@me)
     log
 
-    assert_equal 0, actions.count
-    assert_match(/assigned to @UOTHER, not to you/, flash[:alert])
+    assert_equal 1, actions.count
   end
 
   test "I can act on my own case" do
@@ -112,32 +103,6 @@ class FdActionsTest < ActionDispatch::IntegrationTest
 
     assert_equal 1, actions.count
     assert_no_match(/stays open/, flash[:notice])
-  end
-
-  test "the logged action shows in what was done" do
-    sign_in_as(@me)
-    log(type_key: "shush", expires_on: "2026-09-01")
-
-    get fd_case_path(@kase, tab: "actions")
-    assert_match(/Shush/, response.body)
-    assert_select ".ledger-top b", text: "Shush"
-  end
-
-  test "the case page offers the log modal from the menu" do
-    sign_in_as(@me)
-    get fd_case_path(@kase)
-
-    assert_select "input#log-action.modal-flip"
-    assert_select ".menu-pop label[for=log-action]"
-    assert_select "form[action=?] select[name=type_key]", fd_case_actions_path(@kase)
-  end
-
-  test "the log modal carries its action fields without an id that could clash" do
-    sign_in_as(@me)
-    get fd_case_path(@kase)
-
-    assert_select "select.action-type", 1
-    assert_select "select#type_key", count: 0
   end
 
   test "an action must say why it was taken" do
@@ -185,5 +150,61 @@ class FdActionsTest < ActionDispatch::IntegrationTest
     log(category_key: "nonsense")
 
     assert_nil actions.sole.category_key
+  end
+
+  test "an unparseable expiry is refused instead of raising" do
+    sign_in_as(@me)
+    log(type_key: "shush", expires_on: "2026-13-45")
+
+    assert_response :redirect
+    assert_equal 0, actions.count
+    assert_match(/is not a date/, flash[:alert])
+  end
+
+  test "a target that is not a member id is refused instead of raising" do
+    sign_in_as(@me)
+    log(target_user_id: ["USUB"])
+
+    assert_response :redirect
+    assert_equal 0, actions.count
+    assert_match(/is not a member id/, flash[:alert])
+  end
+
+  test "a channel sent as a list is refused instead of stored as nonsense" do
+    sign_in_as(@me)
+    log(type_key: "channel_ban", expires_on: "2026-09-01", channel_id: ["C0266FRGV"])
+
+    assert_response :redirect
+    assert_equal 0, actions.count
+    assert_match(/is not a channel id/, flash[:alert])
+  end
+
+  test "acting on somebody the case was not about makes the case about them" do
+    sign_in_as(@me)
+    assert_not_includes @kase.subject_user_ids, "UNEW"
+
+    log(target_user_id: "UNEW")
+
+    assert_includes @kase.reload.subject_user_ids, "UNEW"
+    assert_match(/now also about @UNEW/, flash[:notice])
+    assert Fd::AuditEntry.where(entity_type: "participant", verb: "attached",
+      entity_id: @kase.id).exists?, "putting them on the case belongs in the trail"
+  end
+
+  test "acting on a subject twice leaves them on the case once" do
+    sign_in_as(@me)
+    log
+    log
+
+    assert_equal ["USUB"], @kase.reload.subject_user_ids
+    assert_no_match(/now also about/, flash[:notice])
+  end
+
+  test "a refused action does not put anybody on the case" do
+    sign_in_as(@me)
+    log(target_user_id: "UNEW", reason: "  ")
+
+    assert_equal 0, actions.count
+    assert_not_includes @kase.reload.subject_user_ids, "UNEW"
   end
 end

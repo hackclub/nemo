@@ -1,0 +1,43 @@
+shared_networks:
+  rotates_above: 5.0
+  crowds_above: 40
+  min_sightings: 2
+
+signals:
+  ip_exact:
+    label: Signed in from the same address
+    evidence: the same IP address
+    weight: 5.0
+    crowd_ceiling: 8
+
+  ip_prefix:
+    label: Signed in from the same network
+    evidence: the same /24 or /64
+    weight: 3.0
+    crowd_ceiling: 20
+
+  email_domain:
+    label: Share an email domain
+    evidence: the domain their address sits on
+    weight: 2.0
+    crowd_ceiling: 30
+
+  session_agent:
+    label: Same app and system
+    evidence: the client they signed in with
+    weight: 1.0
+    crowd_ceiling: 60
+    corroborating: true
+
+  joined_together:
+    label: Joined within minutes of each other
+    evidence: how close their arrivals were
+    weight: 1.5
+    window_seconds: 300
+    crowd_ceiling: 25
+
+scoring:
+  floor: 3.0
+  strong: 5.0
+  certain: 8.0
+  most_per_member: 25

@@ -5,7 +5,12 @@ module Engine
     test "every source declares the six things a source has to say" do
       Source.all.each do |source|
         Source::DECLARED.each do |field|
-          assert source.public_send(field).present?, "#{source.key} declares no #{field}"
+          said = source.public_send(field)
+          if field == "feeds"
+            assert_not_nil said, "#{source.key} declares no #{field}"
+          else
+            assert said.present?, "#{source.key} declares no #{field}"
+          end
         end
       end
     end
@@ -27,8 +32,7 @@ module Engine
 
     test "the stages a person can trigger are the sources themselves" do
       assert_equal Source::KEYS, SyncRequest::STAGES
-      assert_includes SyncRequest::STAGES, "member_channels", "the newest stages are triggerable"
-      assert_includes SyncRequest::STAGES, "channel_membership"
+      assert_includes SyncRequest::STAGES, "channel_membership", "the newest stages are triggerable"
     end
 
     test "a stage the file does not know is refused" do

@@ -1,16 +1,16 @@
 import yaml
 
-from bot.engine import richtext
+from bot.core import richtext
 from lib.paths import CATEGORIES_FILE
 
 MENU = "case_more"
 
-SUBJECT = "case_subject"
+PEOPLE = "case_people"
+ASSIGNEES = "case_assignees_open"
 CATEGORY = "case_category"
 NOTE = "case_note"
-HAND_BACK = "case_hand_back"
+REVERSE = "case_reverse"
 
-WHO = "subject_who"
 WHAT = "category_what"
 SAID = "note_said"
 
@@ -32,59 +32,42 @@ def option(text, value):
     return {"text": {"type": "plain_text", "text": text}, "value": value}
 
 
-def choices(case, mine):
-    out = []
-    if not case.get("subjects"):
-        out.append(option("Say who it is about", SUBJECT))
+OVERFLOW_LIMIT = 5
+
+
+def choices(case):
+    out = [option("People", PEOPLE), option("Assignees", ASSIGNEES)]
     if not case.get("category_key"):
         out.append(option("Set the violation", CATEGORY))
     out.append(option("Leave a note", NOTE))
-    if mine:
-        out.append(option("Hand it back", HAND_BACK))
+    if case.get("live_actions"):
+        out.append(option("Reverse an action", REVERSE))
     return out
 
 
-def menu(case, mine):
-    picks = choices(case, mine)
+def menu(case):
+    picks = choices(case)
     if not picks:
         return None
 
+    options = [
+        option(pick["text"]["text"], f"{pick['value']}:{case['case_id']}")
+        for pick in picks
+    ]
+    if len(options) <= OVERFLOW_LIMIT:
+        return {"type": "overflow", "action_id": MENU, "options": options}
+
     return {
-        "type": "overflow",
+        "type": "static_select",
         "action_id": MENU,
-        "options": [
-            option(pick["text"]["text"], f"{pick['value']}:{case['case_id']}")
-            for pick in picks
-        ],
+        "placeholder": {"type": "plain_text", "text": "More"},
+        "options": options,
     }
 
 
 def asked(value):
     verb, _, case_id = (value or "").rpartition(":")
     return verb, int(case_id) if case_id.isdigit() else None
-
-
-def subject_view(case_id):
-    return {
-        "type": "modal",
-        "callback_id": SUBJECT,
-        "private_metadata": str(case_id),
-        "title": {"type": "plain_text", "text": f"Subject · case {case_id}"[:TITLE_LIMIT]},
-        "submit": {"type": "plain_text", "text": "Add them"},
-        "close": {"type": "plain_text", "text": "Cancel"},
-        "blocks": [
-            {
-                "type": "input",
-                "block_id": WHO,
-                "label": {"type": "plain_text", "text": NO_LABEL},
-                "element": {
-                    "type": "users_select",
-                    "action_id": WHO,
-                    "placeholder": {"type": "plain_text", "text": "who it is about"},
-                },
-            },
-        ],
-    }
 
 
 def category_view(case_id):
@@ -137,10 +120,6 @@ def note_view(case_id):
             }
         ],
     }
-
-
-def who_picked(view_state):
-    return view_state.get("values", {}).get(WHO, {}).get(WHO, {}).get("selected_user")
 
 
 def what_picked(view_state):

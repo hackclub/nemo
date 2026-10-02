@@ -1,34 +1,30 @@
 module Fd
   class Names
-    LATE_LOOKUPS = 8
+    PERSON = /\A[UW][A-Z0-9]+\z/
 
     def self.for(user_ids)
-      wanted = Array(user_ids).flatten.compact.uniq
+      wanted = Array(user_ids).flatten.compact.uniq.grep(PERSON)
       return none if wanted.empty?
 
-      new(members: Member.where(user_id: wanted).index_by(&:user_id),
-        profiles: CachetClient.profiles(wanted))
+      new(members: Member.where(user_id: wanted).index_by(&:user_id))
     end
 
     def self.none = new
 
-    def initialize(members: {}, profiles: {})
+    def initialize(members: {})
       @members = members
-      @profiles = profiles
       @shown = {}
-      @late = 0
     end
 
     def [](user_id)
       return "n/a" if user_id.blank?
 
-      @shown[user_id] ||= said_for(user_id) || "@#{user_id}"
+      @shown[user_id] ||= said_for(user_id) ||
+        (user_id.match?(PERSON) ? "@#{user_id}" : user_id)
     end
 
-    def image(user_id)
-      return nil if user_id.blank?
-
-      profile(user_id)&.image_url.presence
+    def unknown?(user_id)
+      user_id.present? && self[user_id] == "@#{user_id}"
     end
 
     def initial(user_id)
@@ -41,7 +37,7 @@ module Fd
     end
 
     def known?(user_id)
-      @members.key?(user_id) || @profiles.key?(user_id)
+      @members.key?(user_id)
     end
 
     def list(user_ids)
@@ -51,20 +47,7 @@ module Fd
     private
 
     def said_for(user_id)
-      profile(user_id)&.display_name.presence || @members[user_id]&.name
-    end
-
-    def profile(user_id)
-      return @profiles[user_id] if @profiles.key?(user_id)
-
-      @profiles[user_id] = late(user_id)
-    end
-
-    def late(user_id)
-      return nil if @late >= LATE_LOOKUPS
-
-      @late += 1
-      CachetClient.profiles([user_id])[user_id]
+      @members[user_id]&.name
     end
   end
 end

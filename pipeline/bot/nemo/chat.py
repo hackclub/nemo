@@ -1,10 +1,18 @@
 from psycopg.types.json import Jsonb
 
-from bot.engine import parse
+from bot.core import parse
 from bot.nemo.cards import report as cards
 
 CASE_OF_THREAD = """
-SELECT case_id FROM fd.case_reports WHERE forwarded_ts = %s
+SELECT case_id FROM (
+    SELECT case_id, 1 AS rank FROM fd.case_reports WHERE forwarded_ts = %(ts)s
+    UNION ALL
+    SELECT id, 2 FROM fd.cases WHERE card_thread_ts = %(ts)s
+    UNION ALL
+    SELECT id, 3 FROM fd.cases WHERE card_ts = %(ts)s AND card_thread_ts IS NULL
+) found
+ORDER BY rank
+LIMIT 1
 """
 
 KEEP = """
@@ -53,8 +61,20 @@ RETURNING id
 """
 
 
+REACHES_A_MEMBER = """
+SELECT 1 FROM fd.intake_messages m
+JOIN fd.intake_conversations c ON c.id = m.conversation_id
+WHERE m.mirrored_ts = %s
+LIMIT 1
+"""
+
+
+def reaches_a_member(conn, thread_ts):
+    return conn.execute(REACHES_A_MEMBER, (thread_ts,)).fetchone() is not None
+
+
 def case_of_thread(conn, thread_ts):
-    row = conn.execute(CASE_OF_THREAD, (thread_ts,)).fetchone()
+    row = conn.execute(CASE_OF_THREAD, {"ts": thread_ts}).fetchone()
     return row[0] if row else None
 
 
@@ -128,23 +148,31 @@ def delete(conn, channel_id, ts):
     return row[0] if row else None
 
 
-WAITING = """
-SELECT c.id, c.author_user_id, c.body, r.forwarded_ts
+UNDER = """
+coalesce(
+    (SELECT r.forwarded_ts FROM fd.case_reports r
+      WHERE r.case_id = c.case_id AND r.forwarded_ts IS NOT NULL
+      ORDER BY r.id LIMIT 1),
+    (SELECT coalesce(k.card_thread_ts, k.card_ts) FROM fd.cases k WHERE k.id = c.case_id)
+)
+"""
+
+WAITING = f"""
+SELECT c.id, c.author_user_id, c.body, {UNDER}
 FROM fd.case_chat c
-JOIN fd.case_reports r ON r.case_id = c.case_id
 WHERE c.case_id = %s AND c.ts IS NULL AND c.mirrored_ts IS NULL
   AND (c.mirrored_as IS NULL OR c.said_at < now() - interval '2 minutes')
-  AND r.forwarded_ts IS NOT NULL
+  AND {UNDER} IS NOT NULL
 ORDER BY c.said_at, c.id
 LIMIT 20
 """
 
-WAITING_ANYWHERE = """
+WAITING_ANYWHERE = f"""
 SELECT DISTINCT c.case_id
 FROM fd.case_chat c
-JOIN fd.case_reports r ON r.case_id = c.case_id
-WHERE c.ts IS NULL AND c.mirrored_ts IS NULL AND r.forwarded_ts IS NOT NULL
+WHERE c.ts IS NULL AND c.mirrored_ts IS NULL
   AND (c.mirrored_as IS NULL OR c.said_at < now() - interval '2 minutes')
+  AND {UNDER} IS NOT NULL
 LIMIT 50
 """
 

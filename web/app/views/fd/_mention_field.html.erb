@@ -1,5 +1,5 @@
 <div class="mention-field" data-controller="mention"
-     data-mention-url-value="<%= fd_member_search_path %>">
+     data-mention-url-value="<%= local_assigns[:url] || fd_member_search_path %>">
   <%= text_area_tag name, value, rows: rows, class: "textarea", id: nil,
         maxlength: Fd::NotesController::MAX_LENGTH,
         placeholder: placeholder,

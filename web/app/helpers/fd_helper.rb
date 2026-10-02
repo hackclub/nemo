@@ -14,17 +14,29 @@ module FdHelper
     channels[channel_id]
   end
 
-  def handle(user_id)
-    return "n/a" if user_id.blank?
+  def channel_link(channel_id, permalink: nil)
+    return tag.span(channels[channel_id], class: "sub2") if channel_id.blank?
 
-    tag.button(names[user_id], type: "button", class: "handle", title: "copy #{user_id}",
+    if permalink.present?
+      return link_to(channels[channel_id], permalink, class: "handle",
+        title: "open the message in Slack", target: "_blank", rel: "noopener")
+    end
+
+    link_to channels[channel_id], slack_channel_url(channel_id), class: "handle",
+      title: channel_id, target: "_blank", rel: "noopener"
+  end
+
+  def handle(user_id)
+    return "nobody" if user_id.blank?
+
+    tag.button(person_name(user_id), type: "button", class: "handle", title: "copy #{user_id}",
       data: { controller: "copy", copy_id_value: user_id, action: "click->copy#write" })
   end
 
   def member_link(user_id)
     return "n/a" if user_id.blank?
 
-    link_to names[user_id], fd_member_path(user_id), class: "lnk", title: user_id,
+    link_to person_name(user_id), fd_member_path(user_id), class: "lnk", title: user_id,
       data: { turbo_frame: "person-drawer" }
   end
 
@@ -34,13 +46,22 @@ module FdHelper
     "#{SLACK_TEAM_URL}/#{user_id}"
   end
 
+  CF_EMAIL_OFF = "<!--email_off-->".html_safe
+  CF_EMAIL_ON = "<!--/email_off-->".html_safe
+
+  def plain_email(address, css: "mono")
+    return nil if address.blank?
+
+    safe_join([CF_EMAIL_OFF, tag.span(address, class: css), CF_EMAIL_ON])
+  end
+
   def identity_line(identity)
     return locked_note("Nothing on file") if identity.nil?
     return locked_note("Not yours to read") if identity.refused?
     return locked_note("Identity purged") if identity.purged?
     return locked_note("Email not collected yet") if identity.email.blank?
 
-    locked_note(identity.email)
+    tag.span(class: "locked") { plain_email(identity.email, css: nil) }
   end
 
   def locked_note(text)
@@ -104,23 +125,195 @@ module FdHelper
   def channel_mention(channel_id, said = nil)
     named = channels.named?(channel_id) ? channel_label(channel_id) : nil
     shown = named || (said.present? ? "##{said}" : channel_id)
-    return tag.span(shown, class: "mention", title: channel_id) unless on?(:analytics)
+    return tag.span(shown, class: "mention", title: channel_id) unless may_open_channel?(channel_id)
 
     link_to shown, channel_path(channel_id), class: "mention", title: channel_id
   end
 
-  def already_open_line(cases, preset)
-    asked = Array(preset).map { |person| person[:id] }
-    caught = (cases.flat_map(&:subject_user_ids) & asked).uniq
-    who = caught.any? ? names.list(caught) : "that member"
+  def may_open_channel?(channel_id)
+    return false unless on?(:analytics)
+    return true unless respond_to?(:current_account)
 
-    "#{who} already #{caught.many? ? 'have' : 'has'} an open case."
+    @may_open ||= {}
+    @may_open.fetch(channel_id) {
+      @may_open[channel_id] = Channels::Audience.may_see?(current_account, channel_id)
+    }
   end
 
   def share_of(part, whole)
     return "n/a" if whole.to_i.zero?
 
     "#{((part.to_f / whole) * 100).round(1)}% of the workspace"
+  end
+
+  AUDIT_SOURCE = { "fire_engine" => "Fire Engine", "slack" => "Slack",
+                   "read" => "Fire Engine" }.freeze
+
+  def audit_raw(row)
+    JSON.pretty_generate(row.raw || row.detail || {})
+  end
+
+  def audit_verb(row)
+    row.verb.to_s.tr("_", " ")
+  end
+
+  def audit_actor(row)
+    return member_link(row.actor_id) if row.actor_id.present?
+    return tag.span("nemo", class: "state") if row.actor_kind.to_s == "bot"
+
+    tag.span("nobody named", class: "state")
+  end
+
+  AUDIT_CHANNEL = /\A[CGD][A-Z0-9]{2,}\z/
+  AUDIT_MEMBER = /\A[UW][A-Z0-9]{2,}\z/
+
+  def audit_about(row)
+    return member_link(row.subject_id) if row.subject_id.present?
+
+    said = [row.entity_ref, row.entity_id].compact_blank
+    room = said.find { |one| one.match?(AUDIT_CHANNEL) }
+    return audit_channel(room) if room
+
+    who = said.find { |one| one.match?(AUDIT_MEMBER) }
+    return member_link(who) if who
+    return tag.span("#{row.entity_kind} #{row.entity_id}", class: "sub2") if row.entity_id.present?
+
+    tag.span(row.entity_kind.to_s.tr("_", " "), class: "sub2")
+  end
+
+  PRIVATE_CHANNEL = "#private-channel".freeze
+
+  def audit_channel(channel_id)
+    return tag.span(PRIVATE_CHANNEL, class: "sub2", title: channel_id) unless
+      channels.named?(channel_id)
+
+    link_to channel_label(channel_id), channel_path(channel_id), class: "lnk",
+      title: channel_id
+  end
+
+  def audit_where(row)
+    parts = [tag.span(AUDIT_SOURCE.fetch(row.source, row.source), class: "state")]
+    parts << tag.span(row.ip, class: "mono audit-ip") if row.ip.present?
+    parts << tag.span(row.app_name, class: "sub2") if row.app_name.present?
+    safe_join(parts, " ")
+  end
+
+  AUDIT_VALUE = 80
+
+  def audit_value(value)
+    return tag.span("nothing", class: "sub2") if value.nil? || value == ""
+
+    said = value.is_a?(String) ? value : value.to_json
+    tag.span(said.truncate(AUDIT_VALUE), class: "mono")
+  end
+
+  DOMAIN_MATCH_LABELS = { "exact" => "exact", "suffix" => "with subdomains" }.freeze
+  DOMAIN_EFFECT_LABELS = { "flag" => "write it down", "hold" => "shush them",
+                           "deactivate" => "deactivate them" }.freeze
+  DOMAIN_EFFECT_TONES = { "flag" => "", "hold" => "state-warn",
+                          "deactivate" => "state-crit" }.freeze
+  SCREEN_TONES = { "flagged" => "state-warn", "held" => "state-warn",
+                   "deactivated" => "state-crit", "failed" => "state-crit" }.freeze
+
+  def domain_match_label(said) = DOMAIN_MATCH_LABELS.fetch(said, said)
+
+  def domain_effect_label(said) = DOMAIN_EFFECT_LABELS.fetch(said, said)
+
+  def domain_match_chip(one)
+    tag.span(domain_match_label(one.match_mode), class: "state")
+  end
+
+  def domain_effect_chip(one)
+    tag.span(domain_effect_label(one.effect),
+      class: "state #{DOMAIN_EFFECT_TONES.fetch(one.effect, '')}".strip)
+  end
+
+  def screen_outcome_chip(screen)
+    tag.span(screen.outcome.tr("_", " "),
+      class: "state #{SCREEN_TONES.fetch(screen.outcome, '')}".strip)
+  end
+
+  def link_band_chip(side)
+    tone = { "certain" => "state-crit", "strong" => "state-warn" }.fetch(side.band, "")
+    tag.span(side.band, class: "state #{tone}".strip)
+  end
+
+  def link_score_chip(score)
+    said = score.to_f
+    tone = if said >= Fd::MemberLink::CERTAIN
+      "state-crit"
+    elsif said >= Fd::MemberLink::STRONG
+      "state-warn"
+    else
+      ""
+    end
+    tag.span(number_with_precision(said, precision: 1), class: "state #{tone}".strip)
+  end
+
+  def session_span(first_at, last_at)
+    return "n/a" if first_at.nil? || last_at.nil?
+    return on_day(last_at) if first_at.to_date == last_at.to_date
+
+    "#{first_at.strftime('%-d %b')} \u2013 #{on_day(last_at)}"
+  end
+
+  def session_swatch(address)
+    return tag.span("shared", class: "state state-crit") if address.alongside.any?
+    return tag.span("crowded", class: "state") if address.crowded?
+    return tag.span("shared", class: "state state-warn") if address.shared?
+
+    tag.span("theirs alone", class: "state state-good")
+  end
+
+  def joiner_country(row)
+    return tag.span("n/a", class: "sub2") if row.seen_country.blank?
+
+    safe_join([
+      (tag.span(row.flag, class: "joiner-flag") if row.flag),
+      tag.span(Fd::Countries.name_for(row.seen_country))
+    ].compact, " ")
+  end
+
+  def joiner_ip(row)
+    return tag.span("never signed in", class: "sub2") if row.ip.blank?
+
+    safe_join([
+      tag.span(row.ip, class: "mono"),
+      (if row.crowded?
+         tag.span("#{row.seen_people} here", class: "state state-warn")
+       elsif row.close_company?
+         tag.span("#{row.seen_people} here", class: "state")
+       end)
+    ].compact, " ")
+  end
+
+  def joiner_sort_header(label, key, numeric: false)
+    css = ["th-sort"]
+    css << "col-num" if numeric
+    css << (@query.descending? ? "sort-down" : "sort-up") if @query.sorting?(key)
+
+    tag.th(class: css.join(" "), aria: { sort: sort_state(key) }) do
+      link_to fd_joiners_path(@query.sort_params(key)) do
+        concat tag.span(label)
+        concat sort_caret(key)
+      end
+    end
+  end
+
+  JOINER_SOURCE = { "by_hand" => "written down by hand",
+                    "cohort" => "from the cohort table" }.freeze
+
+  def joiner_when(row)
+    [row.joined_at.strftime("%-d %b %Y"), JOINER_SOURCE[row.source]].compact.join(" · ")
+  end
+
+  def joiner_standing(row)
+    return tag.span("deactivated", class: "state state-crit") if row.deactivated?
+    return tag.span("clear", class: "state") unless row.guarded?
+
+    safe_join(Fd::MemberGuard.worst_kinds_first(row.kinds).map { |kind|
+      tag.span(action_label(kind).downcase, class: "state state-warn")
+    }, " ")
   end
 
   def member_sort_header(label, key, numeric: false)
@@ -130,20 +323,9 @@ module FdHelper
 
     tag.th(class: css.join(" "),
       aria: { sort: sort_state(key) }) do
-      link_to fd_members_path(@query.sort_params(key)), data: { turbo_frame: "roster" } do
-        concat tag.span(label)
-        concat sort_caret(key)
-      end
-    end
-  end
-
-  def case_sort_header(label, key, numeric: false)
-    css = ["th-sort"]
-    css << "num" if numeric
-    css << (@query.descending? ? "sort-down" : "sort-up") if @query.sorting?(key)
-
-    tag.th(class: css.join(" "), aria: { sort: sort_state(key) }) do
-      link_to fd_cases_path(@query.sort_params(key)), data: { turbo_frame: "queue" } do
+      path_params = @query.sort_params(key)
+      path_params = path_params.merge(layout: params[:layout]) if params[:layout].present?
+      link_to fd_members_path(path_params), data: { turbo_frame: "roster" } do
         concat tag.span(label)
         concat sort_caret(key)
       end
@@ -182,17 +364,14 @@ module FdHelper
   end
 
   def member_standing_swatch(row)
-    word, tint =
-      if row.open_cases.positive? then ["open case", "var(--series-3)"]
-      elsif row.in_force.positive? then ["in force", "var(--down)"]
-      elsif row.notes.positive? || row.cases.positive? then ["noted", "var(--series-3)"]
-      else ["clean", "var(--series-2)"]
+    word, tone =
+      if row.open_cases.positive? then ["open case", "state-warn"]
+      elsif row.in_force.positive? then ["in force", "state-crit"]
+      elsif row.notes.positive? || row.cases.positive? then ["noted", "state-warn"]
+      else ["clean", "state-off"]
       end
 
-    tag.span(class: "swatch") do
-      concat tag.i(nil, style: "background-color: #{tint}")
-      concat word
-    end
+    tag.span(word, class: "state #{tone}")
   end
 
   def member_state_chips(row)
@@ -201,7 +380,7 @@ module FdHelper
     chips << tag.span("#{row.in_force} in force", class: "chip chip-warn") if
       row.in_force.positive?
     if chips.empty? && row.subject_of.zero? && row.logged_in.zero?
-      chips << tag.span("nothing on record", class: "chip chip-good")
+      chips << tag.span("nothing on record", class: "chip chip-off")
     end
     chips << tag.span("resolved", class: "chip chip-off") if chips.empty?
     safe_join(chips, " ")
@@ -231,31 +410,71 @@ module FdHelper
   end
 
   def member_tab_link(user_id, key, label, count)
-    link_to fd_member_path(user_id, show: (key unless key == "all")),
-      aria: { current: ("true" if key == @only) } do
+    link_to fd_member_path(user_id, (@pane_params || {}).merge(show: (key unless key == "all")).compact),
+      class: "view", aria: { current: ("true" if key == @only) } do
       concat tag.span(label)
-      concat tag.span(count, class: "seg-count")
+      concat tag.span(count, class: "tab-count")
     end
-  end
-
-  def role_reach(role)
-    held = Fd::Permission.keys.count { |key| Fd::Permission.roles(key).include?(role) }
-    "#{held} of #{Fd::Permission.keys.size} permissions"
   end
 
   def menu_item(icon, label, note: nil)
     render "fd/menu_item", icon: icon, label: label, note: note
   end
 
-  def history_by_month(entries)
-    entries.group_by { |entry| entry.at.to_date.beginning_of_month }
+  Stop = Struct.new(:key, :label, :icon, :path, :here, :tally, keyword_init: true)
+
+  NAV_HOME = { "fd/fire" => "overview", "fd/members" => "members",
+               "fd/joiners" => "joiners", "fd/member_links" => "links",
+               "fd/channels" => "channels", "fd/audits" => "audit",
+               "fd/configuration" => "configuration",
+               "fd/channel_purges" => "channels" }.freeze
+
+  def fd_nav_here
+    NAV_HOME.fetch(controller_path, "cases")
   end
 
-  def in_force_line(action, names)
-    span = action.expires? ? " until #{on_day(action.expires_at)}" : ""
-    tail = ", set by #{names[action.decided_by]} on #{on_day(action.performed_at)}"
-    tail += " after case #{action.case_id}" if action.case_id
-    safe_join([tag.b(action_label(action.type_key)), "#{span}#{tail}."])
+  def fd_nav_stops
+    fd_nav_mark([
+      Stop.new(key: "overview", label: "Overview", icon: "overview", path: fd_root_path),
+      Stop.new(key: "cases", label: "Cases", icon: "shield", path: fd_cases_path,
+        tally: Fd::Case.unresolved.not_duplicate.unassigned.count),
+      Stop.new(key: "members", label: "Members", icon: "people", path: fd_members_path),
+      Stop.new(key: "channels", label: "Channels", icon: "channels", path: fd_channels_path),
+      Stop.new(key: "joiners", label: "Joiners", icon: "newcomers", path: fd_joiners_path)
+    ])
+  end
+
+  def fd_nav_tools
+    stops = []
+    if current_account&.may?("app.configure")
+      stops << Stop.new(key: "configuration", label: "Configuration", icon: "gear",
+        path: fd_configuration_path)
+    end
+    if current_account&.may?("member.links")
+      stops << Stop.new(key: "links", label: "Linked accounts", icon: "people",
+        path: fd_links_path)
+    end
+    if current_account&.may?("access.read")
+      stops << Stop.new(key: "audit", label: "Audit log", icon: "history", path: fd_audit_path)
+    end
+    fd_nav_mark(stops)
+  end
+
+  def fd_nav_mark(stops)
+    here = fd_nav_here
+    stops.each { |stop| stop.here = stop.key == here }
+  end
+
+  def case_action_button(icon, label, shortcut: nil)
+    render "fd/case_action_button", icon: icon, label: label, shortcut: shortcut
+  end
+
+  def case_action_icon(icon)
+    render "fd/case_action_button", icon: icon, label: nil, shortcut: nil
+  end
+
+  def history_by_month(entries)
+    entries.group_by { |entry| entry.at.to_date.beginning_of_month }
   end
 
   HISTORY_EMPTY = {
@@ -281,7 +500,8 @@ module FdHelper
   def actions_phrase(standing)
     return nil if standing.actions.zero?
 
-    parts = ["#{pluralize(standing.in_force.size, 'action')} still standing"]
+    parts = [pluralize(standing.actions, "action")]
+    parts << "#{standing.in_force.size} in force" if standing.in_force.any?
     parts << "#{standing.reversed} reversed" if standing.reversed.positive?
     "#{parts.join(', ')}."
   end
@@ -294,16 +514,15 @@ module FdHelper
     parts.join(" · ")
   end
 
-  def person_line(person, context, said_counts, total_messages)
+  def person_line(person, context, priors)
     parts = []
     parts << "here #{tenure_label(context.tenure_days)}" if context&.tenure_days
     parts << "active #{last_active_label(context.last_active_at)}" if context&.last_active_at
-    parts << said_phrase(said_counts.fetch(person.user_id, 0), total_messages)
-    parts += person.records.filter_map { |record| record.detail.presence }
+    parts << prior_phrase(priors.fetch(person.user_id, 0))
     parts.compact.join(" · ").presence || person.user_id
   end
 
-  PEOPLE_ORDER = %w[subject involved reporter].freeze
+  PEOPLE_ORDER = %w[subject reporter].freeze
 
   def role_rank(role)
     PEOPLE_ORDER.index(role) || PEOPLE_ORDER.size
@@ -330,7 +549,6 @@ module FdHelper
 
   REMOVE_LABELS = {
     "subject" => "Remove as the subject",
-    "involved" => "Remove as involved",
     "reporter" => "Remove as a reporter"
   }.freeze
 
@@ -338,13 +556,6 @@ module FdHelper
     return "Take them off the case" if person.records.one?
 
     REMOVE_LABELS.fetch(record.role, "Remove as #{record.role}")
-  end
-
-  def said_phrase(said, total)
-    return nil if said.zero?
-    return pluralize(said, "message") if said == total
-
-    "said #{said} of the #{total} messages"
   end
 
   def prior_chip_for(count)
@@ -361,48 +572,11 @@ module FdHelper
     "also open"
   end
 
-  def flagged_count(row, flags)
-    row.messages.count { |said| flags.key?(said.id) }
-  end
-
-  def shown_messages(row, flags, only)
-    return row.messages unless only == "flagged"
-
-    row.messages.select { |said| flags.key?(said.id) }
-  end
-
-  def evidence_empty_note(row, only)
-    return "Nothing in this thread is flagged." if only == "flagged"
-
-    "No messages held for this thread yet."
-  end
-
-  def citation_numbers(flags)
-    flags.keys.each_with_index.to_h { |id, i| [id, "E#{i + 1}"] }
-  end
-
-  def messages_by_day(messages)
-    messages.group_by { |said| said.posted_at.to_date }
-  end
-
   def age_ink(seconds)
     return "age-crit" if seconds >= AGE_CRIT
     return "age-warn" if seconds >= AGE_WARN
 
     ""
-  end
-
-  LANES = ["open", "acting", "resolved"].freeze
-
-  def case_lanes(cases, action_counts)
-    LANES.index_with { |lane| cases.select { |kase| case_lane(kase, action_counts) == lane } }
-  end
-
-  def case_lane(kase, action_counts)
-    return "resolved" if kase.resolved?
-    return "acting" if action_counts[kase.id].to_i.positive?
-
-    "open"
   end
 
   def case_age_label(seconds)
@@ -428,8 +602,7 @@ module FdHelper
 
   ROLE_LABELS = {
     "subject" => "subject",
-    "reporter" => "reported it",
-    "involved" => "involved"
+    "reporter" => "reported it"
   }.freeze
 
   def slack_thread_url(channel_id, thread_ts)
@@ -441,7 +614,6 @@ module FdHelper
   end
 
   ROLE_TONES = {
-    "involved" => "chip-warn",
     "reporter" => "chip-off",
     "subject" => "chip-crit"
   }.freeze
@@ -450,7 +622,8 @@ module FdHelper
     ROLE_TONES.fetch(role, "chip-off")
   end
 
-  ChatEntry = Struct.new(:at, :side, :kind, :who, :name, :body, :state, keyword_init: true)
+  ChatEntry = Struct.new(:key, :at, :side, :kind, :who, :anon, :name, :body, :state, :files,
+    :shares, keyword_init: true)
 
   def chat_stream(kase)
     "case_#{kase.id}_chat"
@@ -468,8 +641,17 @@ module FdHelper
   end
 
   def chat_entries(reports, chat, messages = [], queued = [])
-    said = messages.any? ? messages.map { |one| message_entry(one) } : opening(reports)
-    said += reports.filter_map { |report| told_entry(report) }
+    said = messages.any? ? [] : opening(reports)
+    (said + changed_chat_entries(reports, chat, messages, queued)).sort_by(&:at)
+  end
+
+  def changed_chat_entries(reports, chat, messages, queued)
+    hidden = reports.any?(&:anonymous?)
+    held = Fd::IntakeFile.for_messages(messages.map(&:id))
+    cited = Fd::IntakeShare.for_messages(messages.map(&:id))
+    said = messages.map do |one|
+      message_entry(one, hidden, held.fetch(one.id, []), cited.fetch(one.id, []))
+    end
     said += chat.map { |line| chat_entry(line) }
     said += queued.map { |row| queued_entry(row) }
     said.sort_by(&:at)
@@ -477,27 +659,34 @@ module FdHelper
 
   def opening(reports)
     reports.map do |report|
-      ChatEntry.new(at: report.received_at, side: "in", kind: "them",
+      ChatEntry.new(key: "open-#{report.id}", at: report.received_at, side: "in", kind: "them",
         who: (report.reporter_user_id unless report.anonymous?),
+        anon: report.anonymous?,
         name: report.reporter_label(names),
-        body: report.body.presence || "No words with it.")
+        body: report.body.presence)
     end
   end
 
-  def message_entry(said)
+  def message_entry(said, hidden = false, files = [], shares = [])
     theirs = said.theirs?
+    masked = theirs && hidden
     ChatEntry.new(
+      key: "msg-#{said.id}",
       at: said.posted_at,
       side: theirs ? "in" : "out",
       kind: theirs ? "them" : "us",
-      who: theirs ? said.author_user_id : said.sent_by,
-      name: message_name(said),
-      body: message_body(said),
-      state: ("deleted in Slack" if said.deleted?)
+      who: masked ? nil : (theirs ? said.author_user_id : said.sent_by),
+      anon: masked,
+      name: message_name(said, hidden),
+      body: message_body(said, files),
+      state: ("deleted in Slack" if said.deleted?),
+      files: files,
+      shares: shares
     )
   end
 
-  def message_name(said)
+  def message_name(said, hidden = false)
+    return "Anonymous" if said.theirs? && hidden
     return names[said.author_user_id] if said.theirs? && said.author_user_id
     return "them" if said.theirs?
     return names[said.sent_by] if said.sent_by
@@ -505,31 +694,24 @@ module FdHelper
     "the Fire Department"
   end
 
-  def message_body(said)
-    said.body.presence || "no words, only what was attached"
+  def message_body(said, _files = [])
+    said.body.presence
   end
 
   def queued_entry(row)
-    ChatEntry.new(at: row.requested_at, side: "out", kind: "us",
+    ChatEntry.new(key: "queued-#{row.id}", at: row.requested_at, side: "out", kind: "us",
       who: row.requested_by, name: names[row.requested_by], body: row.body,
-      state: row.failed? ? "undelivered, #{row.error}" : "sending, #{signing(row)}")
+      state: row.failed? ? "undelivered, #{row.error}" : "sending, #{signing(row)}",
+      files: Fd::OutgoingFile.queued_on(row))
   end
 
   def signing(row)
     row.mode == "signed" ? "from #{names[row.requested_by]}" : "anonymous"
   end
 
-  def told_entry(report)
-    return nil unless report.told_of_outcome?
-
-    ChatEntry.new(at: report.closed_at, side: "out", kind: "us",
-      who: report.closed_by, name: names[report.closed_by],
-      body: "Told them how it ended.")
-  end
-
   def chat_entry(line)
-    ChatEntry.new(at: line.said_at, side: "out", kind: "chat", who: line.author_user_id,
-      name: names[line.author_user_id], body: chat_body(line))
+    ChatEntry.new(key: "chat-#{line.id}", at: line.said_at, side: "out", kind: "chat",
+      who: line.author_user_id, name: names[line.author_user_id], body: chat_body(line))
   end
 
   def chat_body(line)
@@ -627,7 +809,34 @@ module FdHelper
   end
 
   def action_options
-    ACTION_LABELS.map { |key, label| [label, key] }
+    ACTION_LABELS.map do |key, label|
+      [label, key, { data: {
+        expires: Fd::Action::NEEDS_EXPIRY.include?(key),
+        channel: Fd::Action::TAKES_CHANNEL.include?(key),
+        lock: Fd::Action.from_thread_lock?(key)
+      } }]
+    end
+  end
+
+  CONFIGURATION_TAB_LABELS = { "automod" => "Automod", "domains" => "Domains",
+                              "responses" => "Responses" }.freeze
+
+  def configuration_tab_label(key)
+    CONFIGURATION_TAB_LABELS.fetch(key) { key.tr("_", " ").capitalize }
+  end
+
+  AUTOMOD_MODE_LABELS = {
+    "word" => "Whole word",
+    "substring" => "Substring",
+    "regex" => "Regex"
+  }.freeze
+
+  def automod_mode_options
+    Fd::AutomodWord::MATCHES.map { |key| [AUTOMOD_MODE_LABELS.fetch(key), key] }
+  end
+
+  def automod_mode_chip(word)
+    tag.span(AUTOMOD_MODE_LABELS.fetch(word.match_mode, word.match_mode), class: "chip")
   end
 
   def category_label(key)
@@ -640,20 +849,15 @@ module FdHelper
     Fd::Case::CATEGORIES.map { |key| [category_label(key), key] }
   end
 
-  def facet_link(query, key, value)
-    fd_cases_path(query.facet_params(key => value))
-  end
-
   def note_byline(note)
     safe_join([member_link(note.author), on_day(note.created_at)], " · ")
   end
 
   def action_option_label(action)
-    [
-      action_label(action.type_key),
-      "on #{names[action.target_user_id]}",
-      on_day(action.performed_at)
-    ].join(" · ")
+    said = [action_label(action.type_key)]
+    said << "on #{names[action.target_user_id]}" if action.aimed_at_member?
+    said << on_day(action.performed_at)
+    said.join(" · ")
   end
 
   def lone_subject(kase)
@@ -719,58 +923,102 @@ module FdHelper
     "av-#{(user_id.sum % AVATAR_TONES) + 1}"
   end
 
-  def face(user_id, css: "row-avatar")
-    shown = user_id.present? ? names.image(user_id) : nil
-    return tag.img(src: shown, class: css, alt: "", loading: "lazy") if shown
+  SUBJECTS_SHOWN = 3
 
-    letter = user_id ? names.initial(user_id) : "?"
-    tag.span(letter, class: "#{css} #{avatar_tone(user_id)}", aria: { hidden: true })
+  def subject_faces(kase)
+    ids = kase.subject_user_ids
+    return nil if ids.empty?
+
+    shown = ids.first(SUBJECTS_SHOWN)
+    parts = shown.map { |id|
+      tag.span(class: "face-name", title: names[id]) {
+        safe_join([slack_face(id), tag.span(member_link(id), class: "face-said")])
+      }
+    }
+    parts << tag.span("+#{ids.size - shown.size}", class: "face-more") if ids.size > shown.size
+    tag.span(class: ["subjfaces", ("subjfaces-many" if ids.many?)]) { safe_join(parts) }
   end
 
-  def row_avatar(kase)
-    id = kase.subject_user_ids.first if kase.subject_user_ids.one?
-    face(id)
+  def preset_faces(user_ids)
+    ids = Array(user_ids).compact.reject(&:blank?).uniq
+    return [] if ids.empty?
+
+    known = Fd::Names.for(ids)
+    ids.map { |id| { id: id, name: known[id], initial: known.member(id)&.initial || id[0] } }
   end
 
-  def assignee_faces(user_ids)
-    return "n/a" if user_ids.blank?
+  def slack_face(user_id, css: "row-avatar")
+    return face(user_id, css: css) if user_id.blank?
 
-    safe_join(Array(user_ids).map { |id|
-      tag.span(class: "face-name") { safe_join([face(id), handle(id)]) }
-    }, " ")
+    link_to slack_member_url(user_id), class: "face-link", target: "_blank",
+      rel: "noopener", title: "#{names[user_id]} in Slack" do
+      face(user_id, css: css)
+    end
   end
 
-  def row_subject_avatar(kase)
-    face(kase.subject_user_ids.first)
+  def face(user_id, css: "row-avatar", data: {})
+    if user_id.blank?
+      return tag.span("", class: "#{css} av-none", aria: { hidden: true }, data: data)
+    end
+
+    tag.img(src: cachet_face_url(user_id), class: css, alt: "", loading: "lazy",
+      width: 22, height: 22,
+      data: data.merge(cachet_face: user_id, cachet_initial: names.initial(user_id),
+        cachet_tone: avatar_tone(user_id)))
+  end
+
+  def person_name(user_id)
+    said = names[user_id]
+    return said unless names.unknown?(user_id)
+
+    tag.span(said, data: { cachet_name: user_id })
   end
 
   def case_first_report(kase)
     kase.reports.min_by(&:received_at)
   end
 
-  def case_excerpt(kase)
-    case_first_report(kase)&.body.presence
+  def cited_words
+    @cited_words || {}
   end
 
-  def case_gist(kase)
+  A_LINK = %r{<https?://[^\s<>|]+(?:\|[^>]*)?>|https?://\S+}
+
+  def only_a_link?(text)
+    said = text.to_s
+    !said.empty? && said.gsub(A_LINK, " ").blank?
+  end
+
+  def plain_words(text)
+    text.to_s
+      .gsub(/<(https?:\/\/[^\s<>|]+)\|([^>]*)>/) { Regexp.last_match(2) }
+      .gsub(/<(https?:\/\/[^\s<>]+)>/) { Regexp.last_match(1) }
+      .squish
+  end
+
+  def case_cited(kase)
+    cited = cited_words[kase.id]
+    return nil if cited.nil? || cited.body.blank?
+
     body = case_first_report(kase)&.body.presence
-    return nil if body.nil?
+    return nil if body.present? && !only_a_link?(body)
 
-    tag.span(class: "gist") { tag.q(body) }
+    cited
   end
 
-  def case_needs(kase)
-    return [] if kase.resolved?
-
-    return [] if kase.subject_user_ids.any?
-
-    ["a subject"]
+  def held_counts
+    @held_counts || {}
   end
 
-  def to_sentence_words(words)
-    return words.first if words.one?
+  def case_words(kase)
+    body = case_first_report(kase)&.body.presence
+    return plain_words(body) if body
+    return "no report on file" if kase.reports.empty?
 
-    "#{words[0..-2].join(', ')} and #{words.last}"
+    held = held_counts[kase.id].to_i
+    return pluralize(held, "attachment") if held.positive?
+
+    "a report with nothing in it"
   end
 
   def row_reporter(kase)
@@ -780,8 +1028,18 @@ module FdHelper
     reports.reject(&:anonymous?).first&.reporter_user_id
   end
 
+  ANONYMOUS_FACE = "/anonymous.png".freeze
+
+  def anonymous_face(css: "row-avatar")
+    image_tag(ANONYMOUS_FACE, class: css, alt: "", width: 22, height: 22,
+      loading: "lazy", title: "Anonymous")
+  end
+
   def row_reporter_face(kase)
-    face(row_reporter(kase))
+    who = row_reporter(kase)
+    return face(who) if who.present?
+
+    anonymous_face
   end
 
   def case_priors(kase, counts)
@@ -843,17 +1101,9 @@ module FdHelper
     prior_phrase(prior_counts.fetch(lone, 0))
   end
 
-  def row_subject_label(kase)
-    ids = kase.subject_user_ids
-    return "nobody identified yet" if ids.empty?
-    return names[ids.first] if ids.one?
-
-    "#{names[ids.first]} and #{pluralize(ids.size - 1, 'other')}"
-  end
-
   def row_reporter_label(kase)
     who = row_reporter(kase)
-    return "anonymous" if who.blank?
+    return "Anonymous" if who.blank?
 
     others = kase.reports.size - 1
     return names[who] if others < 1
@@ -883,16 +1133,27 @@ module FdHelper
   end
 
   CASE_TAB_LABELS = {
-    "report" => "Report", "evidence" => "Evidence", "actions" => "Actions",
-    "notes" => "Notes", "people" => "People"
+    "report" => "Report", "people" => "People",
+    "actions" => "Actions", "notes" => "Notes", "timeline" => "Timeline"
   }.freeze
 
-  STILL_NEEDED = { 1 => "One thing", 2 => "Two things", 3 => "Three things" }.freeze
+  TIMELINE_TONES = {
+    "report" => "crit", "action" => "act", "resolve" => "good", "close" => "good",
+    "claim" => "", "note" => "", "thread" => "", "person" => "", "open" => "", "reply" => ""
+  }.freeze
 
-  def still_needed(missing)
-    return if missing.empty?
+  TIMELINE_GLYPHS = {
+    "report" => "R", "action" => "A", "resolve" => "C", "close" => "C",
+    "claim" => "@", "note" => "N", "thread" => "T", "person" => "P",
+    "open" => "+", "reply" => "@"
+  }.freeze
 
-    "#{STILL_NEEDED.fetch(missing.size, "#{missing.size} things")} before this can close"
+  def timeline_tone(mark)
+    TIMELINE_TONES.fetch(mark.to_s, "")
+  end
+
+  def timeline_glyph(mark)
+    tag.span(TIMELINE_GLYPHS.fetch(mark.to_s, "\u00b7"), class: "mono", style: "font-size:10px")
   end
 
   def case_tabs(counts)
@@ -901,9 +1162,41 @@ module FdHelper
   end
 
   def case_status_chip(kase)
-    return tag.span(kase.resolution.tr("_", " "), class: "chip chip-off") if kase.resolved?
+    return tag.span(kase.resolution.tr("_", " "), class: "state state-off") if kase.resolved?
 
-    tag.span(safe_join([tag.span(class: "chip-dot"), "open"]), class: "chip chip-crit")
+    tag.span("open", class: "state state-crit")
+  end
+
+  def case_state_chip(kase, acted: nil, reachable: nil)
+    said, tone = case_state(kase, acted: acted, reachable: reachable)
+    tag.span(said, class: "state #{tone}")
+  end
+
+  def case_state(kase, acted: nil, reachable: nil)
+    return ["folded into #{kase.duplicate_of}", "state-off"] if kase.duplicate_of
+    return ["closed as #{kase.resolution.to_s.tr('_', ' ')}", "state-off"] if kase.resolved?
+
+    reports = kase.reports.to_a
+    reachable ||= reachable_reports(reports)
+    unanswered = reports.any? do |one|
+      reachable.include?(one.id) && !one.replied? && !one.told_of_outcome?
+    end
+    return ["no reply yet", "state-crit"] if unanswered
+    return ["nobody on it", "state-warn"] unless kase.assigned?
+    return ["needs a subject", "state-warn"] if kase.subject_user_ids.empty?
+
+    taken = acted || kase.actions.reject(&:reversed?).size
+    return ["acted, not closed", "state-live"] if taken.positive?
+    return ["waiting on the reporter", "state"] if reports.any?(&:replied?)
+
+    ["working", "state-live"]
+  end
+
+  def reachable_reports(reports)
+    ids = reports.map(&:id)
+    return Set.new if ids.empty?
+
+    Fd::IntakeConversation.open_ones.where(report_id: ids).pluck(:report_id).to_set
   end
 
   def case_head_meta(kase, reports)
@@ -922,7 +1215,6 @@ module FdHelper
     safe_join(["#{said} by ", member_link(first.reporter_user_id)])
   end
 
-
   ACTION_LABELS = Fd::Action::LABELS
 
   def action_label(type_key)
@@ -934,13 +1226,22 @@ module FdHelper
     parts << reversal_line(action) if action.reversed?
     parts << "via #{action.source_app}" if action.source_app != "fire_engine"
     parts << action_performer_note(action) unless action.performed_by_decider?
-    parts << "follows #{kase.followed_decision.title}" if kase.followed_decision
     parts.compact.join(" · ").presence
   end
 
   def reversal_line(action)
     why = action.reversal_reason.present? ? ", #{action.reversal_reason}" : ""
     "reversed #{on_day(action.reversed_at)} by #{names[action.reversed_by]}#{why}"
+  end
+
+  def action_thread_url(action)
+    return nil unless action.from_thread_lock?
+
+    channel = action.details["channel_id"]
+    thread = action.details["thread_ts"]
+    return nil if channel.blank? || thread.blank?
+
+    slack_thread_url(channel, thread)
   end
 
   def action_state_chip(action)
@@ -958,14 +1259,17 @@ module FdHelper
   end
 
   def actions_head_line(actions)
-    standing = actions.count(&:active?)
-    tail = standing.zero? ? "none still standing" : "#{standing} still standing"
-    "#{pluralize(actions.size, "action")} · #{tail}"
+    reversed = actions.count(&:reversed?)
+    in_force = actions.count(&:in_force?)
+    parts = [pluralize(actions.size, "action")]
+    parts << "#{in_force} in force" if in_force.positive?
+    parts << "#{reversed} reversed" if reversed.positive?
+    parts.join(" · ")
   end
 
   def action_sentence(action)
     channel = action.details["channel_id"]
-    parts = ["On ", member_link(action.target_user_id)]
+    parts = action.aimed_at_member? ? ["On ", member_link(action.target_user_id)] : ["On a thread"]
     parts << " in #{channel_label(channel)}" if channel.present?
     parts << ", until #{on_day(action.expires_at)}" if action.expires?
     parts << ". Set by "
@@ -987,12 +1291,6 @@ module FdHelper
     tag.q(said, class: "why-said")
   end
 
-  def off_subject_chip(action, kase)
-    return if kase.subject_user_ids.include?(action.target_user_id)
-
-    tag.span("not the subject", class: "chip chip-crit")
-  end
-
   def action_performer_note(action)
     return "performed themselves" if action.performed_by_decider?
 
@@ -1007,17 +1305,8 @@ module FdHelper
     parts.join(" · ").presence
   end
 
-  def cite_options(messages)
-    messages.map do |said|
-      words = said.body.to_s.truncate(60)
-      shown = "#{said.channel_id} #{said.posted_at.strftime('%-d %b %H:%M')} " \
-        "#{names[said.author_user_id]}: #{words.presence || 'no text held'}"
-      [shown, said.id]
-    end
-  end
-
   def fact_number(value)
-    value ? number_with_delimiter(value) : "n/a"
+    value ? number_with_delimiter(value) : "not tracked"
   end
 
   def here_since(context)
@@ -1031,42 +1320,6 @@ module FdHelper
     ago_label(at)
   end
 
-  DECISION_CHIPS = {
-    "settled" => ["chip-good", "in force"],
-    "proposed" => ["chip-warn", "proposed"],
-    "superseded" => ["chip-off", "retired"]
-  }.freeze
-
-  def decision_state_chip(decision)
-    tone, label = DECISION_CHIPS.fetch(decision.state)
-    tag.span(label, class: "chip #{tone}")
-  end
-
-  def decision_when_line(decision)
-    case decision.state
-    when "proposed"
-      safe_join(["written #{decision.proposed_at.strftime('%-d %b')} by ",
-        member_link(decision.proposed_by)])
-    when "settled"
-      safe_join(["settled #{decision.settled_at.strftime('%-d %b')} by ",
-        member_link(decision.settled_by)])
-    else
-      retired = safe_join(["retired #{decision.retired_at.strftime('%-d %b')} by ",
-        member_link(decision.retired_by)])
-      return retired if decision.replacement.nil?
-
-      safe_join([retired, "replaced by #{decision.replacement.title}"], " · ")
-    end
-  end
-
-  def decision_thread_note(count)
-    count.to_i.zero? ? "no threads" : pluralize(count, "thread")
-  end
-
-  def decision_row_line(decision, threads)
-    safe_join([decision_when_line(decision), decision_thread_note(threads)], " · ")
-  end
-
   ROLE_CHIPS = { "community_manager" => ["chip-crit", "manager"],
                  "lead" => ["chip-warn", "lead"],
                  "firefighter" => ["chip-off", "firefighter"] }.freeze
@@ -1076,25 +1329,9 @@ module FdHelper
     tag.span(said, class: "chip #{tone}")
   end
 
-  def holds_mark(held)
-    tag.span(held ? "yes" : "no", class: held ? "yes" : "no")
-  end
-
-  def role_switch(key, role)
-    held = Fd::Permission.roles(key).include?(role)
-    return holds_mark(held) if Fd::Permission.locked?(key) || !current_staff.may?("access.grant")
-
-    button_to held ? "yes" : "no",
-      fd_role_permission_path(role: role, key: key, allowed: held ? "0" : "1"),
-      method: :patch, class: "switch #{held ? 'yes' : 'no'}",
-      title: "#{held ? 'take' : 'give'} #{key} #{held ? 'from' : 'to'} " \
-        "#{Fd::Permission::ROLE_LABELS.fetch(role).downcase}",
-      form: { class: "contents" }
-  end
-
   def flag_switch(key)
     showing = Fd::Flag.on?(key)
-    return holds_mark(showing) unless current_staff.may?("app.flip")
+    return nil unless current_account.may?("app.flip")
 
     button_to showing ? "yes" : "no",
       fd_flag_path(key: key, on: showing ? "0" : "1"),
@@ -1104,7 +1341,7 @@ module FdHelper
   end
 
   def moved_chip(key)
-    return nil unless Fd::RolePermission.moved?(key)
+    return nil unless Authz::Override.moved?(key)
 
     tag.span("moved", class: "chip chip-warn")
   end
@@ -1126,8 +1363,6 @@ module FdHelper
     "case/resolved" => "Resolved",
     "case/reopened" => "Reopened",
     "case/categorised" => "Set what kind of thing",
-    "case/followed" => "Linked a decision to",
-    "case/unfollowed" => "Unlinked a decision from",
     "note/noted" => "Wrote a note on",
     "note/deleted" => "Deleted a note on",
     "participant/attached" => "Added somebody to",
@@ -1142,13 +1377,9 @@ module FdHelper
     "citation/unflagged" => "Unflagged a message on",
     "action/performed" => "Logged an action on",
     "action/reversed" => "Reversed an action on",
+    "member/looked_up" => "Looked up",
     "report/received" => "Took a report on",
     "report/closed" => "Told the reporter on",
-    "decision/proposed" => "Proposed",
-    "decision/amended" => "Reworded",
-    "decision/dropped" => "Dropped",
-    "decision/settled" => "Settled",
-    "decision/superseded" => "Retired",
     "consent/granted" => "Opted in to",
     "consent/withheld" => "Opted out of",
     "api/checked" => "Checked",
@@ -1156,8 +1387,6 @@ module FdHelper
     "api/token_minted" => "Generated a token,",
     "api/token_rate_set" => "Set the rate on",
     "api/token_revoked" => "Revoked a token,",
-    "decision_thread/attached" => "Linked a thread to",
-    "decision_thread/detached" => "Unlinked a thread from",
     "grant/granted" => "Gave access to",
     "grant/revoked" => "Took access from",
     "permission/granted" => "Gave a role",
@@ -1168,14 +1397,16 @@ module FdHelper
   }.freeze
 
   def why_not(key, record = nil)
-    Fd::Access.why_not(current_staff, key, record)
+    Fd::Access.why_not(current_account, key, record)
   end
 
-  def opens_modal(key, text = nil, opens:, on: nil, css: "btn", &block)
+  def opens_modal(key, text = nil, opens:, on: nil, css: "btn", data: {}, &block)
     why = why_not(key, on)
     body = block ? capture(&block) : text
     if why.nil?
-      return tag.label(body, for: opens, class: css, tabindex: "0", role: "button")
+      return tag.button(body, type: "button", class: css,
+        data: data.merge(modal_open: opens),
+        aria: { haspopup: "dialog" })
     end
 
     dead_button(body, why, css)
@@ -1190,20 +1421,21 @@ module FdHelper
   end
 
   def dead_button(text, why, css = "btn")
-    tag.span(class: "#{css} btn-off", title: why, aria: { disabled: "true" }) do
+    tag.span(class: "#{css} btn-off", title: why, tabindex: "0",
+      aria: { disabled: "true", description: why }) do
       concat tag.span(text)
       concat tag.span(why, class: "btn-why")
     end
   end
 
   def did_path(person, key, asked)
-    fd_settings_path(tab: "usage", person: person.user_id, did: (key unless asked == key))
+    admin_person_path(person.user_id)
   end
 
   def tally_link(user_id, count, key = nil)
     return count.to_s if count.zero?
 
-    link_to count, fd_settings_path(tab: "usage", person: user_id, did: key), class: "lnk"
+    link_to count, admin_person_path(user_id), class: "lnk"
   end
 
   def deed_words(event)
@@ -1219,7 +1451,6 @@ module FdHelper
   def deed_link(deed)
     case deed.kind
     when "case" then link_to deed.about, fd_case_path(deed.id), class: "lnk"
-    when "decision" then link_to deed.about, fd_decision_path(deed.id), class: "lnk"
     when "capability" then deed.about
     else member_link(deed.id)
     end
@@ -1322,71 +1553,153 @@ module FdHelper
     tag.span("ended", class: "chip chip-off")
   end
 
-  def followed_chip(kase)
-    decision = kase.followed_decision
-    return nil if decision.nil?
-
-    tone = decision.proposed? ? "chip-warn" : "chip-crit"
-    said = decision.proposed? ? "behind #{decision.title}" : "followed #{decision.title}"
-    link_to said, fd_decision_path(decision), class: "chip #{tone}"
-  end
-
-  DECISION_GROUPS ={ "settled" => "In force", "proposed" => "Proposed",
-                      "superseded" => "Retired" }.freeze
-  DECISION_ORDER = { "settled" => 0, "proposed" => 1, "superseded" => 2 }.freeze
-
-  def decision_groups(kase, decisions)
-    decisions.group_by(&:state).sort_by { |state, _| DECISION_ORDER.fetch(state) }
-      .map { |state, group| [DECISION_GROUPS.fetch(state), ordered_for(kase, group)] }
-  end
-
-  def ordered_for(kase, decisions)
-    decisions.sort_by { |one| [one.category_key == kase.category_key ? 0 : 1, one.title] }
-      .map { |one| [one.title, one.id] }
-  end
-
-  def cases_band_label(decision)
-    decision.settled? ? "Cases that followed it" : "Cases behind it"
-  end
-
-  def decision_case_note(count)
-    count.to_i.zero? ? "n/a" : pluralize(count, "case")
-  end
-
-  def decision_history_line(decision)
-    parts = [safe_join(["proposed #{decision.proposed_at.strftime('%-d %b %Y')} by ",
-      member_link(decision.proposed_by)])]
-
-    if decision.settled_at
-      parts << safe_join(["settled #{decision.settled_at.strftime('%-d %b %Y')} by ",
-        member_link(decision.settled_by)])
-    end
-
-    if decision.retired_at
-      parts << safe_join(["retired #{decision.retired_at.strftime('%-d %b %Y')} by ",
-        member_link(decision.retired_by)])
-    end
-
-    if decision.replacement
-      parts << safe_join(["replaced by ",
-        link_to(decision.replacement.title, fd_decision_path(decision.replacement), class: "lnk")])
-    end
-
-    safe_join(parts, " · ")
-  end
-
   def timeline_standing(kase, timeline)
     return "Nothing has happened on this case yet." if timeline.empty?
 
     if kase.resolved?
       "Resolved #{on_day(kase.resolved_at)} as #{kase.resolution.tr('_', ' ')}."
-    else
-      assigned = if kase.assigned?
-        "assigned to #{names.list(kase.assignee_user_ids)}"
-      else
-        "still unassigned"
-      end
-      "Still open. #{case_age_label(case_age_seconds(kase))}, #{assigned}."
     end
   end
+
+  THREAD_GUARD_STATE = {
+    "warned" => ["warned", "state-warn"],
+    "running" => ["running", "state-warn"],
+    "done" => ["done", "state-good"],
+    "failed" => ["failed", "state-crit"]
+  }.freeze
+
+  def thread_guard_line(guard)
+    said = guard.destroying? ? "Thread destroyed" : "Thread locked"
+    safe_join([said, " in ", channel_link(guard.channel_id)])
+  end
+
+  def thread_guard_chip(guard)
+    said, tone = THREAD_GUARD_STATE.fetch(guard.state, [guard.state, "state"])
+    tag.span(said, class: "state #{tone}")
+  end
+
+  def guard_kind_options
+    Fd::MemberGuard::KINDS.map { |key| [ACTION_LABELS.fetch(key, key), key] }
+  end
+
+  GUARD_CARRY_CHIP = {
+    "held" => ["holding", "state-good"],
+    "pending" => ["not yet", "state-warn"],
+    "failed" => ["not holding", "state-crit"]
+  }.freeze
+
+  def guard_carry_chip(guard)
+    return tag.span("by hand", class: "state") if guard.by_hand?
+
+    said, tone = GUARD_CARRY_CHIP.fetch(guard.carry, [guard.carry, "state"])
+    tag.span(said, class: "state #{tone}")
+  end
+
+  def already_here_note(attached)
+    attached ? "already on this case" : "already logged on this case"
+  end
+
+  def thread_lock_note(guard, case_id)
+    said = [guard_standing_where(guard, case_id)]
+    said << (guard.expires_at ? "lifts #{guard.expires_at.strftime("%-d %b")}" : "no end date")
+    said << guard.reason.to_s.truncate(60)
+    said.join("  ·  ")
+  end
+
+  def guard_standing_where(guard, case_id)
+    return "on no case" if guard.orphaned?
+    return "on this case" if guard.case_id == case_id
+
+    "on case #{guard.case_id}"
+  end
+
+  def guard_kind_line(guard)
+    return action_label(guard.kind) unless guard.channel_scoped?
+
+    safe_join([action_label(guard.kind), " in ", channel_link(guard.channel_id)])
+  end
+
+  def guard_held_line(guard)
+    said = guard_kind_line(guard)
+    guard.orphaned? ? safe_join([said, ", on no case"]) : said
+  end
+
+  def guard_option_note(guard, case_id)
+    said = [guard_standing_where(guard, case_id)]
+    said << (guard.expires_at ? "until #{guard.expires_at.strftime("%-d %b")}" : "no end date")
+    said.join("  ·  ")
+  end
+
+  def guard_already(guard)
+    said = action_label(guard.kind).downcase
+    return said unless guard.channel_scoped?
+
+    safe_join([said, " in ", channel_link(guard.channel_id)])
+  end
+
+  def guard_whose(guard, case_id)
+    return "on no case" if guard.orphaned?
+    return "on this case" if guard.case_id == case_id
+
+    link_to "under case #{guard.case_id}", fd_case_path(guard.case_id)
+  end
+
+  def guard_standing_line(guard, case_id, names = Names.none)
+    safe_join([
+      names[guard.subject_id],
+      " is already ",
+      guard_already(guard),
+      " ",
+      guard_whose(guard, case_id),
+      "."
+    ])
+  end
+
+  GUARD_CARRY = {
+    "pending" => "nemo has not carried it yet",
+    "failed" => "nemo is not holding it"
+  }.freeze
+
+  GUARD_CARRY_SAID = {
+    "pending" => "Asking Slack",
+    "held" => "Deactivated in Slack",
+    "failed" => "Slack refused",
+    "lifting" => "Putting the account back"
+  }.freeze
+
+  GUARD_DOT_TONE = {
+    "pending" => "warn",
+    "held" => "crit",
+    "failed" => "crit",
+    "lifting" => "good"
+  }.freeze
+
+  def guard_carry_said(guard)
+    GUARD_CARRY_SAID.fetch(guard.carry_state, guard.carry_state)
+  end
+
+  def guard_dot_tone(guard)
+    return "crit" if guard.failed?
+    return GUARD_DOT_TONE.fetch(guard.carry_state, "act") if guard.deactivation?
+
+    "act"
+  end
+
+  def guard_footnote(guard, names = Names.none)
+    said = ["opened by #{names[guard.opened_by]}"]
+    said << "since #{guard.opened_at.strftime("%-d %b")}" if guard.opened_at
+    said << (guard.expires_at ? "until #{guard.expires_at.strftime("%-d %b")}" : "with no end date")
+    said << if guard.by_hand?
+      "done by hand"
+    else
+      GUARD_CARRY[guard.carry]
+    end
+    said.compact.join("  \u00b7  ")
+  end
+  SETTLE_DEFAULT = {
+    Fd::MemberGuard::UNGUARDED => Fd::MemberGuard::CARRY,
+    Fd::MemberGuard::ORPHANED => Fd::MemberGuard::ADOPT,
+    Fd::MemberGuard::ELSEWHERE => Fd::MemberGuard::RECORD,
+    Fd::MemberGuard::HERE => Fd::MemberGuard::RECORD
+  }.freeze
 end

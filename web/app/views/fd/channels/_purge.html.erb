@@ -1,0 +1,51 @@
+<div class="stack">
+  <div class="card card-flush">
+    <div class="card-head">
+      <h2 class="card-title">Purge</h2>
+      <div class="card-tools">
+        <% unless Fd::ChannelPurge.waiting_on?(channel_id) %>
+          <%= opens_modal "channel.purge", "Take down messages", opens: "purge-channel",
+                css: "btn btn-sm btn-danger" %>
+        <% end %>
+      </div>
+    </div>
+
+    <% if purges.any? %>
+      <div class="list purge-list">
+        <% purges.each do |purge| %>
+          <div class="lrow">
+            <span class="grow">
+              <span class="lrow-head">
+                <b><%= link_to "#{purge.wanted} asked",
+                      fd_channel_purge_path(channel_id, purge), class: "lnk" %></b>
+                <%= purge_state_chip(purge) %>
+              </span>
+              <span class="sub"><%= purge.reason %></span>
+              <span class="sub">
+                <%= member_link(purge.asked_by) %> ·
+                <%= at_minute(purge.asked_at) %>
+                <% unless purge.waiting? %>
+                  · <%= purge.taken_down %> taken down
+                  <% if purge.replies_taken.positive? %>
+                    · <%= purge.replies_taken %> in threads
+                  <% end %>
+                <% end %>
+                <% if purge.failed? && purge.error.present? %>
+                  · <%= purge.error %>
+                <% end %>
+              </span>
+            </span>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">Nothing taken down</p>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<% if current_account.may?("channel.purge") %>
+  <%= render "purge_modal", channel_id: channel_id, label: label %>
+<% end %>

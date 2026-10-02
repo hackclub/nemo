@@ -1,0 +1,56 @@
+<% rows = classes.map do |c|
+     bounds = wilson_bounds(c.retained_day_30_count, c.measured_day_30)
+     {
+       label: reply_class_label(c.reply_class),
+       hits: c.retained_day_30_count.to_i,
+       sample: c.measured_day_30.to_i,
+       rate: share_pct(c.retained_day_30_count, c.measured_day_30),
+       low: bounds&.first,
+       high: bounds&.last,
+       thin: c.newcomers.to_i < HomeHelper::MIN_SAMPLE
+     }
+   end.select { |r| r[:rate] } %>
+
+<% if rows.any? %>
+  <% top = rows.map { |r| r[:high] }.max.to_f %>
+  <% step = [2, 5, 10, 20, 25].find { |v| (top / v).ceil <= 5 } || 25 %>
+  <% dom = [(top / step).ceil * step, step].max %>
+  <% ticks = (0..dom).step(step).to_a %>
+  <div class="ivrows">
+    <div class="ivrow ivscale">
+      <span class="ivhead">first member reply</span>
+      <span class="ivtrack ivticks">
+        <% ticks.each_with_index do |t, i| %>
+          <i style="left: <%= (t.to_f / dom * 100).round(2) %>%"
+             data-edge="<%= i.zero? ? "start" : (t == dom ? "end" : "mid") %>"><%= t %>%</i>
+        <% end %>
+      </span>
+      <span class="ivhead ivhead-end">day-30 return</span>
+    </div>
+    <% rows.each do |r| %>
+      <div class="ivrow<%= " is-thin" if r[:thin] %>">
+        <span class="ivname"><%= r[:label] %></span>
+        <span class="ivtrack"
+              title="<%= number_to_percentage(r[:rate], precision: 1) %>, 95% interval <%= number_to_percentage(r[:low], precision: 1) %> to <%= number_to_percentage(r[:high], precision: 1) %>, from <%= number_with_delimiter(r[:hits]) %> of <%= number_with_delimiter(r[:sample]) %>">
+          <i class="ivband"
+             style="left: <%= (r[:low] / dom * 100).round(2) %>%; width: <%= ((r[:high] - r[:low]) / dom * 100).round(2) %>%"></i>
+          <i class="ivdot" style="left: <%= (r[:rate] / dom * 100).round(2) %>%"></i>
+        </span>
+        <span class="ivval">
+          <% if r[:thin] %>
+            n&nbsp;=&nbsp;<%= r[:sample] %>, below floor
+          <% else %>
+            <b><%= number_to_percentage(r[:rate], precision: 1) %></b>
+            <span><%= r[:hits] %>/<%= r[:sample] %></span>
+          <% end %>
+        </span>
+      </div>
+    <% end %>
+  </div>
+  <div class="key">
+    <span><i class="iv-key-dot"></i>day-30 return rate</span>
+    <span><i class="iv-key-band"></i>95% interval</span>
+  </div>
+
+<% else %>
+<% end %>

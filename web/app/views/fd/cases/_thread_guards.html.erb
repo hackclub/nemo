@@ -1,0 +1,26 @@
+<div class="list thread-guard-list">
+  <% guards.each do |guard| %>
+    <div class="lrow <%= "is-reversed" unless guard.still_on? %>">
+      <span class="evdot <%= guard.failed? ? "crit" : "act" %>" aria-hidden="true">
+        <%= case_action_button("act", nil) %>
+      </span>
+      <span class="grow">
+        <span class="lrow-head">
+          <b><%= thread_guard_line(guard) %></b>
+          <%= thread_guard_chip(guard) %>
+        </span>
+        <span class="sub"><%= guard.reason %></span>
+        <% if guard.note_text.present? %>
+          <span class="lcite"><%= guard.note_text %></span>
+        <% end %>
+        <span class="sub">
+          <%= member_link(guard.opened_by) %> ·
+          <%= guard.created_at.strftime("%-d %b %H:%M") %>
+        </span>
+      </span>
+      <span class="lrow-right">
+        <%= open_in_slack slack_thread_url(guard.channel_id, guard.thread_ts), css: "btn btn-sm" %>
+      </span>
+    </div>
+  <% end %>
+</div>

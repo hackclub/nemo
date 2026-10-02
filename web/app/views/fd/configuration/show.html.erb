@@ -1,0 +1,25 @@
+<% content_for :page_title, "Configuration" %>
+
+<% if Fd::ConfigurationController::TABS.size > 1 %>
+  <% content_for :page_tabs do %>
+    <% Fd::ConfigurationController::TABS.each do |key| %>
+      <%= link_to configuration_tab_label(key), fd_configuration_path(tab: key),
+            class: "view", aria: { current: ("true" if key == @tab) } %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<% if @tab == "automod" %>
+  <%= render "automod", words: @words, retired: @retired, matches: @matches %>
+<% end %>
+
+<% if @tab == "domains" %>
+  <%= render "domains", domains: @domains, screens: @screens %>
+<% end %>
+
+<% if @tab == "responses" %>
+  <%= render "responses" %>
+<% end %>
+
+<%= render "word_modal" %>
+<%= render "domain_modal" %>

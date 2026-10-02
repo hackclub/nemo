@@ -13,9 +13,9 @@ module Fd
     end
 
     test "a flag nobody has touched follows the file" do
-      assert Flag.on?(:decisions)
+      assert Flag.on?(:fire_engine)
       assert Flag.on?("analytics")
-      assert_equal %w[analytics fire_engine decisions], Flag.showing
+      assert_equal %w[analytics fire_engine], Flag.showing
     end
 
     test "the file says true in a word yaml does not read as a boolean key" do
@@ -27,19 +27,19 @@ module Fd
     end
 
     test "turning one off leaves the other alone" do
-      Flag.set!(:decisions, false, by: "UME")
+      Flag.set!(:fire_engine, false, by: "UME")
 
-      assert Flag.off?(:decisions)
+      assert Flag.off?(:fire_engine)
       assert Flag.on?(:analytics)
-      assert_equal %w[analytics fire_engine], Flag.showing
+      assert_equal %w[analytics], Flag.showing
     end
 
     test "turning it back on clears the override" do
-      Flag.set!(:decisions, false, by: "UME")
-      Flag.set!(:decisions, true, by: "UME")
+      Flag.set!(:fire_engine, false, by: "UME")
+      Flag.set!(:fire_engine, true, by: "UME")
 
-      assert Flag.on?(:decisions)
-      assert_equal 1, Flag.where(key: "decisions").count, "one row, flipped, not two"
+      assert Flag.on?(:fire_engine)
+      assert_equal 1, Flag.where(key: "fire_engine").count, "one row, flipped, not two"
     end
 
     test "a flip records who did it and when" do
@@ -62,14 +62,14 @@ module Fd
     end
 
     test "the answer is remembered within a request and forgotten on a flip" do
-      assert Flag.on?(:decisions)
-      Flag.insert!({ key: "decisions", is_on: false, changed_by: "UME",
+      assert Flag.on?(:fire_engine)
+      Flag.insert!({ key: "fire_engine", is_on: false, changed_by: "UME",
                      changed_at: Time.current })
 
-      assert Flag.on?(:decisions), "the row landed behind the cache"
+      assert Flag.on?(:fire_engine), "the row landed behind the cache"
 
       Current.forget_flags
-      assert Flag.off?(:decisions)
+      assert Flag.off?(:fire_engine)
     end
   end
 end

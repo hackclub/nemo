@@ -1,0 +1,30 @@
+<%= render layout: "fd/modal", locals: { id: "watch-word", title: "Add word" } do %>
+  <%= form_with url: fd_automod_words_path, method: :post, html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <label class="field-label">
+        Word
+        <%= text_field_tag :word, nil, class: "input", id: nil, autocomplete: "off",
+              maxlength: Fd::AutomodWordsController::LONGEST %>
+      </label>
+      <label class="field-label">
+        Match
+        <%= select_tag :match_mode, options_for_select(automod_mode_options),
+              class: "select", id: nil %>
+      </label>
+      <label class="field-label">
+        Category
+        <%= select_tag :category_key,
+              options_for_select([["not set", ""]] + category_options),
+              class: "select", id: nil %>
+      </label>
+      <label class="field-label">
+        Note
+        <%= text_area_tag :note, nil, rows: 2, class: "textarea", id: nil %>
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+      <%= submit_tag "Add", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>

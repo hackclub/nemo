@@ -5,6 +5,6 @@
       is named in a note but is not on the case
     </span>
     <%= gated_button "case.people", "Add them", fd_case_participants_path(kase),
-          on: kase, css: "btn", params: { user_ids: [user_id], role: "involved" } %>
+          on: kase, css: "btn", params: { user_ids: [user_id] } %>
   </div>
 <% end %>

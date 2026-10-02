@@ -1,0 +1,38 @@
+<div class="card card-flush">
+  <% if lifecycle.any? %>
+    <% tops = Journey::Lifecycle::STAGES.to_h { |s| [s[:key], lifecycle.filter_map { |r| r.public_send(s[:key])&.to_f }.max] } %>
+    <div class="scroll">
+      <div class="lifegrid" style="--stages: <%= Journey::Lifecycle::STAGES.size %>">
+        <span class="lg-head lg-left">cohort</span>
+        <% Journey::Lifecycle::STAGES.each do |stage| %>
+          <span class="lg-head"><%= stage[:head] %></span>
+        <% end %>
+        <span class="lg-head" title="median days from account creation to first public post">median days</span>
+
+        <% lifecycle.each do |row| %>
+          <span class="lg-row">
+            <b><%= row.month.strftime("%b %Y") %></b>
+            <span><%= number_with_delimiter(row.invited) %> created</span>
+          </span>
+          <% Journey::Lifecycle::STAGES.each do |stage| %>
+            <%= lifecycle_cell(row, stage, tops[stage[:key]]) %>
+          <% end %>
+          <span class="lg-plain">
+            <%= row.median_days ? number_with_precision(row.median_days, precision: 1) : tag.span("n/a", class: "sub2") %>
+          </span>
+        <% end %>
+      </div>
+    </div>
+    <div class="key">
+      <span class="lg-ramp">
+        low
+        <% HomeHelper::HEAT_STEPS.times do |i| %><i class="lg-h<%= i %>"></i><% end %>
+        high, per column
+      </span>
+      <span><i class="lg-swatch-open"></i>window still open</span>
+      <span><i class="lg-swatch-none"></i>no publishable rate</span>
+    </div>
+  <% else %>
+    <p class="card-note">n/a</p>
+  <% end %>
+</div>

@@ -1,0 +1,46 @@
+<%= render layout: "fd/modal", locals: { id: "block-domain", title: "Add domain",
+      open: params[:do] == "domain" } do %>
+  <%= form_with url: fd_blocked_domains_path, method: :post,
+        html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <label class="field-label">
+        Domain
+        <%= text_field_tag :domain, field_was(:domain), class: "input", id: nil,
+              placeholder: "throwaway.example" %>
+      </label>
+      <%= field_wrong(:domain) %>
+
+      <div class="field-label">
+        <span>Match</span>
+        <%= render "shared/choice", name: :match_mode,
+              chosen: "exact",
+              options: Fd::BlockedDomain::MATCHES.each_with_index.map { |key, i| {
+                value: key, label: domain_match_label(key), current: i.zero? } } %>
+      </div>
+
+      <div class="field-label">
+        <span>On joining</span>
+        <%= render "shared/choice", name: :effect,
+              chosen: Fd::BlockedDomain::FLAG,
+              options: Fd::BlockedDomain::EFFECTS.each_with_index.map { |key, i| {
+                value: key, label: domain_effect_label(key), current: i.zero? } } %>
+      </div>
+
+      <label class="field-label">
+        Why
+        <%= text_field_tag :note, nil, class: "input", id: nil %>
+      </label>
+
+      <% if field_was(:domain).present? %>
+        <label class="opt">
+          <%= check_box_tag :anyway, "1", false, id: nil, class: "tick" %>
+          <span><span class="opt-label">Add it anyway</span></span>
+        </label>
+      <% end %>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+      <%= submit_tag "Add it", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>

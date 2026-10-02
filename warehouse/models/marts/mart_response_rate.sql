@@ -1,42 +1,44 @@
-with checked as (
+{% set newcomer_days = 30 %}
+
+with newcomers as (
     select
-        h.user_id,
-        date_trunc('month', h.first_post_ts)::date as post_month,
-        r.replier_id,
-        r.bot_replier_id,
-        r.latency_seconds,
-        coalesce(d.is_bot, false) as replier_is_bot
-    from {{ ref('fct_member_history') }} h
-    inner join {{ ref('fct_member_first_reply') }} r on r.user_id = h.user_id
-    left join {{ ref('dim_member') }} d on d.user_id = r.replier_id
-    where h.first_post_ts is not null
-      and coalesce(r.unreadable, false) = false
+        r.post_at,
+        r.responded_at,
+        r.bot_at,
+        r.answered,
+        r.bot_replied,
+        r.latency_seconds
+    from {{ ref('fct_first_response') }} r
+    inner join {{ ref('dim_member') }} d on d.user_id = r.newcomer_id
+    where d.cohort_at is not null
+      and not coalesce(d.is_bot, false)
+      and not coalesce(d.is_deleted, false)
+      and not coalesce(d.invite_pending, false)
+      and r.post_at <= d.cohort_at + interval '{{ newcomer_days }} days'
 ),
 
 classified as (
     select
-        post_month,
-        bot_replier_id is not null as bot_replied_first,
-        case
-            when replier_id is not null and not replier_is_bot then 'member'
-            when replier_id is not null or bot_replier_id is not null then 'bot'
-            else 'none'
-        end as answered_by,
-        case when replier_id is not null and not replier_is_bot then latency_seconds end as member_latency
-    from checked
+        date_trunc('month', post_at)::date as post_month,
+        answered,
+        bot_replied,
+        bot_at is not null
+            and (responded_at is null or bot_at < responded_at) as bot_replied_first,
+        case when answered then latency_seconds end as member_latency
+    from newcomers
 )
 
 select
     post_month,
     count(*) as first_posts_checked,
-    count(*) filter (where answered_by = 'member') as answered_by_member,
-    count(*) filter (where answered_by = 'bot') as answered_by_bot,
-    count(*) filter (where answered_by = 'none') as unanswered,
+    count(*) filter (where answered) as answered_by_member,
+    count(*) filter (where not answered and bot_replied) as answered_by_bot,
+    count(*) filter (where not answered and not bot_replied) as unanswered,
     count(*) filter (where bot_replied_first) as bot_replied_first,
-    count(*) filter (where bot_replied_first and answered_by = 'member') as bot_first_then_member,
+    count(*) filter (where bot_replied_first and answered) as bot_first_then_member,
     round((percentile_cont(0.5) within group (order by member_latency))::numeric, 0)
         as median_member_latency_seconds,
-    'v2' as metric_version
+    'v3' as metric_version
 from classified
 group by 1
 order by 1

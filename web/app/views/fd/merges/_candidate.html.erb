@@ -1,0 +1,10 @@
+<label class="merge-pick">
+  <%= check_box_tag "case_ids[]", other.id, false, id: nil, class: "tick",
+        data: { merge_picker_target: "case", action: "change->merge-picker#change",
+                opened_at: other.opened_at.iso8601 } %>
+  <span class="qrow merge-qrow">
+    <%= render "fd/cases/qrow", kase: other, violations: violations,
+          priors_by_user: priors_by_user, reachable: reachable %>
+    <span class="merge-sub"><%= merge_candidate_line(other) %></span>
+  </span>
+</label>

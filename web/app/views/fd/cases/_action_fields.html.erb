@@ -1,38 +1,42 @@
-<label class="field-label">
-  What was done
-  <%= select_tag :type_key, options_for_select(action_options),
-        class: "select action-type", id: nil %>
-</label>
-<label class="field-label">
-  Directed at
-  <%= text_field_tag :target_user_id, target, class: "textarea", id: nil %>
-</label>
-<label class="field-label when when-expiry">
-  Until when
-  <%= date_field_tag :expires_on, nil, class: "textarea", id: nil %>
-</label>
-<label class="field-label when when-channel">
-  Which channel
-  <%= text_field_tag :channel_id, nil, class: "textarea", id: nil,
-        placeholder: "C0266FRGV" %>
-</label>
-<label class="field-label">
-  What it is about
-  <%= select_tag :category_key,
-        options_for_select([["not set", ""]] + category_options, kase.category_key),
-        class: "select", id: nil %>
-</label>
-<label class="field-label">
-  Why
-  <%= text_area_tag :reason, field_was(:reason), rows: 3, class: "textarea", id: nil,
-        placeholder: "what they did, and why this is the answer to it" %>
-</label>
-<%= field_wrong(:reason) %>
-<% if flagged.any? %>
+<div class="field-label" data-action-standing-target="aimed">
+  <span>Directed at</span>
+  <%= render "fd/member_picker", name: "target_user_id", single: true,
+        url: fd_member_search_path(case_id: kase.id),
+        label: "search for who this is directed at", preset: preset_faces(target) %>
+</div>
+
+<div data-action-standing-target="standing">
+  <%= render "standing", guards: standing, kase: kase, names: names,
+        logged: guards_logged %>
+</div>
+
+<div class="fieldset" data-action-standing-target="fields">
   <label class="field-label">
-    Which flagged message it is about
-    <%= select_tag :cites_message_id,
-          options_for_select([["nothing in particular", ""]] + cite_options(flagged)),
+    What was done
+    <%= select_tag :type_key, options_for_select(action_options),
+          class: "select action-type", id: nil,
+          data: { action: "change->action-standing#shape" } %>
+  </label>
+  <%= render "thread_lock_pick", locks: thread_locks, kase: kase, logged: locks_logged %>
+  <label class="field-label" data-action-standing-target="expiry" hidden>
+    Until when
+    <%= date_field_tag :expires_on, nil, class: "input", id: nil %>
+  </label>
+  <div class="field-label" data-action-standing-target="channel" hidden>
+    <span>Which channel</span>
+    <%= render "fd/channel_field", name: :channel_id, label: "search for a channel" %>
+  </div>
+  <label class="field-label">
+    What it is about
+    <%= select_tag :category_key,
+          options_for_select([["not set", ""]] + category_options, kase.category_key),
           class: "select", id: nil %>
   </label>
-<% end %>
+  <div data-action-standing-target="why">
+    <label class="field-label">
+      Why
+      <%= text_area_tag :reason, field_was(:reason), rows: 3, class: "textarea", id: nil %>
+    </label>
+    <%= field_wrong(:reason) %>
+  </div>
+</div>

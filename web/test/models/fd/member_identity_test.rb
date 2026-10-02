@@ -2,17 +2,12 @@ require "test_helper"
 
 class Fd::MemberIdentityTest < ActiveSupport::TestCase
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
   end
 
   test "the app holds no write grant on either member table" do
-    assert_raises(ActiveRecord::StatementInvalid) do
-      Fd::Member.insert!({ user_id: "USNEAK", display_name: "Sneak" })
-    end
-
-    assert_raises(ActiveRecord::StatementInvalid) do
-      Fd::MemberIdentity.insert!({ user_id: "USNEAK", email: "sneak@example.invalid" })
-    end
+    assert_read_only! "fd.member"
+    assert_read_only! "fd.member_identity"
   end
 
   test "a loaded member row is readonly, so nothing can save one by accident" do
@@ -40,9 +35,9 @@ class Fd::MemberIdentityTest < ActiveSupport::TestCase
   end
 
   test "somebody whose role does not carry identity.read is handed nothing" do
-    them = Staff.create!(user_id: "UFF1", community_manager: false)
-    Fd::AccessGrant.give!("UFF1", role: "firefighter", by: "UME")
-    Fd::RolePermission.set!("firefighter", "identity.read", false, by: "UME")
+    them = Account.create!(user_id: "UFF1")
+    hold_role!("UFF1", "firefighter")
+    move_capability!("firefighter", "identity.read", false, by: "UME")
     before = AccessLog.count
 
     row = Fd::MemberIdentity.look_up(Fd::Member.order(:user_id).first.user_id, actor: them)

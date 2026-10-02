@@ -1,74 +1,52 @@
-<% content_for :page_title, "Acquisition" %>
-<% content_for :page_kicker, "Stage 01" %>
+<% content_for :page_title, "Joining" %>
 
-<% content_for :page_controls do %>
-  <span class="qlab">Span</span>
-  <div class="segmented" role="group" aria-label="months of growth">
-    <% HomeHelper::GROWTH_SPANS.each do |span| %>
-      <%= link_to "#{span}m", acquisition_journey_path(growth_months: span),
-            aria: { current: ("true" if span == @growth_span) } %>
-    <% end %>
-  </div>
+<% content_for :head_actions do %>
+  <%= render "shared/range_button", id: "joining-range",
+        label: "Last #{@growth_span} months" %>
 <% end %>
 
-<div id="acquisition">
-  <%= render "growth", growth_months: @growth_months, growth_span: @growth_span %>
-</div>
+<%= render "shared/range_modal", id: "joining-range", title: "Months of growth", dates: false,
+      presets: HomeHelper::GROWTH_SPANS.map { |span| {
+        label: "Last #{span} months", current: span == @growth_span,
+        href: joining_journey_path(growth_months: span) } } %>
 
-<div class="card card-flush">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Monthly cohorts</h2>
-      <p class="card-sub">members who joined each month, from their all-time message history</p>
-    </div>
+<% created_total = @growth_months.sum { |m| m.claimed_members.to_i + m.unclaimed_members.to_i } %>
+<% settled_months = @growth_months.select(&:claim_rate_30d) %>
+<% claim_mean = settled_months.any? ?
+     (settled_months.sum { |m| m.claim_rate_30d.to_f } / settled_months.size * 100).round(1) : nil %>
+
+<div class="metrics">
+  <div class="metric">
+    <span class="metric-k">Accounts created</span>
+    <span class="metric-v"><%= number_with_delimiter(created_total) %></span>
   </div>
-  <% if @monthly_cohorts.any? %>
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>cohort</th>
-            <th class="col-num">members</th>
-            <th class="col-num">ever posted</th>
-            <th class="col-num">posted in 30d</th>
-            <th class="col-num">median days</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @monthly_cohorts.each do |c| %>
-            <tr>
-              <td>
-                <span class="two-line">
-                  <b><%= c.cohort_month.strftime("%b %Y") %></b>
-                  <% unless c.complete? %>
-                    <span><%= number_with_delimiter(c.searched) %> of <%= number_with_delimiter(c.members) %> searched</span>
-                  <% end %>
-                </span>
-              </td>
-              <td class="col-num"><%= number_with_delimiter(c.members) %></td>
-              <% if c.complete? %>
-                <td class="col-num"><%= number_to_percentage(c.ever_posted.to_f / c.members * 100, precision: 1) %></td>
-                <td class="col-num">
-                  <% if c.mature? %>
-                    <%= number_to_percentage(c.posted_within_30d.to_f / c.members * 100, precision: 1) %>
-                  <% else %>
-                    <span class="sub2">matures <%= c.matures_on.strftime("%-d %b") %></span>
-                  <% end %>
-                </td>
-                <td class="col-num"><%= c.median_days_to_first_post || "n/a" %></td>
-              <% else %>
-                <td class="col-num">n/a</td>
-                <td class="col-num">n/a</td>
-                <td class="col-num">n/a</td>
-              <% end %>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
+  <div class="metric">
+    <span class="metric-k">Signed in, 30 days</span>
+    <span class="metric-v">
+      <%= claim_mean ? number_to_percentage(claim_mean, precision: 1) : "n/a" %>
+    </span>
+  </div>
+  <% if @newcomer_reach %>
+    <div class="metric">
+      <span class="metric-k">Newcomers, last 30 days</span>
+      <span class="metric-v"><%= number_with_delimiter(@newcomer_reach.cohort_size) %></span>
     </div>
-  <% else %>
-    <p class="card-note">
-      No cohort has been searched yet. The member history backfill fills this in, newest months first.
-    </p>
   <% end %>
 </div>
+
+<%= render "growth", growth_months: @growth_months, growth_span: @growth_span %>
+
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Cohort lifecycle</h2>
+  </div>
+  <%= render "lifecycle", lifecycle: @lifecycle %>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Where newcomers land</h2>
+  </div>
+  <%= render "newcomer_channels", newcomer_channels: @newcomer_channels,
+        newcomer_reach: @newcomer_reach %>
+</section>

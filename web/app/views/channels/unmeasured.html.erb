@@ -1,0 +1,20 @@
+<% content_for :page_title, @channel_id %>
+<% content_for :page_face do %>
+  <span class="crumb"><%= link_to "Channels", channels_path %> /</span>
+<% end %>
+
+<% content_for :head_actions do %>
+  <%= open_in_slack slack_channel_url(@channel_id) %>
+<% end %>
+
+<div class="stack">
+  <div class="panel">
+    <div class="empty">
+      <p class="empty-title">Analytics isn't available for this channel yet</p>
+      <p>
+        Make sure Mnemosyne is in <span class="mono"><%= @channel_id %></span>.
+        The numbers are rebuilt once a night, so check back tomorrow.
+      </p>
+    </div>
+  </div>
+</div>

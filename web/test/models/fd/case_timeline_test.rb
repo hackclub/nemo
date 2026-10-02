@@ -56,15 +56,14 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
     assert_no_match(/@/, entry.detail)
   end
 
-  test "an identified reporter who was also involved says so once" do
-    person = Fd::CaseParticipant.new(user_id: "UT", role: "involved")
+  test "an identified reporter is named once" do
+    person = Fd::CaseParticipant.new(user_id: "UT", role: "subject")
     entry = build(
       kase,
       reports: [report(is_anonymous: false, reporter_user_id: "UT")],
       participants: [person],
     ).first
-    assert_equal "by @UT, who was involved · via shroud · no reply yet · no subject set",
-      entry.detail
+    assert_equal "by @UT · via shroud · no reply yet", entry.detail
   end
 
   test "reply latency is stated in words rather than seconds" do
@@ -95,11 +94,11 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
     assert_equal "@UFF3 · by @UFF2 · an hour after opening", entry.detail
   end
 
-  test "an action performed by the bot names the bot, not a handle" do
+  test "an action performed by somebody other than the decider says who" do
     entry = build(kase, actions: [action(type_key: "locked_thread", performed_by: "UMNEMOSYNE",
       details: { "channel_id" => "C123" })]).last
     assert_equal "Locked thread", entry.title
-    assert_equal "decided by @UFF1 · performed by Mnemosyne · in C123", entry.detail
+    assert_equal "taken by @UFF1 · performed by @UMNEMOSYNE · in C123", entry.detail
   end
 
   test "an action on somebody other than the subject says who" do

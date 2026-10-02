@@ -14,7 +14,8 @@ total as (
 select
     c.cohort_day,
     c.members,
-    round(100.0 * c.members / nullif(t.all_members, 0), 2) as share_pct
+    round(100.0 * c.members / nullif(t.all_members, 0), 2) as share_pct,
+    10.0 as max_share_pct
 from cohorts c
 cross join total t
-where c.members::numeric / nullif(t.all_members, 0) > 0.05
+where c.members::numeric / nullif(t.all_members, 0) > 0.10

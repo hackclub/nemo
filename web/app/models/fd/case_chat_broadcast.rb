@@ -4,9 +4,9 @@ module Fd
       new(case_id).call
     end
 
-    def self.tag(case_id)
-      %(<turbo-stream action="reload_frame" target="chat-log-#{case_id}"></turbo-stream>)
-        .html_safe
+    def self.tag(case_id, version: ChatVersion.for(case_id))
+      %(<turbo-stream action="reload_frame" target="chat-log-#{case_id}" version="#{version}">) \
+        .concat("</turbo-stream>").html_safe
     end
 
     def initialize(case_id)

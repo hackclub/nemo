@@ -1,0 +1,40 @@
+<div class="metric">
+  <span class="metric-k"><%= label %></span>
+  <span class="metric-v"><%= number_with_delimiter(value) %></span>
+
+
+  <% if local_assigns[:spark] && spark[:data].compact.many? %>
+    <span class="metric-spark"
+          title="<%= local_assigns[:spark_title] %>"
+          data-controller="chart"
+          data-chart-kind-value="line"
+          data-chart-spark-value="true"
+          data-chart-days-value="true"
+          data-chart-height-value="34"
+          data-chart-data-value="<%= {
+            labels: spark[:labels],
+            datasets: [{ label: spark[:name], data: spark[:data] }]
+          }.to_json %>"></span>
+  <% end %>
+
+  <span class="metric-say">
+    <% if prior %>
+      <%= delta_chip(value, prior) %>
+      <span>vs previous <%= span[:label] %></span>
+    <% else %>
+      <span>no prior <%= span[:label] %> held</span>
+    <% end %>
+
+    <% if local_assigns[:share_of] %>
+      <% share = share_pct(value, share_of) %>
+      <% if share %>
+        <span class="ratiobar" role="img"
+              aria-label="<%= number_to_percentage(share, precision: 1) %> <%= share_note %>"
+              title="<%= number_with_delimiter(value) %> of <%= number_with_delimiter(share_of) %>">
+          <i style="width: <%= share.round(1) %>%"></i>
+        </span>
+        <span><%= number_to_percentage(share, precision: 1) %> <%= share_note %></span>
+      <% end %>
+    <% end %>
+  </span>
+</div>

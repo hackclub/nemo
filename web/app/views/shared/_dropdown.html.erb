@@ -1,0 +1,12 @@
+<details class="menu<%= " #{local_assigns[:css]}" if local_assigns[:css].present? %>"
+         data-controller="menu">
+  <summary class="<%= local_assigns.fetch(:trigger_css, "btn btn-only") %>"
+           aria-haspopup="menu"
+           aria-label="<%= label %>"
+           <%= "aria-current=#{local_assigns[:current].to_s.inspect}".html_safe if local_assigns[:current].present? %>>
+    <%= trigger %>
+  </summary>
+  <div class="menu-pop<%= " #{local_assigns[:pop_css]}" if local_assigns[:pop_css].present? %>">
+    <%= yield %>
+  </div>
+</details>

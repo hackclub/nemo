@@ -22,7 +22,7 @@ class Fd::BaseControllerTest < ActiveSupport::TestCase
   test "a controller that writes without declaring a permission refuses to run" do
     names = Fd::BaseController._process_action_callbacks.map(&:filter)
     assert_includes names, :require_a_declaration
-    assert_includes names, :require_staff
+    assert_includes names, :require_account
 
     bare = Class.new(Fd::BaseController)
     assert_empty bare.declared
@@ -31,7 +31,7 @@ class Fd::BaseControllerTest < ActiveSupport::TestCase
 
   test "the gate runs after sign in, so it never leaks to a stranger" do
     names = Fd::BaseController._process_action_callbacks.map(&:filter)
-    assert names.index(:require_staff) < names.index(:require_a_declaration)
+    assert names.index(:require_account) < names.index(:require_a_declaration)
   end
 
   test "forgery protection runs before the gate" do
@@ -49,7 +49,7 @@ class Fd::BaseControllerTest < ActiveSupport::TestCase
     writing.each do |controller|
       assert controller.declared.any?, "#{controller} writes without a permission"
       controller.declared.each do |key|
-        assert_includes Fd::Permission.keys, key, "#{controller} names #{key}, which does not exist"
+        assert_includes Authz.keys, key, "#{controller} names #{key}, which does not exist"
       end
     end
   end

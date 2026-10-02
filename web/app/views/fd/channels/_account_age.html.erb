@@ -1,0 +1,28 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <h2 class="card-title">New accounts</h2>
+    <div class="card-tools">
+      <% if guard %>
+        <%= submit_tag "Save", class: "btn btn-sm btn-primary", form: "account-age-form" %>
+      <% end %>
+      <%= channel_guard_switch(channel_id, guard, kind: Fd::ChannelGuard::ACCOUNT_AGE) %>
+    </div>
+  </div>
+
+  <% if guard %>
+    <%= form_with url: fd_channel_guard_path(channel_id, guard.kind), method: :patch,
+          id: "account-age-form" do %>
+      <div class="setlist">
+        <label class="setline">
+          <span class="setname">Days old before they may post</span>
+          <span class="setval">
+            <%= number_field_tag :min_age_days, guard.min_age_days, class: "input", id: nil,
+                  min: 1, max: Fd::ChannelGuard::OLDEST %>
+          </span>
+        </label>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="empty"><p class="empty-title">Off</p></div>
+  <% end %>
+</div>

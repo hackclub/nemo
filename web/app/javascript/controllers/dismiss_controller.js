@@ -1,5 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
+const POPUPS = "details.menu[open], details.picker[open]"
+
 export default class extends Controller {
   connect() {
     this.away = this.away.bind(this)
@@ -14,7 +16,7 @@ export default class extends Controller {
   }
 
   away(event) {
-    for (const open of this.element.querySelectorAll("details[open]")) {
+    for (const open of this.element.querySelectorAll(POPUPS)) {
       if (!open.contains(event.target)) open.removeAttribute("open")
     }
   }
@@ -22,7 +24,7 @@ export default class extends Controller {
   escape(event) {
     if (event.key !== "Escape") return
 
-    for (const open of this.element.querySelectorAll("details[open]")) {
+    for (const open of this.element.querySelectorAll(POPUPS)) {
       open.removeAttribute("open")
     }
   }

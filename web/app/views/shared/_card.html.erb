@@ -1,0 +1,16 @@
+<%= tag.div class: ["card", local_assigns[:css]].compact.join(" ") do %>
+  <% if local_assigns[:title].present? || local_assigns[:tools].present? %>
+    <div class="card-head">
+      <% if local_assigns[:title].present? %>
+        <div>
+          <h2 class="card-title"><%= title %></h2>
+          <% if local_assigns[:sub].present? %><p class="card-sub"><%= sub %></p><% end %>
+        </div>
+      <% end %>
+      <% if local_assigns[:tools].present? %>
+        <div class="card-tools"><%= tools %></div>
+      <% end %>
+    </div>
+  <% end %>
+  <%= yield %>
+<% end %>

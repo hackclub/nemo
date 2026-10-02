@@ -3,10 +3,6 @@ module HomeHelper
   GROWTH_SPANS = [6, 12, 24].freeze
   DEFAULT_GROWTH_SPAN = 6
 
-  def stale_note(mart)
-    Engine::Freshness.note(mart)
-  end
-
   def window_note(from, to)
     return nil if from.nil? || to.nil?
 
@@ -16,48 +12,59 @@ module HomeHelper
     "#{from.strftime(same_year ? '%-d %b' : '%-d %b %Y')} to #{to.strftime('%-d %b %Y')}"
   end
 
-  def stale_card(title, note)
-    tag.div(class: "card") do
-      tag.div(class: "card-head") do
-        tag.div do
-          tag.h2(title, class: "card-title") +
-            tag.p("n/a", class: "card-sub")
-        end
-      end + tag.p(note, class: "card-note")
-    end
+  OVERVIEW_SPANS = {
+    "7d" => { label: "7 days", days: 7, granularity: "daily" },
+    "28d" => { label: "28 days", days: 28, granularity: "daily" },
+    "90d" => { label: "90 days", days: 90, granularity: "daily" },
+    "12m" => { label: "12 months", months: 12, granularity: "monthly" }
+  }.freeze
+  DEFAULT_OVERVIEW_SPAN = "28d".freeze
+
+  def overview_span(value)
+    OVERVIEW_SPANS.key?(value.to_s) ? value.to_s : DEFAULT_OVERVIEW_SPAN
   end
 
-  ACTIVITY_GRANULARITIES = { "daily" => "daily", "monthly" => "monthly" }.freeze
-
-  def activity_granularity(value)
-    ACTIVITY_GRANULARITIES.fetch(value.to_s, "daily")
+  def span_of(key)
+    OVERVIEW_SPANS.fetch(overview_span(key))
   end
 
   def activity_series(rows, granularity)
     if granularity == "monthly"
       {
         labels: rows.map { |r| r.month.strftime("%b %Y") },
-        tick_every: 1,
+        days: false,
         span: "#{rows.size} months",
-        people: rows.map(&:active_users_28d),
-        people_label: "active in last 28 days",
+        partial: rows.each_with_index.filter_map { |r, i| i unless r.is_complete },
+        active: rows.map(&:active_users_28d),
         posted: rows.map(&:writers_count_28d),
-        posted_label: "posted in last 28 days",
+        posted_label: "posted",
+        silent: rows.map { |r| r.active_users_28d.to_i - r.writers_count_28d.to_i },
+        silent_label: "active, did not post",
         posted_share: rows.map { |r| share_pct(r.writers_count_28d, r.active_users_28d) },
         messages: rows.map(&:channel_messages),
+        public: rows.map(&:public_channel_messages),
+        public_label: "public channels",
+        private: rows.map { |r| r.channel_messages.to_i - r.public_channel_messages.to_i },
+        private_label: "private channels",
         public_share: rows.map { |r| share_pct(r.public_channel_messages, r.channel_messages) }
       }
     else
       {
-        labels: rows.map { |r| r.ds.strftime("%b %d") },
-        tick_every: 15,
+        labels: rows.map { |r| r.ds.iso8601 },
+        days: true,
         span: "#{rows.size} days",
-        people: rows.map(&:active_users_1d),
-        people_label: "active",
+        partial: [],
+        active: rows.map(&:active_users_1d),
         posted: rows.map(&:writers_count_1d),
         posted_label: "posted",
+        silent: rows.map { |r| r.active_users_1d.to_i - r.writers_count_1d.to_i },
+        silent_label: "active, did not post",
         posted_share: rows.map { |r| share_pct(r.writers_count_1d, r.active_users_1d) },
         messages: rows.map(&:channel_messages_1d),
+        public: rows.map(&:chats_channels_count_1d),
+        public_label: "public channels",
+        private: rows.map { |r| r.channel_messages_1d.to_i - r.chats_channels_count_1d.to_i },
+        private_label: "private channels",
         public_share: rows.map { |r| share_pct(r.chats_channels_count_1d, r.channel_messages_1d) }
       }
     end
@@ -85,13 +92,25 @@ module HomeHelper
       class: "delta-share")
   end
 
+  REPLY_CLASS_LABEL = {
+    "fast" => "under 1 h",
+    "slow" => "over 1 h",
+    "none" => "no member reply"
+  }.freeze
+
+  def reply_class_label(reply_class)
+    REPLY_CLASS_LABEL.fetch(reply_class, reply_class)
+  end
+
   def rate_chip(pct, label = nil)
-    style = if pct >= 60 then "chip chip-good"
-    elsif pct >= 30 then "chip chip-off"
-    else "chip chip-warn"
-    end
     text = number_to_percentage(pct, precision: 1)
-    tag.span(label ? "#{text} #{label}" : text, class: style)
+    tag.span(label ? "#{text} #{label}" : text, class: "tn")
+  end
+
+  def retention_cell(rate)
+    return tag.span("n/a", class: "sub2") if rate.nil?
+
+    number_to_percentage((rate.to_f * 100).round(1), precision: 1)
   end
 
   def incomplete_chip(*reasons)
@@ -102,7 +121,7 @@ module HomeHelper
   end
 
   def reply_wait(seconds)
-    return "n/a" if seconds.nil?
+    return tag.span("n/a", class: "sub2") if seconds.nil?
 
     seconds = seconds.to_i
     return "#{seconds}s" if seconds < 90
@@ -116,23 +135,154 @@ module HomeHelper
     format("%.1f d", hours / 24)
   end
 
+  WINDOWS = [[86_400, "day"], [3600, "hour"], [60, "minute"]].freeze
+
+  def window_said(seconds)
+    return "the whole span" if seconds.blank?
+
+    size, word = WINDOWS.find { |step, _| seconds >= step } || [1, "second"]
+    count = (seconds.to_f / size).round
+    "the first #{count == 1 ? word : pluralize(count, word)}"
+  end
+
   def share_pct(numerator, denominator)
-    return 0.0 if denominator.nil? || denominator.to_i.zero?
+    return nil if denominator.nil? || denominator.to_i.zero? || numerator.nil?
 
     ((numerator.to_f / denominator) * 100).round(1)
   end
 
-  def ratio_line_dataset(label, data)
-    {
-      label: label,
-      data: data,
-      type: "line",
-      yAxisID: "y1",
-      borderWidth: 2,
-      pointRadius: 0,
-      pointHitRadius: 8,
-      tension: 0,
-      order: 0
-    }
+  def rate_cell(numerator, denominator, precision: 1)
+    pct = share_pct(numerator, denominator)
+    return tag.span("n/a", class: "sub2") if pct.nil?
+
+    tag.span(class: "two-line", title: "#{number_with_delimiter(numerator)} of " \
+      "#{number_with_delimiter(denominator)}") do
+      concat tag.b(number_to_percentage(pct, precision: precision))
+      concat tag.span("#{number_with_delimiter(numerator)}/#{number_with_delimiter(denominator)}")
+    end
+  end
+
+  HEAT_STEPS = 6
+
+  def heat_step(value, peak)
+    return 0 if value.nil? || peak.nil? || peak.to_f <= 0
+
+    [[(value.to_f / peak * (HEAT_STEPS - 1)).round, 0].max, HEAT_STEPS - 1].min
+  end
+
+  def lifecycle_cell(row, stage, peak)
+    value = row.public_send(stage[:key])
+    return heat_cell(row, stage, peak, lifecycle_reason(row, stage)) if value
+
+    if lifecycle_open?(row, stage)
+      tag.span("pending", class: "lg-cell lg-open",
+        title: "this window closes " \
+               "#{lifecycle_closes(row, stage).strftime('%-d %b %Y')}")
+    else
+      tag.span("n/a", class: "lg-cell lg-none", title: lifecycle_reason(row, stage))
+    end
+  end
+
+  def heat_cell(row, stage, peak, title)
+    value = row.public_send(stage[:key])
+    shade = "lg-cell lg-h#{heat_step(value, peak)}"
+
+    # the opening stage divides by created, so its step and its cumulative are one number
+    if stage[:prev] == :invited
+      return tag.span(number_to_percentage(value.to_f * 100, precision: 1),
+        class: shade, title: title)
+    end
+
+    step = row.step_of(stage)
+    tag.span(class: "#{shade} lg-two", title: title) do
+      concat tag.b(step ? number_to_percentage(step * 100, precision: 1) : "n/a")
+      concat tag.span("#{number_to_percentage(value.to_f * 100, precision: 1)} of created")
+    end
+  end
+
+  def lifecycle_open?(row, stage)
+    case stage[:key]
+    when :signed_rate then false
+    when :posted_rate_30d then Date.current < row.closes_on(:posted_rate_30d)
+    when :funnel_30 then Date.current < row.closes_on(:funnel_30)
+    when :funnel_90 then Date.current < row.closes_on(:funnel_90)
+    end
+  end
+
+  def lifecycle_closes(row, stage)
+    row.closes_on(stage[:key])
+  end
+
+  def lifecycle_reason(row, stage)
+    step = row.step_of(stage)
+    if step
+      before = row.public_send(stage[:prev])
+      here = row.public_send(stage[:num])
+      return "#{number_with_delimiter(here)} of #{number_with_delimiter(before)} from the stage " \
+             "before, #{number_with_delimiter(here)} of #{number_with_delimiter(row.invited)} " \
+             "created &middot; #{lifecycle_note(row, stage)}"
+    end
+
+    lifecycle_note(row, stage)
+  end
+
+  def lifecycle_note(row, stage)
+    case stage[:key]
+    when :signed_rate
+      claimed = if row.claim_rate_30d
+        ", #{number_to_percentage(row.claim_rate_30d.to_f * 100, precision: 1)} of them " \
+          "within 30 days"
+      end
+      "#{number_with_delimiter(row.claimed)} of #{number_with_delimiter(row.invited)} " \
+        "created accounts signed in#{claimed}"
+    when :posted_rate_30d
+      if row.searched.to_i.positive?
+        "#{number_with_delimiter(row.posted_30d)} of #{number_with_delimiter(row.invited)} " \
+          "created accounts posted inside their first 30 days. A floor: only " \
+          "#{number_with_delimiter(row.searched)} of the cohort has searched history, and a " \
+          "first post needs a searched timestamp to count"
+      else
+        "no searched message history for this cohort, so posting is unobservable"
+      end
+    when :funnel_30 then lifecycle_window_reason(row, 30, row.retained_30, row.cover_30)
+    when :funnel_90 then lifecycle_window_reason(row, 90, row.retained_90, row.cover_90)
+    end
+  end
+
+  def lifecycle_window_reason(row, day, retained, cover)
+    return "no first poster in this cohort is measurable at day #{day} yet" if cover.nil?
+
+    held = "#{number_to_percentage(cover * 100, precision: 0)} of the cohort's " \
+           "#{number_with_delimiter(row.first_posters)} first posters have a held day in the " \
+           "day-#{day} window"
+    if cover < Journey::Lifecycle::COVER_FLOOR
+      return "#{held}, under the " \
+             "#{number_to_percentage(Journey::Lifecycle::COVER_FLOOR * 100, precision: 0)} " \
+             "needed before a cohort share can be published"
+    end
+
+    "#{number_with_delimiter(retained)} of #{number_with_delimiter(row.invited)} created " \
+      "accounts posted in a public channel in the 8 days ending on day #{day} " \
+        "&middot; #{held}"
+  end
+
+  def band_split(value, bands, label)
+    return nil if value.nil?
+
+    at = bands.index { |b| (b.band_top || Float::INFINITY) >= value.to_i }
+    return nil if at.nil? || at >= bands.size - 1
+
+    { after: at, label: "#{label} #{number_with_delimiter(value)}" }
+  end
+
+  def wilson_bounds(hits, sample)
+    return nil if sample.nil? || sample.to_i.zero?
+
+    z = 1.96
+    p = hits.to_f / sample
+    d = 1 + (z**2 / sample)
+    centre = (p + (z**2 / (2.0 * sample))) / d
+    margin = z * Math.sqrt((p * (1 - p) / sample) + (z**2 / (4.0 * sample**2))) / d
+    [[centre - margin, 0].max * 100, [centre + margin, 1].min * 100]
   end
 end

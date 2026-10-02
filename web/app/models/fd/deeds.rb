@@ -3,35 +3,14 @@ module Fd
     LIMIT = 40
     READ = "identity.read".freeze
 
-    VIEWS = {
-      "all" => { tab: "Everything", head: "Everything anyone did" },
-      "audit" => { tab: "Firefighters", head: "Everything firefighters did" },
-      "read" => { tab: "Identity reads", head: "Every identity read" },
-      "api" => { tab: "API", head: "Everything anyone did to the API" }
-    }.freeze
-
-    VIA = { "dashboard" => "from the dashboard", "command" => "from Slack" }.freeze
-
-    KIND_VIEWS = {
-      "audit" => "audit", "read" => "read", "consent" => "api", "event" => "api",
-      "request" => "api"
-    }.freeze
-
     Row = Struct.new(:at, :event, :kind, :id, :about, :who, :said, :actor, keyword_init: true)
 
     ON_CASE = %w[case participant assignee thread citation].freeze
 
-    def self.view_for(asked)
-      VIEWS.key?(asked.to_s) ? asked.to_s : "all"
-    end
-
-    attr_reader :view
-
-    def initialize(user_id, since:, only: nil, view: nil, limit: LIMIT, offset: 0)
+    def initialize(user_id, since:, only: nil, limit: LIMIT, offset: 0)
       @user_id = user_id
       @since = since
       @only = only
-      @view = self.class.view_for(view)
       @limit = limit
       @offset = offset
     end
@@ -44,10 +23,6 @@ module Fd
       @total ||= picked("count(*) AS found").first["found"].to_i
     end
 
-    def totals
-      @totals ||= tallied
-    end
-
     def member_ids
       rows.flat_map { |row| [row.kind == "member" ? row.id : row.who, row.actor] }.compact.uniq
     end
@@ -58,7 +33,7 @@ module Fd
       return AuditEntry.connection.select_all("SELECT 0 AS found WHERE false") if nothing_asked?
 
       sql = <<~SQL
-        WITH picked AS (#{union})
+        WITH picked AS (#{audit_side}#{reads_side})
         SELECT #{select} FROM picked
       SQL
       sql += "ORDER BY at DESC LIMIT :limit OFFSET :offset" unless select.start_with?("count")
@@ -68,39 +43,12 @@ module Fd
       )
     end
 
-    def union
-      "#{audit_side}#{reads_side}#{consent_side}#{event_side}#{request_side}"
-    end
-
     def nothing_asked?
-      union.strip.empty?
-    end
-
-    def wanted?(name)
-      @view == "all" || @view == name
-    end
-
-    def tallied
-      counted = VIEWS.keys.excluding("all").index_with(0)
-      return counted.merge("all" => 0) if nothing_asked?
-
-      sql = <<~SQL
-        WITH picked AS (#{union})
-        SELECT kind, count(*) AS found FROM picked GROUP BY kind
-      SQL
-      found = AuditEntry.connection.select_all(
-        AuditEntry.sanitize_sql([sql, { since: @since, who: @user_id }])
-      )
-      found.each do |row|
-        view = KIND_VIEWS.fetch(row["kind"])
-        counted[view] += row["found"].to_i
-      end
-      counted.merge("all" => counted.values.sum)
+      audit_side.strip.empty? && reads_side.strip.empty?
     end
 
     def audit_side
-      return "" unless wanted?("audit")
-      return "" if @only && @only != READ && Permission.events(@only).empty?
+      return "" if @only && @only != READ && Authz.events(@only).empty?
       return "" if @only == READ
 
       mine = @user_id ? "AND a.actor_user_id = :who" : ""
@@ -111,68 +59,26 @@ module Fd
       SQL
     end
 
+    IDENTITY_READS = %w[identity identity_search].freeze
+
     def reads_side
-      return "" unless wanted?("read")
       return "" if @only && @only != READ
 
       mine = @user_id ? "AND l.actor_id = :who" : ""
+      lead = audit_side.empty? ? "" : "UNION ALL"
+      classes = AuditEntry.sanitize_sql(["l.field_class IN (?)", IDENTITY_READS])
       <<~SQL
-        #{audit_side.empty? ? '' : 'UNION ALL'}
+        #{lead}
         SELECT 'read' AS kind, l.id AS id, l.looked_at AS at
         FROM access_log l
-        WHERE l.looked_at >= :since AND l.field_class = 'identity' #{mine}
+        WHERE l.looked_at >= :since AND #{classes} #{mine}
       SQL
-    end
-
-    def consent_side
-      return "" unless wanted?("api")
-      return "" if @only
-
-      mine = @user_id ? "AND c.user_id = :who" : ""
-      <<~SQL
-        #{lead_for(audit_side, reads_side)}
-        SELECT 'consent' AS kind, c.id AS id, c.at AS at
-        FROM api.consent_log c
-        WHERE c.at >= :since #{mine}
-      SQL
-    end
-
-    def event_side
-      return "" unless wanted?("api")
-      return "" if @only
-
-      mine = @user_id ? "AND e.actor_user_id = :who" : ""
-      <<~SQL
-        #{lead_for(audit_side, reads_side, consent_side)}
-        SELECT 'event' AS kind, e.id AS id, e.at AS at
-        FROM api.event_log e
-        WHERE e.at >= :since #{mine}
-      SQL
-    end
-
-    def request_side
-      return "" unless wanted?("api")
-      return "" if @only
-
-      mine = @user_id ? "AND t.owner_user_id = :who" : ""
-      <<~SQL
-        #{lead_for(audit_side, reads_side, consent_side, event_side)}
-        SELECT 'request' AS kind, r.token_id AS id, date_trunc('day', r.at) AS at
-        FROM api.request_log r
-        JOIN api.token t ON t.id = r.token_id
-        WHERE r.at >= :since #{mine}
-        GROUP BY r.token_id, date_trunc('day', r.at)
-      SQL
-    end
-
-    def lead_for(*sides)
-      sides.all?(&:empty?) ? "" : "UNION ALL"
     end
 
     def only_clause
       return "" unless @only
 
-      pairs = Permission.events(@only).map { |event| event.split("/") }
+      pairs = Authz.events(@only).map { |event| event.split("/") }
       return "AND false" if pairs.empty?
 
       said = pairs.map { |type, verb|
@@ -196,93 +102,24 @@ module Fd
       chosen = picked.to_a
       @picked_ids = chosen.select { |row| row["kind"] == "audit" }.map { |row| row["id"] }
       read_rows = reads_for(chosen.select { |row| row["kind"] == "read" }.map { |row| row["id"] })
-      consent_rows = consents_for(ids_of(chosen, "consent"))
-      event_rows = events_for(ids_of(chosen, "event"))
-      request_rows = requests_for(chosen.select { |row| row["kind"] == "request" })
 
       found = entries
       @actions = Action.where(id: ids(found, "action")).index_by(&:id)
       @notes = Note.where(id: ids(found, "note")).index_by(&:id)
       @reports = CaseReport.where(id: ids(found, "report")).index_by(&:id)
-      @grants = AccessGrant.where(id: ids(found, "grant")).index_by(&:id)
-      @titles = Decision.where(id: ids(found, "decision", "decision_thread"))
-        .pluck(:id, :title).to_h
 
       made = found.map { |row| row_for(row).tap { |one| one.actor = row.actor_user_id } }
-      (made + read_rows + consent_rows + event_rows + request_rows)
-        .sort_by { |row| -row.at.to_i }
-    end
-
-    def ids_of(chosen, kind)
-      chosen.select { |row| row["kind"] == kind }.map { |row| row["id"] }
-    end
-
-    ROLLED = <<~SQL.freeze
-      SELECT r.token_id, date_trunc('day', r.at) AS day, t.name AS token_name,
-             t.owner_user_id AS owner, count(*) AS asks,
-             count(*) FILTER (WHERE r.outcome = 'withheld') AS withheld,
-             count(DISTINCT r.subject_user_id) AS people,
-             count(DISTINCT r.channel_id) AS rooms
-      FROM api.request_log r
-      JOIN api.token t ON t.id = r.token_id
-      WHERE r.at >= :since
-      GROUP BY r.token_id, date_trunc('day', r.at), t.name, t.owner_user_id
-    SQL
-
-    def requests_for(picked_rows)
-      return [] if picked_rows.empty?
-
-      wanted = picked_rows.map { |row| [row["id"].to_i, row["at"].to_time.to_i] }.to_set
-      rolled.filter_map do |row|
-        next unless wanted.include?([row["token_id"].to_i, row["day"].to_time.to_i])
-
-        request_row(row)
-      end
-    end
-
-    def rolled
-      AuditEntry.connection.select_all(
-        AuditEntry.sanitize_sql([ROLLED, { since: @since }])
-      )
-    end
-
-    def request_row(row)
-      people = row["people"].to_i
-      withheld = row["withheld"].to_i
-      rooms = row["rooms"].to_i
-      said = ["#{rooms} #{'channel'.pluralize(rooms)}"]
-      said << "#{withheld} withheld" if withheld.positive?
-
-      Row.new(at: row["day"], event: "api/checked", kind: "capability",
-        about: "#{people} #{'member'.pluralize(people)}", actor: row["owner"],
-        said: ([row["token_name"]] + said).join(" · "))
-    end
-
-    def events_for(ids)
-      return [] if ids.empty?
-
-      ::Api::Event.where(id: ids).map do |event|
-        Row.new(at: event.at, event: "api/#{event.verb}", kind: "capability",
-          about: event.subject, actor: event.actor_user_id, said: event.detail)
-      end
-    end
-
-    def consents_for(ids)
-      return [] if ids.empty?
-
-      ::Api::ConsentLog.where(id: ids).map do |log|
-        Row.new(at: log.at, event: "consent/#{log.state}", kind: "capability",
-          about: ::Api::Scope.said(log.capability), actor: log.user_id,
-          said: VIA.fetch(log.via, log.via))
-      end
+      (made + read_rows).sort_by { |row| -row.at.to_i }
     end
 
     def reads_for(ids)
       return [] if ids.empty?
 
       AccessLog.where(id: ids).map do |log|
+        searched = log.field_class == "identity_search"
         Row.new(at: log.looked_at, event: "identity/read", kind: "member",
-          id: log.subject_user_id, actor: log.actor_id)
+          id: log.subject_user_id, actor: log.actor_id,
+          said: ("found by searching" if searched))
       end
     end
 
@@ -296,10 +133,11 @@ module Fd
       case row.entity_type
       when "action" then action_row(row, event)
       when "note" then note_row(row, event)
-      when "decision", "decision_thread" then decision_row(row, event)
-      when "grant" then grant_row(row, event)
+      when "grant", "capability_grant" then grant_row(row, event)
+      when "community_grant" then community_grant_row(row, event)
       when "permission" then moved_row(row, event)
       when "report" then report_row(row, event)
+      when "member" then member_row(row, event)
       when *ON_CASE then on_case(row, event, row.entity_id)
       else Row.new(at: row.occurred_at, event: event)
       end
@@ -333,26 +171,34 @@ module Fd
       on_case(row, event, report ? report.case_id : row.entity_id)
     end
 
-    def decision_row(row, event)
-      title = @titles[row.entity_id]
-      return Row.new(at: row.occurred_at, event: event) if title.nil?
-
-      Row.new(at: row.occurred_at, event: event, kind: "decision", id: row.entity_id,
-        about: title)
-    end
-
     def moved_row(row, event)
       said = row.after || {}
       Row.new(at: row.occurred_at, event: event,
         said: [said["permission"], said["role"]&.tr("_", " ")].compact.join(" · ").presence)
     end
 
-    def grant_row(row, event)
-      grant = @grants[row.entity_id]
-      return Row.new(at: row.occurred_at, event: event) if grant.nil?
+    def member_row(row, event)
+      said = row.after.presence || {}
+      return Row.new(at: row.occurred_at, event: event) if said["user_id"].blank?
 
-      Row.new(at: row.occurred_at, event: event, kind: "member", id: grant.user_id,
-        said: grant.role.tr("_", " "))
+      Row.new(at: row.occurred_at, event: event, kind: "member", id: said["user_id"],
+        said: ("from Slack" if row.source_app != Audit::SOURCE_APP))
+    end
+
+    def grant_row(row, event)
+      said = row.after.presence || row.before.presence || {}
+      return Row.new(at: row.occurred_at, event: event) if said["user_id"].blank?
+
+      Row.new(at: row.occurred_at, event: event, kind: "member", id: said["user_id"],
+        said: said["role"]&.tr("_", " "))
+    end
+
+    def community_grant_row(row, event)
+      said = row.after.presence || row.before.presence || {}
+      return Row.new(at: row.occurred_at, event: event) if said["user_id"].blank?
+
+      Row.new(at: row.occurred_at, event: event, kind: "member", id: said["user_id"],
+        said: [said["role"]&.tr("_", " "), said["family"]].compact.join(", ").presence)
     end
   end
 end

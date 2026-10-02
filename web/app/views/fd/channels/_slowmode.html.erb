@@ -1,0 +1,38 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <h2 class="card-title">Slow mode</h2>
+    <div class="card-tools">
+      <% if guard %>
+        <%= submit_tag "Save", class: "btn btn-sm btn-primary", form: "slowmode-form" %>
+        <%= opens_modal "channel.guard", "Exempt somebody", opens: "allow-bot",
+              css: "btn btn-sm" %>
+      <% end %>
+      <%= channel_guard_switch(channel_id, guard, kind: Fd::ChannelGuard::SLOWMODE) %>
+    </div>
+  </div>
+
+  <% if guard %>
+    <%= form_with url: fd_channel_guard_path(channel_id, guard.kind), method: :patch,
+          id: "slowmode-form" do %>
+      <div class="setlist">
+        <label class="setline">
+          <span class="setname">Seconds between messages</span>
+          <span class="setval">
+            <%= number_field_tag :seconds, guard.seconds, class: "input", id: nil,
+                  min: 1, max: Fd::ChannelGuard::SLOWEST %>
+          </span>
+        </label>
+        <label class="setline">
+          <span class="setname">Also in threads</span>
+          <span class="setval">
+            <%= check_box_tag :threads, "1", guard.threads?, class: "switch", id: nil %>
+          </span>
+        </label>
+      </div>
+    <% end %>
+    <%= render "allows", channel_id: channel_id, guard: guard, allows: allows,
+          empty: "Nobody is exempt" %>
+  <% else %>
+    <div class="empty"><p class="empty-title">Off</p></div>
+  <% end %>
+</div>

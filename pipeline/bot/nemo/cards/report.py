@@ -2,21 +2,22 @@ import re
 
 import yaml
 
-from bot.engine import richtext
+from bot.core import richtext
+from bot.core.wording import (
+    escape,
+    said,
+)
 from bot.nemo.cards import edit
 from lib.paths import CATEGORIES_FILE
 
 MENTION = re.compile(r"(<[@#][A-Z0-9][A-Z0-9]*(?:\|[^>]*)?>)")
-LINK = re.compile(r"(<https?://[^\s<>]+?(?:\|[^>]*)?>)")
 SLACK_BIT = re.compile(
     r"(<[@#][A-Z0-9][A-Z0-9]*(?:\|[^>]*)?>|<https?://[^\s<>]+?(?:\|[^>]*)?>)"
 )
 
 SECTION_LIMIT = 3000
 CONTEXT_ELEMENTS = 10
-QUOTE_LIMIT = 2400
 HEADER_LIMIT = 150
-CUT = "\n[truncated, the whole thing is on the case page]"
 
 CLAIM = "case_claim"
 LOG_ACTION = "case_log_action"
@@ -35,10 +36,6 @@ def category_label(key):
     return LABELS.get(key, key.replace("_", " "))
 
 
-def escape(text):
-    return (text or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-
 def escape_but_slack(text):
     return "".join(
         part if SLACK_BIT.fullmatch(part) else escape(part)
@@ -50,17 +47,9 @@ def escape_but_mentions(text):
     return escape_but_slack(text)
 
 
-def said(body):
-    text = (body or "").strip()
-    if not text:
-        return "they sent no words, only what is attached"
-    if len(text) > QUOTE_LIMIT:
-        text = text[:QUOTE_LIMIT].rstrip() + CUT
-    return text
-
-
 def quote(body):
-    return richtext.quote(said(body))
+    words = said(body)
+    return richtext.quote(words) if words else None
 
 
 def section(text):
@@ -74,8 +63,9 @@ def context(parts):
 
 def where(case):
     for share in case.get("shares") or []:
-        if share.get("source_channel_name"):
-            return f"#{share['source_channel_name']}"
+        named = share.get("source_channel_name")
+        if named:
+            return f"#{named}"
     return None
 
 
@@ -123,7 +113,7 @@ def priors(case):
 def subjects_line(case):
     subjects = case.get("subjects") or []
     if not subjects:
-        return "nobody named yet"
+        return None
     return "about " + ", ".join(f"<@{user_id}>" for user_id in subjects)
 
 
@@ -134,7 +124,7 @@ def link(case):
 
 def reporter(case):
     if case.get("is_anonymous", True) or not case.get("reporter_user_id"):
-        return "anonymous"
+        return "Anonymous"
     return f"<@{case['reporter_user_id']}>"
 
 
@@ -144,24 +134,32 @@ def reported(case):
     return f"{reporter(case)} reported it"
 
 
+def who_and_what(case):
+    parts = [reported(case), subjects_line(case), priors(case)]
+    return context([" · ".join(part for part in parts if part)])
+
+
 def footer(case):
-    parts = [
-        standing(case),
-        subjects_line(case),
-        priors(case),
-        reported(case),
-        link(case),
-    ]
+    parts = [standing(case), link(case)]
     return context([" · ".join(part for part in parts if part)])
 
 
 def evidence(shares):
+    shown = brought(shares)
     lines = []
     for share in shares[:CONTEXT_ELEMENTS]:
-        where = share.get("source_channel_name")
-        label = f"#{where}" if where else "a linked message"
+        if any(share is one for one in shown):
+            continue
+        named = share.get("source_channel_name")
         permalink = share.get("permalink")
-        said = f"<{permalink}|{label}>" if permalink else label
+        if named:
+            said = f"<{permalink}|#{named}>" if permalink else f"#{named}"
+        elif room(share):
+            said = room(share)
+            if permalink:
+                said += f" · <{permalink}|open it>"
+        else:
+            said = f"<{permalink}|a linked message>" if permalink else "a linked message"
         if not share.get("is_reachable"):
             said += " (a link, not shared)"
         lines.append(said)
@@ -227,7 +225,7 @@ def buttons(case):
     elements.append(button(LOG_ACTION, "Log an action", case_id))
     elements.append(button(RESOLVE, "Resolve", case_id, "danger"))
 
-    more = edit.menu(case, mine=bool(held))
+    more = edit.menu(case)
     if more:
         elements.append(more)
 
@@ -253,21 +251,31 @@ def brought(shares):
     ][:SHOWN_SHARES]
 
 
+def room(share):
+    held = share.get("source_channel_id")
+    if held:
+        return f"<#{held}>"
+    named = share.get("source_channel_name")
+    return f"#{named}" if named else None
+
+
 def whose(share):
     who = share.get("source_author_user_id")
-    where = share.get("source_channel_name")
+    where = room(share)
     said = f"<@{who}>" if who else "somebody"
     if where:
-        said += f" in #{where}"
+        said += f" in {where}"
     permalink = share.get("permalink")
     return f"{said} · <{permalink}|open it>" if permalink else said
 
 
-def what_they_reported(shares):
+def what_they_reported(case):
     built = []
-    for share in brought(shares):
+    for share in brought(case.get("shares") or []):
         built.append(context([whose(share)]))
-        built.append(quote(share["source_body"]))
+        words = quote(share["source_body"])
+        if words:
+            built.append(words)
     return built
 
 
@@ -275,8 +283,8 @@ def blocks(case):
     files = case.get("files") or []
     shares = case.get("shares") or []
 
-    built = [title(case), quote(case.get("body"))]
-    built += what_they_reported(shares)
+    built = [part for part in [title(case), who_and_what(case), quote(case.get("body"))] if part]
+    built += what_they_reported(case)
     built.append(footer(case))
 
     trail = [part for part in [attached(case)] if part]
@@ -300,14 +308,3 @@ def metadata(case):
         "event_type": "fd_case_card",
         "event_payload": {"case_id": case["case_id"], "report_id": case.get("report_id")},
     }
-
-
-def escape_but_links(text):
-    return "".join(
-        part if LINK.fullmatch(part) else escape(part)
-        for part in LINK.split(text or "")
-    )
-
-
-def to_member(body):
-    return escape_but_links(said(body))

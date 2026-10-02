@@ -4,7 +4,7 @@ Rails.application.config.middleware.use OmniAuth::Builder do
     issuer: ENV.fetch("HCA_ISSUER", "https://auth.hackclub.com"),
     discovery: true,
     response_type: :code,
-    scope: [:openid, :profile, :email, :name, :slack_id, :verification_status],
+    scope: [:openid, :profile, :email, :name, :slack_id],
     client_options: {
       identifier: ENV["HCA_CLIENT_ID"],
       secret: ENV["HCA_CLIENT_SECRET"],

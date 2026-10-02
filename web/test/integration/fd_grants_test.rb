@@ -2,148 +2,166 @@ require "test_helper"
 
 class FdGrantsTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     sign_in_as(@me)
   end
 
   def give(user_id: "U0AFF1", role: "firefighter", **rest)
-    post fd_grants_path, params: { user_id: user_id, role: role }.merge(rest)
+    post admin_grants_path, params: { user_id: user_id, role: role }.merge(rest)
+    Current.forget_roles
+  end
+
+  def held(user_id = "U0AFF1")
+    Current.forget_roles
+    Authz::Grant.live.roles.find_by(user_id: user_id)
   end
 
   test "giving access records the role and who gave it" do
     give
 
-    grant = Fd::AccessGrant.live.find_by(user_id: "U0AFF1")
-    assert_equal "firefighter", grant.role
+    grant = held
+    assert_equal "firefighter", grant.name
     assert_equal "UME", grant.granted_by
-    assert_redirected_to fd_settings_path(person: "U0AFF1")
-    assert Fd::AuditEntry.exists?(entity_type: "grant", entity_id: grant.id, verb: "granted")
+    assert_redirected_to admin_person_path("U0AFF1")
+    assert Fd::AuditEntry.exists?(entity_type: "capability_grant", entity_id: grant.id,
+      verb: "granted")
   end
 
-  test "a grant needs somebody and a role" do
+  test "a grant needs somebody" do
     give(user_id: "")
     assert_match(/search for somebody/, flash[:alert])
 
-    give(role: "boss")
-    assert_match(/pick a role/, flash[:alert])
+    give(user_id: "not-an-id")
+    assert_match(/is not a Slack user id/, flash[:alert])
 
-    assert_equal 0, Fd::AccessGrant.where(user_id: "U0AFF1").count
+    assert_equal 0, Authz::Grant.for_person("U0AFF1").count
   end
 
   test "changing a role ends the old grant and starts a new one" do
     give
-    give(role: "lead")
+    give(role: "gardener")
 
-    assert_equal "lead", Fd::AccessGrant.role_for("U0AFF1")
-    assert_equal 2, Fd::AccessGrant.for_person("U0AFF1").count
-    assert_equal 1, Fd::AccessGrant.for_person("U0AFF1").ended.count
+    assert_equal "gardener", held.name
+    assert_equal 2, Authz::Grant.for_person("U0AFF1").roles.count
+    assert_equal 1, Authz::Grant.for_person("U0AFF1").roles.where.not(revoked_at: nil).count
   end
 
-  test "taking a grant back leaves the person holding nothing" do
+  test "taking everything back leaves the person holding nothing, and says so in the trail" do
     give
-    grant = Fd::AccessGrant.live.find_by(user_id: "U0AFF1")
+    grant = held
 
-    delete fd_grant_path(grant)
+    delete admin_grant_path("U0AFF1")
 
-    assert_nil Fd::AccessGrant.role_for("U0AFF1")
+    assert_nil held
     assert_equal "UME", grant.reload.revoked_by
-    assert Fd::AuditEntry.exists?(entity_type: "grant", entity_id: grant.id, verb: "revoked")
   end
 
-  test "a grant that already ended cannot be taken back twice" do
+  test "unpicking the fire department rung takes that grant back" do
     give
-    grant = Fd::AccessGrant.live.find_by(user_id: "U0AFF1")
-    delete fd_grant_path(grant)
-    delete fd_grant_path(grant)
+    grant = held
 
-    assert_match(/already ended/, flash[:alert])
-    assert_equal 1, Fd::AuditEntry.where(entity_type: "grant", verb: "revoked").count
+    post admin_grants_path, params: { user_id: "U0AFF1" }
+
+    assert_nil held
+    assert Fd::AuditEntry.exists?(entity_type: "capability_grant", entity_id: grant.id,
+      verb: "revoked")
   end
 
-  test "nobody takes their own access back" do
-    Fd::AccessGrant.give!("UME", role: "community_manager", by: "UME")
-    mine = Fd::AccessGrant.live.find_by(user_id: "UME")
-
-    delete fd_grant_path(mine)
+  test "the last manager cannot lock everybody out by taking their own back" do
+    delete admin_grant_path("UME")
 
     assert_match(/somebody else has to take yours back/, flash[:alert])
-    assert_predicate mine.reload, :live?
+    assert_predicate Account.find("UME"), :manager?
   end
 
-  test "a lead cannot hand out access, and the attempt is kept" do
+  test "a lead cannot reach the grant endpoints at all" do
     delete logout_path
-    lead = Staff.create!(user_id: "ULEAD", community_manager: false)
-    Fd::AccessGrant.give!("ULEAD", role: "lead", by: "UME")
-    sign_in_as(lead)
+    hand = Account.create!(user_id: "ULEAD")
+    Authz::Grant.give!("ULEAD", kind: "role", name: "firefighter", by: "UME")
+    Current.forget_roles
+    sign_in_as(hand)
 
     give
 
-    assert_nil Fd::AccessGrant.role_for("U0AFF1")
-    assert_match(/community manager only/, flash[:alert])
-    assert Fd::AuditEntry.exists?(verb: "refused")
+    assert_nil held
+    assert_redirected_to root_path
   end
 
-  test "no form on the settings page sits inside another one" do
-    Fd::AccessGrant.give!("U0AFF1", role: "firefighter", by: "UME")
+  test "making somebody a manager is written to the trail, and ends their old role" do
+    give
+    post admin_grants_path, params: { user_id: "U0AFF1", role: "community_manager" }
+    Current.forget_roles
 
-    get fd_settings_path(person: "U0AFF1")
-
-    assert_select "form form", count: 0
-  end
-
-  test "the change modal posts the person it is about" do
-    Fd::AccessGrant.give!("U0AFF1", role: "firefighter", by: "UME")
-    get fd_settings_path(person: "U0AFF1")
-
-    assert_select "form[action=?]", fd_grants_path do
-      assert_select "input[name=user_id][value=?]", "U0AFF1"
-      assert_select "input[name=role][value=lead]"
-    end
+    assert_predicate Account.find("U0AFF1"), :manager?
+    assert_equal "community_manager", held.name
+    assert_equal 1, Authz::Grant.for_person("U0AFF1").roles.where.not(revoked_at: nil).count
+    assert Fd::AuditEntry.where(verb: "granted")
+      .any? { |row| row.after&.dig("role") == "community_manager" }
   end
 
   test "the controls are only drawn for somebody who may use them" do
-    Fd::AccessGrant.give!("U0AFF1", role: "firefighter", by: "UME")
+    Authz::Grant.give!("U0AFF1", kind: "role", name: "firefighter", by: "UME")
 
-    get fd_settings_path
-    assert_select "label[for=give-access]", text: "Give access"
+    get admin_people_path
 
-    get fd_settings_path(person: "U0AFF1")
-    assert_select "label[for=change-access]", text: "Change"
+    get admin_person_path("U0AFF1")
 
     delete logout_path
-    lead = Staff.create!(user_id: "ULEAD", community_manager: false)
-    Fd::AccessGrant.give!("ULEAD", role: "lead", by: "UME")
+    lead = Account.create!(user_id: "ULEAD")
+    Authz::Grant.give!("ULEAD", kind: "role", name: "firefighter", by: "UME")
     sign_in_as(lead)
 
-    get fd_settings_path
-    assert_select "label[for=give-access]", count: 0
+    get admin_people_path
+    assert_redirected_to root_path, "the admin section is managers only"
   end
 
   test "a reason is kept on the grant when one is given" do
     give(reason: "covering the weekend")
 
-    assert_equal "covering the weekend", Fd::AccessGrant.live.find_by(user_id: "U0AFF1").reason
+    assert_equal "covering the weekend", held.reason
   end
 
   test "a grant without a reason is still allowed, since the field is optional" do
     give
 
-    grant = Fd::AccessGrant.live.find_by(user_id: "U0AFF1")
+    grant = held
     assert_nil grant.reason
-    assert_equal "firefighter", grant.role
+    assert_equal "firefighter", grant.name
   end
 
   test "a blank reason is stored as nothing rather than an empty string" do
     give(reason: "   ")
 
-    assert_nil Fd::AccessGrant.live.find_by(user_id: "U0AFF1").reason
+    assert_nil held.reason
   end
 
-  test "the give modal offers the role as a segmented row and an optional reason" do
-    get fd_settings_path
+  test "naming a channel on somebody with no role hands out no role" do
+    channel = Analytics::DimChannel.where(archived: false).first
 
-    assert_select "#give-access ~ * .seg-radio input[name=role]",
-      Fd::Permission::ROLES.size
-    assert_select "#give-access ~ * input[name=reason]", 1
+    post admin_grants_path, params: { user_id: "U0AFF1", role: "",
+      channels: [channel.channel_id] }
+    Current.forget_roles
+
+    assert_empty Authz.roles_held("U0AFF1")
+    assert Authz.holds?(Account.find("U0AFF1"), "channel.read"),
+      "channel.read is everyone's, so the channel row is enough on its own"
+    assert Channels::Audience::Grant.live
+      .exists?(user_id: "U0AFF1", channel_id: channel.channel_id)
+  end
+
+  test "granting a role, a scope and a channel is one act" do
+    channel = Analytics::DimChannel.where(archived: false).first
+
+    post admin_grants_path, params: { user_id: "U0AFF1", role: "gardener",
+      scopes: ["channel.backfill"], channels: [channel.channel_id], reason: "the sync rota" }
+    Current.forget_roles
+
+    assert_equal "gardener", held.name
+    got = Authz.held("U0AFF1")
+    assert_equal "added", got["channel.backfill"]
+    assert_equal "baseline", got["channel.read"],
+      "gardener already carries channel.read, so it is not granted twice"
+    assert Channels::Audience::Grant.live
+      .exists?(user_id: "U0AFF1", channel_id: channel.channel_id)
   end
 end

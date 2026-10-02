@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdResolutionsTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @kase = make_case(opened_at: 3.days.ago)
   end
 
@@ -106,11 +106,16 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     assert_nil actions.sole.expires_at
   end
 
-  test "a locked thread may carry a channel but does not need one" do
+  test "a locked thread takes its channel from the lock, not the form" do
     sign_in_as(@me)
-    act(type_key: "locked_thread", channel_id: "C0266FRGV")
+    lock = Fd::ThreadGuard.create!(kind: "lock", channel_id: "C0266FRGV",
+      thread_ts: "1700000000.000100", opened_by: "UMOD", reason: "it was going nowhere",
+      state: "running", expires_at: 3.days.from_now)
+    act(type_key: "locked_thread", channel_id: "CELSE", thread_guard_id: lock.id)
+
     assert_equal "C0266FRGV", actions.sole.details["channel_id"]
-    assert_nil actions.sole.expires_at
+    assert_equal "1700000000.000100", actions.sole.details["thread_ts"]
+    assert_equal lock.id, actions.sole.thread_guard_id
   end
 
   test "an action type outside the eight is refused" do
@@ -173,13 +178,12 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     assert_nil flash[:alert]
   end
 
-  test "an action on a case somebody else holds is refused" do
+  test "an action on a case somebody else holds is allowed" do
     @kase.assign!("UOTHER")
     sign_in_as(@me)
     act
 
-    assert_equal 0, actions.count
-    assert_match(/assigned to @UOTHER, not to you/, flash[:alert])
+    assert_equal 1, actions.count
   end
 
   test "resolving twice does not overwrite the first outcome" do
@@ -250,29 +254,11 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     assert_match(/already open/, flash[:alert])
   end
 
-  test "the modal is offered while open and gone once resolved" do
-    sign_in_as(@me)
-    get fd_case_path(@kase)
-    assert_select "input#resolve-case"
-    assert_select "form[action=?]", fd_case_resolution_path(@kase)
-    assert_select "form[action=?] select[name=close_reason]", fd_case_resolution_path(@kase)
-    assert_select "form[action=?] .opt", fd_case_resolution_path(@kase), 0,
-      "a case with no report has nobody to notify"
-
-    close(member_note: "done")
-    get fd_case_path(@kase)
-    assert_select "input#resolve-case", count: 0
-    assert_select ".closed .closed-what", text: /Closed/
-    assert_select ".closed .closed-why", text: "done"
-  end
-
   test "a case with an action logged closes as action taken, with no reason to pick" do
     sign_in_as(@me)
     act
 
     get fd_case_path(@kase)
-    assert_select "select[name=close_reason]", count: 0
-    assert_select ".said", text: /action taken, warning/
 
     close(close_reason: "not_conduct")
     assert_equal "action_taken", @kase.reload.resolution

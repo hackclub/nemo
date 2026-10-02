@@ -1,0 +1,144 @@
+require "test_helper"
+
+class AccessUiTest < ActionDispatch::IntegrationTest
+  setup do
+    @boss = hold_role!("UAUIBOSS", "community_manager")
+    @them = Account.create!(user_id: "UAUITHEM")
+    hold_role!(@them.user_id, "firefighter")
+    Current.forget_roles
+    sign_in_as(@boss)
+  end
+
+  def held
+    Current.forget_roles
+    Authz.held(@them.user_id)
+  end
+
+  test "the manage page shows the role and what they hold" do
+    get admin_person_path(@them.user_id)
+
+    assert_response :success
+  end
+
+  test "a manager takes one capability off a firefighter, and puts it back" do
+    assert_includes held.keys, "slack.link"
+
+    patch admin_person_capability_path(@them.user_id),
+      params: { key: "slack.link", effect: "deny" }
+    assert_redirected_to admin_person_path(@them.user_id)
+    assert_not_includes held.keys, "slack.link", "the deny takes it off them"
+
+    delete admin_person_capability_path(@them.user_id), params: { key: "slack.link" }
+    assert_includes held.keys, "slack.link", "back to the role default"
+  end
+
+  test "a manager gives a capability no role carries" do
+    assert_not_includes held.keys, "channel.backfill"
+
+    patch admin_person_capability_path(@them.user_id),
+      params: { key: "channel.backfill", effect: "allow" }
+
+    assert_equal "added", held["channel.backfill"]
+  end
+
+  test "the locked granting capability cannot be handed out" do
+    patch admin_person_capability_path(@them.user_id),
+      params: { key: "access.grant", effect: "allow" }
+
+    assert_match(/cannot be handed out/, flash[:alert])
+    assert_not_includes held.keys, "access.grant"
+  end
+
+  test "naming a firefighter on a channel keeps their role, and they can already see it" do
+    channel = Analytics::DimChannel.where(archived: false).first
+    assert_includes held.keys, "channel.all", "a firefighter already reads every channel"
+
+    post admin_person_channel_grants_path(@them.user_id),
+      params: { channel_id: channel.channel_id }
+
+    assert_equal ["firefighter"], Authz.roles_held(@them.user_id), "they are not demoted"
+    assert_empty Authz::Grant.live.for_person(@them.user_id).capabilities,
+      "the baseline already covers it, nothing is added"
+    assert Channels::Audience.may_see?(@them, channel)
+  end
+
+  test "naming somebody with no role on a channel lets them read it without a role" do
+    channel = Analytics::DimChannel.where(archived: false).first
+    bare = Account.create!(user_id: "UAUIBARE2")
+
+    post admin_person_channel_grants_path(bare.user_id),
+      params: { channel_id: channel.channel_id }
+    Current.forget_roles
+
+    assert_empty Authz.roles_held(bare.user_id), "naming a channel hands out no role"
+    assert Channels::Audience.may_see?(bare, channel)
+  end
+
+  test "a channel that is not a channel is refused" do
+    post admin_person_channel_grants_path(@them.user_id), params: { channel_id: "C0NOPE" }
+
+    assert_match(/is not a channel/, flash[:alert])
+  end
+
+  def audits(type, ref)
+    Fd::AuditEntry.where(entity_type: type, entity_ref: ref).oldest_first
+  end
+
+  test "naming somebody on a channel and taking it back both reach the audit" do
+    channel = Analytics::DimChannel.where(archived: false).first
+
+    post admin_person_channel_grants_path(@them.user_id),
+      params: { channel_id: channel.channel_id }
+    delete admin_person_channel_grant_path(@them.user_id, channel.channel_id)
+
+    trail = audits("channel_audience", channel.channel_id)
+    assert_equal %w[granted revoked], trail.map(&:verb)
+    assert_equal [@boss.user_id, @boss.user_id], trail.map(&:actor_user_id)
+    assert_equal @them.user_id, trail.first.after["user_id"]
+    assert_equal @boss.user_id, trail.last.after["revoked_by"]
+    assert_nil Channels::Audience::Grant.live
+      .find_by(user_id: @them.user_id, channel_id: channel.channel_id)
+  end
+
+  test "taking a capability back reaches the audit" do
+    patch admin_person_capability_path(@them.user_id),
+      params: { key: "channel.backfill", effect: "allow" }
+    delete admin_person_capability_path(@them.user_id), params: { key: "channel.backfill" }
+
+    taken = Fd::AuditEntry.where(entity_type: "capability_grant", verb: "revoked").recent_first.first
+    assert_equal "channel.backfill", taken.after["capability"]
+    assert_equal @them.user_id, taken.after["user_id"]
+    assert_equal "allow", taken.before["effect"]
+    assert_equal @boss.user_id, taken.actor_user_id
+    assert_not_includes held.keys, "channel.backfill"
+  end
+
+  test "taking back a capability that does not exist is refused, not a 500" do
+    delete admin_person_capability_path(@them.user_id), params: { key: "case.explode" }
+
+    assert_redirected_to admin_person_path(@them.user_id)
+    assert_match(/is not a capability/, flash[:alert])
+  end
+
+  test "the gardener set is shared, and says how many it reaches" do
+    channel = Analytics::DimChannel.where(archived: false).first
+    Authz::Grant.give!(@them.user_id, kind: "role", name: "gardener", by: @boss.user_id)
+    Current.forget_roles
+
+    post admin_role_channels_path(role: "gardener"), params: { channel_id: channel.channel_id }
+    get admin_role_channels_path(role: "gardener")
+
+    assert_response :success
+    Current.forget_roles
+    assert Channels::Audience.may_see?(@them, channel), "the set reaches everyone holding the role"
+  end
+
+  test "a member with no grant still reaches their own page" do
+    bare = Account.create!(user_id: "UAUIBARE")
+    sign_in_as(bare)
+
+    get account_path
+
+    assert_response :success
+  end
+end

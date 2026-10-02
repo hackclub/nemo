@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import gzip
-import http.client
 import json
 import os
-import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -19,7 +17,7 @@ _AUTH_ERRORS = {
     "account_inactive",
     "no_permission",
 }
-_RETRY_STATUS = {429, 500, 502, 503, 504}
+UPSTREAM_TIMEOUT = 60
 
 
 class InternalAuthError(RuntimeError):
@@ -80,25 +78,10 @@ class InternalClient:
             if num_found is not None and seen >= num_found:
                 break
 
-    def _request(self, url, body, headers, max_retries):
-        attempt = 0
-        while True:
-            req = urllib.request.Request(url, data=body, headers=headers, method="POST")
-            try:
-                with urllib.request.urlopen(req, timeout=60) as resp:
-                    raw = resp.read()
-                    if resp.headers.get("Content-Encoding") == "gzip":
-                        raw = gzip.decompress(raw)
-                    return json.loads(raw)
-            except urllib.error.HTTPError as exc:
-                if exc.code in _RETRY_STATUS and attempt < max_retries:
-                    time.sleep(int(exc.headers.get("Retry-After", 1 + attempt)))
-                    attempt += 1
-                    continue
-                raise
-            except (urllib.error.URLError, http.client.IncompleteRead):
-                if attempt < max_retries:
-                    time.sleep(1 + attempt)
-                    attempt += 1
-                    continue
-                raise
+    def _request(self, url, body, headers, max_retries=0):
+        req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=UPSTREAM_TIMEOUT) as resp:
+            raw = resp.read()
+            if resp.headers.get("Content-Encoding") == "gzip":
+                raw = gzip.decompress(raw)
+            return json.loads(raw)

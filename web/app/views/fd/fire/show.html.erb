@@ -1,36 +1,50 @@
 <% content_for :page_title, "Overview" %>
 <% content_for :head_actions do %>
-  <%= opens_modal "case.open", "Open a case", opens: "open-case", css: "btn btn-primary" %>
+  <%= link_to "Open a case", fd_cases_path(open: "1"), class: "btn btn-primary" %>
 <% end %>
 
-<div class="kpis">
-  <div class="card">
-    <p class="kpi-label">Open cases</p>
-    <p class="kpi-val"><%= @open %></p>
-    <div class="delta">
+<div class="metrics">
+  <div class="metric">
+    <span class="metric-k">Open cases</span>
+    <span class="metric-v"><%= @open %></span>
+    <span class="metric-say">
       <% if @unclaimed.positive? %>
         <span class="delta-down"><%= @unclaimed %></span>
-        <span class="delta-note">with nobody on it</span>
+        <span>with nobody on it</span>
       <% else %>
-        <span class="delta-note">everything has somebody on it</span>
+        <span>everything has somebody on it</span>
       <% end %>
-    </div>
+    </span>
   </div>
-  <div class="card">
-    <p class="kpi-label">Median time to claim</p>
-    <p class="kpi-val"><%= @claim_lag ? case_age_label(@claim_lag) : "n/a" %></p>
-    <div class="delta">
-      <span class="delta-note">from when the report arrived</span>
-    </div>
+  <div class="metric">
+    <span class="metric-k">Median time to resolve</span>
+    <span class="metric-v"><%= @resolve_lag ? case_age_label(@resolve_lag) : "n/a" %></span>
+    <span class="metric-say"><span>from when the report arrived</span></span>
   </div>
-  <div class="card">
-    <p class="kpi-label">Actions, 30 days</p>
-    <p class="kpi-val"><%= @actions_total %></p>
-    <div class="delta">
-      <span class="delta-note"><%= @reversed %> later reversed</span>
-    </div>
+  <div class="metric">
+    <span class="metric-k">In force</span>
+    <span class="metric-v"><%= @guards.size %></span>
+    <span class="metric-say">
+      <% if @guards.empty? %>
+        <span>nothing is being held on anybody</span>
+      <% elsif @orphaned.positive? %>
+        <span class="delta-down"><%= @orphaned %></span>
+        <span>attached to no case</span>
+      <% else %>
+        <span>all of it attached to a case</span>
+      <% end %>
+    </span>
+  </div>
+  <div class="metric">
+    <span class="metric-k">Actions, 30 days</span>
+    <span class="metric-v"><%= @actions_total %></span>
+    <span class="metric-say"><span><%= @reversed %> later reversed</span></span>
   </div>
 </div>
+
+<% if @guards.any? %>
+  <%= render "in_force", guards: @guards, names: @names %>
+<% end %>
 
 <% if @endings.any? %>
   <%= render "endings", endings: @endings, closed: @closed_count %>

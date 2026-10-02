@@ -1,84 +1,53 @@
 import collections
-import itertools
-from datetime import datetime, time, timedelta, timezone
+import zlib
+from datetime import date, datetime, time, timedelta, timezone
 
+from ingest.channel_range_pull import MONTH_SOURCE as CHANNEL_MONTH_SOURCE
+from lib import db
 from lib.db import connect_admin
-from seed import SEED_REF_PREFIX, SEED_SOURCE_PREFIX, SEED_USER_PREFIX
-from seed import conduct as conduct_module
-from seed import hostile as hostile_module
+from seed import SEED_SOURCE_PREFIX, SEED_USER_PREFIX
+from seed import dims as dims_module
+from seed import directory as directory_module
 from seed import runs as runs_module
-from seed.generate import COVERED_DAYS, Sampler
+from seed import spine as spine_module
+from seed.generate import COVERED_DAYS
 
-MEMBER_DAY_SOURCE = f"{SEED_SOURCE_PREFIX}member_day"
-CHANNEL_DAY_SOURCE = f"{SEED_SOURCE_PREFIX}channel_day"
+MEMBER_DAY_SOURCE = db.MEMBER_DAY
+CHANNEL_DAY_SOURCE = db.CHANNEL_DAY
 MEMBER_RANGE_SOURCE = "admin_analytics_member_range"
 CHANNEL_RANGE_SOURCE = "admin_analytics_channel_range"
 TEAM_SOURCE = f"{SEED_SOURCE_PREFIX}team_stats"
-TOP_POSTER_WINDOWS = (7, 30, 90)
 TOP_POSTER_LIMIT = 50
 UNAVAILABLE_DAYS = 3
 UNAVAILABLE_OFFSET = 2
 IDLE_ROWS_PER_DAY = 25
 
-SEED_PREDICATES = {
-    "fd.audit": f"request_id LIKE '{SEED_REF_PREFIX}%'",
-    "fd.notes": f"author LIKE '{SEED_USER_PREFIX}%'",
-    "fd.actions": f"external_ref LIKE '{SEED_REF_PREFIX}%'",
-    "fd.cases": f"external_ref LIKE '{SEED_REF_PREFIX}%'",
-    "fd.member": f"user_id LIKE '{SEED_USER_PREFIX}%'",
-    "fd.thread_messages": f"source_app = '{SEED_SOURCE_PREFIX}slack'",
-    "fd.case_citations": f"flagged_by LIKE '{SEED_USER_PREFIX}%'",
-    "fd.decision_threads": f"added_by LIKE '{SEED_USER_PREFIX}%'",
-    "fd.decisions": f"proposed_by LIKE '{SEED_USER_PREFIX}%'",
-    "fd.access_grants": f"granted_by LIKE '{SEED_USER_PREFIX}%'",
-}
-
-APPEND_ONLY_TABLES = ("fd.audit",)
-
-DEPENDENTS = (
-    ("fd.case_chat", "case_id", "fd.cases"),
-    ("fd.case_citations", "thread_message_id", "fd.thread_messages"),
-    ("fd.actions", "case_id", "fd.cases"),
-)
-
-DETACH = (
-    ("fd.actions", "cites_message_id", "fd.thread_messages"),
-    ("fd.cases", "followed_decision_id", "fd.decisions"),
-    ("fd.cases", "duplicate_of", "fd.cases"),
-    ("fd.decisions", "replaced_by_id", "fd.decisions"),
-)
-
 SEEDED_TABLES = (
-    "fd.audit",
-    "fd.notes",
-    "fd.actions",
-    "fd.case_citations",
-    "fd.thread_messages",
-    "fd.cases",
-    "fd.decision_threads",
-    "fd.decisions",
-    "fd.access_grants",
-    "fd.member",
+    "archive.observation",
+    "archive.message",
+    "raw.member_dim_snapshot",
+    "raw.channel_dim_snapshot",
+    "raw.thread",
+    "raw.channel_walk",
     "raw.member_activity_snapshot",
     "raw.channel_activity_snapshot",
     "raw.team_stats_snapshot",
-    "raw.top_posters_snapshot",
     "raw.message_activity_snapshot",
-    "raw.analytics_day",
     "raw.member_message_history",
-    "raw.member_first_reply",
-    "raw.member_channel_message",
     "raw.member_channel_membership",
     "raw.member_channel_walk",
-    "raw.top_posters_snapshot",
     "raw.member_dim",
     "raw.channel_dim",
+    "fd.member_identity",
+    "fd.member",
 )
 
 LOG_TABLES = (
     "raw.ingest_step_output",
     "raw.ingest_run",
     "raw.dead_letter",
+    "ingest.slice_coverage",
+    "raw.analytics_day",
 )
 
 UNSTAMP_SQL = """
@@ -106,47 +75,10 @@ def noon(day):
     return datetime.combine(day, time(12, 0), tzinfo=timezone.utc)
 
 
-def clear_append_only(force=False):
-    with connect_admin() as admin, admin.cursor() as cur:
-        for table in APPEND_ONLY_TABLES:
-            if force:
-                cur.execute(f"DELETE FROM {table}")
-            else:
-                cur.execute(f"DELETE FROM {table} WHERE {SEED_PREDICATES[table]}")
-        admin.commit()
-
-
-def staff_for_grant_holders():
-    with connect_admin() as admin:
-        rows = admin.execute(
-            "INSERT INTO app.staff (user_id, community_manager, created_at, updated_at) "
-            "SELECT DISTINCT g.user_id, false, now(), now() FROM fd.access_grants g "
-            "ON CONFLICT (user_id) DO NOTHING RETURNING user_id"
-        ).rowcount
-        admin.commit()
-    return rows
-
-
 def clear_seeded_staff():
     with connect_admin() as admin:
-        admin.execute(f"DELETE FROM app.staff WHERE user_id LIKE '{SEED_USER_PREFIX}%'")
+        admin.execute(f"DELETE FROM app.account WHERE user_id LIKE '{SEED_USER_PREFIX}%'")
         admin.commit()
-
-
-def going(table, force):
-    if force or table not in SEED_PREDICATES:
-        return f"SELECT id FROM {table}"
-    return f"SELECT id FROM {table} WHERE {SEED_PREDICATES[table]}"
-
-
-def release(cur, force=False):
-    for child, column, parent in DETACH:
-        cur.execute(
-            f"UPDATE {child} SET {column} = NULL "
-            f"WHERE {column} IN ({going(parent, force)})"
-        )
-    for child, column, parent in DEPENDENTS:
-        cur.execute(f"DELETE FROM {child} WHERE {column} IN ({going(parent, force)})")
 
 
 def unstamp(conn):
@@ -156,19 +88,13 @@ def unstamp(conn):
 
 
 def clear(conn, force=False):
-    clear_append_only(force=force)
     clear_seeded_staff()
     with conn.cursor() as cur:
-        release(cur, force=force)
         for table in LOG_TABLES:
             cur.execute(f"DELETE FROM {table}")
         for table in dict.fromkeys(SEEDED_TABLES):
-            if table in APPEND_ONLY_TABLES:
-                continue
             if force:
                 cur.execute(f"DELETE FROM {table}")
-            elif table in SEED_PREDICATES:
-                cur.execute(f"DELETE FROM {table} WHERE {SEED_PREDICATES[table]}")
             elif has_column(cur, table, "channel_id"):
                 cur.execute(f"DELETE FROM {table} WHERE channel_id LIKE 'CSEED%'")
             elif has_column(cur, table, "user_id"):
@@ -219,10 +145,31 @@ def fold(stream):
     return by_member, by_channel, totals, first_seen
 
 
+def a_day_on(user_id, day):
+    roll = zlib.crc32(f"{user_id}:{day.isoformat()}".encode())
+    ios = 1 if roll % 100 < 62 else 0
+    desktop = 1 if (roll // 100) % 100 < 46 else 0
+    android = 1 if (roll // 10000) % 100 < 7 else 0
+    if not (ios or desktop or android):
+        desktop = 1
+    return ios, desktop, android
+
+
+def a_day_of_use(user_id, day, messages):
+    roll = zlib.crc32(f"use:{user_id}:{day.isoformat()}".encode())
+    huddles = 1 if roll % 100 < 9 else 0
+    files = min(messages, (roll // 100) % 3)
+    searches = (roll // 10000) % 7
+    return huddles, files, searches
+
+
 def member_days(by_member):
     for (user_id, day), (messages, reactions) in by_member.items():
+        ios, desktop, android = a_day_on(user_id, day)
+        huddles, files, searches = a_day_of_use(user_id, day, messages)
         yield (
-            user_id, day, day, MEMBER_DAY_SOURCE, 1, messages, messages, reactions, noon(day),
+            user_id, day, day, MEMBER_DAY_SOURCE, 1, desktop, android, ios,
+            messages, messages, reactions, huddles, files, searches, noon(day),
         )
 
 
@@ -243,7 +190,8 @@ def idle_days(by_member, members, start, days, holes):
             if (member.user_id, day) in by_member:
                 continue
             emitted += 1
-            yield (member.user_id, day, day, MEMBER_DAY_SOURCE, 0, 0, 0, 0, None)
+            yield (member.user_id, day, day, MEMBER_DAY_SOURCE,
+                   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None)
 
 
 def channel_days(by_channel, members_of):
@@ -257,16 +205,25 @@ def channel_days(by_channel, members_of):
 
 
 def member_ranges(by_member, start, end):
-    rolled = collections.defaultdict(lambda: [0, 0, 0])
-    for (user_id, _), (messages, reactions) in by_member.items():
+    rolled = collections.defaultdict(lambda: [0, 0, 0, 0, 0, 0, 0, 0, 0])
+    for (user_id, day), (messages, reactions) in by_member.items():
+        ios, desktop, android = a_day_on(user_id, day)
+        huddles, files, searches = a_day_of_use(user_id, day, messages)
         row = rolled[user_id]
         row[0] += 1
         row[1] += messages
         row[2] += reactions
-    for user_id, (days, messages, reactions) in rolled.items():
+        row[3] += desktop
+        row[4] += android
+        row[5] += ios
+        row[6] += huddles
+        row[7] += files
+        row[8] += searches
+    for user_id, counts in rolled.items():
+        days, messages, reactions, desktop, android, ios, huddles, files, searches = counts
         yield (
-            user_id, start, end, MEMBER_RANGE_SOURCE, days, messages, messages, reactions,
-            noon(end),
+            user_id, start, end, MEMBER_RANGE_SOURCE, days, desktop, android, ios,
+            messages, messages, reactions, huddles, files, searches, noon(end),
         )
 
 
@@ -288,6 +245,28 @@ def channel_ranges(by_channel, start, end, members_of):
             len(posters), len(posters) * 3, reactions, max(1, len(posters) // 2), 0,
             total, total - guests, guests,
         )
+
+
+def channel_months(by_channel, members_of):
+    rolled = collections.defaultdict(lambda: [0, 0, set()])
+    for (channel_id, day), (messages, reactions, posters) in by_channel.items():
+        row = rolled[(channel_id, day.replace(day=1))]
+        row[0] += messages
+        row[1] += reactions
+        row[2] |= posters
+    for (channel_id, month), (messages, reactions, posters) in rolled.items():
+        total, guests = members_of[channel_id]
+        last = month_end(month)
+        yield (
+            channel_id, month, last, CHANNEL_MONTH_SOURCE, messages, messages,
+            len(posters), len(posters) * 3, reactions, max(1, len(posters) // 2), 0,
+            total, total - guests, guests,
+        )
+
+
+def month_end(month):
+    nxt = date(month.year + month.month // 12, month.month % 12 + 1, 1)
+    return nxt - timedelta(days=1)
 
 
 def team_days(by_member, channels, members, start, days):
@@ -329,20 +308,6 @@ def team_days(by_member, channels, members, start, days):
             running_guests, active, active_7, active_28, active, active_7, active_28,
             active * 3, messages[day], messages[day], len(channels),
         )
-
-
-def top_posters(rng, by_member, end, hostile=False):
-    for window in TOP_POSTER_WINDOWS:
-        start = end - timedelta(days=window - 1)
-        totals = collections.Counter()
-        for (user_id, day), (messages, _) in by_member.items():
-            if start <= day <= end:
-                totals[user_id] += messages
-        for user_id, messages in totals.most_common(TOP_POSTER_LIMIT):
-            yield (
-                start, end, user_id,
-                hostile_module.display_name(rng, user_id, hostile), messages, noon(end),
-            )
 
 
 def analytics_days(start, days, holes):
@@ -410,47 +375,12 @@ def history_rows(members, totals, as_of):
         )
 
 
-def first_reply_rows(rng, members, profile, hostile=False):
-    shares = profile["replies"]
-    human = Sampler(shares["latency_seconds"])
-    bot = Sampler(shares["bot_latency_seconds"])
-    for member in members:
-        if not member.first_post_at:
-            continue
-        roll = rng.random()
-        posted = posted_at(member)
-        bot_latency = int(max(1, bot(rng.random()))) if rng.random() < shares["bot_first_share"] else None
-        bot_ts = posted + timedelta(seconds=bot_latency) if bot_latency else None
-        if roll < shares["human_share"]:
-            latency = int(max(1, human(rng.random())))
-            yield (
-                member.user_id, f"USEED{rng.randrange(1000):07d}",
-                posted + timedelta(seconds=latency), latency, False, None,
-                bot_latency and f"USEED{rng.randrange(50):07d}", bot_ts, bot_latency, 2,
-            )
-        elif roll < shares["human_share"] + shares["bot_only_share"]:
-            latency = int(max(1, bot(rng.random())))
-            yield (
-                member.user_id, None, None, None, False, None,
-                f"USEED{rng.randrange(50):07d}", posted + timedelta(seconds=latency), latency, 2,
-            )
-        elif roll < shares["human_share"] + shares["bot_only_share"] + 0.02:
-            yield (
-                member.user_id, None, None, None, True,
-                hostile_module.reason(rng, "thread unreadable", hostile),
-                None, None, None, 2,
-            )
-        else:
-            yield (member.user_id, None, None, None, False, None, None, None, None, 2)
-
-
 def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
           days=COVERED_DAYS, hostile=False):
     start = as_of - timedelta(days=days - 1)
     holes = {start + timedelta(days=UNAVAILABLE_OFFSET + i) for i in range(UNAVAILABLE_DAYS)}
-    by_member, by_channel, totals, last_active = fold(
-        event for event in stream if event.day not in holes
-    )
+    kept = [event for event in stream if event.day not in holes]
+    by_member, by_channel, totals, last_active = fold(kept)
 
     counts = {}
     counts["member_dim"] = copy_rows(
@@ -473,16 +403,11 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
          "counted_through"],
         history_rows(members, totals, as_of),
     )
-    counts["member_first_reply"] = copy_rows(
-        conn, "raw.member_first_reply",
-        ["user_id", "replier_id", "reply_ts", "latency_seconds", "unreadable", "reason",
-         "bot_replier_id", "bot_reply_ts", "bot_latency_seconds", "walk_version"],
-        first_reply_rows(rng, members, profile, hostile),
-    )
 
     member_columns = ["user_id", "window_start", "window_end", "source", "days_active",
+                      "days_active_desktop", "days_active_android", "days_active_ios",
                       "messages_posted", "channel_messages_posted", "reactions_added",
-                      "last_active_at"]
+                      "huddles", "files_uploaded", "searches", "last_active_at"]
     channel_columns = ["channel_id", "window_start", "window_end", "source", "messages_posted",
                        "messages_posted_by_members", "members_who_posted", "members_who_viewed",
                        "reactions_added", "members_who_reacted", "huddles_initiated",
@@ -508,6 +433,10 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
         conn, "raw.channel_activity_snapshot", channel_columns,
         channel_ranges(by_channel, start, as_of, members_of),
     )
+    counts["channel_month"] = copy_rows(
+        conn, "raw.channel_activity_snapshot", channel_columns,
+        channel_months(by_channel, members_of),
+    )
     counts["team_stats"] = copy_rows(
         conn, "raw.team_stats_snapshot",
         ["ds", "source", "total_members_count", "total_claimed_count", "full_members_count",
@@ -516,15 +445,36 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
          "messages_count_1d", "chats_channels_count_1d", "channels_count"],
         team_days(by_member, channels, members, start, days),
     )
-    counts["top_posters"] = copy_rows(
-        conn, "raw.top_posters_snapshot",
-        ["window_start", "window_end", "user_id", "display_name", "messages_posted", "pulled_at"],
-        top_posters(rng, by_member, as_of, hostile),
-    )
     counts["analytics_day"] = copy_rows(
         conn, "raw.analytics_day", ["source", "ds", "loaded", "rows_in", "unavailable", "reason"],
         analytics_days(start, days, holes),
     )
+
+    messages, threads, walks, observations = spine_module.build(rng, kept, members, as_of)
+    counts["archive.message"] = copy_rows(
+        conn, "archive.message", spine_module.ARCHIVE_MESSAGE_COLUMNS,
+        [spine_module.archive_message_row(row) for row in messages]
+    )
+    counts["thread"] = copy_rows(
+        conn, "raw.thread", spine_module.THREAD_COLUMNS, threads
+    )
+    counts["channel_walk"] = copy_rows(
+        conn, "raw.channel_walk", spine_module.WALK_COLUMNS, walks
+    )
+    counts["archive.observation"] = copy_rows(
+        conn, "archive.observation", spine_module.ARCHIVE_OBSERVATION_COLUMNS,
+        [spine_module.archive_observation_row(row) for row in observations]
+    )
+
+    counts["member_dim_snapshot"] = copy_rows(
+        conn, "raw.member_dim_snapshot", dims_module.MEMBER_COLUMNS,
+        dims_module.member_rows(rng, members, as_of),
+    )
+    counts["channel_dim_snapshot"] = copy_rows(
+        conn, "raw.channel_dim_snapshot", dims_module.CHANNEL_COLUMNS,
+        dims_module.channel_rows(rng, channels, as_of),
+    )
+    dims_module.rehash(conn)
 
     with conn.cursor() as cur:
         cur.execute(STAMP_SQL, (profile["captured_at"], scale, seed))
@@ -533,7 +483,22 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
 
 
 RUN_COLUMNS = ["source", "started_at", "finished_at", "status", "rows_in", "rows_rejected",
-               "total_expected", "parent_run_id", "step_index", "step_total"]
+               "total_expected", "parent_run_id", "step_index", "step_total",
+               "source_key", "logical_date", "worker"]
+
+
+def write_directory(conn, seed, members, as_of):
+    profiles = directory_module.profiles_for(directory_module.rng_for(seed), members, as_of)
+    return {
+        "fd.member": copy_rows(
+            conn, "fd.member", directory_module.MEMBER_COLUMNS,
+            directory_module.member_rows(profiles, members),
+        ),
+        "fd.member_identity": copy_rows(
+            conn, "fd.member_identity", directory_module.IDENTITY_COLUMNS,
+            directory_module.identity_rows(profiles, members),
+        ),
+    }
 
 
 def write_runs(conn, rng, members, as_of, hostile=False):
@@ -561,157 +526,11 @@ def write_runs(conn, rng, members, as_of, hostile=False):
             conn, "raw.dead_letter", ["source", "payload", "reason", "created_at"],
             runs_module.dead_letter_rows(rng, as_of, hostile=hostile),
         ),
-    }
-    conn.commit()
-    return counts
-
-
-def ref_ids(conn, table):
-    with conn.cursor() as cur:
-        cur.execute(
-            f"SELECT external_ref, id FROM {table} WHERE external_ref LIKE %s",
-            (f"{SEED_REF_PREFIX}%",),
-        )
-        return dict(cur.fetchall())
-
-
-def case_ids(conn):
-    return ref_ids(conn, "fd.cases")
-
-
-def live_titles(conn):
-    with conn.cursor() as cur:
-        cur.execute("SELECT title FROM fd.decisions WHERE state <> 'superseded'")
-        return [title for (title,) in cur.fetchall()]
-
-
-def decision_ids(conn):
-    with conn.cursor() as cur:
-        cur.execute("SELECT title, id FROM fd.decisions")
-        return dict(cur.fetchall())
-
-
-def link_replacements(conn, pairs, ids):
-    with conn.cursor() as cur:
-        for old_title, new_title in pairs:
-            old_id, new_id = ids.get(old_title), ids.get(new_title)
-            if old_id is None or new_id is None:
-                continue
-            cur.execute(
-                "UPDATE fd.decisions SET replaced_by_id = %s WHERE id = %s",
-                (new_id, old_id),
-            )
-
-
-def apply_follows(conn, follows, cases, decisions):
-    written = 0
-    with conn.cursor() as cur:
-        for external_ref, title, _at, _by in follows:
-            case_id, decision_id = cases.get(external_ref), decisions.get(title)
-            if case_id is None or decision_id is None:
-                continue
-            cur.execute(
-                "UPDATE fd.cases SET followed_decision_id = %s WHERE id = %s",
-                (decision_id, case_id),
-            )
-            written += 1
-    return written
-
-
-def write_conduct(conn, seed, members, as_of):
-    cases = conduct_module.build_cases(conduct_module.rng_for(seed), members, as_of)
-    conduct_module.attach_all_reports(conduct_module.rng_for(seed, "reports"), cases, members)
-    conduct_module.attach_all_actions(conduct_module.rng_for(seed, "actions"), cases, as_of)
-    standing = conduct_module.attach_all_notes(
-        conduct_module.rng_for(seed, "notes"), cases, members, as_of
-    )
-    thread_rng = conduct_module.rng_for(seed, "threads")
-    conduct_module.attach_internal_threads(thread_rng, cases, members)
-    conduct_module.attach_shared_evidence(thread_rng, cases)
-    conduct_module.settle_priors(cases)
-    profiles = conduct_module.profiles_for(
-        conduct_module.rng_for(seed, "profiles"), members, as_of
-    )
-    counts = {
-        "fd.member": copy_rows(
-            conn, "fd.member", conduct_module.MEMBER_COLUMNS,
-            conduct_module.member_rows(profiles, members),
-        ),
-        "fd.member_identity": copy_rows(
-            conn, "fd.member_identity", conduct_module.IDENTITY_COLUMNS,
-            conduct_module.identity_rows(profiles, members),
-        ),
-        "fd.cases": copy_rows(
-            conn, "fd.cases", conduct_module.CASE_COLUMNS,
-            (conduct_module.case_row(case) for case in cases),
+        "slice_coverage": copy_rows(
+            conn, "ingest.slice_coverage", runs_module.COVERAGE_COLUMNS,
+            runs_module.coverage_rows(rng, as_of),
         ),
     }
-    ids = case_ids(conn)
-    counts["fd.case_threads"] = copy_rows(
-        conn, "fd.case_threads", conduct_module.THREAD_COLUMNS,
-        conduct_module.thread_rows(cases, ids),
-    )
-    counts["fd.thread_messages"] = copy_rows(
-        conn, "fd.thread_messages", conduct_module.MESSAGE_COLUMNS,
-        conduct_module.message_rows(conduct_module.rng_for(seed, "messages"), cases),
-    )
-    counts["fd.case_participants"] = copy_rows(
-        conn, "fd.case_participants", conduct_module.PARTICIPANT_COLUMNS,
-        conduct_module.participant_rows(cases, ids),
-    )
-    counts["fd.case_assignees"] = copy_rows(
-        conn, "fd.case_assignees", conduct_module.ASSIGNEE_COLUMNS,
-        conduct_module.assignee_rows(cases, ids),
-    )
-    counts["fd.case_reports"] = copy_rows(
-        conn, "fd.case_reports", conduct_module.REPORT_COLUMNS,
-        conduct_module.report_rows(cases, ids),
-    )
-    counts["fd.actions"] = copy_rows(
-        conn, "fd.actions", conduct_module.ACTION_COLUMNS,
-        conduct_module.action_rows(cases, ids),
-    )
-    counts["fd.notes"] = copy_rows(
-        conn, "fd.notes", conduct_module.NOTE_COLUMNS,
-        conduct_module.note_rows(cases, ids, standing),
-    )
-    decisions = conduct_module.without_titles(
-        conduct_module.build_decisions(
-            conduct_module.rng_for(seed, "decisions"), members, cases, as_of
-        ),
-        live_titles(conn),
-    )
-    counts["fd.decisions"] = copy_rows(
-        conn, "fd.decisions", conduct_module.DECISION_COLUMNS,
-        conduct_module.decision_rows(decisions),
-    )
-    told = decision_ids(conn)
-    link_replacements(conn, conduct_module.replacement_pairs(decisions), told)
-    counts["fd.decision_threads"] = copy_rows(
-        conn, "fd.decision_threads", conduct_module.DECISION_THREAD_COLUMNS,
-        conduct_module.decision_thread_rows(decisions, told),
-    )
-    follows = conduct_module.decision_follows(
-        conduct_module.rng_for(seed, "follows"), cases, decisions
-    )
-    counts["fd.cases followed"] = apply_follows(conn, follows, ids, told)
-    counts["fd.access_grants"] = copy_rows(
-        conn, "fd.access_grants", conduct_module.GRANT_COLUMNS,
-        conduct_module.access_grants(conduct_module.rng_for(seed, "grants"), members, as_of),
-    )
-    counts["fd.audit"] = copy_rows(
-        conn, "fd.audit", conduct_module.AUDIT_COLUMNS,
-        itertools.chain(
-            conduct_module.audit_rows(
-                cases, ids, ref_ids(conn, "fd.actions"), ref_ids(conn, "fd.case_reports")
-            ),
-            conduct_module.decision_audit_rows(decisions, told),
-            conduct_module.follow_audit_rows(follows, ids, told),
-            conduct_module.refusal_rows(
-                conduct_module.rng_for(seed, "refusals"), members, as_of
-            ),
-        ),
-    )
     conn.commit()
     return counts
 

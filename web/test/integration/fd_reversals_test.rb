@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdReversalsTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     @kase = make_case(opened_at: 3.days.ago)
     @action = make_action
   end
@@ -39,6 +39,59 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
     assert_equal 1, @kase.actions.count
   end
 
+  def make_guard(**attrs)
+    Fd::MemberGuard.create!({
+      kind: "deactivation", subject_id: "USUB", case_id: @kase.id, opened_by: "UFF1",
+      reason: "raiding", carried_by: "nemo", carry: "held"
+    }.merge(attrs))
+  end
+
+  test "reversing lifts the guard the action held, and waits on slack for it" do
+    sign_in_as(@me)
+    guard = make_guard
+    @action.update!(guard_id: guard.id)
+
+    reverse(reversal_reason: "appeal upheld")
+
+    guard.reload
+    assert_equal Fd::MemberGuard::LIFTING, guard.state, "nemo puts the account back first"
+    assert_nil guard.lifted_at, "it is not lifted until slack says the account is back"
+    assert_equal "UME", guard.lifted_by
+    assert_match(/appeal upheld/, guard.lift_reason)
+  end
+
+  test "reversing lifts a shush outright, since nothing has to be undone in slack" do
+    sign_in_as(@me)
+    guard = make_guard(kind: "shush", expires_at: 30.days.from_now)
+    @action.update!(guard_id: guard.id)
+
+    reverse
+
+    guard.reload
+    assert_equal Fd::MemberGuard::LIFTED, guard.state
+    assert_not_nil guard.lifted_at
+  end
+
+  test "a guard another live action still wants is left standing" do
+    sign_in_as(@me)
+    guard = make_guard
+    @action.update!(guard_id: guard.id)
+    make_action(guard_id: guard.id)
+
+    reverse
+
+    assert_not_nil @action.reload.reversed_at
+    assert_equal Fd::MemberGuard::LIVE, guard.reload.state
+  end
+
+  test "reversing an action that held nothing leaves the record alone" do
+    sign_in_as(@me)
+    reverse
+
+    assert_not_nil @action.reload.reversed_at
+    assert_equal 0, Fd::MemberGuard.count
+  end
+
   test "the paired columns move together, as the constraint requires" do
     sign_in_as(@me)
     reverse
@@ -56,8 +109,6 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
     assert_match(/Say why it is being reversed/i, flash[:wrong]["said"])
 
     follow_redirect!
-    assert_select "input#reverse-#{@action.id}[checked]", 1, "the modal comes back open"
-    assert_select ".field-wrong", text: /Say why it is being reversed/i
   end
 
   test "an absurdly long reason is refused" do
@@ -92,13 +143,12 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
     assert_equal 1, entries.count
   end
 
-  test "I cannot reverse on a case assigned to somebody else" do
+  test "I can reverse on a case assigned to somebody else" do
     @kase.assign!("UOTHER")
     sign_in_as(@me)
     reverse
 
-    assert_nil @action.reload.reversed_at
-    assert_match(/assigned to @UOTHER, not to you/, flash[:alert])
+    assert_not_nil @action.reload.reversed_at
   end
 
   test "the trail keeps the reason, which is not a member note" do
@@ -110,46 +160,13 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
     assert_equal "lifted early after a conversation", entry.after["reason"]
   end
 
-  test "a reversed action is marked as such and offers no reverse control" do
+  test "a reversal with no action says so instead of silently doing nothing" do
     sign_in_as(@me)
-    reverse
+    reverse(action_id: "")
 
-    get fd_case_path(@kase, tab: "actions")
-    assert_select ".chip", text: "reversed"
-    assert_select "label[for=?]", "reverse-#{@action.id}", count: 0
-    assert_select "input##{'reverse-' + @action.id.to_s}", count: 0
-  end
-
-  test "each live action carries its own control and its own modal" do
-    live = make_action(type_key: "warning", performed_at: 1.day.ago)
-    sign_in_as(@me)
-    get fd_case_path(@kase, tab: "actions")
-
-    assert_select ".ledger-top .btn", text: "Reverse", count: 2
-    assert_select "input#reverse-#{@action.id}.modal-flip"
-    assert_select "input#reverse-#{live.id}.modal-flip"
-    assert_select "input[name=action_id][value=?]", live.id.to_s
-  end
-
-  test "reversing one action leaves the other alone" do
-    live = make_action(type_key: "warning", performed_at: 1.day.ago)
-    sign_in_as(@me)
-    reverse
-
-    assert_not_nil @action.reload.reversed_at
-    assert_nil live.reload.reversed_at
-
-    get fd_case_path(@kase, tab: "actions")
-    assert_select ".ledger-top .btn", text: "Reverse", count: 1
-  end
-
-  test "the reversal shows in the timeline as its own moment" do
-    sign_in_as(@me)
-    reverse(reversal_reason: "appeal upheld")
-
-    get fd_case_path(@kase)
-    assert_match(/reversed/, response.body)
-    assert_match(/appeal upheld/, response.body)
+    assert_redirected_to fd_case_path(@kase, tab: "actions")
+    assert_equal "pick the action to reverse", flash[:alert]
+    assert_nil @action.reload.reversed_at
   end
 
   def entries

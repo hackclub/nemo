@@ -3,7 +3,6 @@ import re
 
 from seed import (
     SEED_CHANNEL_PREFIX,
-    SEED_REF_PREFIX,
     SEED_SOURCE_PREFIX,
     SEED_USER_PREFIX,
 )
@@ -14,33 +13,19 @@ FOREIGN_ROWS = [
     ("raw.member_dim", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),
     ("raw.channel_dim", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
     ("raw.member_message_history", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),
-    ("raw.member_first_reply", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),
-    ("raw.member_channel_message", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),
     ("raw.member_channel_membership", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),
     ("raw.member_channel_walk", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),
-    ("raw.top_posters_snapshot", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),
     ("raw.member_activity_snapshot", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),
     ("raw.channel_activity_snapshot", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
     ("raw.message_activity_snapshot", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
+    ("archive.message", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
+    ("archive.observation", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
+    ("raw.thread", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
+    ("raw.channel_walk", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
+    ("raw.member_dim_snapshot", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),
+    ("raw.channel_dim_snapshot", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
     ("raw.team_stats_snapshot", f"source NOT LIKE '{SEED_SOURCE_PREFIX}%'"),
     ("raw.analytics_day", f"source NOT LIKE '{SEED_SOURCE_PREFIX}%'"),
-    (
-        "fd.cases",
-        f"external_ref IS NULL OR external_ref NOT LIKE '{SEED_REF_PREFIX}%'",
-    ),
-    (
-        "fd.case_reports",
-        f"external_ref IS NULL OR external_ref NOT LIKE '{SEED_REF_PREFIX}%'",
-    ),
-    (
-        "fd.actions",
-        f"external_ref IS NULL OR external_ref NOT LIKE '{SEED_REF_PREFIX}%'",
-    ),
-    ("fd.notes", f"author NOT LIKE '{SEED_USER_PREFIX}%'"),
-    (
-        "fd.audit",
-        f"request_id IS NULL OR request_id NOT LIKE '{SEED_REF_PREFIX}%'",
-    ),
 ]
 
 

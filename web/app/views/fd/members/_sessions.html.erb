@@ -1,0 +1,63 @@
+<%= turbo_frame_tag Fd::MemberSessions.frame(user_id), target: "_top" do %>
+<div class="sessions">
+  <% if sessions.any? %>
+    <p class="sessions-lede">
+      <%= pluralize(sessions.device_count, "device") %> &middot;
+      <%= pluralize(sessions.address_count, "address") %> &middot;
+      first seen <%= on_day(sessions.first_at) %>
+      <% if sessions.failures.positive? %>
+        &middot; <span class="state state-warn"><%= pluralize(sessions.failures, "failed sign-in") %></span>
+      <% end %>
+      <% if sessions.anomalies.positive? %>
+        &middot; <span class="state state-crit">
+          <%= pluralize(sessions.anomalies, "anomaly") %> flagged by Slack
+        </span>
+      <% end %>
+    </p>
+
+    <% sessions.devices.each do |device| %>
+      <section class="session">
+        <header class="session-head">
+          <span class="session-name"><%= device.name %></span>
+          <span class="session-meta">
+            <%= pluralize(device.seen, "sign-in") %> &middot;
+            <%= session_span(device.first_at, device.last_at) %>
+          </span>
+        </header>
+
+        <% if device.addresses.any? %>
+          <% device.addresses.each do |address| %>
+            <div class="session-where">
+              <span class="session-ip mono"><%= address.ip || address.prefix %></span>
+              <%= session_swatch(address) %>
+              <span class="session-net">
+                <%= [address.where, address.isp].compact_blank.join(" · ").presence || "no network on file" %>
+                &middot; <%= session_span(address.first_at, address.last_at) %>
+              </span>
+              <% if address.alongside.any? %>
+                <span class="session-alongside">
+                  also used by
+                  <%= safe_join(address.alongside.first(6).map { |who| member_link(who) }, ", ") %>
+                </span>
+              <% elsif address.crowded? %>
+                <span class="session-crowd">
+                  <%= number_with_delimiter(address.people) %> others on this range, so it says nothing
+                </span>
+              <% end %>
+            </div>
+          <% end %>
+        <% else %>
+          <p class="session-none">No address on file for this one.</p>
+        <% end %>
+      </section>
+    <% end %>
+  <% else %>
+    <div class="empty">
+      <p class="empty-title">Nothing on file</p>
+      <p class="card-note">
+        Sign-ins land once the audit worker has run. Nobody is watched for this.
+      </p>
+    </div>
+  <% end %>
+</div>
+<% end %>

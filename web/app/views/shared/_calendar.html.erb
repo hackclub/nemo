@@ -1,0 +1,35 @@
+<div class="calwrap" data-controller="marktip"
+     data-action="mouseover->marktip#show mouseleave->marktip#clear">
+  <div class="scroll">
+    <div class="cal" style="--cal-weeks: <%= calendar.weeks %>">
+      <% calendar.months.each do |month| %>
+        <span class="cal-mon"
+              style="grid-column: <%= month.from + 1 %> / span <%= month.span %>">
+          <%= month.span > 1 ? month.label : "" %>
+        </span>
+      <% end %>
+
+      <% Community::Calendar::DAYS.each_with_index do |_name, index| %>
+        <span class="cal-day" style="grid-row: <%= index + 2 %>">
+          <%= calendar.row_label(index) %>
+        </span>
+      <% end %>
+
+      <% calendar.cells.each_with_index do |cell, at| %>
+        <i class="<%= calendar_cell_class(cell).join(" ") %>"
+           style="grid-row: <%= (at % 7) + 2 %>; grid-column: <%= (at / 7) + 2 %>"
+           <% if (tip = calendar_tip(cell)) %>data-tip="<%= tip.to_json %>"<% end %>></i>
+      <% end %>
+
+      <% if (run = calendar.run_columns) %>
+        <i class="cal-run" style="grid-column: <%= run.first + 1 %> / <%= run.last + 2 %>"></i>
+        <span class="cal-run-from" style="grid-column: 2 / <%= run.first + 1 %>">
+          <%= calendar.run_from.strftime("%-d %b %Y") %>
+        </span>
+        <span class="cal-run-say" style="grid-column: <%= run.first + 1 %> / -1">
+          <%= pluralize(number_with_delimiter(streak_days), "day") %>
+        </span>
+      <% end %>
+    </div>
+  </div>
+</div>

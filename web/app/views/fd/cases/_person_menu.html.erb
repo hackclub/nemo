@@ -1,8 +1,5 @@
-<details class="menu" data-controller="menu">
-  <summary class="btn btn-only" aria-label="More for <%= names[person.user_id] %>">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
-  </summary>
-  <div class="menu-pop">
+<%= render layout: "shared/dropdown", locals: {
+      label: "More for #{names[person.user_id]}", trigger: menu_dots } do %>
     <%= link_to "Their cases", fd_cases_path(subject: person.user_id), class: "btn" %>
     <%= link_to "Open in Slack", slack_member_url(person.user_id), class: "btn",
           target: "_blank", rel: "noopener" %>
@@ -14,5 +11,4 @@
             form: { class: "contents", data: { turbo_frame: "_top",
             turbo_confirm: "Take @#{person.user_id} off this case?" } } %>
     <% end %>
-  </div>
-</details>
+<% end %>

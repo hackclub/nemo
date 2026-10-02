@@ -30,7 +30,7 @@ module Fd
       if settled
         redirect_to fd_case_path(@case), notice: "case #{@case.id} resolved"
       else
-        refuse(refusal(@case.reload))
+        refuse("case #{@case.id} was already resolved")
       end
     end
 
@@ -42,17 +42,14 @@ module Fd
 
       held = @case.assignee_user_ids
       was = { "resolved_at" => @case.resolved_at, "resolution" => @case.resolution,
-              "duplicate_of" => @case.duplicate_of,
-              "followed_decision_id" => @case.followed_decision_id,
-              "assignees" => held }
+              "duplicate_of" => @case.duplicate_of, "assignees" => held }
 
       writing do
-        @case.update!(resolved_at: nil, resolution: nil, duplicate_of: nil,
-          followed_decision_id: nil, updated_at: @now)
+        @case.update!(resolved_at: nil, resolution: nil, duplicate_of: nil, updated_at: @now)
         @case.assignees.destroy_all
         audit(@case, "reopened", before: was,
           after: { "resolved_at" => nil, "resolution" => nil, "duplicate_of" => nil,
-                   "followed_decision_id" => nil, "assignees" => [] })
+                   "assignees" => [] })
       end
 
       redirect_to fd_case_path(@case), notice: "case #{@case.id} is open again"
@@ -61,7 +58,7 @@ module Fd
     private
 
     def ending
-      return "action_taken" if @case.actions.live.any?
+      return "action_taken" if Action.where(case_id: @case.family_ids).live.any?
 
       reason = params[:close_reason].to_s
       Case::CLOSE_REASONS.include?(reason) ? reason : nil
@@ -89,8 +86,8 @@ module Fd
     def close_reports
       said = told
 
-      @case.reports.where(closed_at: nil).find_each do |report|
-        report.update!(closed_at: @now, closed_by: current_staff.user_id)
+      CaseReport.where(case_id: @case.family_ids, closed_at: nil).find_each do |report|
+        report.update!(closed_at: @now, closed_by: current_account.user_id)
         audit(report, "closed", entity_id: @case.id,
           before: { "closed_at" => nil }, after: { "closed_at" => @now })
         queue(report, said)
@@ -102,13 +99,7 @@ module Fd
       return if conversation.nil?
 
       IntakeOutbox.create!(conversation_id: conversation.id, kind: "outcome", body: said,
-        requested_by: current_staff.user_id)
-    end
-
-    def refusal(kase)
-      return "case #{kase.id} was already resolved" if kase.resolved?
-
-      not_yours(kase)
+        requested_by: current_account.user_id)
     end
 
     def refuse(message)

@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdFlagSwitchTest < ActionDispatch::IntegrationTest
   setup do
-    @boss = Staff.create!(user_id: "UBOSS", community_manager: true)
+    @boss = hold_role!("UBOSS", "community_manager")
     Fd::Flag.delete_all
     Current.forget_flags
   end
@@ -12,14 +12,11 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
     Current.forget_flags
   end
 
-  test "settings lists every section with what it covers" do
+  test "one table names every section by the routes that stop resolving" do
     sign_in_as(@boss)
-    get fd_settings_path(tab: "sections")
+    get admin_flags_path
 
     assert_response :success
-    assert_select "td", text: "Community analytics"
-    assert_select ".said-cell", text: /Overview, Channels and Engine/
-    assert_select "form[action=?]", fd_flag_path(key: "analytics", on: "0")
   end
 
   def standing(key)
@@ -29,20 +26,20 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
   test "a manager can turn one off and back on from the page" do
     sign_in_as(@boss)
 
-    patch fd_flag_path, params: { key: "decisions", on: "0" }
-    assert_redirected_to fd_settings_path(tab: "sections")
-    assert_match(/decisions is turned off/, flash[:notice])
-    assert_equal false, standing(:decisions)
+    patch fd_flag_path, params: { key: "fire_engine", on: "0" }
+    assert_redirected_to admin_flags_path
+    assert_match(/fire engine is turned off/, flash[:notice])
+    assert_equal false, standing(:fire_engine)
 
-    patch fd_flag_path, params: { key: "decisions", on: "1" }
-    assert_match(/decisions is back/, flash[:notice])
-    assert_equal true, standing(:decisions)
-    assert_equal 1, Fd::Flag.where(key: "decisions").count, "one row, flipped"
+    patch fd_flag_path, params: { key: "fire_engine", on: "1" }
+    assert_match(/fire engine is back/, flash[:notice])
+    assert_equal true, standing(:fire_engine)
+    assert_equal 1, Fd::Flag.where(key: "fire_engine").count, "one row, flipped"
   end
 
   test "a firefighter cannot flip anything" do
-    hand = Staff.create!(user_id: "UHAND")
-    Fd::AccessGrant.give!("UHAND", role: "firefighter", by: @boss.user_id, reason: "works here")
+    hand = Account.create!(user_id: "UHAND")
+    hold_role!("UHAND", "firefighter")
     sign_in_as(hand)
 
     patch fd_flag_path, params: { key: "analytics", on: "0" }
@@ -66,7 +63,7 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
 
     patch fd_flag_path, params: { key: "teleporter", on: "0" }
 
-    assert_redirected_to fd_settings_path(tab: "sections")
+    assert_redirected_to admin_flags_path
     assert_match(/not a flag/, flash[:alert])
   end
 end

@@ -28,6 +28,14 @@
 threads_count = ENV.fetch("RAILS_MAX_THREADS", 3)
 threads threads_count, threads_count
 
+clustered = Integer(ENV.fetch("WEB_CONCURRENCY", 0)).positive?
+on_worker_boot do |index|
+  Fd::ChatListener.start if index.zero? && Fd::ChatListener.wanted?
+end
+on_booted do
+  Fd::ChatListener.start if !clustered && Fd::ChatListener.wanted?
+end
+
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.
 # Set SSL_LOCAL=1 with a self-signed cert in tmp/certs to serve https instead, which is
 # what Slack needs before it will redirect back to a callback on this machine.

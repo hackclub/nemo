@@ -11,25 +11,41 @@ module Fd
       "Fd::CaseParticipant" => "participant",
       "Fd::CaseAssignee" => "assignee",
       "Fd::MemberIdentity" => "identity",
-      "Fd::CaseCitation" => "citation",
-      "Fd::Decision" => "decision",
-      "Fd::DecisionThread" => "decision_thread",
-      "Fd::AccessGrant" => "grant",
       "Engine::Setting" => "engine_setting",
-      "Fd::RolePermission" => "permission",
+      "Ingest::IncidentAck" => "incident_ack",
+      "SyncRequest" => "sync_request",
+      "Authz::Override" => "permission",
       "Fd::StaffSlack" => "slack_account",
-      "Fd::Flag" => "flag"
+      "Fd::Flag" => "flag",
+      "ChannelBackfill" => "channel_backfill",
+      "Channels::Audience::Setting" => "channel_audience",
+      "Channels::Audience::Grant" => "channel_audience",
+      "Channels::Activity::Setting" => "message_activity",
+      "Fd::ChannelGuard" => "channel_guard",
+      "Fd::MemberGuard" => "member_guard",
+      "Fd::ThreadGuard" => "thread_guard",
+      "Fd::AutomodWord" => "automod_word",
+      "Fd::BlockedDomain" => "blocked_domain",
+      "Fd::ChannelPurge" => "channel_purge",
+      "Fd::ChannelGuardAllow" => "channel_allow",
+      "Fd::AppSetting" => "app_setting",
+      "Authz::Grant" => "capability_grant",
+      "Fd::ThreadTranscript" => "thread_transcript"
     }.freeze
 
     VERBS = %w[
-      opened claimed unclaimed resolved reopened categorised
+      opened lifted claimed unclaimed resolved reopened categorised
       performed reversed received
-      noted deleted attached detached flagged unflagged closed answered
-      proposed settled amended superseded dropped followed unfollowed
+      noted deleted attached detached flagged unflagged closed answered extended
+      added removed
       granted revoked refused
       linked unlinked
       turned_on turned_off
       tuned reset
+      acked muted
+      exported
+      queued cancelled
+      read
     ].freeze
 
     REDACTED_COLUMNS = {
@@ -44,18 +60,31 @@ module Fd
     class UnauditableRecord < ArgumentError; end
     class UnknownVerb < ArgumentError; end
 
+    NUMERIC = /\A-?\d+\z/
+
+    def self.identify(subject)
+      return [subject, nil] if subject.is_a?(Integer)
+
+      said = subject.to_s
+      return [said.to_i, nil] if said.match?(NUMERIC)
+
+      [0, said.presence]
+    end
+
     def self.record(record, verb, actor:, request_id: nil, actor_kind: "human",
       source_app: SOURCE_APP, entity_id: nil, before: nil, after: nil)
       type = entity_type(record)
       raise UnknownVerb, "#{verb} is not an audited verb" unless VERBS.include?(verb)
 
       changes = record.previous_changes.except(*IGNORED_COLUMNS)
+      id, ref = identify(entity_id || record.id)
 
       AuditEntry.create!(
         actor_user_id: actor,
         actor_kind: actor_kind,
         entity_type: type,
-        entity_id: entity_id || record.id,
+        entity_id: id,
+        entity_ref: ref,
         verb: verb,
         before: redact(type, before || previous_values(record, changes)),
         after: redact(type, after || next_values(record, changes)),

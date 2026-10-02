@@ -14,8 +14,8 @@ module Fd
     end
 
     def in_force
-      @in_force ||= record.actions.select { |action| action.in_force?(at) }
-        .sort_by { |action| [weight_of(action), -action.performed_at.to_i] }
+      @in_force ||= record.guards
+        .sort_by { |guard| [weight_of(guard.kind), -guard.opened_at.to_i] }
     end
 
     def worst
@@ -68,8 +68,8 @@ module Fd
 
     private
 
-    def weight_of(action)
-      WEIGHT.index(action.type_key) || WEIGHT.size
+    def weight_of(kind)
+      WEIGHT.index(kind) || WEIGHT.size
     end
   end
 end

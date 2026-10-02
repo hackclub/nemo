@@ -220,6 +220,17 @@ class Fd::CaseQueryTest < ActiveSupport::TestCase
       "the case that has waited longest is the one that needs somebody"
   end
 
+  test "the resolved view opens with the most recently closed first" do
+    older = make_case(opened_at: 30.days.ago, resolved_at: 9.days.ago, resolution: "no_action")
+    newer = make_case(opened_at: 2.days.ago, resolved_at: 1.hour.ago, resolution: "no_action")
+    shown = query(view: "resolved").relation.where(id: [older.id, newer.id, @done.id]).ids
+
+    assert_equal [newer.id, @done.id, older.id], shown,
+      "nobody scrolls to the bottom of a resolved list to see what just closed"
+    assert_equal "resolved", query(view: "resolved")["sort"]
+    assert_equal "desc", query(view: "resolved")["dir"]
+  end
+
   test "asking for the newest first still works" do
     oldest_first = ids(view: "everything")
 

@@ -1,0 +1,96 @@
+<div class="grid g-2">
+  <div class="card card-stretch">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Threads</h2>
+      </div>
+    </div>
+    <% if pulse.any? %>
+      <div
+        data-controller="chart"
+        data-chart-kind-value="line"
+        data-chart-days-value="true"
+        data-chart-pct-value="true"
+        data-chart-pct-fit-value="true"
+        data-chart-height-value="150"
+        data-chart-data-value="<%= {
+          labels: pulse.labels,
+          datasets: [{ label: "in threads", data: pulse.share_series(:thread_replies) }]
+        }.to_json %>"
+      ></div>
+    <% end %>
+    <dl class="deflist">
+      <div>
+        <dt>in threads</dt>
+        <dd>
+          <%= pulse.threaded_share ? number_to_percentage(pulse.threaded_share, precision: 0) : "n/a" %>
+          <span class="short"><%= number_with_delimiter(pulse.thread_replies) %> replies</span>
+        </dd>
+      </div>
+      <div>
+        <dt>threads</dt>
+        <dd><%= number_with_delimiter(pulse.thread_roots) %></dd>
+      </div>
+      <div>
+        <dt>messages</dt>
+        <dd><%= number_with_delimiter(pulse.messages) %></dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="card card-stretch">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Texture</h2>
+      </div>
+      <% if pulse.messages.positive? %>
+        <div class="card-tools">
+          <div class="legend">
+            <span><i class="ser-1"></i>carry a link</span>
+            <span><i class="ser-2"></i>carry a file</span>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    <% if pulse.messages.positive? %>
+      <div
+        data-controller="chart"
+        data-chart-kind-value="line"
+        data-chart-days-value="true"
+        data-chart-pct-value="true"
+        data-chart-pct-fit-value="true"
+        data-chart-height-value="150"
+        data-chart-data-value="<%= {
+          labels: pulse.labels,
+          datasets: [
+            { label: "carry a link", data: pulse.share_series(:with_link) },
+            { label: "carry a file", data: pulse.share_series(:with_file) }
+          ]
+        }.to_json %>"
+      ></div>
+      <dl class="deflist">
+        <div>
+          <dt>average length</dt>
+          <dd><%= number_with_delimiter(pulse.average_length) %> <span class="short">characters</span></dd>
+        </div>
+        <% [["carry a link", :with_link], ["carry a file", :with_file]].each do |label, measure| %>
+          <div>
+            <dt><%= label %></dt>
+            <dd>
+              <%= number_to_percentage(pulse.share(measure, :messages).to_f, precision: 0) %>
+              <span class="short"><%= number_with_delimiter(pulse.total(measure)) %></span>
+            </dd>
+          </div>
+        <% end %>
+      </dl>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">No messages in this range</p>
+        <p>Nothing was posted here in this window. Try a wider range.</p>
+        <div class="empty-do">
+          <button type="button" class="btn" data-modal-open="channel-range">Change range</button>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

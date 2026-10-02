@@ -4,7 +4,12 @@
 # See the Securing Rails Applications Guide for more information:
 # https://guides.rubyonrails.org/security.html#content-security-policy-header
 
-AVATAR_HOSTS = ["https://avatars.slack-edge.com", "https://*.dunkirk.sh"].freeze
+CACHET_HOST = "https://cachet.hackclub.com".freeze
+
+AVATAR_HOSTS = [
+  CACHET_HOST, "https://avatars.slack-edge.com", "https://*.dunkirk.sh",
+  "https://secure.gravatar.com", "https://i0.wp.com", "https://i1.wp.com", "https://i2.wp.com"
+].freeze
 
 AUTH_ORIGIN = begin
   issuer = URI.parse(ENV.fetch("HCA_ISSUER", "https://auth.hackclub.com"))
@@ -24,7 +29,7 @@ Rails.application.configure do
     policy.style_src       :self, :unsafe_inline
     host = ENV["APP_HOST"].presence
     sockets = host ? ["ws://#{host}", "wss://#{host}"] : ["ws://localhost:*"]
-    policy.connect_src     :self, *sockets
+    policy.connect_src     :self, CACHET_HOST, *sockets
     policy.base_uri        :self
     policy.form_action     :self, AUTH_ORIGIN
     policy.frame_ancestors :none

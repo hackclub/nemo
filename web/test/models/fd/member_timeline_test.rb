@@ -29,15 +29,14 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
     assert_equal "open", entries.sole.state
   end
 
-  test "a case they were only logged in carries their role and their reason" do
+  test "a case they were only logged in is told apart from one about them" do
     theirs = make_case(subject: "USOMEBODY", opened_at: 3.days.ago, category_key: "bullying")
-    theirs.participants.create!(user_id: SUBJECT, role: "involved", detail: "it was aimed at them")
+    theirs.participants.create!(user_id: SUBJECT, role: "reporter")
 
     entry = entries.sole
     assert_equal "cases", entry.kind
     assert_equal "in", entry.mark, "the mark still tells it from a case about them"
     assert_equal "logged in", entry.state
-    assert_match(/it was aimed at them/, entry.detail)
     assert_match(/they were not the subject/, entry.detail)
   end
 
@@ -61,6 +60,58 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
     assert_in_delta 2.days.ago.to_i, reversal.at.to_i, 5
     assert_equal "reversed", reversal.state
     assert_match(/appeal upheld/, reversal.detail)
+  end
+
+  def hold(kind: "shush", at: 3.days.ago, **attrs)
+    Fd::MemberGuard.create!({ kind: kind, subject_id: SUBJECT, opened_by: "UFF1",
+                              reason: "flooding the channel", opened_at: at,
+                              carried_by: "nemo", carry: "pending" }.merge(attrs))
+  end
+
+  test "a guard held with no case behind it is an action entry of its own" do
+    hold(expires_at: 2.days.from_now)
+    entry = entries(only: "actions").sole
+
+    assert_equal "Shush", entry.title
+    assert_equal "act", entry.mark
+    assert_nil entry.case_id, "it came from no case, so it links to none"
+    assert_match(/on no case/, entry.detail)
+    assert_match(/by @UFF1/, entry.detail)
+    assert_match(/flooding the channel/, entry.detail)
+    assert_nil entry.state, "it is still being held"
+  end
+
+  test "a channel ban with no case names the channel it holds in" do
+    hold(kind: "channel_ban", channel_id: "C1LOUNGE", expires_at: 2.days.from_now)
+
+    assert_match(/in C1LOUNGE/, entries(only: "actions").sole.detail)
+  end
+
+  test "lifting a guard with no case reads like a reversal, at the moment it was lifted" do
+    guard = hold(at: 9.days.ago)
+    guard.update!(state: "lifted", lifted_at: 2.days.ago, lifted_by: "UFF2",
+      lift_reason: "they sorted it out")
+
+    lifted, held = entries(only: "actions")
+    assert_equal "Shush lifted", lifted.title
+    assert_in_delta 2.days.ago.to_i, lifted.at.to_i, 5
+    assert_equal "reversal", lifted.word
+    assert_match(/they sorted it out/, lifted.detail)
+    assert_match(/by @UFF2/, lifted.detail)
+    assert_equal "reversed", held.state, "the hold itself reads as undone"
+  end
+
+  test "a guard pulled onto a case is left to its action entry" do
+    kase = make_case(subject: SUBJECT, opened_at: 5.days.ago)
+    hold(case_id: kase.id, expires_at: 2.days.from_now)
+
+    assert_empty entries(only: "actions")
+  end
+
+  test "a guard on somebody else stays on their record" do
+    hold(subject_id: "USOMEBODY", expires_at: 2.days.from_now)
+
+    assert_empty entries(only: "actions")
   end
 
   test "everything is newest first, whichever table it came from" do

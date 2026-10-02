@@ -1,5 +1,7 @@
 from datetime import timedelta
 
+import psycopg
+
 from lib import sources
 
 TUNED_SQL = "SELECT source, name, value FROM app.engine_setting"
@@ -11,7 +13,7 @@ WHERE status = 'ok' AND source = ANY(%s)
 """
 
 ENGINE = "engine"
-DEFAULTS = {"run_at": "03:00", "budget_minutes": "480"}
+DEFAULTS = {"run_at": "03:00", "budget_minutes": "480", "reclaim_seconds": "900"}
 
 PERIOD = {
     "daily": timedelta(hours=20),
@@ -20,18 +22,30 @@ PERIOD = {
 }
 
 
+UNREADABLE = object()
+_warned = False
+
+
 def tuned(conn):
+    global _warned
     try:
         with conn.cursor() as cur:
             cur.execute(TUNED_SQL)
             return {(source, name): value for source, name, value in cur.fetchall()}
-    except Exception:
+    except psycopg.Error as exc:
         conn.rollback()
-        return {}
+        if not _warned:
+            print(f"settings: app.engine_setting is unreadable, running on file defaults, "
+                  f"{type(exc).__name__}: {exc}")
+            _warned = True
+        return UNREADABLE
 
 
 def said(conn, source, name, fallback):
-    return tuned(conn).get((source, name), fallback)
+    got = tuned(conn)
+    if got is UNREADABLE:
+        return fallback
+    return got.get((source, name), fallback)
 
 
 def cadence(conn, key):
@@ -64,6 +78,19 @@ def floor_days(key):
         return None
     count, unit = floor.split()
     return int(count) * (30 if unit.startswith("month") else 1)
+
+
+RECLAIM_FLOOR_SECONDS = 300
+OFF = "off"
+
+
+def reclaim_seconds(conn):
+    asked = said(conn, ENGINE, "reclaim_seconds", DEFAULTS["reclaim_seconds"])
+    if asked == OFF:
+        return None
+    if asked in (None, ""):
+        asked = DEFAULTS["reclaim_seconds"]
+    return max(int(asked), RECLAIM_FLOOR_SECONDS)
 
 
 def retention_days(conn, key):

@@ -2,7 +2,7 @@ require "test_helper"
 
 class FdPersonDrawerTest < ActionDispatch::IntegrationTest
   setup do
-    @me = Staff.create!(user_id: "UME", community_manager: true)
+    @me = hold_role!("UME", "community_manager")
     sign_in_as(@me)
   end
 
@@ -10,52 +10,44 @@ class FdPersonDrawerTest < ActionDispatch::IntegrationTest
     get fd_member_path(user_id), headers: { "Turbo-Frame" => "person-drawer" }
   end
 
-  test "requesting a member from the person-drawer frame renders the drawer, not the full page" do
-    get_drawer("USUB")
+  test "the drawer answers inside its own frame" do
+    get_drawer "UNOBODY"
 
-    assert_select "turbo-frame#person-drawer", 1
-    assert_select ".pm-head", 1
-    assert_select ".ractions", 0, "the full page's header actions do not leak into the drawer"
+    assert_response :success
+    assert_match "person-drawer", response.body
   end
 
-  test "a plain visit to a member still renders the whole page" do
-    get fd_member_path("USUB")
-
-    assert_select "turbo-frame#person-drawer", 1
-    assert_select "turbo-frame#person-drawer .drawer-h", 0, "the layout's frame stays empty"
-    assert_select ".crumb a[href=?]", fd_members_path
+  test "opening the drawer is not an identity read" do
+    assert_no_difference -> { AccessLog.count } do
+      get_drawer "USUB"
+    end
   end
 
-  test "a case note by another author opens their drawer, not a full navigation" do
-    kase = make_case(subject: "USUB")
-    Fd::Note.create!(case_id: kase.id, body: "spoke to them", author: "UFF1")
+  test "the drawer is behind case.read like the page it opens from" do
+    sign_in_as(Account.create!(user_id: "UPLAIN"))
 
-    get fd_case_path(kase, tab: "notes")
+    get_drawer "USUB"
 
-    assert_select ".note-by a.lnk[data-turbo-frame=person-drawer]", text: "@UFF1"
+    refute_equal 200, response.status
   end
 
-  test "a member with nothing on record still renders the drawer" do
-    get_drawer("UNOBODY")
+  test "the drawer does not pay for the roster it never draws" do
+    seen = []
+    listen = ->(*, payload) { seen << payload[:sql] if payload[:sql].to_s.include?("FROM roster") }
 
-    assert_select ".person-modal"
-    assert_select ".note-none", text: "Never named in a case."
-    assert_select ".fstat b", text: "0", count: 3
+    ActiveSupport::Notifications.subscribed(listen, "sql.active_record") { get_drawer "USUB" }
+
+    assert_response :success
+    assert_empty seen, "the drawer renders none of the roster, so it must not aggregate it"
   end
 
-  test "the drawer shows what was done to them, and their notes, nothing else" do
-    kase = make_case(subject: "UAAA")
-    Fd::Action.create!(case_id: kase.id, type_key: "warning", target_user_id: "UAAA",
-      decided_by: "UFF1", performed_by: "UFF1", performed_at: 2.days.ago,
-      source_app: "fire_engine")
-    Fd::Note.create!(subject_user_id: "UAAA", body: "watch for repeats", author: "UFF2")
+  test "the full record still draws the roster beside it" do
+    seen = []
+    listen = ->(*, payload) { seen << payload[:sql] if payload[:sql].to_s.include?("FROM roster") }
 
-    get_drawer("UAAA")
+    ActiveSupport::Notifications.subscribed(listen, "sql.active_record") { get fd_member_path("USUB") }
 
-    assert_select ".pm-label", text: "Cases they appear in"
-    assert_select ".fstat span", text: "actions"
-    assert_select ".fstat span", text: "in force"
-    assert_select ".pm-foot .btn", { text: "Open the full record" },
-      "the summary points at the record rather than repeating it"
+    assert_response :success
+    assert_not_empty seen, "the page itself shows the pane, so it still needs it"
   end
 end

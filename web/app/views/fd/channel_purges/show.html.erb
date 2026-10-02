@@ -1,0 +1,66 @@
+<% name = @channel&.name.presence %>
+<% label = name ? "##{name}" : @purge.channel_id %>
+<% content_for :page_title, "Purged from #{label}" %>
+<% content_for :head_context do %>
+  <span class="triad-sep">&middot;</span>
+  <span class="triad-who"><%= purge_state_chip(@purge) %></span>
+<% end %>
+<% content_for :head_actions do %>
+  <%= link_to "Back to the channel", fd_channel_path(@purge.channel_id, tab: "purge"),
+        class: "btn btn-ghost" %>
+<% end %>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <h2 class="card-title"><%= @purge.wanted %> asked</h2>
+    <p class="card-note">
+      <%= member_link(@purge.asked_by) %> &middot; <%= at_minute(@purge.asked_at) %>
+      &middot; <%= @purge.taken_down %> taken down
+      <% if @purge.replies_taken.positive? %>
+        &middot; <%= @purge.replies_taken %> in threads
+      <% end %>
+    </p>
+  </div>
+  <div class="card-body">
+    <p class="msg-body"><%= @purge.reason %></p>
+    <% if @purge.failed? && @purge.error.present? %>
+      <p class="sub2"><%= @purge.error %></p>
+    <% end %>
+  </div>
+</div>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <h2 class="card-title">Purged</h2>
+  </div>
+
+  <% if @threads.any? %>
+    <div class="card-body">
+      <% @threads.tops.each do |said| %>
+        <%= render "said", said: said, names: @names %>
+        <% below = @threads.below(said) %>
+        <% if below.any? %>
+          <details class="purge-thread" open>
+            <summary><%= pluralize(below.size, "reply") %></summary>
+            <% below.each do |reply| %>
+              <%= render "said", said: reply, names: @names %>
+            <% end %>
+          </details>
+        <% end %>
+      <% end %>
+
+      <% if @threads.orphans.any? %>
+        <details class="purge-thread" open>
+          <summary><%= pluralize(@threads.orphans.size, "reply") %>, the top was not taken</summary>
+          <% @threads.orphans.each do |said| %>
+            <%= render "said", said: said, names: @names %>
+          <% end %>
+        </details>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="empty">
+      <p class="empty-title">Nothing kept</p>
+    </div>
+  <% end %>
+</div>

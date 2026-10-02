@@ -1,58 +1,70 @@
 class JourneyController < ApplicationController
   before_action { needs(:analytics) }
+  before_action :require_reading
+
+  RESPONSE_MONTHS = 13
+  LIFECYCLE_COHORTS = 12
 
   def acquisition
     asked = params[:growth_months].to_i
     @growth_span = HomeHelper::GROWTH_SPANS.include?(asked) ? asked : HomeHelper::DEFAULT_GROWTH_SPAN
     @growth_months = Analytics::MartGrowth.order(month: :desc).limit(@growth_span).to_a.reverse
 
-    @monthly_cohorts = Analytics::MartMonthlyCohorts
-      .where(searched: 1..)
-      .order(cohort_month: :desc)
-      .limit(13)
+    @lifecycle = Journey::Lifecycle.recent(LIFECYCLE_COHORTS)
+    @newcomer_reach = Analytics::MartNewcomerChannels
+      .for_cohort(Analytics::MartNewcomerChannels::DEFAULT_COHORT).order(:channel_id).first
+    @newcomer_channels = Analytics::MartNewcomerChannels
+      .ranked(Analytics::MartNewcomerChannels::DEFAULT_MEASURE, floor: HomeHelper::MIN_SAMPLE)
   end
 
-  def activation
-    @newcomer_reach = Analytics::MartNewcomerChannels.order(:channel_id).first
-    @newcomer_channels = Analytics::MartNewcomerChannels.ranked(
-      Analytics::MartNewcomerChannels::DEFAULT_MEASURE, floor: HomeHelper::MIN_SAMPLE)
-
-    @channel_scorecard = Analytics::MartChannelOnboardingScorecard
-      .where(newcomer_volume: HomeHelper::MIN_SAMPLE..)
-      .order(post_month: :desc, newcomer_volume: :desc).limit(10)
-    @channel_scorecard_total = Analytics::MartChannelOnboardingScorecard.count
+  def replies
+    @response_rate = Analytics::MartResponseRate
+      .order(post_month: :desc).limit(RESPONSE_MONTHS).to_a.reverse
+    @fast_reply_classes = Analytics::MartFastReplyVsRetention
+      .order(Arel.sql("case reply_class when 'fast' then 1 when 'slow' then 2 else 3 end"))
+      .to_a
+    @fast_reply_vs_retention = @fast_reply_classes.select do |row|
+      row.newcomers >= HomeHelper::MIN_SAMPLE
+    end
   end
 
-  def answered
-    @response_rate = Analytics::MartResponseRate.order(post_month: :desc).limit(13)
-    @response_rate_totals = Analytics::MartResponseRate.totals
-    @fast_reply_vs_retention = Analytics::MartFastReplyVsRetention
-      .where(newcomers: HomeHelper::MIN_SAMPLE..)
-      .order(fast_reply: :desc)
-  end
+  RETENTION_COHORTS = 12
+  RECURRENCE_COHORTS = 12
+  SURVIVAL_COHORTS = 6
 
   def retention
-    @cohort_months = Analytics::MartOnboardingFunnel.order(cohort_month: :desc).pluck(:cohort_month)
-    chosen = params[:cohort_month].presence&.then { |d| Date.parse(d) } || @cohort_months.first
-    @onboarding_funnel = Analytics::MartOnboardingFunnel.find_by(cohort_month: chosen)
+    @retention = Analytics::MartCohortRetention.measured
+      .order(cohort_month: :desc).limit(RETENTION_COHORTS).to_a.reverse
 
-    @recurrence_cohort_months = Analytics::MartOnboardingRecurrenceFunnel
-      .order(cohort_month: :desc).pluck(:cohort_month)
-    @recurrence_month = params[:recurrence_month].presence&.then { |d| Date.parse(d) } ||
-      @recurrence_cohort_months.first
-    @recurrence_funnel = Analytics::MartOnboardingRecurrenceFunnel
-      .find_by(cohort_month: @recurrence_month)
+    @survival = Analytics::MartCohortSurvival.curves(cohorts: SURVIVAL_COHORTS,
+      floor: HomeHelper::MIN_SAMPLE)
+    @survival_offsets = Analytics::MartCohortSurvival.offsets
+
+    @recurrence = Analytics::MartOnboardingRecurrenceFunnel
+      .where(searched: 1..)
+      .order(cohort_month: :desc)
+      .limit(RECURRENCE_COHORTS)
+      .to_a
+      .reverse
   end
 
   def distribution
     @top_poster_months = Analytics::MartTopPosters.distinct.order(month: :desc).pluck(:month)
-    @top_posters_month = params[:top_posters_month].presence&.then { |d| Date.parse(d) } ||
-      @top_poster_months.first
-    @top_posters = Analytics::MartTopPosters.where(month: @top_posters_month).order(:rank).limit(10)
+    @top_posters_month = asked_month(:top_posters_month) || @top_poster_months.first
+    @top_posters = Analytics::MartTopPosters
+      .where(month: @top_posters_month).order(:rank).limit(10)
 
-    @activity_bands = Analytics::MartActivityDistribution.order(:band_order)
-    @top_channels = Analytics::MartChannelRange
-      .order(messages_posted_by_members: :desc)
-      .limit(8)
+    @days_measured = @top_posters.map(&:days_measured).max.to_i
+    @activity_bands = Analytics::MartActivityDistribution.order(:band_order).to_a
+    @poster_bands = @activity_bands.reject { |b| b.band_order.zero? }
+    @concentration = Analytics::MartParticipationConcentration.curve.to_a
+  end
+
+  private
+
+  def asked_month(key)
+    Date.iso8601(params[key].to_s)
+  rescue ArgumentError
+    nil
   end
 end

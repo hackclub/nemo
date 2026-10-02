@@ -117,6 +117,7 @@ def cohort_calendar(profile, members, as_of, history_months=None):
     sizes = profile["members"]["cohort_sizes"]
     if history_months:
         sizes = sizes[-history_months:]
+    sizes = prorate_current_month(sizes, as_of)
     total = sum(count for _, count in sizes) or 1
     last = date.fromisoformat(sizes[-1][0])
     shift = (as_of.year - last.year) * 12 + (as_of.month - last.month)
@@ -126,6 +127,16 @@ def cohort_calendar(profile, members, as_of, history_months=None):
         moved = shift_months(month, shift)
         calendar.append((moved, round(count * members / total)))
     return [(month, count) for month, count in calendar if count > 0 and month <= as_of]
+
+
+def prorate_current_month(sizes, as_of):
+    if len(sizes) < 2:
+        return list(sizes)
+    first = date(as_of.year, as_of.month, 1)
+    elapsed = as_of.day / (shift_months(first, 1) - first).days
+    iso, _ = sizes[-1]
+    _, prior = sizes[-2]
+    return list(sizes[:-1]) + [(iso, prior * min(1.0, elapsed))]
 
 
 def shift_months(day, months):

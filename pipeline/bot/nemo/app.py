@@ -1,14 +1,38 @@
 import os
 
 from slack_bolt import App
+from slack_sdk import WebClient
 
-from bot.nemo import channel, command
+from bot.nemo import channel, command, handlers, surface
+from bot.nemo.carriers import (  # noqa: F401
+    account_age,
+    channel_ban,
+    readonly,
+    shush,
+    slowmode,
+)
+from lib.slack_client import RETRY_HANDLERS
+from bot.nemo.surface import (
+    automod_watch,  # noqa: F401
+    autoresponse,  # noqa: F401
+    bot_watch,  # noqa: F401
+    channel_watch,  # noqa: F401
+    join_watch,  # noqa: F401
+    message_activity,  # noqa: F401
+    reaction_watch,  # noqa: F401
+    thread_destroy,  # noqa: F401
+    thread_lock,  # noqa: F401
+    thread_watch,  # noqa: F401
+    unsub_shield,  # noqa: F401
+)
 
 
 def build(on_reply=None):
-    app = App(token=os.environ["NEMO_BOT_TOKEN"], raise_error_for_unhandled_request=False)
-    channel.register(app, on_reply)
+    client = WebClient(token=os.environ["NEMO_BOT_TOKEN"], retry_handlers=RETRY_HANDLERS)
+    app = App(client=client, raise_error_for_unhandled_request=False)
+    handlers.register(app, on_reply)
     command.register(app)
+    surface.register(app)
     return app
 
 

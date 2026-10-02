@@ -1,39 +1,49 @@
 <%= turbo_frame_tag "merge-body" do %>
-  <div class="merge-pane">
-    <div class="merge-list">
+  <%= form_with url: fd_merge_cases_path, method: :post,
+        data: { turbo_frame: "_top", merge_picker_target: "form" } do %>
+    <%= hidden_field_tag "case_ids[]", kase.id, id: nil %>
+    <%= hidden_field_tag :duplicate_of, kase.id, id: nil,
+          data: { merge_picker_target: "keeper" } %>
+
+    <div class="merge-results">
       <% if groups.empty? %>
-        <p class="card-note flush">
-          <%= term.present? ? "Nothing matches that." : "Nothing looks like a duplicate of this one." %>
-        </p>
+        <div class="empty merge-empty">
+          <p class="empty-title">
+          <%= term.present? ? "Nothing matches that" : "Nothing looks like a duplicate of this one" %>
+          </p>
+          <p>
+          <%= term.present? ? "Try a case number, a subject, or a channel name." : "There is nothing nearby in time or about the same person to fold this into." %>
+          </p>
+        </div>
       <% end %>
 
       <% groups.each do |label, found| %>
-        <p class="merge-group"><%= label %></p>
-        <% found.each do |other| %>
-          <%= link_to fd_case_merge_path(kase, into: other.id, q: term.presence),
-                class: "merge-pick", data: { turbo_frame: "merge-body" },
-                aria: { current: ("true" if target && other.id == target.id) } do %>
-            <span class="merge-ring" aria-hidden="true"></span>
-            <span class="merge-who">
-              <b><%= subject_handles(other) %></b>
-              <span class="merge-id">#<%= other.id %></span>
-              <span class="merge-sub"><%= merge_candidate_line(other) %></span>
-            </span>
-            <%= case_status_chip(other) %>
+        <section class="merge-section">
+          <h3 class="merge-group"><%= label == Fd::Case::AROUND ? "Nearby cases" : label %></h3>
+          <%= tag.div class: "merge-list",
+                id: ("merge-around" if label == Fd::Case::AROUND) do %>
+            <% found.each do |other| %>
+              <%= render "fd/merges/candidate", other: other, violations: violations,
+                    priors_by_user: priors_by_user, reachable: reachable %>
+            <% end %>
           <% end %>
-        <% end %>
+        </section>
+      <% end %>
+
+      <% if more %>
+        <div class="pane-more" data-controller="more" data-more-into-value="merge-around"
+             data-more-root-value=".merge-results"
+             data-more-url-value="<%= fd_case_merge_path(kase, page: 2) %>">
+          <span class="sub2">Loading more cases</span>
+        </div>
       <% end %>
     </div>
-  </div>
 
-  <% if plan %>
-    <%= render "fd/merges/outcome", plan: plan,
-          keep_url: ->(one) {
-            fd_case_merge_path(kase, into: target.id, keep: one.id, q: term.presence)
-          } %>
-  <% else %>
     <div class="merge-act">
-      <label for="merge-case" class="btn btn-ghost">Cancel</label>
+      <span class="merge-selected" data-merge-picker-target="count">Select at least one case</span>
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+      <%= submit_tag "Merge cases", class: "btn btn-primary is-off", disabled: true,
+            data: { merge_picker_target: "submit" } %>
     </div>
   <% end %>
 <% end %>

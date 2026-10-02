@@ -4,174 +4,48 @@
 <% end %>
 
 <% content_for :head_actions do %>
-  <%= link_to "Open in Slack", slack_channel_url(@channel.channel_id), class: "btn",
-        target: "_blank", rel: "noopener" %>
+  <% if ChannelsController::RANGED_VIEWS.include?(@view) %>
+    <%= render "shared/range_button", id: "channel-range",
+          label: range_said(@range_preset, @start_date, @end_date) %>
+  <% end %>
+  <%= open_in_slack slack_channel_url(@channel.channel_id) %>
+  <%= render "backfill_button", channel: @channel, backfill: @backfill %>
 <% end %>
 
-<% stats = @range.stats %>
-<% posted = stats && stats["unique_posters"].to_i %>
-<% read = stats && stats["unique_viewers"].to_i %>
-<div class="kpis">
-  <div class="card">
-    <p class="kpi-label">Members</p>
-    <p class="kpi-val"><%= @member_count ? number_with_delimiter(@member_count) : "n/a" %></p>
-  </div>
-  <div class="card">
-    <p class="kpi-label">Member messages</p>
-    <p class="kpi-val"><%= stats ? number_with_delimiter(stats["messages_count"].to_i) : "n/a" %></p>
-  </div>
-  <div class="card">
-    <p class="kpi-label">Who spoke</p>
-    <p class="kpi-val"><%= channel_spoke_share(posted, @member_count) %></p>
-  </div>
-  <div class="card">
-    <p class="kpi-label">Who read</p>
-    <p class="kpi-val"><%= read ? number_with_delimiter(read) : "n/a" %></p>
-  </div>
-</div>
-
-<div class="card">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Activity over a range</h2>
-      <p class="card-sub">
-        <%= @start_date.strftime("%b %-d") %> to <%= @end_date.strftime("%b %-d, %Y") %>
-      </p>
-    </div>
-    <div class="card-tools">
-      <div class="segmented" role="group" aria-label="range length">
-        <% ChannelsController::RANGE_PRESETS.each do |days| %>
-          <%= link_to "#{days}d", channel_path(@channel, days: days),
-                aria: { current: ("true" if @range_preset == days) } %>
-        <% end %>
-        <%= link_to "custom", channel_path(@channel, start: @start_date, end: @end_date),
-              aria: { current: ("true" if @range_preset.nil?) } %>
-      </div>
-    </div>
-  </div>
-
-  <% if @range_preset.nil? %>
-    <%= form_with url: channel_path(@channel), method: :get, class: "qbar" do %>
-      <%= render "datepicker", caption: "from", name: :start, value: @start_date,
-            min: @range_min, max: @range_max %>
-      <%= render "datepicker", caption: "to", name: :end, value: @end_date,
-            min: @range_min, max: @range_max %>
-      <%= submit_tag "Apply", class: "btn btn-primary" %>
-    <% end %>
+<% content_for :page_tabs do %>
+  <% @views.each do |key, label| %>
+    <%= link_to label, channel_view_path(view: key), class: "view",
+          aria: { current: ("true" if @view == key) } %>
   <% end %>
+<% end %>
 
-  <% if @range.stats %>
-    <div class="stat-row">
-      <% [["unique posters", "unique_posters"], ["unique viewers", "unique_viewers"],
-          ["unique reactors", "unique_reactors"], ["messages", "messages_count"],
-          ["reactions", "reactions_count"], ["huddles", "huddles_count"]].each do |label, key| %>
-        <div>
-          <p class="kpi-label"><%= label %></p>
-          <p class="kpi-val"><%= number_with_delimiter(@range.stats[key] || 0) %></p>
-        </div>
-      <% end %>
-    </div>
-  <% else %>
-    <p class="card-note">
-      <% if @range.error == :not_configured %>
-        Analytics proxy is not configured on this deployment. Set INTERNAL_PROXY_URL and PROXY_TOKEN_WEB.
-      <% elsif @range.error == :reauth %>
-        Analytics service needs re-authentication, refresh the Slack session cookie.
-      <% elsif @range.error == :not_found %>
-        No analytics for this channel in the selected range.
-      <% elsif @range.error == :truncated %>
-        Too many channels share this name to find this one. Try a narrower range.
-      <% else %>
-        Couldn&rsquo;t load ranged analytics right now.
-      <% end %>
-    </p>
-  <% end %>
+<div class="stack">
+  <%= render "identity", channel: @channel, snapshot: @snapshot, standing: @standing,
+        crowd: @crowd, team_stats: @team_stats %>
 
-</div>
-
-<div class="card">
-  <div class="card-head">
-    <div>
-      <h2 class="card-title">Daily activity</h2>
-      <% if @activity_trend.any? %>
-        <p class="card-sub">
-          <%= @activity_trend.first.window_start.strftime("%b %-d, %Y") %> to
-          <%= @activity_trend.last.window_start.strftime("%b %-d, %Y") %>
-        </p>
-      <% end %>
-    </div>
-    <% if @activity_trend.any? %>
-      <% span_days = (@activity_trend.last.window_start - @activity_trend.first.window_start).to_i + 1 %>
-      <% if @activity_trend.size < span_days %>
-        <div class="card-tools">
-          <span class="chip chip-warn"><%= pluralize(span_days - @activity_trend.size, "day") %> never fetched</span>
-        </div>
-      <% end %>
-    <% end %>
-  </div>
-
-  <% if @activity_trend.any? %>
-    <div class="chart-short">
-      <div
-        data-controller="svg-chart"
-        data-svg-chart-kind-value="line"
-        data-svg-chart-switchable-value="true"
-        data-svg-chart-height-value="240"
-        data-svg-chart-data-value="<%= {
-          labels: @activity_trend.map { |a| a.window_start.strftime("%b %d") },
-          datasets: [{
-            label: "messages posted",
-            data: @activity_trend.map(&:messages_posted)
-          }]
-        }.to_json %>"
-      ></div>
-    </div>
-  <% else %>
-    <p class="card-note">no daily activity data yet</p>
+  <% case @view %>
+  <% when "overview" %>
+    <%= render "pulse", pulse: @pulse, crowd: @crowd, clock: @clock,
+          range: @range, start_date: @start_date, end_date: @end_date %>
+  <% when "activity" %>
+    <%= render "crowd", crowd: @crowd, snapshot: @snapshot, channel: @channel %>
+  <% when "newcomers" %>
+    <%= render "welcome", welcome: @welcome, scorecard_rows: @scorecard_rows %>
+  <% when "messages" %>
+    <%= render "talk", pulse: @pulse, start_date: @start_date, end_date: @end_date %>
+  <% when "posts" %>
+    <%= render "posts", posts: @posts, names: @names, rooms: @rooms, emoji: @emoji %>
+  <% when "neighbours" %>
+    <%= render "context", neighbours: @neighbours %>
   <% end %>
 </div>
 
-<% if @scorecard_rows.any? %>
-  <div class="card card-flush">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">Onboarding scorecard</h2>
-      </div>
-    </div>
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th class="col-date">month</th>
-            <th class="col-num">newcomers</th>
-            <th class="col-num">fast reply</th>
-            <th class="col-num">90-day retention</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @scorecard_rows.each do |row| %>
-            <tr>
-              <td class="col-date"><%= row.post_month.strftime("%b %Y") %></td>
-              <td class="col-num"><%= number_with_delimiter(row.newcomer_volume) %></td>
-              <td class="col-num"><%= row.fast_reply_share ? rate_chip((row.fast_reply_share.to_f * 100).round(1)) : "n/a" %></td>
-              <td class="col-num"><%= row.retained_90_share ? rate_chip((row.retained_90_share.to_f * 100).round(1)) : "n/a" %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-<% else %>
-  <div class="card">
-    <div class="card-head">
-      <div>
-        <h2 class="card-title">Onboarding scorecard</h2>
-        <p class="card-sub">no month qualifies for this channel</p>
-      </div>
-    </div>
-    <p class="delta-note">
-      A row needs newcomers whose first post here can be matched to a reply, and no month reaches the
-      <%= HomeHelper::MIN_SAMPLE %>-newcomer threshold yet. Empty by measurement, not by error.
-    </p>
-  </div>
+<% if ChannelsController::RANGED_VIEWS.include?(@view) %>
+  <%= render "shared/range_modal", id: "channel-range", title: "Range",
+        sub: window_note(@start_date, @end_date), url: channel_path(@channel),
+        start_on: @start_date, end_on: @end_date, min: @range_min, max: @range_max,
+        carry: { view: @view }.compact,
+        presets: ChannelsController::RANGE_PRESETS.map { |days| {
+          label: "Last #{days} days", current: @range_preset == days,
+          href: channel_view_path(days: days) } } %>
 <% end %>

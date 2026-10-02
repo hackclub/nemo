@@ -1,6 +1,6 @@
-<% said = { "ok" => "ran", "fail" => "failed here", "run" => "running now",
-            "skip" => "nothing to do", "wait" => "not started yet", "none" => "did not run" } %>
-<div class="grid-h">
+<% said = EngineHelper::CELL_SAID %>
+<div class="scroll matrix-scroll">
+<div class="nights-h">
   <div>Source</div>
   <div class="nights">
     <% nights.each_with_index do |on, i| %>
@@ -8,10 +8,25 @@
     <% end %>
   </div>
   <div class="r">Missed</div>
-  <div></div>
-  <div></div>
-  <div></div>
 </div>
+
+<% if defined?(nightly) && nightly.present? %>
+  <% missed = nightly.count { |cell| cell == "none" } %>
+  <div class="srow">
+    <div class="skey">
+      <i class="dot <%= nightly.last == "run" ? "run" : (nightly.last(2).include?("ok") ? "live" : "stale") %>"></i>
+      <b>the nightly</b>
+    </div>
+    <div class="cells" role="group" aria-label="the nightly, the last <%= nights.size %> nights">
+      <% nightly.each_with_index do |cell, i| %>
+        <i class="<%= cell %>" tabindex="0" role="img"
+           title="<%= nights[i].strftime("%-d %b") %> &middot; <%= said[cell] %>"
+           aria-label="<%= nights[i].strftime("%-d %b") %>, <%= said[cell] %>"></i>
+      <% end %>
+    </div>
+    <div class="snum <%= "warn" if missed.positive? %>"><%= missed.positive? ? missed : "n/a" %></div>
+  </div>
+<% end %>
 
 <% matrix.each do |source, cells| %>
   <% missed = cells.count { |cell| cell == "none" || cell == "fail" } %>
@@ -21,23 +36,27 @@
       <i class="dot <%= state %>"></i>
       <b><%= source.key %></b>
     </div>
-    <div class="cells">
+    <div class="cells" role="group" aria-label="<%= source.key %>, the last <%= nights.size %> nights">
       <% cells.each_with_index do |cell, i| %>
-        <i class="<%= cell %>" title="<%= nights[i].strftime("%-d %b") %> &middot; <%= said[cell] %>"></i>
+        <i class="<%= cell %>" tabindex="0" role="img"
+           title="<%= nights[i].strftime("%-d %b") %> &middot; <%= said[cell] %>"
+           aria-label="<%= nights[i].strftime("%-d %b") %>, <%= said[cell] %>"></i>
       <% end %>
     </div>
     <div class="snum <%= "warn" if missed.positive? %>"><%= missed.positive? ? missed : "n/a" %></div>
-    <div></div>
-    <div></div>
-    <div></div>
   <% end %>
 <% end %>
 
+</div>
+
 <div class="key">
-  <span><i style="background-color: var(--series-2); opacity: .82"></i>ran</span>
-  <span><i style="background-color: var(--series-0); opacity: .5"></i>guard skipped it, nothing to do</span>
-  <span><i style="background-color: var(--down)"></i>failed</span>
-  <span><i style="background-color: var(--line-soft); border: 1px dashed var(--line)"></i>the job did not run</span>
-  <span><i style="background-color: var(--card-2); border: 1px solid var(--line-soft)"></i>not started yet</span>
-  <span><i style="background-color: var(--accent)"></i>running</span>
+  <span><i class="lg-ran"></i>ran</span>
+  <span><i class="lg-part"></i>ran, some of it failed</span>
+  <span><i class="lg-skip"></i>guard skipped it, nothing to do</span>
+  <span><i class="lg-stop"></i>cancelled</span>
+  <span><i class="lg-gone"></i>abandoned</span>
+  <span><i class="lg-fail"></i>failed</span>
+  <span><i class="lg-none"></i>the job did not run</span>
+  <span><i class="lg-wait"></i>not started yet</span>
+  <span><i class="lg-run"></i>running</span>
 </div>
