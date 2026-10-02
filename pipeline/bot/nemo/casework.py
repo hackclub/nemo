@@ -58,7 +58,7 @@ INSERT INTO fd.notes (subject_user_id, body, author) VALUES (%s, %s, %s) RETURNI
 
 
 PARTICIPANTS = """
-SELECT user_id, role, detail FROM fd.case_participants
+SELECT user_id, role FROM fd.case_participants
 WHERE case_id = %s ORDER BY noted_at
 """
 
@@ -73,7 +73,7 @@ RETURNING user_id
 
 REMOVE_PARTICIPANT = """
 DELETE FROM fd.case_participants WHERE case_id = %s AND user_id = %s AND role = %s
-RETURNING detail
+RETURNING user_id
 """
 
 
@@ -160,7 +160,7 @@ RETURNING id, performed_at, category_key
 
 def participants(conn, case_id):
     return [
-        {"user_id": row[0], "role": row[1], "detail": row[2]}
+        {"user_id": row[0], "role": row[1]}
         for row in conn.execute(PARTICIPANTS, (case_id,)).fetchall()
     ]
 
@@ -186,7 +186,7 @@ def remove_participant(conn, case_id, user_id, role, by):
 
     audit.record(
         conn, "participant", case_id, "detached", by,
-        before={"user_id": user_id, "role": role, "detail": row[0]},
+        before={"user_id": user_id, "role": role},
         after=None,
     )
     return True

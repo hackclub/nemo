@@ -165,7 +165,12 @@ module ApplicationHelper
     "admin" => ["M4 7h9", "M17 7h3", "M4 12h3", "M11 12h9", "M4 17h12", "M20 17h0",
                 "M15 7a2 2 0 1 0 0-.01", "M9 12a2 2 0 1 0 0-.01", "M18 17a2 2 0 1 0 0-.01"],
     "news" => ["M4 5h11a1 1 0 0 1 1 1v12a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2z",
-               "M16 8h3a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2", "M7 9h5", "M7 13h5", "M7 17h3"]
+               "M16 8h3a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2", "M7 9h5", "M7 13h5", "M7 17h3"],
+    "gear" => ["M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6", "M12 2v2.5", "M12 19.5V22", "M2 12h2.5",
+               "M19.5 12H22", "M4.9 4.9l1.8 1.8", "M17.3 17.3l1.8 1.8", "M19.1 4.9l-1.8 1.8",
+               "M6.7 17.3l-1.8 1.8"],
+    "book" => ["M4 5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v15a2 2 0 0 0-2-1.6H6A2 2 0 0 1 4 16.8z",
+               "M20 5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v15a2 2 0 0 1 2-1.6h4a2 2 0 0 0 2-1.6z"]
   }.freeze
 
   def rail_icon(key)
@@ -209,12 +214,22 @@ module ApplicationHelper
   end
 
   def section_pane
+    return "layouts/docs_pane" if page_section == "docs"
+    return "layouts/settings_pane" if page_section == "settings"
     return "layouts/admin_pane" if page_section == "admin"
     return nil unless on?(:analytics)
     return "layouts/engine_pane" if controller_name == "engine"
     return "layouts/community_pane" if
-      %w[home journey channels you accounts].include?(controller_name)
+      %w[home journey channels you].include?(controller_name)
 
     nil
+  end
+
+  def may_review_api?
+    Authz.holds?(current_account, "api.review")
+  end
+
+  def api_queue_waiting
+    @api_queue_waiting ||= Api::AccessRequest.pending.count
   end
 end

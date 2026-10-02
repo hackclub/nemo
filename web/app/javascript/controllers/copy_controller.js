@@ -2,12 +2,17 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static values = { id: String }
+  static targets = ["source"]
 
   write(event) {
     event.preventDefault()
     if (!navigator.clipboard) return
 
-    navigator.clipboard.writeText(this.idValue).then(() => this.flash())
+    navigator.clipboard.writeText(this.said()).then(() => this.flash())
+  }
+
+  said() {
+    return this.hasSourceTarget ? this.sourceTarget.innerText : this.idValue
   }
 
   flash() {

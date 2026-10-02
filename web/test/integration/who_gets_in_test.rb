@@ -8,6 +8,15 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
   INSIDE = %i[root_path fd_root_path fd_members_path admin_people_path].freeze
 
+  MEMBER = %w[settings/keys settings/tokens settings/apps settings/consents
+              settings/permissions settings/appearances docs accounts workspace_logo
+              channels home fd/slack_accounts].freeze
+
+  ROLE_GATES = %i[require_fd require_admin require_operating require_reading
+                  require_reviewer].freeze
+
+  BEARER = %w[api/v1/tokens api/v1/channel_managers].freeze
+
   setup do
     Rails.application.eager_load!
     @me = Account.create!(user_id: "UNOROLE")
@@ -17,13 +26,26 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     Rails.application.routes.routes.filter_map { |route| route.defaults[:controller] }.uniq
   end
 
+  def filters_of(name)
+    "#{name}_controller".camelize.constantize._process_action_callbacks.map(&:filter)
+  end
+
   def guarded?(name)
-    "#{name}_controller".camelize.constantize._process_action_callbacks
-      .any? { |callback| callback.filter == :require_account }
+    filters_of(name).include?(:require_account)
+  end
+
+  def role_guarded?(name)
+    filters_of(name).intersect?(ROLE_GATES)
+  end
+
+  def token_guarded?(name)
+    filters_of(name).include?(:require_a_token)
   end
 
   def guarded_controllers
-    (self.class.controllers - OPEN).select { |name| guarded?(name) }
+    (self.class.controllers - OPEN).select do |name|
+      guarded?(name) || token_guarded?(name)
+    end
   end
 
   test "the only routes open to the world are signing in and the health check" do
@@ -31,10 +53,39 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
       "a route opened up or closed, so this test needs updating"
   end
 
-  test "every controller behind the login demands a role, not merely a session" do
-    (self.class.controllers - OPEN).each do |name|
+  test "every controller behind the login demands a role, bar the member area and the api" do
+    (self.class.controllers - OPEN - MEMBER - BEARER).each do |name|
       assert guarded?(name), "#{name} lets anybody through"
+      assert role_guarded?(name), "#{name} settles for a session where a role is needed"
     end
+  end
+
+  test "the member area demands a session and never a role, and is only what is listed" do
+    MEMBER.each do |name|
+      assert guarded?(name), "#{name} lets anybody through"
+      assert_not role_guarded?(name), "#{name} still demands a role, so it is not a member page"
+    end
+
+    assert_equal MEMBER.sort,
+      (self.class.controllers - OPEN - BEARER).reject { |name| role_guarded?(name) }.sort,
+      "a controller dropped its role check, so this test needs updating"
+  end
+
+  test "the api demands a token, never a session or a role, and is only what is listed" do
+    BEARER.each do |name|
+      assert token_guarded?(name), "#{name} lets anybody through"
+      assert_not guarded?(name), "#{name} demands a session, which an api caller has not got"
+    end
+
+    assert_equal BEARER.sort,
+      (self.class.controllers - OPEN).select { |name| token_guarded?(name) }.sort,
+      "a controller started taking bearer tokens, so this test needs updating"
+  end
+
+  test "the api carries no session at all, so a browser cannot ride in on cookies" do
+    assert_not Api::V1::BaseController.ancestors.include?(ActionController::Cookies),
+      "an api controller that reads cookies can be driven by a logged in browser"
+    assert_not Api::V1::BaseController.ancestors.include?(ApplicationController)
   end
 
   test "the turbo routes are open because they carry nothing but a go back" do

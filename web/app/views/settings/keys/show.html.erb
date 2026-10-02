@@ -1,0 +1,99 @@
+<% content_for :page_title, "API keys" %>
+<% api_off = Fd::Flag.off?(:public_api) %>
+<% content_for :head_actions do %>
+  <% unless api_off %>
+    <button type="button" class="btn btn-primary" data-modal-open="new-app"
+            aria-haspopup="dialog">Register an app</button>
+  <% end %>
+<% end %>
+
+<% if @apps.any? %>
+  <div class="stack">
+    <% @apps.each do |app| %>
+      <% live_app = approved?(app) %>
+      <% asked = waiting_for(app) %>
+      <% tokens = tokens_for(app) %>
+      <% live = tokens.reject(&:spent?) %>
+      <div class="card card-flush">
+        <div class="card-head">
+          <div class="two-line appline">
+            <h2 class="card-title"><%= app.name %></h2>
+            <span class="sub2"><%= app.blurb %></span>
+          </div>
+
+          <div class="card-tools">
+            <% if asked %>
+              <span class="chip chip-warn">Pending</span>
+            <% elsif !live_app && !api_off %>
+              <button type="button" class="btn btn-sm" data-modal-open="ask-<%= app.id %>"
+                      aria-haspopup="dialog">Ask for access</button>
+            <% end %>
+
+            <%= render layout: "shared/dropdown",
+                  locals: { label: "More for #{app.name}", trigger: "\u2026",
+                            trigger_css: "iconbtn" } do %>
+              <% if asked %>
+                <%= button_to "Withdraw the request", withdraw_settings_request_path(asked),
+                      method: :delete, class: "btn", form: { class: "contents" } %>
+                <div class="menu-sep"></div>
+              <% end %>
+              <button type="button" class="btn" data-modal-open="retire-<%= app.id %>"
+                      aria-haspopup="dialog">Delete the app</button>
+            <% end %>
+          </div>
+        </div>
+
+        <% live.each do |token| %>
+          <div class="rowbar keyline">
+            <span class="two-line">
+              <b><%= token.name %></b>
+              <span>
+                <code class="mono"><%= token.shown %></code> &middot;
+                <%= token.rate %>/min &middot; <%= token.dies_in %> &middot;
+                <%= token.last_used_at ? "used #{time_ago_in_words(token.last_used_at)} ago" : "never used" %>
+              </span>
+            </span>
+            <span class="grow"></span>
+            <% unless api_off %>
+              <%= button_to "Rotate", rotate_settings_token_path(token), method: :post,
+                    class: "text-btn rowact",
+                    form: { class: "contents", data: { turbo: false } } %>
+              <button type="button" class="text-btn rowact rowact-crit"
+                      data-modal-open="kill-<%= token.id %>"
+                      aria-haspopup="dialog">Revoke</button>
+            <% end %>
+          </div>
+        <% end %>
+
+        <% if live_app && live.empty? %>
+          <div class="rowbar keyline">
+            <span class="sub2">No key yet</span>
+            <span class="grow"></span>
+            <% unless api_off %>
+              <button type="button" class="btn btn-sm" data-modal-open="mint-<%= app.id %>"
+                      aria-haspopup="dialog">Generate a key</button>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% else %>
+  <div class="empty">
+    <p class="empty-title">No apps</p>
+  </div>
+<% end %>
+
+<% unless api_off %>
+  <%= render "settings/keys/register" %>
+  <% @apps.each do |app| %>
+    <%= render "settings/keys/mint", app: app %>
+    <%= render "settings/keys/retire", app: app %>
+    <% if !approved?(app) && waiting_for(app).nil? %>
+      <%= render "settings/keys/ask", app: app %>
+    <% end %>
+    <% tokens_for(app).reject(&:spent?).each do |token| %>
+      <%= render "settings/keys/kill", token: token %>
+    <% end %>
+  <% end %>
+<% end %>

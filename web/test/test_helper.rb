@@ -125,6 +125,20 @@ module ActiveSupport
       kase
     end
 
+    def make_app!(owner, name: "Toolbox", approved: true, by: "UBOSS")
+      app = Api::App.register!(owner, name: name, blurb: "answers a question for the team")
+      Api::Approval.grant!(app.id, by: by) if approved
+      app
+    end
+
+    def with_a_real_cache
+      was = Rails.cache
+      Rails.cache = ActiveSupport::Cache::MemoryStore.new
+      yield
+    ensure
+      Rails.cache = was
+    end
+
     def sign_in_as(staff)
       OmniAuth.config.test_mode = true
       OmniAuth.config.mock_auth[:hackclub] = OmniAuth::AuthHash.new(

@@ -59,6 +59,8 @@
     white-space: nowrap;
   }
   .card-head > .two-line { gap: 0; }
+  .card-head > .two-line.appline { gap: 3px; }
+  .card-head:has(> .appline) { min-height: 58px; padding-block: 14px; }
   .card-tools {
     margin-left: auto;
     display: flex;
@@ -434,6 +436,10 @@
   .row-v { font-weight: 500; color: var(--ink); }
   .row-note { font-size: var(--t-fine); color: var(--ink-4); }
   .rowbar { display: flex; align-items: center; gap: var(--s-2xs); padding: 8px var(--s-xs); border-bottom: 1px solid var(--line-soft); }
+  .keyline { gap: var(--s-xs); padding: 11px var(--s-xs); }
+  .keyline > .two-line > span { font-variant-numeric: tabular-nums; }
+  .keyline code { font-size: var(--t-small); color: var(--ink-3); }
+  .card > .keyline:last-child { border-bottom: 0; }
 
   .sep, .menu-sep { height: 1px; background: var(--line-soft); margin: 4px 0; border: 0; }
   .strip-div { width: 1px; height: 26px; background: var(--line-soft); flex: none; border: 0; }

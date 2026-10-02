@@ -1,0 +1,61 @@
+<% @dials.each do |key, value| %>
+  <%= render layout: "fd/modal", locals: { id: "dial-#{key}", title: dial_label(key),
+        sub: "in force now: #{value}" } do %>
+    <%= form_with url: admin_api_setting_path, method: :patch, html: { autocomplete: "off" } do %>
+      <%= hidden_field_tag :key, key, id: nil %>
+      <div class="modal-body">
+        <label class="field-label">
+          New number
+          <%= number_field_tag :value, value, id: nil, min: 1, class: "num-in num-in input" %>
+        </label>
+        <div class="facts-grid">
+          <div class="cell">
+            <span class="fg-k">in force now</span>
+            <span class="fg-v"><%= value %></span>
+          </div>
+          <div class="cell">
+            <span class="fg-k">tokens it covers</span>
+            <span class="fg-v"><%= dial_reach(key, @tokens) %></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <span class="modal-note">Takes hold on the next call, and is written to the audit log.</span>
+        <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+        <%= submit_tag "Set it", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
+
+<% @tokens.reject(&:spent?).each do |token| %>
+  <%= render layout: "fd/modal", locals: { id: "rate-#{token.id}",
+        title: "Rate for #{token.name}", sub: "owned by #{names[token.owner_user_id]}" } do %>
+    <%= form_with url: admin_api_token_rate_path(token), method: :patch,
+          html: { autocomplete: "off" } do %>
+      <div class="modal-body">
+        <label class="field-label">
+          Its own limit
+          <%= number_field_tag :value, token.rate_limit, id: nil, min: 1, class: "num-in num-in input",
+                placeholder: "leave empty to follow the shared #{@dials['rate_per_minute']}" %>
+        </label>
+        <div class="facts-grid">
+          <div class="cell">
+            <span class="fg-k">asks, 30 days</span>
+            <span class="fg-v"><%= number_with_delimiter(@asks[token.id].to_i) %></span>
+          </div>
+          <div class="cell">
+            <span class="fg-k">in force now</span>
+            <span class="fg-v"><%= token.rate %> a minute</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <%= button_to "Revoke it", admin_api_token_path(token), method: :delete,
+              class: "btn btn-undo", form: { class: "contents" } %>
+        <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+        <%= submit_tag "Set it", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

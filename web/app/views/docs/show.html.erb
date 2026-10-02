@@ -1,0 +1,8 @@
+<% content_for :page_title, @topic.title %>
+<% content_for :head_actions do %>
+  <%= link_to "API keys", settings_keys_path, class: "btn" %>
+<% end %>
+
+<article class="doc" data-controller="docs-nav" data-action="click->docs-nav#go">
+  <%= render "docs/#{@topic.slug.tr('-', '_')}", topic: @topic %>
+</article>

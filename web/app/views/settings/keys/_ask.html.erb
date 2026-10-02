@@ -1,0 +1,18 @@
+<%= render layout: "fd/modal", locals: { id: "ask-#{app.id}",
+      title: "Ask for access", sub: app.name } do %>
+  <%= form_with url: settings_requests_path, method: :post, html: { autocomplete: "off" } do %>
+    <%= hidden_field_tag :app_id, app.id, id: nil %>
+    <div class="modal-body form-body">
+      <label class="field-label">
+        What for
+        <%= text_area_tag :reason, nil, id: nil, class: "textarea", rows: 3,
+              maxlength: Api::AccessRequest::MAX_REASON,
+              placeholder: "a reviewer reads this" %>
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+      <%= submit_tag "Send", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>

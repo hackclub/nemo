@@ -15,7 +15,13 @@ module Fd
 
     def self.covers(key) = fetch(key).fetch("covers")
 
+    def self.audience(key) = fetch(key)["audience"]
+
     def self.default?(key) = fetch(key).fetch("default") == true
+
+    def self.listed?(key) = fetch(key)["listed"] != false
+
+    LISTED = KEYS.select { |key| listed?(key) }.freeze
 
     def self.flipped
       pluck(:key, :is_on).to_h

@@ -7,3 +7,9 @@ flags:
     label: Fire Engine
     covers: Cases, Members and the search palette
     default: true
+  public_api:
+    label: Public API
+    covers: Channel manager lookups, tokens and opt-in
+    audience: Everyone in Slack
+    default: false
+    listed: false

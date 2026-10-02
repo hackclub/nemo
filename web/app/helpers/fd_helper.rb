@@ -147,7 +147,7 @@ module FdHelper
   end
 
   AUDIT_SOURCE = { "fire_engine" => "Fire Engine", "slack" => "Slack",
-                   "read" => "Fire Engine" }.freeze
+                   "read" => "Fire Engine", "api" => "Public API" }.freeze
 
   def audit_raw(row)
     JSON.pretty_generate(row.raw || row.detail || {})
@@ -1380,6 +1380,13 @@ module FdHelper
     "member/looked_up" => "Looked up",
     "report/received" => "Took a report on",
     "report/closed" => "Told the reporter on",
+    "consent/granted" => "Opted in to",
+    "consent/withheld" => "Opted out of",
+    "api/checked" => "Checked",
+    "api/setting_changed" => "Changed the",
+    "api/token_minted" => "Generated a token,",
+    "api/token_rate_set" => "Set the rate on",
+    "api/token_revoked" => "Revoked a token,",
     "grant/granted" => "Gave access to",
     "grant/revoked" => "Took access from",
     "permission/granted" => "Gave a role",
@@ -1444,12 +1451,69 @@ module FdHelper
   def deed_link(deed)
     case deed.kind
     when "case" then link_to deed.about, fd_case_path(deed.id), class: "lnk"
+    when "capability" then deed.about
     else member_link(deed.id)
     end
   end
 
   def deed_said(deed)
     [deed.said, ("on #{names[deed.who]}" if deed.who.present?)].compact.join(" ")
+  end
+
+  DIAL_LABELS = {
+    "rate_per_minute" => "Requests a minute, per key",
+    "batch_max" => "People per batch call",
+    "tokens_per_owner" => "Live keys per app"
+  }.freeze
+
+  def token_life_line(token)
+    return "never expires" if token.expires_at.nil?
+
+    "expires #{token.expires_at.strftime('%-d %b %Y')}"
+  end
+
+  def dial_label(key)
+    DIAL_LABELS.fetch(key, key.tr("_", " "))
+  end
+
+  ACCESS_CHIPS = { "approved" => "chip-good", "declined" => "chip-crit",
+                   "withdrawn" => "chip-off", "pending" => "chip-warn" }.freeze
+
+  def access_state_chip(state)
+    tag.span(state, class: "chip #{ACCESS_CHIPS.fetch(state, 'chip-off')}")
+  end
+
+  def api_state_chip
+    on = Fd::Flag.on?(:public_api)
+    tag.span(class: "chip #{on ? 'chip-good' : 'chip-off'}") do
+      tag.span(class: "chip-dot", aria: { hidden: true }) + (on ? "On" : "Off")
+    end
+  end
+
+  def withheld_share(withheld, checks)
+    return "none yet" if checks.zero?
+
+    "#{(withheld * 100.0 / checks).round(1)}% of checks"
+  end
+
+  def synced_line(at)
+    return "never" if at.nil?
+
+    swept = Api::ChannelSweep.count
+    "#{at.strftime('%-d %b %H:%M')}, #{swept} #{'channel'.pluralize(swept)}"
+  end
+
+  def dial_reach(key, tokens)
+    live = tokens.reject(&:revoked?)
+    return "#{live.count { |one| one.rate_limit.nil? }} of #{live.size}" if key == "rate_per_minute"
+
+    "every caller"
+  end
+
+  def dial_change(setting)
+    return "never" if setting.nil? || setting.changed_by.blank?
+
+    "#{names[setting.changed_by]}, #{setting.changed_at.strftime('%-d %b')}"
   end
 
   def acted_line(at)

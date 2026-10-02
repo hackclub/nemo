@@ -11,6 +11,36 @@ Rails.application.routes.draw do
     get "dev/be/:user_id", to: "dev_sessions#create", as: :dev_be
   end
 
+  namespace :api do
+    namespace :v1 do
+      resource :token, only: [:show], controller: "tokens"
+      get "channels/:channel_id/managers/:user_id", to: "channel_managers#show",
+        as: :channel_manager
+    end
+  end
+
+  get "docs", to: "docs#index", as: :docs
+  get "docs/:slug", to: "docs#show", as: :doc
+
+  namespace :settings do
+    resource :appearance, only: [:show], controller: "appearances"
+    resource :keys, only: [:show], controller: "keys"
+    resource :permissions, only: [:show], controller: "permissions"
+    resource :consent, only: [:update], controller: "consents"
+    resources :apps, only: [:create, :destroy]
+    resources :tokens, only: [:create, :destroy] do
+      member { post :rotate }
+    end
+    resources :requests, only: [:index, :create] do
+      member do
+        post :settle
+        delete :withdraw
+      end
+    end
+  end
+
+  get "you/api", to: redirect("/settings/keys")
+
   get "cdn/destroy/:key", to: "fd/transcripts#show", as: :destroy_transcript,
       constraints: { key: %r{[^/]+} }, format: false
 
@@ -108,6 +138,10 @@ Rails.application.routes.draw do
     resource :roles, only: [:show], controller: "roles"
     resource :flags, only: [:show], controller: "flags"
     resource :settings, only: [:show], controller: "settings"
+    resource :api, only: [:show], controller: "api_settings"
+    patch "api/setting", to: "api_settings#update", as: :api_setting
+    patch "api/tokens/:id/rate", to: "api_settings#rate", as: :api_token_rate
+    delete "api/tokens/:id", to: "api_settings#destroy", as: :api_token
     post "settings/firehouse", to: "settings#firehouse", as: :settings_firehouse
     post "settings/join_mode", to: "settings#join_mode", as: :settings_join_mode
     post "settings/sweep", to: "settings#sweep", as: :settings_sweep

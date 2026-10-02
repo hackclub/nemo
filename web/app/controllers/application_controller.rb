@@ -12,8 +12,13 @@ class ApplicationController < ActionController::Base
     @viewer_zone ||= Community::Clock.known_zone(cookies[:mn_tz])
   end
 
+  SETTINGS_PAGES = %w[accounts].freeze
+
   def page_section
     return "admin" if controller_path.start_with?("admin/")
+    return "docs" if controller_path == "docs"
+    return "settings" if controller_path.start_with?("settings/") ||
+      SETTINGS_PAGES.include?(controller_path)
 
     controller_path.start_with?("fd/") ? "fd" : "mn"
   end

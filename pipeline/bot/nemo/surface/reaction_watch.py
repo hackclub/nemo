@@ -1,7 +1,7 @@
 import logging
 
 from bot.core import access, session, whoami
-from bot.nemo import casework, channels, queued
+from bot.nemo import casework, channels, chat, queued
 from bot.nemo.surface import on_event
 
 log = logging.getLogger("bot.nemo")
@@ -54,12 +54,26 @@ def wanted(ctx, marks, needs):
     return channel_id, thread_ts, said, who
 
 
+def worth_keeping(said):
+    return bool(
+        said.get("ts") and said.get("user") and (said.get("text") or said.get("blocks"))
+    )
+
+
+def keep_the_root(conn, case_id, channel_id, said):
+    if not worth_keeping(said):
+        return None
+
+    chat_id, _ = chat.keep(conn, case_id, dict(said, channel=channel_id))
+    return chat_id
+
+
 @on_event("reaction_added", open_to_all=True)
 def opened(ctx):
     asked = wanted(ctx, OPENS, "case.open")
     if asked is None:
         return None
-    channel_id, thread_ts, _, who = asked
+    channel_id, thread_ts, said, who = asked
 
     with session() as conn:
         standing = queued.case_on(conn, channel_id, thread_ts)
@@ -68,6 +82,7 @@ def opened(ctx):
             return standing
 
         case_id = casework.open_case(conn, None, None, who)
+        keep_the_root(conn, case_id, channel_id, said)
         queued.post(ctx.client, conn, case_id, channel_id, thread_ts)
 
     log.info("nemo: case %s opened on %s in %s by %s", case_id, thread_ts, channel_id, who)

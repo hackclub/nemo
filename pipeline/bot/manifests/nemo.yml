@@ -33,6 +33,7 @@ oauth_config:
     user:
       - admin
       - admin.analytics:read
+      - admin.roles:read
       - admin.conversations:read
       - admin.teams:read
       - admin.users:read

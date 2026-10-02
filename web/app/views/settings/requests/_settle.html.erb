@@ -1,0 +1,23 @@
+<%= render layout: "fd/modal", locals: { id: "settle-#{asked.id}",
+      title: asked.app.name, sub: asked.app.slug } do %>
+  <%= form_with url: settle_settings_request_path(asked), method: :post,
+        html: { autocomplete: "off" } do %>
+    <div class="modal-body form-body">
+      <p class="sub2"><%= asked.app.blurb %></p>
+      <p class="rail-line"><%= asked.reason %></p>
+      <p class="sub2">
+        <%= names[asked.app.owner_user_id] %> &middot;
+        requested <%= time_ago_in_words(asked.created_at) %> ago
+      </p>
+      <label class="field-label">
+        Note
+        <%= text_field_tag :note, nil, id: nil, class: "input", maxlength: 200 %>
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+      <%= submit_tag "Decline", name: "verdict", class: "btn btn-crit" %>
+      <%= submit_tag "Approve", name: "verdict", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>

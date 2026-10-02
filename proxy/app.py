@@ -46,6 +46,7 @@ ALLOWED_METHODS = {
     "admin": frozenset(
         {
             "admin.users.list",
+            "admin.roles.listAssignments",
             "search.messages",
             "conversations.history",
             "conversations.replies",
@@ -63,6 +64,11 @@ WEB_METHODS = {
         {
             "admin.analytics.getChannelAnalytics",
             "admin.analytics.getAvailableDateRange",
+        }
+    ),
+    "admin": frozenset(
+        {
+            "admin.roles.listAssignments",
         }
     ),
 }
@@ -86,7 +92,7 @@ WEB_FILE_METHODS = FILE_READ_METHODS
 
 NEMO_METHODS = {**WRITE_METHODS, **ACTIVITY_METHODS}
 WEB_METHODS["internal"] = WEB_METHODS["internal"] | ACTIVITY_METHODS["internal"]
-WEB_METHODS["admin"] = HISTORY_METHODS["admin"]
+WEB_METHODS["admin"] = WEB_METHODS["admin"] | HISTORY_METHODS["admin"]
 
 CREDENTIALS = ("internal", "admin")
 

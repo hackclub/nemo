@@ -1,0 +1,105 @@
+<% content_for :page_title, "Permissions" %>
+<% api_off = Fd::Flag.off?(:public_api) %>
+
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">All apps</h2>
+  </div>
+
+  <div class="card card-flush">
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="said-cell">permission</th>
+            <th class="col-btn"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% Api::Scope::KEYS.each do |key| %>
+            <% on = everywhere?(key) %>
+            <tr>
+              <td class="said-cell">
+                <span class="two-line">
+                  <b><%= Api::Scope.label(key) %></b>
+                  <span><%= Api::Scope.covers(key) %></span>
+                </span>
+              </td>
+              <td class="col-btn">
+                <span class="cap-do">
+                  <%= button_to on ? "Opt out" : "Opt in",
+                        settings_consent_path(scope: key, on: on ? "0" : "1"),
+                        method: :patch, disabled: api_off,
+                        class: "btn btn-sm #{'btn-primary' unless on}",
+                        form: { class: "contents" } %>
+                </span>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<% if @apps.any? %>
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title">Per-app</h2>
+    </div>
+
+    <div class="stack">
+      <% @apps.each do |app| %>
+        <% on = Api::Scope::KEYS.count { |key| covered?(app, key) } %>
+        <details class="foldcard" data-controller="remember"
+                 data-remember-key-value="settings-consent-<%= app.id %>"
+                 data-action="toggle->remember#keep">
+          <summary>
+            <span class="fold-title"><%= app.name %></span>
+            <span class="fold-sub">by <%= @names[app.owner_user_id] %></span>
+            <span class="grow"></span>
+            <% if on.positive? %>
+              <span class="chip chip-good"><%= on %> of <%= Api::Scope::KEYS.size %></span>
+            <% end %>
+          </summary>
+
+          <div class="scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="said-cell">permission</th>
+                  <th class="col-btn"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% Api::Scope::KEYS.each do |key| %>
+                  <% all = everywhere?(key) %>
+                  <% mine = granted?(app, key) %>
+                  <tr>
+                    <td class="said-cell">
+                      <b><%= Api::Scope.label(key) %></b>
+                    </td>
+                    <td class="col-btn">
+                      <span class="cap-do">
+                        <% if all %>
+                          <span class="chip chip-good">All apps</span>
+                        <% else %>
+                          <%= button_to mine ? "Opt out" : "Opt in",
+                                settings_consent_path(app_id: app.id, scope: key,
+                                  on: mine ? "0" : "1"),
+                                method: :patch, disabled: api_off,
+                                class: "btn btn-sm #{'btn-primary' unless mine}",
+                                form: { class: "contents" } %>
+                        <% end %>
+                      </span>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      <% end %>
+    </div>
+  </section>
+<% end %>

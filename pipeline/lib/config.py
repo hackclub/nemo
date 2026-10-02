@@ -56,6 +56,7 @@ ROLES = {
             "INTERNAL_PROXY_URL",
             "PROMETHEUS_BASE_URL",
             "SLACKSCAN_URL",
+            "SLACK_CHANNEL_MANAGER_ROLE_ID",
             "PROXY_TOKEN_WEB",
             "PROXY_ALLOW_PLAINTEXT",
             "RAILS_MAX_THREADS",

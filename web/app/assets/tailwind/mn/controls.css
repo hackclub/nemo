@@ -16,6 +16,7 @@
     letter-spacing: -0.008em;
     white-space: nowrap;
     text-decoration: none;
+    cursor: pointer;
     --ring: var(--line);
     --lift: 0 1px 1px var(--cast);
     box-shadow: 0 0 0 1px var(--ring), var(--lift);
@@ -150,6 +151,7 @@
   .iconbtn {
     display: inline-grid;
     place-items: center;
+    cursor: pointer;
     width: var(--ctl-h);
     height: var(--ctl-h);
     flex: none;
@@ -165,6 +167,7 @@
     border: 0;
     background: none;
     padding: 0;
+    cursor: pointer;
     color: var(--link);
     font-size: inherit;
     font-weight: 500;
@@ -195,6 +198,10 @@
 
   .btn-undo { color: var(--crit); }
   .btn-undo:hover { background: var(--crit-soft); color: var(--crit-deep); }
+
+  .rowact { color: var(--ink-3); font-weight: 500; }
+  .rowact:hover { color: var(--link); }
+  .rowact-crit:hover { color: var(--crit); }
 
   .kbd {
     display: inline-flex;
@@ -883,4 +890,130 @@
   }
   .findbar:hover { border-color: var(--ink-4); color: var(--ink-2); }
   .findbar-text { flex: 1 1 auto; text-align: left; }
+
+  .cap-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .cap-row:last-child {
+    border-bottom: 0;
+  }
+
+  .cap-two {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .cap-two b {
+    font-size: var(--t-body);
+    font-weight: 600;
+  }
+
+  .cap-two span {
+    font-size: var(--t-small);
+    color: var(--ink-3);
+  }
+
+  .cap-do {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2xs);
+    flex: none;
+  }
+
+  .btn-crit {
+    background-color: var(--sev-crit);
+    border-color: var(--sev-crit);
+    color: var(--accent-on);
+  }
+
+  .btn-crit:hover {
+    background-color: var(--crit-deep);
+    border-color: var(--crit-deep);
+    color: var(--accent-on);
+  }
+
+  .drop {
+    position: relative;
+    display: grid;
+  }
+
+  .drop::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: 12px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-inline-end: 2px solid var(--ink-3);
+    border-block-end: 2px solid var(--ink-3);
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+  }
+
+  .drop-in {
+    appearance: none;
+    width: 100%;
+    font-family: inherit;
+    font-size: var(--t-body);
+    line-height: 1.25;
+    color: var(--ink);
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    padding: 9px 32px 9px var(--s-xs);
+    cursor: pointer;
+    transition: border-color var(--dur) var(--ease-out);
+  }
+
+  .drop-in:hover {
+    border-color: var(--ink-3);
+  }
+
+  .drop-in:focus-visible {
+    outline: none;
+    border-color: var(--focus);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  .drop:has(.drop-in:hover)::after {
+    border-color: var(--ink);
+  }
+
+  .form-body {
+    gap: var(--s-md);
+  }
+
+  .form-body .field-label {
+    gap: 6px;
+  }
+
+  .verb {
+    font-family: var(--font-code);
+    font-size: var(--t-micro);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 3px 6px;
+    border-radius: 4px;
+    background-color: var(--accent-soft);
+    color: var(--accent);
+    flex: none;
+  }
+
+  .num-in {
+    font-family: var(--font-code);
+    font-variant-numeric: tabular-nums;
+    max-width: 8rem;
+  }
+
+  .rate-own {
+    color: var(--accent);
+    font-weight: 600;
+  }
 }
