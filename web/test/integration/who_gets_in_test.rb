@@ -8,7 +8,10 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
   INSIDE = %i[root_path fd_root_path fd_members_path admin_people_path].freeze
 
-  MEMBER = %w[you/api you/consents you/tokens docs].freeze
+  MEMBER = %w[you/api you/consents you/tokens docs accounts workspace_logo
+              channels home].freeze
+
+  ROLE_GATES = %i[require_fd require_admin require_operating require_reading].freeze
 
   BEARER = %w[api/v1/tokens api/v1/channel_managers].freeze
 
@@ -29,8 +32,8 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     filters_of(name).include?(:require_account)
   end
 
-  def member_guarded?(name)
-    filters_of(name).include?(:require_a_member)
+  def role_guarded?(name)
+    filters_of(name).intersect?(ROLE_GATES)
   end
 
   def token_guarded?(name)
@@ -39,7 +42,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
   def guarded_controllers
     (self.class.controllers - OPEN).select do |name|
-      guarded?(name) || member_guarded?(name) || token_guarded?(name)
+      guarded?(name) || token_guarded?(name)
     end
   end
 
@@ -51,26 +54,25 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
   test "every controller behind the login demands a role, bar the member area and the api" do
     (self.class.controllers - OPEN - MEMBER - BEARER).each do |name|
       assert guarded?(name), "#{name} lets anybody through"
-      assert_not member_guarded?(name), "#{name} settles for a session where a role is needed"
+      assert role_guarded?(name), "#{name} settles for a session where a role is needed"
     end
   end
 
   test "the member area demands a session and never a role, and is only what is listed" do
     MEMBER.each do |name|
-      assert member_guarded?(name), "#{name} lets anybody through"
-      assert_not guarded?(name), "#{name} still demands a role, so it is not a member page"
+      assert guarded?(name), "#{name} lets anybody through"
+      assert_not role_guarded?(name), "#{name} still demands a role, so it is not a member page"
     end
 
     assert_equal MEMBER.sort,
-      (self.class.controllers - OPEN - BEARER).reject { |name| guarded?(name) }.sort,
+      (self.class.controllers - OPEN - BEARER).reject { |name| role_guarded?(name) }.sort,
       "a controller dropped its role check, so this test needs updating"
   end
 
   test "the api demands a token, never a session or a role, and is only what is listed" do
     BEARER.each do |name|
       assert token_guarded?(name), "#{name} lets anybody through"
-      assert_not guarded?(name), "#{name} demands a role, so it is not reachable by a token"
-      assert_not member_guarded?(name), "#{name} demands a session, which an api caller has not got"
+      assert_not guarded?(name), "#{name} demands a session, which an api caller has not got"
     end
 
     assert_equal BEARER.sort,

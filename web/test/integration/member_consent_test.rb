@@ -5,7 +5,7 @@ class MemberConsentTest < ActionDispatch::IntegrationTest
 
   setup do
     Fd::Flag.set!(:public_api, true, by: "UBOSS")
-    @member = Staff.create!(user_id: "UMEMBER2")
+    @member = Account.create!(user_id: "UMEMBER2")
     sign_in_as(@member)
   end
 

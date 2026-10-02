@@ -2,7 +2,7 @@ require "test_helper"
 
 class ApiDocsTest < ActionDispatch::IntegrationTest
   setup do
-    @member = Staff.create!(user_id: "UMEMBER3")
+    @member = Account.create!(user_id: "UMEMBER3")
   end
 
   test "any signed in member can read the docs, role or no role" do

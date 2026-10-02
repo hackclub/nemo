@@ -78,7 +78,7 @@ class ApiAuthTest < ActionDispatch::IntegrationTest
   end
 
   test "a signed in browser session opens nothing on the api" do
-    staff = Staff.create!(user_id: "UBOSS2", community_manager: true)
+    staff = hold_role!("UBOSS2", "community_manager")
     sign_in_as(staff)
 
     get api_v1_token_path

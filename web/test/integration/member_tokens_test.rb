@@ -3,7 +3,7 @@ require "test_helper"
 class MemberTokensTest < ActionDispatch::IntegrationTest
   setup do
     Fd::Flag.set!(:public_api, true, by: "UBOSS")
-    @member = Staff.create!(user_id: "UMEMBER4")
+    @member = Account.create!(user_id: "UMEMBER4")
     sign_in_as(@member)
   end
 

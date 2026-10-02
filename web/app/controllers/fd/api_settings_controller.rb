@@ -15,8 +15,8 @@ module Fd
 
       was = ::Api::Setting.value(key)
       writing do
-        ::Api::Setting.set!(key, value, by: current_staff.user_id)
-        ::Api::Event.record!("setting_changed", actor: current_staff.user_id,
+        ::Api::Setting.set!(key, value, by: current_account.user_id)
+        ::Api::Event.record!("setting_changed", actor: current_account.user_id,
           subject: key.tr("_", " "), detail: "#{was} to #{value}")
       end
 
@@ -33,7 +33,7 @@ module Fd
       was = token.rate
       writing do
         token.update!(rate_limit: value)
-        ::Api::Event.record!("token_rate_set", actor: current_staff.user_id,
+        ::Api::Event.record!("token_rate_set", actor: current_account.user_id,
           subject: token.shown, detail: said_rate(token, was, value))
       end
 
@@ -45,8 +45,8 @@ module Fd
       return refuse("no live token with that id") if token.nil?
 
       writing do
-        token.revoke!(by: current_staff.user_id)
-        ::Api::Event.record!("token_revoked", actor: current_staff.user_id,
+        token.revoke!(by: current_account.user_id)
+        ::Api::Event.record!("token_revoked", actor: current_account.user_id,
           subject: token.shown, detail: "#{token.name}, owned by #{token.owner_user_id}")
       end
 

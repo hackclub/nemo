@@ -2,8 +2,8 @@ require "test_helper"
 
 class FdApiSettingsTest < ActionDispatch::IntegrationTest
   setup do
-    @boss = Staff.create!(user_id: "UBOSS9", community_manager: true)
-    Fd::AccessGrant.give!("UFIRE9", role: "firefighter", by: @boss.user_id)
+    @boss = hold_role!("UBOSS9", "community_manager")
+    hold_role!("UFIRE9", "firefighter")
     @token, = Api::Token.mint!("UOWNER9", "Toolbox")
     sign_in_as(@boss)
   end
@@ -78,7 +78,7 @@ class FdApiSettingsTest < ActionDispatch::IntegrationTest
   end
 
   test "a firefighter cannot move a dial or touch a token" do
-    sign_in_as(Staff.find("UFIRE9"))
+    sign_in_as(Account.find("UFIRE9"))
 
     patch fd_api_setting_path, params: { key: "rate_per_minute", value: 999 }
     delete fd_api_token_path(@token)
@@ -89,7 +89,7 @@ class FdApiSettingsTest < ActionDispatch::IntegrationTest
   end
 
   test "a firefighter does not even see the tab" do
-    sign_in_as(Staff.find("UFIRE9"))
+    sign_in_as(Account.find("UFIRE9"))
     get fd_settings_path(tab: "api")
 
     assert_select ".views .view", text: /API/, count: 0
