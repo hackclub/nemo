@@ -37,6 +37,7 @@ class Desk:
             ("wake", channel.tell_the_wake),
             ("follow-ups", channel.carry_follow_ups),
             ("files", channel.carry_files),
+            ("case card", queued.card),
             ("thread card", queued.redraw),
         ):
             try:

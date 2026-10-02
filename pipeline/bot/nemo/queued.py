@@ -2,7 +2,7 @@ import logging
 
 from bot.core import parse
 from bot.nemo import cards
-from bot.nemo.channel import ASSIGNEES, SUBJECTS, case_url
+from bot.nemo.channel import ASSIGNEES, SUBJECTS, case_url, firehouse_channel
 
 log = logging.getLogger("bot.nemo")
 
@@ -13,6 +13,16 @@ FROM fd.cases WHERE id = %s
 
 ON_THREAD = """
 SELECT id FROM fd.cases WHERE card_channel_id = %s AND card_thread_ts = %s LIMIT 1
+"""
+
+CLAIM_CARD = """
+SELECT card_ts FROM fd.cases WHERE id = %s FOR UPDATE
+"""
+
+WANTS_A_CARD = """
+SELECT 1 FROM fd.cases c
+WHERE c.id = %s AND c.card_ts IS NULL
+  AND NOT EXISTS (SELECT 1 FROM fd.case_reports r WHERE r.case_id = c.id)
 """
 
 KEPT = """
@@ -58,10 +68,15 @@ def gather(conn, case_id):
     return case
 
 
-def post(client, conn, case_id, channel_id, thread_ts):
+def post(client, conn, case_id, channel_id, thread_ts=None):
     case = gather(conn, case_id)
     if case is None or case["card_ts"]:
         return case and case["card_ts"]
+
+    held = conn.execute(CLAIM_CARD, (case_id,)).fetchone()
+    if held and held[0]:
+        log.info("nemo: case %s went up while we were asking, leaving it", case_id)
+        return held[0]
 
     built = cards.queued.blocks(case)
     sent = client.chat_postMessage(
@@ -102,3 +117,10 @@ def redraw(client, conn, case_id, channel_id=None):
 
     conn.execute(REDRAWN, (fingerprint, case_id))
     return case["card_ts"]
+
+
+def card(client, conn, case_id, channel_id=None):
+    if conn.execute(WANTS_A_CARD, (case_id,)).fetchone() is None:
+        return None
+
+    return post(client, conn, case_id, channel_id or firehouse_channel(conn))

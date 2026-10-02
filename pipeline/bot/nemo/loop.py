@@ -4,7 +4,7 @@ import threading
 
 from bot.core import loops, session
 from bot.nemo import automod, channel, channelguards, channels, chat, guards, guardwork
-from bot.nemo import carriers, memberguards, responses, screening
+from bot.nemo import carriers, memberguards, queued, responses, screening
 from bot.nemo.carriers import purge, sweep
 
 log = logging.getLogger("bot.nemo")
@@ -32,6 +32,16 @@ FROM fd.case_reports r
 JOIN fd.intake_conversations v ON v.report_id = r.id
 WHERE r.forwarded_ts IS NULL AND v.handed_off_at IS NOT NULL
 ORDER BY r.received_at
+LIMIT 20
+"""
+
+CARDLESS = """
+SELECT c.id
+FROM fd.cases c
+WHERE c.card_ts IS NULL
+  AND c.opened_at > now() - interval '1 day'
+  AND NOT EXISTS (SELECT 1 FROM fd.case_reports r WHERE r.case_id = c.id)
+ORDER BY c.opened_at
 LIMIT 20
 """
 
@@ -121,6 +131,7 @@ def once(desk, channel_id=None):
 
     with session() as conn:
         missing = [row[0] for row in conn.execute(UNCARDED).fetchall()]
+        cardless = [row[0] for row in conn.execute(CARDLESS).fetchall()]
         standing = [row[0] for row in conn.execute(WORTH_REDRAWING).fetchall()]
         unmirrored = chat.waiting_anywhere(conn)
         following = channel.waiting_follow_ups(conn)
@@ -139,6 +150,7 @@ def once(desk, channel_id=None):
         purging = [row[0] for row in purge.waiting(conn)]
 
     posted = each(missing, "still has no card", channel.post_report, client, channel_id)
+    posted += each(cardless, "was opened without a card", queued.card, client, channel_id)
     drawn = each(standing, "could not be redrawn", channel.redraw, client, channel_id)
     carried = each(
         unmirrored, "has chat that did not go out", channel.mirror, client, channel_id

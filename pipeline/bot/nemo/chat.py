@@ -4,7 +4,13 @@ from bot.core import parse
 from bot.nemo.cards import report as cards
 
 CASE_OF_THREAD = """
-SELECT case_id FROM fd.case_reports WHERE forwarded_ts = %s
+SELECT case_id FROM (
+    SELECT case_id, 1 AS rank FROM fd.case_reports WHERE forwarded_ts = %(ts)s
+    UNION ALL
+    SELECT id, 2 FROM fd.cases WHERE card_ts = %(ts)s AND card_thread_ts IS NULL
+) found
+ORDER BY rank
+LIMIT 1
 """
 
 KEEP = """
@@ -54,7 +60,7 @@ RETURNING id
 
 
 def case_of_thread(conn, thread_ts):
-    row = conn.execute(CASE_OF_THREAD, (thread_ts,)).fetchone()
+    row = conn.execute(CASE_OF_THREAD, {"ts": thread_ts}).fetchone()
     return row[0] if row else None
 
 
@@ -133,7 +139,7 @@ coalesce(
     (SELECT r.forwarded_ts FROM fd.case_reports r
       WHERE r.case_id = c.case_id AND r.forwarded_ts IS NOT NULL
       ORDER BY r.id LIMIT 1),
-    (SELECT k.card_thread_ts FROM fd.cases k WHERE k.id = c.case_id)
+    (SELECT coalesce(k.card_thread_ts, k.card_ts) FROM fd.cases k WHERE k.id = c.case_id)
 )
 """
 
