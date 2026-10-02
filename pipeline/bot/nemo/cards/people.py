@@ -68,7 +68,6 @@ def picked(state):
     return {
         "user_ids": values.get(WHO, {}).get(WHO, {}).get("selected_users") or [],
         "role": SUBJECT,
-        "detail": None,
     }
 
 
