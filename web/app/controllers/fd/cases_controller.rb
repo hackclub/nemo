@@ -124,11 +124,9 @@ module Fd
 
     def create
       subjects = asked_subjects
-      @open_for_subject = open_cases_for(subjects)
 
       problem = objection(subjects)
       return refuse(problem) if problem
-      return refuse(already_open_warning) if warn_about_open_case?
 
       kase = nil
       writing do
@@ -197,12 +195,6 @@ module Fd
       end
     end
 
-    def open_cases_for(subjects)
-      return [] if subjects.empty?
-
-      Case.unresolved.with_any_subject(subjects).includes(:subjects).oldest_first.to_a
-    end
-
     def objection(subjects)
       unless subjects.all? { |id| id.match?(MEMBER_ID) }
         return "that does not look like a Slack member id"
@@ -212,18 +204,6 @@ module Fd
       end
 
       nil
-    end
-
-    def warn_about_open_case?
-      @open_for_subject.any? && params[:separate] != "1"
-    end
-
-    def already_open_warning
-      caught = (@open_for_subject.flat_map(&:subject_user_ids) & asked_subjects).uniq
-      who = Names.for(caught).list(caught)
-      numbers = @open_for_subject.map { |kase| "##{kase.id}" }.to_sentence
-      "#{who} already #{caught.many? ? 'have' : 'has'} an open case, #{numbers}. " \
-        "Add to that one, or open a new case."
     end
 
     def opened_notice(kase, subjects)
@@ -276,7 +256,6 @@ module Fd
       @names = Names.for(Array(@pane_people))
       @channels = ChannelNames.for(Array(@pane_channels))
       @subject_preset = preset_for(asked_subjects)
-      @open_for_subject ||= []
     end
   end
 end

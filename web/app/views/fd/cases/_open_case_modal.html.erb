@@ -2,19 +2,6 @@
       open: @open_modal } do %>
       <%= form_with url: fd_cases_path, method: :post, html: { autocomplete: "off" } do %>
         <div class="modal-body">
-          <% if @open_for_subject.any? %>
-            <div class="dup">
-              <span>
-                <b><%= already_open_line(@open_for_subject, @subject_preset) %></b>
-                <% @open_for_subject.each do |other| %>
-                  <%= link_to "##{other.id}", fd_case_path(other) %>
-                  <%= category_label(other.category_key).downcase %>,
-                  <%= case_age_label(case_age_seconds(other)) %><%= other.assigned? ? ", assigned to #{other.assignee_handles}" : ", unassigned" %>.
-                <% end %>
-              </span>
-            </div>
-          <% end %>
-
           <div class="field-label">
             <span>Who the case is about</span>
             <%= render "fd/member_picker", name: "subject_user_ids[]", single: false,
@@ -49,17 +36,8 @@
           </label>
         </div>
         <div class="modal-foot">
-          <% if @open_for_subject.any? %>
-            <%= link_to "Add to ##{@open_for_subject.first.id} instead",
-                  fd_case_path(@open_for_subject.first), class: "btn btn-aside" %>
-          <% end %>
           <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
-          <% if @open_for_subject.any? %>
-            <%= button_tag "Open it anyway, this is separate", name: "separate", value: "1",
-                  class: "btn btn-primary" %>
-          <% else %>
-            <%= submit_tag "Open the case", class: "btn btn-primary" %>
-          <% end %>
+          <%= submit_tag "Open the case", class: "btn btn-primary" %>
         </div>
       <% end %>
 <% end %>

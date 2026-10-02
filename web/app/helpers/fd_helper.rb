@@ -140,14 +140,6 @@ module FdHelper
     }
   end
 
-  def already_open_line(cases, preset)
-    asked = Array(preset).map { |person| person[:id] }
-    caught = (cases.flat_map(&:subject_user_ids) & asked).uniq
-    who = caught.any? ? names.list(caught) : "that member"
-
-    "#{who} already #{caught.many? ? 'have' : 'has'} an open case."
-  end
-
   def share_of(part, whole)
     return "n/a" if whole.to_i.zero?
 

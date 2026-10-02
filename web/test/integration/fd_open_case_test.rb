@@ -162,45 +162,27 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
     assert_equal ["UONE"], Fd::Case.order(:id).last.subject_user_ids
   end
 
-  test "an open case for any of the people named raises the warning" do
-    existing = make_case(subject: "UTWO", opened_at: 3.days.ago)
-    sign_in_as(@me)
-    post fd_cases_path, params: { subject_user_ids: %w[UONE UTWO] }
-
-    assert_response :unprocessable_content
-    assert_match(/@UTWO already has an open case, ##{existing.id}/, flash[:alert])
-  end
-
-  test "the warning names everybody it caught, not just the first" do
-    make_case(subject: "UONE", opened_at: 4.days.ago)
+  test "an open case for any of the people named does not stop the submit" do
     make_case(subject: "UTWO", opened_at: 3.days.ago)
     sign_in_as(@me)
     post fd_cases_path, params: { subject_user_ids: %w[UONE UTWO] }
 
-    assert_match(/@UONE and @UTWO already have an open case/, flash[:alert])
+    assert_not_nil opened
+    assert_nil flash[:alert]
+    assert_redirected_to fd_case_path(opened)
   end
 
-  test "a subject with an open case stops the first submit" do
-    existing = make_case(opened_at: 3.days.ago, category_key: "bullying")
+  test "a subject with an open case opens a second one on the first submit" do
+    make_case(opened_at: 3.days.ago, category_key: "bullying")
     sign_in_as(@me)
     open_case
-
-    assert_nil opened, "nothing is created until it is confirmed as separate"
-    assert_response :unprocessable_content
-    assert_match(/already has an open case, ##{existing.id}/, flash[:alert])
-  end
-
-  test "confirming it is separate opens the second case" do
-    make_case(opened_at: 3.days.ago)
-    sign_in_as(@me)
-    open_case(separate: "1")
 
     assert_not_nil opened
     assert_equal "USUB", opened.subject_user_id
     assert_equal 2, Fd::Case.unresolved.with_subject("USUB").count
   end
 
-  test "a resolved case for the same subject raises no warning" do
+  test "a resolved case for the same subject is no obstacle either" do
     make_case(opened_at: 5.days.ago, resolved_at: 1.day.ago, resolution: "no_action")
     sign_in_as(@me)
     open_case
