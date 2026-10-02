@@ -1,11 +1,37 @@
 {{ config(materialized='table', indexes=[{'columns': ['channel_id'], 'unique': True}]) }}
 
-with latest as (
-    select window_start, window_end
+with held as (
+    select distinct window_start, window_end
     from {{ source('raw', 'channel_activity_snapshot') }}
     where source = 'admin_analytics_channel_range'
-    group by window_start, window_end
-    order by window_end desc, window_start asc
+),
+
+settled as (
+    select
+        split_part(slice_key, '..', 1)::date as window_start,
+        split_part(slice_key, '..', 2)::date as window_end
+    from {{ source('ingest', 'slice_coverage') }}
+    where source_key = 'channel_range'
+      and state in ('complete', 'superseded')
+),
+
+ranked as (
+    select h.window_start, h.window_end, 0 as settled_first
+    from held h
+    join settled s
+        on s.window_start = h.window_start
+        and s.window_end = h.window_end
+
+    union all
+
+    select h.window_start, h.window_end, 1
+    from held h
+),
+
+latest as (
+    select window_start, window_end
+    from ranked
+    order by settled_first, window_end desc, window_start asc
     limit 1
 )
 

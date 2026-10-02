@@ -1,3 +1,4 @@
+import pathlib
 from datetime import date
 
 import pytest
@@ -120,3 +121,13 @@ def test_a_first_ever_window_has_nothing_to_replace():
     landed, held = window_totals([(*NEW, 12)], NEW)
     assert (landed, held) == (12, 0)
     assert covers_what_it_replaces(landed, held)
+
+
+def test_a_short_window_keeps_its_cursor_so_the_next_run_resumes():
+    source = pathlib.Path("ingest/channel_range_pull.py").read_text()
+
+    assert 'walked = {"cursor": resume_at}' in source
+    assert 'walked["cursor"] = cursor' in source
+    assert 'None if replacing else walked["cursor"]' in source, (
+        "a window that did not replace the fuller one must keep its cursor"
+    )

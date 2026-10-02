@@ -136,11 +136,13 @@ def run(conn, days=WINDOW_DAYS, end=None, source=SOURCE, span=False):
             return 0
         counts.rows_in = already
         rows = []
+        walked = {"cursor": resume_at}
 
         def flush(cursor, seen):
             with conn.cursor() as cur:
                 cur.executemany(RANGE_SQL, rows)
             rows.clear()
+            walked["cursor"] = cursor
             save_walk(conn, source, window_key, cursor, already + seen)
             counts.total_expected = client.last_num_found
             counts.progress()
@@ -189,7 +191,8 @@ def run(conn, days=WINDOW_DAYS, end=None, source=SOURCE, span=False):
             counts.status = "partial"
         coverage.settle(conn, key, window_key, fence, verdict or UNVERIFIED,
                         client.last_num_found, counts.rows_in)
-        save_walk(conn, source, window_key, None, counts.rows_in)
+        save_walk(conn, source, window_key,
+                  None if replacing else walked["cursor"], counts.rows_in)
     print(
         f"{label} {window_key}: {counts.rows_in} rows, "
         f"{counts.rows_rejected} rejected, {pruned} stale rows pruned"
