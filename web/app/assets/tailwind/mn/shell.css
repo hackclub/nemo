@@ -640,6 +640,7 @@
 
   @media (min-width: 900px) and (max-width: 1099px) {
     html:not(.sidebar-icon) { --nav-w: var(--sidebar-w-icon); }
+    html:not(.sidebar-icon) .cpane { padding: 0 6px 0 2px; }
     html:not(.sidebar-icon) .cnav-said,
     html:not(.sidebar-icon) .cnav-lab,
     html:not(.sidebar-icon) .cnav-find .kbd,
@@ -651,6 +652,24 @@
     html:not(.sidebar-icon) .cnav-toggle,
     html:not(.sidebar-icon) .cnav-find { justify-content: center; padding: 0; }
     html:not(.sidebar-icon) .cnav-head { justify-content: center; padding: 0; }
+    html:not(.sidebar-icon) .cnav-sub { margin-left: 0; padding-left: 0; border-left: 0; }
+    html:not(.sidebar-icon) .cnav-tally,
+    html:not(.sidebar-icon) .cnav a[aria-current="page"] .cnav-tally {
+      position: absolute;
+      top: 0;
+      right: 0;
+      margin: 0;
+      min-width: 14px;
+      height: 14px;
+      padding: 0 3px;
+      border-radius: 4px;
+      background: var(--accent);
+      color: var(--accent-on);
+      box-shadow: 0 0 0 2px var(--chrome);
+      font-size: 9px;
+      font-weight: 600;
+    }
+    html:not(.sidebar-icon) .cnav a { position: relative; }
   }
 
   @media (max-width: 899px) {
