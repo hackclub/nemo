@@ -124,6 +124,8 @@
   }
   .modal-flip:checked ~ .modal-veil { display: block; opacity: 1; }
   .modal-flip:checked ~ .modal-wrap { display: flex; opacity: 1; }
+  .modal-flip:not(:checked) ~ .modal-wrap,
+  .modal-flip:not(:checked) ~ .modal-veil { pointer-events: none; visibility: hidden; }
   @starting-style {
     .modal-flip:checked ~ .modal-veil, .modal-flip:checked ~ .modal-wrap { opacity: 0; }
   }
@@ -149,7 +151,7 @@
   .modal-sm { --modal-w: 420px; }
   .modal-lg { --modal-w: 760px; }
   .modal-xl { --modal-w: 980px; }
-  .modal > form, .modal *:has(.modal-body) {
+  .modal > form, .modal *:has(> .modal-body) {
     display: flex;
     flex-direction: column;
     min-height: 0;
