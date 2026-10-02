@@ -5,6 +5,7 @@ module Api
         render json: {
           name: current_token.name,
           prefix: current_token.prefix,
+          app: current_token.app.slug,
           owner_user_id: current_token.owner_user_id,
           rate_per_minute: current_token.rate,
           created_at: current_token.created_at.utc.iso8601,

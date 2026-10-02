@@ -12,6 +12,8 @@ module Fd
 
       def read? = source == READ
 
+      def api? = source == API
+
       def changed_keys
         ((after || {}).keys | (before || {}).keys).sort
       end
@@ -42,7 +44,8 @@ module Fd
     FIRE_ENGINE = "fire_engine".freeze
     SLACK = "slack".freeze
     READ = "read".freeze
-    SOURCES = [FIRE_ENGINE, SLACK, READ].freeze
+    API = "api".freeze
+    SOURCES = [FIRE_ENGINE, SLACK, READ, API].freeze
 
     LIMIT = 100
     MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/
@@ -53,6 +56,7 @@ module Fd
       "engine" => "Fire Engine",
       "slack" => "Slack",
       "reads" => "Identity reads",
+      "api" => "Public API",
       "refusals" => "Refusals"
     }.freeze
 
@@ -63,6 +67,7 @@ module Fd
       "engine" => [FIRE_ENGINE],
       "slack" => [SLACK],
       "reads" => [READ],
+      "api" => [API],
       "refusals" => [FIRE_ENGINE]
     }.freeze
 
@@ -300,6 +305,89 @@ module Fd
         READ_WHERE
     SQL
 
+    API_EVENT_BRANCH = <<~SQL.freeze
+      SELECT 'api' AS source, 'ae' || e.id::text AS id, e.at AS at,
+             e.actor_user_id AS actor_id, 'human'::text AS actor_kind,
+             'api/' || e.verb AS verb,
+             'api'::text AS entity_kind, e.subject AS entity_id,
+             NULL::text AS entity_ref, NULL::text AS subject_id,
+             NULL::jsonb AS before, NULL::jsonb AS after,
+             jsonb_strip_nulls(jsonb_build_object('said', e.detail)) AS detail
+      FROM api.event_log e
+      WHERE e.at >= :since
+        API_EVENT_WHERE
+    SQL
+
+    API_CONSENT_BRANCH = <<~SQL.freeze
+      SELECT 'api' AS source, 'ac' || c.id::text AS id, c.at AS at,
+             c.user_id AS actor_id, 'human'::text AS actor_kind,
+             'consent/' || c.state AS verb,
+             'scope'::text AS entity_kind, c.capability AS entity_id,
+             NULL::text AS entity_ref, c.user_id AS subject_id,
+             NULL::jsonb AS before, NULL::jsonb AS after,
+             jsonb_build_object('via', c.via) AS detail
+      FROM api.consent_log c
+      WHERE c.at >= :since
+        API_CONSENT_WHERE
+    SQL
+
+    API_REQUEST_BRANCH = <<~SQL.freeze
+      SELECT 'api' AS source, 'ar' || r.id::text AS id, r.at AS at,
+             t.owner_user_id AS actor_id, 'app'::text AS actor_kind,
+             'api/checked'::text AS verb,
+             'channel'::text AS entity_kind, r.channel_id AS entity_id,
+             r.channel_id AS entity_ref, r.subject_user_id AS subject_id,
+             NULL::jsonb AS before, NULL::jsonb AS after,
+             jsonb_build_object('outcome', r.outcome, 'token', t.prefix) AS detail
+      FROM api.request_log r
+      JOIN api.token t ON t.id = r.token_id
+      WHERE r.at >= :since
+        API_REQUEST_WHERE
+    SQL
+
+    def api_where(at:, actor:, subject:, verb:, kind:, channel: nil)
+      parts = []
+      parts << "AND #{actor} IN (:actors)" if search.of("actor").any?
+      parts << "AND #{subject} IN (:subjects)" if search.of("about").any?
+      parts << "AND #{verb} IN (:actions)" if search.of("action").any?
+      if search.of("channel").any?
+        parts << (channel ? "AND #{channel} IN (:channels)" : "AND false")
+      end
+      parts << "AND false" if search.text?
+      parts << "AND false" if search.of("ip").any?
+      if looked_up? && search.of("ip").empty?
+        parts << (anybody.any? ? "AND (#{actor} IN (:anybody) OR " \
+                                 "#{subject} IN (:anybody))" : "AND false")
+      end
+      parts << api_doer(actor, kind)
+      parts << "AND #{at} >= :after" if search.one("after")
+      parts << "AND #{at} < :before" if search.one("before")
+      parts.compact.join("\n")
+    end
+
+    def api_doer(actor, kind)
+      case search.one("is")
+      when "human" then kind == "human" ? nil : "AND false"
+      when "nemo" then "AND false"
+      when "nobody" then "AND #{actor} IS NULL"
+      end
+    end
+
+    def api_event_where
+      api_where(at: "e.at", actor: "e.actor_user_id", subject: "NULL::text",
+        verb: "('api/' || e.verb)", kind: "human")
+    end
+
+    def api_consent_where
+      api_where(at: "c.at", actor: "c.user_id", subject: "c.user_id",
+        verb: "('consent/' || c.state)", kind: "human")
+    end
+
+    def api_request_where
+      api_where(at: "r.at", actor: "t.owner_user_id", subject: "r.subject_user_id",
+        verb: "'api/checked'", kind: "app", channel: "r.channel_id")
+    end
+
     def anybody
       @anybody ||= (search.people_for_email + search.people_for_ip).uniq
     end
@@ -405,6 +493,11 @@ module Fd
       end
       held << SLACK_BRANCH.sub("SLACK_WHERE", slack_where) if wanted_sources.include?(SLACK)
       held << READ_BRANCH.sub("READ_WHERE", read_where) if wanted_sources.include?(READ)
+      if wanted_sources.include?(API)
+        held << API_EVENT_BRANCH.sub("API_EVENT_WHERE", api_event_where)
+        held << API_CONSENT_BRANCH.sub("API_CONSENT_WHERE", api_consent_where)
+        held << API_REQUEST_BRANCH.sub("API_REQUEST_WHERE", api_request_where)
+      end
       held
     end
 
@@ -481,6 +574,7 @@ module Fd
         count(*) FILTER (WHERE source = 'fire_engine') AS engine,
         count(*) FILTER (WHERE source = 'slack') AS slack,
         count(*) FILTER (WHERE source = 'read') AS reads,
+        count(*) FILTER (WHERE source = 'api') AS api,
         0 AS refusals
       FROM held
     SQL
@@ -513,12 +607,21 @@ module Fd
       branch = case source
       when FIRE_ENGINE then ENGINE_BRANCH.sub("ENGINE_WHERE", "AND a.id::text = :id")
       when SLACK then SLACK_BRANCH.sub("SLACK_WHERE", "AND e.id = :id")
-      else READ_BRANCH.sub("READ_WHERE", "AND 'r' || l.id::text = :id")
+      when READ then READ_BRANCH.sub("READ_WHERE", "AND 'r' || l.id::text = :id")
+      else api_branch_for(id)
       end
       found = ApplicationRecord.connection.select_all(
         ApplicationRecord.sanitize_sql([branch, binds.merge(id: id, since: Time.zone.at(0))])
       ).first
       found && build(found)
+    end
+
+    def api_branch_for(id)
+      case id.to_s[0, 2]
+      when "ae" then API_EVENT_BRANCH.sub("API_EVENT_WHERE", "AND 'ae' || e.id::text = :id")
+      when "ac" then API_CONSENT_BRANCH.sub("API_CONSENT_WHERE", "AND 'ac' || c.id::text = :id")
+      else API_REQUEST_BRANCH.sub("API_REQUEST_WHERE", "AND 'ar' || r.id::text = :id")
+      end
     end
 
     def build(row)

@@ -57,6 +57,7 @@ areas:
   slack: Your own account
   access: Access
   app: The dashboard
+  api: Public API
 
 record_scopes: [author, channel]
 
@@ -253,3 +254,8 @@ capabilities:
     area: app
     locked: true
     events: [automod_word/added, automod_word/removed, app_setting/tuned]
+
+  api.review:
+    label: Review requests for public API access
+    area: api
+    events: [access/requested, access/approved, access/declined]

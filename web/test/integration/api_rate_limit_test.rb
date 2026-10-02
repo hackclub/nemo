@@ -3,7 +3,8 @@ require "test_helper"
 class ApiRateLimitTest < ActionDispatch::IntegrationTest
   setup do
     Fd::Flag.set!(:public_api, true, by: "UBOSS")
-    @token, @secret = Api::Token.mint!("UOWNER1", "Toolbox")
+    @client = make_app!("UOWNER1")
+    @token, @secret = Api::Token.mint!(@client, "Toolbox")
   end
 
   teardown do
@@ -63,7 +64,8 @@ class ApiRateLimitTest < ActionDispatch::IntegrationTest
 
   test "one token running hot does not spend another token's budget" do
     with_a_real_cache do
-      other, spare = Api::Token.mint!("UOWNER2", "Arcade")
+      arcade = make_app!("UOWNER2", name: "Arcade")
+      other, spare = Api::Token.mint!(arcade, "Arcade")
       21.times { ask }
       assert_response :too_many_requests
 

@@ -1,0 +1,124 @@
+<% content_for :page_title, "Public API" %>
+
+<div class="metrics">
+  <%= render "shared/stat", k: "Opted in", v: number_with_delimiter(@opted_in),
+        say: pluralize(Api::Scope::KEYS.size, "scope") %>
+  <%= render "shared/stat", k: "Apps", v: @apps,
+        say: "#{@answering} answering" %>
+  <%= render "shared/stat", k: "Live keys", v: @tokens.count { |one| !one.spent? },
+        say: "across #{pluralize(@tokens.map(&:app_id).uniq.size, 'app')}" %>
+  <%= render "shared/stat", k: "Checks, 30d", v: number_with_delimiter(@checks),
+        say: pluralize(@channels, "channel") %>
+  <%= render "shared/stat", k: "Withheld", v: number_with_delimiter(@withheld),
+        say: withheld_share(@withheld, @checks) %>
+</div>
+
+<div class="stack">
+  <div class="card card-flush">
+    <div class="card-head">
+      <h2 class="card-title">Configuration</h2>
+    </div>
+
+    <div class="setlist">
+      <div class="setline">
+        <span class="setname"><%= Fd::Flag.label(:public_api) %></span>
+        <span class="setval cap-do">
+          <%= api_state_chip %>
+          <%= flag_switch(:public_api) %>
+        </span>
+      </div>
+      <% @dials.each do |key, value| %>
+        <div class="setline">
+          <span class="setname"><%= dial_label(key) %></span>
+          <span class="setval cap-do">
+            <b class="row-v"><%= value %></b>
+            <% if may_grant? %>
+              <button type="button" class="text-btn" data-modal-open="dial-<%= key %>" aria-haspopup="dialog">Change</button>
+            <% end %>
+          </span>
+        </div>
+      <% end %>
+      <div class="setline">
+        <span class="setname">Last sync</span>
+        <span class="setval <%= "sub2" unless @synced %>"><%= synced_line(@synced) %></span>
+      </div>
+      <div class="setline">
+        <span class="setname">Last changed</span>
+        <span class="setval <%= "sub2" unless @last_dial %>"><%= dial_change(@last_dial) %></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card card-flush">
+    <div class="card-head">
+      <h2 class="card-title">Tokens</h2>
+      <div class="card-tools">
+        <span class="qlab">
+          <%= @tokens.count { |one| !one.spent? } %> live &middot;
+          <%= @tokens.count(&:spent?) %> spent
+        </span>
+      </div>
+    </div>
+
+    <% if @tokens.any? %>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>app</th>
+              <th>key name</th>
+              <th>key</th>
+              <th class="col-num">rate</th>
+              <th class="col-num">expires</th>
+              <th class="col-num">asks 30d</th>
+              <th class="col-date">last used</th>
+              <th class="col-btn"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @tokens.each do |token| %>
+              <tr>
+                <td>
+                  <span class="row-name">
+                    <%= face(token.owner_user_id) %>
+                    <span class="two-line">
+                      <b><%= token.app.name %></b>
+                      <span><%= names[token.owner_user_id] %></span>
+                    </span>
+                  </span>
+                </td>
+                <td class="<%= "sub2" if token.revoked? %>"><%= token.name %></td>
+                <td><code class="tag mono"><%= token.shown %></code></td>
+                <td class="col-num mono <%= "rate-own" if token.rate_limit %>">
+                  <%= token.revoked? ? "n/a" : token.rate %>
+                </td>
+                <td class="col-num mono"><%= token.spent? ? "n/a" : token.dies_in %></td>
+                <td class="col-num"><%= number_with_delimiter(@asks[token.id].to_i) %></td>
+                <td class="col-date mono">
+                  <%= token.last_used_at ? time_ago_in_words(token.last_used_at) : "never" %>
+                </td>
+                <td class="col-btn">
+                  <% if token.revoked? %>
+                    <span class="chip chip-crit">
+                      Revoked <%= token.revoked_at.strftime("%-d %b") %>
+                    </span>
+                  <% elsif may_grant? %>
+                    <button type="button" class="text-btn" data-modal-open="rate-<%= token.id %>" aria-haspopup="dialog">Set rate</button>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty">
+        <p class="empty-title">No tokens</p>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<% if may_grant? %>
+  <%= render "admin/api_settings/modals" %>
+<% end %>

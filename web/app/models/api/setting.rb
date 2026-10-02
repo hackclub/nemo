@@ -5,7 +5,7 @@ module Api
 
     DEFAULTS = {
       "rate_per_minute" => 20,
-      "tokens_per_owner" => 3
+      "tokens_per_owner" => 1
     }.freeze
 
     def self.value(key)

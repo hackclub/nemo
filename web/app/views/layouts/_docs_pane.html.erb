@@ -1,0 +1,28 @@
+<nav id="section-nav" class="cpane" aria-label="Documentation">
+  <%= render "layouts/sidebar_head", letter: "D", title: "Docs" %>
+
+  <div class="cnav">
+    <% Docs.groups.each do |group, topics| %>
+      <p class="cnav-lab"><%= group %></p>
+      <div class="cnav-group">
+        <% topics.each do |topic| %>
+          <% here = @topic&.slug == topic.slug %>
+          <%= link_to doc_path(topic.slug), title: topic.title,
+                aria: { current: ("page" if here) } do %>
+            <%= nav_icon("news") %><span class="trunc"><%= topic.title %></span>
+          <% end %>
+          <% if here %>
+            <div class="cnav-sub" data-controller="docs-nav"
+                 data-action="click->docs-nav#go">
+              <% topic.sections.each do |section| %>
+                <a href="#<%= section.id %>"><span class="trunc"><%= section.title %></span></a>
+              <% end %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <%= render "layouts/sidebar_foot" %>
+</nav>

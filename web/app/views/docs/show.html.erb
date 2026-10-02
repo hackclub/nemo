@@ -1,19 +1,8 @@
-<% content_for :page_title, "Docs" %>
+<% content_for :page_title, @topic.title %>
 <% content_for :head_actions do %>
-  <%= link_to "Your tokens", you_api_path(tab: "tokens"), class: "btn" %>
+  <%= link_to "API keys", settings_keys_path, class: "btn" %>
 <% end %>
 
-<div class="docs">
-  <nav class="docs-nav" aria-label="On this page">
-    <% Docs.topics.each do |topic| %>
-      <p class="docs-nav-h"><%= topic.title %></p>
-      <% topic.sections.each do |section| %>
-        <a href="#<%= section.id %>"><%= section.title %></a>
-      <% end %>
-    <% end %>
-  </nav>
-
-  <article class="docs-body">
-    <%= render "docs/channel_managers", topic: Docs::CHANNEL_MANAGERS %>
-  </article>
-</div>
+<article class="doc" data-controller="docs-nav" data-action="click->docs-nav#go">
+  <%= render "docs/#{@topic.slug.tr('-', '_')}", topic: @topic %>
+</article>

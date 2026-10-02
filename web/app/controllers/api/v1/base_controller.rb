@@ -7,9 +7,16 @@ module Api
       KEPT_FOR = 2.minutes
 
       before_action :require_a_token
+      before_action :approved_for_scope
       before_action :within_budget
 
       private
+
+      def approved_for_scope
+        return if ::Api::Approval.held?(current_token.app_id)
+
+        refuse(:forbidden, "not_approved")
+      end
 
       attr_reader :current_token
 
@@ -63,7 +70,8 @@ module Api
         "expired_token" => "that key reached its expiry date, mint a new one",
         "bad_channel_id" => "channel_id must match /\\AC[A-Z0-9]{8,}\\z/",
         "bad_user_id" => "every user id must match /\\A[UW][A-Z0-9]{8,}\\z/",
-        "rate_limited" => "rate limit spent, see retry_after"
+        "rate_limited" => "rate limit spent, see retry_after",
+        "not_approved" => "this app is not approved, ask for access"
       }.freeze
 
       CALLER_ERRORS = [
@@ -72,6 +80,7 @@ module Api
         [401, "expired_token", "Key passed its expiry date. Mint a new one."],
         [422, "bad_channel_id", "channel_id did not match the pattern above."],
         [422, "bad_user_id", "user_id did not match the pattern above."],
+        [403, "not_approved", "The app behind this key is not approved."],
         [429, "rate_limited", "Budget spent. Retry after retry_after seconds."],
         [503, "api_off", "The public_api flag is off. Applies to every route."]
       ].freeze

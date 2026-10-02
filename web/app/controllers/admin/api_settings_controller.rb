@@ -1,9 +1,22 @@
-module Fd
+module Admin
   class ApiSettingsController < BaseController
-    skip_before_action :needs_the_engine
-    permit "access.grant"
-
+    WINDOW = 30.days
     MOST = 100_000
+
+    def show
+      @tokens = ::Api::Token.includes(:app).order(revoked_at: :asc, created_at: :desc).to_a
+      @apps = ::Api::App.live.count
+      @answering = ::Api::App.answering.count
+      @asks = ::Api::RequestLog.where(at: WINDOW.ago..).group(:token_id).count
+      @opted_in = ::Api::Consent.where(state: ::Api::Consent::GRANTED).count
+      @checks = ::Api::RequestLog.where(at: WINDOW.ago..).count
+      @withheld = ::Api::RequestLog.where(at: WINDOW.ago.., outcome: "withheld").count
+      @channels = ::Api::RequestLog.where(at: WINDOW.ago..).distinct.count(:channel_id)
+      @synced = ::Api::ChannelSweep.maximum(:synced_at)
+      @dials = ::Api::Setting::DEFAULTS.keys.index_with { |key| ::Api::Setting.value(key) }
+      @last_dial = ::Api::Setting.order(changed_at: :desc).first
+      @names = Fd::Names.for(@tokens.map(&:owner_user_id))
+    end
 
     def update
       key = params[:key].to_s
@@ -55,6 +68,10 @@ module Fd
 
     private
 
+    def writing
+      ActiveRecord::Base.transaction { yield }
+    end
+
     def said_rate(token, was, value)
       return "#{token.name}, back to the shared #{token.rate}" if value.nil?
 
@@ -62,11 +79,11 @@ module Fd
     end
 
     def back_to(said)
-      redirect_to fd_settings_path(tab: "api"), notice: said
+      redirect_to admin_api_path, notice: said
     end
 
     def refuse(said)
-      redirect_to fd_settings_path(tab: "api"), alert: said
+      redirect_to admin_api_path, alert: said
     end
   end
 end

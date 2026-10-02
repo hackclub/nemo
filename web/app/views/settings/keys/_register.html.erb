@@ -1,0 +1,26 @@
+<%= render layout: "fd/modal", locals: { id: "new-app", title: "Register an app" } do %>
+  <%= form_with url: settings_apps_path, method: :post, html: { autocomplete: "off" } do %>
+    <div class="modal-body form-body">
+      <label class="field-label">
+        Name
+        <%= text_field_tag :name, nil, id: nil, class: "input", maxlength: Api::App::MAX_NAME,
+              placeholder: "Design Triage Bot", autofocus: true %>
+      </label>
+      <label class="field-label">
+        What it does
+        <%= text_area_tag :blurb, nil, id: nil, class: "textarea", rows: 2, maxlength: Api::App::MAX_BLURB,
+              placeholder: "members see this when they opt in" %>
+      </label>
+      <label class="field-label">
+        What for
+        <%= text_area_tag :reason, nil, id: nil, class: "textarea", rows: 2,
+              maxlength: Api::AccessRequest::MAX_REASON,
+              placeholder: "a reviewer reads this" %>
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+      <%= submit_tag "Send", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>

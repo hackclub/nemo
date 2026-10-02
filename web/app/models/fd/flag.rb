@@ -19,6 +19,10 @@ module Fd
 
     def self.default?(key) = fetch(key).fetch("default") == true
 
+    def self.listed?(key) = fetch(key)["listed"] != false
+
+    LISTED = KEYS.select { |key| listed?(key) }.freeze
+
     def self.flipped
       pluck(:key, :is_on).to_h
     end

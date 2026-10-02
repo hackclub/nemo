@@ -92,7 +92,7 @@ WEB_FILE_METHODS = FILE_READ_METHODS
 
 NEMO_METHODS = {**WRITE_METHODS, **ACTIVITY_METHODS}
 WEB_METHODS["internal"] = WEB_METHODS["internal"] | ACTIVITY_METHODS["internal"]
-WEB_METHODS["admin"] = HISTORY_METHODS["admin"]
+WEB_METHODS["admin"] = WEB_METHODS["admin"] | HISTORY_METHODS["admin"]
 
 CREDENTIALS = ("internal", "admin")
 

@@ -18,7 +18,9 @@ module Api
       private
 
       def answer(channel, user)
-        return withheld(channel, user) unless ::Api::Consent.granted?(user, CAPABILITY)
+        unless ::Api::Consent.granted?(user, current_token.app_id, CAPABILITY)
+          return withheld(channel, user)
+        end
 
         ChannelManagers.freshen(channel)
         held = ::Api::ChannelManager.find_by(channel_id: channel, user_id: user)
@@ -30,7 +32,7 @@ module Api
       def withheld(channel, user)
         log(channel, user, ::Api::RequestLog::WITHHELD)
 
-        { consent: "withheld", is_manager: nil, opt_in_url: "#{request.base_url}/you/api" }
+        { consent: "withheld", is_manager: nil, opt_in_url: "#{request.base_url}/settings/permissions" }
       end
 
       def freshness(channel)

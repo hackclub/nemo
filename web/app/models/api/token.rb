@@ -11,6 +11,9 @@ module Api
     MAX_NAME = 60
 
     class TooMany < StandardError; end
+    class NotApproved < StandardError; end
+
+    belongs_to :app, class_name: "Api::App", foreign_key: :app_id, inverse_of: :tokens
 
     LIVES = {
       "30" => 30.days,
@@ -36,8 +39,12 @@ module Api
       where(owner_user_id: user_id).order(revoked_at: :asc, created_at: :desc)
     end
 
-    def self.room_for?(user_id)
-      live.where(owner_user_id: user_id).count < Setting.value("tokens_per_owner")
+    def self.for_app(app_id)
+      where(app_id: app_id).order(revoked_at: :asc, created_at: :desc)
+    end
+
+    def self.room_for?(app_id)
+      live.where(app_id: app_id).count < Setting.value("tokens_per_owner")
     end
 
     def self.digest_of(secret)
@@ -57,11 +64,13 @@ module Api
       span && span.from_now
     end
 
-    def self.mint!(owner_user_id, name, lasting: DEFAULT_LIFE)
-      raise TooMany unless room_for?(owner_user_id)
+    def self.mint!(app, name, lasting: DEFAULT_LIFE)
+      raise NotApproved unless Approval.held?(app.id)
+      raise TooMany unless room_for?(app.id)
 
       key = secret
-      row = create!(owner_user_id: owner_user_id, name: name.to_s.strip.first(MAX_NAME),
+      row = create!(app_id: app.id, owner_user_id: app.owner_user_id,
+        name: name.to_s.strip.first(MAX_NAME),
         prefix: key.first(LEAD.length + SHOWN), digest: digest_of(key),
         expires_at: dies_on(lasting))
       [row, key]
@@ -83,6 +92,14 @@ module Api
 
     def revoke!(by:)
       update!(revoked_at: Time.current, revoked_by: by)
+    end
+
+    def rotate!(by:)
+      key = self.class.secret
+      update!(prefix: key.first(LEAD.length + SHOWN), digest: self.class.digest_of(key),
+        rotated_at: Time.current)
+      Event.record!("token_rotated", actor: by, subject: shown, detail: name)
+      key
     end
 
     def rate

@@ -46,20 +46,10 @@
   </div>
 </div>
 
-<div class="grid g-sided">
-  <div class="panel" data-controller="theme">
-    <div class="panel-head">
-      <span class="panel-name">Theme</span>
-      <span class="grow"></span>
-      <span class="theme-chip" data-theme-target="swatch" aria-hidden="true"></span>
-      <span class="sub2" data-theme-target="name"></span>
-    </div>
-    <%= render "accounts/theme" %>
-  </div>
-
+<div class="stack">
   <div class="panel">
     <div class="panel-head">
-      <span class="panel-name">What you did</span>
+      <span class="panel-name">Activity</span>
       <span class="grow"></span>
       <span class="sub2">
         <% if @deed_count.positive? %>

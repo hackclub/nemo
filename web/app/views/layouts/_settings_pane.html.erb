@@ -1,0 +1,43 @@
+<nav id="section-nav" class="cpane" aria-label="Settings sections">
+  <%= render "layouts/sidebar_head", letter: "S", title: "Settings" %>
+
+  <div class="cnav">
+    <div class="cnav-group">
+      <%= link_to account_path, title: "Account",
+            aria: { current: ("page" if controller_path == "accounts") } do %>
+        <%= nav_icon("you") %><span class="trunc">Account</span>
+      <% end %>
+      <%= link_to settings_appearance_path, title: "Appearance",
+            aria: { current: ("page" if controller_path == "settings/appearances") } do %>
+        <%= nav_icon("overview") %><span class="trunc">Appearance</span>
+      <% end %>
+    </div>
+
+    <p class="cnav-lab">Public API</p>
+    <div class="cnav-group">
+      <%= link_to settings_keys_path, title: "API keys",
+            aria: { current: ("page" if controller_path == "settings/keys") } do %>
+        <%= nav_icon("gear") %><span class="trunc">API keys</span>
+      <% end %>
+      <%= link_to settings_permissions_path, title: "Permissions",
+            aria: { current: ("page" if controller_path == "settings/permissions") } do %>
+        <%= nav_icon("group") %><span class="trunc">Permissions</span>
+      <% end %>
+    </div>
+
+    <% if may_review_api? %>
+      <p class="cnav-lab">Review</p>
+      <div class="cnav-group">
+        <%= link_to settings_requests_path, title: "Access requests",
+              aria: { current: ("page" if controller_path == "settings/requests") } do %>
+          <%= nav_icon("news") %><span class="trunc">Access requests</span>
+          <% if api_queue_waiting.positive? %>
+            <span class="cnav-tally"><%= api_queue_waiting %></span>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <%= render "layouts/sidebar_foot" %>
+</nav>

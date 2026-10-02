@@ -1,0 +1,20 @@
+<%= render layout: "fd/modal", locals: { id: "retire-#{app.id}",
+      title: "Delete #{app.name}?" } do %>
+  <%= form_with url: settings_app_path(app), method: :delete do %>
+    <div class="modal-body">
+      <p class="crit-line">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0"/>
+          <path d="M12 9v4"/><path d="M12 17h.01"/>
+        </svg>
+        <span>Once it&rsquo;s deleted, it&rsquo;d be gone. If you need it again, you&rsquo;d have
+          to request a new app</span>
+      </p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+      <%= submit_tag "Delete it", class: "btn btn-crit" %>
+    </div>
+  <% end %>
+<% end %>

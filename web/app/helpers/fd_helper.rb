@@ -147,7 +147,7 @@ module FdHelper
   end
 
   AUDIT_SOURCE = { "fire_engine" => "Fire Engine", "slack" => "Slack",
-                   "read" => "Fire Engine" }.freeze
+                   "read" => "Fire Engine", "api" => "Public API" }.freeze
 
   def audit_raw(row)
     JSON.pretty_generate(row.raw || row.detail || {})
@@ -1461,9 +1461,9 @@ module FdHelper
   end
 
   DIAL_LABELS = {
-    "rate_per_minute" => "Requests a minute, per token",
+    "rate_per_minute" => "Requests a minute, per key",
     "batch_max" => "People per batch call",
-    "tokens_per_owner" => "Live tokens per owner"
+    "tokens_per_owner" => "Live keys per app"
   }.freeze
 
   def token_life_line(token)
@@ -1474,6 +1474,13 @@ module FdHelper
 
   def dial_label(key)
     DIAL_LABELS.fetch(key, key.tr("_", " "))
+  end
+
+  ACCESS_CHIPS = { "approved" => "chip-good", "declined" => "chip-crit",
+                   "withdrawn" => "chip-off", "pending" => "chip-warn" }.freeze
+
+  def access_state_chip(state)
+    tag.span(state, class: "chip #{ACCESS_CHIPS.fetch(state, 'chip-off')}")
   end
 
   def api_state_chip

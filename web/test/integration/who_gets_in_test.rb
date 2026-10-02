@@ -8,10 +8,12 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
 
   INSIDE = %i[root_path fd_root_path fd_members_path admin_people_path].freeze
 
-  MEMBER = %w[you/api you/consents you/tokens docs accounts workspace_logo
-              channels home].freeze
+  MEMBER = %w[settings/keys settings/tokens settings/apps settings/consents
+              settings/permissions settings/appearances docs accounts workspace_logo
+              channels home fd/slack_accounts].freeze
 
-  ROLE_GATES = %i[require_fd require_admin require_operating require_reading].freeze
+  ROLE_GATES = %i[require_fd require_admin require_operating require_reading
+                  require_reviewer].freeze
 
   BEARER = %w[api/v1/tokens api/v1/channel_managers].freeze
 
@@ -176,7 +178,6 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     drop_roles!("UNOROLE")
 
     get login_path
-    assert_redirected_to you_api_path
 
     assert_redirected_to root_path, "a live session is sent on, not asked to sign in again"
   end

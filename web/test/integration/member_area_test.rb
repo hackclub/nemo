@@ -8,7 +8,7 @@ class MemberAreaTest < ActionDispatch::IntegrationTest
 
   def gated_paths
     [fd_root_path, fd_cases_path, fd_members_path, fd_audit_path, fd_search_path,
-     engine_path, acquisition_journey_path, admin_root_path]
+     engine_path, admin_root_path]
   end
 
   test "a member with no role signs in and reaches the front door" do
@@ -20,7 +20,7 @@ class MemberAreaTest < ActionDispatch::IntegrationTest
   end
 
   test "a member with no role holds no capability at all" do
-    Authz.keys.each do |key|
+    Authz.keys.reject { |key| Authz.every_account?(key) }.each do |key|
       assert_not @member.may?(key), "a member with no role must not hold #{key}"
     end
   end
@@ -52,18 +52,18 @@ class MemberAreaTest < ActionDispatch::IntegrationTest
   end
 
   test "signed out, the member page sends you to sign in" do
-    get you_api_path
+    get settings_keys_path
 
     assert_redirected_to login_path
   end
 
   test "signing out shuts the member page again" do
     sign_in_as(@member)
-    get you_api_path
+    get settings_keys_path
     assert_response :success
 
     delete logout_path
-    get you_api_path
+    get settings_keys_path
 
     assert_redirected_to login_path
   end
@@ -78,13 +78,13 @@ class MemberAreaTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to auth_failure_path(message: "no_slack_id")
 
-    get you_api_path
+    get settings_keys_path
     assert_redirected_to login_path
   end
 
   test "the rail offers a member with no role no way into fire engine" do
     sign_in_as(@member)
-    get you_api_path
+    get settings_keys_path
 
     assert_response :success
     assert_select ".rail-btn[href=?]", fd_root_path, count: 0
@@ -93,7 +93,7 @@ class MemberAreaTest < ActionDispatch::IntegrationTest
 
   test "a community manager keeps fire engine and admin in the rail" do
     sign_in_as(@staff)
-    get you_api_path
+    get settings_keys_path
 
     assert_response :success
     assert_select ".rail-btn[href=?]", fd_root_path

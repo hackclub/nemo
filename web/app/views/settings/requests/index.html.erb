@@ -1,0 +1,58 @@
+<% content_for :page_title, "Access requests" %>
+
+<div class="card card-flush">
+  <div class="card-head">
+    <h2 class="card-title">Requests</h2>
+    <div class="card-tools">
+      <span class="qlab"><%= @waiting %> waiting</span>
+    </div>
+  </div>
+
+  <% if @rows.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>app</th>
+            <th>owner</th>
+            <th>state</th>
+            <th>by</th>
+            <th class="col-date">when</th>
+            <th class="col-btn"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @rows.each do |asked| %>
+            <tr>
+              <td>
+                <span class="row-name">
+                  <%= face(asked.app.owner_user_id) %>
+                  <b><%= asked.app.name %></b>
+                </span>
+              </td>
+              <td class="sub2"><%= names[asked.app.owner_user_id] %></td>
+              <td><%= access_state_chip(asked.state) %></td>
+              <td class="sub2"><%= asked.decided_by ? names[asked.decided_by] : "" %></td>
+              <td class="col-date mono">
+                <%= time_ago_in_words(asked.decided_at || asked.created_at) %>
+              </td>
+              <td class="col-btn">
+                <% if asked.pending? %>
+                  <button type="button" class="text-btn" data-modal-open="settle-<%= asked.id %>" aria-haspopup="dialog">Review</button>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty">
+      <p class="empty-title">No requests</p>
+    </div>
+  <% end %>
+</div>
+
+<% @rows.select(&:pending?).each do |asked| %>
+  <%= render "settings/requests/settle", asked: asked %>
+<% end %>

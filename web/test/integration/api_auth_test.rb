@@ -3,7 +3,8 @@ require "test_helper"
 class ApiAuthTest < ActionDispatch::IntegrationTest
   setup do
     Fd::Flag.set!(:public_api, true, by: "UBOSS")
-    @token, @secret = Api::Token.mint!("UOWNER1", "Toolbox")
+    @client = make_app!("UOWNER1")
+    @token, @secret = Api::Token.mint!(@client, "Toolbox")
   end
 
   teardown do

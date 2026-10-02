@@ -1,58 +1,117 @@
 <% channel_pattern = Api::V1::ChannelManagersController::CHANNEL.source %>
 <% member_pattern = Api::V1::ChannelManagersController::MEMBER.source %>
 
-<header class="docs-lede">
-  <h1><%= topic.title %></h1>
-  <p><%= topic.blurb %></p>
-  <dl class="docs-meta">
-    <div><dt>Base</dt><dd class="mono"><%= request.base_url %>/api/v1</dd></div>
-    <div><dt>Scheme</dt><dd class="mono">Bearer</dd></div>
-    <div><dt>Rate</dt><dd class="mono"><%= @rate %>/min per key</dd></div>
-    <div><dt>Format</dt><dd class="mono">application/json</dd></div>
-  </dl>
-</header>
+<dl class="doc-spec">
+  <div><dt>Base</dt><dd><%= request.base_url %>/api/v1</dd></div>
+  <div><dt>Scheme</dt><dd>Bearer</dd></div>
+  <div><dt>Rate</dt><dd><%= @rate %>/min</dd></div>
+  <div><dt>Format</dt><dd>application/json</dd></div>
+</dl>
 
-<section class="docs-sec" id="auth">
-  <h2>Authentication</h2>
-  <pre class="pre">Authorization: Bearer nemo_live_7Fj2QcW8xR4mLpVdA1sT</pre>
-  <p>
-    Keys are <code>nemo_live_</code> plus 20 base58 characters, minted on
-    <%= link_to "your settings page", you_api_path(tab: "tokens") %> and stored as a SHA-256
-    digest. Shown once. Never accepted as a query parameter.
+<section class="doc-sec" id="access">
+  <h2>Access <%= doc_anchor("access") %></h2>
+
+  <p class="doc-lede">
+    Keys belong to an app, not to you. Register one on
+    <%= link_to "your settings page", settings_keys_path %> with a name and what it does,
+    and ask for the scopes it needs. A reviewer approves or declines each scope.
   </p>
-  <pre class="pre"><span class="c">GET /api/v1/token</span> <span class="c">// what this key is</span>
 
-{ <span class="k">"name"</span>: <span class="s">"Toolbox"</span>, <span class="k">"prefix"</span>: <span class="s">"nemo_live_7Fj2"</span>,
-  <span class="k">"owner_user_id"</span>: <span class="s">"U0A5PLKMB25"</span>, <span class="k">"rate_per_minute"</span>: <span class="n"><%= @rate %></span> }</pre>
+  <p>
+    The name and description are what members see when they decide whether to answer you,
+    so write them for a member, not for the reviewer.
+  </p>
+
+  <dl class="doc-defs">
+    <div class="doc-def">
+      <dt>pending <em>state</em></dt>
+      <dd>Waiting on a reviewer. Withdraw it at any time.</dd>
+    </div>
+    <div class="doc-def">
+      <dt>approved <em>state</em></dt>
+      <dd>The app may hold keys for that scope. Rechecked on every call.</dd>
+    </div>
+    <div class="doc-def">
+      <dt>declined <em>state</em></dt>
+      <dd>Nothing is granted. Ask again with a fuller reason.</dd>
+    </div>
+  </dl>
+
+  <div class="doc-note">
+    <b>Revocation</b>
+    An approval taken back stops the app's live keys answering straight away, with
+    <code>403 not_approved</code>. Retiring an app revokes every key it held.
+  </div>
 </section>
 
-<section class="docs-sec" id="check">
-  <h2><span class="verb">GET</span> Check a member</h2>
-  <pre class="pre">/api/v1/channels/{channel_id}/managers/{user_id}</pre>
-  <p>One channel and one member per request. There is no batch form.</p>
-  <div class="scroll">
-    <table class="data-table">
-      <thead>
-        <tr><th>param</th><th>pattern</th><th class="said-cell">notes</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="mono">channel_id</td>
-          <td class="mono"><%= channel_pattern %></td>
-          <td class="said-cell">Public or private. Never validated against an index.</td>
-        </tr>
-        <tr>
-          <td class="mono">user_id</td>
-          <td class="mono"><%= member_pattern %></td>
-          <td class="said-cell">Unknown ids answer <code>withheld</code>.</td>
-        </tr>
-      </tbody>
-    </table>
+<section class="doc-sec" id="auth">
+  <h2>Authentication <%= doc_anchor("auth") %></h2>
+
+  <p>
+    Keys are <code>nemo_live_</code> plus 20 base58 characters, generated once a scope is
+    approved and stored as a SHA-256 digest. Shown once. Rotating one replaces the secret and
+    keeps the name, the rate and the audit trail. Never accepted as a query parameter.
+  </p>
+
+  <div class="doc-code" data-controller="copy">
+    <div class="doc-code-h">
+      <span class="grow">header</span>
+      <%= doc_copy %>
+    </div>
+    <pre class="pre" data-copy-target="source">Authorization: Bearer nemo_live_7Fj2QcW8xR4mLpVdA1sT</pre>
   </div>
-  <div class="two-up">
-    <div class="docs-case">
-      <p class="docs-case-h">200 · consent granted</p>
-      <pre class="pre">{
+
+  <div class="doc-code" data-controller="copy">
+    <div class="doc-code-h">
+      <span class="verb">GET</span>
+      <span class="grow">/api/v1/token</span>
+      <%= doc_copy %>
+    </div>
+    <pre class="pre" data-copy-target="source">{ <span class="k">"name"</span>: <span class="s">"Toolbox"</span>, <span class="k">"prefix"</span>: <span class="s">"nemo_live_7Fj2"</span>,
+  <span class="k">"app"</span>: <span class="s">"triage-bot"</span>, <span class="k">"rate_per_minute"</span>: <span class="n"><%= @rate %></span> }</pre>
+  </div>
+</section>
+
+<section class="doc-sec" id="check">
+  <h2><span class="verb">GET</span> Check a member <%= doc_anchor("check") %></h2>
+
+  <div class="doc-code" data-controller="copy">
+    <div class="doc-code-h">
+      <span class="grow">path</span>
+      <%= doc_copy %>
+    </div>
+    <pre class="pre" data-copy-target="source">/api/v1/channels/{channel_id}/managers/{user_id}</pre>
+  </div>
+
+  <p>One channel and one member per request. There is no batch form.</p>
+
+  <h3>Parameters</h3>
+  <dl class="doc-defs">
+    <div class="doc-def">
+      <dt>channel_id <em>path</em></dt>
+      <dd>
+        <span class="mono"><%= channel_pattern %></span><br>
+        Public or private. Never validated against an index.
+      </dd>
+    </div>
+    <div class="doc-def">
+      <dt>user_id <em>path</em></dt>
+      <dd>
+        <span class="mono"><%= member_pattern %></span><br>
+        Unknown ids answer <code>withheld</code>.
+      </dd>
+    </div>
+  </dl>
+
+  <h3>Responses</h3>
+  <div class="doc-two">
+    <div class="doc-code" data-controller="copy">
+      <div class="doc-code-h">
+        <span class="doc-status">200</span>
+        <span class="grow">granted</span>
+        <%= doc_copy %>
+      </div>
+      <pre class="pre" data-copy-target="source">{
   <span class="k">"channel_id"</span>: <span class="s">"C0P5NE3M0"</span>,
   <span class="k">"user_id"</span>: <span class="s">"U0A5PLKMB25"</span>,
   <span class="k">"consent"</span>: <span class="s">"granted"</span>,
@@ -61,99 +120,125 @@
   <span class="k">"stale"</span>: <span class="n">false</span>
 }</pre>
     </div>
-    <div class="docs-case">
-      <p class="docs-case-h">200 · consent withheld</p>
-      <pre class="pre">{
+    <div class="doc-code" data-controller="copy">
+      <div class="doc-code-h">
+        <span class="doc-status">200</span>
+        <span class="grow">withheld</span>
+        <%= doc_copy %>
+      </div>
+      <pre class="pre" data-copy-target="source">{
   <span class="k">"channel_id"</span>: <span class="s">"C0P5NE3M0"</span>,
   <span class="k">"user_id"</span>: <span class="s">"U0A5PLKMB25"</span>,
   <span class="k">"consent"</span>: <span class="s">"withheld"</span>,
   <span class="k">"is_manager"</span>: <span class="n">null</span>,
-  <span class="k">"opt_in_url"</span>: <span class="s">"<%= you_api_url %>"</span>
+  <span class="k">"opt_in_url"</span>: <span class="s">"<%= settings_permissions_url %>"</span>
 }</pre>
     </div>
   </div>
-  <div class="scroll">
-    <table class="data-table">
-      <thead>
-        <tr><th>field</th><th>type</th><th class="said-cell">notes</th></tr>
-      </thead>
-      <tbody>
-        <tr><td class="mono">consent</td><td class="mono">string</td>
-          <td class="said-cell"><code>granted</code> or <code>withheld</code>. Always present.</td></tr>
-        <tr><td class="mono">is_manager</td><td class="mono">bool | null</td>
-          <td class="said-cell"><code>null</code> whenever consent is withheld.</td></tr>
-        <tr><td class="mono">synced_at</td><td class="mono">iso8601?</td>
-          <td class="said-cell">When the channel was last read from Slack. Absent when withheld.</td></tr>
-        <tr><td class="mono">stale</td><td class="mono">bool?</td>
-          <td class="said-cell"><code>true</code> past the cache TTL. Answer still served.</td></tr>
-        <tr><td class="mono">opt_in_url</td><td class="mono">string?</td>
-          <td class="said-cell">Present only when withheld.</td></tr>
-      </tbody>
-    </table>
-  </div>
+
+  <h3>Fields</h3>
+  <dl class="doc-defs">
+    <div class="doc-def">
+      <dt>consent <em>string</em></dt>
+      <dd><code>granted</code> or <code>withheld</code>. Always present.</dd>
+    </div>
+    <div class="doc-def">
+      <dt>is_manager <em>bool | null</em></dt>
+      <dd><code>null</code> whenever consent is withheld.</dd>
+    </div>
+    <div class="doc-def">
+      <dt>synced_at <em>iso8601?</em></dt>
+      <dd>When the channel was last read from Slack. Absent when withheld.</dd>
+    </div>
+    <div class="doc-def">
+      <dt>stale <em>bool?</em></dt>
+      <dd><code>true</code> past the cache TTL. Answer still served.</dd>
+    </div>
+    <div class="doc-def">
+      <dt>opt_in_url <em>string?</em></dt>
+      <dd>Present only when withheld.</dd>
+    </div>
+  </dl>
 </section>
 
-<section class="docs-sec" id="consent">
-  <h2>Consent states</h2>
-  <p>Branch on <code>consent</code>, not on the status code. Withheld is a <code>200</code>.</p>
-  <div class="scroll">
-    <table class="data-table">
-      <thead>
-        <tr><th>consent</th><th>is_manager</th><th class="said-cell">meaning</th></tr>
-      </thead>
-      <tbody>
-        <tr><td class="mono">granted</td><td class="mono">true | false</td>
-          <td class="said-cell">Member opted in. This is the answer.</td></tr>
-        <tr><td class="mono">withheld</td><td class="mono">null</td>
-          <td class="said-cell">Member has not opted in, or is unknown to us.</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p class="docs-note">
-    Consent is settled before the channel is touched, so a withheld body is identical whatever
-    channel you named: same fields, no <code>synced_at</code>, no <code>stale</code>. That is
-    what lets private channels be answered at all. Mnemosyne does not message members on a
-    caller's behalf; surface <code>opt_in_url</code> yourself.
+<section class="doc-sec" id="consent">
+  <h2>Consent states <%= doc_anchor("consent") %></h2>
+
+  <p class="doc-lede">
+    Members opt in to one app at a time. Consent for somebody else's app says nothing about
+    yours, and a member who opted in to you last month has not opted in to anyone since.
   </p>
+
+  <p>Branch on <code>consent</code>, not on the status code. Withheld is a <code>200</code>.</p>
+
+  <dl class="doc-defs">
+    <div class="doc-def">
+      <dt>granted <em>true | false</em></dt>
+      <dd>The member opted in to your app for this scope. This is the answer.</dd>
+    </div>
+    <div class="doc-def">
+      <dt>withheld <em>null</em></dt>
+      <dd>They have not opted in to your app, or we do not know them.</dd>
+    </div>
+  </dl>
+
   <p>
     A channel with no managers on record, or one that does not exist, answers
     <code>is_manager: false</code>. The API never confirms whether a channel exists.
   </p>
+
+  <div class="doc-note">
+    <b>Why private channels answer</b>
+    Consent is settled before the channel is touched, so a withheld body is identical
+    whatever channel you named: same fields, no <code>synced_at</code>, no
+    <code>stale</code>. Mnemosyne does not message members on your behalf; surface
+    <code>opt_in_url</code> yourself.
+  </div>
 </section>
 
-<section class="docs-sec" id="rate">
-  <h2>Rate limits</h2>
+<section class="doc-sec" id="rate">
+  <h2>Rate limits <%= doc_anchor("rate") %></h2>
+
   <p>
     <code><%= @rate %></code> requests per fixed 60 second window, per key. Overridable per key
     by a community manager.
   </p>
-  <pre class="pre">RateLimit-Limit: <%= @rate %>
+
+  <div class="doc-code" data-controller="copy">
+    <div class="doc-code-h">
+      <span class="grow">response headers</span>
+      <%= doc_copy %>
+    </div>
+    <pre class="pre" data-copy-target="source">RateLimit-Limit: <%= @rate %>
 RateLimit-Remaining: <%= [@rate - 3, 0].max %>
 RateLimit-Reset: 34        <span class="c">// seconds until the window rolls</span>
 Retry-After: 34            <span class="c">// 429 only, matches body.retry_after</span></pre>
+  </div>
+
   <p>
     The first three are on every answered request. Refusals raised before the key is resolved
     carry none, since there is no budget to report.
   </p>
 </section>
 
-<section class="docs-sec" id="errors">
-  <h2>Errors</h2>
-  <pre class="pre">{ <span class="k">"error"</span>: <span class="s">"rate_limited"</span>, <span class="k">"message"</span>: <span class="s">"rate limit spent, see retry_after"</span>, <span class="k">"retry_after"</span>: <span class="n">34</span> }</pre>
-  <div class="scroll">
-    <table class="data-table">
-      <thead>
-        <tr><th>status</th><th>error</th><th class="said-cell">cause</th></tr>
-      </thead>
-      <tbody>
-        <% Api::V1::BaseController::CALLER_ERRORS.each do |status, key, said| %>
-          <tr>
-            <td class="mono"><%= status %></td>
-            <td class="mono"><%= key %></td>
-            <td class="said-cell"><%= said %></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
+<section class="doc-sec" id="errors">
+  <h2>Errors <%= doc_anchor("errors") %></h2>
+
+  <div class="doc-code" data-controller="copy">
+    <div class="doc-code-h">
+      <span class="doc-status is-bad">429</span>
+      <span class="grow">body</span>
+      <%= doc_copy %>
+    </div>
+    <pre class="pre" data-copy-target="source">{ <span class="k">"error"</span>: <span class="s">"rate_limited"</span>, <span class="k">"message"</span>: <span class="s">"rate limit spent, see retry_after"</span>, <span class="k">"retry_after"</span>: <span class="n">34</span> }</pre>
   </div>
+
+  <dl class="doc-defs">
+    <% Api::V1::BaseController::CALLER_ERRORS.each do |status, key, said| %>
+      <div class="doc-def">
+        <dt><%= key %> <em><span class="doc-status<%= " is-bad" if status >= 500 %>"><%= status %></span></em></dt>
+        <dd><%= said %></dd>
+      </div>
+    <% end %>
+  </dl>
 </section>

@@ -4,6 +4,7 @@ class MemberTokensTest < ActionDispatch::IntegrationTest
   setup do
     Fd::Flag.set!(:public_api, true, by: "UBOSS")
     @member = Account.create!(user_id: "UMEMBER4")
+    @client = make_app!(@member.user_id)
     sign_in_as(@member)
   end
 
@@ -13,13 +14,13 @@ class MemberTokensTest < ActionDispatch::IntegrationTest
   end
 
   def mint(name: "Toolbox", lasting: "90")
-    post you_tokens_path, params: { name: name, lasting: lasting }
+    post settings_tokens_path, params: { app_id: @client.id, name: name, lasting: lasting }
   end
 
   test "the form does not go through turbo, so the answer is not thrown away" do
-    get you_api_path(tab: "tokens")
+    get settings_keys_path
 
-    assert_select "form[action=?][data-turbo=false]", you_tokens_path, 1,
+    assert_select "form[action=?][data-turbo=false]", settings_tokens_path, 1,
       "turbo drive discards a 200 from a form post, and the key would never be seen"
   end
 
@@ -29,7 +30,7 @@ class MemberTokensTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert_select ".modal-title", text: "Copy your key"
+    assert_select ".modal-title", text: "Your key"
     assert_select ".secret code", 1
     assert_select ".warn-line"
   end
@@ -67,7 +68,7 @@ class MemberTokensTest < ActionDispatch::IntegrationTest
       mint(name: "  ")
     end
 
-    assert_redirected_to you_api_path(tab: "tokens")
+    assert_redirected_to settings_keys_path
   end
 
   test "minting is written to the audit log with its life" do
@@ -75,30 +76,32 @@ class MemberTokensTest < ActionDispatch::IntegrationTest
 
     said = Api::Event.where(verb: "token_minted").sole
     assert_equal @member.user_id, said.actor_user_id
-    assert_equal "Toolbox, 30 days", said.detail
+    assert_equal "Toolbox, Toolbox, 30 days", said.detail
   end
 
   test "past the cap it is refused, and a revoked key frees a slot" do
-    3.times { |i| mint(name: "key #{i}") }
-    assert_equal 3, Api::Token.count
+    cap = Api::Setting.value("tokens_per_owner")
+    cap.times { |i| mint(name: "key #{i}") }
+    assert_equal cap, Api::Token.count
 
     mint(name: "one too many")
-    assert_equal 3, Api::Token.count
-    assert_match(/already hold 3/, flash[:alert])
+    assert_equal cap, Api::Token.count
+    assert_match(/already holds #{cap}/, flash[:alert])
 
     Api::Token.first.revoke!(by: @member.user_id)
     mint(name: "room now")
 
-    assert_equal 4, Api::Token.count
+    assert_equal cap + 1, Api::Token.count
   end
 
   test "an expired key does not hold a slot" do
-    3.times { |i| mint(name: "key #{i}") }
+    cap = Api::Setting.value("tokens_per_owner")
+    cap.times { |i| mint(name: "key #{i}") }
     Api::Token.first.update!(expires_at: 1.day.ago)
 
     mint(name: "room now")
 
-    assert_equal 4, Api::Token.count
+    assert_equal cap + 1, Api::Token.count
   end
 
   test "nobody can mint while the public api is off" do

@@ -7,10 +7,10 @@ module Admin
     }.freeze
 
     def show
-      @flags = Fd::Flag::KEYS.sort_by { |key| Fd::Flag.on?(key) ? 1 : 0 }
-      @dark = Fd::Flag::KEYS.reject { |key| Fd::Flag.on?(key) }
-      @losers = Fd::Flag::KEYS.index_with { |key| lose(key) }
-      @flipped = Fd::Flag.where(key: Fd::Flag::KEYS).index_by(&:key)
+      @flags = Fd::Flag::LISTED.sort_by { |key| Fd::Flag.on?(key) ? 1 : 0 }
+      @dark = Fd::Flag::LISTED.reject { |key| Fd::Flag.on?(key) }
+      @losers = Fd::Flag::LISTED.index_with { |key| lose(key) }
+      @flipped = Fd::Flag.where(key: Fd::Flag::LISTED).index_by(&:key)
       @names = Fd::Names.for(@flipped.values.filter_map(&:changed_by))
     end
 

@@ -18,6 +18,19 @@
 
   <div class="rail-foot">
     <span class="rail-sep" aria-hidden="true"></span>
+    <%= link_to docs_path, class: "rail-btn", title: "Docs",
+          aria: { current: ("page" if page_section == "docs"), label: "Docs" } do %>
+      <%= rail_icon("book") %>
+      <span class="rail-tip">Docs</span>
+    <% end %>
+    <%= link_to account_path, class: "rail-btn", title: "Settings",
+          aria: { current: ("page" if page_section == "settings"), label: "Settings" } do %>
+      <%= rail_icon("gear") %>
+      <span class="rail-tip">Settings</span>
+      <% if may_review_api? && api_queue_waiting.positive? %>
+        <i class="rail-dot"><%= api_queue_waiting > 99 ? "99+" : api_queue_waiting %></i>
+      <% end %>
+    <% end %>
     <%= render "layouts/you", staff: current_account %>
   </div>
 </nav>

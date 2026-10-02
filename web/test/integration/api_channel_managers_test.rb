@@ -6,7 +6,8 @@ class ApiChannelManagersTest < ActionDispatch::IntegrationTest
 
   setup do
     Fd::Flag.set!(:public_api, true, by: "UBOSS")
-    @token, @secret = Api::Token.mint!("UOWNER1", "Toolbox")
+    @client = make_app!("UOWNER1")
+    @token, @secret = Api::Token.mint!(@client, "Toolbox")
     @channel = Analytics::DimChannel.first.channel_id
     Api::ChannelManager.delete_all
     Api::ChannelSweep.delete_all
@@ -26,7 +27,7 @@ class ApiChannelManagersTest < ActionDispatch::IntegrationTest
   end
 
   def opted_in(user_id)
-    Api::Consent.set!(user_id, "channel_manager", true, via: "dashboard")
+    Api::Consent.set!(user_id, @client.id, "channel_manager", true, via: "dashboard")
   end
 
   def head(key = @secret)
@@ -70,7 +71,7 @@ class ApiChannelManagersTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "withheld", body["consent"]
     assert_nil body["is_manager"]
-    assert_match(%r{/you/api\z}, body["opt_in_url"])
+    assert_match(%r{/settings/permissions\z}, body["opt_in_url"])
   end
 
   test "withheld looks the same whether or not they manage it" do

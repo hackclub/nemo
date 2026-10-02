@@ -19,13 +19,27 @@ Rails.application.routes.draw do
     end
   end
 
-  get "docs", to: "docs#show", as: :docs
+  get "docs", to: "docs#index", as: :docs
+  get "docs/:slug", to: "docs#show", as: :doc
 
-  namespace :you do
-    get "api", to: "api#show", as: :api
+  namespace :settings do
+    resource :appearance, only: [:show], controller: "appearances"
+    resource :keys, only: [:show], controller: "keys"
+    resource :permissions, only: [:show], controller: "permissions"
     resource :consent, only: [:update], controller: "consents"
-    resources :tokens, only: [:create, :destroy]
+    resources :apps, only: [:create, :destroy]
+    resources :tokens, only: [:create, :destroy] do
+      member { post :rotate }
+    end
+    resources :requests, only: [:index, :create] do
+      member do
+        post :settle
+        delete :withdraw
+      end
+    end
   end
+
+  get "you/api", to: redirect("/settings/keys")
 
   get "cdn/destroy/:key", to: "fd/transcripts#show", as: :destroy_transcript,
       constraints: { key: %r{[^/]+} }, format: false
@@ -75,9 +89,6 @@ Rails.application.routes.draw do
     end
     resources :files, only: [:show]
     resource :search, only: [:show], controller: "searches"
-    patch "api_setting", to: "api_settings#update", as: :api_setting
-    patch "api_tokens/:id/rate", to: "api_settings#rate", as: :api_token_rate
-    delete "api_tokens/:id", to: "api_settings#destroy", as: :api_token
     get "audit", to: "audits#show", as: :audit, defaults: { format: "html" }
     get "audit/event", to: "audits#event", as: :audit_event
     get "slack_account/callback", to: "slack_accounts#callback", as: :slack_account_callback
@@ -127,6 +138,10 @@ Rails.application.routes.draw do
     resource :roles, only: [:show], controller: "roles"
     resource :flags, only: [:show], controller: "flags"
     resource :settings, only: [:show], controller: "settings"
+    resource :api, only: [:show], controller: "api_settings"
+    patch "api/setting", to: "api_settings#update", as: :api_setting
+    patch "api/tokens/:id/rate", to: "api_settings#rate", as: :api_token_rate
+    delete "api/tokens/:id", to: "api_settings#destroy", as: :api_token
     post "settings/firehouse", to: "settings#firehouse", as: :settings_firehouse
     post "settings/join_mode", to: "settings#join_mode", as: :settings_join_mode
     post "settings/sweep", to: "settings#sweep", as: :settings_sweep
