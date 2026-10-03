@@ -40,7 +40,9 @@
   .iconbtn:active,
   .rail-btn:active,
   .metric:active { scale: 0.985; }
-  .btn, .iconbtn, .rail-btn, .metric { transition-property: background-color, border-color, color, opacity, scale, box-shadow; }
+  .btn, .iconbtn, .rail-btn, .metric {
+    transition-property: background-color, border-color, color, opacity, scale, translate, box-shadow;
+  }
 
   .work { transition: grid-template-columns var(--dur-3) var(--ease); }
   html.sidebar-dragging .work { transition: none; }

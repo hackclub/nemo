@@ -13,7 +13,7 @@
         <span class="row-right">
           <%= gated_button("channel.guard", "Remove",
                 fd_channel_allow_path(channel_id, guard.kind, one.subject_id),
-                css: "btn btn-sm btn-ghost", method: :delete) %>
+                css: "btn btn-sm btn-danger", method: :delete) %>
         </span>
       </div>
     <% end %>

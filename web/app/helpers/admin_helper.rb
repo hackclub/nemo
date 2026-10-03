@@ -1,7 +1,10 @@
 module AdminHelper
   def role_capability_switch(role, key, override)
     held = override ? override.allowed : Authz.baseline(role).include?(key)
-    return dead_button(held ? "on" : "off", "#{key} is FD only, it cannot be moved") if Authz.locked?(key)
+    if Authz.locked?(key)
+      return dead_button(held ? "on" : "off", "#{key} is FD only, it cannot be moved",
+        held ? "btn tog-on" : "btn tog-off")
+    end
 
     gated_button "access.grant", held ? "on" : "off",
       fd_role_permission_path(role: role, key: key, allowed: held ? "0" : "1"),

@@ -1,7 +1,9 @@
 <% given = defined?(peak_messages) ? peak_messages.to_i : 0 %>
 <% peak = given.positive? ? given : channels.map { |c| c.range_messages.to_i }.max.to_i %>
 <% channels.each do |channel| %>
-  <tr>
+  <tr data-controller="row-link"
+      data-row-link-href-value="<%= channel_path(channel) %>"
+      data-action="click->row-link#go keydown->row-link#go">
     <td>
       <span class="two-line">
         <%= link_to channel_path(channel) do %>

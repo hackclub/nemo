@@ -33,7 +33,7 @@
   <div class="metrics">
     <div class="metric">
       <span class="metric-k">Tonight</span>
-      <span class="metric-v"><%= @run.nil? ? "no run" : (@orphaned ? "stuck" : @run.status) %></span>
+      <span class="metric-v <%= @orphaned ? "crit" : run_ink(@run) %>"><%= @run.nil? ? "no run" : (@orphaned ? "stuck" : @run.status) %></span>
       <span class="metric-say">
         <% if @run.nil? %>
           <span>nothing recorded yet</span>

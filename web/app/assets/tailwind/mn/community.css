@@ -472,7 +472,7 @@
   }
   .chart .quad-say {
     fill: var(--ink-4);
-    font-size: 9px;
+    font-size: var(--t-tiny);
     letter-spacing: 0.04em;
   }
   .chart stop.bot {

@@ -19,13 +19,17 @@
     50% { transform: translateY(-3px) rotate(-3deg); }
   }
 
-  .ladder { display: flex; flex-direction: column; }
+  .ladder {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) minmax(70px, 140px) 60px 72px auto;
+  }
   .rung {
     display: grid;
-    grid-template-columns: 22px minmax(0, 1fr) minmax(70px, 140px) 52px 68px auto;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
     align-items: center;
     gap: var(--s-xs);
-    padding: 8px var(--s-xs);
+    padding: var(--s-2xs) var(--s-xs);
     border-top: 1px solid var(--line-soft);
   }
   .rung:first-child { border-top: 0; }
@@ -59,15 +63,21 @@
   }
   .rbar {
     height: 4px;
-    border-radius: 2px;
+    border-radius: var(--r-pill);
     background: var(--sunk);
     overflow: hidden;
   }
-  .rbar > i { display: block; height: 100%; background: var(--ink-4); border-radius: inherit; }
+  .rbar > i {
+    display: block;
+    height: 100%;
+    min-width: 3px;
+    background: var(--ink-4);
+    border-radius: inherit;
+  }
   .rung.run .rbar > i { background: var(--accent); }
   .rung.ok .rbar > i { background: var(--good); }
-  .rung .snum { text-align: right; }
-  .rst { display: flex; align-items: center; justify-content: flex-end; gap: 4px; flex-wrap: wrap; }
+  .rung .snum { text-align: right; white-space: nowrap; }
+  .rst { display: flex; align-items: center; justify-content: flex-end; gap: var(--s-3xs); flex-wrap: wrap; }
 
   .nights-h, .srow {
     display: flex;
@@ -169,7 +179,7 @@
   .scar {
     display: inline-block;
     color: var(--ink-4);
-    font-size: 9px;
+    font-size: var(--t-tiny);
     transition: transform var(--dur-2) var(--ease), color var(--dur-2) var(--ease);
   }
   .source-row[aria-expanded="true"] .scar { color: var(--accent); transform: rotate(90deg); }
@@ -255,7 +265,7 @@
   .val:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 16%, transparent);
+    box-shadow: var(--ring-focus);
   }
   .val.tuned {
     background: var(--accent-soft);
@@ -285,7 +295,11 @@
     color: var(--ink-4);
   }
   .tgrid.tgrid-schedule { grid-template-columns: minmax(0, 1fr) 130px 1fr; }
-  .tgrid.tgrid-limits { grid-template-columns: minmax(0, 1fr) 110px 130px 1fr; }
+  .tgrid.tgrid-limits {
+    grid-template-columns: minmax(140px, 1fr) 110px 130px minmax(120px, 1fr);
+    min-width: 540px;
+  }
+  .card-body.flush:has(> .tgrid-limits) { overflow-x: auto; }
   .tgrid > .tcell { color: var(--ink-2); }
   .tn { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
   .tn > span { font-size: var(--t-fine); color: var(--ink-4); }
@@ -430,8 +444,8 @@
   }
   .lg-cell.lg-h4, .lg-cell.lg-h5 { color: var(--ink); font-weight: 600; }
   .lg-cell.lg-open {
-    color: var(--ink-4);
-    background: none;
+    color: var(--ink-3);
+    background: var(--accent-soft);
     font-style: normal;
   }
   .lg-cell.lg-none { color: var(--ink-4); background: none; }

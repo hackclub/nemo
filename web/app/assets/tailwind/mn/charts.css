@@ -39,7 +39,7 @@
     stroke-width: 1;
   }
   .ax {
-    fill: var(--ink-3);
+    fill: var(--ink-4);
     font-family: var(--font-code);
     font-size: var(--t-mark);
     font-variant-numeric: tabular-nums;
@@ -585,12 +585,8 @@
   .cal-run-say {
     grid-row: 10;
     font-size: var(--t-mark);
-    font-weight: 500;
-    color: var(--accent-deep);
-  }
-  .cal-run-say {
-    color: var(--accent-deep);
     font-weight: 600;
+    color: var(--accent-deep);
     text-align: right;
   }
 

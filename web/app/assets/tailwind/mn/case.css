@@ -9,7 +9,8 @@
     cursor: pointer;
     text-decoration: none;
     color: inherit;
-    transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+    transition: background-color var(--dur-2) var(--ease-out),
+      box-shadow var(--dur-2) var(--ease-out);
   }
   .qrow::before {
     content: "";
@@ -34,7 +35,7 @@
   }
   .qrow[aria-selected="true"]::before { scale: 1 1; }
   .qtop { display: flex; align-items: center; gap: 7px; min-width: 0; }
-  .qtop .avatar, .qtop .row-avatar { width: 18px; height: 18px; font-size: 9px; flex: none; }
+  .qtop .avatar, .qtop .row-avatar { width: 18px; height: 18px; font-size: var(--t-tiny); flex: none; }
   .qid {
     font-family: var(--font-code);
     font-size: var(--t-fine);
@@ -79,7 +80,7 @@
     min-width: 0;
   }
   .qcite-head { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: var(--t-mark); color: var(--ink-3); }
-  .qcite-face { width: 15px; height: 15px; font-size: 8px; flex: none; }
+  .qcite-face { width: 15px; height: 15px; font-size: var(--t-tiny); flex: none; }
   .qcite-who { font-weight: 600; color: var(--ink-2); min-width: 0; }
   .qcite-how { color: var(--ink-4); flex: none; }
   .qcite-in { min-width: 0; }
@@ -100,7 +101,7 @@
   .qviol { font-size: var(--t-small); font-weight: 500; color: var(--ink-3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .qpriors { font-size: var(--t-fine); font-weight: 500; color: var(--warn); white-space: nowrap; flex: none; }
   .qmeta .faces { margin-left: auto; flex: none; }
-  .qmeta .avatar, .qmeta .row-avatar { width: 18px; height: 18px; font-size: 9px; }
+  .qmeta .avatar, .qmeta .row-avatar { width: 18px; height: 18px; font-size: var(--t-tiny); }
 
   .qlab { font-size: var(--t-fine); color: var(--ink-4); white-space: nowrap; }
   .qsearch { display: flex; min-width: 0; flex: 1 1 auto; }
@@ -250,7 +251,7 @@
   }
 
   .mi { display: flex; align-items: flex-start; gap: var(--s-2xs); min-width: 0; }
-  .mi-ic { color: var(--ink-3); flex: none; margin-top: 1px; }
+  .mi-ic { color: var(--ink-3); flex: none; width: 14px; margin-top: 1px; }
   .mi-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
   .mi-t { font-weight: 500; color: inherit; }
   .mi-note { font-size: var(--t-fine); color: var(--ink-3); }
@@ -366,7 +367,7 @@
     background: var(--card);
     transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   }
-  .composer .cfield:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 16%, transparent); }
+  .composer .cfield:focus-within { border-color: var(--accent); box-shadow: var(--ring-focus); }
   .mention-field { position: relative; flex: 1 1 auto; display: flex; min-width: 0; }
   .chat-input {
     flex: 1 1 auto;
@@ -480,7 +481,7 @@
   .msg.out .cite { background: var(--card); }
   .cite-bare { border-left-color: var(--line); background: transparent; }
   .cite-head { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; font-size: var(--t-small); color: var(--ink-3); line-height: 1.4; }
-  .cite-face { width: 17px; height: 17px; font-size: 8px; flex: none; }
+  .cite-face { width: 17px; height: 17px; font-size: var(--t-tiny); flex: none; }
   .cite-who { font-weight: 600; color: var(--ink-2); }
   .cite-how { color: var(--ink-4); }
   .cite-open { display: inline-flex; margin-left: auto; padding: 2px; border-radius: var(--r-tight); color: var(--ink-4); }

@@ -1,6 +1,6 @@
 module YouHelper
   def figure(value)
-    return tag.span("n/a", class: "sub2") if value.nil?
+    return tag.span("n/a", class: "sub2", title: "not tracked") if value.nil?
 
     number_with_delimiter(value)
   end

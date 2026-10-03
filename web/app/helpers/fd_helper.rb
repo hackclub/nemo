@@ -1421,7 +1421,7 @@ module FdHelper
   end
 
   def dead_button(text, why, css = "btn")
-    tag.span(class: "#{css} btn-off", title: why, tabindex: "0",
+    tag.span(class: "#{css} btn-off", tabindex: "0",
       aria: { disabled: "true", description: why }) do
       concat tag.span(text)
       concat tag.span(why, class: "btn-why")

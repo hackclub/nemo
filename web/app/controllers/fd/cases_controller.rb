@@ -78,6 +78,7 @@ module Fd
         assignees: @assignees,
         erasures: @erasures,
         names: @names,
+        channels: @channels,
       )
       @context = MemberContext.for(
         @case.subject_user_ids +

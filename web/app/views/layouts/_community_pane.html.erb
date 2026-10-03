@@ -20,7 +20,7 @@
         <div class="cnav-sub">
           <% journey_stages.each do |label, stage| %>
             <% path = public_send(:"#{stage}_journey_path") %>
-            <%= link_to path, title: label,
+            <%= link_to path,
                   aria: { current: ("page" if current_page?(path)) } do %>
               <%= nav_icon(stage) %><span class="trunc"><%= label %></span>
             <% end %>

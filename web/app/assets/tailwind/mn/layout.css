@@ -1,7 +1,8 @@
 @layer base {
   .intro {
     font-size: var(--t-mid);
-    line-height: 1.55;
+    line-height: var(--lh-prose);
+    max-inline-size: 72ch;
     color: var(--ink-3);
     max-width: min(100%, 880px);
     padding-bottom: var(--s-2xs);
@@ -40,7 +41,19 @@
   .rhead:has(> .toolbar) > .rtop { padding-bottom: 4px; }
   @container (max-width: 820px) {
     .rhead > .toolbar .kbd { display: none; }
+    .rtop > .ractions > .btn .kbd,
+    .rtop > .ractions > .menu > .btn .kbd { display: none; }
   }
+  @container (max-width: 640px) {
+    .rtop > .ractions > .btn:has(> .action-icon) > span:not(.action-icon) { display: none; }
+    .rtop > .ractions > .btn:has(> .action-icon) {
+      width: var(--ctl-h);
+      padding: 0;
+      gap: 0;
+      flex: none;
+    }
+  }
+
   @container (max-width: 680px) {
     .rhead > .toolbar { flex-wrap: nowrap; padding-top: var(--s-2xs); }
     .rhead > .toolbar > .btn > span:not(.action-icon),
@@ -76,7 +89,8 @@
   .section-title {
     font-size: var(--t-head);
     font-weight: 600;
-    letter-spacing: -0.022em;
+    line-height: var(--lh-snug);
+    letter-spacing: var(--tr-head);
     color: var(--ink);
     flex: none;
   }
@@ -125,11 +139,11 @@
   .metrics {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(var(--metric-min, 200px), 1fr));
-    gap: 1px;
+    gap: 0;
     min-width: 0;
     border: 0;
     border-radius: var(--r-card);
-    background: var(--line);
+    background: var(--card);
     box-shadow: 0 0 0 1px var(--line);
     overflow: clip;
   }
@@ -138,6 +152,7 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
+    box-shadow: 1px 0 0 var(--line), 0 1px 0 var(--line);
     gap: 4px;
     padding: var(--s-sm) var(--s-sm) var(--s-md);
     background: var(--card);
@@ -145,6 +160,7 @@
     text-decoration: none;
     transition: background-color var(--dur) var(--ease);
   }
+  .metrics > .metric:last-child { box-shadow: 0 1px 0 var(--line); }
   a.metric:hover, button.metric:hover { background: var(--hover); text-decoration: none; }
   .metric[aria-current="true"] { background: var(--card-2); }
   .metric[aria-current="true"]::after {
@@ -162,28 +178,27 @@
     right: var(--s-sm);
     z-index: 1;
   }
+  .metric:has(> .pickswitch) > .metric-k { padding-right: 100px; }
   .metric-k {
     display: flex;
     align-items: center;
     gap: var(--s-2xs);
-    font-size: var(--t-fine);
-    font-weight: 550;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    color: var(--ink-4);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .metric-v {
-    font-family: var(--font-code);
+    font-family: var(--font-figure);
     font-size: var(--t-display);
     font-weight: 600;
     letter-spacing: -0.035em;
-    line-height: 1.1;
+    line-height: var(--lh-tight);
     color: var(--ink);
     font-variant-numeric: tabular-nums;
   }
+  .metric-v.good { color: var(--good); }
+  .metric-v.warn { color: var(--warn); }
+  .metric-v.crit { color: var(--crit); }
   .metric-v small {
     font-size: var(--t-mid);
     font-weight: 500;
@@ -209,6 +224,7 @@
   }
   .metric-spark .chart { height: 34px; }
 
+  .stack:has(> .pagebar) { padding-bottom: 56px; }
   .pagebar {
     position: sticky;
     bottom: var(--s-xs);
@@ -249,8 +265,14 @@
     color: var(--accent);
   }
   .lede-said { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-  .lede-said b { font-size: var(--t-mid); font-weight: 600; color: var(--ink); }
-  .lede-said span { font-size: var(--t-small); color: var(--ink-3); line-height: 1.55; }
+  .lede-said b {
+    font-size: var(--t-mid);
+    font-weight: 600;
+    line-height: var(--lh-snug);
+    letter-spacing: var(--tr-head);
+    color: var(--ink);
+  }
+  .lede-said span { font-size: var(--t-small); color: var(--ink-3); line-height: var(--lh-prose); }
   .lede-do { margin-left: auto; flex: none; display: flex; gap: var(--s-2xs); align-items: center; }
 
   .board {
@@ -265,11 +287,6 @@
     align-items: center;
     gap: var(--s-2xs);
     padding: 0 0 2px;
-    font-size: var(--t-fine);
-    font-weight: 550;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    color: var(--ink-4);
   }
 
   .split-cols {

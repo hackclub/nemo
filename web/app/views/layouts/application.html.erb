@@ -24,6 +24,7 @@
   </head>
 
   <body data-section="<%= page_section %>">
+    <a class="skiplink" href="#main">Skip to content</a>
     <%= render "shared/synthetic_banner" %>
     <% fire_engine = may_use_fire_engine? %>
     <% nav_partial = fire_engine && page_section == "fd" ? "layouts/fd_pane" : section_pane %>
@@ -76,7 +77,7 @@
                                pointerup->pane-size#drop pointercancel->pane-size#drop"></button>
         <% end %>
 
-        <main class="main">
+        <main class="main" id="main" tabindex="-1">
           <div class="rhead">
             <div class="rtop">
               <div class="rhead-said">

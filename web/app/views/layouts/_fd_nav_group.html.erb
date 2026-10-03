@@ -1,7 +1,6 @@
 <div class="cnav-group<%= " #{css}" if local_assigns[:css].present? %>">
   <% stops.each do |stop| %>
-    <%= link_to stop.path, title: stop.label,
-          aria: { current: ("page" if stop.here) } do %>
+    <%= link_to stop.path, aria: { current: ("page" if stop.here) } do %>
       <%= nav_icon(stop.icon) %>
       <span class="trunc"><%= stop.label %></span>
       <% if stop.tally.to_i.positive? %>

@@ -24,6 +24,10 @@ module Fd
     def initialize(record, names)
       @record = record
       @names = names
+      @channels = ChannelNames.for(
+        record.guards.map(&:channel_id) +
+          record.actions.filter_map { |one| one.details["channel_id"] if one.details.is_a?(Hash) }
+      )
     end
 
     def entries(only = "all")
@@ -35,7 +39,7 @@ module Fd
 
     private
 
-    attr_reader :record, :names
+    attr_reader :record, :names, :channels
 
     def case_entries
       record.subject_cases.map do |kase|
@@ -189,7 +193,7 @@ module Fd
 
     def guard_detail(guard)
       parts = ["on no case"]
-      parts << "in #{guard.channel_id}" if guard.channel_scoped?
+      parts << "in #{channels[guard.channel_id]}" if guard.channel_scoped?
       parts << "by #{names[guard.opened_by]}"
       parts << "lifts #{guard.expires_at.strftime('%-d %b')}" if guard.expires_at
       parts << guard.reason if guard.reason.present?
@@ -199,7 +203,7 @@ module Fd
     def action_detail(action)
       parts = ["case #{action.case_id}"]
       channel = action.details.is_a?(Hash) ? action.details["channel_id"] : nil
-      parts << "in #{channel}" if channel
+      parts << "in #{channels[channel]}" if channel
       parts << "by #{names[action.decided_by]}"
       parts << "lifts #{action.expires_at.strftime('%-d %b')}" if action.expires?
       parts << action.reason if action.reason.present?

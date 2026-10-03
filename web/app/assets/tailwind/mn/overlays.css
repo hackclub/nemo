@@ -2,7 +2,7 @@
   .menu { position: relative; display: inline-flex; }
   .menu > summary { list-style: none; cursor: pointer; }
   .menu > summary::-webkit-details-marker { display: none; }
-  .car { font-size: 9px; color: var(--ink-4); margin-left: 1px; }
+  .car { font-size: var(--t-tiny); color: var(--ink-4); margin-left: 1px; }
 
   .menu-pop, .pick-pop, .picker-pop, .rooms-pop, .dp-pop, .mention-pop, .area-pop {
     position: absolute;
@@ -15,12 +15,12 @@
     overflow: hidden auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
-    padding: 5px;
+    padding: var(--gap-ctl-sm);
     margin: 0;
     border: 0;
     border-radius: var(--r-card);
     background: var(--card-2);
-    box-shadow: var(--shadow-2);
+    box-shadow: var(--shadow-pop);
     animation: rise var(--dur-2) var(--ease-out) both;
   }
   .menu-pop[popover], .pick-pop[popover], .picker-pop[popover],
@@ -36,11 +36,11 @@
   .menu-pop .btn, .menu-pop > a, .menu-pop > button, .pick-opt, .picker-opt, .rooms-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--s-2xs);
     width: 100%;
     height: auto;
-    min-height: 32px;
-    padding: 6px 9px;
+    min-height: var(--ctl-h);
+    padding: var(--gap-ctl) 9px;
     border: 0;
     border-radius: var(--r-tight);
     background: none;
@@ -83,12 +83,7 @@
   .menu-pop .btn.btn-danger, .menu-pop > form .btn-danger { color: var(--crit); }
   .menu-pop .btn.btn-danger:hover { background: var(--crit-soft); }
   .menu-group {
-    padding: 8px 9px 4px;
-    font-size: var(--t-mark);
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--ink-4);
+    padding: var(--s-2xs) 9px var(--s-3xs);
   }
   .menu-compact { min-width: 170px; }
   .menu-val { margin-left: auto; color: var(--ink-4); font-size: var(--t-fine); }
@@ -151,24 +146,25 @@
   .modal-sm { --modal-w: 420px; }
   .modal-lg { --modal-w: 760px; }
   .modal-xl { --modal-w: 980px; }
-  .modal > form, .modal *:has(> .modal-body) {
+  .modal > form, .modal *:has(.modal-body) {
     display: flex;
     flex-direction: column;
     min-height: 0;
   }
+  .modal .modal-body { flex: 1 1 auto; }
   .modal-head {
     position: relative;
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding: var(--s-xs) 46px 10px var(--s-sm);
+    padding: var(--s-xs) 46px var(--s-xs) var(--s-sm);
     border-bottom: 1px solid var(--line-soft);
     flex: none;
   }
   .modal-shut {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: var(--p-ctl);
+    right: var(--p-ctl);
     display: grid;
     place-items: center;
     width: 26px;
@@ -202,7 +198,7 @@
     align-items: center;
     justify-content: flex-end;
     gap: var(--s-2xs);
-    padding: 10px var(--s-sm);
+    padding: var(--p-ctl) var(--s-sm);
     border-top: 1px solid var(--line-soft);
     background: var(--card-2);
     flex: none;
@@ -216,9 +212,9 @@
     .modal-foot > .btn { flex: 1 1 auto; }
   }
 
-  .palette-input:has(input:focus-visible) { box-shadow: inset 0 0 0 2px var(--focus); }
+
   .palette-empty {
-    padding: 26px var(--s-sm);
+    padding: var(--s-lg) var(--s-sm);
     text-align: center;
     color: var(--ink-3);
     font-size: var(--t-body);
@@ -266,13 +262,14 @@
     display: flex;
     align-items: center;
     gap: var(--s-2xs);
-    padding: 0 var(--s-xs);
+    padding: 0 14px;
     border-bottom: 1px solid var(--line-soft);
     flex: none;
   }
   .palette-input input {
     flex: 1 1 auto;
-    height: 46px;
+    min-width: 0;
+    height: 44px;
     border: 0;
     background: none;
     outline: none;
@@ -282,37 +279,80 @@
   .palette-input input::placeholder { color: var(--ink-4); }
   .palette-icon { color: var(--ink-4); flex: none; }
   .scope { font-size: var(--t-fine); color: var(--ink-4); }
-  .palette-group {
-    padding: 8px 12px 3px;
-    font-size: var(--t-mark);
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--ink-4);
-  }
+  .palette-group { padding: var(--s-xs) 14px var(--s-3xs); }
   .palette-row {
     display: flex;
     align-items: center;
     gap: var(--s-2xs);
-    padding: 8px 10px;
-    margin: 0 4px;
-    border-radius: var(--r-ctl);
+    min-height: 38px;
+    padding: var(--gap-ctl) var(--p-ctl);
+    margin: 0 var(--s-3xs);
+    border-radius: var(--r-tight);
     color: var(--ink-2);
     text-decoration: none;
     min-width: 0;
   }
+  .palette-row > .palette-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    flex: none;
+    color: var(--ink-4);
+  }
+  .palette-row > .palette-icon > .avatar { width: 16px; height: 16px; }
+  .pal-what {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: var(--gap-ctl);
+    row-gap: 1px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .pal-t {
+    font-size: var(--t-body);
+    font-weight: 550;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pal-what > .sub {
+    font-size: var(--t-fine);
+    color: var(--ink-4);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pal-what > .line2 {
+    grid-column: 1 / -1;
+    font-size: var(--t-small);
+    color: var(--ink-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .palette-row:hover, .palette-row[aria-selected="true"] {
-    background: var(--accent-soft);
-    color: var(--accent-deep);
+    background: color-mix(in oklab, var(--ink) 7%, transparent);
+    color: var(--ink);
     text-decoration: none;
   }
+  .palette-row[aria-selected="true"] .pal-t { color: var(--accent); }
+  .palette-row.off { color: var(--ink-4); cursor: not-allowed; }
+  .palette-row.off .pal-t { color: var(--ink-3); font-weight: 500; }
+  .palette-row.off:hover, .palette-row.off[aria-selected="true"] {
+    background: var(--mute-soft);
+    color: var(--ink-4);
+  }
+  .palette-row.off[aria-selected="true"] .pal-t { color: var(--ink-3); }
   .palette-arrow { color: var(--ink-4); }
   .palette-row .palette-arrow { margin-left: auto; }
   .palette-foot {
     display: flex;
     align-items: center;
     gap: var(--s-xs);
-    padding: 8px var(--s-xs);
+    padding: var(--gap-ctl) 14px;
     border-top: 1px solid var(--line-soft);
     background: var(--card-2);
     font-size: var(--t-fine);
@@ -552,7 +592,7 @@
   .pick-field .pick-input:focus { border: 0; box-shadow: none; }
   .pick-field:focus-within {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 16%, transparent);
+    box-shadow: var(--ring-focus);
   }
   .pick-list {
     display: flex;

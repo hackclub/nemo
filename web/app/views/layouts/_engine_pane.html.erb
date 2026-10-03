@@ -7,7 +7,7 @@
       <div class="cnav-group">
         <% keys.each do |key| %>
           <% label = EngineController::TABS.fetch(key) %>
-          <%= link_to engine_tab_path(key), title: label,
+          <%= link_to engine_tab_path(key),
                 aria: { current: ("page" if engine_tab == key) } do %>
             <%= nav_icon(key) %><span class="trunc"><%= label %></span>
           <% end %>

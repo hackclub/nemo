@@ -44,8 +44,7 @@
   <div class="metric">
     <span class="metric-k">Last post</span>
     <span class="metric-v">
-      <% seen = said_ago(snapshot&.last_message_at || channel.last_active_at) %>
-      <%= seen || "n/a" %>
+      <%= said_ago_parts(snapshot&.last_message_at || channel.last_active_at) || "n/a" %>
     </span>
     <% if channel.date_created %>
       <span class="metric-say">created <%= channel.date_created.to_date.strftime("%-d %b %Y") %></span>

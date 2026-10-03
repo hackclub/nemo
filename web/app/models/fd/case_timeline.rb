@@ -3,12 +3,13 @@ module Fd
     Entry = Struct.new(:at, :title, :mark, :chips, :detail, :said, keyword_init: true)
 
     def self.for(kase, reports:, actions:, notes:, participants: [], assignees: [],
-      erasures: [], names: nil)
-      new(kase, reports:, actions:, notes:, participants:, assignees:, erasures:, names:).entries
+      erasures: [], names: nil, channels: nil)
+      new(kase, reports:, actions:, notes:, participants:, assignees:, erasures:, names:,
+        channels:).entries
     end
 
     def initialize(kase, reports:, actions:, notes:, participants: [], assignees: [],
-      erasures: [], names: nil)
+      erasures: [], names: nil, channels: nil)
       @case = kase
       @reports = reports
       @actions = actions
@@ -17,6 +18,7 @@ module Fd
       @assignees = assignees
       @erasures = erasures
       @names = names || Names.none
+      @channels = channels || ChannelNames.none
     end
 
     def entries
@@ -26,7 +28,8 @@ module Fd
 
     private
 
-    attr_reader :reports, :actions, :notes, :participants, :assignees, :erasures, :names
+    attr_reader :reports, :actions, :notes, :participants, :assignees, :erasures, :names,
+      :channels
 
     def kase = @case
 
@@ -180,7 +183,7 @@ module Fd
         parts << "performed by #{names[action.performed_by]}"
       end
       channel = action.details.is_a?(Hash) ? action.details["channel_id"] : nil
-      parts << "in #{channel}" if channel
+      parts << "in #{channels[channel]}" if channel
       parts.join(" · ")
     end
 

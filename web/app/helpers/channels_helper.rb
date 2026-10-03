@@ -72,6 +72,16 @@ module ChannelsHelper
     end
   end
 
+  def said_ago_parts(at)
+    seen = said_ago(at)
+    return nil if seen.nil?
+
+    split = seen.match(/\A(\d[\w.]*)\s+(.+)\z/)
+    return seen if split.nil?
+
+    safe_join([split[1], tag.small(" #{split[2]}")])
+  end
+
   def channel_read_ratio(read, posted)
     return "n/a" if read.nil? || posted.to_i.zero?
 

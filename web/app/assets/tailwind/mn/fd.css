@@ -1,7 +1,7 @@
 @layer base {
   .member-facts {
     display: grid;
-    grid-template-columns: repeat(3, minmax(max-content, 1fr)) repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 1px;
     margin: 0;
     border: 0;
@@ -139,7 +139,7 @@
 
 @layer components {
   .audit-chips { padding: 0 var(--s-3xs); }
-  .audit-search { flex: 1 1 320px; min-width: 200px; max-width: 460px; }
+  .audit-search { flex: 1 1 320px; min-width: 300px; max-width: 460px; }
   .ractions > .audit-search .qsearch-in { width: 100%; }
 
   .audit-help-list {

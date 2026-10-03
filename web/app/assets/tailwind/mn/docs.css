@@ -4,6 +4,7 @@
     --doc-step: 48px;
 
     max-width: var(--doc-measure);
+    margin-inline: auto;
     padding-bottom: calc(var(--s-xl) * 2);
     font-size: var(--t-mid);
     line-height: 1.75;
@@ -71,7 +72,7 @@
     align-items: center;
     gap: var(--s-2xs);
     margin: 0 0 var(--s-xs);
-    font-size: 1.375rem;
+    font-size: var(--t-title);
     font-weight: 600;
     letter-spacing: -0.028em;
     line-height: 1.2;
@@ -291,7 +292,7 @@
 
   @media (max-width: 760px) {
     .doc { --doc-step: var(--s-lg); font-size: var(--t-body); }
-    .doc-sec > h2 { font-size: 1.1875rem; }
+    .doc-sec > h2 { font-size: var(--t-lede); }
     .doc-sec > h3 { font-size: var(--t-mid); }
     .doc-def { grid-template-columns: minmax(0, 1fr); gap: 3px; }
   }

@@ -5,13 +5,27 @@ module EngineHelper
     "partial" => "chip chip-warn",
     "cancelled" => "chip chip-warn",
     "running" => "chip chip-off",
-    "abandoned" => "chip chip-off"
+    "abandoned" => "chip chip-warn"
+  }.freeze
+
+  STATUS_INK = {
+    "ok" => "good",
+    "failed" => "crit",
+    "partial" => "warn",
+    "cancelled" => "warn",
+    "abandoned" => "warn"
   }.freeze
 
   STALE_AFTER = 36.hours
 
   def run_status(row)
     tag.span row.status, class: STATUS_CHIP.fetch(row.status, "chip chip-off")
+  end
+
+  def run_ink(row)
+    return "warn" if row.nil?
+
+    STATUS_INK.fetch(row.status, "")
   end
 
   def short_age(at)
