@@ -13,7 +13,7 @@ class Authz
     scope :for_person, ->(user_id) { where(user_id: user_id) }
     scope :newest_first, -> { order(granted_at: :desc, id: :desc) }
 
-    def self.give!(user_id, kind:, name:, by:, effect: "allow", reason: nil)
+    def self.grant!(user_id, kind:, name:, by:, effect: "allow", reason: nil)
       refuse "#{kind} is not a kind of grant" unless KINDS.include?(kind.to_s)
       refuse "#{effect} is not an effect" unless EFFECTS.include?(effect.to_s)
       check!(kind.to_s, name.to_s, effect.to_s)

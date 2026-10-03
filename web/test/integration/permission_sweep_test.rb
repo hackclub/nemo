@@ -37,7 +37,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     Account.find_or_create_by!(user_id: id)
     hold_role!(id, one[:role]) if one[:role]
     Array(one[:scopes]).each do |key|
-      Authz::Grant.give!(id, kind: "capability", name: key, by: "sweep")
+      Authz::Grant.grant!(id, kind: "capability", name: key, by: "sweep")
     end
     if one[:channels]
       Channels::Audience::Grant.create!(user_id: id, channel_id: @mine,
@@ -372,7 +372,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     refute_includes Authz.held("UVICTIM01").keys, "access.grant",
       "a manager handed out the locked grant capability"
     assert_raises(Authz::Grant::NotAllowedError) do
-      Authz::Grant.give!("UVICTIM01", kind: "capability", name: "access.grant", by: "sweep")
+      Authz::Grant.grant!("UVICTIM01", kind: "capability", name: "access.grant", by: "sweep")
     end
   end
 
@@ -381,7 +381,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     id = become("firefighter")
     assert Authz.holds?(Account.find(id), "slack.link"), "the role should carry it"
 
-    Authz::Grant.give!(id, kind: "capability", name: "slack.link", effect: "deny", by: "sweep")
+    Authz::Grant.grant!(id, kind: "capability", name: "slack.link", effect: "deny", by: "sweep")
     Current.forget_roles
 
     refute Authz.holds?(Account.find(id), "slack.link"), "the denial did not bite"
@@ -396,7 +396,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     assert Authz.holds?(Account.find(id), "identity.read"), "the role should carry it"
 
     assert_raises(Authz::Grant::NotAllowedError) do
-      Authz::Grant.give!(id, kind: "capability", name: "identity.read", effect: "deny",
+      Authz::Grant.grant!(id, kind: "capability", name: "identity.read", effect: "deny",
         by: "sweep")
     end
     assert Authz.holds?(Account.find(id), "identity.read"), "the refused deny must not bite"

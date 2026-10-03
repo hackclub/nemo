@@ -56,7 +56,7 @@ module Fd
     def objection
       return "no domain given" if domain_param.blank?
       return "a domain is under #{LONGEST} characters" if domain_param.length > LONGEST
-      return "#{domain_param} is not a domain" unless BlockedDomain.shape?(domain_param)
+      return "#{domain_param} is not a domain" unless BlockedDomain.valid_domain?(domain_param)
       return nil if overridden?
 
       crowd = BlockedDomain.people_on(domain_param, match_mode: match_mode)

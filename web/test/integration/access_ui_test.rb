@@ -122,7 +122,7 @@ class AccessUiTest < ActionDispatch::IntegrationTest
 
   test "the gardener set is shared, and says how many it reaches" do
     channel = Analytics::DimChannel.where(archived: false).first
-    Authz::Grant.give!(@them.user_id, kind: "role", name: "gardener", by: @boss.user_id)
+    Authz::Grant.grant!(@them.user_id, kind: "role", name: "gardener", by: @boss.user_id)
     Current.forget_roles
 
     post admin_role_channels_path(role: "gardener"), params: { channel_id: channel.channel_id }

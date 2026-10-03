@@ -11,9 +11,9 @@ else
       next
     end
 
-    Authz::Grant.give!(user_id, kind: "role", name: Fd::Access::MANAGER_ROLE,
+    Authz::Grant.grant!(user_id, kind: "role", name: Fd::Access::MANAGER_ROLE,
       by: "seed", reason: "bootstrap admin")
     puts "granted #{Fd::Access::MANAGER_ROLE}: #{user_id}"
   end
-  puts "managers now: #{Authz.who_holds('access.grant').sort.join(', ')}"
+  puts "managers now: #{Authz.holders_of('access.grant').sort.join(', ')}"
 end

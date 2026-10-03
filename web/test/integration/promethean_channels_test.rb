@@ -80,7 +80,7 @@ class PrometheanChannelsTest < ActionDispatch::IntegrationTest
   test "the promethean role cannot be delegated by hand" do
     assert_not_includes Authz.grantable_roles, "promethean"
     assert_raises(Authz::Grant::NotAllowedError) do
-      Authz::Grant.give!(WHO, kind: "role", name: "promethean", by: "test")
+      Authz::Grant.grant!(WHO, kind: "role", name: "promethean", by: "test")
     end
   end
 end

@@ -77,7 +77,7 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
   test "a lead cannot reach the grant endpoints at all" do
     delete logout_path
     hand = Account.create!(user_id: "ULEAD")
-    Authz::Grant.give!("ULEAD", kind: "role", name: "firefighter", by: "UME")
+    Authz::Grant.grant!("ULEAD", kind: "role", name: "firefighter", by: "UME")
     Current.forget_roles
     sign_in_as(hand)
 
@@ -100,7 +100,7 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
   end
 
   test "the controls are only drawn for somebody who may use them" do
-    Authz::Grant.give!("U0AFF1", kind: "role", name: "firefighter", by: "UME")
+    Authz::Grant.grant!("U0AFF1", kind: "role", name: "firefighter", by: "UME")
 
     get admin_people_path
 
@@ -108,7 +108,7 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
 
     delete logout_path
     lead = Account.create!(user_id: "ULEAD")
-    Authz::Grant.give!("ULEAD", kind: "role", name: "firefighter", by: "UME")
+    Authz::Grant.grant!("ULEAD", kind: "role", name: "firefighter", by: "UME")
     sign_in_as(lead)
 
     get admin_people_path

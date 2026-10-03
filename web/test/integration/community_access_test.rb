@@ -12,7 +12,7 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
   def scoped(name, *keys)
     staff = Account.find_or_create_by!(user_id: "UCA#{name.upcase}")
     keys.each do |key|
-      Authz::Grant.give!(staff.user_id, kind: "capability", name: key, by: "test")
+      Authz::Grant.grant!(staff.user_id, kind: "capability", name: key, by: "test")
     end
     Current.forget_roles
     staff
@@ -75,7 +75,7 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
 
   test "a role and an extra scope are held independently" do
     staff = hold_role!("UCABOTH", "gardener")
-    Authz::Grant.give!(staff.user_id, kind: "capability", name: "channel.backfill", by: "test")
+    Authz::Grant.grant!(staff.user_id, kind: "capability", name: "channel.backfill", by: "test")
     Current.forget_roles
 
     assert_equal %w[gardener], Authz.roles_held(staff.user_id)
@@ -212,7 +212,7 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
     Engine::Setting.set!("engine", "backfill_ceiling", "0", by: @boss.user_id)
 
     assert_raises(Authz::Grant::NotAllowedError) do
-      Authz::Grant.give!("UCASYNC", kind: "capability", name: "engine.manage", by: "test")
+      Authz::Grant.grant!("UCASYNC", kind: "capability", name: "engine.manage", by: "test")
     end
 
     sign_in_as(@boss)
@@ -252,7 +252,7 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
 
   test "a new role retires the old one and leaves the extra scopes alone" do
     staff = hold_role!("UCASWAP", "firefighter")
-    Authz::Grant.give!(staff.user_id, kind: "capability", name: "channel.backfill", by: "test")
+    Authz::Grant.grant!(staff.user_id, kind: "capability", name: "channel.backfill", by: "test")
     hold_role!("UCASWAP", "gardener")
     Current.forget_roles
 

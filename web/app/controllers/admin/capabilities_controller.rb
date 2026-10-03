@@ -32,7 +32,7 @@ module Admin
     end
 
     def settle(key, effect)
-      Authz::Grant.give!(who, kind: "capability", name: key, effect: effect,
+      Authz::Grant.grant!(who, kind: "capability", name: key, effect: effect,
         by: current_account.user_id, reason: params[:reason].presence)
       audit_change(key, effect)
       Current.forget_roles

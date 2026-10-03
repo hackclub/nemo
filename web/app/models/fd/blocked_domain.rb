@@ -37,7 +37,7 @@ module Fd
       holds(domain).max_by { |one| EFFECTS.index(one.effect) }
     end
 
-    def self.shape?(text)
+    def self.valid_domain?(text)
       text.to_s.strip.downcase.delete_prefix("@").match?(SHAPE)
     end
 

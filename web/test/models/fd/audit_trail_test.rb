@@ -50,7 +50,7 @@ class Fd::AuditTrailTest < ActiveSupport::TestCase
   end
 
   test "a grant row names who got it and what they got" do
-    grant = Authz::Grant.give!("UNEW", kind: "role", name: "firefighter", by: WHO)
+    grant = Authz::Grant.grant!("UNEW", kind: "role", name: "firefighter", by: WHO)
     audit("capability_grant", grant.id, "granted",
       after: { "user_id" => "UNEW", "role" => "firefighter" })
 

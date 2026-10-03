@@ -101,7 +101,7 @@ module ActiveSupport
 
     def hold_role!(user_id, role)
       Account.find_or_create_by!(user_id: user_id)
-      Authz::Grant.give!(user_id, kind: "role", name: role, by: "test")
+      Authz::Grant.grant!(user_id, kind: "role", name: role, by: "test")
       Current.forget_roles
       Account.find(user_id)
     end

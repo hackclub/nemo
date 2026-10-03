@@ -207,7 +207,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     end
 
     assert_raises(Authz::Grant::NotAllowedError) do
-      Authz::Grant.give!("UNOROLE", kind: "role", name: "wizard", by: "test")
+      Authz::Grant.grant!("UNOROLE", kind: "role", name: "wizard", by: "test")
     end
   end
 

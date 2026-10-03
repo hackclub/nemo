@@ -68,7 +68,7 @@ module Admin
       return 0 if settled_role?(user_id, asked)
 
       if asked.present?
-        Authz::Grant.give!(user_id, kind: "role", name: asked,
+        Authz::Grant.grant!(user_id, kind: "role", name: asked,
           by: current_account.user_id, reason: params[:reason].presence)
         audit_grant(user_id, "role", asked, "granted")
       else
@@ -91,7 +91,7 @@ module Admin
 
     def add_scopes(user_id, keys)
       keys.count do |key|
-        Authz::Grant.give!(user_id, kind: "capability", name: key,
+        Authz::Grant.grant!(user_id, kind: "capability", name: key,
           by: current_account.user_id, reason: params[:reason].presence)
         audit_grant(user_id, "capability", key, "granted")
         true

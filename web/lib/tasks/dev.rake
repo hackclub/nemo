@@ -48,7 +48,7 @@ namespace :dev do
     abort "dev:unpeople only runs in development" unless Rails.env.development?
 
     ids = PEOPLE.map { |one| one[:id] }
-    Authz::Grant.live.where(user_id: ids).find_each { |row| row.take_back!(by: "dev:people") }
+    Authz::Grant.live.where(user_id: ids).find_each { |row| row.revoke!(by: "dev:people") }
     Channels::Audience::Grant.live.where(user_id: ids).find_each do |row|
       row.update!(revoked_by: "dev:people", revoked_at: Time.current)
     end
@@ -62,10 +62,10 @@ namespace :dev do
     Account.find_or_create_by!(user_id: one[:id])
     settle_role(one, by)
     Array(one[:added]).each do |key|
-      Authz::Grant.give!(one[:id], kind: "capability", name: key, by: by, reason: "dev seed")
+      Authz::Grant.grant!(one[:id], kind: "capability", name: key, by: by, reason: "dev seed")
     end
     Array(one[:denied]).each do |key|
-      Authz::Grant.give!(one[:id], kind: "capability", name: key, effect: "deny", by: by,
+      Authz::Grant.grant!(one[:id], kind: "capability", name: key, effect: "deny", by: by,
         reason: "dev seed")
     end
     name_channels(one, pool, by)
@@ -75,7 +75,7 @@ namespace :dev do
   def settle_role(one, by)
     return if one[:role].blank?
 
-    Authz::Grant.give!(one[:id], kind: "role", name: one[:role], by: by, reason: "dev seed")
+    Authz::Grant.grant!(one[:id], kind: "role", name: one[:role], by: by, reason: "dev seed")
   end
 
   def name_channels(one, pool, by)
