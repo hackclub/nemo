@@ -4,7 +4,7 @@
 <% end %>
 <% content_for :head_context do %>
   <span class="triad-sep" aria-hidden="true">&middot;</span>
-  <span class="qage <%= age_ink(case_age_seconds(@case)) unless @case.resolved? %>">
+  <span class="queue-age <%= age_ink(case_age_seconds(@case)) unless @case.resolved? %>">
     <%= @case.resolved? ? "closed" : case_age_label(case_age_seconds(@case)) %>
   </span>
   <% if @case.subject_user_ids.any? %>
@@ -121,7 +121,7 @@
     <% if @tab == "report" %>
       <%= render "chat", kase: @case, reports: @reports, chat: @chat, earlier: @earlier_chat,
             messages: @conversation_said, queued: @queued, thread: @thread,
-            conversation: @thread_conversation, said_count: @conversation_count %>
+            conversation: @thread_conversation, message_count: @conversation_count %>
     <% end %>
 
     <% if @tab == "people" %>
@@ -168,7 +168,7 @@
             <div class="lrow">
               <%= face(note.author) %>
               <span class="grow">
-                <b class="note-said"><%= mentioned(note.body) %></b>
+                <b class="note-fine"><%= mentioned(note.body) %></b>
                 <span class="sub"><%= note_byline(note) %></span>
               </span>
               <span class="lrow-right">
@@ -208,8 +208,8 @@
                 <% if marks.any? %>
                   <p class="card-note"><%= marks.join(" · ") %></p>
                 <% end %>
-                <% if entry.said.present? %>
-                  <p class="msg-body"><%= mentioned(entry.said) %></p>
+                <% if entry.body.present? %>
+                  <p class="msg-body"><%= mentioned(entry.body) %></p>
                 <% end %>
               </div>
             </div>
@@ -342,7 +342,7 @@
           <% if @live_actions.any? %>
             <div class="field-label">
               <span>Why it is closing</span>
-              <div class="said"><%= closing_because(@live_actions) %></div>
+              <div class="quote-block"><%= closing_because(@live_actions) %></div>
             </div>
           <% else %>
             <label class="field-label">
@@ -366,7 +366,7 @@
             </label>
             <label class="field-label only only-telling">
               What they are told
-              <%= text_area_tag :member_message, Fd::Resolution::TOLD, rows: 3,
+              <%= text_area_tag :member_message, Fd::Resolution::DEFAULT_MESSAGE, rows: 3,
                     class: "textarea", maxlength: Fd::IntakeOutbox::MAX_LENGTH %>
             </label>
           <% end %>

@@ -72,7 +72,7 @@ def run(conn, paths):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("files", nargs="+", help="one or more Slack member analytics CSV export parts")
-    parser.add_argument("--dsn", help="connect to this Postgres DSN instead of the pipeline's own env")
+    parser.add_argument("--dsn", help="Postgres DSN to use instead of the environment configuration")
     args = parser.parse_args()
     load_dotenv(ENV_FILE)
 

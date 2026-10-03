@@ -104,7 +104,7 @@ module HomeHelper
 
   def rate_chip(pct, label = nil)
     text = number_to_percentage(pct, precision: 1)
-    tag.span(label ? "#{text} #{label}" : text, class: "tn")
+    tag.span(label ? "#{text} #{label}" : text, class: "stack-fine")
   end
 
   def retention_cell(rate)
@@ -137,7 +137,7 @@ module HomeHelper
 
   WINDOWS = [[86_400, "day"], [3600, "hour"], [60, "minute"]].freeze
 
-  def window_said(seconds)
+  def window_label(seconds)
     return "the whole span" if seconds.blank?
 
     size, word = WINDOWS.find { |step, _| seconds >= step } || [1, "second"]
@@ -187,7 +187,6 @@ module HomeHelper
     value = row.public_send(stage[:key])
     shade = "lg-cell lg-h#{heat_step(value, peak)}"
 
-    # the opening stage divides by created, so its step and its cumulative are one number
     if stage[:prev] == :invited
       return tag.span(number_to_percentage(value.to_f * 100, precision: 1),
         class: shade, title: title)

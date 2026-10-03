@@ -2,8 +2,8 @@ import logging
 import os
 
 from bot.core import parse
-from bot.core.wording import to_member
-from bot.nemo import answer, cards, carry, channels, chat, who
+from bot.core.formatting import to_member
+from bot.nemo import answer, views, attachments, channels, chat, profile
 
 log = logging.getLogger("bot.nemo")
 
@@ -99,13 +99,13 @@ def digest_of(blocks):
     return parse.digest(None, blocks, None)
 
 
-_firehouse = {}
+_internal_log = {}
 
 
-def firehouse_channel(conn=None):
+def internal_log_channel(conn=None):
     if conn is not None:
-        _firehouse["id"] = channels.setting(conn, channels.FIREHOUSE) or None
-    return _firehouse.get("id") or os.environ["FIREHOUSE_CHANNEL_ID"]
+        _internal_log["id"] = channels.setting(conn, channels.INTERNAL_LOG) or None
+    return _internal_log.get("id") or os.environ["INTERNAL_LOG_CHANNEL_ID"]
 
 
 _react = {}
@@ -118,11 +118,11 @@ def react_channels(conn=None):
 
 
 def case_channels(conn=None):
-    return {firehouse_channel(conn)} | react_channels(conn)
+    return {internal_log_channel(conn)} | react_channels(conn)
 
 
 def card_channel(case, channel_id=None, conn=None):
-    return channel_id or firehouse_channel(conn)
+    return channel_id or internal_log_channel(conn)
 
 
 CARD_ROOM = """
@@ -132,7 +132,7 @@ SELECT card_channel_id FROM fd.cases WHERE id = %(case_id)s
 
 def card_room(conn, case_id, channel_id=None):
     row = conn.execute(CARD_ROOM, {"case_id": case_id}).fetchone()
-    return (row and row[0]) or channel_id or firehouse_channel(conn)
+    return (row and row[0]) or channel_id or internal_log_channel(conn)
 
 
 def app_url(path):
@@ -229,11 +229,11 @@ def shares_for(conn, message_id):
 
 def unfurled(conn, message_id):
     built = []
-    for share in cards.report.brought(shares_for(conn, message_id)):
-        built.append(cards.report.context([cards.report.whose(share)]))
-        words = cards.report.quote(share["source_body"])
-        if words:
-            built.append(words)
+    for share in views.report.evidence_blocks(shares_for(conn, message_id)):
+        built.append(views.report.context([views.report.whose(share)]))
+        quoted = views.report.quote(share["source_body"])
+        if quoted:
+            built.append(quoted)
     return built
 
 
@@ -243,7 +243,7 @@ def post_report(client, conn, case_id, channel_id=None, thread_ts=None):
         log.warning("nemo: case %s has no report to post", case_id)
         return None
     if case["forwarded_ts"]:
-        log.info("nemo: case %s is already in the firehouse", case_id)
+        log.info("nemo: case %s is already in the internal_log", case_id)
         return case["forwarded_ts"]
 
     held = conn.execute(CLAIM_CARD, (case["report_id"],)).fetchone()
@@ -251,14 +251,14 @@ def post_report(client, conn, case_id, channel_id=None, thread_ts=None):
         log.info("nemo: case %s went up while we were asking, leaving it", case_id)
         return held[0]
 
-    built = cards.report.blocks(case)
-    room = channel_id or firehouse_channel(conn)
+    built = views.report.build_blocks(case)
+    room = channel_id or internal_log_channel(conn)
     sent = client.chat_postMessage(
         channel=room,
         thread_ts=thread_ts,
-        text=cards.report.fallback(case),
+        text=views.report.fallback(case),
         blocks=built,
-        metadata=cards.report.metadata(case),
+        metadata=views.report.metadata(case),
         unfurl_links=False,
         unfurl_media=False,
         **only_the_face(client, case["is_anonymous"], case["reporter_user_id"]),
@@ -277,19 +277,19 @@ def post_report(client, conn, case_id, channel_id=None, thread_ts=None):
             (ts, case["message_id"]),
         )
     if case["message_id"]:
-        carry.share(
+        attachments.share(
             client, conn, case["message_id"], room, ts,
             wearing=as_reporter(client, case["is_anonymous"], case["reporter_user_id"]),
         )
 
-    log.info("nemo: case %s posted to the firehouse at %s", case_id, ts)
+    log.info("nemo: case %s posted to the internal_log at %s", case_id, ts)
     return ts
 
 
 def anonymous_face():
-    told = os.environ.get("ANONYMOUS_ICON_URL")
-    if told:
-        return told
+    found = os.environ.get("ANONYMOUS_ICON_URL")
+    if found:
+        return found
 
     host = os.environ.get("APP_HOST", "")
     if not host or host.startswith(("localhost", "127.")):
@@ -311,7 +311,7 @@ def as_reporter(client, anonymous, reporter_user_id):
             worn["icon_url"] = icon
         return worn
 
-    seen = who.face(client, reporter_user_id)
+    seen = profile.profile(client, reporter_user_id)
     wearing = {"username": seen["name"]}
     if seen["icon"]:
         wearing["icon_url"] = seen["icon"]
@@ -333,10 +333,10 @@ def post_follow_up(client, conn, message_id, channel_id=None):
         log.warning("nemo: message %s has no card to hang under", message_id)
         return None
 
-    ts = carry.share(
-        client, conn, message_id, channel_id or firehouse_channel(conn), forwarded,
+    ts = attachments.share(
+        client, conn, message_id, channel_id or internal_log_channel(conn), forwarded,
         wearing=as_reporter(client, anonymous, reporter),
-        words=to_member(body),
+        body=to_member(body),
         unfurled=unfurled(conn, message_id),
     )
     if ts is None:
@@ -348,18 +348,18 @@ def post_follow_up(client, conn, message_id, channel_id=None):
         "WHERE id = %s AND mirrored_ts IS NULL",
         (ts, message_id),
     )
-    log.info("nemo: message %s carried into the firehouse at %s", message_id, ts)
+    log.info("nemo: message %s carried into the internal_log at %s", message_id, ts)
     return ts
 
 
-def redraw(client, conn, case_id, channel_id=None):
+def refresh_card(client, conn, case_id, channel_id=None):
     case = gather(conn, case_id)
     if case is None:
         return None
     if not case["forwarded_ts"]:
         return post_report(client, conn, case_id, channel_id)
 
-    built = cards.report.blocks(case)
+    built = views.report.build_blocks(case)
     fingerprint = digest_of(built)
     if fingerprint == case["card_digest"]:
         return case["forwarded_ts"]
@@ -368,13 +368,13 @@ def redraw(client, conn, case_id, channel_id=None):
         client.chat_update(
             channel=card_channel(case, channel_id, conn),
             ts=case["forwarded_ts"],
-            text=cards.report.fallback(case),
+            text=views.report.fallback(case),
             blocks=built,
         )
     except Exception as failure:
-        if not somebody_elses(failure):
+        if not is_foreign_message_error(failure):
             raise
-        return recard(client, conn, case_id, case["report_id"], channel_id)
+        return rebuild_case_card(client, conn, case_id, case["report_id"], channel_id)
 
     conn.execute(
         "UPDATE fd.case_reports SET card_digest = %s, card_rendered_at = now() WHERE id = %s",
@@ -387,12 +387,12 @@ def redraw(client, conn, case_id, channel_id=None):
 NOT_OURS = ("cant_update_message", "message_not_found", "edit_window_closed")
 
 
-def somebody_elses(failure):
-    said = str(failure)
-    return any(one in said for one in NOT_OURS)
+def is_foreign_message_error(failure):
+    text = str(failure)
+    return any(one in text for one in NOT_OURS)
 
 
-def recard(client, conn, case_id, report_id, channel_id):
+def rebuild_case_card(client, conn, case_id, report_id, channel_id):
     conn.execute(
         "UPDATE fd.case_reports SET forwarded_ts = NULL, card_digest = NULL WHERE id = %s",
         (report_id,),
@@ -401,12 +401,12 @@ def recard(client, conn, case_id, report_id, channel_id):
     return post_report(client, conn, case_id, channel_id)
 
 
-def whisper(client, body, said):
+def post_ephemeral(client, body, text):
     client.chat_postEphemeral(
         channel=body["channel"]["id"],
         user=body["user"]["id"],
         thread_ts=body["message"].get("thread_ts") or body["message"]["ts"],
-        text=said,
+        text=text,
     )
 
 
@@ -495,8 +495,8 @@ def carry_files(client, conn, case_id, channel_id=None):
     for message_id, forwarded_ts, anonymous, reporter in conn.execute(
         FILES_ON_CASE, (case_id,)
     ).fetchall():
-        if carry.share(
-            client, conn, message_id, channel_id or firehouse_channel(conn), forwarded_ts,
+        if attachments.share(
+            client, conn, message_id, channel_id or internal_log_channel(conn), forwarded_ts,
             wearing=as_reporter(client, anonymous, reporter),
         ):
             sent += 1
@@ -507,7 +507,7 @@ def waiting_follow_ups(conn):
     return [row[0] for row in conn.execute(FOLLOW_UPS_ANYWHERE).fetchall()]
 
 
-def untold_wakes(conn):
+def unannounced_reopens(conn):
     return [row[0] for row in conn.execute(WOKE_UNTOLD).fetchall()]
 
 
@@ -519,36 +519,36 @@ def carry_follow_ups(client, conn, case_id, channel_id=None):
     return carried
 
 
-def tell_the_wake(client, conn, case_id, channel_id=None):
+def post_reopen_notice(client, conn, case_id, channel_id=None):
     row = conn.execute(WOKE, (case_id,)).fetchone()
     if row is None:
         return None
 
     was = row[0]
-    told = said_again(client, conn, case_id, was, channel_id)
+    found = post_reopen_announcement(client, conn, case_id, was, channel_id)
     conn.execute(WOKE_TOLD, (case_id,))
-    return told
+    return found
 
 
-def said_again(client, conn, case_id, was, channel_id=None):
-    redraw(client, conn, case_id, channel_id)
+def post_reopen_announcement(client, conn, case_id, was, channel_id=None):
+    refresh_card(client, conn, case_id, channel_id)
 
     case = gather(conn, case_id)
     if case is None or not case["forwarded_ts"]:
         return None
 
-    said = was.replace("_", " ") if was else "resolved"
+    label = was.replace("_", " ") if was else "resolved"
     return client.chat_postMessage(
         channel=card_channel(case, channel_id, conn),
         thread_ts=case["forwarded_ts"],
         text=f":arrows_counterclockwise: they wrote back, so case {case_id} is open again "
-        f"(it was closed as {said})",
+        f"(it was closed as {label})",
         unfurl_links=False,
     )["ts"]
 
 
 def echo(client, thread_ts, sent_by, body, signed, channel_id=None):
-    seen = who.face(client, sent_by)
+    seen = profile.profile(client, sent_by)
     wearing = {"username": seen["name"]}
     if seen["icon"]:
         wearing["icon_url"] = seen["icon"]
@@ -557,16 +557,16 @@ def echo(client, thread_ts, sent_by, body, signed, channel_id=None):
         "event_payload": {"source_user_id": sent_by},
     }
 
-    said = f"{answer.PREFIX}{cards.report.escape_but_mentions(body)}"
+    text = f"{answer.PREFIX}{views.report.escape_but_mentions(body)}"
     if not signed:
-        said = f"{answer.ANON}{said}"
+        text = f"{answer.ANON}{text}"
 
-    room = channel_id or firehouse_channel()
+    room = channel_id or internal_log_channel()
     try:
         sent = client.chat_postMessage(
             channel=room,
             thread_ts=thread_ts,
-            text=said,
+            text=text,
             unfurl_links=False,
             unfurl_media=False,
             **wearing,
@@ -583,7 +583,7 @@ def mirror(client, conn, case_id, channel_id=None):
     carried = 0
 
     for chat_id, author, body, thread_ts in chat.waiting(conn, case_id):
-        seen = who.face(client, author)
+        seen = profile.profile(client, author)
         wearing = {"username": seen["name"]}
         if seen["icon"]:
             wearing["icon_url"] = seen["icon"]
@@ -596,7 +596,7 @@ def mirror(client, conn, case_id, channel_id=None):
             sent = client.chat_postMessage(
                 channel=room,
                 thread_ts=thread_ts,
-                text=cards.report.escape_but_mentions(body),
+                text=views.report.escape_but_mentions(body),
                 unfurl_links=False,
                 unfurl_media=False,
                 **wearing,

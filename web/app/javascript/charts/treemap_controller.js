@@ -42,7 +42,7 @@ export default class extends Controller {
     this.at = null
     this.element.innerHTML = `<div class="tree tipped" tabindex="0"
       data-action="mousemove->treemap#track mouseleave->treemap#clear keydown->treemap#key"
-      ><div class="tip"></div><span class="chart-say" aria-live="polite"></span></div>`
+      ><div class="tip"></div><span class="chart-caption" aria-live="polite"></span></div>`
     const box = this.element.querySelector(".tree")
     this.watcher = new ResizeObserver(() => this.measure())
     this.watcher.observe(box)
@@ -240,7 +240,7 @@ export default class extends Controller {
     box.querySelectorAll(".cell").forEach((cell) =>
       cell.classList.toggle("on", +cell.dataset.i === i))
 
-    box.querySelector(".chart-say").textContent = `${r.name}, ${N(r.messages)} messages${
+    box.querySelector(".chart-note").textContent = `${r.name}, ${N(r.messages)} messages${
       r.pct != null && !r.thin ? `, ${signed(r.pct)}` : ""}`
   }
 
@@ -252,7 +252,7 @@ export default class extends Controller {
     box.querySelector(".tip")?.classList.remove("on")
     box.classList.remove("lit")
     box.querySelectorAll(".cell").forEach((cell) => cell.classList.remove("on"))
-    const say = box.querySelector(".chart-say")
+    const say = box.querySelector(".chart-note")
     if (say) say.textContent = ""
   }
 }

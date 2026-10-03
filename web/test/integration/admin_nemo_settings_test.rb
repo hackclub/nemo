@@ -6,7 +6,7 @@ class AdminNemoSettingsTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
   end
 
-  def said(key) = Fd::AppSetting.said(key)
+  def setting(key) = Fd::AppSetting.value(key)
 
   def sweep(**over)
     post admin_settings_sweep_path, params: { soon_hours: "12", tells: "1" }.merge(over)
@@ -31,7 +31,7 @@ class AdminNemoSettingsTest < ActionDispatch::IntegrationTest
     post admin_settings_join_mode_path, params: { mode: "sideways" }
 
     assert_equal "guarded", Fd::AppSetting.join_mode
-    assert_match(/not a join mode/, flash[:alert])
+    assert_match(/not a valid join mode/, flash[:alert])
   end
 
   test "setting the mode it already has changes nothing" do
@@ -55,7 +55,7 @@ class AdminNemoSettingsTest < ActionDispatch::IntegrationTest
   test "an horizon outside the range is refused" do
     sweep(soon_hours: "0")
 
-    assert_empty said(Fd::AppSetting::SWEEP_SOON_HOURS)
+    assert_empty setting(Fd::AppSetting::SWEEP_SOON_HOURS)
     assert_match(/from 1 to/, flash[:alert])
   end
 

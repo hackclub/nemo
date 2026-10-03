@@ -18,7 +18,7 @@
             <b><%= guard_held_line(guard) %></b>
             <span class="sub"><%= guard_footnote(guard, names) %></span>
             <% if guard.deactivation? %>
-              <span class="carry-said"><%= guard_carry_said(guard) %></span>
+              <span class="carry-state"><%= guard_carry_label(guard) %></span>
               <span class="carry-slow" data-deactivate-target="slow" hidden>
                 Slack has not answered yet.
               </span>

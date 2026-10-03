@@ -11,7 +11,7 @@
                 <h2 class="card-title">Channels activity</h2>
               </div>
               <% if @cohorts.many? %>
-                <%= render "shared/picker", said: "activity month",
+                <%= render "shared/picker", label: "activity month",
                       chosen: @cohort.strftime("%b %Y"),
                       groups: [{ options: @cohorts.map { |month| {
                         label: month.strftime("%b %Y"), current: month == @cohort,
@@ -65,7 +65,7 @@
 
       <% if @opportunity %>
         <turbo-frame id="newcomer-map" data-turbo-action="advance">
-          <%= render "map", map: @opportunity, cohorts: @newcomer_cohorts,
+          <%= render "opportunity", map: @opportunity, cohorts: @newcomer_cohorts,
                 title: "Newcomers landing",
                 x_label: "newcomers who posted here", y_label: "newcomers who posted again",
                 n_label: "newcomer messages",
@@ -80,7 +80,7 @@
     <div class="stack">
       <div class="card card-flush">
         <div class="cardbar">
-          <%= form_with url: channels_path, method: :get, class: "qsearch",
+          <%= form_with url: channels_path, method: :get, class: "queue-search",
                 data: { controller: "live-search", action: "input->live-search#go",
                         turbo_frame: "channels", turbo_action: "advance" } do %>
             <% { sort: @sort, direction: @direction,
@@ -94,7 +94,7 @@
             <% end %>
             <%= hidden_field_tag :match, @filter.match, id: nil %>
             <%= search_field_tag :q, @q, placeholder: "Search public channels by name",
-                  class: "qsearch-in", autocomplete: "off",
+                  class: "queue-search-input", autocomplete: "off",
                   aria: { label: "Search public channels by name" } %>
           <% end %>
 
@@ -125,7 +125,7 @@
           </span>
             <% if @window.adjustable? %>
               <%= render "shared/range_button", id: "channels-range",
-                    label: channels_range_said(@window) %>
+                    label: channels_range_label(@window) %>
             <% end %>
           </div>
         </div>

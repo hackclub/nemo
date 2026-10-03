@@ -71,7 +71,7 @@ def ask(client, interval, query=None, direction="asc"):
     return data.get("channel_analytics") or [], data.get("num_found") or 0
 
 
-def absorb(records, found, on_fresh=None):
+def merge_records(records, found, on_fresh=None):
     fresh = [record for record in records if record["channel_id"] not in found]
     for record in records:
         found[record["channel_id"]] = record
@@ -84,7 +84,7 @@ def sweep(client, interval, shards, found, on_fresh=None, depth=0):
     truncated = []
     for shard in shards:
         records, num_found = ask(client, interval, shard)
-        absorb(records, found, on_fresh)
+        merge_records(records, found, on_fresh)
         if num_found > len(records):
             truncated.append(shard)
     if not truncated or depth >= SPLIT_DEPTH:
@@ -95,7 +95,7 @@ def sweep(client, interval, shards, found, on_fresh=None, depth=0):
 
 def tail_sweep(client, interval, found, on_fresh=None):
     records, _ = ask(client, interval, direction="desc")
-    return absorb(records, found, on_fresh)
+    return merge_records(records, found, on_fresh)
 
 
 def run_month(conn, month, alphabet=None):
@@ -113,7 +113,7 @@ def run_month(conn, month, alphabet=None):
         _, expected = ask(client, interval)
         counts.total_expected = expected
 
-        def land(records):
+        def insert_rows(records):
             rows = []
             for record in records:
                 try:
@@ -127,8 +127,8 @@ def run_month(conn, month, alphabet=None):
             counts.rows_in = len(found)
             counts.progress()
 
-        short = sweep(client, interval, shards, found, land)
-        tail = tail_sweep(client, interval, found, land)
+        short = sweep(client, interval, shards, found, insert_rows)
+        tail = tail_sweep(client, interval, found, insert_rows)
         missed = max(0, expected - len(found))
         reached = len(found) >= int(expected * SHORT_AT)
         complete = reached and not short

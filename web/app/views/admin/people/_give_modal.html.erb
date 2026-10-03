@@ -22,9 +22,9 @@
 
       <div class="field-label">
         <span>Role</span>
-        <div class="segmented seg-radio" data-controller="unpick">
+        <div class="segmented seg-radio" data-controller="deselect">
           <% Authz.grantable_roles.each do |name| %>
-            <label data-action="mousedown->unpick#down click->unpick#press">
+            <label data-action="mousedown->deselect#down click->deselect#press">
               <%= radio_button_tag "role", name, role == name, id: nil,
                     data: { give_access_target: "role", action: "change->give-access#settle" } %>
               <%= Authz.role_label(name) %>

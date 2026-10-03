@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from psycopg.types.json import Jsonb
 
-from lib.message import author_kind, scrub, shape
+from lib.message import author_kind, redact, normalize
 
 GONE = "message_deleted"
 CHANGED = "message_changed"
@@ -228,7 +228,7 @@ def record_many(conn, channel_id, entries, method, transport, settled, on_reject
 def from_api_many(conn, channel_id, messages, method, transport, on_reject=None):
     return record_many(
         conn, channel_id,
-        [(message.get("ts"), scrub(message), shape(message)) for message in messages],
+        [(message.get("ts"), redact(message), normalize(message)) for message in messages],
         method, transport, True, on_reject=on_reject)
 
 
@@ -256,7 +256,7 @@ def record(conn, channel_id, ts, envelope, measured, method, transport, settled)
 
 def from_api(conn, channel_id, message, method, transport):
     ts = message.get("ts")
-    return record(conn, channel_id, ts, scrub(message), shape(message),
+    return record(conn, channel_id, ts, redact(message), normalize(message),
                   method, transport, True)
 
 

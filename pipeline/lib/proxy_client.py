@@ -19,19 +19,19 @@ EMPTY_PAGE_BACKOFF_CAP = 20.0
 
 
 class ProxyError(RuntimeError):
-    """The proxy rejected the request: misconfiguration or a disallowed method"""
+    """Raised when the proxy rejects the request: misconfiguration or a disallowed method."""
 
 
 class ProxyUnavailableError(ProxyError):
-    """The proxy could not be reached after retries"""
+    """Raised when the proxy could not be reached after retries."""
 
 
 class InternalAuthError(RuntimeError):
-    """The upstream Slack credential is invalid or expired"""
+    """Raised when the upstream Slack credential is invalid or expired."""
 
 
 class InternalApiError(RuntimeError):
-    """The upstream Slack endpoint returned ok:false for a non-auth reason"""
+    """Raised when the upstream Slack endpoint returns ok:false for a non-auth reason."""
 
 
 def plaintext_refused(url, allow_plaintext=None):
@@ -150,8 +150,8 @@ class ProxyClient:
             if items and fingerprint == previous_page:
                 raise ProxyError(
                     f"{method}: page repeated after {seen} records, so the walk is not "
-                    f"advancing. sort_column={base.get('sort_column')!r} is probably not "
-                    f"unique enough for {cursor_param} to order stably"
+                    f"advancing. sort_column={base.get('sort_column')!r} does not order "
+                    f"{cursor_param} stably"
                 )
             previous_page = fingerprint
 

@@ -9,7 +9,7 @@
           <%= form_with url: admin_role_channels_path(role: @role), method: :post,
                 class: "contents" do %>
             <%= render "admin/channel_picker", field: :channel_id, submit: true,
-                  said: "Add a channel", id: "pick-role-channel" %>
+                  label: "Add a channel", id: "pick-role-channel" %>
           <% end %>
         </div>
       <% end %>
@@ -30,7 +30,7 @@
                     <span class="mono"><%= row.channel_id %></span>
                   </span>
                 </td>
-                <td class="said-cell">
+                <td class="detail-cell">
                   <span class="two-line">
                     <span><%= @names[row.granted_by] %></span>
                     <span><%= row.granted_at.strftime("%-d %b %Y") %></span>
@@ -71,7 +71,7 @@
             <% @reaches.each do |user_id| %>
               <tr>
                 <td><b><%= @names[user_id] %></b></td>
-                <td class="said-cell"><%= pluralize(@channels.size, "shared channel") %></td>
+                <td class="detail-cell"><%= pluralize(@channels.size, "shared channel") %></td>
                 <td><%= link_to "Manage", admin_person_path(user_id), class: "btn" %></td>
               </tr>
             <% end %>

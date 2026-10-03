@@ -2,13 +2,13 @@ module Channels
   class Posts
     SHOWN = 3
 
-    Post = Struct.new(:channel_id, :ts, :author_id, :posted_at, :replies, :reactions, :said,
+    Post = Struct.new(:channel_id, :ts, :author_id, :posted_at, :replies, :reactions, :result,
       keyword_init: true) do
-      def error = said&.error
-      def message = said&.said
+      def error = result&.error
+      def message = result&.message
       def files = Messages::File.listed(message)
 
-      def reactions_said
+      def reactions_label
         Array(message && message["reactions"]).select { |one| one["name"].present? }
       end
     end
@@ -31,13 +31,13 @@ module Channels
     end
 
     def self.post_for(row)
-      said = Slack::Message.at(row.channel_id, row.ts)
-      return nil if said.error == :not_found
+      found = Slack::Message.at(row.channel_id, row.ts)
+      return nil if found.error == :not_found
 
       Post.new(
         channel_id: row.channel_id, ts: row.ts, author_id: row.author_id,
         posted_at: row.posted_at, replies: row.reply_count.to_i,
-        reactions: row.reaction_count.to_i, said: said
+        reactions: row.reaction_count.to_i, result: found
       )
     end
   end

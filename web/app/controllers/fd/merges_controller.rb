@@ -23,12 +23,12 @@ module Fd
 
     def confirm
       ids = ticked_ids
-      return refuse("tick at least two cases to merge") if ids.size < 2
+      return refuse("Select at least two cases to merge") if ids.size < 2
 
       @carry = query_params
       cases = Case.where(id: ids).includes(:subjects, :assignees, :reports, :participants)
         .oldest_first.to_a
-      return refuse("those cases are gone") if cases.size < 2
+      return refuse("Those cases no longer exist") if cases.size < 2
 
       @plan = MergePlan.over(cases, keeper: params[:keep])
       @names = Names.for(cases.flat_map(&:subject_user_ids) +
@@ -37,24 +37,24 @@ module Fd
 
     def create
       ids = ticked_ids
-      return refuse("tick the cases to mark as duplicates") if ids.empty?
+      return refuse("Select the cases to mark as duplicates") if ids.empty?
 
       if params[:duplicate_of].present? && chosen_target.nil?
-        return refuse("that case is gone, so there is nothing to keep")
+        return refuse("That case no longer exists")
       end
       if chosen_target.nil? && ids.size < 2
-        return refuse("tick at least two cases: the oldest stays open, " \
+        return refuse("Select at least two cases: the oldest stays open, " \
           "the rest close as duplicates of it")
       end
 
       target = chosen_target || oldest_of(ids)
-      return refuse("those cases are gone") if target.nil?
+      return refuse("Those cases no longer exist") if target.nil?
 
       root = Case.root_for(target.id)
       marked = mark(ids - [root], root)
 
       if marked.zero?
-        refuse("nothing to mark: those cases are resolved already")
+        refuse("Nothing to mark: those cases are already resolved")
       else
         redirect_to fd_cases_path(query_params), notice: outcome(marked, ids, root)
       end

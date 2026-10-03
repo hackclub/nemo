@@ -64,7 +64,7 @@
     </div>
     <div class="fact">
       <dt>Here since</dt>
-      <dd class="<%= "is-none" unless @context&.cohort_at %>"><%= here_since(@context) %></dd>
+      <dd class="<%= "is-none" unless @context&.cohort_at %>"><%= member_since(@context) %></dd>
     </div>
     <div class="fact">
       <dt>Messages</dt>
@@ -84,8 +84,8 @@
     </div>
   </dl>
 
-  <div class="member-record-content" data-controller="catch-up"
-       data-catch-up-frame-value="<%= Fd::MemberGuardBroadcast.frame(@user_id) %>">
+  <div class="member-record-content" data-controller="pending-flush"
+       data-pending-flush-frame-value="<%= Fd::MemberGuardBroadcast.frame(@user_id) %>">
     <%= turbo_stream_from Fd::MemberGuardBroadcast.stream(@user_id) %>
     <%= render "standing", user_id: @user_id, guards: @guards, names: names,
           may_guard: may_guard, may_deactivate: may_deactivate %>
@@ -101,7 +101,7 @@
               <span class="evdot <%= kase.resolved? ? "good" : "crit" %>"><%= case_action_icon("shield") %></span>
               <span class="grow">
                 <b>#<%= kase.id %> <%= kase.category_key ? category_label(kase.category_key) : "No violation set" %></b>
-                <span class="sub short"><%= plain_words(case_first_report(kase)&.body.presence) .presence || (kase.resolved? ? "resolved" : "open case") %></span>
+                <span class="sub short"><%= plain_text(case_first_report(kase)&.body.presence) .presence || (kase.resolved? ? "resolved" : "open case") %></span>
               </span>
               <span class="lrow-right"><%= link_to "Open", fd_case_path(kase), class: "btn" %></span>
             </div>
@@ -144,11 +144,11 @@
                         <b><%= entry.title %></b>
                       <% end %>
                     </div>
-                    <% if entry.said.present? %>
-                      <p class="member-event-said"><%= mentioned(entry.said) %></p>
+                    <% if entry.body.present? %>
+                      <p class="member-event-body"><%= mentioned(entry.body) %></p>
                     <% else %>
                       <% under = [entry.state, entry.detail].reject(&:blank?).join(" · ") %>
-                      <% if under.present? %><p class="member-event-said"><%= under %></p><% end %>
+                      <% if under.present? %><p class="member-event-body"><%= under %></p><% end %>
                     <% end %>
                     <span class="member-event-by">
                       <%= entry.who ? member_link(entry.who) : "n/a" %>

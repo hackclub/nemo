@@ -9,9 +9,9 @@ from lib.walk import (
     NO_FLOOR,
     SHORT,
     UNVERIFIED,
-    WalkWrong,
+    WalkMismatchError,
     check_walk,
-    covers_what_it_replaces,
+    supersedes,
     should_prune,
     window_totals,
 )
@@ -31,7 +31,7 @@ def test_a_short_walk_is_a_verdict_not_an_exception_and_never_prunes(capsys):
 
 
 def test_walking_past_num_found_is_still_wrong():
-    with pytest.raises(WalkWrong):
+    with pytest.raises(WalkMismatchError):
         check_walk("x", 1_200, 500, 500)
     assert check_walk("x", 10, None, 500) is None
 
@@ -57,7 +57,7 @@ def test_a_floor_of_zero_is_refused_so_the_guard_is_never_disabled_by_accident()
 def test_no_floor_reads_unverified_rather_than_claiming_complete():
     assert check_walk("member analytics", 61_940, 100_000, 500, short_at=NO_FLOOR) == UNVERIFIED
     assert not should_prune(UNVERIFIED)
-    with pytest.raises(WalkWrong):
+    with pytest.raises(WalkMismatchError):
         check_walk("member analytics", 101_000, 100_000, 500, short_at=NO_FLOOR)
 
 
@@ -98,29 +98,29 @@ OLDER = (date(2026, 1, 1), date(2026, 1, 31))
 def test_a_window_that_matches_what_it_replaces_may_prune():
     landed, held = window_totals([(*NEW, 40_000), (*OLD, 39_900)], NEW)
     assert (landed, held) == (40_000, 39_900)
-    assert covers_what_it_replaces(landed, held)
+    assert supersedes(landed, held)
 
 
 def test_a_window_that_collapses_may_not_prune():
     landed, held = window_totals([(*NEW, 1_200), (*OLD, 40_000)], NEW)
-    assert not covers_what_it_replaces(landed, held)
+    assert not supersedes(landed, held)
 
 
 def test_ordinary_churn_still_prunes():
-    assert covers_what_it_replaces(39_000, 40_000)
-    assert not covers_what_it_replaces(35_000, 40_000)
+    assert supersedes(39_000, 40_000)
+    assert not supersedes(35_000, 40_000)
 
 
 def test_the_widest_prior_window_is_the_one_to_beat():
     landed, held = window_totals([(*NEW, 30_000), (*OLD, 12_000), (*OLDER, 40_000)], NEW)
     assert held == 40_000
-    assert not covers_what_it_replaces(landed, held)
+    assert not supersedes(landed, held)
 
 
 def test_a_first_ever_window_has_nothing_to_replace():
     landed, held = window_totals([(*NEW, 12)], NEW)
     assert (landed, held) == (12, 0)
-    assert covers_what_it_replaces(landed, held)
+    assert supersedes(landed, held)
 
 
 def test_a_short_window_keeps_its_cursor_so_the_next_run_resumes():

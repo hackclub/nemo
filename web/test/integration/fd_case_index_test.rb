@@ -18,7 +18,7 @@ class FdCaseIndexTest < ActionDispatch::IntegrationTest
     get fd_cases_path
 
     assert_response :success
-    assert_select "section.pane .qrow"
+    assert_select "section.pane .queue-row"
     assert_match kase.id.to_s, response.body
   end
 

@@ -43,12 +43,12 @@ SELECT channel_id, thread_ts FROM fd.thread_guards WHERE state IN ('warned', 'ru
 """
 
 KEEP_NOTE = """
-UPDATE fd.thread_guards SET note_said = %s, note_text = %s, updated_at = now()
+UPDATE fd.thread_guards SET note_rich = %s, note_text = %s, updated_at = now()
 WHERE id = %s
 """
 
 NOTE_FOR = """
-SELECT note_said, note_text, note_ts FROM fd.thread_guards WHERE id = %s
+SELECT note_rich, note_text, note_ts FROM fd.thread_guards WHERE id = %s
 """
 
 NOTE_POSTED = """
@@ -201,8 +201,8 @@ def case_of(conn, channel_id, thread_ts):
     return row[0] if row else None
 
 
-def keep_note(conn, guard_id, said, text):
-    conn.execute(KEEP_NOTE, (json.dumps(said), text, guard_id))
+def keep_note(conn, guard_id, messages, text):
+    conn.execute(KEEP_NOTE, (json.dumps(messages), text, guard_id))
 
 
 def note_for(conn, guard_id):
@@ -261,7 +261,7 @@ def still_up(conn, limit):
     return conn.execute(STILL_UP, (limit,)).fetchall()
 
 
-def struck(conn, guard_id, user_id):
+def record_strike(conn, guard_id, user_id):
     return conn.execute(STRUCK, (guard_id, user_id)).fetchone()[0]
 
 
@@ -269,7 +269,7 @@ def over_the_line(conn, needed):
     return conn.execute(OVER_THE_LINE, (needed,)).fetchall()
 
 
-def punished(conn, guard_id):
+def strike_count(conn, guard_id):
     return conn.execute(RESET_COUNT, (guard_id,)).fetchone()[0]
 
 
@@ -326,16 +326,16 @@ def line_for(one, named):
     return f"[{at(one.get('ts'))}] <{whose(one, named)}> {words}"
 
 
-def transcript_body(said, named):
+def transcript_body(messages, named):
     lines = [
         line_for(one, named)
-        for one in sorted(said, key=lambda one: float(one.get("ts") or 0))
+        for one in sorted(messages, key=lambda one: float(one.get("ts") or 0))
     ]
     return "\n".join(lines) + "\n"
 
 
-def keep_transcript(conn, guard_id, channel_id, thread_ts, said, named=None):
-    body = transcript_body(said, named or {})
+def keep_transcript(conn, guard_id, channel_id, thread_ts, messages, named=None):
+    body = transcript_body(messages, named or {})
     conn.execute(KEEP_TRANSCRIPT, (guard_id, channel_id, thread_ts, body))
     return body
 

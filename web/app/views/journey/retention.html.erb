@@ -8,27 +8,27 @@
   <div class="metrics">
     <% if last_30 %>
       <div class="metric">
-        <span class="metric-k">Day-30 retention</span>
-        <span class="metric-v"><%= retention_cell(last_30.retained_day_30_rate) %></span>
-        <span class="metric-say"><span><%= last_30.cohort_month.strftime("%b %Y") %> cohort</span></span>
+        <span class="metric-key">Day-30 retention</span>
+        <span class="metric-value"><%= retention_cell(last_30.retained_day_30_rate) %></span>
+        <span class="metric-note"><span><%= last_30.cohort_month.strftime("%b %Y") %> cohort</span></span>
       </div>
     <% end %>
     <% if last_90 %>
       <div class="metric">
-        <span class="metric-k">Day-90 retention</span>
-        <span class="metric-v"><%= retention_cell(last_90.retained_day_90_rate) %></span>
-        <span class="metric-say"><span><%= last_90.cohort_month.strftime("%b %Y") %> cohort</span></span>
+        <span class="metric-key">Day-90 retention</span>
+        <span class="metric-value"><%= retention_cell(last_90.retained_day_90_rate) %></span>
+        <span class="metric-note"><span><%= last_90.cohort_month.strftime("%b %Y") %> cohort</span></span>
       </div>
     <% end %>
     <% if last_recurrence %>
       <div class="metric">
-        <span class="metric-k">Posted 3+ times</span>
-        <span class="metric-v">
+        <span class="metric-key">Posted 3+ times</span>
+        <span class="metric-value">
           <%= number_to_percentage(
                 share_pct(last_recurrence.posted_three_times, last_recurrence.searched) || 0,
                 precision: 1) %>
         </span>
-        <span class="metric-say"><span><%= last_recurrence.cohort_month.strftime("%b %Y") %> cohort</span></span>
+        <span class="metric-note"><span><%= last_recurrence.cohort_month.strftime("%b %Y") %> cohort</span></span>
       </div>
     <% end %>
   </div>

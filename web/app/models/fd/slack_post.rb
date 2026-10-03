@@ -1,7 +1,7 @@
 module Fd
   class SlackPost
     def self.room
-      ENV["FIREHOUSE_CHANNEL_ID"].presence
+      ENV["INTERNAL_LOG_CHANNEL_ID"].presence
     end
 
     def self.thread_for(case_id)
@@ -19,10 +19,10 @@ module Fd
     def self.carry(chat)
       grant = StaffSlack.held_by(chat.author_user_id)
       thread_ts = thread_for(chat.case_id)
-      return give_up(chat, "there is nothing to send it with") if grant.nil? || thread_ts.nil?
+      return abandon(chat, "there is nothing to send it with") if grant.nil? || thread_ts.nil?
 
       answer = tell(grant, thread_ts, chat.body)
-      return give_up(chat, answer[:error], grant) unless answer[:ts]
+      return abandon(chat, answer[:error], grant) unless answer[:ts]
 
       chat.update!(mirrored_ts: answer[:ts], mirrored_at: Time.current, mirrored_as: "user")
       grant.used!
@@ -30,28 +30,28 @@ module Fd
     end
 
     def self.tell(grant, thread_ts, body)
-      said = Slack::Chat.post_message(token: grant.user_token, channel: room,
-        thread_ts: thread_ts, text: escape(body))
-      return { ts: said["ts"] } if said["ok"]
+      answer = Slack::Chat.post_message(token: grant.user_token, channel: room,
+        thread_ts: thread_ts, text: escape_markup(body))
+      return { ts: answer["ts"] } if answer["ok"]
 
-      { error: said["error"].to_s.presence || "slack refused it" }
-    rescue Slack::Chat::Unavailable => failure
+      { error: answer["error"].to_s.presence || "slack refused it" }
+    rescue Slack::Chat::UnavailableError => failure
       { error: failure.message }
     end
 
-    def self.give_up(chat, why, grant = nil)
-      grant&.stumbled!(why)
+    def self.abandon(chat, why, grant = nil)
+      grant&.record_error!(why)
       chat.update!(mirrored_as: nil)
       false
     end
 
-    def self.escape(body)
+    def self.escape_markup(body)
       Mentions.split(body).map { |part|
-        part.start_with?("<@") ? part : plain(part)
+        part.start_with?("<@") ? part : plain_text(part)
       }.join
     end
 
-    def self.plain(part)
+    def self.plain_text(part)
       part.gsub("&", "&amp;").gsub("<", "&lt;").gsub(">", "&gt;")
     end
   end

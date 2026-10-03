@@ -1,6 +1,6 @@
 module Fd
   class MemberIdentity < ApplicationRecord
-    class NoActor < ArgumentError; end
+    class NoActorError < ArgumentError; end
 
     self.table_name = "fd.member_identity"
     self.primary_key = "user_id"
@@ -9,7 +9,7 @@ module Fd
 
     scope :kept, -> { where(purged_at: nil) }
 
-    Refused = Class.new do
+    RefusedError = Class.new do
       def purged? = false
 
       def email = nil
@@ -18,8 +18,8 @@ module Fd
     end
 
     def self.look_up(user_id, actor:)
-      raise NoActor, "reading identity needs an actor to log it against" if actor.nil?
-      return Refused.new unless actor.may?("identity.read")
+      raise NoActorError, "reading identity needs an actor to log it against" if actor.nil?
+      return RefusedError.new unless actor.may?("identity.read")
 
       row = kept.find_by(user_id: user_id)
       AccessLog.record!(actor: actor, subject_user_id: user_id, field_class: "identity")

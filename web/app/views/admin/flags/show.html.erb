@@ -11,11 +11,11 @@
           <span class="grow">
             <b><%= Fd::Flag.label(key) %></b>
             <span class="sub flag-paths">
-              <% routes(key).each do |said, kind| %>
+              <% routes(key).each do |route, kind| %>
                 <% if kind == :path %>
-                  <span class="mono"><%= said %></span>
+                  <span class="mono"><%= route %></span>
                 <% else %>
-                  <span><%= said %></span>
+                  <span><%= route %></span>
                 <% end %>
               <% end %>
             </span>

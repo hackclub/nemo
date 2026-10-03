@@ -13,7 +13,7 @@ OFF = "off"
 MODES = (ON, GUARDED, OFF)
 
 SETTING = "nemo.join_mode"
-FIREHOUSE = "nemo.firehouse_channel"
+INTERNAL_LOG = "nemo.firehouse_channel"
 REACT_CHANNELS = "nemo.case_react_channels"
 SWEEP_SOON_HOURS = "nemo.sweep_soon_hours"
 SWEEP_TELLS_MEMBER = "nemo.sweep_tells_member"
@@ -76,13 +76,13 @@ def setting(conn, key):
     return (row[0] if row else "").strip()
 
 
-def set_setting(conn, key, said, by=None):
-    conn.execute(SET_HOW, (key, said, by))
-    return said
+def set_setting(conn, key, value, by=None):
+    conn.execute(SET_HOW, (key, value, by))
+    return value
 
 
-def listed(said):
-    return [one.strip() for one in (said or "").split(",") if one.strip()]
+def listed(value):
+    return [one.strip() for one in (value or "").split(",") if one.strip()]
 
 
 def react_channels(conn):
@@ -91,17 +91,17 @@ def react_channels(conn):
 
 def mode(conn):
     row = conn.execute(HOW, (SETTING,)).fetchone()
-    said = (row[0] if row else "").strip().lower()
-    return said if said in MODES else FALL_BACK
+    found = (row[0] if row else "").strip().lower()
+    return found if found in MODES else FALL_BACK
 
 
 def set_mode(conn, how, by=None):
-    said = (how or "").strip().lower()
-    if said not in MODES:
+    found = (how or "").strip().lower()
+    if found not in MODES:
         raise ValueError(f"{how!r} is not one of {', '.join(MODES)}")
 
-    conn.execute(SET_HOW, (SETTING, said, by))
-    return said
+    conn.execute(SET_HOW, (SETTING, found, by))
+    return found
 
 
 def guarded_channels(conn):
@@ -150,7 +150,7 @@ def noted(conn, channel_id, verb, why=None, by=None):
     conn.execute(NOTED, (channel_id, verb, why, by))
 
 
-def sat(conn, channel_id, inside):
+def record_membership(conn, channel_id, inside):
     conn.execute(SEATED, (channel_id, inside))
 
 
@@ -169,7 +169,7 @@ def joinable(conn, channel_id):
     return conn.execute(KNOWN_PRIVATE, (channel_id, channel_dim.PRIVATE)).fetchone() is None
 
 
-def seated_already(client, channel_id):
+def is_member(client, channel_id):
     try:
         found = (client.conversations_info(channel=channel_id) or {}).get("channel") or {}
     except Exception as failure:
@@ -180,8 +180,8 @@ def seated_already(client, channel_id):
 
 def found_private(client, conn, channel_id, by):
     channel_dim.record(conn, channel_id, visibility=channel_dim.PRIVATE)
-    if seated_already(client, channel_id):
-        sat(conn, channel_id, True)
+    if is_member(client, channel_id):
+        record_membership(conn, channel_id, True)
         log.info("nemo: %s is private and we are already sitting in it", channel_id)
         return True
 
@@ -202,7 +202,7 @@ def join(client, conn, channel_id, by=None, verb="joined"):
         if why in CANNOT_JOIN:
             return found_private(client, conn, channel_id, by)
         if why in ALREADY_IN:
-            sat(conn, channel_id, True)
+            record_membership(conn, channel_id, True)
             log.info("nemo: %s already had us in it", channel_id)
             return True
         noted(conn, channel_id, "refused", why, by)
@@ -210,7 +210,7 @@ def join(client, conn, channel_id, by=None, verb="joined"):
         return False
 
     noted(conn, channel_id, verb, None, by)
-    sat(conn, channel_id, True)
+    record_membership(conn, channel_id, True)
     return True
 
 

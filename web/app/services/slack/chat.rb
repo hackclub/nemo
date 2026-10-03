@@ -2,7 +2,7 @@ require "net/http"
 
 module Slack
   class Chat
-    class Unavailable < StandardError; end
+    class UnavailableError < StandardError; end
 
     API = "https://slack.com/api".freeze
 
@@ -22,7 +22,7 @@ module Slack
       JSON.parse(response.body)
     rescue Net::OpenTimeout, Net::ReadTimeout, SystemCallError, IOError, SocketError,
            JSON::ParserError => failure
-      raise Unavailable, failure.message
+      raise UnavailableError, failure.message
     end
   end
 end

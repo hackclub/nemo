@@ -52,11 +52,11 @@ def test_an_entry_with_no_id_or_no_date_is_refused_rather_than_landed():
 
 
 def test_our_own_reads_are_marked_so_they_can_be_told_apart():
-    said = entry(action="public_channel_preview",
+    entry_row = entry(action="public_channel_preview",
                  context={"app": {"id": APP, "name": "Nemo"}})
 
-    assert pull.event_row(said, "k", frozenset({APP}))[8] is True
-    assert pull.event_row(said, "k", frozenset())[8] is False
+    assert pull.event_row(entry_row, "k", frozenset({APP}))[8] is True
+    assert pull.event_row(entry_row, "k", frozenset())[8] is False
     assert pull.event_row(entry(), "k", frozenset({APP}))[8] is False
 
 
@@ -90,10 +90,10 @@ def test_a_session_that_is_not_a_number_does_not_stop_the_row():
 
 
 def test_the_prefix_is_the_database_s_job_so_two_hosts_on_one_range_group():
-    said = (pathlib.Path(__file__).parents[2] / "db" / "migrations"
+    sql = (pathlib.Path(__file__).parents[2] / "db" / "migrations"
             / "0144_login_prefix_is_the_network.sql").read_text()
-    assert "GENERATED ALWAYS AS" in said
-    assert "network(set_masklen(ip" in said
+    assert "GENERATED ALWAYS AS" in sql
+    assert "network(set_masklen(ip" in sql
     assert "ip_prefix" not in pull.LOGIN_SQL, "the prefix must not be written by hand"
 
 
@@ -209,10 +209,10 @@ def test_the_action_set_is_part_of_the_coverage_key_so_a_window_cannot_lie():
 def test_the_backfill_walks_the_channel_actions_as_well_as_the_logins():
     import inspect
 
-    said = inspect.signature(pull.backfill).parameters["actions"].default
-    assert said == pull.WATCHED_ACTIONS
-    assert set(pull.CHANNEL_ACTIONS) <= set(said)
-    assert len(said) <= pull.MOST_ACTIONS, "slack takes only so many actions in one call"
+    actions = inspect.signature(pull.backfill).parameters["actions"].default
+    assert actions == pull.WATCHED_ACTIONS
+    assert set(pull.CHANNEL_ACTIONS) <= set(actions)
+    assert len(actions) <= pull.MOST_ACTIONS, "slack takes only so many actions in one call"
 
 
 def test_an_agent_is_read_once_even_when_it_names_no_system():
@@ -237,11 +237,11 @@ def test_a_landed_agent_counts_as_already_read():
 def test_the_access_log_walk_stops_at_what_we_already_hold():
     from ingest import access_logs_pull
 
-    said = pathlib.Path(access_logs_pull.__file__).read_text()
-    assert "newest_held(conn)" in said
-    assert "caught_up = True" in said and "break" in said, \
+    src = pathlib.Path(access_logs_pull.__file__).read_text()
+    assert "newest_held(conn)" in src
+    assert "caught_up = True" in src and "break" in src, \
         "slack hands the access log back newest first, so the walk stops at the watermark"
-    assert "walk.close()" in said, "the generator is closed so no further page is asked for"
+    assert "walk.close()" in src, "the generator is closed so no further page is asked for"
     assert access_logs_pull.LAP_SECONDS >= 1
     assert access_logs_pull.MOST_PAGES >= 1, "a cold start must still be bounded"
 
@@ -377,7 +377,7 @@ class Conn:
 
 def test_landing_writes_the_event_and_the_login_from_one_pass():
     conn, counts = Conn(), Counts()
-    landed, seated = pull.land(conn, [entry(), entry(id="b", action="file_downloaded")],
+    landed, seated = pull.insert_rows(conn, [entry(), entry(id="b", action="file_downloaded")],
                                "audit_logs_tail", frozenset(), counts)
 
     assert (landed, seated) == (2, 1)
@@ -415,8 +415,8 @@ def test_an_identity_we_already_hold_is_never_written_over():
 
 def test_one_write_per_member_a_page_however_often_they_appear():
     conn, counts = Conn(), Counts()
-    said = {"type": "user", "user": {"id": WHO, "name": "Zev", "email": "z@throwaway.example"}}
-    pull.land(conn, [entry(actor=said), entry(id="b", actor=said), entry(id="c", actor=said)],
+    actor = {"type": "user", "user": {"id": WHO, "name": "Zev", "email": "z@throwaway.example"}}
+    pull.insert_rows(conn, [entry(actor=actor), entry(id="b", actor=actor), entry(id="c", actor=actor)],
               "audit_logs_tail", frozenset(), counts)
 
     assert len(conn.did("INSERT INTO fd.member_identity")[0]) == 1
@@ -460,7 +460,7 @@ def test_a_join_missing_the_member_or_the_room_is_not_written_down():
 
 def test_landing_projects_the_rooms_alongside_the_events():
     conn, counts = Conn(), Counts()
-    pull.land(conn, [joined(), joined(id="b", action="user_channel_leave"), entry()],
+    pull.insert_rows(conn, [joined(), joined(id="b", action="user_channel_leave"), entry()],
               "audit_logs_tail", frozenset(), counts)
 
     rooms = conn.did("INSERT INTO fd.member_channel_join")[0]
@@ -469,13 +469,13 @@ def test_landing_projects_the_rooms_alongside_the_events():
 
 
 def test_the_rooms_are_projected_org_wide_not_only_where_nemo_sits():
-    said = (pathlib.Path(__file__).parents[2] / "db" / "migrations"
+    sql = (pathlib.Path(__file__).parents[2] / "db" / "migrations"
             / "0148_member_channel_joins.sql").read_text()
-    assert "FROM slack.audit_event" in said, "the history already landed must be projected too"
-    assert "member_channel_join_room_idx" in said, "fan-out is read by room and time"
+    assert "FROM slack.audit_event" in sql, "the history already landed must be projected too"
+    assert "member_channel_join_room_idx" in sql, "fan-out is read by room and time"
 
 
-@pytest.mark.parametrize(("said", "app", "system"), [
+@pytest.mark.parametrize(("agent", "app", "system"), [
     ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/141.0.0.0 Safari/537.36",
      "Chrome 141.0.0.0", "Windows 10 or 11"),
     ("slack/26.09.41.0.90016209 (samsung SM-A235F; Android 14; store com.android.vending)",
@@ -495,8 +495,8 @@ def test_the_rooms_are_projected_org_wide_not_only_where_nemo_sits():
     ("Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) FxiOS/127.0 Mobile Safari/605.1",
      "Firefox 127.0", "iOS 17.5"),
 ])
-def test_the_agent_string_is_read_into_an_app_and_a_system(said, app, system):
-    seen = useragent.parse(said)
+def test_the_agent_string_is_read_into_an_app_and_a_system(agent, app, system):
+    seen = useragent.parse(agent)
     assert seen["ua_app"] == app
     assert seen["ua_os"] == system
 
@@ -507,9 +507,9 @@ def test_an_agent_string_nobody_recognises_does_not_blow_up():
 
 
 def test_the_agent_string_is_kept_whole_however_long_it_is():
-    said = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " + "Padding/1.0 " * 60 + "End/1"
-    assert len(said) > 700
-    assert useragent.parse(said)["ua"] == said, "the raw agent string is never cut short"
+    agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " + "Padding/1.0 " * 60 + "End/1"
+    assert len(agent) > 700
+    assert useragent.parse(agent)["ua"] == agent, "the raw agent string is never cut short"
 
 
 def test_a_version_is_kept_whole_rather_than_cut_to_its_first_number():
@@ -535,7 +535,7 @@ def test_an_agent_landed_before_the_reader_knew_it_is_read_again():
 
     assert "ua IS NOT NULL" in useragent_reparse.UNREAD
 
-    said = (pathlib.Path(__file__).parents[2] / "db" / "migrations"
+    sql = (pathlib.Path(__file__).parents[2] / "db" / "migrations"
             / "0152_agents_we_have_read.sql").read_text()
-    assert "login_event_unread_agent_idx" in said
-    assert "ua_read_at IS NULL" in said, "the sweep must be free once it has drained"
+    assert "login_event_unread_agent_idx" in sql
+    assert "ua_read_at IS NULL" in sql, "the sweep must be free once it has drained"

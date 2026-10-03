@@ -51,15 +51,15 @@ def thin_user(value):
     return {k: v for k, v in value.items() if k in USER_KEPT}
 
 
-def scrub(value):
+def redact(value):
     if isinstance(value, dict):
         return {
-            k: (thin_user(v) if k == "user" else scrub(v))
+            k: (thin_user(v) if k == "user" else redact(v))
             for k, v in value.items()
             if not redacted(k)
         }
     if isinstance(value, list):
-        return [scrub(v) for v in value]
+        return [redact(v) for v in value]
     return value
 
 
@@ -87,7 +87,7 @@ def derived(text):
     }
 
 
-def shape(message):
+def normalize(message):
     reactions = message.get("reactions") or []
     counted = derived(message.get("text"))
     counted.update({

@@ -68,10 +68,10 @@ module Fd
     end
 
     def self.standing_on(subject_id)
-      said = subject_id.to_s.upcase.presence
-      return [] if said.nil?
+      subject = subject_id.to_s.upcase.presence
+      return [] if subject.nil?
 
-      still_on.for_subject(said).oldest_first.to_a
+      still_on.for_subject(subject).oldest_first.to_a
     end
 
     def self.worst_kinds_first(kinds)

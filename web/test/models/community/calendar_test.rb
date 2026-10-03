@@ -30,10 +30,10 @@ class Community::CalendarTest < ActiveSupport::TestCase
   test "a day with nothing on it sits on step zero" do
     cal = build([[Date.new(2026, 9, 14), 12, 3, 2]])
 
-    said = cal.cells.find { |cell| cell.on == Date.new(2026, 9, 14) }
+    cell = cal.cells.find { |cell| cell.on == Date.new(2026, 9, 14) }
     quiet = cal.cells.find { |cell| cell.on == Date.new(2026, 9, 15) }
 
-    assert_operator said.step, :>, 0
+    assert_operator cell.step, :>, 0
     assert_equal 0, quiet.step
     assert_equal 1, cal.active_days
   end
@@ -73,13 +73,13 @@ class Community::CalendarTest < ActiveSupport::TestCase
       window_start: Date.new(2026, 9, 18).end_of_week(:monday) - (53 * 7 - 1),
       window_end: Date.new(2026, 9, 18).end_of_week(:monday), today: Date.new(2026, 9, 18))
 
-    said = cal.cells.find { |cell| cell.on == on }
-    assert_operator said.step, :>, 0, "a day only Slack saw must still be coloured"
-    assert_equal 55, said.messages
-    assert_equal 32, said.in_channels
-    assert_equal 23, said.elsewhere
-    assert_equal 0, said.rooms
-    assert said.unseen?, "the archive holds none of it"
+    cell = cal.cells.find { |cell| cell.on == on }
+    assert_operator cell.step, :>, 0, "a day only Slack saw must still be coloured"
+    assert_equal 55, cell.messages
+    assert_equal 32, cell.in_channels
+    assert_equal 23, cell.elsewhere
+    assert_equal 0, cell.rooms
+    assert cell.unseen?, "the archive holds none of it"
     assert_equal 1, cal.active_days
   end
 
@@ -89,11 +89,11 @@ class Community::CalendarTest < ActiveSupport::TestCase
       window_start: Date.new(2026, 9, 18).end_of_week(:monday) - (53 * 7 - 1),
       window_end: Date.new(2026, 9, 18).end_of_week(:monday), today: Date.new(2026, 9, 18))
 
-    said = cal.cells.find { |cell| cell.on == on }
-    assert_equal 6, said.messages, "the archive is the floor when analytics lags"
-    assert_equal 6, said.in_channels
-    assert_equal 0, said.elsewhere
-    assert_operator said.step, :>, 0
+    cell = cal.cells.find { |cell| cell.on == on }
+    assert_equal 6, cell.messages, "the archive is the floor when analytics lags"
+    assert_equal 6, cell.in_channels
+    assert_equal 0, cell.elsewhere
+    assert_operator cell.step, :>, 0
   end
 
   test "the archive still supplies the breakdown when it has the day" do
@@ -102,12 +102,12 @@ class Community::CalendarTest < ActiveSupport::TestCase
       window_start: Date.new(2026, 9, 18).end_of_week(:monday) - (53 * 7 - 1),
       window_end: Date.new(2026, 9, 18).end_of_week(:monday), today: Date.new(2026, 9, 18))
 
-    said = cal.cells.find { |cell| cell.on == on }
-    assert_equal 20, said.messages
-    assert_equal 4, said.rooms
-    assert_equal 9, said.replies
-    assert_equal 0, said.elsewhere
-    assert_not said.unseen?
+    cell = cal.cells.find { |cell| cell.on == on }
+    assert_equal 20, cell.messages
+    assert_equal 4, cell.rooms
+    assert_equal 9, cell.replies
+    assert_equal 0, cell.elsewhere
+    assert_not cell.unseen?
   end
 
   test "the run follows the days that are lit, not the one it was handed" do

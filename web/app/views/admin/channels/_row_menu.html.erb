@@ -1,13 +1,13 @@
 <% if may_community?("analytics.channel.share") %>
   <%= render layout: "shared/dropdown", locals: {
-        label: "Set who may read ##{channel.name}", trigger: "\u2026" } do %>
+        label: "Set who may read ##{channel.name}", trigger: menu_dots } do %>
       <% Channels::Audience::KINDS.each do |wanted| %>
         <%= button_to admin_channel_path(channel.channel_id), method: :patch,
               params: { audience: wanted, q: @q.presence }, class: "btn",
               aria: { current: ("true" if wanted == kind) } do %>
-          <span class="mi-body">
-            <span class="mi-t"><%= wanted.capitalize %></span>
-            <span class="mi-note"><%= AdminHelper::AUDIENCE_NOTE.fetch(wanted) %></span>
+          <span class="menu-item-body">
+            <span class="menu-item-title"><%= wanted.capitalize %></span>
+            <span class="menu-item-note"><%= AdminHelper::AUDIENCE_NOTE.fetch(wanted) %></span>
           </span>
         <% end %>
       <% end %>
@@ -19,11 +19,11 @@
               params: { role: role, channel_id: channel.channel_id,
                         from: "channels", q: @q.presence },
               class: "btn" do %>
-          <span class="mi-body">
-            <span class="mi-t"><%= in_set ? "Take out of" : "Give to" %>
-              the <%= role_said(role) %> set</span>
-            <span class="mi-note"><%= in_set ? "every #{role_said(role)} stops reading it" :
-                                                "every #{role_said(role)} may read it" %></span>
+          <span class="menu-item-body">
+            <span class="menu-item-title"><%= in_set ? "Take out of" : "Give to" %>
+              the <%= role_label_text(role) %> set</span>
+            <span class="menu-item-note"><%= in_set ? "every #{role_label_text(role)} stops reading it" :
+                                                "every #{role_label_text(role)} may read it" %></span>
           </span>
         <% end %>
       <% end %>
@@ -32,9 +32,9 @@
         <% shown = @activity.include?(channel.channel_id) %>
         <%= button_to activity_admin_channel_path(channel.channel_id), method: :patch,
               params: { shown: shown ? "off" : "on", q: @q.presence }, class: "btn" do %>
-          <span class="mi-body">
-            <span class="mi-t"><%= shown ? "Stop showing" : "Show" %> how posts did</span>
-            <span class="mi-note"><%= shown ? "authors lose the \"view message activity\" shortcut here" :
+          <span class="menu-item-body">
+            <span class="menu-item-title"><%= shown ? "Stop showing" : "Show" %> how posts did</span>
+            <span class="menu-item-note"><%= shown ? "authors lose the \"view message activity\" shortcut here" :
                                                 "authors may ask nemo how their own post did" %></span>
           </span>
         <% end %>

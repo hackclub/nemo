@@ -143,7 +143,7 @@ module Fd
         icon: ICONS.fetch(row.kind, "•"),
         title: title_for(record),
         sub: sub_for(record),
-        said: row.said,
+        snippet: row.snippet,
         url: url_for_record(record),
         id: (record.user_id if record.is_a?(Member)),
         initial: (@names.initial(record.user_id) if record.is_a?(Member))

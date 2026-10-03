@@ -46,7 +46,7 @@ module Fd
         return "#{channel_id} is not a channel id"
       end
       if params[:reason].to_s.strip.blank?
-        return wrong!(:reason, "say why this was the answer", params[:reason])
+        return wrong!(:reason, "Enter why this was the answer", params[:reason])
       end
 
       nil
@@ -82,8 +82,8 @@ module Fd
     def thread_lock
       return @thread_lock if defined?(@thread_lock)
 
-      said = params[:thread_guard_id].to_s.presence
-      @thread_lock = said && ThreadGuard.still_on.locks.find_by(id: said)
+      given = params[:thread_guard_id].to_s.presence
+      @thread_lock = given && ThreadGuard.still_on.locks.find_by(id: given)
     end
 
     def log_thread_lock(kase, guard)
@@ -103,24 +103,24 @@ module Fd
       )
     end
 
-    def guard_said(guard) = FdHelper::ACTION_LABELS.fetch(guard.kind, guard.kind).downcase
+    def guard_label_text(guard) = FdHelper::ACTION_LABELS.fetch(guard.kind, guard.kind).downcase
 
     def standing_objection(kase, guard)
       family = kase.family_ids
-      said = guard_said(guard)
-      return "that #{said} is already on this case" if guard.on_case?(family)
+      given = guard_label_text(guard)
+      return "that #{given} is already on this case" if guard.on_case?(family)
       if Action.live.exists?(case_id: family, guard_id: guard.id)
-        return "that #{said} is already logged on this case"
+        return "that #{given} is already logged on this case"
       end
 
       nil
     end
 
     def standing_guard
-      said = params[:standing_guard_id].to_s.presence
-      return nil if said.nil?
+      given = params[:standing_guard_id].to_s.presence
+      return nil if given.nil?
 
-      MemberGuard.still_on.for_subject(target_user_id).find_by(id: said)
+      MemberGuard.still_on.for_subject(target_user_id).find_by(id: given)
     end
 
     def guard_channel(type_key)
@@ -173,10 +173,10 @@ module Fd
     def expiry
       return nil unless NEEDS_EXPIRY.include?(type_key)
 
-      said = params[:expires_on].to_s.strip
-      return nil if said.blank?
+      given = params[:expires_on].to_s.strip
+      return nil if given.blank?
 
-      Date.strptime(said, "%Y-%m-%d").end_of_day
+      Date.strptime(given, "%Y-%m-%d").end_of_day
     rescue Date::Error
       nil
     end

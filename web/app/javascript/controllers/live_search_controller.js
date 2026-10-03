@@ -34,6 +34,6 @@ export default class extends Controller {
   }
 
   get field() {
-    return this.element.querySelector("input[type=search], .qsearch-in")
+    return this.element.querySelector("input[type=search], .queue-search-input")
   }
 }

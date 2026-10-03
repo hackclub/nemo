@@ -30,7 +30,7 @@ module Fd
       ) spoke ON true
     SQL
 
-    SAID_MOST = "spoke.messages_posted DESC NULLS LAST".freeze
+    MOST_MESSAGES = "spoke.messages_posted DESC NULLS LAST".freeze
 
     def self.search(term, actor: nil, limit: LIMIT, live_only: false, case_id: nil, bots: false)
       term = term.to_s.strip.delete_prefix("@")
@@ -46,15 +46,15 @@ module Fd
       like = "%#{sanitize_sql_like(term.downcase)}%"
       identity = actor&.may?("identity.read")
       hits = left_joins(:identity, :cachet).joins(HOW_BUSY)
-        .where(arel_table[:user_id].in(anybody(like, identity)))
+        .where(arel_table[:user_id].in(matching_ids(like, identity)))
       hits = hits.where(is_deleted: false, is_bot: bots) if live_only
       place = MemberMatch.ranked(term, identity: identity, columns: COLUMNS)
       hits.select(Arel.sql("#{table_name}.user_id, #{place} AS place, spoke.messages_posted AS talked"))
-        .order(Arel.sql(place), :is_deleted, :is_bot, Arel.sql(SAID_MOST))
+        .order(Arel.sql(place), :is_deleted, :is_bot, Arel.sql(MOST_MESSAGES))
         .by_name.limit(SHORTLIST)
     end
 
-    def self.anybody(like, identity)
+    def self.matching_ids(like, identity)
       ways = [named(like), shown_as(like)]
       ways << identified(like) if identity
       ways.map(&:arel).reduce { |left, right| Arel::Nodes::Union.new(left, right) }

@@ -121,7 +121,7 @@ def test_a_gate_test_failure_refuses_to_publish(monkeypatch, tmp_path):
     monkeypatch.setattr(nightly_sync, "ensure_dbt_profile", lambda: None)
     monkeypatch.setattr(nightly_sync, "check_freshness", lambda counts=None: 0)
     monkeypatch.setattr(nightly_sync, "dbt", lambda *a: 0)
-    monkeypatch.setattr(nightly_sync, "sole_build",
+    monkeypatch.setattr(nightly_sync, "build_lock",
                         lambda **kw: contextlib.nullcontext())
 
     with pytest.raises(RuntimeError, match="refusing to publish"):
@@ -139,7 +139,7 @@ def test_an_ungated_test_failure_still_publishes_and_marks_the_run_partial(monke
     monkeypatch.setattr(nightly_sync, "ensure_dbt_profile", lambda: None)
     monkeypatch.setattr(nightly_sync, "check_freshness", lambda counts=None: 0)
     monkeypatch.setattr(nightly_sync, "dbt", lambda *a: 0)
-    monkeypatch.setattr(nightly_sync, "sole_build",
+    monkeypatch.setattr(nightly_sync, "build_lock",
                         lambda **kw: contextlib.nullcontext())
 
     nightly_sync.run_dbt()
@@ -272,7 +272,7 @@ def test_every_dbt_build_takes_the_single_build_lock():
     from jobs import nightly_sync
 
     src = inspect.getsource(nightly_sync.run_dbt)
-    assert "with sole_build(wait_seconds=wait_seconds):" in src, (
+    assert "with build_lock(wait_seconds=wait_seconds):" in src, (
         "the nightly, the fifteen-minute refresh and the transform CLI all reach dbt through "
         "run_dbt, so the lock belongs here or a hand-run build still races the scheduler"
     )
@@ -303,8 +303,8 @@ def test_a_refused_build_is_a_skip_for_the_refresh_not_a_failure():
     from jobs import sync_worker
 
     src = inspect.getsource(sync_worker.refresh_marts)
-    assert "except AlreadyRunning" in src
-    assert src.index("except AlreadyRunning") < src.index("except Exception")
+    assert "except AlreadyRunningError" in src
+    assert src.index("except AlreadyRunningError") < src.index("except Exception")
 
 
 def test_the_cheap_tier_leaves_the_spine_and_everything_under_it_alone():
@@ -321,7 +321,7 @@ def test_the_spine_tier_runs_on_its_own_slower_clock():
     from jobs import sync_worker
 
     src = inspect.getsource(sync_worker.refresh_marts)
-    assert "spine_every()" in src and "transform_every()" in src
+    assert "spine_interval()" in src and "transform_every()" in src
     assert "OFF_THE_SPINE" in src and "TABLES_ONLY" in src
     assert sync_worker.DEFAULT_SPINE_SECONDS > sync_worker.DEFAULT_TRANSFORM_SECONDS
 
@@ -336,7 +336,7 @@ def test_the_first_pass_builds_on_a_freshly_booted_node():
          mock.patch.object(sync_worker, "run_dbt", lambda *a, **kw: calls.append(kw["select"])), \
          mock.patch.object(sync_worker, "connect", mock.MagicMock()), \
          mock.patch.object(sync_worker, "transform_every", return_value=900), \
-         mock.patch.object(sync_worker, "spine_every", return_value=3600):
+         mock.patch.object(sync_worker, "spine_interval", return_value=3600):
         sync_worker.refresh_marts(sync_worker.NEVER, {"note": "idle"}, sync_worker.NEVER)
 
     assert calls == [sync_worker.TABLES_ONLY], (
@@ -354,7 +354,7 @@ def test_the_two_tiers_keep_separate_clocks():
     with mock.patch.object(sync_worker, "run_dbt", lambda *a, **kw: calls.append(kw["select"])), \
          mock.patch.object(sync_worker, "connect", mock.MagicMock()), \
          mock.patch.object(sync_worker, "transform_every", return_value=1), \
-         mock.patch.object(sync_worker, "spine_every", return_value=10_000):
+         mock.patch.object(sync_worker, "spine_interval", return_value=10_000):
         state = {"note": "idle"}
         refreshed, spined = sync_worker.refresh_marts(sync_worker.NEVER, state, sync_worker.NEVER)
         assert calls == [sync_worker.TABLES_ONLY], "the first pass has to build the spine once"

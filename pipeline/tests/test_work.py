@@ -64,7 +64,7 @@ def test_the_singleton_lock_is_session_scoped_and_namespaced():
     from lib import db
 
     assert db.SINGLETON_NAMESPACE == 8571
-    source = inspect.getsource(db.sole_instance)
+    source = inspect.getsource(db.instance_lock)
     assert "pg_try_advisory_lock" in source
     assert "pg_advisory_xact_lock" not in source
     assert "pg_advisory_unlock" in source
@@ -89,8 +89,8 @@ def test_a_second_instance_is_refused_rather_than_left_to_double_the_budget():
 
     holder = Taken()
     with mock.patch.object(db, "connect", lambda *a, **k: holder):
-        with pytest.raises(db.AlreadyRunning, match="double every in-process rate budget"):
-            with db.sole_instance("archive_worker"):
+        with pytest.raises(db.AlreadyRunningError, match="double every in-process rate budget"):
+            with db.instance_lock("archive_worker"):
                 raise AssertionError("the body must not run")
     assert getattr(holder, "closed", False)
 
@@ -115,7 +115,7 @@ def test_the_sole_holder_runs_the_body_and_unlocks_after():
             calls.append("close")
 
     with mock.patch.object(db, "connect", lambda *a, **k: Free()):
-        with db.sole_instance("archive_worker"):
+        with db.instance_lock("archive_worker"):
             calls.append("body")
     assert calls == ["lock", "body", "unlock", "close"]
 

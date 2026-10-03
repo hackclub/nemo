@@ -93,7 +93,7 @@ def left(ctx):
 
 @on_event("channel_left", open_to_all=True)
 @on_event("group_left", open_to_all=True)
-def put_out(ctx):
+def remove_from_channel(ctx):
     event = ctx.payload or {}
     where = event.get("channel")
     channel_id = where.get("id") if isinstance(where, dict) else where

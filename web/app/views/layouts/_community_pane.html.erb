@@ -1,23 +1,23 @@
 <nav id="section-nav" class="cpane" aria-label="Community contents">
-  <%= render "layouts/sidebar_head", letter: "C", title: "Community", said: "Hack Club Slack" %>
+  <%= render "layouts/sidebar_head", letter: "C", title: "Community", sub: "Hack Club Slack" %>
 
   <div class="cnav">
-    <p class="cnav-lab">Yours</p>
-    <div class="cnav-group">
-      <%= link_to you_path, title: "You",
-            aria: { current: ("page" if current_page?(you_path)) } do %>
-        <%= nav_icon("you") %><span class="trunc">You</span>
+    <p class="community-nav-label">Yours</p>
+    <div class="community-nav-group">
+      <%= link_to profile_path, title: "Profile",
+            aria: { current: ("page" if current_page?(profile_path)) } do %>
+        <%= nav_icon("person") %><span class="trunc">Profile</span>
       <% end %>
     </div>
 
     <% if may_community?("analytics.workspace.read") %>
-      <p class="cnav-lab">The journey</p>
-      <div class="cnav-group">
+      <p class="community-nav-label">The journey</p>
+      <div class="community-nav-group">
         <%= link_to community_path, title: "Overview",
               aria: { current: ("page" if on_community_overview?) } do %>
           <%= nav_icon("overview") %><span class="trunc">Overview</span>
         <% end %>
-        <div class="cnav-sub">
+        <div class="community-nav-sub">
           <% journey_stages.each do |label, stage| %>
             <% path = public_send(:"#{stage}_journey_path") %>
             <%= link_to path,
@@ -28,7 +28,7 @@
         </div>
       </div>
     <% else %>
-      <div class="cnav-group">
+      <div class="community-nav-group">
         <%= link_to community_path, title: "Overview",
               aria: { current: ("page" if on_community_overview?) } do %>
           <%= nav_icon("overview") %><span class="trunc">Overview</span>
@@ -36,16 +36,16 @@
       </div>
     <% end %>
 
-    <p class="cnav-lab">Places</p>
-    <div class="cnav-group">
+    <p class="community-nav-label">Places</p>
+    <div class="community-nav-group">
       <%= link_to channels_path, title: "Channels",
             aria: { current: ("page" if controller_name == "channels") } do %>
         <%= nav_icon("channels") %><span class="trunc">Channels</span>
       <% end %>
     </div>
 
-    <p class="cnav-lab">Mnemosyne</p>
-    <div class="cnav-group">
+    <p class="community-nav-label">Mnemosyne</p>
+    <div class="community-nav-group">
       <%= link_to account_path, title: "Your account",
             aria: { current: ("page" if current_page?(account_path)) } do %>
         <%= nav_icon("gear") %><span class="trunc">Your account</span>

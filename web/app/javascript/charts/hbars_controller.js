@@ -36,13 +36,13 @@ const axl = (v) =>
   Math.abs(v) >= 1000 ? `${+(v / 1000).toFixed(v % 1000 ? 1 : 0)}k` : `${Math.round(v)}`
 
 export default class extends Controller {
-  static values = { rows: Array, said: String, tone: String }
+  static values = { rows: Array, label: String, tone: String }
 
   connect() {
     this.at = null
     this.element.innerHTML = `<div class="hbars tipped" tabindex="0"
       data-action="mousemove->hbars#track mouseleave->hbars#clear keydown->hbars#key"
-      ><div class="tip"></div><span class="chart-say" aria-live="polite"></span></div>`
+      ><div class="tip"></div><span class="chart-caption" aria-live="polite"></span></div>`
     const box = this.element.querySelector(".hbars")
     this.watcher = new ResizeObserver(() => this.measure())
     this.watcher.observe(box)
@@ -58,8 +58,8 @@ export default class extends Controller {
     return this.rowsValue || []
   }
 
-  get said() {
-    return this.hasSaidValue && this.saidValue ? this.saidValue : "rows"
+  get label() {
+    return this.hasLabelValue && this.labelValue ? this.labelValue : "rows"
   }
 
   measure() {
@@ -127,7 +127,7 @@ export default class extends Controller {
 
   summary(rows) {
     const total = rows.reduce((at, r) => at + (Number(r.value) || 0), 0)
-    return [`${this.said}, ${rows.length} rows, ${F(total)} in all`]
+    return [`${this.label}, ${rows.length} rows, ${F(total)} in all`]
       .concat(rows.map((r) => `${r.label} ${F(r.value)}`)).join(". ")
   }
 
@@ -170,7 +170,7 @@ export default class extends Controller {
 
     const tip = box.querySelector(".tip")
     tip.innerHTML = `<div class="t">${esc(r.label)}</div>` +
-      `<div class="row"><i></i>${esc(this.said)}<b>${F(r.value)}</b></div>` +
+      `<div class="row"><i></i>${esc(this.label)}<b>${F(r.value)}</b></div>` +
       (r.note ? `<div class="row"><i></i>share<b>${esc(r.note)}</b></div>` : "")
     tip.classList.add("on")
 
@@ -185,7 +185,7 @@ export default class extends Controller {
     box.classList.add("lit")
     box.querySelectorAll(".hrow").forEach((row) =>
       row.classList.toggle("on", +row.dataset.i === i))
-    box.querySelector(".chart-say").textContent = `${r.label}, ${F(r.value)}`
+    box.querySelector(".chart-note").textContent = `${r.label}, ${F(r.value)}`
   }
 
   clear() {
@@ -196,7 +196,7 @@ export default class extends Controller {
     box.querySelector(".tip")?.classList.remove("on")
     box.classList.remove("lit")
     box.querySelectorAll(".hrow").forEach((row) => row.classList.remove("on"))
-    const say = box.querySelector(".chart-say")
+    const say = box.querySelector(".chart-note")
     if (say) say.textContent = ""
   }
 }

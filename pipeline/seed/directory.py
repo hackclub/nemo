@@ -72,17 +72,17 @@ def profiles_for(rng, members, as_of):
 
 def member_rows(profiles, members):
     for member in members:
-        shape = profiles[member.user_id]
+        profile = profiles[member.user_id]
         yield (
             member.user_id,
-            shape["handle"],
-            shape["display"],
-            shape["title"],
-            shape["pronouns"],
-            f"https://avatars.{SEED_EMAIL_DOMAIN}/{shape['hash']}_192.jpg",
-            shape["hash"],
-            shape["tz"],
-            shape["tz_offset"],
+            profile["handle"],
+            profile["display"],
+            profile["title"],
+            profile["pronouns"],
+            f"https://avatars.{SEED_EMAIL_DOMAIN}/{profile['hash']}_192.jpg",
+            profile["hash"],
+            profile["tz"],
+            profile["tz_offset"],
             SEED_ENTERPRISE,
             [SEED_TEAM],
             member.is_bot,
@@ -91,17 +91,17 @@ def member_rows(profiles, members):
             False,
             member.is_restricted,
             member.is_ultra_restricted,
-            shape["updated_at"],
+            profile["updated_at"],
         )
 
 
 def identity_rows(profiles, members):
     for member in members:
-        shape = profiles[member.user_id]
+        profile = profiles[member.user_id]
         yield (
             member.user_id,
-            f"{shape['given'].capitalize()} {shape['family'].capitalize()}",
-            shape["given"].capitalize(),
-            shape["family"].capitalize(),
-            f"{shape['handle']}@{SEED_EMAIL_DOMAIN}",
+            f"{profile['given'].capitalize()} {profile['family'].capitalize()}",
+            profile["given"].capitalize(),
+            profile["family"].capitalize(),
+            f"{profile['handle']}@{SEED_EMAIL_DOMAIN}",
         )

@@ -32,11 +32,11 @@ module Fd
     def load_responses
       @autoresponse_on = AppSetting.on?(AppSetting::AUTORESPONSE_ON)
       @autoresponse_emoji = AppSetting.autoresponse_emoji
-      @autoresponse_channel = AppSetting.said(AppSetting::AUTORESPONSE_CHANNEL)
-      @autoresponse_body = AppSetting.said(AppSetting::AUTORESPONSE_BODY)
+      @autoresponse_channel = AppSetting.value(AppSetting::AUTORESPONSE_CHANNEL)
+      @autoresponse_body = AppSetting.value(AppSetting::AUTORESPONSE_BODY)
       @autoresponse_cooldown = AppSetting.autoresponse_cooldown_days
       @unsub_on = AppSetting.on?(AppSetting::UNSUB_SHIELD_ON)
-      @unsub_link = AppSetting.said(AppSetting::UNSUB_SHIELD_LINK)
+      @unsub_link = AppSetting.value(AppSetting::UNSUB_SHIELD_LINK)
     end
   end
 end

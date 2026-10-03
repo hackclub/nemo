@@ -21,8 +21,8 @@ module Fd
     private
 
     def wanted
-      @wanted ||= Array(params[:user_ids]).map { |said| said.to_s.strip.upcase }
-        .select { |said| said.match?(MEMBER_ID) }.uniq
+      @wanted ||= Array(params[:user_ids]).map { |one| one.to_s.strip.upcase }
+        .select { |one| one.match?(MEMBER_ID) }.uniq
     end
 
     def reason = params[:reason].to_s.strip.presence || NO_REASON
@@ -46,14 +46,14 @@ module Fd
     end
 
     def notice_for(opened)
-      said = "#{helpers.pluralize(opened, 'account')} sent to nemo to deactivate"
-      return said if opened == wanted.size
+      one = "#{helpers.pluralize(opened, 'account')} sent to nemo to deactivate"
+      return one if opened == wanted.size
 
-      "#{said}, #{wanted.size - opened} already had one standing"
+      "#{one}, #{wanted.size - opened} already had one standing"
     end
 
-    def refuse(said)
-      redirect_to here, alert: (said unless flash[:wrong])
+    def refuse(one)
+      redirect_to here, alert: (one unless flash[:field_error])
     end
   end
 end

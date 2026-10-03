@@ -34,13 +34,13 @@ const N = (v) => v == null ? "n/a" : Number(v).toLocaleString("en-US")
 const PC = (v, d = 1) => v == null ? "n/a" : `${Number(v).toFixed(d)}%`
 
 export default class extends Controller {
-  static values = { tiles: Array, height: Number, said: String }
+  static values = { tiles: Array, height: Number, label: String }
 
   connect() {
     this.at = null
     this.element.innerHTML = `<div class="tree parts tipped" tabindex="0"
       data-action="mousemove->parts#track mouseleave->parts#clear keydown->parts#key"
-      ><div class="tip"></div><span class="chart-say" aria-live="polite"></span></div>`
+      ><div class="tip"></div><span class="chart-caption" aria-live="polite"></span></div>`
     const box = this.element.querySelector(".tree")
     this.watcher = new ResizeObserver(() => this.measure())
     this.watcher.observe(box)
@@ -143,8 +143,8 @@ export default class extends Controller {
   }
 
   summary(rows, total) {
-    const said = this.hasSaidValue && this.saidValue ? this.saidValue : "parts of the whole"
-    const bits = [`Treemap of ${said}, area is each part's share of ${N(total)}`]
+    const label = this.hasLabelValue && this.labelValue ? this.labelValue : "parts of the whole"
+    const bits = [`Treemap of ${label}, area is each part's share of ${N(total)}`]
     rows.forEach((r) => {
       bits.push(`${r.label} ${N(r.value)}, ${PC(r.value / total * 100)}`)
     })
@@ -214,7 +214,7 @@ export default class extends Controller {
     box.classList.add("lit")
     box.querySelectorAll(".cell").forEach((cell) =>
       cell.classList.toggle("on", +cell.dataset.i === i))
-    box.querySelector(".chart-say").textContent =
+    box.querySelector(".chart-note").textContent =
       `${r.label}, ${N(r.value)}, ${zone.share}`
   }
 
@@ -226,7 +226,7 @@ export default class extends Controller {
     box.querySelector(".tip")?.classList.remove("on")
     box.classList.remove("lit")
     box.querySelectorAll(".cell").forEach((cell) => cell.classList.remove("on"))
-    const say = box.querySelector(".chart-say")
+    const say = box.querySelector(".chart-note")
     if (say) say.textContent = ""
   }
 }

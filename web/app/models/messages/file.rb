@@ -21,7 +21,7 @@ module Messages
     def self.bytes_of(one)
       body = Slack::ProxyClient.file(METHOD, { "url" => one["url_private"] })
       Result.new(bytes: body.bytes, kind: kind_for(one, body.kind), name: one["name"].presence)
-    rescue Slack::ProxyClient::NotConfigured => e
+    rescue Slack::ProxyClient::NotConfiguredError => e
       Rails.logger.error("slack file proxy is not configured: #{e.message}")
       Result.new(error: :not_configured)
     rescue Slack::ProxyClient::AuthError

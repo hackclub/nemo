@@ -1,0 +1,59 @@
+<div class="metrics profile-band">
+  <div class="profile-who">
+    <%= face(profile.user_id, css: "avatar avatar-band") %>
+    <span class="two-line">
+      <b class="mono"><%= person_name(profile.user_id) %></b>
+      <span>
+        <% if profile.member_since %>
+          here since <%= profile.member_since.to_date.strftime("%-d %b %Y") %>
+        <% end %>
+      </span>
+    </span>
+  </div>
+
+  <div class="metric">
+    <span class="pickswitch" role="group" aria-label="What counts towards a streak">
+      <% Profile::Summary::STREAK_BASES.each_key do |basis| %>
+        <%= link_to basis, profile_path_with(profile, streak: (basis unless
+              basis == Profile::Summary::DEFAULT_BASIS)),
+              class: ("is-on" if basis == profile.streak_basis),
+              title: Profile::Summary::STREAK_BASES[basis] %>
+      <% end %>
+    </span>
+    <span class="metric-key">Streak</span>
+    <span class="metric-value">
+      <%= number_with_delimiter(profile.streak&.current_days.to_i) %>
+      <small><%= "day".pluralize(profile.streak&.current_days.to_i) %></small>
+    </span>
+    <span class="metric-note"><%= streak_line(profile.streak) %></span>
+  </div>
+
+  <div class="metric">
+    <span class="metric-key">Days here</span>
+    <span class="metric-value"><%= format_number(profile.slack[:days_active]) %></span>
+    <span class="metric-note">
+      <%= format_number(profile.held[:days_posted]) %> posted
+      <span class="triad-sep">&middot;</span>
+      <%= number_with_delimiter(profile.days_reacted) %> reacted
+    </span>
+  </div>
+
+  <div class="metric">
+    <span class="metric-key">Messages</span>
+    <span class="metric-value"><%= format_number(profile.slack[:messages]) %></span>
+    <span class="metric-note">
+      <% if profile.prior_slack %>
+        <%= delta_chip(profile.slack[:messages], profile.prior_slack[:messages]) ||
+              "no change on the window before" %>
+      <% else %>
+        <%= format_number(profile.slack[:channel_messages]) %> in channels
+      <% end %>
+    </span>
+  </div>
+
+  <div class="metric">
+    <span class="metric-key">Reactions given</span>
+    <span class="metric-value"><%= format_number(profile.slack[:reactions_given]) %></span>
+    <span class="metric-note"><%= format_number(profile.held[:reactions_received]) %> received</span>
+  </div>
+</div>

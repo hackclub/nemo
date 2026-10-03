@@ -63,7 +63,7 @@ module Api
         request.authorization.to_s[BEARER, 1]
       end
 
-      SAID = {
+      CALLER_ERROR_MESSAGES = {
         "api_off" => "the public_api flag is off",
         "invalid_token" => "no live key matches that digest",
         "revoked_token" => "that key was revoked, do not retry",
@@ -86,7 +86,7 @@ module Api
       ].freeze
 
       def refuse(status, error, **extra)
-        render json: { error: error, message: SAID[error] }.compact.merge(extra), status: status
+        render json: { error: error, message: CALLER_ERROR_MESSAGES[error] }.compact.merge(extra), status: status
       end
     end
   end

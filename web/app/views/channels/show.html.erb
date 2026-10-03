@@ -6,7 +6,7 @@
 <% content_for :head_actions do %>
   <% if ChannelsController::RANGED_VIEWS.include?(@view) %>
     <%= render "shared/range_button", id: "channel-range",
-          label: range_said(@range_preset, @start_date, @end_date) %>
+          label: range_label(@range_preset, @start_date, @end_date) %>
   <% end %>
   <%= open_in_slack slack_channel_url(@channel.channel_id) %>
   <%= render "backfill_button", channel: @channel, backfill: @backfill %>
@@ -25,14 +25,14 @@
 
   <% case @view %>
   <% when "overview" %>
-    <%= render "pulse", pulse: @pulse, crowd: @crowd, clock: @clock,
+    <%= render "activity", pulse: @pulse, crowd: @crowd, clock: @clock,
           range: @range, start_date: @start_date, end_date: @end_date %>
   <% when "activity" %>
-    <%= render "crowd", crowd: @crowd, snapshot: @snapshot, channel: @channel %>
+    <%= render "participants", crowd: @crowd, snapshot: @snapshot, channel: @channel %>
   <% when "newcomers" %>
     <%= render "welcome", welcome: @welcome, scorecard_rows: @scorecard_rows %>
   <% when "messages" %>
-    <%= render "talk", pulse: @pulse, start_date: @start_date, end_date: @end_date %>
+    <%= render "conversation", pulse: @pulse, start_date: @start_date, end_date: @end_date %>
   <% when "posts" %>
     <%= render "posts", posts: @posts, names: @names, rooms: @rooms, emoji: @emoji %>
   <% when "neighbours" %>

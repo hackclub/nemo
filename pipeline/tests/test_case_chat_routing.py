@@ -36,7 +36,7 @@ def watcher():
     return next(one for one in ENTRIES if one.tag == "handlers.on_message")
 
 
-SAID = {"channel": "C_FIRE", "ts": "2.0", "thread_ts": "1.0", "user": "UFD"}
+EVENT = {"channel": "C_FIRE", "ts": "2.0", "thread_ts": "1.0", "user": "UFD"}
 
 
 @pytest.fixture
@@ -66,7 +66,7 @@ def reaching(monkeypatch, answer):
 
 def test_a_question_on_a_report_thread_goes_to_the_member(wired, monkeypatch):
     reaching(monkeypatch, True)
-    watcher().fn(Ctx(dict(SAID, text="?are you ok")))
+    watcher().fn(Ctx(dict(EVENT, text="?are you ok")))
 
     assert wired["replied"][0][0][1] == "are you ok"
     assert wired["kept"] == []
@@ -74,7 +74,7 @@ def test_a_question_on_a_report_thread_goes_to_the_member(wired, monkeypatch):
 
 def test_a_question_with_no_member_to_reach_is_kept_as_chat(wired, monkeypatch):
     reaching(monkeypatch, False)
-    watcher().fn(Ctx(dict(SAID, text="?are you ok")))
+    watcher().fn(Ctx(dict(EVENT, text="?are you ok")))
 
     assert wired["replied"] == []
     assert wired["kept"][0][0] == 6
@@ -82,7 +82,7 @@ def test_a_question_with_no_member_to_reach_is_kept_as_chat(wired, monkeypatch):
 
 def test_plain_chat_never_asks_whether_a_member_can_be_reached(wired, monkeypatch):
     monkeypatch.setattr(handlers.chat, "reaches_a_member", lambda conn, ts: 1 / 0)
-    watcher().fn(Ctx(dict(SAID, text="who is handling this")))
+    watcher().fn(Ctx(dict(EVENT, text="who is handling this")))
 
     assert wired["kept"][0][0] == 6
 
@@ -101,18 +101,18 @@ def test_the_hourglassed_message_becomes_the_first_chat(monkeypatch):
     assert kept[0][1]["text"] == "that's my alt"
 
 
-@pytest.mark.parametrize("said", [
+@pytest.mark.parametrize("message", [
     {},
     {"ts": "1.0", "user": "UMEM"},
     {"ts": "1.0", "text": "a bot said this"},
     {"user": "UMEM", "text": "no timestamp"},
 ])
-def test_a_root_the_chat_table_would_refuse_is_left_alone(said, monkeypatch):
+def test_a_root_the_chat_table_would_refuse_is_left_alone(message, monkeypatch):
     monkeypatch.setattr(
         reaction_watch.chat, "keep",
         lambda conn, case_id, event: 1 / 0,
     )
-    assert reaction_watch.keep_the_root(None, 6, "C_FIRE", said) is None
+    assert reaction_watch.keep_the_root(None, 6, "C_FIRE", message) is None
 
 
 def test_a_root_with_only_blocks_is_still_worth_keeping():

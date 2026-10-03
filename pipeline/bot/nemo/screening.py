@@ -23,7 +23,7 @@ LANDED = {FLAG: FLAGGED, HOLD: HELD, DEACTIVATE: DEACTIVATED}
 
 SHUSH_DAYS = 7
 
-SAID = {
+OUTCOME_NOTICES = {
     FLAGGED: "joined on {domain}, which is flagged",
     HELD: "joined on {domain} and is shushed",
     DEACTIVATED: "joined on {domain} and is deactivated",
@@ -50,24 +50,24 @@ _loaded = False
 _lock = threading.Lock()
 
 
-class Watch:
+class DomainRule:
     def __init__(self, domain_id, domain, match_mode, effect):
         self.domain_id = domain_id
         self.domain = (domain or "").strip().lower()
         self.match_mode = match_mode
         self.effect = effect
 
-    def holds(self, said):
-        if not self.domain or not said:
+    def holds(self, domain):
+        if not self.domain or not domain:
             return False
         if self.match_mode == EXACT:
-            return said == self.domain
-        return said == self.domain or said.endswith(f".{self.domain}")
+            return domain == self.domain
+        return domain == self.domain or domain.endswith(f".{self.domain}")
 
 
 def refresh(conn):
     global _loaded
-    found = [Watch(*row) for row in conn.execute(LIVE).fetchall()]
+    found = [DomainRule(*row) for row in conn.execute(LIVE).fetchall()]
     with _lock:
         _watching[:] = found
         _loaded = True
@@ -80,19 +80,19 @@ def watching():
 
 
 def domain_of(email):
-    said = (email or "").strip().lower()
-    if "@" not in said:
+    text = (email or "").strip().lower()
+    if "@" not in text:
         return None
-    held = said.rsplit("@", 1)[-1].strip()
+    held = text.rsplit("@", 1)[-1].strip()
     return held or None
 
 
-def worst(said):
+def highest_severity(domain):
     held = watching()
-    if not held or not said:
+    if not held or not domain:
         return None
 
-    caught = [one for one in held if one.holds(said)]
+    caught = [one for one in held if one.holds(domain)]
     if not caught:
         return None
     return min(caught, key=lambda one: WORST_FIRST.index(one.effect))
@@ -108,20 +108,20 @@ def record(conn, user_id, domain, found, outcome, guard_id=None, detail=None):
     )).fetchone()
 
 
-def tell_the_house(client, conn, user_id, domain, outcome):
-    if client is None or outcome not in SAID:
+def post_to_internal_log(client, conn, user_id, domain, outcome):
+    if client is None or outcome not in OUTCOME_NOTICES:
         return None
 
     from bot.nemo import channel
 
-    room = channel.firehouse_channel(conn)
+    room = channel.internal_log_channel(conn)
     if not room:
         return None
 
     try:
         client.chat_postMessage(
             channel=room,
-            text=f"<@{user_id}> {SAID[outcome].format(domain=domain)}.",
+            text=f"<@{user_id}> {OUTCOME_NOTICES[outcome].format(domain=domain)}.",
             unfurl_links=False,
         )
     except Exception as failure:  # noqa: BLE001
@@ -136,7 +136,7 @@ def screen(conn, user_id, email, by="nemo", client=None):
         record(conn, user_id, None, None, NO_EMAIL)
         return NO_EMAIL, None
 
-    found = worst(domain)
+    found = highest_severity(domain)
     if found is None:
         record(conn, user_id, domain, None, ALLOWED)
         return ALLOWED, None
@@ -144,7 +144,7 @@ def screen(conn, user_id, email, by="nemo", client=None):
     if found.effect == FLAG:
         record(conn, user_id, domain, found, FLAGGED)
         log.warning("nemo: %s joined on %s, which is flagged", user_id, domain)
-        tell_the_house(client, conn, user_id, domain, FLAGGED)
+        post_to_internal_log(client, conn, user_id, domain, FLAGGED)
         return FLAGGED, None
 
     guard_id, trouble = hold_them(conn, user_id, found, by)
@@ -152,13 +152,13 @@ def screen(conn, user_id, email, by="nemo", client=None):
         record(conn, user_id, domain, found, FAILED, detail=trouble)
         log.warning("nemo: %s joined on %s but the guard would not open: %s",
                     user_id, domain, trouble)
-        tell_the_house(client, conn, user_id, domain, FAILED)
+        post_to_internal_log(client, conn, user_id, domain, FAILED)
         return FAILED, None
 
     outcome = LANDED[found.effect]
     record(conn, user_id, domain, found, outcome, guard_id=guard_id)
     log.warning("nemo: %s joined on %s, %s", user_id, domain, outcome)
-    tell_the_house(client, conn, user_id, domain, outcome)
+    post_to_internal_log(client, conn, user_id, domain, outcome)
     return outcome, guard_id
 
 
@@ -167,7 +167,7 @@ def hold_them(conn, user_id, found, by):
 
     kind = memberguards.DEACTIVATION if found.effect == DEACTIVATE else memberguards.SHUSH
     reason = f"joined on {found.domain}, which the domain list holds"
-    expires = None if kind == memberguards.DEACTIVATION else shush_until(conn)
+    expires = None if kind == memberguards.DEACTIVATION else shush_expiry(conn)
 
     try:
         guard_id = memberguards.open_guard(
@@ -181,7 +181,7 @@ def hold_them(conn, user_id, found, by):
     return guard_id, None
 
 
-def shush_until(conn):
+def shush_expiry(conn):
     row = conn.execute(
         "SELECT now() + make_interval(days => %s)", (SHUSH_DAYS,)
     ).fetchone()

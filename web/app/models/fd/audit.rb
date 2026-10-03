@@ -57,24 +57,24 @@ module Fd
 
     IGNORED_COLUMNS = %w[id created_at updated_at].freeze
 
-    class UnauditableRecord < ArgumentError; end
-    class UnknownVerb < ArgumentError; end
+    class UnauditableRecordError < ArgumentError; end
+    class UnknownVerbError < ArgumentError; end
 
     NUMERIC = /\A-?\d+\z/
 
     def self.identify(subject)
       return [subject, nil] if subject.is_a?(Integer)
 
-      said = subject.to_s
-      return [said.to_i, nil] if said.match?(NUMERIC)
+      text = subject.to_s
+      return [text.to_i, nil] if text.match?(NUMERIC)
 
-      [0, said.presence]
+      [0, text.presence]
     end
 
     def self.record(record, verb, actor:, request_id: nil, actor_kind: "human",
       source_app: SOURCE_APP, entity_id: nil, before: nil, after: nil)
       type = entity_type(record)
-      raise UnknownVerb, "#{verb} is not an audited verb" unless VERBS.include?(verb)
+      raise UnknownVerbError, "#{verb} is not an audited verb" unless VERBS.include?(verb)
 
       changes = record.previous_changes.except(*IGNORED_COLUMNS)
       id, ref = identify(entity_id || record.id)
@@ -95,7 +95,7 @@ module Fd
 
     def self.entity_type(record)
       ENTITY_TYPES.fetch(record.class.name) do
-        raise UnauditableRecord, "#{record.class.name} is not a conduct record"
+        raise UnauditableRecordError, "#{record.class.name} is not a conduct record"
       end
     end
 

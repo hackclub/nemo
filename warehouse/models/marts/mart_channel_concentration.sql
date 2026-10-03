@@ -88,7 +88,7 @@ points as (
        and c.rn = m.at_rn
 ),
 
-head as (
+top_slice as (
     select
         channel_id,
         month,
@@ -112,4 +112,4 @@ select
     'v2' as metric_version
 from points p
 inner join gini g on g.channel_id = p.channel_id and g.month = p.month
-inner join head h on h.channel_id = p.channel_id and h.month = p.month
+inner join top_slice h on h.channel_id = p.channel_id and h.month = p.month

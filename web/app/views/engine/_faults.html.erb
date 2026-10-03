@@ -151,8 +151,8 @@
         <h2 class="card-title">Suppressed</h2>
       </div>
       <div class="card-tools">
-        <span class="qlab">Mode</span>
-        <%= render "val", source: Engine::Setting::ENGINE, name: "breaker_mode", may_tune: may_tune %>
+        <span class="queue-label">Mode</span>
+        <%= render "setting_value", source: Engine::Setting::ENGINE, name: "breaker_mode", may_tune: may_tune %>
       </div>
     </div>
     <% if breakers.any? %>
@@ -228,7 +228,7 @@
               <th>worker</th>
               <th>state</th>
               <th class="col-num">last beat</th>
-              <th>said</th>
+              <th>detail</th>
             </tr>
           </thead>
           <tbody>

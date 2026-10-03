@@ -34,16 +34,16 @@ class MessageFilesTest < ActionDispatch::IntegrationTest
     message_file_path(@post.channel_id, @post.ts, file_id)
   end
 
-  def answering(file: nil, said: SAID)
+  def answering(file: nil, message: SAID)
     was_call = Slack::ProxyClient.method(:call)
     was_file = Slack::ProxyClient.method(:file)
     asked = []
     Slack::ProxyClient.define_singleton_method(:call) do |_method, params = {}, **|
-      { "ok" => true, "messages" => [said.merge("ts" => params["latest"])] }
+      { "ok" => true, "messages" => [message.merge("ts" => params["latest"])] }
     end
     Slack::ProxyClient.define_singleton_method(:file) do |method, params = {}, **|
       asked << [method, params]
-      raise Slack::ProxyClient::Unavailable, "proxy returned 503" if file.nil?
+      raise Slack::ProxyClient::UnavailableError, "proxy returned 503" if file.nil?
 
       file
     end
@@ -75,12 +75,12 @@ class MessageFilesTest < ActionDispatch::IntegrationTest
   test "a type slack claims is html is never served as html" do
     shown!
     sign_in_as(@me)
-    said = SAID.merge("files" => [{ "id" => FILE_ID, "name" => "x.html",
+    message = SAID.merge("files" => [{ "id" => FILE_ID, "name" => "x.html",
                                     "mimetype" => "text/html",
                                     "url_private" => "https://files.slack.com/x.html" }])
 
     answering(file: Slack::ProxyClient::Body.new(bytes: "<script>alert(1)</script>",
-                                                 kind: "text/html"), said: said) do
+                                                 kind: "text/html"), message: message) do
       get path_for
 
       assert_equal "application/octet-stream", response.media_type
@@ -93,12 +93,12 @@ class MessageFilesTest < ActionDispatch::IntegrationTest
   test "an svg is never rendered inline, whatever slack says it is" do
     shown!
     sign_in_as(@me)
-    said = SAID.merge("files" => [{ "id" => FILE_ID, "name" => "x.svg",
+    message = SAID.merge("files" => [{ "id" => FILE_ID, "name" => "x.svg",
                                     "mimetype" => "image/svg+xml",
                                     "url_private" => "https://files.slack.com/x.svg" }])
 
     answering(file: Slack::ProxyClient::Body.new(bytes: "<svg/>", kind: "image/svg+xml"),
-              said: said) do
+              message: message) do
       get path_for
 
       assert_match(/attachment/, response.headers["Content-Disposition"])

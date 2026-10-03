@@ -29,13 +29,13 @@ def scim_client():
 
 
 def user_id_of(params):
-    said = str(params.get("user_id") or "").strip()
-    if not said:
+    value = str(params.get("user_id") or "").strip()
+    if not value:
         raise ScimError("user_id is required")
-    return said
+    return value
 
 
-def spoke(answer):
+def check_response(answer):
     errors = answer.errors
     if errors is not None:
         raise ScimError(f"scim {errors.code}: {errors.description}")
@@ -49,8 +49,8 @@ def call(method, params):
     user_id = user_id_of(params)
 
     if method == DEACTIVATE:
-        return spoke(client.delete_user(user_id))
+        return check_response(client.delete_user(user_id))
     if method == ACTIVATE:
-        return spoke(client.patch_user(user_id, {"active": True}))
+        return check_response(client.patch_user(user_id, {"active": True}))
 
     raise ScimError(f"unknown scim method: {method}")

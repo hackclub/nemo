@@ -9,7 +9,7 @@ module Fd
       problem = objection(body)
       if problem
         return redirect_to(fd_member_path(user_id, show: "notes"),
-          alert: (problem unless flash[:wrong]))
+          alert: (problem unless flash[:field_error]))
       end
 
       writing do
@@ -17,9 +17,9 @@ module Fd
         audit(note, "noted")
       end
 
-      flash[:did] = { "label" => "See their record", "href" => fd_member_path(user_id) }
+      flash[:action] = { "label" => "See their record", "href" => fd_member_path(user_id) }
       redirect_to fd_member_path(user_id, show: "notes"),
-        notice: "noted, and it follows them to every case"
+        notice: "Noted; it now follows them to every case"
     end
 
     def destroy
@@ -45,10 +45,10 @@ module Fd
       end
 
       if removed
-        flash[:said] = "It stays in the audit trail, but it no longer follows them to a case."
+        flash[:detail] = "It stays in the audit trail, but it no longer follows them to a case."
         redirect_to fd_member_path(user_id, show: "notes"), notice: "Note removed"
       else
-        redirect_to fd_member_path(user_id, show: "notes"), alert: "only whoever wrote a note can remove it"
+        redirect_to fd_member_path(user_id, show: "notes"), alert: "Only the author of a note can remove it"
       end
     end
 

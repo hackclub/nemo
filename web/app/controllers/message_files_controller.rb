@@ -14,8 +14,8 @@ class MessageFilesController < ApplicationController
     return head :not_found if post.nil?
     return head :forbidden unless may_community?("analytics.message.read", post)
 
-    said = Slack::Message.at(channel_id, ts)
-    one = Messages::File.in(said.said, params[:file_id])
+    found = Slack::Message.at(channel_id, ts)
+    one = Messages::File.in(found.message, params[:file_id])
     return head :not_found if one.nil? || one["url_private"].blank?
 
     hand_over(one)

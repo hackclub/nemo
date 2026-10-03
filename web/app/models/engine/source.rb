@@ -1,6 +1,6 @@
 module Engine
   class Source
-    class Unknown < ArgumentError; end
+    class UnknownError < ArgumentError; end
 
     FILE = YAML.load_file(Rails.root.join("../db/sources.yml")).freeze
     TABLE = FILE.fetch("sources").freeze
@@ -16,7 +16,7 @@ module Engine
 
     def initialize(key)
       @key = key.to_s
-      @said = TABLE.fetch(@key) { raise Unknown, "#{key} is not a source" }
+      @row = TABLE.fetch(@key) { raise UnknownError, "#{key} is not a source" }
     end
 
     def self.all
@@ -28,16 +28,16 @@ module Engine
     end
 
     DECLARED.each do |field|
-      define_method(field) { @said.fetch(field) }
+      define_method(field) { @row.fetch(field) }
     end
 
-    def label = @said.fetch("label")
+    def label = @row.fetch("label")
 
-    def endpoint = @said.fetch("endpoint")
+    def endpoint = @row.fetch("endpoint")
 
-    def credential = @said.fetch("credential")
+    def credential = @row.fetch("credential")
 
-    def prune_floor = @said["prune_floor"]
+    def prune_floor = @row["prune_floor"]
 
     def prune_floor_days
       return nil if prune_floor.blank?
@@ -48,17 +48,17 @@ module Engine
 
     def prunable? = prune_floor.present?
 
-    def limits = @said["limits"] || {}
+    def limits = @row["limits"] || {}
 
     def limit(name)
-      limits.fetch(name.to_s) { raise Unknown, "#{key} declares no #{name} limit" }
+      limits.fetch(name.to_s) { raise UnknownError, "#{key} declares no #{name} limit" }
     end
 
     def guarded? = guard != "none"
 
     def resumable? = resume != "none"
 
-    def runs_as = @said["runs_as"] || [key]
+    def runs_as = @row["runs_as"] || [key]
 
     STALE_AFTER = { "daily" => 2.days, "weekly" => 8.days, "monthly" => 35.days }.freeze
 

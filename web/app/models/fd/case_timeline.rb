@@ -1,6 +1,6 @@
 module Fd
   class CaseTimeline
-    Entry = Struct.new(:at, :title, :mark, :chips, :detail, :said, keyword_init: true)
+    Entry = Struct.new(:at, :title, :mark, :chips, :detail, :body, keyword_init: true)
 
     def self.for(kase, reports:, actions:, notes:, participants: [], assignees: [],
       erasures: [], names: nil, channels: nil)
@@ -54,7 +54,7 @@ module Fd
           mark: "intake",
           chips: report.anonymous? ? ["anonymous"] : [],
           detail: report_detail(report, standing: report == first),
-          said: report.body,
+          body: report.body,
         )
       end
     end
@@ -110,7 +110,7 @@ module Fd
           mark: "owner",
           chips: [kase.resolution.tr("_", " ")],
           detail: resolved_detail,
-          said: kase.member_note,
+          body: kase.member_note,
         )
       end
 
@@ -196,7 +196,7 @@ module Fd
           chips: [note.standing? ? "about #{names[note.subject_user_id]}" : nil,
                   from_chip(note)].compact,
           detail: "by #{names[note.author]}",
-          said: note.body,
+          body: note.body,
         )
       end
     end

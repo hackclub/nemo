@@ -14,12 +14,12 @@ class MessagesController < ApplicationController
       return refuse_community("analytics.message.read", @post)
     end
 
-    @said = Slack::Message.at(@channel_id, @ts)
-    @names = Fd::Names.for([@post.author_id] + Fd::Mentions.ids(@said.said&.dig("text")))
+    @found = Slack::Message.at(@channel_id, @ts)
+    @names = Fd::Names.for([@post.author_id] + Fd::Mentions.ids(@found.message&.dig("text")))
     @rooms = Analytics::DimChannel
-      .where(channel_id: Fd::Mentions.channel_ids(@said.said&.dig("text")))
+      .where(channel_id: Fd::Mentions.channel_ids(@found.message&.dig("text")))
       .pluck(:channel_id, :name).to_h
-    @emoji = Slack::Emoji.for(Slack::RichText.emoji_names(@said.said))
+    @emoji = Slack::Emoji.for(Slack::RichText.emoji_names(@found.message))
     @crowd = Analytics::FctChannelSpan.where(channel_id: @channel_id).pick(:total_members)
     @span = Messages::Activity::SPANS.key?(params[:span]) ? params[:span] :
       Messages::Activity.span_for(@post.posted_at)

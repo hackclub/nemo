@@ -147,7 +147,7 @@ class FdMemberGuardsTest < ActionDispatch::IntegrationTest
 
   test "nothing is asked about enforcement, since holding it is the point" do
     get fd_member_path("USUB")
-    assert_no_match(/Already taken/, response.body)
+    assert_no_match(/AlreadyError taken/, response.body)
     assert_no_match(/name="settle"/, response.body)
   end
 

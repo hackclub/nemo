@@ -65,7 +65,7 @@ module Fd
     test "a refusal says why, in words the bot can say too" do
       staff = staff_holding("firefighter")
 
-      assert_equal "give or take back access is Community manager only",
+      assert_equal "grant and revoke access is Community manager only",
         Access.why_not(staff, "access.grant")
     end
   end

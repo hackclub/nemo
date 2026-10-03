@@ -6,13 +6,13 @@ module Settings
       key = params[:scope].to_s
       Api::Scope.fetch(key)
       app = app_asked
-      return refuse("no such app") if params[:app_id].present? && app.nil?
+      return refuse("No such app") if params[:app_id].present? && app.nil?
 
       granted = params[:on] == "1"
       Api::Consent.set!(member_id, app&.id, key, granted, via: "dashboard")
 
-      redirect_to settings_permissions_path, notice: said(app, key, granted)
-    rescue Api::Scope::Unknown => e
+      redirect_to settings_permissions_path, notice: notice_for(app, key, granted)
+    rescue Api::Scope::UnknownError => e
       refuse(e.message)
     end
 
@@ -25,7 +25,7 @@ module Settings
       found&.answering? ? found : nil
     end
 
-    def said(app, key, granted)
+    def notice_for(app, key, granted)
       named = Api::Scope.label(key).downcase
       who = app ? app.name : "Every app"
       granted ? "#{who} may ask about #{named}" : "#{who} may no longer ask"

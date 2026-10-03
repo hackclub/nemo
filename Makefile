@@ -52,7 +52,7 @@ test:
 	cd web && bin/rails test
 
 check:
-	cd pipeline && PYTHONPATH=. .venv/bin/python -m checks.headlines $(CHECK_ARGS)
+	cd pipeline && PYTHONPATH=. .venv/bin/python -m checks.metrics $(CHECK_ARGS)
 
 lint:
 	cd pipeline && .venv/bin/ruff check .

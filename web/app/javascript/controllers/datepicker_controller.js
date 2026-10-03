@@ -137,25 +137,25 @@ export default class extends Controller {
     const nextStart = new Date(year, month + 1, 1)
 
     let cells = ""
-    for (let i = 0; i < lead; i += 1) cells += `<span class="dp-blank"></span>`
+    for (let i = 0; i < lead; i += 1) cells += `<span class="datepicker-blank"></span>`
     for (let day = 1; day <= days; day += 1) {
       const date = new Date(year, month, day)
       const value = iso(date)
       const disabled = this.outOfBounds(date) ? "disabled" : ""
       const selected = value === chosenIso ? ' aria-selected="true"' : ""
-      cells += `<button type="button" class="dp-day" data-date="${value}" ${disabled}${selected} data-action="datepicker#pick">${day}</button>`
+      cells += `<button type="button" class="datepicker-day" data-date="${value}" ${disabled}${selected} data-action="datepicker#pick">${day}</button>`
     }
 
     this.popTarget.innerHTML = `
-      <div class="dp-head">
-        <button type="button" class="dp-nav" data-step="-1" data-action="datepicker#shift"
+      <div class="datepicker-head">
+        <button type="button" class="datepicker-nav" data-step="-1" data-action="datepicker#shift"
           aria-label="previous month"${this.min && prevEnd < this.min ? " disabled" : ""}>&lsaquo;</button>
-        <span class="dp-title">${MONTHS[month]} ${year}</span>
-        <button type="button" class="dp-nav" data-step="1" data-action="datepicker#shift"
+        <span class="datepicker-title">${MONTHS[month]} ${year}</span>
+        <button type="button" class="datepicker-nav" data-step="1" data-action="datepicker#shift"
           aria-label="next month"${this.max && nextStart > this.max ? " disabled" : ""}>&rsaquo;</button>
       </div>
-      <div class="dp-grid">
-        ${DOW.map((d) => `<span class="dp-dow">${d}</span>`).join("")}
+      <div class="datepicker-grid">
+        ${DOW.map((d) => `<span class="datepicker-dow">${d}</span>`).join("")}
         ${cells}
       </div>
     `

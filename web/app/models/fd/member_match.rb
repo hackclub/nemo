@@ -44,9 +44,9 @@ module Fd
     end
 
     def binds(term)
-      said = term.to_s.downcase
-      like = ApplicationRecord.sanitize_sql_like(said)
-      { exact: said, starts: "#{like}%", within: "%#{like}%" }
+      text = term.to_s.downcase
+      like = ApplicationRecord.sanitize_sql_like(text)
+      { exact: text, starts: "#{like}%", within: "%#{like}%" }
     end
   end
 end

@@ -55,7 +55,7 @@ buckets (bucket_order, bucket, answered) as (
         (7, 'never', false)
 ),
 
-whole as (
+channel_totals as (
     select channel_id, count(*)::integer as checked
     from placed
     group by 1
@@ -72,7 +72,7 @@ select
     e.window_start,
     e.window_end,
     'v3' as metric_version
-from whole w
+from channel_totals w
 cross join buckets b
 cross join span e
 left join placed p

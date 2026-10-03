@@ -8,11 +8,11 @@ module Fd
 
       return send_it(kase, read) if read.to_reporter?
 
-      problem = objection(read.said)
+      problem = objection(read.body)
       return redirect_to(back_to(kase), alert: problem) if problem
 
-      said = writing { keep(kase, read.said) }
-      SlackPost.carry(said) if said.mirrored_as == "user"
+      line = writing { keep(kase, read.body) }
+      SlackPost.carry(line) if line.mirrored_as == "user"
 
       answer(kase)
     end
@@ -32,7 +32,7 @@ module Fd
 
       sent = nil
       writing do
-        sent = Outgoing.queue(conversation_for(kase), read.said, mode: mode(read),
+        sent = Outgoing.queue(conversation_for(kase), read.body, mode: mode(read),
           by: current_account.user_id, asked: params[:conversation_id].present?)
         answered(kase, sent.queued) if sent.queued
       end

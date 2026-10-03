@@ -188,8 +188,8 @@ module Fd
       rest.present? ? held.merge(TERM_KEY => rest) : held.except(TERM_KEY)
     end
 
-    def with_params(said)
-      carried.merge(placed).merge(TERM_KEY => [term, said].compact_blank.join(" ").strip)
+    def with_params(term_value)
+      carried.merge(placed).merge(TERM_KEY => [term, term_value].compact_blank.join(" ").strip)
     end
 
     def rows
@@ -219,13 +219,13 @@ module Fd
     end
 
     def summary
-      "#{number_said(rows.size)} of #{counted}"
+      "#{number_label(rows.size)} of #{counted}"
     end
 
     COUNT_CEILING = 10_000
 
     def counted
-      total > COUNT_CEILING ? "#{number_said(COUNT_CEILING)}+" : number_said(total)
+      total > COUNT_CEILING ? "#{number_label(COUNT_CEILING)}+" : number_label(total)
     end
 
     def empty_note
@@ -246,10 +246,10 @@ module Fd
     SUGGESTED = 12
 
     KNOWN_VERBS = <<~SQL.squish.freeze
-      SELECT DISTINCT verb AS said FROM fd.audit
+      SELECT DISTINCT verb FROM fd.audit
       UNION
       SELECT DISTINCT action FROM slack.audit_event WHERE NOT ours
-      ORDER BY said
+      ORDER BY verb
     SQL
 
     def known_verbs
@@ -258,7 +258,7 @@ module Fd
 
     private
 
-    def number_said(count) = ActiveSupport::NumberHelper.number_to_delimited(count)
+    def number_label(count) = ActiveSupport::NumberHelper.number_to_delimited(count)
 
     def since = Time.zone.at(0)
 
@@ -312,7 +312,7 @@ module Fd
              'api'::text AS entity_kind, e.subject AS entity_id,
              NULL::text AS entity_ref, NULL::text AS subject_id,
              NULL::jsonb AS before, NULL::jsonb AS after,
-             jsonb_strip_nulls(jsonb_build_object('said', e.detail)) AS detail
+             jsonb_strip_nulls(jsonb_build_object('note', e.detail)) AS detail
       FROM api.event_log e
       WHERE e.at >= :since
         API_EVENT_WHERE
@@ -449,11 +449,11 @@ module Fd
     end
 
     def ip_clause
-      held = search.of("ip").map { |said|
-        if said.include?("/")
-          "(e.context ->> 'ip_address')::inet << :ip_#{said.hash.abs}::inet"
+      held = search.of("ip").map { |term_value|
+        if term_value.include?("/")
+          "(e.context ->> 'ip_address')::inet << :ip_#{term_value.hash.abs}::inet"
         else
-          "e.context ->> 'ip_address' = :ip_#{said.hash.abs}"
+          "e.context ->> 'ip_address' = :ip_#{term_value.hash.abs}"
         end
       }
       seen = anybody.any? ? " OR e.actor_id IN (:anybody)" : ""
@@ -528,10 +528,10 @@ module Fd
     end
 
     def before_at
-      said = @params["before_at"].to_s.presence
-      return nil if said.nil?
+      term_value = @params["before_at"].to_s.presence
+      return nil if term_value.nil?
 
-      Time.zone.parse(said)
+      Time.zone.parse(term_value)
     rescue ArgumentError
       nil
     end
@@ -558,9 +558,9 @@ module Fd
         anybody: anybody.presence || [""],
         after: search.one("after"), before: search.one("before")
       }
-      search.of("ip").each { |said| held[:"ip_#{said.hash.abs}"] = said }
-      search.of("email").each_with_index { |said, at| held[:"email_#{at}"] = said.downcase }
-      search.of("domain").each_with_index { |said, at| held[:"domain_#{at}"] = said.downcase }
+      search.of("ip").each { |term_value| held[:"ip_#{term_value.hash.abs}"] = term_value }
+      search.of("email").each_with_index { |term_value, at| held[:"email_#{at}"] = term_value.downcase }
+      search.of("domain").each_with_index { |term_value, at| held[:"domain_#{at}"] = term_value.downcase }
       held
     end
 

@@ -32,7 +32,7 @@ _cancel = contextvars.ContextVar("cancel_check", default=None)
 
 
 class SyncCancelled(RuntimeError):
-    """A cancel was requested for the run in progress"""
+    """Raised when a cancel is requested for the run in progress."""
 
 
 def current_step() -> tuple:
@@ -100,7 +100,7 @@ def connect_admin(dsn: str | None = None, maintenance: bool = False) -> psycopg.
 
 
 class SeededDeployment(RuntimeError):
-    """The database holds synthetic data, so ingestion must not run against it"""
+    """Raised when the database holds synthetic data and ingestion must not run."""
 
 
 BEAT_SQL = """
@@ -111,7 +111,7 @@ ON CONFLICT (worker) DO UPDATE SET
 """
 
 
-def beat(conn: psycopg.Connection, name: str, note: str | None = None) -> None:
+def record_heartbeat(conn: psycopg.Connection, name: str, note: str | None = None) -> None:
     boot = WORKER_BOOT if name == worker() else None
     try:
         conn.execute(BEAT_SQL, (name, note, boot))
@@ -199,12 +199,12 @@ def finish_run(
 SINGLETON_NAMESPACE = 8571
 
 
-class AlreadyRunning(RuntimeError):
+class AlreadyRunningError(RuntimeError):
     pass
 
 
 @contextmanager
-def sole_instance(name: str):
+def instance_lock(name: str):
     holder = connect()
     try:
         taken = holder.execute(
@@ -213,7 +213,7 @@ def sole_instance(name: str):
         ).fetchone()[0]
         holder.commit()
         if not taken:
-            raise AlreadyRunning(
+            raise AlreadyRunningError(
                 f"another {name} already holds the singleton lock on this database, "
                 "so this one would double every in-process rate budget"
             )
@@ -239,7 +239,7 @@ def build_wait_seconds():
 
 
 @contextmanager
-def sole_build(wait_seconds=None, poll_seconds=BUILD_POLL_SECONDS,
+def build_lock(wait_seconds=None, poll_seconds=BUILD_POLL_SECONDS,
                clock=time.monotonic, sleep=time.sleep):
     if wait_seconds is None:
         wait_seconds = build_wait_seconds()
@@ -258,7 +258,7 @@ def sole_build(wait_seconds=None, poll_seconds=BUILD_POLL_SECONDS,
                     print(f"dbt: the {BUILD_LOCK} lock came free, building now")
                 break
             if clock() >= deadline:
-                raise AlreadyRunning(
+                raise AlreadyRunningError(
                     f"another dbt build has held the {BUILD_LOCK} lock for more than "
                     f"{wait_seconds}s, and two builds race each other for the same relations"
                 )
@@ -426,7 +426,7 @@ RETURNING id, source
 """
 
 
-def sweep_my_earlier_boots(conn: psycopg.Connection) -> list[tuple[int, str]]:
+def clear_stale_sessions(conn: psycopg.Connection) -> list[tuple[int, str]]:
     gone = "swept: the worker restarted, so this run's process is gone"
     with conn.cursor() as cur:
         cur.execute(ORPHAN_SQL, (gone, worker(), WORKER_BOOT))

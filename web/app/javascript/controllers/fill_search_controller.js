@@ -1,13 +1,13 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static values = { said: String }
+  static values = { term: String }
 
   use() {
-    const field = document.querySelector(".qsearch .qsearch-in")
+    const field = document.querySelector(".queue-search .queue-search-input")
     if (!field) return
 
-    field.value = this.saidValue
+    field.value = this.termValue
     document.querySelectorAll(".modal-flip:checked").forEach((flip) => {
       flip.checked = false
     })

@@ -29,8 +29,8 @@ FOREIGN_ROWS = [
 ]
 
 
-class SeedRefused(RuntimeError):
-    """The seeder will not write to this database"""
+class SeedRefusedError(RuntimeError):
+    """Raised when the seeder refuses to write to this database."""
 
 
 def target_allowed(dbname, allow=None):
@@ -46,7 +46,7 @@ def check_target_name(dbname=None, allow=None):
     allow = allow if allow is not None else os.environ.get("SEED_ALLOW_DB", "").strip()
     if target_allowed(dbname, allow):
         return dbname
-    raise SeedRefused(
+    raise SeedRefusedError(
         f"{dbname or 'POSTGRES_DB'} is not a seed target. name it with a _dev, _test or "
         f"_seed suffix, or set SEED_ALLOW_DB={dbname} if you are certain"
     )
@@ -69,7 +69,7 @@ def check_no_real_data(conn, force=False):
     if force:
         print(f"seed: --force, overwriting a database that holds rows the seeder did not write: {listed}")
         return found
-    raise SeedRefused(
+    raise SeedRefusedError(
         f"this database holds rows the seeder did not write: {listed}. "
         "seeding would mix synthetic data into it. pass --force only if you are certain"
     )

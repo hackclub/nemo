@@ -27,12 +27,12 @@ class Conn:
     def did(self, mark):
         return [args for sql, args in self.ran if mark in sql]
 
-    def said(self, mark):
+    def executed(self, mark):
         return any(mark in sql for sql, _ in self.ran)
 
 
 def watch(domain="throwaway.example", match_mode="exact", effect="flag", domain_id=3):
-    return screening.Watch(domain_id, domain, match_mode, effect)
+    return screening.DomainRule(domain_id, domain, match_mode, effect)
 
 
 def watching(*held):
@@ -63,7 +63,7 @@ class House:
 def test_a_catch_is_said_in_the_firehouse(monkeypatch):
     watching(watch(effect="flag"))
     from bot.nemo import channel
-    monkeypatch.setattr(channel, "firehouse_channel", lambda _conn=None: "CHOUSE")
+    monkeypatch.setattr(channel, "internal_log_channel", lambda _conn=None: "CHOUSE")
     house = House()
 
     screening.screen(Conn(), WHO, "kid@throwaway.example", client=house)
@@ -76,7 +76,7 @@ def test_a_catch_is_said_in_the_firehouse(monkeypatch):
 def test_somebody_the_list_lets_in_is_not_announced(monkeypatch):
     watching(watch())
     from bot.nemo import channel
-    monkeypatch.setattr(channel, "firehouse_channel", lambda _conn=None: "CHOUSE")
+    monkeypatch.setattr(channel, "internal_log_channel", lambda _conn=None: "CHOUSE")
     house = House()
 
     screening.screen(Conn(), WHO, "kid@school.example", client=house)
@@ -86,7 +86,7 @@ def test_somebody_the_list_lets_in_is_not_announced(monkeypatch):
 def test_a_firehouse_that_will_not_take_it_does_not_lose_the_screen(monkeypatch):
     watching(watch(effect="flag"))
     from bot.nemo import channel
-    monkeypatch.setattr(channel, "firehouse_channel", lambda _conn=None: "CHOUSE")
+    monkeypatch.setattr(channel, "internal_log_channel", lambda _conn=None: "CHOUSE")
 
     class Refuses:
         def chat_postMessage(self, **_kwargs):
@@ -142,7 +142,7 @@ def test_a_flagged_domain_is_written_down_and_nothing_else_happens():
 
     assert screening.screen(conn, WHO, "kid@throwaway.example") == (screening.FLAGGED, None)
     assert outcome_of(conn) == screening.FLAGGED
-    assert not conn.said("INSERT INTO fd.member_guards")
+    assert not conn.executed("INSERT INTO fd.member_guards")
 
 
 def test_a_held_domain_opens_a_shush_that_runs_out():
@@ -172,7 +172,7 @@ def test_the_worst_effect_wins_when_two_entries_catch_them():
              watch(effect="deactivate", domain_id=2),
              watch(effect="hold", domain_id=3))
 
-    assert screening.worst("throwaway.example").effect == "deactivate"
+    assert screening.highest_severity("throwaway.example").effect == "deactivate"
 
 
 def test_a_guard_that_will_not_open_is_recorded_as_a_failure_not_a_pass():
@@ -197,7 +197,7 @@ def test_a_guard_that_will_not_open_is_recorded_as_a_failure_not_a_pass():
 def test_nobody_is_screened_until_the_list_has_been_loaded():
     screening._loaded = False
     assert screening.watching() is None
-    assert screening.worst("throwaway.example") is None
+    assert screening.highest_severity("throwaway.example") is None
 
 
 def test_one_row_per_member_so_a_replayed_join_cannot_double_up():
@@ -220,10 +220,10 @@ def test_the_join_watcher_asks_slack_for_the_address_the_event_leaves_out():
 
     from bot.nemo.surface import join_watch
 
-    said = pathlib.Path(join_watch.__file__).read_text()
-    assert "privileged.profile(" in said, \
+    src = pathlib.Path(join_watch.__file__).read_text()
+    assert "privileged.profile(" in src, \
         "team_join carries no email, so the profile has to be fetched"
-    assert "joiners.keep(conn, whole_user)" in said, "what slack hands back is kept"
+    assert "new_members.keep(conn, whole_user)" in src, "what slack hands back is kept"
 
 
 def test_the_profile_is_read_on_the_admin_credential():
@@ -251,6 +251,6 @@ def test_the_join_watcher_screens_only_somebody_who_is_new():
 
     from bot.nemo.surface import join_watch
 
-    said = pathlib.Path(join_watch.__file__).read_text()
-    assert "if not fresh:" in said, "a replayed team_join must not screen them twice"
-    assert "screening.screen(" in said
+    src = pathlib.Path(join_watch.__file__).read_text()
+    assert "if not fresh:" in src, "a replayed team_join must not screen them twice"
+    assert "screening.screen(" in src

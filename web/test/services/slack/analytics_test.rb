@@ -86,7 +86,7 @@ class Slack::AnalyticsTest < ActiveSupport::TestCase
     end
   end
 
-  test "a failure is never cached, so a blip does not stick for hours" do
+  test "a failure is never cached, so a blip does not sticky for hours" do
     caching do
       answering(->(*) { raise Slack::ProxyClient::Error, "down" }) do |calls|
         assert_equal :unavailable, ask.error

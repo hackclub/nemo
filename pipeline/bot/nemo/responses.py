@@ -29,7 +29,7 @@ WHERE fd.autoresponse_cooldown.sent_at <= now() - make_interval(days => %s)
 RETURNING sent_at
 """
 
-_said = {}
+_settings = {}
 _loaded = False
 _lock = threading.Lock()
 
@@ -38,31 +38,31 @@ def refresh(conn):
     global _loaded
     found = dict(conn.execute(LIVE, (list(KEYS),)).fetchall())
     with _lock:
-        _said.clear()
-        _said.update(found)
+        _settings.clear()
+        _settings.update(found)
         _loaded = True
     return len(found)
 
 
-def said(key):
+def setting(key):
     with _lock:
         if not _loaded:
             return None
-        return (_said.get(key) or "").strip()
+        return (_settings.get(key) or "").strip()
 
 
 def on(key):
-    return said(key) == "on"
+    return setting(key) == "on"
 
 
-def words(key):
-    held = said(key) or ""
+def setting_list(key):
+    held = setting(key) or ""
     return [one.strip() for one in held.split(",") if one.strip()]
 
 
 def cooldown_days():
     try:
-        held = int(said(AUTORESPONSE_COOLDOWN) or 0)
+        held = int(setting(AUTORESPONSE_COOLDOWN) or 0)
     except ValueError:
         held = 0
     return held if 1 <= held <= SLOWEST else COOLDOWN_FALL_BACK
@@ -71,11 +71,11 @@ def cooldown_days():
 def answering(channel_id, emoji):
     if not on(AUTORESPONSE_ON):
         return False
-    if not said(AUTORESPONSE_BODY):
+    if not setting(AUTORESPONSE_BODY):
         return False
-    if channel_id != said(AUTORESPONSE_CHANNEL):
+    if channel_id != setting(AUTORESPONSE_CHANNEL):
         return False
-    return emoji in words(AUTORESPONSE_EMOJI)
+    return emoji in setting_list(AUTORESPONSE_EMOJI)
 
 
 def may_answer(conn, user_id):

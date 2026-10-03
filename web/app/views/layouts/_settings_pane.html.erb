@@ -2,10 +2,10 @@
   <%= render "layouts/sidebar_head", letter: "S", title: "Settings" %>
 
   <div class="cnav">
-    <div class="cnav-group">
+    <div class="community-nav-group">
       <%= link_to account_path, title: "Account",
             aria: { current: ("page" if controller_path == "accounts") } do %>
-        <%= nav_icon("you") %><span class="trunc">Account</span>
+        <%= nav_icon("person") %><span class="trunc">Account</span>
       <% end %>
       <%= link_to settings_appearance_path, title: "Appearance",
             aria: { current: ("page" if controller_path == "settings/appearances") } do %>
@@ -13,8 +13,8 @@
       <% end %>
     </div>
 
-    <p class="cnav-lab">Public API</p>
-    <div class="cnav-group">
+    <p class="community-nav-label">Public API</p>
+    <div class="community-nav-group">
       <%= link_to settings_keys_path, title: "API keys",
             aria: { current: ("page" if controller_path == "settings/keys") } do %>
         <%= nav_icon("gear") %><span class="trunc">API keys</span>
@@ -26,13 +26,13 @@
     </div>
 
     <% if may_review_api? %>
-      <p class="cnav-lab">Review</p>
-      <div class="cnav-group">
+      <p class="community-nav-label">Review</p>
+      <div class="community-nav-group">
         <%= link_to settings_requests_path, title: "Access requests",
               aria: { current: ("page" if controller_path == "settings/requests") } do %>
           <%= nav_icon("news") %><span class="trunc">Access requests</span>
           <% if api_queue_waiting.positive? %>
-            <span class="cnav-tally"><%= api_queue_waiting %></span>
+            <span class="community-nav-tally"><%= api_queue_waiting %></span>
           <% end %>
         <% end %>
       </div>

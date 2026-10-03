@@ -12,7 +12,7 @@ module Fd
       problem = held ? standing_objection(kase, held) : action_objection(kase)
       if problem
         return redirect_to(fd_case_path(kase, do: "action"),
-          alert: (problem unless flash[:wrong]))
+          alert: (problem unless flash[:field_error]))
       end
 
       named = false
@@ -56,22 +56,22 @@ module Fd
     end
 
     def attached_notice(kase, guard)
-      "the #{guard_said(guard)} already standing on @#{guard.subject_id} " \
+      "the #{guard_label_text(guard)} already standing on @#{guard.subject_id} " \
         "is now on case #{kase.id}"
     end
 
     def locked_notice(kase, adopted)
-      said = "thread lock logged on case #{kase.id}"
-      adopted ? "#{said}, and the thread is now on this case" : said
+      message = "thread lock logged on case #{kase.id}"
+      adopted ? "#{message}, and the thread is now on this case" : message
     end
 
     def logged_notice(kase, named)
-      said = if kase.resolved?
+      message = if kase.resolved?
         "#{type_name.downcase} logged on case #{kase.id}"
       else
         "#{type_name.downcase} logged, case #{kase.id} stays open"
       end
-      named ? "#{said}, and the case is now also about @#{target_user_id}" : said
+      named ? "#{message}, and the case is now also about @#{target_user_id}" : message
     end
   end
 end

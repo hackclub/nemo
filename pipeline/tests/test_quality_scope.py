@@ -4,7 +4,7 @@ from jobs import invariants, nightly_sync, reconcile
 
 
 def test_i11_grades_only_the_day_sources_the_walk_writes():
-    body = inspect.getsource(invariants.i11_every_day_source_is_recent)
+    body = inspect.getsource(invariants.i11_day_sources_recent)
     assert "DAY_LEDGERS" in body
     assert "source = ANY(%s)" in body
 

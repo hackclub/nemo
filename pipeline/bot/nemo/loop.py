@@ -3,9 +3,9 @@ import os
 import threading
 
 from bot.core import loops, session
-from bot.nemo import automod, channel, channelguards, channels, chat, guards, guardwork
-from bot.nemo import carriers, memberguards, queued, responses, screening
-from bot.nemo.carriers import purge, sweep
+from bot.nemo import automod, channel, channelguards, channels, chat, guards, guard_actions
+from bot.nemo import enforcement, memberguards, case_queue, responses, screening
+from bot.nemo.enforcement import purge, sweep
 
 log = logging.getLogger("bot.nemo")
 
@@ -64,11 +64,11 @@ def every_join_sweep():
     return int(os.environ.get("NEMO_JOIN_SECONDS", DEFAULT_JOIN_SECONDS))
 
 
-def join_sweep(desk):
-    channels.reconcile(desk.client)
+def join_sweep(case_channel):
+    channels.reconcile(case_channel.client)
 
 
-def take_a_seat(client, channel_id):
+def join_channel(client, channel_id):
     if channelguards.guarding(channel_id) is None:
         return False
 
@@ -80,7 +80,7 @@ def take_a_seat(client, channel_id):
 
 def take_up(client, guard):
     with session() as conn:
-        carriers.take_up(client, conn, guard)
+        enforcement.take_up(client, conn, guard)
 
 
 def apart(*doing):
@@ -91,10 +91,10 @@ def apart(*doing):
             log.exception("nemo: %s failed", name)
 
 
-def carry_now(client):
+def flush_pending(client):
     with session() as conn:
         memberguards.refresh(conn)
-        taking_up = memberguards.uncarried(conn)
+        taking_up = memberguards.unenforced(conn)
         finishing = memberguards.still_lifting(conn)
 
     for guard in taking_up:
@@ -126,8 +126,8 @@ def each(cases, doing, work, client, channel_id):
     return done
 
 
-def once(desk, channel_id=None):
-    client = desk.client
+def once(case_channel, channel_id=None):
+    client = case_channel.client
 
     with session() as conn:
         missing = [row[0] for row in conn.execute(UNCARDED).fetchall()]
@@ -135,7 +135,7 @@ def once(desk, channel_id=None):
         standing = [row[0] for row in conn.execute(WORTH_REDRAWING).fetchall()]
         unmirrored = chat.waiting_anywhere(conn)
         following = channel.waiting_follow_ups(conn)
-        woke = channel.untold_wakes(conn)
+        woke = channel.unannounced_reopens(conn)
         unshared = channel.waiting_files(conn)
         guards.refresh(conn)
         channelguards.refresh(conn)
@@ -143,16 +143,16 @@ def once(desk, channel_id=None):
         automod.refresh(conn)
         responses.refresh(conn)
         screening.refresh(conn)
-        taking_up = memberguards.uncarried(conn)
-        channel.firehouse_channel(conn)
+        taking_up = memberguards.unenforced(conn)
+        channel.internal_log_channel(conn)
         channel.react_channels(conn)
         destroying = guards.pending(conn)
         lifting = guards.lifting(conn)
         purging = [row[0] for row in purge.waiting(conn)]
 
     posted = each(missing, "still has no card", channel.post_report, client, channel_id)
-    posted += each(cardless, "was opened without a card", queued.card, client, channel_id)
-    drawn = each(standing, "could not be redrawn", channel.redraw, client, channel_id)
+    posted += each(cardless, "was opened without a card", case_queue.card, client, channel_id)
+    drawn = each(standing, "could not be redrawn", channel.refresh_card, client, channel_id)
     carried = each(
         unmirrored, "has chat that did not go out", channel.mirror, client, channel_id
     )
@@ -161,33 +161,33 @@ def once(desk, channel_id=None):
     each(following, "has a follow-up still waiting",
          channel.carry_follow_ups, client, channel_id)
     each(woke, "was reopened without saying so",
-         channel.tell_the_wake, client, channel_id)
-    desk.echo_queued()
-    desk.tick_queued()
+         channel.post_reopen_notice, client, channel_id)
+    case_channel.echo_queued()
+    case_channel.tick_queued()
 
     for guard_id in destroying:
-        apart((f"destroying guard {guard_id}", lambda id=guard_id: guardwork.run_destroy(client, id)))
+        apart((f"destroying guard {guard_id}", lambda id=guard_id: guard_actions.run_destroy(client, id)))
     for guard_id in lifting:
-        apart((f"lifting guard {guard_id}", lambda id=guard_id: guardwork.lift_lock(client, id)))
+        apart((f"lifting guard {guard_id}", lambda id=guard_id: guard_actions.lift_lock(client, id)))
     for purge_id in purging:
         apart((f"purging {purge_id}", lambda id=purge_id: purge.run(client, id)))
     for guard in taking_up:
         apart((f"taking up {guard['kind']} {guard['id']}",
                lambda one=guard: take_up(client, one)))
     apart(
-        ("clearing what the guard could not remove", lambda: guardwork.sweep_removals(client)),
-        ("resetting sessions the guard has earned", guardwork.sweep_strikes),
+        ("clearing unremoved guard artifacts", lambda: guard_actions.sweep_removals(client)),
+        ("resetting sessions the guard has earned", guard_actions.sweep_strikes),
         ("lifting what has run out", lambda: sweep.sweep_lapsed(client)),
-        ("finishing what is still lifting", lambda: sweep.sweep_lifting(client)),
-        ("saying what was lifted by hand", lambda: sweep.sweep_lifted(client)),
-        ("taking up what it dropped", lambda: sweep.sweep_dropped(client)),
-        ("saying what is ending soon", lambda: sweep.sweep_ending(client)),
+        ("completing in-progress lifts", lambda: sweep.sweep_lifting(client)),
+        ("notifying manually lifted guards", lambda: sweep.sweep_lifted(client)),
+        ("reclaiming released work", lambda: sweep.sweep_dropped(client)),
+        ("notifying expiring guards", lambda: sweep.sweep_ending(client)),
     )
 
     return posted, drawn, carried
 
 
-def start(desk, stopping, channel_id=None):
+def start(case_channel, stopping, channel_id=None):
     with session() as conn:
         log.info("nemo: watching %s guarded thread(s), %s guarded channel(s), "
                  "%s shushed member(s) and %s automod word(s)",
@@ -196,21 +196,21 @@ def start(desk, stopping, channel_id=None):
         responses.refresh(conn)
         screening.refresh(conn)
 
-    def heard(channel_name, told):
+    def on_notify(channel_name, payload):
         if channel_name == CHAT:
-            desk.mirror(told)
+            case_channel.mirror(payload)
         elif channel_name == OUTBOX:
-            apart(("echoing", desk.echo_queued), ("ticking", desk.tick_queued))
+            apart(("echoing", case_channel.echo_queued), ("ticking", case_channel.tick_queued))
         elif channel_name == GUARD:
             with session() as conn:
                 guards.refresh(conn)
             threading.Thread(
-                target=guardwork.run_destroy, args=(desk.client, told),
-                name=f"nemo-guard-{told}", daemon=True,
+                target=guard_actions.run_destroy, args=(case_channel.client, payload),
+                name=f"nemo-guard-{payload}", daemon=True,
             ).start()
         elif channel_name == APP_SETTING:
             with session() as conn:
-                channel.firehouse_channel(conn)
+                channel.internal_log_channel(conn)
                 channel.react_channels(conn)
                 responses.refresh(conn)
         elif channel_name == AUTOMOD_WORD:
@@ -221,33 +221,33 @@ def start(desk, stopping, channel_id=None):
                 screening.refresh(conn)
         elif channel_name == CHANNEL_PURGE:
             threading.Thread(
-                target=purge.run, args=(desk.client, told),
-                name=f"nemo-purge-{told}", daemon=True,
+                target=purge.run, args=(case_channel.client, payload),
+                name=f"nemo-purge-{payload}", daemon=True,
             ).start()
         elif channel_name == CHANNEL_GUARD:
             with session() as conn:
                 channelguards.refresh(conn)
             threading.Thread(
-                target=take_a_seat, args=(desk.client, told),
-                name=f"nemo-seat-{told}", daemon=True,
+                target=join_channel, args=(case_channel.client, payload),
+                name=f"nemo-seat-{payload}", daemon=True,
             ).start()
         elif channel_name == MEMBER_GUARD:
             threading.Thread(
-                target=carry_now, args=(desk.client,),
-                name=f"nemo-member-guard-{told}", daemon=True,
+                target=flush_pending, args=(case_channel.client,),
+                name=f"nemo-member-guard-{payload}", daemon=True,
             ).start()
         elif channel_name == CONVERSATION:
-            apart(("catching up", lambda: desk.caught_up(told)),
-                  ("ticking", desk.tick_queued))
+            apart(("catching up", lambda: case_channel.caught_up(payload)),
+                  ("ticking", case_channel.tick_queued))
         else:
-            desk.caught_up(told)
+            case_channel.caught_up(payload)
 
     return (
         loops.watching(NAME,
                        (CASES, CHAT, OUTBOX, CONVERSATION, GUARD, CHANNEL_GUARD,
                         MEMBER_GUARD, APP_SETTING, AUTOMOD_WORD, CHANNEL_PURGE,
                         BLOCKED_DOMAIN),
-                       heard, stopping),
-        loops.sweeping(NAME, every(), lambda: once(desk, channel_id), stopping),
-        loops.sweeping(f"{NAME}-joins", every_join_sweep(), lambda: join_sweep(desk), stopping),
+                       on_notify, stopping),
+        loops.sweeping(NAME, every(), lambda: once(case_channel, channel_id), stopping),
+        loops.sweeping(f"{NAME}-joins", every_join_sweep(), lambda: join_sweep(case_channel), stopping),
     )

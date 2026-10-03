@@ -1,6 +1,6 @@
 <div class="metric">
-  <span class="metric-k"><%= k %></span>
-  <span class="metric-v"><%= v %></span>
+  <span class="metric-key"><%= k %></span>
+  <span class="metric-value"><%= v %></span>
   <% if local_assigns[:spark] && spark[:data]&.compact&.many? %>
     <span class="metric-spark"
           data-controller="chart"
@@ -14,6 +14,6 @@
           }.to_json %>"></span>
   <% end %>
   <% if local_assigns[:say].present? %>
-    <span class="metric-say"><%= say %></span>
+    <span class="metric-note"><%= say %></span>
   <% end %>
 </div>

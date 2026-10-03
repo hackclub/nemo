@@ -15,13 +15,13 @@ module Fd
       end
 
       redirect_to admin_roles_path, notice: moved_note(role, key, allowed)
-    rescue NotAllowed => e
+    rescue NotAllowedError => e
       redirect_to admin_roles_path, alert: e.message
     end
 
     def destroy
       rows = Authz::Override.all.to_a
-      return redirect_to(admin_roles_path, alert: "nothing is off default") if rows.empty?
+      return redirect_to(admin_roles_path, alert: "No overrides are set") if rows.empty?
 
       writing do
         rows.each do |row|
@@ -32,12 +32,12 @@ module Fd
         Current.forget_roles
       end
 
-      redirect_to admin_roles_path, notice: "#{rows.size} capability(s) put back to default"
+      redirect_to admin_roles_path, notice: "#{rows.size} capability(s) reset to default"
     end
 
     private
 
-    class NotAllowed < StandardError; end
+    class NotAllowedError < StandardError; end
 
     def move!(role, key, allowed)
       check!(role, key, allowed)
@@ -70,14 +70,14 @@ module Fd
     end
 
     def moved_note(role, key, allowed)
-      said = Authz.role_label(role).downcase
-      return "#{said}s can now #{Authz.label(key).downcase}" if allowed
+      label = Authz.role_label(role).downcase
+      return "#{label}s can now #{Authz.label(key).downcase}" if allowed
 
       "#{key} is no longer theirs"
     end
 
     def refuse(why)
-      raise NotAllowed, why
+      raise NotAllowedError, why
     end
   end
 end

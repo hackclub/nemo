@@ -17,19 +17,19 @@
 
 <div class="metrics">
   <div class="metric">
-    <span class="metric-k">Accounts created</span>
-    <span class="metric-v"><%= number_with_delimiter(created_total) %></span>
+    <span class="metric-key">Accounts created</span>
+    <span class="metric-value"><%= number_with_delimiter(created_total) %></span>
   </div>
   <div class="metric">
-    <span class="metric-k">Signed in, 30 days</span>
-    <span class="metric-v">
+    <span class="metric-key">Signed in, 30 days</span>
+    <span class="metric-value">
       <%= claim_mean ? number_to_percentage(claim_mean, precision: 1) : "n/a" %>
     </span>
   </div>
   <% if @newcomer_reach %>
     <div class="metric">
-      <span class="metric-k">Newcomers, last 30 days</span>
-      <span class="metric-v"><%= number_with_delimiter(@newcomer_reach.cohort_size) %></span>
+      <span class="metric-key">Newcomers, last 30 days</span>
+      <span class="metric-value"><%= number_with_delimiter(@newcomer_reach.cohort_size) %></span>
     </div>
   <% end %>
 </div>

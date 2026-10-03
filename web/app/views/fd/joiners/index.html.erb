@@ -11,14 +11,14 @@
 <% end %>
 
 <% content_for :page_controls do %>
-  <%= form_with url: fd_joiners_path, method: :get, class: "qsearch",
+  <%= form_with url: fd_joiners_path, method: :get, class: "queue-search",
         data: { controller: "live-search", action: "input->live-search#go",
                 turbo_action: "advance" } do %>
     <% @query.to_params.except("q", "page").each do |key, value| %>
       <%= hidden_field_tag key, value, id: nil %>
     <% end %>
     <%= search_field_tag :q, @query.term, placeholder: "Find a joiner",
-          class: "qsearch-in", autocomplete: "off", aria: { label: "Find a joiner" } %>
+          class: "queue-search-input", autocomplete: "off", aria: { label: "Find a joiner" } %>
   <% end %>
 <% end %>
 
@@ -145,7 +145,7 @@
       </div>
 
       <%= render "shared/pager", page: @query.page, pages: @query.pages, frame: "joiners",
-            said: @query.summary,
+            label: @query.summary,
             back_href: (fd_joiners_path(@query.page_params(@query.page - 1)) if @query.page > 1),
             next_href: (fd_joiners_path(@query.page_params(@query.page + 1)) if @query.page < @query.pages) %>
     <% else %>
@@ -155,7 +155,7 @@
     <% end %>
 
     <% if may_deactivate %>
-      <%= render "picked", query: @query %>
+      <%= render "selection", query: @query %>
     <% end %>
   </div>
 </turbo-frame>

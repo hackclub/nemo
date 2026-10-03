@@ -23,8 +23,8 @@ module Admin
       return refuse("#{key} is not a setting") unless ::Api::Setting::DEFAULTS.key?(key)
 
       value = params[:value].to_i
-      return refuse("a setting has to be a number above nought") unless value.positive?
-      return refuse("#{value} is more than anybody needs") if value > MOST
+      return refuse("A setting must be a number greater than zero") unless value.positive?
+      return refuse("#{value} exceeds the maximum") if value > MOST
 
       was = ::Api::Setting.value(key)
       writing do
@@ -38,16 +38,16 @@ module Admin
 
     def rate
       token = ::Api::Token.find_by(id: params[:id])
-      return refuse("no such token") if token.nil?
+      return refuse("No such key") if token.nil?
 
       value = params[:value].presence&.to_i
-      return refuse("a rate has to be a number above nought") if value && !value.positive?
+      return refuse("A rate must be a number greater than zero") if value && !value.positive?
 
       was = token.rate
       writing do
         token.update!(rate_limit: value)
         ::Api::Event.record!("token_rate_set", actor: current_account.user_id,
-          subject: token.shown, detail: said_rate(token, was, value))
+          subject: token.shown, detail: rate_notice(token, was, value))
       end
 
       back_to "#{token.name} is now #{token.rate} a minute"
@@ -55,7 +55,7 @@ module Admin
 
     def destroy
       token = ::Api::Token.live.find_by(id: params[:id])
-      return refuse("no live token with that id") if token.nil?
+      return refuse("No live key with that id") if token.nil?
 
       writing do
         token.revoke!(by: current_account.user_id)
@@ -72,18 +72,18 @@ module Admin
       ActiveRecord::Base.transaction { yield }
     end
 
-    def said_rate(token, was, value)
+    def rate_notice(token, was, value)
       return "#{token.name}, back to the shared #{token.rate}" if value.nil?
 
       "#{token.name}, #{was} to #{value}"
     end
 
-    def back_to(said)
-      redirect_to admin_api_path, notice: said
+    def back_to(message)
+      redirect_to admin_api_path, notice: message
     end
 
-    def refuse(said)
-      redirect_to admin_api_path, alert: said
+    def refuse(message)
+      redirect_to admin_api_path, alert: message
     end
   end
 end

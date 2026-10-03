@@ -1,6 +1,6 @@
 class Authz
   class Grant < ApplicationRecord
-    class NotAllowed < StandardError; end
+    class NotAllowedError < StandardError; end
 
     self.table_name = "app.grant"
 
@@ -21,9 +21,9 @@ class Authz
       transaction do
         Account.find_or_create_by!(user_id: user_id)
         live.for_person(user_id).where(kind: kind, name: name).find_each do |held|
-          held.take_back!(by: by)
+          held.revoke!(by: by)
         end
-        live.for_person(user_id).roles.find_each { |held| held.take_back!(by: by) } if
+        live.for_person(user_id).roles.find_each { |held| held.revoke!(by: by) } if
           kind.to_s == "role"
         create!(user_id: user_id, kind: kind, name: name, effect: effect,
           granted_by: by, granted_at: Time.current, reason: reason.presence)
@@ -42,10 +42,10 @@ class Authz
     end
 
     def self.take_back_all!(user_id, by:)
-      live.for_person(user_id).find_each { |held| held.take_back!(by: by) }
+      live.for_person(user_id).find_each { |held| held.revoke!(by: by) }
     end
 
-    def take_back!(by:, at: Time.current)
+    def revoke!(by:, at: Time.current)
       refuse "that grant already ended" if revoked?
 
       update!(revoked_by: by, revoked_at: at)
@@ -64,7 +64,7 @@ class Authz
     end
 
     def self.refuse(why)
-      raise NotAllowed, why
+      raise NotAllowedError, why
     end
 
     def refuse(why)

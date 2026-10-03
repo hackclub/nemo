@@ -14,21 +14,21 @@ PIECE = re.compile(
 def link(url, label=None):
     href = html.unescape(url)
     made = {"type": "link", "url": href}
-    said = html.unescape(label or "")
-    if said and said != href:
-        made["text"] = said
+    text = html.unescape(label or "")
+    if text and text != href:
+        made["text"] = text
     return made
 
 
 def elements(text, style=None):
-    said = text or ""
+    body = text or ""
     out = []
     at = 0
 
-    for found in PIECE.finditer(said):
-        before = said[at : found.start()]
+    for found in PIECE.finditer(body):
+        before = body[at : found.start()]
         if before:
-            out.append(word(before, style))
+            out.append(text_element(before, style))
 
         user_id, channel_id, url, label, bare = found.groups()
         if user_id:
@@ -41,13 +41,13 @@ def elements(text, style=None):
             out.append(link(bare))
         at = found.end()
 
-    rest = said[at:]
+    rest = body[at:]
     if rest or not out:
-        out.append(word(rest, style))
+        out.append(text_element(rest, style))
     return out
 
 
-def word(text, style=None):
+def text_element(text, style=None):
     made = {"type": "text", "text": text}
     if style:
         made["style"] = style
@@ -62,23 +62,23 @@ def flatten(value):
     if not value:
         return ""
 
-    said = []
+    parts = []
     for block in value.get("elements") or []:
         for part in block.get("elements") or []:
             kind = part.get("type")
             if kind == "user":
-                said.append(f"<@{part['user_id']}>")
+                parts.append(f"<@{part['user_id']}>")
             elif kind == "channel":
-                said.append(f"<#{part['channel_id']}>")
+                parts.append(f"<#{part['channel_id']}>")
             elif kind == "link":
-                said.append(part.get("url") or "")
+                parts.append(part.get("url") or "")
             elif kind == "emoji":
-                said.append(f":{part.get('name')}:")
+                parts.append(f":{part.get('name')}:")
             else:
-                said.append(part.get("text") or "")
-        said.append("\n")
+                parts.append(part.get("text") or "")
+        parts.append("\n")
 
-    return "".join(said).strip()
+    return "".join(parts).strip()
 
 
 def quote(text, style=None):

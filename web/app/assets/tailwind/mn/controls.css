@@ -31,9 +31,9 @@
     --ring: color-mix(in oklab, var(--line) 62%, var(--ink));
   }
   .btn:active { background: var(--sunk); translate: 0 1px; --lift: 0 0 #0000; }
-  .btn > svg, .btn > .ic { color: var(--ink-3); flex: none; }
+  .btn > svg, .btn > .icon-slot { color: var(--ink-3); flex: none; }
   .btn > svg:not([width]), .iconbtn > svg:not([width]) { width: 14px; height: 14px; }
-  .btn:hover > svg, .btn:hover > .ic { color: var(--ink-2); }
+  .btn:hover > svg, .btn:hover > .icon-slot { color: var(--ink-2); }
 
   .btn-sm {
     height: 24px;
@@ -65,8 +65,8 @@
     background: var(--pri);
     --lift: inset 0 1px 2px color-mix(in oklab, oklch(0% 0 0) 18%, transparent);
   }
-  .btn-primary > svg, .btn-primary > .ic,
-  .btn-primary:hover > svg, .btn-primary:hover > .ic { color: currentColor; opacity: 0.75; }
+  .btn-primary > svg, .btn-primary > .icon-slot,
+  .btn-primary:hover > svg, .btn-primary:hover > .icon-slot { color: currentColor; opacity: 0.75; }
 
   .btn-accent {
     background: var(--accent);
@@ -95,7 +95,7 @@
     color: var(--crit-deep);
     --ring: color-mix(in oklab, var(--crit) 46%, transparent);
   }
-  .btn-danger > svg, .btn-danger > .ic, .btn-danger:hover > svg { color: currentColor; }
+  .btn-danger > svg, .btn-danger > .icon-slot, .btn-danger:hover > svg { color: currentColor; }
 
   .btn.is-on, .btn-on {
     background: var(--accent-soft);
@@ -361,7 +361,7 @@
     color: var(--accent);
   }
 
-  .field, .input, .textarea, .select, .qsearch-in, .pick-input, .note-input {
+  .field, .input, .textarea, .select, .queue-search-input, .pick-input, .note-input {
     width: 100%;
     min-width: 0;
     height: var(--ctl-h);
@@ -391,17 +391,17 @@
   }
   .input-sm { height: var(--ctl-h-sm); padding: 0 var(--p-ctl-sm); font-size: var(--t-small); }
   .field:focus, .input:focus, .textarea:focus, .select:focus,
-  .qsearch-in:focus, .pick-input:focus, .note-input:focus {
+  .queue-search-input:focus, .pick-input:focus, .note-input:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: var(--ring-focus);
   }
   .field::placeholder, .input::placeholder, .textarea::placeholder,
-  .qsearch-in::placeholder, .pick-input::placeholder, .note-input::placeholder {
+  .queue-search-input::placeholder, .pick-input::placeholder, .note-input::placeholder {
     color: var(--ink-3);
   }
   .field:hover:not(:focus), .input:hover:not(:focus), .textarea:hover:not(:focus),
-  .select:hover:not(:focus), .qsearch-in:hover:not(:focus), .note-input:hover:not(:focus) {
+  .select:hover:not(:focus), .queue-search-input:hover:not(:focus), .note-input:hover:not(:focus) {
     border-color: var(--ink-4);
   }
 
@@ -757,7 +757,7 @@
   }
   .pill > a:hover { background: var(--hover); color: var(--ink); }
 
-  .avatar, .face-stack > *, .row-avatar, .person-face, .index-face, .qcite-face {
+  .avatar, .face-stack > *, .row-avatar, .person-face, .index-face, .queue-cite-face {
     width: 22px;
     height: 22px;
     flex: none;
@@ -773,24 +773,24 @@
     text-transform: uppercase;
     user-select: none;
   }
-  .av-lg, .face-stack .av-lg { width: 28px; height: 28px; font-size: var(--t-fine); }
-  .av-none { background: var(--sunk); color: var(--ink-4); }
-  .av-1 { background: oklch(91% 0.048 55); color: oklch(38% 0.095 55); }
-  .av-2 { background: oklch(91% 0.048 105); color: oklch(38% 0.095 105); }
-  .av-3 { background: oklch(91% 0.048 155); color: oklch(38% 0.095 155); }
-  .av-4 { background: oklch(91% 0.048 195); color: oklch(38% 0.095 195); }
-  .av-5 { background: oklch(91% 0.048 240); color: oklch(38% 0.095 240); }
-  .av-6 { background: oklch(91% 0.048 280); color: oklch(38% 0.095 280); }
-  .av-7 { background: oklch(91% 0.048 315); color: oklch(38% 0.095 315); }
-  .av-8 { background: oklch(91% 0.048 350); color: oklch(38% 0.095 350); }
-  :root[data-theme="lightsout"] .av-1, :root[data-theme="contrast"] .av-1 { background: oklch(32% 0.055 55); color: oklch(87% 0.075 55); }
-  :root[data-theme="lightsout"] .av-2, :root[data-theme="contrast"] .av-2 { background: oklch(32% 0.055 105); color: oklch(87% 0.075 105); }
-  :root[data-theme="lightsout"] .av-3, :root[data-theme="contrast"] .av-3 { background: oklch(32% 0.055 155); color: oklch(87% 0.075 155); }
-  :root[data-theme="lightsout"] .av-4, :root[data-theme="contrast"] .av-4 { background: oklch(32% 0.055 195); color: oklch(87% 0.075 195); }
-  :root[data-theme="lightsout"] .av-5, :root[data-theme="contrast"] .av-5 { background: oklch(32% 0.055 240); color: oklch(87% 0.075 240); }
-  :root[data-theme="lightsout"] .av-6, :root[data-theme="contrast"] .av-6 { background: oklch(32% 0.055 280); color: oklch(87% 0.075 280); }
-  :root[data-theme="lightsout"] .av-7, :root[data-theme="contrast"] .av-7 { background: oklch(32% 0.055 315); color: oklch(87% 0.075 315); }
-  :root[data-theme="lightsout"] .av-8, :root[data-theme="contrast"] .av-8 { background: oklch(32% 0.055 350); color: oklch(87% 0.075 350); }
+  .avatar-lg, .face-stack .avatar-lg { width: 28px; height: 28px; font-size: var(--t-fine); }
+  .avatar-none { background: var(--sunk); color: var(--ink-4); }
+  .avatar-1 { background: oklch(91% 0.048 55); color: oklch(38% 0.095 55); }
+  .avatar-2 { background: oklch(91% 0.048 105); color: oklch(38% 0.095 105); }
+  .avatar-3 { background: oklch(91% 0.048 155); color: oklch(38% 0.095 155); }
+  .avatar-4 { background: oklch(91% 0.048 195); color: oklch(38% 0.095 195); }
+  .avatar-5 { background: oklch(91% 0.048 240); color: oklch(38% 0.095 240); }
+  .avatar-6 { background: oklch(91% 0.048 280); color: oklch(38% 0.095 280); }
+  .avatar-7 { background: oklch(91% 0.048 315); color: oklch(38% 0.095 315); }
+  .avatar-8 { background: oklch(91% 0.048 350); color: oklch(38% 0.095 350); }
+  :root[data-theme="lightsout"] .avatar-1, :root[data-theme="contrast"] .avatar-1 { background: oklch(32% 0.055 55); color: oklch(87% 0.075 55); }
+  :root[data-theme="lightsout"] .avatar-2, :root[data-theme="contrast"] .avatar-2 { background: oklch(32% 0.055 105); color: oklch(87% 0.075 105); }
+  :root[data-theme="lightsout"] .avatar-3, :root[data-theme="contrast"] .avatar-3 { background: oklch(32% 0.055 155); color: oklch(87% 0.075 155); }
+  :root[data-theme="lightsout"] .avatar-4, :root[data-theme="contrast"] .avatar-4 { background: oklch(32% 0.055 195); color: oklch(87% 0.075 195); }
+  :root[data-theme="lightsout"] .avatar-5, :root[data-theme="contrast"] .avatar-5 { background: oklch(32% 0.055 240); color: oklch(87% 0.075 240); }
+  :root[data-theme="lightsout"] .avatar-6, :root[data-theme="contrast"] .avatar-6 { background: oklch(32% 0.055 280); color: oklch(87% 0.075 280); }
+  :root[data-theme="lightsout"] .avatar-7, :root[data-theme="contrast"] .avatar-7 { background: oklch(32% 0.055 315); color: oklch(87% 0.075 315); }
+  :root[data-theme="lightsout"] .avatar-8, :root[data-theme="contrast"] .avatar-8 { background: oklch(32% 0.055 350); color: oklch(87% 0.075 350); }
 
   .faces, .face-stack { display: inline-flex; align-items: center; }
   .faces > *, .face-stack > * { box-shadow: 0 0 0 1.5px var(--card); }
@@ -817,7 +817,7 @@
   }
   .face-link:hover { color: var(--accent); text-decoration: none; }
   .face-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .face-said { font-size: var(--t-fine); color: var(--ink-4); }
+  .face-sub { font-size: var(--t-fine); color: var(--ink-4); }
 
   .who, .subjcell, .row-name, .person-who, .line-row {
     display: flex;
@@ -825,7 +825,7 @@
     gap: 7px;
     min-width: 0;
   }
-  .row-said {
+  .row-title {
     font-weight: 500;
     min-width: 0;
     overflow: hidden;
@@ -833,7 +833,7 @@
     white-space: nowrap;
   }
 
-  .qtools {
+  .queue-tools {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -899,7 +899,7 @@
   .theme-pill.on { background: var(--card); color: var(--ink); box-shadow: var(--shadow-1); }
   .theme-pill.auto { color: var(--accent); }
 
-  .you-face {
+  .account-face {
     display: grid;
     place-items: center;
     width: 38px;
@@ -909,9 +909,9 @@
     background: none;
     padding: 0;
   }
-  .you-face:hover { background: var(--hover); }
-  .you-face .avatar { width: 24px; height: 24px; box-shadow: none; }
-  .you-theme {
+  .account-face:hover { background: var(--hover); }
+  .account-face .avatar { width: 24px; height: 24px; box-shadow: none; }
+  .account-theme {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -919,7 +919,7 @@
     padding: 6px 10px 8px;
   }
 
-  .you-head {
+  .account-head {
     display: flex;
     align-items: center;
     gap: var(--s-2xs);
@@ -927,8 +927,8 @@
     border-bottom: 1px solid var(--line-soft);
     margin-bottom: 4px;
   }
-  .you-out { color: var(--crit); }
-  .you-out:hover { background: var(--crit-soft); }
+  .account-out { color: var(--crit); }
+  .account-out:hover { background: var(--crit-soft); }
 
   .cap-do {
     display: flex;
@@ -945,7 +945,7 @@
   }
   .btn-crit:hover { background: var(--crit-deep); color: var(--accent-on); }
   .btn-crit:active { background: var(--crit); --lift: inset 0 1px 2px oklch(0% 0 0 / 0.18); }
-  .btn-crit > svg, .btn-crit > .ic, .btn-crit:hover > svg { color: currentColor; opacity: 0.75; }
+  .btn-crit > svg, .btn-crit > .icon-slot, .btn-crit:hover > svg { color: currentColor; opacity: 0.75; }
 
   .form-body {
     gap: var(--s-md);

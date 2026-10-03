@@ -48,7 +48,7 @@ class FdSearchTest < ActionDispatch::IntegrationTest
 
     row = group("drop it", "note")["rows"].first
     assert_equal "case #{kase.id}", row["title"]
-    assert_includes row["said"], "drop it"
+    assert_includes row["snippet"], "drop it"
     assert_equal fd_case_path(kase), row["url"]
   end
 

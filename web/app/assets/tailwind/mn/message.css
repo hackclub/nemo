@@ -1,18 +1,18 @@
 @layer components {
-  .ma-post { padding: var(--s-sm); max-width: 78ch; }
-  .ma-post-head { display: flex; align-items: center; gap: var(--s-2xs); flex-wrap: wrap; }
-  .ma-face { width: 26px; height: 26px; border-radius: 50%; }
-  .ma-post-said { margin-top: var(--s-2xs); }
-  .ma-post-said > .rt-said:first-child { margin-top: 0; }
+  .message-activity-post { padding: var(--s-sm); max-width: 78ch; }
+  .message-activity-post-head { display: flex; align-items: center; gap: var(--s-2xs); flex-wrap: wrap; }
+  .message-activity-face { width: 26px; height: 26px; border-radius: 50%; }
+  .message-activity-post-body { margin-top: var(--s-2xs); }
+  .message-activity-post-body > .richtext-text:first-child { margin-top: 0; }
 
-  .ma-figures > .fact > dt {
+  .message-activity-figures > .fact > dt {
     font-size: var(--t-fine);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--ink-4);
   }
-  .ma-figures > .fact { padding: var(--s-xs) var(--s-sm); }
-  .ma-figures > .fact > dd {
+  .message-activity-figures > .fact { padding: var(--s-xs) var(--s-sm); }
+  .message-activity-figures > .fact > dd {
     margin: var(--s-2xs) 0 0;
     font-family: var(--font-code);
     font-size: var(--t-head);
@@ -21,24 +21,24 @@
     line-height: 1.2;
   }
 
-  .ma-head { align-items: flex-start; gap: var(--s-sm); }
-  .ma-head > .segmented { margin-left: auto; flex: none; }
+  .message-activity-head { align-items: flex-start; gap: var(--s-sm); }
+  .message-activity-head > .segmented { margin-left: auto; flex: none; }
 
-  .ma-clients { padding: var(--s-sm); display: grid; gap: var(--s-sm); }
-  .ma-bar { display: flex; height: 6px; gap: 3px; }
-  .ma-part { display: block; border-radius: 999px; min-width: 3px; }
-  .ma-part-1 { background: var(--accent); }
-  .ma-part-2 { background: color-mix(in oklab, var(--accent) 55%, var(--card)); }
-  .ma-part-3 { background: color-mix(in oklab, var(--accent) 24%, var(--card)); }
+  .message-activity-clients { padding: var(--s-sm); display: grid; gap: var(--s-sm); }
+  .message-activity-bar { display: flex; height: 6px; gap: 3px; }
+  .message-activity-part { display: block; border-radius: 999px; min-width: 3px; }
+  .message-activity-part-1 { background: var(--accent); }
+  .message-activity-part-2 { background: color-mix(in oklab, var(--accent) 55%, var(--card)); }
+  .message-activity-part-3 { background: color-mix(in oklab, var(--accent) 24%, var(--card)); }
 
-  .ma-key {
+  .message-activity-key {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
     gap: var(--s-xs) var(--s-sm);
     margin: 0;
   }
-  .ma-key > div { display: grid; gap: 3px; min-width: 0; }
-  .ma-key dt {
+  .message-activity-key > div { display: grid; gap: 3px; min-width: 0; }
+  .message-activity-key dt {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -47,7 +47,7 @@
     text-transform: uppercase;
     color: var(--ink-4);
   }
-  .ma-key dd {
+  .message-activity-key dd {
     display: flex;
     align-items: baseline;
     gap: 6px;
@@ -57,15 +57,15 @@
     font-variant-numeric: tabular-nums;
     color: var(--ink);
   }
-  .ma-key dd > small { font-family: var(--font-sans); color: var(--ink-4); }
-  .ma-dot { width: 7px; height: 7px; border-radius: 999px; display: inline-block; flex: none; }
+  .message-activity-key dd > small { font-family: var(--font-sans); color: var(--ink-4); }
+  .message-activity-dot { width: 7px; height: 7px; border-radius: 999px; display: inline-block; flex: none; }
 
-  .rt-emoji-img {
+  .richtext-emoji-img {
     display: inline-block;
     width: 1.25em;
     height: 1.25em;
     vertical-align: -0.25em;
     object-fit: contain;
   }
-  .post-rxn .rt-emoji-img { width: 1.1em; height: 1.1em; vertical-align: -0.2em; }
+  .post-rxn .richtext-emoji-img { width: 1.1em; height: 1.1em; vertical-align: -0.2em; }
 }

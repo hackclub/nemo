@@ -10,12 +10,12 @@
         </label>
         <div class="facts-grid">
           <div class="cell">
-            <span class="fg-k">in force now</span>
-            <span class="fg-v"><%= value %></span>
+            <span class="figure-key">in force now</span>
+            <span class="figure-value"><%= value %></span>
           </div>
           <div class="cell">
-            <span class="fg-k">tokens it covers</span>
-            <span class="fg-v"><%= dial_reach(key, @tokens) %></span>
+            <span class="figure-key">tokens it covers</span>
+            <span class="figure-value"><%= dial_reach(key, @tokens) %></span>
           </div>
         </div>
       </div>
@@ -41,12 +41,12 @@
         </label>
         <div class="facts-grid">
           <div class="cell">
-            <span class="fg-k">asks, 30 days</span>
-            <span class="fg-v"><%= number_with_delimiter(@asks[token.id].to_i) %></span>
+            <span class="figure-key">asks, 30 days</span>
+            <span class="figure-value"><%= number_with_delimiter(@asks[token.id].to_i) %></span>
           </div>
           <div class="cell">
-            <span class="fg-k">in force now</span>
-            <span class="fg-v"><%= token.rate %> a minute</span>
+            <span class="figure-key">in force now</span>
+            <span class="figure-value"><%= token.rate %> a minute</span>
           </div>
         </div>
       </div>

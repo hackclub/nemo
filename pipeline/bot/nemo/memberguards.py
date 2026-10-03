@@ -1,7 +1,7 @@
 import threading
 
 from bot.core import audit
-from bot.nemo.cards import action
+from bot.nemo.views import action
 
 SHUSH = "shush"
 CHANNEL_BAN = "channel_ban"
@@ -49,7 +49,7 @@ def enforceable(type_key):
     return action.guard_kind(type_key) is not None
 
 
-def standing(conn, subject_id, kind, channel_id=None):
+def active_guard(conn, subject_id, kind, channel_id=None):
     return seen(conn.execute(STANDING, (subject_id, kind, channel_id)).fetchone())
 
 
@@ -67,7 +67,7 @@ def for_action(conn, type_key, subject_id, channel_id=None):
         return None
     if action.guard_scope(type_key) != "channel":
         channel_id = None
-    return standing(conn, subject_id, kind, channel_id)
+    return active_guard(conn, subject_id, kind, channel_id)
 
 
 def settle(conn, type_key, subject_id, case_id=None, channel_id=None):
@@ -166,25 +166,25 @@ def link(conn, action_id, guard_id):
     return row[0] if row else None
 
 
-def settled(conn, action_id, said, standing, by):
-    standing = standing or {}
-    if not standing.get("enforceable"):
+def settled(conn, action_id, values, active_guard, by):
+    active_guard = active_guard or {}
+    if not active_guard.get("enforceable"):
         return None
 
-    found = standing.get("found")
-    case_id = standing.get("case_id")
-    chose = said.get("settle") or action.RECORD
-    expires_at = action.expiry(said)
+    found = active_guard.get("found")
+    case_id = active_guard.get("case_id")
+    chose = values.get("settle") or action.RECORD
+    expires_at = action.expiry(values)
 
     if found is None:
         guard_id = open_guard(
             conn,
-            action.guard_kind(said["type_key"]),
-            said["target_user_id"],
+            action.guard_kind(values["type_key"]),
+            values["target_user_id"],
             by,
-            said["reason"],
-            channel_id=said.get("channel_id")
-            if action.guard_scope(said["type_key"]) == "channel"
+            values["reason"],
+            channel_id=values.get("channel_id")
+            if action.guard_scope(values["type_key"]) == "channel"
             else None,
             case_id=case_id,
             expires_at=expires_at,
@@ -193,7 +193,7 @@ def settled(conn, action_id, said, standing, by):
         guard_id = attach(conn, found["id"], case_id, by)
     elif chose == action.EXTEND:
         guard_id = run_until(conn, found["id"], expires_at, found.get("expires_at"), by)
-    elif standing.get("reads") == HERE:
+    elif active_guard.get("reads") == HERE:
         guard_id = found["id"]
     else:
         guard_id = None
@@ -286,7 +286,7 @@ def banned(subject_id, channel_id):
         return _bans.get((subject_id, channel_id))
 
 
-def uncarried(conn):
+def unenforced(conn):
     return [dict(zip(WANTED, row)) for row in conn.execute(UNCARRIED).fetchall()]
 
 
@@ -299,7 +299,7 @@ def dropped(conn, guard_id, why):
     return row[0] if row else None
 
 
-def happened(conn, guard_id, subject_id, channel_id, verb,
+def record_enforcement(conn, guard_id, subject_id, channel_id, verb,
              message_ts=None, permalink=None, detail=None):
     return conn.execute(
         HAPPENED, (guard_id, subject_id, channel_id, verb, message_ts, permalink, detail)
@@ -408,7 +408,7 @@ def undone_in_slack(kind):
     return kind in UNDONE_IN_SLACK
 
 
-def let_go(conn, guard_id, by, why, kind=None):
+def lift(conn, guard_id, by, why, kind=None):
     waiting = undone_in_slack(kind)
     sql = START_LIFTING if waiting else LET_GO
     row = conn.execute(sql, (by, why, guard_id)).fetchone()
@@ -438,7 +438,7 @@ def lift_for_action(conn, action_id, by, why):
         return None
 
     guard_id, kind = row
-    return guard_id if let_go(conn, guard_id, by, why, kind=kind) else None
+    return guard_id if lift(conn, guard_id, by, why, kind=kind) else None
 
 
 def lift_done(conn, guard_id):

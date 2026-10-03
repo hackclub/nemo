@@ -1,4 +1,4 @@
-from bot.nemo.cards import action, report
+from bot.nemo.views import action, report
 
 ROWS = 8
 
@@ -25,7 +25,7 @@ LIMIT 1
 ENTRIES = """
 WITH entries AS (
   SELECT c.opened_at AS at, 'cases' AS kind, c.id AS case_id,
-         c.category_key AS what, c.resolution AS who_by, NULL::text AS said
+         c.category_key AS what, c.resolution AS who_by, NULL::text AS note
   FROM fd.cases c
   JOIN fd.case_participants p ON p.case_id = c.id AND p.role = 'subject'
   WHERE p.user_id = %(who)s
@@ -45,7 +45,7 @@ WITH entries AS (
   FROM fd.notes n
   WHERE n.subject_user_id = %(who)s AND n.deleted_at IS NULL
 )
-SELECT count(*) OVER () AS total, at, kind, case_id, what, who_by, said
+SELECT count(*) OVER () AS total, at, kind, case_id, what, who_by, note
 FROM entries
 ORDER BY at DESC
 LIMIT %(rows)s
@@ -92,14 +92,14 @@ def read(conn, user_id, rows=ROWS):
                 "case_id": row[3],
                 "what": row[4],
                 "who_by": row[5],
-                "said": row[6],
+                "note": row[6],
             }
             for row in found
         ],
     }
 
 
-def when(at):
+def format_date(at):
     return at.strftime("%-d %b %Y") if at else "n/a"
 
 
@@ -124,23 +124,23 @@ def standing_line(found):
     if found is None:
         return "nothing standing"
 
-    said = action.label(found["kind"]).lower()
+    text = action.label(found["kind"]).lower()
     where = found.get("channel_id")
     if where:
-        said += f" in <#{where}>"
+        text += f" in <#{where}>"
     if found.get("expires_at"):
-        said += f" until {found['expires_at'].strftime('%-d %b')}"
+        text += f" until {found['expires_at'].strftime('%-d %b')}"
     else:
-        said += ", no end date"
+        text += ", no end date"
 
     if found.get("carried_by") == "by_hand":
-        return f"{said}, done by hand"
+        return f"{text}, done by hand"
     caveat = CARRY_SAID.get(found.get("carry"))
-    return f"{said}, {caveat}" if caveat else said
+    return f"{text}, {caveat}" if caveat else text
 
 
 def line(entry):
-    at = when(entry["at"])
+    at = format_date(entry["at"])
     if entry["kind"] == "cases":
         what = report.category_label(entry["what"]) or "not set"
         ending = f", {entry['who_by'].replace('_', ' ')}" if entry["who_by"] else ", open"
@@ -153,7 +153,7 @@ def line(entry):
         )
 
     if entry["kind"] == "reversed":
-        said = f"{at}  ·  {action.label(entry['what']).lower()} reversed by <@{entry['who_by']}>"
-        return f"{said}, {entry['said']}" if entry["said"] else said
+        text = f"{at}  ·  {action.label(entry['what']).lower()} reversed by <@{entry['who_by']}>"
+        return f"{text}, {entry['note']}" if entry["note"] else text
 
-    return f"{at}  ·  note by <@{entry['who_by']}>: {entry['said']}"
+    return f"{at}  ·  note by <@{entry['who_by']}>: {entry['note']}"

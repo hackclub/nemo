@@ -3,8 +3,8 @@
          data-pane-filter-list-id-value="channel-listbox"
          data-pane-filter-label-value="Channels">
   <div class="pane-head">
-    <%= form_with url: fd_channels_path, method: :get, class: "qtools" do %>
-      <label class="vh" for="pane-channel-filter">Find a channel</label>
+    <%= form_with url: fd_channels_path, method: :get, class: "queue-tools" do %>
+      <label class="visually-hidden" for="pane-channel-filter">Find a channel</label>
       <%= search_field_tag :q, query.term, id: "pane-channel-filter",
             class: "input input-sm grow", autocomplete: "off", placeholder: "Find a channel",
             data: { pane_filter_target: "query", action: "input->pane-filter#filter" } %>
@@ -17,8 +17,8 @@
         <%= render "fd/channels/pane_rows", rows: rows, open_id: open_id, more: nil %>
       </div>
       <% if query.more? %>
-        <div class="pane-more" data-controller="more" data-more-into-value="channel-listbox"
-             data-more-url-value="<%= fd_channel_pane_path(query.to_params.merge(page: query.page + 1, open: open_id).compact) %>"
+        <div class="pane-more" data-controller="expand" data-expand-into-value="channel-listbox"
+             data-expand-url-value="<%= fd_channel_pane_path(query.to_params.merge(page: query.page + 1, open: open_id).compact) %>"
              aria-hidden="true"><i class="dot run"></i></div>
       <% end %>
 

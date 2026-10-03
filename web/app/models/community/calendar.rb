@@ -95,10 +95,10 @@ module Community
     end
 
     def totals_of(posted)
-      said = posted.to_h { |ds, messages, in_channels| [ds, [messages.to_i, in_channels.to_i]] }
-      (said.keys | @held.keys).to_h do |on|
+      by_day = posted.to_h { |ds, messages, in_channels| [ds, [messages.to_i, in_channels.to_i]] }
+      (by_day.keys | @held.keys).to_h do |on|
         archived = @held[on]&.last.to_i
-        messages, in_channels = said[on] || [0, 0]
+        messages, in_channels = by_day[on] || [0, 0]
         [on, [[messages, archived].max, [in_channels, archived].max]]
       end
     end

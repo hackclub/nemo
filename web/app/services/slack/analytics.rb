@@ -13,7 +13,7 @@ module Slack
         to = response["end_date"]
         { "start_date" => from, "end_date" => to } if from.present? && to.present?
       end
-    rescue ProxyClient::NotConfigured => e
+    rescue ProxyClient::NotConfiguredError => e
       Rails.logger.error("slack analytics proxy is not configured: #{e.message}")
       nil
     rescue ProxyClient::Error
@@ -75,7 +75,7 @@ module Slack
       return Result.new(stats: shape(match, from, to)) if match
 
       Result.new(error: response["num_found"].to_i > records.size ? :truncated : :not_found)
-    rescue ProxyClient::NotConfigured => e
+    rescue ProxyClient::NotConfiguredError => e
       Rails.logger.error("slack analytics proxy is not configured: #{e.message}")
       Result.new(error: :not_configured)
     rescue ProxyClient::AuthError

@@ -10,7 +10,7 @@ module Fd
                  "n:" => "note", "r:" => "report" }.freeze
     SCOPES = %w[member case note report].freeze
 
-    Row = Struct.new(:kind, :record, :said, keyword_init: true)
+    Row = Struct.new(:kind, :record, :snippet, keyword_init: true)
     Group = Struct.new(:key, :label, :rows, :total, keyword_init: true)
 
     LABELS = {
@@ -85,10 +85,10 @@ module Fd
       { channel_id: thread.channel_id, thread_ts: thread.thread_ts }
     end
 
-    def group(kind, found, &said)
+    def group(kind, found, &snippet)
       rows = found.limit(@limit).map do |record|
         Row.new(kind: kind, record: record,
-          said: searching? && said ? self.class.snippet(said.call(record), term) : nil)
+          snippet: searching? && snippet ? self.class.snippet(snippet.call(record), term) : nil)
       end
       Group.new(key: kind, label: LABELS.fetch(kind), rows: rows,
         total: searching? ? found.count : rows.size)

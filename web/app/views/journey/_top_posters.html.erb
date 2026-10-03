@@ -11,7 +11,7 @@
     </div>
     <% if top_poster_months.many? %>
       <div class="section-tools">
-        <%= render "shared/picker", said: "month",
+        <%= render "shared/picker", label: "month",
               chosen: top_posters_month.strftime("%b %Y"),
               groups: [{ options: top_poster_months.map { |m| {
                 label: m.strftime("%b %Y"), current: m == top_posters_month,

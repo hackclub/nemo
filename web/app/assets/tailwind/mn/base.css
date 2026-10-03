@@ -36,9 +36,9 @@
     outline-offset: 2px;
   }
 
-  .qrow:focus-visible,
-  .member-qrow:focus-visible,
-  .merge-qrow:focus-visible,
+  .queue-row:focus-visible,
+  .member-queue-row:focus-visible,
+  .merge-queue-row:focus-visible,
   .palette-row:focus-visible,
   .line-row:focus-visible,
   .setline:focus-visible,
@@ -64,7 +64,7 @@
 
   img, svg { vertical-align: middle; }
 
-  .mono, .num, .tnum, .fine-mono, .snum {
+  .mono, .num, .tnum, .fine-mono, .stat-value {
     font-family: var(--font-code);
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.015em;
@@ -72,17 +72,17 @@
     min-width: 0;
   }
   .fine-mono { font-size: var(--t-fine); color: var(--ink-3); }
-  .snum { font-size: var(--t-small); }
+  .stat-value { font-size: var(--t-small); }
 
   .grow { flex: 1 1 auto; min-width: 0; }
   .trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .contents { display: contents; }
   .plain { all: unset; cursor: pointer; }
   .push { margin-left: auto; }
-  .dn { display: none !important; }
+  .is-hidden { display: none !important; }
   .w-full { width: 100%; }
 
-  .vh, .sr-only {
+  .visually-hidden, .sr-only {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -104,7 +104,7 @@
   .h4 { font-size: var(--t-body); letter-spacing: var(--tr-body); }
   .h5 { font-size: var(--t-small); letter-spacing: var(--tr-body); }
 
-  .sub, .sub2, .fnote, .note-said {
+  .sub, .sub2, .fnote, .note-fine {
     color: var(--ink-3);
     font-size: var(--t-small);
     line-height: var(--lh-body);
@@ -151,8 +151,8 @@
     overflow: hidden;
   }
 
-  .lbl, .cnav-lab, .admin-lab, .covkey, .skey,
-  .metric-k, .card-grid-head, .menu-group, .palette-group,
+  .form-label, .community-nav-label, .admin-lab, .covkey, .stat-key,
+  .metric-key, .card-grid-head, .menu-group, .palette-group,
   .field-label, .field-label > span:first-child {
     font-size: var(--t-fine);
     font-weight: 550;
@@ -169,7 +169,7 @@
   .up { color: var(--up); }
   .down { color: var(--down); }
 
-  .ic { flex: none; }
+  .icon-slot { flex: none; }
 
   @view-transition { navigation: auto; }
 

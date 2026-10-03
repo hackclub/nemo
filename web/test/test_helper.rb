@@ -107,7 +107,7 @@ module ActiveSupport
     end
 
     def drop_roles!(user_id)
-      Authz::Grant.live.for_person(user_id).roles.find_each { |row| row.take_back!(by: "test") }
+      Authz::Grant.live.for_person(user_id).roles.find_each { |row| row.revoke!(by: "test") }
       Current.forget_roles
     end
 

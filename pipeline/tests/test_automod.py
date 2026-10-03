@@ -50,7 +50,7 @@ class Ctx:
         self.client = client or Slack()
 
 
-def said(text, **over):
+def message(text, **over):
     return {"user": WHO, "channel": ROOM, "ts": TS, "text": text, **over}
 
 
@@ -149,7 +149,7 @@ def test_a_match_is_recorded_with_the_message_kept():
     load((1, "badword", "word", "flag", "spam"))
     conn = Conn()
     watch = automod.caught("a badword here")[0]
-    automod.record(conn, watch, said("a badword here"))
+    automod.record(conn, watch, message("a badword here"))
 
     kept = conn.did("INSERT INTO fd.automod_matches")[0]
     assert kept[1] == "badword"
@@ -163,7 +163,7 @@ def test_the_watcher_records_what_it_catches(monkeypatch):
     conn = Conn()
     monkeypatch.setattr(automod_watch, "session", lambda: _held(conn))
 
-    assert automod_watch.watched(Ctx(said("a badword here"))) == 1
+    assert automod_watch.watched(Ctx(message("a badword here"))) == 1
     assert conn.did("INSERT INTO fd.automod_matches")
 
 
@@ -172,7 +172,7 @@ def test_the_watcher_leaves_a_clean_message_alone(monkeypatch):
     conn = Conn()
     monkeypatch.setattr(automod_watch, "session", lambda: _held(conn))
 
-    assert automod_watch.watched(Ctx(said("nothing to see"))) is None
+    assert automod_watch.watched(Ctx(message("nothing to see"))) is None
     assert not conn.did("INSERT INTO fd.automod_matches")
 
 
@@ -181,7 +181,7 @@ def test_the_watcher_ignores_a_bot(monkeypatch):
     conn = Conn()
     monkeypatch.setattr(automod_watch, "session", lambda: _held(conn))
 
-    assert automod_watch.watched(Ctx(said("badword", bot_id="B1"))) is None
+    assert automod_watch.watched(Ctx(message("badword", bot_id="B1"))) is None
     assert not conn.did("INSERT INTO fd.automod_matches")
 
 
@@ -198,7 +198,7 @@ def test_an_edit_that_adds_a_word_is_caught(monkeypatch):
 
 def test_an_edit_records_against_the_message_not_the_edit():
     load((1, "badword", "word", "flag", None))
-    held = automod_watch.said_in(edited("a badword"))
+    held = automod_watch.message_in(edited("a badword"))
 
     assert held["ts"] == TS
     assert held["user"] == WHO
@@ -237,7 +237,7 @@ def test_the_watcher_says_nothing_to_the_author(monkeypatch):
     conn = Conn()
     client = Slack()
     monkeypatch.setattr(automod_watch, "session", lambda: _held(conn))
-    automod_watch.watched(Ctx(said("a badword here"), client))
+    automod_watch.watched(Ctx(message("a badword here"), client))
 
     assert not hasattr(client, "posted")
     assert not conn.did("DELETE")
@@ -248,14 +248,14 @@ def test_a_message_already_recorded_is_not_counted_twice(monkeypatch):
     conn = Conn(keeps=False)
     monkeypatch.setattr(automod_watch, "session", lambda: _held(conn))
 
-    assert automod_watch.watched(Ctx(said("a badword here"))) is None
+    assert automod_watch.watched(Ctx(message("a badword here"))) is None
 
 
 def test_a_missing_permalink_does_not_stop_the_record(monkeypatch):
     load((1, "badword", "word", "flag", None))
     conn = Conn()
     monkeypatch.setattr(automod_watch, "session", lambda: _held(conn))
-    automod_watch.watched(Ctx(said("a badword here"), Slack(link=None)))
+    automod_watch.watched(Ctx(message("a badword here"), Slack(link=None)))
 
     assert conn.did("INSERT INTO fd.automod_matches")
     assert not conn.did("SET permalink")
@@ -266,7 +266,7 @@ def test_a_permalink_is_only_fetched_for_a_fresh_match(monkeypatch):
     conn = Conn(keeps=False)
     client = Slack()
     monkeypatch.setattr(automod_watch, "session", lambda: _held(conn))
-    automod_watch.watched(Ctx(said("a badword here"), client))
+    automod_watch.watched(Ctx(message("a badword here"), client))
 
     assert client.asked == []
 
@@ -276,7 +276,7 @@ def test_a_fresh_match_is_linked(monkeypatch):
     conn = Conn()
     client = Slack()
     monkeypatch.setattr(automod_watch, "session", lambda: _held(conn))
-    automod_watch.watched(Ctx(said("a badword here"), client))
+    automod_watch.watched(Ctx(message("a badword here"), client))
 
     assert client.asked == [{"channel": ROOM, "message_ts": TS}]
     assert conn.did("SET permalink")[0][0] == client.link

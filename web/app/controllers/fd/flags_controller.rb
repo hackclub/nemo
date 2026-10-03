@@ -14,15 +14,15 @@ module Fd
       end
 
       redirect_to admin_flags_path, notice: flipped_note(key, on)
-    rescue Flag::Unknown => e
+    rescue Flag::UnknownError => e
       redirect_to admin_flags_path, alert: e.message
     end
 
     private
 
     def flipped_note(key, on)
-      said = Flag.label(key).downcase
-      on ? "#{said} is back" : "#{said} is turned off, and nothing was deleted"
+      label = Flag.label(key).downcase
+      on ? "#{label.upcase_first} turned on" : "#{label.upcase_first} turned off; nothing was deleted"
     end
   end
 end

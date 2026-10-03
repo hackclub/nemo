@@ -22,7 +22,7 @@ nemo <role> [args]
 
   serve          the dashboard. set PORT to run it directly, otherwise
                  thruster serves it on 80, which is the container path
-  bot            shroud takes the reports, nemo works them
+  bot            relay takes the reports, nemo works them
   sync           the nightly sync worker
   history        member_history's search backfill, drained continuously
   archive        channel history and thread replies

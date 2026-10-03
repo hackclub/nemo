@@ -1,0 +1,37 @@
+<% label = violations_label(violations[kase.id] || [kase.category_key].compact, short: true) %>
+<% priors = case_priors(kase, priors_by_user) %>
+<span class="queue-top">
+  <%= row_reporter_face(kase) %>
+  <span class="queue-id">#<%= kase.id %></span>
+  <span class="queue-by trunc"><%= row_reporter_label(kase) %></span>
+  <span class="queue-age <%= age_ink(case_age_seconds(kase)) unless kase.resolved? %>">
+    <%= kase.resolved? ? "closed" : case_age_label(case_age_seconds(kase)) %>
+  </span>
+</span>
+
+<% cited = case_cited(kase) %>
+<% if cited %>
+  <span class="queue-cite">
+    <span class="queue-cite-head">
+      <%= face(cited.author, css: "row-avatar queue-cite-face") %>
+      <span class="queue-cite-who trunc"><%= names[cited.author] %></span>
+      <% named = cited.channel.present? && channels.named?(cited.channel) %>
+      <span class="queue-cite-how"><%= cited.word %><%= " from" if named %></span>
+      <% if named %>
+        <span class="queue-cite-in trunc"><%= channels[cited.channel] %></span>
+      <% end %>
+    </span>
+    <span class="queue-cite-body"><%= plain_text(cited.body) %></span>
+  </span>
+<% else %>
+  <span class="queue-subject"><%= case_words(kase) %></span>
+<% end %>
+
+<span class="queue-meta">
+  <span class="queue-violation trunc"><%= label || "no violation set" %></span>
+  <% if kase.assigned? %>
+    <span class="faces">
+      <%= safe_join(kase.assignee_user_ids.map { |id| face(id) }) %>
+    </span>
+  <% end %>
+</span>

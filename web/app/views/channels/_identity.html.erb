@@ -1,32 +1,32 @@
 <% rank = channel_standing(standing) %>
 <div class="metrics">
   <div class="metric">
-    <span class="metric-k">Members</span>
-    <span class="metric-v">
+    <span class="metric-key">Members</span>
+    <span class="metric-value">
       <%= snapshot&.total_members ? number_with_delimiter(snapshot.total_members) : "n/a" %>
     </span>
     <% if team_stats&.total_claimed_count.to_i.positive? %>
-      <span class="metric-say">
+      <span class="metric-note">
         of <%= number_with_delimiter(team_stats.total_claimed_count) %> claimed accounts
       </span>
     <% end %>
   </div>
 
   <div class="metric">
-    <span class="metric-k">People who spoke</span>
-    <span class="metric-v">
+    <span class="metric-key">People who spoke</span>
+    <span class="metric-value">
       <%= crowd.any? ? number_with_delimiter(crowd.posters) : "n/a" %>
     </span>
     <% if crowd.any? && snapshot&.total_members.to_i.positive? %>
-      <span class="metric-say">
+      <span class="metric-note">
         <%= channel_spoke_share(crowd.posters, snapshot.total_members) %> of members
       </span>
     <% end %>
   </div>
 
   <div class="metric">
-    <span class="metric-k">Busiest rank</span>
-    <span class="metric-v">
+    <span class="metric-key">Busiest rank</span>
+    <span class="metric-value">
       <% if rank %>
         #<%= number_with_delimiter(rank[:rank]) %>
         <small>of <%= number_with_delimiter(rank[:of]) %></small>
@@ -35,19 +35,19 @@
       <% end %>
     </span>
     <% if standing&.share_of_total %>
-      <span class="metric-say">
+      <span class="metric-note">
         <%= number_to_percentage(standing.share_of_total.to_f, precision: 2) %> of the workspace
       </span>
     <% end %>
   </div>
 
   <div class="metric">
-    <span class="metric-k">Last post</span>
-    <span class="metric-v">
-      <%= said_ago_parts(snapshot&.last_message_at || channel.last_active_at) || "n/a" %>
+    <span class="metric-key">Last post</span>
+    <span class="metric-value">
+      <%= time_ago_parts(snapshot&.last_message_at || channel.last_active_at) || "n/a" %>
     </span>
     <% if channel.date_created %>
-      <span class="metric-say">created <%= channel.date_created.to_date.strftime("%-d %b %Y") %></span>
+      <span class="metric-note">created <%= channel.date_created.to_date.strftime("%-d %b %Y") %></span>
     <% end %>
   </div>
 </div>

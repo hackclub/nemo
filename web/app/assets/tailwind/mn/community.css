@@ -18,7 +18,7 @@
     align-items: flex-start;
     gap: 5px;
   }
-  .range-dates .dp-trigger {
+  .range-dates .datepicker-trigger {
     width: 100%;
     justify-content: flex-start;
   }
@@ -133,7 +133,7 @@
     flex-wrap: wrap;
     gap: var(--s-xs);
   }
-  .unmeasured-cell .said-cell {
+  .unmeasured-cell .detail-cell {
     color: var(--ink-3);
     font-size: var(--t-small);
   }
@@ -167,8 +167,8 @@
     grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   }
 
-  .trio > figure,
-  .duo > figure {
+  .grid-3 > figure,
+  .grid-2 > figure {
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -221,10 +221,10 @@
     font-size: var(--t-small);
   }
 
-  .sect {
+  .disclosure {
     border-bottom: 1px solid var(--line-soft);
   }
-  .sect > summary {
+  .disclosure > summary {
     display: flex;
     align-items: center;
     gap: 7px;
@@ -235,10 +235,10 @@
     font-weight: 600;
     color: var(--ink-2);
   }
-  .sect > summary::-webkit-details-marker {
+  .disclosure > summary::-webkit-details-marker {
     display: none;
   }
-  .sect > summary:hover {
+  .disclosure > summary:hover {
     color: var(--ink);
   }
   .sect-body {
@@ -250,11 +250,11 @@
     gap: var(--s-xs);
     align-content: start;
   }
-  .fg-k {
+  .figure-key {
     font-size: var(--t-fine);
     color: var(--ink-3);
   }
-  .fg-v {
+  .figure-value {
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--ink);
@@ -308,12 +308,12 @@
   }
 
   .hit,
-  .hl {
+  .highlight {
     padding: 0 2px;
     border-radius: var(--r-tight);
     background: var(--warn-soft);
   }
-  .dec-said {
+  .dec-note {
     font-weight: 500;
   }
   .dec-why {
@@ -395,7 +395,7 @@
   .p-droid {
     background: var(--series-3);
   }
-  .avatar.av-band {
+  .avatar.avatar-band {
     width: 58px;
     height: 58px;
     font-size: var(--t-display);
@@ -411,10 +411,10 @@
   .card-sub.flat {
     margin: 0;
   }
-  .med {
+  .text-medium {
     font-weight: 500;
   }
-  .thin {
+  .text-thin {
     font-weight: 400;
   }
   .flat {
@@ -423,18 +423,18 @@
   .wrap {
     white-space: normal;
   }
-  .m {
+  .text-muted {
     color: var(--ink-3);
   }
-  .v {
+  .text-value {
     color: var(--ink);
     font-weight: 500;
     font-variant-numeric: tabular-nums;
   }
-  .z {
+  .text-faint {
     color: var(--ink-4);
   }
-  .tn {
+  .stack-fine {
     font-size: var(--t-fine);
     color: var(--ink-3);
     font-variant-numeric: tabular-nums;
@@ -459,7 +459,7 @@
     stroke: var(--card);
     stroke-width: 2;
   }
-  .chart .rule-say {
+  .chart .rule-note {
     fill: var(--ink-3);
   }
   .chart .split {
@@ -467,10 +467,10 @@
     stroke-width: 1;
     stroke-dasharray: 3 3;
   }
-  .chart .split-say {
+  .chart .split-note {
     fill: var(--ink-3);
   }
-  .chart .quad-say {
+  .chart .quad-note {
     fill: var(--ink-4);
     font-size: var(--t-tiny);
     letter-spacing: 0.04em;

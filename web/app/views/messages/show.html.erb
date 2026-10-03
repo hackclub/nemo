@@ -15,21 +15,21 @@
 
 <% if !@shown %>
   <div class="lede">
-    <span class="lede-said">
+    <span class="lede-note">
       <b>Activity is not shown for this channel</b>
       <span>An admin turns it on per channel from the channels admin.</span>
     </span>
   </div>
 <% elsif @post.nil? %>
   <div class="lede">
-    <span class="lede-said">
+    <span class="lede-note">
       <b>Post not in the warehouse yet</b>
       <span>The archive lands new posts every few minutes. The Slack shortcut reads live.</span>
     </span>
   </div>
 <% elsif @post.is_reply %>
   <div class="lede">
-    <span class="lede-said">
+    <span class="lede-note">
       <b>Replies carry no activity</b>
       <span>Slack counts views, clicks and shares on top-level posts only.</span>
     </span>
@@ -37,24 +37,24 @@
 <% else %>
   <% stats = @activity&.stats %>
   <div class="stack ma">
-    <article class="card ma-post">
-      <header class="ma-post-head">
-        <%= face(@post.author_id, css: "row-avatar ma-face") %>
+    <article class="card message-activity-post">
+      <header class="message-activity-post-head">
+        <%= face(@post.author_id, css: "row-avatar message-activity-face") %>
         <span class="msg-who"><%= person_name(@post.author_id) %></span>
         <span class="msg-at">
           <%= @post.posted_at.in_time_zone(viewer_zone).strftime("%-d %b %Y, %H:%M") %>
         </span>
       </header>
 
-      <div class="ma-post-said">
-        <% if @said&.said %>
-          <%= Slack::RichText.for(@said.said, names: @names, channels: @rooms, emoji: @emoji) %>
+      <div class="message-activity-post-body">
+        <% if @found&.message %>
+          <%= Slack::RichText.for(@found.message, names: @names, channels: @rooms, emoji: @emoji) %>
         <% else %>
           <p class="msg-gone">Slack did not return the message.</p>
         <% end %>
       </div>
 
-      <% files = Messages::File.listed(@said&.said) %>
+      <% files = Messages::File.listed(@found&.message) %>
       <% if files.any? %>
         <div class="post-files">
           <% files.each do |one| %>
@@ -71,7 +71,7 @@
 
     <% if stats.nil? %>
       <div class="lede">
-        <span class="lede-said">
+        <span class="lede-note">
           <b>No activity returned</b>
           <span>
             <% if @activity&.error == :not_configured %>
@@ -87,7 +87,7 @@
         </span>
       </div>
     <% else %>
-      <dl class="card facts-strip ma-figures">
+      <dl class="card facts-strip message-activity-figures">
         <div class="fact">
           <dt>Unique viewers</dt>
           <dd><%= number_with_delimiter(stats.viewers) %></dd>
@@ -112,13 +112,13 @@
 
       <% if stats.any_curve? %>
         <section class="card">
-          <div class="card-head ma-head">
+          <div class="card-head message-activity-head">
             <div>
               <h2 class="card-title">Reach over time</h2>
               <p class="card-sub">
-                <%= stats.bucket_said(@span) %> buckets
+                <%= stats.bucket_label(@span) %> buckets
                 <span class="triad-sep">&middot;</span>
-                <%= window_said(stats.window_seconds(@span)) %> after posting
+                <%= window_label(stats.window_seconds(@span)) %> after posting
                 <span class="triad-sep">&middot;</span>
                 <%= number_with_delimiter(stats.seen_within(@span)) %> of
                 <%= number_with_delimiter(stats.viewers) %> viewers<%= " so far" if stats.partial?(@span) %>
@@ -158,19 +158,19 @@
         <div class="card-head">
           <div><h2 class="card-title">Where it was read</h2></div>
         </div>
-        <div class="ma-clients">
-          <div class="ma-bar" role="img"
+        <div class="message-activity-clients">
+          <div class="message-activity-bar" role="img"
                aria-label="<%= stats.clients.map { |label, count, _| "#{label} #{count}" }.join(", ") %>">
             <% stats.clients.each_with_index do |(label, count, share), i| %>
               <% next unless count.positive? %>
-              <span class="ma-part ma-part-<%= i + 1 %>" style="flex-grow: <%= count %>"
+              <span class="message-activity-part ma-part-<%= i + 1 %>" style="flex-grow: <%= count %>"
                     title="<%= label %> <%= count %>"></span>
             <% end %>
           </div>
-          <dl class="ma-key">
+          <dl class="message-activity-key">
             <% stats.clients.each_with_index do |(label, count, share), i| %>
               <div>
-                <dt><span class="ma-dot ma-part-<%= i + 1 %>"></span><%= label %></dt>
+                <dt><span class="message-activity-dot ma-part-<%= i + 1 %>"></span><%= label %></dt>
                 <dd><%= number_with_delimiter(count) %><small><%= share ? "#{share}%" : "n/a" %></small></dd>
               </div>
             <% end %>

@@ -1,7 +1,7 @@
 import pytest
 
 from bot.nemo import memberguards
-from bot.nemo.cards import action
+from bot.nemo.views import action
 
 ROOM = "C1"
 WHO = "U1"

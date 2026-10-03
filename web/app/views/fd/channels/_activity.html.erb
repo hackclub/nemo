@@ -20,9 +20,9 @@
             </span>
           </div>
 
-          <% if one.said.present? %>
-            <span class="qcite">
-              <span class="qcite-said"><%= plain_words(one.said) %></span>
+          <% if one.message_text.present? %>
+            <span class="queue-cite">
+              <span class="queue-cite-body"><%= plain_text(one.message_text) %></span>
             </span>
           <% end %>
         </div>

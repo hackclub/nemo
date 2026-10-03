@@ -105,8 +105,8 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
 
     assert_nil @action.reload.reversed_at
     assert_nil flash[:alert], "a problem with one field is not a page-level message"
-    assert_equal "reversal_reason", flash[:wrong]["field"]
-    assert_match(/Say why it is being reversed/i, flash[:wrong]["said"])
+    assert_equal "reversal_reason", flash[:field_error]["field"]
+    assert_match(/Say why it is being reversed/i, flash[:field_error]["message"])
 
     follow_redirect!
   end
@@ -115,7 +115,7 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     reverse(reversal_reason: "x" * (Fd::ReversalsController::MAX_REASON + 1))
     assert_nil @action.reload.reversed_at
-    assert_match(/Keep it under 500 characters/, flash[:wrong]["said"])
+    assert_match(/Keep it under 500 characters/, flash[:field_error]["message"])
   end
 
   test "an action on another case cannot be reversed through this one" do
@@ -165,7 +165,7 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
     reverse(action_id: "")
 
     assert_redirected_to fd_case_path(@kase, tab: "actions")
-    assert_equal "pick the action to reverse", flash[:alert]
+    assert_equal "Select an action to reverse", flash[:alert]
     assert_nil @action.reload.reversed_at
   end
 

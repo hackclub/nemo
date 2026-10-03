@@ -14,25 +14,25 @@ module Fd
           by: current_account.user_id))
         tune(AppSetting.set_words(AppSetting::AUTORESPONSE_EMOJI, params[:emoji],
           by: current_account.user_id))
-        keep_if_said(AppSetting::AUTORESPONSE_CHANNEL, channel_id)
-        keep_if_said(AppSetting::AUTORESPONSE_BODY, body)
-        keep_if_said(AppSetting::AUTORESPONSE_COOLDOWN, cooldown.positive? ? cooldown.to_s : "")
+        write_if_given(AppSetting::AUTORESPONSE_CHANNEL, channel_id)
+        write_if_given(AppSetting::AUTORESPONSE_BODY, body)
+        write_if_given(AppSetting::AUTORESPONSE_COOLDOWN, cooldown.positive? ? cooldown.to_s : "")
       end
 
-      redirect_to here, notice: "the autoresponse is saved"
+      redirect_to here, notice: "Autoresponse saved"
     end
 
     def unsub_shield
       link = params[:link].to_s.strip
-      return refuse("that is not a link") if link.present? && !link.match?(%r{\Ahttps?://})
+      return refuse("That is not a valid link") if link.present? && !link.match?(%r{\Ahttps?://})
 
       writing do
         tune(AppSetting.flip(AppSetting::UNSUB_SHIELD_ON, params[:on].present?,
           by: current_account.user_id))
-        keep_if_said(AppSetting::UNSUB_SHIELD_LINK, link)
+        write_if_given(AppSetting::UNSUB_SHIELD_LINK, link)
       end
 
-      redirect_to here, notice: "the unsubscribe shield is saved"
+      redirect_to here, notice: "Unsubscribe shield saved"
     end
 
     private
@@ -71,14 +71,14 @@ module Fd
         .map { |one| one.strip.delete_prefix(":").delete_suffix(":") }.reject(&:blank?)
     end
 
-    def known?(said)
-      Analytics::DimChannel.where(channel_id: said).exists?
+    def known?(channel_id)
+      Analytics::DimChannel.where(channel_id: channel_id).exists?
     end
 
-    def keep_if_said(key, value)
+    def write_if_given(key, value)
       return nil if value.blank?
 
-      tune(AppSetting.keep(key, value, by: current_account.user_id))
+      tune(AppSetting.write(key, value, by: current_account.user_id))
     end
 
     def tune(setting)

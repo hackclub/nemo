@@ -13,15 +13,15 @@ module ChannelsHelper
   end
 
   def channels_window_note(total, window)
-    said = "#{number_with_delimiter(total)} channels"
-    return said if window.nil?
+    text = "#{number_with_delimiter(total)} channels"
+    return text if window.nil?
 
     messages = window_note(window.start_date, window.end_date)
-    return said if messages.nil?
-    return "#{said} · #{messages}" if window.pulled?
+    return text if messages.nil?
+    return "#{text} · #{messages}" if window.pulled?
 
     people = window_note(window.pulled_start, window.pulled_end)
-    "#{said} · messages #{messages}#{" · people #{people}" if people}"
+    "#{text} · messages #{messages}#{" · people #{people}" if people}"
   end
 
   def channels_empty_title
@@ -51,11 +51,11 @@ module ChannelsHelper
     "returned" => "came back"
   }.freeze
 
-  def funnel_step_said(step)
+  def funnel_step_label(step)
     FUNNEL_SHORT.fetch(step.key, step.label)
   end
 
-  def latency_bucket_said(bucket)
+  def latency_bucket_label(bucket)
     bucket.to_s.sub(/\Aunder /, "<").sub(/\Aover /, ">").gsub(" to ", "-")
   end
 
@@ -72,8 +72,8 @@ module ChannelsHelper
     end
   end
 
-  def said_ago_parts(at)
-    seen = said_ago(at)
+  def time_ago_parts(at)
+    seen = time_ago(at)
     return nil if seen.nil?
 
     split = seen.match(/\A(\d[\w.]*)\s+(.+)\z/)
@@ -106,7 +106,7 @@ module ChannelsHelper
              "#{number_with_delimiter(channel.prior_messages)} in the window before")
   end
 
-  def slack_window_said(range, from, to)
+  def slack_window_label(range, from, to)
     stats = range&.stats || {}
     lo = Channels::Window.on(stats["start_date"]) || from
     hi = Channels::Window.on(stats["end_date"]) || to
@@ -150,22 +150,22 @@ module ChannelsHelper
              start: (@start_date if @range_preset.nil?),
              end: (@end_date if @range_preset.nil?),
              month: (@crowd&.month&.iso8601 unless @crowd&.month == @crowd&.months&.first) }
-    said = base.merge(overrides)
-    said[:view] = nil if said[:view] == ChannelsController::DEFAULT_VIEW
-    said = said.except(:start, :end) if said[:days]
-    said = said.except(:days) if said[:start] || said[:end]
-    channel_path(@channel, **said.compact)
+    text = base.merge(overrides)
+    text[:view] = nil if text[:view] == ChannelsController::DEFAULT_VIEW
+    text = text.except(:start, :end) if text[:days]
+    text = text.except(:days) if text[:start] || text[:end]
+    channel_path(@channel, **text.compact)
   end
 
-  def pulse_delta(pct, said = nil)
+  def pulse_delta(pct, text = nil)
     return tag.span("n/a", class: "sub2") if pct.nil?
 
     tone = pct.positive? ? "delta-up" : pct.negative? ? "delta-down" : "delta-share"
     text = "#{pct.positive? ? '+' : ''}#{number_to_percentage(pct, precision: 1)}"
-    safe_join([tag.span(text, class: tone), said].compact, " ")
+    safe_join([tag.span(text, class: tone), text].compact, " ")
   end
 
-  def duration_said(seconds)
+  def duration_label(seconds)
     return "n/a" if seconds.nil?
 
     seconds = seconds.to_i
@@ -200,20 +200,20 @@ module ChannelsHelper
     curve.map { |point| [point.poster_pct, point.message_pct.to_f] }
   end
 
-  def channels_range_said(window)
+  def channels_range_label(window)
     return window_note(window.start_date, window.end_date) if window.custom?
     return "All measured" if window.pulled?
 
     "Last #{window.days} days"
   end
 
-  def range_said(preset, from, to)
+  def range_label(preset, from, to)
     return "Last #{preset} days" if preset
 
     window_note(from, to)
   end
 
-  def said_ago(at)
+  def time_ago(at)
     return nil if at.nil?
 
     gap = (Time.current - at).to_i

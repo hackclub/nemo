@@ -42,7 +42,7 @@ def separated(conn):
     return len(roles_present(conn)) == len(EXPECTED_ROLES)
 
 
-def the_deployment_mode_is_declared(conn):
+def deployment_mode_declared(conn):
     found = roles_present(conn)
     if len(found) == len(EXPECTED_ROLES):
         return ("the deployment mode is declared", "pass",
@@ -59,7 +59,7 @@ def skipped_when_shared(assertion):
     return (assertion, "skipped", f"{SHARED_MODE}: no grant separation to measure", "n/a")
 
 
-def dbt_cannot_read_conduct(conn):
+def dbt_denied_conduct(conn):
     if not separated(conn):
         return skipped_when_shared("dbt cannot read conduct")
 
@@ -68,7 +68,7 @@ def dbt_cannot_read_conduct(conn):
             f"{count} fd table(s) readable by dbt_owner", "0")
 
 
-def rails_cannot_read_the_archive(conn):
+def rails_denied_archive(conn):
     if not separated(conn):
         return skipped_when_shared("rails cannot read the archive")
 
@@ -77,7 +77,7 @@ def rails_cannot_read_the_archive(conn):
             f"{count} archive table(s) readable by rails_app", "0")
 
 
-def dbt_cannot_read_rails_state(conn):
+def dbt_denied_rails_state(conn):
     if not separated(conn):
         return skipped_when_shared("dbt cannot read rails state")
 
@@ -86,7 +86,7 @@ def dbt_cannot_read_rails_state(conn):
             f"{count} app table(s) readable by dbt_owner", "0")
 
 
-def rails_cannot_write_analytics(conn):
+def rails_denied_analytics_write(conn):
     if not separated(conn):
         return skipped_when_shared("rails cannot write analytics")
 
@@ -95,7 +95,7 @@ def rails_cannot_write_analytics(conn):
             f"{count} analytics table(s) writable by rails_app", "0")
 
 
-def the_pipeline_cannot_write_analytics(conn):
+def pipeline_denied_analytics_write(conn):
     if not separated(conn):
         return skipped_when_shared("the pipeline cannot write analytics")
 
@@ -105,12 +105,12 @@ def the_pipeline_cannot_write_analytics(conn):
 
 
 CHECKS = (
-    the_deployment_mode_is_declared,
-    dbt_cannot_read_conduct,
-    rails_cannot_read_the_archive,
-    dbt_cannot_read_rails_state,
-    rails_cannot_write_analytics,
-    the_pipeline_cannot_write_analytics,
+    deployment_mode_declared,
+    dbt_denied_conduct,
+    rails_denied_archive,
+    dbt_denied_rails_state,
+    rails_denied_analytics_write,
+    pipeline_denied_analytics_write,
 )
 
 

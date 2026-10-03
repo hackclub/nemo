@@ -19,18 +19,18 @@ from jobs.nightly_sync import (
     stage_plan,
 )
 from lib import settings
-from lib.heartbeat import beating
+from lib.heartbeat import heartbeat_loop
 from lib.proxy_client import ProxyClient
 from lib.db import (
-    beat,
+    record_heartbeat,
     set_worker,
     STALE_AFTER_HOURS,
-    AlreadyRunning,
+    AlreadyRunningError,
     SeededDeployment,
     cancel_scope,
     connect,
     refuse_if_seeded,
-    sweep_my_earlier_boots,
+    clear_stale_sessions,
     sweep_stale_runs,
 )
 
@@ -92,14 +92,14 @@ def next_run_at(at, now):
     return scheduled if scheduled > now else scheduled + timedelta(days=1)
 
 
-def tonight_so_far():
+def todays_run_elapsed():
     try:
         with connect() as conn, conn.cursor() as cur:
             cur.execute(RAN_TODAY_SQL, (SOURCE,))
             stood, crashed = cur.fetchone()
             return stood > 0, crashed
     except Exception as exc:
-        print(f"sync worker: cannot tell whether tonight ran, {type(exc).__name__}: {exc}")
+        print(f"sync worker: cannot tell whether tonight's run ran, {type(exc).__name__}: {exc}")
         return True, MAX_CATCH_UPS
 
 
@@ -204,7 +204,7 @@ def serve(request_id, kind, stage):
     print(f"{label}: {status}, run {run_id}")
 
 
-def reap(stale_after_hours=STALE_AFTER_HOURS):
+def expire_stale_runs(stale_after_hours=STALE_AFTER_HOURS):
     try:
         with connect() as conn, conn.cursor() as cur:
             swept = sweep_stale_runs(conn)
@@ -270,7 +270,7 @@ def probe_proxy(last_at):
     note = proxy_note()
     try:
         with connect() as conn:
-            beat(conn, PROXY_WORKER, note)
+            record_heartbeat(conn, PROXY_WORKER, note)
     except Exception as exc:
         print(f"sync worker: proxy probe could not be recorded, {type(exc).__name__}: {exc}")
     if note.startswith("FAILED"):
@@ -282,7 +282,7 @@ def transform_every():
     return int(os.environ.get("TRANSFORM_EVERY_SECONDS", "") or DEFAULT_TRANSFORM_SECONDS)
 
 
-def spine_every():
+def spine_interval():
     return int(os.environ.get("SPINE_TRANSFORM_EVERY_SECONDS", "") or DEFAULT_SPINE_SECONDS)
 
 
@@ -292,7 +292,7 @@ def due(last_at, every):
 
 def refresh_marts(last_at, state, spine_at=None):
     spine_at = last_at if spine_at is None else spine_at
-    spine = due(spine_at, spine_every())
+    spine = due(spine_at, spine_interval())
     if not spine and not due(last_at, transform_every()):
         return last_at, spine_at
     select, tier = (TABLES_ONLY, "every mart") if spine else (OFF_THE_SPINE, "the marts off the spine")
@@ -301,7 +301,7 @@ def refresh_marts(last_at, state, spine_at=None):
     try:
         with connect() as conn:
             run_dbt(conn, select=select, wait_seconds=REFRESH_WAIT_SECONDS)
-    except AlreadyRunning as exc:
+    except AlreadyRunningError as exc:
         print(f"sync worker: mart refresh skipped, {exc}")
     except Exception as exc:
         print(f"sync worker: mart refresh failed {type(exc).__name__}: {exc}")
@@ -331,7 +331,7 @@ def main():
         except SeededDeployment as exc:
             print(f"sync worker: {exc}")
             raise SystemExit(1) from exc
-        for orphan, source in sweep_my_earlier_boots(conn):
+        for orphan, source in clear_stale_sessions(conn):
             print(f"sync worker: swept run {orphan} ({source}), left running by an earlier boot")
 
     at = scheduled_at()
@@ -342,14 +342,14 @@ def main():
         f"next scheduled run at {scheduled:%Y-%m-%dT%H:%M}"
     )
     waiting = listener()
-    reap(stale_after_hours=0)
+    expire_stale_runs(stale_after_hours=0)
     state = {"note": waiting_note(scheduled)}
     probed = NEVER
     refreshed = NEVER
     spined = NEVER
 
-    with beating(WORKER, lambda: state["note"], every=BEAT_SECONDS):
-        why = boot_run(at, datetime.now(), *tonight_so_far())
+    with heartbeat_loop(WORKER, lambda: state["note"], every=BEAT_SECONDS):
+        why = boot_run(at, datetime.now(), *todays_run_elapsed())
         if why:
             state["note"] = f"{why} run"
             run_scheduled(why)
@@ -372,12 +372,12 @@ def main():
                 request_id, kind, stage = request
                 state["note"] = f"sync request {request_id} ({stage or kind})"
                 serve(*request)
-                reap()
+                expire_stale_runs()
                 continue
 
             try:
                 if not wait_for_request(waiting, wait_seconds(poll, scheduled, datetime.now())):
-                    reap()
+                    expire_stale_runs()
             except psycopg.OperationalError as exc:
                 print(f"sync worker: listener reconnecting after {type(exc).__name__}: {exc}")
                 waiting = listener()

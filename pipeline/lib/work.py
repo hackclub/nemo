@@ -165,7 +165,7 @@ def settle(conn, item, state, fetched=None, note=None):
         cur.execute(SETTLE_SQL, {"id": item.id, "fence": item.fence, "state": state,
                                  "fetched": fetched, "note": note and str(note)[:500]})
         if cur.rowcount == 0:
-            raise lease.FencedOut(f"work item {item.id}: fence {item.fence} is no longer ours")
+            raise lease.FenceTokenExpiredError(f"work item {item.id}: fence {item.fence} is no longer ours")
 
 
 def settle_many(conn, outcomes):

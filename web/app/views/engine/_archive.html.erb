@@ -77,20 +77,20 @@
         </div>
       </dl>
 
-      <div class="arcrows">
+      <div class="archive-rows">
         <% archive.stages.each do |stage| %>
-          <div class="arcrow">
-            <div class="arcn"><b><%= stage.name %></b></div>
-            <div class="arcpct <%= "is-none" if stage.shown_share.nil? %>">
+          <div class="archive-row">
+            <div class="archive-name"><b><%= stage.name %></b></div>
+            <div class="archive-percent <%= "is-none" if stage.shown_share.nil? %>">
               <%= stage.shown_share ? number_to_percentage(stage.shown_share, precision: 1) : "nothing to measure it against yet" %>
             </div>
-            <div class="arcnum">
+            <div class="archive-count">
               <%= number_with_delimiter(stage.done.to_i) %>
               <% if stage.total %>
                 <span class="sub">of <%= number_with_delimiter(stage.total) %></span>
               <% end %>
             </div>
-            <div class="arcnum">
+            <div class="archive-count">
               <% if stage.outstanding.nil? %>
                 <span class="sub">n/a</span>
               <% elsif stage.outstanding.zero? %>
@@ -300,9 +300,9 @@
               </tr>
             </thead>
             <tbody>
-              <% archive.errors.each do |said, count, at| %>
+              <% archive.errors.each do |error, count, at| %>
                 <tr>
-                  <td class="mono"><%= said %></td>
+                  <td class="mono"><%= error %></td>
                   <td class="col-num"><%= number_with_delimiter(count) %></td>
                   <td class="col-num mono"><%= at ? "#{short_age(at)} ago" : "n/a" %></td>
                 </tr>

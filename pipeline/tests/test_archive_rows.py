@@ -1,9 +1,9 @@
 from lib import archive
-from lib.message import scrub, shape
+from lib.message import redact, normalize
 
 
 def built(message, channel_id="C1"):
-    return archive.message_row(channel_id, message["ts"], 1, scrub(message), shape(message))
+    return archive.message_row(channel_id, message["ts"], 1, redact(message), normalize(message))
 
 
 def test_the_archive_never_stores_the_message_text():

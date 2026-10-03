@@ -41,11 +41,11 @@ class AccessUiTest < ActionDispatch::IntegrationTest
     assert_equal "added", held["channel.backfill"]
   end
 
-  test "the locked granting capability cannot be handed out" do
+  test "the locked granting capability cannot be delegated" do
     patch admin_person_capability_path(@them.user_id),
       params: { key: "access.grant", effect: "allow" }
 
-    assert_match(/cannot be handed out/, flash[:alert])
+    assert_match(/cannot be delegated/, flash[:alert])
     assert_not_includes held.keys, "access.grant"
   end
 

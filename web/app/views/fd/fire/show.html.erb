@@ -5,9 +5,9 @@
 
 <div class="metrics">
   <div class="metric">
-    <span class="metric-k">Open cases</span>
-    <span class="metric-v"><%= @open %></span>
-    <span class="metric-say">
+    <span class="metric-key">Open cases</span>
+    <span class="metric-value"><%= @open %></span>
+    <span class="metric-note">
       <% if @unclaimed.positive? %>
         <span class="delta-down"><%= @unclaimed %></span>
         <span>with nobody on it</span>
@@ -17,14 +17,14 @@
     </span>
   </div>
   <div class="metric">
-    <span class="metric-k">Median time to resolve</span>
-    <span class="metric-v"><%= @resolve_lag ? case_age_label(@resolve_lag) : "n/a" %></span>
-    <span class="metric-say"><span>from when the report arrived</span></span>
+    <span class="metric-key">Median time to resolve</span>
+    <span class="metric-value"><%= @resolve_lag ? case_age_label(@resolve_lag) : "n/a" %></span>
+    <span class="metric-note"><span>from when the report arrived</span></span>
   </div>
   <div class="metric">
-    <span class="metric-k">In force</span>
-    <span class="metric-v"><%= @guards.size %></span>
-    <span class="metric-say">
+    <span class="metric-key">In force</span>
+    <span class="metric-value"><%= @guards.size %></span>
+    <span class="metric-note">
       <% if @guards.empty? %>
         <span>nothing is being held on anybody</span>
       <% elsif @orphaned.positive? %>
@@ -36,9 +36,9 @@
     </span>
   </div>
   <div class="metric">
-    <span class="metric-k">Actions, 30 days</span>
-    <span class="metric-v"><%= @actions_total %></span>
-    <span class="metric-say"><span><%= @reversed %> later reversed</span></span>
+    <span class="metric-key">Actions, 30 days</span>
+    <span class="metric-value"><%= @actions_total %></span>
+    <span class="metric-note"><span><%= @reversed %> later reversed</span></span>
   </div>
 </div>
 

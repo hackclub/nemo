@@ -1,7 +1,6 @@
 module Channels
   class Filter
     Field = Struct.new(:key, :label, :kind, :sql, :unit, :omit, keyword_init: true) do
-      # a channel cannot have never been created, so that operator has no meaning here
       def ops
         OPS.fetch(kind).except(*Array(omit))
       end
@@ -75,7 +74,6 @@ module Channels
 
     attr_reader :conditions, :match
 
-    # c can arrive keyed by index, c[3][f]=..., or as a plain list, so unwrap both
     def self.from(params, measures: {})
       new(rows: rows_in(params[:c]), match: params[:match], measures: measures)
     end
@@ -100,11 +98,10 @@ module Channels
       @conditions.size
     end
 
-    # returns [sql_with_placeholders, *binds] or nil
     def clause
       return nil if @conditions.empty?
 
-      parts = @conditions.map { |c| piece(c) }
+      parts = @conditions.map { |c| condition_sql(c) }
       joiner = @match == "any" ? " OR " : " AND "
       [parts.map(&:first).join(joiner), *parts.flat_map { |p| p.drop(1) }]
     end
@@ -117,7 +114,6 @@ module Channels
 
     private
 
-    # only a known key can be repointed, so the whitelist still decides what is queryable
     def rebound(measures)
       return BY_KEY if measures.blank?
 
@@ -144,7 +140,6 @@ module Channels
       cast = values.filter_map { |v| coerce(field, op, v) }
       return nil unless cast.size == wanted
 
-      # a range reads and queries the same way round, so settle the order here
       cast = cast.sort if op == "between"
       Condition.new(field: field, op: op, values: cast)
     end
@@ -174,7 +169,7 @@ module Channels
       nil
     end
 
-    def piece(condition)
+    def condition_sql(condition)
       col = condition.field.sql
       one = condition.values.first
       case condition.op
@@ -194,8 +189,6 @@ module Channels
       end
     end
 
-    # a channel with no range row has nothing to say, so "never" means it has a
-    # row and the column is empty
     def unset_for(condition, col)
       if condition.field.sql.start_with?("#{Joins::RANGE}.")
         return ["(#{Joins::RANGE}.channel_id IS NOT NULL AND #{col} IS NULL)"]

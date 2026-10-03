@@ -11,7 +11,7 @@
             <%= form_with url: admin_person_channel_grants_path(@user_id), method: :post,
                   class: "contents" do %>
               <%= render "admin/channel_picker", field: :channel_id, submit: true,
-                    said: "Add a channel", id: "pick-person-channel" %>
+                    label: "Add a channel", id: "pick-person-channel" %>
             <% end %>
           </div>
         </div>
@@ -28,7 +28,7 @@
                   <span class="mono sub2"><%= row.channel_id %></span>
                 </td>
                 <td><span class="sub">named to them</span></td>
-                <td class="said-cell"><%= @names[row.granted_by] %></td>
+                <td class="detail-cell"><%= @names[row.granted_by] %></td>
                 <td>
                   <% if may_grant? %>
                     <%= button_to "Take back",
@@ -61,7 +61,7 @@
                     <span class="mono sub2"><%= id %></span>
                   </td>
                   <td><span class="sub"><%= Authz.role_label(role).downcase %> set</span></td>
-                  <td class="said-cell">shared, not theirs alone</td>
+                  <td class="detail-cell">shared, not theirs alone</td>
                   <td>
                     <%= link_to "Edit the set", admin_role_channels_path(role: role), class: "btn" %>
                   </td>

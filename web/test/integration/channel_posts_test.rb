@@ -94,7 +94,7 @@ class ChannelPostsTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "no more than three posts, with a word about older ones" do
+  test "no expand than three posts, with a word about older ones" do
     shown!
     answering(one_post) do |asked|
       ask(view: "posts")
@@ -130,7 +130,7 @@ class ChannelPostsTest < ActionDispatch::IntegrationTest
 
   test "a post slack will not answer for leaves the page standing" do
     shown!
-    answering(->(*) { raise Slack::ProxyClient::Unavailable, "proxy returned 503" }) do
+    answering(->(*) { raise Slack::ProxyClient::UnavailableError, "proxy returned 503" }) do
       ask(view: "posts")
 
       assert_response :success

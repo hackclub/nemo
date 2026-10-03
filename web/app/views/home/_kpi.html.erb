@@ -1,6 +1,6 @@
 <div class="metric">
-  <span class="metric-k"><%= label %></span>
-  <span class="metric-v"><%= number_with_delimiter(value) %></span>
+  <span class="metric-key"><%= label %></span>
+  <span class="metric-value"><%= number_with_delimiter(value) %></span>
 
 
   <% if local_assigns[:spark] && spark[:data].compact.many? %>
@@ -17,7 +17,7 @@
           }.to_json %>"></span>
   <% end %>
 
-  <span class="metric-say">
+  <span class="metric-note">
     <% if prior %>
       <%= delta_chip(value, prior) %>
       <span>vs previous <%= span[:label] %></span>

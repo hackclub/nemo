@@ -25,7 +25,7 @@ module Prometheus
 
       settle(user_id, Roster.channels_for(user_id))
       true
-    rescue Roster::Error, Roster::NotConfigured => e
+    rescue Roster::Error, Roster::NotConfiguredError => e
       Rails.logger.warn("[prometheus] could not read #{user_id}: #{e.message}")
       false
     end
@@ -42,7 +42,7 @@ module Prometheus
     def self.reconcile_all
       return false unless Roster.configured?
 
-      held = Roster.every_appointment.filter_map { |one| whole_row(one) }.uniq { |row| row.values_at(:user_id, :channel_id) }
+      held = Roster.every_appointment.filter_map { |one| row_from(one) }.uniq { |row| row.values_at(:user_id, :channel_id) }
       return refuse_to_empty if held.empty? && Appointment.exists?
 
       Appointment.transaction do
@@ -51,7 +51,7 @@ module Prometheus
       end
       Current.forget_roles
       held.size
-    rescue Roster::Error, Roster::NotConfigured => e
+    rescue Roster::Error, Roster::NotConfiguredError => e
       Rails.logger.warn("[prometheus] reconcile stopped: #{e.message}")
       false
     end
@@ -64,11 +64,11 @@ module Prometheus
       false
     end
 
-    def self.whole_row(said)
-      user_id = said["user_id"].to_s
+    def self.row_from(record)
+      user_id = record["user_id"].to_s
       return nil if user_id.blank?
 
-      row_for(user_id, said, Time.current)
+      row_for(user_id, record, Time.current)
     end
 
     def self.rows_for(user_id, channels)
@@ -77,9 +77,9 @@ module Prometheus
         .uniq { |row| row[:channel_id] }
     end
 
-    def self.row_for(user_id, said, seen_at)
-      channel_id = said["channel_id"].to_s
-      role = said["role"].to_s
+    def self.row_for(user_id, record, seen_at)
+      channel_id = record["channel_id"].to_s
+      role = record["role"].to_s
       return nil if channel_id.blank? || Appointment::ROLES.exclude?(role)
 
       { user_id: user_id, channel_id: channel_id, role: role, seen_at: seen_at }

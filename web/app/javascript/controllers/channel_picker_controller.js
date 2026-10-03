@@ -1,10 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
-function said(className, text) {
-  const span = document.createElement("span")
-  span.className = className
-  span.textContent = text
-  return span
+function span(className, text) {
+  const el = document.createElement("span")
+  el.className = className
+  el.textContent = text
+  return el
 }
 
 export default class extends Controller {
@@ -64,7 +64,7 @@ export default class extends Controller {
     this.resultsTarget.hidden = false
     this.resultsTarget.innerHTML = ""
     if (channels.length === 0) {
-      this.resultsTarget.append(said("pick-none", "no channel matches"))
+      this.resultsTarget.append(span("pick-none", "no channel matches"))
       return
     }
 
@@ -76,8 +76,8 @@ export default class extends Controller {
       row.dataset.id = channel.id
       row.dataset.name = channel.name
       row.append(
-        said("pick-name", `#${channel.name}`),
-        said("pick-id mono", channel.id)
+        span("pick-name", `#${channel.name}`),
+        span("pick-id mono", channel.id)
       )
       this.resultsTarget.append(row)
     }

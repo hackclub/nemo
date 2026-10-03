@@ -41,7 +41,7 @@ module Messages
       return Result.new(error: :not_found) if stats.nil?
 
       Result.new(stats: new(stats, posted_at: posted_at))
-    rescue Slack::ProxyClient::NotConfigured => e
+    rescue Slack::ProxyClient::NotConfiguredError => e
       Rails.logger.error("message activity proxy is not configured: #{e.message}")
       Result.new(error: :not_configured)
     rescue Slack::ProxyClient::AuthError
@@ -117,7 +117,7 @@ module Messages
       held.size > 1 ? held.last - held.first : nil
     end
 
-    def bucket_said(span)
+    def bucket_label(span)
       seconds = bucket_seconds(span)
       return nil if seconds.nil?
 

@@ -154,22 +154,22 @@ class FdActionStandingTest < ActionDispatch::IntegrationTest
   test "the modal asks who first, then what is standing, then the fields" do
     guard!
     get fd_case_path(@kase, do: "action")
-    said = response.body
+    body = response.body
 
-    assert_operator said.index('data-member-picker-name-value="target_user_id"'), :<,
-      said.index('turbo-frame id="action-standing"')
-    assert_operator said.index('turbo-frame id="action-standing"'), :<,
-      said.index('data-action-standing-target="fields"')
+    assert_operator body.index('data-member-picker-name-value="target_user_id"'), :<,
+      body.index('turbo-frame id="action-standing"')
+    assert_operator body.index('turbo-frame id="action-standing"'), :<,
+      body.index('data-action-standing-target="fields"')
   end
 
   test "the fields collapse under a chosen guard, and the frame reloads on a member" do
     get fd_case_path(@kase, do: "action")
-    said = response.body
+    body = response.body
 
-    assert_match(/data-action-standing-target="fields"/, said)
-    assert_match(/action-standing#fit/, said) if Fd::MemberGuard.any?
-    assert_match(/member-picker:picked->action-standing#look/, said)
-    assert_match(/turbo:frame-load->action-standing#fit/, said)
+    assert_match(/data-action-standing-target="fields"/, body)
+    assert_match(/action-standing#fit/, body) if Fd::MemberGuard.any?
+    assert_match(/member-picker:picked->action-standing#look/, body)
+    assert_match(/turbo:frame-load->action-standing#fit/, body)
   end
 
   test "a case with one subject already shows what is standing on them" do
@@ -189,33 +189,33 @@ class FdActionStandingTest < ActionDispatch::IntegrationTest
   end
   test "each kind carries whether it expires, takes a channel, or reads a lock" do
     get fd_case_path(@kase, do: "action")
-    said = response.body
+    body = response.body
 
     assert_match(/data-expires="false" data-channel="false" data-lock="false" value="warning"/,
-      said)
-    assert_match(/data-expires="true" data-channel="false" data-lock="false" value="shush"/, said)
+      body)
+    assert_match(/data-expires="true" data-channel="false" data-lock="false" value="shush"/, body)
     assert_match(/data-expires="true" data-channel="true" data-lock="false" value="channel_ban"/,
-      said)
+      body)
     assert_match(
-      /data-expires="false" data-channel="false" data-lock="true" value="locked_thread"/, said
+      /data-expires="false" data-channel="false" data-lock="true" value="locked_thread"/, body
     )
   end
 
   test "the date and channel start hidden and are shaped by the kind" do
     get fd_case_path(@kase, do: "action")
-    said = response.body
+    body = response.body
 
-    assert_match(/data-action-standing-target="expiry" hidden/, said)
-    assert_match(/data-action-standing-target="channel" hidden/, said)
-    assert_match(/action-standing#shape/, said)
+    assert_match(/data-action-standing-target="expiry" hidden/, body)
+    assert_match(/data-action-standing-target="channel" hidden/, body)
+    assert_match(/action-standing#shape/, body)
   end
   test "the channel field searches rather than asking for an id" do
     get fd_case_path(@kase, do: "action")
-    said = response.body
+    body = response.body
 
-    assert_match(/data-controller="channel-picker"/, said)
-    assert_match(/data-channel-picker-name-value="channel_id"/, said)
-    assert_no_match(/placeholder="C0266FRGV"/, said)
+    assert_match(/data-controller="channel-picker"/, body)
+    assert_match(/data-channel-picker-name-value="channel_id"/, body)
+    assert_no_match(/placeholder="C0266FRGV"/, body)
   end
 
   test "each option is a house radio row, not a browser one" do

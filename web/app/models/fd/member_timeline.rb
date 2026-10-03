@@ -1,6 +1,6 @@
 module Fd
   class MemberTimeline
-    Entry = Struct.new(:at, :title, :kind, :word, :who, :mark, :state, :detail, :said, :case_id,
+    Entry = Struct.new(:at, :title, :kind, :word, :who, :mark, :state, :detail, :body, :case_id,
       :ref, keyword_init: true)
 
     KINDS = {
@@ -156,7 +156,7 @@ module Fd
           mark: "note",
           state: names[note.author],
           detail: nil,
-          said: note.body,
+          body: note.body,
           case_id: nil,
           ref: note
         )

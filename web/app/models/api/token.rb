@@ -10,8 +10,8 @@ module Api
     SHOWN = 4
     MAX_NAME = 60
 
-    class TooMany < StandardError; end
-    class NotApproved < StandardError; end
+    class TooManyError < StandardError; end
+    class NotApprovedError < StandardError; end
 
     belongs_to :app, class_name: "Api::App", foreign_key: :app_id, inverse_of: :tokens
 
@@ -65,8 +65,8 @@ module Api
     end
 
     def self.mint!(app, name, lasting: DEFAULT_LIFE)
-      raise NotApproved unless Approval.held?(app.id)
-      raise TooMany unless room_for?(app.id)
+      raise NotApprovedError unless Approval.held?(app.id)
+      raise TooManyError unless room_for?(app.id)
 
       key = secret
       row = create!(app_id: app.id, owner_user_id: app.owner_user_id,

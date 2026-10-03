@@ -69,10 +69,10 @@ class _held:
 
 @pytest.fixture(autouse=True)
 def clean():
-    responses._said.clear()
+    responses._settings.clear()
     responses._loaded = False
     yield
-    responses._said.clear()
+    responses._settings.clear()
     responses._loaded = False
 
 
@@ -201,7 +201,7 @@ def test_the_unsubscribe_is_taken_down(monkeypatch):
     load()
     client = Slack()
     taken = []
-    monkeypatch.setattr(unsub_shield.guardwork, "remove",
+    monkeypatch.setattr(unsub_shield.guard_actions, "remove",
                         lambda _c, room, ts: taken.append((room, ts)))
 
     assert unsub_shield.seen(Ctx(posted(), client)) is True
@@ -212,7 +212,7 @@ def test_the_unsubscribe_is_taken_down(monkeypatch):
 def test_the_link_is_left_out_when_it_is_not_set(monkeypatch):
     load(**{responses.UNSUB_SHIELD_LINK: ""})
     client = Slack()
-    monkeypatch.setattr(unsub_shield.guardwork, "remove", lambda *a: True)
+    monkeypatch.setattr(unsub_shield.guard_actions, "remove", lambda *a: True)
     unsub_shield.seen(Ctx(posted(), client))
 
     assert "See how" not in client.ephemeral[0]["text"]
@@ -221,7 +221,7 @@ def test_the_link_is_left_out_when_it_is_not_set(monkeypatch):
 def test_lower_case_and_spaces_still_match(monkeypatch):
     load()
     taken = []
-    monkeypatch.setattr(unsub_shield.guardwork, "remove",
+    monkeypatch.setattr(unsub_shield.guard_actions, "remove",
                         lambda _c, room, ts: taken.append((room, ts)))
     unsub_shield.seen(Ctx(posted("  unsubscribe  ")))
 
@@ -231,7 +231,7 @@ def test_lower_case_and_spaces_still_match(monkeypatch):
 def test_a_message_that_only_mentions_it_is_left_alone(monkeypatch):
     load()
     taken = []
-    monkeypatch.setattr(unsub_shield.guardwork, "remove",
+    monkeypatch.setattr(unsub_shield.guard_actions, "remove",
                         lambda _c, room, ts: taken.append((room, ts)))
 
     assert unsub_shield.seen(Ctx(posted("how do I UNSUBSCRIBE from this"))) is None
@@ -241,7 +241,7 @@ def test_a_message_that_only_mentions_it_is_left_alone(monkeypatch):
 def test_one_outside_a_thread_is_left_alone(monkeypatch):
     load()
     taken = []
-    monkeypatch.setattr(unsub_shield.guardwork, "remove",
+    monkeypatch.setattr(unsub_shield.guard_actions, "remove",
                         lambda _c, room, ts: taken.append((room, ts)))
 
     assert unsub_shield.seen(Ctx(posted(thread_ts=None))) is None
@@ -251,7 +251,7 @@ def test_one_outside_a_thread_is_left_alone(monkeypatch):
 def test_the_shield_turned_off_takes_nothing_down(monkeypatch):
     load(**{responses.UNSUB_SHIELD_ON: "off"})
     taken = []
-    monkeypatch.setattr(unsub_shield.guardwork, "remove",
+    monkeypatch.setattr(unsub_shield.guard_actions, "remove",
                         lambda _c, room, ts: taken.append((room, ts)))
 
     assert unsub_shield.seen(Ctx(posted())) is None

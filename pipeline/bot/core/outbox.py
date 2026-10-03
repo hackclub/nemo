@@ -103,7 +103,7 @@ WHERE id = %s AND sent_at IS NULL
 """
 
 
-class Queued:
+class QueuedMessage:
     def __init__(self, row):
         (
             self.id,
@@ -134,7 +134,7 @@ def waiting(conn, conversation_id=None):
         return []
 
     rows = conn.execute(CLAIMED, ([one[0] for one in claimed],)).fetchall()
-    return [Queued(row) for row in rows]
+    return [QueuedMessage(row) for row in rows]
 
 
 def any_waiting(conn):
@@ -179,7 +179,7 @@ def drop_echo(conn, outbox_id):
     conn.execute(DROP_ECHO, (outbox_id,))
 
 
-def stumbled(conn, outbox_id, error, give_up):
+def mark_error(conn, outbox_id, error, give_up):
     if give_up:
         conn.execute(GAVE_UP, (str(error)[:500], outbox_id))
     else:

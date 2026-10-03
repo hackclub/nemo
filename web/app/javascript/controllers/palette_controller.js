@@ -134,8 +134,8 @@ export default class extends Controller {
       head.className = "palette-group"
       head.textContent = group.label
       if (group.total > group.rows.length) {
-        const more = document.createElement("span")
-        more.className = "more"
+        const expand = document.createElement("span")
+        more.className = "expand"
         more.textContent = `${group.rows.length} of ${group.total}`
         head.append(more)
       }
@@ -150,7 +150,7 @@ export default class extends Controller {
     const all = groups.reduce((sum, group) => sum + group.total, 0)
     if (term.length > 0 && all > held) {
       this.resultsTarget.append(this.line({
-        icon: "arrow", title: `See all ${all}`, sub: null, said: null,
+        icon: "arrow", title: `See all ${all}`, sub: null, sub_note: null,
         url: `/fd/search?q=${encodeURIComponent(term)}${this.only ? `&scope=${this.only}` : ""}`,
       }, term))
     }
@@ -201,11 +201,11 @@ export default class extends Controller {
       what.append(sub)
     }
 
-    if (row.said) {
-      const said = document.createElement("span")
-      said.className = "line2"
-      said.append(...this.lit(row.said, term))
-      what.append(said)
+    if (row.sub_note) {
+      const sub_note = document.createElement("span")
+      sub_note.className = "line2"
+      sub_note.append(...this.lit(row.sub_note, term))
+      what.append(sub_note)
     }
 
     line.append(icon, what, document.createElement("span"))
@@ -219,7 +219,7 @@ export default class extends Controller {
     if (at < 0) return [document.createTextNode(text)]
 
     const hit = document.createElement("span")
-    hit.className = "hl"
+    hit.className = "highlight"
     hit.textContent = text.slice(at, at + word.length)
     return [
       document.createTextNode(text.slice(0, at)),

@@ -3,11 +3,11 @@ module Analytics
     self.table_name = "analytics.mart_cohort_survival"
 
     Curve = Struct.new(:cohort_month, :members, :shares, keyword_init: true) do
-      def drawn_to = shares.rindex { |share| !share.nil? }
+      def last_filled_index = shares.rindex { |share| !share.nil? }
 
       def at(offset) = shares[offset]
 
-      def partial?(ladder) = drawn_to.to_i < ladder.length - 1
+      def partial?(ladder) = last_filled_index.to_i < ladder.length - 1
     end
 
     def readonly?

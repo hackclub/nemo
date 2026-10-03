@@ -28,7 +28,7 @@ class FdMemberStandingTest < ActionDispatch::IntegrationTest
     get fd_member_standing_path(WHO)
 
     assert_select %(.standing-row[data-carry="pending"])
-    assert_select ".carry-said", "Asking Slack"
+    assert_select ".carry-state", "Asking Slack"
   end
 
   test "a guard slack confirmed reads as held, and says so once it just landed" do
@@ -36,7 +36,7 @@ class FdMemberStandingTest < ActionDispatch::IntegrationTest
     get fd_member_standing_path(WHO)
 
     assert_select %(.standing-row[data-carry="held"][data-landed="true"])
-    assert_select ".carry-said", "Deactivated in Slack"
+    assert_select ".carry-state", "Deactivated in Slack"
   end
 
   test "a guard that landed a while ago does not animate again" do
@@ -52,7 +52,7 @@ class FdMemberStandingTest < ActionDispatch::IntegrationTest
     get fd_member_standing_path(WHO)
 
     assert_select %(.standing-row[data-carry="lifting"])
-    assert_select ".carry-said", "Putting the account back"
+    assert_select ".carry-state", "Putting the account back"
   end
 
   test "a failed carry shows what slack said" do
@@ -69,7 +69,7 @@ class FdMemberStandingTest < ActionDispatch::IntegrationTest
     get fd_member_standing_path(WHO)
 
     assert_select ".standing-row.is-carried", false
-    assert_select ".carry-said", false
+    assert_select ".carry-state", false
   end
 
   test "a role the capability was taken from is not offered the button" do
@@ -87,7 +87,7 @@ class FdMemberStandingTest < ActionDispatch::IntegrationTest
     get fd_member_path(WHO)
 
     assert_select %(turbo-frame#member-standing-#{WHO})
-    assert_select %([data-catch-up-frame-value="member-standing-#{WHO}"])
+    assert_select %([data-pending-flush-frame-value="member-standing-#{WHO}"])
     assert_select "turbo-cable-stream-source"
   end
 

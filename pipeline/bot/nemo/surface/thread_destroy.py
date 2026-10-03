@@ -2,7 +2,7 @@ import logging
 
 from bot.core import session
 from bot.nemo import guards
-from bot.nemo.cards import guard as card
+from bot.nemo.views import guard as card
 from bot.nemo.surface import on_action, on_shortcut, on_view
 
 log = logging.getLogger("bot.nemo")
@@ -13,7 +13,7 @@ SHORTCUT = "destroy_thread"
 @on_shortcut(SHORTCUT, needs="thread.guard")
 def asked(ctx):
     if not ctx.thread_ts:
-        return ctx.whisper("that is not a thread")
+        return ctx.post_ephemeral("that is not a thread")
 
     ctx.client.views_open(
         trigger_id=ctx.trigger_id,
@@ -28,12 +28,12 @@ def note_toggled(ctx):
         return None
 
     channel_id, thread_ts = card.opened(view)
-    said = card.picked(view.get("state") or {})
+    values = card.submitted_values(view.get("state") or {})
     try:
         ctx.client.views_update(
             view_id=view["id"],
             hash=view["hash"],
-            view=card.destroy_view(channel_id, thread_ts, said=said),
+            view=card.destroy_view(channel_id, thread_ts, values=values),
         )
     except Exception as failure:
         log.warning("nemo: could not reshape the destroy modal: %s", failure)
@@ -42,8 +42,8 @@ def note_toggled(ctx):
 
 @on_view(card.DESTROY_CALLBACK, needs="thread.guard", refuse_block=card.REASON)
 def confirmed(ctx):
-    said = card.picked(ctx.view.get("state") or {})
-    wrong = card.objection(said)
+    values = card.submitted_values(ctx.view.get("state") or {})
+    wrong = card.validation_errors(values)
     if wrong:
         return ctx.ack(response_action="errors", errors=wrong)
 
@@ -54,13 +54,13 @@ def confirmed(ctx):
 
     with session() as conn:
         guard_id = guards.open_guard(
-            conn, guards.DESTROY, channel_id, thread_ts, ctx.user_id, said["reason"]
+            conn, guards.DESTROY, channel_id, thread_ts, ctx.user_id, values["reason"]
         )
-        if guard_id is not None and said.get("note"):
-            guards.keep_note(conn, guard_id, said["note_said"], card.note_words(said))
+        if guard_id is not None and values.get("note"):
+            guards.keep_note(conn, guard_id, values["note_body"], card.note_text(values))
 
     if guard_id is None:
-        return ctx.whisper("that thread is already held", channel_id, thread_ts)
+        return ctx.post_ephemeral("that thread is already held", channel_id, thread_ts)
 
     ctx.join(channel_id)
     with session() as conn:

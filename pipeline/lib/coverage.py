@@ -61,7 +61,7 @@ def settle(conn, source_key, slice_key, fence, state, expected=None, landed=None
             "expected": expected, "landed": landed, "note": (note or None) and str(note)[:500],
         })
         if cur.fetchone() is None:
-            raise lease.FencedOut(f"{source_key} {slice_key}: fence {fence} is no longer ours, verdict not written")
+            raise lease.FenceTokenExpiredError(f"{source_key} {slice_key}: fence {fence} is no longer ours, verdict not written")
 
 
 def settle_aside(source_key, slice_key, fence, state, expected=None, landed=None, note=None):

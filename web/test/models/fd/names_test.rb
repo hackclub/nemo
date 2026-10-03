@@ -67,7 +67,7 @@ class Fd::NamesTest < ActiveSupport::TestCase
     assert_equal 1, queries, "the members we hold, nothing else"
   end
 
-  test "the member row itself is reachable, for pages that want more than a name" do
+  test "the member row itself is reachable, for pages that want expand than a name" do
     names = Fd::Names.for([seeded.user_id])
     assert_equal seeded.user_id, names.member(seeded.user_id).user_id
     assert_nil names.member("UNOBODY")

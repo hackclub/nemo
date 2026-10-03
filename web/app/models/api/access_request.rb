@@ -10,8 +10,8 @@ module Api
     MAX_REASON = 500
     SHORTEST_REASON = 10
 
-    class Already < StandardError; end
-    class TooThin < StandardError; end
+    class AlreadyError < StandardError; end
+    class TooThinError < StandardError; end
 
     belongs_to :app, class_name: "Api::App", foreign_key: :app_id, inverse_of: false
 
@@ -31,12 +31,12 @@ module Api
     end
 
     def self.ask!(app, reason:)
-      raise Already if open_for?(app.id) || Approval.held?(app.id)
+      raise AlreadyError if open_for?(app.id) || Approval.held?(app.id)
 
-      said = reason.to_s.strip
-      raise TooThin if said.length < SHORTEST_REASON
+      text = reason.to_s.strip
+      raise TooThinError if text.length < SHORTEST_REASON
 
-      row = create!(app_id: app.id, reason: said.first(MAX_REASON))
+      row = create!(app_id: app.id, reason: text.first(MAX_REASON))
       Event.record!("access_requested", actor: app.owner_user_id, subject: app.name,
         detail: row.reason)
       row
@@ -71,7 +71,7 @@ module Api
     private
 
     def settle!(to, by, note)
-      raise Already unless pending?
+      raise AlreadyError unless pending?
 
       update!(state: to, decided_by: by, decided_at: Time.current,
         note: note.to_s.strip.presence)

@@ -49,21 +49,21 @@ def cap():
 def verdict(status, content_type, size, limit=None):
     limit = cap() if limit is None else limit
     if status in (401, 403):
-        return "refused", f"slack answered {status}, the token cannot read this file"
+        return "refused", f"Slack returned {status}: the token cannot read this file"
     if status == 404 or status == 410:
         return "gone", None
     if status != 200:
-        return "failed", f"slack answered {status}"
+        return "failed", f"Slack returned {status}"
     if (content_type or "").split(";")[0].strip().lower() in HTML:
-        return "refused", "slack returned a web page instead of the file"
+        return "refused", "Slack returned HTML instead of file content"
     if size is not None and size > limit:
         return "too_large", f"{size} bytes is over the {limit} byte limit"
     if not size:
-        return "failed", "slack returned an empty body"
+        return "failed", "Slack returned an empty body"
     return "stored", None
 
 
-def too_big_to_ask(size, limit=None):
+def exceeds_limit(size, limit=None):
     limit = cap() if limit is None else limit
     return bool(size) and size > limit
 
@@ -72,7 +72,7 @@ def waiting(conn, limit=20):
     return conn.execute(PENDING, (limit,)).fetchall()
 
 
-def keep(conn, file_id, body, mimetype):
+def store_blob(conn, file_id, body, mimetype):
     sha = hashlib.sha256(body).hexdigest()
     conn.execute(
         "INSERT INTO fd.intake_file_blobs (sha256, body, size_bytes, mimetype) "
@@ -88,7 +88,7 @@ def keep(conn, file_id, body, mimetype):
     return sha
 
 
-def stash(conn, body, mimetype):
+def insert_blob(conn, body, mimetype):
     sha = hashlib.sha256(body).hexdigest()
     conn.execute(
         "INSERT INTO fd.intake_file_blobs (sha256, body, size_bytes, mimetype) "
@@ -98,7 +98,7 @@ def stash(conn, body, mimetype):
     return sha
 
 
-def give_up(conn, file_id, state, error):
+def mark_failed(conn, file_id, state, error):
     conn.execute(
         "UPDATE fd.intake_files SET fetch_state = %s, fetch_error = %s, "
         "fetch_attempts = fetch_attempts + 1, fetched_at = now() WHERE id = %s",

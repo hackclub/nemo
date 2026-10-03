@@ -17,7 +17,7 @@ span as (
     from edge
 ),
 
-said as (
+per_person as (
     select
         m.channel_id,
         date_trunc('month', m.posted_at at time zone 'UTC')::date as month,
@@ -37,13 +37,13 @@ said as (
     group by 1, 2, 3
 ),
 
-whole as (
+channel_totals as (
     select
         channel_id,
         month,
         sum(messages)::bigint as channel_messages,
         count(*)::integer as channel_posters
-    from said
+    from per_person
     group by 1, 2
 ),
 
@@ -60,7 +60,7 @@ edges as (
     select
         month,
         (month + interval '1 month' - interval '1 day')::date as month_end
-    from (select distinct month from said) m
+    from (select distinct month from per_person) m
 )
 
 select
@@ -89,7 +89,7 @@ select
     w.channel_posters,
     e.month_end,
     'v2' as metric_version
-from said p
-inner join whole w on w.channel_id = p.channel_id and w.month = p.month
+from per_person p
+inner join channel_totals w on w.channel_id = p.channel_id and w.month = p.month
 inner join edges e on e.month = p.month
 inner join tenured t on t.user_id = p.user_id

@@ -24,7 +24,7 @@ class Slack::ProxyClientTest < ActiveSupport::TestCase
 
   test "plaintext to another machine is refused" do
     ENV["INTERNAL_PROXY_URL"] = "http://proxy.example.com:8002"
-    err = assert_raises(Slack::ProxyClient::NotConfigured) { Slack::ProxyClient.base_url }
+    err = assert_raises(Slack::ProxyClient::NotConfiguredError) { Slack::ProxyClient.base_url }
     assert_match "clear text", err.message
   end
 

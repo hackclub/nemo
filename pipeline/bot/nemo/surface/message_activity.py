@@ -6,7 +6,7 @@ from slack_sdk.errors import SlackApiError
 
 from bot.core import audit, session
 from bot.nemo import activity, channel
-from bot.nemo.cards import activity as card
+from bot.nemo.views import activity as card
 from bot.nemo.surface import on_action, on_shortcut
 
 log = logging.getLogger("bot.nemo")
@@ -24,8 +24,8 @@ FILE_TRIES = 3
 
 
 def filled(client, view_id, shown, plain):
-    """Slack takes a moment to make an uploaded chart usable in a block, and
-    refuses the whole view until it has. Wait it out, then go without it"""
+    """Poll until the uploaded file is usable in a block; render without the
+    chart on timeout."""
     for attempt in range(FILE_TRIES):
         last = attempt == FILE_TRIES - 1
         try:
@@ -49,7 +49,7 @@ def refused(conn, ctx, why, ts):
         after={"permission": "message.read", "surface": f"shortcut:{SHORTCUT}",
                "channel_id": ctx.channel_id, "ts": ts},
     )
-    return ctx.whisper(why)
+    return ctx.post_ephemeral(why)
 
 
 @on_shortcut(SHORTCUT, needs="message.read")
@@ -57,33 +57,33 @@ def asked(ctx):
     message = ctx.body.get("message") or {}
     ts = message.get("ts")
     if not ts or not ctx.channel_id:
-        return ctx.whisper("That is not a message.")
+        return ctx.post_ephemeral("That is not a message.")
     if is_reply(message):
-        return ctx.whisper(NOT_A_POST)
+        return ctx.post_ephemeral(NOT_A_POST)
 
     author_id = message.get("user")
     with session() as conn:
         if not activity.shown(conn, ctx.channel_id):
-            return ctx.whisper(NOT_SHOWN)
+            return ctx.post_ephemeral(NOT_SHOWN)
         if not activity.may_read(ctx.user_id, author_id):
             return refused(conn, ctx, NOT_YOURS, ts)
         found = activity.landed(conn, ctx.channel_id, ts)
         crowd = activity.members(conn, ctx.channel_id)
 
-    opened = ctx.client.views_open(trigger_id=ctx.trigger_id, view=card.reading())
+    opened = ctx.client.views_open(trigger_id=ctx.trigger_id, view=card.loading_view())
     view_id = ((opened or {}).get("view") or {}).get("id")
 
     stats = activity.fetch(ctx.channel_id, ts)
     if stats is None:
-        shown = plain = card.sorry(NOT_NOW)
+        shown = plain = card.error_view(NOT_NOW)
     else:
         posted_at = (found or {}).get("posted_at") or dt.datetime.fromtimestamp(float(ts), dt.UTC)
         file_id, span = activity.chart(ctx.client, stats["curves"], posted_at, stats["viewers"])
-        said = (ctx.channel_id, ts, author_id, message.get("text"), stats)
+        args = (ctx.channel_id, ts, author_id, message.get("text"), stats)
         kept = {"found": found, "crowd": crowd,
                 "activity_url": channel.app_url(f"/messages/{ctx.channel_id}/{ts}")}
-        shown = card.view(*said, chart=(file_id, span) if file_id else None, **kept)
-        plain = card.view(*said, **kept)
+        shown = card.build_view(*args, chart=(file_id, span) if file_id else None, **kept)
+        plain = card.build_view(*args, **kept)
 
     if view_id:
         filled(ctx.client, view_id, shown, plain)

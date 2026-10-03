@@ -1,7 +1,7 @@
 import logging
 
 from bot.core import session
-from bot.nemo import guards, guardwork
+from bot.nemo import guards, guard_actions
 from bot.nemo.surface import on_event
 
 log = logging.getLogger("bot.nemo")
@@ -36,11 +36,11 @@ def watched(ctx):
         if guards.exempt(conn, who, guard[5]):
             log.info("nemo: guard %s let %s past, they are exempt", guard[0], who)
             return None
-        noted = guardwork.note_it(conn, guard, who, ts)
+        noted = guard_actions.note_it(conn, guard, who, ts)
 
     if not noted:
         return None
 
-    guardwork.took_it_down(ctx.client, guard[0], channel_id, ts)
+    guard_actions.delete_notice(ctx.client, guard[0], channel_id, ts)
     log.info("nemo: guard %s noted %s from %s", guard[0], ts, who)
-    return guardwork.earned_it(guard, who) or "noted"
+    return guard_actions.threshold_met(guard, who) or "noted"

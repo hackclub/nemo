@@ -75,7 +75,7 @@ class MemberConsentTest < ActionDispatch::IntegrationTest
       flip("1", app: quiet)
     end
 
-    assert_match(/no such app/, flash[:alert])
+    assert_match(/No such app/, flash[:alert])
   end
 
   test "a scope nobody declared is refused and writes nothing" do

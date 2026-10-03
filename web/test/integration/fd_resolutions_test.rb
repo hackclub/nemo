@@ -144,7 +144,7 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     close(close_reason: "action_taken")
     assert_nil @kase.reload.resolved_at
-    assert_match(/say why this case is closing/, flash[:alert])
+    assert_match(/Enter why this case is closing/, flash[:alert])
   end
 
   test "an outcome nobody offered is refused" do
@@ -229,7 +229,7 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     @kase.reload
     assert_nil @kase.resolved_at
     assert_nil @kase.resolution
-    assert_match(/open again/, flash[:notice])
+    assert_match(/reopened/, flash[:notice])
     assert Fd::AuditEntry.exists?(entity_type: "case", entity_id: @kase.id, verb: "reopened")
   end
 
@@ -269,7 +269,7 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     post fd_case_resolution_path(@kase)
 
     assert_nil @kase.reload.resolved_at
-    assert_match(/say why this case is closing/, flash[:alert])
+    assert_match(/Enter why this case is closing/, flash[:alert])
   end
 
   test "a reversed action does not decide the ending" do

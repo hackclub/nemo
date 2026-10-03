@@ -9,18 +9,18 @@ def table():
     return yaml.safe_load(CAPABILITIES_FILE.read_text())
 
 
-def capabilities(said=None):
-    return (said or table())["capabilities"]
+def capabilities(data=None):
+    return (data or table())["capabilities"]
 
 
-def roles(said=None):
-    return (said or table())["roles"]
+def roles(data=None):
+    return (data or table())["roles"]
 
 
-def flat(said=None):
-    said = said or table()
+def flat(data=None):
+    data = data or table()
     rows = []
-    for key, one in capabilities(said).items():
+    for key, one in capabilities(data).items():
         rows.append((
             key,
             one["label"],
@@ -33,34 +33,34 @@ def flat(said=None):
     return rows
 
 
-def role_rows(said=None):
-    said = said or table()
+def role_rows(data=None):
+    data = data or table()
     return [
         (name, one["label"], bool(one.get("everything")), bool(one.get("grantable", True)))
-        for name, one in roles(said).items()
+        for name, one in roles(data).items()
     ]
 
 
-def role_capability_rows(said=None):
-    said = said or table()
+def role_capability_rows(data=None):
+    data = data or table()
     pairs = []
-    for name, one in roles(said).items():
+    for name, one in roles(data).items():
         for key in one.get("capabilities") or []:
             pairs.append((name, key))
     return pairs
 
 
-def objections(said=None):
-    said = said or table()
-    known = set(capabilities(said))
+def objections(data=None):
+    data = data or table()
+    known = set(capabilities(data))
     wrong = []
-    for key, one in capabilities(said).items():
+    for key, one in capabilities(data).items():
         scope = one.get("record_scope")
         if scope is not None and scope not in SCOPES:
             wrong.append(f"{key} declares an unknown record scope {scope!r}")
         if not one.get("area"):
             wrong.append(f"{key} declares no area")
-    for name, one in roles(said).items():
+    for name, one in roles(data).items():
         if one.get("everything") and one.get("capabilities"):
             wrong.append(f"{name} is a superadmin, it must not list capabilities")
         for key in one.get("capabilities") or []:
@@ -93,19 +93,19 @@ ON CONFLICT DO NOTHING
 
 
 def sync(conn):
-    said = table()
-    wrong = objections(said)
+    data = table()
+    wrong = objections(data)
     if wrong:
         raise ValueError("db/capabilities.yml is not consistent: " + "; ".join(wrong))
 
-    rows = flat(said)
+    rows = flat(data)
     with conn.cursor() as cur:
         cur.executemany(SYNC, rows)
-        cur.executemany(SYNC_ROLE, role_rows(said))
+        cur.executemany(SYNC_ROLE, role_rows(data))
         cur.execute("DELETE FROM app.capability WHERE key <> ALL(%s)", ([r[0] for r in rows],))
         cur.execute("DELETE FROM app.role WHERE name <> ALL(%s)",
-                    ([r[0] for r in role_rows(said)],))
-        pairs = role_capability_rows(said)
+                    ([r[0] for r in role_rows(data)],))
+        pairs = role_capability_rows(data)
         cur.executemany(SYNC_PAIR, pairs)
         cur.execute(
             "DELETE FROM app.role_capability WHERE (role, capability) NOT IN ("

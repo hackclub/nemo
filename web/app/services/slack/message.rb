@@ -3,18 +3,18 @@ module Slack
     METHOD = "conversations.history".freeze
     TTL = 10.minutes
 
-    Result = Struct.new(:said, :error, keyword_init: true) do
-      def found? = said.present?
+    Result = Struct.new(:message, :error, keyword_init: true) do
+      def found? = message.present?
     end
 
     def self.at(channel_id, ts)
-      said = Rails.cache.fetch(key_for(channel_id, ts), expires_in: TTL, skip_nil: true) do
+      found = Rails.cache.fetch(key_for(channel_id, ts), expires_in: TTL, skip_nil: true) do
         asked(channel_id, ts)
       end
-      return Result.new(error: :not_found) if said.nil?
+      return Result.new(error: :not_found) if found.nil?
 
-      Result.new(said: said)
-    rescue ProxyClient::NotConfigured => e
+      Result.new(message: found)
+    rescue ProxyClient::NotConfiguredError => e
       Rails.logger.error("slack message proxy is not configured: #{e.message}")
       Result.new(error: :not_configured)
     rescue ProxyClient::AuthError

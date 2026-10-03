@@ -4,7 +4,7 @@ module Admin
       return refuse unless may_grant?
 
       channel_id = params[:channel_id].to_s
-      return refuse("pick a channel") if channel_id.blank?
+      return refuse("Select a channel") if channel_id.blank?
       return refuse("#{channel_id} is not a channel") unless known?(channel_id)
 
       ActiveRecord::Base.transaction do
@@ -17,22 +17,22 @@ module Admin
       end
       Current.forget_roles
 
-      redirect_to admin_person_path(who), notice: "##{channel_id} is theirs to read"
+      redirect_to admin_person_path(who), notice: "##{channel_id} is now readable by them"
     rescue ActiveRecord::RecordNotUnique
-      refuse("they already hold that channel")
+      refuse("They already have that channel")
     end
 
     def destroy
       return refuse unless may_grant?
 
       Channels::Audience::Grant.live.where(user_id: who, channel_id: params[:channel_id])
-        .find_each { |held| take_back(held) }
-      redirect_to admin_person_path(who), notice: "##{params[:channel_id]} taken back"
+        .find_each { |held| revoke(held) }
+      redirect_to admin_person_path(who), notice: "Access to ##{params[:channel_id]} revoked"
     end
 
     private
 
-    def take_back(held)
+    def revoke(held)
       ActiveRecord::Base.transaction do
         held.update!(revoked_by: current_account.user_id, revoked_at: Time.current)
         audit(held, "revoked", entity_id: held.channel_id,

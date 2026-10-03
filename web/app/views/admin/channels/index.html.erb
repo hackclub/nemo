@@ -1,11 +1,11 @@
 <% content_for :page_title, "Channels" %>
 
 <% content_for :page_controls do %>
-  <%= form_with url: admin_channels_path, method: :get, class: "qsearch",
+  <%= form_with url: admin_channels_path, method: :get, class: "queue-search",
         data: { controller: "live-search", turbo_frame: "admin-channels",
                 turbo_action: "advance" } do %>
     <%= search_field_tag :q, @q, placeholder: "Search every channel by name",
-          class: "qsearch-in", autocomplete: "off", aria: { label: "Search channels" },
+          class: "queue-search-input", autocomplete: "off", aria: { label: "Search channels" },
           data: { action: "input->live-search#go" } %>
   <% end %>
   <% if @q.present? %>

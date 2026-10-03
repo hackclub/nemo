@@ -2,7 +2,7 @@ module Engine
   class Setting < ApplicationRecord
     self.table_name = "engine_setting"
 
-    class Refused < ArgumentError; end
+    class RefusedError < ArgumentError; end
 
     ENGINE = "engine".freeze
     CADENCE = "cadence".freeze
@@ -87,7 +87,7 @@ module Engine
     end
 
     def self.checked(source, name, value)
-      raise Refused, "#{name} cannot be blank" if value.blank?
+      raise RefusedError, "#{name} cannot be blank" if value.blank?
 
       if source == ENGINE
         return checked_engine(name, value)
@@ -97,11 +97,11 @@ module Engine
       when CADENCE
         return value if Source::CADENCES.include?(value)
 
-        raise Refused, "#{value} is not a cadence"
+        raise RefusedError, "#{value} is not a cadence"
       when ENABLED
         return value if %w[true false].include?(value)
 
-        raise Refused, "#{value} is not true or false"
+        raise RefusedError, "#{value} is not true or false"
       when RETENTION
         checked_retention(source, value)
       else
@@ -113,38 +113,38 @@ module Engine
       return KEEP if value.casecmp(KEEP).zero?
 
       floor = Source[source].prune_floor_days
-      raise Refused, "#{source} does not delete anything" if floor.nil?
+      raise RefusedError, "#{source} does not delete anything" if floor.nil?
 
       in_bounds({ "min" => floor, "max" => LONGEST }, RETENTION, value)
     end
 
     def self.checked_engine(name, value)
-      dial = ENGINE_DIALS.fetch(name) { raise Refused, "#{name} is not an engine setting" }
+      dial = ENGINE_DIALS.fetch(name) { raise RefusedError, "#{name} is not an engine setting" }
       if dial[:kind] == :switch
         return value if %w[true false].include?(value)
 
-        raise Refused, "#{value} is not true or false"
+        raise RefusedError, "#{value} is not true or false"
       end
       if dial[:kind] == :choice
         return value if dial[:choices].include?(value)
 
-        raise Refused, "#{value} is not one of #{dial[:choices].join(', ')}"
+        raise RefusedError, "#{value} is not one of #{dial[:choices].join(', ')}"
       end
       return value if dial[:kind] == :time && value.match?(/\A([01]\d|2[0-3]):[0-5]\d\z/)
-      raise Refused, "#{value} is not a time of day" if dial[:kind] == :time
+      raise RefusedError, "#{value} is not a time of day" if dial[:kind] == :time
 
       in_bounds(dial.transform_keys(&:to_s), name, value)
     end
 
     def self.in_bounds(bounds, name, value)
-      raise Refused, "#{name} has to be a number" unless value.match?(/\A\d+\z/)
+      raise RefusedError, "#{name} has to be a number" unless value.match?(/\A\d+\z/)
 
       asked = value.to_i
       low = bounds.fetch("min")
       high = bounds.fetch("max")
       return value if asked.between?(low, high)
 
-      raise Refused, "#{name} has to be between #{low} and #{high}"
+      raise RefusedError, "#{name} has to be between #{low} and #{high}"
     end
   end
 end

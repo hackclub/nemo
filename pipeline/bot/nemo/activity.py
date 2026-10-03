@@ -1,4 +1,4 @@
-"""How one top-level post did: slack's own message activity, read for the author"""
+"""Message activity for a top-level post, from Slack's message activity API."""
 
 import datetime as dt
 import logging
@@ -50,13 +50,13 @@ def members(conn, channel_id):
 
 
 def may_read(user_id, author_id):
-    """Only the author, and only when slack says who that is"""
+    """True when the requester is the message author and Slack reports an author."""
     return bool(author_id) and author_id == user_id
 
 
 def chart(client, curves, posted_at, viewers):
-    """Draw the span that suits the post's age and hand the png to slack, privately.
-    Returns the file id for an image block, or None when either step fails"""
+    """Render the span appropriate to the post's age and upload the PNG privately.
+    Returns the file id for an image block, or None when either step fails."""
     age = (dt.datetime.now(dt.UTC) - posted_at).total_seconds() if posted_at else 0
     span = plot.span_for(age)
     png = plot.render(curves.get(span) or [], span, viewers=viewers, age_seconds=age)
@@ -93,14 +93,14 @@ def share(count, whole):
 
 
 def clients(stats):
-    said = stats.get("client_breakdown") or {}
-    counts = [(label, int(said.get(key) or 0)) for key, label in CLIENTS]
+    breakdown = stats.get("client_breakdown") or {}
+    counts = [(label, int(breakdown.get(key) or 0)) for key, label in CLIENTS]
     whole = sum(count for _, count in counts)
     return [(label, count, share(count, whole)) for label, count in counts]
 
 
 def curve(stats, span):
-    """New unique viewers per bucket for one span, as (at, count) pairs"""
+    """Return (timestamp, unique_viewers) pairs per bucket for the given span."""
     series = (stats.get("viewers_time_series") or {}).get("data") or []
     for one in series:
         if one.get("seriesType") != span:

@@ -31,14 +31,14 @@ function axWide(text) {
 }
 
 function axClip(text, room) {
-  const said = String(text)
-  if (!(room > 0) || axWide(said) <= room) return said
+  const label = String(text)
+  if (!(room > 0) || axWide(label) <= room) return label
 
-  for (let n = said.length - 1; n >= 2; n--) {
-    const cut = `${said.slice(0, n)}…`
+  for (let n = label.length - 1; n >= 2; n--) {
+    const cut = `${label.slice(0, n)}…`
     if (axWide(cut) <= room) return cut
   }
-  return said
+  return label
 }
 
 const F = (n) => (n == null ? "n/a" : Number(n).toLocaleString("en-US"))
@@ -161,7 +161,7 @@ export default class extends Controller {
     this.element.classList.toggle("chart-spark", this.sparkValue)
     this.element.innerHTML = `${this.head(series)}<div class="chart tipped" tabindex="0"
       data-action="mousemove->chart#track mouseleave->chart#clear keydown->chart#key"
-      ><div class="tip"></div><span class="chart-say" aria-live="polite"></span></div>`
+      ><div class="tip"></div><span class="chart-caption" aria-live="polite"></span></div>`
     this.wide = 0
     this.measure()
   }
@@ -199,7 +199,7 @@ export default class extends Controller {
     return this.fineTicks ? `${Number(v).toFixed(1)}%` : `${Math.round(v)}%`
   }
 
-  said(v) {
+  format(v) {
     if (v == null) return "n/a"
     return this.pctValue ? `${Number(v).toFixed(1)}%` : F(v)
   }
@@ -207,14 +207,14 @@ export default class extends Controller {
   get pad() {
     if (this.sparkValue) return { l: 1, r: 1, t: 3, b: 3 }
 
-    const said = {
+    const text = {
       ...PAD,
       l: PAD.l + (this.xlabelValue || this.ylabelValue ? AX_SAY_Y : 0),
       b: PAD.b + (this.xlabelValue ? AX_SAY_X : 0)
     }
-    if (!this.tilt) return said
+    if (!this.tilt) return text
 
-    return { ...said, r: said.r + (this.tiltEdge || 0), b: said.b + Math.round(this.tiltRoom || 22) }
+    return { ...text, r: text.r + (this.tiltEdge || 0), b: text.b + Math.round(this.tiltRoom || 22) }
   }
 
   get stack() {
@@ -317,14 +317,14 @@ export default class extends Controller {
     }).join("")
 
     const gaps = rows.map((r, i) => r.gap
-      ? `<rect class="hole" x="${x(i).toFixed(1)}" y="${pad.t}" width="${
+      ? `<rect class="donut-hole" x="${x(i).toFixed(1)}" y="${pad.t}" width="${
         Math.max(1, x.step()).toFixed(1)}" height="${(floor - pad.t).toFixed(1)}"/>`
       : "").join("")
 
     const rule = this.hasRuleValue && this.ruleValue.at != null
       ? `<line class="mark-rule" x1="${pad.l}" y1="${y(this.ruleValue.at).toFixed(1)}" x2="${
         right}" y2="${y(this.ruleValue.at).toFixed(1)}"/>` + (this.ruleValue.label
-        ? `<text class="ax rule-say" x="${right}" y="${
+        ? `<text class="ax rule-note" x="${right}" y="${
           (y(this.ruleValue.at) - 5).toFixed(1)}" text-anchor="end">${
           esc(this.ruleValue.label)}</text>`
         : "")
@@ -337,7 +337,7 @@ export default class extends Controller {
       const at = (x(after) + x.bandwidth() + x(after + 1)) / 2
       return `<line class="split" x1="${at.toFixed(1)}" y1="${pad.t}" x2="${at.toFixed(1)}" y2="${
         floor}"/>` + (split.label
-        ? `<text class="ax split-say" x="${(at + 5).toFixed(1)}" y="${pad.t + 9}">${
+        ? `<text class="ax split-note" x="${(at + 5).toFixed(1)}" y="${pad.t + 9}">${
           esc(split.label)}</text>`
         : "")
     }).join("")
@@ -549,10 +549,10 @@ export default class extends Controller {
     const seen = rows.flatMap((r) => series.map((s) => r[s.k])).filter((v) => v != null)
     const holes = rows.filter((r) => r.gap).length
     const range = seen.length
-      ? `, low ${this.said(Math.min(...seen))}, high ${this.said(Math.max(...seen))}`
+      ? `, low ${this.format(Math.min(...seen))}, high ${this.format(Math.max(...seen))}`
       : ""
     const latest = rows.length && series.length
-      ? `, latest ${this.said(rows[rows.length - 1][series[0].k])}`
+      ? `, latest ${this.format(rows[rows.length - 1][series[0].k])}`
       : ""
     const unit = this.daysValue ? "day" : "point"
     const missing = holes ? `, ${holes} ${unit}${holes > 1 ? "s" : ""} not measurable` : ""
@@ -598,24 +598,24 @@ export default class extends Controller {
     this.at = i
 
     const lines = row.gap
-      ? `<div class="row"><i class="hole-dot"></i>${
+      ? `<div class="row"><i class="donut-hole-dot"></i>${
         esc(row.why || "not fetched")}<b>n/a</b></div>`
       : g.series.map((s) => row[s.k] == null ? "" :
         `<div class="row"><i class="${this.paint(s)}"${this.tint(s)}></i>${esc(s.n)}<b><span>${
-          this.said(row[s.k])}</span>${row[s.c] == null ? "" : `<u>${F(row[s.c])}</u>`}</b></div>`)
+          this.format(row[s.k])}</span>${row[s.c] == null ? "" : `<u>${F(row[s.c])}</u>`}</b></div>`)
         .join("")
 
     const whole = this.stack && !row.gap && !this.pctValue
       ? `<div class="row row-sum"><i></i>total<b><span>${
-        this.said(this.sum(row, g.series))}</span></b></div>`
+        this.format(this.sum(row, g.series))}</span></b></div>`
       : ""
 
     const short = this.hasPartialValue && this.partialValue.map(Number).includes(i)
-      ? `<div class="row row-note"><i class="hole-dot"></i>${
+      ? `<div class="row row-note"><i class="donut-hole-dot"></i>${
         esc(this.partialNoteValue || "period not complete")}</div>`
       : ""
 
-    const said = row.tip
+    const text = row.tip
       ? `<div class="row row-note"><i></i>${esc(row.tip)}</div>`
       : ""
 
@@ -624,7 +624,7 @@ export default class extends Controller {
       : ""
 
     const tip = chart.querySelector(".tip")
-    tip.innerHTML = `<div class="t">${esc(row.label)}</div>${lines}${whole}${said}${short}${note}`
+    tip.innerHTML = `<div class="t">${esc(row.label)}</div>${lines}${whole}${text}${short}${note}`
     tip.classList.add("on")
 
     const at = g.mid(i)
@@ -657,10 +657,10 @@ export default class extends Controller {
       })
     }
 
-    chart.querySelector(".chart-say").textContent = row.gap
+    chart.querySelector(".chart-note").textContent = row.gap
       ? `${row.label}, ${row.why || "not fetched"}`
-      : `${row.label}, ${g.series.map((s) => `${s.n} ${this.said(row[s.k])}`).join(", ")}${
-        this.stack ? `, total ${this.said(this.sum(row, g.series))}` : ""}`
+      : `${row.label}, ${g.series.map((s) => `${s.n} ${this.format(row[s.k])}`).join(", ")}${
+        this.stack ? `, total ${this.format(this.sum(row, g.series))}` : ""}`
   }
 
   clear() {
@@ -672,7 +672,7 @@ export default class extends Controller {
     chart.querySelector(".cur")?.setAttribute("opacity", "0")
     chart.querySelectorAll(".dot").forEach((dot) => dot.setAttribute("opacity", "0"))
     chart.querySelectorAll(".mark").forEach((mark) => mark.classList.remove("fade"))
-    const say = chart.querySelector(".chart-say")
+    const say = chart.querySelector(".chart-note")
     if (say) say.textContent = ""
   }
 }

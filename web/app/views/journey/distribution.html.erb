@@ -9,16 +9,16 @@
 <% if searched.positive? %>
   <div class="metrics">
     <div class="metric">
-      <span class="metric-k">Ever posted</span>
-      <span class="metric-v"><%= number_to_percentage(posters.to_f / searched * 100, precision: 1) %></span>
+      <span class="metric-key">Ever posted</span>
+      <span class="metric-value"><%= number_to_percentage(posters.to_f / searched * 100, precision: 1) %></span>
     </div>
     <div class="metric">
-      <span class="metric-k">Concentration</span>
-      <span class="metric-v"><%= curve.first&.gini&.to_f&.round(3) || "n/a" %></span>
+      <span class="metric-key">Concentration</span>
+      <span class="metric-value"><%= curve.first&.gini&.to_f&.round(3) || "n/a" %></span>
     </div>
     <div class="metric">
-      <span class="metric-k">Top tenth of posters</span>
-      <span class="metric-v">
+      <span class="metric-key">Top tenth of posters</span>
+      <span class="metric-value">
         <%= tenth ? number_to_percentage(100 - tenth.message_pct.to_f, precision: 1) : "n/a" %>
       </span>
     </div>

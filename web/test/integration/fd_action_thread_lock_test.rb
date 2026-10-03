@@ -97,11 +97,11 @@ class FdActionThreadLockTest < ActionDispatch::IntegrationTest
   test "a lock already on the case is offered but cannot be picked" do
     guard = lock!(case_id: @kase.id)
     get fd_case_path(@kase, do: "action")
-    said = response.body
+    body = response.body
 
-    assert_match(/name="thread_guard_id" value="#{guard.id}"/, said)
+    assert_match(/name="thread_guard_id" value="#{guard.id}"/, body)
     assert_select %(input[name="thread_guard_id"][value="#{guard.id}"][disabled])
-    assert_match(/already on this case/, said)
+    assert_match(/already on this case/, body)
   end
 
   test "a lock already on the case is refused even if the form is forced" do
@@ -144,11 +144,11 @@ class FdActionThreadLockTest < ActionDispatch::IntegrationTest
     mine = lock!(case_id: @kase.id, thread_ts: "1700000000.000200")
     loose = lock!(case_id: nil, thread_ts: "1700000000.000300")
     get fd_case_path(@kase, do: "action")
-    said = response.body
+    body = response.body
 
-    assert_operator said.index(%(value="#{mine.id}")), :<, said.index(%(value="#{loose.id}"))
-    assert_match(/on this case/, said)
-    assert_match(/on no case/, said)
+    assert_operator body.index(%(value="#{mine.id}")), :<, body.index(%(value="#{loose.id}"))
+    assert_match(/on this case/, body)
+    assert_match(/on no case/, body)
   end
 
   test "a lifted lock is not offered" do
@@ -160,11 +160,11 @@ class FdActionThreadLockTest < ActionDispatch::IntegrationTest
 
   test "the picker and the member fields start hidden behind the kind" do
     get fd_case_path(@kase, do: "action")
-    said = response.body
+    body = response.body
 
-    assert_match(/data-action-standing-target="locks" hidden/, said)
-    assert_match(/data-action-standing-target="aimed"/, said)
-    assert_match(/data-action-standing-target="why"/, said)
+    assert_match(/data-action-standing-target="locks" hidden/, body)
+    assert_match(/data-action-standing-target="aimed"/, body)
+    assert_match(/data-action-standing-target="why"/, body)
   end
 
   test "a logged lock reads as being on a thread, not a member" do

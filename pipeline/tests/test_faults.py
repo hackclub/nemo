@@ -5,7 +5,7 @@ from slack_sdk.errors import SlackApiError
 from lib import faults
 from lib.db import SyncCancelled
 from lib.proxy_client import InternalApiError, InternalAuthError, ProxyError, ProxyUnavailableError
-from lib.walk import WalkWrong
+from lib.walk import WalkMismatchError
 
 
 def slack_error(error):
@@ -34,7 +34,7 @@ def slack_error(error):
     (KeyError("user_id"), "contract"),
     (ValueError("bad ts"), "contract"),
     (TypeError("None + 1"), "contract"),
-    (WalkWrong("walked 1 against 100"), "local"),
+    (WalkMismatchError("walked 1 against 100"), "local"),
     (psycopg.OperationalError("connection lost"), "local"),
     (TimeoutError("read timed out"), "transport"),
     (RuntimeError("something else"), "local"),

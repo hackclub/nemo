@@ -4,12 +4,12 @@ from bot.nemo import command
 
 WHO = "U1ABC"
 ROOM = "C1LOUNGE"
-SAID = f"<@{WHO}|somebody>"
+MENTION = f"<@{WHO}|somebody>"
 THERE = f"<#{ROOM}|lounge>"
 
 
 def test_shush_is_asked_for_like_the_other_verbs():
-    verb, wanted, body = command.asked(f"shush {SAID} 3d flooding the channel")
+    verb, wanted, body = command.asked(f"shush {MENTION} 3d flooding the channel")
 
     assert (verb, wanted, body) == (command.SHUSH, WHO, "3d flooding the channel")
 
@@ -33,8 +33,8 @@ def test_a_date_is_taken_as_it_stands():
 
 
 def test_what_is_not_a_length_reads_as_none():
-    for said in ("0d", "999d", "soon", "", "2026-13-01", "-3d"):
-        assert command.ends_on(said) is None, said
+    for text in ("0d", "999d", "soon", "", "2026-13-01", "-3d"):
+        assert command.ends_on(text) is None, text
 
 
 def test_a_date_already_gone_reads_as_none():
@@ -62,7 +62,7 @@ def test_a_length_with_no_reason_leaves_nothing_to_write_down():
 
 
 def test_channelban_is_asked_for_like_the_other_verbs():
-    verb, wanted, body = command.asked(f"channelban {SAID} {THERE} 3d flooding it")
+    verb, wanted, body = command.asked(f"channelban {MENTION} {THERE} 3d flooding it")
 
     assert (verb, wanted, body) == (command.CHANNEL_BAN, WHO, f"{THERE} 3d flooding it")
 

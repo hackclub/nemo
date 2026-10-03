@@ -31,7 +31,7 @@ def tuned(conn):
     try:
         with conn.cursor() as cur:
             cur.execute(TUNED_SQL)
-            return {(source, name): value for source, name, value in cur.fetchall()}
+            return {(source, name): val for source, name, val in cur.fetchall()}
     except psycopg.Error as exc:
         conn.rollback()
         if not _warned:
@@ -41,7 +41,7 @@ def tuned(conn):
         return UNREADABLE
 
 
-def said(conn, source, name, fallback):
+def value(conn, source, name, fallback):
     got = tuned(conn)
     if got is UNREADABLE:
         return fallback
@@ -49,24 +49,24 @@ def said(conn, source, name, fallback):
 
 
 def cadence(conn, key):
-    return said(conn, key, "cadence", sources.says(key, "cadence"))
+    return value(conn, key, "cadence", sources.field_of(key, "cadence"))
 
 
 def enabled(conn, key):
-    return said(conn, key, "enabled", "true") != "false"
+    return value(conn, key, "enabled", "true") != "false"
 
 
 def limit(conn, key, name):
     bounds = sources.limit(key, name)
-    return sources.clamped(key, name, said(conn, key, name, bounds["default"]))
+    return sources.clamped(key, name, value(conn, key, name, bounds["default"]))
 
 
 def run_at(conn):
-    return said(conn, ENGINE, "run_at", DEFAULTS["run_at"])
+    return value(conn, ENGINE, "run_at", DEFAULTS["run_at"])
 
 
 def budget_minutes(conn):
-    return int(said(conn, ENGINE, "budget_minutes", DEFAULTS["budget_minutes"]))
+    return int(value(conn, ENGINE, "budget_minutes", DEFAULTS["budget_minutes"]))
 
 
 KEEP = "keep"
@@ -85,7 +85,7 @@ OFF = "off"
 
 
 def reclaim_seconds(conn):
-    asked = said(conn, ENGINE, "reclaim_seconds", DEFAULTS["reclaim_seconds"])
+    asked = value(conn, ENGINE, "reclaim_seconds", DEFAULTS["reclaim_seconds"])
     if asked == OFF:
         return None
     if asked in (None, ""):
@@ -94,7 +94,7 @@ def reclaim_seconds(conn):
 
 
 def retention_days(conn, key):
-    asked = said(conn, key, "retention_days", KEEP)
+    asked = value(conn, key, "retention_days", KEEP)
     if asked == KEEP:
         return None
 

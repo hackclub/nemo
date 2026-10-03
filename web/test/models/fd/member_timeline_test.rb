@@ -173,7 +173,7 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
 
     assert_equal "Note", entry.title
     assert_equal "note", entry.mark
-    assert_equal "a soft word early goes further", entry.said
+    assert_equal "a soft word early goes further", entry.body
     assert_nil entry.case_id, "a standing note belongs to no case, so it links to none"
     assert_equal "@UFF1", entry.state, "the author is the chip"
   end
@@ -200,8 +200,8 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
     act_on kase, at: 3.days.ago
     note_about(created_at: 1.day.ago)
 
-    said = entries
-    assert_equal 3, said.size
-    assert_equal %w[notes actions cases], said.map(&:kind)
+    rows = entries
+    assert_equal 3, rows.size
+    assert_equal %w[notes actions cases], rows.map(&:kind)
   end
 end

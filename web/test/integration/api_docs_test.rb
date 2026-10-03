@@ -56,7 +56,7 @@ class ApiDocsTest < ActionDispatch::IntegrationTest
     sign_in_as(@member)
     get doc_path(@topic.slug)
 
-    listed = css_select("#section-nav .cnav-sub a").map { |link| link["href"].delete_prefix("#") }
+    listed = css_select("#section-nav .community-nav-sub a").map { |link| link["href"].delete_prefix("#") }
     rendered = css_select(".doc-sec").map { |sec| sec["id"] }
 
     assert_equal @topic.sections.map(&:id), listed, "the sidebar lists every section, in order"
@@ -67,7 +67,7 @@ class ApiDocsTest < ActionDispatch::IntegrationTest
     sign_in_as(@member)
     get doc_path(@topic.slug)
 
-    assert_select "#section-nav .cnav-group a[href=?]", doc_path(@topic.slug)
+    assert_select "#section-nav .community-nav-group a[href=?]", doc_path(@topic.slug)
     assert_select "#section-nav a[aria-current=page]", 1
   end
 

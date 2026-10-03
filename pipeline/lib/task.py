@@ -6,8 +6,8 @@ from lib.db import dead_letter
 CONSECUTIVE_FAULTS = 25
 
 
-class LaneAborted(RuntimeError):
-    """Too many consecutive per-entity faults, the whole lane is presumed broken"""
+class LaneAbortedError(RuntimeError):
+    """Raised when consecutive per-entity faults exceed the lane threshold."""
 
 
 @contextmanager
@@ -29,7 +29,7 @@ def per_entity(conn, source, counts, payload, on_entity=None, on_fault=None):
             conn.commit()
         counts.consecutive_faults += 1
         if counts.consecutive_faults >= CONSECUTIVE_FAULTS:
-            raise LaneAborted(
+            raise LaneAbortedError(
                 f"{source}: {counts.consecutive_faults} consecutive {fault.name} faults, "
                 f"the last was {fault.detail[:120]}"
             ) from exc

@@ -54,8 +54,8 @@ module Fd
       end
     end
 
-    def self.parsed(said)
-      said.is_a?(String) ? JSON.parse(said) : (said || {})
+    def self.parsed(value)
+      value.is_a?(String) ? JSON.parse(value) : (value || {})
     rescue JSON::ParserError
       {}
     end

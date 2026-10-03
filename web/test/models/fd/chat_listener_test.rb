@@ -20,17 +20,17 @@ class Fd::ChatListenerTest < ActiveSupport::TestCase
   end
 
   test "saying no in any of the usual spellings turns it off" do
-    %w[0 false no off FALSE Off].each do |said|
-      with_env("NEMO_STREAM", said) do
-        assert_not Fd::ChatListener.wanted?, "NEMO_STREAM=#{said} should not stream"
+    %w[0 false no off FALSE Off].each do |value|
+      with_env("NEMO_STREAM", value) do
+        assert_not Fd::ChatListener.wanted?, "NEMO_STREAM=#{value} should not stream"
       end
     end
   end
 
   test "anything else asked for turns it on, whatever the process is called" do
-    %w[1 true yes on].each do |said|
-      with_env("NEMO_STREAM", said) do
-        assert Fd::ChatListener.wanted?, "NEMO_STREAM=#{said} should stream"
+    %w[1 true yes on].each do |value|
+      with_env("NEMO_STREAM", value) do
+        assert Fd::ChatListener.wanted?, "NEMO_STREAM=#{value} should stream"
       end
     end
   end
@@ -52,14 +52,14 @@ class Fd::ChatListenerTest < ActiveSupport::TestCase
   end
 
   test "it connects on its own terms, not out of the request pool" do
-    said = {
+    value = {
       host: "db.example", port: 5432, database: "mnemosyne",
       username: "rails_app", password: "secret", pool: 5, adapter: "postgresql"
     }
 
     assert_equal({ host: "db.example", port: 5432, dbname: "mnemosyne",
                    user: "rails_app", password: "secret" },
-      Fd::ChatListener.connection_options(said))
+      Fd::ChatListener.connection_options(value))
   end
 
   test "a socket with nothing configured for it is left out" do

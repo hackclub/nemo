@@ -82,8 +82,8 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     write(body: "   ")
     assert_equal 0, notes.count
     assert_nil flash[:alert], "a problem with one field is not a page-level message"
-    assert_equal "body", flash[:wrong]["field"]
-    assert_match(/Write the note/i, flash[:wrong]["said"])
+    assert_equal "body", flash[:field_error]["field"]
+    assert_match(/Write the note/i, flash[:field_error]["message"])
   end
 
   test "the body is trimmed before it is stored" do
@@ -96,8 +96,8 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     write(body: "x" * (Fd::NotesController::MAX_LENGTH + 1))
     assert_equal 0, notes.count
-    assert_match(/Keep it under/, flash[:wrong]["said"])
-    assert_nil flash[:wrong]["was"],
+    assert_match(/Keep it under/, flash[:field_error]["message"])
+    assert_nil flash[:field_error]["was"],
       "a body over the limit will not fit in a cookie, so it is not carried back"
   end
 
@@ -123,7 +123,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     assert_equal "UME", note.deleted_by
     assert_equal "wrote this in haste", note.body, "the row stays, only the visibility changes"
     assert_match(/Note removed/i, flash[:notice])
-    assert_match(/stays in the audit trail/, flash[:said])
+    assert_match(/stays in the audit trail/, flash[:detail])
   end
 
   test "I cannot remove somebody else's note" do
@@ -132,7 +132,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
     delete fd_case_note_path(@kase, note)
 
     assert_nil note.reload.deleted_at
-    assert_match(/only whoever wrote a note can remove it/, flash[:alert])
+    assert_match(/Only the author of a note can remove it/, flash[:alert])
   end
 
   test "a note belonging to another case cannot be removed through this one" do

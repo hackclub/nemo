@@ -5,8 +5,8 @@ module Slack
     class Error < StandardError; end
     class AuthError < Error; end
     class ApiError < Error; end
-    class Unavailable < Error; end
-    class NotConfigured < StandardError; end
+    class UnavailableError < Error; end
+    class NotConfiguredError < StandardError; end
 
     Body = Struct.new(:bytes, :kind, keyword_init: true)
 
@@ -22,7 +22,7 @@ module Slack
         detail = detail_of(answer)
         raise detail.to_s.start_with?("invalid_auth") ? AuthError.new(detail) : ApiError.new(detail)
       else
-        raise Unavailable, "proxy returned #{answer.code}: #{detail_of(answer)}"
+        raise UnavailableError, "proxy returned #{answer.code}: #{detail_of(answer)}"
       end
     end
 
@@ -37,7 +37,7 @@ module Slack
         http.request(request)
       end
     rescue Net::OpenTimeout, Net::ReadTimeout, SystemCallError, IOError, SocketError => e
-      raise Unavailable, e.message
+      raise UnavailableError, e.message
     end
 
     def self.call(method, params = {}, credential: "internal", read_timeout: 30)
@@ -63,19 +63,19 @@ module Slack
         detail = detail_of(response)
         raise detail.to_s.start_with?("invalid_auth") ? AuthError.new(detail) : ApiError.new(detail)
       else
-        raise Unavailable, "proxy returned #{response.code}: #{detail_of(response)}"
+        raise UnavailableError, "proxy returned #{response.code}: #{detail_of(response)}"
       end
     rescue Net::OpenTimeout, Net::ReadTimeout, SystemCallError, IOError, SocketError => e
-      raise Unavailable, e.message
+      raise UnavailableError, e.message
     end
 
     LOCAL_HOSTS = ["localhost", "127.0.0.1", "::1", "host.docker.internal"].freeze
     TRUTHY = ["1", "true", "yes", "on"].freeze
 
     def self.base_url
-      url = ENV["INTERNAL_PROXY_URL"].presence || raise(NotConfigured, "INTERNAL_PROXY_URL is not set")
+      url = ENV["INTERNAL_PROXY_URL"].presence || raise(NotConfiguredError, "INTERNAL_PROXY_URL is not set")
       refusal = plaintext_refusal(url)
-      raise NotConfigured, refusal if refusal
+      raise NotConfiguredError, refusal if refusal
 
       url
     end
@@ -91,7 +91,7 @@ module Slack
     end
 
     def self.token
-      ENV["PROXY_TOKEN_WEB"].presence || raise(NotConfigured, "PROXY_TOKEN_WEB is not set")
+      ENV["PROXY_TOKEN_WEB"].presence || raise(NotConfiguredError, "PROXY_TOKEN_WEB is not set")
     end
 
     def self.detail_of(response)

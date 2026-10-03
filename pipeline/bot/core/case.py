@@ -36,7 +36,7 @@ WHERE id = %s AND resolved_at IS NOT NULL AND duplicate_of IS NULL
 """
 
 
-def wake(conn, case_id, by):
+def reopen(conn, case_id, by):
     row = conn.execute(STANDING, (case_id,)).fetchone()
     if row is None or row[0] is None or row[2] is not None:
         return None

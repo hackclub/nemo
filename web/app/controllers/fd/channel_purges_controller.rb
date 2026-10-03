@@ -22,9 +22,9 @@ module Fd
         audit(purge, "queued", after: { "channel_id" => channel_id, "wanted" => wanted })
       end
 
-      redirect_to here, notice: "nemo is taking down the last #{wanted} here"
+      redirect_to here, notice: "Deleting the last #{wanted} messages in this channel"
     rescue ActiveRecord::RecordNotUnique
-      refuse("a purge is already running here")
+      refuse("A purge is already running in this channel")
     end
 
     private
@@ -51,7 +51,7 @@ module Fd
       end
       return "say why" if reason.blank?
       return "keep it under #{LONGEST_REASON} characters" if reason.length > LONGEST_REASON
-      return "a purge is already running here" if ChannelPurge.waiting_on?(channel_id)
+      return "A purge is already running in this channel" if ChannelPurge.waiting_on?(channel_id)
 
       nil
     end

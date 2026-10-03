@@ -22,7 +22,7 @@ class PanelTest < ActiveSupport::TestCase
   end
 
   test "an unknown panel is refused rather than treated as open" do
-    assert_raises(Panel::Unknown) { Panel.visible?("overview.teleporter", nil) }
+    assert_raises(Panel::UnknownError) { Panel.visible?("overview.teleporter", nil) }
   end
 
   test "the analytics panels are open and the member directory is not" do

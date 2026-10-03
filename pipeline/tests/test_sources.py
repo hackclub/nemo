@@ -6,18 +6,18 @@ from lib import sources
 
 def test_every_source_declares_its_behaviour():
     for key in sources.KEYS:
-        said = sources.source(key)
-        missing = [field for field in sources.DECLARED if field not in said]
+        spec = sources.source(key)
+        missing = [field for field in sources.DECLARED if field not in spec]
         assert not missing, f"{key} declares no {', '.join(missing)}"
 
 
 def test_declared_values_come_from_the_allowed_sets():
     for key in sources.KEYS:
-        said = sources.source(key)
-        assert said["cadence"] in sources.CADENCES, key
-        assert said["guard"] in sources.GUARDS, key
-        assert said["resume"] in sources.RESUMES, key
-        assert said["retention"] in sources.RETENTIONS, key
+        spec = sources.source(key)
+        assert spec["cadence"] in sources.CADENCES, key
+        assert spec["guard"] in sources.GUARDS, key
+        assert spec["resume"] in sources.RESUMES, key
+        assert spec["retention"] in sources.RETENTIONS, key
 
 
 def test_nothing_is_pruned_unless_a_window_is_asked_for():
@@ -74,9 +74,9 @@ def test_clamped_holds_a_value_inside_its_bounds():
 
 
 def test_an_unknown_source_is_refused_rather_than_empty():
-    with pytest.raises(sources.Unknown):
+    with pytest.raises(sources.UnknownSourceError):
         sources.source("teleporter")
-    with pytest.raises(sources.Unknown):
+    with pytest.raises(sources.UnknownSourceError):
         sources.limit("team_stats", "batch")
 
 
@@ -96,7 +96,7 @@ def test_a_source_claiming_num_found_actually_enforces_a_floor():
 def test_member_days_says_it_has_no_usable_count():
     from lib import sources
 
-    assert sources.says("member_days", "guard") == "none"
+    assert sources.field_of("member_days", "guard") == "none"
 
 
 def test_every_declared_guard_is_in_the_vocabulary():
@@ -160,10 +160,10 @@ def test_every_feeds_entry_names_a_model_the_source_actually_reaches():
     for key in sources.KEYS:
         if key in BUILDS_THE_WHOLE_WAREHOUSE:
             continue
-        said = sources.source(key)
-        tables = {tuple(w.split(".", 1)) for w in said["writes"] if "." in w}
+        spec = sources.source(key)
+        tables = {tuple(w.split(".", 1)) for w in spec["writes"] if "." in w}
         reached = reached_from(models, tables)
-        for fed in said["feeds"]:
+        for fed in spec["feeds"]:
             assert fed in models, f"{key} says it feeds {fed}, which is not a warehouse model"
             assert fed in reached, (
                 f"{key} says it feeds {fed}, but nothing downstream of {sorted(tables)} reads it"

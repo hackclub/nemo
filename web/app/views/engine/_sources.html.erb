@@ -23,9 +23,9 @@
         <div>Window</div>
         <div>Retention</div>
         <div>Last 14 nights</div>
-        <div class="r">Last ok</div>
-        <div class="r">Typical</div>
-        <div class="r">Rows</div>
+        <div class="align-right">Last ok</div>
+        <div class="align-right">Typical</div>
+        <div class="align-right">Rows</div>
         <div></div>
         <div></div>
     </div>
@@ -38,7 +38,7 @@
       <% is_open = open == source.key %>
       <%= link_to engine_path(tab: "sources", open: (source.key unless is_open)),
             class: "source-row", aria: { expanded: is_open.to_s } do %>
-        <div class="skey"><i class="dot <%= state %>"></i><b><%= source.key %></b></div>
+        <div class="stat-key"><i class="dot <%= state %>"></i><b><%= source.key %></b></div>
         <div class="src-cell"><%= Engine::Setting.value(source.key, Engine::Setting::CADENCE) %></div>
         <div class="sub fine-mono"><%= source.window %></div>
         <div class="src-cell">
@@ -50,20 +50,20 @@
         <% shown_nights = nights.last(14) %>
         <div class="cells" role="group" aria-label="<%= source.key %>, the last 14 nights">
           <% cells.last(14).each_with_index do |cell, i| %><i class="<%= cell %>" role="img"
-             title="<%= shown_nights[i]&.strftime("%-d %b") %> &middot; <%= cell_said(cell) %>"
-             aria-label="<%= shown_nights[i]&.strftime("%-d %b") %>, <%= cell_said(cell) %>"></i><% end %>
+             title="<%= shown_nights[i]&.strftime("%-d %b") %> &middot; <%= cell_label(cell) %>"
+             aria-label="<%= shown_nights[i]&.strftime("%-d %b") %>, <%= cell_label(cell) %>"></i><% end %>
         </div>
-        <div class="snum <%= "warn" if state == "stale" %>"><%= short_age(row.last_ok) %></div>
-        <div class="snum"><%= row.typical ? "#{row.typical.round}s" : "n/a" %></div>
-        <div class="snum"><%= row.rows ? number_with_delimiter(row.rows) : "n/a" %></div>
-        <div class="r"></div>
-        <div class="scar">&#9654;</div>
+        <div class="stat-value <%= "warn" if state == "stale" %>"><%= short_age(row.last_ok) %></div>
+        <div class="stat-value"><%= row.typical ? "#{row.typical.round}s" : "n/a" %></div>
+        <div class="stat-value"><%= row.rows ? number_with_delimiter(row.rows) : "n/a" %></div>
+        <div class="align-right"></div>
+        <div class="disclosure-caret">&#9654;</div>
       <% end %>
 
       <% if is_open %>
-        <div class="exp">
+        <div class="contract">
           <div>
-            <div class="exp-k">The contract &middot; db/sources.yml</div>
+            <div class="contract-key">The contract &middot; db/sources.yml</div>
             <dl class="facts2">
               <dt>Endpoint</dt><dd><%= source.endpoint %></dd>
               <dt>Credential</dt><dd><%= source.credential %></dd>
@@ -78,30 +78,30 @@
               </dd>
             </dl>
 
-            <div class="exp-k exp-k-next">Dials</div>
+            <div class="contract-key contract-key-next">Dials</div>
             <div class="dialrow">
-              <div class="dn">Cadence<span>how often the night runs it</span></div>
-              <div class="dd">was <%= source.cadence %></div>
-              <%= render "val", source: source.key, name: Engine::Setting::CADENCE, may_tune: may_tune %>
+              <div class="is-hidden">Cadence<span>how often the night runs it</span></div>
+              <div class="meta-fine">was <%= source.cadence %></div>
+              <%= render "setting_value", source: source.key, name: Engine::Setting::CADENCE, may_tune: may_tune %>
             </div>
             <div class="dialrow">
-              <div class="dn">Retention<span>how many days of its rows are kept</span></div>
-              <div class="dd">was <%= Engine::Setting::KEEP %></div>
-              <%= render "val", source: source.key, name: Engine::Setting::RETENTION, may_tune: may_tune %>
+              <div class="is-hidden">Retention<span>how many days of its rows are kept</span></div>
+              <div class="meta-fine">was <%= Engine::Setting::KEEP %></div>
+              <%= render "setting_value", source: source.key, name: Engine::Setting::RETENTION, may_tune: may_tune %>
             </div>
           </div>
 
           <div>
-            <div class="exp-k">
-              What it said<% if run %> &middot; run <%= run.id %>, <%= run.started_at.strftime("%-d %b, %H:%M") %><% end %>
+            <div class="contract-key">
+              What it output<% if run %> &middot; run <%= run.id %>, <%= run.started_at.strftime("%-d %b, %H:%M") %><% end %>
             </div>
-            <% said = step_output.find { |out| out.source == source.key } %>
-            <% if said&.output.present? %>
-              <pre><%= said.output %></pre>
+            <% output = step_output.find { |out| out.source == source.key } %>
+            <% if output&.output.present? %>
+              <pre><%= output.output %></pre>
             <% else %>
               <p class="card-sub flat">n/a</p>
             <% end %>
-            <div class="exp-act">
+            <div class="contract-actions">
               <% if active_request.nil? %>
                 <%= button_to "Run it now", engine_stage_path(stage: source.key),
                       class: "btn", form: { class: "contents" } %>

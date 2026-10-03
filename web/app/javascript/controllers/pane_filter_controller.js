@@ -89,7 +89,7 @@ export default class extends Controller {
   replace(html) {
     const holder = document.createElement("div")
     holder.innerHTML = html
-    const next = holder.querySelector("template[data-more-next]")
+    const next = holder.querySelector("template[data-expand-next]")
     next?.remove()
 
     let listbox = this.listTarget.querySelector(`#${this.listIdValue}`)
@@ -105,10 +105,10 @@ export default class extends Controller {
 
     this.listTarget.querySelector(".pane-more")?.remove()
     if (next) {
-      const more = document.createElement("div")
+      const expand = document.createElement("div")
       more.className = "pane-more"
       more.setAttribute("aria-hidden", "true")
-      more.dataset.controller = "more"
+      more.dataset.controller = "expand"
       more.dataset.moreIntoValue = this.listIdValue
       more.dataset.moreUrlValue = next.dataset.moreNext
       more.innerHTML = '<i class="dot run"></i>'

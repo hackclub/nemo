@@ -202,16 +202,16 @@ class CommunityAccessTest < ActionDispatch::IntegrationTest
       post opt_in_channel_path(channel.channel_id)
     end
 
-    assert_match(/needs engine.manage/, flash[:alert])
+    assert_match(/requires engine.manage/, flash[:alert])
   end
 
-  test "engine.manage cannot be handed out piecemeal, only a manager bypasses the ceiling" do
+  test "engine.manage cannot be delegated piecemeal, only a manager bypasses the ceiling" do
     channel = priceable_channel
     skip "the seed priced no channel" if channel.nil?
     open_up(channel, "everyone")
     Engine::Setting.set!("engine", "backfill_ceiling", "0", by: @boss.user_id)
 
-    assert_raises(Authz::Grant::NotAllowed) do
+    assert_raises(Authz::Grant::NotAllowedError) do
       Authz::Grant.give!("UCASYNC", kind: "capability", name: "engine.manage", by: "test")
     end
 

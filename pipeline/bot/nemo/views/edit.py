@@ -1,0 +1,142 @@
+import yaml
+
+from bot.core import richtext
+from lib.paths import CATEGORIES_FILE
+
+MENU = "case_more"
+
+PEOPLE = "case_people"
+ASSIGNEES = "case_assignees_open"
+CATEGORY = "case_category"
+NOTE = "case_note"
+REVERSE = "case_reverse"
+
+WHAT = "category_what"
+NOTE_BODY = "note_body"
+
+NOTE_LIMIT = 5000
+TITLE_LIMIT = 24
+NO_LABEL = " "
+
+LABELS = None
+
+
+def categories():
+    global LABELS
+    if LABELS is None:
+        LABELS = yaml.safe_load(CATEGORIES_FILE.read_text())["categories"]
+    return LABELS
+
+
+def option(text, value):
+    return {"text": {"type": "plain_text", "text": text}, "value": value}
+
+
+OVERFLOW_LIMIT = 5
+
+
+def choices(case):
+    out = [option("People", PEOPLE), option("Assignees", ASSIGNEES)]
+    if not case.get("category_key"):
+        out.append(option("Set the violation", CATEGORY))
+    out.append(option("Leave a note", NOTE))
+    if case.get("live_actions"):
+        out.append(option("Reverse an action", REVERSE))
+    return out
+
+
+def menu(case):
+    picks = choices(case)
+    if not picks:
+        return None
+
+    options = [
+        option(pick["text"]["text"], f"{pick['value']}:{case['case_id']}")
+        for pick in picks
+    ]
+    if len(options) <= OVERFLOW_LIMIT:
+        return {"type": "overflow", "action_id": MENU, "options": options}
+
+    return {
+        "type": "static_select",
+        "action_id": MENU,
+        "placeholder": {"type": "plain_text", "text": "More"},
+        "options": options,
+    }
+
+
+def asked(value):
+    verb, _, case_id = (value or "").rpartition(":")
+    return verb, int(case_id) if case_id.isdigit() else None
+
+
+def category_view(case_id):
+    return {
+        "type": "modal",
+        "callback_id": CATEGORY,
+        "private_metadata": str(case_id),
+        "title": {"type": "plain_text", "text": f"Violation · case {case_id}"[:TITLE_LIMIT]},
+        "submit": {"type": "plain_text", "text": "Set it"},
+        "close": {"type": "plain_text", "text": "Cancel"},
+        "blocks": [
+            {
+                "type": "input",
+                "block_id": WHAT,
+                "label": {"type": "plain_text", "text": NO_LABEL},
+                "element": {
+                    "type": "static_select",
+                    "action_id": WHAT,
+                    "options": [
+                        option(label, key) for key, label in categories().items()
+                    ],
+                },
+            },
+        ],
+    }
+
+
+def note_view(case_id):
+    return {
+        "type": "modal",
+        "callback_id": NOTE,
+        "private_metadata": str(case_id),
+        "title": {"type": "plain_text", "text": f"Note · case {case_id}"[:TITLE_LIMIT]},
+        "submit": {"type": "plain_text", "text": "Keep it"},
+        "close": {"type": "plain_text", "text": "Cancel"},
+        "blocks": [
+            {
+                "type": "input",
+                "block_id": NOTE_BODY,
+                "label": {"type": "plain_text", "text": NO_LABEL},
+                "element": {
+                    "type": "rich_text_input",
+                    "action_id": NOTE_BODY,
+                    "min_lines": 3,
+                    "placeholder": {
+                        "type": "plain_text",
+                        "text": "what you found, what you did",
+                    },
+                },
+            }
+        ],
+    }
+
+
+def what_picked(view_state):
+    chosen = view_state.get("values", {}).get(WHAT, {}).get(WHAT, {}).get("selected_option")
+    return (chosen or {}).get("value")
+
+
+def submitted_values(view_state):
+    values = view_state.get("values", {}).get(NOTE_BODY, {}).get(NOTE_BODY, {}).get("rich_text_value")
+    return richtext.flatten(values)[:NOTE_LIMIT]
+
+
+def note_objection(values):
+    if not values:
+        return {NOTE_BODY: "Write something first."}
+    return None
+
+
+def category_label(key):
+    return categories().get(key, (key or "").replace("_", " "))

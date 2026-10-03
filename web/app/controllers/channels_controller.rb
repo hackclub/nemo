@@ -156,7 +156,7 @@ class ChannelsController < ApplicationController
       actor: current_account.user_id, request_id: request.request_id,
       after: { "channel_id" => row.channel_id, "estimated_requests" => row.estimated_requests })
 
-    redirect_to channel_path(channel.channel_id), notice: "thread replies queued for ##{channel.name}"
+    redirect_to channel_path(channel.channel_id), notice: "Thread replies queued for ##{channel.name}"
   end
 
   def opt_out_replies
@@ -166,14 +166,14 @@ class ChannelsController < ApplicationController
     return refuse_channel if channel.nil?
 
     row = ChannelBackfill.find_by(channel_id: channel.channel_id)
-    return redirect_to(channel_path(channel.channel_id), alert: "not opted in") if row.nil?
+    return redirect_to(channel_path(channel.channel_id), alert: "Not opted in") if row.nil?
 
     row.opt_out!(by: current_account.user_id)
     Fd::Audit.record(row, "turned_off",
       actor: current_account.user_id, request_id: request.request_id,
       after: { "channel_id" => row.channel_id })
 
-    redirect_to channel_path(channel.channel_id), notice: "thread replies stopped for ##{channel.name}"
+    redirect_to channel_path(channel.channel_id), notice: "Thread replies stopped for ##{channel.name}"
   end
 
   private
@@ -194,7 +194,7 @@ class ChannelsController < ApplicationController
 
   def emoji_in(posts)
     posts.flat_map do |post|
-      Slack::RichText.emoji_names(post.message) + post.reactions_said.map { |one| one["name"] }
+      Slack::RichText.emoji_names(post.message) + post.reactions_label.map { |one| one["name"] }
     end.uniq
   end
 
@@ -216,7 +216,7 @@ class ChannelsController < ApplicationController
 
   def refuse_spend(channel, estimate)
     redirect_to channel_path(channel.channel_id),
-      alert: "#{helpers.number_with_delimiter(estimate)} requests needs engine.manage"
+      alert: "#{helpers.number_with_delimiter(estimate)} requests requires engine.manage"
   end
 
   def settle_range(last_available)
@@ -281,13 +281,13 @@ class ChannelsController < ApplicationController
 
   def refuse_channel
     known = Channels::Audience.everything.exists?(channel_id: params[:id])
-    said = if known
+    message = if known
       Community::Access.why_not(current_account, "analytics.channel.read") ||
         "that channel is not shared with you"
     else
       "no such channel"
     end
-    redirect_to channels_path(q: params[:id]), alert: said
+    redirect_to channels_path(q: params[:id]), alert: message
   end
 
   def sort_sql

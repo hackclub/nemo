@@ -18,7 +18,7 @@ module Community
     }.freeze
 
     def self.capability_for(key)
-      CAPABILITY.fetch(key.to_s) { raise Authz::Unknown, "#{key} is not a permission" }
+      CAPABILITY.fetch(key.to_s) { raise Authz::UnknownError, "#{key} is not a permission" }
     end
 
     def self.allow?(staff, key, record = nil)

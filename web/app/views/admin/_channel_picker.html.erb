@@ -1,12 +1,12 @@
 <% id = local_assigns.fetch(:id, "pick-a-channel") %>
 <% field = local_assigns.fetch(:field, :channel_id) %>
-<% said = local_assigns.fetch(:said, "Add channel") %>
+<% label = local_assigns.fetch(:label, "Add channel") %>
 <div data-controller="channel-picker"
      data-channel-picker-name-value="<%= field %>"
      data-channel-picker-url-value="<%= search_admin_channels_path %>"
      data-channel-picker-submit-value="<%= local_assigns.fetch(:submit, false) %>">
   <button type="button" class="btn" data-modal-open="<%= id %>" aria-haspopup="dialog"
-          data-action="click->channel-picker#opened"><%= said %></button>
+          data-action="click->channel-picker#opened"><%= label %></button>
   <span data-channel-picker-target="chosen" class="pick-chosen"></span>
   <span data-channel-picker-target="store"></span>
 

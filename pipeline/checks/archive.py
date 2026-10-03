@@ -20,7 +20,7 @@ WARN_ONLY = frozenset({
 })
 
 
-def hours_since_the_last_write(conn):
+def hours_since_last_write(conn):
     row = conn.execute("SELECT max(updated_at), now() - max(updated_at) FROM archive.message").fetchone()
     if row is None or row[0] is None:
         return ("last write", "fail", "the archive holds nothing", f"under {FRESH_HOURS}h")
@@ -35,7 +35,7 @@ def unconfirmed_rows(conn):
             f"{count} row(s) seeded and never fetched", "0")
 
 
-def channels_still_to_walk(conn):
+def pending_channels(conn):
     count = conn.execute("""
         SELECT count(*)
         FROM raw.channel_dim d
@@ -47,7 +47,7 @@ def channels_still_to_walk(conn):
     return ("channels to walk", "pass" if count == 0 else "fail", f"{count} reachable channel(s)", "0")
 
 
-def channels_slack_will_not_return(conn):
+def unavailable_channels(conn):
     count = conn.execute(
         "SELECT count(*) FROM raw.channel_walk WHERE last_error LIKE 'entity:%'"
     ).fetchone()[0]
@@ -55,7 +55,7 @@ def channels_slack_will_not_return(conn):
             f"{count} channel(s) permanently out of reach", "0")
 
 
-def threads_still_to_fetch(conn):
+def pending_threads(conn):
     owed, known = conn.execute(
         "SELECT count(*) FILTER (WHERE fetched_at IS NULL), count(*) FROM raw.thread"
     ).fetchone()
@@ -71,32 +71,32 @@ def share_of_slacks_day_held(conn):
             WHERE source = 'admin_analytics_api' AND window_start = window_end
         ),
         slack AS (
-            SELECT coalesce(sum(s.messages_posted), 0) AS said
+            SELECT coalesce(sum(s.messages_posted), 0) AS reported
             FROM raw.channel_activity_snapshot s CROSS JOIN day d
             WHERE s.source = 'admin_analytics_api' AND s.window_start = d.ds AND s.window_end = d.ds
         ),
         held AS (
-            SELECT count(*) AS got
+            SELECT count(*) AS stored
             FROM archive.message m CROSS JOIN day d
             WHERE m.deleted_at IS NULL
               AND (m.posted_at AT TIME ZONE 'UTC')::date = d.ds
         )
-        SELECT d.ds, slack.said, held.got FROM day d CROSS JOIN slack CROSS JOIN held
+        SELECT d.ds, slack.reported, held.stored FROM day d CROSS JOIN slack CROSS JOIN held
     """).fetchone()
-    ds, said, got = row
-    if not said:
+    ds, reported, stored = row
+    if not reported:
         return ("share of Slack's day held", "pass", "Slack reported no messages", "n/a")
-    share = 100.0 * got / said
+    share = 100.0 * stored / reported
     return ("share of Slack's day held", "pass" if share >= 95 else "warn",
-            f"{share:.1f}% of {said} on {ds}", "95% or more")
+            f"{share:.1f}% of {reported} on {ds}", "95% or more")
 
 
 CHECKS = (
-    hours_since_the_last_write,
+    hours_since_last_write,
     unconfirmed_rows,
-    channels_still_to_walk,
-    channels_slack_will_not_return,
-    threads_still_to_fetch,
+    pending_channels,
+    unavailable_channels,
+    pending_threads,
     share_of_slacks_day_held,
 )
 

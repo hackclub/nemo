@@ -44,8 +44,8 @@ def test_an_empty_settings_table_is_a_real_empty_dict():
 
 def test_said_falls_back_when_unreadable_and_when_missing(monkeypatch):
     monkeypatch.setattr(settings, "_warned", False)
-    assert settings.said(BrokenConn(), "member_days", "batch", "6") == "6"
-    assert settings.said(EmptyConn(), "member_days", "batch", "6") == "6"
+    assert settings.value(BrokenConn(), "member_days", "batch", "6") == "6"
+    assert settings.value(EmptyConn(), "member_days", "batch", "6") == "6"
 
 
 class TunedConn(EmptyConn):

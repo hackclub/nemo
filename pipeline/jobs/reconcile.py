@@ -59,15 +59,15 @@ def one(conn, sql, params=()):
         return cur.fetchone()[0]
 
 
-def r1_every_unsearched_member_is_queued(conn):
+def r1_unsearched_members_queued(conn):
     return "R1", one(conn, UNQUEUED_HISTORY_SQL, (member_history.MEMBER_RANGE_SOURCE,)), 0
 
 
-def r3_every_pending_thread_of_a_draining_channel_is_queued(conn):
+def r3_pending_threads_queued(conn):
     return "R3", one(conn, UNQUEUED_THREADS_SQL), 0
 
 
-def r4_no_lease_outlives_its_expiry(conn):
+def r4_leases_within_expiry(conn):
     return "R4", one(conn, STALE_LEASES_SQL), 0
 
 
@@ -80,9 +80,9 @@ def r6_dead_units(conn):
 
 
 CHECKS = (
-    r1_every_unsearched_member_is_queued,
-    r3_every_pending_thread_of_a_draining_channel_is_queued,
-    r4_no_lease_outlives_its_expiry,
+    r1_unsearched_members_queued,
+    r3_pending_threads_queued,
+    r4_leases_within_expiry,
     r5_one_unit_per_member,
     r6_dead_units,
 )

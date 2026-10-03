@@ -1,25 +1,25 @@
-<% said = chat_entries(reports, chat, messages, queued) %>
+<% entries = chat_entries(reports, chat, messages, queued) %>
 
 <%= turbo_frame_tag chat_log_id(kase),
       data: { src: fd_case_chat_log_path(kase, thread: reports.first&.id) } do %>
-<div id="chat-said-<%= kase.id %>" class="chatscroll" data-version="<%= Fd::ChatVersion.for(kase.id) %>">
+<div id="chat-log-<%= kase.id %>" class="chatscroll" data-version="<%= Fd::ChatVersion.for(kase.id) %>">
   <% if earlier.positive? %>
     <p class="dayrule" data-earlier><%= pluralize(earlier, "earlier message") %></p>
   <% end %>
 
   <% last_day = nil %>
-  <% said.each do |entry| %>
+  <% entries.each do |entry| %>
     <% day = entry.at.to_date %>
     <% if day != last_day %>
       <p class="dayrule"><%= day.strftime("%-d %B %Y") %></p>
       <% last_day = day %>
     <% end %>
-    <%= render "fd/cases/said", entry: entry %>
+    <%= render "fd/cases/message", entry: entry %>
   <% end %>
 
   <p class="dayrule" data-nothing hidden>Nothing has gone to the reporter yet.</p>
 
-  <% if said.empty? %>
+  <% if entries.empty? %>
     <div id="chat-empty-<%= kase.id %>" class="empty">
       <span class="empty-mark">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v12H8l-3 3z"/></svg>

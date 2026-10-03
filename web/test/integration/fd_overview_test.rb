@@ -27,7 +27,7 @@ class FdOverviewTest < ActionDispatch::IntegrationTest
   end
 
   def metric
-    response.body[/In force<\/span>\s*<span class="metric-v">(\d+)/, 1]
+    response.body[/In force<\/span>\s*<span class="metric-value">(\d+)/, 1]
   end
 
   test "with nothing held the tile says so and no panel is drawn" do

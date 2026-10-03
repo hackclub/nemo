@@ -33,7 +33,7 @@ module Fd
       kept.count { |one| one["thread_ts"].present? }
     end
 
-    Said = Struct.new(:ts, :thread_ts, :user, :text, keyword_init: true) do
+    Message = Struct.new(:ts, :thread_ts, :user, :text, keyword_init: true) do
       def at
         Time.zone.at(ts.to_f) if ts.to_s.include?(".")
       end
@@ -41,11 +41,11 @@ module Fd
 
     class Reading
       def initialize(kept)
-        @said = kept.map { |one| Said.new(**one.symbolize_keys.slice(*Said.members)) }
+        @messages = kept.map { |one| Message.new(**one.symbolize_keys.slice(*Message.members)) }
       end
 
-      def tops
-        @tops ||= @said.reject { |one| one.thread_ts.present? }.sort_by { |one| one.ts.to_f }
+      def top_level
+        @top_level ||= @messages.reject { |one| one.thread_ts.present? }.sort_by { |one| one.ts.to_f }
       end
 
       def below(parent)
@@ -53,15 +53,15 @@ module Fd
       end
 
       def orphans
-        @orphans ||= replies.reject { |ts, _| tops.any? { |one| one.ts == ts } }.values.flatten
+        @orphans ||= replies.reject { |ts, _| top_level.any? { |one| one.ts == ts } }.values.flatten
       end
 
-      def any? = @said.any?
+      def any? = @messages.any?
 
       private
 
       def replies
-        @replies ||= @said.select { |one| one.thread_ts.present? }
+        @replies ||= @messages.select { |one| one.thread_ts.present? }
           .group_by(&:thread_ts)
           .transform_values { |held| held.sort_by { |one| one.ts.to_f } }
       end

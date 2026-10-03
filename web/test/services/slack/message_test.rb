@@ -44,7 +44,7 @@ class Slack::MessageTest < ActiveSupport::TestCase
         assert params["inclusive"]
         assert_equal 1, params["limit"]
         assert_equal "admin", rest[:credential]
-        assert_equal "big news", found.said["text"]
+        assert_equal "big news", found.message["text"]
         assert found.found?
       end
     end
@@ -57,7 +57,7 @@ class Slack::MessageTest < ActiveSupport::TestCase
         again = Slack::Message.at(ROOM, TS)
 
         assert_equal 1, asked.size, "the second look must come from the cache"
-        assert_equal "big news", again.said["text"]
+        assert_equal "big news", again.message["text"]
       end
     end
   end
@@ -91,7 +91,7 @@ class Slack::MessageTest < ActiveSupport::TestCase
 
   test "a proxy that is down leaves the page standing" do
     caching do
-      answering(->(*) { raise Slack::ProxyClient::Unavailable, "proxy returned 503" }) do
+      answering(->(*) { raise Slack::ProxyClient::UnavailableError, "proxy returned 503" }) do
         assert_equal :unavailable, Slack::Message.at(ROOM, TS).error
       end
     end
@@ -107,23 +107,23 @@ class Slack::MessageTest < ActiveSupport::TestCase
 
   test "a proxy that is not set up says so" do
     caching do
-      answering(->(*) { raise Slack::ProxyClient::NotConfigured, "INTERNAL_PROXY_URL is not set" }) do
+      answering(->(*) { raise Slack::ProxyClient::NotConfiguredError, "INTERNAL_PROXY_URL is not set" }) do
         assert_equal :not_configured, Slack::Message.at(ROOM, TS).error
       end
     end
   end
 
-  test "a failure is never cached, so a blip does not stick for ten minutes" do
+  test "a failure is never cached, so a blip does not sticky for ten minutes" do
     caching do
       tries = 0
       answering(lambda { |*|
         tries += 1
-        raise Slack::ProxyClient::Unavailable, "proxy returned 503" if tries == 1
+        raise Slack::ProxyClient::UnavailableError, "proxy returned 503" if tries == 1
 
         { "ok" => true, "messages" => [SAID] }
       }) do
         assert_equal :unavailable, Slack::Message.at(ROOM, TS).error
-        assert_equal "big news", Slack::Message.at(ROOM, TS).said["text"]
+        assert_equal "big news", Slack::Message.at(ROOM, TS).message["text"]
       end
     end
   end

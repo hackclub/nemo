@@ -19,7 +19,7 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "the priors figure uses the definition, not the case count" do
+  test "the priors format_number uses the definition, not the case count" do
     acted = make_case(subject: SUBJECT, opened_at: 40.days.ago, resolved_at: 30.days.ago,
       resolution: "action_taken")
     act_on acted
@@ -64,8 +64,8 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
 
     assert_empty Fd::Note.for_subject(SUBJECT).to_a
     assert_nil flash[:alert], "a problem with one field is not a page-level message"
-    assert_equal "body", flash[:wrong]["field"]
-    assert_match(/Write the note/i, flash[:wrong]["said"])
+    assert_equal "body", flash[:field_error]["field"]
+    assert_match(/Write the note/i, flash[:field_error]["message"])
     assert_redirected_to fd_member_path(SUBJECT, show: "notes")
   end
 
@@ -84,7 +84,7 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
 
     delete fd_member_note_path(SUBJECT, theirs)
     assert_nil theirs.reload.deleted_at
-    assert_match(/only whoever wrote a note can remove it/, flash[:alert])
+    assert_match(/Only the author of a note can remove it/, flash[:alert])
 
     delete fd_member_note_path(SUBJECT, mine)
     assert_not_nil mine.reload.deleted_at

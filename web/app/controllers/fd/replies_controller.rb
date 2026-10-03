@@ -8,7 +8,7 @@ module Fd
       sent = nil
 
       writing do
-        sent = Outgoing.queue(conversation_for(kase), read.said, mode: mode(read),
+        sent = Outgoing.queue(conversation_for(kase), read.body, mode: mode(read),
           by: current_account.user_id, asked: params[:conversation_id].present?)
         answered(kase, sent.queued) if sent.queued
       end
@@ -18,8 +18,8 @@ module Fd
       respond_to do |format|
         format.turbo_stream { render turbo_stream: CaseChatBroadcast.tag(kase.id) }
         format.html do
-          flash[:said] = "It goes out as a DM. Your name is on it either way."
-          redirect_to back_to(kase), notice: "Reply on its way to the reporter"
+          flash[:detail] = "It goes out as a DM. Your name is on it either way."
+          redirect_to back_to(kase), notice: "Reply queued for the reporter"
         end
       end
     end

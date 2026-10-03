@@ -26,7 +26,7 @@ class ApplicationController < ActionController::Base
   def needs(key)
     return if Fd::Flag.on?(key)
 
-    redirect_to still_on, alert: "#{Fd::Flag.label(key).downcase} is turned off"
+    redirect_to still_on, alert: "#{Fd::Flag.label(key)} turned off"
   end
 
   def still_on
@@ -46,7 +46,7 @@ class ApplicationController < ActionController::Base
     return if current_account.present?
     return head :unauthorized if request.format.json?
 
-    redirect_to login_path, alert: "sign in to continue"
+    redirect_to login_path, alert: "Sign in to continue"
   end
 
   def may_administer?

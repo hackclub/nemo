@@ -21,8 +21,8 @@ def test_a_held_shush_reads_as_the_thing_it_is():
 
 
 def test_a_channel_ban_names_its_channel():
-    said = record.standing_line(found(kind="channel_ban", channel_id="C1"))
-    assert said == "channel ban in <#C1> until 10 Mar"
+    line = record.standing_line(found(kind="channel_ban", channel_id="C1"))
+    assert line == "channel ban in <#C1> until 10 Mar"
 
 
 def test_one_with_no_end_date_says_that_instead():
@@ -39,9 +39,9 @@ def test_one_nemo_has_dropped_admits_it():
 
 
 def test_one_done_by_hand_is_not_blamed_on_nemo():
-    said = record.standing_line(found(carried_by="by_hand", carry="held"))
-    assert said.endswith("done by hand")
-    assert "nemo" not in said
+    line = record.standing_line(found(carried_by="by_hand", carry="held"))
+    assert line.endswith("done by hand")
+    assert "nemo" not in line
 
 
 def test_standing_is_read_from_the_guards_not_the_actions():
@@ -56,6 +56,6 @@ def test_the_live_count_is_what_is_being_held():
 
 
 def test_the_counts_line_calls_it_what_it_is():
-    said = record.counted({"subject_of": 1, "logged_in": 2, "live": 1, "reversed": 0})
-    assert "1 in force" in said
-    assert "action" not in said
+    line = record.counted({"subject_of": 1, "logged_in": 2, "live": 1, "reversed": 0})
+    assert "1 in force" in line
+    assert "action" not in line

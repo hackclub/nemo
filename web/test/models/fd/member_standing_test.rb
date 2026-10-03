@@ -20,14 +20,14 @@ class Fd::MemberStandingTest < ActiveSupport::TestCase
   end
 
   test "somebody with nothing on them is clean" do
-    said = standing("UNOBODY")
+    standing_row = standing("UNOBODY")
 
-    assert said.clean?
-    assert_equal 0, said.priors
-    assert_empty said.in_force
-    assert_nil said.worst
-    assert_nil said.open_case
-    assert_not said.anything_in_force?
+    assert standing_row.clean?
+    assert_equal 0, standing_row.priors
+    assert_empty standing_row.in_force
+    assert_nil standing_row.worst
+    assert_nil standing_row.open_case
+    assert_not standing_row.anything_in_force?
   end
 
   test "a case with no action still counts as something, not clean" do
@@ -38,28 +38,28 @@ class Fd::MemberStandingTest < ActiveSupport::TestCase
   test "a live guard is in force and is the worst of one" do
     hold
 
-    said = standing
-    assert said.anything_in_force?
-    assert_equal 1, said.in_force.size
-    assert_equal "shush", said.worst.kind
-    assert_equal said.worst.expires_at, said.lifts_at
+    standing_row = standing
+    assert standing_row.anything_in_force?
+    assert_equal 1, standing_row.in_force.size
+    assert_equal "shush", standing_row.worst.kind
+    assert_equal standing_row.worst.expires_at, standing_row.lifts_at
   end
 
   test "a guard with no end date is still in force, unlike an action" do
     hold(expires_at: nil)
 
-    said = standing
-    assert said.anything_in_force?
-    assert_nil said.lifts_at
+    standing_row = standing
+    assert standing_row.anything_in_force?
+    assert_nil standing_row.lifts_at
   end
 
   test "an action that has not expired is no longer standing on its own" do
     kase = make_case(subject: SUBJECT)
     act_on(kase, type_key: "shush", expires_at: 3.days.from_now)
 
-    said = standing
-    assert_empty said.in_force, "nothing holds it in Slack, so nothing is in force"
-    assert_equal 1, said.actions
+    standing_row = standing
+    assert_empty standing_row.in_force, "nothing holds it in Slack, so nothing is in force"
+    assert_equal 1, standing_row.actions
   end
 
   test "a lifted guard is not in force" do
@@ -79,10 +79,10 @@ class Fd::MemberStandingTest < ActiveSupport::TestCase
     kase = make_case(subject: SUBJECT)
     act_on(kase, reversed_at: Time.current, reversed_by: "UFF1", reversal_reason: "wrong person")
 
-    said = standing
-    assert_empty said.in_force
-    assert_equal 1, said.reversed
-    assert_equal 1, said.actions
+    standing_row = standing
+    assert_empty standing_row.in_force
+    assert_equal 1, standing_row.reversed
+    assert_equal 1, standing_row.actions
   end
 
   test "the worst thing in force wins, whatever order it was held in" do
@@ -90,10 +90,10 @@ class Fd::MemberStandingTest < ActiveSupport::TestCase
     hold(kind: "channel_ban", channel_id: "C0266FRGV", opened_at: 3.days.ago,
          expires_at: 9.days.from_now)
 
-    said = standing
-    assert_equal 2, said.in_force.size
-    assert_equal "channel_ban", said.worst.kind, "a channel ban outranks a shush"
-    assert_equal said.worst.expires_at, said.lifts_at
+    standing_row = standing
+    assert_equal 2, standing_row.in_force.size
+    assert_equal "channel_ban", standing_row.worst.kind, "a channel ban outranks a shush"
+    assert_equal standing_row.worst.expires_at, standing_row.lifts_at
   end
 
   test "the newest wins when two of the same kind are in force" do
@@ -107,9 +107,9 @@ class Fd::MemberStandingTest < ActiveSupport::TestCase
   test "an open case is named, with whoever holds it" do
     kase = make_case(subject: SUBJECT, assign: "UFF1")
 
-    said = standing
-    assert_equal kase.id, said.open_case.id
-    assert_equal "UFF1", said.held_by
+    standing_row = standing
+    assert_equal kase.id, standing_row.open_case.id
+    assert_equal "UFF1", standing_row.held_by
   end
 
   test "a case nobody holds has no holder" do
@@ -128,9 +128,9 @@ class Fd::MemberStandingTest < ActiveSupport::TestCase
     other = make_case(subject: "USOMEBODY")
     other.participants.create!(user_id: SUBJECT, role: "reporter")
 
-    said = standing
-    assert_equal 1, said.cases
-    assert_equal 1, said.logged_in
+    standing_row = standing
+    assert_equal 1, standing_row.cases
+    assert_equal 1, standing_row.logged_in
     assert_not_equal subject_case.id, other.id
   end
 

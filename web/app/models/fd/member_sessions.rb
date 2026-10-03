@@ -25,7 +25,7 @@ module Fd
 
     def self.frame(user_id) = "member-sessions-#{user_id}"
 
-    def self.said_prefix(prefix)
+    def self.with_prefix(prefix)
       return nil if prefix.nil?
       return prefix.to_s unless prefix.respond_to?(:prefix)
 
@@ -86,7 +86,7 @@ module Fd
     end
 
     def addresses_in(held)
-      held.group_by { |row| self.class.said_prefix(row.ip_prefix) }.filter_map do |prefix, rows|
+      held.group_by { |row| self.class.with_prefix(row.ip_prefix) }.filter_map do |prefix, rows|
         next nil if prefix.nil?
 
         address_for(prefix, rows)
@@ -107,7 +107,7 @@ module Fd
     end
 
     def prefixes
-      @prefixes ||= rows.filter_map { |row| self.class.said_prefix(row.ip_prefix) }.uniq
+      @prefixes ||= rows.filter_map { |row| self.class.with_prefix(row.ip_prefix) }.uniq
     end
 
     def cohorts
@@ -115,7 +115,7 @@ module Fd
         next_up = {}
         if prefixes.any?
           IpCohort.where(ip_prefix: prefixes).each do |one|
-            next_up[self.class.said_prefix(one.ip_prefix)] = one.people
+            next_up[self.class.with_prefix(one.ip_prefix)] = one.people
           end
         end
         next_up

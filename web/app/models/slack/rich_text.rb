@@ -8,11 +8,11 @@ module Slack
     DEEPEST = 5
     OPENABLE = ["http://", "https://"].freeze
 
-    def self.for(said, names: {}, channels: {}, emoji: {})
-      new(names, channels, emoji).said(said || {})
+    def self.for(message, names: {}, channels: {}, emoji: {})
+      new(names, channels, emoji).to_text(message || {})
     end
 
-    def self.emoji_names(said)
+    def self.emoji_names(message)
       found = []
       walk = lambda do |node|
         case node
@@ -22,7 +22,7 @@ module Slack
         when Array then node.each { |one| walk.call(one) }
         end
       end
-      walk.call((said || {})["blocks"])
+      walk.call((message || {})["blocks"])
       found.uniq
     end
 
@@ -32,7 +32,7 @@ module Slack
       @emoji = emoji
     end
 
-    def said(message)
+    def to_text(message)
       shown = blocks(message["blocks"])
       return shown if shown.present?
 
@@ -51,7 +51,7 @@ module Slack
       case one["type"]
       when "rich_text" then safe_join(Array(one["elements"]).filter_map { |part| rich(part) })
       when "section" then paragraph(lines(one.dig("text", "text").to_s))
-      when "divider" then tag.hr(class: "rt-rule")
+      when "divider" then tag.hr(class: "richtext-rule")
       end
     end
 
@@ -59,13 +59,13 @@ module Slack
       case part["type"]
       when "rich_text_section" then paragraph(inline(part["elements"]))
       when "rich_text_list" then listed(part)
-      when "rich_text_quote" then tag.blockquote(inline(part["elements"]), class: "rt-quote")
-      when "rich_text_preformatted" then tag.pre(tag.code(flat(part["elements"])), class: "rt-pre")
+      when "rich_text_quote" then tag.blockquote(inline(part["elements"]), class: "richtext-quote")
+      when "rich_text_preformatted" then tag.pre(tag.code(flat(part["elements"])), class: "richtext-pre")
       end
     end
 
-    def paragraph(said)
-      said.present? ? tag.p(said, class: "rt-said") : nil
+    def paragraph(text)
+      text.present? ? tag.p(text, class: "richtext-text") : nil
     end
 
     def listed(part)
@@ -74,26 +74,26 @@ module Slack
       depth = part["indent"].to_i.clamp(0, DEEPEST)
       start = part["offset"].to_i + 1
 
-      tag.send(kind, rows, class: "rt-list rt-indent-#{depth}",
+      tag.send(kind, rows, class: "richtext-list richtext-indent-#{depth}",
         **(kind == "ol" && start > 1 ? { start: start } : {}))
     end
 
     def inline(elements)
-      safe_join(Array(elements).map { |one| styled(one, piece(one)) })
+      safe_join(Array(elements).map { |one| styled(one, element(one)) })
     end
 
     def flat(elements)
-      safe_join(Array(elements).map { |one| plain(one) })
+      safe_join(Array(elements).map { |one| plain_text(one) })
     end
 
-    def piece(one)
+    def element(one)
       case one["type"]
       when "text" then lines(one["text"].to_s)
       when "link" then linked(one)
       when "emoji" then emoji_for(one["name"])
       when "user" then chip(named(one["user_id"]), one["user_id"])
       when "usergroup" then chip("@#{one['usergroup_id']}", one["usergroup_id"])
-      when "channel" then chip(roomed(one["channel_id"]), one["channel_id"])
+      when "channel" then chip(channel_ref(one["channel_id"]), one["channel_id"])
       when "broadcast" then chip(BROADCASTS.fetch(one["range"], "@#{one['range']}"), one["range"])
       when "message_mention" then linked(one.merge("text" => one["text"].presence || "a message"))
       when "date" then dated(one)
@@ -102,20 +102,20 @@ module Slack
       end
     end
 
-    def plain(one)
-      said = one["type"] == "text" ? one["text"].to_s : one.values_at("text", "name", "url").compact.first.to_s
-      ERB::Util.html_escape(said)
+    def plain_text(one)
+      text = one["type"] == "text" ? one["text"].to_s : one.values_at("text", "name", "url").compact.first.to_s
+      ERB::Util.html_escape(text)
     end
 
-    def styled(one, said)
+    def styled(one, text)
       style = one["style"]
-      return said unless style.is_a?(Hash) && said.present?
+      return text unless style.is_a?(Hash) && text.present?
 
-      said = tag.code(said, class: "rt-code") if style["code"]
-      said = tag.strong(said) if style["bold"]
-      said = tag.em(said) if style["italic"]
-      said = tag.s(said) if style["strike"]
-      said
+      text = tag.code(text, class: "richtext-code") if style["code"]
+      text = tag.strong(text) if style["bold"]
+      text = tag.em(text) if style["italic"]
+      text = tag.s(text) if style["strike"]
+      text
     end
 
     def linked(one)
@@ -127,7 +127,7 @@ module Slack
     end
 
     def link_to_url(label, url)
-      tag.a(ERB::Util.html_escape(label), href: url, class: "rt-link",
+      tag.a(ERB::Util.html_escape(label), href: url, class: "richtext-link",
         target: "_blank", rel: "noopener")
     end
 
@@ -139,16 +139,16 @@ module Slack
     end
 
     def emoji_for(name)
-      said = ":#{name}:"
+      text = ":#{name}:"
       url = emoji[name].presence
-      return tag.span(said, class: "rt-emoji", title: name) if url.nil?
+      return tag.span(text, class: "richtext-emoji", title: name) if url.nil?
 
-      tag.img(src: url, class: "rt-emoji-img", alt: said, title: said, loading: "lazy",
+      tag.img(src: url, class: "richtext-emoji-img", alt: text, title: text, loading: "lazy",
         width: 20, height: 20)
     end
 
-    def chip(said, title)
-      tag.span(said, class: "rt-mention", title: title)
+    def chip(text, title)
+      tag.span(text, class: "richtext-mention", title: title)
     end
 
     def named(user_id)
@@ -156,15 +156,15 @@ module Slack
       shown.to_s.start_with?("@") ? shown : "@#{shown}"
     end
 
-    def roomed(channel_id)
+    def channel_ref(channel_id)
       shown = channels[channel_id].presence || channel_id
       shown.to_s.start_with?("#") ? shown : "##{shown}"
     end
 
-    def lines(said)
-      return "".html_safe if said.empty?
+    def lines(text)
+      return "".html_safe if text.empty?
 
-      safe_join(said.split("\n", -1).map { |line| ERB::Util.html_escape(line) }, tag.br)
+      safe_join(text.split("\n", -1).map { |line| ERB::Util.html_escape(line) }, tag.br)
     end
   end
 end

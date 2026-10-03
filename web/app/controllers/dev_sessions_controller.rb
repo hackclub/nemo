@@ -6,7 +6,7 @@ class DevSessionsController < ApplicationController
     staff = Account.find_or_create_by!(user_id: params[:user_id])
     reset_session
     session[:user_id] = staff.user_id
-    redirect_to root_path, notice: "signed in as #{staff.user_id}, #{held(staff)}"
+    redirect_to root_path, notice: "Signed in as #{staff.user_id}, #{held(staff)}"
   end
 
   private
@@ -17,10 +17,10 @@ class DevSessionsController < ApplicationController
       .where(effect: "allow").count
     return "holding nothing" if roles.empty? && extras.zero?
 
-    said = roles.any? ? roles.to_sentence : "no role"
-    return said if extras.zero?
+    text = roles.any? ? roles.to_sentence : "no role"
+    return text if extras.zero?
 
-    "#{said}, #{extras} #{'extra scope'.pluralize(extras)}"
+    "#{text}, #{extras} #{'extra scope'.pluralize(extras)}"
   end
 
   def only_in_development

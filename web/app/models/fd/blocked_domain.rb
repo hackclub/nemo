@@ -27,28 +27,28 @@ module Fd
     end
 
     def self.holds(domain)
-      said = domain.to_s.strip.downcase
-      return [] if said.blank?
+      text = domain.to_s.strip.downcase
+      return [] if text.blank?
 
-      active.select { |one| one.holds?(said) }
+      active.select { |one| one.holds?(text) }
     end
 
     def self.worst_for(domain)
       holds(domain).max_by { |one| EFFECTS.index(one.effect) }
     end
 
-    def self.shape?(said)
-      said.to_s.strip.downcase.delete_prefix("@").match?(SHAPE)
+    def self.shape?(text)
+      text.to_s.strip.downcase.delete_prefix("@").match?(SHAPE)
     end
 
     def self.people_on(domain, match_mode: EXACT)
-      said = domain.to_s.strip.downcase
+      text = domain.to_s.strip.downcase
       scope = MemberIdentity.kept.where.not(email: nil)
-      return scope.where("lower(split_part(email, '@', 2)) = ?", said).count if
+      return scope.where("lower(split_part(email, '@', 2)) = ?", text).count if
         match_mode == EXACT
 
       scope.where("lower(split_part(email, '@', 2)) = ? OR " \
-                  "lower(split_part(email, '@', 2)) LIKE ?", said, "%.#{said}").count
+                  "lower(split_part(email, '@', 2)) LIKE ?", text, "%.#{text}").count
     end
 
     def self.too_many?(count)
@@ -58,10 +58,10 @@ module Fd
       count.to_f / known > TOO_MANY
     end
 
-    def holds?(said)
-      return said == domain if match_mode == EXACT
+    def holds?(text)
+      return text == domain if match_mode == EXACT
 
-      said == domain || said.end_with?(".#{domain}")
+      text == domain || text.end_with?(".#{domain}")
     end
 
     def retire!(by:)

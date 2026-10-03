@@ -206,7 +206,7 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
         "the role a grant names is the role they hold"
     end
 
-    assert_raises(Authz::Grant::NotAllowed) do
+    assert_raises(Authz::Grant::NotAllowedError) do
       Authz::Grant.give!("UNOROLE", kind: "role", name: "wizard", by: "test")
     end
   end

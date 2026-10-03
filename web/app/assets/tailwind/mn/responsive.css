@@ -19,7 +19,7 @@
   @media (max-width: 1439px) {
     .rtitle { font-size: var(--t-lede); }
     .metric { padding: var(--s-xs) var(--s-xs) var(--s-sm); }
-    .metric-v { font-size: var(--t-title); }
+    .metric-value { font-size: var(--t-title); }
   }
 
   @media (max-width: 1099px) {
@@ -34,10 +34,10 @@
     .toolbar { gap: var(--gap-ctl); }
     .toolbar-end { margin-left: 0; width: 100%; }
     .cardbar:not(:has(.pill)) { flex-wrap: nowrap; }
-    .cardbar > .qsearch { flex: 1 1 120px; min-width: 0; max-width: none; }
+    .cardbar > .queue-search { flex: 1 1 120px; min-width: 0; max-width: none; }
     .cardbar > .toolbar-end { margin-left: auto; width: auto; flex: none; }
     .metric { padding: var(--p-ctl) var(--s-xs) var(--s-xs); }
-    .metric-v { font-size: var(--t-lede); }
+    .metric-value { font-size: var(--t-lede); }
     .metric-spark { display: none; }
     .facts-strip > div, .facts-strip > .fact { flex-basis: 50%; }
     .section-head { flex-wrap: wrap; }
@@ -49,11 +49,11 @@
     .drawer, .person-drawer-frame:not(:empty) { width: 100vw; }
     .views { gap: var(--s-xs); }
 
-    .rtop { flex-wrap: wrap; row-gap: var(--gap-ctl); min-height: 0; padding: var(--s-2xs) 0 var(--p-ctl); }
-    .rhead-said { flex: 1 1 100%; }
-    .rtop > .ractions { flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-start; }
-    .mobar > .ractions { margin-left: auto; flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: 6px; }
-    .mobar > .ractions > .btn { max-width: 46vw; overflow: hidden; }
+    .row-top { flex-wrap: wrap; row-gap: var(--gap-ctl); min-height: 0; padding: var(--s-2xs) 0 var(--p-ctl); }
+    .rhead-sub { flex: 1 1 100%; }
+    .row-top > .ractions { flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-start; }
+    .mobile-bar > .ractions { margin-left: auto; flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: 6px; }
+    .mobile-bar > .ractions > .btn { max-width: 46vw; overflow: hidden; }
     .toolbar > .btn, .ractions > .btn, .card-tools > .btn, .section-tools > .btn { flex: 0 0 auto; }
 
     .segmented { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
@@ -81,11 +81,11 @@
       align-items: center;
       row-gap: 6px;
     }
-    .rung > .ri { width: 18px; flex: none; }
-    .rung > .rn { flex: 1 1 110px; min-width: 0; }
-    .rung > .rst { margin-left: auto; flex: none; }
+    .rung > .step-index { width: 18px; flex: none; }
+    .rung > .stack-tight { flex: 1 1 110px; min-width: 0; }
+    .rung > .row-end { margin-left: auto; flex: none; }
     .rung > .rbar { order: 5; flex: 1 1 70px; }
-    .rung > .snum { order: 6; flex: none; min-width: 48px; }
+    .rung > .stat-value { order: 6; flex: none; min-width: 48px; }
 
     .matrix-scroll > .nights-h, .matrix-scroll > .srow { min-width: 460px; }
     .channel-table { min-width: 0; table-layout: auto; }
@@ -113,10 +113,10 @@
     .channel-poster-table { min-width: 460px; }
     .member-table { min-width: 620px; }
 
-    .toolbar .kbd, .ractions .kbd, .qbar .kbd { display: none; }
-    .toolbar > .btn, .qbar > .btn { flex: 0 1 auto; min-width: 0; }
+    .toolbar .kbd, .ractions .kbd, .queue-bar .kbd { display: none; }
+    .toolbar > .btn, .queue-bar > .btn { flex: 0 1 auto; min-width: 0; }
     .toolbar > .btn > span:not(.action-icon),
-    .qbar > .btn > span:not(.action-icon) {
+    .queue-bar > .btn > span:not(.action-icon) {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -133,7 +133,7 @@
       --rail-w: 48px;
     }
     .rail { padding: 6px 0; gap: 4px; }
-    .rail-btn, .you-face { width: 36px; height: 36px; }
+    .rail-btn, .account-face { width: 36px; height: 36px; }
     .rail-brand { width: 36px; }
     .rail-tip { display: none; }
     .cpane { left: var(--rail-w); }
@@ -155,7 +155,7 @@
     .segmented > a, .segmented > button, .segmented > label, .segmented > span { padding: 0 7px; }
     .palette { padding: var(--p-ctl); align-items: flex-start; }
     .palette-card { max-height: 78dvh; }
-    .qbar > .field, .qbar > .input, .qbar > .qsearch-in { max-width: none; }
+    .queue-bar > .field, .queue-bar > .input, .queue-bar > .queue-search-input { max-width: none; }
   }
 
   @media (max-width: 460px) {
@@ -167,8 +167,8 @@
     .btn-sm { min-height: 28px; height: 28px; }
     .cnav a { height: 36px; }
     .data-table td { padding: 11px var(--s-xs); }
-    .qrow { padding-top: 11px; padding-bottom: 11px; }
-    .dp-day { height: 34px; }
+    .queue-row { padding-top: 11px; padding-bottom: 11px; }
+    .datepicker-day { height: 34px; }
     .menu-pop .btn, .menu-pop > a, .menu-pop > button { min-height: 34px; }
   }
 

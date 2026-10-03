@@ -1,7 +1,7 @@
 from psycopg.types.json import Jsonb
 
 from bot.core import parse
-from bot.nemo.cards import report as cards
+from bot.nemo.views import report as views
 
 CASE_OF_THREAD = """
 SELECT case_id FROM (
@@ -17,7 +17,7 @@ LIMIT 1
 
 KEEP = """
 INSERT INTO fd.case_chat
-    (case_id, author_user_id, body, blocks, said_at, channel_id, ts, thread_ts, source_app)
+    (case_id, author_user_id, body, blocks, posted_at, channel_id, ts, thread_ts, source_app)
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'nemo')
 ON CONFLICT (channel_id, ts) WHERE ts IS NOT NULL
     DO UPDATE SET last_seen_at = now()
@@ -49,8 +49,8 @@ RETURNING id
 PENDING = """
 SELECT id, body FROM fd.case_chat
 WHERE case_id = %s AND author_user_id = %s AND mirrored_as = 'user'
-  AND mirrored_ts IS NULL AND ts IS NULL AND said_at > now() - interval '2 minutes'
-ORDER BY said_at
+  AND mirrored_ts IS NULL AND ts IS NULL AND posted_at > now() - interval '2 minutes'
+ORDER BY posted_at
 """
 
 ADOPT_PENDING = """
@@ -78,19 +78,19 @@ def case_of_thread(conn, thread_ts):
     return row[0] if row else None
 
 
-def adopt(conn, case_id, event):
+def attach_message(conn, case_id, event):
     row = conn.execute(ADOPT, (event["channel"], event["ts"], event["ts"])).fetchone()
     if row:
         return row[0]
 
-    return adopt_late(conn, case_id, event)
+    return attach_backfilled_message(conn, case_id, event)
 
 
-def adopt_late(conn, case_id, event):
-    said = event.get("text") or ""
+def attach_backfilled_message(conn, case_id, event):
+    text = event.get("text") or ""
     waiting = conn.execute(PENDING, (case_id, event.get("user"))).fetchall()
     for chat_id, body in waiting:
-        if cards.escape_but_mentions(body) != said:
+        if views.escape_but_mentions(body) != text:
             continue
         row = conn.execute(
             ADOPT_PENDING, (event["channel"], event["ts"], event["ts"], chat_id)
@@ -102,7 +102,7 @@ def adopt_late(conn, case_id, event):
 
 
 def keep(conn, case_id, event):
-    ours = adopt(conn, case_id, event)
+    ours = attach_message(conn, case_id, event)
     if ours:
         return ours, False
 
@@ -161,9 +161,9 @@ WAITING = f"""
 SELECT c.id, c.author_user_id, c.body, {UNDER}
 FROM fd.case_chat c
 WHERE c.case_id = %s AND c.ts IS NULL AND c.mirrored_ts IS NULL
-  AND (c.mirrored_as IS NULL OR c.said_at < now() - interval '2 minutes')
+  AND (c.mirrored_as IS NULL OR c.posted_at < now() - interval '2 minutes')
   AND {UNDER} IS NOT NULL
-ORDER BY c.said_at, c.id
+ORDER BY c.posted_at, c.id
 LIMIT 20
 """
 
@@ -171,7 +171,7 @@ WAITING_ANYWHERE = f"""
 SELECT DISTINCT c.case_id
 FROM fd.case_chat c
 WHERE c.ts IS NULL AND c.mirrored_ts IS NULL
-  AND (c.mirrored_as IS NULL OR c.said_at < now() - interval '2 minutes')
+  AND (c.mirrored_as IS NULL OR c.posted_at < now() - interval '2 minutes')
   AND {UNDER} IS NOT NULL
 LIMIT 50
 """

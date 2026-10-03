@@ -89,7 +89,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
       post engine_sync_path
     end
 
-    assert_equal "a sync is already queued or running", flash[:alert]
+    assert_equal "A sync is already queued or running", flash[:alert]
   end
 
   test "a cancelling request still blocks a new one" do
@@ -101,7 +101,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
       post engine_sync_path
     end
 
-    assert_equal "a sync is already queued or running", flash[:alert]
+    assert_equal "A sync is already queued or running", flash[:alert]
   end
 
   test "a finished request does not block a new one" do

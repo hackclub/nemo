@@ -11,17 +11,17 @@ from ingest.ip_cohorts import run as refresh_cohorts
 from ingest.member_links import run as refresh_links
 from ingest.useragent_reparse import run as reread_agents
 from lib.db import (
-    AlreadyRunning,
+    AlreadyRunningError,
     SeededDeployment,
     SyncCancelled,
     cancel_scope,
     connect,
     refuse_if_seeded,
     set_worker,
-    sole_instance,
-    sweep_my_earlier_boots,
+    instance_lock,
+    clear_stale_sessions,
 )
-from lib.heartbeat import beating
+from lib.heartbeat import heartbeat_loop
 from lib.paths import ENV_FILE
 from lib.proxy_client import ProxyError
 
@@ -48,8 +48,8 @@ def backfill_wanted():
 
 
 def refused(failure):
-    said = str(failure)
-    return any(one in said for one in REFUSALS)
+    text = str(failure)
+    return any(one in text for one in REFUSALS)
 
 
 LANES = (
@@ -104,9 +104,9 @@ def main():
     load_dotenv(ENV_FILE)
     set_worker(WORKER)
     try:
-        with sole_instance(WORKER):
+        with instance_lock(WORKER):
             return serve()
-    except AlreadyRunning as clash:
+    except AlreadyRunningError as clash:
         print(f"{WORKER}: {clash}")
         return 1
 
@@ -125,7 +125,7 @@ def serve():
         except SeededDeployment as refusal:
             print(f"{WORKER}: {refusal}")
             raise SystemExit(1) from refusal
-        for orphan, source in sweep_my_earlier_boots(conn):
+        for orphan, source in clear_stale_sessions(conn):
             print(f"{WORKER}: swept run {orphan} ({source}), left running by an earlier boot")
 
     lanes = wanted_lanes()
@@ -139,7 +139,7 @@ def serve():
     signal.signal(signal.SIGINT, stop)
 
     print(f"{WORKER}: {len(lanes)} lane(s) running independently")
-    with beating(WORKER, lambda: note(state)):
+    with heartbeat_loop(WORKER, lambda: note(state)):
         running = [lane(name, work, state, stopping, seconds(var, fallback), drains)
                    for name, work, var, fallback, drains in lanes]
         stopping.wait()

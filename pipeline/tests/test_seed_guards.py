@@ -1,6 +1,6 @@
 import pytest
 
-from seed.guards import SeedRefused, check_target_name, target_allowed
+from seed.guards import SeedRefusedError, check_target_name, target_allowed
 
 
 @pytest.mark.parametrize("dbname", ["mnemosyne_dev", "mnemosyne_test", "anything_seed"])
@@ -34,7 +34,7 @@ def test_the_override_has_to_match_exactly():
 
 
 def test_check_names_the_database_it_refused():
-    with pytest.raises(SeedRefused, match="mnemosyne is not a seed target"):
+    with pytest.raises(SeedRefusedError, match="mnemosyne is not a seed target"):
         check_target_name("mnemosyne", allow="")
 
 
@@ -51,7 +51,7 @@ def test_every_shape_check_resolves_against_the_captured_profile():
 
     for path in sorted(set(paths)):
         try:
-            verify.dig(profile, path)
+            verify.get_path(profile, path)
         except KeyError:
             pytest.fail(
                 f"verify.py checks {path!r} but profile.json has no such key, so "

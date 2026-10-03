@@ -6,12 +6,12 @@ module Fd
 
     def create
       guard = live_guard
-      return refuse("this channel is not guarded") if guard.nil?
+      return refuse("This channel is not guarded") if guard.nil?
 
       wanted = asked_for
-      return refuse("say who to allow") if wanted.empty?
+      return refuse("Select who to allow") if wanted.empty?
       unless wanted.all? { |id| id.match?(MEMBER_ID) }
-        return refuse("that does not look like a member id")
+        return refuse("That is not a valid member id")
       end
 
       added = []
@@ -31,10 +31,10 @@ module Fd
 
     def destroy
       guard = live_guard
-      return refuse("this channel is not guarded") if guard.nil?
+      return refuse("This channel is not guarded") if guard.nil?
 
       allow = guard.allows.find_by(subject_id: params[:id].to_s.strip.upcase)
-      return refuse("that bot is not on the list") if allow.nil?
+      return refuse("That bot is not on the list") if allow.nil?
 
       writing do
         audit(allow, "removed", entity_id: guard.id,
@@ -43,7 +43,7 @@ module Fd
       end
 
       redirect_to fd_channel_path(channel_id, tab: kind),
-        notice: "#{allow.name} is off the list"
+        notice: "#{allow.name} removed from the list"
     end
 
     private

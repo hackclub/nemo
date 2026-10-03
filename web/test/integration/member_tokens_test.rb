@@ -74,9 +74,9 @@ class MemberTokensTest < ActionDispatch::IntegrationTest
   test "minting is written to the audit log with its life" do
     mint(lasting: "30")
 
-    said = Api::Event.where(verb: "token_minted").sole
-    assert_equal @member.user_id, said.actor_user_id
-    assert_equal "Toolbox, Toolbox, 30 days", said.detail
+    event = Api::Event.where(verb: "token_minted").sole
+    assert_equal @member.user_id, event.actor_user_id
+    assert_equal "Toolbox, Toolbox, 30 days", event.detail
   end
 
   test "past the cap it is refused, and a revoked key frees a slot" do

@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from lib.db import connect
 from lib.paths import ENV_FILE
 from seed import SCALES
-from seed.emit import (
+from seed.writer import (
     analyze,
     clear,
     unstamp,
@@ -17,8 +17,8 @@ from seed.emit import (
     write_runs,
 )
 from seed.generate import HISTORY_MONTHS, build, events
-from seed.guards import SeedRefused, check, check_target_name
-from seed.hostile import poison_channels
+from seed.guards import SeedRefusedError, check, check_target_name
+from seed.adversarial import poison_channels
 
 TRUTHY = {"1", "true", "yes", "on"}
 
@@ -42,7 +42,7 @@ def parse_args(argv=None):
 def clear_only(args):
     try:
         dbname = check_target_name()
-    except SeedRefused as exc:
+    except SeedRefusedError as exc:
         print(f"seed: {exc}")
         raise SystemExit(2) from exc
 
@@ -67,7 +67,7 @@ def main(argv=None):
     with connect() as conn:
         try:
             dbname, mode = check(conn, force=args.force)
-        except SeedRefused as exc:
+        except SeedRefusedError as exc:
             print(f"seed: {exc}")
             raise SystemExit(2) from exc
 
@@ -100,7 +100,7 @@ def main(argv=None):
     for name, count in counts.items():
         print(f"seed:   {name}: {count} rows")
     for notice in notices:
-        print(f"seed: postgres said: {notice}")
+        print(f"seed: postgres reported: {notice}")
     print(
         f"seed: wrote {sum(counts.values())} rows in {time.monotonic() - started:.1f}s. "
         f"{dbname} is now marked seeded, run dbt build next"

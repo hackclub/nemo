@@ -11,8 +11,8 @@ export default class extends Controller {
   fit() {
     if (!this.hasGoTarget) return
 
-    const said = this.hasFieldTarget ? this.fieldTarget.value.trim() : ""
+    const typed = this.hasFieldTarget ? this.fieldTarget.value.trim() : ""
     const wanted = this.wordValue.trim()
-    this.goTarget.disabled = said.toLowerCase() !== wanted.toLowerCase()
+    this.goTarget.disabled = typed.toLowerCase() !== wanted.toLowerCase()
   }
 }

@@ -37,32 +37,32 @@ def as_edited(event):
     }
 
 
-def said_in(event):
-    said = as_edited(event) if event.get("subtype") == EDITED else as_posted(event)
-    if not said:
+def message_in(event):
+    message = as_edited(event) if event.get("subtype") == EDITED else as_posted(event)
+    if not message:
         return None
-    if not said.get("user") or not said.get("channel") or not said.get("ts"):
+    if not message.get("user") or not message.get("channel") or not message.get("ts"):
         return None
-    return said
+    return message
 
 
 @on_event("message", open_to_all=True)
 def watched(ctx):
-    said = said_in(ctx.payload or {})
-    if not said:
+    message = message_in(ctx.payload or {})
+    if not message:
         return None
 
-    found = automod.caught(said.get("text"))
+    found = automod.caught(message.get("text"))
     if not found:
         return None
 
     with session() as conn:
         kept = [row[0] for row in
-                (automod.record(conn, watch, said) for watch in found) if row]
+                (automod.record(conn, watch, message) for watch in found) if row]
         if not kept:
             return None
-        automod.link(conn, kept, permalink_for(ctx.client, said["channel"], said["ts"]))
+        automod.link(conn, kept, permalink_for(ctx.client, message["channel"], message["ts"]))
 
     log.info("nemo: automod caught %s word(s) in %s from %s",
-             len(kept), said["ts"], said.get("user"))
+             len(kept), message["ts"], message.get("user"))
     return len(kept)

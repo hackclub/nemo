@@ -36,14 +36,14 @@
 
   <% if @threads.any? %>
     <div class="card-body">
-      <% @threads.tops.each do |said| %>
-        <%= render "said", said: said, names: @names %>
-        <% below = @threads.below(said) %>
+      <% @threads.top_level.each do |message| %>
+        <%= render "message", message: message, names: @names %>
+        <% below = @threads.below(message) %>
         <% if below.any? %>
           <details class="purge-thread" open>
             <summary><%= pluralize(below.size, "reply") %></summary>
             <% below.each do |reply| %>
-              <%= render "said", said: reply, names: @names %>
+              <%= render "message", message: reply, names: @names %>
             <% end %>
           </details>
         <% end %>
@@ -52,8 +52,8 @@
       <% if @threads.orphans.any? %>
         <details class="purge-thread" open>
           <summary><%= pluralize(@threads.orphans.size, "reply") %>, the top was not taken</summary>
-          <% @threads.orphans.each do |said| %>
-            <%= render "said", said: said, names: @names %>
+          <% @threads.orphans.each do |message| %>
+            <%= render "message", message: message, names: @names %>
           <% end %>
         </details>
       <% end %>

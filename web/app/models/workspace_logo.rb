@@ -34,34 +34,34 @@ class WorkspaceLogo
   end
 
   def self.pointed_at
-    said = get(URI(SOURCE))
-    return nil unless said.is_a?(Net::HTTPSuccess)
+    answer = get(URI(SOURCE))
+    return nil unless answer.is_a?(Net::HTTPSuccess)
 
-    where = said.body.to_s.strip.lines.first.to_s.strip
-    uri = safely(where)
+    where = answer.body.to_s.strip.lines.first.to_s.strip
+    uri = fetch_safely(where)
     uri && uri.to_s
   end
 
   def self.fetch(url)
-    uri = safely(url)
+    uri = fetch_safely(url)
     HOPS.times do
       return nil if uri.nil?
 
-      said = get(uri)
-      return picture(said) if said.is_a?(Net::HTTPSuccess)
-      return nil unless said.is_a?(Net::HTTPRedirection)
+      answer = get(uri)
+      return picture(answer) if answer.is_a?(Net::HTTPSuccess)
+      return nil unless answer.is_a?(Net::HTTPRedirection)
 
-      uri = safely(said["location"].to_s)
+      uri = fetch_safely(answer["location"].to_s)
     end
     nil
   end
 
-  def self.picture(said)
-    type = said["content-type"].to_s.split(";").first.to_s.strip
+  def self.picture(answer)
+    type = answer["content-type"].to_s.split(";").first.to_s.strip
     return nil unless type.start_with?("image/")
-    return nil if said.body.to_s.bytesize > BIGGEST || said.body.to_s.empty?
+    return nil if answer.body.to_s.bytesize > BIGGEST || answer.body.to_s.empty?
 
-    Image.new(body: said.body, type: type)
+    Image.new(body: answer.body, type: type)
   end
 
   def self.get(uri)
@@ -71,7 +71,7 @@ class WorkspaceLogo
     end
   end
 
-  def self.safely(url)
+  def self.fetch_safely(url)
     uri = URI.parse(url.to_s)
     return nil unless uri.is_a?(URI::HTTPS)
 

@@ -26,17 +26,17 @@ module Fd
     LETTER_A = "A".ord
 
     def self.name_for(code)
-      said = code.to_s.strip.upcase
-      return nil unless said.match?(SHAPE)
+      code_text = code.to_s.strip.upcase
+      return nil unless code_text.match?(SHAPE)
 
-      NAMES.fetch(said, said)
+      NAMES.fetch(code_text, code_text)
     end
 
     def self.flag_for(code)
-      said = code.to_s.strip.upcase
-      return nil unless said.match?(SHAPE)
+      code_text = code.to_s.strip.upcase
+      return nil unless code_text.match?(SHAPE)
 
-      said.each_char.map { |one| (FIRST + one.ord - LETTER_A).chr(Encoding::UTF_8) }.join
+      code_text.each_char.map { |one| (FIRST + one.ord - LETTER_A).chr(Encoding::UTF_8) }.join
     end
   end
 end

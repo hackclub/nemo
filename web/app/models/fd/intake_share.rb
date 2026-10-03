@@ -14,7 +14,7 @@ module Fd
       kind == FORWARD
     end
 
-    def said?
+    def body?
       is_reachable && source_body.present?
     end
 
@@ -23,7 +23,7 @@ module Fd
     end
 
     def why_not
-      "a link we could not open" unless said?
+      "a link we could not open" unless body?
     end
 
     Cited = Struct.new(:case_id, :body, :kind, :author, :channel, :permalink,

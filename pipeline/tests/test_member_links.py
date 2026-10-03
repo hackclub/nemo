@@ -74,10 +74,10 @@ def test_the_landing_refuses_a_pair_held_up_by_corroboration_alone():
 
 
 def test_a_pair_is_written_one_way_round_so_it_cannot_be_held_twice():
-    said = (pathlib.Path(__file__).parents[2] / "db" / "migrations"
+    sql = (pathlib.Path(__file__).parents[2] / "db" / "migrations"
             / "0149_member_links.sql").read_text()
-    assert "CHECK (a_user_id < b_user_id)" in said
-    assert "PRIMARY KEY (a_user_id, b_user_id)" in said
+    assert "CHECK (a_user_id < b_user_id)" in sql
+    assert "PRIMARY KEY (a_user_id, b_user_id)" in sql
     assert "least(a.user_id, b.user_id)" in links.PAIRS_SQL
 
 

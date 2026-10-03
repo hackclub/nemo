@@ -19,7 +19,7 @@ module Fd
     def [](user_id)
       return "n/a" if user_id.blank?
 
-      @shown[user_id] ||= said_for(user_id) ||
+      @shown[user_id] ||= label_for(user_id) ||
         (user_id.match?(PERSON) ? "@#{user_id}" : user_id)
     end
 
@@ -46,7 +46,7 @@ module Fd
 
     private
 
-    def said_for(user_id)
+    def label_for(user_id)
       @members[user_id]&.name
     end
   end

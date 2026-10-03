@@ -6,11 +6,11 @@ export function askingFor(where, term) {
   return url
 }
 
-export function said(className, text) {
-  const span = document.createElement("span")
-  span.className = className
-  span.textContent = text
-  return span
+export function span(className, text) {
+  const el = document.createElement("span")
+  el.className = className
+  el.textContent = text
+  return el
 }
 
 export function face(id, initial) {
@@ -24,9 +24,9 @@ export function face(id, initial) {
 }
 
 export function named(id, name) {
-  const span = said("pick-name", name)
-  if (name === `@${id}`) span.dataset.cachetName = id
-  return span
+  const el = span("pick-name", name)
+  if (name === `@${id}`) el.dataset.cachetName = id
+  return el
 }
 
 export function personRow(member, action) {
@@ -45,8 +45,8 @@ export function personRow(member, action) {
     member.id !== bare ? member.id : null
   ].filter(Boolean).join(" · ")
 
-  const body = said("pick-body-text", "")
-  body.append(named(member.id, member.name), said("pick-id mono", sub))
+  const body = span("pick-body-text", "")
+  body.append(named(member.id, member.name), span("pick-id mono", sub))
   row.append(face(member.id, member.initial), body)
   return row
 }

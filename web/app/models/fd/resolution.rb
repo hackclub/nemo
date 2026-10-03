@@ -1,5 +1,5 @@
 module Fd
   class Resolution
-    TOLD = YAML.load_file(Rails.root.join("../db/resolutions.yml")).fetch("told").freeze
+    DEFAULT_MESSAGE = YAML.load_file(Rails.root.join("../db/resolutions.yml")).fetch("told").freeze
   end
 end

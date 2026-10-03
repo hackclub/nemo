@@ -63,7 +63,7 @@ class FdHelperTest < ActionView::TestCase
     assert_equal "chip-off", prior_tone(1)
   end
 
-  test "two or more priors are plural and read as a warning" do
+  test "two or expand priors are plural and read as a warning" do
     assert_equal "2 priors", prior_phrase(2)
     assert_equal "chip-crit", prior_tone(2)
     assert_equal "5 priors", prior_phrase(5)
@@ -161,64 +161,64 @@ class FdHelperTest < ActionView::TestCase
       body: "they said something", posted_at: 2.days.ago)
   end
 
-  def conversation_for(said)
-    Fd::IntakeConversation.create!(report_id: said.id, channel_id: "D0REP",
+  def conversation_for(filed)
+    Fd::IntakeConversation.create!(report_id: filed.id, channel_id: "D0REP",
       thread_ts: "1.0", opened_at: 3.days.ago).id
   end
 
   test "an anonymous reporter is not named in their own transcript" do
-    said = report(is_anonymous: true, reporter_user_id: nil)
-    message = intake(conversation_for(said), author: "UREP1")
+    filed = report(is_anonymous: true, reporter_user_id: nil)
+    message = intake(conversation_for(filed), author: "UREP1")
 
-    entry = chat_entries([said], [], [message]).first
+    entry = chat_entries([filed], [], [message]).first
 
     assert_nil entry.who, "the author id must not reach the avatar"
     assert_equal "Anonymous", entry.name
-    assert_equal said.reporter_label(names), entry.name
+    assert_equal filed.reporter_label(names), entry.name
   end
 
   test "an anonymous transcript never resolves the author against the name table" do
-    said = report(is_anonymous: true, reporter_user_id: nil)
-    message = intake(conversation_for(said), author: "UREP1")
+    filed = report(is_anonymous: true, reporter_user_id: nil)
+    message = intake(conversation_for(filed), author: "UREP1")
     @names = Fd::Names.for(["UREP1"])
 
-    entry = chat_entries([said], [], [message]).first
+    entry = chat_entries([filed], [], [message]).first
 
     assert_not_equal @names["UREP1"], entry.name
     assert_no_match(/UREP1/, entry.name)
   end
 
   test "a signed reporter is still named in their transcript" do
-    said = report
-    message = intake(conversation_for(said), author: "UREP1")
+    filed = report
+    message = intake(conversation_for(filed), author: "UREP1")
 
-    entry = chat_entries([said], [], [message]).first
+    entry = chat_entries([filed], [], [message]).first
 
     assert_equal "UREP1", entry.who
     assert_match(/UREP1/, entry.name)
   end
-  def waiting(said, body = "")
-    Fd::IntakeOutbox.create!(conversation_id: conversation_for(said), kind: "reply",
+  def waiting(filed, body = "")
+    Fd::IntakeOutbox.create!(conversation_id: conversation_for(filed), kind: "reply",
       body: body, mode: "signed", requested_by: "UFF1",
       files: [{ "name" => "shot.png", "sha256" => "abc123" }])
   end
 
   test "a reply still on its way shows what it carries, as the reporter's does" do
-    said = report
+    filed = report
 
-    entry = chat_entries([said], [], [], [waiting(said)]).last
+    entry = chat_entries([filed], [], [], [waiting(filed)]).last
 
     assert_equal ["shot.png"], entry.files.map(&:shown_name)
-    assert_equal ["sending"], entry.files.map(&:said)
+    assert_equal ["sending"], entry.files.map(&:note)
     assert_not entry.files.first.kept?
     assert_not entry.files.first.image?
   end
 
   test "a reply carrying nothing has no file chips to show" do
-    said = report
+    filed = report
 
-    entry = chat_entries([said], [], [], [Fd::IntakeOutbox.create!(
-      conversation_id: conversation_for(said), kind: "reply", body: "just words",
+    entry = chat_entries([filed], [], [], [Fd::IntakeOutbox.create!(
+      conversation_id: conversation_for(filed), kind: "reply", body: "just words",
       mode: "signed", requested_by: "UFF1"
     )]).last
 
@@ -233,36 +233,36 @@ class FdHelperTest < ActionView::TestCase
   end
 
   test "a forwarded message is cited under the words it arrived with" do
-    said = report
-    message = intake(conversation_for(said), author: "UREP1")
+    filed = report
+    message = intake(conversation_for(filed), author: "UREP1")
     cited(message)
 
-    entry = chat_entries([said], [], [message]).first
+    entry = chat_entries([filed], [], [message]).first
     share = entry.shares.sole
 
     assert share.forwarded?
     assert_equal "forwarded", share.word
-    assert share.said?
+    assert share.body?
     assert_equal "the message they reported", share.source_body
   end
 
   test "a link nobody could open says so rather than quoting nothing" do
-    said = report
-    message = intake(conversation_for(said), author: "UREP1")
+    filed = report
+    message = intake(conversation_for(filed), author: "UREP1")
     cited(message, kind: "link", source_body: nil, permalink: nil, is_reachable: false)
 
-    share = chat_entries([said], [], [message]).first.shares.sole
+    share = chat_entries([filed], [], [message]).first.shares.sole
 
-    assert_not share.said?
+    assert_not share.body?
     assert_equal "linked", share.word
     assert_equal "a link we could not open", share.why_not
   end
 
   test "a message with nothing cited carries no citation blocks" do
-    said = report
-    message = intake(conversation_for(said), author: "UREP1")
+    filed = report
+    message = intake(conversation_for(filed), author: "UREP1")
 
-    assert_empty chat_entries([said], [], [message]).first.shares
+    assert_empty chat_entries([filed], [], [message]).first.shares
   end
   def listed(kase, **over)
     @cited_words = { kase.id => Fd::IntakeShare::Cited.new(
@@ -321,8 +321,8 @@ class FdHelperTest < ActionView::TestCase
   end
 
   test "slack link markup is never shown raw in the list" do
-    assert_equal "look here", plain_words("<https://slack.com/x|look here>")
-    assert_equal "https://slack.com/x", plain_words("<https://slack.com/x>")
+    assert_equal "look here", plain_text("<https://slack.com/x|look here>")
+    assert_equal "https://slack.com/x", plain_text("<https://slack.com/x>")
   end
   def held(**over)
     Fd::MemberGuard.new({ kind: "shush", subject_id: "USUB", opened_by: "UMOD",

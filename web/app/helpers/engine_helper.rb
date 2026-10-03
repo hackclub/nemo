@@ -60,13 +60,13 @@ module EngineHelper
     "#{(minutes / 1440).round(1)} d"
   end
 
-  CELL_SAID = { "ok" => "ran", "fail" => "failed here", "run" => "running now",
+  CELL_LABELS = { "ok" => "ran", "fail" => "failed here", "run" => "running now",
                 "part" => "ran, some of it failed", "stop" => "cancelled", "gone" => "abandoned",
                 "skip" => "nothing to do", "wait" => "not started yet",
                 "none" => "did not run" }.freeze
 
-  def cell_said(cell)
-    CELL_SAID.fetch(cell, cell)
+  def cell_label(cell)
+    CELL_LABELS.fetch(cell, cell)
   end
 
   SLICE_CELL = { "complete" => "on", "unverified" => "on", "superseded" => "on",
@@ -114,10 +114,10 @@ module EngineHelper
 
   def worker_note(beats)
     cold = beats.count(&:cold?)
-    said = "#{pluralize(beats.size, 'worker')} reporting"
-    return said if cold.zero?
+    text = "#{pluralize(beats.size, 'worker')} reporting"
+    return text if cold.zero?
 
-    "#{said} · #{cold} silent"
+    "#{text} · #{cold} silent"
   end
 
   def worker_chip(worker)

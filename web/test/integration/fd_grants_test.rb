@@ -29,7 +29,7 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
 
   test "a grant needs somebody" do
     give(user_id: "")
-    assert_match(/search for somebody/, flash[:alert])
+    assert_match(/Search for a member/, flash[:alert])
 
     give(user_id: "not-an-id")
     assert_match(/is not a Slack user id/, flash[:alert])
@@ -56,7 +56,7 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
     assert_equal "UME", grant.reload.revoked_by
   end
 
-  test "unpicking the fire department rung takes that grant back" do
+  test "unpicking the fire department grant_source takes that grant back" do
     give
     grant = held
 
@@ -70,7 +70,7 @@ class FdGrantsTest < ActionDispatch::IntegrationTest
   test "the last manager cannot lock everybody out by taking their own back" do
     delete admin_grant_path("UME")
 
-    assert_match(/somebody else has to take yours back/, flash[:alert])
+    assert_match(/Another administrator must revoke your own access/, flash[:alert])
     assert_predicate Account.find("UME"), :manager?
   end
 

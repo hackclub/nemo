@@ -20,7 +20,7 @@ class FdResponsesTest < ActionDispatch::IntegrationTest
       params: { on: "1", link: "https://unsub.hack.club" }.merge(over)
   end
 
-  def said(key) = Fd::AppSetting.said(key)
+  def setting(key) = Fd::AppSetting.value(key)
 
   test "the responses tab opens" do
     get fd_configuration_path(tab: "responses")
@@ -40,7 +40,7 @@ class FdResponsesTest < ActionDispatch::IntegrationTest
     assert_no_match(/unnamed channel/, response.body)
   end
 
-  test "the tab bar shows once there is more than one tab" do
+  test "the tab bar shows once there is expand than one tab" do
     get fd_configuration_path
 
     assert_match(/Automod/, response.body)
@@ -52,8 +52,8 @@ class FdResponsesTest < ActionDispatch::IntegrationTest
 
     assert Fd::AppSetting.on?(Fd::AppSetting::AUTORESPONSE_ON)
     assert_equal %w[fd-reason blunder], Fd::AppSetting.autoresponse_emoji
-    assert_equal @room.channel_id, said(Fd::AppSetting::AUTORESPONSE_CHANNEL)
-    assert_equal "here is why we do not say", said(Fd::AppSetting::AUTORESPONSE_BODY)
+    assert_equal @room.channel_id, setting(Fd::AppSetting::AUTORESPONSE_CHANNEL)
+    assert_equal "here is why we do not say", setting(Fd::AppSetting::AUTORESPONSE_BODY)
     assert_equal 7, Fd::AppSetting.autoresponse_cooldown_days
     assert_operator Fd::AuditEntry.where(entity_type: "app_setting", verb: "tuned").count,
       :>=, 1
@@ -70,13 +70,13 @@ class FdResponsesTest < ActionDispatch::IntegrationTest
     save(on: "")
 
     assert_not Fd::AppSetting.on?(Fd::AppSetting::AUTORESPONSE_ON)
-    assert_equal "here is why we do not say", said(Fd::AppSetting::AUTORESPONSE_BODY)
+    assert_equal "here is why we do not say", setting(Fd::AppSetting::AUTORESPONSE_BODY)
   end
 
   test "turning it on with no reply is refused" do
     save(body: "  ")
 
-    assert_empty said(Fd::AppSetting::AUTORESPONSE_BODY)
+    assert_empty setting(Fd::AppSetting::AUTORESPONSE_BODY)
     assert_match(/say what to answer with/, flash[:alert])
   end
 
@@ -115,14 +115,14 @@ class FdResponsesTest < ActionDispatch::IntegrationTest
     shield
 
     assert Fd::AppSetting.on?(Fd::AppSetting::UNSUB_SHIELD_ON)
-    assert_equal "https://unsub.hack.club", said(Fd::AppSetting::UNSUB_SHIELD_LINK)
+    assert_equal "https://unsub.hack.club", setting(Fd::AppSetting::UNSUB_SHIELD_LINK)
   end
 
-  test "a link that is not a link is refused" do
+  test "a link that is not a valid link is refused" do
     shield(link: "unsub.hack.club")
 
-    assert_empty said(Fd::AppSetting::UNSUB_SHIELD_LINK)
-    assert_match(/not a link/, flash[:alert])
+    assert_empty setting(Fd::AppSetting::UNSUB_SHIELD_LINK)
+    assert_match(/not a valid link/, flash[:alert])
   end
 
   test "the shield is turned off on its own" do
@@ -130,7 +130,7 @@ class FdResponsesTest < ActionDispatch::IntegrationTest
     shield(on: "")
 
     assert_not Fd::AppSetting.on?(Fd::AppSetting::UNSUB_SHIELD_ON)
-    assert_equal "https://unsub.hack.club", said(Fd::AppSetting::UNSUB_SHIELD_LINK)
+    assert_equal "https://unsub.hack.club", setting(Fd::AppSetting::UNSUB_SHIELD_LINK)
   end
 
   test "somebody without the capability cannot save either" do
@@ -139,7 +139,7 @@ class FdResponsesTest < ActionDispatch::IntegrationTest
     save
     shield
 
-    assert_empty said(Fd::AppSetting::AUTORESPONSE_BODY)
-    assert_empty said(Fd::AppSetting::UNSUB_SHIELD_LINK)
+    assert_empty setting(Fd::AppSetting::AUTORESPONSE_BODY)
+    assert_empty setting(Fd::AppSetting::UNSUB_SHIELD_LINK)
   end
 end

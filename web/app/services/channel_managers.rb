@@ -66,7 +66,7 @@ class ChannelManagers
       break if cursor.nil?
     end
     found
-  rescue Slack::ProxyClient::Error, Slack::ProxyClient::NotConfigured => e
+  rescue Slack::ProxyClient::Error, Slack::ProxyClient::NotConfiguredError => e
     Rails.logger.warn("channel_managers: #{e.class} for #{channel_id}")
     nil
   end

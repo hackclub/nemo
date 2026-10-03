@@ -1,6 +1,6 @@
-"""A viewers-over-time chart as a PNG, drawn by hand so the bot needs no browser
+"""Renders a viewers-over-time PNG without a headless browser.
 
-Drawn at twice the size and scaled down, which is what makes the line smooth.
+Drawn at 2x and downsampled for antialiasing.
 """
 
 import io
@@ -52,7 +52,7 @@ def font(path, size, weight=400):
         return ImageFont.load_default(size * SCALE)
 
 
-def nice_ticks(top, wanted=4):
+def axis_ticks(top, wanted=4):
     if top <= 0:
         return [0, 1]
     raw = top / wanted
@@ -72,7 +72,7 @@ def nice_ticks(top, wanted=4):
 
 
 def smoothed(points, per_span=12):
-    """Monotone cubic through the points: bends, but never overshoots a flat run"""
+    """Monotone cubic interpolation; does not overshoot on flat segments."""
     n = len(points)
     if n < 3:
         return points
@@ -112,8 +112,8 @@ def smoothed(points, per_span=12):
     return out
 
 
-def wash(size, polygon, floor, top):
-    """The fill under the line, fading out towards the floor"""
+def gradient_fill(size, polygon, floor, top):
+    """Vertical gradient fill between the curve and the baseline."""
     layer = Image.new("RGBA", size, WASH + (0,))
     shape = Image.new("L", size, 0)
     ImageDraw.Draw(shape).polygon(polygon, fill=255)
@@ -125,8 +125,8 @@ def wash(size, polygon, floor, top):
     return layer
 
 
-def bucket_said(curve):
-    """How wide one bucket is, in words: slack picks it per span"""
+def bucket_label(curve):
+    """Human-readable bucket width; Slack selects it per span."""
     seconds = int((curve[1][0] - curve[0][0]).total_seconds()) if len(curve) > 1 else 0
     if seconds <= 0:
         return "bucket"
@@ -140,8 +140,8 @@ def bucket_said(curve):
     return "day" if days == 1 else f"{days} days"
 
 
-def so_far(curve, age_seconds):
-    """Slack pads the span out with zeros past the present, which is not silence"""
+def trim_to_present(curve, age_seconds):
+    """Drop the zero-padding Slack appends past the current time."""
     if age_seconds is None or not curve:
         return curve
     start = curve[0][0]
@@ -151,7 +151,7 @@ def so_far(curve, age_seconds):
 WINDOWS = ((86400, "day"), (3600, "hour"), (60, "minute"))
 
 
-def window_said(seconds):
+def format_span(seconds):
     for size, word in WINDOWS:
         if seconds >= size:
             count = round(seconds / size)
@@ -160,17 +160,17 @@ def window_said(seconds):
 
 
 def render(curve, span, viewers=None, age_seconds=None):
-    """PNG bytes for one span's curve of (posted_at + offset, new viewers), drawn
-    up to the present only"""
-    said = SPANS.get(span)
-    if not said or len(curve) < 2:
+    """PNG bytes for one span's curve of (posted_at + offset, new viewers),
+    drawn up to the present only."""
+    spec = SPANS.get(span)
+    if not spec or len(curve) < 2:
         return None
     whole_span = (curve[-1][0] - curve[0][0]).total_seconds()
-    curve = so_far(curve, age_seconds)
+    curve = trim_to_present(curve, age_seconds)
     if len(curve) < 2:
         return None
 
-    unit_label, unit, step, say = said
+    unit_label, unit, step, say = spec
     s = SCALE
     size = (WIDE * s, HIGH * s)
     image = Image.new("RGB", size, PAPER)
@@ -183,7 +183,7 @@ def render(curve, span, viewers=None, age_seconds=None):
     span_seconds = whole_span or 1
     counts = [count for _, count in curve]
     peak = max(counts)
-    ticks = nice_ticks(peak * 1.12)
+    ticks = axis_ticks(peak * 1.12)
     ceiling = ticks[-1]
 
     def x_of(at):
@@ -210,7 +210,7 @@ def render(curve, span, viewers=None, age_seconds=None):
     bend = smoothed(points)
     bend = [(x, min(max(y, top), floor)) for x, y in bend]
 
-    under = wash(size, [(left, floor), *bend, (bend[-1][0], floor)], floor, top)
+    under = gradient_fill(size, [(left, floor), *bend, (bend[-1][0], floor)], floor, top)
     image.paste(under, (0, 0), under)
     draw = ImageDraw.Draw(image, "RGBA")
     draw.line([(left, floor), (right, floor)], fill=GRID, width=s)
@@ -228,15 +228,15 @@ def render(curve, span, viewers=None, age_seconds=None):
                  width=int(3 * s))
     peak_font = font(MONO, 16, 500)
     anchor = "ls" if px < (left + right) / 2 else "rs"
-    nudge = 14 * s if anchor == "ls" else -14 * s
-    draw.text((px + nudge, py - 12 * s), f"{peak:,}", font=peak_font, fill=LINE, anchor=anchor)
+    post_expiry_notice = 14 * s if anchor == "ls" else -14 * s
+    draw.text((px + post_expiry_notice, py - 12 * s), f"{peak:,}", font=peak_font, fill=LINE, anchor=anchor)
 
     title = font(SANS, 30, 620)
     sub = font(MONO, 16)
-    draw.text((left, 34 * s), f"Viewers over {window_said(whole_span)}", font=title, fill=INK,
+    draw.text((left, 34 * s), f"Viewers over {format_span(whole_span)}", font=title, fill=INK,
               anchor="la")
     seen = f"{sum(counts):,} of {viewers:,}" if viewers is not None else f"{sum(counts):,}"
-    draw.text((left, 74 * s), f"{seen} viewers · new viewers per {bucket_said(curve)}",
+    draw.text((left, 74 * s), f"{seen} viewers · new viewers per {bucket_label(curve)}",
               font=sub, fill=INK_2, anchor="la")
 
     shrunk = image.resize((WIDE, HIGH), Image.LANCZOS).filter(ImageFilter.SHARPEN)
@@ -246,7 +246,7 @@ def render(curve, span, viewers=None, age_seconds=None):
 
 
 def span_for(age_seconds):
-    """The span that still has something to say about a post this old"""
+    """Select the reporting span appropriate to the post's age."""
     if age_seconds < 2 * 3600:
         return "1h"
     if age_seconds < 2 * 86400:

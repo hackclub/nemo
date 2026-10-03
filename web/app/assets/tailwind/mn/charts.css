@@ -9,7 +9,7 @@
     max-width: 100%;
     height: auto;
   }
-  .chart-say {
+  .chart-caption {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -44,10 +44,10 @@
     font-size: var(--t-mark);
     font-variant-numeric: tabular-nums;
   }
-  th[aria-sort] .ax, .ax.cap-say {
+  th[aria-sort] .ax, .ax.cap-note {
     fill: var(--ink-3);
   }
-  .ax.cap-say {
+  .ax.cap-note {
     font-family: var(--font-sans);
     font-size: var(--t-fine);
     letter-spacing: normal;
@@ -64,11 +64,11 @@
     font-size: var(--t-fine);
     font-variant-numeric: tabular-nums;
   }
-  .t-say {
+  .t-note {
     font-weight: 400;
     color: color-mix(in oklab, var(--tip-ink) 62%, transparent);
   }
-  .tipped > .tip .t-say {
+  .tipped > .tip .t-note {
     margin-left: 5px;
   }
   .tipped > .tip .row u {
@@ -83,10 +83,10 @@
     text-decoration: none;
   }
 
-  .hole {
+  .donut-hole {
     fill: color-mix(in oklab, var(--ink-4) 7%, transparent);
   }
-  .hole-dot {
+  .donut-hole-dot {
     display: inline-block;
     width: 7px;
     height: 7px;
@@ -154,17 +154,17 @@
   .wash-fill {
     fill: color-mix(in oklab, var(--series-1) 14%, transparent);
   }
-  .spot {
+  .scatter-point {
     fill: currentColor;
     stroke: var(--card);
     stroke-width: 1;
     cursor: pointer;
     transition: opacity var(--dur-2) var(--ease);
   }
-  .chart:has(.spot.lit) .spot:not(.lit) {
+  .chart:has(.scatter-point.lit) .scatter-point:not(.lit) {
     opacity: 0.35;
   }
-  .spot.lit {
+  .scatter-point.lit {
     stroke: var(--ink);
     stroke-width: 1.5;
   }
@@ -327,7 +327,7 @@
     color: var(--ink-4);
     font-size: var(--t-fine);
   }
-  .tree-key .sep {
+  .tree-key .divider {
     width: 1px;
     height: 12px;
     margin: 0 4px;
@@ -380,13 +380,13 @@
     flex-direction: column;
     padding: var(--s-2xs) var(--s-xs);
   }
-  .fn-row {
+  .funnel-row {
     display: flex;
     align-items: center;
     gap: var(--s-xs);
     padding: 5px 0;
   }
-  .fn-name {
+  .funnel-name {
     flex: 0 0 168px;
     overflow: hidden;
     color: var(--ink-2);
@@ -394,7 +394,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .fn-bar {
+  .funnel-bar {
     position: relative;
     flex: 1 1 auto;
     height: 18px;
@@ -402,14 +402,14 @@
     background: var(--sunk);
     overflow: hidden;
   }
-  .fn-bar i {
+  .funnel-bar i {
     position: absolute;
     inset: 0 auto 0 0;
     height: 100%;
   }
-  .fn-a { border-radius: 3px; background: color-mix(in oklab, var(--series-1) 24%, var(--card)); }
-  .fn-b { border-radius: 3px; background: color-mix(in oklab, var(--series-1) 66%, var(--card)); }
-  .fn-c { border-radius: 3px; background: var(--series-2); }
+  .funnel-a { border-radius: 3px; background: color-mix(in oklab, var(--series-1) 24%, var(--card)); }
+  .funnel-b { border-radius: 3px; background: color-mix(in oklab, var(--series-1) 66%, var(--card)); }
+  .funnel-c { border-radius: 3px; background: var(--series-2); }
 
   .ivrows {
     display: flex;
@@ -582,7 +582,7 @@
     font-size: var(--t-mark);
     color: var(--ink-4);
   }
-  .cal-run-say {
+  .cal-run-note {
     grid-row: 10;
     font-size: var(--t-mark);
     font-weight: 600;
@@ -684,7 +684,7 @@
     background: var(--hover);
     text-decoration: none;
   }
-  .tile-t {
+  .tile-title {
     overflow: hidden;
     color: var(--ink);
     font-size: var(--t-body);
@@ -710,7 +710,7 @@
     border-radius: inherit;
     background: var(--series-1);
   }
-  .tile-v {
+  .tile-value {
     color: var(--ink-3);
     font-family: var(--font-code);
     font-size: var(--t-fine);
@@ -727,7 +727,7 @@
     font-family: var(--font-code);
     font-weight: 600;
   }
-  .tile-s {
+  .tile-sub {
     margin-top: auto;
     color: var(--ink-4);
     font-size: var(--t-fine);

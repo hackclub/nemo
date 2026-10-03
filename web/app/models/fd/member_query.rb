@@ -188,11 +188,11 @@ module Fd
     end
 
     def sort_label
-      said = SORT.fetch(self["sort"])
+      label = SORT.fetch(self["sort"])
       return "name, a to z" if self["sort"] == "name" && !descending?
       return "name, z to a" if self["sort"] == "name"
 
-      descending? ? "most #{said}" : "least #{said}"
+      descending? ? "most #{label}" : "least #{label}"
     end
 
     def title
@@ -280,10 +280,10 @@ module Fd
     end
 
     def counts_per_view
-      said = VIEWS.keys.map { |key| "count(*) FILTER (WHERE #{view_clause(key)}) AS #{key}" }
+      label = VIEWS.keys.map { |key| "count(*) FILTER (WHERE #{view_clause(key)}) AS #{key}" }
       row = ask(<<~SQL).first
         WITH #{aggregates}
-        SELECT #{said.join(", ")} FROM roster
+        SELECT #{label.join(", ")} FROM roster
       SQL
       VIEWS.keys.index_with { |key| row[key].to_i }
     end

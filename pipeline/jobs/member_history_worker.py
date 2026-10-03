@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from ingest.member_history import run as run_member_history
 from lib import settings
 from lib.db import SeededDeployment, connect, refuse_if_seeded, set_worker
-from lib.heartbeat import beating
+from lib.heartbeat import heartbeat_loop
 from lib.paths import ENV_FILE
 
 WORKER = "member_history_worker"
@@ -41,7 +41,7 @@ def main():
     while True:
         state = {"note": "draining"}
         try:
-            with connect() as conn, beating(WORKER, lambda: state["note"]):
+            with connect() as conn, heartbeat_loop(WORKER, lambda: state["note"]):
                 searched = drain(conn, lambda n: state.update(note=f"draining, {n} searched this wake"))
                 state["note"] = (
                     "idle, every member searched" if not searched else f"idle after searching {searched}"

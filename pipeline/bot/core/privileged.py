@@ -15,13 +15,13 @@ DEFAULT_CAP = 5
 
 
 def mode():
-    said = (os.environ.get("FD_SESSION_RESET") or LOG).strip().lower()
-    return said if said in MODES else LOG
+    mode = (os.environ.get("FD_SESSION_RESET") or LOG).strip().lower()
+    return mode if mode in MODES else LOG
 
 
 def deactivation_mode():
-    said = (os.environ.get("FD_DEACTIVATE") or LOG).strip().lower()
-    return said if said in MODES else LOG
+    mode = (os.environ.get("FD_DEACTIVATE") or LOG).strip().lower()
+    return mode if mode in MODES else LOG
 
 
 def strikes_needed():
@@ -52,13 +52,13 @@ _admin = {}
 
 
 def absent(failure):
-    said = str(failure)
-    return any(one in said for one in NOT_THERE)
+    text = str(failure)
+    return any(one in text for one in NOT_THERE)
 
 
 def gone(failure):
-    said = str(failure)
-    return any(one in said for one in ALREADY_GONE)
+    text = str(failure)
+    return any(one in text for one in ALREADY_GONE)
 
 
 def admin_user_id():

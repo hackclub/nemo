@@ -17,14 +17,14 @@ SELECT role FROM app.effective_role WHERE user_id = %s ORDER BY role
 CARRIED = ("author", "channel")
 
 
-class Unknown(KeyError):
-    """No capability in db/capabilities.yml carries this key"""
+class UnknownCapabilityError(KeyError):
+    """Raised when db/capabilities.yml has no capability under this key."""
 
 
 def entry(conn, key):
     row = conn.execute(CAPABILITY, (key,)).fetchone()
     if row is None:
-        raise Unknown(f"{key} is not a capability")
+        raise UnknownCapabilityError(f"{key} is not a capability")
     return {"label": row[0], "record_scope": row[1], "every_account": bool(row[2])}
 
 
@@ -45,15 +45,15 @@ def holds(conn, user_id, key):
     return bool(conn.execute(HOLDS, (user_id, key)).fetchone()[0])
 
 
-def refusal(said):
-    return f"{said['label'].lower()} is not yours to use"
+def refusal(cap):
+    return f"{cap['label'].lower()} is not yours to use"
 
 
-def in_scope(said):
-    scope = said["record_scope"]
+def in_scope(cap):
+    scope = cap["record_scope"]
     if scope is None or scope in CARRIED:
         return True, None
-    return False, f"{said['label'].lower()} is scoped to {scope}, which nemo cannot weigh"
+    return False, f"{cap['label'].lower()} is scoped to {scope}, which nemo cannot weigh"
 
 
 def may_see_channel(conn, user_id, channel_id):
@@ -63,12 +63,12 @@ def may_see_channel(conn, user_id, channel_id):
 
 
 def may(conn, user_id, key, case_id=None):
-    said = entry(conn, key)
-    if said["every_account"]:
-        return in_scope(said)
+    cap = entry(conn, key)
+    if cap["every_account"]:
+        return in_scope(cap)
     if not roles(conn, user_id) and not holds(conn, user_id, key):
         return False, "you need a Fire Department grant to do that"
     if not holds(conn, user_id, key):
-        return False, refusal(said)
+        return False, refusal(cap)
 
-    return in_scope(said)
+    return in_scope(cap)

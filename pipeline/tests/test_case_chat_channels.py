@@ -24,12 +24,12 @@ class Conn:
 
 @pytest.fixture(autouse=True)
 def forget(monkeypatch):
-    monkeypatch.setattr(channel, "_firehouse", {})
+    monkeypatch.setattr(channel, "_internal_log", {})
     monkeypatch.setattr(channel, "_react", {})
 
 
-def settings(monkeypatch, firehouse="C_FIRE", react=("C_REACT",)):
-    monkeypatch.setattr(channel.channels, "setting", lambda conn, key: firehouse)
+def settings(monkeypatch, internal_log="C_FIRE", react=("C_REACT",)):
+    monkeypatch.setattr(channel.channels, "setting", lambda conn, key: internal_log)
     monkeypatch.setattr(channel.channels, "react_channels", lambda conn: set(react))
 
 

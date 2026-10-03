@@ -62,7 +62,7 @@ module ApplicationHelper
   end
 
   NAV_ICONS = {
-    "you" => ["M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8", "M4 21v-1a6 6 0 0 1 6-6h4",
+    "person" => ["M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8", "M4 21v-1a6 6 0 0 1 6-6h4",
               "M15 21l2.5-4 2 2.5 2.5-5"],
     "overview" => ["M3 3h7v7H3z", "M14 3h7v7h-7z", "M14 14h7v7h-7z", "M3 14h7v7H3z"],
     "joining" => ["M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4", "M10 17l5-5-5-5", "M15 12H3"],
@@ -113,7 +113,7 @@ module ApplicationHelper
 
   def nav_icon(key)
     paths = NAV_ICONS.fetch(key.to_s, NAV_ICONS.fetch("group"))
-    tag.svg(class: "ic", width: 15, height: 15, viewBox: "0 0 24 24", fill: "none",
+    tag.svg(class: "icon-slot", width: 15, height: 15, viewBox: "0 0 24 24", fill: "none",
       stroke: "currentColor", "stroke-width": 1.7, "stroke-linecap": "round",
       "stroke-linejoin": "round", "aria-hidden": "true") do
       safe_join(paths.map { |d| tag.path(d: d) })
@@ -175,7 +175,7 @@ module ApplicationHelper
 
   def rail_icon(key)
     paths = RAIL_ICONS.fetch(key.to_s, RAIL_ICONS.fetch("community"))
-    tag.svg(class: "ic", width: 18, height: 18, viewBox: "0 0 24 24", fill: "none",
+    tag.svg(class: "icon-slot", width: 18, height: 18, viewBox: "0 0 24 24", fill: "none",
       stroke: "currentColor", "stroke-width": 1.6, "stroke-linecap": "round",
       "stroke-linejoin": "round", "aria-hidden": "true") do
       safe_join(paths.map { |d| tag.path(d: d) })
@@ -209,7 +209,7 @@ module ApplicationHelper
     controller_name == "home" && action_name == "index"
   end
 
-  def here_stop(fire_engine:)
+  def nav_here(fire_engine:)
     rail_stops(fire_engine: fire_engine).find(&:here)
   end
 
@@ -220,7 +220,7 @@ module ApplicationHelper
     return nil unless on?(:analytics)
     return "layouts/engine_pane" if controller_name == "engine"
     return "layouts/community_pane" if
-      %w[home journey channels you].include?(controller_name)
+      %w[home journey channels profile].include?(controller_name)
 
     nil
   end

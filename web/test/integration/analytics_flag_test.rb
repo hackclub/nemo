@@ -23,7 +23,7 @@ class AnalyticsFlagTest < ActionDispatch::IntegrationTest
     [community_path, channels_path, engine_path].each do |where|
       get where
       assert_redirected_to fd_cases_path
-      assert_match(/community analytics is turned off/, flash[:alert])
+      assert_match(/Community analytics turned off/, flash[:alert])
     end
   end
 

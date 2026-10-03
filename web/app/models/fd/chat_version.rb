@@ -8,7 +8,7 @@ module Fd
 
     SHAPE = /\A(\d+)\.(\d+)\.(\d+)\z/
 
-    CHAT_STAMPS = Arel.sql("count(*), max(id), max(greatest(said_at, edited_at, deleted_at))")
+    CHAT_STAMPS = Arel.sql("count(*), max(id), max(greatest(posted_at, edited_at, deleted_at))")
     MESSAGE_STAMPS = Arel.sql("count(*), max(id), max(greatest(posted_at, edited_at, deleted_at))")
     OUTBOX_STAMPS = Arel.sql("count(*), max(id), max(greatest(requested_at, sent_at, failed_at))")
     FILE_STAMPS = Arel.sql(

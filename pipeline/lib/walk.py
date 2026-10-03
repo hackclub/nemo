@@ -6,8 +6,8 @@ SHORT = "short"
 UNVERIFIED = "unverified"
 
 
-class WalkWrong(RuntimeError):
-    """The walk did not read what the endpoint said was there"""
+class WalkMismatchError(RuntimeError):
+    """The walk did not read the number of items the endpoint reported."""
 
 
 def check_walk(what, seen, expected, page_size, short_at=SHORT_AT):
@@ -21,7 +21,7 @@ def check_walk(what, seen, expected, page_size, short_at=SHORT_AT):
         return None
 
     if seen > expected + page_size:
-        raise WalkWrong(
+        raise WalkMismatchError(
             f"{what}: walked {seen} rows against a num_found of {expected}, "
             "refusing to commit"
         )
@@ -51,5 +51,5 @@ def window_totals(counted, window):
     return landed, held
 
 
-def covers_what_it_replaces(landed, held, floor=SHORT_AT):
+def supersedes(landed, held, floor=SHORT_AT):
     return landed >= int(held * floor)

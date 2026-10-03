@@ -3,8 +3,8 @@ require "net/http"
 module Prometheus
   class Roster
     class Error < StandardError; end
-    class Unavailable < Error; end
-    class NotConfigured < StandardError; end
+    class UnavailableError < Error; end
+    class NotConfiguredError < StandardError; end
 
     OPEN_TIMEOUT = 2
     READ_TIMEOUT = 3
@@ -30,7 +30,7 @@ module Prometheus
       cursor = nil
       loop do
         body = get(appointments_path(cursor))
-        raise Unavailable, "prometheus answered ok:false" unless body["ok"]
+        raise UnavailableError, "prometheus answered ok:false" unless body["ok"]
 
         Array(body["appointments"]).each { |one| yield one }
         cursor = body["next_cursor"]
@@ -50,18 +50,18 @@ module Prometheus
         open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT) do |http|
         http.request(Net::HTTP::Get.new(uri))
       end
-      raise Unavailable, "prometheus answered #{response.code}" unless response.is_a?(Net::HTTPSuccess)
+      raise UnavailableError, "prometheus answered #{response.code}" unless response.is_a?(Net::HTTPSuccess)
 
       JSON.parse(response.body)
     rescue JSON::ParserError => e
-      raise Unavailable, "prometheus sent something that is not json: #{e.message}"
+      raise UnavailableError, "prometheus sent something that is not json: #{e.message}"
     rescue Net::OpenTimeout, Net::ReadTimeout, SystemCallError, IOError, SocketError => e
-      raise Unavailable, e.message
+      raise UnavailableError, e.message
     end
 
     def self.base_url
       ENV["PROMETHEUS_BASE_URL"].presence ||
-        raise(NotConfigured, "PROMETHEUS_BASE_URL is not set")
+        raise(NotConfiguredError, "PROMETHEUS_BASE_URL is not set")
     end
   end
 end

@@ -48,9 +48,9 @@ class FdBlockedDomainsTest < ActionDispatch::IntegrationTest
     assert_no_difference -> { Fd::BlockedDomain.count } do
       add(domain: "school.example")
     end
-    assert_equal "domain", flash[:wrong]["field"]
-    assert_match(/is on 30 accounts already/, flash[:wrong]["said"])
-    assert_equal "school.example", flash[:wrong]["was"]
+    assert_equal "domain", flash[:field_error]["field"]
+    assert_match(/is on 30 accounts already/, flash[:field_error]["message"])
+    assert_equal "school.example", flash[:field_error]["was"]
 
     assert_difference -> { Fd::BlockedDomain.count }, 1 do
       add(domain: "school.example", anyway: "1")
@@ -93,7 +93,7 @@ class FdBlockedDomainsTest < ActionDispatch::IntegrationTest
     assert_no_difference -> { Fd::BlockedDomain.active.count } do
       add
     end
-    assert_match(/already on the list/, flash[:alert])
+    assert_match(/Already on the list/, flash[:alert])
   end
 
   test "taking one off retires it rather than losing that it was there" do

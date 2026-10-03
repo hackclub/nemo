@@ -34,7 +34,7 @@ def windows(conn):
         days = settings.retention_days(conn, key)
         if days is None:
             continue
-        for table in sources.says(key, "writes"):
+        for table in sources.field_of(key, "writes"):
             column = AGED_BY.get(table)
             if column:
                 stamp = stamp_of(key) if table in SHARED else None

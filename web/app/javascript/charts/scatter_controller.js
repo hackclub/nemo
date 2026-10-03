@@ -26,7 +26,7 @@ export default class extends Controller {
     this.at = null
     this.element.innerHTML = `<div class="chart tipped" tabindex="0"
       data-action="mousemove->scatter#track mouseleave->scatter#clear keydown->scatter#key"
-      ><div class="tip"></div><span class="chart-say" aria-live="polite"></span></div>`
+      ><div class="tip"></div><span class="chart-caption" aria-live="polite"></span></div>`
     const chart = this.element.querySelector(".chart")
     this.watcher = new ResizeObserver(() => this.measure())
     this.watcher.observe(chart)
@@ -73,7 +73,7 @@ export default class extends Controller {
     return this.yPctValue ? `${Math.round(v)}%` : axl(v)
   }
 
-  said(v, pct) {
+  format(v, pct) {
     if (v == null) return "n/a"
     return pct ? `${Number(v).toFixed(1)}%` : F(v)
   }
@@ -110,31 +110,31 @@ export default class extends Controller {
         y(yMid).toFixed(1)}" x2="${wide - PAD.r}" y2="${y(yMid).toFixed(1)}"/>`
     ].join("")
 
-    const said = this.hasCornersValue ? this.cornersValue : {}
+    const corners = this.hasCornersValue ? this.cornersValue : {}
     const corners = CORNERS.map((at) => {
-      const label = said[at]
+      const label = corners[at]
       if (!label) return ""
 
       const left = at[1] === "l"
       const top = at[0] === "t"
-      return `<text class="ax quad-say" x="${
+      return `<text class="ax quad-note" x="${
         (left ? PAD.l + 6 : wide - PAD.r - 6).toFixed(1)}" y="${
         (top ? PAD.t + 11 : high - PAD.b - 6).toFixed(1)}" text-anchor="${
         left ? "start" : "end"}">${esc(label)}</text>`
     }).join("")
 
     const dots = pts.map((p, i) =>
-      `<circle class="spot ser-${p.ink == null ? 1 : p.ink}" data-i="${i}" cx="${
+      `<circle class="scatter-point ser-${p.ink == null ? 1 : p.ink}" data-i="${i}" cx="${
         x(p.x).toFixed(1)}" cy="${y(p.y).toFixed(1)}" r="${
         r(Number(p.n) || 0).toFixed(1)}"/>`).join("")
 
     const caption = this.xLabelValue
-      ? `<text class="ax cap-say" x="${((PAD.l + wide - PAD.r) / 2).toFixed(1)}" y="${
+      ? `<text class="ax cap-note" x="${((PAD.l + wide - PAD.r) / 2).toFixed(1)}" y="${
         high - 6}" text-anchor="middle">${esc(this.xLabelValue)}</text>`
       : ""
 
     const stood = this.yLabelValue
-      ? `<text class="ax cap-say" transform="translate(11,${
+      ? `<text class="ax cap-note" transform="translate(11,${
         ((PAD.t + high - PAD.b) / 2).toFixed(1)}) rotate(-90)" text-anchor="middle">${
         esc(this.yLabelValue)}</text>`
       : ""
@@ -157,7 +157,7 @@ export default class extends Controller {
     const worst = pts.reduce((at, p) => (p.y < at.y ? p : at), pts[0])
     return `${pts.length} channels by ${this.xLabelValue || "x"} against ${
       this.yLabelValue || "y"}, from ${worst.name} at ${
-      this.said(worst.y, this.yPctValue)} to ${best.name} at ${this.said(best.y, this.yPctValue)}`
+      this.format(worst.y, this.yPctValue)} to ${best.name} at ${this.format(best.y, this.yPctValue)}`
   }
 
   track(event) {
@@ -209,18 +209,18 @@ export default class extends Controller {
     if (!g || !p) return
 
     this.at = i
-    chart.querySelectorAll(".spot").forEach((dot) =>
+    chart.querySelectorAll(".scatter-point").forEach((dot) =>
       dot.classList.toggle("lit", Number(dot.dataset.i) === i))
 
     const rows = [
-      [this.xLabelValue, this.said(p.x, false), p.ink],
-      [this.yLabelValue, this.said(p.y, this.yPctValue), p.ink],
+      [this.xLabelValue, this.format(p.x, false), p.ink],
+      [this.yLabelValue, this.format(p.y, this.yPctValue), p.ink],
       [this.nLabelValue, F(p.n), 0]
     ].filter(([label]) => label)
 
     const tip = chart.querySelector(".tip")
     tip.innerHTML = `<div class="t">#${esc(p.name)}${
-      p.phase ? ` <span class="t-say">${esc(p.phase)}</span>` : ""}</div>` +
+      p.phase ? ` <span class="t-note">${esc(p.phase)}</span>` : ""}</div>` +
       rows.map(([label, value, ink]) =>
         `<div class="row"><i class="ser-${ink == null ? 1 : ink}"></i>${
           esc(label)}<b>${value}</b></div>`).join("")
@@ -232,9 +232,9 @@ export default class extends Controller {
     tip.style.left = `${Math.max(0, left)}px`
     tip.style.top = `${Math.max(PAD.t, Math.min(g.y(p.y) - 12, g.high - 110))}px`
 
-    chart.querySelector(".chart-say").textContent =
-      `${p.name}, ${this.xLabelValue} ${this.said(p.x, false)}, ${
-        this.yLabelValue} ${this.said(p.y, this.yPctValue)}`
+    chart.querySelector(".chart-note").textContent =
+      `${p.name}, ${this.xLabelValue} ${this.format(p.x, false)}, ${
+        this.yLabelValue} ${this.format(p.y, this.yPctValue)}`
   }
 
   clear() {
@@ -242,9 +242,9 @@ export default class extends Controller {
     if (!chart) return
 
     this.at = null
-    chart.querySelectorAll(".spot.lit").forEach((dot) => dot.classList.remove("lit"))
+    chart.querySelectorAll(".scatter-point.lit").forEach((dot) => dot.classList.remove("lit"))
     chart.querySelector(".tip")?.classList.remove("on")
-    const say = chart.querySelector(".chart-say")
+    const say = chart.querySelector(".chart-note")
     if (say) say.textContent = ""
   }
 }

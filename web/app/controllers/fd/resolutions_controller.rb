@@ -8,7 +8,7 @@ module Fd
       @now = Time.current
 
       resolution = ending
-      return refuse("say why this case is closing") if resolution.nil?
+      return refuse("Enter why this case is closing") if resolution.nil?
 
       settled = false
       writing do
@@ -28,9 +28,9 @@ module Fd
       end
 
       if settled
-        redirect_to fd_case_path(@case), notice: "case #{@case.id} resolved"
+        redirect_to fd_case_path(@case), notice: "Case #{@case.id} resolved"
       else
-        refuse("case #{@case.id} was already resolved")
+        refuse("Case #{@case.id} was already resolved")
       end
     end
 
@@ -38,7 +38,7 @@ module Fd
       @case = Case.find(params[:case_id])
       @now = Time.current
 
-      return refuse("case #{@case.id} is already open") unless @case.resolved?
+      return refuse("Case #{@case.id} is already open") unless @case.resolved?
 
       held = @case.assignee_user_ids
       was = { "resolved_at" => @case.resolved_at, "resolution" => @case.resolution,
@@ -52,7 +52,7 @@ module Fd
                    "assignees" => [] })
       end
 
-      redirect_to fd_case_path(@case), notice: "case #{@case.id} is open again"
+      redirect_to fd_case_path(@case), notice: "Case #{@case.id} reopened"
     end
 
     private
@@ -69,8 +69,8 @@ module Fd
     end
 
     def told
-      said = params[:member_message].to_s.strip
-      said.presence || Resolution::TOLD
+      message = params[:member_message].to_s.strip
+      message.presence || Resolution::DEFAULT_MESSAGE
     end
 
     def mark_resolved(resolution)
@@ -84,21 +84,21 @@ module Fd
     end
 
     def close_reports
-      said = told
+      message = told
 
       CaseReport.where(case_id: @case.family_ids, closed_at: nil).find_each do |report|
         report.update!(closed_at: @now, closed_by: current_account.user_id)
         audit(report, "closed", entity_id: @case.id,
           before: { "closed_at" => nil }, after: { "closed_at" => @now })
-        queue(report, said)
+        queue(report, message)
       end
     end
 
-    def queue(report, said)
+    def queue(report, message)
       conversation = IntakeConversation.find_by(report_id: report.id, closed_at: nil)
       return if conversation.nil?
 
-      IntakeOutbox.create!(conversation_id: conversation.id, kind: "outcome", body: said,
+      IntakeOutbox.create!(conversation_id: conversation.id, kind: "outcome", body: message,
         requested_by: current_account.user_id)
     end
 

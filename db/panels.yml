@@ -20,13 +20,13 @@ panels:
     needs: ~
 
   members.directory:
-    label: The member directory
+    label: Member directory
     needs: member.read
 
   channels.index:
-    label: The channel list
+    label: Channel list
     needs: ~
 
   engine.runs:
-    label: The engine, its runs and coverage
+    label: Engine runs and coverage
     needs: engine.manage

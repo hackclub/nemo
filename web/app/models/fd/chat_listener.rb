@@ -57,15 +57,15 @@ module Fd
     private
 
     def listen(raw = PG.connect(self.class.connection_options))
-      CHANNELS.each { |heard| raw.exec("LISTEN #{heard}") }
+      CHANNELS.each { |on_notify| raw.exec("LISTEN #{on_notify}") }
       Rails.logger.info("chat listener: listening on #{CHANNELS.join(", ")}")
 
-      loop { raw.wait_for_notify(WAIT) { |channel, _pid, payload| heard(channel, payload) } }
+      loop { raw.wait_for_notify(WAIT) { |channel, _pid, payload| on_notify(channel, payload) } }
     ensure
       raw&.close
     end
 
-    def heard(channel, payload)
+    def on_notify(channel, payload)
       return guard_changed(payload) if channel == GUARD_CHANNEL
 
       chat_changed(payload)

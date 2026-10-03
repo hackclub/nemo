@@ -35,7 +35,7 @@ module Fd
       live.where(channel_id: channel_id).index_by(&:kind)
     end
 
-    def self.kind?(said) = KINDS.include?(said)
+    def self.kind?(kind) = KINDS.include?(kind)
 
     def live? = state == "live"
 

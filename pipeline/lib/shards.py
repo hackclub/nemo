@@ -66,7 +66,7 @@ def report(env=None):
     return discover(env)
 
 
-class Throttled(RuntimeError):
+class ThrottledError(RuntimeError):
     def __init__(self, retry_after):
         super().__init__(f"slack asked for {retry_after}s")
         self.retry_after = retry_after
@@ -176,7 +176,7 @@ class Shard:
             status = getattr(response, "status_code", None)
             if status == 429:
                 headers = getattr(response, "headers", {}) or {}
-                raise Throttled(float(headers.get("Retry-After", 1) or 1)) from failure
+                raise ThrottledError(float(headers.get("Retry-After", 1) or 1)) from failure
             raise
 
     def parked_for(self, method=None):
@@ -212,7 +212,7 @@ class Shard:
         remember_rate(self.index, per_minute)
         return per_minute
 
-    def thrived(self):
+    def mark_success(self):
         if self.pinned:
             return self.per_minute
         with self.lock:
@@ -228,7 +228,7 @@ class Shard:
                 target = min(target, self.ceiling * CEILING_MARGIN)
             return self._retune(target)
 
-    def park(self, method, seconds):
+    def cooldown(self, method, seconds):
         seconds = min(max(float(seconds), 0.0), PARK_CEILING)
         with self.lock:
             now = self.clock()
@@ -274,8 +274,8 @@ class Pool:
             waits.append(wait)
         return None, min(waits)
 
-    def park(self, shard, method, seconds):
-        return shard.park(method, seconds)
+    def cooldown(self, shard, method, seconds):
+        return shard.cooldown(method, seconds)
 
     def rates(self):
         return [
@@ -298,7 +298,7 @@ class Pool:
                 + f" @{self.per_minute():.0f}/min")
 
 
-class NoPool(RuntimeError):
+class PoolUnavailableError(RuntimeError):
     pass
 
 
@@ -306,7 +306,7 @@ class ShardedClient(ProxyClient):
     def __init__(self, pool=None, read_timeout=SHARD_TIMEOUT, deadline_seconds=None, sleep=time.sleep):
         self.pool = pool if pool is not None else Pool()
         if not len(self.pool):
-            raise NoPool(f"no {PREFIX}n is set, so there is no pool to call on")
+            raise PoolUnavailableError(f"no {PREFIX}n is set, so there is no pool to call on")
         self.read_timeout = read_timeout
         self.deadline_seconds = deadline_seconds if deadline_seconds is not None else read_timeout
         self.last_num_found = None
@@ -336,16 +336,16 @@ class ShardedClient(ProxyClient):
                 continue
             try:
                 data = shard.invoke(method, cleaned, timeout=self.read_timeout)
-            except Throttled as throttle:
+            except ThrottledError as throttle:
                 throttles += 1
-                self.pool.park(shard, method, throttle.retry_after)
+                self.pool.cooldown(shard, method, throttle.retry_after)
                 if throttles > max(max_retries, len(self.pool) * 2):
                     raise ProxyError(
                         f"{method}: {throttles} throttle(s) across {len(self.pool)} shard(s), "
                         f"giving up"
                     ) from throttle
                 continue
-            shard.thrived()
+            shard.mark_success()
             num_found = data.get("num_found")
             if num_found is not None:
                 self.last_num_found = num_found
@@ -355,7 +355,7 @@ class ShardedClient(ProxyClient):
 def client_for(key, **kwargs):
     try:
         client = ShardedClient.for_source(key, **kwargs)
-    except NoPool:
+    except PoolUnavailableError:
         return ProxyClient.for_source(key, **kwargs), "proxy"
     return client, f"{len(client.pool)} shard(s)"
 

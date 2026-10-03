@@ -31,9 +31,9 @@
       <% end %>
 
       <% if more %>
-        <div class="pane-more" data-controller="more" data-more-into-value="merge-around"
-             data-more-root-value=".merge-results"
-             data-more-url-value="<%= fd_case_merge_path(kase, page: 2) %>">
+        <div class="pane-more" data-controller="expand" data-expand-into-value="merge-around"
+             data-expand-root-value=".merge-results"
+             data-expand-url-value="<%= fd_case_merge_path(kase, page: 2) %>">
           <span class="sub2">Loading more cases</span>
         </div>
       <% end %>

@@ -8,11 +8,11 @@ import threading
 from dotenv import load_dotenv
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
-from bot import APPS, NEEDS, NEMO, SHROUD
+from bot import APPS, NEEDS, NEMO, RELAY
 from bot.core import session, shutdown
 from lib.config import DATABASE
 from lib.db import SeededDeployment, refuse_if_seeded
-from lib.heartbeat import beating
+from lib.heartbeat import heartbeat_loop
 from lib.paths import ENV_FILE
 
 log = logging.getLogger("bot")
@@ -26,7 +26,7 @@ def parse_args(argv):
         "apps",
         nargs="*",
         choices=APPS,
-        help="which app to run. both, unless you name one",
+        help="app to run; both if unspecified",
     )
     return parser.parse_args(argv)
 
@@ -42,46 +42,46 @@ def worker(apps):
     return ".".join([WORKER] + sorted(apps))
 
 
-def said(apps):
+def app_list(apps):
     return " and ".join(apps)
 
 
-def wire_shroud(built, sides):
-    from bot.shroud import app as shroud_app
-    from bot.shroud.carrier import Carrier
+def wire_relay(built, sides):
+    from bot.relay import app as relay_app
+    from bot.relay.carrier import MessageRelay
 
-    carrier = Carrier()
-    app = shroud_app.build(carrier.taken)
+    carrier = MessageRelay()
+    app = relay_app.build(carrier.taken)
     carrier.client = app.client
-    built[SHROUD] = (app, shroud_app.app_token())
-    sides[SHROUD] = carrier
+    built[RELAY] = (app, relay_app.app_token())
+    sides[RELAY] = carrier
 
 
 def wire_nemo(built, sides):
     from bot.nemo import app as nemo_app
-    from bot.nemo.desk import Desk
+    from bot.nemo.case_channel import CaseChannel
 
-    desk = Desk()
-    app = nemo_app.build(desk.answered)
-    desk.client = app.client
+    case_channel = CaseChannel()
+    app = nemo_app.build(case_channel.answered)
+    case_channel.client = app.client
     built[NEMO] = (app, nemo_app.app_token())
-    sides[NEMO] = desk
+    sides[NEMO] = case_channel
 
 
 def wire(apps):
     built, sides = {}, {}
-    if SHROUD in apps:
-        wire_shroud(built, sides)
+    if RELAY in apps:
+        wire_relay(built, sides)
     if NEMO in apps:
         wire_nemo(built, sides)
     return built, sides
 
 
 def start_loops(sides, stopping):
-    if SHROUD in sides:
-        from bot.shroud import loop as shroud_loop
+    if RELAY in sides:
+        from bot.relay import loop as relay_loop
 
-        shroud_loop.start(sides[SHROUD], stopping)
+        relay_loop.start(sides[RELAY], stopping)
     if NEMO in sides:
         from bot.nemo import loop as nemo_loop
 
@@ -112,7 +112,7 @@ def main(argv=None):
             f"{', '.join(gone)}",
             file=sys.stderr,
         )
-        print("run `nemo doctor bot` for the whole picture", file=sys.stderr)
+        print("Run `nemo doctor bot` for full diagnostics.", file=sys.stderr)
         return 78
 
     try:
@@ -136,7 +136,7 @@ def main(argv=None):
     signal.signal(signal.SIGINT, stop)
 
     log.info("bot: up, %s", " and ".join(apps))
-    with beating(worker(apps), lambda: said(apps)):
+    with heartbeat_loop(worker(apps), lambda: app_list(apps)):
         stopping.wait()
 
     for handler in running:

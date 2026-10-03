@@ -3,7 +3,7 @@ import random
 from lib.db import WORKER_BOOT, worker
 
 
-class FencedOut(RuntimeError):
+class FenceTokenExpiredError(RuntimeError):
     pass
 
 
@@ -65,7 +65,7 @@ def renew(conn, table, where, params, fence, ttl_seconds):
     with conn.cursor() as cur:
         cur.execute(RENEW_SQL.format(table=table, where=where), _params(params, fence=fence, ttl=ttl_seconds))
         if cur.fetchone() is None:
-            raise FencedOut(f"{table}: lease with fence {fence} is no longer ours")
+            raise FenceTokenExpiredError(f"{table}: lease with fence {fence} is no longer ours")
 
 
 def release(conn, table, where, params, fence):

@@ -110,7 +110,7 @@ class FdActionsTest < ActionDispatch::IntegrationTest
     log(reason: "   ")
 
     assert_empty actions, "nothing may be logged against somebody without a reason"
-    assert_equal "reason", flash[:wrong]["field"]
+    assert_equal "reason", flash[:field_error]["field"]
   end
 
   test "the reason is kept so it does not have to be typed twice" do

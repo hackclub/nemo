@@ -3,7 +3,7 @@
 <div class="card card-flush">
   <div class="strip">
     <div class="who">
-      <%= face(current_account.user_id, css: "row-avatar av-lg") %>
+      <%= face(current_account.user_id, css: "row-avatar avatar-lg") %>
       <span class="two-line">
         <b><%= person_name(current_account.user_id) %></b>
         <span class="mono"><%= current_account.user_id %></span>
@@ -52,15 +52,15 @@
       <span class="panel-name">Activity</span>
       <span class="grow"></span>
       <span class="sub2">
-        <% if @deed_count.positive? %>
-          <%= pluralize(@deed_count, "action") %> &middot; last 30 days
+        <% if @audit_row_count.positive? %>
+          <%= pluralize(@audit_row_count, "action") %> &middot; last 30 days
         <% else %>
           last 30 days
         <% end %>
       </span>
     </div>
-    <% if @deeds.any? %>
-      <%= render "shared/log", deeds: @deeds %>
+    <% if @audit_rows.any? %>
+      <%= render "shared/log", audit_rows: @audit_rows %>
     <% else %>
       <div class="empty"><p class="empty-title">Nothing in 30 days</p></div>
     <% end %>

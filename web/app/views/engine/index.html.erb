@@ -32,9 +32,9 @@
   <% missed_nights = @nightly.count { |cell| cell == "none" } %>
   <div class="metrics">
     <div class="metric">
-      <span class="metric-k">Tonight</span>
-      <span class="metric-v <%= @orphaned ? "crit" : run_ink(@run) %>"><%= @run.nil? ? "no run" : (@orphaned ? "stuck" : @run.status) %></span>
-      <span class="metric-say">
+      <span class="metric-key">Tonight</span>
+      <span class="metric-value <%= @orphaned ? "crit" : run_ink(@run) %>"><%= @run.nil? ? "no run" : (@orphaned ? "stuck" : @run.status) %></span>
+      <span class="metric-note">
         <% if @run.nil? %>
           <span>nothing recorded yet</span>
         <% elsif @orphaned %>
@@ -47,33 +47,33 @@
     </div>
 
     <div class="metric">
-      <span class="metric-k">How far</span>
-      <span class="metric-v">
+      <span class="metric-key">How far</span>
+      <span class="metric-value">
         <% if @progress %>
           <%= @progress.step_index %><% if @progress.step_total %><small>of <%= @progress.step_total %></small><% end %>
         <% else %>
           <%= @run ? "done" : "n/a" %>
         <% end %>
       </span>
-      <span class="metric-say">
+      <span class="metric-note">
         <span><%= @run&.running? ? "running now" : (@run ? "finished" : "waiting on the first run") %></span>
       </span>
     </div>
 
     <div class="metric">
-      <span class="metric-k">Running</span>
-      <span class="metric-v">
+      <span class="metric-key">Running</span>
+      <span class="metric-value">
         <%= @run ? run_duration(@run) : "n/a" %><% if @run&.running? %><small>so far</small><% end %>
       </span>
-      <span class="metric-say">
+      <span class="metric-note">
         <span><%= @run ? "started #{@run.started_at.strftime("%-d %b, %H:%M")}" : "no run yet" %></span>
       </span>
     </div>
 
     <div class="metric">
-      <span class="metric-k">Missed, last <%= EngineController::NIGHTS %></span>
-      <span class="metric-v"><%= missed_nights %></span>
-      <span class="metric-say">
+      <span class="metric-key">Missed, last <%= EngineController::NIGHTS %></span>
+      <span class="metric-value"><%= missed_nights %></span>
+      <span class="metric-note">
         <span><%= missed_nights.zero? ? "the nightly ran every night" : "#{"night".pluralize(missed_nights)} it never ran" %></span>
       </span>
     </div>
@@ -93,7 +93,7 @@
     </div>
     <div class="card card-flush">
       <% if @steps.any? %>
-        <%= render "ladder", steps: @steps %>
+        <%= render "stage_progress", steps: @steps %>
       <% else %>
         <p class="card-note">n/a</p>
       <% end %>
@@ -105,7 +105,7 @@
       <h2 class="section-title">The last <%= EngineController::NIGHTS %> nights</h2>
     </div>
     <div class="card card-flush">
-      <%= render "matrix", matrix: @matrix, nights: @nights, nightly: @nightly %>
+      <%= render "nightly_heatmap", matrix: @matrix, nights: @nights, nightly: @nightly %>
     </div>
   </div>
 

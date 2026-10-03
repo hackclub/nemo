@@ -1,7 +1,7 @@
 <% if allows.any? %>
   <div class="people-list">
     <% allows.each do |one| %>
-      <div class="line-row fat">
+      <div class="line-row text-strong">
         <%= guard_face(one.subject_id) %>
         <span class="grow two-line">
           <b><%= bot_name_link(one.name, @app_ids[one.subject_id]) %></b>

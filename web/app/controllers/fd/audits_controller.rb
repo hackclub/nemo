@@ -37,7 +37,7 @@ module Fd
 
     def channel_ids(rows)
       rows.flat_map { |row| [row.entity_ref, row.entity_id] }
-        .select { |said| said.to_s.match?(CHANNEL_ID) }
+        .select { |one| one.to_s.match?(CHANNEL_ID) }
     end
   end
 end

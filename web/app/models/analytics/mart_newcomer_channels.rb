@@ -56,11 +56,11 @@ module Analytics
     end
 
     def self.ranked(key, floor:, cohort: DEFAULT_COHORT, limit: 10)
-      said = MEASURES.fetch(measure(key))
+      measure = MEASURES.fetch(measure(key))
       for_cohort(cohort)
-        .where(said[:gate] => floor..)
-        .where(said[:rank] => 1..)
-        .order(said[:rank] => :desc, newcomer_messages: :desc)
+        .where(measure[:gate] => floor..)
+        .where(measure[:rank] => 1..)
+        .order(measure[:rank] => :desc, newcomer_messages: :desc)
         .limit(limit)
     end
   end

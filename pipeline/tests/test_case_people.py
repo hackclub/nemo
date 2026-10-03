@@ -1,5 +1,5 @@
-from bot.nemo import casework
-from bot.nemo.cards import people
+from bot.nemo import case_actions
+from bot.nemo.views import people
 
 DROPPED = "detail"
 
@@ -27,7 +27,7 @@ class Conn:
 def test_the_people_on_a_case_are_a_user_and_a_role():
     conn = Conn(rows=[("U1", "subject"), ("U2", "reporter")])
 
-    assert casework.participants(conn, 6) == [
+    assert case_actions.participants(conn, 6) == [
         {"user_id": "U1", "role": "subject"},
         {"user_id": "U2", "role": "reporter"},
     ]
@@ -36,7 +36,7 @@ def test_the_people_on_a_case_are_a_user_and_a_role():
 def test_taking_somebody_off_writes_down_who_and_what_they_were():
     conn = Conn(one=("U1",))
 
-    assert casework.remove_participant(conn, 6, "U1", "subject", "UFD") is True
+    assert case_actions.remove_participant(conn, 6, "U1", "subject", "UFD") is True
     before = conn.did("INSERT INTO fd.audit")[0][5].obj
     assert before == {"user_id": "U1", "role": "subject"}
 
@@ -44,15 +44,15 @@ def test_taking_somebody_off_writes_down_who_and_what_they_were():
 def test_taking_off_somebody_who_is_not_there_changes_nothing():
     conn = Conn(one=None)
 
-    assert casework.remove_participant(conn, 6, "U1", "subject", "UFD") is False
+    assert case_actions.remove_participant(conn, 6, "U1", "subject", "UFD") is False
     assert conn.did("INSERT INTO fd.audit") == []
 
 
 def test_no_query_asks_for_the_column_0112_dropped():
-    asked = [casework.PARTICIPANTS, casework.ADD_PARTICIPANT, casework.REMOVE_PARTICIPANT]
+    asked = [case_actions.PARTICIPANTS, case_actions.ADD_PARTICIPANT, case_actions.REMOVE_PARTICIPANT]
     assert [one for one in asked if DROPPED in one] == []
 
 
 def test_the_people_modal_sends_only_what_the_table_holds():
-    picked = people.picked({"values": {people.WHO: {people.WHO: {"selected_users": ["U1"]}}}})
-    assert set(picked) == {"user_ids", "role"}
+    submitted_values = people.submitted_values({"values": {people.WHO: {people.WHO: {"selected_users": ["U1"]}}}})
+    assert set(submitted_values) == {"user_ids", "role"}

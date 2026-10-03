@@ -9,17 +9,17 @@ from ingest.channel_replies_pull import LIVE as replies_pool
 from ingest.channel_replies_pull import run as walk_replies
 from lib import settings, shards, work
 from lib.db import (
-    AlreadyRunning,
+    AlreadyRunningError,
     SeededDeployment,
     SyncCancelled,
     cancel_scope,
     connect,
     refuse_if_seeded,
     set_worker,
-    sole_instance,
-    sweep_my_earlier_boots,
+    instance_lock,
+    clear_stale_sessions,
 )
-from lib.heartbeat import beating
+from lib.heartbeat import heartbeat_loop
 from lib.paths import ENV_FILE
 
 WORKER = "archive_worker"
@@ -125,9 +125,9 @@ def main():
     set_worker(WORKER)
     shards.report()
     try:
-        with sole_instance(WORKER):
+        with instance_lock(WORKER):
             return serve()
-    except AlreadyRunning as clash:
+    except AlreadyRunningError as clash:
         print(f"{WORKER}: {clash}")
         return 1
 
@@ -139,7 +139,7 @@ def serve():
         except SeededDeployment as refusal:
             print(f"{WORKER}: {refusal}")
             raise SystemExit(1) from refusal
-        for orphan, source in sweep_my_earlier_boots(conn):
+        for orphan, source in clear_stale_sessions(conn):
             print(f"{WORKER}: swept run {orphan} ({source}), left running by an earlier boot")
 
     stopping = threading.Event()
@@ -152,7 +152,7 @@ def serve():
     signal.signal(signal.SIGINT, stop)
 
     print(f"{WORKER}: {len(LANES)} lane(s) running independently")
-    with beating(WORKER, lambda: note(state)):
+    with heartbeat_loop(WORKER, lambda: note(state)):
         running = [lane(name, work, state, stopping, seconds(var, fallback))
                    for name, work, var, fallback in LANES]
         stopping.wait()

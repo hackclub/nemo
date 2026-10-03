@@ -1,5 +1,5 @@
-<span class="mi">
-  <span class="mi-ic" aria-hidden="true">
+<span class="menu-item">
+  <span class="menu-item-icon" aria-hidden="true">
     <% case icon %>
     <% when "note" %>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v18H6.5A1.5 1.5 0 0 1 5 19.5Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
@@ -25,10 +25,10 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>
     <% end %>
   </span>
-  <span class="mi-body">
-    <span class="mi-t"><%= label %></span>
+  <span class="menu-item-body">
+    <span class="menu-item-title"><%= label %></span>
     <% if local_assigns[:note].present? %>
-      <span class="mi-note"><%= note %></span>
+      <span class="menu-item-note"><%= note %></span>
     <% end %>
   </span>
 </span>

@@ -11,7 +11,7 @@ from lib.proxy_client import ProxyClient
 from lib.walk import (
     UNVERIFIED,
     check_walk,
-    covers_what_it_replaces,
+    supersedes,
     should_prune,
     window_totals,
 )
@@ -176,7 +176,7 @@ def run(conn, days=WINDOW_DAYS, end=None, source=SOURCE, span=False):
             cur.executemany(RANGE_SQL, rows)
             cur.execute(WINDOW_COUNTS_SQL, (source,))
             landed, held = window_totals(cur.fetchall(), (start, stop))
-            replacing = should_prune(verdict) and covers_what_it_replaces(landed, held)
+            replacing = should_prune(verdict) and supersedes(landed, held)
             if replacing:
                 cur.execute(PRUNE_SQL, (source, start, stop))
                 pruned = cur.rowcount

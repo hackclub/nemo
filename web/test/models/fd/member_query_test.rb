@@ -12,8 +12,8 @@ class Fd::MemberQueryTest < ActiveSupport::TestCase
     user_ids.map { |id| shown.fetch(id, id.downcase) }
   end
 
-  def collate(said)
-    said.gsub(/[^a-z0-9]/, "")
+  def collate(text)
+    text.gsub(/[^a-z0-9]/, "")
   end
 
   def counting

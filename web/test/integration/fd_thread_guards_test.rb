@@ -22,11 +22,11 @@ class FdThreadGuardsTest < ActionDispatch::IntegrationTest
 
   test "a locked thread on the case is shown beside its actions" do
     guard!
-    said = actions_tab
+    body = actions_tab
 
-    assert_match(/Thread locked/, said)
-    assert_match(/it was going nowhere/, said)
-    assert_match(/running/, said)
+    assert_match(/Thread locked/, body)
+    assert_match(/it was going nowhere/, body)
+    assert_match(/running/, body)
   end
 
   test "a destroyed thread reads as destroyed" do
@@ -36,7 +36,7 @@ class FdThreadGuardsTest < ActionDispatch::IntegrationTest
 
   test "the note left in the thread is shown with the guard" do
     guard!(kind: "destroy", expires_at: nil, state: "done",
-      note_said: { "type" => "rich_text" }, note_text: "we took this down, here is why",
+      note_rich: { "type" => "rich_text" }, note_text: "we took this down, here is why",
       note_ts: "1700000000.000200", note_posted_at: Time.current)
 
     assert_match(/we took this down, here is why/, actions_tab)
@@ -50,9 +50,9 @@ class FdThreadGuardsTest < ActionDispatch::IntegrationTest
 
   test "a guard that failed is called out" do
     guard!(state: "failed", error: "the admin account could not be invited")
-    said = actions_tab
-    assert_match(/failed/, said)
-    assert_match(/state-crit/, said)
+    body = actions_tab
+    assert_match(/failed/, body)
+    assert_match(/state-crit/, body)
   end
 
   test "a thread guard on another case is not listed here" do

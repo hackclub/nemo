@@ -2,13 +2,13 @@ module Fd
   class Flag < ApplicationRecord
     self.table_name = "fd.app_flags"
 
-    class Unknown < ArgumentError; end
+    class UnknownError < ArgumentError; end
 
     TABLE = YAML.load_file(Rails.root.join("../db/flags.yml")).fetch("flags").freeze
     KEYS = TABLE.keys.freeze
 
     def self.fetch(key)
-      TABLE.fetch(key.to_s) { raise Unknown, "#{key} is not a flag" }
+      TABLE.fetch(key.to_s) { raise UnknownError, "#{key} is not a flag" }
     end
 
     def self.label(key) = fetch(key).fetch("label")

@@ -30,7 +30,7 @@ def test_three_roles_read_as_the_separated_mode():
 
 def test_a_shared_login_is_a_known_mode_not_a_failure():
     conn = Cluster([])
-    assertion, status, observed, _ = roles.the_deployment_mode_is_declared(conn)
+    assertion, status, observed, _ = roles.deployment_mode_declared(conn)
     assert (assertion, status) == ("the deployment mode is declared", "pass")
     assert roles.SHARED_MODE in observed
     assert "capability checks" in observed

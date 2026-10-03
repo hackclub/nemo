@@ -58,15 +58,15 @@ module Channels
       @tenure ||= begin
         counted = people.group(:tenure_band)
           .pluck(Arel.sql("tenure_band, count(*), coalesce(sum(messages), 0)"))
-          .to_h { |band, folk, said| [band, [folk.to_i, said.to_i]] }
-        whole = counted.values.sum { |_, said| said }
+          .to_h { |band, folk, messages| [band, [folk.to_i, messages.to_i]] }
+        whole = counted.values.sum { |_, messages| messages }
 
         TENURE_ORDER.filter_map do |band|
-          folk, said = counted[band]
-          next if folk.nil? || said.to_i.zero?
+          folk, messages = counted[band]
+          next if folk.nil? || messages.to_i.zero?
 
-          Slice.new(key: band, label: TENURE.fetch(band), people: folk, messages: said,
-            share: whole.positive? ? (said * 100.0 / whole).round(1) : nil)
+          Slice.new(key: band, label: TENURE.fetch(band), people: folk, messages: messages,
+            share: whole.positive? ? (messages * 100.0 / whole).round(1) : nil)
         end
       end
     end

@@ -401,7 +401,7 @@ def test_history_thread_row_is_none_without_replies():
 
 
 def test_shape_counts_the_content_it_then_drops():
-    counted = shaping.shape({
+    counted = shaping.normalize({
         "ts": "1.0", "user": "U1", "text": "look <@U9> https://x.com ?",
         "blocks": [{"type": "rich_text"}, {"type": "divider"}],
         "attachments": [{"id": 1}],
@@ -422,7 +422,7 @@ def test_shape_counts_the_content_it_then_drops():
 
 
 def test_shape_holds_up_with_nothing_in_the_message():
-    counted = shaping.shape({"ts": "1.0"})
+    counted = shaping.normalize({"ts": "1.0"})
 
     assert counted["text_length"] == 0
     assert counted["has_text"] is False
@@ -433,7 +433,7 @@ def test_shape_holds_up_with_nothing_in_the_message():
 
 
 def test_scrub_drops_every_redacted_key_at_any_depth():
-    scrubbed = shaping.scrub({
+    scrubbed = shaping.redact({
         "type": "message", "ts": "1.0", "text": "secret",
         "blocks": [{"text": {"text": "secret"}}],
         "files": [{"url_private": "https://files/x"}],
@@ -473,7 +473,7 @@ def test_scrub_lets_no_free_text_through_from_any_subtype():
         "client_msg_id": "abc", "thread_ts": "1.0", "reply_count": 2, "team": "T1",
     }
 
-    scrubbed = shaping.scrub(event)
+    scrubbed = shaping.redact(event)
 
     assert marked not in json.dumps(scrubbed, default=str), "a field carrying words survived"
     assert scrubbed["reactions"] == [{"name": "tada", "count": 1, "users": ["U2"]}]
@@ -483,7 +483,7 @@ def test_scrub_lets_no_free_text_through_from_any_subtype():
 
 
 def test_scrub_keeps_an_edited_message_but_not_its_words():
-    scrubbed = shaping.scrub({
+    scrubbed = shaping.redact({
         "type": "message", "subtype": "message_changed", "ts": "2.0",
         "message": {"ts": "1.0", "user": "U1", "text": "the new words",
                     "blocks": [{"text": "the new words"}], "files": [{"id": "F1"}],
@@ -497,7 +497,7 @@ def test_scrub_keeps_an_edited_message_but_not_its_words():
 
 
 def test_scrub_thins_the_user_object_but_keeps_the_id():
-    scrubbed = shaping.scrub({
+    scrubbed = shaping.redact({
         "type": "team_join",
         "user": {"id": "U1", "team_id": "T1", "is_bot": False,
                  "real_name": "a person", "profile": {"email": "a@b.c"}},

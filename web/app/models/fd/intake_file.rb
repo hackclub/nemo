@@ -32,7 +32,7 @@ module Fd
       name.presence || title.presence || "attachment"
     end
 
-    def said
+    def note
       kept? ? nil : WHY_NOT.fetch(fetch_state, "could not be kept")
     end
 

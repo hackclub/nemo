@@ -28,13 +28,13 @@
     <div class="people-list">
       <% @guards_on.rows.each do |guard| %>
         <% here = fd_channel_path(guard.channel_id, tab: guard_tab(guard.kind)) %>
-        <div class="line-row fat">
+        <div class="line-row text-strong">
           <span class="grow two-line">
             <b><%= link_to channels[guard.channel_id], here, class: "lnk" %></b>
             <span>
               <%= guard_label(guard.kind) %>
               <span aria-hidden="true">&middot;</span>
-              <%= guard_setting_said(guard, @guards_on.allowed(guard)) %>
+              <%= guard_setting_label(guard, @guards_on.allowed(guard)) %>
             </span>
           </span>
           <span class="row-right">

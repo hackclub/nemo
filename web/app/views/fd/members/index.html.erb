@@ -31,7 +31,7 @@
   </div>
 <% else %>
   <% content_for :page_controls do %>
-    <%= form_with url: fd_members_path, method: :get, class: "qsearch",
+    <%= form_with url: fd_members_path, method: :get, class: "queue-search",
           data: { controller: "live-search", action: "input->live-search#go",
                   turbo_frame: "roster", turbo_action: "advance" } do %>
       <%= hidden_field_tag :layout, "table", id: nil %>
@@ -39,7 +39,7 @@
         <%= hidden_field_tag key, value, id: nil %>
       <% end %>
       <%= search_field_tag :q, @query.term, placeholder: "Find a member",
-            class: "qsearch-in", autocomplete: "off",
+            class: "queue-search-input", autocomplete: "off",
             aria: { label: "Find a member" } %>
     <% end %>
   <% end %>

@@ -34,7 +34,7 @@ module Fd
       assignee = kase.assignees.find_by(user_id: params[:id])
 
       if assignee.nil?
-        return redirect_to(fd_case_path(kase), alert: "they are not on this case")
+        return redirect_to(fd_case_path(kase), alert: "They are not on this case")
       end
 
       writing do
@@ -44,7 +44,7 @@ module Fd
         assignee.destroy!
       end
 
-      redirect_to fd_case_path(kase), notice: "@#{assignee.user_id} taken off the case"
+      redirect_to fd_case_path(kase), notice: "@#{assignee.user_id} removed from the case"
     end
 
     private

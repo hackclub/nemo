@@ -15,7 +15,7 @@
             <div class="covrow">
               <div class="covhead">
                 <span class="covkey"><%= row.source %></span>
-                <span class="covsaid">
+                <span class="cov-label">
                   <%= row.first_ds.strftime("%-d %b %Y") %> to <%= row.last_ds.strftime("%-d %b %Y") %>
                   &middot; <%= pluralize(row.span, "day") %>
                 </span>
@@ -27,7 +27,7 @@
                      title="<%= number_with_delimiter(count) %> <%= EngineHelper::DAY_STATES.fetch(state) %>"></i>
                 <% end %>
               </div>
-              <div class="covsaid">
+              <div class="cov-label">
                 <%= number_with_delimiter(row.loaded) %> held
                 &middot; <%= number_with_delimiter(row.unavailable) %> Slack has no file for
                 <% if row.never_fetched.positive? %>

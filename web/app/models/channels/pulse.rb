@@ -139,10 +139,10 @@ module Channels
       held = rows.index_by(&:ds)
       (@from..@to).map do |ds|
         row = held[ds]
-        said = row&.messages.to_i
-        next nil if said.zero?
+        messages = row&.messages.to_i
+        next nil if messages.zero?
 
-        (row.public_send(measure).to_i * 100.0 / said).round(1)
+        (row.public_send(measure).to_i * 100.0 / messages).round(1)
       end
     end
   end

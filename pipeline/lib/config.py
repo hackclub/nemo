@@ -32,7 +32,7 @@ BOT_OPTIONAL = PIPELINE_ROLE + [
     "NEMO_JOIN_SECONDS",
     "NEMO_SWEEP_SECONDS",
     "PROXY_TOKEN_NEMO",
-    "SHROUD_SWEEP_SECONDS",
+    "RELAY_SWEEP_SECONDS",
     "TZ",
 ]
 
@@ -49,7 +49,7 @@ ROLES = {
             "NEMO_CLIENT_ID",
             "NEMO_CLIENT_SECRET",
             "SLACK_TEAM_ID",
-            "FIREHOUSE_CHANNEL_ID",
+            "INTERNAL_LOG_CHANNEL_ID",
             "FD_ENCRYPTION_PRIMARY_KEY",
             "FD_ENCRYPTION_DETERMINISTIC_KEY",
             "FD_ENCRYPTION_SALT",
@@ -140,21 +140,21 @@ ROLES = {
     },
     "bot": {
         "required": DATABASE + [
-            "SHROUD_BOT_TOKEN",
-            "SHROUD_APP_TOKEN",
+            "RELAY_BOT_TOKEN",
+            "RELAY_APP_TOKEN",
             "NEMO_BOT_TOKEN",
             "NEMO_APP_TOKEN",
-            "FIREHOUSE_CHANNEL_ID",
+            "INTERNAL_LOG_CHANNEL_ID",
             "SLACK_TEAM_ID",
         ],
         "optional": BOT_OPTIONAL,
     },
-    "bot.shroud": {
-        "required": DATABASE + ["SHROUD_BOT_TOKEN", "SHROUD_APP_TOKEN"],
+    "bot.relay": {
+        "required": DATABASE + ["RELAY_BOT_TOKEN", "RELAY_APP_TOKEN"],
         "optional": BOT_OPTIONAL + [
             "NEMO_BOT_TOKEN",
             "NEMO_APP_TOKEN",
-            "FIREHOUSE_CHANNEL_ID",
+            "INTERNAL_LOG_CHANNEL_ID",
             "SLACK_TEAM_ID",
         ],
     },
@@ -162,10 +162,10 @@ ROLES = {
         "required": DATABASE + [
             "NEMO_BOT_TOKEN",
             "NEMO_APP_TOKEN",
-            "FIREHOUSE_CHANNEL_ID",
+            "INTERNAL_LOG_CHANNEL_ID",
             "SLACK_TEAM_ID",
         ],
-        "optional": BOT_OPTIONAL + ["SHROUD_BOT_TOKEN", "SHROUD_APP_TOKEN"],
+        "optional": BOT_OPTIONAL + ["RELAY_BOT_TOKEN", "RELAY_APP_TOKEN"],
     },
     "provision": {
         "required": DATABASE,
@@ -213,9 +213,9 @@ HEADINGS = {
     "transform": "dbt build. one shot",
     "seed": "synthetic data, then transform, then verify. one shot",
     "provision": "schemas, roles, grants and both migration sets. one shot",
-    "bot": "shroud takes the reports, nemo works them. long running",
-    "bot.shroud": "shroud alone, taking reports and carrying the outbox. long running",
-    "bot.nemo": "nemo alone, working the cases in the firehouse. long running",
+    "bot": "relay takes the reports, nemo works them. long running",
+    "bot.relay": "relay alone, taking reports and carrying the outbox. long running",
+    "bot.nemo": "nemo alone, working the cases in the internal_log. long running",
     "archive": "channel history and thread replies. long running",
     "audit": "the slack audit log, tailed and backfilled a day at a time. long running",
 }
@@ -232,7 +232,7 @@ NEVER = {
         "INTERNAL_PROXY_TOKEN",
     ],
     "bot": BOT_NEVER,
-    "bot.shroud": BOT_NEVER,
+    "bot.relay": BOT_NEVER,
     "bot.nemo": BOT_NEVER,
     "sync": ["SLACK_ADMIN_TOKEN"],
     "history": ["SLACK_ADMIN_TOKEN"],

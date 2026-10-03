@@ -8,7 +8,7 @@ log = logging.getLogger("bot.loops")
 RETRY_SECONDS = 5
 
 
-def listen(name, channels, heard, stopping):
+def listen(name, channels, on_notify, stopping):
     conn = connect()
     conn.autocommit = True
     for channel_name in channels:
@@ -19,14 +19,14 @@ def listen(name, channels, heard, stopping):
         for note in conn.notifies(stop_after=None, timeout=None):
             if stopping.is_set():
                 break
-            told = int(note.payload) if note.payload.isdigit() else note.payload
-            if not told:
+            payload = int(note.payload) if note.payload.isdigit() else note.payload
+            if not payload:
                 continue
             try:
-                heard(note.channel, told)
+                on_notify(note.channel, payload)
             except Exception as failure:
                 log.warning("%s: %s %s could not be handled: %s",
-                            name, note.channel, told, failure)
+                            name, note.channel, payload, failure)
     finally:
         try:
             conn.close()
@@ -34,11 +34,11 @@ def listen(name, channels, heard, stopping):
             pass
 
 
-def watching(name, channels, heard, stopping):
+def watching(name, channels, on_notify, stopping):
     def loop():
         while not stopping.is_set():
             try:
-                listen(name, channels, heard, stopping)
+                listen(name, channels, on_notify, stopping)
             except Exception as failure:
                 log.warning("%s: lost the listener, waiting to retry: %s", name, failure)
                 if stopping.wait(RETRY_SECONDS):

@@ -47,7 +47,7 @@
   .work { transition: grid-template-columns var(--dur-3) var(--ease); }
   html.sidebar-dragging .work { transition: none; }
 
-  .cnav a > .trunc, .cnav-toggle > span, .cnav-find span {
+  .cnav a > .trunc, .community-nav-toggle > span, .community-nav-find span {
     transition: opacity var(--dur-2) var(--ease);
   }
 
@@ -86,7 +86,7 @@
   .standing-row.is-carried {
     transition: background-color var(--dur-3) var(--ease), color var(--dur-3) var(--ease);
   }
-  .standing-row.is-carried .carry-said { transition: color var(--dur-2) var(--ease); }
+  .standing-row.is-carried .carry-state { transition: color var(--dur-2) var(--ease); }
 
   .standing-row.is-carried.just-landed {
     animation: carry-settle 620ms var(--ease-out) both;
@@ -116,7 +116,7 @@
     background: color-mix(in oklab, var(--crit) 10%, transparent);
   }
 
-  .qrow, .member-qrow, .merge-qrow, .palette-row, .pick-opt, .picker-opt {
+  .queue-row, .member-queue-row, .merge-queue-row, .palette-row, .pick-opt, .picker-opt {
     transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   }
 

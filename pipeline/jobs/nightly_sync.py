@@ -38,18 +38,18 @@ from lib.db import (
     refuse_if_seeded,
     run_step,
     set_worker,
-    sole_build,
+    build_lock,
     start_run,
     worker,
 )
 from checks import archive as archive_check
-from checks import headlines
+from checks import metrics
 from checks import roles as roles_check
 from checks import shards as shards_check
 from jobs import invariants, reconcile
 from lib import breaker
 from lib import settings, sources
-from lib.heartbeat import beating
+from lib.heartbeat import heartbeat_loop
 from lib.paths import ENV_FILE, WAREHOUSE_DIR, WEB_DIR
 from lib.proxy_client import InternalAuthError, ProxyClient, ProxyError, ProxyUnavailableError
 from lib.slack_client import bot_client
@@ -152,8 +152,8 @@ GATE_TESTS = (
 
 
 def check_freshness(counts=None):
-    """Record how stale each declared source is. Stale is loud, never blocking:
-    old data is a fact about the world, a failing test is a fact about the data."""
+    """Record how stale each declared source is. Staleness is logged but never
+    fails the run."""
     code = dbt("source", "freshness")
     results = json.loads(SOURCES_JSON.read_text()) if SOURCES_JSON.exists() else {}
     stale = [
@@ -164,7 +164,7 @@ def check_freshness(counts=None):
     for name in stale:
         print(f"dbt source freshness: {name} is stale")
     if stale:
-        print(f"dbt: {len(stale)} source(s) stale, the build continues on the data that is there")
+        print(f"dbt: {len(stale)} stale source(s); continuing with available data")
         if counts is not None:
             counts.status = "partial"
     return code
@@ -196,7 +196,7 @@ def run_dbt(conn=None, select=(), wait_seconds=None):
         elif code != 0:
             raise RuntimeError(f"dbt test exited {code} without recording a failure")
 
-    with sole_build(wait_seconds=wait_seconds):
+    with build_lock(wait_seconds=wait_seconds):
         if conn is None:
             build()
             return
@@ -238,7 +238,7 @@ def stages():
 WHEN_DUE = object()
 
 
-def tonight(conn):
+def todays_run(conn):
     return [(name, stage, WHEN_DUE) for name, stage in stages()]
 
 
@@ -281,7 +281,7 @@ def retryable(exc):
     return True
 
 
-class Tee(io.TextIOBase):
+class OutputTee(io.TextIOBase):
     def __init__(self, *sinks):
         self.sinks = sinks
 
@@ -325,7 +325,7 @@ def run_stage(conn, name, stage, run_id, index, total, budget=None, started=None
     for attempt in range(1, STAGE_ATTEMPTS + 1):
         began = datetime.now(timezone.utc)
         try:
-            with run_step(run_id, index, total), redirect_stdout(Tee(sys.stdout, buffer)):
+            with run_step(run_id, index, total), redirect_stdout(OutputTee(sys.stdout, buffer)):
                 stage(conn)
         except SyncCancelled:
             torn = discard(conn)
@@ -359,7 +359,7 @@ def run_stage(conn, name, stage, run_id, index, total, budget=None, started=None
 
 def refresh_statistics(name):
     tables = [
-        table for table in sources.says(name, "writes")
+        table for table in sources.field_of(name, "writes")
         if table.startswith("raw.") and table.count(".") == 1
     ]
     if not tables:
@@ -492,7 +492,7 @@ def record_quality(conn, run_id):
         ("invariants", lambda: invariants.record(conn, run_id)),
         ("reconcile", lambda: reconcile.record(conn, run_id)),
         ("breaker", lambda: breaker.record(conn, run_id)),
-        ("headlines", lambda: headlines.run(cross_only=True, record=True, run_id=run_id)),
+        ("metrics", lambda: metrics.run(cross_only=True, record=True, run_id=run_id)),
         ("archive", lambda: archive_check.record(conn, run_id)),
         ("roles", lambda: roles_check.record(conn, run_id)),
         ("shards", lambda: shards_check.record(conn, run_id)),
@@ -538,7 +538,7 @@ def stage_plan(name):
 def run_sync(plan=None):
     with connect() as conn:
         refuse_if_seeded(conn)
-        plan = plan or tonight(conn)
+        plan = plan or todays_run(conn)
         run_id = start_run(conn, SOURCE)
         conn.commit()
         preflight(run_id)
@@ -572,7 +572,7 @@ def run_sync(plan=None):
 def main():
     load_dotenv(ENV_FILE)
     set_worker("manual")
-    with beating("manual", "nightly_sync, run by hand"):
+    with heartbeat_loop("manual", "nightly_sync, run by hand"):
         _, status = run_sync()
     if status != "ok":
         raise SystemExit(1)

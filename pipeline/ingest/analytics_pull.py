@@ -229,7 +229,7 @@ def by_key(rows):
 LANE_LOCK_TIMEOUT_MS = 120_000
 
 
-def patient(cur):
+def set_statement_timeout(cur):
     cur.execute(f"SET LOCAL lock_timeout = '{int(LANE_LOCK_TIMEOUT_MS)}ms'")
 
 
@@ -355,7 +355,7 @@ def pull_member_day(conn, pull_date):
 
         def flush():
             with conn.cursor() as cur:
-                patient(cur)
+                set_statement_timeout(cur)
                 cur.executemany(MEMBER_ACTIVITY_SQL, activity_rows)
                 cur.executemany(MEMBER_DIM_MERGE_SQL, by_key(dim_rows))
             conn.commit()
@@ -422,7 +422,7 @@ def pull_channel_day(conn, pull_date):
                     counts.rows_rejected += 1
                     dead_letter(conn, ANALYTICS_SOURCE, {"raw_line": line}, str(exc))
             with conn.cursor() as cur:
-                patient(cur)
+                set_statement_timeout(cur)
                 cur.executemany(CHANNEL_ACTIVITY_SQL, activity_rows)
                 cur.executemany(CHANNEL_DIM_MERGE_SQL, by_key(dim_rows))
         except Exception as exc:

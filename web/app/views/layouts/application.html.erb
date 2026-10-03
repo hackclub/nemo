@@ -17,7 +17,7 @@
     <link rel="icon" href="/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <%= render "layouts/boot" %>
+    <%= render "layouts/bootstrap" %>
 
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
@@ -35,14 +35,14 @@
          data-palette-on-value="<%= content_for(:palette_on) %>"
          data-action="keydown@document->palette#key">
 
-      <%= render "layouts/rail", fire_engine: fire_engine %>
+      <%= render "layouts/nav_rail", fire_engine: fire_engine %>
 
       <div class="work<%= " has-nav" if nav_partial %><%= " has-pane" if pane %>"
            data-view="<%= content_for(:pane_default).presence || "main" %>"
-           data-controller="mobar case-timeline<%= " pane pane-size" if pane %>">
-        <header class="mobar">
+           data-controller="mobile-bar case-timeline<%= " pane pane-size" if pane %>">
+        <header class="mobile-bar">
           <% if nav_partial %>
-            <button type="button" class="iconbtn mobar-menu" data-action="sidebar#toggle"
+            <button type="button" class="iconbtn mobile-bar-menu" data-action="sidebar#toggle"
                     aria-controls="section-nav" aria-label="Open navigation">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                    stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
@@ -59,8 +59,8 @@
               </svg>
             </button>
           <% end %>
-          <% here = here_stop(fire_engine: fire_engine) %>
-          <span class="mobar-where">
+          <% here = nav_here(fire_engine: fire_engine) %>
+          <span class="mobile-bar-where">
             <%= strip_tags(content_for(:page_title).to_s).presence || here&.label || "Mnemosyne" %>
           </span>
         </header>
@@ -72,15 +72,15 @@
 
         <%= content_for :pane if pane %>
         <% if pane %>
-          <button type="button" class="qrail" tabindex="-1" aria-hidden="true"
+          <button type="button" class="queue-rail" tabindex="-1" aria-hidden="true"
                   data-action="pointerdown->pane-size#drag pointermove->pane-size#move
                                pointerup->pane-size#drop pointercancel->pane-size#drop"></button>
         <% end %>
 
         <main class="main" id="main" tabindex="-1">
           <div class="rhead">
-            <div class="rtop">
-              <div class="rhead-said">
+            <div class="row-top">
+              <div class="rhead-sub">
                 <h1 class="rtitle" title="<%= strip_tags(content_for(:page_title).to_s).presence || "Mnemosyne" %>">
                   <%= yield :page_face %><%= content_for(:page_title) || "Mnemosyne" %>
                 </h1>
@@ -125,7 +125,7 @@
     <div class="topbar-msgs" aria-live="polite" aria-atomic="false">
       <% if alert || notice %>
         <%= render "layouts/told", alert: alert, notice: notice,
-              said: flash[:said], did: flash[:did], tone: flash[:tone] %>
+              detail: flash[:detail], action: flash[:action], tone: flash[:tone] %>
       <% end %>
     </div>
 

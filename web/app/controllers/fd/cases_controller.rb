@@ -108,7 +108,7 @@ module Fd
         return redirect_to(fd_case_path(kase, do: "category"))
       end
       if kase.category_key.present?
-        return redirect_to(fd_case_path(kase), alert: "this case already has a category")
+        return redirect_to(fd_case_path(kase), alert: "This case already has a category")
       end
 
       was = kase.category_key
@@ -118,7 +118,7 @@ module Fd
           before: { "category_key" => was }, after: { "category_key" => wanted })
       end
 
-      redirect_to fd_case_path(kase), notice: "case #{kase.id} is #{wanted.tr('_', ' ')}"
+      redirect_to fd_case_path(kase), notice: "Case #{kase.id} marked #{wanted.tr('_', ' ')}"
     end
 
     MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/

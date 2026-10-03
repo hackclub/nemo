@@ -10,7 +10,7 @@ module Fd
       problem = guard_objection
       if problem
         return redirect_to(fd_member_path(subject_id, do: "guard"),
-          alert: (problem unless flash[:wrong]))
+          alert: (problem unless flash[:field_error]))
       end
 
       guard = nil
@@ -31,7 +31,7 @@ module Fd
 
       if expiry.nil?
         return redirect_to fd_member_path(guard.subject_id),
-          alert: "say the date it should run until"
+          alert: "Enter the date it should run until"
       end
 
       was = guard.expires_at
@@ -68,7 +68,7 @@ module Fd
 
     def may_deactivate? = current_account&.may?("member.deactivate")
 
-    def deactivating?(said) = said == MemberGuard::DEACTIVATION && !may_deactivate?
+    def deactivating?(kind) = kind == MemberGuard::DEACTIVATION && !may_deactivate?
 
     def channel_id = params[:channel_id].to_s.strip
 
@@ -78,12 +78,12 @@ module Fd
 
     def named(user_id) = Names.for([user_id])[user_id]
 
-    def said_when = params[:expires_on].to_s.strip
+    def expires_on_param = params[:expires_on].to_s.strip
 
     def expiry
-      return nil if said_when.blank?
+      return nil if expires_on_param.blank?
 
-      Date.strptime(said_when, "%Y-%m-%d").end_of_day
+      Date.strptime(expires_on_param, "%Y-%m-%d").end_of_day
     rescue Date::Error
       nil
     end
@@ -94,12 +94,12 @@ module Fd
       if kind == MemberGuard::CHANNEL_BAN && !channel_id.match?(SlackLink::CHANNEL)
         return "a channel ban needs a channel"
       end
-      return "#{said_when} is not a date" if expiry.nil? && said_when.present?
+      return "#{expires_on_param} is not a date" if expiry.nil? && expires_on_param.present?
       if expiry.nil? && !MemberGuard::DATELESS.include?(kind)
         return "say the date it runs until"
       end
       if params[:reason].to_s.strip.blank?
-        return wrong!(:reason, "say why this is being held", params[:reason])
+        return wrong!(:reason, "Enter why this is being held", params[:reason])
       end
 
       nil

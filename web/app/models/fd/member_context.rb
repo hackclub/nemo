@@ -49,7 +49,7 @@ module Fd
       [@window&.last_active_at, @posts&.last_at].compact.max
     end
 
-    def last_said_at
+    def last_posted_at
       @posts&.last_at
     end
   end

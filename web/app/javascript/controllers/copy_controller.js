@@ -8,10 +8,10 @@ export default class extends Controller {
     event.preventDefault()
     if (!navigator.clipboard) return
 
-    navigator.clipboard.writeText(this.said()).then(() => this.flash())
+    navigator.clipboard.writeText(this.text()).then(() => this.flash())
   }
 
-  said() {
+  text() {
     return this.hasSourceTarget ? this.sourceTarget.innerText : this.idValue
   }
 

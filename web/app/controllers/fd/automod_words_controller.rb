@@ -10,33 +10,33 @@ module Fd
 
       word = nil
       writing do
-        word = AutomodWord.add!(word: said, by: current_account.user_id,
+        word = AutomodWord.add!(word: word_param, by: current_account.user_id,
           match_mode: match_mode, effect: effect,
           category_key: chosen_category, note: params[:note])
         audit(word, "added", after: { "match_mode" => word.match_mode,
           "effect" => word.effect, "category_key" => word.category_key })
       end
 
-      redirect_to fd_configuration_path, notice: "added to the automod list"
+      redirect_to fd_configuration_path, notice: "Added to the automod list"
     rescue ActiveRecord::RecordNotUnique
-      refuse("already on the list")
+      refuse("Already on the list")
     end
 
     def destroy
       word = AutomodWord.active.find_by(id: params[:id])
-      return refuse("not on the list") if word.nil?
+      return refuse("Not on the list") if word.nil?
 
       writing do
         word.retire!(by: current_account.user_id)
         audit(word, "removed", before: { "active" => true }, after: { "active" => false })
       end
 
-      redirect_to fd_configuration_path, notice: "removed from the automod list"
+      redirect_to fd_configuration_path, notice: "Removed from the automod list"
     end
 
     private
 
-    def said
+    def word_param
       params[:word].to_s.strip
     end
 
@@ -56,11 +56,11 @@ module Fd
     end
 
     def objection
-      return "no word given" if said.blank?
-      return "word is over #{LONGEST} characters" if said.length > LONGEST
+      return "no word given" if word_param.blank?
+      return "word is over #{LONGEST} characters" if word_param.length > LONGEST
       return nil unless match_mode == AutomodWord::REGEX
 
-      Regexp.new(said)
+      Regexp.new(word_param)
       nil
     rescue RegexpError => failure
       "that regex does not compile: #{failure.message}"

@@ -1,10 +1,10 @@
 <nav id="section-nav" class="cpane" aria-label="Engine sections">
-  <%= render "layouts/sidebar_head", letter: "E", title: "Engine", said: "Ingestion and warehouse" %>
+  <%= render "layouts/sidebar_head", letter: "E", title: "Engine", sub: "Ingestion and warehouse" %>
 
   <div class="cnav">
     <% EngineController::GROUPS.each do |heading, keys| %>
-      <p class="cnav-lab"><%= heading %></p>
-      <div class="cnav-group">
+      <p class="community-nav-label"><%= heading %></p>
+      <div class="community-nav-group">
         <% keys.each do |key| %>
           <% label = EngineController::TABS.fetch(key) %>
           <%= link_to engine_tab_path(key),

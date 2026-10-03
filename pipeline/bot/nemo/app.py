@@ -4,7 +4,7 @@ from slack_bolt import App
 from slack_sdk import WebClient
 
 from bot.nemo import channel, command, handlers, surface
-from bot.nemo.carriers import (  # noqa: F401
+from bot.nemo.enforcement import (  # noqa: F401
     account_age,
     channel_ban,
     readonly,
@@ -40,5 +40,5 @@ def app_token():
     return os.environ["NEMO_APP_TOKEN"]
 
 
-def firehouse_channel():
-    return channel.firehouse_channel()
+def internal_log_channel():
+    return channel.internal_log_channel()

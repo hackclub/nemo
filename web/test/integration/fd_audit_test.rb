@@ -196,13 +196,13 @@ class FdAuditTest < ActionDispatch::IntegrationTest
     slack!(email: "kid@throwaway.example", actor: "UKID")
 
     asked = Fd::AuditSearch.parse("domain:kid@throwaway.example")
-    assert_equal [["domain", "throwaway.example"]], asked.terms.map { |one| [one.kind, one.said] }
+    assert_equal [["domain", "throwaway.example"]], asked.terms.map { |one| [one.kind, one.value] }
     assert_equal 1, query("q" => "domain:kid@throwaway.example").rows.size
   end
 
   test "a bare domain handed to email is read as a domain" do
     asked = Fd::AuditSearch.parse("email:throwaway.example")
-    assert_equal [["domain", "throwaway.example"]], asked.terms.map { |one| [one.kind, one.said] }
+    assert_equal [["domain", "throwaway.example"]], asked.terms.map { |one| [one.kind, one.value] }
   end
 
   test "an email nobody may read finds nothing rather than everything" do
@@ -215,8 +215,8 @@ class FdAuditTest < ActionDispatch::IntegrationTest
   test "a term the parser cannot place falls back to searching the text" do
     engine!(verb: "categorised", after: { "category_key" => "harassment" })
 
-    said = Fd::AuditSearch.parse("harassment")
-    assert_equal %w[text], said.terms.map(&:kind)
+    parsed = Fd::AuditSearch.parse("harassment")
+    assert_equal %w[text], parsed.terms.map(&:kind)
     assert_equal %w[categorised], query("q" => "harassment").rows.map(&:verb)
   end
 
@@ -225,7 +225,7 @@ class FdAuditTest < ActionDispatch::IntegrationTest
     first = asked.terms.first
 
     left = asked.without_params(first)["q"]
-    assert_not_includes left.to_s, first.said
+    assert_not_includes left.to_s, first.value
     assert_includes left.to_s, "resolved"
   end
 
@@ -235,7 +235,7 @@ class FdAuditTest < ActionDispatch::IntegrationTest
     get fd_audit_path
     assert_select %(.view[aria-current="true"]), text: /Slack/
     assert_select ".segmented", false, "the range control is gone, the search carries it"
-    assert_select ".ractions .qsearch"
+    assert_select ".ractions .queue-search"
   end
 
   test "the help is a dialog that can actually be opened" do
@@ -315,7 +315,7 @@ class FdAuditTest < ActionDispatch::IntegrationTest
     assert_no_match(/channel C0APH2MMHH7/, response.body)
   end
 
-  test "a channel we do not have is called private and is not a link" do
+  test "a channel we do not have is called private and is not a valid link" do
     in_channel!("C0PRIVATE01")
     sign_in_as(@me)
 

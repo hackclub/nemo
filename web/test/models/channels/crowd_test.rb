@@ -16,7 +16,7 @@ class Channels::CrowdTest < ActiveSupport::TestCase
     assert_equal [10.0, 30.0, 60.0], parts.map(&:share)
   end
 
-  test "more viewers than members never pushes a group below zero" do
+  test "expand viewers than members never pushes a group below zero" do
     parts = crowd.composition(snapshot(members: 100, spoke: 90, viewed: 400))
 
     assert_equal [90, 10, 0], parts.map(&:people)

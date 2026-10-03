@@ -23,22 +23,22 @@ BLOCKING = {
 }
 
 
-def die(message):
+def exit_with_error(message):
     sys.exit(f"slack_roles: {message}")
 
 
 def api(token):
     if not token:
-        die("no token. pass one as an argument or set SLACK_TOKEN to an xoxp user token")
+        exit_with_error("no token. pass one as an argument or set SLACK_TOKEN to an xoxp user token")
     return WebClient(token=token)
 
 
 def whoami(client):
     try:
-        said = client.auth_test().data
+        found = client.auth_test().data
     except SlackApiError as exc:
-        die(f"auth.test failed: {exc.response.get('error', 'unknown_error')}")
-    return said
+        exit_with_error(f"auth.test failed: {exc.response.get('error', 'unknown_error')}")
+    return found
 
 
 def call(client, **params):
@@ -48,10 +48,10 @@ def call(client, **params):
         error = exc.response.get("error", "unknown_error")
         if error == "missing_scope":
             needed = exc.response.get("needed", "admin.roles:read")
-            die(f"the token is missing {needed}. add it and reinstall the app")
+            exit_with_error(f"the token is missing {needed}. add it and reinstall the app")
         if error in BLOCKING:
-            die(f"admin.roles.listAssignments refused this token: {error}")
-        die(f"admin.roles.listAssignments failed: {error}")
+            exit_with_error(f"admin.roles.listAssignments refused this token: {error}")
+        exit_with_error(f"admin.roles.listAssignments failed: {error}")
 
 
 def walk(client, pages=None, **params):
@@ -129,7 +129,7 @@ def main():
                     "role_ids and entity_ids together answer one channel in one call",
     )
     parser.add_argument("token", nargs="?", help="an xoxp user token, else SLACK_TOKEN is used")
-    parser.add_argument("--all", action="store_true", help="sweep every page instead of the first few")
+    parser.add_argument("--all", action="store_true", help="scan all pages instead of a sample")
     parser.add_argument("--pages", type=int, default=10, help="pages to sample, 200 per page")
     parser.add_argument("--role", help="skip discovery and check this role id")
     parser.add_argument("--channel", help="channel id for the filter check")
@@ -148,7 +148,7 @@ def main():
         pages = None if args.all else args.pages
         found = gather(client, pages)
         if not found:
-            die("no role assignments came back at all")
+            exit_with_error("no role assignments came back at all")
         report(found, None if args.all else args.pages)
         role_id = channel_role(found)
         if role_id is None:
@@ -159,7 +159,7 @@ def main():
         print(f"  pin it:  SLACK_CHANNEL_MANAGER_ROLE_ID={role_id}")
 
     if channel_id is None:
-        die("pass --channel with --role so the filter can be checked")
+        exit_with_error("pass --channel with --role so the filter can be checked")
 
     check_filter(client, role_id, channel_id)
 

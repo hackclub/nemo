@@ -8,7 +8,7 @@ module Fd
       kase = Case.find(params[:case_id])
       if params[:action_id].blank?
         return redirect_to(fd_case_path(kase, tab: "actions"),
-          alert: "pick the action to reverse")
+          alert: "Select an action to reverse")
       end
 
       reason = params[:reversal_reason].to_s.strip
@@ -44,7 +44,7 @@ module Fd
         redirect_to fd_case_path(kase, tab: "actions"), notice: reversed_notice(lifted)
       else
         redirect_to fd_case_path(kase, tab: "actions"),
-          alert: "that action is not on this case, or was reversed already"
+          alert: "That action is not on this case, or was already reversed"
       end
     end
 
@@ -67,10 +67,10 @@ module Fd
     def reversed_notice(guard)
       return "action reversed, and the record keeps both" if guard.nil?
 
-      "action reversed, and the #{guard_said(guard)} it held is lifted"
+      "action reversed, and the #{guard_label_text(guard)} it held is lifted"
     end
 
-    def guard_said(guard) = FdHelper::ACTION_LABELS.fetch(guard.kind, guard.kind).downcase
+    def guard_label_text(guard) = FdHelper::ACTION_LABELS.fetch(guard.kind, guard.kind).downcase
 
     def objection(reason)
       if reason.blank?

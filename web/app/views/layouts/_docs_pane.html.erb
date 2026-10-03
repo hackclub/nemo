@@ -3,8 +3,8 @@
 
   <div class="cnav">
     <% Docs.groups.each do |group, topics| %>
-      <p class="cnav-lab"><%= group %></p>
-      <div class="cnav-group">
+      <p class="community-nav-label"><%= group %></p>
+      <div class="community-nav-group">
         <% topics.each do |topic| %>
           <% here = @topic&.slug == topic.slug %>
           <%= link_to doc_path(topic.slug), title: topic.title,
@@ -12,7 +12,7 @@
             <%= nav_icon("news") %><span class="trunc"><%= topic.title %></span>
           <% end %>
           <% if here %>
-            <div class="cnav-sub" data-controller="docs-nav"
+            <div class="community-nav-sub" data-controller="docs-nav"
                  data-action="click->docs-nav#go">
               <% topic.sections.each do |section| %>
                 <a href="#<%= section.id %>"><span class="trunc"><%= section.title %></span></a>

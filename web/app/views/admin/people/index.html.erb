@@ -1,10 +1,10 @@
 <% content_for :page_title, "People" %>
 
 <% content_for :page_controls do %>
-  <%= form_with url: admin_people_path, method: :get, class: "qsearch" do %>
+  <%= form_with url: admin_people_path, method: :get, class: "queue-search" do %>
     <%= hidden_field_tag :role, @role, id: nil if @role %>
     <%= search_field_tag :q, @term, placeholder: "Search by name or Slack ID",
-          class: "qsearch-in", autocomplete: "off", aria: { label: "Search people" } %>
+          class: "queue-search-input", autocomplete: "off", aria: { label: "Search people" } %>
   <% end %>
   <span class="segmented" role="group" aria-label="role">
     <%= link_to "All", admin_people_path(q: @term.presence),

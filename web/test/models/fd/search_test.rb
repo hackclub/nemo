@@ -88,17 +88,17 @@ class Fd::SearchTest < ActiveSupport::TestCase
     Fd::Note.create!(case_id: kase.id, author: "UFF1",
       body: "#{'a lot of preamble that nobody needs to read ' * 4}the raid came from six accounts")
 
-    said = rows("raid", "note").sole.said
-    assert_includes said, "raid"
-    assert said.length <= Fd::Search::WINDOW + 2, "the snippet ran long: #{said.length}"
-    assert said.start_with?("…"), "a snippet cut from the middle says so"
+    snippet = rows("raid", "note").sole.snippet
+    assert_includes snippet, "raid"
+    assert snippet.length <= Fd::Search::WINDOW + 2, "the snippet ran long: #{snippet.length}"
+    assert snippet.start_with?("…"), "a snippet cut from the middle says so"
   end
 
   test "a short body is quoted whole" do
     kase = make_case(opened_at: 2.days.ago)
     Fd::Note.create!(case_id: kase.id, body: "the raid again", author: "UFF1")
 
-    assert_equal "the raid again", rows("raid", "note").sole.said
+    assert_equal "the raid again", rows("raid", "note").sole.snippet
   end
 
   test "an open case outranks a resolved one" do
@@ -165,7 +165,7 @@ class Fd::SearchTest < ActiveSupport::TestCase
     found = look("#").groups.sole
 
     assert_equal found.rows.size, found.total
-    assert_nil found.rows.first.said
+    assert_nil found.rows.first.snippet
   end
 
   test "a scope passed on its own does the same as a prefix" do
@@ -177,7 +177,7 @@ class Fd::SearchTest < ActiveSupport::TestCase
     assert_equal ["note"], look("raid", scope: "note").groups.map(&:key)
   end
 
-  test "a scoped search shows more of the one kind it kept" do
+  test "a scoped search shows expand of the one kind it kept" do
     kase = make_case(opened_at: 2.days.ago)
     6.times { |n| Fd::Note.create!(case_id: kase.id, body: "raid #{n}", author: "UFF1") }
 

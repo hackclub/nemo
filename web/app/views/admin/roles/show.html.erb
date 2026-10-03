@@ -22,7 +22,7 @@
         <thead>
           <tr>
             <th>capability</th>
-            <th class="said-cell">what it lets them do</th>
+            <th class="detail-cell">what it lets them do</th>
             <% @roles.each do |role| %>
               <th class="col-num">
                 <%= Authz.role_label(role) %>
@@ -41,7 +41,7 @@
                 <td class="mono">
                   <%= Authz.locked?(key) ? locked_note(key) : key %>
                 </td>
-                <td class="said-cell"><%= Authz.label(key) %></td>
+                <td class="detail-cell"><%= Authz.label(key) %></td>
                 <% @roles.each do |role| %>
                   <td class="col-num">
                     <%= role_capability_switch(role, key, @overrides[[role, key]]) %>

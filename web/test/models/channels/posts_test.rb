@@ -46,7 +46,7 @@ class Channels::PostsTest < ActiveSupport::TestCase
 
   Viewer = Struct.new(:user_id)
 
-  test "only your own, until somebody is given more" do
+  test "only your own, until somebody is given expand" do
     assert Channels::Posts.may_read?(Viewer.new("U1"), "U1")
     assert_not Channels::Posts.may_read?(Viewer.new("U1"), "U2")
     assert_not Channels::Posts.may_read?(nil, "U1")
@@ -72,7 +72,7 @@ class Channels::PostsTest < ActiveSupport::TestCase
 
   test "what a post said is read back from slack, one post at a time" do
     asked = []
-    found = Slack::Message::Result.new(said: { "text" => "big news" })
+    found = Slack::Message::Result.new(message: { "text" => "big news" })
 
     given([a_row], ->(channel_id, ts) { asked << [channel_id, ts]; found }) do
       posts = Channels::Posts.for(channel_id: "C1", subject_id: "U1")

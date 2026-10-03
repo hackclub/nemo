@@ -1,7 +1,7 @@
 <% content_for :page_title, "Audit" %>
 
 <% content_for :head_actions do %>
-  <%= form_with url: fd_audit_path, method: :get, class: "qsearch audit-search",
+  <%= form_with url: fd_audit_path, method: :get, class: "queue-search audit-search",
         data: { controller: "live-search", action: "input->live-search#go",
                 turbo_action: "advance" } do %>
     <% @query.to_params.except("q", "before_at", "before_id").each do |key, value| %>
@@ -9,7 +9,7 @@
     <% end %>
     <%= search_field_tag :q, @query.term,
           placeholder: "an address, an email, a handle, or ip: about: did: in:",
-          class: "qsearch-in", autocomplete: "off",
+          class: "queue-search-input", autocomplete: "off",
           aria: { label: "Search the record" } %>
   <% end %>
 
@@ -86,10 +86,10 @@
       open: false } do %>
   <div class="modal-body">
     <dl class="audit-help-list">
-      <% Fd::AuditQuery::HELP.each do |said, what| %>
+      <% Fd::AuditQuery::HELP.each do |term, what| %>
         <dt><button type="button" class="chip audit-help-try"
                     data-controller="fill-search" data-action="click->fill-search#use"
-                    data-fill-search-said-value="<%= said %>"><%= said %></button></dt>
+                    data-fill-search-term-value="<%= term %>"><%= term %></button></dt>
         <dd><%= what %></dd>
       <% end %>
     </dl>

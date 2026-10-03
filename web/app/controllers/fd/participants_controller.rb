@@ -36,7 +36,7 @@ module Fd
         .find_by(user_id: params[:id], role: params[:role])
 
       if person.nil?
-        return redirect_to(fd_case_path(kase, tab: "people"), alert: "they are not on this case")
+        return redirect_to(fd_case_path(kase, tab: "people"), alert: "They are not on this case")
       end
 
       writing do
@@ -47,7 +47,7 @@ module Fd
       end
 
       redirect_to fd_case_path(kase, tab: "people"),
-        notice: "@#{person.user_id} taken off the case"
+        notice: "@#{person.user_id} removed from the case"
     end
 
     private

@@ -113,7 +113,7 @@ landed as (
     group by 1, 2
 ),
 
-whole as (
+channel_range as (
     select
         channel_id,
         window_start,
@@ -132,10 +132,10 @@ baseline as (
 
 workspace as (
     select coalesce(sum(messages_posted_by_members), 0) as workspace_total
-    from whole
+    from channel_range
 ),
 
-together as (
+combined as (
     select
         coalesce(p.cohort_key, j.cohort_key, l.cohort_key) as cohort_key,
         coalesce(p.channel_id, j.channel_id, l.channel_id) as channel_id,
@@ -201,9 +201,9 @@ select
     w.window_start,
     w.window_end,
     'v5' as metric_version
-from together t
+from combined t
 inner join reach r on r.cohort_key = t.cohort_key
 inner join baseline b on b.cohort_key = t.cohort_key
 cross join workspace s
 inner join {{ ref('dim_channel') }} c on c.channel_id = t.channel_id
-left join whole w on w.channel_id = t.channel_id
+left join channel_range w on w.channel_id = t.channel_id

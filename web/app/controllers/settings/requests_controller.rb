@@ -19,19 +19,19 @@ module Settings
 
     def create
       app = Api::App.live.find_by(id: params[:app_id], owner_user_id: member_id)
-      return back("that app is not yours") if app.nil?
+      return back("That app is not yours") if app.nil?
 
       Api::AccessRequest.ask!(app, reason: params[:reason])
       redirect_to settings_keys_path, notice: "Asked for access for #{app.name}"
-    rescue Api::AccessRequest::TooThin
-      back "say what the app needs access for"
-    rescue Api::AccessRequest::Already
+    rescue Api::AccessRequest::TooThinError
+      back "Describe what the app needs access for"
+    rescue Api::AccessRequest::AlreadyError
       back "that app has already asked"
     end
 
     def withdraw
       asked = Api::AccessRequest.pending.includes(:app).find_by(id: params[:id])
-      return back("that request is not yours") if asked&.app&.owner_user_id != member_id
+      return back("That request is not yours") if asked&.app&.owner_user_id != member_id
 
       asked.withdraw!
       redirect_to settings_keys_path, notice: "Withdrawn"
@@ -39,12 +39,12 @@ module Settings
 
     def settle
       asked = Api::AccessRequest.pending.includes(:app).find_by(id: params[:id])
-      return redirect_to(settings_requests_path, alert: "already settled") if asked.nil?
+      return redirect_to(settings_requests_path, alert: "Already settled") if asked.nil?
 
       yes = params[:verdict].to_s.casecmp?("approve")
       asked.public_send(yes ? :approve! : :decline!, by: member_id, note: params[:note])
-      said = yes ? "Approved" : "Declined"
-      redirect_to settings_requests_path, notice: "#{said} #{asked.app.name}"
+      verb = yes ? "Approved" : "Declined"
+      redirect_to settings_requests_path, notice: "#{verb} #{asked.app.name}"
     end
 
     private
@@ -53,14 +53,14 @@ module Settings
       rows.flat_map { |row| [row.app.owner_user_id, row.decided_by] }.compact.uniq
     end
 
-    def back(said)
-      redirect_to settings_keys_path, alert: said
+    def back(verb)
+      redirect_to settings_keys_path, alert: verb
     end
 
     def require_reviewer
       return if Authz.holds?(current_account, "api.review")
 
-      redirect_to settings_keys_path, alert: "reviewing api access is not yours to do"
+      redirect_to settings_keys_path, alert: "You do not have permission to review API access"
     end
   end
 end

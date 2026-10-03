@@ -16,7 +16,7 @@ class SyncRequest < ApplicationRecord
   validates :stage, presence: true, inclusion: { in: STAGES }, if: -> { kind == "stage" }
   validates :stage, absence: true, if: -> { kind == "full" }
 
-  class AlreadyRunning < StandardError; end
+  class AlreadyRunningError < StandardError; end
 
   def self.queue!(kind:, requested_by:, stage: nil)
     transaction do
@@ -25,7 +25,7 @@ class SyncRequest < ApplicationRecord
       request
     end
   rescue ActiveRecord::RecordNotUnique
-    raise AlreadyRunning, "a sync is already queued or running"
+    raise AlreadyRunningError, "a sync is already queued or running"
   end
 
   def active?

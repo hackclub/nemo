@@ -140,7 +140,7 @@
 @layer components {
   .audit-chips { padding: 0 var(--s-3xs); }
   .audit-search { flex: 1 1 320px; min-width: 300px; max-width: 460px; }
-  .ractions > .audit-search .qsearch-in { width: 100%; }
+  .ractions > .audit-search .queue-search-input { width: 100%; }
 
   .audit-help-list {
     display: grid;

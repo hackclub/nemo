@@ -36,9 +36,9 @@ module Admin
       @history = Authz::Grant.for_person(@user_id).newest_first.to_a
       @names = Fd::Names.for([@user_id] + @history.map(&:granted_by) +
         Channels::Audience::Grant.live.where(user_id: @user_id).pluck(:granted_by))
-      @deeds = Fd::Deeds.new(@user_id, since: WINDOW.ago).rows.first(20)
+      @audit_rows = Fd::AuditTrail.new(@user_id, since: WINDOW.ago).rows.first(20)
       @held_since = @history.filter_map(&:granted_at).min
-      @last_acted = @deeds.first&.at
+      @last_acted = @audit_rows.first&.at
       @identity_reads = AccessLog.where(actor_id: @user_id, field_class: "identity")
         .where(looked_at: WINDOW.ago..).count
       @channels_named = Channels::Audience::Grant.live.where(user_id: @user_id).count
@@ -66,7 +66,6 @@ module Admin
       @grant_rows = Authz::Grant.for_person(@user_id).newest_first.to_a
     end
 
-    # inherited from the role, added by hand, taken away by hand, or simply off
     def standing(key)
       effect = @deviations[key]
       return :added if effect == "allow"
@@ -77,7 +76,6 @@ module Admin
     end
     helper_method :standing
 
-    # anyone the new model knows, plus whoever is still only in the old tables
     def everyone
       (Authz::Grant.live.pluck(:user_id) +
         Channels::Audience::Grant.live.where.not(user_id: nil).pluck(:user_id) +
@@ -128,14 +126,14 @@ module Admin
     end
 
     def band(people)
-      grouped = people.group_by { |id| rung(id) }
+      grouped = people.group_by { |id| grant_source(id) }
       BANDS.filter_map { |label, key|
         rows = grouped[key]
         [label, rows] if rows.present?
       }
     end
 
-    def rung(user_id)
+    def grant_source(user_id)
       return :grants if @granters.include?(user_id)
       return :role if (@roles_of[user_id] || []).any?
 

@@ -156,7 +156,7 @@ def test_sync_worker_sweeps_its_own_orphans_at_startup():
 
     from jobs import sync_worker
 
-    assert "sweep_my_earlier_boots" in inspect.getsource(sync_worker.main)
+    assert "clear_stale_sessions" in inspect.getsource(sync_worker.main)
 
 
 def test_both_long_lived_workers_sweep_their_earlier_boots():
@@ -165,7 +165,7 @@ def test_both_long_lived_workers_sweep_their_earlier_boots():
     from jobs import archive_worker, sync_worker
 
     for mod, fn in ((sync_worker, sync_worker.main), (archive_worker, archive_worker.serve)):
-        assert "sweep_my_earlier_boots" in inspect.getsource(fn), mod.__name__
+        assert "clear_stale_sessions" in inspect.getsource(fn), mod.__name__
 
 
 def test_startup_releases_strays_immediately_not_after_six_hours():
@@ -174,7 +174,7 @@ def test_startup_releases_strays_immediately_not_after_six_hours():
     from jobs import sync_worker
 
     main = inspect.getsource(sync_worker.main)
-    assert "reap(stale_after_hours=0)" in main, (
+    assert "expire_stale_runs(stale_after_hours=0)" in main, (
         "at startup every claimed request is stranded, because the worker holding it is gone"
     )
 
@@ -186,7 +186,7 @@ def test_the_periodic_reap_keeps_the_six_hour_bar():
 
     body = inspect.getsource(sync_worker)
     loop = body.split("def main(")[1]
-    assert loop.count("reap()") >= 2, "the in-loop reaps must stay time-based"
+    assert loop.count("expire_stale_runs()") >= 2, "the in-loop reaps must stay time-based"
 
 
 def test_the_stale_release_covers_cancelling_not_just_claimed():

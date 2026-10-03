@@ -3,7 +3,7 @@ import logging
 import os
 
 from bot.core import privileged, session, whoami
-from bot.core.wording import escape
+from bot.core.formatting import escape
 from bot.nemo import channel, channelguards, channels
 from bot.nemo.surface import on_event
 
@@ -20,8 +20,8 @@ _people = {}
 
 
 def ours():
-    said = os.environ.get("EXEMPT_BOT_IDS", "")
-    return {one.strip() for one in said.split(",") if one.strip()}
+    raw = os.environ.get("EXEMPT_BOT_IDS", "")
+    return {one.strip() for one in raw.split(",") if one.strip()}
 
 
 def ask_about(client, bot_id):
@@ -85,10 +85,10 @@ def names_for(client, bot_id, user_id):
     return [one for one in (user_id, bot_id, face_id) if one], label, app_id
 
 
-def words_of(event):
-    said = (event.get("text") or "").strip()
-    if said:
-        return said
+def text_of(event):
+    text = (event.get("text") or "").strip()
+    if text:
+        return text
 
     for block in event.get("attachments") or []:
         fallen = (block.get("text") or block.get("fallback") or "").strip()
@@ -122,7 +122,7 @@ def footer(channel_id, link=None, app_id=None):
         (marketplace_url(app_id), "marketplace"),
         (channel.channel_url(channel_id), "open in fire engine"),
     )
-    parts = [f"<{url}|{said}>" for url, said in shown if url]
+    parts = [f"<{url}|{name}>" for url, name in shown if url]
     return "\n" + "  ·  ".join(parts) if parts else ""
 
 
@@ -133,11 +133,11 @@ def permalink_for(client, channel_id, ts):
         return None
 
 
-def tell(client, conn, guard_id, subject_id, said):
-    held = channelguards.told_lately(conn, guard_id, subject_id)
+def post_notice(client, conn, guard_id, subject_id, notice):
+    held = channelguards.last_notified_at(conn, guard_id, subject_id)
     try:
         sent = client.chat_postMessage(
-            channel=channel.firehouse_channel(conn), text=said,
+            channel=channel.internal_log_channel(conn), text=notice,
             thread_ts=held, unfurl_links=False,
         )
     except Exception as failure:
@@ -177,17 +177,17 @@ def posted(ctx):
     guard_id, _allowed = standing
     face_id = next((one for one in ids if one and one.startswith("U")), None)
     subject_id = face_id or bot_id or user_id
-    said_words = words_of(event)
+    words = text_of(event)
     link = permalink_for(ctx.client, channel_id, ts)
     privileged.delete_message(channel_id, ts)
 
     with session() as conn:
-        said = (f"Deleted a message from {naming(face_id, label, subject_id)}, "
+        notice = (f"Deleted a message from {naming(face_id, label, subject_id)}, "
                 f"which is not on the allow list for <#{channel_id}>."
-                + quoted(said_words) + footer(channel_id, link, app_id))
-        told_ts, told_until = tell(ctx.client, conn, guard_id, subject_id, said)
-        channelguards.happened(conn, guard_id, channel_id, subject_id, "deleted",
-                               bot_id=bot_id, label=label, said=said_words, message_ts=ts,
+                + quoted(words) + footer(channel_id, link, app_id))
+        told_ts, told_until = post_notice(ctx.client, conn, guard_id, subject_id, notice)
+        channelguards.record_enforcement(conn, guard_id, channel_id, subject_id, "deleted",
+                               bot_id=bot_id, label=label, text=words, message_ts=ts,
                                permalink=link, app_id=app_id,
                                told_ts=told_ts, told_until=told_until)
 
@@ -226,12 +226,12 @@ def joined(ctx):
     outcome = privileged.kick(channel_id, who)
 
     with session() as conn:
-        said = (f"Put <@{who}> out of <#{channel_id}>, which is not on its "
+        notice = (f"Put <@{who}> out of <#{channel_id}>, which is not on its "
                 f"allow list." if outcome == "kicked" else
                 f":warning: <@{who}> joined <#{channel_id}> off the allow list, and we "
                 f"could not put them out ({outcome}).") + footer(channel_id, app_id=app_id)
-        told_ts, told_until = tell(ctx.client, conn, guard_id, who, said)
-        channelguards.happened(conn, guard_id, channel_id, who,
+        told_ts, told_until = post_notice(ctx.client, conn, guard_id, who, notice)
+        channelguards.record_enforcement(conn, guard_id, channel_id, who,
                                "kicked" if outcome == "kicked" else "let_past",
                                bot_id=(found.get("profile") or {}).get("bot_id"), label=label,
                                app_id=app_id,

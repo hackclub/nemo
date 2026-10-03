@@ -1,0 +1,38 @@
+<% shown = Fd::Names.for([staff.user_id]) %>
+<%= render layout: "shared/dropdown", locals: {
+      css: "account-menu", trigger_css: "account-face", pop_css: "account-pop menu-start",
+      label: "#{shown[staff.user_id]}, and your account",
+      trigger: tag.img(src: cachet_face_url(staff.user_id), class: "avatar", alt: "",
+        width: 24, height: 24,
+        data: { cachet_face: staff.user_id, cachet_initial: shown.initial(staff.user_id),
+                cachet_tone: avatar_tone(staff.user_id) }) } do %>
+    <div class="account-head">
+      <%= tag.img(src: cachet_face_url(staff.user_id), class: "avatar avatar-lg", alt: "", width: 28, height: 28,
+            data: { cachet_face: staff.user_id, cachet_initial: shown.initial(staff.user_id),
+                    cachet_tone: avatar_tone(staff.user_id) }) %>
+      <span class="two-line">
+        <b><span data-cachet-name="<%= staff.user_id %>"><%= shown[staff.user_id] %></span></b>
+        <span><%= held_label(staff) %></span>
+      </span>
+    </div>
+
+    <div class="account-theme">
+      <span class="form-label">Theme</span>
+      <%= render "layouts/theme_pills" %>
+    </div>
+
+    <div class="menu-sep"></div>
+
+    <%= link_to account_path, class: "btn" do %>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+      <span>Your account</span>
+    <% end %>
+
+    <div class="menu-sep"></div>
+
+    <%= button_to logout_path, method: :delete, class: "btn account-out",
+          form: { class: "contents" } do %>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      <span>Sign out</span>
+    <% end %>
+<% end %>

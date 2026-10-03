@@ -3,5 +3,5 @@
         priors_by_user: @priors, reachable: @reachable %>
 <% end %>
 <% if @more %>
-  <template data-more-next="<%= fd_case_merge_path(@case, page: @page + 1) %>"></template>
+  <template data-expand-next="<%= fd_case_merge_path(@case, page: @page + 1) %>"></template>
 <% end %>

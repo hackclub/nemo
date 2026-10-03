@@ -25,7 +25,7 @@ VALUES (%s, 'invariant', %s, %s, %s, %s, %s)
 """
 
 
-def i1_every_planned_stage_has_a_row(conn):
+def i1_planned_stages_have_rows(conn):
     row = conn.execute("""
         SELECT p.logical_date,
                count(c.id) FILTER (WHERE c.step_index IS NOT NULL),
@@ -44,7 +44,7 @@ def i1_every_planned_stage_has_a_row(conn):
     return ("I1", "pass" if ok else "fail", f"{children} stage rows on {night}", f"{planned} planned")
 
 
-def i4_counts_are_nullable(conn):
+def i4_counts_nullable(conn):
     rows = conn.execute("""
         SELECT table_schema || '.' || table_name || '.' || column_name, is_nullable, column_default
         FROM information_schema.columns
@@ -59,7 +59,7 @@ def i4_counts_are_nullable(conn):
             "no count column is NOT NULL DEFAULT 0")
 
 
-def i10_status_vocabulary_matches_the_check(conn):
+def i10_status_vocabulary(conn):
     row = conn.execute(
         "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'ingest_run_status_ck'"
     ).fetchone()
@@ -68,14 +68,14 @@ def i10_status_vocabulary_matches_the_check(conn):
             ",".join(sorted(declared)) or "no constraint", ",".join(sorted(STATUSES)))
 
 
-def no_running_row_outlives_the_sweep(conn):
+def sweep_no_orphaned_running_rows(conn):
     count = conn.execute(
         "SELECT count(*) FROM raw.ingest_run WHERE status = 'running' AND started_at < now() - interval '6 hours'"
     ).fetchone()[0]
     return ("sweep", "pass" if count == 0 else "fail", f"{count} running row(s) older than 6h", "0")
 
 
-def every_terminal_failure_is_classified(conn):
+def i3_terminal_failures_classified(conn):
     count = conn.execute("""
         SELECT count(*) FROM raw.ingest_run
         WHERE status IN ('failed', 'abandoned', 'cancelled') AND error_class IS NULL
@@ -84,7 +84,7 @@ def every_terminal_failure_is_classified(conn):
     return ("I3", "pass" if count == 0 else "fail", f"{count} unclassified failure(s) in 24h", "0")
 
 
-def i11_every_day_source_is_recent(conn):
+def i11_day_sources_recent(conn):
     walked = [day_source for day_source, _ in DAY_LEDGERS]
     rows = conn.execute("""
         SELECT source, max(ds), (current_date - max(ds))::integer
@@ -103,7 +103,7 @@ def i11_every_day_source_is_recent(conn):
             f"within {DAY_LAG_LIMIT} days")
 
 
-def i12_the_day_ledgers_agree(conn):
+def i12_day_ledgers_agree(conn):
     torn = []
     measured = 0
     for day_source, coverage_key in DAY_LEDGERS:
@@ -144,13 +144,13 @@ def i12_the_day_ledgers_agree(conn):
 
 
 CHECKS = (
-    i1_every_planned_stage_has_a_row,
-    i4_counts_are_nullable,
-    i10_status_vocabulary_matches_the_check,
-    i11_every_day_source_is_recent,
-    i12_the_day_ledgers_agree,
-    no_running_row_outlives_the_sweep,
-    every_terminal_failure_is_classified,
+    i1_planned_stages_have_rows,
+    i4_counts_nullable,
+    i10_status_vocabulary,
+    i11_day_sources_recent,
+    i12_day_ledgers_agree,
+    sweep_no_orphaned_running_rows,
+    i3_terminal_failures_classified,
 )
 
 

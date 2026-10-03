@@ -11,12 +11,12 @@
       <div class="card-body flush">
         <% Engine::Setting::ENGINE_DIALS.each do |name, dial| %>
           <div class="tgrid tgrid-schedule">
-            <div class="tn"><%= dial[:label] %></div>
+            <div class="stack-fine"><%= dial[:label] %></div>
             <div class="tcell">
-              <%= render "val", source: Engine::Setting::ENGINE, name: name,
+              <%= render "setting_value", source: Engine::Setting::ENGINE, name: name,
                     may_tune: may_tune, show_was: true %>
             </div>
-            <div class="sub r">
+            <div class="sub align-right">
               <% row = Engine::Setting.find_by(source: Engine::Setting::ENGINE, name: name) %>
               <%= row ? "#{row.changed_by}, #{time_ago_in_words(row.changed_at)} ago" : "from the file" %>
             </div>
@@ -45,17 +45,17 @@
       <% sources.each do |row| %>
         <% source = row.source %>
         <div class="tgrid">
-          <div class="tn"><b><%= source.key %></b><span><%= source.label %></span></div>
+          <div class="stack-fine"><b><%= source.key %></b><span><%= source.label %></span></div>
           <div class="tcell">
-            <%= render "val", source: source.key, name: Engine::Setting::CADENCE,
+            <%= render "setting_value", source: source.key, name: Engine::Setting::CADENCE,
                   may_tune: may_tune, show_was: true %>
           </div>
           <div class="tcell">
-            <%= render "val", source: source.key, name: Engine::Setting::RETENTION,
+            <%= render "setting_value", source: source.key, name: Engine::Setting::RETENTION,
                   may_tune: may_tune, show_was: true %>
           </div>
           <div class="tcell">
-            <%= render "val", source: source.key, name: Engine::Setting::ENABLED,
+            <%= render "setting_value", source: source.key, name: Engine::Setting::ENABLED,
                   may_tune: may_tune, show_was: true %>
           </div>
         </div>

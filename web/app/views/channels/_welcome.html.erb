@@ -16,7 +16,7 @@
         data-chart-height-value="220"
         data-chart-nokey-value="true"
         data-chart-data-value="<%= {
-          labels: steps.map { |step| funnel_step_said(step) },
+          labels: steps.map { |step| funnel_step_label(step) },
           datasets: [{ label: "newcomers", data: steps.map(&:count) }]
         }.to_json %>"
         data-chart-notes-value="<%= steps.map { |step|
@@ -36,7 +36,7 @@
         <h2 class="card-title">Reply time</h2>
       </div>
       <div class="card-tools">
-        <span class="card-sub">median <%= duration_said(welcome.median_latency) %></span>
+        <span class="card-sub">median <%= duration_label(welcome.median_latency) %></span>
       </div>
     </div>
     <% if welcome.latency.any? %>
@@ -46,7 +46,7 @@
         data-chart-height-value="220"
         data-chart-nokey-value="true"
         data-chart-data-value="<%= {
-          labels: welcome.latency.map { |b| latency_bucket_said(b.bucket) },
+          labels: welcome.latency.map { |b| latency_bucket_label(b.bucket) },
           datasets: [{ label: "newcomers", data: welcome.latency.map { |b| b.newcomers.to_i } }]
         }.to_json %>"
         data-chart-notes-value="<%= welcome.latency.map { |bucket|

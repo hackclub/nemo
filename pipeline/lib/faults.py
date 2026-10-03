@@ -7,14 +7,14 @@ from slack_sdk.errors import SlackApiError
 
 from lib.paths import FAULTS_FILE
 from lib.proxy_client import InternalApiError, InternalAuthError, ProxyError, ProxyUnavailableError
-from lib.walk import WalkWrong
+from lib.walk import WalkMismatchError
 
 TABLE = yaml.safe_load(FAULTS_FILE.read_text())
 CLASSES = TABLE["classes"]
 SLACK_ERRORS = {error: name for name, errors in TABLE["slack_errors"].items() for error in errors}
 PROXY_STATUS = re.compile(r"proxy returned (\d{3})")
 DETAIL_LIMIT = 500
-RAISED_BY_NAME = {"SyncCancelled": "cancelled", "SeededDeployment": "local", "LaneAborted": "local"}
+RAISED_BY_NAME = {"SyncCancelled": "cancelled", "SeededDeployment": "local", "LaneAbortedError": "local"}
 
 
 @dataclass(frozen=True)
@@ -62,7 +62,7 @@ def classify(exc):
         return fault("contract", exc)
     if isinstance(exc, (psycopg.errors.LockNotAvailable, psycopg.errors.DeadlockDetected)):
         return fault("contended", exc)
-    if isinstance(exc, (WalkWrong, psycopg.Error)):
+    if isinstance(exc, (WalkMismatchError, psycopg.Error)):
         return fault("local", exc)
     if isinstance(exc, (TimeoutError, ConnectionError, OSError)):
         return fault("transport", exc)

@@ -4,8 +4,8 @@ module Settings
       return refuse(turned_off) if api_off?
 
       app = owned_app(params[:app_id])
-      return refuse("that app is not yours") if app.nil?
-      return refuse("name what the key is for") if params[:name].to_s.strip.empty?
+      return refuse("That app is not yours") if app.nil?
+      return refuse("Say what the key is for") if params[:name].to_s.strip.empty?
 
       token, @secret = Api::Token.mint!(app, params[:name], lasting: params[:lasting])
       Api::Event.record!("token_minted", actor: member_id, subject: token.shown,
@@ -15,9 +15,9 @@ module Settings
       @token = token
       load_keys
       render "settings/keys/show"
-    rescue Api::Token::NotApproved
-      refuse("that app has no approved scope yet")
-    rescue Api::Token::TooMany
+    rescue Api::Token::NotApprovedError
+      refuse("That app has no approved scope yet")
+    rescue Api::Token::TooManyError
       refuse("that app already holds #{Api::Setting.value('tokens_per_owner')} keys")
     end
 
@@ -25,7 +25,7 @@ module Settings
       return refuse(turned_off) if api_off?
 
       token = own_token
-      return refuse("that key is not yours") if token.nil?
+      return refuse("That key is not yours") if token.nil?
 
       @secret = token.rotate!(by: member_id)
       @token = token
@@ -35,7 +35,7 @@ module Settings
 
     def destroy
       token = own_token
-      return refuse("that key is not yours") if token.nil?
+      return refuse("That key is not yours") if token.nil?
 
       token.revoke!(by: member_id)
       Api::Event.record!("token_revoked", actor: member_id, subject: token.shown,
@@ -54,8 +54,8 @@ module Settings
       Api::Token.live.find_by(id: params[:id], owner_user_id: member_id)
     end
 
-    def refuse(said)
-      redirect_to settings_keys_path, alert: said
+    def refuse(message)
+      redirect_to settings_keys_path, alert: message
     end
   end
 end

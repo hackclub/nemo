@@ -34,7 +34,7 @@ class FdChannelPurgeTest < ActionDispatch::IntegrationTest
     assert_equal 1, Fd::AuditEntry.where(entity_type: "channel_purge", verb: "queued").count
   end
 
-  test "more than the cap is refused" do
+  test "expand than the cap is refused" do
     ask(wanted: (Fd::ChannelPurge::MOST + 1).to_s)
 
     assert_equal 0, purges.count
@@ -165,9 +165,9 @@ class FdChannelPurgeTest < ActionDispatch::IntegrationTest
         "user" => "USUB", "text" => "the top" }
     ])
     get fd_channel_purge_path(@id, one)
-    said = response.body
+    body = response.body
 
-    assert_operator said.index("the top"), :<, said.index("the reply")
+    assert_operator body.index("the top"), :<, body.index("the reply")
     assert_select %(details.purge-thread > summary), text: /1 reply/
   end
 

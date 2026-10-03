@@ -107,7 +107,7 @@ def forget_refusals():
         _refused.clear()
 
 
-def turned_down(failure):
+def is_permission_denied(failure):
     return getattr(failure, "http_status", None) == REFUSED
 
 
@@ -126,7 +126,7 @@ def find_refusals(client, actions):
             client.call(METHOD, {"limit": 1, "action": one},
                         credential=CREDENTIAL, max_retries=0)
         except ProxyError as failure:
-            if not turned_down(failure):
+            if not is_permission_denied(failure):
                 raise
             found.append(one)
 
@@ -142,19 +142,19 @@ def log_refusals(found):
 
 
 def tail_actions():
-    said = os.environ.get("AUDIT_TAIL_ACTIONS", "").strip()
-    if not said:
+    raw = os.environ.get("AUDIT_TAIL_ACTIONS", "").strip()
+    if not raw:
         return None
-    if said.lower() in ("login", "logins"):
+    if raw.lower() in ("login", "logins"):
         return LOGIN_ACTIONS
-    if said.lower() == "watched":
+    if raw.lower() == "watched":
         return WATCHED_ACTIONS
-    return tuple(one.strip() for one in said.split(",") if one.strip())[:MOST_ACTIONS]
+    return tuple(one.strip() for one in raw.split(",") if one.strip())[:MOST_ACTIONS]
 
 
 def nemo_ids():
-    said = os.environ.get("AUDIT_NEMO_ID", "")
-    return frozenset(one.strip() for one in said.split(",") if one.strip())
+    raw = os.environ.get("AUDIT_NEMO_ID", "")
+    return frozenset(one.strip() for one in raw.split(",") if one.strip())
 
 
 def stamp(seconds):
@@ -241,7 +241,7 @@ def channel_row(entry):
     )
 
 
-def land(conn, entries, source_key, ours, counts):
+def insert_rows(conn, entries, source_key, ours, counts):
     events, logins, rooms = [], [], []
     named = {}
     for entry in entries:
@@ -296,7 +296,7 @@ def walk(client, conn, source_key, counts, oldest=None, latest=None, actions=Non
         nonlocal landed, seated
         if not held:
             return
-        grew, lit = land(conn, held, source_key, ours, counts)
+        grew, lit = insert_rows(conn, held, source_key, ours, counts)
         landed += grew
         seated += lit
         held.clear()
@@ -317,7 +317,7 @@ def walk(client, conn, source_key, counts, oldest=None, latest=None, actions=Non
     try:
         held.extend(pages())
     except ProxyError as failure:
-        if not turned_down(failure) or not held_actions(asked):
+        if not is_permission_denied(failure) or not held_actions(asked):
             raise
         if not find_refusals(client, held_actions(asked)):
             raise
@@ -329,8 +329,8 @@ def walk(client, conn, source_key, counts, oldest=None, latest=None, actions=Non
 
 
 def held_actions(asked):
-    said = asked.get("action")
-    return tuple(said.split(",")) if said else ()
+    raw = asked.get("action")
+    return tuple(raw.split(",")) if raw else ()
 
 
 def watermark(conn):
@@ -349,8 +349,8 @@ def keep_place(conn, source_key, oldest, cursor):
 
 
 def held_place(conn, source_key):
-    said = get_cursor(conn, source_key) or ""
-    mark, _, cursor = said.partition(WINDOW_MARK)
+    mark_and_cursor = get_cursor(conn, source_key) or ""
+    mark, _, cursor = mark_and_cursor.partition(WINDOW_MARK)
     if not cursor or not mark.isdigit():
         return None, None
     return cursor, datetime.fromtimestamp(int(mark), tz=UTC)
@@ -380,7 +380,7 @@ def tail(conn, client=None):
             )
             save_cursor(conn, TAIL, "")
     except ProxyError as failure:
-        if held and turned_down(failure):
+        if held and is_permission_denied(failure):
             drop_cursor(conn, TAIL)
             print(f"{TAIL}: slack would not take the saved cursor, dropped it "
                   f"so the next pass starts from the watermark")

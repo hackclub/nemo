@@ -12,7 +12,7 @@ def _load():
 TABLE = _load()
 SOURCES = TABLE["sources"]
 KEYS = tuple(SOURCES)
-STANDALONE_SOURCES = frozenset(key for key, said in SOURCES.items() if said.get("standalone"))
+STANDALONE_SOURCES = frozenset(key for key, spec in SOURCES.items() if spec.get("standalone"))
 NIGHTLY_KEYS = tuple(key for key in KEYS if key not in STANDALONE_SOURCES)
 CADENCES = tuple(TABLE["cadences"])
 GUARDS = tuple(TABLE["guards"])
@@ -20,25 +20,25 @@ RESUMES = tuple(TABLE["resumes"])
 RETENTIONS = tuple(TABLE["retentions"])
 
 
-class Unknown(KeyError):
-    """No source in db/sources.yml carries this key"""
+class UnknownSourceError(KeyError):
+    """Raised when db/sources.yml has no source under this key."""
 
 
 def source(key):
     try:
         return SOURCES[key]
     except KeyError:
-        raise Unknown(f"{key} is not a source") from None
+        raise UnknownSourceError(f"{key} is not a source") from None
 
 
-def says(key, field):
+def field_of(key, field):
     return source(key)[field]
 
 
 def limit(key, name):
     limits = source(key).get("limits") or {}
     if name not in limits:
-        raise Unknown(f"{key} declares no {name} limit")
+        raise UnknownSourceError(f"{key} declares no {name} limit")
     return limits[name]
 
 
@@ -63,14 +63,14 @@ DEFAULT_UNIT_BUDGET_SECONDS = 90
 def unit_budget_seconds(key):
     try:
         return int(source(key).get("unit_budget_seconds", DEFAULT_UNIT_BUDGET_SECONDS))
-    except Unknown:
+    except UnknownSourceError:
         return DEFAULT_UNIT_BUDGET_SECONDS
 
 
 def parser_version(key):
     try:
         return int(source(key).get("parser_version", 1))
-    except Unknown:
+    except UnknownSourceError:
         return 1
 
 

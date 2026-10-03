@@ -24,7 +24,7 @@ def test_a_stage_is_not_due_when_the_night_starts_but_is_when_it_is_reached(monk
 
 def test_the_plan_defers_the_cadence_check(monkeypatch):
     monkeypatch.setattr(nightly_sync, "stages", lambda: [("dim_snapshot", lambda conn: None)])
-    plan = nightly_sync.tonight(None)
+    plan = nightly_sync.todays_run(None)
     assert [why for _, _, why in plan] == [nightly_sync.WHEN_DUE]
 
 

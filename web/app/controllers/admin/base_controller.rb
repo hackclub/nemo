@@ -7,7 +7,7 @@ module Admin
     def require_admin
       return if Fd::Access.manager?(current_account)
 
-      redirect_to root_path, alert: "the admin section is community managers only"
+      redirect_to root_path, alert: "The admin section is restricted to community managers"
     end
 
     def may_grant?

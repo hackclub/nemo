@@ -13,7 +13,7 @@ module Fd
       problem = objection(kase, body, standing, about)
       if problem
         return redirect_to(back_to(kase, standing, about),
-          alert: (problem unless flash[:wrong]))
+          alert: (problem unless flash[:field_error]))
       end
 
       writing do
@@ -54,11 +54,11 @@ module Fd
       end
 
       if removed
-        flash[:said] = "It stays in the audit trail, but nobody will see it on the case again."
+        flash[:detail] = "It stays in the audit trail, but nobody will see it on the case again."
         redirect_to back_to(kase, standing, about), notice: "Note removed"
       else
         redirect_to back_to(kase, standing, about),
-          alert: "only whoever wrote a note can remove it"
+          alert: "Only the author of a note can remove it"
       end
     end
 

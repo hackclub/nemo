@@ -49,18 +49,18 @@ module Fd
         .where(opened_at: ...@kase.opened_at)
         .includes(:actions, :subjects)
         .order(opened_at: :desc)
-        .map { |other| weigh(other) }
+        .map { |other| compare_to(other) }
     end
 
     private
 
-    def weigh(other)
+    def compare_to(other)
       aimed = other.actions.select { |action| action.target_user_id == user_id }
-      why = excuse(other, aimed)
+      why = skip_reason(other, aimed)
       Earlier.new(kase: other, actions: aimed, why: why, counts: why.nil?)
     end
 
-    def excuse(other, aimed)
+    def skip_reason(other, aimed)
       return "logged, not the subject" unless other.subject_user_ids.include?(user_id)
       return "still open" if other.resolved_at.nil?
       return "nothing was done to them" if aimed.empty?

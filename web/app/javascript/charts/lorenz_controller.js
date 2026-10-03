@@ -17,7 +17,7 @@ export default class extends Controller {
     this.at = null
     this.element.innerHTML = `<div class="chart tipped" tabindex="0"
       data-action="mousemove->lorenz#track mouseleave->lorenz#clear keydown->lorenz#key"
-      ><div class="tip"></div><span class="chart-say" aria-live="polite"></span></div>`
+      ><div class="tip"></div><span class="chart-caption" aria-live="polite"></span></div>`
     const chart = this.element.querySelector(".chart")
     this.watcher = new ResizeObserver(() => this.measure())
     this.watcher.observe(chart)
@@ -161,7 +161,7 @@ export default class extends Controller {
     dot.setAttribute("cy", g.y(py))
     dot.setAttribute("opacity", "1")
 
-    chart.querySelector(".chart-say").textContent =
+    chart.querySelector(".chart-note").textContent =
       `bottom ${px} percent of posters hold ${pct(py, 2)} of messages`
   }
 
@@ -173,7 +173,7 @@ export default class extends Controller {
     chart.querySelector(".tip")?.classList.remove("on")
     chart.querySelector(".cur")?.setAttribute("opacity", "0")
     chart.querySelector(".dot")?.setAttribute("opacity", "0")
-    const say = chart.querySelector(".chart-say")
+    const say = chart.querySelector(".chart-note")
     if (say) say.textContent = ""
   }
 }

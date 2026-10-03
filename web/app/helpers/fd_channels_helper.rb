@@ -33,7 +33,7 @@ module FdChannelsHelper
     Fd::ChannelsController::KIND_TABS.fetch(kind, "overview")
   end
 
-  def guard_setting_said(guard, allowed)
+  def guard_setting_label(guard, allowed)
     case guard.kind
     when Fd::ChannelGuard::SLOWMODE then slowmode_line(guard)
     when Fd::ChannelGuard::ACCOUNT_AGE then "#{pluralize(guard.min_age_days, 'day')} old to post"
@@ -63,15 +63,15 @@ module FdChannelsHelper
   }.freeze
 
   def purge_state_chip(purge)
-    said, tone = PURGE_STATE.fetch(purge.state, [purge.state, "state-off"])
-    tag.span(said, class: "state #{tone}")
+    label, tone = PURGE_STATE.fetch(purge.state, [purge.state, "state-off"])
+    tag.span(label, class: "state #{tone}")
   end
 
   def slowmode_line(guard)
     return nil if guard.nil?
 
-    said = "#{pluralize(guard.seconds, 'second')} between messages"
-    guard.threads? ? "#{said}, threads too" : said
+    label = "#{pluralize(guard.seconds, 'second')} between messages"
+    guard.threads? ? "#{label}, threads too" : label
   end
 
   def channel_guard_why(guard)
@@ -81,24 +81,24 @@ module FdChannelsHelper
   end
 
   NEEDS_INVITE = "needs an invite".freeze
-  INVITE_SAID = "a human has to /invite nemo here, a bot cannot join a private channel".freeze
+  INVITE_NOTE = "a human has to /invite nemo here, a bot cannot join a private channel".freeze
 
   def needs_invite?(standing)
     standing&.refused? && standing.why == NEEDS_INVITE
   end
 
-  def channel_seat_said(seat, standing)
+  def channel_seat_label(seat, standing)
     return nil if seat
-    return tag.p(outside_said(standing), class: "sev-crit") if seat == false
+    return tag.p(outside_label(standing), class: "sev-crit") if seat == false
     return nil if standing.nil? || standing.inside?
     return tag.p("nemo was taken out of here", class: "sev-crit") if standing.verb == "left"
-    return tag.p(INVITE_SAID, class: "sev-warn") if needs_invite?(standing)
+    return tag.p(INVITE_NOTE, class: "sev-warn") if needs_invite?(standing)
 
     tag.p("nemo could not get in: #{standing.why.presence || 'refused'}", class: "sev-crit")
   end
 
-  def outside_said(standing)
-    return "nothing is enforced, #{INVITE_SAID}" if needs_invite?(standing)
+  def outside_label(standing)
+    return "nothing is enforced, #{INVITE_NOTE}" if needs_invite?(standing)
 
     why = standing&.refused? && standing.why.presence
     return "nothing is enforced, nemo could not get in: #{why}" if why
@@ -108,15 +108,15 @@ module FdChannelsHelper
 
   MARKETPLACE = "https://hackclub.slack.com/marketplace".freeze
 
-  ACTIVITY_SAID = {
+  ACTIVITY_LABELS = {
     "kicked" => ["removed", "state-warn"],
     "deleted" => ["deleted", "state-warn"],
     "let_past" => ["not removed", "state-crit"]
   }.freeze
 
   def activity_verb(event)
-    said, tone = ACTIVITY_SAID.fetch(event.verb, [event.verb, "state-off"])
-    tag.span(said, class: "state #{tone}")
+    label, tone = ACTIVITY_LABELS.fetch(event.verb, [event.verb, "state-off"])
+    tag.span(label, class: "state #{tone}")
   end
 
   def activity_who(event, labels)
@@ -127,18 +127,18 @@ module FdChannelsHelper
     tag.span([event.subject_id, event.bot_id].compact_blank.uniq.join(" - "), class: "mono")
   end
 
-  def marketplace_link(app_id, said = "manage this bot")
+  def marketplace_link(app_id, label = "manage this bot")
     return nil if app_id.blank?
 
-    link_to said, "#{MARKETPLACE}/#{app_id}", class: "lnk lnk-soft",
+    link_to label, "#{MARKETPLACE}/#{app_id}", class: "lnk lnk-soft",
       target: "_blank", rel: "noopener"
   end
 
-  def bot_name_link(said, app_id)
-    return said if app_id.blank?
+  def bot_name_link(label, app_id)
+    return label if app_id.blank?
 
-    link_to said, "#{MARKETPLACE}/#{app_id}", class: "botlink",
-      title: "open #{said} in the Slack marketplace", target: "_blank", rel: "noopener"
+    link_to label, "#{MARKETPLACE}/#{app_id}", class: "botlink",
+      title: "open #{label} in the Slack marketplace", target: "_blank", rel: "noopener"
   end
 
   def guard_face(subject_id)

@@ -11,7 +11,7 @@ from lib.proxy_client import ProxyClient
 from lib.walk import (
     UNVERIFIED,
     check_walk,
-    covers_what_it_replaces,
+    supersedes,
     should_prune,
     window_totals,
 )
@@ -112,7 +112,7 @@ def run(conn, days=None, end=None):
         with conn.cursor() as cur:
             cur.execute(WINDOW_COUNTS_SQL, (SOURCE,))
             landed, held = window_totals(cur.fetchall(), (start, stop))
-        replacing = should_prune(verdict) and covers_what_it_replaces(landed, held)
+        replacing = should_prune(verdict) and supersedes(landed, held)
         if should_prune(verdict) and not replacing:
             print(
                 f"member range {window_key}: walked {landed} rows against {held} already held, "

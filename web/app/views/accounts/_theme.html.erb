@@ -1,8 +1,8 @@
 <div class="panel-body">
   <% Appearance::BANDS.each do |band, label| %>
-    <div class="fbox">
+    <div class="theme-box">
       <div class="ft"><%= label %></div>
-      <div class="fb">
+      <div class="theme-preview">
         <div class="theme-grid" role="group" aria-label="<%= label %> themes">
           <% Appearance.of_band(band).each do |theme| %>
             <button type="button" class="theme-opt" aria-pressed="false"

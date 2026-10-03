@@ -11,11 +11,11 @@
       <% end %>
     </nav>
 
-    <%= form_with url: fd_members_path, method: :get, class: "qtools" do %>
+    <%= form_with url: fd_members_path, method: :get, class: "queue-tools" do %>
       <% query.picked.each do |key, value| %>
         <%= hidden_field_tag key, value, id: nil %>
       <% end %>
-      <label class="vh" for="pane-member-filter">Find a member</label>
+      <label class="visually-hidden" for="pane-member-filter">Find a member</label>
       <%= search_field_tag :q, query.term, id: "pane-member-filter",
             class: "input input-sm grow", autocomplete: "off", placeholder: "Find a member",
             data: { pane_filter_target: "query", action: "input->pane-filter#filter" } %>
@@ -29,8 +29,8 @@
               open_id: open_id, carry: query.to_params %>
       </div>
       <% if query.pages > query.page %>
-        <div class="pane-more" data-controller="more" data-more-into-value="member-listbox"
-             data-more-url-value="<%= fd_member_pane_path(query.page_params(query.page + 1).merge({ open: open_id }.compact)) %>"
+        <div class="pane-more" data-controller="expand" data-expand-into-value="member-listbox"
+             data-expand-url-value="<%= fd_member_pane_path(query.page_params(query.page + 1).merge({ open: open_id }.compact)) %>"
              aria-hidden="true"><i class="dot run"></i></div>
       <% end %>
 

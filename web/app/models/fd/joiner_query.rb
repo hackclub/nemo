@@ -154,10 +154,10 @@ module Fd
       key == DEFAULTS.fetch(WINDOW_KEY) ? held : held.merge(WINDOW_KEY => key)
     end
 
-    def term_params(said)
+    def term_params(term_value)
       held = carried.merge(placed)
       held.delete(TERM_KEY)
-      said.present? ? held.merge(TERM_KEY => said) : held
+      term_value.present? ? held.merge(TERM_KEY => term_value) : held
     end
 
     def facet_params(overrides)
@@ -207,10 +207,10 @@ module Fd
     end
 
     def one(user_id)
-      said = user_id.to_s.strip
-      return nil if said.blank?
+      term_value = user_id.to_s.strip
+      return nil if term_value.blank?
 
-      found = ask(body("*", "user_id = :who"), who: said).first
+      found = ask(body("*", "user_id = :who"), who: term_value).first
       found && build(found)
     end
 
@@ -234,7 +234,7 @@ module Fd
       return "#{view_label} matching #{term}" if view && asked?
       return view_label if view
 
-      rest = [state_phrase, shape_phrase, domain_phrase, term_phrase].compact
+      rest = [state_phrase, match_phrase, domain_phrase, term_phrase].compact
       lead = "Joined #{WHEN.fetch(self[WINDOW_KEY])}"
       rest.empty? ? lead : "#{lead}, #{rest.to_sentence}"
     end
@@ -413,8 +413,8 @@ module Fd
     end
 
     def term_clause
-      said = term_fields.map { |field| "lower(#{field}) LIKE :term" }
-      "(user_id = :id OR #{said.join(' OR ')})"
+      term_value = term_fields.map { |field| "lower(#{field}) LIKE :term" }
+      "(user_id = :id OR #{term_value.join(' OR ')})"
     end
 
     def order
@@ -479,7 +479,7 @@ module Fd
       end
     end
 
-    def shape_phrase
+    def match_phrase
       case self["shape"]
       when "lone" then "first on their email domain"
       end

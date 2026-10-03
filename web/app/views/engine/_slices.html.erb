@@ -60,7 +60,7 @@
             <div class="covrow">
               <div class="covhead">
                 <span class="covkey"><%= key %></span>
-                <span class="covsaid">
+                <span class="cov-label">
                   <%= missing %> not complete
                   <% if per_day.positive? %>
                     &middot; <%= per_day.round(1) %> a day this week
@@ -70,7 +70,7 @@
                   <% end %>
                 </span>
               </div>
-              <div class="cov">
+              <div class="coverage">
                 <% days.each do |day, state| %><i class="<%= slice_cell(state) %>" title="<%= day %> <%= state %>"></i><% end %>
               </div>
             </div>

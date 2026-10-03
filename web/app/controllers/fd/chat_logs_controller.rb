@@ -9,7 +9,7 @@ module Fd
       @thread = reports.find { |report| report.id == params[:thread].to_i } || reports.last
       @reports = [@thread].compact
       @conversation = IntakeConversation.for_case(family).find_by(report_id: @thread&.id)
-      @conversation_said = IntakeMessage.tail([@conversation&.id].compact)
+      @conversation_messages = IntakeMessage.tail([@conversation&.id].compact)
       @queued = if @conversation
         IntakeOutbox.where(conversation_id: @conversation.id, sent_at: nil).oldest_first.to_a
       else
@@ -17,9 +17,9 @@ module Fd
       end
       @chat = CaseChat.tail(family)
       @earlier_chat = CaseChat.earlier_than(family, @chat.size)
-      @cited_shares = IntakeShare.for_messages(@conversation_said.map(&:id))
+      @cited_shares = IntakeShare.for_messages(@conversation_messages.map(&:id))
       @channels = ChannelNames.for(cited.map(&:source_channel_id).compact)
-      @names = Names.for(said_by)
+      @names = Names.for(people_ids)
 
       respond_to do |format|
         format.html { render layout: false }
@@ -33,13 +33,13 @@ module Fd
       (@cited_shares || {}).values.flatten
     end
 
-    def said_by
+    def people_ids
       named = @reports.map(&:reporter_user_id) + @reports.map(&:closed_by) +
-        @conversation_said.map(&:sent_by) + cited.map(&:source_author_user_id) +
+        @conversation_messages.map(&:sent_by) + cited.map(&:source_author_user_id) +
         @queued.map(&:requested_by) + @chat.map(&:author_user_id) + [@case.opened_by]
       return named if @reports.any?(&:anonymous?)
 
-      named + @conversation_said.map(&:author_user_id)
+      named + @conversation_messages.map(&:author_user_id)
     end
 
     def changes_since(since)
@@ -53,13 +53,13 @@ module Fd
       now = ChatVersion.parts(@case.id)
       return head :reset_content if now.zip(had).any? { |here, there| here.count < there.count }
 
-      chat_had, said_had, queued_had = had
-      @chat_changed = @chat.select { |line| moved?(line, chat_had, :said_at, :edited_at, :deleted_at) }
-      @said_changed = @conversation_said.select { |one| moved?(one, said_had, :posted_at, :edited_at, :deleted_at) }
+      chat_had, messages_had, queued_had = had
+      @chat_changed = @chat.select { |line| moved?(line, chat_had, :posted_at, :edited_at, :deleted_at) }
+      @messages_changed = @conversation_messages.select { |one| moved?(one, messages_had, :posted_at, :edited_at, :deleted_at) }
       @queued_changed = @queued.select { |row| moved?(row, queued_had, :requested_at, :sent_at, :failed_at) }
       @gone = sent_since(queued_had)
 
-      head :no_content if [@chat_changed, @said_changed, @queued_changed, @gone].all?(&:empty?)
+      head :no_content if [@chat_changed, @messages_changed, @queued_changed, @gone].all?(&:empty?)
     end
 
     def moved?(row, had, *columns)

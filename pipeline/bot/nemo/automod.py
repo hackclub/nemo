@@ -32,7 +32,7 @@ _loaded = False
 _lock = threading.Lock()
 
 
-class Watch:
+class WordRule:
     def __init__(self, word_id, word, match_mode, effect, category_key):
         self.word_id = word_id
         self.word = word
@@ -41,22 +41,22 @@ class Watch:
         self.category_key = category_key
         self.pattern = compile_one(word, match_mode)
 
-    def hits(self, said):
-        return bool(self.pattern and self.pattern.search(said))
+    def hits(self, text):
+        return bool(self.pattern and self.pattern.search(text))
 
 
 def compile_one(word, match_mode):
-    said = (word or "").strip()
-    if not said:
+    text = (word or "").strip()
+    if not text:
         return None
     try:
         if match_mode == REGEX:
-            return re.compile(said, re.IGNORECASE)
+            return re.compile(text, re.IGNORECASE)
         if match_mode == SUBSTRING:
-            return re.compile(re.escape(said), re.IGNORECASE)
-        return re.compile(rf"(?<![0-9A-Za-z]){re.escape(said)}(?![0-9A-Za-z])", re.IGNORECASE)
+            return re.compile(re.escape(text), re.IGNORECASE)
+        return re.compile(rf"(?<![0-9A-Za-z]){re.escape(text)}(?![0-9A-Za-z])", re.IGNORECASE)
     except re.error as failure:
-        log.warning("nemo: automod word %r does not compile: %s", said, failure)
+        log.warning("nemo: automod word %r does not compile: %s", text, failure)
         return None
 
 
@@ -64,7 +64,7 @@ def refresh(conn):
     global _loaded
     found = []
     for row in conn.execute(LIVE).fetchall():
-        watch = Watch(*row)
+        watch = WordRule(*row)
         if watch.pattern is not None:
             found.append(watch)
     with _lock:
@@ -78,17 +78,17 @@ def watching():
         return list(_watching) if _loaded else None
 
 
-def caught(said):
+def caught(text):
     held = watching()
-    if not held or not said:
+    if not held or not text:
         return []
-    return [one for one in held if one.hits(said)]
+    return [one for one in held if one.hits(text)]
 
 
-def record(conn, watch, said):
+def record(conn, watch, message):
     return conn.execute(RECORD, (
-        watch.word_id, watch.word, watch.effect, said.get("user"), said.get("channel"),
-        said.get("ts"), said.get("thread_ts"), said.get("text"),
+        watch.word_id, watch.word, watch.effect, message.get("user"), message.get("channel"),
+        message.get("ts"), message.get("thread_ts"), message.get("text"),
     )).fetchone()
 
 

@@ -40,18 +40,18 @@ def stamp(seconds):
         return None
 
 
-def said(value):
+def normalized(value):
     held = str(value or "").strip()
     return held or None
 
 
 def row_for(login):
-    user_id = said(login.get("user_id"))
+    user_id = normalized(login.get("user_id"))
     at = stamp(login.get("date_last") or login.get("date_first"))
     if not user_id or at is None:
         return None
 
-    ip = said(login.get("ip"))
+    ip = normalized(login.get("ip"))
     seen = useragent.parse(login.get("user_agent"))
     try:
         count = max(1, int(login.get("count") or 1))
@@ -60,12 +60,12 @@ def row_for(login):
 
     return (
         user_id, at, ip, seen["ua"], seen["ua_app"], seen["ua_os"],
-        said(login.get("country")), said(login.get("region")), said(login.get("isp")),
+        normalized(login.get("country")), normalized(login.get("region")), normalized(login.get("isp")),
         count,
     )
 
 
-def land(conn, logins, counts):
+def insert_rows(conn, logins, counts):
     rows = []
     for login in logins:
         row = row_for(login)
@@ -102,7 +102,7 @@ def run(conn, client=None):
             nonlocal landed
             if not held:
                 return
-            landed += land(conn, held, counts)
+            landed += insert_rows(conn, held, counts)
             held.clear()
 
         walk = client.paginate(
@@ -123,6 +123,6 @@ def run(conn, client=None):
         walk.close()
         flush()
 
-    said = "up to date" if caught_up else "more to walk"
-    print(f"{SOURCE}: {landed} login row(s), {said}")
+    state = "up to date" if caught_up else "more to walk"
+    print(f"{SOURCE}: {landed} login row(s), {state}")
     return landed

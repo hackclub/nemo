@@ -1,9 +1,9 @@
 module ClockHelper
   def clock_note(clock)
-    said = [window_note(clock.window_start, clock.window_end)]
-    said << "#{number_with_delimiter(clock.total)} messages"
-    said << clock.label
-    said.compact.join(" · ")
+    parts = [window_note(clock.window_start, clock.window_end)]
+    parts << "#{number_with_delimiter(clock.total)} messages"
+    parts << clock.label
+    parts.compact.join(" · ")
   end
 
   def clock_tip(cell, clock)

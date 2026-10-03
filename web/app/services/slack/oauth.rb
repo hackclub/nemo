@@ -2,9 +2,9 @@ require "net/http"
 
 module Slack
   class Oauth
-    class NotConfigured < StandardError; end
-    class Unavailable < StandardError; end
-    class Refused < StandardError; end
+    class NotConfiguredError < StandardError; end
+    class UnavailableError < StandardError; end
+    class RefusedError < StandardError; end
 
     AUTHORIZE = "https://slack.com/oauth/v2/authorize".freeze
     API = "https://slack.com/api".freeze
@@ -14,7 +14,7 @@ module Slack
     end
 
     def self.walk_to(redirect_uri:, state:)
-      raise NotConfigured, "NEMO_CLIENT_ID and NEMO_CLIENT_SECRET are not set" unless configured?
+      raise NotConfiguredError, "NEMO_CLIENT_ID and NEMO_CLIENT_SECRET are not set" unless configured?
 
       query = { client_id: client_id, user_scope: Fd::StaffSlack::SCOPE,
                 redirect_uri: redirect_uri, state: state }
@@ -22,18 +22,18 @@ module Slack
     end
 
     def self.exchange(code:, redirect_uri:)
-      raise NotConfigured, "NEMO_CLIENT_ID and NEMO_CLIENT_SECRET are not set" unless configured?
+      raise NotConfiguredError, "NEMO_CLIENT_ID and NEMO_CLIENT_SECRET are not set" unless configured?
 
       answer = call("oauth.v2.access", client_id: client_id, client_secret: client_secret,
         code: code, redirect_uri: redirect_uri)
-      raise Refused, answer["error"].to_s.presence || "slack refused it" unless answer["ok"]
+      raise RefusedError, answer["error"].to_s.presence || "slack refused it" unless answer["ok"]
 
       answer
     end
 
     def self.give_back(token)
       call("auth.revoke", {}, token)
-    rescue Unavailable
+    rescue UnavailableError
       { "ok" => false, "error" => "unreachable" }
     end
 
@@ -48,7 +48,7 @@ module Slack
       JSON.parse(response.body)
     rescue Net::OpenTimeout, Net::ReadTimeout, SystemCallError, IOError, SocketError,
            JSON::ParserError => failure
-      raise Unavailable, failure.message
+      raise UnavailableError, failure.message
     end
 
     def self.client_id

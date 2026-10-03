@@ -28,11 +28,11 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
 
     patch fd_flag_path, params: { key: "fire_engine", on: "0" }
     assert_redirected_to admin_flags_path
-    assert_match(/fire engine is turned off/, flash[:notice])
+    assert_match(/Fire engine turned off/, flash[:notice])
     assert_equal false, standing(:fire_engine)
 
     patch fd_flag_path, params: { key: "fire_engine", on: "1" }
-    assert_match(/fire engine is back/, flash[:notice])
+    assert_match(/Fire engine turned on/, flash[:notice])
     assert_equal true, standing(:fire_engine)
     assert_equal 1, Fd::Flag.where(key: "fire_engine").count, "one row, flipped"
   end
@@ -53,9 +53,9 @@ class FdFlagSwitchTest < ActionDispatch::IntegrationTest
 
     patch fd_flag_path, params: { key: "analytics", on: "0" }
 
-    said = Fd::AuditEntry.where(verb: "turned_off").last
-    assert_equal "UBOSS", said.actor_user_id
-    assert_equal "analytics", said.after["flag"]
+    entry = Fd::AuditEntry.where(verb: "turned_off").last
+    assert_equal "UBOSS", entry.actor_user_id
+    assert_equal "analytics", entry.after["flag"]
   end
 
   test "a section the file does not know is refused" do

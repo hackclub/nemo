@@ -84,7 +84,7 @@ class EngineController < ApplicationController
     return refuse_tuning unless may_community?("ops.engine")
 
     row = remember_incident(params[:source_key], params[:kind], muted_until: MUTE_FOR.from_now)
-    redirect_to engine_path(tab: "faults"), notice: "#{row.source_key} muted for a day"
+    redirect_to engine_path(tab: "faults"), notice: "#{row.source_key} muted for 24 hours"
   rescue ActiveRecord::RecordInvalid => e
     redirect_to engine_path(tab: "faults"), alert: e.record.errors.full_messages.to_sentence
   end
@@ -93,7 +93,7 @@ class EngineController < ApplicationController
     return refuse_tuning unless may_community?("ops.engine")
 
     row = remember_incident(params[:source_key], "breaker", muted_until: MUTE_FOR.from_now)
-    redirect_to engine_path(tab: "faults"), notice: "breaker #{row.source_key} held closed for a night"
+    redirect_to engine_path(tab: "faults"), notice: "Breaker #{row.source_key} suppressed for 24 hours"
   rescue ActiveRecord::RecordInvalid => e
     redirect_to engine_path(tab: "faults"), alert: e.record.errors.full_messages.to_sentence
   end
@@ -130,7 +130,7 @@ class EngineController < ApplicationController
       after: { "source" => row.source, "name" => row.name, "value" => row.value })
 
     redirect_to engine_path(tab: "tuning"), notice: "#{row.name} is #{row.value}"
-  rescue Engine::Setting::Refused, Engine::Source::Unknown => e
+  rescue Engine::Setting::RefusedError, Engine::Source::UnknownError => e
     redirect_to engine_path(tab: "tuning"), alert: e.message
   end
 
@@ -144,7 +144,7 @@ class EngineController < ApplicationController
         after: { "source" => row.source, "name" => row.name })
     end
 
-    redirect_to engine_path(tab: "tuning"), notice: "#{params[:name]} is back to the file"
+    redirect_to engine_path(tab: "tuning"), notice: "#{params[:name]} reset to its file default"
   end
 
   def show
@@ -159,14 +159,14 @@ class EngineController < ApplicationController
     return refuse_running unless may_community?("ops.engine")
 
     if SyncRequest.active.exists?
-      redirect_to engine_path, alert: "a sync is already queued or running"
+      redirect_to engine_path, alert: "A sync is already queued or running"
       return
     end
 
     queued = SyncRequest.queue!(kind: "full", requested_by: current_account.user_id)
     audit(queued, "queued", "kind" => "full")
-    redirect_to engine_path, notice: "sync queued"
-  rescue SyncRequest::AlreadyRunning => e
+    redirect_to engine_path, notice: "Sync queued"
+  rescue SyncRequest::AlreadyRunningError => e
     redirect_to engine_path, alert: e.message
   end
 
@@ -179,7 +179,7 @@ class EngineController < ApplicationController
       audit(@active_request, "cancelled", "worker_gone" => gone)
       redirect_to engine_path, notice: gone ? "released, no worker" : "cancel requested"
     else
-      redirect_to engine_path, alert: "nothing to cancel"
+      redirect_to engine_path, alert: "Nothing to cancel"
     end
   end
 
@@ -187,7 +187,7 @@ class EngineController < ApplicationController
     return refuse_running unless may_community?("ops.engine")
 
     if SyncRequest.active.exists?
-      redirect_to engine_path, alert: "a sync is already queued or running"
+      redirect_to engine_path, alert: "A sync is already queued or running"
       return
     end
 
@@ -195,7 +195,7 @@ class EngineController < ApplicationController
       requested_by: current_account.user_id)
     audit(queued, "queued", "kind" => "stage", "stage" => queued.stage)
     redirect_to engine_path, notice: "#{params[:stage]} queued"
-  rescue SyncRequest::AlreadyRunning => e
+  rescue SyncRequest::AlreadyRunningError => e
     redirect_to engine_path, alert: e.message
   rescue ActiveRecord::RecordInvalid => e
     redirect_to engine_path, alert: e.record.errors.full_messages.to_sentence

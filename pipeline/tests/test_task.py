@@ -68,7 +68,7 @@ def test_a_clean_entity_resets_the_consecutive_counter(quiet_dead_letter):
 
 def test_the_same_outage_is_not_dead_lettered_forever(quiet_dead_letter):
     conn, counts = FakeConn(), RunCounts()
-    with pytest.raises(task.LaneAborted) as caught:
+    with pytest.raises(task.LaneAbortedError) as caught:
         for _ in range(task.CONSECUTIVE_FAULTS):
             with task.per_entity(conn, "channel_membership", counts, {"user_id": "U"}):
                 raise InternalApiError("internal_error")

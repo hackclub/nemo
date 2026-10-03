@@ -1,6 +1,6 @@
 class AccountsController < ApplicationController
   WINDOW = 30.days
-  DEEDS_SHOWN = 10
+  AUDIT_ROWS_SHOWN = 10
 
   def show
     @account = Fd::StaffSlack.find_by(staff_user_id: current_account.user_id)
@@ -8,9 +8,9 @@ class AccountsController < ApplicationController
     @roles = Authz.roles_held(current_account.user_id)
     @holding = @roles.any? || Authz.held(current_account.user_id).any?
 
-    deeds = @holding ? Fd::Deeds.new(current_account.user_id, since: WINDOW.ago).rows : []
-    @deed_count = deeds.size
-    @deeds = deeds.first(DEEDS_SHOWN)
+    audit_rows = @holding ? Fd::AuditTrail.new(current_account.user_id, since: WINDOW.ago).rows : []
+    @audit_row_count = audit_rows.size
+    @audit_rows = audit_rows.first(AUDIT_ROWS_SHOWN)
 
     @names = Fd::Names.for([current_account.user_id])
   end

@@ -44,16 +44,16 @@ SYSTEMS = (
 WINDOWS_NAMES = {"10.0": "10 or 11", "6.3": "8.1", "6.2": "8", "6.1": "7"}
 
 
-def version(said):
-    return (said or "").replace("_", ".").strip(".")
+def version(raw):
+    return (raw or "").replace("_", ".").strip(".")
 
 
-def named(family, said):
-    return f"{family} {said}" if said else family
+def named(family, raw):
+    return f"{family} {raw}" if raw else family
 
 
-def windows(said):
-    found = version(said)
+def windows(raw):
+    found = version(raw)
     return named("Windows", WINDOWS_NAMES.get(found, found))
 
 
@@ -64,8 +64,8 @@ def system(ua):
             continue
         if family == "Windows":
             return windows(found.group(1))
-        said = next((one for one in found.groups() if one), "")
-        return named(family, version(said))
+        raw = next((one for one in found.groups() if one), "")
+        return named(family, version(raw))
     return UNKNOWN
 
 
@@ -88,8 +88,8 @@ def app(ua):
 
     found = SLACK_DESKTOP.search(ua)
     if found:
-        said = next((one for one in found.groups() if one), "")
-        return named("Slack Desktop", version(said))
+        raw = next((one for one in found.groups() if one), "")
+        return named("Slack Desktop", version(raw))
 
     found = SLACK_IOS.search(ua)
     if found:
@@ -122,8 +122,8 @@ def device(ua):
 
 
 def parse(ua):
-    said = (ua or "").strip()
-    if not said:
+    raw = (ua or "").strip()
+    if not raw:
         return {"ua": UNKNOWN, "ua_app": UNKNOWN, "ua_os": UNKNOWN}
 
-    return {"ua": said, "ua_app": app(said), "ua_os": system(said) or device(said)}
+    return {"ua": raw, "ua_app": app(raw), "ua_os": system(raw) or device(raw)}

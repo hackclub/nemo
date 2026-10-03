@@ -19,10 +19,10 @@ def test_every_named_capability_exists():
 
 
 def test_declared_refuses_an_undeclared_surface():
-    entry = surface.Entry(surface.ACTION, "loose_button", None, lambda ctx: None)
+    entry = surface.SurfaceEntry(surface.ACTION, "loose_button", None, lambda ctx: None)
     surface.ENTRIES.append(entry)
     try:
-        with pytest.raises(surface.Undeclared):
+        with pytest.raises(surface.UndeclaredCapabilityError):
             surface.declared()
     finally:
         surface.ENTRIES.remove(entry)
@@ -45,9 +45,9 @@ def test_the_message_watcher_is_open_to_everyone():
 def test_one_key_gets_one_listener_that_runs_every_handler():
     ran = []
     entries = [
-        surface.Entry(surface.EVENT, "message", None, lambda ctx: ran.append("first"),
+        surface.SurfaceEntry(surface.EVENT, "message", None, lambda ctx: ran.append("first"),
                       open_to_all=True),
-        surface.Entry(surface.EVENT, "message", None, lambda ctx: ran.append("second"),
+        surface.SurfaceEntry(surface.EVENT, "message", None, lambda ctx: ran.append("second"),
                       open_to_all=True),
     ]
     surface.fanned(entries)(ack=None, body={}, client=None, payload={})
@@ -61,8 +61,8 @@ def test_one_failing_handler_does_not_silence_the_others():
         raise RuntimeError("no")
 
     entries = [
-        surface.Entry(surface.EVENT, "message", None, angry, open_to_all=True),
-        surface.Entry(surface.EVENT, "message", None, lambda ctx: ran.append("still ran"),
+        surface.SurfaceEntry(surface.EVENT, "message", None, angry, open_to_all=True),
+        surface.SurfaceEntry(surface.EVENT, "message", None, lambda ctx: ran.append("still ran"),
                       open_to_all=True),
     ]
     surface.fanned(entries)(ack=None, body={}, client=None, payload={})
@@ -71,7 +71,7 @@ def test_one_failing_handler_does_not_silence_the_others():
 
 def test_an_event_without_an_ack_does_not_blow_up():
     ran = []
-    entry = surface.Entry(surface.EVENT, "message", None, lambda ctx: ran.append("ok"),
+    entry = surface.SurfaceEntry(surface.EVENT, "message", None, lambda ctx: ran.append("ok"),
                           open_to_all=True)
     surface.guarded(entry)(ack=None, body={}, client=None, payload={})
     assert ran == ["ok"], "bolt passes events no ack, so calling one must not be attempted"
@@ -112,7 +112,7 @@ def test_the_listener_names_the_arguments_bolt_injects():
 
     from bot.nemo import surface as s
 
-    for made in (s.fanned([]), s.guarded(s.Entry(s.EVENT, "message", None,
+    for made in (s.fanned([]), s.guarded(s.SurfaceEntry(s.EVENT, "message", None,
                                                  lambda ctx: None, open_to_all=True))):
         named = inspect.getfullargspec(made).args
         assert set(s.INJECTED) <= set(named), (
@@ -131,7 +131,7 @@ def test_a_missing_admin_is_recognised_and_a_real_failure_is_not():
 
 def test_a_delete_invites_the_admin_then_retries_once():
     from bot.core import privileged
-    from bot.nemo import guardwork
+    from bot.nemo import guard_actions
 
     tries, invited = [], []
 
@@ -148,7 +148,7 @@ def test_a_delete_invites_the_admin_then_retries_once():
     try:
         privileged.delete_message = flaky
         privileged.admin_user_id = lambda: "UADMIN"
-        guardwork.remove(Client(), "C1", "1.1")
+        guard_actions.remove(Client(), "C1", "1.1")
     finally:
         privileged.delete_message, privileged.admin_user_id = was_delete, was_who
 

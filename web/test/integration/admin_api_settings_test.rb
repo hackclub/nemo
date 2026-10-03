@@ -28,9 +28,9 @@ class AdminApiSettingsTest < ActionDispatch::IntegrationTest
     end
 
     assert_equal 250, Api::Setting.value("rate_per_minute")
-    said = Api::Event.last
+    event = Api::Event.last
     assert_equal ["setting_changed", @boss.user_id, "20 to 250"],
-      [said.verb, said.actor_user_id, said.detail]
+      [event.verb, event.actor_user_id, event.detail]
   end
 
   test "a dial that does not exist, or a silly number, changes nothing" do
@@ -40,10 +40,10 @@ class AdminApiSettingsTest < ActionDispatch::IntegrationTest
     assert_match(/not a setting/, flash[:alert])
 
     patch admin_api_setting_path, params: { key: "rate_per_minute", value: 0 }
-    assert_match(/above nought/, flash[:alert])
+    assert_match(/greater than zero/, flash[:alert])
 
     patch admin_api_setting_path, params: { key: "rate_per_minute", value: 999_999_999 }
-    assert_match(/more than anybody needs/, flash[:alert])
+    assert_match(/exceeds the maximum/, flash[:alert])
 
     assert_equal was, dials
     assert_equal 0, Api::Event.count
@@ -64,8 +64,8 @@ class AdminApiSettingsTest < ActionDispatch::IntegrationTest
 
     assert_predicate @token.reload, :revoked?
     assert_equal @boss.user_id, @token.revoked_by
-    said = Api::Event.where(verb: "token_revoked").sole
-    assert_match(/owned by UOWNER9/, said.detail)
+    event = Api::Event.where(verb: "token_revoked").sole
+    assert_match(/owned by UOWNER9/, event.detail)
   end
 
   test "revoking the same token twice is refused rather than logged twice" do
@@ -75,7 +75,7 @@ class AdminApiSettingsTest < ActionDispatch::IntegrationTest
       delete admin_api_token_path(@token)
     end
 
-    assert_match(/no live token/, flash[:alert])
+    assert_match(/No live key/, flash[:alert])
   end
 
   test "a firefighter cannot move a dial or touch a token" do

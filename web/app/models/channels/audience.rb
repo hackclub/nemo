@@ -63,8 +63,6 @@ module Channels
       ids.presence || [nil]
     end
 
-    # the resolver answers on app tables alone, so an archived channel is ruled
-    # out here rather than inside the function
     def self.may_see?(staff, channel)
       id = channel.respond_to?(:channel_id) ? channel.channel_id : channel.to_s
       return false if staff.nil? || id.blank?

@@ -37,8 +37,8 @@ VALUES (%s, 'breaker', %s, %s, %s, %s, %s)
 
 
 def mode(conn):
-    said = str(settings.said(conn, settings.ENGINE, "breaker_mode", "observe")).strip().lower()
-    return said if said in MODES else "observe"
+    mode = str(settings.value(conn, settings.ENGINE, "breaker_mode", "observe")).strip().lower()
+    return mode if mode in MODES else "observe"
 
 
 def streak_of(rows):
@@ -55,7 +55,7 @@ def streak_of(rows):
 def credential_of(key):
     try:
         return sources.source(key).get("credential")
-    except sources.Unknown:
+    except sources.UnknownSourceError:
         return None
 
 

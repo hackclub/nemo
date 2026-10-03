@@ -2,7 +2,7 @@ module Admin
   class SettingsController < BaseController
     SOONEST = Fd::AppSetting::SOONEST
 
-    JOIN_SAID = {
+    JOIN_MODE_NOTICES = {
       Fd::AppSetting::ON => "nemo joins every public channel",
       Fd::AppSetting::GUARDED => "nemo joins guarded channels only",
       Fd::AppSetting::OFF => "nemo joins nothing new"
@@ -21,36 +21,36 @@ module Admin
 
     def join_mode
       how = params[:mode].to_s.strip.downcase
-      return refuse("that is not a join mode") unless Fd::AppSetting::MODES.include?(how)
+      return refuse("That is not a valid join mode") unless Fd::AppSetting::MODES.include?(how)
       return redirect_to admin_settings_path if how == Fd::AppSetting.join_mode
 
       keep(Fd::AppSetting.set_join_mode(how, by: current_account.user_id))
-      redirect_to admin_settings_path, notice: JOIN_SAID.fetch(how)
+      redirect_to admin_settings_path, notice: JOIN_MODE_NOTICES.fetch(how)
     end
 
     def sweep
       hours = params[:soon_hours].to_s.strip.to_i
-      return refuse("say how many hours, from 1 to #{SOONEST}") unless hours.between?(1, SOONEST)
+      return refuse("Enter a number of hours, from 1 to #{SOONEST}") unless hours.between?(1, SOONEST)
 
-      keep(Fd::AppSetting.keep(Fd::AppSetting::SWEEP_SOON_HOURS, hours.to_s,
+      keep(Fd::AppSetting.write(Fd::AppSetting::SWEEP_SOON_HOURS, hours.to_s,
         by: current_account.user_id))
       keep(Fd::AppSetting.flip(Fd::AppSetting::SWEEP_TELLS_MEMBER, params[:tells].present?,
         by: current_account.user_id))
-      redirect_to admin_settings_path, notice: "the sweep is saved"
+      redirect_to admin_settings_path, notice: "Sweep settings saved"
     end
 
     def firehouse
       channel_id = params[:channel_id].to_s.strip
-      return refuse("pick a channel") if channel_id.blank?
+      return refuse("Select a channel") if channel_id.blank?
       return refuse("#{channel_id} is not a channel") unless known?(channel_id)
 
       keep(Fd::AppSetting.set_firehouse_channel(channel_id, by: current_account.user_id))
-      redirect_to admin_settings_path, notice: "guard notices now go to ##{name_of(channel_id)}"
+      redirect_to admin_settings_path, notice: "Guard notices now post to ##{name_of(channel_id)}"
     end
 
     def add_react
       channel_id = params[:channel_id].to_s.strip
-      return refuse("pick a channel") if channel_id.blank?
+      return refuse("Select a channel") if channel_id.blank?
       return refuse("#{channel_id} is not a channel") unless known?(channel_id)
 
       held = Fd::AppSetting.case_react_channels
@@ -59,7 +59,7 @@ module Admin
       keep(Fd::AppSetting.set_case_react_channels(held + [channel_id],
         by: current_account.user_id))
       redirect_to admin_settings_path,
-        notice: "an hourglass in ##{name_of(channel_id)} now opens a case"
+        notice: "An hourglass in ##{name_of(channel_id)} now opens a case"
     end
 
     def drop_react

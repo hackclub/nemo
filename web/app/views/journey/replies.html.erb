@@ -17,26 +17,26 @@
 <% if latest %>
   <div class="metrics">
     <div class="metric">
-      <span class="metric-k">Answered</span>
-      <span class="metric-v">
+      <span class="metric-key">Answered</span>
+      <span class="metric-value">
         <%= number_to_percentage(
               share_pct(latest.answered_by_member.to_i + latest.answered_by_bot.to_i,
                 latest.first_posts_checked) || 0, precision: 1) %>
       </span>
-      <span class="metric-say"><span><%= latest.post_month.strftime("%b %Y") %>, last settled month</span></span>
+      <span class="metric-note"><span><%= latest.post_month.strftime("%b %Y") %>, last settled month</span></span>
     </div>
     <div class="metric">
-      <span class="metric-k">Answered by a member</span>
-      <span class="metric-v">
+      <span class="metric-key">Answered by a member</span>
+      <span class="metric-value">
         <%= number_to_percentage(
               share_pct(latest.answered_by_member, latest.first_posts_checked) || 0, precision: 1) %>
       </span>
-      <span class="metric-say"><span>vs. bot-only or no reply</span></span>
+      <span class="metric-note"><span>vs. bot-only or no reply</span></span>
     </div>
     <div class="metric">
-      <span class="metric-k">Median wait</span>
-      <span class="metric-v"><%= reply_wait(latest.median_member_latency_seconds) %></span>
-      <span class="metric-say"><span>for a member's first reply</span></span>
+      <span class="metric-key">Median wait</span>
+      <span class="metric-value"><%= reply_wait(latest.median_member_latency_seconds) %></span>
+      <span class="metric-note"><span>for a member's first reply</span></span>
     </div>
   </div>
 <% end %>

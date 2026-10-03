@@ -225,14 +225,14 @@ def enough_queued(conn, floor):
         return cur.fetchone() is not None
 
 
-def deal(items, hands):
+def shared_queue(items, hands):
     shared = Queue()
     for item in items:
         shared.put(item)
     return [shared] * max(1, hands)
 
 
-def gave_way(conn, item, fault):
+def record_failure(conn, item, fault):
     limit = CONTENDED_ATTEMPTS if fault.name in FORGIVEN else work.MAX_ATTEMPTS
     work.fail(conn, item, f"{fault.name}: {fault.detail}", max_attempts=limit)
 
@@ -252,7 +252,7 @@ def drain(client, pending, tally, guard, halt, broken, check):
                     continue
                 rejected = local.rows_rejected
                 with per_entity(conn, SOURCE, local, {"channel": channel_id, "root_ts": root_ts},
-                                on_fault=lambda fault, item=item: gave_way(conn, item, fault)):
+                                on_fault=lambda fault, item=item: record_failure(conn, item, fault)):
                     work.renew(conn, item)
                     conn.commit()
                     replies = fetch_thread(conn, client, channel_id, root_ts, item)
@@ -299,7 +299,7 @@ def run(conn, budget=500, fetchers=DEFAULT_FETCHERS, stale_hours=6):
           + (f", {queued} newly queued" if queued else "")
           + f", {spread} channel(s) over {hands} fetcher(s)")
 
-    shares = deal(items, hands)
+    shares = shared_queue(items, hands)
     tally = {"replies": 0, "rejected": 0, "touched": set()}
     guard, halt, broken = threading.Lock(), threading.Event(), []
     check = current_cancel()

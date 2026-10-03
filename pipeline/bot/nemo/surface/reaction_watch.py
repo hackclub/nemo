@@ -1,7 +1,7 @@
 import logging
 
 from bot.core import access, session, whoami
-from bot.nemo import casework, channels, chat, queued
+from bot.nemo import case_actions, channels, chat, case_queue
 from bot.nemo.surface import on_event
 
 log = logging.getLogger("bot.nemo")
@@ -20,11 +20,11 @@ def root_of(client, channel_id, ts):
         found = client.conversations_replies(
             channel=channel_id, ts=ts, limit=1, inclusive=True
         )
-        said = (found.get("messages") or [{}])[0]
+        message = (found.get("messages") or [{}])[0]
     except Exception as failure:
         log.info("nemo: could not read the thread above %s: %s", ts, failure)
         return ts, {}
-    return said.get("thread_ts") or said.get("ts") or ts, said
+    return message.get("thread_ts") or message.get("ts") or ts, message
 
 
 def wanted(ctx, marks, needs):
@@ -50,21 +50,21 @@ def wanted(ctx, marks, needs):
         log.info("nemo: %s reacted in %s without %s", who, channel_id, needs)
         return None
 
-    thread_ts, said = root_of(ctx.client, channel_id, ts)
-    return channel_id, thread_ts, said, who
+    thread_ts, message = root_of(ctx.client, channel_id, ts)
+    return channel_id, thread_ts, message, who
 
 
-def worth_keeping(said):
+def worth_keeping(message):
     return bool(
-        said.get("ts") and said.get("user") and (said.get("text") or said.get("blocks"))
+        message.get("ts") and message.get("user") and (message.get("text") or message.get("blocks"))
     )
 
 
-def keep_the_root(conn, case_id, channel_id, said):
-    if not worth_keeping(said):
+def keep_the_root(conn, case_id, channel_id, message):
+    if not worth_keeping(message):
         return None
 
-    chat_id, _ = chat.keep(conn, case_id, dict(said, channel=channel_id))
+    chat_id, _ = chat.keep(conn, case_id, dict(message, channel=channel_id))
     return chat_id
 
 
@@ -73,17 +73,17 @@ def opened(ctx):
     asked = wanted(ctx, OPENS, "case.open")
     if asked is None:
         return None
-    channel_id, thread_ts, said, who = asked
+    channel_id, thread_ts, message, who = asked
 
     with session() as conn:
-        standing = queued.case_on(conn, channel_id, thread_ts)
+        standing = case_queue.case_on(conn, channel_id, thread_ts)
         if standing is not None:
             log.info("nemo: %s in %s is already case %s", thread_ts, channel_id, standing)
             return standing
 
-        case_id = casework.open_case(conn, None, None, who)
-        keep_the_root(conn, case_id, channel_id, said)
-        queued.post(ctx.client, conn, case_id, channel_id, thread_ts)
+        case_id = case_actions.open_case(conn, None, None, who)
+        keep_the_root(conn, case_id, channel_id, message)
+        case_queue.post(ctx.client, conn, case_id, channel_id, thread_ts)
 
     log.info("nemo: case %s opened on %s in %s by %s", case_id, thread_ts, channel_id, who)
     return case_id
@@ -97,19 +97,19 @@ def closed(ctx):
     channel_id, thread_ts, _, who = asked
 
     with session() as conn:
-        case_id = queued.case_on(conn, channel_id, thread_ts)
+        case_id = case_queue.case_on(conn, channel_id, thread_ts)
         if case_id is None:
             return None
 
-        told = casework.resolve(
+        told = case_actions.resolve(
             conn, case_id,
-            {"resolution": CLOSED_AS, "member_note": None, "said": None, "telling": False},
+            {"resolution": CLOSED_AS, "member_note": None, "message": None, "telling": False},
             who,
         )
         if told is None:
             log.info("nemo: case %s was already resolved", case_id)
             return None
-        queued.redraw(ctx.client, conn, case_id)
+        case_queue.refresh_card(ctx.client, conn, case_id)
 
     log.info("nemo: case %s resolved from the thread by %s", case_id, who)
     return case_id

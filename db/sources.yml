@@ -113,7 +113,7 @@ sources:
   channel_replies:
     unit_budget_seconds: 180
     standalone: true
-    label: Thread replies, every thread the walk has found
+    label: Thread replies for every walked thread
     endpoint: conversations.replies
     documented: true
     credential: admin
@@ -130,7 +130,7 @@ sources:
       batch: {default: 500, min: 50, max: 5000}
 
   prometheans:
-    label: Who Prometheus says runs each channel
+    label: Channel owners, from the Prometheus API
     endpoint: /api/public/v1/appointments
     credential: none
     cadence: daily
@@ -156,7 +156,7 @@ sources:
   channel_history:
     unit_budget_seconds: 120
     standalone: true
-    label: Public channel messages, the message spine
+    label: Public channel messages (message spine)
     endpoint: conversations.history
     documented: true
     credential: admin
@@ -173,7 +173,7 @@ sources:
       batch: {default: 200, min: 10, max: 2000}
 
   users_list:
-    label: Account flags and deactivation, display name, handle, and avatar
+    label: Account flags, deactivation, display name, handle and avatar
     endpoint: users.list
     documented: true
     credential: bot
@@ -213,7 +213,7 @@ sources:
     runs_as: [channel_roster, autojoin]
 
   channel_names:
-    label: Names for channels the list never returned
+    label: Names for channels absent from the workspace listing
     endpoint: conversations.info
     documented: true
     credential: bot
@@ -265,7 +265,7 @@ sources:
   audit_logs_tail:
     unit_budget_seconds: 120
     standalone: true
-    label: Every audit event since the last one we landed
+    label: Audit events since the last ingested event
     endpoint: audit.logs
     documented: true
     credential: admin
@@ -295,7 +295,7 @@ sources:
   useragent_reparse:
     unit_budget_seconds: 120
     standalone: true
-    label: Agent strings landed before the reader knew how to read them
+    label: User-agent strings ingested before the parser supported them
     endpoint: none
     documented: true
     credential: none
@@ -310,7 +310,7 @@ sources:
   member_links:
     unit_budget_seconds: 300
     standalone: true
-    label: Accounts that look like they belong to the same person
+    label: Accounts likely belonging to the same person
     endpoint: none
     documented: true
     credential: none
@@ -325,7 +325,7 @@ sources:
   access_logs:
     unit_budget_seconds: 180
     standalone: true
-    label: Where each member signed in from, with the network behind it
+    label: Member sign-in locations, with the originating network
     endpoint: team.accessLogs
     documented: true
     credential: admin
@@ -339,7 +339,7 @@ sources:
 
   ip_cohorts:
     standalone: true
-    label: How many people share each address, so one shared one is not a signal
+    label: Members per IP address, to discount shared addresses
     endpoint: none
     documented: true
     credential: none

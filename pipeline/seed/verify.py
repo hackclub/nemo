@@ -129,7 +129,7 @@ ANALYTICS_CHECKS = [
 ]
 
 
-def dig(node, path):
+def get_path(node, path):
     for key in path.split("."):
         node = node[key]
     return node
@@ -137,8 +137,8 @@ def dig(node, path):
 
 def compare_shape(reference, seeded):
     for path, tolerance, size_path in SHAPE_CHECKS:
-        want, got = dig(reference, path), dig(seeded, path)
-        sample = dig(seeded, size_path) or 0
+        want, got = get_path(reference, path), get_path(seeded, path)
+        sample = get_path(seeded, size_path) or 0
         if sample < MIN_SHARE_SAMPLE:
             yield path, got, want, None, f"skipped, {sample} rows, needs {MIN_SHARE_SAMPLE}"
             continue
@@ -147,8 +147,8 @@ def compare_shape(reference, seeded):
 
 def compare_quantiles(reference, seeded):
     for path, point, factor in QUANTILE_CHECKS:
-        block = dig(seeded, path)
-        want = Sampler(dig(reference, path))(point)
+        block = get_path(seeded, path)
+        want = Sampler(get_path(reference, path))(point)
         got = Sampler(block)(point)
         label = f"{path} p{int(point * 100)}"
         needed = max(MIN_QUANTILE_SAMPLE, round(TAIL_SAMPLES_PER_TAIL / (1 - point)))

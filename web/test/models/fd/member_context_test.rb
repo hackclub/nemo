@@ -7,7 +7,7 @@ class Fd::MemberContextTest < ActiveSupport::TestCase
     Fd::MemberContext.for([user_id]).fetch(user_id)
   end
 
-  def window_said(at)
+  def window_label(at)
     Analytics::MemberWindow.new(user_id: MINE, last_active_at: at,
       source: Analytics::MemberWindow::LIFETIME_SOURCE)
   end
@@ -24,7 +24,7 @@ class Fd::MemberContextTest < ActiveSupport::TestCase
     behind = 3.days.ago.change(usec: 0)
     fresh = 1.hour.ago.change(usec: 0)
 
-    person = built(window: window_said(behind), archive: archive_said(fresh))
+    person = built(window: window_label(behind), archive: archive_said(fresh))
 
     assert_equal fresh, person.last_active_at
   end
@@ -33,7 +33,7 @@ class Fd::MemberContextTest < ActiveSupport::TestCase
     read = 1.hour.ago.change(usec: 0)
     posted = 9.days.ago.change(usec: 0)
 
-    person = built(window: window_said(read), archive: archive_said(posted))
+    person = built(window: window_label(read), archive: archive_said(posted))
 
     assert_equal read, person.last_active_at
   end
@@ -41,7 +41,7 @@ class Fd::MemberContextTest < ActiveSupport::TestCase
   test "either source alone is enough" do
     at = 2.hours.ago.change(usec: 0)
 
-    assert_equal at, built(window: window_said(at), archive: nil).last_active_at
+    assert_equal at, built(window: window_label(at), archive: nil).last_active_at
     assert_equal at, built(window: nil, archive: archive_said(at)).last_active_at
     assert_nil built(window: nil, archive: nil).last_active_at
   end
@@ -49,10 +49,10 @@ class Fd::MemberContextTest < ActiveSupport::TestCase
   test "a window that knows nothing does not hide a message we hold" do
     at = 5.minutes.ago.change(usec: 0)
 
-    person = built(window: window_said(nil), archive: archive_said(at))
+    person = built(window: window_label(nil), archive: archive_said(at))
 
     assert_equal at, person.last_active_at
-    assert_equal at, person.last_said_at
+    assert_equal at, person.last_posted_at
   end
 
   test "looking somebody up reads both sources" do

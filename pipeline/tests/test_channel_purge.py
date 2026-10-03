@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from bot.nemo.carriers import purge
+from bot.nemo.enforcement import purge
 
 ROOM = "C1"
 
@@ -59,7 +59,7 @@ class _held:
         return False
 
 
-def message(ts, text="said a thing", **over):
+def message(ts, text="body a thing", **over):
     return {"ts": ts, "user": "U1", "text": text, **over}
 
 
@@ -72,7 +72,7 @@ def wired(monkeypatch):
     conn = Conn()
     monkeypatch.setattr(purge, "session", lambda: _held(conn))
     taken = []
-    monkeypatch.setattr(purge.guardwork, "remove",
+    monkeypatch.setattr(purge.guard_actions, "remove",
                         lambda _c, room, ts: taken.append((room, ts)))
     return conn, taken
 
@@ -151,7 +151,7 @@ def test_a_failure_keeps_what_it_managed(monkeypatch):
             raise RuntimeError("slack said no")
         taken.append((room, ts))
 
-    monkeypatch.setattr(purge.guardwork, "remove", remove)
+    monkeypatch.setattr(purge.guard_actions, "remove", remove)
     purge.run(Slack(pages=[{"messages": [message("3"), message("2"), message("1")]}]), 7)
 
     failed = conn.did("state = 'failed'")[0]

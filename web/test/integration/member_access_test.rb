@@ -47,7 +47,7 @@ class MemberAccessTest < ActionDispatch::IntegrationTest
       register(blurb: "bot")
     end
 
-    assert_match(/say what the app does/, flash[:alert])
+    assert_match(/Describe what the app does/, flash[:alert])
   end
 
   test "a reason that says nothing is refused, and leaves no app behind" do

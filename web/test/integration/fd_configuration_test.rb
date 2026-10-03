@@ -69,7 +69,7 @@ class FdConfigurationTest < ActionDispatch::IntegrationTest
     add
 
     assert_equal 1, live.count
-    assert_match(/already on the list/, flash[:alert])
+    assert_match(/Already on the list/, flash[:alert])
   end
 
   test "a regex that does not compile is refused" do
@@ -118,7 +118,7 @@ class FdConfigurationTest < ActionDispatch::IntegrationTest
     delete fd_automod_word_path(word)
     delete fd_automod_word_path(word)
 
-    assert_match(/not on the list/, flash[:alert])
+    assert_match(/Not on the list/, flash[:alert])
   end
 
   test "a retired word frees the name for a new one" do

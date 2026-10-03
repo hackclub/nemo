@@ -5,11 +5,11 @@ module Engine
     test "every source declares the six things a source has to say" do
       Source.all.each do |source|
         Source::DECLARED.each do |field|
-          said = source.public_send(field)
+          value = source.public_send(field)
           if field == "feeds"
-            assert_not_nil said, "#{source.key} declares no #{field}"
+            assert_not_nil value, "#{source.key} declares no #{field}"
           else
-            assert said.present?, "#{source.key} declares no #{field}"
+            assert value.present?, "#{source.key} declares no #{field}"
           end
         end
       end
@@ -43,8 +43,8 @@ module Engine
     end
 
     test "an unknown source raises rather than answering nil" do
-      assert_raises(Source::Unknown) { Source["teleporter"] }
-      assert_raises(Source::Unknown) { Source["team_stats"].limit(:batch) }
+      assert_raises(Source::UnknownError) { Source["teleporter"] }
+      assert_raises(Source::UnknownError) { Source["team_stats"].limit(:batch) }
     end
 
     test "a source reports whether it is guarded and whether it can resume" do

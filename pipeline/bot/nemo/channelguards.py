@@ -63,7 +63,7 @@ ORDER BY at DESC LIMIT 1
 
 HAPPENED = """
 INSERT INTO fd.channel_guard_events
-    (guard_id, channel_id, subject_id, bot_id, label, verb, said, message_ts, permalink,
+    (guard_id, channel_id, subject_id, bot_id, label, verb, text, message_ts, permalink,
      app_id, told_ts, told_until)
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 RETURNING id
@@ -74,7 +74,7 @@ _loaded = False
 _lock = threading.Lock()
 
 
-class Held:
+class HeldGuard:
     def __init__(self, guard_id, settings, allowed):
         self.guard_id = guard_id
         self.settings = settings or {}
@@ -99,7 +99,7 @@ class Held:
 def refresh(conn):
     global _loaded
     found = {
-        (row[0], row[1]): Held(row[2], row[3], frozenset(row[4] or ()))
+        (row[0], row[1]): HeldGuard(row[2], row[3], frozenset(row[4] or ()))
         for row in conn.execute(LIVE).fetchall()
     }
     with _lock:
@@ -175,7 +175,7 @@ def disallow(conn, guard_id, subject_id, by):
     return row[0]
 
 
-def told_lately(conn, guard_id, subject_id):
+def last_notified_at(conn, guard_id, subject_id):
     row = conn.execute(TOLD_LATELY, (guard_id, subject_id)).fetchone()
     return row[0] if row else None
 
@@ -183,11 +183,11 @@ def told_lately(conn, guard_id, subject_id):
 KEPT_WORDS = 8000
 
 
-def happened(conn, guard_id, channel_id, subject_id, verb, bot_id=None, label=None, said=None,
+def record_enforcement(conn, guard_id, channel_id, subject_id, verb, bot_id=None, label=None, text=None,
              message_ts=None, permalink=None, app_id=None, told_ts=None, told_until=None):
     return conn.execute(
         HAPPENED,
         (guard_id, channel_id, subject_id, bot_id, label, verb,
-         (said or None) and said[:KEPT_WORDS],
+         (text or None) and text[:KEPT_WORDS],
          message_ts, permalink, app_id, told_ts, told_until),
     ).fetchone()[0]

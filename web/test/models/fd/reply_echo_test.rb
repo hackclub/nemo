@@ -10,11 +10,11 @@ class Fd::ReplyEchoTest < ActiveSupport::TestCase
     @conversation = Fd::IntakeConversation.create!(report_id: @report.id,
       member_user_id: reporter, channel_id: "D0REP", thread_ts: "1700.5",
       opened_at: 2.days.ago)
-    ENV["FIREHOUSE_CHANNEL_ID"] = "C0FIRE"
+    ENV["INTERNAL_LOG_CHANNEL_ID"] = "C0FIRE"
   end
 
   teardown do
-    ENV.delete("FIREHOUSE_CHANNEL_ID")
+    ENV.delete("INTERNAL_LOG_CHANNEL_ID")
   end
 
   def instead_of(answer)
@@ -45,7 +45,7 @@ class Fd::ReplyEchoTest < ActiveSupport::TestCase
     carried = instead_of(lambda { |**args|
       sent = args
       { "ok" => true, "ts" => "1700.0100" }
-    }) { Fd::ReplyEcho.catch_up(@kase.id) }
+    }) { Fd::ReplyEcho.flush_pending(@kase.id) }
 
     assert_equal 1, carried
     assert_equal "xoxp-real", sent[:token]
@@ -64,7 +64,7 @@ class Fd::ReplyEchoTest < ActiveSupport::TestCase
     instead_of(lambda { |**args|
       sent = args
       { "ok" => true, "ts" => "1700.0101" }
-    }) { Fd::ReplyEcho.catch_up(@kase.id) }
+    }) { Fd::ReplyEcho.flush_pending(@kase.id) }
 
     assert_equal "~?we are looking at it", sent[:text]
   end
@@ -73,7 +73,7 @@ class Fd::ReplyEchoTest < ActiveSupport::TestCase
     queued = queue
 
     carried = instead_of(->(**) { flunk "the bot echoes this one" }) {
-      Fd::ReplyEcho.catch_up(@kase.id)
+      Fd::ReplyEcho.flush_pending(@kase.id)
     }
 
     assert_equal 0, carried
@@ -85,7 +85,7 @@ class Fd::ReplyEchoTest < ActiveSupport::TestCase
     queued = queue(sent: false)
 
     instead_of(->(**) { flunk "nothing has been sent to the reporter yet" }) {
-      Fd::ReplyEcho.catch_up(@kase.id)
+      Fd::ReplyEcho.flush_pending(@kase.id)
     }
 
     assert_nil queued.reload.echoed_at
@@ -100,8 +100,8 @@ class Fd::ReplyEchoTest < ActiveSupport::TestCase
       tries += 1
       { "ok" => true, "ts" => "1700.0102" }
     }) do
-      Fd::ReplyEcho.catch_up(@kase.id)
-      Fd::ReplyEcho.catch_up(@kase.id)
+      Fd::ReplyEcho.flush_pending(@kase.id)
+      Fd::ReplyEcho.flush_pending(@kase.id)
     end
 
     assert_equal 1, tries
@@ -113,7 +113,7 @@ class Fd::ReplyEchoTest < ActiveSupport::TestCase
     queued = queue
 
     instead_of(->(**) { { "ok" => false, "error" => "not_in_channel" } }) do
-      Fd::ReplyEcho.catch_up(@kase.id)
+      Fd::ReplyEcho.flush_pending(@kase.id)
     end
 
     assert_nil queued.reload.echoed_at, "it can be tried again"
@@ -140,7 +140,7 @@ class Fd::ReplyEchoTest < ActiveSupport::TestCase
 
     with_a_failing_write do
       instead_of(->(**) { { "ok" => true, "ts" => "1700.0103" } }) do
-        assert_raises(ActiveRecord::StatementInvalid) { Fd::ReplyEcho.catch_up(@kase.id) }
+        assert_raises(ActiveRecord::StatementInvalid) { Fd::ReplyEcho.flush_pending(@kase.id) }
       end
     end
 
@@ -155,7 +155,7 @@ class Fd::ReplyEchoTest < ActiveSupport::TestCase
     queued = queue
 
     instead_of(->(**) { flunk "there is no thread to echo into" }) do
-      Fd::ReplyEcho.catch_up(@kase.id)
+      Fd::ReplyEcho.flush_pending(@kase.id)
     end
 
     assert_nil queued.reload.echoed_at

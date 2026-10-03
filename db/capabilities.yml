@@ -69,7 +69,7 @@ capabilities:
     events: [member/looked_up]
 
   case.open:
-    label: Open a case, claim it, hand it back
+    label: Open, claim and release a case
     area: case
     locked: true
     events: [case/opened, assignee/claimed, assignee/unclaimed, assignee/attached, assignee/detached]
@@ -81,20 +81,20 @@ capabilities:
     events: [case/categorised]
 
   case.note:
-    label: Write a note, delete their own
+    label: Write a note and delete their own
     area: case
     record_scope: author
     locked: true
     events: [note/noted, note/deleted]
 
   case.people:
-    label: Add somebody, take somebody off
+    label: Add and remove case participants
     area: case
     locked: true
     events: [participant/attached, participant/detached]
 
   case.chat:
-    label: Talk to the team on a case
+    label: Post internal case chat
     area: case
     locked: true
 
@@ -105,7 +105,7 @@ capabilities:
     events: [report/answered]
 
   case.act:
-    label: Log an action against somebody
+    label: Log an action against a member
     area: case
     locked: true
     events:
@@ -115,19 +115,19 @@ capabilities:
       - member_guard/extended
 
   case.resolve:
-    label: Resolve a case, mark a duplicate
+    label: Resolve a case or mark it a duplicate
     area: case
     locked: true
     events: [case/resolved]
 
   case.reverse:
-    label: Reverse an action somebody logged
+    label: Reverse a logged action
     area: case
     locked: true
     events: [action/reversed]
 
   case.reopen:
-    label: Put a resolved case back in the queue
+    label: Reopen a resolved case
     area: case
     locked: true
     events: [case/reopened]
@@ -144,7 +144,7 @@ capabilities:
     locked: true
 
   member.guard:
-    label: Hold a shush or channel ban on somebody, with no case behind it
+    label: Apply a shush or channel ban with no case attached
     area: member
     locked: true
     events:
@@ -153,7 +153,7 @@ capabilities:
       - member_guard/extended
 
   member.deactivate:
-    label: Deactivate a Slack account, and put it back
+    label: Deactivate and reactivate a Slack account
     area: member
     locked: true
 
@@ -162,29 +162,29 @@ capabilities:
     area: member
 
   member.links:
-    label: See the accounts that look like the same person
+    label: View suspected duplicate accounts
     area: member
     locked: true
     logged: true
 
   identity.read:
-    label: See the real name and email behind an id
+    label: View the real name and email behind a member id
     area: identity
     locked: true
     logged: true
 
   channel.read:
-    label: See the analytics for a channel they hold
+    label: View analytics for channels they manage
     area: channel
     record_scope: channel
     every_account: true
 
   channel.all:
-    label: See the analytics for every channel
+    label: View analytics for every channel
     area: channel
 
   channel.share:
-    label: Set a channel's audience, and name who may read it
+    label: Set a channel's audience and readers
     area: channel
     locked: true
     events: [channel_audience/granted, channel_audience/revoked]
@@ -194,7 +194,7 @@ capabilities:
     area: channel
 
   channel.guard:
-    label: Guard a channel, and say which bots may post in it
+    label: Guard a channel and set its bot allow list
     area: channel
     locked: true
     events:
@@ -205,20 +205,20 @@ capabilities:
       - app_setting/tuned
 
   channel.purge:
-    label: Take down the last messages in a channel at once
+    label: Bulk delete recent channel messages
     area: channel
     locked: true
     logged: true
     events: [channel_purge/queued, channel_purge/performed]
 
   message.read:
-    label: See how their own post did, in a channel that shows it
+    label: View their own message activity, where the channel allows it
     area: channel
     record_scope: author
     every_account: true
 
   message.show:
-    label: Pick the channels whose posts show their activity
+    label: Select the channels that expose message activity
     area: channel
     locked: true
     events: [message_activity/turned_on, message_activity/turned_off]
@@ -229,16 +229,16 @@ capabilities:
     locked: true
 
   slack.link:
-    label: Link their own Slack account, to send as themselves
+    label: Link their own Slack account to send as themselves
     area: slack
     events: [slack_account/linked, slack_account/unlinked]
 
   access.read:
-    label: See who holds access and what they did with it
+    label: View who holds access and their activity
     area: access
 
   access.grant:
-    label: Give or take back access
+    label: Grant and revoke access
     area: access
     locked: true
     events: [grant/granted, grant/revoked, community_grant/granted, community_grant/revoked, permission/granted, permission/revoked]
@@ -250,7 +250,7 @@ capabilities:
     events: [flag/turned_on, flag/turned_off]
 
   app.configure:
-    label: Tune the automod list and the canned replies
+    label: Configure the automod list and canned replies
     area: app
     locked: true
     events: [automod_word/added, automod_word/removed, app_setting/tuned]

@@ -1,5 +1,5 @@
-<div class="calwrap" data-controller="marktip"
-     data-action="mouseover->marktip#show mouseleave->marktip#clear">
+<div class="calwrap" data-controller="chart-tooltip"
+     data-action="mouseover->chart-tooltip#show mouseleave->chart-tooltip#clear">
   <div class="scroll">
     <div class="cal" style="--cal-weeks: <%= calendar.weeks %>">
       <% calendar.months.each do |month| %>
@@ -26,7 +26,7 @@
         <span class="cal-run-from" style="grid-column: 2 / <%= run.first + 1 %>">
           <%= calendar.run_from.strftime("%-d %b %Y") %>
         </span>
-        <span class="cal-run-say" style="grid-column: <%= run.first + 1 %> / -1">
+        <span class="cal-run-note" style="grid-column: <%= run.first + 1 %> / -1">
           <%= pluralize(number_with_delimiter(streak_days), "day") %>
         </span>
       <% end %>

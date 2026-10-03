@@ -31,7 +31,7 @@
         <div class="setline">
           <span class="setname"><%= dial_label(key) %></span>
           <span class="setval cap-do">
-            <b class="row-v"><%= value %></b>
+            <b class="row-value"><%= value %></b>
             <% if may_grant? %>
               <button type="button" class="text-btn" data-modal-open="dial-<%= key %>" aria-haspopup="dialog">Change</button>
             <% end %>
@@ -53,7 +53,7 @@
     <div class="card-head">
       <h2 class="card-title">Tokens</h2>
       <div class="card-tools">
-        <span class="qlab">
+        <span class="queue-label">
           <%= @tokens.count { |one| !one.spent? } %> live &middot;
           <%= @tokens.count(&:spent?) %> spent
         </span>

@@ -41,7 +41,7 @@ def reacted(ctx):
         return None
 
     try:
-        ctx.client.chat_postMessage(channel=who, text=responses.said(
+        ctx.client.chat_postMessage(channel=who, text=responses.setting(
             responses.AUTORESPONSE_BODY))
     except Exception as failure:
         log.warning("nemo: could not answer %s: %s", who, failure)

@@ -2,7 +2,7 @@ import json
 from datetime import date, datetime, time, timedelta, timezone
 
 from lib import sources
-from seed import hostile as hostile_module
+from seed import adversarial
 
 PARENT_SOURCE = "nightly_sync"
 RUN_HISTORY = 14
@@ -107,7 +107,7 @@ def step_output_rows(rng, parent_ids, hostile=False):
                 parent_id,
                 step,
                 source,
-                hostile_module.reason(rng, output, hostile),
+                adversarial.reason(rng, output, hostile),
             )
 
 
@@ -155,6 +155,6 @@ def dead_letter_rows(rng, as_of, count=40, hostile=False):
         source, base = DEAD_LETTER_REASONS[rng.randrange(len(DEAD_LETTER_REASONS))]
         seen = as_of - timedelta(days=rng.randrange(RUN_HISTORY), seconds=rng.randrange(86400))
         payload = {"user_id": f"USEED{rng.randrange(200_000):07d}", "keys": ["date", "user_id"]}
-        yield (source, json.dumps(payload), hostile_module.reason(rng, base, hostile), seen)
+        yield (source, json.dumps(payload), adversarial.reason(rng, base, hostile), seen)
 
 

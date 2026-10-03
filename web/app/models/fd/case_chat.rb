@@ -5,8 +5,8 @@ module Fd
     MAX_LENGTH = 4_000
     SHOWN = 50
 
-    scope :oldest_first, -> { order(:said_at, :id) }
-    scope :newest_first, -> { order(said_at: :desc, id: :desc) }
+    scope :oldest_first, -> { order(:posted_at, :id) }
+    scope :newest_first, -> { order(posted_at: :desc, id: :desc) }
 
     def self.tail(case_id, limit: SHOWN)
       where(case_id: case_id).newest_first.limit(limit).to_a.reverse

@@ -22,8 +22,8 @@ module Fd
 
       granted = Slack::Oauth.exchange(code: params[:code], redirect_uri: back_url)
       problem = keep(granted)
-      problem ? stop(problem) : done("your slack account is linked")
-    rescue Slack::Oauth::Refused, Slack::Oauth::Unavailable, Slack::Oauth::NotConfigured => failure
+      problem ? stop(problem) : done("Your Slack account is linked")
+    rescue Slack::Oauth::RefusedError, Slack::Oauth::UnavailableError, Slack::Oauth::NotConfiguredError => failure
       stop("slack did not hand over a token: #{failure.message}")
     end
 
@@ -33,11 +33,11 @@ module Fd
 
       Slack::Oauth.give_back(held.user_token)
       writing do
-        held.give_back!(current_account.user_id)
+        held.return_token!(current_account.user_id)
         audit(held, "unlinked", entity_id: 0, before: { "scopes" => held.scopes })
       end
 
-      done("your slack account is unlinked, messages go out through nemo again")
+      done("Your Slack account is unlinked; messages now send through nemo")
     end
 
     private
@@ -55,7 +55,7 @@ module Fd
 
     def keep(granted)
       authed = granted["authed_user"] || {}
-      problem = wrong_with(authed, granted.dig("team", "id"))
+      problem = validation_error(authed, granted.dig("team", "id"))
       return problem if problem
 
       writing do
@@ -68,7 +68,7 @@ module Fd
       nil
     end
 
-    def wrong_with(authed, team_id)
+    def validation_error(authed, team_id)
       return "slack granted an app token, not a token for you" if authed["access_token"].blank?
       return "that is not the account you are signed in as" if authed["id"] != current_account.user_id
       unless authed["scope"].to_s.split(",").include?(StaffSlack::SCOPE)
@@ -89,8 +89,8 @@ module Fd
       redirect_to account_path, alert: problem
     end
 
-    def done(said)
-      redirect_to account_path, notice: said
+    def done(message)
+      redirect_to account_path, notice: message
     end
   end
 end

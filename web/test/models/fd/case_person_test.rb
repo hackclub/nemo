@@ -90,11 +90,11 @@ class Fd::CasePersonTest < ActiveSupport::TestCase
   end
 
   test "speaking twice in one thread is one thread, not two" do
-    said = Array.new(2) do |i|
+    shares = Array.new(2) do |i|
       Said.new(channel_id: "C0LOUNGE", thread_ts: "1.1", author_user_id: "UDEX")
     end
-    said << Said.new(channel_id: "C0SHIP", thread_ts: "2.2", author_user_id: "UDEX")
-    here = Fd::CasePerson.for(@person, kase: @kase, actions: [], notes: [], messages: said)
+    shares << Said.new(channel_id: "C0SHIP", thread_ts: "2.2", author_user_id: "UDEX")
+    here = Fd::CasePerson.for(@person, kase: @kase, actions: [], notes: [], messages: shares)
 
     assert_equal 3, here.messages.size
     assert_equal 2, here.threads_spoken_in

@@ -3,7 +3,7 @@ import logging
 
 from bot.core import session
 from bot.nemo import guards
-from bot.nemo.cards import guard as card
+from bot.nemo.views import guard as card
 from bot.nemo.surface import on_shortcut, on_view
 
 log = logging.getLogger("bot.nemo")
@@ -14,7 +14,7 @@ SHORTCUT = "lock_thread"
 @on_shortcut(SHORTCUT, needs="thread.guard")
 def asked(ctx):
     if not ctx.thread_ts:
-        return ctx.whisper("that is not a thread")
+        return ctx.post_ephemeral("that is not a thread")
 
     ctx.client.views_open(
         trigger_id=ctx.trigger_id,
@@ -24,12 +24,12 @@ def asked(ctx):
 
 @on_view(card.LOCK_CALLBACK, needs="thread.guard", refuse_block=card.REASON)
 def confirmed(ctx):
-    said = card.picked(ctx.view.get("state") or {})
-    wrong = card.objection(said, needs_until=True)
+    values = card.submitted_values(ctx.view.get("state") or {})
+    wrong = card.validation_errors(values, needs_until=True)
     if wrong:
         return ctx.ack(response_action="errors", errors=wrong)
 
-    lifts = dt.datetime.fromtimestamp(said["until"], dt.UTC)
+    lifts = dt.datetime.fromtimestamp(values["until"], dt.UTC)
     if lifts <= dt.datetime.now(dt.UTC):
         return ctx.ack(response_action="errors", errors={card.UNTIL: "That is in the past."})
 
@@ -40,12 +40,12 @@ def confirmed(ctx):
 
     with session() as conn:
         guard_id = guards.open_guard(
-            conn, guards.LOCK, channel_id, thread_ts, ctx.user_id, said["reason"],
+            conn, guards.LOCK, channel_id, thread_ts, ctx.user_id, values["reason"],
             expires_at=lifts,
         )
 
     if guard_id is None:
-        return ctx.whisper("that thread is already held", channel_id, thread_ts)
+        return ctx.post_ephemeral("that thread is already held", channel_id, thread_ts)
 
     ctx.join(channel_id)
     with session() as conn:

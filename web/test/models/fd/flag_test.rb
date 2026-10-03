@@ -50,8 +50,8 @@ module Fd
     end
 
     test "a key the file does not know is refused, not quietly false" do
-      assert_raises(Flag::Unknown) { Flag.on?(:teleporter) }
-      assert_raises(Flag::Unknown) { Flag.set!(:teleporter, true, by: "UME") }
+      assert_raises(Flag::UnknownError) { Flag.on?(:teleporter) }
+      assert_raises(Flag::UnknownError) { Flag.set!(:teleporter, true, by: "UME") }
     end
 
     test "every flag says what it is and what it covers" do

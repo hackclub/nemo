@@ -39,7 +39,7 @@ module Fd
       return if Authz.holds?(current_account, "case.read")
       return head :forbidden if request.format.json?
 
-      redirect_to root_path, alert: "Fire Engine is for the conduct team"
+      redirect_to root_path, alert: "Fire Engine is restricted to the conduct team"
     end
 
     def needs_the_engine
@@ -76,16 +76,16 @@ module Fd
 
     CARRIES = 900
 
-    def wrong!(field, said, was = nil)
+    def wrong!(field, message, was = nil)
       kept = was.to_s.length <= CARRIES ? was : nil
-      flash[:wrong] = { "field" => field.to_s, "said" => said, "was" => kept }
-      said
+      flash[:field_error] = { "field" => field.to_s, "message" => message, "was" => kept }
+      message
     end
 
     def refuse!(key, record = nil)
       log_refusal(key, record)
       flash[:tone] = "bad"
-      flash[:said] = "Nothing was changed. #{Authz.refusal(key).upcase_first}."
+      flash[:detail] = "Nothing was changed. #{Authz.refusal(key).upcase_first}."
       redirect_back fallback_location: fd_cases_path, alert: refusal_for(key, record)
     end
 

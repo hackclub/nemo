@@ -172,7 +172,7 @@ class FdSlackAccountTest < ActionDispatch::IntegrationTest
     start_linking
     state = Rack::Utils.parse_query(URI.parse(response.location).query)["state"]
 
-    refusal = ->(**) { raise Slack::Oauth::Refused, "invalid_code" }
+    refusal = ->(**) { raise Slack::Oauth::RefusedError, "invalid_code" }
     instead_of(:exchange, refusal) do
       get fd_slack_account_callback_path(code: "c0de", state: state)
     end
@@ -209,7 +209,7 @@ class FdSlackAccountTest < ActionDispatch::IntegrationTest
   test "linking again after unlinking brings the row back to life" do
     sign_in_as(@me)
     Fd::StaffSlack.keep!("UME", token: "old", team_id: "T0FIRE", scopes: "chat:write")
-      .give_back!("UME")
+      .return_token!("UME")
 
     start_linking
     state = Rack::Utils.parse_query(URI.parse(response.location).query)["state"]

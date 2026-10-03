@@ -154,7 +154,7 @@ class ChannelManagersTest < ActiveSupport::TestCase
     stamped = Api::ChannelSweep.find(CHANNEL).synced_at
     Api::ChannelSweep.find(CHANNEL).update!(synced_at: 2.hours.ago)
 
-    found = raising(Slack::ProxyClient::Unavailable) { ChannelManagers.for(CHANNEL) }
+    found = raising(Slack::ProxyClient::UnavailableError) { ChannelManagers.for(CHANNEL) }
 
     assert_equal %w[U1], found
     assert_not_equal stamped, Api::ChannelSweep.find(CHANNEL).synced_at
@@ -178,12 +178,12 @@ class ChannelManagersTest < ActiveSupport::TestCase
   end
 
   test "it follows the cursor to the end" do
-    found = answering(page("U1", cursor: "more"), page("U2")) { ChannelManagers.for(CHANNEL) }
+    found = answering(page("U1", cursor: "expand"), page("U2")) { ChannelManagers.for(CHANNEL) }
 
     assert_equal %w[U1 U2], found
     assert_equal 2, @asked.size
     assert_nil @asked.first[1][:cursor], "the first call sends no cursor at all"
-    assert_equal "more", @asked.last[1][:cursor]
+    assert_equal "expand", @asked.last[1][:cursor]
   end
 
   test "with no role id pinned it asks nothing and claims nothing" do

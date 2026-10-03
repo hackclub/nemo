@@ -84,8 +84,8 @@ module FdHelper
     return "" if text.blank?
 
     parts = Fd::Mentions.split(text).map do |piece|
-      said = piece.match(Fd::Mentions::SLACK)
-      next mention_link(said[1]) if said
+      match = piece.match(Fd::Mentions::SLACK)
+      next mention_link(match[1]) if match
 
       room = piece.match(Fd::Mentions::CHANNEL)
       next channel_mention(room[1], room[2]) if room
@@ -104,13 +104,13 @@ module FdHelper
     href = CGI.unescapeHTML(url.to_s)
     return href unless href.start_with?("http://", "https://")
 
-    link_to link_label(href, label), href, class: "said-link",
+    link_to link_label(href, label), href, class: "link-note",
       target: "_blank", rel: "noopener"
   end
 
   def link_label(href, label = nil)
-    said = CGI.unescapeHTML(label.to_s)
-    return said if said.present? && said != href
+    text = CGI.unescapeHTML(label.to_s)
+    return text if text.present? && text != href
 
     ref = Fd::SlackLink.parse(href)
     return channel_label(ref.channel_id) if ref
@@ -122,9 +122,9 @@ module FdHelper
     link_to at_name(user_id), fd_member_path(user_id), class: "mention", title: user_id
   end
 
-  def channel_mention(channel_id, said = nil)
+  def channel_mention(channel_id, name = nil)
     named = channels.named?(channel_id) ? channel_label(channel_id) : nil
-    shown = named || (said.present? ? "##{said}" : channel_id)
+    shown = named || (name.present? ? "##{name}" : channel_id)
     return tag.span(shown, class: "mention", title: channel_id) unless may_open_channel?(channel_id)
 
     link_to shown, channel_path(channel_id), class: "mention", title: channel_id
@@ -170,11 +170,11 @@ module FdHelper
   def audit_about(row)
     return member_link(row.subject_id) if row.subject_id.present?
 
-    said = [row.entity_ref, row.entity_id].compact_blank
-    room = said.find { |one| one.match?(AUDIT_CHANNEL) }
+    refs = [row.entity_ref, row.entity_id].compact_blank
+    room = refs.find { |one| one.match?(AUDIT_CHANNEL) }
     return audit_channel(room) if room
 
-    who = said.find { |one| one.match?(AUDIT_MEMBER) }
+    who = refs.find { |one| one.match?(AUDIT_MEMBER) }
     return member_link(who) if who
     return tag.span("#{row.entity_kind} #{row.entity_id}", class: "sub2") if row.entity_id.present?
 
@@ -203,8 +203,8 @@ module FdHelper
   def audit_value(value)
     return tag.span("nothing", class: "sub2") if value.nil? || value == ""
 
-    said = value.is_a?(String) ? value : value.to_json
-    tag.span(said.truncate(AUDIT_VALUE), class: "mono")
+    text = value.is_a?(String) ? value : value.to_json
+    tag.span(text.truncate(AUDIT_VALUE), class: "mono")
   end
 
   DOMAIN_MATCH_LABELS = { "exact" => "exact", "suffix" => "with subdomains" }.freeze
@@ -215,9 +215,9 @@ module FdHelper
   SCREEN_TONES = { "flagged" => "state-warn", "held" => "state-warn",
                    "deactivated" => "state-crit", "failed" => "state-crit" }.freeze
 
-  def domain_match_label(said) = DOMAIN_MATCH_LABELS.fetch(said, said)
+  def domain_match_label(key) = DOMAIN_MATCH_LABELS.fetch(key, key)
 
-  def domain_effect_label(said) = DOMAIN_EFFECT_LABELS.fetch(said, said)
+  def domain_effect_label(key) = DOMAIN_EFFECT_LABELS.fetch(key, key)
 
   def domain_match_chip(one)
     tag.span(domain_match_label(one.match_mode), class: "state")
@@ -239,15 +239,15 @@ module FdHelper
   end
 
   def link_score_chip(score)
-    said = score.to_f
-    tone = if said >= Fd::MemberLink::CERTAIN
+    score = score.to_f
+    tone = if score >= Fd::MemberLink::CERTAIN
       "state-crit"
-    elsif said >= Fd::MemberLink::STRONG
+    elsif score >= Fd::MemberLink::STRONG
       "state-warn"
     else
       ""
     end
-    tag.span(number_with_precision(said, precision: 1), class: "state #{tone}".strip)
+    tag.span(number_with_precision(score, precision: 1), class: "state #{tone}".strip)
   end
 
   def session_span(first_at, last_at)
@@ -387,17 +387,17 @@ module FdHelper
   end
 
   def wrong_on?(field)
-    flash[:wrong].is_a?(Hash) && flash[:wrong]["field"] == field.to_s
+    flash[:field_error].is_a?(Hash) && flash[:field_error]["field"] == field.to_s
   end
 
   def field_wrong(field)
     return nil unless wrong_on?(field)
 
-    tag.p(flash[:wrong]["said"], class: "field-wrong")
+    tag.p(flash[:field_error]["message"], class: "field-wrong")
   end
 
   def field_was(field, fallback = nil)
-    wrong_on?(field) ? flash[:wrong]["was"] : fallback
+    wrong_on?(field) ? flash[:field_error]["was"] : fallback
   end
 
   def history_word_chip(entry)
@@ -641,20 +641,20 @@ module FdHelper
   end
 
   def chat_entries(reports, chat, messages = [], queued = [])
-    said = messages.any? ? [] : opening(reports)
-    (said + changed_chat_entries(reports, chat, messages, queued)).sort_by(&:at)
+    entries = messages.any? ? [] : opening(reports)
+    (entries + changed_chat_entries(reports, chat, messages, queued)).sort_by(&:at)
   end
 
   def changed_chat_entries(reports, chat, messages, queued)
     hidden = reports.any?(&:anonymous?)
     held = Fd::IntakeFile.for_messages(messages.map(&:id))
     cited = Fd::IntakeShare.for_messages(messages.map(&:id))
-    said = messages.map do |one|
+    entries = messages.map do |one|
       message_entry(one, hidden, held.fetch(one.id, []), cited.fetch(one.id, []))
     end
-    said += chat.map { |line| chat_entry(line) }
-    said += queued.map { |row| queued_entry(row) }
-    said.sort_by(&:at)
+    entries += chat.map { |line| chat_entry(line) }
+    entries += queued.map { |row| queued_entry(row) }
+    entries.sort_by(&:at)
   end
 
   def opening(reports)
@@ -667,35 +667,35 @@ module FdHelper
     end
   end
 
-  def message_entry(said, hidden = false, files = [], shares = [])
-    theirs = said.theirs?
+  def message_entry(message, hidden = false, files = [], shares = [])
+    theirs = message.theirs?
     masked = theirs && hidden
     ChatEntry.new(
-      key: "msg-#{said.id}",
-      at: said.posted_at,
+      key: "msg-#{message.id}",
+      at: message.posted_at,
       side: theirs ? "in" : "out",
       kind: theirs ? "them" : "us",
-      who: masked ? nil : (theirs ? said.author_user_id : said.sent_by),
+      who: masked ? nil : (theirs ? message.author_user_id : message.sent_by),
       anon: masked,
-      name: message_name(said, hidden),
-      body: message_body(said, files),
-      state: ("deleted in Slack" if said.deleted?),
+      name: message_name(message, hidden),
+      body: message_body(message, files),
+      state: ("deleted in Slack" if message.deleted?),
       files: files,
       shares: shares
     )
   end
 
-  def message_name(said, hidden = false)
-    return "Anonymous" if said.theirs? && hidden
-    return names[said.author_user_id] if said.theirs? && said.author_user_id
-    return "them" if said.theirs?
-    return names[said.sent_by] if said.sent_by
+  def message_name(message, hidden = false)
+    return "Anonymous" if message.theirs? && hidden
+    return names[message.author_user_id] if message.theirs? && message.author_user_id
+    return "them" if message.theirs?
+    return names[message.sent_by] if message.sent_by
 
     "the Fire Department"
   end
 
-  def message_body(said, _files = [])
-    said.body.presence
+  def message_body(message, _files = [])
+    message.body.presence
   end
 
   def queued_entry(row)
@@ -710,7 +710,7 @@ module FdHelper
   end
 
   def chat_entry(line)
-    ChatEntry.new(key: "chat-#{line.id}", at: line.said_at, side: "out", kind: "chat",
+    ChatEntry.new(key: "chat-#{line.id}", at: line.posted_at, side: "out", kind: "chat",
       who: line.author_user_id, name: names[line.author_user_id], body: chat_body(line))
   end
 
@@ -767,10 +767,10 @@ module FdHelper
     "Message the team, or ? to reply to #{thread.reporter_label(names)}"
   end
 
-  def chat_head_line(reports, kase, said: 0)
+  def chat_head_line(reports, kase, count: 0)
     parts = []
     parts << "reported it #{report_when_short(reports.first)}"
-    parts << pluralize(said, "message") if said.positive?
+    parts << pluralize(count, "message") if count.positive?
     if reports.first.unanswered? && !kase.resolved?
       parts << "waiting #{case_age_label(reports.first.waiting_for)}"
     end
@@ -783,15 +783,15 @@ module FdHelper
 
   RESOLUTION_LABELS = Fd::Case::RESOLUTION_LABELS
 
-  def told_chip(reports, open_reports)
+  def reports_chip(reports, open_reports)
     return nil if reports.blank?
 
-    return tag.span(told_phrase(reports.size), class: "chip chip-good") if open_reports.zero?
+    return tag.span(reports_phrase(reports.size), class: "chip chip-good") if open_reports.zero?
 
     tag.span("#{pluralize(open_reports, 'reporter')} not told", class: "chip chip-warn")
   end
 
-  def told_phrase(count)
+  def reports_phrase(count)
     count == 1 ? "reporter was told" : "#{count} reporters were told"
   end
 
@@ -800,8 +800,8 @@ module FdHelper
   end
 
   def closing_because(actions)
-    said = actions.map { |action| action_label(action.type_key).downcase }.uniq.to_sentence
-    "action taken, #{said}"
+    labels = actions.map { |action| action_label(action.type_key).downcase }.uniq.to_sentence
+    "action taken, #{labels}"
   end
 
   def close_reason_options
@@ -854,10 +854,10 @@ module FdHelper
   end
 
   def action_option_label(action)
-    said = [action_label(action.type_key)]
-    said << "on #{names[action.target_user_id]}" if action.aimed_at_member?
-    said << on_day(action.performed_at)
-    said.join(" · ")
+    parts = [action_label(action.type_key)]
+    parts << "on #{names[action.target_user_id]}" if action.aimed_at_member?
+    parts << on_day(action.performed_at)
+    parts.join(" · ")
   end
 
   def lone_subject(kase)
@@ -908,19 +908,19 @@ module FdHelper
     count = thread_counts.fetch(kase.id, 0)
     return nil unless count.positive?
 
-    said = pluralize(count, "message")
+    text = pluralize(count, "message")
     where = Array(thread_channels[kase.id])
-    return said unless where.one? && channels.named?(where.first)
+    return text unless where.one? && channels.named?(where.first)
 
-    "#{said} in #{channels[where.first]}"
+    "#{text} in #{channels[where.first]}"
   end
 
   AVATAR_TONES = 8
 
   def avatar_tone(user_id)
-    return "av-none" if user_id.blank?
+    return "avatar-none" if user_id.blank?
 
-    "av-#{(user_id.sum % AVATAR_TONES) + 1}"
+    "avatar-#{(user_id.sum % AVATAR_TONES) + 1}"
   end
 
   SUBJECTS_SHOWN = 3
@@ -932,7 +932,7 @@ module FdHelper
     shown = ids.first(SUBJECTS_SHOWN)
     parts = shown.map { |id|
       tag.span(class: "face-name", title: names[id]) {
-        safe_join([slack_face(id), tag.span(member_link(id), class: "face-said")])
+        safe_join([slack_face(id), tag.span(member_link(id), class: "face-sub")])
       }
     }
     parts << tag.span("+#{ids.size - shown.size}", class: "face-more") if ids.size > shown.size
@@ -958,7 +958,7 @@ module FdHelper
 
   def face(user_id, css: "row-avatar", data: {})
     if user_id.blank?
-      return tag.span("", class: "#{css} av-none", aria: { hidden: true }, data: data)
+      return tag.span("", class: "#{css} avatar-none", aria: { hidden: true }, data: data)
     end
 
     tag.img(src: cachet_face_url(user_id), class: css, alt: "", loading: "lazy",
@@ -968,10 +968,10 @@ module FdHelper
   end
 
   def person_name(user_id)
-    said = names[user_id]
-    return said unless names.unknown?(user_id)
+    name = names[user_id]
+    return name unless names.unknown?(user_id)
 
-    tag.span(said, data: { cachet_name: user_id })
+    tag.span(name, data: { cachet_name: user_id })
   end
 
   def case_first_report(kase)
@@ -985,11 +985,11 @@ module FdHelper
   A_LINK = %r{<https?://[^\s<>|]+(?:\|[^>]*)?>|https?://\S+}
 
   def only_a_link?(text)
-    said = text.to_s
-    !said.empty? && said.gsub(A_LINK, " ").blank?
+    text = text.to_s
+    !text.empty? && text.gsub(A_LINK, " ").blank?
   end
 
-  def plain_words(text)
+  def plain_text(text)
     text.to_s
       .gsub(/<(https?:\/\/[^\s<>|]+)\|([^>]*)>/) { Regexp.last_match(2) }
       .gsub(/<(https?:\/\/[^\s<>]+)>/) { Regexp.last_match(1) }
@@ -1012,7 +1012,7 @@ module FdHelper
 
   def case_words(kase)
     body = case_first_report(kase)&.body.presence
-    return plain_words(body) if body
+    return plain_text(body) if body
     return "no report on file" if kase.reports.empty?
 
     held = held_counts[kase.id].to_i
@@ -1168,8 +1168,8 @@ module FdHelper
   end
 
   def case_state_chip(kase, acted: nil, reachable: nil)
-    said, tone = case_state(kase, acted: acted, reachable: reachable)
-    tag.span(said, class: "state #{tone}")
+    label, tone = case_state(kase, acted: acted, reachable: reachable)
+    tag.span(label, class: "state #{tone}")
   end
 
   def case_state(kase, acted: nil, reachable: nil)
@@ -1208,11 +1208,11 @@ module FdHelper
     return safe_join(["opened #{on_day(kase.opened_at)} by ",
       member_link(kase.opened_by)]) if first.nil?
 
-    said = "reported #{on_day(first.received_at)}"
-    return "#{said} by #{pluralize(reports.size, 'person')}" if reports.many?
-    return "#{said} by a member" if first.anonymous?
+    text = "reported #{on_day(first.received_at)}"
+    return "#{text} by #{pluralize(reports.size, 'person')}" if reports.many?
+    return "#{text} by a member" if first.anonymous?
 
-    safe_join(["#{said} by ", member_link(first.reporter_user_id)])
+    safe_join(["#{text} by ", member_link(first.reporter_user_id)])
   end
 
   ACTION_LABELS = Fd::Action::LABELS
@@ -1285,10 +1285,10 @@ module FdHelper
   end
 
   def action_reason(action)
-    said = action.reason.presence
-    return tag.span("no reason recorded", class: "why-none") if said.nil?
+    reason = action.reason.presence
+    return tag.span("no reason recorded", class: "why-none") if reason.nil?
 
-    tag.q(said, class: "why-said")
+    tag.q(reason, class: "why-quote")
   end
 
   def action_performer_note(action)
@@ -1309,7 +1309,7 @@ module FdHelper
     value ? number_with_delimiter(value) : "not tracked"
   end
 
-  def here_since(context)
+  def member_since(context)
     at = context&.cohort_at
     return "n/a" if at.nil?
 
@@ -1325,8 +1325,8 @@ module FdHelper
                  "firefighter" => ["chip-off", "firefighter"] }.freeze
 
   def role_chip(role)
-    tone, said = ROLE_CHIPS.fetch(role, ["chip-off", role])
-    tag.span(said, class: "chip #{tone}")
+    tone, label = ROLE_CHIPS.fetch(role, ["chip-off", role])
+    tag.span(label, class: "chip #{tone}")
   end
 
   def flag_switch(key)
@@ -1438,26 +1438,26 @@ module FdHelper
     link_to count, admin_person_path(user_id), class: "lnk"
   end
 
-  def deed_words(event)
+  def audit_summary(event)
     DEED_WORDS.fetch(event) { event.tr("_/", " ").capitalize }
   end
 
-  def deed_head(deed)
-    return deed_words(deed.event) if deed.kind.nil?
+  def audit_title(row)
+    return audit_summary(row.event) if row.kind.nil?
 
-    safe_join([deed_words(deed.event), deed_link(deed)], " ")
+    safe_join([audit_summary(row.event), audit_link(row)], " ")
   end
 
-  def deed_link(deed)
-    case deed.kind
-    when "case" then link_to deed.about, fd_case_path(deed.id), class: "lnk"
-    when "capability" then deed.about
-    else member_link(deed.id)
+  def audit_link(row)
+    case row.kind
+    when "case" then link_to row.about, fd_case_path(row.id), class: "lnk"
+    when "capability" then row.about
+    else member_link(row.id)
     end
   end
 
-  def deed_said(deed)
-    [deed.said, ("on #{names[deed.who]}" if deed.who.present?)].compact.join(" ")
+  def audit_detail(row)
+    [row.detail, ("on #{names[row.who]}" if row.who.present?)].compact.join(" ")
   end
 
   DIAL_LABELS = {
@@ -1576,13 +1576,13 @@ module FdHelper
   }.freeze
 
   def thread_guard_line(guard)
-    said = guard.destroying? ? "Thread destroyed" : "Thread locked"
-    safe_join([said, " in ", channel_link(guard.channel_id)])
+    text = guard.destroying? ? "Thread destroyed" : "Thread locked"
+    safe_join([text, " in ", channel_link(guard.channel_id)])
   end
 
   def thread_guard_chip(guard)
-    said, tone = THREAD_GUARD_STATE.fetch(guard.state, [guard.state, "state"])
-    tag.span(said, class: "state #{tone}")
+    label, tone = THREAD_GUARD_STATE.fetch(guard.state, [guard.state, "state"])
+    tag.span(label, class: "state #{tone}")
   end
 
   def guard_kind_options
@@ -1598,8 +1598,8 @@ module FdHelper
   def guard_carry_chip(guard)
     return tag.span("by hand", class: "state") if guard.by_hand?
 
-    said, tone = GUARD_CARRY_CHIP.fetch(guard.carry, [guard.carry, "state"])
-    tag.span(said, class: "state #{tone}")
+    label, tone = GUARD_CARRY_CHIP.fetch(guard.carry, [guard.carry, "state"])
+    tag.span(label, class: "state #{tone}")
   end
 
   def already_here_note(attached)
@@ -1607,10 +1607,10 @@ module FdHelper
   end
 
   def thread_lock_note(guard, case_id)
-    said = [guard_standing_where(guard, case_id)]
-    said << (guard.expires_at ? "lifts #{guard.expires_at.strftime("%-d %b")}" : "no end date")
-    said << guard.reason.to_s.truncate(60)
-    said.join("  ·  ")
+    parts = [guard_standing_where(guard, case_id)]
+    parts << (guard.expires_at ? "lifts #{guard.expires_at.strftime("%-d %b")}" : "no end date")
+    parts << guard.reason.to_s.truncate(60)
+    parts.join("  ·  ")
   end
 
   def guard_standing_where(guard, case_id)
@@ -1627,21 +1627,21 @@ module FdHelper
   end
 
   def guard_held_line(guard)
-    said = guard_kind_line(guard)
-    guard.orphaned? ? safe_join([said, ", on no case"]) : said
+    text = guard_kind_line(guard)
+    guard.orphaned? ? safe_join([text, ", on no case"]) : text
   end
 
   def guard_option_note(guard, case_id)
-    said = [guard_standing_where(guard, case_id)]
-    said << (guard.expires_at ? "until #{guard.expires_at.strftime("%-d %b")}" : "no end date")
-    said.join("  ·  ")
+    parts = [guard_standing_where(guard, case_id)]
+    parts << (guard.expires_at ? "until #{guard.expires_at.strftime("%-d %b")}" : "no end date")
+    parts.join("  ·  ")
   end
 
   def guard_already(guard)
-    said = action_label(guard.kind).downcase
-    return said unless guard.channel_scoped?
+    text = action_label(guard.kind).downcase
+    return text unless guard.channel_scoped?
 
-    safe_join([said, " in ", channel_link(guard.channel_id)])
+    safe_join([text, " in ", channel_link(guard.channel_id)])
   end
 
   def guard_whose(guard, case_id)
@@ -1681,7 +1681,7 @@ module FdHelper
     "lifting" => "good"
   }.freeze
 
-  def guard_carry_said(guard)
+  def guard_carry_label(guard)
     GUARD_CARRY_SAID.fetch(guard.carry_state, guard.carry_state)
   end
 
@@ -1693,15 +1693,15 @@ module FdHelper
   end
 
   def guard_footnote(guard, names = Names.none)
-    said = ["opened by #{names[guard.opened_by]}"]
-    said << "since #{guard.opened_at.strftime("%-d %b")}" if guard.opened_at
-    said << (guard.expires_at ? "until #{guard.expires_at.strftime("%-d %b")}" : "with no end date")
-    said << if guard.by_hand?
+    parts = ["opened by #{names[guard.opened_by]}"]
+    parts << "since #{guard.opened_at.strftime("%-d %b")}" if guard.opened_at
+    parts << (guard.expires_at ? "until #{guard.expires_at.strftime("%-d %b")}" : "with no end date")
+    parts << if guard.by_hand?
       "done by hand"
     else
       GUARD_CARRY[guard.carry]
     end
-    said.compact.join("  \u00b7  ")
+    parts.compact.join("  \u00b7  ")
   end
   SETTLE_DEFAULT = {
     Fd::MemberGuard::UNGUARDED => Fd::MemberGuard::CARRY,

@@ -97,11 +97,11 @@ module Fd
       by_action = Action.where(case_id: closed.where(resolution: ACTED).select(:id))
         .group(:type_key).count
 
-      rows = RESOLUTION_TABLE.filter_map do |key, said|
+      rows = RESOLUTION_TABLE.filter_map do |key, row|
         next if key == ACTED
 
         count = by_resolution[key].to_i
-        [said.fetch("label"), count] if count.positive?
+        [row.fetch("label"), count] if count.positive?
       end
 
       acted = Action::WORST_FIRST.filter_map do |key|
@@ -227,10 +227,10 @@ module Fd
     end
 
     def mentioned_but_unlogged(notes: [], reports: [])
-      said = (notes + reports).flat_map { |row| Mentions.ids(row.body) }.uniq
-      return [] if said.empty?
+      row = (notes + reports).flat_map { |row| Mentions.ids(row.body) }.uniq
+      return [] if row.empty?
 
-      (said - participants.map(&:user_id) - Account.where(user_id: said).pluck(:user_id)) -
+      (row - participants.map(&:user_id) - Account.where(user_id: row).pluck(:user_id)) -
         [opened_by]
     end
 

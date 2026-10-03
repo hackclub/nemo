@@ -50,7 +50,7 @@
           <%= form_with url: admin_settings_react_channels_path, method: :post,
                 class: "contents" do %>
             <%= render "admin/channel_picker", field: :channel_id, submit: true,
-                  said: "Add a channel", id: "pick-react-channel" %>
+                  label: "Add a channel", id: "pick-react-channel" %>
           <% end %>
         </div>
       <% end %>
@@ -89,7 +89,7 @@
         <div class="card-tools">
           <%= form_with url: admin_settings_firehouse_path, method: :post, class: "contents" do %>
             <%= render "admin/channel_picker", field: :channel_id, submit: true,
-                  said: @firehouse ? "Move it" : "Pick a channel", id: "pick-firehouse" %>
+                  label: @firehouse ? "Move it" : "Pick a channel", id: "pick-firehouse" %>
           <% end %>
         </div>
       <% end %>
@@ -106,7 +106,7 @@
       </div>
     <% else %>
       <div class="empty">
-        <p class="empty-title">Falling back to FIREHOUSE_CHANNEL_ID</p>
+        <p class="empty-title">Falling back to INTERNAL_LOG_CHANNEL_ID</p>
       </div>
     <% end %>
   </div>

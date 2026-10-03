@@ -5,11 +5,11 @@ module Admin
 
       key = params[:key].to_s
       return refuse("#{key} is not a capability") unless Authz.keys.include?(key)
-      return refuse("#{Authz.label(key)} cannot be handed out") if Authz.locked?(key)
+      return refuse("#{Authz.label(key)} cannot be delegated") if Authz.locked?(key)
 
       settle(key, params[:effect].to_s)
-      redirect_to admin_person_path(who), notice: said(key, params[:effect].to_s)
-    rescue Authz::Grant::NotAllowed => e
+      redirect_to admin_person_path(who), notice: notice_for(key, params[:effect].to_s)
+    rescue Authz::Grant::NotAllowedError => e
       refuse(e.message)
     end
 
@@ -20,9 +20,9 @@ module Admin
       return refuse("#{key} is not a capability") unless Authz.keys.include?(key)
 
       Authz::Grant.live.for_person(who).capabilities.where(name: key)
-        .find_each { |held| take_back(held, key) }
+        .find_each { |held| revoke(held, key) }
       Current.forget_roles
-      redirect_to admin_person_path(who), notice: "#{Authz.label(key)} is back to the role default"
+      redirect_to admin_person_path(who), notice: "#{Authz.label(key)} reset to the role default"
     end
 
     private
@@ -38,10 +38,10 @@ module Admin
       Current.forget_roles
     end
 
-    def take_back(held, key)
+    def revoke(held, key)
       was = held.effect
       ActiveRecord::Base.transaction do
-        held.take_back!(by: current_account.user_id)
+        held.revoke!(by: current_account.user_id)
         Fd::Audit.record(held, "revoked",
           actor: current_account.user_id, request_id: request.request_id,
           before: { "user_id" => who, "capability" => key, "effect" => was },
@@ -58,7 +58,7 @@ module Admin
         after: { "user_id" => who, "capability" => key, "effect" => effect })
     end
 
-    def said(key, effect)
+    def notice_for(key, effect)
       effect == "deny" ? "#{Authz.label(key)} taken off them" : "#{Authz.label(key)} given to them"
     end
 

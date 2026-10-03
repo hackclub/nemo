@@ -24,7 +24,7 @@ class FireEngineFlagTest < ActionDispatch::IntegrationTest
     [fd_cases_path, fd_case_path(kase), fd_members_path, fd_search_path].each do |where|
       get where
       assert_redirected_to root_path
-      assert_match(/fire engine is turned off/, flash[:alert])
+      assert_match(/Fire Engine turned off/, flash[:alert])
     end
   end
 

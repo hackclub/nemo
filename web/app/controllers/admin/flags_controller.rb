@@ -9,15 +9,15 @@ module Admin
     def show
       @flags = Fd::Flag::LISTED.sort_by { |key| Fd::Flag.on?(key) ? 1 : 0 }
       @dark = Fd::Flag::LISTED.reject { |key| Fd::Flag.on?(key) }
-      @losers = Fd::Flag::LISTED.index_with { |key| lose(key) }
+      @losers = Fd::Flag::LISTED.index_with { |key| clear_flag(key) }
       @flipped = Fd::Flag.where(key: Fd::Flag::LISTED).index_by(&:key)
       @names = Fd::Names.for(@flipped.values.filter_map(&:changed_by))
     end
 
     private
 
-    def lose(key)
-      Authz.who_holds(fd?(key) ? "case.read" : "channel.read").size
+    def clear_flag(key)
+      Authz.holders_of(fd?(key) ? "case.read" : "channel.read").size
     end
 
     def fd?(key)

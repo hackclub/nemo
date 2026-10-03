@@ -5,11 +5,11 @@
 <% earlier = local_assigns.fetch(:earlier, 0) %>
 <% thread = local_assigns.fetch(:thread, reports.last) %>
 <% conversation = local_assigns.fetch(:conversation, nil) %>
-<% said_count = local_assigns.fetch(:said_count, messages.size) %>
+<% message_count = local_assigns.fetch(:message_count, messages.size) %>
 
-<div class="chatwrap" data-controller="stick catch-up presence chat-filter"
+<div class="chatwrap" data-controller="sticky pending-flush presence chat-filter"
      data-chat-filter-key-value="<%= kase.id %>"
-     data-catch-up-frame-value="<%= chat_log_id(kase) %>"
+     data-pending-flush-frame-value="<%= chat_log_id(kase) %>"
      data-presence-case-value="<%= kase.id %>"
      data-presence-me-value="<%= current_account&.user_id %>">
 
@@ -27,7 +27,7 @@
       <%= thread.anonymous? ? anonymous_face : face(thread.reporter_user_id) %>
       <span class="grow two-line">
         <b><%= thread.reporter_label(names) %></b>
-        <span><%= chat_head_line([thread], kase, said: said_count) %></span>
+        <span><%= chat_head_line([thread], kase, count: message_count) %></span>
       </span>
     <% else %>
       <span class="grow two-line">

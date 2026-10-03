@@ -7,7 +7,7 @@ class Analytics::MartCohortSurvivalTest < ActiveSupport::TestCase
   end
 
   test "a curve is drawn as far as its last observed day, not to the horizon" do
-    assert_equal 2, curve([100.0, 80.0, 60.0, nil, nil]).drawn_to
+    assert_equal 2, curve([100.0, 80.0, 60.0, nil, nil]).last_filled_index
   end
 
   test "a cohort that has aged through the whole horizon is not partial" do

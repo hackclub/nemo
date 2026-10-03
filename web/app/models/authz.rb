@@ -1,5 +1,5 @@
 class Authz
-  class Unknown < ArgumentError; end
+  class UnknownError < ArgumentError; end
 
   PATH = Rails.root.join("../db/capabilities.yml").freeze
   TABLE = YAML.load_file(PATH).freeze
@@ -15,7 +15,7 @@ class Authz
     def keys = CAPABILITIES.keys
 
     def fetch(key)
-      CAPABILITIES.fetch(key.to_s) { raise Unknown, "#{key} is not a capability" }
+      CAPABILITIES.fetch(key.to_s) { raise UnknownError, "#{key} is not a capability" }
     end
 
     def label(key) = fetch(key).fetch("label")
@@ -91,7 +91,7 @@ class Authz
       roles_held(account.user_id).any? || held(account.user_id).any?
     end
 
-    def who_holds(key)
+    def holders_of(key)
       ApplicationRecord.connection.select_values(
         ApplicationRecord.sanitize_sql([WHO_HOLDS, key.to_s])
       )
@@ -135,15 +135,14 @@ class Authz
       "that is not yours"
     end
 
-    # name the roles the catalogue gives it to, ordinary ones before superadmins
     def refusal(key)
-      said = label(key).downcase
+      label = label(key).downcase
       ordinary, supers = role_names.partition { |role| !superadmin?(role) }
       carried = ordinary.select { |role| baseline(role).include?(key) }
       carried = supers.select { |role| baseline(role).include?(key) } if carried.empty?
-      return "#{said} is not yours to use" if carried.empty?
+      return "#{label} is not yours to use" if carried.empty?
 
-      "#{said} is #{carried.map { |role| role_label(role) }.to_sentence} only"
+      "#{label} is #{carried.map { |role| role_label(role) }.to_sentence} only"
     end
 
     def load_held(user_id)

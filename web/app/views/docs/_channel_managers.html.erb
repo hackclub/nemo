@@ -234,10 +234,10 @@ Retry-After: 34            <span class="c">// 429 only, matches body.retry_after
   </div>
 
   <dl class="doc-defs">
-    <% Api::V1::BaseController::CALLER_ERRORS.each do |status, key, said| %>
+    <% Api::V1::BaseController::CALLER_ERRORS.each do |status, key, text| %>
       <div class="doc-def">
         <dt><%= key %> <em><span class="doc-status<%= " is-bad" if status >= 500 %>"><%= status %></span></em></dt>
-        <dd><%= said %></dd>
+        <dd><%= text %></dd>
       </div>
     <% end %>
   </dl>

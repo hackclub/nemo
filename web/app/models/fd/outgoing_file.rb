@@ -14,7 +14,7 @@ module Fd
       @held["name"].presence || "attachment"
     end
 
-    def said
+    def note
       ON_ITS_WAY
     end
 

@@ -68,7 +68,7 @@ export function profile(id) {
 
 function fallback(img) {
   const span = document.createElement("span")
-  span.className = `${img.className} ${img.dataset.cachetTone || "av-none"}`.trim()
+  span.className = `${img.className} ${img.dataset.cachetTone || "avatar-none"}`.trim()
   span.textContent = img.dataset.cachetInitial || "?"
   span.setAttribute("aria-hidden", "true")
   for (const key of ["user", "name"]) {

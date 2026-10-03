@@ -60,7 +60,7 @@ class FdChannelGuardKindsTest < ActionDispatch::IntegrationTest
     turn_on("sideways")
 
     assert_equal 0, Fd::ChannelGuard.live.where(channel_id: @id).count
-    assert_match(/not a kind of guard/, flash[:alert])
+    assert_match(/not a valid guard kind/, flash[:alert])
   end
 
   test "slow mode keeps the seconds it was given" do

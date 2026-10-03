@@ -79,7 +79,7 @@ module Fd
       spread.last&.opened_at
     end
 
-    def spine
+    def timeline
       span = seconds_covered
       spread.map do |kase|
         at = kase.opened_at

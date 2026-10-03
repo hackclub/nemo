@@ -21,7 +21,7 @@ module Admin
       return refuse unless may_grant?
 
       channel_id = params[:channel_id].to_s
-      return refuse("pick a channel") if channel_id.blank?
+      return refuse("Select a channel") if channel_id.blank?
       unless Analytics::DimChannel.where(channel_id: channel_id, archived: false).exists?
         return refuse("#{channel_id} is not a channel")
       end
@@ -31,7 +31,7 @@ module Admin
       redirect_to back_to,
         notice: "##{channel_id} is now read by every #{Authz.role_label(wanted).downcase}"
     rescue ActiveRecord::RecordNotUnique
-      refuse("the set already holds that channel")
+      refuse("The set already contains that channel")
     end
 
     def destroy
@@ -40,7 +40,7 @@ module Admin
       Channels::Audience::Grant.live.where(role: wanted, channel_id: params[:channel_id])
         .find_each { |held| held.update!(revoked_by: current_account.user_id,
                                         revoked_at: Time.current) }
-      redirect_to back_to, notice: "##{params[:channel_id]} taken out of the set"
+      redirect_to back_to, notice: "##{params[:channel_id]} removed from the set"
     end
 
     private

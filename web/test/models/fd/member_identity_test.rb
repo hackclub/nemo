@@ -18,7 +18,7 @@ class Fd::MemberIdentityTest < ActiveSupport::TestCase
   end
 
   test "reading an identity without an actor is refused, not quietly allowed" do
-    assert_raises(Fd::MemberIdentity::NoActor) do
+    assert_raises(Fd::MemberIdentity::NoActorError) do
       Fd::MemberIdentity.look_up("UMEMBER", actor: nil)
     end
   end

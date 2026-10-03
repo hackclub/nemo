@@ -5,7 +5,7 @@ from slack_sdk.errors import SlackApiError
 
 from bot.core import access
 from bot.nemo import activity, surface
-from bot.nemo.cards import activity as card
+from bot.nemo.views import activity as card
 from bot.nemo.surface import message_activity
 
 ROOM = "C0ANNOUNCE"
@@ -37,28 +37,28 @@ STATS = {
 
 
 def test_the_numbers_are_lifted_off_the_answer():
-    said = activity.shaped(STATS)
-    assert (said["viewers"], said["reacted"], said["clicked"], said["shared"]) == (224, 12, 58, 0)
-    assert said["top_reply_ts"] == "1790701348.867479"
+    stats = activity.shaped(STATS)
+    assert (stats["viewers"], stats["reacted"], stats["clicked"], stats["shared"]) == (224, 12, 58, 0)
+    assert stats["top_reply_ts"] == "1790701348.867479"
 
 
 def test_the_client_split_is_shares_of_the_whole():
-    said = activity.shaped(STATS)
-    assert said["clients"] == [("browser", 123, 55), ("desktop", 75, 33), ("mobile", 26, 12)]
+    stats = activity.shaped(STATS)
+    assert stats["clients"] == [("browser", 123, 55), ("desktop", 75, 33), ("mobile", 26, 12)]
 
 
 def test_a_curve_is_utc_stamps_and_new_viewers_per_bucket():
-    said = activity.shaped(STATS)
-    hour = said["curves"]["1h"]
+    stats = activity.shaped(STATS)
+    hour = stats["curves"]["1h"]
     assert hour[0] == (dt.datetime(2026, 9, 29, 16, 57, 42, tzinfo=dt.UTC), 0)
     assert hour[1][1] == 3
-    assert said["curves"]["30d"] == [], "a span slack did not send is empty, not missing"
+    assert stats["curves"]["30d"] == [], "a span slack did not send is empty, not missing"
 
 
 def test_an_empty_answer_shapes_to_zeros():
-    said = activity.shaped({})
-    assert said["viewers"] == 0
-    assert said["clients"] == [("browser", 0, None), ("desktop", 0, None), ("mobile", 0, None)]
+    stats = activity.shaped({})
+    assert stats["viewers"] == 0
+    assert stats["clients"] == [("browser", 0, None), ("desktop", 0, None), ("mobile", 0, None)]
 
 
 class Conn:
@@ -101,8 +101,8 @@ def test_a_capability_that_is_not_every_account_still_wants_a_grant():
 
 
 def test_the_card_quotes_the_post_and_says_who_where_when():
-    said = activity.shaped(STATS)
-    view = card.view(ROOM, TS, ME, "hello  world", said, found=None, crowd=600)
+    stats = activity.shaped(STATS)
+    view = card.build_view(ROOM, TS, ME, "hello  world", stats, found=None, crowd=600)
     blocks = view["blocks"]
     assert blocks[0]["text"]["text"] == "> hello world"
     assert f"<@{ME}>" in blocks[1]["elements"][0]["text"]
@@ -121,7 +121,7 @@ def test_the_card_quotes_the_post_and_says_who_where_when():
 
 
 def test_a_long_post_is_cut_short_in_the_card():
-    view = card.view(ROOM, TS, ME, "x" * 1000, activity.shaped({}))
+    view = card.build_view(ROOM, TS, ME, "x" * 1000, activity.shaped({}))
     assert len(view["blocks"][0]["text"]["text"]) <= card.QUOTE_LIMIT + 2
 
 
@@ -131,7 +131,7 @@ def test_replies_read_off_the_archive_row():
 
 
 class Answer:
-    """What the slack sdk hands back: not a dict, but it reads like one"""
+    """Stand-in for the Slack SDK response object: mapping-like, not a dict."""
 
     def __init__(self, data):
         self.data = data
@@ -185,7 +185,7 @@ def clicked(author=ME, who=ME, thread_ts=None):
     if thread_ts:
         message["thread_ts"] = thread_ts
     body = {"user": {"id": who}, "channel": {"id": ROOM}, "trigger_id": "T1", "message": message}
-    entry = surface.Entry(surface.SHORTCUT, message_activity.SHORTCUT, "message.read", None)
+    entry = surface.SurfaceEntry(surface.SHORTCUT, message_activity.SHORTCUT, "message.read", None)
     return surface.Ctx(entry, body, Slack(), lambda: None)
 
 
@@ -231,7 +231,7 @@ def test_the_author_gets_a_modal_that_fills_in_once_slack_answers(monkeypatch):
     hold(monkeypatch, stats=activity.shaped(STATS), landed=(8, 5, None))
     ctx = clicked()
     message_activity.asked(ctx)
-    assert ctx.client.opened[0]["view"] == card.reading()
+    assert ctx.client.opened[0]["view"] == card.loading_view()
     filled = ctx.client.updated[0]
     assert filled["view_id"] == "V1"
     assert filled["view"]["title"]["text"] == card.TITLE
@@ -241,7 +241,7 @@ def test_the_author_gets_a_modal_that_fills_in_once_slack_answers(monkeypatch):
 
 def test_a_chart_slack_has_not_finished_taking_is_tried_again(monkeypatch):
     hold(monkeypatch, stats=activity.shaped(STATS), landed=(8, 5, None))
-    monkeypatch.setattr(activity, "chart", lambda *said: ("F1", "1d"))
+    monkeypatch.setattr(activity, "chart", lambda *args: ("F1", "1d"))
     ctx = clicked()
     ctx.client.refuses_the_file = 1
     monkeypatch.setattr(message_activity.time, "sleep", lambda _: None)
@@ -255,7 +255,7 @@ def test_a_chart_slack_has_not_finished_taking_is_tried_again(monkeypatch):
 
 def test_a_chart_slack_keeps_refusing_leaves_the_numbers_standing(monkeypatch):
     hold(monkeypatch, stats=activity.shaped(STATS), landed=(8, 5, None))
-    monkeypatch.setattr(activity, "chart", lambda *said: ("F1", "1d"))
+    monkeypatch.setattr(activity, "chart", lambda *args: ("F1", "1d"))
     ctx = clicked()
     ctx.client.refuses_the_file = message_activity.FILE_TRIES
     monkeypatch.setattr(message_activity.time, "sleep", lambda _: None)
@@ -271,7 +271,7 @@ def test_when_slack_will_not_answer_the_modal_says_so(monkeypatch):
     hold(monkeypatch, stats=None)
     ctx = clicked()
     message_activity.asked(ctx)
-    assert ctx.client.updated[0]["view"] == card.sorry(message_activity.NOT_NOW)
+    assert ctx.client.updated[0]["view"] == card.error_view(message_activity.NOT_NOW)
 
 
 def test_the_shortcut_is_registered_behind_message_read():
@@ -297,8 +297,8 @@ def test_a_curve_renders_to_a_png_of_the_right_size():
 
     from bot.nemo import plot
 
-    said = activity.shaped(STATS)
-    png = plot.render(said["curves"]["1d"], "1d", viewers=said["viewers"])
+    stats = activity.shaped(STATS)
+    png = plot.render(stats["curves"]["1d"], "1d", viewers=stats["viewers"])
     assert png[:8] == b"\x89PNG\r\n\x1a\n"
     assert Image.open(io.BytesIO(png)).size == (plot.WIDE, plot.HIGH)
 
@@ -334,25 +334,25 @@ class Uploader:
 
 
 def test_the_chart_goes_to_slack_privately_and_comes_back_as_a_file_id():
-    said = activity.shaped(STATS)
+    stats = activity.shaped(STATS)
     client = Uploader()
     posted = dt.datetime.now(dt.UTC) - dt.timedelta(hours=5)
-    file_id, span = activity.chart(client, said["curves"], posted, said["viewers"])
+    file_id, span = activity.chart(client, stats["curves"], posted, stats["viewers"])
     assert (file_id, span) == ("F1", "1d")
     assert client.sent[0]["filename"] == "activity-1d.png"
     assert "channel" not in client.sent[0], "the file is not shared anywhere"
 
 
 def test_a_chart_slack_will_not_take_is_simply_left_out():
-    said = activity.shaped(STATS)
-    file_id, span = activity.chart(Uploader(blows_up=True), said["curves"],
-                                   dt.datetime.now(dt.UTC), said["viewers"])
+    stats = activity.shaped(STATS)
+    file_id, span = activity.chart(Uploader(blows_up=True), stats["curves"],
+                                   dt.datetime.now(dt.UTC), stats["viewers"])
     assert file_id is None and span == "1h"
 
 
 def test_the_card_carries_the_chart_and_the_way_to_the_page():
-    said = activity.shaped(STATS)
-    view = card.view(ROOM, TS, ME, "hi", said, chart=("F1", "1d"),
+    stats = activity.shaped(STATS)
+    view = card.build_view(ROOM, TS, ME, "hi", stats, chart=("F1", "1d"),
                      activity_url="https://nemo.test/messages/C0ANNOUNCE/1790701062.123456")
     image = next(one for one in view["blocks"] if one["type"] == "image")
     assert image["slack_file"] == {"id": "F1"}

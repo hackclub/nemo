@@ -1,8 +1,8 @@
 import logging
 
 from bot.core import access, session
-from bot.nemo import answer, cards, chat, memberguards, surface
-from bot.nemo.casework import (
+from bot.nemo import answer, views, chat, memberguards, surface
+from bot.nemo.case_actions import (
     CASE_CATEGORY,
     HELD_BY,
     OPEN_REPORTS,
@@ -22,13 +22,13 @@ from bot.nemo.casework import (
     reverse_action,
     set_category,
 )
-from bot.nemo.channel import ASSIGNEES, SUBJECTS, case_channels, redraw, whisper
+from bot.nemo.channel import ASSIGNEES, SUBJECTS, case_channels, refresh_card, post_ephemeral
 
 log = logging.getLogger("bot.nemo")
 
 
 def register(app, on_reply=None):
-    @app.action(cards.report.CLAIM)
+    @app.action(views.report.CLAIM)
     def on_claim(ack, body, client):
         ack()
         case_id = int(body["actions"][0]["value"])
@@ -37,15 +37,15 @@ def register(app, on_reply=None):
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, "case.open")
             if not allowed:
-                return whisper(client, body, refusal)
+                return post_ephemeral(client, body, refusal)
             if not conn.execute(STILL_OPEN, (case_id,)).fetchone()[0]:
-                return whisper(client, body, f"case {case_id} is already resolved")
+                return post_ephemeral(client, body, f"case {case_id} is already resolved")
             held = [row[0] for row in conn.execute(HELD_BY, (case_id,)).fetchall()]
             if user_id in held:
-                return whisper(client, body, f"case {case_id} is already yours")
+                return post_ephemeral(client, body, f"case {case_id} is already yours")
             if held:
                 who = ", ".join(f"<@{one}>" for one in held)
-                return whisper(
+                return post_ephemeral(
                     client,
                     body,
                     f"case {case_id} is with {who}. Put yourself on it in Fire Engine "
@@ -55,7 +55,7 @@ def register(app, on_reply=None):
 
         log.info("nemo: case %s claimed by %s", case_id, user_id)
 
-    @app.action(cards.report.LOG_ACTION)
+    @app.action(views.report.LOG_ACTION)
     def on_log_action(ack, body, client):
         ack()
         case_id = int(body["actions"][0]["value"])
@@ -64,64 +64,64 @@ def register(app, on_reply=None):
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, "case.act", case_id)
             if not allowed:
-                return whisper(client, body, refusal)
+                return post_ephemeral(client, body, refusal)
             subjects = [row[0] for row in conn.execute(SUBJECTS, (case_id,)).fetchall()]
             held = conn.execute(CASE_CATEGORY, (case_id,)).fetchone()
 
         client.views_open(
             trigger_id=body["trigger_id"],
-            view=cards.action.view(case_id, subjects, held[0] if held else None),
+            view=views.action.build_view(case_id, subjects, held[0] if held else None),
         )
 
-    def settle(conn, case_id, said):
+    def settle(conn, case_id, values):
         return memberguards.settle(
             conn,
-            said.get("type_key"),
-            said.get("target_user_id"),
+            values.get("type_key"),
+            values.get("target_user_id"),
             case_id,
-            said.get("channel_id"),
+            values.get("channel_id"),
         )
 
     def reshape(ack, body, client):
         ack()
         asked = body.get("view") or {}
-        if asked.get("callback_id") != cards.action.CALLBACK:
+        if asked.get("callback_id") != views.action.CALLBACK:
             return
 
         case_id = int(asked["private_metadata"])
-        said = cards.action.picked(asked["state"])
+        values = views.action.submitted_values(asked["state"])
         with session() as conn:
-            standing = settle(conn, case_id, said)
+            standing = settle(conn, case_id, values)
 
         try:
             client.views_update(
                 view_id=asked["id"],
                 hash=asked["hash"],
-                view=cards.action.view(case_id, said=said, standing=standing),
+                view=views.action.build_view(case_id, values=values, standing=standing),
             )
         except Exception as failure:
             log.warning("nemo: could not reshape the action modal: %s", failure)
 
-    for where in (cards.action.KIND, cards.action.TARGET, cards.action.WHERE):
+    for where in (views.action.KIND, views.action.TARGET, views.action.WHERE):
         app.action(where)(reshape)
 
-    @app.view(cards.action.CALLBACK)
+    @app.view(views.action.CALLBACK)
     def on_action_logged(ack, body, view, client):
         case_id = int(view["private_metadata"])
         user_id = body["user"]["id"]
-        said = cards.action.picked(view["state"])
+        values = views.action.submitted_values(view["state"])
 
         with session() as conn:
-            standing = settle(conn, case_id, said)
+            standing = settle(conn, case_id, values)
 
         shown = {block.get("block_id") for block in view.get("blocks", [])}
-        if cards.action.unasked(said, shown, standing):
+        if views.action.requires_refresh(values, shown, standing):
             return ack(
                 response_action="update",
-                view=cards.action.view(case_id, said=said, standing=standing),
+                view=views.action.build_view(case_id, values=values, standing=standing),
             )
 
-        wrong = cards.action.objection(said)
+        wrong = views.action.validation_errors(values)
         if wrong:
             return ack(response_action="errors", errors=wrong)
 
@@ -130,36 +130,36 @@ def register(app, on_reply=None):
             if not allowed:
                 return ack(
                     response_action="errors",
-                    errors={cards.action.KIND: refusal},
+                    errors={views.action.KIND: refusal},
                 )
-            fresh = settle(conn, case_id, said)
-            action_id = log_action(conn, case_id, said, user_id)
-            guard_id = memberguards.settled(conn, action_id, said, fresh, user_id)
+            fresh = settle(conn, case_id, values)
+            action_id = log_action(conn, case_id, values, user_id)
+            guard_id = memberguards.settled(conn, action_id, values, fresh, user_id)
 
         ack()
         with session() as conn:
-            redraw(client, conn, case_id)
+            refresh_card(client, conn, case_id)
         log.info("nemo: action %s logged on case %s by %s, guard %s",
                  action_id, case_id, user_id, guard_id)
 
     MORE = {
-        cards.edit.CATEGORY: ("case.categorise", cards.edit.category_view),
-        cards.edit.NOTE: ("case.note", cards.edit.note_view),
+        views.edit.CATEGORY: ("case.categorise", views.edit.category_view),
+        views.edit.NOTE: ("case.note", views.edit.note_view),
     }
 
-    @app.action(cards.edit.MENU)
+    @app.action(views.edit.MENU)
     def on_more(ack, body, client):
         ack()
-        verb, case_id = cards.edit.asked(body["actions"][0]["selected_option"]["value"])
+        verb, case_id = views.edit.asked(body["actions"][0]["selected_option"]["value"])
         user_id = body["user"]["id"]
         if case_id is None:
             return None
 
-        if verb == cards.edit.REVERSE:
+        if verb == views.edit.REVERSE:
             return on_reverse_asked(body, client, case_id, user_id)
-        if verb == cards.edit.PEOPLE:
+        if verb == views.edit.PEOPLE:
             return on_people_asked(body, client, case_id, user_id)
-        if verb == cards.edit.ASSIGNEES:
+        if verb == views.edit.ASSIGNEES:
             return on_assignees_asked(body, client, case_id, user_id)
 
         wanted = MORE.get(verb)
@@ -170,7 +170,7 @@ def register(app, on_reply=None):
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, key, case_id)
         if not allowed:
-            return whisper(client, body, refusal)
+            return post_ephemeral(client, body, refusal)
 
         client.views_open(trigger_id=body["trigger_id"], view=view_of(case_id))
         return None
@@ -179,62 +179,62 @@ def register(app, on_reply=None):
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, "case.reverse", case_id)
             if not allowed:
-                return whisper(client, body, refusal)
+                return post_ephemeral(client, body, refusal)
             live = live_actions(conn, case_id)
 
         if not live:
-            return whisper(client, body, f"nothing live to reverse on *case {case_id}*")
+            return post_ephemeral(client, body, f"nothing live to reverse on *case {case_id}*")
 
         client.views_open(
             trigger_id=body["trigger_id"],
-            view=cards.reverse.view(case_id, live),
+            view=views.reverse.build_view(case_id, live),
         )
         return None
 
-    @app.view(cards.reverse.CALLBACK)
+    @app.view(views.reverse.CALLBACK)
     def on_reversed(ack, body, view, client):
         case_id = int(view["private_metadata"])
         user_id = body["user"]["id"]
-        said = cards.reverse.picked(view["state"])
+        values = views.reverse.submitted_values(view["state"])
 
-        wrong = cards.reverse.objection(said)
+        wrong = views.reverse.validation_errors(values)
         if wrong:
             return ack(response_action="errors", errors=wrong)
 
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, "case.reverse", case_id)
             if not allowed:
-                return ack(response_action="errors", errors={cards.reverse.WHICH: refusal})
-            done = reverse_action(conn, case_id, said["action_id"], said["reason"], user_id)
+                return ack(response_action="errors", errors={views.reverse.WHICH: refusal})
+            done = reverse_action(conn, case_id, values["action_id"], values["reason"], user_id)
 
         if not done:
             return ack(
                 response_action="errors",
-                errors={cards.reverse.WHICH: "That action is not live on this case anymore."},
+                errors={views.reverse.WHICH: "That action is not live on this case anymore."},
             )
 
         ack()
         with session() as conn:
-            redraw(client, conn, case_id)
-        log.info("nemo: action %s reversed on case %s by %s", said["action_id"], case_id, user_id)
+            refresh_card(client, conn, case_id)
+        log.info("nemo: action %s reversed on case %s by %s", values["action_id"], case_id, user_id)
 
     def on_people_asked(body, client, case_id, user_id):
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, "case.people", case_id)
             if not allowed:
-                return whisper(client, body, refusal)
+                return post_ephemeral(client, body, refusal)
             held = participants(conn, case_id)
 
         client.views_open(
             trigger_id=body["trigger_id"],
-            view=cards.people.view(case_id, held),
+            view=views.people.build_view(case_id, held),
         )
         return None
 
-    @app.action(cards.people.REMOVE)
+    @app.action(views.people.REMOVE)
     def on_people_removed(ack, body, client):
         ack()
-        user_id, role, case_id = cards.people.removed(body["actions"][0]["value"])
+        user_id, role, case_id = views.people.removed(body["actions"][0]["value"])
         actor = body["user"]["id"]
         if case_id is None:
             return None
@@ -242,7 +242,7 @@ def register(app, on_reply=None):
         with session() as conn:
             allowed, refusal = access.may(conn, actor, "case.people", case_id)
             if not allowed:
-                return whisper(client, body, refusal)
+                return post_ephemeral(client, body, refusal)
             remove_participant(conn, case_id, user_id, role, actor)
             held = participants(conn, case_id)
 
@@ -250,39 +250,39 @@ def register(app, on_reply=None):
             client.views_update(
                 view_id=body["view"]["id"],
                 hash=body["view"]["hash"],
-                view=cards.people.view(case_id, held),
+                view=views.people.build_view(case_id, held),
             )
         except Exception as failure:
             log.warning("nemo: could not refresh the people modal: %s", failure)
 
         with session() as conn:
-            redraw(client, conn, case_id)
+            refresh_card(client, conn, case_id)
         log.info("nemo: %s taken off case %s (%s) by %s", user_id, case_id, role, actor)
         return None
 
-    @app.view(cards.people.CALLBACK)
+    @app.view(views.people.CALLBACK)
     def on_people_submitted(ack, body, view, client):
         case_id = int(view["private_metadata"])
         user_id = body["user"]["id"]
-        said = cards.people.picked(view["state"])
+        values = views.people.submitted_values(view["state"])
 
-        wrong = cards.people.objection(said)
+        wrong = views.people.validation_errors(values)
         if wrong:
             return ack(response_action="errors", errors=wrong)
 
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, "case.people", case_id)
             if not allowed:
-                return ack(response_action="errors", errors={cards.people.WHO: refusal})
+                return ack(response_action="errors", errors={views.people.WHO: refusal})
             added = add_participants(
-                conn, case_id, said["user_ids"], said["role"], user_id
+                conn, case_id, values["user_ids"], values["role"], user_id
             )
             held = participants(conn, case_id)
 
-        ack(response_action="update", view=cards.people.view(case_id, held))
+        ack(response_action="update", view=views.people.build_view(case_id, held))
         with session() as conn:
-            redraw(client, conn, case_id)
-        already = [one for one in said["user_ids"] if one not in added]
+            refresh_card(client, conn, case_id)
+        already = [one for one in values["user_ids"] if one not in added]
         log.info("nemo: case %s people added %s (already: %s) by %s",
                  case_id, added, already, user_id)
         return None
@@ -291,19 +291,19 @@ def register(app, on_reply=None):
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, "case.open", case_id)
             if not allowed:
-                return whisper(client, body, refusal)
+                return post_ephemeral(client, body, refusal)
             held = [row[0] for row in conn.execute(ASSIGNEES, (case_id,)).fetchall()]
 
         client.views_open(
             trigger_id=body["trigger_id"],
-            view=cards.assignees.view(case_id, held),
+            view=views.assignees.build_view(case_id, held),
         )
         return None
 
-    @app.action(cards.assignees.REMOVE)
+    @app.action(views.assignees.REMOVE)
     def on_assignee_removed(ack, body, client):
         ack()
-        user_id, case_id = cards.assignees.removed(body["actions"][0]["value"])
+        user_id, case_id = views.assignees.removed(body["actions"][0]["value"])
         actor = body["user"]["id"]
         if case_id is None:
             return None
@@ -311,7 +311,7 @@ def register(app, on_reply=None):
         with session() as conn:
             allowed, refusal = access.may(conn, actor, "case.open", case_id)
             if not allowed:
-                return whisper(client, body, refusal)
+                return post_ephemeral(client, body, refusal)
             remove_assignee(conn, case_id, user_id, actor)
             held = [row[0] for row in conn.execute(ASSIGNEES, (case_id,)).fetchall()]
 
@@ -319,91 +319,91 @@ def register(app, on_reply=None):
             client.views_update(
                 view_id=body["view"]["id"],
                 hash=body["view"]["hash"],
-                view=cards.assignees.view(case_id, held),
+                view=views.assignees.build_view(case_id, held),
             )
         except Exception as failure:
             log.warning("nemo: could not refresh the assignees modal: %s", failure)
 
         with session() as conn:
-            redraw(client, conn, case_id)
+            refresh_card(client, conn, case_id)
         log.info("nemo: %s taken off case %s by %s", user_id, case_id, actor)
         return None
 
-    @app.view(cards.assignees.CALLBACK)
+    @app.view(views.assignees.CALLBACK)
     def on_assignees_submitted(ack, body, view, client):
         case_id = int(view["private_metadata"])
         user_id = body["user"]["id"]
-        said = cards.assignees.picked(view["state"])
+        values = views.assignees.submitted_values(view["state"])
 
-        wrong = cards.assignees.objection(said)
+        wrong = views.assignees.validation_errors(values)
         if wrong:
             return ack(response_action="errors", errors=wrong)
 
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, "case.open", case_id)
             if not allowed:
-                return ack(response_action="errors", errors={cards.assignees.WHO: refusal})
+                return ack(response_action="errors", errors={views.assignees.WHO: refusal})
             if not conn.execute(STILL_OPEN, (case_id,)).fetchone()[0]:
                 return ack(
                     response_action="errors",
-                    errors={cards.assignees.WHO: f"case {case_id} is already resolved"},
+                    errors={views.assignees.WHO: f"case {case_id} is already resolved"},
                 )
-            added = assign_people(conn, case_id, said["user_ids"], user_id)
+            added = assign_people(conn, case_id, values["user_ids"], user_id)
             held = [row[0] for row in conn.execute(ASSIGNEES, (case_id,)).fetchall()]
 
-        ack(response_action="update", view=cards.assignees.view(case_id, held))
+        ack(response_action="update", view=views.assignees.build_view(case_id, held))
         with session() as conn:
-            redraw(client, conn, case_id)
-        already = [one for one in said["user_ids"] if one not in added]
+            refresh_card(client, conn, case_id)
+        already = [one for one in values["user_ids"] if one not in added]
         log.info("nemo: case %s assignees added %s (already: %s) by %s",
                  case_id, added, already, user_id)
         return None
 
-    @app.view(cards.edit.CATEGORY)
+    @app.view(views.edit.CATEGORY)
     def on_category(ack, body, view, client):
         case_id = int(view["private_metadata"])
         user_id = body["user"]["id"]
-        key = cards.edit.what_picked(view["state"])
+        key = views.edit.what_picked(view["state"])
 
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, "case.categorise", case_id)
             if not allowed:
-                return ack(response_action="errors", errors={cards.edit.WHAT: refusal})
+                return ack(response_action="errors", errors={views.edit.WHAT: refusal})
             settled = set_category(conn, case_id, key, user_id)
 
         if not settled:
             return ack(
                 response_action="errors",
-                errors={cards.edit.WHAT: f"Case {case_id} already has a category."},
+                errors={views.edit.WHAT: f"Case {case_id} already has a category."},
             )
 
         ack()
         with session() as conn:
-            redraw(client, conn, case_id)
+            refresh_card(client, conn, case_id)
         log.info("nemo: case %s is %s", case_id, key)
         return None
 
-    @app.view(cards.edit.NOTE)
+    @app.view(views.edit.NOTE)
     def on_note(ack, body, view, client):
         case_id = int(view["private_metadata"])
         user_id = body["user"]["id"]
-        said = cards.edit.said_picked(view["state"])
+        values = views.edit.submitted_values(view["state"])
 
-        wrong = cards.edit.note_objection(said)
+        wrong = views.edit.note_objection(values)
         if wrong:
             return ack(response_action="errors", errors=wrong)
 
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, "case.note", case_id)
             if not allowed:
-                return ack(response_action="errors", errors={cards.edit.SAID: refusal})
-            note_id = keep_note(conn, case_id, said, user_id)
+                return ack(response_action="errors", errors={views.edit.NOTE_BODY: refusal})
+            note_id = keep_note(conn, case_id, values, user_id)
 
         ack()
         log.info("nemo: note %s kept on case %s", note_id, case_id)
         return None
 
-    @app.action(cards.report.REOPEN)
+    @app.action(views.report.REOPEN)
     def on_reopen(ack, body, client):
         ack()
         case_id = int(body["actions"][0]["value"])
@@ -412,18 +412,18 @@ def register(app, on_reply=None):
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, "case.reopen", case_id)
             if not allowed:
-                return whisper(client, body, refusal)
+                return post_ephemeral(client, body, refusal)
             back = reopen(conn, case_id, user_id)
 
         if not back:
-            return whisper(client, body, f"case {case_id} is already open")
+            return post_ephemeral(client, body, f"case {case_id} is already open")
 
         with session() as conn:
-            redraw(client, conn, case_id)
+            refresh_card(client, conn, case_id)
         log.info("nemo: case %s reopened by %s", case_id, user_id)
         return None
 
-    @app.action(cards.report.RESOLVE)
+    @app.action(views.report.RESOLVE)
     def on_resolve_asked(ack, body, client):
         ack()
         case_id = int(body["actions"][0]["value"])
@@ -432,46 +432,46 @@ def register(app, on_reply=None):
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, "case.resolve", case_id)
             if not allowed:
-                return whisper(client, body, refusal)
+                return post_ephemeral(client, body, refusal)
             live = live_actions(conn, case_id)
             open_ones = counted(conn, OPEN_REPORTS, case_id)
 
         client.views_open(
             trigger_id=body["trigger_id"],
-            view=cards.resolve.view(case_id, live, open_ones),
+            view=views.resolve.build_view(case_id, live, open_ones),
         )
 
-    @app.view(cards.resolve.CALLBACK)
+    @app.view(views.resolve.CALLBACK)
     def on_resolved(ack, body, view, client):
         case_id = int(view["private_metadata"])
         user_id = body["user"]["id"]
 
         with session() as conn:
             live = live_actions(conn, case_id)
-        said = cards.resolve.picked(view["state"], live)
+        values = views.resolve.submitted_values(view["state"], live)
 
-        wrong = cards.resolve.objection(said)
+        wrong = views.resolve.validation_errors(values)
         if wrong:
             return ack(response_action="errors", errors=wrong)
 
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, "case.resolve", case_id)
             if not allowed:
-                return ack(response_action="errors", errors={cards.resolve.WHY: refusal})
-            told = resolve(conn, case_id, said, user_id)
+                return ack(response_action="errors", errors={views.resolve.WHY: refusal})
+            notified = resolve(conn, case_id, values, user_id)
 
-        if told is None:
+        if notified is None:
             return ack(
                 response_action="errors",
-                errors={cards.resolve.WHY: f"Case {case_id} was already resolved."},
+                errors={views.resolve.WHY: f"Case {case_id} was already resolved."},
             )
 
         ack()
         with session() as conn:
-            redraw(client, conn, case_id)
-        log.info("nemo: case %s resolved by %s, %s told", case_id, user_id, told)
+            refresh_card(client, conn, case_id)
+        log.info("nemo: case %s resolved by %s, %s notified", case_id, user_id, notified)
 
-    def say_no(event, thread_ts, client, said, refusal):
+    def post_refusal(event, thread_ts, client, what, refusal):
         try:
             client.reactions_add(
                 channel=event["channel"], timestamp=event["ts"], name=answer.STUCK
@@ -480,7 +480,7 @@ def register(app, on_reply=None):
                 channel=event["channel"],
                 user=event["user"],
                 thread_ts=thread_ts,
-                text=f"{said}. {refusal}",
+                text=f"{what}. {refusal}",
             )
         except Exception as failure:
             log.warning("nemo: could not say why it was refused: %s", failure)
@@ -492,7 +492,7 @@ def register(app, on_reply=None):
         if allowed:
             return True
 
-        say_no(event, thread_ts, client, "nothing was sent", refusal)
+        post_refusal(event, thread_ts, client, "nothing was sent", refusal)
         log.info("nemo: refused an answer from %s on case %s", event.get("user"), case_id)
         return False
 
@@ -530,7 +530,7 @@ def register(app, on_reply=None):
 
         return on_reply(
             thread_ts,
-            aimed["said"],
+            aimed["body"],
             event.get("user"),
             signed=aimed["signed"],
             files=event.get("files") or [],
@@ -545,7 +545,7 @@ def register(app, on_reply=None):
             allowed, refusal = access.may(conn, event.get("user"), "case.chat", case_id)
 
         if not allowed:
-            say_no(event, thread_ts, client, "nothing was kept", refusal)
+            post_refusal(event, thread_ts, client, "nothing was kept", refusal)
             log.info("nemo: refused chat from %s on case %s", event.get("user"), case_id)
             return
 

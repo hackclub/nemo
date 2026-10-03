@@ -4,7 +4,7 @@
   .menu > summary::-webkit-details-marker { display: none; }
   .car { font-size: var(--t-tiny); color: var(--ink-4); margin-left: 1px; }
 
-  .menu-pop, .pick-pop, .picker-pop, .rooms-pop, .dp-pop, .mention-pop, .area-pop {
+  .menu-pop, .pick-pop, .picker-pop, .rooms-pop, .datepicker-pop, .mention-pop, .area-pop {
     position: absolute;
     top: calc(100% + 5px);
     left: 0;
@@ -24,7 +24,7 @@
     animation: rise var(--dur-2) var(--ease-out) both;
   }
   .menu-pop[popover], .pick-pop[popover], .picker-pop[popover],
-  .rooms-pop[popover], .dp-pop[popover], .mention-pop[popover] {
+  .rooms-pop[popover], .datepicker-pop[popover], .mention-pop[popover] {
     position: fixed;
     inset: auto;
     overflow: hidden auto;
@@ -492,15 +492,15 @@
     transition: opacity var(--dur-3) var(--ease), translate var(--dur-3) var(--ease);
   }
   .toast.is-leaving, .topbar-msg.is-leaving { opacity: 0; translate: 0 8px; }
-  .told-mark { flex: none; margin-top: 1px; color: var(--ink-3); }
-  .topbar-msg-good .told-mark { color: var(--good); }
-  .topbar-msg-warn .told-mark { color: var(--warn); }
-  .topbar-msg-bad .told-mark { color: var(--crit); }
-  .told-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
-  .told-title { font-size: var(--t-body); font-weight: 550; color: var(--ink); }
-  .told-said { font-size: var(--t-small); color: var(--ink-3); }
-  .told-did a { font-size: var(--t-small); font-weight: 500; }
-  .told-shut {
+  .flash-mark { flex: none; margin-top: 1px; color: var(--ink-3); }
+  .topbar-msg-good .flash-mark { color: var(--good); }
+  .topbar-msg-warn .flash-mark { color: var(--warn); }
+  .topbar-msg-bad .flash-mark { color: var(--crit); }
+  .flash-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+  .flash-title { font-size: var(--t-body); font-weight: 550; color: var(--ink); }
+  .flash-detail { font-size: var(--t-small); color: var(--ink-3); }
+  .flash-action a { font-size: var(--t-small); font-weight: 500; }
+  .flash-close {
     flex: none;
     display: grid;
     place-items: center;
@@ -511,12 +511,12 @@
     background: none;
     color: var(--ink-4);
   }
-  .told-shut:hover { background: var(--hover); color: var(--ink); }
+  .flash-close:hover { background: var(--hover); color: var(--ink); }
 
-  .dp-pop[popover] { padding: var(--s-2xs); min-width: 250px; }
-  .dp-head { display: flex; align-items: center; gap: var(--s-2xs); padding: 2px 4px 8px; }
-  .dp-title { font-size: var(--t-body); font-weight: 600; flex: 1 1 auto; text-align: center; }
-  .dp-nav {
+  .datepicker-pop[popover] { padding: var(--s-2xs); min-width: 250px; }
+  .datepicker-head { display: flex; align-items: center; gap: var(--s-2xs); padding: 2px 4px 8px; }
+  .datepicker-title { font-size: var(--t-body); font-weight: 600; flex: 1 1 auto; text-align: center; }
+  .datepicker-nav {
     display: grid;
     place-items: center;
     width: 24px;
@@ -526,9 +526,9 @@
     background: none;
     color: var(--ink-3);
   }
-  .dp-nav:hover { background: var(--hover); color: var(--ink); }
-  .dp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
-  .dp-dow {
+  .datepicker-nav:hover { background: var(--hover); color: var(--ink); }
+  .datepicker-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+  .datepicker-dow {
     display: grid;
     place-items: center;
     height: 22px;
@@ -537,7 +537,7 @@
     text-transform: uppercase;
     color: var(--ink-4);
   }
-  .dp-day {
+  .datepicker-day {
     display: grid;
     place-items: center;
     height: 28px;
@@ -548,11 +548,11 @@
     font-size: var(--t-small);
     font-variant-numeric: tabular-nums;
   }
-  .dp-day:hover { background: var(--hover); color: var(--ink); }
-  .dp-day[aria-selected="true"], .dp-day.on { background: var(--accent); color: var(--accent-on); font-weight: 600; }
-  .dp-day:disabled { color: var(--ink-4); opacity: 0.4; cursor: not-allowed; }
-  .dp-blank { visibility: hidden; }
-  .dp-trigger { display: inline-flex; }
+  .datepicker-day:hover { background: var(--hover); color: var(--ink); }
+  .datepicker-day[aria-selected="true"], .datepicker-day.on { background: var(--accent); color: var(--accent-on); font-weight: 600; }
+  .datepicker-day:disabled { color: var(--ink-4); opacity: 0.4; cursor: not-allowed; }
+  .datepicker-blank { visibility: hidden; }
+  .datepicker-trigger { display: inline-flex; }
 
   .pick {
     position: relative;

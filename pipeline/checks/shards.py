@@ -31,14 +31,14 @@ def survey(env=None):
     return [(index, identify(token)) for index, token in shards.discover(env)]
 
 
-def the_pool_is_configured(_conn, found):
+def pool_configured(_conn, found):
     if not found:
         return ("the pool is configured", "warn",
                 f"no {shards.PREFIX}n set, replies stay on the proxy", "1 or more")
     return ("the pool is configured", "pass", f"{len(found)} token(s)", "1 or more")
 
 
-def every_token_is_live(_conn, found):
+def tokens_valid(_conn, found):
     dead = [f"{shards.PREFIX}{index} ({error})" for index, (who, error) in found if who is None]
     if not found:
         return ("every token is live", "pass", "no token to probe", "0 dead")
@@ -46,7 +46,7 @@ def every_token_is_live(_conn, found):
             f"{len(dead)} dead: {', '.join(dead)}" if dead else f"{len(found)} live", "0 dead")
 
 
-def every_token_is_a_user_token(_conn, found):
+def tokens_are_user_tokens(_conn, found):
     bots = [f"{shards.PREFIX}{index}" for index, (who, _) in found if who and who.get("bot_id")]
     return ("every token is a user token", "pass" if not bots else "fail",
             f"{', '.join(bots)} carry a bot_id, so they cannot read unjoined channels"
@@ -54,25 +54,25 @@ def every_token_is_a_user_token(_conn, found):
             "0 bot tokens")
 
 
-def every_token_points_at_one_workspace(_conn, found):
+def tokens_single_workspace(_conn, found):
     teams = {who.get("team_id") for _, (who, _) in found if who}
     teams.discard(None)
     return ("every token points at one workspace", "pass" if len(teams) <= 1 else "fail",
             f"{len(teams)} workspace(s) across the pool", "1 workspace")
 
 
-def no_token_is_repeated(_conn, _found):
+def tokens_unique(_conn, _found):
     trouble = [note for note in shards.problems() if "repeats" in note]
     return ("no token is repeated", "pass" if not trouble else "fail",
             "; ".join(trouble) if trouble else "every token is distinct", "0 repeats")
 
 
 CHECKS = (
-    the_pool_is_configured,
-    every_token_is_live,
-    every_token_is_a_user_token,
-    every_token_points_at_one_workspace,
-    no_token_is_repeated,
+    pool_configured,
+    tokens_valid,
+    tokens_are_user_tokens,
+    tokens_single_workspace,
+    tokens_unique,
 )
 
 

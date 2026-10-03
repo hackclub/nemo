@@ -11,7 +11,7 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th class="said-cell">permission</th>
+            <th class="detail-cell">permission</th>
             <th class="col-btn"></th>
           </tr>
         </thead>
@@ -19,7 +19,7 @@
           <% Api::Scope::KEYS.each do |key| %>
             <% on = everywhere?(key) %>
             <tr>
-              <td class="said-cell">
+              <td class="detail-cell">
                 <span class="two-line">
                   <b><%= Api::Scope.label(key) %></b>
                   <span><%= Api::Scope.covers(key) %></span>
@@ -67,7 +67,7 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th class="said-cell">permission</th>
+                  <th class="detail-cell">permission</th>
                   <th class="col-btn"></th>
                 </tr>
               </thead>
@@ -76,7 +76,7 @@
                   <% all = everywhere?(key) %>
                   <% mine = granted?(app, key) %>
                   <tr>
-                    <td class="said-cell">
+                    <td class="detail-cell">
                       <b><%= Api::Scope.label(key) %></b>
                     </td>
                     <td class="col-btn">

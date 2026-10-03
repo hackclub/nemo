@@ -77,9 +77,9 @@ class PrometheanChannelsTest < ActionDispatch::IntegrationTest
     assert_match(/no data for this channel yet/, response.body)
   end
 
-  test "the promethean role cannot be handed out by hand" do
+  test "the promethean role cannot be delegated by hand" do
     assert_not_includes Authz.grantable_roles, "promethean"
-    assert_raises(Authz::Grant::NotAllowed) do
+    assert_raises(Authz::Grant::NotAllowedError) do
       Authz::Grant.give!(WHO, kind: "role", name: "promethean", by: "test")
     end
   end

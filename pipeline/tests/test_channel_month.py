@@ -74,4 +74,4 @@ def test_tail_sweep_adds_only_channels_the_shards_missed():
 
 def test_absorb_reports_zero_when_nothing_is_new():
     found = {"C1": rec("C1", "a")}
-    assert cm.absorb([rec("C1", "a")], found, None) == 0
+    assert cm.merge_records([rec("C1", "a")], found, None) == 0

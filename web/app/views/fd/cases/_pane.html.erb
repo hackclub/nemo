@@ -9,8 +9,8 @@
         <% end %>
       <% end %>
     </nav>
-    <div class="qtools">
-      <label class="vh" for="pane-case-filter">Filter the queue</label>
+    <div class="queue-tools">
+      <label class="visually-hidden" for="pane-case-filter">Filter the queue</label>
       <input class="input input-sm grow" id="pane-case-filter" type="search"
              autocomplete="off" placeholder="Filter by number, handle, or words"
              data-pane-filter-target="query" data-action="input->pane-filter#filter">
@@ -27,10 +27,10 @@
     <% if cases.any? %>
       <div aria-label="Cases">
         <% cases.each do |kase| %>
-          <%= link_to fd_case_path(kase, query.to_params), class: "qrow", role: "option",
+          <%= link_to fd_case_path(kase, query.to_params), class: "queue-row", role: "option",
                 aria: { selected: (open_id == kase.id).to_s },
                 data: { pane_filter_target: "row", action: "click->pane#hide" } do %>
-            <%= render "fd/cases/qrow", kase: kase, violations: violations,
+            <%= render "fd/cases/queue_row", kase: kase, violations: violations,
                   priors_by_user: priors_by_user, reachable: local_assigns[:reachable] %>
           <% end %>
         <% end %>

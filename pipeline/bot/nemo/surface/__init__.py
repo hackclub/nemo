@@ -13,11 +13,11 @@ COMMAND = "command"
 ENTRIES = []
 
 
-class Undeclared(RuntimeError):
-    """A Slack surface that writes without naming the capability it needs"""
+class UndeclaredCapabilityError(RuntimeError):
+    """Raised when a Slack surface writes without declaring the capability it needs."""
 
 
-class Entry:
+class SurfaceEntry:
     def __init__(self, kind, key, needs, fn, refuse_block=None, open_to_all=False, tag=None):
         self.kind = kind
         self.key = key
@@ -34,12 +34,12 @@ class Entry:
 def bind(kind, key, fn, tag=None):
     name = tag or getattr(fn, "__qualname__", repr(fn))
     ENTRIES[:] = [one for one in ENTRIES if one.tag != name]
-    ENTRIES.append(Entry(kind, key, None, fn, open_to_all=True, tag=name))
+    ENTRIES.append(SurfaceEntry(kind, key, None, fn, open_to_all=True, tag=name))
 
 
 def keep(kind, key, needs, refuse_block=None, open_to_all=False):
     def hold(fn):
-        ENTRIES.append(Entry(kind, key, needs, fn, refuse_block, open_to_all))
+        ENTRIES.append(SurfaceEntry(kind, key, needs, fn, refuse_block, open_to_all))
         return fn
 
     return hold
@@ -75,17 +75,17 @@ class Ctx:
 
     @property
     def user_id(self):
-        said = self.body.get("user")
-        if isinstance(said, dict):
-            return said.get("id")
-        return said or self.payload.get("user")
+        found = self.body.get("user")
+        if isinstance(found, dict):
+            return found.get("id")
+        return found or self.payload.get("user")
 
     @property
     def channel_id(self):
-        said = self.body.get("channel")
-        if isinstance(said, dict):
-            return said.get("id")
-        return said or self.payload.get("channel")
+        found = self.body.get("channel")
+        if isinstance(found, dict):
+            return found.get("id")
+        return found or self.payload.get("channel")
 
     @property
     def message_ts(self):
@@ -119,18 +119,18 @@ class Ctx:
                 return
             log.info("nemo: could not join %s: %s", where, failure)
 
-    def whisper(self, said, channel_id=None, thread_ts=None):
+    def post_ephemeral(self, message, channel_id=None, thread_ts=None):
         room = channel_id or self.channel_id
         if not room:
-            log.info("nemo: nowhere to say %r", said)
+            log.info("nemo: nowhere to say %r", message)
             return
         try:
             self.client.chat_postEphemeral(
                 channel=room, user=self.user_id,
-                thread_ts=thread_ts or self.thread_ts, text=said,
+                thread_ts=thread_ts or self.thread_ts, text=message,
             )
         except Exception as failure:
-            log.warning("nemo: could not whisper: %s", failure)
+            log.warning("nemo: could not post an ephemeral message: %s", failure)
 
 
 def refused(entry, ctx, why):
@@ -143,7 +143,7 @@ def refused(entry, ctx, why):
         ctx.ack(response_action="errors", errors={entry.refuse_block: why})
         return
     ctx.acknowledge()
-    ctx.whisper(why)
+    ctx.post_ephemeral(why)
 
 
 def allowed(entry, ctx):
@@ -171,7 +171,7 @@ def guarded(entry):
 def declared():
     missing = [one for one in ENTRIES if not one.open_to_all and not one.needs]
     if missing:
-        raise Undeclared(
+        raise UndeclaredCapabilityError(
             "these Slack surfaces write without declaring a capability: "
             + ", ".join(f"{one.kind}:{one.key}" for one in missing)
         )

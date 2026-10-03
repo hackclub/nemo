@@ -3,8 +3,8 @@ module Fd
     permit "channel.guard"
 
     def create
-      return refuse("that is not a kind of guard") unless ChannelGuard.kind?(kind)
-      return refuse("this channel is guarded already") if live_guard
+      return refuse("That is not a valid guard kind") unless ChannelGuard.kind?(kind)
+      return refuse("This channel is already guarded") if live_guard
 
       problem = settings_objection
       return refuse(problem) if problem
@@ -15,12 +15,12 @@ module Fd
         audit(guard, "opened", after: guard.settings)
       end
 
-      redirect_to here, notice: "#{guard_said} is on"
+      redirect_to here, notice: "#{guard_label_text.upcase_first} turned on"
     end
 
     def update
       guard = live_guard
-      return refuse("this channel is not guarded that way") if guard.nil?
+      return refuse("This channel is not guarded that way") if guard.nil?
 
       problem = settings_objection
       return refuse(problem) if problem
@@ -31,12 +31,12 @@ module Fd
         audit(guard, "tuned", before: was, after: guard.settings)
       end
 
-      redirect_to here, notice: "#{guard_said} changed"
+      redirect_to here, notice: "#{guard_label_text.upcase_first} updated"
     end
 
     def destroy
       guard = live_guard
-      return refuse("this channel is not guarded that way") if guard.nil?
+      return refuse("This channel is not guarded that way") if guard.nil?
 
       writing do
         guard.update!(state: "lifted", lifted_at: Time.current,
@@ -44,7 +44,7 @@ module Fd
         audit(guard, "lifted")
       end
 
-      redirect_to here, notice: "#{guard_said} is off, the list is kept"
+      redirect_to here, notice: "#{guard_label_text.upcase_first} turned off; the list is kept"
     end
 
     private
@@ -61,7 +61,7 @@ module Fd
       @live_guard ||= ChannelGuard.live_for(channel_id, kind: kind)
     end
 
-    def guard_said
+    def guard_label_text
       FdChannelsHelper::GUARD_LABELS.fetch(kind, kind).downcase
     end
 
@@ -81,13 +81,13 @@ module Fd
     end
 
     def seconds
-      said = params[:seconds].to_s.strip
-      said.present? ? said.to_i : ChannelGuard::SECONDS_TO_START
+      given = params[:seconds].to_s.strip
+      given.present? ? given.to_i : ChannelGuard::SECONDS_TO_START
     end
 
     def min_age_days
-      said = params[:min_age_days].to_s.strip
-      said.present? ? said.to_i : ChannelGuard::DAYS_TO_START
+      given = params[:min_age_days].to_s.strip
+      given.present? ? given.to_i : ChannelGuard::DAYS_TO_START
     end
 
     def settings_objection

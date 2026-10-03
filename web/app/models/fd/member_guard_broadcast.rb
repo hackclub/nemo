@@ -11,8 +11,8 @@ module Fd
     def self.frame(subject_id) = "member-standing-#{subject_id}"
 
     def self.subject_from(payload)
-      said = payload.to_s.strip.upcase
-      said if said.match?(MEMBER_ID)
+      user_id = payload.to_s.strip.upcase
+      user_id if user_id.match?(MEMBER_ID)
     end
 
     def self.tag(subject_id)

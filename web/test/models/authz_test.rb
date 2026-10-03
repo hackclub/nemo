@@ -39,7 +39,7 @@ class AuthzTest < ActiveSupport::TestCase
   end
 
   test "an unknown capability is refused rather than treated as absent" do
-    assert_raises(Authz::Unknown) { Authz.record_scope("case.explode") }
+    assert_raises(Authz::UnknownError) { Authz.record_scope("case.explode") }
   end
 
   test "a scoped capability still answers the unscoped question for the UI" do

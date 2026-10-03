@@ -19,11 +19,11 @@ class Fd::AuditTest < ActiveSupport::TestCase
   end
 
   test "a record outside the conduct schema is refused rather than mislabelled" do
-    assert_raises(Fd::Audit::UnauditableRecord) { Fd::Audit.entity_type(Account.new) }
+    assert_raises(Fd::Audit::UnauditableRecordError) { Fd::Audit.entity_type(Account.new) }
   end
 
   test "a verb outside the vocabulary is refused" do
-    assert_raises(Fd::Audit::UnknownVerb) { record(kase, "yeeted") }
+    assert_raises(Fd::Audit::UnknownVerbError) { record(kase, "yeeted") }
   end
 
   test "a create has no before, because there was no before" do
@@ -32,7 +32,7 @@ class Fd::AuditTest < ActiveSupport::TestCase
     assert_equal "UFF1", entry.after["opened_by"]
   end
 
-  test "a row keyed by more than its id is filed under the case it belongs to" do
+  test "a row keyed by expand than its id is filed under the case it belongs to" do
     target = kase
     person = target.add_subject!("UANOTHER")
     entry = record(person, "attached", entity_id: target.id)

@@ -21,7 +21,7 @@ module Fd
       [ua_app, ua_os].compact_blank.join(" · ").presence
     end
 
-    def whereabouts
+    def location
       [country, region.presence && region.to_s].compact_blank.join(" · ").presence
     end
   end

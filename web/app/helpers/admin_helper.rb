@@ -15,9 +15,9 @@ module AdminHelper
   def role_standing(user_id, roles: nil, extras: nil)
     roles ||= Authz.roles_held(user_id)
     extras ||= Authz::Grant.live.for_person(user_id).capabilities.where(effect: "allow").count
-    said = roles.any? ? roles.map { |role| Authz.role_label(role) }.to_sentence : "No role"
+    text = roles.any? ? roles.map { |role| Authz.role_label(role) }.to_sentence : "No role"
 
-    parts = [tag.span(said, class: roles.any? ? "" : "sub2")]
+    parts = [tag.span(text, class: roles.any? ? "" : "sub2")]
     if extras.positive?
       parts << tag.span("with #{pluralize(extras, 'extra scope')}", class: "chip chip-good")
     end
@@ -65,14 +65,14 @@ module AdminHelper
     safe_join([role_chips(roles), face_stack(people)].compact, " ")
   end
 
-  def role_said(role)
+  def role_label_text(role)
     Authz.role_names.include?(role.to_s) ? Authz.role_label(role).downcase : role.to_s
   end
 
   def role_chips(roles)
     return nil if roles.empty?
 
-    safe_join(roles.map { |role| tag.span("#{role_said(role)} set", class: "chip") }, " ")
+    safe_join(roles.map { |role| tag.span("#{role_label_text(role)} set", class: "chip") }, " ")
   end
 
   def face_stack(people)

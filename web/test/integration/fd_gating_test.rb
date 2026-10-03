@@ -61,7 +61,7 @@ class FdGatingTest < ActionDispatch::IntegrationTest
 
     rows = response.parsed_body["groups"].first["rows"]
     act = rows.find { |row| row["title"] == "Log an action" }
-    assert_equal "log an action against somebody is Firefighter only", act["why"]
+    assert_equal "log an action against a member is Firefighter only", act["why"]
     assert_nil rows.find { |row| row["title"] == "Resolve this case" }["why"]
     assert_nil rows.find { |row| row["title"] == "Go to the cases" }["why"]
   end

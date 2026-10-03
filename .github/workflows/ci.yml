@@ -65,7 +65,7 @@ jobs:
         working-directory: web
 
       - name: headline checks
-        run: uv run python -m checks.headlines --cross-only
+        run: uv run python -m checks.metrics --cross-only
         working-directory: pipeline
         continue-on-error: true
 

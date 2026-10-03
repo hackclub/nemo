@@ -52,7 +52,7 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
   test "an anonymous report is chipped and never names anybody" do
     entry = build(kase, reports: [report(body: "they keep at it")]).first
     assert_equal ["anonymous"], entry.chips
-    assert_equal "they keep at it", entry.said
+    assert_equal "they keep at it", entry.body
     assert_no_match(/@/, entry.detail)
   end
 
@@ -127,7 +127,7 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
     entry = build(kase, notes: [note(subject_user_id: "USUB", body: "escalates in public")])
       .find { |e| e.title == "Note added" }
     assert_equal ["about @USUB"], entry.chips
-    assert_equal "escalates in public", entry.said
+    assert_equal "escalates in public", entry.body
     assert_equal "by @UFF1", entry.detail
   end
 
@@ -139,7 +139,7 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
   test "resolution quotes what the member was told and flags when they were told nothing" do
     told = build(kase(resolved_at: OPENED + 1.day, resolution: "action_taken",
       member_note: "we spoke to them")).last
-    assert_equal "we spoke to them", told.said
+    assert_equal "we spoke to them", told.body
     assert_no_match(/not told/, told.detail)
 
     silent = build(kase(resolved_at: OPENED + 1.day, resolution: "no_action")).last

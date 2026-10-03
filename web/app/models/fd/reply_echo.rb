@@ -1,6 +1,6 @@
 module Fd
   class ReplyEcho
-    def self.catch_up(case_id)
+    def self.flush_pending(case_id)
       thread_ts = SlackPost.thread_for(case_id)
       return 0 if thread_ts.nil? || SlackPost.room.nil?
 
@@ -18,23 +18,23 @@ module Fd
       return false if grant.nil?
       return false unless claim(queued)
 
-      said = Slack::Chat.post_message(token: grant.user_token, channel: SlackPost.room,
-        thread_ts: thread_ts, text: shaped(queued))
-      return let_go(queued, grant, said["error"]) unless said["ok"]
+      answer = Slack::Chat.post_message(token: grant.user_token, channel: SlackPost.room,
+        thread_ts: thread_ts, text: payload_for(queued))
+      return release_after_error(queued, grant, answer["error"]) unless answer["ok"]
 
-      queued.update!(echoed_ts: said["ts"], echoed_as: "user")
+      queued.update!(echoed_ts: answer["ts"], echoed_as: "user")
       grant.used!
       true
-    rescue Slack::Chat::Unavailable => failure
-      let_go(queued, grant, failure.message)
+    rescue Slack::Chat::UnavailableError => failure
+      release_after_error(queued, grant, failure.message)
     rescue StandardError
       release(queued)
       raise
     end
 
-    def self.shaped(queued)
+    def self.payload_for(queued)
       mark = queued.mode == "signed" ? "?" : "~?"
-      "#{mark}#{SlackPost.escape(queued.body)}"
+      "#{mark}#{SlackPost.escape_markup(queued.body)}"
     end
 
     def self.claim(queued)
@@ -42,8 +42,8 @@ module Fd
         .update_all(echoed_at: Time.current) == 1
     end
 
-    def self.let_go(queued, grant, why)
-      grant&.stumbled!(why)
+    def self.release_after_error(queued, grant, why)
+      grant&.record_error!(why)
       release(queued)
     end
 

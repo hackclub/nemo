@@ -362,7 +362,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
       "dev/be is routable in this environment"
   end
 
-  # 16. a locked capability cannot be handed out, not even by a manager
+  # 16. a locked capability cannot be delegated, not even by a manager
   test "nobody can hand out a locked capability" do
     become("manager")
 
@@ -371,7 +371,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
 
     refute_includes Authz.held("UVICTIM01").keys, "access.grant",
       "a manager handed out the locked grant capability"
-    assert_raises(Authz::Grant::NotAllowed) do
+    assert_raises(Authz::Grant::NotAllowedError) do
       Authz::Grant.give!("UVICTIM01", kind: "capability", name: "access.grant", by: "sweep")
     end
   end
@@ -395,7 +395,7 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
     id = become("firefighter")
     assert Authz.holds?(Account.find(id), "identity.read"), "the role should carry it"
 
-    assert_raises(Authz::Grant::NotAllowed) do
+    assert_raises(Authz::Grant::NotAllowedError) do
       Authz::Grant.give!(id, kind: "capability", name: "identity.read", effect: "deny",
         by: "sweep")
     end

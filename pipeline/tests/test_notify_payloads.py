@@ -15,8 +15,8 @@ class FakeConn:
         self.listening = []
         self.autocommit = False
 
-    def execute(self, said):
-        self.listening.append(said)
+    def execute(self, sql):
+        self.listening.append(sql)
 
     def notifies(self, stop_after=None, timeout=None):
         return iter(self.notes)
