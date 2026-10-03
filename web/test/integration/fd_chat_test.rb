@@ -14,6 +14,12 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "the chat log renders as html, not only as a stream" do
+    get fd_case_chat_log_path(@kase, thread: @kase.reports.first&.id)
+
+    assert_response :success
+  end
+
   test "asked what changed when nothing did, the log says nothing" do
     get fd_case_chat_log_path(@kase, since: Fd::ChatVersion.for(@kase.id)), as: :turbo_stream
     assert_response :no_content

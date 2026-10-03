@@ -40,7 +40,7 @@ module Fd
       @reachable = @conversations.reject(&:closed?).map(&:report_id).to_set
       @thread = chosen_thread(@reports)
       @thread_conversation = @conversations.find { |one| one.report_id == @thread&.id }
-      @conversation_said = IntakeMessage.tail([@thread_conversation&.id].compact)
+      @conversation_messages = IntakeMessage.tail([@thread_conversation&.id].compact)
       @conversation_count = IntakeMessage.count_for([@thread_conversation&.id].compact)
       @queued = if @thread_conversation
         IntakeOutbox.where(conversation_id: @thread_conversation.id)
@@ -55,7 +55,7 @@ module Fd
       @thread_messages = ThreadMessage.for_threads(@threads).to_a
       @case_person = CasePerson.for(@people.chosen, kase: @case, actions: @actions,
         notes: @notes, messages: @thread_messages)
-      @cited_shares = IntakeShare.for_messages(@conversation_said.map(&:id))
+      @cited_shares = IntakeShare.for_messages(@conversation_messages.map(&:id))
       @channels = ChannelNames.for(@threads.map(&:channel_id) + cited_channel_ids +
         @thread_guards.map(&:channel_id) + @thread_locks.map(&:channel_id) +
         @action_standing.map(&:channel_id) +

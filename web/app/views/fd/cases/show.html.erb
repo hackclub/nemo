@@ -120,7 +120,7 @@
   <div class="<%= @tab == "report" ? "panel report-solo" : "case-tab-body" %>">
     <% if @tab == "report" %>
       <%= render "chat", kase: @case, reports: @reports, chat: @chat, earlier: @earlier_chat,
-            messages: @conversation_said, queued: @queued, thread: @thread,
+            messages: @conversation_messages, queued: @queued, thread: @thread,
             conversation: @thread_conversation, message_count: @conversation_count %>
     <% end %>
 
