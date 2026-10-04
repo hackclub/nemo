@@ -8,7 +8,7 @@ log = logging.getLogger("bot.relay")
 
 CARRIES_CONTENT = (None, "file_share", "me_message", "thread_broadcast")
 
-DECLINED_BY = "shroud:reporter declined"
+DECLINED_BY = "relay:reporter declined"
 
 STANDING = """
 SELECT c.handed_off_at IS NOT NULL,

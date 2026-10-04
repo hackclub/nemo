@@ -7,7 +7,7 @@ class Fd::CaseReportTest < ActiveSupport::TestCase
 
   def file(**attrs)
     Fd::CaseReport.create!({
-      case_id: @case.id, received_at: 5.days.ago, source_app: "shroud",
+      case_id: @case.id, received_at: 5.days.ago, source_app: "relay",
       is_anonymous: false, reporter_user_id: "UREP1"
     }.merge(attrs))
   end

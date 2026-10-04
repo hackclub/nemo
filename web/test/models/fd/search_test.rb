@@ -67,7 +67,7 @@ class Fd::SearchTest < ActiveSupport::TestCase
 
   test "a report is found by what the reporter wrote" do
     kase = make_case(opened_at: 2.days.ago)
-    report = Fd::CaseReport.create!(case_id: kase.id, is_anonymous: true, source_app: "shroud",
+    report = Fd::CaseReport.create!(case_id: kase.id, is_anonymous: true, source_app: "relay",
       received_at: 1.day.ago, body: "a raid from six day-old accounts")
 
     assert_equal [report.id], rows("raid", "report").map { |row| row.record.id }

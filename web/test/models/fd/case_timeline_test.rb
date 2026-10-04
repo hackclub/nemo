@@ -13,7 +13,7 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
 
   def report(**attrs)
     Fd::CaseReport.new({
-      received_at: OPENED - 10.minutes, is_anonymous: true, source_app: "shroud"
+      received_at: OPENED - 10.minutes, is_anonymous: true, source_app: "relay"
     }.merge(attrs))
   end
 
@@ -63,7 +63,7 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
       reports: [report(is_anonymous: false, reporter_user_id: "UT")],
       participants: [person],
     ).first
-    assert_equal "by @UT · via shroud · no reply yet", entry.detail
+    assert_equal "by @UT · via relay · no reply yet", entry.detail
   end
 
   test "reply latency is stated in words rather than seconds" do

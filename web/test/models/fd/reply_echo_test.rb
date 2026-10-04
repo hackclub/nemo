@@ -5,7 +5,7 @@ class Fd::ReplyEchoTest < ActiveSupport::TestCase
     @kase = make_case
     reporter = Fd::Member.first.user_id
     @report = Fd::CaseReport.create!(case_id: @kase.id, reporter_user_id: reporter,
-      is_anonymous: false, body: "look at this", source_app: "shroud",
+      is_anonymous: false, body: "look at this", source_app: "relay",
       received_at: 2.days.ago, forwarded_ts: "1700.0001")
     @conversation = Fd::IntakeConversation.create!(report_id: @report.id,
       member_user_id: reporter, channel_id: "D0REP", thread_ts: "1700.5",

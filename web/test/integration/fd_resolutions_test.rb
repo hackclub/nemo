@@ -199,7 +199,7 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
 
   test "resolving closes the reports that were still open" do
     report = Fd::CaseReport.create!(case_id: @kase.id, reporter_user_id: "UREP1",
-      is_anonymous: false, body: "look at this", source_app: "shroud", received_at: 2.days.ago)
+      is_anonymous: false, body: "look at this", source_app: "relay", received_at: 2.days.ago)
     sign_in_as(@me)
     close(member_note: "warned them", tell_reporter: "1")
 
@@ -213,7 +213,7 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
   test "a report already closed is left as it was" do
     was = 3.days.ago.change(usec: 0)
     report = Fd::CaseReport.create!(case_id: @kase.id, is_anonymous: true,
-      source_app: "shroud", received_at: 5.days.ago, closed_at: was, closed_by: "UFF9")
+      source_app: "relay", received_at: 5.days.ago, closed_at: was, closed_by: "UFF9")
     sign_in_as(@me)
     close(member_note: "done")
 

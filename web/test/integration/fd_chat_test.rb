@@ -103,7 +103,7 @@ class FdChatTest < ActionDispatch::IntegrationTest
   def with_a_reporter
     reporter = Fd::Member.first.user_id
     report = Fd::CaseReport.create!(case_id: @kase.id, reporter_user_id: reporter,
-      is_anonymous: false, body: "look at this", source_app: "shroud", received_at: 2.days.ago)
+      is_anonymous: false, body: "look at this", source_app: "relay", received_at: 2.days.ago)
     Fd::IntakeConversation.create!(report_id: report.id, member_user_id: reporter,
       channel_id: "D0REP", thread_ts: "1700.5", opened_at: 2.days.ago)
   end
@@ -171,7 +171,7 @@ class FdChatTest < ActionDispatch::IntegrationTest
 
   def in_the_firehouse
     ENV["INTERNAL_LOG_CHANNEL_ID"] = "C0FIRE"
-    Fd::CaseReport.create!(case_id: @kase.id, is_anonymous: true, source_app: "shroud",
+    Fd::CaseReport.create!(case_id: @kase.id, is_anonymous: true, source_app: "relay",
       received_at: 2.days.ago, forwarded_ts: "1700.0001")
     Fd::StaffSlack.keep!("UME", token: "xoxp-real", team_id: "T0FIRE", scopes: "chat:write")
   end
@@ -245,7 +245,7 @@ class FdChatTest < ActionDispatch::IntegrationTest
 
   test "without slack linked, the message is left for the bot untouched" do
     ENV["INTERNAL_LOG_CHANNEL_ID"] = "C0FIRE"
-    Fd::CaseReport.create!(case_id: @kase.id, is_anonymous: true, source_app: "shroud",
+    Fd::CaseReport.create!(case_id: @kase.id, is_anonymous: true, source_app: "relay",
       received_at: 2.days.ago, forwarded_ts: "1700.0001")
 
     chat = instead_of(:post_message, ->(**) { flunk "nothing should be sent" }) { say }

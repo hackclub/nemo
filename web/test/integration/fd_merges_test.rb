@@ -147,7 +147,7 @@ class FdMergesTest < ActionDispatch::IntegrationTest
   test "a candidate shows what its report said, not only who and when" do
     body_text = "they kept posting the same link after being asked to stop"
     Fd::CaseReport.create!(case_id: @main.id, is_anonymous: true,
-      source_app: "shroud", received_at: Time.current, body: body_text)
+      source_app: "relay", received_at: Time.current, body: body_text)
 
     sign_in_as(@me)
     get fd_case_merge_path(@dup_one)
@@ -174,7 +174,7 @@ class FdMergesTest < ActionDispatch::IntegrationTest
 
   def forwarded_into(kase, body_text:, link: "https://hackclub.slack.com/archives/C0LOUNGE/p1754487721123456")
     report = Fd::CaseReport.create!(case_id: kase.id, reporter_user_id: "UREP1",
-      is_anonymous: false, source_app: "shroud", received_at: Time.current, body: link)
+      is_anonymous: false, source_app: "relay", received_at: Time.current, body: link)
     conversation = Fd::IntakeConversation.create!(report_id: report.id, channel_id: "D0REP",
       thread_ts: "1.0", opened_at: 1.hour.ago)
     message = Fd::IntakeMessage.create!(conversation_id: conversation.id, channel_id: "D0REP",
@@ -264,7 +264,7 @@ class FdMergesTest < ActionDispatch::IntegrationTest
   test "reading the candidates' reports does not query once per candidate" do
     [@main, @dup_two].each do |kase|
       Fd::CaseReport.create!(case_id: kase.id, is_anonymous: true,
-        source_app: "shroud", received_at: Time.current, body: "a report on #{kase.id}")
+        source_app: "relay", received_at: Time.current, body: "a report on #{kase.id}")
     end
     sign_in_as(@me)
 

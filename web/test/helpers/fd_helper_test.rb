@@ -102,7 +102,7 @@ class FdHelperTest < ActionView::TestCase
   test "the subtitle says who raised it, reporter or opener" do
     reported = make_case(subject: "UAAA")
     Fd::CaseReport.create!(case_id: reported.id, is_anonymous: true,
-      source_app: "shroud", received_at: Time.current)
+      source_app: "relay", received_at: Time.current)
     assert_match(/a member reported it/, row_subtitle(Fd::Case.find(reported.id), {}))
 
     opened = make_case(subject: "UAAA", opened_by: "UOPEN")
@@ -124,14 +124,14 @@ class FdHelperTest < ActionView::TestCase
   test "the drawer still names the reporter when a report is on file" do
     saved = make_case(subject: "UAAA")
     Fd::CaseReport.create!(case_id: saved.id, reporter_user_id: "UREP", is_anonymous: false,
-      source_app: "shroud", received_at: Time.current)
+      source_app: "relay", received_at: Time.current)
     assert_equal "@UREP", row_reporter_label(Fd::Case.find(saved.id))
   end
 
   test "an anonymous report reads as anonymous, not by the missing name" do
     saved = make_case(subject: "UAAA")
     Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true,
-      source_app: "shroud", received_at: Time.current)
+      source_app: "relay", received_at: Time.current)
     assert_equal "Anonymous", row_reporter_label(Fd::Case.find(saved.id))
   end
 
@@ -143,16 +143,16 @@ class FdHelperTest < ActionView::TestCase
   test "several reports name the first reporter and count the rest" do
     saved = make_case(subject: "UAAA")
     Fd::CaseReport.create!(case_id: saved.id, reporter_user_id: "UREP1", is_anonymous: false,
-      source_app: "shroud", received_at: Time.current)
+      source_app: "relay", received_at: Time.current)
     Fd::CaseReport.create!(case_id: saved.id, reporter_user_id: "UREP2", is_anonymous: false,
-      source_app: "shroud", received_at: Time.current)
+      source_app: "relay", received_at: Time.current)
     assert_equal "@UREP1 and 1 other", row_reporter_label(Fd::Case.find(saved.id))
   end
 
   def report(**attrs)
     saved = make_case(subject: "UAAA")
     Fd::CaseReport.create!(case_id: saved.id, reporter_user_id: "UREP1", is_anonymous: false,
-      source_app: "shroud", received_at: 3.days.ago, **attrs)
+      source_app: "relay", received_at: 3.days.ago, **attrs)
   end
 
   def intake(conversation_id, author:)
@@ -273,7 +273,7 @@ class FdHelperTest < ActionView::TestCase
 
   test "a case whose report is only a link is summed up by what it points at" do
     saved = make_case(subject: "UAAA")
-    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "shroud",
+    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "relay",
       received_at: Time.current, body: "<https://hackclub.slack.com/archives/C0L/p1|x>")
     kase = Fd::Case.find(saved.id)
     listed(kase)
@@ -285,7 +285,7 @@ class FdHelperTest < ActionView::TestCase
 
   test "a report with words of its own is not replaced by what it links to" do
     saved = make_case(subject: "UAAA")
-    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "shroud",
+    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "relay",
       received_at: Time.current, body: "they keep following me")
     kase = Fd::Case.find(saved.id)
     listed(kase)
@@ -296,7 +296,7 @@ class FdHelperTest < ActionView::TestCase
 
   test "a report whose words are empty but carries files is summed up by the files" do
     saved = make_case(subject: "UAAA")
-    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "shroud",
+    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "relay",
       received_at: Time.current, body: "")
     kase = Fd::Case.find(saved.id)
     @held_counts = { kase.id => 9 }
@@ -307,7 +307,7 @@ class FdHelperTest < ActionView::TestCase
 
   test "a report with neither words nor anything attached says only that" do
     saved = make_case(subject: "UAAA")
-    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "shroud",
+    Fd::CaseReport.create!(case_id: saved.id, is_anonymous: true, source_app: "relay",
       received_at: Time.current, body: nil)
     kase = Fd::Case.find(saved.id)
 

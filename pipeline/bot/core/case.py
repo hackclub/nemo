@@ -17,11 +17,11 @@ LIMIT 1
 
 
 def case_ref(conversation_id):
-    return f"shroud:conversation:{conversation_id}"
+    return f"relay:conversation:{conversation_id}"
 
 
 def report_ref(conversation_id):
-    return f"shroud:report:{conversation_id}"
+    return f"relay:report:{conversation_id}"
 
 
 STANDING = """
@@ -77,7 +77,7 @@ def open_case(conn, conversation_id, opened_by, anonymous=True):
     ref = case_ref(conversation_id)
     conn.execute(
         "INSERT INTO fd.cases (opened_by, source_app, external_ref) "
-        "VALUES (%s, 'shroud', %s) ON CONFLICT (external_ref) DO NOTHING",
+        "VALUES (%s, 'relay', %s) ON CONFLICT (external_ref) DO NOTHING",
         (opened_by, ref),
     )
     case_id = conn.execute("SELECT id FROM fd.cases WHERE external_ref = %s", (ref,)).fetchone()[0]
@@ -90,7 +90,7 @@ def open_case(conn, conversation_id, opened_by, anonymous=True):
     conn.execute(
         "INSERT INTO fd.case_reports "
         "(case_id, is_anonymous, reporter_user_id, body, received_at, source_app, external_ref) "
-        "VALUES (%s, %s, %s, %s, coalesce(%s, now()), 'shroud', %s) "
+        "VALUES (%s, %s, %s, %s, coalesce(%s, now()), 'relay', %s) "
         "ON CONFLICT (external_ref) DO NOTHING",
         (case_id, reporter is None, reporter, body, received, report),
     )

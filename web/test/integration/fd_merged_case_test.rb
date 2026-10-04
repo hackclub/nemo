@@ -25,7 +25,7 @@ class FdMergedCaseTest < ActionDispatch::IntegrationTest
 
   def report_on(kase, who, at:)
     report = Fd::CaseReport.create!(case_id: kase.id, reporter_user_id: who,
-      is_anonymous: false, body: "#{who} said something", source_app: "shroud", received_at: at)
+      is_anonymous: false, body: "#{who} said something", source_app: "relay", received_at: at)
     Fd::IntakeConversation.create!(report_id: report.id, member_user_id: who,
       channel_id: "D0#{who}", thread_ts: "1700.#{report.id}", opened_at: at)
     report

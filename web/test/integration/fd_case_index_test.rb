@@ -8,7 +8,7 @@ class FdCaseIndexTest < ActionDispatch::IntegrationTest
 
   def told(kase, **attrs)
     Fd::CaseReport.create!({ case_id: kase.id, reporter_user_id: "UREP", is_anonymous: false,
-      source_app: "shroud", received_at: 3.days.ago }.merge(attrs))
+      source_app: "relay", received_at: 3.days.ago }.merge(attrs))
   end
 
   test "the index lists the open cases in the pane" do
