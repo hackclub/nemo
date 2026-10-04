@@ -20,6 +20,22 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "the scroll container does not share the frame id, so upsert reaches it" do
+    get fd_case_chat_log_path(@kase, thread: @kase.reports.first&.id)
+
+    assert_equal 1, response.body.scan(/id="chat-log-#{@kase.id}"/).size,
+      "the frame id must not be reused by the scroll container"
+    assert_includes response.body, %(id="chat-messages-#{@kase.id}" class="chatscroll")
+  end
+
+  test "the live stream upserts into the scroll container, not the frame" do
+    post fd_case_chats_path(@kase), params: { body: "meow" }, as: :turbo_stream
+    get fd_case_chat_log_path(@kase, since: "0.0.0"), as: :turbo_stream
+
+    assert_response :success
+    assert_includes response.body, %(target="chat-messages-#{@kase.id}")
+  end
+
   test "asked what changed when nothing did, the log says nothing" do
     get fd_case_chat_log_path(@kase, since: Fd::ChatVersion.for(@kase.id)), as: :turbo_stream
     assert_response :no_content

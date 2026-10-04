@@ -118,7 +118,7 @@
   }
   .subjfaces-many .face-name + .face-name { margin-left: -5px; }
   .subjfaces-many .face-name .row-avatar, .subjfaces-many .face-name .avatar { box-shadow: 0 0 0 2px var(--card); }
-  .subjfaces-many .face-name {
+  .subjfaces-many .face-sub {
     position: absolute;
     left: 50%;
     top: calc(100% + 6px);
@@ -134,7 +134,7 @@
     opacity: 0;
     transition: opacity var(--dur-2) var(--ease-out);
   }
-  .subjfaces-many .face-name:hover .face-name,
+  .subjfaces-many .face-name:hover .face-sub,
   .subjfaces-many .face-name:focus-within .face-sub { opacity: 1; }
 
   .case-record { display: flex; flex-direction: column; min-height: 0; }

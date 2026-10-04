@@ -2,7 +2,7 @@
 
 <%= turbo_frame_tag chat_log_id(kase),
       data: { src: fd_case_chat_log_path(kase, thread: reports.first&.id) } do %>
-<div id="chat-log-<%= kase.id %>" class="chatscroll" data-version="<%= Fd::ChatVersion.for(kase.id) %>">
+<div id="chat-messages-<%= kase.id %>" class="chatscroll" data-version="<%= Fd::ChatVersion.for(kase.id) %>">
   <% if earlier.positive? %>
     <p class="dayrule" data-earlier><%= pluralize(earlier, "earlier message") %></p>
   <% end %>
