@@ -8,8 +8,10 @@ module Slack
     DEEPEST = 5
     OPENABLE = ["http://", "https://"].freeze
 
-    def self.for(message, names: {}, channels: {}, emoji: {})
-      new(names, channels, emoji).to_text(message || {})
+    def self.for(message, names: {}, channels: {}, emoji: {},
+                 user_chip: nil, channel_chip: nil)
+      new(names, channels, emoji, user_chip: user_chip, channel_chip: channel_chip)
+        .to_text(message || {})
     end
 
     def self.emoji_names(message)
@@ -26,10 +28,12 @@ module Slack
       found.uniq
     end
 
-    def initialize(names = {}, channels = {}, emoji = {})
+    def initialize(names = {}, channels = {}, emoji = {}, user_chip: nil, channel_chip: nil)
       @names = names
       @channels = channels
       @emoji = emoji
+      @user_chip = user_chip
+      @channel_chip = channel_chip
     end
 
     def to_text(message)
@@ -91,9 +95,9 @@ module Slack
       when "text" then lines(one["text"].to_s)
       when "link" then linked(one)
       when "emoji" then emoji_for(one["name"])
-      when "user" then chip(named(one["user_id"]), one["user_id"])
+      when "user" then shown_user(one["user_id"])
       when "usergroup" then chip("@#{one['usergroup_id']}", one["usergroup_id"])
-      when "channel" then chip(channel_ref(one["channel_id"]), one["channel_id"])
+      when "channel" then shown_channel(one["channel_id"])
       when "broadcast" then chip(BROADCASTS.fetch(one["range"], "@#{one['range']}"), one["range"])
       when "message_mention" then linked(one.merge("text" => one["text"].presence || "a message"))
       when "date" then dated(one)
@@ -145,6 +149,18 @@ module Slack
 
       tag.img(src: url, class: "richtext-emoji-img", alt: text, title: text, loading: "lazy",
         width: 20, height: 20)
+    end
+
+    def shown_user(user_id)
+      return chip(named(user_id), user_id) if @user_chip.nil?
+
+      @user_chip.call(user_id)
+    end
+
+    def shown_channel(channel_id)
+      return chip(channel_ref(channel_id), channel_id) if @channel_chip.nil?
+
+      @channel_chip.call(channel_id)
     end
 
     def chip(text, title)

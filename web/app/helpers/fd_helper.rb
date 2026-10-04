@@ -100,6 +100,11 @@ module FdHelper
     safe_join(parts)
   end
 
+  def rich_said(blocks)
+    Slack::RichText.for({ "blocks" => blocks }, names: names, channels: channels,
+      user_chip: ->(id) { mention_link(id) }, channel_chip: ->(id) { channel_mention(id) })
+  end
+
   def linked(url, label = nil)
     href = CGI.unescapeHTML(url.to_s)
     return href unless href.start_with?("http://", "https://")
@@ -622,8 +627,8 @@ module FdHelper
     ROLE_TONES.fetch(role, "chip-off")
   end
 
-  ChatEntry = Struct.new(:key, :at, :side, :kind, :who, :anon, :name, :body, :state, :files,
-    :shares, keyword_init: true)
+  ChatEntry = Struct.new(:key, :at, :side, :kind, :who, :anon, :name, :body, :blocks, :state,
+    :files, :shares, keyword_init: true)
 
   def chat_stream(kase)
     "case_#{kase.id}_chat"
@@ -679,6 +684,7 @@ module FdHelper
       anon: masked,
       name: message_name(message, hidden),
       body: message_body(message, files),
+      blocks: message.blocks,
       state: ("deleted in Slack" if message.deleted?),
       files: files,
       shares: shares
@@ -711,7 +717,8 @@ module FdHelper
 
   def chat_entry(line)
     ChatEntry.new(key: "chat-#{line.id}", at: line.posted_at, side: "out", kind: "chat",
-      who: line.author_user_id, name: names[line.author_user_id], body: chat_body(line))
+      who: line.author_user_id, name: names[line.author_user_id], body: chat_body(line),
+      blocks: (line.blocks unless line.deleted?))
   end
 
   def chat_body(line)

@@ -92,6 +92,22 @@ class Slack::RichTextTest < ActiveSupport::TestCase
     assert_match(/leftovers/, render([{ "type" => "citation", "text" => "leftovers" }]))
   end
 
+  test "a caller can render its own user and channel chips" do
+    html = Slack::RichText.for(
+      { "blocks" => [{ "type" => "rich_text",
+                       "elements" => [{ "type" => "rich_text_section", "elements" => [
+                         { "type" => "user", "user_id" => "U1" },
+                         { "type" => "channel", "channel_id" => "C1" }
+                       ] }] }] },
+      user_chip: ->(id) { %(<a href="/m/#{id}">them</a>).html_safe },
+      channel_chip: ->(id) { %(<a href="/c/#{id}">there</a>).html_safe }
+    )
+
+    assert_match(%r{<a href="/m/U1">them</a>}, html)
+    assert_match(%r{<a href="/c/C1">there</a>}, html)
+    assert_no_match(/richtext-mention/, html)
+  end
+
   test "markup in a message is escaped, never rendered" do
     html = render([{ "type" => "text", "text" => "<script>alert(1)</script>" }])
 

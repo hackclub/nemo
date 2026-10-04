@@ -444,6 +444,9 @@
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
+  .msg-rich { white-space: normal; }
+  .msg-rich > :first-child { margin-top: 0; }
+  .msg-rich > :last-child { margin-bottom: 0; }
   .msg-gone, .thr-gone { color: var(--ink-4); font-style: normal; }
 
   .purge-thread {

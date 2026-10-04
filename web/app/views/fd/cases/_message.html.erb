@@ -8,7 +8,9 @@
       <% if entry.kind == "chat" %><span class="tag">internal</span><% end %>
       <% if entry.state %><span class="tag <%= state_tone(entry.state).sub("chip-", "") %>"><%= entry.state %></span><% end %>
     </div>
-    <% if entry.body.present? %>
+    <% if entry.blocks.present? %>
+      <div class="msg-body msg-rich"><%= rich_said(entry.blocks) %></div>
+    <% elsif entry.body.present? %>
       <p class="msg-body"><%= mentioned(entry.body) %></p>
     <% end %>
     <% if entry.shares.present? %>

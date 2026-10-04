@@ -59,6 +59,42 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  def rich(elements)
+    [{ "type" => "rich_text",
+       "elements" => [{ "type" => "rich_text_section", "elements" => elements }] }]
+  end
+
+  test "a line that came from slack is drawn from its blocks" do
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "_was_ it",
+      source_app: "nemo", channel_id: "CLOG", ts: "1.1",
+      blocks: rich([{ "type" => "text", "text" => "was", "style" => { "italic" => true } },
+                    { "type" => "text", "text" => " it" }]))
+
+    get fd_case_chat_log_path(@kase, thread: @kase.reports.first&.id)
+
+    assert_includes response.body, "<em>was</em>"
+    assert_not_includes response.body, "_was_ it"
+  end
+
+  test "a mention in a slack line still links to the member" do
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "<@UTHEM> look",
+      source_app: "nemo", channel_id: "CLOG", ts: "1.2",
+      blocks: rich([{ "type" => "user", "user_id" => "UTHEM" }]))
+
+    get fd_case_chat_log_path(@kase, thread: @kase.reports.first&.id)
+
+    assert_select "a.mention[href=?]", fd_member_path("UTHEM")
+  end
+
+  test "a line with no blocks is still drawn from its text" do
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "typed here",
+      source_app: "fire_engine")
+
+    get fd_case_chat_log_path(@kase, thread: @kase.reports.first&.id)
+
+    assert_includes response.body, "typed here"
+  end
+
   test "a deletion sends the browser back for a full reload" do
     line = Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "oops",
       source_app: "fire_engine")
