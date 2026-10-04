@@ -20,7 +20,7 @@ class MentionRenderTest < ActionView::TestCase
 
   test "a channel mention becomes a link, never an id" do
     html = mentioned("in <#C0LOUNGE|the-lounge>")
-    assert_match(/href="\/channels\/C0LOUNGE"/, html)
+    assert_match(%r{href="/fd/channels/C0LOUNGE"}, html)
     assert_match(/#the-lounge/, html)
   end
 

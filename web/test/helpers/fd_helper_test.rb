@@ -3,12 +3,20 @@ require "test_helper"
 class FdHelperTest < ActionView::TestCase
   include FdHelper
 
+  def on?(_key) = true
+
   def kase(**attrs)
     make_case(opened_at: 5.days.ago, **attrs)
   end
 
   def entries(count)
     Array.new(count) { Fd::CaseTimeline::Entry.new(at: Time.current, title: "x") }
+  end
+
+  test "a channel mention opens the fire-engine channel page" do
+    html = channel_mention("C0BE6N4G2BA")
+
+    assert_match(%r{href="/fd/channels/C0BE6N4G2BA"}, html)
   end
 
   test "an open case adds no standing line under its timeline" do

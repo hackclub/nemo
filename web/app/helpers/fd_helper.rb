@@ -142,7 +142,7 @@ module FdHelper
     shown = named || (name.present? ? "##{name}" : channel_id)
     return tag.span(shown, class: "mention", title: channel_id) unless may_open_channel?(channel_id)
 
-    link_to shown, channel_path(channel_id), class: "mention", title: channel_id
+    link_to shown, fd_channel_path(channel_id), class: "mention", title: channel_id
   end
 
   def may_open_channel?(channel_id)
