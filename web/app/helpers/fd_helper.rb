@@ -10,6 +10,10 @@ module FdHelper
     @channels || Fd::ChannelNames.none
   end
 
+  def chat_emoji
+    @emoji || {}
+  end
+
   def channel_label(channel_id)
     channels[channel_id]
   end
@@ -100,12 +104,13 @@ module FdHelper
     safe_join(parts)
   end
 
-  def said(entry)
-    rich_said(entry.blocks.presence || Slack::Mrkdwn.blocks(entry.body))
+  def body_html(entry)
+    blocks_html(entry.blocks.presence || Slack::Mrkdwn.blocks(entry.body))
   end
 
-  def rich_said(blocks)
+  def blocks_html(blocks)
     Slack::RichText.for({ "blocks" => blocks }, names: names, channels: channels,
+      emoji: chat_emoji,
       user_chip: ->(id) { mention_link(id) }, channel_chip: ->(id) { channel_mention(id) },
       link_chip: ->(url, label) { linked(url, label) })
   end

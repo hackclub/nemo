@@ -105,6 +105,48 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_select "a.mention[href=?]", fd_member_path("UTHEM")
   end
 
+  def answering(map)
+    was = Slack::Emoji.method(:for)
+    Slack::Emoji.define_singleton_method(:for) { |names| map.slice(*Array(names)) }
+    yield
+  ensure
+    Slack::Emoji.define_singleton_method(:for, was)
+  end
+
+  test "a custom emoji in a slack line becomes its image" do
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: ":sho:",
+      source_app: "nemo", channel_id: "CLOG", ts: "1.3",
+      blocks: rich([{ "type" => "emoji", "name" => "sho" }]))
+
+    answering({ "sho" => "https://emoji.test/sho.png" }) do
+      get fd_case_chat_log_path(@kase, thread: @kase.reports.first&.id)
+    end
+
+    assert_select "img.richtext-emoji-img[src=?]", "https://emoji.test/sho.png"
+  end
+
+  test "a custom emoji typed in the fire engine is looked up too" do
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "nice :sho:",
+      source_app: "fire_engine")
+
+    answering({ "sho" => "https://emoji.test/sho.png" }) do
+      get fd_case_chat_log_path(@kase, thread: @kase.reports.first&.id)
+    end
+
+    assert_select "img.richtext-emoji-img[src=?]", "https://emoji.test/sho.png"
+  end
+
+  test "an emoji nobody knows stays as its name" do
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "nice :nope:",
+      source_app: "fire_engine")
+
+    answering({}) do
+      get fd_case_chat_log_path(@kase, thread: @kase.reports.first&.id)
+    end
+
+    assert_select "span.richtext-emoji", ":nope:"
+  end
+
   test "a deletion sends the browser back for a full reload" do
     line = Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "oops",
       source_app: "fire_engine")

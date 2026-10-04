@@ -97,9 +97,9 @@ module Slack
       when "text" then lines(one["text"].to_s)
       when "link" then linked(one)
       when "emoji" then emoji_for(one["name"])
-      when "user" then shown_user(one["user_id"])
+      when "user" then user_mention(one["user_id"])
       when "usergroup" then chip("@#{one['usergroup_id']}", one["usergroup_id"])
-      when "channel" then shown_channel(one["channel_id"])
+      when "channel" then channel_mention(one["channel_id"])
       when "broadcast" then chip(BROADCASTS.fetch(one["range"], "@#{one['range']}"), one["range"])
       when "message_mention" then linked(one.merge("text" => one["text"].presence || "a message"))
       when "date" then dated(one)
@@ -155,13 +155,13 @@ module Slack
         width: 20, height: 20)
     end
 
-    def shown_user(user_id)
+    def user_mention(user_id)
       return chip(named(user_id), user_id) if @user_chip.nil?
 
       @user_chip.call(user_id)
     end
 
-    def shown_channel(channel_id)
+    def channel_mention(channel_id)
       return chip(channel_ref(channel_id), channel_id) if @channel_chip.nil?
 
       @channel_chip.call(channel_id)

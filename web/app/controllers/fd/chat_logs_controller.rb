@@ -20,6 +20,7 @@ module Fd
       @cited_shares = IntakeShare.for_messages(@conversation_messages.map(&:id))
       @channels = ChannelNames.for(cited.map(&:source_channel_id).compact)
       @names = Names.for(people_ids)
+      @emoji = ChatEmoji.for(@chat, @conversation_messages, @queued, @reports)
 
       respond_to do |format|
         format.html { render layout: false }

@@ -61,6 +61,7 @@ module Fd
         @action_standing.map(&:channel_id) +
         @actions.filter_map { |a| a.details["channel_id"] } +
         Array(@pane_channels))
+      @emoji = ChatEmoji.for(@chat, @conversation_messages, @queued, @reports)
       @person_priors = Case.prior_counts_for(@participants.map(&:user_id))
       @assignees = @case.assignees.to_a
       @mentioned = @case.mentioned_but_unlogged(

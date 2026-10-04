@@ -9,7 +9,7 @@
       <% if entry.state %><span class="tag <%= state_tone(entry.state).sub("chip-", "") %>"><%= entry.state %></span><% end %>
     </div>
     <% if entry.blocks.present? || entry.body.present? %>
-      <div class="msg-body msg-rich"><%= said(entry) %></div>
+      <div class="msg-body msg-rich"><%= body_html(entry) %></div>
     <% end %>
     <% if entry.shares.present? %>
       <div class="msg-cites">
