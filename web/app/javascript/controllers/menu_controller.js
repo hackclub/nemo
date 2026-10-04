@@ -1,9 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
+import { placePop, clearPop } from "lib/place_pop"
 
 const REACHABLE = "a[href], button:not([disabled]), label[tabindex], [tabindex='0']"
-
-const MARGIN = 12
-const FLOOR = 160
 
 export default class extends Controller {
   connect() {
@@ -33,10 +31,7 @@ export default class extends Controller {
 
     if (!this.element.open) {
       if (pop.matches(":popover-open")) pop.hidePopover()
-      pop.style.removeProperty("--menu-room")
-      pop.style.removeProperty("left")
-      pop.style.removeProperty("top")
-      pop.classList.remove("menu-up")
+      clearPop(pop)
       this.unwatch()
       return
     }
@@ -57,27 +52,7 @@ export default class extends Controller {
   }
 
   place() {
-    const pop = this.pop
-    const box = this.summary.getBoundingClientRect()
-    const below = window.innerHeight - box.bottom - MARGIN
-    const above = box.top - MARGIN
-    const up = below < FLOOR && above > below
-
-    pop.classList.toggle("menu-up", up)
-    pop.style.setProperty("--menu-room", `${Math.max(0, Math.round(up ? above : below))}px`)
-    if (!pop.hasAttribute("popover")) return
-
-    pop.style.left = "0px"
-    pop.style.top = "0px"
-    const size = pop.getBoundingClientRect()
-    const start = pop.classList.contains("menu-start")
-    const left = Math.max(MARGIN, Math.min(start ? box.left : box.right - size.width,
-      window.innerWidth - MARGIN - size.width))
-    const top = up ? box.top - size.height - 5 : box.bottom + 5
-
-    pop.style.left = `${Math.round(left)}px`
-    pop.style.top = `${Math.round(Math.max(MARGIN,
-      Math.min(top, window.innerHeight - MARGIN - size.height)))}px`
+    placePop(this.pop, this.summary)
   }
 
   get summary() {
