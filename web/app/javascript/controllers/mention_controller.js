@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { askingFor, personRow } from "lib/people_menu"
+import { placePop, clearPop } from "lib/place_pop"
 
 const TOKEN = /@([\w.\-]*)$/
 
@@ -10,12 +11,17 @@ export default class extends Controller {
   connect() {
     this.timer = null
     this.away = this.away.bind(this)
+    this.onMove = this.onMove.bind(this)
     document.addEventListener("click", this.away)
+    if (typeof this.resultsTarget.showPopover === "function") {
+      this.resultsTarget.setAttribute("popover", "manual")
+    }
   }
 
   disconnect() {
     clearTimeout(this.timer)
     document.removeEventListener("click", this.away)
+    this.unwatch()
   }
 
   away(event) {
@@ -55,8 +61,35 @@ export default class extends Controller {
       )
     }
     this.resultsTarget.hidden = false
+    if (this.popped && !this.resultsTarget.matches(":popover-open")) {
+      this.resultsTarget.showPopover()
+    }
+    this.place()
+    this.watch()
     this.at = -1
     this.mark()
+  }
+
+  get popped() {
+    return this.resultsTarget.hasAttribute("popover")
+  }
+
+  place() {
+    placePop(this.resultsTarget, this.fieldTarget)
+  }
+
+  onMove() {
+    if (!this.resultsTarget.hidden) this.place()
+  }
+
+  watch() {
+    window.addEventListener("resize", this.onMove)
+    document.addEventListener("scroll", this.onMove, true)
+  }
+
+  unwatch() {
+    window.removeEventListener("resize", this.onMove)
+    document.removeEventListener("scroll", this.onMove, true)
   }
 
   rows() {
@@ -138,7 +171,12 @@ export default class extends Controller {
   }
 
   close() {
+    if (this.popped && this.resultsTarget.matches(":popover-open")) {
+      this.resultsTarget.hidePopover()
+    }
     this.resultsTarget.innerHTML = ""
     this.resultsTarget.hidden = true
+    clearPop(this.resultsTarget)
+    this.unwatch()
   }
 }

@@ -187,7 +187,7 @@
     overflow: auto;
     min-height: 0;
   }
-  .modal-body .pick-pop, .modal-body .picker-pop, .modal-body .mention-pop { position: absolute; }
+  .modal-body .pick-pop:not([popover]), .modal-body .picker-pop:not([popover]) { position: absolute; }
   .modal-body:has(> .field-label > .pick > .pick-pop:not([hidden])),
   .modal-body:has(.pick-pop:not([hidden])),
   .modal-body:has(details.picker[open]) { overflow: visible; }
@@ -616,7 +616,7 @@
     font-size: var(--t-mark);
     color: var(--ink-4);
   }
-  .pick-id:not(:empty)::before { content: "\00b7"; margin-right: 6px; }
+  .pick-id:not(:empty)::before { content: "\00b7"; margin: 0 6px; }
   .pick-none, .pick-body-text { color: var(--ink-4); font-size: var(--t-small); padding: 6px 8px; }
   .picker { position: relative; display: inline-flex; }
   .pickswitch {
