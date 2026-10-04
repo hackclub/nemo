@@ -100,9 +100,14 @@ module FdHelper
     safe_join(parts)
   end
 
+  def said(entry)
+    rich_said(entry.blocks.presence || Slack::Mrkdwn.blocks(entry.body))
+  end
+
   def rich_said(blocks)
     Slack::RichText.for({ "blocks" => blocks }, names: names, channels: channels,
-      user_chip: ->(id) { mention_link(id) }, channel_chip: ->(id) { channel_mention(id) })
+      user_chip: ->(id) { mention_link(id) }, channel_chip: ->(id) { channel_mention(id) },
+      link_chip: ->(url, label) { linked(url, label) })
   end
 
   def linked(url, label = nil)

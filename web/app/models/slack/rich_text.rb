@@ -9,9 +9,9 @@ module Slack
     OPENABLE = ["http://", "https://"].freeze
 
     def self.for(message, names: {}, channels: {}, emoji: {},
-                 user_chip: nil, channel_chip: nil)
-      new(names, channels, emoji, user_chip: user_chip, channel_chip: channel_chip)
-        .to_text(message || {})
+                 user_chip: nil, channel_chip: nil, link_chip: nil)
+      new(names, channels, emoji, user_chip: user_chip, channel_chip: channel_chip,
+        link_chip: link_chip).to_text(message || {})
     end
 
     def self.emoji_names(message)
@@ -28,12 +28,14 @@ module Slack
       found.uniq
     end
 
-    def initialize(names = {}, channels = {}, emoji = {}, user_chip: nil, channel_chip: nil)
+    def initialize(names = {}, channels = {}, emoji = {}, user_chip: nil, channel_chip: nil,
+                   link_chip: nil)
       @names = names
       @channels = channels
       @emoji = emoji
       @user_chip = user_chip
       @channel_chip = channel_chip
+      @link_chip = link_chip
     end
 
     def to_text(message)
@@ -131,6 +133,8 @@ module Slack
     end
 
     def link_to_url(label, url)
+      return @link_chip.call(url, label) if @link_chip
+
       tag.a(ERB::Util.html_escape(label), href: url, class: "richtext-link",
         target: "_blank", rel: "noopener")
     end

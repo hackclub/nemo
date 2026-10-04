@@ -95,6 +95,16 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "typed here"
   end
 
+  test "a line with no blocks is read as mrkdwn" do
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME",
+      body: "*look* at <@UTHEM>", source_app: "fire_engine")
+
+    get fd_case_chat_log_path(@kase, thread: @kase.reports.first&.id)
+
+    assert_includes response.body, "<strong>look</strong>"
+    assert_select "a.mention[href=?]", fd_member_path("UTHEM")
+  end
+
   test "a deletion sends the browser back for a full reload" do
     line = Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "oops",
       source_app: "fire_engine")
