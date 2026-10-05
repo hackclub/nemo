@@ -16,6 +16,18 @@ class FdActionsTest < ActionDispatch::IntegrationTest
     @kase.actions
   end
 
+  test "logging an action echoes into the case chat" do
+    sign_in_as(@me)
+    log
+
+    echo = Fd::CaseChat.where(case_id: @kase.id).sole
+    assert_equal "UME", echo.author_user_id
+    assert_equal "fire_engine", echo.source_app
+    assert_match(/<@USUB>/, echo.body)
+    assert_match(/kept at it after being asked to stop/, echo.body)
+  end
+
+
   test "a signed out visitor cannot log an action" do
     log
     assert_redirected_to login_path

@@ -17,6 +17,7 @@ module Fd
 
       named = false
       adopted = lock&.orphaned?
+      echoed = nil
       writing do
         named = name_a_subject(kase) unless lock
         if held
@@ -27,8 +28,10 @@ module Fd
           action = log_action(kase, Time.current)
           audit(action, "performed")
           enforce(kase, action)
+          echoed = ActionEcho.write!(kase, action, by: current_account.user_id)
         end
       end
+      SlackPost.carry(echoed) if echoed&.mirrored_as == "user"
 
       redirect_to fd_case_path(kase, tab: "actions"),
         notice: notice_for(kase, held: held, lock: lock, adopted: adopted, named: named)
