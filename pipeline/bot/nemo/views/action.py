@@ -230,11 +230,11 @@ def build_blocks(case_id, values, standing=None):
             "type": "input",
             "block_id": TARGET,
             "dispatch_action": True,
-            "label": {"type": "plain_text", "text": "Against"},
+            "label": {"type": "plain_text", "text": "Logging record on individual"},
             "element": {
                 "type": "users_select",
                 "action_id": TARGET,
-                "placeholder": {"type": "plain_text", "text": "who it was aimed at"},
+                "placeholder": {"type": "plain_text", "text": "who this is about"},
                 **(
                     {"initial_user": values["target_user_id"]}
                     if values.get("target_user_id")
@@ -246,7 +246,7 @@ def build_blocks(case_id, values, standing=None):
             "type": "input",
             "block_id": KIND,
             "dispatch_action": True,
-            "label": {"type": "plain_text", "text": "What was done"},
+            "label": {"type": "plain_text", "text": "Action"},
             "element": {
                 "type": "static_select",
                 "action_id": KIND,
@@ -398,9 +398,9 @@ def submitted_values(view_state):
 def validation_errors(values):
     key = values.get("type_key")
     if not key:
-        return {KIND: "Pick what was done."}
+        return {KIND: "Pick an action."}
     if not values.get("target_user_id"):
-        return {TARGET: "Say who it was aimed at."}
+        return {TARGET: "Say who this is about."}
     if needs_expiry(key) and not values.get("expires_on"):
         return {UNTIL: f"A {label(key).lower()} needs a date it runs until."}
     if needs_channel(key) and not values.get("channel_id"):
