@@ -45,6 +45,7 @@ def seen(ctx):
         channelguards.record_enforcement(conn, standing.guard_id, channel_id, subject_id,
                                DELETED, text=body, message_ts=ts)
 
-    notify.post_ephemeral(ctx.client, channel_id, subject_id, IN_CHANNEL.format(body=body))
+    notify.post_ephemeral(ctx.client, channel_id, subject_id, IN_CHANNEL.format(body=body),
+                     thread_ts=event.get("thread_ts"))
     log.info("nemo: read-only %s removed %s from %s", standing.guard_id, ts, channel_id)
     return True

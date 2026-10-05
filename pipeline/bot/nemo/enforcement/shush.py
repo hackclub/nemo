@@ -57,7 +57,8 @@ def remove(client, conn, guard, channel_id, ts):
 
 @on_event("message", open_to_all=True)
 def seen(ctx):
-    channel_id, subject_id, ts = notify.ours(ctx.payload or {})
+    event = ctx.payload or {}
+    channel_id, subject_id, ts = notify.ours(event)
     if not channel_id:
         return None
     if channel_id == channel.internal_log_channel():
@@ -71,7 +72,7 @@ def seen(ctx):
         if not remove(ctx.client, conn, guard, channel_id, ts):
             return None
         notify.post_ephemeral(ctx.client, channel_id, subject_id, IN_CHANNEL.format(
-            why=guard["reason"], until=notify.ending(guard)))
+            why=guard["reason"], until=notify.ending(guard)), thread_ts=event.get("thread_ts"))
         if notify.reset_threshold_met(conn, guard, DELETED):
             notify.reset(conn, guard, "posting")
     return True

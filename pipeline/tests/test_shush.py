@@ -6,6 +6,27 @@ import pytest
 from bot.nemo import memberguards
 from bot.nemo.enforcement import shush
 
+
+class _held:
+    def __init__(self, conn):
+        self.conn = conn
+
+    def __enter__(self):
+        return self.conn
+
+    def __exit__(self, *failure):
+        return False
+
+
+class Ctx:
+    def __init__(self, event, client=None):
+        self.payload = event
+        self.client = client or Slack()
+
+
+def event(**over):
+    return {"user": WHO, "channel": ROOM, "ts": TS, "text": "hey", **over}
+
 WHO = "U1"
 ROOM = "C1"
 TS = "1700000000.000100"
@@ -94,6 +115,34 @@ def test_a_removed_message_is_written_down_and_the_guard_reads_as_held():
     told = conn.did("INSERT INTO fd.member_guard_events")[0]
     assert told[3] == "deleted"
     assert told[4] == TS
+
+
+def test_seen_tells_them_inside_the_thread_they_posted_in(monkeypatch):
+    monkeypatch.setattr(shush, "session", lambda: _held(Conn()))
+    monkeypatch.setattr(shush.channel, "internal_log_channel", lambda: "COTHER")
+    memberguards._shushes[WHO] = guard()
+    memberguards._loaded = True
+    try:
+        client = Slack()
+        shush.seen(Ctx(event(thread_ts="1700000000.000000"), client))
+        assert client.ephemeral[0]["thread_ts"] == "1700000000.000000"
+    finally:
+        memberguards._shushes.clear()
+        memberguards._loaded = False
+
+
+def test_seen_tells_them_channel_wide_outside_a_thread(monkeypatch):
+    monkeypatch.setattr(shush, "session", lambda: _held(Conn()))
+    monkeypatch.setattr(shush.channel, "internal_log_channel", lambda: "COTHER")
+    memberguards._shushes[WHO] = guard()
+    memberguards._loaded = True
+    try:
+        client = Slack()
+        shush.seen(Ctx(event(), client))
+        assert client.ephemeral[0]["thread_ts"] is None
+    finally:
+        memberguards._shushes.clear()
+        memberguards._loaded = False
 
 
 def test_a_message_that_will_not_go_drops_the_guard(monkeypatch):

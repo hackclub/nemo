@@ -91,6 +91,7 @@ def seen(ctx):
                                DELETED, text=body, message_ts=ts)
 
     notify.post_ephemeral(ctx.client, channel_id, subject_id,
-                     IN_CHANNEL.format(left=time_left(left), body=body))
+                     IN_CHANNEL.format(left=time_left(left), body=body),
+                     thread_ts=event.get("thread_ts"))
     log.info("nemo: slow mode %s removed %s from %s", standing.guard_id, ts, channel_id)
     return True

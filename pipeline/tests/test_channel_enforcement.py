@@ -193,6 +193,28 @@ def test_slowmode_keys_a_thread_on_its_own_clock(monkeypatch):
     assert conn.did("INSERT INTO fd.slowmode_clock")[0][1] == THREAD
 
 
+def test_slowmode_tells_them_inside_the_thread_they_posted_in(monkeypatch):
+    guard(channelguards.SLOWMODE, {"seconds": 30, "threads": True})
+    conn = Conn(tick=None, left=5)
+    wire(monkeypatch, slowmode, conn)
+    client = Slack()
+
+    slowmode.seen(Ctx(message(thread_ts=THREAD), client))
+
+    assert client.ephemeral[0]["thread_ts"] == THREAD
+
+
+def test_slowmode_tells_them_channel_wide_outside_a_thread(monkeypatch):
+    guard(channelguards.SLOWMODE, {"seconds": 30})
+    conn = Conn(tick=None, left=5)
+    wire(monkeypatch, slowmode, conn)
+    client = Slack()
+
+    slowmode.seen(Ctx(message(), client))
+
+    assert client.ephemeral[0]["thread_ts"] is None
+
+
 def test_slowmode_keys_a_channel_message_on_the_empty_thread(monkeypatch):
     guard(channelguards.SLOWMODE, {"seconds": 30})
     conn = Conn(tick=("now",))

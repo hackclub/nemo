@@ -64,7 +64,8 @@ def reapply(conn, guard, why):
 
 @on_event("message", open_to_all=True)
 def seen(ctx):
-    channel_id, subject_id, ts = notify.ours(ctx.payload or {})
+    event = ctx.payload or {}
+    channel_id, subject_id, ts = notify.ours(event)
     if not channel_id:
         return None
 
@@ -84,7 +85,7 @@ def seen(ctx):
         memberguards.record_enforcement(conn, guard["id"], subject_id, channel_id,
                               "deleted", message_ts=ts)
         notify.post_ephemeral(ctx.client, channel_id, subject_id, IN_CHANNEL.format(
-            why=guard["reason"], until=notify.ending(guard)))
+            why=guard["reason"], until=notify.ending(guard)), thread_ts=event.get("thread_ts"))
         remove_from_channel(conn, guard)
         reapply(conn, guard, "posting")
     return True

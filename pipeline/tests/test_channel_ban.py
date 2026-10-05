@@ -5,6 +5,27 @@ import pytest
 from bot.nemo import memberguards
 from bot.nemo.enforcement import channel_ban
 
+
+class _held:
+    def __init__(self, conn):
+        self.conn = conn
+
+    def __enter__(self):
+        return self.conn
+
+    def __exit__(self, *failure):
+        return False
+
+
+class Ctx:
+    def __init__(self, event, client=None):
+        self.payload = event
+        self.client = client or Slack()
+
+
+def event(**over):
+    return {"user": WHO, "channel": ROOM, "ts": TS, "text": "hey", **over}
+
 WHO = "U1"
 ROOM = "C1"
 TS = "1700000000.000100"
@@ -103,6 +124,34 @@ def test_a_channel_nobody_can_be_kicked_from_keeps_the_reason(cannot_kick):
     conn = Conn()
     channel_ban.take_up(Slack(), conn, guard())
     assert "cant_kick_from_general" in conn.did("SET carry = 'failed'")[0][0]
+
+
+def test_seen_tells_them_inside_the_thread_they_posted_in(kicks, monkeypatch):
+    monkeypatch.setattr(channel_ban, "session", lambda: _held(Conn()))
+    monkeypatch.setattr(channel_ban.guard_actions, "remove", lambda client, room, ts: True)
+    memberguards._bans[(WHO, ROOM)] = guard()
+    memberguards._loaded = True
+    try:
+        client = Slack()
+        channel_ban.seen(Ctx(event(thread_ts="1700000000.000000"), client))
+        assert client.ephemeral[0]["thread_ts"] == "1700000000.000000"
+    finally:
+        memberguards._bans.clear()
+        memberguards._loaded = False
+
+
+def test_seen_tells_them_channel_wide_outside_a_thread(kicks, monkeypatch):
+    monkeypatch.setattr(channel_ban, "session", lambda: _held(Conn()))
+    monkeypatch.setattr(channel_ban.guard_actions, "remove", lambda client, room, ts: True)
+    memberguards._bans[(WHO, ROOM)] = guard()
+    memberguards._loaded = True
+    try:
+        client = Slack()
+        channel_ban.seen(Ctx(event(), client))
+        assert client.ephemeral[0]["thread_ts"] is None
+    finally:
+        memberguards._bans.clear()
+        memberguards._loaded = False
 
 
 def test_coming_back_gets_them_put_out_again(kicks):
