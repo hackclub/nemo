@@ -2,7 +2,7 @@ import logging
 import os
 
 from bot.core import parse
-from bot.core.formatting import to_member
+from bot.core.formatting import quote_text
 from bot.nemo import answer, views, attachments, channels, chat, profile
 
 log = logging.getLogger("bot.nemo")
@@ -336,7 +336,7 @@ def post_follow_up(client, conn, message_id, channel_id=None):
     ts = attachments.share(
         client, conn, message_id, channel_id or internal_log_channel(conn), forwarded,
         wearing=as_reporter(client, anonymous, reporter),
-        body=to_member(body),
+        body=views.report.escape_but_mentions(quote_text(body)),
         unfurled=unfurled(conn, message_id),
     )
     if ts is None:
