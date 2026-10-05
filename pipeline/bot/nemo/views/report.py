@@ -47,7 +47,12 @@ def escape_but_mentions(text):
     return escape_but_slack(text)
 
 
-def quote(body):
+def quote(body, blocks=None):
+    if blocks:
+        made = richtext.quote_blocks(blocks)
+        if made:
+            return made
+
     words = quote_text(body)
     return richtext.quote(words) if words else None
 
@@ -283,7 +288,9 @@ def build_blocks(case):
     files = case.get("files") or []
     shares = case.get("shares") or []
 
-    built = [part for part in [title(case), subject_summary_text(case), quote(case.get("body"))] if part]
+    built = [part for part in [
+        title(case), subject_summary_text(case), quote(case.get("body"), case.get("blocks")),
+    ] if part]
     built += report_body_text(case)
     built.append(footer(case))
 

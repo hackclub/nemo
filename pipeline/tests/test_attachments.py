@@ -161,6 +161,40 @@ def test_the_footer_keeps_only_standing_and_the_link():
     assert all("reported it" not in one for one in rest), "the reporter is named once"
 
 
+def test_the_quote_keeps_slacks_own_styling_when_it_is_simple():
+    blocks = [{"type": "rich_text", "elements": [
+        {"type": "rich_text_section", "elements": [
+            {"type": "text", "text": "this is "},
+            {"type": "text", "text": "urgent", "style": {"bold": True}},
+        ]},
+    ]}]
+    built = card(blocks=blocks)
+    quote = next(b for b in built if b["type"] == "rich_text")
+    runs = quote["elements"][0]["elements"]
+    assert {"type": "text", "text": "urgent", "style": {"bold": True}} in runs
+
+
+def test_a_list_in_the_report_falls_back_to_plain_text():
+    blocks = [{"type": "rich_text", "elements": [
+        {"type": "rich_text_list", "style": "bullet", "elements": [
+            {"type": "rich_text_section", "elements": [{"type": "text", "text": "one"}]},
+        ]},
+    ]}]
+    built = card(blocks=blocks)
+    quote = next(b for b in built if b["type"] == "rich_text")
+    assert quote["elements"][0]["elements"] == [
+        {"type": "text", "text": "he keeps following me"}
+    ]
+
+
+def test_no_blocks_at_all_still_quotes_the_plain_body():
+    built = card(blocks=None)
+    quote = next(b for b in built if b["type"] == "rich_text")
+    assert quote["elements"][0]["elements"] == [
+        {"type": "text", "text": "he keeps following me"}
+    ]
+
+
 def test_an_anonymous_card_says_so_where_the_name_would_be():
     top = lines(card(is_anonymous=True, reporter_user_id=None))[0]
     assert "reported anonymously" in top

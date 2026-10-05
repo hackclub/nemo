@@ -86,3 +86,18 @@ def quote(text, style=None):
         "type": "rich_text",
         "elements": [{"type": "rich_text_quote", "elements": elements(text, style)}],
     }
+
+
+def quote_blocks(blocks):
+    runs = []
+    for block in blocks or []:
+        if block.get("type") != "rich_text":
+            return None
+        for part in block.get("elements") or []:
+            if part.get("type") != "rich_text_section":
+                return None
+            runs.extend(part.get("elements") or [])
+
+    if not runs:
+        return None
+    return {"type": "rich_text", "elements": [{"type": "rich_text_quote", "elements": runs}]}

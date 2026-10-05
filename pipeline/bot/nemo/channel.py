@@ -40,7 +40,7 @@ WHERE role = 'subject' AND case_id <> %s AND user_id = ANY(%s)
 
 
 FIRST_MESSAGE = """
-SELECT id, body, mirrored_ts
+SELECT id, body, mirrored_ts, blocks
 FROM fd.intake_messages
 WHERE conversation_id = %s AND direction = 'inbound'
 ORDER BY posted_at, id
@@ -175,6 +175,7 @@ def gather(conn, case_id):
         "files": [],
         "shares": [],
         "message_id": None,
+        "blocks": None,
     }
 
     case["subjects"] = [
@@ -199,6 +200,7 @@ def gather(conn, case_id):
     if first:
         case["message_id"] = first[0]
         case["mirrored_ts"] = first[2]
+        case["blocks"] = first[3]
         if not case["body"]:
             case["body"] = first[1]
 
