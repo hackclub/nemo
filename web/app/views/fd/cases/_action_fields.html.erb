@@ -1,8 +1,8 @@
 <div class="field-label" data-action-standing-target="aimed">
-  <span>Directed at</span>
+  <span>Logging record on individual</span>
   <%= render "fd/member_picker", name: "target_user_id", single: true,
         url: fd_member_search_path(case_id: kase.id),
-        label: "search for who this is directed at", preset: preset_faces(target) %>
+        label: "search for who this is about", preset: preset_faces(target) %>
 </div>
 
 <div data-action-standing-target="standing">
@@ -12,7 +12,7 @@
 
 <div class="fieldset" data-action-standing-target="fields">
   <label class="field-label">
-    What was done
+    Action
     <%= select_tag :type_key, options_for_select(action_options),
           class: "select action-type", id: nil,
           data: { action: "change->action-standing#shape" } %>
