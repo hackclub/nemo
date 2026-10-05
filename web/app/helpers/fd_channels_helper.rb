@@ -40,7 +40,7 @@ module FdChannelsHelper
     when Fd::ChannelGuard::BOT_ALLOWLIST
       allowed.positive? ? "#{pluralize(allowed, 'bot')} allowed" : "no bot allowed"
     when Fd::ChannelGuard::READONLY
-      allowed.positive? ? "#{pluralize(allowed, 'person')} may post" : "nobody may post"
+      readonly_line(guard, allowed)
     end
   end
 
@@ -71,6 +71,11 @@ module FdChannelsHelper
     return nil if guard.nil?
 
     label = "#{pluralize(guard.seconds, 'second')} between messages"
+    guard.threads? ? "#{label}, threads too" : label
+  end
+
+  def readonly_line(guard, allowed)
+    label = allowed.positive? ? "#{pluralize(allowed, 'person')} may post" : "nobody may post"
     guard.threads? ? "#{label}, threads too" : label
   end
 

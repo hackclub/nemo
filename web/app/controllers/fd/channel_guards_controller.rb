@@ -73,6 +73,8 @@ module Fd
       case kind
       when ChannelGuard::SLOWMODE
         { "seconds" => seconds, "threads" => params[:threads].present? }
+      when ChannelGuard::READONLY
+        { "threads" => params[:threads].present? }
       when ChannelGuard::ACCOUNT_AGE
         { "min_age_days" => min_age_days }
       else

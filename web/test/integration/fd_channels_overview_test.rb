@@ -26,6 +26,14 @@ class FdChannelsOverviewTest < ActionDispatch::IntegrationTest
     assert_match(/30 seconds between messages, threads too/, response.body)
   end
 
+  test "a read-only guard that also catches threads says so" do
+    guard! Fd::ChannelGuard::READONLY, settings: { "threads" => true }
+
+    get fd_channels_path
+
+    assert_match(/nobody may post, threads too/, response.body)
+  end
+
   test "a lifted guard is not listed" do
     one = guard!(Fd::ChannelGuard::READONLY)
     one.update!(state: "lifted", lifted_at: Time.current, lifted_by: "UME")

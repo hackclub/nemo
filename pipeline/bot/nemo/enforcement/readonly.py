@@ -26,11 +26,13 @@ def in_a_thread(event):
 def seen(ctx):
     event = ctx.payload or {}
     channel_id, subject_id, ts = notify.ours(event)
-    if not channel_id or in_a_thread(event):
+    if not channel_id:
         return None
 
     standing = channelguards.guarding(channel_id, KIND)
     if standing is None or standing.lets_past(subject_id):
+        return None
+    if in_a_thread(event) and not standing.threads():
         return None
 
     body = event.get("text") or ""

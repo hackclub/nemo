@@ -3,6 +3,7 @@
     <h2 class="card-title">Read-only</h2>
     <div class="card-tools">
       <% if guard %>
+        <%= submit_tag "Save", class: "btn btn-sm btn-primary", form: "readonly-form" %>
         <%= opens_modal "channel.guard", "Allow", opens: "allow-bot",
               css: "btn btn-sm" %>
       <% end %>
@@ -11,6 +12,17 @@
   </div>
 
   <% if guard %>
+    <%= form_with url: fd_channel_guard_path(channel_id, guard.kind), method: :patch,
+          id: "readonly-form" do %>
+      <div class="setlist">
+        <label class="setline">
+          <span class="setname">Also in threads</span>
+          <span class="setval">
+            <%= check_box_tag :threads, "1", guard.threads?, class: "switch", id: nil %>
+          </span>
+        </label>
+      </div>
+    <% end %>
     <%= render "allows", channel_id: channel_id, guard: guard, allows: allows,
           empty: "Nobody may post" %>
   <% else %>

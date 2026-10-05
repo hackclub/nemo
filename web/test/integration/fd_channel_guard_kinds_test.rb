@@ -48,6 +48,26 @@ class FdChannelGuardKindsTest < ActionDispatch::IntegrationTest
     assert_nil live("readonly")
   end
 
+  test "read-only keeps whether it also catches threads" do
+    turn_on("readonly", threads: "1")
+
+    assert live("readonly").threads?
+  end
+
+  test "read-only without threads leaves them out" do
+    turn_on("readonly")
+
+    assert_not live("readonly").threads?
+  end
+
+  test "read-only is retuned in place and audited" do
+    turn_on("readonly")
+    tune("readonly", threads: "1")
+
+    assert live("readonly").threads?
+    assert_equal 1, Fd::AuditEntry.where(entity_type: "channel_guard", verb: "tuned").count
+  end
+
   test "all four kinds stand at once on one channel" do
     Fd::ChannelGuard::KINDS.each do |kind|
       guard!(kind, seconds: 30, min_age_days: 7)

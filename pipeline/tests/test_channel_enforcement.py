@@ -139,6 +139,14 @@ def test_readonly_catches_a_thread_broadcast(monkeypatch):
     assert taken == [(ROOM, TS)]
 
 
+def test_readonly_also_catches_a_thread_reply_when_told_to(monkeypatch):
+    guard(channelguards.READONLY, {"threads": True})
+    taken = wire(monkeypatch, readonly, Conn())
+
+    assert readonly.seen(Ctx(message(thread_ts=THREAD))) is True
+    assert taken == [(ROOM, TS)]
+
+
 def test_readonly_lets_an_allowed_member_post(monkeypatch):
     guard(channelguards.READONLY, allowed=[WHO])
     taken = wire(monkeypatch, readonly, Conn())
