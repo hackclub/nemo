@@ -20,6 +20,24 @@ class FdHelperTest < ActionView::TestCase
     assert_match(/data-turbo-frame="_top"/, html)
   end
 
+  test "a private channel we cannot name is a generic, unlinked chip" do
+    @channels = Fd::ChannelNames.new({}, Set["C0SECRET00"])
+
+    html = channel_mention("C0SECRET00")
+
+    assert_equal %(<span class="mention mention-private" title="C0SECRET00">#private-channel</span>),
+      html
+  end
+
+  test "a private channel we cannot name stays generic even with an inline label" do
+    @channels = Fd::ChannelNames.new({}, Set["C0SECRET00"])
+
+    html = channel_mention("C0SECRET00", "do-not-leak-this")
+
+    assert_no_match(/do-not-leak-this/, html)
+    assert_match(/#private-channel/, html)
+  end
+
   test "a user mention does not ask the chat log to swap itself" do
     html = mention_link("U08EMT46G3V")
 

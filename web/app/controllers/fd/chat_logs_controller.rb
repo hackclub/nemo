@@ -18,7 +18,8 @@ module Fd
       @chat = CaseChat.tail(family)
       @earlier_chat = CaseChat.earlier_than(family, @chat.size)
       @cited_shares = IntakeShare.for_messages(@conversation_messages.map(&:id))
-      @channels = ChannelNames.for(cited.map(&:source_channel_id).compact)
+      @channels = ChannelNames.for(cited.map(&:source_channel_id).compact +
+        ChatChannels.ids(@chat, @conversation_messages, @queued, @reports))
       @names = Names.for(people_ids)
       @emoji = ChatEmoji.for(@chat, @conversation_messages, @queued, @reports)
 

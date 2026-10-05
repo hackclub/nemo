@@ -138,13 +138,21 @@ module FdHelper
       data: { turbo_frame: "person-drawer" }
   end
 
+  PRIVATE_CHANNEL_LABEL = "#private-channel".freeze
+
   def channel_mention(channel_id, name = nil)
+    return private_channel_chip(channel_id) if channels.private_unnamed?(channel_id)
+
     named = channels.named?(channel_id) ? channel_label(channel_id) : nil
     shown = named || (name.present? ? "##{name}" : channel_id)
     return tag.span(shown, class: "mention", title: channel_id) unless may_open_channel?(channel_id)
 
     link_to shown, fd_channel_path(channel_id), class: "mention", title: channel_id,
       data: { turbo_frame: "_top" }
+  end
+
+  def private_channel_chip(channel_id)
+    tag.span(PRIVATE_CHANNEL_LABEL, class: "mention mention-private", title: channel_id)
   end
 
   def may_open_channel?(channel_id)

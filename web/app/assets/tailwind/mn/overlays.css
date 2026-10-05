@@ -652,6 +652,12 @@
     border-radius: 3px;
     font-weight: 500;
   }
+  .mention-private {
+    color: var(--ink-4);
+    background: var(--card-2);
+    font-weight: 400;
+    font-style: italic;
+  }
 
   .warn-line {
     display: flex;

@@ -28,6 +28,20 @@ module Slack
       found.uniq
     end
 
+    def self.channel_ids(message)
+      found = []
+      walk = lambda do |node|
+        case node
+        when Hash
+          found << node["channel_id"] if node["type"] == "channel" && node["channel_id"].present?
+          node["elements"]&.each { |one| walk.call(one) }
+        when Array then node.each { |one| walk.call(one) }
+        end
+      end
+      walk.call((message || {})["blocks"])
+      found.uniq
+    end
+
     def initialize(names = {}, channels = {}, emoji = {}, user_chip: nil, channel_chip: nil,
                    link_chip: nil)
       @names = names

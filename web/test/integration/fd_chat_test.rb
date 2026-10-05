@@ -1,6 +1,8 @@
 require "test_helper"
 
 class FdChatTest < ActionDispatch::IntegrationTest
+  include SeedsPipelineTables
+
   setup do
     @me = hold_role!("UME", "community_manager")
     @kase = make_case
@@ -145,6 +147,28 @@ class FdChatTest < ActionDispatch::IntegrationTest
     end
 
     assert_select "span.richtext-emoji", ":nope:"
+  end
+
+  def private_unnamed_channel!(channel_id)
+    as_pipeline(<<~SQL.squish,
+      INSERT INTO raw.channel_dim (channel_id, name, visibility)
+      VALUES (?, NULL, 'private')
+      ON CONFLICT (channel_id) DO UPDATE SET name = NULL, visibility = 'private'
+    SQL
+      channel_id)
+    seeded!("raw.channel_dim", "channel_id", channel_id)
+  end
+
+  test "a private channel mentioned in a slack line never shows its real name" do
+    private_unnamed_channel!("C0SECRET00")
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "look in it",
+      source_app: "nemo", channel_id: "CLOG", ts: "1.4",
+      blocks: rich([{ "type" => "channel", "channel_id" => "C0SECRET00" }]))
+
+    get fd_case_chat_log_path(@kase, thread: @kase.reports.first&.id)
+
+    assert_select "span.mention-private", "#private-channel"
+    assert_select "a[href*='C0SECRET00']", count: 0
   end
 
   test "a deletion sends the browser back for a full reload" do

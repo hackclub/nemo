@@ -119,6 +119,24 @@ class Slack::RichTextTest < ActiveSupport::TestCase
     Slack::RichText.for({ "blocks" => [{ "type" => "rich_text", "elements" => [part] }] })
   end
 
+  test "channel_ids walks blocks for every channel element" do
+    message = { "blocks" => [{ "type" => "rich_text", "elements" => [
+      { "type" => "rich_text_section", "elements" => [
+        { "type" => "channel", "channel_id" => "C0ONE000" },
+        { "type" => "text", "text" => " and " },
+        { "type" => "channel", "channel_id" => "C0TWO000" },
+        { "type" => "channel", "channel_id" => "C0ONE000" }
+      ] }
+    ] }] }
+
+    assert_equal %w[C0ONE000 C0TWO000], Slack::RichText.channel_ids(message)
+  end
+
+  test "channel_ids finds nothing in a message with no blocks" do
+    assert_equal [], Slack::RichText.channel_ids({ "text" => "just words" })
+    assert_equal [], Slack::RichText.channel_ids(nil)
+  end
+
   def row(text) = { "type" => "rich_text_section", "elements" => [{ "type" => "text", "text" => text }] }
 
   test "a bullet list is a ul, an ordered list an ol" do

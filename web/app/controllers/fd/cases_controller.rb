@@ -60,7 +60,8 @@ module Fd
         @thread_guards.map(&:channel_id) + @thread_locks.map(&:channel_id) +
         @action_standing.map(&:channel_id) +
         @actions.filter_map { |a| a.details["channel_id"] } +
-        Array(@pane_channels))
+        Array(@pane_channels) +
+        ChatChannels.ids(@chat, @conversation_messages, @queued, @reports))
       @emoji = ChatEmoji.for(@chat, @conversation_messages, @queued, @reports)
       @person_priors = Case.prior_counts_for(@participants.map(&:user_id))
       @assignees = @case.assignees.to_a
