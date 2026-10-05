@@ -17,6 +17,13 @@ class FdHelperTest < ActionView::TestCase
     html = channel_mention("C0BE6N4G2BA")
 
     assert_match(%r{href="/fd/channels/C0BE6N4G2BA"}, html)
+    assert_match(/data-turbo-frame="_top"/, html)
+  end
+
+  test "a user mention does not ask the chat log to swap itself" do
+    html = mention_link("U08EMT46G3V")
+
+    assert_match(/data-turbo-frame="person-drawer"/, html)
   end
 
   test "an open case adds no standing line under its timeline" do

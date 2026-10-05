@@ -18,10 +18,20 @@ class MentionRenderTest < ActionView::TestCase
     assert_no_match(/old-handle/, html)
   end
 
+  test "a user mention targets the person drawer, not its ambient frame" do
+    html = mentioned("it was <@U0QUINN> honestly")
+    assert_match(/data-turbo-frame="person-drawer"/, html)
+  end
+
   test "a channel mention becomes a link, never an id" do
     html = mentioned("in <#C0LOUNGE|the-lounge>")
     assert_match(%r{href="/fd/channels/C0LOUNGE"}, html)
     assert_match(/#the-lounge/, html)
+  end
+
+  test "a channel mention opens as a full page, not inside its ambient frame" do
+    html = mentioned("in <#C0LOUNGE|the-lounge>")
+    assert_match(/data-turbo-frame="_top"/, html)
   end
 
   test "a channel with no name at all still says something" do

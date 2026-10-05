@@ -134,7 +134,8 @@ module FdHelper
   end
 
   def mention_link(user_id)
-    link_to at_name(user_id), fd_member_path(user_id), class: "mention", title: user_id
+    link_to at_name(user_id), fd_member_path(user_id), class: "mention", title: user_id,
+      data: { turbo_frame: "person-drawer" }
   end
 
   def channel_mention(channel_id, name = nil)
@@ -142,7 +143,8 @@ module FdHelper
     shown = named || (name.present? ? "##{name}" : channel_id)
     return tag.span(shown, class: "mention", title: channel_id) unless may_open_channel?(channel_id)
 
-    link_to shown, fd_channel_path(channel_id), class: "mention", title: channel_id
+    link_to shown, fd_channel_path(channel_id), class: "mention", title: channel_id,
+      data: { turbo_frame: "_top" }
   end
 
   def may_open_channel?(channel_id)
