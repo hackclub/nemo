@@ -1327,6 +1327,13 @@ module FdHelper
     tag.q(reason, class: "why-quote")
   end
 
+  def action_resolution_note(action)
+    note = action.resolution_note.presence
+    return nil if note.nil?
+
+    tag.span(note, class: "resolution-note")
+  end
+
   def action_performer_note(action)
     return "performed themselves" if action.performed_by_decider?
 

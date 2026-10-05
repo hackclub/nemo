@@ -10,6 +10,9 @@
           <%= action_state_chip(action) %>
         </span>
         <span class="sub"><%= action_reason(action) %></span>
+        <% if action_resolution_note(action) %>
+          <span class="sub"><%= action_resolution_note(action) %></span>
+        <% end %>
         <span class="sub"><%= action_sentence(action) %></span>
 
         <% standing = action_standing_line(action, kase) %>

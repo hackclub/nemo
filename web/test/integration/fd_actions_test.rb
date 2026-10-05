@@ -28,6 +28,52 @@ class FdActionsTest < ActionDispatch::IntegrationTest
   end
 
 
+  test "a resolution note is stored and echoed when given" do
+    sign_in_as(@me)
+    log(resolution_note: "walked them through the rules in a DM")
+
+    action = actions.sole
+    assert_equal "walked them through the rules in a DM", action.resolution_note
+
+    echo = Fd::CaseChat.where(case_id: @kase.id).sole
+    assert_match(/How it was solved: walked them through the rules in a DM/, echo.body)
+  end
+
+  test "logging an action with no resolution note leaves it unset" do
+    sign_in_as(@me)
+    log
+
+    assert_nil actions.sole.resolution_note
+
+    echo = Fd::CaseChat.where(case_id: @kase.id).sole
+    assert_no_match(/How it was solved/, echo.body)
+  end
+
+  test "the action form offers a resolution note under the action type" do
+    sign_in_as(@me)
+    get fd_case_path(@kase, tab: "actions", do: "action")
+
+    assert_select "label.field-label", text: /How was this solved\?/
+    assert_select "textarea[name=?]", "resolution_note"
+    assert_select "label.field-label", text: /What did they do\?/
+  end
+
+  test "a logged resolution note shows on the action in the list" do
+    sign_in_as(@me)
+    log(resolution_note: "walked them through the rules in a DM")
+
+    get fd_case_path(@kase, tab: "actions")
+    assert_select ".resolution-note", text: "walked them through the rules in a DM"
+  end
+
+  test "no resolution note means no resolution-note line at all" do
+    sign_in_as(@me)
+    log
+
+    get fd_case_path(@kase, tab: "actions")
+    assert_select ".resolution-note", false
+  end
+
   test "a signed out visitor cannot log an action" do
     log
     assert_redirected_to login_path

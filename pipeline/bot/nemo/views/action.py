@@ -7,6 +7,7 @@ CALLBACK = "case_action_log"
 
 TARGET = "action_target"
 KIND = "action_kind"
+RESOLUTION_NOTE = "action_resolution_note"
 UNTIL = "action_until"
 WHERE = "action_where"
 REASON = "action_reason"
@@ -254,6 +255,24 @@ def build_blocks(case_id, values, standing=None):
                 **kind_pick(key),
             },
         },
+        {
+            "type": "input",
+            "block_id": RESOLUTION_NOTE,
+            "optional": True,
+            "label": {"type": "plain_text", "text": "How was this solved? (optional)"},
+            "element": {
+                "type": "plain_text_input",
+                "action_id": RESOLUTION_NOTE,
+                "multiline": True,
+                "max_length": REASON_LIMIT,
+                "placeholder": {"type": "plain_text", "text": "what fixed it, if anything"},
+                **(
+                    {"initial_value": values["resolution_note"]}
+                    if values.get("resolution_note")
+                    else {}
+                ),
+            },
+        },
     ]
 
     built += standing_blocks(standing)
@@ -316,7 +335,7 @@ def build_blocks(case_id, values, standing=None):
         {
             "type": "input",
             "block_id": REASON,
-            "label": {"type": "plain_text", "text": "Resolution summary"},
+            "label": {"type": "plain_text", "text": "What did they do?"},
             "element": {
                 "type": "plain_text_input",
                 "action_id": REASON,
@@ -360,6 +379,9 @@ def submitted_values(view_state):
         "type_key": (
             (values.get(KIND, {}).get(KIND, {}).get("selected_option") or {}).get("value")
         ),
+        "resolution_note": (
+            values.get(RESOLUTION_NOTE, {}).get(RESOLUTION_NOTE, {}).get("value") or ""
+        ).strip(),
         "expires_on": values.get(UNTIL, {}).get(UNTIL, {}).get("selected_date"),
         "channel_id": values.get(WHERE, {}).get(WHERE, {}).get("selected_conversation"),
         "settle": (

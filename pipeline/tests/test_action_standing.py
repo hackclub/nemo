@@ -64,6 +64,30 @@ def test_a_record_only_kind_never_grows_a_warning():
     assert action.STANDING not in ids(built)
 
 
+def test_the_modal_always_offers_a_resolution_note():
+    built = action.build_blocks(412, {"type_key": "shush", "target_user_id": WHO}, None)
+    assert action.RESOLUTION_NOTE in ids(built)
+
+
+def test_the_resolution_note_is_optional():
+    built = action.build_blocks(412, {"type_key": "shush", "target_user_id": WHO}, None)
+    field = next(one for one in built if one.get("block_id") == action.RESOLUTION_NOTE)
+    assert field["optional"] is True
+
+
+def test_the_resolution_note_sits_right_under_the_action_kind():
+    built = action.build_blocks(412, {"type_key": "shush", "target_user_id": WHO}, None)
+    shown = [one.get("block_id") for one in built]
+    assert shown.index(action.KIND) + 1 == shown.index(action.RESOLUTION_NOTE)
+
+
+def test_submitted_values_reads_and_strips_the_resolution_note():
+    state = {"values": {action.RESOLUTION_NOTE: {action.RESOLUTION_NOTE: {
+        "value": "  talked it through  "
+    }}}}
+    assert action.submitted_values(state)["resolution_note"] == "talked it through"
+
+
 def test_an_orphaned_guard_says_it_sits_on_no_case():
     built = action.build_blocks(412, {"type_key": "shush"}, standing(guard()))
     assert action.STANDING in ids(built)

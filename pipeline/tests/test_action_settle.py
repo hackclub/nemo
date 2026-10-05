@@ -108,6 +108,12 @@ def test_a_submit_that_never_saw_an_orphan_is_sent_back():
     assert not action.requires_refresh(submission(), shown | {action.SETTLE}, held)
 
 
+def test_resolution_note_is_never_required():
+    assert action.validation_errors(submission()) is None
+    assert action.validation_errors(submission(resolution_note="")) is None
+    assert action.validation_errors(submission(resolution_note="talked it through")) is None
+
+
 def test_extending_without_a_date_is_refused():
     wrong = action.validation_errors(submission(settle=action.EXTEND, expires_on=None))
     assert action.UNTIL in wrong

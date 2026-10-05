@@ -12,8 +12,12 @@ module Fd
 
     def self.body_for(action)
       target = action.aimed_at_member? ? "<@#{action.target_user_id}>" : "a thread"
-      text = "#{FdHelper::ACTION_LABELS.fetch(action.type_key) { action.type_key.tr('_', ' ').capitalize }} logged on #{target}"
-      action.reason.presence ? "#{text}: #{action.reason}" : text
+      label = FdHelper::ACTION_LABELS.fetch(action.type_key) { action.type_key.tr("_", " ").capitalize }
+      lines = ["#{label} logged on #{target}"]
+      lines[-1] += ": #{action.reason}" if action.reason.presence
+      lines << "How it was solved: #{action.resolution_note}" if action.resolution_note.presence
+      lines.join("
+")
     end
   end
 end

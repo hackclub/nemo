@@ -17,6 +17,11 @@
           class: "select action-type", id: nil,
           data: { action: "change->action-standing#shape" } %>
   </label>
+  <label class="field-label">
+    How was this solved? (optional)
+    <%= text_area_tag :resolution_note, field_was(:resolution_note), rows: 2, class: "textarea",
+          id: nil %>
+  </label>
   <%= render "thread_lock_pick", locks: thread_locks, kase: kase, logged: locks_logged %>
   <label class="field-label" data-action-standing-target="expiry" hidden>
     Until when
@@ -34,7 +39,7 @@
   </label>
   <div data-action-standing-target="why">
     <label class="field-label">
-      Why
+      What did they do?
       <%= text_area_tag :reason, field_was(:reason), rows: 3, class: "textarea", id: nil %>
     </label>
     <%= field_wrong(:reason) %>
