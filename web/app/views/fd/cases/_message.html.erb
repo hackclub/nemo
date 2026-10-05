@@ -3,13 +3,13 @@
      data-kind="<%= entry.kind %>">
   <%= entry.anon ? anonymous_face : face(entry.who) %>
   <div>
-    <% if !grouped || entry.kind == "chat" || entry.state %>
+    <% if !grouped || entry.state %>
       <div class="msg-head">
         <% unless grouped %>
           <span class="msg-who"><%= entry.name %></span>
           <span class="msg-at"><%= entry.at.strftime("%-d %b, %H:%M") %></span>
+          <% if entry.kind == "chat" %><span class="tag tag-internal">internal</span><% end %>
         <% end %>
-        <% if entry.kind == "chat" %><span class="tag">internal</span><% end %>
         <% if entry.state %><span class="tag <%= state_tone(entry.state).sub("chip-", "") %>"><%= entry.state %></span><% end %>
       </div>
     <% end %>

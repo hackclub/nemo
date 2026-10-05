@@ -431,6 +431,13 @@
     max-width: 76ch;
   }
   .msg-flagged { padding: 6px 9px; margin: 0 -9px; border-radius: var(--r-ctl); background: var(--warn-soft); }
+  .msg[data-kind="chat"] {
+    padding: 6px 9px;
+    margin: 0 -9px;
+    background: var(--info-soft);
+    border-left: 3px solid var(--info);
+  }
+  .tag-internal { background: var(--info-soft); color: var(--info); }
   .msg .avatar, .msg .row-avatar { width: 26px; height: 26px; font-size: var(--t-fine); }
   .msg.is-grouped { padding-top: 1px; }
   .msg.is-grouped .avatar, .msg.is-grouped .row-avatar { visibility: hidden; }
