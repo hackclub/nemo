@@ -670,6 +670,15 @@ module FdHelper
     (entries + changed_chat_entries(reports, chat, messages, queued)).sort_by(&:at)
   end
 
+  GROUPED_WITHIN = 5.minutes
+
+  def grouped_with?(entry, previous)
+    return false if previous.nil?
+
+    entry.kind == previous.kind && entry.who == previous.who &&
+      (entry.at - previous.at) <= GROUPED_WITHIN
+  end
+
   def changed_chat_entries(reports, chat, messages, queued)
     hidden = reports.any?(&:anonymous?)
     held = Fd::IntakeFile.for_messages(messages.map(&:id))

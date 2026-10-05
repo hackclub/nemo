@@ -1,13 +1,18 @@
-<div id="message-<%= entry.key %>" class="msg <%= entry.side == "out" ? "out" : "in" %>"
+<% grouped = local_assigns.fetch(:grouped, false) %>
+<div id="message-<%= entry.key %>" class="msg <%= entry.side == "out" ? "out" : "in" %> <%= "is-grouped" if grouped %>"
      data-kind="<%= entry.kind %>">
   <%= entry.anon ? anonymous_face : face(entry.who) %>
   <div>
-    <div class="msg-head">
-      <span class="msg-who"><%= entry.name %></span>
-      <span class="msg-at"><%= entry.at.strftime("%-d %b, %H:%M") %></span>
-      <% if entry.kind == "chat" %><span class="tag">internal</span><% end %>
-      <% if entry.state %><span class="tag <%= state_tone(entry.state).sub("chip-", "") %>"><%= entry.state %></span><% end %>
-    </div>
+    <% if !grouped || entry.kind == "chat" || entry.state %>
+      <div class="msg-head">
+        <% unless grouped %>
+          <span class="msg-who"><%= entry.name %></span>
+          <span class="msg-at"><%= entry.at.strftime("%-d %b, %H:%M") %></span>
+        <% end %>
+        <% if entry.kind == "chat" %><span class="tag">internal</span><% end %>
+        <% if entry.state %><span class="tag <%= state_tone(entry.state).sub("chip-", "") %>"><%= entry.state %></span><% end %>
+      </div>
+    <% end %>
     <% if entry.blocks.present? || entry.body.present? %>
       <div class="msg-body msg-rich"><%= body_html(entry) %></div>
     <% end %>

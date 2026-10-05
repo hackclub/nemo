@@ -171,6 +171,30 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_select "a[href*='C0SECRET00']", count: 0
   end
 
+  test "two messages from the same author close together collapse the header" do
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "first",
+      source_app: "fire_engine", posted_at: 1.hour.ago)
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "second",
+      source_app: "fire_engine", posted_at: 1.hour.ago + 1.minute)
+
+    get fd_case_chat_log_path(@kase, thread: @kase.reports.first&.id)
+
+    assert_select ".msg.is-grouped", 1
+    assert_select ".msg:not(.is-grouped) .msg-who", text: "@UME"
+    assert_select ".msg.is-grouped .msg-who", false
+  end
+
+  test "a reply far enough apart keeps its own header" do
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "first",
+      source_app: "fire_engine", posted_at: 2.hours.ago)
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "second",
+      source_app: "fire_engine", posted_at: 1.hour.ago)
+
+    get fd_case_chat_log_path(@kase, thread: @kase.reports.first&.id)
+
+    assert_select ".msg.is-grouped", 0
+  end
+
   test "a deletion sends the browser back for a full reload" do
     line = Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "oops",
       source_app: "fire_engine")

@@ -8,13 +8,16 @@
   <% end %>
 
   <% last_day = nil %>
+  <% last_entry = nil %>
   <% entries.each do |entry| %>
     <% day = entry.at.to_date %>
     <% if day != last_day %>
       <p class="dayrule"><%= day.strftime("%-d %B %Y") %></p>
       <% last_day = day %>
+      <% last_entry = nil %>
     <% end %>
-    <%= render "fd/cases/message", entry: entry %>
+    <%= render "fd/cases/message", entry: entry, grouped: grouped_with?(entry, last_entry) %>
+    <% last_entry = entry %>
   <% end %>
 
   <p class="dayrule" data-nothing hidden>Nothing has gone to the reporter yet.</p>

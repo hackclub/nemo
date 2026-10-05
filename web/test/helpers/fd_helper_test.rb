@@ -44,6 +44,42 @@ class FdHelperTest < ActionView::TestCase
     assert_match(/data-turbo-frame="person-drawer"/, html)
   end
 
+  def entry_at(at, **over)
+    FdHelper::ChatEntry.new({ key: "k", at: at, side: "in", kind: "them", who: "U1" }.merge(over))
+  end
+
+  test "the same author back to back within the window groups" do
+    first = entry_at(Time.current)
+    second = entry_at(first.at + 2.minutes)
+
+    assert grouped_with?(second, first)
+  end
+
+  test "the same author outside the window does not group" do
+    first = entry_at(Time.current)
+    second = entry_at(first.at + 6.minutes)
+
+    assert_not grouped_with?(second, first)
+  end
+
+  test "a different author never groups, however close" do
+    first = entry_at(Time.current, who: "U1")
+    second = entry_at(first.at + 1.second, who: "U2")
+
+    assert_not grouped_with?(second, first)
+  end
+
+  test "the same author but a different kind never groups" do
+    first = entry_at(Time.current, kind: "chat")
+    second = entry_at(first.at + 1.second, kind: "them")
+
+    assert_not grouped_with?(second, first)
+  end
+
+  test "there is nothing before the first entry" do
+    assert_not grouped_with?(entry_at(Time.current), nil)
+  end
+
   test "an open case adds no standing line under its timeline" do
     assert_nil timeline_standing(make_case(opened_at: 5.days.ago, assign: "UFF2"), entries(3))
   end

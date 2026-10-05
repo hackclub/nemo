@@ -432,6 +432,8 @@
   }
   .msg-flagged { padding: 6px 9px; margin: 0 -9px; border-radius: var(--r-ctl); background: var(--warn-soft); }
   .msg .avatar, .msg .row-avatar { width: 26px; height: 26px; font-size: var(--t-fine); }
+  .msg.is-grouped { padding-top: 1px; }
+  .msg.is-grouped .avatar, .msg.is-grouped .row-avatar { visibility: hidden; }
   .msg-head { display: flex; align-items: baseline; gap: var(--s-2xs); flex-wrap: wrap; }
   .msg-who { font-size: var(--t-body); font-weight: 600; color: var(--ink); }
   .msg-at { font-family: var(--font-code); font-size: var(--t-mark); color: var(--ink-4); font-variant-numeric: tabular-nums; }

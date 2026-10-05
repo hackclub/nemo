@@ -3,5 +3,13 @@
 <% if entries.any? %><%= turbo_stream.remove("chat-empty-#{@case.id}") %><% end %>
 <% @gone.each do |id| %><%= turbo_stream.remove("message-queued-#{id}") %><% end %>
 <turbo-stream action="upsert" target="chat-messages-<%= @case.id %>" version="<%= @version %>">
-  <template><%= render partial: "fd/cases/message", collection: entries, as: :entry, formats: [:html] %></template>
+  <template><%
+    last_entry = nil
+    entries.each do |entry|
+  %><%= render partial: "fd/cases/message",
+        locals: { entry: entry, grouped: grouped_with?(entry, last_entry) },
+        formats: [:html] %><%
+      last_entry = entry
+    end
+  %></template>
 </turbo-stream>
