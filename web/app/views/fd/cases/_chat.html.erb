@@ -26,7 +26,14 @@
     <% elsif thread %>
       <%= thread.anonymous? ? anonymous_face : face(thread.reporter_user_id) %>
       <span class="grow two-line">
-        <b><%= thread.reporter_label(names) %></b>
+        <b>
+          <% if thread.anonymous? %>
+            <%= thread.reporter_label(names) %>
+          <% else %>
+            <%= link_to thread.reporter_label(names), fd_member_path(thread.reporter_user_id),
+                  class: "lnk", data: { turbo_frame: "person-drawer" } %>
+          <% end %>
+        </b>
         <span><%= chat_head_line([thread], kase, count: message_count) %></span>
       </span>
     <% else %>

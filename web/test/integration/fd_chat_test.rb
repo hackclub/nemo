@@ -195,6 +195,26 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_select ".msg.is-grouped", 0
   end
 
+  test "an identified reporter's name links to their member page" do
+    Fd::CaseReport.create!(case_id: @kase.id, is_anonymous: false, reporter_user_id: "UREPORTER",
+      body: "it happened again", received_at: Time.current, source_app: "relay")
+
+    get fd_case_path(@kase)
+
+    assert_select ".chat-head a.lnk[href=?][data-turbo-frame=?]",
+      fd_member_path("UREPORTER"), "person-drawer"
+  end
+
+  test "an anonymous reporter's name is not a link" do
+    Fd::CaseReport.create!(case_id: @kase.id, is_anonymous: true,
+      body: "it happened again", received_at: Time.current, source_app: "relay")
+
+    get fd_case_path(@kase)
+
+    assert_select ".chat-head b", text: "Anonymous"
+    assert_select ".chat-head a.lnk", false
+  end
+
   test "a deletion sends the browser back for a full reload" do
     line = Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "oops",
       source_app: "fire_engine")
