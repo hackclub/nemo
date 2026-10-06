@@ -11,6 +11,9 @@ default: &default
   variables:
     statement_timeout: 15000
     lock_timeout: 3000
+    jit: "off"
+    random_page_cost: 1.1
+    effective_io_concurrency: 200
 
 development:
   <<: *default
