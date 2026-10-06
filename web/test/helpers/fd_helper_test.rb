@@ -38,6 +38,24 @@ class FdHelperTest < ActionView::TestCase
     assert_match(/#private-channel/, html)
   end
 
+  test "a link shared from a dm never shows the raw channel id" do
+    html = channel_mention("D0BQ793DP43")
+
+    assert_equal %(<span class="mention mention-private" title="D0BQ793DP43">private dm</span>),
+      html
+  end
+
+  test "a link shared from a group dm reads the same as a plain dm" do
+    html = channel_mention("G0BQ793DP43")
+
+    assert_match(/private dm/, html)
+  end
+
+  test "a bare permalink pasted from a dm labels itself, not the raw id" do
+    assert_equal "private dm",
+      link_label("https://hackclub.slack.com/archives/D0BQ793DP43/p1700000000000100")
+  end
+
   test "a user mention does not ask the chat log to swap itself" do
     html = mention_link("U08EMT46G3V")
 

@@ -138,7 +138,11 @@ module FdHelper
     return text if text.present? && text != href
 
     ref = Fd::SlackLink.parse(href)
-    return channel_label(ref.channel_id) if ref
+    if ref
+      return PRIVATE_DM_LABEL if ref.channel_id.match?(DM_ID)
+
+      return channel_label(ref.channel_id)
+    end
 
     href.delete_prefix("https://").delete_prefix("http://").truncate(48)
   end
@@ -149,8 +153,11 @@ module FdHelper
   end
 
   PRIVATE_CHANNEL_LABEL = "#private-channel".freeze
+  PRIVATE_DM_LABEL = "private dm".freeze
+  DM_ID = /\A[DG][A-Z0-9]+\z/
 
   def channel_mention(channel_id, name = nil)
+    return dm_chip(channel_id) if channel_id.to_s.match?(DM_ID)
     return private_channel_chip(channel_id) if channels.private_unnamed?(channel_id)
 
     named = channels.named?(channel_id) ? channel_label(channel_id) : nil
@@ -159,6 +166,10 @@ module FdHelper
 
     link_to shown, fd_channel_path(channel_id), class: "mention", title: channel_id,
       data: { turbo_frame: "_top" }
+  end
+
+  def dm_chip(channel_id)
+    tag.span(PRIVATE_DM_LABEL, class: "mention mention-private", title: channel_id)
   end
 
   def private_channel_chip(channel_id)
