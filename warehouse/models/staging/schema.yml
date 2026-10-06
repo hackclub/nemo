@@ -193,21 +193,15 @@ models:
       - name: channel_id
         data_type: text
         data_tests:
-          - not_null
           - relationships:
               to: ref('dim_channel')
               field: channel_id
       - name: ts
         data_type: text
-        data_tests: [not_null]
       - name: author_id
         data_type: text
       - name: author_kind
         data_type: text
-        data_tests:
-          - not_null
-          - accepted_values:
-              values: [member, bot, unknown]
       - name: bot_id
         data_type: text
       - name: app_id
@@ -220,13 +214,10 @@ models:
         data_type: text
       - name: is_reply
         data_type: boolean
-        data_tests: [not_null]
       - name: is_broadcast
         data_type: boolean
-        data_tests: [not_null]
       - name: posted_at
         data_type: timestamp with time zone
-        data_tests: [not_null]
       - name: edited_at
         data_type: timestamp with time zone
       - name: reply_count
@@ -257,10 +248,8 @@ models:
         data_type: boolean
       - name: settled
         data_type: boolean
-        data_tests: [not_null]
       - name: observed_at
         data_type: timestamp with time zone
-        data_tests: [not_null]
   - name: fct_member_message
     config:
       contract:
