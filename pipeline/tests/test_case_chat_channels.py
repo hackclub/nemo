@@ -60,6 +60,72 @@ def test_the_thread_is_asked_for_by_name_not_by_position():
     assert conn.did("SELECT case_id FROM (")[0] == {"ts": "100.000"}
 
 
+def test_thread_for_a_case_with_a_report_uses_its_forwarded_ts():
+    conn = Conn({"SELECT coalesce(": ("200.000",)})
+    assert channel.thread_for(conn, 412) == "200.000"
+
+
+def test_thread_for_a_case_with_no_thread_at_all_is_none():
+    conn = Conn()
+    assert channel.thread_for(conn, 412) is None
+
+
+class Slack:
+    def __init__(self, fails=False):
+        self.fails = fails
+        self.posted = []
+
+    def chat_postMessage(self, **kwargs):
+        if self.fails:
+            raise RuntimeError("slack said no")
+        self.posted.append(kwargs)
+        return {"ts": "9.9"}
+
+
+def test_an_action_echo_quotes_a_report_thread(monkeypatch):
+    monkeypatch.setattr(channel.profile, "profile",
+        lambda client, user_id: {"name": user_id, "icon": None})
+    conn = Conn({
+        "SELECT coalesce(": ("100.000",),
+        "SELECT card_channel_id": ("CROOM",),
+    })
+    client = Slack()
+
+    ts = channel.post_action_echo(client, conn, 412,
+        {"type_key": "warning", "target_user_id": "USUB", "reason": "kept at it"}, "UMOD")
+
+    assert ts == "9.9"
+    posted = client.posted[0]
+    assert posted["channel"] == "CROOM"
+    assert posted["thread_ts"] == "100.000"
+    assert posted["blocks"][0]["text"]["text"] == "Warning"
+    recorded = conn.did("INSERT INTO fd.case_chat")[0]
+    assert recorded[0] == 412
+    assert recorded[1] == "UMOD"
+    assert recorded[2].obj == posted["blocks"]
+    assert recorded[3:] == ("CROOM", "9.9", "9.9")
+
+
+def test_an_action_echo_with_nowhere_to_go_posts_nothing(monkeypatch):
+    conn = Conn()
+    client = Slack()
+
+    assert channel.post_action_echo(client, conn, 412,
+        {"type_key": "warning", "target_user_id": "USUB", "reason": "kept at it"}, "UMOD") is None
+    assert client.posted == []
+
+
+def test_an_action_echo_slack_refuses_is_not_recorded(monkeypatch):
+    monkeypatch.setattr(channel.profile, "profile",
+        lambda client, user_id: {"name": user_id, "icon": None})
+    conn = Conn({"SELECT coalesce(": ("100.000",), "SELECT card_channel_id": ("CROOM",)})
+    client = Slack(fails=True)
+
+    assert channel.post_action_echo(client, conn, 412,
+        {"type_key": "warning", "target_user_id": "USUB", "reason": "kept at it"}, "UMOD") is None
+    assert conn.did("INSERT INTO fd.case_chat") == []
+
+
 def test_a_card_sitting_in_a_thread_can_name_its_case():
     assert "card_thread_ts = %(ts)s" in chat.CASE_OF_THREAD
 

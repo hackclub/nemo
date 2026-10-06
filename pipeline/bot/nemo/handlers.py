@@ -22,7 +22,14 @@ from bot.nemo.case_actions import (
     reverse_action,
     set_category,
 )
-from bot.nemo.channel import ASSIGNEES, SUBJECTS, case_channels, refresh_card, post_ephemeral
+from bot.nemo.channel import (
+    ASSIGNEES,
+    SUBJECTS,
+    case_channels,
+    post_action_echo,
+    post_ephemeral,
+    refresh_card,
+)
 
 log = logging.getLogger("bot.nemo")
 
@@ -139,6 +146,7 @@ def register(app, on_reply=None):
         ack()
         with session() as conn:
             refresh_card(client, conn, case_id)
+            post_action_echo(client, conn, case_id, values, user_id)
         log.info("nemo: action %s logged on case %s by %s, guard %s",
                  action_id, case_id, user_id, guard_id)
 

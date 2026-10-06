@@ -64,6 +64,38 @@ def test_a_record_only_kind_never_grows_a_warning():
     assert action.STANDING not in ids(built)
 
 
+def submission(**over):
+    row = {"type_key": "warning", "target_user_id": WHO,
+           "reason": "kept at it after being asked to stop"}
+    row.update(over)
+    return row
+
+
+def test_echo_blocks_names_the_action_and_who_it_is_against():
+    built = action.echo_blocks(submission(), MOD)
+    assert built[0] == {"type": "header", "text": {"type": "plain_text", "text": "Warning"}}
+    assert built[1]["elements"][0]["text"] == f"Against <@{WHO}> · logged by <@{MOD}>"
+    assert built[2] == {"type": "divider"}
+
+
+def test_echo_blocks_quotes_the_reason():
+    built = action.echo_blocks(submission(), MOD)
+    quoted = next(one for one in built if one["type"] == "section")
+    assert quoted["text"]["text"] == "> kept at it after being asked to stop"
+
+
+def test_echo_blocks_adds_a_resolution_note_only_when_given():
+    without = action.echo_blocks(submission(), MOD)
+    assert all(
+        "How it was solved" not in element.get("text", "")
+        for block in without for element in block.get("elements", [])
+    )
+
+    found = action.echo_blocks(submission(resolution_note="walked them through the rules in a DM"), MOD)
+    footer = found[-1]["elements"][0]["text"]
+    assert footer == "*How it was solved:* walked them through the rules in a DM"
+
+
 def test_the_modal_always_offers_a_resolution_note():
     built = action.build_blocks(412, {"type_key": "shush", "target_user_id": WHO}, None)
     assert action.RESOLUTION_NOTE in ids(built)

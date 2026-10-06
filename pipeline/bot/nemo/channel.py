@@ -1,6 +1,8 @@
 import logging
 import os
 
+from psycopg.types.json import Jsonb
+
 from bot.core import parse
 from bot.core.formatting import quote_text
 from bot.nemo import answer, views, attachments, channels, chat, profile
@@ -133,6 +135,21 @@ SELECT card_channel_id FROM fd.cases WHERE id = %(case_id)s
 def card_room(conn, case_id, channel_id=None):
     row = conn.execute(CARD_ROOM, {"case_id": case_id}).fetchone()
     return (row and row[0]) or channel_id or internal_log_channel(conn)
+
+
+THREAD_FOR_CASE = """
+SELECT coalesce(
+    (SELECT r.forwarded_ts FROM fd.case_reports r
+      WHERE r.case_id = %(case_id)s AND r.forwarded_ts IS NOT NULL
+      ORDER BY r.id LIMIT 1),
+    (SELECT coalesce(k.card_thread_ts, k.card_ts) FROM fd.cases k WHERE k.id = %(case_id)s)
+)
+"""
+
+
+def thread_for(conn, case_id):
+    row = conn.execute(THREAD_FOR_CASE, {"case_id": case_id}).fetchone()
+    return row[0] if row else None
 
 
 def app_url(path):
@@ -613,3 +630,49 @@ def mirror(client, conn, case_id, channel_id=None):
     if carried:
         log.info("nemo: carried %s message(s) into case %s's thread", carried, case_id)
     return carried
+
+
+KEEP_ACTION_ECHO = """
+INSERT INTO fd.case_chat
+    (case_id, author_user_id, blocks, channel_id, ts, mirrored_ts, mirrored_at, mirrored_as,
+     source_app)
+VALUES (%s, %s, %s, %s, %s, %s, now(), 'nemo', 'nemo')
+RETURNING id
+"""
+
+
+def post_action_echo(client, conn, case_id, values, by):
+    thread_ts = thread_for(conn, case_id)
+    if thread_ts is None:
+        log.info("nemo: case %s has no thread yet, the action log has nowhere to go", case_id)
+        return None
+
+    room = card_room(conn, case_id)
+    blocks = views.action.echo_blocks(values, by)
+    seen = profile.profile(client, by)
+    wearing = {"username": seen["name"]}
+    if seen["icon"]:
+        wearing["icon_url"] = seen["icon"]
+    wearing["metadata"] = {
+        "event_type": "nemo_message",
+        "event_payload": {"source_user_id": by},
+    }
+
+    try:
+        sent = client.chat_postMessage(
+            channel=room,
+            thread_ts=thread_ts,
+            blocks=blocks,
+            text=views.action.label(values["type_key"]),
+            unfurl_links=False,
+            unfurl_media=False,
+            **wearing,
+        )
+    except Exception as failure:
+        log.warning("nemo: the action log for case %s did not reach the thread: %s",
+                    case_id, failure)
+        return None
+
+    conn.execute(KEEP_ACTION_ECHO,
+        (case_id, by, Jsonb(blocks), room, sent["ts"], sent["ts"]))
+    return sent["ts"]

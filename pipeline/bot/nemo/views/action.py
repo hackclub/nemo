@@ -361,6 +361,39 @@ def build_view(case_id, subjects=(), category=None, values=None, standing=None):
     }
 
 
+HEADER_TEXT_LIMIT = 150
+
+
+def echo_blocks(values, by):
+    built = [
+        {
+            "type": "header",
+            "text": {"type": "plain_text", "text": label(values["type_key"])[:HEADER_TEXT_LIMIT]},
+        },
+        {
+            "type": "context",
+            "elements": [{
+                "type": "mrkdwn",
+                "text": f"Against <@{values['target_user_id']}> · logged by <@{by}>",
+            }],
+        },
+        {"type": "divider"},
+        {
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": f"> {values['reason']}"},
+        },
+    ]
+    if values.get("resolution_note"):
+        built.append({
+            "type": "context",
+            "elements": [{
+                "type": "mrkdwn",
+                "text": f"*How it was solved:* {values['resolution_note']}",
+            }],
+        })
+    return built
+
+
 def requires_refresh(values, shown, standing=None):
     key = values.get("type_key")
     if needs_expiry(key) and UNTIL not in shown:
