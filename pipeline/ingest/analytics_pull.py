@@ -76,6 +76,15 @@ ON CONFLICT (user_id) DO UPDATE SET
         THEN EXCLUDED.is_invited_guest ELSE raw.member_dim.is_invited_guest END,
     invite_flags_on = greatest(raw.member_dim.invite_flags_on, EXCLUDED.invite_flags_on),
     updated_at = now()
+WHERE (raw.member_dim.claimed_at, raw.member_dim.is_invited_member,
+       raw.member_dim.is_invited_guest, raw.member_dim.invite_flags_on)
+      IS DISTINCT FROM (
+          COALESCE(raw.member_dim.claimed_at, EXCLUDED.claimed_at),
+          CASE WHEN {NEWER_DAY}
+              THEN EXCLUDED.is_invited_member ELSE raw.member_dim.is_invited_member END,
+          CASE WHEN {NEWER_DAY}
+              THEN EXCLUDED.is_invited_guest ELSE raw.member_dim.is_invited_guest END,
+          greatest(raw.member_dim.invite_flags_on, EXCLUDED.invite_flags_on))
 """
 
 CHANNEL_ACTIVITY_SQL = """

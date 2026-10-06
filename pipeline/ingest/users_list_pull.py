@@ -26,6 +26,12 @@ ON CONFLICT (user_id) DO UPDATE SET
     is_restricted = EXCLUDED.is_restricted,
     is_ultra_restricted = EXCLUDED.is_ultra_restricted,
     updated_at = now()
+WHERE (raw.member_dim.is_deleted, raw.member_dim.invite_pending, raw.member_dim.is_bot,
+       raw.member_dim.is_admin, raw.member_dim.is_owner, raw.member_dim.is_primary_owner,
+       raw.member_dim.is_restricted, raw.member_dim.is_ultra_restricted)
+      IS DISTINCT FROM (EXCLUDED.is_deleted, EXCLUDED.invite_pending, EXCLUDED.is_bot,
+                        EXCLUDED.is_admin, EXCLUDED.is_owner, EXCLUDED.is_primary_owner,
+                        EXCLUDED.is_restricted, EXCLUDED.is_ultra_restricted)
 """
 
 MEMBER_SQL = """
@@ -43,6 +49,11 @@ ON CONFLICT (user_id) DO UPDATE SET
     is_deleted = EXCLUDED.is_deleted,
     profile_updated_at = EXCLUDED.profile_updated_at,
     synced_at = now()
+WHERE (fd.member.handle, fd.member.display_name, fd.member.avatar_url, fd.member.avatar_hash,
+       fd.member.is_bot, fd.member.is_deleted, fd.member.profile_updated_at)
+      IS DISTINCT FROM (EXCLUDED.handle, EXCLUDED.display_name, EXCLUDED.avatar_url,
+                        EXCLUDED.avatar_hash, EXCLUDED.is_bot, EXCLUDED.is_deleted,
+                        EXCLUDED.profile_updated_at)
 """
 
 IDENTITY_NAME_SQL = """
@@ -53,6 +64,8 @@ ON CONFLICT (user_id) DO UPDATE SET
     last_name = EXCLUDED.last_name,
     updated_at = now()
 WHERE fd.member_identity.purged_at IS NULL
+  AND (fd.member_identity.first_name, fd.member_identity.last_name)
+      IS DISTINCT FROM (EXCLUDED.first_name, EXCLUDED.last_name)
 """
 
 

@@ -25,6 +25,8 @@ ON CONFLICT (channel_id, root_ts) DO UPDATE SET
     reply_users_count = EXCLUDED.reply_users_count,
     latest_reply_ts = EXCLUDED.latest_reply_ts,
     seen_at = now()
+WHERE (raw.thread.reply_count, raw.thread.reply_users_count, raw.thread.latest_reply_ts)
+      IS DISTINCT FROM (EXCLUDED.reply_count, EXCLUDED.reply_users_count, EXCLUDED.latest_reply_ts)
 """
 
 WALK_SQL = """
@@ -52,6 +54,7 @@ FROM (
     FROM raw.thread WHERE channel_id = ANY(%s) GROUP BY channel_id
 ) t
 WHERE d.channel_id = t.channel_id
+  AND (d.thread_parents, d.thread_replies) IS DISTINCT FROM (t.parents, t.replies)
 """
 
 

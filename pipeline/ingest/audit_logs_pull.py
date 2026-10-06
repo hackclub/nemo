@@ -59,6 +59,13 @@ ON CONFLICT (user_id, at, source) DO UPDATE SET
     ua_os = coalesce(EXCLUDED.ua_os, fd.login_event.ua_os),
     session_id = coalesce(EXCLUDED.session_id, fd.login_event.session_id),
     updated_at = now()
+WHERE (fd.login_event.ip, fd.login_event.ua, fd.login_event.ua_app, fd.login_event.ua_os,
+       fd.login_event.session_id)
+      IS DISTINCT FROM (coalesce(EXCLUDED.ip, fd.login_event.ip),
+                        coalesce(EXCLUDED.ua, fd.login_event.ua),
+                        coalesce(EXCLUDED.ua_app, fd.login_event.ua_app),
+                        coalesce(EXCLUDED.ua_os, fd.login_event.ua_os),
+                        coalesce(EXCLUDED.session_id, fd.login_event.session_id))
 """
 
 IDENTITY_SQL = """

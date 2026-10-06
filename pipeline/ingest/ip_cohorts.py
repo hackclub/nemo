@@ -19,6 +19,10 @@ ON CONFLICT (ip_prefix) DO UPDATE SET
     first_seen = least(EXCLUDED.first_seen, fd.ip_cohort.first_seen),
     last_seen = greatest(EXCLUDED.last_seen, fd.ip_cohort.last_seen),
     refreshed_at = now()
+WHERE (fd.ip_cohort.people, fd.ip_cohort.logins, fd.ip_cohort.first_seen, fd.ip_cohort.last_seen)
+      IS DISTINCT FROM (EXCLUDED.people, EXCLUDED.logins,
+                        least(EXCLUDED.first_seen, fd.ip_cohort.first_seen),
+                        greatest(EXCLUDED.last_seen, fd.ip_cohort.last_seen))
 """
 
 STALE_SQL = """

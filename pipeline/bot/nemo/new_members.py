@@ -20,6 +20,18 @@ ON CONFLICT (user_id) DO UPDATE SET
     is_ultra_restricted = EXCLUDED.is_ultra_restricted,
     profile_updated_at = coalesce(EXCLUDED.profile_updated_at, fd.member.profile_updated_at),
     synced_at = now()
+WHERE (fd.member.handle, fd.member.display_name, fd.member.avatar_url, fd.member.avatar_hash,
+       fd.member.tz, fd.member.tz_offset, fd.member.is_bot, fd.member.is_deleted,
+       fd.member.is_restricted, fd.member.is_ultra_restricted, fd.member.profile_updated_at)
+      IS DISTINCT FROM (coalesce(EXCLUDED.handle, fd.member.handle),
+                        coalesce(EXCLUDED.display_name, fd.member.display_name),
+                        coalesce(EXCLUDED.avatar_url, fd.member.avatar_url),
+                        coalesce(EXCLUDED.avatar_hash, fd.member.avatar_hash),
+                        coalesce(EXCLUDED.tz, fd.member.tz),
+                        coalesce(EXCLUDED.tz_offset, fd.member.tz_offset),
+                        EXCLUDED.is_bot, EXCLUDED.is_deleted,
+                        EXCLUDED.is_restricted, EXCLUDED.is_ultra_restricted,
+                        coalesce(EXCLUDED.profile_updated_at, fd.member.profile_updated_at))
 """
 
 IDENTITY = """
@@ -32,6 +44,12 @@ ON CONFLICT (user_id) DO UPDATE SET
     email = coalesce(EXCLUDED.email, fd.member_identity.email),
     updated_at = now()
 WHERE fd.member_identity.purged_at IS NULL
+  AND (fd.member_identity.real_name, fd.member_identity.first_name,
+       fd.member_identity.last_name, fd.member_identity.email)
+      IS DISTINCT FROM (coalesce(EXCLUDED.real_name, fd.member_identity.real_name),
+                        coalesce(EXCLUDED.first_name, fd.member_identity.first_name),
+                        coalesce(EXCLUDED.last_name, fd.member_identity.last_name),
+                        coalesce(EXCLUDED.email, fd.member_identity.email))
 """
 
 JOINED = """

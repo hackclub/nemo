@@ -20,6 +20,8 @@ ON CONFLICT (user_id) DO UPDATE SET
     email = EXCLUDED.email,
     updated_at = now()
 WHERE fd.member_identity.purged_at IS NULL
+  AND (fd.member_identity.real_name, fd.member_identity.email)
+      IS DISTINCT FROM (EXCLUDED.real_name, EXCLUDED.email)
 """
 
 

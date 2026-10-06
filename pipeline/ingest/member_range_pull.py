@@ -40,6 +40,9 @@ ON CONFLICT (user_id) DO UPDATE SET
     account_created_verified = EXCLUDED.account_created_verified,
     claimed_at = COALESCE(raw.member_dim.claimed_at, EXCLUDED.claimed_at),
     updated_at = now()
+WHERE (raw.member_dim.account_created_verified, raw.member_dim.claimed_at)
+      IS DISTINCT FROM (EXCLUDED.account_created_verified,
+                        COALESCE(raw.member_dim.claimed_at, EXCLUDED.claimed_at))
 """
 
 

@@ -30,6 +30,16 @@ ON CONFLICT (user_id, at, source) DO UPDATE SET
     isp = coalesce(EXCLUDED.isp, fd.login_event.isp),
     seen = greatest(EXCLUDED.seen, fd.login_event.seen),
     updated_at = now()
+WHERE (fd.login_event.ip, fd.login_event.ua, fd.login_event.ua_app, fd.login_event.ua_os,
+       fd.login_event.country, fd.login_event.region, fd.login_event.isp, fd.login_event.seen)
+      IS DISTINCT FROM (coalesce(EXCLUDED.ip, fd.login_event.ip),
+                        coalesce(EXCLUDED.ua, fd.login_event.ua),
+                        coalesce(EXCLUDED.ua_app, fd.login_event.ua_app),
+                        coalesce(EXCLUDED.ua_os, fd.login_event.ua_os),
+                        coalesce(EXCLUDED.country, fd.login_event.country),
+                        coalesce(EXCLUDED.region, fd.login_event.region),
+                        coalesce(EXCLUDED.isp, fd.login_event.isp),
+                        greatest(EXCLUDED.seen, fd.login_event.seen))
 """
 
 
