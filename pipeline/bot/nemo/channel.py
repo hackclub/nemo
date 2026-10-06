@@ -685,8 +685,17 @@ def post_echo(client, conn, case_id, blocks, by, fallback_text, trouble):
     return sent["ts"]
 
 
+CHANNEL_NAME = "SELECT name FROM raw.channel_dim WHERE channel_id = %s"
+
+
+def channel_name(conn, channel_id):
+    row = conn.execute(CHANNEL_NAME, (channel_id,)).fetchone()
+    return row[0] if row else None
+
+
 def post_action_echo(client, conn, case_id, values, by):
-    blocks = views.action.echo_blocks(values, by)
+    named = channel_name(conn, values["channel_id"]) if values.get("channel_id") else None
+    blocks = views.action.echo_blocks(values, by, channel_name=named)
     return post_echo(client, conn, case_id, blocks, by, views.action.label(values["type_key"]),
         "nemo: the action log for case %s did not reach the thread: %s")
 

@@ -1,3 +1,5 @@
+import datetime as dt
+
 import yaml
 
 from bot.nemo.views import edit
@@ -105,6 +107,21 @@ def expiry(values):
 
 def format_date(at):
     return at.strftime("%-d %b") if at else None
+
+
+def format_expiry(expires_on):
+    return format_date(dt.date.fromisoformat(expires_on)) if expires_on else None
+
+
+def header_text(values, channel_name=None):
+    key = values["type_key"]
+    parts = [label(key)]
+    if needs_channel(key) and values.get("channel_id"):
+        parts.append(f"from #{channel_name}" if channel_name else f"from {values['channel_id']}")
+    until = format_expiry(values.get("expires_on"))
+    if needs_expiry(key) and until:
+        parts.append(f"until {until}")
+    return " ".join(parts)
 
 
 def existing_action_text(found):
@@ -364,11 +381,12 @@ def build_view(case_id, subjects=(), category=None, values=None, standing=None):
 HEADER_TEXT_LIMIT = 150
 
 
-def echo_blocks(values, by):
+def echo_blocks(values, by, channel_name=None):
     built = [
         {
             "type": "header",
-            "text": {"type": "plain_text", "text": label(values["type_key"])[:HEADER_TEXT_LIMIT]},
+            "text": {"type": "plain_text",
+                      "text": header_text(values, channel_name)[:HEADER_TEXT_LIMIT]},
         },
         {
             "type": "context",

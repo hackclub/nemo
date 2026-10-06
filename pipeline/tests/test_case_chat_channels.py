@@ -106,6 +106,26 @@ def test_an_action_echo_quotes_a_report_thread(monkeypatch):
     assert recorded[3:] == ("CROOM", "9.9", "9.9")
 
 
+def test_a_channel_ban_echo_names_its_channel_and_end_date(monkeypatch):
+    monkeypatch.setattr(channel.profile, "profile",
+        lambda client, user_id: {"name": user_id, "icon": None})
+    conn = Conn({
+        "SELECT coalesce(": ("100.000",),
+        "SELECT card_channel_id": ("CROOM",),
+        "SELECT name FROM raw.channel_dim": ("general",),
+    })
+    client = Slack()
+
+    channel.post_action_echo(client, conn, 412, {
+        "type_key": "channel_ban", "target_user_id": "USUB", "reason": "kept at it",
+        "channel_id": "CGEN", "expires_on": "2026-03-10",
+    }, "UMOD")
+
+    posted = client.posted[0]
+    assert posted["blocks"][0]["text"]["text"] == "Channel ban from #general until 10 Mar"
+    assert conn.did("SELECT name FROM raw.channel_dim")[0] == ("CGEN",)
+
+
 def test_an_action_echo_with_nowhere_to_go_posts_nothing(monkeypatch):
     conn = Conn()
     client = Slack()

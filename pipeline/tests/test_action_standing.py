@@ -84,6 +84,36 @@ def test_echo_blocks_quotes_the_reason():
     assert quoted["text"]["text"] == "> kept at it after being asked to stop"
 
 
+def test_the_header_names_a_channel_ban_its_channel_and_its_end_date():
+    built = action.echo_blocks(
+        submission(type_key="channel_ban", channel_id="CGEN", expires_on="2026-03-10"), MOD,
+        channel_name="general",
+    )
+    assert built[0]["text"]["text"] == "Channel ban from #general until 10 Mar"
+
+
+def test_a_channel_ban_falls_back_to_the_raw_id_when_the_name_is_unknown():
+    built = action.echo_blocks(
+        submission(type_key="channel_ban", channel_id="CGEN", expires_on="2026-03-10"), MOD,
+    )
+    assert built[0]["text"]["text"] == "Channel ban from CGEN until 10 Mar"
+
+
+def test_a_shush_names_its_end_date_but_no_channel():
+    built = action.echo_blocks(submission(type_key="shush", expires_on="2026-03-10"), MOD)
+    assert built[0]["text"]["text"] == "Shush until 10 Mar"
+
+
+def test_a_temporary_ban_names_its_end_date():
+    built = action.echo_blocks(submission(type_key="temp_ban", expires_on="2026-03-10"), MOD)
+    assert built[0]["text"]["text"] == "Temporary ban until 10 Mar"
+
+
+def test_a_permanent_ban_has_no_end_date_to_name():
+    built = action.echo_blocks(submission(type_key="perma_ban"), MOD)
+    assert built[0]["text"]["text"] == "Permanent ban"
+
+
 def test_echo_blocks_adds_a_resolution_note_only_when_given():
     without = action.echo_blocks(submission(), MOD)
     assert all(
