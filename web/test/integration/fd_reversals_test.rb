@@ -42,7 +42,7 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
   def make_guard(**attrs)
     Fd::MemberGuard.create!({
       kind: "deactivation", subject_id: "USUB", case_id: @kase.id, opened_by: "UFF1",
-      reason: "raiding", carried_by: "nemo", carry: "held"
+      reason: "raiding", enforced_by: "nemo", enforcement_status: "held"
     }.merge(attrs))
   end
 

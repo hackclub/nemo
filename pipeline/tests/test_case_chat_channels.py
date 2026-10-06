@@ -126,6 +126,37 @@ def test_an_action_echo_slack_refuses_is_not_recorded(monkeypatch):
     assert conn.did("INSERT INTO fd.case_chat") == []
 
 
+def test_a_resolution_echo_quotes_a_report_thread(monkeypatch):
+    monkeypatch.setattr(channel.profile, "profile",
+        lambda client, user_id: {"name": user_id, "icon": None})
+    conn = Conn({
+        "SELECT coalesce(": ("100.000",),
+        "SELECT card_channel_id": ("CROOM",),
+    })
+    client = Slack()
+
+    ts = channel.post_resolution_echo(client, conn, 412, "no_action", None, "UMOD")
+
+    assert ts == "9.9"
+    posted = client.posted[0]
+    assert posted["channel"] == "CROOM"
+    assert posted["thread_ts"] == "100.000"
+    assert posted["text"] == "No action needed"
+    recorded = conn.did("INSERT INTO fd.case_chat")[0]
+    assert recorded[0] == 412
+    assert recorded[1] == "UMOD"
+    assert recorded[2].obj == posted["blocks"]
+    assert recorded[3:] == ("CROOM", "9.9", "9.9")
+
+
+def test_a_resolution_echo_with_nowhere_to_go_posts_nothing():
+    conn = Conn()
+    client = Slack()
+
+    assert channel.post_resolution_echo(client, conn, 412, "no_action", None, "UMOD") is None
+    assert client.posted == []
+
+
 def test_a_card_sitting_in_a_thread_can_name_its_case():
     assert "card_thread_ts = %(ts)s" in chat.CASE_OF_THREAD
 

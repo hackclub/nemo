@@ -2,7 +2,7 @@ import logging
 
 from bot.core import session
 from bot.nemo import channel, channels, memberguards
-from bot.nemo.enforcement import CARRIERS
+from bot.nemo.enforcement import ENFORCEMENTS
 
 log = logging.getLogger("bot.nemo")
 
@@ -30,15 +30,15 @@ HEADING = "*Ending soon*"
 LINE = "• <@{who}> — {what}{where}, until {when}{case}"
 
 
-def carrier_for(guard):
-    return CARRIERS.get(guard["kind"])
+def enforcement_for(guard):
+    return ENFORCEMENTS.get(guard["kind"])
 
 
 def release(client, conn, guard):
-    carrier = carrier_for(guard)
-    if carrier is None:
+    enforcement = enforcement_for(guard)
+    if enforcement is None:
         return True
-    return carrier.lift(client, conn, guard, tell=notifies_member(conn))
+    return enforcement.lift(client, conn, guard, tell=notifies_member(conn))
 
 
 def release_now(client, guard):
@@ -110,12 +110,12 @@ def sweep_dropped(client):
         again = memberguards.dropped_awhile(conn)
 
     for guard in again:
-        carrier = carrier_for(guard)
-        if carrier is None:
+        enforcement = enforcement_for(guard)
+        if enforcement is None:
             continue
         with session() as conn:
             try:
-                carrier.take_up(client, conn, guard)
+                enforcement.take_up(client, conn, guard)
             except Exception as failure:
                 log.warning("nemo: could not take %s back up: %s", guard["id"], failure)
     return len(again)

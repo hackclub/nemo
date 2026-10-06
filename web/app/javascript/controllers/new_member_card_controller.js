@@ -13,10 +13,10 @@ export default class extends Controller {
   }
 
   onClick(event) {
-    const trigger = event.target.closest("[data-joiner-card]")
+    const trigger = event.target.closest("[data-new-member-card]")
     if (!trigger || !this.hasFrameTarget) return
 
-    const url = trigger.getAttribute("data-joiner-card")
+    const url = trigger.getAttribute("data-new-member-card")
     if (this.frameTarget.getAttribute("src") === url) return
 
     this.frameTarget.removeAttribute("complete")

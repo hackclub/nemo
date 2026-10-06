@@ -7,7 +7,7 @@ ENDS = dt.datetime(2026, 3, 10, 12, tzinfo=dt.UTC)
 
 def found(**over):
     row = {"kind": "shush", "expires_at": ENDS, "channel_id": None,
-           "case_id": 412, "carry": "held", "carried_by": "nemo"}
+           "case_id": 412, "enforcement_status": "held", "enforced_by": "nemo"}
     row.update(over)
     return row
 
@@ -30,16 +30,16 @@ def test_one_with_no_end_date_says_that_instead():
 
 
 def test_one_nemo_has_not_carried_admits_it():
-    assert record.standing_line(found(carry="pending")).endswith(
+    assert record.standing_line(found(enforcement_status="pending")).endswith(
         "nemo has not carried it yet")
 
 
 def test_one_nemo_has_dropped_admits_it():
-    assert record.standing_line(found(carry="failed")).endswith("nemo is not holding it")
+    assert record.standing_line(found(enforcement_status="failed")).endswith("nemo is not holding it")
 
 
 def test_one_done_by_hand_is_not_blamed_on_nemo():
-    line = record.standing_line(found(carried_by="by_hand", carry="held"))
+    line = record.standing_line(found(enforced_by="by_hand", enforcement_status="held"))
     assert line.endswith("done by hand")
     assert "nemo" not in line
 

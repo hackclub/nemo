@@ -123,7 +123,7 @@ class FdActionStandingTest < ActionDispatch::IntegrationTest
   end
 
   test "the note says which case and until when, and nothing about nemo" do
-    guard!(carry: "failed", expires_at: Time.utc(2026, 3, 10))
+    guard!(enforcement_status: "failed", expires_at: Time.utc(2026, 3, 10))
     look
 
     assert_match(/on no case/, response.body)

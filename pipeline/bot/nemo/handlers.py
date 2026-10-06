@@ -18,6 +18,7 @@ from bot.nemo.case_actions import (
     remove_assignee,
     remove_participant,
     reopen,
+    resolution_echo_actions,
     resolve,
     reverse_action,
     set_category,
@@ -28,6 +29,7 @@ from bot.nemo.channel import (
     case_channels,
     post_action_echo,
     post_ephemeral,
+    post_resolution_echo,
     refresh_card,
 )
 
@@ -477,6 +479,9 @@ def register(app, on_reply=None):
         ack()
         with session() as conn:
             refresh_card(client, conn, case_id)
+            actions = resolution_echo_actions(conn, case_id)
+            post_resolution_echo(client, conn, case_id, values["resolution"],
+                values["member_note"], user_id, actions)
         log.info("nemo: case %s resolved by %s, %s notified", case_id, user_id, notified)
 
     def post_refusal(event, thread_ts, client, what, refusal):

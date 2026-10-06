@@ -1,5 +1,5 @@
 module Fd
-  class JoinerQuery
+  class NewMemberQuery
     IDENTITY_READ = "identity.read".freeze
 
     Facet = Struct.new(:key, :label, :value, :value_label, :options, :on, :kind,

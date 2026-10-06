@@ -101,7 +101,7 @@ def test_taking_one_up_puts_them_out_and_tells_them_where_from(kicks):
     assert channel_ban.take_up(client, conn, guard())
 
     assert kicks == [(ROOM, WHO)]
-    assert conn.executed("carry = 'held'")
+    assert conn.executed("enforcement_status = 'held'")
     assert "kicked" in conn.verbs()
 
     text = client.posted[0]["text"]
@@ -114,8 +114,8 @@ def test_one_it_cannot_put_out_is_not_claimed_as_held(cannot_kick):
     conn, client = Conn(), Slack()
     assert not channel_ban.take_up(client, conn, guard())
 
-    assert conn.executed("carry = 'failed'")
-    assert not conn.executed("carry = 'held'")
+    assert conn.executed("enforcement_status = 'failed'")
+    assert not conn.executed("enforcement_status = 'held'")
     assert conn.verbs() == ["failed"]
     assert client.posted == [], "nothing is claimed to them that did not happen"
 
@@ -123,7 +123,7 @@ def test_one_it_cannot_put_out_is_not_claimed_as_held(cannot_kick):
 def test_a_channel_nobody_can_be_kicked_from_keeps_the_reason(cannot_kick):
     conn = Conn()
     channel_ban.take_up(Slack(), conn, guard())
-    assert "cant_kick_from_general" in conn.did("SET carry = 'failed'")[0][0]
+    assert "cant_kick_from_general" in conn.did("SET enforcement_status = 'failed'")[0][0]
 
 
 def test_seen_tells_them_inside_the_thread_they_posted_in(kicks, monkeypatch):

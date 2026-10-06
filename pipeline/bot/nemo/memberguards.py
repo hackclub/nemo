@@ -15,7 +15,7 @@ ELSEWHERE = action.ELSEWHERE
 HERE = action.HERE
 
 FIELDS = (
-    "id", "kind", "subject_id", "channel_id", "state", "carry", "carried_by",
+    "id", "kind", "subject_id", "channel_id", "state", "enforcement_status", "enforced_by",
     "case_id", "opened_by", "opened_at", "reason", "expires_at",
 )
 
@@ -98,7 +98,7 @@ def reads(found, case_id=None):
 OPEN = """
 INSERT INTO fd.member_guards
     (kind, subject_id, channel_id, case_id, opened_by, reason, expires_at,
-     carried_by, carry)
+     enforced_by, enforcement_status)
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT DO NOTHING
 RETURNING id
@@ -123,10 +123,11 @@ UPDATE fd.actions SET guard_id = %s WHERE id = %s AND guard_id IS NULL RETURNING
 
 def open_guard(conn, kind, subject_id, by, reason, channel_id=None, case_id=None,
                expires_at=None, by_hand=False):
-    carried_by, carry = ("by_hand", "held") if by_hand else ("nemo", "pending")
+    enforced_by, enforcement_status = ("by_hand", "held") if by_hand else ("nemo", "pending")
     row = conn.execute(
         OPEN,
-        (kind, subject_id, channel_id, case_id, by, reason, expires_at, carried_by, carry),
+        (kind, subject_id, channel_id, case_id, by, reason, expires_at, enforced_by,
+         enforcement_status),
     ).fetchone()
     if row is None:
         return None
@@ -134,7 +135,7 @@ def open_guard(conn, kind, subject_id, by, reason, channel_id=None, case_id=None
     audit.record(
         conn, "member_guard", row[0], "opened", by,
         after={"kind": kind, "subject_id": subject_id, "channel_id": channel_id,
-               "case_id": case_id, "carried_by": carried_by,
+               "case_id": case_id, "enforced_by": enforced_by,
                "expires_at": str(expires_at) if expires_at else None},
     )
     return row[0]
@@ -204,28 +205,29 @@ def settled(conn, action_id, values, active_guard, by):
 
 
 LIVE_GUARDS = """
-SELECT id, kind, subject_id, channel_id, reason, expires_at, carry, carried_by
+SELECT id, kind, subject_id, channel_id, reason, expires_at, enforcement_status,
+       enforced_by
 FROM fd.member_guards
 WHERE state = 'live'
 """
 
-UNCARRIED = """
+UNENFORCED = """
 SELECT id, kind, subject_id, channel_id, reason, expires_at
 FROM fd.member_guards
-WHERE state = 'live' AND carry = 'pending' AND carried_by = 'nemo'
+WHERE state = 'live' AND enforcement_status = 'pending' AND enforced_by = 'nemo'
 ORDER BY opened_at LIMIT 20
 """
 
 HOLDING = """
 UPDATE fd.member_guards
-SET carry = 'held', attempts = 0, last_error = NULL, updated_at = now()
-WHERE id = %s AND carry <> 'held'
+SET enforcement_status = 'held', attempts = 0, last_error = NULL, updated_at = now()
+WHERE id = %s AND enforcement_status <> 'held'
 RETURNING id
 """
 
 DROPPED = """
 UPDATE fd.member_guards
-SET carry = 'failed', attempts = attempts + 1, last_error = %s, updated_at = now()
+SET enforcement_status = 'failed', attempts = attempts + 1, last_error = %s, updated_at = now()
 WHERE id = %s
 RETURNING attempts
 """
@@ -243,7 +245,7 @@ WHERE guard_id = %s AND verb = %s AND at > now() - %s::interval
 """
 
 WATCHED = ("id", "kind", "subject_id", "channel_id", "reason", "expires_at",
-           "carry", "carried_by")
+           "enforcement_status", "enforced_by")
 
 WANTED = ("id", "kind", "subject_id", "channel_id", "reason", "expires_at")
 
@@ -287,7 +289,7 @@ def banned(subject_id, channel_id):
 
 
 def unenforced(conn):
-    return [dict(zip(WANTED, row)) for row in conn.execute(UNCARRIED).fetchall()]
+    return [dict(zip(WANTED, row)) for row in conn.execute(UNENFORCED).fetchall()]
 
 
 def holding(conn, guard_id):
@@ -324,7 +326,7 @@ ORDER BY expires_at LIMIT 20
 DROPPED_AWHILE = """
 SELECT id, kind, subject_id, channel_id, reason, expires_at
 FROM fd.member_guards
-WHERE state = 'live' AND carry = 'failed' AND carried_by = 'nemo'
+WHERE state = 'live' AND enforcement_status = 'failed' AND enforced_by = 'nemo'
   AND updated_at <= now() - (least(attempts, %s) * interval '1 minute')
 ORDER BY updated_at LIMIT 20
 """
@@ -353,7 +355,7 @@ RETURNING id
 STILL_LIFTING = """
 SELECT id, kind, subject_id, channel_id, reason, expires_at
 FROM fd.member_guards
-WHERE state = 'lifting' AND carried_by = 'nemo'
+WHERE state = 'lifting' AND enforced_by = 'nemo'
 ORDER BY updated_at LIMIT 20
 """
 
@@ -374,7 +376,7 @@ ORDER BY g.expires_at
 LIFTED_UNTOLD = """
 SELECT id, kind, subject_id, channel_id, reason, expires_at
 FROM fd.member_guards g
-WHERE g.state = 'lifted' AND g.carried_by = 'nemo'
+WHERE g.state = 'lifted' AND g.enforced_by = 'nemo'
   AND g.lifted_at > now() - %s::interval
   AND NOT EXISTS (
     SELECT 1 FROM fd.member_guard_events e

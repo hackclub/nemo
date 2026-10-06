@@ -26,7 +26,7 @@ class Conn:
 def guard(**over):
     row = {
         "id": 7, "kind": "shush", "subject_id": WHO, "channel_id": None,
-        "state": "live", "carry": "held", "carried_by": "nemo", "case_id": None,
+        "state": "live", "enforcement_status": "held", "enforced_by": "nemo", "case_id": None,
         "opened_by": MOD, "opened_at": OPENED, "reason": "being awful",
         "expires_at": ENDS,
     }
@@ -153,17 +153,17 @@ def test_a_guard_with_no_end_date_says_that_instead():
 
 
 def test_a_guard_nemo_has_not_carried_admits_it():
-    built = action.build_blocks(412, {"type_key": "shush"}, standing(guard(carry="pending")))
+    built = action.build_blocks(412, {"type_key": "shush"}, standing(guard(enforcement_status="pending")))
     assert "nemo has not carried it yet" in words(built)
 
 
 def test_a_guard_nemo_has_dropped_admits_it():
-    built = action.build_blocks(412, {"type_key": "shush"}, standing(guard(carry="failed")))
+    built = action.build_blocks(412, {"type_key": "shush"}, standing(guard(enforcement_status="failed")))
     assert "nemo is not holding it" in words(built)
 
 
 def test_a_guard_done_by_hand_is_not_blamed_on_nemo():
-    found = guard(carried_by="by_hand", carry="held")
+    found = guard(enforced_by="by_hand", enforcement_status="held")
     text = words(action.build_blocks(412, {"type_key": "shush"}, standing(found)))
     assert "done by hand" in text
     assert "nemo" not in text

@@ -757,7 +757,7 @@
   }
   .pill > a:hover { background: var(--hover); color: var(--ink); }
 
-  .avatar, .face-stack > *, .row-avatar, .person-face, .index-face, .queue-cite-face {
+  .avatar, .avatar-stack > *, .row-avatar, .person-face, .index-face, .queue-cite-face {
     width: 22px;
     height: 22px;
     flex: none;
@@ -773,7 +773,7 @@
     text-transform: uppercase;
     user-select: none;
   }
-  .avatar-lg, .face-stack .avatar-lg { width: 28px; height: 28px; font-size: var(--t-fine); }
+  .avatar-lg, .avatar-stack .avatar-lg { width: 28px; height: 28px; font-size: var(--t-fine); }
   .avatar-none { background: var(--sunk); color: var(--ink-4); }
   .avatar-1 { background: oklch(91% 0.048 55); color: oklch(38% 0.095 55); }
   .avatar-2 { background: oklch(91% 0.048 105); color: oklch(38% 0.095 105); }
@@ -792,9 +792,9 @@
   :root[data-theme="lightsout"] .avatar-7, :root[data-theme="contrast"] .avatar-7 { background: oklch(32% 0.055 315); color: oklch(87% 0.075 315); }
   :root[data-theme="lightsout"] .avatar-8, :root[data-theme="contrast"] .avatar-8 { background: oklch(32% 0.055 350); color: oklch(87% 0.075 350); }
 
-  .faces, .face-stack { display: inline-flex; align-items: center; }
-  .faces > *, .face-stack > * { box-shadow: 0 0 0 1.5px var(--card); }
-  .faces > * + *, .face-stack > * + * { margin-left: -5px; }
+  .avatar-stack { display: inline-flex; align-items: center; }
+  .avatar-stack > * { box-shadow: 0 0 0 1.5px var(--card); }
+  .avatar-stack > * + * { margin-left: -5px; }
   .face-more {
     display: inline-grid;
     place-items: center;

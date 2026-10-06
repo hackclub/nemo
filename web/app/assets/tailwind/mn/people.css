@@ -110,32 +110,32 @@
   .standing-row { display: flex; align-items: center; gap: var(--s-2xs); flex-wrap: wrap; }
   .standing-row .grow { min-width: 160px; }
 
-  .standing-row.is-carried {
+  .standing-row.is-enforced {
     position: relative;
     overflow: clip;
     border-radius: var(--r-card);
     padding: var(--s-3xs) var(--s-2xs);
     margin: calc(var(--s-3xs) * -1) calc(var(--s-2xs) * -1);
   }
-  .carry-state {
+  .enforcement-state {
     display: block;
     font-size: var(--t-small);
     font-weight: 550;
     color: var(--ink-2);
   }
-  .carry-slow, .carry-why {
+  .enforcement-slow, .enforcement-why {
     display: block;
     font-size: var(--t-small);
     color: var(--ink-3);
   }
-  .carry-why { overflow-wrap: anywhere; }
+  .enforcement-why { overflow-wrap: anywhere; }
 
-  .standing-row[data-carry="pending"] .carry-state { color: var(--warn, var(--ink-2)); }
-  .standing-row[data-carry="failed"] .carry-state { color: var(--crit, var(--ink-2)); }
-  .standing-row[data-carry="held"] {
+  .standing-row[data-enforcement-status="pending"] .enforcement-state { color: var(--warn, var(--ink-2)); }
+  .standing-row[data-enforcement-status="failed"] .enforcement-state { color: var(--crit, var(--ink-2)); }
+  .standing-row[data-enforcement-status="held"] {
     color: var(--ink-3);
   }
-  .standing-row[data-carry="held"] .standing-line > b {
+  .standing-row[data-enforcement-status="held"] .standing-line > b {
     color: var(--ink-2);
     text-decoration: line-through;
     text-decoration-color: var(--line);

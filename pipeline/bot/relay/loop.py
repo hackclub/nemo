@@ -14,18 +14,18 @@ def every():
     return int(os.environ.get("RELAY_SWEEP_SECONDS", DEFAULT_SECONDS))
 
 
-def once(carrier):
+def once(relay):
     with session() as conn:
         queued = outbox.any_waiting(conn)
 
-    return sum(carrier.deliver(conversation_id) for conversation_id in queued)
+    return sum(relay.deliver(conversation_id) for conversation_id in queued)
 
 
-def start(carrier, stopping):
+def start(relay, stopping):
     def on_notify(_channel_name, payload):
-        carrier.deliver(payload)
+        relay.deliver(payload)
 
     return (
         loops.watching(NAME, (OUTBOX,), on_notify, stopping),
-        loops.sweeping(NAME, every(), lambda: once(carrier), stopping),
+        loops.sweeping(NAME, every(), lambda: once(relay), stopping),
     )

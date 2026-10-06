@@ -79,7 +79,7 @@ module AdminHelper
     return nil if people.empty?
 
     shown = people.first(FACES_SHOWN)
-    stack = tag.span(class: "face-stack") do
+    stack = tag.span(class: "avatar-stack") do
       safe_join(shown.map { |grant| face(grant.user_id) })
     end
     return stack if people.size <= FACES_SHOWN

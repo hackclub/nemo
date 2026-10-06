@@ -22,7 +22,7 @@
 
 <% content_for :head_actions do %>
   <% if @case.assigned? %>
-    <span class="faces"><%= safe_join(@case.assignee_user_ids.map { |id| slack_face(id) }) %></span>
+    <span class="avatar-stack"><%= safe_join(@case.assignee_user_ids.map { |id| slack_face(id) }) %></span>
   <% end %>
 
   <% if @case.resolved? %>

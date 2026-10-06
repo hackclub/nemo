@@ -571,7 +571,7 @@
   .rhead-sub > .rtitle { flex: 1 1 auto; min-width: 6ch; }
   .rhead-sub > .triad-who { flex: 0 1 auto; }
   .rhead-sub > .triad-sep, .rhead-sub > .queue-age { flex: none; }
-  .rhead-sub .faces, .rhead-sub .face-stack { flex: none; }
+  .rhead-sub .avatar-stack { flex: none; }
   .rtitle {
     font-size: var(--t-title);
     font-weight: 600;

@@ -290,16 +290,16 @@ module FdHelper
     tag.span("theirs alone", class: "state state-good")
   end
 
-  def joiner_country(row)
+  def new_member_country(row)
     return tag.span("n/a", class: "sub2") if row.seen_country.blank?
 
     safe_join([
-      (tag.span(row.flag, class: "joiner-flag") if row.flag),
+      (tag.span(row.flag, class: "new-member-flag") if row.flag),
       tag.span(Fd::Countries.name_for(row.seen_country))
     ].compact, " ")
   end
 
-  def joiner_ip(row)
+  def new_member_ip(row)
     return tag.span("never signed in", class: "sub2") if row.ip.blank?
 
     safe_join([
@@ -312,27 +312,27 @@ module FdHelper
     ].compact, " ")
   end
 
-  def joiner_sort_header(label, key, numeric: false)
+  def new_member_sort_header(label, key, numeric: false)
     css = ["th-sort"]
     css << "col-num" if numeric
     css << (@query.descending? ? "sort-down" : "sort-up") if @query.sorting?(key)
 
     tag.th(class: css.join(" "), aria: { sort: sort_state(key) }) do
-      link_to fd_joiners_path(@query.sort_params(key)) do
+      link_to fd_new_members_path(@query.sort_params(key)) do
         concat tag.span(label)
         concat sort_caret(key)
       end
     end
   end
 
-  JOINER_SOURCE = { "by_hand" => "written down by hand",
-                    "cohort" => "from the cohort table" }.freeze
+  NEW_MEMBER_SOURCE = { "by_hand" => "written down by hand",
+                        "cohort" => "from the cohort table" }.freeze
 
-  def joiner_when(row)
-    [row.joined_at.strftime("%-d %b %Y"), JOINER_SOURCE[row.source]].compact.join(" · ")
+  def new_member_when(row)
+    [row.joined_at.strftime("%-d %b %Y"), NEW_MEMBER_SOURCE[row.source]].compact.join(" · ")
   end
 
-  def joiner_standing(row)
+  def new_member_standing(row)
     return tag.span("deactivated", class: "state state-crit") if row.deactivated?
     return tag.span("clear", class: "state") unless row.guarded?
 
@@ -449,7 +449,7 @@ module FdHelper
   Stop = Struct.new(:key, :label, :icon, :path, :here, :tally, keyword_init: true)
 
   NAV_HOME = { "fd/fire" => "overview", "fd/members" => "members",
-               "fd/joiners" => "joiners", "fd/member_links" => "links",
+               "fd/new_members" => "new_members", "fd/member_links" => "links",
                "fd/channels" => "channels", "fd/audits" => "audit",
                "fd/configuration" => "configuration",
                "fd/channel_purges" => "channels" }.freeze
@@ -465,7 +465,8 @@ module FdHelper
         tally: Fd::Case.unresolved.not_duplicate.unassigned.count),
       Stop.new(key: "members", label: "Members", icon: "people", path: fd_members_path),
       Stop.new(key: "channels", label: "Channels", icon: "channels", path: fd_channels_path),
-      Stop.new(key: "joiners", label: "Joiners", icon: "newcomers", path: fd_joiners_path)
+      Stop.new(key: "new_members", label: "New members", icon: "newcomers",
+        path: fd_new_members_path)
     ])
   end
 
@@ -1632,16 +1633,17 @@ module FdHelper
     Fd::MemberGuard::KINDS.map { |key| [ACTION_LABELS.fetch(key, key), key] }
   end
 
-  GUARD_CARRY_CHIP = {
+  GUARD_ENFORCEMENT_CHIP = {
     "held" => ["holding", "state-good"],
     "pending" => ["not yet", "state-warn"],
     "failed" => ["not holding", "state-crit"]
   }.freeze
 
-  def guard_carry_chip(guard)
+  def guard_enforcement_chip(guard)
     return tag.span("by hand", class: "state") if guard.by_hand?
 
-    label, tone = GUARD_CARRY_CHIP.fetch(guard.carry, [guard.carry, "state"])
+    label, tone = GUARD_ENFORCEMENT_CHIP.fetch(guard.enforcement_status,
+      [guard.enforcement_status, "state"])
     tag.span(label, class: "state #{tone}")
   end
 
@@ -1705,12 +1707,12 @@ module FdHelper
     ])
   end
 
-  GUARD_CARRY = {
+  GUARD_ENFORCEMENT_STATUS = {
     "pending" => "nemo has not carried it yet",
     "failed" => "nemo is not holding it"
   }.freeze
 
-  GUARD_CARRY_SAID = {
+  GUARD_ENFORCEMENT_STATE_SAID = {
     "pending" => "Asking Slack",
     "held" => "Deactivated in Slack",
     "failed" => "Slack refused",
@@ -1724,13 +1726,13 @@ module FdHelper
     "lifting" => "good"
   }.freeze
 
-  def guard_carry_label(guard)
-    GUARD_CARRY_SAID.fetch(guard.carry_state, guard.carry_state)
+  def guard_enforcement_label(guard)
+    GUARD_ENFORCEMENT_STATE_SAID.fetch(guard.enforcement_state, guard.enforcement_state)
   end
 
   def guard_dot_tone(guard)
     return "crit" if guard.failed?
-    return GUARD_DOT_TONE.fetch(guard.carry_state, "act") if guard.deactivation?
+    return GUARD_DOT_TONE.fetch(guard.enforcement_state, "act") if guard.deactivation?
 
     "act"
   end
@@ -1742,7 +1744,7 @@ module FdHelper
     parts << if guard.by_hand?
       "done by hand"
     else
-      GUARD_CARRY[guard.carry]
+      GUARD_ENFORCEMENT_STATUS[guard.enforcement_status]
     end
     parts.compact.join("  \u00b7  ")
   end

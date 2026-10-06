@@ -15,7 +15,7 @@ SELECT
 """
 
 IN_FORCE = """
-SELECT kind, expires_at, channel_id, case_id, carry, carried_by
+SELECT kind, expires_at, channel_id, case_id, enforcement_status, enforced_by
 FROM fd.member_guards
 WHERE subject_id = %(who)s AND state IN ('live', 'lifting')
 ORDER BY array_position(%(worst_first)s::text[], kind), opened_at DESC
@@ -78,8 +78,8 @@ def read(conn, user_id, rows=ROWS):
                 "expires_at": standing[1],
                 "channel_id": standing[2],
                 "case_id": standing[3],
-                "carry": standing[4],
-                "carried_by": standing[5],
+                "enforcement_status": standing[4],
+                "enforced_by": standing[5],
             }
             if standing
             else None
@@ -114,7 +114,7 @@ def counted(counts):
     return "  ·  ".join(parts)
 
 
-CARRY_SAID = {
+ENFORCEMENT_STATUS_SAID = {
     "pending": "nemo has not carried it yet",
     "failed": "nemo is not holding it",
 }
@@ -133,9 +133,9 @@ def standing_line(found):
     else:
         text += ", no end date"
 
-    if found.get("carried_by") == "by_hand":
+    if found.get("enforced_by") == "by_hand":
         return f"{text}, done by hand"
-    caveat = CARRY_SAID.get(found.get("carry"))
+    caveat = ENFORCEMENT_STATUS_SAID.get(found.get("enforcement_status"))
     return f"{text}, {caveat}" if caveat else text
 
 

@@ -129,11 +129,11 @@ def footnote(found):
         parts.append(f"since {since}")
     until = format_date(found.get("expires_at"))
     parts.append(f"until {until}" if until else "with no end date")
-    if found.get("carried_by") == "by_hand":
+    if found.get("enforced_by") == "by_hand":
         parts.append("done by hand")
-    elif found.get("carry") == "failed":
+    elif found.get("enforcement_status") == "failed":
         parts.append("nemo is not holding it")
-    elif found.get("carry") == "pending":
+    elif found.get("enforcement_status") == "pending":
         parts.append("nemo has not carried it yet")
     return "  ·  ".join(parts)
 

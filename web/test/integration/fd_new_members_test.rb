@@ -1,6 +1,6 @@
 require "test_helper"
 
-class FdJoinersTest < ActionDispatch::IntegrationTest
+class FdNewMembersTest < ActionDispatch::IntegrationTest
   include SeedsPipelineTables
 
   setup do
@@ -16,7 +16,7 @@ class FdJoinersTest < ActionDispatch::IntegrationTest
   end
 
   def query(params = {}, actor: @me)
-    Fd::JoinerQuery.new(params.stringify_keys, actor: actor)
+    Fd::NewMemberQuery.new(params.stringify_keys, actor: actor)
   end
 
   test "the window is what was asked for, not everything ever" do
@@ -35,7 +35,7 @@ class FdJoinersTest < ActionDispatch::IntegrationTest
     assert_equal "kid@school.example", row.email
     assert_equal "school.example", row.domain
 
-    blind = Fd::JoinerQuery.new({}, actor: nil)
+    blind = Fd::NewMemberQuery.new({}, actor: nil)
     assert_nil blind.rows.find { |one| one.user_id == "UE1" }.email
   end
 
@@ -54,9 +54,9 @@ class FdJoinersTest < ActionDispatch::IntegrationTest
     joined!("UG1", at: 1.hour.ago)
     joined!("UG2", at: 1.hour.ago)
     Fd::MemberGuard.create!(kind: "shush", subject_id: "UG1", opened_by: "UME",
-      reason: "spam", carried_by: "nemo", carry: "held", expires_at: 2.days.from_now)
+      reason: "spam", enforced_by: "nemo", enforcement_status: "held", expires_at: 2.days.from_now)
     Fd::MemberGuard.create!(kind: "deactivation", subject_id: "UG2", opened_by: "UME",
-      reason: "raiding", carried_by: "nemo", carry: "held")
+      reason: "raiding", enforced_by: "nemo", enforcement_status: "held")
 
     rows = query.rows.index_by(&:user_id)
     assert rows["UG1"].guarded?
@@ -71,7 +71,7 @@ class FdJoinersTest < ActionDispatch::IntegrationTest
     joined!("UT1", at: 1.hour.ago)
     joined!("UT2", at: 1.hour.ago + 20.seconds)
     Fd::MemberGuard.create!(kind: "deactivation", subject_id: "UT1", opened_by: "UME",
-      reason: "raiding", carried_by: "nemo", carry: "held")
+      reason: "raiding", enforced_by: "nemo", enforcement_status: "held")
 
     counts = query({ "view" => "gone" }).views.index_by(&:key)
     assert_equal 2, counts["newest"].count
@@ -81,7 +81,7 @@ class FdJoinersTest < ActionDispatch::IntegrationTest
   test "a domain filter nobody may read is refused rather than applied" do
     joined!("UF1", at: 1.hour.ago, email: "kid@school.example")
 
-    blind = Fd::JoinerQuery.new({ "domain" => "school.example" }, actor: nil)
+    blind = Fd::NewMemberQuery.new({ "domain" => "school.example" }, actor: nil)
     assert_equal "any", blind["domain"]
     assert_includes blind.rows.map(&:user_id), "UF1"
   end
@@ -90,9 +90,9 @@ class FdJoinersTest < ActionDispatch::IntegrationTest
     joined!("UP1", at: 1.hour.ago, email: "kid@school.example")
     sign_in_as(@me)
 
-    get fd_joiners_path
+    get fd_new_members_path
     assert_response :success
-    assert_select "turbo-frame#joiners"
+    assert_select "turbo-frame#new-members"
     assert_match "school.example", response.body
   end
 
@@ -101,8 +101,8 @@ class FdJoinersTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
 
     assert_no_difference -> { AccessLog.count } do
-      get fd_joiners_path
-      get fd_joiners_path
+      get fd_new_members_path
+      get fd_new_members_path
     end
   end
 
@@ -129,7 +129,7 @@ class FdJoinersTest < ActionDispatch::IntegrationTest
 
     assert_includes query({ "q" => "us1" }).rows.map(&:user_id), "US1"
     assert_includes query({ "q" => "findme" }).rows.map(&:user_id), "US1"
-    blind = Fd::JoinerQuery.new({ "q" => "findme" }, actor: nil)
+    blind = Fd::NewMemberQuery.new({ "q" => "findme" }, actor: nil)
     assert_not_includes blind.rows.map(&:user_id), "US1"
   end
 
@@ -144,7 +144,7 @@ class FdJoinersTest < ActionDispatch::IntegrationTest
 
     assert_equal 2, Fd::MemberGuard.where(kind: "deactivation", subject_id: %w[UX1 UX2]).count
     assert_equal %w[pending], Fd::MemberGuard.where(subject_id: %w[UX1 UX2])
-      .pluck(:carry).uniq
+      .pluck(:enforcement_status).uniq
   end
 
   test "a bulk deactivation with nobody picked changes nothing" do
@@ -183,7 +183,7 @@ class FdJoinersTest < ActionDispatch::IntegrationTest
   test "one already standing is counted apart rather than opened twice" do
     joined!("UV1", at: 1.hour.ago)
     Fd::MemberGuard.create!(kind: "deactivation", subject_id: "UV1", opened_by: "UME",
-      reason: "already", carried_by: "nemo", carry: "held")
+      reason: "already", enforced_by: "nemo", enforcement_status: "held")
     sign_in_as(@me)
 
     post fd_bulk_deactivations_path, params: { user_ids: %w[UV1], reason: "again" }
@@ -195,7 +195,7 @@ class FdJoinersTest < ActionDispatch::IntegrationTest
   test "the standing column names the guard rather than counting it" do
     joined!("UK1", at: 1.hour.ago)
     Fd::MemberGuard.create!(kind: "shush", subject_id: "UK1", opened_by: "UME",
-      reason: "spam", carried_by: "nemo", carry: "held", expires_at: 2.days.from_now)
+      reason: "spam", enforced_by: "nemo", enforcement_status: "held", expires_at: 2.days.from_now)
 
     assert_equal %w[shush], query.rows.find { |row| row.user_id == "UK1" }.kinds
   end
@@ -205,12 +205,12 @@ class FdJoinersTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
 
     assert_no_difference -> { AccessLog.count } do
-      get fd_joiners_path
+      get fd_new_members_path
     end
   end
 end
 
-class FdJoinerCardTest < ActionDispatch::IntegrationTest
+class FdNewMemberCardTest < ActionDispatch::IntegrationTest
   include SeedsPipelineTables
 
   setup do
@@ -232,7 +232,7 @@ class FdJoinerCardTest < ActionDispatch::IntegrationTest
   end
 
   test "the card carries everything the firehouse note used to" do
-    get fd_joiner_path("UJOIN")
+    get fd_new_member_path("UJOIN")
     assert_response :success
 
     assert_match "kid@throwaway.example", response.body
@@ -246,7 +246,7 @@ class FdJoinerCardTest < ActionDispatch::IntegrationTest
   end
 
   test "the table shows the address and the country it came from" do
-    get fd_joiners_path
+    get fd_new_members_path
     assert_response :success
 
     assert_select "th", text: "IP"
@@ -265,7 +265,7 @@ class FdJoinerCardTest < ActionDispatch::IntegrationTest
       ON CONFLICT DO NOTHING
     SQL
 
-    get fd_joiner_path("UJOIN")
+    get fd_new_member_path("UJOIN")
     assert_response :success
     assert_match "Serbia", response.body,
       "the audit log carries no country, so it must not hide the one the access log has"
@@ -274,7 +274,7 @@ class FdJoinerCardTest < ActionDispatch::IntegrationTest
   end
 
   test "an address is wrapped so cloudflare leaves it alone" do
-    get fd_joiner_path("UJOIN")
+    get fd_new_member_path("UJOIN")
     assert_match "<!--email_off-->", response.body
     assert_match "kid@throwaway.example", response.body
 
@@ -287,19 +287,19 @@ class FdJoinerCardTest < ActionDispatch::IntegrationTest
   end
 
   test "the page wraps its addresses too, since turbo swaps it in undecoded" do
-    get fd_joiners_path
+    get fd_new_members_path
     assert_match "<!--email_off-->", response.body
     assert_match "kid@throwaway.example", response.body
   end
 
   test "the card is a frame the page can swap in" do
-    get fd_joiner_path("UJOIN")
-    assert_select %(turbo-frame[id="joiner-card"])
+    get fd_new_member_path("UJOIN")
+    assert_select %(turbo-frame[id="new-member-card"])
   end
 
   test "opening a card leaves nothing in the engine's own trail either" do
     assert_no_difference -> { AccessLog.count } do
-      get fd_joiner_path("UJOIN")
+      get fd_new_member_path("UJOIN")
     end
   end
 
@@ -309,13 +309,13 @@ class FdJoinerCardTest < ActionDispatch::IntegrationTest
                 "VALUES (?, now(), 'team_join') ON CONFLICT (user_id) DO NOTHING", "UQUIET")
     seeded!("fd.member_joins", "user_id", "UQUIET")
 
-    get fd_joiner_path("UQUIET")
+    get fd_new_member_path("UQUIET")
     assert_response :success
     assert_match "never signed in", response.body
   end
 
   test "a joiner nobody has heard of is not found" do
-    get fd_joiner_path("UNOBODY")
+    get fd_new_member_path("UNOBODY")
     assert_response :not_found
   end
 
@@ -323,7 +323,7 @@ class FdJoinerCardTest < ActionDispatch::IntegrationTest
     as_pipeline("UPDATE fd.member_joins SET joined_at = now() - interval '200 days' " \
                 "WHERE user_id = ?", "UJOIN")
 
-    get fd_joiner_path("UJOIN")
+    get fd_new_member_path("UJOIN")
     assert_response :success
     assert_match "185.26.172.245", response.body
   end

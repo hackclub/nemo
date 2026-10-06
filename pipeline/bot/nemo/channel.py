@@ -632,7 +632,7 @@ def mirror(client, conn, case_id, channel_id=None):
     return carried
 
 
-KEEP_ACTION_ECHO = """
+KEEP_ECHO = """
 INSERT INTO fd.case_chat
     (case_id, author_user_id, blocks, channel_id, ts, mirrored_ts, mirrored_at, mirrored_as,
      source_app)
@@ -641,14 +641,13 @@ RETURNING id
 """
 
 
-def post_action_echo(client, conn, case_id, values, by):
+def post_echo(client, conn, case_id, blocks, by, fallback_text, trouble):
     thread_ts = thread_for(conn, case_id)
     if thread_ts is None:
-        log.info("nemo: case %s has no thread yet, the action log has nowhere to go", case_id)
+        log.info("nemo: case %s has no thread yet, the echo has nowhere to go", case_id)
         return None
 
     room = card_room(conn, case_id)
-    blocks = views.action.echo_blocks(values, by)
     seen = profile.profile(client, by)
     wearing = {"username": seen["name"]}
     if seen["icon"]:
@@ -663,16 +662,26 @@ def post_action_echo(client, conn, case_id, values, by):
             channel=room,
             thread_ts=thread_ts,
             blocks=blocks,
-            text=views.action.label(values["type_key"]),
+            text=fallback_text,
             unfurl_links=False,
             unfurl_media=False,
             **wearing,
         )
     except Exception as failure:
-        log.warning("nemo: the action log for case %s did not reach the thread: %s",
-                    case_id, failure)
+        log.warning(trouble, case_id, failure)
         return None
 
-    conn.execute(KEEP_ACTION_ECHO,
-        (case_id, by, Jsonb(blocks), room, sent["ts"], sent["ts"]))
+    conn.execute(KEEP_ECHO, (case_id, by, Jsonb(blocks), room, sent["ts"], sent["ts"]))
     return sent["ts"]
+
+
+def post_action_echo(client, conn, case_id, values, by):
+    blocks = views.action.echo_blocks(values, by)
+    return post_echo(client, conn, case_id, blocks, by, views.action.label(values["type_key"]),
+        "nemo: the action log for case %s did not reach the thread: %s")
+
+
+def post_resolution_echo(client, conn, case_id, resolution, member_note, by, actions=()):
+    blocks = views.resolve.echo_blocks(resolution, member_note, by, actions)
+    return post_echo(client, conn, case_id, blocks, by, views.resolve.label(resolution),
+        "nemo: the resolution log for case %s did not reach the thread: %s")

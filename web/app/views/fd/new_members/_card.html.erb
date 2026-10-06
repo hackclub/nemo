@@ -1,6 +1,6 @@
-<%= turbo_frame_tag "joiner-card", target: "_top" do %>
-  <div class="joiner-card">
-    <div class="joiner-head">
+<%= turbo_frame_tag "new-member-card", target: "_top" do %>
+  <div class="new-member-card">
+    <div class="new-member-head">
       <%= face(row.user_id) %>
       <span class="two-line">
         <%= link_to fd_member_path(row.user_id), class: "lnk" do %>
@@ -10,12 +10,12 @@
       </span>
     </div>
 
-    <dl class="joiner-facts">
+    <dl class="new-member-facts">
       <div>
         <dt>Joined</dt>
         <dd>
           <%= time_ago_in_words(row.joined_at) %> ago
-          <span class="sub2"><%= joiner_when(row) %></span>
+          <span class="sub2"><%= new_member_when(row) %></span>
         </dd>
       </div>
 
@@ -45,7 +45,7 @@
         <dd>
           <% if row.ip.present? %>
             <span class="mono"><%= row.ip %></span>
-            <% if row.flag %><span class="joiner-flag"><%= row.flag %></span><% end %>
+            <% if row.flag %><span class="new-member-flag"><%= row.flag %></span><% end %>
             <% if row.where_from %>
               <span class="sub2"><%= row.where_from %></span>
             <% end %>
@@ -77,17 +77,17 @@
       <% if row.raw_agent.present? %>
         <div>
           <dt>Agent</dt>
-          <dd><span class="mono joiner-agent"><%= row.raw_agent %></span></dd>
+          <dd><span class="mono new-member-agent"><%= row.raw_agent %></span></dd>
         </div>
       <% end %>
 
       <div>
         <dt>Standing</dt>
-        <dd><%= joiner_standing(row) %></dd>
+        <dd><%= new_member_standing(row) %></dd>
       </div>
     </dl>
 
-    <div class="joiner-foot">
+    <div class="new-member-foot">
       <%= link_to "Open the member", fd_member_path(row.user_id), class: "btn btn-sm" %>
       <%= link_to "Open a case", fd_cases_path(subject_user_id: row.user_id, open: "1"),
             class: "btn btn-sm" %>

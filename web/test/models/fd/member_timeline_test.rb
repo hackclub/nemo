@@ -65,7 +65,7 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
   def hold(kind: "shush", at: 3.days.ago, **attrs)
     Fd::MemberGuard.create!({ kind: kind, subject_id: SUBJECT, opened_by: "UFF1",
                               reason: "flooding the channel", opened_at: at,
-                              carried_by: "nemo", carry: "pending" }.merge(attrs))
+                              enforced_by: "nemo", enforcement_status: "pending" }.merge(attrs))
   end
 
   test "a guard held with no case behind it is an action entry of its own" do

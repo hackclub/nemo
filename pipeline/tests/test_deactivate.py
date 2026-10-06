@@ -57,7 +57,7 @@ def test_taking_one_up_holds_the_guard_and_writes_down_what_slack_did(took):
     conn = Conn()
     assert deactivate.take_up(Slack(), conn, guard())
 
-    assert conn.executed("carry = 'held'")
+    assert conn.executed("enforcement_status = 'held'")
     row = conn.did("INSERT INTO fd.member_guard_events")[0]
     assert row[3] == "deactivated"
     assert row[6] == "deactivated"
@@ -68,8 +68,8 @@ def test_an_account_slack_would_not_take_down_drops_the_guard(took):
     conn = Conn()
     assert not deactivate.take_up(Slack(), conn, guard())
 
-    assert conn.executed("carry = 'failed'")
-    assert not conn.executed("carry = 'held'")
+    assert conn.executed("enforcement_status = 'failed'")
+    assert not conn.executed("enforcement_status = 'held'")
     assert conn.did("INSERT INTO fd.member_guard_events")[0][3] == "failed"
 
 
@@ -78,7 +78,7 @@ def test_a_run_that_is_not_armed_still_reads_as_carried(took, how):
     took(how)
     conn = Conn()
     assert deactivate.take_up(Slack(), conn, guard())
-    assert conn.executed("carry = 'held'")
+    assert conn.executed("enforcement_status = 'held'")
 
 
 def test_lifting_puts_them_back_before_the_guard_reads_as_lifted(took):

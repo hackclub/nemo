@@ -34,8 +34,8 @@ class FdActionSettleTest < ActionDispatch::IntegrationTest
     guard = guards.sole
     assert_equal "shush", guard.kind
     assert_equal @kase.id, guard.case_id
-    assert_equal "nemo", guard.carried_by
-    assert_equal "pending", guard.carry
+    assert_equal "nemo", guard.enforced_by
+    assert_equal "pending", guard.enforcement_status
     assert_equal guard.id, logged.guard_id
     assert_equal 1, told("opened").count
   end

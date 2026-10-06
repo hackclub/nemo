@@ -5,7 +5,7 @@ import urllib.error
 import urllib.request
 from urllib.parse import quote
 
-log = logging.getLogger("bot.faces")
+log = logging.getLogger("bot.profiles")
 
 HOST = "https://cachet.hackclub.com/users"
 TIMEOUT = 5
@@ -27,7 +27,7 @@ def fetch(user_id):
         with urllib.request.urlopen(request, timeout=TIMEOUT) as answer:
             body = json.loads(answer.read())
     except (urllib.error.URLError, TimeoutError, OSError, ValueError) as trouble:
-        log.warning("faces: could not ask cachet about %s: %s", user_id, trouble)
+        log.warning("profiles: could not ask cachet about %s: %s", user_id, trouble)
         return None
 
     display = body.get("displayName")

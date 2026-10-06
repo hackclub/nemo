@@ -176,3 +176,54 @@ def validation_errors(values):
     if values.get("telling") and richtext.mentions(values.get("message")):
         return {MESSAGE: "The reporter cannot be sent a mention. Say it in words."}
     return None
+
+
+def by_line(resolution, by):
+    if resolution == "action_taken":
+        return f"Resolved by <@{by}>"
+    return f"Resolved by <@{by}> · {label(resolution).lower()}"
+
+
+def action_group_blocks(one):
+    built = [{
+        "type": "context",
+        "elements": [{
+            "type": "mrkdwn",
+            "text": f"*{action.label(one['type_key'])}* against <@{one['target_user_id']}>",
+        }],
+    }]
+    if one.get("reason"):
+        built.append({
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": f"> {one['reason']}"},
+        })
+    return built
+
+
+def echo_blocks(resolution, member_note, by, actions=()):
+    built = [{
+        "type": "context",
+        "elements": [{"type": "mrkdwn", "text": by_line(resolution, by)}],
+    }]
+
+    if resolution == "action_taken":
+        if actions:
+            built.append({"type": "divider"})
+            for one in actions:
+                built.extend(action_group_blocks(one))
+        if member_note:
+            built.append({
+                "type": "context",
+                "elements": [{
+                    "type": "mrkdwn",
+                    "text": f"*How it was solved:* {member_note}",
+                }],
+            })
+    elif member_note:
+        built.append({"type": "divider"})
+        built.append({
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": f"> {member_note}"},
+        })
+
+    return built

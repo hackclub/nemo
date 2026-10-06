@@ -31,7 +31,7 @@ class FdMemberGuardsTest < ActionDispatch::IntegrationTest
     guard = guards.sole
     assert_nil guard.case_id
     assert guard.orphaned?
-    assert_equal "pending", guard.carry
+    assert_equal "pending", guard.enforcement_status
     assert_equal "UME", guard.opened_by
     assert_equal 1, told("opened").count
   end
@@ -153,8 +153,8 @@ class FdMemberGuardsTest < ActionDispatch::IntegrationTest
 
   test "what it holds is always carried by nemo" do
     hold
-    assert_equal "nemo", guards.sole.carried_by
-    assert_equal "pending", guards.sole.carry
+    assert_equal "nemo", guards.sole.enforced_by
+    assert_equal "pending", guards.sole.enforcement_status
   end
 
   test "channels can be searched from inside the fire engine" do

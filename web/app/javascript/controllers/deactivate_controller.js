@@ -16,8 +16,8 @@ export default class extends Controller {
     clearTimeout(this.landedTimer)
   }
 
-  get carry() {
-    return this.element.dataset.carry
+  get enforcementStatus() {
+    return this.element.dataset.enforcementStatus
   }
 
   mark() {
@@ -30,7 +30,7 @@ export default class extends Controller {
   }
 
   waitForSlack() {
-    if (this.carry !== "pending" || !this.hasSlowTarget) return
+    if (this.enforcementStatus !== "pending" || !this.hasSlowTarget) return
 
     this.slowTimer = setTimeout(() => {
       this.slowTarget.hidden = false

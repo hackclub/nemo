@@ -15,12 +15,12 @@
     from { opacity: 0; }
     to { opacity: 1; }
   }
-  @keyframes carry-settle {
+  @keyframes enforcement-settle {
     0%   { transform: scale(1); }
     36%  { transform: scale(1.012); }
     100% { transform: scale(1); }
   }
-  @keyframes carry-wash {
+  @keyframes enforcement-wash {
     from { transform: translateX(-100%); }
     to   { transform: translateX(200%); }
   }
@@ -83,15 +83,15 @@
     z-index: 4;
   }
 
-  .standing-row.is-carried {
+  .standing-row.is-enforced {
     transition: background-color var(--dur-3) var(--ease), color var(--dur-3) var(--ease);
   }
-  .standing-row.is-carried .carry-state { transition: color var(--dur-2) var(--ease); }
+  .standing-row.is-enforced .enforcement-state { transition: color var(--dur-2) var(--ease); }
 
-  .standing-row.is-carried.just-landed {
-    animation: carry-settle 620ms var(--ease-out) both;
+  .standing-row.is-enforced.just-landed {
+    animation: enforcement-settle 620ms var(--ease-out) both;
   }
-  .standing-row.is-carried.just-landed::after {
+  .standing-row.is-enforced.just-landed::after {
     content: "";
     position: absolute;
     inset: 0 auto 0 0;
@@ -103,16 +103,16 @@
       color-mix(in oklab, var(--accent) 16%, transparent),
       transparent
     );
-    animation: carry-wash 760ms var(--ease-out) both;
+    animation: enforcement-wash 760ms var(--ease-out) both;
   }
-  .standing-row.is-carried[data-carry="held"].just-landed {
+  .standing-row.is-enforced[data-enforcement-status="held"].just-landed {
     background: color-mix(in oklab, var(--crit) 7%, transparent);
   }
-  .standing-row.is-carried[data-carry="lifting"].just-landed,
-  .standing-row.is-carried[data-carry="pending"].just-landed {
+  .standing-row.is-enforced[data-enforcement-status="lifting"].just-landed,
+  .standing-row.is-enforced[data-enforcement-status="pending"].just-landed {
     background: color-mix(in oklab, var(--accent) 7%, transparent);
   }
-  .standing-row.is-carried[data-carry="failed"].just-landed {
+  .standing-row.is-enforced[data-enforcement-status="failed"].just-landed {
     background: color-mix(in oklab, var(--crit) 10%, transparent);
   }
 
@@ -138,8 +138,8 @@
     .chart > svg, .hbars > svg, .tree > svg, .lorenz > svg,
     .chart .bar, .hbars .bar, .tree .cell rect, .parts .cell rect,
     turbo-frame[aria-busy="true"]::after,
-    .standing-row.is-carried.just-landed,
-    .standing-row.is-carried.just-landed::after {
+    .standing-row.is-enforced.just-landed,
+    .standing-row.is-enforced.just-landed::after {
       animation: none;
     }
     .work { transition: none; }

@@ -120,6 +120,13 @@ SELECT count(*) FROM fd.case_reports WHERE case_id = %s AND closed_at IS NULL
 """
 
 
+RESOLUTION_ECHO_ACTIONS = """
+SELECT target_user_id, type_key, reason, resolution_note FROM fd.actions
+WHERE case_id = %s AND reversed_at IS NULL
+ORDER BY performed_at, id
+"""
+
+
 RESOLVE = """
 UPDATE fd.cases SET resolved_at = now(), resolution = %s, member_note = %s, updated_at = now()
 WHERE id = %s AND resolved_at IS NULL
@@ -287,6 +294,18 @@ def live_actions(conn, case_id):
             "details": row[4],
         }
         for row in conn.execute(LIVE_ACTIONS, (case_id,)).fetchall()
+    ]
+
+
+def resolution_echo_actions(conn, case_id):
+    return [
+        {
+            "target_user_id": row[0],
+            "type_key": row[1],
+            "reason": row[2],
+            "resolution_note": row[3],
+        }
+        for row in conn.execute(RESOLUTION_ECHO_ACTIONS, (case_id,)).fetchall()
     ]
 
 

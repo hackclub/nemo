@@ -48,7 +48,7 @@ module Fd
     scope :live, -> { where(state: LIVE) }
     scope :on_no_case, -> { where(case_id: nil) }
     scope :orphaned, -> { live.on_no_case }
-    scope :stuck, -> { where(carry: FAILED) }
+    scope :stuck, -> { where(enforcement_status: FAILED) }
     scope :oldest_first, -> { order(:opened_at, :id) }
     scope :for_subject, ->(subject_id) { where(subject_id: subject_id) }
 
@@ -100,7 +100,7 @@ module Fd
       transaction(requires_new: true) do
         create!(kind: kind, subject_id: subject_id, channel_id: channel_id, case_id: case_id,
           opened_by: by, reason: reason, expires_at: expires_at,
-          carried_by: by_hand ? BY_HAND : NEMO, carry: by_hand ? HELD : PENDING)
+          enforced_by: by_hand ? BY_HAND : NEMO, enforcement_status: by_hand ? HELD : PENDING)
       end
     rescue ActiveRecord::RecordNotUnique
       nil
@@ -133,16 +133,16 @@ module Fd
 
     def live? = state == LIVE
     def lifting? = state == LIFTING
-    def held? = carry == HELD
-    def pending? = carry == PENDING
-    def failed? = carry == FAILED
-    def by_hand? = carried_by == BY_HAND
+    def held? = enforcement_status == HELD
+    def pending? = enforcement_status == PENDING
+    def failed? = enforcement_status == FAILED
+    def by_hand? = enforced_by == BY_HAND
     def orphaned? = case_id.nil?
     def channel_scoped? = channel_id.present?
     def deactivation? = kind == DEACTIVATION
 
-    def carry_state
-      lifting? ? LIFTING : carry
+    def enforcement_state
+      lifting? ? LIFTING : enforcement_status
     end
 
     def landed?(at = Time.current)

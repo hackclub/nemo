@@ -1,30 +1,31 @@
-<% content_for :page_title, "Joiners" %>
+<% content_for :page_title, "New members" %>
 <% may_deactivate = current_account.may?("member.deactivate") %>
 
 <% content_for :head_actions do %>
   <span class="segmented">
-    <% Fd::JoinerQuery::WHEN.each do |key, label| %>
-      <%= link_to label.capitalize, fd_joiners_path(@query.window_params(key)),
-            aria: { current: ("true" if @query[Fd::JoinerQuery::WINDOW_KEY] == key) } %>
+    <% Fd::NewMemberQuery::WHEN.each do |key, label| %>
+      <%= link_to label.capitalize, fd_new_members_path(@query.window_params(key)),
+            aria: { current: ("true" if @query[Fd::NewMemberQuery::WINDOW_KEY] == key) } %>
     <% end %>
   </span>
 <% end %>
 
 <% content_for :page_controls do %>
-  <%= form_with url: fd_joiners_path, method: :get, class: "queue-search",
+  <%= form_with url: fd_new_members_path, method: :get, class: "queue-search",
         data: { controller: "live-search", action: "input->live-search#go",
                 turbo_action: "advance" } do %>
     <% @query.to_params.except("q", "page").each do |key, value| %>
       <%= hidden_field_tag key, value, id: nil %>
     <% end %>
-    <%= search_field_tag :q, @query.term, placeholder: "Find a joiner",
-          class: "queue-search-input", autocomplete: "off", aria: { label: "Find a joiner" } %>
+    <%= search_field_tag :q, @query.term, placeholder: "Find a new member",
+          class: "queue-search-input", autocomplete: "off",
+          aria: { label: "Find a new member" } %>
   <% end %>
 <% end %>
 
 <% content_for :page_tabs do %>
-  <% @views.select { |view| Fd::JoinerQuery::TABS.include?(view.key) }.each do |view| %>
-    <%= link_to fd_joiners_path(@query.view_params(view.key)), class: "view",
+  <% @views.select { |view| Fd::NewMemberQuery::TABS.include?(view.key) }.each do |view| %>
+    <%= link_to fd_new_members_path(@query.view_params(view.key)), class: "view",
           aria: { current: ("true" if view.current) } do %>
       <%= view.label %>
       <span class="view-count"><%= number_with_delimiter(view.count) %></span>
@@ -32,7 +33,7 @@
   <% end %>
 <% end %>
 
-<turbo-frame id="joiners" target="_top" data-turbo-action="advance">
+<turbo-frame id="new-members" target="_top" data-turbo-action="advance">
   <div class="stack" <%= "data-controller=pick-rows".html_safe if may_deactivate %>>
     <% if @rows.any? %>
       <div class="card card-flush">
@@ -60,10 +61,10 @@
                                   action: "change->pick-rows#toggleAll" } %>
                   </th>
                 <% end %>
-                <%= joiner_sort_header("Member", "name") %>
-                <%= joiner_sort_header("Joined", "joined") %>
+                <%= new_member_sort_header("Member", "name") %>
+                <%= new_member_sort_header("Joined", "joined") %>
                 <% if @query.identity? %>
-                  <%= joiner_sort_header("Email", "domain") %>
+                  <%= new_member_sort_header("Email", "domain") %>
                   <th>IP</th>
                   <th>Country</th>
                 <% end %>
@@ -99,7 +100,7 @@
                   <td>
                     <span class="two-line">
                       <b><%= time_ago_in_words(row.joined_at) %> ago</b>
-                      <span><%= joiner_when(row) %></span>
+                      <span><%= new_member_when(row) %></span>
                     </span>
                   </td>
                   <% if @query.identity? %>
@@ -108,7 +109,7 @@
                         <span class="two-line">
                           <b>
                             <%= link_to row.domain,
-                                  fd_joiners_path(@query.facet_params("domain" => row.domain)),
+                                  fd_new_members_path(@query.facet_params("domain" => row.domain)),
                                   class: "lnk" %>
                             <% if row.lone_domain? %>
                               <span class="state state-warn">only them</span>
@@ -121,17 +122,17 @@
                       <% end %>
                     </td>
                     <td class="<%= "is-none" if row.ip.blank? %>">
-                      <%= joiner_ip(row) %>
+                      <%= new_member_ip(row) %>
                     </td>
                     <td class="<%= "is-none" if row.seen_country.blank? %>">
-                      <%= joiner_country(row) %>
+                      <%= new_member_country(row) %>
                     </td>
                   <% end %>
-                  <td class="col-num"><%= joiner_standing(row) %></td>
+                  <td class="col-num"><%= new_member_standing(row) %></td>
                   <td class="col-num">
                     <button type="button" class="btn btn-sm"
-                            data-modal-open="joiner-card"
-                            data-joiner-card="<%= fd_joiner_path(row.user_id) %>"
+                            data-modal-open="new-member-card"
+                            data-new-member-card="<%= fd_new_member_path(row.user_id) %>"
                             aria-haspopup="dialog"
                             aria-label="Everything we hold on <%= row.handle || row.user_id %>">
                       <%= case_action_icon("people") %>
@@ -144,10 +145,10 @@
         </div>
       </div>
 
-      <%= render "shared/pager", page: @query.page, pages: @query.pages, frame: "joiners",
+      <%= render "shared/pager", page: @query.page, pages: @query.pages, frame: "new-members",
             label: @query.summary,
-            back_href: (fd_joiners_path(@query.page_params(@query.page - 1)) if @query.page > 1),
-            next_href: (fd_joiners_path(@query.page_params(@query.page + 1)) if @query.page < @query.pages) %>
+            back_href: (fd_new_members_path(@query.page_params(@query.page - 1)) if @query.page > 1),
+            next_href: (fd_new_members_path(@query.page_params(@query.page + 1)) if @query.page < @query.pages) %>
     <% else %>
       <div class="empty">
         <p class="empty-title"><%= @query.empty_note %></p>
@@ -160,12 +161,12 @@
   </div>
 </turbo-frame>
 
-<div data-controller="joiner-card">
-  <%= render layout: "fd/modal", locals: { id: "joiner-card", title: "Joiner",
+<div data-controller="new-member-card">
+  <%= render layout: "fd/modal", locals: { id: "new-member-card", title: "New member",
         size: "wide", open: false } do %>
     <div class="modal-body">
-      <%= turbo_frame_tag "joiner-card", target: "_top",
-            data: { joiner_card_target: "frame" } do %>
+      <%= turbo_frame_tag "new-member-card", target: "_top",
+            data: { new_member_card_target: "frame" } do %>
         <p class="card-note">Reading what we hold…</p>
       <% end %>
     </div>

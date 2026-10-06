@@ -31,7 +31,7 @@ class Conn:
 def guard(**over):
     row = {
         "id": 7, "kind": "shush", "subject_id": WHO, "channel_id": None,
-        "state": "live", "carry": "held", "carried_by": "nemo", "case_id": None,
+        "state": "live", "enforcement_status": "held", "enforced_by": "nemo", "case_id": None,
         "opened_by": MOD, "opened_at": None, "reason": "being awful", "expires_at": ENDS,
     }
     row.update(over)

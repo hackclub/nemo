@@ -4,7 +4,7 @@ module Fd
 
     MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/
     MOST = 100
-    NO_REASON = "deactivated in bulk from the joiners page".freeze
+    NO_REASON = "deactivated in bulk from the new members page".freeze
 
     def create
       problem = objection
@@ -27,7 +27,7 @@ module Fd
 
     def reason = params[:reason].to_s.strip.presence || NO_REASON
 
-    def here = fd_joiners_path(params.permit(*JoinerQuery::KEYS).to_h.compact_blank)
+    def here = fd_new_members_path(params.permit(*NewMemberQuery::KEYS).to_h.compact_blank)
 
     def objection
       return "pick who this is about" if wanted.empty?

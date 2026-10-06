@@ -61,8 +61,8 @@ class FdOverviewTest < ActionDispatch::IntegrationTest
 
   test "the panel says what nemo is actually doing about each one" do
     guard!
-    guard!(kind: "channel_ban", channel_id: "C0266FRGV", subject_id: "UTWO", carry: "failed")
-    guard!(subject_id: "UTHREE", carried_by: "by_hand", carry: "held")
+    guard!(kind: "channel_ban", channel_id: "C0266FRGV", subject_id: "UTWO", enforcement_status: "failed")
+    guard!(subject_id: "UTHREE", enforced_by: "by_hand", enforcement_status: "held")
     get fd_root_path
 
     assert_equal "3", metric

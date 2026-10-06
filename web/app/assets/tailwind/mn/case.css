@@ -100,7 +100,7 @@
   .queue-meta { display: flex; align-items: center; gap: var(--s-2xs); margin-top: 5px; min-width: 0; }
   .queue-violation { font-size: var(--t-small); font-weight: 500; color: var(--ink-3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .queue-priors { font-size: var(--t-fine); font-weight: 500; color: var(--warn); white-space: nowrap; flex: none; }
-  .queue-meta .faces { margin-left: auto; flex: none; }
+  .queue-meta .avatar-stack { margin-left: auto; flex: none; }
   .queue-meta .avatar, .queue-meta .row-avatar { width: 18px; height: 18px; font-size: var(--t-tiny); }
 
   .queue-label { font-size: var(--t-fine); color: var(--ink-4); white-space: nowrap; }
@@ -234,8 +234,8 @@
     overflow-wrap: anywhere;
   }
   .queue-bar .action-icon, .ractions .action-icon { color: currentColor; opacity: 0.8; }
-  .ractions > .faces { margin-right: var(--s-2xs); }
-  .ractions > .faces::after {
+  .ractions > .avatar-stack { margin-right: var(--s-2xs); }
+  .ractions > .avatar-stack::after {
     content: "";
     width: 1px;
     height: 18px;

@@ -47,7 +47,7 @@ class Conn:
         sql, args = self.ran[-1]
         if "verb = %s AND at >" in sql:
             return (self.counts.get(args[1], 0),)
-        if "carry = 'held'" in sql:
+        if "enforcement_status = 'held'" in sql:
             return (7,) if self.claims else None
         return (1,)
 
@@ -111,7 +111,7 @@ def test_a_removed_message_is_written_down_and_the_guard_reads_as_held():
     conn = Conn()
     assert shush.remove(Slack(), conn, guard(), ROOM, TS)
 
-    assert conn.executed("carry = 'held'")
+    assert conn.executed("enforcement_status = 'held'")
     told = conn.did("INSERT INTO fd.member_guard_events")[0]
     assert told[3] == "deleted"
     assert told[4] == TS
@@ -153,7 +153,7 @@ def test_a_message_that_will_not_go_drops_the_guard(monkeypatch):
     conn = Conn()
     assert not shush.remove(Slack(), conn, guard(), ROOM, TS)
 
-    assert conn.executed("carry = 'failed'")
+    assert conn.executed("enforcement_status = 'failed'")
     assert conn.did("INSERT INTO fd.member_guard_events")[0][3] == "failed"
 
 
@@ -163,8 +163,8 @@ def test_the_live_set_is_only_what_is_still_live():
 
 
 def test_only_what_nemo_carries_is_taken_up():
-    assert "carried_by = 'nemo'" in memberguards.UNCARRIED
-    assert "carry = 'pending'" in memberguards.UNCARRIED
+    assert "enforced_by = 'nemo'" in memberguards.UNENFORCED
+    assert "enforcement_status = 'pending'" in memberguards.UNENFORCED
 
 
 def test_nothing_is_shushed_until_the_set_has_been_loaded():

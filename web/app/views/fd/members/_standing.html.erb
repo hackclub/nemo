@@ -5,10 +5,10 @@
       <p class="standing-t">In force now</p>
       <% guards.each do |guard| %>
         <% may_lift = guard.deactivation? ? may_deactivate : may_guard %>
-        <div class="standing-row<%= " is-carried" if guard.deactivation? %>"
+        <div class="standing-row<%= " is-enforced" if guard.deactivation? %>"
              <%= tag.attributes(data: {
                    controller: ("deactivate" if guard.deactivation?),
-                   carry: (guard.carry_state if guard.deactivation?),
+                   enforcement_status: (guard.enforcement_state if guard.deactivation?),
                    landed: (guard.landed?.to_s if guard.deactivation?)
                  }.compact) %>>
           <span class="evdot <%= guard_dot_tone(guard) %>">
@@ -18,12 +18,12 @@
             <b><%= guard_held_line(guard) %></b>
             <span class="sub"><%= guard_footnote(guard, names) %></span>
             <% if guard.deactivation? %>
-              <span class="carry-state"><%= guard_carry_label(guard) %></span>
-              <span class="carry-slow" data-deactivate-target="slow" hidden>
+              <span class="enforcement-state"><%= guard_enforcement_label(guard) %></span>
+              <span class="enforcement-slow" data-deactivate-target="slow" hidden>
                 Slack has not answered yet.
               </span>
               <% if guard.failed? && guard.last_error.present? %>
-                <span class="carry-why"><%= guard.last_error %></span>
+                <span class="enforcement-why"><%= guard.last_error %></span>
               <% end %>
             <% end %>
           </span>

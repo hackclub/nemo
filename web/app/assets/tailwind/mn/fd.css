@@ -159,29 +159,29 @@
   }
   .audit-help-try:hover { color: var(--ink); border-color: var(--line); }
 
-  .joiner-card { display: flex; flex-direction: column; gap: var(--s-xs); min-width: 0; }
-  .joiner-head {
+  .new-member-card { display: flex; flex-direction: column; gap: var(--s-xs); min-width: 0; }
+  .new-member-head {
     display: flex;
     align-items: center;
     gap: var(--s-2xs);
     padding-bottom: var(--s-2xs);
     border-bottom: 1px solid var(--line-soft);
   }
-  .joiner-facts { display: flex; flex-direction: column; gap: var(--s-2xs); margin: 0; }
-  .joiner-facts > div {
+  .new-member-facts { display: flex; flex-direction: column; gap: var(--s-2xs); margin: 0; }
+  .new-member-facts > div {
     display: grid;
     grid-template-columns: 92px minmax(0, 1fr);
     gap: var(--s-2xs);
     align-items: baseline;
   }
-  .joiner-facts dt {
+  .new-member-facts dt {
     font-size: var(--t-fine);
     font-weight: 550;
     letter-spacing: 0.03em;
     text-transform: uppercase;
     color: var(--ink-4);
   }
-  .joiner-facts dd {
+  .new-member-facts dd {
     margin: 0;
     min-width: 0;
     display: flex;
@@ -189,14 +189,14 @@
     align-items: baseline;
     gap: 6px;
   }
-  .joiner-flag { font-size: var(--t-mid); line-height: 1; }
-  .joiner-agent {
+  .new-member-flag { font-size: var(--t-mid); line-height: 1; }
+  .new-member-agent {
     font-size: var(--t-fine);
     color: var(--ink-3);
     overflow-wrap: anywhere;
     line-height: 1.45;
   }
-  .joiner-foot {
+  .new-member-foot {
     display: flex;
     gap: var(--s-2xs);
     padding-top: var(--s-2xs);

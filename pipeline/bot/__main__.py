@@ -48,13 +48,13 @@ def app_list(apps):
 
 def wire_relay(built, sides):
     from bot.relay import app as relay_app
-    from bot.relay.carrier import MessageRelay
+    from bot.relay.messages import MessageRelay
 
-    carrier = MessageRelay()
-    app = relay_app.build(carrier.taken)
-    carrier.client = app.client
+    relay = MessageRelay()
+    app = relay_app.build(relay.taken)
+    relay.client = app.client
     built[RELAY] = (app, relay_app.app_token())
-    sides[RELAY] = carrier
+    sides[RELAY] = relay
 
 
 def wire_nemo(built, sides):

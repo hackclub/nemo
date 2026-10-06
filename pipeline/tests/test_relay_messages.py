@@ -1,4 +1,4 @@
-from bot.relay.carrier import MessageRelay, shared_at
+from bot.relay.messages import MessageRelay, shared_at
 
 ROOM = "D123"
 THREAD = "100.000"

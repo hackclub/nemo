@@ -11,7 +11,7 @@ class FdMemberStandingTest < ActionDispatch::IntegrationTest
   def deactivation(**attrs)
     Fd::MemberGuard.create!({
       kind: "deactivation", subject_id: WHO, opened_by: "UFF1", reason: "raiding",
-      carried_by: "nemo", carry: "pending"
+      enforced_by: "nemo", enforcement_status: "pending"
     }.merge(attrs))
   end
 
@@ -27,20 +27,20 @@ class FdMemberStandingTest < ActionDispatch::IntegrationTest
     deactivation
     get fd_member_standing_path(WHO)
 
-    assert_select %(.standing-row[data-carry="pending"])
-    assert_select ".carry-state", "Asking Slack"
+    assert_select %(.standing-row[data-enforcement-status="pending"])
+    assert_select ".enforcement-state", "Asking Slack"
   end
 
   test "a guard slack confirmed reads as held, and says so once it just landed" do
-    deactivation(carry: "held")
+    deactivation(enforcement_status: "held")
     get fd_member_standing_path(WHO)
 
-    assert_select %(.standing-row[data-carry="held"][data-landed="true"])
-    assert_select ".carry-state", "Deactivated in Slack"
+    assert_select %(.standing-row[data-enforcement-status="held"][data-landed="true"])
+    assert_select ".enforcement-state", "Deactivated in Slack"
   end
 
   test "a guard that landed a while ago does not animate again" do
-    guard = deactivation(carry: "held")
+    guard = deactivation(enforcement_status: "held")
     guard.update_columns(updated_at: 1.hour.ago)
     get fd_member_standing_path(WHO)
 
@@ -48,28 +48,28 @@ class FdMemberStandingTest < ActionDispatch::IntegrationTest
   end
 
   test "one waiting on slack to put the account back says that, not that it is lifted" do
-    deactivation(carry: "held", state: "lifting", lifted_by: "UME")
+    deactivation(enforcement_status: "held", state: "lifting", lifted_by: "UME")
     get fd_member_standing_path(WHO)
 
-    assert_select %(.standing-row[data-carry="lifting"])
-    assert_select ".carry-state", "Putting the account back"
+    assert_select %(.standing-row[data-enforcement-status="lifting"])
+    assert_select ".enforcement-state", "Putting the account back"
   end
 
   test "a failed carry shows what slack said" do
-    deactivation(carry: "failed", last_error: "failed: user_not_found")
+    deactivation(enforcement_status: "failed", last_error: "failed: user_not_found")
     get fd_member_standing_path(WHO)
 
-    assert_select %(.standing-row[data-carry="failed"])
-    assert_select ".carry-why", "failed: user_not_found"
+    assert_select %(.standing-row[data-enforcement-status="failed"])
+    assert_select ".enforcement-why", "failed: user_not_found"
   end
 
   test "a shush is not dressed up as a carried deactivation" do
     Fd::MemberGuard.create!(kind: "shush", subject_id: WHO, opened_by: "UFF1",
-      reason: "spam", carried_by: "nemo", carry: "held", expires_at: 3.days.from_now)
+      reason: "spam", enforced_by: "nemo", enforcement_status: "held", expires_at: 3.days.from_now)
     get fd_member_standing_path(WHO)
 
-    assert_select ".standing-row.is-carried", false
-    assert_select ".carry-state", false
+    assert_select ".standing-row.is-enforced", false
+    assert_select ".enforcement-state", false
   end
 
   test "a role the capability was taken from is not offered the button" do

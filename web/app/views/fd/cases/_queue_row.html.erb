@@ -30,7 +30,7 @@
 <span class="queue-meta">
   <span class="queue-violation trunc"><%= label || "no violation set" %></span>
   <% if kase.assigned? %>
-    <span class="faces">
+    <span class="avatar-stack">
       <%= safe_join(kase.assignee_user_ids.map { |id| face(id) }) %>
     </span>
   <% end %>

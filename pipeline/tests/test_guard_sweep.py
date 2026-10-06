@@ -61,7 +61,7 @@ def guard(**over):
 
 def test_a_lift_by_hand_is_swept_only_until_it_has_been_said():
     assert "state = 'lifted'" in memberguards.LIFTED_UNTOLD
-    assert "carried_by = 'nemo'" in memberguards.LIFTED_UNTOLD
+    assert "enforced_by = 'nemo'" in memberguards.LIFTED_UNTOLD
     assert "e.verb = 'released'" in memberguards.LIFTED_UNTOLD
 
 
@@ -118,7 +118,7 @@ def test_one_somebody_lifted_first_is_left_alone():
     assert client.posted == []
 
 
-def test_a_kind_with_no_carrier_still_lifts():
+def test_a_kind_with_no_enforcement_still_lifts():
     conn, client = Conn(), Slack()
     assert sweep.lapse(client, conn, guard(kind="deactivate"))
     assert "released" in conn.verbs()
@@ -131,11 +131,11 @@ def test_a_dropped_carry_waits_longer_each_time_it_fails():
 
 
 def test_only_what_nemo_carries_is_retried():
-    assert "carried_by = 'nemo'" in memberguards.DROPPED_AWHILE
-    assert "carry = 'failed'" in memberguards.DROPPED_AWHILE
+    assert "enforced_by = 'nemo'" in memberguards.DROPPED_AWHILE
+    assert "enforcement_status = 'failed'" in memberguards.DROPPED_AWHILE
 
 
-def test_retrying_goes_back_through_the_carrier(monkeypatch):
+def test_retrying_goes_back_through_the_enforcement(monkeypatch):
     taken = []
     monkeypatch.setattr(shush, "take_up", lambda c, conn, g: taken.append(g["id"]))
     monkeypatch.setattr(memberguards, "dropped_awhile", lambda conn: [guard()])
@@ -203,11 +203,11 @@ def test_the_same_guard_is_not_nudged_twice_in_a_day():
     assert "verb = 'told'" in memberguards.ENDING_UNTOLD
 
 
-@pytest.mark.parametrize("carrier", [shush, channel_ban])
-def test_every_carrier_can_be_let_go(carrier):
+@pytest.mark.parametrize("enforcement", [shush, channel_ban])
+def test_every_enforcement_can_be_let_go(enforcement):
     conn, client = Conn(), Slack()
-    carrier.lift(client, conn, guard(kind=carrier.KIND, channel_id=ROOM))
-    assert client.posted, f"{carrier.KIND} says nothing when it ends"
+    enforcement.lift(client, conn, guard(kind=enforcement.KIND, channel_id=ROOM))
+    assert client.posted, f"{enforcement.KIND} says nothing when it ends"
 
 
 def test_the_ending_horizon_falls_back_when_it_is_not_set():
