@@ -96,12 +96,6 @@ CONSISTENCY_CHECKS = [
         "select count(*) from raw.channel_walk w where w.messages_seen <> ("
         "select count(*) from archive.message m where m.channel_id = w.channel_id)",
     ),
-    (
-        "every message was observed arriving",
-        "select count(*) from archive.message m where not exists ("
-        "select 1 from archive.observation o "
-        "where o.channel_id = m.channel_id and o.ts = m.ts)",
-    ),
 ]
 
 ANALYTICS_CHECKS = [

@@ -23,7 +23,6 @@ UNAVAILABLE_OFFSET = 2
 IDLE_ROWS_PER_DAY = 25
 
 SEEDED_TABLES = (
-    "archive.observation",
     "archive.message",
     "raw.member_dim_snapshot",
     "raw.channel_dim_snapshot",
@@ -450,7 +449,7 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
         analytics_days(start, days, holes),
     )
 
-    messages, threads, walks, observations = spine_module.build(rng, kept, members, as_of)
+    messages, threads, walks = spine_module.build(rng, kept, members, as_of)
     counts["archive.message"] = copy_rows(
         conn, "archive.message", spine_module.ARCHIVE_MESSAGE_COLUMNS,
         [spine_module.archive_message_row(row) for row in messages]
@@ -460,10 +459,6 @@ def write(conn, channels, members, profile, as_of, rng, stream, scale, seed,
     )
     counts["channel_walk"] = copy_rows(
         conn, "raw.channel_walk", spine_module.WALK_COLUMNS, walks
-    )
-    counts["archive.observation"] = copy_rows(
-        conn, "archive.observation", spine_module.ARCHIVE_OBSERVATION_COLUMNS,
-        [spine_module.archive_observation_row(row) for row in observations]
     )
 
     counts["member_dim_snapshot"] = copy_rows(

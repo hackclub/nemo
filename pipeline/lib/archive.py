@@ -48,25 +48,23 @@ ALWAYS = ("revision", "posted_at", "author_kind", "is_reply", "is_broadcast",
 def _upsert():
     columns = ", ".join(FIELDS)
     holders = ", ".join(["%s"] * len(FIELDS))
-    kept = [f"{name} = coalesce(EXCLUDED.{name}, archive.message.{name})"
-            for name in KEPT_WHEN_ABSENT]
-    plain = [f"{name} = EXCLUDED.{name}" for name in ALWAYS]
-    sets = ", ".join(plain + kept + ["settled = archive.message.settled OR EXCLUDED.settled",
-                                     "updated_at = now()"])
+    merged = {name: f"EXCLUDED.{name}" for name in ALWAYS}
+    merged.update({name: f"coalesce(EXCLUDED.{name}, archive.message.{name})"
+                   for name in KEPT_WHEN_ABSENT})
+    merged["settled"] = "archive.message.settled OR EXCLUDED.settled"
+    sets = ", ".join([f"{name} = {value}" for name, value in merged.items()]
+                     + ["updated_at = now()"])
+    before = ", ".join(f"archive.message.{name}" for name in merged)
+    after = ", ".join(f"({value})" for value in merged.values())
     return (
         f"INSERT INTO archive.message ({columns}, settled) VALUES ({holders}, %s) "
         f"ON CONFLICT (channel_id, ts) DO UPDATE SET {sets} "
-        f"WHERE NOT archive.message.settled OR EXCLUDED.settled"
+        f"WHERE (NOT archive.message.settled OR EXCLUDED.settled) "
+        f"AND ({before}) IS DISTINCT FROM ({after})"
     )
 
 
 MESSAGE_SQL = _upsert()
-
-OBSERVED_SQL = """
-INSERT INTO archive.observation (channel_id, ts, transport, revision)
-VALUES (%s, %s, %s, %s)
-ON CONFLICT (channel_id, ts, transport, revision) DO UPDATE SET observed_at = now()
-"""
 
 LOCK_SQL = "SELECT pg_advisory_xact_lock(hashtext(%s))"
 
@@ -202,7 +200,7 @@ def record_many(conn, channel_id, entries, method, transport, settled, on_reject
 
     hold(conn, channel_id)
     held = latest_for(conn, channel_id, {ts for ts, *_ in shaped})
-    envelopes, messages, observations = [], [], []
+    envelopes, messages = [], []
     for ts, envelope, measured, payload_hash in shaped:
         revision, fresh = next_revision(held.get(ts), payload_hash)
         built = message_row(channel_id, ts, revision, envelope, measured)
@@ -212,7 +210,6 @@ def record_many(conn, channel_id, entries, method, transport, settled, on_reject
         if fresh:
             envelopes.append((channel_id, ts, revision, Jsonb(envelope), payload_hash, method))
         messages.append((*built, settled))
-        observations.append((channel_id, ts, transport, revision))
         held[ts] = (revision, payload_hash)
 
     with conn.cursor() as cur:
@@ -220,8 +217,6 @@ def record_many(conn, channel_id, entries, method, transport, settled, on_reject
             cur.executemany(ENVELOPE_SQL, envelopes)
         if messages:
             cur.executemany(MESSAGE_SQL, messages)
-        if observations:
-            cur.executemany(OBSERVED_SQL, observations)
     return len(messages)
 
 
@@ -250,7 +245,6 @@ def record(conn, channel_id, ts, envelope, measured, method, transport, settled)
             cur.execute(ENVELOPE_SQL,
                         (channel_id, ts, revision, Jsonb(envelope), payload_hash, method))
         cur.execute(MESSAGE_SQL, (*built, settled))
-        cur.execute(OBSERVED_SQL, (channel_id, ts, transport, revision))
     return True
 
 

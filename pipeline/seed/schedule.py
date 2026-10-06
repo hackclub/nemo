@@ -2,10 +2,8 @@ import collections
 import math
 from datetime import datetime, time, timedelta, timezone
 
-from ingest.channel_history_pull import SOURCE, TRANSPORT
+from ingest.channel_history_pull import SOURCE
 from lib.message import SUBSTANTIVE_CHARS
-
-EVENT_TRANSPORT = "events"
 
 REPLY_SHARE = 0.18
 MENTION_SHARE = 0.22
@@ -22,7 +20,6 @@ LENGTH_CAP = 4000
 
 ROOT_MEMORY = 40
 REPLY_WINDOW_SECONDS = 48 * 3600
-EVENT_TRANSPORT_DAYS = 7
 
 DAY_START_HOUR = 6
 DAY_SPAN_SECONDS = 16 * 3600
@@ -44,8 +41,6 @@ WALK_COLUMNS = [
     "channel_id", "oldest_ts", "newest_ts", "messages_seen", "history_complete",
     "last_walked_at", "updated_at",
 ]
-
-OBSERVATION_COLUMNS = ["channel_id", "ts", "transport", "observed_at"]
 
 
 class Message:
@@ -194,19 +189,11 @@ def walk_row(channel_id, made, as_of):
     )
 
 
-def observation_rows(made, cutoff, as_of):
-    for message in made:
-        yield (message.channel_id, message.ts, TRANSPORT, as_of)
-        if message.at >= cutoff:
-            yield (message.channel_id, message.ts, EVENT_TRANSPORT, as_of)
-
-
 def build(rng, events, members, as_of):
     bots = {member.user_id for member in members if member.is_bot}
     stamped = datetime.combine(as_of, time(12, 0), tzinfo=timezone.utc)
-    cutoff = stamped - timedelta(days=EVENT_TRANSPORT_DAYS)
     held = by_channel_day(events)
-    messages, threads, walks, observations = [], [], [], []
+    messages, threads, walks = [], [], []
     for channel_id in sorted(held):
         made = thread_them(rng, channel_messages(rng, channel_id, held[channel_id], bots))
         if not made:
@@ -214,8 +201,7 @@ def build(rng, events, members, as_of):
         messages.extend(message_row(rng, message, stamped) for message in made)
         threads.extend(thread_rows(made, stamped))
         walks.append(walk_row(channel_id, made, stamped))
-        observations.extend(observation_rows(made, cutoff, stamped))
-    return messages, threads, walks, observations
+    return messages, threads, walks
 
 
 ARCHIVE_REVISION = 0
@@ -227,8 +213,6 @@ ARCHIVE_MESSAGE_COLUMNS = [
     "mentioned_ids", "is_question", "is_substantive", "has_link", "emoji_only",
     "reaction_count", "reactor_count", "edited_at", "edited_by", "settled", "first_seen_at",
 ]
-
-ARCHIVE_OBSERVATION_COLUMNS = ["channel_id", "ts", "transport", "revision", "observed_at"]
 
 
 def archive_message_row(row):
@@ -245,9 +229,3 @@ def archive_message_row(row):
         held["reaction_count"], held["reactor_count"], held["edited_at"], held["edited_by"],
         False, held["observed_at"],
     )
-
-
-def archive_observation_row(row):
-    held = dict(zip(OBSERVATION_COLUMNS, row))
-    return (held["channel_id"], held["ts"], held["transport"],
-            ARCHIVE_REVISION, held["observed_at"])

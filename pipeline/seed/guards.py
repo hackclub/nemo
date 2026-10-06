@@ -19,7 +19,6 @@ FOREIGN_ROWS = [
     ("raw.channel_activity_snapshot", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
     ("raw.message_activity_snapshot", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
     ("archive.message", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
-    ("archive.observation", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
     ("raw.thread", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
     ("raw.channel_walk", f"channel_id NOT LIKE '{SEED_CHANNEL_PREFIX}%'"),
     ("raw.member_dim_snapshot", f"user_id NOT LIKE '{SEED_USER_PREFIX}%'"),
