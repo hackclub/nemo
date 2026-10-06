@@ -289,10 +289,10 @@ def post_report(client, conn, case_id, channel_id=None, thread_ts=None):
         "card_rendered_at = now() WHERE id = %s AND forwarded_ts IS NULL",
         (ts, digest_of(built), case["report_id"]),
     )
-    if case["message_id"] and not case.get("mirrored_ts"):
+    if case["message_id"]:
         conn.execute(
             "UPDATE fd.intake_messages SET mirrored_ts = %s, mirrored_at = now() "
-            "WHERE id = %s AND mirrored_ts IS NULL",
+            "WHERE id = %s",
             (ts, case["message_id"]),
         )
     if case["message_id"]:

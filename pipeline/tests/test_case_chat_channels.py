@@ -204,6 +204,43 @@ def test_a_file_that_will_not_carry_does_not_block_the_rest(monkeypatch):
     assert tried == [46, 47]
 
 
+def report_case(**over):
+    case = {"forwarded_ts": None, "report_id": 2, "message_id": 3,
+            "is_anonymous": False, "reporter_user_id": "U1"}
+    case.update(over)
+    return case
+
+
+def stub_report_views(monkeypatch):
+    monkeypatch.setattr(channel.views.report, "build_blocks", lambda case: [])
+    monkeypatch.setattr(channel.views.report, "fallback", lambda case: "fallback")
+    monkeypatch.setattr(channel.views.report, "metadata", lambda case: {})
+    monkeypatch.setattr(channel.attachments, "share", lambda *args, **kwargs: None)
+
+
+def test_posting_a_report_points_its_message_at_the_new_card(monkeypatch):
+    stub_report_views(monkeypatch)
+    monkeypatch.setattr(channel, "gather", lambda conn, case_id: report_case())
+    conn = Conn()
+
+    ts = channel.post_report(Slack(), conn, 2, "CNEW")
+
+    assert ts == "9.9"
+    assert conn.did("UPDATE fd.intake_messages")[0] == ("9.9", 3)
+
+
+def test_rebuilding_a_card_in_a_new_channel_repoints_an_already_mirrored_message(monkeypatch):
+    stub_report_views(monkeypatch)
+    monkeypatch.setattr(
+        channel, "gather", lambda conn, case_id: report_case(mirrored_ts="OLD.TS")
+    )
+    conn = Conn()
+
+    channel.post_report(Slack(), conn, 2, "CNEW")
+
+    assert conn.did("UPDATE fd.intake_messages")[0] == ("9.9", 3)
+
+
 def test_a_card_sitting_in_a_thread_can_name_its_case():
     assert "card_thread_ts = %(ts)s" in chat.CASE_OF_THREAD
 
