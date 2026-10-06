@@ -177,11 +177,14 @@ def enqueue_pending(conn):
     return work.enqueue_select(conn, KIND, QUEUE_SELECT, (MEMBER_RANGE_SOURCE,), requested_by=SOURCE)
 
 
-def run(conn, limit=BATCH_LIMIT):
+def prepare(conn):
     settle_from_range(conn)
     carry_forward(conn)
+    return enqueue_pending(conn)
+
+
+def search(conn, limit=BATCH_LIMIT, queued=0):
     work.reclaim(conn, KIND)
-    queued = enqueue_pending(conn)
     items = work.claim(conn, KIND, limit)
     if not items:
         print(f"{SOURCE}: every member is searched, queue empty")
@@ -220,6 +223,10 @@ def run(conn, limit=BATCH_LIMIT):
 
     print(f"{SOURCE}: {counts.rows_in} searched, {counts.rows_rejected} rejected")
     return len(items)
+
+
+def run(conn, limit=BATCH_LIMIT):
+    return search(conn, limit, prepare(conn))
 
 
 def main():
