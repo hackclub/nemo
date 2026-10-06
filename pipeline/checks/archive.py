@@ -76,10 +76,9 @@ def share_of_slacks_day_held(conn):
             WHERE s.source = 'admin_analytics_api' AND s.window_start = d.ds AND s.window_end = d.ds
         ),
         held AS (
-            SELECT count(*) AS stored
-            FROM archive.message m CROSS JOIN day d
-            WHERE m.deleted_at IS NULL
-              AND (m.posted_at AT TIME ZONE 'UTC')::date = d.ds
+            SELECT coalesce(sum(h.messages), 0)::bigint AS stored
+            FROM analytics.fct_message_hour h CROSS JOIN day d
+            WHERE h.ds = d.ds
         )
         SELECT d.ds, slack.reported, held.stored FROM day d CROSS JOIN slack CROSS JOIN held
     """).fetchone()
