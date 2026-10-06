@@ -6,7 +6,18 @@ class ApplicationController < ActionController::Base
 
   helper_method :current_account, :page_section, :viewer_zone
 
+  rescue_from ActiveRecord::StatementInvalid, ActiveRecord::QueryCanceled,
+    ActiveRecord::ConnectionTimeoutError, with: :handle_db_timeout
+
   private
+
+  def handle_db_timeout(exc)
+    Rails.logger.error("db timeout: #{exc.class}: #{exc.message}")
+    return head :service_unavailable if request.format.json?
+
+    render plain: "This is taking longer than it should. Please try again in a moment.",
+      status: :service_unavailable
+  end
 
   def viewer_zone
     @viewer_zone ||= Community::Clock.known_zone(cookies[:mn_tz])
