@@ -514,10 +514,15 @@ def carry_files(client, conn, case_id, channel_id=None):
     for message_id, forwarded_ts, anonymous, reporter in conn.execute(
         FILES_ON_CASE, (case_id,)
     ).fetchall():
-        if attachments.share(
-            client, conn, message_id, channel_id or internal_log_channel(conn), forwarded_ts,
-            wearing=as_reporter(client, anonymous, reporter),
-        ):
+        try:
+            carried = attachments.share(
+                client, conn, message_id, channel_id or internal_log_channel(conn), forwarded_ts,
+                wearing=as_reporter(client, anonymous, reporter),
+            )
+        except Exception as failure:
+            log.warning("nemo: message %s's file would not carry: %s", message_id, failure)
+            continue
+        if carried:
             sent += 1
     return sent
 
@@ -533,7 +538,12 @@ def unannounced_reopens(conn):
 def carry_follow_ups(client, conn, case_id, channel_id=None):
     carried = 0
     for (message_id,) in conn.execute(FOLLOW_UPS_WAITING, (case_id,)).fetchall():
-        if post_follow_up(client, conn, message_id, channel_id):
+        try:
+            landed = post_follow_up(client, conn, message_id, channel_id)
+        except Exception as failure:
+            log.warning("nemo: message %s would not carry: %s", message_id, failure)
+            continue
+        if landed:
             carried += 1
     return carried
 

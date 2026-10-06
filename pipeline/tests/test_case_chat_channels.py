@@ -157,6 +157,53 @@ def test_a_resolution_echo_with_nowhere_to_go_posts_nothing():
     assert client.posted == []
 
 
+class FetchallConn:
+    def __init__(self, rows):
+        self.rows = rows
+
+    def execute(self, sql, args=None):
+        return self
+
+    def fetchall(self):
+        return self.rows
+
+
+def test_a_follow_up_that_will_not_carry_does_not_block_the_rest(monkeypatch):
+    tried = []
+
+    def fake_post_follow_up(client, conn, message_id, channel_id):
+        tried.append(message_id)
+        if message_id == 46:
+            raise RuntimeError("invalid_blocks")
+        return "9.9"
+
+    monkeypatch.setattr(channel, "post_follow_up", fake_post_follow_up)
+    conn = FetchallConn([(46,), (47,), (48,)])
+
+    assert channel.carry_follow_ups(Slack(), conn, 19) == 2
+    assert tried == [46, 47, 48]
+
+
+def test_a_file_that_will_not_carry_does_not_block_the_rest(monkeypatch):
+    tried = []
+
+    def fake_share(client, conn, message_id, channel_id, forwarded_ts, wearing=None):
+        tried.append(message_id)
+        if message_id == 46:
+            raise RuntimeError("invalid_blocks")
+        return "9.9"
+
+    monkeypatch.setattr(channel.attachments, "share", fake_share)
+    monkeypatch.setattr(channel, "as_reporter", lambda client, anonymous, reporter: {})
+    conn = FetchallConn([
+        (46, "100.000", False, "U1"),
+        (47, "100.000", False, "U1"),
+    ])
+
+    assert channel.carry_files(Slack(), conn, 19, "CROOM") == 1
+    assert tried == [46, 47]
+
+
 def test_a_card_sitting_in_a_thread_can_name_its_case():
     assert "card_thread_ts = %(ts)s" in chat.CASE_OF_THREAD
 

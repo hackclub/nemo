@@ -1,4 +1,5 @@
 import logging
+import time
 import urllib.error
 import urllib.request
 
@@ -6,6 +7,7 @@ from bot.core import blobs
 
 TIMEOUT = 30
 IN_BLOCKS = ("image/png", "image/jpeg", "image/jpg", "image/gif")
+FILE_INDEX_DELAY = 1.0
 
 log = logging.getLogger("bot.nemo")
 
@@ -90,6 +92,9 @@ def post(client, conn, message_id, channel_id, thread_ts, inline, text, alongsid
 
     if inline and not kept:
         raise RuntimeError("slack would not keep any of the pictures, so this is not settled")
+
+    if kept:
+        time.sleep(FILE_INDEX_DELAY)
 
     if text and not kept and not alongside and not unfurled:
         return post_text(client, channel_id, thread_ts, text, wearing)

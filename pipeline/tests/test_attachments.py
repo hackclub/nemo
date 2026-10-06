@@ -70,6 +70,29 @@ def test_a_picture_goes_up_wearing_the_reporters_face(monkeypatch):
     assert conn.written == [("F1", 5, 7)]
 
 
+def test_a_picture_gets_a_moment_to_index_before_it_is_referenced(monkeypatch):
+    blob(monkeypatch, "image/png")
+    conn = Conn([(7, "shot.png", "image/png", "abc", 100)])
+    slack = Slack()
+    waited = []
+    monkeypatch.setattr(attachments.time, "sleep", lambda seconds: waited.append(seconds))
+
+    attachments.share(slack, conn, 5, ROOM, THREAD, wearing={"username": "Anonymous"})
+
+    assert waited == [attachments.FILE_INDEX_DELAY]
+
+
+def test_words_with_no_picture_do_not_wait_on_slack_to_index_anything(monkeypatch):
+    conn = Conn([])
+    slack = Slack()
+    waited = []
+    monkeypatch.setattr(attachments.time, "sleep", lambda seconds: waited.append(seconds))
+
+    attachments.share(slack, conn, 5, ROOM, THREAD, wearing={"username": "Anonymous"}, body="look")
+
+    assert waited == []
+
+
 def test_words_and_picture_ride_the_same_message(monkeypatch):
     blob(monkeypatch, "image/png")
     conn = Conn([(7, "shot.png", "image/png", "abc", 100)])
