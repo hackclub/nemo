@@ -431,13 +431,13 @@
     max-width: 76ch;
   }
   .msg-flagged { padding: 6px 9px; margin: 0 -9px; border-radius: var(--r-ctl); background: var(--warn-soft); }
-  .msg[data-kind="chat"] {
+  .msg[data-kind="them"], .msg[data-kind="us"] {
     padding: 6px 9px;
     margin: 0 -9px;
-    background: var(--info-soft);
-    border-left: 3px solid var(--info);
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
   }
-  .tag-internal { background: var(--info-soft); color: var(--info); }
+  .tag-reporter { background: var(--accent-soft); color: var(--accent); }
   .msg .avatar, .msg .row-avatar { width: 26px; height: 26px; font-size: var(--t-fine); }
   .msg.is-grouped { padding-top: 1px; }
   .msg.is-grouped .avatar, .msg.is-grouped .row-avatar { visibility: hidden; }
