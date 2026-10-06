@@ -427,4 +427,20 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_equal "&lt;b&gt; <@U0A1> &amp; me",
       Fd::SlackPost.escape_markup("<b> <@U0A1> & me")
   end
+
+  test "a logged action renders as its own highlighted card, not a reporter reply" do
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", source_app: "fire_engine",
+      blocks: [
+        { "type" => "header", "text" => { "type" => "plain_text", "text" => "Warning" } },
+        { "type" => "context",
+          "elements" => [{ "type" => "mrkdwn", "text" => "Against <@UTHEM> · logged by <@UME>" }] },
+        { "type" => "section", "text" => { "type" => "mrkdwn", "text" => "> kept at it" } }
+      ])
+
+    get fd_case_chat_log_path(@kase, thread: @kase.reports.first&.id)
+
+    assert_includes response.body, %(data-kind="action")
+    assert_includes response.body, %(class="echo-head">Warning</p>)
+    assert_not_includes response.body, "tag-reporter"
+  end
 end

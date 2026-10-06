@@ -105,14 +105,24 @@ module FdHelper
   end
 
   def body_html(entry)
-    blocks_html(entry.blocks.presence || Slack::Mrkdwn.blocks(entry.body))
+    blocks = entry.blocks.presence || Slack::Mrkdwn.blocks(entry.body)
+    return echo_card_html(blocks) if Slack::EchoCard.echo?(blocks)
+
+    blocks_html(blocks)
   end
 
   def blocks_html(blocks)
-    Slack::RichText.for({ "blocks" => blocks }, names: names, channels: channels,
-      emoji: chat_emoji,
+    Slack::RichText.for({ "blocks" => blocks }, **rendering)
+  end
+
+  def echo_card_html(blocks)
+    Slack::EchoCard.render(blocks, **rendering)
+  end
+
+  def rendering
+    { names: names, channels: channels, emoji: chat_emoji,
       user_chip: ->(id) { mention_link(id) }, channel_chip: ->(id) { channel_mention(id) },
-      link_chip: ->(url, label) { linked(url, label) })
+      link_chip: ->(url, label) { linked(url, label) } }
   end
 
   def linked(url, label = nil)
@@ -746,9 +756,11 @@ module FdHelper
   end
 
   def chat_entry(line)
-    ChatEntry.new(key: "chat-#{line.id}", at: line.posted_at, side: "out", kind: "chat",
+    blocks = line.blocks unless line.deleted?
+    kind = Slack::EchoCard.echo?(blocks) ? "action" : "chat"
+    ChatEntry.new(key: "chat-#{line.id}", at: line.posted_at, side: "out", kind: kind,
       who: line.author_user_id, name: names[line.author_user_id], body: chat_body(line),
-      blocks: (line.blocks unless line.deleted?))
+      blocks: blocks)
   end
 
   def chat_body(line)

@@ -266,6 +266,29 @@ class FdHelperTest < ActionView::TestCase
     assert_equal "UREP1", entry.who
     assert_match(/UREP1/, entry.name)
   end
+
+  def logged_action(**attrs)
+    saved = make_case(subject: "UAAA")
+    Fd::CaseChat.create!(case_id: saved.id, author_user_id: "UME", source_app: "fire_engine",
+      **attrs)
+  end
+
+  test "an ordinary chat note reads as plain chat" do
+    line = logged_action(body: "noted for later")
+    entry = chat_entries([], [line]).first
+
+    assert_equal "chat", entry.kind
+  end
+
+  test "a logged action's echo reads as its own kind, not plain chat" do
+    line = logged_action(blocks: [
+      { "type" => "header", "text" => { "type" => "plain_text", "text" => "Warning" } },
+      { "type" => "context", "elements" => [{ "type" => "mrkdwn", "text" => "Against <@UAAA>" }] }
+    ])
+    entry = chat_entries([], [line]).first
+
+    assert_equal "action", entry.kind
+  end
   def waiting(filed, body = "")
     Fd::IntakeOutbox.create!(conversation_id: conversation_for(filed), kind: "reply",
       body: body, mode: "signed", requested_by: "UFF1",

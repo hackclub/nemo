@@ -8,7 +8,7 @@
         <% unless grouped %>
           <span class="msg-who"><%= entry.name %></span>
           <span class="msg-at"><%= entry.at.strftime("%-d %b, %H:%M") %></span>
-          <% if entry.kind != "chat" %><span class="tag tag-reporter">reporter</span><% end %>
+          <% if %w[them us].include?(entry.kind) %><span class="tag tag-reporter">reporter</span><% end %>
         <% end %>
         <% if entry.state %><span class="tag <%= state_tone(entry.state).sub("chip-", "") %>"><%= entry.state %></span><% end %>
       </div>
