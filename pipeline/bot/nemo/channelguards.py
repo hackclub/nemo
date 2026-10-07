@@ -82,7 +82,7 @@ RETURNING deleted_count, kicked_count
 
 HAPPENED = """
 INSERT INTO fd.channel_guard_events
-    (guard_id, channel_id, subject_id, bot_id, label, verb, text, message_ts, permalink, app_id)
+    (guard_id, channel_id, subject_id, bot_id, label, verb, message_text, message_ts, permalink, app_id)
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 RETURNING id
 """
