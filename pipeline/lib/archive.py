@@ -1,8 +1,4 @@
-import hashlib
-import json
 from datetime import datetime, timezone
-
-from psycopg.types.json import Jsonb
 
 from lib import member_seen
 from lib.message import author_kind, redact, normalize
@@ -10,21 +6,7 @@ from lib.message import author_kind, redact, normalize
 GONE = "message_deleted"
 CHANGED = "message_changed"
 WRAPPERS = frozenset({GONE, CHANGED})
-
-LATEST_SQL = """
-SELECT revision, payload_hash
-FROM archive.envelope
-WHERE channel_id = %s AND ts = %s
-ORDER BY revision DESC
-LIMIT 1
-"""
-
-ENVELOPE_SQL = """
-INSERT INTO archive.envelope
-    (channel_id, ts, revision, payload, payload_hash, method)
-VALUES (%s, %s, %s, %s, %s, %s)
-ON CONFLICT (channel_id, ts, revision) DO NOTHING
-"""
+FETCHED = 1
 
 FIELDS = (
     "channel_id", "ts", "revision", "posted_at", "author_id", "author_kind", "bot_id",
@@ -100,11 +82,6 @@ def stamp(ts):
         return None
 
 
-def digest(payload):
-    packed = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
-    return hashlib.sha256(packed.encode("utf-8")).digest()
-
-
 def body_of(envelope):
     if envelope.get("type") not in (None, "message"):
         return None
@@ -119,16 +96,6 @@ def body_of(envelope):
 def hold(conn, channel_id):
     with conn.cursor() as cur:
         cur.execute(LOCK_SQL, (channel_id,))
-
-
-def revision_for(conn, channel_id, ts, payload_hash):
-    with conn.cursor() as cur:
-        cur.execute(LATEST_SQL, (channel_id, ts))
-        row = cur.fetchone()
-    if row is None:
-        return 1, True
-    revision, held = row
-    return (revision, False) if bytes(held) == payload_hash else (revision + 1, True)
 
 
 def message_row(channel_id, ts, revision, envelope, measured):
@@ -179,39 +146,12 @@ def message_row(channel_id, ts, revision, envelope, measured):
     )
 
 
-LATEST_MANY_SQL = """
-SELECT ts, revision, payload_hash
-FROM (
-    SELECT ts, revision, payload_hash,
-           row_number() OVER (PARTITION BY ts ORDER BY revision DESC) AS rn
-    FROM archive.envelope
-    WHERE channel_id = %s AND ts = ANY(%s)
-) latest
-WHERE rn = 1
-"""
-
-
-def latest_for(conn, channel_id, stamps):
-    if not stamps:
-        return {}
-    with conn.cursor() as cur:
-        cur.execute(LATEST_MANY_SQL, (channel_id, list(stamps)))
-        return {ts: (revision, bytes(held)) for ts, revision, held in cur.fetchall()}
-
-
-def next_revision(held, payload_hash):
-    if held is None:
-        return 1, True
-    revision, kept = held
-    return (revision, False) if kept == payload_hash else (revision + 1, True)
-
-
 def record_many(conn, channel_id, entries, method, transport, settled, on_reject=None):
     def refuse(ts, reason):
         if on_reject is not None:
             on_reject(ts, reason)
 
-    shaped = []
+    messages = []
     for ts, envelope, measured in entries:
         if not channel_id or not ts or not isinstance(envelope, dict):
             refuse(ts, "no channel, no ts, or the envelope is not an object")
@@ -219,30 +159,18 @@ def record_many(conn, channel_id, entries, method, transport, settled, on_reject
         if body_of(envelope) is None:
             refuse(ts, "the envelope carries no message body")
             continue
-        shaped.append((ts, envelope, measured, digest(envelope)))
-    if not shaped:
-        return 0
-
-    hold(conn, channel_id)
-    held = latest_for(conn, channel_id, {ts for ts, *_ in shaped})
-    envelopes, messages = [], []
-    for ts, envelope, measured, payload_hash in shaped:
-        revision, fresh = next_revision(held.get(ts), payload_hash)
-        built = message_row(channel_id, ts, revision, envelope, measured)
+        built = message_row(channel_id, ts, FETCHED, envelope, measured)
         if built is None:
             refuse(ts, "the envelope would not build a message row")
             continue
-        if fresh:
-            envelopes.append((channel_id, ts, revision, Jsonb(envelope), payload_hash, method))
         messages.append((*built, settled))
-        held[ts] = (revision, payload_hash)
+    if not messages:
+        return 0
 
+    hold(conn, channel_id)
     with conn.cursor() as cur:
-        if envelopes:
-            cur.executemany(ENVELOPE_SQL, envelopes)
-        if messages:
-            cur.executemany(MESSAGE_SQL, [dict(zip(COLUMNS, row)) for row in messages])
-            member_seen.posted(cur, member_posts(messages))
+        cur.executemany(MESSAGE_SQL, [dict(zip(COLUMNS, row)) for row in messages])
+        member_seen.posted(cur, member_posts(messages))
     return len(messages)
 
 
@@ -254,25 +182,8 @@ def from_api_many(conn, channel_id, messages, method, transport, on_reject=None)
 
 
 def record(conn, channel_id, ts, envelope, measured, method, transport, settled):
-    if not channel_id or not ts or not isinstance(envelope, dict):
-        return False
-    if body_of(envelope) is None:
-        return False
-
-    hold(conn, channel_id)
-    payload_hash = digest(envelope)
-    revision, fresh = revision_for(conn, channel_id, ts, payload_hash)
-    built = message_row(channel_id, ts, revision, envelope, measured)
-    if built is None:
-        return False
-
-    with conn.cursor() as cur:
-        if fresh:
-            cur.execute(ENVELOPE_SQL,
-                        (channel_id, ts, revision, Jsonb(envelope), payload_hash, method))
-        cur.execute(MESSAGE_SQL, dict(zip(COLUMNS, (*built, settled))))
-        member_seen.posted(cur, member_posts([built]))
-    return True
+    return record_many(conn, channel_id, [(ts, envelope, measured)], method, transport,
+                       settled) == 1
 
 
 def from_api(conn, channel_id, message, method, transport):

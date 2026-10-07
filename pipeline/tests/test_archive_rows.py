@@ -63,6 +63,32 @@ def test_a_rejection_is_reported_so_the_caller_can_dead_letter_it():
     assert src.count("refuse(") >= 3
 
 
+def test_a_fetched_message_lands_without_an_envelope():
+    ran = []
+
+    class Conn:
+        def cursor(self):
+            return self
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def execute(self, sql, args=None):
+            ran.append((sql, args))
+
+        def executemany(self, sql, rows):
+            ran.extend((sql, row) for row in rows)
+
+    said = {"ts": "1700000000.000100", "user": "U1", "text": "hi"}
+    archive.from_api_many(Conn(), "C1", [said], "conversations.history", "history")
+
+    assert not any("archive.envelope" in sql for sql, _ in ran)
+    assert [row["revision"] for sql, row in ran if sql == archive.MESSAGE_SQL] == [archive.FETCHED]
+
+
 def test_an_unchanged_message_is_read_first_so_it_is_never_locked():
     ahead, behind = archive.MESSAGE_SQL.split(" ON CONFLICT ", 1)
 

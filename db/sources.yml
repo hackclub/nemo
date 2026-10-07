@@ -122,8 +122,7 @@ sources:
     guard: none
     resume: pending set
     retention: keep
-    writes: [raw.thread,
-             archive.envelope, archive.message]
+    writes: [raw.thread, archive.message]
     runs_as: [channel_replies]
     feeds: [fct_message, fct_thread]
     limits:
@@ -165,8 +164,7 @@ sources:
     guard: none
     resume: cursor
     retention: keep
-    writes: [raw.thread, raw.channel_walk,
-             archive.envelope, archive.message]
+    writes: [raw.thread, raw.channel_walk, archive.message]
     runs_as: [conversations_history]
     feeds: [fct_message, fct_thread]
     limits:
