@@ -144,3 +144,18 @@ def created(ctx):
         if channels.mode(conn) != channels.ON:
             return None
         return channels.join(ctx.client, conn, channel_id)
+
+
+@on_event("channel_rename", open_to_all=True)
+@on_event("group_rename", open_to_all=True)
+def renamed(ctx):
+    event = ctx.payload or {}
+    where = event.get("channel")
+    if not isinstance(where, dict) or not where.get("id") or not where.get("name"):
+        return None
+
+    with session() as conn:
+        channel_dim.record(conn, where["id"], name=where["name"])
+
+    log.info("nemo: %s is now #%s", where["id"], where["name"])
+    return where["id"]

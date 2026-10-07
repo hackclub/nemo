@@ -7,16 +7,18 @@ module Fd
       members = Analytics::DimMember.where(user_id: ids).index_by(&:user_id)
       windows = Analytics::MemberWindow.lifetime.where(user_id: ids).index_by(&:user_id)
       posts = Analytics::MemberLifetimeMessages.where(user_id: ids).index_by(&:user_id)
-      ids.to_h { |id| [id, new(id, members[id], windows[id], posts[id])] }
+      joined = Fd::MemberJoin.where(user_id: ids).pluck(:user_id, :joined_at).to_h
+      ids.to_h { |id| [id, new(id, members[id], windows[id], posts[id], joined[id])] }
     end
 
     attr_reader :user_id
 
-    def initialize(user_id, member, window, posts = nil)
+    def initialize(user_id, member, window, posts = nil, joined_at = nil)
       @user_id = user_id
       @member = member
       @window = window
       @posts = posts
+      @joined_at = joined_at
     end
 
     def known?
@@ -24,13 +26,13 @@ module Fd
     end
 
     def tenure_days
-      return nil if @member&.cohort_at.nil?
+      return nil if cohort_at.nil?
 
-      (Date.current - @member.cohort_at.to_date).to_i
+      (Date.current - cohort_at.to_date).to_i
     end
 
     def cohort_at
-      @member&.cohort_at
+      @member&.cohort_at || @joined_at
     end
 
     def claimed_at

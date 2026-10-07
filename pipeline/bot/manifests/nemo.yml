@@ -70,9 +70,11 @@ settings:
       - channel_archive
       - channel_created
       - channel_left
+      - channel_rename
       - channel_unarchive
       - group_archive
       - group_left
+      - group_rename
       - group_unarchive
       - member_joined_channel
       - member_left_channel

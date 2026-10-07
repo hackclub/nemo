@@ -58,4 +58,22 @@ class Fd::MemberContextTest < ActiveSupport::TestCase
   test "looking somebody up reads both sources" do
     assert_nothing_raised { context_for }
   end
+
+  test "a member the warehouse has not met yet takes their tenure from the day they joined" do
+    joined = 2.days.ago.change(usec: 0)
+
+    person = Fd::MemberContext.new(MINE, nil, nil, nil, joined)
+
+    assert_equal joined, person.cohort_at
+    assert_equal 2, person.tenure_days
+  end
+
+  test "the warehouse cohort wins over the join day when both are known" do
+    cohort = 400.days.ago.change(usec: 0)
+    member = Analytics::DimMember.new(user_id: MINE, cohort_at: cohort)
+
+    person = Fd::MemberContext.new(MINE, member, nil, nil, 1.day.ago)
+
+    assert_equal cohort, person.cohort_at
+  end
 end

@@ -130,6 +130,7 @@ module Fd
         LEFT JOIN noted ON noted.user_id = people.user_id
         LEFT JOIN fd.member m ON m.user_id = people.user_id
         LEFT JOIN analytics.dim_member_cohort dm ON dm.user_id = people.user_id
+        LEFT JOIN fd.member_joins mj ON mj.user_id = people.user_id
         LEFT JOIN LATERAL (
           SELECT last_active_at, messages_posted FROM analytics.fct_member_window w
           WHERE w.source = 'admin_analytics_member_range' AND w.user_id = people.user_id LIMIT 1
@@ -148,7 +149,8 @@ module Fd
       UNION SELECT user_id FROM cachet_profiles WHERE lower(display_name) LIKE :term
     SQL
 
-    CONTEXT_COLUMNS = ", dm.cohort_at, w.last_active_at, w.messages_posted".freeze
+    CONTEXT_COLUMNS =
+      ", coalesce(dm.cohort_at, mj.joined_at) AS cohort_at, w.last_active_at, w.messages_posted".freeze
 
     IDENTITY_COLUMNS =
       ", mi.real_name, mi.first_name, mi.last_name, mi.email, cp.display_name AS shown_name".freeze
@@ -161,6 +163,7 @@ module Fd
 
     CONTEXT_JOIN = <<~SQL
       LEFT JOIN analytics.dim_member dm ON dm.user_id = people.user_id
+      LEFT JOIN fd.member_joins mj ON mj.user_id = people.user_id
       LEFT JOIN analytics.fct_member_window w
         ON w.user_id = people.user_id AND w.source = 'admin_analytics_member_range'
     SQL
