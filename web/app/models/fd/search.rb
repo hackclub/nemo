@@ -67,7 +67,7 @@ module Fd
       return holding_the_thread if thread
 
       all = [
-        group("member", members),
+        group("member", members, total: (found_members.total if searching?)),
         group("case", cases),
         group("note", notes) { |note| note.body },
         group("report", reports) { |report| report.body }
@@ -85,26 +85,32 @@ module Fd
       { channel_id: thread.channel_id, thread_ts: thread.thread_ts }
     end
 
-    def group(kind, found, &snippet)
+    def group(kind, found, total: nil, &snippet)
       rows = found.limit(@limit).map do |record|
         Row.new(kind: kind, record: record,
           snippet: searching? && snippet ? self.class.snippet(snippet.call(record), term) : nil)
       end
       Group.new(key: kind, label: LABELS.fetch(kind), rows: rows,
-        total: searching? ? found.count : rows.size)
+        total: total || (searching? ? found.count : rows.size))
     end
 
     CASE_ORDER = "(id = :asked) DESC, (resolved_at IS NOT NULL), opened_at DESC".freeze
 
     RECENT_CASES = 40
+    MEMBERS_FOR_CASES = 10
 
     def members
       return recent_members unless searching?
 
-      ids = MemberQuery.new({ "q" => term }, actor: @actor).rows.map(&:user_id)
+      ids = found_members.ids
       return Member.none if ids.empty?
 
       Member.where(user_id: ids).in_order_of(:user_id, ids)
+    end
+
+    def found_members
+      @found_members ||= MemberFinder.new(term, actor: @actor)
+        .find(limit: [@limit, MEMBERS_FOR_CASES].max)
     end
 
     def recent_members
@@ -115,7 +121,7 @@ module Fd
     end
 
     def member_ids
-      @member_ids ||= members.limit(10).pluck(:user_id)
+      @member_ids ||= members.limit(MEMBERS_FOR_CASES).pluck(:user_id)
     end
 
     def case_id

@@ -33,7 +33,7 @@ module Fd
     end
 
     def every_count
-      whole = Search.new(params[:q], limit: 1, actor: current_account)
+      whole = @found.scope ? Search.new(params[:q], limit: 1, actor: current_account) : @found
       return {} unless whole.asked?
 
       whole.groups.to_h { |group| [group.key, group.total] }
