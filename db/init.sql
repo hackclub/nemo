@@ -132,7 +132,6 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'archive' AND tablename = 'message') THEN
         EXECUTE 'GRANT USAGE ON SCHEMA archive TO dbt_owner';
         EXECUTE 'GRANT SELECT ON archive.message TO dbt_owner';
-        EXECUTE 'REVOKE ALL ON archive.envelope FROM dbt_owner';
         EXECUTE 'REVOKE ALL ON ALL TABLES IN SCHEMA archive FROM rails_app';
     END IF;
 
