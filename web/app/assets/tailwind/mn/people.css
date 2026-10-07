@@ -554,23 +554,22 @@
   .profile-who .avatar { width: 40px; height: 40px; font-size: var(--t-head); }
   .profile-who .two-line b { font-size: var(--t-head); font-weight: 600; letter-spacing: -0.01em; }
   .metrics.profile-band { --metric-min: 150px; }
-  .metrics.profile-band > .profile-who { grid-column: span 2; }
+  .metrics.profile-band > .profile-who {
+    grid-column: span 2;
+    border-radius: var(--r-panel);
+    box-shadow: 0 0 0 1px var(--line);
+  }
   .metrics.profile-band > .metric-wide { grid-column: span 2; }
   .metrics.profile-band > .metric {
     justify-content: flex-start;
     gap: 3px;
-    padding: var(--s-sm);
   }
   .metrics.profile-band .metric-value {
     font-size: var(--t-head);
     font-weight: 500;
     letter-spacing: -0.01em;
   }
-  .metrics.profile-band .metric-key {
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    color: var(--ink-4);
-  }
+  .metrics.profile-band .metric-key { color: var(--ink-4); }
   .metric-value.is-text {
     font-family: var(--font-sans);
     font-size: var(--t-head);

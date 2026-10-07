@@ -152,7 +152,7 @@
   }
 
   .form-label, .community-nav-label, .admin-lab, .covkey, .stat-key,
-  .metric-key, .card-grid-head, .menu-group, .palette-group,
+  .card-grid-head, .menu-group, .palette-group,
   .field-label, .field-label > span:first-child {
     font-size: var(--t-fine);
     font-weight: 550;

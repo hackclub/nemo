@@ -18,8 +18,6 @@
 
   @media (max-width: 1439px) {
     .rtitle { font-size: var(--t-lede); }
-    .metric { padding: var(--s-xs) var(--s-xs) var(--s-sm); }
-    .metric-value { font-size: var(--t-title); }
   }
 
   @media (max-width: 1099px) {
@@ -36,8 +34,7 @@
     .cardbar:not(:has(.pill)) { flex-wrap: nowrap; }
     .cardbar > .queue-search { flex: 1 1 120px; min-width: 0; max-width: none; }
     .cardbar > .toolbar-end { margin-left: auto; width: auto; flex: none; }
-    .metric { padding: var(--p-ctl) var(--s-xs) var(--s-xs); }
-    .metric-value { font-size: var(--t-lede); }
+    .metric { --metric-head: 32px; --metric-pad: var(--p-ctl); }
     .metric-spark { display: none; }
     .facts-strip > div, .facts-strip > .fact { flex-basis: 50%; }
     .section-head { flex-wrap: wrap; }
