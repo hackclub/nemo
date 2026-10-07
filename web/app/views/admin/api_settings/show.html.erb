@@ -33,7 +33,7 @@
           <span class="setval cap-do">
             <b class="row-value"><%= value %></b>
             <% if may_grant? %>
-              <button type="button" class="text-btn" data-modal-open="dial-<%= key %>" aria-haspopup="dialog">Change</button>
+              <button type="button" class="lnk" data-modal-open="dial-<%= key %>" aria-haspopup="dialog">Change</button>
             <% end %>
           </span>
         </div>
@@ -103,7 +103,7 @@
                       Revoked <%= token.revoked_at.strftime("%-d %b") %>
                     </span>
                   <% elsif may_grant? %>
-                    <button type="button" class="text-btn" data-modal-open="rate-<%= token.id %>" aria-haspopup="dialog">Set rate</button>
+                    <button type="button" class="lnk" data-modal-open="rate-<%= token.id %>" aria-haspopup="dialog">Set rate</button>
                   <% end %>
                 </td>
               </tr>

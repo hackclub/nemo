@@ -36,7 +36,7 @@
     <% end %>
     <% if row.raw? %>
       <%= link_to fd_audit_event_path(source: row.source, id: row.id),
-            class: "iconbtn audit-more", aria: { label: "Everything on this event" },
+            class: "btn btn-ghost btn-only audit-more", aria: { label: "Everything on this event" },
             data: { turbo_frame: "audit-panel" } do %>
         <%= menu_dots %>
       <% end %>

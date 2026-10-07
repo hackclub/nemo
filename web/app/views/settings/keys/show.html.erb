@@ -31,7 +31,7 @@
 
             <%= render layout: "shared/dropdown",
                   locals: { label: "More for #{app.name}", trigger: menu_dots,
-                            trigger_css: "iconbtn" } do %>
+                            trigger_css: "btn btn-ghost btn-only" } do %>
               <% if asked %>
                 <%= button_to "Withdraw the request", withdraw_settings_request_path(asked),
                       method: :delete, class: "btn", form: { class: "contents" } %>
@@ -56,9 +56,9 @@
             <span class="grow"></span>
             <% unless api_off %>
               <%= button_to "Rotate", rotate_settings_token_path(token), method: :post,
-                    class: "text-btn rowact",
+                    class: "lnk rowact",
                     form: { class: "contents", data: { turbo: false } } %>
-              <button type="button" class="text-btn rowact rowact-crit"
+              <button type="button" class="lnk rowact rowact-crit"
                       data-modal-open="kill-<%= token.id %>"
                       aria-haspopup="dialog">Revoke</button>
             <% end %>

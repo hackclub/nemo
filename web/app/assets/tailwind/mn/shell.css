@@ -853,7 +853,7 @@
       background: var(--chrome);
       border-bottom: 1px solid var(--line);
     }
-    .mobile-bar .iconbtn { flex: none; width: 36px; height: 36px; }
+    .mobile-bar .btn-only { flex: none; width: 36px; height: 36px; }
     .mobile-bar-where {
       margin-left: 5px;
       min-width: 0;

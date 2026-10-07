@@ -160,8 +160,7 @@
   }
 
   @media (pointer: coarse) {
-    .btn, .iconbtn { min-height: 34px; }
-    .btn-sm { min-height: 28px; height: 28px; }
+    .btn { min-height: 34px; }
     .cnav a { height: 36px; }
     .data-table td { padding: 11px var(--s-xs); }
     .queue-row { padding-top: 11px; padding-bottom: 11px; }

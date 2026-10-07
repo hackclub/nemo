@@ -36,11 +36,9 @@
   .hbars .bar { transform-origin: left; }
   .tree .cell rect, .parts .cell rect { animation: fade-in var(--dur-3) var(--ease) both; }
 
-  .btn:active:not(.is-off):not([aria-disabled="true"]),
-  .iconbtn:active,
   .rail-btn:active,
   .metric:active { scale: 0.985; }
-  .btn, .iconbtn, .rail-btn, .metric {
+  .rail-btn, .metric {
     transition-property: background-color, border-color, color, opacity, scale, translate, box-shadow;
   }
 

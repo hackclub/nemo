@@ -42,7 +42,7 @@
            data-controller="mobile-bar case-timeline<%= " pane pane-size" if pane %>">
         <header class="mobile-bar">
           <% if nav_partial %>
-            <button type="button" class="iconbtn mobile-bar-menu" data-action="sidebar#toggle"
+            <button type="button" class="btn btn-ghost btn-only mobile-bar-menu" data-action="sidebar#toggle"
                     aria-controls="section-nav" aria-label="Open navigation">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                    stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
@@ -51,7 +51,7 @@
             </button>
           <% end %>
           <% if pane %>
-            <button type="button" class="iconbtn backbtn" aria-label="Back to the list"
+            <button type="button" class="btn btn-ghost btn-only backbtn" aria-label="Back to the list"
                     data-action="click->pane#show" hidden>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

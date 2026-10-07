@@ -1,0 +1,104 @@
+@layer base {
+  .btn {
+    @apply inline-flex shrink-0 items-center justify-center whitespace-nowrap transition-all outline-none select-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0;
+    @apply focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 rounded-lg border border-transparent bg-clip-padding text-sm font-medium focus-visible:ring-3 aria-invalid:ring-3 active:not-aria-[haspopup]:translate-y-px [&_svg:not([class*='size-'])]:size-4;
+    @apply h-8 gap-1.5 px-2.5;
+    @apply cursor-pointer font-sans text-foreground no-underline;
+  }
+
+  .btn:where(:not(.btn-primary, .btn-ghost, .btn-danger, .btn-crit)) {
+    @apply border-border bg-background hover:bg-muted hover:text-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 aria-expanded:bg-muted aria-expanded:text-foreground;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/80;
+  }
+
+  .btn-ghost {
+    @apply hover:bg-muted hover:text-foreground dark:hover:bg-muted/50 aria-expanded:bg-muted aria-expanded:text-foreground;
+  }
+
+  .btn-danger {
+    @apply bg-destructive/10 hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/20 text-destructive focus-visible:border-destructive/40 dark:hover:bg-destructive/30;
+  }
+
+  .btn-crit {
+    @apply bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60;
+  }
+
+  .btn-sm {
+    @apply h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] [&_svg:not([class*='size-'])]:size-3.5;
+  }
+
+  .btn-only {
+    @apply size-8 px-0;
+  }
+
+  .btn-only.btn-sm {
+    @apply size-7 rounded-[min(var(--radius-md),12px)];
+  }
+
+  .btn.is-on {
+    @apply bg-muted text-foreground;
+  }
+
+  .btn-on, .tog-on {
+    @apply border-primary/25 bg-primary/10 text-primary hover:bg-primary/15;
+  }
+
+  .tog-off {
+    @apply border-transparent bg-transparent text-muted-foreground hover:bg-muted;
+  }
+
+  .btn:is(.is-off, .btn-off, [aria-disabled="true"]) {
+    @apply relative cursor-not-allowed opacity-50 active:translate-y-0;
+  }
+
+  .btn-why {
+    @apply sr-only;
+  }
+
+  .btn-off:hover > .btn-why, .btn-off:focus-visible > .btn-why,
+  .btn[aria-disabled="true"]:hover > .btn-why {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 80;
+    width: max-content;
+    max-width: 260px;
+    height: auto;
+    margin: 0;
+    padding: 6px 9px;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+    border-radius: var(--r-ctl);
+    background: var(--tip-bg);
+    color: var(--tip-ink);
+    font-size: var(--t-fine);
+    font-weight: 400;
+    line-height: 1.45;
+    text-align: left;
+    box-shadow: var(--shadow-pop);
+  }
+
+  .btn-primary .kbd {
+    @apply bg-primary-foreground/25 text-primary-foreground;
+  }
+
+  .btn-group {
+    @apply flex w-fit items-stretch *:focus-visible:relative *:focus-visible:z-10 [&>*:not(:first-child)]:rounded-l-none [&>*:not(:first-child)]:border-l-0 [&>*:not(:last-child)]:rounded-r-none;
+  }
+
+  .lnk {
+    @apply cursor-pointer border-0 bg-transparent p-0 font-medium text-primary no-underline underline-offset-4 hover:underline;
+  }
+
+  .rowact {
+    @apply font-medium text-muted-foreground hover:text-primary;
+  }
+
+  .rowact-crit {
+    @apply text-destructive hover:text-destructive/80;
+  }
+}

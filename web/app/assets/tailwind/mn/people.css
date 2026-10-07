@@ -484,6 +484,7 @@
   .role-matrix td:not(:first-child):not(:nth-child(2)) { text-align: center; }
   .role-matrix .btn { min-width: 46px; justify-content: center; }
   .role-matrix .btn-on { font-weight: 650; }
+  .role-matrix .btn-off { opacity: 1; }
   .role-matrix .tog-off { text-decoration: line-through; text-decoration-color: color-mix(in oklab, var(--ink-4) 60%, transparent); }
 
   .theme-grid {

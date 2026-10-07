@@ -52,7 +52,7 @@
       </div>
       <div class="modal-foot">
         <%= button_to "Revoke it", admin_api_token_path(token), method: :delete,
-              class: "btn btn-undo", form: { class: "contents" } %>
+              class: "btn btn-danger", form: { class: "contents" } %>
         <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
         <%= submit_tag "Set it", class: "btn btn-primary" %>
       </div>
