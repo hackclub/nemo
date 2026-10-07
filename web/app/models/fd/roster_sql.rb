@@ -37,13 +37,16 @@ module Fd
         WHERE case_id IS NULL AND subject_user_id IS NOT NULL AND deleted_at IS NULL
         GROUP BY subject_user_id
       ),
-      people AS (
-        SELECT user_id FROM fd.member WHERE is_deleted = false AND is_bot = false
-        UNION SELECT user_id FROM conduct
-        UNION SELECT user_id FROM acted
-        UNION SELECT user_id FROM held
-        UNION SELECT user_id FROM noted
+      touched AS (
+        SELECT p.user_id FROM fd.case_participants p
+        JOIN fd.cases c ON c.id = p.case_id
+        WHERE (:category = 'any' OR c.category_key = :category)
+        UNION SELECT target_user_id FROM fd.actions WHERE target_user_id IS NOT NULL
+        UNION SELECT subject_id FROM fd.member_guards WHERE state IN ('live', 'lifting')
+        UNION SELECT subject_user_id FROM fd.notes
+        WHERE case_id IS NULL AND subject_user_id IS NOT NULL AND deleted_at IS NULL
       ),
+      people AS (PEOPLE_FROM),
       roster AS (
         SELECT people.user_id,
                coalesce(conduct.cases, 0) AS cases,
@@ -66,9 +69,20 @@ module Fd
       )
     SQL
 
-    SEARCH_AGGREGATES = <<~SQL
+    EVERYONE = <<~SQL.squish.freeze
+      SELECT user_id FROM fd.member WHERE is_deleted = false AND is_bot = false
+      UNION ALL
+      SELECT user_id FROM touched WHERE NOT EXISTS (
+        SELECT 1 FROM fd.member live
+        WHERE live.user_id = touched.user_id AND live.is_deleted = false AND live.is_bot = false
+      )
+    SQL
+
+    TOUCHED = "SELECT user_id FROM touched".freeze
+
+    LISTED_AGGREGATES = <<~SQL
       hit AS (
-        SELECT user_id, place FROM unnest(ARRAY[:hits]::text[]) WITH ORDINALITY AS found(user_id, place)
+        SELECT user_id, place FROM unnest(LISTED_IDS) WITH ORDINALITY AS found(user_id, place)
       ),
       conduct AS (
         SELECT p.user_id,
@@ -131,7 +145,6 @@ module Fd
           SELECT last_active_at, messages_posted FROM analytics.fct_member_window w
           WHERE w.source = 'admin_analytics_member_range' AND w.user_id = people.user_id LIMIT 1
         ) w ON true
-        CONTEXT_JOIN
       )
     SQL
 
@@ -141,7 +154,7 @@ module Fd
       "w.messages_posted".freeze
 
     CONTEXT_JOIN = <<~SQL
-      LEFT JOIN analytics.dim_member dm ON dm.user_id = people.user_id
+      LEFT JOIN analytics.dim_member_cohort dm ON dm.user_id = people.user_id
       LEFT JOIN fd.member_joins mj ON mj.user_id = people.user_id
       LEFT JOIN fd.member_seen ms ON ms.user_id = people.user_id
       LEFT JOIN analytics.fct_member_window w
@@ -156,23 +169,36 @@ module Fd
       "notes" => "notes"
     }.freeze
 
+    NAMES = "m.display_name, m.handle".freeze
+    SHOWN = "m.display_name, m.handle, m.title".freeze
+
     private
 
     def aggregates
-      columns = "m.display_name, m.handle, m.title"
-      joins = []
+      asked? ? listed("ARRAY[:hits]::text[]") : whole
+    end
 
-      if context_asked?
-        columns += CONTEXT_COLUMNS
-        joins << CONTEXT_JOIN unless asked?
-      end
+    def whole
+      AGGREGATES.sub(NAMES, context_asked? ? SHOWN + CONTEXT_COLUMNS : SHOWN)
+        .sub("CONTEXT_JOIN", context_asked? ? CONTEXT_JOIN : "")
+        .sub("PEOPLE_FROM", conduct_only? ? TOUCHED : EVERYONE)
+    end
 
-      template = asked? ? SEARCH_AGGREGATES : AGGREGATES
-      template.sub("m.display_name, m.handle", columns).sub("CONTEXT_JOIN", joins.join("\n"))
+    def listed(ids)
+      LISTED_AGGREGATES.sub(NAMES, SHOWN + CONTEXT_COLUMNS).sub("LISTED_IDS") { ids }
+    end
+
+    def paged_ids
+      "ARRAY(WITH #{whole} SELECT user_id FROM roster WHERE #{roster_where} " \
+        "ORDER BY #{sort_order} LIMIT :limit OFFSET :offset)"
     end
 
     def context_asked?
       asked? || !default?("tenure") || !default?("active") || self["sort"] == "messages"
+    end
+
+    def conduct_only?
+      self["who"] != "everyone" || !default?("priors") || %w[open force noted].include?(self["state"])
     end
 
     def roster_where

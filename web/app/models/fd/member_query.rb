@@ -265,13 +265,23 @@ module Fd
     def page_rows
       return [] if asked? && hits.empty?
 
-      found = ask(<<~SQL, limit: LIMIT, offset: searched_page? ? 0 : (page - 1) * LIMIT)
+      (asked? ? searched_rows : browsed_rows).map { |row| row_from(row) }
+    end
+
+    def searched_rows
+      ask(<<~SQL, limit: LIMIT, offset: searched_page? ? 0 : (page - 1) * LIMIT)
         WITH #{aggregates}
         SELECT * FROM roster WHERE #{roster_where}
         ORDER BY #{roster_order}
         LIMIT :limit OFFSET :offset
       SQL
-      found.map { |row| row_from(row) }
+    end
+
+    def browsed_rows
+      ask(<<~SQL, limit: LIMIT, offset: (page - 1) * LIMIT)
+        WITH #{listed(paged_ids)}
+        SELECT * FROM roster ORDER BY place
+      SQL
     end
 
     def all_rows
