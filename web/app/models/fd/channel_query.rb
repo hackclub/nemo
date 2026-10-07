@@ -3,8 +3,6 @@ module Fd
     PER_PAGE = 40
     MIN_TERM = 2
 
-    COLUMNS = { handle: "c.name", user_id: "c.channel_id" }.freeze
-
     Row = Struct.new(:channel_id, :name, :visibility, :archived, :messages, :members,
       :last_active_at, keyword_init: true) do
       def label = name.present? ? "##{name}" : "unnamed channel"
@@ -23,6 +21,10 @@ module Fd
 
     BUSIEST = ("c.archived, s.messages_posted DESC NULLS LAST, " \
                "c.last_active_at DESC NULLS LAST, c.name").freeze
+
+    CLOSEST = ("CASE WHEN lower(c.name) = :exact OR lower(c.channel_id) = :exact THEN 0 " \
+               "WHEN lower(c.name) LIKE :starts OR lower(c.channel_id) LIKE :starts THEN 1 " \
+               "ELSE 2 END").freeze
 
     def initialize(params = {})
       @params = params.respond_to?(:to_unsafe_h) ? params.to_unsafe_h : params.to_h
@@ -78,14 +80,16 @@ module Fd
     def order
       return BUSIEST unless asked?
 
-      "#{MemberMatch.rank(identity: false, columns: COLUMNS)}, #{BUSIEST}"
+      "#{CLOSEST}, #{BUSIEST}"
     end
 
     def binds(limit)
       held = { limit: limit, offset: (page - 1) * PER_PAGE }
       return held unless asked?
 
-      held.merge(MemberMatch.binds(term))
+      text = term.downcase
+      like = Case.sanitize_sql_like(text)
+      held.merge(exact: text, starts: "#{like}%", within: "%#{like}%")
     end
   end
 end

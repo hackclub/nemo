@@ -128,7 +128,7 @@ class FdChannelsTest < ActionDispatch::IntegrationTest
     bot = Fd::Member.live.where(is_bot: false).first
     skip "the corpus has no member" if bot.nil?
 
-    found = Fd::Member.search(bot.name, live_only: true, bots: true).map(&:user_id)
+    found = Fd::MemberFinder.new(bot.name).pick(limit: Fd::Member::LIMIT, bots: true)
     assert_not_includes found, bot.user_id
   end
 

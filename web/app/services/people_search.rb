@@ -38,7 +38,7 @@ class PeopleSearch
   end
 
   def by_name
-    Fd::Member.search(@term, limit: @limit).pluck(:user_id)
+    Fd::MemberFinder.new(@term).pick(limit: @limit, everyone: true)
   end
 
   def shown(id, names)

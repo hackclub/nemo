@@ -10,7 +10,10 @@ class FdMemberSearchTest < ActionDispatch::IntegrationTest
     lone_name = Fd::MemberIdentity.where(user_id: Fd::Member.live.select(:user_id))
       .group(:real_name).having("count(*) = 1").pluck(:real_name)
     @named = Fd::Member.live.joins(:identity)
-      .where("fd.member_identity.real_name = ?", lone_name.first).first
+      .where("fd.member_identity.real_name IN (?)", lone_name)
+      .where("similarity(lower(coalesce(fd.member.display_name, '')), lower(fd.member_identity.real_name)) < 0.2")
+      .where("similarity(lower(coalesce(fd.member.handle, '')), lower(fd.member_identity.real_name)) < 0.2")
+      .order(:user_id).first
   end
 
   def look(term)
@@ -131,15 +134,16 @@ class FdMemberSearchTest < ActionDispatch::IntegrationTest
     assert_equal before, AccessLog.count
   end
   test "the picker never runs the roster aggregates" do
-    sql = Fd::Member.search("dra", actor: @me, limit: 8, live_only: true).to_sql
+    sql = Fd::MemberFinder.new("dra", actor: @me).pick_sql(8)
 
     assert_not_includes sql, "case_participants", "a type-ahead must not aggregate conduct"
     assert_not_includes sql, "fd.actions"
     assert_not_includes sql, "notes"
+    assert_not_includes sql, "count("
   end
 
   test "asking from a case looks up that one case, and still no aggregates" do
-    sql = Fd::Member.search("dra", actor: @me, limit: 8, live_only: true, case_id: 7).to_sql
+    sql = Fd::MemberFinder.new("dra", actor: @me).pick_sql(8, case_id: 7)
 
     assert_includes sql, "party.case_id = 7"
     assert_not_includes sql, "count(", "who is on this case is a lookup, not a tally"

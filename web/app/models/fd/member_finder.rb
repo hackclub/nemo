@@ -48,8 +48,22 @@ module Fd
       Found.new(rows.map { |row| row["user_id"] }, rows.first ? rows.first["found"].to_i : 0)
     end
 
+    def pick(limit:, case_id: nil, bots: false, everyone: false)
+      return [] if user_id.nil? && (words.empty? || @typed.length < Member::MIN_TERM)
+
+      ApplicationRecord.connection.select_values(
+        pick_sql(limit, case_id: case_id, bots: bots, everyone: everyone)
+      )
+    end
+
     def sql(limit, offset = 0)
       user_id ? by_id(limit, offset) : by_name(limit, offset)
+    end
+
+    def pick_sql(limit, case_id: nil, bots: false, everyone: false)
+      return ApplicationRecord.sanitize_sql_array(["SELECT user_id FROM fd.member WHERE user_id = ?", user_id]) if user_id
+
+      picked(limit, case_id, everyone ? "true" : "NOT m.is_deleted AND #{'NOT ' unless bots}m.is_bot")
     end
 
     private
@@ -70,45 +84,12 @@ module Fd
 
     def by_name(limit, offset)
       ApplicationRecord.sanitize_sql_array([<<~SQL, binds.merge(limit: limit, offset: offset)])
-        WITH exact AS (#{exact_email}),
-        asked AS (#{words.one? ? holding(':upper') : NOTHING}),
-        candidates AS (#{candidates}),
+        WITH #{ranked(holding(':upper'), 'NOT m.is_bot')},
         touched AS (
           SELECT user_id FROM fd.case_participants
           UNION SELECT target_user_id FROM fd.actions WHERE target_user_id IS NOT NULL
           UNION SELECT subject_user_id FROM fd.notes
           WHERE subject_user_id IS NOT NULL AND deleted_at IS NULL
-        ),
-        named AS (
-          SELECT m.user_id, m.is_deleted, #{names},
-                 translate(lower(concat_ws(' ', m.display_name, m.handle)), '._-@', '    ') AS seen_text,
-                 translate(lower(concat_ws(' ', #{text_fields})), '._-@', '    ') AS text
-          FROM candidates c
-          JOIN fd.member m ON m.user_id = c.user_id
-          #{identity_joins}
-          WHERE NOT m.is_bot
-        ),
-        scored AS (
-          SELECT user_id, is_deleted,
-                 CASE WHEN :whole IN (shown, handle) THEN #{SEEN_EXACT}
-                      #{"WHEN :whole IN (real_name, full_name, cachet) THEN #{HIDDEN_EXACT}" if @identity}
-                      WHEN #{every_word("(' ' || seen_text) LIKE :start")} THEN #{SEEN_START}
-                      WHEN #{every_word("(' ' || text) LIKE :start")} THEN #{HIDDEN_START}
-                      WHEN #{every_word('seen_text LIKE :within')} THEN #{SEEN_WITHIN}
-                      WHEN #{every_word('text LIKE :within')} THEN #{HIDDEN_WITHIN}
-                      ELSE #{SPELLED_CLOSE} END AS place,
-                 greatest(#{closeness}) AS close
-          FROM named
-        ),
-        kept AS (
-          SELECT user_id, #{SEEN_EXACT} AS place, 1::real AS close, false AS is_deleted FROM exact
-          UNION ALL
-          SELECT user_id, #{SEEN_EXACT}, 1::real, false FROM asked
-          WHERE NOT EXISTS (SELECT 1 FROM exact)
-          UNION ALL
-          SELECT user_id, place, close, is_deleted FROM scored
-          WHERE NOT EXISTS (SELECT 1 FROM exact) AND (#{keeps})
-            AND user_id NOT IN (SELECT user_id FROM asked)
         )
         SELECT k.user_id, count(*) OVER () AS found
         FROM kept k
@@ -120,6 +101,66 @@ module Fd
                  CASE WHEN k.place = #{SPELLED_CLOSE} THEN k.close END DESC NULLS LAST,
                  w.messages_posted DESC NULLS LAST, k.close DESC, k.is_deleted, k.user_id
         LIMIT :limit OFFSET :offset
+      SQL
+    end
+
+    def picked(limit, case_id, who)
+      ApplicationRecord.sanitize_sql_array([<<~SQL, binds.merge(limit: limit, case_id: case_id)])
+        WITH #{ranked('SELECT user_id FROM fd.member WHERE user_id = :upper', who)}
+        SELECT k.user_id
+        FROM kept k
+        LEFT JOIN analytics.fct_member_window w
+          ON w.source = :lifetime AND w.user_id = k.user_id
+        ORDER BY #{pick_order(case_id)}
+        LIMIT :limit
+      SQL
+    end
+
+    def pick_order(case_id)
+      on_case = "EXISTS (SELECT 1 FROM fd.case_participants party " \
+                "WHERE party.user_id = k.user_id AND party.case_id = :case_id) DESC"
+      ["k.place", (on_case if case_id), "CASE WHEN k.place = #{SPELLED_CLOSE} THEN k.close END DESC NULLS LAST",
+       "k.is_deleted", "k.is_bot", "w.messages_posted DESC NULLS LAST", "k.close DESC", "k.user_id"]
+        .compact.join(", ")
+    end
+
+    def ranked(asked, who)
+      <<~SQL.chomp
+        exact AS (#{exact_email}),
+        asked AS (#{words.one? ? asked : NOTHING}),
+        candidates AS (#{candidates}),
+        named AS (
+          SELECT m.user_id, m.is_deleted, m.is_bot, #{names},
+                 translate(lower(concat_ws(' ', m.display_name, m.handle)), '._-@', '    ') AS seen_text,
+                 translate(lower(concat_ws(' ', #{text_fields})), '._-@', '    ') AS text
+          FROM candidates c
+          JOIN fd.member m ON m.user_id = c.user_id
+          #{identity_joins}
+          WHERE #{who}
+        ),
+        scored AS (
+          SELECT user_id, is_deleted, is_bot,
+                 CASE WHEN :whole IN (shown, handle) THEN #{SEEN_EXACT}
+                      #{"WHEN :whole IN (real_name, full_name, cachet) THEN #{HIDDEN_EXACT}" if @identity}
+                      WHEN #{every_word("(' ' || seen_text) LIKE :start")} THEN #{SEEN_START}
+                      WHEN #{every_word("(' ' || text) LIKE :start")} THEN #{HIDDEN_START}
+                      WHEN #{every_word('seen_text LIKE :within')} THEN #{SEEN_WITHIN}
+                      WHEN #{every_word('text LIKE :within')} THEN #{HIDDEN_WITHIN}
+                      ELSE #{SPELLED_CLOSE} END AS place,
+                 greatest(#{closeness}) AS close
+          FROM named
+        ),
+        kept AS (
+          SELECT user_id, #{SEEN_EXACT} AS place, 1::real AS close, false AS is_deleted, false AS is_bot
+          FROM exact
+          UNION ALL
+          SELECT user_id, #{SEEN_EXACT}, 1::real, false, false FROM asked
+          WHERE NOT EXISTS (SELECT 1 FROM exact)
+          UNION ALL
+          SELECT user_id, place, close, is_deleted, is_bot FROM scored
+          WHERE NOT EXISTS (SELECT 1 FROM exact) AND (#{keeps})
+            AND user_id NOT IN (SELECT user_id FROM asked)
+        )
       SQL
     end
 

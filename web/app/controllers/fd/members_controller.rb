@@ -52,16 +52,14 @@ module Fd
     end
 
     def search
-      term = params[:q].to_s.strip
-      results = Member.search(term, actor: current_account, limit: Member::LIMIT,
-        live_only: true, case_id: params[:case_id].presence&.to_i,
-        bots: params[:bots].present?).to_a
+      ids = MemberFinder.new(params[:q], actor: current_account).pick(limit: Member::LIMIT,
+        case_id: params[:case_id].presence&.to_i, bots: params[:bots].present?)
 
-      faces = Names.for(results.map(&:user_id))
-      found = results.map do |row|
-        member = faces.member(row.user_id)
-        { id: row.user_id, name: faces[row.user_id], handle: member&.handle.presence,
-          initial: faces.initial(row.user_id), deleted: member&.is_deleted || false }
+      faces = Names.for(ids)
+      found = ids.map do |id|
+        member = faces.member(id)
+        { id: id, name: faces[id], handle: member&.handle.presence,
+          initial: faces.initial(id), deleted: member&.is_deleted || false }
       end
 
       render json: { members: found }
