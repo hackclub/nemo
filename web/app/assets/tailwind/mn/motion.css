@@ -53,8 +53,8 @@
 
   .turbo-progress-bar {
     height: 2px;
-    background: var(--accent);
-    box-shadow: 0 0 10px color-mix(in oklab, var(--accent) 60%, transparent);
+    background: var(--primary);
+    box-shadow: 0 0 10px color-mix(in oklab, var(--primary) 60%, transparent);
   }
 
   turbo-frame[aria-busy="true"], [aria-busy="true"] > .scrollarea {
@@ -68,7 +68,7 @@
     top: 0;
     height: 2px;
     overflow: hidden;
-    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    background: color-mix(in oklab, var(--primary) 14%, transparent);
     z-index: 3;
   }
   turbo-frame[aria-busy="true"]::after {
@@ -78,7 +78,7 @@
     top: 0;
     width: 25%;
     height: 2px;
-    background: var(--accent);
+    background: var(--primary);
     animation: sweep 1.1s var(--ease) infinite;
     z-index: 4;
   }
@@ -100,7 +100,7 @@
     background: linear-gradient(
       90deg,
       transparent,
-      color-mix(in oklab, var(--accent) 16%, transparent),
+      color-mix(in oklab, var(--primary) 16%, transparent),
       transparent
     );
     animation: enforcement-wash 760ms var(--ease-out) both;
@@ -110,7 +110,7 @@
   }
   .standing-row.is-enforced[data-enforcement-status="lifting"].just-landed,
   .standing-row.is-enforced[data-enforcement-status="pending"].just-landed {
-    background: color-mix(in oklab, var(--accent) 7%, transparent);
+    background: color-mix(in oklab, var(--primary) 7%, transparent);
   }
   .standing-row.is-enforced[data-enforcement-status="failed"].just-landed {
     background: color-mix(in oklab, var(--crit) 10%, transparent);

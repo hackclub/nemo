@@ -29,7 +29,7 @@
 
   button, input, textarea, select { font: inherit; color: inherit; }
   button { cursor: pointer; }
-  input, textarea { caret-color: var(--accent); }
+  input, textarea { caret-color: var(--primary); }
 
   :focus-visible {
     outline: 2px solid var(--focus);
@@ -65,7 +65,7 @@
   img, svg { vertical-align: middle; }
 
   .mono, .num, .tnum, .fine-mono, .stat-value {
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.015em;
     overflow-wrap: anywhere;

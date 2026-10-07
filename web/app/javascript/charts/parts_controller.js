@@ -6,7 +6,7 @@ const RULER = typeof document === "undefined"
   ? null
   : document.createElement("canvas").getContext("2d")
 
-const SANS = '"Inter Tight", ui-sans-serif, system-ui, sans-serif'
+const SANS = '"Geist", ui-sans-serif, system-ui, sans-serif'
 const MONO = '"Geist Mono", ui-monospace, monospace'
 
 function fit(text, size, mono) {

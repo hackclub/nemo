@@ -34,17 +34,17 @@
   }
   .rung:first-child { border-top: 0; }
   .rung.run {
-    background: color-mix(in oklab, var(--accent) 8%, transparent);
-    box-shadow: inset 2px 0 0 var(--accent);
+    background: color-mix(in oklab, var(--primary) 8%, transparent);
+    box-shadow: inset 2px 0 0 var(--primary);
   }
   .step-index {
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-small);
     font-variant-numeric: tabular-nums;
     color: var(--ink-4);
     text-align: center;
   }
-  .rung.run .step-index { color: var(--accent); font-weight: 600; }
+  .rung.run .step-index { color: var(--primary); font-weight: 600; }
   .stack-tight { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
   .stack-tight > b {
     font-size: var(--t-body);
@@ -74,7 +74,7 @@
     background: var(--ink-4);
     border-radius: inherit;
   }
-  .rung.run .rbar > i { background: var(--accent); }
+  .rung.run .rbar > i { background: var(--primary); }
   .rung.ok .rbar > i { background: var(--good); }
   .rung .stat-value { text-align: right; white-space: nowrap; }
   .row-end { display: flex; align-items: center; justify-content: flex-end; gap: var(--s-3xs); flex-wrap: wrap; }
@@ -103,7 +103,7 @@
     flex: 1 1 0;
     min-width: 0;
     text-align: center;
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
   .stat-key { display: flex; align-items: center; gap: 6px; width: 168px; flex: none; min-width: 0; }
@@ -121,7 +121,7 @@
   }
   .cells > i.ok { background: var(--good); }
   .cells > i.run {
-    background: var(--accent);
+    background: var(--primary);
     animation: pulse 1.6s var(--ease) infinite;
   }
   .cells > i.part { background: var(--warn); }
@@ -182,7 +182,7 @@
     font-size: var(--t-tiny);
     transition: transform var(--dur-2) var(--ease), color var(--dur-2) var(--ease);
   }
-  .source-row[aria-expanded="true"] .disclosure-caret { color: var(--accent); transform: rotate(90deg); }
+  .source-row[aria-expanded="true"] .disclosure-caret { color: var(--primary); transform: rotate(90deg); }
   .source-row[aria-expanded="true"] { background: var(--card-2); }
 
   .contract {
@@ -213,7 +213,7 @@
     border-radius: var(--r-ctl);
     background: var(--sunk);
     color: var(--ink-2);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-fine);
     line-height: 1.5;
     white-space: pre-wrap;
@@ -246,7 +246,7 @@
     border-radius: var(--r-tight);
     background: var(--card-2);
     color: var(--ink);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-small);
     font-variant-numeric: tabular-nums;
     box-shadow: none;
@@ -264,13 +264,13 @@
   input.val { width: 72px; }
   .val:focus {
     outline: none;
-    border-color: var(--accent);
+    border-color: var(--primary);
     box-shadow: var(--ring-focus);
   }
   .val.tuned {
-    background: var(--accent-soft);
-    border-color: var(--accent-line);
-    color: var(--accent-deep);
+    background: var(--primary-soft);
+    border-color: var(--primary-line);
+    color: var(--primary-deep);
     font-weight: 600;
   }
   .was { font-size: var(--t-fine); color: var(--ink-4); margin-right: 6px; }
@@ -366,7 +366,7 @@
     display: inline-block;
   }
   .lg-ran { background: var(--good); }
-  .lg-run { background: var(--accent); }
+  .lg-run { background: var(--primary); }
   .lg-part { background: var(--warn); }
   .lg-skip { background: var(--info-soft); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--info) 45%, transparent); }
   .lg-stop { background: var(--card-2); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--warn) 55%, transparent); }
@@ -378,14 +378,14 @@
   .lg-short { background: var(--warn); }
   .lg-nofile { background: var(--card-2); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ink-4) 55%, transparent); }
   .lg-before { background: var(--sunk); opacity: 0.6; }
-  .lg-swatch-open { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent-line); }
+  .lg-swatch-open { background: var(--primary-soft); box-shadow: inset 0 0 0 1px var(--primary-line); }
   .lg-swatch-none { background: none; box-shadow: inset 0 0 0 1px var(--line); }
   .lg-h0 { background: var(--cal-0); }
-  .lg-h1 { background: color-mix(in oklab, var(--accent) 7%, transparent); }
-  .lg-h2 { background: color-mix(in oklab, var(--accent) 13%, transparent); }
-  .lg-h3 { background: color-mix(in oklab, var(--accent) 20%, transparent); }
-  .lg-h4 { background: color-mix(in oklab, var(--accent) 28%, transparent); }
-  .lg-h5 { background: color-mix(in oklab, var(--accent) 38%, transparent); }
+  .lg-h1 { background: color-mix(in oklab, var(--primary) 7%, transparent); }
+  .lg-h2 { background: color-mix(in oklab, var(--primary) 13%, transparent); }
+  .lg-h3 { background: color-mix(in oklab, var(--primary) 20%, transparent); }
+  .lg-h4 { background: color-mix(in oklab, var(--primary) 28%, transparent); }
+  .lg-h5 { background: color-mix(in oklab, var(--primary) 38%, transparent); }
 
   .lifegrid {
     display: grid;
@@ -436,7 +436,7 @@
     justify-content: center;
     padding: 6px 4px;
     border-top: 1px solid var(--line-soft);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-small);
     font-variant-numeric: tabular-nums;
     color: var(--ink-2);
@@ -445,7 +445,7 @@
   .lg-cell.lg-h4, .lg-cell.lg-h5 { color: var(--ink); font-weight: 600; }
   .lg-cell.lg-open {
     color: var(--ink-3);
-    background: var(--accent-soft);
+    background: var(--primary-soft);
     font-style: normal;
   }
   .lg-cell.lg-none { color: var(--ink-4); background: none; }
@@ -458,7 +458,7 @@
     justify-content: center;
     padding: 7px var(--s-2xs);
     border-top: 1px solid var(--line-soft);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     color: var(--ink-3);
   }
@@ -475,12 +475,12 @@
   .archive-rows > .archive-row:first-child { border-top: 0; }
   .archive-name { color: var(--ink); }
   .archive-percent {
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     color: var(--ink-2);
   }
   .archive-count {
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     text-align: right;
     color: var(--ink);

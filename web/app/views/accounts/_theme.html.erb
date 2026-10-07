@@ -1,22 +1,24 @@
 <div class="panel-body">
-  <% Appearance::BANDS.each do |band, label| %>
-    <div class="theme-box">
-      <div class="ft"><%= label %></div>
-      <div class="theme-preview">
-        <div class="theme-grid" role="group" aria-label="<%= label %> themes">
-          <% Appearance.of_band(band).each do |theme| %>
-            <button type="button" class="theme-opt" aria-pressed="false"
-                    data-theme-target="option" data-theme-key="<%= theme.key %>"
-                    data-action="theme#pick">
-              <span class="theme-chip" aria-hidden="true"
-                    style="--chip: <%= theme_swatch_blend(theme.swatch) %>"></span>
-              <span class="theme-name"><%= theme.label %></span>
-              <span class="theme-auto">auto</span>
-              <span class="theme-mark" aria-hidden="true">&#10003;</span>
-            </button>
-          <% end %>
-        </div>
-      </div>
-    </div>
-  <% end %>
+  <div class="theme-grid" role="group" aria-label="Theme">
+    <% Appearance::THEMES.each do |theme| %>
+      <button type="button" class="theme-opt" aria-pressed="false"
+              data-theme-target="option" data-theme-key="<%= theme.key %>"
+              data-action="theme#pick">
+        <span class="theme-chip" aria-hidden="true"
+              style="--chip: <%= theme_swatch_blend(theme.swatch) %>"></span>
+        <span class="theme-name"><%= theme.label %></span>
+        <span class="theme-auto">auto</span>
+        <span class="theme-mark" aria-hidden="true">&#10003;</span>
+      </button>
+    <% end %>
+  </div>
+</div>
+<div class="setlist">
+  <label class="setline">
+    <span class="setname">Orange</span>
+    <span class="setval">
+      <input type="checkbox" class="switch" role="switch"
+             data-theme-target="accent" data-action="theme#tint">
+    </span>
+  </label>
 </div>

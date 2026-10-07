@@ -78,7 +78,7 @@
     font-weight: 550;
   }
   .menu-pop .btn[aria-current="true"] > svg, .menu-pop > a[aria-current="true"] > svg {
-    color: var(--accent);
+    color: var(--primary);
   }
   .menu-pop .btn.btn-danger, .menu-pop > form .btn-danger { color: var(--crit); }
   .menu-pop .btn.btn-danger:hover { background: var(--crit-soft); }
@@ -338,7 +338,7 @@
     color: var(--ink);
     text-decoration: none;
   }
-  .palette-row[aria-selected="true"] .pal-t { color: var(--accent); }
+  .palette-row[aria-selected="true"] .pal-t { color: var(--primary); }
   .palette-row.off { color: var(--ink-4); cursor: not-allowed; }
   .palette-row.off .pal-t { color: var(--ink-3); font-weight: 500; }
   .palette-row.off:hover, .palette-row.off[aria-selected="true"] {
@@ -549,7 +549,7 @@
     font-variant-numeric: tabular-nums;
   }
   .datepicker-day:hover { background: var(--hover); color: var(--ink); }
-  .datepicker-day[aria-selected="true"], .datepicker-day.on { background: var(--accent); color: var(--accent-on); font-weight: 600; }
+  .datepicker-day[aria-selected="true"], .datepicker-day.on { background: var(--primary); color: var(--primary-foreground); font-weight: 600; }
   .datepicker-day:disabled { color: var(--ink-4); opacity: 0.4; cursor: not-allowed; }
   .datepicker-blank { visibility: hidden; }
   .datepicker-trigger { display: inline-flex; }
@@ -591,7 +591,7 @@
   }
   .pick-field .pick-input:focus { border: 0; box-shadow: none; }
   .pick-field:focus-within {
-    border-color: var(--accent);
+    border-color: var(--primary);
     box-shadow: var(--ring-focus);
   }
   .pick-list {
@@ -612,7 +612,7 @@
   .pick-id {
     margin-left: auto;
     flex: none;
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-mark);
     color: var(--ink-4);
   }
@@ -646,8 +646,8 @@
 
   .mention-pop { min-width: 240px; }
   .mention {
-    color: var(--accent-deep);
-    background: var(--accent-soft);
+    color: var(--primary-deep);
+    background: var(--primary-soft);
     padding: 0 3px;
     border-radius: 3px;
     font-weight: 500;
@@ -711,7 +711,7 @@
   .secret code {
     flex: 1;
     min-width: 0;
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-small);
     color: var(--ink);
   }

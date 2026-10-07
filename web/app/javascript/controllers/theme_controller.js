@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["option", "name", "swatch"]
+  static targets = ["option", "accent", "name", "swatch"]
 
   connect() {
     this.onTheme = () => this.render()
@@ -17,18 +17,27 @@ export default class extends Controller {
     const key = event.currentTarget.dataset.themeKey
     if (!key) return
 
+    window.MnTheme?.pick(key, this.origin(event))
+  }
+
+  tint(event) {
+    if (!window.MnTheme) return
+
+    window.MnTheme.tint(!window.MnTheme.state().accent, this.origin(event))
+  }
+
+  origin(event) {
     const box = event.currentTarget.getBoundingClientRect()
     const pointer = event.clientX || event.clientY
-    const at = pointer
+    return pointer
       ? { x: event.clientX, y: event.clientY }
       : { x: box.left + box.width / 2, y: box.top + box.height / 2 }
-    window.MnTheme?.pick(key, at)
   }
 
   render() {
     if (!window.MnTheme) return
 
-    const { pinned } = window.MnTheme.state()
+    const { pinned, accent } = window.MnTheme.state()
     const live = document.documentElement.getAttribute("data-theme")
 
     this.optionTargets.forEach((el) => {
@@ -36,6 +45,11 @@ export default class extends Controller {
       el.setAttribute("aria-pressed", key === pinned ? "true" : "false")
       el.classList.toggle("on", key === live)
       el.classList.toggle("auto", !pinned && key === live)
+    })
+
+    this.accentTargets.forEach((el) => {
+      if (el.type === "checkbox") el.checked = Boolean(accent)
+      else el.setAttribute("aria-pressed", accent ? "true" : "false")
     })
 
     this.mirror(this.optionTargets.find((el) => el.dataset.themeKey === live), pinned)

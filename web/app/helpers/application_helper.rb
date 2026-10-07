@@ -123,11 +123,10 @@ module ApplicationHelper
   THEME_ICONS = {
     "light" => ["M12 2v2", "M12 20v2", "M2 12h2", "M20 12h2", "M4.9 4.9l1.4 1.4",
                 "M17.7 17.7l1.4 1.4", "M19.1 4.9l-1.4 1.4", "M6.3 17.7l-1.4 1.4"],
-    "lightsout" => ["M20 14.5A8.5 8.5 0 0 1 9.5 4a7.5 7.5 0 1 0 10.5 10.5Z"],
-    "contrast" => []
+    "lightsout" => ["M20 14.5A8.5 8.5 0 0 1 9.5 4a7.5 7.5 0 1 0 10.5 10.5Z"]
   }.freeze
 
-  THEME_DISC = { "light" => 4, "contrast" => 8 }.freeze
+  THEME_DISC = { "light" => 4 }.freeze
 
   def theme_icon(key)
     tag.svg(width: 13, height: 13, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor",
@@ -135,8 +134,6 @@ module ApplicationHelper
       "aria-hidden": "true") do
       radius = THEME_DISC[key]
       concat tag.circle(cx: 12, cy: 12, r: radius) if radius
-      concat tag.path(d: "M12 4a8 8 0 0 1 0 16Z", fill: "currentColor", stroke: "none") if
-        key == "contrast"
       THEME_ICONS.fetch(key, []).each { |d| concat tag.path(d: d) }
     end
   end

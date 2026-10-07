@@ -94,7 +94,7 @@
   }
 
   .channel-facts dd {
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
   .channel-index-tools {
@@ -146,7 +146,7 @@
   .substrip-v {
     flex: none;
     padding: 10px var(--s-xs);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--ink);
@@ -358,7 +358,7 @@
     color: var(--crit);
   }
   .is-high {
-    color: var(--accent);
+    color: var(--primary);
     font-weight: 600;
   }
   .is-loud {
@@ -455,7 +455,7 @@
   }
 
   .chart .pin {
-    fill: var(--accent);
+    fill: var(--primary);
     stroke: var(--card);
     stroke-width: 2;
   }

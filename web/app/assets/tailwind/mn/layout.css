@@ -174,7 +174,7 @@
   a.metric:hover, button.metric:hover { text-decoration: none; }
   a.metric:hover::before, button.metric:hover::before { background-color: var(--card-2); }
   .metric[aria-current="true"]::before {
-    box-shadow: 0 0 0 1px var(--accent), inset 0 1px 0 var(--line-soft), var(--shadow-1);
+    box-shadow: 0 0 0 1px var(--primary), inset 0 1px 0 var(--line-soft), var(--shadow-1);
   }
   .metric > .pickswitch {
     position: absolute;
@@ -271,8 +271,8 @@
     width: 38px;
     height: 38px;
     border-radius: var(--r-card);
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: var(--primary-soft);
+    color: var(--primary);
   }
   .lede-note { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .lede-note b {

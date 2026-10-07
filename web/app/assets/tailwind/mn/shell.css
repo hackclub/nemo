@@ -85,7 +85,7 @@
   .rail-btn:hover { background: color-mix(in oklab, var(--ink) 6%, transparent); color: var(--ink); text-decoration: none; }
   .rail-btn[aria-current="page"], .rail-btn.is-on {
     background: none;
-    color: var(--accent);
+    color: var(--primary);
   }
   .rail-btn[aria-current="page"]::before, .rail-btn.is-on::before {
     content: "";
@@ -96,11 +96,11 @@
     width: 2px;
     height: 16px;
     border-radius: var(--r-hair);
-    background: var(--accent);
+    background: var(--primary);
   }
   .rail-btn[aria-current="page"]:hover, .rail-btn.is-on:hover {
     background: color-mix(in oklab, var(--ink) 6%, transparent);
-    color: var(--accent);
+    color: var(--primary);
   }
   .rail-btn svg { display: block; }
 
@@ -136,10 +136,10 @@
     display: grid;
     place-items: center;
     border-radius: var(--r-mark);
-    background: var(--accent);
-    color: var(--accent-on);
+    background: var(--primary);
+    color: var(--primary-foreground);
     box-shadow: 0 0 0 2px var(--chrome);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-tiny);
     font-style: normal;
     font-weight: 600;
@@ -188,7 +188,7 @@
     content: "";
     position: absolute;
     inset: 0 3px;
-    background: var(--accent);
+    background: var(--primary);
     opacity: 0;
     transition: opacity var(--dur-2) var(--ease);
   }
@@ -220,8 +220,8 @@
     height: 24px;
     flex: none;
     border-radius: var(--r-ctl);
-    background: var(--accent-soft);
-    color: var(--accent-deep);
+    background: var(--primary-soft);
+    color: var(--primary-deep);
     overflow: hidden;
   }
   .community-nav-mark-letter {
@@ -304,7 +304,7 @@
     color: var(--ink);
     font-weight: 500;
   }
-  .cnav a[aria-current="page"] > svg, .cnav a[aria-current="page"] > .icon-slot { color: var(--accent); }
+  .cnav a[aria-current="page"] > svg, .cnav a[aria-current="page"] > .icon-slot { color: var(--primary); }
 
   .community-nav-sub {
     display: flex;
@@ -321,13 +321,13 @@
     place-items: center;
     background: none;
     color: var(--ink-4);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-mark);
     font-variant-numeric: tabular-nums;
     font-weight: 500;
     line-height: 1;
   }
-  .cnav a[aria-current="page"] .community-nav-tally { color: var(--accent); }
+  .cnav a[aria-current="page"] .community-nav-tally { color: var(--primary); }
 
   .community-nav-find {
     display: flex;
@@ -389,7 +389,7 @@
     content: "";
     position: absolute;
     inset: 0 3px;
-    background: var(--accent);
+    background: var(--primary);
     opacity: 0;
     transition: opacity var(--dur-2) var(--ease);
   }
@@ -419,8 +419,8 @@
     height: 14px;
     padding: 0 3px;
     border-radius: 4px;
-    background: var(--accent);
-    color: var(--accent-on);
+    background: var(--primary);
+    color: var(--primary-foreground);
     box-shadow: 0 0 0 2px var(--chrome);
     font-size: var(--t-tiny);
     font-weight: 600;
@@ -523,7 +523,7 @@
     background: none;
     color: var(--ink-4);
   }
-  .pane-head > .views .view[aria-current="true"] .view-count { background: none; color: var(--accent); }
+  .pane-head > .views .view[aria-current="true"] .view-count { background: none; color: var(--primary); }
   .pane-head .queue-tools { gap: 6px; }
 
   .pane-list {
@@ -590,7 +590,7 @@
   .mobile-bar { display: none; }
 
   .triad-id {
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-mid);
     font-weight: 500;
     color: var(--ink-4);
@@ -734,8 +734,8 @@
       height: 14px;
       padding: 0 3px;
       border-radius: var(--r-mark);
-      background: var(--accent);
-      color: var(--accent-on);
+      background: var(--primary);
+      color: var(--primary-foreground);
       box-shadow: 0 0 0 2px var(--chrome);
       font-size: var(--t-tiny);
       font-weight: 600;

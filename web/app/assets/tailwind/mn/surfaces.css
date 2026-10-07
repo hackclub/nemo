@@ -220,7 +220,7 @@
     align-items: baseline;
     gap: 6px;
     color: var(--ink);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-body);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -280,7 +280,7 @@
   .data-table tbody tr:hover td, .channel-table tbody tr:hover td,
   .engine-table tbody tr:hover td { background: var(--hover); }
   .data-table tbody tr[data-controller="row-link"], .data-table tbody tr[data-row-link-href-value] { cursor: pointer; }
-  .col-num, .col-rank, .col-date { text-align: right; font-family: var(--font-code); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .col-num, .col-rank, .col-date { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .col-num, .col-rank { width: 1%; }
   .channel-table thead th.col-bar { text-align: right; }
   .col-btn { width: 1%; white-space: nowrap; }
@@ -393,7 +393,7 @@
   .flag-icon { color: var(--ink-4); flex: none; }
   .flag-warn .flag-icon { color: currentColor; }
 
-  .warnbar, .dup, .theme-box-warn {
+  .warnbar, .dup {
     display: flex;
     align-items: flex-start;
     gap: var(--s-2xs);
@@ -406,21 +406,6 @@
   }
   .dup-calm { border-color: var(--line); background: var(--card-2); color: var(--ink-2); }
 
-  .theme-box { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--card); overflow: clip; }
-  .theme-box + .theme-box { margin-top: var(--s-xs); }
-  .ft {
-    padding: 8px var(--s-xs);
-    border-bottom: 1px solid var(--line-soft);
-    background: var(--card-2);
-    font-size: var(--t-fine);
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ink-4);
-  }
-  .theme-preview { padding: var(--s-xs); }
-  .theme-preview-action { display: flex; gap: var(--s-2xs); }
-  .theme-preview-line { display: flex; align-items: center; gap: var(--s-2xs); }
   .fcard { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--card); padding: var(--s-xs); }
   .fcard-head { display: flex; align-items: center; gap: var(--s-2xs); margin-bottom: 6px; }
   .fcard-who { font-weight: 600; }
@@ -433,7 +418,7 @@
   .fstats { display: flex; gap: var(--s-md); flex-wrap: wrap; }
   .fstat { display: flex; flex-direction: column; gap: 1px; }
   .fstat-k { font-size: var(--t-fine); color: var(--ink-4); }
-  .fstat-n { font-family: var(--font-code); font-size: var(--t-head); font-weight: 600; color: var(--ink); }
+  .fstat-n { font-family: var(--font-mono); font-size: var(--t-head); font-weight: 600; color: var(--ink); }
 
   .list, .rows, .record-list, .people-list, .band-list, .srclist, .optlist {
     display: flex;
@@ -500,7 +485,7 @@
   .lnk-soft:hover { color: var(--ink-2); }
 
   .log { display: flex; flex-direction: column; }
-  .log-meta, .log-source { font-size: var(--t-fine); color: var(--ink-4); font-family: var(--font-code); }
+  .log-meta, .log-source { font-size: var(--t-fine); color: var(--ink-4); font-family: var(--font-mono); }
 
   .auditlog { display: flex; flex-direction: column; min-width: 0; }
   .auditlog-day {
@@ -530,7 +515,7 @@
   .auditlog-row:last-child { border-bottom: 0; }
   .auditlog-row:hover { background: color-mix(in oklab, var(--ink) 4%, transparent); }
   .auditlog-at {
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-small);
     font-variant-numeric: tabular-nums;
     color: var(--ink-4);

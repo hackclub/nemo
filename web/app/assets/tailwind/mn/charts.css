@@ -40,7 +40,7 @@
   }
   .ax {
     fill: var(--ink-4);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-mark);
     font-variant-numeric: tabular-nums;
   }
@@ -54,13 +54,13 @@
   }
   .cap {
     fill: var(--ink-3);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-mark);
     font-variant-numeric: tabular-nums;
   }
   .val {
     fill: var(--ink-2);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-fine);
     font-variant-numeric: tabular-nums;
   }
@@ -75,7 +75,7 @@
     min-width: 3.5ch;
     text-align: right;
     color: color-mix(in oklab, var(--tip-ink) 52%, transparent);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-mark);
     font-style: normal;
     font-weight: 400;
@@ -217,7 +217,7 @@
   .legend b, .key b, .parts-key b {
     color: var(--ink);
     font-weight: 600;
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
 
@@ -235,7 +235,7 @@
   .ramp-lo, .ramp-hi {
     margin: 0 4px;
     color: var(--ink-4);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-mark);
   }
 
@@ -294,7 +294,7 @@
   .tree .t-v {
     fill: var(--ink);
     fill-opacity: 0.72;
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-weight: 500;
     font-variant-numeric: tabular-nums;
   }
@@ -364,14 +364,14 @@
   }
   .facet-zero b {
     color: var(--ink);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-mid);
     font-weight: 600;
   }
   .facet-share {
     margin-left: auto;
     color: var(--warn);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-weight: 600;
   }
 
@@ -464,7 +464,7 @@
     top: 0;
     translate: -50% 0;
     color: var(--ink-4);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-mark);
     font-style: normal;
   }
@@ -495,7 +495,7 @@
     flex: 0 0 auto;
     min-width: 84px;
     color: var(--ink);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-small);
     text-align: right;
   }
@@ -573,12 +573,12 @@
     height: 3px;
     margin-top: 6px;
     border-radius: var(--r-hair);
-    background: var(--accent);
+    background: var(--primary);
     display: block;
   }
   .cal-run-from {
     grid-row: 10;
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-mark);
     color: var(--ink-4);
   }
@@ -586,7 +586,7 @@
     grid-row: 10;
     font-size: var(--t-mark);
     font-weight: 600;
-    color: var(--accent-deep);
+    color: var(--primary-deep);
     text-align: right;
   }
 
@@ -628,7 +628,7 @@
   .clock-hour {
     width: auto;
     color: var(--ink-3);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-weight: 500;
     text-align: center;
     padding-bottom: 4px;
@@ -637,7 +637,7 @@
   .clock-day {
     width: 44px;
     color: var(--ink-3);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     text-align: right;
     padding-right: 9px;
     white-space: nowrap;
@@ -712,7 +712,7 @@
   }
   .tile-value {
     color: var(--ink-3);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-fine);
     font-variant-numeric: tabular-nums;
   }
@@ -724,7 +724,7 @@
   }
   .tile-pair b {
     color: var(--ink);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-weight: 600;
   }
   .tile-sub {
@@ -757,7 +757,7 @@
     flex: none;
     min-width: 36px;
     color: var(--ink-3);
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-fine);
     font-variant-numeric: tabular-nums;
     text-align: right;
@@ -780,7 +780,7 @@
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: var(--accent);
+    background: var(--primary);
   }
 
   .bar-sep {
@@ -802,7 +802,7 @@
     flex: 1 1 auto;
     display: flex;
     justify-content: space-between;
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
   }
   .srow:hover {
     background: var(--hover);

@@ -134,7 +134,7 @@
     white-space: pre;
     tab-size: 2;
   }
-  .audit-panel-raw code { font-family: var(--font-code); }
+  .audit-panel-raw code { font-family: var(--font-mono); }
 }
 
 @layer components {
@@ -153,7 +153,7 @@
   .audit-help-list dt { white-space: nowrap; }
   .audit-help-list dd { color: var(--ink-3); margin: 0; }
   .audit-help-try {
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     cursor: pointer;
     white-space: nowrap;
   }

@@ -1,27 +1,16 @@
 module Appearance
-  Theme = Struct.new(:key, :label, :band, :swatch, keyword_init: true)
+  Theme = Struct.new(:key, :label, :swatch, keyword_init: true)
 
   THEMES = [
-    Theme.new(key: "light", label: "Light", band: "light",
-      swatch: ["oklch(96.6% 0.005 253)", "oklch(99.3% 0.003 253)", "oklch(22.5% 0.020 253)"]),
-    Theme.new(key: "lightsout", label: "Lights out", band: "dark",
-      swatch: ["oklch(0% 0 0)", "oklch(17% 0.006 75)", "oklch(74% 0.148 48)"]),
-    Theme.new(key: "contrast", label: "Contrast", band: "dark",
-      swatch: ["oklch(0% 0 0)", "oklch(14% 0 0)", "oklch(100% 0 0)"])
+    Theme.new(key: "light", label: "Light",
+      swatch: ["oklch(98.5% 0 0)", "oklch(100% 0 0)", "oklch(20.5% 0 0)"]),
+    Theme.new(key: "lightsout", label: "Dark",
+      swatch: ["oklch(14.5% 0 0)", "oklch(20.5% 0 0)", "oklch(92.2% 0 0)"])
   ].freeze
 
-  BANDS = { "light" => "Light", "dark" => "Dark" }.freeze
   KEYS = THEMES.map(&:key).freeze
   RETIRED = %w[dark].freeze
-  BAND_OF = THEMES.to_h { |theme| [theme.key, theme.band] }.freeze
   DEFAULT_LIGHT = "light".freeze
   DEFAULT_DARK = "lightsout".freeze
-
-  def self.find(key)
-    THEMES.find { |theme| theme.key == key }
-  end
-
-  def self.of_band(band)
-    THEMES.select { |theme| theme.band == band }
-  end
+  ACCENT = "orange".freeze
 end

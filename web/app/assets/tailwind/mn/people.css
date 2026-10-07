@@ -8,11 +8,11 @@
     overflow: hidden;
     background:
       radial-gradient(118% 78% at 50% 8%,
-        color-mix(in oklab, var(--accent) 26%, transparent), transparent 58%),
+        color-mix(in oklab, var(--primary) 26%, transparent), transparent 58%),
       radial-gradient(90% 60% at 12% 96%,
         color-mix(in oklab, var(--ground-ink-2) 16%, transparent), transparent 66%),
       radial-gradient(70% 50% at 92% 88%,
-        color-mix(in oklab, var(--accent) 12%, transparent), transparent 70%),
+        color-mix(in oklab, var(--primary) 12%, transparent), transparent 70%),
       var(--ground);
   }
   .ground { position: absolute; inset: 0; opacity: 0.14; }
@@ -33,7 +33,7 @@
     z-index: -1;
     border-radius: 50%;
     background: radial-gradient(closest-side,
-      color-mix(in oklab, var(--accent) 30%, transparent), transparent 72%);
+      color-mix(in oklab, var(--primary) 30%, transparent), transparent 72%);
     filter: blur(22px);
   }
   .auth-pod {
@@ -50,7 +50,7 @@
     width: 100%;
     background:
       linear-gradient(180deg,
-        color-mix(in oklab, var(--ground-ink) 96%, var(--accent)),
+        color-mix(in oklab, var(--ground-ink) 96%, var(--primary)),
         var(--ground-ink));
     color: var(--ground);
     border: 1px solid color-mix(in oklab, var(--ground) 12%, transparent);
@@ -233,7 +233,7 @@
   button.evdot:hover { background: var(--hover); }
   .member-event-head { display: flex; align-items: baseline; gap: var(--s-2xs); flex-wrap: wrap; }
   .member-event-head a { color: inherit; text-decoration: none; }
-  .member-event-head a:hover { color: var(--accent); }
+  .member-event-head a:hover { color: var(--primary); }
   .member-event-body {
     margin: 3px 0 0;
     color: var(--ink-2);
@@ -250,7 +250,7 @@
     gap: var(--s-xs);
   }
   .evwhen {
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-mark);
     font-variant-numeric: tabular-nums;
     color: var(--ink-4);
@@ -270,7 +270,7 @@
   .locked svg { flex: none; color: var(--ink-4); }
   .idline { font-size: var(--t-small); color: var(--ink-3); }
   .was {
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-fine);
     color: var(--ink-4);
     text-decoration: line-through;
@@ -422,7 +422,7 @@
   }
   .merge-pick:hover { background: var(--hover); text-decoration: none; }
   .merge-pick:has(.tick:checked), .merge-pick[aria-current="true"] {
-    background: var(--accent-soft);
+    background: var(--primary-soft);
   }
   .merge-pick .tick { margin-top: 4px; }
   .merge-queue-row {
@@ -434,7 +434,7 @@
   .merge-queue-row:hover { background: none; }
   .merge-sub { display: block; margin-top: 2px; font-size: var(--t-fine); color: var(--ink-3); }
   .merge-who { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
-  .merge-id { font-family: var(--font-code); font-size: var(--t-fine); color: var(--ink-4); }
+  .merge-id { font-family: var(--font-mono); font-size: var(--t-fine); color: var(--ink-4); }
   .merge-ring {
     flex: none;
     margin-top: 3px;
@@ -443,7 +443,7 @@
     border-radius: 50%;
     border: 1.5px solid var(--line);
   }
-  .merge-pick[aria-current="true"] .merge-ring { border-color: var(--accent); background: var(--accent); }
+  .merge-pick[aria-current="true"] .merge-ring { border-color: var(--primary); background: var(--primary); }
 
   .merge-outcome {
     display: flex;
@@ -468,7 +468,7 @@
     text-decoration: none;
   }
   .merge-swap:hover { background: var(--hover); color: var(--ink); text-decoration: none; }
-  .merge-swap[aria-current="true"] { background: var(--accent); color: var(--accent-on); font-weight: 550; }
+  .merge-swap[aria-current="true"] { background: var(--primary); color: var(--primary-foreground); font-weight: 550; }
 
   .merge-act {
     flex: none;
@@ -506,8 +506,8 @@
   }
   .theme-opt:hover { border-color: var(--ink-4); }
   .theme-opt.on {
-    border-color: var(--accent-line);
-    background: var(--accent-soft);
+    border-color: var(--primary-line);
+    background: var(--primary-soft);
   }
   .theme-chip {
     flex: none;
@@ -529,7 +529,7 @@
   .theme-mark {
     margin-left: auto;
     flex: none;
-    color: var(--accent);
+    color: var(--primary);
     opacity: 0;
   }
   .theme-opt[aria-pressed="true"] .theme-mark { opacity: 1; }
@@ -623,7 +623,7 @@
     color: var(--ink-3);
   }
   .profile-usage-narrow .profile-extras dd {
-    font-family: var(--font-code);
+    font-family: var(--font-mono);
     font-size: var(--t-body);
     font-weight: 500;
     letter-spacing: -0.015em;
@@ -656,14 +656,14 @@
 @layer components {
   .col-pick { width: 40px; text-align: center; }
   .tickbox {
-    accent-color: var(--accent);
+    accent-color: var(--primary);
     width: 15px;
     height: 15px;
     cursor: pointer;
     vertical-align: middle;
   }
   .data-table tbody tr.is-picked > td {
-    background: color-mix(in oklab, var(--accent) 7%, transparent);
+    background: color-mix(in oklab, var(--primary) 7%, transparent);
   }
 
   .stack:has(> .pickbar:not([hidden])) { padding-bottom: 60px; }

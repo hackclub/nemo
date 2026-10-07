@@ -1,8 +1,9 @@
 <%= javascript_tag nonce: true do %>
   window.MnTheme = (function () {
-    var BANDS = <%= raw Appearance::BAND_OF.to_json %>;
+    var KEYS = <%= raw Appearance::KEYS.to_json %>;
     var LIGHT = <%= raw Appearance::DEFAULT_LIGHT.to_json %>;
     var DARK = <%= raw Appearance::DEFAULT_DARK.to_json %>;
+    var ACCENT = <%= raw Appearance::ACCENT.to_json %>;
     var WAS_DARK = <%= raw (Appearance::RETIRED + ["ash", "slate", "midnight", "ember",
       "moss", "dim", "void", "dracula", "mocha", "nord", "tokyo-night", "gruvbox",
       "one-dark", "rose-pine", "github-dark", "contrast"]).to_json %>;
@@ -16,9 +17,15 @@
     function query() {
       return window.matchMedia("(prefers-color-scheme: dark)");
     }
+    function known(key) {
+      return KEYS.indexOf(key) >= 0;
+    }
     function state() {
       var pinned = get("mn-theme", "");
-      return { pinned: BANDS[pinned] ? pinned : null };
+      return {
+        pinned: known(pinned) ? pinned : null,
+        accent: get("mn-accent", ACCENT) === ACCENT ? ACCENT : null
+      };
     }
     function resolve(now) {
       now = now || state();
@@ -26,37 +33,51 @@
       return query().matches ? DARK : LIGHT;
     }
     function apply() {
-      var key = resolve();
-      if (!BANDS[key]) key = LIGHT;
-      document.documentElement.setAttribute("data-theme", key);
+      var now = state();
+      var key = resolve(now);
+      var root = document.documentElement;
+      root.setAttribute("data-theme", key);
+      if (now.accent) root.setAttribute("data-accent", now.accent);
+      else root.removeAttribute("data-accent");
       return key;
     }
     function announce() {
       document.dispatchEvent(new CustomEvent("mn:theme"));
     }
     function migrate() {
-      if (get("mn-theme-v", "") === "5") return;
+      if (get("mn-theme-v", "") === "6") return;
       var was = get("mn-theme", "");
-      if (was && !BANDS[was]) put("mn-theme", WAS_DARK.indexOf(was) >= 0 ? DARK : LIGHT);
-      put("mn-theme-v", "5");
+      if (was && !known(was)) put("mn-theme", WAS_DARK.indexOf(was) >= 0 ? DARK : LIGHT);
+      put("mn-theme-v", "6");
+    }
+    function swap(at) {
+      var root = document.documentElement;
+      if (typeof document.startViewTransition !== "function") {
+        apply();
+        announce();
+        return;
+      }
+      root.style.setProperty("--mn-x", (at && at.x != null ? at.x : window.innerWidth / 2) + "px");
+      root.style.setProperty("--mn-y", (at && at.y != null ? at.y : window.innerHeight / 2) + "px");
+      document.startViewTransition(function () { apply(); announce(); }).finished.then(function () {
+        root.style.removeProperty("--mn-x");
+        root.style.removeProperty("--mn-y");
+      });
     }
     function pick(key, at) {
-      if (!BANDS[key]) return apply();
+      if (!known(key)) return apply();
       put("mn-theme", key);
-      var root = document.documentElement;
-      if (typeof document.startViewTransition !== "function" || key === root.getAttribute("data-theme")) {
+      if (key === document.documentElement.getAttribute("data-theme")) {
         var applied = apply();
         announce();
         return applied;
       }
-      root.style.setProperty("--mn-x", (at && at.x != null ? at.x : window.innerWidth / 2) + "px");
-      root.style.setProperty("--mn-y", (at && at.y != null ? at.y : window.innerHeight / 2) + "px");
-      var swap = document.startViewTransition(function () { apply(); announce(); });
-      swap.finished.then(function () {
-        root.style.removeProperty("--mn-x");
-        root.style.removeProperty("--mn-y");
-      });
+      swap(at);
       return key;
+    }
+    function tint(on, at) {
+      put("mn-accent", on ? ACCENT : "none");
+      swap(at);
     }
 
     migrate();
@@ -65,7 +86,7 @@
       /Mac|iPhone|iPad/.test(navigator.platform) ? "meta" : "ctrl";
     query().addEventListener("change", function () { apply(); announce() });
 
-    return { state: state, resolve: resolve, apply: apply, pick: pick, bands: BANDS };
+    return { state: state, resolve: resolve, apply: apply, pick: pick, tint: tint };
   })();
 
   (function () {
