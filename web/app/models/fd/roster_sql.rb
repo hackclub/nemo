@@ -68,12 +68,7 @@ module Fd
 
     SEARCH_AGGREGATES = <<~SQL
       hit AS (
-        SELECT user_id FROM fd.member
-        WHERE user_id = :id OR lower(display_name) LIKE :term OR lower(handle) LIKE :term
-        UNION SELECT user_id FROM fd.case_participants WHERE user_id = :id
-        UNION SELECT target_user_id FROM fd.actions WHERE target_user_id = :id
-        UNION SELECT subject_user_id FROM fd.notes WHERE subject_user_id = :id
-        IDENTITY_HITS
+        SELECT user_id, place FROM unnest(ARRAY[:hits]::text[]) WITH ORDINALITY AS found(user_id, place)
       ),
       conduct AS (
         SELECT p.user_id,
@@ -110,9 +105,9 @@ module Fd
         WHERE case_id IS NULL AND subject_user_id IN (SELECT user_id FROM hit) AND deleted_at IS NULL
         GROUP BY subject_user_id
       ),
-      people AS (SELECT user_id FROM hit),
+      people AS (SELECT user_id, place FROM hit),
       roster AS (
-        SELECT people.user_id,
+        SELECT people.user_id, people.place,
                coalesce(conduct.cases, 0) AS cases,
                coalesce(conduct.subject_of, 0) AS subject_of,
                coalesce(conduct.logged_in, 0) AS logged_in,
@@ -137,32 +132,13 @@ module Fd
           WHERE w.source = 'admin_analytics_member_range' AND w.user_id = people.user_id LIMIT 1
         ) w ON true
         CONTEXT_JOIN
-        WHERE (m.user_id IS NOT NULL AND m.is_deleted = false AND m.is_bot = false)
-           OR conduct.user_id IS NOT NULL OR acted.user_id IS NOT NULL OR noted.user_id IS NOT NULL
       )
-    SQL
-
-    IDENTITY_HITS = <<~SQL
-      UNION SELECT user_id FROM fd.member_identity
-      WHERE purged_at IS NULL
-        AND (lower(real_name) LIKE :term OR lower(first_name) LIKE :term
-             OR lower(last_name) LIKE :term OR lower(email) LIKE :term)
-      UNION SELECT user_id FROM cachet_profiles WHERE lower(display_name) LIKE :term
     SQL
 
     CONTEXT_COLUMNS =
       ", coalesce(dm.cohort_at, mj.joined_at) AS cohort_at, " \
       "greatest(w.last_active_at, ms.last_post_at, ms.last_login_at) AS last_active_at, " \
       "w.messages_posted".freeze
-
-    IDENTITY_COLUMNS =
-      ", mi.real_name, mi.first_name, mi.last_name, mi.email, cp.display_name AS shown_name".freeze
-
-    IDENTITY_JOIN = <<~SQL
-      LEFT JOIN fd.member_identity mi
-        ON mi.user_id = people.user_id AND mi.purged_at IS NULL
-      LEFT JOIN cachet_profiles cp ON cp.user_id = people.user_id
-    SQL
 
     CONTEXT_JOIN = <<~SQL
       LEFT JOIN analytics.dim_member dm ON dm.user_id = people.user_id
@@ -191,12 +167,7 @@ module Fd
         joins << CONTEXT_JOIN unless asked?
       end
 
-      if asked? && identity?
-        columns += IDENTITY_COLUMNS
-        joins << IDENTITY_JOIN
-      end
-
-      template = asked? ? SEARCH_AGGREGATES.sub("IDENTITY_HITS", identity? ? IDENTITY_HITS : "") : AGGREGATES
+      template = asked? ? SEARCH_AGGREGATES : AGGREGATES
       template.sub("m.display_name, m.handle", columns).sub("CONTEXT_JOIN", joins.join("\n"))
     end
 
@@ -209,7 +180,6 @@ module Fd
       parts << "(subject_of > 0 OR logged_in > 0)" unless self["who"] == "everyone"
       parts << "priors >= #{self['priors'].to_i}" unless default?("priors")
       parts << state_clause if state_clause
-      parts << term_clause if asked?
       parts << tenure_clause unless default?("tenure")
       parts << active_clause unless default?("active")
       parts.compact.join(" AND ")
@@ -242,31 +212,10 @@ module Fd
       end
     end
 
-    TERM_FIELDS = %w[display_name handle].freeze
-
-    IDENTITY_TERM_FIELDS = %w[shown_name real_name first_name last_name email].freeze
-
-    def term_fields
-      identity? ? TERM_FIELDS + IDENTITY_TERM_FIELDS : TERM_FIELDS
-    end
-
-    def term_clause
-      "(user_id = :id OR #{term_fields.map { |field| "lower(#{field}) LIKE :term" }.join(' OR ')})"
-    end
-
     def roster_order
       return sort_order unless asked?
 
-      "#{match_rank}, messages_posted DESC NULLS LAST, last_case_at DESC NULLS LAST, #{sort_order}"
-    end
-
-    COLUMNS = {
-      handle: "handle", user_id: "user_id", display_name: "display_name",
-      shown_name: "shown_name", real_name: "real_name", email: "email"
-    }.freeze
-
-    def match_rank
-      MemberMatch.rank(identity: identity?, columns: COLUMNS)
+      "place, #{sort_order}"
     end
 
     def sort_order
@@ -285,12 +234,8 @@ module Fd
     end
 
     def roster_binds
-      { category: self["category"], now: Time.current,
-        prior_since: Case::PRIOR_WINDOW.ago,
-        term: "%#{Case.sanitize_sql_like(term.downcase)}%",
-        within: "%#{Case.sanitize_sql_like(term.downcase)}%",
-        starts: "#{Case.sanitize_sql_like(term.downcase)}%",
-        exact: term.downcase, id: term.upcase }
+      held = { category: self["category"], prior_since: Case::PRIOR_WINDOW.ago }
+      asked? ? held.merge(hits: hits) : held
     end
 
     def ask(sql, extra = {})

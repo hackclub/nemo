@@ -41,34 +41,37 @@ module Fd
       @words ||= @typed.downcase.split(/[\s,]+/).reject(&:empty?).uniq.first(WORDS)
     end
 
-    def find(limit:)
+    def find(limit:, offset: 0)
       return Found.new([], 0) if user_id.nil? && words.empty?
 
-      rows = ApplicationRecord.connection.select_all(sql(limit)).to_a
+      rows = ApplicationRecord.connection.select_all(sql(limit, offset)).to_a
       Found.new(rows.map { |row| row["user_id"] }, rows.first ? rows.first["found"].to_i : 0)
     end
 
-    def sql(limit)
-      user_id ? by_id(limit) : by_name(limit)
+    def sql(limit, offset = 0)
+      user_id ? by_id(limit, offset) : by_name(limit, offset)
     end
 
     private
 
-    def by_id(limit)
-      ApplicationRecord.sanitize_sql_array([<<~SQL, { id: user_id, limit: limit }])
-        SELECT user_id, count(*) OVER () AS found FROM (
-          SELECT user_id FROM fd.member WHERE user_id = :id
-          UNION SELECT user_id FROM fd.case_participants WHERE user_id = :id
-          UNION SELECT target_user_id FROM fd.actions WHERE target_user_id = :id
-          UNION SELECT subject_user_id FROM fd.notes WHERE subject_user_id = :id
-        ) asked
-        LIMIT :limit
+    def by_id(limit, offset)
+      ApplicationRecord.sanitize_sql_array([<<~SQL, { id: user_id, limit: limit, offset: offset }])
+        SELECT user_id, count(*) OVER () AS found FROM (#{holding(':id')}) asked
+        LIMIT :limit OFFSET :offset
       SQL
     end
 
-    def by_name(limit)
-      ApplicationRecord.sanitize_sql_array([<<~SQL, binds.merge(limit: limit)])
+    def holding(id)
+      "SELECT user_id FROM fd.member WHERE user_id = #{id} " \
+        "UNION SELECT user_id FROM fd.case_participants WHERE user_id = #{id} " \
+        "UNION SELECT target_user_id FROM fd.actions WHERE target_user_id = #{id} " \
+        "UNION SELECT subject_user_id FROM fd.notes WHERE subject_user_id = #{id}"
+    end
+
+    def by_name(limit, offset)
+      ApplicationRecord.sanitize_sql_array([<<~SQL, binds.merge(limit: limit, offset: offset)])
         WITH exact AS (#{exact_email}),
+        asked AS (#{words.one? ? holding(':upper') : NOTHING}),
         candidates AS (#{candidates}),
         touched AS (
           SELECT user_id FROM fd.case_participants
@@ -100,8 +103,12 @@ module Fd
         kept AS (
           SELECT user_id, #{SEEN_EXACT} AS place, 1::real AS close, false AS is_deleted FROM exact
           UNION ALL
+          SELECT user_id, #{SEEN_EXACT}, 1::real, false FROM asked
+          WHERE NOT EXISTS (SELECT 1 FROM exact)
+          UNION ALL
           SELECT user_id, place, close, is_deleted FROM scored
           WHERE NOT EXISTS (SELECT 1 FROM exact) AND (#{keeps})
+            AND user_id NOT IN (SELECT user_id FROM asked)
         )
         SELECT k.user_id, count(*) OVER () AS found
         FROM kept k
@@ -112,7 +119,7 @@ module Fd
         ORDER BY k.place, (t.user_id IS NOT NULL) DESC,
                  CASE WHEN k.place = #{SPELLED_CLOSE} THEN k.close END DESC NULLS LAST,
                  w.messages_posted DESC NULLS LAST, k.close DESC, k.is_deleted, k.user_id
-        LIMIT :limit
+        LIMIT :limit OFFSET :offset
       SQL
     end
 
@@ -132,7 +139,8 @@ module Fd
 
     def binds
       longest = words.max_by(&:length).to_s
-      held = { whole: words.join(" "), anchor: "%#{like(longest)}%", leading: "#{like(longest)}%",
+      held = { whole: words.join(" "), upper: words.first.to_s.upcase,
+               anchor: "%#{like(longest)}%", leading: "#{like(longest)}%",
                word_leading: "% #{like(longest)}%", email: email, close_enough: CLOSE_ENOUGH,
                lifetime: Analytics::MemberWindow::LIFETIME_SOURCE }
       words.each_with_index do |word, i|

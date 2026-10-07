@@ -61,12 +61,6 @@ module Fd
 
     def asked? = term.present?
 
-    def identity?
-      return @identity if defined?(@identity)
-
-      @identity = @actor.present? && @actor.may?(RosterSql::IDENTITY_READ)
-    end
-
     def [](key)
       raw = @params[key].to_s
       return raw if allowed?(key, raw)
@@ -131,10 +125,16 @@ module Fd
     end
 
     def total
-      @total ||= ask(<<~SQL).first["found"].to_i
-        WITH #{aggregates}
-        SELECT count(*) AS found FROM roster WHERE #{roster_where}
-      SQL
+      @total ||= if searched_page?
+        searched.total
+      elsif asked? && hits.empty?
+        0
+      else
+        ask(<<~SQL).first["found"].to_i
+          WITH #{aggregates}
+          SELECT count(*) AS found FROM roster WHERE #{roster_where}
+        SQL
+      end
     end
 
     COUNTS_FOR = 5.minutes
@@ -263,7 +263,9 @@ module Fd
     end
 
     def page_rows
-      found = ask(<<~SQL, limit: LIMIT, offset: (page - 1) * LIMIT)
+      return [] if asked? && hits.empty?
+
+      found = ask(<<~SQL, limit: LIMIT, offset: searched_page? ? 0 : (page - 1) * LIMIT)
         WITH #{aggregates}
         SELECT * FROM roster WHERE #{roster_where}
         ORDER BY #{roster_order}
@@ -273,10 +275,44 @@ module Fd
     end
 
     def all_rows
-      ask(<<~SQL).map { |row| row_from(row) }
+      return [] if asked? && matched.ids.empty?
+
+      ask(<<~SQL, asked? ? { hits: matched.ids } : {}).map { |row| row_from(row) }
         WITH #{aggregates}
         SELECT * FROM roster WHERE #{roster_where} ORDER BY #{roster_order}
       SQL
+    end
+
+    SEARCH_CAP = 20_000
+    NARROWING = %w[who priors state tenure active].freeze
+
+    def finder
+      @finder ||= MemberFinder.new(term, actor: @actor)
+    end
+
+    def narrowed?
+      NARROWING.any? { |key| !default?(key) }
+    end
+
+    def searched_page?
+      asked? && !narrowed?
+    end
+
+    def hits
+      @hits ||= searched_page? ? searched.ids : matched.ids
+    end
+
+    def matched
+      @matched ||= finder.find(limit: SEARCH_CAP)
+    end
+
+    def searched
+      @searched ||= begin
+        wanted = [@params["page"].to_i, 1].max
+        found = finder.find(limit: LIMIT, offset: (wanted - 1) * LIMIT)
+        last = [(found.total / LIMIT.to_f).ceil, 1].max
+        wanted > last ? finder.find(limit: LIMIT, offset: (last - 1) * LIMIT) : found
+      end
     end
 
     def counts_per_view

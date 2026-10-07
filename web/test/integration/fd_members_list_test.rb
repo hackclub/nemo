@@ -260,3 +260,56 @@ class FdMembersActivityTest < ActionDispatch::IntegrationTest
     assert_includes shown(q: "UGONE", active: "dormant"), "UGONE"
   end
 end
+
+class FdMembersSearchTest < ActionDispatch::IntegrationTest
+  include SeedsPipelineTables
+
+  setup do
+    @me = hold_role!("UME", "community_manager")
+  end
+
+  def named!(user_id, display_name, deleted: false)
+    as_pipeline("INSERT INTO fd.member (user_id, handle, display_name, is_deleted) VALUES (?, ?, ?, ?) " \
+                "ON CONFLICT (user_id) DO UPDATE SET display_name = EXCLUDED.display_name, " \
+                "is_deleted = EXCLUDED.is_deleted", user_id, user_id.downcase, display_name, deleted)
+    seeded!("fd.member", "user_id", user_id)
+  end
+
+  def query(**asked)
+    Fd::MemberQuery.new(asked.transform_keys(&:to_s), actor: @me)
+  end
+
+  test "a search lists what the finder ranked, in its order, with its total" do
+    named!("U0RSTA1", "Quorvex Ombrine")
+    named!("U0RSTA2", "Ombrine Quorvexa")
+    ranked = Fd::MemberFinder.new("quorvex ombrine", actor: @me).find(limit: 50)
+
+    assert_equal ranked.ids, query(q: "quorvex ombrine").rows.map(&:user_id)
+    assert_equal ranked.total, query(q: "quorvex ombrine").total
+  end
+
+  test "a pasted id lists that member even when the account is gone" do
+    named!("U0RSTGONE1", "Quorvex Gone", deleted: true)
+
+    assert_equal ["U0RSTGONE1"], query(q: "<@U0RSTGONE1>").rows.map(&:user_id)
+  end
+
+  test "a search pages through its matches" do
+    55.times { |n| named!(format("U0RSTP%03d", n), "Quorvexpage #{n}") }
+
+    first = query(q: "quorvexpage").rows.map(&:user_id)
+    second = query(q: "quorvexpage", page: "2").rows.map(&:user_id)
+    assert_equal 50, first.size
+    assert_equal 5, second.size
+    assert_empty first & second
+  end
+
+  test "a facet narrows a search to the matches that hold it" do
+    named!("U0RSTF1", "Quorvex Facet")
+    named!("U0RSTF2", "Quorvex Facetwo")
+    make_case(subject: "U0RSTF2", opened_at: 2.days.ago)
+
+    assert_equal ["U0RSTF2"], query(q: "quorvex", view: "history").rows.map(&:user_id)
+    assert_equal 1, query(q: "quorvex", view: "history").total
+  end
+end
