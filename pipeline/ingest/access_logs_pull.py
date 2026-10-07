@@ -1,6 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
-from lib import useragent
+from lib import member_seen, useragent
 from lib.db import dead_letter, ingest_run
 from lib.proxy_client import ProxyClient
 
@@ -88,6 +88,7 @@ def insert_rows(conn, logins, counts):
     if rows:
         with conn.cursor() as cur:
             cur.executemany(ROW_SQL, rows)
+            member_seen.logged_in(cur, [(row[0], row[1]) for row in rows])
     conn.commit()
     counts.rows_in += len(rows)
     return len(rows)

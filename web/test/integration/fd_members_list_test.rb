@@ -220,3 +220,43 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
       "narrowing must not drop the search"
   end
 end
+
+class FdMembersActivityTest < ActionDispatch::IntegrationTest
+  include SeedsPipelineTables
+
+  setup do
+    @me = hold_role!("UME", "community_manager")
+  end
+
+  def seen!(user_id, post: nil, login: nil)
+    member!(user_id)
+    as_pipeline("INSERT INTO fd.member_seen (user_id, last_post_at, last_login_at) VALUES (?, ?, ?) " \
+                "ON CONFLICT (user_id) DO UPDATE SET last_post_at = EXCLUDED.last_post_at, " \
+                "last_login_at = EXCLUDED.last_login_at", user_id, post, login)
+    seeded!("fd.member_seen", "user_id", user_id)
+  end
+
+  def shown(**asked)
+    Fd::MemberQuery.new(asked.transform_keys(&:to_s), actor: @me).rows.map(&:user_id)
+  end
+
+  test "a login this week makes somebody active this week" do
+    seen!("UJUSTIN", login: 1.hour.ago)
+
+    assert_includes shown(q: "UJUSTIN", active: "week"), "UJUSTIN"
+    assert_empty shown(q: "UJUSTIN", active: "dormant")
+  end
+
+  test "a post this month makes somebody active this month" do
+    seen!("UPOSTED", post: 12.days.ago, login: 200.days.ago)
+
+    assert_includes shown(q: "UPOSTED", active: "month"), "UPOSTED"
+    assert_empty shown(q: "UPOSTED", active: "week")
+  end
+
+  test "somebody we have not seen in months is dormant" do
+    seen!("UGONE", post: 120.days.ago, login: 95.days.ago)
+
+    assert_includes shown(q: "UGONE", active: "dormant"), "UGONE"
+  end
+end

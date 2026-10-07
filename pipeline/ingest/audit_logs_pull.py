@@ -4,7 +4,7 @@ from datetime import UTC, date, datetime, timedelta
 
 from psycopg.types.json import Jsonb
 
-from lib import coverage, useragent
+from lib import coverage, member_seen, useragent
 from lib.db import dead_letter, get_cursor, ingest_run, save_cursor
 from lib.proxy_client import ProxyClient, ProxyError
 
@@ -273,6 +273,7 @@ def insert_rows(conn, entries, source_key, ours, counts):
             cur.executemany(EVENT_SQL, events)
             if logins:
                 cur.executemany(LOGIN_SQL, logins)
+                member_seen.logged_in(cur, [(row[0], row[1]) for row in logins if row[2] == "user_login"])
             if rooms:
                 cur.executemany(CHANNEL_SQL, rooms)
             if named:

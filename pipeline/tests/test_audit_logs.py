@@ -386,6 +386,15 @@ def test_landing_writes_the_event_and_the_login_from_one_pass():
     assert len(conn.did("INSERT INTO fd.login_event")[0]) == 1
 
 
+def test_only_a_login_that_worked_counts_as_being_seen():
+    conn, counts = Conn(), Counts()
+    failed = {"type": "user", "user": {"id": "U2", "name": "nope"}}
+    pull.insert_rows(conn, [entry(), entry(id="b", action="user_login_failed", actor=failed)],
+                     "audit_logs_tail", frozenset(), counts)
+
+    assert [ids for ids, _ in conn.did("INSERT INTO fd.member_seen")] == [[WHO]]
+
+
 def test_a_landed_event_is_never_written_twice():
     assert "ON CONFLICT (id) DO NOTHING" in pull.EVENT_SQL
     assert "ON CONFLICT (user_id, at, source) DO UPDATE" in pull.LOGIN_SQL

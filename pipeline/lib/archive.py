@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from psycopg.types.json import Jsonb
 
+from lib import member_seen
 from lib.message import author_kind, redact, normalize
 
 GONE = "message_deleted"
@@ -43,6 +44,15 @@ KEPT_WHEN_ABSENT = (
 
 ALWAYS = ("revision", "posted_at", "author_kind", "is_reply", "is_broadcast",
           "thread_root_ts", "reply_count", "reply_users_count", "latest_reply_ts")
+
+AUTHOR, KIND, SUBTYPE, POSTED = (
+    FIELDS.index(name) for name in ("author_id", "author_kind", "subtype", "posted_at")
+)
+
+
+def member_posts(rows):
+    return [(row[AUTHOR], row[POSTED]) for row in rows
+            if row[KIND] == "member" and row[AUTHOR] and row[SUBTYPE] != "channel_join"]
 
 
 def _upsert():
@@ -217,6 +227,7 @@ def record_many(conn, channel_id, entries, method, transport, settled, on_reject
             cur.executemany(ENVELOPE_SQL, envelopes)
         if messages:
             cur.executemany(MESSAGE_SQL, messages)
+            member_seen.posted(cur, member_posts(messages))
     return len(messages)
 
 
@@ -245,6 +256,7 @@ def record(conn, channel_id, ts, envelope, measured, method, transport, settled)
             cur.execute(ENVELOPE_SQL,
                         (channel_id, ts, revision, Jsonb(envelope), payload_hash, method))
         cur.execute(MESSAGE_SQL, (*built, settled))
+        member_seen.posted(cur, member_posts([built]))
     return True
 
 

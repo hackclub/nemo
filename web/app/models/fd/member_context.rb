@@ -6,18 +6,18 @@ module Fd
 
       members = Analytics::DimMember.where(user_id: ids).index_by(&:user_id)
       windows = Analytics::MemberWindow.lifetime.where(user_id: ids).index_by(&:user_id)
-      posts = Analytics::MemberLifetimeMessages.where(user_id: ids).index_by(&:user_id)
+      seen = Fd::MemberSeen.where(user_id: ids).index_by(&:user_id)
       joined = Fd::MemberJoin.where(user_id: ids).pluck(:user_id, :joined_at).to_h
-      ids.to_h { |id| [id, new(id, members[id], windows[id], posts[id], joined[id])] }
+      ids.to_h { |id| [id, new(id, members[id], windows[id], seen[id], joined[id])] }
     end
 
     attr_reader :user_id
 
-    def initialize(user_id, member, window, posts = nil, joined_at = nil)
+    def initialize(user_id, member, window, seen = nil, joined_at = nil)
       @user_id = user_id
       @member = member
       @window = window
-      @posts = posts
+      @seen = seen
       @joined_at = joined_at
     end
 
@@ -48,11 +48,11 @@ module Fd
     end
 
     def last_active_at
-      [@window&.last_active_at, @posts&.last_at].compact.max
+      [@window&.last_active_at, @seen&.last_post_at, @seen&.last_login_at].compact.max
     end
 
     def last_posted_at
-      @posts&.last_at
+      @seen&.last_post_at
     end
   end
 end

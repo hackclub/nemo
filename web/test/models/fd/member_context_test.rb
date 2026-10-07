@@ -12,19 +12,19 @@ class Fd::MemberContextTest < ActiveSupport::TestCase
       source: Analytics::MemberWindow::LIFETIME_SOURCE)
   end
 
-  def archive_said(at)
-    Analytics::MemberLifetimeMessages.new(user_id: MINE, last_at: at)
+  def seen(post: nil, login: nil)
+    Fd::MemberSeen.new(user_id: MINE, last_post_at: post, last_login_at: login)
   end
 
-  def built(window:, archive:)
-    Fd::MemberContext.new(MINE, nil, window, archive)
+  def built(window:, seen:)
+    Fd::MemberContext.new(MINE, nil, window, seen)
   end
 
   test "the newest message wins when the analytics window is behind it" do
     behind = 3.days.ago.change(usec: 0)
     fresh = 1.hour.ago.change(usec: 0)
 
-    person = built(window: window_label(behind), archive: archive_said(fresh))
+    person = built(window: window_label(behind), seen: seen(post: fresh))
 
     assert_equal fresh, person.last_active_at
   end
@@ -33,29 +33,46 @@ class Fd::MemberContextTest < ActiveSupport::TestCase
     read = 1.hour.ago.change(usec: 0)
     posted = 9.days.ago.change(usec: 0)
 
-    person = built(window: window_label(read), archive: archive_said(posted))
+    person = built(window: window_label(read), seen: seen(post: posted))
 
     assert_equal read, person.last_active_at
+  end
+
+  test "a login after the last message counts as activity" do
+    posted = 6.days.ago.change(usec: 0)
+    logged = 10.minutes.ago.change(usec: 0)
+
+    person = built(window: window_label(4.days.ago), seen: seen(post: posted, login: logged))
+
+    assert_equal logged, person.last_active_at
+    assert_equal posted, person.last_posted_at
   end
 
   test "either source alone is enough" do
     at = 2.hours.ago.change(usec: 0)
 
-    assert_equal at, built(window: window_label(at), archive: nil).last_active_at
-    assert_equal at, built(window: nil, archive: archive_said(at)).last_active_at
-    assert_nil built(window: nil, archive: nil).last_active_at
+    assert_equal at, built(window: window_label(at), seen: nil).last_active_at
+    assert_equal at, built(window: nil, seen: seen(post: at)).last_active_at
+    assert_equal at, built(window: nil, seen: seen(login: at)).last_active_at
+    assert_nil built(window: nil, seen: nil).last_active_at
   end
 
   test "a window that knows nothing does not hide a message we hold" do
     at = 5.minutes.ago.change(usec: 0)
 
-    person = built(window: window_label(nil), archive: archive_said(at))
+    person = built(window: window_label(nil), seen: seen(post: at))
 
     assert_equal at, person.last_active_at
     assert_equal at, person.last_posted_at
   end
 
-  test "looking somebody up reads both sources" do
+  test "a login is not a message" do
+    person = built(window: nil, seen: seen(login: 1.hour.ago))
+
+    assert_nil person.last_posted_at
+  end
+
+  test "looking somebody up reads every source" do
     assert_nothing_raised { context_for }
   end
 

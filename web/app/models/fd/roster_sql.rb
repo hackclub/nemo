@@ -131,6 +131,7 @@ module Fd
         LEFT JOIN fd.member m ON m.user_id = people.user_id
         LEFT JOIN analytics.dim_member_cohort dm ON dm.user_id = people.user_id
         LEFT JOIN fd.member_joins mj ON mj.user_id = people.user_id
+        LEFT JOIN fd.member_seen ms ON ms.user_id = people.user_id
         LEFT JOIN LATERAL (
           SELECT last_active_at, messages_posted FROM analytics.fct_member_window w
           WHERE w.source = 'admin_analytics_member_range' AND w.user_id = people.user_id LIMIT 1
@@ -150,7 +151,9 @@ module Fd
     SQL
 
     CONTEXT_COLUMNS =
-      ", coalesce(dm.cohort_at, mj.joined_at) AS cohort_at, w.last_active_at, w.messages_posted".freeze
+      ", coalesce(dm.cohort_at, mj.joined_at) AS cohort_at, " \
+      "greatest(w.last_active_at, ms.last_post_at, ms.last_login_at) AS last_active_at, " \
+      "w.messages_posted".freeze
 
     IDENTITY_COLUMNS =
       ", mi.real_name, mi.first_name, mi.last_name, mi.email, cp.display_name AS shown_name".freeze
@@ -164,6 +167,7 @@ module Fd
     CONTEXT_JOIN = <<~SQL
       LEFT JOIN analytics.dim_member dm ON dm.user_id = people.user_id
       LEFT JOIN fd.member_joins mj ON mj.user_id = people.user_id
+      LEFT JOIN fd.member_seen ms ON ms.user_id = people.user_id
       LEFT JOIN analytics.fct_member_window w
         ON w.user_id = people.user_id AND w.source = 'admin_analytics_member_range'
     SQL
