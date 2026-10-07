@@ -36,6 +36,9 @@ module Profile
       busiest_day: "max(messages)"
     }.freeze
 
+    MEASURED_SOURCES = %w[member_day member_day_import].freeze
+    DAILY_SOURCE = "member_day".freeze
+
     def self.span_key(asked)
       SPANS.key?(asked.to_s) ? asked.to_s : DEFAULT_SPAN
     end
@@ -118,10 +121,14 @@ module Profile
 
     def slack(from = window_start, to = window_end)
       @slack ||= {}
-      @slack[[from, to]] ||= read(
-        Analytics::MemberActivity.mine(@user_id).between(from, to),
-        SLACK.transform_values { |column| "sum(#{column})" }
-      )
+      @slack[[from, to]] ||= begin
+        found = read(
+          Analytics::MemberActivity.mine(@user_id).between(from, to),
+          SLACK.transform_values { |column| "sum(#{column})" }.merge(rows: "count(*)")
+        )
+        rows = found.delete(:rows)
+        rows.zero? && measured?(from, to) ? found.transform_values { 0 } : found
+      end
     end
 
     def held(from = window_start, to = window_end)
@@ -233,8 +240,20 @@ module Profile
     end
 
     def first_measured_on
-      [first_post_on, Analytics::MemberActivity.mine(@user_id).minimum(:window_start)]
-        .compact.min
+      [first_post_on, Analytics::MemberActivity.mine(@user_id).minimum(:window_start),
+       first_reported_on].compact.min
+    end
+
+    def first_reported_on
+      days = Analytics::FctAnalyticsDay.where(source: DAILY_SOURCE, loaded: true)
+      days = days.where(ds: member_since.to_date..) if member_since
+      days.minimum(:ds)
+    end
+
+    def measured?(from, to)
+      from = [from, member_since&.to_date].compact.max
+      from <= to &&
+        Analytics::FctAnalyticsDay.where(source: MEASURED_SOURCES, loaded: true, ds: from..to).exists?
     end
 
     def read(scope, columns)
