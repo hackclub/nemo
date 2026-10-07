@@ -657,7 +657,7 @@ export default class extends Controller {
       })
     }
 
-    chart.querySelector(".chart-note").textContent = row.gap
+    chart.querySelector(".chart-caption").textContent = row.gap
       ? `${row.label}, ${row.why || "not fetched"}`
       : `${row.label}, ${g.series.map((s) => `${s.n} ${this.format(row[s.k])}`).join(", ")}${
         this.stack ? `, total ${this.format(this.sum(row, g.series))}` : ""}`
@@ -672,7 +672,7 @@ export default class extends Controller {
     chart.querySelector(".cur")?.setAttribute("opacity", "0")
     chart.querySelectorAll(".dot").forEach((dot) => dot.setAttribute("opacity", "0"))
     chart.querySelectorAll(".mark").forEach((mark) => mark.classList.remove("fade"))
-    const say = chart.querySelector(".chart-note")
+    const say = chart.querySelector(".chart-caption")
     if (say) say.textContent = ""
   }
 }
