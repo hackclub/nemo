@@ -85,7 +85,10 @@ module Fd
 
     def shown(found)
       @names = Names.for(found.groups.flat_map { |group| named_in(group) })
-      @context = MemberContext.for(member_ids(found))
+      people = member_ids(found)
+      @context = MemberContext.for(people)
+      @priors = Case.prior_counts_for(people)
+      @open = Case.open_counts_for(people)
 
       found.groups.map do |group|
         { key: group.key, label: group.label, total: group.total,
@@ -175,9 +178,9 @@ module Fd
       parts << helpers.tenure_label(seen&.tenure_days)
       parts << "#{helpers.number_with_delimiter(seen.messages_posted)} messages" if
         seen&.messages_posted
-      priors = Case.prior_count(member.user_id, within: Case::PRIOR_WINDOW)
+      priors = @priors.fetch(member.user_id, 0)
       parts << helpers.pluralize(priors, "prior") if priors.positive?
-      open = Case.unresolved.with_subject(member.user_id).count
+      open = @open.fetch(member.user_id, 0)
       parts << "#{open} open" if open.positive?
       parts.compact.join(" · ")
     end

@@ -89,6 +89,15 @@ module Fd
         .distinct.count(:case_id)
     end
 
+    def self.open_counts_for(user_ids)
+      ids = user_ids.compact.uniq
+      return {} if ids.empty?
+
+      CaseParticipant.subjects.where(user_id: ids, case_id: unresolved.select(:id))
+        .group(:user_id)
+        .distinct.count(:case_id)
+    end
+
     ACTED = "action_taken".freeze
 
     def self.ending_tally
