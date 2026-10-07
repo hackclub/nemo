@@ -39,6 +39,10 @@ module Analytics
     MONTHS_OFFERED = 12
 
     def self.cohorts
+      WarehouseBuild.cached("newcomer_cohorts") { read_cohorts }
+    end
+
+    def self.read_cohorts
       distinct
         .order(:cohort_order, cohort_end: :desc)
         .pluck(:cohort_key, :cohort_order, :cohort_start, :cohort_end, :mature, :cohort_size)
@@ -49,10 +53,11 @@ module Analytics
         .group_by(&:default?)
         .then { |held| held.fetch(true, []) + held.fetch(false, []).first(MONTHS_OFFERED) }
     end
+    private_class_method :read_cohorts
 
-    def self.cohort(key)
+    def self.cohort(key, among: cohorts)
       asked = key.to_s
-      cohorts.find { |c| c.key == asked } || cohorts.find(&:default?) || cohorts.first
+      among.find { |c| c.key == asked } || among.find(&:default?) || among.first
     end
 
     def self.ranked(key, floor:, cohort: DEFAULT_COHORT, limit: 10)

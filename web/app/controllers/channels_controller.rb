@@ -74,7 +74,7 @@ class ChannelsController < ApplicationController
 
     @momentum = Analytics::MartChannelMomentum.top
     @newcomer_cohorts = Analytics::MartNewcomerChannels.cohorts
-    @newcomer_cohort = Analytics::MartNewcomerChannels.cohort(params[:newcomers])
+    @newcomer_cohort = Analytics::MartNewcomerChannels.cohort(params[:newcomers], among: @newcomer_cohorts)
     @opportunity = @newcomer_cohort && Channels::Map.opportunity(@newcomer_cohort)
     @momentum_head = @momentum.first
     @cohorts = Analytics::MartChannelBands.cohorts

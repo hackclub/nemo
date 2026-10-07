@@ -1,6 +1,8 @@
 require "test_helper"
 
 class FdSearchTest < ActionDispatch::IntegrationTest
+  include SeedsPipelineTables
+
   setup do
     @me = hold_role!("UME", "community_manager")
     sign_in_as(@me)
@@ -40,6 +42,19 @@ class FdSearchTest < ActionDispatch::IntegrationTest
     assert_equal "case #{kase.id}", row["title"]
     assert_match(/spam · open/, row["sub"])
     assert_equal fd_case_path(kase), row["url"]
+  end
+
+  test "a member row counts their priors and open cases" do
+    member!("U0PALETTE1", handle: "quorvexpalette")
+    acted = make_case(subject: "U0PALETTE1", opened_at: 20.days.ago, resolved_at: 10.days.ago,
+      resolution: "action_taken")
+    Fd::Action.create!(case_id: acted.id, type_key: "warning", target_user_id: "U0PALETTE1",
+      decided_by: "UFF1", performed_by: "UFF1")
+    make_case(subject: "U0PALETTE1", opened_at: 2.days.ago)
+
+    row = group("quorvexpalette", "member")["rows"].find { |one| one["id"] == "U0PALETTE1" }
+    assert_match(/1 prior/, row["sub"])
+    assert_match(/1 open/, row["sub"])
   end
 
   test "a note row quotes the words around the match and points at its case" do
