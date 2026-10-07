@@ -55,22 +55,37 @@ def member_posts(rows):
             if row[KIND] == "member" and row[AUTHOR] and row[SUBTYPE] != "channel_join"]
 
 
-def _upsert():
-    columns = ", ".join(FIELDS)
-    holders = ", ".join(["%s"] * len(FIELDS))
-    merged = {name: f"EXCLUDED.{name}" for name in ALWAYS}
-    merged.update({name: f"coalesce(EXCLUDED.{name}, archive.message.{name})"
-                   for name in KEPT_WHEN_ABSENT})
-    merged["settled"] = "archive.message.settled OR EXCLUDED.settled"
-    sets = ", ".join([f"{name} = {value}" for name, value in merged.items()]
-                     + ["updated_at = now()"])
-    before = ", ".join(f"archive.message.{name}" for name in merged)
+COLUMNS = (*FIELDS, "settled")
+
+
+def _merged(new, old):
+    merged = {name: new(name) for name in ALWAYS}
+    merged.update({name: f"coalesce({new(name)}, {old}.{name})" for name in KEPT_WHEN_ABSENT})
+    merged["settled"] = f"{old}.settled OR {new('settled')}"
+    return merged
+
+
+def _changes(new, old):
+    merged = _merged(new, old)
+    before = ", ".join(f"{old}.{name}" for name in merged)
     after = ", ".join(f"({value})" for value in merged.values())
+    return f"(NOT {old}.settled OR {new('settled')}) AND ({before}) IS DISTINCT FROM ({after})"
+
+
+def _upsert():
+    excluded = "EXCLUDED.{}".format
+    given = "%({})s".format
+    sets = ", ".join([f"{name} = {value}"
+                      for name, value in _merged(excluded, "archive.message").items()]
+                     + ["updated_at = now()"])
     return (
-        f"INSERT INTO archive.message ({columns}, settled) VALUES ({holders}, %s) "
+        f"INSERT INTO archive.message ({', '.join(COLUMNS)}) "
+        f"SELECT {', '.join(given(name) for name in COLUMNS)} "
+        f"WHERE NOT EXISTS (SELECT 1 FROM archive.message held "
+        f"WHERE held.channel_id = %(channel_id)s AND held.ts = %(ts)s "
+        f"AND ({_changes(given, 'held')}) IS NOT TRUE) "
         f"ON CONFLICT (channel_id, ts) DO UPDATE SET {sets} "
-        f"WHERE (NOT archive.message.settled OR EXCLUDED.settled) "
-        f"AND ({before}) IS DISTINCT FROM ({after})"
+        f"WHERE {_changes(excluded, 'archive.message')}"
     )
 
 
@@ -226,7 +241,7 @@ def record_many(conn, channel_id, entries, method, transport, settled, on_reject
         if envelopes:
             cur.executemany(ENVELOPE_SQL, envelopes)
         if messages:
-            cur.executemany(MESSAGE_SQL, messages)
+            cur.executemany(MESSAGE_SQL, [dict(zip(COLUMNS, row)) for row in messages])
             member_seen.posted(cur, member_posts(messages))
     return len(messages)
 
@@ -255,7 +270,7 @@ def record(conn, channel_id, ts, envelope, measured, method, transport, settled)
         if fresh:
             cur.execute(ENVELOPE_SQL,
                         (channel_id, ts, revision, Jsonb(envelope), payload_hash, method))
-        cur.execute(MESSAGE_SQL, (*built, settled))
+        cur.execute(MESSAGE_SQL, dict(zip(COLUMNS, (*built, settled))))
         member_seen.posted(cur, member_posts([built]))
     return True
 

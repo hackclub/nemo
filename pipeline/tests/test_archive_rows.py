@@ -1,3 +1,5 @@
+import re
+
 from lib import archive
 from lib.message import redact, normalize
 
@@ -59,3 +61,48 @@ def test_a_rejection_is_reported_so_the_caller_can_dead_letter_it():
     src = inspect.getsource(archive.record_many)
     assert "on_reject" in src
     assert src.count("refuse(") >= 3
+
+
+def test_an_unchanged_message_is_read_first_so_it_is_never_locked():
+    ahead, behind = archive.MESSAGE_SQL.split(" ON CONFLICT ", 1)
+
+    assert "WHERE NOT EXISTS (SELECT 1 FROM archive.message held" in ahead
+    for name in archive.COLUMNS[2:]:
+        assert f"held.{name}" in ahead, f"the read skips {name}, so a change to it would be lost"
+        assert f"archive.message.{name}" in behind
+
+
+def test_every_message_is_sent_with_the_names_the_statement_asks_for():
+    sent = []
+
+    class Conn:
+        def cursor(self):
+            return self
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def execute(self, sql, args=None):
+            if sql == archive.MESSAGE_SQL:
+                sent.append(args)
+            return self
+
+        def executemany(self, sql, rows):
+            if sql == archive.MESSAGE_SQL:
+                sent.extend(rows)
+
+        def fetchone(self):
+            return None
+
+        def fetchall(self):
+            return []
+
+    said = {"ts": "1700000000.000100", "user": "U1", "text": "hi"}
+    archive.from_api_many(Conn(), "C1", [said], "conversations.history", "history")
+    archive.from_api(Conn(), "C1", said, "conversations.history", "history")
+
+    asked = set(re.findall(r"%\((\w+)\)s", archive.MESSAGE_SQL))
+    assert [set(row) for row in sent] == [asked, asked]
