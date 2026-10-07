@@ -156,6 +156,13 @@ def member_activity_row(rec, start, end=None, source=ANALYTICS_SOURCE):
     )
 
 
+COUNTS = slice(4, 18)
+
+
+def idle(row):
+    return not any(row[COUNTS])
+
+
 def member_dim_row(rec, pull_date):
     return (
         rec["user_id"],
@@ -365,7 +372,8 @@ def pull_member_day(conn, pull_date):
         def flush():
             with conn.cursor() as cur:
                 set_statement_timeout(cur)
-                cur.executemany(MEMBER_ACTIVITY_SQL, activity_rows)
+                if activity_rows:
+                    cur.executemany(MEMBER_ACTIVITY_SQL, activity_rows)
                 cur.executemany(MEMBER_DIM_MERGE_SQL, by_key(dim_rows))
             conn.commit()
             activity_rows.clear()
@@ -380,7 +388,9 @@ def pull_member_day(conn, pull_date):
             )):
                 counts.rows_in += 1
                 try:
-                    activity_rows.append(member_activity_row(rec, pull_date))
+                    activity = member_activity_row(rec, pull_date)
+                    if not idle(activity):
+                        activity_rows.append(activity)
                     dim_rows.append(member_dim_row(rec, pull_date))
                 except KeyError as exc:
                     counts.rows_rejected += 1

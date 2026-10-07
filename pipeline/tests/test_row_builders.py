@@ -59,6 +59,24 @@ def test_member_activity_row_leaves_api_omitted_fields_null():
     assert row[10] is None
 
 
+def test_a_day_with_nothing_done_is_idle():
+    row = analytics_pull.member_activity_row(
+        {"user_id": "U1", "days_active": 0, "messages_posted": 0, "date_last_active": 1700000000},
+        PULL_DATE,
+    )
+    assert analytics_pull.idle(row)
+
+
+def test_any_one_count_keeps_the_day():
+    counted = ("days_active", "days_active_desktop", "days_active_android", "days_active_ios",
+               "days_active_slack_connect", "messages_posted", "messages_posted_in_channel",
+               "reactions_added", "files_added_count", "slack_huddles_count", "search_count",
+               "channels_joined_count")
+    for field in counted:
+        row = analytics_pull.member_activity_row({"user_id": "U1", field: 1}, PULL_DATE)
+        assert not analytics_pull.idle(row), f"{field} alone must keep the day"
+
+
 def test_member_dim_row_stamps_the_day_the_flags_came_from():
     row = analytics_pull.member_dim_row(
         {"user_id": "U1", "is_invited_member": True, "is_invited_guest": False}, PULL_DATE

@@ -116,7 +116,8 @@ models:
         data_tests: [not_null]
   - name: fct_member_activity
     description: >
-      One row per member per day, for days the member-day source has loaded.
+      One row per member per day they did something, for days the member-day
+      source has loaded; a loaded day with no row is a day the member did nothing.
       Grain (user_id, window_start): where a day carries both an API pull and an
       imported row, the API pull wins, so a later repull of an imported day
       replaces it rather than adding to it.
