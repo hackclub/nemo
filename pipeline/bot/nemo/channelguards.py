@@ -55,17 +55,35 @@ SELECT subject_id, label, added_by, added_at
 FROM fd.channel_guard_allows WHERE guard_id = %s ORDER BY added_at
 """
 
-TOLD_LATELY = """
-SELECT told_ts FROM fd.channel_guard_events
-WHERE guard_id = %s AND subject_id = %s AND told_until > now()
-ORDER BY at DESC LIMIT 1
+LOCK_NOTICE_THREAD = """
+SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))
+"""
+
+OPEN_NOTICE_THREAD = """
+SELECT id, parent_ts FROM fd.channel_guard_notice_threads
+WHERE guard_id = %s AND subject_id = %s
+  AND last_event_at > now() - %s AND opened_at > now() - %s
+ORDER BY last_event_at DESC LIMIT 1
+"""
+
+OPEN_NEW_NOTICE_THREAD = """
+INSERT INTO fd.channel_guard_notice_threads
+    (guard_id, subject_id, parent_ts, deleted_count, kicked_count)
+VALUES (%s, %s, %s, %s, %s)
+RETURNING id
+"""
+
+NOTED_EVENT = """
+UPDATE fd.channel_guard_notice_threads
+SET deleted_count = deleted_count + %s, kicked_count = kicked_count + %s, last_event_at = now()
+WHERE id = %s
+RETURNING deleted_count, kicked_count
 """
 
 HAPPENED = """
 INSERT INTO fd.channel_guard_events
-    (guard_id, channel_id, subject_id, bot_id, label, verb, text, message_ts, permalink,
-     app_id, told_ts, told_until)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    (guard_id, channel_id, subject_id, bot_id, label, verb, text, message_ts, permalink, app_id)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 RETURNING id
 """
 
@@ -175,19 +193,34 @@ def disallow(conn, guard_id, subject_id, by):
     return row[0]
 
 
-def last_notified_at(conn, guard_id, subject_id):
-    row = conn.execute(TOLD_LATELY, (guard_id, subject_id)).fetchone()
-    return row[0] if row else None
+def lock_notice_thread(conn, guard_id, subject_id):
+    conn.execute(LOCK_NOTICE_THREAD, (f"channel_guard_notice:{guard_id}:{subject_id}",))
+
+
+def open_notice_thread(conn, guard_id, subject_id, idle_timeout, max_age):
+    return conn.execute(
+        OPEN_NOTICE_THREAD, (guard_id, subject_id, idle_timeout, max_age),
+    ).fetchone()
+
+
+def open_new_notice_thread(conn, guard_id, subject_id, parent_ts, deleted, kicked):
+    return conn.execute(
+        OPEN_NEW_NOTICE_THREAD, (guard_id, subject_id, parent_ts, deleted, kicked),
+    ).fetchone()[0]
+
+
+def note_event(conn, thread_id, deleted, kicked):
+    return conn.execute(NOTED_EVENT, (deleted, kicked, thread_id)).fetchone()
 
 
 KEPT_WORDS = 8000
 
 
 def record_enforcement(conn, guard_id, channel_id, subject_id, verb, bot_id=None, label=None, text=None,
-             message_ts=None, permalink=None, app_id=None, told_ts=None, told_until=None):
+             message_ts=None, permalink=None, app_id=None):
     return conn.execute(
         HAPPENED,
         (guard_id, channel_id, subject_id, bot_id, label, verb,
          (text or None) and text[:KEPT_WORDS],
-         message_ts, permalink, app_id, told_ts, told_until),
+         message_ts, permalink, app_id),
     ).fetchone()[0]

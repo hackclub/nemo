@@ -10,7 +10,8 @@ from bot.nemo.surface import on_event
 log = logging.getLogger("bot.nemo")
 
 CARRIES = (None, "bot_message", "file_share", "thread_broadcast")
-TELL_AGAIN_AFTER = dt.timedelta(hours=1)
+NOTICE_IDLE_TIMEOUT = dt.timedelta(hours=1)
+NOTICE_MAX_AGE = dt.timedelta(hours=24)
 MARKETPLACE = "https://hackclub.slack.com/marketplace"
 QUOTE_LIMIT = 1200
 CUT = "\n[truncated]"
@@ -133,20 +134,57 @@ def permalink_for(client, channel_id, ts):
         return None
 
 
-def post_notice(client, conn, guard_id, subject_id, notice):
-    held = channelguards.last_notified_at(conn, guard_id, subject_id)
-    try:
-        sent = client.chat_postMessage(
-            channel=channel.internal_log_channel(conn), text=notice,
-            thread_ts=held, unfurl_links=False,
-        )
-    except Exception as failure:
-        log.warning("nemo: could not say what the guard did: %s", failure)
-        return None, None
+def plural(count, one, many):
+    return f"{count} {one if count == 1 else many}"
 
-    if held:
-        return held, dt.datetime.now(dt.UTC) + TELL_AGAIN_AFTER
-    return sent.get("ts"), dt.datetime.now(dt.UTC) + TELL_AGAIN_AFTER
+
+def summary(name, channel_id, deleted, kicked):
+    parts = [f"{name} is not on the allow list for <#{channel_id}>."]
+    if deleted:
+        parts.append(f"Deleted {plural(deleted, 'message', 'messages')}.")
+    if kicked:
+        parts.append(f"Removed from the channel {plural(kicked, 'time', 'times')}.")
+    return " ".join(parts)
+
+
+def post_notice(client, conn, guard_id, channel_id, subject_id, name, verb, detail):
+    deleted = 1 if verb == "deleted" else 0
+    kicked = 1 if verb == "kicked" else 0
+    log_channel = channel.internal_log_channel(conn)
+    channelguards.lock_notice_thread(conn, guard_id, subject_id)
+    thread = channelguards.open_notice_thread(conn, guard_id, subject_id,
+                                              NOTICE_IDLE_TIMEOUT, NOTICE_MAX_AGE)
+
+    if thread is None:
+        try:
+            sent = client.chat_postMessage(
+                channel=log_channel, text=summary(name, channel_id, deleted, kicked),
+                unfurl_links=False,
+            )
+        except Exception as failure:
+            log.warning("nemo: could not open a notice thread for guard %s: %s", guard_id, failure)
+            return None
+        parent_ts = sent.get("ts")
+        channelguards.open_new_notice_thread(conn, guard_id, subject_id, parent_ts, deleted, kicked)
+        totals = None
+    else:
+        thread_id, parent_ts = thread
+        totals = channelguards.note_event(conn, thread_id, deleted, kicked)
+
+    try:
+        client.chat_postMessage(channel=log_channel, text=detail, thread_ts=parent_ts,
+                                unfurl_links=False)
+    except Exception as failure:
+        log.warning("nemo: could not reply in notice thread %s: %s", parent_ts, failure)
+
+    if totals is not None:
+        try:
+            client.chat_update(channel=log_channel, ts=parent_ts,
+                               text=summary(name, channel_id, *totals))
+        except Exception as failure:
+            log.warning("nemo: could not update notice thread %s: %s", parent_ts, failure)
+
+    return parent_ts
 
 
 @on_event("message", open_to_all=True)
@@ -182,14 +220,14 @@ def posted(ctx):
     privileged.delete_message(channel_id, ts)
 
     with session() as conn:
-        notice = (f"Deleted a message from {naming(face_id, label, subject_id)}, "
+        name = naming(face_id, label, subject_id)
+        notice = (f"Deleted a message from {name}, "
                 f"which is not on the allow list for <#{channel_id}>."
                 + quoted(words) + footer(channel_id, link, app_id))
-        told_ts, told_until = post_notice(ctx.client, conn, guard_id, subject_id, notice)
+        post_notice(ctx.client, conn, guard_id, channel_id, subject_id, name, "deleted", notice)
         channelguards.record_enforcement(conn, guard_id, channel_id, subject_id, "deleted",
                                bot_id=bot_id, label=label, text=words, message_ts=ts,
-                               permalink=link, app_id=app_id,
-                               told_ts=told_ts, told_until=told_until)
+                               permalink=link, app_id=app_id)
 
     log.info("nemo: guard %s deleted %s from %s in %s", guard_id, ts, subject_id, channel_id)
     return guard_id
@@ -225,17 +263,17 @@ def joined(ctx):
     app_id = (found.get("profile") or {}).get("api_app_id")
     outcome = privileged.kick(channel_id, who)
 
+    verb = "kicked" if outcome == "kicked" else "let_past"
+
     with session() as conn:
         notice = (f"Put <@{who}> out of <#{channel_id}>, which is not on its "
                 f"allow list." if outcome == "kicked" else
                 f":warning: <@{who}> joined <#{channel_id}> off the allow list, and we "
                 f"could not put them out ({outcome}).") + footer(channel_id, app_id=app_id)
-        told_ts, told_until = post_notice(ctx.client, conn, guard_id, who, notice)
-        channelguards.record_enforcement(conn, guard_id, channel_id, who,
-                               "kicked" if outcome == "kicked" else "let_past",
+        post_notice(ctx.client, conn, guard_id, channel_id, who, f"<@{who}>", verb, notice)
+        channelguards.record_enforcement(conn, guard_id, channel_id, who, verb,
                                bot_id=(found.get("profile") or {}).get("bot_id"), label=label,
-                               app_id=app_id,
-                               told_ts=told_ts, told_until=told_until)
+                               app_id=app_id)
 
     log.info("nemo: guard %s met %s joining %s -> %s", guard_id, who, channel_id, outcome)
     return guard_id
