@@ -72,6 +72,31 @@ class Fd::MemberFinderTest < ActiveSupport::TestCase
     assert_operator ids.index("U0ZQ7Y4KD2"), :<, ids.index("U0ZQ7Y4KD1")
   end
 
+  test "words typed in order at the start of a name rank above the same words anywhere" do
+    named!("U0ZQ7Y4KD1", "Zorblax Quintrell")
+    named!("U0ZQ7Y4KD2", "Quintrell Zorblax")
+    make_case(subject: "U0ZQ7Y4KD2", opened_at: 2.days.ago)
+
+    assert_equal %w[U0ZQ7Y4KD1 U0ZQ7Y4KD2], found("zorblax q").ids
+  end
+
+  test "the words in order must sit inside one name, not run from the display name into the handle" do
+    named!("U0ZQ7Y4KD1", "Zorblax", handle: "quintrellz")
+    named!("U0ZQ7Y4KD2", "Zorblax Quintrell")
+    make_case(subject: "U0ZQ7Y4KD1", opened_at: 2.days.ago)
+
+    assert_equal %w[U0ZQ7Y4KD2 U0ZQ7Y4KD1], found("zorblax q").ids
+  end
+
+  test "words shorter than three letters are matched as typed, in that order" do
+    named!("U0ZQ7Y4KD1", "Al Bzorkani")
+    named!("U0ZQ7Y4KD2", "Bzork Alvin")
+    named!("U0ZQ7Y4KD3", "Achal Bzorkani")
+
+    assert_equal %w[U0ZQ7Y4KD1 U0ZQ7Y4KD3], found("al bz").ids
+    assert_equal %w[U0ZQ7Y4KD1 U0ZQ7Y4KD3], picked("al bz")
+  end
+
   test "a typo still finds them" do
     named!("U0ZQ7Y4KD1", "Zorblax Quintrell")
 

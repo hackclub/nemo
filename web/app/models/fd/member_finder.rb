@@ -11,11 +11,12 @@ module Fd
     NOTHING = "SELECT NULL::text AS user_id WHERE false".freeze
     SEEN_EXACT = 0
     HIDDEN_EXACT = 1
-    SEEN_START = 2
-    HIDDEN_START = 3
-    SEEN_WITHIN = 4
-    HIDDEN_WITHIN = 5
-    SPELLED_CLOSE = 6
+    SEEN_PHRASE = 2
+    SEEN_START = 3
+    HIDDEN_START = 4
+    SEEN_WITHIN = 5
+    HIDDEN_WITHIN = 6
+    SPELLED_CLOSE = 7
 
     Found = Struct.new(:ids, :total)
 
@@ -142,6 +143,8 @@ module Fd
           SELECT user_id, is_deleted, is_bot,
                  CASE WHEN :whole IN (shown, handle) THEN #{SEEN_EXACT}
                       #{"WHEN :whole IN (real_name, full_name, cachet) THEN #{HIDDEN_EXACT}" if @identity}
+                      WHEN (' ' || translate(shown, '._-@', '    ')) LIKE :phrase
+                        OR (' ' || translate(handle, '._-@', '    ')) LIKE :phrase THEN #{SEEN_PHRASE}
                       WHEN #{every_word("(' ' || seen_text) LIKE :start")} THEN #{SEEN_START}
                       WHEN #{every_word("(' ' || text) LIKE :start")} THEN #{HIDDEN_START}
                       WHEN #{every_word('seen_text LIKE :within')} THEN #{SEEN_WITHIN}
@@ -168,22 +171,31 @@ module Fd
       words.all? { |word| word.length < TRIGRAM }
     end
 
+    def leading?
+      short? && words.one?
+    end
+
+    def phrase?
+      short? && words.many?
+    end
+
     def fuzzy?
-      words.join(" ").length >= FUZZY_FROM
+      !phrase? && words.join(" ").length >= FUZZY_FROM
     end
 
     def keeps
-      held = [short? ? "place < #{SEEN_WITHIN}" : "place < #{SPELLED_CLOSE}"]
+      held = [leading? ? "place < #{SEEN_WITHIN}" : "place < #{SPELLED_CLOSE}"]
       held << "close >= :close_enough" if fuzzy?
       held.join(" OR ")
     end
 
     def binds
+      whole = words.join(" ")
       longest = words.max_by(&:length).to_s
-      held = { whole: words.join(" "), upper: words.first.to_s.upcase,
-               anchor: "%#{like(longest)}%", leading: "#{like(longest)}%",
-               word_leading: "% #{like(longest)}%", email: email, close_enough: CLOSE_ENOUGH,
-               lifetime: Analytics::MemberWindow::LIFETIME_SOURCE }
+      held = { whole: whole, upper: words.first.to_s.upcase,
+               anchor: "%#{like(phrase? ? whole : longest)}%", leading: "#{like(longest)}%",
+               word_leading: "% #{like(longest)}%", phrase: "% #{like(whole)}%", email: email,
+               close_enough: CLOSE_ENOUGH, lifetime: Analytics::MemberWindow::LIFETIME_SOURCE }
       words.each_with_index do |word, i|
         held[:"start#{i}"] = "% #{like(word)}%"
         held[:"within#{i}"] = "%#{like(word)}%"
@@ -220,8 +232,8 @@ module Fd
 
     def matching(fields)
       fields.map { |field|
-        if short?
-          "lower(#{field}) LIKE :leading OR (' ' || lower(#{field})) LIKE :word_leading"
+        if leading?
+          "lower(#{field}) LIKE :leading OR lower(#{field}) LIKE :word_leading"
         else
           "lower(#{field}) LIKE :anchor"
         end
