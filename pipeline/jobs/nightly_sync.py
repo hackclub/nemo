@@ -135,10 +135,6 @@ def dbt_outcomes(results):
     return failed, warned
 
 
-TABLES_ONLY = ("--select", "+config.materialized:table")
-OFF_THE_SPINE = TABLES_ONLY + ("--exclude", "fct_message+")
-
-
 GATE_TESTS = (
     "assert_claimed_counts_track_slack",
     "assert_recurrence_funnel_never_widens",

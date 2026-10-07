@@ -256,14 +256,16 @@ def test_the_reap_survives_a_database_that_refuses_it():
         assert nightly_sync.reap_orphaned_dbt(datetime.now(timezone.utc)) == 0
 
 
-def test_the_periodic_refresh_is_closed_under_its_dependencies():
-    from jobs import nightly_sync
+def test_dbt_builds_once_a_night_and_never_in_between():
+    import inspect
 
-    assert nightly_sync.TABLES_ONLY == ("--select", "+config.materialized:table"), (
-        "config.materialized:table selects the tables but not the views they read, so a view "
-        "the last run failed to build stays missing until a full nightly; the + pulls the "
-        "ancestors in and lets the refresh rebuild them"
+    from jobs import nightly_sync, sync_worker
+
+    assert "run_dbt" not in inspect.getsource(sync_worker), (
+        "community analytics may be a day old, and what Fire Engine reads from dbt is a view "
+        "or comes from the nightly pull, so a build between nights rewrites tables nobody waits on"
     )
+    assert nightly_sync.stages()[-1][0] == nightly_sync.TRANSFORM
 
 
 def test_every_dbt_build_takes_the_single_build_lock():
@@ -273,8 +275,8 @@ def test_every_dbt_build_takes_the_single_build_lock():
 
     src = inspect.getsource(nightly_sync.run_dbt)
     assert "with build_lock(wait_seconds=wait_seconds):" in src, (
-        "the nightly, the fifteen-minute refresh and the transform CLI all reach dbt through "
-        "run_dbt, so the lock belongs here or a hand-run build still races the scheduler"
+        "the nightly and the transform CLI both reach dbt through run_dbt, so the lock "
+        "belongs here or a hand-run build still races the scheduler"
     )
 
 
@@ -295,69 +297,3 @@ def test_the_reap_demands_a_floor_rather_than_defaulting_to_none():
 
     floor = inspect.signature(nightly_sync.reap_orphaned_dbt).parameters["before"]
     assert floor.default is inspect.Parameter.empty
-
-
-def test_a_refused_build_is_a_skip_for_the_refresh_not_a_failure():
-    import inspect
-
-    from jobs import sync_worker
-
-    src = inspect.getsource(sync_worker.refresh_marts)
-    assert "except AlreadyRunningError" in src
-    assert src.index("except AlreadyRunningError") < src.index("except Exception")
-
-
-def test_the_cheap_tier_leaves_the_spine_and_everything_under_it_alone():
-    from jobs import nightly_sync
-
-    assert nightly_sync.OFF_THE_SPINE == (
-        "--select", "+config.materialized:table", "--exclude", "fct_message+"
-    ), "24 models refresh without touching the 22 that queue behind a 54M-row scan"
-
-
-def test_the_spine_tier_runs_on_its_own_slower_clock():
-    import inspect
-
-    from jobs import sync_worker
-
-    src = inspect.getsource(sync_worker.refresh_marts)
-    assert "spine_interval()" in src and "transform_every()" in src
-    assert "OFF_THE_SPINE" in src and "TABLES_ONLY" in src
-    assert sync_worker.DEFAULT_SPINE_SECONDS > sync_worker.DEFAULT_TRANSFORM_SECONDS
-
-
-def test_the_first_pass_builds_on_a_freshly_booted_node():
-    from unittest import mock
-
-    from jobs import sync_worker
-
-    calls = []
-    with mock.patch.object(sync_worker.time, "monotonic", return_value=3.0), \
-         mock.patch.object(sync_worker, "run_dbt", lambda *a, **kw: calls.append(kw["select"])), \
-         mock.patch.object(sync_worker, "connect", mock.MagicMock()), \
-         mock.patch.object(sync_worker, "transform_every", return_value=900), \
-         mock.patch.object(sync_worker, "spine_interval", return_value=3600):
-        sync_worker.refresh_marts(sync_worker.NEVER, {"note": "idle"}, sync_worker.NEVER)
-
-    assert calls == [sync_worker.TABLES_ONLY], (
-        "monotonic() counts from boot, so a 0.0 baseline reads as 'ran at boot' and holds the "
-        "first build back until the node's uptime passes the interval"
-    )
-
-
-def test_the_two_tiers_keep_separate_clocks():
-    from unittest import mock
-
-    from jobs import sync_worker
-
-    calls = []
-    with mock.patch.object(sync_worker, "run_dbt", lambda *a, **kw: calls.append(kw["select"])), \
-         mock.patch.object(sync_worker, "connect", mock.MagicMock()), \
-         mock.patch.object(sync_worker, "transform_every", return_value=1), \
-         mock.patch.object(sync_worker, "spine_interval", return_value=10_000):
-        state = {"note": "idle"}
-        refreshed, spined = sync_worker.refresh_marts(sync_worker.NEVER, state, sync_worker.NEVER)
-        assert calls == [sync_worker.TABLES_ONLY], "the first pass has to build the spine once"
-        refreshed, spined = sync_worker.refresh_marts(sync_worker.NEVER, state, spined)
-        assert calls[-1] == sync_worker.OFF_THE_SPINE, "the spine is not due again yet"
-        assert state["note"] == "idle", "the worker's note has to come back"

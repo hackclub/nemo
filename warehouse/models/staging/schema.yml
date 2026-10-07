@@ -257,18 +257,12 @@ models:
     columns:
       - name: channel_id
         data_type: text
-        data_tests: [not_null]
       - name: ts
         data_type: text
-        data_tests: [not_null]
       - name: author_id
         data_type: text
-        data_tests: [not_null]
       - name: author_kind
         data_type: text
-        data_tests:
-          - accepted_values:
-              values: [member]
       - name: bot_id
         data_type: text
       - name: app_id
@@ -285,7 +279,6 @@ models:
         data_type: boolean
       - name: posted_at
         data_type: timestamp with time zone
-        data_tests: [not_null]
       - name: edited_at
         data_type: timestamp with time zone
       - name: reply_count

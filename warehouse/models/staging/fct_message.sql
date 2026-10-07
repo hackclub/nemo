@@ -1,14 +1,4 @@
-{{ config(
-    materialized='incremental',
-    unique_key=['channel_id', 'ts'],
-    incremental_strategy='delete+insert',
-    on_schema_change='fail',
-    indexes=[{'columns': ['channel_id', 'ts'], 'unique': True},
-             {'columns': ['posted_at']},
-             {'columns': ['channel_id', 'thread_root_ts']}]
-) }}
-
-{% set lookback_hours = 2 %}
+{{ config(materialized='view') }}
 
 select
     channel_id,
@@ -40,10 +30,3 @@ select
     settled,
     first_seen_at as observed_at
 from {{ source('archive', 'message') }}
-{% if is_incremental() %}
-where updated_at > (
-    select coalesce(max(observed_at), '-infinity'::timestamptz)
-         - interval '{{ lookback_hours }} hours'
-    from {{ this }}
-)
-{% endif %}

@@ -1,8 +1,4 @@
-{{ config(
-    materialized='table',
-    indexes=[{'columns': ['channel_id', 'ts'], 'unique': True},
-             {'columns': ['author_id', 'posted_at']}]
-) }}
+{{ config(materialized='view') }}
 
 select *
 from {{ ref('fct_message') }}

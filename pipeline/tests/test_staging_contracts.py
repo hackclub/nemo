@@ -245,12 +245,15 @@ def test_the_response_model_exposes_when_the_bot_replied_not_just_whether():
     )
 
 
-def test_the_spine_carries_the_indexes_the_response_model_joins_on():
-    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_message.sql").read_text()
-    assert "['channel_id', 'thread_root_ts']" in sql, (
+def test_the_archive_carries_the_indexes_the_response_model_joins_on():
+    sql = (MIGRATIONS_DIR / "0089_archive_schema.sql").read_text()
+    assert "archive.message (channel_id, thread_root_ts)" in sql, (
         "fct_first_response joins fct_message on (channel_id, thread_root_ts); without the "
         "index that is a sequential scan over every message in the workspace, on every "
-        "nightly run, and archive.message already carries the same index"
+        "nightly run"
+    )
+    assert "archive.message (channel_id, posted_at)" in sql, (
+        "the in-channel mention join walks one channel's hour after the first post"
     )
 
 
@@ -264,17 +267,14 @@ def test_the_response_model_is_incremental_with_a_lookback():
     )
 
 
-def test_the_message_spine_is_a_relation_not_a_view_over_the_archive():
-    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_message.sql").read_text()
-    assert "materialized='incremental'" in sql, (
-        "seven models read fct_message; as a view each one rescans the whole archive, "
-        "and every run has to CREATE OR REPLACE it behind whichever reader is still open"
-    )
-    assert "unique_key=['channel_id', 'ts']" in sql
-    assert "incremental_strategy='delete+insert'" in sql
-    assert "is_incremental()" in sql
-    assert "updated_at >" in sql, "the window must key off the archive's own change stamp"
-    assert "lookback_hours" in sql
+def test_the_message_spine_is_a_view_over_the_archive():
+    for name in ("fct_message", "fct_member_message"):
+        sql = (WAREHOUSE_DIR / "models" / "staging" / f"{name}.sql").read_text()
+        assert "materialized='view'" in sql, (
+            f"{name} as a table is a 21 GB second copy of the archive, rewritten on every "
+            "build and a day old between nightly builds; post pages read it and need it live"
+        )
+        assert "is_incremental()" not in sql
 
 
 def test_nothing_writes_a_deletion_the_spine_would_have_to_sweep():
@@ -305,9 +305,9 @@ def test_an_edit_wrapper_is_still_unwrapped():
     assert archive.body_of(envelope) == inner
 
 
-def test_the_archive_carries_the_index_the_incremental_leans_on():
+def test_the_archive_freshness_check_has_an_index_to_read():
     sql = (MIGRATIONS_DIR / "0095_archive_message_change_markers.sql").read_text()
-    assert "archive.message (updated_at)" in sql
+    assert "archive.message (updated_at)" in sql, "checks/archive.py reads max(updated_at)"
 
 
 def test_the_spine_proves_uniqueness_with_its_index_not_a_54m_row_group_by():
@@ -316,8 +316,8 @@ def test_the_spine_proves_uniqueness_with_its_index_not_a_54m_row_group_by():
         "the expression test cost 225.78s on fct_message and 191.22s on fct_member_message "
         "to re-prove what the unique index already guarantees"
     )
-    sql = (WAREHOUSE_DIR / "models" / "staging" / "fct_message.sql").read_text()
-    assert "'unique': True" in sql, "something has to enforce it, and the index is the cheap half"
+    sql = (MIGRATIONS_DIR / "0089_archive_schema.sql").read_text()
+    assert "PRIMARY KEY (channel_id, ts)" in sql, "something has to enforce it, and the archive does"
 
 
 
