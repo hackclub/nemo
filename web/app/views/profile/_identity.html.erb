@@ -16,8 +16,7 @@
       <% Profile::Summary::STREAK_BASES.each_key do |basis| %>
         <%= link_to basis, profile_path_with(profile, streak: (basis unless
               basis == Profile::Summary::DEFAULT_BASIS)),
-              class: ("is-on" if basis == profile.streak_basis),
-              title: Profile::Summary::STREAK_BASES[basis] %>
+              class: ("is-on" if basis == profile.streak_basis) %>
       <% end %>
     </span>
     <span class="metric-key">Streak</span>

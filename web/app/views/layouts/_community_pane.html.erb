@@ -4,7 +4,7 @@
   <div class="cnav">
     <p class="community-nav-label">Yours</p>
     <div class="community-nav-group">
-      <%= link_to profile_path, title: "Profile",
+      <%= link_to profile_path,
             aria: { current: ("page" if current_page?(profile_path)) } do %>
         <%= nav_icon("person") %><span class="trunc">Profile</span>
       <% end %>
@@ -13,7 +13,7 @@
     <% if may_community?("analytics.workspace.read") %>
       <p class="community-nav-label">The journey</p>
       <div class="community-nav-group">
-        <%= link_to community_path, title: "Overview",
+        <%= link_to community_path,
               aria: { current: ("page" if on_community_overview?) } do %>
           <%= nav_icon("overview") %><span class="trunc">Overview</span>
         <% end %>
@@ -29,7 +29,7 @@
       </div>
     <% else %>
       <div class="community-nav-group">
-        <%= link_to community_path, title: "Overview",
+        <%= link_to community_path,
               aria: { current: ("page" if on_community_overview?) } do %>
           <%= nav_icon("overview") %><span class="trunc">Overview</span>
         <% end %>
@@ -38,7 +38,7 @@
 
     <p class="community-nav-label">Places</p>
     <div class="community-nav-group">
-      <%= link_to channels_path, title: "Channels",
+      <%= link_to channels_path,
             aria: { current: ("page" if controller_name == "channels") } do %>
         <%= nav_icon("channels") %><span class="trunc">Channels</span>
       <% end %>
@@ -46,7 +46,7 @@
 
     <p class="community-nav-label">Mnemosyne</p>
     <div class="community-nav-group">
-      <%= link_to account_path, title: "Your account",
+      <%= link_to account_path,
             aria: { current: ("page" if current_page?(account_path)) } do %>
         <%= nav_icon("gear") %><span class="trunc">Your account</span>
       <% end %>

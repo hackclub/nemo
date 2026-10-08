@@ -4,7 +4,6 @@
 
   <% if local_assigns[:spark] && spark[:data].compact.many? %>
     <span class="metric-spark"
-          title="<%= local_assigns[:spark_title] %>"
           data-controller="chart"
           data-chart-kind-value="line"
           data-chart-spark-value="true"

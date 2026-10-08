@@ -23,24 +23,24 @@ module FdHelper
 
     if permalink.present?
       return link_to(channels[channel_id], permalink, class: "handle",
-        title: "open the message in Slack", target: "_blank", rel: "noopener")
+        target: "_blank", rel: "noopener")
     end
 
     link_to channels[channel_id], slack_channel_url(channel_id), class: "handle",
-      title: channel_id, target: "_blank", rel: "noopener"
+      target: "_blank", rel: "noopener"
   end
 
   def handle(user_id)
     return "nobody" if user_id.blank?
 
-    tag.button(person_name(user_id), type: "button", class: "handle", title: "copy #{user_id}",
+    tag.button(person_name(user_id), type: "button", class: "handle", aria: { label: "Copy #{user_id}" },
       data: { controller: "copy", copy_id_value: user_id, action: "click->copy#write" })
   end
 
   def member_link(user_id)
     return "n/a" if user_id.blank?
 
-    link_to person_name(user_id), fd_member_path(user_id), class: "lnk", title: user_id,
+    link_to person_name(user_id), fd_member_path(user_id), class: "lnk",
       data: { turbo_frame: "person-drawer" }
   end
 
@@ -156,7 +156,7 @@ module FdHelper
   end
 
   def mention_link(user_id)
-    link_to at_name(user_id), fd_member_path(user_id), class: "mention", title: user_id,
+    link_to at_name(user_id), fd_member_path(user_id), class: "mention",
       data: { turbo_frame: "person-drawer" }
   end
 
@@ -170,18 +170,18 @@ module FdHelper
 
     named = channels.named?(channel_id) ? channel_label(channel_id) : nil
     shown = named || (name.present? ? "##{name}" : channel_id)
-    return tag.span(shown, class: "mention", title: channel_id) unless may_open_channel?(channel_id)
+    return tag.span(shown, class: "mention") unless may_open_channel?(channel_id)
 
-    link_to shown, fd_channel_path(channel_id), class: "mention", title: channel_id,
+    link_to shown, fd_channel_path(channel_id), class: "mention",
       data: { turbo_frame: "_top" }
   end
 
   def dm_chip(channel_id)
-    tag.span(PRIVATE_DM_LABEL, class: "mention mention-private", title: channel_id)
+    tag.span(PRIVATE_DM_LABEL, class: "mention mention-private")
   end
 
   def private_channel_chip(channel_id)
-    tag.span(PRIVATE_CHANNEL_LABEL, class: "mention mention-private", title: channel_id)
+    tag.span(PRIVATE_CHANNEL_LABEL, class: "mention mention-private")
   end
 
   def may_open_channel?(channel_id)
@@ -238,11 +238,10 @@ module FdHelper
   PRIVATE_CHANNEL = "#private-channel".freeze
 
   def audit_channel(channel_id)
-    return tag.span(PRIVATE_CHANNEL, class: "sub2", title: channel_id) unless
+    return tag.span(PRIVATE_CHANNEL, class: "sub2") unless
       channels.named?(channel_id)
 
-    link_to channel_label(channel_id), channel_path(channel_id), class: "lnk",
-      title: channel_id
+    link_to channel_label(channel_id), channel_path(channel_id), class: "lnk"
   end
 
   def audit_where(row)
@@ -1009,7 +1008,7 @@ module FdHelper
 
     shown = ids.first(SUBJECTS_SHOWN)
     parts = shown.map { |id|
-      tag.span(class: "face-name", title: names[id]) {
+      tag.span(class: "face-name") {
         safe_join([slack_face(id), tag.span(member_link(id), class: "face-sub")])
       }
     }
@@ -1029,7 +1028,7 @@ module FdHelper
     return face(user_id, css: css) if user_id.blank?
 
     link_to slack_member_url(user_id), class: "face-link", target: "_blank",
-      rel: "noopener", title: "#{names[user_id]} in Slack" do
+      rel: "noopener", aria: { label: "#{names[user_id]} in Slack" } do
       face(user_id, css: css)
     end
   end
@@ -1110,7 +1109,7 @@ module FdHelper
 
   def anonymous_face(css: "row-avatar")
     image_tag(ANONYMOUS_FACE, class: css, alt: "", width: 22, height: 22,
-      loading: "lazy", title: "Anonymous")
+      loading: "lazy")
   end
 
   def row_reporter_face(kase)
@@ -1421,7 +1420,7 @@ module FdHelper
     button_to showing ? "yes" : "no",
       fd_flag_path(key: key, on: showing ? "0" : "1"),
       method: :patch, class: "switch #{showing ? 'yes' : 'no'}",
-      title: "#{showing ? 'turn off' : 'turn on'} #{Fd::Flag.label(key).downcase}",
+      aria: { label: "#{showing ? 'Turn off' : 'Turn on'} #{Fd::Flag.label(key).downcase}" },
       form: { class: "contents" }
   end
 

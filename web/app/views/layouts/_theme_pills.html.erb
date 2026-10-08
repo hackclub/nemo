@@ -3,7 +3,7 @@
     <% Appearance::THEMES.each do |theme| %>
       <button type="button" class="theme-pill" aria-pressed="false"
               data-theme-target="option" data-theme-key="<%= theme.key %>"
-              data-action="theme#pick" title="<%= theme.label %>"
+              data-action="theme#pick"
               aria-label="<%= theme.label %> theme">
         <%= theme_icon(theme.key) %>
       </button>
@@ -11,7 +11,7 @@
   </div>
   <button type="button" class="theme-accent" aria-pressed="false"
           data-theme-target="accent" data-action="theme#tint"
-          title="Orange" aria-label="Orange">
+          aria-label="Orange">
     <span aria-hidden="true"></span>
   </button>
 </div>

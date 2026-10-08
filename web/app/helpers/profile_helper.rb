@@ -1,6 +1,6 @@
 module ProfileHelper
   def format_number(value)
-    return tag.span("n/a", class: "sub2", title: "not tracked") if value.nil?
+    return tag.span("n/a", class: "sub2") if value.nil?
 
     number_with_delimiter(value)
   end

@@ -63,7 +63,7 @@ class Slack::RichTextTest < ActiveSupport::TestCase
   test "a member reads as a name when one is known, an id when not" do
     html = render([{ "type" => "user", "user_id" => "U1" }], names: { "U1" => "quinn" })
     assert_match(/@quinn/, html)
-    assert_match(/title="U1"/, html)
+    assert_no_match(/title=/, html)
 
     assert_match(/@U2/, render([{ "type" => "user", "user_id" => "U2" }]))
   end

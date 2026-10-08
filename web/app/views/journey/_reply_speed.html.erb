@@ -30,8 +30,7 @@
     <% rows.each do |r| %>
       <div class="ivrow<%= " is-thin" if r[:thin] %>">
         <span class="ivname"><%= r[:label].to_s.upcase_first %></span>
-        <span class="ivtrack"
-              title="<%= number_to_percentage(r[:rate], precision: 1) %>, 95% interval <%= number_to_percentage(r[:low], precision: 1) %> to <%= number_to_percentage(r[:high], precision: 1) %>, from <%= number_with_delimiter(r[:hits]) %> of <%= number_with_delimiter(r[:sample]) %>">
+        <span class="ivtrack">
           <i class="ivband"
              style="left: <%= (r[:low] / dom * 100).round(2) %>%; width: <%= ((r[:high] - r[:low]) / dom * 100).round(2) %>%"></i>
           <i class="ivdot" style="left: <%= (r[:rate] / dom * 100).round(2) %>%"></i>

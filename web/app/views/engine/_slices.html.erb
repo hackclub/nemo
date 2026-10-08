@@ -55,7 +55,8 @@
             <h2 class="card-title">Last <%= EngineController::SLICE_STRIP_DAYS %> days</h2>
           </div>
         </div>
-        <div class="covrows">
+        <div class="covrows" data-controller="chart-tooltip"
+             data-action="mouseover->chart-tooltip#show mouseleave->chart-tooltip#clear">
           <% day_strips.each do |key, days, missing, per_day, eta| %>
             <div class="covrow">
               <div class="covhead">
@@ -71,7 +72,7 @@
                 </span>
               </div>
               <div class="coverage">
-                <% days.each do |day, state| %><i class="<%= slice_cell(state) %>" title="<%= day %> <%= state %>"></i><% end %>
+                <% days.each do |day, state| %><i class="<%= slice_cell(state) %>" data-tip="<%= slice_tip(key, day, state) %>"></i><% end %>
               </div>
             </div>
           <% end %>

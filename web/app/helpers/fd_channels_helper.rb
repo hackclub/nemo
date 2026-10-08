@@ -50,7 +50,6 @@ module FdChannelsHelper
 
     button_to on ? "yes" : "no", fd_channel_guard_path(channel_id, kind),
       method: on ? :delete : :post, class: "switch #{on ? 'yes' : 'no'}",
-      title: on ? "turn it off" : "turn it on",
       aria: { label: on ? "turn it off" : "turn it on" },
       form: { class: "contents" }
   end
@@ -142,8 +141,7 @@ module FdChannelsHelper
   def bot_name_link(label, app_id)
     return label if app_id.blank?
 
-    link_to label, "#{MARKETPLACE}/#{app_id}", class: "botlink",
-      title: "open #{label} in the Slack marketplace", target: "_blank", rel: "noopener"
+    link_to label, "#{MARKETPLACE}/#{app_id}", class: "botlink", target: "_blank", rel: "noopener"
   end
 
   def guard_face(subject_id)

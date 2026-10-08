@@ -186,6 +186,10 @@
     stroke-width: 1.5;
   }
 
+  .tipped {
+    @apply relative;
+  }
+
   .tip {
     @apply pointer-events-none absolute z-70 hidden w-max max-w-72 min-w-[140px] gap-1.5 rounded-lg px-3 py-2.5 text-xs leading-none shadow-lg ring-1 ring-foreground/5 backdrop-blur-md;
     background: var(--chart-tip-bg);

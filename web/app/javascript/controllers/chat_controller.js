@@ -75,7 +75,7 @@ export default class extends Controller {
       : "internal"
     this.anonTarget.value = this.anonymous ? "1" : ""
     this.element.action = atReporter ? this.replyUrlValue : this.noteUrlValue
-    this.sendTarget.title = atReporter ? "Send to the reporter" : "Send to the team"
+    this.sendTarget.setAttribute("aria-label", atReporter ? "Send to the reporter" : "Send to the team")
   }
 
   pickingAMention() {

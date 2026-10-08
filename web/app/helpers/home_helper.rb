@@ -141,7 +141,7 @@ module HomeHelper
     reasons = reasons.compact
     return nil if reasons.empty?
 
-    tag.span("not complete", class: "chip chip-off", title: reasons.join("; "))
+    tag.span("Not complete", class: "chip chip-off")
   end
 
   def reply_wait(seconds)
@@ -179,8 +179,7 @@ module HomeHelper
     pct = share_pct(numerator, denominator)
     return tag.span("n/a", class: "sub2") if pct.nil?
 
-    tag.span(class: "two-line", title: "#{number_with_delimiter(numerator)} of " \
-      "#{number_with_delimiter(denominator)}") do
+    tag.span(class: "two-line") do
       concat tag.b(number_to_percentage(pct, precision: precision))
       concat tag.span("#{number_with_delimiter(numerator)}/#{number_with_delimiter(denominator)}")
     end
@@ -196,28 +195,26 @@ module HomeHelper
 
   def lifecycle_cell(row, stage, peak)
     value = row.public_send(stage[:key])
-    return heat_cell(row, stage, peak, lifecycle_reason(row, stage)) if value
+    return heat_cell(row, stage, peak) if value
 
     if lifecycle_open?(row, stage)
-      tag.span("Pending", class: "lg-cell lg-open",
-        title: "This window closes " \
-               "#{lifecycle_closes(row, stage).strftime('%-d %b %Y')}")
+      tag.span("Pending", class: "lg-cell lg-open")
     else
-      tag.span("n/a", class: "lg-cell lg-none", title: lifecycle_reason(row, stage))
+      tag.span("n/a", class: "lg-cell lg-none")
     end
   end
 
-  def heat_cell(row, stage, peak, title)
+  def heat_cell(row, stage, peak)
     value = row.public_send(stage[:key])
     shade = "lg-cell lg-h#{heat_step(value, peak)}"
 
     if stage[:prev] == :invited
       return tag.span(number_to_percentage(value.to_f * 100, precision: 1),
-        class: shade, title: title)
+        class: shade)
     end
 
     step = row.step_of(stage)
-    tag.span(class: "#{shade} lg-two", title: title) do
+    tag.span(class: "#{shade} lg-two") do
       concat tag.b(step ? number_to_percentage(step * 100, precision: 1) : "n/a")
       concat tag.span("#{number_to_percentage(value.to_f * 100, precision: 1)} of created")
     end
@@ -234,59 +231,6 @@ module HomeHelper
 
   def lifecycle_closes(row, stage)
     row.closes_on(stage[:key])
-  end
-
-  def lifecycle_reason(row, stage)
-    step = row.step_of(stage)
-    if step
-      before = row.public_send(stage[:prev])
-      here = row.public_send(stage[:num])
-      return "#{number_with_delimiter(here)} of #{number_with_delimiter(before)} from the stage " \
-             "before, #{number_with_delimiter(here)} of #{number_with_delimiter(row.invited)} " \
-             "created &middot; #{lifecycle_note(row, stage)}"
-    end
-
-    lifecycle_note(row, stage)
-  end
-
-  def lifecycle_note(row, stage)
-    case stage[:key]
-    when :signed_rate
-      claimed = if row.claim_rate_30d
-        ", #{number_to_percentage(row.claim_rate_30d.to_f * 100, precision: 1)} of them " \
-          "within 30 days"
-      end
-      "#{number_with_delimiter(row.claimed)} of #{number_with_delimiter(row.invited)} " \
-        "created accounts signed in#{claimed}"
-    when :posted_rate_30d
-      if row.searched.to_i.positive?
-        "#{number_with_delimiter(row.posted_30d)} of #{number_with_delimiter(row.invited)} " \
-          "created accounts posted inside their first 30 days. A floor: only " \
-          "#{number_with_delimiter(row.searched)} of the cohort has searched history, and a " \
-          "first post needs a searched timestamp to count"
-      else
-        "no searched message history for this cohort, so posting is unobservable"
-      end
-    when :funnel_30 then lifecycle_window_reason(row, 30, row.retained_30, row.cover_30)
-    when :funnel_90 then lifecycle_window_reason(row, 90, row.retained_90, row.cover_90)
-    end
-  end
-
-  def lifecycle_window_reason(row, day, retained, cover)
-    return "no first poster in this cohort is measurable at day #{day} yet" if cover.nil?
-
-    held = "#{number_to_percentage(cover * 100, precision: 0)} of the cohort's " \
-           "#{number_with_delimiter(row.first_posters)} first posters have a held day in the " \
-           "day-#{day} window"
-    if cover < Journey::Lifecycle::COVER_FLOOR
-      return "#{held}, under the " \
-             "#{number_to_percentage(Journey::Lifecycle::COVER_FLOOR * 100, precision: 0)} " \
-             "needed before a cohort share can be published"
-    end
-
-    "#{number_with_delimiter(retained)} of #{number_with_delimiter(row.invited)} created " \
-      "accounts posted in a public channel in the 8 days ending on day #{day} " \
-        "&middot; #{held}"
   end
 
   def band_split(value, bands, label)

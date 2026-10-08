@@ -89,9 +89,7 @@ module ChannelsHelper
 
   def channel_change_cell(channel)
     if channel.try(:prior_thin)
-      return tag.span("n/a", class: "sub2",
-        title: "the previous window held #{number_with_delimiter(channel.prior_messages)} " \
-               "member messages, under the floor of #{number_with_delimiter(channel.prior_floor)}")
+      return tag.span("n/a", class: "sub2")
     end
 
     change = channel.try(:range_change)
@@ -100,9 +98,7 @@ module ChannelsHelper
     change = change.to_f
     tone = change.positive? ? "delta-up" : change.negative? ? "delta-down" : "delta-share"
     tag.span("#{change.positive? ? '+' : ''}#{number_to_percentage(change, precision: 1)}",
-      class: tone,
-      title: "#{number_with_delimiter(channel.range_messages)} member messages against " \
-             "#{number_with_delimiter(channel.prior_messages)} in the window before")
+      class: tone)
   end
 
   def slack_window_label(range, from, to)

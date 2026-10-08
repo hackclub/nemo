@@ -31,7 +31,7 @@
                 <td class="mono"><%= incident.source_key %></td>
                 <td class="col-num"><%= incident.consecutive %></td>
                 <td><span class="chip <%= fault_class_chip(incident.error_class) %>"><%= incident.error_class || "n/a" %></span></td>
-                <td class="sub trunc-cell" title="<%= incident.error_detail %>"><%= incident.error_detail || "n/a" %></td>
+                <td class="sub"><%= incident.error_detail || "n/a" %></td>
                 <td class="col-num"><%= short_age(incident.last_seen) %></td>
                 <td class="col-btn">
                   <% if incident.muted %>
@@ -127,7 +127,7 @@
                 <td class="mono"><%= row.assertion %></td>
                 <td><span class="chip <%= row.status == "fail" ? "chip-crit" : "chip-warn" %>"><%= row.status %></span></td>
                 <td class="col-num"><%= row.observed %></td>
-                <td class="sub trunc-cell" title="<%= row.expected %>"><%= row.expected %></td>
+                <td class="sub"><%= row.expected %></td>
                 <td class="col-num"><%= short_age(row.checked_at) %></td>
               </tr>
             <% end %>

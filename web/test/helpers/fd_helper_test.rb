@@ -25,7 +25,7 @@ class FdHelperTest < ActionView::TestCase
 
     html = channel_mention("C0SECRET00")
 
-    assert_equal %(<span class="mention mention-private" title="C0SECRET00">#private-channel</span>),
+    assert_equal %(<span class="mention mention-private">#private-channel</span>),
       html
   end
 
@@ -41,7 +41,7 @@ class FdHelperTest < ActionView::TestCase
   test "a link shared from a dm never shows the raw channel id" do
     html = channel_mention("D0BQ793DP43")
 
-    assert_equal %(<span class="mention mention-private" title="D0BQ793DP43">private dm</span>),
+    assert_equal %(<span class="mention mention-private">private dm</span>),
       html
   end
 
@@ -193,7 +193,7 @@ class FdHelperTest < ActionView::TestCase
     assert_match(/a member reported it/, row_subtitle(Fd::Case.find(reported.id), {}))
 
     opened = make_case(subject: "UAAA", opened_by: "UOPEN")
-    assert_match(/@UOPEN opened it/, row_subtitle(Fd::Case.find(opened.id), {}))
+    assert_match(/@UOPEN opened it/, strip_tags(row_subtitle(Fd::Case.find(opened.id), {})))
   end
 
   test "a case with thread messages counts them in the subtitle" do

@@ -54,8 +54,7 @@
                     <td>
                       <%= audience_chip(kind) %>
                       <% if @activity.include?(channel.channel_id) %>
-                        <span class="chip chip-good"
-                              title="Authors may ask Nemo how their own post did">Activity</span>
+                        <span class="chip chip-good">Activity</span>
                       <% end %>
                     </td>
                     <td><%= named_faces(named, kind) %></td>

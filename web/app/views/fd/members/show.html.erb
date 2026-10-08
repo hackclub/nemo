@@ -64,7 +64,7 @@
       <dl class="fact-grid member-facts">
         <div class="fact">
           <dt>Slack ID</dt>
-          <dd class="mono fact-one" title="<%= @user_id %>"><%= @user_id %></dd>
+          <dd class="mono fact-one"><%= @user_id %></dd>
         </div>
         <div class="fact">
           <dt>Email</dt>
@@ -105,7 +105,7 @@
             <div class="lrow">
               <span class="evdot <%= kase.resolved? ? "good" : "crit" %>"><%= case_action_icon("shield") %></span>
               <span class="grow">
-                <b>#<%= kase.id %> <%= kase.category_key ? category_label(kase.category_key) : "No violation set" %></b>
+                <b>#<%= kase.id %><%= " #{category_label(kase.category_key)}" if kase.category_key.present? %></b>
                 <span class="sub short"><%= plain_text(case_first_report(kase)&.body.presence) .presence || (kase.resolved? ? "Resolved" : "Open case") %></span>
               </span>
               <span class="lrow-right"><%= link_to "Open", fd_case_path(kase), class: "btn btn-sm" %></span>

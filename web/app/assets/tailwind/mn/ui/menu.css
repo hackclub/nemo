@@ -113,4 +113,12 @@
   :is(.menu-pop .btn, .menu-pop > a, .menu-pop > button):is(:hover, :focus-visible) .menu-item-icon {
     @apply text-accent-foreground;
   }
+
+  .hint {
+    @apply pointer-events-none fixed z-100 w-max -translate-y-1/2 rounded-md bg-foreground px-3 py-1.5 text-xs text-background opacity-0 transition-opacity duration-100;
+  }
+
+  .hint.on {
+    @apply opacity-100;
+  }
 }

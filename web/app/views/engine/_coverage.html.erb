@@ -62,8 +62,7 @@
               <div class="covbar" role="img"
                    aria-label="<%= number_with_delimiter(row.loaded) %> of <%= number_with_delimiter(row.span) %> days held">
                 <% day_shares(row.never_fetched, row.unavailable, row.loaded).each do |state, count, width| %>
-                  <i class="<%= state %>" style="width: <%= width %>%"
-                     title="<%= number_with_delimiter(count) %> <%= EngineHelper::DAY_STATES.fetch(state) %>"></i>
+                  <i class="<%= state %>" style="width: <%= width %>%"></i>
                 <% end %>
               </div>
               <div class="cov-label">

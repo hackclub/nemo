@@ -7,7 +7,7 @@
         <% Journey::Lifecycle::STAGES.each do |stage| %>
           <span class="lg-head"><%= stage[:head].upcase_first %></span>
         <% end %>
-        <span class="lg-head lg-end" title="Median days from account creation to first public post">Median days</span>
+        <span class="lg-head lg-end">Median days</span>
 
         <% lifecycle.each do |row| %>
           <span class="lg-row">

@@ -46,7 +46,7 @@
             <div class="person-menu-item">
               <%= link_to fd_case_path(kase), class: "person-menu-case", data: { turbo_frame: "_top" } do %>
                 <span class="two-line">
-                  <b>#<%= kase.id %> <%= category_label(kase.category_key) %></b>
+                  <b>#<%= kase.id %><%= " #{category_label(kase.category_key)}" if kase.category_key.present? %></b>
                   <span><%= kase.subject_user_ids.include?(@user_id) ? "Subject" : "Named" %></span>
                 </span>
                 <span class="row-right"><%= case_status_chip(kase) %></span>

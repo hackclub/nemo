@@ -33,7 +33,7 @@
               <% end %>
               <% if cite.permalink.present? %>
                 <%= link_to cite.permalink, class: "cite-open", target: "_blank", rel: "noopener",
-                      title: "open it in Slack" do %>
+                      aria: { label: "Open it in Slack" } do %>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
                 <% end %>
               <% end %>
@@ -51,7 +51,7 @@
       <div class="msg-files">
         <% entry.files.each do |file| %>
           <% if file.image? %>
-            <%= link_to fd_file_path(file), class: "msg-shot", title: file.shown_name,
+            <%= link_to fd_file_path(file), class: "msg-shot",
                   data: { lightbox: file.shown_name } do %>
               <%= image_tag fd_file_path(file), alt: file.shown_name, decoding: "async",
                     width: file.original_w, height: file.original_h %>

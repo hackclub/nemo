@@ -73,6 +73,23 @@ module EngineHelper
     CELL_LABELS.fetch(cell, cell)
   end
 
+  CELL_TONES = { "ok" => "var(--success)", "part" => "var(--warning)", "stop" => "var(--warning)",
+                 "fail" => "var(--destructive)", "gone" => "var(--destructive)",
+                 "run" => "var(--primary)", "skip" => "var(--info)" }.freeze
+
+  def night_tip(name, day, cell)
+    { title: name, rows: [{ label: day ? day.strftime("%-d %b") : "n/a",
+                            value: cell_label(cell).to_s.upcase_first,
+                            tone: CELL_TONES.fetch(cell, "var(--muted-foreground)") }] }.to_json
+  end
+
+  SLICE_TONES = { "on" => "var(--success)", "sh" => "var(--warning)" }.freeze
+
+  def slice_tip(name, day, state)
+    { title: name, rows: [{ label: day.to_s, value: state.to_s.upcase_first,
+                            tone: SLICE_TONES.fetch(slice_cell(state), "var(--muted-foreground)") }] }.to_json
+  end
+
   SLICE_CELL = { "complete" => "on", "unverified" => "on", "superseded" => "on",
                  "unavailable" => "un", "short" => "sh", "claimed" => "sh",
                  "missing" => "no" }.freeze

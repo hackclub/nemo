@@ -3,11 +3,11 @@
 
   <div class="cnav">
     <div class="community-nav-group">
-      <%= link_to account_path, title: "Account",
+      <%= link_to account_path,
             aria: { current: ("page" if controller_path == "accounts") } do %>
         <%= nav_icon("person") %><span class="trunc">Account</span>
       <% end %>
-      <%= link_to settings_appearance_path, title: "Appearance",
+      <%= link_to settings_appearance_path,
             aria: { current: ("page" if controller_path == "settings/appearances") } do %>
         <%= nav_icon("overview") %><span class="trunc">Appearance</span>
       <% end %>
@@ -15,11 +15,11 @@
 
     <p class="community-nav-label">Public API</p>
     <div class="community-nav-group">
-      <%= link_to settings_keys_path, title: "API keys",
+      <%= link_to settings_keys_path,
             aria: { current: ("page" if controller_path == "settings/keys") } do %>
         <%= nav_icon("gear") %><span class="trunc">API keys</span>
       <% end %>
-      <%= link_to settings_permissions_path, title: "Permissions",
+      <%= link_to settings_permissions_path,
             aria: { current: ("page" if controller_path == "settings/permissions") } do %>
         <%= nav_icon("group") %><span class="trunc">Permissions</span>
       <% end %>
@@ -28,7 +28,7 @@
     <% if may_review_api? %>
       <p class="community-nav-label">Review</p>
       <div class="community-nav-group">
-        <%= link_to settings_requests_path, title: "Access requests",
+        <%= link_to settings_requests_path,
               aria: { current: ("page" if controller_path == "settings/requests") } do %>
           <%= nav_icon("news") %><span class="trunc">Access requests</span>
           <% if api_queue_waiting.positive? %>

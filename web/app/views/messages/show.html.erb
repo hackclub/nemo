@@ -164,8 +164,7 @@
                aria-label="<%= stats.clients.map { |label, count, _| "#{label} #{count}" }.join(", ") %>">
             <% stats.clients.each_with_index do |(label, count, share), i| %>
               <% next unless count.positive? %>
-              <span class="message-activity-part ma-part-<%= i + 1 %>" style="flex-grow: <%= count %>"
-                    title="<%= label %> <%= count %>"></span>
+              <span class="message-activity-part ma-part-<%= i + 1 %>" style="flex-grow: <%= count %>"></span>
             <% end %>
           </div>
           <dl class="message-activity-key">

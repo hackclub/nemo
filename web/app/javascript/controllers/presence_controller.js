@@ -40,7 +40,7 @@ export default class extends Controller {
       if (!me) others.push(who.dataset.name)
     })
     box.hidden = others.length === 0
-    box.title = this.sentence(others)
+    box.setAttribute("aria-label", this.sentence(others))
   }
 
   sentence(names) {

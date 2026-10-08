@@ -112,9 +112,9 @@ module Slack
       when "link" then linked(one)
       when "emoji" then emoji_for(one["name"])
       when "user" then user_mention(one["user_id"])
-      when "usergroup" then chip("@#{one['usergroup_id']}", one["usergroup_id"])
+      when "usergroup" then chip("@#{one['usergroup_id']}")
       when "channel" then channel_mention(one["channel_id"])
-      when "broadcast" then chip(BROADCASTS.fetch(one["range"], "@#{one['range']}"), one["range"])
+      when "broadcast" then chip(BROADCASTS.fetch(one["range"], "@#{one['range']}"))
       when "message_mention" then linked(one.merge("text" => one["text"].presence || "a message"))
       when "date" then dated(one)
       when "color" then tag.span(one["value"].to_s, class: "rt-colour")
@@ -163,26 +163,26 @@ module Slack
     def emoji_for(name)
       text = ":#{name}:"
       url = emoji[name].presence
-      return tag.span(text, class: "richtext-emoji", title: name) if url.nil?
+      return tag.span(text, class: "richtext-emoji") if url.nil?
 
-      tag.img(src: url, class: "richtext-emoji-img", alt: text, title: text, loading: "lazy",
+      tag.img(src: url, class: "richtext-emoji-img", alt: text, loading: "lazy",
         width: 20, height: 20)
     end
 
     def user_mention(user_id)
-      return chip(named(user_id), user_id) if @user_chip.nil?
+      return chip(named(user_id)) if @user_chip.nil?
 
       @user_chip.call(user_id)
     end
 
     def channel_mention(channel_id)
-      return chip(channel_ref(channel_id), channel_id) if @channel_chip.nil?
+      return chip(channel_ref(channel_id)) if @channel_chip.nil?
 
       @channel_chip.call(channel_id)
     end
 
-    def chip(text, title)
-      tag.span(text, class: "richtext-mention", title: title)
+    def chip(text)
+      tag.span(text, class: "richtext-mention")
     end
 
     def named(user_id)

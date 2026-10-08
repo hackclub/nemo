@@ -32,7 +32,7 @@
                       <% if silent && total.positive? %>
                         <% quiet = (silent.channels.to_f / total * 100).round(1) %>
                         &middot;
-                        <span title="<%= number_with_delimiter(silent.channels) %> of <%= number_with_delimiter(total) %> channels recorded zero in this month">
+                        <span>
                           <%= number_with_delimiter(silent.channels) %> at zero (<%= number_to_percentage(quiet, precision: 0) %>)
                         </span>
                       <% end %>

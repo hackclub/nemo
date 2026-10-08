@@ -29,7 +29,7 @@
         </div>
         <% if archive.beat %>
           <div class="card-tools">
-            <span title="<%= archive.beat.note %>"><%= worker_state(archive.beat) %></span>
+            <%= worker_state(archive.beat) %>
           </div>
         <% end %>
       </div>
@@ -290,7 +290,7 @@
                   <td class="col-num"><%= number_with_delimiter(row.messages_held.to_i) %></td>
                   <td class="col-num"><%= number_with_delimiter([row.threads_known - row.threads_fetched, 0].max) %></td>
                   <td class="col-num"><%= row.last_walked_at ? "#{short_age(row.last_walked_at)} ago" : "n/a" %></td>
-                  <td class="sub trunc-cell" title="<%= row.unreachable_reason %>">
+                  <td class="sub">
                     <%= row.unreachable_reason.presence || "Still queued" %>
                   </td>
                 </tr>

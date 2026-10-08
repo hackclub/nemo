@@ -15,7 +15,8 @@
     </div>
   </div>
 
-  <div class="scroll">
+  <div class="scroll" data-controller="chart-tooltip"
+       data-action="mouseover->chart-tooltip#show mouseleave->chart-tooltip#clear">
     <div class="srclist">
       <div class="source-head">
         <div>Source</div>
@@ -39,7 +40,7 @@
             class: "source-row", aria: { expanded: is_open.to_s } do %>
         <div class="stat-key"><i class="dot <%= state %>"></i><b><%= source.key %></b></div>
         <div class="src-cell"><%= Engine::Setting.value(source.key, Engine::Setting::CADENCE) %></div>
-        <div class="src-dim" title="<%= source.window %>"><%= source.window %></div>
+        <div class="src-dim"><%= source.window %></div>
         <div class="src-cell">
           <%= Engine::Setting.value(source.key, Engine::Setting::RETENTION) %>
           <% if source.prune_floor.present? %>
@@ -49,7 +50,7 @@
         <% shown_nights = nights.last(14) %>
         <div class="cells" role="group" aria-label="<%= source.key %>, the last 14 nights">
           <% cells.last(14).each_with_index do |cell, i| %><i class="<%= cell %>" role="img"
-             title="<%= shown_nights[i]&.strftime("%-d %b") %> &middot; <%= cell_label(cell) %>"
+             data-tip="<%= night_tip(source.key, shown_nights[i], cell) %>"
              aria-label="<%= shown_nights[i]&.strftime("%-d %b") %>, <%= cell_label(cell) %>"></i><% end %>
         </div>
         <div class="stat-value <%= "warn" if state == "stale" %>"><%= short_age(row.last_ok) %></div>

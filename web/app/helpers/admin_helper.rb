@@ -4,7 +4,7 @@ module AdminHelper
     label = "#{Authz.role_label(role)}: #{key}"
     why = Authz.locked?(key) ? "#{key} is FD only, it cannot be moved" : why_not("access.grant")
     if why
-      return tag.span(class: "switch", role: "switch", tabindex: "0", title: why,
+      return tag.span(class: "switch", role: "switch", tabindex: "0",
         aria: { checked: held.to_s, disabled: "true", label: label, description: why })
     end
 
@@ -50,8 +50,7 @@ module AdminHelper
   FACES_SHOWN = 4
 
   def audience_chip(kind)
-    tag.span(kind.to_s.upcase_first, class: AUDIENCE_TONE.fetch(kind, "chip chip-off"),
-      title: AUDIENCE_NOTE[kind])
+    tag.span(kind.to_s.upcase_first, class: AUDIENCE_TONE.fetch(kind, "chip chip-off"))
   end
 
   def named_faces(named, kind)

@@ -4,7 +4,7 @@
       <%= nav_icon(stop.icon) %>
       <span class="trunc"><%= stop.label %></span>
       <% if stop.tally.to_i.positive? %>
-        <span class="community-nav-tally" title="<%= pluralize(stop.tally, "case") %> nobody is holding">
+        <span class="community-nav-tally">
           <%= stop.tally > 99 ? "99+" : stop.tally %>
         </span>
       <% end %>

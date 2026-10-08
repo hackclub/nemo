@@ -1,5 +1,6 @@
 <% labels = EngineHelper::CELL_LABELS %>
-<div class="scroll matrix-scroll">
+<div class="scroll matrix-scroll" data-controller="chart-tooltip"
+     data-action="mouseover->chart-tooltip#show mouseleave->chart-tooltip#clear">
 <div class="nights-h">
   <div>Source</div>
   <div class="nights">
@@ -19,8 +20,7 @@
     </div>
     <div class="cells" role="group" aria-label="the nightly, the last <%= nights.size %> nights">
       <% nightly.each_with_index do |cell, i| %>
-        <i class="<%= cell %>" tabindex="0" role="img"
-           title="<%= nights[i].strftime("%-d %b") %> &middot; <%= labels[cell] %>"
+        <i class="<%= cell %>" tabindex="0" role="img" data-tip="<%= night_tip("The nightly", nights[i], cell) %>"
            aria-label="<%= nights[i].strftime("%-d %b") %>, <%= labels[cell] %>"></i>
       <% end %>
     </div>
@@ -38,8 +38,7 @@
     </div>
     <div class="cells" role="group" aria-label="<%= source.key %>, the last <%= nights.size %> nights">
       <% cells.each_with_index do |cell, i| %>
-        <i class="<%= cell %>" tabindex="0" role="img"
-           title="<%= nights[i].strftime("%-d %b") %> &middot; <%= labels[cell] %>"
+        <i class="<%= cell %>" tabindex="0" role="img" data-tip="<%= night_tip(source.key, nights[i], cell) %>"
            aria-label="<%= nights[i].strftime("%-d %b") %>, <%= labels[cell] %>"></i>
       <% end %>
     </div>
