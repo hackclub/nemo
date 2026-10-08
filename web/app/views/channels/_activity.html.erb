@@ -6,10 +6,10 @@
       <p class="card-sub"><%= slack_window_label(range, start_date, end_date) %></p>
       </div>
     </div>
-    <dl class="facts-strip facts-wrap">
-      <% [["unique viewers", "unique_viewers"], ["unique reactors", "unique_reactors"],
-          ["huddles", "huddles_count"], ["unique posters", "unique_posters"],
-          ["messages", "messages_count"], ["reactions", "reactions_count"]].each do |label, key| %>
+    <dl class="fact-grid fact-grid-3">
+      <% [["Unique viewers", "unique_viewers"], ["Unique reactors", "unique_reactors"],
+          ["Huddles", "huddles_count"], ["Unique posters", "unique_posters"],
+          ["Messages", "messages_count"], ["Reactions", "reactions_count"]].each do |label, key| %>
         <div class="fact">
           <dt><%= label %></dt>
           <dd><%= number_with_delimiter(range.stats[key] || 0) %></dd>
@@ -18,7 +18,8 @@
     </dl>
   </div>
 <% else %>
-  <div class="lede">
+  <div class="lede lede-warn" role="status">
+    <%= lede_icon(:warn) %>
     <span class="lede-note">
       <b>Slack analytics unavailable</b>
       <span>
@@ -84,7 +85,7 @@
       }.to_json %>"
     ></div>
   <% else %>
-    <p class="card-note">no message landed in this range</p>
+    <div class="empty"><p class="empty-title">Nothing in this range</p></div>
   <% end %>
 </div>
 

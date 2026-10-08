@@ -42,14 +42,6 @@
       <span><i class="funnel-c"></i>came back on a later day</span>
     </div>
   <% else %>
-    <p class="card-note">
-      <% if newcomer_reach %>
-        No channel has reached <%= HomeHelper::MIN_SAMPLE %> newcomer first posts &middot;
-        <%= number_with_delimiter(newcomer_reach.searched_of_cohort) %> of
-        <%= number_with_delimiter(newcomer_reach.cohort_size) %> searched
-      <% else %>
-        No newcomer walked yet
-      <% end %>
-    </p>
+    <div class="empty"><p class="empty-title">Not enough newcomers yet</p></div>
   <% end %>
 </div>

@@ -34,7 +34,7 @@
     .cardbar:not(:has(.pill)) { flex-wrap: nowrap; }
     .cardbar > .queue-search { flex: 1 1 120px; min-width: 0; max-width: none; }
     .cardbar > .toolbar-end { margin-left: auto; width: auto; flex: none; }
-    .metric { --metric-head: 32px; --metric-pad: var(--p-ctl); }
+    .metric, .profile-who { @apply p-4; }
     .metric-spark { display: none; }
     .facts-strip > div, .facts-strip > .fact { flex-basis: 50%; }
     .section-head { flex-wrap: wrap; }

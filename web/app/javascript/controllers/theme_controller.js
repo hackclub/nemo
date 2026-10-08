@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["option", "accent", "name", "swatch"]
+  static targets = ["option", "accent", "name"]
 
   connect() {
     this.onTheme = () => this.render()
@@ -64,13 +64,8 @@ export default class extends Controller {
     if (!option) return
 
     if (this.hasNameTarget) {
-      const label = option.querySelector(".theme-name")?.textContent
+      const label = option.querySelector(".theme-label")?.textContent
       this.nameTarget.textContent = pinned ? label : `${label}, auto`
-    }
-    if (this.hasSwatchTarget) {
-      const chip = option.querySelector(".theme-chip")
-      this.swatchTarget.style.setProperty("--chip",
-        chip ? chip.style.getPropertyValue("--chip") : "")
     }
   }
 }

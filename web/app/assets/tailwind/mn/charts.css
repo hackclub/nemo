@@ -79,8 +79,8 @@
   .tree.parts {
     --parts-ink: var(--card);
   }
-  .card > .tree.parts, .card > [data-controller~="parts"] { padding: 0 var(--s-sm); }
-  .card > .parts-key { padding-top: var(--s-xs); }
+  .card > .tree.parts, .card > [data-controller~="parts"] { @apply px-4 pt-3; }
+  .card > .parts-key { @apply mb-0 px-4 pt-3 pb-4; }
   .tree.parts .part-0, .parts-key .part-0 { fill: var(--series-0); background: var(--series-0); }
   .tree.parts .part-1, .parts-key .part-1 { fill: var(--series-1); background: var(--series-1); }
   .tree.parts .part-2, .parts-key .part-2 { fill: var(--series-2); background: var(--series-2); }
@@ -114,155 +114,54 @@
 
   .card:has(> .facets) { container-type: inline-size; }
   .facets {
-    display: grid;
+    @apply grid gap-6 px-4 pt-3 pb-4;
     grid-template-columns: repeat(var(--facets, 3), minmax(0, 1fr));
-    gap: var(--s-sm);
-    padding: var(--s-xs);
   }
   @container (max-width: 700px) {
     .facets { --facets: 1; }
   }
-  .facet {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0;
-  }
-  .facet-name {
-    color: var(--ink);
-    font-size: var(--t-small);
-    font-weight: 600;
-  }
-  .facet-zero {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    color: var(--ink-3);
-    font-size: var(--t-fine);
-  }
-  .facet-zero b {
-    color: var(--ink);
-    font-variant-numeric: tabular-nums;
-    font-size: var(--t-mid);
-    font-weight: 600;
-  }
-  .facet-share {
-    margin-left: auto;
-    color: var(--warn);
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-  }
+  .facet { @apply flex min-w-0 flex-col gap-3; }
+  .facet-head { @apply flex min-w-0 flex-col gap-0.5; }
+  .facet-name { @apply text-sm font-medium text-foreground; }
+  .facet-zero { @apply text-xs text-muted-foreground tabular-nums; }
 
-  .ivrows {
-    display: flex;
-    flex-direction: column;
-    padding: var(--s-2xs) var(--s-xs);
-  }
+  .ivrows { @apply flex flex-col text-sm; }
   .ivrow {
-    display: flex;
-    align-items: center;
-    gap: var(--s-xs);
-    padding: 6px 0;
-    border-top: 1px solid var(--line-soft);
+    @apply flex items-center gap-4 border-b border-border px-4 py-3 last:border-b-0;
   }
-  .ivrow:first-child {
-    border-top: 0;
-  }
-  .ivrow.is-thin {
-    opacity: 0.55;
-  }
-  .ivscale {
-    padding-bottom: 12px;
-  }
-  .ivhead {
-    flex: 0 0 auto;
-    color: var(--ink-3);
-    font-size: 0.6875rem;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-  }
-  .ivhead-end {
-    margin-left: auto;
-    text-align: right;
-  }
-  .ivname {
-    flex: 0 0 128px;
-    overflow: hidden;
-    color: var(--ink-2);
-    font-size: var(--t-small);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .ivtrack {
-    position: relative;
-    flex: 1 1 auto;
-    height: 16px;
-  }
-  .ivticks {
-    height: auto;
-  }
+  .ivrow.is-thin { @apply opacity-55; }
+  .ivscale { @apply h-10 py-0; }
+  .ivhead { @apply w-32 flex-none font-medium whitespace-nowrap text-foreground; }
+  .ivhead-end { @apply ml-auto w-28 text-right; }
+  .ivname { @apply w-32 flex-none truncate text-foreground; }
+  .ivtrack { @apply relative h-4 flex-auto; }
+  .ivticks { @apply h-auto; }
   .ivticks i {
-    position: absolute;
-    top: 0;
-    translate: -50% 0;
-    color: var(--ink-4);
-    font-variant-numeric: tabular-nums;
-    font-size: 0.6875rem;
-    font-style: normal;
+    @apply absolute top-0 -translate-x-1/2 text-xs font-normal text-muted-foreground not-italic tabular-nums;
   }
-  .ivticks i[data-edge="start"] {
-    translate: 0 0;
-  }
-  .ivticks i[data-edge="end"] {
-    translate: -100% 0;
-  }
+  .ivticks i[data-edge="start"] { @apply translate-x-0; }
+  .ivticks i[data-edge="end"] { @apply -translate-x-full; }
   .ivband {
-    position: absolute;
-    top: 6px;
-    height: 4px;
-    border-radius: 2px;
-    background: color-mix(in oklab, var(--series-2) 32%, transparent);
+    @apply absolute top-1 h-2 rounded-full;
+    background: color-mix(in oklab, var(--series-2) 30%, transparent);
   }
   .ivdot {
-    position: absolute;
-    top: 2px;
-    width: 8px;
-    height: 8px;
-    translate: -50% 0;
-    border-radius: 50%;
+    @apply absolute top-0.5 size-3 -translate-x-1/2 rounded-full ring-2 ring-card;
     background: var(--series-2);
-    box-shadow: 0 0 0 2px var(--card);
   }
-  .ivval {
-    flex: 0 0 auto;
-    min-width: 84px;
-    color: var(--ink);
-    font-variant-numeric: tabular-nums;
-    font-size: var(--t-small);
-    text-align: right;
-  }
-  .ivval span {
-    margin-left: 4px;
-    color: var(--ink-4);
-    font-size: var(--t-fine);
-  }
+  .ivval { @apply w-28 flex-none text-right font-medium text-foreground tabular-nums; }
+  .ivval b { @apply font-medium; }
+  .ivval span { @apply ml-1.5 text-xs font-normal text-muted-foreground; }
   .iv-key-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+    @apply inline-block size-2.5 rounded-full;
     background: var(--series-2);
-    box-shadow: 0 0 0 2px var(--card);
   }
   .iv-key-band {
-    display: inline-block;
-    width: 14px;
-    height: 4px;
-    border-radius: 2px;
-    background: color-mix(in oklab, var(--series-2) 32%, transparent);
+    @apply inline-block h-2 w-3.5 rounded-full;
+    background: color-mix(in oklab, var(--series-2) 30%, transparent);
   }
 
-  .calwrap { position: relative; padding: 0 var(--s-sm) var(--s-sm); }
+  .calwrap { @apply relative px-4 pt-4 pb-4; }
   .cal {
     display: grid;
     grid-template-columns: 38px repeat(var(--cal-weeks, 53), minmax(0, 1fr));
@@ -277,8 +176,8 @@
     font-size: 0.6875rem;
     font-weight: 500;
     line-height: 1;
-    padding-bottom: 7px;
-    color: var(--ink-4);
+    padding-bottom: 8px;
+    color: var(--muted-foreground);
   }
   .cal-day {
     grid-column: 1;
@@ -354,8 +253,7 @@
     padding-top: 6px;
   }
   .clockwrap {
-    position: relative;
-    padding: 0 var(--s-sm);
+    @apply relative px-4 pt-4 pb-1;
   }
   .clock {
     width: 100%;
@@ -370,7 +268,7 @@
     font-variant-numeric: tabular-nums;
     font-weight: 500;
     text-align: center;
-    padding-bottom: 4px;
+    padding-bottom: 6px;
   }
   .clock thead td:first-child { width: 44px; }
   .clock-day {

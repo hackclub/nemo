@@ -9,6 +9,7 @@
             <div class="card-head">
               <div>
                 <h2 class="card-title">Channels activity</h2>
+                <p class="card-sub"><%= window_note(@band_rows.first.window_start, @band_rows.first.window_end) %></p>
               </div>
               <% if @cohorts.many? %>
                 <%= render "shared/picker", label: "activity month",
@@ -24,16 +25,19 @@
                 <% busy = rows.reject { |r| r.band_order.zero? } %>
                 <% total = rows.sum(&:channels) %>
                 <div class="facet">
-                  <p class="facet-name"><%= band_title(rows.first) %></p>
-                  <% if silent && total.positive? %>
-                    <% quiet = (silent.channels.to_f / total * 100).round(1) %>
-                    <p class="facet-zero"
-                       title="<%= number_with_delimiter(silent.channels) %> of <%= number_with_delimiter(total) %> channels recorded zero in this month">
-                      <b><%= number_with_delimiter(silent.channels) %></b>
-                      <span>at zero</span>
-                      <span class="facet-share"><%= number_to_percentage(quiet, precision: 0) %></span>
+                  <div class="facet-head">
+                    <p class="facet-name"><%= band_title(rows.first) %></p>
+                    <p class="facet-zero">
+                      <%= number_with_delimiter(rows.first.measure_total) %> in total
+                      <% if silent && total.positive? %>
+                        <% quiet = (silent.channels.to_f / total * 100).round(1) %>
+                        &middot;
+                        <span title="<%= number_with_delimiter(silent.channels) %> of <%= number_with_delimiter(total) %> channels recorded zero in this month">
+                          <%= number_with_delimiter(silent.channels) %> at zero (<%= number_to_percentage(quiet, precision: 0) %>)
+                        </span>
+                      <% end %>
                     </p>
-                  <% end %>
+                  </div>
                   <div
                     data-controller="chart"
                     data-chart-kind-value="bars"
@@ -46,7 +50,6 @@
                 </div>
               <% end %>
             </div>
-          <p class="chart-note"><%= window_note(@band_rows.first.window_start, @band_rows.first.window_end) %></p>
           </div>
         </turbo-frame>
       <% end %>

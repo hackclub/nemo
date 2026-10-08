@@ -37,7 +37,7 @@
           datasets: bands.map do |band|
             {
               label: band[:label],
-              color: band[:tone] ? "color-mix(in oklab, var(--series-1) #{band[:tone]}%, var(--card))" : "var(--series-0)",
+              color: band[:tone] ? "color-mix(in oklab, var(--series-1) #{band[:tone]}%, var(--card))" : "var(--series-rest)",
               data: recurrence.map { |f| share_pct(band[:count].call(f), f.searched) },
               counts: recurrence.map { |f| band[:count].call(f) }
             }
@@ -46,6 +46,6 @@
       ></div>
     </div>
   <% else %>
-    <p class="card-note">No cohort searched yet.</p>
+    <div class="empty"><p class="empty-title">No cohorts yet</p></div>
   <% end %>
 </div>

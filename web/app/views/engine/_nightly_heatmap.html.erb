@@ -15,7 +15,7 @@
   <div class="srow">
     <div class="stat-key">
       <i class="dot <%= nightly.last == "run" ? "run" : (nightly.last(2).include?("ok") ? "live" : "stale") %>"></i>
-      <b>the nightly</b>
+      <b>The nightly</b>
     </div>
     <div class="cells" role="group" aria-label="the nightly, the last <%= nights.size %> nights">
       <% nightly.each_with_index do |cell, i| %>

@@ -4,14 +4,6 @@ module ApplicationHelper
       class: css, target: "_blank", rel: "noopener"
   end
 
-  def theme_swatch_blend(swatch)
-    stops = swatch.each_with_index.map do |colour, i|
-      at = swatch.size < 2 ? 50 : (i * 100.0 / (swatch.size - 1)).round
-      "#{colour} #{at}%"
-    end
-    "linear-gradient(115deg, #{stops.join(', ')})"
-  end
-
   def open_case_count
     @open_case_count ||= Fd::Case.unresolved.count
   end
@@ -135,6 +127,20 @@ module ApplicationHelper
       radius = THEME_DISC[key]
       concat tag.circle(cx: 12, cy: 12, r: radius) if radius
       THEME_ICONS.fetch(key, []).each { |d| concat tag.path(d: d) }
+    end
+  end
+
+  LEDE_ICONS = {
+    info: ["M12 16v-4", "M12 8h.01"],
+    warn: ["M12 8v4", "M12 16h.01"]
+  }.freeze
+
+  def lede_icon(kind = :info)
+    tag.svg(class: "lede-icon", width: 16, height: 16, viewBox: "0 0 24 24", fill: "none",
+      stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round",
+      "stroke-linejoin": "round", "aria-hidden": "true") do
+      concat tag.circle(cx: 12, cy: 12, r: 10)
+      LEDE_ICONS.fetch(kind).each { |d| concat tag.path(d: d) }
     end
   end
 

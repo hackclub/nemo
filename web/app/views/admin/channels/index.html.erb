@@ -20,7 +20,7 @@
       <h2 class="section-title"><%= @q.present? ? "Matching" : "Directory" %></h2>
       <p class="section-note">
         <% if @q.present? %>
-          every channel matching &ldquo;<%= @q %>&rdquo;
+          Every channel matching &ldquo;<%= @q %>&rdquo;
         <% else %>
           <%= number_with_delimiter(@total) %> channels &middot; <%= number_with_delimiter(@open) %> public
         <% end %>
@@ -34,7 +34,7 @@
             <thead>
               <tr>
                 <th>Channel</th><th>Audience</th><th>Who</th>
-                <th>Last active</th><th class="col-btn"></th>
+                <th>Last active</th><th class="col-btn"><span class="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
@@ -55,11 +55,11 @@
                       <%= audience_chip(kind) %>
                       <% if @activity.include?(channel.channel_id) %>
                         <span class="chip chip-good"
-                              title="authors may ask nemo how their own post did">activity</span>
+                              title="Authors may ask Nemo how their own post did">Activity</span>
                       <% end %>
                     </td>
                     <td><%= named_faces(named, kind) %></td>
-                    <td><%= ago_label(channel.last_active_at, none: "never") %></td>
+                    <td class="<%= "sub" unless channel.last_active_at %>"><%= ago_label(channel.last_active_at, none: "Never") %></td>
                     <td class="col-btn">
                       <%= render "admin/channels/row_menu", channel: channel, kind: kind,
                             named: named %>

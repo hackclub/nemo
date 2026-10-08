@@ -6,7 +6,7 @@
     <div>
       <h2 class="section-title">Top posters<%= ", #{first_poster.month.strftime("%B %Y")}" if first_poster %></h2>
       <% if first_poster && first_poster.days_in_window < full_days %>
-        <p class="section-note">month in progress</p>
+        <p class="section-note">Month in progress</p>
       <% end %>
     </div>
     <% if top_poster_months.many? %>

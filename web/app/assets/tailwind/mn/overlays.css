@@ -137,9 +137,7 @@
     width: min(var(--drawer-w), 100vw);
     display: flex;
     flex-direction: column;
-    border-left: 1px solid var(--line);
-    background: var(--card);
-    box-shadow: var(--shadow-2);
+    @apply border-l border-border bg-background shadow-2xl;
     overflow: hidden;
   }
   .person-drawer-frame[aria-busy="true"]:empty, .person-drawer-frame[busy]:empty { display: none; }

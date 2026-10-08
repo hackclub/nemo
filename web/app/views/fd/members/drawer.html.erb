@@ -1,76 +1,83 @@
 <turbo-frame id="person-drawer" data-controller="person-drawer">
   <div class="person-modal" role="dialog" aria-label="<%= names[@user_id] %>">
     <div class="person-menu-head">
-      <b><%= person_name(@user_id) %></b>
-      <button type="button" class="person-menu-x" aria-label="Close"
-              data-action="click->person-drawer#close">&#10005;</button>
+      <%= face(@user_id, css: "avatar person-menu-face") %>
+      <span class="person-menu-who">
+        <b><%= person_name(@user_id) %></b>
+        <span>
+          <%= @context&.cohort_at ? "Here since #{on_day(@context.cohort_at)}" : "Join date unknown" %>
+          <% if @context&.messages_posted %>
+            &middot; <%= number_with_delimiter(@context.messages_posted) %> messages
+          <% end %>
+          <% if @rooms.any? %>
+            &middot; <%= pluralize(number_with_delimiter(@rooms.size), "channel") %>
+          <% end %>
+        </span>
+      </span>
+      <button type="button" class="btn btn-ghost btn-only btn-sm person-menu-x" aria-label="Close"
+              data-action="click->person-drawer#close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
     </div>
 
     <div class="person-menu-body">
-      <div class="who">
-        <%= face(@user_id, css: "row-avatar avatar-lg") %>
-        <span class="two-line">
-          <b><%= person_name(@user_id) %></b>
-          <span>
-            <%= @context&.cohort_at ? "here since #{on_day(@context.cohort_at)}" : "join date unknown" %>
-            <% if @context&.messages_posted %>
-              &middot; <%= number_with_delimiter(@context.messages_posted) %> messages
-            <% end %>
-            <% if @rooms.any? %>
-              &middot; <%= number_with_delimiter(@rooms.size) %> channels
-            <% end %>
-          </span>
-        </span>
-      </div>
-
-      <div class="person-menu-stats">
-        <div class="fstat">
-          <b class="<%= "is-none" if @record.cases_named.zero? %>"><%= @record.cases_named %></b>
-          <span><%= "case".pluralize(@record.cases_named) %></span>
+      <dl class="person-menu-stats">
+        <div>
+          <dt><%= "Case".pluralize(@record.cases_named) %></dt>
+          <dd class="<%= "is-none" if @record.cases_named.zero? %>"><%= @record.cases_named %></dd>
         </div>
-        <div class="fstat">
-          <b class="<%= "is-none" if @record.actions.empty? %>"><%= @record.actions.size %></b>
-          <span>actions</span>
+        <div>
+          <dt>Actions</dt>
+          <dd class="<%= "is-none" if @record.actions.empty? %>"><%= @record.actions.size %></dd>
         </div>
-        <div class="fstat">
-          <b class="<%= "is-none" if @standing.in_force.empty? %>"><%= @standing.in_force.size %></b>
-          <span>in force</span>
+        <div>
+          <dt>In force</dt>
+          <dd class="<%= "is-none" if @standing.in_force.empty? %>"><%= @standing.in_force.size %></dd>
         </div>
-      </div>
+      </dl>
 
       <% named = (@record.subject_cases + @record.logged_cases).uniq(&:id).sort_by(&:opened_at) %>
       <% if named.any? %>
-        <div class="person-menu-group">
-          <span class="person-menu-label">Cases they appear in</span>
+        <section class="person-menu-group">
+          <h3 class="person-menu-label">Cases they appear in</h3>
           <% by_case = @record.actions.group_by(&:case_id) %>
           <% named.each do |kase| %>
-            <%= link_to fd_case_path(kase), class: "person-menu-case", data: { turbo_frame: "_top" } do %>
-              <span class="two-line">
-                <b>#<%= kase.id %> <%= category_label(kase.category_key) %></b>
-                <span><%= kase.subject_user_ids.include?(@user_id) ? "subject" : "named" %></span>
-              </span>
-              <span class="row-right"><%= case_status_chip(kase) %></span>
-            <% end %>
-            <% Array(by_case[kase.id]).each do |action| %>
-              <div class="person-menu-act">
-                <span class="person-menu-act-top">
-                  <b><%= action_label(action.type_key) %></b>
-                  <%= action_state_chip(action) %>
+            <div class="person-menu-item">
+              <%= link_to fd_case_path(kase), class: "person-menu-case", data: { turbo_frame: "_top" } do %>
+                <span class="two-line">
+                  <b>#<%= kase.id %> <%= category_label(kase.category_key) %></b>
+                  <span><%= kase.subject_user_ids.include?(@user_id) ? "Subject" : "Named" %></span>
                 </span>
-                <span class="person-menu-act-why"><%= action_reason(action) %></span>
-                <span class="person-menu-act-detail"><%= action_sentence(action) %></span>
-              </div>
-            <% end %>
+                <span class="row-right"><%= case_status_chip(kase) %></span>
+              <% end %>
+              <% acts = Array(by_case[kase.id]) %>
+              <% if acts.any? %>
+                <ul class="person-menu-acts">
+                  <% acts.each do |action| %>
+                    <li class="person-menu-act">
+                      <span class="person-menu-act-top">
+                        <b><%= action_label(action.type_key) %></b>
+                        <%= action_state_chip(action) %>
+                      </span>
+                      <% if (why = action_reason(action)).present? %>
+                        <span class="person-menu-act-why"><%= why %></span>
+                      <% end %>
+                      <span class="person-menu-act-detail"><%= action_sentence(action) %></span>
+                    </li>
+                  <% end %>
+                </ul>
+              <% end %>
+            </div>
           <% end %>
-        </div>
+        </section>
       <% else %>
-        <span class="note-none">Never named in a case.</span>
+        <div class="empty"><p class="empty-title">No cases</p></div>
       <% end %>
     </div>
 
     <div class="person-menu-foot">
-      <span class="person-menu-spacer"></span>
-      <button type="button" class="btn" data-action="click->person-drawer#close">Close</button>
+      <button type="button" class="btn btn-ghost" data-action="click->person-drawer#close">Close</button>
       <%= link_to "Open the full record", fd_member_path(@user_id), class: "btn btn-primary",
             data: { turbo_frame: "_top" } %>
     </div>

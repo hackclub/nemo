@@ -40,8 +40,7 @@ module ChannelsHelper
   end
 
   def band_title(row)
-    "Distribution by #{number_with_delimiter(row.measure_total)} " \
-      "of #{row.measure_label}"
+    "Channels by #{row.measure_label}"
   end
 
   FUNNEL_SHORT = {
@@ -52,7 +51,7 @@ module ChannelsHelper
   }.freeze
 
   def funnel_step_label(step)
-    FUNNEL_SHORT.fetch(step.key, step.label)
+    FUNNEL_SHORT.fetch(step.key, step.label).to_s.upcase_first
   end
 
   def latency_bucket_label(bucket)

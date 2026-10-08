@@ -65,6 +65,10 @@
     @apply inline-flex size-4;
   }
 
+  .btn-primary > .action-icon, .btn-danger > .action-icon {
+    @apply text-current;
+  }
+
   .action-icon > svg { @apply block size-full; }
 
   .menu-pop .btn[aria-current="true"], .menu-pop > a[aria-current="true"], .menu-compact [aria-current="true"] {

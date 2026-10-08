@@ -19,13 +19,10 @@
     <%= image_tag "nemo.png", class: "empty-fish", alt: "", width: 800, height: 483 %>
     <span class="lede-note">
       <b>Nothing to show yet</b>
-      <span>
-        Your numbers start the day you first post. <%= link_to "Find a channel", channels_path %>
-        and say something &mdash; the nightly sync picks it up from there.
-      </span>
+      <span>Your numbers start with your first post.</span>
     </span>
     <span class="lede-do">
-      <%= link_to "Channels", channels_path, class: "btn btn-primary" %>
+      <%= link_to "Find a channel", channels_path, class: "btn btn-primary" %>
     </span>
   </div>
 <% end %>
@@ -40,7 +37,7 @@
         <h2 class="card-title">Daily activity</h2>
         <div class="card-tools">
           <span class="ramp" aria-hidden="true">
-            <span class="ramp-lo">quiet</span>
+            <span class="ramp-lo">Quiet</span>
             <% (0..5).each do |step| %><i class="cal-key h<%= step %>"></i><% end %>
             <span class="ramp-hi"><%= number_with_delimiter(@profile.calendar.peak) %></span>
           </span>

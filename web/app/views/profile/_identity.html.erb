@@ -2,7 +2,7 @@
   <div class="profile-who">
     <%= face(profile.user_id, css: "avatar avatar-band") %>
     <span class="two-line">
-      <b class="mono"><%= person_name(profile.user_id) %></b>
+      <b><%= person_name(profile.user_id) %></b>
       <span>
         <% if profile.member_since %>
           here since <%= profile.member_since.to_date.strftime("%-d %b %Y") %>

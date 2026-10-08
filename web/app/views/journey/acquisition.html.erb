@@ -12,22 +12,25 @@
 <% claim_mean = settled_months.any? ?
      (settled_months.sum { |m| m.claim_rate_30d.to_f } / settled_months.size * 100).round(1) : nil %>
 
+<% months = @growth_months.map { |m| m.month.strftime("%b %Y") } %>
+<% newcomer_months = Analytics::MartNewcomerChannels.cohorts.reject(&:default?).sort_by(&:starts_on) %>
 <div class="metrics">
-  <div class="metric">
-    <span class="metric-key">Accounts created</span>
-    <span class="metric-value"><%= number_with_delimiter(created_total) %></span>
-  </div>
-  <div class="metric">
-    <span class="metric-key">Signed in, 30 days</span>
-    <span class="metric-value">
-      <%= claim_mean ? number_to_percentage(claim_mean, precision: 1) : "n/a" %>
-    </span>
-  </div>
+  <%= render "shared/stat", k: "Accounts created", v: number_with_delimiter(created_total),
+        spark: { name: "accounts created", labels: months, days: false,
+                 data: @growth_months.map { |m| m.claimed_members.to_i + m.unclaimed_members.to_i } },
+        say: "Created per month" %>
+  <%= render "shared/stat", k: "Signed in, 30 days",
+        v: claim_mean ? number_to_percentage(claim_mean, precision: 1) : "n/a",
+        spark: { name: "signed in within 30 days", labels: months, days: false,
+                 data: @growth_months.map { |m| m.claim_rate_30d && (m.claim_rate_30d.to_f * 100).round(1) } },
+        say: settled_months.any? ? "Mean of #{pluralize(settled_months.size, "settled month")}" : "No settled month yet" %>
   <% if @newcomer_reach %>
-    <div class="metric">
-      <span class="metric-key">Newcomers, last 30 days</span>
-      <span class="metric-value"><%= number_with_delimiter(@newcomer_reach.cohort_size) %></span>
-    </div>
+    <%= render "shared/stat", k: "Newcomers, last 30 days",
+          v: number_with_delimiter(@newcomer_reach.cohort_size.to_i),
+          spark: { name: "newcomers", days: false,
+                   labels: newcomer_months.map { |c| c.starts_on.strftime("%b %Y") },
+                   data: newcomer_months.map(&:size) },
+          say: "Newcomers per month" %>
   <% end %>
 </div>
 
@@ -37,6 +40,32 @@
   <div class="section-head">
     <h2 class="section-title">Cohort lifecycle</h2>
   </div>
+  <% settled = @lifecycle.select(&:funnel_90) %>
+  <% if settled.any? %>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">Joining funnel</h2>
+          <p class="card-sub">
+            <%= pluralize(settled.size, "settled cohort") %>,
+            <%= settled.last.month.strftime("%b %Y") %> to <%= settled.first.month.strftime("%b %Y") %>
+          </p>
+        </div>
+      </div>
+      <div
+        data-controller="funnel"
+        data-funnel-label-value="accounts"
+        data-funnel-height-value="230"
+        data-funnel-stages-value="<%= [
+          { label: "Created", value: settled.sum { |r| r.invited.to_i } },
+          { label: "Signed in", value: settled.sum { |r| r.claimed.to_i } },
+          { label: "Posted in 30 days", value: settled.sum { |r| r.posted_30d.to_i } },
+          { label: "Posting at day 30", value: settled.sum { |r| r.retained_30.to_i } },
+          { label: "Posting at day 90", value: settled.sum { |r| r.retained_90.to_i } }
+        ].to_json %>"
+      ></div>
+    </div>
+  <% end %>
   <%= render "lifecycle", lifecycle: @lifecycle %>
 </section>
 

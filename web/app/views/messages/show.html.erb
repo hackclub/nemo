@@ -15,23 +15,23 @@
 
 <% if !@shown %>
   <div class="lede">
+    <%= lede_icon %>
     <span class="lede-note">
       <b>Activity is not shown for this channel</b>
-      <span>An admin turns it on per channel from the channels admin.</span>
     </span>
   </div>
 <% elsif @post.nil? %>
   <div class="lede">
+    <%= lede_icon %>
     <span class="lede-note">
-      <b>Post not in the warehouse yet</b>
-      <span>The archive lands new posts every few minutes. The Slack shortcut reads live.</span>
+      <b>This post is not here yet</b>
     </span>
   </div>
 <% elsif @post.is_reply %>
   <div class="lede">
+    <%= lede_icon %>
     <span class="lede-note">
-      <b>Replies carry no activity</b>
-      <span>Slack counts views, clicks and shares on top-level posts only.</span>
+      <b>Replies have no activity</b>
     </span>
   </div>
 <% else %>
@@ -71,6 +71,7 @@
 
     <% if stats.nil? %>
       <div class="lede">
+        <%= lede_icon %>
         <span class="lede-note">
           <b>No activity returned</b>
           <span>

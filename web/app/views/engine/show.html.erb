@@ -4,15 +4,10 @@
   <div data-controller="run-refresh" data-run-refresh-seconds-value="10" hidden></div>
 <% end %>
 
-<% content_for :head_context do %>
-  <span class="triad-sep" aria-hidden="true">&middot;</span>
-  <span class="triad-who"><%= @run.started_at.strftime("%-d %b %Y, %H:%M") %></span>
-<% end %>
-
 <% content_for :head_actions do %>
   <%= link_to engine_path, class: "btn" do %>
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-    <span>Back to the night</span>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+    <span>Runs</span>
   <% end %>
 <% end %>
 

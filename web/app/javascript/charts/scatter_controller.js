@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { scaleLinear, scaleSqrt } from "d3-scale"
 
-const PAD = { l: 48, r: 16, t: 16, b: 42 }
+const PAD = { l: 48, r: 16, t: 22, b: 46 }
 const DOT = [4, 15]
 const CORNERS = ["tl", "tr", "bl", "br"]
 
@@ -100,7 +100,7 @@ export default class extends Controller {
         this.yTick(v)}</text>`).join("")
 
     const rungs = x.ticks(Math.max(2, Math.floor((wide - PAD.l - PAD.r) / 76))).map((v) =>
-      `<text class="ax" x="${x(v).toFixed(1)}" y="${high - PAD.b + 16}" text-anchor="middle">${
+      `<text class="ax" x="${x(v).toFixed(1)}" y="${high - PAD.b + 22}" text-anchor="middle">${
         axl(v)}</text>`).join("")
 
     const cuts = [

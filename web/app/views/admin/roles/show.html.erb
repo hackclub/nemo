@@ -24,7 +24,7 @@
             <th>Capability</th>
             <th class="detail-cell">What it lets them do</th>
             <% @roles.each do |role| %>
-              <th class="col-num">
+              <th class="col-switch">
                 <%= Authz.role_label(role) %>
                 <span class="view-count"><%= @holders[role] || 0 %></span>
               </th>
@@ -43,7 +43,7 @@
                 </td>
                 <td class="detail-cell"><%= Authz.label(key) %></td>
                 <% @roles.each do |role| %>
-                  <td class="col-num">
+                  <td class="col-switch">
                     <%= role_capability_switch(role, key, @overrides[[role, key]]) %>
                   </td>
                 <% end %>

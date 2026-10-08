@@ -1,36 +1,25 @@
 @layer base {
   .metrics {
-    @apply grid min-w-0 gap-3;
+    @apply grid min-w-0 overflow-hidden rounded-xl bg-card text-card-foreground ring-1 ring-foreground/10;
     grid-template-columns: repeat(auto-fit, minmax(var(--metric-min, 200px), 1fr));
   }
 
   .metric {
-    --metric-head: 2rem;
-    --metric-pad: 1rem;
-    @apply relative isolate flex min-w-0 flex-col gap-1.5 rounded-xl bg-muted/50 px-(--metric-pad) pb-(--metric-pad) text-card-foreground no-underline ring-1 ring-foreground/10;
-  }
-
-  .metric::before {
-    content: "";
-    @apply absolute inset-x-0 bottom-0 -z-1 rounded-xl bg-card shadow-xs ring-1 ring-foreground/10 transition-colors;
-    top: var(--metric-head);
-    background-image: linear-gradient(160deg, color-mix(in oklab, var(--foreground) 4%, transparent), transparent 55%);
+    @apply relative flex min-w-0 flex-col gap-1 bg-card p-5 text-card-foreground no-underline;
+    box-shadow: 1px 0 0 var(--border), 0 1px 0 var(--border);
   }
 
   a.metric:hover, button.metric:hover {
-    @apply no-underline;
+    @apply bg-muted/40 no-underline;
   }
 
-  a.metric:hover::before, button.metric:hover::before {
-    @apply bg-muted;
-  }
-
-  .metric[aria-current="true"]::before {
-    @apply ring-primary;
+  .metric[aria-current="true"] {
+    @apply bg-muted/40;
+    box-shadow: inset 0 -2px 0 var(--primary), 1px 0 0 var(--border), 0 1px 0 var(--border);
   }
 
   .metric > .pickswitch {
-    @apply absolute top-0 right-(--metric-pad) z-1 h-(--metric-head);
+    @apply absolute top-5 right-5 z-1 h-4;
   }
 
   .metric:has(> .pickswitch) > .metric-key {
@@ -38,11 +27,11 @@
   }
 
   .metric-key {
-    @apply mb-(--metric-pad) flex h-(--metric-head) flex-none items-center gap-2 truncate text-xs font-normal tracking-wide text-muted-foreground;
+    @apply flex min-h-4 flex-none items-center gap-2 truncate text-xs font-normal text-muted-foreground;
   }
 
   .metric-value {
-    @apply font-sans text-2xl leading-tight font-semibold text-card-foreground tabular-nums;
+    @apply mt-2 font-sans text-2xl leading-tight font-semibold tracking-tight text-card-foreground tabular-nums;
   }
 
   .metric-value.good {
@@ -58,15 +47,15 @@
   }
 
   .metric-value small {
-    @apply ml-0.5 text-sm font-medium text-muted-foreground;
+    @apply ml-1 text-sm font-normal tracking-normal text-muted-foreground;
   }
 
   .metric-note {
-    @apply mt-auto flex min-h-4 flex-wrap items-center gap-1.5 text-xs text-muted-foreground;
+    @apply mt-auto flex min-h-4 flex-wrap items-center gap-1.5 pt-1 text-xs text-muted-foreground;
   }
 
   .metric-spark {
-    @apply mt-1.5 h-[34px] min-w-0;
+    @apply mt-2 h-[34px] min-w-0;
   }
 
   .metric-spark .chart {

@@ -24,7 +24,6 @@
 
       <div class="empty pane-filter-empty" data-pane-filter-target="empty" hidden>
         <p class="empty-title">No channel matches that</p>
-        <p>Try part of the name, or a channel ID.</p>
       </div>
     <% else %>
       <div class="empty">
@@ -32,7 +31,6 @@
           <%= query.asked? ? "No channel matches that" : "No channels have been read yet" %>
         </p>
         <% unless query.asked? %>
-          <p>Channels show up here once nemo has seen them.</p>
         <% end %>
       </div>
     <% end %>

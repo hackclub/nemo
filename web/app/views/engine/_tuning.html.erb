@@ -3,7 +3,7 @@
     <h2 class="section-title">Global dials</h2>
   </div>
 
-  <div class="grid g-sided">
+  <div class="grid g-1">
     <div class="card card-flush">
       <div class="card-head">
         <div><h2 class="card-title">Schedule</h2></div>
@@ -11,14 +11,14 @@
       <div class="card-body flush">
         <% Engine::Setting::ENGINE_DIALS.each do |name, dial| %>
           <div class="tgrid tgrid-schedule">
-            <div class="stack-fine"><%= dial[:label] %></div>
+            <div class="tstack"><b><%= dial[:label] %></b></div>
             <div class="tcell">
               <%= render "setting_value", source: Engine::Setting::ENGINE, name: name,
                     may_tune: may_tune, show_was: true %>
             </div>
             <div class="sub align-right">
               <% row = Engine::Setting.find_by(source: Engine::Setting::ENGINE, name: name) %>
-              <%= row ? "#{row.changed_by}, #{time_ago_in_words(row.changed_at)} ago" : "from the file" %>
+              <%= row ? "#{row.changed_by}, #{time_ago_in_words(row.changed_at)} ago" : "From the file" %>
             </div>
           </div>
         <% end %>
@@ -35,7 +35,7 @@
   </div>
 
   <div class="card card-flush">
-    <div class="card-body flush">
+    <div class="card-body flush scroll">
       <div class="tgrid thead">
         <div>Source</div>
         <div class="tcell">Cadence</div>
@@ -45,7 +45,7 @@
       <% sources.each do |row| %>
         <% source = row.source %>
         <div class="tgrid">
-          <div class="stack-fine"><b><%= source.key %></b><span><%= source.label %></span></div>
+          <div class="tstack"><b><%= source.key %></b><span><%= source.label %></span></div>
           <div class="tcell">
             <%= render "setting_value", source: source.key, name: Engine::Setting::CADENCE,
                   may_tune: may_tune, show_was: true %>

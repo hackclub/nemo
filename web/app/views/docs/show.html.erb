@@ -3,6 +3,16 @@
   <%= link_to "API keys", settings_keys_path, class: "btn" %>
 <% end %>
 
-<article class="doc" data-controller="docs-nav" data-action="click->docs-nav#go">
-  <%= render "docs/#{@topic.slug.tr('-', '_')}", topic: @topic %>
-</article>
+<div class="doc-layout" data-controller="docs-nav" data-action="click->docs-nav#go">
+  <article class="doc" data-docs-nav-target="body">
+    <%= render "docs/#{@topic.slug.tr('-', '_')}", topic: @topic %>
+  </article>
+  <nav class="doc-toc" aria-label="On this page">
+    <p class="doc-toc-title">On this page</p>
+    <ul data-docs-nav-target="toc">
+      <% @topic.sections.each do |section| %>
+        <li><%= link_to section.title, "##{section.id}", data: { id: section.id } %></li>
+      <% end %>
+    </ul>
+  </nav>
+</div>

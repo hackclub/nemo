@@ -69,7 +69,7 @@ class ChannelPostsTest < ActionDispatch::IntegrationTest
 
       assert_response :success
       assert_match(/aria-current="true"[^>]*>\s*Overview|Overview\s*<\/a>/, response.body)
-      assert_no_match(/You have not posted here/, response.body)
+      assert_no_match(/No posts here yet/, response.body)
     end
   end
 

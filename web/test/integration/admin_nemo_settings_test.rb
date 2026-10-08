@@ -16,7 +16,7 @@ class AdminNemoSettingsTest < ActionDispatch::IntegrationTest
     get admin_settings_path
 
     assert_response :success
-    assert_match(/Channels nemo joins/, response.body)
+    assert_match(/Channels Nemo joins/, response.body)
     assert_match(/Guard expiry/, response.body)
   end
 

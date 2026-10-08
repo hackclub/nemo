@@ -1,13 +1,13 @@
 <div class="section">
   <div class="section-head">
     <h2 class="section-title">Open problems</h2>
-    <p class="section-note">what is actively failing right now</p>
   </div>
 
   <div class="card card-flush">
     <div class="card-head">
       <div>
         <h2 class="card-title">Incidents</h2>
+        <p class="card-sub"><%= incidents.count { |i| !i.muted } %> open &middot; <%= incidents.count(&:muted) %> muted</p>
       </div>
     </div>
     <% if incidents.any? %>
@@ -21,7 +21,7 @@
               <th>Class</th>
               <th>Detail</th>
               <th class="col-num">Last seen</th>
-              <th></th>
+              <th class="col-btn"><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -32,18 +32,18 @@
                 <td class="col-num"><%= incident.consecutive %></td>
                 <td><span class="chip <%= fault_class_chip(incident.error_class) %>"><%= incident.error_class || "n/a" %></span></td>
                 <td class="sub trunc-cell" title="<%= incident.error_detail %>"><%= incident.error_detail || "n/a" %></td>
-                <td class="col-num mono"><%= short_age(incident.last_seen) %></td>
-                <td>
+                <td class="col-num"><%= short_age(incident.last_seen) %></td>
+                <td class="col-btn">
                   <% if incident.muted %>
-                    <span class="chip chip-off">muted until <%= incident.muted_until.strftime("%-d %b %H:%M") %></span>
+                    <span class="chip chip-off">Muted until <%= incident.muted_until.strftime("%-d %b %H:%M") %></span>
                   <% elsif incident.acked_at %>
-                    <span class="chip chip-off">acked by <%= incident.acked_by %></span>
+                    <span class="chip chip-off">Acked by <%= incident.acked_by %></span>
                   <% elsif may_tune %>
                     <span class="dial-set">
-                      <%= button_to "ack", engine_ack_incident_path(source_key: incident.source_key, kind: incident.kind),
-                            class: "btn", form: { class: "contents" } %>
-                      <%= button_to "mute a day", engine_mute_incident_path(source_key: incident.source_key, kind: incident.kind),
-                            class: "btn", form: { class: "contents" } %>
+                      <%= button_to "Ack", engine_ack_incident_path(source_key: incident.source_key, kind: incident.kind),
+                            class: "btn btn-sm", form: { class: "contents" } %>
+                      <%= button_to "Mute a day", engine_mute_incident_path(source_key: incident.source_key, kind: incident.kind),
+                            class: "btn btn-sm", form: { class: "contents" } %>
                     </span>
                   <% end %>
                 </td>
@@ -55,10 +55,8 @@
     <% else %>
       <div class="empty">
         <p class="empty-title">No incident open</p>
-        <p>Nothing has failed enough nights in a row to raise one. That is the healthy state.</p>
       </div>
     <% end %>
-  <p class="chart-note"><%= incidents.count { |i| !i.muted } %> open &middot; <%= incidents.count(&:muted) %> muted</p>
   </div>
 
   <div class="card card-flush">
@@ -84,9 +82,9 @@
               <tr>
                 <td class="mono"><%= row.subject %>:<%= row.assertion %></td>
                 <td><span class="chip <%= row.severity == "error" ? "chip-crit" : "chip-warn" %>"><%= row.severity %></span></td>
-                <td class="col-num mono"><%= row.observed %></td>
-                <td class="col-num mono"><%= row.expected %></td>
-                <td class="col-num mono"><%= short_age(row.checked_at) %></td>
+                <td class="col-num"><%= row.observed %></td>
+                <td class="col-num"><%= row.expected %></td>
+                <td class="col-num"><%= short_age(row.checked_at) %></td>
               </tr>
             <% end %>
           </tbody>
@@ -95,7 +93,6 @@
     <% else %>
       <div class="empty">
         <p class="empty-title">Every check passed</p>
-        <p>No invariant or queue reconciliation has failed in the last two days.</p>
       </div>
     <% end %>
   </div>
@@ -129,9 +126,9 @@
               <tr>
                 <td class="mono"><%= row.assertion %></td>
                 <td><span class="chip <%= row.status == "fail" ? "chip-crit" : "chip-warn" %>"><%= row.status %></span></td>
-                <td class="col-num mono"><%= row.observed %></td>
+                <td class="col-num"><%= row.observed %></td>
                 <td class="sub trunc-cell" title="<%= row.expected %>"><%= row.expected %></td>
-                <td class="col-num mono"><%= short_age(row.checked_at) %></td>
+                <td class="col-num"><%= short_age(row.checked_at) %></td>
               </tr>
             <% end %>
           </tbody>
@@ -140,7 +137,6 @@
     <% else %>
       <div class="empty">
         <p class="empty-title">Every headline agrees</p>
-        <p>Every number the nightly checked matched the second source it was checked against.</p>
       </div>
     <% end %>
   </div>
@@ -149,6 +145,7 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">Suppressed</h2>
+        <p class="card-sub">Breakers <%= breaker_mode %><%= ", recording only" if breaker_mode == "observe" %></p>
       </div>
       <div class="card-tools">
         <span class="queue-label">Mode</span>
@@ -165,7 +162,7 @@
               <th class="col-num">Streak</th>
               <th class="col-num">Trips at</th>
               <th class="col-num">Checked</th>
-              <th></th>
+              <th class="col-btn"><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -174,20 +171,20 @@
                 <td class="mono"><%= row.assertion %></td>
                 <td>
                   <% if row.status == "fail" %>
-                    <span class="chip chip-crit"><%= breaker_mode == "on" ? "open, skipping" : "would open" %></span>
+                    <span class="chip chip-crit"><%= breaker_mode == "on" ? "Open, skipping" : "Would open" %></span>
                   <% elsif row.assertion.start_with?("mode:") %>
-                    <span class="chip chip-good">none open</span>
+                    <span class="chip chip-good">None open</span>
                   <% else %>
-                    <span class="chip chip-off">held closed</span>
+                    <span class="chip chip-off">Held closed</span>
                   <% end %>
                 </td>
                 <td class="col-num"><%= row.observed %></td>
                 <td class="col-num"><%= row.expected.to_i + 1 %></td>
-                <td class="col-num mono"><%= short_age(row.checked_at) %></td>
-                <td>
+                <td class="col-num"><%= short_age(row.checked_at) %></td>
+                <td class="col-btn">
                   <% if row.status == "fail" && may_tune %>
-                    <%= button_to "hold closed tonight", engine_override_breaker_path(source_key: row.assertion.split(":", 2).last),
-                          class: "btn", form: { class: "contents" } %>
+                    <%= button_to "Hold closed tonight", engine_override_breaker_path(source_key: row.assertion.split(":", 2).last),
+                          class: "btn btn-sm", form: { class: "contents" } %>
                   <% end %>
                 </td>
               </tr>
@@ -198,10 +195,8 @@
     <% else %>
       <div class="empty">
         <p class="empty-title">No breaker has tripped</p>
-        <p>Every check is still under its threshold, so nothing is being suppressed.</p>
       </div>
     <% end %>
-  <p class="chart-note">breakers <%= breaker_mode %><%= ", recording only" if breaker_mode == "observe" %></p>
   </div>
 </div>
 
@@ -214,11 +209,12 @@
     <div class="card-head">
       <div>
         <h2 class="card-title">Workers</h2>
+        <p class="card-sub"><%= worker_note(beats).to_s.upcase_first %></p>
       </div>
     </div>
     <% if beats.empty? %>
       <div class="empty">
-        <p class="empty-title">No worker has ever reported</p>
+        <p class="empty-title">No worker has reported</p>
       </div>
     <% else %>
       <div class="scroll">
@@ -236,7 +232,7 @@
               <tr>
                 <td class="mono"><%= beat.worker %></td>
                 <td><%= worker_state(beat) %></td>
-                <td class="col-num mono"><%= short_age(beat.beat_at) %></td>
+                <td class="col-num"><%= short_age(beat.beat_at) %></td>
                 <td class="sub"><%= beat.note.presence || "n/a" %></td>
               </tr>
             <% end %>
@@ -244,13 +240,13 @@
         </table>
       </div>
     <% end %>
-  <p class="chart-note"><%= worker_note(beats) %></p>
   </div>
 
   <div class="card card-flush">
     <div class="card-head">
       <div>
         <h2 class="card-title">Taxonomy</h2>
+        <p class="card-sub">Failed stage runs, last <%= EngineController::TAXONOMY_WINDOW.inspect %></p>
       </div>
     </div>
     <% if taxonomy.any? %>
@@ -270,7 +266,7 @@
                 <td><span class="chip <%= fault_class_chip(taxon.error_class) %>"><%= taxon.error_class %></span></td>
                 <td class="col-num"><%= taxon.count %></td>
                 <td class="col-num"><%= taxon.sources %></td>
-                <td class="sub fine-mono"><%= taxon.sample || "n/a" %></td>
+                <td class="<%= taxon.sample ? "mono" : "sub" %>"><%= taxon.sample || "n/a" %></td>
               </tr>
             <% end %>
           </tbody>
@@ -279,9 +275,7 @@
     <% else %>
       <div class="empty">
         <p class="empty-title">Nothing failed</p>
-        <p>No stage run has failed in that window, so there is nothing to classify.</p>
       </div>
     <% end %>
-  <p class="chart-note">failed stage runs, last <%= EngineController::TAXONOMY_WINDOW.inspect %></p>
   </div>
 </div>

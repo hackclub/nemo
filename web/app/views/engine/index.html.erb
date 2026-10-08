@@ -33,10 +33,10 @@
   <div class="metrics">
     <div class="metric">
       <span class="metric-key">Tonight</span>
-      <span class="metric-value <%= @orphaned ? "crit" : run_ink(@run) %>"><%= @run.nil? ? "no run" : (@orphaned ? "stuck" : @run.status) %></span>
+      <span class="metric-value <%= @orphaned ? "crit" : run_ink(@run) %>"><%= @run.nil? ? "No run" : (@orphaned ? "Stuck" : @run.status.to_s.upcase_first) %></span>
       <span class="metric-note">
         <% if @run.nil? %>
-          <span>nothing recorded yet</span>
+          <span>Nothing recorded yet</span>
         <% elsif @orphaned %>
           <%= worker_chip(@worker) %>
         <% else %>
@@ -52,11 +52,11 @@
         <% if @progress %>
           <%= @progress.step_index %><% if @progress.step_total %><small>of <%= @progress.step_total %></small><% end %>
         <% else %>
-          <%= @run ? "done" : "n/a" %>
+          <%= @run ? "Done" : "n/a" %>
         <% end %>
       </span>
       <span class="metric-note">
-        <span><%= @run&.running? ? "running now" : (@run ? "finished" : "waiting on the first run") %></span>
+        <span><%= @run&.running? ? "Running now" : (@run ? "Finished" : "Waiting on the first run") %></span>
       </span>
     </div>
 
@@ -66,7 +66,7 @@
         <%= @run ? run_duration(@run) : "n/a" %><% if @run&.running? %><small>so far</small><% end %>
       </span>
       <span class="metric-note">
-        <span><%= @run ? "started #{@run.started_at.strftime("%-d %b, %H:%M")}" : "no run yet" %></span>
+        <span><%= @run ? "Started #{@run.started_at.strftime("%-d %b, %H:%M")}" : "No run yet" %></span>
       </span>
     </div>
 
@@ -74,7 +74,7 @@
       <span class="metric-key">Missed, last <%= EngineController::NIGHTS %></span>
       <span class="metric-value"><%= missed_nights %></span>
       <span class="metric-note">
-        <span><%= missed_nights.zero? ? "the nightly ran every night" : "#{"night".pluralize(missed_nights)} it never ran" %></span>
+        <span><%= missed_nights.zero? ? "Ran every night" : "#{"Night".pluralize(missed_nights)} it never ran" %></span>
       </span>
     </div>
   </div>
@@ -95,7 +95,7 @@
       <% if @steps.any? %>
         <%= render "stage_progress", steps: @steps %>
       <% else %>
-        <p class="card-note">n/a</p>
+        <div class="empty"><p class="empty-title">No steps yet</p></div>
       <% end %>
     </div>
   </div>

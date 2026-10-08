@@ -2,7 +2,7 @@
       data: { src: fd_member_standing_path(user_id) } do %>
   <% if guards.any? %>
     <div class="standing">
-      <p class="standing-t">In force now</p>
+      <p class="standing-t">In force now <span class="standing-count"><%= guards.size %></span></p>
       <% guards.each do |guard| %>
         <% may_lift = guard.deactivation? ? may_deactivate : may_guard %>
         <div class="standing-row<%= " is-enforced" if guard.deactivation? %>"
@@ -27,16 +27,18 @@
               <% end %>
             <% end %>
           </span>
-          <% if guard.case_id %>
-            <%= link_to "Open case ##{guard.case_id}", fd_case_path(guard.case_id),
-                  class: "btn btn-ghost" %>
-          <% end %>
-          <% if may_lift %>
-            <button type="button" class="btn" aria-haspopup="dialog"
-                    data-modal-open="guard-lift-<%= guard.id %>">
-              <%= guard.deactivation? ? "Activate" : "Lift it" %>
-            </button>
-          <% end %>
+          <span class="standing-do">
+            <% if guard.case_id %>
+              <%= link_to "Case ##{guard.case_id}", fd_case_path(guard.case_id),
+                    class: "btn btn-sm btn-ghost" %>
+            <% end %>
+            <% if may_lift %>
+              <button type="button" class="btn btn-sm" aria-haspopup="dialog"
+                      data-modal-open="guard-lift-<%= guard.id %>">
+                <%= guard.deactivation? ? "Activate" : "Lift it" %>
+              </button>
+            <% end %>
+          </span>
         </div>
 
         <% if may_lift %>

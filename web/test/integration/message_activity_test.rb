@@ -125,7 +125,7 @@ class MessageActivityTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert_includes response.body, "Post not in the warehouse yet"
+    assert_includes response.body, "This post is not here yet"
   end
 
   test "when slack will not answer the page still stands" do

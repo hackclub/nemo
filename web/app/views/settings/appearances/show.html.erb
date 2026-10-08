@@ -1,13 +1,11 @@
 <% content_for :page_title, "Appearance" %>
 
-<div class="grid g-1">
-  <div class="card" data-controller="theme">
-    <div class="card-head">
-      <span class="card-title">Theme</span>
-      <span class="grow"></span>
-      <span class="theme-chip" data-theme-target="swatch" aria-hidden="true"></span>
-      <span class="sub2" data-theme-target="name"></span>
+<div class="card card-flush appearance" data-controller="theme">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">Theme</h2>
+      <p class="card-sub" data-theme-target="name"></p>
     </div>
-    <%= render "accounts/theme" %>
   </div>
+  <%= render "accounts/theme" %>
 </div>

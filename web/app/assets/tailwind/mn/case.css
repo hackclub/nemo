@@ -198,7 +198,7 @@
   .standing-slot:not(:has(turbo-frame > *)) { display: none; }
 
   .act { color: var(--primary-deep); }
-  .evdot.act { background: var(--primary-soft); color: var(--primary-deep); }
+  .evdot.act { @apply bg-primary/10 text-primary; }
   .acts-now { border-top: 1px solid var(--line-soft); padding: var(--s-xs); display: flex; flex-direction: column; gap: 6px; }
   .acts-h { font-size: var(--t-fine); font-weight: 550; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-4); }
   .lcite {

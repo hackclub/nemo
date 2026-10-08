@@ -21,18 +21,18 @@
     <% end %>
     <dl class="deflist">
       <div>
-        <dt>in threads</dt>
+        <dt>In threads</dt>
         <dd>
           <%= pulse.threaded_share ? number_to_percentage(pulse.threaded_share, precision: 0) : "n/a" %>
           <span class="short"><%= number_with_delimiter(pulse.thread_replies) %> replies</span>
         </dd>
       </div>
       <div>
-        <dt>threads</dt>
+        <dt>Threads</dt>
         <dd><%= number_with_delimiter(pulse.thread_roots) %></dd>
       </div>
       <div>
-        <dt>messages</dt>
+        <dt>Messages</dt>
         <dd><%= number_with_delimiter(pulse.messages) %></dd>
       </div>
     </dl>
@@ -70,12 +70,12 @@
       ></div>
       <dl class="deflist">
         <div>
-          <dt>average length</dt>
+          <dt>Average length</dt>
           <dd><%= number_with_delimiter(pulse.average_length) %> <span class="short">characters</span></dd>
         </div>
         <% [["carry a link", :with_link], ["carry a file", :with_file]].each do |label, measure| %>
           <div>
-            <dt><%= label %></dt>
+            <dt><%= label.upcase_first %></dt>
             <dd>
               <%= number_to_percentage(pulse.share(measure, :messages).to_f, precision: 0) %>
               <span class="short"><%= number_with_delimiter(pulse.total(measure)) %></span>
@@ -86,7 +86,6 @@
     <% else %>
       <div class="empty">
         <p class="empty-title">No messages in this range</p>
-        <p>Nothing was posted here in this window. Try a wider range.</p>
         <div class="empty-do">
           <button type="button" class="btn" data-modal-open="channel-range">Change range</button>
         </div>

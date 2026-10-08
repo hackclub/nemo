@@ -1,9 +1,12 @@
 <% content_for :page_title, "Nemo channels" %>
 
-<div class="grid g-sided">
+<div class="grid g-sided items-start">
   <div class="card card-flush">
     <div class="card-head">
-      <h2 class="card-title">Channels nemo joins</h2>
+      <div>
+        <h2 class="card-title">Channels Nemo joins</h2>
+        <p class="card-sub"><%= AdminHelper::JOIN_NOTES[@join_mode] %></p>
+      </div>
       <% if may_grant? %>
         <div class="card-tools">
           <%= admin_join_mode_switch(@join_mode) %>
@@ -59,15 +62,15 @@
     <% if @react_channels.any? %>
       <div class="scroll">
         <table class="data-table">
-          <thead><tr><th>Channel</th><th class="col-num"></th></tr></thead>
+          <thead><tr><th>Channel</th><th class="col-btn"><span class="sr-only">Actions</span></th></tr></thead>
           <tbody>
             <% @react_channels.each do |channel_id| %>
               <tr>
                 <td><%= channel_cell(channel_id, @named[channel_id]) %></td>
-                <td class="col-num">
+                <td class="col-btn">
                   <% if may_grant? %>
                     <%= button_to "Take out", admin_settings_react_channel_path(channel_id),
-                          method: :delete, class: "btn" %>
+                          method: :delete, class: "btn btn-sm", form: { class: "contents" } %>
                   <% end %>
                 </td>
               </tr>
@@ -106,7 +109,7 @@
       </div>
     <% else %>
       <div class="empty">
-        <p class="empty-title">Falling back to INTERNAL_LOG_CHANNEL_ID</p>
+        <p class="empty-title">No channel picked</p>
       </div>
     <% end %>
   </div>

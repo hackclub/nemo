@@ -79,6 +79,14 @@ module FdHelper
     end
   end
 
+  UNRESOLVED = /@([UW][A-Z0-9]{6,})\b/
+
+  def named_text(text)
+    safe_join(text.to_s.split(UNRESOLVED).each_with_index.map do |piece, i|
+      i.odd? ? tag.span("@#{piece}", data: { cachet_name: piece }) : piece
+    end)
+  end
+
   def at_name(user_id)
     shown = names[user_id]
     shown.start_with?("@") ? shown : "@#{shown}"
@@ -354,11 +362,11 @@ module FdHelper
   end
 
   def new_member_standing(row)
-    return tag.span("deactivated", class: "state state-crit") if row.deactivated?
-    return tag.span("clear", class: "state") unless row.guarded?
+    return tag.span("Deactivated", class: "state state-crit") if row.deactivated?
+    return tag.span("Clear", class: "state") unless row.guarded?
 
     safe_join(Fd::MemberGuard.worst_kinds_first(row.kinds).map { |kind|
-      tag.span(action_label(kind).downcase, class: "state state-warn")
+      tag.span(action_label(kind), class: "state state-warn")
     }, " ")
   end
 
@@ -965,13 +973,13 @@ module FdHelper
 
   def row_origin_phrase(kase)
     reports = kase.reports.to_a
-    return "#{names[kase.opened_by]} opened it" if reports.empty?
+    return safe_join([person_name(kase.opened_by), " opened it"]) if reports.empty?
 
     named = reports.reject(&:anonymous?)
     return "#{pluralize(reports.size, 'person')} reported it" if reports.many?
     return "a member reported it" if named.empty?
 
-    "#{names[named.first.reporter_user_id]} reported it"
+    safe_join([person_name(named.first.reporter_user_id), " reported it"])
   end
 
   def row_messages_phrase(kase, thread_counts, thread_channels)
@@ -1296,12 +1304,12 @@ module FdHelper
     parts << reversal_line(action) if action.reversed?
     parts << "via #{action.source_app}" if action.source_app != "fire_engine"
     parts << action_performer_note(action) unless action.performed_by_decider?
-    parts.compact.join(" · ").presence
+    parts.compact.any? ? safe_join(parts.compact, " · ") : nil
   end
 
   def reversal_line(action)
     why = action.reversal_reason.present? ? ", #{action.reversal_reason}" : ""
-    "reversed #{on_day(action.reversed_at)} by #{names[action.reversed_by]}#{why}"
+    safe_join(["reversed #{on_day(action.reversed_at)} by ", person_name(action.reversed_by), why])
   end
 
   def action_thread_url(action)
@@ -1371,7 +1379,7 @@ module FdHelper
   def action_performer_note(action)
     return "performed themselves" if action.performed_by_decider?
 
-    "performed by #{names[action.performed_by]}"
+    safe_join(["performed by ", person_name(action.performed_by)])
   end
 
   def action_detail_note(action)
@@ -1557,7 +1565,7 @@ module FdHelper
                    "withdrawn" => "chip-off", "pending" => "chip-warn" }.freeze
 
   def access_state_chip(state)
-    tag.span(state, class: "chip #{ACCESS_CHIPS.fetch(state, 'chip-off')}")
+    tag.span(state.to_s.upcase_first, class: "chip #{ACCESS_CHIPS.fetch(state, 'chip-off')}")
   end
 
   def withheld_share(withheld, checks)
@@ -1567,7 +1575,7 @@ module FdHelper
   end
 
   def synced_line(at)
-    return "never" if at.nil?
+    return "Never" if at.nil?
 
     swept = Api::ChannelSweep.count
     "#{at.strftime('%-d %b %H:%M')}, #{swept} #{'channel'.pluralize(swept)}"
@@ -1581,9 +1589,9 @@ module FdHelper
   end
 
   def dial_change(setting)
-    return "never" if setting.nil? || setting.changed_by.blank?
+    return "Never" if setting.nil? || setting.changed_by.blank?
 
-    "#{names[setting.changed_by]}, #{setting.changed_at.strftime('%-d %b')}"
+    safe_join([person_name(setting.changed_by), ", #{setting.changed_at.strftime('%-d %b')}"])
   end
 
   def acted_line(at)
@@ -1610,7 +1618,7 @@ module FdHelper
 
   def dormant_chip(grant)
     held = ((Time.current - grant.granted_at) / 1.day).floor
-    tag.span("#{names[grant.user_id]}, #{tenure_label(held)}", class: "chip chip-warn")
+    tag.span(safe_join([person_name(grant.user_id), ", #{tenure_label(held)}"]), class: "chip chip-warn")
   end
 
   def load_bar(share)
@@ -1734,8 +1742,8 @@ module FdHelper
   end
 
   GUARD_ENFORCEMENT_STATUS = {
-    "pending" => "nemo has not carried it yet",
-    "failed" => "nemo is not holding it"
+    "pending" => "Nemo has not carried it yet",
+    "failed" => "Nemo is not holding it"
   }.freeze
 
   GUARD_ENFORCEMENT_STATE_SAID = {
@@ -1764,7 +1772,8 @@ module FdHelper
   end
 
   def guard_footnote(guard, names = Names.none)
-    parts = ["opened by #{names[guard.opened_by]}"]
+    opener = names.unknown?(guard.opened_by) ? tag.span(names[guard.opened_by], data: { cachet_name: guard.opened_by }) : names[guard.opened_by]
+    parts = [safe_join(["Opened by ", opener])]
     parts << "since #{guard.opened_at.strftime("%-d %b")}" if guard.opened_at
     parts << (guard.expires_at ? "until #{guard.expires_at.strftime("%-d %b")}" : "with no end date")
     parts << if guard.by_hand?
@@ -1772,7 +1781,7 @@ module FdHelper
     else
       GUARD_ENFORCEMENT_STATUS[guard.enforcement_status]
     end
-    parts.compact.join("  \u00b7  ")
+    safe_join(parts.compact, " \u00b7 ")
   end
   SETTLE_DEFAULT = {
     Fd::MemberGuard::UNGUARDED => Fd::MemberGuard::CARRY,

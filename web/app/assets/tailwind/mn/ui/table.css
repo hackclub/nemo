@@ -40,6 +40,10 @@
     @apply text-right;
   }
 
+  .data-table thead th.col-switch {
+    @apply px-3 text-center;
+  }
+
   .col-num, .col-rank, .col-date {
     @apply text-right whitespace-nowrap tabular-nums;
   }
@@ -52,6 +56,22 @@
     @apply whitespace-nowrap;
   }
 
+  .data-table td.col-btn {
+    @apply text-right;
+  }
+
+  .row-go {
+    @apply inline-block size-4 text-muted-foreground transition-transform;
+  }
+
+  .data-table tbody tr:hover .row-go {
+    @apply translate-x-0.5 text-foreground;
+  }
+
+  .col-switch {
+    @apply w-[1%] text-center;
+  }
+
   th > a.sortable, th > button.sortable, th.sortable > a, th.sortable > button, th.th-sort > a {
     @apply inline-flex items-center gap-1 text-inherit no-underline hover:text-foreground hover:no-underline;
   }
@@ -60,7 +80,23 @@
     @apply text-primary;
   }
 
-  .band-row td {
+  .data-table td a:not(.btn, .chip, .pill, .token) {
+    @apply font-medium text-foreground no-underline decoration-foreground/40 underline-offset-4 hover:underline;
+  }
+
+  .data-table td.mono, .data-table td > .mono {
+    @apply font-mono text-[0.8125rem];
+  }
+
+  .data-table td.sub, .data-table td:is(.col-num, .col-date) > :is(.sub2, .na, .none) {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .data-table .band-row td {
+    @apply h-9 bg-muted/50 py-0 text-xs font-medium text-muted-foreground;
+  }
+
+  .data-table tbody tr.band-row:hover > td {
     @apply bg-muted/50;
   }
 

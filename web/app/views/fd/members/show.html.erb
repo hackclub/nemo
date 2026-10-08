@@ -8,44 +8,9 @@
 <% may_links = current_account.may?("member.links") %>
 <% standing_guard = @guards.find(&:deactivation?) %>
 
-<% content_for :page_title, (names.unknown?(@user_id) ? person_name(@user_id) : member_handle) %>
-<% content_for :page_face do %><%= face(@user_id) %><% end %>
-<% if member_name.present? && member_name.delete_prefix("@") != member_handle.delete_prefix("@") %>
-  <% content_for :head_context do %>
-    <span class="triad-sep">&middot;</span>
-    <span class="triad-who"><%= member_name %></span>
-  <% end %>
-<% end %>
-<% content_for :head_actions do %>
-  <%= open_in_slack slack_member_url(@user_id), css: "btn btn-ghost" %>
-  <% if may_note %>
-    <button type="button" class="btn" data-modal-open="member-note" aria-haspopup="dialog">
-      <%= case_action_button("note", "Write a note") %>
-    </button>
-  <% end %>
-  <% if may_guard %>
-    <button type="button" class="btn" data-modal-open="member-guard" aria-haspopup="dialog">
-      <%= case_action_button("gauge", "Take action") %>
-    </button>
-  <% end %>
-  <%= render layout: "shared/dropdown", locals: {
-        label: "More actions", trigger: menu_dots } do %>
-    <%= opens_modal "identity.read", menu_item("sessions", "Sessions"),
-          opens: "member-sessions" %>
-    <%= opens_modal "member.links", menu_item("people", "Linked accounts"),
-          opens: "member-links" %>
-    <% if standing_guard %>
-      <%= opens_modal "member.deactivate", menu_item("hand", "Activate"),
-            opens: "guard-lift-#{standing_guard.id}" %>
-    <% else %>
-      <%= opens_modal "member.deactivate", menu_item("deactivate", "Deactivate"),
-            opens: "member-deactivate" %>
-    <% end %>
-  <% end %>
-  <span class="ractions-split" aria-hidden="true"></span>
-  <%= link_to case_action_button("plus", "Open a case"),
-        fd_cases_path(subject_user_id: @user_id, open: "1"), class: "btn btn-primary" %>
-<% end %>
+<% member_title = names.unknown?(@user_id) ? person_name(@user_id) : member_handle %>
+<% content_for :page_title, member_title %>
+<% content_for :headless, true %>
 <% content_for :pane do %>
   <%= render "pane", rows: @pane_rows, views: @pane_views, query: @pane_query,
         context: @pane_context, grants: @pane_grants, open_id: @user_id %>
@@ -53,40 +18,80 @@
 <% content_for :flush, true %>
 
 <div class="stack member-record">
-  <dl class="facts-strip member-facts">
-    <div class="fact">
-      <dt>Slack ID</dt>
-      <dd class="mono"><%= @user_id %></dd>
-    </div>
-    <div class="fact">
-      <dt>Email</dt>
-      <dd class="<%= "is-none" unless @identity&.email.present? && !@identity.refused? && !@identity.purged? %>"><%= identity_line(@identity) %></dd>
-    </div>
-    <div class="fact">
-      <dt>Here since</dt>
-      <dd class="<%= "is-none" unless @context&.cohort_at %>"><%= member_since(@context) %></dd>
-    </div>
-    <div class="fact">
-      <dt>Messages</dt>
-      <dd class="<%= "is-none" unless @context&.messages_posted %>"><%= fact_number(@context&.messages_posted) %></dd>
-    </div>
-    <div class="fact">
-      <dt>Cases</dt>
-      <dd class="<%= "is-none" if @standing.cases_named.zero? %>">
-        <%= @standing.cases_named.zero? ? "none" : @standing.cases_named %>
-      </dd>
-    </div>
-    <div class="fact">
-      <dt>Actions</dt>
-      <dd class="<%= "is-none" if @standing.actions.zero? %>">
-        <%= @standing.actions.zero? ? "none" : @standing.actions %>
-      </dd>
-    </div>
-  </dl>
 
   <div class="member-record-content" data-controller="pending-flush"
        data-pending-flush-frame-value="<%= Fd::MemberGuardBroadcast.frame(@user_id) %>">
     <%= turbo_stream_from Fd::MemberGuardBroadcast.stream(@user_id) %>
+    <section class="card member-hero">
+      <div class="member-hero-head">
+        <%= face(@user_id, css: "avatar member-hero-face") %>
+        <div class="member-hero-who">
+          <h1 class="member-hero-name"><%= member_title %></h1>
+          <% if member_name.present? && member_name.delete_prefix("@") != member_handle.delete_prefix("@") %>
+            <span class="member-hero-sub"><%= member_name %></span>
+          <% end %>
+        </div>
+        <div class="member-hero-do">
+          <%= open_in_slack slack_member_url(@user_id), css: "btn btn-ghost" %>
+          <% if may_note %>
+            <button type="button" class="btn" data-modal-open="member-note" aria-haspopup="dialog">
+              <%= case_action_button("note", "Write a note") %>
+            </button>
+          <% end %>
+          <% if may_guard %>
+            <button type="button" class="btn" data-modal-open="member-guard" aria-haspopup="dialog">
+              <%= case_action_button("gauge", "Take action") %>
+            </button>
+          <% end %>
+          <%= render layout: "shared/dropdown", locals: {
+                label: "More actions", trigger: menu_dots } do %>
+            <%= opens_modal "identity.read", menu_item("sessions", "Sessions"),
+                  opens: "member-sessions" %>
+            <%= opens_modal "member.links", menu_item("people", "Linked accounts"),
+                  opens: "member-links" %>
+            <% if standing_guard %>
+              <%= opens_modal "member.deactivate", menu_item("hand", "Activate"),
+                    opens: "guard-lift-#{standing_guard.id}" %>
+            <% else %>
+              <%= opens_modal "member.deactivate", menu_item("deactivate", "Deactivate"),
+                    opens: "member-deactivate" %>
+            <% end %>
+          <% end %>
+          <%= link_to case_action_button("plus", "Open a case"),
+                fd_cases_path(subject_user_id: @user_id, open: "1"), class: "btn btn-primary" %>
+        </div>
+      </div>
+      <dl class="fact-grid member-facts">
+        <div class="fact">
+          <dt>Slack ID</dt>
+          <dd class="mono fact-one" title="<%= @user_id %>"><%= @user_id %></dd>
+        </div>
+        <div class="fact">
+          <dt>Email</dt>
+          <dd class="fact-one <%= "is-none" unless @identity&.email.present? && !@identity.refused? && !@identity.purged? %>"><%= identity_line(@identity) %></dd>
+        </div>
+        <div class="fact">
+          <dt>Here since</dt>
+          <dd class="fact-one <%= "is-none" unless @context&.cohort_at %>"><%= member_since(@context) %></dd>
+        </div>
+        <div class="fact">
+          <dt>Messages</dt>
+          <dd class="<%= "is-none" unless @context&.messages_posted %>"><%= fact_number(@context&.messages_posted) %></dd>
+        </div>
+        <div class="fact">
+          <dt>Cases</dt>
+          <dd class="<%= "is-none" if @standing.cases_named.zero? %>">
+            <%= @standing.cases_named.zero? ? "None" : @standing.cases_named %>
+          </dd>
+        </div>
+        <div class="fact">
+          <dt>Actions</dt>
+          <dd class="<%= "is-none" if @standing.actions.zero? %>">
+            <%= @standing.actions.zero? ? "None" : @standing.actions %>
+          </dd>
+        </div>
+      </dl>
+    </section>
     <%= render "standing", user_id: @user_id, guards: @guards, names: names,
           may_guard: may_guard, may_deactivate: may_deactivate %>
 
@@ -101,9 +106,9 @@
               <span class="evdot <%= kase.resolved? ? "good" : "crit" %>"><%= case_action_icon("shield") %></span>
               <span class="grow">
                 <b>#<%= kase.id %> <%= kase.category_key ? category_label(kase.category_key) : "No violation set" %></b>
-                <span class="sub short"><%= plain_text(case_first_report(kase)&.body.presence) .presence || (kase.resolved? ? "resolved" : "open case") %></span>
+                <span class="sub short"><%= plain_text(case_first_report(kase)&.body.presence) .presence || (kase.resolved? ? "Resolved" : "Open case") %></span>
               </span>
-              <span class="lrow-right"><%= link_to "Open", fd_case_path(kase), class: "btn" %></span>
+              <span class="lrow-right"><%= link_to "Open", fd_case_path(kase), class: "btn btn-sm" %></span>
             </div>
           <% end %>
         </div>
@@ -148,7 +153,7 @@
                       <p class="member-event-body"><%= mentioned(entry.body) %></p>
                     <% else %>
                       <% under = [entry.state, entry.detail].reject(&:blank?).join(" · ") %>
-                      <% if under.present? %><p class="member-event-body"><%= under %></p><% end %>
+                      <% if under.present? %><p class="member-event-body"><%= named_text(under) %></p><% end %>
                     <% end %>
                     <span class="member-event-by">
                       <%= entry.who ? member_link(entry.who) : "n/a" %>

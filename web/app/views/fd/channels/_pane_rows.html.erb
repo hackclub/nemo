@@ -11,7 +11,7 @@
       <% if row.archived? %>
         <span class="sub2">archived</span>
       <% end %>
-      <span class="queue-age"><%= row.members ? number_to_human(row.members, units: { unit: "", thousand: "k" }) : "—" %></span>
+      <span class="queue-age"><%= row.members ? number_to_human(row.members, units: { unit: "", thousand: "k" }) : "n/a" %></span>
     </span>
 
     <span class="queue-meta">

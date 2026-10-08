@@ -10,19 +10,19 @@
     <%= f.hidden_field :name, value: name, id: nil %>
     <% if name == Engine::Setting::CADENCE %>
       <%= f.select :value, Engine::Source::CADENCES, { selected: now },
-            class: "val #{"tuned" if tuned}", id: nil,
+            class: "dial #{"tuned" if tuned}", id: nil,
             aria: { label: "#{source} #{name}" }, onchange: "this.form.requestSubmit()" %>
     <% elsif (choices = Engine::Setting.choices(name)) && source == Engine::Setting::ENGINE %>
       <%= f.select :value, choices, { selected: now },
-            class: "val #{"tuned" if tuned}", id: nil,
+            class: "dial #{"tuned" if tuned}", id: nil,
             aria: { label: "#{source} #{name}" }, onchange: "this.form.requestSubmit()" %>
     <% elsif name == Engine::Setting::ENABLED %>
       <%= f.select :value, %w[true false], { selected: now },
-            class: "val #{"tuned" if tuned}", id: nil,
+            class: "dial #{"tuned" if tuned}", id: nil,
             aria: { label: "#{source} #{name}" }, onchange: "this.form.requestSubmit()" %>
     <% else %>
       <%= f.text_field :value, value: now, inputmode: "numeric", size: 6,
-            class: "val #{"tuned" if tuned}", id: nil,
+            class: "dial #{"tuned" if tuned}", id: nil,
             aria: { label: "#{source} #{name}" }, onchange: "this.form.requestSubmit()" %>
     <% end %>
   <% end %>
@@ -32,5 +32,5 @@
           aria: { label: "reset #{source} #{name} to the file" } %>
   <% end %>
 <% else %>
-  <span class="val <%= "tuned" if tuned %>"><%= now %></span>
+  <span class="dial <%= "tuned" if tuned %>"><%= now %></span>
 <% end %>

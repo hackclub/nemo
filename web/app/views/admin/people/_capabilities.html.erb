@@ -3,10 +3,12 @@
     <h2 class="section-title">Channel grants</h2>
   </div>
 
-  <% if @channel_rows.any? || @role_channels.values.flatten.any? || @appointments.any? %>
-    <div class="card card-flush">
+  <div class="card card-flush">
       <% if may_grant? %>
         <div class="cardbar">
+          <span class="card-sub">
+            <%= pluralize(@channel_rows.size + @appointments.size + @role_channels.values.flatten.size, "channel") %>
+          </span>
           <div class="toolbar-end">
             <%= form_with url: admin_person_channel_grants_path(@user_id), method: :post,
                   class: "contents" do %>
@@ -16,6 +18,7 @@
           </div>
         </div>
       <% end %>
+      <% if @channel_rows.any? || @role_channels.values.flatten.any? || @appointments.any? %>
       <div class="scroll">
         <table class="data-table">
           <tbody>
@@ -27,13 +30,13 @@
                   <% end %>
                   <span class="mono sub2"><%= row.channel_id %></span>
                 </td>
-                <td><span class="sub">named to them</span></td>
+                <td><span class="sub">Named to them</span></td>
                 <td class="detail-cell"><%= @names[row.granted_by] %></td>
-                <td>
+                <td class="col-btn">
                   <% if may_grant? %>
                     <%= button_to "Take back",
                           admin_person_channel_grant_path(@user_id, row.channel_id),
-                          method: :delete, class: "btn" %>
+                          method: :delete, class: "btn btn-sm", form: { class: "contents" } %>
                   <% end %>
                 </td>
               </tr>
@@ -46,9 +49,9 @@
                   <% end %>
                   <span class="mono sub2"><%= one.channel_id %></span>
                 </td>
-                <td>Promethean</td>
+                <td><span class="sub">Promethean</span></td>
                 <td></td>
-                <td></td>
+                <td class="col-btn"></td>
               </tr>
             <% end %>
             <% @role_channels.each do |role, ids| %>
@@ -60,10 +63,10 @@
                     <% end %>
                     <span class="mono sub2"><%= id %></span>
                   </td>
-                  <td><span class="sub"><%= Authz.role_label(role).downcase %> set</span></td>
-                  <td class="detail-cell">shared, not theirs alone</td>
-                  <td>
-                    <%= link_to "Edit the set", admin_role_channels_path(role: role), class: "btn" %>
+                  <td><span class="sub"><%= Authz.role_label(role) %> set</span></td>
+                  <td class="detail-cell sub">Shared with the role</td>
+                  <td class="col-btn">
+                    <%= link_to "Edit the set", admin_role_channels_path(role: role), class: "btn btn-sm" %>
                   </td>
                 </tr>
               <% end %>
@@ -71,11 +74,10 @@
           </tbody>
         </table>
       </div>
-    </div>
-  <% else %>
-    <div class="empty">
-      <p class="empty-title">No channel is theirs to read</p>
-      <p>They still see anything set to public.</p>
-    </div>
-  <% end %>
+      <% else %>
+        <div class="empty">
+          <p class="empty-title">No channel is theirs to read</p>
+        </div>
+      <% end %>
+  </div>
 </section>

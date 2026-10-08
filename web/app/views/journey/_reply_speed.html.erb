@@ -18,18 +18,18 @@
   <% ticks = (0..dom).step(step).to_a %>
   <div class="ivrows">
     <div class="ivrow ivscale">
-      <span class="ivhead">first member reply</span>
+      <span class="ivhead">First member reply</span>
       <span class="ivtrack ivticks">
         <% ticks.each_with_index do |t, i| %>
           <i style="left: <%= (t.to_f / dom * 100).round(2) %>%"
              data-edge="<%= i.zero? ? "start" : (t == dom ? "end" : "mid") %>"><%= t %>%</i>
         <% end %>
       </span>
-      <span class="ivhead ivhead-end">day-30 return</span>
+      <span class="ivhead ivhead-end">Day-30 return</span>
     </div>
     <% rows.each do |r| %>
       <div class="ivrow<%= " is-thin" if r[:thin] %>">
-        <span class="ivname"><%= r[:label] %></span>
+        <span class="ivname"><%= r[:label].to_s.upcase_first %></span>
         <span class="ivtrack"
               title="<%= number_to_percentage(r[:rate], precision: 1) %>, 95% interval <%= number_to_percentage(r[:low], precision: 1) %> to <%= number_to_percentage(r[:high], precision: 1) %>, from <%= number_with_delimiter(r[:hits]) %> of <%= number_with_delimiter(r[:sample]) %>">
           <i class="ivband"
@@ -38,7 +38,7 @@
         </span>
         <span class="ivval">
           <% if r[:thin] %>
-            n&nbsp;=&nbsp;<%= r[:sample] %>, below floor
+            <span>n&nbsp;=&nbsp;<%= r[:sample] %>, below floor</span>
           <% else %>
             <b><%= number_to_percentage(r[:rate], precision: 1) %></b>
             <span><%= r[:hits] %>/<%= r[:sample] %></span>
@@ -48,9 +48,12 @@
     <% end %>
   </div>
   <div class="key">
-    <span><i class="iv-key-dot"></i>day-30 return rate</span>
+    <span><i class="iv-key-dot"></i>Day-30 return rate</span>
     <span><i class="iv-key-band"></i>95% interval</span>
   </div>
 
 <% else %>
+  <div class="empty">
+    <p class="empty-title">Not enough newcomers yet</p>
+  </div>
 <% end %>

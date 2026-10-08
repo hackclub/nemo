@@ -199,8 +199,8 @@ module HomeHelper
     return heat_cell(row, stage, peak, lifecycle_reason(row, stage)) if value
 
     if lifecycle_open?(row, stage)
-      tag.span("pending", class: "lg-cell lg-open",
-        title: "this window closes " \
+      tag.span("Pending", class: "lg-cell lg-open",
+        title: "This window closes " \
                "#{lifecycle_closes(row, stage).strftime('%-d %b %Y')}")
     else
       tag.span("n/a", class: "lg-cell lg-none", title: lifecycle_reason(row, stage))

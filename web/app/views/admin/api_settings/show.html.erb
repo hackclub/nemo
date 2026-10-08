@@ -7,7 +7,7 @@
         say: "#{@answering} answering" %>
   <%= render "shared/stat", k: "Live keys", v: @tokens.count { |one| !one.spent? },
         say: "across #{pluralize(@tokens.map(&:app_id).uniq.size, 'app')}" %>
-  <%= render "shared/stat", k: "Checks, 30d", v: number_with_delimiter(@checks),
+  <%= render "shared/stat", k: "Checks, 30 days", v: number_with_delimiter(@checks),
         say: pluralize(@channels, "channel") %>
   <%= render "shared/stat", k: "Withheld", v: number_with_delimiter(@withheld),
         say: withheld_share(@withheld, @checks) %>
@@ -32,18 +32,19 @@
           <span class="setval cap-do">
             <b class="row-value"><%= value %></b>
             <% if may_grant? %>
-              <button type="button" class="lnk" data-modal-open="dial-<%= key %>" aria-haspopup="dialog">Change</button>
+              <button type="button" class="btn btn-sm" data-modal-open="dial-<%= key %>" aria-haspopup="dialog">Change</button>
             <% end %>
           </span>
         </div>
       <% end %>
       <div class="setline">
         <span class="setname">Last sync</span>
-        <span class="setval <%= "sub2" unless @synced %>"><%= synced_line(@synced) %></span>
+        <span class="setval <%= "is-none" unless @synced %>"><%= synced_line(@synced) %></span>
       </div>
       <div class="setline">
         <span class="setname">Last changed</span>
-        <span class="setval <%= "sub2" unless @last_dial %>"><%= dial_change(@last_dial) %></span>
+        <% changed = dial_change(@last_dial) %>
+        <span class="setval <%= "is-none" if changed.to_s == "Never" %>"><%= changed %></span>
       </div>
     </div>
   </div>
@@ -52,7 +53,7 @@
     <div class="card-head">
       <h2 class="card-title">Tokens</h2>
       <div class="card-tools">
-        <span class="queue-label">
+        <span class="card-sub">
           <%= @tokens.count { |one| !one.spent? } %> live &middot;
           <%= @tokens.count(&:spent?) %> spent
         </span>
@@ -69,9 +70,9 @@
               <th>Key</th>
               <th class="col-num">Rate</th>
               <th class="col-num">Expires</th>
-              <th class="col-num">Asks 30d</th>
+              <th class="col-num">Asks, 30 days</th>
               <th class="col-date">Last used</th>
-              <th class="col-btn"></th>
+              <th class="col-btn"><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -86,15 +87,15 @@
                     </span>
                   </span>
                 </td>
-                <td class="<%= "sub2" if token.revoked? %>"><%= token.name %></td>
-                <td><code class="tag mono"><%= token.shown %></code></td>
-                <td class="col-num mono <%= "rate-own" if token.rate_limit %>">
+                <td class="<%= "sub" if token.revoked? %>"><%= token.name %></td>
+                <td><code class="tag"><%= token.shown %></code></td>
+                <td class="col-num <%= "rate-own" if token.rate_limit %>">
                   <%= token.revoked? ? "n/a" : token.rate %>
                 </td>
-                <td class="col-num mono"><%= token.spent? ? "n/a" : token.dies_in %></td>
+                <td class="col-num"><%= token.spent? ? "n/a" : token.dies_in %></td>
                 <td class="col-num"><%= number_with_delimiter(@asks[token.id].to_i) %></td>
-                <td class="col-date mono">
-                  <%= token.last_used_at ? time_ago_in_words(token.last_used_at) : "never" %>
+                <td class="col-date">
+                  <%= token.last_used_at ? "#{time_ago_in_words(token.last_used_at)} ago" : "Never" %>
                 </td>
                 <td class="col-btn">
                   <% if token.revoked? %>
@@ -102,7 +103,7 @@
                       Revoked <%= token.revoked_at.strftime("%-d %b") %>
                     </span>
                   <% elsif may_grant? %>
-                    <button type="button" class="lnk" data-modal-open="rate-<%= token.id %>" aria-haspopup="dialog">Set rate</button>
+                    <button type="button" class="btn btn-sm" data-modal-open="rate-<%= token.id %>" aria-haspopup="dialog">Set rate</button>
                   <% end %>
                 </td>
               </tr>

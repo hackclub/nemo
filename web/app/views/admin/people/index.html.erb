@@ -29,7 +29,7 @@
         <thead>
           <tr>
             <th>Person</th><th>Role</th>
-            <th style="width: 18%">Acted 30d</th><th class="col-btn"></th>
+            <th style="width: 18%">Acted, 30 days</th><th class="col-btn"><span class="sr-only">Open</span></th>
           </tr>
         </thead>
         <tbody>
@@ -38,7 +38,8 @@
               <td colspan="4"><%= label %> &middot; <%= people.size %></td>
             </tr>
             <% people.each do |user_id| %>
-              <tr>
+              <tr data-controller="row-link" data-row-link-href-value="<%= admin_person_path(user_id) %>"
+                  data-action="click->row-link#go keydown->row-link#go">
                 <td>
                   <div class="subjcell">
                     <%= face(user_id) %>
@@ -52,7 +53,8 @@
                           extras: @extras_of[user_id] || 0) %></td>
                 <td><%= acted_bar(@acted[user_id], @busiest) %></td>
                 <td class="col-btn">
-                  <%= link_to "Open", admin_person_path(user_id), class: "btn" %>
+                  <svg class="row-go" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
                 </td>
               </tr>
             <% end %>

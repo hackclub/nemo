@@ -102,12 +102,12 @@ class MemberConsentTest < ActionDispatch::IntegrationTest
     get settings_permissions_path
 
     assert_select ".fold-title", text: "Triage Bot"
-    assert_select ".data-table .btn", text: "Opt in"
+    assert_select ".data-table .switch", text: "Opt in"
 
     flip("1")
     get settings_permissions_path
 
-    assert_select ".data-table .btn", text: "Opt out"
+    assert_select ".data-table .switch", text: "Opt out"
   end
 
   test "an app nobody approved is not offered at all" do
@@ -121,7 +121,7 @@ class MemberConsentTest < ActionDispatch::IntegrationTest
     Fd::Flag.set!(:public_api, false, by: "UBOSS")
     get settings_permissions_path
 
-    assert_select ".data-table .btn[disabled]"
+    assert_select ".data-table .switch[disabled]"
   end
 
   test "signed out, nobody can move consent at all" do

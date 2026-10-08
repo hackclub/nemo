@@ -1,15 +1,17 @@
 module AdminHelper
   def role_capability_switch(role, key, override)
     held = override ? override.allowed : Authz.baseline(role).include?(key)
-    if Authz.locked?(key)
-      return dead_button(held ? "on" : "off", "#{key} is FD only, it cannot be moved",
-        held ? "btn tog-on" : "btn tog-off")
+    label = "#{Authz.role_label(role)}: #{key}"
+    why = Authz.locked?(key) ? "#{key} is FD only, it cannot be moved" : why_not("access.grant")
+    if why
+      return tag.span(class: "switch", role: "switch", tabindex: "0", title: why,
+        aria: { checked: held.to_s, disabled: "true", label: label, description: why })
     end
 
-    gated_button "access.grant", held ? "on" : "off",
+    button_to held ? "On" : "Off",
       fd_role_permission_path(role: role, key: key, allowed: held ? "0" : "1"),
-      method: :patch,
-      class: held ? "btn btn-on" : "btn tog-off"
+      method: :patch, class: "switch", form: { class: "contents" },
+      role: "switch", aria: { checked: held.to_s, label: label }
   end
 
   def role_standing(user_id, roles: nil, extras: nil)
@@ -48,19 +50,17 @@ module AdminHelper
   FACES_SHOWN = 4
 
   def audience_chip(kind)
-    tone = AUDIENCE_TONE[kind]
-    return tag.span(kind, class: "sub2") if tone.nil?
-
-    tag.span(kind, class: tone)
+    tag.span(kind.to_s.upcase_first, class: AUDIENCE_TONE.fetch(kind, "chip chip-off"),
+      title: AUDIENCE_NOTE[kind])
   end
 
   def named_faces(named, kind)
-    return tag.span("anyone signed in", class: "sub2") if
+    return tag.span("Anyone signed in", class: "sub") if
       Channels::Audience::OPEN.include?(kind)
 
     people = named.select { |grant| grant.user_id.present? }
     roles = named.filter_map { |grant| grant.role.presence }.uniq
-    return tag.span("nobody", class: "sub2") if people.empty? && roles.empty?
+    return tag.span("Nobody", class: "sub") if people.empty? && roles.empty?
 
     safe_join([role_chips(roles), face_stack(people)].compact, " ")
   end
@@ -72,7 +72,7 @@ module AdminHelper
   def role_chips(roles)
     return nil if roles.empty?
 
-    safe_join(roles.map { |role| tag.span("#{role_label_text(role)} set", class: "chip") }, " ")
+    safe_join(roles.map { |role| tag.span("#{role_label_text(role).upcase_first} set", class: "chip") }, " ")
   end
 
   def face_stack(people)
@@ -99,7 +99,7 @@ module AdminHelper
   end
 
   def acted_bar(count, busiest)
-    return tag.span("never", class: "sub2") if count.to_i.zero?
+    return tag.span("Never", class: "sub") if count.to_i.zero?
 
     width = busiest.to_i.positive? ? (count * 100.0 / busiest).round : 0
     tag.span(class: "inbar") do
@@ -111,6 +111,12 @@ module AdminHelper
     Fd::AppSetting::ON => "All public",
     Fd::AppSetting::GUARDED => "Guarded only",
     Fd::AppSetting::OFF => "None"
+  }.freeze
+
+  JOIN_NOTES = {
+    Fd::AppSetting::ON => "Every public channel",
+    Fd::AppSetting::GUARDED => "Only channels with a guard",
+    Fd::AppSetting::OFF => "No channel"
   }.freeze
 
   def admin_join_mode_switch(mode)

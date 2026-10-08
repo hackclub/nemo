@@ -17,6 +17,8 @@ LIFETIME_MIN_DAYS = 3.0
 LIFETIME_SCALE_DAYS = 300.0
 LIFETIME_EXPONENT = 2.5
 MESSAGE_RANK_WEIGHT = 0.35
+DATED_CLAIM_DAYS = 210
+CLAIM_LAGS = ((0.7, 0, 0), (0.2, 1, 7), (0.07, 8, 30), (0.03, 31, 90))
 
 WORDS = (
     "lounge welcome ship code design hardware music games photos books coffee garden rocket "
@@ -197,6 +199,15 @@ def make_members(rng, profile, count, channels, as_of, history_months=None):
     return members
 
 
+def claim_lag(rng):
+    roll = rng.random()
+    for share, low, high in CLAIM_LAGS:
+        if roll < share:
+            return rng.randint(low, high)
+        roll -= share
+    return 0
+
+
 def make_member(rng, rates, messages_q, delay_q, channels, weights, month, index, as_of):
     latest = as_of - timedelta(days=1)
     days_in = min(27, (latest - month).days) if month <= latest else 0
@@ -221,12 +232,18 @@ def make_member(rng, rates, messages_q, delay_q, channels, weights, month, index
         span = max(1, (latest - cohort_at).days)
         deactivated_at = cohort_at + timedelta(days=rng.randint(1, span))
 
+    pending = first_post_at is None and rng.random() < rates["invite_pending"]
+    if (latest - cohort_at).days <= DATED_CLAIM_DAYS:
+        claimed_at = None if pending else min(cohort_at + timedelta(days=claim_lag(rng)), latest)
+    else:
+        claimed_at = cohort_at if rng.random() < rates["claimed"] else None
+
     return Member(
         user_id=f"{SEED_USER_PREFIX}{index:07d}",
         cohort_at=cohort_at,
         engagement=engagement,
-        claimed_at=cohort_at if rng.random() < rates["claimed"] else None,
-        invite_pending=first_post_at is None and rng.random() < rates["invite_pending"],
+        claimed_at=claimed_at,
+        invite_pending=pending,
         is_bot=is_bot,
         is_admin=rng.random() < rates["is_admin"],
         is_restricted=rng.random() < rates["is_restricted"],

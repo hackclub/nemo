@@ -46,7 +46,7 @@
   }
 
   .pane-head > .views {
-    @apply -mx-3 px-2;
+    @apply -mx-3 px-1.5;
   }
 
   .pane-head > .views .view {
@@ -92,7 +92,7 @@
   }
 
   .rhead > .views {
-    @apply -mx-6 mt-3 px-4;
+    @apply -mx-6 mt-3 px-[18px];
   }
 
   .backbtn { flex: none; }
@@ -217,7 +217,7 @@
     }
 
     .rhead > .row-top { display: none; }
-    .rhead > .views { @apply -mx-4 mt-0 px-2; }
+    .rhead > .views { @apply -mx-4 mt-0 px-2.5; }
     .rhead:not(:has(> .views, > .toolbar, > .intro)) { display: none; }
 
     .body { @apply gap-4 p-4 pb-10; }

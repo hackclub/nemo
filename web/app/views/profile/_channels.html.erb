@@ -3,12 +3,17 @@
     <div>
       <h2 class="card-title">Channels</h2>
     </div>
-    <div class="card-tools">
-      <span class="card-sub">top <%= profile.channels.size %> of
-        <%= number_with_delimiter(profile.channels_posted_in) %></span>
-    </div>
+    <% if profile.channels.any? %>
+      <div class="card-tools">
+        <span class="card-sub">Top <%= profile.channels.size %> of
+          <%= number_with_delimiter(profile.channels_posted_in) %></span>
+      </div>
+    <% end %>
   </div>
   <% if profile.channels.empty? %>
+    <div class="empty">
+      <p class="empty-title">No channels yet</p>
+    </div>
   <% else %>
     <% top = profile.channels.first.first.messages.to_f %>
     <div class="scroll">

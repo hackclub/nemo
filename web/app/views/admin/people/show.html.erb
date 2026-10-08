@@ -20,26 +20,31 @@
     <span class="metric-value is-text <%= "is-none" if @roles.empty? %>">
       <%= @roles.any? ? @roles.map { |r| Authz.role_label(r) }.to_sentence : "No role" %>
     </span>
+    <span class="metric-note"><%= @held_since ? "Since #{@held_since.strftime("%b %Y")}" : "Never held one" %></span>
   </div>
 
   <div class="metric">
     <span class="metric-key">In force</span>
     <span class="metric-value"><%= @effective.size %></span>
+    <span class="metric-note">Capabilities</span>
   </div>
 
   <div class="metric">
     <span class="metric-key">Off default</span>
     <span class="metric-value <%= "is-none" if @deviations.empty? %>"><%= @deviations.size %></span>
+    <span class="metric-note">Changed by hand</span>
   </div>
 
   <div class="metric">
     <span class="metric-key">Channels</span>
     <span class="metric-value <%= "is-none" if @channel_rows.empty? %>"><%= @channel_rows.size %></span>
+    <span class="metric-note">Named to them</span>
   </div>
 
   <div class="metric">
     <span class="metric-key">Looked up</span>
     <span class="metric-value <%= "is-none" if @identity_reads.zero? %>"><%= @identity_reads %></span>
+    <span class="metric-note">Identities, 30 days</span>
   </div>
 </div>
 
@@ -56,7 +61,7 @@
           <thead>
             <tr>
               <th>Scope</th><th class="detail-cell">What it does</th>
-              <th class="detail-cell">Given by</th><th class="col-num"></th>
+              <th class="detail-cell">Given by</th><th class="col-num"><span class="sr-only">Change</span></th>
             </tr>
           </thead>
           <tbody>
@@ -68,7 +73,7 @@
                   <%= @names[grant.granted_by] %>, <%= grant.granted_at.strftime("%b %Y") %>
                 </td>
                 <td class="col-num">
-                  <span class="sub"><%= grant.denial? ? "taken away" : "added" %></span>
+                  <span class="sub"><%= grant.denial? ? "Taken away" : "Added" %></span>
                 </td>
               </tr>
             <% end %>
@@ -100,7 +105,7 @@
           <div class="lrow">
             <span class="grow">
               <%= grant.label %>
-              <% if grant.revoked? %><span class="sub">taken back</span><% end %>
+              <% if grant.revoked? %><span class="sub">Taken back</span><% end %>
             </span>
             <span class="lrow-right sub">
               <%= (grant.revoked_at || grant.granted_at)&.strftime("%b %Y") || "n/a" %>
@@ -116,7 +121,7 @@
     <div class="card card-flush">
       <div class="card-head">
         <h2 class="card-title">What they did</h2>
-        <span class="card-sub">last 30 days</span>
+        <span class="card-sub">Last 30 days</span>
       </div>
       <% if @audit_rows.any? %>
         <%= render "shared/log", audit_rows: @audit_rows %>

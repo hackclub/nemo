@@ -6,19 +6,11 @@
   .message-activity-post-body > .richtext-text:first-child { margin-top: 0; }
 
   .message-activity-figures > .fact > dt {
-    font-size: var(--t-fine);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ink-4);
+    @apply text-xs text-muted-foreground;
   }
   .message-activity-figures > .fact { padding: var(--s-xs) var(--s-sm); }
   .message-activity-figures > .fact > dd {
-    margin: var(--s-2xs) 0 0;
-    font-family: var(--font-mono);
-    font-size: var(--t-head);
-    font-variant-numeric: tabular-nums;
-    color: var(--ink);
-    line-height: 1.2;
+    @apply mt-1 text-xl leading-tight font-semibold text-foreground tabular-nums;
   }
 
   .message-activity-head { align-items: flex-start; gap: var(--s-sm); }
@@ -42,22 +34,16 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: var(--t-fine);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ink-4);
+    @apply text-xs text-muted-foreground;
   }
   .message-activity-key dd {
     display: flex;
     align-items: baseline;
     gap: 6px;
     margin: 0;
-    font-family: var(--font-mono);
-    font-size: var(--t-body);
-    font-variant-numeric: tabular-nums;
-    color: var(--ink);
+    @apply text-sm font-medium text-foreground tabular-nums;
   }
-  .message-activity-key dd > small { font-family: var(--font-sans); color: var(--ink-4); }
+  .message-activity-key dd > small { @apply text-xs font-normal text-muted-foreground; }
   .message-activity-dot { width: 7px; height: 7px; border-radius: 999px; display: inline-block; flex: none; }
 
   .richtext-emoji-img {

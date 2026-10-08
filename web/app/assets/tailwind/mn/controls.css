@@ -212,7 +212,6 @@
   }
 
   .num-in {
-    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     max-width: 8rem;
   }

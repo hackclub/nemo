@@ -1,4 +1,20 @@
 @layer base {
+  .doc-layout {
+    @apply mx-auto grid max-w-full justify-center gap-12;
+    grid-template-columns: minmax(0, 44rem);
+  }
+  @media (min-width: 1280px) {
+    .doc-layout { grid-template-columns: minmax(0, 44rem) 12rem; }
+  }
+  .doc-layout > .doc { @apply m-0 max-w-none; }
+  .doc-toc { @apply sticky top-0 hidden self-start pt-1 text-sm xl:block; }
+  .doc-toc-title { @apply mb-3 font-medium text-foreground; }
+  .doc-toc ul { @apply m-0 flex list-none flex-col gap-2.5 border-l border-border p-0; }
+  .doc-toc a {
+    @apply -ml-px block border-l border-transparent pl-3 text-muted-foreground no-underline transition-colors hover:text-foreground hover:no-underline;
+  }
+  .doc-toc a[aria-current] { @apply border-foreground font-medium text-foreground; }
+
   .doc {
     --doc-measure: 72ch;
     --doc-step: 48px;
@@ -47,11 +63,7 @@
   }
 
   .doc-spec dt {
-    font-size: var(--t-mark);
-    font-weight: 600;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-    color: var(--ink-4);
+    @apply text-xs text-muted-foreground;
   }
 
   .doc-spec dd {
@@ -130,8 +142,6 @@
     font-family: var(--font-mono);
     font-size: var(--t-mark);
     font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
   }
 
   .doc-defs { display: grid; }
@@ -160,12 +170,7 @@
   }
 
   .doc-def > dt em {
-    font-family: var(--font-sans);
-    font-style: normal;
-    font-size: var(--t-mark);
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    color: var(--ink-4);
+    @apply font-mono text-xs font-normal text-muted-foreground not-italic;
   }
 
   .doc-def > dd {

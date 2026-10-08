@@ -462,4 +462,35 @@
     fill: var(--muted-foreground);
     font-size: 11px;
   }
+
+  .lifegrid {
+    @apply grid gap-1 px-4 pt-2 pb-4 text-sm;
+    grid-template-columns: 8.5rem repeat(var(--stages), minmax(7rem, 1fr)) 6rem;
+    min-width: 46rem;
+  }
+  .lg-head {
+    @apply flex h-9 items-center justify-center px-1 text-center font-medium whitespace-nowrap text-foreground;
+  }
+  .lg-head.lg-left { @apply justify-start text-left; }
+  .lg-head.lg-end { @apply justify-end text-right; }
+  .lg-row { @apply flex min-w-0 flex-col justify-center gap-0.5 pr-2; }
+  .lg-row > b { @apply font-medium text-foreground; }
+  .lg-row > span { @apply text-xs text-muted-foreground tabular-nums; }
+  .lg-cell {
+    @apply flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-md px-2 py-1.5 text-center font-medium text-foreground tabular-nums;
+  }
+  .lg-cell > b { @apply font-medium; }
+  .lg-cell > span { @apply text-xs font-normal text-muted-foreground; }
+  .lg-h0 { background: color-mix(in oklab, var(--primary) 4%, transparent); }
+  .lg-h1 { background: color-mix(in oklab, var(--primary) 9%, transparent); }
+  .lg-h2 { background: color-mix(in oklab, var(--primary) 15%, transparent); }
+  .lg-h3 { background: color-mix(in oklab, var(--primary) 22%, transparent); }
+  .lg-h4 { background: color-mix(in oklab, var(--primary) 31%, transparent); }
+  .lg-h5 { background: color-mix(in oklab, var(--primary) 42%, transparent); }
+  .lg-cell:is(.lg-h4, .lg-h5) > span { @apply text-foreground/75; }
+  .lg-cell.lg-open { @apply border border-dashed border-border bg-transparent font-normal text-muted-foreground; }
+  .lg-cell.lg-none { @apply bg-transparent font-normal text-muted-foreground; }
+  .lg-plain { @apply flex items-center justify-end text-muted-foreground tabular-nums; }
+  .lg-swatch-open { @apply border border-dashed border-muted-foreground; }
+  .lg-swatch-none { @apply border border-border; }
 }

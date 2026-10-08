@@ -19,7 +19,7 @@
       <div class="scroll">
         <table class="data-table">
           <thead>
-            <tr><th>Channel</th><th>Added</th><th></th></tr>
+            <tr><th>Channel</th><th>Added</th><th class="col-btn"><span class="sr-only">Actions</span></th></tr>
           </thead>
           <tbody>
             <% @channels.each do |row| %>
@@ -32,15 +32,15 @@
                 </td>
                 <td class="detail-cell">
                   <span class="two-line">
-                    <span><%= @names[row.granted_by] %></span>
+                    <b><%= @names[row.granted_by] %></b>
                     <span><%= row.granted_at.strftime("%-d %b %Y") %></span>
                   </span>
                 </td>
-                <td>
+                <td class="col-btn">
                   <% if may_grant? %>
                     <%= button_to "Take out",
                           admin_role_channels_path(role: @role, channel_id: row.channel_id),
-                          method: :delete, class: "btn" %>
+                          method: :delete, class: "btn btn-sm", form: { class: "contents" } %>
                   <% end %>
                 </td>
               </tr>
@@ -50,7 +50,7 @@
       </div>
     <% else %>
       <div class="empty">
-        <p class="empty-title">The set is empty</p>
+        <p class="empty-title">No channels yet</p>
       </div>
     <% end %>
   </div>
@@ -72,7 +72,7 @@
               <tr>
                 <td><b><%= @names[user_id] %></b></td>
                 <td class="detail-cell"><%= pluralize(@channels.size, "shared channel") %></td>
-                <td><%= link_to "Manage", admin_person_path(user_id), class: "btn" %></td>
+                <td class="col-btn"><%= link_to "Manage", admin_person_path(user_id), class: "btn btn-sm" %></td>
               </tr>
             <% end %>
           </tbody>

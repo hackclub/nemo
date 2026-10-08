@@ -49,25 +49,11 @@
     overflow-wrap: normal;
   }
   .facts-strip dt, .fact-lead > dt, .fact > dt {
-    font-size: var(--t-fine);
-    font-weight: 500;
-    letter-spacing: var(--tr-caps);
-    text-transform: uppercase;
-    color: var(--ink-3);
-    margin-bottom: 3px;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    @apply mb-1 min-w-0 text-xs text-muted-foreground;
   }
   .facts-strip dd, .fact > dd {
-    margin: 0;
-    font-size: var(--t-body);
-    font-weight: 500;
-    color: var(--ink);
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    @apply m-0 min-w-0 text-sm font-medium text-foreground tabular-nums;
+    overflow-wrap: anywhere;
   }
   .fact-note, .fact-unit { font-size: var(--t-fine); color: var(--ink-4); font-weight: 400; }
   .facts, .facts2, .facts-wrap, .facts-fit {
@@ -117,11 +103,7 @@
   .trunc-cell { max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tcell, .detail-cell, .when-cell, .subjcell { min-width: 0; }
   .band-label {
-    font-size: var(--t-fine);
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ink-4);
+    @apply text-xs font-medium text-muted-foreground;
   }
 
   .pager {
@@ -179,14 +161,14 @@
   .fstats { display: flex; gap: var(--s-md); flex-wrap: wrap; }
   .fstat { display: flex; flex-direction: column; gap: 1px; }
   .fstat-k { font-size: var(--t-fine); color: var(--ink-4); }
-  .fstat-n { font-family: var(--font-mono); font-size: var(--t-head); font-weight: 600; color: var(--ink); }
+  .fstat-n { @apply text-lg font-semibold text-foreground tabular-nums; }
 
-  .list, .rows, .record-list, .people-list, .band-list, .srclist, .optlist {
+  .list, .rows, .record-list, .people-list, .srclist, .optlist {
     display: flex;
     flex-direction: column;
     min-width: 0;
   }
-  .row, .lrow, .srow, .band-row, .index-item, .record-row, .source-row {
+  .row, .lrow, .srow, .index-item, .record-row, .source-row {
     display: flex;
     align-items: center;
     gap: var(--s-2xs);
@@ -234,8 +216,18 @@
   .lnk-soft { color: var(--ink-4); }
   .lnk-soft:hover { color: var(--ink-2); }
 
-  .log { display: flex; flex-direction: column; }
-  .log-meta, .log-source { @apply font-mono text-xs text-muted-foreground; }
+  details.log-item { @apply block p-0 last:border-b-0; }
+  details.log-item > summary {
+    @apply flex cursor-pointer list-none items-center gap-2 px-4 py-3 transition-colors hover:bg-muted/50;
+  }
+  details.log-item > summary::-webkit-details-marker { display: none; }
+  .log-caret { @apply size-4 flex-none text-muted-foreground transition-transform; }
+  details.log-item[open] .log-caret { @apply rotate-90 text-foreground; }
+  details.log-item > pre.log {
+    @apply mx-4 mt-0 mb-4 max-h-96 overflow-auto rounded-lg border border-border bg-muted/40 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap text-foreground;
+  }
+  .log-source { @apply font-mono text-xs text-foreground; }
+  .log-meta { @apply text-xs text-muted-foreground tabular-nums; }
 
   .auditlog { display: flex; flex-direction: column; min-width: 0; }
   .auditlog-day {

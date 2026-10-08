@@ -11,6 +11,10 @@
     @apply sr-only;
   }
 
+  .chart-empty {
+    @apply flex w-full items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground;
+  }
+
   line.grid, line.base, line.mark-rule {
     shape-rendering: crispEdges;
   }
@@ -66,7 +70,9 @@
   }
 
   .cap {
+    fill: var(--foreground);
     font-size: 11px;
+    font-weight: 500;
   }
 
   .val {
@@ -336,8 +342,12 @@
     opacity: 0.55;
   }
 
-  .card > :is([data-controller~="chart"], [data-controller~="funnel"]) {
+  .card > :is([data-controller~="chart"], [data-controller~="funnel"], [data-controller~="lorenz"], [data-controller~="scatter"]) {
     @apply px-4 pt-3 pb-4;
+  }
+
+  .card > [data-controller~="lorenz"] + .legend {
+    @apply -mt-1 px-4 pb-4;
   }
 
   .ring {

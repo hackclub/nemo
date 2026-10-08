@@ -1,63 +1,60 @@
 <% content_for :page_title, "Your account" %>
 
-<div class="card card-flush">
-  <div class="strip">
-    <div class="who">
-      <%= face(current_account.user_id, css: "row-avatar avatar-lg") %>
+<div class="grid g-1">
+  <div class="card card-flush">
+    <div class="card-head identity-head">
+      <%= face(current_account.user_id, css: "avatar avatar-band") %>
       <span class="two-line">
         <b><%= person_name(current_account.user_id) %></b>
         <span class="mono"><%= current_account.user_id %></span>
       </span>
     </div>
 
-    <span class="strip-div" aria-hidden="true"></span>
-
-    <span class="two-line">
-      <span class="sub2">Role</span>
-      <% if @roles.any? %>
-        <span class="<%= Authz.superadmin?(@roles.first) ? "is-high" : "is-loud" %>">
-          <%= @roles.map { |role| Authz.role_label(role) }.to_sentence %>
+    <div class="setlist">
+      <div class="setline">
+        <span class="setname">Role</span>
+        <span class="setval">
+          <% if @roles.any? %>
+            <span class="chip <%= Authz.superadmin?(@roles.first) ? "chip-primary" : "" %>">
+              <%= @roles.map { |role| Authz.role_label(role) }.to_sentence %>
+            </span>
+          <% else %>
+            <span class="is-none">None</span>
+          <% end %>
         </span>
-      <% else %>
-        <span class="is-quiet">none</span>
-      <% end %>
-    </span>
+      </div>
 
-    <span class="strip-div" aria-hidden="true"></span>
-
-    <span class="two-line">
-      <span class="sub2">Slack</span>
-      <% if @account %>
-        <span class="is-good">linked</span>
-      <% else %>
-        <span class="is-quiet">not linked</span>
-      <% end %>
-    </span>
-
-    <span class="grow"></span>
-
-    <% if @account %>
-      <%= button_to "Unlink Slack", fd_slack_account_path, method: :delete, class: "btn",
-            form: { class: "contents" } %>
-    <% elsif @linkable %>
-      <%= button_to "Link Slack", fd_slack_account_path, method: :post, class: "btn",
-            form: { class: "contents" } %>
-    <% end %>
+      <div class="setline">
+        <span class="setname">Slack</span>
+        <span class="setval">
+          <% if @account %>
+            <span class="chip chip-good">Linked</span>
+            <%= button_to "Unlink Slack", fd_slack_account_path, method: :delete, class: "btn btn-sm",
+                  form: { class: "contents" } %>
+          <% elsif @linkable %>
+            <span class="chip chip-off">Not linked</span>
+            <%= button_to "Link Slack", fd_slack_account_path, method: :post, class: "btn btn-sm",
+                  form: { class: "contents" } %>
+          <% else %>
+            <span class="chip chip-off">Not linked</span>
+          <% end %>
+        </span>
+      </div>
+    </div>
   </div>
-</div>
 
-<div class="stack">
-  <div class="card">
+  <div class="card card-flush">
     <div class="card-head">
-      <span class="card-title">Activity</span>
-      <span class="grow"></span>
-      <span class="sub2">
-        <% if @audit_row_count.positive? %>
-          <%= pluralize(@audit_row_count, "action") %> &middot; last 30 days
-        <% else %>
-          last 30 days
-        <% end %>
-      </span>
+      <div>
+        <h2 class="card-title">Activity</h2>
+        <p class="card-sub">
+          <% if @audit_row_count.positive? %>
+            <%= pluralize(@audit_row_count, "action") %>, last 30 days
+          <% else %>
+            Last 30 days
+          <% end %>
+        </p>
+      </div>
     </div>
     <% if @audit_rows.any? %>
       <%= render "shared/log", audit_rows: @audit_rows %>

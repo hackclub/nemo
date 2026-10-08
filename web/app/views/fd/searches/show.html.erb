@@ -24,11 +24,14 @@
     <p class="empty-title">
       <%= @found.asked? ? "Nothing matches #{@found.term}" : "Search the Fire Engine" %>
     </p>
-    <p>
-      <%= @found.asked? ?
-            "Try a case number, a handle, a Slack ID, or a phrase from a report." :
-            "Type at least two letters. Prefix with @ for a member, # for a case, n: for a note, or r: for a report." %>
-    </p>
+    <% unless @found.asked? %>
+      <div class="empty-keys">
+        <span><kbd class="kbd">@</kbd> Member</span>
+        <span><kbd class="kbd">#</kbd> Case</span>
+        <span><kbd class="kbd">n:</kbd> Note</span>
+        <span><kbd class="kbd">r:</kbd> Report</span>
+      </div>
+    <% end %>
     <% if @found.asked? %>
       <div class="empty-do">
         <%= link_to "Every case", fd_cases_path, class: "btn" %>

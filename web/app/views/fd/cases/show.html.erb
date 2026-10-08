@@ -206,7 +206,7 @@
                 </div>
                 <% marks = [entry.detail.presence, *entry.chips].compact %>
                 <% if marks.any? %>
-                  <p class="card-note"><%= marks.join(" · ") %></p>
+                  <p class="card-note"><%= named_text(marks.join(" · ")) %></p>
                 <% end %>
                 <% if entry.body.present? %>
                   <p class="msg-body"><%= mentioned(entry.body) %></p>

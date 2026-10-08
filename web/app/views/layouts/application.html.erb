@@ -52,6 +52,7 @@
           <% end %>
 
           <main class="main" id="main" tabindex="-1">
+            <% unless content_for?(:headless) %>
             <div class="rhead">
               <div class="row-top">
                 <div class="rhead-sub">
@@ -78,6 +79,7 @@
                 <nav class="views" aria-label="Sections"><%= content_for(:page_tabs) %></nav>
               <% end %>
             </div>
+            <% end %>
 
             <div class="scrollarea<%= " flush" if content_for?(:flush) %>">
               <div class="body<%= " flush" if content_for?(:flush) %>">
@@ -105,7 +107,7 @@
     </div>
 
     <% if fire_engine %>
-      <turbo-frame id="person-drawer" class="person-drawer-frame" data-controller="person-drawer"
+      <turbo-frame id="person-drawer" class="person-drawer-frame" data-controller="person-drawer cachet"
         target="_top"></turbo-frame>
     <% end %>
   </body>

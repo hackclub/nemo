@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { scaleLinear } from "d3-scale"
 import { line as lineOf, area as areaOf, curveLinear } from "d3-shape"
 
-const PAD = { l: 42, r: 14, t: 12, b: 34 }
+const PAD = { l: 42, r: 14, t: 20, b: 38 }
 const TICKS = [0, 25, 50, 75, 100]
 
 const esc = (s) =>
@@ -70,7 +70,7 @@ export default class extends Controller {
         wide - PAD.r}" y2="${y(v).toFixed(1)}"/>` +
       `<text class="ax" x="${PAD.l - 7}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end">${
         v}%</text>` +
-      `<text class="ax" x="${x(v).toFixed(1)}" y="${y(0) + 15}" text-anchor="middle">${
+      `<text class="ax" x="${x(v).toFixed(1)}" y="${y(0) + 21}" text-anchor="middle">${
         v}%</text>`).join("")
 
     const fair = `<line class="fair" x1="${x(0)}" y1="${y(0)}" x2="${x(100)}" y2="${y(100)}"/>`

@@ -12,7 +12,7 @@
         <thead>
           <tr>
             <th class="detail-cell">Permission</th>
-            <th class="col-btn"></th>
+            <th class="col-btn"><span class="sr-only">Opted in</span></th>
           </tr>
         </thead>
         <tbody>
@@ -26,13 +26,11 @@
                 </span>
               </td>
               <td class="col-btn">
-                <span class="cap-do">
-                  <%= button_to on ? "Opt out" : "Opt in",
-                        settings_consent_path(scope: key, on: on ? "0" : "1"),
-                        method: :patch, disabled: api_off,
-                        class: "btn btn-sm #{'btn-primary' unless on}",
-                        form: { class: "contents" } %>
-                </span>
+                <%= button_to on ? "Opt out" : "Opt in",
+                      settings_consent_path(scope: key, on: on ? "0" : "1"),
+                      method: :patch, disabled: api_off, class: "switch", role: "switch",
+                      aria: { checked: on.to_s, label: "#{Api::Scope.label(key)}, every app" },
+                      form: { class: "contents" } %>
               </td>
             </tr>
           <% end %>
@@ -56,10 +54,10 @@
                  data-action="toggle->remember#keep">
           <summary>
             <span class="fold-title"><%= app.name %></span>
-            <span class="fold-sub">by <%= @names[app.owner_user_id] %></span>
+            <span class="fold-sub"><%= @names[app.owner_user_id] %></span>
             <span class="grow"></span>
             <% if on.positive? %>
-              <span class="chip chip-good"><%= on %> of <%= Api::Scope::KEYS.size %></span>
+              <span class="chip chip-good"><%= on %> of <%= Api::Scope::KEYS.size %> on</span>
             <% end %>
           </summary>
 
@@ -68,7 +66,7 @@
               <thead>
                 <tr>
                   <th class="detail-cell">Permission</th>
-                  <th class="col-btn"></th>
+                  <th class="col-btn"><span class="sr-only">Opted in</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -80,18 +78,16 @@
                       <b><%= Api::Scope.label(key) %></b>
                     </td>
                     <td class="col-btn">
-                      <span class="cap-do">
-                        <% if all %>
-                          <span class="chip chip-good">All apps</span>
-                        <% else %>
-                          <%= button_to mine ? "Opt out" : "Opt in",
-                                settings_consent_path(app_id: app.id, scope: key,
-                                  on: mine ? "0" : "1"),
-                                method: :patch, disabled: api_off,
-                                class: "btn btn-sm #{'btn-primary' unless mine}",
-                                form: { class: "contents" } %>
-                        <% end %>
-                      </span>
+                      <% if all %>
+                        <span class="chip chip-good">All apps</span>
+                      <% else %>
+                        <%= button_to mine ? "Opt out" : "Opt in",
+                              settings_consent_path(app_id: app.id, scope: key,
+                                on: mine ? "0" : "1"),
+                              method: :patch, disabled: api_off, class: "switch", role: "switch",
+                              aria: { checked: mine.to_s, label: "#{Api::Scope.label(key)}, #{app.name}" },
+                              form: { class: "contents" } %>
+                      <% end %>
                     </td>
                   </tr>
                 <% end %>

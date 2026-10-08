@@ -1,7 +1,8 @@
 <div class="card card-flush">
   <div class="card-head">
     <div>
-      <h2 class="card-title">Queues</h2>
+      <h2 class="card-title">By work kind</h2>
+      <p class="card-sub"><%= number_with_delimiter(queues.sum(&:pending)) %> waiting &middot; <%= queues.sum(&:claimed) %> in flight</p>
     </div>
   </div>
   <% if queues.any? %>
@@ -24,7 +25,7 @@
         <tbody>
           <% queues.each do |queue| %>
             <tr>
-              <td class="mono"><%= queue.work_kind %></td>
+              <td class="font-medium"><%= queue.work_kind %></td>
               <td class="col-num"><%= number_with_delimiter(queue.pending) %></td>
               <td class="col-num"><%= queue.claimed %></td>
               <td class="col-num"><%= number_with_delimiter(queue.settled_last_hour) %></td>
@@ -32,8 +33,8 @@
               <td class="col-num"><%= number_with_delimiter(queue.arrived_last_day) %></td>
               <td class="col-num"><%= queue.short %></td>
               <td class="col-num <%= "warn" if queue.dead.positive? %>"><%= queue.dead %></td>
-              <td class="col-num mono"><%= queue.oldest_pending_at ? short_age(queue.oldest_pending_at) : "n/a" %></td>
-              <td class="col-num mono"><%= queue_eta(queue) %></td>
+              <td class="col-num"><%= queue.oldest_pending_at ? short_age(queue.oldest_pending_at) : "n/a" %></td>
+              <td class="col-num"><%= queue_eta(queue) %></td>
             </tr>
           <% end %>
         </tbody>
@@ -42,8 +43,6 @@
   <% else %>
     <div class="empty">
       <p class="empty-title">Nothing queued</p>
-      <p>No work kind has anything waiting or in flight. An empty queues tab is the healthy state.</p>
     </div>
   <% end %>
-<p class="chart-note"><%= number_with_delimiter(queues.sum(&:pending)) %> waiting &middot; <%= queues.sum(&:claimed) %> in flight</p>
 </div>

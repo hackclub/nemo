@@ -3,11 +3,11 @@
     <% tops = Journey::Lifecycle::STAGES.to_h { |s| [s[:key], lifecycle.filter_map { |r| r.public_send(s[:key])&.to_f }.max] } %>
     <div class="scroll">
       <div class="lifegrid" style="--stages: <%= Journey::Lifecycle::STAGES.size %>">
-        <span class="lg-head lg-left">cohort</span>
+        <span class="lg-head lg-left">Cohort</span>
         <% Journey::Lifecycle::STAGES.each do |stage| %>
-          <span class="lg-head"><%= stage[:head] %></span>
+          <span class="lg-head"><%= stage[:head].upcase_first %></span>
         <% end %>
-        <span class="lg-head" title="median days from account creation to first public post">median days</span>
+        <span class="lg-head lg-end" title="Median days from account creation to first public post">Median days</span>
 
         <% lifecycle.each do |row| %>
           <span class="lg-row">
@@ -25,14 +25,16 @@
     </div>
     <div class="key">
       <span class="lg-ramp">
-        low
+        Low
         <% HomeHelper::HEAT_STEPS.times do |i| %><i class="lg-h<%= i %>"></i><% end %>
-        high, per column
+        High, per column
       </span>
-      <span><i class="lg-swatch-open"></i>window still open</span>
-      <span><i class="lg-swatch-none"></i>no publishable rate</span>
+      <span><i class="lg-swatch-open"></i>Window still open</span>
+      <span><i class="lg-swatch-none"></i>No rate to publish</span>
     </div>
   <% else %>
-    <p class="card-note">n/a</p>
+    <div class="empty">
+      <p class="empty-title">No cohorts yet</p>
+    </div>
   <% end %>
 </div>

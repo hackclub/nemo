@@ -28,9 +28,9 @@
     .row-top > .ractions > .btn .kbd,
     .row-top > .ractions > .menu > .btn .kbd { display: none; }
   }
-  @container (max-width: 640px) {
-    .row-top > .ractions > .btn:has(> .action-icon) > span:not(.action-icon) { display: none; }
-    .row-top > .ractions > .btn:has(> .action-icon) {
+  @container (max-width: 1080px) {
+    .row-top > .ractions > .btn:not(.btn-primary):has(> .action-icon) > span:not(.action-icon) { @apply sr-only; }
+    .row-top > .ractions > .btn:not(.btn-primary):has(> .action-icon) {
       width: var(--ctl-h);
       padding: 0;
       gap: 0;
@@ -143,35 +143,20 @@
   .pagebar .btn { height: var(--ctl-h-sm); border-radius: var(--r-ctl); padding: 0 12px; }
 
   .lede {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--s-sm);
-    padding: var(--s-sm) var(--s-md);
-    border: 1px solid var(--line);
-    border-radius: var(--r-card);
-    background: var(--card);
-    min-width: 0;
+    @apply relative flex w-full min-w-0 items-start gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm text-card-foreground;
   }
+  .lede-icon { @apply mt-0.5 size-4 flex-none text-muted-foreground; }
+  .lede-warn { @apply border-warning/30 bg-warning/5; }
+  .lede-warn > .lede-icon { @apply text-warning; }
+  .lede > .empty-fish { @apply w-14 self-center; }
   .lede-mark {
-    flex: none;
-    display: grid;
-    place-items: center;
-    width: 38px;
-    height: 38px;
-    border-radius: var(--r-card);
-    background: var(--primary-soft);
-    color: var(--primary);
+    @apply grid size-9 flex-none place-items-center rounded-lg bg-primary/10 text-primary;
   }
-  .lede-note { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-  .lede-note b {
-    font-size: var(--t-mid);
-    font-weight: 600;
-    line-height: var(--lh-snug);
-    letter-spacing: var(--tr-head);
-    color: var(--ink);
-  }
-  .lede-note span { font-size: var(--t-small); color: var(--ink-3); line-height: var(--lh-prose); }
-  .lede-do { margin-left: auto; flex: none; display: flex; gap: var(--s-2xs); align-items: center; }
+  .lede-note { @apply flex min-w-0 flex-auto flex-col gap-0.5; }
+  .lede-note b { @apply font-medium leading-snug tracking-tight text-foreground; }
+  .lede-note span { @apply leading-relaxed text-muted-foreground; }
+  .lede-note a { @apply text-foreground underline underline-offset-4 hover:text-primary; }
+  .lede-do { @apply ml-auto flex flex-none items-center gap-2 self-center; }
 
   .board {
     display: grid;

@@ -2,9 +2,9 @@
 
 <div class="card card-flush">
   <div class="card-head">
-    <h2 class="card-title">Requests</h2>
-    <div class="card-tools">
-      <span class="queue-label"><%= @waiting %> waiting</span>
+    <div>
+      <h2 class="card-title">Requests</h2>
+      <p class="card-sub"><%= @waiting %> waiting</p>
     </div>
   </div>
 
@@ -18,7 +18,7 @@
             <th>State</th>
             <th>By</th>
             <th class="col-date">When</th>
-            <th class="col-btn"></th>
+            <th class="col-btn"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
         <tbody>
@@ -30,15 +30,15 @@
                   <b><%= asked.app.name %></b>
                 </span>
               </td>
-              <td class="sub2"><%= names[asked.app.owner_user_id] %></td>
+              <td class="sub"><%= names[asked.app.owner_user_id] %></td>
               <td><%= access_state_chip(asked.state) %></td>
-              <td class="sub2"><%= asked.decided_by ? names[asked.decided_by] : "" %></td>
-              <td class="col-date mono">
-                <%= time_ago_in_words(asked.decided_at || asked.created_at) %>
+              <td class="sub"><%= asked.decided_by ? names[asked.decided_by] : "" %></td>
+              <td class="col-date">
+                <%= time_ago_in_words(asked.decided_at || asked.created_at) %> ago
               </td>
               <td class="col-btn">
                 <% if asked.pending? %>
-                  <button type="button" class="lnk" data-modal-open="settle-<%= asked.id %>" aria-haspopup="dialog">Review</button>
+                  <button type="button" class="btn btn-sm" data-modal-open="settle-<%= asked.id %>" aria-haspopup="dialog">Review</button>
                 <% end %>
               </td>
             </tr>

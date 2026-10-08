@@ -41,14 +41,14 @@
           <table class="data-table cols-fixed">
             <colgroup>
               <% if may_deactivate %><col style="width: 40px"><% end %>
-              <col style="width: <%= @query.identity? ? "24%" : "48%" %>">
-              <col style="width: 18%">
+              <col style="width: <%= @query.identity? ? "22%" : "48%" %>">
+              <col style="width: 13%">
               <% if @query.identity? %>
-                <col style="width: 22%">
-                <col style="width: 14%">
+                <col style="width: 23%">
+                <col style="width: 12%">
                 <col style="width: 12%">
               <% end %>
-              <col style="width: 16%">
+              <col style="width: 10%">
               <col style="width: 44px">
             </colgroup>
             <thead>
@@ -69,7 +69,7 @@
                   <th>Country</th>
                 <% end %>
                 <th class="col-num">Standing</th>
-                <th class="col-num"></th>
+                <th class="col-num"><span class="sr-only">Details</span></th>
               </tr>
             </thead>
             <tbody>
@@ -112,13 +112,13 @@
                                   fd_new_members_path(@query.facet_params("domain" => row.domain)),
                                   class: "lnk" %>
                             <% if row.lone_domain? %>
-                              <span class="state state-warn">only them</span>
+                              <span class="state state-warn">Only them</span>
                             <% end %>
                           </b>
                           <%= plain_email(row.email) %>
                         </span>
                       <% else %>
-                        not on file
+                        Not on file
                       <% end %>
                     </td>
                     <td class="<%= "is-none" if row.ip.blank? %>">

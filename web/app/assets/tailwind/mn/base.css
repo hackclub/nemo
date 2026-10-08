@@ -63,15 +63,18 @@
 
   img, svg { vertical-align: middle; }
 
-  .mono, .num, .tnum, .fine-mono, .stat-value {
+  .mono, .fine-mono {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.015em;
     overflow-wrap: anywhere;
     min-width: 0;
   }
-  .fine-mono { font-size: var(--t-fine); color: var(--ink-3); }
-  .stat-value { font-size: var(--t-small); }
+  .num, .tnum, .stat-value {
+    font-variant-numeric: tabular-nums;
+    min-width: 0;
+  }
+  .fine-mono { @apply text-xs text-muted-foreground; }
+  .stat-value { @apply text-sm; }
 
   .grow { flex: 1 1 auto; min-width: 0; }
   .trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -138,14 +141,8 @@
     overflow: hidden;
   }
 
-  .form-label, .admin-lab, .covkey, .stat-key,
-  .card-grid-head {
-    font-size: var(--t-fine);
-    font-weight: 550;
-    line-height: var(--lh-snug);
-    letter-spacing: var(--tr-caps);
-    text-transform: uppercase;
-    color: var(--ink-3);
+  .form-label, .admin-lab, .covkey, .card-grid-head {
+    @apply text-xs leading-snug font-medium text-muted-foreground;
   }
 
   .good { color: var(--good); }

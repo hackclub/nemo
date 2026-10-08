@@ -5,31 +5,30 @@
 <% last_recurrence = @recurrence.last %>
 
 <% if last_30 || last_90 || last_recurrence %>
+  <% rate = ->(v) { v && (v.to_f <= 1 ? v.to_f * 100 : v.to_f) } %>
   <div class="metrics">
     <% if last_30 %>
-      <div class="metric">
-        <span class="metric-key">Day-30 retention</span>
-        <span class="metric-value"><%= retention_cell(last_30.retained_day_30_rate) %></span>
-        <span class="metric-note"><span><%= last_30.cohort_month.strftime("%b %Y") %> cohort</span></span>
-      </div>
+      <%= render "shared/stat", k: "Day-30 retention", v: retention_cell(last_30.retained_day_30_rate),
+            spark: { name: "day-30 retention", days: false,
+                     labels: @retention.map { |r| r.cohort_month.strftime("%b %Y") },
+                     data: @retention.map { |r| rate.call(r.retained_day_30_rate) } },
+            say: "#{last_30.cohort_month.strftime("%b %Y")} cohort" %>
     <% end %>
     <% if last_90 %>
-      <div class="metric">
-        <span class="metric-key">Day-90 retention</span>
-        <span class="metric-value"><%= retention_cell(last_90.retained_day_90_rate) %></span>
-        <span class="metric-note"><span><%= last_90.cohort_month.strftime("%b %Y") %> cohort</span></span>
-      </div>
+      <%= render "shared/stat", k: "Day-90 retention", v: retention_cell(last_90.retained_day_90_rate),
+            spark: { name: "day-90 retention", days: false,
+                     labels: @retention.map { |r| r.cohort_month.strftime("%b %Y") },
+                     data: @retention.map { |r| rate.call(r.retained_day_90_rate) } },
+            say: "#{last_90.cohort_month.strftime("%b %Y")} cohort" %>
     <% end %>
     <% if last_recurrence %>
-      <div class="metric">
-        <span class="metric-key">Posted 3+ times</span>
-        <span class="metric-value">
-          <%= number_to_percentage(
-                share_pct(last_recurrence.posted_three_times, last_recurrence.searched) || 0,
-                precision: 1) %>
-        </span>
-        <span class="metric-note"><span><%= last_recurrence.cohort_month.strftime("%b %Y") %> cohort</span></span>
-      </div>
+      <%= render "shared/stat", k: "Posted 3+ times",
+            v: number_to_percentage(share_pct(last_recurrence.posted_three_times, last_recurrence.searched) || 0,
+              precision: 1),
+            spark: { name: "posted 3+ times", days: false,
+                     labels: @recurrence.map { |r| r.cohort_month.strftime("%b %Y") },
+                     data: @recurrence.map { |r| share_pct(r.posted_three_times, r.searched) } },
+            say: "#{last_recurrence.cohort_month.strftime("%b %Y")} cohort" %>
     <% end %>
   </div>
 <% end %>

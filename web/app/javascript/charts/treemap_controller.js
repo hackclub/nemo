@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { squarify } from "charts/squarify"
 
-const GAP = 2
+const GAP = 3
 const CLAMP = 100
 const RULER = typeof document === "undefined"
   ? null
@@ -130,7 +130,7 @@ export default class extends Controller {
 
       cells += `<g class="cell ${tone}" data-i="${i}"><rect class="${tone}"
         x="${x.toFixed(1)}" y="${y.toFixed(1)}"
-        width="${w.toFixed(1)}" height="${h.toFixed(1)}"/>${text}</g>`
+        width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="${Math.min(6, w / 4, h / 4).toFixed(1)}"/>${text}</g>`
 
       this.zones.push({ i, cx: r.x + r.w / 2, cy: r.y + r.h / 2, row: r, tone,
         x0: r.x, y0: r.y, x1: r.x + r.w, y1: r.y + r.h })

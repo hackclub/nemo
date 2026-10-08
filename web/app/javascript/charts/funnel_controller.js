@@ -113,7 +113,7 @@ export default class extends Controller {
         `<text class="funnel-value" x="${cx.toFixed(1)}" y="${TOP - 10}" text-anchor="middle">${
           esc(compact(stage.value))}</text>` +
         `<g class="funnel-pill"><rect x="${(cx - pillW / 2).toFixed(1)}" y="${(my - PILL_H / 2).toFixed(1)}"
-          width="${pillW.toFixed(1)}" height="${PILL_H}" rx="${PILL_H / 2}"/><text x="${cx.toFixed(1)}"
+          width="${pillW.toFixed(1)}" height="${PILL_H}" rx="6"/><text x="${cx.toFixed(1)}"
           y="${(my + 4).toFixed(1)}" text-anchor="middle">${esc(pct)}</text></g>` +
         `<text class="ax funnel-stage" x="${cx.toFixed(1)}" y="${high - 10}" text-anchor="middle">${
           esc(stage.label)}</text></g>`

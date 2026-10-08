@@ -140,6 +140,10 @@
     @apply overflow-hidden text-[0px] leading-none text-transparent;
   }
 
+  .switch:is([aria-disabled="true"], :disabled) {
+    @apply cursor-not-allowed opacity-50;
+  }
+
   span.yes, span.no {
     @apply inline-flex items-center gap-1.5 text-xs font-medium;
   }

@@ -9,12 +9,21 @@
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1, width=device-width">
     <meta name="robots" content="noindex, nofollow">
-    <meta name="theme-color" content="#143252">
+    <meta name="theme-color" content="#0a0a0a">
+    <script>try { var t = localStorage.getItem("mn-theme"); if (t) document.documentElement.dataset.theme = t; if (localStorage.getItem("mn-accent") === "none") document.documentElement.dataset.accent = "none" } catch (e) {}</script>
 
     <link rel="icon" href="/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="/icon.png">
 
     <style>
+
+      @font-face {
+        font-family: "Geist";
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: swap;
+        src: url("/geist-variable.woff2") format("woff2");
+      }
 
       *, *::before, *::after {
         box-sizing: border-box;
@@ -22,6 +31,59 @@
 
       * {
         margin: 0;
+      }
+
+      :root {
+        color-scheme: light;
+        --bg: oklch(1 0 0);
+        --fg: oklch(0.145 0 0);
+        --muted: oklch(0.556 0 0);
+        --mark: oklch(0.556 0 0);
+        --glow: oklch(0.75 0.15 52 / 0.16);
+        --btn: oklch(0.56 0.155 48);
+        --btn-fg: oklch(0.985 0 0);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          color-scheme: dark;
+          --bg: oklch(0.145 0 0);
+          --fg: oklch(0.985 0 0);
+          --muted: oklch(0.708 0 0);
+          --mark: oklch(0.708 0 0);
+          --glow: oklch(0.74 0.15 52 / 0.22);
+          --btn: oklch(0.76 0.15 52);
+          --btn-fg: oklch(0.159 0 0);
+        }
+      }
+
+      :root[data-theme="lightsout"] {
+        color-scheme: dark;
+        --bg: oklch(0.145 0 0);
+        --fg: oklch(0.985 0 0);
+        --muted: oklch(0.708 0 0);
+        --mark: oklch(0.708 0 0);
+        --glow: oklch(0.74 0.15 52 / 0.22);
+        --btn: oklch(0.76 0.15 52);
+        --btn-fg: oklch(0.159 0 0);
+      }
+
+      :root[data-accent="none"] {
+        --glow: oklch(0.556 0 0 / 0.1);
+        --btn: oklch(0.205 0 0);
+        --btn-fg: oklch(0.985 0 0);
+      }
+
+      :root[data-accent="none"][data-theme="lightsout"] {
+        --btn: oklch(0.985 0 0);
+        --btn-fg: oklch(0.205 0 0);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root[data-accent="none"]:not([data-theme="light"]) {
+          --btn: oklch(0.985 0 0);
+          --btn-fg: oklch(0.205 0 0);
+        }
       }
 
       html {
@@ -36,46 +98,25 @@
         display: grid;
         place-items: center;
         padding: 2rem 1.5rem;
-        background-color: #143252;
-        color: #f0e7d6;
-        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+        background: radial-gradient(118% 78% at 50% 8%, var(--glow), transparent 58%), var(--bg);
+        color: var(--fg);
+        font-family: Geist, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
         font-weight: 400;
         line-height: 1.5;
-        letter-spacing: -0.0025em;
         -webkit-font-smoothing: antialiased;
         text-rendering: optimizeLegibility;
         -webkit-text-size-adjust: 100%;
       }
 
-      .bands,
-      .rules,
       .marks {
         position: absolute;
-        pointer-events: none;
-      }
-
-      .bands {
-        inset: -30% -10%;
-        z-index: -3;
-        background: repeating-linear-gradient(74deg,
-          transparent 0 84px,
-          #1c3f65 84px 146px,
-          transparent 146px 336px);
-      }
-
-      .rules {
-        inset: 0;
-        z-index: -2;
-        background:
-          linear-gradient(90deg, transparent 20.4%, #0a1726 20.4% 20.9%, transparent 20.9%),
-          linear-gradient(90deg, transparent 79.2%, #0a1726 79.2% 79.7%, transparent 79.7%);
-      }
-
-      .marks {
         inset: 0;
         z-index: -1;
         width: 100%;
         height: 100%;
+        pointer-events: none;
+        color: var(--mark);
+        opacity: 0.16;
       }
 
       main {
@@ -88,43 +129,64 @@
       .pod {
         display: block;
         width: 100%;
-        max-width: 18rem;
+        max-width: 14rem;
         height: auto;
-        filter: drop-shadow(0 16px 26px rgb(4 12 22 / 0.45));
+        filter: drop-shadow(0 16px 26px rgb(0 0 0 / 0.3));
       }
 
       .code {
-        margin-top: 0.75rem;
-        font-size: clamp(3rem, 11vw, 4.5rem);
-        font-weight: 700;
+        margin-top: 1rem;
+        font-size: 3.5rem;
+        font-weight: 600;
         line-height: 1;
         letter-spacing: -0.04em;
         font-variant-numeric: tabular-nums;
-        color: #f5e8cf;
       }
 
       .said {
-        margin-top: 0.625rem;
-        font-size: clamp(1rem, 3vw, 1.1875rem);
+        margin-top: 0.75rem;
+        font-size: 1.125rem;
         font-weight: 600;
-        color: #f5e8cf;
+        letter-spacing: -0.01em;
       }
 
       .why {
         margin-top: 0.375rem;
         font-size: 0.875rem;
-        color: #a9bed5;
+        color: var(--muted);
+      }
+
+      .home {
+        display: inline-flex;
+        align-items: center;
+        height: 2.25rem;
+        margin-top: 1.5rem;
+        padding: 0 1rem;
+        border-radius: 0.625rem;
+        background: var(--btn);
+        color: var(--btn-fg);
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+      }
+
+      .home:hover {
+        opacity: 0.9;
+      }
+
+      .home:focus-visible {
+        outline: 3px solid color-mix(in oklab, var(--fg) 30%, transparent);
+        outline-offset: 2px;
       }
 
       .word {
         display: flex;
         align-items: center;
         gap: 0.4rem;
-        margin-top: 2.25rem;
+        margin-top: 2.5rem;
         font-size: 0.8125rem;
-        font-weight: 600;
-        letter-spacing: -0.01em;
-        color: #8ea9c6;
+        font-weight: 500;
+        color: var(--muted);
       }
 
       .word img {
@@ -152,11 +214,8 @@
 
     <!-- This file lives in public/404.html -->
 
-    <div class="bands"></div>
-    <div class="rules"></div>
-
     <svg class="marks" viewBox="0 0 1200 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-      <g fill="#f5e8cf">
+      <g fill="currentColor">
         <circle cx="298" cy="66" r="7" opacity=".85"/>
         <circle cx="712" cy="452" r="5" opacity=".7"/>
         <circle cx="332" cy="470" r="9" opacity=".8"/>
@@ -168,7 +227,7 @@
         <path d="M768 396 l10 30 30 10 -30 10 -10 30 -10-30 -30-10 30-10z" opacity=".95"/>
         <path d="M452 434 l13 0 0 13 -13 0z" opacity=".8" transform="rotate(45 458 440)"/>
       </g>
-      <g fill="none" stroke="#f5e8cf" stroke-width="3">
+      <g fill="none" stroke="currentColor" stroke-width="3">
         <circle cx="372" cy="44" r="16" opacity=".85"/>
         <circle cx="856" cy="446" r="24" opacity=".9"/>
         <path d="M866 456 a14 14 0 0 0 -10 -14" stroke-width="4" opacity=".9"/>
@@ -182,6 +241,7 @@
       <p class="code">404</p>
       <p class="said">That page does not exist.</p>
       <p class="why">The address may be mistyped, or the page may have moved.</p>
+      <a class="home" href="/">Back to Mnemosyne</a>
       <p class="word"><img src="/nemo.png" alt="" width="800" height="483">Mnemosyne</p>
     </main>
 

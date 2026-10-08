@@ -2,6 +2,12 @@
   <div class="card-head">
     <div>
       <h2 class="card-title"><%= heading %></h2>
+      <p class="card-sub">
+        Started <%= run.started_at.strftime("%-d %b %Y, %H:%M") %> &middot; <%= run_duration(run) %>
+        <% if run.running? && steps.any? %>
+          &middot; step <%= steps.last.step_index %> of <%= steps.last.step_total %>
+        <% end %>
+      </p>
     </div>
     <div class="card-tools">
       <%= run_age(run) %>
@@ -26,7 +32,7 @@
             <tr>
               <td>
                 <span class="two-line">
-                  <b><%= step.source %></b>
+                  <b class="font-mono text-xs"><%= step.source %></b>
                   <% notes = [] %>
                   <% notes << pluralize(step.children, "worker") if step.children > 1 %>
                   <% notes << "#{number_to_percentage(step.pct, precision: 1)} through" if step.running? && step.pct %>
@@ -48,13 +54,8 @@
       </table>
     </div>
   <% else %>
-    <p class="card-note">n/a</p>
+    <div class="empty"><p class="empty-title">No steps recorded</p></div>
   <% end %>
-<p class="chart-note">started <%= run.started_at.strftime("%-d %b %Y, %H:%M") %>
-        &middot; <%= run_duration(run) %>
-        <% if run.running? && steps.any? %>
-          &middot; step <%= steps.last.step_index %> of <%= steps.last.step_total %>
-        <% end %></p>
 </div>
 
 <div class="card card-flush">
@@ -71,13 +72,15 @@
     <% step_output.each do |row| %>
       <details class="log-item">
         <summary>
+          <svg class="log-caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
           <span class="log-source"><%= row.source %></span>
-          <span class="log-meta">step <%= row.step_index %> &middot; <%= output_size(row.output) %></span>
+          <span class="log-meta">Step <%= row.step_index %> &middot; <%= output_size(row.output) %></span>
         </summary>
         <pre class="log"><%= row.output %></pre>
       </details>
     <% end %>
   <% else %>
-    <p class="card-note">n/a</p>
+    <div class="empty"><p class="empty-title">No stage wrote output</p></div>
   <% end %>
 </div>

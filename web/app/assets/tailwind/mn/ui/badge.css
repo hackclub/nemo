@@ -1,7 +1,7 @@
 @layer base {
   .chip {
     @apply inline-flex w-fit shrink-0 items-center justify-center overflow-hidden whitespace-nowrap focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [&>svg]:pointer-events-none;
-    @apply h-5 gap-1 rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium transition-all [&>svg]:size-3!;
+    @apply h-5 gap-1 rounded-md border border-transparent px-2 py-0.5 text-xs font-medium transition-all [&>svg]:size-3!;
     @apply bg-secondary text-secondary-foreground no-underline [a]:hover:bg-secondary/80;
   }
 
@@ -30,7 +30,7 @@
   }
 
   .token {
-    @apply inline-flex h-6 w-fit shrink-0 items-center gap-1 overflow-hidden rounded-4xl bg-secondary pr-1 pl-1 text-xs font-medium whitespace-nowrap text-secondary-foreground;
+    @apply inline-flex h-6 w-fit shrink-0 items-center gap-1 overflow-hidden rounded-md bg-secondary pr-1 pl-1 text-xs font-medium whitespace-nowrap text-secondary-foreground;
   }
 
   .token-plain {
@@ -42,15 +42,15 @@
   }
 
   .token-x {
-    @apply inline-grid size-4 cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-current opacity-60 hover:bg-foreground/10 hover:opacity-100;
+    @apply inline-grid size-4 cursor-pointer place-items-center rounded-sm border-0 bg-transparent p-0 text-current opacity-60 hover:bg-foreground/10 hover:opacity-100;
   }
 
   .pill {
-    @apply inline-flex h-6 w-fit shrink-0 items-center gap-1.5 rounded-4xl border border-border pr-1 pl-2.5 text-xs font-medium whitespace-nowrap text-foreground;
+    @apply inline-flex h-6 w-fit shrink-0 items-center gap-1.5 rounded-md border border-border pr-1 pl-2.5 text-xs font-medium whitespace-nowrap text-foreground;
   }
 
   .pill > a {
-    @apply inline-grid size-4 place-items-center rounded-full text-[0.625rem] text-muted-foreground no-underline hover:bg-muted hover:text-foreground;
+    @apply inline-grid size-4 place-items-center rounded-sm text-[0.625rem] text-muted-foreground no-underline hover:bg-muted hover:text-foreground;
   }
 
   .state {

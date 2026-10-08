@@ -7,21 +7,24 @@
 <% tenth = curve.find { |p| p.poster_pct == 90 } %>
 
 <% if searched.positive? %>
+  <% gini = curve.first&.gini&.to_f %>
+  <% top_share = tenth ? 100 - tenth.message_pct.to_f : nil %>
+  <% spread = Analytics::MartTopPosters.spread(12) %>
+  <% spread_months = spread.map { |r| r.month.strftime("%b %Y") } %>
   <div class="metrics">
-    <div class="metric">
-      <span class="metric-key">Ever posted</span>
-      <span class="metric-value"><%= number_to_percentage(posters.to_f / searched * 100, precision: 1) %></span>
-    </div>
-    <div class="metric">
-      <span class="metric-key">Concentration</span>
-      <span class="metric-value"><%= curve.first&.gini&.to_f&.round(3) || "n/a" %></span>
-    </div>
-    <div class="metric">
-      <span class="metric-key">Top tenth of posters</span>
-      <span class="metric-value">
-        <%= tenth ? number_to_percentage(100 - tenth.message_pct.to_f, precision: 1) : "n/a" %>
-      </span>
-    </div>
+    <%= render "shared/stat", k: "Ever posted",
+          v: safe_join([number_to_percentage(posters.to_f / searched * 100, precision: 1),
+                        tag.small("#{number_with_delimiter(posters)} of #{number_with_delimiter(searched)}")]),
+          spark: { name: "posters", days: false, labels: spread_months, data: spread.map(&:posters) },
+          say: "Posters per month" %>
+    <%= render "shared/stat", k: "Concentration", v: gini ? gini.round(3) : "n/a",
+          spark: { name: "Gini", days: false, labels: spread_months, data: spread.map(&:gini) },
+          say: "Gini by month" %>
+    <%= render "shared/stat", k: "Top tenth of posters",
+          v: top_share ? number_to_percentage(top_share, precision: 1) : "n/a",
+          spark: { name: "top tenth's share", days: false, labels: spread_months,
+                   data: spread.map(&:top_tenth_share) },
+          say: "Their share of messages by month" %>
   </div>
 <% end %>
 
@@ -53,7 +56,7 @@
           }.to_json %>"
         ></div>
       <% else %>
-        <p class="card-note">n/a</p>
+        <div class="empty"><p class="empty-title">No data yet</p></div>
       <% end %>
     </div>
 
@@ -72,7 +75,7 @@
           data-lorenz-marks-value="<%= [half, tenth].compact.map { |p| [p.poster_pct, p.message_pct.to_f] }.to_json %>"
         ></div>
       <% else %>
-        <p class="card-note">n/a</p>
+        <div class="empty"><p class="empty-title">No data yet</p></div>
       <% end %>
     </div>
   </div>

@@ -37,7 +37,6 @@
     <% else %>
       <div class="empty">
         <p class="empty-title">No membership snapshot</p>
-        <p>Mnemosyne hasn&rsquo;t captured a membership snapshot for this channel yet.</p>
       </div>
     <% end %>
   </div>
@@ -63,7 +62,6 @@
     <% else %>
       <div class="empty">
         <p class="empty-title">Nobody posted here</p>
-        <p>No one posted in this channel during <%= crowd.month&.strftime("%B %Y") %>.</p>
       </div>
     <% end %>
   </div>
@@ -120,7 +118,6 @@
     <% else %>
       <div class="empty">
         <p class="empty-title">Nobody posted here</p>
-        <p>No one posted in this channel during <%= crowd.month&.strftime("%B %Y") %>.</p>
       </div>
     <% end %>
   </div>
@@ -142,17 +139,16 @@
       ></div>
       <div class="legend">
         <span>
-          busiest <b><%= number_with_delimiter(crowd.concentration.people_for_half) %></b> write half
+          Busiest <b><%= number_with_delimiter(crowd.concentration.people_for_half) %></b> write half
         </span>
         <span>
-          busiest 10 write
+          Busiest 10 write
           <b><%= number_to_percentage(crowd.concentration.top_10_pct.to_f, precision: 1) %></b>
         </span>
       </div>
     <% else %>
       <div class="empty">
         <p class="empty-title">Too few posters</p>
-        <p>Fewer than <%= HomeHelper::MIN_SAMPLE %> people posted here, not enough to plot.</p>
       </div>
     <% end %>
   </div>

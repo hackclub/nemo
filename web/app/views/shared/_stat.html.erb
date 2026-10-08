@@ -1,12 +1,12 @@
 <div class="metric">
   <span class="metric-key"><%= k %></span>
-  <span class="metric-value"><%= v %></span>
+  <span class="metric-value<%= " #{local_assigns[:value_css]}" if local_assigns[:value_css] %>"><%= v %></span>
   <% if local_assigns[:spark] && spark[:data]&.compact&.many? %>
     <span class="metric-spark"
           data-controller="chart"
           data-chart-kind-value="line"
           data-chart-spark-value="true"
-          data-chart-days-value="true"
+          data-chart-days-value="<%= spark.fetch(:days, true) %>"
           data-chart-height-value="34"
           data-chart-data-value="<%= {
             labels: spark[:labels],

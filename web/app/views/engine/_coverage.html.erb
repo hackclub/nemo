@@ -6,6 +6,45 @@
   <div class="grid g-sided">
     <div class="card card-flush">
       <div class="card-head">
+        <div>
+          <h2 class="card-title">What the day count is holding up</h2>
+          <p class="card-sub"><%= pluralize(held, "day") %> held</p>
+        </div>
+      </div>
+      <div class="scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th class="col-num">Needs</th>
+              <th>Progress</th>
+              <th class="col-num">Measurable</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% EngineController::HOLDING.each do |label, needed| %>
+              <% share = needed.positive? ? [held.to_f / needed * 100, 100].min : 0 %>
+              <tr>
+                <td><%= label %></td>
+                <td class="col-num"><%= pluralize(needed, "day") %></td>
+                <td class="cell-share">
+                  <div class="inbar <%= "soft" if share < 50 %>">
+                    <span><i style="width: <%= [share, 2].max.round %>%"></i></span>
+                    <span><%= share.round %>%</span>
+                  </div>
+                </td>
+                <td class="col-num">
+                  <%= held >= needed ? "Now" : (Date.current + (needed - held)).strftime("~%-d %b %Y") %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card card-flush">
+      <div class="card-head">
         <div><h2 class="card-title">Which days each source holds</h2></div>
       </div>
 
@@ -16,8 +55,8 @@
               <div class="covhead">
                 <span class="covkey"><%= row.source %></span>
                 <span class="cov-label">
-                  <%= row.first_ds.strftime("%-d %b %Y") %> to <%= row.last_ds.strftime("%-d %b %Y") %>
-                  &middot; <%= pluralize(row.span, "day") %>
+                  <%= row.first_ds.strftime("%-d %b %Y") %> to <%= row.last_ds.strftime("%-d %b %Y") %>,
+                  <%= pluralize(row.span, "day") %>
                 </span>
               </div>
               <div class="covbar" role="img"
@@ -44,46 +83,9 @@
           <span><i class="lg-before"></i>before the job existed</span>
         </div>
       <% else %>
-        <p class="card-note">n/a</p>
+        <div class="empty"><p class="empty-title">No day coverage yet</p></div>
       <% end %>
     </div>
 
-    <div class="card card-flush">
-      <div class="card-head">
-        <div><h2 class="card-title">What the day count is holding up</h2></div>
-      </div>
-      <div class="scroll">
-        <table class="data-table engine-wide-table">
-          <thead>
-            <tr>
-              <th>Metric</th>
-              <th class="col-num">Days held</th>
-              <th class="col-num">Days needed</th>
-              <th>Progress</th>
-              <th class="col-num">First measurable</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% EngineController::HOLDING.each do |label, needed| %>
-              <% share = needed.positive? ? (held.to_f / needed * 100) : 0 %>
-              <tr>
-                <td><%= label %></td>
-                <td class="col-num"><%= held %></td>
-                <td class="col-num"><%= needed %></td>
-                <td class="cell-share">
-                  <div class="inbar <%= "soft" if share < 50 %>">
-                    <span><i style="width: <%= [share, 2].max.round %>%"></i></span>
-                    <span><%= share.round %>%</span>
-                  </div>
-                </td>
-                <td class="col-num mono">
-                  <%= held >= needed ? "now" : (Date.current + (needed - held)).strftime("~%-d %b %Y") %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    </div>
   </div>
 </div>

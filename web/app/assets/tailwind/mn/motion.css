@@ -48,9 +48,8 @@
   .hbars .bar { transform-origin: left; }
   .tree .cell rect, .parts .cell rect { animation: fade-in var(--dur-3) var(--ease) both; }
 
-  .metric:active { scale: 0.985; }
   .metric {
-    transition-property: background-color, border-color, color, opacity, scale, translate, box-shadow;
+    transition-property: background-color, color, box-shadow;
   }
 
   .work { transition: grid-template-columns var(--dur-3) var(--ease); }

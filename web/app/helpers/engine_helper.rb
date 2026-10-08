@@ -18,8 +18,12 @@ module EngineHelper
 
   STALE_AFTER = 36.hours
 
+  def status_word(status)
+    status.to_s == "ok" ? "OK" : status.to_s.upcase_first
+  end
+
   def run_status(row)
-    tag.span row.status, class: STATUS_CHIP.fetch(row.status, "chip chip-off")
+    tag.span status_word(row.status), class: STATUS_CHIP.fetch(row.status, "chip chip-off")
   end
 
   def run_ink(row)
@@ -99,17 +103,17 @@ module EngineHelper
   def run_status_tally(statuses)
     counted = statuses.values.sum > 1
     chips = statuses.map do |status, count|
-      tag.span(counted ? "#{count} #{status}" : status,
+      tag.span(counted ? "#{count} #{status}" : status_word(status),
         class: STATUS_CHIP.fetch(status, "chip chip-off"))
     end
     safe_join(chips, " ")
   end
 
   def worker_state(beat)
-    return tag.span("failed", class: "chip chip-crit") if beat.note.to_s.start_with?("FAILED")
-    return tag.span("silent", class: "chip chip-warn") if beat.cold?
+    return tag.span("Failed", class: "chip chip-crit") if beat.note.to_s.start_with?("FAILED")
+    return tag.span("Silent", class: "chip chip-warn") if beat.cold?
 
-    tag.span("ok", class: "chip chip-good")
+    tag.span("OK", class: "chip chip-good")
   end
 
   def worker_note(beats)
@@ -121,9 +125,9 @@ module EngineHelper
   end
 
   def worker_chip(worker)
-    return tag.span("orphaned, no worker heartbeat", class: "chip chip-crit") if worker.nil?
+    return tag.span("Orphaned, no worker heartbeat", class: "chip chip-crit") if worker.nil?
 
-    tag.span("orphaned, worker cold #{short_age(worker.beat_at)}", class: "chip chip-crit")
+    tag.span("Orphaned, worker cold #{short_age(worker.beat_at)}", class: "chip chip-crit")
   end
 
   def step_progress(progress)
@@ -161,7 +165,7 @@ module EngineHelper
     age = "#{time_ago_in_words(row.age_from)} ago"
     return tag.span(age, class: "delta-note") unless run_stale?(row)
 
-    tag.span("#{age}, the nightly should run daily", class: "chip chip-warn")
+    tag.span("#{age.upcase_first}, the nightly should run daily", class: "chip chip-warn")
   end
 
   def output_size(text)

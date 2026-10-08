@@ -6,13 +6,12 @@ let seq = 0
 
 const INK = [1, 2, 3, 4, 5, 0]
 
-const PAD = { l: 44, r: 8, t: 12, b: 28 }
+const PAD = { l: 44, r: 8, t: 20, b: 34 }
 
 const BAR_CAP = 72
 const BAR_R = 6
 const PILL_H = 22
 const SEG_GAP = 2
-const LABEL_ROOM = 64
 const TILT = -32
 const LEAN = Math.abs(TILT) * Math.PI / 180
 const AX_LINE = 14
@@ -40,6 +39,20 @@ function axClip(text, room) {
     if (axWide(cut) <= room) return cut
   }
   return label
+}
+
+const BIN = /^(\d+)(?:-(\d+))?(\+)?$/
+
+const kilo = (n) => (n >= 1000 ? `${+(n / 1000).toFixed(n % 1000 >= 100 ? 1 : 0)}k` : String(n))
+
+function binLabels(rows) {
+  const parts = rows.map((r) => BIN.exec(String(r.label)))
+  if (!parts.length || parts.some((m) => !m)) return null
+
+  const ranged = parts.map(([, a, b, plus]) =>
+    `${kilo(Number(a))}${b ? `-${kilo(Number(b))}` : ""}${plus ? "+" : ""}`)
+  const floors = parts.map(([, a, , plus]) => `${kilo(Number(a))}${plus ? "+" : ""}`)
+  return [ranged, floors]
 }
 
 const F = (n) => (n == null ? "n/a" : Number(n).toLocaleString("en-US"))
@@ -157,7 +170,13 @@ export default class extends Controller {
 
   build() {
     const series = this.series
-    if (!this.rows.length || !series.length) return
+    const rows = this.rows
+    if (!rows.length || !series.length) return
+
+    if (!this.sparkValue && rows.every((r) => series.every((s) => !Number(r[s.k])))) {
+      this.element.innerHTML = `<div class="chart-empty" style="min-height:${this.height}px">Nothing in this range</div>`
+      return
+    }
 
     this.fresh = true
     this.element.classList.toggle("chart-spark", this.sparkValue)
@@ -271,8 +290,15 @@ export default class extends Controller {
   shownLabels(rows, wide) {
     const band = (wide - PAD.l - PAD.r) / rows.length
     const widest = rows.reduce((mx, r) => Math.max(mx, axWide(r.label)), 0)
-    if (widest + 6 <= band) {
+    if (widest + 12 <= band) {
       return { show: this.everyNth(rows.length, 1), tilt: false, room: 0, cap: 0, edge: 0 }
+    }
+    if (!this.daysValue && !this.line) {
+      const fits = (binLabels(rows) || []).find((names) =>
+        names.every((name) => axWide(name) + 12 <= band))
+      if (fits) {
+        return { show: this.everyNth(rows.length, 1), tilt: false, room: 0, cap: 0, edge: 0, names: fits }
+      }
     }
     if (this.daysValue || this.line) {
       const every = Math.max(1, Math.ceil((widest + 16) / band))
@@ -361,14 +387,18 @@ export default class extends Controller {
     const flagged = (this.hasPartialValue ? this.partialValue : []).map(Number)
       .filter((i) => i >= 0 && i < rows.length)
     const lip = (x.step() - x.bandwidth()) / 2
-    const marks = this.sparkValue || !flagged.length ? "" : (() => {
-      const from = Math.min(...flagged)
-      const to = Math.max(...flagged)
+    const runs = [...new Set(flagged)].sort((a, b) => a - b).reduce((all, i) => {
+      const last = all[all.length - 1]
+      if (last && i === last[1] + 1) last[1] = i
+      else all.push([i, i])
+      return all
+    }, [])
+    const marks = this.sparkValue ? "" : runs.map(([from, to]) => {
       const left = Math.max(pad.l, x(from) - lip)
       const width = Math.min(right, x(to) + x.bandwidth() + lip) - left
       return `<rect class="partial-area" x="${left.toFixed(1)}" y="${pad.t}" width="${
         width.toFixed(1)}" height="${(floor - pad.t).toFixed(1)}" fill="url(#${this.gid}-hatch)"/>`
-    })()
+    }).join("")
 
     const weekends = !this.daysValue || this.sparkValue ? "" : rows.map((r, i) => {
       if (!ISO.test(r.key)) return ""
@@ -378,10 +408,12 @@ export default class extends Controller {
         x.step().toFixed(1)}" height="${(floor - pad.t).toFixed(1)}"/>`
     }).join("")
 
+    let kept = -Infinity
     const names = rows.map((r, i) => {
       if (!labels.show.has(i)) return ""
 
       const at = mid(i)
+      const text = labels.names ? labels.names[i] : r.label
       if (labels.tilt) {
         const ty = high - pad.b + labels.lift
         return `<text class="ax xtick" data-x="${at.toFixed(1)}" x="${at.toFixed(1)}" y="${
@@ -390,11 +422,16 @@ export default class extends Controller {
           esc(axClip(r.label, labels.cap))}</text>`
       }
 
-      const anchor = at - pad.l < LABEL_ROOM / 2
-        ? "start" : right - at < LABEL_ROOM / 2 ? "end" : "middle"
-      const x = anchor === "start" ? pad.l : anchor === "end" ? right : at
+      const wideness = axWide(text)
+      const anchor = at - wideness / 2 < 2
+        ? "start" : at + wideness / 2 > wide - 2 ? "end" : "middle"
+      const x = anchor === "start" ? 2 : anchor === "end" ? wide - 2 : at
+      const left = anchor === "start" ? x : anchor === "end" ? x - wideness : x - wideness / 2
+      if (left < kept + 12) return ""
+
+      kept = left + wideness
       return `<text class="ax xtick" data-x="${at.toFixed(1)}" x="${x.toFixed(1)}" y="${
-        high - pad.b + 16}" text-anchor="${anchor}">${esc(r.label)}</text>`
+        high - pad.b + 22}" text-anchor="${anchor}">${esc(text)}</text>`
     }).join("")
 
     const body = line
@@ -443,8 +480,8 @@ export default class extends Controller {
       s.k}" data-axis="2" r="4" fill="currentColor" opacity="0"/>`).join("")
 
     const pill = this.sparkValue ? "" :
-      `<g class="x-pill" opacity="0"><rect y="${(high - pad.b + 4).toFixed(1)}" height="${PILL_H}"
-        rx="${PILL_H / 2}" width="0"/><text y="${(high - pad.b + 4 + PILL_H / 2 + 4).toFixed(1)}"
+      `<g class="x-pill" opacity="0"><rect y="${(high - pad.b + 6).toFixed(1)}" height="${PILL_H}"
+        rx="6" width="0"/><text y="${(high - pad.b + 6 + PILL_H / 2 + 4).toFixed(1)}"
         text-anchor="middle"></text></g>`
 
     const base = this.sparkValue

@@ -1,7 +1,7 @@
 <% content_for :page_title, "API keys" %>
 <% api_off = Fd::Flag.off?(:public_api) %>
 <% content_for :head_actions do %>
-  <% unless api_off %>
+  <% unless api_off || @apps.empty? %>
     <button type="button" class="btn btn-primary" data-modal-open="new-app"
             aria-haspopup="dialog">Register an app</button>
   <% end %>
@@ -18,7 +18,7 @@
         <div class="card-head">
           <div class="two-line appline">
             <h2 class="card-title"><%= app.name %></h2>
-            <span class="sub2"><%= app.blurb %></span>
+            <span class="card-sub"><%= app.blurb %></span>
           </div>
 
           <div class="card-tools">
@@ -56,9 +56,9 @@
             <span class="grow"></span>
             <% unless api_off %>
               <%= button_to "Rotate", rotate_settings_token_path(token), method: :post,
-                    class: "lnk rowact",
+                    class: "btn btn-sm",
                     form: { class: "contents", data: { turbo: false } } %>
-              <button type="button" class="lnk rowact rowact-crit"
+              <button type="button" class="btn btn-sm btn-crit"
                       data-modal-open="kill-<%= token.id %>"
                       aria-haspopup="dialog">Revoke</button>
             <% end %>
@@ -67,7 +67,7 @@
 
         <% if live_app && live.empty? %>
           <div class="rowbar keyline">
-            <span class="sub2">No key yet</span>
+            <span class="sub">No key yet</span>
             <span class="grow"></span>
             <% unless api_off %>
               <button type="button" class="btn btn-sm" data-modal-open="mint-<%= app.id %>"
@@ -79,8 +79,19 @@
     <% end %>
   </div>
 <% else %>
-  <div class="empty">
-    <p class="empty-title">No apps</p>
+  <div class="empty empty-page">
+    <span class="empty-mark" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round"><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/></svg>
+    </span>
+    <p class="empty-title">No apps yet</p>
+    <div class="empty-do">
+      <% unless api_off %>
+        <button type="button" class="btn btn-primary" data-modal-open="new-app"
+                aria-haspopup="dialog">Register an app</button>
+      <% end %>
+      <%= link_to "Read the docs", doc_path("channel-managers"), class: "btn" %>
+    </div>
   </div>
 <% end %>
 
