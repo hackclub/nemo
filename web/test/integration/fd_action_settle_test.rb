@@ -25,7 +25,7 @@ class FdActionSettleTest < ActionDispatch::IntegrationTest
 
   def logged = @kase.actions.order(:id).last
 
-  def told(verb)
+  def audited(verb)
     Fd::AuditEntry.where(entity_type: "member_guard", verb: verb)
   end
 
@@ -37,7 +37,7 @@ class FdActionSettleTest < ActionDispatch::IntegrationTest
     assert_equal "nemo", guard.enforced_by
     assert_equal "pending", guard.enforcement_status
     assert_equal guard.id, logged.guard_id
-    assert_equal 1, told("opened").count
+    assert_equal 1, audited("opened").count
   end
 
   test "a record only kind is logged without enforcing anything" do
@@ -65,8 +65,8 @@ class FdActionSettleTest < ActionDispatch::IntegrationTest
     assert_equal 1, guards.count
     assert_equal held.id, logged.guard_id
     assert_equal "shush", logged.type_key
-    assert_equal 1, told("attached").count
-    assert_empty told("opened")
+    assert_equal 1, audited("attached").count
+    assert_empty audited("opened")
   end
 
   test "the logged action takes its shape from the guard, not the form" do
@@ -87,7 +87,7 @@ class FdActionSettleTest < ActionDispatch::IntegrationTest
 
     assert_equal other.id, held.reload.case_id, "it is not stolen from its case"
     assert_equal held.id, logged.guard_id
-    assert_empty told("attached")
+    assert_empty audited("attached")
   end
 
   test "choosing one already on this case is refused, not logged again" do
@@ -95,7 +95,7 @@ class FdActionSettleTest < ActionDispatch::IntegrationTest
     act(standing_guard_id: held.id)
 
     assert_equal 0, @kase.actions.count
-    assert_empty told("attached")
+    assert_empty audited("attached")
     assert_match(/already on this case/, flash[:alert])
   end
 

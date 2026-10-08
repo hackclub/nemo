@@ -359,12 +359,12 @@
 
           <% if @open_reports.positive? %>
             <label class="opt">
-              <%= check_box_tag :tell_reporter, "1", true, class: "tick" %>
+              <%= check_box_tag :notify_reporter, "1", true, class: "tick" %>
               <span>
                 <span class="opt-label">Notify the reporter</span>
               </span>
             </label>
-            <label class="field-label only only-telling">
+            <label class="field-label only only-notifying">
               What they are told
               <%= text_area_tag :member_message, Fd::Resolution::DEFAULT_MESSAGE, rows: 3,
                     class: "textarea", maxlength: Fd::IntakeOutbox::MAX_LENGTH %>

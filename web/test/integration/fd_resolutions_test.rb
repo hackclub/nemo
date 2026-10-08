@@ -201,7 +201,7 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
     report = Fd::CaseReport.create!(case_id: @kase.id, reporter_user_id: "UREP1",
       is_anonymous: false, body: "look at this", source_app: "relay", received_at: 2.days.ago)
     sign_in_as(@me)
-    close(member_note: "warned them", tell_reporter: "1")
+    close(member_note: "warned them", notify_reporter: "1")
 
     report.reload
     assert_not_nil report.closed_at

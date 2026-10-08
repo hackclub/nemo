@@ -431,18 +431,18 @@ def post_ephemeral(client, body, text):
 
 WOKE = """
 SELECT woke_from FROM fd.cases
-WHERE id = %s AND woke_at IS NOT NULL AND woke_told_at IS NULL
+WHERE id = %s AND woke_at IS NOT NULL AND woke_notified_at IS NULL
 """
 
 
 REOPEN_ANNOUNCED = """
-UPDATE fd.cases SET woke_told_at = now() WHERE id = %s AND woke_told_at IS NULL
+UPDATE fd.cases SET woke_notified_at = now() WHERE id = %s AND woke_notified_at IS NULL
 """
 
 
 UNANNOUNCED_REOPENS = """
 SELECT id FROM fd.cases
-WHERE woke_at IS NOT NULL AND woke_told_at IS NULL
+WHERE woke_at IS NOT NULL AND woke_notified_at IS NULL
 ORDER BY woke_at LIMIT 50
 """
 

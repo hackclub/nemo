@@ -8,7 +8,7 @@ module Fd
     DELETED = "deleted".freeze
     KICKED = "kicked".freeze
     LET_PAST = "let_past".freeze
-    TOLD = "told".freeze
+    NOTIFIED = "notified".freeze
 
     belongs_to :guard, class_name: "Fd::MemberGuard", foreign_key: :guard_id,
       inverse_of: :events

@@ -31,7 +31,7 @@ def label(key):
 
 
 def default_message():
-    return table()["told"]
+    return table()["reporter_message"]
 
 
 def reasons():

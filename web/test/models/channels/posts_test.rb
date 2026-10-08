@@ -58,12 +58,12 @@ class Channels::PostsTest < ActiveSupport::TestCase
   def given(rows, answer)
     was = Channels::Posts.method(:rows)
     Channels::Posts.define_singleton_method(:rows) { |**| rows }
-    told = Slack::Message.method(:at)
+    original = Slack::Message.method(:at)
     Slack::Message.define_singleton_method(:at) { |channel_id, ts| answer.call(channel_id, ts) }
     yield
   ensure
     Channels::Posts.define_singleton_method(:rows, was)
-    Slack::Message.define_singleton_method(:at, told)
+    Slack::Message.define_singleton_method(:at, original)
   end
 
   def a_row(ts = "1790701062.123456")

@@ -10,6 +10,6 @@ resolutions:
     label: Not a conduct matter
     pick: 1
 
-told: >-
+reporter_message: >-
   Thanks for reporting! Your report has been marked as resolved, please reach out to us again
   if you have any further inquiries.

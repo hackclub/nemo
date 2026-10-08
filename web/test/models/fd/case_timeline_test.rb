@@ -137,10 +137,10 @@ class Fd::CaseTimelineTest < ActiveSupport::TestCase
   end
 
   test "resolution quotes what the member was told and flags when they were told nothing" do
-    told = build(kase(resolved_at: OPENED + 1.day, resolution: "action_taken",
+    resolved = build(kase(resolved_at: OPENED + 1.day, resolution: "action_taken",
       member_note: "we spoke to them")).last
-    assert_equal "we spoke to them", told.body
-    assert_no_match(/not told/, told.detail)
+    assert_equal "we spoke to them", resolved.body
+    assert_no_match(/not told/, resolved.detail)
 
     silent = build(kase(resolved_at: OPENED + 1.day, resolution: "no_action")).last
     assert_match(/the member was not told/, silent.detail)

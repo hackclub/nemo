@@ -90,7 +90,7 @@ def test_the_notification_is_written_down():
     conn, client = Conn(), Slack()
     notify.dm_subject(client, conn, guard(), "you've been shushed")
     assert client.posted[0]["channel"] == WHO
-    assert conn.did("INSERT INTO fd.member_guard_events")[0][3] == "told"
+    assert conn.did("INSERT INTO fd.member_guard_events")[0][3] == "notified"
 
 
 def test_a_dm_that_will_not_send_is_written_down_as_such():

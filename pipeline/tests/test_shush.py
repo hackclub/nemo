@@ -92,7 +92,7 @@ def test_taking_one_up_notifies_them_once_and_says_when_it_ends():
     assert posted["channel"] == WHO
     assert "you've been shushed for being awful" in posted["text"]
     assert "until 10 Mar" in posted["text"]
-    assert conn.did("INSERT INTO fd.member_guard_events")[0][3] == "told"
+    assert conn.did("INSERT INTO fd.member_guard_events")[0][3] == "notified"
 
 
 def test_one_that_never_ends_says_so_rather_than_a_date():

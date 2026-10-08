@@ -6,14 +6,14 @@ class FdCaseIndexTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
   end
 
-  def told(kase, **attrs)
+  def report_on(kase, **attrs)
     Fd::CaseReport.create!({ case_id: kase.id, reporter_user_id: "UREP", is_anonymous: false,
       source_app: "relay", received_at: 3.days.ago }.merge(attrs))
   end
 
   test "the index lists the open cases in the pane" do
     kase = make_case
-    told kase
+    report_on kase
 
     get fd_cases_path
 
@@ -23,8 +23,8 @@ class FdCaseIndexTest < ActionDispatch::IntegrationTest
   end
 
   test "a layout parameter buys nothing" do
-    told make_case
-    told make_case
+    report_on make_case
+    report_on make_case
 
     get fd_cases_path
     assert_response :success

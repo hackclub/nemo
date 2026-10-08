@@ -64,8 +64,8 @@ module Fd
     end
 
     def violations
-      told = actions.reject(&:reversed?).filter_map(&:category_key).uniq
-      return told if told.any?
+      categories = actions.reject(&:reversed?).filter_map(&:category_key).uniq
+      return categories if categories.any?
 
       [category_key].compact
     end

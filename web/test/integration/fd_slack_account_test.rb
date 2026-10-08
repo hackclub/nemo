@@ -186,12 +186,12 @@ class FdSlackAccountTest < ActionDispatch::IntegrationTest
     row = Fd::StaffSlack.keep!("UME", token: "xoxp-real", team_id: "T0FIRE",
       scopes: "chat:write")
 
-    told = nil
-    instead_of(:give_back, ->(token) { told = token }) do
+    given_back = nil
+    instead_of(:give_back, ->(token) { given_back = token }) do
       delete fd_slack_account_path
     end
 
-    assert_equal "xoxp-real", told, "slack must be told to forget the token"
+    assert_equal "xoxp-real", given_back, "slack must be told to forget the token"
     assert_nil Fd::StaffSlack.held_by("UME")
     assert_not_nil row.reload.revoked_at
     assert_equal "UME", row.revoked_by

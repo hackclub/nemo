@@ -15,7 +15,7 @@ module Fd
         next unless mark_resolved(resolution)
 
         settled = true
-        close_reports if telling?
+        close_reports if notify_reporter?
         @case.reload
         audit(@case, "resolved",
           before: { "resolved_at" => nil, "resolution" => nil },
@@ -64,11 +64,11 @@ module Fd
       Case::CLOSE_REASONS.include?(reason) ? reason : nil
     end
 
-    def telling?
-      params[:tell_reporter] == "1"
+    def notify_reporter?
+      params[:notify_reporter] == "1"
     end
 
-    def told
+    def reporter_message
       message = params[:member_message].to_s.strip
       message.presence || Resolution::DEFAULT_MESSAGE
     end
@@ -84,7 +84,7 @@ module Fd
     end
 
     def close_reports
-      message = told
+      message = reporter_message
 
       CaseReport.where(case_id: @case.family_ids, closed_at: nil).find_each do |report|
         report.update!(closed_at: @now, closed_by: current_account.user_id)

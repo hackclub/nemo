@@ -28,7 +28,8 @@ def dm_subject(client, conn, guard, message):
         log.warning("nemo: guard %s is held but %s was not notified: %s",
                     guard["id"], guard["subject_id"], failure)
 
-    memberguards.record_enforcement(conn, guard["id"], guard["subject_id"], None, "told", detail=detail)
+    memberguards.record_enforcement(conn, guard["id"], guard["subject_id"], None,
+                                   memberguards.NOTIFIED, detail=detail)
 
 
 def post_ephemeral(client, channel_id, subject_id, message, thread_ts=None):

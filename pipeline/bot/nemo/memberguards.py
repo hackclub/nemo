@@ -366,7 +366,7 @@ WHERE g.state = 'live' AND g.expires_at IS NOT NULL
   AND g.expires_at >= now() AND g.expires_at < now() + %s::interval
   AND NOT EXISTS (
     SELECT 1 FROM fd.member_guard_events e
-    WHERE e.guard_id = g.id AND e.verb = 'told' AND e.detail = %s
+    WHERE e.guard_id = g.id AND e.verb = 'notified' AND e.detail = %s
       AND e.at > now() - interval '20 hours'
   )
 ORDER BY g.expires_at
@@ -387,6 +387,8 @@ LIMIT 20
 """
 
 RELEASED = "released"
+
+NOTIFIED = "notified"
 
 LIFTED_BY_HAND = "somebody lifted it"
 

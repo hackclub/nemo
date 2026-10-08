@@ -194,7 +194,7 @@
   .flag-mid .flag-icon { color: currentColor; }
 
   .only { transition: opacity var(--dur-2) var(--ease); }
-  .modal-body:has(#tell_reporter:not(:checked)) .only-telling { display: none; }
+  .modal-body:has(#notify_reporter:not(:checked)) .only-notifying { display: none; }
   .standing-slot:not(:has(turbo-frame > *)) { display: none; }
 
   .act { color: var(--primary-deep); }

@@ -101,7 +101,7 @@
 
     <div class="topbar-msgs" data-controller="cachet" aria-live="polite" aria-atomic="false">
       <% if alert || notice %>
-        <%= render "layouts/told", alert: alert, notice: notice,
+        <%= render "layouts/flash", alert: alert, notice: notice,
               detail: flash[:detail], action: flash[:action], tone: flash[:tone] %>
       <% end %>
     </div>

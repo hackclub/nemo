@@ -76,7 +76,7 @@ def test_somebody_whose_shush_was_lifted_in_the_dashboard_is_notified(monkeypatc
     monkeypatch.setattr(sweep, "notifies_member", lambda _conn: True)
 
     assert sweep.sweep_lifted(client) == 1
-    assert recorded == [memberguards.RELEASED, "told"]
+    assert recorded == [memberguards.RELEASED, memberguards.NOTIFIED]
     assert "can post again" in client.posted[0]["text"]
 
 
@@ -184,7 +184,7 @@ def test_the_nudge_goes_out_once_and_is_written_down(monkeypatch):
     assert client.posted[0]["channel"] == HOUSE
     assert "Ending soon" in client.posted[0]["text"]
     recorded = conn.did("INSERT INTO fd.member_guard_events")[0]
-    assert recorded[3] == "told"
+    assert recorded[3] == memberguards.NOTIFIED
     assert recorded[6] == memberguards.ENDING
 
 
@@ -200,7 +200,7 @@ def test_nothing_ending_says_nothing(monkeypatch):
 
 def test_the_same_guard_is_not_nudged_twice_in_a_day():
     assert "interval '20 hours'" in memberguards.ENDING_NOT_NOTIFIED
-    assert "verb = 'told'" in memberguards.ENDING_NOT_NOTIFIED
+    assert "verb = 'notified'" in memberguards.ENDING_NOT_NOTIFIED
 
 
 @pytest.mark.parametrize("enforcement", [shush, channel_ban])

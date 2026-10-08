@@ -31,7 +31,7 @@ SELECT resolved_at, resolution, duplicate_of FROM fd.cases WHERE id = %s
 WAKE = """
 UPDATE fd.cases
 SET resolved_at = NULL, resolution = NULL, updated_at = now(),
-    woke_at = now(), woke_from = %s, woke_told_at = NULL
+    woke_at = now(), woke_from = %s, woke_notified_at = NULL
 WHERE id = %s AND resolved_at IS NOT NULL AND duplicate_of IS NULL
 """
 

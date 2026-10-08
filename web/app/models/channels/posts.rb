@@ -26,8 +26,8 @@ module Channels
     end
 
     def self.for(channel_id:, subject_id:, shown: SHOWN)
-      told = rows(channel_id: channel_id, subject_id: subject_id, shown: shown)
-      told.filter_map { |row| post_for(row) }
+      found = rows(channel_id: channel_id, subject_id: subject_id, shown: shown)
+      found.filter_map { |row| post_for(row) }
     end
 
     def self.post_for(row)

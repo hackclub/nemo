@@ -134,6 +134,6 @@ def sweep_ending(client):
     with session() as conn:
         for guard in ending:
             memberguards.record_enforcement(conn, guard["id"], guard["subject_id"], None,
-                                  "told", detail=memberguards.ENDING)
+                                  memberguards.NOTIFIED, detail=memberguards.ENDING)
     log.info("nemo: notified that %s guard(s) are ending soon", len(ending))
     return len(ending)
