@@ -1,4 +1,5 @@
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 from slack_bolt import App
 from slack_sdk import WebClient
@@ -26,10 +27,17 @@ from bot.nemo.surface import (
     unsub_shield,  # noqa: F401
 )
 
+LISTENER_THREADS = 16
+
 
 def build(on_reply=None):
     client = WebClient(token=os.environ["NEMO_BOT_TOKEN"], retry_handlers=RETRY_HANDLERS)
-    app = App(client=client, raise_error_for_unhandled_request=False)
+    app = App(
+        client=client,
+        raise_error_for_unhandled_request=False,
+        listener_executor=ThreadPoolExecutor(
+            max_workers=LISTENER_THREADS, thread_name_prefix="nemo-listener"),
+    )
     handlers.register(app, on_reply)
     command.register(app)
     surface.register(app)
