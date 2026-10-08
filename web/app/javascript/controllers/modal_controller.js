@@ -84,7 +84,7 @@ export default class extends Controller {
   entered() {
     if (!this.opener || this.boxTarget.contains(this.opener)) this.opener = document.activeElement
     requestAnimationFrame(() => {
-      const first = this.reachable()[0]
+      const first = this.boxTarget.querySelector("[autofocus]") || this.reachable()[0]
       ;(first || this.boxTarget).focus()
     })
   }

@@ -336,7 +336,7 @@
 <%= render layout: "fd/modal", locals: { id: "resolve-case",
       title: "Resolve case #{@case.id}", label: "Resolve this case",
       open: params[:do] == "resolve",
-      sub: @case.assigned? ? "assigned to #{@case.assignee_handles}" : "not assigned to anybody" } do %>
+      sub: @case.assigned? ? safe_join(["Assigned to ", to_sentence(@case.assignee_user_ids.map { |id| person_name(id) })]) : "Not assigned to anybody" } do %>
       <%= form_with url: fd_case_resolution_path(@case), method: :post, html: { autocomplete: "off" } do %>
         <div class="modal-body">
           <% if @live_actions.any? %>

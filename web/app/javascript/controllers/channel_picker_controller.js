@@ -64,7 +64,7 @@ export default class extends Controller {
     this.resultsTarget.hidden = false
     this.resultsTarget.innerHTML = ""
     if (channels.length === 0) {
-      this.resultsTarget.append(span("pick-none", "no channel matches"))
+      this.resultsTarget.append(span("pick-none", "No channel matches"))
       return
     }
 

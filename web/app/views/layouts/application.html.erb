@@ -99,7 +99,7 @@
       <%= yield :overlays %>
     </div>
 
-    <div class="topbar-msgs" aria-live="polite" aria-atomic="false">
+    <div class="topbar-msgs" data-controller="cachet" aria-live="polite" aria-atomic="false">
       <% if alert || notice %>
         <%= render "layouts/told", alert: alert, notice: notice,
               detail: flash[:detail], action: flash[:action], tone: flash[:tone] %>

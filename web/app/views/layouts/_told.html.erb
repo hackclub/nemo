@@ -12,7 +12,7 @@
     <% end %>
   </span>
   <span class="flash-body">
-    <span class="flash-title"><%= alert || notice %></span>
+    <span class="flash-title"><%= named_text((alert || notice).to_s.upcase_first) %></span>
     <% if detail.present? %>
       <span class="flash-detail"><%= detail %></span>
     <% end %>

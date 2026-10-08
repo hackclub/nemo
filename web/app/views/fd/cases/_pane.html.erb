@@ -17,7 +17,7 @@
     </div>
     <% if query.view.nil? %>
       <div class="pane-filt">
-        <span class="trunc"><%= query.title %></span>
+        <span class="trunc"><%= named_text(query.title) %></span>
         <%= link_to "Clear", fd_cases_path, class: "lnk" %>
       </div>
     <% end %>

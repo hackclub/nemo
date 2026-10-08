@@ -310,29 +310,16 @@
     @apply border-ring ring-3 ring-ring/50;
   }
   .pick-list {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-    min-height: 0;
-    max-height: min(320px, 46dvh);
-    overflow: hidden auto;
-    overscroll-behavior: contain;
-    border: 1px solid var(--line-soft);
-    border-radius: var(--r-ctl);
-    padding: 4px;
+    @apply flex max-h-[min(320px,46dvh)] min-h-0 min-w-0 flex-col gap-0.5 overflow-x-hidden overflow-y-auto overscroll-contain rounded-lg border border-border p-1;
   }
-  .pick-chosen { display: flex; flex-wrap: wrap; gap: 5px; }
-  .pick-name { font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .pick-list > * { @apply flex-none; }
+  .pick-list > .pick-opt { @apply h-8 gap-3 px-2 py-0; }
+  .pick-chosen { @apply flex flex-wrap gap-1.5; }
+  .pick-name { @apply min-w-0 truncate text-sm font-medium text-foreground; }
   .pick-id {
-    margin-left: auto;
-    flex: none;
-    font-family: var(--font-mono);
-    font-size: var(--t-mark);
-    color: var(--ink-4);
+    @apply ml-auto flex-none font-mono text-xs text-muted-foreground;
   }
-  .pick-id:not(:empty)::before { content: "\00b7"; margin: 0 6px; }
-  .pick-none, .pick-body-text { color: var(--ink-4); font-size: var(--t-small); padding: 6px 8px; }
+  .pick-none, .pick-body-text { @apply px-2 py-1.5 text-sm text-muted-foreground; }
   .picker { position: relative; display: inline-flex; }
 
   .rooms-menu { position: relative; }
