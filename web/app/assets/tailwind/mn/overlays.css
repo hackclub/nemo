@@ -328,11 +328,7 @@
 
   .mention-pop { min-width: 240px; }
   .mention {
-    color: var(--primary-deep);
-    background: var(--primary-soft);
-    padding: 0 3px;
-    border-radius: 3px;
-    font-weight: 500;
+    @apply font-medium text-primary;
   }
   .mention-private {
     color: var(--ink-4);

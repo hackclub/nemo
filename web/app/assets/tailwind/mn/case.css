@@ -188,10 +188,10 @@
   }
   .does-line { font-size: var(--t-small); color: var(--ink-2); line-height: 1.5; }
 
-  .flag-crit { border-color: color-mix(in oklab, var(--crit) 30%, transparent); background: var(--crit-soft); color: var(--crit); }
+  .flag-crit { @apply text-destructive; }
   .flag-crit .flag-icon { color: currentColor; }
-  .flag-mid { background: var(--primary-soft); border-color: var(--primary-line); color: var(--primary-deep); }
-  .flag-mid .flag-icon { color: var(--primary-deep); }
+  .flag-mid { @apply text-primary; }
+  .flag-mid .flag-icon { color: currentColor; }
 
   .only { transition: opacity var(--dur-2) var(--ease); }
   .modal-body:has(#tell_reporter:not(:checked)) .only-telling { display: none; }
@@ -359,20 +359,9 @@
   }
   .chat-input::placeholder { color: var(--ink-3); }
   .chat-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    align-self: center;
-    font-size: var(--t-fine);
-    font-weight: 500;
-    padding: 3px 4px 3px 8px;
-    border-radius: var(--r-ctl);
-    background: var(--primary-soft);
-    color: var(--primary-deep);
-    white-space: nowrap;
-    flex: none;
+    @apply inline-flex flex-none items-center gap-1 self-center text-xs font-medium whitespace-nowrap text-primary;
   }
-  .chat-pill[data-mode="team"] { background: var(--sunk); color: var(--ink-2); padding-right: 8px; }
+  .chat-pill[data-mode="team"] { @apply text-muted-foreground; }
   .chat-pill-x {
     display: inline-grid;
     place-items: center;
@@ -384,7 +373,7 @@
     color: inherit;
     padding: 0;
   }
-  .chat-pill-x:hover { background: color-mix(in oklab, var(--primary) 18%, transparent); }
+  .chat-pill-x:hover { @apply text-foreground; }
   .chat-send {
     width: var(--chat-ctl);
     height: var(--chat-ctl);

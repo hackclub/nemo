@@ -32,7 +32,7 @@
                 </td>
                 <td class="detail-cell">
                   <span class="two-line">
-                    <b><%= @names[row.granted_by] %></b>
+                    <b><%= person_name(row.granted_by) %></b>
                     <span><%= row.granted_at.strftime("%-d %b %Y") %></span>
                   </span>
                 </td>
@@ -70,7 +70,7 @@
           <tbody>
             <% @reaches.each do |user_id| %>
               <tr>
-                <td><b><%= @names[user_id] %></b></td>
+                <td><b><%= person_name(user_id) %></b></td>
                 <td class="detail-cell"><%= pluralize(@channels.size, "shared channel") %></td>
                 <td class="col-btn"><%= link_to "Manage", admin_person_path(user_id), class: "btn btn-sm" %></td>
               </tr>

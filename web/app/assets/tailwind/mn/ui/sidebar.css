@@ -140,7 +140,7 @@
 
   .community-nav-tally {
     @apply pointer-events-none ml-auto flex h-5 min-w-5 flex-none items-center justify-center rounded-md px-1 text-xs font-medium text-sidebar-foreground tabular-nums select-none;
-    @apply collapsed:absolute collapsed:top-0.5 collapsed:right-0.5 collapsed:ml-0 collapsed:h-3.5 collapsed:min-w-3.5 collapsed:rounded-full collapsed:bg-sidebar-primary collapsed:px-1 collapsed:text-[0.5625rem] collapsed:leading-none collapsed:text-sidebar-primary-foreground collapsed:ring-2 collapsed:ring-sidebar;
+    @apply collapsed:absolute collapsed:top-1 collapsed:right-1 collapsed:ml-0 collapsed:size-2 collapsed:min-w-0 collapsed:rounded-full collapsed:bg-sidebar-primary collapsed:p-0 collapsed:text-[0px] collapsed:ring-2 collapsed:ring-sidebar;
   }
 
   .community-nav-sub {

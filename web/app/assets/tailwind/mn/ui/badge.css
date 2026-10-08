@@ -1,33 +1,20 @@
 @layer base {
   .chip {
-    @apply inline-flex w-fit shrink-0 items-center justify-center overflow-hidden whitespace-nowrap focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [&>svg]:pointer-events-none;
-    @apply h-5 gap-1 rounded-md border border-transparent px-2 py-0.5 text-xs font-medium transition-all [&>svg]:size-3!;
-    @apply bg-secondary text-secondary-foreground no-underline [a]:hover:bg-secondary/80;
+    @apply inline-flex w-fit shrink-0 items-center gap-1 whitespace-nowrap text-xs font-medium text-muted-foreground no-underline outline-none [&>svg]:pointer-events-none [&>svg]:size-3!;
+    @apply focus-visible:underline [a]:hover:text-foreground [a]:hover:underline;
   }
 
-  .chip-good {
-    @apply bg-success/10 text-success dark:bg-success/20 [a]:hover:bg-success/20;
-  }
+  .chip-good { @apply text-success; }
 
-  .chip-warn {
-    @apply bg-warning/10 text-warning dark:bg-warning/20 [a]:hover:bg-warning/20;
-  }
+  .chip-warn { @apply text-warning; }
 
-  .chip-crit {
-    @apply bg-destructive/10 [a]:hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 text-destructive dark:bg-destructive/20;
-  }
+  .chip-crit { @apply text-destructive; }
 
-  .chip-off {
-    @apply border-border bg-transparent text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground;
-  }
+  .chip-off { @apply text-muted-foreground; }
 
-  .chip-primary {
-    @apply bg-primary/10 text-primary dark:bg-primary/20;
-  }
+  .chip-primary { @apply text-primary; }
 
-  .chip-sm {
-    @apply h-4 px-1.5 py-0 text-[0.6875rem];
-  }
+  .chip-sm { @apply text-[0.6875rem]; }
 
   .token {
     @apply inline-flex h-6 w-fit shrink-0 items-center gap-1 overflow-hidden rounded-md bg-secondary pr-1 pl-1 text-xs font-medium whitespace-nowrap text-secondary-foreground;
@@ -46,7 +33,7 @@
   }
 
   .pill {
-    @apply inline-flex h-6 w-fit shrink-0 items-center gap-1.5 rounded-md border border-border pr-1 pl-2.5 text-xs font-medium whitespace-nowrap text-foreground;
+    @apply inline-flex w-fit shrink-0 items-center gap-1 text-xs font-medium whitespace-nowrap text-foreground;
   }
 
   .pill > a {

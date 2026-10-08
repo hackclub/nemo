@@ -122,17 +122,9 @@
     flex-wrap: wrap;
   }
   .flag {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 9px;
-    border: 1px solid var(--line);
-    border-radius: var(--r-ctl);
-    background: var(--card-2);
-    font-size: var(--t-fine);
-    color: var(--ink-2);
+    @apply inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground;
   }
-  .flag-warn { border-color: color-mix(in oklab, var(--warn) 34%, transparent); background: var(--warn-soft); color: var(--warn); }
+  .flag-warn { @apply text-warning; }
   .flag-icon { color: var(--ink-4); flex: none; }
   .flag-warn .flag-icon { color: currentColor; }
 

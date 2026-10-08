@@ -6,7 +6,7 @@
       <p class="sub2"><%= asked.app.blurb %></p>
       <p class="rail-line"><%= asked.reason %></p>
       <p class="sub2">
-        <%= names[asked.app.owner_user_id] %> &middot;
+        <%= person_name(asked.app.owner_user_id) %> &middot;
         requested <%= time_ago_in_words(asked.created_at) %> ago
       </p>
       <label class="field-label">

@@ -31,7 +31,7 @@
                   <span class="mono sub2"><%= row.channel_id %></span>
                 </td>
                 <td><span class="sub">Named to them</span></td>
-                <td class="detail-cell"><%= @names[row.granted_by] %></td>
+                <td class="detail-cell"><%= person_name(row.granted_by) %></td>
                 <td class="col-btn">
                   <% if may_grant? %>
                     <%= button_to "Take back",

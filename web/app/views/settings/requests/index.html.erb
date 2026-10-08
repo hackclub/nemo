@@ -30,9 +30,9 @@
                   <b><%= asked.app.name %></b>
                 </span>
               </td>
-              <td class="sub"><%= names[asked.app.owner_user_id] %></td>
+              <td class="sub"><%= person_name(asked.app.owner_user_id) %></td>
               <td><%= access_state_chip(asked.state) %></td>
-              <td class="sub"><%= asked.decided_by ? names[asked.decided_by] : "" %></td>
+              <td class="sub"><%= asked.decided_by ? person_name(asked.decided_by) : "" %></td>
               <td class="col-date">
                 <%= time_ago_in_words(asked.decided_at || asked.created_at) %> ago
               </td>

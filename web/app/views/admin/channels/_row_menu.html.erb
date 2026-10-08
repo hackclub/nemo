@@ -47,8 +47,8 @@
             <span class="who">
               <%= face(grant.user_id) %>
               <span class="two-line">
-                <b><%= @names[grant.user_id] %></b>
-                <span>named by <%= @names[grant.granted_by] %>,
+                <b><%= person_name(grant.user_id) %></b>
+                <span>named by <%= person_name(grant.granted_by) %>,
                   <%= on_day(grant.granted_at) %></span>
               </span>
             </span>

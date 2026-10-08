@@ -9,7 +9,7 @@
         <%= face(post.author_id, css: "row-avatar post-face") %>
         <div class="post-main">
           <div class="msg-head">
-            <span class="msg-who"><%= names[post.author_id] %></span>
+            <span class="msg-who"><%= person_name(post.author_id) %></span>
             <span class="msg-at"><%= post.posted_at.strftime("%-d %b at %H:%M") %></span>
           </div>
 

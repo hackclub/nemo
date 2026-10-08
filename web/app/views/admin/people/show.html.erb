@@ -1,4 +1,4 @@
-<% content_for :page_title, @names[@user_id] %>
+<% content_for :page_title, person_name(@user_id) %>
 
 <% if may_grant? %>
   <% content_for :head_actions do %>
@@ -10,7 +10,7 @@
   <div class="profile-who">
     <%= face(@user_id, css: "avatar avatar-band") %>
     <span class="two-line">
-      <b><%= @names[@user_id] %></b>
+      <b><%= person_name(@user_id) %></b>
       <span class="mono"><%= @user_id %> &middot; <%= acted_label(@last_acted) %></span>
     </span>
   </div>
@@ -70,7 +70,7 @@
                 <td class="mono"><%= grant.name %></td>
                 <td class="detail-cell"><%= grant.label %></td>
                 <td class="detail-cell">
-                  <%= @names[grant.granted_by] %>, <%= grant.granted_at.strftime("%b %Y") %>
+                  <%= person_name(grant.granted_by) %>, <%= grant.granted_at.strftime("%b %Y") %>
                 </td>
                 <td class="col-num">
                   <span class="sub"><%= grant.denial? ? "Taken away" : "Added" %></span>

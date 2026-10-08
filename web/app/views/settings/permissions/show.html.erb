@@ -54,7 +54,7 @@
                  data-action="toggle->remember#keep">
           <summary>
             <span class="fold-title"><%= app.name %></span>
-            <span class="fold-sub"><%= @names[app.owner_user_id] %></span>
+            <span class="fold-sub"><%= person_name(app.owner_user_id) %></span>
             <span class="grow"></span>
             <% if on.positive? %>
               <span class="chip chip-good"><%= on %> of <%= Api::Scope::KEYS.size %> on</span>

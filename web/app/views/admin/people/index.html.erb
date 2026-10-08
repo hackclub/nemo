@@ -44,7 +44,7 @@
                   <div class="subjcell">
                     <%= face(user_id) %>
                     <span class="two-line">
-                      <%= link_to @names[user_id], admin_person_path(user_id) %>
+                      <%= link_to person_name(user_id), admin_person_path(user_id) %>
                       <span class="mono"><%= user_id %></span>
                     </span>
                   </div>

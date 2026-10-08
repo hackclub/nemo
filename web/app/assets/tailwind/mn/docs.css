@@ -131,17 +131,7 @@
   }
 
   .verb {
-    flex: none;
-    display: inline-flex;
-    align-items: center;
-    height: 18px;
-    padding: 0 6px;
-    border-radius: var(--r-hair);
-    background: var(--primary-soft);
-    color: var(--primary-deep);
-    font-family: var(--font-mono);
-    font-size: var(--t-mark);
-    font-weight: 600;
+    @apply inline-flex flex-none items-center font-mono text-xs font-semibold text-primary;
   }
 
   .doc-defs { display: grid; }
@@ -280,20 +270,10 @@
   }
 
   .doc-status {
-    display: inline-flex;
-    align-items: center;
-    height: 18px;
-    padding: 0 6px;
-    border-radius: var(--r-hair);
-    background: var(--sunk);
-    color: var(--ink-2);
-    font-family: var(--font-mono);
-    font-size: var(--t-mark);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
+    @apply inline-flex items-center font-mono text-xs font-semibold text-foreground tabular-nums;
   }
 
-  .doc-status.is-bad { background: var(--crit-soft); color: var(--crit); }
+  .doc-status.is-bad { @apply text-destructive; }
 
   @media (max-width: 760px) {
     .doc { --doc-step: var(--s-lg); font-size: var(--t-body); }
