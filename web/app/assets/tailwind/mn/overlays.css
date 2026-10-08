@@ -92,30 +92,17 @@
   .modal-host { display: contents; }
   .modal-flip { position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0; }
   .modal-veil, .palette-veil {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    background: var(--veil);
-    backdrop-filter: blur(3px);
+    @apply fixed inset-0 z-100 bg-black/10 supports-backdrop-filter:backdrop-blur-xs;
   }
   .modal-veil {
-    display: none;
-    opacity: 0;
-    transition: opacity var(--dur-3) var(--ease), display var(--dur-3) var(--ease) allow-discrete;
+    @apply hidden opacity-0;
+    transition: opacity 100ms ease, display 100ms ease allow-discrete;
   }
   .palette-veil { display: block; z-index: 105; }
   .palette-host[hidden], .palette-host[hidden] .palette-veil { display: none; }
   .modal-wrap {
-    position: fixed;
-    inset: 0;
-    z-index: 101;
-    display: none;
-    align-items: flex-start;
-    justify-content: center;
-    padding: clamp(var(--s-sm), 8vh, 88px) var(--s-sm) var(--s-sm);
-    overflow: auto;
-    opacity: 0;
-    transition: opacity var(--dur-3) var(--ease), display var(--dur-3) var(--ease) allow-discrete;
+    @apply fixed inset-0 z-101 hidden items-center justify-center overflow-auto p-4 opacity-0;
+    transition: opacity 100ms ease, display 100ms ease allow-discrete;
   }
   .modal-flip:checked ~ .modal-veil { display: block; opacity: 1; }
   .modal-flip:checked ~ .modal-wrap { display: flex; opacity: 1; }
@@ -126,26 +113,18 @@
   }
 
   .modal {
-    width: min(var(--modal-w, 560px), 100%);
-    max-height: calc(100dvh - clamp(var(--s-sm), 8vh, 88px) - var(--s-sm));
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--line);
-    border-radius: var(--r-panel);
-    background: var(--card);
-    box-shadow: var(--shadow-2);
-    overflow: hidden;
-    translate: 0 10px;
-    scale: 0.985;
-    transition: translate var(--dur-3) var(--ease-out), scale var(--dur-3) var(--ease-out);
+    @apply flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-xl bg-popover text-sm text-popover-foreground ring-1 ring-foreground/10 outline-none;
+    width: min(var(--modal-w, 32rem), 100%);
+    scale: 0.95;
+    transition: scale 100ms ease;
   }
-  .modal-flip:checked ~ .modal-wrap .modal { translate: 0 0; scale: 1; }
+  .modal-flip:checked ~ .modal-wrap .modal { scale: 1; }
   @starting-style {
-    .modal-flip:checked ~ .modal-wrap .modal { translate: 0 10px; scale: 0.985; }
+    .modal-flip:checked ~ .modal-wrap .modal { scale: 0.95; }
   }
-  .modal-sm { --modal-w: 420px; }
-  .modal-lg { --modal-w: 760px; }
-  .modal-xl { --modal-w: 980px; }
+  .modal-sm { --modal-w: 24rem; }
+  .modal-lg { --modal-w: 48rem; }
+  .modal-xl { --modal-w: 64rem; }
   .modal > form, .modal *:has(.modal-body) {
     display: flex;
     flex-direction: column;
@@ -153,39 +132,15 @@
   }
   .modal .modal-body { flex: 1 1 auto; }
   .modal-head {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: var(--s-xs) 46px var(--s-xs) var(--s-sm);
-    border-bottom: 1px solid var(--line-soft);
-    flex: none;
+    @apply relative flex flex-none flex-col gap-2 p-4 pr-12 pb-0;
   }
   .modal-shut {
-    position: absolute;
-    top: var(--p-ctl);
-    right: var(--p-ctl);
-    display: grid;
-    place-items: center;
-    width: 26px;
-    height: 26px;
-    border: 0;
-    border-radius: var(--r-ctl);
-    background: none;
-    color: var(--ink-4);
-    cursor: pointer;
-    transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+    @apply absolute top-2 right-2;
   }
-  .modal-shut:hover { background: var(--hover); color: var(--ink); }
-  .modal-title { font-size: var(--t-head); font-weight: 600; letter-spacing: -0.02em; color: var(--ink); }
-  .modal-sub { font-size: var(--t-small); color: var(--ink-3); }
+  .modal-title { @apply text-base leading-none font-medium text-foreground; }
+  .modal-sub { @apply text-sm text-muted-foreground; }
   .modal-body {
-    padding: var(--s-sm);
-    display: flex;
-    flex-direction: column;
-    gap: var(--s-xs);
-    overflow: auto;
-    min-height: 0;
+    @apply flex min-h-0 flex-col gap-4 overflow-auto p-4;
   }
   .modal-body .pick-pop:not([popover]), .modal-body .picker-pop:not([popover]) { position: absolute; }
   .modal-body:has(> .field-label > .pick > .pick-pop:not([hidden])),
@@ -194,23 +149,9 @@
   .modal:has(.pick-pop:not([hidden])), .modal:has(details.picker[open]) { overflow: visible; }
   .modal .segmented { align-self: flex-start; }
   .modal-foot {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: var(--s-2xs);
-    padding: var(--p-ctl) var(--s-sm);
-    border-top: 1px solid var(--line-soft);
-    background: var(--card-2);
-    flex: none;
+    @apply flex flex-none flex-col-reverse gap-2 rounded-b-xl border-t border-border bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-end;
   }
-  .modal-foot .push, .modal-foot > .card-note:first-child { margin-right: auto; }
-
-  @media (max-width: 640px) {
-    .modal-wrap { padding: var(--s-sm); align-items: center; }
-    .modal { width: 100%; max-height: calc(100dvh - 2 * var(--s-sm)); }
-    .modal-foot { flex-wrap: wrap; }
-    .modal-foot > .btn { flex: 1 1 auto; }
-  }
+  .modal-foot .push, .modal-foot > .card-note:first-child { @apply sm:mr-auto; }
 
 
   .palette-empty {

@@ -5,7 +5,7 @@
   }
 
   .textarea {
-    @apply h-auto min-h-16 resize-y py-2;
+    @apply field-sizing-content h-auto min-h-16 resize-none py-2;
   }
 
   .input-sm {

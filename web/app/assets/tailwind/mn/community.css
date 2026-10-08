@@ -29,16 +29,10 @@
   }
 
   .filter-form {
-    display: flex;
-    flex-direction: column;
-    gap: var(--s-sm);
+    @apply flex flex-col gap-4 p-4;
   }
   .filter-match {
-    display: flex;
-    align-items: center;
-    gap: var(--s-2xs);
-    font-size: var(--t-body);
-    color: var(--ink-2);
+    @apply flex items-center gap-2 text-sm text-foreground;
   }
   .filter-match .select {
     width: auto;
@@ -83,11 +77,7 @@
     color: var(--ink-4);
   }
   .filter-foot {
-    display: flex;
-    align-items: center;
-    gap: var(--s-2xs);
-    padding-top: var(--s-2xs);
-    border-top: 1px solid var(--line-soft);
+    @apply -mx-4 -mb-4 flex items-center gap-2 rounded-b-xl border-t border-border bg-muted/50 p-4;
   }
   .filter-foot > .btn-primary {
     margin-left: auto;
