@@ -44,7 +44,6 @@
     .card-head { flex-wrap: wrap; }
     .card-tools { margin-left: auto; }
     .drawer, .person-drawer-frame:not(:empty) { width: 100vw; }
-    .views { gap: var(--s-xs); }
 
     .row-top { flex-wrap: wrap; row-gap: var(--gap-ctl); min-height: 0; padding: var(--s-2xs) 0 var(--p-ctl); }
     .rhead-sub { flex: 1 1 100%; }
@@ -149,7 +148,6 @@
     .topbar-msgs { left: var(--p-ctl); right: var(--p-ctl); translate: none; bottom: var(--p-ctl); }
     .toast, .topbar-msg { min-width: 0; max-width: none; }
     .btn { padding: 0 var(--p-ctl-sm); }
-    .segmented > a, .segmented > button, .segmented > label, .segmented > span { padding: 0 7px; }
     .palette { padding: var(--p-ctl); align-items: flex-start; }
     .palette-card { max-height: 78dvh; }
     .queue-bar > .field, .queue-bar > .input, .queue-bar > .queue-search-input { max-width: none; }

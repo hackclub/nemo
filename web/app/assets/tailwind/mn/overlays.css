@@ -619,26 +619,6 @@
   .pick-id:not(:empty)::before { content: "\00b7"; margin: 0 6px; }
   .pick-none, .pick-body-text { color: var(--ink-4); font-size: var(--t-small); padding: 6px 8px; }
   .picker { position: relative; display: inline-flex; }
-  .pickswitch {
-    display: inline-flex;
-    gap: 1px;
-    text-transform: none;
-    letter-spacing: 0;
-    padding: 2px;
-    border-radius: var(--r-tight);
-    background: var(--sunk);
-  }
-  .pickswitch > a {
-    padding: 1px 7px;
-    border-radius: 4px;
-    color: var(--ink-4);
-    font-size: var(--t-mark);
-    font-weight: 500;
-    text-decoration: none;
-    transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
-  }
-  .pickswitch > a:hover { color: var(--ink-2); text-decoration: none; }
-  .pickswitch > a.is-on { background: var(--card-2); color: var(--ink); }
 
   .rooms-menu { position: relative; }
   .rooms-count { margin-left: auto; color: var(--ink-4); font-size: var(--t-fine); }

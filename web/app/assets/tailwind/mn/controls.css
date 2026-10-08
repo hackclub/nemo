@@ -38,95 +38,6 @@
   html[data-mod="meta"] .mod-ctrl, html[data-mod="ctrl"] .mod-meta { display: none; }
 
 
-  .segmented {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    padding: 2px;
-    border: 1px solid var(--line);
-    border-radius: var(--r-ctl);
-    background: var(--sunk);
-    flex: none;
-  }
-  .segmented > a, .segmented > button, .segmented > label, .segmented > span {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    height: calc(var(--ctl-h) - 6px);
-    padding: 0 var(--p-ctl);
-    border: 0;
-    border-radius: var(--r-tight);
-    background: none;
-    color: var(--ink-3);
-    font-size: var(--t-small);
-    font-weight: 500;
-    white-space: nowrap;
-    text-decoration: none;
-    transition: background-color var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
-  }
-  .segmented > a:hover, .segmented > button:hover, .segmented > label:hover {
-    color: var(--ink);
-    text-decoration: none;
-  }
-  .segmented > span { cursor: default; }
-  .segmented > [aria-current="true"], .segmented > [aria-pressed="true"] {
-    background: var(--card);
-    color: var(--ink);
-    box-shadow: var(--shadow-1);
-  }
-  .views {
-    display: flex;
-    align-items: stretch;
-    gap: var(--s-md);
-    min-width: 0;
-    overflow-x: auto;
-    scrollbar-width: none;
-    border-bottom: 1px solid var(--line-soft);
-    mask-image: linear-gradient(to right, black calc(100% - 20px), transparent);
-  }
-  .views::-webkit-scrollbar { display: none; }
-  .views .view {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 9px 0 10px;
-    color: var(--ink-3);
-    font-size: var(--t-body);
-    font-weight: 500;
-    white-space: nowrap;
-    text-decoration: none;
-    transition: color var(--dur-2) var(--ease-out);
-  }
-  .views .view:hover { color: var(--ink); text-decoration: none; }
-  .views .view[aria-current="true"] { color: var(--ink); font-weight: 600; }
-  .views .view[aria-current="true"]::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -1px;
-    height: 2px;
-    border-radius: var(--r-hair) var(--r-hair) 0 0;
-    background: var(--primary);
-    view-transition-name: viewline;
-  }
-  .view-off { color: var(--ink-4); }
-  .view-count, .tab-count {
-    font-family: var(--font-mono);
-    font-size: var(--t-mark);
-    font-variant-numeric: tabular-nums;
-    padding: 0;
-    background: none;
-    color: var(--ink-4);
-    line-height: 1;
-  }
-  .views .view[aria-current="true"] .view-count,
-  .views .view[aria-current="true"] .tab-count {
-    background: none;
-    color: var(--primary);
-  }
-
   .field, .input, .textarea, .select, .queue-search-input, .pick-input, .note-input {
     width: 100%;
     min-width: 0;
@@ -331,24 +242,6 @@
 
   .switch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-  .seg-radio { display: inline-flex; gap: 2px; padding: 2px; border-radius: var(--r-ctl); background: var(--sunk); }
-  .seg-radio input[type="radio"], .picker-opt input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
-  .seg-radio > label {
-    display: inline-flex;
-    align-items: center;
-    height: calc(var(--ctl-h) - 6px);
-    padding: 0 var(--p-ctl);
-    border-radius: var(--r-tight);
-    color: var(--ink-3);
-    font-size: var(--t-small);
-    font-weight: 500;
-    cursor: pointer;
-  }
-  .seg-radio > label:has(input:checked) {
-    background: var(--card);
-    color: var(--ink);
-    box-shadow: var(--shadow-1);
-  }
 
   .opt-band { display: flex; flex-direction: column; gap: 4px; }
   .optlist { display: flex; flex-direction: column; gap: 6px; }

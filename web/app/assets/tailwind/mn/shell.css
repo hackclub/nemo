@@ -513,17 +513,9 @@
   }
   .pane-head > .views {
     margin: -10px calc(var(--s-xs) * -1) 0;
-    padding: 0 var(--s-xs);
-    gap: 11px;
-    border-bottom: 1px solid var(--line-soft);
+    padding: 0 var(--s-2xs);
   }
-  .pane-head > .views .view { font-size: var(--t-small); padding: 8px 0 9px; gap: 4px; }
-  .pane-head > .views .view-count, .pane-head > .views .tab-count {
-    padding: 0;
-    background: none;
-    color: var(--ink-4);
-  }
-  .pane-head > .views .view[aria-current="true"] .view-count { background: none; color: var(--primary); }
+  .pane-head > .views .view { font-size: var(--t-small); padding: 8px 6px 9px; gap: 4px; }
   .pane-head .queue-tools { gap: 6px; }
 
   .pane-list {

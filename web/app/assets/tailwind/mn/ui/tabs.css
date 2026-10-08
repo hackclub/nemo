@@ -1,0 +1,75 @@
+@layer base {
+  .views {
+    @apply flex min-w-0 items-stretch gap-1 overflow-x-auto border-b border-border;
+    scrollbar-width: none;
+    mask-image: linear-gradient(to right, black calc(100% - 20px), transparent);
+  }
+
+  .views::-webkit-scrollbar { display: none; }
+
+  .views .view {
+    @apply relative inline-flex items-center justify-center gap-1.5 px-1.5 py-2.5 text-sm font-medium whitespace-nowrap text-foreground/60 no-underline transition-all hover:text-foreground hover:no-underline dark:text-muted-foreground dark:hover:text-foreground;
+    @apply after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-primary after:opacity-0 after:transition-opacity;
+  }
+
+  .views .view[aria-current="true"] {
+    @apply text-foreground after:opacity-100;
+  }
+
+  .views .view[aria-current="true"]::after {
+    view-transition-name: viewline;
+  }
+
+  .view-off {
+    @apply opacity-50;
+  }
+
+  .view-count, .tab-count {
+    @apply text-xs font-normal text-muted-foreground tabular-nums;
+  }
+
+  .views .view[aria-current="true"] :is(.view-count, .tab-count) {
+    @apply text-primary;
+  }
+
+  .segmented {
+    @apply inline-flex h-8 w-fit flex-none items-center justify-center rounded-lg bg-muted p-[3px] text-muted-foreground;
+  }
+
+  .segmented > :is(a, button, label, span) {
+    @apply relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 no-underline transition-all hover:text-foreground hover:no-underline dark:text-muted-foreground dark:hover:text-foreground;
+  }
+
+  .segmented > span {
+    @apply cursor-default;
+  }
+
+  .segmented > label {
+    @apply cursor-pointer;
+  }
+
+  .segmented > :is([aria-current="true"], [aria-pressed="true"], label:has(input:checked)) {
+    @apply bg-background text-foreground shadow-sm dark:border-input dark:bg-input/30 dark:text-foreground;
+  }
+
+  .segmented input[type="radio"], .picker-opt input[type="radio"] {
+    @apply pointer-events-none absolute opacity-0;
+  }
+
+  .pickswitch {
+    @apply inline-flex items-center gap-1.5 text-xs tracking-normal normal-case;
+  }
+
+  .pickswitch > a {
+    @apply text-muted-foreground no-underline transition-colors hover:text-foreground hover:no-underline;
+  }
+
+  .pickswitch > a + a::before {
+    content: "\00b7";
+    @apply mr-1.5 text-muted-foreground/60;
+  }
+
+  .pickswitch > a.is-on {
+    @apply font-medium text-foreground;
+  }
+}

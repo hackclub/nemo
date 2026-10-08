@@ -30,7 +30,7 @@
   }
 
   .metric > .pickswitch {
-    @apply absolute top-1.5 right-2 z-1;
+    @apply absolute top-0 right-(--metric-pad) z-1 h-(--metric-head);
   }
 
   .metric:has(> .pickswitch) > .metric-key {
