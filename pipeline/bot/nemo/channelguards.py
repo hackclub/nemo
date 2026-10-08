@@ -55,10 +55,6 @@ SELECT subject_id, label, added_by, added_at
 FROM fd.channel_guard_allows WHERE guard_id = %s ORDER BY added_at
 """
 
-LOCK_NOTICE_THREAD = """
-SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))
-"""
-
 OPEN_NOTICE_THREAD = """
 SELECT id, parent_ts FROM fd.channel_guard_notice_threads
 WHERE guard_id = %s AND subject_id = %s
@@ -82,10 +78,43 @@ RETURNING deleted_count, kicked_count
 
 HAPPENED = """
 INSERT INTO fd.channel_guard_events
-    (guard_id, channel_id, subject_id, bot_id, label, verb, message_text, message_ts, permalink, app_id)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    (guard_id, channel_id, subject_id, bot_id, label, verb, message_text, message_ts, permalink, app_id,
+     detail, notice_wanted)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 RETURNING id
 """
+
+NOTICE_GROUPS = """
+SELECT guard_id, subject_id
+FROM fd.channel_guard_events
+WHERE notice_wanted AND noticed_at IS NULL AND notice_attempts < %s
+GROUP BY guard_id, subject_id
+ORDER BY min(id)
+LIMIT %s
+"""
+
+CLAIM_NOTICES = """
+SELECT id, channel_id, subject_id, verb, label, message_text, permalink, app_id, detail
+FROM fd.channel_guard_events
+WHERE guard_id = %s AND subject_id = %s
+  AND notice_wanted AND noticed_at IS NULL AND notice_attempts < %s
+ORDER BY id
+LIMIT %s
+FOR UPDATE SKIP LOCKED
+"""
+
+NOTICED = """
+UPDATE fd.channel_guard_events SET noticed_at = now() WHERE id = ANY(%s)
+"""
+
+NOTICE_FAILED = """
+UPDATE fd.channel_guard_events SET notice_attempts = notice_attempts + 1
+WHERE id = ANY(%s)
+RETURNING id, notice_attempts
+"""
+
+NOTICE_FIELDS = ("id", "channel_id", "subject_id", "verb", "label", "message_text", "permalink",
+                 "app_id", "detail")
 
 _held = {}
 _loaded = False
@@ -193,10 +222,6 @@ def disallow(conn, guard_id, subject_id, by):
     return row[0]
 
 
-def lock_notice_thread(conn, guard_id, subject_id):
-    conn.execute(LOCK_NOTICE_THREAD, (f"channel_guard_notice:{guard_id}:{subject_id}",))
-
-
 def open_notice_thread(conn, guard_id, subject_id, idle_timeout, max_age):
     return conn.execute(
         OPEN_NOTICE_THREAD, (guard_id, subject_id, idle_timeout, max_age),
@@ -213,14 +238,31 @@ def note_event(conn, thread_id, deleted, kicked):
     return conn.execute(NOTED_EVENT, (deleted, kicked, thread_id)).fetchone()
 
 
+def notice_groups(conn, give_up_after, limit):
+    return conn.execute(NOTICE_GROUPS, (give_up_after, limit)).fetchall()
+
+
+def claim_notices(conn, guard_id, subject_id, give_up_after, limit):
+    rows = conn.execute(CLAIM_NOTICES, (guard_id, subject_id, give_up_after, limit)).fetchall()
+    return [dict(zip(NOTICE_FIELDS, row)) for row in rows]
+
+
+def noticed(conn, event_ids):
+    conn.execute(NOTICED, (list(event_ids),))
+
+
+def notice_failed(conn, event_ids):
+    return conn.execute(NOTICE_FAILED, (list(event_ids),)).fetchall()
+
+
 KEPT_WORDS = 8000
 
 
 def record_enforcement(conn, guard_id, channel_id, subject_id, verb, bot_id=None, label=None, text=None,
-             message_ts=None, permalink=None, app_id=None):
+             message_ts=None, permalink=None, app_id=None, detail=None, notice_wanted=False):
     return conn.execute(
         HAPPENED,
         (guard_id, channel_id, subject_id, bot_id, label, verb,
          (text or None) and text[:KEPT_WORDS],
-         message_ts, permalink, app_id),
+         message_ts, permalink, app_id, detail, notice_wanted),
     ).fetchone()[0]

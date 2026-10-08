@@ -4,7 +4,7 @@ import threading
 
 from bot.core import loops, session
 from bot.nemo import automod, channel, channelguards, channels, chat, guards, guard_actions
-from bot.nemo import enforcement, memberguards, case_queue, responses, screening
+from bot.nemo import enforcement, guard_notices, memberguards, case_queue, responses, screening
 from bot.nemo.enforcement import purge, sweep
 
 log = logging.getLogger("bot.nemo")
@@ -21,6 +21,7 @@ APP_SETTING = "fd_app_setting"
 AUTOMOD_WORD = "fd_automod_word"
 CHANNEL_PURGE = "fd_channel_purge"
 BLOCKED_DOMAIN = "fd_blocked_domain"
+GUARD_NOTICE = "fd_guard_notice"
 
 DEFAULT_SECONDS = 300
 DEFAULT_JOIN_SECONDS = 1800
@@ -196,8 +197,13 @@ def start(case_channel, stopping, channel_id=None):
         responses.refresh(conn)
         screening.refresh(conn)
 
+    wake_notices = loops.draining(f"{NAME}-notices",
+                                  lambda: guard_notices.drain(case_channel.client), stopping)
+
     def on_notify(channel_name, payload):
-        if channel_name == CHAT:
+        if channel_name == GUARD_NOTICE:
+            wake_notices()
+        elif channel_name == CHAT:
             case_channel.mirror(payload)
         elif channel_name == OUTBOX:
             apart(("echoing", case_channel.echo_queued), ("ticking", case_channel.tick_queued))
@@ -246,7 +252,7 @@ def start(case_channel, stopping, channel_id=None):
         loops.watching(NAME,
                        (CASES, CHAT, OUTBOX, CONVERSATION, GUARD, CHANNEL_GUARD,
                         MEMBER_GUARD, APP_SETTING, AUTOMOD_WORD, CHANNEL_PURGE,
-                        BLOCKED_DOMAIN),
+                        GUARD_NOTICE, BLOCKED_DOMAIN),
                        on_notify, stopping),
         loops.sweeping(NAME, every(), lambda: once(case_channel, channel_id), stopping),
         loops.sweeping(f"{NAME}-joins", every_join_sweep(), lambda: join_sweep(case_channel), stopping),

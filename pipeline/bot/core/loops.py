@@ -63,3 +63,24 @@ def sweeping(name, seconds, work, stopping):
     thread = threading.Thread(target=loop, name=f"{name}-sweep", daemon=True)
     thread.start()
     return thread
+
+
+def draining(name, work, stopping, settle=2.0, every=60.0):
+    woken = threading.Event()
+
+    def loop():
+        while not stopping.is_set():
+            try:
+                more = work()
+            except Exception:
+                log.exception("%s: the drain failed, trying again next time", name)
+                more = False
+            if more:
+                continue
+            if woken.wait(every) and stopping.wait(settle):
+                return
+            woken.clear()
+
+    thread = threading.Thread(target=loop, name=f"{name}-drain", daemon=True)
+    thread.start()
+    return woken.set
