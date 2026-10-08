@@ -59,7 +59,7 @@
     <% if @react_channels.any? %>
       <div class="scroll">
         <table class="data-table">
-          <thead><tr><th>channel</th><th class="col-num"></th></tr></thead>
+          <thead><tr><th>Channel</th><th class="col-num"></th></tr></thead>
           <tbody>
             <% @react_channels.each do |channel_id| %>
               <tr>
@@ -98,7 +98,7 @@
     <% if @firehouse %>
       <div class="scroll">
         <table class="data-table">
-          <thead><tr><th>channel</th></tr></thead>
+          <thead><tr><th>Channel</th></tr></thead>
           <tbody>
             <tr><td><%= channel_cell(@firehouse, @named[@firehouse]) %></td></tr>
           </tbody>

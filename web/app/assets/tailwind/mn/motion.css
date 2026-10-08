@@ -118,7 +118,6 @@
     transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   }
 
-  .data-table tbody tr td { transition: background-color var(--dur) var(--ease); }
 
   .metrics, .lede {
     transition: border-color var(--dur-2) var(--ease);

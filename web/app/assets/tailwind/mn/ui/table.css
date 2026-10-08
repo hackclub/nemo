@@ -1,0 +1,70 @@
+@layer base {
+  .data-table {
+    @apply w-full caption-bottom border-separate border-spacing-0 text-sm;
+  }
+
+  .data-table thead th {
+    @apply sticky top-0 z-2 h-10 border-b border-border bg-card px-2 text-left align-middle font-medium whitespace-nowrap text-foreground;
+  }
+
+  .data-table td {
+    @apply border-b border-border bg-clip-padding p-2 align-middle transition-colors;
+  }
+
+  .data-table :is(th, td):first-child {
+    @apply pl-4;
+  }
+
+  .data-table :is(th, td):last-child {
+    @apply pr-4;
+  }
+
+  .data-table tbody tr:last-child > td {
+    @apply border-b-0;
+  }
+
+  .data-table tbody tr:hover > td, .data-table tbody tr:has(:focus-visible) > td {
+    @apply bg-muted/50;
+  }
+
+  .data-table tbody tr[data-controller="row-link"], .data-table tbody tr[data-row-link-href-value] {
+    @apply cursor-pointer;
+  }
+
+  .data-table tbody tr[data-controller="row-link"]:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+
+  .data-table thead th:is(.col-num, .col-rank, .col-date, .col-bar) {
+    @apply text-right;
+  }
+
+  .col-num, .col-rank, .col-date {
+    @apply text-right whitespace-nowrap tabular-nums;
+  }
+
+  .col-num, .col-rank, .col-btn {
+    @apply w-[1%];
+  }
+
+  .col-btn {
+    @apply whitespace-nowrap;
+  }
+
+  th > a.sortable, th > button.sortable, th.sortable > a, th.sortable > button, th.th-sort > a {
+    @apply inline-flex items-center gap-1 text-inherit no-underline hover:text-foreground hover:no-underline;
+  }
+
+  .sort-mark {
+    @apply text-primary;
+  }
+
+  .band-row td {
+    @apply bg-muted/50;
+  }
+
+  .row-merged td {
+    @apply opacity-60;
+  }
+}

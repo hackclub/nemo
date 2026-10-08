@@ -124,63 +124,8 @@
 
   .scroll { overflow: auto; min-width: 0; }
 
-  .data-table, .record-table, .engine-table, .engine-wide-table, .channel-table,
-  .role-matrix, .channel-poster-table, .profile-channel-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    font-size: var(--t-body);
-  }
-  .data-table thead th, .record-table thead th, .engine-table thead th,
-  .engine-wide-table thead th, .channel-table thead th,
-  .channel-poster-table thead th, .profile-channel-table thead th {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    text-align: left;
-    padding: 8px var(--s-xs);
-    background: var(--card);
-    border-bottom: 1px solid var(--line);
-    font-size: var(--t-fine);
-    font-weight: 550;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    color: var(--ink-4);
-    white-space: nowrap;
-  }
-  .data-table td, .record-table td, .engine-table td, .engine-wide-table td,
-  .channel-table td, .channel-poster-table td, .profile-channel-table td {
-    padding: 9px var(--s-xs);
-    border-bottom: 1px solid var(--line-soft);
-    background-clip: padding-box;
-    color: var(--ink-2);
-    vertical-align: middle;
-  }
-  .data-table tbody tr:last-child td, .record-table tbody tr:last-child td { border-bottom: 0; }
-  .data-table tbody tr:has(:focus-visible) td,
-  .channel-table tbody tr:has(:focus-visible) td { background: var(--hover); }
-  .data-table tbody tr[data-controller="row-link"]:focus-visible {
-    outline: 2px solid var(--focus);
-    outline-offset: -2px;
-  }
-  .data-table tbody tr:hover td, .channel-table tbody tr:hover td,
-  .engine-table tbody tr:hover td { background: var(--hover); }
-  .data-table tbody tr[data-controller="row-link"], .data-table tbody tr[data-row-link-href-value] { cursor: pointer; }
-  .col-num, .col-rank, .col-date { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .col-num, .col-rank { width: 1%; }
-  .channel-table thead th.col-bar { text-align: right; }
-  .col-btn { width: 1%; white-space: nowrap; }
-  .data-table thead th.col-num, .data-table thead th.col-rank, .data-table thead th.col-date,
-  .record-table thead th.col-num, .record-table thead th.col-rank, .record-table thead th.col-date,
-  .engine-table thead th.col-num, .engine-table thead th.col-rank, .engine-table thead th.col-date,
-  .engine-wide-table thead th.col-num, .engine-wide-table thead th.col-date,
-  .channel-table thead th.col-num, .channel-table thead th.col-rank, .channel-table thead th.col-date,
-  .channel-poster-table thead th.col-num, .channel-poster-table thead th.col-rank,
-  .profile-channel-table thead th.col-num, .profile-channel-table thead th.col-date,
-  th.col-num, th.col-rank, th.col-date { text-align: right; }
   .trunc-cell { max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tcell, .detail-cell, .when-cell, .subjcell { min-width: 0; }
-  .band-row td { background: var(--card-2); }
   .band-label {
     font-size: var(--t-fine);
     font-weight: 600;
@@ -188,7 +133,6 @@
     text-transform: uppercase;
     color: var(--ink-4);
   }
-  .row-merged td { opacity: 0.6; }
 
   .pager {
     display: flex;

@@ -513,19 +513,6 @@
     border-radius: inherit;
   }
 
-  th > a.sortable, th > button.sortable, th.sortable > a, th.sortable > button, th.th-sort > a {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    color: inherit;
-    text-decoration: none;
-  }
-  th > a.sortable:hover, th.sortable > a:hover, th.th-sort > a:hover {
-    color: var(--ink);
-    text-decoration: none;
-  }
-  .sort-mark { color: var(--primary); }
-  th[aria-sort] { color: var(--ink); }
 
   .theme-pills {
     display: inline-flex;

@@ -162,7 +162,7 @@
   @media (pointer: coarse) {
     .btn { min-height: 34px; }
     .cnav a { height: 36px; }
-    .data-table td { padding: 11px var(--s-xs); }
+    .data-table td { padding-block: 11px; }
     .queue-row { padding-top: 11px; padding-bottom: 11px; }
     .datepicker-day { height: 34px; }
     .menu-pop .btn, .menu-pop > a, .menu-pop > button { min-height: 34px; }
