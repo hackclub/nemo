@@ -106,7 +106,6 @@ def flush_pending(client):
     for guard in finishing:
         apart((f"finishing the lift of {guard['kind']} {guard['id']}",
                lambda one=guard: sweep.release_now(client, one)))
-    return len(taking_up) + len(finishing)
 
 
 def each(cases, doing, work, client, channel_id):
@@ -146,7 +145,6 @@ def once(case_channel, channel_id=None):
         automod.refresh(conn)
         responses.refresh(conn)
         screening.refresh(conn)
-        taking_up = memberguards.unenforced(conn)
         channel.internal_log_channel(conn)
         channel.react_channels(conn)
         destroying = guards.pending(conn)
@@ -174,14 +172,10 @@ def once(case_channel, channel_id=None):
         apart((f"lifting guard {guard_id}", lambda id=guard_id: guard_actions.lift_lock(client, id)))
     for purge_id in purging:
         apart((f"purging {purge_id}", lambda id=purge_id: purge.run(client, id)))
-    for guard in taking_up:
-        apart((f"taking up {guard['kind']} {guard['id']}",
-               lambda one=guard: take_up(client, one)))
     apart(
         ("clearing unremoved guard artifacts", lambda: guard_actions.sweep_removals(client)),
         ("resetting sessions the guard has earned", guard_actions.sweep_strikes),
         ("lifting what has run out", lambda: sweep.sweep_lapsed(client)),
-        ("completing in-progress lifts", lambda: sweep.sweep_lifting(client)),
         ("notifying manually lifted guards", lambda: sweep.sweep_lifted(client)),
         ("reclaiming released work", lambda: sweep.sweep_dropped(client)),
         ("notifying expiring guards", lambda: sweep.sweep_ending(client)),
@@ -201,6 +195,8 @@ def start(case_channel, stopping, channel_id=None):
 
     wake_notices = loops.draining(f"{NAME}-notices",
                                   lambda: guard_notices.drain(case_channel.client), stopping)
+    wake_member_guards = loops.draining(f"{NAME}-member-guards",
+                                        lambda: flush_pending(case_channel.client), stopping)
     wake_removals = loops.draining(f"{NAME}-removals",
                                    lambda: guard_removals.drain(case_channel.client, wake_notices),
                                    stopping, settle=1.0, every=5.0)
@@ -245,10 +241,7 @@ def start(case_channel, stopping, channel_id=None):
                 name=f"nemo-seat-{payload}", daemon=True,
             ).start()
         elif channel_name == MEMBER_GUARD:
-            threading.Thread(
-                target=flush_pending, args=(case_channel.client,),
-                name=f"nemo-member-guard-{payload}", daemon=True,
-            ).start()
+            wake_member_guards()
         elif channel_name == CONVERSATION:
             apart(("catching up", lambda: case_channel.caught_up(payload)),
                   ("ticking", case_channel.tick_queued))

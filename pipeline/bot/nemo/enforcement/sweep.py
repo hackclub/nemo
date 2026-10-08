@@ -92,19 +92,6 @@ def sweep_lifted(client):
     return len(waiting)
 
 
-def sweep_lifting(client):
-    with session() as conn:
-        waiting = memberguards.still_lifting(conn)
-
-    for guard in waiting:
-        with session() as conn:
-            try:
-                release(client, conn, guard)
-            except Exception as failure:
-                log.warning("nemo: could not finish lifting %s: %s", guard["id"], failure)
-    return len(waiting)
-
-
 def sweep_dropped(client):
     with session() as conn:
         again = memberguards.dropped_awhile(conn)

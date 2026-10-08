@@ -133,7 +133,8 @@ def test_the_lift_the_web_asks_for_reaches_the_bot_without_waiting_for_a_sweep()
 
     watched = pathlib.Path(loop.__file__).read_text()
     assert "still_lifting" in watched, "the listener must drain what is lifting"
-    assert "target=flush_pending" in watched
+    assert "lambda: flush_pending(case_channel.client)" in watched
+    assert "wake_member_guards()" in watched
 
 
 def test_the_kind_and_the_events_the_database_will_take():
