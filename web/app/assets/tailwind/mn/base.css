@@ -139,7 +139,7 @@
   }
 
   .form-label, .community-nav-label, .admin-lab, .covkey, .stat-key,
-  .card-grid-head, .menu-group, .palette-group {
+  .card-grid-head {
     font-size: var(--t-fine);
     font-weight: 550;
     line-height: var(--lh-snug);

@@ -14,7 +14,7 @@ export function placePop(pop, anchor) {
 
   pop.style.left = "0px"
   pop.style.top = "0px"
-  const size = pop.getBoundingClientRect()
+  const size = { width: pop.offsetWidth, height: pop.offsetHeight }
   const start = pop.classList.contains("menu-start")
   const left = Math.max(MARGIN, Math.min(start ? box.left : box.right - size.width,
     window.innerWidth - MARGIN - size.width))

@@ -134,7 +134,7 @@ export default class extends Controller {
       head.className = "palette-group"
       head.textContent = group.label
       if (group.total > group.rows.length) {
-        const expand = document.createElement("span")
+        const more = document.createElement("span")
         more.className = "expand"
         more.textContent = `${group.rows.length} of ${group.total}`
         head.append(more)

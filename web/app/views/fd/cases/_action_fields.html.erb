@@ -1,11 +1,10 @@
 <div class="field-label" data-action-standing-target="aimed">
-  <span>Logging record on individual</span>
   <%= render "fd/member_picker", name: "target_user_id", single: true,
         url: fd_member_search_path(case_id: kase.id),
         label: "search for who this is about", preset: preset_faces(target) %>
 </div>
 
-<div data-action-standing-target="standing">
+<div class="standing-slot" data-action-standing-target="standing">
   <%= render "standing", guards: standing, kase: kase, names: names,
         logged: guards_logged %>
 </div>

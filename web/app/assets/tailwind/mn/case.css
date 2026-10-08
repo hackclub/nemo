@@ -104,8 +104,7 @@
     translate: -50% 0;
     z-index: 30;
     max-width: 16ch;
-    padding: 3px 6px;
-    border-radius: var(--r-tight);
+    @apply rounded-md px-3 py-1.5 text-xs;
     background: var(--tip-bg);
     color: var(--tip-ink);
     white-space: nowrap;
@@ -196,6 +195,7 @@
 
   .only { transition: opacity var(--dur-2) var(--ease); }
   .modal-body:has(#tell_reporter:not(:checked)) .only-telling { display: none; }
+  .standing-slot:not(:has(turbo-frame > *)) { display: none; }
 
   .act { color: var(--primary-deep); }
   .evdot.act { background: var(--primary-soft); color: var(--primary-deep); }
@@ -228,12 +228,6 @@
     margin: 0 var(--s-3xs, 2px);
     background: var(--line);
   }
-
-  .menu-item { display: flex; align-items: flex-start; gap: var(--s-2xs); min-width: 0; }
-  .menu-item-icon { color: var(--ink-3); flex: none; width: 14px; margin-top: 1px; }
-  .menu-item-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-  .menu-item-title { font-weight: 500; color: inherit; }
-  .menu-item-note { font-size: var(--t-fine); color: var(--ink-3); }
 
   .people-list { display: flex; flex-direction: column; }
   .person-block { padding: 0 var(--s-md); border-bottom: 1px solid var(--line-soft); }

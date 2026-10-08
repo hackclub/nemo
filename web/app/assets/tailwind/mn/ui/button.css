@@ -54,32 +54,38 @@
     @apply relative cursor-not-allowed opacity-50 active:translate-y-0;
   }
 
+  .btn:has(> .btn-why) {
+    @apply opacity-100 [&>:not(.btn-why)]:opacity-50;
+  }
+
+  .btn:has(> .btn-why):where(:not(.btn-primary, .btn-ghost, .btn-danger, .btn-crit)) {
+    @apply border-border/50 bg-background/50 hover:bg-background/50 dark:border-input/50 dark:bg-input/15 dark:hover:bg-input/15;
+  }
+
+  .btn-primary:has(> .btn-why) {
+    @apply bg-primary/50 hover:bg-primary/50;
+  }
+
+  .btn-danger:has(> .btn-why) {
+    @apply bg-destructive/5 hover:bg-destructive/5 dark:bg-destructive/10 dark:hover:bg-destructive/10;
+  }
+
+  .btn-crit:has(> .btn-why) {
+    @apply bg-destructive/50 hover:bg-destructive/50 dark:bg-destructive/30 dark:hover:bg-destructive/30;
+  }
+
   .btn-why {
     @apply sr-only;
   }
 
   .btn-off:hover > .btn-why, .btn-off:focus-visible > .btn-why,
   .btn[aria-disabled="true"]:hover > .btn-why {
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    z-index: 80;
-    width: max-content;
-    max-width: 260px;
-    height: auto;
-    margin: 0;
-    padding: 6px 9px;
-    overflow: visible;
+    @apply absolute top-[calc(100%+6px)] right-0 z-80 m-0 h-auto w-max max-w-xs overflow-visible rounded-md px-3 py-1.5 text-left text-xs leading-normal font-normal whitespace-normal;
     clip-path: none;
-    white-space: normal;
-    border-radius: var(--r-ctl);
     background: var(--tip-bg);
     color: var(--tip-ink);
-    font-size: var(--t-fine);
-    font-weight: 400;
-    line-height: 1.45;
-    text-align: left;
-    box-shadow: var(--shadow-pop);
+    transform-origin: top right;
+    animation: menu-in 100ms ease-out both;
   }
 
   .btn-primary .kbd {

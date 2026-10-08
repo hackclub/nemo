@@ -1,94 +1,4 @@
 @layer base {
-  .menu { position: relative; display: inline-flex; }
-  .menu > summary { list-style: none; cursor: pointer; }
-  .menu > summary::-webkit-details-marker { display: none; }
-  .car { font-size: var(--t-tiny); color: var(--ink-4); margin-left: 1px; }
-
-  .menu-pop, .pick-pop, .picker-pop, .rooms-pop, .datepicker-pop, .mention-pop, .area-pop {
-    position: absolute;
-    top: calc(100% + 5px);
-    left: 0;
-    z-index: 80;
-    min-width: 200px;
-    max-width: min(340px, 92vw);
-    max-height: min(420px, var(--menu-room, 60vh));
-    overflow: hidden auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-    padding: var(--gap-ctl-sm);
-    margin: 0;
-    border: 0;
-    border-radius: var(--r-card);
-    background: var(--card-2);
-    box-shadow: var(--shadow-pop);
-    animation: rise var(--dur-2) var(--ease-out) both;
-  }
-  .menu-pop[popover], .pick-pop[popover], .picker-pop[popover],
-  .rooms-pop[popover], .datepicker-pop[popover], .mention-pop[popover] {
-    position: fixed;
-    inset: auto;
-    overflow: hidden auto;
-  }
-  .menu-pop::backdrop { background: none; }
-  .menu-up { top: auto; bottom: calc(100% + 5px); }
-  .menu > .menu-pop:not([popover]) { right: 0; left: auto; }
-
-  .menu-pop .btn, .menu-pop > a, .menu-pop > button, .pick-opt, .picker-opt, .rooms-row {
-    display: flex;
-    align-items: center;
-    gap: var(--s-2xs);
-    width: 100%;
-    height: auto;
-    min-height: var(--ctl-h);
-    padding: var(--gap-ctl) 9px;
-    border: 0;
-    border-radius: var(--r-tight);
-    background: none;
-    box-shadow: none;
-    color: var(--ink-2);
-    font-size: var(--t-body);
-    font-weight: 450;
-    text-align: left;
-    justify-content: flex-start;
-    white-space: normal;
-    cursor: pointer;
-    transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
-  }
-  .menu-pop .btn:hover, .menu-pop > a:hover, .menu-pop > button:hover,
-  .pick-opt:hover, .picker-opt:hover, .rooms-row:hover {
-    background: var(--hover);
-    color: var(--ink);
-    text-decoration: none;
-  }
-  .menu-pop .btn > svg, .menu-pop > a > svg, .menu-pop > button > svg, .action-icon {
-    color: var(--ink-4);
-    flex: none;
-  }
-  .action-icon {
-    display: inline-flex;
-    width: 15px;
-    height: 15px;
-  }
-  .action-icon > svg { display: block; width: 100%; height: 100%; }
-  .menu-pop .btn[aria-current="true"], .menu-pop > a[aria-current="true"],
-  .menu-compact [aria-current="true"],
-  .pick-opt[aria-selected="true"], .picker-opt[aria-selected="true"] {
-    background: color-mix(in oklab, var(--ink) 6%, transparent);
-    color: var(--ink);
-    font-weight: 550;
-  }
-  .menu-pop .btn[aria-current="true"] > svg, .menu-pop > a[aria-current="true"] > svg {
-    color: var(--primary);
-  }
-  .menu-pop .btn.btn-danger, .menu-pop > form .btn-danger { color: var(--crit); }
-  .menu-pop .btn.btn-danger:hover { background: var(--crit-soft); }
-  .menu-group {
-    padding: var(--s-2xs) 9px var(--s-3xs);
-  }
-  .menu-compact { min-width: 170px; }
-  .menu-val { margin-left: auto; color: var(--ink-4); font-size: var(--t-fine); }
-  .menu-start { justify-content: flex-start; }
-
   .modal-host { display: contents; }
   .modal-flip { position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0; }
   .modal-veil, .palette-veil {
@@ -154,18 +64,6 @@
   .modal-foot .push, .modal-foot > .card-note:first-child { @apply sm:mr-auto; }
 
 
-  .palette-empty {
-    padding: var(--s-lg) var(--s-sm);
-    text-align: center;
-    color: var(--ink-3);
-    font-size: var(--t-body);
-  }
-  .palette-row.off { color: var(--ink-4); cursor: not-allowed; }
-  .palette-row.off:hover, .palette-row.off[aria-selected="true"] {
-    background: var(--mute-soft);
-    color: var(--ink-4);
-  }
-
   .topbar-msg-warn {
     border-color: color-mix(in oklab, var(--warn) 45%, var(--line));
     background: color-mix(in oklab, var(--warn-soft) 60%, var(--card));
@@ -175,133 +73,57 @@
     background: color-mix(in oklab, var(--crit-soft) 60%, var(--card));
   }
 
-  .palette-host[hidden] { display: none; }
   .palette {
-    position: fixed;
-    inset: 0;
-    z-index: 110;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: clamp(var(--s-sm), 12vh, 140px) var(--s-sm) var(--s-sm);
-    pointer-events: none;
+    @apply pointer-events-none fixed inset-0 z-110 flex items-start justify-center p-4;
+    padding-top: clamp(1rem, 12vh, 140px);
   }
   .palette-card {
-    width: min(620px, 100%);
-    max-height: 62vh;
-    display: flex;
-    flex-direction: column;
-    pointer-events: auto;
-    border: 1px solid var(--line);
-    border-radius: var(--r-panel);
-    background: var(--card);
-    box-shadow: var(--shadow-2);
-    overflow: hidden;
-    animation: rise var(--dur-2) var(--ease-out) both;
+    @apply pointer-events-auto flex max-h-[min(62vh,32rem)] w-[min(40rem,100%)] flex-col overflow-hidden rounded-xl bg-popover p-1 text-popover-foreground ring-1 ring-foreground/10;
+    animation: menu-in 100ms ease-out both;
+    translate: 0 0;
   }
   .palette-input {
-    display: flex;
-    align-items: center;
-    gap: var(--s-2xs);
-    padding: 0 14px;
-    border-bottom: 1px solid var(--line-soft);
-    flex: none;
+    @apply m-1 mb-0 flex h-8 flex-none items-center gap-2 rounded-lg border border-input/30 bg-input/30 px-2;
   }
   .palette-input input {
-    flex: 1 1 auto;
-    min-width: 0;
-    height: 44px;
-    border: 0;
-    background: none;
-    outline: none;
-    font-size: var(--t-mid);
-    color: var(--ink);
+    @apply h-full w-full min-w-0 border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground;
   }
-  .palette-input input::placeholder { color: var(--ink-4); }
-  .palette-icon { color: var(--ink-4); flex: none; }
-  .scope { font-size: var(--t-fine); color: var(--ink-4); }
-  .palette-group { padding: var(--s-xs) 14px var(--s-3xs); }
+  .palette-input input::-webkit-search-cancel-button { display: none; }
+  .palette-input > .palette-icon { @apply size-4 opacity-50; }
+  .scope { @apply flex-none rounded-sm bg-muted px-1.5 py-0.5 text-xs font-medium text-foreground; }
+  .palette-list {
+    @apply min-h-0 flex-1 scroll-py-1 overflow-y-auto p-1 outline-none;
+    scrollbar-width: none;
+  }
+  .palette-group {
+    @apply flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-muted-foreground;
+  }
+  .palette-group > .expand { @apply ml-auto font-normal tabular-nums; }
+  .palette-group:only-child { @apply justify-center py-6 text-sm font-normal text-foreground; }
   .palette-row {
-    display: flex;
-    align-items: center;
-    gap: var(--s-2xs);
-    min-height: 38px;
-    padding: var(--gap-ctl) var(--p-ctl);
-    margin: 0 var(--s-3xs);
-    border-radius: var(--r-tight);
-    color: var(--ink-2);
-    text-decoration: none;
-    min-width: 0;
+    @apply relative flex min-w-0 cursor-default items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-foreground no-underline outline-hidden select-none;
   }
   .palette-row > .palette-icon {
-    display: inline-grid;
-    place-items: center;
-    width: 16px;
-    flex: none;
-    color: var(--ink-4);
+    @apply inline-grid w-4 flex-none place-items-center text-muted-foreground [&_svg:not([class*='size-'])]:size-4;
   }
-  .palette-row > .palette-icon > .avatar { width: 16px; height: 16px; }
+  .palette-row > .palette-icon > .avatar { @apply size-4; }
   .pal-what {
-    display: grid;
+    @apply grid min-w-0 flex-auto items-baseline gap-x-2 gap-y-px;
     grid-template-columns: auto minmax(0, 1fr);
-    align-items: baseline;
-    column-gap: var(--gap-ctl);
-    row-gap: 1px;
-    flex: 1 1 auto;
-    min-width: 0;
   }
-  .pal-t {
-    font-size: var(--t-body);
-    font-weight: 550;
-    color: var(--ink);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .pal-what > .sub {
-    font-size: var(--t-fine);
-    color: var(--ink-4);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .pal-what > .line2 {
-    grid-column: 1 / -1;
-    font-size: var(--t-small);
-    color: var(--ink-3);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
+  .pal-t { @apply truncate text-sm font-normal text-foreground; }
+  .pal-what > .sub { @apply truncate text-xs text-muted-foreground; }
+  .pal-what > .line2 { @apply col-span-full truncate text-xs text-muted-foreground; }
   .palette-row:hover, .palette-row[aria-selected="true"] {
-    background: color-mix(in oklab, var(--ink) 7%, transparent);
-    color: var(--ink);
-    text-decoration: none;
+    @apply bg-muted text-foreground no-underline;
   }
-  .palette-row[aria-selected="true"] .pal-t { color: var(--primary); }
-  .palette-row.off { color: var(--ink-4); cursor: not-allowed; }
-  .palette-row.off .pal-t { color: var(--ink-3); font-weight: 500; }
-  .palette-row.off:hover, .palette-row.off[aria-selected="true"] {
-    background: var(--mute-soft);
-    color: var(--ink-4);
-  }
-  .palette-row.off[aria-selected="true"] .pal-t { color: var(--ink-3); }
-  .palette-arrow { color: var(--ink-4); }
-  .palette-row .palette-arrow { margin-left: auto; }
+  .palette-row:is(:hover, [aria-selected="true"]) > .palette-icon { @apply text-foreground; }
+  .palette-row.off { @apply cursor-not-allowed; }
+  .palette-row.off :is(.palette-icon, .pal-t) { @apply opacity-50; }
   .palette-foot {
-    display: flex;
-    align-items: center;
-    gap: var(--s-xs);
-    padding: var(--gap-ctl) 14px;
-    border-top: 1px solid var(--line-soft);
-    background: var(--card-2);
-    font-size: var(--t-fine);
-    color: var(--ink-4);
-    flex: none;
+    @apply -mx-1 -mb-1 mt-1 flex flex-none items-center gap-3 rounded-b-xl border-t border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground;
   }
-  .pal-t { font-weight: 550; color: var(--ink); }
-  .pal-what { color: var(--ink-4); }
+  .palette-foot > span { @apply inline-flex items-center gap-1.5; }
 
   @keyframes drawer-in { from { translate: 24px 0; opacity: 0; } to { translate: 0 0; opacity: 1; } }
   @keyframes drawer-out { from { translate: 0 0; opacity: 1; } to { translate: 24px 0; opacity: 0; } }

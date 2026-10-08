@@ -209,7 +209,7 @@
   .keyline code { @apply text-xs text-muted-foreground; }
   .card > .keyline:last-child { border-bottom: 0; }
 
-  .divider, .menu-sep { height: 1px; background: var(--line-soft); margin: 4px 0; border: 0; }
+  .divider { height: 1px; background: var(--line-soft); margin: 4px 0; border: 0; }
   .strip-div { width: 1px; height: 26px; background: var(--line-soft); flex: none; border: 0; }
   .mark-rule { border-top: 1px solid var(--line-soft); }
 

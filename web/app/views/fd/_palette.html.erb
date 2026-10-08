@@ -3,14 +3,17 @@
   <div class="palette">
     <div class="palette-card" role="dialog" aria-label="Search">
       <div class="palette-input">
-        <span class="palette-arrow" aria-hidden="true">›</span>
+        <svg class="palette-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+        </svg>
         <span class="scope" data-palette-target="scope" hidden></span>
         <input type="search" id="palette_q" name="palette_q"
                data-palette-target="input" data-action="input->palette#type"
                placeholder="Search, or @member  #case  n:note  r:report"
                autocomplete="off" aria-label="Search">
       </div>
-      <div data-palette-target="results"></div>
+      <div class="palette-list" data-palette-target="results"></div>
       <div class="palette-foot">
         <span><span class="kbd">↑↓</span> move</span>
         <span><span class="kbd">↵</span> open</span>

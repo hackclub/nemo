@@ -1,0 +1,112 @@
+@layer base {
+  .menu { @apply relative inline-flex; }
+  .menu > summary { @apply cursor-pointer list-none; }
+  .menu > summary::-webkit-details-marker { display: none; }
+  .car { @apply ml-px text-[0.625rem] text-muted-foreground; }
+
+  @keyframes menu-in {
+    from { opacity: 0; scale: 0.95; translate: 0 -0.5rem; }
+  }
+
+  @keyframes menu-in-up {
+    from { opacity: 0; scale: 0.95; translate: 0 0.5rem; }
+  }
+
+  .menu-pop, .pick-pop, .picker-pop, .rooms-pop, .datepicker-pop, .mention-pop, .area-pop {
+    @apply absolute top-[calc(100%+4px)] left-0 z-80 m-0 max-w-[min(340px,92vw)] min-w-50 overflow-x-hidden overflow-y-auto overscroll-contain rounded-lg border-0 bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10;
+    max-height: min(420px, var(--menu-room, 60vh));
+    scrollbar-width: thin;
+    transform-origin: top left;
+    animation: menu-in 100ms ease-out both;
+  }
+
+  .menu-pop[popover], .pick-pop[popover], .picker-pop[popover],
+  .rooms-pop[popover], .datepicker-pop[popover], .mention-pop[popover] {
+    position: fixed;
+    inset: auto;
+    overflow: hidden auto;
+  }
+
+  .menu-pop::backdrop { background: none; }
+
+  .menu-up {
+    @apply top-auto bottom-[calc(100%+4px)];
+    transform-origin: bottom left;
+    animation-name: menu-in-up;
+  }
+
+  .pick > .pick-pop:not([popover]) {
+    @apply right-0 max-w-none;
+  }
+
+  .menu > .menu-pop:not([popover]) {
+    @apply right-0 left-auto;
+    transform-origin: top right;
+  }
+
+  .menu-pop .btn, .menu-pop > a, .menu-pop > button, .pick-opt, .picker-opt, .rooms-row {
+    @apply relative flex h-auto min-h-0 w-full cursor-default items-center justify-start gap-1.5 rounded-md border-0 bg-transparent px-1.5 py-1 text-left text-sm font-normal whitespace-normal text-popover-foreground no-underline shadow-none ring-0 outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4;
+  }
+
+  :is(.menu-pop .btn, .menu-pop > a, .menu-pop > button, .pick-opt, .picker-opt, .rooms-row):is(:hover, :focus-visible),
+  .pick-opt[aria-selected="true"], .picker-opt[aria-selected="true"] {
+    @apply bg-accent text-accent-foreground no-underline;
+  }
+
+  .menu-pop .btn > svg, .menu-pop > a > svg, .menu-pop > button > svg, .action-icon {
+    @apply flex-none text-muted-foreground;
+  }
+
+  :is(.menu-pop .btn, .menu-pop > a, .menu-pop > button):is(:hover, :focus-visible) > svg {
+    @apply text-accent-foreground;
+  }
+
+  .action-icon {
+    @apply inline-flex size-4;
+  }
+
+  .action-icon > svg { @apply block size-full; }
+
+  .menu-pop .btn[aria-current="true"], .menu-pop > a[aria-current="true"], .menu-compact [aria-current="true"] {
+    @apply pr-8 font-medium;
+  }
+
+  .menu-pop .btn[aria-current="true"]::after, .menu-pop > a[aria-current="true"]::after,
+  .menu-compact [aria-current="true"]::after {
+    content: "";
+    @apply pointer-events-none absolute top-1/2 right-2 size-4 -translate-y-1/2 bg-current;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+
+  .menu-pop .btn.btn-danger, .menu-pop > form .btn-danger {
+    @apply text-destructive;
+  }
+
+  .menu-pop .btn.btn-danger:is(:hover, :focus-visible) {
+    @apply bg-destructive/10 text-destructive dark:bg-destructive/20;
+  }
+
+  .menu-pop .btn.btn-danger > svg { @apply text-destructive; }
+
+  .menu-group {
+    @apply px-1.5 py-1 text-xs font-medium text-muted-foreground;
+  }
+
+  .menu-sep {
+    @apply -mx-1 my-1 h-px border-0 bg-border;
+  }
+
+  .menu-compact { @apply min-w-42; }
+  .menu-val { @apply ml-auto text-xs tracking-normal text-muted-foreground; }
+  .menu-start { @apply justify-start; }
+
+  .menu-item { @apply flex min-w-0 items-start gap-1.5; }
+  .menu-item-icon { @apply mt-0.5 flex-none text-muted-foreground; }
+  .menu-item-body { @apply flex min-w-0 flex-col gap-0.5; }
+  .menu-item-title { @apply font-normal text-inherit; }
+  .menu-item-note { @apply text-xs text-muted-foreground; }
+
+  :is(.menu-pop .btn, .menu-pop > a, .menu-pop > button):is(:hover, :focus-visible) .menu-item-icon {
+    @apply text-accent-foreground;
+  }
+}

@@ -150,50 +150,24 @@
 
 
   .theme-pills {
-    display: inline-flex;
-    align-items: center;
-    gap: 1px;
-    padding: 2px;
-    border-radius: var(--r-ctl);
-    background: var(--sunk);
+    @apply inline-flex h-8 w-fit items-center justify-center rounded-lg bg-muted p-[3px] text-muted-foreground;
   }
   .theme-pill {
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 24px;
-    border: 0;
-    border-radius: var(--r-tight);
-    background: none;
-    color: var(--ink-4);
-    transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+    @apply inline-flex h-[calc(100%-1px)] items-center justify-center rounded-md border border-transparent px-1.5 text-foreground/60 transition-all hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground [&_svg:not([class*='size-'])]:size-4;
   }
-  .theme-pill:hover { color: var(--ink-2); }
-  .theme-pill.on { background: var(--card); color: var(--ink); box-shadow: var(--shadow-1); }
-  .theme-pill.auto { color: var(--primary); }
+  .theme-pill.on {
+    @apply bg-background text-foreground shadow-sm dark:border-input dark:bg-input/30 dark:text-foreground;
+  }
+  .theme-pill.auto { @apply text-primary; }
 
-  .theme-switch { display: inline-flex; align-items: center; gap: var(--s-3xs); }
+  .theme-switch { @apply inline-flex items-center gap-1.5; }
   .theme-accent {
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: 0;
-    border-radius: var(--r-ctl);
-    background: var(--sunk);
-    cursor: pointer;
+    @apply inline-flex size-8 items-center justify-center rounded-lg border border-input bg-transparent p-0 transition-all outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:bg-muted;
   }
   .theme-accent > span {
-    width: 12px;
-    height: 12px;
-    border-radius: var(--r-round);
-    background: var(--orange);
-    box-shadow: 0 0 0 2px var(--sunk), 0 0 0 3.5px transparent;
-    transition: box-shadow var(--dur) var(--ease);
+    @apply size-3 rounded-full bg-muted-foreground/50 transition-colors;
   }
-  .theme-accent:hover > span { box-shadow: 0 0 0 2px var(--sunk), 0 0 0 3.5px var(--line); }
-  .theme-accent[aria-pressed="true"] > span { box-shadow: 0 0 0 2px var(--sunk), 0 0 0 3.5px var(--orange); }
+  .theme-accent[aria-pressed="true"] > span { background: var(--orange); }
 
   .account-face {
     display: grid;
@@ -207,24 +181,17 @@
   }
   .account-face:hover { background: var(--hover); }
   .account-face .avatar { width: 24px; height: 24px; box-shadow: none; }
-  .account-theme {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--s-2xs);
-    padding: 6px 10px 8px;
-  }
-
   .account-head {
-    display: flex;
-    align-items: center;
-    gap: var(--s-2xs);
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--line-soft);
-    margin-bottom: 4px;
+    @apply -mx-1 mb-1 flex items-center gap-2 border-b border-border px-2.5 pt-1.5 pb-2.5 text-left text-sm;
   }
-  .account-out { color: var(--crit); }
-  .account-out:hover { background: var(--crit-soft); }
+  .account-theme {
+    @apply flex items-center justify-between gap-2 py-1 pr-0.5 pl-1.5;
+  }
+  .account-theme > .form-label {
+    @apply text-sm font-normal tracking-normal text-popover-foreground normal-case;
+  }
+  .menu-pop .btn.account-out, .menu-pop .btn.account-out > svg { @apply text-destructive; }
+  .menu-pop .btn.account-out:is(:hover, :focus-visible) { @apply bg-destructive/10 text-destructive dark:bg-destructive/20; }
 
   .cap-do {
     display: flex;
