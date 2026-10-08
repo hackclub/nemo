@@ -2,7 +2,6 @@
   <span class="metric-key"><%= label %></span>
   <span class="metric-value"><%= number_with_delimiter(value) %></span>
 
-
   <% if local_assigns[:spark] && spark[:data].compact.many? %>
     <span class="metric-spark"
           title="<%= local_assigns[:spark_title] %>"
@@ -23,18 +22,6 @@
       <span>vs previous <%= span[:label] %></span>
     <% else %>
       <span>no prior <%= span[:label] %> held</span>
-    <% end %>
-
-    <% if local_assigns[:share_of] %>
-      <% share = share_pct(value, share_of) %>
-      <% if share %>
-        <span class="ratiobar" role="img"
-              aria-label="<%= number_to_percentage(share, precision: 1) %> <%= share_note %>"
-              title="<%= number_with_delimiter(value) %> of <%= number_with_delimiter(share_of) %>">
-          <i style="width: <%= share.round(1) %>%"></i>
-        </span>
-        <span><%= number_to_percentage(share, precision: 1) %> <%= share_note %></span>
-      <% end %>
     <% end %>
   </span>
 </div>

@@ -1,0 +1,55 @@
+@layer base {
+  .sharebars {
+    @apply relative z-10 my-auto flex w-full flex-col gap-0.5;
+  }
+
+  .sharebar {
+    --bar: var(--series-1);
+    @apply relative flex h-12 items-center gap-2 overflow-hidden px-3;
+  }
+
+  .card > .sharebars > .sharebar {
+    @apply px-4;
+  }
+
+  .sharebar-content {
+    @apply z-10 flex w-full min-w-0 items-center justify-between gap-2 text-sm;
+  }
+
+  .sharebar-label {
+    @apply min-w-0 truncate text-pretty;
+  }
+
+  .sharebar-label b {
+    @apply font-medium;
+  }
+
+  .sharebar-value {
+    @apply flex-none font-medium tabular-nums;
+  }
+
+  .sharebar-count {
+    @apply mr-2 text-xs font-normal text-muted-foreground;
+  }
+
+  .sharebar-fill {
+    @apply pointer-events-none absolute top-0 left-0 h-full border-r-2 border-solid;
+    width: calc(var(--share, 0) * 1%);
+    border-right-color: color-mix(in srgb, var(--bar) clamp(36%, var(--share, 0) * 1.75%, 100%), transparent);
+    background-image: linear-gradient(to right,
+      color-mix(in srgb, var(--bar) 4%, transparent),
+      color-mix(in srgb, var(--bar) 36%, transparent));
+  }
+
+  .sharebar-fill ~ .sharebar-fill {
+    @apply bg-card;
+  }
+
+  .funnel-a { --bar: var(--series-0); }
+  .funnel-b { --bar: var(--series-1); }
+  .funnel-c { --bar: var(--series-2); }
+
+  .key i:is(.funnel-a, .funnel-b, .funnel-c) {
+    background: var(--bar);
+  }
+}

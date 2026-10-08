@@ -372,42 +372,6 @@
     font-weight: 600;
   }
 
-  .funnelrows {
-    display: flex;
-    flex-direction: column;
-    padding: var(--s-2xs) var(--s-xs);
-  }
-  .funnel-row {
-    display: flex;
-    align-items: center;
-    gap: var(--s-xs);
-    padding: 5px 0;
-  }
-  .funnel-name {
-    flex: 0 0 168px;
-    overflow: hidden;
-    color: var(--ink-2);
-    font-size: var(--t-small);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .funnel-bar {
-    position: relative;
-    flex: 1 1 auto;
-    height: 18px;
-    border-radius: 3px;
-    background: var(--sunk);
-    overflow: hidden;
-  }
-  .funnel-bar i {
-    position: absolute;
-    inset: 0 auto 0 0;
-    height: 100%;
-  }
-  .funnel-a { border-radius: 3px; background: color-mix(in oklab, var(--series-1) 24%, var(--card)); }
-  .funnel-b { border-radius: 3px; background: color-mix(in oklab, var(--series-1) 66%, var(--card)); }
-  .funnel-c { border-radius: 3px; background: var(--series-2); }
-
   .ivrows {
     display: flex;
     flex-direction: column;
@@ -725,56 +689,6 @@
     margin-top: auto;
     color: var(--ink-4);
     font-size: var(--t-fine);
-  }
-
-  .inbar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 120px;
-  }
-  .inbar span:first-child {
-    position: relative;
-    flex: 1 1 auto;
-    height: 5px;
-    border-radius: 2px;
-    background: var(--sunk);
-    overflow: hidden;
-  }
-  .inbar span:first-child i {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--series-1);
-  }
-  .inbar span:last-child {
-    flex: none;
-    min-width: 36px;
-    color: var(--ink-3);
-    font-family: var(--font-mono);
-    font-size: var(--t-fine);
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-  }
-  .inbar.soft span:first-child i {
-    background: var(--ink-4);
-  }
-  .cell-share {
-    min-width: 140px;
-  }
-  .ratiobar {
-    position: relative;
-    display: block;
-    height: 5px;
-    border-radius: 2px;
-    background: var(--sunk);
-    overflow: hidden;
-  }
-  .ratiobar i {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--primary);
   }
 
   .bar-sep {

@@ -1,4 +1,3 @@
-<% peak = endings.map(&:last).max.to_i %>
 <section class="section">
   <div class="section-head">
     <h2 class="section-title">How cases ended</h2>
@@ -6,30 +5,17 @@
   </div>
 
   <div class="card card-flush">
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Ending</th>
-            <th class="col-num">Cases</th>
-            <th>Share</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% endings.each do |label, count| %>
-            <tr>
-              <td><%= label %></td>
-              <td class="col-num"><%= number_with_delimiter(count) %></td>
-              <td style="width: 44%">
-                <div class="inbar <%= "soft" if peak.positive? && count < peak / 3.0 %>">
-                  <span><i style="width: <%= peak.positive? ? [(count.to_f / peak * 100), 2].max.round : 0 %>%"></i></span>
-                  <span><%= closed.positive? ? "#{(count.to_f / closed * 100).round}%" : "n/a" %></span>
-                </div>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+    <ul class="sharebars" aria-label="Closed cases by ending">
+      <% endings.each do |label, count| %>
+        <% share = closed.positive? ? count.to_f / closed * 100 : 0 %>
+        <li class="sharebar" style="--share: <%= share.round(1) %>">
+          <div class="sharebar-content">
+            <span class="sharebar-label"><%= label %></span>
+            <span class="sharebar-value"><span class="sharebar-count"><%= number_with_delimiter(count) %></span><%= closed.positive? ? "#{share.round}%" : "n/a" %></span>
+          </div>
+          <div class="sharebar-fill" aria-hidden="true"></div>
+        </li>
+      <% end %>
+    </ul>
   </div>
 </section>
