@@ -1,0 +1,295 @@
+@layer base {
+  @media (min-width: 1100px) {
+    html.sidebar-icon { --nav-w: calc(var(--sidebar-w-icon) + 1rem); }
+  }
+
+  @media (min-width: 900px) and (max-width: 1099px) {
+    html:not(.sidebar-icon) { --nav-w: calc(var(--sidebar-w-icon) + 1rem); }
+  }
+
+  .cpane {
+    @apply relative flex h-full w-(--nav-w) flex-none flex-col bg-sidebar p-2 text-sm text-sidebar-foreground transition-[width] duration-200 ease-linear;
+  }
+
+  .cpane svg, .topbar svg, .switcher-pop svg {
+    stroke-width: 2;
+  }
+
+  .sidebar-head {
+    @apply flex flex-none flex-col p-2;
+  }
+
+  .switcher {
+    @apply flex w-full;
+  }
+
+  .switcher-face {
+    @apply flex h-12 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-hidden transition-[width,height,padding,background-color] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring;
+    @apply collapsed:size-8 collapsed:p-0;
+  }
+
+  .switcher-face.switcher-still {
+    @apply cursor-default hover:bg-transparent hover:text-sidebar-foreground;
+  }
+
+  .switcher[open] > .switcher-face {
+    @apply bg-sidebar-accent text-sidebar-accent-foreground;
+  }
+
+  .switcher-mark {
+    @apply relative flex aspect-square size-8 flex-none items-center justify-center overflow-hidden rounded-lg bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground;
+  }
+
+  .switcher-mark > img {
+    @apply absolute inset-0 size-full object-cover;
+  }
+
+  .switcher-name {
+    @apply grid min-w-0 flex-1 text-left leading-tight collapsed:hidden;
+  }
+
+  .switcher-name > b {
+    @apply truncate text-sm font-medium;
+  }
+
+  .switcher-name > span {
+    @apply truncate text-xs text-muted-foreground;
+  }
+
+  .switcher-chev {
+    @apply ml-auto size-4 flex-none text-muted-foreground collapsed:hidden;
+  }
+
+  .menu-pop.switcher-pop {
+    @apply flex min-w-48 flex-col gap-0.5 p-1;
+    width: calc(var(--nav-w) - 2rem);
+  }
+
+  .menu-pop .switcher-row {
+    @apply relative flex h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm text-popover-foreground no-underline outline-hidden transition-colors hover:bg-accent hover:text-accent-foreground hover:no-underline focus-visible:bg-accent [&>svg]:size-4 [&>svg]:flex-none [&>svg]:text-muted-foreground;
+  }
+
+  .menu-pop .switcher-row[aria-current="page"] {
+    @apply pr-8 font-medium [&>svg]:text-primary;
+  }
+
+  .menu-pop .switcher-row[aria-current="page"]::after {
+    content: "";
+    @apply pointer-events-none absolute top-1/2 right-2 size-4 -translate-y-1/2 bg-current;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+
+  .switcher-what {
+    @apply min-w-0 flex-1 truncate;
+  }
+
+  .switcher-tally {
+    @apply ml-auto flex-none text-xs font-normal text-muted-foreground tabular-nums;
+  }
+
+  .cnav {
+    @apply flex min-h-0 flex-1 flex-col overflow-auto px-2 pb-2;
+    scrollbar-width: none;
+    @apply collapsed:overflow-visible;
+  }
+
+  .cnav::-webkit-scrollbar { display: none; }
+
+  .community-nav-label {
+    @apply flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 transition-[margin,opacity] duration-200 ease-linear;
+    @apply collapsed:pointer-events-none collapsed:-mt-8 collapsed:opacity-0;
+  }
+
+  .community-nav-group {
+    @apply flex w-full min-w-0 flex-col gap-1;
+  }
+
+  .community-nav-group + .community-nav-label {
+    @apply mt-4;
+  }
+
+  .community-nav-group + .community-nav-group {
+    @apply mt-4;
+  }
+
+  .community-nav-find {
+    @apply mb-2 flex h-8 w-full flex-none cursor-pointer items-center gap-2 rounded-lg border border-input bg-background px-2 text-left text-sm text-muted-foreground shadow-none transition-colors outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30 [&_svg]:size-4 [&_svg]:flex-none;
+    @apply collapsed:size-8 collapsed:justify-center collapsed:rounded-md collapsed:border-transparent collapsed:bg-transparent collapsed:p-0 collapsed:text-sidebar-foreground collapsed:hover:bg-sidebar-accent collapsed:hover:text-sidebar-accent-foreground;
+  }
+
+  .community-nav-find > span:not(.kbd) {
+    @apply flex-1 truncate collapsed:hidden;
+  }
+
+  .community-nav-find > .kbd {
+    @apply ml-auto collapsed:hidden;
+  }
+
+  .cnav a, .cfoot a {
+    @apply relative flex h-8 w-full min-w-0 items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm text-sidebar-foreground no-underline outline-hidden transition-[width,height,padding] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:no-underline focus-visible:ring-2 focus-visible:ring-sidebar-ring [&_svg]:size-4 [&_svg]:shrink-0;
+    @apply collapsed:size-8 collapsed:overflow-visible;
+  }
+
+  .cnav a[aria-current="page"], .cfoot a[aria-current="page"] {
+    @apply bg-sidebar-accent font-medium text-sidebar-accent-foreground;
+  }
+
+  .cnav a > span:not(.community-nav-tally), .cfoot a > span:not(.community-nav-tally) {
+    @apply min-w-0 truncate;
+  }
+
+  .community-nav-tally {
+    @apply pointer-events-none ml-auto flex h-5 min-w-5 flex-none items-center justify-center rounded-md px-1 text-xs font-medium text-sidebar-foreground tabular-nums select-none;
+    @apply collapsed:absolute collapsed:top-0.5 collapsed:right-0.5 collapsed:ml-0 collapsed:h-3.5 collapsed:min-w-3.5 collapsed:rounded-full collapsed:bg-sidebar-primary collapsed:px-1 collapsed:text-[0.5625rem] collapsed:leading-none collapsed:text-sidebar-primary-foreground collapsed:ring-2 collapsed:ring-sidebar;
+  }
+
+  .community-nav-sub {
+    @apply mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l border-sidebar-border px-2.5 py-0.5 collapsed:hidden;
+  }
+
+  .cnav .community-nav-sub a {
+    @apply h-7 px-2;
+  }
+
+  .cfoot {
+    @apply flex flex-none flex-col gap-1 px-2 pt-2 pb-0.5;
+  }
+
+  .cfoot a {
+    @apply h-7 text-xs text-muted-foreground;
+  }
+
+  .cfoot .community-nav-tally {
+    @apply text-muted-foreground collapsed:text-sidebar-primary-foreground;
+  }
+
+  :is(.cnav a, .cfoot a) > :is(span.trunc, span:not([class])) {
+    @apply collapsed:pointer-events-none collapsed:absolute collapsed:top-1/2 collapsed:left-[calc(100%+0.5rem)] collapsed:z-60 collapsed:w-max collapsed:max-w-xs collapsed:-translate-y-1/2 collapsed:overflow-visible collapsed:rounded-md collapsed:px-3 collapsed:py-1.5 collapsed:text-xs collapsed:font-normal collapsed:opacity-0 collapsed:transition-opacity collapsed:duration-100;
+    @apply collapsed:bg-(--tip-bg) collapsed:text-(--tip-ink);
+  }
+
+  :is(.cnav a, .cfoot a):is(:hover, :focus-visible) > :is(span.trunc, span:not([class])) {
+    @apply collapsed:opacity-100;
+  }
+
+  .srail {
+    @apply absolute inset-y-0 -right-2 z-20 w-4 cursor-ew-resize border-0 bg-transparent p-0;
+    @apply after:absolute after:inset-y-0 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:transition-colors hover:after:bg-sidebar-border;
+  }
+
+  html.sidebar-dragging .srail::after { @apply bg-sidebar-border; }
+  html.sidebar-dragging * { user-select: none; cursor: ew-resize !important; }
+
+  .topbar {
+    @apply sticky top-0 z-50 flex h-14 flex-none items-center gap-2 border-b border-border px-4 md:px-6;
+  }
+
+  .topbar-sep {
+    @apply h-4 w-px flex-none bg-border;
+  }
+
+  .topbar-trigger + .topbar-sep {
+    @apply mr-2;
+  }
+
+  .crumbs {
+    @apply min-w-0 flex-1;
+  }
+
+  .crumbs > ol {
+    @apply m-0 flex min-w-0 list-none flex-nowrap items-center gap-1.5 p-0 text-sm text-muted-foreground;
+  }
+
+  .crumb {
+    @apply inline-flex min-w-0 items-center gap-1;
+  }
+
+  .crumb > a {
+    @apply flex items-center gap-2 text-muted-foreground no-underline transition-colors hover:text-foreground hover:no-underline [&>svg]:size-3.5;
+  }
+
+  .crumb-page {
+    @apply flex min-w-0 items-center gap-2 font-normal text-foreground [&>svg]:size-3.5 [&>svg]:flex-none;
+  }
+
+  .crumb-page, .crumb-page > span {
+    @apply truncate;
+  }
+
+  .crumb-sep {
+    @apply flex flex-none items-center [&>svg]:size-3.5;
+  }
+
+  .topbar-end {
+    @apply ml-auto flex flex-none items-center gap-3;
+  }
+
+  .topbar-actions {
+    @apply flex items-center gap-2;
+  }
+
+  .topbar-actions:empty {
+    @apply hidden;
+  }
+
+  .topbar .btn-ghost.btn-only {
+    @apply text-muted-foreground hover:text-foreground;
+  }
+
+  .account-face {
+    @apply flex size-8 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 outline-none focus-visible:ring-3 focus-visible:ring-ring/50;
+  }
+
+  .account-face .avatar {
+    @apply size-8 shadow-none transition-[box-shadow];
+  }
+
+  .account-face:hover .avatar, .account-menu[open] .account-face .avatar {
+    @apply ring-2 ring-border;
+  }
+
+  .menu-pop.account-pop {
+    @apply w-60;
+  }
+
+  .sbackdrop { display: none; }
+
+  @media (max-width: 899px) {
+    .cpane {
+      @apply fixed inset-y-0 left-0 z-70 w-(--sidebar-w-mobile) p-2 shadow-lg transition-[translate,visibility] duration-200 ease-in-out;
+      translate: -100% 0;
+      visibility: hidden;
+    }
+
+    html.sidebar-open .cpane {
+      translate: 0 0;
+      visibility: visible;
+    }
+
+    html.sidebar-open .sbackdrop {
+      @apply fixed inset-0 z-60 block bg-black/10 supports-backdrop-filter:backdrop-blur-xs;
+    }
+
+    .srail { display: none; }
+
+    .topbar {
+      @apply gap-1 px-2;
+    }
+
+    .topbar-trigger + .topbar-sep {
+      @apply mr-1;
+    }
+
+    .crumb-up, .topbar-theme, .topbar-theme + .topbar-sep {
+      @apply hidden;
+    }
+
+    .crumb-page {
+      @apply font-medium;
+    }
+
+    .topbar-end {
+      @apply gap-2;
+    }
+  }
+}

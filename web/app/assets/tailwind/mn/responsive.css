@@ -13,7 +13,7 @@
   .pane-list, .scrollarea, .case-tab-body, .member-record-content { background-image: none; }
 
   @media (min-width: 1680px) {
-    :root { --sidebar-w: 260px; --queue-w: 400px; }
+    :root { --queue-w: 400px; }
   }
 
   @media (max-width: 1439px) {
@@ -48,8 +48,6 @@
     .row-top { flex-wrap: wrap; row-gap: var(--gap-ctl); min-height: 0; padding: var(--s-2xs) 0 var(--p-ctl); }
     .rhead-sub { flex: 1 1 100%; }
     .row-top > .ractions { flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-start; }
-    .mobile-bar > .ractions { margin-left: auto; flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: 6px; }
-    .mobile-bar > .ractions > .btn { max-width: 46vw; overflow: hidden; }
     .toolbar > .btn, .ractions > .btn, .card-tools > .btn, .section-tools > .btn { flex: 0 0 auto; }
 
     .segmented { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
@@ -125,17 +123,6 @@
   }
 
   @media (max-width: 640px) {
-    :root {
-      --rail-w: 48px;
-    }
-    .rail { padding: 6px 0; gap: 4px; }
-    .rail-btn, .account-face { width: 36px; height: 36px; }
-    .rail-brand { width: 36px; }
-    .rail-tip { display: none; }
-    .cpane { left: var(--rail-w); }
-
-    .rhead { padding: 0 var(--p-ctl); }
-    .body { padding: var(--s-sm) var(--s-sm) var(--s-xl); gap: var(--s-sm); }
     .facts-strip > div, .facts-strip > .fact {
       flex-basis: 100%;
       border-left: 0;

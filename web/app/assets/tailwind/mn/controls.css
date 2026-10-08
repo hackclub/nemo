@@ -169,18 +169,6 @@
   }
   .theme-accent[aria-pressed="true"] > span { background: var(--orange); }
 
-  .account-face {
-    display: grid;
-    place-items: center;
-    width: 38px;
-    height: 38px;
-    border: 0;
-    border-radius: var(--r-ctl);
-    background: none;
-    padding: 0;
-  }
-  .account-face:hover { background: var(--hover); }
-  .account-face .avatar { width: 24px; height: 24px; box-shadow: none; }
   .account-head {
     @apply -mx-1 mb-1 flex items-center gap-2 border-b border-border px-2.5 pt-1.5 pb-2.5 text-left text-sm;
   }

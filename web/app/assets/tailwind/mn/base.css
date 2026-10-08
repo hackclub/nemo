@@ -138,7 +138,7 @@
     overflow: hidden;
   }
 
-  .form-label, .community-nav-label, .admin-lab, .covkey, .stat-key,
+  .form-label, .admin-lab, .covkey, .stat-key,
   .card-grid-head {
     font-size: var(--t-fine);
     font-weight: 550;

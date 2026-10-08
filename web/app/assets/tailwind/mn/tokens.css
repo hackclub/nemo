@@ -1,4 +1,12 @@
 @custom-variant dark (&:where([data-theme="lightsout"], [data-theme="lightsout"] *));
+@custom-variant collapsed {
+  @media (min-width: 1100px) {
+    html.sidebar-icon & { @slot; }
+  }
+  @media (min-width: 900px) and (max-width: 1099px) {
+    html:not(.sidebar-icon) & { @slot; }
+  }
+}
 
 @theme {
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
@@ -96,12 +104,10 @@
     --r-pill: 999px;
     --r-round: 50%;
 
-    --rail-w: 56px;
-    --sidebar-w: 244px;
+    --sidebar-w: 16rem;
     --nav-w: var(--sidebar-w);
-    --sidebar-w-icon: 56px;
-    --sidebar-w-mobile: min(244px, max(190px, calc(100vw - var(--rail-w) - 76px)));
-    --fdnav-w: var(--sidebar-w);
+    --sidebar-w-icon: 3rem;
+    --sidebar-w-mobile: 18rem;
     --queue-w: 372px;
     --drawer-w: 420px;
     --top-h: 0px;

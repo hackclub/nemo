@@ -1,13 +1,38 @@
-<div class="community-nav-head">
-  <span class="community-nav-mark" data-controller="logo" aria-hidden="true">
-    <span class="community-nav-mark-letter"><%= letter %></span>
-    <%= image_tag workspace_logo_path, class: "community-nav-mark-img", alt: "",
-          data: { logo_target: "img", action: "error->logo#gone" } %>
+<% fire_engine = may_use_fire_engine? %>
+<% place, = shell_place(fire_engine: fire_engine) %>
+<% stops = rail_stops(fire_engine: fire_engine) %>
+<% face = capture do %>
+  <span class="switcher-mark" data-controller="logo">
+    <span><%= title.first %></span>
+    <%= image_tag workspace_logo_path, alt: "", data: { logo_target: "img", action: "error->logo#gone" } %>
   </span>
-  <span class="community-nav-title">
+  <span class="switcher-name">
     <b><%= title %></b>
-    <% if local_assigns[:sub].present? %>
-      <span><%= sub %></span>
-    <% end %>
+    <% if local_assigns[:sub].present? %><span><%= sub %></span><% end %>
   </span>
+<% end %>
+<div class="sidebar-head">
+  <% if stops.any? { |stop| stop.label != place } %>
+    <%= render layout: "shared/dropdown", locals: {
+          css: "switcher", trigger_css: "switcher-face", pop_css: "switcher-pop menu-start",
+          label: "#{title}, switch area",
+          trigger: face + tag.svg(class: "switcher-chev", width: 16, height: 16, viewBox: "0 0 24 24",
+            fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round",
+            "stroke-linejoin": "round", aria: { hidden: true }) {
+              tag.path(d: "m7 15 5 5 5-5") + tag.path(d: "m7 9 5-5 5 5")
+            } } do %>
+      <% stops.each do |stop| %>
+        <%= link_to stop.path, class: "switcher-row",
+              aria: { current: ("page" if stop.label == place) } do %>
+          <%= rail_icon(stop.icon) %>
+          <span class="switcher-what"><%= stop.label %></span>
+          <% if stop.tally.to_i.positive? %>
+            <span class="switcher-tally"><%= stop.tally > 99 ? "99+" : stop.tally %></span>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% else %>
+    <div class="switcher-face switcher-still"><%= face %></div>
+  <% end %>
 </div>

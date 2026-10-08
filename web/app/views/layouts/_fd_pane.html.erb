@@ -1,5 +1,5 @@
 <nav id="section-nav" class="cpane fdnav" aria-label="Fire Engine sections">
-  <%= render "layouts/sidebar_head", letter: "F", title: "Fire Engine", sub: "Conduct" %>
+  <%= render "layouts/sidebar_head", title: "Fire Engine", sub: "Conduct" %>
 
   <div class="cnav">
     <button type="button" class="community-nav-find" data-action="palette#open"
@@ -9,11 +9,9 @@
       <span class="kbd"><span class="mod-meta">⌘K</span><span class="mod-ctrl">Ctrl K</span></span>
     </button>
 
-    <%= render "layouts/fd_nav_group", stops: fd_nav_stops %>
-
-    <% tools = fd_nav_tools %>
-    <% if tools.any? %>
-      <%= render "layouts/fd_nav_group", stops: tools, css: "community-nav-group-end" %>
+    <% fd_nav_groups.each do |label, stops| %>
+      <% if label %><p class="community-nav-label"><%= label %></p><% end %>
+      <%= render "layouts/fd_nav_group", stops: stops %>
     <% end %>
   </div>
 

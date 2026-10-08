@@ -1,11 +1,7 @@
 @layer base {
   .intro {
-    font-size: var(--t-mid);
-    line-height: var(--lh-prose);
+    @apply mt-1 max-w-[min(100%,880px)] text-base text-muted-foreground;
     max-inline-size: 72ch;
-    color: var(--ink-3);
-    max-width: min(100%, 880px);
-    padding-bottom: var(--s-2xs);
   }
 
   .toolbar {
@@ -26,7 +22,7 @@
     color: var(--ink-4);
     font-variant-numeric: tabular-nums;
   }
-  .rhead:has(> .toolbar) > .row-top { padding-bottom: 4px; }
+  .rhead > .toolbar { @apply mt-3 pb-0; }
   @container (max-width: 820px) {
     .rhead > .toolbar .kbd { display: none; }
     .row-top > .ractions > .btn .kbd,

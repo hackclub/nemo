@@ -36,18 +36,13 @@
   .hbars .bar { transform-origin: left; }
   .tree .cell rect, .parts .cell rect { animation: fade-in var(--dur-3) var(--ease) both; }
 
-  .rail-btn:active,
   .metric:active { scale: 0.985; }
-  .rail-btn, .metric {
+  .metric {
     transition-property: background-color, border-color, color, opacity, scale, translate, box-shadow;
   }
 
   .work { transition: grid-template-columns var(--dur-3) var(--ease); }
   html.sidebar-dragging .work { transition: none; }
-
-  .cnav a > .trunc, .community-nav-toggle > span, .community-nav-find span {
-    transition: opacity var(--dur-2) var(--ease);
-  }
 
   .turbo-progress-bar {
     height: 2px;

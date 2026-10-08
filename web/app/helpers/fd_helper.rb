@@ -507,6 +507,16 @@ module FdHelper
     fd_nav_mark(stops)
   end
 
+  def fd_nav_groups
+    stops = fd_nav_stops.index_by(&:key)
+    [
+      [nil, stops.values_at("overview", "cases")],
+      ["People", stops.values_at("members", "new_members")],
+      ["Places", stops.values_at("channels")],
+      ["Manage", fd_nav_tools]
+    ].reject { |_, group| group.empty? }
+  end
+
   def fd_nav_mark(stops)
     here = fd_nav_here
     stops.each { |stop| stop.here = stop.key == here }

@@ -1,0 +1,55 @@
+<% place, icon, place_path = shell_place(fire_engine: fire_engine) %>
+<% page = strip_tags(content_for(:page_title).to_s).squish.presence %>
+<header class="topbar">
+  <button type="button" class="btn btn-ghost btn-only btn-sm topbar-trigger" data-action="sidebar#toggle"
+          aria-controls="section-nav" aria-label="Toggle sidebar">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>
+    </svg>
+  </button>
+  <span class="topbar-sep" aria-hidden="true"></span>
+
+  <% if pane %>
+    <button type="button" class="btn btn-ghost btn-only btn-sm backbtn" aria-label="Back to the list"
+            data-action="click->pane#show" hidden>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M19 12H5M12 19l-7-7 7-7"/>
+      </svg>
+    </button>
+  <% end %>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <ol>
+      <% if page && page != place %>
+        <li class="crumb crumb-up">
+          <%= link_to place_path do %><%= rail_icon(icon) %><span><%= place %></span><% end %>
+        </li>
+        <li class="crumb-sep crumb-up" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </li>
+        <li class="crumb"><span class="crumb-page" aria-current="page"><%= page %></span></li>
+      <% else %>
+        <li class="crumb">
+          <span class="crumb-page" aria-current="page"><%= rail_icon(icon) %><span><%= place %></span></span>
+        </li>
+      <% end %>
+    </ol>
+  </nav>
+
+  <div class="topbar-end">
+    <div class="topbar-actions"></div>
+    <button type="button" class="btn btn-ghost btn-only btn-sm topbar-theme" data-controller="theme"
+            data-action="theme#flip" aria-label="Toggle theme">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M12 3l0 18"/>
+        <path d="M12 9l4.65 -4.65"/><path d="M12 14.3l7.37 -7.37"/><path d="M12 19.6l8.85 -8.85"/>
+      </svg>
+    </button>
+    <span class="topbar-sep" aria-hidden="true"></span>
+    <%= render "layouts/account_menu", staff: current_account %>
+  </div>
+</header>

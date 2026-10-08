@@ -202,6 +202,19 @@ module ApplicationHelper
     @rail_stops = stops
   end
 
+  SHELL_PLACES = {
+    "admin" => ["Admin", "admin"], "settings" => ["Settings", "gear"], "docs" => ["Docs", "book"]
+  }.freeze
+
+  def shell_place(fire_engine:)
+    here = nav_here(fire_engine: fire_engine)
+    return [here.label, here.icon, here.path] if here
+
+    label, icon = SHELL_PLACES.fetch(page_section, ["Community", "community"])
+    path = { "settings" => account_path, "docs" => docs_path }.fetch(page_section, root_path)
+    [label, icon, path]
+  end
+
   def on_community_overview?
     controller_name == "home" && action_name == "index"
   end

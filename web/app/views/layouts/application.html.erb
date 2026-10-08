@@ -27,7 +27,7 @@
     <a class="skiplink" href="#main">Skip to content</a>
     <%= render "shared/synthetic_banner" %>
     <% fire_engine = may_use_fire_engine? %>
-    <% nav_partial = fire_engine && page_section == "fd" ? "layouts/fd_pane" : section_pane %>
+    <% nav_partial = (fire_engine && page_section == "fd" ? "layouts/fd_pane" : section_pane) || "layouts/plain_pane" %>
     <% pane = content_for?(:pane) %>
 
     <div class="shell" data-controller="cachet dismiss sidebar lightbox<%= " palette" if fire_engine %>"
@@ -35,82 +35,57 @@
          data-palette-on-value="<%= content_for(:palette_on) %>"
          data-action="keydown@document->palette#key">
 
-      <%= render "layouts/nav_rail", fire_engine: fire_engine %>
+      <%= render nav_partial, fire_engine: fire_engine %>
+      <div class="sbackdrop" data-action="click->sidebar#close" aria-hidden="true"></div>
 
-      <div class="work<%= " has-nav" if nav_partial %><%= " has-pane" if pane %>"
+      <div class="inset"
            data-view="<%= content_for(:pane_default).presence || "main" %>"
-           data-controller="mobile-bar case-timeline<%= " pane pane-size" if pane %>">
-        <header class="mobile-bar">
-          <% if nav_partial %>
-            <button type="button" class="btn btn-ghost btn-only mobile-bar-menu" data-action="sidebar#toggle"
-                    aria-controls="section-nav" aria-label="Open navigation">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
-                <path d="M4 7h16M4 12h16M4 17h16"/>
-              </svg>
-            </button>
-          <% end %>
+           data-controller="mobile-bar<%= " pane pane-size" if pane %>">
+        <%= render "layouts/topbar", fire_engine: fire_engine, pane: pane %>
+
+        <div class="work<%= " has-pane" if pane %>" data-controller="case-timeline">
+          <%= content_for :pane if pane %>
           <% if pane %>
-            <button type="button" class="btn btn-ghost btn-only backbtn" aria-label="Back to the list"
-                    data-action="click->pane#show" hidden>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M19 12H5M12 19l-7-7 7-7"/>
-              </svg>
-            </button>
+            <button type="button" class="queue-rail" tabindex="-1" aria-hidden="true"
+                    data-action="pointerdown->pane-size#drag pointermove->pane-size#move
+                                 pointerup->pane-size#drop pointercancel->pane-size#drop"></button>
           <% end %>
-          <% here = nav_here(fire_engine: fire_engine) %>
-          <span class="mobile-bar-where">
-            <%= strip_tags(content_for(:page_title).to_s).presence || here&.label || "Mnemosyne" %>
-          </span>
-        </header>
 
-        <% if nav_partial %>
-          <%= render nav_partial, fire_engine: fire_engine %>
-          <div class="sbackdrop" data-action="click->sidebar#close" aria-hidden="true"></div>
-        <% end %>
+          <main class="main" id="main" tabindex="-1">
+            <div class="rhead">
+              <div class="row-top">
+                <div class="rhead-sub">
+                  <h1 class="rtitle" title="<%= strip_tags(content_for(:page_title).to_s).presence || "Mnemosyne" %>">
+                    <%= yield :page_face %><%= content_for(:page_title) || "Mnemosyne" %>
+                  </h1>
+                  <%= content_for(:head_context) if content_for?(:head_context) %>
+                </div>
 
-        <%= content_for :pane if pane %>
-        <% if pane %>
-          <button type="button" class="queue-rail" tabindex="-1" aria-hidden="true"
-                  data-action="pointerdown->pane-size#drag pointermove->pane-size#move
-                               pointerup->pane-size#drop pointercancel->pane-size#drop"></button>
-        <% end %>
-
-        <main class="main" id="main" tabindex="-1">
-          <div class="rhead">
-            <div class="row-top">
-              <div class="rhead-sub">
-                <h1 class="rtitle" title="<%= strip_tags(content_for(:page_title).to_s).presence || "Mnemosyne" %>">
-                  <%= yield :page_face %><%= content_for(:page_title) || "Mnemosyne" %>
-                </h1>
-                <%= content_for(:head_context) if content_for?(:head_context) %>
+                <% if content_for?(:head_actions) %>
+                  <div class="ractions"><%= content_for(:head_actions) %></div>
+                <% end %>
               </div>
 
-              <% if content_for?(:head_actions) %>
-                <div class="ractions"><%= content_for(:head_actions) %></div>
+              <% if content_for?(:page_note) %>
+                <p class="intro"><%= content_for(:page_note) %></p>
+              <% end %>
+
+              <% if content_for?(:page_controls) %>
+                <div class="toolbar"><%= content_for(:page_controls) %></div>
+              <% end %>
+
+              <% if content_for?(:page_tabs) %>
+                <nav class="views" aria-label="Sections"><%= content_for(:page_tabs) %></nav>
               <% end %>
             </div>
 
-            <% if content_for?(:page_note) %>
-              <p class="intro"><%= content_for(:page_note) %></p>
-            <% end %>
-
-            <% if content_for?(:page_controls) %>
-              <div class="toolbar"><%= content_for(:page_controls) %></div>
-            <% end %>
-
-            <% if content_for?(:page_tabs) %>
-              <nav class="views" aria-label="Sections"><%= content_for(:page_tabs) %></nav>
-            <% end %>
-          </div>
-
-          <div class="scrollarea<%= " flush" if content_for?(:flush) %>">
-            <div class="body<%= " flush" if content_for?(:flush) %>">
-              <%= yield %>
+            <div class="scrollarea<%= " flush" if content_for?(:flush) %>">
+              <div class="body<%= " flush" if content_for?(:flush) %>">
+                <%= yield %>
+              </div>
             </div>
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
 
       <% if fire_engine %>

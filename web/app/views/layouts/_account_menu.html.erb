@@ -1,6 +1,6 @@
 <% shown = Fd::Names.for([staff.user_id]) %>
 <%= render layout: "shared/dropdown", locals: {
-      css: "account-menu", trigger_css: "account-face", pop_css: "account-pop menu-start",
+      css: "account-menu", trigger_css: "account-face", pop_css: "account-pop",
       label: "#{shown[staff.user_id]}, and your account",
       trigger: tag.img(src: cachet_face_url(staff.user_id), class: "avatar", alt: "",
         width: 24, height: 24,

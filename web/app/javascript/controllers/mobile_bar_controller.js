@@ -15,7 +15,7 @@ export default class extends Controller {
   }
 
   place() {
-    const bar = this.element.querySelector(".mobile-bar")
+    const bar = this.element.querySelector(".topbar-actions")
     const actions = this.element.querySelector(".ractions")
     const top = this.element.querySelector(".rhead > .row-top")
     if (!bar || !actions) return

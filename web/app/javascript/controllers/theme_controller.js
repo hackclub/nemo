@@ -20,6 +20,11 @@ export default class extends Controller {
     window.MnTheme?.pick(key, this.origin(event))
   }
 
+  flip(event) {
+    const live = document.documentElement.getAttribute("data-theme")
+    window.MnTheme?.pick(live === "lightsout" ? "light" : "lightsout", this.origin(event))
+  }
+
   tint(event) {
     if (!window.MnTheme) return
 

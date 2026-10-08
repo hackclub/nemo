@@ -1,12 +1,13 @@
 <div class="cfoot">
-  <button type="button" class="community-nav-toggle" data-action="sidebar#toggle"
-          aria-controls="section-nav" aria-label="Collapse sidebar">
-    <svg class="icon-slot" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>
-    </svg>
-    <span class="trunc">Collapse</span>
-  </button>
+  <%= link_to docs_path, aria: { current: ("page" if page_section == "docs") } do %>
+    <%= nav_icon("news") %><span class="trunc">Docs</span>
+  <% end %>
+  <%= link_to account_path, aria: { current: ("page" if page_section == "settings") } do %>
+    <%= nav_icon("gear") %><span class="trunc">Settings</span>
+    <% if may_review_api? && api_queue_waiting.positive? %>
+      <span class="community-nav-tally"><%= api_queue_waiting > 99 ? "99+" : api_queue_waiting %></span>
+    <% end %>
+  <% end %>
 </div>
 
 <button type="button" class="srail" tabindex="-1" aria-hidden="true"
