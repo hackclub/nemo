@@ -12,10 +12,6 @@ const BAR_CAP = 72
 const BAR_R = 6
 const PILL_H = 22
 const SEG_GAP = 2
-const TILT = -32
-const LEAN = Math.abs(TILT) * Math.PI / 180
-const AX_LINE = 14
-const AX_MOST = 14
 const AX_SAY_X = 26
 const AX_SAY_Y = 22
 
@@ -30,18 +26,7 @@ function axWide(text) {
   return RULER.measureText(String(text)).width
 }
 
-function axClip(text, room) {
-  const label = String(text)
-  if (!(room > 0) || axWide(label) <= room) return label
-
-  for (let n = label.length - 1; n >= 2; n--) {
-    const cut = `${label.slice(0, n)}…`
-    if (axWide(cut) <= room) return cut
-  }
-  return label
-}
-
-const BIN = /^(\d+)(?:-(\d+))?(\+)?$/
+const BIN = /^([<>])?(\d+)(?:-(\d+))?(\+)?$/
 
 const kilo = (n) => (n >= 1000 ? `${+(n / 1000).toFixed(n % 1000 >= 100 ? 1 : 0)}k` : String(n))
 
@@ -49,9 +34,9 @@ function binLabels(rows) {
   const parts = rows.map((r) => BIN.exec(String(r.label)))
   if (!parts.length || parts.some((m) => !m)) return null
 
-  const ranged = parts.map(([, a, b, plus]) =>
-    `${kilo(Number(a))}${b ? `-${kilo(Number(b))}` : ""}${plus ? "+" : ""}`)
-  const floors = parts.map(([, a, , plus]) => `${kilo(Number(a))}${plus ? "+" : ""}`)
+  const ranged = parts.map(([, side, a, b, plus]) =>
+    `${side || ""}${kilo(Number(a))}${b ? `-${kilo(Number(b))}` : ""}${plus ? "+" : ""}`)
+  const floors = parts.map(([, side, a, , plus]) => `${side || ""}${kilo(Number(a))}${plus ? "+" : ""}`)
   return [ranged, floors]
 }
 
@@ -238,9 +223,7 @@ export default class extends Controller {
       l: PAD.l + (this.xlabelValue || this.ylabelValue ? AX_SAY_Y : 0),
       b: PAD.b + (this.xlabelValue ? AX_SAY_X : 0)
     }
-    if (!this.tilt) return text
-
-    return { ...text, r: text.r + (this.tiltEdge || 0), b: text.b + Math.round(this.tiltRoom || 22) }
+    return text
   }
 
   get stack() {
@@ -290,37 +273,15 @@ export default class extends Controller {
   shownLabels(rows, wide) {
     const band = (wide - PAD.l - PAD.r) / rows.length
     const widest = rows.reduce((mx, r) => Math.max(mx, axWide(r.label)), 0)
-    if (widest + 12 <= band) {
-      return { show: this.everyNth(rows.length, 1), tilt: false, room: 0, cap: 0, edge: 0 }
-    }
-    if (!this.daysValue && !this.line) {
-      const fits = (binLabels(rows) || []).find((names) =>
-        names.every((name) => axWide(name) + 12 <= band))
-      if (fits) {
-        return { show: this.everyNth(rows.length, 1), tilt: false, room: 0, cap: 0, edge: 0, names: fits }
-      }
-    }
-    if (this.daysValue || this.line) {
-      const every = Math.max(1, Math.ceil((widest + 16) / band))
-      return { show: this.everyNth(rows.length, every), tilt: false, room: 0, cap: 0, edge: 0 }
-    }
+    if (widest + 12 <= band) return { show: this.everyNth(rows.length, 1) }
 
-    const cap = (PAD.l * 2 + band - 8) / Math.cos(LEAN)
-    const every = Math.max(1, Math.ceil(AX_LINE / (band * Math.sin(LEAN))),
-      Math.ceil(rows.length / AX_MOST))
-    const show = this.everyNth(rows.length, every)
-    const drop = Math.min(widest, cap) / 2 * Math.sin(LEAN)
-    const lift = Math.round(drop + 8 * Math.cos(LEAN)) + 4
-    const end = Math.max(...show)
-    const lead = axWide(axClip(rows[end].label, cap)) / 2 * Math.cos(LEAN) + 2
-    return {
-      show,
-      tilt: true,
-      room: Math.max(0, Math.ceil(lift + drop + 4 - PAD.b)),
-      edge: Math.max(0, Math.ceil(lead - (wide - PAD.l - (end + 0.5) * band))),
-      cap,
-      lift
-    }
+    const sets = this.daysValue || this.line ? [] : (binLabels(rows) || [])
+    const fits = sets.find((names) => names.every((name) => axWide(name) + 12 <= band))
+    if (fits) return { show: this.everyNth(rows.length, 1), names: fits }
+
+    const names = sets[sets.length - 1]
+    const room = names ? Math.max(...names.map(axWide)) : widest
+    return { show: this.everyNth(rows.length, Math.max(1, Math.ceil((room + 16) / band))), names }
   }
 
   everyNth(count, every) {
@@ -334,12 +295,7 @@ export default class extends Controller {
     const all = this.series
     const overs = this.overs
     const series = overs.length ? all.filter((s) => !s.over) : all
-    const labels = this.sparkValue
-      ? { show: new Set(), tilt: false }
-      : this.shownLabels(rows, wide)
-    this.tilt = labels.tilt
-    this.tiltRoom = labels.room
-    this.tiltEdge = labels.edge
+    const labels = this.sparkValue ? { show: new Set() } : this.shownLabels(rows, wide)
     const { x, y, lo, line, high, pad, pinned } = this.scales(rows, series, wide)
     const mid = (i) => x(i) + x.bandwidth() / 2
     const span = y.domain()[1] - y.domain()[0]
@@ -414,13 +370,6 @@ export default class extends Controller {
 
       const at = mid(i)
       const text = labels.names ? labels.names[i] : r.label
-      if (labels.tilt) {
-        const ty = high - pad.b + labels.lift
-        return `<text class="ax xtick" data-x="${at.toFixed(1)}" x="${at.toFixed(1)}" y="${
-          ty.toFixed(1)}" text-anchor="middle"
-          transform="rotate(${TILT} ${at.toFixed(1)} ${ty.toFixed(1)})">${
-          esc(axClip(r.label, labels.cap))}</text>`
-      }
 
       const wideness = axWide(text)
       const anchor = at - wideness / 2 < 2
