@@ -191,27 +191,18 @@
 
   .member-timeline { display: flex; flex-direction: column; }
   .record-month {
-    padding: var(--s-sm) var(--s-xs) 6px;
-    font-size: var(--t-fine);
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ink-4);
+    @apply px-4 pt-4 pb-1.5 text-xs font-medium text-muted-foreground;
   }
   .member-timeline > .record-month:first-child { padding-top: var(--s-sm); }
 
   .activity { display: flex; flex-direction: column; }
   .activity > .activity-item {
-    padding: 10px var(--s-sm);
-    border-bottom: 1px solid var(--line-soft);
+    @apply border-b border-border px-4 py-3;
   }
   .activity > .activity-item:last-child { border-bottom: 0; }
 
   .evrow {
-    display: flex;
-    gap: var(--s-xs);
-    padding: 10px var(--s-xs);
-    border-bottom: 1px solid var(--line-soft);
+    @apply flex gap-3 border-b border-border px-4 py-3 text-sm;
   }
   .evrow:last-child { border-bottom: 0; }
   .evrow.is-reversed { opacity: 0.6; }
@@ -250,11 +241,7 @@
     gap: var(--s-xs);
   }
   .evwhen {
-    font-family: var(--font-mono);
-    font-size: var(--t-mark);
-    font-variant-numeric: tabular-nums;
-    color: var(--ink-4);
-    white-space: nowrap;
+    @apply text-xs whitespace-nowrap text-muted-foreground tabular-nums;
   }
 
   .locked {

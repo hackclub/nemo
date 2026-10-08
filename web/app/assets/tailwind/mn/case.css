@@ -1,9 +1,6 @@
 @layer base {
   .queue-row {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: var(--s-xs) var(--s-sm);
+    @apply flex flex-col gap-1 border-b border-border px-4 py-3 text-sm;
     background-color: var(--pane);
     position: relative;
     cursor: pointer;
@@ -25,8 +22,7 @@
     transition: scale var(--dur-2) var(--ease-out);
   }
   .queue-row:hover {
-    background-image: linear-gradient(var(--hover), var(--hover));
-    text-decoration: none;
+    @apply bg-muted/50 no-underline;
   }
   .queue-row[aria-selected="true"] {
     background-color: var(--card);
@@ -34,35 +30,21 @@
     box-shadow: var(--shadow-1);
   }
   .queue-row[aria-selected="true"]::before { scale: 1 1; }
-  .queue-top { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .queue-top { @apply flex min-w-0 items-center gap-2; }
   .queue-top .avatar, .queue-top .row-avatar { width: 18px; height: 18px; font-size: var(--t-tiny); flex: none; }
   .queue-id {
-    font-family: var(--font-mono);
-    font-size: var(--t-fine);
-    font-weight: 500;
-    color: var(--ink-3);
-    font-variant-numeric: tabular-nums;
-    flex: none;
+    @apply flex-none text-xs font-medium text-muted-foreground tabular-nums;
   }
-  .queue-by { font-size: var(--t-small); font-weight: 600; color: var(--ink); min-width: 0; }
-  .queue-category { font-size: var(--t-body); font-weight: 600; letter-spacing: -0.008em; color: var(--ink); min-width: 0; }
+  .queue-by { @apply min-w-0 font-medium text-foreground; }
+  .queue-category { @apply min-w-0 font-medium text-foreground; }
   .queue-age {
-    margin-left: auto;
-    flex: none;
-    font-family: var(--font-mono);
-    font-size: var(--t-fine);
-    font-variant-numeric: tabular-nums;
-    color: var(--ink-3);
-    white-space: nowrap;
+    @apply ml-auto flex-none text-xs whitespace-nowrap text-muted-foreground tabular-nums;
   }
   .queue-age.age-warn { color: var(--warn); }
   .queue-age.age-crit { color: var(--crit); font-weight: 500; }
 
   .queue-subject {
-    margin-top: 4px;
-    font-size: var(--t-small);
-    line-height: 1.42;
-    color: var(--ink-2);
+    @apply mt-0.5 text-sm leading-snug text-muted-foreground;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
@@ -79,16 +61,13 @@
     background: var(--card-2);
     min-width: 0;
   }
-  .queue-cite-head { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: var(--t-mark); color: var(--ink-3); }
+  .queue-cite-head { @apply flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground; }
   .queue-cite-face { width: 15px; height: 15px; font-size: var(--t-tiny); flex: none; }
-  .queue-cite-who { font-weight: 600; color: var(--ink-2); min-width: 0; }
-  .queue-cite-how { color: var(--ink-4); flex: none; }
+  .queue-cite-who { @apply min-w-0 font-medium text-foreground; }
+  .queue-cite-how { @apply flex-none text-muted-foreground; }
   .queue-cite-in { min-width: 0; }
   .queue-cite-body {
-    margin-top: 3px;
-    font-size: var(--t-small);
-    line-height: 1.42;
-    color: var(--ink-2);
+    @apply mt-1 text-sm leading-snug text-foreground;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
@@ -97,13 +76,13 @@
     overflow-wrap: anywhere;
   }
 
-  .queue-meta { display: flex; align-items: center; gap: var(--s-2xs); margin-top: 5px; min-width: 0; }
-  .queue-violation { font-size: var(--t-small); font-weight: 500; color: var(--ink-3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .queue-priors { font-size: var(--t-fine); font-weight: 500; color: var(--warn); white-space: nowrap; flex: none; }
+  .queue-meta { @apply mt-1 flex min-w-0 items-center gap-2; }
+  .queue-violation { @apply min-w-0 truncate text-sm text-muted-foreground; }
+  .queue-priors { @apply flex-none text-xs font-medium whitespace-nowrap text-warning; }
   .queue-meta .avatar-stack { margin-left: auto; flex: none; }
   .queue-meta .avatar, .queue-meta .row-avatar { width: 18px; height: 18px; font-size: var(--t-tiny); }
 
-  .queue-label { font-size: var(--t-fine); color: var(--ink-4); white-space: nowrap; }
+  .queue-label { @apply text-xs whitespace-nowrap text-muted-foreground; }
   .queue-search { display: flex; min-width: 0; flex: 1 1 auto; }
 
   .subjfaces { display: inline-flex; align-items: center; gap: var(--s-2xs); min-width: 0; }
@@ -460,7 +439,7 @@
   .msg.is-grouped .avatar, .msg.is-grouped .row-avatar { visibility: hidden; }
   .msg-head { display: flex; align-items: baseline; gap: var(--s-2xs); flex-wrap: wrap; }
   .msg-who { font-size: var(--t-body); font-weight: 600; color: var(--ink); }
-  .msg-at { font-family: var(--font-mono); font-size: var(--t-mark); color: var(--ink-4); font-variant-numeric: tabular-nums; }
+  .msg-at { @apply text-xs text-muted-foreground tabular-nums; }
   .msg-end { margin-left: auto; }
   .msg-body, .msg-text {
     margin: 2px 0 0;

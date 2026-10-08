@@ -96,23 +96,13 @@
   }
   .deflist > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
   .deflist dt {
-    color: var(--ink-4);
-    font-size: var(--t-fine);
-    letter-spacing: 0.01em;
+    @apply text-xs text-muted-foreground;
   }
   .deflist dd {
-    margin: 0;
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    color: var(--ink);
-    font-family: var(--font-mono);
-    font-size: var(--t-body);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
+    @apply m-0 flex items-baseline gap-1.5 text-sm font-medium whitespace-nowrap text-foreground tabular-nums;
   }
-  .deflist dd .short { font-family: var(--font-sans); font-size: var(--t-fine); color: var(--ink-4); }
-  .card > .deflist { padding: var(--s-xs) var(--s-sm); }
+  .deflist dd .short { @apply text-xs font-normal text-muted-foreground; }
+  .card > .deflist { @apply p-4; }
 
   .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-xs); }
   .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-xs); }
@@ -203,23 +193,20 @@
     min-width: 0;
   }
   .lrow, .srow, .record-row, .source-row { align-items: flex-start; }
-  .list > .lrow { padding: 9px 0; border-top: 1px solid var(--line-soft); }
-  .list > .lrow:first-child { border-top: 0; }
-  .card-flush > .list > .lrow { padding-inline: var(--s-xs); }
+  .list > .lrow { @apply border-t border-border py-3 text-sm; }
+  .list > .lrow:first-child { @apply border-t-0; }
+  .card-flush > .list > .lrow { @apply px-4; }
   .lrow > .grow, .row > .grow, .srow > .grow, .record-row > .grow {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
+    @apply flex min-w-0 flex-col gap-1;
   }
   .row-right, .lrow-right, .evrow-right { margin-left: auto; display: flex; align-items: center; gap: var(--s-2xs); flex: none; }
-  .row-key { color: var(--ink-3); }
-  .row-value { font-weight: 500; color: var(--ink); }
-  .row-note { font-size: var(--t-fine); color: var(--ink-4); }
+  .row-key { @apply text-muted-foreground; }
+  .row-value { @apply font-medium text-foreground; }
+  .row-note { @apply text-xs text-muted-foreground; }
   .rowbar { display: flex; align-items: center; gap: var(--s-2xs); padding: 8px var(--s-xs); border-bottom: 1px solid var(--line-soft); }
-  .keyline { gap: var(--s-xs); padding: 11px var(--s-xs); }
-  .keyline > .two-line > span { font-variant-numeric: tabular-nums; }
-  .keyline code { font-size: var(--t-small); color: var(--ink-3); }
+  .keyline { @apply gap-3 px-4 py-3; }
+  .keyline > .two-line > span { @apply tabular-nums; }
+  .keyline code { @apply text-xs text-muted-foreground; }
   .card > .keyline:last-child { border-bottom: 0; }
 
   .divider, .menu-sep { height: 1px; background: var(--line-soft); margin: 4px 0; border: 0; }
@@ -231,15 +218,11 @@
 
   .timeline, .member-timeline { display: flex; flex-direction: column; }
   .todo, .closed, .standing, .activity-item, .person-note, .log-item {
-    display: flex;
-    gap: var(--s-2xs);
-    padding: 10px var(--s-xs);
-    border-bottom: 1px solid var(--line-soft);
-    min-width: 0;
+    @apply flex min-w-0 gap-3 border-b border-border px-4 py-3 text-sm;
   }
-  .todo-row { display: flex; align-items: center; gap: var(--s-2xs); }
-  .todo-t, .standing-t, .closed-what { font-weight: 550; color: var(--ink); }
-  .closed-why, .standing-line, .activity-what, .why-quote { font-size: var(--t-small); color: var(--ink-3); }
+  .todo-row { @apply flex items-center gap-2; }
+  .todo-t, .standing-t, .closed-what { @apply font-medium text-foreground; }
+  .closed-why, .standing-line, .activity-what, .why-quote { @apply text-sm text-muted-foreground; }
   .activity-item {
     flex-direction: column;
     align-items: stretch;
@@ -252,53 +235,30 @@
   .lnk-soft:hover { color: var(--ink-2); }
 
   .log { display: flex; flex-direction: column; }
-  .log-meta, .log-source { font-size: var(--t-fine); color: var(--ink-4); font-family: var(--font-mono); }
+  .log-meta, .log-source { @apply font-mono text-xs text-muted-foreground; }
 
   .auditlog { display: flex; flex-direction: column; min-width: 0; }
   .auditlog-day {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    padding: var(--s-2xs) var(--s-sm) 6px;
-    background: var(--card);
-    border-bottom: 1px solid var(--line-soft);
-    font-size: var(--t-fine);
-    font-weight: 550;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ink-4);
+    @apply sticky top-0 z-2 border-b border-border bg-card px-4 py-2 text-xs font-medium text-muted-foreground;
   }
   .auditlog-row {
-    display: grid;
+    @apply grid items-baseline gap-4 border-b border-border px-4 py-2.5 text-sm transition-colors;
     grid-template-columns: 46px minmax(0, 210px) minmax(0, 1fr);
-    align-items: baseline;
-    gap: var(--s-sm);
-    padding: 7px var(--s-sm);
-    border-bottom: 1px solid var(--line-soft);
-    font-size: var(--t-body);
-    transition: background-color var(--dur) var(--ease);
   }
   .auditlog-row-wide { grid-template-columns: 46px minmax(0, 1fr); }
   .auditlog-row:last-child { border-bottom: 0; }
-  .auditlog-row:hover { background: color-mix(in oklab, var(--ink) 4%, transparent); }
+  .auditlog-row:hover { @apply bg-muted/50; }
   .auditlog-at {
-    font-family: var(--font-mono);
-    font-size: var(--t-small);
-    font-variant-numeric: tabular-nums;
-    color: var(--ink-4);
+    @apply text-xs text-muted-foreground tabular-nums;
   }
   .auditlog-who { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .auditlog-who .avatar, .auditlog-who img { width: 18px; height: 18px; flex: none; }
   .auditlog-who b {
-    font-weight: 500;
-    color: var(--ink-2);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    @apply truncate font-medium text-foreground;
   }
-  .auditlog-none { color: var(--ink-4); }
-  .auditlog-what { min-width: 0; color: var(--ink-2); }
-  .auditlog-what > b { font-weight: 400; color: var(--ink-2); }
+  .auditlog-none { @apply text-muted-foreground; }
+  .auditlog-what { @apply min-w-0 text-foreground; }
+  .auditlog-what > b { @apply font-normal text-foreground; }
   .auditlog-detail { margin-left: 6px; }
 
   @media (max-width: 640px) {
