@@ -254,7 +254,7 @@
 <%= render layout: "fd/modal", locals: { id: "log-action", title: "Log an action",
       open: params[:do] == "action" } do %>
   <div data-controller="action-standing"
-       data-action="member-picker:picked->action-standing#look
+       data-action="combobox:picked->action-standing#look
                     turbo:frame-load->action-standing#fit"
        data-action-standing-url-value="<%= fd_case_standing_path(@case) %>">
   <%= form_with url: fd_case_actions_path(@case), method: :post, html: { autocomplete: "off" } do %>

@@ -156,7 +156,7 @@ class FdActionStandingTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase, do: "action")
     body = response.body
 
-    assert_operator body.index('data-member-picker-name-value="target_user_id"'), :<,
+    assert_operator body.index('data-combobox-name-value="target_user_id"'), :<,
       body.index('turbo-frame id="action-standing"')
     assert_operator body.index('turbo-frame id="action-standing"'), :<,
       body.index('data-action-standing-target="fields"')
@@ -168,7 +168,7 @@ class FdActionStandingTest < ActionDispatch::IntegrationTest
 
     assert_match(/data-action-standing-target="fields"/, body)
     assert_match(/action-standing#fit/, body) if Fd::MemberGuard.any?
-    assert_match(/member-picker:picked->action-standing#look/, body)
+    assert_match(/combobox:picked->action-standing#look/, body)
     assert_match(/turbo:frame-load->action-standing#fit/, body)
   end
 
@@ -213,8 +213,8 @@ class FdActionStandingTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase, do: "action")
     body = response.body
 
-    assert_match(/data-controller="channel-picker"/, body)
-    assert_match(/data-channel-picker-name-value="channel_id"/, body)
+    assert_match(/data-combobox-kind-value="channel"/, body)
+    assert_match(/data-combobox-name-value="channel_id"/, body)
     assert_no_match(/placeholder="C0266FRGV"/, body)
   end
 

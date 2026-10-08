@@ -1,0 +1,52 @@
+@layer base {
+  .combo { @apply relative flex min-w-0 flex-col; }
+  .combo-menu { @apply inline-flex flex-row; }
+
+  .input.combo-field {
+    @apply flex h-auto min-h-8 cursor-text flex-wrap items-center gap-1 py-0.5 pr-2.5 pl-1;
+  }
+  .combo-field:focus-within { @apply border-ring ring-3 ring-ring/50; }
+  .combo-field .token { @apply max-w-full; }
+  .combo-field .token-plain { @apply h-6 py-0 pl-2; }
+  .token-label { @apply min-w-0 truncate; }
+  .token-x > svg { @apply size-3; }
+
+  .combo-input {
+    @apply h-7 min-w-24 flex-1 border-0 bg-transparent px-1.5 text-base text-foreground shadow-none outline-none placeholder:text-muted-foreground md:text-sm;
+  }
+
+  .combo-pop {
+    @apply m-0 overflow-hidden rounded-lg border-0 bg-popover p-0 text-popover-foreground shadow-md ring-1 ring-foreground/10;
+    width: 18rem;
+    max-width: calc(100vw - 24px);
+    transform-origin: top left;
+    animation: menu-in 100ms ease-out both;
+  }
+  .combo-pop[popover] { position: fixed; inset: auto; }
+  .combo-pop.menu-up { transform-origin: bottom left; animation-name: menu-in-up; }
+
+  .combo-search { @apply flex h-9 items-center gap-2 border-b border-border px-3; }
+  .combo-search > svg { @apply size-4 flex-none text-muted-foreground; }
+  .combo-search > .combo-input { @apply h-9 px-0; }
+
+  .combo-list {
+    @apply flex flex-col gap-px overflow-x-hidden overflow-y-auto overscroll-contain p-1;
+    max-height: min(300px, var(--menu-room, 60vh));
+    scroll-padding-block: 0.25rem;
+    scrollbar-width: thin;
+  }
+  .combo-search + .combo-list { max-height: min(300px, calc(var(--menu-room, 60vh) - 2.25rem)); }
+  .combo-list:empty { @apply hidden; }
+  .combo-list > * { @apply flex-none; }
+
+  .combo-opt {
+    @apply relative flex h-8 cursor-default items-center gap-2 rounded-md px-2 text-sm text-popover-foreground outline-hidden select-none;
+  }
+  .combo-opt[aria-selected="true"] { @apply bg-accent text-accent-foreground; }
+  .combo-opt > .avatar { @apply size-5 flex-none text-[0.5625rem]; }
+  .combo-icon { @apply size-4 flex-none text-muted-foreground; }
+  .combo-name { @apply min-w-0 shrink truncate; }
+  .combo-sub { @apply min-w-0 shrink-[4] truncate text-muted-foreground; }
+  .combo-end { @apply ml-auto flex-none pl-2 text-xs text-muted-foreground; }
+  .combo-none { @apply block py-6 text-center text-sm text-muted-foreground; }
+}

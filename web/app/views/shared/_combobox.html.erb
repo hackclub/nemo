@@ -1,0 +1,44 @@
+<% kind = local_assigns.fetch(:kind, "member").to_s %>
+<% channel = kind == "channel" %>
+<% trigger = local_assigns[:trigger] %>
+<% placeholder = local_assigns[:placeholder] || (channel ? "Search channels" : "Search by name or Slack ID") %>
+<% actions = "input->combobox#type keydown->combobox#keys" %>
+<% actions += " focus->combobox#wake" unless trigger %>
+<%= tag.div class: ["combo", ("combo-menu" if trigger)],
+      data: { controller: "combobox", action: "focusout->combobox#leave",
+              combobox_kind_value: kind,
+              combobox_name_value: name,
+              combobox_url_value: local_assigns[:url] || (channel ? fd_channel_search_path : fd_member_search_path),
+              combobox_single_value: local_assigns.fetch(:single, channel),
+              combobox_submit_value: local_assigns.fetch(:submit, false),
+              combobox_least_value: local_assigns.fetch(:least, channel ? 0 : Fd::Member::MIN_TERM),
+              combobox_empty_value: local_assigns[:empty] || (channel ? "No channels found" : "No members found"),
+              combobox_preset_value: local_assigns.fetch(:preset, nil) || [] } do %>
+  <% field = tag.input(type: "text", class: "combo-input", role: "combobox", autocomplete: "off",
+        aria: { autocomplete: "list", expanded: false, label: local_assigns[:label] || placeholder },
+        placeholder: placeholder, data: { combobox_target: "input", action: actions }) %>
+  <% if trigger %>
+    <button type="button" class="btn" aria-haspopup="listbox" aria-expanded="false"
+            data-combobox-target="trigger" data-action="combobox#toggle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg>
+      <%= trigger %>
+    </button>
+    <div class="combo-pop" popover="manual" data-combobox-target="pop">
+      <div class="combo-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <%= field %>
+      </div>
+      <div class="combo-list" data-combobox-target="list"></div>
+    </div>
+  <% else %>
+    <div class="input combo-field" data-combobox-target="field" data-action="click->combobox#focus">
+      <%= field %>
+    </div>
+    <div class="combo-pop combo-pop-fit" popover="manual" data-combobox-target="pop">
+      <div class="combo-list" data-combobox-target="list"></div>
+    </div>
+  <% end %>
+  <span hidden data-combobox-target="store"></span>
+<% end %>

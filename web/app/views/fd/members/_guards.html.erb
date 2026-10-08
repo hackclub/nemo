@@ -14,7 +14,7 @@
 
       <div class="field-label" data-guard-form-target="channel" hidden>
         <span>Which channel</span>
-        <%= render "fd/channel_field", name: :channel_id, label: "search for a channel" %>
+        <%= render "shared/combobox", kind: "channel", name: :channel_id, label: "search for a channel" %>
       </div>
 
       <label class="field-label">

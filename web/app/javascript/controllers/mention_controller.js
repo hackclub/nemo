@@ -1,36 +1,39 @@
 import { Controller } from "@hotwired/stimulus"
-import { askingFor, personRow } from "lib/people_menu"
-import { placePop, clearPop } from "lib/place_pop"
+import { Listbox, askingFor } from "lib/listbox"
 
 const TOKEN = /@([\w.\-]*)$/
 
 export default class extends Controller {
-  static targets = ["field", "results"]
-  static values = { url: String, send: Boolean }
+  static targets = ["field", "pop", "list"]
+  static values = { url: String }
 
   connect() {
     this.timer = null
-    this.away = this.away.bind(this)
-    this.onMove = this.onMove.bind(this)
-    document.addEventListener("click", this.away)
-    if (typeof this.resultsTarget.showPopover === "function") {
-      this.resultsTarget.setAttribute("popover", "manual")
+    this.box = new Listbox({
+      pop: this.popTarget,
+      list: this.listTarget,
+      anchor: this.fieldTarget,
+      input: this.fieldTarget,
+      kind: "member",
+      empty: "No members found",
+      pick: ({ id }) => this.put(id)
+    })
+    this.away = (event) => {
+      if (!this.element.contains(event.target)) this.close()
     }
+    document.addEventListener("pointerdown", this.away)
   }
 
   disconnect() {
     clearTimeout(this.timer)
-    document.removeEventListener("click", this.away)
-    this.unwatch()
-  }
-
-  away(event) {
-    if (!this.element.contains(event.target)) this.close()
+    this.asking?.abort()
+    document.removeEventListener("pointerdown", this.away)
+    this.box.hide()
   }
 
   type() {
     clearTimeout(this.timer)
-    this.timer = setTimeout(() => this.look(), 160)
+    this.timer = setTimeout(() => this.look(), 150)
   }
 
   token() {
@@ -40,87 +43,27 @@ export default class extends Controller {
 
   async look() {
     const found = this.token()
+    this.asking?.abort()
     if (!found || found[1].length < 2) return this.close()
 
-    const response = await fetch(askingFor(this.urlValue, found[1]), {
-      headers: { Accept: "application/json" },
-    })
-    if (!response.ok) return this.close()
-
-    const { members } = await response.json()
-    this.show(members)
-  }
-
-  show(members) {
-    this.resultsTarget.innerHTML = ""
+    const asking = new AbortController()
+    this.asking = asking
+    let members
+    try {
+      const response = await fetch(askingFor(this.urlValue, found[1]), {
+        headers: { Accept: "application/json" },
+        signal: asking.signal
+      })
+      if (!response.ok) throw new Error(`search failed with ${response.status}`)
+      ;({ members } = await response.json())
+    } catch {
+      if (!asking.signal.aborted) this.close()
+      return
+    }
+    if (asking.signal.aborted) return
     if (members.length === 0) return this.close()
 
-    for (const member of members) {
-      this.resultsTarget.append(
-        personRow(member, "click->mention#choose mouseenter->mention#hover")
-      )
-    }
-    this.resultsTarget.hidden = false
-    if (this.popped && !this.resultsTarget.matches(":popover-open")) {
-      this.resultsTarget.showPopover()
-    }
-    this.place()
-    this.watch()
-    this.at = -1
-    this.mark()
-  }
-
-  get popped() {
-    return this.resultsTarget.hasAttribute("popover")
-  }
-
-  place() {
-    placePop(this.resultsTarget, this.fieldTarget)
-  }
-
-  onMove() {
-    if (!this.resultsTarget.hidden) this.place()
-  }
-
-  watch() {
-    window.addEventListener("resize", this.onMove)
-    document.addEventListener("scroll", this.onMove, true)
-  }
-
-  unwatch() {
-    window.removeEventListener("resize", this.onMove)
-    document.removeEventListener("scroll", this.onMove, true)
-  }
-
-  rows() {
-    return [...this.resultsTarget.querySelectorAll(".pick-opt")]
-  }
-
-  mark() {
-    this.rows().forEach((row, spot) => {
-      const on = spot === this.at
-      row.setAttribute("aria-selected", on ? "true" : "false")
-      if (on) row.scrollIntoView({ block: "nearest" })
-    })
-  }
-
-  move(step) {
-    const all = this.rows()
-    if (all.length === 0) return
-
-    this.at = this.at < 0
-      ? (step > 0 ? 0 : all.length - 1)
-      : (this.at + step + all.length) % all.length
-    this.mark()
-  }
-
-  hover(event) {
-    this.at = this.rows().indexOf(event.currentTarget)
-    this.mark()
-  }
-
-  choose(event) {
-    this.put(event.currentTarget.dataset.id)
+    this.box.show(members)
   }
 
   put(id) {
@@ -138,45 +81,12 @@ export default class extends Controller {
   }
 
   keys(event) {
-    if (this.resultsTarget.hidden) {
-      if (this.sendValue && event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault()
-        if (this.fieldTarget.value.trim()) this.element.closest("form")?.requestSubmit()
-      }
-      return
-    }
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault()
-      return this.move(1)
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault()
-      return this.move(-1)
-    }
-
-    if (event.key === "Escape") {
-      event.preventDefault()
-      return this.close()
-    }
-
-    if (event.key === "Enter" || event.key === "Tab") {
-      const row = this.rows()[this.at] || this.rows()[0]
-      if (!row) return
-
-      event.preventDefault()
-      this.put(row.dataset.id)
-    }
+    this.box.keys(event, { tab: true })
   }
 
   close() {
-    if (this.popped && this.resultsTarget.matches(":popover-open")) {
-      this.resultsTarget.hidePopover()
-    }
-    this.resultsTarget.innerHTML = ""
-    this.resultsTarget.hidden = true
-    clearPop(this.resultsTarget)
-    this.unwatch()
+    clearTimeout(this.timer)
+    this.asking?.abort()
+    this.box.hide()
   }
 }

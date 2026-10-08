@@ -52,8 +52,8 @@
         <div class="card-tools">
           <%= form_with url: admin_settings_react_channels_path, method: :post,
                 class: "contents" do %>
-            <%= render "admin/channel_picker", field: :channel_id, submit: true,
-                  label: "Add a channel", id: "pick-react-channel" %>
+            <%= render "shared/combobox", kind: "channel", name: :channel_id, submit: true,
+                  url: search_admin_channels_path, trigger: "Add a channel" %>
           <% end %>
         </div>
       <% end %>
@@ -91,8 +91,8 @@
       <% if may_grant? %>
         <div class="card-tools">
           <%= form_with url: admin_settings_firehouse_path, method: :post, class: "contents" do %>
-            <%= render "admin/channel_picker", field: :channel_id, submit: true,
-                  label: @firehouse ? "Move it" : "Pick a channel", id: "pick-firehouse" %>
+            <%= render "shared/combobox", kind: "channel", name: :channel_id, submit: true,
+                  url: search_admin_channels_path, trigger: @firehouse ? "Move it" : "Pick a channel" %>
           <% end %>
         </div>
       <% end %>

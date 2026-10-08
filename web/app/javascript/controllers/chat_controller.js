@@ -44,6 +44,8 @@ export default class extends Controller {
   }
 
   keys(event) {
+    if (event.defaultPrevented) return
+
     if (event.key === "Enter" && !event.shiftKey && !this.pickingAMention()) {
       event.preventDefault()
       if (!this.sendTarget.disabled && this.fieldTarget.value.trim()) {
@@ -79,8 +81,8 @@ export default class extends Controller {
   }
 
   pickingAMention() {
-    const pop = this.element.querySelector('[data-mention-target="results"]')
-    return pop ? !pop.hidden : false
+    const pop = this.element.querySelector('[data-mention-target="pop"]')
+    return pop ? pop.matches(":popover-open") : false
   }
 
   caretAtStart() {

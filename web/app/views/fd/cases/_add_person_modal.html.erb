@@ -4,7 +4,7 @@
     <div class="modal-body">
       <div class="field-label">
         <span>Subject</span>
-        <%= render "fd/member_picker", name: "user_ids[]", single: false,
+        <%= render "shared/combobox", name: "user_ids[]",
               url: fd_member_search_path(case_id: kase.id),
               label: "search for the subject of the case" %>
       </div>

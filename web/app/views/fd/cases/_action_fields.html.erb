@@ -1,5 +1,5 @@
 <div class="field-label" data-action-standing-target="aimed">
-  <%= render "fd/member_picker", name: "target_user_id", single: true,
+  <%= render "shared/combobox", name: "target_user_id", single: true,
         url: fd_member_search_path(case_id: kase.id),
         label: "search for who this is about", preset: preset_faces(target) %>
 </div>
@@ -28,7 +28,7 @@
   </label>
   <div class="field-label" data-action-standing-target="channel" hidden>
     <span>Which channel</span>
-    <%= render "fd/channel_field", name: :channel_id, label: "search for a channel" %>
+    <%= render "shared/combobox", kind: "channel", name: :channel_id, label: "search for a channel" %>
   </div>
   <label class="field-label">
     What it is about

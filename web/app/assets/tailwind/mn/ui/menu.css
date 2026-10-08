@@ -12,7 +12,7 @@
     from { opacity: 0; scale: 0.95; translate: 0 0.5rem; }
   }
 
-  .menu-pop, .pick-pop, .picker-pop, .rooms-pop, .datepicker-pop, .mention-pop, .area-pop {
+  .menu-pop, .picker-pop, .rooms-pop, .datepicker-pop, .area-pop {
     @apply absolute top-[calc(100%+4px)] left-0 z-80 m-0 max-w-[min(340px,92vw)] min-w-50 overflow-x-hidden overflow-y-auto overscroll-contain rounded-lg border-0 bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10;
     max-height: min(420px, var(--menu-room, 60vh));
     scrollbar-width: thin;
@@ -20,8 +20,8 @@
     animation: menu-in 100ms ease-out both;
   }
 
-  .menu-pop[popover], .pick-pop[popover], .picker-pop[popover],
-  .rooms-pop[popover], .datepicker-pop[popover], .mention-pop[popover] {
+  .menu-pop[popover], .picker-pop[popover],
+  .rooms-pop[popover], .datepicker-pop[popover] {
     position: fixed;
     inset: auto;
     overflow: hidden auto;
@@ -35,21 +35,17 @@
     animation-name: menu-in-up;
   }
 
-  .pick > .pick-pop:not([popover]) {
-    @apply right-0 max-w-none;
-  }
-
   .menu > .menu-pop:not([popover]) {
     @apply right-0 left-auto;
     transform-origin: top right;
   }
 
-  .menu-pop .btn, .menu-pop > a, .menu-pop > button, .pick-opt, .picker-opt, .rooms-row {
+  .menu-pop .btn, .menu-pop > a, .menu-pop > button, .picker-opt, .rooms-row {
     @apply relative flex h-auto min-h-0 w-full cursor-default items-center justify-start gap-1.5 rounded-md border-0 bg-transparent px-1.5 py-1 text-left text-sm font-normal whitespace-normal text-popover-foreground no-underline shadow-none ring-0 outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4;
   }
 
-  :is(.menu-pop .btn, .menu-pop > a, .menu-pop > button, .pick-opt, .picker-opt, .rooms-row):is(:hover, :focus-visible),
-  .pick-opt[aria-selected="true"], .picker-opt[aria-selected="true"] {
+  :is(.menu-pop .btn, .menu-pop > a, .menu-pop > button, .picker-opt, .rooms-row):is(:hover, :focus-visible),
+  .picker-opt[aria-selected="true"] {
     @apply bg-accent text-accent-foreground no-underline;
   }
 

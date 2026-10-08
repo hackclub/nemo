@@ -37,6 +37,7 @@
 @import "./mn/ui/empty.css";
 @import "./mn/ui/progress.css";
 @import "./mn/ui/menu.css";
+@import "./mn/ui/combobox.css";
 @import "./mn/ui/sidebar.css";
 @import "./mn/ui/chart.css";
 @import "./mn/ui/calendar.css";

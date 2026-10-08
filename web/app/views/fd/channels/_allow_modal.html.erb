@@ -7,9 +7,10 @@
     <div class="modal-body">
       <div class="field-label">
         <span><%= bots ? "Which bot" : "Who" %></span>
-        <%= render "fd/member_picker", name: "subject_ids[]", single: false,
+        <%= render "shared/combobox", name: "subject_ids[]",
               url: bots ? fd_member_search_path(bots: 1) : fd_member_search_path,
-              label: bots ? "search for the bot to allow" : "search for who to allow" %>
+              label: bots ? "search for the bot to allow" : "search for who to allow",
+              placeholder: ("Search bots" if bots), empty: ("No bots found" if bots) %>
       </div>
     </div>
     <div class="modal-foot">

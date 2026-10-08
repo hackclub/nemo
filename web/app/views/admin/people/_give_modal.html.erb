@@ -15,7 +15,7 @@
       <% else %>
         <label class="field-label">
           <span>Who</span>
-          <%= render "fd/member_picker", name: "user_id", single: true,
+          <%= render "shared/combobox", name: "user_id", single: true,
                 label: "search for who to give it to", url: search_admin_people_path %>
         </label>
       <% end %>
@@ -57,13 +57,14 @@
           <% end %>
         </div>
         <p class="card-note" data-give-access-target="empty" hidden>
-          nothing left to add
+          Nothing left to add
         </p>
       </div>
 
       <div class="field-label" data-give-access-target="channels" hidden>
         <span>Channels</span>
-        <%= render "admin/channel_picker", field: "channels[]" %>
+        <%= render "shared/combobox", kind: "channel", name: "channels[]", single: false,
+              url: search_admin_channels_path, label: "Channels" %>
       </div>
 
       <label class="field-label">

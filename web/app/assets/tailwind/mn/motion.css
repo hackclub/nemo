@@ -120,7 +120,7 @@
     background: color-mix(in oklab, var(--crit) 10%, transparent);
   }
 
-  .queue-row, .member-queue-row, .merge-queue-row, .palette-row, .pick-opt, .picker-opt {
+  .queue-row, .member-queue-row, .merge-queue-row, .palette-row, .combo-opt, .picker-opt {
     transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   }
 

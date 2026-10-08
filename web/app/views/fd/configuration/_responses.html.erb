@@ -18,7 +18,7 @@
           </label>
           <div class="field-label">
             <span>Channel</span>
-            <%= render "fd/channel_field", name: :channel_id, label: "search for a channel" %>
+            <%= render "shared/combobox", kind: "channel", name: :channel_id, label: "search for a channel" %>
             <% if @autoresponse_channel.present? %>
               <span class="sub2">now <%= channel_link(@autoresponse_channel) %></span>
             <% end %>

@@ -1,5 +1,5 @@
 @layer base {
-  .card-note, .note, .delta-note, .reveal-note, .pick-note, .modal-note, .card-head + .card-note {
+  .card-note, .note, .delta-note, .reveal-note, .modal-note, .card-head + .card-note {
     font-size: var(--t-small);
     color: var(--ink-3);
     line-height: var(--lh-prose);

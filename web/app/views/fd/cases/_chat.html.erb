@@ -83,7 +83,9 @@
                   data: { chat_target: "field", mention_target: "field",
                           action: "input->mention#type input->chat#type " \
                                   "keydown->mention#keys keydown->chat#keys" } %>
-            <div class="menu-pop pick-pop mention-pop menu-start" hidden data-mention-target="results"></div>
+            <div class="combo-pop menu-start" popover="manual" data-mention-target="pop">
+              <div class="combo-list" data-mention-target="list"></div>
+            </div>
           </div>
 
           <button type="submit" class="chat-send" data-chat-target="send" aria-label="Send">

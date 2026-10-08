@@ -8,8 +8,8 @@
         <div class="toolbar-end">
           <%= form_with url: admin_role_channels_path(role: @role), method: :post,
                 class: "contents" do %>
-            <%= render "admin/channel_picker", field: :channel_id, submit: true,
-                  label: "Add a channel", id: "pick-role-channel" %>
+            <%= render "shared/combobox", kind: "channel", name: :channel_id, submit: true,
+                  url: search_admin_channels_path, trigger: "Add a channel" %>
           <% end %>
         </div>
       <% end %>

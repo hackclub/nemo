@@ -142,7 +142,7 @@ class FdMemberGuardsTest < ActionDispatch::IntegrationTest
 
     assert_match(/data-controller="picker menu"/, response.body)
     assert_match(/data-guard-form-target="channel" hidden/, response.body)
-    assert_match(/data-controller="channel-picker"/, response.body)
+    assert_match(/data-combobox-kind-value="channel"/, response.body)
   end
 
   test "nothing is asked about enforcement, since holding it is the point" do
