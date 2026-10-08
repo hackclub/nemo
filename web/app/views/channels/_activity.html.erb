@@ -78,24 +78,11 @@
         labels: pulse.labels,
         datasets: [
           { label: "member messages", data: pulse.series.map(&:member_messages) },
-          ({ label: "bot messages", data: pulse.series.map(&:bot_messages) } if pulse.bot_messages.positive?)
+          ({ label: "bot messages", data: pulse.series.map(&:bot_messages) } if pulse.bot_messages.positive?),
+          { label: "people posting", data: pulse.series.map(&:authors), over: true }
         ].compact
       }.to_json %>"
     ></div>
-    <div class="substrip">
-      <span class="substrip-k">people posting</span>
-      <div
-        data-controller="chart"
-        data-chart-kind-value="line"
-        data-chart-spark-value="true"
-        data-chart-days-value="true"
-        data-chart-height-value="46"
-        data-chart-data-value="<%= {
-          labels: pulse.labels,
-          datasets: [{ label: "people posting", data: pulse.series.map(&:authors) }]
-        }.to_json %>"
-      ></div>
-    </div>
   <% else %>
     <p class="card-note">no message landed in this range</p>
   <% end %>

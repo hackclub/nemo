@@ -4,13 +4,11 @@
   <% unless @team_stats %>
     <span class="sub2">waiting on the nightly sync</span>
   <% end %>
-  <%= render "shared/range_button", id: "home-range", label: "Last #{@span[:label]}" %>
+  <%= render "shared/date_range", dates: false, label: "Last #{@span[:label]}",
+        presets: HomeHelper::OVERVIEW_SPANS.map { |key, span| {
+          label: "Last #{span[:label]}", current: key == @span_key,
+          href: community_path(span: key) } } %>
 <% end %>
-
-<%= render "shared/range_modal", id: "home-range", title: "Range", dates: false,
-      presets: HomeHelper::OVERVIEW_SPANS.map { |key, span| {
-        label: "Last #{span[:label]}", current: key == @span_key,
-        href: community_path(span: key) } } %>
 
 <% if @team_stats.nil? %>
   <div class="lede">

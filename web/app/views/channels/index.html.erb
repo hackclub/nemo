@@ -124,8 +124,15 @@
             <% end %>
           </span>
             <% if @window.adjustable? %>
-              <%= render "shared/range_button", id: "channels-range",
-                    label: channels_range_label(@window) %>
+              <%= render "shared/date_range", url: channels_path,
+                    start_on: @window.start_date, end_on: @window.end_date,
+                    min: @window.floor, max: @window.ceiling,
+                    carry: { q: @q.presence, sort: @sort, direction: @direction }.compact,
+                    presets: @window.choices.map { |days| {
+                      label: days == @window.pulled_days ? "All measured" : "Last #{days} days",
+                      current: !@window.custom? && days == @window.days,
+                      href: channel_query(days: (days unless days == @window.pulled_days),
+                                          start: nil, end: nil) } } %>
             <% end %>
           </div>
         </div>
@@ -178,15 +185,4 @@
   <%= render "filter_modal" %>
 </div>
 
-<% if @window.adjustable? %>
-  <%= render "shared/range_modal", id: "channels-range", title: "Message range",
-        sub: window_note(@window.start_date, @window.end_date), url: channels_path,
-        start_on: @window.start_date, end_on: @window.end_date,
-        min: @window.floor, max: @window.ceiling,
-        carry: { q: @q.presence, sort: @sort, direction: @direction }.compact,
-        presets: @window.choices.map { |days| {
-          label: days == @window.pulled_days ? "All measured" : "Last #{days} days",
-          current: !@window.custom? && days == @window.days,
-          href: channel_query(days: (days unless days == @window.pulled_days),
-                              start: nil, end: nil) } } %>
-<% end %>
+

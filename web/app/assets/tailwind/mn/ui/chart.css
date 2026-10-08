@@ -1,0 +1,432 @@
+@layer base {
+  .chart, .hbars, .tree {
+    @apply relative w-full text-xs;
+  }
+
+  .chart svg, .hbars svg, .tree svg {
+    @apply block h-auto max-w-full overflow-visible;
+  }
+
+  .chart-caption {
+    @apply sr-only;
+  }
+
+  line.grid, line.base, line.mark-rule {
+    shape-rendering: crispEdges;
+  }
+
+  line.grid, line.base {
+    stroke: var(--chart-grid);
+    stroke-width: 1;
+  }
+
+  line.grid {
+    stroke-dasharray: 4 4;
+  }
+
+  .mark-rule {
+    stroke: var(--muted-foreground);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    stroke-opacity: 0.7;
+  }
+
+  .cur {
+    stroke: var(--chart-crosshair);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+  }
+
+  .x-pill {
+    pointer-events: none;
+    transition: opacity 150ms ease;
+  }
+
+  .x-pill rect {
+    fill: var(--chart-badge-bg);
+  }
+
+  .x-pill text {
+    fill: var(--chart-badge-fg);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .xtick {
+    transition: opacity 300ms ease;
+  }
+
+  .ax, .cap, .val {
+    fill: var(--muted-foreground);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cap {
+    font-size: 11px;
+  }
+
+  .val {
+    fill: var(--foreground);
+  }
+
+  th[aria-sort] .ax, .ax.cap-note {
+    fill: var(--foreground);
+  }
+
+  .ax.cap-note {
+    font-size: 11px;
+  }
+
+  .donut-hole {
+    fill: color-mix(in oklab, var(--muted-foreground) 7%, transparent);
+  }
+
+  .donut-hole-dot {
+    @apply inline-block size-2.5 flex-none rounded-full border-[1.5px] border-dashed border-muted-foreground;
+  }
+
+  .weekend {
+    fill: color-mix(in oklab, var(--foreground) 3.5%, transparent);
+  }
+
+  .partial-area {
+    opacity: 1;
+  }
+
+  .hatch {
+    stroke: color-mix(in oklab, var(--foreground) 12%, transparent);
+    stroke-width: 1.5;
+  }
+
+  .mark {
+    cursor: pointer;
+    transition: opacity 200ms ease;
+  }
+
+  .mark.fade {
+    opacity: 0.3;
+  }
+
+  .ser-0 { color: var(--series-0); }
+  .ser-1 { color: var(--series-1); }
+  .ser-2 { color: var(--series-2); }
+  .ser-3 { color: var(--series-3); }
+  .ser-4 { color: var(--series-4); }
+  .ser-5 { color: var(--series-5); }
+  .ser-none { color: var(--muted-foreground); }
+
+  .ghost {
+    opacity: 0.6;
+  }
+
+  .chart :is(.top, .bot, .bar-top, .bar-bot) {
+    stop-color: currentColor;
+  }
+
+  .chart .top { stop-opacity: 0.35; }
+  .chart .bot { stop-opacity: 0; }
+  .chart .bar-top { stop-opacity: 0.5; }
+  .chart .bar-bot { stop-opacity: 0; }
+
+  .chart :where(.dot) {
+    fill: currentColor;
+    color: var(--series-1);
+    stroke: var(--background);
+    stroke-width: 2;
+  }
+
+  .chart-spark {
+    line-height: 0;
+  }
+
+  .fair {
+    stroke: var(--muted-foreground);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+  }
+
+  .curve {
+    fill: none;
+    stroke: var(--series-1);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .wash-fill:not([fill]) {
+    fill: color-mix(in oklab, var(--series-1) 14%, transparent);
+  }
+
+  .scatter-point {
+    fill: currentColor;
+    fill-opacity: 0.85;
+    stroke: var(--background);
+    stroke-width: 1;
+    cursor: pointer;
+    transition: opacity 100ms ease;
+  }
+
+  .chart:has(.scatter-point.lit) .scatter-point:not(.lit) {
+    opacity: 0.3;
+  }
+
+  .scatter-point.lit {
+    fill-opacity: 1;
+    stroke: var(--foreground);
+    stroke-width: 1.5;
+  }
+
+  .tip {
+    @apply pointer-events-none absolute z-70 hidden w-max max-w-72 min-w-[140px] gap-1.5 rounded-lg px-3 py-2.5 text-xs leading-none shadow-lg ring-1 ring-foreground/5 backdrop-blur-md;
+    background: var(--chart-tip-bg);
+    color: var(--chart-tip-fg);
+  }
+
+  .tip.on {
+    display: grid;
+  }
+
+  .tip .t {
+    @apply mb-0.5 text-xs leading-tight font-medium;
+  }
+
+  .tip .t-note {
+    @apply ml-1 font-normal text-muted-foreground;
+  }
+
+  .tip .row {
+    @apply flex w-full items-center gap-2 text-sm leading-tight;
+    color: var(--chart-tip-muted);
+  }
+
+  .tip .row > i {
+    @apply size-2.5 flex-none rounded-full;
+    background: currentColor;
+  }
+
+  .tip .row > b {
+    @apply ml-auto flex items-baseline gap-2 pl-4 font-medium tabular-nums;
+    color: var(--chart-tip-fg);
+  }
+
+  .tip .row u {
+    @apply min-w-[3.5ch] text-right text-xs font-normal no-underline;
+    color: var(--chart-tip-muted);
+  }
+
+  .tip:has(.row u) .row-sum > b {
+    padding-right: calc(3.5ch + 0.5rem);
+  }
+
+  .tip :is(.row-sum, .row-note) > i:not([class]) {
+    @apply invisible;
+  }
+
+  .tip .row-sum {
+    @apply border-t border-foreground/10 pt-1.5;
+  }
+
+  .tip .row-note {
+    @apply text-xs leading-snug;
+  }
+
+  .tip .row:not(.row-note) + .row-note {
+    @apply border-t border-foreground/10 pt-1.5;
+  }
+
+  .legend, .key, .chart-legend, .swatch, .parts-key {
+    @apply flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground;
+  }
+
+  .chart-legend, .parts-key {
+    @apply mb-1.5;
+  }
+
+  [data-controller~="chart"] {
+    @apply flex min-w-0 flex-col;
+  }
+
+  [data-controller~="chart"] > .chart-legend {
+    @apply order-2 mb-0 justify-center pt-3;
+  }
+
+  .card:has(.card-tools > .legend) .chart-legend {
+    display: none;
+  }
+
+  .legend span, .key span, .chart-legend span, .parts-key span {
+    @apply inline-flex items-center gap-1.5;
+  }
+
+  :where(.legend, .key, .chart-legend, .swatch, .parts-key) i {
+    @apply size-2 flex-none rounded-[2px];
+    background: currentColor;
+  }
+
+  .legend i.ghost, .key i.ghost, .chart-legend i.ghost {
+    background: none;
+    border: 1.5px dashed currentColor;
+  }
+
+  .legend b, .key b, .parts-key b {
+    @apply font-medium text-foreground tabular-nums;
+  }
+
+  .funnel .funnel-seg, .funnel .funnel-says {
+    transition: opacity 150ms ease;
+  }
+
+  .funnel.lit .funnel-seg:not(.on), .funnel.lit .funnel-says:not(.on) {
+    opacity: 0.4;
+  }
+
+  .funnel-seam {
+    stroke: var(--chart-grid);
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+  }
+
+  .funnel-value {
+    fill: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .funnel-pill rect {
+    fill: var(--chart-badge-bg);
+    filter: drop-shadow(0 1px 1px oklch(0 0 0 / 0.15));
+  }
+
+  .funnel-pill text {
+    fill: var(--chart-badge-fg);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .funnel.is-entering .funnel-seg {
+    transform-box: fill-box;
+    transform-origin: left center;
+    animation: funnel-grow 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--i, 0) * 120ms);
+  }
+
+  .funnel.is-entering .funnel-says {
+    animation: fade-in 400ms ease-out both;
+    animation-delay: calc(var(--i, 0) * 120ms + 250ms);
+  }
+
+  @keyframes funnel-grow {
+    from { opacity: 0; transform: scale(0.2, 0.6); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .funnel.is-entering .funnel-seg, .funnel.is-entering .funnel-says { animation: none; }
+  }
+
+  .chart .wash-over {
+    opacity: 0.55;
+  }
+
+  .card > :is([data-controller~="chart"], [data-controller~="funnel"]) {
+    @apply px-4 pt-3 pb-4;
+  }
+
+  .ring {
+    @apply flex flex-wrap items-center justify-center gap-x-8 gap-y-4;
+  }
+
+  .ring-art {
+    @apply relative flex-none;
+  }
+
+  .ring-art svg {
+    @apply block -rotate-0;
+  }
+
+  .ring-track {
+    fill: none;
+    stroke: var(--chart-track);
+  }
+
+  .ring-arc {
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+  }
+
+  .ring.is-entering .ring-arc {
+    stroke-dasharray: 1;
+    animation: line-draw 1100ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--i, 0) * 90ms);
+  }
+
+  .ring-band, .ring-row {
+    transition: opacity 150ms ease;
+  }
+
+  .ring.lit .ring-band:not(.on), .ring.lit .ring-row:not(.on) {
+    opacity: 0.35;
+  }
+
+  .ring-mid {
+    @apply pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5 text-center;
+  }
+
+  .ring-mid b {
+    @apply text-2xl leading-none font-semibold tracking-tight text-foreground tabular-nums;
+  }
+
+  .ring-mid span {
+    @apply text-xs text-muted-foreground;
+  }
+
+  .ring-legend {
+    @apply m-0 flex min-w-48 flex-1 list-none flex-col gap-3 p-0;
+    max-width: 22rem;
+  }
+
+  .ring-row {
+    @apply grid cursor-default items-center gap-x-3 gap-y-1.5;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ring-name {
+    @apply flex min-w-0 items-center gap-2 truncate text-sm font-medium text-foreground;
+  }
+
+  .ring-name i {
+    @apply size-2.5 flex-none rounded-full;
+    background: currentColor;
+  }
+
+  .ring-num {
+    @apply flex items-baseline gap-2 text-sm text-muted-foreground tabular-nums;
+  }
+
+  .ring-num span {
+    @apply text-xs;
+  }
+
+  .ring-bar {
+    @apply col-span-full block h-1 overflow-hidden rounded-full;
+    background: var(--chart-track);
+  }
+
+  .ring-bar b {
+    @apply block h-full rounded-full;
+    background: currentColor;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ring.is-entering .ring-arc { animation: none; }
+  }
+}

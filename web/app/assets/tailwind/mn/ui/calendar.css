@@ -1,0 +1,98 @@
+@layer base {
+  .daterange {
+    @apply inline-flex items-stretch;
+  }
+
+  .daterange:has(> .daterange-presets) .daterange-open {
+    @apply rounded-l-none border-l-0;
+  }
+
+  .daterange.has-dates > .daterange-presets > summary.btn {
+    @apply rounded-r-none;
+  }
+
+  .daterange-chev, .daterange-open > svg {
+    @apply size-4 flex-none text-muted-foreground;
+  }
+
+  .daterange-preset {
+    @apply gap-2;
+  }
+
+  .daterange-open {
+    @apply gap-2 tabular-nums;
+  }
+
+  .daterange-pop {
+    @apply fixed m-0 rounded-lg border-0 bg-popover p-3 text-popover-foreground shadow-md ring-1 ring-foreground/10;
+    inset: auto;
+    animation: menu-in 100ms ease-out both;
+  }
+
+  .rcal {
+    --cell: 2.25rem;
+    @apply relative flex gap-4;
+  }
+
+  .rcal-nav {
+    @apply absolute top-0 z-1 size-7;
+  }
+
+  .rcal-prev { @apply left-0; }
+  .rcal-next { @apply right-0; }
+
+  .rcal-month {
+    @apply flex flex-col gap-2;
+  }
+
+  .rcal-caption {
+    @apply flex h-7 items-center justify-center text-sm font-medium select-none;
+  }
+
+  .rcal-grid {
+    @apply grid gap-y-1;
+    grid-template-columns: repeat(7, var(--cell));
+  }
+
+  .rcal-dow {
+    @apply flex h-8 items-center justify-center text-[0.8rem] font-normal text-muted-foreground select-none;
+  }
+
+  .rcal-day {
+    @apply relative isolate flex size-(--cell) cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-sm text-foreground tabular-nums outline-none select-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50;
+  }
+
+  .rcal-day.rcal-out {
+    @apply text-muted-foreground;
+  }
+
+  .rcal-day:disabled {
+    @apply cursor-not-allowed opacity-40 hover:bg-transparent;
+  }
+
+  .rcal-day.rcal-in {
+    @apply rounded-none bg-muted;
+  }
+
+  .rcal-day.rcal-in.rcal-l {
+    @apply rounded-l-md;
+  }
+
+  .rcal-day.rcal-in.rcal-r {
+    @apply rounded-r-md;
+  }
+
+  .rcal-day.rcal-pick {
+    @apply font-medium text-background;
+  }
+
+  .rcal-day.rcal-pick::before {
+    content: "";
+    @apply absolute inset-0 -z-1 rounded-md bg-foreground;
+  }
+
+  @media (max-width: 640px) {
+    .rcal { @apply flex-col; }
+    .rcal-next { @apply top-0; }
+  }
+}

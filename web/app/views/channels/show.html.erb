@@ -5,8 +5,12 @@
 
 <% content_for :head_actions do %>
   <% if ChannelsController::RANGED_VIEWS.include?(@view) %>
-    <%= render "shared/range_button", id: "channel-range",
-          label: range_label(@range_preset, @start_date, @end_date) %>
+    <%= render "shared/date_range", url: channel_path(@channel),
+          start_on: @start_date, end_on: @end_date, min: @range_min, max: @range_max,
+          carry: { view: @view }.compact,
+          presets: ChannelsController::RANGE_PRESETS.map { |days| {
+            label: "Last #{days} days", current: @range_preset == days,
+            href: channel_view_path(days: days) } } %>
   <% end %>
   <%= open_in_slack slack_channel_url(@channel.channel_id) %>
   <%= render "backfill_button", channel: @channel, backfill: @backfill %>
@@ -40,12 +44,4 @@
   <% end %>
 </div>
 
-<% if ChannelsController::RANGED_VIEWS.include?(@view) %>
-  <%= render "shared/range_modal", id: "channel-range", title: "Range",
-        sub: window_note(@start_date, @end_date), url: channel_path(@channel),
-        start_on: @start_date, end_on: @end_date, min: @range_min, max: @range_max,
-        carry: { view: @view }.compact,
-        presets: ChannelsController::RANGE_PRESETS.map { |days| {
-          label: "Last #{days} days", current: @range_preset == days,
-          href: channel_view_path(days: days) } } %>
-<% end %>
+

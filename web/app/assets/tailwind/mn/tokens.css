@@ -242,6 +242,14 @@
     --orange-foreground: oklch(0.99 0.006 60);
     --tip-bg: var(--foreground);
     --tip-ink: var(--background);
+    --chart-grid: oklch(0.9 0 0);
+    --chart-crosshair: oklch(0.7 0 0);
+    --chart-tip-bg: oklch(1 0 0 / 0.86);
+    --chart-tip-fg: var(--foreground);
+    --chart-tip-muted: var(--muted-foreground);
+    --chart-badge-bg: var(--foreground);
+    --chart-badge-fg: var(--background);
+    --chart-track: oklch(0.94 0 0);
 
     --series-0: oklch(0.72 0.012 80);
     --series-1: var(--chart-2);
@@ -293,6 +301,14 @@
     --orange-foreground: oklch(0.15 0.02 50);
     --tip-bg: var(--popover);
     --tip-ink: var(--popover-foreground);
+    --chart-grid: oklch(0.28 0.004 260);
+    --chart-crosshair: oklch(0.62 0.01 280);
+    --chart-tip-bg: oklch(0.21 0.006 285 / 0.8);
+    --chart-tip-fg: oklch(0.985 0 0);
+    --chart-tip-muted: oklch(0.68 0.01 260);
+    --chart-badge-bg: oklch(1 0 0);
+    --chart-badge-fg: oklch(0.15 0 0);
+    --chart-track: oklch(0.35 0.01 260 / 0.3);
 
     --series-0: oklch(0.52 0.01 75);
     --series-1: var(--chart-1);

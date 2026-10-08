@@ -10,10 +10,13 @@ const esc = (s) =>
 
 const pct = (v, d = 1) => `${Number(v).toFixed(d)}%`
 
+let seq = 0
+
 export default class extends Controller {
   static values = { points: Array, height: Number, gini: Number, marks: Array }
 
   connect() {
+    this.gid = `lz${++seq}`
     this.at = null
     this.element.innerHTML = `<div class="chart tipped" tabindex="0"
       data-action="mousemove->lorenz#track mouseleave->lorenz#clear keydown->lorenz#key"
@@ -78,12 +81,14 @@ export default class extends Controller {
     chart.querySelector("svg")?.remove()
     chart.insertAdjacentHTML("afterbegin",
       `<svg width="${wide}" height="${high}" viewBox="0 0 ${wide} ${high}" role="img"
-        aria-label="${esc(this.summary())}">${grid}${fair}` +
-      `<path class="wash-fill" d="${under(seen)}"/>` +
+        aria-label="${esc(this.summary())}"><defs><linearGradient id="${this.gid}" x1="0" y1="0"
+          x2="0" y2="1"><stop class="top ser-1" offset="0"/><stop class="bot ser-1" offset="1"/>
+          </linearGradient></defs>${grid}${fair}` +
+      `<path class="wash-fill" fill="url(#${this.gid})" d="${under(seen)}"/>` +
       `<path class="curve" d="${path(seen)}" fill="none"/>${marks}` +
       `<line class="base" x1="${PAD.l}" y1="${y(0)}" x2="${wide - PAD.r}" y2="${y(0)}"/>` +
       `<line class="cur" x1="0" y1="${PAD.t}" x2="0" y2="${y(0)}" opacity="0"/>` +
-      `<circle class="dot" r="4.5" opacity="0"/></svg>`)
+      `<circle class="dot" r="4" opacity="0"/></svg>`)
 
     this.geom = { x, y, wide, high, pts: seen }
     if (this.at != null) this.show(this.at)
@@ -161,7 +166,7 @@ export default class extends Controller {
     dot.setAttribute("cy", g.y(py))
     dot.setAttribute("opacity", "1")
 
-    chart.querySelector(".chart-note").textContent =
+    chart.querySelector(".chart-caption").textContent =
       `bottom ${px} percent of posters hold ${pct(py, 2)} of messages`
   }
 
@@ -173,7 +178,7 @@ export default class extends Controller {
     chart.querySelector(".tip")?.classList.remove("on")
     chart.querySelector(".cur")?.setAttribute("opacity", "0")
     chart.querySelector(".dot")?.setAttribute("opacity", "0")
-    const say = chart.querySelector(".chart-note")
+    const say = chart.querySelector(".chart-caption")
     if (say) say.textContent = ""
   }
 }

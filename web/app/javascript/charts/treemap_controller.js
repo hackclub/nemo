@@ -8,7 +8,7 @@ const RULER = typeof document === "undefined"
   : document.createElement("canvas").getContext("2d")
 
 const SANS = '"Geist", ui-sans-serif, system-ui, sans-serif'
-const MONO = '"Geist Mono", ui-monospace, monospace'
+const MONO = SANS
 
 function fit(text, size, mono) {
   if (!RULER) return text.length * size * 0.6
@@ -240,7 +240,7 @@ export default class extends Controller {
     box.querySelectorAll(".cell").forEach((cell) =>
       cell.classList.toggle("on", +cell.dataset.i === i))
 
-    box.querySelector(".chart-note").textContent = `${r.name}, ${N(r.messages)} messages${
+    box.querySelector(".chart-caption").textContent = `${r.name}, ${N(r.messages)} messages${
       r.pct != null && !r.thin ? `, ${signed(r.pct)}` : ""}`
   }
 
@@ -252,7 +252,7 @@ export default class extends Controller {
     box.querySelector(".tip")?.classList.remove("on")
     box.classList.remove("lit")
     box.querySelectorAll(".cell").forEach((cell) => cell.classList.remove("on"))
-    const say = box.querySelector(".chart-note")
+    const say = box.querySelector(".chart-caption")
     if (say) say.textContent = ""
   }
 }

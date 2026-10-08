@@ -1,223 +1,4 @@
 @layer base {
-  .chart, .hbars, .tree {
-    position: relative;
-    width: 100%;
-  }
-  .chart svg, .hbars svg, .tree svg {
-    display: block;
-    overflow: visible;
-    max-width: 100%;
-    height: auto;
-  }
-  .chart-caption {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .grid, .base, .mark-rule, .cur {
-    shape-rendering: crispEdges;
-  }
-  .grid {
-    stroke: var(--grid);
-    stroke-width: 1;
-  }
-  .base {
-    stroke: var(--ink-4);
-    stroke-width: 1;
-  }
-  .mark-rule {
-    stroke: var(--ink-3);
-    stroke-width: 1;
-    stroke-dasharray: 3 3;
-  }
-  .cur {
-    stroke: var(--ink-3);
-    stroke-width: 1;
-  }
-  .ax {
-    fill: var(--ink-4);
-    font-family: var(--font-mono);
-    font-size: var(--t-mark);
-    font-variant-numeric: tabular-nums;
-  }
-  th[aria-sort] .ax, .ax.cap-note {
-    fill: var(--ink-3);
-  }
-  .ax.cap-note {
-    font-family: var(--font-sans);
-    font-size: var(--t-fine);
-    letter-spacing: normal;
-  }
-  .cap {
-    fill: var(--ink-3);
-    font-family: var(--font-mono);
-    font-size: var(--t-mark);
-    font-variant-numeric: tabular-nums;
-  }
-  .val {
-    fill: var(--ink-2);
-    font-family: var(--font-mono);
-    font-size: var(--t-fine);
-    font-variant-numeric: tabular-nums;
-  }
-  .t-note {
-    font-weight: 400;
-    color: color-mix(in oklab, var(--tip-ink) 62%, transparent);
-  }
-  .tipped > .tip .t-note {
-    margin-left: 5px;
-  }
-  .tipped > .tip .row u {
-    min-width: 3.5ch;
-    text-align: right;
-    color: color-mix(in oklab, var(--tip-ink) 52%, transparent);
-    font-family: var(--font-mono);
-    font-size: var(--t-mark);
-    font-style: normal;
-    font-weight: 400;
-    font-variant-numeric: tabular-nums;
-    text-decoration: none;
-  }
-
-  .donut-hole {
-    fill: color-mix(in oklab, var(--ink-4) 7%, transparent);
-  }
-  .donut-hole-dot {
-    display: inline-block;
-    width: 7px;
-    height: 7px;
-    flex: none;
-    border-radius: 50%;
-    border: 1.5px dashed var(--ink-4);
-  }
-  .partial-mark {
-    fill: none;
-    stroke: var(--warn);
-    stroke-width: 1.25;
-    stroke-dasharray: 3 2;
-  }
-
-  .mark {
-    cursor: pointer;
-  }
-  .mark.fade {
-    opacity: 0.32;
-    transition: opacity var(--dur-2) var(--ease);
-  }
-
-  .ser-0 { color: var(--series-0); }
-  .ser-1 { color: var(--series-1); }
-  .ser-2 { color: var(--series-2); }
-  .ser-3 { color: var(--series-3); }
-  .ser-4 { color: var(--series-4); }
-  .ser-5 { color: var(--series-5); }
-  .ser-none { color: var(--ink-4); }
-  .ghost {
-    opacity: 0.6;
-  }
-
-  .chart .top, .chart .bot {
-    stop-color: currentColor;
-  }
-  .chart .top {
-    stop-opacity: 0.3;
-  }
-  .chart .bot {
-    stop-opacity: 0;
-  }
-  .chart :where(.dot) {
-    fill: currentColor;
-    color: var(--series-1);
-    stroke: var(--card);
-    stroke-width: 1.5;
-  }
-  .chart-spark {
-    line-height: 0;
-  }
-
-  .fair {
-    stroke: var(--series-0);
-    stroke-width: 1;
-    stroke-dasharray: 4 3;
-  }
-  .curve {
-    fill: none;
-    stroke: var(--series-1);
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-  .wash-fill {
-    fill: color-mix(in oklab, var(--series-1) 14%, transparent);
-  }
-  .scatter-point {
-    fill: currentColor;
-    stroke: var(--card);
-    stroke-width: 1;
-    cursor: pointer;
-    transition: opacity var(--dur-2) var(--ease);
-  }
-  .chart:has(.scatter-point.lit) .scatter-point:not(.lit) {
-    opacity: 0.35;
-  }
-  .scatter-point.lit {
-    stroke: var(--ink);
-    stroke-width: 1.5;
-  }
-
-  .legend, .key, .chart-legend, .swatch, .parts-key {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--s-sm);
-    font-size: var(--t-fine);
-    color: var(--ink-3);
-  }
-  .chart-legend, .parts-key {
-    gap: var(--s-2xs) var(--s-sm);
-    margin-bottom: 6px;
-  }
-  [data-controller~="chart"] { display: flex; flex-direction: column; min-width: 0; }
-  [data-controller~="chart"] > .chart-legend {
-    order: 2;
-    margin-bottom: 0;
-    padding-top: var(--s-2xs);
-  }
-  .card > [data-controller~="chart"] > .chart-legend {
-    padding-left: var(--s-sm);
-    padding-right: var(--s-sm);
-  }
-  .card > [data-controller~="chart"]:last-child > .chart-legend {
-    padding-bottom: var(--s-xs);
-  }
-  .card:has(.card-tools > .legend) .chart-legend { display: none; }
-  .legend span, .key span, .chart-legend span, .parts-key span {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-  :where(.legend, .key, .chart-legend, .swatch, .parts-key) i {
-    width: 8px;
-    height: 8px;
-    flex: none;
-    border-radius: 2px;
-    background: currentColor;
-  }
-  .legend i.ghost, .key i.ghost, .chart-legend i.ghost {
-    background: none;
-    border: 1.5px dashed currentColor;
-  }
-  .legend b, .key b, .parts-key b {
-    color: var(--ink);
-    font-weight: 600;
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
-  }
-
   .ramp {
     display: inline-flex;
     align-items: center;
@@ -232,8 +13,8 @@
   .ramp-lo, .ramp-hi {
     margin: 0 4px;
     color: var(--ink-4);
-    font-family: var(--font-mono);
-    font-size: var(--t-mark);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.6875rem;
   }
 
   .hbars .ax {
@@ -291,7 +72,7 @@
   .tree .t-v {
     fill: var(--ink);
     fill-opacity: 0.72;
-    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
     font-weight: 500;
     font-variant-numeric: tabular-nums;
   }
@@ -361,14 +142,14 @@
   }
   .facet-zero b {
     color: var(--ink);
-    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
     font-size: var(--t-mid);
     font-weight: 600;
   }
   .facet-share {
     margin-left: auto;
     color: var(--warn);
-    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
     font-weight: 600;
   }
 
@@ -396,7 +177,7 @@
   .ivhead {
     flex: 0 0 auto;
     color: var(--ink-3);
-    font-size: var(--t-mark);
+    font-size: 0.6875rem;
     letter-spacing: 0.03em;
     text-transform: uppercase;
   }
@@ -425,8 +206,8 @@
     top: 0;
     translate: -50% 0;
     color: var(--ink-4);
-    font-family: var(--font-mono);
-    font-size: var(--t-mark);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.6875rem;
     font-style: normal;
   }
   .ivticks i[data-edge="start"] {
@@ -456,7 +237,7 @@
     flex: 0 0 auto;
     min-width: 84px;
     color: var(--ink);
-    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
     font-size: var(--t-small);
     text-align: right;
   }
@@ -493,7 +274,7 @@
   }
   .cal-mon {
     grid-row: 1;
-    font-size: var(--t-mark);
+    font-size: 0.6875rem;
     font-weight: 500;
     line-height: 1;
     padding-bottom: 7px;
@@ -503,7 +284,7 @@
     grid-column: 1;
     text-align: right;
     padding-right: 9px;
-    font-size: var(--t-mark);
+    font-size: 0.6875rem;
     font-weight: 500;
     line-height: 1;
     color: var(--ink-4);
@@ -539,13 +320,13 @@
   }
   .cal-run-from {
     grid-row: 10;
-    font-family: var(--font-mono);
-    font-size: var(--t-mark);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.6875rem;
     color: var(--ink-4);
   }
   .cal-run-note {
     grid-row: 10;
-    font-size: var(--t-mark);
+    font-size: 0.6875rem;
     font-weight: 600;
     color: var(--primary-deep);
     text-align: right;
@@ -581,12 +362,12 @@
     table-layout: fixed;
     border-collapse: separate;
     border-spacing: 2px;
-    font-size: var(--t-mark);
+    font-size: 0.6875rem;
   }
   .clock-hour {
     width: auto;
     color: var(--ink-3);
-    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
     font-weight: 500;
     text-align: center;
     padding-bottom: 4px;
@@ -595,7 +376,7 @@
   .clock-day {
     width: 44px;
     color: var(--ink-3);
-    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
     text-align: right;
     padding-right: 9px;
     white-space: nowrap;
@@ -670,7 +451,7 @@
   }
   .tile-value {
     color: var(--ink-3);
-    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
     font-size: var(--t-fine);
     font-variant-numeric: tabular-nums;
   }
@@ -682,7 +463,7 @@
   }
   .tile-pair b {
     color: var(--ink);
-    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
     font-weight: 600;
   }
   .tile-sub {
@@ -704,13 +485,13 @@
     gap: var(--s-2xs);
     padding: 0 var(--s-xs);
     color: var(--ink-4);
-    font-size: var(--t-mark);
+    font-size: 0.6875rem;
   }
   .nights {
     flex: 1 1 auto;
     display: flex;
     justify-content: space-between;
-    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
   }
   .srow:hover {
     background: var(--hover);

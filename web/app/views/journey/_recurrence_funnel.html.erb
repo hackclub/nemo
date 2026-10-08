@@ -10,6 +10,17 @@
          { label: "never posted", tone: nil,
            count: ->(f) { [f.searched.to_i - f.posted_once.to_i, 0].max } }
        ] %>
+    <div class="card-body"
+      data-controller="funnel"
+      data-funnel-label-value="newcomers"
+      data-funnel-height-value="230"
+      data-funnel-stages-value="<%= [
+        { label: "Searched", value: recurrence.sum { |f| f.searched.to_i } },
+        { label: "Posted", value: recurrence.sum { |f| f.posted_once.to_i } },
+        { label: "Twice", value: recurrence.sum { |f| f.posted_twice.to_i } },
+        { label: "3+ times", value: recurrence.sum { |f| f.posted_three_times.to_i } }
+      ].to_json %>"
+    ></div>
     <div style="padding: 0 var(--s-sm) var(--s-2xs)">
       <div
         data-controller="chart"

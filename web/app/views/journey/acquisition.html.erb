@@ -1,14 +1,11 @@
 <% content_for :page_title, "Joining" %>
 
 <% content_for :head_actions do %>
-  <%= render "shared/range_button", id: "joining-range",
-        label: "Last #{@growth_span} months" %>
+  <%= render "shared/date_range", dates: false, label: "Last #{@growth_span} months",
+        presets: HomeHelper::GROWTH_SPANS.map { |span| {
+          label: "Last #{span} months", current: span == @growth_span,
+          href: joining_journey_path(growth_months: span) } } %>
 <% end %>
-
-<%= render "shared/range_modal", id: "joining-range", title: "Months of growth", dates: false,
-      presets: HomeHelper::GROWTH_SPANS.map { |span| {
-        label: "Last #{span} months", current: span == @growth_span,
-        href: joining_journey_path(growth_months: span) } } %>
 
 <% created_total = @growth_months.sum { |m| m.claimed_members.to_i + m.unclaimed_members.to_i } %>
 <% settled_months = @growth_months.select(&:claim_rate_30d) %>

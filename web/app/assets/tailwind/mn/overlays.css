@@ -159,51 +159,6 @@
   .drawer-body, .drawer-b { flex: 1 1 auto; min-height: 0; overflow: auto; padding: var(--s-xs); }
   .drawer-foot { padding: 10px var(--s-xs); border-top: 1px solid var(--line-soft); background: var(--card-2); flex: none; }
 
-  .tip, .tipped > .tip {
-    position: absolute;
-    z-index: 70;
-    display: none;
-    min-width: 130px;
-    max-width: 260px;
-    padding: 7px 9px;
-    border-radius: var(--r-ctl);
-    background: var(--tip-bg);
-    color: var(--tip-ink);
-    font-size: var(--t-fine);
-    line-height: 1.5;
-    pointer-events: none;
-    box-shadow: var(--shadow-2);
-  }
-  .tip.on, .tipped > .tip.on { display: block; }
-  .tipped > .tip .t { font-weight: 600; margin-bottom: 3px; }
-  .tipped > .tip .row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-variant-numeric: tabular-nums;
-  }
-  .tipped > .tip .row b {
-    margin-left: auto;
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    font-weight: 500;
-  }
-  .tipped > .tip:has(.row u) .row-sum b { padding-right: calc(3.5ch + 8px); }
-  .tipped > .tip .row i {
-    width: 7px;
-    height: 7px;
-    flex: none;
-    border-radius: 2px;
-    background: currentColor;
-  }
-  .tipped > .tip .row-note { opacity: 0.7; }
-  .tipped > .tip .row:not(.row-note) + .row-note {
-    margin-top: 5px;
-    padding-top: 5px;
-    border-top: 1px solid color-mix(in oklab, var(--tip-ink) 30%, transparent);
-  }
-
   .lightbox {
     border: 0;
     padding: 0;

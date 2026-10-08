@@ -3,6 +3,13 @@ module HomeHelper
   GROWTH_SPANS = [6, 12, 24].freeze
   DEFAULT_GROWTH_SPAN = 6
 
+  def date_range_label(from, to)
+    return "" if from.nil? || to.nil?
+
+    left = from.strftime(from.year == to.year ? "%b %-d" : "%b %-d, %Y")
+    "#{left} - #{to.strftime('%b %-d, %Y')}"
+  end
+
   def window_note(from, to)
     return nil if from.nil? || to.nil?
 
@@ -14,11 +21,11 @@ module HomeHelper
 
   OVERVIEW_SPANS = {
     "7d" => { label: "7 days", days: 7, granularity: "daily" },
-    "28d" => { label: "28 days", days: 28, granularity: "daily" },
+    "30d" => { label: "30 days", days: 30, granularity: "daily" },
     "90d" => { label: "90 days", days: 90, granularity: "daily" },
     "12m" => { label: "12 months", months: 12, granularity: "monthly" }
   }.freeze
-  DEFAULT_OVERVIEW_SPAN = "28d".freeze
+  DEFAULT_OVERVIEW_SPAN = "30d".freeze
 
   def overview_span(value)
     OVERVIEW_SPANS.key?(value.to_s) ? value.to_s : DEFAULT_OVERVIEW_SPAN

@@ -1,19 +1,16 @@
 <% content_for :page_title, "Profile" %>
 
 <% content_for :head_actions do %>
-  <%= render "shared/range_button", id: "profile-range", label: range_label_for(@profile) %>
+  <%= render "shared/date_range", url: profile_path_with(@profile),
+        start_on: @profile.window_start, end_on: @profile.window_end,
+        min: @profile.floor, max: @profile.ceiling,
+        presets: Profile::Summary::SPANS.keys.map { |key| {
+          label: span_label(key),
+          current: !@profile.custom? && key == @profile.span_key,
+          href: profile_path_with(@profile, span: (key unless key == Profile::Summary::DEFAULT_SPAN),
+                         start: nil, end: nil) } } %>
   <%= open_in_slack slack_member_url(@profile.user_id), css: "btn btn-ghost" %>
 <% end %>
-
-<%= render "shared/range_modal", id: "profile-range", title: "Range",
-      sub: window_note(@profile.window_start, @profile.window_end), url: profile_path_with(@profile),
-      start_on: @profile.window_start, end_on: @profile.window_end,
-      min: @profile.floor, max: @profile.ceiling,
-      presets: Profile::Summary::SPANS.keys.map { |key| {
-        label: span_label(key),
-        current: !@profile.custom? && key == @profile.span_key,
-        href: profile_path_with(@profile, span: (key unless key == Profile::Summary::DEFAULT_SPAN),
-                       start: nil, end: nil) } } %>
 
 <%= render "identity", profile: @profile %>
 

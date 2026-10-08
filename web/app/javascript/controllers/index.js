@@ -43,3 +43,15 @@ if (waiting.size > 0) {
     childList: true
   })
 }
+
+const chartNames = new Set(chartPaths.map((path) =>
+  path.replace(/^charts\//, "").replace(/_controller$/, "").replace(/_/g, "-")))
+
+document.addEventListener("turbo:morph", () => {
+  application.controllers
+    .filter((controller) => chartNames.has(controller.identifier))
+    .forEach((controller) => {
+      controller.disconnect?.()
+      controller.connect?.()
+    })
+})

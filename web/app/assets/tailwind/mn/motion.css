@@ -25,13 +25,25 @@
     to   { transform: translateX(200%); }
   }
 
-  .chart > svg, .hbars > svg, .tree > svg, .lorenz > svg {
+  @keyframes line-draw {
+    from { stroke-dashoffset: 1; }
+    to { stroke-dashoffset: 0; }
+  }
+  .chart.is-entering > svg, .hbars > svg, .tree > svg, .lorenz > svg {
     animation: chart-in var(--dur-3) var(--ease-out) both;
   }
-  .chart .bar, .chart .bar-good, .chart .bar-warn, .chart .bar-crit, .hbars .bar {
+  .chart.is-entering .bar, .hbars .bar {
     transform-box: fill-box;
     transform-origin: bottom;
-    animation: bar-in 420ms var(--ease-out) both;
+    animation: bar-in 640ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--i, 0) * 12ms);
+  }
+  .chart.is-entering .stroke-line {
+    stroke-dasharray: 1;
+    animation: line-draw 1100ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .chart.is-entering .wash {
+    animation: fade-in 900ms ease-out 250ms both;
   }
   .hbars .bar { transform-origin: left; }
   .tree .cell rect, .parts .cell rect { animation: fade-in var(--dur-3) var(--ease) both; }
@@ -129,6 +141,7 @@
   @media (prefers-reduced-motion: reduce) {
     .chart > svg, .hbars > svg, .tree > svg, .lorenz > svg,
     .chart .bar, .hbars .bar, .tree .cell rect, .parts .cell rect,
+    .chart .stroke-line, .chart .wash,
     turbo-frame[aria-busy="true"]::after,
     .standing-row.is-enforced.just-landed,
     .standing-row.is-enforced.just-landed::after {

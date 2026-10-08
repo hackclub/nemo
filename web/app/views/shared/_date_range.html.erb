@@ -1,0 +1,45 @@
+<% dates = local_assigns.fetch(:dates, true) %>
+<% current = presets.find { |option| option[:current] } %>
+<div class="daterange<%= " has-dates" if dates %>">
+  <% if presets.any? %>
+    <%= render layout: "shared/dropdown", locals: {
+          css: "daterange-presets", trigger_css: "btn daterange-preset", pop_css: "menu-compact",
+          label: local_assigns[:title] || "Range",
+          trigger: capture {
+            concat tag.span(current ? current[:label] : (dates ? "Custom" : label))
+            concat(tag.svg(width: 16, height: 16, viewBox: "0 0 24 24", fill: "none",
+              stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round",
+              "stroke-linejoin": "round", class: "daterange-chev", aria: { hidden: true }) do
+              tag.path(d: "m6 9 6 6 6-6")
+            end)
+          } } do %>
+      <% presets.each do |option| %>
+        <%= link_to option[:label], option[:href], class: "btn",
+              data: { turbo_action: "replace" },
+              aria: { current: ("true" if option[:current]) } %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% if dates %>
+    <%= form_with url: url, method: :get, class: "contents",
+          data: { controller: "daterange", turbo_action: "replace",
+                  daterange_min_value: min&.iso8601, daterange_max_value: max&.iso8601 } do %>
+      <% Array(local_assigns[:carry]).each do |key, value| %>
+        <%= hidden_field_tag key, value, id: nil %>
+      <% end %>
+      <%= hidden_field_tag :start, start_on&.iso8601, id: nil, data: { daterange_target: "start" } %>
+      <%= hidden_field_tag :end, end_on&.iso8601, id: nil, data: { daterange_target: "end" } %>
+      <button type="button" class="btn daterange-open" data-daterange-target="trigger"
+              data-action="daterange#toggle" aria-haspopup="dialog" aria-expanded="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+        </svg>
+        <span data-daterange-target="say"><%= date_range_label(start_on, end_on) %></span>
+      </button>
+      <div class="daterange-pop" popover="manual" role="dialog" aria-label="Pick a range"
+           data-daterange-target="pop"></div>
+    <% end %>
+  <% end %>
+</div>

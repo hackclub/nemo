@@ -12,7 +12,7 @@ const RULER = typeof document === "undefined"
 function wideAs(text, size) {
   if (!RULER) return String(text).length * size * 0.6
 
-  RULER.font = `${size}px "Geist Mono", ui-monospace, monospace`
+  RULER.font = `${size}px Geist, ui-sans-serif, system-ui, sans-serif`
   return RULER.measureText(String(text)).width
 }
 
@@ -185,7 +185,7 @@ export default class extends Controller {
     box.classList.add("lit")
     box.querySelectorAll(".hrow").forEach((row) =>
       row.classList.toggle("on", +row.dataset.i === i))
-    box.querySelector(".chart-note").textContent = `${r.label}, ${F(r.value)}`
+    box.querySelector(".chart-caption").textContent = `${r.label}, ${F(r.value)}`
   }
 
   clear() {
@@ -196,7 +196,7 @@ export default class extends Controller {
     box.querySelector(".tip")?.classList.remove("on")
     box.classList.remove("lit")
     box.querySelectorAll(".hrow").forEach((row) => row.classList.remove("on"))
-    const say = box.querySelector(".chart-note")
+    const say = box.querySelector(".chart-caption")
     if (say) say.textContent = ""
   }
 }

@@ -110,9 +110,9 @@ export default class extends Controller {
         y(yMid).toFixed(1)}" x2="${wide - PAD.r}" y2="${y(yMid).toFixed(1)}"/>`
     ].join("")
 
-    const corners = this.hasCornersValue ? this.cornersValue : {}
+    const named = this.hasCornersValue ? this.cornersValue : {}
     const corners = CORNERS.map((at) => {
-      const label = corners[at]
+      const label = named[at]
       if (!label) return ""
 
       const left = at[1] === "l"
@@ -232,7 +232,7 @@ export default class extends Controller {
     tip.style.left = `${Math.max(0, left)}px`
     tip.style.top = `${Math.max(PAD.t, Math.min(g.y(p.y) - 12, g.high - 110))}px`
 
-    chart.querySelector(".chart-note").textContent =
+    chart.querySelector(".chart-caption").textContent =
       `${p.name}, ${this.xLabelValue} ${this.format(p.x, false)}, ${
         this.yLabelValue} ${this.format(p.y, this.yPctValue)}`
   }
@@ -244,7 +244,7 @@ export default class extends Controller {
     this.at = null
     chart.querySelectorAll(".scatter-point.lit").forEach((dot) => dot.classList.remove("lit"))
     chart.querySelector(".tip")?.classList.remove("on")
-    const say = chart.querySelector(".chart-note")
+    const say = chart.querySelector(".chart-caption")
     if (say) say.textContent = ""
   }
 }

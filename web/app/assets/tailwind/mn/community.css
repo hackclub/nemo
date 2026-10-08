@@ -446,31 +446,20 @@
 
   .chart .pin {
     fill: var(--primary);
-    stroke: var(--card);
+    stroke: var(--background);
     stroke-width: 2;
   }
-  .chart .rule-note {
-    fill: var(--ink-3);
+  .chart .rule-note, .chart .split-note {
+    fill: var(--muted-foreground);
+    font-size: 11px;
   }
   .chart .split {
-    stroke: var(--ink-4);
+    stroke: var(--border);
     stroke-width: 1;
     stroke-dasharray: 3 3;
   }
-  .chart .split-note {
-    fill: var(--ink-3);
-  }
   .chart .quad-note {
-    fill: var(--ink-4);
-    font-size: var(--t-tiny);
-    letter-spacing: 0.04em;
-  }
-  .chart stop.bot {
-    stop-color: currentColor;
-    stop-opacity: 0;
-  }
-  .tipped > .tip .row-sum {
-    padding-top: 4px;
-    border-top: 1px solid color-mix(in oklab, var(--tip-ink) 12%, transparent);
+    fill: var(--muted-foreground);
+    font-size: 11px;
   }
 }
