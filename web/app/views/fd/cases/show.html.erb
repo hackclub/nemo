@@ -201,7 +201,7 @@
               <span class="evdot <%= timeline_tone(entry.mark) %>"><%= timeline_glyph(entry.mark) %></span>
               <div>
                 <div class="msg-head">
-                  <span class="msg-who"><%= entry.title %></span>
+                  <span class="msg-who"><%= named_text(entry.title) %></span>
                   <span class="msg-at"><%= entry.at.strftime("%-d %b, %H:%M") %></span>
                 </div>
                 <% marks = [entry.detail.presence, *entry.chips].compact %>

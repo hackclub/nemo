@@ -241,7 +241,7 @@
   }
 
   .account-face .avatar {
-    @apply size-8 shadow-none transition-[box-shadow];
+    @apply size-8 rounded-full shadow-none transition-[box-shadow];
   }
 
   .account-face:hover .avatar, .account-menu[open] .account-face .avatar {

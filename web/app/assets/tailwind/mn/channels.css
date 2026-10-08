@@ -11,7 +11,7 @@
   }
   .post:last-of-type { border-bottom: 0; }
   .post:hover { background: color-mix(in oklab, var(--hover) 45%, transparent); }
-  .post-face { width: 26px; height: 26px; border-radius: 50%; margin-top: 2px; }
+  .post-face { width: 26px; height: 26px; border-radius: 22%; margin-top: 2px; }
   .post-main { min-width: 0; }
   .post-body { margin-top: 2px; }
   .post-body > .richtext-text:first-child { margin-top: 0; }

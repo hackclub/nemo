@@ -1,7 +1,7 @@
 @layer components {
   .message-activity-post { padding: var(--s-sm); max-width: 78ch; }
   .message-activity-post-head { display: flex; align-items: center; gap: var(--s-2xs); flex-wrap: wrap; }
-  .message-activity-face { width: 26px; height: 26px; border-radius: 50%; }
+  .message-activity-face { width: 26px; height: 26px; border-radius: 22%; }
   .message-activity-post-body { margin-top: var(--s-2xs); }
   .message-activity-post-body > .richtext-text:first-child { margin-top: 0; }
 

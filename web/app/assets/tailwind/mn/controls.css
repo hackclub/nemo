@@ -47,7 +47,7 @@
     width: 22px;
     height: 22px;
     flex: none;
-    border-radius: var(--r-round);
+    border-radius: 22%;
     display: inline-grid;
     place-items: center;
     font-size: var(--t-mark);

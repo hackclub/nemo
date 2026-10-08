@@ -6,7 +6,7 @@
     <% if !grouped || entry.state %>
       <div class="msg-head">
         <% unless grouped %>
-          <span class="msg-who"><%= entry.name %></span>
+          <span class="msg-who"><%= named_text(entry.name) %></span>
           <span class="msg-at"><%= entry.at.strftime("%-d %b, %H:%M") %></span>
           <% if %w[them us].include?(entry.kind) %><span class="chip chip-sm chip-primary">reporter</span><% end %>
         <% end %>
