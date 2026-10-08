@@ -42,7 +42,7 @@ def proxy():
     token = os.environ.get("PROXY_TOKEN_NEMO", "")
     if not token:
         raise ProxyError("PROXY_TOKEN_NEMO must be set for the Fire Department to act in Slack")
-    return ProxyClient(token=token)
+    return ProxyClient(token=token, keep_alive=True)
 
 
 NOT_THERE = ("channel_not_found", "not_in_channel")

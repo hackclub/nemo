@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import http.client
+import io
 import json
 import os
+import socket
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -53,12 +56,84 @@ RETRY_STATUS = frozenset({429, 502, 503, 504})
 UPSTREAM_TRANSPORT = ("upstream unreachable", "upstream timeout", "upstream http")
 FAULT_ORIGIN_HEADER = "X-Fault-Origin"
 
+KEEP_IDLE_SECONDS = 30
+STALE = (http.client.RemoteDisconnected, http.client.CannotSendRequest,
+         ConnectionResetError, BrokenPipeError)
+
+_kept = threading.local()
+
+
+def kept_pool():
+    pool = getattr(_kept, "pool", None)
+    if pool is None:
+        pool = _kept.pool = {}
+    return pool
+
+
+def drop_kept(key):
+    held = kept_pool().pop(key, None)
+    if held is not None:
+        held[0].close()
+
+
+def kept_connection(key, timeout):
+    pool = kept_pool()
+    held = pool.get(key)
+    if held is not None and time.monotonic() - held[1] <= KEEP_IDLE_SECONDS:
+        conn = held[0]
+        conn.timeout = timeout
+        if conn.sock is not None:
+            conn.sock.settimeout(timeout)
+        return conn, True
+
+    drop_kept(key)
+    scheme, host, port = key
+    kind = http.client.HTTPSConnection if scheme == "https" else http.client.HTTPConnection
+    conn = kind(host, port, timeout=timeout)
+    pool[key] = (conn, time.monotonic())
+    return conn, False
+
+
+def post_kept(url, body, headers, timeout):
+    parts = urllib.parse.urlsplit(url)
+    key = (parts.scheme, parts.hostname, parts.port)
+    path = parts.path + (f"?{parts.query}" if parts.query else "")
+
+    for second_try in (False, True):
+        conn, reused = kept_connection(key, timeout)
+        try:
+            if conn.sock is None:
+                conn.connect()
+                conn.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            conn.request("POST", path, body=body, headers=headers)
+            resp = conn.getresponse()
+            payload = resp.read()
+        except STALE as exc:
+            drop_kept(key)
+            if reused and not second_try:
+                continue
+            raise urllib.error.URLError(exc) from exc
+        except (OSError, http.client.HTTPException) as exc:
+            drop_kept(key)
+            raise urllib.error.URLError(exc) from exc
+
+        if resp.will_close:
+            drop_kept(key)
+        else:
+            kept_pool()[key] = (conn, time.monotonic())
+        if resp.status >= 400:
+            raise urllib.error.HTTPError(url, resp.status, resp.reason, resp.headers,
+                                         io.BytesIO(payload))
+        return payload
+
 
 class ProxyClient:
-    def __init__(self, url=None, token=None, read_timeout=120, deadline_seconds=None):
+    def __init__(self, url=None, token=None, read_timeout=120, deadline_seconds=None,
+                 keep_alive=False):
         self.url = (url or os.environ.get("INTERNAL_PROXY_URL", "")).rstrip("/")
         self.token = token or os.environ.get("INTERNAL_PROXY_TOKEN", "")
         self.read_timeout = read_timeout
+        self.keep_alive = keep_alive
         self.deadline_seconds = deadline_seconds if deadline_seconds is not None else read_timeout
         self.last_num_found = None
         if not self.url or not self.token:
@@ -194,9 +269,8 @@ class ProxyClient:
                 raise ProxyUnavailableError(
                     f"deadline of {deadline.seconds:.0f}s spent after {attempt} attempt(s) at {self.url}")
             try:
-                with urllib.request.urlopen(req, timeout=timeout) as resp:
-                    payload = resp.read()
-                    return payload if raw else json.loads(payload)
+                payload = self._post(req, url, body, headers, timeout)
+                return payload if raw else json.loads(payload)
             except urllib.error.HTTPError as exc:
                 if exc.code in RETRY_STATUS and attempt < max_retries and not deadline.expired():
                     time.sleep(deadline.clamp(retry_after(exc, 1 + attempt)))
@@ -210,6 +284,12 @@ class ProxyClient:
                     continue
                 raise ProxyUnavailableError(
                     f"proxy unreachable at {self.url} after {attempt + 1} attempt(s): {exc}") from exc
+
+    def _post(self, req, url, body, headers, timeout):
+        if self.keep_alive:
+            return post_kept(url, body, headers, timeout)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.read()
 
     def _raise_for_status(self, exc):
         try:
