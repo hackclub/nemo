@@ -18,18 +18,6 @@
   }
   .toolbar > .grow { min-width: 140px; }
   .toolbar > .queue-search { max-width: 320px; }
-  .cardbar {
-    display: flex;
-    align-items: center;
-    gap: var(--s-2xs);
-    flex-wrap: wrap;
-    min-width: 0;
-    padding: var(--s-xs);
-    border-bottom: 1px solid var(--line);
-  }
-  .cardbar > .queue-search { max-width: 300px; }
-  .cardbar .queue-search-input { height: var(--ctl-h-sm); }
-  .cardbar .btn { height: var(--ctl-h-sm); }
   .toolbar-end { margin-left: auto; display: flex; align-items: center; gap: var(--s-2xs); }
   .toolbar-note {
     margin-top: -2px;

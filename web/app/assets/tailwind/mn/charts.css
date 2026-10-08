@@ -187,17 +187,14 @@
     margin-bottom: 0;
     padding-top: var(--s-2xs);
   }
-  .card > [data-controller~="chart"] > .chart-legend,
-  .panel > [data-controller~="chart"] > .chart-legend {
+  .card > [data-controller~="chart"] > .chart-legend {
     padding-left: var(--s-sm);
     padding-right: var(--s-sm);
   }
-  .card > [data-controller~="chart"]:last-child > .chart-legend,
-  .panel > [data-controller~="chart"]:last-child > .chart-legend {
+  .card > [data-controller~="chart"]:last-child > .chart-legend {
     padding-bottom: var(--s-xs);
   }
-  .card:has(.card-tools > .legend) .chart-legend,
-  .panel:has(.card-tools > .legend) .chart-legend { display: none; }
+  .card:has(.card-tools > .legend) .chart-legend { display: none; }
   .legend span, .key span, .chart-legend span, .parts-key span {
     display: inline-flex;
     align-items: center;
@@ -601,17 +598,14 @@
     font-size: var(--t-small);
     color: var(--ink-4);
   }
-  .card > .legend, .card > .key, .card > .parts-key,
-  .panel > .legend, .panel > .key, .panel > .parts-key {
+  .card > .legend, .card > .key, .card > .parts-key {
     padding: var(--s-2xs) var(--s-sm);
   }
   .card > .legend:not(:last-child), .card > .key:not(:last-child),
-  .card > .parts-key:not(:last-child), .panel > .legend:not(:last-child),
-  .panel > .key:not(:last-child), .panel > .parts-key:not(:last-child) {
+  .card > .parts-key:not(:last-child) {
     padding-bottom: 0;
   }
-  .card > .legend + .chart-note, .card > .parts-key + .chart-note,
-  .panel > .legend + .chart-note, .panel > .parts-key + .chart-note {
+  .card > .legend + .chart-note, .card > .parts-key + .chart-note {
     padding-top: 6px;
   }
   .clockwrap {

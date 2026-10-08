@@ -120,7 +120,7 @@
 
   .data-table tbody tr td { transition: background-color var(--dur) var(--ease); }
 
-  .card, .panel, .metrics, .lede {
+  .metrics, .lede {
     transition: border-color var(--dur-2) var(--ease);
   }
 

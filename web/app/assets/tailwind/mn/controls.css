@@ -242,7 +242,7 @@
     border-top: 1px solid var(--line-soft);
   }
   .setlist > .setline:first-child { border-top: 0; }
-  .panel-body + .setlist { border-top: 1px solid var(--line-soft); }
+  .card-body + .setlist { border-top: 1px solid var(--line-soft); }
   .setline > .setname {
     flex: 1 1 auto;
     min-width: 0;

@@ -661,7 +661,7 @@
     border-width: 1px 0 0;
     border-radius: 0;
   }
-  .body.flush > .stack > .panel,
+  .body.flush > .stack > .card,
   .body.flush > .case-record > .case-tab-body {
     flex: 1 1 auto;
     min-height: 0;

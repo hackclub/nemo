@@ -1,123 +1,9 @@
 @layer base {
-  .card, .panel {
-    position: relative;
-    min-width: 0;
-    border: 1px solid var(--line);
-    border-radius: var(--r-card);
-    background: var(--card);
-    box-shadow: var(--shadow-1);
-    overflow: clip;
-  }
-  .card .card, .panel .card, .card .panel, .panel .panel { box-shadow: none; }
-  .card-2 { background: var(--card-2); }
-  .card-stretch { display: flex; flex-direction: column; }
-  .card-stretch > .chart-note:last-child { margin-top: auto; }
-  .card-stretch > [data-controller~="chart"]:last-child { flex: 1 1 auto; min-height: 0; justify-content: flex-end; }
-  .card-stretch > [data-controller~="lorenz"] {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-  }
-  .card-stretch > [data-controller~="lorenz"] > .chart {
-    flex: 1 1 auto;
-    min-height: 228px;
-  }
-  .card-stretch > [data-controller~="lorenz"] > .chart > svg {
-    width: 100%;
-    height: auto;
-    max-height: 100%;
-  }
-  .card-thin { border-color: var(--line-soft); }
-
-  .card-head, .panel-head {
-    display: flex;
-    align-items: center;
-    gap: var(--s-2xs);
-    min-height: 48px;
-    padding: var(--s-xs) var(--s-sm);
-    border-bottom: 1px solid var(--line-soft);
-    min-width: 0;
-  }
-  .card:not(.card-flush) > .card-head:not(:has(.card-sub)):not(:has(.card-tools)) {
-    border-bottom-color: transparent;
-    padding-bottom: 2px;
-  }
-  .card-title, .panel-name {
-    font-size: var(--t-body);
-    font-weight: 600;
-    line-height: var(--lh-snug);
-    letter-spacing: var(--tr-body);
-    color: var(--ink);
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .card-sub {
-    font-size: var(--t-fine);
-    color: var(--ink-4);
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .card-head > .two-line { gap: 0; }
-  .card-head > .two-line.appline { gap: 3px; }
-  .card-head:has(> .appline) { min-height: 58px; padding-block: 14px; }
-  .card-tools {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: var(--s-xs);
-    flex: none;
-  }
-  .card-body, .panel-body { padding: var(--s-sm); min-width: 0; }
-  .card > p, .panel > p, .card > .sub2, .card > .sub { padding: var(--s-2xs) var(--s-xs) var(--s-xs); }
-  .card-head + p, .panel-head + p, .card-head + .sub2, .card-head + .sub { padding-top: 0; }
   .card-note, .note, .delta-note, .reveal-note, .pick-note, .modal-note, .card-head + .card-note {
     font-size: var(--t-small);
     color: var(--ink-3);
     line-height: var(--lh-prose);
   }
-  .card-flush > .card-head { padding: var(--s-2xs) var(--s-xs); }
-  .panel-foot {
-    display: flex;
-    align-items: center;
-    gap: var(--s-2xs);
-    padding: 9px var(--s-xs);
-    border-top: 1px solid var(--line-soft);
-    background: var(--card-2);
-  }
-
-  .foldcard { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--card); overflow: clip; }
-  .foldcard > summary {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    min-height: 42px;
-    padding: 9px var(--s-xs);
-    list-style: none;
-    cursor: pointer;
-    font-size: var(--t-body);
-    font-weight: 600;
-    color: var(--ink);
-  }
-  .foldcard > summary::-webkit-details-marker { display: none; }
-  .foldcard > summary::before {
-    content: "";
-    width: 0;
-    height: 0;
-    flex: none;
-    border: 4px solid transparent;
-    border-left-color: var(--ink-4);
-    margin-left: 2px;
-    transition: rotate var(--dur-2) var(--ease);
-  }
-  .foldcard[open] > summary::before { rotate: 90deg; translate: -2px 2px; }
-  .foldcard[open] > summary { border-bottom: 1px solid var(--line-soft); }
-  .fold-title { font-weight: 600; }
-  .fold-sub { font-size: var(--t-fine); color: var(--ink-4); font-weight: 400; }
-  .fold-body { padding: var(--s-xs); }
 
   .reveal { border-top: 1px solid var(--line-soft); }
   .reveal-head {
@@ -226,7 +112,7 @@
     white-space: nowrap;
   }
   .deflist dd .short { font-family: var(--font-sans); font-size: var(--t-fine); color: var(--ink-4); }
-  .card > .deflist, .panel > .deflist { padding: var(--s-xs) var(--s-sm); }
+  .card > .deflist { padding: var(--s-xs) var(--s-sm); }
 
   .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-xs); }
   .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-xs); }
@@ -324,7 +210,7 @@
     padding: var(--s-xl) var(--s-md);
     text-align: center;
   }
-  .card > .empty, .panel > .empty, .card-body > .empty, .fold-body > .empty {
+  .card > .empty, .card-body > .empty, .fold-body > .empty {
     min-height: 92px;
     padding: var(--s-md) var(--s-sm);
   }

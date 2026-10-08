@@ -1,0 +1,103 @@
+@layer base {
+  .card {
+    @apply relative min-w-0 overflow-hidden rounded-xl bg-card text-card-foreground ring-1 ring-foreground/10;
+  }
+
+  .card-stretch { display: flex; flex-direction: column; }
+  .card-stretch > .chart-note:last-child { margin-top: auto; }
+  .card-stretch > [data-controller~="chart"]:last-child { flex: 1 1 auto; min-height: 0; justify-content: flex-end; }
+  .card-stretch > [data-controller~="lorenz"] {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .card-stretch > [data-controller~="lorenz"] > .chart {
+    flex: 1 1 auto;
+    min-height: 228px;
+  }
+  .card-stretch > [data-controller~="lorenz"] > .chart > svg {
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+  }
+
+  .card-head {
+    @apply flex min-w-0 items-center gap-2 border-b border-border p-4;
+  }
+
+  .card:not(.card-flush) > .card-head:not(:has(.card-sub)):not(:has(.card-tools)) {
+    @apply border-transparent pb-0.5;
+  }
+
+  .card-head > .two-line { gap: 0; }
+  .card-head > .two-line.appline { gap: 3px; }
+
+  .card-title {
+    @apply min-w-0 truncate text-base leading-snug font-medium text-card-foreground;
+  }
+
+  .card-sub {
+    @apply min-w-0 truncate text-sm text-muted-foreground;
+  }
+
+  .card-tools {
+    @apply ml-auto flex flex-none items-center gap-2;
+  }
+
+  .card-body {
+    @apply min-w-0 p-4;
+  }
+
+  .card > p, .card > .sub2, .card > .sub {
+    @apply px-4 pt-2 pb-4;
+  }
+
+  .card-head + p, .card-head + .sub2, .card-head + .sub {
+    @apply pt-0;
+  }
+
+  .cardbar {
+    @apply flex min-w-0 flex-wrap items-center gap-2 border-b border-border px-4 py-3;
+  }
+
+  .cardbar > .queue-search { max-width: 300px; }
+
+  .cardbar .queue-search-input {
+    @apply h-8;
+  }
+
+  .foldcard {
+    @apply overflow-hidden rounded-xl bg-card text-card-foreground ring-1 ring-foreground/10;
+  }
+
+  .foldcard > summary {
+    @apply flex cursor-pointer list-none items-center gap-2 p-4 text-base leading-snug font-medium;
+  }
+
+  .foldcard > summary::-webkit-details-marker { display: none; }
+
+  .foldcard > summary::before {
+    content: "";
+    width: 0;
+    height: 0;
+    flex: none;
+    border: 4px solid transparent;
+    border-left-color: var(--muted-foreground);
+    margin-left: 2px;
+    transition: rotate var(--dur-2) var(--ease);
+  }
+
+  .foldcard[open] > summary::before { rotate: 90deg; translate: -2px 2px; }
+
+  .foldcard[open] > summary {
+    @apply border-b border-border;
+  }
+
+  .fold-sub {
+    @apply text-sm font-normal text-muted-foreground;
+  }
+
+  .fold-body {
+    @apply p-4;
+  }
+}
