@@ -146,7 +146,7 @@ SELECT id FROM fd.intake_conversations WHERE report_id = %s AND closed_at IS NUL
 """
 
 
-TELL_THEM = """
+QUEUE_OUTCOME = """
 INSERT INTO fd.intake_outbox (conversation_id, kind, body, requested_by)
 VALUES (%s, 'outcome', %s, %s)
 """
@@ -320,7 +320,7 @@ def close_reports(conn, case_id, values, user_id):
         open_one = conn.execute(OPEN_CONVERSATION, (report_id,)).fetchone()
         if open_one is None:
             continue
-        conn.execute(TELL_THEM, (open_one[0], values, user_id))
+        conn.execute(QUEUE_OUTCOME, (open_one[0], values, user_id))
         notified += 1
     return notified
 
@@ -341,7 +341,7 @@ def resolve(conn, case_id, values, user_id):
             "member_note": values["member_note"],
         },
     )
-    notified = close_reports(conn, case_id, values["message"], user_id) if values["telling"] else 0
+    notified = close_reports(conn, case_id, values["message"], user_id) if values["notify_reporter"] else 0
     return notified
 
 

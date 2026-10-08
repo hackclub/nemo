@@ -41,9 +41,9 @@ EVENT = {"channel": "C_FIRE", "ts": "2.0", "thread_ts": "1.0", "user": "UFD"}
 
 @pytest.fixture
 def wired(monkeypatch):
-    told = {"replied": [], "kept": []}
+    heard = {"replied": [], "kept": []}
 
-    handlers.register(App(), lambda *args, **kw: told["replied"].append((args, kw)))
+    handlers.register(App(), lambda *args, **kw: heard["replied"].append((args, kw)))
 
     @contextlib.contextmanager
     def one_session():
@@ -55,9 +55,9 @@ def wired(monkeypatch):
     monkeypatch.setattr(handlers.access, "may", lambda conn, who, needs, case=None: (True, None))
     monkeypatch.setattr(
         handlers.chat, "keep",
-        lambda conn, case_id, event: (told["kept"].append((case_id, event)), (1, True))[1],
+        lambda conn, case_id, event: (heard["kept"].append((case_id, event)), (1, True))[1],
     )
-    return told
+    return heard
 
 
 def reaching(monkeypatch, answer):

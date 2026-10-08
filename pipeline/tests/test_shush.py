@@ -84,7 +84,7 @@ def quiet(monkeypatch):
     monkeypatch.setattr(shush.guard_actions, "remove", lambda client, room, ts: True)
 
 
-def test_taking_one_up_tells_them_once_and_says_when_it_ends():
+def test_taking_one_up_notifies_them_once_and_says_when_it_ends():
     conn, client = Conn(), Slack()
     assert shush.take_up(client, conn, guard())
 
@@ -101,7 +101,7 @@ def test_one_that_never_ends_says_so_rather_than_a_date():
     assert "with no end date" in client.posted[0]["text"]
 
 
-def test_one_already_held_is_not_told_again():
+def test_one_already_held_is_not_notified_again():
     client = Slack()
     assert not shush.take_up(client, Conn(claims=False), guard())
     assert client.posted == []
@@ -112,12 +112,12 @@ def test_a_removed_message_is_written_down_and_the_guard_reads_as_held():
     assert shush.remove(Slack(), conn, guard(), ROOM, TS)
 
     assert conn.executed("enforcement_status = 'held'")
-    told = conn.did("INSERT INTO fd.member_guard_events")[0]
-    assert told[3] == "deleted"
-    assert told[4] == TS
+    recorded = conn.did("INSERT INTO fd.member_guard_events")[0]
+    assert recorded[3] == "deleted"
+    assert recorded[4] == TS
 
 
-def test_seen_tells_them_inside_the_thread_they_posted_in(monkeypatch):
+def test_seen_notifies_them_inside_the_thread_they_posted_in(monkeypatch):
     monkeypatch.setattr(shush, "session", lambda: _held(Conn()))
     monkeypatch.setattr(shush.channel, "internal_log_channel", lambda: "COTHER")
     memberguards._shushes[WHO] = guard()

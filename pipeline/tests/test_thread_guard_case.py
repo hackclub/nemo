@@ -46,5 +46,5 @@ def test_the_primary_thread_wins_when_a_thread_is_on_more_than_one():
 def test_opening_is_written_down_against_the_case_it_found():
     conn = Conn({"FROM fd.case_threads": (412,), "INSERT INTO fd.thread_guards": (9,)})
     guards.open_guard(conn, guards.LOCK, "C1", "100.000", "UMOD", "enough")
-    told = conn.did("INSERT INTO fd.audit")[0]
-    assert told[6].obj["case_id"] == 412
+    recorded = conn.did("INSERT INTO fd.audit")[0]
+    assert recorded[6].obj["case_id"] == 412

@@ -101,12 +101,13 @@ def closed(ctx):
         if case_id is None:
             return None
 
-        told = case_actions.resolve(
+        notified = case_actions.resolve(
             conn, case_id,
-            {"resolution": CLOSED_AS, "member_note": None, "message": None, "telling": False},
+            {"resolution": CLOSED_AS, "member_note": None, "message": None,
+             "notify_reporter": False},
             who,
         )
-        if told is None:
+        if notified is None:
             log.info("nemo: case %s was already resolved", case_id)
             return None
         case_queue.refresh_card(ctx.client, conn, case_id)

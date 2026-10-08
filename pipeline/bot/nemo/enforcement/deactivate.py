@@ -35,7 +35,7 @@ def take_up(client, conn, guard):
     return True
 
 
-def lift(client, conn, guard, tell=True):
+def lift(client, conn, guard, notify_member=True):
     how = privileged.reactivate(guard["subject_id"])
     if not carried(how, REACTIVATED):
         memberguards.record_enforcement(conn, guard["id"], guard["subject_id"], None,

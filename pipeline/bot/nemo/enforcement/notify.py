@@ -24,8 +24,8 @@ def dm_subject(client, conn, guard, message):
         client.chat_postMessage(channel=guard["subject_id"], text=message)
         detail = None
     except Exception as failure:
-        detail = f"could not tell them: {str(failure)[:200]}"
-        log.warning("nemo: guard %s is held but %s was not told: %s",
+        detail = f"could not notify them: {str(failure)[:200]}"
+        log.warning("nemo: guard %s is held but %s was not notified: %s",
                     guard["id"], guard["subject_id"], failure)
 
     memberguards.record_enforcement(conn, guard["id"], guard["subject_id"], None, "told", detail=detail)

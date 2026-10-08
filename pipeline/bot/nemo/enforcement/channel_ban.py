@@ -11,7 +11,7 @@ KIND = memberguards.CHANNEL_BAN
 
 KICKED = "kicked"
 
-TOLD = "Hey <@{who}>, you've been banned from <#{room}> for {why}, {until}."
+APPLIED_DM = "Hey <@{who}>, you've been banned from <#{room}> for {why}, {until}."
 
 IN_CHANNEL = (
     "Your message was removed. You are banned from this channel for {why}, {until}."
@@ -39,7 +39,7 @@ def take_up(client, conn, guard):
     if not remove_from_channel(conn, guard):
         return False
 
-    notify.dm_subject(client, conn, guard, TOLD.format(
+    notify.dm_subject(client, conn, guard, APPLIED_DM.format(
         who=guard["subject_id"], room=guard["channel_id"],
         why=guard["reason"], until=notify.ending(guard),
     ))
@@ -48,8 +48,8 @@ def take_up(client, conn, guard):
     return True
 
 
-def lift(client, conn, guard, tell=True):
-    if tell:
+def lift(client, conn, guard, notify_member=True):
+    if notify_member:
         notify.dm_subject(client, conn, guard, OVER.format(room=guard["channel_id"]))
     return True
 

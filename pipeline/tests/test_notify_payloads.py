@@ -29,7 +29,7 @@ def what_was_heard(monkeypatch, notes):
     monkeypatch.setattr(loops, "connect", lambda: FakeConn(notes))
     got = []
     loops.listen(
-        "nemo", ("fd_channel_guard",), lambda name, told: got.append((name, told)),
+        "nemo", ("fd_channel_guard",), lambda name, payload: got.append((name, payload)),
         threading.Event(),
     )
     return got

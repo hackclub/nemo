@@ -11,7 +11,7 @@ KIND = memberguards.SHUSH
 
 DELETED = "deleted"
 
-TOLD = "Hey <@{who}>, you've been shushed for {why}, {until}."
+APPLIED_DM = "Hey <@{who}>, you've been shushed for {why}, {until}."
 
 IN_CHANNEL = (
     "Your message was removed. You are shushed for {why}, {until}. "
@@ -25,15 +25,15 @@ def take_up(client, conn, guard):
     if not memberguards.holding(conn, guard["id"]):
         return False
 
-    notify.dm_subject(client, conn, guard, TOLD.format(
+    notify.dm_subject(client, conn, guard, APPLIED_DM.format(
         who=guard["subject_id"], why=guard["reason"], until=notify.ending(guard),
     ))
     log.info("nemo: shush %s is now held on %s", guard["id"], guard["subject_id"])
     return True
 
 
-def lift(client, conn, guard, tell=True):
-    if tell:
+def lift(client, conn, guard, notify_member=True):
+    if notify_member:
         notify.dm_subject(client, conn, guard, OVER)
     return True
 

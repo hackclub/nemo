@@ -86,7 +86,7 @@ def test_every_subtype_that_carries_words_is_ours():
         assert notify.ours(event(subtype=subtype))[0] == ROOM, subtype
 
 
-def test_telling_them_is_written_down():
+def test_the_notification_is_written_down():
     conn, client = Conn(), Slack()
     notify.dm_subject(client, conn, guard(), "you've been shushed")
     assert client.posted[0]["channel"] == WHO
@@ -96,7 +96,7 @@ def test_telling_them_is_written_down():
 def test_a_dm_that_will_not_send_is_written_down_as_such():
     conn = Conn()
     notify.dm_subject(Slack(fails=("dm",)), conn, guard(), "anything")
-    assert conn.did("INSERT INTO fd.member_guard_events")[0][6].startswith("could not tell")
+    assert conn.did("INSERT INTO fd.member_guard_events")[0][6].startswith("could not notify")
 
 
 def test_a_whisper_that_will_not_send_is_swallowed():
@@ -131,6 +131,6 @@ def test_a_reset_is_written_down_with_what_came_of_it(monkeypatch):
     monkeypatch.setattr(notify.privileged, "reset_sessions", lambda who: "reset")
     conn = Conn()
     assert notify.reset(conn, guard(), "posting") == "reset"
-    told = conn.did("INSERT INTO fd.member_guard_events")[0]
-    assert told[3] == "reset"
-    assert told[6] == "reset"
+    recorded = conn.did("INSERT INTO fd.member_guard_events")[0]
+    assert recorded[3] == "reset"
+    assert recorded[6] == "reset"

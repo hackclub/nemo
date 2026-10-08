@@ -38,7 +38,7 @@ def release(client, conn, guard):
     enforcement = enforcement_for(guard)
     if enforcement is None:
         return True
-    return enforcement.lift(client, conn, guard, tell=notifies_member(conn))
+    return enforcement.lift(client, conn, guard, notify_member=notifies_member(conn))
 
 
 def release_now(client, guard):
@@ -78,9 +78,9 @@ LIFT_LOOKBACK = "2 hours"
 
 def sweep_lifted(client):
     with session() as conn:
-        untold = memberguards.lifted_untold(conn, LIFT_LOOKBACK)
+        waiting = memberguards.lifted_not_notified(conn, LIFT_LOOKBACK)
 
-    for guard in untold:
+    for guard in waiting:
         with session() as conn:
             try:
                 memberguards.record_enforcement(conn, guard["id"], guard["subject_id"],
@@ -89,7 +89,7 @@ def sweep_lifted(client):
                 release(client, conn, guard)
             except Exception as failure:
                 log.warning("nemo: could not say that %s was lifted: %s", guard["id"], failure)
-    return len(untold)
+    return len(waiting)
 
 
 def sweep_lifting(client):
@@ -137,7 +137,7 @@ def post_expiry_notice(client, guards, room):
 
 def sweep_ending(client):
     with session() as conn:
-        ending = memberguards.ending_untold(conn, expiring_soon(conn))
+        ending = memberguards.ending_not_notified(conn, expiring_soon(conn))
         room = channel.internal_log_channel(conn)
 
     if not ending or not room:

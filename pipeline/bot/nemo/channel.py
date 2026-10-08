@@ -435,12 +435,12 @@ WHERE id = %s AND woke_at IS NOT NULL AND woke_told_at IS NULL
 """
 
 
-WOKE_TOLD = """
+REOPEN_ANNOUNCED = """
 UPDATE fd.cases SET woke_told_at = now() WHERE id = %s AND woke_told_at IS NULL
 """
 
 
-WOKE_UNTOLD = """
+UNANNOUNCED_REOPENS = """
 SELECT id FROM fd.cases
 WHERE woke_at IS NOT NULL AND woke_told_at IS NULL
 ORDER BY woke_at LIMIT 50
@@ -532,7 +532,7 @@ def waiting_follow_ups(conn):
 
 
 def unannounced_reopens(conn):
-    return [row[0] for row in conn.execute(WOKE_UNTOLD).fetchall()]
+    return [row[0] for row in conn.execute(UNANNOUNCED_REOPENS).fetchall()]
 
 
 def carry_follow_ups(client, conn, case_id, channel_id=None):
@@ -555,7 +555,7 @@ def post_reopen_notice(client, conn, case_id, channel_id=None):
 
     was = row[0]
     found = post_reopen_announcement(client, conn, case_id, was, channel_id)
-    conn.execute(WOKE_TOLD, (case_id,))
+    conn.execute(REOPEN_ANNOUNCED, (case_id,))
     return found
 
 

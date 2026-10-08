@@ -359,7 +359,7 @@ WHERE state = 'lifting' AND enforced_by = 'nemo'
 ORDER BY updated_at LIMIT 20
 """
 
-ENDING_UNTOLD = """
+ENDING_NOT_NOTIFIED = """
 SELECT g.id, g.kind, g.subject_id, g.channel_id, g.reason, g.expires_at, g.case_id
 FROM fd.member_guards g
 WHERE g.state = 'live' AND g.expires_at IS NOT NULL
@@ -373,7 +373,7 @@ ORDER BY g.expires_at
 """
 
 
-LIFTED_UNTOLD = """
+LIFTED_NOT_NOTIFIED = """
 SELECT id, kind, subject_id, channel_id, reason, expires_at
 FROM fd.member_guards g
 WHERE g.state = 'lifted' AND g.enforced_by = 'nemo'
@@ -391,8 +391,8 @@ RELEASED = "released"
 LIFTED_BY_HAND = "somebody lifted it"
 
 
-def lifted_untold(conn, within):
-    return [dict(zip(WANTED, row)) for row in conn.execute(LIFTED_UNTOLD, (within,)).fetchall()]
+def lifted_not_notified(conn, within):
+    return [dict(zip(WANTED, row)) for row in conn.execute(LIFTED_NOT_NOTIFIED, (within,)).fetchall()]
 
 
 def lapsed(conn):
@@ -454,9 +454,9 @@ def still_lifting(conn):
 ENDING = "ending"
 
 
-def ending_untold(conn, within):
+def ending_not_notified(conn, within):
     fields = (*WANTED, "case_id")
     return [
         dict(zip(fields, row))
-        for row in conn.execute(ENDING_UNTOLD, (within, ENDING)).fetchall()
+        for row in conn.execute(ENDING_NOT_NOTIFIED, (within, ENDING)).fetchall()
     ]

@@ -225,8 +225,8 @@ def test_opening_a_guard_is_written_down_against_the_guard():
     conn = Conn({"INSERT INTO fd.member_guards": (9,), "UPDATE fd.actions": (1,)})
     memberguards.settled(conn, 1, submission(settle=action.CARRY),
                          standing(None, action.UNGUARDED), MOD)
-    told = conn.did("INSERT INTO fd.audit")[0]
-    assert told[2:5] == ("member_guard", 9, "opened")
+    recorded = conn.did("INSERT INTO fd.audit")[0]
+    assert recorded[2:5] == ("member_guard", 9, "opened")
 
 
 def test_adopting_and_extending_are_written_down_too():
@@ -253,6 +253,6 @@ def test_every_verb_the_writes_use_is_declared_on_the_capability():
     from lib.paths import CAPABILITIES_FILE
 
     held = yaml.safe_load(CAPABILITIES_FILE.read_text())
-    told = set(held["capabilities"]["case.act"]["events"])
+    declared = set(held["capabilities"]["case.act"]["events"])
     assert {"member_guard/opened", "member_guard/attached",
-            "member_guard/extended"} <= told
+            "member_guard/extended"} <= declared

@@ -60,23 +60,23 @@ def guard(**over):
 
 
 def test_a_lift_by_hand_is_swept_only_until_it_has_been_said():
-    assert "state = 'lifted'" in memberguards.LIFTED_UNTOLD
-    assert "enforced_by = 'nemo'" in memberguards.LIFTED_UNTOLD
-    assert "e.verb = 'released'" in memberguards.LIFTED_UNTOLD
+    assert "state = 'lifted'" in memberguards.LIFTED_NOT_NOTIFIED
+    assert "enforced_by = 'nemo'" in memberguards.LIFTED_NOT_NOTIFIED
+    assert "e.verb = 'released'" in memberguards.LIFTED_NOT_NOTIFIED
 
 
-def test_somebody_whose_shush_was_lifted_in_the_dashboard_is_told(monkeypatch):
+def test_somebody_whose_shush_was_lifted_in_the_dashboard_is_notified(monkeypatch):
     client = Slack()
-    told = []
-    monkeypatch.setattr(sweep.memberguards, "lifted_untold",
+    recorded = []
+    monkeypatch.setattr(sweep.memberguards, "lifted_not_notified",
                         lambda _conn, _within: [guard()])
     monkeypatch.setattr(sweep.memberguards, "record_enforcement",
-                        lambda *args, **over: told.append(args[4]))
+                        lambda *args, **over: recorded.append(args[4]))
     monkeypatch.setattr(sweep, "session", lambda: FakeSession())
     monkeypatch.setattr(sweep, "notifies_member", lambda _conn: True)
 
     assert sweep.sweep_lifted(client) == 1
-    assert told == [memberguards.RELEASED, "told"]
+    assert recorded == [memberguards.RELEASED, "told"]
     assert "can post again" in client.posted[0]["text"]
 
 
@@ -94,7 +94,7 @@ def test_only_a_date_already_passed_is_swept():
     assert "expires_at IS NOT NULL" in memberguards.LAPSED, "endless ones never lapse"
 
 
-def test_lifting_one_that_ran_out_says_why_and_tells_them():
+def test_lifting_one_that_ran_out_says_why_and_notifies_them():
     conn, client = Conn(), Slack()
     assert sweep.lapse(client, conn, guard())
 
@@ -175,7 +175,7 @@ def test_one_on_no_case_is_called_out_in_the_nudge():
 
 def test_the_nudge_goes_out_once_and_is_written_down(monkeypatch):
     conn = Conn()
-    monkeypatch.setattr(memberguards, "ending_untold", lambda c, within: [guard()])
+    monkeypatch.setattr(memberguards, "ending_not_notified", lambda c, within: [guard()])
     monkeypatch.setattr(sweep.channel, "internal_log_channel", lambda c: HOUSE)
     monkeypatch.setattr(sweep, "session", _session(conn))
     client = Slack()
@@ -183,13 +183,13 @@ def test_the_nudge_goes_out_once_and_is_written_down(monkeypatch):
     assert sweep.sweep_ending(client) == 1
     assert client.posted[0]["channel"] == HOUSE
     assert "Ending soon" in client.posted[0]["text"]
-    told = conn.did("INSERT INTO fd.member_guard_events")[0]
-    assert told[3] == "told"
-    assert told[6] == memberguards.ENDING
+    recorded = conn.did("INSERT INTO fd.member_guard_events")[0]
+    assert recorded[3] == "told"
+    assert recorded[6] == memberguards.ENDING
 
 
 def test_nothing_ending_says_nothing(monkeypatch):
-    monkeypatch.setattr(memberguards, "ending_untold", lambda c, within: [])
+    monkeypatch.setattr(memberguards, "ending_not_notified", lambda c, within: [])
     monkeypatch.setattr(sweep.channel, "internal_log_channel", lambda c: HOUSE)
     monkeypatch.setattr(sweep, "session", _session(Conn()))
     client = Slack()
@@ -199,8 +199,8 @@ def test_nothing_ending_says_nothing(monkeypatch):
 
 
 def test_the_same_guard_is_not_nudged_twice_in_a_day():
-    assert "interval '20 hours'" in memberguards.ENDING_UNTOLD
-    assert "verb = 'told'" in memberguards.ENDING_UNTOLD
+    assert "interval '20 hours'" in memberguards.ENDING_NOT_NOTIFIED
+    assert "verb = 'told'" in memberguards.ENDING_NOT_NOTIFIED
 
 
 @pytest.mark.parametrize("enforcement", [shush, channel_ban])
@@ -224,13 +224,13 @@ def test_an_horizon_outside_the_range_falls_back():
     assert sweep.expiring_soon(Conn(settings={"nemo.sweep_soon_hours": "sideways"})) == "36 hours"
 
 
-def test_the_member_is_told_unless_it_is_turned_off():
+def test_the_member_is_notified_unless_it_is_turned_off():
     assert sweep.notifies_member(Conn()) is True
     assert sweep.notifies_member(Conn(settings={"nemo.sweep_tells_member": "on"})) is True
     assert sweep.notifies_member(Conn(settings={"nemo.sweep_tells_member": "off"})) is False
 
 
-def test_a_lapse_says_nothing_when_telling_is_off():
+def test_a_lapse_says_nothing_when_notifying_is_off():
     conn = Conn(settings={"nemo.sweep_tells_member": "off"})
     client = Slack()
     sweep.lapse(client, conn, guard())

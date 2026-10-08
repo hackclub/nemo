@@ -10,10 +10,10 @@ TITLE_LIMIT = 24
 
 WHY = "resolve_why"
 NOTE = "resolve_note"
-TELL = "resolve_tell"
+NOTIFY = "resolve_notify"
 MESSAGE = "resolve_message"
 
-TELLING = "tell_them"
+NOTIFY_REPORTER = "notify_reporter"
 
 TABLE = None
 
@@ -109,22 +109,22 @@ def build_view(case_id, live_actions=(), open_reports=0):
         blocks += [
             {
                 "type": "input",
-                "block_id": TELL,
+                "block_id": NOTIFY,
                 "optional": True,
                 "label": {"type": "plain_text", "text": "The reporter"},
                 "element": {
                     "type": "checkboxes",
-                    "action_id": TELL,
+                    "action_id": NOTIFY,
                     "options": [
                         {
                             "text": {"type": "plain_text", "text": "Tell them it is closed"},
-                            "value": TELLING,
+                            "value": NOTIFY_REPORTER,
                         }
                     ],
                     "initial_options": [
                         {
                             "text": {"type": "plain_text", "text": "Tell them it is closed"},
-                            "value": TELLING,
+                            "value": NOTIFY_REPORTER,
                         }
                     ],
                 },
@@ -157,7 +157,7 @@ def build_view(case_id, live_actions=(), open_reports=0):
 def submitted_values(view_state, live_actions=()):
     values = view_state.get("values", {})
     chosen = (values.get(WHY, {}).get(WHY, {}).get("selected_option") or {}).get("value")
-    ticked = values.get(TELL, {}).get(TELL, {}).get("selected_options") or []
+    ticked = values.get(NOTIFY, {}).get(NOTIFY, {}).get("selected_options") or []
     message = values.get(MESSAGE, {}).get(MESSAGE, {}).get("value")
 
     note = richtext.flatten(values.get(NOTE, {}).get(NOTE, {}).get("rich_text_value"))
@@ -165,7 +165,7 @@ def submitted_values(view_state, live_actions=()):
     return {
         "resolution": forced(live_actions) or chosen,
         "member_note": note or None,
-        "telling": any(one.get("value") == TELLING for one in ticked),
+        "notify_reporter": any(one.get("value") == NOTIFY_REPORTER for one in ticked),
         "message": (message or "").strip() or default_message(),
     }
 
@@ -173,7 +173,7 @@ def submitted_values(view_state, live_actions=()):
 def validation_errors(values):
     if not values.get("resolution"):
         return {WHY: "Say why this case is closing."}
-    if values.get("telling") and richtext.mentions(values.get("message")):
+    if values.get("notify_reporter") and richtext.mentions(values.get("message")):
         return {MESSAGE: "The reporter cannot be sent a mention. Say it in words."}
     return None
 
