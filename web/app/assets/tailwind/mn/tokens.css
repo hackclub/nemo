@@ -235,11 +235,11 @@
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
 
-    --success: oklch(0.508 0.118 165.612);
-    --warning: oklch(0.54 0.12 85);
+    --success: oklch(0.596 0.145 163.225);
+    --warning: oklch(0.6 0.14 72);
     --info: oklch(0.546 0.245 262.881);
-    --orange: oklch(0.56 0.155 48);
-    --orange-foreground: oklch(0.99 0.006 60);
+    --orange: oklch(0.646 0.222 41.116);
+    --orange-foreground: oklch(0.985 0.016 73.684);
     --tip-bg: var(--foreground);
     --tip-ink: var(--background);
     --chart-grid: oklch(0.9 0 0);
@@ -251,13 +251,13 @@
     --chart-badge-fg: var(--background);
     --chart-track: oklch(0.94 0 0);
 
-    --series-0: oklch(0.72 0.012 80);
-    --series-rest: oklch(0.9 0.004 80);
+    --series-0: oklch(0.705 0.015 286.067);
+    --series-rest: oklch(0.92 0.004 286.32);
     --series-1: var(--chart-2);
-    --series-2: oklch(0.54 0.115 245);
-    --series-3: oklch(0.55 0.11 160);
-    --series-4: oklch(0.55 0.135 310);
-    --series-5: oklch(0.56 0.15 20);
+    --series-2: oklch(0.63 0.17 255);
+    --series-3: oklch(0.68 0.15 162);
+    --series-4: oklch(0.6 0.18 295);
+    --series-5: oklch(0.64 0.19 18);
   }
 
   :root[data-theme="lightsout"] {
@@ -330,27 +330,27 @@
   }
 
   :root:not([data-theme="lightsout"])[data-accent="orange"] {
-    --series-1: oklch(0.58 0.15 48);
+    --series-1: oklch(0.72 0.175 50);
 
-    --cal-1: oklch(0.91 0.045 60);
-    --cal-2: oklch(0.84 0.085 55);
-    --cal-3: oklch(0.75 0.125 52);
-    --cal-4: oklch(0.66 0.15 50);
-    --cal-5: oklch(0.55 0.155 48);
-    --clk-1: oklch(0.89 0.06 85);
-    --clk-2: oklch(0.79 0.125 55);
-    --clk-3: oklch(0.66 0.17 20);
-    --clk-4: oklch(0.52 0.165 345);
-    --clk-5: oklch(0.38 0.115 295);
+    --cal-1: oklch(0.954 0.038 75.164);
+    --cal-2: oklch(0.901 0.076 70.697);
+    --cal-3: oklch(0.837 0.128 66.29);
+    --cal-4: oklch(0.75 0.183 55.934);
+    --cal-5: oklch(0.646 0.222 41.116);
+    --clk-1: oklch(0.93 0.085 92);
+    --clk-2: oklch(0.83 0.13 70);
+    --clk-3: oklch(0.72 0.165 45);
+    --clk-4: oklch(0.61 0.17 15);
+    --clk-5: oklch(0.49 0.16 340);
 
-    --dv-d3: oklch(0.66 0.125 25);
-    --dv-d2: oklch(0.78 0.082 25);
-    --dv-d1: oklch(0.88 0.04 25);
-    --dv-z: oklch(0.93 0.003 80);
-    --dv-u1: oklch(0.88 0.034 245);
-    --dv-u2: oklch(0.78 0.07 245);
-    --dv-u3: oklch(0.66 0.1 245);
-    --dv-na: oklch(0.95 0.002 80);
+    --dv-d3: oklch(0.704 0.191 22.216);
+    --dv-d2: oklch(0.808 0.114 19.571);
+    --dv-d1: oklch(0.885 0.062 18.334);
+    --dv-z: oklch(0.967 0.001 286.375);
+    --dv-u1: oklch(0.882 0.059 254.128);
+    --dv-u2: oklch(0.809 0.105 251.813);
+    --dv-u3: oklch(0.707 0.165 254.624);
+    --dv-na: oklch(0.985 0 0);
   }
 
   :root[data-theme="lightsout"][data-accent="orange"] {
