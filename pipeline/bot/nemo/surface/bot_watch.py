@@ -1,11 +1,13 @@
 import datetime as dt
 import logging
 import os
+import time
 
 from bot.core import privileged, session, whoami
 from bot.core.formatting import escape
 from bot.nemo import channel, channelguards, channels
 from bot.nemo.surface import on_event
+from bot.nemo.views.activity import message_url
 
 log = logging.getLogger("bot.nemo")
 
@@ -127,13 +129,6 @@ def footer(channel_id, link=None, app_id=None):
     return "\n" + "  ·  ".join(parts) if parts else ""
 
 
-def permalink_for(client, channel_id, ts):
-    try:
-        return (client.chat_getPermalink(channel=channel_id, message_ts=ts) or {}).get("permalink")
-    except Exception:
-        return None
-
-
 def plural(count, one, many):
     return f"{count} {one if count == 1 else many}"
 
@@ -215,9 +210,10 @@ def posted(ctx):
     guard_id, _allowed = standing
     face_id = next((one for one in ids if one and one.startswith("U")), None)
     subject_id = face_id or bot_id or user_id
-    words = text_of(event)
-    link = permalink_for(ctx.client, channel_id, ts)
     privileged.delete_message(channel_id, ts)
+    took_ms = round((time.time() - float(ts)) * 1000)
+    words = text_of(event)
+    link = message_url(channel_id, ts, event.get("thread_ts"))
 
     with session() as conn:
         name = naming(face_id, label, subject_id)
@@ -229,7 +225,8 @@ def posted(ctx):
                                bot_id=bot_id, label=label, text=words, message_ts=ts,
                                permalink=link, app_id=app_id)
 
-    log.info("nemo: guard %s deleted %s from %s in %s", guard_id, ts, subject_id, channel_id)
+    log.info("nemo: guard %s deleted %s from %s in %s, %sms after it was posted",
+             guard_id, ts, subject_id, channel_id, took_ms)
     return guard_id
 
 

@@ -72,6 +72,12 @@ def reply_url(channel_id, root_ts, reply_ts):
     )
 
 
+def message_url(channel_id, ts, thread_ts=None):
+    if thread_ts and thread_ts != ts:
+        return reply_url(channel_id, thread_ts, ts)
+    return f"{ARCHIVES}/{channel_id}/p{ts.replace('.', '')}"
+
+
 def chart_block(file_id, span):
     return {
         "type": "image",
