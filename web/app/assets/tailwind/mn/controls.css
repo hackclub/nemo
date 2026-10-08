@@ -25,25 +25,6 @@
 
   .cfield { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 
-  .setlist { display: flex; flex-direction: column; }
-  .setlist > .setline {
-    display: flex;
-    align-items: center;
-    gap: var(--s-xs);
-    min-height: 44px;
-    padding: 6px var(--s-sm);
-    border-top: 1px solid var(--line-soft);
-  }
-  .setlist > .setline:first-child { border-top: 0; }
-  .card-body + .setlist { border-top: 1px solid var(--line-soft); }
-  .setline > .setname {
-    flex: 1 1 auto;
-    min-width: 0;
-    font-size: var(--t-body);
-    color: var(--ink);
-    cursor: pointer;
-  }
-  .setline > .setval { flex: none; margin-left: auto; display: flex; align-items: center; }
   .chiprow { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; min-width: 0; }
   .chiprow-fill { flex: 1 1 auto; }
   .dot {

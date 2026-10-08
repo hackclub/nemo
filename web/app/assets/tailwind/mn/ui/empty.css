@@ -1,0 +1,45 @@
+@layer base {
+  .empty {
+    @apply flex min-h-40 w-full min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-xl p-6 text-center text-balance;
+  }
+
+  .card > .empty, .card-body > .empty, .fold-body > .empty {
+    @apply min-h-23 rounded-none;
+  }
+
+  :is(.section, .stack) > .empty {
+    @apply border border-dashed border-border;
+  }
+
+  .empty-mark {
+    @apply mb-2 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0;
+  }
+
+  .empty-title {
+    @apply text-sm font-medium tracking-tight text-foreground;
+  }
+
+  .empty p:not(.empty-title), .empty-note {
+    @apply max-w-sm text-sm/relaxed text-muted-foreground [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary;
+  }
+
+  .empty-do {
+    @apply mt-2 flex items-center justify-center gap-2;
+  }
+
+  .empty-keys {
+    @apply mt-1 flex gap-1;
+  }
+
+  .empty-fish {
+    @apply w-24 flex-none opacity-90;
+  }
+
+  .empty-aside {
+    @apply flex items-center gap-4 p-4;
+  }
+
+  .empty-note {
+    @apply flex min-w-0 flex-col items-start gap-1 text-left;
+  }
+}

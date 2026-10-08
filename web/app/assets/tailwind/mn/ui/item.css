@@ -1,0 +1,25 @@
+@layer base {
+  .setlist {
+    @apply flex w-full flex-col;
+  }
+
+  .setlist > .setline {
+    @apply flex w-full flex-wrap items-center gap-2.5 border-t border-border px-4 py-2.5 text-sm transition-colors outline-none;
+  }
+
+  .setlist > .setline:first-child {
+    @apply border-t-0;
+  }
+
+  .card-body + .setlist {
+    @apply border-t border-border;
+  }
+
+  .setline > .setname {
+    @apply flex min-w-0 flex-1 cursor-pointer flex-col gap-1 leading-snug font-medium text-foreground;
+  }
+
+  .setline > .setval {
+    @apply ml-auto flex flex-none items-center gap-2;
+  }
+}

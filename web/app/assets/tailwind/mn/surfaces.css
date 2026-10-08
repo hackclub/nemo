@@ -143,65 +143,6 @@
   }
   .pager-at { font-size: var(--t-small); color: var(--ink-4); }
 
-  .empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--gap-ctl);
-    flex: 1 1 auto;
-    min-height: 160px;
-    padding: var(--s-xl) var(--s-md);
-    text-align: center;
-  }
-  .card > .empty, .card-body > .empty, .fold-body > .empty {
-    min-height: 92px;
-    padding: var(--s-md) var(--s-sm);
-  }
-  .empty-mark {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    margin-bottom: var(--s-3xs);
-    color: var(--ink-4);
-  }
-  .empty-mark > svg {
-    width: 28px;
-    height: 28px;
-    stroke-width: 1.4;
-  }
-  .empty-title {
-    font-size: var(--t-mid);
-    font-weight: 600;
-    line-height: var(--lh-snug);
-    letter-spacing: var(--tr-head);
-    color: var(--ink);
-  }
-  .empty p, .empty-note {
-    font-size: var(--t-small);
-    color: var(--ink-3);
-    line-height: var(--lh-prose);
-    max-width: 42ch;
-  }
-  .empty-do { display: flex; align-items: center; gap: var(--s-2xs); margin-top: var(--s-2xs); }
-  .empty-keys { display: flex; gap: var(--gap-ctl-sm); margin-top: var(--s-3xs); }
-  .empty-fish { width: 96px; opacity: 0.9; flex: none; }
-  .empty-aside {
-    display: flex;
-    align-items: center;
-    gap: var(--s-sm);
-    padding: var(--s-sm) var(--s-xs);
-  }
-  .empty-note {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    align-items: flex-start;
-    text-align: left;
-    min-width: 0;
-  }
-
   .flagstrip, .flag-wide {
     display: flex;
     align-items: center;

@@ -144,7 +144,7 @@
     .facts-strip > div:first-child, .facts-strip > .fact:first-child { border-top: 0; }
     .strip { gap: var(--s-2xs); }
     .strip-div { display: none; }
-    .empty { padding: var(--s-lg) var(--s-xs); }
+    .empty { padding: 1.75rem 0.75rem; }
     .topbar-msgs { left: var(--p-ctl); right: var(--p-ctl); translate: none; bottom: var(--p-ctl); }
     .toast, .topbar-msg { min-width: 0; max-width: none; }
     .btn { padding: 0 var(--p-ctl-sm); }
