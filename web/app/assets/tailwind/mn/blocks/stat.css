@@ -1,0 +1,75 @@
+@layer base {
+  .metrics {
+    @apply grid min-w-0 gap-3;
+    grid-template-columns: repeat(auto-fit, minmax(var(--metric-min, 200px), 1fr));
+  }
+
+  .metric {
+    --metric-head: 2rem;
+    --metric-pad: 1rem;
+    @apply relative isolate flex min-w-0 flex-col gap-1.5 rounded-xl bg-muted/50 px-(--metric-pad) pb-(--metric-pad) text-card-foreground no-underline ring-1 ring-foreground/10;
+  }
+
+  .metric::before {
+    content: "";
+    @apply absolute inset-x-0 bottom-0 -z-1 rounded-xl bg-card shadow-xs ring-1 ring-foreground/10 transition-colors;
+    top: var(--metric-head);
+    background-image: linear-gradient(160deg, color-mix(in oklab, var(--foreground) 4%, transparent), transparent 55%);
+  }
+
+  a.metric:hover, button.metric:hover {
+    @apply no-underline;
+  }
+
+  a.metric:hover::before, button.metric:hover::before {
+    @apply bg-muted;
+  }
+
+  .metric[aria-current="true"]::before {
+    @apply ring-primary;
+  }
+
+  .metric > .pickswitch {
+    @apply absolute top-1.5 right-2 z-1;
+  }
+
+  .metric:has(> .pickswitch) > .metric-key {
+    padding-right: 100px;
+  }
+
+  .metric-key {
+    @apply mb-(--metric-pad) flex h-(--metric-head) flex-none items-center gap-2 truncate text-xs font-normal tracking-wide text-muted-foreground;
+  }
+
+  .metric-value {
+    @apply font-sans text-2xl leading-tight font-semibold text-card-foreground tabular-nums;
+  }
+
+  .metric-value.good {
+    @apply text-success;
+  }
+
+  .metric-value.warn {
+    @apply text-warning;
+  }
+
+  .metric-value.crit {
+    @apply text-destructive;
+  }
+
+  .metric-value small {
+    @apply ml-0.5 text-sm font-medium text-muted-foreground;
+  }
+
+  .metric-note {
+    @apply mt-auto flex min-h-4 flex-wrap items-center gap-1.5 text-xs text-muted-foreground;
+  }
+
+  .metric-spark {
+    @apply mt-1.5 h-[34px] min-w-0;
+  }
+
+  .metric-spark .chart {
+    @apply h-[34px];
+  }
+}
