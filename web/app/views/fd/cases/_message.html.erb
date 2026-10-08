@@ -8,9 +8,9 @@
         <% unless grouped %>
           <span class="msg-who"><%= entry.name %></span>
           <span class="msg-at"><%= entry.at.strftime("%-d %b, %H:%M") %></span>
-          <% if %w[them us].include?(entry.kind) %><span class="tag tag-reporter">reporter</span><% end %>
+          <% if %w[them us].include?(entry.kind) %><span class="chip chip-sm chip-primary">reporter</span><% end %>
         <% end %>
-        <% if entry.state %><span class="tag <%= state_tone(entry.state).sub("chip-", "") %>"><%= entry.state %></span><% end %>
+        <% if entry.state %><span class="chip chip-sm <%= state_tone(entry.state) %>"><%= entry.state %></span><% end %>
       </div>
     <% end %>
     <% if entry.blocks.present? || entry.body.present? %>
@@ -65,7 +65,7 @@
             <span class="msg-file is-out">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M15 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/></svg>
               <span class="trunc"><%= file.shown_name %></span>
-              <span class="tag off"><%= file.note %></span>
+              <span class="chip chip-off"><%= file.note %></span>
             </span>
           <% end %>
         <% end %>

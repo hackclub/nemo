@@ -280,7 +280,6 @@
   .lrow-head > .chip::before { content: "\00b7"; margin-right: 7px; color: var(--ink-4); }
   .botlink { color: inherit; text-decoration: none; }
   .botlink:hover { text-decoration: underline; text-underline-offset: 2px; }
-  .prior-count.is-none { background: var(--mute-soft); color: var(--ink-4); }
   .offered {
     display: flex;
     align-items: center;
@@ -440,7 +439,6 @@
     background: var(--primary-soft);
     border-left: 3px solid var(--primary);
   }
-  .tag-reporter { background: var(--primary-soft); color: var(--primary); }
   .msg[data-kind="action"] {
     padding: 6px 9px;
     margin: 0 -9px;

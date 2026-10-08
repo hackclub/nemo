@@ -28,6 +28,8 @@
 @import "./mn/layout.css";
 @import "./mn/controls.css";
 @import "./mn/ui/button.css";
+@import "./mn/ui/badge.css";
+@import "./mn/blocks/delta.css";
 @import "./mn/surfaces.css";
 @import "./mn/overlays.css";
 @import "./mn/charts.css";

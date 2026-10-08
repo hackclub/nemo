@@ -1,0 +1,75 @@
+@layer base {
+  .chip {
+    @apply inline-flex w-fit shrink-0 items-center justify-center overflow-hidden whitespace-nowrap focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [&>svg]:pointer-events-none;
+    @apply h-5 gap-1 rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium transition-all [&>svg]:size-3!;
+    @apply bg-secondary text-secondary-foreground no-underline [a]:hover:bg-secondary/80;
+  }
+
+  .chip-good {
+    @apply bg-success/10 text-success dark:bg-success/20 [a]:hover:bg-success/20;
+  }
+
+  .chip-warn {
+    @apply bg-warning/10 text-warning dark:bg-warning/20 [a]:hover:bg-warning/20;
+  }
+
+  .chip-crit {
+    @apply bg-destructive/10 [a]:hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 text-destructive dark:bg-destructive/20;
+  }
+
+  .chip-off {
+    @apply border-border bg-transparent text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground;
+  }
+
+  .chip-primary {
+    @apply bg-primary/10 text-primary dark:bg-primary/20;
+  }
+
+  .chip-sm {
+    @apply h-4 px-1.5 py-0 text-[0.6875rem];
+  }
+
+  .chip-dot {
+    @apply size-1.5 shrink-0 rounded-full bg-current;
+  }
+
+  .token {
+    @apply inline-flex h-6 w-fit shrink-0 items-center gap-1 overflow-hidden rounded-4xl bg-secondary pr-1 pl-1 text-xs font-medium whitespace-nowrap text-secondary-foreground;
+  }
+
+  .token-plain {
+    @apply h-auto gap-1.5 py-1 pr-1 pl-2.5;
+  }
+
+  .token .row-avatar, .token .avatar, .token > img {
+    @apply size-4 text-[0.5625rem];
+  }
+
+  .token-x {
+    @apply inline-grid size-4 cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-current opacity-60 hover:bg-foreground/10 hover:opacity-100;
+  }
+
+  .pill {
+    @apply inline-flex h-6 w-fit shrink-0 items-center gap-1.5 rounded-4xl border border-border pr-1 pl-2.5 text-xs font-medium whitespace-nowrap text-foreground;
+  }
+
+  .pill > a {
+    @apply inline-grid size-4 place-items-center rounded-full text-[0.625rem] text-muted-foreground no-underline hover:bg-muted hover:text-foreground;
+  }
+
+  .state {
+    @apply inline-flex items-center gap-1.5 text-xs font-medium whitespace-nowrap text-muted-foreground;
+  }
+
+  .state-good, .state-live {
+    @apply text-success;
+  }
+
+  .state-warn {
+    @apply text-warning;
+  }
+
+  .state-crit {
+    @apply text-destructive;
+  }
+}

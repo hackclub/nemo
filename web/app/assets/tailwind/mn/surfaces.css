@@ -455,10 +455,6 @@
   .strip-div { width: 1px; height: 26px; background: var(--line-soft); flex: none; border: 0; }
   .mark-rule { border-top: 1px solid var(--line-soft); }
 
-  .delta { display: inline-flex; align-items: center; gap: 3px; font-size: var(--t-fine); font-weight: 600; }
-  .delta-up { color: var(--up); }
-  .delta-down { color: var(--down); }
-  .delta-share { color: var(--ink-4); font-weight: 400; }
 
   .stat-row { display: flex; align-items: baseline; gap: var(--s-2xs); }
 

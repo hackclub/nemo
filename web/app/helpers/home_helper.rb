@@ -80,9 +80,26 @@ module HomeHelper
     pct = stat_delta(current, prior)
     return nil if pct.nil? || pct.abs < 0.05
 
-    arrow = pct.positive? ? "↑" : "↓"
-    style = pct.positive? ? "delta-up" : "delta-down"
-    tag.span("#{arrow} #{number_to_percentage(pct.abs, precision: 1)}", class: style)
+    delta_tag(pct)
+  end
+
+  DELTA_WAYS = {
+    "up" => ["m18 15-6-6-6 6", "up"],
+    "down" => ["m6 9 6 6 6-6", "down"],
+    "flat" => ["M5 12h14", "no change"]
+  }.freeze
+
+  def delta_tag(pct)
+    way = pct.positive? ? "up" : pct.negative? ? "down" : "flat"
+    path, said = DELTA_WAYS.fetch(way)
+    tag.span(class: "delta delta-#{way}") do
+      safe_join([
+        tag.svg(viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2,
+          "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true") { tag.path(d: path) },
+        tag.span(said, class: "visually-hidden"),
+        number_to_percentage(pct.abs, precision: 1)
+      ])
+    end
   end
 
   def share_chip(numerator, denominator)

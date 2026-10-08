@@ -99,7 +99,7 @@ module ChannelsHelper
     return tag.span("n/a", class: "sub2") if change.nil?
 
     change = change.to_f
-    tone = change.positive? ? "delta-up" : change.negative? ? "delta-down" : "share"
+    tone = change.positive? ? "delta-up" : change.negative? ? "delta-down" : "delta-share"
     tag.span("#{change.positive? ? '+' : ''}#{number_to_percentage(change, precision: 1)}",
       class: tone,
       title: "#{number_with_delimiter(channel.range_messages)} member messages against " \
@@ -157,12 +157,10 @@ module ChannelsHelper
     channel_path(@channel, **text.compact)
   end
 
-  def pulse_delta(pct, text = nil)
+  def pulse_delta(pct, against = nil)
     return tag.span("n/a", class: "sub2") if pct.nil?
 
-    tone = pct.positive? ? "delta-up" : pct.negative? ? "delta-down" : "delta-share"
-    text = "#{pct.positive? ? '+' : ''}#{number_to_percentage(pct, precision: 1)}"
-    safe_join([tag.span(text, class: tone), text].compact, " ")
+    safe_join([delta_tag(pct), against].compact, " ")
   end
 
   def duration_label(seconds)

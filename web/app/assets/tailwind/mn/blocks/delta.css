@@ -1,0 +1,17 @@
+@layer base {
+  .delta {
+    @apply inline-flex items-center gap-1 text-muted-foreground tabular-nums [&_svg]:size-3 [&_svg]:shrink-0;
+  }
+
+  .delta-up {
+    @apply text-success;
+  }
+
+  .delta-down {
+    @apply text-destructive;
+  }
+
+  .delta-share {
+    @apply font-normal text-muted-foreground;
+  }
+}
