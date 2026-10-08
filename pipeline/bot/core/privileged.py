@@ -71,9 +71,9 @@ def admin_user_id():
     return _admin["id"]
 
 
-def delete_message(channel_id, ts):
+def delete_message(channel_id, ts, max_retries=2):
     proxy().call("chat.delete", {"channel": channel_id, "ts": ts},
-                 credential="admin", max_retries=2)
+                 credential="admin", max_retries=max_retries)
 
 
 def kick(channel_id, user_id):

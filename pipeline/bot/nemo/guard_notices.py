@@ -68,6 +68,10 @@ def detail_of(event):
     if event["verb"] == "kicked":
         return (f"Put {name} out of <#{room}>, which is not on its allow list."
                 + footer(room, app_id=event["app_id"]))
+    if event["message_ts"]:
+        return (f":warning: Could not delete a message from {name} in <#{room}> "
+                f"({event['detail']})."
+                + quoted(event["message_text"]) + footer(room, event["permalink"], event["app_id"]))
     return (f":warning: {name} joined <#{room}> off the allow list, and we could not put "
             f"them out ({event['detail']})." + footer(room, app_id=event["app_id"]))
 

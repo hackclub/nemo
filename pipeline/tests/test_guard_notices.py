@@ -8,8 +8,15 @@ BOT = "U9"
 PARENT = "1700000000.000100"
 
 
-def event(event_id, verb="deleted", subject=BOT, label="spammer", text="buy now", detail=None):
-    return (event_id, ROOM, subject, verb, label, text, f"https://link/{event_id}", "A1", detail)
+def event(event_id, verb="deleted", subject=BOT, label="spammer", text="buy now", detail=None,
+          message_ts="1700000000.000200"):
+    return (event_id, ROOM, subject, verb, label, text, message_ts, f"https://link/{event_id}",
+            "A1", detail)
+
+
+def as_dict(row):
+    return dict(zip(("id", "channel_id", "subject_id", "verb", "label", "message_text",
+                     "message_ts", "permalink", "app_id", "detail"), row))
 
 
 class Conn:
@@ -221,10 +228,9 @@ def test_drain_asks_for_another_pass_when_the_group_limit_is_hit(monkeypatch):
 
 
 def test_details_read_like_the_old_notices():
-    deleted = dict(zip(("id", "channel_id", "subject_id", "verb", "label", "message_text",
-                        "permalink", "app_id", "detail"), event(1)))
-    kicked = {**deleted, "verb": "kicked"}
-    stuck = {**deleted, "verb": "let_past", "detail": "away"}
+    deleted = as_dict(event(1))
+    kicked = {**deleted, "verb": "kicked", "message_ts": None}
+    stuck = {**deleted, "verb": "let_past", "detail": "away", "message_ts": None}
 
     assert guard_notices.detail_of(deleted).startswith(
         f"Deleted a message from <@{BOT}>, which is not on the allow list for <#{ROOM}>.\n> buy now")
@@ -234,6 +240,23 @@ def test_details_read_like_the_old_notices():
     assert guard_notices.detail_of(stuck).startswith(
         f":warning: <@{BOT}> joined <#{ROOM}> off the allow list, and we could not put them "
         "out (away).")
+
+
+def test_a_delete_that_was_given_up_says_so():
+    kept = as_dict(event(1, verb="let_past", detail="cant_delete_message"))
+
+    text = guard_notices.detail_of(kept)
+    assert text.startswith(
+        f":warning: Could not delete a message from <@{BOT}> in <#{ROOM}> (cant_delete_message).")
+    assert "> buy now" in text
+    assert "<https://link/1|message link>" in text
+
+
+def test_notices_wait_for_a_queued_delete():
+    from bot.nemo import channelguards
+
+    assert "NOT remove_pending" in channelguards.CLAIM_NOTICES
+    assert "NOT remove_pending" in channelguards.NOTICE_GROUPS
 
 
 def test_a_bot_with_no_user_is_named_by_its_label():

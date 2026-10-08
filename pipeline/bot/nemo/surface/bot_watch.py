@@ -121,7 +121,12 @@ def posted(ctx):
     guard_id, _allowed = standing
     face_id = next((one for one in ids if one and one.startswith("U")), None)
     subject_id = face_id or bot_id or user_id
-    privileged.delete_message(channel_id, ts)
+    failure = None
+    try:
+        privileged.delete_message(channel_id, ts, max_retries=0)
+    except Exception as failed:
+        if not privileged.gone(failed):
+            failure = failed
     took_ms = round((time.time() - float(ts)) * 1000)
     words = text_of(event)
     link = message_url(channel_id, ts, event.get("thread_ts"))
@@ -129,8 +134,14 @@ def posted(ctx):
     with session() as conn:
         channelguards.record_enforcement(conn, guard_id, channel_id, subject_id, "deleted",
                                bot_id=bot_id, label=label, text=words, message_ts=ts,
-                               permalink=link, app_id=app_id, notice_wanted=True)
+                               permalink=link, app_id=app_id, notice_wanted=True,
+                               detail=failure and str(failure)[:500],
+                               remove_pending=failure is not None)
 
+    if failure is not None:
+        log.info("nemo: guard %s could not delete %s in %s yet, queued for a retry: %s",
+                 guard_id, ts, channel_id, failure)
+        return guard_id
     log.info("nemo: guard %s deleted %s from %s in %s, %sms after it was posted",
              guard_id, ts, subject_id, channel_id, took_ms)
     return guard_id

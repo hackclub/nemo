@@ -4,7 +4,8 @@ import threading
 
 from bot.core import loops, session
 from bot.nemo import automod, channel, channelguards, channels, chat, guards, guard_actions
-from bot.nemo import enforcement, guard_notices, memberguards, case_queue, responses, screening
+from bot.nemo import enforcement, guard_notices, guard_removals, memberguards, case_queue
+from bot.nemo import responses, screening
 from bot.nemo.enforcement import purge, sweep
 
 log = logging.getLogger("bot.nemo")
@@ -22,6 +23,7 @@ AUTOMOD_WORD = "fd_automod_word"
 CHANNEL_PURGE = "fd_channel_purge"
 BLOCKED_DOMAIN = "fd_blocked_domain"
 GUARD_NOTICE = "fd_guard_notice"
+GUARD_REMOVE = "fd_guard_remove"
 
 DEFAULT_SECONDS = 300
 DEFAULT_JOIN_SECONDS = 1800
@@ -199,10 +201,15 @@ def start(case_channel, stopping, channel_id=None):
 
     wake_notices = loops.draining(f"{NAME}-notices",
                                   lambda: guard_notices.drain(case_channel.client), stopping)
+    wake_removals = loops.draining(f"{NAME}-removals",
+                                   lambda: guard_removals.drain(case_channel.client, wake_notices),
+                                   stopping, settle=1.0, every=5.0)
 
     def on_notify(channel_name, payload):
         if channel_name == GUARD_NOTICE:
             wake_notices()
+        elif channel_name == GUARD_REMOVE:
+            wake_removals()
         elif channel_name == CHAT:
             case_channel.mirror(payload)
         elif channel_name == OUTBOX:
@@ -252,7 +259,7 @@ def start(case_channel, stopping, channel_id=None):
         loops.watching(NAME,
                        (CASES, CHAT, OUTBOX, CONVERSATION, GUARD, CHANNEL_GUARD,
                         MEMBER_GUARD, APP_SETTING, AUTOMOD_WORD, CHANNEL_PURGE,
-                        GUARD_NOTICE, BLOCKED_DOMAIN),
+                        GUARD_NOTICE, GUARD_REMOVE, BLOCKED_DOMAIN),
                        on_notify, stopping),
         loops.sweeping(NAME, every(), lambda: once(case_channel, channel_id), stopping),
         loops.sweeping(f"{NAME}-joins", every_join_sweep(), lambda: join_sweep(case_channel), stopping),

@@ -135,7 +135,7 @@ def test_a_delete_invites_the_admin_then_retries_once():
 
     tries, invited = [], []
 
-    def flaky(channel_id, ts):
+    def flaky(channel_id, ts, max_retries=2):
         tries.append(ts)
         if len(tries) == 1:
             raise RuntimeError("channel_not_found")

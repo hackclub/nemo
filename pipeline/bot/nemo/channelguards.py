@@ -79,25 +79,25 @@ RETURNING deleted_count, kicked_count
 HAPPENED = """
 INSERT INTO fd.channel_guard_events
     (guard_id, channel_id, subject_id, bot_id, label, verb, message_text, message_ts, permalink, app_id,
-     detail, notice_wanted)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+     detail, notice_wanted, remove_pending)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 RETURNING id
 """
 
 NOTICE_GROUPS = """
 SELECT guard_id, subject_id
 FROM fd.channel_guard_events
-WHERE notice_wanted AND noticed_at IS NULL AND notice_attempts < %s
+WHERE notice_wanted AND noticed_at IS NULL AND notice_attempts < %s AND NOT remove_pending
 GROUP BY guard_id, subject_id
 ORDER BY min(id)
 LIMIT %s
 """
 
 CLAIM_NOTICES = """
-SELECT id, channel_id, subject_id, verb, label, message_text, permalink, app_id, detail
+SELECT id, channel_id, subject_id, verb, label, message_text, message_ts, permalink, app_id, detail
 FROM fd.channel_guard_events
 WHERE guard_id = %s AND subject_id = %s
-  AND notice_wanted AND noticed_at IS NULL AND notice_attempts < %s
+  AND notice_wanted AND noticed_at IS NULL AND notice_attempts < %s AND NOT remove_pending
 ORDER BY id
 LIMIT %s
 FOR UPDATE SKIP LOCKED
@@ -113,8 +113,31 @@ WHERE id = ANY(%s)
 RETURNING id, notice_attempts
 """
 
-NOTICE_FIELDS = ("id", "channel_id", "subject_id", "verb", "label", "message_text", "permalink",
-                 "app_id", "detail")
+NOTICE_FIELDS = ("id", "channel_id", "subject_id", "verb", "label", "message_text", "message_ts",
+                 "permalink", "app_id", "detail")
+
+CLAIM_REMOVALS = """
+SELECT id, channel_id, message_ts
+FROM fd.channel_guard_events
+WHERE remove_pending
+ORDER BY id
+LIMIT %s
+FOR UPDATE SKIP LOCKED
+"""
+
+REMOVED = """
+UPDATE fd.channel_guard_events SET remove_pending = false, detail = NULL WHERE id = %s
+"""
+
+REMOVAL_FAILED = """
+UPDATE fd.channel_guard_events
+SET remove_attempts = remove_attempts + 1,
+    detail = %s,
+    remove_pending = remove_attempts + 1 < %s,
+    verb = CASE WHEN remove_attempts + 1 < %s THEN verb ELSE 'let_past' END
+WHERE id = %s
+RETURNING remove_pending
+"""
 
 _held = {}
 _loaded = False
@@ -255,14 +278,27 @@ def notice_failed(conn, event_ids):
     return conn.execute(NOTICE_FAILED, (list(event_ids),)).fetchall()
 
 
+def claim_removals(conn, limit):
+    return conn.execute(CLAIM_REMOVALS, (limit,)).fetchall()
+
+
+def removed(conn, event_id):
+    conn.execute(REMOVED, (event_id,))
+
+
+def removal_failed(conn, event_id, why, give_up_after):
+    return conn.execute(REMOVAL_FAILED, (why, give_up_after, give_up_after, event_id)).fetchone()[0]
+
+
 KEPT_WORDS = 8000
 
 
 def record_enforcement(conn, guard_id, channel_id, subject_id, verb, bot_id=None, label=None, text=None,
-             message_ts=None, permalink=None, app_id=None, detail=None, notice_wanted=False):
+             message_ts=None, permalink=None, app_id=None, detail=None, notice_wanted=False,
+             remove_pending=False):
     return conn.execute(
         HAPPENED,
         (guard_id, channel_id, subject_id, bot_id, label, verb,
          (text or None) and text[:KEPT_WORDS],
-         message_ts, permalink, app_id, detail, notice_wanted),
+         message_ts, permalink, app_id, detail, notice_wanted, remove_pending),
     ).fetchone()[0]

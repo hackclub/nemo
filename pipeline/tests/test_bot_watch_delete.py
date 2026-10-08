@@ -52,6 +52,14 @@ class Ctx:
         self.client = client
 
 
+class Wired:
+    def __init__(self, calls, conn, tries, failures):
+        self.calls, self.conn, self.tries, self.failures = calls, conn, tries, failures
+
+    def __iter__(self):
+        return iter((self.calls, self.conn))
+
+
 @pytest.fixture
 def wired(monkeypatch):
     calls = []
@@ -62,12 +70,18 @@ def wired(monkeypatch):
     channelguards._loaded = True
     bot_watch._apps[BOT_ID] = (FACE, "spammer", "A1")
     monkeypatch.setattr(whoami, "bot_user_id", lambda client, name: "UNEMO")
-    monkeypatch.setattr(bot_watch.privileged, "delete_message",
-                        lambda channel_id, ts: calls.append("chat.delete"))
+    def delete(channel_id, ts, max_retries=2):
+        calls.append("chat.delete")
+        tries.append(max_retries)
+        if failures:
+            raise failures.pop(0)
+
+    tries, failures = [], []
+    monkeypatch.setattr(bot_watch.privileged, "delete_message", delete)
     monkeypatch.setattr(bot_watch.privileged, "kick",
                         lambda channel_id, user_id: calls.append("conversations.kick") or "kicked")
     monkeypatch.setattr(bot_watch, "session", lambda: _held(conn))
-    yield calls, conn
+    yield Wired(calls, conn, tries, failures)
     channelguards._held.clear()
     channelguards._loaded = False
     bot_watch._apps.clear()
@@ -104,7 +118,7 @@ def test_the_delete_is_queued_for_a_notice(wired):
     args = recorded(conn)
     assert args[2] == FACE
     assert args[5] == "deleted"
-    assert args[-1] is True
+    assert args[-2:] == (True, False)
 
 
 def test_a_bot_joining_is_kicked_and_queued_for_a_notice(wired):
@@ -117,7 +131,7 @@ def test_a_bot_joining_is_kicked_and_queued_for_a_notice(wired):
     assert calls == ["conversations.kick"]
     args = recorded(conn)
     assert args[5] == "kicked"
-    assert args[-2:] == (None, True)
+    assert args[-3:] == (None, True, False)
 
 
 def test_a_thread_reply_links_into_its_thread():
@@ -129,6 +143,43 @@ def test_a_thread_reply_links_into_its_thread():
 def test_a_top_level_message_links_without_a_thread():
     assert activity.message_url(ROOM, TS) == f"{activity.ARCHIVES}/{ROOM}/p1700000000000200"
     assert activity.message_url(ROOM, TS, TS) == f"{activity.ARCHIVES}/{ROOM}/p1700000000000200"
+
+
+def throttled():
+    failure = RuntimeError("proxy returned 429: budget: nemo:admin:chat.delete is spent")
+    failure.http_status = 429
+    return failure
+
+
+def test_the_hot_path_never_sleeps_on_a_retry(wired):
+    calls, _conn = wired
+    bot_watch.posted(Ctx(message(), Slack(calls)))
+
+    assert wired.tries == [0]
+
+
+def test_a_delete_that_fails_is_queued_for_the_removal_worker(wired, caplog):
+    calls, conn = wired
+    wired.failures.append(throttled())
+    caplog.set_level("INFO", logger="bot.nemo")
+
+    assert bot_watch.posted(Ctx(message(), Slack(calls))) == 7
+    args = recorded(conn)
+    assert args[5] == "deleted"
+    assert "429" in args[-3]
+    assert args[-2:] == (True, True)
+    assert any("queued for a retry" in one.getMessage() for one in caplog.records)
+
+
+def test_a_message_that_is_already_gone_counts_as_deleted(wired):
+    calls, conn = wired
+    wired.failures.append(RuntimeError("message_not_found"))
+
+    bot_watch.posted(Ctx(message(), Slack(calls)))
+
+    args = recorded(conn)
+    assert args[-3] is None
+    assert args[-1] is False
 
 
 def test_the_log_says_how_long_the_delete_took(wired, caplog):

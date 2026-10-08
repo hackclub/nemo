@@ -37,9 +37,9 @@ def invite_the_admin(client, channel_id):
     return True
 
 
-def remove(client, channel_id, ts):
+def remove(client, channel_id, ts, max_retries=2):
     try:
-        privileged.delete_message(channel_id, ts)
+        privileged.delete_message(channel_id, ts, max_retries=max_retries)
         return True
     except Exception as failure:
         if not privileged.absent(failure):
@@ -49,7 +49,7 @@ def remove(client, channel_id, ts):
     if not invite_the_admin(client, channel_id):
         raise RuntimeError(f"the admin account is not in {channel_id} and could not be invited")
 
-    privileged.delete_message(channel_id, ts)
+    privileged.delete_message(channel_id, ts, max_retries=max_retries)
     return True
 
 
