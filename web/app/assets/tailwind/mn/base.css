@@ -29,7 +29,6 @@
 
   button, input, textarea, select { font: inherit; color: inherit; }
   button { cursor: pointer; }
-  input, textarea { caret-color: var(--primary); }
 
   :focus-visible {
     outline: 2px solid var(--focus);
@@ -152,8 +151,7 @@
   }
 
   .form-label, .community-nav-label, .admin-lab, .covkey, .stat-key,
-  .card-grid-head, .menu-group, .palette-group,
-  .field-label, .field-label > span:first-child {
+  .card-grid-head, .menu-group, .palette-group {
     font-size: var(--t-fine);
     font-weight: 550;
     line-height: var(--lh-snug);

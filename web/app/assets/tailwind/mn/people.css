@@ -656,13 +656,6 @@
 
 @layer components {
   .col-pick { width: 40px; text-align: center; }
-  .tickbox {
-    accent-color: var(--primary);
-    width: 15px;
-    height: 15px;
-    cursor: pointer;
-    vertical-align: middle;
-  }
   .data-table tbody tr.is-picked > td {
     background: color-mix(in oklab, var(--primary) 7%, transparent);
   }

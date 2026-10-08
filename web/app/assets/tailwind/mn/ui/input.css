@@ -1,0 +1,153 @@
+@layer base {
+  .field, .input, .textarea, .select, .queue-search-input, .pick-input {
+    @apply w-full min-w-0 outline-none placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50;
+    @apply dark:bg-input/30 border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 disabled:bg-input/50 dark:disabled:bg-input/80 h-8 rounded-lg border bg-transparent px-2.5 py-1 text-base text-foreground transition-colors focus-visible:ring-3 aria-invalid:ring-3 md:text-sm;
+  }
+
+  .textarea {
+    @apply h-auto min-h-16 resize-y py-2;
+  }
+
+  .input-sm {
+    @apply h-7 rounded-[min(var(--radius-md),12px)] px-2 text-[0.8rem];
+  }
+
+  input[type="number"] { appearance: textfield; -moz-appearance: textfield; max-width: 110px; }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+  }
+
+  select.select {
+    @apply appearance-none pr-8 select-none dark:hover:bg-input/50;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+      linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+    background-position: calc(100% - 16px) calc(50% + 1px), calc(100% - 11px) calc(50% + 1px);
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+  }
+
+  summary.select {
+    @apply flex cursor-pointer list-none items-center gap-1.5;
+  }
+
+  summary.select > svg:last-child { margin-left: auto; flex: none; }
+  summary.select::-webkit-details-marker { display: none; }
+
+  .field-label {
+    @apply flex min-w-0 flex-col gap-2;
+  }
+
+  .field-label > * {
+    @apply text-sm font-normal tracking-normal normal-case text-foreground;
+  }
+
+  .field-label > span:first-child {
+    @apply leading-none font-medium;
+  }
+
+  .field-wrong, .wrong {
+    @apply mt-1.5 block text-sm text-destructive;
+  }
+
+  .field:has(+ .field-wrong), .input:has(+ .field-wrong) {
+    @apply border-destructive;
+  }
+
+  .tickline {
+    @apply flex cursor-pointer items-center gap-2 text-sm text-foreground;
+  }
+
+  .tick {
+    @apply relative size-4 shrink-0 cursor-pointer appearance-none rounded-[4px] border border-input outline-none transition-colors dark:bg-input/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .tick:checked {
+    @apply border-primary bg-primary text-primary-foreground dark:bg-primary;
+  }
+
+  .tick:checked::after {
+    content: "";
+    position: absolute;
+    left: 4.5px;
+    top: 1.5px;
+    width: 5px;
+    height: 9px;
+    border: solid currentColor;
+    border-width: 0 2px 2px 0;
+    rotate: 45deg;
+  }
+
+  .opt-band { @apply flex flex-col gap-1; }
+  .optlist { @apply flex flex-col gap-1.5; }
+  .fieldset { display: contents; }
+
+  .opt {
+    @apply flex cursor-pointer items-center gap-2 rounded-lg border border-border p-2.5 leading-snug transition-colors hover:bg-muted/50;
+  }
+
+  .opt > input[type="radio"] { @apply pointer-events-none absolute opacity-0; }
+
+  .opt-body { @apply flex min-w-0 flex-col gap-0.5; }
+
+  .modal-body > .opt,
+  .modal-body > .opt:hover,
+  .modal-body > .opt:has(input:checked) {
+    @apply border-transparent bg-transparent px-0 py-0.5;
+  }
+
+  .opt:has(input:checked) {
+    @apply border-primary/30 bg-primary/5 dark:border-primary/20 dark:bg-primary/10;
+  }
+
+  .opt-label { @apply text-sm font-medium text-foreground; }
+
+  .opt-dot {
+    @apply relative size-4 shrink-0 rounded-full border border-input dark:bg-input/30;
+  }
+
+  .opt:has(input:checked) .opt-dot {
+    @apply border-primary bg-primary after:absolute after:inset-1 after:rounded-full after:bg-primary-foreground;
+  }
+
+  .opt:has(input:disabled), .opt:has(input:disabled):hover {
+    @apply cursor-not-allowed bg-transparent opacity-50;
+  }
+
+  .opt-why, .opt-note { @apply text-xs text-muted-foreground; }
+
+  .switch {
+    @apply relative inline-flex h-[18.4px] w-8 shrink-0 cursor-pointer appearance-none items-center rounded-full border border-transparent bg-input p-0 align-middle transition-all outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/80;
+    @apply after:pointer-events-none after:absolute after:top-1/2 after:left-0 after:size-4 after:-translate-y-1/2 after:rounded-full after:bg-background after:transition-transform dark:after:bg-foreground;
+  }
+
+  .switch:is(:checked, [aria-checked="true"], .yes) {
+    @apply bg-primary after:translate-x-[calc(100%-2px)] after:bg-background dark:bg-primary dark:after:bg-primary-foreground;
+  }
+
+  .switch::before {
+    content: "";
+    position: absolute;
+    inset: 50% 50% 50% 50%;
+    width: 44px;
+    height: 44px;
+    translate: -50% -50%;
+  }
+
+  button.switch {
+    @apply overflow-hidden text-[0px] leading-none text-transparent;
+  }
+
+  span.yes, span.no {
+    @apply inline-flex items-center gap-1.5 text-xs font-medium;
+  }
+
+  span.yes { @apply text-success; }
+  span.no { @apply text-muted-foreground; }
+
+  .kbd {
+    @apply pointer-events-none inline-flex h-5 w-fit min-w-5 items-center justify-center gap-1 rounded-sm bg-muted px-1 font-sans text-xs font-medium tracking-normal text-muted-foreground select-none;
+  }
+}

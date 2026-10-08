@@ -234,7 +234,6 @@
     --info: oklch(0.546 0.245 262.881);
     --orange: oklch(0.56 0.155 48);
     --orange-foreground: oklch(0.99 0.006 60);
-    --knob: var(--background);
     --tip-bg: var(--foreground);
     --tip-ink: var(--background);
 
@@ -286,7 +285,6 @@
     --info: oklch(0.707 0.165 254.624);
     --orange: oklch(0.76 0.15 52);
     --orange-foreground: oklch(0.15 0.02 50);
-    --knob: var(--foreground);
     --tip-bg: var(--popover);
     --tip-ink: var(--popover-foreground);
 

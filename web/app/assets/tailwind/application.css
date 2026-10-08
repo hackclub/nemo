@@ -32,6 +32,7 @@
 @import "./mn/ui/card.css";
 @import "./mn/ui/table.css";
 @import "./mn/ui/tabs.css";
+@import "./mn/ui/input.css";
 @import "./mn/blocks/delta.css";
 @import "./mn/blocks/stat.css";
 @import "./mn/surfaces.css";

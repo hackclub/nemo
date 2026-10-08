@@ -1550,13 +1550,6 @@ module FdHelper
     tag.span(state, class: "chip #{ACCESS_CHIPS.fetch(state, 'chip-off')}")
   end
 
-  def api_state_chip
-    on = Fd::Flag.on?(:public_api)
-    tag.span(class: "chip #{on ? 'chip-good' : 'chip-off'}") do
-      tag.span(class: "chip-dot", aria: { hidden: true }) + (on ? "On" : "Off")
-    end
-  end
-
   def withheld_share(withheld, checks)
     return "none yet" if checks.zero?
 
