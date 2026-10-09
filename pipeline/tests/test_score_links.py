@@ -191,7 +191,7 @@ def test_too_few_verdicts_suggest_nothing():
 
 def test_render_prints_the_current_and_the_suggested_cut():
     result = {
-        "links": "fd.member_link_v2",
+        "links": "fd.member_link",
         "bands": {"certain": 1, "strong": 1, "worth a look": 1},
         "verdicts": {},
         "people": [],

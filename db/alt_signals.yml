@@ -17,44 +17,6 @@ network_classes:
     names: [Reliance Jio, Bharti Airtel, T-Mobile, Verizon Wireless]
     asns: []
 
-signals:
-  ip_exact:
-    label: Signed in from the same address
-    evidence: the same IP address
-    weight: 5.0
-    crowd_ceiling: 8
-    family: network
-
-  ip_prefix:
-    label: Signed in from the same network
-    evidence: the same /24 or /64
-    weight: 3.0
-    crowd_ceiling: 20
-    family: network
-
-  email_domain:
-    label: Share an email domain
-    evidence: the domain their address sits on
-    weight: 2.0
-    crowd_ceiling: 30
-    family: identity
-
-  session_agent:
-    label: Same app and system
-    evidence: the client they signed in with
-    weight: 1.0
-    crowd_ceiling: 60
-    corroborating: true
-    family: device
-
-  joined_together:
-    label: Joined within minutes of each other
-    evidence: how close their arrivals were
-    weight: 1.5
-    window_seconds: 300
-    crowd_ceiling: 25
-    family: arrival
-
 network_signals:
   ip_stable:
     label: Signed in from the same home or office address

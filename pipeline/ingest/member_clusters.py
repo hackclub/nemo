@@ -11,7 +11,7 @@ APART = ("different_people", "household")
 
 EDGES_SQL = """
 SELECT l.a_user_id, l.b_user_id
-FROM fd.member_link_v2 l
+FROM fd.member_link l
 WHERE l.score >= %(edge)s
   AND (l.label IS NULL OR NOT (l.label = ANY(%(unclustered)s)))
   AND NOT EXISTS (SELECT 1 FROM fd.member_link_verdict v

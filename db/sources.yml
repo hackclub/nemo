@@ -308,21 +308,6 @@ sources:
   member_links:
     unit_budget_seconds: 300
     standalone: true
-    label: Accounts likely belonging to the same person
-    endpoint: none
-    documented: true
-    credential: none
-    cadence: live
-    window: everything we hold
-    guard: none
-    resume: none
-    retention: replace
-    writes: [fd.member_link]
-    feeds: []
-
-  member_links_v2:
-    unit_budget_seconds: 300
-    standalone: true
     label: Accounts likely belonging to the same person, scored by evidence family
     endpoint: none
     documented: true
@@ -332,7 +317,7 @@ sources:
     guard: none
     resume: none
     retention: replace
-    writes: [fd.member_link_v2]
+    writes: [fd.member_link]
     feeds: []
 
   member_clusters:

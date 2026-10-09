@@ -3,7 +3,8 @@ module Fd
     self.table_name = "fd.member_link"
 
     SIGNALS = YAML.load_file(Rails.root.join("../db/alt_signals.yml")).freeze
-    CATALOGUE = SIGNALS.fetch("signals").freeze
+    SECTIONS = %w[network_signals device_signals identity_signals name_signals arrival_signals].freeze
+    CATALOGUE = SECTIONS.reduce({}) { |held, section| held.merge(SIGNALS.fetch(section, {})) }.freeze
     BANDS = SIGNALS.fetch("scoring").freeze
 
     STRONG = BANDS.fetch("strong")
