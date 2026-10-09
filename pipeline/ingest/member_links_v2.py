@@ -1,3 +1,5 @@
+import re
+
 from ingest import member_links as links
 from lib.db import ingest_run
 from lib.mailbox import mailbox, staff_domain
@@ -87,6 +89,10 @@ DEVICE_EVIDENCE = {
 
 MAILBOX = """
 CREATE TEMP TABLE mailbox (user_id text, box text, local text, domain text) ON COMMIT DROP
+"""
+
+STAFF = """
+CREATE TEMP TABLE staff_member (user_id text PRIMARY KEY) ON COMMIT DROP
 """
 
 IDENTITIES_SQL = """
@@ -311,7 +317,7 @@ SELECT p.a_user_id, p.b_user_id, p.score, p.top_family, p.families,
                    'value', b.value, 'people', b.people, 'score', round(b.score::numeric, 3)))
         FROM best b
         WHERE b.a_user_id = p.a_user_id AND b.b_user_id = p.b_user_id) AS signals,
-       p.first_seen, p.last_seen
+       p.first_seen, p.last_seen, NULL::text AS label
 FROM pair p
 """
 
@@ -337,12 +343,51 @@ WHERE EXISTS (
 )
 """
 
+STAFF_TEST = """
+UPDATE link_pass p
+SET label = 'staff_test'
+WHERE p.label IS NULL
+  AND EXISTS (SELECT 1 FROM staff_member s WHERE s.user_id = p.a_user_id)
+  AND EXISTS (SELECT 1 FROM staff_member s WHERE s.user_id = p.b_user_id)
+"""
+
+CLASSROOM = """
+UPDATE link_pass p
+SET label = 'classroom',
+    score = round(p.score + %(weight)s::numeric, 3),
+    families = p.families || jsonb_build_object('classroom', %(weight)s::numeric)
+WHERE p.label IS NULL
+  AND (EXISTS (
+          SELECT 1 FROM fd.ip_network n
+          WHERE p.signals ? 'ip_stable'
+            AND n.ip_prefix = network(set_masklen((p.signals->'ip_stable'->>'value')::inet,
+                CASE WHEN family((p.signals->'ip_stable'->>'value')::inet) = 4 THEN 24 ELSE 64 END))
+            AND n.network ~* %(networks)s)
+       OR coalesce(p.signals->'device_agent'->>'value', '') ~ %(devices)s)
+"""
+
+HOUSEHOLD = """
+UPDATE link_pass p
+SET label = 'household',
+    score = round(p.score + %(weight)s::numeric, 3),
+    families = p.families || jsonb_build_object('household', %(weight)s::numeric)
+FROM fd.member_identity a, fd.member_identity b
+WHERE p.label IS NULL
+  AND p.signals ? 'ip_stable'
+  AND a.user_id = p.a_user_id AND b.user_id = p.b_user_id
+  AND position(' ' IN btrim(a.real_name)) > 0 AND position(' ' IN btrim(b.real_name)) > 0
+  AND regexp_replace(lower(btrim(a.real_name)), '^.*[[:space:]]', '')
+      = regexp_replace(lower(btrim(b.real_name)), '^.*[[:space:]]', '')
+  AND split_part(lower(btrim(a.real_name)), ' ', 1) <> split_part(lower(btrim(b.real_name)), ' ', 1)
+"""
+
 BELOW_FLOOR = "DELETE FROM link_pass WHERE score < %(floor)s"
 
 LAND = """
 INSERT INTO fd.member_link_v2
-    (a_user_id, b_user_id, score, top_family, families, signals, first_seen, last_seen, computed_at)
-SELECT a_user_id, b_user_id, score, top_family, families, signals, first_seen, last_seen, now()
+    (a_user_id, b_user_id, score, top_family, families, signals, first_seen, last_seen, label,
+     computed_at)
+SELECT a_user_id, b_user_id, score, top_family, families, signals, first_seen, last_seen, label, now()
 FROM link_pass
 ON CONFLICT (a_user_id, b_user_id) DO UPDATE SET
     score = EXCLUDED.score,
@@ -351,11 +396,13 @@ ON CONFLICT (a_user_id, b_user_id) DO UPDATE SET
     signals = EXCLUDED.signals,
     first_seen = EXCLUDED.first_seen,
     last_seen = EXCLUDED.last_seen,
+    label = EXCLUDED.label,
     computed_at = EXCLUDED.computed_at
 WHERE (fd.member_link_v2.score, fd.member_link_v2.top_family, fd.member_link_v2.families,
-       fd.member_link_v2.signals, fd.member_link_v2.first_seen, fd.member_link_v2.last_seen)
+       fd.member_link_v2.signals, fd.member_link_v2.first_seen, fd.member_link_v2.last_seen,
+       fd.member_link_v2.label)
       IS DISTINCT FROM (EXCLUDED.score, EXCLUDED.top_family, EXCLUDED.families,
-                        EXCLUDED.signals, EXCLUDED.first_seen, EXCLUDED.last_seen)
+                        EXCLUDED.signals, EXCLUDED.first_seen, EXCLUDED.last_seen, EXCLUDED.label)
 """
 
 SWEEP = """
@@ -383,6 +430,23 @@ def signals(held=None):
 
 def against(held=None):
     return (held or links.catalogue())["against"]
+
+
+def labels(held=None):
+    return (held or links.catalogue())["labels"]
+
+
+def pattern(words):
+    if not words:
+        return "a^"
+    return "(" + "|".join(re.escape(word) for word in words) + ")"
+
+
+def staff_members(identities, staff):
+    for user_id, email in identities:
+        box = mailbox(email)
+        if box and staff_domain(box.rpartition("@")[2], staff):
+            yield (user_id,)
 
 
 def family_table(held):
@@ -429,6 +493,10 @@ def load_mailboxes(conn, held):
     with conn.cursor() as cur, cur.copy("COPY mailbox (user_id, box, local, domain) FROM STDIN") as copy:
         for row in mailbox_rows(identities, staff):
             copy.write_row(row)
+    conn.execute(STAFF)
+    with conn.cursor() as cur, cur.copy("COPY staff_member (user_id) FROM STDIN") as copy:
+        for row in staff_members(identities, staff):
+            copy.write_row(row)
 
 
 def gather(conn, held):
@@ -469,6 +537,16 @@ def run(conn):
             cur.execute(PASS_INDEX)
             cur.execute(AGAINST, {"weight": against(held)[TWO_COUNTRIES]["weight"]})
             countered = cur.rowcount
+            named = labels(held)
+            labelled = {}
+            cur.execute(STAFF_TEST)
+            labelled["staff_test"] = cur.rowcount
+            cur.execute(CLASSROOM, {"weight": named["classroom"]["weight"],
+                                    "networks": pattern(named["classroom"].get("networks")),
+                                    "devices": pattern(named["classroom"].get("devices"))})
+            labelled["classroom"] = cur.rowcount
+            cur.execute(HOUSEHOLD, {"weight": named["household"]["weight"]})
+            labelled["household"] = cur.rowcount
             cur.execute(BELOW_FLOOR, {"floor": marks["floor"]})
             cur.execute(LAND)
             changed = cur.rowcount
@@ -480,7 +558,8 @@ def run(conn):
         counts.rows_in = changed
 
     per_signal = ", ".join(f"{name} {n}" for name, n in sorted(found.items()) if n)
+    per_label = ", ".join(f"{count} labelled {name}" for name, count in labelled.items())
     print(f"{SOURCE}: {kept} link(s) kept, {changed} written, {gone} dropped, "
-          f"{countered} lowered by activity in two countries, "
+          f"{countered} lowered by activity in two countries, {per_label}, "
           f"{put_aside} address(es) on shared networks treated as rotating ({per_signal})")
     return changed

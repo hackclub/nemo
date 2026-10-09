@@ -87,7 +87,8 @@ def test_a_pass_gathers_once_then_lands_sweeps_and_counts(monkeypatch, capsys):
     monkeypatch.setattr(v2, "gather", lambda _conn, _held: {"ip_stable": 3})
 
     assert v2.run(Conn()) == 4
-    assert ran[:6] == [v2.PASS, v2.PASS_INDEX, v2.AGAINST, v2.BELOW_FLOOR, v2.LAND, v2.SWEEP]
+    assert ran[:9] == [v2.PASS, v2.PASS_INDEX, v2.AGAINST, v2.STAFF_TEST, v2.CLASSROOM,
+                       v2.HOUSEHOLD, v2.BELOW_FLOOR, v2.LAND, v2.SWEEP]
     assert ran[-1] == "commit"
     assert "9 link(s) kept, 4 written, 1 dropped" in capsys.readouterr().out
 
@@ -229,3 +230,41 @@ def test_joining_together_needs_the_same_address_within_the_window():
     assert "JOIN fd.member_joins j" in sql
     assert "b.ip = a.ip" in sql and "make_interval(secs => %(window)s)" in sql
     assert args["window"] == 1800
+
+
+def test_the_labels_match_the_table_check():
+    sql = (pathlib.Path(__file__).parents[2] / "db" / "migrations"
+           / "0185_member_link_v2_label.sql").read_text()
+    for name in v2.labels():
+        assert f"'{name}'" in sql
+
+
+def test_household_and_classroom_lower_the_score_and_staff_test_only_labels():
+    held = v2.labels()
+
+    assert held["household"]["weight"] < 0
+    assert held["classroom"]["weight"] < 0
+    assert "weight" not in held["staff_test"]
+    assert "score" not in v2.STAFF_TEST
+
+
+def test_a_word_list_becomes_one_pattern_and_an_empty_one_matches_nothing():
+    assert v2.pattern(["school", "k12"]) == "(school|k12)"
+    assert v2.pattern([]) == "a^"
+
+
+def test_staff_members_are_the_accounts_with_a_staff_mailbox():
+    rows = list(v2.staff_members([("U1", "x+test@mail.hackclub.com"), ("U2", "y@gmail.com"),
+                                  ("U3", None)], ["hackclub.com"]))
+    assert rows == [("U1",)]
+
+
+def test_a_household_needs_one_home_line_a_shared_surname_and_two_first_names():
+    assert "p.signals ? 'ip_stable'" in v2.HOUSEHOLD
+    assert "'^.*[[:space:]]'" in v2.HOUSEHOLD
+    assert "split_part(lower(btrim(a.real_name)), ' ', 1) <>" in v2.HOUSEHOLD
+
+
+def test_a_label_change_is_written_like_any_other_change():
+    assert "label = EXCLUDED.label" in v2.LAND
+    assert "EXCLUDED.label)" in v2.LAND

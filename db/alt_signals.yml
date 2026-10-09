@@ -147,6 +147,20 @@ against:
     label: Active from two countries in the same hour, neither on a VPN
     weight: -3.0
 
+labels:
+  staff_test:
+    label: Both accounts have staff mailboxes
+
+  classroom:
+    label: A school network or a managed school device
+    weight: -2.0
+    networks: [school, district, education, universit, college, academy, k12]
+    devices: [CrOS]
+
+  household:
+    label: Same surname, different first names, one home line
+    weight: -2.0
+
 families:
   network:
     cap: 6.0
