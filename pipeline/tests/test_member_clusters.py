@@ -37,7 +37,7 @@ def test_four_accounts_joining_within_an_hour_make_a_ring_and_active_ones_are_ma
     rows = clusters.cluster_rows([group], accounts, RULE)
 
     assert {row[1] for row in rows} == {"U1"}
-    assert all(row[2] == 4 and row[3] for row in rows)
+    assert all(row[2] == 4 and row[3] and not row[5] for row in rows)
     assert [row[0] for row in rows if row[4]] == ["U2"]
 
 
@@ -51,7 +51,7 @@ def test_accounts_spread_over_days_are_a_cluster_but_not_a_ring():
 
 
 def test_household_and_classroom_links_never_join_a_cluster():
-    assert "NOT (label = ANY(%(unclustered)s))" in clusters.EDGES_SQL
+    assert "NOT (l.label = ANY(%(unclustered)s))" in clusters.EDGES_SQL
     assert set(clusters.UNCLUSTERED_LABELS) == {"household", "classroom"}
 
 
@@ -63,3 +63,33 @@ def test_clusters_build_on_strong_links_only():
 def test_an_unchanged_cluster_row_is_not_written_again():
     assert "IS DISTINCT FROM" in clusters.LAND
     assert clusters.SWEEP.startswith("DELETE FROM fd.member_cluster WHERE NOT (user_id = ANY")
+
+
+def test_a_same_person_verdict_joins_clusters_and_a_different_people_verdict_cuts_its_link():
+    sql = clusters.EDGES_SQL
+
+    assert "UNION\nSELECT a_user_id, b_user_id FROM fd.member_link_verdict WHERE verdict = ANY(%(together)s)" in sql
+    assert "v.verdict = ANY(%(apart)s)" in sql
+    assert set(clusters.TOGETHER) == {"same_person", "staff_test"}
+    assert set(clusters.APART) == {"different_people", "household"}
+
+
+def test_two_clusters_bridged_by_a_verdict_become_one():
+    groups = components([("U1", "U2"), ("U3", "U4"), ("U2", "U3")])
+
+    assert groups == [{"U1", "U2", "U3", "U4"}]
+
+
+def test_a_cluster_still_holding_two_accounts_fd_called_different_people_is_flagged():
+    accounts = {one: (True, at(i)) for i, one in enumerate(["U1", "U2", "U3"])}
+
+    flagged = clusters.cluster_rows([{"U1", "U2", "U3"}], accounts, RULE, apart=[("U1", "U3")])
+    clean = clusters.cluster_rows([{"U1", "U2", "U3"}], accounts, RULE, apart=[("U1", "U9")])
+
+    assert all(row[5] for row in flagged)
+    assert not any(row[5] for row in clean)
+
+
+def test_a_conflict_change_is_written_like_any_other_change():
+    assert "conflict = EXCLUDED.conflict" in clusters.LAND
+    assert "EXCLUDED.conflict)" in clusters.LAND

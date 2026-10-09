@@ -6,12 +6,22 @@ from lib.graph import components
 
 SOURCE = "member_clusters"
 UNCLUSTERED_LABELS = ("household", "classroom")
+TOGETHER = ("same_person", "staff_test")
+APART = ("different_people", "household")
 
 EDGES_SQL = """
-SELECT a_user_id, b_user_id
-FROM fd.member_link_v2
-WHERE score >= %(edge)s AND (label IS NULL OR NOT (label = ANY(%(unclustered)s)))
+SELECT l.a_user_id, l.b_user_id
+FROM fd.member_link_v2 l
+WHERE l.score >= %(edge)s
+  AND (l.label IS NULL OR NOT (l.label = ANY(%(unclustered)s)))
+  AND NOT EXISTS (SELECT 1 FROM fd.member_link_verdict v
+                  WHERE v.a_user_id = l.a_user_id AND v.b_user_id = l.b_user_id
+                    AND v.verdict = ANY(%(apart)s))
+UNION
+SELECT a_user_id, b_user_id FROM fd.member_link_verdict WHERE verdict = ANY(%(together)s)
 """
+
+APART_SQL = "SELECT a_user_id, b_user_id FROM fd.member_link_verdict WHERE verdict = ANY(%s)"
 
 ACCOUNTS_SQL = """
 SELECT m.user_id, NOT m.is_deleted, j.joined_at
@@ -21,17 +31,19 @@ WHERE m.user_id = ANY(%s)
 """
 
 LAND = """
-INSERT INTO fd.member_cluster (user_id, cluster_id, accounts, ring, active, computed_at)
-VALUES (%s, %s, %s, %s, %s, now())
+INSERT INTO fd.member_cluster (user_id, cluster_id, accounts, ring, active, conflict, computed_at)
+VALUES (%s, %s, %s, %s, %s, %s, now())
 ON CONFLICT (user_id) DO UPDATE SET
     cluster_id = EXCLUDED.cluster_id,
     accounts = EXCLUDED.accounts,
     ring = EXCLUDED.ring,
     active = EXCLUDED.active,
+    conflict = EXCLUDED.conflict,
     computed_at = EXCLUDED.computed_at
 WHERE (fd.member_cluster.cluster_id, fd.member_cluster.accounts, fd.member_cluster.ring,
-       fd.member_cluster.active)
-      IS DISTINCT FROM (EXCLUDED.cluster_id, EXCLUDED.accounts, EXCLUDED.ring, EXCLUDED.active)
+       fd.member_cluster.active, fd.member_cluster.conflict)
+      IS DISTINCT FROM (EXCLUDED.cluster_id, EXCLUDED.accounts, EXCLUDED.ring, EXCLUDED.active,
+                        EXCLUDED.conflict)
 """
 
 SWEEP = "DELETE FROM fd.member_cluster WHERE NOT (user_id = ANY(%s))"
@@ -56,7 +68,11 @@ def oldest(group, joined):
     return min(group, key=lambda one: (joined.get(one) is None, joined.get(one) or 0, one))
 
 
-def cluster_rows(groups, accounts, rule):
+def conflicted(group, apart):
+    return any(a in group and b in group for a, b in apart)
+
+
+def cluster_rows(groups, accounts, rule, apart=()):
     joined = {user_id: at for user_id, (_active, at) in accounts.items()}
     window = timedelta(minutes=rule["window_minutes"])
     rows = []
@@ -64,9 +80,10 @@ def cluster_rows(groups, accounts, rule):
         cluster_id = oldest(group, joined)
         ring = (len(group) >= rule["min_accounts"]
                 and burst([joined.get(one) for one in group], window) >= rule["min_accounts"])
+        conflict = conflicted(group, apart)
         for user_id in sorted(group):
             active = accounts.get(user_id, (True, None))[0]
-            rows.append((user_id, cluster_id, len(group), ring, active))
+            rows.append((user_id, cluster_id, len(group), ring, active, conflict))
     return rows
 
 
@@ -74,12 +91,14 @@ def run(conn):
     held = settings()
     with ingest_run(conn, SOURCE) as counts:
         edges = conn.execute(EDGES_SQL, {"edge": held["edge_score"],
-                                         "unclustered": list(UNCLUSTERED_LABELS)}).fetchall()
+                                         "unclustered": list(UNCLUSTERED_LABELS),
+                                         "apart": list(APART), "together": list(TOGETHER)}).fetchall()
+        apart = [(a, b) for a, b in conn.execute(APART_SQL, (list(APART),)).fetchall()]
         groups = components((a, b) for a, b in edges)
         members = sorted(set().union(*groups)) if groups else []
         accounts = {row[0]: (row[1], row[2])
                     for row in conn.execute(ACCOUNTS_SQL, (members,)).fetchall()} if members else {}
-        rows = cluster_rows(groups, accounts, held["ring"])
+        rows = cluster_rows(groups, accounts, held["ring"], apart)
         with conn.cursor() as cur:
             if rows:
                 cur.executemany(LAND, rows)
@@ -89,6 +108,8 @@ def run(conn):
         counts.rows_in = len(rows)
 
     rings = len({row[1] for row in rows if row[3]})
+    conflicts = len({row[1] for row in rows if row[5]})
     print(f"{SOURCE}: {len(groups)} cluster(s) over {len(rows)} account(s), {rings} ring(s), "
+          f"{conflicts} holding accounts FD marked as different people, "
           f"{gone} account(s) no longer clustered")
     return len(rows)
