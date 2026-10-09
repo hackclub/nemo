@@ -1,18 +1,25 @@
 from datetime import UTC, datetime, timedelta
 
 from lib import member_seen, useragent
-from lib.db import dead_letter, ingest_run
+from lib.db import dead_letter, get_cursor, ingest_run, save_cursor
 from lib.proxy_client import ProxyClient
 
 SOURCE = "access_logs"
+BACKFILL = "access_logs_backfill"
 METHOD = "team.accessLogs"
 CREDENTIAL = "admin"
 PAGE = 1000
 LAP_SECONDS = 120
 MOST_PAGES = 20
+BACKFILL_COMPLETE = "complete"
+BACKFILL_MARKER_MAX_AGE_HOURS = 24 * 365
 
 NEWEST_SQL = """
 SELECT at FROM fd.login_event WHERE source = 'access_logs' ORDER BY at DESC LIMIT 1
+"""
+
+OLDEST_SQL = """
+SELECT min(at) FROM fd.login_event WHERE source = 'access_logs'
 """
 
 ROW_SQL = """
@@ -139,4 +146,69 @@ def run(conn, client=None):
 
     state = "up to date" if caught_up else "more to walk"
     print(f"{SOURCE}: {landed} login row(s), {state}")
+    return landed
+
+
+def backfill_start(conn):
+    marker = get_cursor(conn, BACKFILL, max_age_hours=BACKFILL_MARKER_MAX_AGE_HOURS)
+    if marker == BACKFILL_COMPLETE:
+        return None
+    if marker and marker.isdigit():
+        return int(marker)
+    row = conn.execute(OLDEST_SQL).fetchone()
+    oldest = row[0] if row and row[0] else datetime.now(UTC)
+    return int(oldest.timestamp())
+
+
+def next_before(before, oldest_first_seen):
+    candidate = int(oldest_first_seen.timestamp())
+    return candidate if candidate < before else before - 1
+
+
+def backfill(conn, client=None):
+    before = backfill_start(conn)
+    if before is None:
+        return 0
+
+    client = client or ProxyClient.for_source(BACKFILL)
+    batch = []
+    landed = 0
+    taken = 0
+    oldest = None
+    capped = False
+
+    with ingest_run(conn, BACKFILL) as counts:
+        def flush():
+            nonlocal landed
+            if batch:
+                landed += insert_rows(conn, batch, counts)
+                batch.clear()
+            if oldest is not None:
+                save_cursor(conn, BACKFILL, str(next_before(before, oldest)))
+                conn.commit()
+
+        entries = client.paginate(
+            METHOD, {"before": before}, "logins", page_size=PAGE, cursor_param="cursor",
+            credential=CREDENTIAL, page_param="limit",
+            cursor_field="response_metadata.next_cursor",
+            on_page=lambda _cursor, _seen: flush(),
+        )
+        for login in entries:
+            first_seen = stamp(login.get("date_first"))
+            if first_seen is not None and (oldest is None or first_seen < oldest):
+                oldest = first_seen
+            batch.append(login)
+            taken += 1
+            if taken >= PAGE * MOST_PAGES:
+                capped = True
+                break
+        entries.close()
+        flush()
+        if not capped:
+            save_cursor(conn, BACKFILL, BACKFILL_COMPLETE)
+            conn.commit()
+
+    reached = f"first seen {oldest:%Y-%m-%d %H:%M}" if oldest else "no entries"
+    state = "more to walk" if capped else "complete"
+    print(f"{BACKFILL}: {landed} login row(s), {reached}, {state}")
     return landed

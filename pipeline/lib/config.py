@@ -108,6 +108,8 @@ ROLES = {
     "audit": {
         "required": DATABASE + ["INTERNAL_PROXY_URL", "INTERNAL_PROXY_TOKEN"],
         "optional": PIPELINE_ROLE + [
+            "AUDIT_ACCESS_BACKFILL",
+            "AUDIT_ACCESS_BACKFILL_SECONDS",
             "AUDIT_ACCESS_SECONDS",
             "AUDIT_BACKFILL",
             "AUDIT_BACKFILL_SECONDS",
@@ -197,6 +199,8 @@ DEFAULTS = {
     "AUDIT_BACKFILL_SECONDS": "120",
     "AUDIT_BACKFILL_SETS": "login_and_channel",
     "AUDIT_ACCESS_SECONDS": "3600",
+    "AUDIT_ACCESS_BACKFILL": "off",
+    "AUDIT_ACCESS_BACKFILL_SECONDS": "60",
     "AUDIT_COHORT_SECONDS": "900",
     "AUDIT_HORIZON_DAYS": "90",
     "AUDIT_AGENT_SECONDS": "3600",

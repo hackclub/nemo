@@ -4,6 +4,7 @@ import threading
 
 from dotenv import load_dotenv
 
+from ingest.access_logs_pull import backfill as backfill_access_logs
 from ingest.access_logs_pull import run as walk_access_logs
 from ingest.audit_logs_pull import backfill_next, unknown_backfill_sets
 from ingest.audit_logs_pull import tail as walk_tail
@@ -29,6 +30,7 @@ WORKER = "audit_worker"
 DEFAULT_TAIL_SECONDS = 60
 DEFAULT_BACKFILL_SECONDS = 120
 DEFAULT_ACCESS_SECONDS = 60
+DEFAULT_ACCESS_BACKFILL_SECONDS = 60
 DEFAULT_COHORT_SECONDS = 900
 DEFAULT_LINK_SECONDS = 1800
 DEFAULT_AGENT_SECONDS = 3600
@@ -43,8 +45,21 @@ def seconds(name, fallback):
     return int(os.environ.get(name, "") or fallback)
 
 
-def backfill_wanted():
-    return (os.environ.get("AUDIT_BACKFILL", "on").strip().lower()) not in ("0", "off", "no")
+LANE_SWITCHES = {
+    "backfill": ("AUDIT_BACKFILL", True),
+    "access_backfill": ("AUDIT_ACCESS_BACKFILL", False),
+}
+OFF_VALUES = ("0", "off", "no", "false")
+
+
+def lane_enabled(name):
+    if name not in LANE_SWITCHES:
+        return True
+    variable, default = LANE_SWITCHES[name]
+    value = os.environ.get(variable, "").strip().lower()
+    if not value:
+        return default
+    return value not in OFF_VALUES
 
 
 def refused(failure):
@@ -56,12 +71,12 @@ LANES = (
     ("tail", walk_tail, "AUDIT_TAIL_SECONDS", DEFAULT_TAIL_SECONDS, True),
     ("backfill", backfill_next, "AUDIT_BACKFILL_SECONDS", DEFAULT_BACKFILL_SECONDS, True),
     ("access", walk_access_logs, "AUDIT_ACCESS_SECONDS", DEFAULT_ACCESS_SECONDS, True),
+    ("access_backfill", backfill_access_logs, "AUDIT_ACCESS_BACKFILL_SECONDS",
+     DEFAULT_ACCESS_BACKFILL_SECONDS, True),
     ("cohorts", refresh_cohorts, "AUDIT_COHORT_SECONDS", DEFAULT_COHORT_SECONDS, False),
     ("links", refresh_links, "AUDIT_LINK_SECONDS", DEFAULT_LINK_SECONDS, False),
     ("agents", reread_agents, "AUDIT_AGENT_SECONDS", DEFAULT_AGENT_SECONDS, True),
 )
-
-OPTIONAL = ("backfill",)
 
 
 def note(state):
@@ -112,13 +127,18 @@ def main():
 
 
 def wanted_lanes():
-    if backfill_wanted():
+    enabled = []
+    for spec in LANES:
+        name = spec[0]
+        if lane_enabled(name):
+            enabled.append(spec)
+        else:
+            print(f"{WORKER}: {LANE_SWITCHES[name][0]} is off, the {name} lane will not run")
+    if lane_enabled("backfill"):
         unknown = unknown_backfill_sets()
         if unknown:
             print(f"{WORKER}: AUDIT_BACKFILL_SETS has unknown set names, skipping: {', '.join(unknown)}")
-        return LANES
-    print(f"{WORKER}: AUDIT_BACKFILL is off, the backfill lane will not run")
-    return tuple(one for one in LANES if one[0] not in OPTIONAL)
+    return tuple(enabled)
 
 
 def serve():
@@ -132,8 +152,9 @@ def serve():
             print(f"{WORKER}: swept run {orphan} ({source}), left running by an earlier boot")
 
     lanes = wanted_lanes()
+    enabled_names = {name for name, *_ in lanes}
     stopping = threading.Event()
-    state = {name: "starting" for name, *_ in LANES}
+    state = {name: "starting" if name in enabled_names else "off" for name, *_ in LANES}
 
     def stop(*_):
         stopping.set()

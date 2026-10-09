@@ -335,6 +335,21 @@ sources:
     writes: [fd.login_event]
     feeds: []
 
+  access_logs_backfill:
+    unit_budget_seconds: 300
+    standalone: true
+    label: Older member sign-in locations, walked back by first seen
+    endpoint: team.accessLogs
+    documented: true
+    credential: admin
+    cadence: on_demand
+    window: back to the first entry
+    guard: cursor end
+    resume: sync_cursor
+    retention: keep
+    writes: [fd.login_event]
+    feeds: []
+
   ip_cohorts:
     standalone: true
     label: Members per IP address, to discount shared addresses
