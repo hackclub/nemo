@@ -17,6 +17,8 @@ from lib.paths import ENV_FILE
 LINKS = "fd.member_link"
 TABLE = re.compile(r"^([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)$")
 BAND_NAMES = ("certain", "strong", "worth a look")
+RIGHT = ("same_person",)
+WRONG = ("different_people", "household")
 
 BANDS_SQL = """
 SELECT count(*) FILTER (WHERE score >= %(certain)s),
@@ -83,9 +85,34 @@ def found(pairs, scores, marks):
     return {"pairs": len(pairs), "linked": sum(bands.values()), "bands": bands}
 
 
+def labelled(rows):
+    return [(None if score is None else float(score), verdict in RIGHT)
+            for _a, _b, verdict, score in rows if verdict in RIGHT + WRONG]
+
+
+def suggest_cutoffs(pairs, targets):
+    right = sum(1 for _score, good in pairs if good)
+    wrong = len(pairs) - right
+    least = targets["least_verdicts"]
+    found = {"right": right, "wrong": wrong, "enough": right >= least and wrong >= least, "cuts": {}}
+    if not found["enough"]:
+        return found
+    scored = sorted({score for score, _good in pairs if score is not None})
+    for name, target in targets["precision"].items():
+        for cut in scored:
+            above = [good for score, good in pairs if score is not None and score >= cut]
+            precision = sum(above) / len(above)
+            if precision >= target:
+                found["cuts"][name] = {"cut": cut, "precision": precision, "recall": sum(above) / right}
+                break
+    return found
+
+
 def measure(conn, links_name=LINKS):
     marks = scoring()
-    staff = catalogue().get("staff_domains", [])
+    held = catalogue()
+    staff = held.get("staff_domains", [])
+    targets = held.get("band_targets")
     links = links_table(links_name)
 
     def query(text, params=None):
@@ -125,6 +152,8 @@ def measure(conn, links_name=LINKS):
         "verdicts": verdicts,
         "people": confirmed_people,
         "aliases": found(aliases, alias_scores, marks),
+        "marks": marks,
+        "cutoffs": suggest_cutoffs(labelled(rows), targets) if targets else None,
     }
 
 
@@ -165,6 +194,24 @@ def render(result):
     lines.append(f"email aliases outside staff domains: {aliases['linked']:,} of "
                  f"{aliases['pairs']:,} linked ({share(aliases['linked'], aliases['pairs'])}): "
                  f"{band_line(aliases['bands'])}")
+
+    cutoffs = result.get("cutoffs")
+    if cutoffs is None:
+        return lines
+    lines.append("")
+    lines.append(f"bands from verdicts: {cutoffs['right']:,} same person, "
+                 f"{cutoffs['wrong']:,} different people or household")
+    if not cutoffs["enough"]:
+        lines.append("  not enough verdicts to suggest cutoffs yet")
+        return lines
+    for name in ("floor", "strong", "certain"):
+        now = result["marks"][name]
+        one = cutoffs["cuts"].get(name)
+        if one is None:
+            lines.append(f"  {name:<8} now {now:g}, no score reaches the precision asked for")
+            continue
+        lines.append(f"  {name:<8} now {now:g}, suggested {one['cut']:g} "
+                     f"(precision {share(one['precision'], 1)}, recall {share(one['recall'], 1)})")
     return lines
 
 

@@ -157,3 +157,52 @@ def test_a_missing_links_table_exits_2_with_the_database_message(monkeypatch, ca
 
     assert links.main(["--links", "fd.nope"]) == 2
     assert capsys.readouterr().err == 'check-links: relation "fd.nope" does not exist\n'
+
+
+TARGETS = {"least_verdicts": 2, "precision": {"floor": 0.5, "strong": 0.9, "certain": 0.98}}
+
+
+def test_only_same_person_counts_as_right_and_staff_tests_are_left_out():
+    rows = [("U1", "U2", "same_person", 9), ("U1", "U3", "household", 4),
+            ("U1", "U4", "staff_test", 8), ("U1", "U5", "different_people", None)]
+
+    assert links.labelled(rows) == [(9.0, True), (4.0, False), (None, False)]
+
+
+def test_each_band_gets_the_lowest_score_that_reaches_its_precision():
+    pairs = [(9.0, True), (8.5, True), (6.0, True), (6.0, False), (4.0, True), (4.0, False),
+             (3.5, False), (None, True), (None, False)]
+
+    found = links.suggest_cutoffs(pairs, TARGETS)
+
+    assert found["enough"] and (found["right"], found["wrong"]) == (5, 4)
+    assert found["cuts"]["floor"]["cut"] == 3.5
+    assert found["cuts"]["strong"]["cut"] == 8.5
+    assert found["cuts"]["certain"]["cut"] == 8.5
+    assert found["cuts"]["strong"]["recall"] == 2 / 5
+
+
+def test_too_few_verdicts_suggest_nothing():
+    found = links.suggest_cutoffs([(9.0, True), (3.0, False)], TARGETS)
+
+    assert not found["enough"]
+    assert found["cuts"] == {}
+
+
+def test_render_prints_the_current_and_the_suggested_cut():
+    result = {
+        "links": "fd.member_link_v2",
+        "bands": {"certain": 1, "strong": 1, "worth a look": 1},
+        "verdicts": {},
+        "people": [],
+        "aliases": {"pairs": 0, "linked": 0, "bands": {}},
+        "marks": {"floor": 3.0, "strong": 5.0, "certain": 8.0},
+        "cutoffs": {"right": 5, "wrong": 4, "enough": True,
+                    "cuts": {"strong": {"cut": 8.5, "precision": 1.0, "recall": 0.4}}},
+    }
+
+    text = "\n".join(links.render(result))
+
+    assert "bands from verdicts: 5 same person, 4 different people or household" in text
+    assert "strong   now 5, suggested 8.5 (precision 100%, recall 40%)" in text
+    assert "floor    now 3, no score reaches the precision asked for" in text

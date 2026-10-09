@@ -179,6 +179,13 @@ clusters:
     min_accounts: 4
     window_minutes: 60
 
+band_targets:
+  least_verdicts: 20
+  precision:
+    floor: 0.5
+    strong: 0.9
+    certain: 0.98
+
 scoring:
   floor: 3.0
   strong: 5.0
