@@ -75,6 +75,9 @@ def test_a_pass_gathers_once_then_lands_sweeps_and_counts(monkeypatch, capsys):
         def cursor(self):
             return Cursor()
 
+        def execute(self, sql, _params=None):
+            ran.append(sql)
+
         def commit(self):
             ran.append("commit")
 
@@ -87,8 +90,9 @@ def test_a_pass_gathers_once_then_lands_sweeps_and_counts(monkeypatch, capsys):
     monkeypatch.setattr(v2, "gather", lambda _conn, _held: {"ip_stable": 3})
 
     assert v2.run(Conn()) == 4
-    assert ran[:9] == [v2.PASS, v2.PASS_INDEX, v2.AGAINST, v2.STAFF_TEST, v2.CLASSROOM,
-                       v2.HOUSEHOLD, v2.BELOW_FLOOR, v2.LAND, v2.SWEEP]
+    ran[:] = [one for one in ran if one not in ("ANALYZE shared_ip", "ANALYZE link_part")]
+    assert ran[:10] == [v2.PASS, v2.PASS_INDEX, "ANALYZE link_pass", v2.AGAINST, v2.STAFF_TEST,
+                        v2.CLASSROOM, v2.HOUSEHOLD, v2.BELOW_FLOOR, v2.LAND, v2.SWEEP]
     assert ran[-1] == "commit"
     assert "9 link(s) kept, 4 written, 1 dropped" in capsys.readouterr().out
 
@@ -268,3 +272,20 @@ def test_a_household_needs_one_home_line_a_shared_surname_and_two_first_names():
 def test_a_label_change_is_written_like_any_other_change():
     assert "label = EXCLUDED.label" in v2.LAND
     assert "EXCLUDED.label)" in v2.LAND
+
+
+
+def test_every_temp_table_is_analysed_before_it_is_joined():
+    import inspect
+
+    gathered = inspect.getsource(v2.gather)
+    passed = inspect.getsource(v2.run)
+    for table in ("sighting", "mailbox", "staff_member"):
+        assert f'"ANALYZE {table}"' in gathered, table
+    for table in ("shared_ip", "link_part", "link_pass"):
+        assert f'"ANALYZE {table}"' in passed, table
+
+
+def test_signals_are_grouped_by_pair_not_looked_up_per_pair():
+    assert "FROM best b\n        WHERE b.a_user_id = p.a_user_id" not in v2.PASS
+    assert "GROUP BY b.a_user_id, b.b_user_id" in v2.PASS

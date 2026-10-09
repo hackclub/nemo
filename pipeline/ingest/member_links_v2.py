@@ -311,14 +311,19 @@ pair AS (
     FROM family
     GROUP BY a_user_id, b_user_id
     HAVING sum(score) >= %(floor)s AND bool_or(NOT corroborating)
+),
+named AS (
+    SELECT b.a_user_id, b.b_user_id,
+           jsonb_object_agg(b.signal, jsonb_build_object(
+               'value', b.value, 'people', b.people, 'score', round(b.score::numeric, 3))) AS signals
+    FROM best b
+    JOIN pair p ON p.a_user_id = b.a_user_id AND p.b_user_id = b.b_user_id
+    GROUP BY b.a_user_id, b.b_user_id
 )
-SELECT p.a_user_id, p.b_user_id, p.score, p.top_family, p.families,
-       (SELECT jsonb_object_agg(b.signal, jsonb_build_object(
-                   'value', b.value, 'people', b.people, 'score', round(b.score::numeric, 3)))
-        FROM best b
-        WHERE b.a_user_id = p.a_user_id AND b.b_user_id = p.b_user_id) AS signals,
+SELECT p.a_user_id, p.b_user_id, p.score, p.top_family, p.families, n.signals,
        p.first_seen, p.last_seen, NULL::text AS label
 FROM pair p
+JOIN named n ON n.a_user_id = p.a_user_id AND n.b_user_id = p.b_user_id
 """
 
 PASS_INDEX = "CREATE INDEX ON link_pass (a_user_id, b_user_id)"
@@ -503,7 +508,10 @@ def gather(conn, held):
     conn.execute(links.RARITY)
     conn.execute(links.STAGE)
     conn.execute(SIGHTING)
+    conn.execute("ANALYZE sighting")
     load_mailboxes(conn, held)
+    conn.execute("ANALYZE mailbox")
+    conn.execute("ANALYZE staff_member")
     sightings = int(links.shared(held).get("min_sightings", 1))
     counted = {}
 
@@ -531,10 +539,13 @@ def run(conn):
 
     with ingest_run(conn, SOURCE) as counts:
         put_aside = links.mark_shared(conn, held)
+        conn.execute("ANALYZE shared_ip")
         found = gather(conn, held)
+        conn.execute("ANALYZE link_part")
         with conn.cursor() as cur:
             cur.execute(PASS, {**family_table(held), "floor": marks["floor"]})
             cur.execute(PASS_INDEX)
+            cur.execute("ANALYZE link_pass")
             cur.execute(AGAINST, {"weight": against(held)[TWO_COUNTRIES]["weight"]})
             countered = cur.rowcount
             named = labels(held)
