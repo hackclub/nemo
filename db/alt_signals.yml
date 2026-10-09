@@ -93,6 +93,33 @@ device_signals:
     crowd_ceiling: 25
     corroborating: true
 
+identity_signals:
+  mailbox_alias:
+    label: Same mailbox, once dots and plus tags are removed
+    weight: 8.0
+    crowd_ceiling: 10
+
+  local_part:
+    label: Same mailbox name on another domain
+    weight: 3.0
+    crowd_ceiling: 5
+
+name_signals:
+  full_name:
+    label: Same full name
+    weight: 3.0
+    crowd_ceiling: 5
+
+  display_name:
+    label: Same display name
+    weight: 2.0
+    crowd_ceiling: 5
+
+  handle_stem:
+    label: Same handle, ignoring trailing numbers
+    weight: 2.0
+    crowd_ceiling: 5
+
 against:
   two_countries:
     label: Active from two countries in the same hour, neither on a VPN
@@ -102,7 +129,9 @@ families:
   network:
     cap: 6.0
   identity:
-    cap: 5.0
+    cap: 8.0
+  name:
+    cap: 4.0
   device:
     cap: 4.0
   arrival:

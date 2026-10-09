@@ -13,10 +13,12 @@ def test_every_signal_belongs_to_a_family_with_a_cap():
         assert one["cap"] > 0, family
 
 
-def test_no_family_alone_reaches_certain():
+def test_only_identity_evidence_can_reach_certain_alone():
     certain = links.scoring()["certain"]
     for family, one in v2.families().items():
-        assert one["cap"] < certain, family
+        if family != "identity":
+            assert one["cap"] < certain, family
+    assert v2.signals()["mailbox_alias"]["weight"] >= certain
 
 
 def test_the_family_table_lines_up_signal_by_signal():
@@ -157,3 +159,39 @@ def test_a_shared_build_alone_stays_below_strong():
     held = v2.signals()
     assert held["device_agent"]["weight"] < links.scoring()["strong"]
     assert v2.families()["device"]["cap"] < links.scoring()["strong"]
+
+
+def test_a_name_alone_stays_below_strong():
+    assert v2.families()["name"]["cap"] < links.scoring()["strong"]
+    for name in ("full_name", "display_name", "handle_stem"):
+        assert v2.signals()[name]["family"] == "name"
+
+
+def test_mailboxes_fold_aliases_and_leave_out_staff_domains():
+    rows = list(v2.mailbox_rows([("U1", "Jo.Doe+x@googlemail.com"), ("U2", "x@mail.hackclub.com"),
+                                 ("U3", "nope"), ("U4", "kai@school.edu")], ["hackclub.com"]))
+
+    assert rows == [("U1", "jodoe@gmail.com", "jodoe", "gmail.com"),
+                    ("U4", "kai@school.edu", "kai", "school.edu")]
+
+
+def test_names_skip_bots_and_renamed_deactivated_accounts():
+    held = v2.signals()
+    for name in ("full_name", "display_name", "handle_stem"):
+        sql, _ = v2.evidence(name, held[name], 2)
+        assert "NOT" in sql and "is_bot" in sql
+        assert "position('deactivateduser' IN lower(" in sql
+        assert f">= {v2.SHORTEST_NAME}" in sql
+
+
+def test_a_handle_stem_drops_trailing_numbers_and_marks():
+    sql, _ = v2.evidence("handle_stem", v2.signals()["handle_stem"], 2)
+    assert "regexp_replace(lower(handle), '[^a-z]+$', '')" in sql
+
+
+def test_the_harness_and_the_finder_share_one_mailbox_rule():
+    from jobs import score_links
+    from lib import mailbox as rule
+
+    assert score_links.mailbox is rule.mailbox
+    assert v2.mailbox is rule.mailbox

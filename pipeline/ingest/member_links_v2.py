@@ -1,9 +1,14 @@
 from ingest import member_links as links
 from lib.db import ingest_run
+from lib.mailbox import mailbox, staff_domain
 
 SOURCE = "member_links_v2"
 NETWORK = "network"
 DEVICE = "device"
+IDENTITY = "identity"
+NAME = "name"
+SHORTEST_LOCAL = 4
+SHORTEST_NAME = 3
 DEVICE_AGENT = "device_agent"
 DEVICE_JA4 = "device_ja4"
 SHORTEST_AGENT = 20
@@ -76,6 +81,53 @@ DEVICE_EVIDENCE = {
         WHERE action = 'anomaly' AND actor_id IS NOT NULL
           AND payload->'details'->>'client_ja4_fingerprint' IS NOT NULL
         GROUP BY 1, 2
+    """,
+}
+
+MAILBOX = """
+CREATE TEMP TABLE mailbox (user_id text, box text, local text, domain text) ON COMMIT DROP
+"""
+
+IDENTITIES_SQL = """
+SELECT user_id, email FROM fd.member_identity
+WHERE email IS NOT NULL AND position('@' IN email) > 0
+"""
+
+IDENTITY_EVIDENCE = {
+    "mailbox_alias": """
+        SELECT user_id, box AS value, NULL::timestamptz AS first_seen, NULL::timestamptz AS last_seen
+        FROM mailbox
+    """,
+    "local_part": """
+        SELECT user_id, local AS value, NULL::timestamptz AS first_seen, NULL::timestamptz AS last_seen
+        FROM mailbox
+        WHERE length(local) >= {shortest_local}
+    """,
+}
+
+NAME_EVIDENCE = {
+    "full_name": """
+        SELECT i.user_id, lower(btrim(i.real_name)) AS value,
+               NULL::timestamptz AS first_seen, NULL::timestamptz AS last_seen
+        FROM fd.member_identity i
+        JOIN fd.member m ON m.user_id = i.user_id
+        WHERE NOT m.is_bot AND length(btrim(coalesce(i.real_name, ''))) >= {shortest_name}
+          AND position('deactivateduser' IN lower(i.real_name)) <> 1
+    """,
+    "display_name": """
+        SELECT user_id, lower(btrim(display_name)) AS value,
+               NULL::timestamptz AS first_seen, NULL::timestamptz AS last_seen
+        FROM fd.member
+        WHERE NOT is_bot AND length(btrim(coalesce(display_name, ''))) >= {shortest_name}
+          AND position('deactivateduser' IN lower(display_name)) <> 1
+    """,
+    "handle_stem": """
+        SELECT user_id, regexp_replace(lower(handle), '[^a-z]+$', '') AS value,
+               NULL::timestamptz AS first_seen, NULL::timestamptz AS last_seen
+        FROM fd.member
+        WHERE NOT is_bot AND handle IS NOT NULL
+          AND position('deactivateduser' IN lower(handle)) <> 1
+          AND length(regexp_replace(lower(handle), '[^a-z]+$', '')) >= {shortest_name}
     """,
 }
 
@@ -206,6 +258,8 @@ def signals(held=None):
     held = held or links.catalogue()
     found = {name: {**one, "family": NETWORK} for name, one in held["network_signals"].items()}
     found.update({name: {**one, "family": DEVICE} for name, one in held["device_signals"].items()})
+    found.update({name: {**one, "family": IDENTITY} for name, one in held["identity_signals"].items()})
+    found.update({name: {**one, "family": NAME} for name, one in held["name_signals"].items()})
     found.update({name: one for name, one in links.signals(held).items()
                   if one["family"] != NETWORK})
     return found
@@ -227,18 +281,41 @@ def evidence(name, settings, sightings):
     if name == links.JOINED_TOGETHER:
         return links.TOGETHER_SQL, {"weight": settings["weight"], "ceiling": settings["crowd_ceiling"],
                                     "window": settings.get("window_seconds", 300)}
-    source = NETWORK_EVIDENCE.get(name) or DEVICE_EVIDENCE.get(name) or links.EVIDENCE.get(name)
+    source = (NETWORK_EVIDENCE.get(name) or DEVICE_EVIDENCE.get(name)
+              or IDENTITY_EVIDENCE.get(name) or NAME_EVIDENCE.get(name) or links.EVIDENCE.get(name))
     if source is None:
         return None, None
     pairs = links.PAIRS_SQL.format(
-        evidence=source.format(sightings=sightings, shortest=SHORTEST_AGENT))
+        evidence=source.format(sightings=sightings, shortest=SHORTEST_AGENT,
+                               shortest_local=SHORTEST_LOCAL, shortest_name=SHORTEST_NAME))
     return pairs, {"weight": settings["weight"], "ceiling": settings["crowd_ceiling"]}
+
+
+def mailbox_rows(identities, staff):
+    for user_id, email in identities:
+        box = mailbox(email)
+        if box is None:
+            continue
+        local, _, domain = box.rpartition("@")
+        if staff_domain(domain, staff):
+            continue
+        yield user_id, box, local, domain
+
+
+def load_mailboxes(conn, held):
+    conn.execute(MAILBOX)
+    staff = held.get("staff_domains", [])
+    identities = conn.execute(IDENTITIES_SQL).fetchall()
+    with conn.cursor() as cur, cur.copy("COPY mailbox (user_id, box, local, domain) FROM STDIN") as copy:
+        for row in mailbox_rows(identities, staff):
+            copy.write_row(row)
 
 
 def gather(conn, held):
     conn.execute(links.RARITY)
     conn.execute(links.STAGE)
     conn.execute(SIGHTING)
+    load_mailboxes(conn, held)
     sightings = int(links.shared(held).get("min_sightings", 1))
     counted = {}
 

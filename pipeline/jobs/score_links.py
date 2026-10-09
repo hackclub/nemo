@@ -10,11 +10,11 @@ from psycopg import errors, sql
 from ingest.member_links import catalogue, scoring
 from jobs.link_verdicts import VERDICTS
 from lib.db import connect
+from lib.mailbox import mailbox, staff_domain
 from lib.paths import ENV_FILE
 
 LINKS = "fd.member_link"
 TABLE = re.compile(r"^([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)$")
-GMAIL_DOMAINS = ("gmail.com", "googlemail.com")
 BAND_NAMES = ("certain", "strong", "worth a look")
 
 BANDS_SQL = """
@@ -55,23 +55,6 @@ def band_of(score, marks):
     if score >= marks["strong"]:
         return "strong"
     return "worth a look"
-
-
-def mailbox(email):
-    local, at, domain = (email or "").strip().lower().rpartition("@")
-    if not at or not domain:
-        return None
-    local = local.split("+", 1)[0]
-    if domain in GMAIL_DOMAINS:
-        domain = GMAIL_DOMAINS[0]
-        local = local.replace(".", "")
-    if not local:
-        return None
-    return f"{local}@{domain}"
-
-
-def staff_domain(domain, staff):
-    return any(domain == one or domain.endswith(f".{one}") for one in staff)
 
 
 def alias_pairs(rows, staff):
