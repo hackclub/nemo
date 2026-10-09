@@ -148,3 +148,48 @@ def test_the_shared_tables_are_gone_when_the_pass_commits():
 def test_every_signal_the_catalogue_names_can_actually_be_gathered():
     known = set(links.EVIDENCE) | {links.JOINED_TOGETHER}
     assert set(links.signals()) <= known
+
+
+def test_a_pass_reports_what_it_kept_and_returns_the_count(monkeypatch, capsys):
+    import contextlib
+
+    class Counts:
+        rows_in = 0
+        rows_rejected = 0
+
+    class Cursor:
+        rowcount = 0
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def execute(self, sql, _params=None):
+            self.rowcount = 7 if sql == links.LAND else 2
+
+    class Conn:
+        def execute(self, _sql, _params=None):
+            return self
+
+        def fetchone(self):
+            return ("2026-10-09",)
+
+        def cursor(self):
+            return Cursor()
+
+        def commit(self):
+            pass
+
+    @contextlib.contextmanager
+    def bookkeeping(*_args, **_kwargs):
+        yield Counts()
+
+    monkeypatch.setattr(links, "ingest_run", bookkeeping)
+    monkeypatch.setattr(links, "mark_shared", lambda _conn, _held: 3)
+    monkeypatch.setattr(links, "gather", lambda _conn, _held: {"ip_exact": 4, "ip_prefix": 0})
+
+    assert links.run(Conn()) == 7
+    assert "7 link(s) kept, 2 dropped, 3 address(es) on shared networks left out (ip_exact 4)" \
+        in capsys.readouterr().out

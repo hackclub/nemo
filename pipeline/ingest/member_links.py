@@ -253,7 +253,7 @@ def run(conn):
             gone = cur.rowcount
         conn.commit()
 
-    counts = ", ".join(f"{name} {n}" for name, n in sorted(found.items()) if n)
+    per_signal = ", ".join(f"{name} {n}" for name, n in sorted(found.items()) if n)
     print(f"{SOURCE}: {counts.rows_in} link(s) kept, {gone} dropped, "
-          f"{put_aside} address(es) on shared networks left out ({counts})")
+          f"{put_aside} address(es) on shared networks left out ({per_signal})")
     return counts.rows_in
