@@ -753,3 +753,89 @@ def test_addresses_are_checked_and_written_in_one_form():
     assert pull.address("redacted") is None
     assert pull.address("") is None
     assert pull.address(None) is None
+
+
+EVENT_ID = "0dc5d1ec-1111-2222-3333-444455556666"
+
+
+class Shape(Conn):
+    def __init__(self, codes=(), agents=()):
+        super().__init__()
+        self.codes = list(codes)
+        self.agents = list(agents)
+        self.answer = []
+
+    def execute(self, sql, args=None):
+        self.ran.append((sql, args))
+        self.answer = {pull.VIEW_CODES_SQL: self.codes, pull.AGENTS_SQL: self.agents}.get(sql, [])
+        return self
+
+    def fetchall(self):
+        return self.answer
+
+
+def test_a_full_event_gets_typed_columns_and_its_category():
+    actor = {"type": "user", "user": {"id": WHO, "name": "zev", "email": "Zev@Example.COM"}}
+    entity = {"type": "channel", "channel": {"id": "C0APH2MMHH7", "name": "lounge"}}
+    agent = entry()["context"]["ua"]
+    row = pull.monthly_row(entry(action="user_channel_join", actor=actor, entity=entity), "audit_logs_tail",
+                           frozenset(), {pull.agent_hash(agent): 7}, None)
+
+    assert str(row[0]) == EVENT_ID
+    assert row[2:4] == ("user_channel_join", "channels")
+    assert row[6] == "zev@example.com"
+    assert row[10] == "C0APH2MMHH7"
+    assert row[13] == "157.51.215.171"
+    assert row[14] == 7
+    assert row[15] == 12177102026566
+
+
+def test_an_event_slack_did_not_give_a_uuid_stays_out_of_the_new_tables():
+    assert pull.monthly_row(entry(id="not-a-uuid"), "k", frozenset(), {}, None) is None
+    assert pull.view_row(entry(id="not-a-uuid"), 3, {}) is None
+
+
+def test_a_redacted_address_is_stored_as_no_address():
+    row = pull.monthly_row(entry(context={"ip_address": "redacted"}), "k", frozenset(), {}, None)
+    assert row[13] is None
+
+
+def test_the_channel_comes_from_the_entity_whatever_its_kind():
+    assert pull.channel_of(entry(entity={"type": "channel", "channel": {"id": "C1"}})) == "C1"
+    assert pull.channel_of(entry(entity={"type": "message", "message": {"channel": "C2"}})) == "C2"
+    assert pull.channel_of(entry(entity={"type": "huddle", "huddle": {"channel_id": "C3"}})) == "C3"
+    assert pull.channel_of(entry(entity={"type": "user", "user": {"id": "U1"}})) is None
+
+
+def test_high_volume_actions_go_to_the_slim_table_and_the_rest_to_the_monthly_one():
+    agent = entry()["context"]["ua"]
+    conn = Shape(codes=[("file_downloaded", 3)], agents=[(pull.agent_hash(agent), 7)])
+    downloaded = entry(id="0dc5d1ec-1111-2222-3333-444455556667", action="file_downloaded",
+                       entity={"type": "file", "file": {"id": "F123"}})
+
+    assert pull.write_new_shape(conn, [entry(), downloaded], "audit_logs_tail", frozenset()) == (1, 1)
+
+    [view] = conn.did("INSERT INTO slack.audit_view")
+    assert view[0][2:5] == (3, WHO, "F123")
+    assert view[0][6] == 7
+    [monthly] = conn.did("INSERT INTO slack.audit_event_monthly")
+    assert monthly[0][2] == "user_login"
+    [ensure] = conn.did("slack.ensure_months")
+    assert ensure["first"].day == 1 and ensure["ahead"] == pull.MONTHS_AHEAD
+
+
+def test_landing_also_writes_the_new_shape_in_the_same_transaction():
+    conn, counts = Shape(), Counts()
+
+    pull.insert_rows(conn, [entry()], "audit_logs_tail", frozenset(), counts)
+
+    assert conn.did("INSERT INTO slack.audit_event")
+    assert conn.did("INSERT INTO slack.audit_event_monthly")
+
+
+def test_months_are_created_by_their_owner_and_only_for_the_audit_tables():
+    sql = (pathlib.Path(__file__).parents[2] / "db" / "migrations"
+           / "0191_audit_months_run_as_owner.sql").read_text()
+    assert "SECURITY DEFINER" in sql and "SET search_path = slack, pg_temp" in sql
+    assert "parent NOT IN ('slack.audit_event_monthly'::regclass, 'slack.audit_view'::regclass)" in sql
+    assert "FROM PUBLIC" in sql

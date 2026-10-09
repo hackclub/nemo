@@ -1,11 +1,13 @@
+import hashlib
 import ipaddress
 import os
 import threading
+import uuid
 from datetime import UTC, date, datetime, timedelta
 
 from psycopg.types.json import Jsonb
 
-from lib import coverage, member_seen, useragent
+from lib import audit_actions, coverage, member_seen, useragent
 from lib.db import dead_letter, get_cursor, ingest_run, save_cursor
 from lib.proxy_client import ProxyClient, ProxyError
 
@@ -55,6 +57,37 @@ ROOMED = {"user_channel_join": JOINED, "user_channel_leave": LEFT}
 DEFAULT_HORIZON_DAYS = 90
 LAP_SECONDS = 1
 FIRST_TAIL_HOURS = 24
+
+MONTHS_AHEAD = 2
+
+ENSURE_MONTHS_SQL = """
+SELECT slack.ensure_months('slack.audit_event_monthly', 'audit_event', %(first)s, %(ahead)s),
+       slack.ensure_months('slack.audit_view', 'audit_view', %(first)s, %(ahead)s)
+"""
+
+AGENTS_UPSERT_SQL = """
+INSERT INTO slack.user_agent (ua)
+SELECT DISTINCT unnest(%s::text[])
+ON CONFLICT (md5(ua)) DO NOTHING
+"""
+
+AGENTS_SQL = "SELECT md5(ua), id FROM slack.user_agent WHERE md5(ua) = ANY(%s)"
+
+VIEW_CODES_SQL = "SELECT action, code FROM slack.audit_view_action"
+
+MONTHLY_SQL = """
+INSERT INTO slack.audit_event_monthly
+    (id, at, action, category, actor_kind, actor_id, actor_email, entity_kind, entity_id,
+     entity_email, channel_id, app_id, ours, ip, ua_id, session_id, source_key, payload)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+ON CONFLICT (id, at) DO NOTHING
+"""
+
+VIEW_SQL = """
+INSERT INTO slack.audit_view (id, at, action, actor_id, object_id, ip, ua_id, session_id)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+ON CONFLICT (id, at) DO NOTHING
+"""
 
 EVENT_SQL = """
 INSERT INTO slack.audit_event
@@ -249,6 +282,115 @@ def own_session(entry):
     return not useragent.api_client(context.get("ua"))
 
 
+def session_of(context):
+    session = (context or {}).get("session_id")
+    return int(session) if str(session or "").isdigit() else None
+
+
+def event_uuid(value):
+    try:
+        return uuid.UUID(str(value))
+    except ValueError:
+        return None
+
+
+def email_of(entry, key):
+    held = entry.get(key) or {}
+    if held.get("type") != "user":
+        return None
+    email = str((held.get("user") or {}).get("email") or "").strip().lower()
+    return email or None
+
+
+def channel_of(entry):
+    entity = entry.get("entity") or {}
+    kind = entity.get("type")
+    body = entity.get(kind) or {} if kind else {}
+    if kind == "channel":
+        found = body.get("id")
+    else:
+        found = body.get("channel") or body.get("channel_id")
+    return found if isinstance(found, str) and found else None
+
+
+def agent_hash(ua):
+    return hashlib.md5(ua.encode()).hexdigest()
+
+
+def agent_of(entry):
+    return str((entry.get("context") or {}).get("ua") or "").strip() or None
+
+
+def agent_ids(conn, agents):
+    held = sorted({one for one in agents if one})
+    if not held:
+        return {}
+    conn.execute(AGENTS_UPSERT_SQL, (held,))
+    hashes = [agent_hash(one) for one in held]
+    return dict(conn.execute(AGENTS_SQL, (hashes,)).fetchall())
+
+
+def monthly_row(entry, source_key, ours, agents, held):
+    event_id = event_uuid(entry.get("id"))
+    at = stamp(entry.get("date_create"))
+    if event_id is None or at is None or not entry.get("action"):
+        return None
+    context = entry.get("context") or {}
+    app_id = ((context.get("app") or {}).get("id")) or None
+    actor_kind, actor_id = whose(entry, "actor")
+    entity_kind, entity_id = whose(entry, "entity")
+    agent = agent_of(entry)
+    return (
+        event_id, at, entry["action"], audit_actions.entry(entry["action"], held)["category"],
+        actor_kind, actor_id, email_of(entry, "actor"), entity_kind, entity_id,
+        email_of(entry, "entity"), channel_of(entry), app_id, bool(app_id and app_id in ours),
+        address(context.get("ip_address")), agents.get(agent_hash(agent)) if agent else None,
+        session_of(context), source_key, Jsonb(entry),
+    )
+
+
+def view_row(entry, code, agents):
+    event_id = event_uuid(entry.get("id"))
+    at = stamp(entry.get("date_create"))
+    if event_id is None or at is None:
+        return None
+    context = entry.get("context") or {}
+    _actor_kind, actor_id = whose(entry, "actor")
+    _entity_kind, entity_id = whose(entry, "entity")
+    agent = agent_of(entry)
+    return (
+        event_id, at, code, actor_id, entity_id, address(context.get("ip_address")),
+        agents.get(agent_hash(agent)) if agent else None, session_of(context),
+    )
+
+
+def write_new_shape(conn, entries, source_key, ours):
+    times = [at for at in (stamp(entry.get("date_create")) for entry in entries) if at is not None]
+    if not times:
+        return 0, 0
+    conn.execute(ENSURE_MONTHS_SQL, {"first": min(times).date().replace(day=1), "ahead": MONTHS_AHEAD})
+    held = audit_actions.catalogue()
+    codes = dict(conn.execute(VIEW_CODES_SQL).fetchall())
+    agents = agent_ids(conn, [agent_of(entry) for entry in entries])
+    monthly, view = [], []
+    for entry in entries:
+        code = codes.get(entry.get("action"))
+        if code:
+            row = view_row(entry, code, agents)
+            if row:
+                view.append(row)
+        else:
+            row = monthly_row(entry, source_key, ours, agents, held)
+            if row:
+                monthly.append(row)
+    with conn.cursor() as cur:
+        if monthly:
+            cur.executemany(MONTHLY_SQL, monthly)
+        if view:
+            cur.executemany(VIEW_SQL, view)
+    return len(monthly), len(view)
+
+
 def login_row(entry):
     kind, user_id = whose(entry, "actor")
     at = stamp(entry.get("date_create"))
@@ -261,12 +403,9 @@ def login_row(entry):
         if kind != "user" or ip is None or not own_session(entry):
             return None
     seen = useragent.parse(context.get("ua"))
-    session = context.get("session_id")
-
     return (
         user_id, at, entry["action"], ip,
-        seen["ua"], seen["ua_app"], seen["ua_os"],
-        int(session) if str(session or "").isdigit() else None,
+        seen["ua"], seen["ua_app"], seen["ua_os"], session_of(context),
     )
 
 
@@ -321,7 +460,7 @@ def own_sessions(conn, logins):
 
 
 def insert_rows(conn, entries, source_key, ours, counts):
-    events, logins, rooms = [], [], []
+    events, logins, rooms, landed = [], [], [], []
     named = {}
     for entry in entries:
         row = event_row(entry, source_key, ours)
@@ -330,6 +469,7 @@ def insert_rows(conn, entries, source_key, ours, counts):
             dead_letter(conn, source_key, {"keys": sorted(entry)}, "no id, action or date")
             continue
         events.append(row)
+        landed.append(entry)
         seated = login_row(entry)
         if seated:
             logins.append(seated)
@@ -351,6 +491,7 @@ def insert_rows(conn, entries, source_key, ours, counts):
                 cur.executemany(CHANNEL_SQL, rooms)
             if named:
                 cur.executemany(IDENTITY_SQL, list(named.values()))
+        write_new_shape(conn, landed, source_key, ours)
     conn.commit()
     counts.rows_in += len(events)
     return len(events), len(logins)
