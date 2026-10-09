@@ -9,6 +9,8 @@ CAP = 101
 
 TOUCHED_SQL = "SELECT user_id, touched_at FROM fd.member_touch ORDER BY touched_at LIMIT %s"
 
+QUEUED_SQL = "SELECT user_id, touched_at FROM fd.member_touch WHERE user_id = ANY(%s)"
+
 DONE_SQL = """
 DELETE FROM fd.member_touch t
 USING unnest(%s::text[], %s::timestamptz[]) AS done (user_id, touched_at)
@@ -239,6 +241,19 @@ def rescore(conn, held, wholes, touched):
     conn.execute("ANALYZE link_part")
     kept, changed, gone, _countered, _labelled = links.settle(conn, held, LIVE, SWEEP)
     return widened, kept, changed, gone, found
+
+
+def score(conn, user_ids):
+    held = links.catalogue()
+    wholes = links.held_wholes(conn)
+    if links.wanting(held, wholes):
+        return None
+    queued = conn.execute(QUEUED_SQL, (list(user_ids),)).fetchall()
+    _widened, _kept, changed, _gone, _found = rescore(conn, held, wholes, list(user_ids))
+    if queued:
+        conn.execute(DONE_SQL, ([user_id for user_id, _ in queued], [at for _, at in queued]))
+    conn.commit()
+    return changed
 
 
 def run(conn, batch=BATCH):

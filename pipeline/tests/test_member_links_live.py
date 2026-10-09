@@ -57,3 +57,42 @@ def test_trait_changes_joins_and_bans_queue_the_member():
     assert "AFTER INSERT OR UPDATE OF joined_at ON fd.member_joins" in sql
     assert "WHEN (NEW.action IN ('user_deactivated', 'user_reactivated'))" in sql
     assert "ON CONFLICT (user_id) DO UPDATE SET touched_at = EXCLUDED.touched_at" in sql
+
+
+def test_scoring_one_member_waits_for_the_first_full_rebuild():
+    class Conn:
+        def execute(self, _sql, _args=None):
+            return self
+
+        def fetchall(self):
+            return []
+
+    assert live.score(Conn(), ["U1"]) is None
+
+
+def test_a_join_is_scored_after_it_is_screened():
+    import pathlib
+
+    from bot.nemo.surface import join_watch
+
+    src = pathlib.Path(join_watch.__file__).read_text()
+    assert src.index("screening.screen(") < src.index("score_links(user[\"id\"])")
+
+
+def test_a_join_whose_scoring_fails_is_left_to_the_live_lane(monkeypatch, caplog):
+    import contextlib
+
+    from bot.nemo.surface import join_watch
+
+    @contextlib.contextmanager
+    def session():
+        yield object()
+
+    def broken(_conn, _ids):
+        raise RuntimeError("lock timeout")
+
+    monkeypatch.setattr(join_watch, "session", session)
+    monkeypatch.setattr(join_watch.member_links_live, "score", broken)
+
+    assert join_watch.score_links("U1") is None
+    assert "the live lane will" in caplog.text
