@@ -18,8 +18,8 @@ SELECT at FROM fd.login_event WHERE source = 'access_logs' ORDER BY at DESC LIMI
 ROW_SQL = """
 INSERT INTO fd.login_event
     (user_id, at, source, action, ip, ua, ua_app, ua_os,
-     country, region, isp, seen, ua_read_at)
-VALUES (%s, %s, 'access_logs', 'access_log', %s, %s, %s, %s, %s, %s, %s, %s, now())
+     country, region, isp, seen, first_seen_at, ua_read_at)
+VALUES (%s, %s, 'access_logs', 'access_log', %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
 ON CONFLICT (user_id, at, source) DO UPDATE SET
     ip = coalesce(EXCLUDED.ip, fd.login_event.ip),
     ua = coalesce(EXCLUDED.ua, fd.login_event.ua),
@@ -29,9 +29,11 @@ ON CONFLICT (user_id, at, source) DO UPDATE SET
     region = coalesce(EXCLUDED.region, fd.login_event.region),
     isp = coalesce(EXCLUDED.isp, fd.login_event.isp),
     seen = greatest(EXCLUDED.seen, fd.login_event.seen),
+    first_seen_at = least(EXCLUDED.first_seen_at, fd.login_event.first_seen_at),
     updated_at = now()
 WHERE (fd.login_event.ip, fd.login_event.ua, fd.login_event.ua_app, fd.login_event.ua_os,
-       fd.login_event.country, fd.login_event.region, fd.login_event.isp, fd.login_event.seen)
+       fd.login_event.country, fd.login_event.region, fd.login_event.isp, fd.login_event.seen,
+       fd.login_event.first_seen_at)
       IS DISTINCT FROM (coalesce(EXCLUDED.ip, fd.login_event.ip),
                         coalesce(EXCLUDED.ua, fd.login_event.ua),
                         coalesce(EXCLUDED.ua_app, fd.login_event.ua_app),
@@ -39,7 +41,8 @@ WHERE (fd.login_event.ip, fd.login_event.ua, fd.login_event.ua_app, fd.login_eve
                         coalesce(EXCLUDED.country, fd.login_event.country),
                         coalesce(EXCLUDED.region, fd.login_event.region),
                         coalesce(EXCLUDED.isp, fd.login_event.isp),
-                        greatest(EXCLUDED.seen, fd.login_event.seen))
+                        greatest(EXCLUDED.seen, fd.login_event.seen),
+                        least(EXCLUDED.first_seen_at, fd.login_event.first_seen_at))
 """
 
 
@@ -71,7 +74,7 @@ def row_for(login):
     return (
         user_id, at, ip, seen["ua"], seen["ua_app"], seen["ua_os"],
         normalized(login.get("country")), normalized(login.get("region")), normalized(login.get("isp")),
-        count,
+        count, stamp(login.get("date_first")),
     )
 
 
