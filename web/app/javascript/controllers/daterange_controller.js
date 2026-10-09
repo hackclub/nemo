@@ -189,14 +189,17 @@ export default class extends Controller {
     const [a, b] = this.span
     this.popTarget.querySelectorAll(".rcal-day").forEach((cell) => {
       const day = parse(cell.dataset.day)
-      const inside = a && b && day >= a && day <= b
-      const edgeA = same(day, a)
-      const edgeB = same(day, b)
+      const out = cell.classList.contains("rcal-out")
+      const inside = !out && a && b && day >= a && day <= b
+      const edgeA = !out && same(day, a)
+      const edgeB = !out && same(day, b)
       const dow = Number(cell.dataset.dow)
+      const first = day.getDate() === 1
+      const last = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1).getDate() === 1
       cell.classList.toggle("rcal-in", Boolean(inside))
       cell.classList.toggle("rcal-pick", Boolean(edgeA || edgeB))
-      cell.classList.toggle("rcal-l", Boolean(inside && (edgeA || dow === 0)))
-      cell.classList.toggle("rcal-r", Boolean(inside && (edgeB || dow === 6)))
+      cell.classList.toggle("rcal-l", Boolean(inside && (edgeA || dow === 0 || first)))
+      cell.classList.toggle("rcal-r", Boolean(inside && (edgeB || dow === 6 || last)))
       cell.setAttribute("aria-pressed", edgeA || edgeB ? "true" : "false")
     })
   }
