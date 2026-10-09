@@ -91,6 +91,10 @@ def landing_row(row, agents):
             country, region, isp)
 
 
+def order(row):
+    return row[0], row[1], row[2] or "", row[3] or 0
+
+
 def insert_rows(conn, logins, counts):
     rows = []
     for login in logins:
@@ -104,7 +108,7 @@ def insert_rows(conn, logins, counts):
     if rows:
         agents = user_agents.ids(conn, [row[3] for row in rows])
         with conn.cursor() as cur:
-            cur.executemany(ROW_SQL, [landing_row(row, agents) for row in rows])
+            cur.executemany(ROW_SQL, sorted((landing_row(row, agents) for row in rows), key=order))
             member_seen.logged_in(cur, [(row[0], row[1]) for row in rows])
     conn.commit()
     counts.rows_in += len(rows)
