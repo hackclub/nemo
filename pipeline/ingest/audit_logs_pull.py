@@ -1,3 +1,4 @@
+import ipaddress
 import os
 import threading
 from datetime import UTC, date, datetime, timedelta
@@ -229,6 +230,16 @@ def event_row(entry, source_key, ours):
     )
 
 
+def address(value):
+    held = str(value or "").strip()
+    if not held:
+        return None
+    try:
+        return str(ipaddress.ip_address(held))
+    except ValueError:
+        return None
+
+
 def own_session(entry):
     context = entry.get("context") or {}
     if (context.get("app") or {}).get("id"):
@@ -245,7 +256,7 @@ def login_row(entry):
         return None
 
     context = entry.get("context") or {}
-    ip = (context.get("ip_address") or "").strip() or None
+    ip = address(context.get("ip_address"))
     if entry.get("action") not in SEATED:
         if kind != "user" or ip is None or not own_session(entry):
             return None

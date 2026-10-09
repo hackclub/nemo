@@ -737,3 +737,19 @@ def test_the_held_walk_ends_complete_and_then_stops_reading(login_walk):
     conn = Owners(held=[held("z", 5)])
     assert pull.backfill_logins(conn) == 0
     assert conn.ran == []
+
+
+def test_an_address_slack_redacted_is_never_written_as_one():
+    redacted = {"ip_address": "redacted", "ua": entry()["context"]["ua"]}
+
+    assert pull.login_row(entry(action="file_downloaded", context=redacted)) is None
+    signed_in = pull.login_row(entry(context=redacted))
+    assert signed_in is not None and signed_in[3] is None
+
+
+def test_addresses_are_checked_and_written_in_one_form():
+    assert pull.address(" 157.51.215.171 ") == "157.51.215.171"
+    assert pull.address("2001:DB8::1") == "2001:db8::1"
+    assert pull.address("redacted") is None
+    assert pull.address("") is None
+    assert pull.address(None) is None
