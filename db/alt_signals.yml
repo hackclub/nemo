@@ -173,6 +173,12 @@ families:
   arrival:
     cap: 4.0
 
+clusters:
+  edge_score: 5.0
+  ring:
+    min_accounts: 4
+    window_minutes: 60
+
 scoring:
   floor: 3.0
   strong: 5.0

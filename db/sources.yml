@@ -335,6 +335,20 @@ sources:
     writes: [fd.member_link_v2]
     feeds: []
 
+  member_clusters:
+    standalone: true
+    label: Accounts grouped through strong links, with rings of throwaway accounts flagged
+    endpoint: none
+    documented: true
+    credential: none
+    cadence: live
+    window: everything we hold
+    guard: none
+    resume: none
+    retention: replace
+    writes: [fd.member_cluster]
+    feeds: []
+
   access_logs:
     unit_budget_seconds: 180
     standalone: true

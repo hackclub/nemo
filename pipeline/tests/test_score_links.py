@@ -2,6 +2,7 @@ import pytest
 from psycopg import errors
 
 from jobs import score_links as links
+from lib.graph import components
 
 MARKS = {"floor": 3.0, "strong": 5.0, "certain": 8.0}
 
@@ -55,7 +56,7 @@ def test_alias_pairs_leave_out_staff_domains():
 
 
 def test_people_join_chains_of_pairs():
-    assert links.people([("U1", "U2"), ("U3", "U2"), ("U7", "U8")]) == [
+    assert components([("U1", "U2"), ("U3", "U2"), ("U7", "U8")]) == [
         {"U1", "U2", "U3"}, {"U7", "U8"}]
 
 

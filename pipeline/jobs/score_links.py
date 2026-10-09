@@ -10,6 +10,7 @@ from psycopg import errors, sql
 from ingest.member_links import catalogue, scoring
 from jobs.link_verdicts import VERDICTS
 from lib.db import connect
+from lib.graph import components
 from lib.mailbox import mailbox, staff_domain
 from lib.paths import ENV_FILE
 
@@ -66,24 +67,6 @@ def alias_pairs(rows, staff):
     return {pair for users in boxes.values() for pair in combinations(sorted(users), 2)}
 
 
-def people(pairs):
-    parent = {}
-
-    def root(one):
-        parent.setdefault(one, one)
-        while parent[one] != one:
-            parent[one] = parent[parent[one]]
-            one = parent[one]
-        return one
-
-    for a, b in pairs:
-        parent[root(a)] = root(b)
-    groups = defaultdict(set)
-    for one in list(parent):
-        groups[root(one)].add(one)
-    return sorted(groups.values(), key=lambda group: (-len(group), min(group)))
-
-
 def hub(person, pairs):
     counts = Counter(one for pair in pairs for one in pair if one in person)
     return min(person, key=lambda one: (-counts[one], one))
@@ -91,7 +74,7 @@ def hub(person, pairs):
 
 def together(person, links):
     inside = [(a, b) for a, b in links if a in person and b in person]
-    groups = people(inside)
+    groups = components(inside)
     return len(groups[0]) if groups else 0
 
 
@@ -120,7 +103,7 @@ def measure(conn, links_name=LINKS):
     verdicts = {verdict: found(by_verdict[verdict], scores, marks) for verdict in VERDICTS}
 
     confirmed = by_verdict["same_person"]
-    groups = people(confirmed)
+    groups = components(confirmed)
     accounts = sorted(set().union(*groups)) if groups else []
     among = query(AMONG_SQL, {"ids": accounts}) if accounts else []
     every = [(a, b) for a, b, _score in among]
