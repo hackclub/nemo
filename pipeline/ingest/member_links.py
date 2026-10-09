@@ -18,13 +18,13 @@ EVIDENCE = {
     EMAIL_DOMAIN: """
         SELECT user_id, lower(split_part(email, '@', 2)) AS value,
                NULL::timestamptz AS first_seen, NULL::timestamptz AS last_seen
-        FROM fd.member_identity
+        FROM {identity}
         WHERE email IS NOT NULL AND position('@' IN email) > 0
     """,
     SESSION_AGENT: """
         SELECT e.user_id, u.app || ' / ' || u.os AS value,
                min(e.first_at) AS first_seen, max(e.last_at) AS last_seen
-        FROM fd.login_event e
+        FROM {login} e
         JOIN slack.user_agent u ON u.id = e.ua_id
         WHERE u.app IS NOT NULL AND u.os IS NOT NULL GROUP BY 1, 2
     """,
@@ -36,20 +36,17 @@ crowd AS (
     SELECT value, count(DISTINCT user_id) AS people FROM ev GROUP BY 1
 ),
 keep AS (
-    SELECT value, people FROM crowd WHERE people BETWEEN 2 AND %(ceiling)s
+    SELECT value, people FROM crowd WHERE people BETWEEN 2 AND %(ceiling)s {not_crowded_value}
 ),
 small AS (
     SELECT e.user_id, e.value, e.first_seen, e.last_seen
     FROM ev e JOIN keep k ON k.value = e.value
-),
-whole AS (
-    SELECT greatest(count(DISTINCT user_id), 2)::numeric AS people FROM ev
 )
 SELECT least(a.user_id, b.user_id) AS a_user_id,
        greatest(a.user_id, b.user_id) AS b_user_id,
        a.value,
        k.people,
-       %(weight)s::numeric * rarity((SELECT people FROM whole), k.people) AS score,
+       %(weight)s::numeric * rarity(%(whole)s::numeric, k.people) AS score,
        least(a.first_seen, b.first_seen) AS first_seen,
        greatest(a.last_seen, b.last_seen) AS last_seen
 FROM small a
@@ -57,11 +54,18 @@ JOIN small b ON b.value = a.value AND b.user_id > a.user_id
 JOIN keep k ON k.value = a.value
 """
 
-TOGETHER_SQL = """
-WITH ev AS (
+WHOLE_SQL = """
+WITH ev AS ({evidence})
+SELECT greatest(count(DISTINCT user_id), 2)::numeric FROM ev
+"""
+
+TOGETHER_EVIDENCE = """
     SELECT user_id, joined_at, date_trunc('hour', joined_at) AS bucket
-    FROM fd.member_joins WHERE joined_at IS NOT NULL
-),
+    FROM {joins} WHERE joined_at IS NOT NULL
+"""
+
+TOGETHER_SQL = """
+WITH ev AS (""" + TOGETHER_EVIDENCE + """),
 crowd AS (
     SELECT bucket, count(DISTINCT user_id) AS people FROM ev GROUP BY 1
 ),
@@ -70,15 +74,12 @@ keep AS (
 ),
 small AS (
     SELECT e.user_id, e.joined_at, e.bucket FROM ev e JOIN keep k ON k.bucket = e.bucket
-),
-whole AS (
-    SELECT greatest(count(DISTINCT user_id), 2)::numeric AS people FROM ev
 )
 SELECT least(a.user_id, b.user_id) AS a_user_id,
        greatest(a.user_id, b.user_id) AS b_user_id,
        to_char(least(a.joined_at, b.joined_at), 'YYYY-MM-DD HH24:MI') AS value,
        k.people,
-       %(weight)s::numeric * rarity((SELECT people FROM whole), k.people) AS score,
+       %(weight)s::numeric * rarity(%(whole)s::numeric, k.people) AS score,
        least(a.joined_at, b.joined_at) AS first_seen,
        greatest(a.joined_at, b.joined_at) AS last_seen
 FROM small a
@@ -109,6 +110,19 @@ WHERE e.ip IS NOT NULL
 """
 
 SHARED_INDEX = "CREATE INDEX ON shared_ip (ip)"
+
+KEEP_SHARED = """
+WITH gone AS (DELETE FROM fd.shared_ip WHERE ip NOT IN (SELECT ip FROM shared_ip))
+INSERT INTO fd.shared_ip (ip) SELECT ip FROM shared_ip ON CONFLICT (ip) DO NOTHING
+"""
+
+KEEP_WHOLE = """
+INSERT INTO fd.link_signal_stat (signal, whole, computed_at)
+SELECT signal, whole, now() FROM unnest(%s::text[], %s::numeric[]) AS one (signal, whole)
+ON CONFLICT (signal) DO UPDATE SET whole = EXCLUDED.whole, computed_at = EXCLUDED.computed_at
+"""
+
+HELD_WHOLE = "SELECT signal, whole FROM fd.link_signal_stat"
 
 RARITY = """
 CREATE OR REPLACE FUNCTION pg_temp.rarity(whole numeric, crowd numeric)
@@ -149,19 +163,20 @@ REPEATED = ((IP_MANY, IP_STABLE),)
 COLLAPSED = (IP_SAME_HOUR, IP_HOURLY, IP_BURST)
 TWO_COUNTRIES = "two_countries"
 
-SIGHTING = """
-CREATE TEMP TABLE sighting ON COMMIT DROP AS
+SIGHTING_SELECT = """
 SELECT e.user_id, e.ip, e.ip_prefix, e.hour, sum(e.hits) AS seen,
        CASE WHEN n.class IN ('rotating', 'vpn', 'hosting', 'tor') THEN n.class
-            WHEN EXISTS (SELECT 1 FROM shared_ip s WHERE s.ip = e.ip) THEN 'rotating'
+            WHEN EXISTS (SELECT 1 FROM {shared_ip} s WHERE s.ip = e.ip) THEN 'rotating'
             ELSE 'stable' END AS class,
        coalesce(e.country, n.country) AS country
-FROM fd.login_event e
+FROM {login} e
 LEFT JOIN fd.ip_network n ON n.ip_prefix = e.ip_prefix
 WHERE e.ip IS NOT NULL
 GROUP BY e.user_id, e.ip, e.ip_prefix, e.hour, n.class,
          coalesce(e.country, n.country)
 """
+
+SIGHTING = "CREATE TEMP TABLE sighting ON COMMIT DROP AS" + SIGHTING_SELECT
 
 NETWORK_EVIDENCE = {
     IP_STABLE: """
@@ -191,12 +206,12 @@ NETWORK_EVIDENCE = {
                host(e.ip) || ' ' || to_char(e.hour, 'YYYY-MM-DD HH24')
                    || ' ' || left(md5(u.ua), 12) AS value,
                min(e.first_at) AS first_seen, max(e.last_at) AS last_seen
-        FROM fd.login_event e
+        FROM {login} e
         JOIN slack.user_agent u ON u.id = e.ua_id
         LEFT JOIN fd.ip_network n ON n.ip_prefix = e.ip_prefix
         WHERE e.ip IS NOT NULL
           AND (n.class IN ('rotating', 'vpn', 'hosting', 'tor')
-               OR EXISTS (SELECT 1 FROM shared_ip s WHERE s.ip = e.ip))
+               OR EXISTS (SELECT 1 FROM {shared_ip} s WHERE s.ip = e.ip))
         GROUP BY 1, 2
     """,
 }
@@ -204,7 +219,7 @@ NETWORK_EVIDENCE = {
 DEVICE_EVIDENCE = {
     DEVICE_AGENT: """
         SELECT e.user_id, u.ua AS value, min(e.first_at) AS first_seen, max(e.last_at) AS last_seen
-        FROM fd.login_event e
+        FROM {login} e
         JOIN slack.user_agent u ON u.id = e.ua_id
         WHERE length(u.ua) >= {shortest}
         GROUP BY 1, 2
@@ -212,7 +227,7 @@ DEVICE_EVIDENCE = {
     DEVICE_JA4: """
         SELECT actor_id AS user_id, payload->'details'->>'client_ja4_fingerprint' AS value,
                min(at) AS first_seen, max(at) AS last_seen
-        FROM slack.audit_event
+        FROM {audit}
         WHERE action = 'anomaly' AND actor_id IS NOT NULL
           AND payload->'details'->>'client_ja4_fingerprint' IS NOT NULL
         GROUP BY 1, 2
@@ -228,7 +243,7 @@ CREATE TEMP TABLE staff_member (user_id text PRIMARY KEY) ON COMMIT DROP
 """
 
 IDENTITIES_SQL = """
-SELECT user_id, email FROM fd.member_identity
+SELECT user_id, email FROM {identity}
 WHERE email IS NOT NULL AND position('@' IN email) > 0
 """
 
@@ -248,22 +263,22 @@ NAME_EVIDENCE = {
     "full_name": """
         SELECT i.user_id, lower(btrim(i.real_name)) AS value,
                NULL::timestamptz AS first_seen, NULL::timestamptz AS last_seen
-        FROM fd.member_identity i
-        JOIN fd.member m ON m.user_id = i.user_id
+        FROM {identity} i
+        JOIN {member} m ON m.user_id = i.user_id
         WHERE NOT m.is_bot AND length(btrim(coalesce(i.real_name, ''))) >= {shortest_name}
           AND position('deactivateduser' IN lower(i.real_name)) <> 1
     """,
     "display_name": """
         SELECT user_id, lower(btrim(display_name)) AS value,
                NULL::timestamptz AS first_seen, NULL::timestamptz AS last_seen
-        FROM fd.member
+        FROM {member}
         WHERE NOT is_bot AND length(btrim(coalesce(display_name, ''))) >= {shortest_name}
           AND position('deactivateduser' IN lower(display_name)) <> 1
     """,
     "handle_stem": """
         SELECT user_id, regexp_replace(lower(handle), '[^a-z]+$', '') AS value,
                NULL::timestamptz AS first_seen, NULL::timestamptz AS last_seen
-        FROM fd.member
+        FROM {member}
         WHERE NOT is_bot AND handle IS NOT NULL
           AND position('deactivateduser' IN lower(handle)) <> 1
           AND length(regexp_replace(lower(handle), '[^a-z]+$', '')) >= {shortest_name}
@@ -271,7 +286,7 @@ NAME_EVIDENCE = {
     "handle_stem_long": """
         SELECT user_id, regexp_replace(lower(handle), '[^a-z]+$', '') AS value,
                NULL::timestamptz AS first_seen, NULL::timestamptz AS last_seen
-        FROM fd.member
+        FROM {member}
         WHERE NOT is_bot AND handle IS NOT NULL
           AND position('deactivateduser' IN lower(handle)) <> 1
           AND length(regexp_replace(lower(handle), '[^a-z]+$', '')) >= {longest_stem}
@@ -283,7 +298,7 @@ WITH banned AS (
     SELECT entity_id AS user_id,
            max(at) FILTER (WHERE action = 'user_deactivated') AS banned_at,
            max(at) FILTER (WHERE action = 'user_reactivated') AS back_at
-    FROM slack.audit_event
+    FROM {audit}
     WHERE action IN ('user_deactivated', 'user_reactivated') AND entity_id IS NOT NULL
     GROUP BY 1
 ),
@@ -292,12 +307,24 @@ held AS (
     WHERE banned_at IS NOT NULL AND banned_at > coalesce(back_at, '-infinity'::timestamptz)
 )"""
 
+INVITES = """
+    SELECT actor_id, entity_id, min(at) AS at
+    FROM {audit}
+    WHERE action = 'user_created' AND actor_id IS NOT NULL AND entity_id IS NOT NULL
+      AND actor_id <> entity_id
+    GROUP BY 1, 2
+"""
+
+INVITES_WHOLE = "SELECT greatest(count(*), 2)::numeric FROM (" + INVITES + ") invites"
+
+TOGETHER_WHOLE = "SELECT greatest(count(DISTINCT user_id), 2)::numeric FROM (" + TOGETHER_EVIDENCE + ") ev"
+
 ARRIVAL_EVIDENCE = {
     "created_same_address": """
         WITH ev AS (
             SELECT e.user_id, e.ip, min(j.joined_at) AS at
-            FROM fd.login_event e
-            JOIN fd.member_joins j ON j.user_id = e.user_id
+            FROM {login} e
+            JOIN {joins} j ON j.user_id = e.user_id
             WHERE e.ip IS NOT NULL
               AND e.first_at <= j.joined_at + interval '1 hour'
               AND e.last_at >= j.joined_at - interval '5 minutes'
@@ -320,27 +347,18 @@ ARRIVAL_EVIDENCE = {
                               AND a.at + make_interval(secs => %(window)s)
     """,
     "invited_by": """
-        WITH invites AS (
-            SELECT actor_id, entity_id, min(at) AS at
-            FROM slack.audit_event
-            WHERE action = 'user_created' AND actor_id IS NOT NULL AND entity_id IS NOT NULL
-              AND actor_id <> entity_id
-            GROUP BY 1, 2
-        ),
+        WITH invites AS (""" + INVITES + """),
         crowd AS (
             SELECT actor_id, count(*) AS people FROM invites GROUP BY 1
-        ),
-        whole AS (
-            SELECT greatest(count(*), 2)::numeric AS people FROM invites
         )
         SELECT least(i.actor_id, i.entity_id) AS a_user_id,
                greatest(i.actor_id, i.entity_id) AS b_user_id,
                i.actor_id AS value, c.people,
-               %(weight)s::numeric * rarity((SELECT people FROM whole), (c.people + 1)::numeric) AS score,
+               %(weight)s::numeric * rarity(%(whole)s::numeric, (c.people + 1)::numeric) AS score,
                i.at AS first_seen, i.at AS last_seen
         FROM invites i
         JOIN crowd c ON c.actor_id = i.actor_id
-        WHERE c.people <= %(ceiling)s
+        WHERE c.people <= %(ceiling)s {not_crowded_actor}
     """,
     "after_ban_address": BANNED + """,
         used AS (
@@ -368,14 +386,14 @@ ARRIVAL_EVIDENCE = {
     "after_ban_device": BANNED + """,
         agent AS (
             SELECT e.user_id, u.ua, min(e.first_at) AS first_at
-            FROM fd.login_event e
+            FROM {login} e
             JOIN slack.user_agent u ON u.id = e.ua_id
             WHERE length(u.ua) >= {shortest}
             GROUP BY 1, 2
         ),
         crowd AS (
             SELECT ua, count(*) AS people FROM agent GROUP BY 1
-            HAVING count(*) BETWEEN 2 AND %(ceiling)s
+            HAVING count(*) BETWEEN 2 AND %(ceiling)s {not_crowded_ua}
         ),
         used AS (
             SELECT a.user_id, a.ua, h.banned_at
@@ -400,12 +418,12 @@ WITH ev AS (
            host(e.ip) || ' ' || to_char(e.hour, 'YYYY-MM-DD HH24')
                || ' ' || left(md5(u.ua), 12) AS value,
            min(e.first_at) AS seen
-    FROM fd.login_event e
+    FROM {login} e
     JOIN slack.user_agent u ON u.id = e.ua_id
     LEFT JOIN fd.ip_network n ON n.ip_prefix = e.ip_prefix
     WHERE e.ip IS NOT NULL
       AND (n.class IN ('rotating', 'vpn', 'hosting', 'tor')
-           OR EXISTS (SELECT 1 FROM shared_ip s WHERE s.ip = e.ip))
+           OR EXISTS (SELECT 1 FROM {shared_ip} s WHERE s.ip = e.ip))
     GROUP BY 1, 2
 ),
 crowd AS (
@@ -418,7 +436,7 @@ small AS (
     SELECT e.user_id, e.value, e.seen, j.joined_at
     FROM ev e
     JOIN keep k ON k.value = e.value
-    JOIN fd.member_joins j ON j.user_id = e.user_id
+    JOIN {joins} j ON j.user_id = e.user_id
 )
 SELECT least(a.user_id, b.user_id) AS a_user_id,
        greatest(a.user_id, b.user_id) AS b_user_id,
@@ -444,7 +462,7 @@ SELECT DISTINCT ON (a_user_id, b_user_id)
        a_user_id, b_user_id, %(name)s, value, people, score, first_seen, last_seen
 FROM ({pairs}) one
 WHERE score > 0
-ORDER BY a_user_id, b_user_id, score DESC
+ORDER BY a_user_id, b_user_id, score DESC, value
 """
 
 MANY = """
@@ -468,7 +486,7 @@ best AS (
     SELECT DISTINCT ON (a_user_id, b_user_id, signal)
            a_user_id, b_user_id, signal, value, people, score, first_seen, last_seen
     FROM link_part
-    ORDER BY a_user_id, b_user_id, signal, score DESC
+    ORDER BY a_user_id, b_user_id, signal, score DESC, value
 ),
 family AS (
     SELECT b.a_user_id, b.b_user_id, f.family,
@@ -483,7 +501,7 @@ family AS (
 pair AS (
     SELECT a_user_id, b_user_id,
            round(sum(score)::numeric, 3) AS score,
-           (array_agg(family ORDER BY score DESC))[1] AS top_family,
+           (array_agg(family ORDER BY score DESC, family))[1] AS top_family,
            jsonb_object_agg(family, round(score::numeric, 3)) AS families,
            min(first_seen) AS first_seen,
            max(last_seen) AS last_seen
@@ -493,7 +511,7 @@ pair AS (
 ),
 named AS (
     SELECT b.a_user_id, b.b_user_id,
-           (array_agg(b.signal ORDER BY b.score DESC))[1] AS top_signal,
+           (array_agg(b.signal ORDER BY b.score DESC, b.signal))[1] AS top_signal,
            jsonb_object_agg(b.signal, jsonb_build_object(
                'value', b.value, 'people', b.people, 'score', round(b.score::numeric, 3))) AS signals
     FROM best b
@@ -511,7 +529,7 @@ PASS_INDEX = "CREATE INDEX ON link_pass (a_user_id, b_user_id)"
 PRESENCE = """
 CREATE TEMP TABLE presence ON COMMIT DROP AS
 SELECT DISTINCT s.user_id, s.hour, s.country
-FROM sighting s
+FROM {sighting} s
 WHERE s.country IS NOT NULL
   AND s.class NOT IN ('vpn', 'hosting', 'tor')
   AND s.user_id IN (SELECT a_user_id FROM link_pass UNION SELECT b_user_id FROM link_pass)
@@ -600,9 +618,22 @@ WHERE (fd.member_link.score, fd.member_link.top_signal, fd.member_link.top_famil
 
 SWEEP = """
 DELETE FROM fd.member_link l
-WHERE NOT EXISTS (SELECT 1 FROM link_pass p
+WHERE l.computed_at < now()
+  AND NOT EXISTS (SELECT 1 FROM link_pass p
                   WHERE p.a_user_id = l.a_user_id AND p.b_user_id = l.b_user_id)
 """
+
+
+FULL = {
+    "login": "fd.login_event",
+    "identity": "fd.member_identity",
+    "member": "fd.member",
+    "joins": "fd.member_joins",
+    "audit": "slack.audit_event",
+    "shared_ip": "shared_ip",
+    "sighting": "sighting",
+    "crowded": None,
+}
 
 
 def catalogue():
@@ -617,12 +648,17 @@ def shared(held=None):
     return (held or catalogue()).get("shared_networks", {})
 
 
+def sightings_of(held):
+    return int(shared(held).get("min_sightings", 1))
+
+
 def mark_shared(conn, held):
     settings = shared(held)
     conn.execute(SHARED_ISP, {"rotates": settings.get("rotates_above", 5.0),
                               "crowds": settings.get("crowds_above", 40)})
     conn.execute(SHARED_IP)
     conn.execute(SHARED_INDEX)
+    conn.execute(KEEP_SHARED)
     row = conn.execute("SELECT count(*) FROM shared_ip").fetchone()
     return row[0] if row else 0
 
@@ -670,27 +706,76 @@ def family_table(held):
             "caps": [row[2] for row in rows], "corroborating": [row[3] for row in rows]}
 
 
-def evidence(name, settings, sightings):
+def not_crowded(sources, column):
+    if not sources.get("crowded"):
+        return ""
+    return f"AND {column} NOT IN (SELECT value FROM {sources['crowded']} WHERE signal = %(name)s)"
+
+
+def names_for(sources, settings, sightings):
+    return {**sources, "sightings": sightings, "shortest": SHORTEST_AGENT,
+            "range_ceiling": settings.get("range_ceiling", 20), "shortest_local": SHORTEST_LOCAL,
+            "shortest_name": SHORTEST_NAME, "longest_stem": SHORTEST_LONG_STEM,
+            "not_crowded_value": not_crowded(sources, "value"),
+            "not_crowded_ua": not_crowded(sources, "ua"),
+            "not_crowded_actor": not_crowded(sources, "i.actor_id")}
+
+
+def source_of(name):
+    return (NETWORK_EVIDENCE.get(name) or DEVICE_EVIDENCE.get(name) or IDENTITY_EVIDENCE.get(name)
+            or NAME_EVIDENCE.get(name) or EVIDENCE.get(name))
+
+
+def evidence(name, settings, sightings, sources=FULL):
+    names = names_for(sources, settings, sightings)
+    args = {"weight": settings["weight"], "ceiling": settings.get("crowd_ceiling")}
     if name == IP_BURST:
-        return BURST, {"weight": settings["weight"], "ceiling": settings["crowd_ceiling"],
-                       "window": settings["window_days"]}
+        return BURST.format(**names), {**args, "window": settings["window_days"]}
     if name in ARRIVAL_EVIDENCE:
-        return ARRIVAL_EVIDENCE[name].format(shortest=SHORTEST_AGENT), {
-            "weight": settings["weight"], "ceiling": settings["crowd_ceiling"],
-            "window": settings.get("window_seconds", 1800)}
+        return ARRIVAL_EVIDENCE[name].format(**names), {**args, "window": settings.get("window_seconds", 1800)}
     if name == JOINED_TOGETHER:
-        return TOGETHER_SQL, {"weight": settings["weight"], "ceiling": settings["crowd_ceiling"],
-                                    "window": settings.get("window_seconds", 300)}
-    source = (NETWORK_EVIDENCE.get(name) or DEVICE_EVIDENCE.get(name)
-              or IDENTITY_EVIDENCE.get(name) or NAME_EVIDENCE.get(name) or EVIDENCE.get(name))
+        return TOGETHER_SQL.format(**names), {**args, "window": settings.get("window_seconds", 300)}
+    source = source_of(name)
     if source is None:
         return None, None
-    pairs = PAIRS_SQL.format(
-        evidence=source.format(sightings=sightings, shortest=SHORTEST_AGENT,
-                               range_ceiling=settings.get("range_ceiling", 20),
-                               shortest_local=SHORTEST_LOCAL, shortest_name=SHORTEST_NAME,
-                               longest_stem=SHORTEST_LONG_STEM))
-    return pairs, {"weight": settings["weight"], "ceiling": settings["crowd_ceiling"]}
+    return PAIRS_SQL.format(evidence=source.format(**names), **names), args
+
+
+def whole_sql(name, settings, sightings, sources=FULL):
+    names = names_for(sources, settings, sightings)
+    if name == JOINED_TOGETHER:
+        return TOGETHER_WHOLE.format(**names)
+    if name == "invited_by":
+        return INVITES_WHOLE.format(**names)
+    if name in ARRIVAL_EVIDENCE or name == IP_BURST:
+        return None
+    source = source_of(name)
+    return WHOLE_SQL.format(evidence=source.format(**names)) if source else None
+
+
+def measure(conn, held, sources=FULL):
+    sightings = sightings_of(held)
+    found = {}
+    for name, settings in signals(held).items():
+        sql = whole_sql(name, settings, sightings, sources)
+        if sql:
+            found[name] = conn.execute(sql).fetchone()[0]
+    return found
+
+
+def keep_wholes(conn, wholes):
+    names = sorted(wholes)
+    conn.execute(KEEP_WHOLE, (names, [wholes[name] for name in names]))
+
+
+def held_wholes(conn):
+    return dict(conn.execute(HELD_WHOLE).fetchall())
+
+
+def wanting(held, wholes):
+    sightings = sightings_of(held)
+    return sorted(name for name, settings in signals(held).items()
+                  if whole_sql(name, settings, sightings) and name not in wholes)
 
 
 def mailbox_rows(identities, staff):
@@ -704,10 +789,10 @@ def mailbox_rows(identities, staff):
         yield user_id, box, local, domain
 
 
-def load_mailboxes(conn, held):
+def load_mailboxes(conn, held, sources=FULL):
     conn.execute(MAILBOX)
     staff = held.get("staff_domains", [])
-    identities = conn.execute(IDENTITIES_SQL).fetchall()
+    identities = conn.execute(IDENTITIES_SQL.format(**sources)).fetchall()
     with conn.cursor() as cur, cur.copy("COPY mailbox (user_id, box, local, domain) FROM STDIN") as copy:
         for row in mailbox_rows(identities, staff):
             copy.write_row(row)
@@ -717,21 +802,26 @@ def load_mailboxes(conn, held):
             copy.write_row(row)
 
 
-def gather(conn, held):
+def prepare(conn, held, sources=FULL):
     conn.execute(RARITY)
     conn.execute(STAGE)
-    conn.execute(SIGHTING)
+    conn.execute(SIGHTING.format(**sources))
     conn.execute("ANALYZE sighting")
-    load_mailboxes(conn, held)
+    load_mailboxes(conn, held, sources)
     conn.execute("ANALYZE mailbox")
     conn.execute("ANALYZE staff_member")
-    sightings = int(shared(held).get("min_sightings", 1))
+
+
+def gather(conn, held, wholes, sources=FULL):
+    sightings = sightings_of(held)
     counted = {}
 
     for name, settings in signals(held).items():
-        pairs, args = evidence(name, settings, sightings)
+        pairs, args = evidence(name, settings, sightings, sources)
         if pairs is None:
             continue
+        if name in wholes:
+            args["whole"] = wholes[name]
         template = COLLAPSED_PART if name in COLLAPSED else PART
         sql = template.format(pairs=pairs.replace("rarity(", "pg_temp.rarity("))
         with conn.cursor() as cur:
@@ -747,9 +837,42 @@ def gather(conn, held):
     return counted
 
 
+def settle(conn, held, sources=FULL, sweep=SWEEP, lap=lambda _step: None):
+    marks = scoring(held)
+    named = labels(held)
+    labelled = {}
+    with conn.cursor() as cur:
+        cur.execute(PASS, {**family_table(held), "floor": marks["floor"]})
+        cur.execute(PASS_INDEX)
+        cur.execute("ANALYZE link_pass")
+        lap("score")
+        cur.execute(PRESENCE.format(**sources))
+        cur.execute(PRESENCE_INDEX)
+        cur.execute("ANALYZE presence")
+        cur.execute(AGAINST, {"weight": against(held)[TWO_COUNTRIES]["weight"]})
+        countered = cur.rowcount
+        lap("countries")
+        cur.execute(STAFF_TEST)
+        labelled["staff_test"] = cur.rowcount
+        cur.execute(CLASSROOM, {"weight": named["classroom"]["weight"],
+                                "networks": pattern(named["classroom"].get("networks")),
+                                "devices": pattern(named["classroom"].get("devices"))})
+        labelled["classroom"] = cur.rowcount
+        cur.execute(HOUSEHOLD, {"weight": named["household"]["weight"]})
+        labelled["household"] = cur.rowcount
+        lap("labels")
+        cur.execute(BELOW_FLOOR, {"floor": marks["floor"]})
+        cur.execute(LAND)
+        changed = cur.rowcount
+        cur.execute(sweep)
+        gone = cur.rowcount
+        cur.execute("SELECT count(*) FROM link_pass")
+        kept = cur.fetchone()[0]
+    return kept, changed, gone, countered, labelled
+
+
 def run(conn):
     held = catalogue()
-    marks = scoring(held)
 
     took = {}
     clock = time.monotonic()
@@ -763,38 +886,13 @@ def run(conn):
     with ingest_run(conn, SOURCE) as counts:
         put_aside = mark_shared(conn, held)
         conn.execute("ANALYZE shared_ip")
-        found = gather(conn, held)
+        prepare(conn, held)
+        wholes = measure(conn, held)
+        keep_wholes(conn, wholes)
+        found = gather(conn, held, wholes)
         conn.execute("ANALYZE link_part")
         lap("gather")
-        with conn.cursor() as cur:
-            cur.execute(PASS, {**family_table(held), "floor": marks["floor"]})
-            cur.execute(PASS_INDEX)
-            cur.execute("ANALYZE link_pass")
-            lap("score")
-            cur.execute(PRESENCE)
-            cur.execute(PRESENCE_INDEX)
-            cur.execute("ANALYZE presence")
-            cur.execute(AGAINST, {"weight": against(held)[TWO_COUNTRIES]["weight"]})
-            countered = cur.rowcount
-            lap("countries")
-            named = labels(held)
-            labelled = {}
-            cur.execute(STAFF_TEST)
-            labelled["staff_test"] = cur.rowcount
-            cur.execute(CLASSROOM, {"weight": named["classroom"]["weight"],
-                                    "networks": pattern(named["classroom"].get("networks")),
-                                    "devices": pattern(named["classroom"].get("devices"))})
-            labelled["classroom"] = cur.rowcount
-            cur.execute(HOUSEHOLD, {"weight": named["household"]["weight"]})
-            labelled["household"] = cur.rowcount
-            lap("labels")
-            cur.execute(BELOW_FLOOR, {"floor": marks["floor"]})
-            cur.execute(LAND)
-            changed = cur.rowcount
-            cur.execute(SWEEP)
-            gone = cur.rowcount
-            cur.execute("SELECT count(*) FROM link_pass")
-            kept = cur.fetchone()[0]
+        kept, changed, gone, countered, labelled = settle(conn, held, lap=lap)
         conn.commit()
         lap("write")
         counts.rows_in = changed

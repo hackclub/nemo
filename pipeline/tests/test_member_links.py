@@ -116,7 +116,10 @@ def test_each_family_is_capped_before_the_families_are_added():
 def test_an_unchanged_link_is_not_written_again():
     assert "IS DISTINCT FROM" in links.LAND
     assert "NOT EXISTS (SELECT 1 FROM link_pass" in links.SWEEP
-    assert "computed_at" not in links.SWEEP
+
+
+def test_the_full_rebuild_never_sweeps_a_link_the_live_lane_wrote_after_it_started():
+    assert "l.computed_at < now()" in links.SWEEP
 
 
 def test_a_pass_gathers_once_then_lands_sweeps_and_counts(monkeypatch, capsys):
@@ -158,11 +161,14 @@ def test_a_pass_gathers_once_then_lands_sweeps_and_counts(monkeypatch, capsys):
 
     monkeypatch.setattr(links, "ingest_run", bookkeeping)
     monkeypatch.setattr(links, "mark_shared", lambda _conn, _held: 2)
-    monkeypatch.setattr(links, "gather", lambda _conn, _held: {"ip_stable": 3})
+    monkeypatch.setattr(links, "prepare", lambda _conn, _held: None)
+    monkeypatch.setattr(links, "measure", lambda _conn, _held: {"ip_stable": 40})
+    monkeypatch.setattr(links, "gather", lambda _conn, _held, _wholes: {"ip_stable": 3})
 
     assert links.run(Conn()) == 4
-    ran[:] = [one for one in ran if one not in ("ANALYZE shared_ip", "ANALYZE link_part")]
-    assert ran[:13] == [links.PASS, links.PASS_INDEX, "ANALYZE link_pass", links.PRESENCE, links.PRESENCE_INDEX,
+    ran[:] = [one for one in ran if one not in ("ANALYZE shared_ip", "ANALYZE link_part", links.KEEP_WHOLE)]
+    assert ran[:13] == [links.PASS, links.PASS_INDEX, "ANALYZE link_pass", links.PRESENCE.format(**links.FULL),
+                        links.PRESENCE_INDEX,
                         "ANALYZE presence", links.AGAINST, links.STAFF_TEST, links.CLASSROOM, links.HOUSEHOLD,
                         links.BELOW_FLOOR, links.LAND, links.SWEEP]
     assert ran[-1] == "commit"
@@ -193,12 +199,13 @@ def test_each_signal_reads_the_evidence_built_for_it():
     assert "HAVING sum(s.seen) >= 2" in stable
     assert "'rotating', 'vpn', 'hosting', 'tor'" in hourly and "md5(u.ua)" in hourly
     assert "fd.member_identity" in domain
-    assert together == links.TOGETHER_SQL and args["window"] == 300
+    assert together == links.TOGETHER_SQL.format(**links.FULL) and args["window"] == 300
     assert links.evidence("nothing", {"weight": 1, "crowd_ceiling": 2}, 2) == (None, None)
 
 
 def test_an_address_another_isp_rotates_through_is_treated_as_rotating():
-    assert "WHEN EXISTS (SELECT 1 FROM shared_ip s WHERE s.ip = e.ip) THEN 'rotating'" in links.SIGHTING
+    assert ("WHEN EXISTS (SELECT 1 FROM shared_ip s WHERE s.ip = e.ip) THEN 'rotating'"
+            in links.SIGHTING.format(**links.FULL))
 
 
 def test_hourly_evidence_keeps_one_row_per_pair():
@@ -214,7 +221,7 @@ def test_two_countries_in_one_hour_count_against_a_link_unless_one_is_a_vpn():
 
 
 def test_the_country_check_reads_only_the_members_of_candidate_links():
-    assert "FROM sighting s" in links.PRESENCE
+    assert "FROM sighting s" in links.PRESENCE.format(**links.FULL)
     assert "SELECT a_user_id FROM link_pass UNION SELECT b_user_id FROM link_pass" in links.PRESENCE
     assert "fd.login_event" not in links.AGAINST
 
@@ -356,10 +363,10 @@ def test_a_label_change_is_written_like_any_other_change():
 def test_every_temp_table_is_analysed_before_it_is_joined():
     import inspect
 
-    gathered = inspect.getsource(links.gather)
-    passed = inspect.getsource(links.run)
+    prepared = inspect.getsource(links.prepare)
+    passed = inspect.getsource(links.run) + inspect.getsource(links.settle)
     for table in ("sighting", "mailbox", "staff_member"):
-        assert f'"ANALYZE {table}"' in gathered, table
+        assert f'"ANALYZE {table}"' in prepared, table
     for table in ("shared_ip", "link_part", "link_pass"):
         assert f'"ANALYZE {table}"' in passed, table
 
@@ -421,11 +428,12 @@ def test_a_burst_needs_the_same_exit_hour_and_browser_and_joins_in_the_same_week
     held = links.signals()["ip_burst"]
     sql, args = links.evidence("ip_burst", held, 2)
 
-    assert sql == links.BURST
+    assert sql == links.BURST.format(**links.names_for(links.FULL, held, 2))
     assert "JOIN fd.member_joins j" in sql
     assert "make_interval(days => %(window)s)" in sql
     assert "md5(u.ua)" in sql and "'rotating', 'vpn', 'hosting', 'tor'" in sql
     assert args == {"weight": held["weight"], "ceiling": 8, "window": 7}
+    assert "{" not in sql
     assert held["weight"] >= links.scoring()["floor"]
     assert "ip_burst" in links.COLLAPSED
 
@@ -446,3 +454,28 @@ def test_the_finder_writes_the_links_table_the_web_reads():
     assert "INSERT INTO fd.member_link\n" in links.LAND
     assert "top_signal = EXCLUDED.top_signal" in links.LAND
     assert "DELETE FROM fd.member_link l" in links.SWEEP
+
+
+def test_the_full_rebuild_keeps_what_the_live_lane_needs():
+    import inspect
+
+    passed = inspect.getsource(links.run)
+    assert "keep_wholes(conn, wholes)" in passed
+    assert "KEEP_SHARED" in inspect.getsource(links.mark_shared)
+    assert "rarity(%(whole)s::numeric, k.people)" in links.PAIRS_SQL
+    assert "rarity(%(whole)s::numeric, k.people)" in links.TOGETHER_SQL
+
+
+def test_a_value_too_crowded_to_load_never_pairs_in_the_live_lane():
+    live = {**links.FULL, "crowded": "crowded"}
+    sql, _ = links.evidence("email_domain", links.signals()["email_domain"], 2, live)
+    assert "AND value NOT IN (SELECT value FROM crowded WHERE signal = %(name)s)" in sql
+    full, _ = links.evidence("email_domain", links.signals()["email_domain"], 2)
+    assert "crowded" not in full
+
+
+def test_ties_break_by_name_so_a_rebuild_does_not_rewrite_unchanged_links():
+    assert "ORDER BY b.score DESC, b.signal" in links.PASS
+    assert "ORDER BY score DESC, family" in links.PASS
+    assert "ORDER BY a_user_id, b_user_id, signal, score DESC, value" in links.PASS
+    assert "ORDER BY a_user_id, b_user_id, score DESC, value" in links.COLLAPSED_PART

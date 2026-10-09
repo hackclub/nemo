@@ -20,6 +20,7 @@ from ingest.channel_month_pull import run as pull_channel_month
 from ingest.dim_snapshot import run as snapshot_dimensions
 from ingest.channel_range_pull import run_span as pull_channel_span
 from ingest.member_channels import read_membership as pull_channel_membership
+from ingest.member_links import run as refresh_links
 from ingest.prune import run as prune_rows
 from ingest.member_range_pull import run as pull_member_range
 from ingest.team_stats_pull import run as pull_team_stats
@@ -227,6 +228,7 @@ def stages():
             conn, bot_client(),
             tuned(conn, "channel_membership", "batch"),
             tuned(conn, "channel_membership", "cohort_days"))),
+        ("member_links", lambda conn: refresh_links(conn)),
         ("prune", lambda conn: prune_rows(conn)),
         (PROMETHEANS, lambda conn: reconcile_prometheans(conn)),
         (TRANSFORM, lambda conn: run_dbt(conn)),

@@ -306,18 +306,32 @@ sources:
     feeds: []
 
   member_links:
-    unit_budget_seconds: 300
-    standalone: true
-    label: Accounts likely belonging to the same person, scored by evidence family
+    unit_budget_seconds: 900
+    label: Accounts likely belonging to the same person, scored by evidence family, rebuilt in full
     endpoint: none
     documented: true
     credential: none
-    cadence: live
+    cadence: daily
     window: everything we hold
     guard: none
     resume: none
     retention: replace
-    writes: [fd.member_link]
+    writes: [fd.member_link, fd.link_signal_stat, fd.shared_ip]
+    feeds: []
+
+  member_links_live:
+    unit_budget_seconds: 60
+    standalone: true
+    label: Links rescored for members whose evidence just changed
+    endpoint: none
+    documented: true
+    credential: none
+    cadence: live
+    window: members touched since the last pass
+    guard: none
+    resume: none
+    retention: replace
+    writes: [fd.member_link, fd.member_touch]
     feeds: []
 
   member_clusters:
