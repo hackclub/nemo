@@ -24,3 +24,7 @@ def entry(action, held=None):
 def unknown(actions, held=None):
     known = (held or catalogue())["actions"]
     return sorted({one for one in actions if one and one not in known})
+
+
+def slim_actions(held=None):
+    return sorted(name for name, one in (held or catalogue())["actions"].items() if one.get("slim"))

@@ -119,6 +119,7 @@ actions:
     sentence: "{actor} added a reminder"
   public_channel_preview:
     category: channels
+    slim: true
     label: Previewed a channel
     sentence: "{actor} previewed {entity}"
   user_channel_join:
@@ -243,6 +244,7 @@ actions:
     sentence: "{actor} connected {entity} to another organization"
   file_downloaded:
     category: messages_and_files
+    slim: true
     label: Downloaded a file
     sentence: "{actor} downloaded {entity}"
   file_uploaded:
@@ -303,6 +305,7 @@ actions:
     sentence: "{actor} added an emoji alias"
   canvas_opened:
     category: canvases_and_lists
+    slim: true
     label: Opened a canvas
     sentence: "{actor} opened {entity}"
   canvas_edited:
@@ -391,6 +394,7 @@ actions:
     sentence: "{actor} removed access to {entity}"
   list_cell_updated:
     category: canvases_and_lists
+    slim: true
     label: Edited a list cell
     sentence: "{actor} edited a cell in {entity}"
   list_row_created:
