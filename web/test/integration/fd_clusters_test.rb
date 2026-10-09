@@ -29,10 +29,45 @@ class FdClustersTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_select ".cluster-map a.node", 3
-    assert_select ".cluster-map line.edge-certain", 1
-    assert_select ".cluster-map line.edge-strong", 1
+    assert_select ".cluster-map path.edge-certain[data-a=?][data-b=?]", ALT, ROOT
+    assert_select ".cluster-map path.edge-strong", 1
+    assert_select ".cluster-map svg.is-crowded", count: 0
+    assert_select ".cluster-map a.node[data-user=?]", ROOT
     assert_select ".cluster-map a.node-gone", 1
     assert_select "table.data-table tbody tr", minimum: 3
+  end
+
+  test "a big ring spreads out, shrinks its faces and turns its names into spokes" do
+    20.times do |n|
+      user_id = "UCBIG#{n.to_s.rjust(2, '0')}"
+      member!(user_id)
+      cluster!(user_id, ROOT, active: true)
+    end
+
+    get fd_cluster_path(ROOT)
+    svg = css_select(".cluster-map svg").first
+    assert_includes svg["class"], "is-crowded"
+    assert_operator svg["viewBox"].split.last.to_i, :>, 544
+    assert_select ".cluster-map a.node", 23
+    assert_select ".cluster-map .node-name[transform*=rotate]", minimum: 20
+    assert_select ".cluster-map circle.face-ring[r='14']", 23
+  end
+
+  test "a cluster past sixty packs into a disc, faces kept, names on hover" do
+    70.times do |n|
+      user_id = "UCDISC#{n.to_s.rjust(2, '0')}"
+      member!(user_id)
+      cluster!(user_id, ROOT, active: n.odd?)
+    end
+
+    get fd_cluster_path(ROOT)
+    svg = css_select(".cluster-map svg").first
+    assert_includes svg["class"], "is-packed"
+    assert_select ".cluster-map a.node", 73
+    assert_select ".cluster-map a.node image", 73
+    assert_select ".cluster-map .node-name", count: 0
+    assert_select ".cluster-map text.map-hover[data-cluster-map-target=label]", 1
+    assert_select ".cluster-map a.node[data-name][data-x][data-y]", 73
   end
 
   test "every account on the map shows its face and opens the member" do

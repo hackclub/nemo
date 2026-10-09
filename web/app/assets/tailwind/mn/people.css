@@ -625,13 +625,36 @@
     @apply flex justify-center px-4;
   }
   .cluster-map-body > svg {
-    @apply h-auto w-full max-w-[34rem] overflow-visible;
+    @apply h-auto w-full overflow-visible;
   }
   .cluster-map .edge {
+    fill: none;
     stroke: var(--muted-foreground);
     stroke-width: 1.5;
     transition: opacity 0.3s var(--ease);
   }
+  .cluster-map .is-crowded .edge { stroke-opacity: 0.45; }
+  .cluster-map .is-crowded .edge-certain { stroke-width: 1.75; }
+  .cluster-map .is-crowded .edge-strong { stroke-width: 1.25; }
+  .cluster-map .is-crowded .face-initial { @apply text-[10px]; }
+  .cluster-map .is-packed .edge { stroke-width: 0.75; stroke-opacity: 0.3; }
+  .cluster-map .is-packed .edge-certain { stroke-width: 1.25; }
+  .cluster-map .is-packed .face-ring { stroke-width: 2; }
+  .cluster-map .is-packed .node-oldest .face-ring { stroke-width: 3.5; }
+  .cluster-map .map-hover {
+    @apply text-[12px] font-medium;
+    fill: var(--foreground);
+    paint-order: stroke;
+    stroke: var(--card);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+    pointer-events: none;
+    opacity: 0;
+  }
+  .cluster-map .map-hover.is-on { opacity: 1; }
+  .cluster-map.is-focus .edge:not(.is-lit) { opacity: 0.05; }
+  .cluster-map.is-focus .edge.is-lit { stroke-opacity: 1; }
+  .cluster-map.is-focus .node:not(.is-lit) { opacity: 0.3; }
   .cluster-map .edge-certain { stroke: var(--destructive); stroke-width: 3; }
   .cluster-map .edge-strong { stroke: var(--warning); stroke-width: 2.25; }
   .cluster-map .edge-worth { stroke: var(--muted-foreground); stroke-opacity: 0.6; }
