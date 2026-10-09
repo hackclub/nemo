@@ -615,3 +615,67 @@
     color: var(--ink-3);
   }
 }
+
+@layer components {
+  .cluster-map-body {
+    @apply flex justify-center px-4;
+  }
+  .cluster-map-body > svg {
+    @apply h-auto w-full max-w-[34rem] overflow-visible;
+  }
+  .cluster-map .edge {
+    stroke: var(--muted-foreground);
+    stroke-width: 1.5;
+    transition: opacity 0.3s var(--ease);
+  }
+  .cluster-map .edge-certain { stroke: var(--destructive); stroke-width: 3; }
+  .cluster-map .edge-strong { stroke: var(--warning); stroke-width: 2.25; }
+  .cluster-map .edge-worth { stroke: var(--muted-foreground); stroke-opacity: 0.6; }
+  .cluster-map .edge-together { stroke: var(--primary); stroke-dasharray: 5 4; }
+  .cluster-map .edge-apart { stroke: var(--destructive); stroke-dasharray: 2 4; stroke-opacity: 0.8; }
+  .cluster-map .node { cursor: pointer; transition: opacity 0.3s var(--ease); }
+  .cluster-map .face-bg { fill: var(--muted); }
+  .cluster-map .face-initial {
+    @apply text-[13px] font-medium;
+    fill: var(--muted-foreground);
+  }
+  .cluster-map .face-ring {
+    fill: none;
+    stroke: var(--success);
+    stroke-width: 2.5;
+  }
+  .cluster-map .node-gone .face-ring { stroke: var(--destructive); }
+  .cluster-map .node-gone image { filter: grayscale(1); opacity: 0.7; }
+  .cluster-map .node-oldest .face-ring { stroke-width: 4; }
+  .cluster-map .node-name {
+    @apply text-[11px] font-medium;
+    fill: var(--foreground);
+  }
+  .cluster-map .node:hover .node-name, .cluster-map .node:focus-visible .node-name {
+    fill: var(--primary);
+    text-decoration: underline;
+  }
+  .cluster-map .node:hover .face-ring { stroke-width: 4; }
+  .cluster-map .is-later { opacity: 0.06; }
+  .cluster-map-key {
+    @apply flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-xs text-muted-foreground;
+  }
+  .cluster-map-key > span { @apply inline-flex items-center gap-1.5; }
+  .key-edge {
+    @apply inline-block h-0 w-5 border-t-2;
+    border-color: var(--muted-foreground);
+  }
+  .key-edge.edge-certain { border-color: var(--destructive); border-top-width: 3px; }
+  .key-edge.edge-strong { border-color: var(--warning); }
+  .key-edge.edge-together { border-color: var(--primary); border-top-style: dashed; }
+  .key-edge.edge-apart { border-color: var(--destructive); border-top-style: dotted; }
+  .key-node {
+    @apply inline-block size-2.5 rounded-full border-2;
+    border-color: var(--destructive);
+  }
+  .key-swatch { @apply inline-block size-2.5 rounded-[3px]; }
+  .key-own { @apply bg-muted-foreground/40; }
+  .cluster-cells > i.own { @apply bg-muted-foreground/40; }
+  .snapshot-detail > summary { @apply cursor-pointer text-sm; }
+  .snapshot-detail > div { @apply mt-1; }
+}

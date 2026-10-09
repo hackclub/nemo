@@ -1,0 +1,35 @@
+<% days = cluster_days(cluster) %>
+<section class="card card-flush">
+  <div class="card-head">
+    <h2 class="card-title">Sessions</h2>
+  </div>
+  <div class="scroll matrix-scroll" data-controller="chart-tooltip"
+       data-action="mouseover->chart-tooltip#show mouseleave->chart-tooltip#clear">
+    <div class="nights-h">
+      <div>Account</div>
+      <div class="nights">
+        <% days.each_with_index do |day, i| %>
+          <span><%= day.strftime("%-d %b") if (i % 7).zero? || i == days.size - 1 %></span>
+        <% end %>
+      </div>
+    </div>
+    <% cluster.members.each do |one| %>
+      <div class="srow">
+        <div class="stat-key"><b><%= person_label(one.user_id) %></b></div>
+        <div class="cells cluster-cells" role="group" aria-label="<%= person_label(one.user_id) %>, sessions by day">
+          <% days.each do |day| %>
+            <%= cluster_cell(cluster, one.user_id, day) %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+  <% if cluster.shared_ips.any? %>
+    <div class="cluster-map-key">
+      <% cluster.shared_ips.each do |ip| %>
+        <span><i class="key-swatch" style="background: <%= shared_tone(cluster, ip) %>"></i><span class="mono"><%= ip %></span></span>
+      <% end %>
+      <span><i class="key-swatch key-own"></i>Not shared</span>
+    </div>
+  <% end %>
+</section>

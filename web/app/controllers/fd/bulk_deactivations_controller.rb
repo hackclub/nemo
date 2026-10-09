@@ -27,7 +27,16 @@ module Fd
 
     def reason = params[:reason].to_s.strip.presence || NO_REASON
 
-    def here = fd_new_members_path(params.permit(*NewMemberQuery::KEYS).to_h.compact_blank)
+    def cluster_id
+      asked = params[:cluster_id].to_s.strip.upcase
+      asked if asked.match?(MEMBER_ID)
+    end
+
+    def here
+      return fd_cluster_path(cluster_id) if cluster_id
+
+      fd_new_members_path(params.permit(*NewMemberQuery::KEYS).to_h.compact_blank)
+    end
 
     def objection
       return "pick who this is about" if wanted.empty?

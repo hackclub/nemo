@@ -1,0 +1,52 @@
+<% points = cluster_points(cluster) %>
+<section class="card cluster-map" data-controller="cluster-map"
+         data-cluster-map-steps-value="<%= cluster.members.size %>">
+  <div class="card-head">
+    <h2 class="card-title">Map</h2>
+    <div class="card-tools">
+      <button type="button" class="btn btn-ghost btn-sm" data-action="cluster-map#play"
+              data-cluster-map-target="button">Replay</button>
+    </div>
+  </div>
+  <div class="cluster-map-body">
+    <svg viewBox="0 0 <%= ClusterHelper::MAP_SIZE %> <%= ClusterHelper::MAP_SIZE %>" role="img"
+         aria-label="Accounts in this cluster and the links between them">
+      <% cluster.edges.each do |edge| %>
+        <% a, b = points[edge.a_user_id], points[edge.b_user_id] %>
+        <% next if a.nil? || b.nil? %>
+        <line class="<%= cluster_edge_class(edge) %>" x1="<%= a[:x].round(1) %>" y1="<%= a[:y].round(1) %>"
+              x2="<%= b[:x].round(1) %>" y2="<%= b[:y].round(1) %>"
+              data-step="<%= [a[:step], b[:step]].max %>"><title><%= cluster_edge_title(edge) %></title></line>
+      <% end %>
+      <defs>
+        <clipPath id="cluster-face"><circle r="<%= ClusterHelper::NODE_RADIUS %>"></circle></clipPath>
+      </defs>
+      <% cluster.members.each do |one| %>
+        <% at = points[one.user_id] %>
+        <a href="<%= fd_member_path(one.user_id) %>" data-turbo-frame="person-drawer"
+           class="node <%= one.deactivated ? "node-gone" : "node-active" %> <%= "node-oldest" if one.user_id == cluster.cluster_id %>"
+           data-step="<%= at[:step] %>">
+          <title><%= person_label(one.user_id) %>, <%= one.joined_at ? "joined #{on_day(one.joined_at)}" : "join date n/a" %></title>
+          <g transform="translate(<%= at[:x].round(1) %> <%= at[:y].round(1) %>)">
+            <circle class="face-bg" r="<%= ClusterHelper::NODE_RADIUS %>"></circle>
+            <text class="face-initial" text-anchor="middle" dominant-baseline="central"><%= names.initial(one.user_id) %></text>
+            <image href="<%= cachet_face_url(one.user_id) %>" x="-<%= ClusterHelper::NODE_RADIUS %>" y="-<%= ClusterHelper::NODE_RADIUS %>"
+                   width="<%= ClusterHelper::NODE_RADIUS * 2 %>" height="<%= ClusterHelper::NODE_RADIUS * 2 %>"
+                   clip-path="url(#cluster-face)" preserveAspectRatio="xMidYMid slice"></image>
+            <circle class="face-ring" r="<%= ClusterHelper::NODE_RADIUS %>"></circle>
+          </g>
+          <text class="node-name" x="<%= at[:lx].round(1) %>" y="<%= at[:ly].round(1) %>" text-anchor="<%= at[:anchor] %>"
+                dominant-baseline="middle"><%= person_label(one.user_id).to_s.truncate(18) %></text>
+        </a>
+      <% end %>
+    </svg>
+  </div>
+  <div class="cluster-map-key">
+    <span><i class="key-edge edge-certain"></i>Certain</span>
+    <span><i class="key-edge edge-strong"></i>Strong</span>
+    <span><i class="key-edge edge-worth"></i>Worth a look</span>
+    <span><i class="key-edge edge-together"></i>Same person, by verdict</span>
+    <span><i class="key-edge edge-apart"></i>Different people, by verdict</span>
+    <span><i class="key-node node-gone"></i>Deactivated</span>
+  </div>
+</section>

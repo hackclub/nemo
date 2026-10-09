@@ -1,0 +1,34 @@
+<%= render layout: "fd/modal", locals: { id: "cluster-deactivate",
+      title: "Deactivate accounts", sub: person_label(cluster.cluster_id) } do %>
+  <%= form_with url: fd_bulk_deactivations_path, method: :post,
+        html: { autocomplete: "off",
+                data: { controller: "confirm-word", confirm_word_word_value: "deactivate" } } do %>
+    <%= hidden_field_tag :cluster_id, cluster.cluster_id, id: nil %>
+    <div class="modal-body">
+      <% cluster.active.each do |one| %>
+        <label class="opt">
+          <%= check_box_tag "user_ids[]", one.user_id, true, id: nil, class: "tick" %>
+          <span>
+            <span class="opt-label"><%= person_label(one.user_id) %></span>
+          </span>
+        </label>
+      <% end %>
+
+      <label class="field-label">
+        Why
+        <%= text_area_tag :reason, nil, rows: 3, class: "textarea", id: nil, required: true %>
+      </label>
+
+      <label class="field-label">
+        Type <b class="mono">deactivate</b> to confirm
+        <%= text_field_tag :confirm, nil, class: "input", id: nil, autocomplete: "off",
+              data: { confirm_word_target: "field", action: "input->confirm-word#fit" } %>
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+      <%= submit_tag "Deactivate", class: "btn btn-danger",
+            data: { confirm_word_target: "go" }, disabled: true %>
+    </div>
+  <% end %>
+<% end %>

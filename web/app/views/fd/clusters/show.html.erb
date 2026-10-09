@@ -1,0 +1,50 @@
+<% content_for :page_title, "Cluster" %>
+<% may_deactivate = current_account.may?("member.deactivate") %>
+
+<% content_for :head_actions do %>
+  <% if may_deactivate && @cluster.active.any? %>
+    <button type="button" class="btn btn-danger" data-modal-open="cluster-deactivate" aria-haspopup="dialog">
+      Deactivate
+    </button>
+  <% end %>
+  <% if current_account.may?("case.open") %>
+    <%= link_to "Open a case", fd_cases_path(subject_user_ids: @cluster.ids, open: "1"), class: "btn btn-primary" %>
+  <% end %>
+<% end %>
+
+<div class="stack">
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title"><%= member_link(@cluster.cluster_id) %></h2>
+    </div>
+    <dl class="fact-grid">
+      <div class="fact">
+        <dt>Accounts</dt>
+        <dd class="fact-one"><%= @cluster.members.size %></dd>
+      </div>
+      <div class="fact">
+        <dt>Active</dt>
+        <dd class="fact-one"><%= @cluster.active.size %></dd>
+      </div>
+      <div class="fact">
+        <dt>Flags</dt>
+        <dd class="fact-one <%= "is-none" unless @cluster.ring? || @cluster.conflict? %>">
+          <% if @cluster.conflict? %><span class="state state-crit">Conflict</span><% end %>
+          <% if @cluster.ring? %><span class="state state-warn">Ring</span><% end %>
+          <%= "None" unless @cluster.ring? || @cluster.conflict? %>
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+  <%= render "map", cluster: @cluster %>
+  <%= render "accounts", cluster: @cluster %>
+  <% if @identity %>
+    <%= render "timeline", cluster: @cluster %>
+    <%= render "snapshots", cluster: @cluster %>
+  <% end %>
+</div>
+
+<% if may_deactivate && @cluster.active.any? %>
+  <%= render "deactivate", cluster: @cluster %>
+<% end %>

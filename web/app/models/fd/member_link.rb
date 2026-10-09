@@ -96,6 +96,14 @@ module Fd
       end
     end
 
+    def self.cluster_of(user_id)
+      return nil if user_id.blank?
+
+      connection.select_value(sanitize_sql([
+        "SELECT cluster_id FROM fd.member_cluster WHERE user_id = ?", user_id
+      ]))
+    end
+
     def self.cluster_mates(user_id, except: [])
       return [] if user_id.blank?
 

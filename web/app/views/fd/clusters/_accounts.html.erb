@@ -1,0 +1,34 @@
+<section class="card card-flush">
+  <div class="card-head">
+    <h2 class="card-title">Accounts</h2>
+  </div>
+  <div class="scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Account</th>
+          <th>Joined</th>
+          <th>Status</th>
+          <th class="col-num">Links here</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% cluster.members.each do |one| %>
+          <% here = cluster.edges.count { |edge| edge.score && [edge.a_user_id, edge.b_user_id].include?(one.user_id) } %>
+          <tr>
+            <td><%= member_link(one.user_id) %></td>
+            <td class="sub2"><%= one.joined_at ? on_day(one.joined_at) : "n/a" %></td>
+            <td>
+              <% if one.deactivated %>
+                <span class="state state-crit">Deactivated</span>
+              <% else %>
+                <span class="state state-good">Active</span>
+              <% end %>
+            </td>
+            <td class="col-num"><%= here %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</section>

@@ -12,7 +12,8 @@ module Fd
         field_class: "links")
 
       render partial: "fd/members/links", layout: false,
-        locals: { user_id: user_id, links: links, mates: mates, names: names }
+        locals: { user_id: user_id, links: links, mates: mates, names: names,
+                  cluster_of: MemberLink.cluster_of(user_id) }
     end
   end
 end

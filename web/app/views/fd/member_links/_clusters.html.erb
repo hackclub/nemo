@@ -12,6 +12,7 @@
             <th class="col-num">Accounts</th>
             <th class="col-num">Active</th>
             <th>Flags</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -24,6 +25,7 @@
                 <% if cluster.conflict %><span class="state state-crit">Conflict</span><% end %>
                 <% if cluster.ring %><span class="state state-warn">Ring</span><% end %>
               </td>
+              <td><%= link_to "Open", fd_cluster_path(cluster.cluster_id), class: "lnk" %></td>
             </tr>
           <% end %>
         </tbody>

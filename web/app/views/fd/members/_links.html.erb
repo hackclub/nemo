@@ -45,6 +45,12 @@
     </div>
   <% end %>
 
+  <% if cluster_of %>
+    <div class="card-tools">
+      <%= link_to "Open cluster", fd_cluster_path(cluster_of), class: "btn btn-ghost btn-sm" %>
+    </div>
+  <% end %>
+
   <% if links.none? && mates.none? %>
     <div class="empty">
       <p class="empty-title">No linked accounts</p>

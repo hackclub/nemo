@@ -1,0 +1,47 @@
+<section class="card card-flush">
+  <div class="card-head">
+    <h2 class="card-title">Evidence at deactivation</h2>
+  </div>
+  <% if cluster.snapshots.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Deactivated</th>
+            <th>By</th>
+            <th>Reason</th>
+            <th>Held then</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% cluster.snapshots.each do |snap| %>
+            <tr>
+              <td><%= member_link(snap.user_id) %></td>
+              <td class="sub2"><%= on_day(snap.deactivated_at) %></td>
+              <td><%= snap.actor_id ? member_link(snap.actor_id) : (snap.source == "slack" ? "Slack admin" : "n/a") %></td>
+              <td class="sub2"><%= snap.reason.presence || "n/a" %></td>
+              <td>
+                <details class="snapshot-detail">
+                  <summary><%= pluralize(snap.traits.size, "trait") %>, <%= pluralize(snap.links.size, "link") %></summary>
+                  <% snap.traits.each do |trait| %>
+                    <div class="sub2"><%= trait["kind"].tr("_", " ") %>
+                      <span class="mono"><%= (trait["agent"] || trait["value"]).to_s.truncate(60) %></span></div>
+                  <% end %>
+                  <% snap.links.each do |link| %>
+                    <div class="sub2"><%= member_link(link["other"]) %>
+                      <%= number_with_precision(link["score"], precision: 1) %></div>
+                  <% end %>
+                </details>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty">
+      <p class="empty-title">No snapshots</p>
+    </div>
+  <% end %>
+</section>
