@@ -68,7 +68,7 @@ class ApiDocsTest < ActionDispatch::IntegrationTest
     get doc_path(@topic.slug)
 
     assert_select "#section-nav .community-nav-group a[href=?]", doc_path(@topic.slug)
-    assert_select "#section-nav a[aria-current=page]", 1
+    assert_select "#section-nav .community-nav-group a[aria-current=page]", 1
   end
 
   test "a topic names its sections once, so a duplicate anchor cannot creep in" do

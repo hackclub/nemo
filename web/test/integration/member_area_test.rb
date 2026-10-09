@@ -87,8 +87,8 @@ class MemberAreaTest < ActionDispatch::IntegrationTest
     get settings_keys_path
 
     assert_response :success
-    assert_select ".rail-btn[href=?]", fd_root_path, count: 0
-    assert_select ".rail-btn[href=?]", admin_root_path, count: 0
+    assert_select ".switcher-row[href=?]", fd_root_path, count: 0
+    assert_select ".switcher-row[href=?]", admin_root_path, count: 0
   end
 
   test "a community manager keeps fire engine and admin in the rail" do
@@ -96,8 +96,8 @@ class MemberAreaTest < ActionDispatch::IntegrationTest
     get settings_keys_path
 
     assert_response :success
-    assert_select ".rail-btn[href=?]", fd_root_path
-    assert_select ".rail-btn[href=?]", admin_root_path
+    assert_select ".switcher-row[href=?]", fd_root_path
+    assert_select ".switcher-row[href=?]", admin_root_path
   end
 
   test "the sign in page sends a signed in member on rather than looping" do

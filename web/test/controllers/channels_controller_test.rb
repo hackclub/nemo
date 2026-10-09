@@ -65,12 +65,10 @@ class ChannelsControllerTest < ActionDispatch::IntegrationTest
     channel = busiest_channel
 
     get channel_path(channel.channel_id)
-    assert_select ".range-open", count: 1
-    assert_select "#channel-range", count: 1
+    assert_select ".daterange", count: 1
 
     get channel_path(channel.channel_id, view: "activity")
-    assert_select ".range-open", count: 0
-    assert_select "#channel-range", count: 0
+    assert_select ".daterange", count: 0
   end
 
   test "the range preset is marked and carried across the tab links" do
@@ -80,11 +78,12 @@ class ChannelsControllerTest < ActionDispatch::IntegrationTest
     get channel_path(channel.channel_id, days: 7)
 
     assert_response :success
-    assert_select ".range-open", text: /Last 7 days/
+    assert_select ".daterange-preset", text: /Last 7 days/
+    assert_select ".daterange-presets a[aria-current=true]", text: "Last 7 days"
     assert_select "nav.views a[href*='days=7']"
   end
 
-  test "a custom range swaps the presets for the two date fields" do
+  test "a custom range reads custom and carries its two dates" do
     analyst
     channel = busiest_channel
     edge = Channels::Pulse.edge
@@ -92,9 +91,10 @@ class ChannelsControllerTest < ActionDispatch::IntegrationTest
     get channel_path(channel.channel_id, start: (edge - 3).iso8601, end: edge.iso8601)
 
     assert_response :success
-    assert_select ".range-dates input[name=?]", "start"
-    assert_select ".range-dates input[name=?]", "end"
-    assert_select ".range-open", text: /#{(edge - 3).strftime("%-d %b")}/
+    assert_select ".daterange input[name=start][value=?]", (edge - 3).iso8601
+    assert_select ".daterange input[name=end][value=?]", edge.iso8601
+    assert_select ".daterange-preset", text: /Custom/
+    assert_select ".daterange-open", text: /#{(edge - 3).strftime("%b %-d")}/
   end
 
   test "a range running past what the warehouse holds still renders" do
