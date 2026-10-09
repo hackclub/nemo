@@ -61,7 +61,7 @@
                 fd_cases_path(subject_user_id: @user_id, open: "1"), class: "btn btn-primary" %>
         </div>
       </div>
-      <dl class="fact-grid member-facts">
+      <dl class="fact-grid member-facts <%= "has-links" if @links_held %>">
         <div class="fact">
           <dt>Slack ID</dt>
           <dd class="mono fact-one"><%= @user_id %></dd>
@@ -90,6 +90,37 @@
             <%= @standing.actions.zero? ? "None" : @standing.actions %>
           </dd>
         </div>
+        <% if @links_held %>
+          <div class="fact">
+            <dt>Links</dt>
+            <dd class="fact-one <%= "is-none" if @links_held.count.zero? %>">
+              <% if @links_held.count.zero? %>
+                None
+              <% else %>
+                <button type="button" class="fact-go" data-modal-open="member-links" aria-haspopup="dialog">
+                  <%= @links_held.count %>
+                </button>
+                <% if @links_held.certain.positive? %>
+                  <span class="sub"><%= @links_held.certain %> certain</span>
+                <% elsif @links_held.strong.positive? %>
+                  <span class="sub"><%= @links_held.strong %> strong</span>
+                <% end %>
+              <% end %>
+            </dd>
+          </div>
+          <div class="fact">
+            <dt>Cluster</dt>
+            <dd class="fact-one <%= "is-none" unless @cluster %>">
+              <% if @cluster %>
+                <%= link_to pluralize(@cluster.accounts, "account"), fd_cluster_path(@cluster.cluster_id), class: "fact-go" %>
+                <% if @cluster.conflict %><span class="state state-crit">Conflict</span><% end %>
+                <% if @cluster.ring %><span class="state state-warn">Ring</span><% end %>
+              <% else %>
+                None
+              <% end %>
+            </dd>
+          </div>
+        <% end %>
       </dl>
     </section>
     <%= render "standing", user_id: @user_id, guards: @guards, names: names,

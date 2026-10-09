@@ -36,20 +36,25 @@
     <div class="scroll">
       <table class="data-table">
         <thead>
-          <tr><th>Same cluster</th></tr>
+          <tr><th>Same cluster</th><th></th></tr>
         </thead>
         <tbody>
           <% mates.each do |mate| %>
-            <tr><td><%= member_link(mate) %></td></tr>
+            <tr>
+              <td><%= member_link(mate) %></td>
+              <td class="align-right">
+                <%= link_to "Open cluster", fd_cluster_path(cluster_of), class: "btn btn-sm" if cluster_of %>
+              </td>
+            </tr>
           <% end %>
         </tbody>
       </table>
     </div>
   <% end %>
 
-  <% if cluster_of %>
-    <div class="card-tools">
-      <%= link_to "Open cluster", fd_cluster_path(cluster_of), class: "btn btn-ghost btn-sm" %>
+  <% if cluster_of && mates.none? %>
+    <div class="pane-foot">
+      <%= link_to "Open cluster", fd_cluster_path(cluster_of), class: "btn btn-sm" %>
     </div>
   <% end %>
 

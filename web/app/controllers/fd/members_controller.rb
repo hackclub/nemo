@@ -33,6 +33,10 @@ module Fd
       @guards = @standing.in_force
       @channels = ChannelNames.for(@guards.map(&:channel_id))
       @member_grant = @pane_grants[@user_id] || Authz::Grant.live.roles.find_by(user_id: @user_id)
+      return unless current_account.may?("member.links")
+
+      @links_held = MemberLink.held_by(@user_id)
+      @cluster = MemberLink.cluster_for(@user_id)
     end
 
     def pane

@@ -84,6 +84,10 @@
   .member-facts.fact-grid {
     @apply grid-cols-2 border-t border-b-0 @lg:grid-cols-3 @5xl:grid-cols-6;
   }
+  .member-facts.has-links { @apply @lg:grid-cols-4 @5xl:grid-cols-8; }
+  .member-facts .fact-go {
+    @apply cursor-pointer text-foreground underline decoration-border underline-offset-4 hover:text-primary hover:decoration-primary;
+  }
   .member-facts dd .locked { color: inherit; }
   .member-facts dd.fact-one { @apply truncate whitespace-nowrap; overflow-wrap: normal; }
   .member-facts dd.mono { @apply text-sm; }
@@ -678,5 +682,6 @@
   .cluster-cells > i.own { @apply bg-muted-foreground/40; }
   .snapshot-detail > summary { @apply cursor-pointer text-sm; }
   .verdict-cell { @apply flex items-center gap-2 whitespace-nowrap; }
+  .pane-foot { @apply flex justify-end border-t border-border px-4 py-3; }
   .snapshot-detail > div { @apply mt-1; }
 }

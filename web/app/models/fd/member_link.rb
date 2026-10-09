@@ -36,6 +36,20 @@ module Fd
 
     Cluster = Struct.new(:cluster_id, :accounts, :active, :ring, :conflict, keyword_init: true)
 
+    Held = Struct.new(:count, :certain, :strong, keyword_init: true)
+
+    HELD_SQL = <<~SQL.squish.freeze
+      SELECT count(*) AS links,
+             count(*) FILTER (WHERE score >= :certain) AS certain,
+             count(*) FILTER (WHERE score >= :strong AND score < :certain) AS strong
+      FROM fd.member_link_side
+      WHERE user_id = :user_id
+    SQL
+
+    CLUSTER_SQL = <<~SQL.squish.freeze
+      SELECT cluster_id, accounts, ring, conflict FROM fd.member_cluster WHERE user_id = :user_id
+    SQL
+
     REVIEW_SQL = <<~SQL.squish.freeze
       SELECT l.a_user_id, l.b_user_id, a.is_deleted AS a_gone, l.score, l.top_signal, l.signals,
              l.last_seen
@@ -94,6 +108,21 @@ module Fd
           active: row["active"].to_i, ring: flag.cast(row["ring"]),
           conflict: flag.cast(row["conflict"]))
       end
+    end
+
+    def self.held_by(user_id)
+      row = connection.select_one(sanitize_sql([HELD_SQL,
+        { user_id: user_id, certain: CERTAIN, strong: STRONG }])) || {}
+      Held.new(count: row["links"].to_i, certain: row["certain"].to_i, strong: row["strong"].to_i)
+    end
+
+    def self.cluster_for(user_id)
+      row = connection.select_one(sanitize_sql([CLUSTER_SQL, { user_id: user_id }]))
+      return nil if row.nil?
+
+      flag = ActiveModel::Type::Boolean.new
+      Cluster.new(cluster_id: row["cluster_id"], accounts: row["accounts"].to_i,
+        ring: flag.cast(row["ring"]), conflict: flag.cast(row["conflict"]))
     end
 
     def self.cluster_of(user_id)
