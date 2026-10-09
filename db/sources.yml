@@ -392,20 +392,6 @@ sources:
     writes: [fd.ip_network]
     feeds: []
 
-  ip_cohorts:
-    standalone: true
-    label: Members per IP address, to discount shared addresses
-    endpoint: none
-    documented: true
-    credential: none
-    cadence: live
-    window: all time
-    guard: none
-    resume: none
-    retention: replace
-    writes: [fd.ip_cohort]
-    feeds: []
-
   prune:
     label: Drop rows past their retention window
     endpoint: none

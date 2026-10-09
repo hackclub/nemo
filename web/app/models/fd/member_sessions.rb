@@ -110,15 +110,22 @@ module Fd
       @prefixes ||= rows.filter_map { |row| self.class.with_prefix(row.ip_prefix) }.uniq
     end
 
+    PEOPLE = <<~SQL.squish.freeze
+      SELECT value, count(*) AS people FROM fd.member_trait
+      WHERE kind = 'ip_prefix' AND value IN (:hosts)
+      GROUP BY value
+    SQL
+
     def cohorts
       @cohorts ||= begin
-        next_up = {}
-        if prefixes.any?
-          IpCohort.where(ip_prefix: prefixes).each do |one|
-            next_up[self.class.with_prefix(one.ip_prefix)] = one.people
-          end
+        found = {}
+        hosts = prefixes.index_by { |prefix| prefix.split("/").first }
+        if hosts.any?
+          ApplicationRecord.connection.select_all(
+            ApplicationRecord.sanitize_sql([PEOPLE, { hosts: hosts.keys }])
+          ).each { |row| found[hosts.fetch(row["value"])] = row["people"].to_i }
         end
-        next_up
+        found
       end
     end
 

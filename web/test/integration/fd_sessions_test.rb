@@ -36,13 +36,11 @@ class FdSessionsTest < ActionDispatch::IntegrationTest
       source, at, ip, agent!(ua_app, ua_os), at, at, *counted, country, isp, seen]))
   end
 
-  def cohort!(prefix, people)
-    ApplicationRecord.connection.execute(ApplicationRecord.sanitize_sql([<<~SQL.squish, prefix,
-      INSERT INTO fd.ip_cohort (ip_prefix, people, logins)
-      VALUES (?::inet, ?, ?)
-      ON CONFLICT (ip_prefix) DO UPDATE SET people = EXCLUDED.people
+  def crowd!(host, people)
+    ApplicationRecord.connection.execute(ApplicationRecord.sanitize_sql([<<~SQL.squish, host, people]))
+      INSERT INTO fd.member_trait (user_id, kind, value)
+      SELECT 'UCROWD' || n, 'ip_prefix', ? FROM generate_series(1, ?) n
     SQL
-      people, people]))
   end
 
   test "sign-ins are grouped by the device they came from" do
@@ -58,7 +56,6 @@ class FdSessionsTest < ActionDispatch::IntegrationTest
 
   test "an address only theirs is told apart from one a couple of people share" do
     signed_in!(WHO, at: 1.hour.ago)
-    cohort!("81.2.69.0/24", 1)
 
     address = Fd::MemberSessions.new(WHO).addresses.first
     assert address.alone?
@@ -69,7 +66,6 @@ class FdSessionsTest < ActionDispatch::IntegrationTest
   test "somebody else on a small range is named, because that is the whole point" do
     signed_in!(WHO, at: 1.hour.ago)
     signed_in!(ALSO, at: 2.hours.ago)
-    cohort!("81.2.69.0/24", 2)
 
     address = Fd::MemberSessions.new(WHO).addresses.first
     assert address.shared?
@@ -79,7 +75,7 @@ class FdSessionsTest < ActionDispatch::IntegrationTest
   test "a range a crowd shares names nobody, so a school cannot accuse a class" do
     signed_in!(WHO, at: 1.hour.ago)
     signed_in!(ALSO, at: 2.hours.ago)
-    cohort!("81.2.69.0/24", 1_240)
+    crowd!("81.2.69.0", 1_240)
 
     address = Fd::MemberSessions.new(WHO).addresses.first
     assert address.crowded?

@@ -8,7 +8,6 @@ from ingest.access_logs_pull import backfill as backfill_access_logs
 from ingest.access_logs_pull import run as walk_access_logs
 from ingest.audit_logs_pull import backfill_next, unknown_backfill_sets
 from ingest.audit_logs_pull import tail as walk_tail
-from ingest.ip_cohorts import run as refresh_cohorts
 from ingest.ip_networks import run as classify_networks
 from ingest.member_links_live import run as rescore_links
 from ingest.member_clusters import run as refresh_clusters
@@ -33,7 +32,6 @@ DEFAULT_TAIL_SECONDS = 60
 DEFAULT_BACKFILL_SECONDS = 120
 DEFAULT_ACCESS_SECONDS = 60
 DEFAULT_ACCESS_BACKFILL_SECONDS = 60
-DEFAULT_COHORT_SECONDS = 900
 DEFAULT_NETWORK_SECONDS = 900
 DEFAULT_LINK_LIVE_SECONDS = 15
 DEFAULT_CLUSTER_SECONDS = 3600
@@ -77,7 +75,6 @@ LANES = (
     ("access", walk_access_logs, "AUDIT_ACCESS_SECONDS", DEFAULT_ACCESS_SECONDS, True),
     ("access_backfill", backfill_access_logs, "AUDIT_ACCESS_BACKFILL_SECONDS",
      DEFAULT_ACCESS_BACKFILL_SECONDS, True),
-    ("cohorts", refresh_cohorts, "AUDIT_COHORT_SECONDS", DEFAULT_COHORT_SECONDS, False),
     ("networks", classify_networks, "AUDIT_NETWORK_SECONDS", DEFAULT_NETWORK_SECONDS, True),
     ("links_live", rescore_links, "AUDIT_LINK_LIVE_SECONDS", DEFAULT_LINK_LIVE_SECONDS, True),
     ("clusters", refresh_clusters, "AUDIT_CLUSTER_SECONDS", DEFAULT_CLUSTER_SECONDS, False),

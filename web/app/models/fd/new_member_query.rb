@@ -333,7 +333,10 @@ module Fd
         ORDER BY l.last_at DESC
         LIMIT 1
       ) place ON true
-      LEFT JOIN fd.ip_cohort cohort ON cohort.ip_prefix = seen.ip_prefix
+      LEFT JOIN LATERAL (
+        SELECT count(*) AS people FROM fd.member_trait t
+        WHERE t.kind = 'ip_prefix' AND t.value = host(seen.ip_prefix)
+      ) cohort ON true
     SQL
 
     DOMAIN_TALLY = <<~SQL.freeze
