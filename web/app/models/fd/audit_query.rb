@@ -4,7 +4,7 @@ module Fd
       keyword_init: true)
     View = Struct.new(:key, :label, :count, :current, keyword_init: true)
     Row = Struct.new(:source, :id, :at, :actor_id, :actor_kind, :verb, :entity_kind,
-      :entity_id, :entity_ref, :subject_id, :before, :after, :detail,
+      :entity_id, :entity_ref, :subject_id, :before, :after, :detail, :channel, :app, :session,
       keyword_init: true) do
       def ours? = source == FIRE_ENGINE
 
@@ -95,6 +95,7 @@ module Fd
       "before:2026-09-20" => "up to a date",
       "last:24h" => "the last 24 hours",
       "app:A0123ABCD" => "one app",
+      "session:123456" => "one sign-in session",
       "invite spam" => "free text"
     }.freeze
 
@@ -269,6 +270,44 @@ module Fd
 
       rows.flat_map { |row| [row.actor_id, row.subject_id, row.entity_id] }.compact.uniq
     end
+
+    Pivot = Struct.new(:label, :params, :kind, keyword_init: true)
+    AROUND = 15.minutes
+    EVERYTHING_SHOWN = "show:high_volume".freeze
+
+    def pivots(row)
+      person = row.actor_id.to_s.match?(MEMBER_ID)
+      held = []
+      held << value_pivot("Same actor", "actor", row.actor_id) if person
+      held << value_pivot("Same action", "action", row.verb) if row.verb.present?
+      held << value_pivot("Same address", "ip", row.ip) if row.ip.present?
+      held << value_pivot("Same channel", "channel", row.channel) if row.channel.present?
+      held << value_pivot("Same app", "app", row.app) if row.app.present?
+      held << Pivot.new(label: "Same actor within 15 minutes", params: around_params(row)) if person
+      if person && row.session.present?
+        held << Pivot.new(label: "Same session",
+          params: fresh_params("actor:#{row.actor_id}", "session:#{row.session}", EVERYTHING_SHOWN))
+      end
+      held.compact
+    end
+
+    def value_pivot(label, kind, value)
+      return nil if search.of(kind) == [value]
+
+      kept = terms.reject { |one| one.kind == kind }.map { |one| search.label_for(one) }
+      Pivot.new(label: label, kind: kind,
+        params: placed.except("group").merge(TERM_KEY => (kept << "#{kind}:#{value}").join(" ")))
+    end
+
+    def around_params(row)
+      at = row.at.in_time_zone
+      from = (at - AROUND).change(sec: 0)
+      upto = (at + AROUND).change(sec: 0) + 1.minute
+      fresh_params("actor:#{row.actor_id}", "after:#{from.strftime(AuditSearch::MINUTE)}",
+        "before:#{upto.strftime(AuditSearch::MINUTE)}", EVERYTHING_SHOWN)
+    end
+
+    def fresh_params(*said) = placed.except("group").merge(TERM_KEY => said.join(" "))
 
     GROUPS = {
       "actor" => "Actor", "action" => "Action", "address" => "Address",
@@ -450,7 +489,7 @@ module Fd
              a.entity_ref AS entity_ref, a.subject_user_id AS subject_id,
              a.before AS before, a.after AS after, NULL::jsonb AS detail,
              NULL::text AS ip, CASE WHEN a.entity_ref ~ '^[CGD][A-Z0-9]{2,}$' THEN a.entity_ref END AS channel,
-             NULL::text AS app
+             NULL::text AS app, NULL::text AS session
       FROM fd.audit a
       WHERE a.occurred_at >= :since AND (a.verb <> 'refused') = :wanted_kept
         ENGINE_WHERE
@@ -462,7 +501,7 @@ module Fd
              e.entity_kind AS entity_kind, e.entity_id AS entity_id,
              NULL::text AS entity_ref, NULL::text AS subject_id,
              NULL::jsonb AS before, e.payload AS after, e.payload -> 'context' AS detail,
-             host(e.ip) AS ip, e.channel_id AS channel, e.app_id AS app
+             host(e.ip) AS ip, e.channel_id AS channel, e.app_id AS app, e.session_id::text AS session
       FROM slack.audit_event e
       WHERE e.at >= :since AND NOT e.ours
         SLACK_WHERE
@@ -477,7 +516,7 @@ module Fd
              jsonb_strip_nulls(jsonb_build_object('ip_address', host(v.ip), 'ua', u.ua,
                'session_id', v.session_id)) AS detail,
              host(v.ip) AS ip, CASE WHEN v.object_id ~ '^[CGD][A-Z0-9]{2,}$' THEN v.object_id END AS channel,
-             NULL::text AS app
+             NULL::text AS app, v.session_id::text AS session
       FROM slack.audit_view v
       JOIN slack.audit_view_action a ON a.code = v.action
       LEFT JOIN slack.user_agent u ON u.id = v.ua_id
@@ -512,7 +551,7 @@ module Fd
              NULL::text AS entity_ref, l.subject_user_id AS subject_id,
              NULL::jsonb AS before, NULL::jsonb AS after,
              jsonb_build_object('field_class', l.field_class) AS detail,
-             NULL::text AS ip, NULL::text AS channel, NULL::text AS app
+             NULL::text AS ip, NULL::text AS channel, NULL::text AS app, NULL::text AS session
       FROM app.access_log l
       WHERE l.looked_at >= :since
         READ_WHERE
@@ -526,7 +565,7 @@ module Fd
              NULL::text AS entity_ref, NULL::text AS subject_id,
              NULL::jsonb AS before, NULL::jsonb AS after,
              jsonb_strip_nulls(jsonb_build_object('note', e.detail)) AS detail,
-             NULL::text AS ip, NULL::text AS channel, NULL::text AS app
+             NULL::text AS ip, NULL::text AS channel, NULL::text AS app, NULL::text AS session
       FROM api.event_log e
       WHERE e.at >= :since
         API_EVENT_WHERE
@@ -540,7 +579,7 @@ module Fd
              NULL::text AS entity_ref, c.user_id AS subject_id,
              NULL::jsonb AS before, NULL::jsonb AS after,
              jsonb_build_object('via', c.via) AS detail,
-             NULL::text AS ip, NULL::text AS channel, NULL::text AS app
+             NULL::text AS ip, NULL::text AS channel, NULL::text AS app, NULL::text AS session
       FROM api.consent_log c
       WHERE c.at >= :since
         API_CONSENT_WHERE
@@ -554,7 +593,7 @@ module Fd
              r.channel_id AS entity_ref, r.subject_user_id AS subject_id,
              NULL::jsonb AS before, NULL::jsonb AS after,
              jsonb_build_object('outcome', r.outcome, 'token', t.prefix) AS detail,
-             NULL::text AS ip, r.channel_id AS channel, NULL::text AS app
+             NULL::text AS ip, r.channel_id AS channel, NULL::text AS app, NULL::text AS session
       FROM api.request_log r
       JOIN api.token t ON t.id = r.token_id
       WHERE r.at >= :since
@@ -571,7 +610,7 @@ module Fd
       end
       parts << "AND false" if search.text?
       parts << "AND false" if search.of("ip").any?
-      parts << "AND false" if search.of("app").any?
+      parts << "AND false" if search.of("app").any? || search.of("session").any?
       parts << "AND false" if search.of("category").any?
       if looked_up? && search.of("ip").empty?
         parts << (anybody.any? ? "AND (#{actor} IN (:anybody) OR " \
@@ -622,7 +661,7 @@ module Fd
       parts << "AND a.subject_user_id IN (:subjects)" if search.of("about").any?
       parts << "AND a.verb IN (:actions)" if search.of("action").any?
       parts << "AND a.entity_ref IN (:channels)" if search.of("channel").any?
-      parts << "AND false" if search.of("app").any?
+      parts << "AND false" if search.of("app").any? || search.of("session").any?
       parts << "AND false" if search.of("category").any?
       parts << "AND a.searchable @@ websearch_to_tsquery('simple', :text)" if search.text?
       parts << "AND false" if search.of("ip").any?
@@ -643,6 +682,7 @@ module Fd
       parts << "AND e.action IN (:actions)" if search.of("action").any?
       parts << "AND e.channel_id IN (:channels)" if search.of("channel").any?
       parts << "AND e.app_id IN (:apps)" if search.of("app").any?
+      parts << "AND e.session_id IN (:sessions)" if search.of("session").any?
       parts << "AND e.category IN (:categories)" if search.of("category").any?
       parts << "AND #{SLACK_SEARCHED} @@ websearch_to_tsquery('simple', :text)" if search.text?
       parts << ip_clause("e") if search.of("ip").any?
@@ -660,6 +700,7 @@ module Fd
       parts << "AND v.object_id IN (:subjects)" if search.of("about").any?
       parts << "AND v.object_id IN (:channels)" if search.of("channel").any?
       parts << "AND false" if search.of("app").any?
+      parts << "AND v.session_id IN (:sessions)" if search.of("session").any?
       parts << "AND a.action IN (:category_actions)" if search.of("category").any?
       parts << "AND #{SLACK_VIEW_SEARCHED} @@ websearch_to_tsquery('simple', :text)" if search.text?
       parts << ip_clause("v") if search.of("ip").any?
@@ -717,7 +758,7 @@ module Fd
       parts << "AND l.subject_user_id IN (:subjects)" if search.of("about").any?
       parts << "AND false" if search.of("action").any? && search.of("action") != ["read"]
       parts << "AND false" if search.of("channel").any?
-      parts << "AND false" if search.of("app").any?
+      parts << "AND false" if search.of("app").any? || search.of("session").any?
       parts << "AND false" if search.of("category").any?
       parts << "AND false" if search.text?
       parts << "AND false" if search.of("ip").any?
@@ -754,7 +795,8 @@ module Fd
              NULL::text AS actor_id, NULL::text AS actor_kind, NULL::text AS verb,
              NULL::text AS entity_kind, NULL::text AS entity_id, NULL::text AS entity_ref,
              NULL::text AS subject_id, NULL::jsonb AS before, NULL::jsonb AS after,
-             NULL::jsonb AS detail, NULL::text AS ip, NULL::text AS channel, NULL::text AS app
+             NULL::jsonb AS detail, NULL::text AS ip, NULL::text AS channel, NULL::text AS app,
+             NULL::text AS session
       WHERE false
     SQL
 
@@ -887,6 +929,7 @@ module Fd
         actions: search.of("action").presence || [""],
         channels: search.of("channel").presence || [""],
         apps: search.of("app").presence || [""],
+        sessions: search.of("session").map(&:to_i).presence || [0],
         categories: search.of("category").presence || [""],
         category_actions: AuditCatalogue.actions_in(search.of("category")).presence || [""],
         anybody: anybody.presence || [""],
@@ -981,7 +1024,8 @@ module Fd
         actor_kind: row["actor_kind"], verb: row["verb"], entity_kind: row["entity_kind"],
         entity_id: row["entity_id"], entity_ref: row["entity_ref"],
         subject_id: row["subject_id"], before: shown(held_json(row["before"])),
-        after: shown(held_json(row["after"])), detail: shown(held_json(row["detail"]))
+        after: shown(held_json(row["after"])), detail: shown(held_json(row["detail"])),
+        channel: row["channel"], app: row["app"], session: row["session"]
       )
     end
 

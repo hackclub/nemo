@@ -32,12 +32,20 @@
     <% if row.ip.present? %>
       <span class="audit-ip mono"><%= row.ip %></span>
     <% end %>
-    <% if row.raw? %>
-      <%= link_to fd_audit_event_path(source: row.source, id: row.id),
-            class: "btn btn-ghost btn-only audit-more", aria: { label: "Everything on this event" },
-            data: { turbo_frame: "audit-panel" } do %>
-        <%= menu_dots %>
+    <% pivots = audit_pivots(@query, row) %>
+    <% if pivots.any? %>
+      <%= render layout: "shared/dropdown", locals: {
+            label: "Pivot", trigger_css: "btn btn-ghost btn-only audit-more",
+            pop_css: "menu-compact", trigger: pivot_icon } do %>
+        <% pivots.each do |pivot| %>
+          <%= link_to pivot.label, fd_audit_path(pivot.params) %>
+        <% end %>
       <% end %>
+    <% end %>
+    <%= link_to fd_audit_event_path(source: row.source, id: row.id),
+          class: "btn btn-ghost btn-only audit-more", aria: { label: "Everything on this event" },
+          data: { turbo_frame: "audit-panel" } do %>
+      <%= menu_dots %>
     <% end %>
   </td>
 </tr>

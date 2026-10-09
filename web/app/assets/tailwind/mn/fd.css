@@ -25,6 +25,7 @@
     white-space: nowrap;
   }
   .audit-tail-head { text-align: right; }
+  .audit-tail .menu { vertical-align: middle; }
   .audit-ip {
     font-size: var(--t-small);
     color: var(--ink-3);
@@ -104,6 +105,12 @@
     margin-bottom: 1px;
   }
   .audit-panel-facts dd { color: var(--ink-2); overflow-wrap: anywhere; }
+
+  .audit-pivots {
+    padding: var(--s-xs);
+    border-bottom: 1px solid var(--line-soft);
+    flex: none;
+  }
 
   .audit-panel-raw {
     flex: 1 1 auto;

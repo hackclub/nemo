@@ -13,7 +13,7 @@ module Fd
     DATE = /\A\d{4}-\d{2}-\d{2}\z/
 
     KINDS = %w[actor about ip action category channel email domain source is show text
-               before after last app].freeze
+               before after last app session].freeze
 
     OPERATORS = {
       "actor" => "actor", "by" => "actor", "who" => "actor",
@@ -28,7 +28,7 @@ module Fd
       "is" => "is",
       "before" => "before", "after" => "after", "since" => "after",
       "last" => "last", "within" => "last",
-      "app" => "app"
+      "app" => "app", "session" => "session"
     }.freeze
 
     SOURCES = %w[engine slack read fire_engine].freeze
@@ -169,6 +169,7 @@ module Fd
       when "before", "after" then when_at(kind, value)
       when "last" then recent(value)
       when "app" then app(value)
+      when "session" then session(value)
       when "domain" then addressed("domain", value)
       when "email" then addressed("email", value)
       else Term.new(kind: kind, value: value, label: "#{operator} #{value}")
@@ -278,6 +279,14 @@ module Fd
       return nil unless query.match?(APP)
 
       Term.new(kind: "app", value: query.upcase, label: "app #{query.upcase}")
+    end
+
+    SESSION = /\A\d{1,19}\z/
+
+    def session(query)
+      return nil unless query.match?(SESSION)
+
+      Term.new(kind: "session", value: query, label: "session #{query}")
     end
 
     RECENT = /\A(\d{1,3})(h|d)\z/i

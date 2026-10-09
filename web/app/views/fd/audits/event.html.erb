@@ -40,6 +40,17 @@
       <% end %>
     </div>
 
-    <pre class="audit-panel-raw"><code><%= audit_raw(@row) %></code></pre>
+    <% pivots = audit_pivots(@query_for_row, @row) %>
+    <% if pivots.any? %>
+      <div class="chiprow audit-pivots">
+        <% pivots.each do |pivot| %>
+          <%= link_to pivot.label, fd_audit_path(pivot.params), class: "chip", data: { turbo_frame: "_top" } %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if @row.raw? %>
+      <pre class="audit-panel-raw"><code><%= audit_raw(@row) %></code></pre>
+    <% end %>
   </div>
 </turbo-frame>

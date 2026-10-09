@@ -31,7 +31,7 @@ module Fd
       return head :forbidden unless @query_for_row.may_see?(@row.source)
 
       @names = Names.for([@row.actor_id, @row.subject_id, @row.entity_id].compact)
-      @channels = ChannelNames.for([@row.entity_ref, @row.entity_id].compact)
+      @channels = ChannelNames.for([@row.entity_ref, @row.entity_id, @row.channel].compact)
       render layout: false
     end
 
@@ -63,7 +63,7 @@ module Fd
     CHANNEL_ID = /\A[CGD][A-Z0-9]{2,}\z/
 
     def channel_ids(rows)
-      rows.flat_map { |row| [row.entity_ref, row.entity_id] }
+      rows.flat_map { |row| [row.entity_ref, row.entity_id, row.channel] }
         .select { |one| one.to_s.match?(CHANNEL_ID) }
     end
   end

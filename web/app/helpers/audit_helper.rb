@@ -21,6 +21,17 @@ module AuditHelper
     end
   end
 
+  def audit_pivots(query, row)
+    query.pivots(row).reject { |one| one.kind == "channel" && !channels.named?(row.channel) }
+  end
+
+  PIVOT_ICON = "M3 4h18l-7 8.5V18l-4 2v-7.5z".freeze
+
+  def pivot_icon
+    tag.svg(tag.path(d: PIVOT_ICON), width: 13, height: 13, viewBox: "0 0 24 24", fill: "none",
+      stroke: "currentColor", "stroke-width": 2, "stroke-linejoin": "round", "aria-hidden": true)
+  end
+
   def audit_filter_trigger(key, value)
     safe_join([
       tag.span(key, class: "filter-key"),
