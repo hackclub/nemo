@@ -7,7 +7,7 @@ from ingest import member_links_v2 as v2
 
 def test_every_signal_belongs_to_a_family_with_a_cap():
     caps = v2.families()
-    for name, one in links.signals().items():
+    for name, one in v2.signals().items():
         assert one["family"] in caps, name
     for family, one in caps.items():
         assert one["cap"] > 0, family
@@ -82,9 +82,52 @@ def test_a_pass_gathers_once_then_lands_sweeps_and_counts(monkeypatch, capsys):
 
     monkeypatch.setattr(v2, "ingest_run", bookkeeping)
     monkeypatch.setattr(links, "mark_shared", lambda _conn, _held: 2)
-    monkeypatch.setattr(links, "gather", lambda _conn, _held: {"ip_exact": 3})
+    monkeypatch.setattr(v2, "gather", lambda _conn, _held: {"ip_stable": 3})
 
     assert v2.run(Conn()) == 4
-    assert ran[:4] == [v2.PASS, v2.PASS_INDEX, v2.LAND, v2.SWEEP]
+    assert ran[:6] == [v2.PASS, v2.PASS_INDEX, v2.AGAINST, v2.BELOW_FLOOR, v2.LAND, v2.SWEEP]
     assert ran[-1] == "commit"
-    assert "9 link(s) kept, 4 written, 1 dropped, 2 address(es)" in capsys.readouterr().out
+    assert "9 link(s) kept, 4 written, 1 dropped" in capsys.readouterr().out
+
+
+def test_the_new_finder_takes_its_network_evidence_from_the_class_aware_signals():
+    names = set(v2.signals())
+
+    assert {"ip_stable", "ip_same_hour", "ip_many", "ip_hourly", "ip_prefix_stable"} <= names
+    assert not {"ip_exact", "ip_prefix"} & names
+    assert {"email_domain", "session_agent", "joined_together"} <= names
+
+
+def test_a_home_range_only_counts_alongside_another_family():
+    assert v2.signals()["ip_prefix_stable"]["corroborating"] is True
+
+
+def test_each_signal_reads_the_evidence_built_for_it():
+    held = v2.signals()
+
+    stable, _ = v2.evidence("ip_stable", held["ip_stable"], 2)
+    hourly, _ = v2.evidence("ip_hourly", held["ip_hourly"], 2)
+    domain, _ = v2.evidence("email_domain", held["email_domain"], 2)
+    together, args = v2.evidence("joined_together", held["joined_together"], 2)
+
+    assert "FROM sighting" in stable and "class = 'stable'" in stable
+    assert "HAVING sum(seen) >= 2" in stable
+    assert "'rotating', 'vpn', 'hosting', 'tor'" in hourly and "md5(e.ua)" in hourly
+    assert "fd.member_identity" in domain
+    assert together == links.TOGETHER_SQL and args["window"] == 300
+    assert v2.evidence("nothing", {"weight": 1, "crowd_ceiling": 2}, 2) == (None, None)
+
+
+def test_an_address_another_isp_rotates_through_is_treated_as_rotating():
+    assert "WHEN EXISTS (SELECT 1 FROM shared_ip s WHERE s.ip = e.ip) THEN 'rotating'" in v2.SIGHTING
+
+
+def test_hourly_evidence_keeps_one_row_per_pair():
+    assert set(v2.COLLAPSED) == {"ip_same_hour", "ip_hourly"}
+    assert "DISTINCT ON (a_user_id, b_user_id)" in v2.COLLAPSED_PART
+
+
+def test_two_countries_in_one_hour_count_against_a_link_unless_one_is_a_vpn():
+    assert v2.against()["two_countries"]["weight"] < 0
+    assert "NOT IN ('vpn', 'hosting', 'tor')" in v2.AGAINST
+    assert "coalesce(a.country, na.country) <> coalesce(b.country, nb.country)" in v2.AGAINST

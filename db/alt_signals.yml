@@ -55,6 +55,37 @@ signals:
     crowd_ceiling: 25
     family: arrival
 
+network_signals:
+  ip_stable:
+    label: Signed in from the same home or office address
+    weight: 5.0
+    crowd_ceiling: 8
+
+  ip_same_hour:
+    label: On the same home or office address in the same hour
+    weight: 2.0
+    crowd_ceiling: 8
+
+  ip_many:
+    label: Shared two or more home or office addresses
+    weight: 1.5
+
+  ip_hourly:
+    label: Same mobile, VPN or hosting address in the same hour with the same browser
+    weight: 2.0
+    crowd_ceiling: 4
+
+  ip_prefix_stable:
+    label: Signed in from the same home network range
+    weight: 2.0
+    crowd_ceiling: 20
+    corroborating: true
+
+against:
+  two_countries:
+    label: Active from two countries in the same hour, neither on a VPN
+    weight: -3.0
+
 families:
   network:
     cap: 6.0
