@@ -9,6 +9,10 @@
         aria: { current: ("true" if params[:over] == "certain") } %>
 <% end %>
 
+<%= turbo_stream_from Fd::MemberLinkBroadcast::LIST_STREAM %>
+
+<%= turbo_frame_tag Fd::MemberLinkBroadcast::LIST_FRAME, target: "_top",
+      data: { src: fd_links_path(over: params[:over].presence) } do %>
 <div class="stack">
   <div class="card card-flush">
     <div class="card-head">
@@ -47,3 +51,4 @@
     <% end %>
   </div>
 </div>
+<% end %>

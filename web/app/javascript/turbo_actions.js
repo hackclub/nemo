@@ -91,6 +91,11 @@ Turbo.StreamActions.reload_frame = function () {
     this.getAttribute("version"))
 }
 
+Turbo.StreamActions.refresh_frame = function () {
+  const frame = document.getElementById(this.target)
+  if (frame?.hasAttribute("complete")) frame.reload()
+}
+
 Turbo.StreamActions.upsert = function () {
   const version = this.getAttribute("version")
   const rows = Array.from(this.templateContent.children)

@@ -166,7 +166,8 @@ def test_a_pass_gathers_once_then_lands_sweeps_and_counts(monkeypatch, capsys):
     monkeypatch.setattr(links, "gather", lambda _conn, _held, _wholes: {"ip_stable": 3})
 
     assert links.run(Conn()) == 4
-    ran[:] = [one for one in ran if one not in ("ANALYZE shared_ip", "ANALYZE link_part", links.KEEP_WHOLE)]
+    ran[:] = [one for one in ran if one not in ("ANALYZE shared_ip", "ANALYZE link_part", links.KEEP_WHOLE,
+                                                links.QUIET)]
     assert ran[:13] == [links.PASS, links.PASS_INDEX, "ANALYZE link_pass", links.PRESENCE.format(**links.FULL),
                         links.PRESENCE_INDEX,
                         "ANALYZE presence", links.AGAINST, links.STAFF_TEST, links.CLASSROOM, links.HOUSEHOLD,

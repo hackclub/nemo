@@ -198,7 +198,8 @@
   <%= render layout: "fd/modal", locals: { id: "member-links", title: "Linked accounts",
         sub: names[@user_id], size: "wide", open: params[:do] == "links" } do %>
     <div class="modal-body">
-      <%= turbo_frame_tag "member-links-#{@user_id}", target: "_top",
+      <%= turbo_stream_from Fd::MemberLinkBroadcast.stream(@user_id) %>
+      <%= turbo_frame_tag Fd::MemberLinkBroadcast.frame(@user_id), target: "_top",
             src: fd_member_links_path(@user_id), loading: "lazy" do %>
         <p class="card-note">Reading the links…</p>
       <% end %>

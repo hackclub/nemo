@@ -124,6 +124,8 @@ ON CONFLICT (signal) DO UPDATE SET whole = EXCLUDED.whole, computed_at = EXCLUDE
 
 HELD_WHOLE = "SELECT signal, whole FROM fd.link_signal_stat"
 
+QUIET = "SET LOCAL fd.quiet_links = 'on'"
+
 RARITY = """
 CREATE OR REPLACE FUNCTION pg_temp.rarity(whole numeric, crowd numeric)
 RETURNS numeric AS $$
@@ -884,6 +886,7 @@ def run(conn):
         clock = now
 
     with ingest_run(conn, SOURCE) as counts:
+        conn.execute(QUIET)
         put_aside = mark_shared(conn, held)
         conn.execute("ANALYZE shared_ip")
         prepare(conn, held)

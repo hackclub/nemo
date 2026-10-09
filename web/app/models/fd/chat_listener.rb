@@ -2,7 +2,8 @@ module Fd
   class ChatListener
     CHAT_CHANNELS = %w[fd_chat_changed fd_conversation_changed].freeze
     GUARD_CHANNEL = "fd_member_guard".freeze
-    CHANNELS = (CHAT_CHANNELS + [GUARD_CHANNEL]).freeze
+    LINK_CHANNEL = "fd_member_link".freeze
+    CHANNELS = (CHAT_CHANNELS + [GUARD_CHANNEL, LINK_CHANNEL]).freeze
     RETRY_AFTER = 5
     WAIT = 30
     OFF = %w[0 false no off].freeze
@@ -67,6 +68,7 @@ module Fd
 
     def on_notify(channel, payload)
       return guard_changed(payload) if channel == GUARD_CHANNEL
+      return link_changed(payload) if channel == LINK_CHANNEL
 
       chat_changed(payload)
     rescue StandardError => trouble
@@ -81,6 +83,10 @@ module Fd
         Fd::CaseChatBroadcast.of(case_id)
         ReplyEchoJob.perform_later(case_id)
       end
+    end
+
+    def link_changed(payload)
+      Rails.application.executor.wrap { Fd::MemberLinkBroadcast.of(payload) }
     end
 
     def guard_changed(payload)

@@ -13,6 +13,21 @@ class FdMemberLinksTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "the links page listens for changes and reloads its own list" do
+    get fd_links_path(over: "strong")
+
+    assert_select "turbo-cable-stream-source"
+    assert_select %(turbo-frame##{Fd::MemberLinkBroadcast::LIST_FRAME}[data-src="#{fd_links_path(over: "strong")}"])
+  end
+
+  test "a member page listens for changes to that member's links" do
+    member!("UONE")
+    get fd_member_path("UONE")
+
+    assert_select "turbo-cable-stream-source", minimum: 2
+    assert_select %(turbo-frame#member-links-UONE)
+  end
+
   test "a member link pane reads the links" do
     member!("UONE")
     member!("UTWO")
