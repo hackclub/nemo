@@ -4,6 +4,8 @@ module Fd
 
     def show
       @query = AuditQuery.new(params, actor: current_account)
+      return redirect_to(fd_audit_path(@query.range_params(params[:start], params[:end]))) if params[:start].present?
+
       @rows = @query.rows
       @views = @query.views
       @names = Names.for(named_in(@rows))

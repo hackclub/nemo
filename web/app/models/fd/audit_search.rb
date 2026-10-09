@@ -12,7 +12,7 @@ module Fd
     DOMAIN = /\A[a-z0-9-]+(\.[a-z0-9-]+)+\z/i
     DATE = /\A\d{4}-\d{2}-\d{2}\z/
 
-    KINDS = %w[actor about ip action channel email domain source is text
+    KINDS = %w[actor about ip action category channel email domain source is text
                before after].freeze
 
     OPERATORS = {
@@ -20,6 +20,7 @@ module Fd
       "about" => "about", "to" => "about", "subject" => "about",
       "ip" => "ip", "from" => "ip", "address" => "ip",
       "action" => "action", "did" => "action", "verb" => "action",
+      "category" => "category",
       "in" => "channel", "channel" => "channel",
       "email" => "email", "domain" => "domain",
       "source" => "source",
@@ -142,6 +143,7 @@ module Fd
       when "actor", "about" then person(kind, value)
       when "channel" then channel(value)
       when "source" then source(value)
+      when "category" then category(value)
       when "is" then doer(value)
       when "before", "after" then when_at(kind, value)
       when "domain" then addressed("domain", value)
@@ -200,6 +202,13 @@ module Fd
         kind == "email" && !held.include?("@") && held.match?(DOMAIN)
 
       Term.new(kind: kind, value: held, label: "#{kind} #{held}")
+    end
+
+    def category(query)
+      key = AuditCatalogue.category_for(query)
+      return nil if key.nil?
+
+      Term.new(kind: "category", value: key, label: AuditCatalogue.category_label(key))
     end
 
     def doer(query)

@@ -118,6 +118,9 @@
 
 @layer components {
   .audit-chips { padding: 0 var(--s-3xs); }
+  .audit-filters { @apply flex flex-wrap items-center gap-2; }
+  .audit-filters .filter-val { @apply text-muted-foreground; }
+  .audit-filter-pop { @apply min-w-64; }
   .audit-search { flex: 1 1 320px; min-width: 300px; max-width: 460px; }
   .ractions > .audit-search .queue-search-input { width: 100%; }
 

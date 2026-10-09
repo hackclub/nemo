@@ -1,0 +1,55 @@
+<% search = @query.search %>
+<% categories = search.of("category") %>
+<% actions = search.of("action") %>
+<% after = search.one("after") %>
+<% doer = search.one("is") %>
+<div class="audit-filters">
+  <%= render layout: "shared/dropdown", locals: {
+        label: "Category", trigger_css: "btn",
+        trigger: audit_filter_trigger("Category", categories.first && Fd::AuditCatalogue.category_label(categories.first)) } do %>
+    <%= link_to "Any", fd_audit_path(@query.set_params("category")), aria: { current: ("true" if categories.empty?) } %>
+    <div class="menu-sep"></div>
+    <% Fd::AuditCatalogue::CATEGORIES.each do |key, label| %>
+      <%= link_to label, fd_audit_path(@query.set_params("category", key)),
+            aria: { current: ("true" if categories.include?(key)) } %>
+    <% end %>
+  <% end %>
+
+  <%= render layout: "shared/dropdown", locals: {
+        label: "Action", trigger_css: "btn", pop_css: "audit-filter-pop",
+        trigger: audit_filter_trigger("Action", actions.first && Fd::AuditCatalogue.action_label(actions.first)) } do %>
+    <%= link_to "Any", fd_audit_path(@query.set_params("action")), aria: { current: ("true" if actions.empty?) } %>
+    <% Fd::AuditCatalogue.grouped(categories.presence || Fd::AuditCatalogue::CATEGORIES.keys).each do |_key, label, keys| %>
+      <div class="menu-sep"></div>
+      <div class="menu-group"><%= label %></div>
+      <% keys.each do |action| %>
+        <%= link_to Fd::AuditCatalogue.action_label(action), fd_audit_path(@query.set_params("action", action)),
+              aria: { current: ("true" if actions.include?(action)) } %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% before = search.one("before") %>
+  <% from = after && Date.iso8601(after) %>
+  <% upto = before ? Date.iso8601(before) - 1 : (from && Date.current) %>
+  <%= render "shared/date_range", url: fd_audit_path, title: "When",
+        start_on: from, end_on: upto, min: AuditHelper::FIRST_DAY, max: Date.current,
+        carry: @query.set_params(%w[after before]),
+        presets: [{ label: "Any time", href: fd_audit_path(@query.set_params(%w[after before])),
+                    current: after.nil? && before.nil? }] +
+          AuditHelper::WINDOWS.map { |label, days|
+            since = days.days.ago.to_date.iso8601
+            { label: label, href: fd_audit_path(@query.set_params(%w[after before], since)),
+              current: after == since && before.nil? }
+          } %>
+
+  <%= render layout: "shared/dropdown", locals: {
+        label: "Done by", trigger_css: "btn",
+        trigger: audit_filter_trigger("Done by", AuditHelper::DOERS.key(doer)) } do %>
+    <%= link_to "Anyone", fd_audit_path(@query.set_params("is")), aria: { current: ("true" if doer.nil?) } %>
+    <div class="menu-sep"></div>
+    <% AuditHelper::DOERS.each do |label, key| %>
+      <%= link_to label, fd_audit_path(@query.set_params("is", key)), aria: { current: ("true" if doer == key) } %>
+    <% end %>
+  <% end %>
+</div>

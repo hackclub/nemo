@@ -86,6 +86,7 @@ module Fd
       "@handle" => "about them",
       "actor:@handle" => "by them",
       "did:deactivated" => "one event",
+      "category:people" => "one kind of event",
       "in:#ask" => "one channel",
       "source:slack" => "one log",
       "is:nemo" => "nemo, not a person",
@@ -190,6 +191,24 @@ module Fd
 
     def with_params(term_value)
       carried.merge(placed).merge(TERM_KEY => [term, term_value].compact_blank.join(" ").strip)
+    end
+
+    def range_params(start_on, end_on)
+      from = Date.iso8601(start_on.to_s)
+      upto = end_on.present? ? Date.iso8601(end_on.to_s) : from
+      from, upto = [from, upto].minmax
+      kept = terms.reject { |one| %w[after before].include?(one.kind) }.map { |one| search.label_for(one) }
+      placed.merge(TERM_KEY => (kept + ["after:#{from.iso8601}", "before:#{(upto + 1).iso8601}"]).join(" "))
+    rescue Date::Error
+      to_params
+    end
+
+    def set_params(kinds, value = nil)
+      kinds = Array(kinds)
+      kept = terms.reject { |one| kinds.include?(one.kind) }.map { |one| search.label_for(one) }
+      kept << "#{kinds.first}:#{value}" if value
+      held = placed
+      kept.any? ? held.merge(TERM_KEY => kept.join(" ")) : held
     end
 
     def rows
@@ -392,6 +411,7 @@ module Fd
       end
       parts << "AND false" if search.text?
       parts << "AND false" if search.of("ip").any?
+      parts << "AND false" if search.of("category").any?
       if looked_up? && search.of("ip").empty?
         parts << (anybody.any? ? "AND (#{actor} IN (:anybody) OR " \
                                  "#{subject} IN (:anybody))" : "AND false")
@@ -441,6 +461,7 @@ module Fd
       parts << "AND a.subject_user_id IN (:subjects)" if search.of("about").any?
       parts << "AND a.verb IN (:actions)" if search.of("action").any?
       parts << "AND a.entity_ref IN (:channels)" if search.of("channel").any?
+      parts << "AND false" if search.of("category").any?
       parts << "AND a.searchable @@ websearch_to_tsquery('simple', :text)" if search.text?
       parts << "AND false" if search.of("ip").any?
       if looked_up? && search.of("ip").empty?
@@ -459,6 +480,7 @@ module Fd
       parts << "AND e.entity_id IN (:subjects)" if search.of("about").any?
       parts << "AND e.action IN (:actions)" if search.of("action").any?
       parts << "AND e.channel_id IN (:channels)" if search.of("channel").any?
+      parts << "AND e.category IN (:categories)" if search.of("category").any?
       parts << "AND #{SLACK_SEARCHED} @@ websearch_to_tsquery('simple', :text)" if search.text?
       parts << ip_clause("e") if search.of("ip").any?
       parts << email_clause if search.of("ip").empty? && looked_up?
@@ -473,6 +495,7 @@ module Fd
       parts << "AND v.actor_id IN (:actors)" if search.of("actor").any?
       parts << "AND v.object_id IN (:subjects)" if search.of("about").any?
       parts << "AND v.object_id IN (:channels)" if search.of("channel").any?
+      parts << "AND a.action IN (:category_actions)" if search.of("category").any?
       parts << "AND #{SLACK_VIEW_SEARCHED} @@ websearch_to_tsquery('simple', :text)" if search.text?
       parts << ip_clause("v") if search.of("ip").any?
       if looked_up? && search.of("ip").empty?
@@ -527,6 +550,7 @@ module Fd
       parts << "AND l.subject_user_id IN (:subjects)" if search.of("about").any?
       parts << "AND false" if search.of("action").any? && search.of("action") != ["read"]
       parts << "AND false" if search.of("channel").any?
+      parts << "AND false" if search.of("category").any?
       parts << "AND false" if search.text?
       parts << "AND false" if search.of("ip").any?
       if looked_up? && search.of("ip").empty?
@@ -611,6 +635,8 @@ module Fd
         subjects: search.of("about").presence || [""],
         actions: search.of("action").presence || [""],
         channels: search.of("channel").presence || [""],
+        categories: search.of("category").presence || [""],
+        category_actions: AuditCatalogue.actions_in(search.of("category")).presence || [""],
         anybody: anybody.presence || [""],
         after: search.one("after"), before: search.one("before")
       }
