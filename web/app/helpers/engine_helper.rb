@@ -53,6 +53,13 @@ module EngineHelper
     FAULT_CHIP.fetch(error_class.to_s, "chip-off")
   end
 
+  def growth_label(bytes)
+    return "n/a" if bytes.nil?
+
+    sign = bytes.negative? ? "−" : "+"
+    "#{sign}#{number_to_human_size(bytes.abs)}"
+  end
+
   def queue_eta(queue)
     return "idle" if queue.pending.to_i.zero?
     return "n/a" if queue.eta_minutes.nil?

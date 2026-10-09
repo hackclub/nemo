@@ -9,8 +9,8 @@ class EngineController < ApplicationController
 
   TABS = { "runs" => "Runs", "sources" => "Sources", "coverage" => "Coverage",
            "queues" => "Queues", "backfill" => "Backfill", "archive" => "Archive",
-           "faults" => "Faults", "tuning" => "Tuning" }.freeze
-  GROUPS = { "The night" => %w[runs sources], "What landed" => %w[coverage archive],
+           "storage" => "Storage", "faults" => "Faults", "tuning" => "Tuning" }.freeze
+  GROUPS = { "The night" => %w[runs sources], "What landed" => %w[coverage archive storage],
              "Work waiting" => %w[queues backfill],
              "Whether to trust it" => %w[faults tuning] }.freeze
   MUTE_FOR = 1.day
@@ -44,6 +44,7 @@ class EngineController < ApplicationController
     when "tuning" then @sources = source_rows
     when "backfill" then backfill_facts
     when "archive" then archive_facts
+    when "storage" then @storage = Engine::Storage.latest
     end
   end
 

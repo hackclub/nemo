@@ -1,0 +1,47 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">By table</h2>
+      <% if storage.any? %>
+        <p class="card-sub">
+          <%= number_to_human_size(storage.bytes) %> &middot;
+          <%= growth_label(storage.grew) %> last day &middot;
+          measured <%= storage.day.to_date.strftime("%-d %b") %>
+          <% if storage.flagged.positive? %>
+            &middot; <span class="warn"><%= pluralize(storage.flagged, "table") %> past twice the 30-day median</span>
+          <% end %>
+        </p>
+      <% end %>
+    </div>
+  </div>
+  <% if storage.any? %>
+    <div class="scroll">
+      <table class="data-table engine-wide-table">
+        <thead>
+          <tr>
+            <th>Table</th>
+            <th class="col-num">Size</th>
+            <th class="col-num">Rows</th>
+            <th class="col-num">Last day</th>
+            <th class="col-num">30-day median</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% storage.tables.each do |table| %>
+            <tr>
+              <td class="font-medium mono"><%= table.name %></td>
+              <td class="col-num"><%= number_to_human_size(table.bytes) %></td>
+              <td class="col-num"><%= table.rows ? number_with_delimiter(table.rows) : "n/a" %></td>
+              <td class="col-num <%= "warn" if table.flagged? %>"><%= growth_label(table.grew) %></td>
+              <td class="col-num"><%= growth_label(table.median) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty">
+      <p class="empty-title">Not measured yet</p>
+    </div>
+  <% end %>
+</div>

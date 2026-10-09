@@ -133,6 +133,9 @@
 <% elsif @tab == "archive" %>
   <%= render "archive", archive: @archive %>
 
+<% elsif @tab == "storage" %>
+  <%= render "storage", storage: @storage %>
+
 <% elsif @tab == "tuning" %>
   <%= render "tuning", may_tune: @may_tune, sources: @sources %>
 <% end %>

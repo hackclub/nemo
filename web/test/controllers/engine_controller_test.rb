@@ -21,6 +21,34 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "storage lists every table by size and marks one that grew past twice its median" do
+    sign_in_as(hold_role!("UTESTCM1", "community_manager"))
+    ApplicationRecord.connection.execute(<<~SQL.squish)
+      INSERT INTO ingest.table_size (day, table_name, bytes, rows, grew, median_growth, flagged)
+      VALUES (current_date, 'slack.audit_event', 18253611008, 7765072, 943718400, 104857600, true),
+             (current_date, 'fd.member', 52428800, 140000, 1048576, 1048576, false),
+             (current_date - 1, 'fd.gone', 1, 1, NULL, NULL, false)
+    SQL
+
+    get engine_path(tab: "storage")
+    assert_response :success
+
+    assert_select "td", text: "slack.audit_event"
+    assert_select "td", text: "fd.member"
+    assert_select "td", text: "fd.gone", count: 0
+    assert_select "td.warn", text: "+900 MB"
+    assert_match "1 table past twice the 30-day median", response.body
+  end
+
+  test "storage before the first measurement says so" do
+    sign_in_as(hold_role!("UTESTCM1", "community_manager"))
+    ApplicationRecord.connection.execute("DELETE FROM ingest.table_size")
+
+    get engine_path(tab: "storage")
+    assert_response :success
+    assert_match "Not measured yet", response.body
+  end
+
   test "a breaker override writes a one-night ack the pipeline honours" do
     sign_in_as(hold_role!("UTESTCM1", "community_manager"))
 
