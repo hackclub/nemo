@@ -12,7 +12,7 @@ module Fd
     DOMAIN = /\A[a-z0-9-]+(\.[a-z0-9-]+)+\z/i
     DATE = /\A\d{4}-\d{2}-\d{2}\z/
 
-    KINDS = %w[actor about ip action category channel email domain source is text
+    KINDS = %w[actor about ip action category channel email domain source is show text
                before after].freeze
 
     OPERATORS = {
@@ -21,6 +21,7 @@ module Fd
       "ip" => "ip", "from" => "ip", "address" => "ip",
       "action" => "action", "did" => "action", "verb" => "action",
       "category" => "category",
+      "show" => "show",
       "in" => "channel", "channel" => "channel",
       "email" => "email", "domain" => "domain",
       "source" => "source",
@@ -144,6 +145,7 @@ module Fd
       when "channel" then channel(value)
       when "source" then source(value)
       when "category" then category(value)
+      when "show" then shown(value)
       when "is" then doer(value)
       when "before", "after" then when_at(kind, value)
       when "domain" then addressed("domain", value)
@@ -202,6 +204,15 @@ module Fd
         kind == "email" && !held.include?("@") && held.match?(DOMAIN)
 
       Term.new(kind: kind, value: held, label: "#{kind} #{held}")
+    end
+
+    SHOWN = { "high_volume" => "high_volume", "high-volume" => "high_volume", "busy" => "high_volume" }.freeze
+
+    def shown(query)
+      held = SHOWN[query.downcase]
+      return nil if held.nil?
+
+      Term.new(kind: "show", value: held, label: "high-volume actions")
     end
 
     def category(query)

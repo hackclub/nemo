@@ -3,6 +3,7 @@
 <% actions = search.of("action") %>
 <% after = search.one("after") %>
 <% doer = search.one("is") %>
+<% busy = search.one("show") == "high_volume" %>
 <div class="audit-filters">
   <%= render layout: "shared/dropdown", locals: {
         label: "Category", trigger_css: "btn",
@@ -51,5 +52,12 @@
     <% AuditHelper::DOERS.each do |label, key| %>
       <%= link_to label, fd_audit_path(@query.set_params("is", key)), aria: { current: ("true" if doer == key) } %>
     <% end %>
+  <% end %>
+
+  <%= render layout: "shared/dropdown", locals: {
+        label: "High-volume actions", trigger_css: "btn",
+        trigger: audit_filter_trigger("High-volume", busy ? "Shown" : "Hidden") } do %>
+    <%= link_to "Hidden", fd_audit_path(@query.set_params("show")), aria: { current: ("true" unless busy) } %>
+    <%= link_to "Shown", fd_audit_path(@query.set_params("show", "high_volume")), aria: { current: ("true" if busy) } %>
   <% end %>
 </div>

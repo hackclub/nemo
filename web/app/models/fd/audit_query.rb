@@ -87,6 +87,7 @@ module Fd
       "actor:@handle" => "by them",
       "did:deactivated" => "one event",
       "category:people" => "one kind of event",
+      "show:high_volume" => "previews, downloads and list edits",
       "in:#ask" => "one channel",
       "source:slack" => "one log",
       "is:nemo" => "nemo, not a person",
@@ -491,7 +492,8 @@ module Fd
     end
 
     def slack_view_where
-      parts = ["AND a.action IN (:actions)"]
+      parts = []
+      parts << "AND a.action IN (:actions)" if search.of("action").any?
       parts << "AND v.actor_id IN (:actors)" if search.of("actor").any?
       parts << "AND v.object_id IN (:subjects)" if search.of("about").any?
       parts << "AND v.object_id IN (:channels)" if search.of("channel").any?
@@ -511,7 +513,9 @@ module Fd
       @view_actions ||= ApplicationRecord.connection.select_values(VIEW_ACTIONS)
     end
 
-    def slack_views? = search.of("action").intersect?(view_actions)
+    def high_volume? = search.one("show") == "high_volume"
+
+    def slack_views? = high_volume? || search.of("action").intersect?(view_actions)
 
     EMAIL_FIELDS = %w[e.actor_email e.entity_email].freeze
 

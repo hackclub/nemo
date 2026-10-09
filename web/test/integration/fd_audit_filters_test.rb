@@ -17,6 +17,13 @@ class FdAuditFiltersTest < ActionDispatch::IntegrationTest
     seeded!("slack.audit_event", "id", id)
   end
 
+  def slim!(code)
+    id = SecureRandom.uuid
+    as_pipeline("INSERT INTO slack.audit_view (id, at, action, actor_id, object_id) " \
+                "VALUES (?::uuid, now() - interval '2 hours', ?, 'UFILTER', 'F0FILE')", id, code)
+    seeded!("slack.audit_view", "id", id)
+  end
+
   def query(term, view: "everything")
     Fd::AuditQuery.new({ "view" => view, "q" => term }, actor: @me)
   end
@@ -74,5 +81,36 @@ class FdAuditFiltersTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_select ".audit-filters .daterange-presets summary", text: /Custom/
     assert_select ".daterange-open", text: /Oct 1 - Oct 3, 2026/
+  end
+
+  test "high-volume actions stay hidden until shown, and then all four kinds come" do
+    slack!("user_login", "sign_ins")
+    slim!(3)
+    slim!(4)
+    slim!(2)
+
+    assert_equal %w[user_login], query("", view: "slack").rows.map(&:verb)
+
+    shown = query("show:high_volume", view: "slack").rows.map(&:verb)
+    assert_equal %w[canvas_opened file_downloaded list_cell_updated user_login], shown.sort
+  end
+
+  test "a category narrows the high-volume actions too" do
+    slim!(3)
+    slim!(4)
+    slim!(2)
+
+    rows = query("show:high_volume category:canvases_and_lists", view: "slack").rows
+    assert_equal %w[canvas_opened list_cell_updated], rows.map(&:verb).sort
+  end
+
+  test "the toggle shows which way it is set and flips the term" do
+    get fd_audit_path
+    assert_select ".audit-filters summary", text: /High-volume\s*Hidden/
+    assert_select ".audit-filters a[href*='show%3Ahigh_volume']", "Shown"
+
+    get fd_audit_path(q: "show:high_volume")
+    assert_select ".audit-filters summary", text: /High-volume\s*Shown/
+    assert_select ".audit-chips .chip", text: /high-volume actions/
   end
 end
