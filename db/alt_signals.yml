@@ -81,6 +81,18 @@ network_signals:
     crowd_ceiling: 20
     corroborating: true
 
+device_signals:
+  device_agent:
+    label: Same browser or app build, word for word
+    weight: 3.0
+    crowd_ceiling: 25
+
+  device_ja4:
+    label: Same TLS fingerprint
+    weight: 1.0
+    crowd_ceiling: 25
+    corroborating: true
+
 against:
   two_countries:
     label: Active from two countries in the same hour, neither on a VPN
@@ -92,7 +104,7 @@ families:
   identity:
     cap: 5.0
   device:
-    cap: 2.0
+    cap: 4.0
   arrival:
     cap: 2.0
 

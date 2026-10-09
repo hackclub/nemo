@@ -3,6 +3,10 @@ from lib.db import ingest_run
 
 SOURCE = "member_links_v2"
 NETWORK = "network"
+DEVICE = "device"
+DEVICE_AGENT = "device_agent"
+DEVICE_JA4 = "device_ja4"
+SHORTEST_AGENT = 20
 IP_STABLE = "ip_stable"
 IP_SAME_HOUR = "ip_same_hour"
 IP_MANY = "ip_many"
@@ -54,6 +58,23 @@ NETWORK_EVIDENCE = {
         WHERE e.ip IS NOT NULL AND e.ua IS NOT NULL
           AND (n.class IN ('rotating', 'vpn', 'hosting', 'tor')
                OR EXISTS (SELECT 1 FROM shared_ip s WHERE s.ip = e.ip))
+        GROUP BY 1, 2
+    """,
+}
+
+DEVICE_EVIDENCE = {
+    DEVICE_AGENT: """
+        SELECT user_id, ua AS value, min(at) AS first_seen, max(at) AS last_seen
+        FROM fd.login_event
+        WHERE ua IS NOT NULL AND length(ua) >= {shortest}
+        GROUP BY 1, 2
+    """,
+    DEVICE_JA4: """
+        SELECT actor_id AS user_id, payload->'details'->>'client_ja4_fingerprint' AS value,
+               min(at) AS first_seen, max(at) AS last_seen
+        FROM slack.audit_event
+        WHERE action = 'anomaly' AND actor_id IS NOT NULL
+          AND payload->'details'->>'client_ja4_fingerprint' IS NOT NULL
         GROUP BY 1, 2
     """,
 }
@@ -184,6 +205,7 @@ def families(held=None):
 def signals(held=None):
     held = held or links.catalogue()
     found = {name: {**one, "family": NETWORK} for name, one in held["network_signals"].items()}
+    found.update({name: {**one, "family": DEVICE} for name, one in held["device_signals"].items()})
     found.update({name: one for name, one in links.signals(held).items()
                   if one["family"] != NETWORK})
     return found
@@ -205,10 +227,11 @@ def evidence(name, settings, sightings):
     if name == links.JOINED_TOGETHER:
         return links.TOGETHER_SQL, {"weight": settings["weight"], "ceiling": settings["crowd_ceiling"],
                                     "window": settings.get("window_seconds", 300)}
-    source = NETWORK_EVIDENCE.get(name) or links.EVIDENCE.get(name)
+    source = NETWORK_EVIDENCE.get(name) or DEVICE_EVIDENCE.get(name) or links.EVIDENCE.get(name)
     if source is None:
         return None, None
-    pairs = links.PAIRS_SQL.format(evidence=source.format(sightings=sightings))
+    pairs = links.PAIRS_SQL.format(
+        evidence=source.format(sightings=sightings, shortest=SHORTEST_AGENT))
     return pairs, {"weight": settings["weight"], "ceiling": settings["crowd_ceiling"]}
 
 

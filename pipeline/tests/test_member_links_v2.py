@@ -131,3 +131,29 @@ def test_two_countries_in_one_hour_count_against_a_link_unless_one_is_a_vpn():
     assert v2.against()["two_countries"]["weight"] < 0
     assert "NOT IN ('vpn', 'hosting', 'tor')" in v2.AGAINST
     assert "coalesce(a.country, na.country) <> coalesce(b.country, nb.country)" in v2.AGAINST
+
+
+def test_a_word_for_word_build_is_device_evidence_and_ja4_only_backs_it_up():
+    held = v2.signals()
+
+    assert held["device_agent"]["family"] == "device"
+    assert not held["device_agent"].get("corroborating")
+    assert held["device_ja4"]["corroborating"] is True
+    assert held["device_agent"]["crowd_ceiling"] <= 25
+
+
+def test_device_evidence_reads_the_full_agent_and_the_anomaly_fingerprint():
+    held = v2.signals()
+
+    agent, _ = v2.evidence("device_agent", held["device_agent"], 2)
+    ja4, _ = v2.evidence("device_ja4", held["device_ja4"], 2)
+
+    assert "ua AS value" in agent and f"length(ua) >= {v2.SHORTEST_AGENT}" in agent
+    assert "client_ja4_fingerprint" in ja4 and "action = 'anomaly'" in ja4
+    assert "BETWEEN 2 AND %(ceiling)s" in agent
+
+
+def test_a_shared_build_alone_stays_below_strong():
+    held = v2.signals()
+    assert held["device_agent"]["weight"] < links.scoring()["strong"]
+    assert v2.families()["device"]["cap"] < links.scoring()["strong"]
