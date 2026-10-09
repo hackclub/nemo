@@ -1,0 +1,17 @@
+<%= form_with url: fd_audit_path, method: :get, class: "contents" do %>
+  <% @query.to_params.each do |key, value| %>
+    <%= hidden_field_tag key, value, id: nil %>
+  <% end %>
+  <span class="datepicker" data-controller="datepicker"
+        data-datepicker-min-value="<%= AuditHelper::FIRST_DAY.iso8601 %>"
+        data-datepicker-max-value="<%= Date.current.iso8601 %>"
+        data-datepicker-submit-value="true">
+    <%= hidden_field_tag :on, @query.jump_on&.iso8601, id: nil, data: { datepicker_target: "input" } %>
+    <button type="button" class="btn datepicker-trigger" data-datepicker-target="trigger"
+            data-action="datepicker#toggle" aria-haspopup="dialog" aria-expanded="false">
+      <%= @query.jump_on ? @query.jump_on.strftime("%b %-d, %Y") : "Go to date" %>
+    </button>
+    <span class="datepicker-pop" popover="manual" role="dialog" aria-label="Go to a date"
+          data-datepicker-target="pop"></span>
+  </span>
+<% end %>

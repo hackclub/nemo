@@ -73,7 +73,7 @@ module Fd
 
 
     TERM_KEY = "q".freeze
-    KEYS = %w[view q before_at before_id].freeze
+    KEYS = %w[view q before_at before_id after_at after_id on].freeze
 
     DEFAULT_VIEW = "slack".freeze
     NO_VIEW = "none".freeze
@@ -213,7 +213,20 @@ module Fd
     end
 
     def rows
-      @rows ||= ask(page_sql).map { |row| build(row) }
+      @rows ||= paged_rows
+    end
+
+    def back_params
+      return nil if rows.empty? || first_page?
+
+      first = rows.first
+      to_params.merge("after_at" => first.at.iso8601(6), "after_id" => first.id)
+    end
+
+    def jump_on
+      Date.iso8601(@params["on"].to_s)
+    rescue Date::Error
+      nil
     end
 
     def more?
@@ -611,11 +624,40 @@ module Fd
       "(at, id) < (:before_at::timestamptz, :before_id)"
     end
 
-    def before_at
-      term_value = @params["before_at"].to_s.presence
-      return nil if term_value.nil?
+    RISING = "(at, id) > (:after_at::timestamptz, :after_id)".freeze
 
-      Time.zone.parse(term_value)
+    def paged_rows
+      return ask(page_sql).map { |row| build(row) } if after_at.nil?
+
+      found = ask("#{body(RISING)} ORDER BY at, id LIMIT #{LIMIT + 1}").map { |row| build(row) }
+      return found.first(LIMIT).reverse if found.size > LIMIT
+
+      @top = true
+      ask("#{body} ORDER BY at DESC, id DESC LIMIT #{LIMIT}").map { |row| build(row) }
+    end
+
+    def first_page?
+      rows
+      @top || (after_at.nil? && before_at.nil?)
+    end
+
+    def before_at
+      return (jump_on + 1).in_time_zone.beginning_of_day if jump_on && @params["before_at"].blank?
+
+      stamp(@params["before_at"])
+    end
+
+    def after_at
+      return nil if @params["before_at"].present? || jump_on
+
+      stamp(@params["after_at"])
+    end
+
+    def after_id = @params["after_id"].to_s.presence
+
+    def stamp(value)
+      held = value.to_s.presence
+      held && Time.zone.parse(held)
     rescue ArgumentError
       nil
     end
@@ -634,6 +676,7 @@ module Fd
     def binds
       held = {
         since: since, text: search.text, before_at: before_at, before_id: before_id,
+        after_at: after_at, after_id: after_id,
         wanted_kept: !refusals?,
         actors: search.of("actor").presence || [""],
         subjects: search.of("about").presence || [""],

@@ -19,7 +19,7 @@ function parse(value) {
 
 export default class extends Controller {
   static targets = ["input", "trigger", "pop"]
-  static values = { min: String, max: String }
+  static values = { min: String, max: String, submit: Boolean }
 
   connect() {
     this.min = parse(this.minValue)
@@ -116,6 +116,7 @@ export default class extends Controller {
     this.triggerTarget.textContent = `${MONTHS[date.getMonth()].slice(0, 3)} ${date.getDate()}, ${date.getFullYear()}`
     this.close()
     this.triggerTarget.focus()
+    if (this.submitValue) this.inputTarget.form?.requestSubmit()
   }
 
   outOfBounds(date) {
