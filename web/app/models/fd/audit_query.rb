@@ -102,10 +102,10 @@ module Fd
       READ => "'r' || l.id::text = :id"
     }.freeze
 
-    def self.one(source, id)
+    def self.one(source, id, actor: nil)
       return nil unless SOURCES.include?(source) && id.present?
 
-      new({ "when" => "any", "view" => view_for(source) }).send(:pick, source, id)
+      new({ "when" => "any", "view" => view_for(source) }, actor: actor).send(:pick, source, id)
     end
 
     def self.view_for(source)
@@ -132,6 +132,8 @@ module Fd
     def asked? = search.any?
 
     ENGINE_READ = "access.read".freeze
+    SLACK_READ = "audit.read".freeze
+    IDENTITY_READ = "identity.read".freeze
 
     def may_engine?
       return @may_engine if defined?(@may_engine)
@@ -139,23 +141,41 @@ module Fd
       @may_engine = actor.present? && actor.may?(ENGINE_READ)
     end
 
-    def allowed_views
-      return VIEWS if may_engine?
+    def may_slack?
+      return @may_slack if defined?(@may_slack)
 
-      VIEWS.except(*ENGINE_ONLY)
+      @may_slack = actor.present? && actor.may?(SLACK_READ)
+    end
+
+    def identity? = search.identity?
+
+    def identity_refused? = search.identity_terms? && !identity?
+
+    def allowed_views
+      held = VIEWS
+      held = held.except(*ENGINE_ONLY) unless may_engine?
+      held = held.except(*SLACK_ONLY) unless may_slack?
+      held
     end
 
     ENGINE_ONLY = %w[engine refusals].freeze
+    SLACK_ONLY = %w[slack].freeze
 
     def may_see?(source)
-      source != FIRE_ENGINE || may_engine?
+      case source
+      when FIRE_ENGINE then may_engine?
+      when SLACK then may_slack?
+      else true
+      end
     end
+
+    def default_view = may_slack? ? DEFAULT_VIEW : "everything"
 
     def view
       raw = @params["view"].to_s
       return nil if raw == NO_VIEW
 
-      allowed_views.key?(raw) ? raw : DEFAULT_VIEW
+      allowed_views.key?(raw) ? raw : default_view
     end
 
     def view_label = VIEWS.fetch(view)
@@ -172,7 +192,7 @@ module Fd
     end
 
     def placed
-      return {} if view.nil? || view == DEFAULT_VIEW
+      return {} if view.nil? || view == default_view
 
       { "view" => view }
     end
@@ -181,7 +201,7 @@ module Fd
 
     def view_params(key)
       held = carried
-      key == DEFAULT_VIEW ? held : held.merge("view" => key)
+      key == default_view ? held : held.merge("view" => key)
     end
 
     def without_params(one)
@@ -223,6 +243,17 @@ module Fd
       to_params.merge("after_at" => first.at.iso8601(6), "after_id" => first.id)
     end
 
+    def looked_at
+      held = {}
+      held["identity_search"] = shown_people if search.identity_terms? && identity?
+      held["audit"] = search.of("actor") | search.of("about") if wanted_sources.include?(SLACK)
+      held.transform_values { |ids| ids.grep(MEMBER_ID) }.reject { |_, ids| ids.empty? }
+    end
+
+    def shown_people
+      rows.flat_map { |row| [row.actor_id, row.subject_id, row.entity_id] }.compact.uniq
+    end
+
     def jump_on
       Date.iso8601(@params["on"].to_s)
     rescue Date::Error
@@ -262,6 +293,7 @@ module Fd
     end
 
     def empty_note
+      return "Not yours to search by address or email" if identity_refused?
       return "Nothing matches that." if asked?
 
       case view
@@ -298,6 +330,8 @@ module Fd
     def since = Time.zone.at(0)
 
     def wanted_sources
+      return [] if identity_refused?
+
       held = view ? VIEW_SOURCES.fetch(view) : SOURCES
       asked = search.of("source")
       held = held & asked.map { |one| one == "engine" ? FIRE_ENGINE : one } if asked.any?
@@ -759,9 +793,39 @@ module Fd
         source: row["source"], id: row["id"], at: row["at"], actor_id: row["actor_id"],
         actor_kind: row["actor_kind"], verb: row["verb"], entity_kind: row["entity_kind"],
         entity_id: row["entity_id"], entity_ref: row["entity_ref"],
-        subject_id: row["subject_id"], before: held_json(row["before"]),
-        after: held_json(row["after"]), detail: held_json(row["detail"])
+        subject_id: row["subject_id"], before: shown(held_json(row["before"])),
+        after: shown(held_json(row["after"])), detail: shown(held_json(row["detail"]))
       )
+    end
+
+    IDENTITY_KEY = /email|ip_address/
+    ADDRESS_SHAPE = /\A[0-9a-f.:]{3,45}\z/i
+    HIDDEN = "hidden".freeze
+
+    def shown(value)
+      return value if identity?
+
+      scrubbed(value)
+    end
+
+    def scrubbed(value)
+      case value
+      when Hash
+        value.reject { |key, _| key.to_s.match?(IDENTITY_KEY) }.transform_values { |one| scrubbed(one) }
+      when Array then value.map { |one| scrubbed(one) }
+      when String then identity_value?(value) ? HIDDEN : value
+      else value
+      end
+    end
+
+    def identity_value?(value)
+      return true if value.match?(AuditSearch::EMAIL)
+      return false unless value.match?(ADDRESS_SHAPE)
+
+      IPAddr.new(value)
+      true
+    rescue IPAddr::Error
+      false
     end
   end
 end

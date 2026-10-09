@@ -544,7 +544,7 @@ module FdHelper
       stops << Stop.new(key: "links", label: "Linked accounts", icon: "people",
         path: fd_links_path)
     end
-    if current_account&.may?("access.read")
+    if current_account&.may?("access.read") || current_account&.may?("audit.read")
       stops << Stop.new(key: "audit", label: "Audit log", icon: "history", path: fd_audit_path)
     end
     fd_nav_mark(stops)

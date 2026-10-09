@@ -80,6 +80,15 @@ module Fd
       @identity = actor.present? && actor.may?("identity.read")
     end
 
+    IDENTITY_KINDS = %w[ip email domain].freeze
+    IDENTITY_TEXT = /\d{1,3}(?:\.\d{1,3}){3}|[^@\s":]+@[^@\s":]+\.[a-z]|\h{1,4}:\h{0,4}:/i
+
+    def identity_terms?
+      return true if IDENTITY_KINDS.any? { |kind| of(kind).any? }
+
+      of("text").any? { |value| value.match?(IDENTITY_TEXT) }
+    end
+
     def people_for_email
       return @people_for_email if defined?(@people_for_email)
 

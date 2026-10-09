@@ -25,6 +25,7 @@ roles:
       - member.links
       - link.verdict
       - identity.read
+      - audit.read
       - slack.link
       - channel.read
       - channel.all
@@ -59,6 +60,7 @@ areas:
   access: Access
   app: The dashboard
   api: Public API
+  audit: Audit log
 
 record_scopes: [author, channel]
 
@@ -177,6 +179,12 @@ capabilities:
   identity.read:
     label: View the real name and email behind a member id
     area: identity
+    locked: true
+    logged: true
+
+  audit.read:
+    label: View Slack audit events
+    area: audit
     locked: true
     logged: true
 

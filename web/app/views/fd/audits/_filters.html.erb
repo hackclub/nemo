@@ -5,27 +5,29 @@
 <% doer = search.one("is") %>
 <% busy = search.one("show") == "high_volume" %>
 <div class="audit-filters">
-  <%= render layout: "shared/dropdown", locals: {
-        label: "Category", trigger_css: "btn",
-        trigger: audit_filter_trigger("Category", categories.first && Fd::AuditCatalogue.category_label(categories.first)) } do %>
-    <%= link_to "Any", fd_audit_path(@query.set_params("category")), aria: { current: ("true" if categories.empty?) } %>
-    <div class="menu-sep"></div>
-    <% Fd::AuditCatalogue::CATEGORIES.each do |key, label| %>
-      <%= link_to label, fd_audit_path(@query.set_params("category", key)),
-            aria: { current: ("true" if categories.include?(key)) } %>
-    <% end %>
-  <% end %>
-
-  <%= render layout: "shared/dropdown", locals: {
-        label: "Action", trigger_css: "btn", pop_css: "audit-filter-pop",
-        trigger: audit_filter_trigger("Action", actions.first && Fd::AuditCatalogue.action_label(actions.first)) } do %>
-    <%= link_to "Any", fd_audit_path(@query.set_params("action")), aria: { current: ("true" if actions.empty?) } %>
-    <% Fd::AuditCatalogue.grouped(categories.presence || Fd::AuditCatalogue::CATEGORIES.keys).each do |_key, label, keys| %>
+  <% if @query.may_slack? %>
+    <%= render layout: "shared/dropdown", locals: {
+          label: "Category", trigger_css: "btn",
+          trigger: audit_filter_trigger("Category", categories.first && Fd::AuditCatalogue.category_label(categories.first)) } do %>
+      <%= link_to "Any", fd_audit_path(@query.set_params("category")), aria: { current: ("true" if categories.empty?) } %>
       <div class="menu-sep"></div>
-      <div class="menu-group"><%= label %></div>
-      <% keys.each do |action| %>
-        <%= link_to Fd::AuditCatalogue.action_label(action), fd_audit_path(@query.set_params("action", action)),
-              aria: { current: ("true" if actions.include?(action)) } %>
+      <% Fd::AuditCatalogue::CATEGORIES.each do |key, label| %>
+        <%= link_to label, fd_audit_path(@query.set_params("category", key)),
+              aria: { current: ("true" if categories.include?(key)) } %>
+      <% end %>
+    <% end %>
+
+    <%= render layout: "shared/dropdown", locals: {
+          label: "Action", trigger_css: "btn", pop_css: "audit-filter-pop",
+          trigger: audit_filter_trigger("Action", actions.first && Fd::AuditCatalogue.action_label(actions.first)) } do %>
+      <%= link_to "Any", fd_audit_path(@query.set_params("action")), aria: { current: ("true" if actions.empty?) } %>
+      <% Fd::AuditCatalogue.grouped(categories.presence || Fd::AuditCatalogue::CATEGORIES.keys).each do |_key, label, keys| %>
+        <div class="menu-sep"></div>
+        <div class="menu-group"><%= label %></div>
+        <% keys.each do |action| %>
+          <%= link_to Fd::AuditCatalogue.action_label(action), fd_audit_path(@query.set_params("action", action)),
+                aria: { current: ("true" if actions.include?(action)) } %>
+        <% end %>
       <% end %>
     <% end %>
   <% end %>
@@ -54,10 +56,12 @@
     <% end %>
   <% end %>
 
-  <%= render layout: "shared/dropdown", locals: {
-        label: "High-volume actions", trigger_css: "btn",
-        trigger: audit_filter_trigger("High-volume", busy ? "Shown" : "Hidden") } do %>
-    <%= link_to "Hidden", fd_audit_path(@query.set_params("show")), aria: { current: ("true" unless busy) } %>
-    <%= link_to "Shown", fd_audit_path(@query.set_params("show", "high_volume")), aria: { current: ("true" if busy) } %>
+  <% if @query.may_slack? %>
+    <%= render layout: "shared/dropdown", locals: {
+          label: "High-volume actions", trigger_css: "btn",
+          trigger: audit_filter_trigger("High-volume", busy ? "Shown" : "Hidden") } do %>
+      <%= link_to "Hidden", fd_audit_path(@query.set_params("show")), aria: { current: ("true" unless busy) } %>
+      <%= link_to "Shown", fd_audit_path(@query.set_params("show", "high_volume")), aria: { current: ("true" if busy) } %>
+    <% end %>
   <% end %>
 </div>

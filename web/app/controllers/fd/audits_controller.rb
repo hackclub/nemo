@@ -8,13 +8,16 @@ module Fd
 
       @rows = @query.rows
       @views = @query.views
+      @query.looked_at.each do |field_class, user_ids|
+        AccessLog.record_many!(actor: current_account, subject_user_ids: user_ids, field_class: field_class)
+      end
       @names = Names.for(named_in(@rows))
       @channels = ChannelNames.for(channel_ids(@rows))
     end
 
     def event
       @query_for_row = AuditQuery.new({}, actor: current_account)
-      @row = AuditQuery.one(params[:source].to_s, params[:id].to_s)
+      @row = AuditQuery.one(params[:source].to_s, params[:id].to_s, actor: current_account)
       return head :not_found if @row.nil?
       return head :forbidden unless @query_for_row.may_see?(@row.source)
 
