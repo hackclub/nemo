@@ -31,6 +31,7 @@ nemo <role> [args]
   seed           generate synthetic data, transform, then verify
   provision      schemas, roles, grants and both migration sets
   prometheans    replace the appointment mirror from the Prometheus API
+  verdict        record link verdicts between a main account and others
   doctor <role>  report the env this role needs and what is missing
 
 the role may also come from NEMO_ROLE when no argument is given.
@@ -87,6 +88,9 @@ case "$ROLE" in
   prometheans)
     cd "$WEB" || exit 1
     exec ./bin/rails prometheus:reconcile "$@"
+    ;;
+  verdict)
+    py -m jobs.link_verdicts "$@"
     ;;
   doctor)
     py -m lib.config "${1:-serve}"

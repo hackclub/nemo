@@ -3,6 +3,9 @@ shared_networks:
   crowds_above: 40
   min_sightings: 2
 
+staff_domains:
+  - hackclub.com
+
 signals:
   ip_exact:
     label: Signed in from the same address
