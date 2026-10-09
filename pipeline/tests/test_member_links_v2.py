@@ -119,7 +119,7 @@ def test_each_signal_reads_the_evidence_built_for_it():
     together, args = v2.evidence("joined_together", held["joined_together"], 2)
 
     assert "FROM sighting" in stable and "class = 'stable'" in stable
-    assert "HAVING sum(seen) >= 2" in stable
+    assert "HAVING sum(s.seen) >= 2" in stable
     assert "'rotating', 'vpn', 'hosting', 'tor'" in hourly and "md5(e.ua)" in hourly
     assert "fd.member_identity" in domain
     assert together == links.TOGETHER_SQL and args["window"] == 300
@@ -131,7 +131,7 @@ def test_an_address_another_isp_rotates_through_is_treated_as_rotating():
 
 
 def test_hourly_evidence_keeps_one_row_per_pair():
-    assert set(v2.COLLAPSED) == {"ip_same_hour", "ip_hourly"}
+    assert set(v2.COLLAPSED) == {"ip_same_hour", "ip_hourly", "ip_burst"}
     assert "DISTINCT ON (a_user_id, b_user_id)" in v2.COLLAPSED_PART
 
 
@@ -152,7 +152,7 @@ def test_a_word_for_word_build_is_device_evidence_and_ja4_only_backs_it_up():
     held = v2.signals()
 
     assert held["device_agent"]["family"] == "device"
-    assert not held["device_agent"].get("corroborating")
+    assert held["device_agent"]["corroborating"] is True
     assert held["device_ja4"]["corroborating"] is True
     assert held["device_agent"]["crowd_ceiling"] <= 25
 
@@ -312,22 +312,6 @@ def test_a_shared_name_only_backs_other_evidence_up():
         assert v2.signals()[name]["corroborating"] is True, name
 
 
-def test_a_vpn_exit_few_people_used_is_network_evidence():
-    held = v2.signals()
-    sql, args = v2.evidence("ip_shared_exit", held["ip_shared_exit"], 2)
-
-    assert "class IN ('vpn', 'hosting', 'tor')" in sql and "FROM sighting" in sql
-    assert args["ceiling"] <= 10
-    assert held["ip_shared_exit"]["family"] == "network"
-    assert held["ip_shared_exit"]["weight"] < links.scoring()["floor"]
-
-
-def test_repeated_addresses_earn_a_bonus_for_homes_and_for_exits():
-    assert ("ip_many", "ip_stable") in v2.REPEATED
-    assert ("ip_shared_exits", "ip_shared_exit") in v2.REPEATED
-    assert "WHERE signal = %(single)s" in v2.MANY
-
-
 def test_a_long_shared_handle_stem_links_on_its_own_but_stays_below_strong():
     held = v2.signals()["handle_stem_long"]
     sql, args = v2.evidence("handle_stem_long", held, 2)
@@ -346,3 +330,45 @@ def test_a_short_stem_still_only_backs_other_evidence_up():
 
 def test_a_vpn_or_mobile_address_in_the_same_hour_with_the_same_browser_reaches_the_floor():
     assert v2.signals()["ip_hourly"]["weight"] >= links.scoring()["floor"]
+
+
+def test_the_new_finder_keeps_its_own_copies_of_the_shared_signals():
+    base = links.signals()
+    held = v2.signals()
+
+    for name in ("email_domain", "session_agent", "joined_together"):
+        assert held[name]["corroborating"] is True, name
+    assert not base["email_domain"].get("corroborating")
+    assert not base["joined_together"].get("corroborating")
+
+
+def test_only_precise_evidence_can_make_a_link_on_its_own():
+    primary = {name for name, one in v2.signals().items() if not one.get("corroborating")}
+
+    assert primary == {"ip_stable", "ip_many", "ip_hourly", "ip_burst", "mailbox_alias", "local_part",
+                       "handle_stem_long", "created_same_address", "invited_by",
+                       "after_ban_address", "after_ban_device"}
+
+
+def test_a_home_address_on_a_busy_range_does_not_count():
+    sql, _ = v2.evidence("ip_stable", v2.signals()["ip_stable"], 2)
+
+    assert "HAVING count(DISTINCT user_id) <= 20" in sql
+    assert v2.signals()["ip_same_hour"]["corroborating"] is True
+
+
+def test_a_burst_needs_the_same_exit_hour_and_browser_and_joins_in_the_same_week():
+    held = v2.signals()["ip_burst"]
+    sql, args = v2.evidence("ip_burst", held, 2)
+
+    assert sql == v2.BURST
+    assert "JOIN fd.member_joins j" in sql
+    assert "make_interval(days => %(window)s)" in sql
+    assert "md5(e.ua)" in sql and "'rotating', 'vpn', 'hosting', 'tor'" in sql
+    assert args == {"weight": held["weight"], "ceiling": 8, "window": 7}
+    assert held["weight"] >= links.scoring()["floor"]
+    assert "ip_burst" in v2.COLLAPSED
+
+
+def test_only_home_addresses_earn_the_repeat_bonus():
+    assert v2.REPEATED == (("ip_many", "ip_stable"),)

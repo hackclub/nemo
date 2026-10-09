@@ -60,11 +60,13 @@ network_signals:
     label: Signed in from the same home or office address
     weight: 5.0
     crowd_ceiling: 8
+    range_ceiling: 20
 
   ip_same_hour:
     label: On the same home or office address in the same hour
     weight: 2.0
     crowd_ceiling: 8
+    corroborating: true
 
   ip_many:
     label: Shared two or more home or office addresses
@@ -81,20 +83,24 @@ network_signals:
     crowd_ceiling: 20
     corroborating: true
 
-  ip_shared_exit:
-    label: Same VPN or hosting address that few people ever used
-    weight: 2.0
-    crowd_ceiling: 10
-
-  ip_shared_exits:
-    label: Two or more VPN or hosting addresses that few people ever used
-    weight: 1.5
+  ip_burst:
+    label: Joined the same week and shared a mobile, VPN or hosting address in the same hour with the same browser
+    weight: 3.0
+    crowd_ceiling: 8
+    window_days: 7
 
 device_signals:
   device_agent:
     label: Same browser or app build, word for word
     weight: 3.0
     crowd_ceiling: 5
+    corroborating: true
+
+  session_agent:
+    label: Same app and system
+    weight: 1.0
+    crowd_ceiling: 60
+    corroborating: true
 
   device_ja4:
     label: Same TLS fingerprint
@@ -103,6 +109,12 @@ device_signals:
     corroborating: true
 
 identity_signals:
+  email_domain:
+    label: Share an email domain
+    weight: 2.0
+    crowd_ceiling: 30
+    corroborating: true
+
   mailbox_alias:
     label: Same mailbox, once dots and plus tags are removed
     weight: 8.0
@@ -138,6 +150,13 @@ name_signals:
     crowd_ceiling: 20
 
 arrival_signals:
+  joined_together:
+    label: Joined within minutes of each other
+    weight: 1.5
+    window_seconds: 300
+    crowd_ceiling: 25
+    corroborating: true
+
   created_same_address:
     label: Joined within minutes of each other from the same address
     weight: 3.0

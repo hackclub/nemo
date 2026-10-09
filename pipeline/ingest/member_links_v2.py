@@ -22,10 +22,9 @@ IP_SAME_HOUR = "ip_same_hour"
 IP_MANY = "ip_many"
 IP_HOURLY = "ip_hourly"
 IP_PREFIX_STABLE = "ip_prefix_stable"
-IP_SHARED_EXIT = "ip_shared_exit"
-IP_SHARED_EXITS = "ip_shared_exits"
-REPEATED = ((IP_MANY, IP_STABLE), (IP_SHARED_EXITS, IP_SHARED_EXIT))
-COLLAPSED = (IP_SAME_HOUR, IP_HOURLY)
+IP_BURST = "ip_burst"
+REPEATED = ((IP_MANY, IP_STABLE),)
+COLLAPSED = (IP_SAME_HOUR, IP_HOURLY, IP_BURST)
 TWO_COUNTRIES = "two_countries"
 
 SIGHTING = """
@@ -44,11 +43,13 @@ GROUP BY e.user_id, e.ip, e.ip_prefix, date_trunc('hour', e.at), n.class,
 
 NETWORK_EVIDENCE = {
     IP_STABLE: """
-        SELECT user_id, host(ip) AS value, min(hour) AS first_seen, max(hour) AS last_seen
-        FROM sighting
-        WHERE class = 'stable'
+        SELECT s.user_id, host(s.ip) AS value, min(s.hour) AS first_seen, max(s.hour) AS last_seen
+        FROM sighting s
+        WHERE s.class = 'stable'
+          AND s.ip_prefix IN (SELECT ip_prefix FROM sighting WHERE class = 'stable'
+                              GROUP BY 1 HAVING count(DISTINCT user_id) <= {range_ceiling})
         GROUP BY 1, 2
-        HAVING sum(seen) >= {sightings}
+        HAVING sum(s.seen) >= {sightings}
     """,
     IP_SAME_HOUR: """
         SELECT user_id, host(ip) || ' ' || to_char(hour, 'YYYY-MM-DD HH24') AS value,
@@ -62,12 +63,6 @@ NETWORK_EVIDENCE = {
         WHERE class = 'stable' AND ip_prefix IS NOT NULL
         GROUP BY 1, 2
         HAVING sum(seen) >= {sightings}
-    """,
-    IP_SHARED_EXIT: """
-        SELECT user_id, host(ip) AS value, min(hour) AS first_seen, max(hour) AS last_seen
-        FROM sighting
-        WHERE class IN ('vpn', 'hosting', 'tor')
-        GROUP BY 1, 2
     """,
     IP_HOURLY: """
         SELECT e.user_id,
@@ -273,6 +268,42 @@ ARRIVAL_EVIDENCE = {
     """,
 }
 
+BURST = """
+WITH ev AS (
+    SELECT e.user_id,
+           host(e.ip) || ' ' || to_char(date_trunc('hour', e.at), 'YYYY-MM-DD HH24')
+               || ' ' || left(md5(e.ua), 12) AS value,
+           min(e.at) AS seen
+    FROM fd.login_event e
+    LEFT JOIN fd.ip_network n ON n.ip_prefix = e.ip_prefix
+    WHERE e.ip IS NOT NULL AND e.ua IS NOT NULL
+      AND (n.class IN ('rotating', 'vpn', 'hosting', 'tor')
+           OR EXISTS (SELECT 1 FROM shared_ip s WHERE s.ip = e.ip))
+    GROUP BY 1, 2
+),
+crowd AS (
+    SELECT value, count(*) AS people FROM ev GROUP BY 1
+),
+keep AS (
+    SELECT value, people FROM crowd WHERE people BETWEEN 2 AND %(ceiling)s
+),
+small AS (
+    SELECT e.user_id, e.value, e.seen, j.joined_at
+    FROM ev e
+    JOIN keep k ON k.value = e.value
+    JOIN fd.member_joins j ON j.user_id = e.user_id
+)
+SELECT least(a.user_id, b.user_id) AS a_user_id,
+       greatest(a.user_id, b.user_id) AS b_user_id,
+       a.value, k.people, %(weight)s::numeric AS score,
+       least(a.seen, b.seen) AS first_seen, greatest(a.seen, b.seen) AS last_seen
+FROM small a
+JOIN small b ON b.value = a.value AND b.user_id > a.user_id
+            AND b.joined_at BETWEEN a.joined_at - make_interval(days => %(window)s)
+                                AND a.joined_at + make_interval(days => %(window)s)
+JOIN keep k ON k.value = a.value
+"""
+
 PART = """
 INSERT INTO link_part (a_user_id, b_user_id, signal, value, people, score, first_seen, last_seen)
 SELECT a_user_id, b_user_id, %(name)s, value, people, score, first_seen, last_seen
@@ -453,8 +484,6 @@ def signals(held=None):
     found.update({name: {**one, "family": IDENTITY} for name, one in held["identity_signals"].items()})
     found.update({name: {**one, "family": NAME} for name, one in held["name_signals"].items()})
     found.update({name: {**one, "family": ARRIVAL} for name, one in held["arrival_signals"].items()})
-    found.update({name: one for name, one in links.signals(held).items()
-                  if one["family"] != NETWORK})
     return found
 
 
@@ -488,6 +517,9 @@ def family_table(held):
 
 
 def evidence(name, settings, sightings):
+    if name == IP_BURST:
+        return BURST, {"weight": settings["weight"], "ceiling": settings["crowd_ceiling"],
+                       "window": settings["window_days"]}
     if name in ARRIVAL_EVIDENCE:
         return ARRIVAL_EVIDENCE[name].format(shortest=SHORTEST_AGENT), {
             "weight": settings["weight"], "ceiling": settings["crowd_ceiling"],
@@ -501,6 +533,7 @@ def evidence(name, settings, sightings):
         return None, None
     pairs = links.PAIRS_SQL.format(
         evidence=source.format(sightings=sightings, shortest=SHORTEST_AGENT,
+                               range_ceiling=settings.get("range_ceiling", 20),
                                shortest_local=SHORTEST_LOCAL, shortest_name=SHORTEST_NAME,
                                longest_stem=SHORTEST_LONG_STEM))
     return pairs, {"weight": settings["weight"], "ceiling": settings["crowd_ceiling"]}
