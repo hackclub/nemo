@@ -8,16 +8,32 @@ class FdSessionsTest < ActionDispatch::IntegrationTest
     @me = hold_role!("UME", "community_manager")
   end
 
+  def agent!(app, os)
+    ApplicationRecord.connection.select_value(ApplicationRecord.sanitize_sql([<<~SQL.squish,
+      INSERT INTO slack.user_agent (ua, app, os) VALUES (?, ?, ?)
+      ON CONFLICT (md5(ua)) DO UPDATE SET app = EXCLUDED.app, os = EXCLUDED.os
+      RETURNING id
+    SQL
+      "raw agent #{app} #{os}", app, os]))
+  end
+
   def signed_in!(user_id, at:, ip: "81.2.69.144", ua_app: "Chrome 141",
     ua_os: "Windows 10 or 11", action: "user_login", source: "audit_logs",
     country: "GB", isp: "Sky", seen: 1)
+    counted = %w[user_login user_login_failed anomaly].map { |one| action == one ? 1 : 0 }
     ApplicationRecord.connection.execute(ApplicationRecord.sanitize_sql([<<~SQL.squish, user_id,
-      INSERT INTO fd.login_event
-        (user_id, at, source, action, ip, ua, ua_app, ua_os, country, isp, seen)
-      VALUES (?, ?, ?, ?, ?::inet, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT (user_id, at, source) DO NOTHING
+      INSERT INTO fd.login_event AS held
+        (user_id, source, hour, ip, ua_id, first_at, last_at, logins, failures, anomalies,
+         country, isp, seen)
+      VALUES (?, ?, date_trunc('hour', ?::timestamptz, 'UTC'), ?::inet, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT (user_id, source, hour, ip, ua_id) DO UPDATE SET
+        first_at = least(held.first_at, EXCLUDED.first_at),
+        last_at = greatest(held.last_at, EXCLUDED.last_at),
+        hits = held.hits + 1, logins = held.logins + EXCLUDED.logins,
+        failures = held.failures + EXCLUDED.failures,
+        anomalies = held.anomalies + EXCLUDED.anomalies, seen = held.seen + EXCLUDED.seen
     SQL
-      at, source, action, ip, "raw agent", ua_app, ua_os, country, isp, seen]))
+      source, at, ip, agent!(ua_app, ua_os), at, at, *counted, country, isp, seen]))
   end
 
   def cohort!(prefix, people)

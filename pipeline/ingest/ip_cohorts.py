@@ -6,9 +6,9 @@ REFRESH_SQL = """
 INSERT INTO fd.ip_cohort (ip_prefix, people, logins, first_seen, last_seen, refreshed_at)
 SELECT ip_prefix,
        count(DISTINCT user_id),
-       count(*),
-       min(at),
-       max(at),
+       sum(hits),
+       min(first_at),
+       max(last_at),
        now()
 FROM fd.login_event
 WHERE ip_prefix IS NOT NULL

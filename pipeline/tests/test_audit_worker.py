@@ -46,15 +46,8 @@ def test_wanted_lanes_leaves_out_switched_off_lanes(monkeypatch):
 def test_wanted_lanes_runs_every_lane_when_every_switch_is_on(monkeypatch):
     monkeypatch.delenv("AUDIT_BACKFILL", raising=False)
     monkeypatch.setenv("AUDIT_ACCESS_BACKFILL", "on")
-    monkeypatch.setenv("AUDIT_LOGIN_BACKFILL", "on")
     monkeypatch.delenv("AUDIT_BACKFILL_SETS", raising=False)
 
     names = lane_names(audit_worker.wanted_lanes())
 
     assert names == lane_names(audit_worker.LANES)
-
-
-def test_the_login_backfill_lane_is_off_by_default(monkeypatch):
-    monkeypatch.delenv("AUDIT_LOGIN_BACKFILL", raising=False)
-
-    assert not audit_worker.lane_enabled("login_backfill")

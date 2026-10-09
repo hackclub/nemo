@@ -220,15 +220,21 @@ class FdNewMemberCardTest < ActionDispatch::IntegrationTest
     as_pipeline("INSERT INTO fd.member_joins (user_id, joined_at, source) " \
                 "VALUES (?, now(), 'team_join') ON CONFLICT (user_id) DO NOTHING", "UJOIN")
     seeded!("fd.member_joins", "user_id", "UJOIN")
-    as_pipeline(<<~SQL.squish, "UJOIN")
-      INSERT INTO fd.login_event (user_id, at, source, action, ip, ua, ua_app, ua_os,
-                                  country, isp)
-      VALUES (?, now(), 'audit_logs', 'user_login', '185.26.172.245'::inet,
-              'Mozilla/5.0 (iPhone; CPU iPhone OS 26_4_2 like Mac OS X) CriOS/154.0.8037.55',
-              'Chrome 154.0.8037.55', 'iOS 26.4.2', 'RS', 'TELEKOM SRBIJA a.d.')
+    signed_in!("185.26.172.245", "Mozilla/5.0 (iPhone; CPU iPhone OS 26_4_2 like Mac OS X) CriOS/154.0.8037.55",
+      "Chrome 154.0.8037.55", "iOS 26.4.2", country: "RS", isp: "TELEKOM SRBIJA a.d.")
+    seeded!("fd.login_event", "user_id", "UJOIN")
+  end
+
+  def signed_in!(ip, ua, app, os, at: "now()", country: nil, isp: nil)
+    as_pipeline(<<~SQL.squish, ua, app, os)
+      INSERT INTO slack.user_agent (ua, app, os) VALUES (?, ?, ?) ON CONFLICT (md5(ua)) DO NOTHING
+    SQL
+    as_pipeline(<<~SQL.squish, "UJOIN", ip, country, isp, ua)
+      INSERT INTO fd.login_event (user_id, source, hour, ip, ua_id, first_at, last_at, country, isp)
+      SELECT ?, 'audit_logs', date_trunc('hour', #{at}, 'UTC'), ?::inet, agent.id, #{at}, #{at}, ?, ?
+      FROM slack.user_agent agent WHERE agent.ua = ?
       ON CONFLICT DO NOTHING
     SQL
-    seeded!("fd.login_event", "user_id", "UJOIN")
   end
 
   test "the card carries everything the firehouse note used to" do
@@ -258,12 +264,7 @@ class FdNewMemberCardTest < ActionDispatch::IntegrationTest
   end
 
   test "the country survives a newer sign-in that carries none" do
-    as_pipeline(<<~SQL.squish, "UJOIN")
-      INSERT INTO fd.login_event (user_id, at, source, action, ip, ua, ua_app, ua_os)
-      VALUES (?, now() + interval '1 minute', 'audit_logs', 'user_login',
-              '203.0.113.9'::inet, 'x', 'Chrome 1', 'Linux')
-      ON CONFLICT DO NOTHING
-    SQL
+    signed_in!("203.0.113.9", "x", "Chrome 1", "Linux", at: "now() + interval '1 minute'")
 
     get fd_new_member_path("UJOIN")
     assert_response :success

@@ -4,7 +4,7 @@ import pathlib
 import pytest
 
 from ingest import audit_logs_pull as pull
-from lib import audit_actions, useragent
+from lib import audit_actions, user_agents, useragent
 from lib.proxy_client import ProxyError, stamped
 
 WHO = "U1"
@@ -70,9 +70,9 @@ def test_a_login_carries_the_address_the_agent_and_the_session():
     assert row[0] == WHO
     assert row[2] == "user_login"
     assert row[3] == "157.51.215.171"
-    assert row[5] == "Chrome 141.0.0.0"
-    assert row[6] == "Windows 10 or 11"
-    assert row[7] == 12177102026566
+    assert row[4] == entry()["context"]["ua"]
+    assert row[5] == 12177102026566
+    assert str(row[6]) == entry()["id"]
 
 
 def test_every_own_session_action_with_an_address_makes_a_login_row():
@@ -118,7 +118,7 @@ def test_a_login_with_nobody_behind_it_is_not_written_down():
 
 def test_a_session_that_is_not_a_number_does_not_stop_the_row():
     row = pull.login_row(entry(context={"session_id": "nonsense", "ip_address": "1.2.3.4"}))
-    assert row[7] is None
+    assert row[5] is None
     assert row[3] == "1.2.3.4"
 
 
@@ -316,19 +316,17 @@ def test_backfill_next_returns_zero_when_every_set_is_covered(monkeypatch):
 def test_an_agent_is_read_once_even_when_it_names_no_system():
     from ingest import useragent_reparse
 
-    assert "ua_read_at IS NULL" in useragent_reparse.UNREAD
-    assert "ua_app IS NULL" not in useragent_reparse.UNREAD, (
-        "a runtime names no system, so a null ua_os is a finished read, not a pending one; "
+    assert "FROM slack.user_agent" in useragent_reparse.UNREAD
+    assert "read_at IS NULL" in useragent_reparse.UNREAD
+    assert "app IS NULL" not in useragent_reparse.UNREAD, (
+        "a runtime names no system, so a null os is a finished read, not a pending one; "
         "matching on it re-reads the newest rows forever and never reaches the backlog")
-    assert "ua_read_at = now()" in useragent_reparse.REREAD
-    assert "coalesce(%s, ua_app)" in useragent_reparse.REREAD, "a read must not clear what it has"
+    assert "read_at = now()" in useragent_reparse.REREAD
+    assert "coalesce(%s, app)" in useragent_reparse.REREAD, "a read must not clear what it has"
 
 
 def test_a_landed_agent_counts_as_already_read():
-    from ingest import access_logs_pull
-
-    assert "ua_read_at" in pull.LOGIN_SQL and "now()" in pull.LOGIN_SQL
-    assert "ua_read_at" in access_logs_pull.ROW_SQL, \
+    assert "read_at" in user_agents.UPSERT_SQL and "now()" in user_agents.UPSERT_SQL, \
         "what the puller parses needs no second pass"
 
 
@@ -457,8 +455,18 @@ class Conn:
         self.ran.append((sql, args))
         return self
 
-    def executemany(self, sql, rows):
+    def executemany(self, sql, rows, returning=False):
         self.ran.append((sql, rows))
+        self.returned = [row[0] for row in rows if returning and row[0] not in self.held_ids]
+
+    held_ids = frozenset()
+    returned = ()
+
+    def results(self):
+        for one in self.returned:
+            self.answer = [(one,)]
+            yield self
+        self.answer = []
 
     def commit(self):
         pass
@@ -466,8 +474,10 @@ class Conn:
     def fetchone(self):
         return (0,)
 
+    answer = ()
+
     def fetchall(self):
-        return []
+        return list(self.answer)
 
     def did(self, mark):
         return [args for sql, args in self.ran if mark in sql]
@@ -475,13 +485,52 @@ class Conn:
 
 def test_landing_writes_the_event_and_the_login_from_one_pass():
     conn, counts = Conn(), Counts()
-    landed, seated = pull.insert_rows(conn, [entry(), entry(id=OTHER_ID, action="user_logout")],
-                               "audit_logs_tail", frozenset(), counts)
+    later = entry(id=OTHER_ID, action="user_logout", date_create=entry()["date_create"] + 60)
+    landed, seated = pull.insert_rows(conn, [entry(), later], "audit_logs_tail", frozenset(), counts)
 
     assert (landed, seated) == (2, 2)
     assert counts.rows_in == 2
     assert len(conn.did("INSERT INTO slack.audit_event")[0]) == 2
-    assert len(conn.did("INSERT INTO fd.login_event")[0]) == 2
+    [hour] = conn.did("INSERT INTO fd.login_event")[0]
+    assert hour[6:] == (2, 1, 0, 0, 2)
+    assert conn.did("INSERT INTO fd.login_session")[0] == [(SESSION, WHO, pull.stamp(entry()["date_create"]))]
+
+
+def test_an_event_already_held_adds_no_sighting():
+    conn, counts = Conn(), Counts()
+    conn.held_ids = frozenset({pull.event_uuid(entry()["id"])})
+
+    pull.insert_rows(conn, [entry()], "audit_logs_tail", frozenset(), counts)
+
+    assert conn.did("INSERT INTO fd.login_event") == []
+
+
+def test_sightings_are_counted_per_member_address_agent_and_hour():
+    at = dt.datetime(2026, 9, 1, 12, 10, tzinfo=dt.UTC)
+    ua = entry()["context"]["ua"]
+    agents = {user_agents.digest(ua): 7}
+
+    def row(minute, action="file_downloaded", ip="1.2.3.4", hour=12):
+        when = at.replace(hour=hour, minute=minute)
+        return (WHO, when, action, ip, ua, None, None)
+
+    rows = pull.hourly([row(10, "user_login"), row(10), row(40, "user_login_failed"), row(50, "anomaly"),
+                        row(20, ip="5.6.7.8"), row(5, hour=13)], agents)
+
+    assert rows == [
+        (WHO, at.replace(minute=0), "1.2.3.4", 7, at.replace(minute=10), at.replace(minute=50), 3, 0, 1, 1, 3),
+        (WHO, at.replace(minute=0), "5.6.7.8", 7, at.replace(minute=20), at.replace(minute=20), 1, 0, 0, 0, 1),
+        (WHO, at.replace(hour=13, minute=0), "1.2.3.4", 7, at.replace(hour=13, minute=5),
+         at.replace(hour=13, minute=5), 1, 0, 0, 0, 1),
+    ]
+
+
+def test_a_sign_in_names_the_owner_of_its_session_once():
+    signed_in = pull.login_row(entry())
+    again = pull.login_row(entry(date_create=entry()["date_create"] + 5))
+    downloaded = pull.login_row(entry(action="file_downloaded"))
+
+    assert pull.session_rows([again, signed_in, downloaded]) == [(SESSION, WHO, signed_in[1])]
 
 
 def test_only_a_login_that_worked_counts_as_being_seen():
@@ -494,9 +543,10 @@ def test_only_a_login_that_worked_counts_as_being_seen():
 
 
 def test_a_landed_event_is_never_written_twice():
-    assert "ON CONFLICT (id, at) DO NOTHING" in pull.MONTHLY_SQL
-    assert "ON CONFLICT (id, at) DO NOTHING" in pull.VIEW_SQL
-    assert "ON CONFLICT (user_id, at, source) DO UPDATE" in pull.LOGIN_SQL
+    assert "ON CONFLICT (id, at) DO NOTHING\nRETURNING id" in pull.MONTHLY_SQL
+    assert "ON CONFLICT (id, at) DO NOTHING\nRETURNING id" in pull.VIEW_SQL
+    assert "ON CONFLICT (user_id, source, hour, ip, ua_id) DO UPDATE" in pull.LOGIN_SQL
+    assert "hits = held.hits + EXCLUDED.hits" in pull.LOGIN_SQL
     assert "ON CONFLICT (audit_id) DO NOTHING" in pull.CHANNEL_SQL
 
 
@@ -641,27 +691,24 @@ def test_the_slack_phone_apps_are_told_apart_from_a_browser_on_the_phone():
 def test_an_agent_landed_before_the_reader_knew_it_is_read_again():
     from ingest import useragent_reparse
 
-    assert "ua IS NOT NULL" in useragent_reparse.UNREAD
+    assert "WHERE read_at IS NULL" in useragent_reparse.UNREAD
 
     sql = (pathlib.Path(__file__).parents[2] / "db" / "migrations"
-            / "0152_agents_we_have_read.sql").read_text()
-    assert "login_event_unread_agent_idx" in sql
-    assert "ua_read_at IS NULL" in sql, "the sweep must be free once it has drained"
+            / "0193_login_event_by_hour.sql").read_text()
+    assert "user_agent_unread_idx ON slack.user_agent (id) WHERE read_at IS NULL" in sql, \
+        "the sweep must be free once it has drained"
 
 
 class Owners(Conn):
-    def __init__(self, owners=(), held=()):
+    def __init__(self, owners=()):
         super().__init__()
         self.owners = list(owners)
-        self.held = list(held)
         self.answer = []
 
     def execute(self, sql, args=None):
         self.ran.append((sql, args))
         if sql == pull.OWNERS_SQL:
             self.answer = self.owners
-        elif sql in (pull.HELD_FIRST_SQL, pull.HELD_NEXT_SQL):
-            self.answer = self.held
         return self
 
     def fetchall(self):
@@ -685,63 +732,6 @@ def test_a_session_signed_into_in_the_same_batch_has_an_owner():
     downloaded = pull.login_row(entry(action="file_downloaded"))
 
     assert pull.own_sessions(Owners(), [signed_in, downloaded]) == [signed_in]
-
-
-def held(event_id, minute, action="file_downloaded"):
-    at = dt.datetime(2026, 9, 1, 12, minute, tzinfo=dt.UTC)
-    return (event_id, at, action, "user", WHO, entry()["context"], {})
-
-
-@pytest.fixture
-def login_walk(monkeypatch):
-    import contextlib
-
-    state = {"marker": None, "saved": []}
-
-    @contextlib.contextmanager
-    def bookkeeping(*_args, **_kwargs):
-        yield Counts()
-
-    monkeypatch.setattr(pull, "ingest_run", bookkeeping)
-    monkeypatch.setattr(pull, "get_cursor",
-                        lambda _conn, _key, max_age_hours=None: state["marker"])
-    monkeypatch.setattr(pull, "save_cursor",
-                        lambda _conn, _key, value: state["saved"].append(value))
-    return state
-
-
-def test_held_events_land_newest_first_and_keep_their_place(login_walk):
-    conn = Owners(held=[held("b", 30), held("a", 10, action="channel_created")])
-
-    assert pull.backfill_logins(conn) == 2
-
-    assert conn.ran[0][0] == pull.HELD_FIRST_SQL
-    assert len(conn.did("INSERT INTO fd.login_event")[0]) == 2
-    assert login_walk["saved"] == ["2026-09-01T12:10:00+00:00|a"]
-
-
-def test_held_events_resume_below_the_saved_place(login_walk):
-    login_walk["marker"] = "2026-09-01T12:10:00+00:00|a"
-    conn = Owners(held=[held("z", 5)])
-
-    pull.backfill_logins(conn)
-
-    sql, args = conn.ran[0]
-    assert sql == pull.HELD_NEXT_SQL
-    assert args["at"] == dt.datetime(2026, 9, 1, 12, 10, tzinfo=dt.UTC)
-    assert args["id"] == "a"
-
-
-def test_the_held_walk_ends_complete_and_then_stops_reading(login_walk):
-    login_walk["marker"] = "2026-09-01T12:10:00+00:00|a"
-
-    assert pull.backfill_logins(Owners()) == 0
-    assert login_walk["saved"] == [pull.LOGIN_BACKFILL_COMPLETE]
-
-    login_walk["marker"] = pull.LOGIN_BACKFILL_COMPLETE
-    conn = Owners(held=[held("z", 5)])
-    assert pull.backfill_logins(conn) == 0
-    assert conn.ran == []
 
 
 def test_an_address_slack_redacted_is_never_written_as_one():
@@ -772,7 +762,7 @@ class Shape(Conn):
 
     def execute(self, sql, args=None):
         self.ran.append((sql, args))
-        self.answer = {pull.VIEW_CODES_SQL: self.codes, pull.AGENTS_SQL: self.agents}.get(sql, [])
+        self.answer = {pull.VIEW_CODES_SQL: self.codes, user_agents.IDS_SQL: self.agents}.get(sql, [])
         return self
 
     def fetchall(self):
@@ -784,7 +774,7 @@ def test_a_full_event_gets_typed_columns_and_its_category():
     entity = {"type": "channel", "channel": {"id": "C0APH2MMHH7", "name": "lounge"}}
     agent = entry()["context"]["ua"]
     row = pull.monthly_row(entry(action="user_channel_join", actor=actor, entity=entity), "audit_logs_tail",
-                           frozenset(), {pull.agent_hash(agent): 7}, None)
+                           frozenset(), {user_agents.digest(agent): 7}, None)
 
     assert str(row[0]) == EVENT_ID
     assert row[2:4] == ("user_channel_join", "channels")
@@ -814,11 +804,14 @@ def test_the_channel_comes_from_the_entity_whatever_its_kind():
 
 def test_high_volume_actions_go_to_the_slim_table_and_the_rest_to_the_monthly_one():
     agent = entry()["context"]["ua"]
-    conn = Shape(codes=[("file_downloaded", 3)], agents=[(pull.agent_hash(agent), 7)])
+    conn = Shape(codes=[("file_downloaded", 3)], agents=[(user_agents.digest(agent), 7)])
     downloaded = entry(id="0dc5d1ec-1111-2222-3333-444455556667", action="file_downloaded",
                        entity={"type": "file", "file": {"id": "F123"}})
 
-    assert pull.write_new_shape(conn, [entry(), downloaded], "audit_logs_tail", frozenset()) == (1, 1)
+    fresh, agents = pull.write_new_shape(conn, [entry(), downloaded], "audit_logs_tail", frozenset())
+
+    assert fresh == {pull.event_uuid(entry()["id"]), pull.event_uuid(downloaded["id"])}
+    assert agents == {user_agents.digest(agent): 7}
 
     [view] = conn.did("INSERT INTO slack.audit_view")
     assert view[0][2:5] == (3, WHO, "F123")
@@ -839,10 +832,13 @@ def test_an_entry_without_a_uuid_is_dead_lettered_not_landed():
     assert len(conn.did("INSERT INTO slack.audit_event")[0]) == 1
 
 
-def test_the_held_walk_reads_the_context_kept_in_the_payload():
-    assert "payload->'context'" in pull.HELD_FIRST_SQL
-    assert "FROM slack.audit_event" in pull.HELD_FIRST_SQL
-    assert "(at, id) < (%(at)s, %(id)s::uuid)" in pull.HELD_NEXT_SQL
+def test_the_move_to_hours_keeps_every_count_the_finder_reads():
+    sql = (pathlib.Path(__file__).parents[2] / "db" / "migrations"
+           / "0193_login_event_by_hour.sql").read_text()
+    assert "date_trunc('hour', e.at, 'UTC')" in sql
+    assert "min(e.at), max(e.at), count(*)," in sql
+    assert "(user_id, source, hour, ip, ua_id) NULLS NOT DISTINCT" in sql
+    assert "WHERE session_id IS NOT NULL AND action = 'user_login'" in sql
 
 
 def test_months_are_created_by_their_owner_and_only_for_the_audit_tables():

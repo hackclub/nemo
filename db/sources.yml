@@ -272,7 +272,7 @@ sources:
     guard: cursor end
     resume: sync_cursor
     retention: keep
-    writes: [slack.audit_event, slack.audit_view, slack.user_agent, fd.login_event, fd.member_channel_join]
+    writes: [slack.audit_event, slack.audit_view, slack.user_agent, fd.login_event, fd.login_session, fd.member_channel_join]
     feeds: []
 
   audit_logs_backfill:
@@ -287,7 +287,7 @@ sources:
     guard: cursor end
     resume: cursor
     retention: keep
-    writes: [slack.audit_event, slack.audit_view, slack.user_agent, fd.login_event, fd.member_channel_join]
+    writes: [slack.audit_event, slack.audit_view, slack.user_agent, fd.login_event, fd.login_session, fd.member_channel_join]
     feeds: []
 
   useragent_reparse:
@@ -302,7 +302,7 @@ sources:
     guard: none
     resume: none
     retention: keep
-    writes: [fd.login_event]
+    writes: [slack.user_agent]
     feeds: []
 
   member_links:
@@ -359,21 +359,6 @@ sources:
     cadence: on_demand
     window: back to the first entry
     guard: cursor end
-    resume: sync_cursor
-    retention: keep
-    writes: [fd.login_event]
-    feeds: []
-
-  login_event_backfill:
-    unit_budget_seconds: 120
-    standalone: true
-    label: Addresses from own-session audit events already held
-    endpoint: none
-    documented: true
-    credential: none
-    cadence: on_demand
-    window: everything we hold
-    guard: none
     resume: sync_cursor
     retention: keep
     writes: [fd.login_event]

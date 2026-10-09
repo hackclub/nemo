@@ -191,7 +191,7 @@ def test_each_signal_reads_the_evidence_built_for_it():
 
     assert "FROM sighting" in stable and "class = 'stable'" in stable
     assert "HAVING sum(s.seen) >= 2" in stable
-    assert "'rotating', 'vpn', 'hosting', 'tor'" in hourly and "md5(e.ua)" in hourly
+    assert "'rotating', 'vpn', 'hosting', 'tor'" in hourly and "md5(u.ua)" in hourly
     assert "fd.member_identity" in domain
     assert together == links.TOGETHER_SQL and args["window"] == 300
     assert links.evidence("nothing", {"weight": 1, "crowd_ceiling": 2}, 2) == (None, None)
@@ -234,7 +234,7 @@ def test_device_evidence_reads_the_full_agent_and_the_anomaly_fingerprint():
     agent, _ = links.evidence("device_agent", held["device_agent"], 2)
     ja4, _ = links.evidence("device_ja4", held["device_ja4"], 2)
 
-    assert "ua AS value" in agent and f"length(ua) >= {links.SHORTEST_AGENT}" in agent
+    assert "u.ua AS value" in agent and f"length(u.ua) >= {links.SHORTEST_AGENT}" in agent
     assert "client_ja4_fingerprint" in ja4 and "action = 'anomaly'" in ja4
     assert "BETWEEN 2 AND %(ceiling)s" in agent
 
@@ -424,7 +424,7 @@ def test_a_burst_needs_the_same_exit_hour_and_browser_and_joins_in_the_same_week
     assert sql == links.BURST
     assert "JOIN fd.member_joins j" in sql
     assert "make_interval(days => %(window)s)" in sql
-    assert "md5(e.ua)" in sql and "'rotating', 'vpn', 'hosting', 'tor'" in sql
+    assert "md5(u.ua)" in sql and "'rotating', 'vpn', 'hosting', 'tor'" in sql
     assert args == {"weight": held["weight"], "ceiling": 8, "window": 7}
     assert held["weight"] >= links.scoring()["floor"]
     assert "ip_burst" in links.COLLAPSED

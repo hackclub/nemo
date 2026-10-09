@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 import pytest
 
 from ingest import access_logs_pull
+from lib import user_agents
 
 FIRST = 1790000000
 LAST = 1790003600
@@ -88,14 +89,30 @@ def test_row_matches_the_insert_placeholders():
     row = access_logs_pull.row_for({"user_id": "U1", "date_first": FIRST, "date_last": LAST})
 
     assert row is not None
-    assert access_logs_pull.ROW_SQL.count("%s") == len(row)
+    assert access_logs_pull.ROW_SQL.count("%s") == len(access_logs_pull.landing_row(row, {}))
+
+
+def test_a_sign_in_lands_in_the_utc_hour_of_its_last_sighting():
+    row = access_logs_pull.row_for({"user_id": "U1", "date_first": FIRST, "date_last": LAST,
+                                    "ip": "1.2.3.4", "user_agent": "Mozilla/5.0 agent"})
+    landed = access_logs_pull.landing_row(row, {user_agents.digest("Mozilla/5.0 agent"): 7})
+
+    last = datetime.fromtimestamp(LAST, tz=UTC)
+    assert landed[1] == last.replace(minute=0, second=0)
+    assert landed[3] == 7
+    assert landed[4:6] == (last, last)
 
 
 def test_upsert_keeps_the_earliest_first_seen_at():
     sql = access_logs_pull.ROW_SQL
 
-    assert "first_seen_at = least(EXCLUDED.first_seen_at, fd.login_event.first_seen_at)" in sql
-    assert "fd.login_event.first_seen_at)\n      IS DISTINCT FROM" in sql
+    assert "first_seen_at = least(EXCLUDED.first_seen_at, held.first_seen_at)" in sql
+    assert "held.isp)\n      IS DISTINCT FROM" in sql
+
+
+def test_a_sighting_counts_only_when_it_moves_the_hour_s_range():
+    assert ("hits = held.hits + CASE WHEN EXCLUDED.last_at > held.last_at OR EXCLUDED.first_at < held.first_at"
+            in access_logs_pull.ROW_SQL)
 
 
 def test_backfill_starts_at_the_oldest_held_sign_in_without_a_marker(walk):

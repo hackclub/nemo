@@ -318,17 +318,19 @@ module Fd
 
     SEEN_JOIN = <<~SQL.freeze
       LEFT JOIN LATERAL (
-        SELECT l.ua_app, l.ua_os, l.ua, l.country, l.region, l.isp, l.ip, l.ip_prefix, l.at
+        SELECT agent.app AS ua_app, agent.os AS ua_os, agent.ua, l.country, l.region, l.isp,
+               l.ip, l.ip_prefix, l.last_at AS at
         FROM fd.login_event l
+        LEFT JOIN slack.user_agent agent ON agent.id = l.ua_id
         WHERE l.user_id = j.user_id
-        ORDER BY l.at DESC
+        ORDER BY l.last_at DESC
         LIMIT 1
       ) seen ON true
       LEFT JOIN LATERAL (
         SELECT l.country, l.region, l.isp
         FROM fd.login_event l
         WHERE l.user_id = j.user_id AND l.country IS NOT NULL
-        ORDER BY l.at DESC
+        ORDER BY l.last_at DESC
         LIMIT 1
       ) place ON true
       LEFT JOIN fd.ip_cohort cohort ON cohort.ip_prefix = seen.ip_prefix

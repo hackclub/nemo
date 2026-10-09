@@ -1,4 +1,3 @@
-import hashlib
 import ipaddress
 import os
 import threading
@@ -7,7 +6,7 @@ from datetime import UTC, date, datetime, timedelta
 
 from psycopg.types.json import Jsonb
 
-from lib import audit_actions, coverage, member_seen, useragent
+from lib import audit_actions, coverage, member_seen, user_agents, useragent
 from lib.db import dead_letter, get_cursor, ingest_run, save_cursor
 from lib.proxy_client import ProxyClient, ProxyError
 
@@ -17,10 +16,6 @@ PAGE = 1000
 
 TAIL = "audit_logs_tail"
 BACKFILL = "audit_logs_backfill"
-LOGIN_BACKFILL = "login_event_backfill"
-LOGIN_BACKFILL_BATCH = 5000
-LOGIN_BACKFILL_COMPLETE = "complete"
-LOGIN_BACKFILL_MARKER_MAX_AGE_HOURS = 24 * 365
 
 LOGIN_ACTIONS = (
     "user_login",
@@ -65,14 +60,6 @@ SELECT slack.ensure_months('slack.audit_event', 'audit_event', %(first)s, %(ahea
        slack.ensure_months('slack.audit_view', 'audit_view', %(first)s, %(ahead)s)
 """
 
-AGENTS_UPSERT_SQL = """
-INSERT INTO slack.user_agent (ua)
-SELECT DISTINCT unnest(%s::text[])
-ON CONFLICT (md5(ua)) DO NOTHING
-"""
-
-AGENTS_SQL = "SELECT md5(ua), id FROM slack.user_agent WHERE md5(ua) = ANY(%s)"
-
 VIEW_CODES_SQL = "SELECT action, code FROM slack.audit_view_action"
 
 MONTHLY_SQL = """
@@ -81,32 +68,36 @@ INSERT INTO slack.audit_event
      entity_email, channel_id, app_id, ours, ip, ua_id, session_id, source_key, payload)
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (id, at) DO NOTHING
+RETURNING id
 """
 
 VIEW_SQL = """
 INSERT INTO slack.audit_view (id, at, action, actor_id, object_id, ip, ua_id, session_id, ours)
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (id, at) DO NOTHING
+RETURNING id
 """
 
 LOGIN_SQL = """
-INSERT INTO fd.login_event
-    (user_id, at, source, action, ip, ua, ua_app, ua_os, session_id, ua_read_at)
-VALUES (%s, %s, 'audit_logs', %s, %s, %s, %s, %s, %s, now())
-ON CONFLICT (user_id, at, source) DO UPDATE SET
-    ip = coalesce(EXCLUDED.ip, fd.login_event.ip),
-    ua = coalesce(EXCLUDED.ua, fd.login_event.ua),
-    ua_app = coalesce(EXCLUDED.ua_app, fd.login_event.ua_app),
-    ua_os = coalesce(EXCLUDED.ua_os, fd.login_event.ua_os),
-    session_id = coalesce(EXCLUDED.session_id, fd.login_event.session_id),
+INSERT INTO fd.login_event AS held
+    (user_id, source, hour, ip, ua_id, first_at, last_at, hits, logins, failures, anomalies, seen)
+VALUES (%s, 'audit_logs', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+ON CONFLICT (user_id, source, hour, ip, ua_id) DO UPDATE SET
+    first_at = least(held.first_at, EXCLUDED.first_at),
+    last_at = greatest(held.last_at, EXCLUDED.last_at),
+    hits = held.hits + EXCLUDED.hits,
+    logins = held.logins + EXCLUDED.logins,
+    failures = held.failures + EXCLUDED.failures,
+    anomalies = held.anomalies + EXCLUDED.anomalies,
+    seen = held.seen + EXCLUDED.seen,
     updated_at = now()
-WHERE (fd.login_event.ip, fd.login_event.ua, fd.login_event.ua_app, fd.login_event.ua_os,
-       fd.login_event.session_id)
-      IS DISTINCT FROM (coalesce(EXCLUDED.ip, fd.login_event.ip),
-                        coalesce(EXCLUDED.ua, fd.login_event.ua),
-                        coalesce(EXCLUDED.ua_app, fd.login_event.ua_app),
-                        coalesce(EXCLUDED.ua_os, fd.login_event.ua_os),
-                        coalesce(EXCLUDED.session_id, fd.login_event.session_id))
+"""
+
+SESSION_SQL = """
+INSERT INTO fd.login_session AS held (session_id, user_id, at)
+VALUES (%s, %s, %s)
+ON CONFLICT (session_id, user_id) DO UPDATE SET at = EXCLUDED.at
+WHERE EXCLUDED.at < held.at
 """
 
 IDENTITY_SQL = """
@@ -130,25 +121,7 @@ ON CONFLICT (audit_id) DO NOTHING
 
 WATERMARK_SQL = "SELECT max(at) FROM slack.audit_event"
 
-OWNERS_SQL = """
-SELECT DISTINCT session_id, user_id FROM fd.login_event
-WHERE session_id = ANY(%s) AND action = 'user_login'
-"""
-
-HELD_FIRST_SQL = """
-SELECT id::text, at, action, actor_kind, actor_id, payload->'context', payload->'details'
-FROM slack.audit_event
-ORDER BY at DESC, id DESC
-LIMIT %(batch)s
-"""
-
-HELD_NEXT_SQL = """
-SELECT id::text, at, action, actor_kind, actor_id, payload->'context', payload->'details'
-FROM slack.audit_event
-WHERE (at, id) < (%(at)s, %(id)s::uuid)
-ORDER BY at DESC, id DESC
-LIMIT %(batch)s
-"""
+OWNERS_SQL = "SELECT session_id, user_id FROM fd.login_session WHERE session_id = ANY(%s)"
 
 
 def horizon_days():
@@ -294,21 +267,8 @@ def channel_of(entry):
     return found if isinstance(found, str) and found else None
 
 
-def agent_hash(ua):
-    return hashlib.md5(ua.encode()).hexdigest()
-
-
 def agent_of(entry):
     return str((entry.get("context") or {}).get("ua") or "").strip() or None
-
-
-def agent_ids(conn, agents):
-    held = sorted({one for one in agents if one})
-    if not held:
-        return {}
-    conn.execute(AGENTS_UPSERT_SQL, (held,))
-    hashes = [agent_hash(one) for one in held]
-    return dict(conn.execute(AGENTS_SQL, (hashes,)).fetchall())
 
 
 def monthly_row(entry, source_key, ours, agents, held):
@@ -325,7 +285,7 @@ def monthly_row(entry, source_key, ours, agents, held):
         event_id, at, entry["action"], audit_actions.entry(entry["action"], held)["category"],
         actor_kind, actor_id, email_of(entry, "actor"), entity_kind, entity_id,
         email_of(entry, "entity"), channel_of(entry), app_id, bool(app_id and app_id in ours),
-        address(context.get("ip_address")), agents.get(agent_hash(agent)) if agent else None,
+        address(context.get("ip_address")), user_agents.id_of(agents, agent),
         session_of(context), source_key, Jsonb(entry),
     )
 
@@ -342,19 +302,26 @@ def view_row(entry, code, agents, ours):
     agent = agent_of(entry)
     return (
         event_id, at, code, actor_id, entity_id, address(context.get("ip_address")),
-        agents.get(agent_hash(agent)) if agent else None, session_of(context),
+        user_agents.id_of(agents, agent), session_of(context),
         bool(app_id and app_id in ours),
     )
+
+
+def landed_ids(cur, sql, rows):
+    if not rows:
+        return set()
+    cur.executemany(sql, rows, returning=True)
+    return {row[0] for _ in cur.results() for row in cur.fetchall()}
 
 
 def write_new_shape(conn, entries, source_key, ours):
     times = [at for at in (stamp(entry.get("date_create")) for entry in entries) if at is not None]
     if not times:
-        return 0, 0
+        return set(), {}
     conn.execute(ENSURE_MONTHS_SQL, {"first": min(times).date().replace(day=1), "ahead": MONTHS_AHEAD})
     held = audit_actions.catalogue()
     codes = dict(conn.execute(VIEW_CODES_SQL).fetchall())
-    agents = agent_ids(conn, [agent_of(entry) for entry in entries])
+    agents = user_agents.ids(conn, [agent_of(entry) for entry in entries])
     monthly, view = [], []
     for entry in entries:
         code = codes.get(entry.get("action"))
@@ -367,11 +334,8 @@ def write_new_shape(conn, entries, source_key, ours):
             if row:
                 monthly.append(row)
     with conn.cursor() as cur:
-        if monthly:
-            cur.executemany(MONTHLY_SQL, monthly)
-        if view:
-            cur.executemany(VIEW_SQL, view)
-    return len(monthly), len(view)
+        fresh = landed_ids(cur, MONTHLY_SQL, monthly) | landed_ids(cur, VIEW_SQL, view)
+    return fresh, agents
 
 
 def login_row(entry):
@@ -385,10 +349,9 @@ def login_row(entry):
     if entry.get("action") not in SEATED:
         if kind != "user" or ip is None or not own_session(entry):
             return None
-    seen = useragent.parse(context.get("ua"))
     return (
-        user_id, at, entry["action"], ip,
-        seen["ua"], seen["ua_app"], seen["ua_os"], session_of(context),
+        user_id, at, entry["action"], ip, useragent.parse(context.get("ua"))["ua"],
+        session_of(context), event_uuid(entry.get("id")),
     )
 
 
@@ -424,22 +387,50 @@ def channel_row(entry):
 
 
 def session_owners(conn, logins):
-    sessions = sorted({row[7] for row in logins if row[7] is not None})
+    sessions = sorted({row[5] for row in logins if row[5] is not None})
     owners = {}
     if sessions:
         for session, user_id in conn.execute(OWNERS_SQL, (sessions,)).fetchall():
             owners.setdefault(session, set()).add(user_id)
     for row in logins:
-        if row[2] == SESSION_START and row[7] is not None:
-            owners.setdefault(row[7], set()).add(row[0])
+        if row[2] == SESSION_START and row[5] is not None:
+            owners.setdefault(row[5], set()).add(row[0])
     return owners
 
 
 def own_sessions(conn, logins):
     owners = session_owners(conn, logins)
     return [row for row in logins
-            if row[2] == SESSION_START or row[7] is None
-            or not owners.get(row[7]) or row[0] in owners[row[7]]]
+            if row[2] == SESSION_START or row[5] is None
+            or not owners.get(row[5]) or row[0] in owners[row[5]]]
+
+
+def session_rows(logins):
+    first = {}
+    for user_id, at, action, _ip, _ua, session, _event in logins:
+        if action == SESSION_START and session is not None:
+            key = (session, user_id)
+            first[key] = min(at, first.get(key, at))
+    return [(session, user_id, at) for (session, user_id), at in sorted(first.items())]
+
+
+def hour_of(at):
+    return at.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
+
+
+def hourly(logins, agents):
+    latest = {}
+    for row in logins:
+        latest[(row[0], row[1])] = row
+    held = {}
+    for user_id, at, action, ip, ua, _session, _event in latest.values():
+        key = (user_id, hour_of(at), ip, user_agents.id_of(agents, ua))
+        first, last, hits, signed_in, failed, flagged = held.get(key, (at, at, 0, 0, 0, 0))
+        held[key] = (min(first, at), max(last, at), hits + 1, signed_in + (action == SESSION_START),
+                     failed + (action == "user_login_failed"), flagged + (action == "anomaly"))
+    return [(*key, first, last, hits, signed_in, failed, flagged, hits)
+            for key, (first, last, hits, signed_in, failed, flagged)
+            in sorted(held.items(), key=lambda one: (one[0][0], one[0][1], str(one[0][2]), one[0][3] or 0))]
 
 
 def insert_rows(conn, entries, source_key, ours, counts):
@@ -463,11 +454,16 @@ def insert_rows(conn, entries, source_key, ours, counts):
 
     logins = own_sessions(conn, logins)
     if landed:
-        write_new_shape(conn, landed, source_key, ours)
+        fresh, agents = write_new_shape(conn, landed, source_key, ours)
+        counted = hourly([row for row in logins if row[6] in fresh], agents)
+        sessions = session_rows(logins)
         with conn.cursor() as cur:
+            if counted:
+                cur.executemany(LOGIN_SQL, counted)
+            if sessions:
+                cur.executemany(SESSION_SQL, sessions)
             if logins:
-                cur.executemany(LOGIN_SQL, logins)
-                member_seen.logged_in(cur, [(row[0], row[1]) for row in logins if row[2] == "user_login"])
+                member_seen.logged_in(cur, [(row[0], row[1]) for row in logins if row[2] == SESSION_START])
             if rooms:
                 cur.executemany(CHANNEL_SQL, rooms)
             if named:
@@ -672,51 +668,3 @@ def backfill_next(conn, client=None):
 
 def run(conn):
     return tail(conn)
-
-
-def held_entry(at, action, actor_kind, actor_id, context, details):
-    actor = {"type": actor_kind, actor_kind: {"id": actor_id}} if actor_kind else {}
-    return {"action": action, "date_create": int(at.timestamp()), "actor": actor,
-            "context": context or {}, "details": details or {}}
-
-
-def login_backfill_place(conn):
-    marker = get_cursor(conn, LOGIN_BACKFILL, max_age_hours=LOGIN_BACKFILL_MARKER_MAX_AGE_HOURS)
-    if marker == LOGIN_BACKFILL_COMPLETE:
-        return LOGIN_BACKFILL_COMPLETE, None
-    at, _, event_id = (marker or "").partition("|")
-    if not at or not event_id:
-        return None, None
-    return datetime.fromisoformat(at), event_id
-
-
-def backfill_logins(conn):
-    at, event_id = login_backfill_place(conn)
-    if at == LOGIN_BACKFILL_COMPLETE:
-        return 0
-
-    with ingest_run(conn, LOGIN_BACKFILL) as counts:
-        if at is None:
-            held = conn.execute(HELD_FIRST_SQL, {"batch": LOGIN_BACKFILL_BATCH}).fetchall()
-        else:
-            held = conn.execute(HELD_NEXT_SQL, {"at": at, "id": event_id,
-                                                "batch": LOGIN_BACKFILL_BATCH}).fetchall()
-        if not held:
-            save_cursor(conn, LOGIN_BACKFILL, LOGIN_BACKFILL_COMPLETE)
-            conn.commit()
-            print(f"{LOGIN_BACKFILL}: every held event has been read, complete")
-            return 0
-
-        logins = [row for row in (login_row(held_entry(*one[1:])) for one in held) if row]
-        logins = own_sessions(conn, logins)
-        if logins:
-            with conn.cursor() as cur:
-                cur.executemany(LOGIN_SQL, logins)
-        last = held[-1]
-        save_cursor(conn, LOGIN_BACKFILL, f"{last[1].isoformat()}|{last[0]}")
-        conn.commit()
-        counts.rows_in += len(logins)
-
-    print(f"{LOGIN_BACKFILL}: {len(held)} event(s) read back to {last[1]:%Y-%m-%d %H:%M}, "
-          f"{len(logins)} login row(s)")
-    return len(held)

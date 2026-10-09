@@ -39,7 +39,7 @@ module Fd
     attr_reader :user_id
 
     def rows
-      @rows ||= LoginEvent.for_member(user_id).recent_first.limit(500).to_a
+      @rows ||= LoginEvent.for_member(user_id).with_agent.recent_first.limit(500).to_a
     end
 
     def any? = rows.any?
@@ -56,16 +56,16 @@ module Fd
     end
 
     def failures
-      @failures ||= rows.count(&:failed?)
+      @failures ||= rows.sum(&:failures)
     end
 
     def anomalies
-      @anomalies ||= rows.count(&:anomaly?)
+      @anomalies ||= rows.sum(&:anomalies)
     end
 
-    def first_at = rows.map(&:at).compact.min
+    def first_at = rows.map(&:first_at).compact.min
 
-    def last_at = rows.map(&:at).compact.max
+    def last_at = rows.map(&:last_at).compact.max
 
     def address_count = prefixes.size
 
@@ -80,7 +80,7 @@ module Fd
     def device_for(app, os, held)
       Device.new(
         app: app, os: os, addresses: addresses_in(held),
-        first_at: held.map(&:at).compact.min, last_at: held.map(&:at).compact.max,
+        first_at: held.map(&:first_at).compact.min, last_at: held.map(&:last_at).compact.max,
         seen: held.sum { |row| row.seen.to_i }
       )
     end
@@ -100,7 +100,7 @@ module Fd
         country: rows.map(&:country).compact.first,
         region: rows.map(&:region).compact.first,
         isp: rows.map(&:isp).compact.first,
-        first_at: rows.map(&:at).compact.min, last_at: rows.map(&:at).compact.max,
+        first_at: rows.map(&:first_at).compact.min, last_at: rows.map(&:last_at).compact.max,
         seen: rows.sum { |row| row.seen.to_i }, people: people,
         alongside: people.between?(2, CROWDED - 1) ? neighbours[prefix].to_a : []
       )

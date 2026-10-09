@@ -22,10 +22,11 @@ EVIDENCE = {
         WHERE email IS NOT NULL AND position('@' IN email) > 0
     """,
     SESSION_AGENT: """
-        SELECT user_id, ua_app || ' / ' || ua_os AS value,
-               min(at) AS first_seen, max(at) AS last_seen
-        FROM fd.login_event
-        WHERE ua_app IS NOT NULL AND ua_os IS NOT NULL GROUP BY 1, 2
+        SELECT e.user_id, u.app || ' / ' || u.os AS value,
+               min(e.first_at) AS first_seen, max(e.last_at) AS last_seen
+        FROM fd.login_event e
+        JOIN slack.user_agent u ON u.id = e.ua_id
+        WHERE u.app IS NOT NULL AND u.os IS NOT NULL GROUP BY 1, 2
     """,
 }
 
@@ -150,7 +151,7 @@ TWO_COUNTRIES = "two_countries"
 
 SIGHTING = """
 CREATE TEMP TABLE sighting ON COMMIT DROP AS
-SELECT e.user_id, e.ip, e.ip_prefix, date_trunc('hour', e.at) AS hour, count(*) AS seen,
+SELECT e.user_id, e.ip, e.ip_prefix, e.hour, sum(e.hits) AS seen,
        CASE WHEN n.class IN ('rotating', 'vpn', 'hosting', 'tor') THEN n.class
             WHEN EXISTS (SELECT 1 FROM shared_ip s WHERE s.ip = e.ip) THEN 'rotating'
             ELSE 'stable' END AS class,
@@ -158,7 +159,7 @@ SELECT e.user_id, e.ip, e.ip_prefix, date_trunc('hour', e.at) AS hour, count(*) 
 FROM fd.login_event e
 LEFT JOIN fd.ip_network n ON n.ip_prefix = e.ip_prefix
 WHERE e.ip IS NOT NULL
-GROUP BY e.user_id, e.ip, e.ip_prefix, date_trunc('hour', e.at), n.class,
+GROUP BY e.user_id, e.ip, e.ip_prefix, e.hour, n.class,
          coalesce(e.country, n.country)
 """
 
@@ -187,12 +188,13 @@ NETWORK_EVIDENCE = {
     """,
     IP_HOURLY: """
         SELECT e.user_id,
-               host(e.ip) || ' ' || to_char(date_trunc('hour', e.at), 'YYYY-MM-DD HH24')
-                   || ' ' || left(md5(e.ua), 12) AS value,
-               min(e.at) AS first_seen, max(e.at) AS last_seen
+               host(e.ip) || ' ' || to_char(e.hour, 'YYYY-MM-DD HH24')
+                   || ' ' || left(md5(u.ua), 12) AS value,
+               min(e.first_at) AS first_seen, max(e.last_at) AS last_seen
         FROM fd.login_event e
+        JOIN slack.user_agent u ON u.id = e.ua_id
         LEFT JOIN fd.ip_network n ON n.ip_prefix = e.ip_prefix
-        WHERE e.ip IS NOT NULL AND e.ua IS NOT NULL
+        WHERE e.ip IS NOT NULL
           AND (n.class IN ('rotating', 'vpn', 'hosting', 'tor')
                OR EXISTS (SELECT 1 FROM shared_ip s WHERE s.ip = e.ip))
         GROUP BY 1, 2
@@ -201,9 +203,10 @@ NETWORK_EVIDENCE = {
 
 DEVICE_EVIDENCE = {
     DEVICE_AGENT: """
-        SELECT user_id, ua AS value, min(at) AS first_seen, max(at) AS last_seen
-        FROM fd.login_event
-        WHERE ua IS NOT NULL AND length(ua) >= {shortest}
+        SELECT e.user_id, u.ua AS value, min(e.first_at) AS first_seen, max(e.last_at) AS last_seen
+        FROM fd.login_event e
+        JOIN slack.user_agent u ON u.id = e.ua_id
+        WHERE length(u.ua) >= {shortest}
         GROUP BY 1, 2
     """,
     DEVICE_JA4: """
@@ -296,7 +299,8 @@ ARRIVAL_EVIDENCE = {
             FROM fd.login_event e
             JOIN fd.member_joins j ON j.user_id = e.user_id
             WHERE e.ip IS NOT NULL
-              AND e.at BETWEEN j.joined_at - interval '5 minutes' AND j.joined_at + interval '1 hour'
+              AND e.first_at <= j.joined_at + interval '1 hour'
+              AND e.last_at >= j.joined_at - interval '5 minutes'
             GROUP BY 1, 2
         ),
         crowd AS (
@@ -363,9 +367,10 @@ ARRIVAL_EVIDENCE = {
     """,
     "after_ban_device": BANNED + """,
         agent AS (
-            SELECT user_id, ua, min(at) AS first_at
-            FROM fd.login_event
-            WHERE ua IS NOT NULL AND length(ua) >= {shortest}
+            SELECT e.user_id, u.ua, min(e.first_at) AS first_at
+            FROM fd.login_event e
+            JOIN slack.user_agent u ON u.id = e.ua_id
+            WHERE length(u.ua) >= {shortest}
             GROUP BY 1, 2
         ),
         crowd AS (
@@ -392,12 +397,13 @@ ARRIVAL_EVIDENCE = {
 BURST = """
 WITH ev AS (
     SELECT e.user_id,
-           host(e.ip) || ' ' || to_char(date_trunc('hour', e.at), 'YYYY-MM-DD HH24')
-               || ' ' || left(md5(e.ua), 12) AS value,
-           min(e.at) AS seen
+           host(e.ip) || ' ' || to_char(e.hour, 'YYYY-MM-DD HH24')
+               || ' ' || left(md5(u.ua), 12) AS value,
+           min(e.first_at) AS seen
     FROM fd.login_event e
+    JOIN slack.user_agent u ON u.id = e.ua_id
     LEFT JOIN fd.ip_network n ON n.ip_prefix = e.ip_prefix
-    WHERE e.ip IS NOT NULL AND e.ua IS NOT NULL
+    WHERE e.ip IS NOT NULL
       AND (n.class IN ('rotating', 'vpn', 'hosting', 'tor')
            OR EXISTS (SELECT 1 FROM shared_ip s WHERE s.ip = e.ip))
     GROUP BY 1, 2
