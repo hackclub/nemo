@@ -1,0 +1,30 @@
+<div class="card card-flush">
+  <div class="scroll">
+    <table class="data-table audit-table audit-groups">
+      <thead>
+        <tr>
+          <th><%= @query.group_label %></th>
+          <th class="col-num">Events</th>
+          <th>First seen</th>
+          <th>Last seen</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @groups.each do |one| %>
+          <tr>
+            <td class="audit-about"><%= audit_group_value(@query.group, one) %></td>
+            <td class="col-num">
+              <%= link_to number_with_delimiter(one.count), fd_audit_path(@query.group_params_for(one)), class: "lnk" %>
+            </td>
+            <td class="audit-when"><%= audit_stamp(one.first_at) %></td>
+            <td class="audit-when"><%= audit_stamp(one.last_at) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="pagebar">
+  <span class="pager-at"><%= @query.group_summary %></span>
+</div>

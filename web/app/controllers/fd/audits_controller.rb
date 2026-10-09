@@ -8,13 +8,14 @@ module Fd
       @query = AuditQuery.new(params, actor: current_account)
       return redirect_to(fd_audit_path(@query.range_params(params[:start], params[:end]))) if params[:start].present?
 
-      @rows = @query.rows
+      @groups = @query.group ? @query.groups : []
+      @rows = @query.group ? [] : @query.rows
       @views = @query.views
       @query.looked_at.each do |field_class, user_ids|
         AccessLog.record_many!(actor: current_account, subject_user_ids: user_ids, field_class: field_class)
       end
-      @names = Names.for(named_in(@rows))
-      @channels = ChannelNames.for(channel_ids(@rows))
+      @names = Names.for(named_in(@rows) + grouped("actor"))
+      @channels = ChannelNames.for(channel_ids(@rows) + grouped("channel"))
     end
 
     def histogram
@@ -43,6 +44,10 @@ module Fd
     def viewer_zone
       tz = Member.where(user_id: current_account&.user_id).pick(:tz)
       ActiveSupport::TimeZone[tz.to_s] || Time.zone
+    end
+
+    def grouped(kind)
+      @query.group == kind ? @groups.map(&:key) : []
     end
 
     def named_in(rows)

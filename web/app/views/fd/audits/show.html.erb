@@ -41,10 +41,14 @@
     </div>
   <% end %>
 
-  <% if @rows.any? %>
+  <% if @rows.any? || @groups.any? %>
     <turbo-frame id="audit-histogram" class="audit-histogram" loading="lazy"
                  src="<%= fd_audit_histogram_path(@query.to_params) %>"></turbo-frame>
+  <% end %>
 
+  <% if @groups.any? %>
+    <%= render "groups" %>
+  <% elsif @rows.any? %>
     <div class="card card-flush">
       <div class="scroll">
         <table class="data-table audit-table">
@@ -87,7 +91,7 @@
     </div>
   <% else %>
     <div class="empty">
-      <p class="empty-title"><%= @query.empty_note %></p>
+      <p class="empty-title"><%= @query.groups_slow? ? "Too slow to group, narrow the range" : @query.empty_note %></p>
     </div>
   <% end %>
 </div>

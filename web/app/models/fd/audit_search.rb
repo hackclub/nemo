@@ -13,7 +13,7 @@ module Fd
     DATE = /\A\d{4}-\d{2}-\d{2}\z/
 
     KINDS = %w[actor about ip action category channel email domain source is show text
-               before after last].freeze
+               before after last app].freeze
 
     OPERATORS = {
       "actor" => "actor", "by" => "actor", "who" => "actor",
@@ -27,7 +27,8 @@ module Fd
       "source" => "source",
       "is" => "is",
       "before" => "before", "after" => "after", "since" => "after",
-      "last" => "last", "within" => "last"
+      "last" => "last", "within" => "last",
+      "app" => "app"
     }.freeze
 
     SOURCES = %w[engine slack read fire_engine].freeze
@@ -167,6 +168,7 @@ module Fd
       when "is" then doer(value)
       when "before", "after" then when_at(kind, value)
       when "last" then recent(value)
+      when "app" then app(value)
       when "domain" then addressed("domain", value)
       when "email" then addressed("email", value)
       else Term.new(kind: kind, value: value, label: "#{operator} #{value}")
@@ -268,6 +270,14 @@ module Fd
       Term.new(kind: kind, value: value, label: "#{kind} #{value.tr('T', ' ')}")
     rescue ArgumentError
       nil
+    end
+
+    APP = /\A[AB][A-Z0-9]{2,}\z/i
+
+    def app(query)
+      return nil unless query.match?(APP)
+
+      Term.new(kind: "app", value: query.upcase, label: "app #{query.upcase}")
     end
 
     RECENT = /\A(\d{1,3})(h|d)\z/i

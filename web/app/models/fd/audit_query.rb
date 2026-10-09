@@ -94,6 +94,7 @@ module Fd
       "after:2026-09-01" => "from a date",
       "before:2026-09-20" => "up to a date",
       "last:24h" => "the last 24 hours",
+      "app:A0123ABCD" => "one app",
       "invite spam" => "free text"
     }.freeze
 
@@ -193,15 +194,15 @@ module Fd
     end
 
     def placed
-      return {} if view.nil? || view == default_view
+      return group_params if view.nil? || view == default_view
 
-      { "view" => view }
+      { "view" => view }.merge(group_params)
     end
 
     def to_params = carried.merge(placed)
 
     def view_params(key)
-      held = carried
+      held = carried.merge(group_params)
       key == default_view ? held : held.merge("view" => key)
     end
 
@@ -264,7 +265,52 @@ module Fd
     end
 
     def shown_people
+      return group == "actor" ? groups.map(&:key) : [] if group
+
       rows.flat_map { |row| [row.actor_id, row.subject_id, row.entity_id] }.compact.uniq
+    end
+
+    GROUPS = {
+      "actor" => "Actor", "action" => "Action", "address" => "Address",
+      "channel" => "Channel", "app" => "App"
+    }.freeze
+    GROUP_COLUMNS = {
+      "actor" => "actor_id", "action" => "verb", "address" => "ip",
+      "channel" => "channel", "app" => "app"
+    }.freeze
+    GROUP_TERMS = {
+      "actor" => "actor", "action" => "action", "address" => "ip",
+      "channel" => "in", "app" => "app"
+    }.freeze
+    GROUP_LIMIT = 100
+
+    Group = Struct.new(:key, :count, :first_at, :last_at, :name, keyword_init: true)
+
+    def allowed_groups
+      identity? ? GROUPS : GROUPS.except("address")
+    end
+
+    def group
+      raw = @params["group"].to_s
+      allowed_groups.key?(raw) ? raw : nil
+    end
+
+    def group_label = GROUPS[group]
+
+    def group_params = group ? { "group" => group } : {}
+
+    def groups
+      @groups ||= fetch_groups
+    end
+
+    def groups_slow? = @groups_slow == true
+
+    def group_summary
+      "#{number_label(groups.size)} of #{number_label(@group_total.to_i)} #{group_label.downcase.pluralize(@group_total.to_i)}"
+    end
+
+    def group_params_for(one)
+      with_params("#{GROUP_TERMS.fetch(group)}:#{one.key}").except("group")
     end
 
     def jump_on
@@ -402,7 +448,9 @@ module Fd
              a.actor_user_id AS actor_id, a.actor_kind AS actor_kind, a.verb AS verb,
              a.entity_type AS entity_kind, a.entity_id::text AS entity_id,
              a.entity_ref AS entity_ref, a.subject_user_id AS subject_id,
-             a.before AS before, a.after AS after, NULL::jsonb AS detail
+             a.before AS before, a.after AS after, NULL::jsonb AS detail,
+             NULL::text AS ip, CASE WHEN a.entity_ref ~ '^[CGD][A-Z0-9]{2,}$' THEN a.entity_ref END AS channel,
+             NULL::text AS app
       FROM fd.audit a
       WHERE a.occurred_at >= :since AND (a.verb <> 'refused') = :wanted_kept
         ENGINE_WHERE
@@ -413,7 +461,8 @@ module Fd
              e.actor_id AS actor_id, 'slack' AS actor_kind, e.action AS verb,
              e.entity_kind AS entity_kind, e.entity_id AS entity_id,
              NULL::text AS entity_ref, NULL::text AS subject_id,
-             NULL::jsonb AS before, e.payload AS after, e.payload -> 'context' AS detail
+             NULL::jsonb AS before, e.payload AS after, e.payload -> 'context' AS detail,
+             host(e.ip) AS ip, e.channel_id AS channel, e.app_id AS app
       FROM slack.audit_event e
       WHERE e.at >= :since AND NOT e.ours
         SLACK_WHERE
@@ -426,7 +475,9 @@ module Fd
              NULL::text AS entity_ref, NULL::text AS subject_id,
              NULL::jsonb AS before, NULL::jsonb AS after,
              jsonb_strip_nulls(jsonb_build_object('ip_address', host(v.ip), 'ua', u.ua,
-               'session_id', v.session_id)) AS detail
+               'session_id', v.session_id)) AS detail,
+             host(v.ip) AS ip, CASE WHEN v.object_id ~ '^[CGD][A-Z0-9]{2,}$' THEN v.object_id END AS channel,
+             NULL::text AS app
       FROM slack.audit_view v
       JOIN slack.audit_view_action a ON a.code = v.action
       LEFT JOIN slack.user_agent u ON u.id = v.ua_id
@@ -460,7 +511,8 @@ module Fd
              'identity' AS entity_kind, l.subject_user_id AS entity_id,
              NULL::text AS entity_ref, l.subject_user_id AS subject_id,
              NULL::jsonb AS before, NULL::jsonb AS after,
-             jsonb_build_object('field_class', l.field_class) AS detail
+             jsonb_build_object('field_class', l.field_class) AS detail,
+             NULL::text AS ip, NULL::text AS channel, NULL::text AS app
       FROM app.access_log l
       WHERE l.looked_at >= :since
         READ_WHERE
@@ -473,7 +525,8 @@ module Fd
              'api'::text AS entity_kind, e.subject AS entity_id,
              NULL::text AS entity_ref, NULL::text AS subject_id,
              NULL::jsonb AS before, NULL::jsonb AS after,
-             jsonb_strip_nulls(jsonb_build_object('note', e.detail)) AS detail
+             jsonb_strip_nulls(jsonb_build_object('note', e.detail)) AS detail,
+             NULL::text AS ip, NULL::text AS channel, NULL::text AS app
       FROM api.event_log e
       WHERE e.at >= :since
         API_EVENT_WHERE
@@ -486,7 +539,8 @@ module Fd
              'scope'::text AS entity_kind, c.capability AS entity_id,
              NULL::text AS entity_ref, c.user_id AS subject_id,
              NULL::jsonb AS before, NULL::jsonb AS after,
-             jsonb_build_object('via', c.via) AS detail
+             jsonb_build_object('via', c.via) AS detail,
+             NULL::text AS ip, NULL::text AS channel, NULL::text AS app
       FROM api.consent_log c
       WHERE c.at >= :since
         API_CONSENT_WHERE
@@ -499,7 +553,8 @@ module Fd
              'channel'::text AS entity_kind, r.channel_id AS entity_id,
              r.channel_id AS entity_ref, r.subject_user_id AS subject_id,
              NULL::jsonb AS before, NULL::jsonb AS after,
-             jsonb_build_object('outcome', r.outcome, 'token', t.prefix) AS detail
+             jsonb_build_object('outcome', r.outcome, 'token', t.prefix) AS detail,
+             NULL::text AS ip, r.channel_id AS channel, NULL::text AS app
       FROM api.request_log r
       JOIN api.token t ON t.id = r.token_id
       WHERE r.at >= :since
@@ -516,6 +571,7 @@ module Fd
       end
       parts << "AND false" if search.text?
       parts << "AND false" if search.of("ip").any?
+      parts << "AND false" if search.of("app").any?
       parts << "AND false" if search.of("category").any?
       if looked_up? && search.of("ip").empty?
         parts << (anybody.any? ? "AND (#{actor} IN (:anybody) OR " \
@@ -566,6 +622,7 @@ module Fd
       parts << "AND a.subject_user_id IN (:subjects)" if search.of("about").any?
       parts << "AND a.verb IN (:actions)" if search.of("action").any?
       parts << "AND a.entity_ref IN (:channels)" if search.of("channel").any?
+      parts << "AND false" if search.of("app").any?
       parts << "AND false" if search.of("category").any?
       parts << "AND a.searchable @@ websearch_to_tsquery('simple', :text)" if search.text?
       parts << "AND false" if search.of("ip").any?
@@ -585,6 +642,7 @@ module Fd
       parts << "AND e.entity_id IN (:subjects)" if search.of("about").any?
       parts << "AND e.action IN (:actions)" if search.of("action").any?
       parts << "AND e.channel_id IN (:channels)" if search.of("channel").any?
+      parts << "AND e.app_id IN (:apps)" if search.of("app").any?
       parts << "AND e.category IN (:categories)" if search.of("category").any?
       parts << "AND #{SLACK_SEARCHED} @@ websearch_to_tsquery('simple', :text)" if search.text?
       parts << ip_clause("e") if search.of("ip").any?
@@ -601,6 +659,7 @@ module Fd
       parts << "AND v.actor_id IN (:actors)" if search.of("actor").any?
       parts << "AND v.object_id IN (:subjects)" if search.of("about").any?
       parts << "AND v.object_id IN (:channels)" if search.of("channel").any?
+      parts << "AND false" if search.of("app").any?
       parts << "AND a.action IN (:category_actions)" if search.of("category").any?
       parts << "AND #{SLACK_VIEW_SEARCHED} @@ websearch_to_tsquery('simple', :text)" if search.text?
       parts << ip_clause("v") if search.of("ip").any?
@@ -658,6 +717,7 @@ module Fd
       parts << "AND l.subject_user_id IN (:subjects)" if search.of("about").any?
       parts << "AND false" if search.of("action").any? && search.of("action") != ["read"]
       parts << "AND false" if search.of("channel").any?
+      parts << "AND false" if search.of("app").any?
       parts << "AND false" if search.of("category").any?
       parts << "AND false" if search.text?
       parts << "AND false" if search.of("ip").any?
@@ -694,7 +754,7 @@ module Fd
              NULL::text AS actor_id, NULL::text AS actor_kind, NULL::text AS verb,
              NULL::text AS entity_kind, NULL::text AS entity_id, NULL::text AS entity_ref,
              NULL::text AS subject_id, NULL::jsonb AS before, NULL::jsonb AS after,
-             NULL::jsonb AS detail
+             NULL::jsonb AS detail, NULL::text AS ip, NULL::text AS channel, NULL::text AS app
       WHERE false
     SQL
 
@@ -759,6 +819,54 @@ module Fd
       "#{body(keyset)} ORDER BY at DESC, id DESC LIMIT #{LIMIT}"
     end
 
+    def fetch_groups
+      from, upto = histogram_span
+      return [] if group.nil? || from >= upto || wanted_sources.empty?
+
+      found = ApplicationRecord.transaction do
+        ApplicationRecord.connection.execute(HISTOGRAM_TIMEOUT)
+        ask(group_sql, histogram_from: from, histogram_upto: upto).to_a
+      end
+      @group_total = found.first&.fetch("groups").to_i
+      names = group == "app" ? app_names(found.filter_map { |row| row["sample"] }) : {}
+      found.map do |row|
+        Group.new(key: row["key"], count: row["found"].to_i, first_at: row["first_at"],
+          last_at: row["last_at"], name: names[row["key"]])
+      end
+    rescue ActiveRecord::QueryCanceled
+      @groups_slow = true
+      []
+    end
+
+    def group_sql
+      column = GROUP_COLUMNS.fetch(group)
+      <<~SQL
+        SELECT key, found, first_at, last_at, sample, count(*) OVER () AS groups
+        FROM (
+          SELECT #{column} AS key, count(*) AS found, min(at) AS first_at, max(at) AS last_at,
+                 min(id) FILTER (WHERE source = 'slack') AS sample
+          FROM (#{body(HISTOGRAM_WINDOW)}) held
+          WHERE #{column} IS NOT NULL
+          GROUP BY 1
+        ) grouped
+        ORDER BY found DESC, key
+        LIMIT #{GROUP_LIMIT}
+      SQL
+    end
+
+    APP_NAMES = <<~SQL.squish.freeze
+      SELECT app_id, payload #>> '{context,app,name}' AS name
+      FROM slack.audit_event
+      WHERE id IN (:ids) AND app_id IS NOT NULL
+    SQL
+
+    def app_names(ids)
+      return {} if ids.empty?
+
+      ApplicationRecord.connection.select_all(ApplicationRecord.sanitize_sql([APP_NAMES, { ids: ids }]))
+        .to_h { |row| [row["app_id"], row["name"]] }
+    end
+
     def histogram_sql
       "SELECT date_trunc(:unit, at AT TIME ZONE :zone)::text AS bin, count(*) AS found " \
         "FROM (#{body(HISTOGRAM_WINDOW)}) held GROUP BY 1"
@@ -778,6 +886,7 @@ module Fd
         subjects: search.of("about").presence || [""],
         actions: search.of("action").presence || [""],
         channels: search.of("channel").presence || [""],
+        apps: search.of("app").presence || [""],
         categories: search.of("category").presence || [""],
         category_actions: AuditCatalogue.actions_in(search.of("category")).presence || [""],
         anybody: anybody.presence || [""],

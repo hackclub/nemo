@@ -56,6 +56,17 @@
     <% end %>
   <% end %>
 
+  <%= render layout: "shared/dropdown", locals: {
+        label: "Group by", trigger_css: "btn",
+        trigger: audit_filter_trigger("Group by", @query.group_label) } do %>
+    <%= link_to "None", fd_audit_path(@query.to_params.except("group")), aria: { current: ("true" if @query.group.nil?) } %>
+    <div class="menu-sep"></div>
+    <% @query.allowed_groups.each do |key, label| %>
+      <%= link_to label, fd_audit_path(@query.to_params.merge("group" => key)),
+            aria: { current: ("true" if @query.group == key) } %>
+    <% end %>
+  <% end %>
+
   <% if @query.may_slack? %>
     <%= render layout: "shared/dropdown", locals: {
           label: "High-volume actions", trigger_css: "btn",

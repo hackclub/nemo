@@ -4,6 +4,23 @@ module AuditHelper
   FIRST_DAY = Fd::AuditQuery::FIRST_DAY
   CHEVRON = "m6 9 6 6 6-6".freeze
 
+  def audit_stamp(at)
+    local = at.in_time_zone
+    tag.time(datetime: local.iso8601, title: at.utc.strftime("%-d %b %Y %H:%M:%S UTC")) do
+      safe_join([local.strftime("%-d %b"), " ", tag.span(local.strftime("%H:%M"), class: "audit-clock")])
+    end
+  end
+
+  def audit_group_value(group, one)
+    case group
+    when "actor" then member_link(one.key)
+    when "action" then tag.span(Fd::AuditCatalogue.action_label(one.key), class: "audit-verb")
+    when "address" then tag.span(one.key, class: "mono")
+    when "channel" then audit_channel(one.key)
+    when "app" then one.name.presence || tag.span(one.key, class: "mono")
+    end
+  end
+
   def audit_filter_trigger(key, value)
     safe_join([
       tag.span(key, class: "filter-key"),
