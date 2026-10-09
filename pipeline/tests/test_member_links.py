@@ -81,6 +81,13 @@ def test_a_pair_is_written_one_way_round_so_it_cannot_be_held_twice():
     assert "least(a.user_id, b.user_id)" in links.PAIRS_SQL
 
 
+def test_a_verdict_is_held_once_per_pair_in_the_same_order_as_its_link():
+    sql = (pathlib.Path(__file__).parents[2] / "db" / "migrations"
+            / "0181_member_link_verdicts.sql").read_text()
+    assert "CHECK (a_user_id < b_user_id)" in sql
+    assert "UNIQUE (a_user_id, b_user_id)" in sql
+
+
 def test_a_link_nothing_supports_any_more_is_swept_rather_than_left_standing():
     assert links.SWEEP.startswith("DELETE FROM fd.member_link")
     assert "computed_at <" in links.SWEEP
