@@ -90,7 +90,7 @@ class FdAuditAccessTest < ActionDispatch::IntegrationTest
     assert_no_match(EMAIL, response.body)
     assert_select "dt", text: "Address", count: 0
     assert_match(/hidden/, response.body)
-    assert_match(/kid/, response.body)
+    assert_no_match(/&quot;kid&quot;|"kid"/, response.body)
   end
 
   test "addresses and emails show with identity.read" do

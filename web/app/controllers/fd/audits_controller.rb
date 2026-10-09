@@ -30,8 +30,10 @@ module Fd
       return head :not_found if @row.nil?
       return head :forbidden unless @query_for_row.may_see?(@row.source)
 
-      @names = Names.for([@row.actor_id, @row.subject_id, @row.entity_id].compact)
-      @channels = ChannelNames.for([@row.entity_ref, @row.entity_id, @row.channel].compact)
+      @context = AuditContext.new(@row, @query_for_row)
+      related = @context.shown_related
+      @names = Names.for([@row.actor_id, @row.subject_id, @row.entity_id].compact + named_in(related))
+      @channels = ChannelNames.for([@row.entity_ref, @row.entity_id, @row.channel].compact + channel_ids(related))
       render layout: false
     end
 

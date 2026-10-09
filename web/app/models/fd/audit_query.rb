@@ -283,9 +283,9 @@ module Fd
       held << value_pivot("Same address", "ip", row.ip) if row.ip.present?
       held << value_pivot("Same channel", "channel", row.channel) if row.channel.present?
       held << value_pivot("Same app", "app", row.app) if row.app.present?
-      held << Pivot.new(label: "Same actor within 15 minutes", params: around_params(row)) if person
+      held << Pivot.new(label: "Same actor within 15 minutes", kind: "around", params: around_params(row)) if person
       if person && row.session.present?
-        held << Pivot.new(label: "Same session",
+        held << Pivot.new(label: "Same session", kind: "session",
           params: fresh_params("actor:#{row.actor_id}", "session:#{row.session}", EVERYTHING_SHOWN))
       end
       held.compact
@@ -1042,11 +1042,19 @@ module Fd
     def scrubbed(value)
       case value
       when Hash
-        value.reject { |key, _| key.to_s.match?(IDENTITY_KEY) }.transform_values { |one| scrubbed(one) }
+        value.reject { |key, _| identity_key?(key, value) }.transform_values { |one| scrubbed(one) }
       when Array then value.map { |one| scrubbed(one) }
       when String then identity_value?(value) ? HIDDEN : value
       else value
       end
+    end
+
+    PERSON_NAMES = %w[name real_name display_name].freeze
+
+    def identity_key?(key, held)
+      return true if key.to_s.match?(IDENTITY_KEY)
+
+      PERSON_NAMES.include?(key.to_s) && held["id"].to_s.match?(MEMBER_ID)
     end
 
     def identity_value?(value)

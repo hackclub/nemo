@@ -91,6 +91,52 @@
   }
   .audit-panel .drawer-head > b { color: var(--ink); }
 
+  .audit-panel-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .audit-panel-sub {
+    display: block;
+    font-size: var(--t-small);
+    color: var(--ink-3);
+  }
+
+  .audit-related {
+    padding: var(--s-xs);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .audit-related-title {
+    font-size: var(--t-fine);
+    font-weight: 400;
+    color: var(--ink-4);
+    margin-bottom: var(--s-3xs);
+  }
+  .audit-related-row {
+    display: flex;
+    gap: var(--s-xs);
+    align-items: baseline;
+    padding: 3px 0;
+    color: var(--ink-2);
+  }
+  .audit-related-row:hover .audit-verb { text-decoration: underline; }
+  .audit-related-row time {
+    font-size: var(--t-small);
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .audit-related-all { display: inline-block; margin-top: var(--s-3xs); font-size: var(--t-small); }
+
+  .audit-panel-rawbox > summary {
+    cursor: pointer;
+    padding: var(--s-xs);
+    font-size: var(--t-small);
+    color: var(--ink-3);
+  }
+  .audit-panel-rawbox[open] > summary { padding-bottom: 0; }
+
   .audit-panel-facts {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -113,8 +159,6 @@
   }
 
   .audit-panel-raw {
-    flex: 1 1 auto;
-    min-height: 0;
     overflow: auto;
     margin: 0;
     padding: var(--s-xs);
