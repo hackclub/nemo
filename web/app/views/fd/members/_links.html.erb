@@ -4,7 +4,7 @@
     <div class="scroll">
       <table class="data-table">
         <thead>
-          <tr><th>Account</th><th>Score</th><th>On</th><th>Last seen</th></tr>
+          <tr><th>Account</th><th>Score</th><th>On</th><th>Last seen</th><th>Verdict</th></tr>
         </thead>
         <tbody>
           <% links.each do |side| %>
@@ -23,6 +23,8 @@
                 <% end %>
               </td>
               <td class="sub2"><%= side.last_seen ? on_day(side.last_seen) : "n/a" %></td>
+              <% judged = Fd::LinkVerdict.of(verdicts, user_id, side.other_id) %>
+              <td><%= verdict_cell(user_id, side.other_id, judged) %></td>
             </tr>
           <% end %>
         </tbody>

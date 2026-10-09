@@ -291,6 +291,28 @@ module FdHelper
     tag.span(side.band, class: "state #{tone}".strip)
   end
 
+  def may_judge? = current_account&.may?("link.verdict")
+
+  def verdict_chip(verdict)
+    return "" if verdict.nil?
+
+    title = ["by #{names[verdict.decided_by]}", verdict.note].compact.join(", ")
+    tag.span(verdict.label, class: "state #{verdict.one_person? ? 'state-crit' : 'state-good'}", title: title)
+  end
+
+  def verdict_button(one, other, verdict = nil)
+    return "" unless may_judge?
+
+    tag.button(verdict ? "Change" : "Judge", type: "button", class: "btn btn-sm",
+      data: { modal_open: "link-verdict", verdict_a: one, verdict_b: other,
+              verdict_names: "#{names[one]} and #{names[other]}",
+              verdict_was: verdict&.verdict, verdict_note: verdict&.note })
+  end
+
+  def verdict_cell(one, other, verdict = nil)
+    tag.div(safe_join([verdict_chip(verdict), verdict_button(one, other, verdict)].compact_blank), class: "verdict-cell")
+  end
+
   REASONS_SHOWN = 3
   REASON_VALUE = 48
 

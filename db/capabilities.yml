@@ -23,6 +23,7 @@ roles:
       - member.guard
       - member.deactivate
       - member.links
+      - link.verdict
       - identity.read
       - slack.link
       - channel.read
@@ -166,6 +167,12 @@ capabilities:
     area: member
     locked: true
     logged: true
+
+  link.verdict:
+    label: Judge whether two linked accounts are one person
+    area: member
+    locked: true
+    events: [member_link_verdict/linked, member_link_verdict/unlinked]
 
   identity.read:
     label: View the real name and email behind a member id

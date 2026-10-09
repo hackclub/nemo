@@ -13,6 +13,7 @@
             <th>Score</th>
             <th>Reasons</th>
             <th>Last seen</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -23,6 +24,7 @@
               <td><%= link_score_chip(pair.score) %></td>
               <td><%= link_reasons(pair.evidence) %></td>
               <td class="sub2"><%= pair.last_seen ? on_day(pair.last_seen) : "n/a" %></td>
+              <td><%= verdict_cell(pair.active_id, pair.deactivated_id) %></td>
             </tr>
           <% end %>
         </tbody>

@@ -1,0 +1,32 @@
+<div data-controller="verdict" data-action="click@window->verdict#pick">
+  <%= render layout: "fd/modal", locals: { id: "link-verdict", title: "Verdict" } do %>
+    <%= form_with url: fd_link_verdicts_path, method: :post, html: { autocomplete: "off" } do %>
+      <%= hidden_field_tag :a, nil, id: nil, data: { verdict_target: "a" } %>
+      <%= hidden_field_tag :b, nil, id: nil, data: { verdict_target: "b" } %>
+      <%= hidden_field_tag :back, back, id: nil %>
+      <div class="modal-body">
+        <div class="field-label">
+          <span data-verdict-target="pair"></span>
+          <div class="optlist">
+            <% Fd::LinkVerdict::VERDICTS.each do |key, label| %>
+              <label class="opt">
+                <%= radio_button_tag :verdict, key, false, id: nil, required: true,
+                      data: { verdict_target: "choice" } %>
+                <span class="opt-dot" aria-hidden="true"></span>
+                <span class="opt-body"><span class="opt-label"><%= label %></span></span>
+              </label>
+            <% end %>
+          </div>
+        </div>
+        <label class="field-label">
+          Note (optional)
+          <%= text_area_tag :note, nil, rows: 2, class: "textarea", id: nil, data: { verdict_target: "note" } %>
+        </label>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" data-action="click->modal#shut">Cancel</button>
+        <%= submit_tag "Save", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

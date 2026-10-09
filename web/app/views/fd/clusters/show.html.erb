@@ -39,6 +39,7 @@
 
   <%= render "map", cluster: @cluster %>
   <%= render "accounts", cluster: @cluster %>
+  <%= render "links", cluster: @cluster %>
   <% if @identity %>
     <%= render "timeline", cluster: @cluster %>
     <%= render "snapshots", cluster: @cluster %>
@@ -47,4 +48,8 @@
 
 <% if may_deactivate && @cluster.active.any? %>
   <%= render "deactivate", cluster: @cluster %>
+<% end %>
+
+<% if may_judge? %>
+  <%= render "fd/member_links/verdict_modal", back: fd_cluster_path(@cluster.cluster_id) %>
 <% end %>

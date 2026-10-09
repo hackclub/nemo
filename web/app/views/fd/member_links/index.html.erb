@@ -29,3 +29,7 @@
     <%= render @view %>
   </div>
 <% end %>
+
+<% if may_judge? %>
+  <%= render "verdict_modal", back: request.fullpath %>
+<% end %>

@@ -81,6 +81,7 @@ Rails.application.routes.draw do
     resources :bulk_deactivations, only: [:create], path: "new_members/deactivate"
     resources :links, only: [:index], controller: "member_links"
     resources :clusters, only: [:show]
+    resources :link_verdicts, only: [:create], path: "links/verdicts"
     resources :members, only: [:index, :show] do
       resources :notes, only: [:create, :destroy], controller: "member_notes"
       resources :guards, only: [:create, :update, :destroy], controller: "member_guards"

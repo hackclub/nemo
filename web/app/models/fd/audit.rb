@@ -30,7 +30,8 @@ module Fd
       "Fd::ChannelGuardAllow" => "channel_allow",
       "Fd::AppSetting" => "app_setting",
       "Authz::Grant" => "capability_grant",
-      "Fd::ThreadTranscript" => "thread_transcript"
+      "Fd::ThreadTranscript" => "thread_transcript",
+      "Fd::LinkVerdict" => "member_link_verdict"
     }.freeze
 
     VERBS = %w[
@@ -72,7 +73,7 @@ module Fd
     end
 
     def self.record(record, verb, actor:, request_id: nil, actor_kind: "human",
-      source_app: SOURCE_APP, entity_id: nil, before: nil, after: nil)
+      source_app: SOURCE_APP, entity_id: nil, before: nil, after: nil, subject_user_id: nil)
       type = entity_type(record)
       raise UnknownVerbError, "#{verb} is not an audited verb" unless VERBS.include?(verb)
 
@@ -90,6 +91,7 @@ module Fd
         after: redact(type, after || next_values(record, changes)),
         source_app: source_app,
         request_id: request_id,
+        subject_user_id: subject_user_id
       )
     end
 

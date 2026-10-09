@@ -677,5 +677,6 @@
   .key-own { @apply bg-muted-foreground/40; }
   .cluster-cells > i.own { @apply bg-muted-foreground/40; }
   .snapshot-detail > summary { @apply cursor-pointer text-sm; }
+  .verdict-cell { @apply flex items-center gap-2 whitespace-nowrap; }
   .snapshot-detail > div { @apply mt-1; }
 }

@@ -13,6 +13,7 @@
             <th>Score</th>
             <th>Reasons</th>
             <th>Last seen</th>
+            <th>Verdict</th>
           </tr>
         </thead>
         <tbody>
@@ -23,6 +24,8 @@
               <td><%= link_score_chip(one.score) %></td>
               <td><%= link_reasons(Fd::MemberLink.evidence_of(one.signals)) %></td>
               <td class="sub2"><%= one.last_seen ? on_day(one.last_seen) : "n/a" %></td>
+              <% judged = Fd::LinkVerdict.of(@verdicts, one.a_user_id, one.b_user_id) %>
+              <td><%= verdict_cell(one.a_user_id, one.b_user_id, judged) %></td>
             </tr>
           <% end %>
         </tbody>

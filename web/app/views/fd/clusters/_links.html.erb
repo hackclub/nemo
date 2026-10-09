@@ -1,0 +1,36 @@
+<section class="card card-flush">
+  <div class="card-head">
+    <h2 class="card-title">Links</h2>
+  </div>
+  <% if cluster.edges.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>One</th>
+            <th>The other</th>
+            <th>Score</th>
+            <th>Reasons</th>
+            <th>Verdict</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% cluster.edges.each do |edge| %>
+            <% judged = Fd::LinkVerdict.of(@verdicts, edge.a_user_id, edge.b_user_id) %>
+            <tr>
+              <td><%= member_link(edge.a_user_id) %></td>
+              <td><%= member_link(edge.b_user_id) %></td>
+              <td><%= edge.score ? link_score_chip(edge.score) : "n/a" %></td>
+              <td><%= link_reasons(Fd::MemberLink.evidence_of(edge.signals)) %></td>
+              <td><%= verdict_cell(edge.a_user_id, edge.b_user_id, judged) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty">
+      <p class="empty-title">No links</p>
+    </div>
+  <% end %>
+</section>
