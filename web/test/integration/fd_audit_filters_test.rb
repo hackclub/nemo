@@ -64,14 +64,15 @@ class FdAuditFiltersTest < ActionDispatch::IntegrationTest
 
   test "the time presets and the doer filter write the terms the search already reads" do
     get fd_audit_path
-    week = 7.days.ago.to_date.iso8601
 
-    assert_select ".audit-filters .daterange a[href*='after%3A#{week}']", "Last 7 days"
+    assert_select ".audit-filters .daterange a[href*='last%3A24h']", "Last 24 hours"
+    assert_select ".audit-filters .daterange a[href*='last%3A7d']", "Last 7 days"
     assert_select ".audit-filters .daterange form[action='#{fd_audit_path}']"
     assert_select ".audit-filters a[href*='is%3Ahuman']", "A person"
 
-    get fd_audit_path(q: "after:#{week}")
+    get fd_audit_path(q: "last:7d")
     assert_select ".audit-filters .daterange-presets summary", text: /Last 7 days/
+    assert_select ".audit-chips .chip-on", text: /last 7 days/
   end
 
   test "a range picked on the calendar becomes after and before, the end day included" do

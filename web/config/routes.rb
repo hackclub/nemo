@@ -93,6 +93,7 @@ Rails.application.routes.draw do
     resource :search, only: [:show], controller: "searches"
     get "audit", to: "audits#show", as: :audit, defaults: { format: "html" }
     get "audit/event", to: "audits#event", as: :audit_event
+    get "audit/histogram", to: "audits#histogram", as: :audit_histogram
     get "slack_account/callback", to: "slack_accounts#callback", as: :slack_account_callback
     resource :slack_account, only: [:create, :destroy], controller: "slack_accounts"
     resource :role_permission, only: [:update, :destroy], controller: "role_permissions"

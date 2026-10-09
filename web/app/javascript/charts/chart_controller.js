@@ -81,7 +81,7 @@ export default class extends Controller {
     kind: String, data: Object, height: Number, pct: Boolean, pctFit: Boolean,
     stacked: Boolean, days: Boolean, spark: Boolean, rule: Object, splits: Array,
     voids: Array, partial: Array, partialNote: String, notes: Array, caps: Array, nokey: Boolean,
-    xlabel: String, ylabel: String
+    xlabel: String, ylabel: String, brush: Boolean, brushHref: String, brushKeys: Array
   }
 
   connect() {
@@ -165,8 +165,12 @@ export default class extends Controller {
 
     this.fresh = true
     this.element.classList.toggle("chart-spark", this.sparkValue)
-    this.element.innerHTML = `${this.head(series)}<div class="chart tipped" tabindex="0"
-      data-action="mousemove->chart#track mouseleave->chart#clear keydown->chart#key"
+    const brush = this.brushValue
+      ? " pointerdown->chart#press pointermove->chart#drag pointerup->chart#release pointercancel->chart#release"
+      : ""
+    this.element.innerHTML = `${this.head(series)}<div class="chart tipped${
+      this.brushValue ? " is-brush" : ""}" tabindex="0"
+      data-action="mousemove->chart#track mouseleave->chart#clear keydown->chart#key${brush}"
       ><div class="tip"></div><span class="chart-caption" aria-live="polite"></span></div>`
     this.wide = 0
     this.measure()
@@ -386,6 +390,10 @@ export default class extends Controller {
     const body = line
       ? this.drawLine(rows, series, { x, y, mid, lo, floor })
       : this.drawBars(rows, series, { x, y, floor })
+    const brushed = this.brushValue
+      ? `<rect class="brush-area" x="0" y="${pad.t}" width="0" height="${
+        (floor - pad.t).toFixed(1)}" opacity="0"/>`
+      : ""
 
     const seenOver = rows.flatMap((r) => overs.map((s) => r[s.k])).filter((v) => v != null)
     const y2 = overs.length
@@ -454,7 +462,7 @@ export default class extends Controller {
       `<svg width="${wide}" height="${high}" viewBox="0 0 ${wide} ${high}" role="img"
         aria-label="${esc(this.summary(rows, series))}"><defs>${defs}</defs>${weekends}${marks}${gaps}${
         grid}` +
-      `${base}${rule}${cursor}${body}${over}${overDots}${splits}${names}${rightAxis}${says}${
+      `${base}${rule}${brushed}${cursor}${body}${over}${overDots}${splits}${names}${rightAxis}${says}${
         pill}</svg>`)
 
     if (this.fresh) {
@@ -623,17 +631,92 @@ export default class extends Controller {
       rows[rows.length - 1].label}${range}${latest}${missing}`
   }
 
-  track(event) {
+  spot(event, loose = false) {
     const g = this.geom
-    if (!g) return
+    if (!g) return null
 
     const box = this.element.querySelector(".chart").getBoundingClientRect()
     const mx = event.clientX - box.left
     const my = event.clientY - box.top
-    if (mx < g.pad.l || mx > g.wide - g.pad.r || my > g.high - g.pad.b) return this.clear()
+    if (!loose && (mx < g.pad.l || mx > g.wide - g.pad.r || my > g.high - g.pad.b)) return null
 
-    const i = clamp(Math.floor((mx - g.pad.l) / g.x.step()), 0, g.rows.length - 1)
+    return clamp(Math.floor((mx - g.pad.l) / g.x.step()), 0, g.rows.length - 1)
+  }
+
+  track(event) {
+    if (this.held) return
+
+    const i = this.spot(event)
+    if (i == null) return this.clear()
+
     this.show(i)
+  }
+
+  press(event) {
+    if (event.button !== 0) return
+
+    const i = this.spot(event)
+    if (i == null) return
+
+    event.preventDefault()
+    this.held = { from: i, to: i }
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    this.span()
+  }
+
+  drag(event) {
+    if (!this.held) return
+
+    this.held.to = this.spot(event, true)
+    this.span()
+  }
+
+  release(event) {
+    const held = this.held
+    if (!held) return
+
+    this.held = null
+    if (event.type === "pointercancel") return this.clear()
+
+    this.pick(Math.min(held.from, held.to), Math.max(held.from, held.to))
+  }
+
+  span() {
+    const g = this.geom
+    const chart = this.element.querySelector(".chart")
+    const lo = Math.min(this.held.from, this.held.to)
+    const hi = Math.max(this.held.from, this.held.to)
+
+    chart.querySelector(".tip")?.classList.remove("on")
+    chart.querySelector(".cur")?.setAttribute("opacity", "0")
+    chart.querySelectorAll(".mark").forEach((mark) =>
+      mark.classList.toggle("fade", +mark.dataset.i < lo || +mark.dataset.i > hi))
+
+    const lip = (g.x.step() - g.x.bandwidth()) / 2
+    const left = g.x(lo) - lip
+    const right = g.x(hi) + g.x.bandwidth() + lip
+    const area = chart.querySelector(".brush-area")
+    area?.setAttribute("x", left.toFixed(1))
+    area?.setAttribute("width", (right - left).toFixed(1))
+    area?.setAttribute("opacity", "1")
+
+    const say = lo === hi ? g.rows[lo].label : `${g.rows[lo].label} to ${g.rows[hi].label}`
+    this.pill(chart, (left + right) / 2, say)
+    chart.querySelector(".chart-caption").textContent = say
+  }
+
+  pick(lo, hi) {
+    const g = this.geom
+    if (!g || !this.hasBrushHrefValue) return
+
+    const keys = this.hasBrushKeysValue && this.brushKeysValue.length === g.rows.length
+      ? this.brushKeysValue
+      : g.rows.map((row) => row.key)
+    const url = new URL(this.brushHrefValue, window.location.href)
+    url.searchParams.set("start", keys[lo])
+    url.searchParams.set("end", keys[hi])
+    if (window.Turbo) window.Turbo.visit(url.toString())
+    else window.location.assign(url.toString())
   }
 
   key(event) {
@@ -648,6 +731,10 @@ export default class extends Controller {
     else if (event.key === "Home") next = 0
     else if (event.key === "End") next = last
     else if (event.key === "Escape") return this.clear()
+    else if (event.key === "Enter" && this.brushValue && this.at != null) {
+      event.preventDefault()
+      return this.pick(this.at, this.at)
+    }
     else return
 
     event.preventDefault()
@@ -760,6 +847,7 @@ export default class extends Controller {
     chart.querySelectorAll(".dot").forEach((dot) => dot.setAttribute("opacity", "0"))
     chart.querySelectorAll(".mark").forEach((mark) => mark.classList.remove("fade"))
     chart.querySelector(".x-pill")?.setAttribute("opacity", "0")
+    chart.querySelector(".brush-area")?.setAttribute("opacity", "0")
     chart.querySelectorAll(".xtick").forEach((tick) => tick.removeAttribute("opacity"))
     const say = chart.querySelector(".chart-caption")
     if (say) say.textContent = ""

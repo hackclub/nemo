@@ -117,6 +117,16 @@
     opacity: 0.3;
   }
 
+  .chart.is-brush {
+    touch-action: pan-y;
+    user-select: none;
+  }
+
+  .brush-area {
+    fill: color-mix(in oklab, var(--foreground) 8%, transparent);
+    pointer-events: none;
+  }
+
   .ser-0 { color: var(--series-0); }
   .ser-1 { color: var(--series-1); }
   .ser-2 { color: var(--series-2); }

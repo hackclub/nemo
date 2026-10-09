@@ -15,6 +15,10 @@
 
   .audit-who, .audit-about { overflow-wrap: anywhere; }
 
+  .audit-histogram { display: block; }
+  .audit-histogram:not([complete]) { min-height: 180px; }
+  .audit-histogram[complete]:not(:has(.card)) { display: none; }
+
   .audit-verb { font-weight: 500; color: var(--ink); }
   .audit-tail {
     text-align: right;

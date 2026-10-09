@@ -2,6 +2,7 @@
 <% categories = search.of("category") %>
 <% actions = search.of("action") %>
 <% after = search.one("after") %>
+<% last = search.one("last") %>
 <% doer = search.one("is") %>
 <% busy = search.one("show") == "high_volume" %>
 <div class="audit-filters">
@@ -33,17 +34,16 @@
   <% end %>
 
   <% before = search.one("before") %>
-  <% from = after && Date.iso8601(after) %>
-  <% upto = before ? Date.iso8601(before) - 1 : (from && Date.current) %>
+  <% from = after && Date.iso8601(after[0, 10]) %>
+  <% upto = before ? Date.iso8601(before[0, 10]) - (before.include?("T") ? 0 : 1) : (from && Date.current) %>
   <%= render "shared/date_range", url: fd_audit_path, title: "When",
         start_on: from, end_on: upto, min: AuditHelper::FIRST_DAY, max: Date.current,
-        carry: @query.set_params(%w[after before]),
-        presets: [{ label: "Any time", href: fd_audit_path(@query.set_params(%w[after before])),
-                    current: after.nil? && before.nil? }] +
-          AuditHelper::WINDOWS.map { |label, days|
-            since = days.days.ago.to_date.iso8601
-            { label: label, href: fd_audit_path(@query.set_params(%w[after before], since)),
-              current: after == since && before.nil? }
+        carry: @query.set_params(%w[after before last]),
+        presets: [{ label: "Any time", href: fd_audit_path(@query.set_params(%w[after before last])),
+                    current: after.nil? && before.nil? && last.nil? }] +
+          AuditHelper::WINDOWS.map { |label, window|
+            { label: label, href: fd_audit_path(@query.set_params(%w[last after before], window)),
+              current: last == window && after.nil? && before.nil? }
           } %>
 
   <%= render layout: "shared/dropdown", locals: {

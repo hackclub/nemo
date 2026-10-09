@@ -42,6 +42,9 @@
   <% end %>
 
   <% if @rows.any? %>
+    <turbo-frame id="audit-histogram" class="audit-histogram" loading="lazy"
+                 src="<%= fd_audit_histogram_path(@query.to_params) %>"></turbo-frame>
+
     <div class="card card-flush">
       <div class="scroll">
         <table class="data-table audit-table">

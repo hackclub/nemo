@@ -93,6 +93,7 @@ module Fd
       "is:nemo" => "nemo, not a person",
       "after:2026-09-01" => "from a date",
       "before:2026-09-20" => "up to a date",
+      "last:24h" => "the last 24 hours",
       "invite spam" => "free text"
     }.freeze
 
@@ -214,14 +215,26 @@ module Fd
       carried.merge(placed).merge(TERM_KEY => [term, term_value].compact_blank.join(" ").strip)
     end
 
+    RANGE_KINDS = %w[after before last].freeze
+    HOUR = /\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}\z/
+
     def range_params(start_on, end_on)
-      from = Date.iso8601(start_on.to_s)
-      upto = end_on.present? ? Date.iso8601(end_on.to_s) : from
-      from, upto = [from, upto].minmax
-      kept = terms.reject { |one| %w[after before].include?(one.kind) }.map { |one| search.label_for(one) }
-      placed.merge(TERM_KEY => (kept + ["after:#{from.iso8601}", "before:#{(upto + 1).iso8601}"]).join(" "))
-    rescue Date::Error
+      start = start_on.to_s
+      ending = end_on.presence&.to_s || start
+      kept = terms.reject { |one| RANGE_KINDS.include?(one.kind) }.map { |one| search.label_for(one) }
+      placed.merge(TERM_KEY => (kept + range_terms(start, ending)).join(" "))
+    rescue Date::Error, ArgumentError, NoMethodError
       to_params
+    end
+
+    def range_terms(start, ending)
+      if start.match?(HOUR) && ending.match?(HOUR)
+        from, upto = [Time.zone.parse(start), Time.zone.parse(ending)].minmax
+        return ["after:#{from.strftime(AuditSearch::MINUTE)}", "before:#{(upto + 1.hour).strftime(AuditSearch::MINUTE)}"]
+      end
+
+      from, upto = [Date.iso8601(start), Date.iso8601(ending)].minmax
+      ["after:#{from.iso8601}", "before:#{(upto + 1).iso8601}"]
     end
 
     def set_params(kinds, value = nil)
@@ -273,6 +286,50 @@ module Fd
 
     def total
       @total ||= ask(count_sql).first["found"].to_i
+    end
+
+    HISTOGRAM_DAYS = 30
+    HOURLY_UP_TO = 2.days
+    FIRST_DAY = Date.new(2025, 11, 1)
+    HISTOGRAM_TIMEOUT = "SET LOCAL statement_timeout = '8s'".freeze
+    HISTOGRAM_WINDOW = "at >= :histogram_from AND at < :histogram_upto".freeze
+
+    def histogram_span
+      upto = [upto_at, Time.current].compact.min
+      from = from_at || (upto.to_date - (HISTOGRAM_DAYS - 1)).in_time_zone
+      [[from, FIRST_DAY.in_time_zone].max, upto]
+    end
+
+    def hourly?
+      from, upto = histogram_span
+      upto - from <= HOURLY_UP_TO
+    end
+
+    def histogram
+      from, upto = histogram_span
+      return [] if from >= upto || wanted_sources.empty?
+
+      unit = hourly? ? "hour" : "day"
+      found = ApplicationRecord.transaction do
+        ApplicationRecord.connection.execute(HISTOGRAM_TIMEOUT)
+        ask(histogram_sql, unit: unit, zone: Time.zone.tzinfo.name, histogram_from: from, histogram_upto: upto)
+          .to_h { |row| [bin_key(row["bin"]), row["found"].to_i] }
+      end
+      histogram_bins(from, upto).map { |bin| [bin, found.fetch(bin_key(bin), 0)] }
+    rescue ActiveRecord::QueryCanceled
+      []
+    end
+
+    def histogram_bins(from, upto)
+      return (from.to_date..(upto - 1).to_date).to_a unless hourly?
+
+      first = from.beginning_of_hour
+      (0...((upto - first) / 1.hour).ceil).map { |step| first + step.hours }
+    end
+
+    def bin_key(value)
+      at = value.is_a?(String) ? Time.zone.parse(value) : value
+      hourly? ? at.strftime(AuditSearch::MINUTE) : at.to_date.iso8601
     end
 
     def title
@@ -465,8 +522,8 @@ module Fd
                                  "#{subject} IN (:anybody))" : "AND false")
       end
       parts << api_doer(actor, kind)
-      parts << "AND #{at} >= :after" if search.one("after")
-      parts << "AND #{at} < :before" if search.one("before")
+      parts << "AND #{at} >= :after" if from_at
+      parts << "AND #{at} < :before" if upto_at
       parts.compact.join("\n")
     end
 
@@ -517,8 +574,8 @@ module Fd
                                  "a.actor_user_id IN (:anybody))" : "AND false")
       end
       parts << doer_clause("a.actor_user_id", "a.actor_kind")
-      parts << "AND a.occurred_at >= :after" if search.one("after")
-      parts << "AND a.occurred_at < :before" if search.one("before")
+      parts << "AND a.occurred_at >= :after" if from_at
+      parts << "AND a.occurred_at < :before" if upto_at
       parts.compact.join("\n")
     end
 
@@ -533,8 +590,8 @@ module Fd
       parts << ip_clause("e") if search.of("ip").any?
       parts << email_clause if search.of("ip").empty? && looked_up?
       parts << "AND false" if search.one("is") == "nemo"
-      parts << "AND e.at >= :after" if search.one("after")
-      parts << "AND e.at < :before" if search.one("before")
+      parts << "AND e.at >= :after" if from_at
+      parts << "AND e.at < :before" if upto_at
       parts.compact.join("\n")
     end
 
@@ -551,8 +608,8 @@ module Fd
         parts << (anybody.any? ? "AND v.actor_id IN (:anybody)" : "AND false")
       end
       parts << "AND false" if search.one("is") == "nemo"
-      parts << "AND v.at >= :after" if search.one("after")
-      parts << "AND v.at < :before" if search.one("before")
+      parts << "AND v.at >= :after" if from_at
+      parts << "AND v.at < :before" if upto_at
       parts.join("\n")
     end
 
@@ -609,8 +666,8 @@ module Fd
                                  "l.actor_id IN (:anybody))" : "AND false")
       end
       parts << "AND false" if search.one("is") == "nemo"
-      parts << "AND l.looked_at >= :after" if search.one("after")
-      parts << "AND l.looked_at < :before" if search.one("before")
+      parts << "AND l.looked_at >= :after" if from_at
+      parts << "AND l.looked_at < :before" if upto_at
       parts.compact.join("\n")
     end
 
@@ -702,6 +759,11 @@ module Fd
       "#{body(keyset)} ORDER BY at DESC, id DESC LIMIT #{LIMIT}"
     end
 
+    def histogram_sql
+      "SELECT date_trunc(:unit, at AT TIME ZONE :zone)::text AS bin, count(*) AS found " \
+        "FROM (#{body(HISTOGRAM_WINDOW)}) held GROUP BY 1"
+    end
+
     def count_sql
       capped = body(capped: true, pick: COUNTING_PICK)
       "SELECT count(*) AS found FROM (#{capped} LIMIT #{COUNT_CEILING + 1}) counted"
@@ -719,7 +781,7 @@ module Fd
         categories: search.of("category").presence || [""],
         category_actions: AuditCatalogue.actions_in(search.of("category")).presence || [""],
         anybody: anybody.presence || [""],
-        after: day_start(search.one("after")), before: day_start(search.one("before"))
+        after: from_at, before: upto_at
       }
       search.of("ip").each { |term_value| held[:"ip_#{term_value.hash.abs}"] = term_value }
       search.of("email").each_with_index { |term_value, at| held[:"email_#{at}"] = term_value.downcase }
@@ -731,8 +793,20 @@ module Fd
       value && Time.zone.parse(value)
     end
 
-    def ask(sql)
-      ApplicationRecord.connection.select_all(ApplicationRecord.sanitize_sql([sql, binds]))
+    def from_at
+      return @from_at if defined?(@from_at)
+
+      @from_at = [day_start(search.one("after")), search.since].compact.max
+    end
+
+    def upto_at
+      return @upto_at if defined?(@upto_at)
+
+      @upto_at = day_start(search.one("before"))
+    end
+
+    def ask(sql, extra = {})
+      ApplicationRecord.connection.select_all(ApplicationRecord.sanitize_sql([sql, binds.merge(extra)]))
     end
 
     COUNTS = <<~SQL.squish.freeze

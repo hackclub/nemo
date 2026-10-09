@@ -17,6 +17,12 @@ module Fd
       @channels = ChannelNames.for(channel_ids(@rows))
     end
 
+    def histogram
+      @query = AuditQuery.new(params, actor: current_account)
+      @days = @query.histogram
+      render layout: false
+    end
+
     def event
       @query_for_row = AuditQuery.new({}, actor: current_account)
       @row = AuditQuery.one(params[:source].to_s, params[:id].to_s, actor: current_account)

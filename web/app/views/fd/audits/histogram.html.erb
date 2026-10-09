@@ -1,0 +1,17 @@
+<turbo-frame id="audit-histogram">
+  <% if @days.any? %>
+    <% hourly = @query.hourly? %>
+    <div class="card">
+      <div data-controller="chart"
+           data-chart-kind-value="bars"
+           data-chart-days-value="<%= !hourly %>"
+           data-chart-nokey-value="true"
+           data-chart-height-value="150"
+           data-chart-brush-value="true"
+           data-chart-brush-href-value="<%= fd_audit_path(@query.to_params) %>"
+           data-chart-brush-keys-value="<%= @days.map { |bin, _| @query.bin_key(bin) }.to_json %>"
+           data-chart-data-value="<%= { labels: @days.map { |bin, _| hourly ? bin.strftime("%H:%M") : bin.iso8601 },
+             datasets: [{ label: "events", data: @days.map(&:last) }] }.to_json %>"></div>
+    </div>
+  <% end %>
+</turbo-frame>

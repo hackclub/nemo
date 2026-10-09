@@ -1,7 +1,7 @@
 module AuditHelper
-  WINDOWS = { "Last 24 hours" => 1, "Last 7 days" => 7, "Last 30 days" => 30 }.freeze
+  WINDOWS = { "Last 24 hours" => "24h", "Last 7 days" => "7d", "Last 30 days" => "30d" }.freeze
   DOERS = { "A person" => "human", "nemo" => "nemo", "Nobody" => "nobody" }.freeze
-  FIRST_DAY = Date.new(2025, 11, 1)
+  FIRST_DAY = Fd::AuditQuery::FIRST_DAY
   CHEVRON = "m6 9 6 6 6-6".freeze
 
   def audit_filter_trigger(key, value)

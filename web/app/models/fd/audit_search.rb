@@ -13,7 +13,7 @@ module Fd
     DATE = /\A\d{4}-\d{2}-\d{2}\z/
 
     KINDS = %w[actor about ip action category channel email domain source is show text
-               before after].freeze
+               before after last].freeze
 
     OPERATORS = {
       "actor" => "actor", "by" => "actor", "who" => "actor",
@@ -26,7 +26,8 @@ module Fd
       "email" => "email", "domain" => "domain",
       "source" => "source",
       "is" => "is",
-      "before" => "before", "after" => "after", "since" => "after"
+      "before" => "before", "after" => "after", "since" => "after",
+      "last" => "last", "within" => "last"
     }.freeze
 
     SOURCES = %w[engine slack read fire_engine].freeze
@@ -73,6 +74,14 @@ module Fd
     end
 
     def to_s = terms.map { |term| label_for(term) }.join(" ")
+
+    def since
+      held = one("last")
+      return nil if held.nil?
+
+      count = held.to_i
+      held.end_with?("h") ? count.hours.ago : (Date.current - (count - 1)).in_time_zone
+    end
 
     def identity?
       return @identity if defined?(@identity)
@@ -157,6 +166,7 @@ module Fd
       when "show" then shown(value)
       when "is" then doer(value)
       when "before", "after" then when_at(kind, value)
+      when "last" then recent(value)
       when "domain" then addressed("domain", value)
       when "email" then addressed("email", value)
       else Term.new(kind: kind, value: value, label: "#{operator} #{value}")
@@ -247,13 +257,30 @@ module Fd
       Term.new(kind: "source", value: held, label: "source #{query}")
     end
 
+    STAMP = /\A\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/
+    MINUTE = "%Y-%m-%dT%H:%M".freeze
+
     def when_at(kind, query)
       at = Time.zone.parse(query)
       return nil if at.nil?
 
-      Term.new(kind: kind, value: at.to_date.iso8601, label: "#{kind} #{at.to_date.iso8601}")
+      value = query.match?(STAMP) ? at.strftime(MINUTE) : at.to_date.iso8601
+      Term.new(kind: kind, value: value, label: "#{kind} #{value.tr('T', ' ')}")
     rescue ArgumentError
       nil
+    end
+
+    RECENT = /\A(\d{1,3})(h|d)\z/i
+    UNITS = { "h" => "hour", "d" => "day" }.freeze
+
+    def recent(query)
+      found = RECENT.match(query.delete(" "))
+      return nil if found.nil? || found[1].to_i.zero?
+
+      count = found[1].to_i
+      unit = UNITS.fetch(found[2].downcase)
+      Term.new(kind: "last", value: "#{count}#{found[2].downcase}",
+        label: "last #{count == 1 ? unit : "#{count} #{unit.pluralize}"}")
     end
   end
 end
