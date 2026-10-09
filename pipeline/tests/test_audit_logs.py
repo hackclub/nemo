@@ -97,12 +97,18 @@ def test_the_prefix_is_the_database_s_job_so_two_hosts_on_one_range_group():
     assert "ip_prefix" not in pull.LOGIN_SQL, "the prefix must not be written by hand"
 
 
-def test_the_tail_asks_for_everything_unless_it_is_told_to_narrow(monkeypatch):
+def test_tail_actions_default_to_all_and_accept_set_names(monkeypatch):
     monkeypatch.delenv("AUDIT_TAIL_ACTIONS", raising=False)
     assert pull.tail_actions() is None
 
-    monkeypatch.setenv("AUDIT_TAIL_ACTIONS", "logins")
+    monkeypatch.setenv("AUDIT_TAIL_ACTIONS", "login")
     assert pull.tail_actions() == pull.LOGIN_ACTIONS
+
+    monkeypatch.setenv("AUDIT_TAIL_ACTIONS", "login_and_channel")
+    assert pull.tail_actions() == pull.LOGIN_AND_CHANNEL_ACTIONS
+
+    monkeypatch.setenv("AUDIT_TAIL_ACTIONS", "Identity")
+    assert pull.tail_actions() == pull.IDENTITY_ACTIONS
 
     monkeypatch.setenv("AUDIT_TAIL_ACTIONS", " user_login , anomaly ")
     assert pull.tail_actions() == ("user_login", "anomaly")
@@ -195,40 +201,83 @@ def test_a_slice_covers_one_whole_day_in_utc():
     assert (stop - start) == dt.timedelta(days=1)
 
 
-def test_the_action_set_is_part_of_the_coverage_key_so_a_window_cannot_lie():
-    assert pull.source_key_for(pull.LOGIN_ACTIONS).endswith(":logins")
-    assert pull.source_key_for(pull.CHANNEL_ACTIONS).endswith(":channels")
-    assert pull.source_key_for(pull.WATCHED_ACTIONS).endswith(":watched")
-    assert pull.source_key_for(None).endswith(":all")
+def test_each_action_set_has_its_own_coverage_key():
+    assert pull.source_key_for(pull.LOGIN_AND_CHANNEL_ACTIONS) == f"{pull.BACKFILL}:login_and_channel"
+    assert pull.source_key_for(pull.LOGIN_ACTIONS) == f"{pull.BACKFILL}:login"
+    assert pull.source_key_for(pull.CHANNEL_MEMBERSHIP_ACTIONS) == f"{pull.BACKFILL}:channel_membership"
+    assert pull.source_key_for(pull.IDENTITY_ACTIONS) == f"{pull.BACKFILL}:identity"
+    assert pull.source_key_for(("user_login",)) == f"{pull.BACKFILL}:custom"
+    assert pull.source_key_for(None) == f"{pull.BACKFILL}:all"
 
-    keys = {pull.source_key_for(one) for one in
-            (pull.LOGIN_ACTIONS, pull.CHANNEL_ACTIONS, pull.WATCHED_ACTIONS, None)}
-    assert len(keys) == 4, "a widened set must not inherit a narrower set's coverage"
+    keys = {pull.source_key_for(actions) for actions in pull.ACTION_SETS.values()}
+    assert len(keys) == len(pull.ACTION_SETS)
 
 
-def test_the_backfill_walks_the_channel_actions_as_well_as_the_logins():
+def test_every_action_set_fits_one_request():
+    for actions in pull.ACTION_SETS.values():
+        assert len(actions) <= pull.MOST_ACTIONS
+        assert len(set(actions)) == len(actions)
+
+
+def test_backfill_defaults_to_login_and_channel_actions():
     import inspect
 
     actions = inspect.signature(pull.backfill).parameters["actions"].default
-    assert actions == pull.WATCHED_ACTIONS
-    assert set(pull.CHANNEL_ACTIONS) <= set(actions)
-    assert len(actions) <= pull.MOST_ACTIONS, "slack takes only so many actions in one call"
+    assert actions == pull.LOGIN_AND_CHANNEL_ACTIONS
+    assert set(pull.CHANNEL_MEMBERSHIP_ACTIONS) <= set(actions)
 
 
 def test_identity_actions_extend_login_actions_with_account_changes():
     assert pull.IDENTITY_ACTIONS[:len(pull.LOGIN_ACTIONS)] == pull.LOGIN_ACTIONS
     assert {"user_deactivated", "user_reactivated", "user_profile_updated"} <= set(pull.IDENTITY_ACTIONS)
-    assert len(set(pull.IDENTITY_ACTIONS)) == len(pull.IDENTITY_ACTIONS)
-    assert len(pull.IDENTITY_ACTIONS) <= pull.MOST_ACTIONS
 
 
-def test_identity_backfill_has_its_own_coverage_key():
-    key = pull.source_key_for(pull.IDENTITY_ACTIONS)
-    others = {pull.source_key_for(one) for one in
-              (pull.LOGIN_ACTIONS, pull.CHANNEL_ACTIONS, pull.WATCHED_ACTIONS, None)}
+def test_backfill_set_names_default_to_login_and_channel(monkeypatch):
+    monkeypatch.delenv("AUDIT_BACKFILL_SETS", raising=False)
 
-    assert key == f"{pull.BACKFILL}:identity"
-    assert key not in others
+    assert pull.backfill_set_names() == ("login_and_channel",)
+    assert pull.backfill_sets() == (pull.LOGIN_AND_CHANNEL_ACTIONS,)
+
+
+def test_backfill_set_names_keep_order_and_drop_duplicates(monkeypatch):
+    monkeypatch.setenv("AUDIT_BACKFILL_SETS", " Identity , login_and_channel, identity ")
+
+    assert pull.backfill_set_names() == ("identity", "login_and_channel")
+    assert pull.backfill_sets() == (pull.IDENTITY_ACTIONS, pull.LOGIN_AND_CHANNEL_ACTIONS)
+
+
+def test_unknown_backfill_set_names_are_reported_and_skipped(monkeypatch):
+    monkeypatch.setenv("AUDIT_BACKFILL_SETS", "identity,missing_set")
+
+    assert pull.unknown_backfill_sets() == ("missing_set",)
+    assert pull.backfill_sets() == (pull.IDENTITY_ACTIONS,)
+
+
+def test_backfill_next_runs_the_first_set_with_a_pending_day(monkeypatch):
+    monkeypatch.setenv("AUDIT_BACKFILL_SETS", "identity,login_and_channel")
+    pending = {pull.source_key_for(pull.LOGIN_AND_CHANNEL_ACTIONS)}
+    monkeypatch.setattr(pull, "next_slice",
+                        lambda conn, source_key, days: dt.date(2026, 1, 15) if source_key in pending else None)
+    calls = []
+
+    def fake_backfill(conn, client=None, actions=None):
+        calls.append(actions)
+        return 7
+
+    monkeypatch.setattr(pull, "backfill", fake_backfill)
+
+    assert pull.backfill_next(object()) == 7
+    assert calls == [pull.LOGIN_AND_CHANNEL_ACTIONS]
+
+
+def test_backfill_next_returns_zero_when_every_set_is_covered(monkeypatch):
+    monkeypatch.setenv("AUDIT_BACKFILL_SETS", "identity,login_and_channel")
+    monkeypatch.setattr(pull, "next_slice", lambda conn, source_key, days: None)
+    calls = []
+    monkeypatch.setattr(pull, "backfill", lambda *args, **kwargs: calls.append(args))
+
+    assert pull.backfill_next(object()) == 0
+    assert calls == []
 
 
 def test_an_agent_is_read_once_even_when_it_names_no_system():

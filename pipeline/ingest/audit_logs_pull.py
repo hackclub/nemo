@@ -30,9 +30,17 @@ LOGIN_ACTIONS = (
 LOGIN_SET = frozenset(LOGIN_ACTIONS)
 SEATED = frozenset({"user_login", "user_login_failed", "anomaly"})
 
-CHANNEL_ACTIONS = ("user_channel_join", "user_channel_leave")
-WATCHED_ACTIONS = LOGIN_ACTIONS + CHANNEL_ACTIONS
+CHANNEL_MEMBERSHIP_ACTIONS = ("user_channel_join", "user_channel_leave")
+LOGIN_AND_CHANNEL_ACTIONS = LOGIN_ACTIONS + CHANNEL_MEMBERSHIP_ACTIONS
 IDENTITY_ACTIONS = LOGIN_ACTIONS + ("user_deactivated", "user_reactivated", "user_profile_updated")
+
+ACTION_SETS = {
+    "login_and_channel": LOGIN_AND_CHANNEL_ACTIONS,
+    "login": LOGIN_ACTIONS,
+    "channel_membership": CHANNEL_MEMBERSHIP_ACTIONS,
+    "identity": IDENTITY_ACTIONS,
+}
+DEFAULT_BACKFILL_SETS = ("login_and_channel",)
 JOINED = "joined"
 LEFT = "left"
 ROOMED = {"user_channel_join": JOINED, "user_channel_leave": LEFT}
@@ -153,10 +161,8 @@ def tail_actions():
     raw = os.environ.get("AUDIT_TAIL_ACTIONS", "").strip()
     if not raw:
         return None
-    if raw.lower() in ("login", "logins"):
-        return LOGIN_ACTIONS
-    if raw.lower() == "watched":
-        return WATCHED_ACTIONS
+    if raw.lower() in ACTION_SETS:
+        return ACTION_SETS[raw.lower()]
     return tuple(one.strip() for one in raw.split(",") if one.strip())[:MOST_ACTIONS]
 
 
@@ -404,23 +410,29 @@ def slice_keys(days):
     return [today - timedelta(days=step) for step in range(days)]
 
 
-BACKFILL_SETS = (
-    (WATCHED_ACTIONS, "watched"),
-    (LOGIN_ACTIONS, "logins"),
-    (CHANNEL_ACTIONS, "channels"),
-    (IDENTITY_ACTIONS, "identity"),
-)
-
-
 def source_key_for(actions):
     if not actions:
         return f"{BACKFILL}:all"
 
-    held = tuple(actions)
-    for known, name in BACKFILL_SETS:
-        if held == known:
+    requested = tuple(actions)
+    for name, known in ACTION_SETS.items():
+        if requested == known:
             return f"{BACKFILL}:{name}"
-    return f"{BACKFILL}:picked"
+    return f"{BACKFILL}:custom"
+
+
+def backfill_set_names():
+    raw = os.environ.get("AUDIT_BACKFILL_SETS", "")
+    names = [one.strip().lower() for one in raw.split(",") if one.strip()]
+    return tuple(dict.fromkeys(names)) or DEFAULT_BACKFILL_SETS
+
+
+def unknown_backfill_sets():
+    return tuple(name for name in backfill_set_names() if name not in ACTION_SETS)
+
+
+def backfill_sets():
+    return tuple(ACTION_SETS[name] for name in backfill_set_names() if name in ACTION_SETS)
 
 
 def next_slice(conn, source_key, days):
@@ -436,7 +448,7 @@ def bounds(day: date):
     return start, start + timedelta(days=1)
 
 
-def backfill(conn, client=None, actions=WATCHED_ACTIONS):
+def backfill(conn, client=None, actions=LOGIN_AND_CHANNEL_ACTIONS):
     client = client or ProxyClient.for_source(BACKFILL)
     source_key = source_key_for(actions)
     day = next_slice(conn, source_key, horizon_days())
@@ -461,6 +473,14 @@ def backfill(conn, client=None, actions=WATCHED_ACTIONS):
     conn.commit()
     print(f"{source_key} {slice_key}: {landed} event(s), {seated} login(s)")
     return landed
+
+
+def backfill_next(conn, client=None):
+    days = horizon_days()
+    for actions in backfill_sets():
+        if next_slice(conn, source_key_for(actions), days) is not None:
+            return backfill(conn, client, actions)
+    return 0
 
 
 def run(conn):

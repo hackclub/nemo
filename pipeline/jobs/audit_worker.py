@@ -5,7 +5,7 @@ import threading
 from dotenv import load_dotenv
 
 from ingest.access_logs_pull import run as walk_access_logs
-from ingest.audit_logs_pull import backfill as walk_backfill
+from ingest.audit_logs_pull import backfill_next, unknown_backfill_sets
 from ingest.audit_logs_pull import tail as walk_tail
 from ingest.ip_cohorts import run as refresh_cohorts
 from ingest.member_links import run as refresh_links
@@ -54,7 +54,7 @@ def refused(failure):
 
 LANES = (
     ("tail", walk_tail, "AUDIT_TAIL_SECONDS", DEFAULT_TAIL_SECONDS, True),
-    ("backfill", walk_backfill, "AUDIT_BACKFILL_SECONDS", DEFAULT_BACKFILL_SECONDS, True),
+    ("backfill", backfill_next, "AUDIT_BACKFILL_SECONDS", DEFAULT_BACKFILL_SECONDS, True),
     ("access", walk_access_logs, "AUDIT_ACCESS_SECONDS", DEFAULT_ACCESS_SECONDS, True),
     ("cohorts", refresh_cohorts, "AUDIT_COHORT_SECONDS", DEFAULT_COHORT_SECONDS, False),
     ("links", refresh_links, "AUDIT_LINK_SECONDS", DEFAULT_LINK_SECONDS, False),
@@ -113,6 +113,9 @@ def main():
 
 def wanted_lanes():
     if backfill_wanted():
+        unknown = unknown_backfill_sets()
+        if unknown:
+            print(f"{WORKER}: AUDIT_BACKFILL_SETS has unknown set names, skipping: {', '.join(unknown)}")
         return LANES
     print(f"{WORKER}: AUDIT_BACKFILL is off, the backfill lane will not run")
     return tuple(one for one in LANES if one[0] not in OPTIONAL)
