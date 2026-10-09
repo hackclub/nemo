@@ -47,11 +47,11 @@ LIMIT %(batch)s
 """
 
 TOR_SQL = """
-SELECT DISTINCT context->>'ip_address'
+SELECT DISTINCT host(ip)
 FROM slack.audit_event
 WHERE action = 'anomaly'
   AND payload->'details'->'reason' ? 'tor'
-  AND context->>'ip_address' IS NOT NULL
+  AND ip IS NOT NULL
 """
 
 LAND_SQL = """

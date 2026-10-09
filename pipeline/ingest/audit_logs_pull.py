@@ -61,7 +61,7 @@ FIRST_TAIL_HOURS = 24
 MONTHS_AHEAD = 2
 
 ENSURE_MONTHS_SQL = """
-SELECT slack.ensure_months('slack.audit_event_monthly', 'audit_event', %(first)s, %(ahead)s),
+SELECT slack.ensure_months('slack.audit_event', 'audit_event', %(first)s, %(ahead)s),
        slack.ensure_months('slack.audit_view', 'audit_view', %(first)s, %(ahead)s)
 """
 
@@ -76,7 +76,7 @@ AGENTS_SQL = "SELECT md5(ua), id FROM slack.user_agent WHERE md5(ua) = ANY(%s)"
 VIEW_CODES_SQL = "SELECT action, code FROM slack.audit_view_action"
 
 MONTHLY_SQL = """
-INSERT INTO slack.audit_event_monthly
+INSERT INTO slack.audit_event
     (id, at, action, category, actor_kind, actor_id, actor_email, entity_kind, entity_id,
      entity_email, channel_id, app_id, ours, ip, ua_id, session_id, source_key, payload)
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -84,17 +84,9 @@ ON CONFLICT (id, at) DO NOTHING
 """
 
 VIEW_SQL = """
-INSERT INTO slack.audit_view (id, at, action, actor_id, object_id, ip, ua_id, session_id)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+INSERT INTO slack.audit_view (id, at, action, actor_id, object_id, ip, ua_id, session_id, ours)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (id, at) DO NOTHING
-"""
-
-EVENT_SQL = """
-INSERT INTO slack.audit_event
-    (id, at, action, actor_kind, actor_id, entity_kind, entity_id, app_id, ours,
-     context, payload, source_key)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-ON CONFLICT (id) DO NOTHING
 """
 
 LOGIN_SQL = """
@@ -144,16 +136,16 @@ WHERE session_id = ANY(%s) AND action = 'user_login'
 """
 
 HELD_FIRST_SQL = """
-SELECT id, at, action, actor_kind, actor_id, context, payload->'details'
+SELECT id::text, at, action, actor_kind, actor_id, payload->'context', payload->'details'
 FROM slack.audit_event
 ORDER BY at DESC, id DESC
 LIMIT %(batch)s
 """
 
 HELD_NEXT_SQL = """
-SELECT id, at, action, actor_kind, actor_id, context, payload->'details'
+SELECT id::text, at, action, actor_kind, actor_id, payload->'context', payload->'details'
 FROM slack.audit_event
-WHERE (at, id) < (%(at)s, %(id)s)
+WHERE (at, id) < (%(at)s, %(id)s::uuid)
 ORDER BY at DESC, id DESC
 LIMIT %(batch)s
 """
@@ -247,20 +239,9 @@ def whose(entry, key):
     return kind, body.get("id")
 
 
-def event_row(entry, source_key, ours):
-    at = stamp(entry.get("date_create"))
-    if not entry.get("id") or at is None or not entry.get("action"):
-        return None
-
-    context = entry.get("context") or {}
-    app_id = ((context.get("app") or {}).get("id")) or None
-    actor_kind, actor_id = whose(entry, "actor")
-    entity_kind, entity_id = whose(entry, "entity")
-
-    return (
-        entry["id"], at, entry["action"], actor_kind, actor_id, entity_kind, entity_id,
-        app_id, bool(app_id and app_id in ours), Jsonb(context), Jsonb(entry), source_key,
-    )
+def landable(entry):
+    return (event_uuid(entry.get("id")) is not None and stamp(entry.get("date_create")) is not None
+            and bool(entry.get("action")))
 
 
 def address(value):
@@ -349,7 +330,7 @@ def monthly_row(entry, source_key, ours, agents, held):
     )
 
 
-def view_row(entry, code, agents):
+def view_row(entry, code, agents, ours):
     event_id = event_uuid(entry.get("id"))
     at = stamp(entry.get("date_create"))
     if event_id is None or at is None:
@@ -357,10 +338,12 @@ def view_row(entry, code, agents):
     context = entry.get("context") or {}
     _actor_kind, actor_id = whose(entry, "actor")
     _entity_kind, entity_id = whose(entry, "entity")
+    app_id = ((context.get("app") or {}).get("id")) or None
     agent = agent_of(entry)
     return (
         event_id, at, code, actor_id, entity_id, address(context.get("ip_address")),
         agents.get(agent_hash(agent)) if agent else None, session_of(context),
+        bool(app_id and app_id in ours),
     )
 
 
@@ -376,7 +359,7 @@ def write_new_shape(conn, entries, source_key, ours):
     for entry in entries:
         code = codes.get(entry.get("action"))
         if code:
-            row = view_row(entry, code, agents)
+            row = view_row(entry, code, agents, ours)
             if row:
                 view.append(row)
         else:
@@ -460,15 +443,13 @@ def own_sessions(conn, logins):
 
 
 def insert_rows(conn, entries, source_key, ours, counts):
-    events, logins, rooms, landed = [], [], [], []
+    logins, rooms, landed = [], [], []
     named = {}
     for entry in entries:
-        row = event_row(entry, source_key, ours)
-        if row is None:
+        if not landable(entry):
             counts.rows_rejected += 1
-            dead_letter(conn, source_key, {"keys": sorted(entry)}, "no id, action or date")
+            dead_letter(conn, source_key, {"keys": sorted(entry)}, "no uuid id, action or date")
             continue
-        events.append(row)
         landed.append(entry)
         seated = login_row(entry)
         if seated:
@@ -481,9 +462,9 @@ def insert_rows(conn, entries, source_key, ours, counts):
             named[knew[0]] = knew
 
     logins = own_sessions(conn, logins)
-    if events:
+    if landed:
+        write_new_shape(conn, landed, source_key, ours)
         with conn.cursor() as cur:
-            cur.executemany(EVENT_SQL, events)
             if logins:
                 cur.executemany(LOGIN_SQL, logins)
                 member_seen.logged_in(cur, [(row[0], row[1]) for row in logins if row[2] == "user_login"])
@@ -491,10 +472,9 @@ def insert_rows(conn, entries, source_key, ours, counts):
                 cur.executemany(CHANNEL_SQL, rooms)
             if named:
                 cur.executemany(IDENTITY_SQL, list(named.values()))
-        write_new_shape(conn, landed, source_key, ours)
     conn.commit()
-    counts.rows_in += len(events)
-    return len(events), len(logins)
+    counts.rows_in += len(landed)
+    return len(landed), len(logins)
 
 
 def walk(client, conn, source_key, counts, oldest=None, latest=None, actions=None,

@@ -272,7 +272,7 @@ sources:
     guard: cursor end
     resume: sync_cursor
     retention: keep
-    writes: [slack.audit_event, fd.login_event, fd.member_channel_join]
+    writes: [slack.audit_event, slack.audit_view, slack.user_agent, fd.login_event, fd.member_channel_join]
     feeds: []
 
   audit_logs_backfill:
@@ -287,7 +287,7 @@ sources:
     guard: cursor end
     resume: cursor
     retention: keep
-    writes: [slack.audit_event, fd.login_event, fd.member_channel_join]
+    writes: [slack.audit_event, slack.audit_view, slack.user_agent, fd.login_event, fd.member_channel_join]
     feeds: []
 
   useragent_reparse:

@@ -4,11 +4,12 @@ import pathlib
 import pytest
 
 from ingest import audit_logs_pull as pull
-from lib import useragent
+from lib import audit_actions, useragent
 from lib.proxy_client import ProxyError, stamped
 
 WHO = "U1"
 APP = "A0BJDDB42N7"
+OTHER_ID = "0dc5d1ec-1111-2222-3333-444455556667"
 
 
 def entry(**over):
@@ -36,28 +37,31 @@ class Counts:
 
 
 def test_an_entry_becomes_a_row_the_database_will_take():
-    row = pull.event_row(entry(), "audit_logs_tail", frozenset())
+    row = pull.monthly_row(entry(), "audit_logs_tail", frozenset(), {}, None)
 
-    assert row[0] == entry()["id"]
+    assert str(row[0]) == entry()["id"]
     assert row[1] == dt.datetime.fromtimestamp(1790680410, tz=dt.UTC)
     assert row[2] == "user_login"
-    assert row[3:5] == ("user", WHO)
-    assert row[5:7] == ("user", WHO)
+    assert row[4:6] == ("user", WHO)
+    assert row[7:9] == ("user", WHO)
 
 
 def test_an_entry_with_no_id_or_no_date_is_refused_rather_than_landed():
-    assert pull.event_row(entry(id=""), "k", frozenset()) is None
-    assert pull.event_row(entry(date_create=None), "k", frozenset()) is None
-    assert pull.event_row(entry(action=""), "k", frozenset()) is None
+    assert pull.landable(entry())
+    assert not pull.landable(entry(id=""))
+    assert not pull.landable(entry(id="not-a-uuid"))
+    assert not pull.landable(entry(date_create=None))
+    assert not pull.landable(entry(action=""))
 
 
 def test_our_own_reads_are_marked_so_they_can_be_told_apart():
     entry_row = entry(action="public_channel_preview",
                  context={"app": {"id": APP, "name": "Nemo"}})
 
-    assert pull.event_row(entry_row, "k", frozenset({APP}))[8] is True
-    assert pull.event_row(entry_row, "k", frozenset())[8] is False
-    assert pull.event_row(entry(), "k", frozenset({APP}))[8] is False
+    assert pull.view_row(entry_row, 1, {}, frozenset({APP}))[8] is True
+    assert pull.view_row(entry_row, 1, {}, frozenset())[8] is False
+    assert pull.monthly_row(entry_row, "k", frozenset({APP}), {}, None)[12] is True
+    assert pull.monthly_row(entry(), "k", frozenset({APP}), {}, None)[12] is False
 
 
 def test_a_login_carries_the_address_the_agent_and_the_session():
@@ -471,7 +475,7 @@ class Conn:
 
 def test_landing_writes_the_event_and_the_login_from_one_pass():
     conn, counts = Conn(), Counts()
-    landed, seated = pull.insert_rows(conn, [entry(), entry(id="b", action="file_downloaded")],
+    landed, seated = pull.insert_rows(conn, [entry(), entry(id=OTHER_ID, action="user_logout")],
                                "audit_logs_tail", frozenset(), counts)
 
     assert (landed, seated) == (2, 2)
@@ -483,14 +487,15 @@ def test_landing_writes_the_event_and_the_login_from_one_pass():
 def test_only_a_login_that_worked_counts_as_being_seen():
     conn, counts = Conn(), Counts()
     failed = {"type": "user", "user": {"id": "U2", "name": "nope"}}
-    pull.insert_rows(conn, [entry(), entry(id="b", action="user_login_failed", actor=failed)],
+    pull.insert_rows(conn, [entry(), entry(id=OTHER_ID, action="user_login_failed", actor=failed)],
                      "audit_logs_tail", frozenset(), counts)
 
     assert [ids for ids, _ in conn.did("INSERT INTO fd.member_seen")] == [[WHO]]
 
 
 def test_a_landed_event_is_never_written_twice():
-    assert "ON CONFLICT (id) DO NOTHING" in pull.EVENT_SQL
+    assert "ON CONFLICT (id, at) DO NOTHING" in pull.MONTHLY_SQL
+    assert "ON CONFLICT (id, at) DO NOTHING" in pull.VIEW_SQL
     assert "ON CONFLICT (user_id, at, source) DO UPDATE" in pull.LOGIN_SQL
     assert "ON CONFLICT (audit_id) DO NOTHING" in pull.CHANNEL_SQL
 
@@ -563,7 +568,7 @@ def test_a_join_missing_the_member_or_the_room_is_not_written_down():
 
 def test_landing_projects_the_rooms_alongside_the_events():
     conn, counts = Conn(), Counts()
-    pull.insert_rows(conn, [joined(), joined(id="b", action="user_channel_leave"), entry()],
+    pull.insert_rows(conn, [joined(), joined(id=OTHER_ID, action="user_channel_leave"), entry()],
               "audit_logs_tail", frozenset(), counts)
 
     rooms = conn.did("INSERT INTO fd.member_channel_join")[0]
@@ -792,7 +797,7 @@ def test_a_full_event_gets_typed_columns_and_its_category():
 
 def test_an_event_slack_did_not_give_a_uuid_stays_out_of_the_new_tables():
     assert pull.monthly_row(entry(id="not-a-uuid"), "k", frozenset(), {}, None) is None
-    assert pull.view_row(entry(id="not-a-uuid"), 3, {}) is None
+    assert pull.view_row(entry(id="not-a-uuid"), 3, {}, frozenset()) is None
 
 
 def test_a_redacted_address_is_stored_as_no_address():
@@ -818,19 +823,26 @@ def test_high_volume_actions_go_to_the_slim_table_and_the_rest_to_the_monthly_on
     [view] = conn.did("INSERT INTO slack.audit_view")
     assert view[0][2:5] == (3, WHO, "F123")
     assert view[0][6] == 7
-    [monthly] = conn.did("INSERT INTO slack.audit_event_monthly")
+    [monthly] = conn.did("INSERT INTO slack.audit_event")
     assert monthly[0][2] == "user_login"
     [ensure] = conn.did("slack.ensure_months")
     assert ensure["first"].day == 1 and ensure["ahead"] == pull.MONTHS_AHEAD
 
 
-def test_landing_also_writes_the_new_shape_in_the_same_transaction():
-    conn, counts = Shape(), Counts()
+def test_an_entry_without_a_uuid_is_dead_lettered_not_landed():
+    conn, counts = Conn(), Counts()
 
-    pull.insert_rows(conn, [entry()], "audit_logs_tail", frozenset(), counts)
+    landed, _ = pull.insert_rows(conn, [entry(), entry(id="b")], "audit_logs_tail", frozenset(), counts)
 
-    assert conn.did("INSERT INTO slack.audit_event")
-    assert conn.did("INSERT INTO slack.audit_event_monthly")
+    assert landed == 1
+    assert counts.rows_rejected == 1
+    assert len(conn.did("INSERT INTO slack.audit_event")[0]) == 1
+
+
+def test_the_held_walk_reads_the_context_kept_in_the_payload():
+    assert "payload->'context'" in pull.HELD_FIRST_SQL
+    assert "FROM slack.audit_event" in pull.HELD_FIRST_SQL
+    assert "(at, id) < (%(at)s, %(id)s::uuid)" in pull.HELD_NEXT_SQL
 
 
 def test_months_are_created_by_their_owner_and_only_for_the_audit_tables():
@@ -839,3 +851,20 @@ def test_months_are_created_by_their_owner_and_only_for_the_audit_tables():
     assert "SECURITY DEFINER" in sql and "SET search_path = slack, pg_temp" in sql
     assert "parent NOT IN ('slack.audit_event_monthly'::regclass, 'slack.audit_view'::regclass)" in sql
     assert "FROM PUBLIC" in sql
+
+
+def test_the_move_copies_every_held_event_then_takes_the_old_name():
+    sql = (pathlib.Path(__file__).parents[2] / "db" / "migrations"
+           / "0192_move_audit_events.sql").read_text()
+    copy, rest = sql.split("DROP TABLE slack.audit_event;")
+    assert "INSERT INTO slack.audit_event_monthly" in copy and "INSERT INTO slack.audit_view" in copy
+    assert "ALTER TABLE slack.audit_event_monthly RENAME TO audit_event;" in rest
+    assert "parent NOT IN ('slack.audit_event'::regclass, 'slack.audit_view'::regclass)" in rest
+    assert "SECURITY DEFINER" in rest
+
+
+def test_the_move_carries_the_category_of_every_catalogued_action():
+    sql = (pathlib.Path(__file__).parents[2] / "db" / "migrations"
+           / "0192_move_audit_events.sql").read_text()
+    for action, held in audit_actions.catalogue()["actions"].items():
+        assert f"('{action}', '{held['category']}')" in sql

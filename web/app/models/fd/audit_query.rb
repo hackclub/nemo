@@ -96,7 +96,7 @@ module Fd
 
     ONE = {
       FIRE_ENGINE => "a.id::text = :id",
-      SLACK => "e.id = :id",
+      SLACK => "e.id::text = :id",
       READ => "'r' || l.id::text = :id"
     }.freeze
 
@@ -249,6 +249,8 @@ module Fd
       SELECT DISTINCT verb FROM fd.audit
       UNION
       SELECT DISTINCT action FROM slack.audit_event WHERE NOT ours
+      UNION
+      SELECT action FROM slack.audit_view_action
       ORDER BY verb
     SQL
 
@@ -283,14 +285,49 @@ module Fd
     SQL
 
     SLACK_BRANCH = <<~SQL.freeze
-      SELECT 'slack' AS source, e.id AS id, e.at AS at,
+      SELECT 'slack' AS source, e.id::text AS id, e.at AS at,
              e.actor_id AS actor_id, 'slack' AS actor_kind, e.action AS verb,
              e.entity_kind AS entity_kind, e.entity_id AS entity_id,
              NULL::text AS entity_ref, NULL::text AS subject_id,
-             NULL::jsonb AS before, e.payload AS after, e.context AS detail
+             NULL::jsonb AS before, e.payload AS after, e.payload -> 'context' AS detail
       FROM slack.audit_event e
       WHERE e.at >= :since AND NOT e.ours
         SLACK_WHERE
+    SQL
+
+    SLACK_VIEW_BRANCH = <<~SQL.freeze
+      SELECT 'slack' AS source, v.id::text AS id, v.at AS at,
+             v.actor_id AS actor_id, 'slack' AS actor_kind, a.action AS verb,
+             a.entity_kind AS entity_kind, v.object_id AS entity_id,
+             NULL::text AS entity_ref, NULL::text AS subject_id,
+             NULL::jsonb AS before, NULL::jsonb AS after,
+             jsonb_strip_nulls(jsonb_build_object('ip_address', host(v.ip), 'ua', u.ua,
+               'session_id', v.session_id)) AS detail
+      FROM slack.audit_view v
+      JOIN slack.audit_view_action a ON a.code = v.action
+      LEFT JOIN slack.user_agent u ON u.id = v.ua_id
+      WHERE v.at >= :since AND NOT v.ours
+        SLACK_VIEW_WHERE
+    SQL
+
+    SLACK_SEARCHED = <<~SQL.squish.freeze
+      to_tsvector('simple'::regconfig,
+        coalesce(action, '') || ' ' || coalesce(actor_id, '') || ' ' ||
+        coalesce(entity_id, '') || ' ' || coalesce(entity_kind, '') || ' ' ||
+        coalesce(host(ip), '') || ' ' || coalesce(payload #>> '{context,app,name}', '') || ' ' ||
+        coalesce(actor_email, '') || ' ' || coalesce(payload #>> '{actor,user,name}', '') || ' ' ||
+        coalesce(entity_email, '') || ' ' || coalesce(payload #>> '{entity,user,name}', '') || ' ' ||
+        coalesce(payload #>> '{entity,channel,name}', ''))
+    SQL
+
+    SLACK_VIEW_SEARCHED = <<~SQL.squish.freeze
+      to_tsvector('simple'::regconfig,
+        a.action || ' ' || coalesce(v.actor_id, '') || ' ' || coalesce(v.object_id, '') || ' ' ||
+        coalesce(host(v.ip), ''))
+    SQL
+
+    VIEW_ACTIONS = <<~SQL.squish.freeze
+      SELECT action FROM slack.audit_view_action
     SQL
 
     READ_BRANCH = <<~SQL.freeze
@@ -421,9 +458,9 @@ module Fd
       parts << "AND e.actor_id IN (:actors)" if search.of("actor").any?
       parts << "AND e.entity_id IN (:subjects)" if search.of("about").any?
       parts << "AND e.action IN (:actions)" if search.of("action").any?
-      parts << "AND e.entity_id IN (:channels)" if search.of("channel").any?
-      parts << "AND e.searchable @@ websearch_to_tsquery('simple', :text)" if search.text?
-      parts << ip_clause if search.of("ip").any?
+      parts << "AND e.channel_id IN (:channels)" if search.of("channel").any?
+      parts << "AND #{SLACK_SEARCHED} @@ websearch_to_tsquery('simple', :text)" if search.text?
+      parts << ip_clause("e") if search.of("ip").any?
       parts << email_clause if search.of("ip").empty? && looked_up?
       parts << "AND false" if search.one("is") == "nemo"
       parts << "AND e.at >= :after" if search.one("after")
@@ -431,32 +468,48 @@ module Fd
       parts.compact.join("\n")
     end
 
-    EMAIL_FIELDS = ["payload #>> '{actor,user,email}'",
-                    "payload #>> '{entity,user,email}'"].freeze
+    def slack_view_where
+      parts = ["AND a.action IN (:actions)"]
+      parts << "AND v.actor_id IN (:actors)" if search.of("actor").any?
+      parts << "AND v.object_id IN (:subjects)" if search.of("about").any?
+      parts << "AND v.object_id IN (:channels)" if search.of("channel").any?
+      parts << "AND #{SLACK_VIEW_SEARCHED} @@ websearch_to_tsquery('simple', :text)" if search.text?
+      parts << ip_clause("v") if search.of("ip").any?
+      if looked_up? && search.of("ip").empty?
+        parts << (anybody.any? ? "AND v.actor_id IN (:anybody)" : "AND false")
+      end
+      parts << "AND false" if search.one("is") == "nemo"
+      parts << "AND v.at >= :after" if search.one("after")
+      parts << "AND v.at < :before" if search.one("before")
+      parts.join("\n")
+    end
+
+    def view_actions
+      @view_actions ||= ApplicationRecord.connection.select_values(VIEW_ACTIONS)
+    end
+
+    def slack_views? = search.of("action").intersect?(view_actions)
+
+    EMAIL_FIELDS = %w[e.actor_email e.entity_email].freeze
 
     def email_clause
       held = []
       search.of("email").each_with_index do |_said, at|
-        held.concat(EMAIL_FIELDS.map { |field| "lower(e.#{field}) = :email_#{at}" })
+        held.concat(EMAIL_FIELDS.map { |field| "#{field} = :email_#{at}" })
       end
       search.of("domain").each_with_index do |_said, at|
-        held.concat(EMAIL_FIELDS.map { |field|
-          "lower(split_part(e.#{field}, '@', 2)) = :domain_#{at}"
-        })
+        held.concat(EMAIL_FIELDS.map { |field| "split_part(#{field}, '@', 2) = :domain_#{at}" })
       end
       held << "e.actor_id IN (:anybody)" if anybody.any?
       held.empty? ? "AND false" : "AND (#{held.join(' OR ')})"
     end
 
-    def ip_clause
+    def ip_clause(table)
       held = search.of("ip").map { |term_value|
-        if term_value.include?("/")
-          "(e.context ->> 'ip_address')::inet << :ip_#{term_value.hash.abs}::inet"
-        else
-          "e.context ->> 'ip_address' = :ip_#{term_value.hash.abs}"
-        end
+        operator = term_value.include?("/") ? "<<" : "="
+        "#{table}.ip #{operator} :ip_#{term_value.hash.abs}::inet"
       }
-      seen = anybody.any? ? " OR e.actor_id IN (:anybody)" : ""
+      seen = anybody.any? ? " OR #{table}.actor_id IN (:anybody)" : ""
       "AND ((#{held.join(' OR ')})#{seen})"
     end
 
@@ -491,7 +544,10 @@ module Fd
       if wanted_sources.include?(FIRE_ENGINE)
         held << ENGINE_BRANCH.sub("ENGINE_WHERE", engine_where)
       end
-      held << SLACK_BRANCH.sub("SLACK_WHERE", slack_where) if wanted_sources.include?(SLACK)
+      if wanted_sources.include?(SLACK)
+        held << SLACK_BRANCH.sub("SLACK_WHERE", slack_where)
+        held << SLACK_VIEW_BRANCH.sub("SLACK_VIEW_WHERE", slack_view_where) if slack_views?
+      end
       held << READ_BRANCH.sub("READ_WHERE", read_where) if wanted_sources.include?(READ)
       if wanted_sources.include?(API)
         held << API_EVENT_BRANCH.sub("API_EVENT_WHERE", api_event_where)
@@ -606,7 +662,8 @@ module Fd
     def pick(source, id)
       branch = case source
       when FIRE_ENGINE then ENGINE_BRANCH.sub("ENGINE_WHERE", "AND a.id::text = :id")
-      when SLACK then SLACK_BRANCH.sub("SLACK_WHERE", "AND e.id = :id")
+      when SLACK then "#{SLACK_BRANCH.sub('SLACK_WHERE', 'AND e.id::text = :id')}\n" \
+                      "UNION ALL\n#{SLACK_VIEW_BRANCH.sub('SLACK_VIEW_WHERE', 'AND v.id::text = :id')}"
       when READ then READ_BRANCH.sub("READ_WHERE", "AND 'r' || l.id::text = :id")
       else api_branch_for(id)
       end

@@ -18,14 +18,26 @@ class FdAuditTest < ActionDispatch::IntegrationTest
   def slack!(action: "user_login", actor: WHO, at: 1.hour.ago, ip: "81.2.69.144",
     id: SecureRandom.uuid, ours: false, email: nil)
     as_pipeline(<<~SQL.squish, id,
-      INSERT INTO slack.audit_event (id, at, action, actor_kind, actor_id, entity_kind,
-                                     entity_id, ours, context, payload, source_key)
-      VALUES (?, ?, ?, 'user', ?, 'user', ?, ?, ?::jsonb, ?::jsonb, 'test')
+      INSERT INTO slack.audit_event (id, at, action, actor_kind, actor_id, actor_email,
+                                     entity_kind, entity_id, ours, ip, payload, source_key)
+      VALUES (?::uuid, ?, ?, 'user', ?, lower(?), 'user', ?, ?, ?::inet, ?::jsonb, 'test')
     SQL
-      at, action, actor, actor, ours, { ip_address: ip }.to_json,
-      { id: id, action: action,
+      at, action, actor, email, actor, ours, ip,
+      { id: id, action: action, context: { ip_address: ip },
         actor: { type: "user", user: { id: actor, email: email }.compact } }.to_json)
     seeded!("slack.audit_event", "id", id)
+  end
+
+  VIEW_CODES = { "public_channel_preview" => 1, "file_downloaded" => 3 }.freeze
+
+  def slim!(action: "file_downloaded", actor: WHO, object: "F0FILE01", at: 1.hour.ago,
+    ip: "81.2.69.144", ours: false)
+    id = SecureRandom.uuid
+    as_pipeline(<<~SQL.squish, id, at, VIEW_CODES.fetch(action), actor, object, ip, ours)
+      INSERT INTO slack.audit_view (id, at, action, actor_id, object_id, ip, ours)
+      VALUES (?::uuid, ?, ?, ?, ?, ?::inet, ?)
+    SQL
+    seeded!("slack.audit_view", "id", id)
   end
 
   def query(params = {})
@@ -56,10 +68,37 @@ class FdAuditTest < ActionDispatch::IntegrationTest
   end
 
   test "our own reads of the audit log are left out of it" do
-    slack!(action: "public_channel_preview", ours: true)
+    slack!(action: "user_profile_updated", ours: true)
     slack!(action: "user_login", ours: false)
+    slim!(action: "public_channel_preview", ours: true)
 
     assert_equal %w[user_login], query("view" => "slack").rows.map(&:verb)
+    assert_empty query("view" => "slack", "q" => "did:public_channel_preview").rows
+  end
+
+  test "high volume reads are shown when asked for by name and left out otherwise" do
+    slack!(action: "user_login")
+    slim!(action: "file_downloaded", object: "F0FILE01", ip: "86.12.44.9")
+
+    assert_equal %w[user_login], query("view" => "slack").rows.map(&:verb)
+
+    asked = query("view" => "slack", "q" => "did:file_downloaded").rows
+    assert_equal %w[file_downloaded], asked.map(&:verb)
+    assert_equal "F0FILE01", asked.first.entity_id
+    assert_equal "86.12.44.9", asked.first.ip
+  end
+
+  test "a high volume read opens on its own page" do
+    id = slim!(action: "file_downloaded")
+
+    row = Fd::AuditQuery.one("slack", id)
+    assert_equal "file_downloaded", row.verb
+    assert_equal WHO, row.actor_id
+  end
+
+  test "free text is matched by the expression the search index was built on" do
+    sql = Rails.root.join("../db/migrations/0192_move_audit_events.sql").read.squish
+    assert_includes sql, "USING gin (( #{Fd::AuditQuery::SLACK_SEARCHED} ))"
   end
 
   test "refusals are their own tab and are kept out of everything else" do
@@ -288,10 +327,10 @@ class FdAuditTest < ActionDispatch::IntegrationTest
     id = SecureRandom.uuid
     as_pipeline(<<~SQL.squish,
       INSERT INTO slack.audit_event (id, at, action, actor_kind, actor_id, entity_kind,
-                                     entity_id, ours, context, payload, source_key)
-      VALUES (?, now(), ?, 'user', ?, 'channel', ?, false, '{}'::jsonb, '{}'::jsonb, 'test')
+                                     entity_id, channel_id, ours, payload, source_key)
+      VALUES (?::uuid, now(), ?, 'user', ?, 'channel', ?, ?, false, '{}'::jsonb, 'test')
     SQL
-      id, action, WHO, channel_id)
+      id, action, WHO, channel_id, channel_id)
     seeded!("slack.audit_event", "id", id)
   end
 
