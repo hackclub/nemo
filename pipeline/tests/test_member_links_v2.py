@@ -91,8 +91,9 @@ def test_a_pass_gathers_once_then_lands_sweeps_and_counts(monkeypatch, capsys):
 
     assert v2.run(Conn()) == 4
     ran[:] = [one for one in ran if one not in ("ANALYZE shared_ip", "ANALYZE link_part")]
-    assert ran[:10] == [v2.PASS, v2.PASS_INDEX, "ANALYZE link_pass", v2.AGAINST, v2.STAFF_TEST,
-                        v2.CLASSROOM, v2.HOUSEHOLD, v2.BELOW_FLOOR, v2.LAND, v2.SWEEP]
+    assert ran[:13] == [v2.PASS, v2.PASS_INDEX, "ANALYZE link_pass", v2.PRESENCE, v2.PRESENCE_INDEX,
+                        "ANALYZE presence", v2.AGAINST, v2.STAFF_TEST, v2.CLASSROOM, v2.HOUSEHOLD,
+                        v2.BELOW_FLOOR, v2.LAND, v2.SWEEP]
     assert ran[-1] == "commit"
     assert "9 link(s) kept, 4 written, 1 dropped" in capsys.readouterr().out
 
@@ -136,8 +137,15 @@ def test_hourly_evidence_keeps_one_row_per_pair():
 
 def test_two_countries_in_one_hour_count_against_a_link_unless_one_is_a_vpn():
     assert v2.against()["two_countries"]["weight"] < 0
-    assert "NOT IN ('vpn', 'hosting', 'tor')" in v2.AGAINST
-    assert "coalesce(a.country, na.country) <> coalesce(b.country, nb.country)" in v2.AGAINST
+    assert "s.class NOT IN ('vpn', 'hosting', 'tor')" in v2.PRESENCE
+    assert "coalesce(e.country, n.country) AS country" in v2.SIGHTING
+    assert "b.hour = a.hour AND b.country <> a.country" in v2.AGAINST
+
+
+def test_the_country_check_reads_only_the_members_of_candidate_links():
+    assert "FROM sighting s" in v2.PRESENCE
+    assert "SELECT a_user_id FROM link_pass UNION SELECT b_user_id FROM link_pass" in v2.PRESENCE
+    assert "fd.login_event" not in v2.AGAINST
 
 
 def test_a_word_for_word_build_is_device_evidence_and_ja4_only_backs_it_up():
@@ -289,3 +297,32 @@ def test_every_temp_table_is_analysed_before_it_is_joined():
 def test_signals_are_grouped_by_pair_not_looked_up_per_pair():
     assert "FROM best b\n        WHERE b.a_user_id = p.a_user_id" not in v2.PASS
     assert "GROUP BY b.a_user_id, b.b_user_id" in v2.PASS
+
+
+def test_a_shared_inbox_counts_however_many_accounts_use_it():
+    assert v2.signals()["mailbox_alias"]["crowd_ceiling"] >= 100
+
+
+def test_a_device_build_counts_only_when_few_members_use_it():
+    assert v2.signals()["device_agent"]["crowd_ceiling"] <= 5
+
+
+def test_a_shared_name_only_backs_other_evidence_up():
+    for name in ("full_name", "display_name", "handle_stem"):
+        assert v2.signals()[name]["corroborating"] is True, name
+
+
+def test_a_vpn_exit_few_people_used_is_network_evidence():
+    held = v2.signals()
+    sql, args = v2.evidence("ip_shared_exit", held["ip_shared_exit"], 2)
+
+    assert "class IN ('vpn', 'hosting', 'tor')" in sql and "FROM sighting" in sql
+    assert args["ceiling"] <= 10
+    assert held["ip_shared_exit"]["family"] == "network"
+    assert held["ip_shared_exit"]["weight"] < links.scoring()["floor"]
+
+
+def test_repeated_addresses_earn_a_bonus_for_homes_and_for_exits():
+    assert ("ip_many", "ip_stable") in v2.REPEATED
+    assert ("ip_shared_exits", "ip_shared_exit") in v2.REPEATED
+    assert "WHERE signal = %(single)s" in v2.MANY

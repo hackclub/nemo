@@ -1,4 +1,5 @@
 import re
+import time
 
 from ingest import member_links as links
 from lib.db import ingest_run
@@ -20,6 +21,9 @@ IP_SAME_HOUR = "ip_same_hour"
 IP_MANY = "ip_many"
 IP_HOURLY = "ip_hourly"
 IP_PREFIX_STABLE = "ip_prefix_stable"
+IP_SHARED_EXIT = "ip_shared_exit"
+IP_SHARED_EXITS = "ip_shared_exits"
+REPEATED = ((IP_MANY, IP_STABLE), (IP_SHARED_EXITS, IP_SHARED_EXIT))
 COLLAPSED = (IP_SAME_HOUR, IP_HOURLY)
 TWO_COUNTRIES = "two_countries"
 
@@ -28,11 +32,13 @@ CREATE TEMP TABLE sighting ON COMMIT DROP AS
 SELECT e.user_id, e.ip, e.ip_prefix, date_trunc('hour', e.at) AS hour, count(*) AS seen,
        CASE WHEN n.class IN ('rotating', 'vpn', 'hosting', 'tor') THEN n.class
             WHEN EXISTS (SELECT 1 FROM shared_ip s WHERE s.ip = e.ip) THEN 'rotating'
-            ELSE 'stable' END AS class
+            ELSE 'stable' END AS class,
+       coalesce(e.country, n.country) AS country
 FROM fd.login_event e
 LEFT JOIN fd.ip_network n ON n.ip_prefix = e.ip_prefix
 WHERE e.ip IS NOT NULL
-GROUP BY e.user_id, e.ip, e.ip_prefix, date_trunc('hour', e.at), n.class
+GROUP BY e.user_id, e.ip, e.ip_prefix, date_trunc('hour', e.at), n.class,
+         coalesce(e.country, n.country)
 """
 
 NETWORK_EVIDENCE = {
@@ -55,6 +61,12 @@ NETWORK_EVIDENCE = {
         WHERE class = 'stable' AND ip_prefix IS NOT NULL
         GROUP BY 1, 2
         HAVING sum(seen) >= {sightings}
+    """,
+    IP_SHARED_EXIT: """
+        SELECT user_id, host(ip) AS value, min(hour) AS first_seen, max(hour) AS last_seen
+        FROM sighting
+        WHERE class IN ('vpn', 'hosting', 'tor')
+        GROUP BY 1, 2
     """,
     IP_HOURLY: """
         SELECT e.user_id,
@@ -273,7 +285,7 @@ INSERT INTO link_part (a_user_id, b_user_id, signal, value, people, score, first
 SELECT a_user_id, b_user_id, %(name)s, count(DISTINCT value)::text || ' addresses', NULL,
        %(weight)s::numeric, min(first_seen), max(last_seen)
 FROM link_part
-WHERE signal = %(stable)s
+WHERE signal = %(single)s
 GROUP BY a_user_id, b_user_id
 HAVING count(DISTINCT value) >= 2
 """
@@ -328,24 +340,28 @@ JOIN named n ON n.a_user_id = p.a_user_id AND n.b_user_id = p.b_user_id
 
 PASS_INDEX = "CREATE INDEX ON link_pass (a_user_id, b_user_id)"
 
+PRESENCE = """
+CREATE TEMP TABLE presence ON COMMIT DROP AS
+SELECT DISTINCT s.user_id, s.hour, s.country
+FROM sighting s
+WHERE s.country IS NOT NULL
+  AND s.class NOT IN ('vpn', 'hosting', 'tor')
+  AND s.user_id IN (SELECT a_user_id FROM link_pass UNION SELECT b_user_id FROM link_pass)
+"""
+
+PRESENCE_INDEX = "CREATE INDEX ON presence (user_id, hour)"
+
 AGAINST = """
 UPDATE link_pass p
 SET score = round(p.score + %(weight)s::numeric, 3),
     families = p.families || jsonb_build_object('against', %(weight)s::numeric)
-WHERE EXISTS (
-    SELECT 1
-    FROM fd.login_event a
-    JOIN fd.login_event b
-      ON b.user_id = p.b_user_id
-     AND b.at >= date_trunc('hour', a.at)
-     AND b.at < date_trunc('hour', a.at) + interval '1 hour'
-    LEFT JOIN fd.ip_network na ON na.ip_prefix = a.ip_prefix
-    LEFT JOIN fd.ip_network nb ON nb.ip_prefix = b.ip_prefix
-    WHERE a.user_id = p.a_user_id
-      AND coalesce(a.country, na.country) <> coalesce(b.country, nb.country)
-      AND coalesce(na.class, 'stable') NOT IN ('vpn', 'hosting', 'tor')
-      AND coalesce(nb.class, 'stable') NOT IN ('vpn', 'hosting', 'tor')
-)
+FROM (
+    SELECT DISTINCT l.a_user_id, l.b_user_id
+    FROM link_pass l
+    JOIN presence a ON a.user_id = l.a_user_id
+    JOIN presence b ON b.user_id = l.b_user_id AND b.hour = a.hour AND b.country <> a.country
+) clash
+WHERE clash.a_user_id = p.a_user_id AND clash.b_user_id = p.b_user_id
 """
 
 STAFF_TEST = """
@@ -525,11 +541,12 @@ def gather(conn, held):
             cur.execute(sql, {**args, "name": name})
             counted[name] = cur.rowcount
 
-    many = signals(held).get(IP_MANY)
-    if many:
-        with conn.cursor() as cur:
-            cur.execute(MANY, {"name": IP_MANY, "weight": many["weight"], "stable": IP_STABLE})
-            counted[IP_MANY] = cur.rowcount
+    for name, single in REPEATED:
+        many = signals(held).get(name)
+        if many:
+            with conn.cursor() as cur:
+                cur.execute(MANY, {"name": name, "weight": many["weight"], "single": single})
+                counted[name] = cur.rowcount
     return counted
 
 
@@ -537,17 +554,32 @@ def run(conn):
     held = links.catalogue()
     marks = links.scoring(held)
 
+    took = {}
+    clock = time.monotonic()
+
+    def lap(step):
+        nonlocal clock
+        now = time.monotonic()
+        took[step] = now - clock
+        clock = now
+
     with ingest_run(conn, SOURCE) as counts:
         put_aside = links.mark_shared(conn, held)
         conn.execute("ANALYZE shared_ip")
         found = gather(conn, held)
         conn.execute("ANALYZE link_part")
+        lap("gather")
         with conn.cursor() as cur:
             cur.execute(PASS, {**family_table(held), "floor": marks["floor"]})
             cur.execute(PASS_INDEX)
             cur.execute("ANALYZE link_pass")
+            lap("score")
+            cur.execute(PRESENCE)
+            cur.execute(PRESENCE_INDEX)
+            cur.execute("ANALYZE presence")
             cur.execute(AGAINST, {"weight": against(held)[TWO_COUNTRIES]["weight"]})
             countered = cur.rowcount
+            lap("countries")
             named = labels(held)
             labelled = {}
             cur.execute(STAFF_TEST)
@@ -558,6 +590,7 @@ def run(conn):
             labelled["classroom"] = cur.rowcount
             cur.execute(HOUSEHOLD, {"weight": named["household"]["weight"]})
             labelled["household"] = cur.rowcount
+            lap("labels")
             cur.execute(BELOW_FLOOR, {"floor": marks["floor"]})
             cur.execute(LAND)
             changed = cur.rowcount
@@ -566,6 +599,7 @@ def run(conn):
             cur.execute("SELECT count(*) FROM link_pass")
             kept = cur.fetchone()[0]
         conn.commit()
+        lap("write")
         counts.rows_in = changed
 
     per_signal = ", ".join(f"{name} {n}" for name, n in sorted(found.items()) if n)
@@ -573,4 +607,5 @@ def run(conn):
     print(f"{SOURCE}: {kept} link(s) kept, {changed} written, {gone} dropped, "
           f"{countered} lowered by activity in two countries, {per_label}, "
           f"{put_aside} address(es) on shared networks treated as rotating ({per_signal})")
+    print(f"{SOURCE}: took " + ", ".join(f"{step} {seconds:.0f}s" for step, seconds in took.items()))
     return changed

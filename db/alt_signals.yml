@@ -81,11 +81,20 @@ network_signals:
     crowd_ceiling: 20
     corroborating: true
 
+  ip_shared_exit:
+    label: Same VPN or hosting address that few people ever used
+    weight: 2.0
+    crowd_ceiling: 10
+
+  ip_shared_exits:
+    label: Two or more VPN or hosting addresses that few people ever used
+    weight: 1.5
+
 device_signals:
   device_agent:
     label: Same browser or app build, word for word
     weight: 3.0
-    crowd_ceiling: 25
+    crowd_ceiling: 5
 
   device_ja4:
     label: Same TLS fingerprint
@@ -97,7 +106,7 @@ identity_signals:
   mailbox_alias:
     label: Same mailbox, once dots and plus tags are removed
     weight: 8.0
-    crowd_ceiling: 10
+    crowd_ceiling: 100
 
   local_part:
     label: Same mailbox name on another domain
@@ -109,16 +118,19 @@ name_signals:
     label: Same full name
     weight: 3.0
     crowd_ceiling: 5
+    corroborating: true
 
   display_name:
     label: Same display name
     weight: 2.0
     crowd_ceiling: 5
+    corroborating: true
 
   handle_stem:
     label: Same handle, ignoring trailing numbers
     weight: 2.0
     crowd_ceiling: 5
+    corroborating: true
 
 arrival_signals:
   created_same_address:
