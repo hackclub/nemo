@@ -719,12 +719,16 @@ module Fd
         categories: search.of("category").presence || [""],
         category_actions: AuditCatalogue.actions_in(search.of("category")).presence || [""],
         anybody: anybody.presence || [""],
-        after: search.one("after"), before: search.one("before")
+        after: day_start(search.one("after")), before: day_start(search.one("before"))
       }
       search.of("ip").each { |term_value| held[:"ip_#{term_value.hash.abs}"] = term_value }
       search.of("email").each_with_index { |term_value, at| held[:"email_#{at}"] = term_value.downcase }
       search.of("domain").each_with_index { |term_value, at| held[:"domain_#{at}"] = term_value.downcase }
       held
+    end
+
+    def day_start(value)
+      value && Time.zone.parse(value)
     end
 
     def ask(sql)

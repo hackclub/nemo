@@ -7,10 +7,17 @@
     </div>
 
     <div class="audit-panel-facts">
+      <% at = @row.at.in_time_zone %>
       <div class="fact">
         <dt>When</dt>
-        <dd><%= @row.at.strftime("%-d %b %Y %H:%M:%S") %></dd>
+        <dd><%= at.strftime("%-d %b %Y %H:%M:%S %Z") %></dd>
       </div>
+      <% if at.utc_offset != 0 %>
+        <div class="fact">
+          <dt>UTC</dt>
+          <dd><%= @row.at.utc.strftime("%-d %b %Y %H:%M:%S") %></dd>
+        </div>
+      <% end %>
       <div class="fact">
         <dt>Who</dt>
         <dd><%= audit_actor(@row) %></dd>

@@ -1,7 +1,8 @@
 <tr class="audit-row">
   <td class="audit-when">
-    <time datetime="<%= row.at.iso8601 %>">
-      <%= row.at.strftime("%-d %b") %> <span class="audit-clock"><%= row.at.strftime("%H:%M") %></span>
+    <% at = row.at.in_time_zone %>
+    <time datetime="<%= at.iso8601 %>" title="<%= row.at.utc.strftime("%-d %b %Y %H:%M:%S UTC") %>">
+      <%= at.strftime("%-d %b") %> <span class="audit-clock"><%= at.strftime("%H:%M") %></span>
     </time>
   </td>
 
