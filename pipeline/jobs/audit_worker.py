@@ -9,6 +9,7 @@ from ingest.access_logs_pull import run as walk_access_logs
 from ingest.audit_logs_pull import backfill_logins, backfill_next, unknown_backfill_sets
 from ingest.audit_logs_pull import tail as walk_tail
 from ingest.ip_cohorts import run as refresh_cohorts
+from ingest.ip_networks import run as classify_networks
 from ingest.member_links import run as refresh_links
 from ingest.useragent_reparse import run as reread_agents
 from lib.db import (
@@ -33,6 +34,7 @@ DEFAULT_ACCESS_SECONDS = 60
 DEFAULT_ACCESS_BACKFILL_SECONDS = 60
 DEFAULT_LOGIN_BACKFILL_SECONDS = 60
 DEFAULT_COHORT_SECONDS = 900
+DEFAULT_NETWORK_SECONDS = 900
 DEFAULT_LINK_SECONDS = 1800
 DEFAULT_AGENT_SECONDS = 3600
 JOIN_TIMEOUT = 10
@@ -78,6 +80,7 @@ LANES = (
     ("login_backfill", backfill_logins, "AUDIT_LOGIN_BACKFILL_SECONDS",
      DEFAULT_LOGIN_BACKFILL_SECONDS, True),
     ("cohorts", refresh_cohorts, "AUDIT_COHORT_SECONDS", DEFAULT_COHORT_SECONDS, False),
+    ("networks", classify_networks, "AUDIT_NETWORK_SECONDS", DEFAULT_NETWORK_SECONDS, True),
     ("links", refresh_links, "AUDIT_LINK_SECONDS", DEFAULT_LINK_SECONDS, False),
     ("agents", reread_agents, "AUDIT_AGENT_SECONDS", DEFAULT_AGENT_SECONDS, True),
 )

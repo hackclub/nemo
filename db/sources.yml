@@ -365,6 +365,20 @@ sources:
     writes: [fd.login_event]
     feeds: []
 
+  ip_networks:
+    standalone: true
+    label: Network and class for every address prefix, from lists_vpn and IPinfo Lite
+    endpoint: none
+    documented: true
+    credential: none
+    cadence: live
+    window: every prefix we hold
+    guard: none
+    resume: none
+    retention: replace
+    writes: [fd.ip_network]
+    feeds: []
+
   ip_cohorts:
     standalone: true
     label: Members per IP address, to discount shared addresses

@@ -6,6 +6,17 @@ shared_networks:
 staff_domains:
   - hackclub.com
 
+network_classes:
+  vpn:
+    names: [Proton AG, M247, Datacamp, WorldStream, tzulo, Clouvider, Cloudflare]
+    asns: [36183, 54113]
+  hosting:
+    names: []
+    asns: []
+  rotating:
+    names: [Reliance Jio, Bharti Airtel, T-Mobile, Verizon Wireless]
+    asns: []
+
 signals:
   ip_exact:
     label: Signed in from the same address
