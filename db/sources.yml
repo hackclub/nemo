@@ -401,7 +401,7 @@ sources:
     guard: none
     resume: none
     retention: n/a
-    writes: [raw]
+    writes: [raw, ingest.work_item]
     feeds: []
 
   dbt:

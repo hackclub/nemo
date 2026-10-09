@@ -80,3 +80,53 @@ def test_a_dry_run_counts_but_never_deletes():
     assert gone == 12
     assert len(conn.executed) == 1
     assert conn.committed is False
+
+
+def finished(table):
+    return dict(prune.FINISHED)[table]
+
+
+def test_only_complete_work_is_pruned_so_a_given_up_target_is_not_queued_again():
+    where = finished("ingest.work_item")
+    assert "state = 'complete'" in where
+    assert "coalesce(settled_at, updated_at) < now() - make_interval(days => %(days)s)" in where
+    assert prune.FINISHED_DAYS == 90
+
+
+def test_a_run_still_going_and_the_newest_run_of_each_source_are_kept():
+    where = finished("raw.ingest_run")
+    assert "status <> 'running'" in where
+    assert "id NOT IN" in where and "parent_run_id NOT IN" in where
+    newest = prune.NEWEST_RUNS
+    assert "DISTINCT ON (source) id FROM raw.ingest_run ORDER BY source, started_at DESC" in newest
+    assert "DISTINCT ON (source_key) id FROM raw.ingest_run WHERE source_key IS NOT NULL AND status = 'ok'" in newest
+
+
+def test_step_output_goes_only_once_its_run_is_gone():
+    assert ("NOT EXISTS (SELECT 1 FROM raw.ingest_run r WHERE r.id = ingest_step_output.parent_run_id)"
+            in finished("raw.ingest_step_output"))
+
+
+def test_runs_are_pruned_before_the_step_output_that_hangs_off_them():
+    tables = [table for table, _ in prune.FINISHED]
+    assert tables.index("raw.ingest_run") < tables.index("raw.ingest_step_output")
+
+
+class Finished(Recorder):
+    rowcount = 5
+
+
+def test_a_dry_run_of_finished_rows_counts_and_never_deletes():
+    conn = Finished(doomed=3)
+    assert prune.sweep_finished(conn, "ingest.work_item", finished("ingest.work_item"), dry_run=True) == 3
+    sql, params = conn.executed[0]
+    assert sql.startswith("SELECT count(*) FROM ingest.work_item WHERE")
+    assert params == {"days": 90}
+    assert conn.committed is False
+
+
+def test_finished_rows_are_deleted_and_committed():
+    conn = Finished()
+    assert prune.sweep_finished(conn, "ingest.work_item", finished("ingest.work_item")) == 5
+    assert conn.executed[0][0].startswith("DELETE FROM ingest.work_item WHERE")
+    assert conn.committed is True

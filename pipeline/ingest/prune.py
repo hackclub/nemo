@@ -20,6 +20,38 @@ COUNT_SQL = "SELECT count(*) FROM {table} WHERE {column} < now() - make_interval
 DELETE_SQL = "DELETE FROM {table} WHERE {column} < now() - make_interval(days => %s){scope}"
 SCOPE = " AND source = %s"
 
+FINISHED_DAYS = 90
+
+NEWEST_RUNS = """
+    (SELECT DISTINCT ON (source) id FROM raw.ingest_run ORDER BY source, started_at DESC)
+    UNION
+    (SELECT DISTINCT ON (source) id FROM raw.ingest_run WHERE status = 'ok'
+     ORDER BY source, finished_at DESC NULLS LAST)
+    UNION
+    (SELECT DISTINCT ON (source_key) id FROM raw.ingest_run WHERE source_key IS NOT NULL
+     ORDER BY source_key, started_at DESC)
+    UNION
+    (SELECT DISTINCT ON (source_key) id FROM raw.ingest_run WHERE source_key IS NOT NULL AND status = 'ok'
+     ORDER BY source_key, finished_at DESC NULLS LAST)
+"""
+
+FINISHED = (
+    ("ingest.work_item", """
+        state = 'complete'
+        AND coalesce(settled_at, updated_at) < now() - make_interval(days => %(days)s)
+    """),
+    ("raw.ingest_run", f"""
+        status <> 'running'
+        AND started_at < now() - make_interval(days => %(days)s)
+        AND id NOT IN ({NEWEST_RUNS})
+        AND (parent_run_id IS NULL OR parent_run_id NOT IN ({NEWEST_RUNS}))
+    """),
+    ("raw.ingest_step_output", """
+        created_at < now() - make_interval(days => %(days)s)
+        AND NOT EXISTS (SELECT 1 FROM raw.ingest_run r WHERE r.id = ingest_step_output.parent_run_id)
+    """),
+)
+
 
 def stamp_of(key):
     return sources.runs_as(key)[0].split(":")[0]
@@ -55,23 +87,34 @@ def sweep(conn, key, table, column, days, stamp=None, dry_run=False):
     return doomed
 
 
+def sweep_finished(conn, table, where, days=FINISHED_DAYS, dry_run=False):
+    verb = "SELECT count(*) FROM" if dry_run else "DELETE FROM"
+    with conn.cursor() as cur:
+        cur.execute(f"{verb} {table} WHERE {where}", {"days": days})
+        gone = cur.fetchone()[0] if dry_run else cur.rowcount
+    if not dry_run:
+        conn.commit()
+    return gone
+
+
 def run(conn, dry_run=False):
     asked = windows(conn)
-    if not asked:
-        with ingest_run(conn, SOURCE):
-            print(f"{SOURCE}: no retention window is set, so nothing is deleted")
-        return 0
-
+    word = "would drop" if dry_run else "dropped"
     with ingest_run(conn, SOURCE) as counts:
         dropped = 0
         for key, table, column, days, stamp in asked:
             gone = sweep(conn, key, table, column, days, stamp, dry_run)
             dropped += gone
-            word = "would drop" if dry_run else "dropped"
             scope = f" where source = {stamp}" if stamp else ""
             print(f"{SOURCE}: {table} keeps {days} days by {column}{scope}, {word} {gone} rows ({key})")
+        if not asked:
+            print(f"{SOURCE}: no retention window is set, so no ingested rows are deleted")
+        for table, where in FINISHED:
+            gone = sweep_finished(conn, table, where, dry_run=dry_run)
+            dropped += gone
+            print(f"{SOURCE}: {table} keeps {FINISHED_DAYS} days of finished rows, {word} {gone} rows")
         counts.rows_in = dropped
-    print(f"{SOURCE}: {dropped} rows past their window across {len(asked)} table(s)")
+    print(f"{SOURCE}: {dropped} rows past their window across {len(asked) + len(FINISHED)} table(s)")
     return dropped
 
 
