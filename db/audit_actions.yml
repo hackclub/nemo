@@ -1,0 +1,759 @@
+categories:
+  sign_ins: Sign-ins and security
+  people: People
+  channels: Channels
+  messages_and_files: Messages and files
+  canvases_and_lists: Canvases and lists
+  apps_and_ai: Apps and AI tools
+  admin_and_roles: Admin and roles
+  huddles: Huddles
+
+actions:
+  user_login:
+    category: sign_ins
+    label: Signed in
+    sentence: "{actor} signed in"
+  user_login_failed:
+    category: sign_ins
+    label: Failed to sign in
+    sentence: "{actor} failed to sign in"
+  user_logout:
+    category: sign_ins
+    label: Signed out
+    sentence: "{actor} signed out"
+  anomaly:
+    category: sign_ins
+    label: Unusual activity
+    sentence: "Slack flagged unusual activity from {actor}"
+  user_session_invalidated:
+    category: sign_ins
+    label: Session ended
+    sentence: "Slack ended a session for {actor}"
+  user_session_reset_by_admin:
+    category: sign_ins
+    label: Sessions reset by an admin
+    sentence: "{actor} reset the sessions of {entity}"
+  user_sessions_reset_by_anomaly_event_response:
+    category: sign_ins
+    label: Sessions reset after unusual activity
+    sentence: "Slack reset the sessions of {entity} after unusual activity"
+  bulk_session_reset_by_admin:
+    category: sign_ins
+    label: Sessions reset in bulk
+    sentence: "{actor} reset sessions in bulk"
+  cli_login:
+    category: sign_ins
+    label: Signed in from the Slack CLI
+    sentence: "{actor} signed in from the Slack CLI"
+  user_password_reset_requested:
+    category: sign_ins
+    label: Password reset requested
+    sentence: "{actor} asked for a password reset"
+  user_created:
+    category: people
+    label: Account created
+    sentence: "{actor} created the account {entity}"
+  user_joined_workspace:
+    category: people
+    label: Joined the workspace
+    sentence: "{actor} joined the workspace"
+  guest_joined_workspace:
+    category: people
+    label: Guest joined the workspace
+    sentence: "{actor} joined the workspace as a guest"
+  guest_created:
+    category: people
+    label: Guest account created
+    sentence: "{actor} created the guest account {entity}"
+  user_deactivated:
+    category: people
+    label: Account deactivated
+    sentence: "{actor} deactivated {entity}"
+  user_reactivated:
+    category: people
+    label: Account reactivated
+    sentence: "{actor} reactivated {entity}"
+  guest_deactivated:
+    category: people
+    label: Guest deactivated
+    sentence: "{actor} deactivated the guest {entity}"
+  guest_reactivated:
+    category: people
+    label: Guest reactivated
+    sentence: "{actor} reactivated the guest {entity}"
+  user_profile_updated:
+    category: people
+    label: Profile updated
+    sentence: "{actor} updated the profile of {entity}"
+  user_profile_deleted:
+    category: people
+    label: Profile deleted
+    sentence: "{actor} deleted the profile of {entity}"
+  user_username_updated:
+    category: people
+    label: Username changed
+    sentence: "{actor} changed the username of {entity}"
+  user_email_updated:
+    category: people
+    label: Email address changed
+    sentence: "{actor} changed the email address of {entity}"
+  email_change_created:
+    category: people
+    label: Email change requested
+    sentence: "{actor} asked to change an email address"
+  email_change_confirmed:
+    category: people
+    label: Email change confirmed
+    sentence: "{actor} confirmed an email address change"
+  custom_tos_accepted:
+    category: people
+    label: Workspace terms accepted
+    sentence: "{actor} accepted the workspace terms"
+  custom_tos_link_clicked:
+    category: people
+    label: Workspace terms opened
+    sentence: "{actor} opened the workspace terms"
+  user_added_reminder:
+    category: people
+    label: Reminder added
+    sentence: "{actor} added a reminder"
+  public_channel_preview:
+    category: channels
+    label: Previewed a channel
+    sentence: "{actor} previewed {entity}"
+  user_channel_join:
+    category: channels
+    label: Joined a channel
+    sentence: "{actor} joined {entity}"
+  user_channel_leave:
+    category: channels
+    label: Left a channel
+    sentence: "{actor} left {entity}"
+  guest_channel_join:
+    category: channels
+    label: Guest joined a channel
+    sentence: "{actor} joined {entity} as a guest"
+  guest_channel_leave:
+    category: channels
+    label: Guest left a channel
+    sentence: "{actor} left {entity} as a guest"
+  public_channel_created:
+    category: channels
+    label: Channel created
+    sentence: "{actor} created {entity}"
+  private_channel_created:
+    category: channels
+    label: Private channel created
+    sentence: "{actor} created the private channel {entity}"
+  channel_renamed:
+    category: channels
+    label: Channel renamed
+    sentence: "{actor} renamed {entity}"
+  public_channel_archive:
+    category: channels
+    label: Channel archived
+    sentence: "{actor} archived {entity}"
+  private_channel_archive:
+    category: channels
+    label: Private channel archived
+    sentence: "{actor} archived the private channel {entity}"
+  record_channel_archive:
+    category: channels
+    label: Channel archived for records
+    sentence: "{actor} archived {entity} for records"
+  public_channel_unarchive:
+    category: channels
+    label: Channel unarchived
+    sentence: "{actor} unarchived {entity}"
+  private_channel_unarchive:
+    category: channels
+    label: Private channel unarchived
+    sentence: "{actor} unarchived the private channel {entity}"
+  public_channel_deleted:
+    category: channels
+    label: Channel deleted
+    sentence: "{actor} deleted {entity}"
+  private_channel_deleted:
+    category: channels
+    label: Private channel deleted
+    sentence: "{actor} deleted the private channel {entity}"
+  public_channel_converted_to_private:
+    category: channels
+    label: Channel made private
+    sentence: "{actor} made {entity} private"
+  private_channel_converted_to_public:
+    category: channels
+    label: Channel made public
+    sentence: "{actor} made {entity} public"
+  mpim_converted_to_private:
+    category: channels
+    label: Group message made a channel
+    sentence: "{actor} turned a group message into the private channel {entity}"
+  dm_user_added:
+    category: channels
+    label: Added to a group message
+    sentence: "{actor} added someone to a group message"
+  channel_tab_added:
+    category: channels
+    label: Channel tab added
+    sentence: "{actor} added a tab to {entity}"
+  channel_tab_removed:
+    category: channels
+    label: Channel tab removed
+    sentence: "{actor} removed a tab from {entity}"
+  channel_posting_permissions_updated:
+    category: channels
+    label: Posting permissions changed
+    sentence: "{actor} changed who can post in {entity}"
+  channel_retention_changed:
+    category: channels
+    label: Message retention changed
+    sentence: "{actor} changed message retention in {entity}"
+  channel_email_address_created:
+    category: channels
+    label: Channel email address created
+    sentence: "{actor} created an email address for {entity}"
+  channel_email_address_deleted:
+    category: channels
+    label: Channel email address deleted
+    sentence: "{actor} deleted the email address of {entity}"
+  channel_restrict_guests_updated:
+    category: channels
+    label: Guest access changed
+    sentence: "{actor} changed guest access in {entity}"
+  channel_restrict_message_and_file_sharing_updated:
+    category: channels
+    label: Sharing limits changed
+    sentence: "{actor} changed sharing limits in {entity}"
+  channel_exclude_from_slack_ai_updated:
+    category: channels
+    label: Slack AI access changed
+    sentence: "{actor} changed Slack AI access to {entity}"
+  external_shared_channel_invite_approved:
+    category: channels
+    label: Shared channel invite approved
+    sentence: "{actor} approved a shared channel invite for {entity}"
+  external_shared_channel_invite_accepted:
+    category: channels
+    label: Shared channel invite accepted
+    sentence: "{actor} accepted a shared channel invite for {entity}"
+  external_shared_channel_connected:
+    category: channels
+    label: Shared channel connected
+    sentence: "{actor} connected {entity} to another organization"
+  file_downloaded:
+    category: messages_and_files
+    label: Downloaded a file
+    sentence: "{actor} downloaded {entity}"
+  file_uploaded:
+    category: messages_and_files
+    label: Uploaded a file
+    sentence: "{actor} uploaded {entity}"
+  file_shared:
+    category: messages_and_files
+    label: Shared a file
+    sentence: "{actor} shared {entity}"
+  file_deleted:
+    category: messages_and_files
+    label: Deleted a file
+    sentence: "{actor} deleted {entity}"
+  file_public_link_created:
+    category: messages_and_files
+    label: Public file link created
+    sentence: "{actor} created a public link to {entity}"
+  file_public_link_revoked:
+    category: messages_and_files
+    label: Public file link revoked
+    sentence: "{actor} revoked the public link to {entity}"
+  file_malicious_content_detected:
+    category: messages_and_files
+    label: Malicious file detected
+    sentence: "Slack found malicious content in {entity}"
+  private_message_forwarded:
+    category: messages_and_files
+    label: Forwarded a private message
+    sentence: "{actor} forwarded a private message"
+  message_activity_viewed:
+    category: messages_and_files
+    label: Viewed message activity
+    sentence: "{actor} viewed the activity on a message"
+  thread_replies_disabled:
+    category: messages_and_files
+    label: Thread replies turned off
+    sentence: "{actor} turned off replies to a thread"
+  thread_replies_enabled:
+    category: messages_and_files
+    label: Thread replies turned on
+    sentence: "{actor} turned on replies to a thread"
+  thread_hidden:
+    category: messages_and_files
+    label: Thread hidden
+    sentence: "{actor} hid a thread"
+  emoji_added:
+    category: messages_and_files
+    label: Emoji added
+    sentence: "{actor} added an emoji"
+  emoji_removed:
+    category: messages_and_files
+    label: Emoji removed
+    sentence: "{actor} removed an emoji"
+  emoji_aliased:
+    category: messages_and_files
+    label: Emoji alias added
+    sentence: "{actor} added an emoji alias"
+  canvas_opened:
+    category: canvases_and_lists
+    label: Opened a canvas
+    sentence: "{actor} opened {entity}"
+  canvas_edited:
+    category: canvases_and_lists
+    label: Edited a canvas
+    sentence: "{actor} edited {entity}"
+  canvas_created:
+    category: canvases_and_lists
+    label: Created a canvas
+    sentence: "{actor} created {entity}"
+  canvas_deleted:
+    category: canvases_and_lists
+    label: Deleted a canvas
+    sentence: "{actor} deleted {entity}"
+  canvas_shared:
+    category: canvases_and_lists
+    label: Shared a canvas
+    sentence: "{actor} shared {entity}"
+  canvas_unshared:
+    category: canvases_and_lists
+    label: Stopped sharing a canvas
+    sentence: "{actor} stopped sharing {entity}"
+  canvas_downloaded:
+    category: canvases_and_lists
+    label: Downloaded a canvas
+    sentence: "{actor} downloaded {entity}"
+  canvas_access_added:
+    category: canvases_and_lists
+    label: Canvas access given
+    sentence: "{actor} gave access to {entity}"
+  canvas_access_revoked:
+    category: canvases_and_lists
+    label: Canvas access removed
+    sentence: "{actor} removed access to {entity}"
+  canvas_access_upgraded:
+    category: canvases_and_lists
+    label: Canvas access raised
+    sentence: "{actor} raised access to {entity}"
+  canvas_access_downgraded:
+    category: canvases_and_lists
+    label: Canvas access lowered
+    sentence: "{actor} lowered access to {entity}"
+  canvas_linksharing_enabled:
+    category: canvases_and_lists
+    label: Canvas link sharing turned on
+    sentence: "{actor} turned on link sharing for {entity}"
+  canvas_linksharing_disabled:
+    category: canvases_and_lists
+    label: Canvas link sharing turned off
+    sentence: "{actor} turned off link sharing for {entity}"
+  canvas_template_used:
+    category: canvases_and_lists
+    label: Canvas made from a template
+    sentence: "{actor} made {entity} from a template"
+  canvas_slack_ai_exclusion_enabled:
+    category: canvases_and_lists
+    label: Canvas kept from Slack AI
+    sentence: "{actor} kept {entity} from Slack AI"
+  list_opened:
+    category: canvases_and_lists
+    label: Opened a list
+    sentence: "{actor} opened {entity}"
+  list_created:
+    category: canvases_and_lists
+    label: Created a list
+    sentence: "{actor} created {entity}"
+  list_deleted:
+    category: canvases_and_lists
+    label: Deleted a list
+    sentence: "{actor} deleted {entity}"
+  list_shared:
+    category: canvases_and_lists
+    label: Shared a list
+    sentence: "{actor} shared {entity}"
+  list_downloaded:
+    category: canvases_and_lists
+    label: Downloaded a list
+    sentence: "{actor} downloaded {entity}"
+  list_access_added:
+    category: canvases_and_lists
+    label: List access given
+    sentence: "{actor} gave access to {entity}"
+  list_access_revoked:
+    category: canvases_and_lists
+    label: List access removed
+    sentence: "{actor} removed access to {entity}"
+  list_cell_updated:
+    category: canvases_and_lists
+    label: Edited a list cell
+    sentence: "{actor} edited a cell in {entity}"
+  list_row_created:
+    category: canvases_and_lists
+    label: Added a list row
+    sentence: "{actor} added a row to {entity}"
+  list_row_updated:
+    category: canvases_and_lists
+    label: Edited a list row
+    sentence: "{actor} edited a row in {entity}"
+  list_row_deleted:
+    category: canvases_and_lists
+    label: Deleted a list row
+    sentence: "{actor} deleted a row from {entity}"
+  list_rows_deleted:
+    category: canvases_and_lists
+    label: Deleted list rows
+    sentence: "{actor} deleted rows from {entity}"
+  list_rows_archived:
+    category: canvases_and_lists
+    label: Archived list rows
+    sentence: "{actor} archived rows in {entity}"
+  list_column_created:
+    category: canvases_and_lists
+    label: Added a list column
+    sentence: "{actor} added a column to {entity}"
+  list_column_updated:
+    category: canvases_and_lists
+    label: Edited a list column
+    sentence: "{actor} edited a column in {entity}"
+  list_column_deleted:
+    category: canvases_and_lists
+    label: Deleted a list column
+    sentence: "{actor} deleted a column from {entity}"
+  list_title_updated:
+    category: canvases_and_lists
+    label: Renamed a list
+    sentence: "{actor} renamed {entity}"
+  list_description_updated:
+    category: canvases_and_lists
+    label: Edited a list description
+    sentence: "{actor} edited the description of {entity}"
+  list_view_created:
+    category: canvases_and_lists
+    label: Added a list view
+    sentence: "{actor} added a view to {entity}"
+  list_view_updated:
+    category: canvases_and_lists
+    label: Edited a list view
+    sentence: "{actor} edited a view of {entity}"
+  list_default_view_updated:
+    category: canvases_and_lists
+    label: Changed a list's default view
+    sentence: "{actor} changed the default view of {entity}"
+  list_todo_mode_updated:
+    category: canvases_and_lists
+    label: Changed a list's to-do mode
+    sentence: "{actor} changed the to-do mode of {entity}"
+  app_installed:
+    category: apps_and_ai
+    label: App installed
+    sentence: "{actor} installed {entity}"
+  app_uninstalled:
+    category: apps_and_ai
+    label: App uninstalled
+    sentence: "{actor} uninstalled {entity}"
+  app_approved:
+    category: apps_and_ai
+    label: App approved
+    sentence: "{actor} approved {entity}"
+  app_restricted:
+    category: apps_and_ai
+    label: App restricted
+    sentence: "{actor} restricted {entity}"
+  app_deleted:
+    category: apps_and_ai
+    label: App deleted
+    sentence: "{actor} deleted {entity}"
+  app_scopes_expanded:
+    category: apps_and_ai
+    label: App permissions widened
+    sentence: "{actor} gave {entity} more permissions"
+  app_manifest_created:
+    category: apps_and_ai
+    label: App created
+    sentence: "{actor} created {entity}"
+  app_manifest_updated:
+    category: apps_and_ai
+    label: App manifest changed
+    sentence: "{actor} changed the manifest of {entity}"
+  app_collaborator_added:
+    category: apps_and_ai
+    label: App collaborator added
+    sentence: "{actor} added a collaborator to {entity}"
+  app_collaborator_removed:
+    category: apps_and_ai
+    label: App collaborator removed
+    sentence: "{actor} removed a collaborator from {entity}"
+  app_token_preserved:
+    category: apps_and_ai
+    label: App token kept
+    sentence: "{actor} kept the token of {entity}"
+  app_removed_from_whitelist:
+    category: apps_and_ai
+    label: App removed from the approved list
+    sentence: "{actor} removed {entity} from the approved apps"
+  app_allowlist_rule_matched:
+    category: apps_and_ai
+    label: App approval rule matched
+    sentence: "An app approval rule matched {entity}"
+  app_allowlist_scopes_rating_updated:
+    category: apps_and_ai
+    label: App permission ratings changed
+    sentence: "{actor} changed the app permission ratings"
+  app_allowlist_rule_created:
+    category: apps_and_ai
+    label: App approval rule created
+    sentence: "{actor} created an app approval rule"
+  app_allowlist_rule_updated:
+    category: apps_and_ai
+    label: App approval rule changed
+    sentence: "{actor} changed an app approval rule"
+  app_allowlist_rule_deleted:
+    category: apps_and_ai
+    label: App approval rule deleted
+    sentence: "{actor} deleted an app approval rule"
+  app_allowlist_rule_activated:
+    category: apps_and_ai
+    label: App approval rule turned on
+    sentence: "{actor} turned on an app approval rule"
+  app_allowlist_rule_deactivated:
+    category: apps_and_ai
+    label: App approval rule turned off
+    sentence: "{actor} turned off an app approval rule"
+  app_allowlist_rule_reordered:
+    category: apps_and_ai
+    label: App approval rules reordered
+    sentence: "{actor} reordered the app approval rules"
+  child_app_manifest_created:
+    category: apps_and_ai
+    label: Child app created
+    sentence: "{actor} created the child app {entity}"
+  child_app_manifest_updated:
+    category: apps_and_ai
+    label: Child app manifest changed
+    sentence: "{actor} changed the manifest of the child app {entity}"
+  child_app_auto_install_denied:
+    category: apps_and_ai
+    label: Child app install denied
+    sentence: "Slack denied installing the child app {entity}"
+  org_app_workspace_added:
+    category: apps_and_ai
+    label: Org app added to a workspace
+    sentence: "{actor} added {entity} to a workspace"
+  org_app_workspace_removed:
+    category: apps_and_ai
+    label: Org app removed from a workspace
+    sentence: "{actor} removed {entity} from a workspace"
+  slack_ai_agent_stream_stopped:
+    category: apps_and_ai
+    label: Slack AI response stopped
+    sentence: "{actor} stopped a Slack AI response"
+  mcp_slack_search_public_tool_called:
+    category: apps_and_ai
+    label: AI tool searched public messages
+    sentence: "{actor} searched public messages through an AI tool"
+  mcp_slack_search_public_and_private_tool_called:
+    category: apps_and_ai
+    label: AI tool searched public and private messages
+    sentence: "{actor} searched public and private messages through an AI tool"
+  mcp_slack_search_channels_tool_called:
+    category: apps_and_ai
+    label: AI tool searched channels
+    sentence: "{actor} searched channels through an AI tool"
+  mcp_slack_search_users_tool_called:
+    category: apps_and_ai
+    label: AI tool searched people
+    sentence: "{actor} searched people through an AI tool"
+  mcp_slack_search_emojis_tool_called:
+    category: apps_and_ai
+    label: AI tool searched emoji
+    sentence: "{actor} searched emoji through an AI tool"
+  mcp_slack_read_thread_tool_called:
+    category: apps_and_ai
+    label: AI tool read a thread
+    sentence: "{actor} read a thread through an AI tool"
+  mcp_slack_read_channel_tool_called:
+    category: apps_and_ai
+    label: AI tool read a channel
+    sentence: "{actor} read a channel through an AI tool"
+  mcp_slack_read_user_profile_tool_called:
+    category: apps_and_ai
+    label: AI tool read a profile
+    sentence: "{actor} read a profile through an AI tool"
+  mcp_slack_read_file_tool_called:
+    category: apps_and_ai
+    label: AI tool read a file
+    sentence: "{actor} read a file through an AI tool"
+  mcp_slack_read_canvas_tool_called:
+    category: apps_and_ai
+    label: AI tool read a canvas
+    sentence: "{actor} read a canvas through an AI tool"
+  mcp_slack_read_list_tool_called:
+    category: apps_and_ai
+    label: AI tool read a list
+    sentence: "{actor} read a list through an AI tool"
+  mcp_slack_get_reactions_tool_called:
+    category: apps_and_ai
+    label: AI tool read reactions
+    sentence: "{actor} read reactions through an AI tool"
+  mcp_slack_list_user_channels_tool_called:
+    category: apps_and_ai
+    label: AI tool listed a member's channels
+    sentence: "{actor} listed a member's channels through an AI tool"
+  mcp_slack_list_channel_members_tool_called:
+    category: apps_and_ai
+    label: AI tool listed channel members
+    sentence: "{actor} listed channel members through an AI tool"
+  mcp_slack_send_message_tool_called:
+    category: apps_and_ai
+    label: AI tool sent a message
+    sentence: "{actor} sent a message through an AI tool"
+  mcp_slack_send_message_draft_tool_called:
+    category: apps_and_ai
+    label: AI tool drafted a message
+    sentence: "{actor} drafted a message through an AI tool"
+  mcp_slack_add_reaction_tool_called:
+    category: apps_and_ai
+    label: AI tool added a reaction
+    sentence: "{actor} added a reaction through an AI tool"
+  mcp_slack_get_file_upload_url_tool_called:
+    category: apps_and_ai
+    label: AI tool started a file upload
+    sentence: "{actor} started a file upload through an AI tool"
+  mcp_slack_complete_file_upload_tool_called:
+    category: apps_and_ai
+    label: AI tool finished a file upload
+    sentence: "{actor} finished a file upload through an AI tool"
+  mcp_slack_update_canvas_tool_called:
+    category: apps_and_ai
+    label: AI tool edited a canvas
+    sentence: "{actor} edited a canvas through an AI tool"
+  mcp_slack_create_list_tool_called:
+    category: apps_and_ai
+    label: AI tool created a list
+    sentence: "{actor} created a list through an AI tool"
+  mcp_slack_add_list_record_tool_called:
+    category: apps_and_ai
+    label: AI tool added a list row
+    sentence: "{actor} added a list row through an AI tool"
+  mcp_slack_update_list_record_tool_called:
+    category: apps_and_ai
+    label: AI tool edited a list row
+    sentence: "{actor} edited a list row through an AI tool"
+  mcp_slack_create_conversation_tool_called:
+    category: apps_and_ai
+    label: AI tool started a conversation
+    sentence: "{actor} started a conversation through an AI tool"
+  role_assigned:
+    category: admin_and_roles
+    label: Role assigned
+    sentence: "{actor} assigned a role"
+  role_removed:
+    category: admin_and_roles
+    label: Role removed
+    sentence: "{actor} removed a role"
+  role_created:
+    category: admin_and_roles
+    label: Role created
+    sentence: "{actor} created a role"
+  role_updated:
+    category: admin_and_roles
+    label: Role changed
+    sentence: "{actor} changed a role"
+  role_change_to_user:
+    category: admin_and_roles
+    label: Changed to a regular member
+    sentence: "{actor} changed {entity} to a regular member"
+  permissions_assigned:
+    category: admin_and_roles
+    label: Permissions assigned
+    sentence: "{actor} assigned permissions"
+  permissions_removed:
+    category: admin_and_roles
+    label: Permissions removed
+    sentence: "{actor} removed permissions"
+  user_added_to_usergroup:
+    category: admin_and_roles
+    label: Added to a user group
+    sentence: "{actor} added a member to {entity}"
+  user_removed_from_usergroup:
+    category: admin_and_roles
+    label: Removed from a user group
+    sentence: "{actor} removed a member from {entity}"
+  usergroup_section_updated:
+    category: admin_and_roles
+    label: User group section changed
+    sentence: "{actor} changed a section of {entity}"
+  default_channel_added_to_usergroup:
+    category: admin_and_roles
+    label: Default channel added to a user group
+    sentence: "{actor} added a default channel to {entity}"
+  default_channel_removed_from_usergroup:
+    category: admin_and_roles
+    label: Default channel removed from a user group
+    sentence: "{actor} removed a default channel from {entity}"
+  audit_logs_records_searched:
+    category: admin_and_roles
+    label: Searched the audit logs
+    sentence: "{actor} searched the audit logs"
+  audit_logs_records_searched_anomaly:
+    category: admin_and_roles
+    label: Searched the audit logs for unusual activity
+    sentence: "{actor} searched the audit logs for unusual activity"
+  audit_logs_export_json_started:
+    category: admin_and_roles
+    label: Exported the audit logs
+    sentence: "{actor} started an audit log export"
+  pref.display_email_addresses:
+    category: admin_and_roles
+    label: Email visibility changed
+    sentence: "{actor} changed who can see email addresses"
+  pref.app_whitelist_enabled:
+    category: admin_and_roles
+    label: App approval turned on
+    sentence: "{actor} turned on app approval"
+  pref.sign_in_with_slack_disabled:
+    category: admin_and_roles
+    label: Sign in with Slack turned off
+    sentence: "{actor} turned off Sign in with Slack"
+  huddle_started:
+    category: huddles
+    label: Huddle started
+    sentence: "{actor} started a huddle"
+  huddle_ended:
+    category: huddles
+    label: Huddle ended
+    sentence: "{actor} ended a huddle"
+  huddle_participant_joined:
+    category: huddles
+    label: Joined a huddle
+    sentence: "{actor} joined a huddle"
+  huddle_participant_left:
+    category: huddles
+    label: Left a huddle
+    sentence: "{actor} left a huddle"
+  huddle_participant_dropped:
+    category: huddles
+    label: Dropped from a huddle
+    sentence: "{actor} dropped from a huddle"
+  huddle_screenshare_on:
+    category: huddles
+    label: Screen sharing started
+    sentence: "{actor} started sharing their screen in a huddle"
+  huddle_screenshare_off:
+    category: huddles
+    label: Screen sharing stopped
+    sentence: "{actor} stopped sharing their screen in a huddle"
+  huddle_knock_accepted:
+    category: huddles
+    label: Let someone into a huddle
+    sentence: "{actor} let someone into a huddle"
+  huddle_transcription_start_notification:
+    category: huddles
+    label: Huddle transcription started
+    sentence: "{actor} started transcribing a huddle"

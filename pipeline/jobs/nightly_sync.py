@@ -43,6 +43,7 @@ from lib.db import (
     worker,
 )
 from checks import archive as archive_check
+from checks import audit_actions as audit_actions_check
 from checks import metrics
 from checks import roles as roles_check
 from checks import shards as shards_check
@@ -492,6 +493,7 @@ def record_quality(conn, run_id):
         ("archive", lambda: archive_check.record(conn, run_id)),
         ("roles", lambda: roles_check.record(conn, run_id)),
         ("shards", lambda: shards_check.record(conn, run_id)),
+        ("audit_actions", lambda: audit_actions_check.record(conn, run_id)),
     ):
         try:
             job()
