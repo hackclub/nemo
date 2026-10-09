@@ -23,18 +23,21 @@ signals:
     evidence: the same IP address
     weight: 5.0
     crowd_ceiling: 8
+    family: network
 
   ip_prefix:
     label: Signed in from the same network
     evidence: the same /24 or /64
     weight: 3.0
     crowd_ceiling: 20
+    family: network
 
   email_domain:
     label: Share an email domain
     evidence: the domain their address sits on
     weight: 2.0
     crowd_ceiling: 30
+    family: identity
 
   session_agent:
     label: Same app and system
@@ -42,6 +45,7 @@ signals:
     weight: 1.0
     crowd_ceiling: 60
     corroborating: true
+    family: device
 
   joined_together:
     label: Joined within minutes of each other
@@ -49,6 +53,17 @@ signals:
     weight: 1.5
     window_seconds: 300
     crowd_ceiling: 25
+    family: arrival
+
+families:
+  network:
+    cap: 6.0
+  identity:
+    cap: 5.0
+  device:
+    cap: 2.0
+  arrival:
+    cap: 2.0
 
 scoring:
   floor: 3.0
