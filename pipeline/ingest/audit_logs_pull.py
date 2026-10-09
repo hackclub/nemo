@@ -32,6 +32,7 @@ SEATED = frozenset({"user_login", "user_login_failed", "anomaly"})
 
 CHANNEL_ACTIONS = ("user_channel_join", "user_channel_leave")
 WATCHED_ACTIONS = LOGIN_ACTIONS + CHANNEL_ACTIONS
+IDENTITY_ACTIONS = LOGIN_ACTIONS + ("user_deactivated", "user_reactivated", "user_profile_updated")
 JOINED = "joined"
 LEFT = "left"
 ROOMED = {"user_channel_join": JOINED, "user_channel_leave": LEFT}
@@ -407,6 +408,7 @@ BACKFILL_SETS = (
     (WATCHED_ACTIONS, "watched"),
     (LOGIN_ACTIONS, "logins"),
     (CHANNEL_ACTIONS, "channels"),
+    (IDENTITY_ACTIONS, "identity"),
 )
 
 

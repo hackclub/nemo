@@ -215,6 +215,22 @@ def test_the_backfill_walks_the_channel_actions_as_well_as_the_logins():
     assert len(actions) <= pull.MOST_ACTIONS, "slack takes only so many actions in one call"
 
 
+def test_identity_actions_extend_login_actions_with_account_changes():
+    assert pull.IDENTITY_ACTIONS[:len(pull.LOGIN_ACTIONS)] == pull.LOGIN_ACTIONS
+    assert {"user_deactivated", "user_reactivated", "user_profile_updated"} <= set(pull.IDENTITY_ACTIONS)
+    assert len(set(pull.IDENTITY_ACTIONS)) == len(pull.IDENTITY_ACTIONS)
+    assert len(pull.IDENTITY_ACTIONS) <= pull.MOST_ACTIONS
+
+
+def test_identity_backfill_has_its_own_coverage_key():
+    key = pull.source_key_for(pull.IDENTITY_ACTIONS)
+    others = {pull.source_key_for(one) for one in
+              (pull.LOGIN_ACTIONS, pull.CHANNEL_ACTIONS, pull.WATCHED_ACTIONS, None)}
+
+    assert key == f"{pull.BACKFILL}:identity"
+    assert key not in others
+
+
 def test_an_agent_is_read_once_even_when_it_names_no_system():
     from ingest import useragent_reparse
 
