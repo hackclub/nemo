@@ -72,7 +72,7 @@ network_signals:
 
   ip_hourly:
     label: Same mobile, VPN or hosting address in the same hour with the same browser
-    weight: 2.0
+    weight: 3.0
     crowd_ceiling: 4
 
   ip_prefix_stable:
@@ -131,6 +131,11 @@ name_signals:
     weight: 2.0
     crowd_ceiling: 5
     corroborating: true
+
+  handle_stem_long:
+    label: Same long handle, ignoring trailing numbers
+    weight: 4.0
+    crowd_ceiling: 20
 
 arrival_signals:
   created_same_address:

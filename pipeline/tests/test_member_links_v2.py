@@ -190,11 +190,11 @@ def test_mailboxes_fold_aliases_and_leave_out_staff_domains():
 
 def test_names_skip_bots_and_renamed_deactivated_accounts():
     held = v2.signals()
-    for name in ("full_name", "display_name", "handle_stem"):
+    for name in ("full_name", "display_name", "handle_stem", "handle_stem_long"):
         sql, _ = v2.evidence(name, held[name], 2)
         assert "NOT" in sql and "is_bot" in sql
         assert "position('deactivateduser' IN lower(" in sql
-        assert f">= {v2.SHORTEST_NAME}" in sql
+        assert f">= {v2.SHORTEST_NAME}" in sql or f">= {v2.SHORTEST_LONG_STEM}" in sql
 
 
 def test_a_handle_stem_drops_trailing_numbers_and_marks():
@@ -326,3 +326,23 @@ def test_repeated_addresses_earn_a_bonus_for_homes_and_for_exits():
     assert ("ip_many", "ip_stable") in v2.REPEATED
     assert ("ip_shared_exits", "ip_shared_exit") in v2.REPEATED
     assert "WHERE signal = %(single)s" in v2.MANY
+
+
+def test_a_long_shared_handle_stem_links_on_its_own_but_stays_below_strong():
+    held = v2.signals()["handle_stem_long"]
+    sql, args = v2.evidence("handle_stem_long", held, 2)
+
+    assert not held.get("corroborating")
+    assert held["family"] == "name"
+    assert f">= {v2.SHORTEST_LONG_STEM}" in sql and v2.SHORTEST_LONG_STEM >= 8
+    assert args["ceiling"] >= 14
+    assert held["weight"] * 0.8 >= links.scoring()["floor"]
+    assert v2.families()["name"]["cap"] < links.scoring()["strong"]
+
+
+def test_a_short_stem_still_only_backs_other_evidence_up():
+    assert v2.signals()["handle_stem"]["corroborating"] is True
+
+
+def test_a_vpn_or_mobile_address_in_the_same_hour_with_the_same_browser_reaches_the_floor():
+    assert v2.signals()["ip_hourly"]["weight"] >= links.scoring()["floor"]

@@ -13,6 +13,7 @@ NAME = "name"
 ARRIVAL = "arrival"
 SHORTEST_LOCAL = 4
 SHORTEST_NAME = 3
+SHORTEST_LONG_STEM = 8
 DEVICE_AGENT = "device_agent"
 DEVICE_JA4 = "device_ja4"
 SHORTEST_AGENT = 20
@@ -147,6 +148,14 @@ NAME_EVIDENCE = {
         WHERE NOT is_bot AND handle IS NOT NULL
           AND position('deactivateduser' IN lower(handle)) <> 1
           AND length(regexp_replace(lower(handle), '[^a-z]+$', '')) >= {shortest_name}
+    """,
+    "handle_stem_long": """
+        SELECT user_id, regexp_replace(lower(handle), '[^a-z]+$', '') AS value,
+               NULL::timestamptz AS first_seen, NULL::timestamptz AS last_seen
+        FROM fd.member
+        WHERE NOT is_bot AND handle IS NOT NULL
+          AND position('deactivateduser' IN lower(handle)) <> 1
+          AND length(regexp_replace(lower(handle), '[^a-z]+$', '')) >= {longest_stem}
     """,
 }
 
@@ -492,7 +501,8 @@ def evidence(name, settings, sightings):
         return None, None
     pairs = links.PAIRS_SQL.format(
         evidence=source.format(sightings=sightings, shortest=SHORTEST_AGENT,
-                               shortest_local=SHORTEST_LOCAL, shortest_name=SHORTEST_NAME))
+                               shortest_local=SHORTEST_LOCAL, shortest_name=SHORTEST_NAME,
+                               longest_stem=SHORTEST_LONG_STEM))
     return pairs, {"weight": settings["weight"], "ceiling": settings["crowd_ceiling"]}
 
 
