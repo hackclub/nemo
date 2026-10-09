@@ -120,6 +120,28 @@ name_signals:
     weight: 2.0
     crowd_ceiling: 5
 
+arrival_signals:
+  created_same_address:
+    label: Joined within minutes of each other from the same address
+    weight: 3.0
+    crowd_ceiling: 5
+    window_seconds: 1800
+
+  invited_by:
+    label: One account invited the other
+    weight: 2.0
+    crowd_ceiling: 20
+
+  after_ban_address:
+    label: First seen on a deactivated member's home address after the deactivation
+    weight: 3.0
+    crowd_ceiling: 8
+
+  after_ban_device:
+    label: First seen with a deactivated member's device build after the deactivation
+    weight: 2.0
+    crowd_ceiling: 25
+
 against:
   two_countries:
     label: Active from two countries in the same hour, neither on a VPN
@@ -135,7 +157,7 @@ families:
   device:
     cap: 4.0
   arrival:
-    cap: 2.0
+    cap: 4.0
 
 scoring:
   floor: 3.0

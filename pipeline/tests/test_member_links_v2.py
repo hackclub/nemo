@@ -195,3 +195,37 @@ def test_the_harness_and_the_finder_share_one_mailbox_rule():
 
     assert score_links.mailbox is rule.mailbox
     assert v2.mailbox is rule.mailbox
+
+
+def test_arrival_evidence_stays_below_strong_on_its_own():
+    assert v2.families()["arrival"]["cap"] < links.scoring()["strong"]
+    for name in ("created_same_address", "invited_by", "after_ban_address", "after_ban_device"):
+        assert v2.signals()[name]["family"] == "arrival"
+
+
+def test_a_ban_counts_only_while_the_account_stays_deactivated():
+    assert "max(at) FILTER (WHERE action = 'user_reactivated') AS back_at" in v2.BANNED
+    assert "banned_at > coalesce(back_at, '-infinity'::timestamptz)" in v2.BANNED
+
+
+def test_after_a_ban_only_a_first_sighting_counts_and_only_on_a_home_address():
+    sql, _ = v2.evidence("after_ban_address", v2.signals()["after_ban_address"], 2)
+
+    assert "s.class = 'stable' AND s.hour <= h.banned_at" in sql
+    assert "a.first_at > u.banned_at" in sql
+
+
+def test_onboarding_accounts_that_create_everyone_are_not_inviters():
+    sql, args = v2.evidence("invited_by", v2.signals()["invited_by"], 2)
+
+    assert "action = 'user_created'" in sql
+    assert "WHERE c.people <= %(ceiling)s" in sql
+    assert args["ceiling"] == 20
+
+
+def test_joining_together_needs_the_same_address_within_the_window():
+    sql, args = v2.evidence("created_same_address", v2.signals()["created_same_address"], 2)
+
+    assert "JOIN fd.member_joins j" in sql
+    assert "b.ip = a.ip" in sql and "make_interval(secs => %(window)s)" in sql
+    assert args["window"] == 1800

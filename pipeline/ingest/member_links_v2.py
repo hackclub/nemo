@@ -7,6 +7,7 @@ NETWORK = "network"
 DEVICE = "device"
 IDENTITY = "identity"
 NAME = "name"
+ARRIVAL = "arrival"
 SHORTEST_LOCAL = 4
 SHORTEST_NAME = 3
 DEVICE_AGENT = "device_agent"
@@ -128,6 +129,120 @@ NAME_EVIDENCE = {
         WHERE NOT is_bot AND handle IS NOT NULL
           AND position('deactivateduser' IN lower(handle)) <> 1
           AND length(regexp_replace(lower(handle), '[^a-z]+$', '')) >= {shortest_name}
+    """,
+}
+
+BANNED = """
+WITH banned AS (
+    SELECT entity_id AS user_id,
+           max(at) FILTER (WHERE action = 'user_deactivated') AS banned_at,
+           max(at) FILTER (WHERE action = 'user_reactivated') AS back_at
+    FROM slack.audit_event
+    WHERE action IN ('user_deactivated', 'user_reactivated') AND entity_id IS NOT NULL
+    GROUP BY 1
+),
+held AS (
+    SELECT user_id, banned_at FROM banned
+    WHERE banned_at IS NOT NULL AND banned_at > coalesce(back_at, '-infinity'::timestamptz)
+)"""
+
+ARRIVAL_EVIDENCE = {
+    "created_same_address": """
+        WITH ev AS (
+            SELECT e.user_id, e.ip, min(j.joined_at) AS at
+            FROM fd.login_event e
+            JOIN fd.member_joins j ON j.user_id = e.user_id
+            WHERE e.ip IS NOT NULL
+              AND e.at BETWEEN j.joined_at - interval '5 minutes' AND j.joined_at + interval '1 hour'
+            GROUP BY 1, 2
+        ),
+        crowd AS (
+            SELECT ip, count(DISTINCT user_id) AS people FROM ev GROUP BY 1
+        ),
+        keep AS (
+            SELECT ip, people FROM crowd WHERE people BETWEEN 2 AND %(ceiling)s
+        )
+        SELECT least(a.user_id, b.user_id) AS a_user_id,
+               greatest(a.user_id, b.user_id) AS b_user_id,
+               host(a.ip) AS value, k.people, %(weight)s::numeric AS score,
+               least(a.at, b.at) AS first_seen, greatest(a.at, b.at) AS last_seen
+        FROM ev a
+        JOIN keep k ON k.ip = a.ip
+        JOIN ev b ON b.ip = a.ip AND b.user_id > a.user_id
+                 AND b.at BETWEEN a.at - make_interval(secs => %(window)s)
+                              AND a.at + make_interval(secs => %(window)s)
+    """,
+    "invited_by": """
+        WITH invites AS (
+            SELECT actor_id, entity_id, min(at) AS at
+            FROM slack.audit_event
+            WHERE action = 'user_created' AND actor_id IS NOT NULL AND entity_id IS NOT NULL
+              AND actor_id <> entity_id
+            GROUP BY 1, 2
+        ),
+        crowd AS (
+            SELECT actor_id, count(*) AS people FROM invites GROUP BY 1
+        ),
+        whole AS (
+            SELECT greatest(count(*), 2)::numeric AS people FROM invites
+        )
+        SELECT least(i.actor_id, i.entity_id) AS a_user_id,
+               greatest(i.actor_id, i.entity_id) AS b_user_id,
+               i.actor_id AS value, c.people,
+               %(weight)s::numeric * rarity((SELECT people FROM whole), (c.people + 1)::numeric) AS score,
+               i.at AS first_seen, i.at AS last_seen
+        FROM invites i
+        JOIN crowd c ON c.actor_id = i.actor_id
+        WHERE c.people <= %(ceiling)s
+    """,
+    "after_ban_address": BANNED + """,
+        used AS (
+            SELECT DISTINCT s.user_id, s.ip, h.banned_at
+            FROM sighting s
+            JOIN held h ON h.user_id = s.user_id
+            WHERE s.class = 'stable' AND s.hour <= h.banned_at
+        ),
+        crowd AS (
+            SELECT ip, count(DISTINCT user_id) AS people
+            FROM sighting WHERE ip IN (SELECT ip FROM used) GROUP BY 1
+        ),
+        arrived AS (
+            SELECT user_id, ip, min(hour) AS first_at
+            FROM sighting WHERE ip IN (SELECT ip FROM used) GROUP BY 1, 2
+        )
+        SELECT least(u.user_id, a.user_id) AS a_user_id,
+               greatest(u.user_id, a.user_id) AS b_user_id,
+               host(u.ip) AS value, c.people, %(weight)s::numeric AS score,
+               u.banned_at AS first_seen, a.first_at AS last_seen
+        FROM used u
+        JOIN crowd c ON c.ip = u.ip AND c.people <= %(ceiling)s
+        JOIN arrived a ON a.ip = u.ip AND a.user_id <> u.user_id AND a.first_at > u.banned_at
+    """,
+    "after_ban_device": BANNED + """,
+        agent AS (
+            SELECT user_id, ua, min(at) AS first_at
+            FROM fd.login_event
+            WHERE ua IS NOT NULL AND length(ua) >= {shortest}
+            GROUP BY 1, 2
+        ),
+        crowd AS (
+            SELECT ua, count(*) AS people FROM agent GROUP BY 1
+            HAVING count(*) BETWEEN 2 AND %(ceiling)s
+        ),
+        used AS (
+            SELECT a.user_id, a.ua, h.banned_at
+            FROM agent a
+            JOIN held h ON h.user_id = a.user_id
+            JOIN crowd c ON c.ua = a.ua
+            WHERE a.first_at <= h.banned_at
+        )
+        SELECT least(u.user_id, b.user_id) AS a_user_id,
+               greatest(u.user_id, b.user_id) AS b_user_id,
+               u.ua AS value, c.people, %(weight)s::numeric AS score,
+               u.banned_at AS first_seen, b.first_at AS last_seen
+        FROM used u
+        JOIN crowd c ON c.ua = u.ua
+        JOIN agent b ON b.ua = u.ua AND b.user_id <> u.user_id AND b.first_at > u.banned_at
     """,
 }
 
@@ -260,6 +375,7 @@ def signals(held=None):
     found.update({name: {**one, "family": DEVICE} for name, one in held["device_signals"].items()})
     found.update({name: {**one, "family": IDENTITY} for name, one in held["identity_signals"].items()})
     found.update({name: {**one, "family": NAME} for name, one in held["name_signals"].items()})
+    found.update({name: {**one, "family": ARRIVAL} for name, one in held["arrival_signals"].items()})
     found.update({name: one for name, one in links.signals(held).items()
                   if one["family"] != NETWORK})
     return found
@@ -278,6 +394,10 @@ def family_table(held):
 
 
 def evidence(name, settings, sightings):
+    if name in ARRIVAL_EVIDENCE:
+        return ARRIVAL_EVIDENCE[name].format(shortest=SHORTEST_AGENT), {
+            "weight": settings["weight"], "ceiling": settings["crowd_ceiling"],
+            "window": settings.get("window_seconds", 1800)}
     if name == links.JOINED_TOGETHER:
         return links.TOGETHER_SQL, {"weight": settings["weight"], "ceiling": settings["crowd_ceiling"],
                                     "window": settings.get("window_seconds", 300)}
