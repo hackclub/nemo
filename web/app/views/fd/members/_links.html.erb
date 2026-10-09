@@ -28,7 +28,24 @@
         </tbody>
       </table>
     </div>
-  <% else %>
+  <% end %>
+
+  <% if mates.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr><th>Same cluster</th></tr>
+        </thead>
+        <tbody>
+          <% mates.each do |mate| %>
+            <tr><td><%= member_link(mate) %></td></tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <% if links.none? && mates.none? %>
     <div class="empty">
       <p class="empty-title">No linked accounts</p>
     </div>

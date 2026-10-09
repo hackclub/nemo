@@ -1,54 +1,31 @@
 <% content_for :page_title, "Linked accounts" %>
 
+<% if @view == "pairs" %>
+  <% content_for :head_actions do %>
+    <span class="segmented">
+      <%= link_to "All", fd_links_path(view: "pairs"),
+            aria: { current: ("true" if params[:over].blank?) } %>
+      <%= link_to "Strong", fd_links_path(view: "pairs", over: "strong"),
+            aria: { current: ("true" if params[:over] == "strong") } %>
+      <%= link_to "Certain", fd_links_path(view: "pairs", over: "certain"),
+            aria: { current: ("true" if params[:over] == "certain") } %>
+    </span>
+  <% end %>
+<% end %>
+
 <% content_for :page_tabs do %>
-  <%= link_to "All", fd_links_path, class: "view",
-        aria: { current: ("true" if params[:over].blank?) } %>
-  <%= link_to "Strong", fd_links_path(over: "strong"), class: "view",
-        aria: { current: ("true" if params[:over] == "strong") } %>
-  <%= link_to "Certain", fd_links_path(over: "certain"), class: "view",
-        aria: { current: ("true" if params[:over] == "certain") } %>
+  <% Fd::MemberLinksController::VIEWS.each do |key, label| %>
+    <%= link_to label, fd_links_path(view: (key unless key == Fd::MemberLinksController::DEFAULT_VIEW)),
+          class: "view", aria: { current: ("true" if @view == key) } %>
+  <% end %>
 <% end %>
 
 <%= turbo_stream_from Fd::MemberLinkBroadcast::LIST_STREAM %>
 
 <%= turbo_frame_tag Fd::MemberLinkBroadcast::LIST_FRAME, target: "_top",
-      data: { src: fd_links_path(over: params[:over].presence) } do %>
-<div class="stack">
-  <div class="card card-flush">
-    <div class="card-head">
-      <h2 class="card-title">Accounts that look like one person</h2>
-    </div>
-
-    <% if @links.any? %>
-      <div class="scroll">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>One</th>
-              <th>The other</th>
-              <th>Score</th>
-              <th>On</th>
-              <th>Last seen</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @links.each do |one| %>
-              <tr>
-                <td><%= member_link(one.a_user_id) %></td>
-                <td><%= member_link(one.b_user_id) %></td>
-                <td><%= link_score_chip(one.score) %></td>
-                <td class="sub2"><%= Fd::MemberLink.label_for(one.top_signal) %></td>
-                <td class="sub2"><%= one.last_seen ? on_day(one.last_seen) : "n/a" %></td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <div class="empty">
-        <p class="empty-title">No links</p>
-      </div>
-    <% end %>
+      data: { src: fd_links_path(view: (@view unless @view == Fd::MemberLinksController::DEFAULT_VIEW),
+                                 over: params[:over].presence) } do %>
+  <div class="stack">
+    <%= render @view %>
   </div>
-</div>
 <% end %>

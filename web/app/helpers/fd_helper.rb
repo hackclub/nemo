@@ -291,6 +291,20 @@ module FdHelper
     tag.span(side.band, class: "state #{tone}".strip)
   end
 
+  REASONS_SHOWN = 3
+  REASON_VALUE = 48
+
+  def link_reasons(evidence)
+    lines = evidence.first(REASONS_SHOWN).map do |one|
+      shared = " shared with #{one['people']}" if one["people"].to_i > 2
+      tag.div(class: "sub2") do
+        safe_join([one["label"], " ", tag.span(one["value"].to_s.truncate(REASON_VALUE), class: "mono"),
+                   shared].compact)
+      end
+    end
+    safe_join(lines)
+  end
+
   def link_score_chip(score)
     score = score.to_f
     tone = if score >= Fd::MemberLink::CERTAIN

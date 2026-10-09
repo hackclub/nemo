@@ -70,7 +70,96 @@ class FdMemberLinksTest < ActionDispatch::IntegrationTest
     assert_response :redirect
   end
 
+  test "the page opens on strong links to a deactivated account nobody has judged yet" do
+    member!("UACTIVE")
+    member!("UGONE")
+    member!("UJUDGED")
+    member!("UWEAK")
+    member!("UBOTHON")
+    gone!("UGONE")
+    gone!("UJUDGED")
+    gone!("UWEAK")
+    link!("UACTIVE", "UGONE", score: 9.5, top: "mailbox_alias",
+      signals: '{"mailbox_alias": {"value": "kid@gmail.com", "people": 2, "score": 8.0}}')
+    link!("UACTIVE", "UJUDGED", score: 9.0, top: "ip_stable")
+    link!("UACTIVE", "UWEAK", score: 3.5, top: "ip_prefix_stable")
+    link!("UACTIVE", "UBOTHON", score: 9.0, top: "ip_stable")
+    verdict!("UACTIVE", "UJUDGED", "different_people")
+
+    get fd_links_path
+    assert_response :success
+
+    assert_select ".view[aria-current=true]", "Needs review"
+    rows = css_select("tbody tr")
+    assert_equal 1, rows.size
+    assert_match(/ugone/i, rows.first.text)
+    assert_match "Same mailbox, once dots and plus tags are removed", rows.first.text
+    assert_match "kid@gmail.com", rows.first.text
+  end
+
+  test "the clusters tab lists each cluster with its flags" do
+    cluster!("UOLD", "UOLD", accounts: 3, active: true, ring: true)
+    cluster!("UNEW", "UOLD", accounts: 3, active: false, ring: true)
+    cluster!("UMID", "UOLD", accounts: 3, active: true, ring: true, conflict: true)
+
+    get fd_links_path(view: "clusters")
+    assert_response :success
+
+    row = css_select("tbody tr").find { |one| one.text.include?("UOLD") }
+    assert_match(/3\s+2/, row.text.squish)
+    assert_match "Ring", row.text
+    assert_match "Conflict", row.text
+  end
+
+  test "all pairs keeps the band filter and shows the reasons" do
+    member!("UONE")
+    member!("UTWO")
+    member!("UTHREE")
+    link!("UONE", "UTWO", score: 9.5, top: "ip_stable",
+      signals: '{"ip_stable": {"value": "81.2.69.144", "people": 2, "score": 5.0}}')
+    link!("UONE", "UTHREE", score: 3.5, top: "ip_prefix_stable")
+
+    get fd_links_path(view: "pairs", over: "certain")
+    assert_response :success
+
+    assert_select ".segmented a[aria-current=true]", "Certain"
+    assert_equal 1, css_select("tbody tr").size
+    assert_match "81.2.69.144", response.body
+  end
+
+  test "a member pane lists the rest of their cluster when nothing links them directly" do
+    member!("UONE")
+    cluster!("UONE", "UROOT", accounts: 3, active: true)
+    cluster!("UROOT", "UROOT", accounts: 3, active: true)
+    cluster!("UTHIRD", "UROOT", accounts: 3, active: false)
+
+    get fd_member_links_path("UONE")
+    assert_response :success
+
+    assert_select "th", "Same cluster"
+    assert_match "UROOT", response.body
+    assert_match "UTHIRD", response.body
+    assert_select ".empty-title", count: 0
+  end
+
   private
+
+  def gone!(user_id)
+    as_pipeline("UPDATE fd.member SET is_deleted = true WHERE user_id = ?", user_id)
+  end
+
+  def verdict!(one, two, verdict)
+    a, b = [one, two].sort
+    as_pipeline("INSERT INTO fd.member_link_verdict (a_user_id, b_user_id, verdict, decided_by) " \
+                "VALUES (?, ?, ?, 'UME')", a, b, verdict)
+    seeded!("fd.member_link_verdict", "a_user_id", a)
+  end
+
+  def cluster!(user_id, cluster_id, accounts:, active:, ring: false, conflict: false)
+    as_pipeline("INSERT INTO fd.member_cluster (user_id, cluster_id, accounts, ring, active, conflict) " \
+                "VALUES (?, ?, ?, ?, ?, ?)", user_id, cluster_id, accounts, ring, active, conflict)
+    seeded!("fd.member_cluster", "user_id", user_id)
+  end
 
   def link!(one, two, score:, top:, signals: "{}")
     a, b = [one, two].sort

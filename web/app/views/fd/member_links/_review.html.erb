@@ -1,0 +1,36 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <h2 class="card-title">Linked to a deactivated account</h2>
+  </div>
+
+  <% if @pairs.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Active</th>
+            <th>Deactivated</th>
+            <th>Score</th>
+            <th>Reasons</th>
+            <th>Last seen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @pairs.each do |pair| %>
+            <tr>
+              <td><%= member_link(pair.active_id) %></td>
+              <td><%= member_link(pair.deactivated_id) %></td>
+              <td><%= link_score_chip(pair.score) %></td>
+              <td><%= link_reasons(pair.evidence) %></td>
+              <td class="sub2"><%= pair.last_seen ? on_day(pair.last_seen) : "n/a" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty">
+      <p class="empty-title">Nothing to review</p>
+    </div>
+  <% end %>
+</div>

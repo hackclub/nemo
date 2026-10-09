@@ -1,0 +1,37 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <h2 class="card-title">Clusters</h2>
+  </div>
+
+  <% if @clusters.any? %>
+    <div class="scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Oldest account</th>
+            <th class="col-num">Accounts</th>
+            <th class="col-num">Active</th>
+            <th>Flags</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @clusters.each do |cluster| %>
+            <tr>
+              <td><%= member_link(cluster.cluster_id) %></td>
+              <td class="col-num"><%= cluster.accounts %></td>
+              <td class="col-num"><%= cluster.active %></td>
+              <td>
+                <% if cluster.conflict %><span class="state state-crit">Conflict</span><% end %>
+                <% if cluster.ring %><span class="state state-warn">Ring</span><% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty">
+      <p class="empty-title">No clusters</p>
+    </div>
+  <% end %>
+</div>
