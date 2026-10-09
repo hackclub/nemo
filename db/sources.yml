@@ -350,6 +350,21 @@ sources:
     writes: [fd.login_event]
     feeds: []
 
+  login_event_backfill:
+    unit_budget_seconds: 120
+    standalone: true
+    label: Addresses from own-session audit events already held
+    endpoint: none
+    documented: true
+    credential: none
+    cadence: on_demand
+    window: everything we hold
+    guard: none
+    resume: sync_cursor
+    retention: keep
+    writes: [fd.login_event]
+    feeds: []
+
   ip_cohorts:
     standalone: true
     label: Members per IP address, to discount shared addresses

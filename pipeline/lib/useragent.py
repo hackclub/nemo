@@ -9,6 +9,7 @@ SLACK_SDK = re.compile(
 )
 SLACK_IOS = re.compile(r"com\.tinyspeck\.chatlyio(?:\.\w+)?/([\d.]+)", re.IGNORECASE)
 HUDDLE = re.compile(r"HuddlePhone/([\d.]+)", re.IGNORECASE)
+API_CLIENT = re.compile(r"\bApiApp\b|Slack Ruby Client|\bPython/[\d.]+", re.IGNORECASE)
 
 RUNTIMES = (
     ("Bun", re.compile(r"\bBun/([\d.]+)", re.IGNORECASE)),
@@ -119,6 +120,15 @@ def device(ua):
     if not found:
         return UNKNOWN
     return found.group(2).strip() or UNKNOWN
+
+
+def api_client(ua):
+    raw = (ua or "").strip()
+    if not raw:
+        return False
+    if SLACK_SDK.search(raw) or API_CLIENT.search(raw):
+        return True
+    return any(pattern.search(raw) for _family, pattern in RUNTIMES)
 
 
 def parse(ua):

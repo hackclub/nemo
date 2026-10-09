@@ -71,11 +71,40 @@ def test_a_login_carries_the_address_the_agent_and_the_session():
     assert row[7] == 12177102026566
 
 
-def test_only_the_actions_that_seat_somebody_make_a_login():
+def test_every_own_session_action_with_an_address_makes_a_login_row():
     assert pull.login_row(entry(action="user_login_failed")) is not None
     assert pull.login_row(entry(action="anomaly")) is not None
-    assert pull.login_row(entry(action="file_downloaded")) is None
-    assert pull.login_row(entry(action="user_channel_join")) is None
+    assert pull.login_row(entry(action="file_downloaded"))[2] == "file_downloaded"
+    assert pull.login_row(entry(action="user_channel_join", details={"type": "JOINED"})) is not None
+
+
+def test_actions_from_someone_else_s_session_make_no_login_row():
+    chrome = entry()["context"]["ua"]
+    app = {"ip_address": "1.2.3.4", "ua": chrome, "app": {"id": APP}}
+    script = {"ip_address": "1.2.3.4", "ua": "Slack Ruby Client/2.1.0"}
+    no_address = {"ua": chrome}
+
+    assert pull.login_row(entry(action="file_downloaded", context=app)) is None
+    assert pull.login_row(entry(action="file_downloaded", context=script)) is None
+    assert pull.login_row(entry(action="file_downloaded", context=no_address)) is None
+    for kind in ("INVITED", "KICKED"):
+        assert pull.login_row(entry(action="user_channel_join", details={"type": kind})) is None
+    assert pull.login_row(entry(action="file_downloaded",
+                                actor={"type": "app", "app": {"id": APP}})) is None
+
+
+def test_a_sign_in_keeps_its_row_whatever_client_made_it():
+    script = {"ip_address": "1.2.3.4", "ua": "Slack Ruby Client/2.1.0"}
+    assert pull.login_row(entry(context=script)) is not None
+
+
+def test_script_clients_are_told_apart_from_people():
+    for ua in ("Slack Ruby Client/2.1.0", "ApiApp/1.0", "Python/3.12 aiohttp/3.9.5",
+               "Bun/1.1.38", "python-requests/2.31.0", "slack_bolt/1.18"):
+        assert useragent.api_client(ua), ua
+    for ua in (entry()["context"]["ua"], "Slack_SSB/4.41.105",
+               "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0", None):
+        assert not useragent.api_client(ua), ua
 
 
 def test_a_login_with_nobody_behind_it_is_not_written_down():
@@ -445,10 +474,10 @@ def test_landing_writes_the_event_and_the_login_from_one_pass():
     landed, seated = pull.insert_rows(conn, [entry(), entry(id="b", action="file_downloaded")],
                                "audit_logs_tail", frozenset(), counts)
 
-    assert (landed, seated) == (2, 1)
+    assert (landed, seated) == (2, 2)
     assert counts.rows_in == 2
     assert len(conn.did("INSERT INTO slack.audit_event")[0]) == 2
-    assert len(conn.did("INSERT INTO fd.login_event")[0]) == 1
+    assert len(conn.did("INSERT INTO fd.login_event")[0]) == 2
 
 
 def test_only_a_login_that_worked_counts_as_being_seen():
@@ -613,3 +642,98 @@ def test_an_agent_landed_before_the_reader_knew_it_is_read_again():
             / "0152_agents_we_have_read.sql").read_text()
     assert "login_event_unread_agent_idx" in sql
     assert "ua_read_at IS NULL" in sql, "the sweep must be free once it has drained"
+
+
+class Owners(Conn):
+    def __init__(self, owners=(), held=()):
+        super().__init__()
+        self.owners = list(owners)
+        self.held = list(held)
+        self.answer = []
+
+    def execute(self, sql, args=None):
+        self.ran.append((sql, args))
+        if sql == pull.OWNERS_SQL:
+            self.answer = self.owners
+        elif sql in (pull.HELD_FIRST_SQL, pull.HELD_NEXT_SQL):
+            self.answer = self.held
+        return self
+
+    def fetchall(self):
+        return self.answer
+
+
+SESSION = 12177102026566
+
+
+def test_an_action_in_another_member_s_session_is_dropped():
+    downloaded = pull.login_row(entry(action="file_downloaded"))
+
+    assert pull.own_sessions(Owners(owners=[(SESSION, "U9")]), [downloaded]) == []
+    assert pull.own_sessions(Owners(owners=[(SESSION, WHO)]), [downloaded]) == [downloaded]
+    assert pull.own_sessions(Owners(), [downloaded]) == [downloaded]
+
+
+def test_a_session_signed_into_in_the_same_batch_has_an_owner():
+    other = {"type": "user", "user": {"id": "U9", "name": "other"}}
+    signed_in = pull.login_row(entry(actor=other))
+    downloaded = pull.login_row(entry(action="file_downloaded"))
+
+    assert pull.own_sessions(Owners(), [signed_in, downloaded]) == [signed_in]
+
+
+def held(event_id, minute, action="file_downloaded"):
+    at = dt.datetime(2026, 9, 1, 12, minute, tzinfo=dt.UTC)
+    return (event_id, at, action, "user", WHO, entry()["context"], {})
+
+
+@pytest.fixture
+def login_walk(monkeypatch):
+    import contextlib
+
+    state = {"marker": None, "saved": []}
+
+    @contextlib.contextmanager
+    def bookkeeping(*_args, **_kwargs):
+        yield Counts()
+
+    monkeypatch.setattr(pull, "ingest_run", bookkeeping)
+    monkeypatch.setattr(pull, "get_cursor",
+                        lambda _conn, _key, max_age_hours=None: state["marker"])
+    monkeypatch.setattr(pull, "save_cursor",
+                        lambda _conn, _key, value: state["saved"].append(value))
+    return state
+
+
+def test_held_events_land_newest_first_and_keep_their_place(login_walk):
+    conn = Owners(held=[held("b", 30), held("a", 10, action="channel_created")])
+
+    assert pull.backfill_logins(conn) == 2
+
+    assert conn.ran[0][0] == pull.HELD_FIRST_SQL
+    assert len(conn.did("INSERT INTO fd.login_event")[0]) == 2
+    assert login_walk["saved"] == ["2026-09-01T12:10:00+00:00|a"]
+
+
+def test_held_events_resume_below_the_saved_place(login_walk):
+    login_walk["marker"] = "2026-09-01T12:10:00+00:00|a"
+    conn = Owners(held=[held("z", 5)])
+
+    pull.backfill_logins(conn)
+
+    sql, args = conn.ran[0]
+    assert sql == pull.HELD_NEXT_SQL
+    assert args["at"] == dt.datetime(2026, 9, 1, 12, 10, tzinfo=dt.UTC)
+    assert args["id"] == "a"
+
+
+def test_the_held_walk_ends_complete_and_then_stops_reading(login_walk):
+    login_walk["marker"] = "2026-09-01T12:10:00+00:00|a"
+
+    assert pull.backfill_logins(Owners()) == 0
+    assert login_walk["saved"] == [pull.LOGIN_BACKFILL_COMPLETE]
+
+    login_walk["marker"] = pull.LOGIN_BACKFILL_COMPLETE
+    conn = Owners(held=[held("z", 5)])
+    assert pull.backfill_logins(conn) == 0
+    assert conn.ran == []

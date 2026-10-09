@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 from ingest.access_logs_pull import backfill as backfill_access_logs
 from ingest.access_logs_pull import run as walk_access_logs
-from ingest.audit_logs_pull import backfill_next, unknown_backfill_sets
+from ingest.audit_logs_pull import backfill_logins, backfill_next, unknown_backfill_sets
 from ingest.audit_logs_pull import tail as walk_tail
 from ingest.ip_cohorts import run as refresh_cohorts
 from ingest.member_links import run as refresh_links
@@ -31,6 +31,7 @@ DEFAULT_TAIL_SECONDS = 60
 DEFAULT_BACKFILL_SECONDS = 120
 DEFAULT_ACCESS_SECONDS = 60
 DEFAULT_ACCESS_BACKFILL_SECONDS = 60
+DEFAULT_LOGIN_BACKFILL_SECONDS = 60
 DEFAULT_COHORT_SECONDS = 900
 DEFAULT_LINK_SECONDS = 1800
 DEFAULT_AGENT_SECONDS = 3600
@@ -48,6 +49,7 @@ def seconds(name, fallback):
 LANE_SWITCHES = {
     "backfill": ("AUDIT_BACKFILL", True),
     "access_backfill": ("AUDIT_ACCESS_BACKFILL", False),
+    "login_backfill": ("AUDIT_LOGIN_BACKFILL", False),
 }
 OFF_VALUES = ("0", "off", "no", "false")
 
@@ -73,6 +75,8 @@ LANES = (
     ("access", walk_access_logs, "AUDIT_ACCESS_SECONDS", DEFAULT_ACCESS_SECONDS, True),
     ("access_backfill", backfill_access_logs, "AUDIT_ACCESS_BACKFILL_SECONDS",
      DEFAULT_ACCESS_BACKFILL_SECONDS, True),
+    ("login_backfill", backfill_logins, "AUDIT_LOGIN_BACKFILL_SECONDS",
+     DEFAULT_LOGIN_BACKFILL_SECONDS, True),
     ("cohorts", refresh_cohorts, "AUDIT_COHORT_SECONDS", DEFAULT_COHORT_SECONDS, False),
     ("links", refresh_links, "AUDIT_LINK_SECONDS", DEFAULT_LINK_SECONDS, False),
     ("agents", reread_agents, "AUDIT_AGENT_SECONDS", DEFAULT_AGENT_SECONDS, True),

@@ -14,6 +14,10 @@ PAGE = 1000
 
 TAIL = "audit_logs_tail"
 BACKFILL = "audit_logs_backfill"
+LOGIN_BACKFILL = "login_event_backfill"
+LOGIN_BACKFILL_BATCH = 5000
+LOGIN_BACKFILL_COMPLETE = "complete"
+LOGIN_BACKFILL_MARKER_MAX_AGE_HOURS = 24 * 365
 
 LOGIN_ACTIONS = (
     "user_login",
@@ -29,6 +33,8 @@ LOGIN_ACTIONS = (
 
 LOGIN_SET = frozenset(LOGIN_ACTIONS)
 SEATED = frozenset({"user_login", "user_login_failed", "anomaly"})
+SESSION_START = "user_login"
+NOT_OWN_SESSION = frozenset({"INVITED", "KICKED"})
 
 CHANNEL_MEMBERSHIP_ACTIONS = ("user_channel_join", "user_channel_leave")
 LOGIN_AND_CHANNEL_ACTIONS = LOGIN_ACTIONS + CHANNEL_MEMBERSHIP_ACTIONS
@@ -97,6 +103,26 @@ ON CONFLICT (audit_id) DO NOTHING
 """
 
 WATERMARK_SQL = "SELECT max(at) FROM slack.audit_event"
+
+OWNERS_SQL = """
+SELECT DISTINCT session_id, user_id FROM fd.login_event
+WHERE session_id = ANY(%s) AND action = 'user_login'
+"""
+
+HELD_FIRST_SQL = """
+SELECT id, at, action, actor_kind, actor_id, context, payload->'details'
+FROM slack.audit_event
+ORDER BY at DESC, id DESC
+LIMIT %(batch)s
+"""
+
+HELD_NEXT_SQL = """
+SELECT id, at, action, actor_kind, actor_id, context, payload->'details'
+FROM slack.audit_event
+WHERE (at, id) < (%(at)s, %(id)s)
+ORDER BY at DESC, id DESC
+LIMIT %(batch)s
+"""
 
 
 def horizon_days():
@@ -203,17 +229,26 @@ def event_row(entry, source_key, ours):
     )
 
 
-def login_row(entry):
-    if entry.get("action") not in SEATED:
-        return None
+def own_session(entry):
+    context = entry.get("context") or {}
+    if (context.get("app") or {}).get("id"):
+        return False
+    if str((entry.get("details") or {}).get("type") or "").upper() in NOT_OWN_SESSION:
+        return False
+    return not useragent.api_client(context.get("ua"))
 
-    _kind, user_id = whose(entry, "actor")
+
+def login_row(entry):
+    kind, user_id = whose(entry, "actor")
     at = stamp(entry.get("date_create"))
     if not user_id or at is None:
         return None
 
     context = entry.get("context") or {}
     ip = (context.get("ip_address") or "").strip() or None
+    if entry.get("action") not in SEATED:
+        if kind != "user" or ip is None or not own_session(entry):
+            return None
     seen = useragent.parse(context.get("ua"))
     session = context.get("session_id")
 
@@ -255,6 +290,25 @@ def channel_row(entry):
     )
 
 
+def session_owners(conn, logins):
+    sessions = sorted({row[7] for row in logins if row[7] is not None})
+    owners = {}
+    if sessions:
+        for session, user_id in conn.execute(OWNERS_SQL, (sessions,)).fetchall():
+            owners.setdefault(session, set()).add(user_id)
+    for row in logins:
+        if row[2] == SESSION_START and row[7] is not None:
+            owners.setdefault(row[7], set()).add(row[0])
+    return owners
+
+
+def own_sessions(conn, logins):
+    owners = session_owners(conn, logins)
+    return [row for row in logins
+            if row[2] == SESSION_START or row[7] is None
+            or not owners.get(row[7]) or row[0] in owners[row[7]]]
+
+
 def insert_rows(conn, entries, source_key, ours, counts):
     events, logins, rooms = [], [], []
     named = {}
@@ -275,6 +329,7 @@ def insert_rows(conn, entries, source_key, ours, counts):
         if knew:
             named[knew[0]] = knew
 
+    logins = own_sessions(conn, logins)
     if events:
         with conn.cursor() as cur:
             cur.executemany(EVENT_SQL, events)
@@ -485,3 +540,51 @@ def backfill_next(conn, client=None):
 
 def run(conn):
     return tail(conn)
+
+
+def held_entry(at, action, actor_kind, actor_id, context, details):
+    actor = {"type": actor_kind, actor_kind: {"id": actor_id}} if actor_kind else {}
+    return {"action": action, "date_create": int(at.timestamp()), "actor": actor,
+            "context": context or {}, "details": details or {}}
+
+
+def login_backfill_place(conn):
+    marker = get_cursor(conn, LOGIN_BACKFILL, max_age_hours=LOGIN_BACKFILL_MARKER_MAX_AGE_HOURS)
+    if marker == LOGIN_BACKFILL_COMPLETE:
+        return LOGIN_BACKFILL_COMPLETE, None
+    at, _, event_id = (marker or "").partition("|")
+    if not at or not event_id:
+        return None, None
+    return datetime.fromisoformat(at), event_id
+
+
+def backfill_logins(conn):
+    at, event_id = login_backfill_place(conn)
+    if at == LOGIN_BACKFILL_COMPLETE:
+        return 0
+
+    with ingest_run(conn, LOGIN_BACKFILL) as counts:
+        if at is None:
+            held = conn.execute(HELD_FIRST_SQL, {"batch": LOGIN_BACKFILL_BATCH}).fetchall()
+        else:
+            held = conn.execute(HELD_NEXT_SQL, {"at": at, "id": event_id,
+                                                "batch": LOGIN_BACKFILL_BATCH}).fetchall()
+        if not held:
+            save_cursor(conn, LOGIN_BACKFILL, LOGIN_BACKFILL_COMPLETE)
+            conn.commit()
+            print(f"{LOGIN_BACKFILL}: every held event has been read, complete")
+            return 0
+
+        logins = [row for row in (login_row(held_entry(*one[1:])) for one in held) if row]
+        logins = own_sessions(conn, logins)
+        if logins:
+            with conn.cursor() as cur:
+                cur.executemany(LOGIN_SQL, logins)
+        last = held[-1]
+        save_cursor(conn, LOGIN_BACKFILL, f"{last[1].isoformat()}|{last[0]}")
+        conn.commit()
+        counts.rows_in += len(logins)
+
+    print(f"{LOGIN_BACKFILL}: {len(held)} event(s) read back to {last[1]:%Y-%m-%d %H:%M}, "
+          f"{len(logins)} login row(s)")
+    return len(held)
