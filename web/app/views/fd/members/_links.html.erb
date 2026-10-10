@@ -13,7 +13,7 @@
               <td><%= link_band_chip(side) %>
                 <span class="sub2"><%= number_with_precision(side.score, precision: 1) %></span>
               </td>
-              <td>
+              <td class="link-why">
                 <% side.evidence.each do |one| %>
                   <div class="sub2">
                     <%= one["label"] %>

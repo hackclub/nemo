@@ -21,7 +21,7 @@
               <td><%= member_link(edge.a_user_id) %></td>
               <td><%= member_link(edge.b_user_id) %></td>
               <td><%= edge.score ? link_score_chip(edge.score) : "n/a" %></td>
-              <td><%= link_reasons(Fd::MemberLink.evidence_of(edge.signals)) %></td>
+              <td class="link-why"><%= link_reasons(Fd::MemberLink.evidence_of(edge.signals)) %></td>
               <td><%= verdict_cell(edge.a_user_id, edge.b_user_id, judged) %></td>
             </tr>
           <% end %>

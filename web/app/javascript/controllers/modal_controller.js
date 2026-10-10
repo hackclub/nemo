@@ -5,6 +5,9 @@ const REACHABLE = [
   "select:not([disabled])", "textarea:not([disabled])", "summary", "[tabindex]:not([tabindex='-1'])"
 ].join(", ")
 
+const DRAWER = "[data-controller~='person-drawer']"
+const DRAWN = `${DRAWER}:not(:empty)`
+
 export default class extends Controller {
   static targets = ["flip", "box"]
   static values = { id: String }
@@ -40,9 +43,14 @@ export default class extends Controller {
     }
 
     if (!this.flipTarget.checked || event.composedPath().includes(this.boxTarget)) return
+    if (event.target.closest(DRAWER)) return
 
     event.preventDefault()
     this.shut()
+  }
+
+  get covered() {
+    return document.querySelector(DRAWN) !== null
   }
 
   // a form that targets a turbo frame leaves the page in place, so the dialog
@@ -52,7 +60,7 @@ export default class extends Controller {
   }
 
   onDocumentKey(event) {
-    if (event.key !== "Escape" || !this.flipTarget.checked) return
+    if (event.key !== "Escape" || !this.flipTarget.checked || this.covered) return
 
     event.preventDefault()
     this.shut()
@@ -102,6 +110,7 @@ export default class extends Controller {
   }
 
   onKeys(event) {
+    if (event.key === "Escape" && this.covered) return
     if (event.key === "Escape") {
       event.preventDefault()
       event.stopPropagation()

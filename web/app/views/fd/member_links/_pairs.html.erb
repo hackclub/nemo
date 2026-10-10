@@ -22,7 +22,7 @@
               <td><%= member_link(one.a_user_id) %></td>
               <td><%= member_link(one.b_user_id) %></td>
               <td><%= link_score_chip(one.score) %></td>
-              <td><%= link_reasons(Fd::MemberLink.evidence_of(one.signals)) %></td>
+              <td class="link-why"><%= link_reasons(Fd::MemberLink.evidence_of(one.signals)) %></td>
               <td class="sub2"><%= one.last_seen ? on_day(one.last_seen) : "n/a" %></td>
               <% judged = Fd::LinkVerdict.of(@verdicts, one.a_user_id, one.b_user_id) %>
               <td><%= verdict_cell(one.a_user_id, one.b_user_id, judged) %></td>

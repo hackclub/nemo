@@ -621,6 +621,8 @@
 }
 
 @layer components {
+  .link-why { min-width: 16rem; }
+
   .cluster-map-body {
     @apply flex justify-center px-4;
   }

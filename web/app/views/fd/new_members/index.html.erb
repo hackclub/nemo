@@ -163,7 +163,7 @@
 
 <div data-controller="new-member-card">
   <%= render layout: "fd/modal", locals: { id: "new-member-card", title: "New member",
-        size: "wide", open: false } do %>
+        size: "xl", open: false } do %>
     <div class="modal-body">
       <%= turbo_frame_tag "new-member-card", target: "_top",
             data: { new_member_card_target: "frame" } do %>

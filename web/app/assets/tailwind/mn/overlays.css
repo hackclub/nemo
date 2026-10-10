@@ -131,7 +131,7 @@
     top: 0;
     right: 0;
     bottom: 0;
-    z-index: 95;
+    z-index: 102;
     width: min(var(--drawer-w), 100vw);
     display: flex;
     flex-direction: column;

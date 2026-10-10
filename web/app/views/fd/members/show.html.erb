@@ -215,7 +215,7 @@
 
 <% if may_identity %>
   <%= render layout: "fd/modal", locals: { id: "member-sessions", title: "Sessions",
-        sub: names[@user_id], size: "wide", open: params[:do] == "sessions" } do %>
+        sub: names[@user_id], size: "xl", open: params[:do] == "sessions" } do %>
     <div class="modal-body">
       <%= turbo_frame_tag Fd::MemberSessions.frame(@user_id), target: "_top",
             src: fd_member_logins_path(@user_id), loading: "lazy" do %>
@@ -227,7 +227,7 @@
 
 <% if may_links %>
   <%= render layout: "fd/modal", locals: { id: "member-links", title: "Linked accounts",
-        sub: names[@user_id], size: "wide", open: params[:do] == "links" } do %>
+        sub: names[@user_id], size: "xl", open: params[:do] == "links" } do %>
     <div class="modal-body">
       <%= turbo_stream_from Fd::MemberLinkBroadcast.stream(@user_id) %>
       <%= turbo_frame_tag Fd::MemberLinkBroadcast.frame(@user_id), target: "_top",
