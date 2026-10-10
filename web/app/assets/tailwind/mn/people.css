@@ -630,7 +630,29 @@
   .link-mates-head { @apply flex items-center gap-3; }
   .link-mates-title { @apply text-sm font-medium text-foreground; }
   .link-mates-open { @apply ml-auto; }
-  .link-mates-list { @apply flex flex-wrap items-baseline gap-x-4 gap-y-1.5 text-sm; }
+
+  .facepile {
+    --facepile-ring: var(--card);
+    @apply flex flex-wrap items-center gap-y-1.5 pl-1.5;
+  }
+  .modal .facepile { --facepile-ring: var(--popover); }
+  .facepile-face {
+    @apply relative -ml-1.5 rounded-full outline-none;
+    box-shadow: 0 0 0 2px var(--facepile-ring);
+    transition: translate 150ms var(--ease), box-shadow 150ms var(--ease);
+  }
+  .facepile-face:hover, .facepile-face:focus-visible {
+    @apply z-1;
+    translate: 0 -2px;
+    box-shadow: 0 0 0 2px var(--facepile-ring), 0 0 0 3.5px var(--ring);
+  }
+  .facepile-img {
+    @apply inline-grid size-8 place-items-center overflow-hidden rounded-full text-xs font-semibold uppercase select-none;
+    object-fit: cover;
+  }
+  .facepile-face.is-gone .facepile-img { filter: grayscale(1); opacity: 0.5; }
+  .facepile-face.is-gone { box-shadow: 0 0 0 2px var(--facepile-ring), 0 0 0 3.5px color-mix(in oklab, var(--destructive) 70%, transparent); }
+  .facepile-more { @apply ml-2.5 text-xs font-medium text-muted-foreground tabular-nums; }
 
   .cluster-map-body {
     @apply flex justify-center px-4;

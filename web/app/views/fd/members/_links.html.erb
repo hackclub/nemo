@@ -33,18 +33,25 @@
   <% end %>
 
   <% if mates.any? %>
+    <% gone = mates.count { |_, active| !active } %>
     <section class="link-mates">
       <div class="link-mates-head">
         <h3 class="link-mates-title">Same cluster</h3>
-        <span class="sub2"><%= pluralize(number_with_delimiter(mates.size), "other account") %></span>
+        <span class="sub2">
+          <%= pluralize(number_with_delimiter(mates.size), "other account") %><%= ", #{number_with_delimiter(gone)} deactivated" if gone.positive? %>
+        </span>
         <%= link_to "Open cluster", fd_cluster_path(cluster_of), class: "btn btn-sm link-mates-open" if cluster_of %>
       </div>
-      <div class="link-mates-list">
-        <% mates.first(Fd::MemberLink::MATES_SHOWN).each do |mate| %>
-          <%= member_face(mate) %>
+      <div class="facepile">
+        <% mates.first(Fd::MemberLink::MATES_SHOWN).each do |mate, active| %>
+          <%= link_to fd_member_path(mate), class: ["facepile-face", ("is-gone" unless active)],
+                title: active ? names[mate] : "#{names[mate]}, deactivated",
+                aria: { label: names[mate] }, data: { turbo_frame: "person-drawer" } do %>
+            <%= face(mate, css: "facepile-img") %>
+          <% end %>
         <% end %>
         <% if mates.size > Fd::MemberLink::MATES_SHOWN %>
-          <span class="sub2"><%= number_with_delimiter(mates.size - Fd::MemberLink::MATES_SHOWN) %> more</span>
+          <span class="facepile-more">+<%= number_with_delimiter(mates.size - Fd::MemberLink::MATES_SHOWN) %></span>
         <% end %>
       </div>
     </section>

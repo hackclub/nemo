@@ -10,7 +10,7 @@ module Fd
     STRONG = BANDS.fetch("strong")
     CERTAIN = BANDS.fetch("certain")
     MOST = BANDS.fetch("most_per_member", 25)
-    MATES_SHOWN = 12
+    MATES_SHOWN = 16
 
     Side = Struct.new(:user_id, :other_id, :score, :top_signal, :signals,
       :first_seen, :last_seen, keyword_init: true) do
@@ -74,11 +74,11 @@ module Fd
     SQL
 
     MATES_SQL = <<~SQL.squish.freeze
-      SELECT mate.user_id
+      SELECT mate.user_id, mate.active
       FROM fd.member_cluster mine
       JOIN fd.member_cluster mate ON mate.cluster_id = mine.cluster_id AND mate.user_id <> mine.user_id
       WHERE mine.user_id = :user_id
-      ORDER BY mate.user_id
+      ORDER BY mate.active DESC, mate.user_id
     SQL
 
     def self.evidence_of(signals)
@@ -135,9 +135,11 @@ module Fd
     end
 
     def self.cluster_mates(user_id, except: [])
-      return [] if user_id.blank?
+      return {} if user_id.blank?
 
-      connection.select_values(sanitize_sql([MATES_SQL, { user_id: user_id }])) - except
+      connection.select_rows(sanitize_sql([MATES_SQL, { user_id: user_id }]))
+        .reject { |mate, _| except.include?(mate) }
+        .to_h { |mate, active| [mate, ActiveModel::Type::Boolean.new.cast(active) || false] }
     end
 
     def self.label_for(name)

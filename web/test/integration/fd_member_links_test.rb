@@ -137,7 +137,8 @@ class FdMemberLinksTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_select ".link-mates-title", "Same cluster"
-    assert_select ".link-mates-head", /2 other accounts/
+    assert_select ".link-mates-head", /2 other accounts, 1 deactivated/
+    assert_select ".facepile a.facepile-face.is-gone[title*=deactivated]", 1
     assert_select ".link-mates-open", 1
     assert_match "UROOT", response.body
     assert_match "UTHIRD", response.body
@@ -150,8 +151,8 @@ class FdMemberLinksTest < ActionDispatch::IntegrationTest
     20.times { |n| cluster!("UBIG#{n.to_s.rjust(2, '0')}", "UBIG00", accounts: 21, active: true) }
 
     get fd_member_links_path("UONE")
-    assert_select ".link-mates-list a", Fd::MemberLink::MATES_SHOWN
-    assert_select ".link-mates-list", /8 more/
+    assert_select ".facepile a.facepile-face", Fd::MemberLink::MATES_SHOWN
+    assert_select ".facepile .facepile-more", "+4"
     assert_select ".link-mates-head", /20 other accounts/
     assert_select "a", text: "Open cluster", count: 1
   end

@@ -7,7 +7,7 @@ module Fd
       links = MemberLink.for_member(user_id)
       mates = MemberLink.cluster_mates(user_id, except: links.map(&:other_id))
       verdicts = LinkVerdict.for_pairs(links.map { |one| [user_id, one.other_id] })
-      shown = mates.first(MemberLink::MATES_SHOWN)
+      shown = mates.keys.first(MemberLink::MATES_SHOWN)
       names = Names.for([user_id] + links.map(&:other_id) + shown + verdicts.values.map(&:decided_by))
       @names = names
 
