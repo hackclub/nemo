@@ -1,12 +1,13 @@
 import { Controller } from "@hotwired/stimulus"
+import { raise, lower, depth, topmost, popupOpen, aboveOpen, drawerOpen, inDrawer, inAbove } from "lib/layers"
 
 const REACHABLE = [
   "a[href]", "button:not([disabled])", "input:not([type=hidden]):not([disabled])",
   "select:not([disabled])", "textarea:not([disabled])", "summary", "[tabindex]:not([tabindex='-1'])"
 ].join(", ")
 
-const DRAWER = "[data-controller~='person-drawer']"
-const DRAWN = `${DRAWER}:not(:empty)`
+const LAYER_STEP = 3
+const VEIL_FLOOR = 100
 
 export default class extends Controller {
   static targets = ["flip", "box"]
@@ -26,6 +27,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    lower(this)
     document.removeEventListener("click", this.onOpenClick)
     document.removeEventListener("keydown", this.onDocumentKey)
     this.boxTarget.removeEventListener("keydown", this.onKeys)
@@ -42,15 +44,20 @@ export default class extends Controller {
       return
     }
 
-    if (!this.flipTarget.checked || event.composedPath().includes(this.boxTarget)) return
-    if (event.target.closest(DRAWER)) return
+    if (!this.flipTarget.checked || !topmost(this) || event.defaultPrevented) return
+    if (event.composedPath().includes(this.boxTarget)) return
+    if (inDrawer(event.target) || inAbove(event.target)) return
 
     event.preventDefault()
     this.shut()
   }
 
   get covered() {
-    return document.querySelector(DRAWN) !== null
+    return aboveOpen() || (drawerOpen() && depth(this) === 0)
+  }
+
+  holdsEscape(event) {
+    return event.defaultPrevented || this.covered || popupOpen(this.boxTarget)
   }
 
   // a form that targets a turbo frame leaves the page in place, so the dialog
@@ -60,7 +67,8 @@ export default class extends Controller {
   }
 
   onDocumentKey(event) {
-    if (event.key !== "Escape" || !this.flipTarget.checked || this.covered) return
+    if (event.key !== "Escape" || !this.flipTarget.checked || !topmost(this)) return
+    if (this.holdsEscape(event)) return
 
     event.preventDefault()
     this.shut()
@@ -82,7 +90,8 @@ export default class extends Controller {
     this.sync()
   }
 
-  shut() {
+  shut(event) {
+    if (event?.type === "click") event.preventDefault()
     if (!this.flipTarget.checked) return
 
     this.flipTarget.checked = false
@@ -90,6 +99,8 @@ export default class extends Controller {
   }
 
   entered() {
+    raise(this)
+    this.stackAt(depth(this))
     if (!this.opener || this.boxTarget.contains(this.opener)) this.opener = document.activeElement
     requestAnimationFrame(() => {
       const first = this.boxTarget.querySelector("[autofocus]") || this.reachable()[0]
@@ -97,7 +108,16 @@ export default class extends Controller {
     })
   }
 
+  stackAt(level) {
+    const veil = this.element.querySelector(".modal-veil")
+    const wrap = this.element.querySelector(".modal-wrap")
+    if (veil) veil.style.zIndex = level > 0 ? String(VEIL_FLOOR + (level * LAYER_STEP)) : ""
+    if (wrap) wrap.style.zIndex = level > 0 ? String(VEIL_FLOOR + 1 + (level * LAYER_STEP)) : ""
+  }
+
   left() {
+    lower(this)
+    this.stackAt(0)
     const url = new URL(location.href)
     if (url.searchParams.has("open") || url.searchParams.has("do")) {
       url.searchParams.delete("open")
@@ -110,7 +130,7 @@ export default class extends Controller {
   }
 
   onKeys(event) {
-    if (event.key === "Escape" && this.covered) return
+    if (event.key === "Escape" && this.holdsEscape(event)) return
     if (event.key === "Escape") {
       event.preventDefault()
       event.stopPropagation()

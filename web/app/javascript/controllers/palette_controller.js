@@ -29,7 +29,10 @@ export default class extends Controller {
     }
     if (this.hostTarget.hidden) return
 
-    if (event.key === "Escape") return this.close()
+    if (event.key === "Escape") {
+      event.preventDefault()
+      return this.close()
+    }
     if (event.key === "ArrowDown") return this.move(event, 1)
     if (event.key === "ArrowUp") return this.move(event, -1)
     if (event.key === "Enter") return this.go(event)

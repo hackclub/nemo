@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { modalsOpen, drawerOpen, aboveOpen, inOverlay } from "lib/layers"
 
 const OPEN = "mn-dock"
 const PIN = "mn-dock-pin"
@@ -65,6 +66,7 @@ export default class extends Controller {
     if (!this.open || this.pinned) return
     if (!this.hasPanelTarget) return
     if (this.panelTarget.contains(event.target)) return
+    if (inOverlay(event.target) || event.target.closest(":popover-open")) return
     if (event.target.closest('[data-action*="case-timeline#toggle"]')) return
 
     this.close()
@@ -73,7 +75,9 @@ export default class extends Controller {
   onKey(event) {
     if (!this.open || this.pinned) return
     if (document.activeElement?.closest("input, textarea, select")) return
+    if (event.key !== "Escape" || event.defaultPrevented) return
+    if (modalsOpen() > 0 || drawerOpen() || aboveOpen()) return
 
-    if (event.key === "Escape") this.close()
+    this.close()
   }
 }

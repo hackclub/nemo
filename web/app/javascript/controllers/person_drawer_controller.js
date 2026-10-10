@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { modalsOpen, popupOpen, aboveOpen, inOverlay } from "lib/layers"
 
 export default class extends Controller {
   connect() {
@@ -34,15 +35,16 @@ export default class extends Controller {
   onClick(event) {
     if (this.element.matches(":empty")) return
     if (this.element.contains(event.target)) return
-    if (event.target.closest(".modal-wrap")) return
+    if (inOverlay(event.target)) return
     if (event.target.closest(`[data-turbo-frame="${this.element.id}"]`)) return
 
     this.close()
   }
 
   onKey(event) {
-    if (this.element.matches(":empty")) return
+    if (this.element.matches(":empty") || event.key !== "Escape" || event.defaultPrevented) return
+    if (aboveOpen() || popupOpen(this.element) || modalsOpen() > 1) return
 
-    if (event.key === "Escape") this.close()
+    this.close()
   }
 }

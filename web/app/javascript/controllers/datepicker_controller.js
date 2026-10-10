@@ -32,6 +32,7 @@ export default class extends Controller {
     }
     this.onKey = (event) => {
       if (event.key === "Escape") {
+        event.preventDefault()
         this.close()
         this.triggerTarget.focus()
       }
