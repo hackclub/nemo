@@ -61,6 +61,18 @@
   }
   .avatar-lg, .avatar-stack .avatar-lg { width: 28px; height: 28px; font-size: var(--t-fine); }
   .avatar-none { background: var(--sunk); color: var(--ink-4); }
+
+  .member-face {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    max-width: 100%;
+    vertical-align: middle;
+  }
+  .member-face > .lnk { min-width: 0; overflow-wrap: anywhere; }
+  .member-face-sm { gap: 5px; vertical-align: -3px; }
+  .member-face-sm > .row-avatar { width: 16px; height: 16px; font-size: var(--t-tiny); border-radius: 26%; }
   .avatar-1 { background: oklch(91% 0.048 55); color: oklch(38% 0.095 55); }
   .avatar-2 { background: oklch(91% 0.048 105); color: oklch(38% 0.095 105); }
   .avatar-3 { background: oklch(91% 0.048 155); color: oklch(38% 0.095 155); }

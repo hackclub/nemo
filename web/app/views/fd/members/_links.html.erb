@@ -9,7 +9,7 @@
         <tbody>
           <% links.each do |side| %>
             <tr>
-              <td><%= member_link(side.other_id) %></td>
+              <td><%= member_face(side.other_id) %></td>
               <td><%= link_band_chip(side) %>
                 <span class="sub2"><%= number_with_precision(side.score, precision: 1) %></span>
               </td>
@@ -33,23 +33,21 @@
   <% end %>
 
   <% if mates.any? %>
-    <div class="scroll">
-      <table class="data-table">
-        <thead>
-          <tr><th>Same cluster</th><th></th></tr>
-        </thead>
-        <tbody>
-          <% mates.each do |mate| %>
-            <tr>
-              <td><%= member_link(mate) %></td>
-              <td class="align-right">
-                <%= link_to "Open cluster", fd_cluster_path(cluster_of), class: "btn btn-sm" if cluster_of %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+    <section class="link-mates">
+      <div class="link-mates-head">
+        <h3 class="link-mates-title">Same cluster</h3>
+        <span class="sub2"><%= pluralize(number_with_delimiter(mates.size), "other account") %></span>
+        <%= link_to "Open cluster", fd_cluster_path(cluster_of), class: "btn btn-sm link-mates-open" if cluster_of %>
+      </div>
+      <div class="link-mates-list">
+        <% mates.first(Fd::MemberLink::MATES_SHOWN).each do |mate| %>
+          <%= member_face(mate) %>
+        <% end %>
+        <% if mates.size > Fd::MemberLink::MATES_SHOWN %>
+          <span class="sub2"><%= number_with_delimiter(mates.size - Fd::MemberLink::MATES_SHOWN) %> more</span>
+        <% end %>
+      </div>
+    </section>
   <% end %>
 
   <% if cluster_of && mates.none? %>

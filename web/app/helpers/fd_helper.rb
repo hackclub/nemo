@@ -44,6 +44,14 @@ module FdHelper
       data: { turbo_frame: "person-drawer" }
   end
 
+  def member_face(user_id, small: false)
+    return "n/a" if user_id.blank?
+
+    tag.span(class: ["member-face", ("member-face-sm" if small)]) do
+      safe_join([face(user_id), member_link(user_id)])
+    end
+  end
+
   SLACK_TEAM_URL = "https://hackclub.slack.com/team".freeze
 
   def slack_member_url(user_id)
@@ -212,7 +220,7 @@ module FdHelper
   end
 
   def audit_actor(row)
-    return member_link(row.actor_id) if row.actor_id.present?
+    return member_face(row.actor_id) if row.actor_id.present?
     return tag.span("nemo", class: "state") if row.actor_kind.to_s == "bot"
 
     tag.span("nobody named", class: "state")
@@ -222,14 +230,14 @@ module FdHelper
   AUDIT_MEMBER = /\A[UW][A-Z0-9]{2,}\z/
 
   def audit_about(row)
-    return member_link(row.subject_id) if row.subject_id.present?
+    return member_face(row.subject_id) if row.subject_id.present?
 
     refs = [row.entity_ref, row.entity_id].compact_blank
     room = refs.find { |one| one.match?(AUDIT_CHANNEL) }
     return audit_channel(room) if room
 
     who = refs.find { |one| one.match?(AUDIT_MEMBER) }
-    return member_link(who) if who
+    return member_face(who) if who
     return tag.span("#{row.entity_kind} #{row.entity_id}", class: "sub2") if row.entity_id.present?
 
     tag.span(row.entity_kind.to_s.tr("_", " "), class: "sub2")
@@ -963,7 +971,7 @@ module FdHelper
   end
 
   def note_byline(note)
-    safe_join([member_link(note.author), on_day(note.created_at)], " · ")
+    safe_join([member_face(note.author, small: true), on_day(note.created_at)], " · ")
   end
 
   def action_option_label(action)
@@ -1319,13 +1327,13 @@ module FdHelper
   def case_origin_label(kase, reports)
     first = Array(reports).min_by(&:received_at)
     return safe_join(["opened #{on_day(kase.opened_at)} by ",
-      member_link(kase.opened_by)]) if first.nil?
+      member_face(kase.opened_by, small: true)]) if first.nil?
 
     text = "reported #{on_day(first.received_at)}"
     return "#{text} by #{pluralize(reports.size, 'person')}" if reports.many?
     return "#{text} by a member" if first.anonymous?
 
-    safe_join(["#{text} by ", member_link(first.reporter_user_id)])
+    safe_join(["#{text} by ", member_face(first.reporter_user_id, small: true)])
   end
 
   ACTION_LABELS = Fd::Action::LABELS
@@ -1382,11 +1390,11 @@ module FdHelper
 
   def action_sentence(action)
     channel = action.details["channel_id"]
-    parts = action.aimed_at_member? ? ["On ", member_link(action.target_user_id)] : ["On a thread"]
+    parts = action.aimed_at_member? ? ["On ", member_face(action.target_user_id, small: true)] : ["On a thread"]
     parts << " in #{channel_label(channel)}" if channel.present?
     parts << ", until #{on_day(action.expires_at)}" if action.expires?
     parts << ". Set by "
-    parts << member_link(action.decided_by)
+    parts << member_face(action.decided_by, small: true)
     parts << " on #{on_day(action.performed_at)}."
     safe_join(parts)
   end
@@ -1572,7 +1580,7 @@ module FdHelper
     case row.kind
     when "case" then link_to row.about, fd_case_path(row.id), class: "lnk"
     when "capability" then row.about
-    else member_link(row.id)
+    else member_face(row.id, small: true)
     end
   end
 

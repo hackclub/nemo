@@ -18,8 +18,8 @@
           <% cluster.edges.each do |edge| %>
             <% judged = Fd::LinkVerdict.of(@verdicts, edge.a_user_id, edge.b_user_id) %>
             <tr>
-              <td><%= member_link(edge.a_user_id) %></td>
-              <td><%= member_link(edge.b_user_id) %></td>
+              <td><%= member_face(edge.a_user_id) %></td>
+              <td><%= member_face(edge.b_user_id) %></td>
               <td><%= edge.score ? link_score_chip(edge.score) : "n/a" %></td>
               <td class="link-why"><%= link_reasons(Fd::MemberLink.evidence_of(edge.signals)) %></td>
               <td><%= verdict_cell(edge.a_user_id, edge.b_user_id, judged) %></td>

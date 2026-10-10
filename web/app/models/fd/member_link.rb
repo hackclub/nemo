@@ -10,6 +10,7 @@ module Fd
     STRONG = BANDS.fetch("strong")
     CERTAIN = BANDS.fetch("certain")
     MOST = BANDS.fetch("most_per_member", 25)
+    MATES_SHOWN = 12
 
     Side = Struct.new(:user_id, :other_id, :score, :top_signal, :signals,
       :first_seen, :last_seen, keyword_init: true) do

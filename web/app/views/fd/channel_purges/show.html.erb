@@ -14,7 +14,7 @@
   <div class="card-head">
     <h2 class="card-title"><%= @purge.wanted %> asked</h2>
     <p class="card-note">
-      <%= member_link(@purge.asked_by) %> &middot; <%= at_minute(@purge.asked_at) %>
+      <%= member_face(@purge.asked_by, small: true) %> &middot; <%= at_minute(@purge.asked_at) %>
       &middot; <%= @purge.taken_down %> taken down
       <% if @purge.replies_taken.positive? %>
         &middot; <%= @purge.replies_taken %> in threads

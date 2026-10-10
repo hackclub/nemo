@@ -19,8 +19,8 @@
         <tbody>
           <% @pairs.each do |pair| %>
             <tr>
-              <td><%= member_link(pair.active_id) %></td>
-              <td><%= member_link(pair.deactivated_id) %></td>
+              <td><%= member_face(pair.active_id) %></td>
+              <td><%= member_face(pair.deactivated_id) %></td>
               <td><%= link_score_chip(pair.score) %></td>
               <td class="link-why"><%= link_reasons(pair.evidence) %></td>
               <td class="sub2"><%= pair.last_seen ? on_day(pair.last_seen) : "n/a" %></td>

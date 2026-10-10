@@ -30,7 +30,7 @@
                   <%= one.people_here.zero? ? "nobody" : pluralize(one.people_here, "account") %>
                 </td>
                 <td>
-                  <%= member_link(one.added_by) %>
+                  <%= member_face(one.added_by, small: true) %>
                   <span class="sub2"><%= on_day(one.added_at) %></span>
                 </td>
                 <td class="col-num">
@@ -68,7 +68,7 @@
           <tbody>
             <% screens.each do |screen| %>
               <tr>
-                <td><%= member_link(screen.user_id) %></td>
+                <td><%= member_face(screen.user_id) %></td>
                 <td><span class="mono"><%= screen.email_domain || "n/a" %></span></td>
                 <td><%= screen_outcome_chip(screen) %></td>
                 <td class="sub2"><%= on_day(screen.at) %></td>

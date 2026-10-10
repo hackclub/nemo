@@ -13,7 +13,7 @@ module AuditHelper
 
   def audit_group_value(group, one)
     case group
-    when "actor" then member_link(one.key)
+    when "actor" then member_face(one.key)
     when "action" then tag.span(Fd::AuditCatalogue.action_label(one.key), class: "audit-verb")
     when "address" then tag.span(one.key, class: "mono")
     when "channel" then audit_channel(one.key)

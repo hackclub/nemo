@@ -29,7 +29,7 @@
       </span>
       <p class="empty-title"><%= reports.any? ? "Nothing said yet" : "No report on file" %></p>
       <% unless reports.any? %>
-        <p class="card-note"><%= member_link(kase.opened_by) %> opened this case directly, so there is nobody to reply to.</p>
+        <p class="card-note"><%= member_face(kase.opened_by, small: true) %> opened this case directly, so there is nobody to reply to.</p>
       <% end %>
     </div>
   <% end %>

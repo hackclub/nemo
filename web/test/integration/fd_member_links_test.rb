@@ -136,10 +136,24 @@ class FdMemberLinksTest < ActionDispatch::IntegrationTest
     get fd_member_links_path("UONE")
     assert_response :success
 
-    assert_select "th", "Same cluster"
+    assert_select ".link-mates-title", "Same cluster"
+    assert_select ".link-mates-head", /2 other accounts/
+    assert_select ".link-mates-open", 1
     assert_match "UROOT", response.body
     assert_match "UTHIRD", response.body
     assert_select ".empty-title", count: 0
+  end
+
+  test "a big cluster shows a dozen of its accounts and one way into it" do
+    member!("UONE")
+    cluster!("UONE", "UBIG00", accounts: 21, active: true)
+    20.times { |n| cluster!("UBIG#{n.to_s.rjust(2, '0')}", "UBIG00", accounts: 21, active: true) }
+
+    get fd_member_links_path("UONE")
+    assert_select ".link-mates-list a", Fd::MemberLink::MATES_SHOWN
+    assert_select ".link-mates-list", /8 more/
+    assert_select ".link-mates-head", /20 other accounts/
+    assert_select "a", text: "Open cluster", count: 1
   end
 
   private

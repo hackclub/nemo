@@ -37,7 +37,7 @@
               <% if address.alongside.any? %>
                 <span class="session-alongside">
                   also used by
-                  <%= safe_join(address.alongside.first(6).map { |who| member_link(who) }, ", ") %>
+                  <%= safe_join(address.alongside.first(6).map { |who| member_face(who, small: true) }, ", ") %>
                 </span>
               <% elsif address.crowded? %>
                 <span class="session-crowd">

@@ -19,7 +19,7 @@
         <tbody>
           <% guards.each do |guard| %>
             <tr>
-              <td><%= member_link(guard.subject_id) %></td>
+              <td><%= member_face(guard.subject_id) %></td>
               <td><%= guard_held_line(guard) %></td>
               <td><%= guard.opened_at.strftime("%-d %b") %></td>
               <td class="<%= "is-none" unless guard.expires_at %>">

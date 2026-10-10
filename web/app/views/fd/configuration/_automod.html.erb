@@ -26,7 +26,7 @@
                 <td><%= automod_mode_chip(word) %></td>
                 <td><%= word.category_key.present? ? category_label(word.category_key) : "n/a" %></td>
                 <td>
-                  <%= member_link(word.added_by) %>
+                  <%= member_face(word.added_by, small: true) %>
                   <span class="sub2"><%= on_day(word.added_at) %></span>
                 </td>
                 <td class="col-num">
@@ -58,7 +58,7 @@
               <b class="masked"><%= match.word %></b>
               <span class="sub"><%= match.body.presence || "no text held" %></span>
               <span class="sub">
-                <%= member_link(match.user_id) %> ·
+                <%= member_face(match.user_id, small: true) %> ·
                 <%= channel_link(match.channel_id, permalink: match.permalink) %> ·
                 <%= match.at.strftime("%-d %b %H:%M") %>
               </span>
@@ -86,7 +86,7 @@
               <tr>
                 <td><span class="masked mono"><%= word.word %></span></td>
                 <td>
-                  <%= member_link(word.retired_by) %>
+                  <%= member_face(word.retired_by, small: true) %>
                   <span class="sub2"><%= on_day(word.retired_at) %></span>
                 </td>
               </tr>

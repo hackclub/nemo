@@ -18,7 +18,7 @@
         <tbody>
           <% @clusters.each do |cluster| %>
             <tr>
-              <td><%= member_link(cluster.cluster_id) %></td>
+              <td><%= member_face(cluster.cluster_id) %></td>
               <td class="col-num"><%= cluster.accounts %></td>
               <td class="col-num"><%= cluster.active %></td>
               <td>

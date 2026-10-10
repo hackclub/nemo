@@ -16,7 +16,7 @@
         <% cluster.members.each do |one| %>
           <% here = cluster.edges.count { |edge| edge.score && [edge.a_user_id, edge.b_user_id].include?(one.user_id) } %>
           <tr>
-            <td><%= member_link(one.user_id) %></td>
+            <td><%= member_face(one.user_id) %></td>
             <td class="sub2"><%= one.joined_at ? on_day(one.joined_at) : "n/a" %></td>
             <td>
               <% if one.deactivated %>

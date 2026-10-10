@@ -187,7 +187,7 @@
                       <% if under.present? %><p class="member-event-body"><%= named_text(under) %></p><% end %>
                     <% end %>
                     <span class="member-event-by">
-                      <%= entry.who ? member_link(entry.who) : "n/a" %>
+                      <%= entry.who ? member_face(entry.who) : "n/a" %>
                     </span>
                   </div>
                   <span class="evrow-right">

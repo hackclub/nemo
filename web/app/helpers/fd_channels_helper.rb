@@ -81,7 +81,7 @@ module FdChannelsHelper
   def channel_guard_why(guard)
     return nil if guard.nil?
 
-    safe_join([member_link(guard.opened_by), " turned it on ", on_day(guard.created_at)])
+    safe_join([member_face(guard.opened_by, small: true), " turned it on ", on_day(guard.created_at)])
   end
 
   NEEDS_INVITE = "needs an invite".freeze
@@ -155,6 +155,6 @@ module FdChannelsHelper
   end
 
   def vouched_line(allow)
-    safe_join(["allowed by ", member_link(allow.added_by), " ", ago_label(allow.added_at)])
+    safe_join(["allowed by ", member_face(allow.added_by, small: true), " ", ago_label(allow.added_at)])
   end
 end

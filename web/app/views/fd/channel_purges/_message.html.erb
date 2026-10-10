@@ -2,7 +2,7 @@
   <%= face(message.user, css: "avatar") %>
   <span>
     <span class="msg-head">
-      <span class="msg-who"><%= member_link(message.user) %></span>
+      <span class="msg-who"><%= member_face(message.user) %></span>
       <% if message.at %>
         <span class="msg-at"><%= message.at.strftime("%-d %b %H:%M") %></span>
       <% end %>

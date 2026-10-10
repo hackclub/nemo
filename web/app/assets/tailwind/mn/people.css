@@ -623,6 +623,15 @@
 @layer components {
   .link-why { min-width: 16rem; }
 
+  .link-mates {
+    @apply flex flex-col gap-2 border-t border-border px-4 py-3;
+  }
+  .link-mates:first-child { @apply border-t-0; }
+  .link-mates-head { @apply flex items-center gap-3; }
+  .link-mates-title { @apply text-sm font-medium text-foreground; }
+  .link-mates-open { @apply ml-auto; }
+  .link-mates-list { @apply flex flex-wrap items-baseline gap-x-4 gap-y-1.5 text-sm; }
+
   .cluster-map-body {
     @apply flex justify-center px-4;
   }

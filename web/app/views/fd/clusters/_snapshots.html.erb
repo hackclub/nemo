@@ -17,9 +17,9 @@
         <tbody>
           <% cluster.snapshots.each do |snap| %>
             <tr>
-              <td><%= member_link(snap.user_id) %></td>
+              <td><%= member_face(snap.user_id) %></td>
               <td class="sub2"><%= on_day(snap.deactivated_at) %></td>
-              <td><%= snap.actor_id ? member_link(snap.actor_id) : (snap.source == "slack" ? "Slack admin" : "n/a") %></td>
+              <td><%= snap.actor_id ? member_face(snap.actor_id) : (snap.source == "slack" ? "Slack admin" : "n/a") %></td>
               <td class="sub2"><%= snap.reason.presence || "n/a" %></td>
               <td>
                 <details class="snapshot-detail">
@@ -29,7 +29,7 @@
                       <span class="mono"><%= (trait["agent"] || trait["value"]).to_s.truncate(60) %></span></div>
                   <% end %>
                   <% snap.links.each do |link| %>
-                    <div class="sub2"><%= member_link(link["other"]) %>
+                    <div class="sub2"><%= member_face(link["other"]) %>
                       <%= number_with_precision(link["score"], precision: 1) %></div>
                   <% end %>
                 </details>
