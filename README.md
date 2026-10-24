@@ -146,6 +146,7 @@ make doctor   # environment a role needs (ROLE=serve)
 
 - [Palantir Foundry](https://www.palantir.com/platforms/foundry/) and its [data protection and governance guidance](https://www.palantir.com/docs/foundry/security/data-protection-and-governance/) were an inspiration. Mnemosyne is independent, and Hack Club is not affiliated with Palantir.
 - [d3](https://d3js.org/) for the charts.
+- [Nineteen Eighty-Four](https://en.wikipedia.org/wiki/Nineteen_Eighty-Four) by George Orwell. 
 
 ## License
 
