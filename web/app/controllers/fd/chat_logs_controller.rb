@@ -12,8 +12,8 @@ module Fd
       else
         []
       end
-      @chat = CaseChat.tail(family)
-      @earlier_count = CaseChat.earlier_than(family, @chat.size) +
+      @chat = CaseChat.tail(family, hidden_threads: @hidden_threads)
+      @earlier_count = CaseChat.earlier_than(family, @chat.size, hidden_threads: @hidden_threads) +
         [IntakeMessage.count_for(conversation_ids) - @conversation_messages.size, 0].max
       load_rendering
 
@@ -30,7 +30,8 @@ module Fd
       @conversation_messages = IntakeMessage.before(conversation_ids,
         IntakeMessage.find_by(id: params[:message_before], conversation_id: conversation_ids))
       @queued_replies = []
-      @chat = CaseChat.before(family, CaseChat.find_by(id: params[:chat_before], case_id: family))
+      @chat = CaseChat.before(family, CaseChat.find_by(id: params[:chat_before], case_id: family),
+        hidden_threads: @hidden_threads)
       load_rendering
 
       render layout: false
@@ -44,6 +45,7 @@ module Fd
       @named_reporters = reports.reject(&:anonymous?).map(&:reporter_user_id)
       @thread = reports.find { |report| report.id == params[:thread].to_i } || reports.last
       @reports = [@thread].compact
+      @hidden_threads = CaseReport.threads_besides(reports, @thread)
       @conversation = IntakeConversation.for_case(family).find_by(report_id: @thread&.id)
     end
 

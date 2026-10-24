@@ -188,6 +188,77 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#earlier-chat-#{@kase.id} .msg", 0
   end
 
+  def report_in_thread!(kase, forwarded_ts)
+    Fd::CaseReport.create!(case_id: kase.id, is_anonymous: true, body: "report #{forwarded_ts}",
+      received_at: 2.days.ago, source_app: "shroud", card_channel_id: "CFIRE", forwarded_ts: forwarded_ts)
+  end
+
+  def slack_line!(body, ts, thread_ts)
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: body, source_app: "nemo",
+      channel_id: "CFIRE", ts: ts, thread_ts: thread_ts)
+  end
+
+  def merged_reports
+    merged = make_case(duplicate_of: @kase.id)
+    first = report_in_thread!(@kase, "100.1")
+    second = report_in_thread!(merged, "200.1")
+    slack_line!("said in first", "100.2", "100.1")
+    slack_line!("said in second", "200.2", "200.1")
+    slack_line!("said elsewhere", "300.2", "300.1")
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "typed for first",
+      source_app: "fire_engine")
+    Fd::CaseChat.create!(case_id: merged.id, author_user_id: "UME", body: "typed for second",
+      source_app: "fire_engine")
+    [first, second]
+  end
+
+  test "chat log shows only the chat of the selected report thread" do
+    first, second = merged_reports
+
+    get fd_case_chat_log_path(@kase, thread: first.id)
+
+    assert_includes response.body, "said in first"
+    assert_includes response.body, "typed for first"
+    assert_not_includes response.body, "said in second"
+    assert_not_includes response.body, "typed for second"
+
+    get fd_case_chat_log_path(@kase, thread: second.id)
+
+    assert_includes response.body, "said in second"
+    assert_includes response.body, "typed for second"
+    assert_not_includes response.body, "said in first"
+    assert_not_includes response.body, "typed for first"
+  end
+
+  test "chat log keeps a thread that belongs to no report on every report thread" do
+    first, second = merged_reports
+
+    [first, second].each do |report|
+      get fd_case_chat_log_path(@kase, thread: report.id)
+
+      assert_includes response.body, "said elsewhere"
+    end
+  end
+
+  test "case show shows only the chat of the selected report thread" do
+    _, second = merged_reports
+
+    get fd_case_path(@kase, tab: "report", thread: second.id)
+
+    assert_includes response.body, "said in second"
+    assert_not_includes response.body, "said in first"
+  end
+
+  test "earlier chat log leaves out the other report threads" do
+    first, = merged_reports
+    oldest = Fd::CaseChat.where(case_id: @kase.id).order(:id).last
+
+    get earlier_fd_case_chat_log_path(@kase, thread: first.id, chat_before: oldest.id)
+
+    assert_includes response.body, "said in first"
+    assert_not_includes response.body, "said in second"
+  end
+
   def stub_emoji(urls)
     original_for = Slack::Emoji.method(:for)
     Slack::Emoji.define_singleton_method(:for) { |names| urls.slice(*Array(names)) }
@@ -646,7 +717,7 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_select ".msg.out .msg-who", text: "@UME"
   end
 
-  test "chat log on another report tab omits the shroud relay from the first report thread" do
+  test "chat log on another report tab omits the chat of the first report thread" do
     kase = shroud_thread!(anonymous: false)
     first = kase.reports.first
     other = Fd::CaseReport.create!(case_id: kase.id, is_anonymous: false, reporter_user_id: "UOTHER",
@@ -656,11 +727,12 @@ class FdChatTest < ActionDispatch::IntegrationTest
     get fd_case_chat_log_path(kase, thread: other.id)
 
     assert_not_includes response.body, "more detail"
-    assert_includes response.body, "on it"
+    assert_not_includes response.body, "on it"
 
     get fd_case_chat_log_path(kase, thread: first.id)
 
     assert_includes response.body, "more detail"
+    assert_includes response.body, "on it"
   end
 
   def rooted_case!

@@ -38,4 +38,15 @@ class Fd::CaseReportTest < ActiveSupport::TestCase
     report.update!(closed_at: Time.current, closed_by: "UFF1")
     assert report.outcome_notified?
   end
+
+  test "threads_besides lists the threads of the other reports" do
+    first = create_report(forwarded_ts: "100.1")
+    second = create_report(forwarded_ts: "200.1")
+    unposted = create_report(forwarded_ts: nil)
+    reports = [first, second, unposted]
+
+    assert_equal ["200.1"], Fd::CaseReport.threads_besides(reports, first)
+    assert_equal ["100.1", "200.1"], Fd::CaseReport.threads_besides(reports, unposted)
+    assert_equal [], Fd::CaseReport.threads_besides(reports, nil)
+  end
 end

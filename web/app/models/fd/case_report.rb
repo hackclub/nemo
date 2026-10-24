@@ -8,6 +8,12 @@ module Fd
 
     scope :oldest_first, -> { order(:received_at) }
 
+    def self.threads_besides(reports, selected)
+      return [] if selected.nil?
+
+      reports.filter_map(&:forwarded_ts).uniq - [selected.forwarded_ts]
+    end
+
     def self.shroud_reports_by_thread(chat)
       lines = chat.select { |line| shroud_relay?(line) }
       return {} if lines.empty?

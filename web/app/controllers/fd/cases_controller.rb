@@ -49,8 +49,9 @@ module Fd
       else
         []
       end
-      @chat = CaseChat.tail(family)
-      @earlier_count = CaseChat.earlier_than(family, @chat.size) +
+      hidden_threads = CaseReport.threads_besides(@reports, @thread)
+      @chat = CaseChat.tail(family, hidden_threads: hidden_threads)
+      @earlier_count = CaseChat.earlier_than(family, @chat.size, hidden_threads: hidden_threads) +
         [@conversation_count - @conversation_messages.size, 0].max
       @standing_notes = Note.for_subjects(@participants.map(&:user_id)).visible.recent_first
         .group_by(&:subject_user_id)
