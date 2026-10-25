@@ -56,6 +56,48 @@ class FdHelperTest < ActionView::TestCase
       link_label("https://hackclub.slack.com/archives/D0BQ793DP43/p1700000000000100")
   end
 
+  MESSAGE_LINK = "https://hackclub.slack.com/archives/C0BE6N4G2BA/p1788739817138689".freeze
+
+  test "link_label of a message link names its channel" do
+    @channels = Fd::ChannelNames.new({ "C0BE6N4G2BA" => "shroud-logs" })
+
+    assert_equal "message in #shroud-logs", link_label(MESSAGE_LINK)
+  end
+
+  test "link_label of a message link in an unnamed private channel hides the channel" do
+    @channels = Fd::ChannelNames.new({}, Set["C0BE6N4G2BA"])
+
+    assert_equal "message in #private-channel", link_label(MESSAGE_LINK)
+  end
+
+  test "linked turns a message link into a case link when it points at a report thread" do
+    @linked_cases = { ["C0BE6N4G2BA", "1788739817.138689"] =>
+      Fd::LinkedCases::Target.new(case_id: 4248, report_id: 77, root_id: 4230) }
+
+    html = linked(MESSAGE_LINK, MESSAGE_LINK)
+
+    assert_includes html, ">Case 4248</a>"
+    assert_includes html, %(href="#{ERB::Util.html_escape(fd_case_path(4230, tab: 'report', thread: 77))}")
+    assert_includes html, %(data-turbo-frame="_top")
+  end
+
+  test "linked keeps the label someone gave a message link to a case" do
+    @linked_cases = { ["C0BE6N4G2BA", "1788739817.138689"] =>
+      Fd::LinkedCases::Target.new(case_id: 4212, report_id: 70, root_id: 4212) }
+
+    html = linked(MESSAGE_LINK, "#4212")
+
+    assert_includes html, ">#4212</a>"
+    assert_includes html, %(href="#{ERB::Util.html_escape(fd_case_path(4212, tab: 'report', thread: 70))}")
+  end
+
+  test "linked keeps a labelled message link outside any case on Slack" do
+    html = linked(MESSAGE_LINK, "this one")
+
+    assert_includes html, ">this one</a>"
+    assert_includes html, %(href="#{MESSAGE_LINK}")
+  end
+
   test "mention_link targets the person-drawer turbo frame" do
     html = mention_link("U08EMT46G3V")
 

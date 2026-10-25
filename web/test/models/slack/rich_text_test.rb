@@ -104,6 +104,28 @@ class Slack::RichTextTest < ActiveSupport::TestCase
     assert_match(/what they said/, html)
   end
 
+  test "for renders a message_mention without a url as a link built from its channel and ts" do
+    html = render([{ "type" => "message_mention", "channel_id" => "C0A1",
+                     "message_ts" => "1790111676.119469", "thread_ts" => "1790111600.000100" }])
+
+    assert_includes html,
+      %(href="https://hackclub.slack.com/archives/C0A1/p1790111676119469?thread_ts=1790111600.000100")
+  end
+
+  test "link_urls returns link and message_mention urls once" do
+    message = { "blocks" => [{ "type" => "rich_text", "elements" => [
+      { "type" => "rich_text_section", "elements" => [
+        { "type" => "link", "url" => "https://hackclub.slack.com/archives/C0A1/p1790111676119469" },
+        { "type" => "message_mention", "channel_id" => "C0A2", "message_ts" => "1790111700.000100" },
+        { "type" => "link", "url" => "https://hackclub.slack.com/archives/C0A1/p1790111676119469" }
+      ] }
+    ] }] }
+
+    assert_equal ["https://hackclub.slack.com/archives/C0A1/p1790111676119469",
+                  "https://hackclub.slack.com/archives/C0A2/p1790111700000100"],
+      Slack::RichText.link_urls(message)
+  end
+
   test "for renders an unknown element type using its text" do
     assert_match(/leftovers/, render([{ "type" => "citation", "text" => "leftovers" }]))
   end

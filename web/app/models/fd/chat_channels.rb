@@ -6,7 +6,7 @@ module Fd
 
     def self.ids_in(row)
       blocks = row.try(:blocks).presence || Slack::Mrkdwn.blocks(row.try(:body))
-      Slack::RichText.channel_ids({ "blocks" => blocks })
+      Slack::RichText.channel_ids({ "blocks" => blocks }) + ChatLinks.refs_in(row).map(&:channel_id)
     end
   end
 end

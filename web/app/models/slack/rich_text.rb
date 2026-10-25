@@ -42,6 +42,30 @@ module Slack
       ids.uniq
     end
 
+    def self.link_urls(message)
+      urls = []
+      walk = lambda do |node|
+        case node
+        when Hash
+          urls << node["url"] if node["type"] == "link"
+          urls << mention_url(node) if node["type"] == "message_mention"
+          node["elements"]&.each { |child| walk.call(child) }
+        when Array then node.each { |child| walk.call(child) }
+        end
+      end
+      walk.call((message || {})["blocks"])
+      urls.compact_blank.uniq
+    end
+
+    def self.mention_url(node)
+      return node["url"] if node["url"].present?
+      return nil if node["channel_id"].blank? || node["message_ts"].blank?
+
+      url = Fd::SlackLink.url_for(node["channel_id"], node["message_ts"])
+      thread_ts = node["thread_ts"]
+      thread_ts.present? && thread_ts != node["message_ts"] ? "#{url}?thread_ts=#{thread_ts}" : url
+    end
+
     def self.user_ids(message)
       ids = []
       walk = lambda do |node|
@@ -130,7 +154,7 @@ module Slack
       when "usergroup" then chip(usergroup_ref(node["usergroup_id"]))
       when "channel" then channel_mention(node["channel_id"])
       when "broadcast" then chip(BROADCASTS.fetch(node["range"], "@#{node['range']}"))
-      when "message_mention" then linked(node.merge("text" => node["text"].presence || "a message"))
+      when "message_mention" then message_mention(node)
       when "date" then dated(node)
       when "color" then tag.span(node["value"].to_s, class: "rt-colour")
       else lines(node["text"].to_s)
@@ -159,6 +183,13 @@ module Slack
       return ERB::Util.html_escape(label) unless OPENABLE.any? { |scheme| url.start_with?(scheme) }
 
       link_to_url(label, url)
+    end
+
+    def message_mention(node)
+      url = self.class.mention_url(node)
+      return linked(node.merge("text" => node["text"].presence || "a message")) if url.nil?
+
+      linked(node.merge("url" => url))
     end
 
     def link_to_url(label, url)

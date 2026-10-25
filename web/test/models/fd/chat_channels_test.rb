@@ -25,6 +25,12 @@ class Fd::ChatChannelsTest < ActiveSupport::TestCase
     assert_equal %w[C0SAME000 C0OTHER00], Fd::ChatChannels.ids(rows, [nil])
   end
 
+  test "ids reads the channel of a message link" do
+    row = Row.new(body: "see <https://hackclub.slack.com/archives/C0LINKED0/p1790111676119469>")
+
+    assert_equal ["C0LINKED0"], Fd::ChatChannels.ids(row)
+  end
+
   test "ids returns an empty array for empty rows and nil" do
     assert_equal [], Fd::ChatChannels.ids([], nil)
   end

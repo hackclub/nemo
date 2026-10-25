@@ -14,6 +14,10 @@ module FdHelper
     @emoji || {}
   end
 
+  def linked_cases
+    @linked_cases || {}
+  end
+
   def usergroup_handles
     @usergroup_handles ||= Fd::SlackUsergroup::Handles.new
   end
@@ -170,19 +174,38 @@ module FdHelper
     href = CGI.unescapeHTML(url.to_s)
     return href unless href.start_with?("http://", "https://")
 
+    target = linked_case(href)
+    return case_link(target, (CGI.unescapeHTML(label.to_s) if labelled?(href, label))) if target
+
     link_to link_label(href, label), href, class: "link-note",
       target: "_blank", rel: "noopener"
   end
 
-  def link_label(href, label = nil)
+  def labelled?(href, label)
     text = CGI.unescapeHTML(label.to_s)
-    return text if text.present? && text != href
+    text.present? && text != href
+  end
+
+  def linked_case(href)
+    ref = Fd::SlackLink.parse(href)
+    ref && linked_cases[[ref.channel_id, ref.thread_ts]]
+  end
+
+  def case_link(target, label = nil)
+    link_to label || "Case #{target.case_id}",
+      fd_case_path(target.root_id, tab: "report", thread: target.report_id),
+      class: "link-note", data: { turbo_frame: "_top" }
+  end
+
+  def link_label(href, label = nil)
+    return CGI.unescapeHTML(label.to_s) if labelled?(href, label)
 
     ref = Fd::SlackLink.parse(href)
     if ref
       return PRIVATE_DM_LABEL if ref.channel_id.match?(DM_ID)
+      return "message in #{PRIVATE_CHANNEL_LABEL}" if channels.private_unnamed?(ref.channel_id)
 
-      return channel_label(ref.channel_id)
+      return "message in #{channel_label(ref.channel_id)}"
     end
 
     href.delete_prefix("https://").delete_prefix("http://").truncate(48)

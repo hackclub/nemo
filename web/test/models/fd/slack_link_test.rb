@@ -39,6 +39,13 @@ class Fd::SlackLinkTest < ActiveSupport::TestCase
     assert_not_nil parse(ROOT.sub("hackclub.slack.com", "HackClub.Slack.com"))
   end
 
+  test "parse accepts the enterprise host" do
+    ref = parse(ROOT.sub("hackclub.slack.com", "hackclub.enterprise.slack.com"))
+
+    assert_equal "C0266FRGV", ref.channel_id
+    assert_equal "1754487721.123456", ref.thread_ts
+  end
+
   test "parse returns nil for another workspace host" do
     assert_nil parse(ROOT.sub("hackclub.slack.com", "someoneelse.slack.com"))
   end

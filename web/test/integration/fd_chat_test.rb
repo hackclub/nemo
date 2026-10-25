@@ -107,6 +107,23 @@ class FdChatTest < ActionDispatch::IntegrationTest
     assert_select "a.mention[href=?]", fd_member_path("UTHEM")
   end
 
+  test "chat log shows a message link to a report thread as its case" do
+    linked = make_case
+    report = Fd::CaseReport.create!(case_id: linked.id, is_anonymous: true, body: "spam",
+      received_at: 1.day.ago, source_app: "shroud", card_channel_id: "C0FIRE",
+      forwarded_ts: "1788739817.138689")
+    url = "https://hackclub.slack.com/archives/C0FIRE/p1788739817138689"
+    Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "<#{url}|#{url}>",
+      source_app: "nemo", channel_id: "CLOG", ts: "1.6",
+      blocks: rich([{ "type" => "message_mention", "channel_id" => "C0FIRE",
+                      "message_ts" => "1788739817.138689", "url" => url, "text" => url }]))
+
+    get fd_case_chat_log_path(@kase, thread: @kase.reports.first&.id)
+
+    assert_select "a.link-note[href=?]", fd_case_path(linked, tab: "report", thread: report.id),
+      text: "Case #{linked.id}"
+  end
+
   test "chat log names a member mentioned only inside chat" do
     member = Fd::Member.first
     Fd::CaseChat.create!(case_id: @kase.id, author_user_id: "UME", body: "<@#{member.user_id}> look",

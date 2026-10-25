@@ -59,6 +59,7 @@ module Fd
         ChatChannels.ids(@chat, @conversation_messages, @queued_replies, @reports))
       @names = Names.for(people_ids)
       @emoji = ChatEmoji.for(@chat, @conversation_messages, @queued_replies, @reports)
+      @linked_cases = LinkedCases.for(ChatLinks.refs(@chat, @conversation_messages, @queued_replies, @reports))
     end
 
     def cited

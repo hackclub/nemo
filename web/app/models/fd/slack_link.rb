@@ -1,6 +1,7 @@
 module Fd
   class SlackLink
     HOST = "hackclub.slack.com".freeze
+    HOSTS = [HOST, "hackclub.enterprise.slack.com"].freeze
     ARCHIVES = "https://#{HOST}/archives".freeze
 
     CHANNEL = /\A[CDG][A-Z0-9]{2,}\z/
@@ -12,7 +13,7 @@ module Fd
     def self.parse(raw)
       url = URI.parse(raw.to_s.strip)
       return nil unless url.is_a?(URI::HTTP)
-      return nil unless url.host&.downcase == HOST
+      return nil unless HOSTS.include?(url.host&.downcase)
 
       parts = url.path.split("/").reject(&:empty?)
       return nil unless parts.size == 3 && parts.first == "archives"
