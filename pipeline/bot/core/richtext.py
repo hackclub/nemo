@@ -36,7 +36,7 @@ def elements(text, style=None):
     for match in PIECE.finditer(body):
         preceding_text = body[position : match.start()]
         if preceding_text:
-            out.append(text_element(preceding_text, style))
+            out.append(text_element(html.unescape(preceding_text), style))
 
         user_id, channel_id, url, label, bare = match.groups()
         if user_id:
@@ -51,7 +51,7 @@ def elements(text, style=None):
 
     tail = body[position:]
     if tail or not out:
-        out.append(text_element(tail, style))
+        out.append(text_element(html.unescape(tail), style))
     return out
 
 
@@ -92,15 +92,64 @@ def quote(text, style=None):
     }
 
 
+SECTION = "rich_text_section"
+LIST = "rich_text_list"
+QUOTE = "rich_text_quote"
+PREFORMATTED = "rich_text_preformatted"
+
+BULLET = "• "
+
+
+def list_runs(part):
+    runs = []
+    indent = "    " * (part.get("indent") or 0)
+    ordered = part.get("style") == "ordered"
+    for number, item in enumerate(part.get("elements") or [], start=(part.get("offset") or 0) + 1):
+        runs.append(text_element(indent + (f"{number}. " if ordered else BULLET)))
+        runs.extend(item.get("elements") or [])
+        runs.append(text_element("\n"))
+    return runs
+
+
+def preformatted_runs(part):
+    return [
+        {**run, "style": {**(run.get("style") or {}), "code": True}} if run.get("type") == "text" else run
+        for run in part.get("elements") or []
+    ]
+
+
+def part_runs(part):
+    kind = part.get("type")
+    if kind == LIST:
+        return list_runs(part)
+    if kind == PREFORMATTED:
+        return preformatted_runs(part)
+    if kind in (SECTION, QUOTE):
+        return list(part.get("elements") or [])
+    return None
+
+
+def ends_with_newline(runs):
+    last = runs[-1] if runs else {}
+    return last.get("type") == "text" and (last.get("text") or "").endswith("\n")
+
+
 def quote_blocks(blocks):
     runs = []
+    previous_kind = None
     for block in blocks or []:
         if block.get("type") != "rich_text":
             return None
         for part in block.get("elements") or []:
-            if part.get("type") != "rich_text_section":
+            kind = part.get("type")
+            added = part_runs(part)
+            if added is None:
                 return None
-            runs.extend(part.get("elements") or [])
+            both_sections = kind == SECTION and previous_kind == SECTION
+            if runs and not both_sections and not ends_with_newline(runs):
+                runs.append(text_element("\n"))
+            runs.extend(added)
+            previous_kind = kind
 
     if not runs:
         return None

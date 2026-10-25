@@ -6,6 +6,8 @@ MEMBER_TOKEN = re.compile(
     r"(<https?://[^\s<>]+?(?:\|[^>]*)?>|<@[UW][A-Z0-9]+(?:\|[^>]*)?>|<#C[A-Z0-9]+(?:\|[^>]*)?>)"
 )
 
+UNESCAPED_AMPERSAND = re.compile(r"&(?!(?:amp|lt|gt);)")
+
 QUOTE_LIMIT = 2400
 CUT = "\n[truncated]"
 MEMBER_PART_LIMIT = 3000
@@ -13,7 +15,7 @@ SPLIT_POINTS = ("\n\n", "\n", " ")
 
 
 def escape(text):
-    return (text or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return UNESCAPED_AMPERSAND.sub("&amp;", text or "").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def escape_but_links(text):

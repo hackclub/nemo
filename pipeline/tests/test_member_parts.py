@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from bot.core import formatting
+from bot.nemo.views import report
 from bot.relay import messages
 
 
@@ -36,6 +37,17 @@ def test_member_parts_escapes_angle_brackets_and_ampersand_keeps_links():
 
     assert parts == ["1 &lt; 2 &amp; <https://example.com|link>"]
     assert formatting.member_parts("   ") == []
+
+
+def test_escape_keeps_slack_entities_single_escaped():
+    assert formatting.escape("&gt; quoted &amp; &lt;b&gt;") == "&gt; quoted &amp; &lt;b&gt;"
+    assert formatting.escape("a & b <!channel> &copy;") == "a &amp; b &lt;!channel&gt; &amp;copy;"
+
+
+def test_follow_up_text_keeps_slack_quote_and_link():
+    text = "&gt; <https://hackclub.slack.com/archives/C1/p1|alexren in #electronics> not allowed\nHello"
+
+    assert report.escape_but_mentions(text) == text
 
 
 class FakeSlack:

@@ -136,7 +136,7 @@ def test_build_blocks_simple_rich_text_keeps_bold_style():
     assert {"type": "text", "text": "urgent", "style": {"bold": True}} in runs
 
 
-def test_build_blocks_rich_text_list_falls_back_to_plain_body():
+def test_build_blocks_rich_text_list_keeps_bullets_in_quote():
     blocks = [{"type": "rich_text", "elements": [
         {"type": "rich_text_list", "style": "bullet", "elements": [
             {"type": "rich_text_section", "elements": [{"type": "text", "text": "one"}]},
@@ -145,8 +145,15 @@ def test_build_blocks_rich_text_list_falls_back_to_plain_body():
     built = card(blocks=blocks)
     quote = next(b for b in built if b["type"] == "rich_text")
     assert quote["elements"][0]["elements"] == [
-        {"type": "text", "text": "he keeps following me"}
+        {"type": "text", "text": "• "}, {"type": "text", "text": "one"}, {"type": "text", "text": "\n"},
     ]
+
+
+def test_build_blocks_unknown_rich_text_part_falls_back_to_unescaped_body():
+    blocks = [{"type": "rich_text", "elements": [{"type": "rich_text_unknown", "elements": []}]}]
+    built = card(blocks=blocks, body="&gt; quoted &amp; more")
+    quote = next(b for b in built if b["type"] == "rich_text")
+    assert quote["elements"][0]["elements"] == [{"type": "text", "text": "> quoted & more"}]
 
 
 def test_build_blocks_without_blocks_quotes_plain_body():
