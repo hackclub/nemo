@@ -1,6 +1,6 @@
 ANONYMOUS = "anonymous"
 NAMED = "named"
-ANONYMOUSLY = "anonymously"
+WITH_USERNAME = "with_username"
 
 BLOCK = "intake_identity"
 ACTION = "intake_name"
@@ -14,12 +14,12 @@ FALLBACK = "Send this report to the Fire Department?"
 
 
 IDENTITY_OPTION = {
-    "text": {"type": "plain_text", "text": "Send anonymously"},
+    "text": {"type": "plain_text", "text": "Include my username"},
     "description": {
         "type": "plain_text",
-        "text": "FD will not see who filed this report. Leave unchecked to include your username.",
+        "text": "FD will see who filed this report. Leave unchecked to stay anonymous.",
     },
-    "value": ANONYMOUSLY,
+    "value": WITH_USERNAME,
 }
 
 
@@ -60,7 +60,7 @@ def build_blocks(bodies=None, files=0, channels=(), saved_choice=None):
         "action_id": ACTION,
         "options": [IDENTITY_OPTION],
     }
-    if saved_choice == ANONYMOUS:
+    if saved_choice == NAMED:
         identity_checkbox["initial_options"] = [IDENTITY_OPTION]
 
     blocks += [
@@ -93,11 +93,11 @@ def submitted_values(state):
         return None
 
     checked_options = block_values[ACTION].get("selected_options") or []
-    return ANONYMOUS if any(one.get("value") == ANONYMOUSLY for one in checked_options) else NAMED
+    return NAMED if any(one.get("value") == WITH_USERNAME for one in checked_options) else ANONYMOUS
 
 
 def resolve_choice(state, saved_choice=None):
-    return submitted_values(state) or saved_choice or NAMED
+    return submitted_values(state) or saved_choice or ANONYMOUS
 
 
 CANCELLED = "Cancelled"
