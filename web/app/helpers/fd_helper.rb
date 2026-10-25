@@ -530,7 +530,7 @@ module FdHelper
   def member_account_tone(state) = MEMBER_ACCOUNT_TONES[state]
 
   def guard_ends(guard)
-    return "Lifted #{on_day(guard.lifted_at)}" if guard.lifted_at
+    return "#{guard.deactivation? ? 'Reactivated' : 'Lifted'} #{on_day(guard.lifted_at)}" if guard.lifted_at
     return Fd::ShortDate.ending(guard.expires_at) if guard.expires_at
 
     "No end date"
@@ -936,14 +936,24 @@ module FdHelper
     Fd::Case::CLOSE_REASONS.map { |key| [resolution_label(key), key] }
   end
 
+  ACTION_GROUP_LABELS = { false => "Actions", true => "Account deactivation" }.freeze
+
   def action_options
     ACTION_LABELS.map do |key, label|
       [label, key, { data: {
         expires: Fd::Action::TAKES_EXPIRY.include?(key),
         channel: Fd::Action::TAKES_CHANNEL.include?(key),
-        lock: Fd::Action.from_thread_lock?(key)
+        lock: Fd::Action.from_thread_lock?(key),
+        deactivates: Fd::Action.deactivates?(key)
       } }]
     end
+  end
+
+  def action_select_options
+    grouped = action_options.group_by { |_label, key, _attributes| Fd::Action.deactivates?(key) }
+    grouped_options_for_select(
+      ACTION_GROUP_LABELS.filter_map { |deactivates, label| [label, grouped[deactivates]] if grouped[deactivates] }
+    )
   end
 
   CONFIGURATION_TAB_LABELS = { "automod" => "Automod", "domains" => "Domains",
@@ -1552,12 +1562,19 @@ module FdHelper
     "failed" => ["Not enforced", "state-crit"]
   }.freeze
 
+  DEACTIVATION_CHIP = {
+    "held" => ["Deactivated", "state-good"],
+    "pending" => ["Pending", "state-warn"],
+    "failed" => ["Not deactivated", "state-crit"]
+  }.freeze
+
   def guard_enforcement_chip(guard)
     return tag.span("By hand", class: "state") if guard.by_hand?
     return tag.span("Firehose", class: "state") if guard.firehose?
+    return tag.span(LOGGED_ONLY, class: "state") if guard.logged_only?
 
-    label, tone = GUARD_ENFORCEMENT_CHIP.fetch(guard.enforcement_status,
-      [guard.enforcement_status, "state"])
+    chips = guard.deactivation? ? DEACTIVATION_CHIP : GUARD_ENFORCEMENT_CHIP
+    label, tone = chips.fetch(guard.enforcement_status, [guard.enforcement_status, "state"])
     tag.span(label, class: "state #{tone}")
   end
 
@@ -1601,6 +1618,13 @@ module FdHelper
     "failed" => "Not enforced"
   }.freeze
 
+  DEACTIVATION_STATUS = {
+    "pending" => "Deactivation pending",
+    "failed" => "Not deactivated"
+  }.freeze
+
+  LOGGED_ONLY = "Logged only".freeze
+
   GUARD_ENFORCEMENT_STATE_LABELS = {
     "pending" => "Pending",
     "held" => "Deactivated in Slack",
@@ -1616,11 +1640,14 @@ module FdHelper
   }.freeze
 
   def guard_enforcement_label(guard)
+    return LOGGED_ONLY if guard.logged_only? && !guard.lifting?
+
     GUARD_ENFORCEMENT_STATE_LABELS.fetch(guard.enforcement_state, guard.enforcement_state)
   end
 
   def guard_dot_tone(guard)
     return "crit" if guard.failed?
+    return "act" if guard.logged_only?
     return GUARD_DOT_TONE.fetch(guard.enforcement_state, "act") if guard.deactivation?
 
     "act"
@@ -1635,6 +1662,8 @@ module FdHelper
       "by hand"
     elsif guard.firehose?
       "Firehose"
+    elsif guard.deactivation?
+      DEACTIVATION_STATUS[guard.enforcement_status]
     else
       GUARD_ENFORCEMENT_STATUS[guard.enforcement_status]
     end

@@ -133,6 +133,7 @@ module Fd
     def orphaned? = case_id.nil?
     def channel_scoped? = channel_id.present?
     def deactivation? = kind == DEACTIVATION
+    def logged_only? = deactivation? && held? && dry_run?
 
     def enforcement_state
       lifting? ? LIFTING : enforcement_status

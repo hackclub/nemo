@@ -34,6 +34,8 @@ module Fd
 
     def self.enforceable?(type_key) = ENFORCE.key?(type_key)
 
+    def self.deactivates?(type_key) = guard_kind(type_key) == MemberGuard::DEACTIVATION
+
     def self.from_thread_lock?(type_key) = FROM_THREAD_LOCK.include?(type_key)
 
     def self.guards_logged_on(case_ids)

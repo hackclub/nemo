@@ -303,7 +303,7 @@
     </div>
     <div class="modal-foot">
       <button type="button" class="btn btn-ghost" data-action="click->modal#close">Cancel</button>
-      <%= submit_tag "Log", class: "btn btn-primary" %>
+      <%= submit_tag "Log", class: "btn btn-primary", data: { action_standing_target: "submit" } %>
     </div>
   <% end %>
   </div>

@@ -12,9 +12,11 @@ REACTIVATED = privileged.REACTIVATED
 
 FAILED = "failed"
 
+DRY_RUN_OUTCOMES = ("off", "would")
+
 
 def is_success(outcome, expected):
-    return outcome in (expected, "off", "would")
+    return outcome == expected or outcome in DRY_RUN_OUTCOMES
 
 
 def enforce(client, conn, guard):
@@ -27,7 +29,7 @@ def enforce(client, conn, guard):
                     guard["id"], guard["subject_id"], outcome)
         return False
 
-    memberguards.mark_enforced(conn, guard["id"])
+    memberguards.mark_enforced(conn, guard["id"], dry_run=outcome in DRY_RUN_OUTCOMES)
     memberguards.record_enforcement(conn, guard["id"], guard["subject_id"], None,
                           DEACTIVATED, detail=outcome)
     log.warning("nemo: deactivation %s is now held on %s (%s)",

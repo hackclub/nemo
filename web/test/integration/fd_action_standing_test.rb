@@ -157,8 +157,8 @@ class FdActionStandingTest < ActionDispatch::IntegrationTest
     body = response.body
 
     assert_operator body.index('data-combobox-name-value="target_user_id"'), :<,
-      body.index('turbo-frame id="action-standing"')
-    assert_operator body.index('turbo-frame id="action-standing"'), :<,
+      body.index('id="action-standing"')
+    assert_operator body.index('id="action-standing"'), :<,
       body.index('data-action-standing-target="fields"')
   end
 
@@ -191,13 +191,13 @@ class FdActionStandingTest < ActionDispatch::IntegrationTest
     get fd_case_path(@kase, do: "action")
     body = response.body
 
-    assert_match(/data-expires="false" data-channel="false" data-lock="false" value="warning"/,
+    assert_match(/data-expires="false" data-channel="false" data-lock="false" data-deactivates="false" value="warning"/,
       body)
-    assert_match(/data-expires="true" data-channel="false" data-lock="false" value="shush"/, body)
-    assert_match(/data-expires="true" data-channel="true" data-lock="false" value="channel_ban"/,
+    assert_match(/data-expires="true" data-channel="false" data-lock="false" data-deactivates="false" value="shush"/, body)
+    assert_match(/data-expires="true" data-channel="true" data-lock="false" data-deactivates="false" value="channel_ban"/,
       body)
     assert_match(
-      /data-expires="false" data-channel="false" data-lock="true" value="locked_thread"/, body
+      /data-expires="false" data-channel="false" data-lock="true" data-deactivates="false" value="locked_thread"/, body
     )
   end
 

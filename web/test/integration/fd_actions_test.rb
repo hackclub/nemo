@@ -277,6 +277,24 @@ class FdActionsTest < ActionDispatch::IntegrationTest
     assert_select "[data-reason-field-target=reason] textarea[name=reason]"
   end
 
+  test "action form groups ban types under account deactivation" do
+    sign_in_as(@me)
+    get fd_case_path(@kase, tab: "actions", do: "action")
+
+    assert_select "select[name=type_key] optgroup[label=?] option", "Account deactivation", count: 3
+    assert_select "optgroup[label=?] option[value=perma_ban][data-deactivates=true]", "Account deactivation"
+    assert_select "optgroup[label=Actions] option[value=warning][data-deactivates=false]"
+    assert_select "p.deactivation-note[data-action-standing-target=deactivation][hidden]"
+    assert_select "input[type=submit][data-action-standing-target=submit][value=Log]"
+  end
+
+  test "create ban queues the deactivation in the notice" do
+    sign_in_as(@me)
+    log(type_key: "perma_ban")
+
+    assert_equal "Permanent ban logged on case #{@kase.id} · deactivation queued", flash[:notice]
+  end
+
   test "create deleted messages action stores a record with no guard" do
     sign_in_as(@me)
     log(type_key: "deleted_messages")

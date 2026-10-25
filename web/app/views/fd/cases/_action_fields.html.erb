@@ -13,10 +13,11 @@
      data-reason-field-categories-value="<%= Fd::InfractionCategory::NO_REASON_KEYS.to_json %>">
   <label class="field-label">
     Action
-    <%= select_tag :type_key, options_for_select(action_options),
+    <%= select_tag :type_key, action_select_options,
           class: "select action-type", id: nil,
           data: { action: "change->action-standing#toggleKindFields" } %>
   </label>
+  <p class="deactivation-note" data-action-standing-target="deactivation" hidden></p>
   <%= render "thread_lock_pick", locks: thread_locks, kase: kase, logged: locks_logged %>
   <div class="field-label" data-action-standing-target="expiry" hidden>
     <span>End (UTC)</span>

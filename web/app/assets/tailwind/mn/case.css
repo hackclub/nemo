@@ -211,6 +211,7 @@
   .modal-body:has(.purge-kind-last:checked) .purge-member { display: none; }
   .modal-body:has(.purge-kind-member:checked) .purge-count { display: none; }
   .standing-slot:not(:has(turbo-frame > *)) { display: none; }
+  .deactivation-note { @apply text-sm font-medium text-destructive; }
 
   .act { color: var(--primary-deep); }
   .evdot.act { @apply bg-primary/10 text-primary; }

@@ -20,6 +20,7 @@ module Fd
       subject_added = false
       thread_attached = lock&.orphaned?
       echo = nil
+      opened_guard = nil
       resolved = false
       writing do
         subject_added = add_target_subject(kase) unless lock
@@ -30,7 +31,7 @@ module Fd
         else
           action = log_action(kase, Time.current)
           audit(action, "performed")
-          enforce(kase, action)
+          opened_guard = enforce(kase, action)
           echo = ActionEcho.write!(kase, action, by: current_account.user_id)
         end
         if resolve_case?
@@ -42,7 +43,8 @@ module Fd
 
       redirect_to fd_case_path(kase, tab: "actions"),
         notice: notice_for(kase, guard: guard, lock: lock, thread_attached: thread_attached,
-          subject_added: subject_added, resolved: resolved)
+          subject_added: subject_added, resolved: resolved,
+          deactivation_queued: opened_guard&.deactivation? || false)
     end
 
     def update
@@ -85,13 +87,13 @@ module Fd
       nil
     end
 
-    def notice_for(kase, guard:, lock:, thread_attached:, subject_added:, resolved:)
+    def notice_for(kase, guard:, lock:, thread_attached:, subject_added:, resolved:, deactivation_queued:)
       message = if guard
         attached_notice(kase, guard)
       elsif lock
         locked_notice(kase, thread_attached)
       else
-        logged_notice(kase, subject_added)
+        logged_notice(kase, subject_added, deactivation_queued)
       end
       resolved ? "#{message} · case resolved" : message
     end
@@ -128,8 +130,9 @@ module Fd
       thread_attached ? "#{message} · thread attached" : message
     end
 
-    def logged_notice(kase, subject_added)
+    def logged_notice(kase, subject_added, deactivation_queued)
       message = "#{type_name} logged on case #{kase.id}"
+      message = "#{message} · deactivation queued" if deactivation_queued
       subject_added ? "#{message} · @#{target_user_id} added to case" : message
     end
   end

@@ -1,4 +1,4 @@
-<%= turbo_frame_tag "action-standing" do %>
+<%= turbo_frame_tag "action-standing", data: { deactivated: guards.any?(&:deactivation?) } do %>
   <% if guards.any? %>
     <% family = kase.family_ids %>
     <div class="field-label">

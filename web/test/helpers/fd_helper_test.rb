@@ -586,4 +586,31 @@ class FdHelperTest < ActionView::TestCase
     assert_includes footnote, "since 3 Mar #{Date.current.year - 1}"
     assert_includes footnote, "until 15 Oct #{Date.current.year + 1}"
   end
+
+  def build_deactivation(**over)
+    build_guard(kind: "deactivation", enforced_by: "nemo", state: "live", **over)
+  end
+
+  test "deactivation held in dry run reads logged only" do
+    guard = build_deactivation(enforcement_status: "held", dry_run: true)
+
+    assert_equal "Logged only", guard_enforcement_label(guard)
+    assert_includes guard_enforcement_chip(guard), "Logged only"
+  end
+
+  test "deactivation held for real reads deactivated" do
+    guard = build_deactivation(enforcement_status: "held", dry_run: false)
+
+    assert_equal "Deactivated in Slack", guard_enforcement_label(guard)
+    assert_includes guard_enforcement_chip(guard), "Deactivated"
+  end
+
+  test "deactivation footnote and end use deactivation wording" do
+    pending_guard = build_deactivation(enforcement_status: "pending")
+    lifted = build_deactivation(enforcement_status: "held", state: "lifted", lifted_at: Time.zone.local(2026, 10, 3))
+
+    assert_includes guard_footnote(pending_guard, Fd::Names.none), "Deactivation pending"
+    assert_match(/\AReactivated 3 Oct/, guard_ends(lifted))
+    assert_includes guard_enforcement_chip(build_deactivation(enforcement_status: "failed")), "Not deactivated"
+  end
 end

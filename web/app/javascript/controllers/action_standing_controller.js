@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static values = { url: String }
-  static targets = ["fields", "expiry", "channel", "locks", "targetFields", "standing", "why"]
+  static targets = ["fields", "expiry", "channel", "locks", "targetFields", "standing", "why", "deactivation", "submit"]
 
   connect() {
     this.toggleFields()
@@ -22,14 +22,15 @@ export default class extends Controller {
   }
 
   toggleFields() {
-    if (!this.hasFieldsTarget) return
-
-    const selectedGuard = this.element.querySelector('input[name="standing_guard_id"]:checked')
-    this.fieldsTarget.hidden = Boolean(selectedGuard && selectedGuard.value)
+    if (this.hasFieldsTarget) {
+      const selectedGuard = this.element.querySelector('input[name="standing_guard_id"]:checked')
+      this.fieldsTarget.hidden = Boolean(selectedGuard && selectedGuard.value)
+    }
+    this.toggleDeactivation()
   }
 
   toggleKindFields() {
-    const kind = this.element.querySelector('select[name="type_key"]')?.selectedOptions[0]
+    const kind = this.selectedKind()
     if (!kind) return
 
     const onThread = kind.dataset.lock === "true"
@@ -44,5 +45,30 @@ export default class extends Controller {
     if (this.hasTargetFieldsTarget) this.targetFieldsTarget.hidden = onThread
     if (this.hasStandingTarget) this.standingTarget.hidden = onThread
     for (const why of this.whyTargets) why.hidden = onThread
+    this.toggleDeactivation()
+  }
+
+  toggleDeactivation() {
+    const kind = this.selectedKind()
+    const frame = this.element.querySelector("turbo-frame#action-standing")
+    const fieldsShown = !this.hasFieldsTarget || !this.fieldsTarget.hidden
+    const deactivates = Boolean(kind && kind.dataset.deactivates === "true" && fieldsShown &&
+      frame?.dataset.deactivated !== "true")
+
+    if (this.hasDeactivationTarget) {
+      this.deactivationTarget.hidden = !deactivates
+      this.deactivationTarget.textContent = `Deactivates ${this.targetName() || "the account"}`
+    }
+    if (this.hasSubmitTarget) this.submitTarget.value = deactivates ? "Log and deactivate" : "Log"
+  }
+
+  selectedKind() {
+    return this.element.querySelector('select[name="type_key"]')?.selectedOptions[0]
+  }
+
+  targetName() {
+    if (!this.hasTargetFieldsTarget) return null
+
+    return this.targetFieldsTarget.querySelector(".token-label")?.textContent?.trim() || null
   }
 }

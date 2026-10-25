@@ -107,3 +107,35 @@ def test_log_warning_does_not_ask_for_member_deactivate(world):
 ])
 def test_deactivates_matches_deactivation_guard_kinds(kind, expected):
     assert action.deactivates(kind) is expected
+
+
+def test_choice_groups_put_bans_under_account_deactivation():
+    groups = {group["label"]["text"]: [one["value"] for one in group["options"]] for group in action.choice_groups()}
+
+    assert groups["Account deactivation"] == ["temp_ban", "indef_ban", "perma_ban"]
+    assert "warning" in groups["Actions"] and "perma_ban" not in groups["Actions"]
+
+
+def test_build_view_ban_without_guard_notes_deactivation_and_labels_submit():
+    view = action.build_view(49, values={"type_key": "perma_ban", "target_user_id": "UTARGET"})
+
+    assert view["submit"]["text"] == "Log and deactivate"
+    notes = [block["elements"][0]["text"] for block in view["blocks"] if block["type"] == "context"]
+    assert "Deactivates <@UTARGET>" in notes
+
+
+def test_build_view_ban_with_existing_guard_keeps_log_label():
+    status = {"enforceable": True, "relation": action.THIS_CASE, "case_id": 49,
+              "guard": {"id": 3, "subject_id": "UTARGET", "kind": "deactivation", "case_id": 49,
+                        "expires_at": None, "opened_by": "UMOD", "opened_at": None, "reason": "spam"}}
+    view = action.build_view(49, values={"type_key": "perma_ban", "target_user_id": "UTARGET"}, guard_status=status)
+
+    assert view["submit"]["text"] == "Log"
+    assert not any(block.get("elements", [{}])[0].get("text", "").startswith("Deactivates")
+                   for block in view["blocks"] if block["type"] == "context")
+
+
+def test_build_view_warning_keeps_log_label():
+    view = action.build_view(49, values={"type_key": "warning", "target_user_id": "UTARGET"})
+
+    assert view["submit"]["text"] == "Log"

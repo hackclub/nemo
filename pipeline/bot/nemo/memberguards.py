@@ -223,7 +223,7 @@ ORDER BY opened_at LIMIT 20
 
 MARK_ENFORCED = """
 UPDATE fd.member_guards
-SET enforcement_status = 'held', attempts = 0, last_error = NULL, updated_at = now()
+SET enforcement_status = 'held', dry_run = %s, attempts = 0, last_error = NULL, updated_at = now()
 WHERE id = %s AND enforcement_status <> 'held'
 RETURNING id
 """
@@ -302,8 +302,8 @@ def unenforced(conn):
     return [dict(zip(GUARD_FIELDS, row)) for row in conn.execute(UNENFORCED).fetchall()]
 
 
-def mark_enforced(conn, guard_id):
-    return conn.execute(MARK_ENFORCED, (guard_id,)).fetchone() is not None
+def mark_enforced(conn, guard_id, dry_run=False):
+    return conn.execute(MARK_ENFORCED, (dry_run, guard_id)).fetchone() is not None
 
 
 def mark_failed(conn, guard_id, why):

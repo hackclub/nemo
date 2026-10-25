@@ -24,9 +24,7 @@ module Fd
       FdHelper::ACTION_LABELS.fetch(type_key, type_key)
     end
 
-    def deactivates?(key = type_key)
-      Action.guard_kind(key) == MemberGuard::DEACTIVATION
-    end
+    def deactivates?(key = type_key) = Action.deactivates?(key)
 
     def may_deactivate? = current_account&.may?("member.deactivate")
 

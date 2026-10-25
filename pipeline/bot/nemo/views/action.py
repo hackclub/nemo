@@ -29,6 +29,9 @@ NOTIFY_REPORTER = "notify_reporter"
 
 DEACTIVATION_GUARD = "deactivation"
 
+ACTIONS_GROUP = "Actions"
+DEACTIVATION_GROUP = "Account deactivation"
+
 NO_GUARD = "no_guard"
 NO_CASE = "no_case"
 OTHER_CASE = "other_case"
@@ -87,6 +90,15 @@ def deactivates(key):
     return guard_kind(key) == DEACTIVATION_GUARD
 
 
+def queues_deactivation(values, guard_status=None):
+    return deactivates(values.get("type_key")) and not (guard_status or {}).get("guard")
+
+
+def deactivation_note(values):
+    target = values.get("target_user_id")
+    return f"Deactivates <@{target}>" if target else "Deactivates the account"
+
+
 def guard_scope(key):
     return enforce(key).get("scope")
 
@@ -107,6 +119,19 @@ def choices():
     return [
         {"text": {"type": "plain_text", "text": row["label"]}, "value": key}
         for key, row in table().items()
+    ]
+
+
+def choice_groups():
+    options = choices()
+    groups = [
+        (ACTIONS_GROUP, [one for one in options if not deactivates(one["value"])]),
+        (DEACTIVATION_GROUP, [one for one in options if deactivates(one["value"])]),
+    ]
+    return [
+        {"label": {"type": "plain_text", "text": text}, "options": grouped}
+        for text, grouped in groups
+        if grouped
     ]
 
 
@@ -256,7 +281,8 @@ def enforcement_blocks(values, guard_status):
         {
             "type": "input",
             "block_id": ENFORCEMENT,
-            "label": {"type": "plain_text", "text": "Enforcement"},
+            "label": {"type": "plain_text",
+                      "text": "Deactivation" if deactivates(values.get("type_key")) else "Enforcement"},
             "element": {
                 "type": "radio_buttons",
                 "action_id": ENFORCEMENT,
@@ -302,11 +328,14 @@ def build_blocks(case_id, values, guard_status=None, end_error=None, open_report
                 "type": "static_select",
                 "action_id": KIND,
                 "placeholder": {"type": "plain_text", "text": "Select an action"},
-                "options": choices(),
+                "option_groups": choice_groups(),
                 **kind_initial_option(key),
             },
         },
     ]
+
+    if queues_deactivation(values, guard_status):
+        built.append({"type": "context", "elements": [{"type": "mrkdwn", "text": deactivation_note(values)}]})
 
     built += existing_guard_blocks(guard_status)
 
@@ -449,15 +478,16 @@ def notify_blocks(values):
 
 def build_view(case_id, subjects=(), category=None, values=None, guard_status=None, end_error=None,
                open_report=False):
+    shown = values or initial_values(subjects, category)
+    submit = "Log and deactivate" if queues_deactivation(shown, guard_status) else "Log"
     return {
         "type": "modal",
         "callback_id": CALLBACK,
         "private_metadata": str(case_id),
         "title": {"type": "plain_text", "text": "Log action"},
-        "submit": {"type": "plain_text", "text": "Log"},
+        "submit": {"type": "plain_text", "text": submit},
         "close": {"type": "plain_text", "text": "Cancel"},
-        "blocks": build_blocks(case_id, values or initial_values(subjects, category), guard_status, end_error,
-                               open_report),
+        "blocks": build_blocks(case_id, shown, guard_status, end_error, open_report),
     }
 
 

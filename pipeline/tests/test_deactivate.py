@@ -79,6 +79,15 @@ def test_enforce_unarmed_outcome_marks_enforced(slack_outcome, how):
     conn = Conn()
     assert deactivate.enforce(Slack(), conn, guard())
     assert conn.executed("enforcement_status = 'held'")
+    assert conn.args_for("enforcement_status = 'held'") == [(True, 7)]
+
+
+def test_enforce_deactivated_outcome_is_not_a_dry_run(slack_outcome):
+    slack_outcome("deactivated")
+    conn = Conn()
+    deactivate.enforce(Slack(), conn, guard())
+
+    assert conn.args_for("enforcement_status = 'held'") == [(False, 7)]
 
 
 def test_lift_reactivated_outcome_marks_lifted_and_records_event(slack_outcome):
