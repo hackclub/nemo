@@ -1185,7 +1185,8 @@ module FdHelper
     reports.reject(&:anonymous?).first&.reporter_user_id
   end
 
-  ANONYMOUS_FACE = "/anonymous.png".freeze
+  ANONYMOUS_FACE_FILE = Rails.public_path.join("anonymous.png")
+  ANONYMOUS_FACE = "/anonymous.png?v=#{Digest::SHA256.file(ANONYMOUS_FACE_FILE).hexdigest.first(12)}".freeze
 
   def anonymous_face(css: "row-avatar")
     image_tag(ANONYMOUS_FACE, class: css, alt: "", width: 22, height: 22,

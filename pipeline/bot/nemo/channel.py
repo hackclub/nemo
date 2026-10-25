@@ -1,3 +1,5 @@
+import functools
+import hashlib
 import logging
 import os
 import time
@@ -8,6 +10,7 @@ from bot.core import parse, whoami
 from bot.core.formatting import quote_text
 from bot.nemo import answer, views, attachments, card_facts, channels, chat, profile
 from bot.nemo.views.activity import message_url
+from lib.paths import WEB_DIR
 from lyla import claim
 
 log = logging.getLogger("bot.nemo")
@@ -144,6 +147,10 @@ WHERE m.id = %s
 
 
 ANONYMOUS = "Anonymous"
+
+ANONYMOUS_ICON_PATH = "/anonymous.png"
+ANONYMOUS_ICON_FILE = WEB_DIR / "public" / "anonymous.png"
+ICON_VERSION_LENGTH = 12
 
 
 def digest_of(blocks, mark=None):
@@ -791,7 +798,16 @@ def anonymous_icon_url():
     host = os.environ.get("APP_HOST", "")
     if not host or host.startswith(("localhost", "127.")):
         return None
-    return app_url("/anonymous.png")
+    version = anonymous_icon_version()
+    return app_url(f"{ANONYMOUS_ICON_PATH}?v={version}" if version else ANONYMOUS_ICON_PATH)
+
+
+@functools.cache
+def anonymous_icon_version():
+    try:
+        return hashlib.sha256(ANONYMOUS_ICON_FILE.read_bytes()).hexdigest()[:ICON_VERSION_LENGTH]
+    except OSError:
+        return None
 
 
 def author_display_fields(client, anonymous, reporter_user_id):

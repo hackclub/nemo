@@ -1,6 +1,9 @@
+import hashlib
+
 from bot.core.formatting import member_parts, quote_text
 from bot.nemo import attachments, channel
 from bot.nemo.views import report
+from lib import paths
 
 CHANNEL_ID = "C1"
 THREAD = "100.000"
@@ -75,7 +78,8 @@ def test_anonymous_icon_url_returns_none_for_localhost_and_url_otherwise(monkeyp
     assert channel.anonymous_icon_url() is None, "slack cannot fetch localhost"
 
     monkeypatch.setenv("APP_HOST", "fire.hackclub.com")
-    assert channel.anonymous_icon_url() == "https://fire.hackclub.com/anonymous.png"
+    version = hashlib.sha256((paths.WEB_DIR / "public" / "anonymous.png").read_bytes()).hexdigest()[:12]
+    assert channel.anonymous_icon_url() == f"https://fire.hackclub.com/anonymous.png?v={version}"
 
     monkeypatch.setenv("ANONYMOUS_ICON_URL", "https://elsewhere.example/a.png")
     assert channel.anonymous_icon_url() == "https://elsewhere.example/a.png"

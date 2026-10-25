@@ -613,4 +613,10 @@ class FdHelperTest < ActionView::TestCase
     assert_match(/\AReactivated 3 Oct/, guard_ends(lifted))
     assert_includes guard_enforcement_chip(build_deactivation(enforcement_status: "failed")), "Not deactivated"
   end
+
+  test "anonymous_face versions the image url by its content hash" do
+    version = Digest::SHA256.file(Rails.public_path.join("anonymous.png")).hexdigest.first(12)
+
+    assert_includes anonymous_face, %(src="/anonymous.png?v=#{version}")
+  end
 end
