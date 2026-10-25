@@ -1,9 +1,13 @@
 module Fd
   class RepliesController < BaseController
+    include ResolvesFromChat
+
     permit "case.reply", on: -> { Case.find(params[:case_id]) }
 
     def create
       kase = Case.find(params[:case_id])
+      return resolve_from_chat(kase) if Marks.resolve_command?(params[:body], to_reporter: true)
+
       parsed = Marks.read(params[:body], to_reporter: true)
       sent = nil
 

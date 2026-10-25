@@ -84,4 +84,18 @@ class Fd::MarksTest < ActiveSupport::TestCase
     assert read.to_reporter?
     assert_equal "", read.body
   end
+
+  test "resolve_command? matches the slack resolve forms" do
+    ["?resolve", "~?resolve", "!resolve", "? Resolve ", "!  RESOLVE"].each do |body|
+      assert Fd::Marks.resolve_command?(body), body
+    end
+    assert Fd::Marks.resolve_command?("resolve", to_reporter: true)
+  end
+
+  test "resolve_command? ignores other text" do
+    ["resolve", "?resolve this", "please resolve", "!resolved"].each do |body|
+      assert_not Fd::Marks.resolve_command?(body), body
+    end
+    assert_not Fd::Marks.resolve_command?("resolve later", to_reporter: true)
+  end
 end
