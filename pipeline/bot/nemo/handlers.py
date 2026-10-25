@@ -115,6 +115,8 @@ def register(app, on_reply=None):
 
         with session() as conn:
             allowed, refusal = access.may(conn, user_id, "case.act", case_id)
+            if allowed and views.action.deactivates(values["type_key"]):
+                allowed, refusal = access.may(conn, user_id, "member.deactivate")
             if not allowed:
                 return ack(
                     response_action="errors",

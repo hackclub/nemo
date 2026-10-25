@@ -27,6 +27,8 @@ ENFORCEMENT = "action_settle"
 RESOLVE_CASE = "resolve_case"
 NOTIFY_REPORTER = "notify_reporter"
 
+DEACTIVATION_GUARD = "deactivation"
+
 NO_GUARD = "no_guard"
 NO_CASE = "no_case"
 OTHER_CASE = "other_case"
@@ -79,6 +81,10 @@ def enforce(key):
 
 def guard_kind(key):
     return enforce(key).get("guard")
+
+
+def deactivates(key):
+    return guard_kind(key) == DEACTIVATION_GUARD
 
 
 def guard_scope(key):
