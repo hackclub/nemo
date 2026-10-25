@@ -1283,6 +1283,13 @@ module FdHelper
     parts.compact.any? ? safe_join(parts.compact, " · ") : nil
   end
 
+  def reversal_capability(action)
+    return "case.reverse" unless action.reversal_reactivates?
+    return "case.reverse" if current_account&.may?("member.deactivate")
+
+    "member.deactivate"
+  end
+
   def reversal_line(action)
     reason_suffix = action.reversal_reason.present? ? ", #{action.reversal_reason}" : ""
     safe_join(["reversed #{on_day(action.reversed_at)} by ", person_name(action.reversed_by), reason_suffix])

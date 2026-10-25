@@ -172,4 +172,53 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
   def entries
     Fd::AuditEntry.where(entity_type: "action", entity_id: @action.id, verb: "reversed")
   end
+
+  def sign_in_without_deactivate
+    sign_in_as(grant_role!("UFF2", "firefighter"))
+    override_capability!("firefighter", "member.deactivate", false)
+  end
+
+  test "create without member deactivate refuses to reverse a ban holding a deactivation" do
+    guard = make_guard
+    @action.update!(guard_id: guard.id)
+    sign_in_without_deactivate
+
+    reverse
+
+    assert_nil @action.reload.reversed_at
+    assert_equal Fd::MemberGuard::LIVE, guard.reload.state
+    assert flash[:alert].present?
+  end
+
+  test "create without member deactivate reverses a ban whose deactivation another action keeps" do
+    guard = make_guard
+    @action.update!(guard_id: guard.id)
+    make_action(type_key: "perma_ban", expires_at: nil, guard_id: guard.id)
+    sign_in_without_deactivate
+
+    reverse
+
+    assert_not_nil @action.reload.reversed_at
+    assert_equal Fd::MemberGuard::LIVE, guard.reload.state
+  end
+
+  test "create on a deactivation queues the reactivation in the notice" do
+    sign_in_as(@me)
+    guard = make_guard
+    @action.update!(guard_id: guard.id)
+
+    reverse
+
+    assert_equal "Action reversed · reactivation queued", flash[:notice]
+  end
+
+  test "reverse button needs member deactivate when the reversal reactivates" do
+    guard = make_guard
+    @action.update!(guard_id: guard.id)
+    sign_in_without_deactivate
+
+    get fd_case_path(@kase, tab: "actions")
+
+    assert_select "button[data-modal-open=?]", "reverse-#{@action.id}", count: 0
+  end
 end

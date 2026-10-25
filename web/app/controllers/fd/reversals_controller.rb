@@ -11,6 +11,11 @@ module Fd
           alert: "Select an action to reverse")
       end
 
+      target_action = Action.find_by(id: params[:action_id], case_id: kase.id, reversed_at: nil)
+      if target_action&.reversal_reactivates? && !current_account.may?("member.deactivate")
+        return deny!("member.deactivate", kase)
+      end
+
       reason = params[:reversal_reason].to_s.strip
 
       error = validation_error(reason)
@@ -66,6 +71,7 @@ module Fd
 
     def reversed_notice(guard)
       return "Action reversed" if guard.nil?
+      return "Action reversed · reactivation queued" if guard.deactivation?
 
       "Action reversed · #{guard_label_text(guard)} lifted"
     end

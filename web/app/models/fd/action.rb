@@ -57,6 +57,12 @@ module Fd
 
     def targets_member? = target_user_id.present?
 
+    def reversal_reactivates?
+      return false unless guard&.deactivation? && MemberGuard::ACTIVE_STATES.include?(guard.state)
+
+      !self.class.live.where.not(id: id).exists?(guard_id: guard_id)
+    end
+
     def expires?
       expires_at.present?
     end
