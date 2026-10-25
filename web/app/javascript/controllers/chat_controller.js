@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["field", "send", "anon", "team", "reply"]
+  static targets = ["field", "send", "anon", "team", "reply", "box"]
   static values = { reporter: Boolean, reporterLabel: String, case: String, noteUrl: String, replyUrl: String }
 
   connect() {
@@ -78,6 +78,7 @@ export default class extends Controller {
       this.replyTarget.setAttribute("aria-pressed", String(atReporter))
       this.replyTarget.textContent = this.replyLabel()
     }
+    if (this.hasBoxTarget) this.boxTarget.dataset.recipient = atReporter ? "reporter" : "team"
     this.anonTarget.value = this.anonymous ? "1" : ""
     this.element.action = atReporter ? this.replyUrlValue : this.noteUrlValue
     this.sendTarget.setAttribute("aria-label", atReporter ? "Send to reporter" : "Send to team")

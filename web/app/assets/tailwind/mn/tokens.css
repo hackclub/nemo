@@ -158,6 +158,7 @@
     --down: var(--destructive);
 
     --focus: var(--primary);
+    --reply: var(--success);
     --ring-focus: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
     --link: var(--primary);
     --select: var(--primary-soft);
@@ -319,6 +320,7 @@
   :root[data-accent="orange"] {
     --primary: var(--orange);
     --primary-foreground: var(--orange-foreground);
+    --reply: var(--orange);
     --ring: color-mix(in oklab, var(--orange) 70%, var(--background));
     --sidebar-primary: var(--orange);
     --sidebar-primary-foreground: var(--orange-foreground);

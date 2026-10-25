@@ -70,7 +70,7 @@
         <% if conversation %>
           <%= hidden_field_tag :conversation_id, conversation.id, id: nil %>
         <% end %>
-        <div class="cfield" data-action="click->chat#focus">
+        <div class="cfield" data-action="click->chat#focus" data-chat-target="box" data-recipient="team">
           <% if thread %>
             <span class="segmented chat-mode" role="group" aria-label="Recipient">
               <button type="button" aria-pressed="true" data-chat-target="team"
