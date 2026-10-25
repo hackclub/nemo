@@ -367,7 +367,7 @@ def log_action(conn, case_id, values, user_id):
             audit.SOURCE_APP,
             expires,
             Jsonb(views.action.details(values)),
-            values["reason"],
+            values["reason"] or None,
             values.get("solution") or None,
             views.action.resolvers(values, user_id),
             values.get("category_key"),

@@ -80,7 +80,7 @@ def register(app, on_reply=None):
             log.warning("nemo: could not reshape the action modal: %s", failure)
 
     for where in (views.action.KIND, views.action.TARGET, views.action.WHERE, views.action.RESOLVE,
-                  views.action.NOTIFY):
+                  views.action.NOTIFY, views.action.CATEGORY):
         app.action(where)(reshape_action_modal)
 
 

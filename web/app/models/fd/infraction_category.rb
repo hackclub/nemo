@@ -4,6 +4,7 @@ module Fd
     self.primary_key = "key"
 
     LABEL_LENGTH = 80
+    NO_REASON_KEYS = %w[adult].freeze
 
     scope :ordered, -> { order(:position, :key) }
     scope :active, -> { where(retired_at: nil) }
@@ -31,6 +32,8 @@ module Fd
     def self.active_key?(key) = active_keys.include?(key.to_s)
 
     def self.known_key?(key) = labels.key?(key.to_s)
+
+    def self.needs_reason?(key) = NO_REASON_KEYS.exclude?(key.to_s)
 
     def retired? = retired_at.present?
   end

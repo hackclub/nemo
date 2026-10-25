@@ -186,7 +186,7 @@ def apply_enforcement(conn, action_id, values, status, by):
             action.guard_kind(values["type_key"]),
             values["target_user_id"],
             by,
-            values["reason"],
+            action.guard_reason(values),
             channel_id=values.get("channel_id")
             if action.guard_scope(values["type_key"]) == "channel"
             else None,

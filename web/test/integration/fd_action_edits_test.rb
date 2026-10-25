@@ -61,6 +61,16 @@ class FdActionEditsTest < ActionDispatch::IntegrationTest
     assert_equal "spamm", @action.reload.reason
   end
 
+  test "edit to adult category without reason clears the reason" do
+    sign_in_as(@me)
+    patch fd_case_action_path(@kase, @action), params: { category_key: "adult" }
+
+    assert_equal "Action updated", flash[:notice]
+    @action.reload
+    assert_equal "adult", @action.category_key
+    assert_nil @action.reason
+  end
+
   test "edit with unknown category is refused" do
     sign_in_as(@me)
     edit_action(category_key: "made_up")

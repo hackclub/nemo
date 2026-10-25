@@ -234,18 +234,22 @@
         title: "Edit action", sub: action_option_label(action),
         open: params[:do] == "edit-action-#{action.id}" } do %>
     <%= form_with url: fd_case_action_path(@case, action), method: :patch, html: { autocomplete: "off" } do %>
-      <div class="modal-body">
+      <div class="modal-body" data-controller="reason-field"
+           data-reason-field-categories-value="<%= Fd::InfractionCategory::NO_REASON_KEYS.to_json %>">
         <label class="field-label">
           Category
           <%= select_tag :category_key, options_for_select(action_category_options(action), action.category_key),
-                class: "select", id: nil %>
+                class: "select", id: nil,
+                data: { reason_field_target: "category", action: "change->reason-field#toggle" } %>
         </label>
-        <label class="field-label">
-          Reason
-          <%= text_area_tag :reason, submitted_value(:edit_reason, action.reason), rows: 3,
-                class: "textarea", id: nil %>
-        </label>
-        <%= field_wrong(:edit_reason) %>
+        <div data-reason-field-target="reason">
+          <label class="field-label">
+            Reason
+            <%= text_area_tag :reason, submitted_value(:edit_reason, action.reason), rows: 3,
+                  class: "textarea", id: nil %>
+          </label>
+          <%= field_wrong(:edit_reason) %>
+        </div>
         <label class="field-label">
           How Was This Solved? (Text edition)
           <%= text_area_tag :solution, action.solution, rows: 2, class: "textarea", id: nil %>

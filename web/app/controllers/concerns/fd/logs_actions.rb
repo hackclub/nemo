@@ -46,7 +46,7 @@ module Fd
       if channel_id.present? && !channel_id.match?(SlackLink::CHANNEL)
         return "#{channel_id} is not a channel id"
       end
-      if params[:reason].to_s.strip.blank?
+      if params[:reason].to_s.strip.blank? && InfractionCategory.needs_reason?(selected_category(kase))
         return field_error!(:reason, "Enter a reason", params[:reason])
       end
 
@@ -63,7 +63,7 @@ module Fd
         performed_at: performed_at,
         source_app: Audit::SOURCE_APP,
         expires_at: expiry,
-        reason: params[:reason].to_s.strip,
+        reason: params[:reason].to_s.strip.presence,
         solution: params[:solution].to_s.strip.presence,
         resolved_by: resolver_ids,
         category_key: selected_category(kase),
@@ -165,13 +165,17 @@ module Fd
       guard = MemberGuard.open!(
         kind: Action.guard_kind(action.type_key), subject_id: action.target_user_id,
         channel_id: guard_channel(action.type_key), case_id: kase.id,
-        by: current_account.user_id, reason: action.reason, expires_at: action.expires_at
+        by: current_account.user_id, reason: guard_reason(action), expires_at: action.expires_at
       )
       return nil if guard.nil?
 
       audit(guard, "opened")
       action.update!(guard_id: guard.id)
       guard
+    end
+
+    def guard_reason(action)
+      action.reason.presence || InfractionCategory.label(action.category_key)
     end
 
     def selected_category(kase)

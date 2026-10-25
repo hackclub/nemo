@@ -71,7 +71,8 @@ module Fd
     private
 
     def edit_error(action)
-      if params[:reason].to_s.strip.blank? && !action.from_thread_lock?
+      if params[:reason].to_s.strip.blank? && !action.from_thread_lock? &&
+          InfractionCategory.needs_reason?(params[:category_key])
         return field_error!(:edit_reason, "Enter a reason", params[:reason])
       end
 

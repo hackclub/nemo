@@ -46,6 +46,8 @@ DEFAULT_ENFORCEMENT = {
 
 REASON_LIMIT = 2000
 
+NO_REASON_CATEGORIES = ("adult",)
+
 REQUIRED = "required"
 
 TABLE = None
@@ -104,6 +106,15 @@ def choices():
 
 def category_choices():
     return [edit.option(label, key) for key, label in edit.categories().items()]
+
+
+def needs_reason(category_key):
+    return category_key not in NO_REASON_CATEGORIES
+
+
+def guard_reason(values):
+    key = values.get("category_key")
+    return values.get("reason") or edit.categories().get(key, key)
 
 
 def category_initial_option(selected_key):
@@ -323,10 +334,11 @@ def build_blocks(case_id, values, guard_status=None, end_error=None, open_report
 
     built += enforcement_blocks(values, guard_status)
 
-    built += [
+    built.append(
         {
             "type": "input",
             "block_id": CATEGORY,
+            "dispatch_action": True,
             "optional": True,
             "label": {"type": "plain_text", "text": "Violation"},
             "element": {
@@ -336,19 +348,24 @@ def build_blocks(case_id, values, guard_status=None, end_error=None, open_report
                 "options": category_choices(),
                 **category_initial_option(values.get("category_key")),
             },
-        },
-        {
-            "type": "input",
-            "block_id": REASON,
-            "label": {"type": "plain_text", "text": "Reason"},
-            "element": {
-                "type": "plain_text_input",
-                "action_id": REASON,
-                "multiline": True,
-                "max_length": REASON_LIMIT,
-                **({"initial_value": values["reason"]} if values.get("reason") else {}),
-            },
-        },
+        }
+    )
+    if needs_reason(values.get("category_key")):
+        built.append(
+            {
+                "type": "input",
+                "block_id": REASON,
+                "label": {"type": "plain_text", "text": "Reason"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": REASON,
+                    "multiline": True,
+                    "max_length": REASON_LIMIT,
+                    **({"initial_value": values["reason"]} if values.get("reason") else {}),
+                },
+            }
+        )
+    built += [
         {
             "type": "input",
             "block_id": SOLUTION,
@@ -464,12 +481,12 @@ def log_blocks(values, by, channel_name=None):
             "type": "context",
             "elements": [{"type": "mrkdwn", "text": byline(values, by)}],
         },
-        {"type": "divider"},
-        {
-            "type": "section",
-            "text": {"type": "mrkdwn", "text": f"> {values['reason']}"},
-        },
     ]
+    if values.get("reason"):
+        built += [
+            {"type": "divider"},
+            {"type": "section", "text": {"type": "mrkdwn", "text": f"> {values['reason']}"}},
+        ]
     if values.get("solution"):
         built.append({
             "type": "context",
@@ -488,6 +505,8 @@ def requires_refresh(values, block_ids, guard_status=None, open_report=False):
     if takes_expiry(key) and UNTIL not in block_ids:
         return True
     if needs_channel(key) and WHERE not in block_ids:
+        return True
+    if CATEGORY in block_ids and needs_reason(values.get("category_key")) and REASON not in block_ids:
         return True
     if (guard_status or {}).get("guard") and GUARD_STATUS not in block_ids:
         return True
@@ -541,7 +560,7 @@ def validation_errors(values):
         return {WHERE: "Select a channel"}
     if values.get("enforcement") == EXTEND and not values.get("expires_on"):
         return {UNTIL: "Select an end date"}
-    if not values.get("reason"):
+    if needs_reason(values.get("category_key")) and not values.get("reason"):
         return {REASON: "Add a reason."}
     return None
 

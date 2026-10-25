@@ -250,6 +250,33 @@ class FdActionsTest < ActionDispatch::IntegrationTest
     assert_not_includes @kase.reload.subject_user_ids, "UNEW"
   end
 
+  test "create adult category action without reason stores no reason and guards with the category label" do
+    sign_in_as(@me)
+    log(type_key: "shush", category_key: "adult", reason: "")
+
+    action = actions.sole
+    assert_nil action.reason
+    assert_equal "adult", action.category_key
+    assert_equal "Adult", Fd::MemberGuard.find(action.guard_id).reason
+  end
+
+  test "create action with another category and blank reason is refused" do
+    sign_in_as(@me)
+    log(category_key: "spam", reason: "")
+
+    assert_equal 0, actions.count
+    assert_equal "Enter a reason", flash[:field_error]["message"]
+  end
+
+  test "action form wires the reason field to the category select" do
+    sign_in_as(@me)
+    get fd_case_path(@kase, tab: "actions", do: "action")
+
+    assert_select "[data-controller~=reason-field][data-reason-field-categories-value=?]", '["adult"]'
+    assert_select "select[name=category_key][data-reason-field-target=category]"
+    assert_select "[data-reason-field-target=reason] textarea[name=reason]"
+  end
+
   test "create deleted messages action stores a record with no guard" do
     sign_in_as(@me)
     log(type_key: "deleted_messages")

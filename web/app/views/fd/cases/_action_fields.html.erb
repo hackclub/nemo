@@ -9,7 +9,8 @@
         logged: guards_logged %>
 </div>
 
-<div class="fieldset" data-action-standing-target="fields">
+<div class="fieldset" data-action-standing-target="fields" data-controller="reason-field"
+     data-reason-field-categories-value="<%= Fd::InfractionCategory::NO_REASON_KEYS.to_json %>">
   <label class="field-label">
     Action
     <%= select_tag :type_key, options_for_select(action_options),
@@ -32,14 +33,17 @@
     Category
     <%= select_tag :category_key,
           options_for_select([["Not set", ""]] + category_options, kase.category_key),
-          class: "select", id: nil %>
+          class: "select", id: nil,
+          data: { reason_field_target: "category", action: "change->reason-field#toggle" } %>
   </label>
-  <div data-action-standing-target="why">
-    <label class="field-label">
-      Reason
-      <%= text_area_tag :reason, submitted_value(:reason), rows: 3, class: "textarea", id: nil %>
-    </label>
-    <%= field_wrong(:reason) %>
+  <div class="contents" data-action-standing-target="why">
+    <div data-reason-field-target="reason">
+      <label class="field-label">
+        Reason
+        <%= text_area_tag :reason, submitted_value(:reason), rows: 3, class: "textarea", id: nil %>
+      </label>
+      <%= field_wrong(:reason) %>
+    </div>
   </div>
   <label class="field-label" data-action-standing-target="why">
     How Was This Solved? (Text edition)
