@@ -137,6 +137,24 @@ def reopen_from_card(ctx):
     return case_id
 
 
+@on_action(card.REOPEN_AFTER_REPLY, needs="case.reopen")
+def reopen_after_reply(ctx):
+    case_id = action_case_id(ctx)
+    if case_id is None:
+        return None
+    with session() as conn:
+        reopened = case_actions.reopen(conn, case_id, ctx.user_id)
+    if not reopened:
+        return ctx.post_ephemeral(ALREADY_OPEN.format(case_id=case_id))
+    refresh(ctx.client, case_id)
+    try:
+        ctx.client.chat_update(channel=ctx.channel_id, ts=ctx.message_ts,
+                               text=views.lines.reopened_by_reporter(case_id), blocks=[])
+    except Exception as failure:
+        log.warning("nemo: could not update the reopen prompt for case %s: %s", case_id, failure)
+    return case_id
+
+
 @on_action(card.LOG_ACTION, needs="case.act")
 def open_log_action(ctx):
     case_id = action_case_id(ctx)

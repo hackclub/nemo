@@ -63,7 +63,7 @@ class MessageRelay:
             intake.rename_anonymous_files(conn, conversation_id)
             evidence_blocks = evidence.promote(conn, case_id, conversation_id, opener)
             if already:
-                case.reopen(conn, case_id, opener)
+                case.record_reporter_reply(conn, case_id)
         log.info("relay: conversation %s is case %s", conversation_id, case_id)
         threading.Thread(target=self.fetch_attachments, args=(conversation_id,),
                          name=f"relay-files-{conversation_id}", daemon=True).start()

@@ -947,21 +947,22 @@ def post_ephemeral(client, body, text):
     )
 
 
-REOPENED_FROM = """
-SELECT woke_from FROM fd.cases
-WHERE id = %s AND woke_at IS NOT NULL AND woke_notified_at IS NULL
+REOPEN_PROMPT_PENDING = """
+SELECT resolved_at IS NOT NULL FROM fd.cases
+WHERE id = %s AND reporter_replied_at IS NOT NULL AND reopen_prompt_posted_at IS NULL
 """
 
 
-MARK_REOPEN_NOTIFIED = """
-UPDATE fd.cases SET woke_notified_at = now() WHERE id = %s AND woke_notified_at IS NULL
+MARK_REOPEN_PROMPT_POSTED = """
+UPDATE fd.cases SET reopen_prompt_posted_at = now()
+WHERE id = %s AND reopen_prompt_posted_at IS NULL
 """
 
 
-UNNOTIFIED_REOPENS = """
+REOPEN_PROMPTS_PENDING = """
 SELECT id FROM fd.cases
-WHERE woke_at IS NOT NULL AND woke_notified_at IS NULL
-ORDER BY woke_at LIMIT 50
+WHERE reporter_replied_at IS NOT NULL AND reopen_prompt_posted_at IS NULL
+ORDER BY reporter_replied_at LIMIT 50
 """
 
 
@@ -1061,8 +1062,8 @@ def waiting_follow_ups(conn):
     return [row[0] for row in conn.execute(FOLLOW_UPS_ANYWHERE).fetchall()]
 
 
-def unnotified_reopens(conn):
-    return [row[0] for row in conn.execute(UNNOTIFIED_REOPENS).fetchall()]
+def reopen_prompts_pending(conn):
+    return [row[0] for row in conn.execute(REOPEN_PROMPTS_PENDING).fetchall()]
 
 
 def post_follow_ups(client, conn, case_id, channel_id=None):
@@ -1078,29 +1079,28 @@ def post_follow_ups(client, conn, case_id, channel_id=None):
     return posted_count
 
 
-def post_reopen_notice(client, conn, case_id, channel_id=None):
-    row = conn.execute(REOPENED_FROM, (case_id,)).fetchone()
+def post_reopen_prompt(client, conn, case_id, channel_id=None):
+    row = conn.execute(REOPEN_PROMPT_PENDING, (case_id,)).fetchone()
     if row is None:
         return None
 
-    was = row[0]
-    posted_ts = post_reopen_message(client, conn, case_id, was, channel_id)
-    conn.execute(MARK_REOPEN_NOTIFIED, (case_id,))
+    still_resolved = row[0]
+    posted_ts = post_reopen_prompt_message(client, conn, case_id, channel_id) if still_resolved else None
+    conn.execute(MARK_REOPEN_PROMPT_POSTED, (case_id,))
     return posted_ts
 
 
-def post_reopen_message(client, conn, case_id, was, channel_id=None):
-    refresh_card(client, conn, case_id, channel_id)
-
+def post_reopen_prompt_message(client, conn, case_id, channel_id=None):
     case = fetch_case(conn, case_id)
     if case is None or not case["forwarded_ts"] or case.get("imported"):
         return None
 
-    label = views.resolve.label(was) if was else "Resolved"
+    text = views.lines.reporter_replied(case_id)
     return client.chat_postMessage(
         channel=card_channel(case, channel_id, conn),
         thread_ts=case["forwarded_ts"],
-        text=views.lines.reopened_by_reporter(case_id, label),
+        text=text,
+        blocks=views.case_card.reopen_prompt_blocks(case_id, text),
         unfurl_links=False,
     )["ts"]
 

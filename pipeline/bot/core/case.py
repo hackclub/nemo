@@ -24,15 +24,10 @@ def report_ref(conversation_id):
     return f"relay:report:{conversation_id}"
 
 
-CASE_RESOLUTION = """
-SELECT resolved_at, resolution, duplicate_of FROM fd.cases WHERE id = %s
-"""
-
-CLEAR_RESOLUTION = """
-UPDATE fd.cases
-SET resolved_at = NULL, resolution = NULL, updated_at = now(),
-    woke_at = now(), woke_from = %s, woke_notified_at = NULL
-WHERE id = %s AND resolved_at IS NOT NULL AND duplicate_of IS NULL
+RECORD_REPORTER_REPLY = """
+UPDATE fd.cases SET reporter_replied_at = now()
+WHERE id = %s AND resolved_at IS NOT NULL AND duplicate_of IS NULL AND reporter_replied_at IS NULL
+RETURNING id
 """
 
 REOPEN_REPORTS = """
@@ -58,28 +53,8 @@ def reopen_reports(conn, case_id, by):
     return [row[0] for row in rows]
 
 
-def reopen(conn, case_id, by):
-    row = conn.execute(CASE_RESOLUTION, (case_id,)).fetchone()
-    if row is None or row[0] is None or row[2] is not None:
-        return None
-
-    previous_resolution = row[1]
-    conn.execute(CLEAR_RESOLUTION, (previous_resolution, case_id))
-    reopen_reports(conn, case_id, by)
-    audit.record(
-        conn,
-        "case",
-        case_id,
-        "reopened",
-        by,
-        before={"resolved_at": str(row[0]), "resolution": previous_resolution},
-        after={
-            "resolved_at": None,
-            "resolution": None,
-            "why": "the reporter wrote back",
-        },
-    )
-    return previous_resolution
+def record_reporter_reply(conn, case_id):
+    return conn.execute(RECORD_REPORTER_REPLY, (case_id,)).fetchone() is not None
 
 
 def existing(conn, conversation_id):

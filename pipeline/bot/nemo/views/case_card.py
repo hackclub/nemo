@@ -10,6 +10,7 @@ MORE = "case_more"
 CLAIM = "case_claim"
 RESOLVE = "case_resolve"
 REOPEN = "case_reopen"
+REOPEN_AFTER_REPLY = "case_reopen_after_reply"
 
 OPEN = "open"
 RESOLVED = "resolved"
@@ -119,6 +120,13 @@ def reopen_confirm(case_id):
         "confirm": lengths.plain("Reopen"),
         "deny": lengths.plain("Cancel"),
     }
+
+
+def reopen_prompt_blocks(case_id, text):
+    return [
+        {"type": "section", "text": {"type": "mrkdwn", "text": text}},
+        {"type": "actions", "elements": [button(REOPEN_AFTER_REPLY, "Reopen Case", case_id, "primary")]},
+    ]
 
 
 def buttons(case):

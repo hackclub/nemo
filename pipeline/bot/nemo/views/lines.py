@@ -54,8 +54,12 @@ def reopened(actor, case_id):
     return f"<@{actor}> reopened case {case_id}"
 
 
-def reopened_by_reporter(case_id, was_label):
-    return f"Case {case_id} reopened after the reporter replied (was {was_label})"
+def reporter_replied(case_id):
+    return f"Reporter replied to resolved case {case_id}"
+
+
+def reopened_by_reporter(case_id):
+    return f"Case {case_id} reopened after the reporter replied"
 
 
 def note_added(actor, body):

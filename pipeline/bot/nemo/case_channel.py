@@ -48,8 +48,8 @@ class CaseChannel:
         card = None
         for name, work in (
             ("case card", channel.refresh_card),
-            ("reopen notice", channel.post_reopen_notice),
             ("follow-ups", channel.post_follow_ups),
+            ("reopen prompt", channel.post_reopen_prompt),
             ("unfurls", channel.post_unfurls),
             ("files", channel.post_files),
             ("edit notices", channel.post_edit_notices),

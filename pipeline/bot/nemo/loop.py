@@ -232,7 +232,7 @@ def sweep_once(case_channel, channel_id=None):
         redraw_ids = [row[0] for row in conn.execute(RECENT_REPORT_CARDS).fetchall()]
         unmirrored_case_ids = chat.waiting_anywhere(conn)
         follow_up_case_ids = channel.waiting_follow_ups(conn)
-        reopened_case_ids = channel.unnotified_reopens(conn)
+        reopen_prompt_case_ids = channel.reopen_prompts_pending(conn)
         file_case_ids = channel.waiting_files(conn)
         guards.refresh(conn)
         channelguards.refresh(conn)
@@ -259,8 +259,8 @@ def sweep_once(case_channel, channel_id=None):
                   channel.post_follow_ups, client, channel_id)
     run_for_cases(redraw_ids, "has links that would not unfurl",
                   channel.post_unfurls, client, channel_id)
-    run_for_cases(reopened_case_ids, "was reopened without saying so",
-                  channel.post_reopen_notice, client, channel_id)
+    run_for_cases(reopen_prompt_case_ids, "has a reopen prompt still waiting",
+                  channel.post_reopen_prompt, client, channel_id)
     case_channel.mirror_outbox_replies()
     case_channel.mark_outbox_results()
     case_channel.announce_fire_engine()

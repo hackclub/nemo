@@ -158,6 +158,44 @@ def test_reopen_from_card_on_open_case_says_so(world, monkeypatch):
     assert ctx.ephemerals == ["Case 49 is already open"] and world["reopened"] == []
 
 
+class PromptClient(Client):
+    def __init__(self):
+        super().__init__()
+        self.messages = []
+
+    def chat_update(self, **kwargs):
+        self.messages.append(kwargs)
+
+
+class PromptCtx(Ctx):
+    def __init__(self):
+        super().__init__()
+        self.client = PromptClient()
+        self.channel_id = "CFIRE"
+        self.message_ts = "5.5"
+
+
+def test_reopen_after_reply_reopens_redraws_and_replaces_prompt(world, monkeypatch):
+    monkeypatch.setattr(case_actions, "reopen", lambda conn, case_id, by: True)
+    ctx = PromptCtx()
+
+    assert surface.reopen_after_reply(ctx) == 49
+
+    assert world["refreshed"] == [49] and world["said"] == []
+    assert ctx.client.messages == [{"channel": "CFIRE", "ts": "5.5", "blocks": [],
+                                    "text": "Case 49 reopened after the reporter replied"}]
+
+
+def test_reopen_after_reply_on_open_case_says_so_and_keeps_prompt(world, monkeypatch):
+    monkeypatch.setattr(case_actions, "reopen", lambda conn, case_id, by: False)
+    ctx = PromptCtx()
+
+    surface.reopen_after_reply(ctx)
+
+    assert ctx.ephemerals == ["Case 49 is already open"]
+    assert world["refreshed"] == [] and ctx.client.messages == []
+
+
 def test_open_more_builds_menu_from_case_state(world):
     world["assignees"] = ["UONE"]
     world["conn"] = Conn({"resolved_at IS NULL": (True,), "category_key FROM fd.cases": (None,)})

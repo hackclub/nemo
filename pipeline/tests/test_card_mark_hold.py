@@ -56,8 +56,68 @@ def test_refresh_card_on_an_imported_case_without_a_forward_posts_no_card(monkey
     assert slack.calls == []
 
 
-def test_reopen_message_on_an_imported_case_posts_nothing(monkeypatch):
+def test_reopen_prompt_message_on_an_imported_case_posts_nothing(monkeypatch):
     monkeypatch.setattr(channel, "fetch_case", lambda conn, case_id: imported_case())
     slack = Slack()
-    assert channel.post_reopen_message(slack, None, 5001, "resolved") is None
+    assert channel.post_reopen_prompt_message(slack, None, 5001) is None
     assert slack.calls == []
+
+
+class PromptConn:
+    def __init__(self, pending):
+        self.pending = pending
+        self.executed = []
+
+    def execute(self, sql, args=None):
+        self.executed.append(sql)
+        return self
+
+    def fetchone(self):
+        return self.pending if channel.REOPEN_PROMPT_PENDING in self.executed[-1] else None
+
+
+class PostingSlack:
+    def __init__(self):
+        self.posted = []
+
+    def chat_postMessage(self, **kwargs):
+        self.posted.append(kwargs)
+        return {"ts": "9.9"}
+
+
+def reopen_prompt_world(monkeypatch, pending):
+    monkeypatch.setattr(channel, "fetch_case", lambda conn, case_id: imported_case(imported=False))
+    monkeypatch.setattr(channel, "card_channel", lambda case, channel_id, conn: "C0BE6N4G2BA")
+    return PromptConn(pending), PostingSlack()
+
+
+def test_post_reopen_prompt_resolved_case_posts_button_and_marks_posted(monkeypatch):
+    conn, slack = reopen_prompt_world(monkeypatch, (True,))
+
+    assert channel.post_reopen_prompt(slack, conn, 5001) == "9.9"
+
+    posted = slack.posted[0]
+    assert posted["thread_ts"] == "1760900000.000100"
+    assert posted["text"] == "Reporter replied to resolved case 5001"
+    button = posted["blocks"][1]["elements"][0]
+    assert button["action_id"] == "case_reopen_after_reply"
+    assert button["text"]["text"] == "Reopen Case" and button["value"] == "5001"
+    assert channel.MARK_REOPEN_PROMPT_POSTED in conn.executed
+
+
+def test_post_reopen_prompt_case_already_open_marks_posted_without_posting(monkeypatch):
+    conn, slack = reopen_prompt_world(monkeypatch, (False,))
+
+    assert channel.post_reopen_prompt(slack, conn, 5001) is None
+
+    assert slack.posted == []
+    assert channel.MARK_REOPEN_PROMPT_POSTED in conn.executed
+
+
+def test_post_reopen_prompt_without_pending_reply_does_nothing(monkeypatch):
+    conn, slack = reopen_prompt_world(monkeypatch, None)
+
+    assert channel.post_reopen_prompt(slack, conn, 5001) is None
+
+    assert slack.posted == []
+    assert channel.MARK_REOPEN_PROMPT_POSTED not in conn.executed

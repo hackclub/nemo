@@ -6,10 +6,9 @@ from bot.nemo import case_actions
 CASE_ID = 41
 REPORT_ID = 31
 MODERATOR_ID = "UMODERATOR"
-REPORTER_ID = "UREPORTER"
 CLOSED_AT = dt.datetime(2026, 10, 1, 12, 0, tzinfo=dt.UTC)
 
-CASE_RESOLUTION = "SELECT resolved_at, resolution, duplicate_of"
+RECORD_REPORTER_REPLY = "SET reporter_replied_at = now()"
 SLACK_REOPEN = "RETURNING resolution"
 REOPEN_REPORTS = "UPDATE fd.case_reports r"
 AUDIT_INSERT = "INSERT INTO fd.audit"
@@ -49,12 +48,27 @@ def closed_report_rows():
     return {REOPEN_REPORTS: [(REPORT_ID, CLOSED_AT, MODERATOR_ID)]}
 
 
-def test_core_case_reopen_closed_case_reopens_closed_reports():
-    conn = Conn({CASE_RESOLUTION: (CLOSED_AT, "action_taken", None)}, closed_report_rows())
+def test_record_reporter_reply_resolved_case_sets_flag_without_reopening():
+    conn = Conn({RECORD_REPORTER_REPLY: (CASE_ID,)}, closed_report_rows())
 
-    assert core_case.reopen(conn, CASE_ID, REPORTER_ID) == "action_taken"
-    assert conn.args_for(REOPEN_REPORTS) == [(CASE_ID,)]
-    assert [(args[3], args[4]) for args in conn.report_audits()] == [(REPORT_ID, "reopened")]
+    assert core_case.record_reporter_reply(conn, CASE_ID) is True
+    assert conn.args_for(RECORD_REPORTER_REPLY) == [(CASE_ID,)]
+    assert conn.args_for(REOPEN_REPORTS) == []
+    assert conn.args_for(AUDIT_INSERT) == []
+
+
+def test_record_reporter_reply_open_or_flagged_case_returns_false():
+    conn = Conn({RECORD_REPORTER_REPLY: None})
+
+    assert core_case.record_reporter_reply(conn, CASE_ID) is False
+
+
+def test_record_reporter_reply_sql_is_one_time_per_resolved_case():
+    sql = core_case.RECORD_REPORTER_REPLY
+
+    assert "resolved_at IS NOT NULL" in sql
+    assert "reporter_replied_at IS NULL" in sql
+    assert "resolved_at = NULL" not in sql
 
 
 def test_case_actions_reopen_closed_case_reopens_closed_reports():
@@ -81,13 +95,6 @@ def test_case_actions_reopen_without_closed_reports_writes_no_report_audit():
 
     assert case_actions.reopen(conn, CASE_ID, MODERATOR_ID) is True
     assert conn.report_audits() == []
-
-
-def test_core_case_reopen_open_case_returns_none_without_reopening_reports():
-    conn = Conn({CASE_RESOLUTION: (None, None, None)}, closed_report_rows())
-
-    assert core_case.reopen(conn, CASE_ID, REPORTER_ID) is None
-    assert conn.args_for(REOPEN_REPORTS) == []
 
 
 def test_case_actions_reopen_does_not_touch_assignees():

@@ -39,8 +39,8 @@ def test_lines_format_header_resolution_reopen_note_and_assignment_errors():
     assert lines.resolved("UME", 39, "Not a conduct matter") == (
         "<@UME> resolved case 39: Not a conduct matter")
     assert lines.reopened("UME", 39) == "<@UME> reopened case 39"
-    assert lines.reopened_by_reporter(39, "No action needed") == (
-        "Case 39 reopened after the reporter replied (was No action needed)")
+    assert lines.reporter_replied(39) == "Reporter replied to resolved case 39"
+    assert lines.reopened_by_reporter(39) == "Case 39 reopened after the reporter replied"
     assert lines.note_added("UME", "spoke to them") == "<@UME> added a note: spoke to them"
     assert lines.already_claimed(39) == "You are already assigned to case 39"
     assert lines.already_assigned(39, ["UA"]) == "<@UA> is already assigned to case 39"
