@@ -74,17 +74,21 @@ def credentials(prefix: str) -> tuple[str, str]:
     )
 
 
+def connect_kwargs() -> dict[str, str]:
+    user, password = credentials("PIPELINE")
+    return {
+        "host": os.environ["POSTGRES_HOST"],
+        "port": os.environ["POSTGRES_PORT"],
+        "dbname": os.environ["POSTGRES_DB"],
+        "user": user,
+        "password": password,
+    }
+
+
 def connect(dsn: str | None = None) -> psycopg.Connection:
     if dsn is not None:
         return psycopg.connect(dsn)
-    user, password = credentials("PIPELINE")
-    return psycopg.connect(
-        host=os.environ["POSTGRES_HOST"],
-        port=os.environ["POSTGRES_PORT"],
-        dbname=os.environ["POSTGRES_DB"],
-        user=user,
-        password=password,
-    )
+    return psycopg.connect(**connect_kwargs())
 
 
 def connect_admin(dsn: str | None = None, maintenance: bool = False) -> psycopg.Connection:
