@@ -150,3 +150,24 @@ def test_queue_without_opening_edits_the_card_itself():
     case_queue.sync_header(slack, conn, queue_case(body=None, card_header_ts=None))
 
     assert slack.updates[0]["ts"] == "1.1"
+
+
+def test_report_card_metadata_names_the_reporter_unless_anonymous():
+    conn, slack = Conn(), Slack()
+
+    channel.sync_header(slack, conn, report_case(body="", header_ts=None, reporter_user_id="UREP"), "C1")
+    channel.sync_header(slack, conn, report_case(body="", header_ts=None, reporter_user_id="UREP",
+                                                 is_anonymous=True), "C1")
+
+    assert slack.updates[0]["metadata"]["event_payload"]["source_user_id"] == "UREP"
+    assert "source_user_id" not in slack.updates[1]["metadata"]["event_payload"]
+
+
+def test_queue_card_metadata_names_whoever_opened_it():
+    conn, slack = Conn(), Slack()
+
+    case_queue.sync_header(slack, conn, queue_case(body=None, card_header_ts=None, opening_id=5, opened_by="UOPEN"))
+    case_queue.sync_header(slack, conn, queue_case(body=None, card_header_ts=None, opening_id=None, opened_by="UOPEN"))
+
+    assert slack.updates[0]["metadata"]["event_payload"]["source_user_id"] == "UOPEN"
+    assert "source_user_id" not in slack.updates[1]["metadata"]["event_payload"]
