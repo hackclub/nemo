@@ -23,7 +23,7 @@ class FdMemberSearchTest < ActionDispatch::IntegrationTest
 
   test "search signed out redirects to login" do
     get fd_member_search_path(q: "ada")
-    assert_redirected_to root_path
+    assert_redirected_to login_path
   end
 
   test "search by member name returns that member" do

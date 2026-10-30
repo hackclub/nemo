@@ -1,11 +1,9 @@
 class SessionsController < ApplicationController
-  layout "landing"
+  layout "auth"
   skip_before_action :require_account
 
-  RETURN_PATH = %r{\A/(?![/\\])}
-
   def new
-    redirect_to root_path
+    redirect_to root_path if current_account.present?
   end
 
   def create
@@ -19,10 +17,9 @@ class SessionsController < ApplicationController
 
     staff = Account.find_or_create_by!(user_id: slack_id)
     Prometheus::Mirror.refresh(staff.user_id)
-    return_to = safe_return_to(session[:return_to])
     reset_session
     session[:user_id] = staff.user_id
-    redirect_to return_to || root_path, notice: sign_in_notice(staff)
+    redirect_to root_path, notice: sign_in_notice(staff)
   end
 
   def failure
@@ -32,14 +29,10 @@ class SessionsController < ApplicationController
 
   def destroy
     reset_session
-    redirect_to root_path
+    redirect_to login_path
   end
 
   private
-
-  def safe_return_to(path)
-    path if path.is_a?(String) && path.match?(RETURN_PATH)
-  end
 
   def sign_in_notice(staff)
     roles = Authz.effective_roles(staff.user_id).map { |role| Authz.role_label(role) }

@@ -19,7 +19,7 @@ class FdActionEditsTest < ActionDispatch::IntegrationTest
 
   test "signed out edit redirects to login" do
     edit_action
-    assert_redirected_to root_path
+    assert_redirected_to login_path
     assert_equal "spamm", @action.reload.reason
   end
 

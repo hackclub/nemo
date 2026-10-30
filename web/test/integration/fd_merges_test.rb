@@ -15,7 +15,7 @@ class FdMergesTest < ActionDispatch::IntegrationTest
 
   test "merge signed out redirects to login and resolves nothing" do
     merge([@dup_one.id], @main.id)
-    assert_redirected_to root_path
+    assert_redirected_to login_path
     assert_nil @dup_one.reload.resolved_at
   end
 

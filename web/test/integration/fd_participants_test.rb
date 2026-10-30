@@ -17,7 +17,7 @@ class FdParticipantsTest < ActionDispatch::IntegrationTest
 
   test "create signed out redirects to login and adds no participant" do
     add
-    assert_redirected_to root_path
+    assert_redirected_to login_path
     assert_empty extra_participants.to_a
   end
 

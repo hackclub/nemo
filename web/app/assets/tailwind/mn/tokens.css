@@ -164,6 +164,10 @@
     --select: var(--primary-soft);
     --select-on: var(--foreground);
 
+    --ground: var(--background);
+    --ground-ink: var(--foreground);
+    --ground-ink-2: var(--muted-foreground);
+
     --veil: oklch(0 0 0 / 0.5);
     --cast: oklch(0 0 0 / 0.05);
     --shadow-1: 0 1px 2px 0 oklch(0 0 0 / 0.05);

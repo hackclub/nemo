@@ -183,7 +183,7 @@ class EngineControllerTest < ActionDispatch::IntegrationTest
       post engine_sync_path
     end
 
-    assert_redirected_to root_path
+    assert_redirected_to login_path
   end
 
   def firefighter

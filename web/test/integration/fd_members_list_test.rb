@@ -30,7 +30,7 @@ class FdMembersListTest < ActionDispatch::IntegrationTest
   test "members index after logout redirects to login" do
     delete logout_path
     get fd_members_path
-    assert_redirected_to root_path
+    assert_redirected_to login_path
   end
 
   test "member query defaults to everyone view and search finds subject" do

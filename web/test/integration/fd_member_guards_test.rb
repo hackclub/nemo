@@ -194,7 +194,7 @@ class FdMemberGuardsTest < ActionDispatch::IntegrationTest
   test "channel search signed out redirects to login" do
     delete logout_path
     get fd_channel_search_path, params: { q: "" }
-    assert_redirected_to root_path
+    assert_redirected_to login_path
   end
 
   test "member page labels a firehose guard and offers no lift" do

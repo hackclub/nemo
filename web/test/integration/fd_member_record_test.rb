@@ -45,7 +45,7 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
     before = AccessLog.count
     get fd_member_path(SUBJECT)
 
-    assert_redirected_to root_path
+    assert_redirected_to login_path
     assert_equal before, AccessLog.count, "a refused request must not record a lookup"
   end
 

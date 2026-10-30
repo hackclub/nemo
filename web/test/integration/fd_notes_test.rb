@@ -20,7 +20,7 @@ class FdNotesTest < ActionDispatch::IntegrationTest
 
   test "create signed out redirects to login and writes no note" do
     write
-    assert_redirected_to root_path
+    assert_redirected_to login_path
     assert_equal 0, notes.count
   end
 

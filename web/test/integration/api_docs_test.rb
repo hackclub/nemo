@@ -31,7 +31,7 @@ class ApiDocsTest < ActionDispatch::IntegrationTest
   test "docs index signed out redirects to login" do
     get docs_path
 
-    assert_redirected_to root_path
+    assert_redirected_to login_path
   end
 
   test "docs topic shows the current rate_per_minute setting" do

@@ -54,7 +54,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to auth_failure_path(message: "no_slack_id")
   end
 
-  test "logout clears session and redirects to the landing page" do
+  test "logout clears session and redirects to login" do
     grant_role!("UTESTLOGOUT", "community_manager")
     mock_hca_auth("UTESTLOGOUT")
     get "/auth/hackclub/callback"
@@ -62,7 +62,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     delete "/logout"
 
-    assert_redirected_to root_path
+    assert_redirected_to login_path
     assert_nil session[:user_id]
   end
 

@@ -106,7 +106,7 @@ class FdChannelsTest < ActionDispatch::IntegrationTest
     reset!
     get fd_channels_path
 
-    assert_redirected_to root_path
+    assert_redirected_to login_path
   end
 
   test "channel guard create stores opened_by and creates audit entry" do

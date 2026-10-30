@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="lightsout" data-accent="orange">
+<html lang="en">
   <head>
     <title><%= content_for(:title) || "Mnemosyne" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -13,13 +13,23 @@
     <link rel="icon" href="/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="/icon.png">
 
+    <%= render "layouts/bootstrap" %>
+
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
-    <%= javascript_inline_importmap_tag %>
-    <%= javascript_import_module_tag "landing" %>
+    <%= javascript_importmap_tags %>
   </head>
 
-  <body class="landing">
+  <body data-section="mn">
     <%= render "shared/synthetic_banner" %>
-    <%= yield %>
+    <div class="auth">
+      <%= render "layouts/backdrop" %>
+      <div class="auth-stack">
+        <%= image_tag "nemo-pod.png", class: "auth-pod", alt: "", width: 900, height: 613 %>
+        <div class="auth-card">
+          <span class="auth-word">Mnemosyne</span>
+          <%= yield %>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

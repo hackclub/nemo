@@ -54,7 +54,7 @@ class MemberAreaTest < ActionDispatch::IntegrationTest
   test "settings keys signed out redirects to login" do
     get settings_keys_path
 
-    assert_redirected_to root_path
+    assert_redirected_to login_path
   end
 
   test "settings keys after logout redirects to login" do
@@ -65,7 +65,7 @@ class MemberAreaTest < ActionDispatch::IntegrationTest
     delete logout_path
     get settings_keys_path
 
-    assert_redirected_to root_path
+    assert_redirected_to login_path
   end
 
   test "auth callback with a non-slack uid redirects to failure and creates no session" do
@@ -79,7 +79,7 @@ class MemberAreaTest < ActionDispatch::IntegrationTest
     assert_redirected_to auth_failure_path(message: "no_slack_id")
 
     get settings_keys_path
-    assert_redirected_to root_path
+    assert_redirected_to login_path
   end
 
   test "rail for an account without a role has no fire engine or admin links" do

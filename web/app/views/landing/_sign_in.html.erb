@@ -1,8 +1,0 @@
-<%= form_tag "/auth/hackclub", method: :post, authenticity_token: false, data: { turbo: false, **local_assigns.fetch(:form_data, {}) }, class: local_assigns[:form_class] do %>
-  <%= hidden_field_tag :authenticity_token, Rack::Protection::AuthenticityToken.token(session), id: nil %>
-  <%= button_tag type: "submit", name: nil, class: local_assigns[:button_class] do %>
-    <%= hack_club_mark if local_assigns[:mark] %>
-    <span><%= label %></span>
-    <%= landing_arrow if local_assigns[:arrow] %>
-  <% end %>
-<% end %>

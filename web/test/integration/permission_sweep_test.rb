@@ -60,8 +60,8 @@ class PermissionSweepTest < ActionDispatch::IntegrationTest
 
   # 1. nothing at all without a session
   test "signed out requests redirect or return 404 on every page" do
-    open_to_all = ["/", "/login", "/auth/failure"]
-    reachable_paths = (FD_PATHS + ADMIN_PATHS + ENGINE_PATHS + ["/account", "/channels",
+    open_to_all = ["/login", "/auth/failure"]
+    reachable_paths = (FD_PATHS + ADMIN_PATHS + ENGINE_PATHS + ["/", "/account", "/channels",
                                                     "/journey/joining",
                                                     "/messages/C0SWEEP/1.000001"]).reject do |path|
       get path

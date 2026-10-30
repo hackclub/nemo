@@ -41,7 +41,7 @@ class FdSlackAccountTest < ActionDispatch::IntegrationTest
 
   test "slack account create signed out redirects to login" do
     start_linking
-    assert_redirected_to root_path
+    assert_redirected_to login_path
   end
 
   test "slack account create redirects to slack authorize with user_scope and state" do

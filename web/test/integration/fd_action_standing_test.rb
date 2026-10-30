@@ -148,7 +148,7 @@ class FdActionStandingTest < ActionDispatch::IntegrationTest
     guard!
     delete logout_path
     get_standing
-    assert_redirected_to root_path
+    assert_redirected_to login_path
     assert_empty offered_guard_ids
   end
   test "action modal orders member field then standing frame then fields" do

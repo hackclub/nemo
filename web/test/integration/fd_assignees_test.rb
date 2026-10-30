@@ -16,7 +16,7 @@ class FdAssigneesTest < ActionDispatch::IntegrationTest
 
   test "assignees create signed out redirects to login and adds nothing" do
     add
-    assert_redirected_to root_path
+    assert_redirected_to login_path
     assert_empty assignee_ids
   end
 

@@ -119,6 +119,6 @@ class MemberTokensTest < ActionDispatch::IntegrationTest
       mint
     end
 
-    assert_redirected_to root_path
+    assert_redirected_to login_path
   end
 end

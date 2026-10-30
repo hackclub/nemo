@@ -12,7 +12,7 @@ class FdClaimsTest < ActionDispatch::IntegrationTest
 
   test "claim signed out redirects to login and assigns nothing" do
     post fd_case_claim_path(@kase)
-    assert_redirected_to root_path
+    assert_redirected_to login_path
     assert_not @kase.reload.assigned?
     assert_equal 0, audit_rows("claimed").count
   end

@@ -1,22 +1,13 @@
-<main class="landing-state">
-  <section class="landing-band" aria-labelledby="landing-state-title">
-    <div class="landing-band-ground" aria-hidden="true" <%= tag.attributes(data: effect_data("light_rays", LandingHelper::RAYS_EFFECT)) %>></div>
-    <%= link_to root_path, class: "landing-brand" do %>
-      <%= image_tag "nemo.png", alt: "", width: 800, height: 483, class: "landing-brand-fish" %>
-      <span>Nemo</span>
-    <% end %>
-    <h1 id="landing-state-title" class="landing-state-title">Sign-in failed</h1>
-    <% if @message == "no_slack_id" %>
-      <p class="landing-state-text">No Slack ID linked to this Hack Club account</p>
-    <% else %>
-      <p class="landing-state-text">Error code: <code><%= @message %></code></p>
-    <% end %>
-    <div class="landing-actions">
-      <% if current_account %>
-        <%= button_to "Sign out", logout_path, method: :delete, class: "landing-btn landing-btn-quiet" %>
-      <% else %>
-        <%= render "landing/sign_in", label: "Sign in again", button_class: "landing-btn landing-btn-primary", mark: true, arrow: true %>
-      <% end %>
-    </div>
-  </section>
-</main>
+<h1>Sign-in failed</h1>
+
+<% if @message == "no_slack_id" %>
+  <p>No Slack ID linked to this Hack Club account</p>
+<% else %>
+  <p>Error code: <span class="mono"><%= @message %></span></p>
+<% end %>
+
+<% if current_account %>
+  <%= button_to "Sign out", logout_path, method: :delete, class: "btn w-full" %>
+<% else %>
+  <%= link_to "Sign in again", login_path, class: "btn w-full" %>
+<% end %>

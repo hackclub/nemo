@@ -16,7 +16,7 @@ class FdOpenCaseTest < ActionDispatch::IntegrationTest
 
   test "cases create signed out redirects to login and opens no case" do
     open_case
-    assert_redirected_to root_path
+    assert_redirected_to login_path
     assert_nil opened
   end
 

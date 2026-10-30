@@ -1,12 +1,12 @@
 require "test_helper"
 
 class WhoGetsInTest < ActionDispatch::IntegrationTest
-  OPEN = %w[sessions landing health rails/pwa turbo/native/navigation].freeze
+  OPEN = %w[sessions health rails/pwa turbo/native/navigation].freeze
 
   TURBO = %w[/recede_historical_location /resume_historical_location
              /refresh_historical_location].freeze
 
-  SIGN_IN_REQUIRED_PATHS = %i[community_path fd_root_path fd_members_path admin_people_path].freeze
+  SIGN_IN_REQUIRED_PATHS = %i[root_path fd_root_path fd_members_path admin_people_path].freeze
 
   MEMBER = %w[settings/keys settings/tokens settings/apps settings/consents
               settings/permissions settings/appearances docs accounts workspace_logo
@@ -141,10 +141,10 @@ class WhoGetsInTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "signed out requests to protected paths redirect to the landing page" do
+  test "signed out requests to protected paths redirect to login" do
     SIGN_IN_REQUIRED_PATHS.each do |path|
       get send(path)
-      assert_redirected_to root_path, "#{path} does not redirect to the landing page"
+      assert_redirected_to login_path, "#{path} does not redirect to login"
     end
   end
 

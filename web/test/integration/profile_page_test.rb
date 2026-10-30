@@ -81,7 +81,7 @@ class YouPageTest < ActionDispatch::IntegrationTest
   test "profile signed out redirects to login" do
     get profile_path
 
-    assert_redirected_to root_path
+    assert_redirected_to login_path
   end
 
   test "community page links to profile" do

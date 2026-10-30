@@ -65,11 +65,10 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_equal "UTC", @controller.send(:viewer_zone)
   end
 
-  test "unauthenticated visitor gets the landing page" do
+  test "unauthenticated visitor is redirected to login" do
     get root_path
 
-    assert_response :success
-    assert_select "body.landing"
+    assert_redirected_to login_path
   end
 
   test "index returns success for account with no roles" do

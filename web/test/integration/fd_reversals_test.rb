@@ -23,7 +23,7 @@ class FdReversalsTest < ActionDispatch::IntegrationTest
 
   test "create signed out redirects to login and leaves reversed_at nil" do
     reverse
-    assert_redirected_to root_path
+    assert_redirected_to login_path
     assert_nil @action.reload.reversed_at
   end
 

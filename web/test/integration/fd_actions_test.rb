@@ -38,7 +38,7 @@ class FdActionsTest < ActionDispatch::IntegrationTest
 
   test "create action signed out redirects to login and stores nothing" do
     log
-    assert_redirected_to root_path
+    assert_redirected_to login_path
     assert_equal 0, actions.count
   end
 

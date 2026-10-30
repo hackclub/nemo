@@ -29,7 +29,7 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
 
   test "resolution create signed out redirects to login and changes nothing" do
     close
-    assert_redirected_to root_path
+    assert_redirected_to login_path
     assert_nil @kase.reload.resolved_at
     assert_equal 0, actions.count
   end

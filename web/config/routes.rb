@@ -2,7 +2,6 @@ Rails.application.routes.draw do
   get "up" => "health#show", as: :rails_health_check
   get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
 
-  get "/", to: "landing#show", constraints: ->(request) { request.session[:user_id].blank? }
   get "login", to: "sessions#new", as: :login
   match "auth/:provider/callback", to: "sessions#create", via: [:get, :post], as: :auth_callback
   get "auth/failure", to: "sessions#failure", as: :auth_failure
