@@ -1,5 +1,6 @@
 <%
   inline_limit = 3
+  pane_params = local_assigns.fetch(:pane_params, {})
   items = reports.map do |report|
     state, tone = thread_state(report, kase, reachable)
     { report: report, state: state, tone: tone, current: report.id == thread&.id }
@@ -8,7 +9,7 @@
 <% if reports.size <= inline_limit %>
   <nav class="thread-tabs" aria-label="Reporter threads">
     <% items.each do |item| %>
-      <%= link_to fd_case_path(kase, tab: "report", thread: item[:report].id),
+      <%= link_to fd_case_path(kase, pane_params.merge(tab: "report", thread: item[:report].id)),
             class: "thread-tab", aria: { current: (item[:current] ? "true" : nil) } do %>
         <%= render "fd/cases/thread_label", item: item, names: names %>
       <% end %>
@@ -21,7 +22,7 @@
         trigger: render("fd/cases/thread_trigger", item: selected, names: names, total: items.size)
       } do %>
     <% items.each do |item| %>
-      <%= link_to fd_case_path(kase, tab: "report", thread: item[:report].id),
+      <%= link_to fd_case_path(kase, pane_params.merge(tab: "report", thread: item[:report].id)),
             class: "thread-row", aria: { current: (item[:current] ? "true" : nil) } do %>
         <%= render "fd/cases/thread_label", item: item, names: names %>
       <% end %>

@@ -8,6 +8,7 @@
 <% reachable = local_assigns.fetch(:reachable, Set.new) %>
 <% message_count = local_assigns.fetch(:message_count, messages.size) %>
 <% root = local_assigns.fetch(:root, nil) %>
+<% pane_params = local_assigns.fetch(:pane_params, {}) %>
 
 <div class="chatwrap" data-controller="sticky pending-flush chat-filter"
      data-chat-filter-key-value="<%= kase.id %>"
@@ -16,7 +17,7 @@
   <div class="chat-head">
     <% if reports.size > 1 %>
       <%= render "fd/cases/thread_switch", kase: kase, reports: reports, thread: thread,
-            names: names, reachable: reachable %>
+            names: names, reachable: reachable, pane_params: pane_params %>
     <% elsif thread %>
       <%= thread.anonymous? ? anonymous_face : avatar(thread.reporter_user_id) %>
       <span class="grow two-line">

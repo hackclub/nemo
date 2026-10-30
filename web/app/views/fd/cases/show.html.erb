@@ -122,7 +122,7 @@
       <%= render "chat", kase: @case, reports: @reports, chat: @chat, earlier: @earlier_count,
             messages: @conversation_messages, queued: @queued_replies, thread: @thread,
             conversation: @thread_conversation, message_count: @conversation_count,
-            reachable: @reachable_report_ids, root: @root_chat %>
+            reachable: @reachable_report_ids, root: @root_chat, pane_params: @pane_params %>
     <% end %>
 
     <% if @tab == "people" %>

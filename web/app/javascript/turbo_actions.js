@@ -60,25 +60,30 @@ export function syncFrame(frame) {
   fetchChanges(frame, targetSrc, currentVersion)
 }
 
-const SCROLL_PRESERVING_LINKS = ".views a, .segmented a, .member-record-tabs a"
-const SCROLLERS = [".scrollarea", ".pane-list", ".member-record-content", ".case-tab-body"]
+const SCROLL_PRESERVING_LINKS = {
+  ".views a, .segmented a, .member-record-tabs a":
+    [".scrollarea", ".pane-list", ".member-record-content", ".case-tab-body"],
+  ".queue-row, .thread-tabs a, .thread-pop a": [".pane-list"]
+}
 let savedScrollTops = null
 
 document.addEventListener("click", (event) => {
-  const link = event.target.closest(SCROLL_PRESERVING_LINKS)
+  const [links, scrollers] = Object.entries(SCROLL_PRESERVING_LINKS)
+    .find(([selector]) => event.target.closest(selector)) || []
+  const link = links && event.target.closest(links)
   if (!link || link.target === "_blank" || link.dataset.turboFrame) return
 
-  savedScrollTops = SCROLLERS.map((selector) => document.querySelector(selector)?.scrollTop ?? null)
+  savedScrollTops = scrollers.map((selector) => [selector, document.querySelector(selector)?.scrollTop ?? null])
 })
 
 document.addEventListener("turbo:render", () => {
   if (!savedScrollTops) return
 
   const savedTops = savedScrollTops
-  savedScrollTops = null
-  SCROLLERS.forEach((selector, at) => {
+  if (!document.documentElement.hasAttribute("data-turbo-preview")) savedScrollTops = null
+  savedTops.forEach(([selector, top]) => {
     const box = document.querySelector(selector)
-    if (box && savedTops[at] !== null) box.scrollTop = savedTops[at]
+    if (box && top !== null) box.scrollTop = top
   })
 })
 
