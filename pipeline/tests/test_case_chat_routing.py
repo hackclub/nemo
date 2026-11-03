@@ -2,7 +2,7 @@ import contextlib
 
 import pytest
 
-from bot.nemo import handlers
+from bot.nemo import chat, handlers
 from bot.nemo.surface import ENTRIES, reaction_watch
 
 
@@ -85,6 +85,48 @@ def test_on_message_plain_chat_skips_reporter_thread_lookup(harness, monkeypatch
     message_handler().fn(Ctx(dict(EVENT, text="who is handling this")))
 
     assert harness["stored"][0][0] == 6
+
+
+def test_on_message_thread_broadcast_is_stored_as_chat(harness, monkeypatch):
+    stub_is_reporter_thread(monkeypatch, False)
+    message_handler().fn(Ctx(dict(EVENT, subtype="thread_broadcast", text="also posted to the channel")))
+
+    assert harness["stored"] == [(6, dict(EVENT, subtype="thread_broadcast", text="also posted to the channel"))]
+
+
+@pytest.mark.parametrize("subtype", ["channel_join", "bot_message"])
+def test_on_message_non_chat_subtype_is_not_stored(harness, subtype):
+    message_handler().fn(Ctx(dict(EVENT, subtype=subtype, text="joined")))
+
+    assert harness["stored"] == []
+
+
+def test_on_message_with_files_fetches_chat_files_with_the_client_token(harness, monkeypatch):
+    stub_is_reporter_thread(monkeypatch, False)
+    fetched = []
+    monkeypatch.setattr(handlers.intake_files, "drain_chat_files", lambda token: fetched.append(token))
+
+    class TokenClient:
+        token = "xoxb-nemo"
+
+    files = [{"id": "F1", "url_private": "https://files.slack.com/a.png"}]
+    message_handler().fn(ClientCtx(dict(EVENT, subtype="file_share", text="", files=files), TokenClient()))
+    for thread in [one for one in handlers.threading.enumerate() if one.name.startswith("nemo-chat-files-")]:
+        thread.join(timeout=2)
+
+    assert harness["stored"][0][1]["files"] == files
+    assert fetched == ["xoxb-nemo"]
+
+
+def test_attach_files_links_each_file_to_the_chat_line(monkeypatch):
+    conn = Conn()
+    monkeypatch.setattr(chat.intake, "store_file", lambda conn, item: {"F1": 501, "F2": 502}[item["slack_file_id"]])
+    event = {"files": [{"id": "F1", "url_private": "https://files.slack.com/a.png"},
+                       {"id": "F2", "url_private": "https://files.slack.com/b.png"}]}
+
+    chat.attach_files(conn, 77, event)
+
+    assert [args for sql, args in conn.executed if "fd.case_chat_files" in sql] == [(77, 501, 0), (77, 502, 1)]
 
 
 ROOT_MESSAGE = {"ts": "1.0", "user": "UMEM", "text": "that's my alt"}

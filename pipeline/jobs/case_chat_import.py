@@ -59,6 +59,7 @@ def event_of(channel_id, message):
         "user": message.get("user") or message.get("bot_id") or "unknown",
         "text": message.get("text") or "",
         "blocks": message.get("blocks"),
+        "files": message.get("files") or [],
     }
 
 

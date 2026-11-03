@@ -10,6 +10,7 @@ from bot.nemo import (
     usergroups,
 )
 from bot.nemo.enforcement import purge, slowmode, sweep
+from bot.relay import intake_files
 
 log = logging.getLogger("bot.nemo")
 
@@ -287,6 +288,7 @@ def sweep_once(case_channel, channel_id=None):
         ("notifying manually lifted guards", lambda: sweep.sweep_lifted(client)),
         ("reclaiming released work", lambda: sweep.sweep_failed(client)),
         ("notifying expiring guards", lambda: sweep.sweep_ending(client)),
+        ("storing case chat files", lambda: intake_files.drain_chat_files(client.token)),
     )
 
     return posted, redrawn_count, mirrored_count

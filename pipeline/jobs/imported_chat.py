@@ -30,7 +30,7 @@ def known_mirrors(conn, timestamps):
 
 def classify(message, thread_ts, report_id, mirrors, own_ids=()):
     ts = message.get("ts")
-    if not ts or not (message.get("text") or message.get("blocks")):
+    if not ts or not (message.get("text") or message.get("blocks") or message.get("files")):
         return SKIP
     if ts in mirrors:
         return SKIP

@@ -39,6 +39,12 @@ def test_classify_keeps_firefighter_messages_and_skips_empty_ones():
     assert imported_chat.classify(message(text="", blocks=None), THREAD, 7, set()) == SKIP
 
 
+def test_classify_keeps_file_only_messages():
+    shot = message(user=SHROUD_BOT_USER_ID, text="", files=[{"id": "F1"}])
+
+    assert imported_chat.classify(shot, THREAD, 7, set()) == CHAT
+
+
 class Conn:
     def __init__(self, row=(901,)):
         self.row = row

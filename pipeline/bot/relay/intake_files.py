@@ -16,10 +16,19 @@ def drain_token(forwarded, relay, nemo=None):
 
 def drain(token, limit=20):
     nemo = os.environ.get("NEMO_BOT_TOKEN")
-    stored_count = 0
     with session() as conn:
         rows = blobs.waiting(conn, limit)
+    return store(rows, lambda forwarded: drain_token(forwarded, token, nemo))
 
+
+def drain_chat_files(token, limit=20):
+    with session() as conn:
+        rows = blobs.waiting_chat_files(conn, limit)
+    return store(rows, lambda forwarded: token)
+
+
+def store(rows, token_for):
+    stored_count = 0
     for file_id, slack_id, url, size, mimetype, forwarded in rows:
         if not blobs.is_media_type(mimetype):
             with session() as conn:
@@ -34,7 +43,7 @@ def drain(token, limit=20):
             log.info("relay: %s is too large to keep", slack_id)
             continue
 
-        body, state, error = download(url, drain_token(forwarded, token, nemo), blobs.cap())
+        body, state, error = download(url, token_for(forwarded), blobs.cap())
         detected = blobs.media_type(body) if state == "stored" else None
         if state == "stored" and detected is None:
             state, error = "refused", blobs.NOT_MEDIA

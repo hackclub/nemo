@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from bot.core import access, outbox, session
 from bot.nemo import answer, views, chat, memberguards, profile, surface, thread_commands
@@ -22,10 +23,12 @@ from bot.nemo.channel import (
     post_merge_note,
     refresh_card,
 )
+from bot.relay import intake_files
 
 log = logging.getLogger("bot.nemo")
 
 RESOLVED_MARK = "check-check"
+CHAT_SUBTYPES = (None, "file_share", "me_message", "thread_broadcast")
 
 
 def register(app, on_reply=None):
@@ -210,7 +213,7 @@ def register(app, on_reply=None):
             return on_changed(event, client)
         if subtype == "message_deleted":
             return on_deleted(event, client)
-        if event.get("bot_id") or subtype not in (None, "file_share"):
+        if event.get("bot_id") or subtype not in CHAT_SUBTYPES:
             return
 
         thread_ts = event.get("thread_ts")
@@ -306,6 +309,15 @@ def register(app, on_reply=None):
 
         if inserted:
             log.info("nemo: case %s heard us say something (%s)", case_id, chat_id)
+        if event.get("files"):
+            threading.Thread(target=store_chat_files, args=(client.token,),
+                             name=f"nemo-chat-files-{chat_id}", daemon=True).start()
+
+    def store_chat_files(token):
+        try:
+            intake_files.drain_chat_files(token)
+        except Exception:
+            log.exception("nemo: could not store case chat files, they stay pending")
 
     def on_changed(event, client):
         message = event.get("message") or {}

@@ -7,7 +7,15 @@ def test_event_of_member_message():
     event = case_chat_import.event_of("C0FIRE", {"ts": "1.2", "thread_ts": "1.0", "user": "UONE",
                                                  "text": "hi", "blocks": [{"type": "rich_text"}]})
     assert event == {"channel": "C0FIRE", "ts": "1.2", "thread_ts": "1.0", "user": "UONE",
-                     "text": "hi", "blocks": [{"type": "rich_text"}]}
+                     "text": "hi", "blocks": [{"type": "rich_text"}], "files": []}
+
+
+def test_event_of_file_only_message_keeps_files():
+    files = [{"id": "F1", "mimetype": "image/png", "url_private": "https://files.slack.com/a.png"}]
+    event = case_chat_import.event_of("C0FIRE", {"ts": "1.4", "thread_ts": "1.0", "user": "U07K4TS9HQE",
+                                                 "bot_id": "B07KBDVFXJP", "text": "", "files": files})
+    assert event["files"] == files
+    assert event["text"] == ""
 
 
 def test_event_of_bot_message_without_user_uses_bot_id():

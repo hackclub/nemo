@@ -1,6 +1,6 @@
 from psycopg.types.json import Jsonb
 
-from bot.core import parse
+from bot.core import intake, parse
 from bot.nemo.views import report as views
 
 CASE_OF_THREAD = """
@@ -133,7 +133,19 @@ def insert(conn, case_id, event):
             event.get("thread_ts"),
         ),
     ).fetchone()
+    attach_files(conn, row[0], event)
     return row[0], row[1]
+
+
+INSERT_CHAT_FILE = """
+INSERT INTO fd.case_chat_files (chat_id, file_id, seq)
+VALUES (%s, %s, %s) ON CONFLICT DO NOTHING
+"""
+
+
+def attach_files(conn, chat_id, event):
+    for seq, item in enumerate(parse.files(event)):
+        conn.execute(INSERT_CHAT_FILE, (chat_id, intake.store_file(conn, item), seq))
 
 
 def edit(conn, channel_id, message):

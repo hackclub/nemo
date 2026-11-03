@@ -156,26 +156,32 @@ def attach(conn, message_id, event):
         )
 
     for seq, item in enumerate(parse.files(event)):
-        file_id = conn.execute(
-            "INSERT INTO fd.intake_files "
-            "(slack_file_id, name, title, mimetype, filetype, mode, size_bytes, "
-            " original_w, original_h, is_external, external_type, external_url, permalink, "
-            " url_private, uploaded_by, is_tombstoned, is_hidden_by_limit, fetch_state, "
-            " fetch_error, created_at) "
-            "VALUES (%(slack_file_id)s, %(name)s, %(title)s, %(mimetype)s, %(filetype)s, "
-            " %(mode)s, %(size_bytes)s, %(original_w)s, %(original_h)s, %(is_external)s, "
-            " %(external_type)s, %(external_url)s, %(permalink)s, %(url_private)s, "
-            " %(uploaded_by)s, %(is_tombstoned)s, %(is_hidden_by_limit)s, %(fetch_state)s, "
-            " %(fetch_error)s, %(created_at)s) "
-            "ON CONFLICT (slack_file_id) DO UPDATE SET last_seen_at = now() "
-            "RETURNING id",
-            item,
-        ).fetchone()[0]
+        file_id = store_file(conn, item)
         conn.execute(
             "INSERT INTO fd.intake_message_files (message_id, file_id, seq, forwarded) "
             "VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING",
             (message_id, file_id, seq, item["forwarded"]),
         )
+
+
+INSERT_FILE = """
+INSERT INTO fd.intake_files
+    (slack_file_id, name, title, mimetype, filetype, mode, size_bytes,
+     original_w, original_h, is_external, external_type, external_url, permalink,
+     url_private, uploaded_by, is_tombstoned, is_hidden_by_limit, fetch_state,
+     fetch_error, created_at)
+VALUES (%(slack_file_id)s, %(name)s, %(title)s, %(mimetype)s, %(filetype)s,
+    %(mode)s, %(size_bytes)s, %(original_w)s, %(original_h)s, %(is_external)s,
+    %(external_type)s, %(external_url)s, %(permalink)s, %(url_private)s,
+    %(uploaded_by)s, %(is_tombstoned)s, %(is_hidden_by_limit)s, %(fetch_state)s,
+    %(fetch_error)s, %(created_at)s)
+ON CONFLICT (slack_file_id) DO UPDATE SET last_seen_at = now()
+RETURNING id
+"""
+
+
+def store_file(conn, item):
+    return conn.execute(INSERT_FILE, item).fetchone()[0]
 
 
 def edit(conn, channel_id, message):

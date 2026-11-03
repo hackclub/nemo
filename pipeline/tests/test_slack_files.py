@@ -142,6 +142,21 @@ def test_drain_declared_non_media_marks_refused_without_download(drain_calls, mo
     assert drain_calls["failed"] == [(1, "refused", blobs.NOT_MEDIA)]
 
 
+def test_drain_chat_files_reads_only_chat_files_with_the_given_token(drain_calls, monkeypatch):
+    monkeypatch.setattr(intake_files.blobs, "waiting", lambda conn, limit: pytest.fail("intake files read"))
+    monkeypatch.setattr(intake_files.blobs, "waiting_chat_files", lambda conn, limit: [
+        (3, "F3", "https://files.slack.com/c.png", 10, "image/png", False),
+    ])
+    tokens = []
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 24
+    monkeypatch.setattr(intake_files, "download",
+                        lambda url, token, limit: tokens.append(token) or (png, "stored", None))
+
+    assert intake_files.drain_chat_files("xoxb-nemo") == 1
+    assert tokens == ["xoxb-nemo"]
+    assert drain_calls["stored"] == [(3, "image/png")]
+
+
 PDF = b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n"
 
 

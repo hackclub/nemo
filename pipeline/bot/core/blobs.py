@@ -172,8 +172,22 @@ def exceeds_limit(size, limit=None):
     return bool(size) and size > limit
 
 
+PENDING_CHAT_FILES = """
+SELECT f.id, f.slack_file_id, f.url_private, f.size_bytes, f.mimetype, false
+FROM fd.intake_files f
+WHERE f.fetch_state = 'pending' AND f.url_private IS NOT NULL
+  AND EXISTS (SELECT 1 FROM fd.case_chat_files cf WHERE cf.file_id = f.id)
+ORDER BY f.first_seen_at, f.id
+LIMIT %s
+"""
+
+
 def waiting(conn, limit=20):
     return conn.execute(PENDING, (limit,)).fetchall()
+
+
+def waiting_chat_files(conn, limit=20):
+    return conn.execute(PENDING_CHAT_FILES, (limit,)).fetchall()
 
 
 def store_blob(conn, file_id, body, mimetype):
