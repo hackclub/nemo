@@ -39,7 +39,7 @@ module Fd
       @notes = Note.where(case_id: family).visible.recent_first.to_a
       @conversations = IntakeConversation.for_case(family).to_a
       @reachable_report_ids = @conversations.reject(&:closed?).map(&:report_id).to_set
-      @thread = selected_thread(@reports)
+      @thread = CaseReport.selected_thread(@reports, @case, params[:thread])
       @thread_conversation = @conversations.find { |conversation| conversation.report_id == @thread&.id }
       @conversation_messages = IntakeMessage.tail([@thread_conversation&.id].compact)
       @conversation_count = IntakeMessage.count_for([@thread_conversation&.id].compact)
@@ -155,10 +155,6 @@ module Fd
     end
 
     private
-
-    def selected_thread(reports)
-      reports.find { |report| report.id == params[:thread].to_i } || reports.last
-    end
 
     def cited_channel_ids
       (@cited_shares || {}).values.flatten.map(&:source_channel_id).compact

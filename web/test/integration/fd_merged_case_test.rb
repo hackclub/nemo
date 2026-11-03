@@ -68,6 +68,52 @@ class FdMergedCaseTest < ActionDispatch::IntegrationTest
     assert_equal stats_without_merge.total, stats_with_merge.total, "total differs with merged case"
   end
 
+  def slack_report_on(kase, at:, forwarded_ts:)
+    Fd::CaseReport.create!(case_id: kase.id, is_anonymous: true, body: "report on #{kase.id}",
+      source_app: "relay", received_at: at, card_channel_id: "C0FIRE", forwarded_ts: forwarded_ts)
+  end
+
+  test "show selects the case report thread over a newer merged report thread" do
+    own = slack_report_on(@root, at: 3.days.ago, forwarded_ts: "1700000000.000100")
+    merged = slack_report_on(@duplicate, at: 1.day.ago, forwarded_ts: "1700000000.000200")
+
+    get fd_case_path(@root)
+
+    assert_equal own.id, @controller.view_assigns["thread"].id
+    assert_select "a.thread-tab[aria-current='true'][href*='thread=#{own.id}']"
+
+    get fd_case_path(@root, thread: merged.id)
+
+    assert_equal merged.id, @controller.view_assigns["thread"].id
+  end
+
+  test "chat head links the selected report thread to Slack" do
+    slack_report_on(@root, at: 3.days.ago, forwarded_ts: "1700000000.000100")
+    merged = slack_report_on(@duplicate, at: 1.day.ago, forwarded_ts: "1700000000.000200")
+
+    get fd_case_path(@root, thread: merged.id)
+
+    assert_select ".chat-head a[href='https://hackclub.slack.com/archives/C0FIRE/p1700000000000200']",
+      text: "Open in Slack"
+  end
+
+  test "chat line shows the files attached to it" do
+    report = slack_report_on(@root, at: 3.days.ago, forwarded_ts: "1700000000.000100")
+    line = Fd::CaseChat.create!(case_id: @root.id, author_user_id: "UFF1", body: "",
+      posted_at: 2.days.ago, channel_id: "C0FIRE", ts: "1700000100.000100",
+      thread_ts: report.forwarded_ts, source_app: "nemo")
+    file = Fd::IntakeFile.create!(slack_file_id: "FCHAT1", name: "shot.png", mimetype: "image/png",
+      fetch_state: "pending")
+    ApplicationRecord.connection.exec_query(
+      "INSERT INTO fd.case_chat_files (chat_id, file_id, seq) VALUES ($1, $2, 0)",
+      "chat file", [line.id, file.id]
+    )
+
+    get fd_case_path(@root)
+
+    assert_select "#message-chat-#{line.id} .msg-files", text: /shot\.png/
+  end
+
   test "view_counts resolved counts a case resolved without duplicate_of" do
     resolved_before = resolved_count
     @duplicate.update!(resolution: "no_action", duplicate_of: nil)

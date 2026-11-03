@@ -43,7 +43,7 @@ module Fd
       reports = CaseReport.where(case_id: family).oldest_first.to_a
       @root_chat = CaseChat.root_for(@case, family) if reports.empty?
       @named_reporters = reports.reject(&:anonymous?).map(&:reporter_user_id)
-      @thread = reports.find { |report| report.id == params[:thread].to_i } || reports.last
+      @thread = CaseReport.selected_thread(reports, @case, params[:thread])
       @reports = [@thread].compact
       @hidden_threads = CaseReport.threads_besides(reports, @thread)
       @conversation = IntakeConversation.for_case(family).find_by(report_id: @thread&.id)

@@ -8,6 +8,12 @@ module Fd
 
     scope :oldest_first, -> { order(:received_at) }
 
+    def self.selected_thread(reports, kase, thread_id)
+      reports.find { |report| report.id == thread_id.to_i } ||
+        reports.reverse.find { |report| report.case_id == kase.id } ||
+        reports.last
+    end
+
     def self.threads_besides(reports, selected)
       return [] if selected.nil?
 

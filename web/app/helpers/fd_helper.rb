@@ -716,6 +716,17 @@ module FdHelper
     Fd::SlackLink.url_for(channel_id, thread_ts)
   end
 
+  def case_thread_url(kase, thread)
+    channel_id, thread_ts = if thread
+      [thread.card_channel_id, thread.forwarded_ts]
+    else
+      [kase.card_channel_id, kase.card_thread_ts || kase.card_ts]
+    end
+    return nil if channel_id.blank? || thread_ts.blank?
+
+    slack_thread_url(channel_id, thread_ts)
+  end
+
   def role_label(role)
     ROLE_LABELS.fetch(role, role)
   end
@@ -760,11 +771,12 @@ module FdHelper
       message_entry(message, hidden, files.fetch(message.id, []), cited.fetch(message.id, []))
     end
     relayed = Fd::CaseReport.shroud_reports_by_thread(chat)
+    chat_files = Fd::IntakeFile.for_chat(chat.map(&:id))
     entries += chat.filter_map do |line|
       report = relayed[[line.channel_id, line.thread_ts]] if Fd::CaseReport.shroud_relay?(line)
       next if report && reports.exclude?(report)
 
-      chat_entry(line, report)
+      chat_entry(line, report, chat_files.fetch(line.id, []))
     end
     entries += queued.map { |row| queued_entry(row) }
     entries.sort_by(&:at)
@@ -823,27 +835,28 @@ module FdHelper
     row.mode == "signed" ? "from #{names[row.requested_by]}" : "anonymous"
   end
 
-  def chat_entry(line, report = nil)
-    return relayed_entry(line, report) if report && Fd::CaseReport.shroud_relay?(line)
-    return root_entry(line) if line.id == @root_chat&.id
+  def chat_entry(line, report = nil, files = [])
+    return relayed_entry(line, report, files) if report && Fd::CaseReport.shroud_relay?(line)
+    return root_entry(line, files) if line.id == @root_chat&.id
 
     blocks = line.blocks unless line.deleted?
     kind = Slack::EchoCard.echo?(blocks) ? "action" : "chat"
     ChatEntry.new(key: "chat-#{line.id}", at: line.posted_at, side: "out", kind: kind,
       who: line.author_user_id, name: names[line.author_user_id], body: chat_body(line),
-      blocks: blocks)
+      blocks: blocks, files: files)
   end
 
-  def relayed_entry(line, report)
+  def relayed_entry(line, report, files = [])
     ChatEntry.new(key: "chat-#{line.id}", at: line.posted_at, side: "in", kind: "them",
       who: (report.reporter_user_id unless report.anonymous?), anon: report.anonymous?,
-      name: report.reporter_label(names), body: chat_body(line), blocks: (line.blocks unless line.deleted?))
+      name: report.reporter_label(names), body: chat_body(line), blocks: (line.blocks unless line.deleted?),
+      files: files)
   end
 
-  def root_entry(line)
+  def root_entry(line, files = [])
     ChatEntry.new(key: "chat-#{line.id}", at: line.posted_at, side: "in", kind: "them",
       who: line.author_user_id, name: names[line.author_user_id], body: chat_body(line),
-      blocks: (line.blocks unless line.deleted?))
+      blocks: (line.blocks unless line.deleted?), files: files)
   end
 
   def chat_body(line)

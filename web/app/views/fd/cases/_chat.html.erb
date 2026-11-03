@@ -45,6 +45,10 @@
         <b>Internal chat</b>
       </span>
     <% end %>
+    <% if (thread_url = case_thread_url(kase, thread)) %>
+      <%= link_to "Open in Slack", thread_url, class: "btn btn-ghost btn-sm chat-only",
+            target: "_blank", rel: "noopener" %>
+    <% end %>
     <% if thread %>
       <span class="segmented chat-only" role="group" aria-label="Message filter">
         <button type="button" aria-pressed="true" data-chat-filter-target="all"

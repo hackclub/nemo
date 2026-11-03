@@ -64,5 +64,16 @@ module Fd
         .order(Arel.sql("mf.message_id, mf.seq"))
         .group_by { |row| row.file_message_id.to_i }
     end
+
+    def self.for_chat(chat_ids)
+      ids = Array(chat_ids).compact.uniq
+      return {} if ids.empty?
+
+      select("fd.intake_files.*, cf.chat_id AS file_chat_id, cf.seq AS file_seq")
+        .joins("JOIN fd.case_chat_files cf ON cf.file_id = fd.intake_files.id")
+        .where("cf.chat_id IN (?)", ids)
+        .order(Arel.sql("cf.chat_id, cf.seq"))
+        .group_by { |row| row.file_chat_id.to_i }
+    end
   end
 end
