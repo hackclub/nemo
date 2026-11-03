@@ -560,7 +560,7 @@ module FdHelper
     fd_nav_mark([
       Stop.new(key: "overview", label: "Overview", icon: "overview", path: fd_root_path),
       Stop.new(key: "cases", label: "Cases", icon: "shield", path: fd_cases_path,
-        tally: Fd::Case.unresolved.not_duplicate.unassigned.count),
+        tally: unassigned_case_count),
       Stop.new(key: "members", label: "Members", icon: "people", path: fd_members_path),
       Stop.new(key: "channels", label: "Channels", icon: "channels", path: fd_channels_path),
       Stop.new(key: "new_members", label: "New members", icon: "newcomers",
@@ -1102,11 +1102,11 @@ module FdHelper
     tag.span(class: ["subjfaces", ("subjfaces-many" if ids.many?)]) { safe_join(parts) }
   end
 
-  def preset_faces(user_ids)
+  def preset_faces(user_ids, names: nil)
     ids = Array(user_ids).compact.reject(&:blank?).uniq
     return [] if ids.empty?
 
-    name_lookup = Fd::Names.for(ids)
+    name_lookup = names && ids.all? { |id| names.known?(id) } ? names : Fd::Names.for(ids)
     ids.map { |id| { id: id, name: name_lookup[id], initial: name_lookup.member(id)&.initial || id[0] } }
   end
 

@@ -276,7 +276,7 @@ module Fd
 
 
     def sibling_cases
-      pairs = threads.evidence.map(&:coordinates)
+      pairs = threads.select(&:evidence?).map(&:coordinates)
       return Case.none if pairs.empty?
 
       evidence = pairs

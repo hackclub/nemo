@@ -5,11 +5,13 @@ class Deployment
     end
   end
 
-  CACHE_KEY = "deployment/marker".freeze
   CACHE_TTL = 5.minutes
 
   def self.current
-    Rails.cache.fetch(CACHE_KEY, expires_in: CACHE_TTL) { read }
+    marker, read_at = @current
+    return marker if read_at&.after?(CACHE_TTL.ago)
+
+    read.tap { |fresh| @current = [fresh, Time.current] }
   end
 
   def self.seeded?

@@ -1,4 +1,4 @@
-<% names = Fd::Names.for([staff.user_id]) %>
+<% names = Fd::Names.new(members: { staff.user_id => current_member }.compact) %>
 <%= render layout: "shared/dropdown", locals: {
       css: "account-menu", trigger_css: "account-face", pop_css: "account-pop",
       label: "#{names[staff.user_id]}, account",

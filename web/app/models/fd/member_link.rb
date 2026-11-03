@@ -84,9 +84,11 @@ module Fd
     end
 
     def self.review_count
-      Rails.cache.fetch("fd/member_link/review_count", expires_in: REVIEW_COUNT_TTL) do
-        connection.select_value(sanitize_sql([REVIEW_COUNT_SQL, { strong: STRONG }])).to_i
-      end
+      count, counted_at = @review_count
+      return count if counted_at&.after?(REVIEW_COUNT_TTL.ago)
+
+      connection.select_value(sanitize_sql([REVIEW_COUNT_SQL, { strong: STRONG }])).to_i
+        .tap { |fresh| @review_count = [fresh, Time.current] }
     end
 
     def self.clusters_for_members(user_ids, limit: 3)

@@ -1,7 +1,7 @@
 <div class="field-label" data-action-standing-target="targetFields">
   <%= render "shared/combobox", name: "target_user_id", single: true,
         url: fd_member_search_path(case_id: kase.id),
-        label: "Search members", preset: preset_faces(target) %>
+        label: "Search members", preset: preset_faces(target, names: names) %>
 </div>
 
 <div class="standing-slot" data-action-standing-target="standing">

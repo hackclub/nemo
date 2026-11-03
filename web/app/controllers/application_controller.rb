@@ -53,6 +53,13 @@ class ApplicationController < ActionController::Base
     @current_account ||= Account.find_or_initialize_by(user_id: session[:user_id])
   end
 
+  def current_member
+    return @current_member if defined?(@current_member)
+
+    @current_member = current_account && Fd::Member.find_by(user_id: current_account.user_id)
+  end
+  helper_method :current_member
+
   def require_account
     return if current_account.present?
     return head :unauthorized if request.format.json?

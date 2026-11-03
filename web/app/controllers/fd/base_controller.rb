@@ -58,7 +58,7 @@ module Fd
     end
 
     def viewer_time_zone
-      tz = Member.where(user_id: current_account&.user_id).pick(:tz)
+      tz = current_member&.tz
       ActiveSupport::TimeZone[tz.to_s] || ActiveSupport::TimeZone[viewer_zone] || Time.zone
     end
 

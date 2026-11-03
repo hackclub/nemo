@@ -103,7 +103,7 @@ module Fd
       }
       @flags = CaseFlags.for_case(@case, names: @names)
       @subject = @case.subject_user_ids.first
-      @subject_priors = @subject ? Case.prior_count(@subject, within: Case::PRIOR_WINDOW) : 0
+      @subject_priors = @person_priors.fetch(@subject, 0)
       @merge_into = @duplicate_candidates.find { |other| !other.resolved? }
       @open_reports = @reports.count { |report| !report.outcome_notified? }
     end

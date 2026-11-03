@@ -197,7 +197,7 @@ module ApplicationHelper
     stops = []
     if fire_engine
       stops << RailStop.new(key: "fd", label: "Fire Engine", icon: "fire", path: fd_root_path,
-        tally: Fd::Case.unresolved.not_duplicate.unassigned.count, current: page_section == "fd")
+        tally: unassigned_case_count, current: page_section == "fd")
     end
     if on?(:analytics)
       stops << RailStop.new(key: "mn", label: "Community", icon: "community",
@@ -212,6 +212,10 @@ module ApplicationHelper
         current: page_section == "admin")
     end
     @nav_items = stops
+  end
+
+  def unassigned_case_count
+    @unassigned_case_count ||= Fd::Case.unresolved.not_duplicate.unassigned.count
   end
 
   SHELL_PLACES = {
