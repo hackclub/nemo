@@ -57,10 +57,10 @@
         <% end %>
         <% @case.assignees.oldest_first.each do |row| %>
           <% next if row.user_id == current_account.user_id %>
-          <%= gated_button "case.open", menu_item("hand", "Unassign @#{row.user_id}"),
+          <%= gated_button "case.open", menu_item("hand", "Unassign #{names[row.user_id]}"),
                 fd_case_assignee_path(@case, row.user_id), on: @case, method: :delete,
                 form: { class: "contents", data: { turbo_confirm:
-                  "Unassign @#{row.user_id} from case #{@case.id}?" } } %>
+                  "Unassign #{names[row.user_id]} from case #{@case.id}?" } } %>
         <% end %>
         <%= opens_modal "case.open", menu_item("join", "Assign member"),
               opens: "assign-case", on: @case %>

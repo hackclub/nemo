@@ -91,4 +91,15 @@ class FdCasePageTest < ActionDispatch::IntegrationTest
       "names include the subject of the other case"
     assert_equal named_member.name, @controller.view_assigns["names"][named_member.user_id]
   end
+
+  test "unassign menu item shows the assignee display name" do
+    named_member = Fd::Member.live.where.not(display_name: [nil, ""]).order(:user_id).first
+    skip "the corpus has no named member" if named_member.nil?
+    kase = make_case(assign: named_member.user_id)
+
+    get fd_case_path(kase)
+
+    assert_select ".menu-item-title", text: "Unassign #{named_member.name}"
+    assert_select ".menu-item-title", text: "Unassign @#{named_member.user_id}", count: 0
+  end
 end
