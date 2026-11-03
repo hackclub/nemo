@@ -82,7 +82,8 @@ CREATE TEMP TABLE scope_session ON COMMIT DROP AS
 SELECT s.app, s.os, ({SESSION_USER_COUNT}) AS user_count
 FROM (SELECT DISTINCT a.app, a.os FROM slack.user_agent a
       WHERE a.app IS NOT NULL AND a.os IS NOT NULL
-        AND a.id::text IN (SELECT value FROM scope_value WHERE kind = 'ua_id')) s
+        AND a.id IN (SELECT CASE WHEN value ~ '^[0-9]{1,18}$' THEN value::bigint END
+                     FROM scope_value WHERE kind = 'ua_id')) s
 """
 
 ANONYMIZED = "('rotating', 'vpn', 'hosting', 'tor')"
@@ -108,9 +109,10 @@ WHERE e.user_id IN (SELECT user_id FROM rescored) AND e.ip IS NOT NULL
 
 SCOPE_AGENT = """
 CREATE TEMP TABLE scope_agent ON COMMIT DROP AS
-SELECT a.id AS ua_id FROM scope_value v
-JOIN slack.user_agent a ON a.id::text = v.value
-WHERE v.kind = 'ua_id' AND v.user_count <= %(cap)s
+SELECT a.id AS ua_id
+FROM (SELECT CASE WHEN value ~ '^[0-9]{1,18}$' THEN value::bigint END AS id
+      FROM scope_value WHERE kind = 'ua_id' AND user_count <= %(cap)s) v
+JOIN slack.user_agent a ON a.id = v.id
 UNION
 SELECT a.id FROM scope_session s
 JOIN slack.user_agent a ON a.app = s.app AND a.os = s.os
@@ -190,7 +192,8 @@ SELECT signal, value FROM (
                  ('ua_id', 'device_agent'), ('ua_id', 'after_ban_device'), ('ja4', 'device_ja4'), ('ja3', 'device_ja3'),
                  ('inviter', 'invited_by')) AS signals (kind, signal)
       ON signals.kind = v.kind
-    LEFT JOIN slack.user_agent a ON v.kind = 'ua_id' AND a.id::text = v.value
+    LEFT JOIN slack.user_agent a ON v.kind = 'ua_id'
+      AND a.id = CASE WHEN v.kind = 'ua_id' AND v.value ~ '^[0-9]{1,18}$' THEN v.value::bigint END
     WHERE v.user_count > %(cap)s
     UNION ALL
     SELECT 'session_agent', app || ' / ' || os FROM scope_session WHERE user_count > %(cap)s
@@ -234,8 +237,7 @@ def scope(conn, touched):
     args = {"touched": touched, "cap": CAP}
     for sql in SCOPE:
         conn.execute(sql, args)
-    for table in ("rescored", "scope_login", "scope_user", "over_cap"):
-        conn.execute(f"ANALYZE {table}")
+        conn.execute(f"ANALYZE {sql.split('CREATE TEMP TABLE ', 1)[1].split()[0]}")
     return conn.execute("SELECT count(*) FROM rescored").fetchone()[0]
 
 

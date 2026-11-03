@@ -31,6 +31,8 @@ REFRESH_SECONDS = 24 * 3600
 DOWNLOAD_TIMEOUT = 120
 BATCH = 20000
 STALE_DAYS = 30
+RECENT_HOURS = 24
+CATCH_UP_SLICE = "catch_up"
 DEFAULT_RETRY_DAYS = 1
 CLASSES = ("stable", "rotating", "vpn", "hosting", "tor")
 CURATED_ORDER = ("vpn", "hosting", "rotating")
@@ -43,10 +45,35 @@ WHERE e.ip_prefix IS NOT NULL
 LIMIT %s
 """
 
+RECENT_PENDING_SQL = """
+SELECT DISTINCT e.ip_prefix
+FROM fd.login_event e
+WHERE e.ip_prefix IS NOT NULL
+  AND e.updated_at > now() - make_interval(hours => %s)
+  AND NOT EXISTS (SELECT 1 FROM fd.ip_network n WHERE n.ip_prefix = e.ip_prefix)
+LIMIT %s
+"""
+
+CATCH_UP_DUE_SQL = """
+SELECT NOT EXISTS (
+    SELECT 1 FROM raw.ingest_run
+    WHERE source = %s AND slice_key = %s AND status = 'ok' AND rows_in < %s
+      AND started_at > now() - make_interval(secs => %s)
+)
+"""
+
 STALE_SQL = """
-SELECT ip_prefix FROM fd.ip_network
-WHERE classified_at < now() - make_interval(days => %(stale)s)
-   OR (source = 'default' AND classified_at < now() - make_interval(days => %(retry)s))
+SELECT ip_prefix FROM (
+    (SELECT ip_prefix, classified_at FROM fd.ip_network
+     WHERE classified_at < now() - make_interval(days => %(stale)s)
+     ORDER BY classified_at
+     LIMIT %(batch)s)
+    UNION
+    (SELECT ip_prefix, classified_at FROM fd.ip_network
+     WHERE source = 'default' AND classified_at < now() - make_interval(days => %(retry)s)
+     ORDER BY classified_at
+     LIMIT %(batch)s)
+) due
 ORDER BY classified_at
 LIMIT %(batch)s
 """
@@ -229,8 +256,14 @@ def retagged(conn, tor, already):
     return [as_network(row[0]) for row in rows if as_network(row[0]) not in already]
 
 
-def pending(conn):
-    prefixes = [row[0] for row in conn.execute(PENDING_SQL, (BATCH,)).fetchall()]
+def catch_up_due(conn):
+    return conn.execute(CATCH_UP_DUE_SQL, (SOURCE, CATCH_UP_SLICE, BATCH, REFRESH_SECONDS)).fetchone()[0]
+
+
+def pending(conn, catch_up=False):
+    found = (conn.execute(PENDING_SQL, (BATCH,)) if catch_up
+             else conn.execute(RECENT_PENDING_SQL, (RECENT_HOURS, BATCH)))
+    prefixes = [row[0] for row in found.fetchall()]
     if len(prefixes) < BATCH:
         prefixes += [row[0] for row in conn.execute(
             STALE_SQL, {"stale": STALE_DAYS, "retry": DEFAULT_RETRY_DAYS,
@@ -245,9 +278,10 @@ def run(conn):
         return 0
 
     classes = network_classes()
-    with ingest_run(conn, SOURCE) as counts:
+    catch_up = catch_up_due(conn)
+    with ingest_run(conn, SOURCE, slice_key=CATCH_UP_SLICE if catch_up else None) as counts:
         tor = tor_prefixes(conn, tor_exit_addresses())
-        networks = pending(conn)
+        networks = pending(conn, catch_up)
         networks += retagged(conn, tor, set(networks))
         if not networks:
             return 0
