@@ -4,9 +4,12 @@ class WorkspaceLogo
   SOURCE = "https://shrimp-shuffler.a.hackclub.dev/api/current".freeze
   HOSTS = %w[hackclub.com hackclub.dev hackclub-assets.com].freeze
   SUFFIXES = HOSTS.map { |host| ".#{host}" }.freeze
-  CACHE_KEY = "workspace_logo/image".freeze
+  CACHE_KEY = "workspace_logo/entry".freeze
+  REFRESH_KEY = "workspace_logo/refresh".freeze
   IMAGE_TTL = 10.minutes
+  KEEP_TTL = 7.days
   MISSING_TTL = 2.minutes
+  REFRESH_LOCK_TTL = 1.minute
   OPEN_TIMEOUT = 2
   READ_TIMEOUT = 5
   MAX_REDIRECTS = 3
@@ -16,11 +19,24 @@ class WorkspaceLogo
 
   def self.image
     cached = Rails.cache.read(CACHE_KEY)
-    return cached.presence && cached if cached
+    return refresh if cached.nil?
 
-    result = read
-    Rails.cache.write(CACHE_KEY, result || "", expires_in: result ? IMAGE_TTL : MISSING_TTL)
-    result
+    WorkspaceLogoJob.perform_later if cached[:read_at].before?(IMAGE_TTL.ago) && claim_refresh
+    cached[:image]
+  end
+
+  def self.refresh
+    image = read
+    if image
+      Rails.cache.write(CACHE_KEY, { image: image, read_at: Time.current }, expires_in: KEEP_TTL)
+    elsif !Rails.cache.exist?(CACHE_KEY)
+      Rails.cache.write(CACHE_KEY, { image: nil, read_at: Time.current }, expires_in: MISSING_TTL)
+    end
+    image
+  end
+
+  def self.claim_refresh
+    Rails.cache.write(REFRESH_KEY, true, expires_in: REFRESH_LOCK_TTL, unless_exist: true)
   end
 
   def self.read
