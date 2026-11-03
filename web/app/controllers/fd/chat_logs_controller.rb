@@ -4,6 +4,12 @@ module Fd
 
     def show
       @case = Case.find(params[:case_id])
+      if request.format.turbo_stream?
+        @version_parts = ChatVersion.parts(@case.id)
+        @version = @version_parts.join("-")
+        return head :no_content if params[:since] == @version
+      end
+
       family = @case.family_ids
       load_thread(family)
       @conversation_messages = IntakeMessage.tail(conversation_ids)
@@ -77,15 +83,11 @@ module Fd
     end
 
     def changes_since(since)
-      @version = ChatVersion.for(@case.id)
-      return head :no_content if since == @version
-
       previous_parts = ChatVersion.parse(since)
       @sent_ids = []
       return @everything = true if previous_parts.nil?
 
-      current_parts = ChatVersion.parts(@case.id)
-      return head :reset_content if current_parts.zip(previous_parts).any? { |current, previous| current.count < previous.count }
+      return head :reset_content if @version_parts.zip(previous_parts).any? { |current, previous| current.count < previous.count }
 
       previous_chat, previous_messages, previous_queued = previous_parts
       @chat_changed = @chat.select { |line| changed_since?(line, previous_chat, :posted_at, :edited_at, :deleted_at) }
