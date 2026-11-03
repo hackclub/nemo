@@ -21,7 +21,7 @@ def fallback(case):
 
 
 def metadata(case):
-    return {
-        "event_type": "fd_case_card",
-        "event_payload": {"case_id": case["case_id"], "report_id": None},
-    }
+    payload = {"case_id": case["case_id"], "report_id": None}
+    if case.get("opening_id") and case.get("opened_by"):
+        payload["source_user_id"] = case["opened_by"]
+    return {"event_type": "fd_case_card", "event_payload": payload}
