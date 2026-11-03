@@ -2,7 +2,7 @@ import logging
 
 from psycopg.types.json import Jsonb
 
-from bot.core import audit
+from bot.core import access, audit
 from bot.core.case import reopen_reports
 from bot.nemo import views
 
@@ -352,6 +352,31 @@ def resolve(conn, case_id, values, user_id):
     )
     notified = close_reports(conn, case_id, values["message"], user_id) if values["notify_reporter"] else 0
     return notified
+
+
+MEMBERS_WITH_EMAIL = """
+SELECT user_id FROM fd.member_identity
+WHERE lower(email) = %s AND purged_at IS NULL
+LIMIT 2
+"""
+
+
+def resolve_target(conn, values, user_id):
+    text = values.get("target_text")
+    if values.get("target_user_id") or not text:
+        return values
+    typed_id, email = views.action.typed_target(text)
+    if typed_id:
+        return {**values, "target_user_id": typed_id}
+    if not email:
+        return {**values, "target_error": views.action.INVALID_TARGET}
+    allowed, refusal = access.may(conn, user_id, "identity.read")
+    if not allowed:
+        return {**values, "target_error": refusal}
+    found = [row[0] for row in conn.execute(MEMBERS_WITH_EMAIL, (email,)).fetchall()]
+    if len(found) == 1:
+        return {**values, "target_user_id": found[0]}
+    return {**values, "target_error": views.action.SHARED_EMAIL if found else views.action.UNKNOWN_EMAIL}
 
 
 def log_action(conn, case_id, values, user_id):

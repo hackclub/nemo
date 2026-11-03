@@ -9,6 +9,7 @@ from bot.nemo.case_actions import (
     mark_resolution_log_pending,
     log_action,
     merge,
+    resolve_target,
     resolve_thread,
     resolve_with_action,
 )
@@ -66,6 +67,7 @@ def register(app, on_reply=None):
         case_id = int(submitted_view["private_metadata"])
         values = views.action.submitted_values(submitted_view["state"])
         with session() as conn:
+            values = resolve_target(conn, values, body["user"]["id"])
             guard_status = guard_status_for(conn, case_id, values)
             open_report = has_open_report(conn, case_id)
 
@@ -79,8 +81,8 @@ def register(app, on_reply=None):
         except Exception as failure:
             log.warning("nemo: could not reshape the action modal: %s", failure)
 
-    for where in (views.action.KIND, views.action.TARGET, views.action.WHERE, views.action.RESOLVE,
-                  views.action.NOTIFY, views.action.CATEGORY):
+    for where in (views.action.KIND, views.action.TARGET, views.action.TARGET_TEXT, views.action.WHERE,
+                  views.action.RESOLVE, views.action.NOTIFY, views.action.CATEGORY):
         app.action(where)(reshape_action_modal)
 
 
@@ -92,6 +94,7 @@ def register(app, on_reply=None):
         values["timezone"] = getattr(profile.timezone(client, user_id), "key", "UTC")
 
         with session() as conn:
+            values = resolve_target(conn, values, user_id)
             guard_status = guard_status_for(conn, case_id, values)
             open_report = has_open_report(conn, case_id)
 

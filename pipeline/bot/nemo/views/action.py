@@ -1,8 +1,10 @@
 import datetime as dt
+import re
 from zoneinfo import ZoneInfo
 
 import yaml
 
+from bot.core import richtext
 from bot.core.formatting import short_date, short_end
 from bot.nemo.views import edit, lengths, resolve
 from lib.paths import ACTIONS_FILE
@@ -10,6 +12,7 @@ from lib.paths import ACTIONS_FILE
 CALLBACK = "case_action_log"
 
 TARGET = "action_target"
+TARGET_TEXT = "action_target_text"
 KIND = "action_kind"
 UNTIL = "action_until"
 UNTIL_TIME = "action_until_time"
@@ -54,6 +57,12 @@ REASON_LIMIT = 2000
 NO_REASON_CATEGORIES = ("adult",)
 
 REQUIRED = "required"
+
+EMAIL = re.compile(r"\A[^@\s]+@[^@\s]+\.[^@\s]+\Z")
+
+INVALID_TARGET = "Invalid Slack ID or email"
+UNKNOWN_EMAIL = "Member not found"
+SHARED_EMAIL = "Multiple members with this email"
 
 TABLE = None
 
@@ -293,8 +302,18 @@ def enforcement_blocks(values, guard_status):
     ]
 
 
+def typed_target(text):
+    user_id, rest = richtext.leading_user_id(text.upper())
+    if user_id and not rest:
+        return user_id, None
+    if EMAIL.match(text):
+        return None, text.lower()
+    return None, None
+
+
 def initial_values(subjects=(), category=None):
     return {
+        "selected_user_id": subjects[0] if subjects else None,
         "target_user_id": subjects[0] if subjects else None,
         "category_key": category,
     }
@@ -307,16 +326,30 @@ def build_blocks(case_id, values, guard_status=None, end_error=None, open_report
             "type": "input",
             "block_id": TARGET,
             "dispatch_action": True,
+            "optional": True,
             "label": {"type": "plain_text", "text": "Member"},
             "element": {
                 "type": "users_select",
                 "action_id": TARGET,
                 "placeholder": {"type": "plain_text", "text": "Select a member"},
                 **(
-                    {"initial_user": values["target_user_id"]}
-                    if values.get("target_user_id")
+                    {"initial_user": values["selected_user_id"]}
+                    if values.get("selected_user_id")
                     else {}
                 ),
+            },
+        },
+        {
+            "type": "input",
+            "block_id": TARGET_TEXT,
+            "dispatch_action": True,
+            "optional": True,
+            "label": {"type": "plain_text", "text": "Slack ID or email"},
+            "element": {
+                "type": "plain_text_input",
+                "action_id": TARGET_TEXT,
+                "dispatch_action_config": {"trigger_actions_on": ["on_enter_pressed"]},
+                **({"initial_value": values["target_text"]} if values.get("target_text") else {}),
             },
         },
         {
@@ -558,8 +591,11 @@ def ticked(values, block_id, value):
 
 def submitted_values(view_state):
     values = view_state.get("values", {})
+    selected_user_id = values.get(TARGET, {}).get(TARGET, {}).get("selected_user")
     return {
-        "target_user_id": values.get(TARGET, {}).get(TARGET, {}).get("selected_user"),
+        "selected_user_id": selected_user_id,
+        "target_user_id": selected_user_id,
+        "target_text": (values.get(TARGET_TEXT, {}).get(TARGET_TEXT, {}).get("value") or "").strip(),
         "type_key": (
             (values.get(KIND, {}).get(KIND, {}).get("selected_option") or {}).get("value")
         ),
@@ -587,6 +623,8 @@ def validation_errors(values):
     if not key:
         return {KIND: "Select an action"}
     if not values.get("target_user_id"):
+        if values.get("target_error"):
+            return {TARGET_TEXT: values["target_error"]}
         return {TARGET: "Select a member"}
     if needs_expiry(key) and not values.get("expires_on"):
         return {UNTIL: f"A {label(key).lower()} needs an end date."}
