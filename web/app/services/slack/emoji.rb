@@ -5,6 +5,7 @@ module Slack
     URL = "https://badger.hackclub.dev/api/emoji".freeze
     TTL = 12.hours
     MISSING_TTL = 1.hour
+    LOCAL_TTL = 10.minutes
     OPEN_TIMEOUT = 5
     READ_TIMEOUT = 20
     ALIAS = "alias:".freeze
@@ -14,8 +15,9 @@ module Slack
       requested = Array(names).map(&:to_s).reject(&:empty?).uniq
       return {} if requested.empty?
 
-      emoji = requested.index_with { |name| Rails.cache.read(key_for(name)) }
-      missing = requested.reject { |name| Rails.cache.exist?(key_for(name)) }
+      cached = Rails.cache.read_multi(*requested.map { |name| key_for(name) })
+      emoji = requested.index_with { |name| cached[key_for(name)] }
+      missing = requested.reject { |name| cached.key?(key_for(name)) }
       emoji = emoji.merge(looked_up(missing)) if missing.any?
       emoji.compact
     end
@@ -26,11 +28,17 @@ module Slack
       map = all
       return missing.index_with { nil } if map.nil?
 
-      missing.index_with do |name|
-        url = resolve(map, name)
-        Rails.cache.write(key_for(name), url, expires_in: url ? TTL : MISSING_TTL)
-        url
-      end
+      urls = missing.index_with { |name| resolve(map, name) }
+      found, absent = urls.partition { |_, url| url }.map(&:to_h)
+      store(found, TTL)
+      store(absent, MISSING_TTL)
+      urls
+    end
+
+    def self.store(urls, expires_in)
+      return if urls.empty?
+
+      Rails.cache.write_multi(urls.transform_keys { |name| key_for(name) }, expires_in: expires_in)
     end
 
     def self.resolve(map, name)
@@ -45,7 +53,11 @@ module Slack
     end
 
     def self.all
+      map, read_at = @all
+      return map if read_at&.after?(LOCAL_TTL.ago)
+
       Rails.cache.fetch("slack/emoji/all", expires_in: TTL, skip_nil: true) { fetched }
+        .tap { |fresh| @all = [fresh, Time.current] }
     end
 
     def self.fetched
