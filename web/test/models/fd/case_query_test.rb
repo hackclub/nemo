@@ -215,9 +215,9 @@ class Fd::CaseQueryTest < ActiveSupport::TestCase
     assert_equal ["spam"], second.violations
   end
 
-  test "everything view orders cases oldest opened first" do
-    assert_equal [@stale.id, @recent.id, @assigned.id], ids(view: "everything") - [@done.id],
-      "everything view is not ordered oldest first"
+  test "everything view orders cases newest opened first" do
+    assert_equal [@assigned.id, @recent.id, @stale.id], ids(view: "everything") - [@done.id],
+      "everything view is not ordered newest first"
   end
 
   test "resolved view orders cases by resolved_at descending" do
@@ -231,10 +231,25 @@ class Fd::CaseQueryTest < ActiveSupport::TestCase
     assert_equal "desc", query(view: "resolved")["dir"]
   end
 
-  test "dir desc reverses the everything view order" do
-    oldest_first = ids(view: "everything")
+  test "dir asc reverses the everything view order" do
+    newest_first = ids(view: "everything")
 
-    assert_equal oldest_first.reverse, ids(view: "everything", dir: "desc")
+    assert_equal newest_first.reverse, ids(view: "everything", dir: "asc")
+  end
+
+  test "dir asc keeps the view and its filter" do
+    oldest = query(view: "unassigned", dir: "asc")
+
+    assert_equal "unassigned", oldest.view
+    assert_equal({ "view" => "unassigned", "dir" => "asc" }, oldest.to_params)
+    assert_equal [@stale.id, @recent.id], ids(view: "unassigned", dir: "asc")
+  end
+
+  test "reordered_params drops dir for the default order" do
+    assert_equal({ "dir" => "asc" }, query.reordered_params("asc"))
+    assert_empty query(dir: "asc").reordered_params("desc")
+    assert_equal({ "view" => "none", "dir" => "asc" }, query(view: "none").reordered_params("asc"))
+    assert_equal({ "category" => "spam" }, query(category: "spam", dir: "asc").reordered_params("desc"))
   end
 
   test "sort_params keeps the default direction then reverses then drops sort" do
@@ -244,10 +259,10 @@ class Fd::CaseQueryTest < ActiveSupport::TestCase
       "dir present for a fresh column"
 
     ascending = query(sort: "case")
-    assert_equal "desc", ascending.sort_params("case")["dir"], "dir not desc for the second click"
+    assert_equal "asc", ascending.sort_params("case")["dir"], "dir not asc for the second click"
 
-    descending = query(sort: "case", dir: "desc")
-    assert_not_includes descending.sort_params("case").keys, "sort",
+    reversed = query(sort: "case", dir: "asc")
+    assert_not_includes reversed.sort_params("case").keys, "sort",
       "sort present for the third click"
   end
 end

@@ -135,6 +135,8 @@
     gap: 6px;
     min-width: 0;
   }
+  .queue-order { @apply h-7 p-0.5; }
+  .queue-order > a { @apply px-2 text-xs; }
   .pane-filt {
     display: flex;
     align-items: center;

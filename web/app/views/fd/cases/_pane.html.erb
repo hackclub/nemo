@@ -5,7 +5,7 @@
     <% current_more = more_tabs.find(&:current) %>
     <nav class="views" aria-label="Case views">
       <% primary_tabs.each do |view| %>
-        <%= link_to fd_cases_path(view: view.key), class: "view",
+        <%= link_to fd_cases_path({ view: view.key }.merge(query.order_params)), class: "view",
               aria: { current: ("true" if view.current) } do %>
           <%= view.label %>
           <span class="view-count"><%= view.count %></span>
@@ -22,7 +22,7 @@
                   stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "aria-hidden": true)
               ].compact) } do %>
           <% more_tabs.each do |view| %>
-            <%= link_to fd_cases_path(view: view.key), aria: { current: ("true" if view.current) } do %>
+            <%= link_to fd_cases_path({ view: view.key }.merge(query.order_params)), aria: { current: ("true" if view.current) } do %>
               <%= view.label %>
               <span class="menu-val"><%= view.count %></span>
             <% end %>
@@ -35,6 +35,13 @@
       <input class="input input-sm grow" id="pane-case-filter" type="search"
              autocomplete="off" placeholder="Filter cases"
              data-pane-filter-target="query" data-action="input->pane-filter#filter">
+      <span class="segmented queue-order" role="group" aria-label="Sort order">
+        <% { "desc" => "Newest", "asc" => "Oldest" }.each do |dir, label| %>
+          <% order = query.reordered_params(dir) %>
+          <%= link_to label, open_id ? fd_case_path(open_id, order) : fd_cases_path(order),
+                aria: { current: ("true" if query["dir"] == dir) } %>
+        <% end %>
+      </span>
     </div>
     <% if query.view.nil? %>
       <div class="pane-filt">

@@ -43,7 +43,7 @@ module Fd
       "unassigned" => { "status" => "open", "assignee" => "nobody" },
       "acted" => { "status" => "open", "actions" => "some" },
       "aging" => { "status" => "open", "age" => "5d" },
-      "resolved" => { "status" => "resolved", "sort" => "resolved", "dir" => "desc" },
+      "resolved" => { "status" => "resolved", "sort" => "resolved" },
       "everything" => {}
     }.freeze
 
@@ -55,7 +55,7 @@ module Fd
     DEFAULTS = {
       "status" => "any", "age" => "any", "assignee" => "anyone", "category" => "any", "tag" => "any",
       "subject" => "anyone", "actions" => "any", "opened" => "any", "resolved" => "any",
-      "sort" => "opened", "dir" => "asc"
+      "sort" => "opened", "dir" => "desc"
     }.freeze
     FACET_KEYS = DEFAULTS.keys.freeze
     KEYS = (FACET_KEYS + ["view"]).freeze
@@ -84,7 +84,7 @@ module Fd
 
     def view
       raw = @params["view"].to_s
-      return nil if raw == NO_VIEW || selected_facets.any?
+      return nil if raw == NO_VIEW || filter_facets.any?
 
       VIEWS.key?(raw) ? raw : DEFAULT_VIEW
     end
@@ -133,10 +133,19 @@ module Fd
     end
 
     def to_params
-      return {} if view == DEFAULT_VIEW
-      return { "view" => view } if view
+      return order_params if view == DEFAULT_VIEW
+      return { "view" => view }.merge(order_params) if view
 
-      selected_facets.presence || { "view" => NO_VIEW }
+      (filter_facets.presence || { "view" => NO_VIEW }).merge(order_params)
+    end
+
+    def order_params
+      selected_facets.slice(*ORDER_KEYS)
+    end
+
+    def reordered_params(dir)
+      params = to_params.except(*ORDER_KEYS)
+      dir == DEFAULTS["dir"] ? params : params.merge("dir" => dir)
     end
 
     def facet_params(overrides)
@@ -157,7 +166,7 @@ module Fd
 
     def sort_params(key)
       return facet_params("sort" => key, "dir" => DEFAULTS["dir"]) unless sorting?(key)
-      return facet_params("dir" => "desc") unless descending?
+      return facet_params("dir" => "asc") if descending?
 
       facet_params("sort" => DEFAULTS["sort"], "dir" => DEFAULTS["dir"])
     end
@@ -240,11 +249,17 @@ module Fd
     DEFAULT_VIEW = "attention".freeze
     NO_VIEW = "none".freeze
 
+    ORDER_KEYS = %w[dir].freeze
+
     def selected_facets
       @selected_facets ||= FACET_KEYS.filter_map { |key|
         raw = @params[key].to_s
         [key, raw] if allowed?(key, raw) && raw != DEFAULTS[key]
       }.to_h
+    end
+
+    def filter_facets
+      selected_facets.except(*ORDER_KEYS)
     end
 
     def implied
