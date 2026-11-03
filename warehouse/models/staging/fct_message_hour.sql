@@ -43,5 +43,7 @@ from {{ ref('fct_message') }} m
 inner join touched t
     on t.channel_id = m.channel_id
    and t.ds = (m.posted_at at time zone 'UTC')::date
+   and m.posted_at >= (t.ds::timestamp at time zone 'UTC')
+   and m.posted_at < ((t.ds + 1)::timestamp at time zone 'UTC')
 {% endif %}
 group by 1, 2, 3
