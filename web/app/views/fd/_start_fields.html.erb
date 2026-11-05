@@ -1,0 +1,10 @@
+<% current = local_assigns[:current]&.utc %>
+<%= tag.div class: "field-label", data: local_assigns[:data], hidden: local_assigns[:hidden] do %>
+  <span><%= label %></span>
+  <span class="field-pair">
+    <%= date_field_tag :starts_on, current&.to_date&.iso8601, class: "input", id: nil,
+          aria: { label: "Start date" }, required: local_assigns[:required] %>
+    <%= time_field_tag :starts_time, current&.strftime("%H:%M"), class: "input", id: nil,
+          aria: { label: "Start time (UTC)" } %>
+  </span>
+<% end %>

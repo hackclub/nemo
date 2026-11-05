@@ -12,7 +12,7 @@ module Fd
       end
 
       target_action = Action.find_by(id: params[:action_id], case_id: kase.id, reversed_at: nil)
-      if target_action&.reversal_reactivates? && !current_account.may?("member.deactivate")
+      if target_action&.reverses_deactivation? && !current_account.may?("member.deactivate")
         return deny!("member.deactivate", kase)
       end
 
@@ -57,8 +57,9 @@ module Fd
 
     def lift_linked_guard(action, reason)
       guard = action.guard
-      return nil if guard.nil? || !MemberGuard::ACTIVE_STATES.include?(guard.state)
+      return nil if guard.nil? || !MemberGuard::ACTIVE_OR_SCHEDULED_STATES.include?(guard.state)
       return nil if Action.live.exists?(guard_id: guard.id)
+      return cancel_scheduled(guard, reason) if guard.scheduled?
 
       previous_state = guard.state
       lift_reason = "Action reversed: #{reason}"
@@ -69,8 +70,18 @@ module Fd
       guard
     end
 
+    def cancel_scheduled(guard, reason)
+      cancel_reason = "Action reversed: #{reason}"
+      return nil unless guard.cancel!(by: current_account.user_id, reason: cancel_reason)
+
+      audit(guard, "cancelled", before: { "state" => MemberGuard::SCHEDULED },
+        after: { "state" => guard.state, "cancel_reason" => cancel_reason })
+      guard
+    end
+
     def reversed_notice(guard)
       return "Action reversed" if guard.nil?
+      return "Action reversed · scheduled deactivation cancelled" if guard.cancelled?
       return "Action reversed · reactivation queued" if guard.deactivation?
 
       "Action reversed · #{guard_label_text(guard)} lifted"

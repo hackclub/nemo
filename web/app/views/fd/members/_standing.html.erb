@@ -1,8 +1,9 @@
+<% scheduled = local_assigns.fetch(:scheduled, []) %>
 <%= turbo_frame_tag Fd::MemberGuardBroadcast.frame(user_id), target: "_top",
       data: { src: fd_member_standing_path(user_id) } do %>
-  <% if guards.any? %>
+  <% if guards.any? || scheduled.any? %>
     <div class="standing">
-      <p class="standing-t">Guards <span class="standing-count"><%= guards.size %></span></p>
+      <p class="standing-t">Guards <span class="standing-count"><%= guards.size + scheduled.size %></span></p>
       <% guards.each do |guard| %>
         <% may_lift = (guard.deactivation? ? may_deactivate : may_guard) && !guard.firehose? %>
         <div class="standing-row<%= " is-enforced" if guard.deactivation? %>"
@@ -61,6 +62,69 @@
                         data-action="click->modal#close">Cancel</button>
                 <%= submit_tag guard.deactivation? ? "Reactivate" : "Lift",
                       class: "btn btn-danger" %>
+              </div>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% scheduled.each do |guard| %>
+        <div class="standing-row" data-enforcement-status="<%= guard.enforcement_state %>">
+          <span class="evdot <%= guard_dot_tone(guard) %>">
+            <%= case_action_icon("gauge") %>
+          </span>
+          <span class="grow standing-line">
+            <b><%= guard_line(guard) %></b>
+            <span class="sub"><%= guard_footnote(guard, names) %></span>
+            <span class="enforcement-state"><%= guard_enforcement_label(guard) %></span>
+          </span>
+          <span class="standing-do">
+            <% if guard.case_id %>
+              <%= link_to "Case ##{guard.case_id}", fd_case_path(guard.case_id),
+                    class: "btn btn-sm btn-ghost" %>
+            <% end %>
+            <% if may_deactivate %>
+              <button type="button" class="btn btn-sm btn-ghost" aria-haspopup="dialog"
+                      data-modal-open="guard-reschedule-<%= guard.id %>">Edit</button>
+              <button type="button" class="btn btn-sm" aria-haspopup="dialog"
+                      data-modal-open="guard-cancel-<%= guard.id %>">Cancel</button>
+            <% end %>
+          </span>
+        </div>
+
+        <% if may_deactivate %>
+          <%= render layout: "fd/modal", locals: {
+                id: "guard-reschedule-#{guard.id}", title: "Edit scheduled deactivation",
+                sub: names[user_id], open: false } do %>
+            <%= form_with url: fd_member_guard_path(user_id, guard), method: :patch,
+                  html: { autocomplete: "off" } do %>
+              <div class="modal-body">
+                <%= render "fd/start_fields", label: "Start (UTC)", required: true, current: guard.starts_at %>
+                <%= render "fd/end_fields", label: "End (UTC, optional)", current: guard.expires_at %>
+              </div>
+              <div class="modal-foot">
+                <button type="button" class="btn btn-ghost"
+                        data-action="click->modal#close">Close</button>
+                <%= submit_tag "Save", class: "btn btn-primary" %>
+              </div>
+            <% end %>
+          <% end %>
+
+          <%= render layout: "fd/modal", locals: {
+                id: "guard-cancel-#{guard.id}", title: "Cancel scheduled deactivation",
+                sub: names[user_id], open: false } do %>
+            <%= form_with url: fd_member_guard_path(user_id, guard), method: :delete,
+                  html: { autocomplete: "off" } do %>
+              <div class="modal-body">
+                <label class="field-label">
+                  Reason
+                  <%= text_area_tag :cancel_reason, nil, rows: 3, class: "textarea", id: nil %>
+                </label>
+              </div>
+              <div class="modal-foot">
+                <button type="button" class="btn btn-ghost"
+                        data-action="click->modal#close">Close</button>
+                <%= submit_tag "Cancel deactivation", class: "btn btn-danger" %>
               </div>
             <% end %>
           <% end %>

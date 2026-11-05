@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static values = { url: String }
-  static targets = ["fields", "expiry", "channel", "locks", "targetFields", "standing", "why", "deactivation", "submit"]
+  static targets = ["fields", "expiry", "start", "channel", "locks", "targetFields", "standing", "why", "deactivation", "submit"]
 
   connect() {
     this.toggleFields()
@@ -38,6 +38,9 @@ export default class extends Controller {
     if (this.hasExpiryTarget) {
       this.expiryTarget.hidden = onThread || kind.dataset.expires !== "true"
     }
+    if (this.hasStartTarget) {
+      this.startTarget.hidden = onThread || kind.dataset.deactivates !== "true"
+    }
     if (this.hasChannelTarget) {
       this.channelTarget.hidden = onThread || kind.dataset.channel !== "true"
     }
@@ -55,11 +58,26 @@ export default class extends Controller {
     const deactivates = Boolean(kind && kind.dataset.deactivates === "true" && fieldsShown &&
       frame?.dataset.deactivated !== "true")
 
+    const start = deactivates ? this.startText() : null
+
     if (this.hasDeactivationTarget) {
       this.deactivationTarget.hidden = !deactivates
-      this.deactivationTarget.textContent = `Deactivates ${this.targetName() || "the account"}`
+      const name = this.targetName() || "the account"
+      this.deactivationTarget.textContent = start ? `Deactivates ${name} on ${start}` : `Deactivates ${name}`
     }
-    if (this.hasSubmitTarget) this.submitTarget.value = deactivates ? "Log and deactivate" : "Log"
+    if (this.hasSubmitTarget) {
+      this.submitTarget.value = start ? "Log and schedule deactivation" : deactivates ? "Log and deactivate" : "Log"
+    }
+  }
+
+  startText() {
+    if (!this.hasStartTarget) return null
+
+    const date = this.startTarget.querySelector('input[name="starts_on"]')?.value
+    if (!date) return null
+
+    const time = this.startTarget.querySelector('input[name="starts_time"]')?.value || "00:00"
+    return `${date} ${time} UTC`
   }
 
   selectedKind() {

@@ -179,7 +179,8 @@ def lift_lapsed_channel_guards():
 
 
 def lift_expired(client):
-    run_each(("lifting what has run out", lambda: sweep.sweep_lapsed(client)),
+    run_each(("starting scheduled deactivations", sweep.sweep_scheduled),
+             ("lifting what has run out", lambda: sweep.sweep_lapsed(client)),
              ("lifting expired thread locks", lambda: lift_expired_locks(client)),
              ("lifting expired channel guards", lift_lapsed_channel_guards))
     with session() as conn:

@@ -19,6 +19,8 @@
   </label>
   <p class="deactivation-note" data-action-standing-target="deactivation" hidden></p>
   <%= render "thread_lock_pick", locks: thread_locks, kase: kase, logged: locks_logged %>
+  <%= render "fd/start_fields", label: "Start (UTC, optional)", hidden: true,
+        data: { action_standing_target: "start", action: "input->action-standing#toggleDeactivation" } %>
   <div class="field-label" data-action-standing-target="expiry" hidden>
     <span>End (UTC)</span>
     <span class="field-pair">

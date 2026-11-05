@@ -11,10 +11,13 @@ module Fd
     NON_DEACTIVATION_KINDS = (KINDS - [DEACTIVATION]).freeze
     SEVERITY_KINDS = [DEACTIVATION, CHANNEL_BAN, SHUSH].freeze
 
+    SCHEDULED = "scheduled".freeze
     LIVE = "live".freeze
     LIFTING = "lifting".freeze
     LIFTED = "lifted".freeze
+    CANCELLED = "cancelled".freeze
     ACTIVE_STATES = [LIVE, LIFTING].freeze
+    ACTIVE_OR_SCHEDULED_STATES = [SCHEDULED, *ACTIVE_STATES].freeze
 
     PENDING = "pending".freeze
     HELD = "held".freeze
@@ -39,6 +42,8 @@ module Fd
       inverse_of: false
 
     scope :active, -> { where(state: ACTIVE_STATES) }
+    scope :scheduled, -> { where(state: SCHEDULED) }
+    scope :active_or_scheduled, -> { where(state: ACTIVE_OR_SCHEDULED_STATES) }
     scope :live, -> { where(state: LIVE) }
     scope :on_no_case, -> { where(case_id: nil) }
     scope :orphaned, -> { live.on_no_case }
@@ -90,10 +95,11 @@ module Fd
     end
 
     def self.open!(kind:, subject_id:, by:, reason:, channel_id: nil, case_id: nil,
-      expires_at: nil, by_hand: false)
+      expires_at: nil, starts_at: nil, by_hand: false)
       transaction(requires_new: true) do
         create!(kind: kind, subject_id: subject_id, channel_id: channel_id, case_id: case_id,
-          opened_by: by, reason: reason, expires_at: expires_at,
+          opened_by: by, reason: reason, expires_at: expires_at, starts_at: starts_at,
+          state: starts_at ? SCHEDULED : LIVE,
           enforced_by: by_hand ? BY_HAND : NEMO, enforcement_status: by_hand ? HELD : PENDING)
       end
     rescue ActiveRecord::RecordNotUnique
@@ -119,10 +125,26 @@ module Fd
       updated_count.positive? ? reload : nil
     end
 
+    def reschedule!(starts_at:, expires_at:)
+      updated_count = self.class.scheduled.where(id: id)
+        .update_all(starts_at: starts_at, expires_at: expires_at, updated_at: Time.current)
+      updated_count.positive? ? reload : nil
+    end
+
+    def cancel!(by:, reason: nil)
+      updated_count = self.class.scheduled.where(id: id).update_all(
+        state: CANCELLED, cancelled_at: Time.current, cancelled_by: by, cancel_reason: reason,
+        updated_at: Time.current
+      )
+      updated_count.positive? ? reload : nil
+    end
+
     def undone_in_slack?
       UNDONE_IN_SLACK.include?(kind) && !by_hand?
     end
 
+    def scheduled? = state == SCHEDULED
+    def cancelled? = state == CANCELLED
     def live? = state == LIVE
     def lifting? = state == LIFTING
     def held? = enforcement_status == HELD
@@ -136,6 +158,8 @@ module Fd
     def logged_only? = deactivation? && held? && dry_run?
 
     def enforcement_state
+      return SCHEDULED if scheduled?
+
       lifting? ? LIFTING : enforcement_status
     end
 
@@ -153,7 +177,7 @@ module Fd
     end
 
     def referenced_user_ids
-      [opened_by, lifted_by].compact
+      [opened_by, lifted_by, cancelled_by].compact
     end
 
     private

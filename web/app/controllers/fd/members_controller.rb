@@ -43,6 +43,7 @@ module Fd
       @member_channels = SlackScan.channels(@user_id)
       @standing = MemberStanding.new(@record)
       @guards = @standing.in_force
+      @scheduled_guards = @record.scheduled_guards
       @channels = ChannelNames.for(@guards.map(&:channel_id) + @guard_history.map(&:channel_id) +
         audit_channel_ids + @purges.filter_map(&:channel_id))
       @member_grant = @pane_grants[@user_id] || Authz::Grant.live.roles.find_by(user_id: @user_id)

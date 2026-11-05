@@ -44,7 +44,7 @@ module Fd
       redirect_to fd_case_path(kase, tab: "actions"),
         notice: notice_for(kase, guard: guard, lock: lock, thread_attached: thread_attached,
           subject_added: subject_added, resolved: resolved,
-          deactivation_queued: opened_guard&.deactivation? || false)
+          deactivation: opened_guard&.deactivation? ? opened_guard : nil)
     end
 
     def update
@@ -87,13 +87,13 @@ module Fd
       nil
     end
 
-    def notice_for(kase, guard:, lock:, thread_attached:, subject_added:, resolved:, deactivation_queued:)
+    def notice_for(kase, guard:, lock:, thread_attached:, subject_added:, resolved:, deactivation:)
       message = if guard
         attached_notice(kase, guard)
       elsif lock
         locked_notice(kase, thread_attached)
       else
-        logged_notice(kase, subject_added, deactivation_queued)
+        logged_notice(kase, subject_added, deactivation)
       end
       resolved ? "#{message} · case resolved" : message
     end
@@ -121,6 +121,12 @@ module Fd
       false
     end
 
+    def deactivation_note(guard)
+      return "deactivation queued" unless guard.scheduled?
+
+      "deactivation starts #{ShortDate.starting(guard.starts_at)}"
+    end
+
     def attached_notice(kase, guard)
       "#{guard_label_text(guard).upcase_first} attached to case #{kase.id}"
     end
@@ -130,9 +136,9 @@ module Fd
       thread_attached ? "#{message} · thread attached" : message
     end
 
-    def logged_notice(kase, subject_added, deactivation_queued)
+    def logged_notice(kase, subject_added, deactivation)
       message = "#{type_name} logged on case #{kase.id}"
-      message = "#{message} · deactivation queued" if deactivation_queued
+      message = "#{message} · #{deactivation_note(deactivation)}" if deactivation
       subject_added ? "#{message} · @#{target_user_id} added to case" : message
     end
   end

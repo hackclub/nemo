@@ -30,7 +30,7 @@ SELECT p.id
 FROM fd.purges p
 LEFT JOIN fd.member_guards g ON g.id = p.guard_id
 WHERE p.state = 'asked'
-  AND (p.guard_id IS NULL OR g.enforcement_status = 'held' OR g.state = 'lifted')
+  AND (p.guard_id IS NULL OR g.enforcement_status = 'held' OR g.state IN ('lifted', 'cancelled'))
 ORDER BY p.asked_at
 LIMIT 20
 """
@@ -46,7 +46,10 @@ NO_GUARD = "none"
 GUARD_ENFORCED = "held"
 GUARD_PENDING = "pending"
 GUARD_LIFTED = "lifted"
+GUARD_CANCELLED = "cancelled"
 DEACTIVATION_LIFTED = "Deactivation lifted"
+DEACTIVATION_CANCELLED = "Deactivation cancelled"
+GUARD_FAILURES = {GUARD_LIFTED: DEACTIVATION_LIFTED, GUARD_CANCELLED: DEACTIVATION_CANCELLED}
 
 INTERRUPTED = """
 UPDATE fd.purges
@@ -145,8 +148,8 @@ def guard_condition(conn, purge_id):
     if row is None:
         return NO_GUARD
     state, enforcement = row
-    if state == "lifted":
-        return GUARD_LIFTED
+    if state in (GUARD_LIFTED, GUARD_CANCELLED):
+        return state
     return GUARD_ENFORCED if enforcement == "held" else GUARD_PENDING
 
 
@@ -435,7 +438,7 @@ def run(client, purge_id):
         if purge is None:
             return 0
         resumed = conn.execute(ITEM_COUNT, (purge.id,)).fetchone()[0] > 0
-        failure = DEACTIVATION_LIFTED if condition == GUARD_LIFTED else still_allowed(conn, purge)
+        failure = GUARD_FAILURES.get(condition) or still_allowed(conn, purge)
 
     unchecked, left = None, None
     if failure is None:

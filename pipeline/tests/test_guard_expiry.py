@@ -69,6 +69,7 @@ def test_active_on_thread_sql_excludes_expired_lock():
 
 def test_next_expiry_sql_selects_member_thread_and_channel_guards():
     assert "FROM fd.member_guards" in sweep.NEXT_EXPIRY
+    assert "SELECT min(starts_at) FROM fd.member_guards WHERE state = 'scheduled'" in sweep.NEXT_EXPIRY
     assert "FROM fd.thread_guards" in sweep.NEXT_EXPIRY
     assert "kind = 'lock' AND state IN ('warned', 'running')" in sweep.NEXT_EXPIRY
     assert "FROM fd.channel_guards" in sweep.NEXT_EXPIRY
@@ -79,9 +80,10 @@ def test_seconds_to_next_expiry_returns_row_value_or_none(row, seconds):
     assert sweep.seconds_to_next_expiry(Conn(row=row)) == seconds
 
 
-def test_lift_expired_lifts_member_lock_and_channel_guards_in_order(monkeypatch):
+def test_lift_expired_starts_scheduled_then_lifts_member_lock_and_channel_guards_in_order(monkeypatch):
     lift_calls = []
     monkeypatch.setattr(loop, "session", lambda: session_of(Conn()))
+    monkeypatch.setattr(loop.sweep, "sweep_scheduled", lambda: lift_calls.append("scheduled"))
     monkeypatch.setattr(loop.sweep, "sweep_lapsed", lambda client: lift_calls.append("member guards"))
     monkeypatch.setattr(loop.guards, "expired_locks", lambda conn: [7, 8])
     monkeypatch.setattr(loop.guard_actions, "lift_lock", lambda client, guard_id: lift_calls.append(guard_id))
@@ -91,7 +93,7 @@ def test_lift_expired_lifts_member_lock_and_channel_guards_in_order(monkeypatch)
     monkeypatch.setattr(loop.sweep, "seconds_to_next_expiry", lambda conn: 42.0)
 
     assert loop.lift_expired(object()) == 42.0
-    assert lift_calls == ["member guards", 7, 8, "channel guards", "refreshed"]
+    assert lift_calls == ["scheduled", "member guards", 7, 8, "channel guards", "refreshed"]
 
 
 def run_on_timer(work, **options):

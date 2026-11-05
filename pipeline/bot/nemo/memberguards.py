@@ -468,3 +468,61 @@ def ending_not_notified(conn, within):
         dict(zip(fields, row))
         for row in conn.execute(ENDING_NOT_NOTIFIED, (within, ENDING)).fetchall()
     ]
+
+
+DUE = """
+SELECT g.id, g.kind, g.subject_id, g.channel_id, g.reason, g.expires_at, g.case_id, g.opened_by,
+       g.expires_at IS NOT NULL AND g.expires_at <= now() AS ended,
+       EXISTS (
+           SELECT 1 FROM fd.member_guards l
+           WHERE l.subject_id = g.subject_id AND l.kind = g.kind AND l.state IN ('live', 'lifting')
+       ) AS overlapped
+FROM fd.member_guards g
+WHERE g.state = 'scheduled' AND g.starts_at <= now()
+ORDER BY g.starts_at, g.id
+LIMIT 20
+"""
+
+START = """
+UPDATE fd.member_guards SET state = 'live', updated_at = now()
+WHERE id = %s AND state = 'scheduled'
+RETURNING id
+"""
+
+CANCEL = """
+UPDATE fd.member_guards
+SET state = 'cancelled', cancelled_at = now(), cancelled_by = %s, cancel_reason = %s,
+    updated_at = now()
+WHERE id = %s AND state = 'scheduled'
+RETURNING id
+"""
+
+DUE_FIELDS = (*GUARD_FIELDS, "case_id", "opened_by", "ended", "overlapped")
+
+
+def due(conn):
+    return [dict(zip(DUE_FIELDS, row)) for row in conn.execute(DUE).fetchall()]
+
+
+def start(conn, guard):
+    if conn.execute(START, (guard["id"],)).fetchone() is None:
+        return False
+
+    audit.record(
+        conn, "member_guard", guard["id"], "opened", guard["opened_by"],
+        before={"state": "scheduled"},
+        after={"kind": guard["kind"], "subject_id": guard["subject_id"],
+               "channel_id": guard["channel_id"], "case_id": guard["case_id"],
+               "enforced_by": NEMO, "state": "live",
+               "expires_at": str(guard["expires_at"]) if guard["expires_at"] else None},
+    )
+    return True
+
+
+def cancel(conn, guard_id, by, why):
+    if conn.execute(CANCEL, (by, why, guard_id)).fetchone() is None:
+        return False
+
+    audit.record(conn, "member_guard", guard_id, "cancelled", by,
+                 before={"state": "scheduled"}, after={"state": "cancelled", "cancel_reason": why})
+    return True

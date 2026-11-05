@@ -113,7 +113,7 @@ module Fd
             word: "action",
             who: guard.opened_by,
             mark: "act",
-            state: guard.lifted_at ? "reversed" : nil,
+            state: guard.lifted_at || guard.cancelled_at ? "reversed" : nil,
             detail: guard_detail(guard),
             case_id: nil
           )
@@ -130,6 +130,21 @@ module Fd
             state: "reversed",
             detail: ["on no case", guard.lift_reason,
                      ("by #{names[guard.lifted_by]}" if guard.lifted_by)].compact.join(" · "),
+            case_id: nil
+          )
+        end
+
+        if guard.cancelled_at
+          list << Entry.new(
+            at: guard.cancelled_at,
+            title: "#{guard_label(guard)} cancelled",
+            kind: "actions",
+            word: "reversal",
+            who: guard.cancelled_by,
+            mark: "act",
+            state: "reversed",
+            detail: ["on no case", guard.cancel_reason,
+                     ("by #{names[guard.cancelled_by]}" if guard.cancelled_by)].compact.join(" · "),
             case_id: nil
           )
         end
@@ -188,6 +203,7 @@ module Fd
       parts = ["on no case"]
       parts << "in #{channels[guard.channel_id]}" if guard.channel_scoped?
       parts << "by #{names[guard.opened_by]}"
+      parts << "starts #{ShortDate.starting(guard.starts_at)}" if guard.starts_at
       parts << "lifts #{ShortDate.ending(guard.expires_at)}" if guard.expires_at
       parts << guard.reason if guard.reason.present?
       parts.join(" · ")

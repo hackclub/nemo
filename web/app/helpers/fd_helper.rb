@@ -530,6 +530,7 @@ module FdHelper
   def member_account_tone(state) = MEMBER_ACCOUNT_TONES[state]
 
   def guard_ends(guard)
+    return "Cancelled #{on_day(guard.cancelled_at)}" if guard.cancelled_at
     return "#{guard.deactivation? ? 'Reactivated' : 'Lifted'} #{on_day(guard.lifted_at)}" if guard.lifted_at
     return Fd::ShortDate.ending(guard.expires_at) if guard.expires_at
 
@@ -1298,7 +1299,7 @@ module FdHelper
   end
 
   def reversal_capability(action)
-    return "case.reverse" unless action.reversal_reactivates?
+    return "case.reverse" unless action.reverses_deactivation?
     return "case.reverse" if current_account&.may?("member.deactivate")
 
     "member.deactivate"
@@ -1321,6 +1322,10 @@ module FdHelper
 
   def action_state_chip(action)
     return tag.span("Reversed", class: "chip chip-off") if action.reversed?
+    return tag.span("Cancelled", class: "chip chip-off") if action.guard&.cancelled?
+    if action.guard&.scheduled?
+      return tag.span("Starts #{Fd::ShortDate.starting(action.guard.starts_at)}", class: "chip chip-warn")
+    end
     return tag.span("Expired #{Fd::ShortDate.ending(action.expires_at)}", class: "chip chip-off") if action.expired?
 
     return nil unless action.expires?
@@ -1647,6 +1652,7 @@ module FdHelper
   LOGGED_ONLY = "Logged only".freeze
 
   GUARD_ENFORCEMENT_STATE_LABELS = {
+    "scheduled" => "Scheduled",
     "pending" => "Pending",
     "held" => "Deactivated in Slack",
     "failed" => "Rejected by Slack",
@@ -1654,6 +1660,7 @@ module FdHelper
   }.freeze
 
   GUARD_DOT_TONE = {
+    "scheduled" => "warn",
     "pending" => "warn",
     "held" => "crit",
     "failed" => "crit",
@@ -1674,12 +1681,21 @@ module FdHelper
     "act"
   end
 
+  def guard_start_note(guard)
+    return "starts #{Fd::ShortDate.starting(guard.starts_at)}" if guard.scheduled?
+
+    began = guard.starts_at || guard.opened_at
+    began ? "since #{Fd::ShortDate.for(began)}" : nil
+  end
+
   def guard_footnote(guard, names = Names.none)
     opener = names.unknown?(guard.opened_by) ? tag.span(names[guard.opened_by], data: { cachet_name: guard.opened_by }) : names[guard.opened_by]
     parts = [safe_join(["Opened by ", opener])]
-    parts << "since #{Fd::ShortDate.for(guard.opened_at)}" if guard.opened_at
+    parts << guard_start_note(guard)
     parts << (guard.expires_at ? "until #{Fd::ShortDate.ending(guard.expires_at)}" : "with no end date")
-    parts << if guard.by_hand?
+    parts << if guard.scheduled?
+      nil
+    elsif guard.by_hand?
       "by hand"
     elsif guard.firehose?
       "Firehose"

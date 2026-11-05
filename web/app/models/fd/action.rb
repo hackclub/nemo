@@ -57,8 +57,8 @@ module Fd
 
     def targets_member? = target_user_id.present?
 
-    def reversal_reactivates?
-      return false unless guard&.deactivation? && MemberGuard::ACTIVE_STATES.include?(guard.state)
+    def reverses_deactivation?
+      return false unless guard&.deactivation? && MemberGuard::ACTIVE_OR_SCHEDULED_STATES.include?(guard.state)
 
       !self.class.live.where.not(id: id).exists?(guard_id: guard_id)
     end

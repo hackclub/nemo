@@ -483,3 +483,16 @@ def test_run_with_lifted_deactivation_fails_without_deleting(purge_env):
     assert purge_env.removed == []
     assert purge_env.db.purge["state"] == "failed"
     assert purge_env.db.purge["error"] == purge.DEACTIVATION_LIFTED
+
+
+def test_run_with_cancelled_deactivation_fails_without_deleting(purge_env):
+    purge_env.db = deactivation_purge(("cancelled", "pending"))
+    purge.run(Slack(), PURGE_ID)
+
+    assert purge_env.removed == []
+    assert purge_env.db.purge["state"] == "failed"
+    assert purge_env.db.purge["error"] == purge.DEACTIVATION_CANCELLED
+
+
+def test_queued_purges_sql_releases_purges_of_cancelled_deactivations():
+    assert "g.state IN ('lifted', 'cancelled')" in purge.QUEUED_PURGES

@@ -43,6 +43,10 @@ module Fd
       @guards ||= MemberGuard.active.for_subject(user_id).oldest_first.to_a
     end
 
+    def scheduled_guards
+      @scheduled_guards ||= MemberGuard.scheduled.for_subject(user_id).oldest_first.to_a
+    end
+
     def guards_on_no_case
       @guards_on_no_case ||= MemberGuard.for_subject(user_id).on_no_case.oldest_first.to_a
     end

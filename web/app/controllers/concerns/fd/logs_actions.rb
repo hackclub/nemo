@@ -38,6 +38,11 @@ module Fd
         return "#{type_name} needs an end date"
       end
       return expiry_error if expiry_error
+      start_error = start_time.last || StartTime.error(starts_at, expiry)
+      return start_error if start_error
+      if starts_at && MemberGuard.scheduled.exists?(subject_id: target_user_id)
+        return "#{target_user_id} already has a scheduled deactivation"
+      end
       if NEEDS_CHANNEL.include?(type_key) && channel_id.blank?
         return "#{type_name} needs a channel"
       end
@@ -163,11 +168,12 @@ module Fd
       guard = MemberGuard.open!(
         kind: Action.guard_kind(action.type_key), subject_id: action.target_user_id,
         channel_id: guard_channel(action.type_key), case_id: kase.id,
-        by: current_account.user_id, reason: guard_reason(action), expires_at: action.expires_at
+        by: current_account.user_id, reason: guard_reason(action), expires_at: action.expires_at,
+        starts_at: starts_at
       )
       return nil if guard.nil?
 
-      audit(guard, "opened")
+      audit(guard, guard.scheduled? ? "scheduled" : "opened")
       action.update!(guard_id: guard.id)
       guard
     end
@@ -194,6 +200,14 @@ module Fd
     def expiry = end_time.first
 
     def expiry_error = end_time.last
+
+    def start_time
+      return [nil, nil] unless deactivates?
+
+      @start_time ||= StartTime.read(params[:starts_on], params[:starts_time])
+    end
+
+    def starts_at = start_time.first
 
     def channel
       return {} unless TAKES_CHANNEL.include?(type_key)

@@ -124,8 +124,8 @@
         <% end %>
       </dl>
     </section>
-    <%= render "standing", user_id: @user_id, guards: @guards, names: names,
-          may_guard: may_guard, may_deactivate: may_deactivate %>
+    <%= render "standing", user_id: @user_id, guards: @guards, scheduled: @scheduled_guards,
+          names: names, may_guard: may_guard, may_deactivate: may_deactivate %>
 
     <%= turbo_frame_tag "member-record", target: "_top", class: "member-record-frame" do %>
       <section class="member-section member-history-section">

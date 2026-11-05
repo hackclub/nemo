@@ -8,11 +8,13 @@ from bot.nemo.enforcement import ENFORCEMENTS
 log = logging.getLogger("bot.nemo")
 
 EXPIRED_REASON = "End date reached"
+ALREADY_DEACTIVATED = "Already deactivated"
 
 NEXT_EXPIRY = """
 SELECT extract(epoch FROM least(
     (SELECT min(expires_at) FROM fd.member_guards
       WHERE state = 'live' AND expires_at IS NOT NULL),
+    (SELECT min(starts_at) FROM fd.member_guards WHERE state = 'scheduled'),
     (SELECT min(expires_at) FROM fd.thread_guards
       WHERE kind = 'lock' AND state IN ('warned', 'running') AND expires_at IS NOT NULL),
     (SELECT min(expires_at) FROM fd.channel_guards
@@ -87,6 +89,31 @@ def sweep_lapsed(client):
                 lapse(client, conn, guard)
             except Exception as failure:
                 log.warning("nemo: could not lift %s: %s", guard["id"], failure)
+    return len(due)
+
+
+def start_scheduled(conn, guard):
+    if guard["ended"]:
+        return memberguards.cancel(conn, guard["id"], memberguards.NEMO, EXPIRED_REASON)
+    if guard["overlapped"]:
+        return memberguards.cancel(conn, guard["id"], memberguards.NEMO, ALREADY_DEACTIVATED)
+    if not memberguards.start(conn, guard):
+        return False
+
+    log.info("nemo: scheduled %s %s on %s has started", guard["kind"], guard["id"], guard["subject_id"])
+    return True
+
+
+def sweep_scheduled():
+    with session() as conn:
+        due = memberguards.due(conn)
+
+    for guard in due:
+        with session() as conn:
+            try:
+                start_scheduled(conn, guard)
+            except Exception as failure:
+                log.warning("nemo: could not start %s: %s", guard["id"], failure)
     return len(due)
 
 

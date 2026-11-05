@@ -51,7 +51,7 @@ module Fd
       renamed merged
       acked muted
       exported
-      queued cancelled
+      queued cancelled scheduled
       read
       retired restored
     ].freeze

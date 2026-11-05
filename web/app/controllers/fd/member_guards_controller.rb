@@ -10,7 +10,7 @@ module Fd
 
       error = guard_error
       if error
-        return redirect_to(fd_member_path(subject_id, do: "guard"),
+        return redirect_to(fd_member_path(subject_id, do: kind == MemberGuard::DEACTIVATION ? "deactivate" : "guard"),
           alert: (error unless flash[:field_error]))
       end
 
@@ -23,22 +23,21 @@ module Fd
 
       if guard.nil?
         return redirect_to fd_member_path(subject_id),
-          alert: "#{display_name(subject_id)} already has a #{label(kind)}"
+          alert: "#{display_name(subject_id)} already has a #{"scheduled " if starts_at}#{label(kind)}"
       end
 
       redirect_to fd_member_path(subject_id),
-        notice: "#{label(kind).upcase_first} applied to #{display_name(subject_id)}#{purge_note(queued)}"
+        notice: "#{created_notice(guard)}#{purge_note(queued)}"
     end
 
     def update
-      guard = MemberGuard.active.find(params[:id])
+      guard = MemberGuard.active_or_scheduled.find(params[:id])
       return deny!("member.deactivate", guard) if deactivating?(guard.kind)
       return redirect_to(fd_member_path(guard.subject_id), alert: "Set in Firehose") if guard.firehose?
+      return reschedule(guard) if guard.scheduled?
 
-      if expiry.nil?
-        return redirect_to fd_member_path(guard.subject_id),
-          alert: expiry_error || "Enter an end date"
-      end
+      error = expiry_error || ("Enter an end date" if expiry.nil?) || StartTime.error(guard.starts_at, expiry)
+      return redirect_to(fd_member_path(guard.subject_id), alert: error) if error
 
       previous_expiry = guard.expires_at
       writing do
@@ -52,9 +51,10 @@ module Fd
     end
 
     def destroy
-      guard = MemberGuard.active.find(params[:id])
+      guard = MemberGuard.active_or_scheduled.find(params[:id])
       return deny!("member.deactivate", guard) if deactivating?(guard.kind)
       return redirect_to(fd_member_path(guard.subject_id), alert: "Set in Firehose") if guard.firehose?
+      return cancel(guard) if guard.scheduled?
 
       previous_state = guard.state
       writing do
@@ -68,6 +68,50 @@ module Fd
     end
 
     private
+
+    def reschedule(guard)
+      new_start, start_error = StartTime.read(params[:starts_on], params[:starts_time])
+      error = start_error || ("Enter a start date" if new_start.nil?) || expiry_error ||
+        StartTime.error(new_start, expiry)
+      return redirect_to(fd_member_path(guard.subject_id), alert: error) if error
+
+      before = { "starts_at" => guard.starts_at, "expires_at" => guard.expires_at }
+      writing do
+        guard.reschedule!(starts_at: new_start, expires_at: expiry)
+        audit(guard, "edited", before: before, after: { "starts_at" => new_start, "expires_at" => expiry })
+      end
+
+      redirect_to fd_member_path(guard.subject_id),
+        notice: "Deactivation rescheduled · starts #{ShortDate.starting(new_start)}"
+    end
+
+    def cancel(guard)
+      reason = params[:cancel_reason].to_s.strip.presence
+      writing do
+        guard.cancel!(by: current_account.user_id, reason: reason)
+        audit(guard, "cancelled", before: { "state" => MemberGuard::SCHEDULED },
+          after: { "state" => guard.state, "cancel_reason" => reason })
+      end
+
+      redirect_to fd_member_path(guard.subject_id),
+        notice: "Scheduled deactivation cancelled on #{display_name(guard.subject_id)}"
+    end
+
+    def created_notice(guard)
+      unless guard.scheduled?
+        return "#{label(guard.kind).upcase_first} applied to #{display_name(subject_id)}"
+      end
+
+      "Deactivation scheduled for #{display_name(subject_id)} · starts #{ShortDate.starting(guard.starts_at)}"
+    end
+
+    def start_time
+      return [nil, nil] unless kind == MemberGuard::DEACTIVATION
+
+      @start_time ||= StartTime.read(params[:starts_on], params[:starts_time])
+    end
+
+    def starts_at = start_time.first
 
     def subject_id = params[:member_id].to_s.upcase
 
@@ -119,6 +163,8 @@ module Fd
         return "Channel ban needs a channel"
       end
       return expiry_error if expiry_error
+      start_error = start_time.last || StartTime.error(starts_at, expiry)
+      return start_error if start_error
       if params[:reason].to_s.strip.blank?
         return field_error!(:reason, "Enter a reason", params[:reason])
       end
@@ -131,9 +177,9 @@ module Fd
         kind: kind, subject_id: subject_id,
         channel_id: kind == MemberGuard::CHANNEL_BAN ? channel_id : nil,
         by: current_account.user_id, reason: params[:reason].to_s.strip,
-        expires_at: expiry
+        expires_at: expiry, starts_at: starts_at
       )
-      audit(guard, "opened") if guard
+      audit(guard, guard.scheduled? ? "scheduled" : "opened") if guard
       guard
     end
   end
