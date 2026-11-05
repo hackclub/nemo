@@ -47,19 +47,19 @@ class FdMergesTest < ActionDispatch::IntegrationTest
     assert_equal 0, @main.reload.threads.count
   end
 
-  test "merge copies duplicate assignees to target" do
+  test "merge leaves assignees unchanged" do
     @main.assign!("UKEEP")
-    @dup_one.assign!("UKEEP")
     @dup_one.assign!("UONE")
     @dup_two.assign!("UTWO")
     sign_in_as(@me)
 
     merge([@dup_one.id, @dup_two.id], @main.id)
 
-    assert_equal %w[UKEEP UONE UTWO], @main.reload.assignee_user_ids.sort
-    entries = Fd::AuditEntry.where(entity_type: "assignee", entity_id: @main.id, verb: "attached")
-    assert_equal %w[UONE UTWO], entries.map { |entry| entry.after["user_id"] }.sort
-    assert_equal [@dup_one.id, @dup_two.id], entries.first.after["source_case_ids"].sort
+    assert_equal %w[UKEEP], @main.reload.assignee_user_ids
+    assert_equal %w[UONE], @dup_one.reload.assignee_user_ids
+    assert_equal %w[UTWO], @dup_two.reload.assignee_user_ids
+    assert_not Fd::AuditEntry.exists?(entity_type: "assignee", verb: "attached",
+      entity_id: [@main.id, @dup_one.id, @dup_two.id], actor_user_id: @me.user_id)
   end
 
   test "merge ignores the target when it is also in case_ids" do

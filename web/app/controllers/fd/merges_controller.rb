@@ -140,7 +140,6 @@ module Fd
         end
         repoint_duplicates(marked_ids, root, now)
         copy_tags_to_target(marked_ids, root)
-        copy_assignees_to_target(marked_ids, root)
       end
 
       marked
@@ -154,15 +153,6 @@ module Fd
         before = { "duplicate_of" => kase.duplicate_of }
         kase.update_columns(duplicate_of: root, updated_at: now)
         audit(kase, "merged", before: before, after: { "duplicate_of" => root })
-      end
-    end
-
-    def copy_assignees_to_target(source_case_ids, target_id)
-      return if source_case_ids.empty?
-
-      Case.find(target_id).copy_assignees_from!(source_case_ids, by: current_account.user_id).each do |assignee|
-        audit(assignee, "attached", entity_id: target_id,
-          after: { "user_id" => assignee.user_id, "source_case_ids" => source_case_ids })
       end
     end
 

@@ -109,19 +109,9 @@ MERGE = "SET resolved_at = coalesce(resolved_at, now()), resolution = 'duplicate
 MERGE_STATE = "WHERE id = %s FOR UPDATE"
 
 
-def test_merge_with_closed_duplicates_copies_assignees_to_target():
-    conn = Conn({MERGE_STATE: (None, None, None), MERGE: (CLOSED_AT,)},
-                {"INSERT INTO fd.case_assignees": [("UHELPER",)]})
+def test_merge_leaves_assignees_unchanged():
+    conn = Conn({MERGE_STATE: (None, None, None), MERGE: (CLOSED_AT,)})
 
     assert case_actions.merge(conn, CASE_ID, [42, 43], MODERATOR_ID) == [42, 43]
-    assert conn.args_for("INSERT INTO fd.case_assignees") == [(CASE_ID, MODERATOR_ID, [42, 43])]
-    assignee_audits = [args for args in conn.args_for(AUDIT_INSERT) if args[2] == "assignee"]
-    assert [(args[3], args[4], args[6].obj) for args in assignee_audits] == \
-        [(CASE_ID, "attached", {"user_id": "UHELPER", "source_case_ids": [42, 43]})]
-
-
-def test_merge_without_closed_duplicates_copies_no_assignees():
-    conn = Conn({MERGE: None})
-
-    assert case_actions.merge(conn, CASE_ID, [42], MODERATOR_ID) == []
-    assert conn.args_for("INSERT INTO fd.case_assignees") == []
+    assert not [sql for sql, _args in conn.executed if "case_assignees" in sql]
+    assert not [args for args in conn.args_for(AUDIT_INSERT) if args[2] == "assignee"]
