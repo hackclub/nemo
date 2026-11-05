@@ -10,7 +10,6 @@ log = logging.getLogger("bot.nemo")
 card = views.case_card
 menu = views.case_menu
 
-STILL_OPEN = case_actions.STILL_OPEN
 CASE_CATEGORY = case_actions.CASE_CATEGORY
 SUBJECTS = channel.SUBJECTS
 
@@ -47,12 +46,10 @@ def say(client, case_id, lines):
 
 
 def more_for(conn, case_id, notice=None):
-    open_row = conn.execute(STILL_OPEN, (case_id,)).fetchone()
     return menu.more_view(
         case_id,
         thread_commands.current_assignees(conn, case_id),
         url=channel.case_url(case_id),
-        is_open=bool(open_row and open_row[0]),
         notice=notice,
     )
 
@@ -223,7 +220,7 @@ def open_merge(ctx):
     if case_id is None:
         return None
     with session() as conn:
-        cases = case_actions.mergeable(conn, [case_id])
+        cases = case_actions.case_options(conn, [case_id])
     return ctx.client.views_push(trigger_id=ctx.trigger_id,
                                  view=views.merge.build_view(cases, None, [case_id]))
 

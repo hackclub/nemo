@@ -10,6 +10,7 @@ from bot.nemo.case_actions import (
     mark_resolution_log_pending,
     log_action,
     merge,
+    repoint_merged,
     resolve_target,
     resolve_thread,
     resolve_with_action,
@@ -159,24 +160,26 @@ def register(app, on_reply=None):
             return ack(response_action="errors", errors=errors)
 
         with session() as conn:
-            for case_id in (values["target"], *values["duplicates"]):
+            target_id = family_root(conn, values["target"])
+            for case_id in (target_id, *values["duplicates"]):
                 allowed, refusal = access.may(conn, user_id, "case.resolve", case_id)
                 if not allowed:
                     return ack(response_action="errors", errors={views.merge.DUPLICATES: refusal})
-            closed = merge(conn, values["target"], values["duplicates"], user_id)
+            closed = merge(conn, target_id, values["duplicates"], user_id)
+            repointed = repoint_merged(conn, target_id, closed, user_id)
 
         if not closed:
             return ack(
                 response_action="errors",
-                errors={views.merge.DUPLICATES: "Those cases are already resolved"},
+                errors={views.merge.DUPLICATES: "Those cases are already merged"},
             )
 
         ack(response_action="clear")
         with session() as conn:
-            for case_id in closed:
+            for case_id in (*closed, *repointed):
                 refresh_card(client, conn, case_id)
-            post_merge_note(client, conn, values["target"], closed, user_id)
-        log.info("nemo: cases %s merged into %s by %s", closed, values["target"], user_id)
+            post_merge_note(client, conn, target_id, closed, user_id)
+        log.info("nemo: cases %s merged into %s by %s", closed, target_id, user_id)
         return None
 
     def post_refusal(event, thread_ts, client, refusal):

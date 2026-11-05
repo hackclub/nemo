@@ -3,9 +3,7 @@
   <span class="crumb"><%= link_to "Case #{@case.id}", fd_case_path(@case) %> /</span>
 <% end %>
 
-<div class="card card-flush" data-controller="merge-picker"
-     data-merge-picker-base-id-value="<%= @case.id %>"
-     data-merge-picker-base-opened-at-value="<%= @case.opened_at.iso8601 %>">
+<div class="card card-flush" data-controller="merge-picker">
   <div class="merge-searchbar">
     <%= render "find", kase: @case, term: @term %>
   </div>

@@ -36,11 +36,10 @@ def test_more_view_assigned_lists_assignees_and_offers_unassign():
     assert "style" not in view["blocks"][1]["elements"][0]
 
 
-def test_more_view_resolved_case_hides_merge_but_keeps_category():
-    view = menu.more_view(49, [], is_open=False)
+def test_more_view_offers_note_merge_and_category():
+    view = menu.more_view(49, [])
 
-    assert menu.MENU_MERGE not in button_ids(view)
-    assert menu.MENU_CATEGORY in button_ids(view)
+    assert button_ids(view)[-3:] == [menu.MENU_NOTE, menu.MENU_MERGE, menu.MENU_CATEGORY]
 
 
 def test_more_view_links_fire_engine_and_shows_notice_first():

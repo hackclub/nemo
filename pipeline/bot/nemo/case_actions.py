@@ -419,15 +419,34 @@ def log_action(conn, case_id, values, user_id):
     return row[0]
 
 
+MERGE_STATE = """
+SELECT resolved_at, resolution, duplicate_of FROM fd.cases WHERE id = %s FOR UPDATE
+"""
+
+
 MERGE = """
 UPDATE fd.cases
-SET resolved_at = now(), resolution = 'duplicate', duplicate_of = %s, updated_at = now()
-WHERE id = %s AND id <> %s AND resolved_at IS NULL
+SET resolved_at = coalesce(resolved_at, now()), resolution = 'duplicate', duplicate_of = %s,
+    updated_at = now()
+WHERE id = %s
 RETURNING resolved_at
 """
 
 
-MERGEABLE = """
+MERGED_FAMILY = """
+WITH RECURSIVE family(id, duplicate_of) AS (
+    SELECT id, duplicate_of FROM fd.cases WHERE duplicate_of = ANY(%s)
+    UNION
+    SELECT c.id, c.duplicate_of FROM fd.cases c JOIN family f ON c.duplicate_of = f.id
+)
+SELECT id, duplicate_of FROM family WHERE id <> %s ORDER BY id
+"""
+
+
+REPOINT = "UPDATE fd.cases SET duplicate_of = %s, updated_at = now() WHERE id = %s"
+
+
+CASE_OPTION = """
 SELECT c.id, c.category_key,
        (SELECT string_agg(coalesce(m.display_name, m.handle, p.user_id), ', '
                           ORDER BY p.user_id)
@@ -435,30 +454,73 @@ SELECT c.id, c.category_key,
           LEFT JOIN fd.member m ON m.user_id = p.user_id
          WHERE p.case_id = c.id AND p.role = 'subject')
 FROM fd.cases c
-WHERE c.resolved_at IS NULL
-ORDER BY c.id = ANY(%s) DESC, c.id DESC
-LIMIT 100
 """
 
 
-def mergeable(conn, preferred_ids=()):
-    return conn.execute(MERGEABLE, (list(preferred_ids),)).fetchall()
+CASE_OPTIONS = CASE_OPTION + "WHERE c.id = ANY(%s) ORDER BY c.id DESC"
+
+
+FIND_CASE_OPTIONS = CASE_OPTION + """
+WHERE %(term)s = ''
+   OR c.id::text LIKE %(prefix)s
+   OR c.id IN (
+       SELECT p.case_id FROM fd.case_participants p
+       LEFT JOIN fd.member m ON m.user_id = p.user_id
+       WHERE p.role = 'subject'
+         AND (p.user_id ILIKE %(pattern)s OR m.display_name ILIKE %(pattern)s
+              OR m.handle ILIKE %(pattern)s))
+ORDER BY c.id::text = %(term)s DESC, c.resolved_at IS NOT NULL, c.id DESC
+LIMIT %(limit)s
+"""
+
+
+CASE_OPTION_LIMIT = 100
+
+
+def case_options(conn, case_ids):
+    return conn.execute(CASE_OPTIONS, (list(case_ids),)).fetchall()
+
+
+def like_escape(text):
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def find_case_options(conn, text):
+    term = (text or "").strip().lstrip("#")
+    escaped = like_escape(term)
+    return conn.execute(FIND_CASE_OPTIONS, {
+        "term": term, "prefix": f"{escaped}%", "pattern": f"%{escaped}%",
+        "limit": CASE_OPTION_LIMIT,
+    }).fetchall()
 
 
 def merge(conn, target_id, duplicate_ids, by):
     closed = []
-    for case_id in sorted(set(duplicate_ids)):
-        row = conn.execute(MERGE, (target_id, case_id, target_id)).fetchone()
-        if row is None:
+    for case_id in sorted(set(duplicate_ids) - {target_id}):
+        before = conn.execute(MERGE_STATE, (case_id,)).fetchone()
+        if before is None or before[2] == target_id:
             continue
+        row = conn.execute(MERGE, (target_id, case_id)).fetchone()
         audit.record(
             conn, "case", case_id, "resolved", by,
-            before={"resolved_at": None, "resolution": None, "duplicate_of": None},
+            before={"resolved_at": str(before[0]) if before[0] else None,
+                    "resolution": before[1], "duplicate_of": before[2]},
             after={"resolved_at": str(row[0]), "resolution": "duplicate", "duplicate_of": target_id},
         )
         closed.append(case_id)
     copy_assignees_to_target(conn, target_id, closed, by)
     return closed
+
+
+def repoint_merged(conn, target_id, case_ids, by):
+    if not case_ids:
+        return []
+    rows = conn.execute(MERGED_FAMILY, (list(case_ids), target_id)).fetchall()
+    for case_id, duplicate_of in rows:
+        conn.execute(REPOINT, (target_id, case_id))
+        audit.record(conn, "case", case_id, "merged", by,
+                     before={"duplicate_of": duplicate_of}, after={"duplicate_of": target_id})
+    return [row[0] for row in rows]
 
 
 def copy_assignees_to_target(conn, target_id, source_case_ids, by):

@@ -53,7 +53,7 @@ module Fd
       marked = mark_duplicates(ids - [root], root)
 
       if marked.zero?
-        redirect_with_alert("Cases already resolved")
+        redirect_with_alert("Cases already merged")
       else
         redirect_to fd_cases_path(query_params), notice: merge_notice(marked, ids, root)
       end
@@ -121,29 +121,40 @@ module Fd
       marked_ids = []
 
       writing do
-        Case.where(id: ids).unresolved.order(:id).each do |kase|
-          rows = Case.where(id: kase.id, resolved_at: nil)
-            .update_all(
-              resolved_at: now, resolution: "duplicate",
-              duplicate_of: root, updated_at: now
-            )
-          next if rows.zero?
+        Case.where(id: ids).where.not(id: root).lock.order(:id).each do |kase|
+          next if kase.duplicate_of == root
+
+          before = { "resolved_at" => kase.resolved_at, "resolution" => kase.resolution,
+                     "duplicate_of" => kase.duplicate_of }
+          kase.update_columns(resolved_at: kase.resolved_at || now, resolution: "duplicate",
+            duplicate_of: root, updated_at: now)
 
           marked += 1
           marked_ids << kase.id
-          audit(kase.reload, "resolved",
-            before: { "resolved_at" => nil, "resolution" => nil, "duplicate_of" => nil },
+          audit(kase, "resolved", before: before,
             after: {
               "resolved_at" => kase.resolved_at,
               "resolution" => "duplicate",
               "duplicate_of" => root
             })
         end
+        repoint_duplicates(marked_ids, root, now)
         copy_tags_to_target(marked_ids, root)
         copy_assignees_to_target(marked_ids, root)
       end
 
       marked
+    end
+
+    def repoint_duplicates(source_case_ids, root, now)
+      return if source_case_ids.empty?
+
+      family_ids = source_case_ids.flat_map { |id| Case.family_of(id) } - source_case_ids - [root]
+      Case.where(id: family_ids).lock.order(:id).each do |kase|
+        before = { "duplicate_of" => kase.duplicate_of }
+        kase.update_columns(duplicate_of: root, updated_at: now)
+        audit(kase, "merged", before: before, after: { "duplicate_of" => root })
+      end
     end
 
     def copy_assignees_to_target(source_case_ids, target_id)

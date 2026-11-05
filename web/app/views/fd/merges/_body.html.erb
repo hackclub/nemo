@@ -1,9 +1,7 @@
 <%= turbo_frame_tag "merge-body" do %>
-  <%= form_with url: fd_merge_cases_path, method: :post,
-        data: { turbo_frame: "_top", merge_picker_target: "form" } do %>
+  <%= form_with url: fd_confirm_merge_cases_path, method: :get,
+        data: { turbo_frame: "merge-body", merge_picker_target: "form" } do %>
     <%= hidden_field_tag "case_ids[]", kase.id, id: nil %>
-    <%= hidden_field_tag :duplicate_of, kase.id, id: nil,
-          data: { merge_picker_target: "primaryCase" } %>
 
     <div class="merge-results">
       <% if groups.empty? %>
@@ -39,7 +37,7 @@
     <div class="merge-act">
       <span class="merge-selected" data-merge-picker-target="count">Select at least one case</span>
       <button type="button" class="btn btn-ghost" data-action="click->modal#close">Cancel</button>
-      <%= submit_tag "Merge cases", class: "btn btn-primary is-off", disabled: true,
+      <%= submit_tag "Next", name: nil, class: "btn btn-primary is-off", disabled: true,
             data: { merge_picker_target: "submit" } %>
     </div>
   <% end %>

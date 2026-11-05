@@ -19,24 +19,27 @@ def option(one):
             "value": str(case_id)}
 
 
+def options(cases):
+    return [option(one) for one in cases[:OPTION_LIMIT]]
+
+
 def build_view(cases, target=None, duplicates=()):
-    options = [option(one) for one in cases[:OPTION_LIMIT]]
-    by_id = {one["value"]: one for one in options}
+    by_id = {one["value"]: one for one in options(cases)}
 
     target_select = {
-        "type": "static_select",
+        "type": "external_select",
         "action_id": TARGET,
         "placeholder": {"type": "plain_text", "text": "Select a case"},
-        "options": options,
+        "min_query_length": 0,
     }
     if str(target) in by_id:
         target_select["initial_option"] = by_id[str(target)]
 
     duplicates_select = {
-        "type": "multi_static_select",
+        "type": "multi_external_select",
         "action_id": DUPLICATES,
         "placeholder": {"type": "plain_text", "text": "Select cases"},
-        "options": options,
+        "min_query_length": 0,
     }
     selected_options = [by_id[str(one)] for one in duplicates if str(one) in by_id]
     if selected_options:

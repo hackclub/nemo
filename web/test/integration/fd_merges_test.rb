@@ -80,22 +80,51 @@ class FdMergesTest < ActionDispatch::IntegrationTest
       "pointing at a duplicate must resolve to the case it duplicates"
   end
 
-  test "merge skips resolved cases and reports the skipped count" do
-    @dup_two.update!(resolved_at: 1.hour.ago, resolution: "no_action")
+  test "merge marks a resolved case duplicate and keeps its resolved_at" do
+    resolved_at = 1.hour.ago.change(usec: 0)
+    @dup_two.update!(resolved_at: resolved_at, resolution: "no_action")
     sign_in_as(@me)
     merge([@dup_one.id, @dup_two.id], @main.id)
 
-    assert_equal "no_action", @dup_two.reload.resolution
-    assert_match(/1 case marked duplicate of case #{@main.id} · 1 skipped/, flash[:notice])
+    @dup_two.reload
+    assert_equal "duplicate", @dup_two.resolution
+    assert_equal @main.id, @dup_two.duplicate_of
+    assert_equal resolved_at, @dup_two.resolved_at
+    assert_match(/2 cases marked duplicate of case #{@main.id}\z/, flash[:notice])
+
+    entry = Fd::AuditEntry.find_by!(entity_type: "case", entity_id: @dup_two.id, verb: "resolved")
+    assert_equal "no_action", entry.before["resolution"]
   end
 
-  test "merge with all cases resolved alerts Cases already resolved" do
-    @dup_one.update!(resolved_at: 1.hour.ago, resolution: "no_action")
-    @dup_two.update!(resolved_at: 1.hour.ago, resolution: "no_action")
+  test "merge into a resolved target keeps the target resolved" do
+    @main.update!(resolved_at: 1.hour.ago, resolution: "action_taken")
+    sign_in_as(@me)
+    merge([@dup_one.id], @main.id)
+
+    assert_equal @main.id, @dup_one.reload.duplicate_of
+    assert_equal "action_taken", @main.reload.resolution
+    assert_not_nil @main.resolved_at
+  end
+
+  test "merge re-points cases merged into a duplicate to the new target" do
+    @dup_two.update!(resolved_at: 1.hour.ago, resolution: "duplicate", duplicate_of: @dup_one.id)
+    sign_in_as(@me)
+    merge([@dup_one.id], @main.id)
+
+    assert_equal @main.id, @dup_one.reload.duplicate_of
+    assert_equal @main.id, @dup_two.reload.duplicate_of
+    entry = Fd::AuditEntry.find_by!(entity_type: "case", entity_id: @dup_two.id, verb: "merged")
+    assert_equal @dup_one.id, entry.before["duplicate_of"]
+  end
+
+  test "merge with all cases already merged into the target alerts Cases already merged" do
+    [@dup_one, @dup_two].each do |kase|
+      kase.update!(resolved_at: 1.hour.ago, resolution: "duplicate", duplicate_of: @main.id)
+    end
     sign_in_as(@me)
     merge([@dup_one.id, @dup_two.id], @main.id)
 
-    assert_equal "Cases already resolved", flash[:alert]
+    assert_equal "Cases already merged", flash[:alert]
   end
 
   test "merge resolves a case assigned to another user" do
@@ -176,6 +205,34 @@ class FdMergesTest < ActionDispatch::IntegrationTest
     get fd_case_merge_path(@dup_one)
 
     assert_select ".merge-pick .queue-subject", text: /No report/, minimum: 1
+  end
+
+  test "show merge submits the selection to the confirm step" do
+    sign_in_as(@me)
+    get fd_case_merge_path(@dup_one)
+
+    assert_select "form[action='#{fd_confirm_merge_cases_path}'][method='get']" \
+                  "[data-turbo-frame='merge-body']", count: 1
+    assert_select "input[name='duplicate_of']", count: 0
+  end
+
+  test "show merge lists resolved cases after open cases" do
+    resolved = make_case(subject: "UOTHER01", opened_at: 1.hour.ago,
+      resolved_at: 1.hour.ago, resolution: "no_action")
+    open = make_case(subject: "UOTHER02", opened_at: 1.day.ago)
+    sign_in_as(@me)
+    get fd_case_merge_path(@dup_one)
+
+    ids = css_select("#merge-around .merge-pick input.tick").map { |tick| tick["value"].to_i }
+    assert_equal [open.id, resolved.id], ids
+  end
+
+  test "resolved case page offers merge" do
+    @main.update!(resolved_at: 1.hour.ago, resolution: "no_action")
+    sign_in_as(@me)
+    get fd_case_path(@main)
+
+    assert_select "button[data-modal-open='merge-case']", count: 1
   end
 
   test "show merge renders candidates with queue row id and violation markup" do
@@ -305,6 +362,17 @@ class FdMergesTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal 0, Fd::Case.where(id: [@main.id, @dup_one.id, @dup_two.id])
       .where.not(resolved_at: nil).count
+  end
+
+  test "confirm merge with keep makes a newer resolved case the primary" do
+    stagger_opened_at
+    @dup_two.update!(resolved_at: 1.hour.ago, resolution: "no_action")
+    sign_in_as(@me)
+    get fd_confirm_merge_cases_path(case_ids: [@main.id, @dup_two.id], keep: @dup_two.id)
+
+    assert_response :success
+    assert_select "input[name='duplicate_of'][value='#{@dup_two.id}']", count: 1
+    assert_select "input[type='submit'][value='Merge into ##{@dup_two.id}']", count: 1
   end
 
   test "confirm merge with one case_id redirects to cases with alert" do

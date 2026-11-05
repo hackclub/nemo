@@ -105,11 +105,13 @@ def test_case_actions_reopen_does_not_touch_assignees():
     assert not [sql for sql, _args in conn.executed if "case_assignees" in sql]
 
 
-MERGE = "SET resolved_at = now(), resolution = 'duplicate'"
+MERGE = "SET resolved_at = coalesce(resolved_at, now()), resolution = 'duplicate'"
+MERGE_STATE = "WHERE id = %s FOR UPDATE"
 
 
 def test_merge_with_closed_duplicates_copies_assignees_to_target():
-    conn = Conn({MERGE: (CLOSED_AT,)}, {"INSERT INTO fd.case_assignees": [("UHELPER",)]})
+    conn = Conn({MERGE_STATE: (None, None, None), MERGE: (CLOSED_AT,)},
+                {"INSERT INTO fd.case_assignees": [("UHELPER",)]})
 
     assert case_actions.merge(conn, CASE_ID, [42, 43], MODERATOR_ID) == [42, 43]
     assert conn.args_for("INSERT INTO fd.case_assignees") == [(CASE_ID, MODERATOR_ID, [42, 43])]

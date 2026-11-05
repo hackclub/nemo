@@ -133,8 +133,8 @@ module Fd
     end
 
     def self.nearby_candidates(excluded_ids, page: 1, per: 8)
-      cases = unresolved.where.not(id: excluded_ids)
-        .order(opened_at: :desc, id: :desc)
+      cases = where.not(id: excluded_ids)
+        .order(Arel.sql("(resolved_at IS NOT NULL)"), opened_at: :desc, id: :desc)
         .offset((page - 1) * per).limit(per + 1).to_a
       [cases.first(per), cases.size > per]
     end

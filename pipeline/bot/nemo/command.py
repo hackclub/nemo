@@ -335,6 +335,15 @@ def register(app):
         purge_requests.cancel(button_value(body), (body.get("user") or {}).get("id"))
         respond(delete_original=True)
 
+    def on_merge_options(ack, body):
+        with session() as conn:
+            allowed, _refusal = access.may(conn, (body.get("user") or {}).get("id"), NEEDED[MERGE])
+            cases = case_actions.find_case_options(conn, body.get("value")) if allowed else []
+        ack(options=merge.options(cases))
+
+    app.options(merge.TARGET)(on_merge_options)
+    app.options(merge.DUPLICATES)(on_merge_options)
+
     @app.command(COMMAND)
     def on_nemo(ack, command, respond, client):
         ack()
@@ -356,7 +365,7 @@ def register(app):
 
             if verb == MERGE:
                 target_case_id, duplicate_ids = merge.parse_case_ids(body)
-                cases = case_actions.mergeable(conn, [one for one in (target_case_id, *duplicate_ids) if one])
+                cases = case_actions.case_options(conn, [one for one in (target_case_id, *duplicate_ids) if one])
                 client.views_open(
                     trigger_id=command["trigger_id"], view=merge.build_view(cases, target_case_id, duplicate_ids)
                 )

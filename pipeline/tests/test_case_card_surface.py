@@ -242,7 +242,7 @@ def test_unassign_from_menu_with_several_assignees_pushes_picker(world, monkeypa
 
 
 def test_menu_pushes_assign_note_category_and_merge_modals(world, monkeypatch):
-    monkeypatch.setattr(case_actions, "mergeable", lambda conn, preferred: [(49, None, "x")])
+    monkeypatch.setattr(case_actions, "case_options", lambda conn, case_ids: [(49, None, "x")])
     ctx = Ctx()
 
     world["conn"] = Conn({"category_key FROM fd.cases": ("spam",)})
@@ -254,6 +254,9 @@ def test_menu_pushes_assign_note_category_and_merge_modals(world, monkeypatch):
     assert [one["view"]["callback_id"] for one in ctx.client.pushed] == [
         menu.ASSIGN_CALLBACK, menu.NOTE_CALLBACK, menu.CATEGORY_CALLBACK, "case_merge"]
     assert ctx.client.pushed[2]["view"]["blocks"][0]["element"]["initial_option"]["value"] == "spam"
+    duplicates = ctx.client.pushed[3]["view"]["blocks"][1]["element"]
+    assert duplicates["type"] == "multi_external_select"
+    assert [one["value"] for one in duplicates["initial_options"]] == ["49"]
 
 
 def test_log_action_opens_existing_modal_for_subjects(world):

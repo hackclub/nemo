@@ -74,6 +74,8 @@
         <% end %>
       <% end %>
       <% if @case.resolved? %>
+        <%= opens_modal "case.resolve", menu_item("merge", "Merge into another case"),
+              opens: "merge-case", on: @case %>
         <%= gated_button "case.reopen", menu_item("hand", "Reopen"),
               fd_case_resolution_path(@case), on: @case, method: :delete,
               form: { class: "contents", data: { turbo_confirm:

@@ -2,11 +2,7 @@
       title: kase ? "Merge case #{kase.id}" : "Merge selected cases",
       label: "Merge cases" } do %>
   <div class="merge-shell"
-       <% if kase %>
-         data-controller="merge-picker"
-         data-merge-picker-base-id-value="<%= kase.id %>"
-         data-merge-picker-base-opened-at-value="<%= kase.opened_at.iso8601 %>"
-       <% end %>>
+       <% if kase %>data-controller="merge-picker"<% end %>>
     <% if kase %>
       <div class="merge-searchbar">
         <%= render "fd/merges/find", kase: kase, term: nil %>

@@ -71,15 +71,13 @@ def assignee_text(assignees):
     return ", ".join(f"<@{one}>" for one in assignees) if assignees else "None"
 
 
-def more_view(case_id, assignees, url=None, is_open=True, notice=None):
+def more_view(case_id, assignees, url=None, notice=None):
     claim_style = None if assignees else "primary"
     people_row = [button(MENU_CLAIM, "Claim", case_id, claim_style), button(MENU_ASSIGN, "Assign", case_id)]
     if assignees:
         people_row.append(button(MENU_UNASSIGN, "Unassign", case_id, "danger"))
-    record_row = [button(MENU_NOTE, "Note", case_id)]
-    if is_open:
-        record_row.append(button(MENU_MERGE, "Merge", case_id))
-    record_row.append(button(MENU_CATEGORY, "Category", case_id))
+    record_row = [button(MENU_NOTE, "Note", case_id), button(MENU_MERGE, "Merge", case_id),
+                  button(MENU_CATEGORY, "Category", case_id)]
     blocks = []
     if notice:
         blocks.append({"type": "context", "elements": [{"type": "mrkdwn", "text": notice}]})
