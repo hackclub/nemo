@@ -133,6 +133,12 @@ module FdChannelsHelper
     parts.join(" · ")
   end
 
+  def thread_lock_line(lock)
+    parts = [time_left_label(lock.expires_at)]
+    parts << "Reason: #{lock.reason}" if lock.reason.present?
+    parts.join(" · ")
+  end
+
   def readonly_line(guard, allowed)
     label = allowed.positive? ? "#{pluralize(allowed, 'person')} may post" : "nobody may post"
     guard.threads? ? "#{label}, threads too" : label

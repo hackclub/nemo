@@ -55,6 +55,8 @@ module Fd
       @kind_guard = @kind ? @guards[@kind] : nil
       @allows = @kind_guard ? @kind_guard.allows.oldest_first.to_a : []
       @thread_slowmodes = @tab == "slowmode" ? ChannelGuard.thread_slowmodes(@channel_id).to_a : []
+      @thread_locks = @tab == "overview" ? ThreadGuard.active.locks.where(channel_id: @channel_id)
+        .newest_first.to_a : []
       @standing = ChannelJoin.latest_for(@channel_id)
       @nemo_inside = ChannelMembership.inside?(@channel_id)
       @events = @kind ? ChannelGuardEvent.for_kind(@channel_id, @kind)
@@ -64,7 +66,7 @@ module Fd
       @labels = labels_for(@events)
       @app_ids = app_ids_for(@allows)
       @names = Names.for([@guards.values.flat_map(&:referenced_user_ids),
-                          @thread_slowmodes.map(&:opened_by),
+                          @thread_slowmodes.map(&:opened_by), @thread_locks.map(&:opened_by),
                           @allows.map(&:subject_id), @events.map(&:subject_id),
                           @purges.flat_map(&:referenced_user_ids)])
       load_pane

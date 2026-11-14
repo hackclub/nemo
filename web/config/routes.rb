@@ -69,6 +69,8 @@ Rails.application.routes.draw do
     delete "channels/:channel_id/guards/:kind", to: "channel_guards#destroy"
     delete "channels/:channel_id/thread_slowmodes/:id", to: "thread_slowmodes#destroy",
            as: :channel_thread_slowmode
+    patch "channels/:channel_id/thread_locks/:id", to: "thread_locks#update", as: :channel_thread_lock
+    delete "channels/:channel_id/thread_locks/:id", to: "thread_locks#destroy"
     post "channels/:channel_id/guards/:kind/allows", to: "channel_allows#create",
          as: :channel_allows
     delete "channels/:channel_id/guards/:kind/allows/:id", to: "channel_allows#destroy",

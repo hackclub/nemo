@@ -155,4 +155,60 @@ class FdThreadGuardsTest < ActionDispatch::IntegrationTest
 
     assert_equal "running", guard.reload.state
   end
+
+  test "channel overview lists live locks with and without a case" do
+    on_case = guard!
+    caseless = guard!(case_id: nil, thread_ts: "1700000000.000300", reason: "raid replies")
+    guard!(thread_ts: "1700000000.000400", state: "done")
+    guard!(channel_id: "C0OTHER", thread_ts: "1700000000.000500")
+
+    get fd_channel_path("C0266FRGV")
+
+    assert_select "h2", text: "Locked threads"
+    assert_select "form[action=?] button", fd_channel_thread_lock_path("C0266FRGV", on_case), text: "Unlock"
+    assert_select "form[action=?] button", fd_channel_thread_lock_path("C0266FRGV", caseless), text: "Unlock"
+    assert_select "form button", text: "Unlock", count: 2
+    assert_select "a[href=?]", fd_case_path(@kase.id), text: "Case ##{@kase.id}"
+    assert_match(/Reason: raid replies/, response.body)
+    assert_select "[data-modal-id-value=lock-extend-#{caseless.id}] input[name=expires_on]"
+  end
+
+  test "channel overview without live locks omits locked threads" do
+    guard!(state: "done")
+
+    get fd_channel_path("C0266FRGV")
+
+    assert_select "h2", text: "Locked threads", count: 0
+  end
+
+  test "channel unlock lifts a caseless lock and returns to the channel" do
+    guard = guard!(case_id: nil)
+
+    delete fd_channel_thread_lock_path("C0266FRGV", guard)
+
+    assert_redirected_to fd_channel_path("C0266FRGV")
+    assert_equal "Thread unlocked", flash[:notice]
+    assert_equal "done", guard.reload.state
+    assert Fd::AuditEntry.exists?(entity_type: "thread_guard", entity_id: guard.id, verb: "lifted", actor_user_id: "UME")
+  end
+
+  test "channel unlock for a lock in another channel leaves it running" do
+    guard = guard!(case_id: nil)
+
+    delete fd_channel_thread_lock_path("C0OTHER", guard)
+
+    assert_equal "Lock already ended", flash[:alert]
+    assert_equal "running", guard.reload.state
+  end
+
+  test "channel extend moves a caseless lock end and returns to the channel" do
+    guard = guard!(case_id: nil)
+    ends = 5.days.from_now.utc.change(hour: 8, min: 0)
+
+    patch fd_channel_thread_lock_path("C0266FRGV", guard),
+      params: { expires_on: ends.to_date.to_s, expires_time: "08:00" }
+
+    assert_redirected_to fd_channel_path("C0266FRGV")
+    assert_equal ends, guard.reload.expires_at
+  end
 end

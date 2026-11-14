@@ -1,0 +1,43 @@
+<div class="card card-flush">
+  <div class="card-head">
+    <h2 class="card-title">Locked threads</h2>
+  </div>
+  <div class="people-list">
+    <% locks.each do |lock| %>
+      <div class="line-row text-strong">
+        <%= guard_face(lock.opened_by) %>
+        <span class="grow two-line">
+          <b>
+            <%= link_to thread_started(lock), slack_thread_url(lock.channel_id, lock.thread_ts),
+                  target: "_blank", rel: "noopener" %>
+            &middot; set by <%= member_link(lock.opened_by) %>
+            <% if lock.case_id %>
+              &middot; <%= link_to "Case ##{lock.case_id}", fd_case_path(lock.case_id) %>
+            <% end %>
+          </b>
+          <span title="<%= thread_lock_line(lock) %>"><%= thread_lock_line(lock) %></span>
+        </span>
+        <span class="row-right">
+          <%= opens_modal "thread.guard", "Extend", opens: "lock-extend-#{lock.id}", css: "btn btn-sm" %>
+          <%= gated_button("thread.guard", "Unlock", fd_channel_thread_lock_path(lock.channel_id, lock),
+                css: "btn btn-sm btn-danger", method: :delete) %>
+        </span>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<% locks.each do |lock| %>
+  <%= render layout: "fd/modal", locals: { id: "lock-extend-#{lock.id}", title: "Extend lock" } do %>
+    <%= form_with url: fd_channel_thread_lock_path(lock.channel_id, lock), method: :patch,
+          html: { autocomplete: "off" } do %>
+      <div class="modal-body">
+        <%= render "fd/end_fields", label: "New end (UTC)", required: true, current: lock.expires_at %>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" data-action="click->modal#close">Cancel</button>
+        <%= submit_tag "Extend", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

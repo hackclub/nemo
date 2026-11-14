@@ -38,6 +38,7 @@
 
 <% if @tab == "overview" %>
   <%= render "overview", channel_id: @channel_id, guards: @guards %>
+  <%= render "thread_locks", locks: @thread_locks if @thread_locks.any? %>
 <% end %>
 
 <% if @tab == "bots" %>

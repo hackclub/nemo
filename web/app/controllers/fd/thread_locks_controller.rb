@@ -33,8 +33,16 @@ module Fd
 
     private
 
-    def live_lock = ThreadGuard.active.locks.find_by(id: params[:id])
+    def live_lock
+      scope = ThreadGuard.active.locks
+      scope = scope.where(channel_id: channel_id) if channel_id
+      scope.find_by(id: params[:id])
+    end
 
-    def return_path = fd_case_path(params[:case_id])
+    def channel_id = params[:channel_id].to_s.strip.upcase.presence
+
+    def return_path
+      params[:case_id].present? ? fd_case_path(params[:case_id]) : fd_channel_path(channel_id)
+    end
   end
 end
