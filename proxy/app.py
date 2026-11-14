@@ -88,7 +88,7 @@ WRITE_METHODS = {
 
 ACTIVITY_METHODS = {"internal": frozenset({"insights.messageStats"})}
 
-HISTORY_METHODS = {"admin": frozenset({"conversations.history"})}
+HISTORY_METHODS = {"admin": frozenset({"conversations.history", "conversations.replies"})}
 PURGE_READ_METHODS = {
     "admin": frozenset({"conversations.history", "conversations.replies", "search.messages"})
 }

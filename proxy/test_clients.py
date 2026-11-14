@@ -34,8 +34,11 @@ def test_nemo_admin_reads_limited_to_purge_methods():
     assert not reads & app.WRITES
 
 
-def test_purge_read_methods_not_allowed_for_web_admin():
-    assert "conversations.replies" not in app.WEB_METHODS["admin"]
+def test_conversations_replies_allowed_for_web_admin_credential():
+    assert "conversations.replies" in app.WEB_METHODS["admin"]
+
+
+def test_search_messages_not_allowed_for_web_admin():
     assert "search.messages" not in app.WEB_METHODS["admin"]
 
 
