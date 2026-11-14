@@ -64,6 +64,21 @@ def unlock_thread(ctx):
     return lifted
 
 
+@on_action(card.NOTICE_MENU, needs="thread.guard", silent_refusal=True)
+def unlock_from_notice(ctx):
+    if card.selected_option(ctx.body) != card.NOTICE_UNLOCK:
+        return None
+
+    channel_id, thread_ts = ctx.channel_id, ctx.thread_ts
+    current = live_lock(channel_id, thread_ts)
+    lifted = None
+    if current and current["kind"] == guards.LOCK:
+        lifted = guard_actions.lift_lock(ctx.client, current["id"], by=ctx.user_id)
+
+    ctx.post_ephemeral(UNLOCKED if lifted else ALREADY_ENDED, channel_id, thread_ts)
+    return lifted
+
+
 def lock(ctx, channel_id, thread_ts, values, tz):
     expires_at = card.lock_end(values, tz)
     with session() as conn:

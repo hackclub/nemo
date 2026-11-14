@@ -21,7 +21,8 @@ class UndeclaredCapabilityError(RuntimeError):
 
 
 class SurfaceEntry:
-    def __init__(self, kind, key, needs, fn, refuse_block=None, open_to_all=False, tag=None):
+    def __init__(self, kind, key, needs, fn, refuse_block=None, open_to_all=False, tag=None,
+                 silent_refusal=False):
         self.kind = kind
         self.key = key
         self.needs = needs
@@ -29,6 +30,7 @@ class SurfaceEntry:
         self.refuse_block = refuse_block
         self.open_to_all = open_to_all
         self.tag = tag
+        self.silent_refusal = silent_refusal
 
     def __repr__(self):
         return f"<{self.kind} {self.key} needs={self.needs}>"
@@ -40,9 +42,10 @@ def bind(kind, key, fn, tag=None):
     ENTRIES.append(SurfaceEntry(kind, key, None, fn, open_to_all=True, tag=name))
 
 
-def register_entry(kind, key, needs, refuse_block=None, open_to_all=False):
+def register_entry(kind, key, needs, refuse_block=None, open_to_all=False, silent_refusal=False):
     def decorator(fn):
-        ENTRIES.append(SurfaceEntry(kind, key, needs, fn, refuse_block, open_to_all))
+        ENTRIES.append(SurfaceEntry(kind, key, needs, fn, refuse_block, open_to_all,
+                                    silent_refusal=silent_refusal))
         return fn
 
     return decorator
@@ -52,8 +55,8 @@ def on_shortcut(key, *, needs=None, open_to_all=False):
     return register_entry(SHORTCUT, key, needs, open_to_all=open_to_all)
 
 
-def on_action(key, *, needs=None, open_to_all=False):
-    return register_entry(ACTION, key, needs, open_to_all=open_to_all)
+def on_action(key, *, needs=None, open_to_all=False, silent_refusal=False):
+    return register_entry(ACTION, key, needs, open_to_all=open_to_all, silent_refusal=silent_refusal)
 
 
 def on_view(key, *, needs=None, refuse_block=None, open_to_all=False):
@@ -188,6 +191,8 @@ def refused(entry, ctx, why):
         ctx.ack(response_action="errors", errors={entry.refuse_block: why})
         return
     ctx.acknowledge()
+    if entry.silent_refusal:
+        return
     ctx.post_ephemeral(why)
 
 

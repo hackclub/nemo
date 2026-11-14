@@ -29,6 +29,16 @@ def test_lock_notice_with_end_returns_end_and_reason():
     assert len(notice["blocks"]) == 1
 
 
+def test_lock_notice_has_unlock_menu_with_confirm():
+    menu = card.lock_notice(END, "Heated argument")["blocks"][0]["accessory"]
+
+    assert menu["type"] == "overflow"
+    assert menu["action_id"] == card.NOTICE_MENU
+    assert [(one["text"]["text"], one["value"]) for one in menu["options"]] == [
+        ("Unlock thread", card.NOTICE_UNLOCK)]
+    assert menu["confirm"]["confirm"]["text"] == "Unlock"
+
+
 def test_lock_notice_signs_out_true_appends_sign_out_warning():
     notice = card.lock_notice(None, "raid", signs_out=True)
 

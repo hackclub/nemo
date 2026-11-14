@@ -13,7 +13,10 @@ NOTE = "guard_note"
 NOTE_TEXT = "guard_note_text"
 END = "lock_end"
 UNLOCK = "lock_off"
+NOTICE_MENU = "lock_notice_menu"
+NOTICE_UNLOCK = "unlock"
 LOCK_TITLE = "Lock thread"
+UNLOCK_TITLE = "Unlock thread"
 
 REASON_LIMIT = 500
 NOTE_LABEL = "Post note in thread"
@@ -143,6 +146,13 @@ def lock_view(channel_id, thread_ts, values=None, end_error=None):
     return lock_modal(channel_id, thread_ts, "Lock", blocks)
 
 
+def unlock_confirm():
+    return {"title": lengths.plain(UNLOCK_TITLE),
+            "text": {"type": "mrkdwn", "text": "Unlock this thread."},
+            "confirm": lengths.plain("Unlock"), "deny": lengths.plain("Cancel"),
+            "style": "danger"}
+
+
 def lock_status_block(current, now=None):
     return {
         "type": "section",
@@ -151,12 +161,23 @@ def lock_status_block(current, now=None):
                          f"for *{current['reason']}*, set by <@{current['opened_by']}>"},
         "accessory": {
             "type": "button", "action_id": UNLOCK, "style": "danger", "text": lengths.plain("Unlock"),
-            "confirm": {"title": lengths.plain("Unlock thread"),
-                        "text": {"type": "mrkdwn", "text": "Unlock this thread."},
-                        "confirm": lengths.plain("Unlock"), "deny": lengths.plain("Cancel"),
-                        "style": "danger"},
+            "confirm": unlock_confirm(),
         },
     }
+
+
+def notice_menu():
+    return {
+        "type": "overflow",
+        "action_id": NOTICE_MENU,
+        "options": [{"text": lengths.plain(UNLOCK_TITLE), "value": NOTICE_UNLOCK}],
+        "confirm": unlock_confirm(),
+    }
+
+
+def selected_option(body):
+    actions = (body or {}).get("actions") or [{}]
+    return (actions[0].get("selected_option") or {}).get("value")
 
 
 def locked_view(channel_id, thread_ts, current, tz=dt.UTC, values=None, end_error=None, now=None):
@@ -200,7 +221,7 @@ SIGNS_OUT = "Repeated replies sign you out of Slack"
 
 def lock_notice(expires_at, reason, signs_out=False):
     text = f"*Thread locked* {lengths.ends(expires_at)} for *{reason}*"
-    blocks = [section_block(text)]
+    blocks = [{**section_block(text), "accessory": notice_menu()}]
     if signs_out:
         blocks.append({"type": "context", "elements": [{"type": "mrkdwn", "text": SIGNS_OUT}]})
     return {"text": text, "blocks": blocks}

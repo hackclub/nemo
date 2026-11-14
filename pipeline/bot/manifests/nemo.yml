@@ -12,7 +12,7 @@ features:
       type: message
       callback_id: destroy_thread
       description: Save the thread to the case record, then delete it from Slack
-    - name: Lock thread
+    - name: Lock or unlock thread
       type: message
       callback_id: lock_thread
       description: Delete new replies until a set date

@@ -1,3 +1,5 @@
+import contextlib
+
 import pytest
 import yaml
 
@@ -82,6 +84,40 @@ def test_guarded_event_without_ack_runs_handler():
                           open_to_all=True)
     surface.guarded(entry)(ack=None, body={}, client=None, payload={})
     assert calls == ["ok"], "bolt passes events no ack, so calling one must not be attempted"
+
+
+def refused_entry(monkeypatch, silent_refusal):
+    @contextlib.contextmanager
+    def fake_session():
+        yield object()
+
+    audited = []
+    monkeypatch.setattr(surface, "session", fake_session)
+    monkeypatch.setattr(surface.audit, "record", lambda conn, *args, **kwargs: audited.append(args))
+    monkeypatch.setattr(surface.access, "may", lambda conn, user_id, key: (False, "You have no Fire Department access."))
+    sent = []
+    monkeypatch.setattr(surface.Ctx, "post_ephemeral", lambda self, message, *args: sent.append(message))
+    calls = []
+    entry = surface.SurfaceEntry(surface.ACTION, "lock_notice_menu", "thread.guard",
+                                 lambda ctx: calls.append("ran"), silent_refusal=silent_refusal)
+    acks = []
+    surface.guarded(entry)(ack=lambda **kwargs: acks.append(kwargs), body={"user": {"id": "U1"}},
+                           client=None, payload={})
+    return calls, acks, sent, audited
+
+
+def test_guarded_refused_action_posts_refusal(monkeypatch):
+    calls, acks, sent, audited = refused_entry(monkeypatch, silent_refusal=False)
+
+    assert (calls, len(acks), sent) == ([], 1, ["You have no Fire Department access."])
+    assert len(audited) == 1
+
+
+def test_guarded_silent_refusal_acks_without_message(monkeypatch):
+    calls, acks, sent, audited = refused_entry(monkeypatch, silent_refusal=True)
+
+    assert (calls, len(acks), sent) == ([], 1, [])
+    assert len(audited) == 1
 
 
 class NoopApp:

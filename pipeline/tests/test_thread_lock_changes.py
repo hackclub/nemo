@@ -147,8 +147,9 @@ class Client:
 
 
 class SurfaceCtx:
-    def __init__(self, view=None, client=None):
+    def __init__(self, view=None, client=None, body=None):
         self.view = view or {}
+        self.body = body or {}
         self.client = client or Client()
         self.user_id = MOD
         self.channel_id = CHANNEL_ID
@@ -221,6 +222,35 @@ def test_unlock_thread_lifts_lock_and_updates_view(live):
     assert live["lifted"] == [(5, MOD)]
     assert ctx.client.updated[0]["view"]["callback_id"] == card.UNLOCKED_CALLBACK
     assert ctx.ephemeral_messages == ["Thread unlocked"]
+
+
+def notice_click(value=card.NOTICE_UNLOCK):
+    return {"actions": [{"action_id": card.NOTICE_MENU, "selected_option": {"value": value}}]}
+
+
+def test_unlock_from_notice_lifts_lock_and_confirms_to_clicker(live):
+    ctx = SurfaceCtx(body=notice_click())
+
+    assert thread_lock.unlock_from_notice(ctx) == 5
+    assert live["lifted"] == [(5, MOD)]
+    assert ctx.ephemeral_messages == ["Thread unlocked"]
+
+
+def test_unlock_from_notice_after_lock_ended_reports_ended(live):
+    live["row"] = None
+    ctx = SurfaceCtx(body=notice_click())
+
+    assert thread_lock.unlock_from_notice(ctx) is None
+    assert live["lifted"] == []
+    assert ctx.ephemeral_messages == ["Lock already ended"]
+
+
+def test_unlock_from_notice_unknown_option_does_nothing(live):
+    ctx = SurfaceCtx(body=notice_click("other"))
+
+    assert thread_lock.unlock_from_notice(ctx) is None
+    assert live["lifted"] == []
+    assert ctx.ephemeral_messages == []
 
 
 def test_submit_lock_extend_moves_end_to_picked_time(live):
