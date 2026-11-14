@@ -199,6 +199,9 @@
   .member-queue-row .queue-subject { margin-top: 1px; }
 
   .member-timeline { display: flex; flex-direction: column; }
+  .member-mentions { display: flex; flex-direction: column; }
+  .member-mention { @apply border-b border-border px-4 py-3; max-width: none; }
+  .member-mentions-more { @apply px-4 py-3; }
   .record-month {
     @apply px-4 pt-4 pb-1.5 text-xs font-medium text-muted-foreground;
   }

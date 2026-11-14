@@ -13,7 +13,7 @@ module Fd
       assign_pane_from_index
     end
 
-    TABS = { "history" => "History", "links" => "Linked accounts", "sessions" => "Sessions",
+    TABS = { "history" => "History", "mentions" => "Mentions", "links" => "Linked accounts", "sessions" => "Sessions",
              "audit" => "Audit", "enforcement" => "Enforcement", "purges" => "Purges" }.freeze
     TAB_CAPABILITIES = { "links" => "member.links", "sessions" => "identity.read",
                          "purges" => "member.purge" }.freeze

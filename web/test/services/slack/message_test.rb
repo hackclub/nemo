@@ -50,6 +50,33 @@ class Slack::MessageTest < ActiveSupport::TestCase
     end
   end
 
+  test "at with a thread ts requests the reply from conversations.replies" do
+    reply = MESSAGE.merge("ts" => "1790701099.000200", "thread_ts" => TS, "text" => "in the thread")
+    with_memory_cache do
+      stub_slack(->(*) { { "ok" => true, "messages" => [MESSAGE.merge("thread_ts" => TS), reply] } }) do |calls|
+        result = Slack::Message.at(CHANNEL_ID, reply["ts"], thread_ts: TS)
+
+        method, params, options = calls.sole
+        assert_equal Slack::Message::REPLIES_METHOD, method
+        assert_equal TS, params["ts"]
+        assert_equal reply["ts"], params["latest"]
+        assert_equal reply["ts"], params["oldest"]
+        assert_equal "admin", options[:credential]
+        assert_equal "in the thread", result.message["text"]
+      end
+    end
+  end
+
+  test "at with a thread ts equal to ts reads conversations.history" do
+    with_memory_cache do
+      stub_slack(one_message) do |calls|
+        Slack::Message.at(CHANNEL_ID, TS, thread_ts: TS)
+
+        assert_equal Slack::Message::METHOD, calls.sole.first
+      end
+    end
+  end
+
   test "at does not call Slack again for a cached message" do
     with_memory_cache do
       stub_slack(one_message) do |calls|

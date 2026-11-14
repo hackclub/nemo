@@ -1,0 +1,9 @@
+<%= turbo_frame_tag mention_frame_id(@channel_id, @ts), target: "_top", class: "msg-body msg-rich" do %>
+  <% if @slack_message.message? %>
+    <%= slack_message_html(@slack_message.message) %>
+  <% elsif @slack_message.error == :not_found %>
+    <span class="msg-gone">Message unavailable</span>
+  <% else %>
+    <span class="msg-gone">Slack unavailable</span>
+  <% end %>
+<% end %>

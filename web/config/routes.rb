@@ -111,6 +111,9 @@ Rails.application.routes.draw do
       resources :guards, only: [:create, :update, :destroy], controller: "member_guards"
       resource :standing, only: [:show], controller: "member_standings"
       resource :logins, only: [:show], controller: "member_logins"
+      resources :mentions, only: [:index], controller: "member_mentions"
+      get "mentions/:channel_id/:ts", to: "member_mentions#show", as: :mention,
+          constraints: { channel_id: /[A-Z0-9]+/, ts: /\d+\.\d+/ }, format: false
       resource :links, only: [:show], controller: "member_link_panes"
       resources :purges, only: [:show], controller: "member_purges"
     end

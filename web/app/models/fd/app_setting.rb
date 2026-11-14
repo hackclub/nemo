@@ -81,6 +81,10 @@ module Fd
       value(REACT_CHANNELS).split(",").map(&:strip).reject(&:blank?)
     end
 
+    def self.fd_channel_ids
+      [firehouse_channel, reports_channel, log_channel, *case_react_channels].compact.uniq
+    end
+
     def self.trusted_senders
       value(TRUSTED_SENDERS).split(",").map(&:strip).reject(&:blank?)
     end

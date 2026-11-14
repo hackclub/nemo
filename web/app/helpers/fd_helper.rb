@@ -160,6 +160,12 @@ module FdHelper
     Slack::RichText.for({ "blocks" => blocks }, **rendering)
   end
 
+  def slack_message_html(message)
+    return blocks_html(Slack::Mrkdwn.blocks(message["text"])) if message["blocks"].blank? && message["text"].present?
+
+    Slack::RichText.for(message, **rendering)
+  end
+
   def echo_card_html(blocks)
     Slack::EchoCard.render(blocks, **rendering)
   end
@@ -715,6 +721,15 @@ module FdHelper
 
   def slack_thread_url(channel_id, thread_ts)
     Fd::SlackLink.url_for(channel_id, thread_ts)
+  end
+
+  def slack_message_url(channel_id, ts, thread_ts = nil)
+    url = Fd::SlackLink.url_for(channel_id, ts)
+    thread_ts.present? ? "#{url}?thread_ts=#{thread_ts}&cid=#{channel_id}" : url
+  end
+
+  def mention_frame_id(channel_id, ts)
+    "mention-#{channel_id}-#{ts.to_s.delete('.')}"
   end
 
   def case_thread_url(kase, thread)

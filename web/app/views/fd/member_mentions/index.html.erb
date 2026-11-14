@@ -1,0 +1,42 @@
+<%= turbo_frame_tag @frame_id, target: "_top" do %>
+  <% if @page.rows.any? %>
+    <div class="member-mentions">
+      <% @page.rows.each do |row| %>
+        <div class="msg in member-mention">
+          <%= avatar(row.author_id) %>
+          <div>
+            <div class="msg-head">
+              <span class="msg-who"><%= row.author_id ? person_name(row.author_id) : "Unknown" %></span>
+              <span class="msg-at"><%= clock_stamp(row.posted_at, "%-d %b %Y, %H:%M") %></span>
+              <span class="msg-at"><%= channel_mention(row.channel_id) %></span>
+              <% if row.reply? %>
+                <span class="msg-kind">Thread reply</span>
+              <% end %>
+              <%= link_to slack_message_url(row.channel_id, row.ts, (row.thread_root_ts if row.reply?)),
+                    class: "cite-open", target: "_blank", rel: "noopener",
+                    aria: { label: "Open in Slack" }, title: "Open in Slack" do %>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
+              <% end %>
+            </div>
+            <%= turbo_frame_tag mention_frame_id(row.channel_id, row.ts),
+                  src: fd_member_mention_path(@user_id, row.channel_id, row.ts,
+                    thread: (row.thread_root_ts if row.reply?)),
+                  loading: "lazy", target: "_top", class: "msg-body msg-rich" do %>
+              <span class="msg-gone">Loading</span>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    <% if @page.next_before %>
+      <%= turbo_frame_tag mention_page_frame_id(@page.next_before) do %>
+        <div class="member-mentions-more">
+          <%= link_to "Earlier", fd_member_mentions_path(@user_id, before: @page.next_before.utc.iso8601(6)),
+                class: "btn btn-sm" %>
+        </div>
+      <% end %>
+    <% end %>
+  <% elsif @frame_id == "member-mentions" %>
+    <div class="empty"><p class="empty-title">No mentions</p></div>
+  <% end %>
+<% end %>
