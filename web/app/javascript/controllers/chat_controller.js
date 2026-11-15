@@ -103,6 +103,8 @@ export default class extends Controller {
   resizeField() {
     const field = this.fieldTarget
     field.style.height = "auto"
+    if (!field.value || field.offsetWidth === 0) return
+
     field.style.height = `${Math.min(field.scrollHeight, 160)}px`
   }
 }
