@@ -9,6 +9,7 @@ from bot.nemo.case_actions import (
     has_open_report,
     mark_resolution_log_pending,
     log_action,
+    log_additional,
     merge,
     repoint_merged,
     resolve_target,
@@ -141,6 +142,7 @@ def register(app, on_reply=None):
             current_guard_status = guard_status_for(conn, case_id, values)
             action_id = log_action(conn, case_id, values, user_id)
             guard_id = memberguards.apply_enforcement(conn, action_id, values, current_guard_status, user_id)
+            log_additional(conn, case_id, values, user_id, action_id)
             resolution = resolve_with_action(conn, case_id, values, user_id)
 
         ack()

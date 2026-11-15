@@ -1260,7 +1260,7 @@ def channel_name(conn, channel_id):
 def post_action_log(client, conn, case_id, values, by):
     name = channel_name(conn, values["channel_id"]) if values.get("channel_id") else None
     blocks = views.action.log_blocks(values, by, channel_name=name)
-    return post_thread_log(client, conn, case_id, blocks, by, views.action.label(values["type_key"]),
+    return post_thread_log(client, conn, case_id, blocks, by, views.action.labels(values),
         "nemo: the action log for case %s did not reach the thread: %s")
 
 

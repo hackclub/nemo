@@ -14,6 +14,7 @@ CALLBACK = "case_action_log"
 TARGET = "action_target"
 TARGET_TEXT = "action_target_text"
 KIND = "action_kind"
+ALSO = "action_also"
 UNTIL = "action_until"
 UNTIL_TIME = "action_until_time"
 DURATION = "action_duration"
@@ -80,6 +81,42 @@ def table():
 def label(key):
     row = table().get(key)
     return row["label"] if row else key.replace("_", " ")
+
+
+def additional_keys():
+    excluded = {"enforce", "expires", "channel", "thread_lock"}
+    return [key for key, row in table().items() if not excluded & set(row)]
+
+
+def shows_also(key):
+    return bool(key) and not table().get(key, {}).get("thread_lock")
+
+
+def also_keys(values):
+    wanted = set(values.get("also") or [])
+    return [key for key in additional_keys() if key in wanted and key != values.get("type_key")]
+
+
+def labels(values):
+    return ", ".join(label(key) for key in [values["type_key"], *also_keys(values)])
+
+
+def also_block(key, selected=()):
+    options = [
+        {"text": {"type": "plain_text", "text": label(one)}, "value": one}
+        for one in additional_keys() if one != key
+    ]
+    element = {"type": "checkboxes", "action_id": ALSO, "options": options}
+    initial = [one for one in options if one["value"] in selected]
+    if initial:
+        element["initial_options"] = initial
+    return {
+        "type": "input",
+        "block_id": ALSO,
+        "optional": True,
+        "label": {"type": "plain_text", "text": "Additional actions"},
+        "element": element,
+    }
 
 
 def takes_expiry(key):
@@ -194,7 +231,8 @@ def header_text(values, channel_name=None):
     parts = [label(key)]
     if needs_channel(key) and values.get("channel_id"):
         parts.append(f"from #{channel_name}" if channel_name else f"from {values['channel_id']}")
-    return " ".join(parts)
+    others = [label(one) for one in also_keys(values)]
+    return ", ".join([" ".join(parts), *others])
 
 
 def existing_action_text(guard):
@@ -369,6 +407,9 @@ def build_blocks(case_id, values, guard_status=None, end_error=None, open_report
             },
         },
     ]
+
+    if shows_also(key):
+        built.append(also_block(key, values.get("also") or []))
 
     if queues_deactivation(values, guard_status):
         built.append({"type": "context", "elements": [{"type": "mrkdwn", "text": deactivation_note(values)}]})
@@ -623,6 +664,7 @@ def submitted_values(view_state):
         "type_key": (
             (values.get(KIND, {}).get(KIND, {}).get("selected_option") or {}).get("value")
         ),
+        "also": [one.get("value") for one in values.get(ALSO, {}).get(ALSO, {}).get("selected_options") or []],
         "expires_on": values.get(UNTIL, {}).get(UNTIL, {}).get("selected_date"),
         "expires_time": values.get(UNTIL, {}).get(UNTIL_TIME, {}).get("selected_time"),
         "duration": (values.get(DURATION, {}).get(DURATION, {}).get("value") or "").strip(),

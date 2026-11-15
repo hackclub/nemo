@@ -416,6 +416,30 @@ def log_action(conn, case_id, values, user_id):
     return row[0]
 
 
+GROUP_ACTIONS = "UPDATE fd.actions SET group_id = %s WHERE id = ANY(%s)"
+
+
+def log_additional(conn, case_id, values, user_id, main_id):
+    keys = views.action.also_keys(values)
+    if not keys or not values.get("target_user_id"):
+        return []
+    added = []
+    for type_key in keys:
+        row = conn.execute(LOG_ACTION, (
+            case_id, type_key, values["target_user_id"], user_id, user_id, audit.SOURCE_APP, None,
+            Jsonb({}), values["reason"] or None, values.get("solution") or None,
+            views.action.resolvers(values, user_id), values.get("category_key"), case_id,
+        )).fetchone()
+        audit.record(conn, "action", row[0], "performed", user_id, after={
+            "case_id": case_id, "type_key": type_key, "target_user_id": values["target_user_id"],
+            "category_key": row[2], "solution": values.get("solution") or None,
+            "resolved_by": views.action.resolvers(values, user_id), "group_id": main_id,
+        })
+        added.append(row[0])
+    conn.execute(GROUP_ACTIONS, (main_id, [main_id, *added]))
+    return added
+
+
 MERGE_STATE = """
 SELECT resolved_at, resolution, duplicate_of FROM fd.cases WHERE id = %s FOR UPDATE
 """
