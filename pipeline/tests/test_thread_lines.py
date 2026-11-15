@@ -45,3 +45,30 @@ def test_lines_format_header_resolution_reopen_note_and_assignment_errors():
     assert lines.already_claimed(39) == "You are already assigned to case 39"
     assert lines.already_assigned(39, ["UA"]) == "<@UA> is already assigned to case 39"
     assert lines.not_assigned(39, ["UA", "UB"]) == "<@UA> and <@UB> are not assigned to case 39"
+
+
+def slack(case_id):
+    return f"https://slack/{case_id}"
+
+
+def test_merged_links_the_slack_thread_of_every_other_case():
+    assert lines.merged("UME", [25, 31], 39, slack_of=slack) == [
+        (39, "<@UME> merged cases 25 (<https://slack/25|Slack>) and 31 (<https://slack/31|Slack>) "
+             "into case 39 (this case)"),
+        (25, "<@UME> merged case 25 (this case) into case 39 (<https://slack/39|Slack>)"),
+        (31, "<@UME> merged case 31 (this case) into case 39 (<https://slack/39|Slack>)"),
+    ]
+
+
+def test_unmerged_links_the_slack_thread_of_the_other_case():
+    assert lines.unmerged("UME", 25, 39, slack_of=slack) == [
+        (39, "<@UME> unmerged case 25 (<https://slack/25|Slack>) from case 39 (this case)"),
+        (25, "<@UME> unmerged case 25 (this case) from case 39 (<https://slack/39|Slack>)"),
+    ]
+
+
+def test_merged_leaves_out_slack_when_a_case_has_no_thread():
+    assert lines.merged("UME", [25], 39, slack_of=lambda case_id: None) == [
+        (39, "<@UME> merged case 25 into case 39 (this case)"),
+        (25, "<@UME> merged case 25 (this case) into case 39"),
+    ]

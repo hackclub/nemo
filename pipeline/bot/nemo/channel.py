@@ -353,6 +353,14 @@ def thread_for(conn, case_id):
     return row[0] if row else None
 
 
+def thread_url(conn, case_id):
+    thread = thread_for(conn, case_id)
+    if not thread:
+        return None
+    channel_id = card_channel_for(conn, case_id)
+    return message_url(channel_id, thread) if channel_id else None
+
+
 def post_line(client, conn, case_id, text):
     thread = thread_for(conn, case_id)
     if not thread:
@@ -371,7 +379,7 @@ def post_line(client, conn, case_id, text):
 
 
 def post_unmerge_note(client, conn, case_id, into_case_id, by):
-    entries = views.lines.unmerged(by, case_id, into_case_id, case_url)
+    entries = views.lines.unmerged(by, case_id, into_case_id, case_url, lambda one: thread_url(conn, one))
     for line_case_id, text in entries:
         post_line(client, conn, line_case_id, text)
     return entries
@@ -380,7 +388,7 @@ def post_unmerge_note(client, conn, case_id, into_case_id, by):
 def post_merge_note(client, conn, target_id, closed, by):
     if not closed:
         return None
-    entries = views.lines.merged(by, closed, target_id, case_url)
+    entries = views.lines.merged(by, closed, target_id, case_url, lambda one: thread_url(conn, one))
     for case_id, text in entries:
         post_line(client, conn, case_id, text)
     return entries

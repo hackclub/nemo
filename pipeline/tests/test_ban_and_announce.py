@@ -140,6 +140,17 @@ def test_announcement_lines_fire_engine_rows_return_thread_lines(monkeypatch):
     ]
 
 
+def test_announcement_lines_fire_engine_unmerge_tells_both_threads(monkeypatch):
+    monkeypatch.setattr(announce.channel, "case_url", lambda case_id: None)
+    monkeypatch.setattr(announce.channel, "thread_url", lambda conn, case_id: f"https://slack/{case_id}")
+    rows = [row(1, "unmerged", "case", 25, before={"duplicate_of": 39}, after={"duplicate_of": None})]
+
+    assert announce.announcement_lines(Conn({}), rows) == [
+        (39, "<@UFE> unmerged case 25 (<https://slack/25|Slack>) from case 39 (this case)"),
+        (25, "<@UFE> unmerged case 25 (this case) from case 39 (<https://slack/39|Slack>)"),
+    ]
+
+
 def test_announce_advances_bot_cursor_to_last_row(monkeypatch):
     posted = []
     monkeypatch.setattr(announce.channel, "post_line",

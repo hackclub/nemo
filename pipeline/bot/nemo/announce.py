@@ -19,7 +19,7 @@ FROM fd.audit
 WHERE id > %s AND source_app = 'fire_engine'
   AND ((entity_type = 'assignee' AND verb IN ('attached', 'detached', 'claimed', 'unclaimed'))
        OR (entity_type = 'note' AND verb = 'noted')
-       OR (entity_type = 'case' AND verb IN ('reopened', 'resolved')))
+       OR (entity_type = 'case' AND verb IN ('reopened', 'resolved', 'unmerged')))
 ORDER BY id
 LIMIT %s
 """
@@ -61,11 +61,26 @@ def announcement_lines(conn, rows):
         elif entity == "case" and verb == "reopened":
             out += [(row[3], lines.reopened(actor, row[3])) for row in group]
         elif entity == "case" and verb == "resolved":
-            out += merge_lines(actor, group)
+            out += merge_lines(conn, actor, group)
+        elif entity == "case" and verb == "unmerged":
+            out += unmerge_lines(conn, actor, group)
     return out
 
 
-def merge_lines(actor, rows):
+def slack_of(conn):
+    return lambda case_id: channel.thread_url(conn, case_id)
+
+
+def unmerge_lines(conn, actor, rows):
+    out = []
+    for row in rows:
+        into_case_id = (row[5] or {}).get("duplicate_of")
+        if into_case_id:
+            out += lines.unmerged(actor, row[3], int(into_case_id), channel.case_url, slack_of(conn))
+    return out
+
+
+def merge_lines(conn, actor, rows):
     duplicates_by_target = {}
     for row in rows:
         after = row[6] or {}
@@ -73,7 +88,7 @@ def merge_lines(actor, rows):
             duplicates_by_target.setdefault(int(after["duplicate_of"]), []).append(row[3])
     out = []
     for primary_id, duplicate_ids in duplicates_by_target.items():
-        out += lines.merged(actor, sorted(duplicate_ids), primary_id, channel.case_url)
+        out += lines.merged(actor, sorted(duplicate_ids), primary_id, channel.case_url, slack_of(conn))
     return out
 
 

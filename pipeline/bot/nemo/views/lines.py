@@ -32,25 +32,33 @@ def number(case_id, url=None):
 THIS_CASE = "(this case)"
 
 
-def merged(actor, duplicate_ids, target_id, url_of=lambda case_id: None):
+def slack_link(url):
+    return f" (<{url}|Slack>)" if url else ""
+
+
+def merged(actor, duplicate_ids, target_id, url_of=lambda case_id: None, slack_of=lambda case_id: None):
     target = number(target_id, url_of(target_id))
     numbers = [number(one, url_of(one)) for one in duplicate_ids]
-    if len(numbers) == 1:
-        listed = f"case {numbers[0]}"
+    elsewhere = [linked + slack_link(slack_of(one)) for one, linked in zip(duplicate_ids, numbers)]
+    if len(elsewhere) == 1:
+        listed = f"case {elsewhere[0]}"
     else:
-        listed = "cases " + ", ".join(numbers[:-1]) + f" and {numbers[-1]}"
+        listed = "cases " + ", ".join(elsewhere[:-1]) + f" and {elsewhere[-1]}"
+    target_elsewhere = target + slack_link(slack_of(target_id))
     entries = [(target_id, f"<@{actor}> merged {listed} into case {target} {THIS_CASE}")]
     for case_id, linked in zip(duplicate_ids, numbers):
-        entries.append((case_id, f"<@{actor}> merged case {linked} {THIS_CASE} into case {target}"))
+        entries.append((case_id, f"<@{actor}> merged case {linked} {THIS_CASE} into case {target_elsewhere}"))
     return entries
 
 
-def unmerged(actor, case_id, into_case_id, url_of=lambda case_id: None):
+def unmerged(actor, case_id, into_case_id, url_of=lambda case_id: None, slack_of=lambda case_id: None):
     linked = number(case_id, url_of(case_id))
     into = number(into_case_id, url_of(into_case_id))
     return [
-        (into_case_id, f"<@{actor}> unmerged case {linked} from case {into} {THIS_CASE}"),
-        (case_id, f"<@{actor}> unmerged case {linked} {THIS_CASE} from case {into}"),
+        (into_case_id,
+         f"<@{actor}> unmerged case {linked}{slack_link(slack_of(case_id))} from case {into} {THIS_CASE}"),
+        (case_id,
+         f"<@{actor}> unmerged case {linked} {THIS_CASE} from case {into}{slack_link(slack_of(into_case_id))}"),
     ]
 
 

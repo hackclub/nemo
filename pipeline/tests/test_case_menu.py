@@ -316,13 +316,15 @@ def test_post_merge_note_posts_to_target_and_duplicate_cases(monkeypatch):
     monkeypatch.setattr(channel, "post_line",
                         lambda client, conn, case_id, text: posted_lines.append((case_id, text)))
     monkeypatch.setattr(channel, "case_url", lambda case_id: None)
+    monkeypatch.setattr(channel, "thread_url", lambda conn, case_id: f"https://slack/{case_id}")
 
     channel.post_merge_note(None, None, 39, [25, 31], "UME")
 
     assert posted_lines == [
-        (39, "<@UME> merged cases 25 and 31 into case 39 (this case)"),
-        (25, "<@UME> merged case 25 (this case) into case 39"),
-        (31, "<@UME> merged case 31 (this case) into case 39"),
+        (39, "<@UME> merged cases 25 (<https://slack/25|Slack>) and 31 (<https://slack/31|Slack>) "
+             "into case 39 (this case)"),
+        (25, "<@UME> merged case 25 (this case) into case 39 (<https://slack/39|Slack>)"),
+        (31, "<@UME> merged case 31 (this case) into case 39 (<https://slack/39|Slack>)"),
     ]
 
 
