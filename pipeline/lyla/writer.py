@@ -46,6 +46,34 @@ OPENING = """
 SELECT body FROM fd.case_chat WHERE case_id = %s AND mirrored_as = 'card' ORDER BY id LIMIT 1
 """
 
+FAMILY_THREADS = """
+WITH RECURSIVE family(id) AS (
+    SELECT %(case_id)s::bigint
+    UNION
+    SELECT c.id FROM fd.cases c JOIN family f ON c.duplicate_of = f.id
+)
+SELECT channel_id, thread_ts FROM (
+    SELECT 0 AS rank, c.id, c.card_channel_id AS channel_id, coalesce(c.card_thread_ts, c.card_ts) AS thread_ts
+    FROM fd.cases c WHERE c.id IN (SELECT id FROM family)
+    UNION ALL
+    SELECT 1, r.case_id, r.card_channel_id, r.forwarded_ts
+    FROM fd.case_reports r WHERE r.case_id IN (SELECT id FROM family)
+) threads
+WHERE channel_id IS NOT NULL AND thread_ts IS NOT NULL
+ORDER BY id <> %(case_id)s, rank, id
+"""
+
+ANCESTORS = """
+WITH RECURSIVE chain(id, parent) AS (
+    SELECT id, duplicate_of FROM fd.cases WHERE id = %s
+    UNION
+    SELECT c.id, c.duplicate_of FROM fd.cases c JOIN chain ON c.id = chain.parent
+)
+SELECT id FROM chain
+"""
+
+NEMO_ASSIGNEES = "SELECT user_id, assigned_by, assigned_at FROM fd.case_assignees WHERE case_id = %s"
+
 RESOLVER = """
 SELECT actor_user_id FROM fd.audit
 WHERE entity_type = 'case' AND entity_id = %s AND verb = 'resolved'
@@ -119,6 +147,16 @@ ON CONFLICT DO NOTHING
 """
 
 DROP_ASSIGNEES = "DELETE FROM case_assignees WHERE case_number = %s"
+
+RETURN_THREAD = """
+UPDATE case_threads SET case_number = %s, is_primary = false
+WHERE channel = %s AND thread_ts = %s AND case_number = ANY(%s)
+RETURNING channel, thread_ts
+"""
+
+DROP_RETURNED_ASSIGNEES = """
+DELETE FROM case_assignees WHERE case_number = %s AND user_id = ANY(%s) AND NOT (user_id = ANY(%s))
+"""
 
 THREAD_OWNER = "SELECT case_number FROM case_threads WHERE channel = %s AND thread_ts = %s"
 
@@ -255,6 +293,24 @@ def merge_into(lyla, source, target, keep_primary=False):
     lyla.execute(UCAT_PENDING, (source,))
 
 
+def unmerge_from(lyla, conn, case_id, merged_into):
+    owners = [row[0] for row in conn.execute(ANCESTORS, (merged_into,)).fetchall()] or [merged_into]
+    returned = []
+    for channel_id, thread_ts in conn.execute(FAMILY_THREADS, {"case_id": case_id}).fetchall():
+        returned += lyla.execute(RETURN_THREAD, (case_id, channel_id, thread_ts, owners)).fetchall()
+    if returned and lyla.execute(HAS_PRIMARY, (case_id,)).fetchone() is None:
+        lyla.execute(PROMOTE, returned[0])
+
+    assignees = conn.execute(NEMO_ASSIGNEES, (case_id,)).fetchall()
+    for user_id, assigned_by, assigned_at in assignees:
+        source = "self" if assigned_by == user_id else "manual"
+        lyla.execute(ADD_ASSIGNEE, (case_id, user_id, mapping.to_ms(assigned_at) or now_ms(), source))
+    if assignees:
+        kept = [row[0] for row in conn.execute(NEMO_ASSIGNEES, (merged_into,)).fetchall()]
+        lyla.execute(DROP_RETURNED_ASSIGNEES, (merged_into, [row[0] for row in assignees], kept))
+    return returned
+
+
 def set_resolver(lyla, case_number, user_id, resolved_at=None):
     lyla.execute(SET_RESOLVER, (user_id, mapping.to_ms(resolved_at), case_number))
 
@@ -341,6 +397,8 @@ class Writer:
                 if lyla_status != mapping.MERGED or merged_into != duplicate_of:
                     merge_into(self.lyla, case_id, duplicate_of)
             elif status != lyla_status:
+                if lyla_status == mapping.MERGED and merged_into:
+                    unmerge_from(self.lyla, conn, case_id, merged_into)
                 closed = status != mapping.OPEN
                 self.lyla.execute(SET_STATUS, (
                     status, status if closed else None,

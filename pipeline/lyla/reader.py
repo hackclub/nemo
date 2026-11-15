@@ -4,6 +4,7 @@ import logging
 
 from psycopg.types.json import Jsonb
 
+from bot.core import merges
 from lyla import categories, digests, mapping, numbers, store, writer
 from lyla.mapping import LYLA_BOT_USER_ID
 
@@ -395,6 +396,8 @@ class Reader:
             return True
         current = mapping.lyla_status(nemo_resolved_at, resolution)
         target = self.target_case(conn, merged_into) if status == mapping.MERGED else None
+        if target is not None:
+            target = merges.root(conn, target)
         if target == case_id:
             target = None
 
@@ -404,6 +407,8 @@ class Reader:
             return True
 
         if status == mapping.OPEN:
+            if duplicate_of is not None:
+                merges.unmerge(conn, case_id, LYLA_BOT_USER_ID, source_app=store.LYLA)
             conn.execute(REOPEN, (case_id,))
             conn.execute(REOPEN_REPORTS, (case_id,))
             store.record(conn, "case", case_id, "reopened", LYLA_BOT_USER_ID,

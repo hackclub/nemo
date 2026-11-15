@@ -76,3 +76,41 @@ def test_apply_assignee_records_claims_as_self_and_assignments_as_manual():
     assert [(row[0], row[1], row[3]) for row in added] == [(5001, "UFF1", "self"), (5001, "UFF2", "manual")]
     assert added[0][2] == int(dt.datetime(2026, 10, 22, 9, tzinfo=dt.UTC).timestamp() * 1000)
     assert lyla.ran(writer.DROP_ASSIGNEE) == [(5001, "UFF2")]
+
+
+class NemoRows(Recorder):
+    def execute(self, sql, args=None):
+        self.executed.append((sql, args))
+        answer = self.answers.get(sql, [])
+        return Rows(answer(args) if callable(answer) else answer)
+
+
+ASSIGNED_AT = dt.datetime(2026, 11, 1, 9, 0, tzinfo=dt.UTC)
+
+
+def test_unmerge_from_moves_family_threads_back_and_restores_assignees():
+    conn = NemoRows({
+        writer.ANCESTORS: [(5001,), (4990,)],
+        writer.FAMILY_THREADS: [("C0FIRE", "1.1"), ("C0REP", "2.2")],
+        writer.NEMO_ASSIGNEES: lambda args: [("UMOD", "UMOD", ASSIGNED_AT)] if args == (5006,) else [("UBOSS", "UBOSS", ASSIGNED_AT)],
+    })
+    lyla = NemoRows({writer.RETURN_THREAD: lambda args: [(args[1], args[2])]})
+
+    assert writer.unmerge_from(lyla, conn, 5006, 5001) == [("C0FIRE", "1.1"), ("C0REP", "2.2")]
+
+    assert lyla.ran(writer.RETURN_THREAD) == [(5006, "C0FIRE", "1.1", [5001, 4990]),
+                                             (5006, "C0REP", "2.2", [5001, 4990])]
+    assert lyla.ran(writer.PROMOTE) == [("C0FIRE", "1.1")]
+    assert lyla.ran(writer.ADD_ASSIGNEE)[0][:2] == (5006, "UMOD")
+    assert lyla.ran(writer.ADD_ASSIGNEE)[0][3] == "self"
+    assert lyla.ran(writer.DROP_RETURNED_ASSIGNEES) == [(5001, ["UMOD"], ["UBOSS"])]
+
+
+def test_unmerge_from_keeps_an_existing_primary_thread():
+    conn = NemoRows({writer.ANCESTORS: [(5001,)], writer.FAMILY_THREADS: [("C0FIRE", "1.1")]})
+    lyla = NemoRows({writer.RETURN_THREAD: [("C0FIRE", "1.1")], writer.HAS_PRIMARY: [(1,)]})
+
+    writer.unmerge_from(lyla, conn, 5006, 5001)
+
+    assert lyla.ran(writer.PROMOTE) == []
+    assert lyla.ran(writer.DROP_RETURNED_ASSIGNEES) == []

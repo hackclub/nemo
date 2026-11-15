@@ -89,3 +89,23 @@ def test_sync_status_same_status_and_resolver_changes_nothing(monkeypatch):
     conn = Recorder({reader.RESOLVER: [("UFF1",)]})
     reader.Reader(None, None).sync_status(conn, lyla_case("resolved"), nemo_case(AT, "no_action"))
     assert conn.ran(reader.RESOLVE) == []
+
+
+def test_merges_root_walks_up_to_the_main_case():
+    from bot.core import merges
+
+    class RootConn:
+        def __init__(self):
+            self.executed = []
+
+        def execute(self, sql, args=None):
+            self.executed.append((sql, args))
+            return self
+
+        def fetchone(self):
+            return (19,)
+
+    conn = RootConn()
+
+    assert merges.root(conn, 25) == 19
+    assert conn.executed == [(merges.ROOT, (25,))]
