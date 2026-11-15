@@ -62,7 +62,7 @@ class FdResolutionsTest < ActionDispatch::IntegrationTest
 
     assert_nil @kase.reload.resolved_at
     assert_equal 0, actions.count
-    assert_equal "Temporary ban needs an end date", flash[:alert]
+    assert_equal "Temporary ban needs an end date or duration", flash[:alert]
   end
 
   test "action create shush with expires_on stores expires_at" do

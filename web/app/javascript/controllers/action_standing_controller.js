@@ -77,7 +77,7 @@ export default class extends Controller {
     if (!date) return null
 
     const time = this.startTarget.querySelector('input[name="starts_time"]')?.value || "00:00"
-    return `${date} ${time} UTC`
+    return `${date} ${time} ${this.startTarget.dataset.zone || "UTC"}`
   }
 
   selectedKind() {

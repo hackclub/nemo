@@ -99,8 +99,8 @@
             <%= form_with url: fd_member_guard_path(user_id, guard), method: :patch,
                   html: { autocomplete: "off" } do %>
               <div class="modal-body">
-                <%= render "fd/start_fields", label: "Start (UTC)", required: true, current: guard.starts_at %>
-                <%= render "fd/end_fields", label: "End (UTC, optional)", current: guard.expires_at %>
+                <%= render "fd/start_fields", label: zoned_label("Start"), required: true, current: guard.starts_at %>
+                <%= render "fd/end_fields", label: zoned_label("End", optional: true), current: guard.expires_at %>
               </div>
               <div class="modal-foot">
                 <button type="button" class="btn btn-ghost"

@@ -723,6 +723,15 @@ module FdHelper
     Fd::SlackLink.url_for(channel_id, thread_ts)
   end
 
+  def viewer_zone_name
+    name = Time.zone.tzinfo.identifier
+    name == "Etc/UTC" ? "UTC" : name
+  end
+
+  def zoned_label(name, optional: false)
+    "#{name} (#{[viewer_zone_name, ("optional" if optional)].compact.join(', ')})"
+  end
+
   def slack_message_url(channel_id, ts, thread_ts = nil)
     url = Fd::SlackLink.url_for(channel_id, ts)
     thread_ts.present? ? "#{url}?thread_ts=#{thread_ts}&cid=#{channel_id}" : url

@@ -58,6 +58,29 @@ class FdMemberGuardsTest < ActionDispatch::IntegrationTest
     assert_equal Time.utc(2026, 11, 2, 8, 15), guards.sole.expires_at
   end
 
+  test "create with a duration sets expires_at that long after now" do
+    freeze_time do
+      create_guard(expires_on: "", duration: "12h")
+
+      assert_equal 12.hours.from_now.change(sec: 0), guards.sole.expires_at
+    end
+  end
+
+  test "create with an end date and a duration creates no guard" do
+    create_guard(duration: "3d")
+
+    assert_empty guards
+    assert_equal "Use End or Duration, not both", flash[:alert]
+  end
+
+  test "member page guard modal labels the end with the viewer zone and offers a duration" do
+    cookies[:mn_tz] = "America/New_York"
+    get fd_member_path("USUB", do: "guard")
+
+    assert_select "[data-modal-id-value=member-guard] .field-label span", text: "End (America/New_York, optional)"
+    assert_select "[data-modal-id-value=member-guard] input[name=duration]"
+  end
+
   test "create with invalid expires_time creates no guard and sets alert" do
     create_guard(expires_time: "25:00")
 

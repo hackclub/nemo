@@ -51,7 +51,7 @@
     <%= form_with url: fd_channel_guard_path(channel_id, Fd::ChannelGuard::SLOWMODE), method: :patch,
           html: { autocomplete: "off" } do %>
       <div class="modal-body">
-        <%= render "fd/end_fields", label: "New end (UTC)", required: true, current: guard.expires_at %>
+        <%= render "fd/end_fields", label: zoned_label("New end"), required: true, current: guard.expires_at %>
       </div>
       <div class="modal-foot">
         <button type="button" class="btn btn-ghost" data-action="click->modal#close">Cancel</button>
@@ -64,7 +64,7 @@
     <%= form_with url: fd_channel_guard_path(channel_id, Fd::ChannelGuard::SLOWMODE), method: :post,
           html: { autocomplete: "off" } do %>
       <div class="modal-body">
-        <%= render "fd/end_fields", label: "End (UTC, optional)" %>
+        <%= render "fd/end_fields", label: zoned_label("End", optional: true) %>
         <label class="field-label">
           Cooldown (seconds)
           <%= number_field_tag :seconds, Fd::ChannelGuard::DEFAULT_SLOWMODE_SECONDS, class: "input", id: nil,

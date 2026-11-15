@@ -81,7 +81,7 @@ class FdActionsTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     log(type_key: "temp_ban")
     assert_equal 0, actions.count
-    assert_equal "Temporary ban needs an end date", flash[:alert]
+    assert_equal "Temporary ban needs an end date or duration", flash[:alert]
 
     log(type_key: "channel_ban", expires_on: "2026-09-01")
     assert_equal 0, actions.count
@@ -159,8 +159,55 @@ class FdActionsTest < ActionDispatch::IntegrationTest
     sign_in_as(@me)
     log(type_key: "temp_ban", reason: "")
 
-    assert_equal "Temporary ban needs an end date", flash[:alert],
+    assert_equal "Temporary ban needs an end date or duration", flash[:alert],
       "end date error is reported before the blank reason"
+  end
+
+  test "create temp ban with a duration ends that long after now" do
+    sign_in_as(@me)
+    freeze_time do
+      log(type_key: "temp_ban", duration: "7d")
+
+      assert_equal 7.days.from_now.change(sec: 0), actions.sole.expires_at
+    end
+  end
+
+  test "create action with both an end date and a duration stores nothing" do
+    sign_in_as(@me)
+    log(type_key: "shush", expires_on: 3.days.from_now.to_date.iso8601, duration: "2d")
+
+    assert_empty actions
+    assert_equal "Use End or Duration, not both", flash[:alert]
+  end
+
+  test "create action with an unreadable duration stores nothing" do
+    sign_in_as(@me)
+    log(type_key: "shush", duration: "a week")
+
+    assert_empty actions
+    assert_equal "Enter a duration such as 30m, 12h, 7d or 2w", flash[:alert]
+  end
+
+  test "create action reads the end date and time in the viewer zone" do
+    sign_in_as(@me)
+    cookies[:mn_tz] = "Europe/Athens"
+    on = 5.days.from_now.to_date
+
+    log(type_key: "shush", expires_on: on.iso8601, expires_time: "17:30")
+
+    assert_equal ActiveSupport::TimeZone["Europe/Athens"].local(on.year, on.month, on.day, 17, 30),
+      actions.sole.expires_at
+  end
+
+  test "action form labels start and end with the viewer zone and offers a duration" do
+    sign_in_as(@me)
+    cookies[:mn_tz] = "Europe/Athens"
+    get fd_case_path(@kase, tab: "actions", do: "action")
+
+    assert_select ".field-label span", text: "Start (Europe/Athens, optional)"
+    assert_select ".field-label span", text: "End (Europe/Athens)"
+    assert_select "input[name=duration][placeholder=?]", "7d"
+    assert_select "[data-action-standing-target=start][data-zone=?]", "Europe/Athens"
   end
 
   test "create action strips whitespace around reason" do

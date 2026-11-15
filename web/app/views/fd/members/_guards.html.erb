@@ -17,13 +17,8 @@
         <%= render "shared/combobox", kind: "channel", name: :channel_id, label: "Search channels" %>
       </div>
 
-      <div class="field-label">
-        <span>End (UTC, optional)</span>
-        <span class="field-pair">
-          <%= date_field_tag :expires_on, nil, class: "input", id: nil, aria: { label: "End date" } %>
-          <%= time_field_tag :expires_time, nil, class: "input", id: nil, aria: { label: "End time (UTC)" } %>
-        </span>
-      </div>
+      <%= render "fd/end_fields", label: zoned_label("End", optional: true) %>
+      <%= render "fd/duration_field" %>
 
       <label class="field-label">
         Reason

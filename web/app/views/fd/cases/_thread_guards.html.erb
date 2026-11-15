@@ -37,7 +37,7 @@
   <%= render layout: "fd/modal", locals: { id: "lock-extend-#{guard.id}", title: "Extend lock" } do %>
     <%= form_with url: fd_case_thread_lock_path(kase, guard), method: :patch, html: { autocomplete: "off" } do %>
       <div class="modal-body">
-        <%= render "fd/end_fields", label: "New end (UTC)", required: true, current: guard.expires_at %>
+        <%= render "fd/end_fields", label: zoned_label("New end"), required: true, current: guard.expires_at %>
       </div>
       <div class="modal-foot">
         <button type="button" class="btn btn-ghost" data-action="click->modal#close">Cancel</button>

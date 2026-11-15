@@ -150,7 +150,10 @@ module Fd
 
     def display_name(user_id) = Names.for([user_id])[user_id]
 
-    def end_time = @end_time ||= EndTime.read(params[:expires_on], params[:expires_time])
+    def end_time
+      @end_time ||= EndTime.read_with_duration(params[:expires_on], params[:expires_time], params[:duration],
+        from: starts_at || Time.current)
+    end
 
     def expiry = end_time.first
 

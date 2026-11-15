@@ -19,14 +19,12 @@
   </label>
   <p class="deactivation-note" data-action-standing-target="deactivation" hidden></p>
   <%= render "thread_lock_pick", locks: thread_locks, kase: kase, logged: locks_logged %>
-  <%= render "fd/start_fields", label: "Start (UTC, optional)", hidden: true,
-        data: { action_standing_target: "start", action: "input->action-standing#toggleDeactivation" } %>
-  <div class="field-label" data-action-standing-target="expiry" hidden>
-    <span>End (UTC)</span>
-    <span class="field-pair">
-      <%= date_field_tag :expires_on, nil, class: "input", id: nil, aria: { label: "End date" } %>
-      <%= time_field_tag :expires_time, nil, class: "input", id: nil, aria: { label: "End time (UTC)" } %>
-    </span>
+  <%= render "fd/start_fields", label: zoned_label("Start", optional: true), hidden: true,
+        data: { action_standing_target: "start", action: "input->action-standing#toggleDeactivation",
+                zone: viewer_zone_name } %>
+  <div class="contents" data-action-standing-target="expiry" hidden>
+    <%= render "fd/end_fields", label: zoned_label("End") %>
+    <%= render "fd/duration_field" %>
   </div>
   <div class="field-label" data-action-standing-target="channel" hidden>
     <span>Channel</span>

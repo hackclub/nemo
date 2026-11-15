@@ -12,15 +12,10 @@
       </label>
       <%= field_wrong(:reason) %>
 
-      <%= render "fd/start_fields", label: "Start (UTC, optional)" %>
+      <%= render "fd/start_fields", label: zoned_label("Start", optional: true) %>
 
-      <div class="field-label">
-        <span>End (UTC, optional)</span>
-        <span class="field-pair">
-          <%= date_field_tag :expires_on, nil, class: "input", id: nil, aria: { label: "End date" } %>
-          <%= time_field_tag :expires_time, nil, class: "input", id: nil, aria: { label: "End time (UTC)" } %>
-        </span>
-      </div>
+      <%= render "fd/end_fields", label: zoned_label("End", optional: true) %>
+      <%= render "fd/duration_field" %>
 
       <% if current_account.may?("member.purge") %>
         <label class="tickline">

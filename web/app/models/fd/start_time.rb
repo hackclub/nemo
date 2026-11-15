@@ -9,7 +9,7 @@ module Fd
       match = EndTime::TIME.match(time_text)
       return [nil, "#{time_text} is not a time"] if time_text.present? && match.nil?
 
-      starts = Time.utc(on.year, on.month, on.day, match ? match[1].to_i : 0, match ? match[2].to_i : 0)
+      starts = Time.zone.local(on.year, on.month, on.day, match ? match[1].to_i : 0, match ? match[2].to_i : 0)
       return [nil, "Start must be in the future"] if starts <= now
 
       [starts, nil]

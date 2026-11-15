@@ -32,7 +32,7 @@
     <%= form_with url: fd_channel_thread_lock_path(lock.channel_id, lock), method: :patch,
           html: { autocomplete: "off" } do %>
       <div class="modal-body">
-        <%= render "fd/end_fields", label: "New end (UTC)", required: true, current: lock.expires_at %>
+        <%= render "fd/end_fields", label: zoned_label("New end"), required: true, current: lock.expires_at %>
       </div>
       <div class="modal-foot">
         <button type="button" class="btn btn-ghost" data-action="click->modal#close">Cancel</button>

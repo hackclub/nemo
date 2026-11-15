@@ -34,10 +34,8 @@ module Fd
       return "Select a target" if target_user_id.blank?
       return "#{target_user_id} is not a member id" unless target_user_id.match?(MEMBER_ID)
       return "Not permitted to log #{type_name}" if deactivates? && !may_deactivate?
-      if NEEDS_EXPIRY.include?(type_key) && params[:expires_on].blank?
-        return "#{type_name} needs an end date"
-      end
       return expiry_error if expiry_error
+      return "#{type_name} needs an end date or duration" if NEEDS_EXPIRY.include?(type_key) && expiry.nil?
       start_error = start_time.last || StartTime.error(starts_at, expiry)
       return start_error if start_error
       if starts_at && MemberGuard.scheduled.exists?(subject_id: target_user_id)
@@ -191,7 +189,8 @@ module Fd
 
     def end_time
       @end_time ||= if TAKES_EXPIRY.include?(type_key)
-        EndTime.read(params[:expires_on], params[:expires_time])
+        EndTime.read_with_duration(params[:expires_on], params[:expires_time], params[:duration],
+          from: starts_at || Time.current)
       else
         [nil, nil]
       end
