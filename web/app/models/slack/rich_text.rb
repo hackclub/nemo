@@ -147,7 +147,7 @@ module Slack
 
     def element(node)
       case node["type"]
-      when "text" then lines(node["text"].to_s)
+      when "text" then text_node(node)
       when "link" then linked(node)
       when "emoji" then emoji_for(node)
       when "user" then user_mention(node["user_id"])
@@ -256,6 +256,14 @@ module Slack
       return "".html_safe if text.empty?
 
       safe_join(text.split("\n", -1).map { |line| ERB::Util.html_escape(line) }, tag.br)
+    end
+
+    def text_node(node)
+      text = node["text"].to_s
+      code = node["style"].is_a?(Hash) && node["style"]["code"]
+      return lines(text) if code || Fd::CaseRefs.ids(text).empty?
+
+      safe_join(text.split("\n", -1).map { |line| Fd::CaseRefs.linked(line) }, tag.br)
     end
   end
 end

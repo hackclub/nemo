@@ -18,6 +18,15 @@ class MentionRenderTest < ActionView::TestCase
     assert_no_match(/old-handle/, html)
   end
 
+  test "case reference in a note links the case next to a member mention" do
+    kase = make_case
+
+    html = mentioned("<@U0QUINN> is the same as ##{kase.id}")
+
+    assert_match(%r{href="/fd/members/U0QUINN"}, html)
+    assert_includes html, %(<a class="lnk" href="/fd/cases/#{kase.id}">##{kase.id}</a>)
+  end
+
   test "user mention targets the person-drawer turbo frame" do
     html = mentioned("it was <@U0QUINN> honestly")
     assert_match(/data-turbo-frame="person-drawer"/, html)

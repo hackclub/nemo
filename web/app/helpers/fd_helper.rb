@@ -143,7 +143,7 @@ module FdHelper
       next linked(link_match[1], link_match[2]) if link_match
       next linked(piece) if piece.match?(Fd::Mentions::BARE)
 
-      piece
+      Fd::CaseRefs.linked(piece)
     end
 
     safe_join(parts)

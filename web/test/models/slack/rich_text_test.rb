@@ -14,6 +14,18 @@ class Slack::RichTextTest < ActiveSupport::TestCase
       render([{ "type" => "text", "text" => "big news" }])
   end
 
+  test "for links a case reference in a text element but not in code" do
+    kase = make_case
+
+    html = render([
+      { "type" => "text", "text" => "see ##{kase.id}" },
+      { "type" => "text", "text" => " ##{kase.id}", "style" => { "code" => true } }
+    ])
+
+    assert_includes html, %(see <a class="lnk" href="/fd/cases/#{kase.id}">##{kase.id}</a>)
+    assert_includes html, %(<code class="richtext-code"> ##{kase.id}</code>)
+  end
+
   test "for renders newlines in a text element as br" do
     html = render([{ "type" => "text", "text" => "one\ntwo" }])
 
