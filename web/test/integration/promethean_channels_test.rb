@@ -23,38 +23,33 @@ class PrometheanChannelsTest < ActionDispatch::IntegrationTest
     Current.forget_roles
   end
 
-  test "manager appointment grants the promethean role and channel access" do
-    skip "no measured channel in the warehouse" if @channel.nil?
-    create_appointment(@channel.channel_id)
+  Prometheus::Appointment::ROLES.each do |role|
+    test "#{role} appointment grants the promethean role and channel access" do
+      skip "no measured channel in the warehouse" if @channel.nil?
+      create_appointment(@channel.channel_id, role)
 
-    assert_equal ["promethean"], Authz.effective_roles(PROMETHEAN_USER_ID)
-    assert Channels::Audience.may_see?(@staff, @channel.channel_id)
-  end
+      assert_equal ["promethean"], Authz.effective_roles(PROMETHEAN_USER_ID)
+      assert Channels::Audience.may_see?(@staff, @channel.channel_id)
+      assert_includes Channels::Audience.for(@staff).pluck(:channel_id), @channel.channel_id
+    end
 
-  test "moderator appointment grants no role and no channel access" do
-    skip "no measured channel in the warehouse" if @channel.nil?
-    create_appointment(@channel.channel_id, "moderator")
+    test "unmeasured_for lists a #{role} channel missing from the warehouse" do
+      create_appointment(UNMEASURED_CHANNEL, role)
 
-    assert_empty Authz.effective_roles(PROMETHEAN_USER_ID)
-    assert_not Channels::Audience.may_see?(@staff, @channel.channel_id)
-  end
+      assert_equal [UNMEASURED_CHANNEL], Channels::Audience.unmeasured_for(@staff)
+      assert Channels::Audience.may_see?(@staff, UNMEASURED_CHANNEL)
+    end
 
-  test "unmeasured_for lists an appointed channel missing from the warehouse" do
-    create_appointment(UNMEASURED_CHANNEL)
+    test "channel page for a #{role} unmeasured channel shows analytics unavailable" do
+      create_appointment(UNMEASURED_CHANNEL, role)
+      sign_in_as(@staff)
 
-    assert_equal [UNMEASURED_CHANNEL], Channels::Audience.unmeasured_for(@staff)
-    assert Channels::Audience.may_see?(@staff, UNMEASURED_CHANNEL)
-  end
+      get channel_path(UNMEASURED_CHANNEL)
 
-  test "channel page for an unmeasured channel shows analytics unavailable" do
-    create_appointment(UNMEASURED_CHANNEL)
-    sign_in_as(@staff)
-
-    get channel_path(UNMEASURED_CHANNEL)
-
-    assert_response :success
-    assert_match(/Analytics unavailable/, response.body)
-    assert_match UNMEASURED_CHANNEL, response.body
+      assert_response :success
+      assert_match(/Analytics unavailable/, response.body)
+      assert_match UNMEASURED_CHANNEL, response.body
+    end
   end
 
   test "channel page without an appointment redirects to channels" do

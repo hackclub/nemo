@@ -41,12 +41,15 @@ class PrometheusMirrorTest < ActiveSupport::TestCase
     assert_equal [["C1", "manager"], ["C2", "moderator"]], appointments
   end
 
-  test "effective_roles includes promethean only for a manager appointment" do
+  test "effective_roles includes promethean for a manager or moderator appointment" do
     replace_appointments({ "channel_id" => "C1", "role" => "moderator" })
-    assert_empty Authz.effective_roles(USER_ID)
+    assert_equal ["promethean"], Authz.effective_roles(USER_ID)
 
     replace_appointments({ "channel_id" => "C1", "role" => "manager" })
     assert_equal ["promethean"], Authz.effective_roles(USER_ID)
+
+    replace_appointments
+    assert_empty Authz.effective_roles(USER_ID)
   end
 
   test "replace_appointments removes channels missing from the new list" do

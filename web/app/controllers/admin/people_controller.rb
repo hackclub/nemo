@@ -59,7 +59,7 @@ module Admin
       @role_channels = @roles.index_with { |role|
         Channels::Audience::Grant.live.where(role: role).pluck(:channel_id)
       }
-      @appointments = ::Prometheus::Appointment.managing.for_person(@user_id).order(:channel_id).to_a
+      @appointments = ::Prometheus::Appointment.for_person(@user_id).order(:channel_id).to_a
       channel_ids = (@channel_rows.map(&:channel_id) + @role_channels.values.flatten +
         @appointments.map(&:channel_id)).uniq
       @channel_names = Analytics::DimChannel.where(channel_id: channel_ids).index_by(&:channel_id)
@@ -79,7 +79,7 @@ module Admin
     def granted_user_ids
       (Authz::Grant.live.pluck(:user_id) +
         Channels::Audience::Grant.live.where.not(user_id: nil).pluck(:user_id) +
-        ::Prometheus::Appointment.managing.distinct.pluck(:user_id)).compact.uniq
+        ::Prometheus::Appointment.distinct.pluck(:user_id)).compact.uniq
     end
 
     ROLES_OF = "SELECT user_id, role FROM app.effective_role " \

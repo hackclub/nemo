@@ -270,8 +270,7 @@ class ChannelsController < ApplicationController
     return false if current_account.nil?
     return false if Analytics::DimChannel.exists?(channel_id: params[:id])
 
-    ::Prometheus::Appointment.managing.for_person(current_account.user_id)
-      .exists?(channel_id: params[:id])
+    ::Prometheus::Appointment.for_person(current_account.user_id).exists?(channel_id: params[:id])
   end
 
   def unmeasured_channel

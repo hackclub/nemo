@@ -33,13 +33,13 @@ module Channels
     end
 
     def self.appointed_ids_for(staff)
-      ::Prometheus::Appointment.managing.for_person(staff.user_id).select(:channel_id)
+      ::Prometheus::Appointment.for_person(staff.user_id).select(:channel_id)
     end
 
     def self.unmeasured_for(staff)
       return [] if staff.nil?
 
-      ::Prometheus::Appointment.managing.for_person(staff.user_id)
+      ::Prometheus::Appointment.for_person(staff.user_id)
         .where.not(channel_id: Analytics::DimChannel.select(:channel_id))
         .order(:channel_id)
         .pluck(:channel_id)
