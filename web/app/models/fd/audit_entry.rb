@@ -24,6 +24,12 @@ module Fd
       scope.oldest_first
     end
 
+    def self.thread_additions_for(case_ids)
+      where(entity_type: "thread", verb: "attached")
+        .where("after->>'case_id' IN (?)", Array(case_ids).map(&:to_s))
+        .oldest_first
+    end
+
     def self.trail_for(case_id:, action_ids: [], report_ids: [])
       pairs = { "case" => Array(case_id), "action" => action_ids, "report" => report_ids }
         .reject { |_type, ids| ids.blank? }

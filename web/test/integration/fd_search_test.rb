@@ -148,6 +148,16 @@ class FdSearchTest < ActionDispatch::IntegrationTest
     assert_equal fd_case_path(kase), row["url"]
   end
 
+  test "search with Slack thread link skips a thread removed from the case" do
+    kase = make_case(opened_at: 2.days.ago)
+    Fd::CaseThread.create!(case_id: kase.id, channel_id: "C0266FRGV", thread_ts: "1754487721.123456",
+      added_by: "UFF1", removed_at: Time.current, removed_by: "UFF1")
+
+    rows = group("https://hackclub.slack.com/archives/C0266FRGV/p1754487721123456", "case")&.fetch("rows")
+
+    assert_empty Array(rows)
+  end
+
   test "search with hash prefix only returns scope case and case group" do
     make_case(opened_at: 2.days.ago)
     payload = search_json("#")

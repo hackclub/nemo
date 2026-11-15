@@ -1,0 +1,20 @@
+<% message = local_assigns[:message] %>
+<% author_id = message && message["user"] %>
+<% author = author_id ? member_link(author_id) : message && (message.dig("bot_profile", "name") || message["username"]) %>
+<%= avatar(author_id) %>
+<div class="grow">
+  <% if message %>
+    <div class="msg-text msg-rich"><%= slack_message_html(message) %></div>
+  <% else %>
+    <p class="msg-text msg-gone"><%= local_assigns.fetch(:state, "Loading") %></p>
+  <% end %>
+  <span class="sub"><%= safe_join([author, channel_mention(thread.channel_id),
+        clock_stamp(Time.at(thread.thread_ts.to_r), "%-d %b %Y, %H:%M")].compact_blank, " · ") %></span>
+</div>
+<span class="lrow-right">
+  <%= link_to "Open in Slack", slack_thread_url(thread.channel_id, thread.thread_ts), class: "btn btn-sm",
+        target: "_blank", rel: "noopener" %>
+  <%= gated_button "case.open", "Remove", fd_case_thread_path(kase, thread), on: kase, method: :delete,
+        css: "btn btn-sm",
+        form: { data: { turbo_frame: "_top", turbo_confirm: "Remove this thread from the case?" } } %>
+</span>

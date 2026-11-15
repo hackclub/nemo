@@ -3,13 +3,13 @@ module Fd
     Entry = Struct.new(:at, :title, :mark, :chips, :detail, :body, keyword_init: true)
 
     def self.for(kase, reports:, actions:, notes:, participants: [], assignees: [],
-      erasures: [], names: nil, channels: nil)
-      new(kase, reports:, actions:, notes:, participants:, assignees:, erasures:, names:,
+      erasures: [], additions: [], names: nil, channels: nil)
+      new(kase, reports:, actions:, notes:, participants:, assignees:, erasures:, additions:, names:,
         channels:).entries
     end
 
     def initialize(kase, reports:, actions:, notes:, participants: [], assignees: [],
-      erasures: [], names: nil, channels: nil)
+      erasures: [], additions: [], names: nil, channels: nil)
       @case = kase
       @reports = reports
       @actions = actions
@@ -17,18 +17,19 @@ module Fd
       @participants = participants
       @assignees = assignees
       @erasures = erasures
+      @additions = additions
       @names = names || Names.none
       @channels = channels || ChannelNames.none
     end
 
     def entries
-      (report_entries + case_entries + action_entries + note_entries + erasure_entries)
+      (report_entries + case_entries + action_entries + note_entries + addition_entries + erasure_entries)
         .compact.sort_by { |entry| [entry.at, entry.title] }
     end
 
     private
 
-    attr_reader :reports, :actions, :notes, :participants, :assignees, :erasures, :names,
+    attr_reader :reports, :actions, :notes, :participants, :assignees, :erasures, :additions, :names,
       :channels
 
     def kase = @case
@@ -204,18 +205,33 @@ module Fd
     ERASED = {
       "note" => "Note removed",
       "participant" => "Participant removed",
-      "thread" => "Thread detached",
+      "thread" => "Slack thread removed",
       "citation" => "Flag removed"
     }.freeze
+
+    ERASURE_MARKS = { "note" => "note", "thread" => "thread" }.freeze
 
     def erasure_entries
       erasures.map do |row|
         Entry.new(
           at: row.occurred_at,
           title: ERASED.fetch(row.entity_type, "Removed"),
-          mark: row.entity_type == "note" ? "note" : "owner",
+          mark: ERASURE_MARKS.fetch(row.entity_type, "owner"),
           chips: [],
           detail: erasure_detail(row)
+        )
+      end
+    end
+
+    def addition_entries
+      additions.map do |row|
+        channel_id = (row.after || {})["channel_id"]
+        Entry.new(
+          at: row.occurred_at,
+          title: "Slack thread added",
+          mark: "thread",
+          chips: [],
+          detail: ["by #{names[row.actor_user_id]}", (channels[channel_id] if channel_id)].compact.join(" · ")
         )
       end
     end
@@ -224,7 +240,7 @@ module Fd
       removed = row.before || {}
       target = case row.entity_type
       when "participant" then names[removed["user_id"]]
-      when "thread" then removed["channel_id"]
+      when "thread" then channels[removed["channel_id"]] if removed["channel_id"]
       end
 
       ["by #{names[row.actor_user_id]}", target].compact.join(" · ")

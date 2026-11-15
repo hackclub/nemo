@@ -1,0 +1,8 @@
+<%= turbo_frame_tag dom_id(@thread, :row) do %>
+  <% if @slack_message.message? %>
+    <%= render "fd/case_threads/row", kase: @case, thread: @thread, message: @slack_message.message %>
+  <% else %>
+    <%= render "fd/case_threads/row", kase: @case, thread: @thread,
+          state: @slack_message.error == :not_found ? "Message unavailable" : "Slack unavailable" %>
+  <% end %>
+<% end %>

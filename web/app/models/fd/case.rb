@@ -10,7 +10,7 @@ module Fd
       .sort_by { |_key, row| row["pick"] }.map(&:first).freeze
     def self.category_label(key) = InfractionCategory.label(key)
 
-    has_many :threads, class_name: "Fd::CaseThread", foreign_key: :case_id,
+    has_many :threads, -> { visible }, class_name: "Fd::CaseThread", foreign_key: :case_id,
       inverse_of: :kase, dependent: nil
     has_many :participants, class_name: "Fd::CaseParticipant", foreign_key: :case_id,
       inverse_of: :kase, dependent: nil
@@ -302,7 +302,7 @@ module Fd
       return Case.none if pairs.empty?
 
       evidence = pairs
-        .map { |channel_id, thread_ts| CaseThread.evidence.where(channel_id:, thread_ts:) }
+        .map { |channel_id, thread_ts| CaseThread.visible.evidence.where(channel_id:, thread_ts:) }
         .reduce { |scope, pair| scope.or(pair) }
       ids = evidence.where.not(case_id: id).distinct.pluck(:case_id)
       ids.any? ? Case.where(id: ids) : Case.none

@@ -211,6 +211,10 @@
       <% end %>
     <% end %>
 
+    <% if @tab == "threads" %>
+      <%= render "slack_threads", kase: @case, threads: @threads %>
+    <% end %>
+
     <% if @tab == "timeline" %>
       <div class="section-head">
         <h2 class="section-title">Timeline</h2>
@@ -397,6 +401,24 @@
     <div class="modal-foot">
       <button type="button" class="btn btn-ghost" data-action="click->modal#close">Cancel</button>
       <%= submit_tag "Save", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>
+
+<%= render layout: "fd/modal", locals: { id: "add-thread", title: "Add Slack thread",
+      open: params[:do] == "thread" } do %>
+  <%= form_with url: fd_case_threads_path(@case), method: :post, html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <label class="field-label">
+        Slack link
+        <%= text_field_tag :link, submitted_value(:link), class: "input", id: nil, autocomplete: "off",
+              spellcheck: false, inputmode: "url", required: true %>
+      </label>
+      <%= field_wrong(:link) %>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-action="click->modal#close">Cancel</button>
+      <%= submit_tag "Add", class: "btn btn-primary" %>
     </div>
   <% end %>
 <% end %>

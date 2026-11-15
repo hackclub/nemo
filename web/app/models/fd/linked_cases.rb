@@ -23,7 +23,7 @@ module Fd
 
     def self.threads(thread_ts)
       found = {}
-      CaseThread.where(thread_ts: thread_ts).pluck(:channel_id, :thread_ts, :case_id)
+      CaseThread.visible.where(thread_ts: thread_ts).pluck(:channel_id, :thread_ts, :case_id)
         .each { |channel_id, ts, case_id| found[[channel_id, ts]] ||= [case_id, nil] }
       Case.where(card_thread_ts: thread_ts).pluck(:card_channel_id, :card_thread_ts, :id)
         .each { |channel_id, ts, case_id| found[[channel_id, ts]] = [case_id, nil] }

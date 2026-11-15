@@ -6,7 +6,7 @@ module Fd
     permit "case.open", only: :create
     permit "case.categorise", on: -> { Case.find(params[:id]) }, only: :update
 
-    TABS = %w[report people actions notes timeline].freeze
+    TABS = %w[report people actions notes threads timeline].freeze
 
     def index
       @open_modal = params[:open] == "1"
@@ -17,7 +17,7 @@ module Fd
       @case = Case.find(params[:id])
 
       family = @case.family_ids
-      @threads = CaseThread.where(case_id: family).primary_first.to_a
+      @threads = CaseThread.visible.where(case_id: family).primary_first.to_a
       @participants = CaseParticipant.where(case_id: family).by_role.to_a
         .uniq { |person| [person.user_id, person.role] }
       @others = @participants.reject { |person| person.role == "subject" }
@@ -60,7 +60,12 @@ module Fd
       @case_person = CasePerson.for(@people.selected, kase: @case, actions: @actions,
         notes: @notes, messages: @thread_messages)
       @cited_shares = IntakeShare.for_messages(@conversation_messages.map(&:id))
+      @erased_entries = AuditEntry.erasures_for(case_id: family,
+        note_ids: Note.where(case_id: family).ids).to_a
+      @thread_additions = AuditEntry.thread_additions_for(family).to_a
       @channels = ChannelNames.for(@threads.map(&:channel_id) + cited_channel_ids +
+        @erased_entries.filter_map { |row| (row.before || {})["channel_id"] } +
+        @thread_additions.filter_map { |row| (row.after || {})["channel_id"] } +
         @thread_guards.map(&:channel_id) + @thread_locks.map(&:channel_id) +
         @action_standing.map(&:channel_id) +
         @actions.filter_map { |action| action.details["channel_id"] } +
@@ -75,8 +80,6 @@ module Fd
       @mentioned = @case.mentioned_but_unlogged(
         notes: @notes + @standing_notes.values.flatten, reports: @reports
       )
-      @erased_entries = AuditEntry.erasures_for(case_id: family,
-        note_ids: Note.where(case_id: family).ids).to_a
       @names = Names.for(page_ids)
       @timeline = CaseTimeline.for(
         @case,
@@ -86,6 +89,7 @@ module Fd
         participants: @participants,
         assignees: @assignees,
         erasures: @erased_entries,
+        additions: @thread_additions,
         names: @names,
         channels: @channels,
       )
@@ -99,6 +103,7 @@ module Fd
         "report" => @reports.size,
         "actions" => @actions.size,
         "notes" => @notes.size,
+        "threads" => @threads.size,
         "people" => @participants.size,
         "timeline" => @timeline.size
       }
@@ -182,6 +187,7 @@ module Fd
         @thread_messages.map(&:purged_by),
         @threads.map(&:added_by),
         @erased_entries.map(&:actor_user_id),
+        @thread_additions.map(&:actor_user_id),
         cited_authors,
         Array(@pane_people)
       ]

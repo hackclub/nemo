@@ -1299,7 +1299,7 @@ module FdHelper
 
   CASE_TAB_LABELS = {
     "report" => "Report", "people" => "People",
-    "actions" => "Actions", "notes" => "Notes", "timeline" => "Timeline"
+    "actions" => "Actions", "notes" => "Notes", "threads" => "Slack threads", "timeline" => "Timeline"
   }.freeze
 
   TIMELINE_TONES = {

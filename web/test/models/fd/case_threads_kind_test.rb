@@ -16,6 +16,20 @@ class Fd::CaseThreadsKindTest < ActiveSupport::TestCase
     assert attach(@one, "C1", "1.1").evidence?
   end
 
+  test "kind_for is internal in an FD channel and evidence anywhere else" do
+    Fd::AppSetting.set_firehouse_channel("GTESTFIRE", by: "UFF1")
+
+    assert_equal "internal", Fd::CaseThread.kind_for("GTESTFIRE")
+    assert_equal "evidence", Fd::CaseThread.kind_for("C0LOUNGE")
+  end
+
+  test "sibling_cases skips a thread removed from the other case" do
+    attach(@one, "C1", "1.1", is_primary: true)
+    attach(@two, "C1", "1.1", removed_at: Time.current, removed_by: "UFF1")
+
+    assert_empty @one.sibling_cases
+  end
+
   test "sibling_cases includes cases sharing an evidence thread" do
     attach(@one, "C1", "1.1", is_primary: true)
     attach(@two, "C1", "1.1", is_primary: true)

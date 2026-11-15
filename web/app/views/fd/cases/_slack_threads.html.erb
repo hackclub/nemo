@@ -1,0 +1,26 @@
+<div class="section-head">
+  <h2 class="section-title">Slack threads</h2>
+  <div class="section-tools">
+    <%= opens_modal "case.open", "Add thread", opens: "add-thread", on: kase %>
+  </div>
+</div>
+<% if threads.any? %>
+  <div class="list case-threads">
+    <% threads.each do |thread| %>
+      <%= turbo_frame_tag dom_id(thread, :row), src: fd_case_thread_path(kase, thread), loading: "lazy",
+            target: "_top", class: "lrow case-thread" do %>
+        <%= render "fd/case_threads/row", kase: kase, thread: thread %>
+      <% end %>
+    <% end %>
+  </div>
+<% else %>
+  <div class="empty">
+    <span class="empty-mark">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v12H8l-3 3z"/></svg>
+    </span>
+    <p class="empty-title">No Slack threads</p>
+    <div class="empty-do">
+      <%= opens_modal "case.open", "Add thread", opens: "add-thread", on: kase, css: "btn btn-primary" %>
+    </div>
+  </div>
+<% end %>

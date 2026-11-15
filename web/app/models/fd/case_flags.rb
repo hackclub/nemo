@@ -77,7 +77,7 @@ module Fd
 
     def same_thread_case_id(kase)
       kase.threads.each do |thread|
-        other = CaseThread.joins(:kase)
+        other = CaseThread.visible.joins(:kase)
           .merge(Case.unresolved.not_duplicate)
           .where(channel_id: thread.channel_id, thread_ts: thread.thread_ts)
           .where.not(case_id: kase.id)
@@ -93,6 +93,7 @@ module Fd
       JOIN fd.case_threads ct2
         ON ct1.channel_id = ct2.channel_id AND ct1.thread_ts = ct2.thread_ts
        AND ct1.case_id < ct2.case_id
+       AND ct1.removed_at IS NULL AND ct2.removed_at IS NULL
       JOIN fd.cases ca ON ca.id = ct1.case_id AND ca.resolved_at IS NULL AND ca.duplicate_of IS NULL
       JOIN fd.cases cb ON cb.id = ct2.case_id AND cb.resolved_at IS NULL AND cb.duplicate_of IS NULL
       LIMIT 1

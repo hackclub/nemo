@@ -87,6 +87,17 @@ class Fd::CaseFlagsTest < ActiveSupport::TestCase
     assert_empty Fd::CaseFlags.for_case(b)
   end
 
+  test "for_case does not flag a thread removed from one of the cases" do
+    a = make_case(opened_at: 2.days.ago)
+    b = make_case(opened_at: 1.day.ago)
+    Fd::CaseThread.create!(case_id: a.id, channel_id: "C1", thread_ts: "1.1", kind: "evidence",
+      added_by: "UFF1", added_at: Time.current, removed_at: Time.current, removed_by: "UFF1")
+    Fd::CaseThread.create!(case_id: b.id, channel_id: "C1", thread_ts: "1.1",
+      kind: "evidence", is_primary: true, added_by: "UFF1", added_at: Time.current)
+
+    assert_nil Fd::CaseFlags.for_case(b).find { |flag| flag.headline.include?("share") }
+  end
+
   test "for_queue returns one unclaimed flag for several unclaimed cases" do
     make_case(opened_at: 6.days.ago)
     make_case(opened_at: 8.days.ago)

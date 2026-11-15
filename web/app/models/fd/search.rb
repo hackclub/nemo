@@ -86,7 +86,7 @@ module Fd
 
     def thread_groups
       [
-        group("case", Case.where(id: CaseThread.where(coordinates).select(:case_id)).newest_first)
+        group("case", Case.where(id: CaseThread.visible.where(coordinates).select(:case_id)).newest_first)
       ]
     end
 

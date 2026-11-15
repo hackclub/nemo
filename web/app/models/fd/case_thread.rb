@@ -6,9 +6,14 @@ module Fd
 
     KINDS = %w[evidence internal].freeze
 
-    scope :primary_first, -> { order(is_primary: :desc, added_at: :asc) }
+    scope :primary_first, -> { order(is_primary: :desc, added_at: :asc, id: :asc) }
     scope :evidence, -> { where(kind: "evidence") }
     scope :internal, -> { where(kind: "internal") }
+    scope :visible, -> { where(removed_at: nil) }
+
+    def self.kind_for(channel_id)
+      AppSetting.fd_channel_ids.include?(channel_id) ? "internal" : "evidence"
+    end
 
     def coordinates
       [channel_id, thread_ts]
@@ -20,6 +25,14 @@ module Fd
 
     def internal?
       kind == "internal"
+    end
+
+    def removed?
+      removed_at.present?
+    end
+
+    def audit_values
+      { "case_id" => case_id, "channel_id" => channel_id, "thread_ts" => thread_ts, "kind" => kind }
     end
   end
 end
