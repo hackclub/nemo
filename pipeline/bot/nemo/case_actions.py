@@ -2,7 +2,7 @@ import logging
 
 from psycopg.types.json import Jsonb
 
-from bot.core import access, audit
+from bot.core import access, audit, merges
 from bot.core.case import reopen_reports
 from bot.nemo import views
 
@@ -146,6 +146,11 @@ def has_open_report(conn, case_id):
     return conn.execute(OPEN_REPORT, (case_id,)).fetchone() is not None
 
 
+def merged_into(conn, case_id):
+    row = conn.execute(PARENT, (case_id,)).fetchone()
+    return row[0] if row else None
+
+
 def family_root(conn, case_id):
     current = case_id
     for _ in range(FAMILY_HOPS):
@@ -227,9 +232,10 @@ def remove_assignee(conn, case_id, user_id, by):
 
 
 def reopen(conn, case_id, by):
+    unmerged = merges.unmerge(conn, case_id, by)
     row = conn.execute(REOPEN, (case_id,)).fetchone()
     if row is None:
-        return False
+        return unmerged is not None
 
     reopen_reports(conn, case_id, by)
     audit.record(
@@ -487,10 +493,14 @@ def find_case_options(conn, text):
 
 def merge(conn, target_id, duplicate_ids, by):
     closed = []
-    for case_id in sorted(set(duplicate_ids) - {target_id}):
+    selected = set(duplicate_ids) - {target_id}
+    along = {one for case_id in selected for one in merges.family(conn, case_id) if one != case_id}
+    for case_id in sorted(selected - along - set(merges.family(conn, target_id))):
         before = conn.execute(MERGE_STATE, (case_id,)).fetchone()
         if before is None or before[2] == target_id:
             continue
+        if before[2] is not None:
+            merges.release_previous(conn, case_id, by)
         row = conn.execute(MERGE, (target_id, case_id)).fetchone()
         audit.record(
             conn, "case", case_id, "resolved", by,
@@ -507,10 +517,13 @@ def repoint_merged(conn, target_id, case_ids, by):
         return []
     rows = conn.execute(MERGED_FAMILY, (list(case_ids), target_id)).fetchall()
     for case_id, duplicate_of in rows:
+        merges.release_previous(conn, case_id, by)
         conn.execute(REPOINT, (target_id, case_id))
         audit.record(conn, "case", case_id, "merged", by,
                      before={"duplicate_of": duplicate_of}, after={"duplicate_of": target_id})
-    return [row[0] for row in rows]
+    repointed = [row[0] for row in rows]
+    merges.copy_tags(conn, target_id, [*case_ids, *repointed], by)
+    return repointed
 
 
 def default_resolution(conn, case_id):

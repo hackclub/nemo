@@ -11,6 +11,7 @@ CLAIM = "case_claim"
 RESOLVE = "case_resolve"
 REOPEN = "case_reopen"
 REOPEN_AFTER_REPLY = "case_reopen_after_reply"
+UNMERGE = "case_unmerge"
 
 OPEN = "open"
 RESOLVED = "resolved"
@@ -122,6 +123,17 @@ def reopen_confirm(case_id):
     }
 
 
+def unmerge_confirm(case_id, into_case_id=None):
+    text = f"Unmerge case {case_id} from case {into_case_id}?" if into_case_id else f"Unmerge case {case_id}?"
+    return {
+        "title": lengths.plain("Unmerge case"),
+        "text": {"type": "mrkdwn", "text": text},
+        "confirm": lengths.plain("Unmerge"),
+        "deny": lengths.plain("Cancel"),
+        "style": "danger",
+    }
+
+
 def reopen_prompt_blocks(case_id, text):
     return [
         {"type": "section", "text": {"type": "mrkdwn", "text": text}},
@@ -134,7 +146,7 @@ def buttons(case):
     kind = state(case)
     more = button(MORE, "More", case_id)
     if kind == MERGED:
-        return [more]
+        return [more, button(UNMERGE, "Unmerge", case_id, confirm=unmerge_confirm(case_id, case.get("duplicate_of")))]
     if kind == RESOLVED:
         return [more, button(REOPEN, "Reopen", case_id, "primary", reopen_confirm(case_id))]
     log = button(LOG_ACTION, "Log action", case_id)

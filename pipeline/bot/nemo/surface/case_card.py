@@ -1,6 +1,6 @@
 import logging
 
-from bot.core import access, session
+from bot.core import access, merges, session
 from bot.nemo import case_actions, case_modal, case_queue, channel, profile, thread_commands, views
 from bot.nemo.surface import on_action, on_view
 from bot.nemo.surface.reaction_watch import after_reopen, after_resolve
@@ -14,6 +14,7 @@ CASE_CATEGORY = case_actions.CASE_CATEGORY
 SUBJECTS = channel.SUBJECTS
 
 ALREADY_OPEN = "Case {case_id} is already open"
+NOT_MERGED = "Case {case_id} is not merged"
 ALREADY_RESOLVED = "Case {case_id} is already resolved"
 UNCHANGED_CATEGORY = "Category unchanged"
 NOT_ASSIGNED = "Select an assignee"
@@ -132,6 +133,38 @@ def reopen_from_card(ctx):
     if in_case_view(ctx):
         return update_case_view(ctx, case_id)
     return case_id
+
+
+@on_action(card.UNMERGE, needs="case.resolve")
+def unmerge_from_card(ctx):
+    case_id = action_case_id(ctx)
+    if case_id is None:
+        return None
+    with session() as conn:
+        into_case_id = case_actions.merged_into(conn, case_id)
+        for one in (case_id, into_case_id):
+            if one is None:
+                continue
+            allowed, refusal = access.may(conn, ctx.user_id, "case.resolve", one)
+            if not allowed:
+                return ctx.post_ephemeral(refusal)
+        unmerged = merges.unmerge(conn, case_id, ctx.user_id) if into_case_id else None
+    if unmerged is None:
+        if in_case_view(ctx):
+            return update_case_view(ctx, case_id, NOT_MERGED.format(case_id=case_id))
+        return ctx.post_ephemeral(NOT_MERGED.format(case_id=case_id))
+    after_unmerge(ctx.client, case_id, unmerged["into_case_id"], ctx.user_id)
+    if in_case_view(ctx):
+        return update_case_view(ctx, case_id)
+    return case_id
+
+
+def after_unmerge(client, case_id, into_case_id, user_id):
+    with session() as conn:
+        for one in (case_id, into_case_id):
+            channel.refresh_card(client, conn, one)
+            case_queue.refresh_card(client, conn, one)
+        channel.post_unmerge_note(client, conn, case_id, into_case_id, user_id)
 
 
 @on_action(card.REOPEN_AFTER_REPLY, needs="case.reopen")

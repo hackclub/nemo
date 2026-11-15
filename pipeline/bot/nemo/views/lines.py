@@ -45,6 +45,15 @@ def merged(actor, duplicate_ids, target_id, url_of=lambda case_id: None):
     return entries
 
 
+def unmerged(actor, case_id, into_case_id, url_of=lambda case_id: None):
+    linked = number(case_id, url_of(case_id))
+    into = number(into_case_id, url_of(into_case_id))
+    return [
+        (into_case_id, f"<@{actor}> unmerged case {linked} from case {into} {THIS_CASE}"),
+        (case_id, f"<@{actor}> unmerged case {linked} {THIS_CASE} from case {into}"),
+    ]
+
+
 def resolved(actor, case_id, label=None):
     line = f"<@{actor}> resolved case {case_id}"
     return f"{line}: {label}" if label else line

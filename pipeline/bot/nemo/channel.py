@@ -370,6 +370,13 @@ def post_line(client, conn, case_id, text):
         return None
 
 
+def post_unmerge_note(client, conn, case_id, into_case_id, by):
+    entries = views.lines.unmerged(by, case_id, into_case_id, case_url)
+    for line_case_id, text in entries:
+        post_line(client, conn, line_case_id, text)
+    return entries
+
+
 def post_merge_note(client, conn, target_id, closed, by):
     if not closed:
         return None

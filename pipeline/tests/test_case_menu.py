@@ -196,17 +196,40 @@ def test_merge_missing_case_returns_empty_list():
     assert case_actions.merge(Conn({}), 23, [25], "UME") == []
 
 
-def test_repoint_merged_points_cases_merged_into_duplicates_at_the_target():
+def test_repoint_merged_moves_cases_merged_into_duplicates_onto_the_target():
     class FamilyConn(Conn):
         def fetchall(self):
-            return [(40, 25), (41, 40)] if "WITH RECURSIVE family" in self.executed[-1][0] else []
+            sql = self.executed[-1][0]
+            if sql == case_actions.MERGED_FAMILY:
+                return [(40, 25), (41, 25)]
+            return []
 
     conn = FamilyConn({})
 
     assert case_actions.repoint_merged(conn, 23, [25], "UME") == [40, 41]
     assert [args for sql, args in conn.executed if sql == case_actions.REPOINT] == [(23, 40), (23, 41)]
-    assert [(row[3], row[4], row[5].obj) for row in audit_rows(conn)] == \
-        [(40, "merged", {"duplicate_of": 25}), (41, "merged", {"duplicate_of": 40})]
+    assert [(row[3], row[4], row[5].obj) for row in audit_rows(conn) if row[4] == "merged"] == \
+        [(40, "merged", {"duplicate_of": 25}), (41, "merged", {"duplicate_of": 25})]
+
+
+def test_repoint_merged_releases_old_tags_before_moving_and_copies_tags_after():
+    from bot.core import merges
+
+    class FamilyConn(Conn):
+        def fetchall(self):
+            sql = self.executed[-1][0]
+            if sql == case_actions.MERGED_FAMILY:
+                return [(40, 25)]
+            return []
+
+    conn = FamilyConn({})
+
+    case_actions.repoint_merged(conn, 23, [25], "UME")
+
+    statements = [sql for sql, _args in conn.executed]
+    assert statements.index(merges.LIVE_MERGE) < statements.index(case_actions.REPOINT)
+    assert [args for sql, args in conn.executed if sql == merges.COPY_TAGS] == \
+        [{"target": 23, "sources": [25, 40], "by": "UME"}]
 
 
 def test_repoint_merged_without_merged_cases_does_nothing():
@@ -214,6 +237,43 @@ def test_repoint_merged_without_merged_cases_does_nothing():
 
     assert case_actions.repoint_merged(conn, 23, [], "UME") == []
     assert conn.executed == []
+
+
+def test_merge_skips_cases_already_in_the_target_family():
+    class FamilyConn(Conn):
+        def fetchall(self):
+            if "WITH RECURSIVE family" in self.executed[-1][0]:
+                return [(23,), (25,), (40,)]
+            return super().fetchall()
+
+    conn = FamilyConn({MERGE_STATE: (None, None, None), MERGE_UPDATE: ("2026-10-11",)})
+
+    assert case_actions.merge(conn, 23, [25, 40, 31], "UME") == [31]
+
+
+def test_tags_of_merged_cases_are_copied_once_the_merge_settles():
+    copied = []
+
+    class TagConn(Conn):
+        def fetchall(self):
+            sql, args = self.executed[-1]
+            if "INSERT INTO fd.case_tags" in sql:
+                copied.append(args)
+                return [(7,)]
+            if "SELECT name FROM fd.tags" in sql:
+                return [("spam",)]
+            return super().fetchall()
+
+    conn = TagConn({MERGE_STATE: (None, None, None), MERGE_UPDATE: ("2026-10-11",)})
+
+    closed = case_actions.merge(conn, 23, [25, 31], "UME")
+    assert copied == []
+    case_actions.repoint_merged(conn, 23, closed, "UME")
+
+    assert copied == [{"target": 23, "sources": [25, 31], "by": "UME"}]
+    tag_audit = [row for row in audit_rows(conn) if row[2] == "case_tag"]
+    assert [(row[3], row[4], row[6].obj) for row in tag_audit] == \
+        [(23, "added", {"tags": ["spam"], "source_case_ids": [25, 31]})]
 
 
 def test_find_case_options_matches_number_prefix_and_escapes_like_wildcards():

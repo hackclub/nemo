@@ -99,11 +99,23 @@ def test_icon_present_only_with_subject_icon():
     (case(), ["case_log_action", "case_more", "case_claim"], ["case_claim"]),
     (case(assignees=["UMOD"]), ["case_log_action", "case_more", "case_resolve"], ["case_resolve"]),
     (case(resolved_at=UPDATED, resolution="no_action"), ["case_more", "case_reopen"], ["case_reopen"]),
-    (case(resolved_at=UPDATED, resolution="duplicate"), ["case_more"], []),
+    (case(resolved_at=UPDATED, resolution="duplicate"), ["case_more", "case_unmerge"], []),
 ])
 def test_buttons_follow_case_state(row, ids, primary):
     assert button_ids(row) == ids
     assert primary_of(row) == primary
+
+
+def test_unmerge_button_asks_for_confirmation_naming_both_cases():
+    block = case_card.card_block(case(resolved_at=UPDATED, resolution="duplicate", duplicate_of=23))
+    unmerge = block["actions"][-1]
+
+    assert unmerge["text"]["text"] == "Unmerge"
+    assert "style" not in unmerge
+    assert unmerge["value"] == "49"
+    assert unmerge["confirm"]["text"]["text"] == "Unmerge case 49 from case 23?"
+    assert unmerge["confirm"]["confirm"]["text"] == "Unmerge"
+    assert unmerge["confirm"]["style"] == "danger"
 
 
 def test_reopen_button_asks_for_confirmation():

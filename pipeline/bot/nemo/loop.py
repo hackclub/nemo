@@ -65,7 +65,7 @@ SELECT r.case_id
 FROM fd.case_reports r
 JOIN fd.cases c ON c.id = r.case_id
 WHERE r.forwarded_ts IS NOT NULL
-  AND (c.resolved_at IS NULL OR c.resolved_at > now() - interval '2 days')
+  AND (c.resolved_at IS NULL OR c.updated_at > now() - interval '2 days')
 ORDER BY c.updated_at DESC
 LIMIT 200
 """
