@@ -43,6 +43,10 @@ def test_on_a_case_sql_prefers_primary_thread():
     assert "is_primary DESC" in guards.ON_A_CASE
 
 
+def test_on_a_case_sql_skips_removed_threads():
+    assert "removed_at IS NULL" in guards.ON_A_CASE
+
+
 def test_open_guard_audit_row_includes_case_id():
     conn = Conn({"FROM fd.case_threads": (412,), "INSERT INTO fd.thread_guards": (9,)})
     guards.open_guard(conn, guards.LOCK, "C1", "100.000", "UMOD", "enough")

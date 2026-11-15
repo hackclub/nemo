@@ -28,6 +28,12 @@ def note(**over):
     return row
 
 
+def thread(**over):
+    row = {"channel_id": "C0LOUNGE", "thread_ts": "1762790400.123456"}
+    row.update(over)
+    return row
+
+
 def build(row=None, reporter=NAMED, entries=(), notes=(), **kwargs):
     return case_view.build_view(row or case(), reporter, list(entries), list(notes), **kwargs)
 
@@ -180,6 +186,40 @@ def test_build_view_lists_notes_with_author_and_body():
     text = "\n".join(texts(build(notes=[note()])))
 
     assert "*<@UMOD>*" in text and "likely an alternate" in text
+
+
+def test_thread_text_names_channel_links_thread_and_posted_time():
+    posted = dt.datetime(2025, 11, 10, 16, 0, tzinfo=dt.UTC)
+
+    assert case_view.thread_text(thread()) == (
+        "<#C0LOUNGE>  <https://hackclub.slack.com/archives/C0LOUNGE/p1762790400123456|Open thread>\n"
+        f"_<!date^1762790400^{{ago}}|{short_end(posted)}>_"
+    )
+
+
+def test_build_view_lists_slack_threads_after_notes():
+    view = build(entries=[entry()], notes=[note()], threads=[thread()])
+
+    headers = [one["text"]["text"] for one in view["blocks"] if one["type"] == "header"]
+    position = next(at for at, one in enumerate(view["blocks"])
+                    if one["type"] == "header" and one["text"]["text"] == "Slack threads")
+    assert headers == ["Actions", "Notes", "Slack threads"]
+    assert "Open thread>" in view["blocks"][position + 1]["text"]["text"]
+
+
+def test_build_view_without_threads_omits_threads_section():
+    view = build(notes=[note()])
+
+    assert [one["text"]["text"] for one in view["blocks"] if one["type"] == "header"] == ["Notes"]
+
+
+def test_build_view_shows_newest_threads_and_links_rest_to_threads_tab():
+    threads = [thread(channel_id=f"C{one:03d}") for one in range(case_view.THREADS_SHOWN + 2)]
+
+    text = "\n".join(texts(build(threads=threads)))
+
+    assert "<#C000>" not in text and f"<#C{case_view.THREADS_SHOWN + 1:03d}>" in text
+    assert "<https://fe/cases/49?tab=threads|2 more in Fire Engine>" in text
 
 
 def test_build_view_notice_is_first_block():

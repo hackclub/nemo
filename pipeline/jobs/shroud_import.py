@@ -40,7 +40,7 @@ SELECT id, card_channel_id, resolved_at, resolution FROM fd.cases WHERE card_thr
 UNION ALL
 SELECT c.id, t.channel_id, c.resolved_at, c.resolution
 FROM fd.case_threads t JOIN fd.cases c ON c.id = t.case_id
-WHERE t.thread_ts = %(ts)s
+WHERE t.thread_ts = %(ts)s AND t.removed_at IS NULL
 LIMIT 1
 """
 

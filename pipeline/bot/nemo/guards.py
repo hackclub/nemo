@@ -114,7 +114,7 @@ WHERE id = %s
 
 ON_A_CASE = """
 SELECT case_id FROM fd.case_threads
-WHERE channel_id = %s AND thread_ts = %s
+WHERE channel_id = %s AND thread_ts = %s AND removed_at IS NULL
 ORDER BY is_primary DESC, added_at LIMIT 1
 """
 

@@ -10,6 +10,7 @@ OPENING_SQL = "mirrored_as = 'card'"
 ACTION_COUNT = "SELECT count(*) FROM fd.actions"
 ENTRIES_SQL = "type_key, target_user_id, expires_at, reason"
 NOTES_SQL = "FROM fd.notes"
+THREADS_SQL = "FROM fd.case_threads"
 
 
 class Conn:
@@ -152,3 +153,19 @@ def test_build_passes_notice_to_view():
     view = case_modal.build(None, Conn({QUEUE_CASE: queue_case_row(12)}), 12, "Case 12 is already open")
 
     assert view["blocks"][0]["elements"][0]["text"] == "Case 12 is already open"
+
+
+
+def test_build_lists_slack_threads_of_the_case():
+    conn = Conn({QUEUE_CASE: queue_case_row(12)}, {THREADS_SQL: [("C0LOUNGE", "1762790400.123456")]})
+
+    text = str(case_modal.build(None, conn, 12)["blocks"])
+
+    assert "<#C0LOUNGE>  <https://hackclub.slack.com/archives/C0LOUNGE/p1762790400123456|Open thread>" in text
+    assert "<!date^1762790400^{ago}" in text
+    assert "Added by" not in text
+
+
+def test_threads_sql_covers_merged_cases_and_skips_removed_threads():
+    assert "c.duplicate_of = f.id" in case_modal.CASE_THREADS
+    assert "removed_at IS NULL" in case_modal.CASE_THREADS

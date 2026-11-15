@@ -16,6 +16,18 @@ WHERE case_id = %s AND deleted_at IS NULL
 ORDER BY created_at, id
 """
 
+CASE_THREADS = """
+WITH RECURSIVE family(id) AS (
+    SELECT %(case_id)s::bigint
+    UNION
+    SELECT c.id FROM fd.cases c JOIN family f ON c.duplicate_of = f.id
+)
+SELECT channel_id, thread_ts
+FROM fd.case_threads
+WHERE case_id IN (SELECT id FROM family) AND removed_at IS NULL
+ORDER BY is_primary DESC, added_at, id
+"""
+
 
 def fetch_entries(conn, case_id):
     return [
@@ -36,6 +48,13 @@ def fetch_notes(conn, case_id):
     return [
         {"author": row[0], "body": row[1], "created_at": row[2]}
         for row in conn.execute(CASE_NOTES, (case_id,)).fetchall()
+    ]
+
+
+def fetch_threads(conn, case_id):
+    return [
+        {"channel_id": row[0], "thread_ts": row[1]}
+        for row in conn.execute(CASE_THREADS, {"case_id": case_id}).fetchall()
     ]
 
 
@@ -70,4 +89,5 @@ def build(client, conn, case_id, notice=None):
         fetch_notes(conn, case_id),
         thread_url_of(case),
         notice,
+        fetch_threads(conn, case_id),
     )

@@ -1,5 +1,8 @@
+import datetime as dt
+
 from bot.core.formatting import escape, escape_but_member_tokens, outside_token, short_end
 from bot.nemo.views import action, case_card, lengths
+from bot.nemo.views.activity import message_url
 
 CALLBACK = "case_view"
 
@@ -11,6 +14,7 @@ BODY_LIMIT = case_card.BODY_LIMIT
 ASSIGNEES_SHOWN = 10
 ACTIONS_SHOWN = 6
 NOTES_SHOWN = 5
+THREADS_SHOWN = 5
 REASON_LIMIT = 200
 NOTE_LIMIT = 500
 
@@ -99,6 +103,12 @@ def note_text(note):
     return f"*<@{note['author']}>*  _{ago(note['created_at'])}_\n{escape(shorten(note['body'], NOTE_LIMIT))}"
 
 
+def thread_text(thread):
+    link = message_url(thread["channel_id"], thread["thread_ts"])
+    posted = dt.datetime.fromtimestamp(float(thread["thread_ts"]), tz=dt.UTC)
+    return f"<#{thread['channel_id']}>  <{link}|Open thread>\n_{ago(posted)}_"
+
+
 def listing(title, items, render, shown, url):
     if not items:
         return []
@@ -120,7 +130,7 @@ def footer(thread_url, url):
     return [context("   ".join(links))] if links else []
 
 
-def build_view(case, reporter, entries, notes, thread_url=None, notice=None):
+def build_view(case, reporter, entries, notes, thread_url=None, notice=None, threads=()):
     url = case.get("url")
     blocks = []
     if notice:
@@ -129,6 +139,8 @@ def build_view(case, reporter, entries, notes, thread_url=None, notice=None):
     blocks.append(card_block(case, reporter))
     blocks += listing("Actions", entries, action_text, ACTIONS_SHOWN, url)
     blocks += listing("Notes", notes, note_text, NOTES_SHOWN, url)
+    blocks += listing("Slack threads", list(threads), thread_text, THREADS_SHOWN,
+                      f"{url}?tab=threads" if url else None)
     blocks += footer(thread_url, url)
     return {
         "type": "modal",

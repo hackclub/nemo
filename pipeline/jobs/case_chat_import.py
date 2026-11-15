@@ -30,7 +30,7 @@ THREADS = """
 SELECT card_channel_id, card_thread_ts FROM fd.cases
 WHERE id = %(case_id)s AND card_channel_id IS NOT NULL AND card_thread_ts IS NOT NULL
 UNION
-SELECT channel_id, thread_ts FROM fd.case_threads WHERE case_id = %(case_id)s
+SELECT channel_id, thread_ts FROM fd.case_threads WHERE case_id = %(case_id)s AND removed_at IS NULL
 UNION
 SELECT card_channel_id, forwarded_ts FROM fd.case_reports
 WHERE case_id = %(case_id)s AND forwarded_ts IS NOT NULL AND card_channel_id IS NOT NULL
