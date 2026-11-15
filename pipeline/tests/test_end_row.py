@@ -12,7 +12,7 @@ NOW = dt.datetime(2027, 10, 16, 9, 30, tzinfo=dt.UTC)
 
 
 def test_end_row_renders_label_then_date_and_time_pickers():
-    label, row = lengths.end_row("end", "End, optional")
+    label, row = lengths.end_row("end", "End", optional=True)
 
     assert label["text"]["text"] == "*End, optional*"
     assert row["block_id"] == "end"
@@ -30,18 +30,17 @@ def test_end_row_accepts_initial_values_error_and_custom_action_ids():
     assert blocks[2]["elements"][0]["text"] == "Select the end date."
 
 
-@pytest.mark.parametrize(("tz", "expected"), [(ATHENS, "Europe/Athens"), ("Africa/Cairo", "Africa/Cairo")])
-def test_end_row_shows_the_viewer_zone_on_the_time_picker(tz, expected):
-    time_element = lengths.end_row("end", "End", tz=tz)[1]["elements"][1]
+@pytest.mark.parametrize(("tz", "optional", "expected"), [
+    (ATHENS, True, "*End (Europe/Athens, optional)*"),
+    ("Africa/Cairo", False, "*End (Africa/Cairo)*"),
+    (dt.UTC, True, "*End (UTC, optional)*"),
+    (None, False, "*End*"),
+])
+def test_end_row_label_names_the_viewer_zone(tz, optional, expected):
+    label, row = lengths.end_row("end", "End", tz=tz, optional=optional)
 
-    assert time_element["timezone"] == expected
-
-
-@pytest.mark.parametrize("tz", [None, dt.UTC])
-def test_end_row_without_a_known_zone_leaves_the_time_picker_bare(tz):
-    time_element = lengths.end_row("end", "End", tz=tz)[1]["elements"][1]
-
-    assert "timezone" not in time_element
+    assert label["text"]["text"] == expected
+    assert all("timezone" not in element for element in row["elements"])
 
 
 def test_initial_of_converts_to_the_viewer_zone():

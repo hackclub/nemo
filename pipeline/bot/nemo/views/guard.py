@@ -141,8 +141,8 @@ def lock_modal(channel_id, thread_ts, submit, blocks, extend=False):
 
 def lock_view(channel_id, thread_ts, values=None, end_error=None, tz=None):
     values = values or {}
-    blocks = lengths.end_row(END, "End, optional", (values.get("end_date"), values.get("end_time")), end_error,
-                             tz=tz)
+    blocks = lengths.end_row(END, "End", (values.get("end_date"), values.get("end_time")), end_error,
+                             tz=tz, optional=True)
     blocks.append(reason_block(values.get("reason")))
     return lock_modal(channel_id, thread_ts, "Lock", blocks)
 

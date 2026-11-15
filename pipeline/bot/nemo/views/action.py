@@ -377,9 +377,8 @@ def build_blocks(case_id, values, guard_status=None, end_error=None, open_report
 
     if takes_expiry(key):
         built += lengths.end_row(
-            UNTIL, "End" if needs_expiry(key) else "End, optional",
-            (values.get("expires_on"), values.get("expires_time")), end_error,
-            date_action=UNTIL, time_action=UNTIL_TIME, tz=values.get("timezone"),
+            UNTIL, "End", (values.get("expires_on"), values.get("expires_time")), end_error,
+            date_action=UNTIL, time_action=UNTIL_TIME, tz=values.get("timezone"), optional=not needs_expiry(key),
         )
         built.append(duration_block(values.get("duration")))
 

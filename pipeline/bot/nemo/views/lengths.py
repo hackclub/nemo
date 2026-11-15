@@ -27,22 +27,30 @@ def initial_of(at, tz=dt.UTC):
 
 
 def zone_name(tz):
-    return tz if isinstance(tz, str) else getattr(tz, "key", None)
+    if tz is None or isinstance(tz, str):
+        return tz
+    return getattr(tz, "key", None) or tz.tzname(None)
 
 
-def end_row(block_id, label, initial=(None, None), error=None, date_action=None, time_action=None, tz=None):
+def end_label(label, tz=None, optional=False):
+    zone = zone_name(tz)
+    if zone:
+        return f"{label} ({zone}, optional)" if optional else f"{label} ({zone})"
+    return f"{label}, optional" if optional else label
+
+
+def end_row(block_id, label, initial=(None, None), error=None, date_action=None, time_action=None, tz=None,
+            optional=False):
     date_element = {"type": "datepicker", "action_id": date_action or f"{block_id}{DATE_SUFFIX}",
                     "placeholder": plain("Select a date")}
     time_element = {"type": "timepicker", "action_id": time_action or f"{block_id}{TIME_SUFFIX}",
                     "placeholder": plain("Select a time")}
-    if zone_name(tz):
-        time_element["timezone"] = zone_name(tz)
     if initial[0]:
         date_element["initial_date"] = initial[0]
     if initial[1]:
         time_element["initial_time"] = initial[1]
     blocks = [
-        {"type": "section", "text": {"type": "mrkdwn", "text": f"*{label}*"}},
+        {"type": "section", "text": {"type": "mrkdwn", "text": f"*{end_label(label, tz, optional)}*"}},
         {"type": "actions", "block_id": block_id, "elements": [date_element, time_element]},
     ]
     if error:

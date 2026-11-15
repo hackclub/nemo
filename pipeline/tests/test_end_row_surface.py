@@ -31,27 +31,31 @@ VIEW_BUILDERS = [
 ]
 
 
-def time_zones(view):
+def end_labels(view):
+    blocks = view["blocks"]
     return [
-        element.get("timezone")
-        for block in view["blocks"] if block["type"] == "actions"
-        for element in block["elements"] if element["type"] == "timepicker"
+        blocks[index - 1]["text"]["text"]
+        for index, block in enumerate(blocks)
+        if block["type"] == "actions" and any(element["type"] == "timepicker" for element in block["elements"])
     ]
 
 
 ZONED_BUILDERS = [
-    lambda tz: guard.lock_view("C1", "1.1", tz=tz),
-    lambda tz: guard.locked_view("C1", "1.1", CURRENT_LOCK, tz),
-    lambda tz: slowmode.build_view("C1", None, tz=tz),
-    lambda tz: action.build_view(1, ["USUBJECT"], values={"type_key": "temp_ban"}, timezone=tz.key),
+    (lambda tz: guard.lock_view("C1", "1.1", tz=tz), "*End (Africa/Cairo, optional)*"),
+    (lambda tz: guard.locked_view("C1", "1.1", CURRENT_LOCK, tz), "*New end (Africa/Cairo)*"),
+    (lambda tz: slowmode.build_view("C1", None, tz=tz), "*End (Africa/Cairo, optional)*"),
+    (lambda tz: action.build_view(1, ["USUBJECT"], values={"type_key": "temp_ban"}, timezone=tz.key),
+     "*End (Africa/Cairo)*"),
+    (lambda tz: action.build_view(1, ["USUBJECT"], values={"type_key": "shush"}, timezone=tz.key),
+     "*End (Africa/Cairo, optional)*"),
 ]
 
 
-@pytest.mark.parametrize("build", ZONED_BUILDERS)
-def test_every_time_picker_shows_the_viewer_zone(build, monkeypatch):
+@pytest.mark.parametrize(("build", "label"), ZONED_BUILDERS)
+def test_every_end_label_names_the_viewer_zone(build, label, monkeypatch):
     monkeypatch.setattr(edit, "categories", lambda: {"spam": "Spam"})
 
-    assert time_zones(build(ZoneInfo("Africa/Cairo"))) == ["Africa/Cairo"]
+    assert end_labels(build(ZoneInfo("Africa/Cairo"))) == [label]
 
 
 @pytest.mark.parametrize("build", VIEW_BUILDERS)

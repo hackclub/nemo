@@ -56,4 +56,4 @@ def timezone(client, user_id):
 
 
 def timezone_name(client, user_id):
-    return getattr(timezone(client, user_id), "key", None)
+    return getattr(timezone(client, user_id), "key", "UTC")

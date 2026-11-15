@@ -67,7 +67,7 @@ def test_locked_view_shows_status_and_prefills_current_end_in_viewer_zone():
     assert view["blocks"][0]["text"]["text"] == (
         f"*Locked* until {short_end(END)} (1d 5h left) for *Heated argument*, set by <@{MOD}>")
     assert view["blocks"][0]["accessory"]["action_id"] == card.UNLOCK
-    assert view["blocks"][1]["text"]["text"] == "*New end*"
+    assert view["blocks"][1]["text"]["text"] == "*New end (Europe/Athens)*"
     date_element, time_element = end_row_elements(view)
     assert (date_element["initial_date"], time_element["initial_time"]) == ("2027-10-17", "17:30")
     assert view["submit"]["text"] == "Save"

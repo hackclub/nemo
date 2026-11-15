@@ -46,7 +46,7 @@ def test_build_view_new_has_empty_end_row_and_default_fields():
     date_element, time_element = end_row_elements(view)
 
     assert block_ids(view) == [None, card.END, card.SECONDS, card.REASON, card.EXEMPT]
-    assert view["blocks"][0]["text"]["text"] == "*End, optional*"
+    assert view["blocks"][0]["text"]["text"] == "*End (UTC, optional)*"
     assert view["submit"]["text"] == "Enable"
     assert (date_element["type"], time_element["type"]) == ("datepicker", "timepicker")
     assert "initial_date" not in date_element and "initial_time" not in time_element
