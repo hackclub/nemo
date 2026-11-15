@@ -20,6 +20,7 @@ from bot.nemo.surface import (
     autoresponse,  # noqa: F401
     bot_watch,  # noqa: F401
     case_card,  # noqa: F401
+    case_refs,  # noqa: F401
     channel_watch,  # noqa: F401
     end_row,  # noqa: F401
     join_watch,  # noqa: F401
