@@ -37,11 +37,16 @@ module Fd
         WHERE case_id IS NULL AND subject_user_id IS NOT NULL AND deleted_at IS NULL
         GROUP BY subject_user_id
       ),
+      actioned AS (
+        SELECT DISTINCT target_user_id AS user_id FROM fd.actions
+        WHERE reversed_at IS NULL AND target_user_id IS NOT NULL
+      ),
       link_totals AS (
-        SELECT user_id, count(*) AS links
-        FROM fd.member_link_side
-        WHERE score >= :strong
-        GROUP BY user_id
+        SELECT s.user_id, count(*) AS links,
+               count(*) FILTER (WHERE s.other_id IN (SELECT user_id FROM actioned)) AS linked_actions
+        FROM fd.member_link_side s
+        WHERE s.score >= :strong AND NOT_DIFFERENT_PEOPLE
+        GROUP BY s.user_id
       ),
       involved AS (
         SELECT p.user_id FROM fd.case_participants p
@@ -65,6 +70,7 @@ module Fd
                coalesce(action_totals.priors, 0) AS priors,
                coalesce(note_totals.notes, 0) AS notes,
                coalesce(link_totals.links, 0) AS links,
+               coalesce(link_totals.linked_actions, 0) AS linked_actions,
                coalesce(m.is_deleted, false) AS deactivated,
                m.display_name, m.handle
         FROM candidate
@@ -129,11 +135,16 @@ module Fd
         WHERE case_id IS NULL AND subject_user_id IN (SELECT user_id FROM matched_user) AND deleted_at IS NULL
         GROUP BY subject_user_id
       ),
+      actioned AS (
+        SELECT DISTINCT target_user_id AS user_id FROM fd.actions
+        WHERE reversed_at IS NULL AND target_user_id IS NOT NULL
+      ),
       link_totals AS (
-        SELECT user_id, count(*) AS links
-        FROM fd.member_link_side
-        WHERE score >= :strong AND user_id IN (SELECT user_id FROM matched_user)
-        GROUP BY user_id
+        SELECT s.user_id, count(*) AS links,
+               count(*) FILTER (WHERE s.other_id IN (SELECT user_id FROM actioned)) AS linked_actions
+        FROM fd.member_link_side s
+        WHERE s.score >= :strong AND s.user_id IN (SELECT user_id FROM matched_user) AND NOT_DIFFERENT_PEOPLE
+        GROUP BY s.user_id
       ),
       candidate AS (SELECT user_id, match_rank FROM matched_user),
       roster AS (
@@ -148,6 +159,7 @@ module Fd
                coalesce(action_totals.priors, 0) AS priors,
                coalesce(note_totals.notes, 0) AS notes,
                coalesce(link_totals.links, 0) AS links,
+               coalesce(link_totals.linked_actions, 0) AS linked_actions,
                coalesce(m.is_deleted, false) AS deactivated,
                m.display_name, m.handle
         FROM candidate
@@ -198,13 +210,13 @@ module Fd
     end
 
     def full_aggregates
-      AGGREGATES.sub(NAMES, include_context? ? DISPLAY_COLUMNS + CONTEXT_COLUMNS : DISPLAY_COLUMNS)
+      AGGREGATES.sub("NOT_DIFFERENT_PEOPLE", MemberLink::NOT_DIFFERENT_PEOPLE).sub(NAMES, include_context? ? DISPLAY_COLUMNS + CONTEXT_COLUMNS : DISPLAY_COLUMNS)
         .sub("CONTEXT_JOIN", include_context? ? CONTEXT_JOIN : "")
         .sub("CANDIDATE_SOURCE", candidate_source)
     end
 
     def listed(ids)
-      LISTED_AGGREGATES.sub(NAMES, DISPLAY_COLUMNS + CONTEXT_COLUMNS).sub("LISTED_IDS") { ids }
+      LISTED_AGGREGATES.sub("NOT_DIFFERENT_PEOPLE", MemberLink::NOT_DIFFERENT_PEOPLE).sub(NAMES, DISPLAY_COLUMNS + CONTEXT_COLUMNS).sub("LISTED_IDS") { ids }
     end
 
     def paged_ids
@@ -243,6 +255,7 @@ module Fd
       when "noted" then "notes > 0"
       when "clean" then "subject_of = 0 AND logged_in = 0"
       when "linked" then "links > 0"
+      when "alts" then "linked_actions > 0"
       when "gone" then "deactivated"
       end
     end

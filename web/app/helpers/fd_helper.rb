@@ -1171,6 +1171,14 @@ module FdHelper
         cachet_tone: avatar_tone(user_id)))
   end
 
+  def alt_names(alt_ids)
+    return nil if alt_ids.blank?
+
+    shown = alt_ids.first(2).map { |user_id| person_name(user_id) }
+    extra = alt_ids.size - shown.size
+    safe_join(["alt: ", safe_join(shown, ", "), (" +#{extra}" if extra.positive?)].compact)
+  end
+
   def person_name(user_id)
     name = names[user_id]
     return name unless names.unknown?(user_id)

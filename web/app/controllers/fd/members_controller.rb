@@ -5,7 +5,7 @@ module Fd
       @layout = params[:layout] == "table" ? "table" : "split"
       @query = MemberQuery.new(params, actor: current_account)
       @rows = @query.rows
-      @names = Names.for(@rows.map(&:user_id))
+      @names = Names.for(@rows.map(&:user_id) + @query.alts.values.flatten)
       @context = MemberContext.for(@rows.map(&:user_id))
       @grants = Authz::Grant.live.roles.where(user_id: @rows.map(&:user_id))
         .index_by(&:user_id)
@@ -33,7 +33,8 @@ module Fd
       load_member_audit if @tab == "audit"
       @guard_history = @tab == "enforcement" ? guard_history : []
       load_purges
-      @names = Names.for(@record.referenced_user_ids + @pane_rows.map(&:user_id) + audit_member_ids +
+      @names = Names.for(@record.referenced_user_ids + @pane_rows.map(&:user_id) + @pane_query.alts.values.flatten +
+        audit_member_ids +
         @guard_history.flat_map(&:referenced_user_ids) + @purges.map(&:asked_by))
       @member = @names.member(@user_id)
       @account = MemberAccount.find_by(user_id: @user_id)
@@ -57,7 +58,7 @@ module Fd
       query = MemberQuery.new(params, actor: current_account)
       rows = query.rows
       ids = rows.map(&:user_id)
-      @names = Names.for(ids)
+      @names = Names.for(ids + query.alts.values.flatten)
       more = if query.pages > query.page
         fd_member_pane_path(query.page_params(query.page + 1).merge({ open: params[:open].presence }.compact))
       end
@@ -65,7 +66,7 @@ module Fd
       render partial: "fd/members/pane_rows", layout: false, locals: {
         rows: rows, context: MemberContext.for(ids),
         grants: Authz::Grant.live.roles.where(user_id: ids).index_by(&:user_id),
-        open_id: params[:open].to_s.presence, more: more, query_params: query.to_params
+        open_id: params[:open].to_s.presence, more: more, query_params: query.to_params, alts: query.alts
       }
     end
 

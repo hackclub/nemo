@@ -17,6 +17,7 @@
     <span class="queue-subject trunc">
       <%= member_name %> &middot;
       <%= member_context&.cohort_at ? "joined #{member_context.cohort_at.to_date.strftime('%b %Y')}" : "join date n/a" %>
+      <% if (alt_line = alt_names(local_assigns.fetch(:alts, {})[row.user_id])) %>&middot; <%= alt_line %><% end %>
     </span>
 
     <% if row.cases.positive? || row.in_force.positive? || row.open_cases.positive? || grant %>
