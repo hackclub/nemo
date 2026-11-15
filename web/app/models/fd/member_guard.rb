@@ -106,6 +106,15 @@ module Fd
       nil
     end
 
+    def self.record_deactivation!(subject_id:, by:, reason:, opened_at: nil, case_id: nil)
+      transaction(requires_new: true) do
+        create!(kind: DEACTIVATION, subject_id: subject_id, opened_by: by, reason: reason, case_id: case_id,
+          opened_at: opened_at || Time.current, state: LIVE, enforced_by: NEMO, enforcement_status: HELD)
+      end
+    rescue ActiveRecord::RecordNotUnique
+      nil
+    end
+
     def attach_to!(case_id)
       updated_count = self.class.active.where(id: id, case_id: nil)
         .update_all(case_id: case_id, updated_at: Time.current)

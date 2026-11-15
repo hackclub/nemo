@@ -109,6 +109,7 @@ Rails.application.routes.draw do
     resources :members, only: [:index, :show] do
       resources :notes, only: [:create, :update, :destroy], controller: "member_notes"
       resources :guards, only: [:create, :update, :destroy], controller: "member_guards"
+      resource :reactivation, only: [:create]
       resource :standing, only: [:show], controller: "member_standings"
       resource :logins, only: [:show], controller: "member_logins"
       resources :mentions, only: [:index], controller: "member_mentions"

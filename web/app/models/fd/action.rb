@@ -13,6 +13,7 @@ module Fd
     FROM_THREAD_LOCK = TABLE.select { |_key, row| row["thread_lock"] }.keys.freeze
     ENFORCE = TABLE.transform_values { |row| row["enforce"] }.compact.freeze
     ENFORCEABLE = ENFORCE.keys.freeze
+    ACCOUNT_BANS = ENFORCE.select { |_key, row| row["guard"] == "deactivation" }.keys.freeze
     ADDITIONAL = TABLE.reject { |_key, row| row.keys.intersect?(%w[enforce expires channel thread_lock]) }
       .keys.freeze
     SHARED_COLUMNS = %w[case_id target_user_id decided_by performed_by performed_at source_app reason
@@ -31,6 +32,9 @@ module Fd
     scope :for_target, ->(user_id) { where(target_user_id: user_id) }
     scope :expiring, -> { live.where.not(expires_at: nil) }
     scope :in_force, ->(at = Time.current) { live.where("expires_at > ?", at) }
+    scope :running_bans_on, lambda { |user_id, at = Time.current|
+      live.for_target(user_id).where(type_key: ACCOUNT_BANS).where("expires_at IS NULL OR expires_at > ?", at)
+    }
 
     def self.guard_kind(type_key) = ENFORCE.dig(type_key, "guard")
 

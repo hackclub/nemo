@@ -1,5 +1,7 @@
 module Fd
   class MemberGuardsController < BaseController
+    include ReactivatesMembers
+
     permit "member.guard"
 
     MEMBER_ID = /\A[UW][A-Z0-9]{2,}\z/
@@ -56,6 +58,8 @@ module Fd
       return redirect_to(fd_member_path(guard.subject_id), alert: "Set in Firehose") if guard.firehose?
       return cancel(guard) if guard.scheduled?
 
+      return reactivate(guard) if guard.deactivation?
+
       previous_state = guard.state
       writing do
         guard.lift!(by: current_account.user_id, reason: lift_reason)
@@ -85,16 +89,38 @@ module Fd
         notice: "Deactivation rescheduled · starts #{ShortDate.starting(new_start)}"
     end
 
+    def reactivate(guard)
+      lifted = nil
+      ended = []
+      writing do
+        lifted = lift_deactivation(guard, lift_reason)
+        ended = end_bans(guard.subject_id, lift_reason)
+      end
+
+      redirect_to fd_member_path(guard.subject_id),
+        notice: reactivation_notice(lifted || guard, ended, display_name(guard.subject_id))
+    end
+
     def cancel(guard)
       reason = params[:cancel_reason].to_s.strip.presence
       writing do
         guard.cancel!(by: current_account.user_id, reason: reason)
         audit(guard, "cancelled", before: { "state" => MemberGuard::SCHEDULED },
           after: { "state" => guard.state, "cancel_reason" => reason })
+        reverse_actions(guard, reason || "Scheduled deactivation cancelled")
       end
 
       redirect_to fd_member_path(guard.subject_id),
         notice: "Scheduled deactivation cancelled on #{display_name(guard.subject_id)}"
+    end
+
+    def reverse_actions(guard, reason)
+      now = Time.current
+      guard.actions.live.order(:id).each do |action|
+        action.update_columns(reversed_at: now, reversed_by: current_account.user_id, reversal_reason: reason)
+        audit(action, "reversed", before: { "reversed_at" => nil },
+          after: { "reversed_at" => now, "reversed_by" => current_account.user_id, "reason" => reason })
+      end
     end
 
     def created_notice(guard)

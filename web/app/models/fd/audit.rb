@@ -49,6 +49,7 @@ module Fd
       turned_on turned_off
       tuned reset
       renamed merged unmerged
+      ended recorded
       acked muted
       exported
       queued cancelled scheduled

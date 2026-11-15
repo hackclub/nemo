@@ -53,6 +53,9 @@
             <% if standing_guard %>
               <%= opens_modal "member.deactivate", menu_item("hand", "Reactivate"),
                     opens: "guard-lift-#{standing_guard.id}" %>
+            <% elsif @account&.deactivated %>
+              <%= opens_modal "member.deactivate", menu_item("hand", "Reactivate"),
+                    opens: "member-reactivate" %>
             <% else %>
               <%= opens_modal "member.deactivate", menu_item("deactivate", "Deactivate"),
                     opens: "member-deactivate" %>
@@ -154,6 +157,9 @@
 <% if may_deactivate && standing_guard.nil? %>
   <%= render "deactivate", user_id: @user_id, member: names[@user_id],
         handle: member_handle %>
+  <% if @account&.deactivated %>
+    <%= render "reactivate", user_id: @user_id, member: names[@user_id] %>
+  <% end %>
 <% end %>
 
 <% if may_note %>

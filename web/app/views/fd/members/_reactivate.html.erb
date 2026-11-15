@@ -1,0 +1,16 @@
+<%= render layout: "fd/modal", locals: { id: "member-reactivate", title: "Reactivate", sub: member,
+      open: params[:do] == "reactivate" } do %>
+  <%= form_with url: fd_member_reactivation_path(user_id), method: :post, html: { autocomplete: "off" } do %>
+    <div class="modal-body">
+      <label class="field-label">
+        Reason
+        <%= text_area_tag :reason, nil, rows: 3, class: "textarea", id: nil %>
+      </label>
+      <%= field_wrong(:reactivate_reason) %>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-action="click->modal#close">Cancel</button>
+      <%= submit_tag "Reactivate", class: "btn btn-danger" %>
+    </div>
+  <% end %>
+<% end %>

@@ -1475,6 +1475,7 @@ module FdHelper
     "citation/unflagged" => "Unflagged a message on",
     "action/performed" => "Logged an action on",
     "action/reversed" => "Reversed an action on",
+    "action/ended" => "Ended an action on",
     "action/edited" => "Edited an action on",
     "member/looked_up" => "Looked up",
     "report/received" => "Received report on",
