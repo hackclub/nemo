@@ -26,11 +26,17 @@ def initial_of(at, tz=dt.UTC):
     return local.date().isoformat(), local.strftime("%H:%M")
 
 
-def end_row(block_id, label, initial=(None, None), error=None, date_action=None, time_action=None):
+def zone_name(tz):
+    return tz if isinstance(tz, str) else getattr(tz, "key", None)
+
+
+def end_row(block_id, label, initial=(None, None), error=None, date_action=None, time_action=None, tz=None):
     date_element = {"type": "datepicker", "action_id": date_action or f"{block_id}{DATE_SUFFIX}",
                     "placeholder": plain("Select a date")}
     time_element = {"type": "timepicker", "action_id": time_action or f"{block_id}{TIME_SUFFIX}",
                     "placeholder": plain("Select a time")}
+    if zone_name(tz):
+        time_element["timezone"] = zone_name(tz)
     if initial[0]:
         date_element["initial_date"] = initial[0]
     if initial[1]:

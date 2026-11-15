@@ -30,6 +30,20 @@ def test_end_row_accepts_initial_values_error_and_custom_action_ids():
     assert blocks[2]["elements"][0]["text"] == "Select the end date."
 
 
+@pytest.mark.parametrize(("tz", "expected"), [(ATHENS, "Europe/Athens"), ("Africa/Cairo", "Africa/Cairo")])
+def test_end_row_shows_the_viewer_zone_on_the_time_picker(tz, expected):
+    time_element = lengths.end_row("end", "End", tz=tz)[1]["elements"][1]
+
+    assert time_element["timezone"] == expected
+
+
+@pytest.mark.parametrize("tz", [None, dt.UTC])
+def test_end_row_without_a_known_zone_leaves_the_time_picker_bare(tz):
+    time_element = lengths.end_row("end", "End", tz=tz)[1]["elements"][1]
+
+    assert "timezone" not in time_element
+
+
 def test_initial_of_converts_to_the_viewer_zone():
     at = dt.datetime(2027, 10, 17, 14, 30, tzinfo=dt.UTC)
 

@@ -197,7 +197,8 @@ def test_post_action_log_channel_ban_text_names_channel_and_expiry(monkeypatch):
     }, "UMOD")
 
     posted = client.posted[0]
-    assert posted["blocks"][0]["text"]["text"] == "Channel ban from #general until 10 Mar"
+    assert posted["blocks"][0]["text"]["text"] == "Channel ban from #general"
+    assert posted["blocks"][1]["elements"][0]["text"] == "Against <@USUB> until 10 Mar, logged by <@UMOD>"
     assert conn.args_for("SELECT name FROM raw.channel_dim")[0] == ("CGEN",)
 
 

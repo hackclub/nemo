@@ -84,29 +84,37 @@ def test_log_blocks_quotes_reason():
     assert quoted["text"]["text"] == "> kept at it after being asked to stop"
 
 
-def test_log_blocks_channel_ban_header_has_channel_name_and_end_date():
+def test_log_blocks_channel_ban_header_has_channel_name_and_byline_has_end_date():
     built = action.log_blocks(
         submission(type_key="channel_ban", channel_id="CGEN", expires_on="2026-03-10"), MOD,
         channel_name="general",
     )
-    assert built[0]["text"]["text"] == "Channel ban from #general until 10 Mar"
+    assert built[0]["text"]["text"] == "Channel ban from #general"
+    assert built[1]["elements"][0]["text"] == f"Against <@{USER_ID}> until 10 Mar, logged by <@{MOD}>"
 
 
 def test_log_blocks_channel_ban_without_name_uses_channel_id():
     built = action.log_blocks(
         submission(type_key="channel_ban", channel_id="CGEN", expires_on="2026-03-10"), MOD,
     )
-    assert built[0]["text"]["text"] == "Channel ban from CGEN until 10 Mar"
+    assert built[0]["text"]["text"] == "Channel ban from CGEN"
 
 
-def test_log_blocks_shush_header_has_end_date_without_channel():
+def test_log_blocks_shush_byline_has_end_date_without_channel():
     built = action.log_blocks(submission(type_key="shush", expires_on="2026-03-10"), MOD)
-    assert built[0]["text"]["text"] == "Shush until 10 Mar"
+    assert built[0]["text"]["text"] == "Shush"
+    assert built[1]["elements"][0]["text"] == f"Against <@{USER_ID}> until 10 Mar, logged by <@{MOD}>"
 
 
-def test_log_blocks_temp_ban_header_has_end_date():
-    built = action.log_blocks(submission(type_key="temp_ban", expires_on="2026-03-10"), MOD)
-    assert built[0]["text"]["text"] == "Temporary ban until 10 Mar"
+def test_log_blocks_temp_ban_end_time_is_a_date_token():
+    built = action.log_blocks(
+        submission(type_key="temp_ban", expires_on="2026-03-10", expires_time="20:00", timezone="Africa/Cairo"), MOD,
+    )
+    assert built[0]["text"]["text"] == "Temporary ban"
+    assert built[1]["elements"][0]["text"] == (
+        f"Against <@{USER_ID}> until <!date^1773165600^{{date_short_pretty}} at {{time}}|10 Mar 2026, 18:00 UTC>, "
+        f"logged by <@{MOD}>"
+    )
 
 
 def test_log_blocks_perma_ban_header_has_no_end_date():

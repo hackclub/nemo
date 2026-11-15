@@ -2,7 +2,9 @@ import datetime as dt
 
 import pytest
 
-from bot.core.formatting import short_date
+from zoneinfo import ZoneInfo
+
+from bot.core.formatting import short_end_token
 from bot.nemo.views import action
 
 def submission(**over):
@@ -144,12 +146,12 @@ def test_expiry_with_duration_counts_from_submission(text, length):
     assert action.expiry({"duration": text, "submitted_at": submitted_at}) == submitted_at + length
 
 
-def test_header_text_with_duration_shows_computed_end():
+def test_byline_with_duration_shows_computed_end_as_date_token():
     submitted_at = dt.datetime.now(dt.UTC).replace(second=0, microsecond=0)
     values = submission(duration="3d", submitted_at=submitted_at)
 
-    assert action.header_text(values) == f"Shush until {short_date((submitted_at + dt.timedelta(days=3)).date())}, " \
-        f"{(submitted_at + dt.timedelta(days=3)):%H:%M} UTC"
+    assert action.byline(values, "UMOD") == \
+        f"Against <@U1> until {short_end_token(submitted_at + dt.timedelta(days=3))}, logged by <@UMOD>"
 
 
 def test_validation_errors_time_without_date_is_refused():
@@ -161,8 +163,21 @@ def test_validation_errors_date_and_time_is_valid():
     assert action.validation_errors(submission(expires_on="2026-10-16", expires_time="11:00")) is None
 
 
-def test_header_text_with_expiry_shows_end_date_and_time():
+def test_byline_with_expiry_reads_the_end_in_the_loggers_zone():
     on = dt.date.today() + dt.timedelta(days=4)
-    values = submission(expires_on=on.isoformat(), expires_time="14:30")
+    values = submission(expires_on=on.isoformat(), expires_time="14:30", timezone="Africa/Cairo")
+    end = dt.datetime.combine(on, dt.time(14, 30), ZoneInfo("Africa/Cairo"))
 
-    assert action.header_text(values) == f"Shush until {short_date(on)}, 14:30 UTC"
+    assert action.byline(values, "UMOD") == f"Against <@U1> until {short_end_token(end)}, logged by <@UMOD>"
+
+
+def test_header_text_leaves_the_end_to_the_byline():
+    values = submission(expires_on=(dt.date.today() + dt.timedelta(days=4)).isoformat(), expires_time="14:30")
+
+    assert action.header_text(values) == "Shush"
+
+
+def test_byline_without_end_leaves_it_out():
+    assert action.byline(submission(), "UMOD") == "Against <@U1>, logged by <@UMOD>"
+    assert action.byline(submission(type_key="warning", duration="3d"), "UMOD") == \
+        "Against <@U1>, logged by <@UMOD>"

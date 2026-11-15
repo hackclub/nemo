@@ -139,9 +139,10 @@ def lock_modal(channel_id, thread_ts, submit, blocks, extend=False):
     }
 
 
-def lock_view(channel_id, thread_ts, values=None, end_error=None):
+def lock_view(channel_id, thread_ts, values=None, end_error=None, tz=None):
     values = values or {}
-    blocks = lengths.end_row(END, "End, optional", (values.get("end_date"), values.get("end_time")), end_error)
+    blocks = lengths.end_row(END, "End, optional", (values.get("end_date"), values.get("end_time")), end_error,
+                             tz=tz)
     blocks.append(reason_block(values.get("reason")))
     return lock_modal(channel_id, thread_ts, "Lock", blocks)
 
@@ -184,7 +185,7 @@ def locked_view(channel_id, thread_ts, current, tz=dt.UTC, values=None, end_erro
     initial = lengths.initial_of(current["expires_at"], tz)
     if values and (values.get("end_date") or values.get("end_time")):
         initial = (values.get("end_date"), values.get("end_time"))
-    blocks = [lock_status_block(current, now), *lengths.end_row(END, "New end", initial, end_error)]
+    blocks = [lock_status_block(current, now), *lengths.end_row(END, "New end", initial, end_error, tz=tz)]
     return lock_modal(channel_id, thread_ts, "Save", blocks, extend=True)
 
 

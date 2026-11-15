@@ -101,7 +101,7 @@ def build_view(channel_id, thread_ts, current=None, tz=dt.UTC, values=None, end_
     reason = values.get("reason") or (current and current["reason"])
     exempt = values["exempt"] if "exempt" in values else (current["exempt"] if current else ())
     blocks = [status_block(current, now)] if current else []
-    blocks += lengths.end_row(END, "End, optional", initial, end_error)
+    blocks += lengths.end_row(END, "End, optional", initial, end_error, tz=tz)
     blocks += [seconds_block(seconds), reason_block(reason), exempt_block(exempt)]
     return {
         "type": "modal",

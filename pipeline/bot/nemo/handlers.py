@@ -50,7 +50,8 @@ def register(app, on_reply=None):
             subjects = [target, *[one for one in subjects if one != target]]
         return client.views_open(
             trigger_id=body["trigger_id"],
-            view=views.action.build_view(case_id, subjects, category_row[0] if category_row else None),
+            view=views.action.build_view(case_id, subjects, category_row[0] if category_row else None,
+                                         timezone=profile.timezone_name(client, user_id)),
         )
 
     def guard_status_for(conn, case_id, values):
@@ -70,6 +71,7 @@ def register(app, on_reply=None):
 
         case_id = int(submitted_view["private_metadata"])
         values = views.action.submitted_values(submitted_view["state"])
+        values["timezone"] = profile.timezone_name(client, body["user"]["id"])
         with session() as conn:
             values = resolve_target(conn, values, body["user"]["id"])
             guard_status = guard_status_for(conn, case_id, values)
@@ -95,7 +97,7 @@ def register(app, on_reply=None):
         case_id = int(view["private_metadata"])
         user_id = body["user"]["id"]
         values = views.action.submitted_values(view["state"])
-        values["timezone"] = getattr(profile.timezone(client, user_id), "key", "UTC")
+        values["timezone"] = profile.timezone_name(client, user_id)
 
         with session() as conn:
             values = resolve_target(conn, values, user_id)

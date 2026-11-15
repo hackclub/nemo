@@ -194,9 +194,6 @@ def header_text(values, channel_name=None):
     parts = [label(key)]
     if needs_channel(key) and values.get("channel_id"):
         parts.append(f"from #{channel_name}" if channel_name else f"from {values['channel_id']}")
-    until = format_end(expiry(values))
-    if takes_expiry(key) and until:
-        parts.append(f"until {until}")
     return " ".join(parts)
 
 
@@ -382,7 +379,7 @@ def build_blocks(case_id, values, guard_status=None, end_error=None, open_report
         built += lengths.end_row(
             UNTIL, "End" if needs_expiry(key) else "End, optional",
             (values.get("expires_on"), values.get("expires_time")), end_error,
-            date_action=UNTIL, time_action=UNTIL_TIME,
+            date_action=UNTIL, time_action=UNTIL_TIME, tz=values.get("timezone"),
         )
         built.append(duration_block(values.get("duration")))
 
@@ -532,8 +529,10 @@ def notify_blocks(values):
 
 
 def build_view(case_id, subjects=(), category=None, values=None, guard_status=None, end_error=None,
-               open_report=False):
+               open_report=False, timezone=None):
     shown = values or initial_values(subjects, category)
+    if timezone:
+        shown = {**shown, "timezone": timezone}
     submit = "Log and deactivate" if queues_deactivation(shown, guard_status) else "Log"
     return {
         "type": "modal",
@@ -554,7 +553,11 @@ def resolvers(values, by):
 
 
 def byline(values, by):
-    text = f"Against <@{values['target_user_id']}>, logged by <@{by}>"
+    text = f"Against <@{values['target_user_id']}>"
+    until = expiry(values) if takes_expiry(values["type_key"]) else None
+    if until:
+        text += f" {lengths.logged_ends(until)}"
+    text += f", logged by <@{by}>"
     resolved_by = resolvers(values, by)
     if resolved_by != [by]:
         text += ", resolved by " + ", ".join(f"<@{one}>" for one in resolved_by)

@@ -53,3 +53,7 @@ def timezone(client, user_id):
 
     ZONE_CACHE[user_id] = zone
     return zone
+
+
+def timezone_name(client, user_id):
+    return getattr(timezone(client, user_id), "key", None)

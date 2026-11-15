@@ -26,7 +26,7 @@ def live_lock(channel_id, thread_ts):
 def view_for(channel_id, thread_ts, current, tz, values=None, end_error=None):
     if current:
         return card.locked_view(channel_id, thread_ts, current, tz, values, end_error)
-    return card.lock_view(channel_id, thread_ts, values, end_error)
+    return card.lock_view(channel_id, thread_ts, values, end_error, tz)
 
 
 @on_shortcut(SHORTCUT, needs="thread.guard")

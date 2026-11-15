@@ -1,4 +1,5 @@
 import datetime as dt
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -28,6 +29,29 @@ VIEW_BUILDERS = [
     lambda: slowmode.build_view("C1", None),
     action_view,
 ]
+
+
+def time_zones(view):
+    return [
+        element.get("timezone")
+        for block in view["blocks"] if block["type"] == "actions"
+        for element in block["elements"] if element["type"] == "timepicker"
+    ]
+
+
+ZONED_BUILDERS = [
+    lambda tz: guard.lock_view("C1", "1.1", tz=tz),
+    lambda tz: guard.locked_view("C1", "1.1", CURRENT_LOCK, tz),
+    lambda tz: slowmode.build_view("C1", None, tz=tz),
+    lambda tz: action.build_view(1, ["USUBJECT"], values={"type_key": "temp_ban"}, timezone=tz.key),
+]
+
+
+@pytest.mark.parametrize("build", ZONED_BUILDERS)
+def test_every_time_picker_shows_the_viewer_zone(build, monkeypatch):
+    monkeypatch.setattr(edit, "categories", lambda: {"spam": "Spam"})
+
+    assert time_zones(build(ZoneInfo("Africa/Cairo"))) == ["Africa/Cairo"]
 
 
 @pytest.mark.parametrize("build", VIEW_BUILDERS)
