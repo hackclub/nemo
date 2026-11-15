@@ -24,6 +24,10 @@ module Fd
       FdHelper::ACTION_LABELS.fetch(type_key, type_key)
     end
 
+    def additional_type_keys
+      Array(params[:also]).map(&:to_s)
+    end
+
     def deactivates?(key = type_key) = Action.deactivates?(key)
 
     def may_deactivate? = current_account&.may?("member.deactivate")

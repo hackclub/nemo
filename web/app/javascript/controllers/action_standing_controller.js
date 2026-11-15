@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static values = { url: String }
-  static targets = ["fields", "expiry", "start", "channel", "locks", "targetFields", "standing", "why", "deactivation", "submit"]
+  static targets = ["fields", "expiry", "start", "channel", "locks", "targetFields", "standing", "why", "deactivation", "submit", "also"]
 
   connect() {
     this.toggleFields()
@@ -45,10 +45,20 @@ export default class extends Controller {
       this.channelTarget.hidden = onThread || kind.dataset.channel !== "true"
     }
     if (this.hasLocksTarget) this.locksTarget.hidden = !onThread
+    if (this.hasAlsoTarget) this.toggleAlso(kind.value, onThread)
     if (this.hasTargetFieldsTarget) this.targetFieldsTarget.hidden = onThread
     if (this.hasStandingTarget) this.standingTarget.hidden = onThread
     for (const why of this.whyTargets) why.hidden = onThread
     this.toggleDeactivation()
+  }
+
+  toggleAlso(kindKey, onThread) {
+    this.alsoTarget.hidden = onThread
+    for (const option of this.alsoTarget.querySelectorAll("[data-kind]")) {
+      const same = option.dataset.kind === kindKey
+      option.hidden = same
+      if (same || onThread) option.querySelector("input").checked = false
+    }
   }
 
   toggleDeactivation() {

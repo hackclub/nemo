@@ -13,6 +13,10 @@ module Fd
     FROM_THREAD_LOCK = TABLE.select { |_key, row| row["thread_lock"] }.keys.freeze
     ENFORCE = TABLE.transform_values { |row| row["enforce"] }.compact.freeze
     ENFORCEABLE = ENFORCE.keys.freeze
+    ADDITIONAL = TABLE.reject { |_key, row| row.keys.intersect?(%w[enforce expires channel thread_lock]) }
+      .keys.freeze
+    SHARED_COLUMNS = %w[case_id target_user_id decided_by performed_by performed_at source_app reason
+                        solution resolved_by category_key].freeze
 
     belongs_to :kase, class_name: "Fd::Case", foreign_key: :case_id, inverse_of: :actions
     belongs_to :guard, class_name: "Fd::MemberGuard", foreign_key: :guard_id,
@@ -23,7 +27,7 @@ module Fd
     scope :live, -> { where(reversed_at: nil) }
     scope :reversed, -> { where.not(reversed_at: nil) }
     scope :recent_first, -> { order(performed_at: :desc) }
-    scope :oldest_first, -> { order(:performed_at) }
+    scope :oldest_first, -> { order(:performed_at, :id) }
     scope :for_target, ->(user_id) { where(target_user_id: user_id) }
     scope :expiring, -> { live.where.not(expires_at: nil) }
     scope :in_force, ->(at = Time.current) { live.where("expires_at > ?", at) }
@@ -37,6 +41,25 @@ module Fd
     def self.deactivates?(type_key) = guard_kind(type_key) == MemberGuard::DEACTIVATION
 
     def self.from_thread_lock?(type_key) = FROM_THREAD_LOCK.include?(type_key)
+
+    def self.labels_for(type_keys) = type_keys.map { |key| LABELS.fetch(key, key) }.join(", ")
+
+    def group_members
+      return [self] if group_id.nil?
+
+      self.class.where(group_id: group_id).order(:id).to_a
+    end
+
+    def log_additional!(type_keys)
+      keys = ADDITIONAL.select { |key| type_keys.include?(key) } - [type_key]
+      return [] if keys.empty? || !targets_member?
+
+      added = keys.map do |key|
+        self.class.create!(attributes.slice(*SHARED_COLUMNS).merge("type_key" => key, "group_id" => id))
+      end
+      update_columns(group_id: id)
+      added
+    end
 
     def self.guards_logged_on(case_ids)
       live.where(case_id: case_ids).where.not(guard_id: nil).pluck(:guard_id).to_set

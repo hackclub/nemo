@@ -17,6 +17,17 @@
           class: "select action-type", id: nil,
           data: { action: "change->action-standing#toggleKindFields" } %>
   </label>
+  <div class="field-label" data-action-standing-target="also">
+    <span>Additional actions</span>
+    <span class="also-row">
+      <% Fd::Action::ADDITIONAL.each do |key| %>
+        <label class="opt also-opt" data-kind="<%= key %>">
+          <%= check_box_tag "also[]", key, false, class: "tick", id: nil %>
+          <span class="opt-label"><%= action_label(key) %></span>
+        </label>
+      <% end %>
+    </span>
+  </div>
   <p class="deactivation-note" data-action-standing-target="deactivation" hidden></p>
   <%= render "thread_lock_pick", locks: thread_locks, kase: kase, logged: locks_logged %>
   <%= render "fd/start_fields", label: zoned_label("Start", optional: true), hidden: true,

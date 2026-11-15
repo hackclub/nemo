@@ -21,6 +21,7 @@ module Fd
       thread_attached = lock&.orphaned?
       echo = nil
       opened_guard = nil
+      logged = []
       resolved = false
       writing do
         subject_added = add_target_subject(kase) unless lock
@@ -32,7 +33,10 @@ module Fd
           action = log_action(kase, Time.current)
           audit(action, "performed")
           opened_guard = enforce(kase, action)
-          echo = ActionEcho.write!(kase, action, by: current_account.user_id)
+          added = action.log_additional!(additional_type_keys)
+          added.each { |one| audit(one, "performed") }
+          logged = [action, *added]
+          echo = ActionEcho.write!(kase, logged, by: current_account.user_id)
         end
         if resolve_case?
           resolved = resolve_case(kase)
@@ -43,7 +47,7 @@ module Fd
 
       redirect_to fd_case_path(kase, tab: "actions"),
         notice: notice_for(kase, guard: guard, lock: lock, thread_attached: thread_attached,
-          subject_added: subject_added, resolved: resolved,
+          subject_added: subject_added, resolved: resolved, logged: logged,
           deactivation: opened_guard&.deactivation? ? opened_guard : nil)
     end
 
@@ -58,14 +62,20 @@ module Fd
           alert: (error unless flash[:field_error]))
       end
 
-      action.assign_attributes(reason: params[:reason].to_s.strip.presence,
-        solution: params[:solution].to_s.strip.presence,
-        category_key: params[:category_key].to_s.presence)
-      return redirect_to(fd_case_path(kase, tab: "actions"), notice: "No changes") unless action.changed?
+      members = action.group_members
+      members.each do |member|
+        member.assign_attributes(reason: params[:reason].to_s.strip.presence,
+          solution: params[:solution].to_s.strip.presence,
+          category_key: params[:category_key].to_s.presence)
+      end
+      changed = members.select(&:changed?)
+      return redirect_to(fd_case_path(kase, tab: "actions"), notice: "No changes") if changed.empty?
 
       writing do
-        action.save!
-        audit(action, "edited")
+        changed.each do |member|
+          member.save!
+          audit(member, "edited")
+        end
       end
       redirect_to fd_case_path(kase, tab: "actions"), notice: "Action updated"
     end
@@ -87,13 +97,13 @@ module Fd
       nil
     end
 
-    def notice_for(kase, guard:, lock:, thread_attached:, subject_added:, resolved:, deactivation:)
+    def notice_for(kase, guard:, lock:, thread_attached:, subject_added:, resolved:, logged:, deactivation:)
       message = if guard
         attached_notice(kase, guard)
       elsif lock
         locked_notice(kase, thread_attached)
       else
-        logged_notice(kase, subject_added, deactivation)
+        logged_notice(kase, subject_added, deactivation, logged)
       end
       resolved ? "#{message} · case resolved" : message
     end
@@ -136,8 +146,8 @@ module Fd
       thread_attached ? "#{message} · thread attached" : message
     end
 
-    def logged_notice(kase, subject_added, deactivation)
-      message = "#{type_name} logged on case #{kase.id}"
+    def logged_notice(kase, subject_added, deactivation, logged)
+      message = "#{Action.labels_for(logged.map(&:type_key))} logged on case #{kase.id}"
       message = "#{message} · #{deactivation_note(deactivation)}" if deactivation
       subject_added ? "#{message} · @#{target_user_id} added to case" : message
     end

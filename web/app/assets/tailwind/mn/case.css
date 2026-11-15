@@ -176,6 +176,8 @@
   }
   .closed-what { font-weight: 600; color: var(--ink); }
   .closed:has(.closed-do) { align-items: center; padding-block: 6px; }
+  .also-row { @apply flex flex-wrap gap-1.5; }
+  .also-opt { @apply py-1.5 pr-3 pl-2.5; }
   .merge-strip {
     display: flex;
     align-items: baseline;

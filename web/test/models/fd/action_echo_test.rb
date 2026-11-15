@@ -9,6 +9,11 @@ class Fd::ActionEchoTest < ActiveSupport::TestCase
     assert_equal "Warning logged on <@USUB>: kept at it", Fd::ActionEcho.body_for(action)
   end
 
+  test "body_for with several actions names each type once" do
+    body = Fd::ActionEcho.body_for([action, action(type_key: "dm")])
+    assert_equal "Warning, DM logged on <@USUB>: kept at it", body
+  end
+
   test "body_for without target_user_id names a thread" do
     body = Fd::ActionEcho.body_for(action(target_user_id: nil))
     assert_equal "Warning logged on a thread: kept at it", body
