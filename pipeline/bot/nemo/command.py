@@ -12,6 +12,7 @@ from bot.nemo import (
     memberguards,
     open_cases,
     purge_requests,
+    reactivation,
     record,
 )
 from bot.nemo.views import help as helping
@@ -55,7 +56,7 @@ SUBJECT_USAGE = {
     SHUSH: "Name the member: */nemo shush @member 3d reason*",
     CHANNEL_BAN: "Name the member: */nemo channelban @member #channel 3d reason*",
     UNSHUSH: "Name the member: */nemo unshush @member*",
-    UNBAN: "Name the member: */nemo unban @member #channel*",
+    UNBAN: "Name the member: */nemo unban @member*",
 }
 
 TEXT_USAGE = {
@@ -84,7 +85,6 @@ COOLDOWN_USAGE = (
 SLOWMODE_REASON_USAGE = "Add a reason: */nemo slowmode #channel 30s reason*"
 
 CHANNEL_USAGE = "Name the channel: */nemo channelban @member #channel 3d reason*"
-UNBAN_CHANNEL_USAGE = "Name the channel: */nemo unban @member #channel*"
 
 
 def parse_command(text):
@@ -279,10 +279,30 @@ def unshush(conn, user_id, why, by):
     return with_reason(f"<@{user_id}> has been unshushed", why)
 
 
+def reactivate_account(conn, user_id, why, by):
+    allowed, refusal = access.may(conn, by, "member.deactivate")
+    if not allowed:
+        return refusal
+    outcome, ended = reactivation.reactivate(conn, user_id, by, why)
+    if outcome == reactivation.FIREHOSE:
+        return f"<@{user_id}> is deactivated in Firehose"
+    if outcome == reactivation.NOTHING and not ended:
+        return f"<@{user_id}> is not deactivated"
+    if outcome == reactivation.QUEUED:
+        text = f"<@{user_id}> reactivation queued"
+    elif outcome == reactivation.LIFTED:
+        text = f"<@{user_id}> deactivation lifted"
+    else:
+        text = f"<@{user_id}> bans ended"
+    if ended and outcome != reactivation.NOTHING:
+        text += f" · {len(ended)} {'ban' if len(ended) == 1 else 'bans'} ended"
+    return with_reason(text, why)
+
+
 def unban(conn, user_id, body, by):
     where, why = extract_channel(body)
     if where is None:
-        return UNBAN_CHANNEL_USAGE
+        return reactivate_account(conn, user_id, (body or "").strip() or None, by)
     lifted = lift_guard(conn, user_id, memberguards.CHANNEL_BAN, where, why, by)
     if lifted == memberguards.FIREHOSE:
         return f"<@{user_id}> is banned from <#{where}> in Firehose"

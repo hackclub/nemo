@@ -39,6 +39,7 @@ GUARDS = (
         ("member.guard", "/nemo channelban @member #channel 3d reason",
          "channel ban for 3 days, no case"),
         ("member.guard", "/nemo unban @member #channel", "lift a channel ban"),
+        ("member.deactivate", "/nemo unban @member reason", "reactivate an account and end its bans"),
     ),
 )
 

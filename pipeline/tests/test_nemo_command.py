@@ -261,9 +261,44 @@ def test_unban_with_channel_lifts_channel_ban(member_guards):
     assert member_guards["lifted"] == [(7, "UMOD", "appeal upheld", "channel_ban")]
 
 
-def test_unban_without_channel_returns_usage(member_guards):
-    assert command.unban(object(), USER_ID, None, "UMOD") == command.UNBAN_CHANNEL_USAGE
+@pytest.fixture
+def reactivating(monkeypatch):
+    state = {"may": (True, None), "outcome": ("queued", [11, 12]), "calls": []}
+    monkeypatch.setattr(command.access, "may", lambda conn, user_id, key, case_id=None: state["may"])
+
+    def reactivate(conn, user_id, by, why):
+        state["calls"].append((user_id, by, why))
+        return state["outcome"]
+
+    monkeypatch.setattr(command.reactivation, "reactivate", reactivate)
+    return state
+
+
+def test_unban_without_channel_reactivates_the_account_and_ends_its_bans(reactivating, member_guards):
+    reply = command.unban(object(), USER_ID, "appeal accepted", "UMOD")
+
+    assert reply == f"<@{USER_ID}> reactivation queued · 2 bans ended. Reason: appeal accepted"
+    assert reactivating["calls"] == [(USER_ID, "UMOD", "appeal accepted")]
     assert member_guards["lifted"] == []
+
+
+def test_unban_without_channel_needs_member_deactivate(reactivating, member_guards):
+    reactivating["may"] = (False, "You need member.deactivate")
+
+    assert command.unban(object(), USER_ID, None, "UMOD") == "You need member.deactivate"
+    assert reactivating["calls"] == []
+
+
+@pytest.mark.parametrize(("outcome", "reply"), [
+    (("nothing", []), f"<@{USER_ID}> is not deactivated"),
+    (("firehose", []), f"<@{USER_ID}> is deactivated in Firehose"),
+    (("lifted", []), f"<@{USER_ID}> deactivation lifted"),
+    (("nothing", [11]), f"<@{USER_ID}> bans ended"),
+])
+def test_unban_without_channel_reports_each_outcome(reactivating, outcome, reply):
+    reactivating["outcome"] = outcome
+
+    assert command.unban(object(), USER_ID, None, "UMOD") == reply
 
 
 def test_unban_without_ban_reports_not_banned(member_guards):
