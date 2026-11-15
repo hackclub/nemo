@@ -175,3 +175,31 @@ def test_writer_group_ids_of_a_single_action_is_itself():
     sync = writer.Writer.__new__(writer.Writer)
 
     assert sync.group_ids(NemoRows({}), nemo_action(78, "dm", group_id=None)) == [78]
+
+
+ENDED = dt.datetime(2026, 11, 15, 13, 0, tzinfo=dt.UTC)
+
+
+def ban_data(type_key, expires_at=None, reversed_at=None):
+    sync = writer.Writer.__new__(writer.Writer)
+    action = (5, 49, type_key, "U1", "UMOD", ENDED, "spamming", None, ["UMOD"], "spam", expires_at, {},
+              reversed_at, None, None)
+    return sync.action_data(None, action, {"banUntil": None})
+
+
+def test_an_ended_indefinite_ban_sends_its_end_day():
+    assert ban_data("indef_ban", expires_at=ENDED)["banUntil"] == "2026-11-15"
+
+
+def test_a_reversed_temporary_ban_sends_the_reversal_day():
+    assert ban_data("temp_ban", expires_at=dt.datetime(2026, 11, 22, tzinfo=dt.UTC),
+                    reversed_at=ENDED)["banUntil"] == "2026-11-15"
+
+
+def test_a_running_ban_keeps_its_end_and_a_running_permanent_ban_has_none():
+    assert ban_data("temp_ban", expires_at=dt.datetime(2026, 11, 22, tzinfo=dt.UTC))["banUntil"] == "2026-11-22"
+    assert ban_data("perma_ban")["banUntil"] is None
+
+
+def test_a_warning_never_gets_an_end_day():
+    assert "banUntil" not in {key: value for key, value in ban_data("warning").items() if value}

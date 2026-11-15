@@ -5,6 +5,7 @@ import logging
 from psycopg.types.json import Jsonb
 
 from bot.core import merges
+from bot.nemo import reactivation
 from lyla import categories, digests, mapping, numbers, store, writer
 from lyla.mapping import LYLA_BOT_USER_ID
 
@@ -180,7 +181,7 @@ WHERE id = %s
 REVERSE_ACTION = """
 UPDATE fd.actions SET reversed_at = coalesce(%s, now()), reversed_by = %s, reversal_reason = %s
 WHERE id = %s AND reversed_at IS NULL
-RETURNING id
+RETURNING id, type_key, target_user_id
 """
 
 ADD_SUBJECT = """
@@ -612,10 +613,21 @@ class Reader:
         return True
 
     def reverse(self, conn, action_id, at, why):
-        if conn.execute(REVERSE_ACTION, (at, LYLA_BOT_USER_ID, why, action_id)).fetchone():
+        row = conn.execute(REVERSE_ACTION, (at, LYLA_BOT_USER_ID, why, action_id)).fetchone()
+        if row:
             store.record(conn, "action", action_id, "reversed", LYLA_BOT_USER_ID,
                          after={"reason": why})
             self.summary["reversed"] += 1
+            self.reactivate_after(conn, row[1], row[2], why)
+
+    def reactivate_after(self, conn, type_key, user_id, why):
+        if not user_id or type_key not in reactivation.account_bans():
+            return
+        if reactivation.running_bans(conn, user_id):
+            return
+        outcome, _ended = reactivation.reactivate(conn, user_id, LYLA_BOT_USER_ID, why, end_bans=False)
+        if outcome in (reactivation.QUEUED, reactivation.LIFTED):
+            self.summary["reactivated"] += 1
 
     def update_case_note(self, conn, note_id, action):
         body = "\n\n".join(one for one in (

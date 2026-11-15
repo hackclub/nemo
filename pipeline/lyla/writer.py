@@ -482,11 +482,12 @@ class Writer:
 
     def action_data(self, conn, action, data=None):
         (action_id, case_id, type_key, target, _performed_by, _performed_at, reason, _solution,
-         _resolved_by, _category_key, expires_at, details, _reversed_at, _external_ref, _group_id) = action
+         _resolved_by, _category_key, expires_at, details, reversed_at, _external_ref, _group_id) = action
         data = dict(data or {})
         data["whatTheyDid"] = reason or ""
-        if type_key in mapping.EXPIRING_TYPES:
-            data["banUntil"] = mapping.ban_until(expires_at)
+        end = mapping.ended_at(expires_at, reversed_at)
+        if type_key in mapping.EXPIRING_TYPES or (type_key in mapping.ENDING_TYPES and end):
+            data["banUntil"] = mapping.ban_until(end)
         if (details or {}).get("channel_id"):
             data["channelBanChannel"] = details["channel_id"]
         data.setdefault("nemoActionId", str(action_id))

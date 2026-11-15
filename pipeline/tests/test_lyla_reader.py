@@ -140,3 +140,35 @@ def test_import_of_a_single_type_lyla_action_is_not_grouped():
     sync.import_action(conn, 5002, lyla_action("Warning"))
 
     assert conn.ran(reader.GROUP_IMPORTED) == []
+
+
+def reversing(monkeypatch, type_key, running=()):
+    calls = []
+    monkeypatch.setattr(reader.reactivation, "running_bans", lambda conn, user_id: list(running))
+    monkeypatch.setattr(reader.reactivation, "reactivate",
+                        lambda conn, user_id, by, why, end_bans=True: calls.append((user_id, by, why, end_bans))
+                        or ("queued", []))
+    monkeypatch.setattr(reader.store, "record", lambda *args, **kwargs: None)
+    conn = Recorder({reader.REVERSE_ACTION: [(9001, type_key, "U1")]})
+    sync = reader.Reader(None, None)
+    sync.reverse(conn, 9001, AT, "Reversed in LYLA")
+    return sync, calls
+
+
+def test_a_ban_reversed_in_lyla_reactivates_the_account(monkeypatch):
+    sync, calls = reversing(monkeypatch, "indef_ban")
+
+    assert calls == [("U1", reader.LYLA_BOT_USER_ID, "Reversed in LYLA", False)]
+    assert sync.summary["reactivated"] == 1
+
+
+def test_a_reversed_ban_leaves_the_account_alone_while_another_ban_runs(monkeypatch):
+    _sync, calls = reversing(monkeypatch, "perma_ban", running=[(77, None)])
+
+    assert calls == []
+
+
+def test_a_reversed_warning_does_not_reactivate(monkeypatch):
+    _sync, calls = reversing(monkeypatch, "warning")
+
+    assert calls == []

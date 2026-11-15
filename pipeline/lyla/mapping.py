@@ -50,6 +50,7 @@ REVERSED_PREFIX = "Reversed: "
 SEPARATOR = ", "
 
 EXPIRING_TYPES = frozenset({"shush", "temp_ban", "channel_ban"})
+ENDING_TYPES = EXPIRING_TYPES | {"indef_ban", "perma_ban"}
 
 OPEN = "open"
 RESOLVED = "resolved"
@@ -173,6 +174,11 @@ def to_ms(value):
     if value is None:
         return None
     return int(value.timestamp() * 1000)
+
+
+def ended_at(expires_at, reversed_at):
+    ends = [one for one in (expires_at, reversed_at) if one is not None]
+    return min(ends) if ends else None
 
 
 def ban_until(expires_at):
