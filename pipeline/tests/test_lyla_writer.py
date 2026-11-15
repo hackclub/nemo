@@ -114,3 +114,64 @@ def test_unmerge_from_keeps_an_existing_primary_thread():
 
     assert lyla.ran(writer.PROMOTE) == []
     assert lyla.ran(writer.DROP_RETURNED_ASSIGNEES) == []
+
+
+def nemo_action(action_id, type_key, group_id=77, expires_at=None, reversed_at=None):
+    return (action_id, 49, type_key, "U1", "UMOD", dt.datetime(2026, 11, 15, tzinfo=dt.UTC), "spamming",
+            None, ["UMOD"], "spam", expires_at, {}, reversed_at, None, group_id)
+
+
+def test_writer_finds_the_lyla_action_of_a_group_through_any_member(monkeypatch):
+    monkeypatch.setattr(writer.store, "keys_for",
+                        lambda conn, kind, entity, entity_id: ["912"] if entity_id == 77 else [])
+    nemo = NemoRows({writer.GROUP_IDS: [(77,), (78,)]})
+    sync = writer.Writer.__new__(writer.Writer)
+    sync.lyla = NemoRows({})
+
+    assert sync.lyla_action_id(nemo, nemo_action(78, "dm")) == 912
+
+
+def test_writer_inserts_one_lyla_action_with_every_type_of_the_group(monkeypatch):
+    stored = []
+    monkeypatch.setattr(writer.store, "put", lambda conn, kind, key, entity, entity_id, *rest: stored.append((key, entity_id)))
+    monkeypatch.setattr(writer.categories, "load", lambda conn, lyla: type("Names", (), {"code_for": lambda self, key: 11})())
+    monkeypatch.setattr(writer, "profile", lambda user_id: {"email": "a@b.c", "displayName": "a"})
+    nemo = NemoRows({
+        writer.GROUP_IDS: [(77,), (78,)],
+        writer.MEMBER_ACTIONS: [(77, "temp_ban", None, None), (78, "dm", None, None)],
+        writer.NEMO_CASE: [(49, None, None, None, None, None, None)],
+    })
+    lyla = NemoRows({writer.LYLA_CASE: [(49, "open", None, None, None)], writer.INSERT_ACTION: [(912,)]})
+    sync = writer.Writer.__new__(writer.Writer)
+    sync.lyla = lyla
+
+    sync.insert_action(nemo, nemo_action(77, "temp_ban", expires_at=dt.datetime(2026, 11, 22, tzinfo=dt.UTC)))
+
+    inserted = lyla.ran(writer.INSERT_ACTION)[0]
+    assert inserted[1] == "Temp Ban, DM"
+    assert stored == [(912, 77)]
+
+
+def test_writer_update_marks_only_the_reversed_type_of_a_group(monkeypatch):
+    monkeypatch.setattr(writer.categories, "load", lambda conn, lyla: type("Names", (), {"code_for": lambda self, key: 11})())
+    reversed_at = dt.datetime(2026, 11, 16, tzinfo=dt.UTC)
+    nemo = NemoRows({
+        writer.GROUP_IDS: [(77,), (78,)],
+        writer.LINKED_ACTIONS: [(77, "temp_ban", reversed_at, None), (78, "dm", None, None)],
+    })
+    current = (912, 49, "Temp Ban, DM", "U1", ["UMOD"], {"whatTheyDid": "spamming", "nemoActionId": "77"},
+               1, 11, None, 1, None, False)
+    lyla = NemoRows({writer.LYLA_ACTION: [current]})
+    sync = writer.Writer.__new__(writer.Writer)
+    sync.lyla = lyla
+
+    sync.update_action(nemo, nemo_action(77, "temp_ban", reversed_at=reversed_at), 912)
+
+    assert nemo.ran(writer.LINKED_ACTIONS) == [("lyla:action:912:%", [77, 78])]
+    assert lyla.ran(writer.UPDATE_ACTION)[0][0] == "Reversed: Temp Ban, DM"
+
+
+def test_writer_group_ids_of_a_single_action_is_itself():
+    sync = writer.Writer.__new__(writer.Writer)
+
+    assert sync.group_ids(NemoRows({}), nemo_action(78, "dm", group_id=None)) == [78]

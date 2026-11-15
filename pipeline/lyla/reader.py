@@ -40,6 +40,12 @@ x.category_code, x.category_extra, x.updated_at, {digests.ACTION}
 
 LYLA_ACTIONS = f"SELECT {ACTION_COLUMNS} FROM case_actions x WHERE x.case_number = ANY(%s) ORDER BY x.id"
 
+GROUP_IMPORTED = """
+UPDATE fd.actions a SET group_id = grouped.first_id
+FROM (SELECT min(id) AS first_id, count(*) AS types FROM fd.actions WHERE external_ref LIKE %(prefix)s) grouped
+WHERE a.external_ref LIKE %(prefix)s AND grouped.types > 1 AND a.group_id IS DISTINCT FROM grouped.first_id
+"""
+
 LYLA_ACTIONS_BY_ID = f"SELECT {ACTION_COLUMNS} FROM case_actions x WHERE x.id = ANY(%s) ORDER BY x.id"
 
 LYLA_ACTION_IDS = "SELECT id FROM case_actions"
@@ -480,6 +486,9 @@ class Reader:
             "details": details,
         }
 
+    def group_imported(self, conn, lyla_id):
+        conn.execute(GROUP_IMPORTED, {"prefix": f"lyla:action:{lyla_id}:%"})
+
     def import_action(self, conn, case_id, action):
         types, solution = self.parsed(action)
         types = [(key, reversed_) for key, reversed_ in types
@@ -502,6 +511,8 @@ class Reader:
             if row and first is None:
                 first = row[0]
             self.summary["actions"] += 1
+        if len(types) > 1:
+            self.group_imported(conn, action["id"])
         if action["target_user_id"]:
             conn.execute(ADD_SUBJECT, (case_id, action["target_user_id"]))
         return ("actions", first) if first else None
@@ -558,6 +569,7 @@ class Reader:
                 values["reason"], values["category_key"], parsed_solution, values["resolved_by"],
             ))
             self.summary["actions"] += 1
+        self.group_imported(conn, action["id"])
 
     def update_action(self, conn, row, action, solution):
         (action_id, type_key, target, reason, old_solution, resolved_by, category_key, expires_at,

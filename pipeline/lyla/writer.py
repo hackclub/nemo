@@ -88,9 +88,13 @@ ORDER BY occurred_at DESC, id DESC LIMIT 1
 
 NEMO_ACTION = """
 SELECT id, case_id, type_key, target_user_id, performed_by, performed_at, reason, solution,
-       resolved_by, category_key, expires_at, details, reversed_at, external_ref
+       resolved_by, category_key, expires_at, details, reversed_at, external_ref, group_id
 FROM fd.actions WHERE id = %s
 """
+
+GROUP_IDS = "SELECT id FROM fd.actions WHERE group_id = %s ORDER BY id"
+
+MEMBER_ACTIONS = "SELECT id, type_key, reversed_at, solution FROM fd.actions WHERE id = ANY(%s) ORDER BY id"
 
 LINKED_ACTIONS = """
 SELECT id, type_key, reversed_at, solution FROM fd.actions
@@ -445,15 +449,25 @@ class Writer:
             store.touch_case(conn, case_id)
         return None
 
+    def group_ids(self, conn, action):
+        if action[14] is None:
+            return [action[0]]
+        return [row[0] for row in conn.execute(GROUP_IDS, (action[14],)).fetchall()] or [action[0]]
+
     def lyla_action_id(self, conn, action):
         external_ref = action[13] or ""
         if external_ref.startswith("lyla:action:"):
             return int(external_ref.split(":")[2])
-        keys = store.keys_for(conn, ACTIONS, "actions", action[0])
-        if keys:
-            return int(keys[0])
-        row = self.lyla.execute(LYLA_ACTION_FOR, (str(action[0]),)).fetchone()
-        return row[0] if row else None
+        member_ids = self.group_ids(conn, action)
+        for member_id in member_ids:
+            keys = store.keys_for(conn, ACTIONS, "actions", member_id)
+            if keys:
+                return int(keys[0])
+        for member_id in member_ids:
+            row = self.lyla.execute(LYLA_ACTION_FOR, (str(member_id),)).fetchone()
+            if row:
+                return row[0]
+        return None
 
     def apply_action(self, conn, action_id, op):
         if op == "delete":
@@ -468,7 +482,7 @@ class Writer:
 
     def action_data(self, conn, action, data=None):
         (action_id, case_id, type_key, target, _performed_by, _performed_at, reason, _solution,
-         _resolved_by, _category_key, expires_at, details, _reversed_at, _external_ref) = action
+         _resolved_by, _category_key, expires_at, details, _reversed_at, _external_ref, _group_id) = action
         data = dict(data or {})
         data["whatTheyDid"] = reason or ""
         if type_key in mapping.EXPIRING_TYPES:
@@ -489,7 +503,7 @@ class Writer:
 
     def insert_action(self, conn, action):
         (action_id, case_id, type_key, target, performed_by, performed_at, _reason, solution,
-         resolved_by, category_key, _expires_at, details, reversed_at, _external_ref) = action
+         resolved_by, category_key, _expires_at, details, reversed_at, _external_ref, _group_id) = action
         if not target:
             return "no target, kept in Nemo"
         if self.lyla.execute(LYLA_CASE, (case_id,)).fetchone() is None:
@@ -500,8 +514,11 @@ class Writer:
             "email": member["email"], "displayName": member["displayName"],
             "permalink": self.permalink(conn, case_id),
         })
+        members = conn.execute(MEMBER_ACTIONS, (self.group_ids(conn, action),)).fetchall()
+        types = [(row[1], row[2] is not None) for row in members] or [(type_key, reversed_at is not None)]
+        solution = next((row[3] for row in members if row[3]), solution)
         lyla_id = self.lyla.execute(INSERT_ACTION, (
-            case_id, mapping.compose_action_type([(type_key, reversed_at is not None)], solution),
+            case_id, mapping.compose_action_type(types, solution),
             target, list(resolved_by or []) or [performed_by], Jsonb(data),
             mapping.to_ms(performed_at), names.code_for(category_key),
         )).fetchone()[0]
@@ -510,12 +527,12 @@ class Writer:
 
     def update_action(self, conn, action, lyla_id):
         (action_id, case_id, type_key, target, performed_by, _performed_at, _reason, _solution,
-         resolved_by, category_key, _expires_at, _details, _reversed_at, _external_ref) = action
+         resolved_by, category_key, _expires_at, _details, _reversed_at, _external_ref, _group_id) = action
         current = self.lyla.execute(LYLA_ACTION, (lyla_id,)).fetchone()
         if current is None:
             return None
         before = dict(zip(ACTION_FIELDS, current))
-        linked = conn.execute(LINKED_ACTIONS, (f"lyla:action:{lyla_id}:%", [action_id])).fetchall()
+        linked = conn.execute(LINKED_ACTIONS, (f"lyla:action:{lyla_id}:%", self.group_ids(conn, action))).fetchall()
         types = [(row[1], row[2] is not None) for row in linked]
         solution = next((row[3] for row in linked if row[3]), None)
         parsed = mapping.parse_action_type(before["action_type"], bool(before["data"].get("banUntil")))

@@ -109,3 +109,34 @@ def test_merges_root_walks_up_to_the_main_case():
 
     assert merges.root(conn, 25) == 19
     assert conn.executed == [(merges.ROOT, (25,))]
+
+
+class Names:
+    def key_for(self, code):
+        return "spam"
+
+
+def lyla_action(action_type):
+    return {"id": 4321, "action_type": action_type, "data": {"whatTheyDid": "spam"}, "target_user_id": "U1",
+            "performed_by": ["UFF1"], "performed_at": AT_MS, "category_code": 11, "category_extra": None}
+
+
+def test_import_of_a_combined_lyla_action_groups_its_types():
+    conn = Recorder({reader.INSERT_ACTION: [(9001,)]})
+    sync = reader.Reader(None, None)
+    sync.categories = Names()
+
+    sync.import_action(conn, 5002, lyla_action("Warning, DM"))
+
+    assert [args[1] for args in conn.ran(reader.INSERT_ACTION)] == ["warning", "dm"]
+    assert conn.ran(reader.GROUP_IMPORTED) == [{"prefix": "lyla:action:4321:%"}]
+
+
+def test_import_of_a_single_type_lyla_action_is_not_grouped():
+    conn = Recorder({reader.INSERT_ACTION: [(9001,)]})
+    sync = reader.Reader(None, None)
+    sync.categories = Names()
+
+    sync.import_action(conn, 5002, lyla_action("Warning"))
+
+    assert conn.ran(reader.GROUP_IMPORTED) == []
