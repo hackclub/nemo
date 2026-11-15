@@ -16,6 +16,7 @@ TARGET_TEXT = "action_target_text"
 KIND = "action_kind"
 UNTIL = "action_until"
 UNTIL_TIME = "action_until_time"
+DURATION = "action_duration"
 WHERE = "action_where"
 REASON = "action_reason"
 SOLUTION = "action_solution"
@@ -61,6 +62,8 @@ REQUIRED = "required"
 EMAIL = re.compile(r"\A[^@\s]+@[^@\s]+\.[^@\s]+\Z")
 
 INVALID_TARGET = "Invalid Slack ID or email"
+END_OR_DURATION = "Use End or Duration, not both"
+INVALID_DURATION = "Enter a duration such as 30m, 12h, 7d or 2w"
 UNKNOWN_EMAIL = "Member not found"
 SHARED_EMAIL = "Multiple members with this email"
 
@@ -168,6 +171,9 @@ def kind_initial_option(selected_key):
 
 
 def expiry(values):
+    length = lengths.duration(values.get("duration"))
+    if length:
+        return (values.get("submitted_at") or dt.datetime.now(dt.UTC)) + length
     on = values.get("expires_on")
     if not on:
         return None
@@ -378,6 +384,7 @@ def build_blocks(case_id, values, guard_status=None, end_error=None, open_report
             (values.get("expires_on"), values.get("expires_time")), end_error,
             date_action=UNTIL, time_action=UNTIL_TIME,
         )
+        built.append(duration_block(values.get("duration")))
 
     if takes_channel(key):
         built.append(
@@ -464,6 +471,21 @@ def build_blocks(case_id, values, guard_status=None, end_error=None, open_report
     if values.get("resolve_case") and open_report:
         built += notify_blocks(values)
     return built
+
+
+def duration_block(value=None):
+    return {
+        "type": "input",
+        "block_id": DURATION,
+        "optional": True,
+        "label": {"type": "plain_text", "text": "Duration"},
+        "element": {
+            "type": "plain_text_input",
+            "action_id": DURATION,
+            "placeholder": {"type": "plain_text", "text": "7d"},
+            **({"initial_value": value} if value else {}),
+        },
+    }
 
 
 RESOLVE_OPTION = {"text": {"type": "plain_text", "text": "Yes"}, "value": RESOLVE_CASE}
@@ -601,6 +623,8 @@ def submitted_values(view_state):
         ),
         "expires_on": values.get(UNTIL, {}).get(UNTIL, {}).get("selected_date"),
         "expires_time": values.get(UNTIL, {}).get(UNTIL_TIME, {}).get("selected_time"),
+        "duration": (values.get(DURATION, {}).get(DURATION, {}).get("value") or "").strip(),
+        "submitted_at": dt.datetime.now(dt.UTC).replace(microsecond=0),
         "channel_id": values.get(WHERE, {}).get(WHERE, {}).get("selected_conversation"),
         "enforcement": (
             (values.get(ENFORCEMENT, {}).get(ENFORCEMENT, {}).get("selected_option") or {}).get("value")
@@ -626,14 +650,19 @@ def validation_errors(values):
         if values.get("target_error"):
             return {TARGET_TEXT: values["target_error"]}
         return {TARGET: "Select a member"}
-    if needs_expiry(key) and not values.get("expires_on"):
-        return {UNTIL: f"A {label(key).lower()} needs an end date."}
+    if values.get("duration"):
+        if values.get("expires_on") or values.get("expires_time"):
+            return {DURATION: END_OR_DURATION}
+        if lengths.duration(values["duration"]) is None:
+            return {DURATION: INVALID_DURATION}
+    if needs_expiry(key) and not values.get("expires_on") and not values.get("duration"):
+        return {UNTIL: f"A {label(key).lower()} needs an end date or duration."}
     if values.get("expires_time") and not values.get("expires_on"):
         return {UNTIL: "Pick a date for the end time."}
     if needs_channel(key) and not values.get("channel_id"):
         return {WHERE: "Select a channel"}
-    if values.get("enforcement") == EXTEND and not values.get("expires_on"):
-        return {UNTIL: "Select an end date"}
+    if values.get("enforcement") == EXTEND and not values.get("expires_on") and not values.get("duration"):
+        return {UNTIL: "Select an end date or duration"}
     if needs_reason(values.get("category_key")) and not values.get("reason"):
         return {REASON: "Add a reason."}
     return None

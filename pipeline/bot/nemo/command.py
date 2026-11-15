@@ -15,7 +15,7 @@ from bot.nemo import (
     record,
 )
 from bot.nemo.views import help as helping
-from bot.nemo.views import member_view, merge
+from bot.nemo.views import lengths, member_view, merge
 from bot.nemo.views import slowmode as slowcard
 
 log = logging.getLogger("bot.nemo")
@@ -44,14 +44,10 @@ USER_MENTION = re.compile(r"<@([UW][A-Z0-9]+)(?:\|[^>]*)?>")
 CHANNEL_MENTION = re.compile(r"<#(C[A-Z0-9]+)(?:\|[^>]*)?>")
 CASE = re.compile(r"\A#?(\d+)\Z")
 MEMBER_ID = re.compile(r"\A[UW][A-Z0-9]{2,}\Z")
-DURATION = re.compile(r"\A(\d{1,6})([mhdw])\Z", re.IGNORECASE)
 END_DATE = re.compile(r"\A(\d{4})-(\d{2})-(\d{2})\Z")
 COOLDOWN = re.compile(r"\A(\d{1,4})([sm]?)\Z", re.IGNORECASE)
-UNITS = {"m": "minutes", "h": "hours", "d": "days", "w": "weeks"}
-
-MAX_DURATION_DAYS = 365
-MIN_DURATION = dt.timedelta(minutes=1)
-MAX_DURATION = dt.timedelta(days=MAX_DURATION_DAYS)
+MAX_DURATION_DAYS = lengths.MAX_DURATION_DAYS
+MAX_DURATION = lengths.MAX_DURATION
 
 SUBJECT_USAGE = {
     LOOKUP: "Name the member: */nemo lookup @member*",
@@ -120,17 +116,14 @@ def end_of_day(on):
 
 
 def is_duration(text):
-    return bool(DURATION.match(text) or END_DATE.match(text))
+    return bool(lengths.DURATION.match(text) or END_DATE.match(text))
 
 
 def parse_end(text, now=None):
     now = now or dt.datetime.now(dt.timezone.utc)
-    match = DURATION.match(text)
-    if match:
-        length = dt.timedelta(**{UNITS[match.group(2).lower()]: int(match.group(1))})
-        if not MIN_DURATION <= length <= MAX_DURATION:
-            return None
-        return now + length
+    if lengths.DURATION.match(text):
+        length = lengths.duration(text)
+        return now + length if length else None
 
     match = END_DATE.match(text)
     if not match:

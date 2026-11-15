@@ -158,4 +158,4 @@ def test_logging_a_temporary_ban_without_end_redraws_modal_with_end_error(monkey
     labels = [block for block in response["view"]["blocks"] if block.get("block_id") == action.UNTIL]
     assert labels, "the end row stays in the redrawn modal"
     context_texts = [block["elements"][0]["text"] for block in response["view"]["blocks"] if block["type"] == "context"]
-    assert "A temporary ban needs an end date." in context_texts
+    assert "A temporary ban needs an end date or duration." in context_texts

@@ -1,8 +1,15 @@
 import datetime as dt
+import re
 
 from bot.core.formatting import short_end, short_end_token
 
 END_OF_DAY = dt.time(23, 59, 59)
+
+DURATION = re.compile(r"\A(\d{1,6})([mhdw])\Z", re.IGNORECASE)
+DURATION_UNITS = {"m": "minutes", "h": "hours", "d": "days", "w": "weeks"}
+MAX_DURATION_DAYS = 365
+MIN_DURATION = dt.timedelta(minutes=1)
+MAX_DURATION = dt.timedelta(days=MAX_DURATION_DAYS)
 
 DATE_SUFFIX = "_date"
 TIME_SUFFIX = "_time"
@@ -41,6 +48,14 @@ def picked(values, block_id, date_action=None, time_action=None):
     row = values.get(block_id, {})
     return (row.get(date_action or f"{block_id}{DATE_SUFFIX}", {}).get("selected_date"),
             row.get(time_action or f"{block_id}{TIME_SUFFIX}", {}).get("selected_time"))
+
+
+def duration(text):
+    match = DURATION.match((text or "").strip())
+    if not match:
+        return None
+    length = dt.timedelta(**{DURATION_UNITS[match.group(2).lower()]: int(match.group(1))})
+    return length if MIN_DURATION <= length <= MAX_DURATION else None
 
 
 def end_at(date_text, time_text, tz=dt.UTC):
