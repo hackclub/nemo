@@ -15,12 +15,14 @@ WHERE c.id = %s
 """
 
 
-def enrich(client, conn, case, url_of=None):
+def enrich(client, conn, case, url_of=None, thread_of=None):
     row = conn.execute(CASE_FACTS, (case["case_id"],)).fetchone()
     if row:
         case["duplicate_of"], case["updated_at"], case["resolved_by"] = row
         if case["duplicate_of"] and url_of:
             case["duplicate_url"] = url_of(case["duplicate_of"])
+        if case["duplicate_of"] and thread_of:
+            case["duplicate_thread_url"] = thread_of(conn, case["duplicate_of"])
     case["actions"] = [one["type_key"] for one in case_actions.live_actions(conn, case["case_id"])]
     subjects = case.get("subjects") or []
     if client is not None and subjects:

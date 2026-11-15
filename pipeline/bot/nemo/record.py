@@ -159,4 +159,5 @@ def build_view(conn, user_id, can_note=False):
         channel.member_url(user_id),
         can_note,
         channel.case_url,
+        lambda case_id: channel.thread_url(conn, case_id),
     )

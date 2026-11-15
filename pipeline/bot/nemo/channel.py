@@ -406,7 +406,7 @@ UPDATE fd.case_reports SET header_digest = %s WHERE id = %s
 def post_header(client, conn, case, card_channel_id, thread_ts):
     if case.get("header_ts") or case.get("resolved_at") or not views.report.needs_header(case):
         return None
-    card_facts.enrich(client, conn, case, case_url)
+    card_facts.enrich(client, conn, case, case_url, thread_url)
     try:
         sent = client.chat_postMessage(
             channel=card_channel_id,
@@ -432,7 +432,7 @@ def sync_header(client, conn, case, card_channel_id):
         target_ts = case["forwarded_ts"]
         extra["metadata"] = views.report.metadata(case)
 
-    card_facts.enrich(client, conn, case, case_url)
+    card_facts.enrich(client, conn, case, case_url, thread_url)
     digest = views.case_card.digest(case)
     if digest == case.get("header_digest"):
         return target_ts
@@ -763,7 +763,7 @@ def post_report(client, conn, case_id, channel_id=None, thread_ts=None):
         return row[0]
 
     if not views.report.needs_header(case):
-        card_facts.enrich(client, conn, case, case_url)
+        card_facts.enrich(client, conn, case, case_url, thread_url)
     built = views.report.build_blocks(case)
     sent = client.chat_postMessage(
         channel=card_channel_id,

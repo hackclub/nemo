@@ -14,6 +14,7 @@ from bot.nemo.channel import (
     mark_root,
     author_display_fields,
     root_mark,
+    thread_url,
     unfurl_opening,
 )
 from lyla import claim
@@ -134,7 +135,7 @@ UPDATE fd.cases SET card_header_digest = %s WHERE id = %s
 def post_header(client, conn, case, channel_id, card_ts):
     if case.get("card_header_ts") or not views.queued.needs_header(case):
         return None
-    card_facts.enrich(client, conn, case, case_url)
+    card_facts.enrich(client, conn, case, case_url, thread_url)
     try:
         sent = client.chat_postMessage(
             channel=channel_id,
@@ -162,7 +163,7 @@ def sync_header(client, conn, case):
         target_ts = case["card_ts"]
         extra["metadata"] = views.queued.metadata(case)
 
-    card_facts.enrich(client, conn, case, case_url)
+    card_facts.enrich(client, conn, case, case_url, thread_url)
     digest = views.case_card.digest(case)
     if digest == case.get("card_header_digest"):
         return target_ts
@@ -200,7 +201,7 @@ def post(client, conn, case_id, channel_id, thread_ts=None):
         return row[0]
 
     if not views.queued.needs_header(case):
-        card_facts.enrich(client, conn, case, case_url)
+        card_facts.enrich(client, conn, case, case_url, thread_url)
     built = views.queued.build_blocks(case)
     sent = client.chat_postMessage(
         channel=channel_id,

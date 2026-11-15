@@ -51,7 +51,7 @@ def loaded(monkeypatch):
     state = {"case": case()}
     monkeypatch.setattr(channel, "fetch_case", lambda conn, case_id: state["case"])
     monkeypatch.setattr(case_queue, "fetch_case", lambda conn, case_id: None)
-    monkeypatch.setattr(card_facts, "enrich", lambda client, conn, row, url_of=None: row)
+    monkeypatch.setattr(card_facts, "enrich", lambda client, conn, row, url_of=None, thread_of=None: row)
     return state
 
 

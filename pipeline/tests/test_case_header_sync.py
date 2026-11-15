@@ -41,7 +41,7 @@ class Slack:
 
 @pytest.fixture(autouse=True)
 def no_facts(monkeypatch):
-    monkeypatch.setattr(card_facts, "enrich", lambda client, conn, case, url_of=None: case)
+    monkeypatch.setattr(card_facts, "enrich", lambda client, conn, case, url_of=None, thread_of=None: case)
 
 
 def report_case(**over):

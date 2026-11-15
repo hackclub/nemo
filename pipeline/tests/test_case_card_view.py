@@ -61,6 +61,28 @@ def test_body_merged_links_target_case():
     assert case_card.body_text(row) == "<@USUBJECT>, merged into <https://fe/cases/52|case 52> by <@UMOD>"
 
 
+def test_body_merged_links_main_case_slack_thread_after_fire_engine():
+    row = case(resolved_at=UPDATED, resolution="duplicate", resolved_by="UMOD", duplicate_of=52,
+               duplicate_url="https://fe/cases/52", duplicate_thread_url="https://slack/52")
+
+    assert case_card.body_text(row) == (
+        "<@USUBJECT>, merged into <https://fe/cases/52|case 52> (<https://slack/52|Slack>) by <@UMOD>"
+    )
+
+
+def test_body_merged_drops_slack_link_when_body_would_be_cut():
+    thread = "https://hackclub.slack.com/archives/G01DBHPLK25/p1762790400123456"
+    row = case(subjects=["U0SUBJECT01", "U0SUBJECT02", "U0SUBJECT03", "U0SUBJECT04"],
+               resolved_at=UPDATED, resolution="duplicate", resolved_by="U0FIREFTR01", duplicate_of=5633,
+               duplicate_url="https://fire.example.org/fd/cases/5633", duplicate_thread_url=thread)
+
+    text = case_card.body_text(row)
+
+    assert thread not in text
+    assert text.endswith("merged into <https://fire.example.org/fd/cases/5633|case 5633> by <@U0FIREFTR01>")
+    assert len(text) <= case_card.BODY_LIMIT
+
+
 def test_body_caps_people_listed():
     row = case(subjects=["U1", "U2", "U3", "U4", "U5"])
 

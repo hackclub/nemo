@@ -19,7 +19,9 @@ class Conn:
 
     def fetchone(self):
         sql = self.executed[-1][0]
-        return self.counts if "AS case_count" in sql else self.in_force
+        if "AS case_count" in sql:
+            return self.counts
+        return self.in_force if "fd.member_guards" in sql else None
 
     def fetchall(self):
         sql = self.executed[-1][0]
@@ -87,3 +89,20 @@ def test_build_view_summarises_guard_counts_and_entries():
     assert "case 44" in view["blocks"][0]["text"]["text"].lower()
     assert view["blocks"][1]["elements"][0]["text"] == "9 cases, 1 open, 3 actions, 1 reversed, 1 note"
     assert "*Shush*" in text and "bad" in text and "member_add_note" in text
+
+
+def test_build_view_links_each_action_case_to_its_slack_thread(monkeypatch):
+    monkeypatch.setattr(record.channel, "thread_url", lambda conn, case_id: f"https://slack/{case_id}")
+    conn = Conn(counts=(1, 0, 1, 0, 0), actions=[("shush", 44, "UMOD", AT, None, "spam", None, None, None, {})])
+
+    text = str(record.build_view(conn, "UM")["blocks"])
+
+    assert "case 44" in text and "(<https://slack/44|Slack>)" in text
+
+
+def test_build_view_reads_the_real_thread_of_each_action_case():
+    conn = Conn(counts=(1, 0, 1, 0, 0), actions=[("shush", 44, "UMOD", AT, None, "spam", None, None, None, {})])
+
+    record.build_view(conn, "UM")
+
+    assert any(sql == record.channel.THREAD_FOR_CASE and args == {"case_id": 44} for sql, args in conn.executed)

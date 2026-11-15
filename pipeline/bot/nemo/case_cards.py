@@ -30,7 +30,7 @@ def load(client, conn, case_id):
     case = channel.fetch_case(conn, case_id) or case_queue.fetch_case(conn, case_id)
     if case is None:
         return None
-    return card_facts.enrich(client, conn, case, channel.case_url)
+    return card_facts.enrich(client, conn, case, channel.case_url, channel.thread_url)
 
 
 def post(client, conn, case_id, channel_id, thread_ts, by=None):

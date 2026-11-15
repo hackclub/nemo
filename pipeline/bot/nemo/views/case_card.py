@@ -4,6 +4,7 @@ import json
 from bot.core.formatting import short_end
 from bot.nemo import categories
 from bot.nemo.views import action, lengths, resolve
+from bot.nemo.views.lines import slack_link
 
 LOG_ACTION = "case_log_action"
 MORE = "case_more"
@@ -49,18 +50,21 @@ def join(parts):
     return text if text.startswith("<") else capitalized(text)
 
 
-def case_link(case_id, url):
-    return f"<{url}|case {case_id}>" if url else f"case {case_id}"
+def case_link(case_id, url, thread_url=None):
+    linked = f"<{url}|case {case_id}>" if url else f"case {case_id}"
+    return linked + slack_link(thread_url)
 
 
 def by_user(user_id):
     return f" by <@{user_id}>" if user_id else ""
 
 
-def status_clause(case):
+def status_clause(case, thread_link=True):
     kind = state(case)
     if kind == MERGED:
-        target = case_link(case.get("duplicate_of"), case.get("duplicate_url")) if case.get("duplicate_of") else "another case"
+        main_id = case.get("duplicate_of")
+        thread_url = case.get("duplicate_thread_url") if thread_link else None
+        target = case_link(main_id, case.get("duplicate_url"), thread_url) if main_id else "another case"
         return f"merged into {target}{by_user(case.get('resolved_by'))}"
     if kind == RESOLVED:
         return f"resolved{by_user(case.get('resolved_by'))}"
@@ -69,8 +73,11 @@ def status_clause(case):
 
 
 def body_text(case):
-    subjects = case.get("subjects") or []
-    return join([people(subjects), status_clause(case)])[:BODY_LIMIT]
+    subjects = people(case.get("subjects") or [])
+    text = join([subjects, status_clause(case)])
+    if len(text) > BODY_LIMIT:
+        text = join([subjects, status_clause(case, thread_link=False)])
+    return text[:BODY_LIMIT]
 
 
 def action_summary(case):

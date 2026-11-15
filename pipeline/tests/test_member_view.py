@@ -11,6 +11,10 @@ def url_of(case_id):
     return f"https://fe/cases/{case_id}"
 
 
+def slack_of(case_id):
+    return f"https://slack/{case_id}"
+
+
 def entry(**over):
     row = {"type_key": "shush", "case_id": 44, "performed_by": "UMOD", "performed_at": AT,
            "expires_at": None, "reason": "spam", "reversed_at": None, "reversed_by": None,
@@ -68,6 +72,26 @@ def test_action_text_links_case_and_shows_reason_and_actor():
     text = member_view.action_text(entry(), url_of)
 
     assert text.startswith("*Shush*  <https://fe/cases/44|case 44>\nspam _<@UMOD>, ")
+
+
+def test_action_text_links_case_slack_thread_after_fire_engine():
+    text = member_view.action_text(entry(), url_of, slack_of)
+
+    assert text.startswith("*Shush*  <https://fe/cases/44|case 44> (<https://slack/44|Slack>)\nspam _<@UMOD>, ")
+
+
+def test_action_text_without_slack_thread_keeps_fire_engine_link_only():
+    text = member_view.action_text(entry(), url_of, lambda case_id: None)
+
+    assert text.startswith("*Shush*  <https://fe/cases/44|case 44>\nspam _<@UMOD>, ")
+
+
+def test_build_view_passes_slack_threads_to_every_action():
+    view = member_view.build_view("UM", "Nothing active", "No record", [entry(), entry(case_id=45)], [], URL,
+                                  True, url_of, slack_of)
+    text = str(view["blocks"])
+
+    assert "(<https://slack/44|Slack>)" in text and "(<https://slack/45|Slack>)" in text
 
 
 def test_action_text_without_case_url_uses_plain_case_number():
