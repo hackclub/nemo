@@ -1,6 +1,7 @@
 module Fd
   class ResolutionsController < BaseController
     include ClosesReports
+    include UnmergesCases
 
     permit "case.resolve", on: -> { Case.find(params[:case_id]) }, only: :create
     permit "case.reopen", on: -> { Case.find(params[:case_id]) }, only: :destroy
@@ -42,14 +43,14 @@ module Fd
 
       return redirect_with_alert("Case #{@case.id} is already open") unless @case.resolved?
 
-      previous_state = { "resolved_at" => @case.resolved_at, "resolution" => @case.resolution,
-                         "duplicate_of" => @case.duplicate_of }
-
       writing do
-        @case.update!(resolved_at: nil, resolution: nil, duplicate_of: nil, updated_at: @now)
-        reopen_reports
-        audit(@case, "reopened", before: previous_state,
-          after: { "resolved_at" => nil, "resolution" => nil, "duplicate_of" => nil })
+        unmerge(@case) if @case.duplicate?
+        next unless @case.resolved?
+
+        previous_state = { "resolved_at" => @case.resolved_at, "resolution" => @case.resolution }
+        @case.update!(resolved_at: nil, resolution: nil, updated_at: @now)
+        reopen_reports(@case)
+        audit(@case, "reopened", before: previous_state, after: { "resolved_at" => nil, "resolution" => nil })
       end
 
       redirect_to fd_case_path(@case), notice: "Case #{@case.id} reopened"
@@ -66,15 +67,6 @@ module Fd
 
     def mark_resolved(resolution)
       @case.mark_resolved!(resolution, at: @now, member_note: params[:member_note].presence)
-    end
-
-    def reopen_reports
-      CaseReport.where(case_id: @case.family_ids).where.not(closed_at: nil).find_each do |report|
-        previous_closure = { "closed_at" => report.closed_at, "closed_by" => report.closed_by }
-        report.update!(closed_at: nil, closed_by: nil)
-        audit(report, "reopened", entity_id: @case.id,
-          before: previous_closure, after: { "closed_at" => nil, "closed_by" => nil })
-      end
     end
 
     def redirect_with_alert(message)

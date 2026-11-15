@@ -135,6 +135,7 @@ Rails.application.routes.draw do
       resource :claim, only: [:create, :destroy]
       resources :assignees, only: [:create, :destroy]
       resource :resolution, only: [:create, :destroy]
+      resource :unmerge, only: [:create]
       resources :replies, only: [:create]
       resources :chats, only: [:create]
       resource :chat_log, only: [:show] do

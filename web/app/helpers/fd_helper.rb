@@ -922,6 +922,22 @@ module FdHelper
     thread.nil? ? "Message the team" : "Message"
   end
 
+  def unmerge_title(case_id, into_case_id)
+    "Unmerge case #{case_id} from case #{into_case_id}?"
+  end
+
+  def thread_case_label(report, kase)
+    return "Merged case #{report.case_id}" if report.case_id != kase.id
+    return "Main case #{report.case_id}" if !kase.duplicate? && kase.merged?
+
+    "Case #{report.case_id}"
+  end
+
+  def merged_case_links(kase)
+    ids = kase.merged_in.map(&:id).sort
+    safe_join(ids.map { |id| link_to(id, fd_case_path(id), class: "lnk") }, ", ")
+  end
+
   def thread_state(report, kase, reachable)
     if !reachable.include?(report.id)
       ["closed", "closed"]
@@ -1442,6 +1458,7 @@ module FdHelper
     "case/unclaimed" => "Released",
     "case/resolved" => "Resolved",
     "case/reopened" => "Reopened",
+    "case/unmerged" => "Unmerged",
     "case/categorised" => "Set category on",
     "note/noted" => "Wrote a note on",
     "note/deleted" => "Deleted a note on",

@@ -106,7 +106,7 @@ class FdMergesTest < ActionDispatch::IntegrationTest
     assert_not_nil @main.resolved_at
   end
 
-  test "merge re-points cases merged into a duplicate to the new target" do
+  test "merge moves cases merged into a duplicate onto the main case" do
     @dup_two.update!(resolved_at: 1.hour.ago, resolution: "duplicate", duplicate_of: @dup_one.id)
     sign_in_as(@me)
     merge([@dup_one.id], @main.id)
@@ -115,6 +115,25 @@ class FdMergesTest < ActionDispatch::IntegrationTest
     assert_equal @main.id, @dup_two.reload.duplicate_of
     entry = Fd::AuditEntry.find_by!(entity_type: "case", entity_id: @dup_two.id, verb: "merged")
     assert_equal @dup_one.id, entry.before["duplicate_of"]
+  end
+
+  test "merge of a case and a case already merged into it puts both on the main case" do
+    @dup_two.update!(resolved_at: 1.hour.ago, resolution: "duplicate", duplicate_of: @dup_one.id)
+    sign_in_as(@me)
+    merge([@dup_two.id, @dup_one.id], @main.id)
+
+    assert_equal @main.id, @dup_one.reload.duplicate_of
+    assert_equal @main.id, @dup_two.reload.duplicate_of
+  end
+
+  test "merge skips a case already merged deeper into the target" do
+    @dup_one.update!(resolved_at: 1.hour.ago, resolution: "duplicate", duplicate_of: @main.id)
+    @dup_two.update!(resolved_at: 1.hour.ago, resolution: "duplicate", duplicate_of: @dup_one.id)
+    sign_in_as(@me)
+    merge([@dup_two.id], @main.id)
+
+    assert_equal @dup_one.id, @dup_two.reload.duplicate_of
+    assert_equal "Cases already merged", flash[:alert]
   end
 
   test "merge with all cases already merged into the target alerts Cases already merged" do

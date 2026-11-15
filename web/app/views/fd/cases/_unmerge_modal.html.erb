@@ -1,0 +1,9 @@
+<%= render layout: "fd/modal", locals: { id: "unmerge-#{case_id}", title: unmerge_title(case_id, into_case_id) } do %>
+  <%= form_with url: fd_case_unmerge_path(case_id), method: :post do %>
+    <%= hidden_field_tag :back, back, id: nil %>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-action="click->modal#close">Cancel</button>
+      <%= submit_tag "Unmerge", class: "btn btn-crit" %>
+    </div>
+  <% end %>
+<% end %>

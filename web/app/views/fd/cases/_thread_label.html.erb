@@ -2,7 +2,7 @@
 <span class="thread-text">
   <b><%= item[:report].reporter_label(names) %></b>
   <span class="thread-meta">
-    <span>Case <%= item[:report].case_id %></span>
+    <span><%= thread_case_label(item[:report], kase) %></span>
     <span class="thread-state" data-state="<%= item[:tone] %>"><%= item[:state] %></span>
   </span>
 </span>

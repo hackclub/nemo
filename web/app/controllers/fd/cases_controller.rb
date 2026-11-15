@@ -24,6 +24,7 @@ module Fd
       @people = CasePeople.for(@participants, selected_user_id: params[:person])
       @reports = CaseReport.where(case_id: family).oldest_first.to_a
       @root_chat = CaseChat.root_for(@case, family) if @reports.empty?
+      @merge_parents = @case.merge_parents if current_account.may?("case.resolve", @case)
       @actions = Action.where(case_id: family).oldest_first.to_a
       @live_actions = @actions.reject(&:reversed?)
       @thread_guards = ThreadGuard.for_case(family).newest_first.to_a

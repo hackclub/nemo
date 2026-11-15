@@ -24,10 +24,12 @@
   <% end %>
 
   <% if @case.resolved? %>
-    <%= gated_button "case.reopen", case_action_button("history", "Reopen"),
-          fd_case_resolution_path(@case), on: @case,
-          method: :delete, form: { class: "contents", data: { turbo_confirm:
-            "Reopen case #{@case.id}?" } } %>
+    <% unless @case.duplicate? %>
+      <%= gated_button "case.reopen", case_action_button("history", "Reopen"),
+            fd_case_resolution_path(@case), on: @case,
+            method: :delete, form: { class: "contents", data: { turbo_confirm:
+              "Reopen case #{@case.id}?" } } %>
+    <% end %>
   <% else %>
     <% unless @case.assigned_to?(current_account.user_id) %>
       <%= gated_button "case.open", case_action_button("shield", "Claim", shortcut: "c"),
@@ -76,10 +78,15 @@
       <% if @case.resolved? %>
         <%= opens_modal "case.resolve", menu_item("merge", "Merge into another case"),
               opens: "merge-case", on: @case %>
-        <%= gated_button "case.reopen", menu_item("hand", "Reopen"),
-              fd_case_resolution_path(@case), on: @case, method: :delete,
-              form: { class: "contents", data: { turbo_confirm:
-                "Reopen case #{@case.id}?" } } %>
+        <% if @case.duplicate? %>
+          <%= opens_modal "case.resolve", menu_item("merge", "Unmerge"),
+                opens: "unmerge-#{@case.id}", on: @case %>
+        <% else %>
+          <%= gated_button "case.reopen", menu_item("hand", "Reopen"),
+                fd_case_resolution_path(@case), on: @case, method: :delete,
+                form: { class: "contents", data: { turbo_confirm:
+                  "Reopen case #{@case.id}?" } } %>
+        <% end %>
       <% end %>
   <% end %>
 <% end %>
@@ -104,18 +111,27 @@
     <div class="closed">
       <span class="closed-what">
         Closed <%= Fd::ShortDate.for(@case.resolved_at) %> ·
-        <%= resolution_label(@case.resolution).downcase %>
+        <% if @case.duplicate? %>
+          merged into <%= link_to "case #{@case.duplicate_of}", fd_case_path(@case.duplicate_of), class: "lnk" %>
+        <% else %>
+          <%= resolution_label(@case.resolution).downcase %>
+        <% end %>
       </span>
       <% if @case.member_note.present? %>
         <span class="closed-why"><%= mentioned(@case.member_note) %></span>
       <% end %>
+      <% if @case.duplicate? %>
+        <%= opens_modal "case.resolve", "Unmerge", opens: "unmerge-#{@case.id}", on: @case,
+              css: "btn btn-ghost btn-sm closed-do" %>
+      <% end %>
     </div>
   <% end %>
 
-  <% if @case.duplicate_of %>
-    <div class="warnbar">
-      <span>Duplicate of
-        <%= link_to "case #{@case.duplicate_of}", fd_case_path(@case.duplicate_of), class: "lnk" %></span>
+  <% if !@case.duplicate? && @case.merged? %>
+    <div class="merge-strip">
+      <span class="closed-what">
+        Main case · <%= pluralize(@case.merged_in.size, "merged case") %>: <%= merged_case_links(@case) %>
+      </span>
     </div>
   <% end %>
 
@@ -124,7 +140,8 @@
       <%= render "chat", kase: @case, reports: @reports, chat: @chat, earlier: @earlier_count,
             messages: @conversation_messages, queued: @queued_replies, thread: @thread,
             conversation: @thread_conversation, message_count: @conversation_count,
-            reachable: @reachable_report_ids, root: @root_chat, pane_params: @pane_params %>
+            reachable: @reachable_report_ids, root: @root_chat, pane_params: @pane_params,
+            merge_parents: @merge_parents %>
     <% end %>
 
     <% if @tab == "people" %>
@@ -230,6 +247,14 @@
     <% end %>
   </div>
 </div>
+
+<% if @merge_parents %>
+  <% unmerge_ids = @tab == "report" ? @reports.map(&:case_id) : [] %>
+  <% unmerge_ids = (unmerge_ids - [@case.id] + (@case.duplicate? ? [@case.id] : [])).uniq %>
+  <% unmerge_ids.each do |case_id| %>
+    <%= render "unmerge_modal", case_id: case_id, into_case_id: @merge_parents.fetch(case_id), back: @case.id %>
+  <% end %>
+<% end %>
 
 <% @actions.each do |action| %>
   <%= render layout: "fd/modal", locals: { id: "edit-action-#{action.id}",

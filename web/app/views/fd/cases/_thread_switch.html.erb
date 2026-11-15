@@ -1,7 +1,8 @@
 <%
   inline_limit = 3
   pane_params = local_assigns.fetch(:pane_params, {})
-  items = reports.map do |report|
+  merge_parents = local_assigns.fetch(:merge_parents, nil)
+  items = reports.sort_by.with_index { |report, index| [report.case_id == kase.id ? 0 : 1, index] }.map do |report|
     state, tone = thread_state(report, kase, reachable)
     { report: report, state: state, tone: tone, current: report.id == thread&.id }
   end
@@ -11,7 +12,7 @@
     <% items.each do |item| %>
       <%= link_to fd_case_path(kase, pane_params.merge(tab: "report", thread: item[:report].id)),
             class: "thread-tab", aria: { current: (item[:current] ? "true" : nil) } do %>
-        <%= render "fd/cases/thread_label", item: item, names: names %>
+        <%= render "fd/cases/thread_label", item: item, names: names, kase: kase %>
       <% end %>
     <% end %>
   </nav>
@@ -19,13 +20,19 @@
   <% selected = items.find { |item| item[:current] } || items.last %>
   <%= render layout: "shared/dropdown", locals: {
         label: "Reporter threads", css: "thread-menu", trigger_css: "thread-trigger", pop_css: "thread-pop",
-        trigger: render("fd/cases/thread_trigger", item: selected, names: names, total: items.size)
+        trigger: render("fd/cases/thread_trigger", item: selected, names: names, total: items.size, kase: kase)
       } do %>
     <% items.each do |item| %>
-      <%= link_to fd_case_path(kase, pane_params.merge(tab: "report", thread: item[:report].id)),
-            class: "thread-row", aria: { current: (item[:current] ? "true" : nil) } do %>
-        <%= render "fd/cases/thread_label", item: item, names: names %>
-      <% end %>
+      <div class="thread-item">
+        <%= link_to fd_case_path(kase, pane_params.merge(tab: "report", thread: item[:report].id)),
+              class: "thread-row", aria: { current: (item[:current] ? "true" : nil) } do %>
+          <%= render "fd/cases/thread_label", item: item, names: names, kase: kase %>
+        <% end %>
+        <% if merge_parents && item[:report].case_id != kase.id %>
+          <button type="button" class="btn btn-ghost btn-sm thread-unmerge" aria-haspopup="dialog"
+                  data-modal-open="unmerge-<%= item[:report].case_id %>">Unmerge</button>
+        <% end %>
+      </div>
     <% end %>
   <% end %>
 <% end %>

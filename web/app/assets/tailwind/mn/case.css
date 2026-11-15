@@ -175,6 +175,18 @@
     padding-inline: calc(var(--s-md) + 3px) var(--s-md);
   }
   .closed-what { font-weight: 600; color: var(--ink); }
+  .closed:has(.closed-do) { align-items: center; padding-block: 6px; }
+  .merge-strip {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    padding: var(--s-xs) var(--s-md) var(--s-xs) calc(var(--s-md) + 3px);
+    border-bottom: 1px solid var(--line);
+    background: var(--card-2);
+    font-size: var(--t-body);
+  }
+  .case-record > .merge-strip { margin-bottom: calc(var(--s-xs) * -1); }
+  .closed-do { margin-left: auto; flex: none; }
   .closed-why { color: var(--ink-3); font-size: var(--t-small); }
 
   .dup {
@@ -337,6 +349,11 @@
   .thread-chevron { @apply flex-none text-muted-foreground; }
   .menu-pop.thread-pop { @apply min-w-72 p-1; }
   .thread-pop .thread-row { @apply w-full; }
+  .thread-item { @apply relative; }
+  .thread-item:has(.thread-unmerge) > .thread-row { @apply pr-24; }
+  .menu-pop .thread-item > .thread-unmerge {
+    @apply absolute top-1/2 right-1.5 w-auto -translate-y-1/2 px-2 py-1 text-xs font-medium text-muted-foreground;
+  }
   .chat-only { flex: none; }
   .segmented.chat-only { @apply h-auto gap-0.5 bg-transparent p-0; }
   .segmented.chat-only > button { @apply h-7 rounded-md border-transparent! px-2.5 text-xs shadow-none!; }

@@ -13,6 +13,22 @@ module Fd
 
     scope :oldest_first, -> { order(:added_at, :tag_id) }
 
+    def self.release_merge!(case_id, merge_id)
+      copied = where(case_id: case_id, merge_id: merge_id).includes(:tag).to_a
+      copied.filter_map do |row|
+        keeper = CaseMerge.live.where(into_case_id: case_id).where.not(id: merge_id)
+          .where(case_id: where(tag_id: row.tag_id).select(:case_id)).order(:id).pick(:id)
+        rows = where(case_id: case_id, tag_id: row.tag_id)
+        if keeper
+          rows.update_all(merge_id: keeper)
+          next
+        end
+
+        rows.delete_all
+        row.tag
+      end
+    end
+
     private
 
     def within_tag_limit

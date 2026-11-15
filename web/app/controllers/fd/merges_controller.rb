@@ -50,7 +50,8 @@ module Fd
       return redirect_with_alert("Cases not found") if target.nil?
 
       root = Case.root_for(target.id)
-      marked = mark_duplicates(ids - [root], root)
+      along = ids.flat_map { |id| Case.family_of(id) - [id] }
+      marked = mark_duplicates(ids - along - Case.family_of(root), root)
 
       if marked.zero?
         redirect_with_alert("Cases already merged")
@@ -124,6 +125,7 @@ module Fd
         Case.where(id: ids).where.not(id: root).lock.order(:id).each do |kase|
           next if kase.duplicate_of == root
 
+          release_previous_merge(kase)
           before = { "resolved_at" => kase.resolved_at, "resolution" => kase.resolution,
                      "duplicate_of" => kase.duplicate_of }
           kase.update_columns(resolved_at: kase.resolved_at || now, resolution: "duplicate",
@@ -138,22 +140,35 @@ module Fd
               "duplicate_of" => root
             })
         end
-        repoint_duplicates(marked_ids, root, now)
-        copy_tags_to_target(marked_ids, root)
+        repointed_ids = repoint_duplicates(marked_ids, root, now)
+        copy_tags_to_target(marked_ids + repointed_ids, root)
       end
 
       marked
     end
 
     def repoint_duplicates(source_case_ids, root, now)
-      return if source_case_ids.empty?
+      return [] if source_case_ids.empty?
 
       family_ids = source_case_ids.flat_map { |id| Case.family_of(id) } - source_case_ids - [root]
-      Case.where(id: family_ids).lock.order(:id).each do |kase|
+      Case.where(id: family_ids).lock.order(:id).map do |kase|
+        release_previous_merge(kase)
         before = { "duplicate_of" => kase.duplicate_of }
         kase.update_columns(duplicate_of: root, updated_at: now)
         audit(kase, "merged", before: before, after: { "duplicate_of" => root })
+        kase.id
       end
+    end
+
+    def release_previous_merge(kase)
+      merge = CaseMerge.live.find_by(case_id: kase.id)
+      return if merge.nil?
+
+      removed = CaseTag.release_merge!(merge.into_case_id, merge.id)
+      return if removed.empty?
+
+      audit(CaseTag.new(case_id: merge.into_case_id), "removed", entity_id: merge.into_case_id,
+        before: { "tags" => removed.map(&:name), "source_case_ids" => [kase.id] })
     end
 
     def copy_tags_to_target(source_case_ids, target_id)

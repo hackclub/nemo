@@ -229,12 +229,41 @@ module Fd
     end
 
     def copy_tags_from!(source_case_ids, by:)
-      existing_tag_ids = CaseTag.where(case_id: id).select(:tag_id)
-      tag_ids = CaseTag.where(case_id: source_case_ids).where.not(tag_id: existing_tag_ids).distinct.pluck(:tag_id)
-      return [] if tag_ids.empty?
+      merge_ids = CaseMerge.live.where(case_id: source_case_ids, into_case_id: id).pluck(:case_id, :id).to_h
+      present = CaseTag.where(case_id: id).pluck(:tag_id).to_set
+      rows = CaseTag.where(case_id: source_case_ids).order(:case_id, :added_at, :tag_id).filter_map do |source|
+        next unless present.add?(source.tag_id)
 
-      CaseTag.insert_all(tag_ids.map { |tag_id| { case_id: id, tag_id: tag_id, added_by: by } })
-      Tag.where(id: tag_ids).order(:name).to_a
+        { case_id: id, tag_id: source.tag_id, added_by: by, merge_id: merge_ids[source.case_id] }
+      end
+      return [] if rows.empty?
+
+      CaseTag.insert_all(rows)
+      Tag.where(id: rows.pluck(:tag_id)).order(:name).to_a
+    end
+
+    Unmerged = Struct.new(:into_case_id, :before, :after, :removed_tags, keyword_init: true) do
+      def reopened? = after["resolved_at"].nil?
+    end
+
+    def unmerge!(at: Time.current)
+      lock!
+      return nil unless duplicate?
+
+      merge = CaseMerge.live.find_by(case_id: id)
+      into_case_id = duplicate_of
+      before = { "resolved_at" => resolved_at, "resolution" => resolution, "duplicate_of" => duplicate_of }
+      restored = merge&.prior_resolved?
+      update_columns(duplicate_of: nil, resolved_at: (merge.prior_resolved_at if restored),
+        resolution: (merge.prior_resolution if restored), updated_at: at)
+      removed_tags = merge ? CaseTag.release_merge!(into_case_id, merge.id) : []
+
+      Unmerged.new(into_case_id: into_case_id, before: before, removed_tags: removed_tags,
+        after: { "resolved_at" => resolved_at, "resolution" => resolution, "duplicate_of" => nil })
+    end
+
+    def merge_parents
+      @merge_parents ||= self.class.where(id: family_ids).pluck(:id, :duplicate_of).to_h
     end
 
     def assign!(user_id, by: nil)

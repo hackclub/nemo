@@ -9,6 +9,7 @@
 <% message_count = local_assigns.fetch(:message_count, messages.size) %>
 <% root = local_assigns.fetch(:root, nil) %>
 <% pane_params = local_assigns.fetch(:pane_params, {}) %>
+<% merge_parents = local_assigns.fetch(:merge_parents, nil) %>
 
 <div class="chatwrap" data-controller="sticky pending-flush chat-filter"
      data-chat-filter-key-value="<%= kase.id %>"
@@ -17,7 +18,7 @@
   <div class="chat-head">
     <% if reports.size > 1 %>
       <%= render "fd/cases/thread_switch", kase: kase, reports: reports, thread: thread,
-            names: names, reachable: reachable, pane_params: pane_params %>
+            names: names, reachable: reachable, pane_params: pane_params, merge_parents: merge_parents %>
     <% elsif thread %>
       <%= thread.anonymous? ? anonymous_face : avatar(thread.reporter_user_id) %>
       <span class="grow two-line">
@@ -44,6 +45,10 @@
       <span class="grow two-line">
         <b>Internal chat</b>
       </span>
+    <% end %>
+    <% if merge_parents && reports.size.between?(2, 3) && thread && thread.case_id != kase.id %>
+      <button type="button" class="btn btn-ghost btn-sm chat-only" aria-haspopup="dialog"
+              data-modal-open="unmerge-<%= thread.case_id %>">Unmerge</button>
     <% end %>
     <% if (thread_url = case_thread_url(kase, thread)) %>
       <%= link_to "Open in Slack", thread_url, class: "btn btn-ghost btn-sm chat-only",
