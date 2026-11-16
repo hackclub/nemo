@@ -1,5 +1,8 @@
+import re
+
 PREFIX = "?"
 ANON = "~"
+QUESTION_MARKS_ONLY = re.compile(r"[?\s]+")
 
 SENT_REACTION = "white_check_mark"
 FAILED_REACTION = "x"
@@ -13,7 +16,10 @@ def read(text):
     if not text.startswith(PREFIX):
         return None
 
-    return {"body": text[len(PREFIX):].lstrip(), "signed": not is_anonymous}
+    body = text[len(PREFIX):].lstrip()
+    if QUESTION_MARKS_ONLY.fullmatch(body):
+        return None
+    return {"body": body, "signed": not is_anonymous}
 
 
 def reply_body(text):

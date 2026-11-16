@@ -80,6 +80,22 @@ def test_on_message_question_without_reporter_thread_is_stored_as_chat(harness, 
     assert harness["stored"][0][0] == 6
 
 
+@pytest.mark.parametrize("text", ["??", "???", "~??", "? ?", "?? "])
+def test_on_message_question_marks_only_is_stored_as_chat(harness, monkeypatch, text):
+    stub_is_reporter_thread(monkeypatch, True)
+    message_handler().fn(Ctx(dict(EVENT, text=text)))
+
+    assert harness["replies"] == []
+    assert harness["stored"][0][0] == 6
+
+
+def test_on_message_reply_ending_in_question_marks_is_sent(harness, monkeypatch):
+    stub_is_reporter_thread(monkeypatch, True)
+    message_handler().fn(Ctx(dict(EVENT, text="?are you still there??")))
+
+    assert harness["replies"][0][0][1] == "are you still there??"
+
+
 def test_on_message_plain_chat_skips_reporter_thread_lookup(harness, monkeypatch):
     monkeypatch.setattr(handlers.chat, "is_reporter_thread", lambda conn, ts: 1 / 0)
     message_handler().fn(Ctx(dict(EVENT, text="who is handling this")))
@@ -204,12 +220,13 @@ def test_on_message_changed_reply_queues_edit_with_new_text(harness, monkeypatch
     assert edited == [("C_FIRE", "2.0", "thanks, looking now", "UFD")]
 
 
-def test_on_message_changed_non_reply_chat_queues_no_edit(harness, monkeypatch):
+@pytest.mark.parametrize("text", ["internal chat", "??"])
+def test_on_message_changed_non_reply_chat_queues_no_edit(harness, monkeypatch, text):
     edited = []
     monkeypatch.setattr(handlers.chat, "edit", lambda conn, channel_id, message: 5)
     monkeypatch.setattr(handlers.outbox, "edit_reply", lambda *args: edited.append(args))
     changed = {"channel": "C_FIRE", "subtype": "message_changed",
-               "message": {"ts": "2.0", "user": "UFD", "text": "internal chat"}}
+               "message": {"ts": "2.0", "user": "UFD", "text": text}}
 
     message_handler().fn(ClientCtx(changed, SlackCalls()))
 
