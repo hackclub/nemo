@@ -49,14 +49,6 @@ module Fd
       WHERE s.user_id = :user_id AND #{NOT_DIFFERENT_PEOPLE}
     SQL
 
-    ACTIONED_ALTS_SQL = <<~SQL.squish.freeze
-      SELECT s.user_id, s.other_id
-      FROM fd.member_link_side s
-      WHERE s.user_id IN (:ids) AND s.score >= :strong AND #{NOT_DIFFERENT_PEOPLE}
-        AND EXISTS (SELECT 1 FROM fd.actions a WHERE a.target_user_id = s.other_id AND a.reversed_at IS NULL)
-      ORDER BY s.user_id, s.score DESC, s.other_id
-    SQL
-
     CLUSTER_SQL = <<~SQL.squish.freeze
       SELECT cluster_id, accounts, ring, conflict FROM fd.member_cluster WHERE user_id = :user_id
     SQL
@@ -115,13 +107,6 @@ module Fd
           active: row["active"].to_i, ring: flag.cast(row["ring"]),
           conflict: flag.cast(row["conflict"]))
       end
-    end
-
-    def self.actioned_alts_for(user_ids)
-      return {} if user_ids.empty?
-
-      connection.select_rows(sanitize_sql([ACTIONED_ALTS_SQL, { ids: user_ids, strong: STRONG }]))
-        .group_by(&:first).transform_values { |pairs| pairs.map(&:last) }
     end
 
     def self.link_counts_for(user_id)

@@ -78,6 +78,97 @@ class FdLinkListTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#member-links-list[data-src=?]", fd_links_path(view: "certain")
   end
 
+  def action_on!(user_id, reversed: false)
+    kase = make_case(subject: user_id)
+    Fd::Action.create!(case_id: kase.id, type_key: "warning", target_user_id: user_id, decided_by: "UMOD",
+      performed_by: "UMOD", performed_at: 2.days.ago, source_app: "fire_engine",
+      reversed_at: (1.day.ago if reversed), reversed_by: ("UMOD" if reversed))
+  end
+
+  def pair_names
+    pairs.map { |pair| pair.map { |face| face.delete_prefix("@") } }
+  end
+
+  test "actioned view lists strong pairs with an unreversed action on either side" do
+    action_on!("ULISTB")
+    action_on!("ULISTD")
+    action_on!("ULISTF", reversed: true)
+
+    get fd_links_path(view: "actioned")
+
+    assert_equal [%w[ulista ulistb]], pair_names
+    assert_equal 1, tab_counts["Alt has actions"]
+  end
+
+  test "actioned view leaves out pairs marked different people and keeps reviewed pairs" do
+    action_on!("ULISTA")
+    as_pipeline("INSERT INTO fd.member_link_verdict (a_user_id, b_user_id, verdict, decided_by) VALUES ('ULISTA', 'ULISTB', 'same_person', 'ULISTBOSS')")
+    seeded!("fd.member_link_verdict", "a_user_id", "ULISTA")
+
+    get fd_links_path(view: "actioned")
+
+    assert_equal [%w[ulista ulistb], %w[ulista ulistf]], pair_names
+  end
+
+  test "actioned view filters by deactivation and verdict" do
+    action_on!("ULISTA")
+    as_pipeline("UPDATE fd.member SET is_deleted = true WHERE user_id IN ('ULISTA', 'ULISTB')")
+    as_pipeline("INSERT INTO fd.member_link_verdict (a_user_id, b_user_id, verdict, decided_by) VALUES ('ULISTA', 'ULISTB', 'same_person', 'ULISTBOSS')")
+    seeded!("fd.member_link_verdict", "a_user_id", "ULISTA")
+
+    get fd_links_path(view: "actioned", status: "both_deactivated")
+    assert_equal [%w[ulista ulistb]], pair_names
+    assert_equal 1, tab_counts["Alt has actions"]
+
+    get fd_links_path(view: "actioned", status: "one_deactivated")
+    assert_equal [%w[ulista ulistf]], pair_names
+
+    get fd_links_path(view: "actioned", status: "neither_deactivated")
+    assert_equal 0, pairs.size
+    assert_select ".empty-title", "No links"
+
+    get fd_links_path(view: "actioned", verdict: "reviewed")
+    assert_equal [%w[ulista ulistb]], pair_names
+
+    get fd_links_path(view: "actioned", verdict: "unreviewed")
+    assert_equal [%w[ulista ulistf]], pair_names
+
+    get fd_links_path(view: "actioned", status: "nope", verdict: "nope")
+    assert_equal 2, pairs.size
+  end
+
+  test "actioned view shows its filters and keeps them in the frame source and other tabs reset them" do
+    action_on!("ULISTA")
+
+    get fd_links_path(view: "actioned", status: "one_deactivated", verdict: "unreviewed")
+
+    assert_select ".views-tools .filter-key", text: "Status"
+    assert_select ".views-tools .filter-val", text: "One deactivated"
+    assert_select ".views-tools .filter-key", text: "Verdict"
+    assert_select ".views-tools .filter-val", text: "Unreviewed"
+    assert_select ".views-tools .segmented", count: 0
+    assert_select "turbo-frame#member-links-list[data-src=?]", fd_links_path(view: "actioned", status: "one_deactivated", verdict: "unreviewed")
+    assert_select "nav.views a.view[href=?]", fd_links_path, text: /Unreviewed/
+    assert_select "nav.views a.view[href=?]", fd_links_path(view: "actioned"), text: /Alt has actions/
+  end
+
+  test "actioned view paginates every pair" do
+    action_on!("ULISTA")
+    105.times do |n|
+      user_id = "UPAGE#{n.to_s.rjust(3, '0')}"
+      member!(user_id)
+      link!("ULISTA", user_id, 10.0, '{"ip_stable": {"value": "81.2.69.200", "score": 5.0}}')
+    end
+
+    get fd_links_path(view: "actioned")
+    assert_equal 100, pairs.size
+    assert_select ".pager-at", "Page 1 of 2"
+
+    get fd_links_path(view: "actioned", page: 2, status: "any")
+    assert_equal 7, pairs.size
+    assert_select ".pager-at", "Page 2 of 2"
+  end
+
   test "links index omits a reviewed pair from its band and lists it under reviewed" do
     get fd_links_path(view: "strong")
     refute_includes pairs.flatten, "ulistc"

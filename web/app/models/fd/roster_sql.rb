@@ -37,13 +37,8 @@ module Fd
         WHERE case_id IS NULL AND subject_user_id IS NOT NULL AND deleted_at IS NULL
         GROUP BY subject_user_id
       ),
-      actioned AS (
-        SELECT DISTINCT target_user_id AS user_id FROM fd.actions
-        WHERE reversed_at IS NULL AND target_user_id IS NOT NULL
-      ),
       link_totals AS (
-        SELECT s.user_id, count(*) AS links,
-               count(*) FILTER (WHERE s.other_id IN (SELECT user_id FROM actioned)) AS linked_actions
+        SELECT s.user_id, count(*) AS links
         FROM fd.member_link_side s
         WHERE s.score >= :strong AND NOT_DIFFERENT_PEOPLE
         GROUP BY s.user_id
@@ -70,7 +65,6 @@ module Fd
                coalesce(action_totals.priors, 0) AS priors,
                coalesce(note_totals.notes, 0) AS notes,
                coalesce(link_totals.links, 0) AS links,
-               coalesce(link_totals.linked_actions, 0) AS linked_actions,
                coalesce(m.is_deleted, false) AS deactivated,
                m.display_name, m.handle
         FROM candidate
@@ -135,13 +129,8 @@ module Fd
         WHERE case_id IS NULL AND subject_user_id IN (SELECT user_id FROM matched_user) AND deleted_at IS NULL
         GROUP BY subject_user_id
       ),
-      actioned AS (
-        SELECT DISTINCT target_user_id AS user_id FROM fd.actions
-        WHERE reversed_at IS NULL AND target_user_id IS NOT NULL
-      ),
       link_totals AS (
-        SELECT s.user_id, count(*) AS links,
-               count(*) FILTER (WHERE s.other_id IN (SELECT user_id FROM actioned)) AS linked_actions
+        SELECT s.user_id, count(*) AS links
         FROM fd.member_link_side s
         WHERE s.score >= :strong AND s.user_id IN (SELECT user_id FROM matched_user) AND NOT_DIFFERENT_PEOPLE
         GROUP BY s.user_id
@@ -159,7 +148,6 @@ module Fd
                coalesce(action_totals.priors, 0) AS priors,
                coalesce(note_totals.notes, 0) AS notes,
                coalesce(link_totals.links, 0) AS links,
-               coalesce(link_totals.linked_actions, 0) AS linked_actions,
                coalesce(m.is_deleted, false) AS deactivated,
                m.display_name, m.handle
         FROM candidate
@@ -255,7 +243,6 @@ module Fd
       when "noted" then "notes > 0"
       when "clean" then "subject_of = 0 AND logged_in = 0"
       when "linked" then "links > 0"
-      when "alts" then "linked_actions > 0"
       when "gone" then "deactivated"
       end
     end

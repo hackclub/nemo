@@ -46,7 +46,7 @@
     <% if rows.any? %>
       <div aria-label="Members" id="member-listbox">
         <%= render "fd/members/pane_rows", rows: rows, context: context, grants: grants,
-              open_id: open_id, query_params: query.to_params, alts: query.alts %>
+              open_id: open_id, query_params: query.to_params %>
       </div>
       <% if query.pages > query.page %>
         <div class="pane-more" data-controller="expand" data-expand-into-value="member-listbox"

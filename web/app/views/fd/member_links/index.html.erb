@@ -2,7 +2,7 @@
 
 <% content_for :page_tabs do %>
   <% Fd::LinkList::VIEWS.each do |key, label| %>
-    <%= link_to fd_links_path(@list.params_for(view: key, signal: nil)), class: "view",
+    <%= link_to fd_links_path(@list.params_for(view: key, status: nil, verdict: nil, signal: nil)), class: "view",
           aria: { current: ("true" if @list.view == key) } do %>
       <%= label %><span class="view-count"><%= number_with_delimiter(@list.view_counts.fetch(key)) %></span>
     <% end %>
@@ -12,11 +12,28 @@
 <% content_for :tab_tools do %>
   <% if @list.view == Fd::LinkList::DEFAULT_VIEW %>
     <span class="segmented">
-      <% Fd::LinkList::STATUSES.each do |key, label| %>
+      <% @list.statuses.each do |key, label| %>
         <%= link_to label, fd_links_path(@list.params_for(status: key)),
               aria: { current: ("true" if @list.status == key) } %>
       <% end %>
     </span>
+  <% elsif @list.view == "actioned" %>
+    <%= render layout: "shared/dropdown", locals: {
+          label: "Status", trigger_css: "btn",
+          trigger: audit_filter_trigger("Status", (@list.statuses.fetch(@list.status) unless @list.status == Fd::LinkList::DEFAULT_STATUSES["actioned"])) } do %>
+      <% @list.statuses.each do |key, label| %>
+        <%= link_to label, fd_links_path(@list.params_for(status: key)), class: "btn",
+              aria: { current: ("true" if @list.status == key) } %>
+      <% end %>
+    <% end %>
+    <%= render layout: "shared/dropdown", locals: {
+          label: "Verdict", trigger_css: "btn",
+          trigger: audit_filter_trigger("Verdict", (Fd::LinkList::VERDICT_FILTERS.fetch(@list.verdict_filter) unless @list.verdict_filter == Fd::LinkList::DEFAULT_VERDICT_FILTER)) } do %>
+      <% Fd::LinkList::VERDICT_FILTERS.each do |key, label| %>
+        <%= link_to label, fd_links_path(@list.params_for(verdict: key)), class: "btn",
+              aria: { current: ("true" if @list.verdict_filter == key) } %>
+      <% end %>
+    <% end %>
   <% end %>
   <%= render layout: "shared/dropdown", locals: {
         label: "Signal", trigger_css: "btn",

@@ -10,7 +10,6 @@ module Fd
     VIEWS = {
       "everyone" => "All",
       "linked" => "Linked",
-      "alts" => "Alt has actions",
       "force" => "In force",
       "priors" => "With priors",
       "deactivated" => "Deactivated",
@@ -19,7 +18,7 @@ module Fd
       "notes" => "Standing notes"
     }.freeze
 
-    TABS = %w[everyone linked alts force deactivated].freeze
+    TABS = %w[everyone linked force deactivated].freeze
     PANE_TABS = %w[everyone linked force].freeze
 
     VIEW_FACETS = {
@@ -28,7 +27,6 @@ module Fd
       "open" => { "state" => "open" },
       "priors" => { "priors" => "2" },
       "linked" => { "state" => "linked" },
-      "alts" => { "state" => "alts" },
       "deactivated" => { "state" => "gone" },
       "notes" => { "state" => "noted" },
       "everyone" => { "who" => "everyone" }
@@ -40,7 +38,7 @@ module Fd
     ACTIVE = { "any" => "any", "week" => "past week", "month" => "past month",
                "dormant" => "not in 90 days" }.freeze
     STATE = { "any" => "any", "open" => "open case", "noted" => "standing notes",
-              "clean" => "nothing on record", "linked" => "linked accounts", "alts" => "alt has actions",
+              "clean" => "nothing on record", "linked" => "linked accounts",
               "gone" => "deactivated" }.freeze
     WHO = { "history" => "with a history", "everyone" => "everyone" }.freeze
     SORT = { "messages" => "messages", "recent" => "last case", "subject" => "cases as subject",
@@ -110,10 +108,6 @@ module Fd
 
     def rows
       @rows ||= page_rows
-    end
-
-    def alts
-      @alts ||= self["state"] == "alts" ? MemberLink.actioned_alts_for(rows.map(&:user_id)) : {}
     end
 
     def page
@@ -230,7 +224,6 @@ module Fd
       when "priors" then "No members with priors"
       when "notes" then "No standing notes"
       when "linked" then "No linked members"
-      when "alts" then "No alts with actions"
       when "deactivated" then "No deactivated members"
       else "No matching members"
       end
@@ -360,7 +353,6 @@ module Fd
       when "priors" then "priors >= 2"
       when "notes" then "notes > 0"
       when "linked" then "links > 0"
-      when "alts" then "linked_actions > 0"
       when "deactivated" then "deactivated"
       else "1 = 1"
       end
@@ -396,7 +388,6 @@ module Fd
       when "noted" then "with standing notes"
       when "clean" then "with nothing on record"
       when "linked" then "with linked accounts"
-      when "alts" then "with an alt that has actions"
       when "gone" then "deactivated"
       end
     end

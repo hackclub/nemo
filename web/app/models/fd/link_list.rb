@@ -5,14 +5,32 @@ module Fd
       "certain" => "Certain",
       "strong" => "Strong",
       "weak" => "Weak",
+      "actioned" => "Alt has actions",
       "labelled" => "Staff test",
       "reviewed" => "Reviewed",
       "sampled" => "Sampled"
     }.freeze
     DEFAULT_VIEW = "review".freeze
-    STATUSES = { "one_deactivated" => "One deactivated", "all" => "All" }.freeze
-    DEFAULT_STATUS = "one_deactivated".freeze
-    STATUS_CONDITIONS = { "one_deactivated" => "a.is_deleted <> b.is_deleted", "all" => "true" }.freeze
+    STATUSES = {
+      "review" => { "one_deactivated" => "One deactivated", "all" => "All" },
+      "actioned" => { "any" => "Any", "one_deactivated" => "One deactivated",
+                      "both_deactivated" => "Both deactivated", "neither_deactivated" => "Neither deactivated" }
+    }.freeze
+    DEFAULT_STATUSES = { "review" => "one_deactivated", "actioned" => "any" }.freeze
+    STATUS_CONDITIONS = {
+      "one_deactivated" => "coalesce(a.is_deleted, false) <> coalesce(b.is_deleted, false)",
+      "both_deactivated" => "coalesce(a.is_deleted, false) AND coalesce(b.is_deleted, false)",
+      "neither_deactivated" => "NOT coalesce(a.is_deleted, false) AND NOT coalesce(b.is_deleted, false)",
+      "all" => "true",
+      "any" => "true"
+    }.freeze
+    VERDICT_FILTERS = { "any" => "Any", "unreviewed" => "Unreviewed", "reviewed" => "Reviewed" }.freeze
+    DEFAULT_VERDICT_FILTER = "any".freeze
+    VERDICT_CONDITIONS = {
+      "any" => "true",
+      "unreviewed" => "v.a_user_id IS NULL",
+      "reviewed" => "v.a_user_id IS NOT NULL"
+    }.freeze
     LIVE_VARIANT = "live".freeze
     LIMIT = 100
 
@@ -29,6 +47,9 @@ module Fd
       "certain" => "l.score >= :certain AND v.a_user_id IS NULL",
       "strong" => "l.score >= :strong AND l.score < :certain AND v.a_user_id IS NULL",
       "weak" => "l.score < :strong AND l.label IS NULL AND v.a_user_id IS NULL",
+      "actioned" => "l.score >= :strong AND (v.a_user_id IS NULL OR v.verdict <> 'different_people') AND " \
+                    "EXISTS (SELECT 1 FROM fd.actions x WHERE x.target_user_id IN (l.a_user_id, l.b_user_id) " \
+                    "AND x.reversed_at IS NULL)",
       "labelled" => "l.label IS NOT NULL AND v.a_user_id IS NULL",
       "reviewed" => "v.a_user_id IS NOT NULL",
       "sampled" => "EXISTS (SELECT 1 FROM fd.link_sample s WHERE s.variant = :variant " \
@@ -76,10 +97,11 @@ module Fd
       VIEWS.key?(requested) ? requested : DEFAULT_VIEW
     end
 
-    def status
-      requested = @params[:status].to_s
-      view == DEFAULT_VIEW && STATUSES.key?(requested) ? requested : DEFAULT_STATUS
-    end
+    def statuses = STATUSES.fetch(view, {})
+
+    def status = status_for(view)
+
+    def verdict_filter = verdict_filter_for(view)
 
     def signal
       requested = @params[:signal].to_s
@@ -141,9 +163,11 @@ module Fd
 
     def user_ids = rows.flat_map { |row| [row.a_user_id, row.b_user_id] }
 
-    def params_for(view: self.view, status: self.status, signal: self.signal, variant: self.variant, page: 1)
+    def params_for(view: self.view, status: self.status, verdict: verdict_filter, signal: self.signal,
+      variant: self.variant, page: 1)
       { view: (view unless view == DEFAULT_VIEW),
-        status: (status if view == DEFAULT_VIEW && status != DEFAULT_STATUS), signal: signal,
+        status: (status if STATUSES.fetch(view, {}).key?(status) && status != DEFAULT_STATUSES[view]),
+        verdict: (verdict if view == "actioned" && verdict != DEFAULT_VERDICT_FILTER), signal: signal,
         variant: (variant if view == "sampled" && variant != LIVE_VARIANT),
         page: (page if page > 1) }.compact
     end
@@ -151,9 +175,21 @@ module Fd
     private
 
     def condition(key)
-      return CONDITIONS.fetch(key) unless key == DEFAULT_VIEW
+      return CONDITIONS.fetch(key) unless STATUSES.key?(key)
 
-      "#{CONDITIONS.fetch(key)} AND #{STATUS_CONDITIONS.fetch(status)}"
+      clauses = [CONDITIONS.fetch(key), STATUS_CONDITIONS.fetch(status_for(key))]
+      clauses << VERDICT_CONDITIONS.fetch(verdict_filter_for(key)) if key == "actioned"
+      clauses.join(" AND ")
+    end
+
+    def status_for(key)
+      requested = @params[:status].to_s
+      key == view && STATUSES.fetch(key, {}).key?(requested) ? requested : DEFAULT_STATUSES[key]
+    end
+
+    def verdict_filter_for(key)
+      requested = @params[:verdict].to_s
+      key == "actioned" && key == view && VERDICT_FILTERS.key?(requested) ? requested : DEFAULT_VERDICT_FILTER
     end
 
     def from_sql
