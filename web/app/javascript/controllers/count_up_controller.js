@@ -5,6 +5,8 @@ const LEADING_NUMBER = /^(\d[\d,]*)(.*)$/s
 const NUMBER_FORMAT = new Intl.NumberFormat("en-US")
 
 export default class extends Controller {
+  static reconnectOnMorph = false
+
   connect() {
     this.frames = new Set()
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return

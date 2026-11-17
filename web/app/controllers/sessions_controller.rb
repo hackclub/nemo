@@ -17,9 +17,10 @@ class SessionsController < ApplicationController
 
     staff = Account.find_or_create_by!(user_id: slack_id)
     Prometheus::Mirror.refresh(staff.user_id)
+    return_to = ReturnPath.sanitize(session[:return_to])
     reset_session
     session[:user_id] = staff.user_id
-    redirect_to root_path, notice: sign_in_notice(staff)
+    redirect_to return_to || root_path, notice: sign_in_notice(staff)
   end
 
   def failure

@@ -44,15 +44,18 @@ if (pendingCharts.size > 0) {
   })
 }
 
-const chartNames = new Set(chartPaths.map((path) =>
-  path.replace(/^charts\//, "").replace(/_controller$/, "").replace(/_/g, "-")))
-
 document.addEventListener("turbo:morph", () => {
   application.controllers
-    .filter((controller) => chartNames.has(controller.identifier))
+    .filter((controller) => controller.constructor.reconnectOnMorph !== false)
+    .filter((controller) => controller.element.isConnected)
     .filter((controller) => !controller.element.closest("[data-turbo-permanent]"))
     .forEach((controller) => {
-      controller.disconnect?.()
-      controller.connect?.()
+      try {
+        controller.disconnect()
+        controller.connect()
+      } catch (error) {
+        application.handleError(error, "reconnecting controller after a page morph",
+          { identifier: controller.identifier, controller, element: controller.element })
+      }
     })
 })

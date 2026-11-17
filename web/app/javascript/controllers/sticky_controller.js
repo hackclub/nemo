@@ -4,6 +4,8 @@ const BOTTOM_THRESHOLD = 60
 const LOG = "chatscroll"
 
 export default class extends Controller {
+  static reconnectOnMorph = false
+
   connect() {
     this.followBottom = true
     this.onScroll = this.onScroll.bind(this)

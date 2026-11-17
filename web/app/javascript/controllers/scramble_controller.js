@@ -29,9 +29,11 @@ export default class extends Controller {
   }
 
   finish() {
+    if (!this.timer) return
+
     clearInterval(this.timer)
     this.timer = null
-    if (this.text !== undefined) this.element.textContent = this.text
+    this.element.textContent = this.text
   }
 
   randomGlyph() {

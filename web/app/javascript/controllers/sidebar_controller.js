@@ -11,6 +11,8 @@ const MAX_WIDTH_PX = 460
 const DRAG_THRESHOLD_PX = 3
 
 export default class extends Controller {
+  static reconnectOnMorph = false
+
   connect() {
     this.root = document.documentElement
     this.nav = this.element.querySelector(".cpane")

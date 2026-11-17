@@ -64,7 +64,12 @@ class ApplicationController < ActionController::Base
     return if current_account.present?
     return head :unauthorized if request.format.json?
 
+    session[:return_to] = request.fullpath if storable_return?
     redirect_to login_path, alert: "Sign in to continue"
+  end
+
+  def storable_return?
+    request.get? && request.format.html? && !turbo_frame_request?
   end
 
   def may_administer?

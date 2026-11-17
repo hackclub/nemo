@@ -40,7 +40,7 @@ export default class extends Controller {
   }
 
   disconnect() {
-    this.detach()
+    this.close()
   }
 
   get isOpen() {

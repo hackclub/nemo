@@ -53,6 +53,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    this.close()
     this.detach()
   }
 
