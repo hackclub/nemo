@@ -50,60 +50,60 @@ def test_line_without_author_shows_unknown():
     assert "Unknown" in mentions.line(row(author_id=None))
 
 
-def test_build_reply_empty_is_bare_title():
-    reply = mentions.build_reply("UM", [])
+def test_build_view_empty_is_bare_title():
+    view = mentions.build_view("UM", [])
 
-    assert reply["text"] == "No mentions"
-    assert len(reply["blocks"]) == 1
+    assert view["type"] == "modal"
+    assert [one["text"]["text"] for one in view["blocks"]] == ["No mentions"]
 
 
-def test_build_reply_shows_first_ten_rows():
+def test_build_view_shows_first_ten_rows():
     rows = [row(ts=f"1763380800.{n:06d}") for n in range(15)]
 
-    reply = mentions.build_reply("UM", rows)
+    view = mentions.build_view("UM", rows)
 
-    assert reply["text"] == "*<@UM>*  15 mentions"
-    texts = [one["text"]["text"] for one in reply["blocks"] if one["type"] == "section"][1:]
+    assert view["blocks"][0]["text"]["text"] == "*<@UM>*  15 mentions"
+    texts = [one["text"]["text"] for one in view["blocks"] if one["type"] == "section"][1:]
     assert len(texts) == mentions.SHOWN
     assert all("|Open>" in one for one in texts)
 
 
-def test_build_reply_adds_web_button(monkeypatch):
+def test_build_view_adds_web_button(monkeypatch):
     monkeypatch.setenv("APP_HOST", "nemo.example.com")
 
-    reply = mentions.build_reply("UM", [row()])
+    view = mentions.build_view("UM", [row()])
 
-    button = reply["blocks"][-1]["elements"][0]
+    button = view["blocks"][-1]["elements"][0]
     assert button["text"]["text"] == "Show in Nemo"
     assert button["url"] == "https://nemo.example.com/fd/members/UM?tab=mentions"
 
 
-def test_build_reply_without_app_host_has_no_button(monkeypatch):
+def test_build_view_without_app_host_has_no_button(monkeypatch):
     monkeypatch.delenv("APP_HOST", raising=False)
 
-    reply = mentions.build_reply("UM", [row()])
+    view = mentions.build_view("UM", [row()])
 
-    assert [one["type"] for one in reply["blocks"]] == ["section", "divider", "section"]
-
-
-def test_build_reply_quotes_message_text():
-    reply = mentions.build_reply("UM", [row(text="first line\nsecond   line")])
-
-    assert reply["blocks"][2]["text"]["text"].endswith("\n> first line second line")
+    assert [one["type"] for one in view["blocks"]] == ["section", "divider", "section"]
 
 
-def test_build_reply_shortens_long_text():
-    reply = mentions.build_reply("UM", [row(text="word " * 400)])
+def test_build_view_quotes_message_text():
+    view = mentions.build_view("UM", [row(text="first line\nsecond   line")])
 
-    quote = reply["blocks"][2]["text"]["text"].split("\n", 1)[1]
+    assert view["blocks"][2]["text"]["text"].endswith("\n> first line second line")
+
+
+def test_build_view_shortens_long_text():
+    view = mentions.build_view("UM", [row(text="word " * 400)])
+
+    quote = view["blocks"][2]["text"]["text"].split("\n", 1)[1]
     assert len(quote) <= mentions.TEXT_LIMIT
     assert quote.endswith("...")
 
 
-def test_build_reply_row_without_text_has_header_only():
-    reply = mentions.build_reply("UM", [row(text=None)])
+def test_build_view_row_without_text_has_header_only():
+    view = mentions.build_view("UM", [row(text=None)])
 
-    assert "\n" not in reply["blocks"][2]["text"]["text"]
+    assert "\n" not in view["blocks"][2]["text"]["text"]
 
 
 def test_with_text_fetches_only_shown_rows_and_keeps_count():
@@ -162,3 +162,52 @@ def test_message_text_returns_none_when_message_missing(monkeypatch):
     monkeypatch.setattr(mentions.privileged, "history", lambda channel_id, **kwargs: {"messages": []})
 
     assert mentions.message_text(row()) is None
+
+
+def test_loading_view_is_modal_with_bare_label():
+    view = mentions.loading_view()
+
+    assert view["type"] == "modal"
+    assert view["title"]["text"] == "Mentions"
+    assert [one["text"]["text"] for one in view["blocks"]] == ["Loading"]
+
+
+def test_build_view_has_modal_identity():
+    view = mentions.build_view("UM", [row()])
+
+    assert view["type"] == "modal"
+    assert view["callback_id"] == mentions.CALLBACK
+    assert view["title"]["text"] == "Mentions"
+    assert view["close"]["text"] == "Close"
+
+
+DATE = "<!date^1798200000^{date_long} at {time}|Fri, 25 Dec 2026 12:00:00 GMT>"
+
+
+def test_quote_keeps_date_token_intact():
+    text = f"<@UA> shushed <@UB> in all Slack channels until {DATE} for Being Mean."
+
+    assert mentions.quote(text) == f"> {text}"
+
+
+def test_quote_escapes_other_angle_brackets():
+    assert mentions.quote("a <!here> b <b>") == "> a &lt;!here&gt; b &lt;b&gt;"
+
+
+def test_quote_keeps_existing_entities():
+    assert mentions.quote("a &amp; b &lt;c&gt;") == "> a &amp; b &lt;c&gt;"
+
+
+def test_quote_cut_does_not_split_date_token():
+    text = "x" * (mentions.TEXT_LIMIT - 20) + " " + DATE
+
+    quoted = mentions.quote(text)
+
+    assert "<!date" not in quoted
+    assert "&lt;" not in quoted
+    assert len(quoted) <= mentions.TEXT_LIMIT
+
+
+def test_quote_blank_returns_none():
+    assert mentions.quote("  \n ") is None
+    assert mentions.quote(None) is None

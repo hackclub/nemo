@@ -1,14 +1,28 @@
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor
 
 from bot.core import privileged
-from bot.core.formatting import short_end_token
+from bot.core.formatting import escape, short_end_token
 from bot.nemo import channel
-from bot.nemo.views import case_view, member_view
+from bot.nemo.views import case_view, lengths, member_view
 from bot.nemo.views.activity import message_url
 from lib.proxy_client import InternalApiError, InternalAuthError, ProxyError
 
 log = logging.getLogger("bot.nemo")
+
+CALLBACK = "member_mentions"
+TITLE = "Mentions"
+CLOSE = "Close"
+LOADING = "Loading"
+EMPTY = "No mentions"
+
+TOKEN = re.compile(
+    r"(<!date\^\d+\^[^|>]*\|[^>]*>"
+    r"|<https?://[^\s<>]+?(?:\|[^>]*)?>"
+    r"|<@[UW][A-Z0-9]+(?:\|[^>]*)?>"
+    r"|<#C[A-Z0-9]+(?:\|[^>]*)?>)"
+)
 
 SHOWN = 10
 MAX_COUNT = 100
@@ -66,9 +80,25 @@ def line(row):
     return f"<#{row['channel_id']}>  {author}  {short_end_token(row['posted_at'])}{kind}  <{url}|Open>"
 
 
+def escape_but_tokens(text):
+    return "".join(part if TOKEN.fullmatch(part) else escape(part) for part in TOKEN.split(text or ""))
+
+
+def quote(text):
+    flat = " ".join((text or "").split())
+    if not flat:
+        return None
+    size = len(flat)
+    while True:
+        rendered = f"> {escape_but_tokens(case_view.shorten(flat, size))}"
+        if len(rendered) <= TEXT_LIMIT or size <= 1:
+            return rendered[:TEXT_LIMIT]
+        size = max(1, min(size - 1, size - (len(rendered) - TEXT_LIMIT)))
+
+
 def entry(row):
-    quote = case_view.quoted(row.get("text"), TEXT_LIMIT)
-    return f"{line(row)}\n{quote}" if quote else line(row)
+    quoted = quote(row.get("text"))
+    return f"{line(row)}\n{quoted}" if quoted else line(row)
 
 
 def web_url(user_id):
@@ -76,13 +106,25 @@ def web_url(user_id):
     return f"{url}?tab=mentions" if url else None
 
 
-def build_reply(user_id, rows):
-    if not rows:
-        text = "No mentions"
-        return {"text": text, "blocks": [case_view.section(text)]}
+def modal(blocks):
+    return {
+        "type": "modal",
+        "callback_id": CALLBACK,
+        "title": lengths.plain(TITLE),
+        "close": lengths.plain(CLOSE),
+        "blocks": blocks,
+    }
 
-    head = f"*<@{user_id}>*  {count_text(len(rows))}"
-    blocks = [case_view.section(head)]
+
+def loading_view():
+    return modal([case_view.section(LOADING)])
+
+
+def build_view(user_id, rows):
+    if not rows:
+        return modal([case_view.section(EMPTY)])
+
+    blocks = [case_view.section(f"*<@{user_id}>*  {count_text(len(rows))}")]
     for one in rows[:SHOWN]:
         blocks.append({"type": "divider"})
         blocks.append(case_view.section(entry(one)))
@@ -92,4 +134,4 @@ def build_reply(user_id, rows):
             "type": "actions",
             "elements": [member_view.button(member_view.OPEN_WEB, "Show in Nemo", url=url)],
         })
-    return {"text": head, "blocks": blocks}
+    return modal(blocks)

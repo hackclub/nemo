@@ -2,6 +2,8 @@ import datetime as dt
 import logging
 import re
 
+from slack_sdk.errors import SlackApiError
+
 from bot.core import access, audit, richtext, session
 from bot.core.formatting import short_end
 from bot.nemo import (
@@ -367,6 +369,7 @@ def register(app):
         verb, target_id, body = parse_command(command.get("text"))
         user_id = command["user_id"]
         mention_rows = None
+        mention_view_id = None
 
         if verb is None:
             return respond(**help_view(user_id))
@@ -400,6 +403,8 @@ def register(app):
                 audit.record(conn, "member", 0, "looked_up", user_id,
                              after={"user_id": target_id, "view": "mentions"})
                 mention_rows = mentions.read(conn, target_id)
+                mention_view_id = client.views_open(
+                    trigger_id=command["trigger_id"], view=mentions.loading_view())["view"]["id"]
                 answer = None
             elif verb == NOTE:
                 case_actions.member_note(conn, target_id, body, user_id)
@@ -473,7 +478,12 @@ def register(app):
                     return None
 
         if verb == MENTIONS:
-            answer = mentions.build_reply(target_id, mentions.with_text(mention_rows))
+            try:
+                client.views_update(
+                    view_id=mention_view_id, view=mentions.build_view(target_id, mentions.with_text(mention_rows)))
+            except SlackApiError as failure:
+                log.warning("nemo: mentions view %s not updated: %s", mention_view_id, failure)
+            return None
 
         log.info("nemo: %s ran %s on %s", user_id, verb, target_id)
         return respond(**answer) if answer else None
