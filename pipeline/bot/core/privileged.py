@@ -104,9 +104,11 @@ def history(channel_id, cursor=None, limit=200, oldest=None, latest=None):
     }, credential="admin")
 
 
-def replies(channel_id, ts, cursor=None, limit=200):
+def replies(channel_id, ts, cursor=None, limit=200, oldest=None, latest=None):
+    bounded = oldest is not None or latest is not None
     return proxy().call("conversations.replies", {
         "channel": channel_id, "ts": ts, "cursor": cursor, "limit": limit,
+        "oldest": oldest, "latest": latest, "inclusive": 1 if bounded else None,
     }, credential="admin")
 
 

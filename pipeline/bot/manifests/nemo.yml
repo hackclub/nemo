@@ -26,8 +26,8 @@ features:
       description: Viewers, reactions and clicks on your own post
   slash_commands:
     - command: /nemo
-      description: Look up members, add notes, open cases, set slow mode, purge messages
-      usage_hint: help | queue | lookup @member | note @member | open @member | shush @member 3d | unshush @member | channelban @member #channel 3d | unban @member #channel | slowmode #channel 30s 2h | purge #channel 50 | readonly #channel on | accountage #channel 7d | botallow #channel on | 3864
+      description: Look up members and mentions, add notes, open cases, set slow mode, purge messages
+      usage_hint: help | queue | lookup @member | mentions @member | note @member | open @member | shush @member 3d | unshush @member | channelban @member #channel 3d | unban @member #channel | slowmode #channel 30s 2h | purge #channel 50 | readonly #channel on | accountage #channel 7d | botallow #channel on | 3864
       should_escape: true
 
 oauth_config:

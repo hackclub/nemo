@@ -16,6 +16,23 @@ def test_parse_command_shush_returns_verb_target_and_body():
     assert (verb, target, body) == (command.SHUSH, USER_ID, "3d flooding the channel")
 
 
+def test_parse_command_mentions_returns_verb_and_target():
+    assert command.parse_command(f"mentions {USER_MENTION}") == (command.MENTIONS, USER_ID, None)
+
+
+def test_parse_command_mentions_accepts_bare_member_id():
+    assert command.parse_command("mentions U09QT9R59PX") == (command.MENTIONS, "U09QT9R59PX", None)
+
+
+def test_needed_mentions_requires_case_read():
+    assert command.NEEDED[command.MENTIONS] == "case.read"
+
+
+def test_mentions_requires_member():
+    assert command.MENTIONS in command.MEMBER_REQUIRED_VERBS
+    assert command.MENTIONS in command.SUBJECT_USAGE
+
+
 def test_needed_shush_requires_member_guard():
     assert command.NEEDED[command.SHUSH] == "member.guard"
 

@@ -10,6 +10,7 @@ from bot.nemo import (
     channelguards,
     guard_commands,
     memberguards,
+    mentions,
     open_cases,
     purge_requests,
     reactivation,
@@ -23,6 +24,7 @@ log = logging.getLogger("bot.nemo")
 
 COMMAND = "/nemo"
 LOOKUP = "lookup"
+MENTIONS = "mentions"
 NOTE = "note"
 OPEN = "open"
 MERGE = "merge"
@@ -36,7 +38,7 @@ QUEUE = "queue"
 OPEN_RECORD = member_view.OPEN_WEB
 OFF = "off"
 
-MEMBER_REQUIRED_VERBS = (LOOKUP, NOTE, SHUSH, CHANNEL_BAN, UNSHUSH, UNBAN)
+MEMBER_REQUIRED_VERBS = (LOOKUP, MENTIONS, NOTE, SHUSH, CHANNEL_BAN, UNSHUSH, UNBAN)
 MEMBER_VERBS = (*MEMBER_REQUIRED_VERBS, OPEN, PURGE)
 VERBS = (*MEMBER_REQUIRED_VERBS, OPEN, MERGE, PURGE, SLOWMODE, QUEUE, *guard_commands.VERBS)
 TEXT_REQUIRED_VERBS = (NOTE, OPEN, SHUSH, CHANNEL_BAN, SLOWMODE)
@@ -52,6 +54,7 @@ MAX_DURATION = lengths.MAX_DURATION
 
 SUBJECT_USAGE = {
     LOOKUP: "Name the member: */nemo lookup @member*",
+    MENTIONS: "Name the member: */nemo mentions @member*",
     NOTE: "Name the member: */nemo note @member text*",
     SHUSH: "Name the member: */nemo shush @member 3d reason*",
     CHANNEL_BAN: "Name the member: */nemo channelban @member #channel 3d reason*",
@@ -218,6 +221,7 @@ def message_only(text):
 
 NEEDED = {
     LOOKUP: "case.read",
+    MENTIONS: "case.read",
     NOTE: "member.note",
     OPEN: "case.open",
     MERGE: "case.resolve",
@@ -362,6 +366,7 @@ def register(app):
         ack()
         verb, target_id, body = parse_command(command.get("text"))
         user_id = command["user_id"]
+        mention_rows = None
 
         if verb is None:
             return respond(**help_view(user_id))
@@ -391,6 +396,11 @@ def register(app):
                              after={"user_id": target_id})
                 client.views_open(trigger_id=command["trigger_id"], view=view)
                 return None
+            elif verb == MENTIONS:
+                audit.record(conn, "member", 0, "looked_up", user_id,
+                             after={"user_id": target_id, "view": "mentions"})
+                mention_rows = mentions.read(conn, target_id)
+                answer = None
             elif verb == NOTE:
                 case_actions.member_note(conn, target_id, body, user_id)
                 answer = message_only(f"Note added to <@{target_id}>")
@@ -461,6 +471,9 @@ def register(app):
                 else:
                     client.views_open(trigger_id=command["trigger_id"], view=view)
                     return None
+
+        if verb == MENTIONS:
+            answer = mentions.build_reply(target_id, mentions.with_text(mention_rows))
 
         log.info("nemo: %s ran %s on %s", user_id, verb, target_id)
         return respond(**answer) if answer else None

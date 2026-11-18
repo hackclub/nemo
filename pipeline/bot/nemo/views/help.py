@@ -15,6 +15,7 @@ LOOKUP = (
     "Lookup",
     (
         ("case.read", "/nemo lookup @member", "their record"),
+        ("case.read", "/nemo mentions @member", "messages mentioning them in Fire Department channels"),
         ("case.read", "/nemo 3864", "show case 3864"),
         ("case.read", "/nemo queue", "open cases"),
     ),
