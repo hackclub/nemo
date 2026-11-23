@@ -134,6 +134,7 @@ class FdPhotoRemovalsTest < ActionDispatch::IntegrationTest
 
     assert_select %(input[name="remove_photo"][type="checkbox"])
     assert_select %(form[action="#{fd_member_photo_removals_path(MEMBER)}"] textarea[name="reason"])
+    assert_select %(form[action="#{fd_member_photo_removals_path(MEMBER)}"] label), text: /Reason \(optional\)/
     assert_select "button[data-modal-open=?]", "member-photo-removal"
   end
 
