@@ -32,7 +32,7 @@ def test_nemo_admin_reads_limited_to_purge_and_publicize_methods():
 
     assert reads == {"conversations.history", "conversations.replies", "search.messages",
                      "conversations.info", "admin.conversations.search",
-                     "admin.roles.entity.listAssignments"}
+                     "admin.roles.listAssignments"}
     assert not reads & app.WRITES
 
 

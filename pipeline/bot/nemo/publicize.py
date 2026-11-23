@@ -1,4 +1,5 @@
 import logging
+import os
 
 from bot.core import audit, privileged, session
 
@@ -6,6 +7,8 @@ log = logging.getLogger("bot.nemo.publicize")
 
 COMMAND = "/publicize"
 CHANNEL_MANAGER_ROLE = "Rl0A"
+MANAGER_TTL = "1 hour"
+PAGE_CAP = 20
 
 ALREADY_PUBLIC = ":neocat: this channel already public"
 REFUSED = ":bleh: sorry it doesnt appear you're an admin, the cm, or the creator"
@@ -44,15 +47,56 @@ def is_admin(user_id):
     return any(user.get(flag) for flag in ("is_admin", "is_owner", "is_primary_owner"))
 
 
+def role_id():
+    return os.environ.get("SLACK_CHANNEL_MANAGER_ROLE_ID", "").strip() or CHANNEL_MANAGER_ROLE
+
+
+FRESH_MANAGERS = f"""
+SELECT array(SELECT user_id FROM api.channel_manager WHERE channel_id = %s)
+FROM api.channel_sweep WHERE channel_id = %s AND synced_at > now() - interval '{MANAGER_TTL}'
+"""
+
+
+def cached_managers(channel_id):
+    """The managers the web API's channel-manager check cached, if fresh."""
+    with session() as conn:
+        row = conn.execute(FRESH_MANAGERS, (channel_id, channel_id)).fetchone()
+    return set(row[0]) if row else None
+
+
+def fetch_managers(channel_id):
+    managers, cursor = set(), None
+    for _ in range(PAGE_CAP):
+        page = call("admin.roles.listAssignments",
+                    {"role_ids": role_id(), "entity_ids": channel_id, "limit": 200, "cursor": cursor})
+        managers |= {row["user_id"] for row in page.get("role_assignments") or []
+                     if row.get("entity_id") == channel_id and row.get("user_id")}
+        cursor = (page.get("response_metadata") or {}).get("next_cursor")
+        if not cursor:
+            break
+    return managers
+
+
+def store_managers(channel_id, managers):
+    with session() as conn:
+        conn.execute("DELETE FROM api.channel_manager WHERE channel_id = %s", (channel_id,))
+        for user in managers:
+            conn.execute("INSERT INTO api.channel_manager (channel_id, user_id) VALUES (%s, %s)",
+                         (channel_id, user))
+        conn.execute(
+            "INSERT INTO api.channel_sweep (channel_id, synced_at, managers) VALUES (%s, now(), %s) "
+            "ON CONFLICT (channel_id) DO UPDATE SET synced_at = now(), managers = EXCLUDED.managers",
+            (channel_id, len(managers)))
+
+
 def channel_managers(channel_id):
-    response = call("admin.roles.entity.listAssignments",
-                    {"entity_id": channel_id, "role_id": CHANNEL_MANAGER_ROLE})
-    return {
-        user
-        for assignment in response.get("role_assignments") or []
-        if assignment.get("role_id") == CHANNEL_MANAGER_ROLE
-        for user in assignment.get("users") or []
-    }
+    """Same source as the /api/v1/channels/{id}/managers/{user} check."""
+    cached = cached_managers(channel_id)
+    if cached is not None:
+        return cached
+    managers = fetch_managers(channel_id)
+    store_managers(channel_id, managers)
+    return managers
 
 
 def may_publicize(user_id, channel_id, creator):

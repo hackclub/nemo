@@ -25,21 +25,35 @@ class Proxy:
             return {"channel": self.info}
         if method == "admin.conversations.search":
             return {"conversations": self.found}
-        if method == "admin.roles.entity.listAssignments":
-            return {"role_assignments": [{"role_id": publicize.CHANNEL_MANAGER_ROLE, "users": self.managers}]}
+        if method == "admin.roles.listAssignments":
+            return {"role_assignments": [{"entity_id": params["entity_ids"], "user_id": user}
+                                         for user in self.managers]}
         return {"ok": True}
+
+
+class Db:
+    def __init__(self, cached):
+        self.cached = cached
+        self.sql = []
+
+    def execute(self, sql, params=()):
+        self.sql.append((sql, params))
+        row = (list(self.cached),) if self.cached is not None and "SELECT" in sql else None
+        return type("Result", (), {"fetchone": lambda _self: row})()
 
 
 @pytest.fixture
 def setup(monkeypatch):
     audited = []
 
-    @contextlib.contextmanager
-    def session():
-        yield None
-
-    def build(info=None, managers=(), admin=False, fail=(), found=()):
+    def build(info=None, managers=(), admin=False, fail=(), found=(), cached=None):
         proxy = Proxy(info, managers, fail, found)
+        db = Db(cached)
+
+        @contextlib.contextmanager
+        def session():
+            yield db
+
         monkeypatch.setattr(privileged, "proxy", lambda: proxy)
         monkeypatch.setattr(privileged, "profile", lambda user_id: {"is_admin": admin})
         monkeypatch.setattr(publicize, "session", session)
@@ -113,3 +127,15 @@ def test_convert_failure_is_reported(setup):
     _, audited = setup(info={"is_private": True}, admin=True, fail={"admin.conversations.convertToPublic"})
     assert publicize.publicize(USER, CHANNEL) == publicize.FAILED
     assert not audited
+
+
+def test_fresh_cached_managers_skip_slack(setup):
+    proxy, _ = setup(info={"is_private": True, "creator": "U2"}, cached=[USER])
+    assert publicize.publicize(USER, CHANNEL) == publicize.DONE
+    assert "admin.roles.listAssignments" not in proxy.calls
+
+
+def test_cached_empty_managers_fall_back_to_creator(setup):
+    proxy, _ = setup(info={"is_private": True, "creator": USER}, managers=["U2"], cached=[])
+    assert publicize.publicize(USER, CHANNEL) == publicize.DONE
+    assert "admin.roles.listAssignments" not in proxy.calls
