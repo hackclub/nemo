@@ -31,7 +31,8 @@ def test_nemo_admin_reads_limited_to_purge_and_publicize_methods():
     reads = app.NEMO_METHODS["admin"] - app.WRITE_METHODS["admin"]
 
     assert reads == {"conversations.history", "conversations.replies", "search.messages",
-                     "conversations.info", "admin.roles.entity.listAssignments"}
+                     "conversations.info", "admin.conversations.search",
+                     "admin.roles.entity.listAssignments"}
     assert not reads & app.WRITES
 
 

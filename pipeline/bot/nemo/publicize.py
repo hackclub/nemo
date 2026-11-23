@@ -20,10 +20,23 @@ def call(method, params):
 def channel_info(channel_id):
     try:
         channel = call("conversations.info", {"channel": channel_id}).get("channel") or {}
+        return channel.get("is_private") is not False, channel.get("creator")
     except Exception as failure:  # noqa: BLE001
-        log.info("publicize: cannot read %s, assuming private: %s", channel_id, failure)
+        log.info("publicize: cannot read %s, trying admin search: %s", channel_id, failure)
+    return search_channel(channel_id)
+
+
+def search_channel(channel_id):
+    """Admin search sees every channel in the org, member or not."""
+    try:
+        found = call("admin.conversations.search", {"query": channel_id, "limit": 10})
+    except Exception as failure:  # noqa: BLE001
+        log.info("publicize: admin search failed for %s, assuming private: %s", channel_id, failure)
         return True, None
-    return channel.get("is_private") is not False, channel.get("creator")
+    for channel in found.get("conversations") or []:
+        if channel.get("id") == channel_id:
+            return channel.get("is_private") is not False, channel.get("creator_id")
+    return True, None
 
 
 def is_admin(user_id):

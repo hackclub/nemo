@@ -10,8 +10,9 @@ USER = "U1"
 
 
 class Proxy:
-    def __init__(self, info=None, managers=(), fail=()):
+    def __init__(self, info=None, managers=(), fail=(), found=()):
         self.info = info
+        self.found = list(found)
         self.managers = list(managers)
         self.fail = set(fail)
         self.calls = []
@@ -22,6 +23,8 @@ class Proxy:
             raise RuntimeError(f"{method} failed: channel_not_found")
         if method == "conversations.info":
             return {"channel": self.info}
+        if method == "admin.conversations.search":
+            return {"conversations": self.found}
         if method == "admin.roles.entity.listAssignments":
             return {"role_assignments": [{"role_id": publicize.CHANNEL_MANAGER_ROLE, "users": self.managers}]}
         return {"ok": True}
@@ -35,8 +38,8 @@ def setup(monkeypatch):
     def session():
         yield None
 
-    def build(info=None, managers=(), admin=False, fail=()):
-        proxy = Proxy(info, managers, fail)
+    def build(info=None, managers=(), admin=False, fail=(), found=()):
+        proxy = Proxy(info, managers, fail, found)
         monkeypatch.setattr(privileged, "proxy", lambda: proxy)
         monkeypatch.setattr(privileged, "profile", lambda user_id: {"is_admin": admin})
         monkeypatch.setattr(publicize, "session", session)
@@ -86,8 +89,22 @@ def test_member_refused(setup):
     assert not converted(proxy)
 
 
-def test_unreadable_channel_is_treated_as_private(setup):
-    proxy, _ = setup(admin=True, fail={"conversations.info"})
+def test_unreadable_channel_uses_admin_search_for_creator(setup):
+    found = [{"id": "C9", "is_private": True, "creator_id": "U9"},
+             {"id": CHANNEL, "is_private": True, "creator_id": USER}]
+    proxy, _ = setup(fail={"conversations.info"}, found=found)
+    assert publicize.publicize(USER, CHANNEL) == publicize.DONE
+    assert converted(proxy)
+
+
+def test_unreadable_public_channel_found_by_admin_search(setup):
+    proxy, _ = setup(fail={"conversations.info"}, found=[{"id": CHANNEL, "is_private": False}])
+    assert publicize.publicize(USER, CHANNEL) == publicize.ALREADY_PUBLIC
+    assert not converted(proxy)
+
+
+def test_unsearchable_channel_is_treated_as_private(setup):
+    proxy, _ = setup(admin=True, fail={"conversations.info", "admin.conversations.search"})
     assert publicize.publicize(USER, CHANNEL) == publicize.DONE
     assert converted(proxy)
 

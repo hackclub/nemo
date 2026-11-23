@@ -94,7 +94,9 @@ PURGE_READ_METHODS = {
     "admin": frozenset({"conversations.history", "conversations.replies", "search.messages"})
 }
 PUBLICIZE_READ_METHODS = {
-    "admin": frozenset({"conversations.info", "admin.roles.entity.listAssignments"})
+    "admin": frozenset(
+        {"conversations.info", "admin.conversations.search", "admin.roles.entity.listAssignments"}
+    )
 }
 WEB_FILE_METHODS = FILE_READ_METHODS
 
