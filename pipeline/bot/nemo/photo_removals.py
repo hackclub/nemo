@@ -19,7 +19,10 @@ FETCH_TIMEOUT_SECONDS = 20
 REFRESH_ATTEMPTS = 3
 REFRESH_DELAY_SECONDS = 2
 
-IMAGE_HOSTS = frozenset({"avatars.slack-edge.com", "a.slack-edge.com", "secure.gravatar.com"})
+IMAGE_HOSTS = frozenset({
+    "avatars.slack-edge.com", "a.slack-edge.com", "secure.gravatar.com",
+    "i0.wp.com", "i1.wp.com", "i2.wp.com", "i3.wp.com",
+})
 IMAGE_KEYS = ("image_original", "image_1024", "image_512", "image_192")
 IMAGE_TYPES = frozenset({"image/png", "image/jpeg", "image/gif", "image/webp"})
 FALLBACK_TYPE = "application/octet-stream"

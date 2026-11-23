@@ -1,5 +1,7 @@
 import contextlib
 import hashlib
+import io
+import urllib.request
 
 import pytest
 
@@ -76,6 +78,7 @@ def removal(attempts=1):
     "https://avatars.slack-edge.com/a.png",
     "https://a.slack-edge.com/df10d/img/avatars/ava_0000-512.png",
     "https://secure.gravatar.com/avatar/abc.jpg?s=512",
+    "https://i1.wp.com/a.slack-edge.com/df10d/img/avatars/ava_0000-512.png?ssl=1",
 ])
 def test_allowed_image_url_accepts_slack_and_gravatar_hosts(url):
     assert photo_removals.allowed_image_url(url)
@@ -98,6 +101,16 @@ def test_allowed_image_url_rejects_other_hosts_schemes_and_authority(url):
 def test_fetch_image_disallowed_host_raises_before_any_request():
     with pytest.raises(ValueError, match="not allowed"):
         photo_removals.fetch_image("https://evil.example/a.png")
+
+
+def test_redirect_from_gravatar_to_the_image_proxy_is_followed():
+    handler = photo_removals.AllowedRedirects()
+    request = urllib.request.Request("https://secure.gravatar.com/avatar/abc.jpg?s=512")
+    target = "https://i1.wp.com/a.slack-edge.com/df10d/img/avatars/ava_0000-512.png?ssl=1"
+
+    followed = handler.redirect_request(request, io.BytesIO(), 302, "Found", {}, target)
+
+    assert followed.full_url == target
 
 
 def test_redirect_to_disallowed_host_raises():
