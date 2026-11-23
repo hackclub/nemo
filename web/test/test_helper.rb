@@ -125,6 +125,13 @@ module ActiveSupport
       kase
     end
 
+    # Case refs only link #100 and up; on a fresh database early ids are shorter.
+    def make_linkable_case(**attrs)
+      kase = make_case(**attrs)
+      kase = make_case(**attrs) while kase.id < 100
+      kase
+    end
+
     def make_app!(owner, name: "Toolbox", approved: true, by: "UBOSS")
       app = Api::App.register!(owner, name: name, blurb: "answers a question for the team")
       Api::Approval.grant!(app.id, by: by) if approved
