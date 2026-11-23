@@ -6,8 +6,8 @@ from bot.core import loops, session
 from bot.nemo import automod, channel, channelguards, channels, chat, guards, guard_actions
 from bot.nemo import enforcement, guard_notices, guard_removals, memberguards, case_queue
 from bot.nemo import (
-    bot_kicks, categories, internal_log, join_requests, missed_reactions, public_log, responses, screening,
-    usergroups,
+    bot_kicks, categories, internal_log, join_requests, missed_reactions, photo_removals, public_log,
+    responses, screening, usergroups,
 )
 from bot.nemo.enforcement import purge, slowmode, sweep
 from bot.relay import intake_files
@@ -32,6 +32,7 @@ JOIN_REQUEST = "fd_channel_join_request"
 AUDIT_EVENT = "fd_audit_event"
 AUTOMOD_MATCH = "fd_automod_match"
 BOT_KICK = "fd_bot_kick"
+PHOTO_REMOVAL = "fd_photo_removal"
 CATEGORY = "fd_infraction_category"
 FIRE_ENGINE_SOURCE = '"fire_engine"'
 NEMO_SOURCE = '"nemo"'
@@ -282,6 +283,7 @@ def sweep_once(case_channel, channel_id=None):
         ("posting internal log lines", lambda: internal_log.drain(client)),
         ("posting public log lines", lambda: public_log.drain(client)),
         ("kicking bots taken off allow lists", lambda: bot_kicks.drain(client)),
+        ("replacing member photos", photo_removals.drain),
         ("resetting sessions the guard has earned", guard_actions.sweep_strikes),
         ("lifting what has run out", lambda: sweep.sweep_lapsed(client)),
         ("lifting expired channel guards", lift_lapsed_channel_guards),
@@ -324,6 +326,7 @@ def start(case_channel, stopping, channel_id=None):
     wake_lapses = loops.run_on_timer(f"{NAME}-lapses", lambda: lift_expired(case_channel.client), stopping)
     wake_log = loops.run_on_wake(f"{NAME}-log", lambda: drain_logs(case_channel.client), stopping)
     wake_kicks = loops.run_on_wake(f"{NAME}-kicks", lambda: bot_kicks.drain(case_channel.client), stopping)
+    wake_photo_removals = loops.run_on_wake(f"{NAME}-photo-removals", photo_removals.drain, stopping)
 
     def on_notify(channel_name, payload):
         if channel_name == GUARD_NOTICE:
@@ -335,6 +338,8 @@ def start(case_channel, stopping, channel_id=None):
             wake_log()
         elif channel_name == BOT_KICK:
             wake_kicks()
+        elif channel_name == PHOTO_REMOVAL:
+            wake_photo_removals()
         elif channel_name == CATEGORY:
             with session() as conn:
                 categories.refresh(conn)
@@ -392,7 +397,7 @@ def start(case_channel, stopping, channel_id=None):
                        (CASES, CHAT, OUTBOX, CONVERSATION, GUARD, CHANNEL_GUARD,
                         MEMBER_GUARD, APP_SETTING, AUTOMOD_WORD, PURGE,
                         GUARD_NOTICE, GUARD_REMOVE, JOIN_REQUEST, BLOCKED_DOMAIN,
-                        AUDIT_EVENT, AUTOMOD_MATCH, BOT_KICK, CATEGORY),
+                        AUDIT_EVENT, AUTOMOD_MATCH, BOT_KICK, PHOTO_REMOVAL, CATEGORY),
                        on_notify, stopping),
         loops.run_periodically(NAME, sweep_interval_seconds(), lambda: sweep_once(case_channel, channel_id), stopping),
         loops.run_periodically(f"{NAME}-joins", join_sweep_interval_seconds(), lambda: join_sweep(case_channel, stopping),

@@ -117,6 +117,7 @@ Rails.application.routes.draw do
           constraints: { channel_id: /[A-Z0-9]+/, ts: /\d+\.\d+/ }, format: false
       resource :links, only: [:show], controller: "member_link_panes"
       resources :purges, only: [:show], controller: "member_purges"
+      resources :photo_removals, only: [:create, :show]
     end
     resources :files, only: [:show]
     resource :search, only: [:show], controller: "searches"

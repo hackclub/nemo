@@ -31,6 +31,7 @@ module Fd
         logged_cases.flat_map(&:assignee_user_ids) +
         actions.flat_map { |action| [action.decided_by, action.performed_by, action.reversed_by] } +
         guards_on_no_case.flat_map(&:referenced_user_ids) +
+        photo_removals.flat_map(&:referenced_user_ids) +
         notes.map(&:author) +
         notes.flat_map { |note| Mentions.ids(note.body) }
     end
@@ -49,6 +50,15 @@ module Fd
 
     def guards_on_no_case
       @guards_on_no_case ||= MemberGuard.for_subject(user_id).on_no_case.oldest_first.to_a
+    end
+
+    def photo_removals
+      @photo_removals ||= PhotoRemoval.for_member(user_id).finished.newest_first.to_a
+    end
+
+    def photo_removal_evidence_ids
+      @photo_removal_evidence_ids ||= PhotoRemovalEvidence
+        .where(removal_id: photo_removals.map(&:id)).pluck(:removal_id).to_set
     end
 
     def notes

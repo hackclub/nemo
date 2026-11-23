@@ -25,7 +25,8 @@ module Fd
 
     def entries(only = "all")
       kind = KINDS.key?(only) ? only : "all"
-      all = case_entries + logged_entries + action_entries + guard_entries + note_entries
+      all = case_entries + logged_entries + action_entries + guard_entries +
+        photo_removal_entries + note_entries
       all = all.select { |entry| entry.kind == kind } unless kind == "all"
       all.sort_by { |entry| [-entry.at.to_i, -entry.case_id.to_i] }
     end
@@ -151,6 +152,30 @@ module Fd
 
         list
       end
+    end
+
+    def photo_removal_entries
+      record.photo_removals.map do |removal|
+        Entry.new(
+          at: removal.finished_at,
+          title: removal.failed? ? "Pfp removal failed" : "Pfp removed",
+          kind: "actions",
+          word: "action",
+          who: removal.asked_by,
+          mark: "act",
+          state: nil,
+          detail: photo_removal_detail(removal),
+          case_id: nil,
+          ref: removal
+        )
+      end
+    end
+
+    def photo_removal_detail(removal)
+      parts = ["by #{names[removal.asked_by]}"]
+      parts << removal.reason if removal.reason.present?
+      parts << removal.error if removal.failed? && removal.error.present?
+      parts.join(" · ")
     end
 
     def note_entries

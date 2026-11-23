@@ -157,3 +157,75 @@ def test_url_of_slack_url_returns_url_unchanged():
     import file_client
 
     assert file_client.url_of({"url": FILE_URL}) == FILE_URL
+
+
+def test_replace_photo_method_is_an_admin_write_for_nemo_only():
+    import scim_client
+
+    assert scim_client.REPLACE_PHOTO in app.NEMO_METHODS["admin"]
+    assert scim_client.REPLACE_PHOTO in app.WRITES
+    assert scim_client.REPLACE_PHOTO not in app.WEB_METHODS["admin"]
+    assert scim_client.REPLACE_PHOTO not in app.ALLOWED_METHODS["admin"]
+
+
+def test_replace_photo_method_has_its_own_nemo_budget_key():
+    import budget
+    import scim_client
+
+    key = ("nemo", "admin", scim_client.REPLACE_PHOTO)
+
+    assert budget.keys_for(*key) == [key]
+
+
+def test_replace_photo_call_patches_photos_with_the_bundled_image(monkeypatch):
+    import base64
+
+    import scim_client
+
+    sent = []
+
+    class Response:
+        errors = None
+        status_code = 200
+        raw_body = ""
+
+    class Client:
+        def patch_user(self, user_id, body):
+            sent.append((user_id, body))
+            return Response()
+
+    monkeypatch.setattr(scim_client, "scim_client", lambda: Client())
+
+    result = scim_client.call(scim_client.REPLACE_PHOTO, {"user_id": "U1"})
+
+    assert result == {"ok": True, "status": 200}
+    [(user_id, body)] = sent
+    [photo] = body["photos"]
+    prefix, encoded = photo["value"].split(",", 1)
+    assert user_id == "U1"
+    assert photo["primary"] is True
+    assert prefix == "data:image/png;base64"
+    assert base64.b64decode(encoded) == scim_client.REPLACEMENT_PHOTO.read_bytes()
+
+
+def test_replace_photo_call_without_user_id_raises_scim_error(monkeypatch):
+    import pytest
+
+    import scim_client
+
+    monkeypatch.setattr(scim_client, "scim_client", lambda: object())
+
+    with pytest.raises(scim_client.ScimError):
+        scim_client.call(scim_client.REPLACE_PHOTO, {})
+
+
+def test_replacement_photo_is_a_square_png():
+    import struct
+
+    import scim_client
+
+    header = scim_client.REPLACEMENT_PHOTO.read_bytes()[:24]
+    width, height = struct.unpack(">II", header[16:24])
+
+    assert header[:8] == b"\x89PNG\r\n\x1a\n"
+    assert width == height

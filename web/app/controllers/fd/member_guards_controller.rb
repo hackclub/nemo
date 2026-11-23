@@ -18,9 +18,11 @@ module Fd
 
       guard = nil
       queued = nil
+      photo_queued = nil
       writing do
         guard = open_guard
         queued = queue_purge(guard) if guard && purging?
+        photo_queued = queue_photo_removal(guard) if guard && removing_photo?
       end
 
       if guard.nil?
@@ -29,7 +31,7 @@ module Fd
       end
 
       redirect_to fd_member_path(subject_id),
-        notice: "#{created_notice(guard)}#{purge_note(queued)}"
+        notice: "#{created_notice(guard)}#{purge_note(queued)}#{photo_note(photo_queued)}"
     end
 
     def update
@@ -164,6 +166,25 @@ module Fd
       return " · Message purge already running" unless queued
 
       " · Message purge queued"
+    end
+
+    def removing_photo? = kind == MemberGuard::DEACTIVATION && params[:remove_photo] == "1"
+
+    def queue_photo_removal(guard)
+      removal = PhotoRemoval.queue!(member_id: subject_id, asked_by: current_account.user_id,
+        reason: guard.reason, guard_id: guard.id)
+      return false if removal.nil?
+
+      audit(removal, "queued", subject_user_id: subject_id,
+        after: { "member_id" => subject_id, "guard_id" => guard.id })
+      true
+    end
+
+    def photo_note(queued)
+      return "" if queued.nil?
+      return " · Pfp removal already queued" unless queued
+
+      " · Pfp removal queued"
     end
 
     def deactivating?(kind) = kind == MemberGuard::DEACTIVATION && !may_deactivate?

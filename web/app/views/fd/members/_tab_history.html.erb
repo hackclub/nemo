@@ -12,6 +12,9 @@
               <div class="member-event-head">
                 <% if entry.case_id %>
                   <b><%= link_to entry.title, fd_case_path(entry.case_id) %></b>
+                <% elsif entry.ref.is_a?(Fd::PhotoRemoval) && @record.photo_removal_evidence_ids.include?(entry.ref.id) && current_account.may?("member.guard") %>
+                  <b><%= link_to entry.title, fd_member_photo_removal_path(@user_id, entry.ref),
+                        target: "_blank", rel: "noopener" %></b>
                 <% else %>
                   <b><%= entry.title %></b>
                 <% end %>

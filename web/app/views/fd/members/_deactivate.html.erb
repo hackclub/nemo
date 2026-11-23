@@ -24,6 +24,11 @@
         </label>
       <% end %>
 
+      <label class="tickline">
+        <%= check_box_tag :remove_photo, "1", false, class: "tick", id: nil %>
+        Remove pfp
+      </label>
+
       <label class="field-label">
         Type <b class="mono"><%= handle %></b> to confirm
         <%= text_field_tag :confirm, nil, class: "input", id: nil, autocomplete: "off",

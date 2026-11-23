@@ -1,4 +1,6 @@
+import base64
 import os
+from pathlib import Path
 
 from slack_sdk.scim import SCIMClient
 
@@ -9,7 +11,10 @@ DEFAULT_BASE_URL = "https://api.slack.com/scim/v1/"
 
 DEACTIVATE = "scim.users.deactivate"
 ACTIVATE = "scim.users.activate"
-METHODS = frozenset({DEACTIVATE, ACTIVATE})
+REPLACE_PHOTO = "scim.users.photo.replace"
+METHODS = frozenset({DEACTIVATE, ACTIVATE, REPLACE_PHOTO})
+
+REPLACEMENT_PHOTO = Path(__file__).resolve().parent / "assets" / "sad_mac.png"
 
 
 class ScimError(RuntimeError):
@@ -44,6 +49,11 @@ def check_response(response):
     return {"ok": True, "status": response.status_code}
 
 
+def replacement_photo_url():
+    encoded = base64.b64encode(REPLACEMENT_PHOTO.read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
 def call(method, params):
     client = scim_client()
     user_id = user_id_of(params)
@@ -52,5 +62,8 @@ def call(method, params):
         return check_response(client.delete_user(user_id))
     if method == ACTIVATE:
         return check_response(client.patch_user(user_id, {"active": True}))
+    if method == REPLACE_PHOTO:
+        photos = [{"value": replacement_photo_url(), "primary": True}]
+        return check_response(client.patch_user(user_id, {"photos": photos}))
 
     raise ScimError(f"unknown scim method: {method}")

@@ -201,6 +201,21 @@ def deactivate(user_id, conn=None):
     return set_account_state(user_id, DEACTIVATE, DEACTIVATED, "deactivate", conn)
 
 
+REPLACE_PHOTO = "scim.users.photo.replace"
+PHOTO_REPLACED = "replaced"
+
+
+def replace_photo(user_id):
+    try:
+        proxy().call(REPLACE_PHOTO, {"user_id": user_id}, credential="admin", max_retries=1)
+    except Exception as failure:
+        log.warning("privileged: could not replace the photo of %s: %s", user_id, failure)
+        return f"failed: {str(failure)[:200]}"
+
+    log.warning("privileged: replaced the photo of %s", user_id)
+    return PHOTO_REPLACED
+
+
 def assign_workspace(user_id):
     team_id = os.environ.get("SLACK_TEAM_ID", "").strip()
     if not team_id:

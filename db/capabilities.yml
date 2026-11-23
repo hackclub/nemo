@@ -156,13 +156,15 @@ capabilities:
     events: [note/noted, note/edited, note/deleted]
 
   member.guard:
-    label: Apply a shush or channel ban with no case attached
+    label: Apply a shush, channel ban or pfp removal with no case attached
     area: member
     locked: true
     events:
       - member_guard/opened
       - member_guard/lifted
       - member_guard/extended
+      - member_photo/queued
+      - member_photo/performed
 
   member.deactivate:
     label: Deactivate and reactivate a Slack account

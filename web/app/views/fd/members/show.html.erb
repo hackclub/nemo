@@ -50,6 +50,10 @@
           <%= render layout: "shared/dropdown", locals: {
                 label: "More actions", trigger: menu_dots } do %>
             <%= link_to menu_item("history", "Audit log"), fd_audit_path(q: "about:#{@user_id}"), class: "btn" %>
+            <% if may_guard %>
+              <%= opens_modal "member.guard", menu_item("photo", "Remove pfp"),
+                    opens: "member-photo-removal" %>
+            <% end %>
             <% if standing_guard %>
               <%= opens_modal "member.deactivate", menu_item("hand", "Reactivate"),
                     opens: "guard-lift-#{standing_guard.id}" %>
@@ -152,6 +156,7 @@
 
 <% if may_guard %>
   <%= render "guards", user_id: @user_id, member: names[@user_id] %>
+  <%= render "photo_removal", user_id: @user_id, member: names[@user_id] %>
 <% end %>
 
 <% if may_deactivate && standing_guard.nil? %>
