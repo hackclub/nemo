@@ -357,3 +357,25 @@ def test_parse_command_non_leading_user_id_returns_no_target(text, parsed):
 def test_parse_command_mention_overrides_bare_user_id():
     assert command.parse_command("note U0123ABCD about <@U9999ZZZZ>") == \
         (command.NOTE, "U9999ZZZZ", "U0123ABCD about")
+
+
+@pytest.mark.parametrize(("text", "parsed"), [
+    ("removepfp <@U0123ABCD> nsfw pfp", (command.REMOVE_PFP, "U0123ABCD", "nsfw pfp")),
+    ("removepfp <@U0123ABCD>", (command.REMOVE_PFP, "U0123ABCD", None)),
+    ("removepfp U0123ABCD  nsfw   pfp", (command.REMOVE_PFP, "U0123ABCD", "nsfw pfp")),
+    ("removepfp nsfw pfp", (command.REMOVE_PFP, None, "nsfw pfp")),
+])
+def test_parse_command_removepfp_returns_verb_target_and_optional_reason(text, parsed):
+    assert command.parse_command(text) == parsed
+
+
+def test_removepfp_requires_member_and_member_guard():
+    assert command.REMOVE_PFP in command.MEMBER_REQUIRED_VERBS
+    assert "removepfp @member" in command.SUBJECT_USAGE[command.REMOVE_PFP]
+    assert command.NEEDED[command.REMOVE_PFP] == "member.guard"
+    assert command.REMOVE_PFP not in command.TEXT_REQUIRED_VERBS
+
+
+def test_fallback_text_lists_removepfp_only_with_member_guard():
+    assert "/nemo removepfp" in command.helping.fallback_text({"member.guard"})
+    assert "/nemo removepfp" not in command.helping.fallback_text({"case.read"})

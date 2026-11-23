@@ -16,8 +16,9 @@ CUSTOM_PROFILE = {"avatar_hash": "abc123", "image_original": CUSTOM_URL, "image_
 
 
 class Conn:
-    def __init__(self, claim=None, ready=()):
+    def __init__(self, claim=None, ready=(), inserted=None):
         self.claim = claim
+        self.inserted = inserted
         self.ready = list(ready)
         self.executed = []
 
@@ -27,6 +28,8 @@ class Conn:
         return self
 
     def fetchone(self):
+        if self.last == photo_removals.INSERT_REQUEST:
+            return self.inserted
         return self.claim if self.last == photo_removals.CLAIM else None
 
     def fetchall(self):
@@ -260,3 +263,47 @@ def test_drain_while_another_drain_runs_returns_zero(conn, slack):
         assert conn.executed == []
     finally:
         photo_removals._lock.release()
+
+
+def test_queue_request_inserts_the_row_and_audits_as_the_requester(conn, slack):
+    conn.inserted = (9,)
+
+    answer = photo_removals.queue_request(conn, MEMBER_ID, "nsfw pfp", ASKED_BY)
+
+    assert answer == "Pfp removal queued for <@U1>"
+    assert conn.args_for(photo_removals.INSERT_REQUEST) == [(MEMBER_ID, ASKED_BY, "nsfw pfp")]
+    (args, kwargs), = slack["audited"]
+    assert args == (photo_removals.ENTITY_TYPE, 9, "queued", ASKED_BY)
+    assert kwargs["subject_user_id"] == MEMBER_ID
+
+
+@pytest.mark.parametrize("reason", [None, ""])
+def test_queue_request_without_a_reason_stores_no_reason(conn, slack, reason):
+    conn.inserted = (9,)
+
+    photo_removals.queue_request(conn, MEMBER_ID, reason, ASKED_BY)
+
+    assert conn.args_for(photo_removals.INSERT_REQUEST) == [(MEMBER_ID, ASKED_BY, None)]
+
+
+def test_queue_request_while_one_is_waiting_queues_nothing_and_audits_nothing(conn, slack):
+    conn.inserted = None
+
+    answer = photo_removals.queue_request(conn, MEMBER_ID, "again", ASKED_BY)
+
+    assert answer == "Pfp removal already queued for <@U1>"
+    assert slack["audited"] == []
+
+
+def test_queue_request_with_a_long_reason_is_refused_before_any_insert(conn, slack):
+    answer = photo_removals.queue_request(conn, MEMBER_ID, "x" * (photo_removals.MAX_REASON_LENGTH + 1), ASKED_BY)
+
+    assert answer == photo_removals.REASON_TOO_LONG
+    assert conn.executed == []
+    assert slack["audited"] == []
+
+
+def test_insert_request_conflicts_only_on_a_waiting_removal():
+    sql = " ".join(photo_removals.INSERT_REQUEST.split())
+
+    assert "ON CONFLICT (member_id) WHERE state IN ('asked', 'running') DO NOTHING" in sql

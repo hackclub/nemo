@@ -19,8 +19,8 @@ BATCH = 50
 REPLACED_BY_DESTROY = "replaced by a destroy"
 SYSTEM_ACTORS = (None, "system", memberguards.NEMO)
 
-ENTITY_TYPES = ["member_guard", "channel_guard", "channel_allow", "thread_guard"]
-VERBS = ["opened", "lifted", "extended", "tuned", "added", "removed"]
+ENTITY_TYPES = ["member_guard", "channel_guard", "channel_allow", "thread_guard", "member_photo"]
+VERBS = ["opened", "lifted", "extended", "tuned", "added", "removed", "performed"]
 
 CURSOR = "SELECT last_id FROM fd.log_cursors WHERE name = %s"
 MOVE_CURSOR = "UPDATE fd.log_cursors SET last_id = %s, updated_at = now() WHERE name = %s"
@@ -56,6 +56,8 @@ THREAD_GUARD = """
 SELECT kind, channel_id, thread_ts, reason, expires_at, state, error
 FROM fd.thread_guards WHERE id = %s
 """
+
+PHOTO_REMOVAL = "SELECT member_id, reason FROM fd.photo_removals WHERE id = %s"
 
 MEMBER_LABELS = {"shush": "Shush", "channel_ban": "Channel ban", "deactivation": "Deactivation"}
 MEMBER_VERBS = {"shush": "shushed", "channel_ban": "banned", "deactivation": "deactivated"}
@@ -189,11 +191,19 @@ def thread_line(entry, row):
     return None
 
 
+def photo_line(entry, row):
+    member_id, reason = row
+    if entry["verb"] != "performed":
+        return None
+    return f"Pfp removed for <@{member_id}>{reason_part(reason)}{actor_suffix(entry['actor'])}"
+
+
 LINE_BUILDERS = {
     "member_guard": (MEMBER_GUARD, member_line),
     "channel_guard": (CHANNEL_GUARD, channel_line),
     "channel_allow": (CHANNEL_GUARD, allow_line),
     "thread_guard": (THREAD_GUARD, thread_line),
+    "member_photo": (PHOTO_REMOVAL, photo_line),
 }
 
 

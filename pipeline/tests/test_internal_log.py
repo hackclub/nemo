@@ -260,3 +260,18 @@ def test_extension_lines_say_shortened_when_the_end_moves_earlier():
         f"Slow mode shortened on <#C1> to {short_end_token(END)} by <@UMOD>"
     assert internal_log.thread_line(entry("extended", entity_type="thread_guard", **moved), LOCK) == \
         f"Lock on <#C1> {THREAD_LINK} shortened to {short_end_token(END)} by <@UMOD>"
+
+
+@pytest.mark.parametrize(("row", "made", "line"), [
+    (("U1", "nsfw pfp"), entry("performed", entity_type="member_photo"), "Pfp removed for <@U1> for *nsfw pfp* by <@UMOD>"),
+    (("U1", None), entry("performed", entity_type="member_photo"), "Pfp removed for <@U1> by <@UMOD>"),
+    (("U1", "nsfw pfp"), entry("queued", entity_type="member_photo"), None),
+])
+def test_photo_line_formats_a_finished_removal_only(row, made, line):
+    assert internal_log.photo_line(made, row) == line
+
+
+def test_audit_lines_include_pfp_removals_by_type_and_verb():
+    assert "member_photo" in internal_log.ENTITY_TYPES
+    assert "performed" in internal_log.VERBS
+    assert internal_log.LINE_BUILDERS["member_photo"][1] is internal_log.photo_line

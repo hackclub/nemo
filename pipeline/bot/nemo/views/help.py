@@ -44,6 +44,13 @@ GUARDS = (
     ),
 )
 
+PFP = (
+    "Pfp",
+    (
+        ("member.guard", "/nemo removepfp @member reason", "replace their pfp, reason optional"),
+    ),
+)
+
 SLOWMODE = (
     "Slow mode",
     (
@@ -105,7 +112,7 @@ CARD = (
     ),
 )
 
-SECTIONS = (LOOKUP, NOTES, GUARDS, SLOWMODE, CHANNEL_GUARDS, PURGE, THREAD, CARD)
+SECTIONS = (LOOKUP, NOTES, GUARDS, PFP, SLOWMODE, CHANNEL_GUARDS, PURGE, THREAD, CARD)
 
 
 def line(command, note):

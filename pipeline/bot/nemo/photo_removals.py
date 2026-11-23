@@ -31,6 +31,11 @@ DONE = "done"
 FAILED = "failed"
 DEACTIVATION_CANCELLED = "Deactivation cancelled"
 
+MAX_REASON_LENGTH = 500
+REASON_TOO_LONG = f"Reason must be under {MAX_REASON_LENGTH} characters"
+QUEUED_ANSWER = "Pfp removal queued for <@{member_id}>"
+ALREADY_QUEUED_ANSWER = "Pfp removal already queued for <@{member_id}>"
+
 Removal = namedtuple("Removal", "id member_id asked_by attempts")
 Original = namedtuple("Original", "url avatar_hash image content_type")
 
@@ -77,6 +82,13 @@ STORE_EVIDENCE = """
 INSERT INTO fd.photo_removal_evidence (removal_id, image, content_type, sha256)
 VALUES (%s, %s, %s, %s)
 ON CONFLICT (removal_id) DO NOTHING
+"""
+
+INSERT_REQUEST = """
+INSERT INTO fd.photo_removals (member_id, asked_by, reason)
+VALUES (%s, %s, %s)
+ON CONFLICT (member_id) WHERE state IN ('asked', 'running') DO NOTHING
+RETURNING id
 """
 
 FINISH = "UPDATE fd.photo_removals SET state = %s, error = %s, finished_at = now() WHERE id = %s"
@@ -201,6 +213,19 @@ def run(removal_id):
 
     log.info("nemo: photo removal %s for %s -> %s", removal.id, removal.member_id, error or DONE)
     return error is None
+
+
+def queue_request(conn, member_id, reason, asked_by):
+    if reason and len(reason) > MAX_REASON_LENGTH:
+        return REASON_TOO_LONG
+
+    row = conn.execute(INSERT_REQUEST, (member_id, asked_by, reason or None)).fetchone()
+    if row is None:
+        return ALREADY_QUEUED_ANSWER.format(member_id=member_id)
+
+    audit.record(conn, ENTITY_TYPE, row[0], "queued", asked_by, subject_user_id=member_id,
+                 after={"member_id": member_id})
+    return QUEUED_ANSWER.format(member_id=member_id)
 
 
 def drain():

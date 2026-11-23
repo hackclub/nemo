@@ -14,6 +14,7 @@ from bot.nemo import (
     memberguards,
     mentions,
     open_cases,
+    photo_removals,
     purge_requests,
     reactivation,
     record,
@@ -35,12 +36,13 @@ CHANNEL_BAN = "channelban"
 UNSHUSH = "unshush"
 UNBAN = "unban"
 PURGE = "purge"
+REMOVE_PFP = "removepfp"
 SLOWMODE = "slowmode"
 QUEUE = "queue"
 OPEN_RECORD = member_view.OPEN_WEB
 OFF = "off"
 
-MEMBER_REQUIRED_VERBS = (LOOKUP, MENTIONS, NOTE, SHUSH, CHANNEL_BAN, UNSHUSH, UNBAN)
+MEMBER_REQUIRED_VERBS = (LOOKUP, MENTIONS, NOTE, SHUSH, CHANNEL_BAN, UNSHUSH, UNBAN, REMOVE_PFP)
 MEMBER_VERBS = (*MEMBER_REQUIRED_VERBS, OPEN, PURGE)
 VERBS = (*MEMBER_REQUIRED_VERBS, OPEN, MERGE, PURGE, SLOWMODE, QUEUE, *guard_commands.VERBS)
 TEXT_REQUIRED_VERBS = (NOTE, OPEN, SHUSH, CHANNEL_BAN, SLOWMODE)
@@ -62,6 +64,7 @@ SUBJECT_USAGE = {
     CHANNEL_BAN: "Name the member: */nemo channelban @member #channel 3d reason*",
     UNSHUSH: "Name the member: */nemo unshush @member*",
     UNBAN: "Name the member: */nemo unban @member*",
+    REMOVE_PFP: "Name the member: */nemo removepfp @member* or */nemo removepfp @member reason*",
 }
 
 TEXT_USAGE = {
@@ -231,6 +234,7 @@ NEEDED = {
     CHANNEL_BAN: "member.guard",
     UNSHUSH: "member.guard",
     UNBAN: "member.guard",
+    REMOVE_PFP: "member.guard",
     SLOWMODE: "channel.guard",
     QUEUE: "case.read",
     "case": "case.read",
@@ -446,6 +450,8 @@ def register(app):
                 answer = message_only(unshush(conn, target_id, body, user_id))
             elif verb == UNBAN:
                 answer = message_only(unban(conn, target_id, body, user_id))
+            elif verb == REMOVE_PFP:
+                answer = message_only(photo_removals.queue_request(conn, target_id, body, user_id))
             elif verb == SLOWMODE:
                 request, problem = slowmode_request(body, command.get("channel_id"))
                 answer_text = problem or apply_slowmode(conn, request, user_id)
