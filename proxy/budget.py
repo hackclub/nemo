@@ -34,6 +34,7 @@ LIMITS = {
     ("nemo", "admin", "conversations.replies"): (TIER3, 0),
     ("nemo", "admin", "search.messages"): (TIER2, 0),
     ("nemo", "admin", "users.info"): (TIER4, 0),
+    ("nemo", "admin", "admin.conversations.convertToPublic"): (TIER2, 0),
     ("nemo", "admin"): (TIER3, 60),
     ("nemo", "internal"): (TIER2, 20),
     ("pipeline", "admin"): (TIER4, 500),

@@ -80,6 +80,7 @@ WRITE_METHODS = {
             "conversations.kick",
             "admin.users.session.reset",
             "admin.users.assign",
+            "admin.conversations.convertToPublic",
             "users.info",
         }
         | set(SCIM_METHODS)
@@ -92,10 +93,13 @@ HISTORY_METHODS = {"admin": frozenset({"conversations.history", "conversations.r
 PURGE_READ_METHODS = {
     "admin": frozenset({"conversations.history", "conversations.replies", "search.messages"})
 }
+PUBLICIZE_READ_METHODS = {
+    "admin": frozenset({"conversations.info", "admin.roles.entity.listAssignments"})
+}
 WEB_FILE_METHODS = FILE_READ_METHODS
 
 NEMO_METHODS = {
-    "admin": WRITE_METHODS["admin"] | PURGE_READ_METHODS["admin"],
+    "admin": WRITE_METHODS["admin"] | PURGE_READ_METHODS["admin"] | PUBLICIZE_READ_METHODS["admin"],
     "internal": ACTIVITY_METHODS["internal"],
 }
 WEB_METHODS["internal"] = WEB_METHODS["internal"] | ACTIVITY_METHODS["internal"]

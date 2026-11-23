@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from slack_bolt import App
 from slack_sdk import WebClient
 
-from bot.nemo import command, handlers, surface
+from bot.nemo import command, handlers, publicize, surface
 from bot.nemo.enforcement import (  # noqa: F401
     account_age,
     channel_ban,
@@ -50,5 +50,6 @@ def build(on_reply=None):
     )
     handlers.register(app, on_reply)
     command.register(app)
+    publicize.register(app)
     surface.register(app)
     return app
