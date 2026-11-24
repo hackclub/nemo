@@ -515,6 +515,27 @@ def find_case_options(conn, text):
     }).fetchall()
 
 
+FIND_RESOLVER_OPTIONS = """
+SELECT r.user_id, coalesce(m.display_name, m.handle, r.user_id)
+FROM (SELECT DISTINCT user_id FROM app.effective_role) r
+LEFT JOIN fd.member m ON m.user_id = r.user_id
+WHERE NOT coalesce(m.is_deleted, false)
+  AND (%(term)s = ''
+       OR r.user_id ILIKE %(pattern)s
+       OR m.display_name ILIKE %(pattern)s
+       OR m.handle ILIKE %(pattern)s)
+ORDER BY lower(coalesce(m.display_name, m.handle, r.user_id)), r.user_id
+LIMIT %(limit)s
+"""
+
+
+def find_resolver_options(conn, text):
+    term = (text or "").strip()
+    return conn.execute(FIND_RESOLVER_OPTIONS, {
+        "term": term, "pattern": f"%{like_escape(term)}%", "limit": CASE_OPTION_LIMIT,
+    }).fetchall()
+
+
 def merge(conn, target_id, duplicate_ids, by):
     closed = []
     selected = set(duplicate_ids) - {target_id}

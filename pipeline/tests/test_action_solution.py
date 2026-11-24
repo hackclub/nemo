@@ -44,26 +44,48 @@ def test_build_blocks_has_solution_resolvers_and_resolve_tick_with_lyla_labels()
 def test_build_blocks_leaves_resolve_tick_unticked_by_default():
     built = action.build_blocks(CASE_ID, submission())
     assert "initial_options" not in block(built, action.RESOLVE)["element"]
-    assert "initial_users" not in block(built, action.RESOLVERS)["element"]
+    assert "initial_options" not in block(built, action.RESOLVERS)["element"]
+
+
+def test_resolvers_select_loads_options_on_open():
+    element = block(action.build_blocks(CASE_ID, submission()), action.RESOLVERS)["element"]
+    assert element["type"] == "multi_external_select"
+    assert element["min_query_length"] == 0
 
 
 def test_build_blocks_keeps_entered_solution_resolvers_and_tick():
     built = action.build_blocks(
-        CASE_ID, submission(solution="removed the post", resolved_by=[MOD, HELPER], resolve_case=True)
+        CASE_ID,
+        submission(solution="removed the post", resolved_by=[MOD, HELPER], resolve_case=True,
+                   resolver_labels={MOD: "Mod", HELPER: "Helper"}),
     )
     assert block(built, action.SOLUTION)["element"]["initial_value"] == "removed the post"
-    assert block(built, action.RESOLVERS)["element"]["initial_users"] == [MOD, HELPER]
+    assert block(built, action.RESOLVERS)["element"]["initial_options"] == [
+        {"text": {"type": "plain_text", "text": "Mod"}, "value": MOD},
+        {"text": {"type": "plain_text", "text": "Helper"}, "value": HELPER},
+    ]
     assert block(built, action.RESOLVE)["element"]["initial_options"] == [action.RESOLVE_OPTION]
+
+
+def test_initial_resolver_options_fall_back_to_the_user_id_without_a_label():
+    built = action.build_blocks(CASE_ID, submission(resolved_by=[MOD]))
+    assert block(built, action.RESOLVERS)["element"]["initial_options"] == [
+        {"text": {"type": "plain_text", "text": MOD}, "value": MOD},
+    ]
 
 
 def test_submitted_values_reads_solution_resolvers_and_tick():
     values = action.submitted_values({"values": {
         action.SOLUTION: {action.SOLUTION: {"value": "  removed the post  "}},
-        action.RESOLVERS: {action.RESOLVERS: {"selected_users": [MOD, HELPER]}},
+        action.RESOLVERS: {action.RESOLVERS: {"selected_options": [
+            {"text": {"type": "plain_text", "text": "Mod"}, "value": MOD},
+            {"text": {"type": "plain_text", "text": "Helper"}, "value": HELPER},
+        ]}},
         action.RESOLVE: {action.RESOLVE: {"selected_options": [{"value": action.RESOLVE_CASE}]}},
     }})
     assert values["solution"] == "removed the post"
     assert values["resolved_by"] == [MOD, HELPER]
+    assert values["resolver_labels"] == {MOD: "Mod", HELPER: "Helper"}
     assert values["resolve_case"] is True
 
 
@@ -71,7 +93,15 @@ def test_submitted_values_defaults_when_left_empty():
     values = action.submitted_values({"values": {}})
     assert values["solution"] == ""
     assert values["resolved_by"] == []
+    assert values["resolver_labels"] == {}
     assert values["resolve_case"] is False
+
+
+def test_resolver_options_label_with_the_name_and_cap_the_text():
+    assert action.resolver_options([(MOD, "Mod"), (HELPER, "x" * 100)]) == [
+        {"text": {"type": "plain_text", "text": "Mod"}, "value": MOD},
+        {"text": {"type": "plain_text", "text": "x" * 75}, "value": HELPER},
+    ]
 
 
 def test_resolvers_default_to_the_person_logging():

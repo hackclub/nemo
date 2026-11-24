@@ -20,7 +20,7 @@ from bot.nemo import (
     record,
 )
 from bot.nemo.views import help as helping
-from bot.nemo.views import lengths, member_view, merge
+from bot.nemo.views import action, lengths, member_view, merge
 from bot.nemo.views import slowmode as slowcard
 
 log = logging.getLogger("bot.nemo")
@@ -366,6 +366,13 @@ def register(app):
 
     app.options(merge.TARGET)(on_merge_options)
     app.options(merge.DUPLICATES)(on_merge_options)
+
+    @app.options(action.RESOLVERS)
+    def on_resolver_options(ack, body):
+        with session() as conn:
+            allowed, _refusal = access.may(conn, (body.get("user") or {}).get("id"), "case.act")
+            rows = case_actions.find_resolver_options(conn, body.get("value")) if allowed else []
+        ack(options=action.resolver_options(rows))
 
     @app.command(COMMAND)
     def on_nemo(ack, command, respond, client):

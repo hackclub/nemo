@@ -497,10 +497,11 @@ def build_blocks(case_id, values, guard_status=None, end_error=None, open_report
             "optional": True,
             "label": {"type": "plain_text", "text": "Who Resolved This? (Thank you btw <3)"},
             "element": {
-                "type": "multi_users_select",
+                "type": "multi_external_select",
                 "action_id": RESOLVERS,
                 "placeholder": {"type": "plain_text", "text": "Select people"},
-                **({"initial_users": values["resolved_by"]} if values.get("resolved_by") else {}),
+                "min_query_length": 0,
+                **({"initial_options": resolver_initial_options(values)} if values.get("resolved_by") else {}),
             },
         },
         resolve_block(values.get("resolve_case")),
@@ -508,6 +509,22 @@ def build_blocks(case_id, values, guard_status=None, end_error=None, open_report
     if values.get("resolve_case") and open_report:
         built += notify_blocks(values)
     return built
+
+
+OPTION_TEXT_LIMIT = 75
+
+
+def resolver_option(user_id, name=None):
+    return {"text": {"type": "plain_text", "text": (name or user_id)[:OPTION_TEXT_LIMIT]}, "value": user_id}
+
+
+def resolver_options(rows):
+    return [resolver_option(user_id, name) for user_id, name in rows]
+
+
+def resolver_initial_options(values):
+    labels = values.get("resolver_labels") or {}
+    return [resolver_option(one, labels.get(one)) for one in values["resolved_by"]]
 
 
 def duration_block(value=None):
@@ -657,6 +674,7 @@ def ticked(values, block_id, value):
 def submitted_values(view_state):
     values = view_state.get("values", {})
     selected_user_id = values.get(TARGET, {}).get(TARGET, {}).get("selected_user")
+    selected_resolvers = values.get(RESOLVERS, {}).get(RESOLVERS, {}).get("selected_options") or []
     return {
         "selected_user_id": selected_user_id,
         "target_user_id": selected_user_id,
@@ -675,7 +693,8 @@ def submitted_values(view_state):
         ),
         "reason": (values.get(REASON, {}).get(REASON, {}).get("value") or "").strip(),
         "solution": (values.get(SOLUTION, {}).get(SOLUTION, {}).get("value") or "").strip(),
-        "resolved_by": values.get(RESOLVERS, {}).get(RESOLVERS, {}).get("selected_users") or [],
+        "resolved_by": [one["value"] for one in selected_resolvers],
+        "resolver_labels": {one["value"]: one["text"]["text"] for one in selected_resolvers},
         "resolve_case": ticked(values, RESOLVE, RESOLVE_CASE),
         "notify_reporter": ticked(values, NOTIFY, NOTIFY_REPORTER) if NOTIFY in values else True,
         "message": (values.get(MESSAGE, {}).get(MESSAGE, {}).get("value") or "").strip() or None,

@@ -3,7 +3,7 @@ import contextlib
 import pytest
 
 from bot.nemo import case_actions, channel, command, handlers
-from bot.nemo.views import merge
+from bot.nemo.views import action, merge
 
 
 class App:
@@ -308,6 +308,40 @@ def test_merge_options_lists_found_cases_for_allowed_members(monkeypatch):
 
     assert ack.responses == [{"options": [{"text": {"type": "plain_text", "text": "5532, found 5532"},
                                            "value": "5532"}]}]
+    assert refused.responses == [{"options": []}]
+
+
+def test_find_resolver_options_reads_role_holders_and_escapes_like_wildcards():
+    conn = Conn({})
+
+    case_actions.find_resolver_options(conn, " a_% ")
+
+    sql, params = conn.executed[-1]
+    assert "app.effective_role" in sql
+    assert params == {"term": "a_%", "pattern": "%a\\_\\%%", "limit": 100}
+
+
+def test_resolver_options_list_role_holders_for_members_who_may_act(monkeypatch):
+    fake_app = App()
+    conn = Conn({})
+
+    @contextlib.contextmanager
+    def fake_session():
+        yield conn
+
+    monkeypatch.setattr(command, "session", fake_session)
+    monkeypatch.setattr(command.access, "may",
+                        lambda conn, user_id, capability: (user_id == "UME" and capability == "case.act", None))
+    monkeypatch.setattr(command.case_actions, "find_resolver_options",
+                        lambda conn, text: [("UFD", f"found {text}")])
+    command.register(fake_app)
+    ack, refused = Ack(), Ack()
+
+    fake_app.option_loaders[action.RESOLVERS](ack, {"user": {"id": "UME"}, "value": "fd"})
+    fake_app.option_loaders[action.RESOLVERS](refused, {"user": {"id": "UOTHER"}, "value": "fd"})
+
+    assert ack.responses == [{"options": [{"text": {"type": "plain_text", "text": "found fd"},
+                                           "value": "UFD"}]}]
     assert refused.responses == [{"options": []}]
 
 
