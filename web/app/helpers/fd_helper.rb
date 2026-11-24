@@ -463,6 +463,11 @@ module FdHelper
     tag.time(local.strftime(format), datetime: local.iso8601, title: time.utc.strftime("%-d %b %Y %H:%M UTC"))
   end
 
+  def action_when(time)
+    label = ago_label(time)
+    safe_join([on_day(time), (label unless label == on_day(time))].compact, " · ")
+  end
+
   def ago_label(time, none: "n/a")
     return none if time.nil?
 
@@ -514,7 +519,8 @@ module FdHelper
   end
 
   def member_tab_link(user_id, key, label, count)
-    link_to fd_member_path(user_id, (@pane_params || {}).merge(tab: (key unless key == "history")).compact),
+    link_to fd_member_path(user_id,
+      (@pane_params || {}).merge(tab: (key unless key == Fd::MembersController::DEFAULT_TAB)).compact),
       class: "view", aria: { current: ("true" if key == @tab) },
       data: { turbo_frame: "member-record", turbo_action: "advance" } do
       concat tag.span(label)
@@ -524,6 +530,7 @@ module FdHelper
 
   def member_tab_count(key)
     case key
+    when "actions" then @record.action_count
     when "history" then @entries.size
     when "links" then @member_links&.count
     when "purges" then @purge_count if @purge_count&.positive?

@@ -32,11 +32,12 @@ class FdMemberTabsTest < ActionDispatch::IntegrationTest
     css_select("nav.member-record-tabs a.view").map { |link| link.at("span").text.squish }
   end
 
-  test "member show renders the tab list with History current" do
+  test "member show renders the tab list with Actions current" do
     get fd_member_path(MEMBER_ID)
 
-    assert_equal ["History", "Mentions", "Linked accounts", "Sessions", "Audit", "Enforcement", "Purges"], tab_labels
-    assert_select "nav.member-record-tabs a[aria-current=true]", text: /History/
+    assert_equal ["Actions", "Mentions", "Linked accounts", "Sessions", "Audit", "Enforcement", "Purges", "History"], tab_labels
+    assert_select "nav.member-record-tabs a[aria-current=true]", text: /Actions/
+    assert_select %(nav.member-record-tabs a[href="#{fd_member_path(MEMBER_ID, tab: "history")}"])
     assert_select "turbo-frame#member-record[target=_top]"
     assert_select %(nav.member-record-tabs a[href="#{fd_member_path(MEMBER_ID, tab: "audit")}"][data-turbo-frame="member-record"][data-turbo-action="advance"])
   end
@@ -49,8 +50,8 @@ class FdMemberTabsTest < ActionDispatch::IntegrationTest
 
     get fd_member_path(MEMBER_ID, tab: "sessions")
 
-    assert_equal %w[History Mentions Audit Enforcement Purges], tab_labels
-    assert_select "nav.member-record-tabs a[aria-current=true]", text: /History/
+    assert_equal %w[Actions Mentions Audit Enforcement Purges History], tab_labels
+    assert_select "nav.member-record-tabs a[aria-current=true]", text: /Actions/
   end
 
   test "member show with do=links selects the Linked accounts tab" do

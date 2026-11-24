@@ -77,6 +77,10 @@ module Fd
       actions.count(&:reversed?)
     end
 
+    def action_count
+      actions.size + guards_on_no_case.size + photo_removals.size
+    end
+
     def anything?
       subject_cases.any? || logged_cases.any?
     end

@@ -1,0 +1,36 @@
+<% if @action_entries.any? %>
+  <div class="member-actions">
+    <% @action_entries.each do |entry| %>
+      <div class="action-entry">
+        <div class="action-entry-head">
+          <span class="action-entry-name action-tone-<%= entry.tone %>"><%= entry.label %></span>
+          <% if entry.details.any? || entry.states.any? %>
+            <span class="action-entry-sub">
+              <% entry.details.each do |detail| %><span><%= detail %></span><% end %>
+              <% entry.states.each do |state| %><span class="action-entry-state"><%= state %></span><% end %>
+            </span>
+          <% end %>
+        </div>
+        <% if entry.thread_url %>
+          <%= link_to entry.thread_url, class: "thread-link", target: "_blank", rel: "noopener" do %>
+            <%= case_action_icon("thread") %>
+            <span>Case Thread</span>
+            <%= case_action_icon("external") %>
+          <% end %>
+        <% end %>
+        <div class="action-entry-body">
+          <p class="action-entry-category"><%= entry.case_id ? (entry.category || "n/a") : "No case" %></p>
+          <% if entry.reason.present? %>
+            <p class="action-entry-reason"><%= entry.reason %></p>
+          <% end %>
+          <p class="action-entry-meta">
+            <%= safe_join([(link_to("Case #{entry.case_id}", fd_case_path(entry.case_id), class: "lnk") if entry.case_id),
+                           member_link(entry.by), action_when(entry.at)].compact, " · ") %>
+          </p>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% else %>
+  <div class="empty"><p class="empty-title">No actions</p></div>
+<% end %>

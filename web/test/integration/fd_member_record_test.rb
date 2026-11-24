@@ -118,7 +118,7 @@ class FdMemberRecordTest < ActionDispatch::IntegrationTest
   test "member history shows edit and remove on standing notes by other authors" do
     note = Fd::Note.create!(subject_user_id: SUBJECT, body: "not mine", author: "UFF9")
 
-    get fd_member_path(SUBJECT)
+    get fd_member_path(SUBJECT, tab: "history")
 
     assert_select "button[data-modal-open='edit-note-#{note.id}']", text: "Edit"
     assert_select "form[action='#{fd_member_note_path(SUBJECT, note)}'] button", text: "Remove"

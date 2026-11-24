@@ -249,6 +249,74 @@
     @apply text-xs whitespace-nowrap text-muted-foreground tabular-nums;
   }
 
+  .member-actions { display: flex; flex-direction: column; container-type: inline-size; }
+  .action-entry {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "head thread" "body body";
+    gap: 4px var(--s-xs);
+    padding: var(--s-xs) var(--s-sm);
+    border-bottom: 1px solid var(--line);
+  }
+  .action-entry:last-child { border-bottom: 0; }
+  .action-entry-head {
+    grid-area: head;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 10px;
+    min-width: 0;
+  }
+  .action-entry-name {
+    font-size: var(--t-head);
+    font-weight: 600;
+    line-height: var(--lh-snug);
+    letter-spacing: var(--tr-head);
+  }
+  .action-entry-sub { display: flex; flex-wrap: wrap; font-size: var(--t-body); color: var(--ink-2); }
+  .action-entry-sub > * + *::before { content: "\00b7"; margin: 0 6px; color: var(--ink-3); }
+  .action-entry-state { color: var(--good); }
+  .action-entry-body { grid-area: body; min-width: 0; }
+  .action-entry-category { font-size: var(--t-mid); font-weight: 600; line-height: var(--lh-snug); }
+  .action-entry-reason {
+    margin-top: 2px;
+    font-size: var(--t-mid);
+    line-height: var(--lh-body);
+    color: var(--ink-2);
+    overflow-wrap: anywhere;
+  }
+  .action-entry-meta { margin-top: 4px; font-size: var(--t-body); color: var(--ink-3); }
+  .action-entry-meta .lnk { color: var(--ink-2); }
+  .action-tone-crit { color: var(--crit); }
+  .action-tone-orange { color: var(--orange); }
+  .action-tone-warn { color: var(--warn); }
+  .action-tone-plain { color: var(--ink); }
+  .action-tone-muted { color: var(--ink-2); }
+  .thread-link {
+    grid-area: thread;
+    display: inline-flex;
+    align-items: center;
+    align-self: start;
+    gap: 5px;
+    font-size: var(--t-mid);
+    font-weight: 500;
+    color: var(--link);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .thread-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .thread-link .action-icon, .thread-link .action-icon svg { width: 14px; height: 14px; }
+  @container (min-width: 720px) {
+    .action-entry {
+      grid-template-columns: 168px minmax(0, 1fr) auto;
+      grid-template-areas: "head body thread";
+      gap: 0 var(--s-sm);
+    }
+    .action-entry-head { display: block; }
+    .action-entry-sub { flex-direction: column; margin-top: 2px; }
+    .action-entry-sub > * + *::before { content: none; }
+  }
+
   .locked {
     display: inline-flex;
     align-items: center;

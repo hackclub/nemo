@@ -16,8 +16,10 @@ module Fd
       assign_pane_from_index
     end
 
-    TABS = { "history" => "History", "mentions" => "Mentions", "links" => "Linked accounts", "sessions" => "Sessions",
-             "audit" => "Audit", "enforcement" => "Enforcement", "purges" => "Purges" }.freeze
+    DEFAULT_TAB = "actions".freeze
+    TABS = { "actions" => "Actions", "mentions" => "Mentions", "links" => "Linked accounts", "sessions" => "Sessions",
+             "audit" => "Audit", "enforcement" => "Enforcement", "purges" => "Purges",
+             "history" => "History" }.freeze
     TAB_CAPABILITIES = { "links" => "member.links", "sessions" => "identity.read",
                          "purges" => "member.purge" }.freeze
     PURGE_ROWS = 50
@@ -32,8 +34,9 @@ module Fd
 
       load_member_pane
       @tabs = TABS.select { |key, _| may_open_tab?(key) }
-      @tab = [params[:tab], params[:do]].find { |key| @tabs.key?(key) } || "history"
+      @tab = [params[:tab], params[:do]].find { |key| @tabs.key?(key) } || DEFAULT_TAB
       load_member_audit if @tab == "audit"
+      @action_entries = @tab == "actions" ? MemberActions.for(@record) : []
       @guard_history = @tab == "enforcement" ? guard_history : []
       load_purges
       @names = Names.for(@record.referenced_user_ids + @pane_rows.map(&:user_id) +
