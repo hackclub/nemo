@@ -40,6 +40,7 @@ class FdReactivationsTest < ActionDispatch::IntegrationTest
     guard = guards.sole
     assert_equal %w[deactivation lifting nemo held],
       [guard.kind, guard.state, guard.enforced_by, guard.enforcement_status]
+    assert guard.lift_only
     assert_equal ["UMOD", "Indefinite ban", @kase.id], [guard.opened_by, guard.reason, guard.case_id]
     assert_in_delta indefinite.performed_at, guard.opened_at, 1
     assert_equal "appeal accepted", guard.lift_reason
@@ -47,7 +48,7 @@ class FdReactivationsTest < ActionDispatch::IntegrationTest
     assert_not indefinite.reversed?
     assert_operator served.reload.expires_at, :<, 12.hours.ago
     assert_match(/\AReactivation queued for .+ · 1 ban ended\z/, flash[:notice])
-    assert Fd::AuditEntry.exists?(entity_type: "member_guard", entity_id: guard.id, verb: "recorded")
+    assert_not Fd::AuditEntry.exists?(entity_type: "member_guard", entity_id: guard.id, verb: "recorded")
     assert Fd::AuditEntry.exists?(entity_type: "member_guard", entity_id: guard.id, verb: "lifted")
     assert Fd::AuditEntry.exists?(entity_type: "action", entity_id: indefinite.id, verb: "ended")
   end

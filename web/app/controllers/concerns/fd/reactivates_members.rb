@@ -12,12 +12,10 @@ module Fd
       return nil unless MemberAccount.find_by(user_id: subject_id)&.deactivated
 
       ban = Action.running_bans_on(subject_id).order(performed_at: :desc, id: :desc).first
-      guard = MemberGuard.record_deactivation!(subject_id: subject_id,
+      MemberGuard.record_deactivation!(subject_id: subject_id,
         by: ban&.performed_by || current_account.user_id,
         reason: ban&.reason.presence || (ban && Action::LABELS[ban.type_key]) || OUTSIDE_NEMO,
         opened_at: ban&.performed_at, case_id: ban&.case_id)
-      audit(guard, "recorded") if guard
-      guard
     end
 
     def lift_deactivation(guard, reason)

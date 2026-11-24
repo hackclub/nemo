@@ -97,6 +97,16 @@ class FdMemberTabsTest < ActionDispatch::IntegrationTest
     assert_select ".member-tab td", text: /\ALifted /
   end
 
+  test "member enforcement tab leaves out lift-only deactivations" do
+    Fd::MemberGuard.create!(kind: "deactivation", subject_id: MEMBER_ID, opened_by: "UTABBOSS",
+      reason: "Deactivated outside Nemo", state: "lifting", enforced_by: "nemo", enforcement_status: "held",
+      lift_only: true)
+
+    get fd_member_path(MEMBER_ID, tab: "enforcement")
+
+    assert_select ".member-tab .empty-title", "No guards"
+  end
+
   test "member enforcement tab without guards renders the No guards title" do
     get fd_member_path(MEMBER_ID, tab: "enforcement")
 

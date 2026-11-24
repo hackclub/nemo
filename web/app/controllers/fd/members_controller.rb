@@ -126,7 +126,7 @@ module Fd
     end
 
     def guard_history
-      MemberGuard.for_subject(@user_id).order(opened_at: :desc, id: :desc).to_a
+      MemberGuard.for_subject(@user_id).listed.order(opened_at: :desc, id: :desc).to_a
     end
 
     def show_drawer

@@ -66,7 +66,8 @@ def test_deactivated_account_without_a_guard_gets_one_recorded_then_lifted(lifts
     assert reactivation.reactivate(conn, "U1", "UMOD", "appeal accepted") == ("queued", [])
 
     assert conn.ran(reactivation.RECORD) == [("U1", "UMOD", None, "Deactivated outside Nemo", None)]
-    assert conn.audits() == [("member_guard", 90, "recorded")]
+    assert "lift_only" in reactivation.RECORD
+    assert conn.audits() == []
     assert lifts == [(90, "deactivation")]
 
 

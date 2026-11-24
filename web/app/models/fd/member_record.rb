@@ -49,7 +49,7 @@ module Fd
     end
 
     def guards_on_no_case
-      @guards_on_no_case ||= MemberGuard.for_subject(user_id).on_no_case.oldest_first.to_a
+      @guards_on_no_case ||= MemberGuard.for_subject(user_id).listed.on_no_case.oldest_first.to_a
     end
 
     def photo_removals

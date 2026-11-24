@@ -81,6 +81,14 @@ class Fd::MemberTimelineTest < ActiveSupport::TestCase
     assert_nil entry.state, "state is nil for an unlifted guard"
   end
 
+  test "lift-only deactivation without a case yields no entries" do
+    guard = create_guard(kind: "deactivation", reason: "Deactivated outside Nemo", lift_only: true,
+      enforcement_status: "held")
+    guard.update!(state: "lifting", lifted_by: "UFF2", lift_reason: "appeal accepted")
+
+    assert_empty entries(only: "actions")
+  end
+
   test "channel ban guard without a case names the channel in detail" do
     create_guard(kind: "channel_ban", channel_id: "C1LOUNGE", expires_at: 2.days.from_now)
 

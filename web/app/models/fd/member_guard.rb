@@ -46,6 +46,7 @@ module Fd
     scope :active_or_scheduled, -> { where(state: ACTIVE_OR_SCHEDULED_STATES) }
     scope :live, -> { where(state: LIVE) }
     scope :on_no_case, -> { where(case_id: nil) }
+    scope :listed, -> { where(lift_only: false) }
     scope :orphaned, -> { live.on_no_case }
     scope :stuck, -> { where(enforcement_status: FAILED) }
     scope :oldest_first, -> { order(:opened_at, :id) }
@@ -109,7 +110,8 @@ module Fd
     def self.record_deactivation!(subject_id:, by:, reason:, opened_at: nil, case_id: nil)
       transaction(requires_new: true) do
         create!(kind: DEACTIVATION, subject_id: subject_id, opened_by: by, reason: reason, case_id: case_id,
-          opened_at: opened_at || Time.current, state: LIVE, enforced_by: NEMO, enforcement_status: HELD)
+          opened_at: opened_at || Time.current, state: LIVE, enforced_by: NEMO, enforcement_status: HELD,
+          lift_only: true)
       end
     rescue ActiveRecord::RecordNotUnique
       nil

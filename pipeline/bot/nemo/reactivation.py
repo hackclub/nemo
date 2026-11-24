@@ -18,8 +18,8 @@ DEACTIVATED = "SELECT deactivated FROM fd.member_account WHERE user_id = %s"
 
 RECORD = """
 INSERT INTO fd.member_guards
-    (kind, subject_id, opened_by, opened_at, reason, case_id, enforced_by, enforcement_status)
-VALUES ('deactivation', %s, %s, coalesce(%s, now()), %s, %s, 'nemo', 'held')
+    (kind, subject_id, opened_by, opened_at, reason, case_id, enforced_by, enforcement_status, lift_only)
+VALUES ('deactivation', %s, %s, coalesce(%s, now()), %s, %s, 'nemo', 'held', true)
 ON CONFLICT DO NOTHING
 RETURNING id
 """
@@ -72,9 +72,6 @@ def record_deactivation(conn, user_id, by):
     row = conn.execute(RECORD, (user_id, opened_by, opened_at, reason, case_id)).fetchone()
     if row is None:
         return None
-    audit.record(conn, "member_guard", row[0], "recorded", by, subject_user_id=user_id,
-                 after={"kind": memberguards.DEACTIVATION, "state": "live", "enforced_by": memberguards.NEMO,
-                        "enforcement_status": "held"})
     return (row[0], memberguards.NEMO, "live")
 
 
