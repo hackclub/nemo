@@ -19,7 +19,7 @@ class MentionRenderTest < ActionView::TestCase
   end
 
   test "case reference in a note links the case next to a member mention" do
-    kase = make_case
+    kase = make_linkable_case
 
     html = mentioned("<@U0QUINN> is the same as ##{kase.id}")
 

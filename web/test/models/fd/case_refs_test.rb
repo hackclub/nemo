@@ -10,7 +10,7 @@ class Fd::CaseRefsTest < ActiveSupport::TestCase
   end
 
   test "linked links an existing case and leaves other numbers as text" do
-    kase = make_case
+    kase = make_linkable_case
     missing = Fd::Case.maximum(:id) + 1000
 
     html = Fd::CaseRefs.linked("see ##{kase.id} and ##{missing} <b>")

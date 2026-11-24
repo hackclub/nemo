@@ -29,6 +29,9 @@ features:
       description: Look up members and mentions, add notes, open cases, set slow mode, purge messages, remove pfps
       usage_hint: help | queue | lookup @member | mentions @member | note @member | open @member | shush @member 3d | unshush @member | channelban @member #channel 3d | unban @member #channel | removepfp @member | slowmode #channel 30s 2h | purge #channel 50 | readonly #channel on | accountage #channel 7d | botallow #channel on | 3864
       should_escape: true
+    - command: /publicize
+      description: Make this private channel public (admins, channel managers, creators)
+      should_escape: false
 
 oauth_config:
   redirect_urls:
@@ -37,6 +40,7 @@ oauth_config:
     user:
       - admin
       - admin.analytics:read
+      - admin.conversations:write
       - admin.roles:read
       - admin.conversations:read
       - admin.teams:read

@@ -27,10 +27,12 @@ def test_conversations_history_not_in_writes():
     assert "conversations.history" not in app.WRITES
 
 
-def test_nemo_admin_reads_limited_to_purge_methods():
+def test_nemo_admin_reads_limited_to_purge_and_publicize_methods():
     reads = app.NEMO_METHODS["admin"] - app.WRITE_METHODS["admin"]
 
-    assert reads == {"conversations.history", "conversations.replies", "search.messages"}
+    assert reads == {"conversations.history", "conversations.replies", "search.messages",
+                     "conversations.info", "admin.conversations.search",
+                     "admin.roles.listAssignments"}
     assert not reads & app.WRITES
 
 

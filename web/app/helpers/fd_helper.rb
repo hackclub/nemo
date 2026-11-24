@@ -1485,6 +1485,7 @@ module FdHelper
     "action/ended" => "Ended an action on",
     "action/edited" => "Edited an action on",
     "member/looked_up" => "Looked up",
+    "channel/publicized" => "Made public",
     "report/received" => "Received report on",
     "report/closed" => "Notified reporter on",
     "consent/granted" => "Opted in to",
